@@ -21,8 +21,8 @@ invocation_logs = true
 UPSTREAM_ORIGIN = "https://cv-proxy.karp-gabriel-a.workers.dev"
 
 # CORS allowlist (comma-separated). The PWA origin must be listed.
-ALLOWED_ORIGINS = "https://cv-generator-det.pages.dev"
-SETUP_URL = "https://cv-generator-det.pages.dev"
+ALLOWED_ORIGINS = "https://antcv.pages.dev"
+SETUP_URL = "https://antcv.pages.dev"
 
 # Google OAuth client ID for in-app sign-in. Get this from Google Cloud
 # Console → APIs & Services → Credentials → OAuth 2.0 Client IDs (Web).

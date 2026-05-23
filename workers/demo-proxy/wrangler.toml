@@ -1,0 +1,89 @@
+# cv-proxy — full wrangler.toml
+# =============================
+# Sits behind Cloudflare Access. The relay (antcv-access-relay) reaches it via
+# a service token. Don't make this Worker public — its env holds the provider
+# API keys.
+#
+# What the cv-proxy code reads from `env`:
+#   Vars:        ALLOWED_ORIGINS, proxy_url
+#   Bindings:    ANALYTICS (KV — events), KV_BINDING (KV — prefs/signals),
+#                ANT_ANALYTIC_ENGINE (Analytics Engine dataset)
+#   Secrets:     Claude_API_Key, ChatGPT_API_Key, Mistral_API_Key, Gemini_API_Key,
+#                ANALYTICS_SECRET (optional — gates /analytics/summary)
+
+name = "cv-demo-proxy"
+main = "src/index.js"
+compatibility_date = "2024-12-01"
+
+# ---------- Observability ----------
+# Per AntCV standing rule: every Cloudflare Worker must emit logs into
+# the dashboard. Without [observability.logs] enabled, console.log() and
+# console.warn() output is invisible in `wrangler tail` and the dashboard
+# Logs panel, making post-incident debugging much harder. Cost is
+# negligible (logs are sampled and metered separately).
+[observability.logs]
+enabled = true
+invocation_logs = true
+
+# ---------- Vars ----------
+
+[vars]
+# CORS allowlist — comma-separated. Must include the PWA origin AND the
+# relay's origin (since the relay forwards requests with the original Origin
+# header).
+DEMO_MODE = "true"
+ALLOWED_ORIGINS = "https://cv-generator-det.pages.dev,https://antcv-access-relay.karp-gabriel-a.workers.dev"
+
+# Self-reported URL returned by /config.
+proxy_url = "https://cv-proxy.karp-gabriel-a.workers.dev"
+
+# ---------- KV namespaces ----------
+# The code reads two binding names: ANALYTICS (for /analytics events and the
+# /analytics/summary listing) and KV_BINDING (for /preferences and /signals).
+# These can point at the SAME namespace id — that's the simplest setup. Or
+# two separate namespaces if you want event data isolated from user data.
+#
+# Create namespaces:
+#   npx wrangler kv:namespace create "CV_PROXY_DATA"
+# (Optional second one):
+#   npx wrangler kv:namespace create "CV_PROXY_ANALYTICS"
+#
+# Then paste the id(s) below. Two-binding-one-namespace example:
+[[kv_namespaces]]
+binding = "CV_PROXY_DATA"
+#id = "PASTE-ID-HERE"
+
+[[kv_namespaces]]
+binding = "KV_BINDING"
+#id = "PASTE-ID-HERE"
+
+
+# ---------- Analytics Engine ----------
+
+[[analytics_engine_datasets]]
+binding = "ANT_ANALYTIC_ENGINE"
+dataset = "ant_analytic_events"
+
+# ---------- Secrets to set via `npx wrangler secret put …` ----------
+#
+# Provider API keys (only set the ones you actually use):
+#   npx wrangler secret put Claude_API_Key       # must start with sk-ant-
+#   npx wrangler secret put ChatGPT_API_Key      # must start with sk-
+#   npx wrangler secret put Mistral_API_Key
+#   npx wrangler secret put Gemini_API_Key
+#
+# Optional admin secret for /analytics/summary (the listing endpoint
+# requires `?secret=…` to match):
+#   npx wrangler secret put ANALYTICS_SECRET
+#
+# Verify what's set:
+#   npx wrangler secret list
+
+
+# --- Shared analytics KV ---
+# Create once:
+#   npx wrangler kv namespace create ANALYTICS
+# Paste the SAME id into all AntCV workers.
+[[kv_namespaces]]
+binding = "ANALYTICS"
+# id = "PASTE-ID-HERE"

@@ -26,6 +26,7 @@ jobs:
           test -f pwa/index.html
           test -f pwa/sw.js
           test -f workers/proxy/wrangler.toml
+          test -f workers/demo-proxy/wrangler.toml
           test -f workers/docx-worker/wrangler.toml
           test -f workers/c2pa-worker/wrangler.toml
           test -f workers/access-relay/wrangler.toml

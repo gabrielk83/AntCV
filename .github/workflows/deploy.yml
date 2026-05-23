@@ -30,6 +30,7 @@ jobs:
           test -f workers/docx-worker/wrangler.toml
           test -f workers/c2pa-worker/wrangler.toml
           test -f workers/access-relay/wrangler.toml
+          test -f workers/antcv-mcp/wrangler.toml
       - name: Confirm observability is on in every wrangler.toml
         run: |
           for f in workers/*/wrangler.toml; do

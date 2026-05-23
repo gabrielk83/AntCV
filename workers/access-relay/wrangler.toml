@@ -79,7 +79,7 @@ environment = "production"
 #
  [[kv_namespaces]]
  binding = "KV_BINDING"
- id = "PASTE-ID-HERE"
+ # id = "PASTE-ID-HERE"
 
 # Secrets to set via `npx wrangler secret put …`:
 #   JWT_SECRET                    ≥32-byte random string for HS256 signing
@@ -108,7 +108,7 @@ environment = "production"
 # Paste the SAME id into all AntCV workers.
 [[kv_namespaces]]
 binding = "ANALYTICS"
-id = "PASTE-ID-HERE"
+# id = "PASTE-ID-HERE"
 
 # --- D1 database binding (REQUIRED for D1 routes) ---
 # Holds user_kernel, application, language_view, active_application,

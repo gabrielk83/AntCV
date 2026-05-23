@@ -1,0 +1,1192 @@
+<html lang="en">
+<head>
+<meta http-equiv="Cache-Control" content="no-store" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="AntCV">
+  <meta name="theme-color" content="#283556">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <title>AntCV</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <!-- v1.40.303: antcv-wizard-startup-clear-300.js removed (and its
+       duplicate near the rest of the shim chain). It was a band-aid
+       for the rogue wizardCompleted writers in wizard-fix-297 and
+       ai-wizard-slide-239, which have also been removed. The bundle's
+       gate at app.js bytes 210050 / 217398 is sufficient on its own,
+       once nothing else writes the flag at module-init time. -->
+  <!-- Mammoth (.docx text extractor) loads lazily on first .docx upload, like JSZip and PDF.js.
+       v0.98.3: ~700KB previously eager; now deferred to first use. -->
+  <script>window.loadMammoth=()=>new Promise((res,rej)=>{if(window.mammoth)return res(window.mammoth);const s=document.createElement('script');s.src='https://unpkg.com/mammoth/mammoth.browser.min.js';s.onload=()=>res(window.mammoth);s.onerror=()=>rej(new Error('Failed to load Mammoth (.docx parser)'));document.head.appendChild(s);});</script>
+  <!-- JSZip loads lazily from exportDocx when needed, so the app boots fast. -->
+  <script>window.loadJSZip=()=>new Promise((res,rej)=>{if(window.JSZip)return res(window.JSZip);const s=document.createElement('script');s.src='https://unpkg.com/jszip@3.10.1/dist/jszip.min.js';s.onload=()=>res(window.JSZip);s.onerror=()=>rej(new Error('Failed to load JSZip'));document.head.appendChild(s);});</script>
+  <!-- PDF.js loads lazily on first PDF upload — robust client-side extraction with no API call needed.
+       v23: switched from 4.0.379 (ES-module-only, no UMD build at that path) to 3.11.174 (last stable
+       3.x, UMD build available on all major CDNs). Added multi-CDN fallback chain so a single CDN
+       outage or path change can't kill PDF parsing. -->
+  <script>
+    window.loadPDFJS=()=>new Promise((res,rej)=>{
+      if(window.pdfjsLib) return res(window.pdfjsLib);
+      const ver='3.11.174';
+      const cdns=[
+        `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${ver}/pdf.min.js`,
+        `https://cdn.jsdelivr.net/npm/pdfjs-dist@${ver}/build/pdf.min.js`,
+        `https://unpkg.com/pdfjs-dist@${ver}/build/pdf.min.js`
+      ];
+      const workerUrls=[
+        `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${ver}/pdf.worker.min.js`,
+        `https://cdn.jsdelivr.net/npm/pdfjs-dist@${ver}/build/pdf.worker.min.js`,
+        `https://unpkg.com/pdfjs-dist@${ver}/build/pdf.worker.min.js`
+      ];
+      let idx=0;
+      const tryNext=()=>{
+        if(idx>=cdns.length){
+          return rej(new Error('Failed to load PDF.js from all 3 CDNs (cdnjs, jsdelivr, unpkg). Check your connection or firewall — these are unblocked on most networks.'));
+        }
+        const s=document.createElement('script');
+        s.src=cdns[idx];
+        s.onload=()=>{
+          try{
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc=workerUrls[idx];
+            console.log('[AntCV] PDF.js loaded from', cdns[idx]);
+            res(window.pdfjsLib);
+          }catch(e){rej(e);}
+        };
+        s.onerror=()=>{
+          console.warn('[AntCV] PDF.js CDN failed:', cdns[idx]);
+          idx++;
+          tryNext();
+        };
+        document.head.appendChild(s);
+      };
+      tryNext();
+    });
+  </script>
+  <style>
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0;}
+    body{font-family:'Georgia',serif;background:#283556;overscroll-behavior:none;}
+    #root{min-height:100dvh;}
+    textarea,input,select,button{font-family:inherit;}
+    ::-webkit-scrollbar{width:4px;}
+    ::-webkit-scrollbar-thumb{background:#01B7BB55;border-radius:2px;}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+    .fade{animation:fadeIn .3s ease;}
+
+    /* WCAG 2.1 AA: visible keyboard focus indicators for all
+       interactive elements. Sites that suppress :focus entirely
+       (with outline:none and no replacement) fail SC 2.4.7. We
+       keep our designed look by using :focus-visible (mouse
+       clicks suppressed, keyboard focus shown) and a 2.5px ring
+       in our brand teal with a 1px white inset for visibility on
+       both navy and white backgrounds. */
+    button:focus-visible,
+    a:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    textarea:focus-visible,
+    [role="button"]:focus-visible,
+    [tabindex]:focus-visible {
+      outline: 2.5px solid #01B7BB !important;
+      outline-offset: 2px !important;
+      box-shadow: 0 0 0 1px #fff inset, 0 0 0 4px rgba(1,183,187,0.35) !important;
+    }
+    /* Mouse-click focus stays unobtrusive — only keyboard focus
+       gets the high-visibility ring. */
+    :focus:not(:focus-visible) { outline: none; }
+
+    /* WCAG 2.4.1 Bypass Blocks — skip link to main content for
+       screen-reader and keyboard users. Hidden until focused. */
+    .antcv-skip-link {
+      position: absolute; top: -100px; left: 8px; z-index: 99999;
+      background: #00746E; color: #fff; padding: 10px 16px;
+      border-radius: 6px; font-weight: 700; font-size: 14px;
+      text-decoration: none; font-family: Calibri, Arial, sans-serif;
+    }
+    .antcv-skip-link:focus { top: 8px; outline: 2.5px solid #fff; }
+
+    /* WCAG 2.3.3 / SC 2.2.2: respect prefers-reduced-motion.
+       Users who set this OS preference get static UI instead of
+       fades, slides, and spins. The spinner becomes a static dot. */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+      }
+    }
+
+    /* Print: visible AI-assisted footer line uses rgba alpha. By
+       default browsers may strip alpha for print to favour ink
+       legibility; force the exact composited colour through. */
+    @media print {
+      [data-antcv-ai-disclosure="visible"] {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+    }
+
+    /* v1.40.115: during sidebar/table drag, the JS handler adds
+       `.antcv-dragging` to <html>. These rules force ew-resize cursor
+       on every descendant — winning over `cursor:text` on
+       contenteditable and other element-specific cursor declarations
+       that would otherwise flicker the cursor mid-drag. Also disables
+       text selection so cross-element drags don't start a selection. */
+    html.antcv-dragging, html.antcv-dragging *,
+    html.antcv-dragging [contenteditable="true"] {
+      cursor: ew-resize !important;
+      user-select: none !important;
+      -webkit-user-select: none !important;
+    }
+
+    /* v1.40.120: when the kernel showcase banner is visible at the
+       top of the viewport, push body content down so it isn't
+       covered. Without this the banner overlapped the topbar and
+       any buttons below it. The 52px matches the banner's height
+       (10px padding + 18px spinner + 4px progress bar + ~16px
+       label + 10px padding \u2248 52px) and leaves a small visual
+       gap below the bottom border. */
+    body.antcv-banner-active {
+      padding-top: 52px !important;
+    }
+    body.antcv-banner-active > div[role="alert"],
+    body.antcv-banner-active > div[role="status"] {
+      /* For full-width alert/status bars rendered by React at the
+         top of the document tree, shift them down too so they
+         don't visually merge with the banner above. */
+      margin-top: 0 !important;
+    }
+
+    /* v1.40.116: blanket-hide every floating UI element from print.
+       Gabriel reported that some circular FAB buttons (refresh /
+       graduation cap / fusion CL-CV) were showing up in CTRL+P print
+       preview. The originating components are spread across overlay
+       JS modules and don't all have `.no-print`. This rule catches
+       them by their common pattern: position:fixed circular elements
+       in the bottom-right region of the viewport. It also reinforces
+       existing `.no-print` declarations for buttons that already had
+       one. Safe at print time because nothing about the printed
+       document should be interactive. */
+    @media print {
+      .no-print, [class*="no-print"] { display: none !important; }
+      /* Catch overlay/FAB buttons that lack a no-print class. */
+      .antcv-fab, [class*="antcv-fab"],
+      .antcv-overlay, [class*="antcv-overlay"],
+      .antcv-mc-action, [class*="antcv-mc-action"] {
+        display: none !important;
+      }
+      /* Catch any circular floating element near the viewport edges. */
+      body > div[style*="position: fixed"][style*="bottom"],
+      body > div[style*="position:fixed"][style*="bottom"] {
+        display: none !important;
+      }
+    }
+
+    /* v128: Gesture priority hierarchy (per UX spec):
+       1. UI controls (buttons, sliders) — manipulation (no double-tap zoom delay)
+       2. Editable text — auto (native edit / selection, double-tap)
+       3. Single-finger vertical — native scroll (never intercepted)
+       4. Single-finger horizontal — pan only when zoomed >100% (handled in JS)
+       5. Two fingers — pinch zoom (handled in JS)
+       The previous rule blanket-applied touch-action:none and user-select:none
+       to every preview node, which made vertical scroll, double-tap, and
+       text editing unreliable in the "red areas". */
+    .antcv-preview-scroll{
+      /* Scroller: allow native vertical scroll + pinch. The capture-phase
+         JS handler takes over for two-finger pinch and for horizontal pan
+         when zoomed; a single-finger vertical drag releases to the browser. */
+      touch-action: pan-x pan-y;
+      -webkit-overflow-scrolling: touch;
+    }
+    .antcv-preview-wrap, .antcv-preview-paper{
+      /* Wrappers don't intercept anything — let events reach editable text. */
+      touch-action: auto;
+    }
+    .antcv-preview-paper [contenteditable="true"]{
+      /* In edit mode: native selection, caret, double-tap-to-select. */
+      -webkit-user-select: text;
+      user-select: text;
+      cursor: text;
+      pointer-events: auto;
+    }
+    .antcv-preview-paper [data-antcv-editable-text="true"]:not([contenteditable="true"]){
+      /* Outside edit mode: prevent text selection so touches over text
+         release cleanly to the gesture handler (scroll / pinch). The
+         previous rule applied user-select:text to ALL editable markers,
+         which caused Android to start a text-selection gesture on every
+         touch over the name/specialisation/contact line — preempting
+         both scroll and pinch zoom. */
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    .antcv-preview-actions, .antcv-preview-actions *,
+    .antcv-react-bottom-nav, .antcv-react-bottom-nav *{
+      /* Buttons must always be tappable, never blocked by gesture handlers. */
+      touch-action: manipulation;
+    }
+    @media (max-width: 900px){
+      .antcv-preview-actions .antcv-export-buttons{
+        transform:none!important;
+      }
+    }
+    .antcv-col-splitter{
+      transition: background 120ms ease-out;
+      /* Hit zone is 56px wide (set inline) for finger-friendly drags
+         even after the preview is scaled down on mobile. The visible
+         grip is a centered teal pill rendered via ::before — large
+         enough to spot, narrow enough not to overlap content. */
+      background: transparent !important;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .antcv-col-splitter::before{
+      content: '';
+      width: 6px;
+      height: 32px;
+      background: rgba(1,183,187,0.55);
+      border: 1px solid rgba(1,183,187,0.85);
+      border-radius: 4px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+      pointer-events: none;
+      /* Three subtle horizontal grip notches via inset shadows */
+      background-image: linear-gradient(
+        to bottom,
+        transparent 0%, transparent 28%,
+        rgba(255,255,255,0.55) 28%, rgba(255,255,255,0.55) 36%,
+        transparent 36%, transparent 46%,
+        rgba(255,255,255,0.55) 46%, rgba(255,255,255,0.55) 54%,
+        transparent 54%, transparent 64%,
+        rgba(255,255,255,0.55) 64%, rgba(255,255,255,0.55) 72%,
+        transparent 72%, transparent 100%
+      );
+    }
+    .antcv-col-splitter:hover::before,
+    .antcv-col-splitter:active::before{
+      background-color: rgba(1,183,187,0.9);
+      border-color: rgba(0,116,110,1);
+      width: 8px;
+    }
+    @media print{
+      /* Always hide UI chrome regardless of mode */
+      .no-print{display:none!important;}
+      .app-root .no-print{display:none!important;}
+
+      /* When the user uses the dedicated PDF export, the app sets
+         body.antcv-printing-cv before invoking print. Only then do we
+         force the preview-only layout. For plain Ctrl+P / browser print
+         this class is not set, so the page prints what's visible
+         instead of producing a blank navy sheet. */
+      body.antcv-printing-cv > #root > * {display:none!important;}
+      body.antcv-printing-cv > #root > .app-root { display:block!important; }
+      body.antcv-printing-cv .app-root .preview-print-area{display:block!important;}
+
+      .print-wrap{position:fixed;top:0;left:0;width:100%;height:100%;overflow:auto;background:#fff;}
+      /* v1.05: the CV preview wraps the sidebar + main column in
+         display:flex. Browsers cannot paginate flex containers across
+         pages — they treat flex children as atomic, which is why the
+         whole experience block jumps to a new physical page instead of
+         splitting between roles. Convert to a table layout for print
+         only; the children's pageBreakInside:avoid then works as
+         intended and the section splits between role boundaries. */
+      .antcv-page-row{
+        display:table!important;
+        width:100%!important;
+        table-layout:fixed!important;
+      }
+      .antcv-page-row > .antcv-document-sidebar,
+      .antcv-page-row > .antcv-document-main{
+        display:table-cell!important;
+        vertical-align:top!important;
+        float:none!important;
+        /* v1.14: kill the on-screen minHeight (400px page-1, 300px later)
+           in print. The pixel min keeps the navy sidebar looking
+           visually substantial on screen even when content is sparse,
+           but in print it forces the table-row to be at least that
+           tall, which after browser pagination tends to push trailing
+           whitespace onto an extra blank page. Letting the row
+           collapse to its content height in print eliminates the
+           ghost pages. */
+        min-height:0!important;
+        /* v1.40.19: allow content INSIDE each cell to split across pages.
+           Default for table-cell is `break-inside:avoid` in some
+           browsers, which keeps the whole cell on one page; when the
+           sidebar is taller than what fits, the row is pushed forward,
+           creating a blank page above. `auto` lets the column flow
+           naturally. */
+        page-break-inside:auto!important;
+        break-inside:auto!important;
+      }
+      /* v1.40.19: the page-row itself also needs to allow internal
+         breaking — some Chromium versions treat `display:table` as
+         atomic for pagination unless this is explicit. */
+      .antcv-page-row{
+        page-break-inside:auto!important;
+        break-inside:auto!important;
+      }
+      /* Honor section.pageBreakBefore=true (set e.g. by the
+         "Append to cover letter" flow on the jd_questions section)
+         even when only the legacy webkit prefix is present. */
+      [style*="page-break-before:always"],
+      [style*="break-before:page"]{
+        page-break-before:always!important;
+        break-before:page!important;
+      }
+    }
+  </style>
+<link rel="stylesheet" href="./antcv-mobile-controls.css">
+<!-- v128: External DOCX worker client. Set window.ANTCV_DOCX_WORKER to your
+     deployed worker URL to use the new strict-Word-compliant pipeline.
+     Leave it unset to keep using the legacy inline pipeline.
+     v1.40: hydrate from localStorage at boot so users can configure
+     routing inside the PWA (Settings → Advanced → Routing) without
+     re-editing index.html. -->
+<script>
+  (function hydrateDocxWorker(){
+    function isUsable(u){
+      if (!u) return false;
+      try {
+        var p = new URL(u);
+        if (p.protocol !== 'https:') return false;
+        if (p.hostname === location.hostname) return false;
+        if (/\.pages\.dev$/i.test(p.hostname)) return false;
+        return true;
+      } catch(_) { return false; }
+    }
+    try {
+      var v = localStorage.getItem('docxWorkerUrl') || localStorage.getItem('antcv:docxWorker') || localStorage.getItem('antcvDocxWorker') || '';
+      if (v && v.charAt(0)==='"' && v.charAt(v.length-1)==='"') v = v.slice(1,-1);
+      v = (v || '').replace(/\/+$/, '');
+      // v1.40.14: clean-install default so users don't have to hunt for the URL
+      if (!v) v = 'https://docx-worker.karp-gabriel-a.workers.dev';
+      if (isUsable(v)) {
+        window.ANTCV_DOCX_WORKER = v;
+        try { localStorage.setItem('docxWorkerUrl', v); localStorage.setItem('antcvDocxWorker', JSON.stringify(v)); localStorage.setItem('antcv:docxWorker', v); } catch(_) {}
+      }
+    } catch(_) {}
+  })();
+</script>
+<script type="module">
+  import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.40.202';
+  window.exportDocxViaWorker = exportDocxViaWorker;
+  // v1.40.198: unconditional assignment. The previous defensive
+  // `if (!window.ANTCV_VERSION)` left the door open for app.js to
+  // overwrite the value later with its own baked-in constant
+  // (1.40.172), making the UI show a stale version. The
+  // antcv-version-override.js sidecar re-asserts this value after
+  // app.js loads and also pins it via Object.defineProperty.
+  // v1.40.306: step-3/demo-path entry now gated through AI Notice modal
+  // (window.AntcvShowAiNotice) before user reaches API-key entry or demo
+  // proxy URL screen. Step 2 → step 3 transition via Next button also
+  // gated. v1.40.305's Skip/Done routing through AI Notice retained.
+  // Pending server-side: relay-auth STR_FIELDS must add wizardSkipped +
+  // aiNoticeAccepted else those keys are dropped on PUT and a Skip +
+  // signout + signin re-opens the wizard.
+  // v1.40.307: cloud-restore now reads wizardSkipped + aiNoticeAccepted
+  // from the relay GET response (root cause of #4 — relay was echoing
+  // them after v2.5.4, but bundle ignored everything except
+  // wizardCompleted). Settings open (#3) hard-gated: q(!0) → 
+  // _antcvOpenSettings() at all 6 callsites; gate requires
+  // (wizardCompleted||wizardSkipped) && aiNoticeAccepted, else reopens
+  // wizard. 'Re-edit a previous application' section (#11) now wrapped
+  // with B.is_admin — non-admins don't see it.
+  // v1.40.308: CL closure misfire (#13) — generation prompt now
+  // explicitly forbids putting addressee names anywhere outside the
+  // opening greeting and requires HOW I WOULD CONTRIBUTE to have 3
+  // concrete bullets. Parser prompt's 'closure' section requires ≥30
+  // chars + a real sentence; honorific-only fragments are dropped.
+  // Render-time guard at the single CL closure render site skips any
+  // closure whose content is short AND contains honorifics (Prof./Dr./
+  // Asso./Mr./Mrs./Ms.) without a verb — defense-in-depth so existing
+  // bad outputs don't render the stray addressee line. Companion shim
+  // antcv-cloud-delete-296.js bumped to v1.40.308: layer C
+  // (window.AntcvOnboarding.deleteUser) removed since the target was
+  // retired in v1.40.303; the timeout log no longer reports a
+  // perpetual `deleteUser: false`.
+  // v1.40.309 (additive over v308): wizard fixes + banner tone-down
+  // + CL anti-hallucination guard.
+  // 1) Wizard step entries (byok/demo/step2→3) now pass force:true to
+  //    window.AntcvShowAiNotice — the modal re-appears on every wizard
+  //    traversal regardless of aiNoticeAccepted state. Fixes 'AI notice
+  //    should appear regardless of if it is unchecked or checked'.
+  // 2) Placeholder-leak banner: ⛔ CRITICAL (red) → ⚠ amber, softer
+  //    copy. SetTimeout bumped 600ms → 5000ms with extra 3500ms defer
+  //    when window._antcvKernelBusy/_antcvConsensusBusy is set.
+  // 3) Banner now SKIPPED ENTIRELY when io.company === 'Unsolicited'
+  //    OR io.showcase === true — placeholders are expected in showcase
+  //    mode (no JD = nothing to fill them with). Console log still
+  //    fires for debug visibility.
+  // 4) CL generation prompt softened: 'MUST have THREE concrete
+  //    bullets' → 'should have 2-3 concrete bullets... MUST be
+  //    grounded in candidate background or JD requirements. NEVER
+  //    invent achievements/projects/technologies. Vague filler is
+  //    worse than fewer bullets.'
+  window.ANTCV_VERSION = '1.40.309';
+  // Configure your worker:
+  if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';  // configure in Settings → Advanced → Routing
+  // window.ANTCV_DOCX_SECRET = '<your shared secret>';  // optional
+</script>
+<script>
+  // ===========================================================================
+  // v1.38: relay URL is now loaded from relay-config.json at boot time.
+  //
+  // Deploy workflow:
+  //   1. Edit relay-config.json — change "relay" to your real Cloudflare
+  //      Worker URL (the one running antcv-relay-auth).
+  //   2. Drop it alongside this index.html in your Cloudflare Pages deploy.
+  //
+  // If relay-config.json is missing or malformed, an admin-only error
+  // appears in the browser console. End users see a clean "service
+  // unavailable" message — never internal config language.
+  //
+  // The localStorage `proxyUrl` (set by the wizard's "Own Cloudflare
+  // Worker" path) always takes precedence over this file.
+  // ===========================================================================
+  (function bootAntCV() {
+    function loadAppScripts(){
+      // v1.40.195: shape-guard MUST load before app.js so the first
+      // React render sees a clean `sections` shape (fixes the
+      // "Cannot read properties of undefined (reading 'bullets')"
+      // crash on language switch back from zh/es to en).
+      // v1.40.198: version-override is loaded AFTER app.js so it
+      // can re-pin window.ANTCV_VERSION (app.js bakes its own
+      // version constant and overwrites our value during init).
+      var shapeGuard = document.createElement('script');
+      shapeGuard.src = 'antcv-shape-guard.js?v=1.40.202';
+      shapeGuard.onload = function(){
+        var auth = document.createElement('script');
+        auth.src = 'antcv-auth.js?v=1.40.202';
+        auth.onload = function(){
+          var app = document.createElement('script');
+          app.src = 'app.js?v=1.40.311';
+          app.onload = function(){
+            // v1.40.198: re-assert version after app.js has set
+            // its baked-in constant. The sidecar uses
+            // Object.defineProperty + a polling timer to keep it
+            // pinned even against repeat assignments.
+            var vo = document.createElement('script');
+            vo.src = 'antcv-version-override.js?v=1.40.241';
+            document.head.appendChild(vo);
+          };
+          document.head.appendChild(app);
+        };
+        document.head.appendChild(auth);
+      };
+      document.head.appendChild(shapeGuard);
+    }
+
+    fetch('relay-config.json', { cache: 'no-store' })
+      .then(function(r){ if (!r.ok) throw new Error('HTTP_'+r.status); return r.json(); })
+      .then(function(j){
+        var raw = (j && typeof j.relay === 'string') ? j.relay.trim().replace(/\/+$/, '') : '';
+        if (raw && raw.indexOf('https://') === 0 && raw.indexOf('REPLACE_WITH_YOUR') < 0) {
+          window.ANTCV_RELAY_URL = raw;
+        } else {
+          window.ANTCV_RELAY_CONFIG_ERROR = 'invalid_relay_in_config';
+          console.error('[AntCV admin] relay-config.json has no valid "relay" URL. Edit relay-config.json to point at your deployed AntCV relay-auth Worker URL, then redeploy.');
+        }
+      })
+      .catch(function(e){
+        window.ANTCV_RELAY_CONFIG_ERROR = String((e && e.message) || e);
+        console.error('[AntCV admin] relay-config.json could not be loaded:', e, '\\nMake sure relay-config.json is deployed alongside index.html, and contains a valid JSON object like:\\n  {"relay": "https://your-relay.workers.dev"}');
+      })
+      .finally(loadAppScripts);
+  })();
+</script>
+<!-- v1.38: antcv-auth.js and app.js are now loaded dynamically by the bootstrap above. The lines below are intentionally absent. -->
+<script>
+(function(){
+  async function clearAntcvHardReset(opts){
+    opts=opts||{};
+    var keepProxy='';
+    try{ keepProxy=localStorage.getItem('proxyUrl')||''; }catch(e){}
+    try{ localStorage.clear(); }catch(e){}
+    try{ localStorage.removeItem('session'); localStorage.removeItem('antcv:auth:token'); localStorage.removeItem('antcv:auth:email'); localStorage.removeItem('antcv:auth:expires_at'); }catch(e){}
+    try{ if(keepProxy) localStorage.setItem('proxyUrl', keepProxy); }catch(e){}
+    try{ sessionStorage.clear(); }catch(e){}
+    try{
+      document.cookie.split(';').forEach(function(c){
+        var name=c.replace(/^ +/,'').split('=')[0];
+        if(!name) return;
+        document.cookie=name+'=;expires='+new Date(0).toUTCString()+';path=/';
+        document.cookie=name+'=;expires='+new Date(0).toUTCString()+';path=/;SameSite=None;Secure';
+      });
+    }catch(e){}
+    try{
+      if('caches' in window){
+        var keys=await caches.keys();
+        await Promise.all(keys.map(function(k){return caches.delete(k)}));
+      }
+    }catch(e){}
+    try{
+      if('serviceWorker' in navigator){
+        var regs=await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(function(r){return r.unregister()}));
+      }
+    }catch(e){}
+    if(opts.redirect!==false){
+      // v1.30: avoid the previous ?resetDone=1&logout=1&t=... redirect chain
+      // which caused intermittent 404s on mobile (especially when the SW was
+      // mid-update). Just reload the current page in place. The PWA sees no
+      // session and renders the sign-in screen normally.
+      try{
+        // Strip any reset/logout params from the URL before reload so we
+        // don't loop or carry stale flags forward.
+        var clean=location.origin+location.pathname;
+        if(opts.target){
+          try{ clean=String(opts.target).replace(/[?#].*$/,''); }catch(e){}
+        }
+        if(clean!==location.href){
+          location.replace(clean);
+        }else{
+          location.reload();
+        }
+      }catch(e){ try{ location.reload(); }catch(_){} }
+    }
+  }
+  window.AntcvHardReset=clearAntcvHardReset;
+
+  // v1.31: AntcvFullErase — destructive total wipe.
+  //
+  // Unlike clearAntcvHardReset (which preserves proxyUrl as a usability
+  // tradeoff after hard refresh), this function deletes EVERYTHING and
+  // returns the user to a pristine state: no localStorage, no cookies,
+  // no SW cache, no cloud-stored prefs. Used by the "Erase all data &
+  // sign out" button in Settings → Account.
+  //
+  // Best-effort cloud wipe runs in parallel with local wipe so a slow
+  // network can't block the user from getting back to a clean state.
+  async function antcvFullErase(){
+    // v1.40.83: set the just-erased flag IMMEDIATELY, before any network calls.
+    // The PWA's cloudWrite reads this flag via _antcvJustErased() and refuses
+    // to fire outgoing PUTs while it's set. Without this, an already-queued
+    // cloudWrite (e.g. closeWiz's `cloudWrite({wizardCompleted: true})` with
+    // its 1500ms debounce) can fire DURING the erase sequence and re-write
+    // the very field the erase is trying to clear. Setting the flag before
+    // the network calls closes that race window. Belt-and-suspenders: the
+    // flag is also set after the local wipe (preserved through reload via
+    // sessionStorage), so the first 30s after reload also suppresses any
+    // post-sign-in cloudWrites that might fire.
+    try{ sessionStorage.setItem('antcv:just-erased', String(Date.now())); }catch(e){}
+    var proxyUrl='';
+    try{ proxyUrl=localStorage.getItem('proxyUrl')||''; if(proxyUrl.startsWith('"')&&proxyUrl.endsWith('"'))proxyUrl=proxyUrl.slice(1,-1); }catch(e){}
+
+    // v1.40.22: The previous wipe (v1.40.21) sent `personalInfo: null` in the
+    // PUT-empty fallback. The relay almost certainly does MERGE semantics on
+    // PUT (we see cloudWrite issuing sparse PUTs like `{proxyUrl: ""}` and
+    // expecting other fields preserved), and a `null` value is likely either
+    // rejected as type-invalid or merged as "no change". Either way, the
+    // cloud `personalInfo` survived, and on the next sign-in `cloudRead()`
+    // wrote it straight back to localStorage. That's the data leak the user
+    // saw in the wizard's "Tell AntCV about you" step.
+    //
+    // Two defenses, applied together:
+    //   1. Send DELETE AND THEN an unconditional PUT carrying a fully-typed
+    //      empty-state object for every persisted field — empty objects, not
+    //      null — so merge semantics cannot leave stale fields behind.
+    //   2. Set a sessionStorage marker the next page-load checks before
+    //      letting cloudRead overwrite local state. Belt-and-suspenders for
+    //      the case where Cloudflare KV returns eventually-consistent stale
+    //      reads in the seconds after a DELETE.
+    if(proxyUrl){
+      var base=proxyUrl.replace(/\/+$/,'');
+      var withTimeout=function(p,ms){
+        return Promise.race([p,new Promise(function(res){setTimeout(function(){res({_timeout:true})},ms)})]);
+      };
+      // Fully-typed empty state. Keys mirror what cloudRead unpacks; values
+      // are the type the relay would accept (strings/objects/arrays, never
+      // null). If new fields are added to cloudWrite later, add them here too.
+      var EMPTY_STATE={
+        proxyUrl:'',
+        photo:'',
+        apiKeys:{anthropic:'',openai:'',mistral:'',gemini:''},
+        personalInfo:{
+          name:'',firstName:'',lastName:'',headline:'',
+          city:'',country:'',location:'',citizenship:'',
+          email:'',phone:'',landline:'',linkedin:'',github:'',website:'',
+          contactExtra:[],patentNumber:'',patentDescription:'',
+          publications:[],background:'',
+          tools:[],certifications:[],education:[],regulatory:[],additional:[],
+          stylePrefs:{banned_words:'',banned_phrases:'',preferred_tone:''}
+        },
+        sections:{cv:[],cl:[]},
+        meta:{},
+        rationale:{},
+        headerItemLoc:{},
+        wizardCompleted:false,
+        // v1.40.45 leak fix: the LLM-derived doc blobs (memoryDigest,
+        // profileDoc, skillsDoc, danishDoc, wordsDoc, memoryDigestHash)
+        // are pulled from cloud KV on cloudRead. If a prior generation
+        // wrote contaminated content into one of them, cloudRead would
+        // re-pollute local state on the next sign-in even after a
+        // local-only wipe. Sending these as empty strings forces the
+        // relay to overwrite the cloud copy too. The relay PUT
+        // allow-list in handleApiPrefs accepts these as of v2.6.
+        memoryDigest:'',
+        memoryDigestHash:'',
+        profileDoc:'',
+        skillsDoc:'',
+        danishDoc:'',
+        wordsDoc:'',
+        // Belt-and-suspenders: an explicit deletion timestamp the relay can
+        // log even if it doesn't act on it.
+        _erasedAt:new Date().toISOString()
+      };
+      // 1) Best-effort DELETE first.
+      try{
+        await withTimeout(
+          fetch(base+'/api/prefs',{method:'DELETE',credentials:'include'}).catch(function(e){return{_err:e}}),
+          2000
+        );
+      }catch(e){}
+      // 2) Unconditional PUT with the fully-typed empty state. This runs
+      //    REGARDLESS of whether the DELETE succeeded — if the relay's KV
+      //    is eventually consistent or DELETE is unsupported, the PUT
+      //    overwrites every known field with its empty value.
+      try{
+        await withTimeout(
+          fetch(base+'/api/prefs',{
+            method:'PUT',credentials:'include',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify(EMPTY_STATE)
+          }).catch(function(){return null}),
+          2000
+        );
+      }catch(e){}
+      // 3) POST /auth/logout — invalidates the JWT server-side. Path is
+      //    /auth/logout (matches antcv-auth.js signOut), NOT /logout.
+      try{
+        await withTimeout(
+          fetch(base+'/auth/logout',{method:'POST',credentials:'include'}).catch(function(){return null}),
+          2000
+        );
+      }catch(e){}
+      // 4) v1.40.45: cascade-delete D1 kernel rows. The PUT-empty above
+      //    only touches KV; D1 (user_kernel, application, active_application)
+      //    is on a separate code path. Without this call a user who has
+      //    deleted everything in the PWA still has D1 rows under their
+      //    hashed email, and on next sign-in the kernel-extraction
+      //    endpoints would surface that stale data. Best-effort —
+      //    failure here does not block the local wipe.
+      try{
+        await withTimeout(
+          fetch(base+'/api/profile/kernel',{method:'DELETE',credentials:'include'}).catch(function(){return null}),
+          2000
+        );
+      }catch(e){}
+    }
+    // Set a marker so the next signin's cloudRead can refuse to overwrite
+    // local state if cloud-eventual-consistency hasn't propagated yet.
+    // sessionStorage is scoped to the tab and survives reload — exactly
+    // what we want.
+
+    // Total local wipe — no exceptions
+    try{ localStorage.clear(); }catch(e){}
+    try{ sessionStorage.clear(); }catch(e){}
+    // Set the just-erased marker AFTER sessionStorage.clear() so it survives
+    // the wipe and is visible to the next page load. The next-load hook in
+    // app.js (cloudRead) checks this and refuses to write any cloud-returned
+    // personalInfo / sections back to localStorage for the first 30 seconds,
+    // covering Cloudflare KV's eventual-consistency window.
+    try{ sessionStorage.setItem('antcv:just-erased', String(Date.now())); }catch(e){}
+    try{
+      document.cookie.split(';').forEach(function(c){
+        var name=c.replace(/^ +/,'').split('=')[0];
+        if(!name) return;
+        document.cookie=name+'=;expires='+new Date(0).toUTCString()+';path=/';
+        document.cookie=name+'=;expires='+new Date(0).toUTCString()+';path=/;SameSite=None;Secure';
+        // Also try clearing cookies scoped to subdomain or parent
+        try{
+          var domain=location.hostname.split('.').slice(-2).join('.');
+          document.cookie=name+'=;expires='+new Date(0).toUTCString()+';path=/;domain=.'+domain;
+        }catch(_){}
+      });
+    }catch(e){}
+    try{
+      if('caches' in window){
+        var keys=await caches.keys();
+        await Promise.all(keys.map(function(k){return caches.delete(k)}));
+      }
+    }catch(e){}
+    try{
+      if('serviceWorker' in navigator){
+        var regs=await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(function(r){return r.unregister()}));
+      }
+    }catch(e){}
+    // Tiny delay so the SW unregister has a chance to settle on slow mobile
+    await new Promise(function(r){setTimeout(r,150)});
+    try{ location.reload(); }catch(e){ try{ location.replace(location.origin+location.pathname); }catch(_){} }
+  }
+  window.AntcvFullErase=antcvFullErase;
+  try{
+    var p=new URLSearchParams(location.search);
+    if(p.get('hardReset')==='1'){
+      clearAntcvHardReset({target:location.origin+location.pathname});
+    }
+  }catch(e){}
+})();
+</script>
+<script>window.__hardResetEnabled=true;</script></head>
+<body>
+<a href="#root" class="antcv-skip-link">Skip to main content</a>
+<div id="root" role="main" aria-label="AntCV application"></div>
+<script>
+const PHOTO_B64 = "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";
+</script>
+<!-- Auth module — must load BEFORE the inline app JSX so window.AntcvAuth and the
+     fetch wrapper exist when app.jsx runs. Adds Authorization headers to every
+     relay call and provides <AntcvAuthPanel /> for the Settings menu. -->
+<!-- antcv-auth.js and app.js are loaded dynamically by the bootstrap script after relay-config.json resolves. -->
+
+<!-- =========================================================
+     AntCV Overlay v1
+     - Supervisor post-check (catches fabrication after each enrich)
+     - DocX export Word-compatibility warning banner
+     - Reset CV content for new JD button
+     localStorage keys tuned for this bundle (sections, meta,
+     rationale, cv_pwa_*). The reset button preserves proxyUrl
+     and antcv:auth:* so login survives.
+     ========================================================= -->
+<script>
+  // v1.40 — hydrate routing URLs from localStorage so the overlay finds
+  // them without manual config. The overlay also reads localStorage on
+  // its own (v1.17) — this is belt-and-braces.
+  (function hydrateOverlayCfg(){
+    function readLs(k){
+      try {
+        var v = localStorage.getItem(k) || '';
+        if (v.charAt(0)==='"' && v.charAt(v.length-1)==='"') v = v.slice(1,-1);
+        v = (v || '').replace(/\/+$/, '');
+        if (!v) return '';
+        try {
+          var p = new URL(v);
+          if (p.protocol !== 'https:') return '';
+          if (p.hostname === location.hostname) return '';
+          if (/\.pages\.dev$/i.test(p.hostname)) return '';
+          return v;
+        } catch(_) { return ''; }
+      } catch(_) { return ''; }
+    }
+    var proxy = readLs('proxyUrl');
+    var docx  = readLs('docxWorkerUrl') || readLs('antcv:docxWorker');
+    window.AntCVOverlayConfig = {
+      cvProxyOrigin:    proxy || '',
+      docxWorkerOrigin: docx  || '',
+      enabled: { supervisor: true, wordWarning: true, resetButton: true, jdAnalysis: true, fusionButton: true },
+      position: 'bottom-right',
+      sourceCvLocalStorageKey: 'sections',
+      contentLocalStorageKeys: [
+        'sections',
+        'meta',
+        'rationale',
+        'cv_pwa_sections',
+        'cv_pwa_meta',
+        'cv_pwa_rationale',
+        'cv_pwa_undo_stack',
+        'cv_pwa_redo_stack',
+        'cv_pwa_status',
+        'cv_pwa_header_item_loc',
+        'headerItemLoc',
+      ],
+    };
+  })();
+</script>
+<script src="antcv-pdf-po-shim.js?v=1.40.153" defer></script>
+<script src="antcv-hide-gsi-button.js?v=1.40.154" defer></script>
+<script src="antcv-about.js?v=1.40.183" defer></script>
+<script src="antcv-orchestration-replay.js?v=1.40.181" defer></script>
+<script src="antcv-replay-analysis.js?v=1.40.183" defer></script>
+<script src="antcv-provenance.js?v=1.40.183" defer></script>
+<script src="antcv-provenance-ui.js?v=1.40.183" defer></script>
+<script src="antcv-benchmark-corpus.js?v=1.40.182" defer></script>
+<script src="antcv-benchmark-regression.js?v=1.40.183" defer></script>
+<!-- v1.40.303: antcv-wizard-fix.js removed. Was a TTL-based clearer of
+     wizardCompleted that fought with the rogue writers in
+     ai-wizard-slide-239. Both removed in the same pass. -->
+<script src="antcv-stale-status.js?v=1.40.158" defer></script>
+<script src="antcv-publication-titles.js?v=1.40.178" defer></script>
+<script src="antcv-overlay.js?v=1.40.7" defer></script>
+<script src="antcv-data-importer.js?v=1.40.335b" defer></script>
+<script src="antcv-personality.js?v=1.40.296" defer></script>
+<!-- v1.40.296: cloud DELETE on user-delete. Wraps the deletion
+     entry points (window.AntcvFullErase, window.AntcvAuth.signOut
+     when called from a delete-intent context, and
+     window.AntcvOnboarding.deleteUser) so a DELETE /api/prefs
+     fires before the local erase + reload. Closes the loop where
+     cloud restore was bringing back stale wizardCompleted=true and
+     identity fields after deletion. Discovers the relay base via
+     localStorage.proxyUrl / .relayUrl (same pattern as
+     antcv-ai-consent-cloud-sync-224.js). Requires the worker to
+     implement DELETE /api/prefs; non-2xx is logged but doesn't
+     block the local erase. Escape hatch:
+     localStorage['antcv:disable-cloud-delete'] = '1'. -->
+<script src="antcv-cloud-delete-296.js?v=1.40.302" defer></script>
+<!-- v1.40.298: cloud-restore filter. Strips wizardCompleted (and
+     aliases wizard_completed / wizardComplete / onboardingCompleted)
+     from GET /api/prefs response bodies when personalInfo has NONE
+     of the content arrays populated (workHistory / experience /
+     education / publications / publicationsStructured /
+     certifications / skills). Closes the deleted-user-re-login gap
+     where cloud-restore brought back stale wizardCompleted=true
+     along with identity fields, causing the bundle to skip the
+     wizard. Works whether or not the worker DELETE /api/prefs
+     handler has shipped — independent fallback. Escape hatch:
+     localStorage['antcv:disable-cloud-restore-filter'] = '1'. -->
+<script src="antcv-cloud-restore-filter-298.js?v=1.40.302" defer></script>
+<!-- v1.40.303: duplicate antcv-wizard-startup-clear-300.js removed
+     here as well. Both instances retired alongside the rogue writers. -->
+<script src="antcv-i18n.js?v=1.40.178" defer></script>
+<script src="antcv-format-prefs.js?v=1.40.178" defer></script>
+<script src="antcv-page-budget.js?v=1.40.178" defer></script>
+<script src="antcv-language-prefs.js?v=1.40.323" defer></script>
+<script src="antcv-semantic-constraints.js?v=1.40.189" defer></script>
+<script src="antcv-enhanced-prompt.js?v=1.40.178" defer></script>
+<script src="antcv-page-breaks.js?v=1.40.178" defer></script>
+<script src="antcv-button-bar.js?v=1.40.178" defer></script>
+<script src="antcv-enhanced-fields-ui.js?v=1.40.191" defer></script>
+<script src="antcv-demo-watermark.js?v=1.40.178" defer></script>
+<script src="antcv-cloud-revs.js?v=1.40.178" defer></script>
+<script src="antcv-section-align.js?v=1.40.203" defer></script>
+<script src="antcv-recheck-fit.js?v=1.40.139" defer></script>
+<script src="antcv-jd-watch.js?v=1.40.131" defer></script>
+<script src="antcv-privacy-led.js?v=1.40.295" defer></script>
+<script src="antcv-bullet-targets.js?v=1.40.136" defer></script>
+<script src="antcv-fetch-coalesce.js?v=1.40.186" defer></script>
+<script src="antcv-photo-position.js?v=1.40.194" defer></script>
+<script src="antcv-tone-helper.js?v=1.40.159" defer></script>
+<script src="antcv-banned-audit.js?v=1.40.178" defer></script>
+<script src="antcv-llm-audit.js?v=1.40.178" defer></script>
+<script src="antcv-wizard-formats-explainer.js?v=1.40.178" defer></script>
+<script src="antcv-jd-image-ocr.js?v=1.40.139" defer></script>
+<script src="antcv-panel-bottom-pad.js?v=1.40.145" defer></script>
+<script src="antcv-sidebar-position.js?v=1.40.146" defer></script>
+<script src="antcv-splitter-flip.js?v=1.40.151" defer></script>
+<script src="antcv-section-panel-tweaks.js?v=1.40.203" defer></script>
+<script src="antcv-item-align.js?v=1.40.178" defer></script>
+<script src="antcv-item-page-marker.js?v=1.40.178" defer></script>
+<script src="antcv-page-fit.js?v=1.40.151" defer></script>
+<script src="antcv-table-fast-drag.js?v=1.40.147" defer></script>
+<!-- v1.40.194 — new sidecars:
+     antcv-pdf-error-toast.js: shows a dismissible chip when the
+       docx-worker /generate-pdf endpoint fails (CloudConvert scopes,
+       timeouts, 5xx). Suppresses the "pdf_not_configured" case.
+     antcv-item-pages-render.js: preview-side renderer for the
+       antcv:itemPages assignments. Inserts page-break-before and a
+       "<SECTION> (CONT.)" header before each item flagged for
+       page ≥ 2 in labeled_list / list / education sections (Regulatory
+       Context, Additional Information, Education, Publications,
+       Tools & Methods). Works under window.print() so the browser-
+       print PDF fallback also splits correctly.
+-->
+<script src="antcv-pdf-error-toast.js?v=1.40.194" defer></script>
+<script src="antcv-item-pages-render.js?v=1.40.194" defer></script>
+<!-- v1.40.195 — new sidecars (load order matters: cont-fix must run
+     after item-pages-render so it doesn't double-process those
+     headings; translation-patch and print-iframe are independent).
+
+     antcv-shape-guard.js (NOT here — loaded synchronously by the
+       bootAntCV() loader above, BEFORE app.js, because it has to
+       normalize localStorage before the very first React render).
+
+     antcv-exp-continuation-fix.js: fixes the wrong continuation
+       header on natural mid-Experience page breaks ("SELECTED
+       OUTCOMES" → "PROFESSIONAL EXPERIENCE (CONT.)").
+
+     antcv-translation-patch.js: dictionary patcher for zh-CN / es
+       translation gaps that the LLM pipeline misses (EU Citizen,
+       Kind regards, Optoelectronics, education entries, role
+       titles, etc.). Patches both preview DOM and localStorage so
+       the docx-worker also picks them up.
+
+     antcv-print-iframe-preview.js: wraps window.print() so the PDF
+       fallback path (browser print) goes through a preview iframe
+       with explicit Print/Cancel buttons instead of jumping
+       straight to the system print dialog.
+-->
+<script src="antcv-exp-continuation-fix.js?v=1.40.195" defer></script>
+<script src="antcv-translation-patch.js?v=1.40.195" defer></script>
+<script src="antcv-print-iframe-preview.js?v=1.40.195" defer></script>
+<!-- v1.40.196 — backlog clearance:
+
+     antcv-wait-screen-times.js: rewrites the wrong "60s"/"90s"
+       wait-screen labels to "4-6 minutes" (the real generation time).
+
+     antcv-fit-cv-cloud-sync.js: two fit-flow fixes — (a) suppress
+       Fit-vs-CV modal auto-open when no CV is loaded; (b) on a
+       Run-fit click with empty localStorage.sections, sync the
+       cloud-resident CV first then re-click.
+
+     antcv-jd-analysis-and-reupload-fix.js: (a) forces the JD-
+       analysis modal default tab and probes the Recruiter & Red
+       Flags body for content-swap bugs; (b) clears stale JD
+       parse-status caches on every JD file re-upload so the
+       "File parsed but contained no usable text" regression
+       can't latch.
+
+     antcv-pdf-page-mismatch.js: listens for antcv:pdf-export-
+       success, reads the new `pages` field from docx-worker
+       v1.14.9+, compares against the preview page count, and
+       raises a dismissible chip on mismatch (CL spill from 1 to
+       2 pages is the visible case Gabriel reported).
+-->
+<script src="antcv-wait-screen-times.js?v=1.40.196" defer></script>
+<script src="antcv-fit-cv-cloud-sync.js?v=1.40.196" defer></script>
+<script src="antcv-jd-analysis-and-reupload-fix.js?v=1.40.196" defer></script>
+<script src="antcv-pdf-page-mismatch.js?v=1.40.196" defer></script>
+<!-- v1.40.197 — UX flow / mobile fixes:
+
+     antcv-eu-disclosure-order-guard.js: defers the EU AI
+       disclosure modal until the onboarding wizard and setup
+       page have closed. The disclosure was popping during the
+       loading phase, before the user had seen what they were
+       consenting to. Fail-safe at 30 s prevents permanent
+       suppression if no wizard/setup ever shows.
+
+     antcv-lang-bar-filter.js: hides language buttons in the top
+       bar that the user didn't include in their preference. The
+       app shows EN / DA / ZH / ES by default but the user's
+       "shown languages" setting wasn't being honoured. Reads
+       from localStorage['antcv:visibleLanguages'] (JSON array
+       of codes) or personalInfo.stylePrefs.visibleLanguages.
+
+     antcv-preview-touch-fix.js: on mobile, repairs the chain
+       above the preview-paper so taps/clicks reach the content
+       even after scrolling past the lower sections bar. Repairs
+       inline pointer-events:none / touch-action:none ancestors,
+       injects a high-specificity stylesheet re-asserting
+       pointer-events:auto on the preview, and suppresses
+       invisible high-z overlays that cover the preview rect.
+-->
+<!-- v1.40.303: antcv-ai-wizard-slide.js removed. It had a
+     markWizardCompletedLocal() that wrote BOTH wizardCompleted and
+     antcv:wizardCompleted at module init (called from internal lines
+     161 and 268), which was the root rogue writer behind the
+     "wizard never opens on fresh sign-in" bug.
+     antcv-ai-notice-rescue-229.js also removed: it triggered the AI
+     notice modal on wizard-skip from welcome stage, where it must
+     not appear. AI notice gating is left to the app.js post-completion
+     path. -->
+<script src="antcv-ai-consent-cloud-sync-224.js?v=1.40.239" defer></script>
+<script src="antcv-wizard-section-format-step10.js?v=1.40.239" defer></script>
+<script src="antcv-lang-bar-filter.js?v=1.40.212" defer></script>
+<script src="antcv-language-prefs-defaults.js?v=1.40.323" defer></script>
+<script src="antcv-preview-touch-fix.js?v=1.40.197" defer></script>
+<!-- v1.40.212 — cloud-gated AI notice + disclosure auto-dismiss + section-panel safe-mode repair:
+
+     antcv-eu-disclosure-order-guard.js (v1.40.199): now also
+       auto-dismisses the EU AI disclosure modal when it's already
+       been accepted in a prior session (`aiDisclosureAccepted`
+       present in localStorage, personalInfo, or restored from cloud prefs).
+
+     antcv-ai-disclosure-cloud.js: mirrors EU AI notice acceptance to
+       `/api/prefs` and restores it on signed-in sessions, so clearing
+       cookies/site data does not force a repeat signature.
+
+     antcv-panel-escape.js: keeps the floating emergency close button.
+
+     antcv-section-bar-freeze-fix.js: repairs the lower-bar Section(s)
+       panel directly on mobile/PWA. It detects the section-button tap,
+       makes the opened panel scrollable inside the viewport, and adds
+       a visible Preview button so the app no longer gets trapped in
+       a state where only preview scrolling works.
+-->
+<script src="antcv-panel-escape.js?v=1.40.203" defer></script>
+<script src="antcv-section-bar-freeze-fix.js?v=1.40.203" defer></script>
+<script src="antcv-section-main-panel-fix.js?v=1.40.205" defer></script>
+<script src="antcv-section-panel-206.js?v=1.40.206" defer></script>
+<script src="antcv-section-panel-207.js?v=1.40.207" defer></script>
+<script src="antcv-section-panel-208.js?v=1.40.209" defer></script>
+<script src="antcv-section-panel-211.js?v=1.40.239" defer></script>
+<script src="antcv-experience-role-cjlr-230.js?v=1.40.239" defer></script>
+<script src="antcv-core-competencies-row-controls-234.js?v=1.40.246" defer></script>
+<script src="antcv-selected-outcomes-row-controls-237.js?v=1.40.239" defer></script>
+<script src="antcv-profile-workstyle-cjlr-238.js?v=1.40.239" defer></script>
+<script src="antcv-how-contribute-controls-245.js?v=1.40.245" defer></script>
+<script src="antcv-what-i-bring-cjlr-cleanup-246.js?v=1.40.246" defer></script>
+<script src="antcv-additional-info-row-controls-247.js?v=1.40.247" defer></script>
+<script src="antcv-add-cjlr-order-swap-241.js?v=1.40.243" defer></script>
+<script src="antcv-embedded-controls-248.js?v=1.40.248" defer></script>
+<script src="antcv-what-i-bring-header-cjlr-249.js?v=1.40.249" defer></script>
+<!-- antcv-tone-custom-slots.js (v1.40.148) removed in v1.40.150:
+     Custom 1/2/3 now live in the helper's separate dropdown
+     (single source of truth, one Save/Load/Clear button row). -->
+<!-- v1.40.237 — Selected Outcomes gets per-line Page, Compress, Enrich and CJLR controls. -->
+<script src="antcv-publications-strict-row-layout-273.js?v=1.40.273" defer></script>
+<script src="antcv-core-wib-strict-row-layout-274.js?v=1.40.274" defer></script>
+<script src="antcv-mobile-topbar-cleanup-275.js?v=1.40.275" defer></script>
+<!-- v1.40.276: On mobile, relocate the three FABs (JD Analysis, Fusion,
+     Privacy LED) from the bottom-right overlay into a horizontal strip
+     at the top of the preview gray zone, between the "CV/CL preview"
+     heading and the PDF/DOCX export buttons. Re-parents existing
+     elements rather than cloning, so all click handlers survive. -->
+<!-- disabled v1.40.322 core-render fix: <script src="antcv-mobile-preview-actions-horizontal-276.js?v=1.40.280" defer></script> -->
+<!-- v1.40.318: Stabilize preview toolbar action buttons. Keeps JD Analysis, Fuse CV/CL,
+     and Privacy status in a fixed strip before PDF/DOCX when returning from preview to setup. -->
+<!-- disabled v1.40.322 core-render fix: <script src="antcv-preview-toolbar-stabilizer-319.js?v=1.40.319" defer></script> -->
+
+<!-- v1.40.277: Generate-button cloud sync gate. Intercepts the
+     "Generate CV & Cover Letter" click and runs PUT (local → cloud)
+     + GET (cloud → local) + antcv:sections-updated dispatch before
+     re-dispatching the click, so the kernel never runs against a
+     half-sync'd local state. -->
+<script src="antcv-generate-cloud-sync-277.js?v=1.40.277" defer></script>
+<!-- v1.40.278: In the section/preview panel, reorder Publications &
+     Patent row buttons to match the canonical layout used by Education
+     and Regulatory Context: [◀] [📄1] [✨] [→ Compress] [ON] [✕]. The
+     native ✨ is moved from end-of-row to position 30 via inline flex
+     `order`, and a compress button is cloned from a donor section if
+     none exists in the row. The cloned compress is wired to a
+     defensive localStorage-side compression of publication item
+     detail/journal/year strings. -->
+<script src="antcv-publications-section-panel-row-fix-278.js?v=1.40.278" defer></script>
+<!-- v1.40.279: Hide the section-level page button (📄1) on every
+     sidebar-section row in the section/preview panel (Tools & Methods,
+     Certifications, Education, Publications & Patent, Regulatory
+     Context, Additional Information). The same page control already
+     exists on each sub-sub-section row (per item), wired by the
+     existing row-control sidecars 234 / 237 / 245 / 247 / 273. Main-
+     column sections are left alone. -->
+<script src="antcv-sidebar-section-row-hide-page-279.js?v=1.40.281" defer></script>
+<!-- v1.40.282: On page load, pull personalInfo from the cloud relay
+     (GET /api/prefs) and merge into localStorage so refreshing the
+     page no longer wipes the user's personal info. Uses a "fill
+     missing" merge — cloud values only populate empty/missing fields
+     locally, never overwrite local edits in progress. Once per
+     session; waits for sign-in if auth isn't yet ready. Dispatches a
+     storage event so React reducers rehydrate immediately. -->
+<script src="antcv-personal-info-cloud-restore-282.js?v=1.40.282" defer></script>
+<!-- v1.40.283: Hook the Settings → Advanced → Sync "Load from cloud"
+     and "Save to cloud" buttons so personalInfo participates in both
+     directions. After Load, we re-fetch /api/prefs ourselves, extract
+     personalInfo (with widened nesting paths), write to localStorage,
+     and push the values directly into the Personal-tab inputs via
+     React's native value-setter + input/change events so the form
+     updates without a reload. After Save, we GET current cloud prefs,
+     merge personalInfo from localStorage, and PUT back so the existing
+     30-field cloud payload is preserved. Each action shows a toast
+     indicating success / no-data-in-cloud / fetch-failed so the user
+     sees what happened. -->
+<script src="antcv-load-from-cloud-personal-info-hook-283.js?v=1.40.283" defer></script>
+<!-- v1.40.284: Insert visible page-break bars + (CONT.) headers in
+     the preview for ALL sections that have items mapped to page >= 2
+     in localStorage['antcv:itemPages'], not just Professional
+     Experience. The existing antcv-item-pages-render.js (v1.40.194)
+     restricts to section types {labeled_list, list, education} and
+     only inserts an invisible page-break-before spacer; this widens
+     to all section types and adds a visible amber "▼ PAGE N ▼" bar
+     plus the teal "(CONT.)" continuation header. Skips Professional
+     Experience (handled natively by app.js) and skips sections where
+     v194 already inserted markers (to avoid double-rendering). -->
+<script src="antcv-page-breaks-everywhere-284.js?v=1.40.284" defer></script>
+<script src="antcv-what-i-bring-row-controls-327.js?v=1.40.327" defer></script>
+<script src="antcv-table-page-splits-327.js?v=1.40.327" defer></script>
+<script src="antcv-page-button-polish-327.js?v=1.40.327" defer></script>
+<script src="antcv-settings-front-327.js?v=1.40.327" defer></script>
+
+<!-- v1.40.285: Wizard AI-notice escape hatch. When the wizard's AI
+     notice slide stays blank/blue with no reachable Continue button
+     for 4+ seconds, show a fixed-position panel with our own
+     checkbox + "Accept and continue" button (records acceptance via
+     the same flow as the proper Continue) and a "Skip wizard
+     entirely" button that marks both the AI disclosure and the
+     wizard as completed and reloads. Detects the stuck state by
+     looking for any visible page-covering overlay containing AI Act
+     / disclosure text whose buttons are all hidden/disabled. -->
+<!-- v1.40.289 (a): Cloud-PUT personalInfo shrink protection. Supersedes
+     v288 with three semantic changes:
+       1) any empty-personalInfo PUT (new substantive field count
+          == 0) is now treated as catastrophic, regardless of whether
+          a local backup exists. v288 required backup>=5 to trigger;
+          v289 always triggers so the cloud is protected even when
+          localStorage has been wiped. The half-shrink rule is
+          loosened from <backup/2 to <max(2,backup/3) so a 6->1 drop
+          is caught;
+       2) hard-block fallback: when no usable backup exists, strip
+          personalInfo from the PUT body so the relay still receives
+          the write for any other keys, and if that leaves the body
+          empty, return a synthetic 200 OK without hitting the
+          network;
+       3) coexistence guard so it stacks safely with v288 if both
+          ever load together. -->
+<script src="antcv-cloud-put-shrink-guard-289.js?v=1.40.289" defer></script>
+<!-- v1.40.290: Kernel-generation completeness guard (supersedes v289).
+     v289 caught fully-empty array failures but let through a more
+     subtle failure mode: the LLM filled items 1..N of each array but
+     left item 0 as the bracketed template, and put placeholders in
+     every prose field too. The bundle's "5/5 critical CL fields"
+     check accepted it (placeholders are non-empty), then _scrubRole
+     crashed iterating role 0's malformed bullet shape → blue screen.
+     v290 changes:
+       - Strict mode: ANY placeholder in any array element or prose
+         field rejects the whole response (not threshold-based).
+       - Prose field coverage: profile_content, opening_content,
+         who_content, why_content, foundation_*, closure_content,
+         contribute_intro, contribute_closing all validated.
+       - Persistent augmentation: the prompt addendum is re-applied
+         on every retry within the 30s window (v289 was one-shot),
+         and the addendum names "item 0 / row 1" as the observed
+         failure pattern.
+       - Part C defensive scrubber: any placeholder string that
+         somehow survives validation is mutated to empty string in
+         place before the parsed object reaches app.js — empty is
+         safe downstream, bracketed placeholders crash _scrubRole. -->
+<script src="antcv-kernel-completeness-290.js?v=1.40.290" defer></script>
+<!-- v1.40.291: Application History dropdown z-index fix.
+     The dropdown renders at z-index 1500 but the preview vertical
+     slider (.antcv-preview-v-slider) is z-index 2490 and the bottom
+     nav is 2500, so they paint over the dropdown's right edge. This
+     both hides the "Open in Settings" button visually and intercepts
+     the click event so the button appears inert. A MutationObserver
+     watches for the dropdown's mount signature (div with inline
+     position:absolute + zIndex:1500) and bumps it to 9001, plus its
+     full-viewport dismissal overlay (zIndex:1499 → 9000). Pure DOM
+     observation; no edit to app.js. -->
+<script src="antcv-app-history-zfix-291.js?v=1.40.291" defer></script>
+<!-- v1.40.292-295: language UX fixes. Companion sidecar to the
+     app.js translation patches across rounds:
+       v292: per-language scope + per-language closing line + new
+             field extraction (experience role title/company/years
+             for ES/ZH, education.sch always, meta name/company for
+             ES/ZH); contact_line / publications removed from skip
+             list; name_block content gated on ES/ZH.
+       v293: publications <b>...</b> sentinel preservation, write-back
+             substitution, prompt sentinel rule.
+       v294: contact_line items {key,label,icon,value,hidden} shape
+             extraction; section.title extraction; categorised
+             proper-noun handling in the prompt (orgs verbatim, job
+             titles + place names + civic terms translate, person
+             names transliterate for ZH).
+       v295: universities moved from KEEP-VERBATIM to TRANSLATE
+             category in the prompt (Tel Aviv University, Tsinghua
+             University, Technion, MIT all have established
+             target-language forms — e.g. ZH 特拉维夫大学 / 清华大学 /
+             以色列理工学院 / 麻省理工学院; ES Universidad de Tel Aviv
+             / Universidad de Tsinghua etc).
+     This sidecar handles DOM-layer things the bundle can't:
+     (1) push "zh" into enabledLanguages on boot,
+     (2) MutationObserver fixes the "Translating to English" spinner
+         label for ES/ZH targets,
+     (3) DOM override of "Kind regards," for ES/ZH (defence-in-depth),
+     (4) DOM override of "EU Citizen" tag in rendered contact line
+         per language (DA/ES/ZH variants, whitespace-tolerant). -->
+<script src="antcv-language-ui-fixes-292.js?v=1.40.292" defer></script>
+
+<!-- disabled v1.40.333: preview actions singleton superseded by antcv-stability-core-333.js -->
+<!-- disabled v1.40.333: settings language personal-only sidecar superseded by antcv-stability-core-333.js -->
+<!-- disabled v1.40.333: app history settings-route sidecar superseded by antcv-stability-core-333.js -->
+
+<script src="antcv-table-row-page-controls-328.js?v=1.40.328" defer></script>
+<!-- disabled v1.40.331 cleanup: <script src="antcv-foundation-subpart-controls-328.js?v=1.40.328" defer></script> -->
+<script src="antcv-sidebar-subsection-pagebreaks-329.js?v=1.40.329" defer></script>
+<!-- disabled v1.40.331 cleanup: <script src="antcv-editor-layout-fixes-330.js?v=1.40.330" defer></script> -->
+<script src="antcv-editor-layout-cleanup-331.js?v=1.40.331" defer></script>
+<script src="antcv-stability-core-334.js?v=1.40.335b" defer></script>
+</body>
+</html>

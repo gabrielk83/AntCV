@@ -1,0 +1,45 @@
+# Wrangler / Cloudflare
+.wrangler/
+.dev.vars
+wrangler.toml.bak
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Build artefacts
+dist/
+build/
+*.tsbuildinfo
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Backups
+*.bak
+*.orig
+
+# Logs
+*.log
+
+# Test output
+coverage/
+.nyc_output/
+
+# Local-only secrets / candidate data
+secrets/
+private/
+candidates/

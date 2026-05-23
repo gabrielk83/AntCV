@@ -1,0 +1,1194 @@
+
+/* AntCV v069 mobile controls. External only. */
+
+/* -------- Setup language switch -------- */
+.antcv-setup-lang-floating {
+  position: fixed !important;
+  z-index: 2147482500 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  padding: 4px !important;
+  border-radius: 14px !important;
+  background: rgba(255,255,255,.16) !important;
+  border: 1px solid rgba(255,255,255,.24) !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,.18) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+.antcv-setup-lang-floating button,
+.antcv-setup-lang-floating [role="button"] {
+  min-height: 34px !important;
+  min-width: 48px !important;
+  padding: 5px 10px !important;
+  border-radius: 11px !important;
+  border: 1px solid rgba(8,86,96,.18) !important;
+  background: rgba(238,249,249,.92) !important;
+  color: #07545e !important;
+  font: 850 13px/1 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif !important;
+  box-shadow: none !important;
+}
+
+.antcv-setup-lang-floating button.active,
+.antcv-setup-lang-floating button[aria-pressed="true"],
+.antcv-setup-lang-floating .active,
+.antcv-setup-lang-floating [data-active="true"] {
+  background: #087f7a !important;
+  color: #fff !important;
+}
+
+/* -------- Bottom editor controls -------- */
+#antcv-file-chip,
+#antcv-bottom-nav,
+#antcv-contact-submenu {
+  display: none;
+}
+
+body.antcv-editor-ready #antcv-file-chip,
+body.antcv-editor-ready #antcv-bottom-nav {
+  display: flex;
+}
+
+body.antcv-editor-ready {
+  padding-bottom: 64px !important;
+}
+
+#antcv-file-chip {
+  position: fixed;
+  top: 6px;
+  left: 8px;
+  right: 8px;
+  z-index: 2147481600;
+  pointer-events: none;
+  justify-content: center;
+}
+
+#antcv-file-chip span {
+  max-width: 74vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(9,92,103,.88);
+  color: #fff;
+  font: 650 11px/1.2 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  box-shadow: 0 2px 8px rgba(0,0,0,.18);
+}
+
+#antcv-bottom-nav {
+  position: fixed;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  z-index: 2147481600;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 16px;
+  background: rgba(255,255,255,.96);
+  border: 1px solid rgba(8,86,96,.16);
+  box-shadow: 0 6px 24px rgba(0,0,0,.20);
+  font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+
+#antcv-bottom-nav button,
+.antcv-inline-btn,
+#antcv-contact-submenu button {
+  border: 1px solid rgba(8,86,96,.20);
+  background: #eef9f9;
+  color: #07545e;
+  border-radius: 10px;
+  min-height: 32px;
+  min-width: 34px;
+  padding: 4px 8px;
+  font-weight: 850;
+  font-size: 12px;
+}
+
+#antcv-bottom-nav button {
+  border-radius: 12px;
+  min-height: 36px;
+  min-width: 44px;
+  font-size: 11px;
+}
+
+/* CV/CL rocker */
+#antcv-doc-rocker {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 86px;
+  height: 36px;
+  border-radius: 999px;
+  padding: 3px;
+  background: #dff4f4;
+  border: 1px solid rgba(8,86,96,.20);
+  box-sizing: border-box;
+}
+
+#antcv-doc-rocker::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc(50% - 3px);
+  border-radius: 999px;
+  background: #087f7a;
+  transition: transform .16s ease;
+}
+
+#antcv-doc-rocker[data-mode="cl"]::before {
+  transform: translateX(100%);
+}
+
+#antcv-doc-rocker span {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 900;
+  color: #07545e;
+}
+
+#antcv-doc-rocker[data-mode="cv"] span:first-child,
+#antcv-doc-rocker[data-mode="cl"] span:last-child {
+  color: #fff;
+}
+
+#antcv-lang-wrap {
+  position: relative;
+}
+
+#antcv-lang-menu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  display: none;
+  min-width: 116px;
+  padding: 6px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid rgba(8,86,96,.15);
+  box-shadow: 0 8px 24px rgba(0,0,0,.22);
+}
+
+#antcv-lang-menu.open {
+  display: grid;
+  gap: 5px;
+}
+
+/* Inline controls beside each real app action group */
+.antcv-align-btn {
+  min-width: 38px !important;
+  font-weight: 900 !important;
+  border-color: rgba(8,86,96,.25) !important;
+  margin-left: 4px !important;
+}
+
+.antcv-back-btn {
+  float: right;
+  margin-left: 8px;
+}
+
+.antcv-editor-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+/* Contact submenu */
+#antcv-contact-submenu {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: 70px;
+  top: 84px;
+  z-index: 2147481550;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 18px;
+  background: rgba(255,255,255,.98);
+  border: 1px solid rgba(8,86,96,.16);
+  box-shadow: 0 8px 26px rgba(0,0,0,.22);
+  color: #073f46;
+  font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  overflow: auto;
+}
+
+#antcv-contact-submenu.open {
+  display: flex;
+}
+
+#antcv-contact-submenu .header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #16b8b0;
+  font-weight: 900;
+  font-size: 18px;
+}
+
+#antcv-contact-submenu .item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 7px;
+  padding: 7px;
+  border: 1px solid rgba(8,86,96,.12);
+  border-radius: 12px;
+  background: #f9ffff;
+}
+
+#antcv-contact-submenu .fields {
+  display: grid;
+  gap: 5px;
+}
+
+#antcv-contact-submenu input {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 32px;
+  border: 1px solid rgba(8,86,96,.20);
+  border-radius: 8px;
+  padding: 4px 7px;
+  font: 14px/1.2 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+
+#antcv-contact-submenu .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  justify-content: flex-end;
+}
+
+#antcv-contact-submenu .on {
+  background: #1ca34a;
+  color: #fff;
+}
+
+#antcv-contact-submenu .off {
+  background: #e8eeee;
+  color: #6b7778;
+}
+
+/* Reorder */
+.antcv-draggable {
+  touch-action: none;
+  user-select: none;
+}
+
+.antcv-dragging {
+  opacity: .72;
+  outline: 2px solid #0aa;
+  background: rgba(0,170,170,.08) !important;
+}
+
+.antcv-drop-target {
+  border-top: 3px solid #0aa !important;
+}
+
+/* Preview scroll */
+@media (max-width: 900px) {
+  .antcv-preview-pane,
+  .antcv-preview-scroll,
+  .preview-pane,
+  .preview-panel,
+  .preview-container,
+  .cv-preview-wrap,
+  .cv-preview-container,
+  .preview-scroll,
+  #preview,
+  [data-tab="preview"] {
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-x pan-y pinch-zoom !important;
+    overscroll-behavior: contain !important;
+    max-width: 100vw !important;
+    max-height: calc(100vh - 72px) !important;
+  }
+
+  .antcv-preview-scroll,
+  .preview-scroll,
+  .cv-preview-wrap,
+  .cv-preview-container {
+    height: calc(100vh - 96px) !important;
+    max-height: calc(100vh - 96px) !important;
+  }
+
+  .antcv-preview-scroll > div,
+  .preview-scroll > div,
+  .cv-preview-wrap > div,
+  .cv-preview-container > div {
+    min-width: 794px !important;
+    max-width: none !important;
+    min-height: 1123px !important;
+    flex: 0 0 auto !important;
+  }
+}
+
+
+/* v070: stable setup language control, no duplicates */
+#antcv-setup-lang-owned {
+  position: fixed !important;
+  z-index: 2147482500 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  padding: 0 !important;
+  border-radius: 14px !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  pointer-events: auto !important;
+}
+
+#antcv-setup-lang-owned button {
+  min-height: 48px !important;
+  min-width: 76px !important;
+  padding: 7px 16px !important;
+  border-radius: 14px !important;
+  border: 1px solid rgba(255,255,255,.24) !important;
+  background: rgba(255,255,255,.10) !important;
+  color: rgba(255,255,255,.82) !important;
+  font: 850 18px/1 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 2px 10px rgba(0,0,0,.12) !important;
+}
+
+#antcv-setup-lang-owned button.active,
+#antcv-setup-lang-owned button[aria-pressed="true"] {
+  background: rgba(8,127,122,.70) !important;
+  color: #fff !important;
+  border-color: rgba(255,255,255,.30) !important;
+}
+
+/* Hide older moved language clones if they remain */
+.antcv-setup-lang-floating:not(#antcv-setup-lang-owned),
+.antcv-setup-lang-wrap:not(#antcv-setup-lang-owned) {
+  display: none !important;
+}
+
+/* v070: hide duplicate mobile tab row (Sections/Edit/Analysis/Preview) while keeping top blue toolbar */
+@media (max-width: 900px) {
+  .antcv-mobile-tab-row-hidden {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    max-height: 0 !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+  }
+}
+
+
+/* v074 rollback fix: undo broken forced mobile layout patches */
+@media (max-width: 900px) {
+  body.antcv-editor-ready .antcv-native-topbar-keep,
+  body.antcv-editor-ready header,
+  body.antcv-editor-ready nav,
+  body.antcv-editor-ready .topbar,
+  body.antcv-editor-ready .toolbar,
+  body.antcv-editor-ready .app-header {
+    position: initial !important;
+    top: auto !important;
+    transform: none !important;
+    max-height: none !important;
+    height: auto !important;
+  }
+
+  body.antcv-editor-ready .antcv-mobile-bottom-sheet,
+  body.antcv-editor-ready [data-antcv-mobile-sheet="true"] {
+    position: initial !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    top: auto !important;
+    width: auto !important;
+    min-height: initial !important;
+    max-height: initial !important;
+    height: auto !important;
+    overflow: visible !important;
+    border-radius: inherit !important;
+    z-index: auto !important;
+    margin: initial !important;
+    transform: none !important;
+  }
+
+  body.antcv-editor-ready .antcv-mobile-sheet-host {
+    min-height: initial !important;
+    height: auto !important;
+    padding-top: initial !important;
+    margin-top: initial !important;
+  }
+}
+
+/* No setup language overlay in editor */
+body.antcv-editor-ready #antcv-setup-lang-owned,
+body.antcv-editor-ready .antcv-setup-lang-floating,
+body.antcv-editor-ready .antcv-setup-lang-wrap {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Keep old injected back duplicates hidden */
+.antcv-back-btn {
+  display: none !important;
+}
+
+
+/* v075 conservative guardrails */
+
+/* Do not allow any custom setup-language overlay to survive in editor. */
+body.antcv-editor-ready #antcv-setup-lang-owned,
+body.antcv-editor-ready .antcv-setup-lang-floating,
+body.antcv-editor-ready .antcv-setup-lang-wrap,
+body.antcv-editor-ready [id*="setup-lang"],
+body.antcv-editor-ready [class*="setup-lang"] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Avoid layout damage from previous fixed-sheet patches. */
+@media (max-width: 900px) {
+  body.antcv-editor-ready [data-antcv-mobile-sheet="true"],
+  body.antcv-editor-ready .antcv-mobile-bottom-sheet {
+    position: unset !important;
+    left: unset !important;
+    right: unset !important;
+    bottom: unset !important;
+    top: unset !important;
+    width: auto !important;
+    height: auto !important;
+    min-height: unset !important;
+    max-height: unset !important;
+    overflow: visible !important;
+    z-index: auto !important;
+    transform: none !important;
+  }
+
+  body.antcv-editor-ready .antcv-mobile-sheet-host {
+    min-height: unset !important;
+    height: auto !important;
+    padding-top: unset !important;
+    margin-top: unset !important;
+  }
+}
+
+/* Hide only our injected duplicate backs; keep native app controls. */
+.antcv-back-btn,
+#antcv-section-back-owned {
+  display: none !important;
+}
+
+/* Keep alignment controls modest so they do not expand rows. */
+.antcv-align-btn {
+  min-width: 32px !important;
+  max-width: 38px !important;
+  padding-left: 5px !important;
+  padding-right: 5px !important;
+  font-size: 12px !important;
+}
+
+
+/* v076: lower panel only, no toolbar/root conversion */
+@media (max-width: 900px) {
+  body.antcv-editor-ready .antcv-lower-panel-v76 {
+    position: fixed !important;
+    left: 10px !important;
+    right: 10px !important;
+    bottom: 64px !important;
+    top: auto !important;
+    height: 38vh !important;
+    max-height: 42vh !important;
+    min-height: 220px !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    z-index: 1250 !important;
+    border-radius: 16px !important;
+    box-shadow: 0 8px 26px rgba(0,0,0,.22) !important;
+    background: #fff !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    transform: none !important;
+  }
+
+  body.antcv-editor-ready .antcv-lower-panel-host-v76 {
+    min-height: 0 !important;
+    height: auto !important;
+  }
+}
+
+
+/* v077: simpler mobile bottom nav, no CV/CL rocker, no language */
+@media (max-width: 900px) {
+  #antcv-bottom-nav {
+    display: flex !important;
+    justify-content: space-evenly !important;
+    align-items: center !important;
+    gap: 10px !important;
+    padding: 7px 10px !important;
+  }
+
+  #antcv-doc-rocker,
+  #antcv-lang-wrap {
+    display: none !important;
+  }
+
+  #antcv-bottom-nav button[data-act="section"],
+  #antcv-bottom-nav button[data-act="analysis"],
+  #antcv-bottom-nav button[data-act="preview"],
+  #antcv-bottom-nav button[data-act="start"] {
+    flex: 1 1 0 !important;
+    max-width: 150px !important;
+    min-width: 0 !important;
+    height: 42px !important;
+    font-size: 13px !important;
+  }
+
+  /* v077: lower panels should be about lower 30% */
+  body.antcv-editor-ready .antcv-lower-panel-v77,
+  body.antcv-editor-ready .antcv-lower-panel-v76 {
+    position: fixed !important;
+    left: 10px !important;
+    right: 10px !important;
+    bottom: 64px !important;
+    top: auto !important;
+
+    height: 30vh !important;
+    max-height: 34vh !important;
+    min-height: 190px !important;
+
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+
+    z-index: 1250 !important;
+    border-radius: 16px !important;
+    box-shadow: 0 8px 26px rgba(0,0,0,.22) !important;
+    background: #fff !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    transform: none !important;
+  }
+
+  /* Do not let any previous full-screen sheet rule override this */
+  body.antcv-editor-ready [data-antcv-lower-panel-v77="true"],
+  body.antcv-editor-ready [data-antcv-lower-panel-v76="true"] {
+    height: 30vh !important;
+    max-height: 34vh !important;
+    top: auto !important;
+    bottom: 64px !important;
+  }
+}
+
+
+/* v078: bottom nav = Section / Analysis / Preview only */
+@media (max-width: 900px) {
+  #antcv-bottom-nav button[data-act="start"],
+  #antcv-bottom-nav button[data-act="lang"],
+  #antcv-doc-rocker,
+  #antcv-lang-wrap {
+    display: none !important;
+  }
+
+  #antcv-bottom-nav {
+    display: flex !important;
+    justify-content: space-evenly !important;
+    align-items: center !important;
+    gap: 12px !important;
+    padding: 7px 12px !important;
+  }
+
+  #antcv-bottom-nav button[data-act="section"],
+  #antcv-bottom-nav button[data-act="analysis"],
+  #antcv-bottom-nav button[data-act="preview"] {
+    flex: 1 1 0 !important;
+    max-width: 190px !important;
+    height: 42px !important;
+    font-size: 13px !important;
+  }
+}
+
+/* v078: Contact should be its own lower subsection panel */
+#antcv-contact-submenu {
+  position: fixed !important;
+  left: 10px !important;
+  right: 10px !important;
+  bottom: 64px !important;
+  top: auto !important;
+  height: 30vh !important;
+  max-height: 34vh !important;
+  min-height: 190px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  border-radius: 16px !important;
+  z-index: 1500 !important;
+  background: #fff !important;
+  box-shadow: 0 8px 26px rgba(0,0,0,.22) !important;
+  box-sizing: border-box !important;
+}
+
+#antcv-contact-submenu .header {
+  position: sticky !important;
+  top: 0 !important;
+  background: #fff !important;
+  z-index: 2 !important;
+}
+
+
+/* v080: lower-third applies only to the editor side sheet, never to preview or generation live-preview. */
+@media (max-width: 900px) {
+  body.antcv-editor-ready:not(.antcv-generating) [data-antcv-mobile-panel-fixed="true"],
+  body.antcv-editor-ready:not(.antcv-generating) .antcv-mobile-panel-fixed {
+    position: fixed !important;
+    left: 10px !important;
+    right: 10px !important;
+    bottom: 64px !important;
+    top: auto !important;
+    height: 33dvh !important;
+    max-height: 33dvh !important;
+    min-height: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    z-index: 1250 !important;
+    border-radius: 16px !important;
+    box-shadow: 0 8px 26px rgba(0,0,0,.22) !important;
+    background: #fff !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    transform: none !important;
+  }
+
+  body.antcv-editor-ready:not(.antcv-generating) #antcv-contact-submenu {
+    height: 33dvh !important;
+    max-height: 33dvh !important;
+    min-height: 0 !important;
+  }
+}
+
+
+/* v084: stale font-size editor must not sit above Section/Analysis after tab changes. */
+@media (max-width: 900px) {
+  body.antcv-editor-ready .antcv-stale-font-panel-v84 {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+}
+
+/* v086: prevent a nested Section child from staying fixed as a second layer. */
+@media (max-width: 900px) {
+  body.antcv-editor-ready .antcv-lower-panel-v77 .antcv-lower-panel-v77,
+  body.antcv-editor-ready .antcv-lower-panel-v77 .antcv-lower-panel-v76,
+  body.antcv-editor-ready .antcv-lower-panel-v77 [data-antcv-lower-panel-v77="true"],
+  body.antcv-editor-ready .antcv-lower-panel-v77 [data-antcv-lower-panel-v76="true"] {
+    position: static !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    top: auto !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    z-index: auto !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+}
+
+
+/* v088: alignment button styling only. No panel layout changes from v087. */
+@media (max-width: 900px) {
+  body.antcv-editor-ready .antcv-align-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-width: 36px !important;
+    min-height: 32px !important;
+    margin: 4px !important;
+    border-radius: 10px !important;
+    z-index: 3 !important;
+  }
+}
+
+
+/* v089: top-bar refinement and bottom CV/CL rocker. */
+#antcv-file-chip {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+.antcv-top-ant-icon {
+  image-rendering: auto;
+  shape-rendering: geometricPrecision;
+}
+
+@media (max-width: 900px) {
+  body.antcv-editor-ready .antcv-topbar {
+    gap: 7px !important;
+  }
+
+  body.antcv-editor-ready .antcv-topbar-mid {
+    min-width: 0 !important;
+  }
+
+  body.antcv-editor-ready .antcv-topbar-title {
+    min-width: 88px !important;
+  }
+
+  body.antcv-editor-ready .antcv-top-file-name {
+    display: block !important;
+    max-width: 32vw !important;
+  }
+
+  body.antcv-editor-ready .antcv-top-tools {
+    margin-left: 0 !important;
+    transform: translateX(-12px) !important;
+  }
+
+  body.antcv-editor-ready .antcv-top-sliders input[type="range"] {
+    width: 36px !important;
+  }
+
+  body.antcv-editor-ready .antcv-top-doc-toggle {
+    display: none !important;
+  }
+
+  #antcv-bottom-nav {
+    justify-content: space-between !important;
+    gap: 7px !important;
+    padding: 7px 10px !important;
+  }
+
+  #antcv-bottom-nav button[data-act="section"],
+  #antcv-bottom-nav button[data-act="analysis"],
+  #antcv-bottom-nav button[data-act="preview"] {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+
+  #antcv-doc-rocker {
+    display: grid !important;
+    flex: 0 0 70px !important;
+    width: 70px !important;
+    height: 38px !important;
+    margin-left: 2px !important;
+  }
+}
+
+/* v094: Add-field sub-editor alignment control: one compact mode button on the left, wider text field. */
+@media (max-width: 900px) {
+  body.antcv-editor-ready .antcv-add-field-align-row {
+    display: grid !important;
+    grid-template-columns: 38px minmax(0, 1fr) !important;
+    align-items: center !important;
+    column-gap: 6px !important;
+  }
+  body.antcv-editor-ready .antcv-add-field-align-row > .antcv-add-field-align-btn {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    width: 34px !important;
+    min-width: 34px !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    margin: 0 !important;
+  }
+  body.antcv-editor-ready .antcv-add-field-align-row > .antcv-add-field-input-with-align {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+}
+
+/* v097: tighten mobile section/submenu behavior. */
+@media (max-width: 900px) {
+  #antcv-contact-submenu:not(.open) {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+
+  /* If a non-editor preview/sidebar fragment is ever marked as a lower panel,
+     keep it in normal document flow instead of letting it detach at the bottom. */
+  body.antcv-editor-ready .antcv-preview-fragment-v97 {
+    position: static !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    top: auto !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    z-index: auto !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+}
+
+
+/* v099: small top grab line for Section/Analysis bottom panels. Swipe down or tap to close. */
+@media (max-width: 900px) {
+  body.antcv-editor-ready .antcv-lower-panel-v77 {
+    padding-top: 14px !important;
+  }
+
+  .antcv-panel-swipe-handle {
+    position: sticky;
+    top: 8px;
+    left: 0;
+    right: 0;
+    height: 34px;
+    margin: -4px 0 4px 0;
+    padding: 8px 0 10px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    background: linear-gradient(to bottom, rgba(255,255,255,.99), rgba(255,255,255,.80));
+    touch-action: none;
+    cursor: grab;
+  }
+
+  .antcv-panel-swipe-handle span {
+    display: block;
+    width: 58px;
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(8,127,122,.42);
+    box-shadow: 0 1px 2px rgba(0,0,0,.08);
+  }
+
+  .antcv-panel-swipe-handle.dragging span {
+    background: rgba(8,127,122,.62);
+  }
+}
+
+/* v100: keep editing chrome visible while the document preview is pinch-zoomed/panned. */
+@media (max-width: 900px) {
+  body.antcv-editor-ready .antcv-topbar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 1600 !important;
+    transform: translateZ(0) !important;
+    will-change: transform !important;
+  }
+  body.antcv-editor-ready #antcv-bottom-nav {
+    position: fixed !important;
+    left: 10px !important;
+    right: 10px !important;
+    bottom: max(10px, env(safe-area-inset-bottom)) !important;
+    z-index: 1700 !important;
+    transform: translateZ(0) !important;
+    will-change: transform !important;
+  }
+  body.antcv-editor-ready .antcv-preview-scroll {
+    scroll-padding-top: 54px !important;
+    scroll-padding-bottom: 90px !important;
+    padding-top: 54px !important;
+    padding-bottom: 90px !important;
+  }
+  body.antcv-editor-ready .antcv-lower-panel-v77,
+  body.antcv-editor-ready .antcv-lower-panel-v76 {
+    bottom: 76px !important;
+  }
+}
+
+
+/* v101: zoom applies only to the preview paper. Do not inverse-scale or fade app chrome. */
+@media (max-width: 900px) {
+  body.antcv-editor-ready .antcv-topbar,
+  body.antcv-editor-ready #antcv-bottom-nav {
+    opacity: 1 !important;
+    filter: none !important;
+  }
+  body.antcv-editor-ready .antcv-preview-scroll,
+  body.antcv-editor-ready .cv-preview-wrap,
+  body.antcv-editor-ready .cv-preview-container {
+    /* v128e: pan-x pan-y pinch-zoom — let browser handle ALL pans
+       natively (vertical scroll, horizontal scroll on overflow). The JS
+       handler only intercepts pinch via preventDefault to redirect zoom
+       from viewport to preview. The previous "pan-x pan-y" silently
+       blocked two-finger gestures on mobile Chrome/Safari. */
+    touch-action: pan-x pan-y pinch-zoom !important;
+  }
+}
+
+/* v107: React owns the bottom bar; native top tab row and injected legacy nav are hidden. */
+.antcv-native-tab-row,
+#antcv-bottom-nav {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+body.antcv-editor-ready {
+  padding-bottom: 72px !important;
+}
+
+@media (max-width: 900px) {
+  body.antcv-editor-ready .antcv-preview-scroll {
+    padding-top: 8px !important;
+    padding-bottom: 86px !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+  }
+  body.antcv-editor-ready .antcv-preview-scroll > div,
+  body.antcv-editor-ready .cv-preview-wrap > div,
+  body.antcv-editor-ready .cv-preview-container > div {
+    min-width: 0 !important;
+    min-height: 0 !important;
+  }
+  body.antcv-editor-ready .antcv-mobile-panel-fixed,
+  body.antcv-editor-ready [data-antcv-mobile-panel-fixed="true"] {
+    position: fixed !important;
+    left: 10px !important;
+    right: 10px !important;
+    bottom: 80px !important;
+    top: auto !important;
+    height: 33dvh !important;
+    max-height: 33dvh !important;
+    min-height: 0 !important;
+    width: auto !important;
+    overflow: hidden !important;
+    z-index: 1250 !important;
+    border-radius: 16px !important;
+    box-shadow: 0 8px 26px rgba(0,0,0,.22) !important;
+    background: #fff !important;
+    transform: none !important;
+  }
+  body.antcv-editor-ready .antcv-mobile-panel-fixed > div,
+  body.antcv-editor-ready [data-antcv-mobile-panel-fixed="true"] > div {
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+}
+
+
+/* v109: explicit naming split.
+   editor-side-panel/mobile-bottom-panel are app chrome.
+   document-sidebar is the left column inside the CV paper.
+   These must never share fixed-panel rules. */
+.antcv-document-sidebar,
+[data-antcv-document-sidebar="true"] {
+  position: relative !important;
+  left: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  top: auto !important;
+  height: auto !important;
+  max-height: none !important;
+  transform: none !important;
+  z-index: auto !important;
+}
+.antcv-preview-scroll .antcv-document-sidebar,
+.antcv-preview-scroll [data-antcv-document-sidebar="true"] {
+  flex-shrink: 0 !important;
+}
+@media (max-width: 900px) {
+  body.antcv-editor-ready:not(.antcv-generating) .antcv-mobile-bottom-panel,
+  body.antcv-editor-ready:not(.antcv-generating) [data-antcv-app-panel="mobile-bottom-panel"] {
+    position: fixed !important;
+    left: 10px !important;
+    right: 10px !important;
+    bottom: 80px !important;
+    top: auto !important;
+    height: 33dvh !important;
+    max-height: 33dvh !important;
+    min-height: 0 !important;
+    width: auto !important;
+    overflow: hidden !important;
+    z-index: 1250 !important;
+    border-radius: 16px !important;
+    box-shadow: 0 8px 26px rgba(0,0,0,.22) !important;
+    background: #fff !important;
+    transform: none !important;
+  }
+  body.antcv-editor-ready .antcv-preview-scroll .antcv-mobile-panel-fixed,
+  body.antcv-editor-ready .antcv-preview-scroll [data-antcv-mobile-panel-fixed="true"],
+  body.antcv-editor-ready .antcv-document-sidebar.antcv-mobile-panel-fixed,
+  body.antcv-editor-ready [data-antcv-document-sidebar="true"].antcv-mobile-panel-fixed {
+    position: relative !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    top: auto !important;
+    height: auto !important;
+    max-height: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    z-index: auto !important;
+  }
+}
+
+
+/* v111: tighter preview fit and fixed mobile drawer semantics. */
+@media (max-width: 900px) {
+  body.antcv-editor-ready .antcv-preview-scroll {
+    padding-top: 2px !important;
+    padding-left: 2px !important;
+    padding-right: 2px !important;
+    padding-bottom: 84px !important;
+    display: block !important;
+  }
+  body.antcv-editor-ready .antcv-preview-wrap {
+    margin-top: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+  body.antcv-editor-ready .antcv-preview-paper {
+    margin-top: 0 !important;
+  }
+  body.antcv-editor-ready .antcv-native-tab-row,
+  body.antcv-editor-ready .antcv-editor-side-panel .antcv-native-tab-row {
+    display: none !important;
+  }
+}
+
+/* v113: preview viewport must start at the paper, not a huge scrollable grey field. */
+@media (max-width: 900px) {
+  html, body, #root {
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    overflow: hidden !important;
+  }
+  body.antcv-editor-ready .antcv-preview-scroll {
+    height: calc(100dvh - 116px) !important;
+    max-height: calc(100dvh - 116px) !important;
+    min-height: 0 !important;
+    padding: 0 0 76px 0 !important;
+    margin: 0 !important;
+    overflow: auto !important;
+    background: #d0d2d6 !important;
+    overscroll-behavior: contain !important;
+  }
+  body.antcv-editor-ready .antcv-preview-wrap {
+    margin: 0 !important;
+    padding: 0 !important;
+    align-items: flex-start !important;
+  }
+  body.antcv-editor-ready .antcv-preview-paper {
+    margin: 0 !important;
+  }
+  body.antcv-editor-ready .antcv-react-bottom-nav {
+    position: fixed !important;
+    left: 10px !important;
+    right: 10px !important;
+    bottom: max(10px, env(safe-area-inset-bottom)) !important;
+    z-index: 2500 !important;
+  }
+}
+
+/* v115: align preview label/export controls to paper and reduce top/bottom grey field. */
+@media (max-width: 900px) {
+  body.antcv-editor-ready .antcv-preview-scroll {
+    padding: 4px 20px 76px 20px !important;
+    box-sizing: border-box !important;
+    display: block !important;
+    align-content: flex-start !important;
+  }
+  body.antcv-editor-ready .antcv-preview-actions {
+    margin: 0 0 8px 0 !important;
+  }
+  body.antcv-editor-ready .antcv-preview-wrap {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  body.antcv-editor-ready .antcv-preview-paper {
+    margin: 0 !important;
+  }
+}
+
+
+/* v128f: removed leftover v126 .antcv-preview-actions { width: 794px } rule —
+   that was for the old in-frame layout where the toolbar matched the paper
+   width. Toolbar is now a full-width bar above the scroll container, so the
+   width must be 100% of its parent, not a fixed 794. */
+@media (max-width: 900px) {
+  .antcv-preview-actions .antcv-export-buttons {
+    transform: none !important;
+    margin-left: auto !important;
+    justify-content: flex-end !important;
+  }
+  /* v128e: pan-x pan-y pinch-zoom — match inline. Browser handles all
+     native pans, JS only intercepts pinch via preventDefault. */
+  .antcv-preview-scroll {
+    touch-action: pan-x pan-y pinch-zoom !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  .antcv-preview-wrap, .antcv-preview-frame, .antcv-preview-paper {
+    touch-action: auto !important;
+  }
+  .antcv-preview-paper [contenteditable="true"] {
+    /* In edit mode: native selection + caret. */
+    -webkit-user-select: text !important;
+    user-select: text !important;
+    cursor: text !important;
+    pointer-events: auto !important;
+  }
+  .antcv-preview-paper [data-antcv-editable-text="true"]:not([contenteditable="true"]) {
+    /* Outside edit mode: no selection, so touches release to gesture handler. */
+    -webkit-user-select: none !important;
+    user-select: none !important;
+  }
+  .antcv-preview-actions, .antcv-preview-actions *,
+  .antcv-react-bottom-nav, .antcv-react-bottom-nav * {
+    touch-action: manipulation !important;
+  }
+  .antcv-panel-grab-zone {
+    height: 34px !important;
+    min-height: 34px !important;
+    z-index: 10000 !important;
+    background: rgba(255,255,255,.98) !important;
+    touch-action: none !important;
+  }
+  .antcv-panel-grab-zone > div {
+    width: 64px !important;
+    height: 7px !important;
+    background: rgba(8,86,96,.42) !important;
+  }
+}
+
+/* v127: keep export buttons clickable and allow double-tap text editing without fighting preview pan. */
+.antcv-preview-actions,
+.antcv-preview-actions *,
+.antcv-react-bottom-nav,
+.antcv-react-bottom-nav *,
+.antcv-preview-h-slider,
+.antcv-preview-h-slider *,
+.antcv-preview-v-slider,
+.antcv-preview-v-slider * {
+  touch-action: manipulation !important;
+  -webkit-user-select: auto !important;
+  user-select: auto !important;
+  pointer-events: auto !important;
+}
+.antcv-preview-paper [contenteditable="true"] {
+  touch-action: manipulation !important;
+  -webkit-user-select: text !important;
+  user-select: text !important;
+  cursor: text !important;
+}

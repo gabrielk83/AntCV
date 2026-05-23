@@ -36,40 +36,40 @@ jobs:
               || (echo "missing [observability.logs] in $f" && exit 1)
           done
 
-  # deploy-pwa:
-  #   needs: lint
-  #   runs-on: ubuntu-latest
-  #   if: github.ref == 'refs/heads/main'
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - name: Install wrangler
-  #       run: npm install -g wrangler
-  #     - name: Deploy PWA
-  #       run: |
-  #         cd pwa
-  #         wrangler pages deploy . \
-  #           --project-name=antcv \
-  #           --branch=main \
-  #           --commit-message="${{ github.event.head_commit.message }}"
-  #       env:
-  #         CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-  #         CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+  deploy-pwa:
+    needs: lint
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install wrangler
+        run: npm install -g wrangler
+      - name: Deploy PWA
+        run: |
+          cd pwa
+          wrangler pages deploy . \
+            --project-name=antcv \
+            --branch=main \
+            --commit-message="${{ github.event.head_commit.message }}"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-  # deploy-workers:
-  #   needs: lint
-  #   runs-on: ubuntu-latest
-  #   if: github.ref == 'refs/heads/main'
-  #   strategy:
-  #     matrix:
-  #       worker: [proxy, docx-worker, c2pa-worker, access-relay]
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - name: Install wrangler
-  #       run: npm install -g wrangler
-  #     - name: Deploy ${{ matrix.worker }}
-  #       run: |
-  #         cd workers/${{ matrix.worker }}
-  #         wrangler deploy
-  #       env:
+  deploy-workers:
+    needs: lint
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    strategy:
+      matrix:
+        worker: [proxy, docx-worker, c2pa-worker, access-relay]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install wrangler
+        run: npm install -g wrangler
+      - name: Deploy ${{ matrix.worker }}
+        run: |
+          cd workers/${{ matrix.worker }}
+          wrangler deploy
+        env:
   #         CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
   #         CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

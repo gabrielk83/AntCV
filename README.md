@@ -47,7 +47,7 @@ antcv/
 
 | Component | Version | Notes |
 |---|---|---|
-| PWA | v1.40.336-version-grow-fix | Carries the four mechanical patches from v1.40.335-hotfix-b. Adds two fixes: removes `1.40.335` from `STALE_VERSIONS` in the version-override sidecar (it was matching its own output) and adds an idempotency guard so the rewrite loop can't re-trigger. See `pwa/README.md`. |
+| PWA | v1.40.337-ai-notice-fix | Wizard "Next" on the worker URL step was frozen by a stale `.antcv-ai-notice-host` left in the DOM blocking re-fire of the AI notice. Now removes any stale hosts before injecting a fresh one. Z-index bumped above the stability-core Settings ramp, and `.antcv-ai-notice-host` added to the stability-core modal guard as belt-and-braces. Carries the version-grow-fix from v1.40.336 and the four mechanical patches from v1.40.335-hotfix-b. See `pwa/README-v1.40.337-ai-notice-fix.txt`. |
 | Proxy worker | v3.4.0 | |
 | DOCX worker | v1.14.12 (sidebar pagebreak fix) | |
 | C2PA worker | v1.0.1 | |

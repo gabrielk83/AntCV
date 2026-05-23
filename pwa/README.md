@@ -4,13 +4,15 @@ Static site for Cloudflare Pages. No build step; the source files at this direct
 
 ## Current build
 
-**v1.40.336-version-grow-fix.** Fixes the version-string growth bug introduced by the previous build: `TARGET_VERSION` in `antcv-version-override.js` was being concatenated with `-hotfix-b` on every MutationObserver cycle because `1.40.335` was incorrectly added to `STALE_VERSIONS` (so the regex matched its own output). Now:
+**v1.40.337-ai-notice-fix.** Fixes a wizard freeze on the worker URL step (own path). Pressing Next on vn=2 always routes through the AI notice on the way to vn=3. The notice's guard `if (document.querySelector('.antcv-ai-notice-host')) return;` was silently bailing whenever a stale host node was left in the DOM from a previous interaction, locking the wizard.
 
-- `1.40.335` removed from `STALE_VERSIONS`.
-- New idempotency guard in `rewriteTextNodes` skips nodes that already contain `TARGET_VERSION`.
-- `TARGET_VERSION = '1.40.336-version-grow-fix'`.
+Three changes:
 
-Carries forward the four mechanical patches from v1.40.335-hotfix-b (language card collapsed default, `raiseSettings` modal guard, `forceRoute` TTL, importer modal z-index). See `README-v1.40.335-hotfix-b.txt` for the patch detail and the smoke-test checklist that still applies.
+- `app.js`: replace the orphan-bail with orphan-removal — any stale `.antcv-ai-notice-host` nodes are removed and a fresh notice is injected.
+- `app.js`: AI notice z-index bumped from `2147482999` to `2147483300` (above the stability-core Settings ramp at `2147483200`).
+- `antcv-stability-core-334.js`: `.antcv-ai-notice-host` added to the `nonSettingsModalOpen()` selector so a visible AI notice suppresses the Settings z-index ramp.
+
+Carries forward: the version-grow-fix from v1.40.336 (STALE_VERSIONS hygiene + idempotency guard) and the four mechanical patches from v1.40.335-hotfix-b (language card collapsed default, `raiseSettings` modal guard, `forceRoute` TTL, importer modal z-index). See `README-v1.40.337-ai-notice-fix.txt` for the diagnosis trail and post-deploy verification.
 
 ## Structure
 

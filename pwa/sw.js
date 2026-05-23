@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.40.336-version-grow-fix';
+const CACHE = 'antcv-1.40.337-ai-notice-fix';
 const SHELL = [
   './manifest.json',
   './antcv-mobile-controls.css',

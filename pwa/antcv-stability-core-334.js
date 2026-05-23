@@ -209,7 +209,7 @@
     try{localStorage.setItem('settingsSubTab',sub);}catch(_){}
   }
   function nonSettingsModalOpen(){
-    var sel='.antcv-import-backdrop,[data-antcv-ai-disclosure],[data-antcv-modal="ai-disclosure"],[data-antcv-portal-modal]';
+    var sel='.antcv-import-backdrop,.antcv-ai-notice-host,[data-antcv-ai-disclosure],[data-antcv-modal="ai-disclosure"],[data-antcv-portal-modal]';
     var nodes;
     try{nodes=document.querySelectorAll(sel);}catch(_){return false;}
     for(var i=0;i<nodes.length;i++){ if(visible(nodes[i])) return true; }

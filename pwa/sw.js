@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.40.335-hotfix-b-safe-revert';
+const CACHE = 'antcv-1.40.336-version-grow-fix';
 const SHELL = [
   './manifest.json',
   './antcv-mobile-controls.css',

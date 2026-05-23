@@ -37,6 +37,15 @@ When applying a patch:
 6. Bump `sw.js` `CACHE` constant.
 7. Update `pwa/antcv-version-override.js` `TARGET_VERSION` and extend `STALE_VERSIONS`.
 
+## STALE_VERSIONS invariant (do not violate)
+
+`pwa/antcv-version-override.js` rewrites old version strings in the DOM and console to the current `TARGET_VERSION`. Two rules:
+
+- **Never put the current `TARGET_VERSION` in `STALE_VERSIONS`.** That list is for versions OLDER than the current one. Adding the current version causes the regex to match its own output and append the suffix on every `MutationObserver` cycle (text grows to `1.40.X-suffix-suffix-suffix-…` until the script stops being re-triggered, which can take minutes on a busy page).
+- When bumping `TARGET_VERSION`, add the PREVIOUS `TARGET_VERSION`'s number to `STALE_VERSIONS`, not the new one.
+
+There is an idempotency guard in `rewriteTextNodes` that skips nodes already containing `TARGET_VERSION` — this is defence in depth, but it is not a substitute for the invariant above. Keep both.
+
 ## Test data
 
 `docs/personas/anita/` contains a complete synthetic candidate. Use it for any end-to-end test that needs a full personalInfo object, photo, certificate PDFs, etc. Do not commit real candidate data.

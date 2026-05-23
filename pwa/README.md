@@ -4,7 +4,13 @@ Static site for Cloudflare Pages. No build step; the source files at this direct
 
 ## Current build
 
-**v1.40.335-hotfix-b** (safe revert). See `README-v1.40.335-hotfix-b.txt` in this directory for the full patch list and the smoke-test checklist.
+**v1.40.336-version-grow-fix.** Fixes the version-string growth bug introduced by the previous build: `TARGET_VERSION` in `antcv-version-override.js` was being concatenated with `-hotfix-b` on every MutationObserver cycle because `1.40.335` was incorrectly added to `STALE_VERSIONS` (so the regex matched its own output). Now:
+
+- `1.40.335` removed from `STALE_VERSIONS`.
+- New idempotency guard in `rewriteTextNodes` skips nodes that already contain `TARGET_VERSION`.
+- `TARGET_VERSION = '1.40.336-version-grow-fix'`.
+
+Carries forward the four mechanical patches from v1.40.335-hotfix-b (language card collapsed default, `raiseSettings` modal guard, `forceRoute` TTL, importer modal z-index). See `README-v1.40.335-hotfix-b.txt` for the patch detail and the smoke-test checklist that still applies.
 
 ## Structure
 

@@ -47,7 +47,7 @@ antcv/
 
 | Component | Version | Notes |
 |---|---|---|
-| PWA | v1.40.335-hotfix-b (safe revert) | Four mechanical patches over v1.40.334. Two speculative patches reverted; see `pwa/README-v1.40.335-hotfix-b.txt`. |
+| PWA | v1.40.336-version-grow-fix | Carries the four mechanical patches from v1.40.335-hotfix-b. Adds two fixes: removes `1.40.335` from `STALE_VERSIONS` in the version-override sidecar (it was matching its own output) and adds an idempotency guard so the rewrite loop can't re-trigger. See `pwa/README.md`. |
 | Proxy worker | v3.4.0 | |
 | DOCX worker | v1.14.12 (sidebar pagebreak fix) | |
 | C2PA worker | v1.0.1 | |

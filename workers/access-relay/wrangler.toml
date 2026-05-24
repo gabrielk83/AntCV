@@ -77,9 +77,7 @@ environment = "production"
 # 2. Dashboard: Workers & Pages → antcv-access-relay → Settings → Bindings
 #    → KV namespace → Add binding (variable: KV_BINDING).
 #
- [[kv_namespaces]]
- binding = "KV_BINDING"
- # id = "PASTE-ID-HERE"
+
 
 # Secrets to set via `npx wrangler secret put …`:
 #   JWT_SECRET                    ≥32-byte random string for HS256 signing
@@ -106,9 +104,17 @@ environment = "production"
 # Create once:
 #   npx wrangler kv namespace create ANALYTICS
 # Paste the SAME id into all AntCV workers.
+
+[[kv_namespaces]]
+binding = "KV_BINDING"
+id = "4524070751e04a30834b7ee46df98e2e"
+
+
 [[kv_namespaces]]
 binding = "ANALYTICS"
-# id = "PASTE-ID-HERE"
+id = "1cfec90c37c043c9a03d7db32df178ba"
+
+
 
 # --- D1 database binding (REQUIRED for D1 routes) ---
 # Holds user_kernel, application, language_view, active_application,
@@ -121,10 +127,10 @@ binding = "ANALYTICS"
 #   npx wrangler d1 execute ant_memory --file=schema.sql --remote
 #   npx wrangler d1 execute ant_memory --file=schema-telemetry.sql --remote
 # The code reads this binding as `env.DB`. Database name is "ant_memory".
-[[d1_databases]]
+[[[d1_databases]]
 binding = "DB"
 database_name = "ant_memory"
-# database_id = "PASTE-D1-DATABASE-ID-HERE"
+database_id = "499c3de9-8371-428a-9b9f-5d695d58e32b"
 
 # --- Cron triggers ---
 # Every 5 minutes, aggregate llm_calls into llm_provider_health for

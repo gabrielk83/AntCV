@@ -14,10 +14,15 @@ type Props = {
 	accessToken: string;
 };
 
-const ALLOWED_USERNAMES = new Set<string>([
+
 	// Add GitHub usernames of users who should have access to the image generation tool
 	// For example: 'yourusername', 'coworkerusername'
-]);
+
+const ALLOWED_USERNAMES = new Set(["gabrielk83"].map((username) => username.toLowerCase()));
+
+function isAllowedUsername(username: string | null | undefined) {
+	return Boolean(username && ALLOWED_USERNAMES.has(username.toLowerCase()));
+}
 
 export class MyMCP extends McpAgent<Env, Record<string, never>, Props> {
 	server = new McpServer({

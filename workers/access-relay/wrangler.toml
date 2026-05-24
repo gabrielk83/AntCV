@@ -28,7 +28,7 @@ SETUP_URL = "https://antcv.pages.dev"
 # Console → APIs & Services → Credentials → OAuth 2.0 Client IDs (Web).
 # Add your PWA origin to "Authorized JavaScript origins".
 # Leave commented out if you only want Email OTP for now.
-# GOOGLE_CLIENT_ID = "REPLACE_WITH_YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"
+GOOGLE_CLIENT_ID = "817851000754-74anhmb0s3842igqplae20d8426qnc9r.apps.googleusercontent.com"
 
 # Sender for OTP emails. Resend's shared sender works without DNS setup,
 # rate-limited to your verified email. Replace later when you set up your

@@ -127,7 +127,7 @@ id = "1cfec90c37c043c9a03d7db32df178ba"
 #   npx wrangler d1 execute ant_memory --file=schema.sql --remote
 #   npx wrangler d1 execute ant_memory --file=schema-telemetry.sql --remote
 # The code reads this binding as `env.DB`. Database name is "ant_memory".
-[[[d1_databases]]
+[[d1_databases]]
 binding = "DB"
 database_name = "ant_memory"
 database_id = "499c3de9-8371-428a-9b9f-5d695d58e32b"

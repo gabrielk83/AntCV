@@ -18,7 +18,7 @@ invocation_logs = true
 # Upstream cv-proxy worker — kept here for the HTTP-fallback path. The
 # PRIMARY transport is the [[services]] binding below, which bypasses
 # Cloudflare's same-account fetch block (error 1042) entirely.
-UPSTREAM_ORIGIN = "https://cv-proxy.karp-gabriel-a.workers.dev"
+UPSTREAM_ORIGIN = "https://antcv.pages.dev,https://cv-proxy.karp-gabriel-a.workers.dev"
 
 # CORS allowlist (comma-separated). The PWA origin must be listed.
 ALLOWED_ORIGINS = "https://antcv.pages.dev"

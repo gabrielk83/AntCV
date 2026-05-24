@@ -32,7 +32,7 @@ invocation_logs = true
 # relay's origin (since the relay forwards requests with the original Origin
 # header).
 DEMO_MODE = "true"
-ALLOWED_ORIGINS = "https://cv-generator-det.pages.dev,https://antcv-access-relay.karp-gabriel-a.workers.dev"
+ALLOWED_ORIGINS = "https://antcv.pages.dev,https://antcv-access-relay.karp-gabriel-a.workers.dev"
 
 # Self-reported URL returned by /config.
 proxy_url = "https://cv-proxy.karp-gabriel-a.workers.dev"

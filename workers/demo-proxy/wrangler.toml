@@ -11,7 +11,7 @@
 #   Secrets:     Claude_API_Key, ChatGPT_API_Key, Mistral_API_Key, Gemini_API_Key,
 #                ANALYTICS_SECRET (optional — gates /analytics/summary)
 
-name = "cv-demo-proxy"
+name = "antcv-demo-proxy"
 main = "src/index.js"
 compatibility_date = "2024-12-01"
 
@@ -35,7 +35,7 @@ DEMO_MODE = "true"
 ALLOWED_ORIGINS = "https://antcv.pages.dev,https://antcv-access-relay.karp-gabriel-a.workers.dev"
 
 # Self-reported URL returned by /config.
-proxy_url = "https://cv-demo-proxy.karp-gabriel-a.workers.dev"
+proxy_url = "https://antcv-demo-proxy.karp-gabriel-a.workers.dev"
 
 # ---------- KV namespaces ----------
 # The code reads two binding names: ANALYTICS (for /analytics events and the

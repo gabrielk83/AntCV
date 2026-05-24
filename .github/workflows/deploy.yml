@@ -63,7 +63,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     strategy:
       matrix:
-        worker: [AntCV-mcp, proxy, demo-proxy, docx-worker, c2pa-worker, access-relay]
+        worker: [antcv-mcp, proxy, demo-proxy, docx-worker, c2pa-worker, access-relay]
     steps:
       - uses: actions/checkout@v4
       - name: Install wrangler

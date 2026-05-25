@@ -11,6 +11,15 @@ upload_source_maps = true
 enabled = true
 invocation_logs = true
 
+# KV namespace for session relay
+# Create with: wrangler kv namespace create "SESSIONS"
+# Then paste the id below
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = "2ef1dccebcf44af2ba5434a6ba0932c3"
+
+
+
 # Note: Use secrets to store sensitive data.
 # https://developers.cloudflare.com/workers/configuration/secrets/
 #
@@ -18,6 +27,9 @@ invocation_logs = true
 # npx wrangler secret put GITHUB_CLIENT_ID
 # npx wrangler secret put GITHUB_CLIENT_SECRET
 # npx wrangler secret put COOKIE_ENCRYPTION_KEY
+# Secrets to set:
+#   wrangler secret put CF_API_TOKEN
+#   wrangler secret put CF_ACCOUNT_ID
 
 [[migrations]]
 tag = "v1"

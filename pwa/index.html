@@ -464,14 +464,14 @@
         auth.src = 'antcv-auth.js?v=1.40.202';
         auth.onload = function(){
           var app = document.createElement('script');
-          app.src = 'app.js?v=1.40.337';
+          app.src = 'app.js?v=1.40.338';
           app.onload = function(){
             // v1.40.198: re-assert version after app.js has set
             // its baked-in constant. The sidecar uses
             // Object.defineProperty + a polling timer to keep it
             // pinned even against repeat assignments.
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.40.337';
+            vo.src = 'antcv-version-override.js?v=1.40.338';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -1187,7 +1187,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-sidebar-subsection-pagebreaks-329.js?v=1.40.329" defer></script>
 <!-- disabled v1.40.331 cleanup: <script src="antcv-editor-layout-fixes-330.js?v=1.40.330" defer></script> -->
 <script src="antcv-editor-layout-cleanup-331.js?v=1.40.331" defer></script>
-<script src="antcv-wizard-mode-bridge-337.js?v=1.40.337" defer></script>
-<script src="antcv-stability-core-334.js?v=1.40.337" defer></script>
+<script src="antcv-wizard-mode-bridge-337.js?v=1.40.338" defer></script>
+<script src="antcv-stability-core-334.js?v=1.40.338" defer></script>
 </body>
 </html>

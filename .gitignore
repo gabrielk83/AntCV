@@ -47,3 +47,7 @@ candidates/
 .dev.vars*
 !.dev.vars.example
 !.env.example
+
+# docx-worker bundled outputs (built from src/)
+workers/docx-worker/docx-worker.js
+workers/docx-worker/docx-worker.min.js

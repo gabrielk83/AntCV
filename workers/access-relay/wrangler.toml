@@ -14,49 +14,44 @@ compatibility_date = "2024-12-01"
 [observability.logs]
 enabled = true
 invocation_logs = true
+
 [vars]
-# Upstream cv-proxy worker — kept here for the HTTP-fallback path. The
-# PRIMARY transport is the [[services]] binding below, which bypasses
-# Cloudflare's same-account fetch block (error 1042) entirely.
-UPSTREAM_ORIGIN = "https://antcv.pages.dev,https://cv-proxy.karp-gabriel-a.workers.dev"
+# --- Upstream proxies (paid + demo) ---
+# The relay forwards each request to ONE of two upstream Workers based on
+# the authenticated user's `mode` field (stored in their prefs2 KV record):
+#
+#   mode = "paid"  -> UPSTREAM (service binding to cv-proxy)
+#                     or UPSTREAM_ORIGIN (HTTP fallback)
+#   mode = "demo"  -> UPSTREAM_DEMO (service binding to antcv-demo-proxy)
+#                     or UPSTREAM_ORIGIN_DEMO (HTTP fallback)
+#
+# Service bindings are preferred (bypass error 1042, no DNS/TLS overhead).
+# The *_ORIGIN values exist as HTTP-fallback URLs when bindings aren't
+# available (local dev, separate Cloudflare accounts).
+#
+# Default mode for users with no explicit choice is "paid" — safer, since
+# paid is BYOK and a user without keys hits a clear setup-required warning
+# rather than silently consuming demo budget.
+UPSTREAM_ORIGIN      = "https://cv-proxy.karp-gabriel-a.workers.dev"
+UPSTREAM_ORIGIN_DEMO = "https://antcv-demo-proxy.karp-gabriel-a.workers.dev"
 
 # CORS allowlist (comma-separated). The PWA origin must be listed.
 ALLOWED_ORIGINS = "https://antcv.pages.dev"
 SETUP_URL = "https://antcv.pages.dev"
 
-# Google OAuth client ID for in-app sign-in. Get this from Google Cloud
-# Console → APIs & Services → Credentials → OAuth 2.0 Client IDs (Web).
-# Add your PWA origin to "Authorized JavaScript origins".
-# Leave commented out if you only want Email OTP for now.
+# Google OAuth client ID for in-app sign-in.
 GOOGLE_CLIENT_ID = "817851000754-74anhmb0s3842igqplae20d8426qnc9r.apps.googleusercontent.com"
 
-# Sender for OTP emails. Resend's shared sender works without DNS setup,
-# rate-limited to your verified email. Replace later when you set up your
-# own domain in Resend.
+# Sender for OTP emails.
 EMAIL_FROM = "AntCV <onboarding@resend.dev>"
 
-# Optional allowlist — only emails on this list can sign in via either
-# Google or Email OTP. Comma-separated, case-insensitive. Leave commented
-# out to allow any email.
+# Optional email allowlist (comma-separated, case-insensitive).
 EMAIL_ALLOWLIST = "karp.gabriel.a@gmail.com,51pegasib@gmail.com"
 
 # --- Admin (analytics access) ---
-# Comma-separated list of emails that get admin endpoints (currently:
-# /analytics/summary). Admin identity is checked against the JWT email
-# after sign-in, so the user never has to type a secret. The relay
-# injects the cv-proxy ANALYTICS_SECRET (held in UPSTREAM_ANALYTICS_SECRET
-# below) on the admin's behalf.
 ADMIN_EMAILS = "karp.gabriel.a@gmail.com"
 
-# --- Telemetry retention (optional) ---
-# How long to keep raw llm_calls + llm_quality_signals rows, and how
-# long to keep aggregated llm_provider_health snapshots. Defaults are
-# 90 / 30 days. Floor is 7 days (so we never prune mid-aggregation;
-# the 7-day window is the longest one we aggregate).
-# TELEMETRY_RAW_RETENTION_DAYS    = "90"
-# TELEMETRY_HEALTH_RETENTION_DAYS = "30"
-
-# --- Service binding to cv-proxy (REQUIRED on same Cloudflare account) ---
+# --- Service binding to cv-proxy (paid tier) ---
 # Without this, Cloudflare blocks same-account Worker-to-Worker fetches via
 # *.workers.dev with "error code: 1042". The service binding bypasses HTTP
 # entirely — direct Worker-to-Worker invocation, no DNS, no TLS, no Access
@@ -64,69 +59,41 @@ ADMIN_EMAILS = "karp.gabriel.a@gmail.com"
 [[services]]
 binding = "UPSTREAM"
 service = "cv-proxy"
-# Optional: pin to a specific environment of cv-proxy
 environment = "production"
 
-# --- KV namespace binding (REQUIRED) ---
-# Bind a KV namespace as `KV_BINDING` for OTP storage, rate counters,
-# preferences, and signals. Two ways:
-#
-# 1. CLI: create a namespace, paste its id below, redeploy.
-#    npx wrangler kv:namespace create "ANTCV_RELAY"
-#
-# 2. Dashboard: Workers & Pages → antcv-access-relay → Settings → Bindings
-#    → KV namespace → Add binding (variable: KV_BINDING).
-#
-
+# --- Service binding to antcv-demo-proxy (demo tier) ---
+# Same setup as UPSTREAM above, but targets the demo proxy. The relay
+# picks this binding when the authenticated user's mode is "demo".
+[[services]]
+binding = "UPSTREAM_DEMO"
+service = "antcv-demo-proxy"
+environment = "production"
 
 # Secrets to set via `npx wrangler secret put …`:
-#   JWT_SECRET                    ≥32-byte random string for HS256 signing
+#   JWT_SECRET                    >=32-byte random string for HS256 signing
 #   RESEND_API_KEY                Resend API key
 #   UPSTREAM_ANALYTICS_SECRET     Same value as cv-proxy's ANALYTICS_SECRET.
-#                                 The relay injects this on behalf of the
-#                                 admin so the PWA never asks for a secret.
-#                                 If cv-proxy doesn't have ANALYTICS_SECRET
-#                                 set, leave this unset too — cv-proxy will
-#                                 then accept any caller (relay-only since
-#                                 cv-proxy is behind Access).
 #
-# Optional (only needed if the service binding above isn't bound, e.g.
-# during local dev or if cv-proxy lives on a different Cloudflare account):
+# Optional (only needed if the service bindings above aren't bound):
 #   CF_ACCESS_CLIENT_ID       service-token id for cv-proxy's Access policy
 #   CF_ACCESS_CLIENT_SECRET   service-token secret
-#
-# Generate JWT_SECRET on the command line:
-#   PowerShell: -join ((1..48) | %% { [char][int]((Get-Random -Min 33 -Max 126)) })
-#   bash/macOS: openssl rand -base64 48
 
-# Optional shared KV fallback. You can bind the same namespace here as in cv-proxy.
-# --- Shared analytics KV ---
-# Create once:
-#   npx wrangler kv namespace create ANALYTICS
-# Paste the SAME id into all AntCV workers.
-
+# --- KV bindings (REQUIRED) ---
+# KV_BINDING is the canonical user-prefs store (prefs2:<hash>). The new
+# `mode` field for paid/demo routing lives there. Shared across the three
+# workers (relay, cv-proxy, antcv-demo-proxy) so the proxies can read user
+# state if they ever need to.
 [[kv_namespaces]]
 binding = "KV_BINDING"
 id = "4524070751e04a30834b7ee46df98e2e"
-
 
 [[kv_namespaces]]
 binding = "ANALYTICS"
 id = "1cfec90c37c043c9a03d7db32df178ba"
 
-
-
 # --- D1 database binding (REQUIRED for D1 routes) ---
 # Holds user_kernel, application, language_view, active_application,
-# plus the LLM telemetry tables (llm_calls, llm_quality_signals,
-# llm_provider_health, llm_provider_costs).
-# One-time setup:
-#   npx wrangler d1 create ant_memory
-# Paste the database_id returned by that command below, then apply
-# both schema files:
-#   npx wrangler d1 execute ant_memory --file=schema.sql --remote
-#   npx wrangler d1 execute ant_memory --file=schema-telemetry.sql --remote
-# The code reads this binding as `env.DB`. Database name is "ant_memory".
+# plus the LLM telemetry tables.
 [[d1_databases]]
 binding = "DB"
 database_name = "ant_memory"
@@ -134,13 +101,6 @@ database_id = "499c3de9-8371-428a-9b9f-5d695d58e32b"
 
 # --- Cron triggers ---
 # Every 5 minutes, aggregate llm_calls into llm_provider_health for
-# the rolling-window dashboard and autorotate logic. The cron handler
-# is the `scheduled` export in src/index.js. Cost is negligible (D1
-# reads + writes for ≤240 rows per run).
-#
-# Test manually without waiting for the next 5-min boundary:
-#   curl -X POST -H "Authorization: Bearer $TOKEN" \
-#     https://antcv-access-relay.<your-subdomain>.workers.dev/api/llm-health/aggregate
+# the rolling-window dashboard and autorotate logic.
 [triggers]
 crons = ["*/5 * * * *"]
-

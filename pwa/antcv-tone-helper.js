@@ -1,64 +1,20 @@
-/* AntCV writing-tone helper sidecar (v1.40.340)
+/* AntCV writing-tone helper sidecar (v1.40.341)
  *
- * v1.40.340: findWritingToneWrap() now recognises both "WRITING STYLE" (new
- * label as of v1.40.340-f Settings refactor) and "WRITING TONE" (legacy) so
- * the helper continues to anchor on the right wrap after the app.js rename.
- * No other behavioural change vs v1.40.159.
+ * v1.40.341: dropdown values are now writer-skill canonical names per
+ * Writing System Engine spec §2. findToneSelect() searches for any of
+ * the canonical option values (nordic-minimal, measured-professional,
+ * achievement-driven) so the helper still anchors after the cultural
+ * register names were removed from the dropdown. Backward-compat: also
+ * recognises "scandinavian" so the helper works against bundles that
+ * haven't shipped the Round 4.1 app.js yet.
  *
- * --- v1.40.150 original notes follow ---
- * ============================================================
- * Replaces v1.40.149 with Gabriel's redesigned tone UX.
- *
- * Changes from v1.40.149
- * ----------------------
- *   1. Section reorder in Settings → Personal so the order is:
- *        CV Sidebar Content
- *        Optional details — patent, publications, background
- *        Writing Tone (moved into this position; was above the
- *          candidate name field)
- *        Tone & banned terms
- *      The reorder uses CSS `order` on the four elements rather
- *      than DOM appendChild, so the <details> elements keep
- *      their native toggle behaviour. The Writing Tone wrap may
- *      need a one-time DOM move into the section parent if app.js
- *      renders it elsewhere; we do that move only once and only
- *      when the wrap isn't already a sibling of the details.
- *
- *   2. Force-apply preset chips on standard tone change.
- *      No "Suggested chips for this tone" hint. No "Apply
- *      preset chips" button. When the user picks Scandinavian /
- *      American / British / Indian, that tone's TONE_PRESETS
- *      list is applied to the chip bank automatically.
- *
- *   3. Lock preset chips when in standard-tone mode.
- *      A capture-phase document click listener intercepts × on
- *      active chips. If the term is part of the current
- *      standard tone's preset AND no custom slot is currently
- *      active, the removal is blocked. Visual flash gives
- *      feedback.
- *
- *   4. Custom slots: dropdown selector + single Save / Load /
- *      Clear button row.
- *      Replaces v1.40.149's three rows (one per slot). The
- *      dropdown lists Custom 1, Custom 2, Custom 3 with chip
- *      counts; the single button row operates on the currently
- *      selected slot. Selection persists in
- *      localStorage[antcv:tone:selected-slot].
- *
- * Compatibility
- * -------------
- *   - Polyfills window.AntcvToneRebind._applyChipSet for the
- *     v1.40.148 tone-custom-slots sidecar that injects
- *     Custom 1/2/3 into the Writing Tone dropdown.
- *   - SYNTH_FLAG (window.__antcvSyntheticToneChange) is
- *     respected when v1.40.148 dispatches a programmatic
- *     change event; we skip the force-apply path so the slot's
- *     saved chips aren't clobbered.
+ * v1.40.340: findWritingToneWrap() now recognises both "WRITING STYLE"
+ * (new label) and "WRITING TONE" (legacy).
  */
 (function () {
   'use strict';
 
-  const SCRIPT_VERSION = '1.40.340';
+  const SCRIPT_VERSION = '1.40.341';
   const CUSTOMS_KEY = 'antcv:tone:customs';
   const SELECTED_SLOT_KEY = 'antcv:tone:selected-slot';
   const ACTIVE_CUSTOM_KEY = 'antcv:tone:active-custom';
@@ -68,6 +24,16 @@
   if (window.__antcvToneHelperInstalled) return;
   window.__antcvToneHelperInstalled = SCRIPT_VERSION;
 
+  // STANDARD_TONES below is the LEGACY cultural-register set. We keep
+  // it untouched for the force-apply preset-chip logic — those code
+  // paths only fire if a user's stored toneRegister is one of these
+  // cultural names. After v1.40.341 the dropdown only offers writer-
+  // skill canonical names, so for new selections these branches are
+  // silently inactive. The migration writes a canonical key to LS;
+  // STANDARD_TONES.includes(canonical) is false, so force-apply skips.
+  // A future round can extend STANDARD_TONES + TONE_PRESETS to the 12
+  // canonical names using each style's defaultToneChips from the
+  // style-matrix.md, but that is not in scope for Round 4.1.
   const STANDARD_TONES = ['scandinavian', 'usa', 'latam', 'british', 'indian'];
 
   const TONE_PRESETS = {
@@ -103,10 +69,22 @@
     tone:      'Tone & banned terms',
   };
 
+  // v1.40.341: identifier values used to locate the writing-style select.
+  // We check for ANY of these — Round 4.1 ships canonical only; older
+  // builds still ship "scandinavian". Either way the helper finds the
+  // right select.
+  const CANONICAL_OPTION_VALUES = [
+    'nordic-minimal', 'measured-professional', 'achievement-driven',
+    'context-rich', 'cold-outreach',
+    'scandinavian'  // legacy fallback for pre-Round-4.1 bundles
+  ];
+
   function findToneSelect() {
     const sels = document.querySelectorAll('select');
     for (const s of sels) {
-      if (s.querySelector('option[value="scandinavian"]')) return s;
+      for (const v of CANONICAL_OPTION_VALUES) {
+        if (s.querySelector('option[value="' + v + '"]')) return s;
+      }
     }
     return null;
   }
@@ -580,7 +558,14 @@
 
     document.addEventListener('change', function (ev) {
       const t = ev.target;
-      if (!(t && t.tagName === 'SELECT' && t.querySelector('option[value="scandinavian"]'))) return;
+      if (!t || t.tagName !== 'SELECT') return;
+      // v1.40.341: identify the writing-style select via any canonical
+      // option value present. Same probe used by findToneSelect().
+      let isOurs = false;
+      for (const v of CANONICAL_OPTION_VALUES) {
+        if (t.querySelector('option[value="' + v + '"]')) { isOurs = true; break; }
+      }
+      if (!isOurs) return;
       if (window[SYNTH_FLAG]) return;
       const v = t.value;
       if (v && v.indexOf('custom_') === 0) return;
@@ -622,5 +607,6 @@
     _isLockedChip: isLockedChip,
     _presets: TONE_PRESETS,
     _standardTones: STANDARD_TONES,
+    _canonicalValues: CANONICAL_OPTION_VALUES,
   };
 })();

@@ -1,21 +1,34 @@
-/* AntCV section-panel tweaks sidecar (v1.40.340)
+/* AntCV section-panel tweaks sidecar (v1.40.341)
  * ============================================================
  *
- * v1.40.340: findWritingToneWrap() now recognises both "WRITING STYLE"
- * (new label as of v1.40.340-f Settings refactor) and "WRITING TONE"
- * (legacy) so the Advanced Tone / Banned Words split keeps anchoring
- * on the correct wrap after the app.js rename. No other behavioural
- * change vs v1.40.203.
+ * v1.40.341: findWritingToneWrap() now searches for any canonical
+ * writer-skill option value (nordic-minimal etc.), not just the
+ * legacy "scandinavian" value that was removed in Round 4.1 of
+ * the Settings refactor. Backward-compat: still recognises
+ * "scandinavian" for pre-Round-4.1 bundles.
+ *
+ * v1.40.340: findWritingToneWrap() recognises both "WRITING STYLE"
+ * (new label) and "WRITING TONE" (legacy).
  */
 (function () {
   'use strict';
 
-  const SCRIPT_VERSION = '1.40.340';
+  const SCRIPT_VERSION = '1.40.341';
   const COMPRESS_NEW_ICON = '\u21B9';
   const COMPRESS_OLD_ICONS = ['\u21E5', '\uD83E\uDD0F'];
 
   if (window.__antcvSectionPanelTweaksInstalled) return;
   window.__antcvSectionPanelTweaksInstalled = SCRIPT_VERSION;
+
+  // v1.40.341: writing-style select identifier values. The select is
+  // located by searching for ANY of these option values, so Round 4.1
+  // canonical-only bundles AND pre-Round-4.1 cultural-register bundles
+  // both work.
+  const CANONICAL_OPTION_VALUES = [
+    'nordic-minimal', 'measured-professional', 'achievement-driven',
+    'context-rich', 'cold-outreach',
+    'scandinavian'  // legacy fallback
+  ];
 
   function isMobileViewport() {
     try {
@@ -175,7 +188,12 @@
   function findWritingToneWrap() {
     const sels = document.querySelectorAll('select');
     for (const s of sels) {
-      if (!s.querySelector('option[value="scandinavian"]')) continue;
+      // v1.40.341: probe for any canonical option value.
+      let matches = false;
+      for (const v of CANONICAL_OPTION_VALUES) {
+        if (s.querySelector('option[value="' + v + '"]')) { matches = true; break; }
+      }
+      if (!matches) continue;
       let wrap = s.parentElement;
       for (let i = 0; i < 4 && wrap; i++) {
         const txt = (wrap.textContent || '').trim();
@@ -320,5 +338,6 @@
     COMPRESS_OLD_ICONS: COMPRESS_OLD_ICONS,
     PANEL_LOCS: PANEL_LOCS,
     COMPACT_LOCS: COMPACT_LOCS,
+    CANONICAL_OPTION_VALUES: CANONICAL_OPTION_VALUES,
   };
 })();

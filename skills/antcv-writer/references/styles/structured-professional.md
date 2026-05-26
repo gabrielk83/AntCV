@@ -62,7 +62,7 @@ Two columns, `table-grid` format. 5 – 7 rows. Focus area named as a methodolog
 
 ### `experience`
 
-3 bullets per role. Each 12 – 18 words. Past tense for past, present for current. Bullet 1 names the role and methodological scope; bullet 2 names a specific action grounded in a framework; bullet 3 names the outcome.
+3 bullets per role. Each 12 – 18 words. Past tense for past, present for current. Bullet 1 names the role and methodological scope; bullet 2 names a specific action anchored in a framework; bullet 3 names the outcome.
 
 **Good (Change Control Lead, Innoviz, 2020 – 2025):**
 

@@ -42,7 +42,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.40.302';
+  var VERSION = '1.40.339';
   if (window.__antcvCloudRestoreFilter298 === VERSION) return;
   window.__antcvCloudRestoreFilter298 = VERSION;
 
@@ -138,6 +138,30 @@
       if (Object.prototype.hasOwnProperty.call(piOut, WIZARD_KEYS[j])) {
         delete piOut[WIZARD_KEYS[j]];
         changed = true;
+      }
+    }
+    // v1.40.339: also strip stale language preferences from stylePrefs so
+    // the post-delete fresh-start really starts fresh (no ZH coming back
+    // from a previous session via cloud-restore).
+    if (piOut.stylePrefs && typeof piOut.stylePrefs === 'object') {
+      var spOut = {};
+      var spKey;
+      for (spKey in piOut.stylePrefs) {
+        if (Object.prototype.hasOwnProperty.call(piOut.stylePrefs, spKey)) spOut[spKey] = piOut.stylePrefs[spKey];
+      }
+      var LANG_KEYS = ['visibleLanguages', 'languageBar', 'enabledLanguages',
+                       'languages', 'langBar', 'shownLanguages'];
+      var langChanged = false;
+      for (var lk = 0; lk < LANG_KEYS.length; lk++) {
+        if (Object.prototype.hasOwnProperty.call(spOut, LANG_KEYS[lk])) {
+          delete spOut[LANG_KEYS[lk]];
+          langChanged = true;
+        }
+      }
+      if (langChanged) {
+        piOut.stylePrefs = spOut;
+        changed = true;
+        try { console.info('[antcv-cloud-restore-filter-' + VERSION + '] stripped stylePrefs.visibleLanguages and aliases (fresh-start)'); } catch (_) {}
       }
     }
     // personalInfo.meta: shallow clone + strip

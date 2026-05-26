@@ -3,13 +3,25 @@
 | | |
 |---|---|
 | Source spec | `AntCV_UI_UX_Spec_and_QA_Plan_v2.docx` (v2 supersedes v1) |
-| Plan version | v2 — adds Preview shell + routing, Application History foregrounding, loading status, warning/error severity, CL table capture, Publications regression warning, Professional Experience positive PB reference |
+| Plan version | v2.1 — adds resolved decisions for PRV-004, CL-006, AH-001 |
 | Scope | Cover Letter editor, page-break model, AI watermark, Candidate/Application, drag-and-drop, tables, Selected Outcomes, Publications, Preview shell routing/visibility, LLM input pipeline |
 | Output rule | Every change must behave identically in Preview, DOCX, and PDF unless the requirement explicitly excludes export |
 | Authority | This plan paraphrases the source spec for execution. On any conflict, the source spec wins. |
 | Acceptance gate | A requirement is done only when the Definition of Done block (§9) is filled in and all linked test cases pass in Preview **and** DOCX **and** PDF |
 
 The v2 spec contains **44 numbered requirements** plus **18 visual findings**. They cluster into **nine implementation areas**. Most of the section-level fixes are downstream of one shared refactor (the `SectionControlBar`), so doing that first turns the per-section fixes into configuration changes. The Preview-shell, Application History, validation-severity, and CL-table-capture fixes are independent of that refactor and can run in parallel — see §1.
+
+---
+
+## 0. Resolved decisions (locked) — read before implementing
+
+These three decisions were previously open questions. They are now locked. Any implementation must match them.
+
+| Decision | Resolution | Affects |
+|---|---|---|
+| **PRV-004 — loading status click behaviour** | **No-op while a job is active.** Clicks during loading neither hide the status nor open a details view. After completion, normal dismiss is allowed. | `pwa/antcv-stale-status.js`, `pwa/antcv-wait-screen-times.js`. Don't build a details view. |
+| **CL-006 — PDF table parsing** | **Use CloudConvert for proper conversion: PDF → DOCX server-side via the existing Cloudflare Worker chain, then parse DOCX tables with the same parser used for DOCX-source JDs.** Do not attempt to extract tables from raw PDF text. Proper structure preservation is required, not best-effort flattening. | `pwa/antcv-data-importer.js`, `pwa/antcv-jd-image-ocr.js`, the Cloudflare Worker(s), and the DOCX table parser. Requires a CloudConvert API key in Worker secrets. |
+| **AH-001 — browser back from Application History** | **Browser back returns to Preview** (where the popup was opened from). | `pwa/antcv-app-history-zfix-291.js`. The route push for "Open in Settings" must build a history entry that resolves to Preview on `popstate`. |
 
 ---
 
@@ -24,7 +36,7 @@ Implement in this order. Each phase is a coherent commit/PR boundary. Phases mar
 | **P0-C — Cover Letter editor** | CL-001..CL-005, VF-001..VF-003 | Highest-visibility defect set (duplicate overlay on every text selection). |
 | **P0-D — Candidate, Application, drag-and-drop** | CA-001..CA-005, VF-005..VF-007 | Drag-and-drop corrupts placement and styling; blocks any further layout work. |
 | **P0-E — Preview shell + routing (parallel)** | PRV-001..PRV-004, AH-001, GEN-009, GEN-010, VF-011..VF-015 | Desktop users intermittently cannot see export buttons. Independent of P0-A. Should ship as soon as possible. |
-| **P0-F — CL table capture (parallel)** | CL-006, GEN-011, VF-017 | Silent data loss in Cover Letter generation. Affects letter content, not layout. Independent of UI refactor. |
+| **P0-F — CL table capture (parallel)** | CL-006, GEN-011, VF-017 | Silent data loss in Cover Letter generation. Requires CloudConvert integration server-side. Independent of UI refactor. |
 | **P1-A — AI watermark anchoring** | WM-001..WM-002, VF-004 | Final-output quality. Must be page-box-anchored, not flow-anchored. |
 | **P1-B — Tables, Selected Outcomes, Publications** | TB-001..TB-003, SO-001..SO-002, PP-001..PP-003, VF-008..VF-010 | Extends the shared control model to row-based sections. PP-003 is a stability risk warning — test thoroughly. |
 | **P1-C — Validation severity** | VAL-001, VF-016 | Warnings yellow, errors red. Small but visible. |
@@ -103,7 +115,7 @@ Two contracts derive from this:
 1. **Action contract.** Every control event carries `{ itemId, action, payload? }`. Actions without `itemId` are rejected and logged. This is what enforces GEN-002 (control locality) — there is no path by which "click Page Break on row 3" can update row 4.
 2. **Capabilities contract.** Each section declares what its items support: `{ canMove, canDelete, canPageBreak, canAlign, canEnhance, canFit }`. The `SectionControlBar` reads this and renders only the relevant buttons in the standard order (GEN-003).
 
-### Preview shell state contract (added in v2 for PRV-* and AH-001)
+### Preview shell state contract (v2 — for PRV-* and AH-001)
 
 ```mermaid
 flowchart TB
@@ -143,6 +155,32 @@ flowchart TB
 
 The rule: the Preview shell mounts its visible controls from one derived state. No control's visibility may depend on which route was hard-refreshed last. Today, hard-refresh in Preview restores PDF/DOCX while hard-refresh in Set hides them — that's a side-effect leak that this contract removes.
 
+### CL-006 — CloudConvert pipeline (v2.1 — locked architecture)
+
+```mermaid
+flowchart LR
+    JD["Job description input<br/>(uploaded or pasted)"] --> TYPE{Source type?}
+    TYPE -->|DOCX| PDOCX[DOCX table parser]
+    TYPE -->|HTML paste| PHTML[HTML table parser]
+    TYPE -->|Markdown paste| PMD[Markdown table parser]
+    TYPE -->|PDF| CC["CloudConvert API<br/>PDF → DOCX<br/>(via Cloudflare Worker)"]
+    CC --> PDOCX
+
+    PDOCX --> CTX[LLM generation context]
+    PHTML --> CTX
+    PMD --> CTX
+    CTX --> GEN[CL generation]
+
+    classDef input fill:#283556,color:#fff,stroke:#01B7BB
+    classDef parser fill:#01B7BB,color:#fff,stroke:#00746E
+    classDef ext fill:#00746E,color:#fff,stroke:#283556
+    class JD,TYPE input
+    class PDOCX,PHTML,PMD,CTX,GEN parser
+    class CC ext
+```
+
+The DOCX table parser is the single canonical path. PDFs are normalised into DOCX upstream via CloudConvert, so the LLM context-prep code has one table-parsing implementation, not four.
+
 ---
 
 ## 3. Repo file map — where each fix lands
@@ -174,10 +212,10 @@ The PWA is the single `pwa/app.js` (804 KB) plus a stack of patch overlays. Most
 | Area | Primary file(s) to edit | Notes |
 |---|---|---|
 | **Desktop Preview shell — utilities, Privacy, Fuse, PDF/DOCX (PRV-001..PRV-003, VF-011..VF-013)** | `pwa/app.js` (Preview shell component), `pwa/antcv-mobile-controls.css` (33 KB), `pwa/antcv-editor-layout-cleanup-331.js`, `pwa/antcv-settings-front-327.js` | The bug is route-dependent visibility. Hunt for `useEffect` hooks that mount these buttons only on certain route transitions. The fix is one Preview-shell state, derived from app state — not from route side-effects. Mobile must keep parity. |
-| **Loading status disappearing on click (PRV-004, VF-015)** | `pwa/antcv-stale-status.js`, `pwa/antcv-wait-screen-times.js`, possibly `pwa/antcv-pdf-error-toast.js` | Currently any click dismisses the status. Make it either non-click-dismissable while a job is active, or click-opens-details. Never click-hides while job running. |
-| **Application History foregrounding (AH-001, VF-014)** | **`pwa/antcv-app-history-zfix-291.js` (9.2 KB)** | **The "zfix" suffix suggests an earlier attempt that didn't fully solve it. The action must: (1) close the popup, (2) route to Set, (3) move focus to the Application History panel, (4) scroll it into view. Today, only the route changes — the visible UI doesn't move.** |
+| **Loading status — no-op while loading (PRV-004, VF-015) — LOCKED** | `pwa/antcv-stale-status.js`, `pwa/antcv-wait-screen-times.js`, possibly `pwa/antcv-pdf-error-toast.js` | **Click during an active job: do nothing.** Do not hide; do not open details. After job completes, normal dismiss is allowed. Don't build a details view — that decision is closed. |
+| **Application History foregrounding (AH-001, VF-014) — back returns to Preview** | **`pwa/antcv-app-history-zfix-291.js` (9.2 KB)** | **The "zfix" suffix suggests an earlier attempt that didn't fully solve it.** The action must: (1) close the popup, (2) push a route to Set with Application History as the foreground panel, (3) move focus there, (4) scroll into view. The history entry must be constructed so browser back resolves to Preview, not to a deeper Set state. |
 | **Warning vs error colours (VAL-001, VF-016)** | `pwa/antcv-banned-audit.js`, `pwa/antcv-llm-audit.js`, `pwa/antcv-shape-guard.js` + their CSS | Introduce separate severity tokens. Errors red, warnings yellow. Distinct icon + aria-label. Today both render red. |
-| **CL table capture (CL-006, GEN-011, VF-017)** | `pwa/antcv-data-importer.js` (41 KB), `pwa/antcv-jd-analysis-and-reupload-fix.js`, `pwa/antcv-jd-watch.js`, `pwa/antcv-jd-image-ocr.js`, `pwa/antcv-personality.js` (LLM context prep) | Extend the JD/source extraction layer to parse tables from DOCX, pasted HTML, Markdown-like, and PDF-derived text. Preserve row/column associations where they matter. Today, table content is silently dropped. |
+| **CL table capture — CloudConvert (CL-006, GEN-011, VF-017) — LOCKED** | `pwa/antcv-data-importer.js` (41 KB), Cloudflare Worker(s), `pwa/antcv-jd-analysis-and-reupload-fix.js`, `pwa/antcv-jd-watch.js`, `pwa/antcv-jd-image-ocr.js`, `pwa/antcv-personality.js` (LLM context prep) | PDF inputs go through CloudConvert (PDF → DOCX) via the Worker chain, then through the canonical DOCX table parser. HTML and Markdown table parsers handle those source types directly. **No raw-PDF-text table extraction**. Requires `CLOUDCONVERT_API_KEY` in Worker secrets. |
 
 If a file above isn't where the defect actually lives, the recovery move is `github_search_code` on a distinctive string (e.g. `Compress`, `down-arrow` SVG path, `Application History`, `loading-status`) and follow the hits.
 
@@ -201,7 +239,7 @@ Each block states **what to change**, **acceptance criteria** (lifted from the s
 | GEN-008 | Every icon button has a deterministic tooltip + aria-label naming action + target. | Example: `Page break for Selected outcome 2`. | i18n template keys, not concatenated strings. |
 | **GEN-009 (v2)** | Preview utility + export buttons remain visible on desktop and mobile across route changes and refreshes. | After Set → Preview → Set → Preview, and hard refresh in either route, every utility/export button is visible. | Mounting Preview shell controls from route side-effects. |
 | **GEN-010 (v2)** | Loading status doesn't vanish from accidental clicks. Warnings are yellow; errors stay red. | Status survives a click while job is active. Warnings visually distinct from errors. | Any global click handler on toast/status containers. |
-| **GEN-011 (v2)** | CL generation captures content from source tables, not only plain paragraphs. | Table-only requirements appear in generation context. | DOCX/HTML/Markdown/PDF table parsing paths. |
+| **GEN-011 (v2)** | CL generation captures content from source tables, not only plain paragraphs. | Table-only requirements appear in generation context. | DOCX/HTML/Markdown parsing paths + CloudConvert pipeline for PDFs. |
 
 ### 4.2 PB — Page-break behaviour (P0-B)
 
@@ -227,9 +265,22 @@ Each block states **what to change**, **acceptance criteria** (lifted from the s
 | CL-003 | How I Would Contribute: model as `{intro, bullets[], closing}`. Each bullet is its own item with its own SectionControlBar. Intro + closing get their own bars too. Add `+ Add` under the last bullet. | Each bullet independently controllable. Closing stays a paragraph, never becomes a bullet. `+ Add` appends a bullet at the end. Delete removes only the selected bullet. |
 | CL-004 | Foundation: attach one 4-button bar (PB, CJLR, Enhance, Fit) to each textbox. Bars do not float between textboxes. | Changing the first textbox does not affect the second; and vice versa. Exports match Preview. |
 | CL-005 | Cover letter body rows get the section-move button to the left of the action cluster. On/off visibility stays as an independent control. Standard order applies to the rest. | Move button visible on every movable body row. Toggling visibility doesn't corrupt content. Required controls remain visible. |
-| **CL-006 (v2)** | Extend the CL input extraction layer to parse tables from DOCX, pasted HTML, Markdown-like, and PDF-derived text. Preserve row/column associations where they matter. Convert useful table facts into the LLM generation context instead of dropping them. | Relevant table facts appear in the generated Cover Letter context and output. No table-only requirements are omitted. Irrelevant formatting artifacts are not copied into the letter. |
+| **CL-006 (v2) — LOCKED ARCHITECTURE** | Extend the CL input extraction layer to parse tables from DOCX, pasted HTML, and Markdown-like sources directly. For PDF sources, normalise PDF → DOCX server-side via CloudConvert (existing Cloudflare Worker chain), then parse with the DOCX table parser. Preserve row/column associations. Convert useful table facts into the LLM generation context. | Relevant table facts appear in the generated Cover Letter context and output. No table-only requirements are omitted. Irrelevant formatting artifacts are not copied into the letter. PDF→DOCX→table path produces structured tables, not flattened text. |
 
-**Implementation note (v2 — CL-006).** This is silent data loss: today a job description where the requirements live in a table produces a Cover Letter that doesn't reference those requirements. The extraction layer should normalise tables to a flat "Field: Value" or "Column1 | Column2 | Column3" representation before passing to the LLM context. Pasted HTML tables and Markdown-like tables (`| a | b |` lines) are common job-description formats — both must be handled. PDF-derived text often loses the table grid entirely; falling back to spatial clustering or just treating cell text as inline paragraphs is acceptable as long as the content is not dropped.
+**Implementation note (v2.1 — CL-006 locked).**
+
+The architecture is one canonical table parser (DOCX) plus three lightweight parsers (HTML, Markdown, and the CloudConvert pipeline that produces DOCX). Specifically:
+
+1. **DOCX source**: parse `<w:tbl>` directly. Preserve row/column structure. Already partially exists for CV imports — reuse and extend it.
+2. **Pasted HTML source**: parse `<table>`/`<tr>`/`<td>` from the clipboard payload. Standard `DOMParser`.
+3. **Pasted Markdown source**: detect `| col1 | col2 |` lines plus the `|---|---|` separator row. Lightweight regex-free parser (remember the `\s` constraint — use char-comparison loops).
+4. **PDF source**: send the PDF bytes to the Cloudflare Worker. Worker calls CloudConvert API (`POST /v2/jobs` with a `convert` task `input_format=pdf, output_format=docx`), polls for completion, retrieves the converted DOCX bytes, and returns them to the client. The client then runs the same DOCX table parser as path (1).
+
+Worker prerequisites: `CLOUDCONVERT_API_KEY` set via `wrangler secret put CLOUDCONVERT_API_KEY`. Add a Worker route handler `POST /api/jd/pdf-to-docx` that wraps the CloudConvert sync-job flow with a sensible timeout (CloudConvert PDF→DOCX usually completes in 5–20 s). Return the DOCX as `application/vnd.openxmlformats-officedocument.wordprocessingml.document`.
+
+Once the table cells are in hand, normalise them to a flat representation for the LLM context: each table becomes a labelled block like `[Table: Requirements]\nFunctional Safety | Required\nISO 26262 | Required\n...`. The LLM then has both the table semantics (rows correspond to facts) and the surrounding paragraph context.
+
+Failure modes: if CloudConvert returns an error or times out, fall back to the existing PDF text-extraction path and emit a warning in the audit panel ("PDF tables may not have been fully captured — re-upload as DOCX for best results"). Do not silently fall back without a warning.
 
 ### 4.4 CA — Candidate, Application, section movement (P0-D)
 
@@ -274,12 +325,21 @@ This area is independent of P0-A. It addresses the regression where desktop Prev
 | **PRV-001** | Render the three desktop Preview utility buttons in the lower-right gray Preview zone at all supported desktop widths. Must include Privacy, Fuse CL → CV, and the third utility button (visible on mobile). Not hidden by the canvas, zoom bar, CV/CL toggle, scrollbars, or bottom nav. | All three buttons visible, clickable, labelled, and stable after route changes and hard refreshes. Mobile keeps same controls visible. |
 | **PRV-002** | Place Privacy and Fuse CL → CV in the right-side Preview utility cluster on desktop. Same state, tooltip, and action as mobile. No duplicate hidden DOM instances. | Both buttons visible and usable on desktop and mobile, no duplicated/hidden/offscreen copies. |
 | **PRV-003** | Render PDF and DOCX as persistent Preview export actions in the top Preview gray area. Visibility independent of which route was hard-refreshed. Initialise from a single Preview-shell state, not from route-specific side-effects. | PDF and DOCX visible after: direct Preview load; Set → Preview navigation; Preview → Set → Preview; hard refresh in Preview; hard refresh in Set then navigate to Preview. |
-| **PRV-004** | Loading status either non-click-dismissable while a job is active, or click-opens-details. Never click-hides while a job is running. | Status survives a click while job is active. Click during loading either does nothing or opens job details. After completion, dismiss is allowed. |
-| **AH-001** | Application History "Open in Settings" must: close/dismiss the popup, navigate the visible UI to Set, foreground the Application History section, move focus to it, and scroll it into view. | After pressing the action: visible route is Set; Application History panel is visible and focused; user is not silently left in Preview. |
+| **PRV-004 — LOCKED: no-op while loading** | Loading status: while a job is active, click does nothing (no hide, no details view). After the job completes, normal dismiss is allowed. | Status survives any click during loading. After completion, normal dismiss works. |
+| **AH-001 — back returns to Preview** | Application History "Open in Settings" must: close/dismiss the popup, push a route to Set with Application History foregrounded, move focus to it, scroll it into view. The pushed history entry must be constructed so `popstate` (browser back) resolves to Preview. | After pressing the action: visible route is Set with AH visible/focused. Browser back returns to Preview. |
 
 **Implementation note (PRV-001..PRV-003).** Today the Preview shell mounts these buttons via route-specific side-effects, which is why a hard refresh in Set can hide them while a hard refresh in Preview restores them. The fix is one `<PreviewShell>` component whose visible button set is derived from app state (CV vs CL active, has-document, generation-in-progress, etc.) — not from `useEffect` hooks tied to route transitions. Mobile uses the same component with a different layout breakpoint; mobile is the parity reference for which buttons should be available at all.
 
-**Implementation note (AH-001).** The existing `antcv-app-history-zfix-291.js` is the third place to start reading — the "zfix" naming suggests at least one earlier attempt to solve a layering/z-index symptom. The current bug is that the *route* changes (proven by returning from Preview to Set landing inside Application History) but the *visible UI* doesn't. The action handler should do all four things atomically: dismiss popup, push route, focus the target panel, scroll into view.
+**Implementation note (PRV-004 — locked).** Don't build a job-details view. Don't change what the click does after a job completes (today's behaviour stays). Only change is: while `isLoading === true`, the click handler returns early. Aria-label can change to "Job in progress — click disabled" during loading for screen reader clarity, but that's optional polish.
+
+**Implementation note (AH-001 — back to Preview, locked).** The existing `antcv-app-history-zfix-291.js` is the third place to start reading — the "zfix" naming suggests at least one earlier attempt to solve a layering symptom. The action handler should do four things atomically:
+
+1. Dismiss the popup (close + animate out).
+2. `history.pushState({route: 'set', panel: 'applicationHistory'}, '', '/set#applicationHistory')` — the key is *push*, not *replace*. This creates a new history entry so back goes to the previous state (Preview).
+3. Imperatively focus the Application History panel root element.
+4. `scrollIntoView({ behavior: 'smooth', block: 'start' })` on the AH panel.
+
+Listen for `popstate` from the Set route — when it fires and the previous state was Preview, route back to Preview (don't strip the AH panel state along the way).
 
 ### 4.8 VAL — validation severity (P1-C, v2)
 
@@ -293,38 +353,35 @@ This area is independent of P0-A. It addresses the regression where desktop Prev
 
 ## 5. Implementation guidance
 
-These follow directly from the source spec §7 plus what's visible in the repo layout.
-
 - **Start with the shared component and the action contract.** The repeated defects across `antcv-*-row-controls-*.js` files are the same defect duplicated. Centralise.
 - **Every control event carries `itemId`.** Reject events without one. This is what enforces GEN-002 mechanically rather than by convention.
 - **Store manual page breaks in the document model**, not in DOM state. Preview, DOCX, and PDF must all read the same flag.
 - **Use destination-container style tokens** when rendering moved items. Don't carry source CSS classes through a move.
-- **Build fixtures before refactoring exporters.** See §8 for the fixture set.
+- **Build fixtures before refactoring exporters.** See §8.
 - **Old saved CVs and cover letters must still load.** Migrate missing per-row control state to defaults; don't crash on schema drift.
-- **Add stable test IDs to repeated controls**: `data-testid="{itemType}.{itemId}.{action}"`. This is what makes automated test selectors not brittle.
+- **Add stable test IDs to repeated controls**: `data-testid="{itemType}.{itemId}.{action}"`.
 - **Treat any Preview ↔ DOCX ↔ PDF mismatch as a failed implementation, not an export-only issue.**
 - **(v2) Mobile is the parity reference for desktop.** Where mobile shows a control and desktop doesn't, mobile is correct and desktop is broken. Apply this to PRV-001..PRV-003.
-- **(v2) Preview shell visibility derives from app state, not route side-effects.** If a hard refresh in route A produces different visible controls than a hard refresh in route B, the shell is initialised wrong.
-- **(v2) Reuse `antcv-exp-continuation-fix.js` as the PB-006 reference.** The "EXPERIENCE (CONT.)" pattern already works there.
-- **(v2) Refactor Publications & Patents only through the shared row-control model.** No ad-hoc positioning. PP-003 has a track record of breaking.
+- **(v2) Preview shell visibility derives from app state, not route side-effects.**
+- **(v2) Reuse `antcv-exp-continuation-fix.js` as the PB-006 reference.**
+- **(v2) Refactor Publications & Patents only through the shared row-control model.** No ad-hoc positioning.
+- **(v2.1) For CL-006, use CloudConvert for PDF normalisation.** Don't build a PDF table parser.
 
 ### Local hazards specific to this repo
 
-These come from AntCV's existing constraints. Carry them through every edit:
-
-- **No `\s` in regex literals.** The test harness brace-counter misreads `\` inside regex. Use loop-based char-comparison helpers.
+- **No `\s` in regex literals.** Use loop-based char-comparison helpers.
 - **No `\u` Unicode escapes in JSX text positions.**
-- **Comment stripper only strips standalone `//` lines.** Do not strip patterns inside strings or regex.
+- **Comment stripper only strips standalone `//` lines.**
 - **LinkedIn must never be dropped from contact items.**
-- **OOXML strict validator must show zero errors and zero warnings** after the DOCX exporter changes.
-- **`w:rFonts` ordering** in `rPr` arrays must come first (before `w:b`, `w:sz`). Word rejects otherwise.
-- **All `w:w` attribute values cast through `Math.round()`** — Word rejects decimal twip values.
+- **OOXML strict validator must show zero errors and zero warnings** after DOCX exporter changes.
+- **`w:rFonts` ordering** in `rPr` arrays must come first (before `w:b`, `w:sz`).
+- **All `w:w` attribute values cast through `Math.round()`.**
+- **Wrangler.toml must include `[observability.logs]` with `enabled = true` and `invocation_logs = true`** just after `compatibility_date`.
+- **AntCV PWA release zips put files at the zip root**, not nested in a subfolder.
 
 ---
 
 ## 6. QA strategy
-
-Adapted from the source spec §8. The tester verifies from both the user perspective and the export perspective. A panel-only pass is not a pass.
 
 | Test layer | Tester action | Pass condition |
 |---|---|---|
@@ -332,15 +389,14 @@ Adapted from the source spec §8. The tester verifies from both the user perspec
 | Panel UI | Inspect every affected row and textbox at normal **and** narrow widths. | Controls visible, ordered, scoped, labelled. |
 | Preview editing | Edit text, click away, reopen item, refresh Preview where supported. | Edited text persists; remains editable. |
 | Export parity | Export DOCX and PDF after each class of change. | DOCX and PDF match Preview for order, page break, style, watermark placement. |
-| **Route + refresh (v2)** | For Preview-shell tests: navigate Set ↔ Preview multiple times, hard-refresh in each route, switch CV/CL, resize viewport. | All Preview utility/export buttons remain visible in every state. Mobile keeps parity. |
+| **Route + refresh (v2)** | Navigate Set ↔ Preview multiple times, hard-refresh in each route, switch CV/CL, resize viewport. | All Preview utility/export buttons remain visible in every state. Mobile keeps parity. |
 | **Long-running job (v2)** | Start generation, click loading status during the job, navigate between Set/Preview, return after completion. | Status doesn't vanish on click while job is active. Buttons remain stable. Publications stays stable during generation (PP-003). |
+| **PDF→DOCX pipeline (v2.1)** | Upload a PDF JD with table-only requirements. Inspect Worker logs. Inspect generated CL. | Worker invokes CloudConvert. Table cells appear in generation context. Generated CL references the table content. |
 | Regression | Repeat tests in adjacent sections that share controls. | A fix in one section does not break another. |
 
 ---
 
 ## 7. Minimum test cases
-
-From the source spec §9 + §13.5. These are the gating cases — every commit in P0/P1 must keep these green.
 
 | ID | Area | Steps | Expected result |
 |---|---|---|---|
@@ -367,10 +423,11 @@ From the source spec §9 + §13.5. These are the gating cases — every commit i
 | **TC-021 (v2)** | Desktop Preview utilities | Open desktop Preview at normal width. Inspect lower-right gray Preview zone. | Three utility buttons are visible, including Privacy and Fuse CL → CV. |
 | **TC-022 (v2)** | Preview utility route stability | Switch Set → Preview → Set → Preview, then hard refresh in Preview and in Set. | Preview utilities, Privacy, Fuse CL → CV, PDF, and DOCX remain visible in all routes. |
 | **TC-023 (v2)** | Export buttons | Open Preview from a fresh load and from Set menu. Click PDF and DOCX. | Buttons are visible and export the current CV or Cover Letter. |
-| **TC-024 (v2)** | Application History foregrounding | Open Application History popup and press Open in Settings. | Set menu is shown onscreen with Application History visible and focused. |
-| **TC-025 (v2)** | Loading status click | Start generation and click the loading status area. | Status stays visible or opens details. It does not disappear while the task is active. |
+| **TC-024 (v2)** | Application History foregrounding | Open Application History popup and press Open in Settings. Then press browser back. | Set menu shown with AH visible/focused; browser back returns to Preview. |
+| **TC-025 (v2)** | Loading status click — LOCKED no-op | Start generation and click the loading status area. | Click during loading does nothing. Status stays. After completion, normal dismiss works. |
 | **TC-026 (v2)** | Validation colors | Create one error and one warning in the Set menu. | Error is red. Warning is yellow. Labels and icons distinguish severity. |
-| **TC-027 (v2)** | CL table capture | Generate a Cover Letter from a source where key requirements appear only in tables. | Relevant table data appears in the generation context and letter sections. |
+| **TC-027 (v2)** | CL table capture — PDF + CloudConvert | Upload a PDF JD with key requirements only in tables. Generate CL. Inspect Worker logs for CloudConvert invocation. | CloudConvert is invoked; PDF→DOCX conversion succeeds; table cells appear in generation context; generated CL references the table content. |
+| **TC-027b (v2.1)** | CL table capture — DOCX + HTML + Markdown | Generate CL from DOCX/HTML-paste/Markdown-paste JDs each containing table-only requirements. | Each source type produces structured table data in the generation context. |
 | **TC-028 (v2) — STRESS** | Publications stress test | Edit Publications & Patents with long text, several rows, route changes, and generation running. | Buttons remain row-bound, ordered, and stable. No floating or random button placement occurs. |
 | **TC-029 (v2)** | Professional Experience page break | Apply Page Break to a later Professional Experience sub-subsection. | Panel shows the inline page marker. Preview and exports show EXPERIENCE (CONT.) on the next page. |
 | **TC-030 (v2)** | Mobile parity reference | Repeat Preview utility and export-button checks on mobile. | Mobile stays functional and matches intended button availability. |
@@ -378,8 +435,6 @@ From the source spec §9 + §13.5. These are the gating cases — every commit i
 ---
 
 ## 8. Fixture set
-
-Build before refactoring exporters. Each fixture is a saved CV/cover letter JSON the tester reuses.
 
 | Fixture | Purpose |
 |---|---|
@@ -390,14 +445,15 @@ Build before refactoring exporters. Each fixture is a saved CV/cover letter JSON
 | `Colored-layout` | Coloured header + coloured sidebar + dense final page — watermark contrast and collision. |
 | `Narrow-editor` | Editor viewport narrow enough to stress row controls. |
 | `Localized-continuation` | DA + EN active language to verify continuation labels. |
-| **`JD-table-only` (v2)** | Job description where key requirements appear only in tables (DOCX, pasted HTML, Markdown, PDF-derived). Drives TC-027. |
+| **`JD-table-only-pdf` (v2.1)** | PDF JD with table-only requirements — drives the CloudConvert path in TC-027. |
+| **`JD-table-only-docx` (v2.1)** | DOCX JD with table-only requirements — drives the canonical DOCX parser in TC-027b. |
+| **`JD-table-only-html` (v2.1)** | Pasted HTML JD with table-only requirements — drives the HTML parser. |
+| **`JD-table-only-md` (v2.1)** | Pasted Markdown JD with table-only requirements — drives the Markdown parser. |
 | **`Publications-stress` (v2)** | Many publication rows, long text, narrow width — drives TC-028. |
 
 ---
 
 ## 9. Definition of Done — per-requirement report template
-
-A requirement is accepted only when this block is filled. Copy-paste per ID into the PR description.
 
 ```
 Requirement ID:        e.g. PRV-003
@@ -408,7 +464,7 @@ Pass / fail:           Pass only if observed == required
 Regression notes:      <sections retested because they share the same control family>
 ```
 
-### Acceptance gate summary (from spec §12)
+### Acceptance gate summary
 
 - Not accepted on code-written alone.
 - Not accepted if it works in Preview but not in DOCX or PDF (unless the requirement explicitly excludes export).
@@ -416,16 +472,17 @@ Regression notes:      <sections retested because they share the same control fa
 - Not accepted if drag-and-drop lands at the end when the indicator showed another position.
 - Not accepted if the watermark is attached to text flow instead of the page box.
 - Not accepted if any control is hidden, clipped, or requires horizontal scrolling.
-- **(v2) Not accepted if a Preview button is visible after one route refresh path but hidden after another.**
-- **(v2) Not accepted if "Open in Settings" changes the route in the background while leaving the user in Preview.**
-- **(v2) Not accepted if a Cover Letter generated from a table-only JD silently omits the table's content.**
-- **(v2) Not accepted if Publications & Patents buttons look correct only in the simplest row state.**
+- Not accepted if a Preview button is visible after one route refresh path but hidden after another.
+- Not accepted if "Open in Settings" changes the route in the background while leaving the user in Preview.
+- Not accepted if a Cover Letter generated from a table-only JD silently omits the table's content.
+- Not accepted if Publications & Patents buttons look correct only in the simplest row state.
+- **(v2.1) Not accepted if a click on the loading status during an active job changes anything.**
+- **(v2.1) Not accepted if PDF JD tables are flattened instead of going through the CloudConvert → DOCX pipeline.**
+- **(v2.1) Not accepted if browser back from foregrounded Application History does not return to Preview.**
 
 ---
 
 ## 10. Branch and commit plan
-
-One branch per phase. Each merges to `main` only after the linked test cases pass.
 
 | Branch | Phase | Linked IDs | Linked TCs |
 |---|---|---|---|
@@ -433,28 +490,27 @@ One branch per phase. Each merges to `main` only after the linked test cases pas
 | `fix/page-break-model` | P0-B | PB-001..PB-006 | TC-008, TC-009, TC-010, TC-029 |
 | `fix/cover-letter-editor` | P0-C | CL-001..CL-005, VF-001..VF-003 | TC-004, TC-005, TC-006, TC-007 |
 | `fix/candidate-application-dnd` | P0-D | CA-001..CA-005, VF-005..VF-007 | TC-013, TC-014, TC-015, TC-016 |
-| **`fix/preview-shell-routing`** | **P0-E (v2)** | **PRV-001..PRV-004, AH-001, GEN-009, GEN-010, VF-011..VF-015** | **TC-021, TC-022, TC-023, TC-024, TC-025, TC-030** |
-| **`fix/cl-table-capture`** | **P0-F (v2)** | **CL-006, GEN-011, VF-017** | **TC-027** |
+| **`fix/preview-shell-routing`** | **P0-E** | PRV-001..PRV-004, AH-001, GEN-009, GEN-010, VF-011..VF-015 | TC-021, TC-022, TC-023, TC-024, TC-025, TC-030 |
+| **`fix/cl-table-capture-cloudconvert`** | **P0-F** | CL-006, GEN-011, VF-017 | TC-027, TC-027b |
 | `fix/watermark-page-anchor` | P1-A | WM-001, WM-002, VF-004 | TC-011, TC-012 |
 | `fix/tables-outcomes-publications` | P1-B | TB-001..TB-003, SO-001..SO-002, PP-001..PP-003, VF-008..VF-010 | TC-017, TC-018, TC-019, TC-028 |
-| **`fix/validation-severity`** | **P1-C (v2)** | **VAL-001, VF-016** | **TC-026** |
+| **`fix/validation-severity`** | **P1-C** | VAL-001, VF-016 | TC-026 |
 | `fix/regression-sweep` | gate | — | TC-020 |
 
 ---
 
-## 11. Open questions for the product owner
+## 11. Open questions for the product owner (still open)
 
 1. **Application sentence editability — parser strictness.** Edits to the rendered Preview sentence (CA-002): hard-parse back into `{role, company}` on every keystroke, or only on blur? Keystroke-parsing is brittle mid-typing the `-` separator.
 2. **Fit limits.** Fit is "reduce or rebalance within defined limits, but must not change content meaning". The limits themselves are not enumerated. Without them the tester cannot deterministically verify Fit behaviour.
 3. **Watermark contrast threshold.** WM-002 says "lowest reasonable visual attention". A measurable contrast floor (e.g. WCAG AA against the chosen corner background) would make this testable.
 4. **Continuation label localisation.** PB-003 requires localised "Cont." suffix. DA + EN confirmed. ES + Mandarin are on the roadmap — does this phase need them, or only DA + EN?
 5. **Section move destinations per section type.** CA-003 says "every movable item gets a move button". The exact destination matrix per item type should be confirmed before tooltips/aria-labels are finalised.
-6. **(v2) Loading status click — open details or no-op?** PRV-004 allows either non-click-dismissable or click-opens-details. Which is the intended UX? "Click-opens-details" requires a details view — does one exist, or does it need to be built? "No-op while loading" is simpler.
-7. **(v2) CL-006 table parsing scope.** The spec lists DOCX, pasted HTML, Markdown, and PDF-derived. PDF tables are notoriously lossy — is "best-effort, no row/column preservation" acceptable, or must PDF tables also keep their structure? An explicit fallback policy avoids over-engineering.
-8. **(v2) Application History foregrounding — back-button behaviour.** After AH-001, what should the browser back button do from the foregrounded Application History view? Return to Preview (where the popup was opened from) or close Application History and stay in Set?
+
+(PRV-004, CL-006, AH-001 are resolved — see §0.)
 
 ---
 
 ## 12. Source of truth
 
-`AntCV_UI_UX_Spec_and_QA_Plan_v2.docx`. This implementation plan paraphrases and rearranges it for execution; the source spec wins on any conflict. v1 of this plan is preserved in git history at commit `1b80cd6`.
+`AntCV_UI_UX_Spec_and_QA_Plan_v2.docx` + the three locked decisions in §0. This implementation plan paraphrases and rearranges them for execution; the source spec wins on any conflict. v1 of this plan is preserved in git history at commit `1b80cd6`; v2.0 at `b219555`.

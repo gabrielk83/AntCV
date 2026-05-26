@@ -1,19 +1,17 @@
 # Personalization
 
-How `role_summary` and `role_summary_global` modulate the skill's output. Loaded when `role_summary` is non-null.
+How `role_summary` and `role_summary_global` modulate output. Loaded when `role_summary` is non-null.
 
-The skill personalises across two axes: per-user history with this `role_slug`, and global aggregate behaviour across all users on the same `role_slug`. The two are blended based on data density — when the user has limited history, the global prior carries more weight.
+Two signals: per-user history for this `role_slug`, and anonymised global aggregate across all users on the same `role_slug`. They blend by data density — sparse user history shifts weight to the global prior.
 
 ---
 
 ## Inputs
 
-The worker passes two objects:
+The worker passes two objects of identical shape:
 
-- `role_summary` — per-user rollup keyed `user:{uid}:role-summary:{slug}` in `ANALYTICS` KV.
-- `role_summary_global` — anonymised aggregate keyed `global:role-summary:{slug}`.
-
-Both follow the same shape:
+- `role_summary` — per-user, keyed `user:{uid}:role-summary:{slug}` in `ANALYTICS` KV.
+- `role_summary_global` — anonymised aggregate, keyed `global:role-summary:{slug}`.
 
 ```json
 {
@@ -37,86 +35,76 @@ Both follow the same shape:
 }
 ```
 
-The user copy may be null when the user has not yet generated for this role; the global copy is null only when no user anywhere has generated for this role (uncommon after the first weeks of operation).
+The user copy is null until the first generation for this role. The global copy is null only when no user has generated for this role anywhere.
 
 ---
 
 ## Blending logic
 
-The skill uses a density threshold to decide weighting:
-
-- **`application_count` >= 3** for `role_summary`: trust the user's per-role history fully; ignore `role_summary_global` for that role.
-- **`application_count` < 3** for `role_summary`: blend the user's history with the global prior. The user's signals still dominate for style choice (they made an explicit selection), but density and format defaults come from `role_summary_global`.
-- **`role_summary` is null**: use `role_summary_global` as the prior for density and format defaults. Style is taken from the user's current `writingPrefs.style`.
-- **Both null**: cold start. Use the style row's `sectionFormatDefaults` and density values verbatim from `style-matrix.md`.
+| `application_count` | Behaviour |
+|---|---|
+| ≥ 3 | Trust per-user history fully. Ignore the global prior. |
+| 1 – 2 | Blend. User signals decide style choice; density and format come from the global prior. |
+| 0 (null `role_summary`) | Use the global prior for density and format. Style comes from `writingPrefs.style`. |
+| Both null | Cold start. Use `style-matrix.md` defaults verbatim. |
 
 ---
 
 ## What gets personalised
 
-The skill applies `role_summary` signals to these output decisions, **not** to content correctness:
+`role_summary` shapes output decisions, not content correctness:
 
-| Signal | Effect on output |
+| Signal | Effect |
 |---|---|
-| `section_density_observed.{section}.avg_bullets_after_edit` | Targets bullet count for that section toward the user's revealed preference (within the style's range). |
-| `section_density_observed.{section}.avg_chars_per_bullet` | Targets bullet length toward the user's revealed preference (within the style's range). |
-| `section_format_observed.{section}` | If the user has consistently overridden the style default to a different format for this role, the skill uses the user's format. |
-| `manual_edit_signals.common_user_replacements` | The skill avoids generating words the user has consistently replaced. E.g., if the user replaces "drove" with "led" six times, the skill uses "led" by default for this role. |
-| `preferred_styles` | When `writing_style` is not explicitly set, default to the most-accepted style for this role. |
-| `preferred_packages` | When `package` is not explicitly set, default to the most-selected package for this role. |
+| `section_density_observed.{section}.avg_bullets_after_edit` | Targets bullet count toward the user's revealed preference, within the style's range. |
+| `section_density_observed.{section}.avg_chars_per_bullet` | Targets bullet length toward the user's revealed preference. |
+| `section_format_observed.{section}` | Uses the user's revealed format when it consistently overrides the style default. |
+| `manual_edit_signals.common_user_replacements` | Generates the user's preferred replacement instead of the original (e.g., "led" instead of "drove" after six edits). |
+| `preferred_styles` | When `writing_style` is unset, defaults to the most-accepted style. |
+| `preferred_packages` | When `package` is unset, defaults to the most-selected package. |
 
-What `role_summary` **does not** affect:
+What `role_summary` does **not** touch:
 
-- Banned word lists (those are absolute).
-- Style constraints (`primaryConstraint`, `constraintAvoid`, `constraintPrefer`) — these are pure functions of the style.
-- Section presence (the skeleton decides which sections exist).
-- ATS tier (decided per `cv-skeleton.md` § Tier inference).
+- Banned word lists (absolute).
+- Style constraints (`primaryConstraint`, `constraintAvoid`, `constraintPrefer`) — pure functions of the style.
+- Section presence (the skeleton decides).
+- ATS tier (`cv-skeleton.md` § Tier inference).
 - JD Gap Closure claim validity.
 
 ---
 
 ## Global prior usage
 
-`role_summary_global` is used in two contexts:
+`role_summary_global` informs structure (typical bullet length for a Product Manager) but never wording — no user's specific phrasing surfaces to another user. Used in two contexts:
 
-1. **Cold start for a user.** When the user has no history with this `role_slug`, the global prior informs density and format defaults so the first generation does not feel arbitrary.
-2. **Sparse user history.** When `application_count < 3` for the user, the global signals contribute to density and format defaults via the blend.
+1. **Cold start** — user has no history with this `role_slug`.
+2. **Sparse history** — `application_count < 3` triggers the blend.
 
-The global prior is never used for content. It informs structure (how long a bullet typically is for a Product Manager application) but never wording (no user's specific phrasing is ever surfaced to another user).
-
----
-
-## Sparse-data fallback
-
-When `role_summary_global` is also null or has fewer than 50 applications across all users, the skill falls back to `global:section-defaults` — a coarser prior built from all applications across all roles. This is the cold-start cold-start.
-
-`global:section-defaults` is a single KV entry of the same shape as `role_summary` but with `role_slug=ALL`. It is updated by the rollup function on every event regardless of role.
+When `role_summary_global` is also null or has fewer than 50 applications across all users, fall back to `global:section-defaults` — a coarser prior built across all roles. Single KV entry, same shape, `role_slug=ALL`. Updated on every event.
 
 ---
 
-## Manual-edit signals — privacy considerations
+## Privacy
 
-`manual_edit_signals.common_user_replacements` captures word-level patterns from the user's own change log. The signal stays per-user — it is never aggregated into `role_summary_global` because individual word preferences can leak personal voice.
+`manual_edit_signals.common_user_replacements` captures word-level patterns from the user's change log. The signal stays per-user — never aggregated globally, because individual word choices can leak personal voice.
 
-When the daily retention sweeper trims `change_log.before_text` and `after_text` past the retention threshold, the manual-edit signals already aggregated into `role_summary` persist as counts (no raw text). The aggregate survives the text trim.
+When the daily retention sweeper trims `change_log.before_text` and `after_text`, the manual-edit signals already aggregated into `role_summary` persist as counts. The aggregate survives the text trim.
 
-If the user calls "Wipe my analytics" (see `AI_IMPLEMENTATION_GUIDE.md` § 8.2), the per-user `role_summary` is deleted along with the events. The user starts cold on the next generation.
-
----
-
-## When to override personalisation
-
-The skill ignores `role_summary` in these cases:
-
-- **`writingPrefs.overrides[field] === true`** for any field the personalisation would affect. The user's explicit override always wins.
-- **Style cascade just happened.** When `style.cascade` fires within the last 30 seconds, the new style's `sectionFormatDefaults` win over the personalisation observed under the previous style.
-- **JD Gap Closure claim conflicts.** If a JD Gap claim demands a section that the user has historically dropped, the claim wins and the section appears.
+"Wipe my analytics" (`AI_IMPLEMENTATION_GUIDE.md` § 8.2) deletes the user's `role_summary` along with the events. The user starts cold next time.
 
 ---
 
-## Effects on change-log
+## When personalisation is ignored
 
-Every personalisation effect produces a change-log entry with `reason` naming the signal:
+- **`writingPrefs.overrides[field] === true`** — the user's explicit override wins for that field.
+- **Recent style cascade** — within 30 seconds of `style.cascade`, the new style's `sectionFormatDefaults` win over previously observed preferences.
+- **JD Gap Closure conflict** — a confirmed claim demanding a section the user has dropped causes the section to appear regardless.
+
+---
+
+## Change-log entries
+
+Every personalisation effect produces a change-log entry naming the signal:
 
 ```json
 {
@@ -130,7 +118,7 @@ Every personalisation effect produces a change-log entry with `reason` naming th
 }
 ```
 
-When the user later edits that section, the edit is captured against the same `application_id` and the rollup updates the signal — closing the feedback loop.
+User edits to that section are captured against the same `application_id`; the next rollup updates the signal.
 
 ---
 
@@ -138,6 +126,6 @@ When the user later edits that section, the edit is captured against the same `a
 
 - `style-matrix.md` — base defaults that personalisation modifies.
 - `cv-skeleton.md` / `cv-skeleton-academic.md` — section structure that personalisation respects.
-- `change-log-application.md` — adjacent reference; change-log patterns are the other behavioural signal alongside `role_summary`.
-- `AI_IMPLEMENTATION_GUIDE.md` § 7 — rollup function that populates `role_summary`.
-- `output-schema.md` — change-log entry shape for personalisation signals.
+- `change-log-application.md` — the other behavioural signal.
+- `AI_IMPLEMENTATION_GUIDE.md` § 7 — rollup function.
+- `output-schema.md` — change-log entry shape.

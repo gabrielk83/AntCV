@@ -62,6 +62,12 @@
     padding: 10px 12px; overflow: auto; font-family: var(--mono); font-size: 12px; margin: 0; }
   details summary { cursor: pointer; color: var(--muted); font-size: 12px; padding: 4px 0; user-select: none; }
   details[open] summary { color: var(--text); }
+  .nested { margin-top: 6px; padding: 8px 10px; background: var(--panel-2);
+    border-left: 2px solid var(--border); border-radius: 0 4px 4px 0; }
+  .nested .muted { color: var(--muted); }
+  table.sub { font-size: 11px; }
+  table.sub th { font-size: 10px; }
+  .nested code { font-size: 11px; }
   .meta { display: flex; gap: 16px; flex-wrap: wrap; font-family: var(--mono); font-size: 12px; color: var(--muted); margin-top: 6px; }
   .meta span b { color: var(--text); font-weight: 600; }
   .note { font-size: 12px; color: var(--muted); margin-top: 6px; }
@@ -299,20 +305,98 @@
       '</div>';
   }
 
+  function typeLabel(def) {
+    if (!def) return "?";
+    if (def.enum) return "enum";
+    if (def.anyOf) return "anyOf";
+    if (def.oneOf) return "oneOf";
+    if (def.type === "array") {
+      const it = def.items;
+      const inner = !it ? "?" : (it.enum ? "enum" : (it.type || "?"));
+      return "array<" + inner + ">";
+    }
+    if (def.type === "object") {
+      if (def.properties) return "object";
+      if (def.additionalProperties) {
+        const ap = def.additionalProperties;
+        const vt = ap === true ? "any" : (ap.type || "?");
+        return "object<" + vt + ">";
+      }
+      return "object";
+    }
+    return def.type || "?";
+  }
+
+  function subTable(props, required) {
+    const req = new Set(required || []);
+    const rows = Object.entries(props).map(([name, def]) => {
+      const flag = req.has(name) ? '<td class="req">required</td>' : '<td class="opt">optional</td>';
+      const desc = def.description ? escapeHtml(def.description) : '<span class="note">—</span>';
+      return '<tr>' +
+        '<td class="name">' + escapeHtml(name) + '</td>' +
+        '<td class="type">' + escapeHtml(typeLabel(def)) + '</td>' +
+        flag +
+        '<td>' + desc + '</td>' +
+      '</tr>';
+    }).join("");
+    return '<table class="sub"><thead><tr><th>field</th><th>type</th><th>required</th><th>description</th></tr></thead><tbody>' + rows + '</tbody></table>';
+  }
+
+  // One-level expansion: for nested objects, arrays of objects, records, enums, and anyOf,
+  // surface the immediate child shape underneath the row. Anything deeper stays in the
+  // raw inputSchema collapsible.
+  function nestedFor(def) {
+    if (!def) return "";
+    if (def.enum) {
+      const vals = def.enum.map((v) => '<code>' + escapeHtml(JSON.stringify(v)) + '</code>').join(' | ');
+      return '<div class="nested"><span class="muted">values:</span> ' + vals + '</div>';
+    }
+    if (def.anyOf || def.oneOf) {
+      const arr = def.anyOf || def.oneOf;
+      const label = def.anyOf ? "any of:" : "one of:";
+      const parts = arr.map((s) => '<code>' + escapeHtml(typeLabel(s)) + '</code>').join(' | ');
+      return '<div class="nested"><span class="muted">' + label + '</span> ' + parts + '</div>';
+    }
+    if (def.type === "object" && def.properties) {
+      return '<div class="nested">' + subTable(def.properties, def.required) + '</div>';
+    }
+    if (def.type === "object" && def.additionalProperties && typeof def.additionalProperties === "object") {
+      const ap = def.additionalProperties;
+      const tail = ap.description ? ' — ' + escapeHtml(ap.description) : '';
+      return '<div class="nested"><span class="muted">map of</span> <code>string</code> ' +
+        '<span class="muted">→</span> <code>' + escapeHtml(ap.type || "any") + '</code>' + tail + '</div>';
+    }
+    if (def.type === "array" && def.items) {
+      const it = def.items;
+      if (it.type === "object" && it.properties) {
+        return '<div class="nested"><div class="muted" style="margin-bottom:4px">each item:</div>' +
+          subTable(it.properties, it.required) + '</div>';
+      }
+      if (it.enum) {
+        const vals = it.enum.map((v) => '<code>' + escapeHtml(JSON.stringify(v)) + '</code>').join(' | ');
+        return '<div class="nested"><span class="muted">item values:</span> ' + vals + '</div>';
+      }
+      if (it.type) {
+        return '<div class="nested"><span class="muted">items:</span> <code>' + escapeHtml(it.type) + '</code></div>';
+      }
+    }
+    return "";
+  }
+
   function renderProps(schema) {
     if (!schema || schema.type !== "object" || !schema.properties) {
       return '<div class="note">No structured input schema.</div>';
     }
     const required = new Set(schema.required || []);
     const rows = Object.entries(schema.properties).map(([name, def]) => {
-      const t = def.type || (def.enum ? "enum" : (def.anyOf ? "anyOf" : "?"));
       const flag = required.has(name) ? '<td class="req">required</td>' : '<td class="opt">optional</td>';
       const desc = def.description ? escapeHtml(def.description) : '<span class="note">—</span>';
+      const nested = nestedFor(def);
       return '<tr>' +
         '<td class="name">' + escapeHtml(name) + '</td>' +
-        '<td class="type">' + escapeHtml(String(t)) + '</td>' +
+        '<td class="type">' + escapeHtml(typeLabel(def)) + '</td>' +
         flag +
-        '<td>' + desc + '</td>' +
+        '<td>' + desc + nested + '</td>' +
       '</tr>';
     }).join("");
     return '<table><thead><tr><th>arg</th><th>type</th><th>required</th><th>description</th></tr></thead><tbody>' + rows + '</tbody></table>';

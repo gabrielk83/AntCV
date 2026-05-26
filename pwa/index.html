@@ -427,7 +427,7 @@
   //    grounded in candidate background or JD requirements. NEVER
   //    invent achievements/projects/technologies. Vague filler is
   //    worse than fewer bullets.'
-  window.ANTCV_VERSION = '1.40.309';
+  window.ANTCV_VERSION = '1.40.339';
   // Configure your worker:
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';  // configure in Settings → Advanced → Routing
   // window.ANTCV_DOCX_SECRET = '<your shared secret>';  // optional
@@ -464,14 +464,14 @@
         auth.src = 'antcv-auth.js?v=1.40.202';
         auth.onload = function(){
           var app = document.createElement('script');
-          app.src = 'app.js?v=1.40.338';
+          app.src = 'app.js?v=1.40.339';
           app.onload = function(){
             // v1.40.198: re-assert version after app.js has set
             // its baked-in constant. The sidecar uses
             // Object.defineProperty + a polling timer to keep it
             // pinned even against repeat assignments.
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.40.338';
+            vo.src = 'antcv-version-override.js?v=1.40.339';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -800,13 +800,13 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 </script>
 <script src="antcv-pdf-po-shim.js?v=1.40.153" defer></script>
 <script src="antcv-hide-gsi-button.js?v=1.40.154" defer></script>
-<script src="antcv-about.js?v=1.40.183" defer></script>
-<script src="antcv-orchestration-replay.js?v=1.40.181" defer></script>
-<script src="antcv-replay-analysis.js?v=1.40.183" defer></script>
-<script src="antcv-provenance.js?v=1.40.183" defer></script>
-<script src="antcv-provenance-ui.js?v=1.40.183" defer></script>
-<script src="antcv-benchmark-corpus.js?v=1.40.182" defer></script>
-<script src="antcv-benchmark-regression.js?v=1.40.183" defer></script>
+<!-- v1.40.339: antcv-about.js removed — file no longer in pwa/. Was likely an About modal / version-info dialog. -->
+<!-- v1.40.339: antcv-orchestration-replay.js removed — file no longer in pwa/. LLM orchestration replay tooling. -->
+<!-- v1.40.339: antcv-replay-analysis.js removed — file no longer in pwa/. Pairs with orchestration-replay. -->
+<!-- v1.40.339: antcv-provenance.js removed — file no longer in pwa/. C2PA / content provenance (AI Act 50(2)). Pair w/ antcv-c2pa-worker (deployed but idle). -->
+<!-- v1.40.339: antcv-provenance-ui.js removed — file no longer in pwa/. UI for the provenance feature above. -->
+<!-- v1.40.339: antcv-benchmark-corpus.js removed — file no longer in pwa/. LLM benchmark test corpus. -->
+<!-- v1.40.339: antcv-benchmark-regression.js removed — file no longer in pwa/. Regression testing against benchmark corpus. -->
 <!-- v1.40.303: antcv-wizard-fix.js removed. Was a TTL-based clearer of
      wizardCompleted that fought with the rogue writers in
      ai-wizard-slide-239. Both removed in the same pass. -->
@@ -846,31 +846,31 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-format-prefs.js?v=1.40.178" defer></script>
 <script src="antcv-page-budget.js?v=1.40.178" defer></script>
 <script src="antcv-language-prefs.js?v=1.40.323" defer></script>
-<script src="antcv-semantic-constraints.js?v=1.40.189" defer></script>
-<script src="antcv-enhanced-prompt.js?v=1.40.178" defer></script>
-<script src="antcv-page-breaks.js?v=1.40.178" defer></script>
-<script src="antcv-button-bar.js?v=1.40.178" defer></script>
-<script src="antcv-enhanced-fields-ui.js?v=1.40.191" defer></script>
-<script src="antcv-demo-watermark.js?v=1.40.178" defer></script>
-<script src="antcv-cloud-revs.js?v=1.40.178" defer></script>
+<!-- v1.40.339: antcv-semantic-constraints.js removed — file no longer in pwa/. Keyword/concept constraint validator for LLM outputs. -->
+<!-- v1.40.339: antcv-enhanced-prompt.js removed — file no longer in pwa/. Enhanced LLM prompt construction. -->
+<!-- v1.40.339: antcv-page-breaks.js removed — file no longer in pwa/. NB: distinct from antcv-page-breaks-everywhere-284.js (which IS loaded). -->
+<!-- v1.40.339: antcv-button-bar.js removed — file no longer in pwa/. Button bar UI. -->
+<!-- v1.40.339: antcv-enhanced-fields-ui.js removed — file no longer in pwa/. Enhanced editor field UI. -->
+<!-- v1.40.339: antcv-demo-watermark.js removed — file no longer in pwa/. NB: demo routing now works at relay level via UPSTREAM_DEMO. -->
+<!-- v1.40.339: antcv-cloud-revs.js removed — file no longer in pwa/. Cloud-side revision history. -->
 <script src="antcv-section-align.js?v=1.40.203" defer></script>
 <script src="antcv-recheck-fit.js?v=1.40.139" defer></script>
 <script src="antcv-jd-watch.js?v=1.40.131" defer></script>
 <script src="antcv-privacy-led.js?v=1.40.295" defer></script>
 <script src="antcv-bullet-targets.js?v=1.40.136" defer></script>
-<script src="antcv-fetch-coalesce.js?v=1.40.186" defer></script>
+<!-- v1.40.339: antcv-fetch-coalesce.js removed — file no longer in pwa/. Coalesce duplicate concurrent fetches. -->
 <script src="antcv-photo-position.js?v=1.40.194" defer></script>
 <script src="antcv-tone-helper.js?v=1.40.159" defer></script>
 <script src="antcv-banned-audit.js?v=1.40.178" defer></script>
 <script src="antcv-llm-audit.js?v=1.40.178" defer></script>
-<script src="antcv-wizard-formats-explainer.js?v=1.40.178" defer></script>
+<!-- v1.40.339: antcv-wizard-formats-explainer.js removed — file no longer in pwa/. Partially covered by antcv-wizard-section-format-step10.js. -->
 <script src="antcv-jd-image-ocr.js?v=1.40.139" defer></script>
 <script src="antcv-panel-bottom-pad.js?v=1.40.145" defer></script>
 <script src="antcv-sidebar-position.js?v=1.40.146" defer></script>
 <script src="antcv-splitter-flip.js?v=1.40.151" defer></script>
 <script src="antcv-section-panel-tweaks.js?v=1.40.203" defer></script>
 <script src="antcv-item-align.js?v=1.40.178" defer></script>
-<script src="antcv-item-page-marker.js?v=1.40.178" defer></script>
+<!-- v1.40.339: antcv-item-page-marker.js removed — file no longer in pwa/. NB: antcv-item-pages-render.js IS loaded and may overlap. -->
 <script src="antcv-page-fit.js?v=1.40.151" defer></script>
 <script src="antcv-table-fast-drag.js?v=1.40.147" defer></script>
 <!-- v1.40.194 — new sidecars:
@@ -1086,7 +1086,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      v194 already inserted markers (to avoid double-rendering). -->
 <script src="antcv-page-breaks-everywhere-284.js?v=1.40.284" defer></script>
 <script src="antcv-what-i-bring-row-controls-327.js?v=1.40.327" defer></script>
-<script src="antcv-table-page-splits-327.js?v=1.40.327" defer></script>
+<script src="antcv-table-page-splits-327.js?v=1.40.339" defer></script>
 <script src="antcv-page-button-polish-327.js?v=1.40.327" defer></script>
 <script src="antcv-settings-front-327.js?v=1.40.327" defer></script>
 
@@ -1187,7 +1187,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-sidebar-subsection-pagebreaks-329.js?v=1.40.329" defer></script>
 <!-- disabled v1.40.331 cleanup: <script src="antcv-editor-layout-fixes-330.js?v=1.40.330" defer></script> -->
 <script src="antcv-editor-layout-cleanup-331.js?v=1.40.331" defer></script>
-<script src="antcv-wizard-mode-bridge-337.js?v=1.40.338" defer></script>
-<script src="antcv-stability-core-334.js?v=1.40.338" defer></script>
+<script src="antcv-wizard-mode-bridge-337.js?v=1.40.339" defer></script>
+<script src="antcv-stability-core-334.js?v=1.40.339" defer></script>
 </body>
 </html>

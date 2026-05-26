@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>antcv-mcp probe</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #161a22;
+    --panel-2: #1d222c;
+    --text: #e7ecf3;
+    --muted: #8a93a3;
+    --accent: #01b7bb;
+    --border: #2a303c;
+    --warn: #ffb454;
+    --err: #ff6b6b;
+    --ok: #5fd07a;
+    --mono: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  }
+  html, body {
+    margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px; line-height: 1.45;
+  }
+  main { max-width: 1080px; margin: 0 auto; padding: 28px 24px 80px; }
+  h1 { font-size: 18px; font-weight: 600; margin: 0 0 4px; }
+  h2 { font-size: 13px; font-weight: 600; margin: 24px 0 8px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  p.sub { margin: 0 0 24px; color: var(--muted); font-size: 13px; }
+  .row { display: grid; grid-template-columns: 140px 1fr; gap: 10px; align-items: center; margin-bottom: 8px; }
+  label { color: var(--muted); font-size: 12px; }
+  input[type=text], input[type=password], textarea {
+    background: var(--panel); color: var(--text); border: 1px solid var(--border);
+    border-radius: 6px; padding: 8px 10px; font: inherit; font-family: var(--mono); font-size: 13px;
+    width: 100%; box-sizing: border-box;
+  }
+  textarea { min-height: 90px; resize: vertical; }
+  input:focus, textarea:focus, button:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  button {
+    background: var(--accent); color: #04212a; border: 0; border-radius: 6px;
+    padding: 8px 14px; font: inherit; font-weight: 600; cursor: pointer;
+  }
+  button.secondary { background: transparent; color: var(--text); border: 1px solid var(--border); font-weight: 500; }
+  button:disabled { opacity: 0.5; cursor: progress; }
+  .status { margin-top: 12px; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .status.ok { color: var(--ok); }
+  .status.err { color: var(--err); }
+  .status.warn { color: var(--warn); }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 14px; }
+  .tool { border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; background: var(--panel); }
+  .tool h3 { margin: 0 0 4px; font-size: 14px; font-family: var(--mono); color: var(--accent); font-weight: 600; }
+  .tool .desc { color: var(--text); font-size: 13px; margin-bottom: 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; font-family: var(--mono); }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 500; }
+  td.name { color: var(--accent); white-space: nowrap; }
+  td.type { color: var(--warn); white-space: nowrap; }
+  td.req { color: var(--err); white-space: nowrap; }
+  td.opt { color: var(--muted); white-space: nowrap; }
+  pre { background: var(--panel-2); border: 1px solid var(--border); border-radius: 6px;
+    padding: 10px 12px; overflow: auto; font-family: var(--mono); font-size: 12px; margin: 0; }
+  details summary { cursor: pointer; color: var(--muted); font-size: 12px; padding: 4px 0; user-select: none; }
+  details[open] summary { color: var(--text); }
+  .nested { margin-top: 6px; padding: 8px 10px; background: var(--panel-2);
+    border-left: 2px solid var(--border); border-radius: 0 4px 4px 0; }
+  .nested .muted { color: var(--muted); }
+  table.sub { font-size: 11px; }
+  table.sub th { font-size: 10px; }
+  .nested code { font-size: 11px; }
+  .meta { display: flex; gap: 16px; flex-wrap: wrap; font-family: var(--mono); font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .meta span b { color: var(--text); font-weight: 600; }
+  .note { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  code { font-family: var(--mono); background: var(--panel-2); padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>antcv-mcp probe</h1>
+  <p class="sub">Diagnostic page. Sends <code>initialize</code> + <code>tools/list</code> to a remote MCP server over HTTP and renders the tool schemas.</p>
+
+  <div class="panel">
+    <div class="row">
+      <label for="url">Endpoint</label>
+      <input id="url" type="text" spellcheck="false" />
+    </div>
+    <div class="row">
+      <label for="token">Bearer token</label>
+      <input id="token" type="password" autocomplete="off" spellcheck="false" placeholder="paste OAuth access_token (e.g. from MCP Inspector)" />
+    </div>
+    <div class="actions">
+      <button id="run">List tools</button>
+      <button id="clear" class="secondary" type="button">Clear token</button>
+      <button id="curl" class="secondary" type="button">Copy curl</button>
+    </div>
+    <div id="status" class="status"></div>
+    <div class="note">Token is stored only in this browser's <code>localStorage</code> under <code>antcv-mcp-probe.token</code>. The probe never persists or transmits anything else.</div>
+  </div>
+
+  <h2>Server</h2>
+  <div id="server" class="panel"><span class="note">No response yet.</span></div>
+
+  <h2>Tools</h2>
+  <div id="tools"><span class="note">No response yet.</span></div>
+
+  <h2>Raw</h2>
+  <details>
+    <summary>initialize request / response</summary>
+    <pre id="raw-init">—</pre>
+  </details>
+  <details>
+    <summary>tools/list request / response</summary>
+    <pre id="raw-list">—</pre>
+  </details>
+</main>
+
+<script>
+(() => {
+  "use strict";
+
+  const DEFAULT_URL = "https://antcv-mcp.karp-gabriel-a.workers.dev/mcp";
+  const LS = { url: "antcv-mcp-probe.url", token: "antcv-mcp-probe.token" };
+  const $ = (id) => document.getElementById(id);
+
+  const elUrl    = $("url");
+  const elToken  = $("token");
+  const elStatus = $("status");
+  const elServer = $("server");
+  const elTools  = $("tools");
+  const elRawIn  = $("raw-init");
+  const elRawLs  = $("raw-list");
+  const btnRun   = $("run");
+  const btnClear = $("clear");
+  const btnCurl  = $("curl");
+
+  elUrl.value   = localStorage.getItem(LS.url)   || DEFAULT_URL;
+  elToken.value = localStorage.getItem(LS.token) || "";
+
+  elUrl.addEventListener("change",   () => localStorage.setItem(LS.url, elUrl.value.trim()));
+  elToken.addEventListener("change", () => localStorage.setItem(LS.token, elToken.value.trim()));
+
+  btnClear.addEventListener("click", () => {
+    elToken.value = "";
+    localStorage.removeItem(LS.token);
+    setStatus("Token cleared from localStorage.", "warn");
+  });
+
+  btnCurl.addEventListener("click", async () => {
+    const url = elUrl.value.trim();
+    const tok = elToken.value.trim();
+    const body = JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} });
+    const cmd =
+      `curl -sS -X POST '${url}' \\\n` +
+      `  -H 'content-type: application/json' \\\n` +
+      `  -H 'accept: application/json, text/event-stream' \\\n` +
+      (tok ? `  -H 'authorization: Bearer ${tok}' \\\n` : "") +
+      `  -d '${body.replace(/'/g, "'\\''")}'`;
+    try {
+      await navigator.clipboard.writeText(cmd);
+      setStatus("curl command copied to clipboard.", "ok");
+    } catch (e) {
+      setStatus("Clipboard blocked: " + e.message, "err");
+    }
+  });
+
+  btnRun.addEventListener("click", () => { run().catch((e) => setStatus("Unhandled: " + e.message, "err")); });
+
+  function setStatus(text, cls) {
+    elStatus.textContent = text;
+    elStatus.className = "status" + (cls ? " " + cls : "");
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", "\"":"&quot;", "'":"&#39;" }[c]));
+  }
+
+  // The Streamable HTTP transport can return either a single JSON body or an
+  // SSE stream containing one or more JSON-RPC frames. Handle both.
+  async function readJsonRpcResponse(resp) {
+    const ct = (resp.headers.get("content-type") || "").toLowerCase();
+    const text = await resp.text();
+    if (ct.includes("text/event-stream")) {
+      const frames = [];
+      for (const block of text.split(/\r?\n\r?\n/)) {
+        const dataLines = block.split(/\r?\n/).filter((l) => l.startsWith("data:")).map((l) => l.slice(5).trimStart());
+        if (!dataLines.length) continue;
+        const joined = dataLines.join("\n");
+        try { frames.push(JSON.parse(joined)); } catch { /* ignore */ }
+      }
+      return { frames, raw: text };
+    }
+    if (!text) return { frames: [], raw: "" };
+    try { return { frames: [JSON.parse(text)], raw: text }; }
+    catch { return { frames: [], raw: text }; }
+  }
+
+  async function rpc(url, token, sessionId, message) {
+    const headers = {
+      "content-type": "application/json",
+      "accept": "application/json, text/event-stream",
+    };
+    if (token) headers["authorization"] = "Bearer " + token;
+    if (sessionId) headers["mcp-session-id"] = sessionId;
+    const resp = await fetch(url, { method: "POST", headers, body: JSON.stringify(message) });
+    const sid = resp.headers.get("mcp-session-id") || sessionId || null;
+    const { frames, raw } = await readJsonRpcResponse(resp);
+    return { status: resp.status, ok: resp.ok, sessionId: sid, frames, raw, headers: resp.headers };
+  }
+
+  async function run() {
+    const url = elUrl.value.trim();
+    const token = elToken.value.trim();
+    if (!url) { setStatus("Endpoint URL required.", "err"); return; }
+    localStorage.setItem(LS.url, url);
+    if (token) localStorage.setItem(LS.token, token);
+
+    btnRun.disabled = true;
+    setStatus("Sending initialize…");
+    elServer.innerHTML = '<span class="note">…</span>';
+    elTools.innerHTML  = '<span class="note">…</span>';
+
+    const initMsg = {
+      jsonrpc: "2.0", id: 1, method: "initialize",
+      params: {
+        protocolVersion: "2025-06-18",
+        capabilities: {},
+        clientInfo: { name: "antcv-mcp-probe", version: "1.0.0" },
+      },
+    };
+
+    let initResp;
+    try {
+      initResp = await rpc(url, token, null, initMsg);
+    } catch (e) {
+      setStatus("initialize failed (network/CORS): " + e.message, "err");
+      elRawIn.textContent = "→ " + JSON.stringify(initMsg, null, 2) + "\n\n← " + e.message;
+      btnRun.disabled = false;
+      return;
+    }
+
+    elRawIn.textContent =
+      "→ POST " + url + "\n" + JSON.stringify(initMsg, null, 2) +
+      "\n\n← HTTP " + initResp.status + (initResp.sessionId ? "  mcp-session-id: " + initResp.sessionId : "") +
+      "\n" + initResp.raw;
+
+    if (!initResp.ok) {
+      setStatus("initialize HTTP " + initResp.status + (initResp.status === 401 ? " — token missing or invalid" : ""), "err");
+      btnRun.disabled = false;
+      return;
+    }
+    const initFrame = initResp.frames.find((f) => f && f.id === 1);
+    if (!initFrame || initFrame.error) {
+      setStatus("initialize JSON-RPC error: " + (initFrame?.error?.message || "no result frame"), "err");
+      btnRun.disabled = false;
+      return;
+    }
+    renderServer(initFrame.result || {});
+
+    // Per the MCP spec the client SHOULD send notifications/initialized after initialize.
+    // Fire-and-forget; some servers ignore it, that's fine.
+    try {
+      await rpc(url, token, initResp.sessionId, { jsonrpc: "2.0", method: "notifications/initialized" });
+    } catch (_) { /* ignore */ }
+
+    setStatus("Sending tools/list…");
+    const listMsg = { jsonrpc: "2.0", id: 2, method: "tools/list", params: {} };
+    let listResp;
+    try {
+      listResp = await rpc(url, token, initResp.sessionId, listMsg);
+    } catch (e) {
+      setStatus("tools/list failed: " + e.message, "err");
+      btnRun.disabled = false;
+      return;
+    }
+    elRawLs.textContent =
+      "→ POST " + url + (initResp.sessionId ? "   mcp-session-id: " + initResp.sessionId : "") +
+      "\n" + JSON.stringify(listMsg, null, 2) +
+      "\n\n← HTTP " + listResp.status + "\n" + listResp.raw;
+
+    if (!listResp.ok) {
+      setStatus("tools/list HTTP " + listResp.status, "err");
+      btnRun.disabled = false;
+      return;
+    }
+    const listFrame = listResp.frames.find((f) => f && f.id === 2);
+    if (!listFrame || listFrame.error) {
+      setStatus("tools/list JSON-RPC error: " + (listFrame?.error?.message || "no result frame"), "err");
+      btnRun.disabled = false;
+      return;
+    }
+    const tools = (listFrame.result && listFrame.result.tools) || [];
+    renderTools(tools);
+    setStatus("OK — " + tools.length + " tool" + (tools.length === 1 ? "" : "s") + " listed.", "ok");
+    btnRun.disabled = false;
+  }
+
+  function renderServer(initResult) {
+    const si = initResult.serverInfo || {};
+    const cap = initResult.capabilities || {};
+    elServer.innerHTML =
+      '<div><b>' + escapeHtml(si.name || "?") + '</b> <span class="note">v' + escapeHtml(si.version || "?") + '</span></div>' +
+      '<div class="meta">' +
+        '<span>protocol: <b>' + escapeHtml(initResult.protocolVersion || "?") + '</b></span>' +
+        '<span>capabilities: <b>' + escapeHtml(Object.keys(cap).join(", ") || "(none)") + '</b></span>' +
+      '</div>';
+  }
+
+  function typeLabel(def) {
+    if (!def) return "?";
+    if (def.enum) return "enum";
+    if (def.anyOf) return "anyOf";
+    if (def.oneOf) return "oneOf";
+    if (def.type === "array") {
+      const it = def.items;
+      const inner = !it ? "?" : (it.enum ? "enum" : (it.type || "?"));
+      return "array<" + inner + ">";
+    }
+    if (def.type === "object") {
+      if (def.properties) return "object";
+      if (def.additionalProperties) {
+        const ap = def.additionalProperties;
+        const vt = ap === true ? "any" : (ap.type || "?");
+        return "object<" + vt + ">";
+      }
+      return "object";
+    }
+    return def.type || "?";
+  }
+
+  function subTable(props, required) {
+    const req = new Set(required || []);
+    const rows = Object.entries(props).map(([name, def]) => {
+      const flag = req.has(name) ? '<td class="req">required</td>' : '<td class="opt">optional</td>';
+      const desc = def.description ? escapeHtml(def.description) : '<span class="note">—</span>';
+      return '<tr>' +
+        '<td class="name">' + escapeHtml(name) + '</td>' +
+        '<td class="type">' + escapeHtml(typeLabel(def)) + '</td>' +
+        flag +
+        '<td>' + desc + '</td>' +
+      '</tr>';
+    }).join("");
+    return '<table class="sub"><thead><tr><th>field</th><th>type</th><th>required</th><th>description</th></tr></thead><tbody>' + rows + '</tbody></table>';
+  }
+
+  // One-level expansion: for nested objects, arrays of objects, records, enums, and anyOf,
+  // surface the immediate child shape underneath the row. Anything deeper stays in the
+  // raw inputSchema collapsible.
+  function nestedFor(def) {
+    if (!def) return "";
+    if (def.enum) {
+      const vals = def.enum.map((v) => '<code>' + escapeHtml(JSON.stringify(v)) + '</code>').join(' | ');
+      return '<div class="nested"><span class="muted">values:</span> ' + vals + '</div>';
+    }
+    if (def.anyOf || def.oneOf) {
+      const arr = def.anyOf || def.oneOf;
+      const label = def.anyOf ? "any of:" : "one of:";
+      const parts = arr.map((s) => '<code>' + escapeHtml(typeLabel(s)) + '</code>').join(' | ');
+      return '<div class="nested"><span class="muted">' + label + '</span> ' + parts + '</div>';
+    }
+    if (def.type === "object" && def.properties) {
+      return '<div class="nested">' + subTable(def.properties, def.required) + '</div>';
+    }
+    if (def.type === "object" && def.additionalProperties && typeof def.additionalProperties === "object") {
+      const ap = def.additionalProperties;
+      const tail = ap.description ? ' — ' + escapeHtml(ap.description) : '';
+      return '<div class="nested"><span class="muted">map of</span> <code>string</code> ' +
+        '<span class="muted">→</span> <code>' + escapeHtml(ap.type || "any") + '</code>' + tail + '</div>';
+    }
+    if (def.type === "array" && def.items) {
+      const it = def.items;
+      if (it.type === "object" && it.properties) {
+        return '<div class="nested"><div class="muted" style="margin-bottom:4px">each item:</div>' +
+          subTable(it.properties, it.required) + '</div>';
+      }
+      if (it.enum) {
+        const vals = it.enum.map((v) => '<code>' + escapeHtml(JSON.stringify(v)) + '</code>').join(' | ');
+        return '<div class="nested"><span class="muted">item values:</span> ' + vals + '</div>';
+      }
+      if (it.type) {
+        return '<div class="nested"><span class="muted">items:</span> <code>' + escapeHtml(it.type) + '</code></div>';
+      }
+    }
+    return "";
+  }
+
+  function renderProps(schema) {
+    if (!schema || schema.type !== "object" || !schema.properties) {
+      return '<div class="note">No structured input schema.</div>';
+    }
+    const required = new Set(schema.required || []);
+    const rows = Object.entries(schema.properties).map(([name, def]) => {
+      const flag = required.has(name) ? '<td class="req">required</td>' : '<td class="opt">optional</td>';
+      const desc = def.description ? escapeHtml(def.description) : '<span class="note">—</span>';
+      const nested = nestedFor(def);
+      return '<tr>' +
+        '<td class="name">' + escapeHtml(name) + '</td>' +
+        '<td class="type">' + escapeHtml(typeLabel(def)) + '</td>' +
+        flag +
+        '<td>' + desc + nested + '</td>' +
+      '</tr>';
+    }).join("");
+    return '<table><thead><tr><th>arg</th><th>type</th><th>required</th><th>description</th></tr></thead><tbody>' + rows + '</tbody></table>';
+  }
+
+  function renderTools(tools) {
+    if (!tools.length) {
+      elTools.innerHTML = '<span class="note">Server returned zero tools.</span>';
+      return;
+    }
+    tools.sort((a, b) => String(a.name).localeCompare(String(b.name)));
+    elTools.innerHTML = tools.map((t) => {
+      const schemaJson = JSON.stringify(t.inputSchema || {}, null, 2);
+      return '<div class="tool">' +
+        '<h3>' + escapeHtml(t.name) + '</h3>' +
+        '<div class="desc">' + escapeHtml(t.description || "(no description)") + '</div>' +
+        renderProps(t.inputSchema) +
+        '<details style="margin-top:8px"><summary>raw inputSchema</summary><pre>' + escapeHtml(schemaJson) + '</pre></details>' +
+      '</div>';
+    }).join("");
+  }
+})();
+</script>
+</body>
+</html>

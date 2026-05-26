@@ -147,13 +147,14 @@ type GenerateRequest = {
   target_language: string;
   target_pages: number;
   target_ats_tier?: "modern" | "legacy";  // default: inferred from JD (named portal only), fallback "modern"
-  target_use_case?: "commercial" | "academic" | "cold-outreach" | "hybrid";  // default: inferred from JD + writing_style
+  target_use_case?: "commercial" | "academic" | "cold-outreach" | "hybrid";  // default: inferred from JD + writing_style; see §3 step 1
+  role_slug?: string;                  // default: inferred from JD; see §3 step 1
   career_stage?: "phd_applicant" | "phd_candidate" | "postdoc" | "early_faculty" | "senior_faculty";  // academic only
   commercial_seniority?: "intern" | "junior" | "mid" | "senior" | "lead" | "director" | "vp" | "c-level";  // commercial only
   writing_style: string;
   tone_chips?: string[];
   package: string;
-  requested_sections: string[];        // ["*"] for all
+  requested_sections: string[];        // ["*"] for all; valid keys per cv-skeleton.md / cv-skeleton-academic.md / cl-skeleton.md
   operation: "generate" | "regenerate" | "compress" | "enhance";
   application_id?: string;             // omit for new applications
   generation_id?: string;              // omit; server-generated if absent
@@ -166,7 +167,7 @@ Auth: Cloudflare Access JWT in `Cf-Access-Jwt-Assertion` header. `user_id` is de
 
 Outbound to the LLM: assembled prompt with the eleven inputs documented in `SKILL.md` § Inputs.
 
-Response to PWA: the LLM's JSON output plus server-generated `application_id` and `generation_id`.
+Response to PWA: the LLM's JSON output (validated against `references/output-schema.md`) plus server-generated `application_id` and `generation_id`.
 
 ---
 
@@ -179,10 +180,36 @@ async function handleGenerate(req: GenerateRequest, env: Env, uid: string) {
   // Step 0 — Identify application + generation
   const application_id = req.application_id ?? newId();
   const generation_id = newId();
-  await ensureApplicationExists(env, application_id, uid, req);
 
-  // Step 1 — Identify target use case + role
-  const role_slug = req.role_slug ?? await inferRoleSlug(req.jd_text, env);
+  // Step 1 — Identify target use case + role + seniority/career stage
+  // Per references/role-inference.md, three dimensions are inferred in a
+  // single claude-haiku-4-5 call (<500ms, cached by jd_hash):
+  //   role_slug, target_use_case, and EITHER career_stage (academic)
+  //   OR commercial_seniority (commercial).
+  // If the PWA already passed any of these (user override after a prior
+  // inference), reuse them and only infer the missing dimensions.
+  const inferred = (req.role_slug && req.target_use_case)
+    ? {
+        role_slug: req.role_slug,
+        target_use_case: req.target_use_case,
+        career_stage: req.career_stage ?? null,
+        commercial_seniority: req.commercial_seniority ?? null,
+      }
+    : await inferRoleDimensions(req.jd_text, env, {
+        hints: {
+          role_slug: req.role_slug,
+          target_use_case: req.target_use_case,
+          career_stage: req.career_stage,
+          commercial_seniority: req.commercial_seniority,
+        },
+      });
+  // The PWA surfaces inferred values for user confirmation before this
+  // call completes when the user has not previously confirmed for the
+  // same jd_hash. User overrides write a role_inference.user_override
+  // event with both inferred and chosen values (see §9 test).
+  const { role_slug, target_use_case, career_stage, commercial_seniority } = inferred;
+
+  await ensureApplicationExists(env, application_id, uid, { ...req, role_slug });
 
   // Step 2 — Load user state from KV
   const kv = req.mode === "demo" ? env.CV_DEMO_PROXY_DATA : env.CV_PROXY_DATA;
@@ -198,12 +225,16 @@ async function handleGenerate(req: GenerateRequest, env: Env, uid: string) {
   if (!style) return jsonErr(400, "unknown_writing_style");
 
   // Step 5 — Build the prompt
+  // assembleSkillPrompt chooses which references to inline per §3.1.
   const prompt = assembleSkillPrompt({
     skill: SKILL_BUNDLED,    // see §1.4
     inputs: {
       jd_text: req.jd_text,
       target_language: req.target_language,
       target_pages: req.target_pages,
+      target_use_case,
+      career_stage,
+      commercial_seniority,
       writing_style: req.writing_style,
       tone_chips: req.tone_chips ?? [],
       package: req.package,
@@ -221,10 +252,13 @@ async function handleGenerate(req: GenerateRequest, env: Env, uid: string) {
   const llm_response = await callLLM(env, uid, prompt);
   const draft = parseDraftJson(llm_response);
 
-  // Step 7 — Semantic Constraint Engine post-filter (banned words, metric integrity)
+  // Step 7 — Semantic Constraint Engine post-filter
+  //   (a) banned words / banned phrases per user_state.writingPrefs
+  //   (b) metric integrity — every number traceable to user_state.profile.experiences
+  //   (c) output-schema compliance per references/output-schema.md
+  // Retries up to 2× with corrective prompt on validation failure.
   let validated = await postFilter(draft, style, user_state.writingPrefs);
   if (validated.violations.length > 0 && validated.retry_count < 2) {
-    // Retry with injected fix instruction; existing pipeline logic
     validated = await retryWithFix(env, validated, prompt);
   }
   if (validated.violations.length > 0) {
@@ -245,7 +279,7 @@ async function handleGenerate(req: GenerateRequest, env: Env, uid: string) {
 }
 ```
 
-The skill bundle (`SKILL.md` + relevant references) is shipped with the worker. Decision: bundle at build time via a `wrangler` asset binding, or fetch from `raw.githubusercontent.com/.../antcv-pwa/main/skills/antcv-writer/...` at cold start with KV caching. Bundle at build time is simpler and removes a runtime dependency on GitHub.
+The skill bundle (`SKILL.md` + relevant references) is shipped with the worker. Decision: bundle at build time via a `wrangler` asset binding, or fetch from `raw.githubusercontent.com/gabrielk83/AntCV/main/skills/antcv-writer/...` at cold start with KV caching. Bundle at build time is simpler and removes a runtime dependency on GitHub.
 
 ### 3.1 Reference loading
 
@@ -498,7 +532,7 @@ When `user:{uid}:role-summary:{slug}` doesn't exist for the requested role, the 
 
 ## 8. Security boundaries
 
-The skill folder is **public on GitHub** (under `antcv-pwa`). Every file in `skills/antcv-writer/` must be safe to publish: no PII, no API keys, no internal-only commentary, no user-specific banned-word lists. The shared base banned-word and banned-phrase lists from the locked-source plan §15 are fine to commit.
+The skill folder is **public on GitHub** at `gabrielk83/AntCV` under `skills/antcv-writer/`. Every file there must be safe to publish: no PII, no API keys, no internal-only commentary, no user-specific banned-word lists. The shared base banned-word and banned-phrase lists from the locked-source plan §15 are fine to commit.
 
 Six boundaries:
 
@@ -560,8 +594,10 @@ Per boundary, one or more tests to add to the CI suite:
 | ATS tier (new) | Generation test: for each `target_ats_tier` value (`modern` / `legacy`), assert: (a) photo present in modern, absent in legacy; (b) `core_competencies.format` is `table-grid` in modern, `bullets` in legacy; (c) section headers use canonical names in legacy; (d) glyphs are text-equivalent in both tiers. |
 | ATS tier inference (new) | Unit test: tier inference function correctly classifies sample JDs — "apply via Workday" → modern, "iCIMS portal" → legacy, no portal mention → modern fallback. Inference must **never** return legacy purely from industry/company without a hard portal signal. |
 | ATS advisory (new) | Integration test: `getTierAdvisory()` returns `show_notice: true, suggested_tier: "legacy"` for healthcare and US government companies but never overrides the inferred tier. PWA-side test asserts the notice renders as non-blocking and the user's decision is logged. |
-| Role inference (new) | Unit test: combined inference function correctly classifies a corpus of sample JDs across all three dimensions (`role_slug`, `career_stage` or `commercial_seniority`, `target_use_case`). Acceptance: 90%+ exact match on `role_slug` (with a stable canonical mapping), 85%+ on `commercial_seniority`, 90%+ on `career_stage`, 95%+ on `target_use_case`. Sample corpus drawn from Gabriel's job-search sprint plus a curated public-JD set. |
+| Role inference (new) | Unit test: combined `inferRoleDimensions()` correctly classifies a corpus of sample JDs across all three dimensions (`role_slug`, `career_stage` or `commercial_seniority`, `target_use_case`). Acceptance: 90%+ exact match on `role_slug` (with a stable canonical mapping), 85%+ on `commercial_seniority`, 90%+ on `career_stage`, 95%+ on `target_use_case`. Sample corpus drawn from Gabriel's job-search sprint plus a curated public-JD set. |
 | Role inference override flow (new) | Integration test: when a user overrides any of the three inferred fields, the override is captured in the `role_inference.user_override` event with both inferred and chosen values. Repeated overrides for similar JDs trigger a `inference_calibration` KV update for that user. |
+| Output schema (new) | Unit test: every generation output validates against `references/output-schema.md`. Validation failure triggers retry per §3 step 7; after 2 retries the response carries `flagged: true`. Use `assets/example-output-{en,da,es,zh}.json` as golden fixtures. |
+| Language honouring (new) | Generation test: requests with `target_language` in {da, es, zh} produce content in that language, with section labels translated per `references/language-output.md`. Section keys in the JSON output stay English regardless of language. No English fallback on unsupported language — return `{"error": "unsupported_language"}`. |
 
 Plus the writing-style violation tests from `AntCV_Plan_v2_LockedSources.md` §8.4 — ≤5 violations per 100 outputs per category per style × section cell.
 
@@ -573,10 +609,10 @@ Aligned with the locked-source plan Pass 3 (v1.50.0). Order:
 
 1. D1 migration applied to `ant_memory` on dev environment first; verify schema; then apply remote.
 2. Worker code change in a feature branch; CI runs acceptance tests.
-3. Skill folder added to `antcv-pwa` repo at `skills/antcv-writer/`; bundled into worker build.
+3. Skill folder lives in `gabrielk83/AntCV` at `skills/antcv-writer/`; bundled into worker build.
 4. PWA changes for JD Gap Closure UI, Privacy settings (retention slider, wipe button), and cascade events. These are PWA Pass 3 + new privacy work — coordinate with the main plan.
 5. Deploy to dev; smoke-test on Gabriel's account with five test JDs (PM, system engineer, functional safety, PhD scholarship, programme manager).
-6. Run §8.4 violation harness on each of the 5 active v1.50 styles.
+6. Run §8.4 violation harness on each style in `references/styles/`. All twelve styles have complete reference files. The five originally-active styles (nordic-minimal, achievement-driven, measured-professional, context-rich, cold-outreach) are the priority for v1.50.0 launch; the remaining seven (mediterranean-formal, structured-professional, prestige-structured, credential-forward, precision-formal, research-formal, hybrid-balanced) follow once the priority five pass.
 7. Promote to production.
 
 ---

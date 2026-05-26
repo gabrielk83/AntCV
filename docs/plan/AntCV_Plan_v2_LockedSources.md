@@ -170,12 +170,57 @@ I look forward to hearing from you, responsible for
 - **Research-evidence integrity:** do not compress away publications, thesis, methods, or grants in Research Formal. Academic evidence outranks commercial brevity.
 
 #### 4.5.1 User-extended bans
-UI exposes "Banned words" and "Banned phrases" lists where the user can add to the shared base. Stored under `personalInfo.writingPrefs.extraBannedWords` and `extraBannedPhrases`.
+UI exposes "Banned words" and "Banned phrases" lists where the user can add to the shared base. Stored under `personalInfo.writingPrefs.extraBannedWords` and `extraBannedPhrases`. **Shape:** both are objects keyed by ISO two-letter language code (see §4.5.3) — items added in the UI are scoped to the active editor language. Items in other languages are stored separately and only enforced when generating in that language.
 
 #### 4.5.2 Gabriel's current personal defaults
-Gabriel's project-memory list of banned words and phrases is a **current master** — a snapshot of his preferences at migration time, expected to evolve as he refines wording over future sessions. Items not in the source doc base (multi-faceted, tværgående, tværfunktionel, central, end-to-end, strong leader, client-focused, customer-centric, all the "My expertise lies in" / "At the heart of my work" / etc.) are silently added on v1.50 first launch to Gabriel's `extraBannedWords` and `extraBannedPhrases` so existing behaviour is preserved without contaminating the shared base. The extras remain user-editable in Settings → Personal → Writing style; nothing about the migration is one-way or locked.
+Gabriel's project-memory list of banned words and phrases is a **current master** — a snapshot of his preferences at migration time, expected to evolve as he refines wording over future sessions. Items not in the source doc base are silently added on v1.50 first launch to Gabriel's `extraBannedWords` and `extraBannedPhrases`, partitioned into the language buckets defined in §4.5.3:
+
+- **`en` bucket:** multi-faceted, central, end-to-end, strong leader, client-focused, customer-centric, "My expertise lies in", "I am known for", "At the heart of my work", "My approach is", "I thrive in", "I bring a wealth of experience", "Proven ability to", "I am committed to", "Passionate about driving", "Known for fostering".
+- **`da` bucket:** tværgående, tværfunktionel.
+- **`es`, `zh` buckets:** empty at migration; grow as Gabriel reviews output in those languages.
+
+The extras remain user-editable in Settings → Personal → Writing style; nothing about the migration is one-way or locked.
 
 **Default writing style for Gabriel:** `personalInfo.writingPrefs.style = "nordic-minimal"` on migration. This is also the system default per source §1 and matches Gabriel's existing CV / cover-letter formatting habits.
+
+#### 4.5.3 Language-partitioned banned-list schema <!-- added 2026-05-27 (extension beyond source) -->
+
+Banned words and phrases are **not portable across languages** — "results-driven" is banned in English; its Danish translation "resultatorienteret" is banned in Danish; neither filters the other. Source §15 specifies the English shared base only; the AntCV implementation extends this to a per-language model so multilingual users (Gabriel: English, Danish, eventual Spanish and Mandarin) keep their bans tidy and language-correct.
+
+**Storage shape.** Both `personalInfo.writingPrefs.extraBannedWords` and `personalInfo.writingPrefs.extraBannedPhrases` are objects keyed by ISO two-letter language code:
+
+```json
+{
+  "extraBannedWords": {
+    "en": ["multi-faceted", "client-focused", "customer-centric", "strong leader", "end-to-end", "central"],
+    "da": ["tværgående", "tværfunktionel"],
+    "es": [],
+    "zh": []
+  },
+  "extraBannedPhrases": {
+    "en": ["My expertise lies in", "At the heart of my work", "I thrive in", "Proven ability to"],
+    "da": [],
+    "es": [],
+    "zh": []
+  }
+}
+```
+
+An empty array is permitted. An absent language key is treated as empty. The shared base from source §15 implicitly applies under `en` only; per-language shared bases (Danish, Spanish, Mandarin) are author-curated and bundled with the worker — see `skills/antcv-writer/references/language-output.md`.
+
+**Worker behaviour during generation.** When the proxy worker runs pipeline step 5 (Semantic Constraint Engine) for a section in `target_language = L`, the active banned-word filter is:
+
+```
+shared_base[L] ∪ user_extras.extraBannedWords[L]
+```
+
+…and similarly for phrases. Items stored under any other language are not enforced for this generation. A Danish output is **not** filtered against English bans, and vice versa. This avoids false positives where the target-language word happens to match a foreign-language banned token.
+
+**UI behaviour.** The "Banned words" and "Banned phrases" controls under Settings → Personal → Writing style are scoped to the **editor language** active when the user adds an item. Switching the editor language switches which bucket the UI reads from and writes to. A header in the control surfaces the current bucket — e.g. "Banned words (English)" — and a language switcher lets the user view and edit other buckets explicitly.
+
+**Migration semantics (extending §4.5.2).** Gabriel's project-memory items are partitioned at migration time as listed in §4.5.2. The migration is idempotent — re-running it produces the same partitioned object and does not duplicate entries. Empty buckets are created for all four currently supported languages (`en`, `da`, `es`, `zh`) so the UI can render the language switcher consistently from day one.
+
+**Cross-reference.** `skills/antcv-writer/references/language-output.md` defines per-language curated shared bases (Danish: "Stor erfaring i", "Dyb forståelse af", "Resultatorienteret"; Spanish: "Apasionado/a por", "Orientado/a a resultados", "Liderazgo demostrado"; etc.) and any per-language tone-register adjustments. The worker merges those shared bases with the user-extras under the same language key during step 5.
 
 ### 4.6 UI surfaces per source doc §13
 
@@ -270,7 +315,7 @@ Cross-reference: the colour / size / rendering side of bullets and glyphs lives 
 
 ---
 
-*§ 4 audit footnote (2026-05-26):* two cells in the §4.1 engine table were corrected against source §1 — Density + Compression Engine controls now end with "evidence preservation, detail depth" (was "evidence preservation"); ATS/Export Engine controls now end with "table simplification, parsing-safe section names" (was "table simplification"). Additions on the same date: source §1 engine-level rules (under §4.1), source §15 + §13 matching and integrity rules (under §4.5), source §13 UI behaviour notes (under §4.6), source §11 Research Formal academic rules (new §4.8), source §12 non-academic expansions (new §4.9), and source §14 dual-track Unicode-bullet and contact-glyph rules (new §4.10). §4.5.2 was reframed from a one-shot migration note into a current-master record of Gabriel's evolving personal defaults, and now also records his default writing style (`nordic-minimal`). All other §4 content from the previous revision was left intact; new material is inline with `added 2026-05-26` markers identifying its source-doc section.
+*§ 4 audit footnote (last revised 2026-05-27):* two cells in the §4.1 engine table were corrected against source §1 — Density + Compression Engine controls now end with "evidence preservation, detail depth" (was "evidence preservation"); ATS/Export Engine controls now end with "table simplification, parsing-safe section names" (was "table simplification"). Additions: source §1 engine-level rules (under §4.1), source §15 + §13 matching and integrity rules (under §4.5), source §13 UI behaviour notes (under §4.6), source §11 Research Formal academic rules (new §4.8), source §12 non-academic expansions (new §4.9), source §14 dual-track Unicode-bullet and contact-glyph rules (new §4.10), and a formal language-partitioned banned-list schema (new §4.5.3; extension beyond source). §4.5.2 was reframed from a one-shot migration note into a current-master record of Gabriel's evolving personal defaults, now also records his default writing style (`nordic-minimal`), and lists his migration items per language bucket. §4.5.1 now points at §4.5.3 for the storage shape. All other §4 content from the previous revision was left intact; new material is inline with `added 2026-05-26` (round 1–2) and `added 2026-05-27` (round 3) markers identifying its source-doc section or extension status.
 
 ---
 
@@ -340,7 +385,7 @@ Additional cleanups bundled: `wizardState` triple-state (`new`/`skipped`/`comple
 14. Proxy worker accepts `writingStyle`, `toneChips`, `extraBannedWords`, `extraBannedPhrases`, `extraConstraints` per request.
 15. Proxy implements 7-step pipeline §4.7. Banned-word post-filter with two retries; third draft returns `flagged: true`.
 16. PWA writing-system picker in Settings → Personal → Writing style.
-17. Gabriel migration: pre-populate `extraBannedWords`/`extraBannedPhrases` with his existing items not in the source-doc base.
+17. Gabriel migration: pre-populate `extraBannedWords`/`extraBannedPhrases` (language-partitioned per §4.5.3) with his existing items not in the source-doc base; Danish items into `da`, English items into `en`. Set default `style = "nordic-minimal"` per §4.5.2.
 18. Showcase hard isolation. Soften kernel validator in showcase.
 19. Centralised `scrubPlaceholders()`.
 
@@ -476,8 +521,9 @@ Switch writing style across all 12 with package fixed → screenshot diff should
 - Sidebar pagination is colour-agnostic if it reads tokens correctly. Regression-test under every package.
 
 ### 9.2 Proxy worker (`antcv-proxy`)
-- Request payload adds `writingStyle`, `toneChips[]`, `extraBannedWords[]`, `extraBannedPhrases[]`, `extraConstraints[]`, `targetPages`, `sectionFormat`.
+- Request payload adds `writingStyle`, `toneChips[]`, `extraBannedWords` (object keyed by lang per §4.5.3), `extraBannedPhrases` (object keyed by lang per §4.5.3), `extraConstraints[]`, `targetPages`, `sectionFormat`, `target_language`.
 - Server-side execution: 7-step pipeline §4.7.
+- SCE step (5): merge `shared_base[target_language]` ∪ `extraBannedWords[target_language]` (same for phrases); apply only the target-language bucket — other languages are not enforced.
 - Banned-word post-filter with two retries; third returns `flagged: true`.
 - Log writing-style selection and per-category violation counts to analytics KV.
 

@@ -324,6 +324,10 @@ export async function generateDocx(payload) {
   const style = mergeStyle(payload.style || {});
   const fontSizes = { ...FONT_DEFAULTS, ...(payload.font_sizes || {}) };
   const lang = payload.language || 'en';
+  // PB-003: continuation suffix localised against `lang`. Mirrors the
+  // PWA-side antcv-i18n key 'pb.cont'. Falls back to English.
+  const CONT_SUFFIX = { en: '(CONT.)', da: '(FORTS.)', es: '(CONT.)', zh: '（续）' };
+  const contSuffix = CONT_SUFFIX[lang] || CONT_SUFFIX.en;
   const layout = payload.layout || (payload.doc === 'cl' ? 'linear' : 'two_column');
   const headerAlign = {
     name: previewAlign(payload, 'name', 'center'),
@@ -335,6 +339,7 @@ export async function generateDocx(payload) {
     style,
     fs: fontSizes,
     lang,
+    contSuffix,
     pi: payload.personal_info || {},
     meta: payload.meta || {},
     doc: payload.doc,
@@ -1289,10 +1294,19 @@ function renderSection(s, ctx, isSidebar) {
   // would inherit font-size styling and visibly nudge spacing on
   // the new page; an empty pageBreakBefore paragraph collapses to
   // zero height.
-  const _sidebarTargetTitle = String([s.title, s.id, s.type].join(' '));
-  const _sidebarFirstItemBreak = !!(isSidebar && /regulatory context|additional information/i.test(_sidebarTargetTitle) && Array.isArray(s.items) && s.items.length && s.items[0] && typeof s.items[0] === 'object' && Number(s.items[0]._page) >= 2);
-  if (_sidebarFirstItemBreak) s._antcvFirstItemPageMoved = true;
-  const pageBreakPara = (s.pageBreakBefore === true || _sidebarFirstItemBreak)
+  // PB-002 (v2): a page break on the FIRST item in a section moves
+  // the WHOLE section (including its heading) to the next page. This
+  // generalises v1.14.12's sidebar-only detection — the same rule
+  // applies to every section type. The renderer for each section
+  // shape then skips the redundant in-loop break+contHeader for that
+  // first item via the s._antcvFirstItemPageMoved flag.
+  const _firstItemPageBreak = !!(
+    Array.isArray(s.items) && s.items.length &&
+    s.items[0] && typeof s.items[0] === 'object' &&
+    Number(s.items[0]._page) >= 2
+  );
+  if (_firstItemPageBreak) s._antcvFirstItemPageMoved = true;
+  const pageBreakPara = (s.pageBreakBefore === true || _firstItemPageBreak)
     ? [new Paragraph({ pageBreakBefore: true, spacing: { before: 0, after: 0 } })]
     : [];
 
@@ -2139,7 +2153,7 @@ function renderSimpleList(s, ctx, isSidebar, italic) {
       ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: 'auto' }
       : undefined,
     children: [new TextRun({
-      text: sectionTitleUpper + ' (CONT.)',
+      text: sectionTitleUpper + ' ' + (ctx.contSuffix || '(CONT.)'),
       bold: true,
       color: isSidebar ? style.sidebarHeadColor : style.mainHeadColor,
       size: pt2hp(isSidebar ? fs.sbHead : fs.mainHead),
@@ -2153,14 +2167,23 @@ function renderSimpleList(s, ctx, isSidebar, italic) {
 
   const isPubs = isPublicationsSection(s);
   const outParas = [];
+  let _simpleSkippedFirstSectionBreak = false;
   for (const { idx, text: item } of dedupedPairs) {
     // Check the ORIGINAL item for a _page assignment. The source
     // could be a plain string, in which case there's no page metadata.
     const src = s.items && s.items[idx];
     const page = (src && typeof src === 'object' && Number(src._page) >= 2) ? Number(src._page) : 0;
     if (page >= 2) {
-      outParas.push(makeBreakPara());
-      outParas.push(makeContHeader());
+      // PB-002: when the section's first item already moved the whole
+      // section to the next page (s._antcvFirstItemPageMoved set in
+      // renderSection), skip the in-loop break+contHeader for that
+      // first flagged item to avoid duplicating the section heading.
+      if (idx === 0 && s._antcvFirstItemPageMoved && !_simpleSkippedFirstSectionBreak) {
+        _simpleSkippedFirstSectionBreak = true;
+      } else {
+        outParas.push(makeBreakPara());
+        outParas.push(makeContHeader());
+      }
     }
     const baseRun = {
       color: isSidebar ? style.sidebarTextColor : style.mainTextColor,
@@ -2397,7 +2420,7 @@ function renderLabeledList(s, ctx, isSidebar) {
         ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: 'auto' }
         : undefined,
       children: [new TextRun({
-        text: sectionTitleUpper + ' (CONT.)',
+        text: sectionTitleUpper + ' ' + (ctx.contSuffix || '(CONT.)'),
         bold: true,
         color: isSidebar ? style.sidebarHeadColor : style.mainHeadColor,
         size: pt2hp(isSidebar ? fs.sbHead : fs.mainHead),
@@ -2586,7 +2609,7 @@ function renderEducation(s, ctx, isSidebar) {
         ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: 'auto' }
         : undefined,
       children: [new TextRun({
-        text: eduSectionTitleUpper + ' (CONT.)',
+        text: eduSectionTitleUpper + ' ' + (ctx.contSuffix || '(CONT.)'),
         bold: true,
         color: isSidebar ? style.sidebarHeadColor : style.mainHeadColor,
         size: pt2hp(isSidebar ? fs.sbHead : fs.mainHead),
@@ -2595,9 +2618,18 @@ function renderEducation(s, ctx, isSidebar) {
     }));
   };
 
+  let _eduSkippedFirstSectionBreak = false;
   deduped.forEach(it => {
     if (it && typeof it === 'object' && Number(it._page) >= 2) {
-      try { emitEduBreakAndCont(); } catch (_) {}
+      // PB-002: when the first item in this section already moved the
+      // whole section to the next page (s._antcvFirstItemPageMoved
+      // set above), skip the in-loop break+contHeader for that first
+      // flagged item — otherwise the heading duplicates.
+      if (s._antcvFirstItemPageMoved && !_eduSkippedFirstSectionBreak) {
+        _eduSkippedFirstSectionBreak = true;
+      } else {
+        try { emitEduBreakAndCont(); } catch (_) {}
+      }
     }
     let deg = (it.deg || it.degree || '').toString();
     let sch = (it.sch || it.school || '').toString();

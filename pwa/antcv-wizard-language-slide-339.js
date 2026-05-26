@@ -1,49 +1,47 @@
-/* AntCV wizard language slide (v1.40.339-e)
+/* AntCV wizard language slide + section-format showcase (v1.40.339-j)
  * ===========================================================================
- * Adds a "Set your languages" step at the END of the wizard, shown right
- * before the AI-Notice modal that gates the final wizard close.
+ * Extends v339-e: the final wizard slide now shows users the seven section
+ * format options as a preview alongside the language picker, so they leave
+ * the wizard knowing what they can customise per section once they reach
+ * the editor.
  *
- * v1.40.339-e changes (against v1.40.339-c)
- * -----------------------------------------
- *  Dropped trigger condition (4): localStorage.wizardCompleted truthy.
+ * Why this lives here
+ * -------------------
+ * The Step 10 content used to live in the merged antcv-onboarding.js
+ * (v1.40.266) as a fixed overlay that fired after the wizard closed. That
+ * sidecar was never wired into index.html and is being deleted in the same
+ * commit. The section-format showcase that the user does want to see is
+ * extracted and folded into THIS slide, which is already the last user-
+ * facing step before AntcvShowAiNotice gates wizard close. One step, one
+ * place, no second overlay stack.
  *
- *  Why: the wizard's e() handler calls u.set("wizardCompleted", true)
- *  immediately BEFORE AntcvShowAiNotice({onContinue:_antcvCloseWiz}),
- *  but u.set is a React-y state setter — the actual localStorage write
- *  happens via a useEffect that runs AFTER the synchronous code path.
- *  So when our wrapper synchronously inspects LS, wizardCompleted may
- *  still be null → condition fails → pass-through → no language slide.
+ * v339-j changes vs v339-e
+ * ------------------------
+ *   + FORMATS constant with seven {name, preview} entries (Paragraph,
+ *     Bullets, Emoji bullets, Hybrid 1/2/3, Table). Each preview is a
+ *     short HTML fragment that visually demonstrates that format.
+ *   + Showcase block inserted between the additional-languages row and
+ *     the existing hint paragraph.
+ *   + Hint text updated to acknowledge the showcase ('above is just a
+ *     preview — pick per section in the editor').
+ *   + Section-format tiles are read-only — the wizard slide does NOT let
+ *     the user choose a default format here. Per-section choice happens
+ *     in the editor.
  *
- *  Conditions (1) one-shot, (2) opts.force !== true, and (3) opts.onContinue
- *  is a function already uniquely identify the wizard's finish/skip
- *  AntcvShowAiNotice call: per v1.40.309 every intermediate step gate
- *  passes force:true, and only the finish/skip paths supply onContinue.
- *  Belt is enough; braces were breaking the trigger.
- *
- *  Side effect: the slide will now also fire on the Skip path (which
- *  also calls AntcvShowAiNotice with onContinue but without force).
- *  That's fine — Skip users can click "Use defaults" in our slide and
- *  proceed to AI Notice exactly like before; one extra click for a
- *  rare path, no break for the common path.
- *
- * v1.40.339-c additive features retained:
- *  - Canonical EN-primary + DA-additional defaults regardless of LS
- *  - Back button (clears wizardCompleted + session flag, no onContinue)
- *  - Defensive z-index 2147483647 + pointer-events:auto on backdrop/panel
- *  - Removed click-outside-to-save handler
+ * Everything else (trigger conditions, persistence helpers, back / skip /
+ * continue handling, debug API) is identical to v339-e.
  *
  * Storage
  * -------
- * Selections are written via window.AntcvStabilityCore.setEnabledLanguages
- * when available (writes to enabledLanguages, antcv:enabledLanguages,
- * antcv:visibleLanguages, antcv:prefs, personalInfo.stylePrefs.*). Falls
- * back to a direct multi-key write if the stability-core API isn't loaded.
+ * Same as v339-e — selections written via window.AntcvStabilityCore.
+ * setEnabledLanguages when available, falling back to direct multi-key
+ * writes. No new keys.
  * ===========================================================================
  */
 (function () {
   'use strict';
 
-  var VERSION = '1.40.339-e';
+  var VERSION = '1.40.339-j';
   if (window.__antcvWizardLanguageSlide339 === VERSION) return;
   window.__antcvWizardLanguageSlide339 = VERSION;
 
@@ -57,6 +55,67 @@
   var ALL_CODES = LANG_OPTIONS.map(function (o) { return o.code; });
   var DEFAULT_PRIMARY = 'en';
   var DEFAULT_ADDITIONAL = ['da'];
+
+  // v339-j: section-format previews extracted from the retired
+  // antcv-onboarding.js Step 10 panel. Each preview is intentionally tiny
+  // (~46-60px tall) so all seven fit in a compact 3-column grid on
+  // desktop / 2-column on mobile without ballooning the slide height.
+  var FORMATS = [
+    {
+      name: 'Paragraph',
+      preview:
+        '<div style="font-size:8.5px;line-height:1.55;color:rgba(255,255,255,0.78);">' +
+          'Brief context line explaining the role\u2019s scope, then a continuation that flows naturally.' +
+        '</div>'
+    },
+    {
+      name: 'Bullets',
+      preview:
+        '<div style="font-size:9px;line-height:1.55;color:rgba(255,255,255,0.78);">' +
+          '\u2022 Outcome one<br>\u2022 Outcome two<br>\u2022 Outcome three' +
+        '</div>'
+    },
+    {
+      name: 'Emoji bullets',
+      preview:
+        '<div style="font-size:9px;line-height:1.55;color:rgba(255,255,255,0.78);">' +
+          '\u2728 Outcome one<br>\u2705 Outcome two<br>\uD83D\uDCCC Outcome three' +
+        '</div>'
+    },
+    {
+      name: 'Hybrid 1',
+      preview:
+        '<div style="font-size:9px;line-height:1.45;color:rgba(255,255,255,0.78);">' +
+          '<strong style="color:#01B7BB">Senior role</strong><br>\u2022 outcome<br>\u2022 outcome' +
+        '</div>'
+    },
+    {
+      name: 'Hybrid 2',
+      preview:
+        '<div style="font-size:8.5px;line-height:1.5;color:rgba(255,255,255,0.78);">' +
+          'Brief intro line.<br>\u2022 outcome<br>\u2022 outcome' +
+        '</div>'
+    },
+    {
+      name: 'Hybrid 3',
+      preview:
+        '<div style="font-size:8.5px;line-height:1.55;color:rgba(255,255,255,0.78);">' +
+          'Brief intro. <em style="color:#01B7BB;font-style:normal">item</em>, ' +
+          '<em style="color:#01B7BB;font-style:normal">item</em>, ' +
+          '<em style="color:#01B7BB;font-style:normal">item</em>' +
+        '</div>'
+    },
+    {
+      name: 'Table',
+      preview:
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;font-size:8.5px;color:rgba(255,255,255,0.78);">' +
+          '<div style="background:rgba(1,183,187,0.22);padding:3px 4px;border-radius:2px;">Role</div>' +
+          '<div style="background:rgba(255,255,255,0.07);padding:3px 4px;border-radius:2px;">Year</div>' +
+          '<div style="background:rgba(255,255,255,0.07);padding:3px 4px;border-radius:2px;">Org</div>' +
+          '<div style="background:rgba(1,183,187,0.22);padding:3px 4px;border-radius:2px;">Loc</div>' +
+        '</div>'
+    }
+  ];
 
   // --- Persistence helpers -------------------------------------------------
   function readJSON(key) {
@@ -132,9 +191,6 @@
 
   // --- Modal renderer ------------------------------------------------------
   function buildModal(onContinue, onSkip, onBack) {
-    // v1.40.339-c: always canonical defaults. The wizard step shows a
-    // predictable starting state (EN primary, DA additional, ZH unchecked)
-    // regardless of what previous sessions or stale cloud data wrote.
     var defaults = defaultLangs();
     var primary = defaults[0];
     var additional = defaults.slice(1);
@@ -154,7 +210,7 @@
     panel.style.cssText = [
       'background:#1b2945','color:#fff','border-radius:14px',
       'box-shadow:0 20px 60px rgba(0,0,0,0.5)','padding:22px 22px 18px',
-      'max-width:480px','width:100%','max-height:88vh','overflow:auto',
+      'max-width:520px','width:100%','max-height:88vh','overflow:auto',
       'border:1px solid rgba(1,183,187,0.4)','position:relative'
     ].join(';');
     panel.style.setProperty('pointer-events', 'auto', 'important');
@@ -202,7 +258,7 @@
     panel.appendChild(addLabel);
 
     var addRow = document.createElement('div');
-    addRow.style.cssText = 'display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:14px;';
+    addRow.style.cssText = 'display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:18px;';
     LANG_OPTIONS.forEach(function (opt) {
       var lab = document.createElement('label');
       lab.dataset.langCode = opt.code;
@@ -231,9 +287,39 @@
       });
     });
 
+    // --- v339-j: section-format showcase ---------------------------------
+    // Extracted from the retired antcv-onboarding.js Step 10 panel. Read-
+    // only preview — the actual per-section choice happens in the editor.
+    var fmtLabel = document.createElement('div');
+    fmtLabel.textContent = 'HOW EACH SECTION CAN LOOK';
+    fmtLabel.style.cssText = 'font-size:10.5px;font-weight:800;letter-spacing:.3px;color:rgba(255,255,255,0.6);margin:4px 0 6px;';
+    panel.appendChild(fmtLabel);
+
+    var fmtIntro = document.createElement('p');
+    fmtIntro.textContent = 'Each CV and cover-letter section can be rendered in one of seven formats. You pick per section in the editor \u2014 these are just previews so you know what\u2019s available.';
+    fmtIntro.style.cssText = 'margin:0 0 10px;font-size:11.5px;line-height:1.5;color:rgba(255,255,255,0.7);';
+    panel.appendChild(fmtIntro);
+
+    var fmtGrid = document.createElement('div');
+    fmtGrid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(115px,1fr));gap:6px;margin-bottom:16px;';
+    FORMATS.forEach(function (f) {
+      var tile = document.createElement('div');
+      tile.style.cssText = 'background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:7px 8px;';
+      var name = document.createElement('div');
+      name.textContent = f.name;
+      name.style.cssText = 'font-size:10.5px;font-weight:700;color:#fff;margin-bottom:5px;letter-spacing:.2px;';
+      tile.appendChild(name);
+      var preview = document.createElement('div');
+      preview.style.cssText = 'min-height:48px;background:rgba(0,0,0,0.22);border-radius:4px;padding:5px 6px;overflow:hidden;';
+      preview.innerHTML = f.preview;
+      tile.appendChild(preview);
+      fmtGrid.appendChild(tile);
+    });
+    panel.appendChild(fmtGrid);
+
     var hint = document.createElement('div');
     hint.style.cssText = 'margin:4px 0 18px;padding:10px 12px;background:rgba(1,183,187,0.08);border:1px solid rgba(1,183,187,0.35);border-radius:8px;font-size:11.5px;line-height:1.55;color:rgba(255,255,255,0.85);';
-    hint.innerHTML = 'Looking for more control? <strong>Settings \u2192 Advanced</strong> contains <em>advanced writing tone</em> and <em>advanced layout styles</em> \u2014 fine-tune your CV voice and visual style there whenever you like.';
+    hint.innerHTML = 'Above is just a preview \u2014 you choose the format per section in the editor. For deeper voice and visual-style control, see <strong>Settings \u2192 Advanced</strong> after the wizard closes.';
     panel.appendChild(hint);
 
     var btnRow = document.createElement('div');
@@ -353,18 +439,7 @@
   }
 
   // --- Wrap AntcvShowAiNotice ----------------------------------------------
-  // v339-e trigger conditions (ALL must hold):
-  //   1. Haven't shown the slide this session.
-  //   2. opts.force is NOT true (intermediate step gates pass force:true
-  //      per v1.40.309 — byok/demo choice, step 2->3 transition, etc.).
-  //   3. opts.onContinue is a function (only the finish/skip paths pass it;
-  //      intermediate gates do not).
-  //   4. The wizard UI is visible (defensive double-check; falls back to
-  //      body-text search for wizard step headers).
-  //
-  // Dropped vs v339-c: the wizardCompleted localStorage check, because
-  // u.set is asynchronous — LS doesn't yet reflect the flag when our
-  // synchronous wrapper runs.
+  // Same v339-e trigger logic; comment retained for context.
   function installWrapper() {
     var orig = window.AntcvShowAiNotice;
     if (!orig || typeof orig !== 'function') {
@@ -408,7 +483,7 @@
     };
     wrapped.__antcvWlsWrapped = VERSION;
     try { window.AntcvShowAiNotice = wrapped; } catch (_) {}
-    try { console.info('[wizard-language-slide-339] wrapped AntcvShowAiNotice (v=' + VERSION + '); trigger drops wizardCompleted LS check'); } catch (_) {}
+    try { console.info('[wizard-language-slide-339] wrapped AntcvShowAiNotice (v=' + VERSION + '); section-format showcase embedded in slide'); } catch (_) {}
   }
 
   if (document.readyState === 'loading') {
@@ -422,6 +497,7 @@
     _show: showSlide,
     _resetSession: clearShown,
     _wizardCompletedFlag: wizardCompletedFlag,
-    _looksLikeWizard: looksLikeWizard
+    _looksLikeWizard: looksLikeWizard,
+    _formats: FORMATS
   };
 })();

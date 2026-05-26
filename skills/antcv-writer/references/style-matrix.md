@@ -8,6 +8,31 @@ Per-style files at `styles/{name}.md` carry the full content rules, examples, an
 
 ---
 
+## Legacy name migration
+
+Earlier iterations of AntCV named writing styles after cultural-register heritages (Scandinavian, USA / American, British, Germanic, Mediterranean, Chinese / East-Asian, Indian, Japanese, LATAM). These names are deprecated. Each legacy name maps to exactly one of the twelve canonical styles below — the canonical name describes the **writing behaviour**, not a region. Country and culture labels were removed because the writing behaviour generalises across regions.
+
+The PWA migrates stored legacy values to the canonical key on next load (`pwa/app.js` state-init); the worker accepts legacy keys as input synonyms but always emits canonical keys in output.
+
+| Current / Legacy name | Canonical name | Modification |
+|---|---|---|
+| Scandinavian | `nordic-minimal` | Concise, factual, low-noise writing. Keep current template order as default. |
+| USA / American | `achievement-driven` | Impact, scope, metrics, and ownership. Country label removed. |
+| British | `measured-professional` | Restrained, credible, precise professional register. |
+| Germanic | `structured-professional` | Completeness, process, traceability, and reliability. |
+| Mediterranean | `mediterranean-formal` | Warmer formal presentation and professional status. |
+| Chinese / East-Asian | `prestige-structured` | Institutional fit, hierarchy, and alignment. |
+| Indian | `credential-forward` | Qualifications, technical depth, and competitiveness. |
+| Japanese | `precision-formal` | Consistency, respect, and organisational fit. |
+| LATAM | `context-rich` | Narrative, contextual trust, and relational framing. |
+| Unsolicited / Cold Outreach | `cold-outreach` | Use-case style for fast relevance and clear ask. |
+| Academic / Research | `research-formal` | Use-case style for academic CVs, papers, grants, and research roles. |
+| Hybrid | `hybrid-balanced` | Base writing system plus selected tone chips and custom overrides. |
+
+Reference: *Writing System Engine — Complete AI + UX Implementation Specification*, §2 Canonical Writing Style Names.
+
+---
+
 ## The twelve styles at a glance
 
 | Style | Primary constraint | Density | Typical context |
@@ -52,6 +77,7 @@ Every style row carries the same fields. Where a field is `inherit`, the worker 
 | `preserveCompressPriority` | concrete_outcomes, metrics, technical_terms |
 | `recommendedPairings` | Copenhagen Modern (primary), Nordic Frost (alt) |
 | `pairedSeniority` | mid, senior |
+| `legacyAliases` | Scandinavian |
 
 ### `achievement-driven`
 
@@ -72,6 +98,7 @@ Every style row carries the same fields. Where a field is `inherit`, the worker 
 | `preserveCompressPriority` | outcome_titles, quantified_metrics, scope_indicators |
 | `recommendedPairings` | Navy Executive (primary), Tokyo Precision (alt) |
 | `pairedSeniority` | senior, lead, director, vp, c-level |
+| `legacyAliases` | USA, American |
 
 ### `measured-professional`
 
@@ -92,6 +119,7 @@ Every style row carries the same fields. Where a field is `inherit`, the worker 
 | `preserveCompressPriority` | specific_outcomes, concrete_actions, domain_terms |
 | `recommendedPairings` | Copenhagen Modern (primary), Nordic Frost (alt) |
 | `pairedSeniority` | mid, senior |
+| `legacyAliases` | British |
 
 ### `structured-professional`
 
@@ -112,6 +140,7 @@ Every style row carries the same fields. Where a field is `inherit`, the worker 
 | `preserveCompressPriority` | methodology_names, scope_indicators, framework_references |
 | `recommendedPairings` | Tokyo Precision (primary), Delhi Technical (alt) |
 | `pairedSeniority` | mid, senior, lead |
+| `legacyAliases` | Germanic |
 
 ### `mediterranean-formal`
 
@@ -132,6 +161,7 @@ Every style row carries the same fields. Where a field is `inherit`, the worker 
 | `preserveCompressPriority` | relational_framing, context_sentences, formal_vocabulary |
 | `recommendedPairings` | Warm Terracotta (primary), Pampas Contemporary (alt) |
 | `pairedSeniority` | mid, senior, director |
+| `legacyAliases` | Mediterranean |
 
 ### `prestige-structured`
 
@@ -152,6 +182,7 @@ Every style row carries the same fields. Where a field is `inherit`, the worker 
 | `preserveCompressPriority` | scope_indicators, institutional_vocabulary, p&l_metrics |
 | `recommendedPairings` | Navy Executive (primary), Copenhagen Modern (alt) |
 | `pairedSeniority` | senior, director, vp, c-level |
+| `legacyAliases` | Chinese, East-Asian |
 
 ### `credential-forward`
 
@@ -172,6 +203,7 @@ Every style row carries the same fields. Where a field is `inherit`, the worker 
 | `preserveCompressPriority` | certification_names, regulatory_references, accreditation_levels |
 | `recommendedPairings` | Delhi Technical (primary), Copenhagen Modern (alt) |
 | `pairedSeniority` | mid, senior, lead |
+| `legacyAliases` | Indian |
 
 ### `precision-formal`
 
@@ -192,6 +224,7 @@ Every style row carries the same fields. Where a field is `inherit`, the worker 
 | `preserveCompressPriority` | exact_metrics, technical_specs, units_and_ranges |
 | `recommendedPairings` | Tokyo Precision (primary), Copenhagen Modern (alt) |
 | `pairedSeniority` | mid, senior, lead |
+| `legacyAliases` | Japanese |
 
 ### `context-rich`
 
@@ -212,6 +245,7 @@ Every style row carries the same fields. Where a field is `inherit`, the worker 
 | `preserveCompressPriority` | narrative_threads, reasoning_clauses, context_sentences |
 | `recommendedPairings` | Warm Terracotta (primary), Pampas Contemporary (alt) |
 | `pairedSeniority` | mid, senior |
+| `legacyAliases` | LATAM |
 
 ### `cold-outreach`
 
@@ -232,6 +266,7 @@ Every style row carries the same fields. Where a field is `inherit`, the worker 
 | `preserveCompressPriority` | openers, specific_company_signals, actionable_offers |
 | `recommendedPairings` | Copenhagen Modern (primary), Tokyo Precision (alt) |
 | `pairedSeniority` | mid, senior, lead, director |
+| `legacyAliases` | Unsolicited, Cold Outreach |
 
 ### `research-formal`
 
@@ -252,6 +287,7 @@ Every style row carries the same fields. Where a field is `inherit`, the worker 
 | `preserveCompressPriority` | publication_data, research_questions, methodological_terms |
 | `recommendedPairings` | Copenhagen Modern (primary), Delhi Technical (alt) |
 | `pairedSeniority` | n/a (uses `career_stage` instead) |
+| `legacyAliases` | Academic, Research |
 
 ### `hybrid-balanced`
 
@@ -272,6 +308,7 @@ Every style row carries the same fields. Where a field is `inherit`, the worker 
 | `preserveCompressPriority` | bridging_terms, dual_register_signals |
 | `recommendedPairings` | user-defined |
 | `pairedSeniority` | n/a (depends on bridge target) |
+| `legacyAliases` | Hybrid |
 
 ---
 

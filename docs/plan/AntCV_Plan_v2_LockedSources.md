@@ -92,9 +92,17 @@ Copenhagen Modern is the default. Base / Primary / Heading-main hex values are u
 |---|---|---|
 | Writing System Engine | Tone, register, section naming, content priority, evidence depth, default chips | Runs first |
 | Layout + Section Engine | Section order, main/sidebar placement, visibility, section format type | Second |
-| Density + Compression Engine | Length target, line limits, compression tolerance, evidence preservation | Third |
+| Density + Compression Engine | Length target, line limits, compression tolerance, evidence preservation, detail depth | Third |
 | Semantic Constraint Engine | Banned words, banned phrases, role-boundary rules, triggered constraints | Fourth — after drafting, before polishing |
-| ATS/Export Engine | ATS-safe flattening, glyph conversion, table simplification | Runs only on ATS export |
+| ATS/Export Engine | ATS-safe flattening, glyph conversion, table simplification, parsing-safe section names | Runs only on ATS export |
+
+<!-- added 2026-05-26 from source §1 -->
+Engine-level rules carried verbatim from source §1 paragraphs (in addition to the controls/execution columns above):
+
+- **Layout + Section Engine** may reorder sections based on writing style, except Nordic Minimal where the current template order is the default.
+- **Density + Compression Engine** decides what to shorten, keep, hide, or expand — and never invents metrics to satisfy density.
+- **Semantic Constraint Engine** prevents wording errors such as inflated ownership, unsupported metrics, or academic evidence loss.
+- **ATS/Export Engine** produces a parser-safe version without changing the human-facing writing style; it is separate from visual-design export rules.
 
 Per the source doc §AI Pipeline Step 7: changing writing style must not modify visual design tokens, fonts, image settings, or colour packages.
 
@@ -151,6 +159,16 @@ I look forward to hearing from you, responsible for
 
 **Differentiation across styles is via the Semantic Constraint Engine (§9 of source), not via diverging banned-word lists.** Each style has its own `primaryConstraint`, `constraintAvoid`, `constraintPrefer` triple, plus optional trigger-based rules (Trigger + Avoid + Prefer + Reason; dormant until trigger matches).
 
+<!-- added 2026-05-26 from source §15 + §13 -->
+**Matching and integrity rules (source §15, §13):**
+
+- **Scope of banned lists:** banned words apply to **generated** text. Do not remove banned words from quoted source text unless that quoted text is being rewritten.
+- **Matching mode:** banned-word matching is case-insensitive, exact-match recommended. Banned-phrase matching is **case-insensitive and punctuation-tolerant**.
+- **Internal SCE ordering:** within the Semantic Constraint Engine phase (pipeline step 5), banned-word/phrase filtering runs **before** trigger-based semantic constraints, because the constraints preserve meaning boundaries.
+- **Metric integrity:** never invent metrics. If a metric is missing, use scope, method, or outcome without numbers.
+- **Role-boundary integrity:** do not imply account, people, or product ownership unless supported. Use "contributed", "supported", "partnered", "coordinated", or "led" only when the underlying scope supports the verb.
+- **Research-evidence integrity:** do not compress away publications, thesis, methods, or grants in Research Formal. Academic evidence outranks commercial brevity.
+
 #### 4.5.1 User-extended bans
 UI exposes "Banned words" and "Banned phrases" lists where the user can add to the shared base. Stored under `personalInfo.writingPrefs.extraBannedWords` and `extraBannedPhrases`.
 
@@ -171,6 +189,15 @@ Gabriel's project-memory list contains several items not in the source doc base 
 | Section format selector | Editor → per section | `personalInfo.layoutPrefs.sectionFormats.<section>` |
 | Custom tone slots | Settings → Personal → Writing style → Slots | `personalInfo.writingPrefs.savedSlots[]` |
 
+<!-- added 2026-05-26 from source §13 -->
+**Source §13 behaviour notes that govern the UI surfaces above:**
+
+- **Tone dropdown** drives default chips, section order, density, and section-format defaults atomically — picking a style updates all four together.
+- **Tone chips** that conflict with the base style move the style to Hybrid Balanced (or Custom Tone) automatically.
+- **Section format selector** applies the chosen format without deleting content (the layout engine reformats; it never drops data).
+- **Custom tone slots** save the full bundle atomically: writing style, chips, extra banned words, extra banned phrases, extra constraints, target length, line sliders, section formats. No partial-update path.
+- **Target CV length** values are 1, 1.5, 2, 2.5, 3, 4, and 5 pages. Research Formal and Context Rich may exceed 3 pages; other styles default within their per-style `allowedLength` band.
+
 ### 4.7 Execution pipeline (source doc §16)
 
 The proxy worker runs every section through this sequence:
@@ -184,6 +211,41 @@ The proxy worker runs every section through this sequence:
 7. Validate visual tokens unchanged
 
 Step 5 is where the post-draft retry loop sits — if the output contains banned words or violates metric integrity, retry up to two times with an injected fix instruction; third draft returns with `flagged: true`.
+
+### 4.8 Research Formal — integrated academic rules <!-- added 2026-05-26 from source §11 -->
+
+The Research Formal style overrides standard commercial CV ordering. Source §11 gives per-area rules that the registry's Research Formal row must encode:
+
+| Area | Rule | AI instruction | Density |
+|---|---|---|---|
+| Education | Major primary section; often top-half main column. | Include thesis, methods, advisors, distinctions, grants, projects, relevant coursework when useful. | 0.5–1.5 pages for early-career research CV. |
+| Research Experience | Primary experience category; equal or higher priority than industry experience. | Use methods, contribution, evidence, instrumentation, datasets, supervision, collaborations. | Expanded detail allowed. |
+| Publications | Dedicated primary section; never hidden in sidebar by default. | Preserve citation structure: title, venue, year, role when known. | May span multiple pages if justified. |
+| Teaching / Supervision | First-class when relevant. | Course names, level, student supervision, labs, tutorials. | Medium. |
+| Grants / Fellowships | First-class when present. | Funding body, project title, role, amount only when known. | Do not overcompress. |
+| Conferences / Talks | Dedicated section when relevant. | Talk title, event, date or year, format. | Medium. |
+| Technical Methods | Sidebar or main depending on density. | Methods, instruments, software, lab techniques, analysis tools. | High allowed. |
+| Work Style | Secondary; move to sidebar or lower page. | Keep short and factual. | Low. |
+| Length | 2–5 pages accepted. | Do not force commercial 1-page behaviour. | Preserve evidence over compactness. |
+
+**Recommended Research Formal section order (source §11):** Research Summary → Education → Research Experience → Publications → Selected Research Outcomes → Teaching / Supervision → Grants / Fellowships → Conferences / Talks → Technical Methods → Industry Experience (if relevant) → Professional Service / Committees → Work Style / Soft Skills.
+
+### 4.9 Expansions for non-academic styles <!-- added 2026-05-26 from source §12 -->
+
+Source §12 requires four commercial styles to carry expanded writing-engine behaviour beyond the per-style matrix in the registry:
+
+| Writing style | Expansion required |
+|---|---|
+| Credential Forward | First-class handling for certifications, education, methods, tools, domain knowledge, licences, language credentials, and technical systems. Allow 2–4 pages. Use tables / grids in the visual CV; flatten them in ATS export. |
+| Structured Professional | Traceability-first handling for requirements, governance, standards, change control, validation, decision logs, audits, and risk controls. Allow process detail when evidence supports it. |
+| Prestige Structured | Institution-fit handling: education, organisation contribution, alignment, reliability, and collective outcomes. Use restrained self-promotion. |
+| Context Rich | Narrative handling: motivation, transition logic, relational trust, and background. Allow a longer profile / context block but keep it relevant. |
+
+Research Formal's expansion is covered separately in §4.8 above.
+
+---
+
+*§ 4 audit footnote (2026-05-26):* two cells in the §4.1 engine table were corrected against source §1 — Density + Compression Engine controls now end with "evidence preservation, detail depth" (was "evidence preservation"); ATS/Export Engine controls now end with "table simplification, parsing-safe section names" (was "table simplification"). All other §4 content from the previous revision was left intact; new material is inline with `added 2026-05-26` markers identifying its source-doc section.
 
 ---
 

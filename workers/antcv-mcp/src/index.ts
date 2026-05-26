@@ -64,12 +64,134 @@ async function cfFetch(
   return json;
 }
 
+// ─── DOCX text extractor ──────────────────────────────────────────────────────
+// A .docx is a ZIP archive containing word/document.xml. We hand-parse the ZIP
+// central directory to locate that entry, decompress it with Workers' native
+// DecompressionStream("deflate-raw"), then extract <w:t> text content from the
+// OOXML. No external ZIP/XML library needed.
+
+function readUint16LE(b: Uint8Array, p: number): number {
+  return b[p] | (b[p + 1] << 8);
+}
+function readUint32LE(b: Uint8Array, p: number): number {
+  return (
+    (b[p] | (b[p + 1] << 8) | (b[p + 2] << 16) | (b[p + 3] * 0x1000000)) >>> 0
+  );
+}
+
+function findEOCD(b: Uint8Array): number {
+  // End Of Central Directory signature: 0x06054b50 (PK\x05\x06).
+  // Located near end of file, within last 65557 bytes (max comment is 65535).
+  const minPos = Math.max(0, b.length - 65557);
+  for (let i = b.length - 22; i >= minPos; i--) {
+    if (
+      b[i] === 0x50 &&
+      b[i + 1] === 0x4b &&
+      b[i + 2] === 0x05 &&
+      b[i + 3] === 0x06
+    ) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+async function extractDocxText(bytes: Uint8Array): Promise<string> {
+  const eocd = findEOCD(bytes);
+  if (eocd < 0) throw new Error("Not a valid ZIP/DOCX: EOCD not found");
+
+  const entryCount = readUint16LE(bytes, eocd + 10);
+  const cdOffset = readUint32LE(bytes, eocd + 16);
+
+  // Walk central directory looking for word/document.xml
+  let pos = cdOffset;
+  let entry: { method: number; compSize: number; lhOffset: number } | null =
+    null;
+  for (let i = 0; i < entryCount; i++) {
+    if (readUint32LE(bytes, pos) !== 0x02014b50) {
+      throw new Error(`Invalid central dir signature at offset ${pos}`);
+    }
+    const method = readUint16LE(bytes, pos + 10);
+    const compSize = readUint32LE(bytes, pos + 20);
+    const nameLen = readUint16LE(bytes, pos + 28);
+    const extraLen = readUint16LE(bytes, pos + 30);
+    const commentLen = readUint16LE(bytes, pos + 32);
+    const lhOffset = readUint32LE(bytes, pos + 42);
+    const name = new TextDecoder().decode(
+      bytes.subarray(pos + 46, pos + 46 + nameLen)
+    );
+    if (name === "word/document.xml") {
+      entry = { method, compSize, lhOffset };
+      break;
+    }
+    pos += 46 + nameLen + extraLen + commentLen;
+  }
+  if (!entry) throw new Error("word/document.xml not found in ZIP");
+
+  // Read local file header to find actual data offset
+  if (readUint32LE(bytes, entry.lhOffset) !== 0x04034b50) {
+    throw new Error("Invalid local file header signature");
+  }
+  const lhNameLen = readUint16LE(bytes, entry.lhOffset + 26);
+  const lhExtraLen = readUint16LE(bytes, entry.lhOffset + 28);
+  const dataStart = entry.lhOffset + 30 + lhNameLen + lhExtraLen;
+  // .slice (not .subarray) — give DecompressionStream its own buffer
+  const compressed = bytes.slice(dataStart, dataStart + entry.compSize);
+
+  let xmlBytes: Uint8Array;
+  if (entry.method === 0) {
+    xmlBytes = compressed;
+  } else if (entry.method === 8) {
+    const stream = new Response(compressed).body!.pipeThrough(
+      new DecompressionStream("deflate-raw")
+    );
+    xmlBytes = new Uint8Array(await new Response(stream).arrayBuffer());
+  } else {
+    throw new Error(`Unsupported ZIP compression method: ${entry.method}`);
+  }
+
+  const xml = new TextDecoder().decode(xmlBytes);
+  return ooxmlToText(xml);
+}
+
+function ooxmlToText(xml: string): string {
+  // Walk each paragraph (<w:p>…</w:p>). Within each, extract <w:t>…</w:t>
+  // text runs in order, plus <w:tab/> as '\t' and <w:br/> as '\n'.
+  const out: string[] = [];
+  const paragraphs = xml.split(/<\/w:p\s*>/);
+  const re =
+    /<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>|<w:tab\s*\/?>|<w:br\s*\/?>/g;
+  for (const p of paragraphs) {
+    let text = "";
+    re.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(p)) !== null) {
+      if (m[1] !== undefined) {
+        text += m[1];
+      } else if (m[0].startsWith("<w:tab")) {
+        text += "\t";
+      } else if (m[0].startsWith("<w:br")) {
+        text += "\n";
+      }
+    }
+    text = text
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'");
+    if (text.length > 0) out.push(text);
+  }
+  // Paragraph separator: blank line between paragraphs.
+  return out.join("\n\n");
+}
+
 // ─── MCP Agent ────────────────────────────────────────────────────────────────
 
 export class MyMCP extends McpAgent<Env, Record<string, never>, Props> {
   server = new McpServer({
     name: "AntCV MCP — GitHub + Deploy",
-    version: "2.0.0",
+    version: "2.1.0",
   });
 
   async init() {
@@ -102,6 +224,78 @@ export class MyMCP extends McpAgent<Env, Record<string, never>, Props> {
         return {
           content: [{ type: "text", text: `--- sha:${data.sha} ---\n${text}` }],
         };
+      }
+    );
+
+    // ── github_read_docx ───────────────────────────────────────────────────
+    this.server.tool(
+      "github_read_docx",
+      "Read a .docx file from a GitHub repository and return its extracted plain text. Use for Word documents (design specs, plan docs) stored as .docx in the repo. Output is paragraph-structured plain text — paragraphs are blank-line separated, tabs and line breaks preserved within paragraphs. Handles files up to ~100 MB via the Git Blob API. Use this instead of github_read_file when the path ends in .docx.",
+      {
+        owner: z.string().describe("Repo owner, e.g. 'gabrielk83'"),
+        repo: z.string().describe("Repo name, e.g. 'AntCV'"),
+        path: z
+          .string()
+          .describe("Path to the .docx within the repo, e.g. 'docs/design/spec.docx'"),
+        ref: z
+          .string()
+          .optional()
+          .describe("Branch, tag, or commit SHA. Defaults to the default branch."),
+      },
+      async ({ owner, repo, path, ref }) => {
+        const octokit = new Octokit({ auth: this.props.accessToken });
+
+        // Step 1: get the file's metadata (sha + size) via repos.getContent
+        const meta = await octokit.repos.getContent({ owner, repo, path, ref });
+        const metaData = meta.data as any;
+        if (Array.isArray(metaData) || metaData.type !== "file") {
+          return { content: [{ type: "text", text: "Not a file: " + path }] };
+        }
+
+        // Step 2: get raw bytes. Use the Git Blob API to bypass the 1 MB
+        // getContent limit (and to avoid the "content omitted for files > 1 MB"
+        // edge case for borderline-sized files).
+        let bytes: Uint8Array;
+        try {
+          if (metaData.content && metaData.size && metaData.size <= 1_000_000) {
+            bytes = Uint8Array.from(Buffer.from(metaData.content, "base64"));
+          } else {
+            const blob = await octokit.git.getBlob({
+              owner,
+              repo,
+              file_sha: metaData.sha,
+            });
+            bytes = Uint8Array.from(
+              Buffer.from(blob.data.content, "base64")
+            );
+          }
+        } catch (e: any) {
+          return {
+            content: [
+              { type: "text", text: `Error fetching blob: ${e.message}` },
+            ],
+          };
+        }
+
+        // Step 3: extract text from the docx ZIP
+        try {
+          const text = await extractDocxText(bytes);
+          return {
+            content: [
+              {
+                type: "text",
+                text:
+                  `--- sha:${metaData.sha} bytes:${bytes.length} ---\n` + text,
+              },
+            ],
+          };
+        } catch (e: any) {
+          return {
+            content: [
+              { type: "text", text: `DOCX extraction error: ${e.message}` },
+            ],
+          };
+        }
       }
     );
 

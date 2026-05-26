@@ -65,14 +65,23 @@ const DEFAULTS = {
   navy: '283556',
   accent: '01B7BB',
   teal: '00746E',
-  mainHeadColor: '00746E',
+  // v1.40.135 — main head colour bumped from '00746E' (old teal) to
+  // '1B627F' to match the candidate-section header band. This is the
+  // colour used for both the "Application: ..." top band and the
+  // WHAT I BRING / CORE COMPETENCIES table header shading, so the
+  // two elements visually line up across the document. The PWA can
+  // still override either via `payload.style`.
+  mainHeadColor: '1B627F',
   mainTextColor: '333333',
-  mainBulletColor: '00746E',
+  mainBulletColor: '1B627F',
   sidebarBg: '283556',
   sidebarHeadColor: '01B7BB',
   sidebarTextColor: 'FFFFFF',
   sidebarLabelColor: 'FFFFFF',     // labels in sidebar (TOOLS & METHODS first words) — white not teal
-  headerBg: '283556',
+  // v1.40.135 — candidate header band aligned with mainHeadColor so
+  // the top "Application: ..." block matches the WHAT I BRING table
+  // header by default.
+  headerBg: '1B627F',
   headerNameColor: 'FFFFFF',
   headerSpecColor: 'FFFFFF',
   headerContactColor: 'FFFFFF',
@@ -109,6 +118,63 @@ function alignType(a) {
     case 'justify': return AlignmentType.JUSTIFIED;
     default:        return AlignmentType.LEFT;
   }
+}
+
+// v1.14.3 — section-level CJLR helper.
+//
+// Returns an AlignmentType for paragraphs in section `s` when
+// the PWA's antcv-item-align sidecar (and docx-client) populated
+// `s.item_alignment`. Resolution order:
+//   1. Per-item override at `s.item_alignment[path]` (if path given)
+//   2. Section group default at `s.item_alignment.__group__`
+//   3. The renderer's own fallback (passed in as `fallback`)
+//
+// `fallback` can be either an AlignmentType (e.g.
+// AlignmentType.JUSTIFIED) or a plain string the renderer's
+// existing code path produces — we coerce strings via
+// `alignType` so existing patterns like
+//     alignment: opts.align || AlignmentType.JUSTIFIED
+// work unchanged when CJLR isn't set.
+function paraAlign(s, path, fallback) {
+  const m = s && s.item_alignment;
+  if (m && typeof m === 'object') {
+    if (path && (m[path] === 'left' || m[path] === 'center' || m[path] === 'right' || m[path] === 'justify')) {
+      return alignType(m[path]);
+    }
+    const g = m.__group__;
+    if (g === 'left' || g === 'center' || g === 'right' || g === 'justify') {
+      return alignType(g);
+    }
+  }
+  if (fallback == null) return undefined;
+  if (typeof fallback === 'string') return alignType(fallback);
+  return fallback;
+}
+
+// Returns true iff the section has any CJLR alignment data
+// (group or per-item). Lets renderers short-circuit when
+// nothing's set.
+function hasItemAlign(s) {
+  const m = s && s.item_alignment;
+  if (!m || typeof m !== 'object') return false;
+  for (const k of Object.keys(m)) {
+    const v = m[k];
+    if (v === 'left' || v === 'center' || v === 'right' || v === 'justify') return true;
+  }
+  return false;
+}
+
+// Path-only lookup — returns the AlignmentType ONLY when the
+// specific edit-path has an override. Returns null when there's
+// no override for that path, EVEN IF the group default is set.
+// Use this when a renderer wants to try several candidate paths
+// in priority order before falling back to the group default.
+function paraAlignPath(s, path) {
+  const m = s && s.item_alignment;
+  if (!m || typeof m !== 'object' || !path) return null;
+  const v = m[path];
+  return (v === 'left' || v === 'center' || v === 'right' || v === 'justify')
+    ? alignType(v) : null;
 }
 
 function firstNonEmpty(...vals) {
@@ -274,6 +340,19 @@ export async function generateDocx(payload) {
     doc: payload.doc,
     headerAlign,
     sections: Array.isArray(payload.sections) ? payload.sections.filter(s => s.on !== false) : [],
+    // v1.14.8: per-item page assignments from the PWA's
+    // antcv:itemPages map. Shape: { '<sid>': { '<itemIdx>': <page> } }.
+    // renderLabeledList consumes this to insert page-break-before
+    // paragraphs ahead of each item flagged for page ≥ 2, mirroring
+    // the preview-side renderer in antcv-item-pages-render.js.
+    itemPages: (payload.item_pages && typeof payload.item_pages === 'object')
+      ? payload.item_pages : {},
+    // v1.14.8: per-panel default alignment from the PWA's
+    // personalInfo.stylePrefs.panelDefaultAlignment map. Shape:
+    // { topbar|sidebar|main: 'left'|'center'|'right'|'justify' }.
+    // Falls back to the existing per-loc defaults when absent.
+    panelDefaultAlignment: (payload.panel_default_alignment && typeof payload.panel_default_alignment === 'object')
+      ? payload.panel_default_alignment : null,
     // Worker version stamp — propagated into the Document's
     // `description` property so the .docx itself records which
     // version of the worker generated it. Lets us tell at a glance
@@ -383,8 +462,14 @@ function countByteMatches(haystack, needle) {
 
 function mergeStyle(input) {
   const s = { ...DEFAULTS };
+  // Non-color string keys that should pass through verbatim (not be
+  // uppercased by hex()). Extend this list when new layout-control
+  // string keys are added.
+  const PASSTHROUGH = new Set(['sidebarPosition']);
   for (const [k, v] of Object.entries(input || {})) {
-    if (typeof v === 'string') s[k] = hex(v);
+    if (typeof v === 'string') {
+      s[k] = PASSTHROUGH.has(k) ? v : hex(v);
+    }
   }
   return s;
 }
@@ -427,6 +512,61 @@ function numberingConfig(style) {
 }
 
 // ──────────────────────────────────────────────────────────────────
+// AI-assisted disclosure — "hanging textbox"
+// ──────────────────────────────────────────────────────────────────
+// v1.14.13 — shared builder for the AI-assisted notice. The PWA
+// preview renders this as a small bordered chip in the lower-right
+// corner of the last page (app.js v1.40.338). DOCX mirrors that look
+// with a 1pt bordered paragraph; no wp:anchor floating frames — they
+// don't survive LibreOffice/CloudConvert PDF conversion (see the
+// v1.14.0 photo-floating regression note further down).
+//
+// context: 'sidebar' (dark navy bg) | 'linear' (white body of CL)
+//
+// The text matches what the PWA writes ("AI-assisted document") plus
+// the responsibility clause, since the docx is the artifact that
+// leaves the user's machine and the long form reads better there.
+function buildAiDisclosureHangingTextbox(ctx, opts) {
+  const context = (opts && opts.context) || 'linear';
+  const isSidebar = context === 'sidebar';
+  // Sidebar: light-grey-blue on dark navy (no fill, the cell bg shows
+  // through). Linear: muted teal on a very light fill.
+  const borderColor = isSidebar ? 'C8D0DC' : '95B0AE';
+  const textColor   = isSidebar ? 'C8D0DC' : '4D7976';
+  const para = {
+    alignment: isSidebar ? AlignmentType.CENTER : AlignmentType.RIGHT,
+    spacing: { before: 360, after: 0, line: 220, lineRule: 'auto' },
+    border: {
+      top:    { color: borderColor, space: 2, style: BorderStyle.SINGLE, size: 4 },
+      bottom: { color: borderColor, space: 2, style: BorderStyle.SINGLE, size: 4 },
+      left:   { color: borderColor, space: 4, style: BorderStyle.SINGLE, size: 4 },
+      right:  { color: borderColor, space: 4, style: BorderStyle.SINGLE, size: 4 },
+    },
+    children: [new TextRun({
+      text: 'AI-assisted — author retains responsibility for content.',
+      font: 'Calibri',
+      size: 13, // 6.5pt (half-points)
+      italics: true,
+      color: textColor,
+    })],
+  };
+  if (isSidebar) {
+    // Small symmetric indent inside the sidebar so the box doesn't
+    // touch the cell margins.
+    para.indent = { left: 120, right: 120 };
+  } else {
+    // Linear/CL: push the box to the right of the body so it hangs in
+    // the bottom-right corner of the last page, far from the
+    // left-aligned body prose. PAGE_W minus body cell L/R margins
+    // (100+100) gives ~11706 dxa usable; left-indent of 7000 leaves
+    // ~4700 dxa for the chip (~3.25").
+    para.indent = { left: 7000 };
+    para.shading = { type: ShadingType.CLEAR, fill: 'F4F8F8', color: 'auto' };
+  }
+  return new Paragraph(para);
+}
+
+// ──────────────────────────────────────────────────────────────────
 // Two-column document (CV)
 // ──────────────────────────────────────────────────────────────────
 function buildTwoColumnDocument(ctx) {
@@ -436,16 +576,119 @@ function buildTwoColumnDocument(ctx) {
   const sidebarSecs = sections.filter(s => s.loc === 'sidebar');
   const mainSecs   = sections.filter(s => s.loc !== 'sidebar');
 
+  // v1.14.0 — photo position determines where the photo paragraph
+  // sits. Only one of these four returns a non-null paragraph.
+  const photoTopOfSidebar    = maybeBuildPhotoFor(ctx, 'sidebar-top');
+  const photoBottomOfSidebar = maybeBuildPhotoFor(ctx, 'sidebar-bottom');
+  const photoInHeader        = maybeBuildPhotoFor(ctx, 'header');
+  const photoInMain          = maybeBuildPhotoFor(ctx, 'main');
+
+  // v1.14.13 — AI disclosure rendered as a "hanging textbox" rather
+  // than a plain footer line. The PWA preview ships the same notice
+  // as a small bordered chip in the lower-right corner of the last
+  // page (app.js v1.40.338). The docx exporter mirrors that look by
+  // wrapping the existing paragraph with a 1pt border on all four
+  // sides and tight inner padding. We do NOT use wp:anchor floating
+  // frames here — see the note at ~line 1036; LibreOffice/CloudConvert
+  // drops anchored frames during PDF conversion, which was the v1.14.0
+  // photo-floating regression. A bordered paragraph survives both.
+  //
+  // For the sidebar context the bg is dark and we keep the existing
+  // light-grey-blue text colour with a matching border. The paragraph
+  // stays at the bottom of the sidebar cell (current placement) — the
+  // cell sits in a cantSplit body row, so moving the disclosure
+  // outside the body table would push it onto its own page.
+  const aiDisclosurePara = buildAiDisclosureHangingTextbox(ctx, { context: 'sidebar' });
+
   const sidebarChildren = [
-    ...(ctx.pi.photo_b64 ? [buildPhotoParagraph(ctx)] : []),
+    ...(photoTopOfSidebar ? [photoTopOfSidebar] : []),
     ...sidebarSecs.flatMap(s => renderSection(s, ctx, /*isSidebar*/ true)),
+    ...(photoBottomOfSidebar ? [photoBottomOfSidebar] : []),
+    aiDisclosurePara,
   ];
 
-  const mainChildren = mainSecs.flatMap(s => renderSection(s, ctx, /*isSidebar*/ false));
+  // v1.14.1 — main-left/right: wrap the FIRST main section's
+  // paragraphs in a nested 2-cell table sitting alongside the photo
+  // cell. Remaining sections render flat below. This is the
+  // "cell-split" approach the user specified — text indents
+  // proportionally beside the photo and renders identically in DOCX
+  // and PDF (unlike v1.14.0's floating images).
+  let mainChildren;
+  if (photoInMain && mainSecs.length > 0) {
+    // photoInMain is the position string ('main-left' or 'main-right').
+    const firstSec  = mainSecs[0];
+    const restSecs  = mainSecs.slice(1);
+    const firstSecParas = renderSection(firstSec, ctx, /*isSidebar*/ false);
+    // Effective main column width = MAIN_W minus the left/right cell
+    // margins from the parent main TableCell (left:160, right:160).
+    const innerW = MAIN_W - 320;
+    const photoTable = buildPhotoRowTable(ctx, photoInMain, firstSecParas, innerW);
+    mainChildren = [
+      photoTable,
+      ...restSecs.flatMap(s => renderSection(s, ctx, /*isSidebar*/ false)),
+    ];
+  } else {
+    mainChildren = mainSecs.flatMap(s => renderSection(s, ctx, /*isSidebar*/ false));
+  }
+
+  // v1.14.1 — header-left/right: same cell-split treatment for the
+  // candidate header band. Wrap name/spec/contact paragraphs in a
+  // 2-cell table alongside the photo cell. Replaces the v1.14.0
+  // floating-image approach which didn't survive PDF conversion.
+  if (photoInHeader) {
+    // photoInHeader is the position string ('header-left' or 'header-right').
+    // Container width = PAGE_W minus the header cell's L/R margins (360+360).
+    const headerInnerW = PAGE_W - 720;
+    const wrappedHeader = buildPhotoRowTable(ctx, photoInHeader, headerCell.slice(), headerInnerW);
+    // Replace headerCell's contents with the wrapping table.
+    headerCell.length = 0;
+    headerCell.push(wrappedHeader);
+  }
+
+  // v1.14.2 — sidebar position. Default 'left' (sidebar in first
+  // cell, main in second). When the PWA passes
+  // `style.sidebarPosition === 'right'`, swap both columnWidths
+  // and the cell order so the sidebar appears on the right side of
+  // the page. The header band still spans both columns and is not
+  // affected.
+  const sidebarOnRight = (style && style.sidebarPosition === 'right');
+  const colWidths = sidebarOnRight
+    ? [MAIN_W, SIDEBAR_W]
+    : [SIDEBAR_W, MAIN_W];
+
+  const sidebarCell = new TableCell({
+    width: { size: SIDEBAR_W, type: WidthType.DXA },
+    shading: { type: ShadingType.CLEAR, fill: style.sidebarBg, color: 'auto' },
+    borders: noBorders(),
+    // Sidebar text pad: 0.10" L/R (144 DXA) — gives content a touch
+    // more breathing room from the sidebar edges. Was 0.05" (72 DXA);
+    // user requested +0.05" more distance.
+    margins: { top: 240, bottom: 240, left: 144, right: 144 },
+    children: sidebarChildren.length ? sidebarChildren : [emptyParagraph()],
+  });
+  const mainCell = new TableCell({
+    width: { size: MAIN_W, type: WidthType.DXA },
+    borders: noBorders(),
+    // Main column pad: 0.10" L/R (144 DXA) — slightly more breathing
+    // room for body prose and tables.
+    // v1.10.3: top reduced 240 → 120 (12pt → 6pt) so the first
+    // section heading (typically PROFILE) sits closer to the
+    // candidate header band — fixes "too much space above the
+    // profile". Combined with the 80-DXA header bottom this leaves
+    // ~10pt total between contact line and PROFILE, was 22pt.
+    margins: { top: 120, bottom: 240, left: 144, right: 144 },
+    children: mainChildren.length ? mainChildren : [emptyParagraph()],
+  });
+
+  const hasSidebarItemPageBreaks = sidebarSecs.some(sec => {
+    const b = ctx.itemPages && sec && sec.id ? ctx.itemPages[sec.id] : null;
+    if (!b || typeof b !== 'object') return false;
+    return Object.keys(b).some(k => Number(b[k]) >= 2);
+  });
 
   const bodyTable = new Table({
     width: { size: PAGE_W, type: WidthType.DXA },
-    columnWidths: [SIDEBAR_W, MAIN_W],
+    columnWidths: colWidths,
     borders: noBorders(),
     rows: [
       new TableRow({
@@ -465,31 +708,23 @@ function buildTwoColumnDocument(ctx) {
         ],
       }),
       new TableRow({
-        children: [
-          new TableCell({
-            width: { size: SIDEBAR_W, type: WidthType.DXA },
-            shading: { type: ShadingType.CLEAR, fill: style.sidebarBg, color: 'auto' },
-            borders: noBorders(),
-            // Sidebar text pad: 0.10" L/R (144 DXA) — gives content a touch
-            // more breathing room from the sidebar edges. Was 0.05" (72 DXA);
-            // user requested +0.05" more distance.
-            margins: { top: 240, bottom: 240, left: 144, right: 144 },
-            children: sidebarChildren.length ? sidebarChildren : [emptyParagraph()],
-          }),
-          new TableCell({
-            width: { size: MAIN_W, type: WidthType.DXA },
-            borders: noBorders(),
-            // Main column pad: 0.10" L/R (144 DXA) — slightly more breathing
-            // room for body prose and tables.
-            // v1.10.3: top reduced 240 → 120 (12pt → 6pt) so the first
-            // section heading (typically PROFILE) sits closer to the
-            // candidate header band — fixes "too much space above the
-            // profile". Combined with the 80-DXA header bottom this leaves
-            // ~10pt total between contact line and PROFILE, was 22pt.
-            margins: { top: 120, bottom: 240, left: 144, right: 144 },
-            children: mainChildren.length ? mainChildren : [emptyParagraph()],
-          }),
-        ],
+        // v1.14.2 — cantSplit on the body row tells Word to keep the
+        // entire sidebar+main row on one page where possible. Without
+        // it, sidebar content slightly taller than the page generates
+        // a near-empty page 2 (just the sidebar tail) followed by a
+        // page 3 with only the CloudConvert footer. With it, Word
+        // either fits everything on page 1 or pushes the whole row
+        // to page 2 — no orphaned trailing pages.
+        //
+        // Caveat: if the body row is INHERENTLY taller than one page
+        // (very large sidebar OR very large main), Word ignores
+        // cantSplit and breaks as before. The user must then trim
+        // their sidebar content to fit. Future ships may add a
+        // density-based shrink-to-fit pass.
+        cantSplit: !hasSidebarItemPageBreaks,
+        children: sidebarOnRight
+          ? [mainCell, sidebarCell]
+          : [sidebarCell, mainCell],
       }),
     ],
   });
@@ -499,8 +734,8 @@ function buildTwoColumnDocument(ctx) {
     lastModifiedBy: ctx.pi.name || 'AntCV user',
     title: ctx.meta.role ? `${ctx.pi.name || 'CV'} — ${ctx.meta.role}` : (ctx.pi.name || 'CV'),
     subject: 'Curriculum Vitae',
-    keywords: 'AntCV, generated',
-    description: `Generated by AntCV docx-worker ${ctx.workerVersion || ''} — author retains all rights to the content.`.trim(),
+    keywords: 'AntCV, AI-assisted',
+    description: `Generated by AntCV docx-worker ${ctx.workerVersion || ''} — AI-assisted document. Author retains all rights to the content. https://cv-generator-det.pages.dev`.trim(),
     revision: 1,
     styles: buildStyles(ctx),
     numbering: numberingConfig(style),
@@ -532,7 +767,34 @@ function buildLinearDocument(ctx) {
   const otherSecs  = sections.filter(s => !s || (s.id !== 'closure' && s.id !== 'jd_questions'));
 
   const bodyChildren = [];
-  for (const s of otherSecs) bodyChildren.push(...renderSection(s, ctx, /*isSidebar*/ false));
+  // v1.14.1 — CL photo support: cell-split for header-* and main-*.
+  // CL has no sidebar, so sidebar-* is a no-op. `hidden` skips entirely.
+  const photoInHeaderCL = maybeBuildPhotoFor(ctx, 'header');
+  const photoInMainCL   = maybeBuildPhotoFor(ctx, 'main');
+  if (photoInHeaderCL) {
+    // Wrap CL header content (greeting/name band) in a nested 2-cell
+    // table alongside the photo cell.
+    const headerInnerW = PAGE_W - 720;
+    const wrappedHeader = buildPhotoRowTable(ctx, photoInHeaderCL, headerCell.slice(), headerInnerW);
+    headerCell.length = 0;
+    headerCell.push(wrappedHeader);
+  }
+  if (photoInMainCL && otherSecs.length > 0) {
+    // Wrap first CL body section's paragraphs in a nested 2-cell
+    // table alongside the photo. CL body cell uses the full page
+    // width minus side margins (matches existing CL geometry).
+    const firstSec = otherSecs[0];
+    const restSecs = otherSecs.slice(1);
+    const firstSecParas = renderSection(firstSec, ctx, /*isSidebar*/ false);
+    // CL body inner width: full page minus body cell L/R margins.
+    // We use the same 720 dxa total to be consistent with header.
+    const bodyInnerW = PAGE_W - 720;
+    const photoTable = buildPhotoRowTable(ctx, photoInMainCL, firstSecParas, bodyInnerW);
+    bodyChildren.push(photoTable);
+    for (const s of restSecs) bodyChildren.push(...renderSection(s, ctx, /*isSidebar*/ false));
+  } else {
+    for (const s of otherSecs) bodyChildren.push(...renderSection(s, ctx, /*isSidebar*/ false));
+  }
 
   if (closureSec && closureSec.content) {
     // Teal rule above the closure — matches preview hr(mainHeadColor, 6, 4).
@@ -568,6 +830,16 @@ function buildLinearDocument(ctx) {
       font: style.mainBodyFont,
     })],
   }));
+
+  // v1.14.13 — AI-assisted disclosure hanging textbox in the lower
+  // corner of the last page. For a single-page CL this is page 1;
+  // when jd_questions is on (page 2) the same chip is also appended
+  // to that page below — see the jdqSec branch in the section
+  // children construction further down. We add it here too so that
+  // single-page CLs still get the chip on their only page.
+  if (!jdqSec) {
+    bodyChildren.push(buildAiDisclosureHangingTextbox(ctx, { context: 'linear' }));
+  }
 
   // Wrap header + body in a single full-width table with zero page
   // margins. The preview uses @page margin:0 plus a 5pt indent on the
@@ -611,8 +883,8 @@ function buildLinearDocument(ctx) {
     lastModifiedBy: pi.name || 'AntCV user',
     title: ctx.meta.role ? `${pi.name || 'Cover Letter'} — ${ctx.meta.role}` : (pi.name || 'Cover Letter'),
     subject: 'Cover Letter',
-    keywords: 'AntCV, generated',
-    description: `Generated by AntCV docx-worker ${ctx.workerVersion || ''} — author retains all rights to the content.`.trim(),
+    keywords: 'AntCV, AI-assisted',
+    description: `Generated by AntCV docx-worker ${ctx.workerVersion || ''} — AI-assisted document. Author retains all rights to the content. https://cv-generator-det.pages.dev`.trim(),
     revision: 1,
     styles: buildStyles(ctx),
     numbering: numberingConfig(style),
@@ -683,6 +955,9 @@ function buildLinearDocument(ctx) {
                             font: style.mainBodyFont,
                           })],
                         }),
+                        // v1.14.13 — AI-assisted disclosure on the
+                        // last page of a 2-page CL (jd_questions).
+                        buildAiDisclosureHangingTextbox(ctx, { context: 'linear' }),
                       ],
                     })],
                   }),
@@ -798,40 +1073,180 @@ function buildHeaderCell(ctx) {
   return out;
 }
 
-function buildPhotoParagraph(ctx) {
+// v1.14.1 — photo position support (cell-split approach).
+//
+// Reads `pi.photoPosition` (one of seven values mirroring the PWA's
+// Settings → Layout → Profile Photo radio buttons):
+//
+//   sidebar-top      → photo paragraph at the top of the sidebar (default)
+//   sidebar-bottom   → photo paragraph at the bottom of the sidebar
+//   header-left      → photo cell on left of header band; name/spec/contact
+//                       cell on right (nested 2-col table inside header cell)
+//   header-right     → mirror — content left, photo right
+//   main-left        → photo cell on left of FIRST main section; section
+//                       content on right (nested 2-col table at top of main)
+//   main-right       → mirror — content left, photo right
+//   hidden           → photo not rendered at all
+//
+// Anything else falls back to sidebar-top.
+//
+// v1.14.0's `floating: { wp:anchor }` approach was abandoned because:
+//   1. PDF conversion (CloudConvert / LibreOffice) dropped header/main
+//      floating images entirely.
+//   2. Word's text wrap around the floating image was visually
+//      inconsistent — text touched the photo edge instead of indenting
+//      proportionally.
+//   3. The user specified the cell-split approach as the desired
+//      behaviour: "splitting the first 2 or 3 cells in the main
+//      section and merging the left (or right ones, pending where
+//      the profile image sits)".
+//
+// Cell-split renders identically in DOCX and PDF, and the text
+// indentation is proportional to the photo's cell width — exactly
+// the requested behaviour.
+
+const PHOTO_POSITIONS = new Set([
+  'sidebar-top', 'sidebar-bottom',
+  'header-left', 'header-right',
+  'main-left', 'main-right',
+  'hidden',
+]);
+
+// Widths for the nested cells (in dxa, twentieths of a point).
+// Photo cell is sized to comfortably hold the photo + a small visual
+// margin; content cell fills the remainder.
+const PHOTO_CELL_W_MAIN   = 1800; // ~1.25" wide for main-left/right
+const PHOTO_CELL_W_HEADER = 1280; // ~0.89" wide for header-left/right
+
+function normalisePhotoPosition(v) {
+  if (typeof v !== 'string') return 'sidebar-top';
+  const s = v.trim().toLowerCase();
+  return PHOTO_POSITIONS.has(s) ? s : 'sidebar-top';
+}
+
+// v1.14.1 — always returns an INLINE photo paragraph. The image is
+// inserted into the appropriate cell by the caller. Size is chosen
+// per position so the photo fits the surrounding layout.
+function buildPhotoParagraph(ctx, position) {
   const { pi, style } = ctx;
   const data = base64ToUint8Array(pi.photo_b64);
-  // Default photo size: 1.25" diameter. The user spec is 1.25"–1.8".
-  // The image is rendered with:
-  //   1. A teal 1pt outline (passed via ImageRun outline parameter
-  //      → emitted as <a:ln> on <pic:spPr>).
-  //   2. An elliptical shape: docx-js hard-codes <a:prstGeom prst="rect"/>
-  //      but the post-processor (post-process.js) rewrites the rect
-  //      to "ellipse" so the photo renders as a circle in Word.
-  const sizePx = Math.round((1.25 * EMU_PER_INCH) / 9525);
-  // Outline colour: use the sidebar accent if present (most users
-  // have teal there), fall back to the brand teal.
+  const pos = normalisePhotoPosition(position);
+
+  let inches = 1.25;
+  if (pos === 'header-left' || pos === 'header-right') inches = 0.85;
+  if (pos === 'main-left'   || pos === 'main-right')   inches = 1.20;
+  const sizePx = Math.round((inches * EMU_PER_INCH) / 9525);
+
   const outlineColor = ((style && style.photoBorderColor) ||
                        (style && style.sidebarHeadColor) ||
                        (style && style.accent) ||
                        '01B7BB').replace(/^#/, '');
+
+  // For sidebar variants: classic centred inline image, used directly
+  // as a top-or-bottom paragraph in the sidebar cell.
+  if (pos === 'sidebar-top' || pos === 'sidebar-bottom') {
+    return new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 120, after: 120 },
+      children: [
+        new ImageRun({
+          data,
+          type: detectImageType(pi.photo_b64),
+          transformation: { width: sizePx, height: sizePx },
+          outline: { width: 12700, solidFillType: 'rgb', value: outlineColor },
+          altText: {
+            title: 'Profile photo',
+            description: pi.name ? ('Profile photo of ' + pi.name) : 'Profile photo',
+            name: 'profile-photo',
+          },
+        }),
+      ],
+    });
+  }
+
+  // For header/main variants: inline image inside a paragraph that
+  // will be placed into a TableCell. Centred horizontally within
+  // its cell. No floating — the caller handles positioning by cell
+  // layout.
   return new Paragraph({
     alignment: AlignmentType.CENTER,
-    spacing: { before: 120, after: 120 },
+    spacing: { before: 60, after: 60 },
     children: [
       new ImageRun({
         data,
         type: detectImageType(pi.photo_b64),
         transformation: { width: sizePx, height: sizePx },
-        // 1pt outline in EMU (12700 = 1pt). solid stroke, brand teal.
-        outline: {
-          width: 12700,
-          solidFillType: 'rgb',
-          value: outlineColor,
+        outline: { width: 12700, solidFillType: 'rgb', value: outlineColor },
+        altText: {
+          title: 'Profile photo',
+          description: pi.name ? ('Profile photo of ' + pi.name) : 'Profile photo',
+          name: 'profile-photo',
         },
       }),
     ],
   });
+}
+
+// v1.14.1 — build a nested 2-cell table that places the photo
+// alongside the given content paragraphs. `position` tells us which
+// side the photo sits on. `containerWidth` is the dxa width of the
+// outer container (MAIN_W for main-*, PAGE_W minus header margins
+// for header-*). Both cells have no visible borders.
+function buildPhotoRowTable(ctx, position, contentParagraphs, containerWidth) {
+  const photoPara = buildPhotoParagraph(ctx, position);
+  const isHeader = (position === 'header-left' || position === 'header-right');
+  const isLeft   = (position === 'main-left'   || position === 'header-left');
+
+  const photoCellW = isHeader ? PHOTO_CELL_W_HEADER : PHOTO_CELL_W_MAIN;
+  const contentCellW = Math.max(2880, containerWidth - photoCellW);
+
+  const photoCell = new TableCell({
+    width: { size: photoCellW, type: WidthType.DXA },
+    children: [photoPara],
+    borders: noBorders(),
+    margins: { top: 80, bottom: 80, left: 80, right: 80 },
+    verticalAlign: VerticalAlign.TOP,
+  });
+
+  const contentCell = new TableCell({
+    width: { size: contentCellW, type: WidthType.DXA },
+    children: (contentParagraphs && contentParagraphs.length)
+      ? contentParagraphs
+      : [new Paragraph({ children: [] })],
+    borders: noBorders(),
+    margins: { top: 0, bottom: 0, left: 0, right: 0 },
+    verticalAlign: VerticalAlign.TOP,
+  });
+
+  return new Table({
+    width: { size: containerWidth, type: WidthType.DXA },
+    columnWidths: isLeft ? [photoCellW, contentCellW] : [contentCellW, photoCellW],
+    borders: noBorders(),
+    rows: [
+      new TableRow({
+        children: isLeft ? [photoCell, contentCell] : [contentCell, photoCell],
+      }),
+    ],
+  });
+}
+
+// v1.14.0 — convenience used by buildTwoColumnDocument + buildLinearDocument
+// to decide where to drop the photo paragraph based on the active
+// position. Returns null when the photo is hidden or absent.
+function maybeBuildPhotoFor(ctx, target) {
+  if (!ctx.pi || !ctx.pi.photo_b64) return null;
+  const pos = normalisePhotoPosition(ctx.pi.photoPosition);
+  if (pos === 'hidden') return null;
+  // target is one of: 'sidebar-top', 'sidebar-bottom', 'header', 'main'
+  switch (target) {
+    case 'sidebar-top':    return pos === 'sidebar-top'    ? buildPhotoParagraph(ctx, pos) : null;
+    case 'sidebar-bottom': return pos === 'sidebar-bottom' ? buildPhotoParagraph(ctx, pos) : null;
+    case 'header':         return (pos === 'header-left' || pos === 'header-right')
+                                  ? pos : null;
+    case 'main':           return (pos === 'main-left' || pos === 'main-right')
+                                  ? pos : null;
+    default: return null;
+  }
 }
 
 function detectImageType(b64) {
@@ -874,7 +1289,10 @@ function renderSection(s, ctx, isSidebar) {
   // would inherit font-size styling and visibly nudge spacing on
   // the new page; an empty pageBreakBefore paragraph collapses to
   // zero height.
-  const pageBreakPara = s.pageBreakBefore === true
+  const _sidebarTargetTitle = String([s.title, s.id, s.type].join(' '));
+  const _sidebarFirstItemBreak = !!(isSidebar && /regulatory context|additional information/i.test(_sidebarTargetTitle) && Array.isArray(s.items) && s.items.length && s.items[0] && typeof s.items[0] === 'object' && Number(s.items[0]._page) >= 2);
+  if (_sidebarFirstItemBreak) s._antcvFirstItemPageMoved = true;
+  const pageBreakPara = (s.pageBreakBefore === true || _sidebarFirstItemBreak)
     ? [new Paragraph({ pageBreakBefore: true, spacing: { before: 0, after: 0 } })]
     : [];
 
@@ -1065,7 +1483,13 @@ function headingParagraph(title, ctx, isSidebar) {
 function renderText(s, ctx, isSidebar) {
   if (!s.content) return [];
   const paras = String(s.content).split(/\n{2,}/).map(p => p.trim()).filter(Boolean);
-  return paras.map(p => bodyParagraphRich(p, ctx, isSidebar));
+  // CJLR v1.14.3 — `content` is the canonical edit-path the PWA
+  // uses for plain text sections. Per-item path override beats the
+  // group default; both fall back to JUSTIFIED.
+  const align = paraAlignPath(s, 'content')
+             ?? paraAlign(s, null, undefined)
+             ?? AlignmentType.JUSTIFIED;
+  return paras.map(p => bodyParagraphRich(p, ctx, isSidebar, { align }));
 }
 
 function renderTextInline(s, ctx, isSidebar) {
@@ -1086,9 +1510,14 @@ function renderTextInline(s, ctx, isSidebar) {
   const spacing = isWorkStyle
     ? { before: 20, after: 140, line: 276, lineRule: 'auto' }
     : { before: 60, after: 60,  line: 276, lineRule: 'auto' };
+  // CJLR v1.14.3 — same rule as renderText: content path override
+  // beats group; both fall back to JUSTIFIED.
+  const align = paraAlignPath(s, 'content')
+             ?? paraAlign(s, null, undefined)
+             ?? AlignmentType.JUSTIFIED;
   return paras.map((p, i) => new Paragraph({
     spacing,
-    alignment: AlignmentType.JUSTIFIED,
+    alignment: align,
     shading: isSidebar
       ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: 'auto' }
       : undefined,
@@ -1129,13 +1558,28 @@ function bodyParagraphRich(text, ctx, isSidebar, opts = {}) {
 
 function renderTextBullets(s, ctx, isSidebar) {
   const out = [];
-  if (s.intro) out.push(bodyParagraphRich(s.intro, ctx, isSidebar));
+  // CJLR v1.14.3 — edit-paths the PWA uses:
+  //   intro          → "intro"
+  //   items[i]       → "items.<i>"
+  //   closing        → "closing"
+  // For each, prefer the specific path override; otherwise fall
+  // back to the group default. paraAlignPath gives us path-only
+  // lookup so the group default doesn't mask a missing override.
+  const groupCjlr = paraAlign(s, null, undefined);
+  if (s.intro) {
+    const a = paraAlignPath(s, 'intro') ?? groupCjlr;
+    out.push(bodyParagraphRich(s.intro, ctx, isSidebar, a ? { align: a } : {}));
+  }
   if (Array.isArray(s.items)) {
-    s.items.filter(Boolean).forEach(it => {
-      out.push(bulletParagraphRich('', String(it), ctx, isSidebar));
+    s.items.filter(Boolean).forEach((it, i) => {
+      const a = paraAlignPath(s, 'items.' + i) ?? groupCjlr;
+      out.push(bulletParagraphRich('', String(it), ctx, isSidebar, a));
     });
   }
-  if (s.closing) out.push(bodyParagraphRich(s.closing, ctx, isSidebar));
+  if (s.closing) {
+    const a = paraAlignPath(s, 'closing') ?? groupCjlr;
+    out.push(bodyParagraphRich(s.closing, ctx, isSidebar, a ? { align: a } : {}));
+  }
   return out;
 }
 
@@ -1150,9 +1594,9 @@ function renderFoundation(s, ctx, isSidebar) {
   // 'Professionally' are still in english when exporting a docx".
   const handsOnLabel       = lang === 'da' ? 'Praktisk: '       : 'Hands-on: ';
   const professionallyLabel = lang === 'da' ? 'Professionelt: ' : 'Professionally: ';
-  const make = (label, body) => new Paragraph({
+  const make = (label, body, align) => new Paragraph({
     spacing: { before: 60, after: 60, line: 276, lineRule: 'auto' },
-    alignment: AlignmentType.JUSTIFIED,
+    alignment: align,
     children: [
       new TextRun({
         text: label,
@@ -1168,8 +1612,32 @@ function renderFoundation(s, ctx, isSidebar) {
       }),
     ],
   });
-  if (s.hands_on)       out.push(make(handsOnLabel,       s.hands_on));
-  if (s.professionally) out.push(make(professionallyLabel, s.professionally));
+  // CJLR v1.14.3 — edit-paths: "hands_on" and "professionally".
+  // Use paraAlignPath so the group default doesn't mask a missing
+  // path-specific override. Falls back to JUSTIFIED.
+  const groupCjlr = paraAlign(s, null, undefined);
+  const controls = (s.foundation_controls && typeof s.foundation_controls === 'object') ? s.foundation_controls : {};
+  const ctlAlign = (part) => {
+    const v = controls && controls[part] && controls[part].align;
+    return (v === 'left' || v === 'center' || v === 'right' || v === 'justify') ? alignType(v) : null;
+  };
+  const ctlPage = (part) => {
+    const n = Number(controls && controls[part] && controls[part].page);
+    return Number.isFinite(n) && n >= 2 ? Math.round(n) : 1;
+  };
+  const handsOnAlign       = ctlAlign('hands_on')       ?? paraAlignPath(s, 'hands_on')       ?? groupCjlr ?? AlignmentType.JUSTIFIED;
+  const professionallyAlign = ctlAlign('professionally') ?? paraAlignPath(s, 'professionally') ?? groupCjlr ?? AlignmentType.JUSTIFIED;
+  if (s.hands_on) {
+    if (ctlPage('hands_on') >= 2) out.push(new Paragraph({ pageBreakBefore: true, spacing: { before: 0, after: 0 } }));
+    out.push(make(handsOnLabel, s.hands_on, handsOnAlign));
+  }
+  if (s.professionally) {
+    if (ctlPage('professionally') >= 2) {
+      out.push(new Paragraph({ pageBreakBefore: true, spacing: { before: 0, after: 0 } }));
+      out.push(headingParagraph(String(s.title || 'FOUNDATION').toUpperCase() + ' (Cont.)', ctx, false));
+    }
+    out.push(make(professionallyLabel, s.professionally, professionallyAlign));
+  }
   return out;
 }
 
@@ -1178,14 +1646,23 @@ function renderFoundation(s, ctx, isSidebar) {
 // ──────────────────────────────────────────────────────────────────
 function renderBullets(s, ctx, isSidebar) {
   if (!Array.isArray(s.items)) return [];
-  return s.items.filter(it => it && (it.t || typeof it === 'string')).map(it => {
-    if (typeof it === 'string') return bulletParagraphRich('', it, ctx, isSidebar);
+  return s.items.filter(it => it && (it.t || typeof it === 'string')).map((it, i) => {
+    // CJLR v1.14.3 — try the {b,t}-pair path first ("items.<i>.t"),
+    // then the plain item path ("items.<i>"), and only THEN fall
+    // back to the group default. paraAlignPath gives us path-only
+    // lookup so the group default doesn't mask a more specific
+    // override on the alternative path.
+    const itemAlign =
+         paraAlignPath(s, 'items.' + i + '.t')
+      ?? paraAlignPath(s, 'items.' + i)
+      ?? paraAlign(s, null, undefined);  // group default OR undefined
+    if (typeof it === 'string') return bulletParagraphRich('', it, ctx, isSidebar, itemAlign);
     const lead = it.b ? `${it.b}: ` : '';
-    return bulletParagraphRich(lead, it.t, ctx, isSidebar);
+    return bulletParagraphRich(lead, it.t, ctx, isSidebar, itemAlign);
   });
 }
 
-function bulletParagraphRich(lead, body, ctx, isSidebar) {
+function bulletParagraphRich(lead, body, ctx, isSidebar, align) {
   const { style, fs } = ctx;
   const baseRun = {
     color: isSidebar ? style.sidebarTextColor : style.mainTextColor,
@@ -1195,7 +1672,7 @@ function bulletParagraphRich(lead, body, ctx, isSidebar) {
   return new Paragraph({
     numbering: { reference: isSidebar ? 'antcv-sb-bullet' : 'antcv-bullet', level: 0 },
     spacing: { before: 20, after: 20, line: 276, lineRule: 'auto' },
-    alignment: AlignmentType.JUSTIFIED,
+    alignment: align || AlignmentType.JUSTIFIED,
     children: [
       ...(lead ? [new TextRun({
         text: lead,
@@ -1222,25 +1699,30 @@ function renderCompetencyTable(s, ctx) {
   const rows = Array.isArray(s.rows) ? s.rows : [];
   if (rows.length === 0) return [];
   const [header, ...data] = rows;
-  const tableW = MAIN_W - 640;
-  // Default cell ratio: 1.5" first column / 3.1" second column = 0.326.
-  // Honour an explicit `s.tableRatio` (0–1, fraction of the first column)
-  // when the PWA sends one — otherwise use the 1.5/3.1 default.
+
+  const isCl = ctx.doc === 'cl';
+  const defaultCvW = MAIN_W - 640;
+  const defaultClW = PAGE_W - 2304;
+  const baseW = isCl ? defaultClW : defaultCvW;
+  const tableW = (typeof s.tableWidth === 'number' && s.tableWidth > 0)
+    ? Math.max(2880, Math.min(PAGE_W - 720, Math.round(s.tableWidth)))
+    : baseW;
   const explicitRatio = (typeof s.tableRatio === 'number' && s.tableRatio > 0.05 && s.tableRatio < 0.95)
     ? s.tableRatio
     : null;
   const col1 = Math.round(tableW * (explicitRatio !== null ? explicitRatio : 0.326));
   const col2 = tableW - col1;
-  const border = { style: BorderStyle.SINGLE, size: 4, color: style.mainHeadColor };
+  const tableHeaderBg = (style && style.tableHeaderBg) || style.mainHeadColor;
+  const border = { style: BorderStyle.SINGLE, size: 4, color: tableHeaderBg };
   const cellBorders = { top: border, bottom: border, left: border, right: border };
   const headerAlignT = alignType(s.headerAlign || 'center');
 
-  const docRows = [
-    new TableRow({
+  function makeHeaderRow() {
+    return new TableRow({
       tableHeader: true,
       children: (header || ['', '']).map((cell, i) => new TableCell({
         width: { size: i === 0 ? col1 : col2, type: WidthType.DXA },
-        shading: { type: ShadingType.CLEAR, fill: style.mainHeadColor, color: 'auto' },
+        shading: { type: ShadingType.CLEAR, fill: tableHeaderBg, color: 'auto' },
         borders: cellBorders,
         margins: { top: 80, bottom: 80, left: 120, right: 120 },
         verticalAlign: VerticalAlign.CENTER,
@@ -1254,8 +1736,11 @@ function renderCompetencyTable(s, ctx) {
           }),
         })],
       })),
-    }),
-    ...data.map((r, idx) => new TableRow({
+    });
+  }
+
+  function makeDataRow(r, idx) {
+    return new TableRow({
       children: (r || []).slice(0, 2).map((cell, i) => new TableCell({
         width: { size: i === 0 ? col1 : col2, type: WidthType.DXA },
         shading: idx % 2 === 0
@@ -1264,9 +1749,6 @@ function renderCompetencyTable(s, ctx) {
         borders: cellBorders,
         margins: { top: 80, bottom: 80, left: 120, right: 120 },
         children: [new Paragraph({
-          // Body cells justified — user spec: "its content is justified,
-          // its headers are centered" for the nested competency table.
-          // First column stays bold (Focus Area).
           alignment: i === 0 ? AlignmentType.LEFT : AlignmentType.JUSTIFIED,
           children: inlineRuns(cell, {
             bold: i === 0,
@@ -1276,33 +1758,52 @@ function renderCompetencyTable(s, ctx) {
           }),
         })],
       })),
-    })),
-  ];
+    });
+  }
 
-  return [
-    new Table({
+  function makeTable(dataRows, offset) {
+    return new Table({
       width: { size: tableW, type: WidthType.DXA },
       columnWidths: [col1, col2],
       borders: cellBorders,
-      // Center the table within its parent. In the CV (two-column
-      // layout) the table fills the main cell, so centering is a
-      // no-op visually. In the CL (linear layout) the table is
-      // narrower than the full body cell, and centering moves it
-      // from left-aligned to centered — matching the visual
-      // expectation set by the CV's CC table and the user's spec.
       alignment: AlignmentType.CENTER,
-      rows: docRows,
-    }),
-    // v1.10.4: 2pt of cushion AFTER the table. The main 4pt gap to the
-    // next section heading is now provided by headingParagraph's
-    // `before: 80` (see comment there). Previously we tried 8pt here,
-    // which Word collapses against the table border — pushing the gap
-    // onto the heading paragraph is the version Word actually honours.
-    new Paragraph({
-      spacing: { before: 0, after: 40, line: 20, lineRule: 'exact' },
-      children: [],
-    }),
-  ];
+      rows: [makeHeaderRow(), ...dataRows.map((r, i) => makeDataRow(r, offset + i))],
+    });
+  }
+
+  const rowPages = (s.row_pages && typeof s.row_pages === 'object') ? s.row_pages : {};
+  function pageForDataIndex(dataIdx) {
+    const withHeader = Number(rowPages[String(dataIdx + 1)]);
+    const withoutHeader = Number(rowPages[String(dataIdx)]);
+    const n = Number.isFinite(withHeader) ? withHeader : withoutHeader;
+    return (Number.isFinite(n) && n >= 2) ? Math.round(n) : 1;
+  }
+
+  const chunks = [];
+  let current = [];
+  let currentStart = 0;
+  for (let i = 0; i < data.length; i++) {
+    const p = pageForDataIndex(i);
+    if (p >= 2 && current.length) {
+      chunks.push({ rows: current, start: currentStart, page: 1 });
+      current = [];
+      currentStart = i;
+    }
+    current.push(data[i]);
+  }
+  if (current.length) chunks.push({ rows: current, start: currentStart, page: chunks.length ? 2 : 1 });
+
+  const out = [];
+  chunks.forEach((chunk, chunkIdx) => {
+    if (chunkIdx > 0) {
+      out.push(new Paragraph({ pageBreakBefore: true, spacing: { before: 0, after: 0 } }));
+      if (s.title) out.push(headingParagraph(String(s.title || '').toUpperCase() + ' (Cont.)', ctx, false));
+    }
+    out.push(makeTable(chunk.rows, chunk.start));
+    out.push(new Paragraph({ spacing: { before: 0, after: 40, line: 20, lineRule: 'exact' }, children: [] }));
+  });
+
+  return out;
 }
 
 // ──────────────────────────────────────────────────────────────────
@@ -1316,7 +1817,7 @@ function renderExperience(s, ctx) {
   // Right edge of the main column, in DXA, accounting for the cell margins.
   const rightTab = MAIN_W - 640 - 40;
 
-  roles.forEach(role => {
+  roles.forEach((role, ri) => {
     const left = [];
     if (role.title) {
       left.push(new TextRun({
@@ -1346,8 +1847,18 @@ function renderExperience(s, ctx) {
     }) : null;
 
     if (left.length || yearsRun) {
+      // CJLR v1.14.3 — role-line override: try "roles.<i>.title"
+      // first (most specific), then "roles.<i>", then fall back
+      // to the group default (or undefined when neither set, so
+      // the tab-stop layout — left text + right-aligned year —
+      // keeps working as before).
+      const roleAlign =
+           paraAlignPath(s, 'roles.' + ri + '.title')
+        ?? paraAlignPath(s, 'roles.' + ri)
+        ?? paraAlign(s, null, undefined);
       out.push(new Paragraph({
         spacing: { before: 120, after: 40 },
+        alignment: roleAlign,
         // keepNext: the role title (e.g. "Customer Change Requests Specialist
         // | Innoviz Technologies | 2020 — 2025") must stay glued to its
         // first bullet. Otherwise Word can leave the title alone at the
@@ -1360,8 +1871,13 @@ function renderExperience(s, ctx) {
     }
 
     if (Array.isArray(role.bullets)) {
-      role.bullets.filter(Boolean).forEach(b => {
-        out.push(bulletParagraphRich('', String(b), ctx, /*isSidebar*/ false));
+      role.bullets.filter(Boolean).forEach((b, bi) => {
+        // CJLR v1.14.3 — per-bullet override path is
+        // "roles.<i>.bullets.<j>" (matches the PWA's translation
+        // enumerator). Falls back to group default otherwise.
+        const bAlign = paraAlignPath(s, 'roles.' + ri + '.bullets.' + bi)
+                    ?? paraAlign(s, null, undefined);
+        out.push(bulletParagraphRich('', String(b), ctx, /*isSidebar*/ false, bAlign));
       });
     }
   });
@@ -1553,35 +2069,99 @@ function renderSimpleList(s, ctx, isSidebar, italic) {
     : autoNoBullet
       ? 'center'
       : (useBullets ? (isSidebar ? 'justify' : 'left') : 'center');
-  const a = alignType(s.align || autoAlign);
+  // CJLR v1.14.3 — `item_alignment.__group__` is the highest-
+  // priority section-wide source (set by the per-section cycler
+  // in the editor). Per-item overrides at "items.<i>" are checked
+  // inside the per-item loop below.
+  const groupCjlr = paraAlign(s, null, null);
+  const a = groupCjlr != null ? groupCjlr : alignType(s.align || autoAlign);
 
-  // Normalize every item: drop hidden (s.hidden[idx] from PWA's
-  // per-item eye toggle, item.hidden, {on:false}), null, and empty;
-  // extract a string from object-shaped items so we never render
-  // "[object Object]" in the docx. Items that survive are guaranteed
-  // to be non-empty strings.
+  // Build pairs of (original-index, normalized-string) so we
+  // can keep the per-item CJLR override mapped to the right
+  // edit-path. Dedup is applied while preserving the FIRST
+  // occurrence's index (matches dedupeStrings' first-wins
+  // semantics).
   //
-  // s.hidden is the PWA's section-level hidden map: an array where
-  // index i is `true` when item i is hidden in the editor. Without
-  // this check the worker rendered every item in REGULATORY CONTEXT
-  // even though only the first few were visible in the preview.
+  // Visibility filter — drop items hidden by any of the three
+  // ways the PWA can mark them (s.hidden[i], it.hidden, it.on=false).
   const visibleIndexes = (s.items || []).map((_, i) => i)
     .filter(i => !(s.hidden && s.hidden[i]))
     .filter(i => {
       const it = s.items[i];
       return !(it && typeof it === 'object' && it.hidden);
     });
-  const normalized = visibleIndexes
-    .map(i => normalizeItem(s.items[i]))
-    .filter(it => typeof it === 'string' && it.length > 0);
-  // Dedupe near-identical entries — see dedupeStrings() above.
-  // Defensive because the PWA's section content sometimes accumulates
-  // duplicate certifications/publications across imports and JD reloads.
-  const deduped = dedupeStrings(normalized);
-  if (deduped.length === 0) return [];
+  const normalizedPairs = visibleIndexes
+    .map(i => ({ idx: i, text: normalizeItem(s.items[i]) }))
+    .filter(p => typeof p.text === 'string' && p.text.length > 0);
+  // dedupeStrings collapses near-identical entries (strict prefix
+  // containment + long common prefix); reproduce the same logic
+  // here while keeping the first occurrence's original index so
+  // CJLR per-item overrides stay mapped to the right edit-path.
+  const keptKeys = [];
+  const dedupedPairs = [];
+  for (const p of normalizedPairs) {
+    const k = dedupeKey(p.text);
+    if (!k) { dedupedPairs.push(p); continue; }
+    let isDup = false;
+    for (const k2 of keptKeys) {
+      if (k === k2) { isDup = true; break; }
+      const minLen = Math.min(k.length, k2.length);
+      if (minLen >= 8 && (k.startsWith(k2) || k2.startsWith(k))) {
+        isDup = true; break;
+      }
+      if (k.length >= 30 && k2.length >= 30) {
+        let lcp = 0;
+        const max = Math.min(k.length, k2.length);
+        while (lcp < max && k[lcp] === k2[lcp]) lcp++;
+        if (lcp >= 25) { isDup = true; break; }
+      }
+    }
+    if (!isDup) { keptKeys.push(k); dedupedPairs.push(p); }
+  }
+  if (dedupedPairs.length === 0) return [];
+
+  // v1.14.8: per-item page-break support in simple lists. Each item
+  // whose source object carries `_page >= 2` (set by the PWA's
+  // normalizeSections from antcv:itemPages) gets a pageBreakBefore
+  // paragraph plus a "<TITLE> (CONT.)" continuation heading inserted
+  // ahead of it. Plain-string items have no page metadata; only the
+  // wrapper-shape `{ text, _page }` items can be flagged. The renderer
+  // collects results into a flat Paragraph array so we can interleave
+  // breaks and content paragraphs in order.
+  const sectionTitleUpper = String(s.title || '').toUpperCase();
+  const makeContHeader = () => new Paragraph({
+    spacing: { before: 0, after: 120 },
+    alignment: a,
+    border: {
+      bottom: { style: BorderStyle.SINGLE, size: 8, color: isSidebar ? style.sidebarHeadColor : style.mainHeadColor },
+    },
+    shading: isSidebar
+      ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: 'auto' }
+      : undefined,
+    children: [new TextRun({
+      text: sectionTitleUpper + ' (CONT.)',
+      bold: true,
+      color: isSidebar ? style.sidebarHeadColor : style.mainHeadColor,
+      size: pt2hp(isSidebar ? fs.sbHead : fs.mainHead),
+      font: isSidebar ? style.sidebarFont : style.mainHeadFont,
+    })],
+  });
+  const makeBreakPara = () => new Paragraph({
+    pageBreakBefore: true,
+    spacing: { before: 0, after: 0 },
+  });
 
   const isPubs = isPublicationsSection(s);
-  return deduped.map(item => {
+  const outParas = [];
+  for (const { idx, text: item } of dedupedPairs) {
+    // Check the ORIGINAL item for a _page assignment. The source
+    // could be a plain string, in which case there's no page metadata.
+    const src = s.items && s.items[idx];
+    const page = (src && typeof src === 'object' && Number(src._page) >= 2) ? Number(src._page) : 0;
+    if (page >= 2) {
+      outParas.push(makeBreakPara());
+      outParas.push(makeContHeader());
+    }
     const baseRun = {
       color: isSidebar ? style.sidebarTextColor : style.mainTextColor,
       size: pt2hp(isSidebar ? fs.sbBody : fs.mainBody),
@@ -1592,14 +2172,6 @@ function renderSimpleList(s, ctx, isSidebar, italic) {
       // Publication entries: NAME (everything before the first em-dash,
       // en-dash, or colon) renders bold + italic; DESCRIPTION (the rest)
       // renders normal. Matches the on-screen preview.
-      //
-      // v1.10.3: strip inline HTML tags (<b>, <i>, <strong>, <em>) from
-      // name + rest before creating the TextRun. The publication path
-      // bypasses `inlineRuns`, so any user-supplied tags would otherwise
-      // render as literal characters (the bug the user reported as
-      // 〈b〉"Suspended Carbon Nanotube..."〈/b〉 — Karp et al., 2009).
-      // The publication path applies its own bold+italic styling on
-      // `name`, so the tags are redundant anyway.
       const stripHtml = t => String(t || '').replace(
         /<\/?(?:b|i|strong|em)\b[^>]*>/gi, ''
       );
@@ -1613,9 +2185,11 @@ function renderSimpleList(s, ctx, isSidebar, italic) {
     } else {
       children = inlineRuns(item, { ...baseRun, italics: italic });
     }
+    // CJLR v1.14.3 — per-item override path is "items.<original_idx>"
+    const itemAlign = paraAlignPath(s, 'items.' + idx) ?? a;
     const para = {
       spacing: { before: 30, after: 30, line: 252, lineRule: 'auto' },
-      alignment: a,
+      alignment: itemAlign,
       shading: isSidebar
         ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: 'auto' }
         : undefined,
@@ -1624,8 +2198,9 @@ function renderSimpleList(s, ctx, isSidebar, italic) {
     if (useBullets) {
       para.numbering = { reference: isSidebar ? 'antcv-sb-bullet' : 'antcv-bullet', level: 0 };
     }
-    return new Paragraph(para);
-  });
+    outParas.push(new Paragraph(para));
+  }
+  return outParas;
 }
 
 // ──────────────────────────────────────────────────────────────────
@@ -1786,7 +2361,65 @@ function renderLabeledList(s, ctx, isSidebar) {
     }
     return '';
   };
+  // CJLR v1.14.3 — section-level group default. For labeled_list
+  // we honour only the group alignment; per-item overrides for
+  // labeled rows are deferred (they'd need original-index threading
+  // through the dedupe + orphan-suppression passes — a structural
+  // change rather than a one-liner).
+  const groupCjlr = paraAlign(s, null, null);
+  // v1.14.8: per-item page-break support inside labeled_list. The
+  // PWA's normalizeSections annotates each item with `_page: N` when
+  // the user assigned the item to page ≥ 2 via the antcv:itemPages
+  // editor cycler. We insert a `pageBreakBefore: true` empty para
+  // ahead of the matching paragraph plus a continuation heading
+  // styled to match the section's main heading. This mirrors the
+  // pattern Professional Experience already uses for role-level
+  // breaks.
+  //
+  // The continuation heading text is "<SECTION TITLE> (CONT.)".
+  // Using a real Paragraph rather than a Break run avoids the
+  // spacing nudge from inherited font sizes.
+  const sectionTitleUpper = String(s.title || '').toUpperCase();
+  const emitPageBreakAndContHeader = () => {
+    out.push(new Paragraph({
+      pageBreakBefore: true,
+      spacing: { before: 0, after: 0 },
+    }));
+    out.push(new Paragraph({
+      spacing: { before: 0, after: 120 },
+      alignment: groupCjlr != null
+        ? groupCjlr
+        : (isSidebar ? AlignmentType.CENTER : AlignmentType.LEFT),
+      border: {
+        bottom: { style: BorderStyle.SINGLE, size: 8, color: isSidebar ? style.sidebarHeadColor : style.mainHeadColor },
+      },
+      shading: isSidebar
+        ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: 'auto' }
+        : undefined,
+      children: [new TextRun({
+        text: sectionTitleUpper + ' (CONT.)',
+        bold: true,
+        color: isSidebar ? style.sidebarHeadColor : style.mainHeadColor,
+        size: pt2hp(isSidebar ? fs.sbHead : fs.mainHead),
+        font: isSidebar ? style.sidebarFont : style.mainHeadFont,
+      })],
+    }));
+  };
+
+  let _skippedFirstSectionBreak = false;
   noOrphans.forEach(it => {
+    // v1.14.8: emit a break BEFORE rendering this item if it carries
+    // the _page marker. Skip the break for items whose page is 1 (the
+    // default) or unset. v1.14.12: when sidebar item 0 is assigned to
+    // a later page, renderSection has already moved the whole
+    // subsection heading, so do not add a second in-section break.
+    if (it && typeof it === 'object' && Number(it._page) >= 2) {
+      if (s._antcvFirstItemPageMoved && !_skippedFirstSectionBreak) {
+        _skippedFirstSectionBreak = true;
+      } else {
+        try { emitPageBreakAndContHeader(); } catch (_) {}
+      }
+    }
     const maybeSubhead = it.group || it.subhead || it.header || it.category || (String(s.id || '').toLowerCase().includes('regulatory') && (it.l || it.label) && !(it.v || it.value));
     if (maybeSubhead) {
       const subheadText = subheadString(maybeSubhead);
@@ -1800,9 +2433,11 @@ function renderLabeledList(s, ctx, isSidebar) {
         // first item under it (no orphaned subhead at bottom of page).
         keepNext: true,
         keepLines: true,
-        // Group/category subheads sit centered in the sidebar so
-        // they're a clear visual divider above the items below.
-        alignment: isSidebar ? AlignmentType.CENTER : undefined,
+        // CJLR group default overrides the sidebar-CENTER default
+        // when set; otherwise the existing per-loc rule applies.
+        alignment: groupCjlr != null
+          ? groupCjlr
+          : (isSidebar ? AlignmentType.CENTER : undefined),
         shading: isSidebar
           ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: 'auto' }
           : undefined,
@@ -1829,10 +2464,11 @@ function renderLabeledList(s, ctx, isSidebar) {
       : style.mainHeadColor;
     out.push(new Paragraph({
       spacing: { before: 40, after: 40, line: 252, lineRule: 'auto' },
-      // Sidebar labeled lists (CERTIFICATIONS, EDUCATION, REGULATORY
-      // CONTEXT, ADDITIONAL INFORMATION) default to justified so
-      // multi-line entries align both edges; user-requested.
-      alignment: isSidebar ? AlignmentType.JUSTIFIED : undefined,
+      // CJLR group default overrides the sidebar-JUSTIFIED default
+      // when set; otherwise the existing per-loc rule applies.
+      alignment: groupCjlr != null
+        ? groupCjlr
+        : (isSidebar ? AlignmentType.JUSTIFIED : undefined),
       shading: isSidebar
         ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: 'auto' }
         : undefined,
@@ -1915,46 +2551,106 @@ function renderEducation(s, ctx, isSidebar) {
     return true;
   });
   if (deduped.length === 0) return [];
+  // CJLR v1.14.3 — group default overrides the sidebar-JUSTIFIED
+  // default when set. We don't thread per-item indices through
+  // the eduKey/dedupe pipeline in v1.14.3, so per-item alignment
+  // overrides are not yet honoured for education entries.
+  const groupCjlr = paraAlign(s, null, null);
+  // v1.14.6: inline education layout — render `deg` and `sch` as
+  // a single paragraph "DEG: SCH" instead of two stacked paragraphs.
+  // The two-paragraph layout wasted 3–4 lines of sidebar real estate
+  // per entry (5 entries = ~15 lines = half a column). Matches the
+  // React preview which now also uses colon-inline.
+  //
+  // v1.14.6 also adds defensive parsing for the case where source
+  // data has the entry packed into `deg` (e.g. "MBA\nTechnion. ..."
+  // from an upload). We split on the first newline so the output is
+  // always one clean inline line per entry, regardless of how the
+  // upstream data is shaped.
+  // v1.14.8: per-item page-break support for education.
+  const eduSectionTitleUpper = String(s.title || '').toUpperCase();
+  const emitEduBreakAndCont = () => {
+    out.push(new Paragraph({
+      pageBreakBefore: true,
+      spacing: { before: 0, after: 0 },
+    }));
+    out.push(new Paragraph({
+      spacing: { before: 0, after: 120 },
+      alignment: groupCjlr != null
+        ? groupCjlr
+        : (isSidebar ? AlignmentType.CENTER : AlignmentType.LEFT),
+      border: {
+        bottom: { style: BorderStyle.SINGLE, size: 8, color: isSidebar ? style.sidebarHeadColor : style.mainHeadColor },
+      },
+      shading: isSidebar
+        ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: 'auto' }
+        : undefined,
+      children: [new TextRun({
+        text: eduSectionTitleUpper + ' (CONT.)',
+        bold: true,
+        color: isSidebar ? style.sidebarHeadColor : style.mainHeadColor,
+        size: pt2hp(isSidebar ? fs.sbHead : fs.mainHead),
+        font: isSidebar ? style.sidebarFont : style.mainHeadFont,
+      })],
+    }));
+  };
+
   deduped.forEach(it => {
-    const deg = (it.deg || it.degree || '').toString();
-    const sch = (it.sch || it.school || '').toString();
+    if (it && typeof it === 'object' && Number(it._page) >= 2) {
+      try { emitEduBreakAndCont(); } catch (_) {}
+    }
+    let deg = (it.deg || it.degree || '').toString();
+    let sch = (it.sch || it.school || '').toString();
+    // Defensive split: if sch is empty AND deg contains a newline,
+    // treat the first line as the degree and the rest as the school.
+    if (!sch.trim() && /\n/.test(deg)) {
+      const nl = deg.indexOf('\n');
+      sch = deg.substring(nl + 1).trim();
+      deg = deg.substring(0, nl).trim();
+    }
+    // Collapse any remaining internal newlines to spaces so the
+    // single-paragraph layout doesn't get a forced break.
+    deg = deg.replace(/\s*\n\s*/g, ' ').trim();
+    sch = sch.replace(/\s*\n\s*/g, ' ').trim();
+    if (!deg && !sch) return;
+    const runs = [];
     if (deg) {
-      out.push(new Paragraph({
-        spacing: { before: 60, after: 0 },
-        // Sidebar education entries justified so degree + school text
-        // wrap with both edges aligned.
-        alignment: isSidebar ? AlignmentType.JUSTIFIED : undefined,
-        shading: isSidebar
-          ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: 'auto' }
-          : undefined,
-        children: [new TextRun({
-          text: deg,
-          bold: true,
-          color: isSidebar ? style.sidebarTextColor : style.mainHeadColor,
-          size: pt2hp(isSidebar ? fs.sbBody : fs.mainBody),
-          font: isSidebar ? (style.sidebarBodyFont || style.sidebarFont) : style.mainBodyFont,
-        })],
+      runs.push(new TextRun({
+        text: deg,
+        bold: true,
+        color: isSidebar ? style.sidebarTextColor : style.mainHeadColor,
+        size: pt2hp(isSidebar ? fs.sbBody : fs.mainBody),
+        font: isSidebar ? (style.sidebarBodyFont || style.sidebarFont) : style.mainBodyFont,
+      }));
+    }
+    if (deg && sch) {
+      runs.push(new TextRun({
+        text: ': ',
+        bold: true,
+        color: isSidebar ? style.sidebarTextColor : style.mainHeadColor,
+        size: pt2hp(isSidebar ? fs.sbBody : fs.mainBody),
+        font: isSidebar ? (style.sidebarBodyFont || style.sidebarFont) : style.mainBodyFont,
       }));
     }
     if (sch) {
-      out.push(new Paragraph({
-        spacing: { before: 0, after: 60 },
-        alignment: isSidebar ? AlignmentType.JUSTIFIED : undefined,
-        shading: isSidebar
-          ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: 'auto' }
-          : undefined,
-        children: [new TextRun({
-          // Sidebar: school renders white NORMAL (per user spec).
-          // Main column: keep the legacy gray italic for visual
-          // hierarchy under the bold teal degree.
-          text: sch,
-          italics: !isSidebar,
-          color: isSidebar ? style.sidebarTextColor : '595959',
-          size: pt2hp(isSidebar ? fs.sbBody : fs.mainBody),
-          font: isSidebar ? (style.sidebarBodyFont || style.sidebarFont) : style.mainBodyFont,
-        })],
+      runs.push(new TextRun({
+        text: sch,
+        italics: !isSidebar,
+        color: isSidebar ? style.sidebarTextColor : '595959',
+        size: pt2hp(isSidebar ? fs.sbBody : fs.mainBody),
+        font: isSidebar ? (style.sidebarBodyFont || style.sidebarFont) : style.mainBodyFont,
       }));
     }
+    out.push(new Paragraph({
+      spacing: { before: 40, after: 40 },
+      alignment: groupCjlr != null
+        ? groupCjlr
+        : (isSidebar ? AlignmentType.JUSTIFIED : undefined),
+      shading: isSidebar
+        ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: 'auto' }
+        : undefined,
+      children: runs,
+    }));
   });
   return out;
 }

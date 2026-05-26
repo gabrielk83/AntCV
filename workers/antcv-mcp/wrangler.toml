@@ -24,12 +24,11 @@ id = "2ef1dccebcf44af2ba5434a6ba0932c3"
 # https://developers.cloudflare.com/workers/configuration/secrets/
 #
 # Commands to set secrets:
-# npx wrangler secret put GITHUB_CLIENT_ID
-# npx wrangler secret put GITHUB_CLIENT_SECRET
-# npx wrangler secret put COOKIE_ENCRYPTION_KEY
-# Secrets to set:
-#   wrangler secret put CF_API_TOKEN
-#   wrangler secret put CF_ACCOUNT_ID
+# npx wrangler secret put GITHUB_CLIENT_ID  --config wrangler.toml
+# npx wrangler secret put GITHUB_CLIENT_SECRET  --config wrangler.toml
+# npx wrangler secret put COOKIE_ENCRYPTION_KEY  --config wrangler.toml
+# npx wrangler secret put CF_API_TOKEN --config wrangler.toml
+# npx wrangler secret put CF_ACCOUNT_ID --config wrangler.toml
 
 [[migrations]]
 tag = "v1"

@@ -86,15 +86,16 @@
     </div>
     <div class="row">
       <label for="token">Bearer token</label>
-      <input id="token" type="password" autocomplete="off" spellcheck="false" placeholder="paste OAuth access_token (e.g. from MCP Inspector)" />
+      <input id="token" type="password" autocomplete="off" spellcheck="false" placeholder="sign in to populate automatically, or paste an existing access_token" />
     </div>
     <div class="actions">
       <button id="run">List tools</button>
-      <button id="clear" class="secondary" type="button">Clear token</button>
+      <button id="signin" class="secondary" type="button">Sign in with GitHub</button>
+      <button id="signout" class="secondary" type="button" hidden>Sign out</button>
       <button id="curl" class="secondary" type="button">Copy curl</button>
     </div>
     <div id="status" class="status"></div>
-    <div class="note">Token is stored only in this browser's <code>localStorage</code> under <code>antcv-mcp-probe.token</code>. The probe never persists or transmits anything else.</div>
+    <div class="note">Sign-in uses OAuth 2.1 with PKCE + Dynamic Client Registration against the same MCP server. The resulting access token is stored only in this browser's <code>localStorage</code>.</div>
   </div>
 
   <h2>Server</h2>
@@ -119,31 +120,36 @@
   "use strict";
 
   const DEFAULT_URL = "https://antcv-mcp.karp-gabriel-a.workers.dev/mcp";
-  const LS = { url: "antcv-mcp-probe.url", token: "antcv-mcp-probe.token" };
+  const LS = {
+    url:    "antcv-mcp-probe.url",
+    token:  "antcv-mcp-probe.token",
+    client: "antcv-mcp-probe.client",  // suffixed with base::redirectUri
+  };
+  const SS_PKCE = "antcv-mcp-probe.pkce";
   const $ = (id) => document.getElementById(id);
 
-  const elUrl    = $("url");
-  const elToken  = $("token");
-  const elStatus = $("status");
-  const elServer = $("server");
-  const elTools  = $("tools");
-  const elRawIn  = $("raw-init");
-  const elRawLs  = $("raw-list");
-  const btnRun   = $("run");
-  const btnClear = $("clear");
-  const btnCurl  = $("curl");
+  const elUrl     = $("url");
+  const elToken   = $("token");
+  const elStatus  = $("status");
+  const elServer  = $("server");
+  const elTools   = $("tools");
+  const elRawIn   = $("raw-init");
+  const elRawLs   = $("raw-list");
+  const btnRun    = $("run");
+  const btnSignin = $("signin");
+  const btnSignout= $("signout");
+  const btnCurl   = $("curl");
 
   elUrl.value   = localStorage.getItem(LS.url)   || DEFAULT_URL;
   elToken.value = localStorage.getItem(LS.token) || "";
 
-  elUrl.addEventListener("change",   () => localStorage.setItem(LS.url, elUrl.value.trim()));
-  elToken.addEventListener("change", () => localStorage.setItem(LS.token, elToken.value.trim()));
+  elUrl.addEventListener("change",   () => { localStorage.setItem(LS.url, elUrl.value.trim()); updateSignedInUI(); });
+  elToken.addEventListener("change", () => { localStorage.setItem(LS.token, elToken.value.trim()); updateSignedInUI(); });
 
-  btnClear.addEventListener("click", () => {
-    elToken.value = "";
-    localStorage.removeItem(LS.token);
-    setStatus("Token cleared from localStorage.", "warn");
+  btnSignin.addEventListener("click", () => {
+    startSignIn().catch((e) => setStatus("Sign-in start failed: " + e.message, "err"));
   });
+  btnSignout.addEventListener("click", signOut);
 
   btnCurl.addEventListener("click", async () => {
     const url = elUrl.value.trim();
@@ -165,9 +171,182 @@
 
   btnRun.addEventListener("click", () => { run().catch((e) => setStatus("Unhandled: " + e.message, "err")); });
 
+  updateSignedInUI();
+  if (location.search.includes("code=") || location.search.includes("error=")) {
+    handleCallback().catch((e) => setStatus("Callback handler crashed: " + e.message, "err"));
+  }
+
   function setStatus(text, cls) {
     elStatus.textContent = text;
     elStatus.className = "status" + (cls ? " " + cls : "");
+  }
+
+  // ── OAuth (PKCE + Dynamic Client Registration) ─────────────────────────
+
+  function oauthBase(mcpUrl) {
+    try {
+      const u = new URL(mcpUrl);
+      u.pathname = u.pathname.replace(/\/(mcp|sse)\/?$/, "/");
+      return u.origin + u.pathname.replace(/\/+$/, "");
+    } catch { return null; }
+  }
+  function b64url(bytes) {
+    let s = "";
+    for (const b of bytes) s += String.fromCharCode(b);
+    return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+  function randomB64url(len) {
+    const a = new Uint8Array(len);
+    crypto.getRandomValues(a);
+    return b64url(a);
+  }
+  async function sha256b64url(s) {
+    const h = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+    return b64url(new Uint8Array(h));
+  }
+  function thisRedirectUri() { return location.origin + location.pathname; }
+  function clientCacheKey(base, redirectUri) {
+    return LS.client + "::" + base + "::" + redirectUri;
+  }
+
+  async function registerClient(base, redirectUri) {
+    const resp = await fetch(base + "/register", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        client_name: "antcv-mcp probe",
+        redirect_uris: [redirectUri],
+        token_endpoint_auth_method: "none",
+        grant_types: ["authorization_code"],
+        response_types: ["code"],
+      }),
+    });
+    if (!resp.ok) {
+      const t = await resp.text().catch(() => "");
+      throw new Error(`/register HTTP ${resp.status}: ${t || resp.statusText}`);
+    }
+    return resp.json();
+  }
+
+  async function exchangeCode(base, clientId, code, codeVerifier, redirectUri) {
+    const body = new URLSearchParams({
+      grant_type: "authorization_code",
+      code, redirect_uri: redirectUri,
+      client_id: clientId, code_verifier: codeVerifier,
+    });
+    const resp = await fetch(base + "/token", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: body.toString(),
+    });
+    if (!resp.ok) {
+      const t = await resp.text().catch(() => "");
+      throw new Error(`/token HTTP ${resp.status}: ${t || resp.statusText}`);
+    }
+    return resp.json();
+  }
+
+  async function startSignIn() {
+    if (!/^https?:$/.test(location.protocol)) {
+      setStatus("Sign-in requires the probe to be served over http(s). For file:// use paste-token.", "err");
+      return;
+    }
+    const mcpUrl = elUrl.value.trim();
+    const base = oauthBase(mcpUrl);
+    if (!base) { setStatus("Cannot derive OAuth base from endpoint URL.", "err"); return; }
+    localStorage.setItem(LS.url, mcpUrl);
+
+    const redirectUri = thisRedirectUri();
+    const cacheKey = clientCacheKey(base, redirectUri);
+    let clientId = localStorage.getItem(cacheKey);
+
+    if (!clientId) {
+      setStatus("Registering OAuth client (DCR)…");
+      try {
+        const reg = await registerClient(base, redirectUri);
+        clientId = reg.client_id;
+        if (!clientId) throw new Error("/register returned no client_id");
+        localStorage.setItem(cacheKey, clientId);
+      } catch (e) {
+        setStatus("Client registration failed (often CORS): " + e.message, "err");
+        return;
+      }
+    }
+
+    const codeVerifier = randomB64url(64);
+    const codeChallenge = await sha256b64url(codeVerifier);
+    const state = randomB64url(16);
+    sessionStorage.setItem(SS_PKCE, JSON.stringify({
+      state, codeVerifier, clientId, base, redirectUri,
+    }));
+
+    const authUrl = new URL(base + "/authorize");
+    authUrl.searchParams.set("response_type", "code");
+    authUrl.searchParams.set("client_id", clientId);
+    authUrl.searchParams.set("redirect_uri", redirectUri);
+    authUrl.searchParams.set("state", state);
+    authUrl.searchParams.set("code_challenge", codeChallenge);
+    authUrl.searchParams.set("code_challenge_method", "S256");
+    setStatus("Redirecting to GitHub via " + base + "/authorize…");
+    location.href = authUrl.toString();
+  }
+
+  async function handleCallback() {
+    const params = new URLSearchParams(location.search);
+    const code  = params.get("code");
+    const state = params.get("state");
+    const err   = params.get("error");
+    if (err) {
+      const desc = params.get("error_description");
+      setStatus("OAuth error: " + err + (desc ? " — " + desc : ""), "err");
+      history.replaceState(null, "", location.pathname);
+      return;
+    }
+    if (!code) return;
+
+    const stored = sessionStorage.getItem(SS_PKCE);
+    if (!stored) {
+      setStatus("OAuth callback received but no PKCE state in sessionStorage. Restart sign-in.", "err");
+      history.replaceState(null, "", location.pathname);
+      return;
+    }
+    let s;
+    try { s = JSON.parse(stored); } catch { setStatus("PKCE state corrupt.", "err"); return; }
+    if (s.state !== state) {
+      setStatus("OAuth state mismatch — possible CSRF. Aborting.", "err");
+      return;
+    }
+
+    setStatus("Exchanging code for token…");
+    try {
+      const json = await exchangeCode(s.base, s.clientId, code, s.codeVerifier, s.redirectUri);
+      if (!json.access_token) throw new Error("/token returned no access_token");
+      elToken.value = json.access_token;
+      localStorage.setItem(LS.token, json.access_token);
+      sessionStorage.removeItem(SS_PKCE);
+      history.replaceState(null, "", location.pathname);
+      updateSignedInUI();
+      setStatus("Signed in. Token stored. Click List tools.", "ok");
+    } catch (e) {
+      setStatus("Token exchange failed: " + e.message, "err");
+    }
+  }
+
+  function signOut() {
+    const mcpUrl = elUrl.value.trim();
+    const base = oauthBase(mcpUrl);
+    elToken.value = "";
+    localStorage.removeItem(LS.token);
+    if (base) localStorage.removeItem(clientCacheKey(base, thisRedirectUri()));
+    sessionStorage.removeItem(SS_PKCE);
+    updateSignedInUI();
+    setStatus("Signed out. Token and cached client_id cleared.", "warn");
+  }
+
+  function updateSignedInUI() {
+    const signedIn = !!elToken.value.trim();
+    btnSignin.hidden  = signedIn;
+    btnSignout.hidden = !signedIn;
   }
 
   function escapeHtml(s) {

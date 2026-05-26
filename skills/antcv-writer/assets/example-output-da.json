@@ -39,8 +39,8 @@
         },
         {
           "title": "To ASPICE-recertificeringer, nul væsentlige findings",
-          "body": "Koordinerede optiske, elektriske og software-teams; pre-board screening før assessor-review.",
-          "word_count": 11
+          "body": "Koordinerede de optiske, elektriske og software-teams; pre-board screening før assessor-review hver gang.",
+          "word_count": 12
         },
         {
           "title": "40% reduktion i review-cyklustid",
@@ -212,7 +212,7 @@
       "source": "llm",
       "before_text": null,
       "after_text": "[3 outcome bullets]",
-      "reason": "outcomes mirror EN; Danish word counts 11-13 vs EN 13-15 per language tightening rule",
+      "reason": "outcomes mirror EN; Danish word counts 12-13 within DA measured-professional 11-16 range per language-output.md",
       "confidence": "high",
       "risk": "none",
       "char_delta": 372

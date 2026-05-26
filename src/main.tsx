@@ -10,7 +10,10 @@
 import { mountLanguageCardIsland } from './islands/LanguageCard/mount';
 import { mountPreviewToolbarIsland } from './islands/PreviewToolbar/mount';
 import { mountSettingsRouterIsland } from './islands/SettingsRouter/mount';
+import { mountPackagePickerIsland } from './islands/PackagePicker/mount';
 import { exposeDebugApi, installWizardStateGuard } from './lib/wizard-state';
+import { installPackageBodyBinding, exposePackageDebugApi } from './lib/body-package';
+import { installCustomModeApi } from './lib/custom-mode';
 
 const VERSION = '1.50.0-pass1';
 
@@ -26,11 +29,15 @@ interface AntcvReactIslandsAPI {
   mountAll: () => void;
 }
 
-// Install the wizard-state guard synchronously — before any island mounts —
-// so that even if app.js fires a write between bundle boot and DOMContentLoaded,
-// the guard is in place.
+// Install the wizard-state guard + body[data-package] binding synchronously —
+// before any island mounts — so that even if app.js fires a write between
+// bundle boot and DOMContentLoaded, both guards are in place and the visual
+// package's CSS variables are bound to <body> on the first paint.
 try { installWizardStateGuard(); } catch (e) { console.warn('[react-islands] wizard-state guard install failed', e); }
 try { exposeDebugApi(); } catch (e) { console.warn('[react-islands] wizard-state debug api install failed', e); }
+try { installPackageBodyBinding(); } catch (e) { console.warn('[react-islands] package body binding failed', e); }
+try { exposePackageDebugApi(); } catch (e) { console.warn('[react-islands] package debug api failed', e); }
+try { installCustomModeApi(); } catch (e) { console.warn('[react-islands] custom-mode api failed', e); }
 
 const api: AntcvReactIslandsAPI = {
   version: VERSION,
@@ -38,6 +45,7 @@ const api: AntcvReactIslandsAPI = {
     try { mountLanguageCardIsland(); } catch (e) { console.warn('[react-islands] LanguageCard mount failed', e); }
     try { mountPreviewToolbarIsland(); } catch (e) { console.warn('[react-islands] PreviewToolbar mount failed', e); }
     try { mountSettingsRouterIsland(); } catch (e) { console.warn('[react-islands] SettingsRouter mount failed', e); }
+    try { mountPackagePickerIsland(); } catch (e) { console.warn('[react-islands] PackagePicker mount failed', e); }
   },
 };
 

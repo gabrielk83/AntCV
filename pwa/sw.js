@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.40.337-ai-notice-fix';
+const CACHE = 'antcv-1.40.340-watermark';
 const SHELL = [
   './manifest.json',
   './antcv-mobile-controls.css',

@@ -1,32 +1,36 @@
-/* AntCV wizard language slide (v1.40.339-c)
+/* AntCV wizard language slide (v1.40.339-e)
  * ===========================================================================
  * Adds a "Set your languages" step at the END of the wizard, shown right
  * before the AI-Notice modal that gates the final wizard close.
  *
- * v1.40.339-c changes (against v1.40.339):
- * ----------------------------------------
- *  1) Tightened the trigger so we ONLY intercept the wizard's *completion*
- *     call to AntcvShowAiNotice, not the intermediate step-1 (byok/demo
- *     choice) and step 2->3 transition gates. Those pass `force:true`
- *     per the bundle's v1.40.309 wizard fixes; the completion call has
- *     no `force` and a `onContinue=_antcvCloseWiz` callback. We also
- *     require localStorage.wizardCompleted to be truthy (the wizard's
- *     e() function sets it just before calling AntcvShowAiNotice in the
- *     completion path; Skip path sets wizardSkipped instead).
+ * v1.40.339-e changes (against v1.40.339-c)
+ * -----------------------------------------
+ *  Dropped trigger condition (4): localStorage.wizardCompleted truthy.
  *
- *  2) Initial state is always the canonical EN-primary + DA-additional
- *     defaults, regardless of what's in localStorage. Previously we read
- *     LS state so a residual ZH from an earlier session showed up
- *     pre-checked, which contradicted the post-delete defaults work.
+ *  Why: the wizard's e() handler calls u.set("wizardCompleted", true)
+ *  immediately BEFORE AntcvShowAiNotice({onContinue:_antcvCloseWiz}),
+ *  but u.set is a React-y state setter — the actual localStorage write
+ *  happens via a useEffect that runs AFTER the synchronous code path.
+ *  So when our wrapper synchronously inspects LS, wizardCompleted may
+ *  still be null → condition fails → pass-through → no language slide.
  *
- *  3) Added a "Back" button. It removes wizardCompleted from LS (so the
- *     wizard isn't stuck in completed state), clears the one-shot
- *     session flag, and dismisses the modal WITHOUT calling onContinue.
- *     The user is left on the wizard's last setup step and can navigate
- *     back or click Done again to retrigger the language slide.
+ *  Conditions (1) one-shot, (2) opts.force !== true, and (3) opts.onContinue
+ *  is a function already uniquely identify the wizard's finish/skip
+ *  AntcvShowAiNotice call: per v1.40.309 every intermediate step gate
+ *  passes force:true, and only the finish/skip paths supply onContinue.
+ *  Belt is enough; braces were breaking the trigger.
  *
- *  4) Defensive z-index + pointer-events. Backdrop and panel both use
- *     setProperty with !important to win against any other modal CSS.
+ *  Side effect: the slide will now also fire on the Skip path (which
+ *  also calls AntcvShowAiNotice with onContinue but without force).
+ *  That's fine — Skip users can click "Use defaults" in our slide and
+ *  proceed to AI Notice exactly like before; one extra click for a
+ *  rare path, no break for the common path.
+ *
+ * v1.40.339-c additive features retained:
+ *  - Canonical EN-primary + DA-additional defaults regardless of LS
+ *  - Back button (clears wizardCompleted + session flag, no onContinue)
+ *  - Defensive z-index 2147483647 + pointer-events:auto on backdrop/panel
+ *  - Removed click-outside-to-save handler
  *
  * Storage
  * -------
@@ -39,7 +43,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.40.339-c';
+  var VERSION = '1.40.339-e';
   if (window.__antcvWizardLanguageSlide339 === VERSION) return;
   window.__antcvWizardLanguageSlide339 = VERSION;
 
@@ -137,10 +141,6 @@
 
     var backdrop = document.createElement('div');
     backdrop.setAttribute('data-antcv-wizard-language-slide', '1');
-    // Set core layout via cssText, then enforce z-index + pointer-events
-    // with setProperty(!important) so nothing from app.js or sidecars can
-    // accidentally suppress clicks. INT_MAX (2147483647) keeps us above
-    // every modal layer we've ever seen.
     backdrop.style.cssText = [
       'position:fixed','inset:0',
       'background:rgba(8,17,38,0.78)','backdrop-filter:blur(2px)',
@@ -216,13 +216,11 @@
       span.innerHTML = '<strong>' + opt.label + '</strong> <span style="opacity:.65;font-size:11px">' + opt.native + '</span>';
       lab.appendChild(cb);
       lab.appendChild(span);
-      // Hide the additional-row entry that matches the primary
       if (opt.code === primary) lab.style.display = 'none';
       addRow.appendChild(lab);
     });
     panel.appendChild(addRow);
 
-    // When the primary radio changes, hide that code in the "additional" row
     primaryRow.addEventListener('change', function () {
       var sel = primaryRow.querySelector('input[type="radio"]:checked');
       var p = sel ? sel.value : DEFAULT_PRIMARY;
@@ -233,17 +231,14 @@
       });
     });
 
-    // --- Informational hint about Settings -> Advanced -------------------
     var hint = document.createElement('div');
     hint.style.cssText = 'margin:4px 0 18px;padding:10px 12px;background:rgba(1,183,187,0.08);border:1px solid rgba(1,183,187,0.35);border-radius:8px;font-size:11.5px;line-height:1.55;color:rgba(255,255,255,0.85);';
     hint.innerHTML = 'Looking for more control? <strong>Settings \u2192 Advanced</strong> contains <em>advanced writing tone</em> and <em>advanced layout styles</em> \u2014 fine-tune your CV voice and visual style there whenever you like.';
     panel.appendChild(hint);
 
-    // --- Buttons ---------------------------------------------------------
     var btnRow = document.createElement('div');
     btnRow.style.cssText = 'display:flex;gap:8px;justify-content:space-between;align-items:center;margin-top:6px;';
 
-    // Back button on the left
     var backBtn = document.createElement('button');
     backBtn.type = 'button';
     backBtn.textContent = '\u2190 Back';
@@ -252,13 +247,8 @@
     backBtn.addEventListener('click', function (ev) {
       ev.stopPropagation();
       try { console.info('[wizard-language-slide-339] back clicked'); } catch (_) {}
-      // Undo wizardCompleted so the wizard isn't stuck in completed state.
-      // The user is left on the last setup step with the wizard still
-      // open; they can navigate back via the wizard's own Back button or
-      // click Done again to retrigger our modal.
       try { localStorage.removeItem('wizardCompleted'); } catch (_) {}
       try { localStorage.removeItem('antcv:wizardCompleted'); } catch (_) {}
-      // Don't mark shown so retry works.
       clearShown();
       try { backdrop.remove(); } catch (_) {}
       try { onBack && onBack(); } catch (_) {}
@@ -298,7 +288,6 @@
         .call(addRow.querySelectorAll('input[type="checkbox"]:checked'))
         .map(function (cb) { return cb.value; })
         .filter(function (c) { return c !== p; });
-      // Final list: primary first, then unique additionals.
       var seen = {};
       var finalList = [p].concat(others).filter(function (c) {
         if (seen[c]) return false;
@@ -319,12 +308,6 @@
     panel.appendChild(btnRow);
 
     backdrop.appendChild(panel);
-
-    // v1.40.339-c: removed the click-outside-to-save handler. It was
-    // surprising and made every accidental click commit the user's
-    // current selection. Now the only ways out are the three explicit
-    // buttons.
-
     return backdrop;
   }
 
@@ -332,24 +315,17 @@
     try {
       var node = buildModal(onContinue, onSkip, onBack);
       (document.body || document.documentElement).appendChild(node);
-      // Move keyboard focus into the panel for accessibility
       setTimeout(function () {
         var first = node.querySelector('input[type="radio"]:checked');
         if (first) try { first.focus(); } catch (_) {}
       }, 50);
     } catch (e) {
       try { console.warn('[wizard-language-slide-339] buildModal failed:', e && e.message); } catch (_) {}
-      // Fail open - call onContinue so wizard isn't stuck
       try { onContinue && onContinue(); } catch (_) {}
     }
   }
 
-  // --- Detection helpers ---------------------------------------------------
-  // True iff localStorage.wizardCompleted is truthy. The wizard's
-  // completion handler (the e() function inside the wizard) writes
-  // u.set("wizardCompleted",!0) BEFORE calling AntcvShowAiNotice in
-  // the completion path. The Skip path writes wizardSkipped instead,
-  // and the intermediate step gates don't write either.
+  // --- Detection helpers (kept for debug API; no longer used in trigger) ---
   function wizardCompletedFlag() {
     try {
       var raw = localStorage.getItem('wizardCompleted');
@@ -369,7 +345,7 @@
     } catch (_) {}
     try {
       var bodyText = String((document.body && document.body.innerText) || '').slice(0, 4000);
-      if (/Welcome to AntCV|Paste your Worker URL|Add LLM API keys|Test the connection|Upload (?:a )?CV/i.test(bodyText)) {
+      if (/Welcome to AntCV|Paste your Worker URL|Add LLM API keys|Test the connection|Upload (?:a )?CV|How should AntCV write|Set your languages/i.test(bodyText)) {
         return true;
       }
     } catch (_) {}
@@ -377,73 +353,62 @@
   }
 
   // --- Wrap AntcvShowAiNotice ----------------------------------------------
-  // Trigger conditions (ALL must hold):
-  //   1. We haven't already shown the slide this session.
+  // v339-e trigger conditions (ALL must hold):
+  //   1. Haven't shown the slide this session.
   //   2. opts.force is NOT true (intermediate step gates pass force:true
-  //      per v1.40.309).
-  //   3. opts.onContinue is a function (the completion call has
-  //      onContinue=_antcvCloseWiz).
-  //   4. localStorage.wizardCompleted is truthy (the wizard's e() set it
-  //      right before calling us; Skip path didn't).
-  //   5. The wizard UI is visible (defensive double-check).
+  //      per v1.40.309 — byok/demo choice, step 2->3 transition, etc.).
+  //   3. opts.onContinue is a function (only the finish/skip paths pass it;
+  //      intermediate gates do not).
+  //   4. The wizard UI is visible (defensive double-check; falls back to
+  //      body-text search for wizard step headers).
+  //
+  // Dropped vs v339-c: the wizardCompleted localStorage check, because
+  // u.set is asynchronous — LS doesn't yet reflect the flag when our
+  // synchronous wrapper runs.
   function installWrapper() {
     var orig = window.AntcvShowAiNotice;
     if (!orig || typeof orig !== 'function') {
-      // Not loaded yet - retry shortly
       setTimeout(installWrapper, 200);
       return;
     }
     if (orig.__antcvWlsWrapped) return;
     var wrapped = function (opts) {
-      // (1) one-shot
       if (alreadyShown()) {
         try { console.debug('[wizard-language-slide-339] pass-through: already shown this session'); } catch (_) {}
         return orig.apply(this, arguments);
       }
-      // (2) intermediate gate?
       if (opts && opts.force === true) {
         try { console.debug('[wizard-language-slide-339] pass-through: force:true (intermediate step gate)'); } catch (_) {}
         return orig.apply(this, arguments);
       }
-      // (3) must have onContinue
       if (!opts || typeof opts.onContinue !== 'function') {
         try { console.debug('[wizard-language-slide-339] pass-through: no onContinue function'); } catch (_) {}
         return orig.apply(this, arguments);
       }
-      // (4) must be the completion path
-      if (!wizardCompletedFlag()) {
-        try { console.debug('[wizard-language-slide-339] pass-through: wizardCompleted not set (skip path or non-wizard caller)'); } catch (_) {}
-        return orig.apply(this, arguments);
-      }
-      // (5) wizard UI present
       if (!looksLikeWizard()) {
         try { console.debug('[wizard-language-slide-339] pass-through: wizard UI not visible'); } catch (_) {}
         return orig.apply(this, arguments);
       }
 
-      try { console.info('[wizard-language-slide-339] intercepting wizard-completion AntcvShowAiNotice'); } catch (_) {}
+      try { console.info('[wizard-language-slide-339] intercepting wizard-finish AntcvShowAiNotice (v=' + VERSION + ')'); } catch (_) {}
 
       var origArgs = arguments;
       var ctx = this;
       showSlide(
         function continueFn() {
-          // Save/continue: forward the original args so AI Notice fires.
           try { orig.apply(ctx, origArgs); } catch (_) {}
         },
         function skipFn() {
-          // Use-defaults: same as continue (AI Notice fires).
           try { orig.apply(ctx, origArgs); } catch (_) {}
         },
         function backFn() {
-          // Back: do nothing further. The user is left on the wizard's
-          // last setup step (wizardCompleted has been cleared in the
-          // button handler). They can navigate or retry from there.
+          // No-op: user is left on the wizard's last setup step.
         }
       );
     };
     wrapped.__antcvWlsWrapped = VERSION;
     try { window.AntcvShowAiNotice = wrapped; } catch (_) {}
-    try { console.info('[wizard-language-slide-339] wrapped AntcvShowAiNotice (v=' + VERSION + ')'); } catch (_) {}
+    try { console.info('[wizard-language-slide-339] wrapped AntcvShowAiNotice (v=' + VERSION + '); trigger drops wizardCompleted LS check'); } catch (_) {}
   }
 
   if (document.readyState === 'loading') {
@@ -452,7 +417,6 @@
     setTimeout(installWrapper, 0);
   }
 
-  // Debug API
   window.AntcvWizardLanguageSlide339 = {
     version: VERSION,
     _show: showSlide,

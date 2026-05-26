@@ -11,9 +11,11 @@ import { mountLanguageCardIsland } from './islands/LanguageCard/mount';
 import { mountPreviewToolbarIsland } from './islands/PreviewToolbar/mount';
 import { mountSettingsRouterIsland } from './islands/SettingsRouter/mount';
 import { mountPackagePickerIsland } from './islands/PackagePicker/mount';
+import { mountWritingStylePickerIsland } from './islands/WritingStylePicker/mount';
 import { exposeDebugApi, installWizardStateGuard } from './lib/wizard-state';
 import { installPackageBodyBinding, exposePackageDebugApi } from './lib/body-package';
 import { installCustomModeApi } from './lib/custom-mode';
+import { exposeMigrationDebugApi, runGabrielMigration } from './lib/gabriel-migration';
 
 const VERSION = '1.50.0-pass1';
 
@@ -39,6 +41,12 @@ try { installPackageBodyBinding(); } catch (e) { console.warn('[react-islands] p
 try { exposePackageDebugApi(); } catch (e) { console.warn('[react-islands] package debug api failed', e); }
 try { installCustomModeApi(); } catch (e) { console.warn('[react-islands] custom-mode api failed', e); }
 
+// Plan §4.5.2 + §4.5.3 — idempotent v1.50 migration. Sets the default writing
+// style and partitions Gabriel's banned items into en / da buckets. Re-running
+// is a no-op.
+try { runGabrielMigration(); } catch (e) { console.warn('[react-islands] gabriel migration failed', e); }
+try { exposeMigrationDebugApi(); } catch (e) { console.warn('[react-islands] migration debug api failed', e); }
+
 const api: AntcvReactIslandsAPI = {
   version: VERSION,
   mountAll() {
@@ -46,6 +54,7 @@ const api: AntcvReactIslandsAPI = {
     try { mountPreviewToolbarIsland(); } catch (e) { console.warn('[react-islands] PreviewToolbar mount failed', e); }
     try { mountSettingsRouterIsland(); } catch (e) { console.warn('[react-islands] SettingsRouter mount failed', e); }
     try { mountPackagePickerIsland(); } catch (e) { console.warn('[react-islands] PackagePicker mount failed', e); }
+    try { mountWritingStylePickerIsland(); } catch (e) { console.warn('[react-islands] WritingStylePicker mount failed', e); }
   },
 };
 

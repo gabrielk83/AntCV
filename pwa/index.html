@@ -427,7 +427,7 @@
   //    grounded in candidate background or JD requirements. NEVER
   //    invent achievements/projects/technologies. Vague filler is
   //    worse than fewer bullets.'
-  window.ANTCV_VERSION = '1.40.339-e';
+  window.ANTCV_VERSION = '1.40.339-f';
   // Configure your worker:
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';  // configure in Settings → Advanced → Routing
   // window.ANTCV_DOCX_SECRET = '<your shared secret>';  // optional
@@ -798,6 +798,19 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
     };
   })();
 </script>
+<!-- v1.40.339-f: JSON repair sidecar. Wraps JSON.parse with a layered
+     repair pipeline (markdown fences, JS comments, smart quotes, missing
+     colons after property names, missing commas, trailing commas,
+     unquoted keys, single-quoted strings, bracket balancing). The
+     bundle's built-in repair only handles truncation; this catches the
+     structural errors LLMs emit ("Expected ':' after property name",
+     "Unexpected token", etc) that otherwise abort kernel generation.
+     Fast path is zero-overhead — only triggers when the bundle's
+     JSON.parse fails AND the input is large + LLM-shaped (>=200 chars,
+     contains '{' or '[' and '"'). Original error is preserved if repair
+     also fails, so the bundle's retry/error-handling continues to work.
+     Escape hatch: localStorage['antcv:disable-json-repair'] = '1'. -->
+<script src="antcv-json-repair-bundle-339.js?v=1.40.339-f" defer></script>
 <script src="antcv-pdf-po-shim.js?v=1.40.153" defer></script>
 <script src="antcv-hide-gsi-button.js?v=1.40.154" defer></script>
 <!-- v1.40.339: antcv-about.js removed — file no longer in pwa/. Was likely an About modal / version-info dialog. -->

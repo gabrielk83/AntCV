@@ -23,6 +23,8 @@ AntCV runs as supervisor-driven orchestration — task routing, output validatio
 * replayable orchestration flows
 * 12 styles × 7 packages, orthogonal — per seniority, target company, taste; JD signals suggest switches
 
+The development workflow mirrored the architecture. I used Claude Code as the agentic operator for refactors, regression matrices, test corpora, and documentation alignment — with my own review and rollback at every commit. Coursework at DTU on AI systems and agentic development, combined with independent study, sharpened how I think about when to delegate, when to validate, and where the human stays in the loop.
+
 The same rules ship as a Claude skill, portable across models. Content and style are entangled with the user, improve with each manual edit, are watermarked, and require human review.
 
 One principle became important: if my own AI cannot reliably read and parse the documents it generated, how can I expect recruiter systems to do it correctly?
@@ -88,6 +90,7 @@ Three things in 200 chars:
 | Signature added: name only | Your direction |
 | Role-scope added to retry list ("overclaimed role scope") | Aligned with locked plan §4.5 role-boundary integrity (added 2026-05-27) |
 | Multilingual bullet refined to "per-language banned-term lists" | Aligned with locked plan §4.5.3 language-partitioned schema (added 2026-05-27) |
+| Agentic-development paragraph added (Claude Code as operator + DTU coursework + independent study) | Your direction: surface the learning and the dev workflow that mirrored the product's supervisor architecture (added 2026-05-27) |
 
 ## Voice and constraint check
 

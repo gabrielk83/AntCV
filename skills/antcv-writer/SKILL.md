@@ -80,7 +80,7 @@ Execute in this order for every request:
 
 6. **Apply language and tone.** Honour `target_language` strictly. Never fall back to English on a non-English request. Apply per-language tone register adjustments from `references/language-output.md`.
 
-7. **Apply style constraints.** Apply the style's `primaryConstraint`, `constraintAvoid`, `constraintPrefer`. Honour `user_state.writingPrefs.extraBannedWords` and `extraBannedPhrases` as additive to the shared base. Never echo a banned word, even quoted, even as an example.
+7. **Apply style constraints and integrity rules.** Apply the style's `primaryConstraint`, `constraintAvoid`, `constraintPrefer`. Honour `user_state.writingPrefs.extraBannedWords` and `extraBannedPhrases` as additive to the shared base — banned-word matching is case-insensitive exact-match; banned-phrase matching is case-insensitive and punctuation-tolerant. Never echo a banned word, even quoted, even as an example. Honour the three integrity rules from the locked plan §4.5: **metric integrity** (never invent metrics; if a metric is missing, use scope, method, or outcome without numbers), **role-boundary integrity** (use "contributed", "supported", "partnered", "coordinated", or "led" only when the underlying scope supports the verb), and **research-evidence integrity** (never compress away publications, thesis, methods, or grants in Research Formal — academic evidence outranks commercial brevity).
 
 8. **Apply JD Gap Closure claims.** Read `user_state.jdGapClaims`. When a claim matches a JD requirement, treat it as factual evidence and surface it in the relevant section. Record the use in the section's change_log entry. See `references/jd-gap-closure.md`.
 

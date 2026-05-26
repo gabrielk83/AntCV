@@ -172,8 +172,10 @@ I look forward to hearing from you, responsible for
 #### 4.5.1 User-extended bans
 UI exposes "Banned words" and "Banned phrases" lists where the user can add to the shared base. Stored under `personalInfo.writingPrefs.extraBannedWords` and `extraBannedPhrases`.
 
-#### 4.5.2 Migration for Gabriel's current list
-Gabriel's project-memory list contains several items not in the source doc base (multi-faceted, tværgående, tværfunktionel, central, end-to-end, strong leader, client-focused, customer-centric, all the "My expertise lies in" / "At the heart of my work" / etc.). On v1.50 first launch, these items are silently added to Gabriel's `extraBannedWords` and `extraBannedPhrases` so existing behaviour is preserved without contaminating the shared base.
+#### 4.5.2 Gabriel's current personal defaults
+Gabriel's project-memory list of banned words and phrases is a **current master** — a snapshot of his preferences at migration time, expected to evolve as he refines wording over future sessions. Items not in the source doc base (multi-faceted, tværgående, tværfunktionel, central, end-to-end, strong leader, client-focused, customer-centric, all the "My expertise lies in" / "At the heart of my work" / etc.) are silently added on v1.50 first launch to Gabriel's `extraBannedWords` and `extraBannedPhrases` so existing behaviour is preserved without contaminating the shared base. The extras remain user-editable in Settings → Personal → Writing style; nothing about the migration is one-way or locked.
+
+**Default writing style for Gabriel:** `personalInfo.writingPrefs.style = "nordic-minimal"` on migration. This is also the system default per source §1 and matches Gabriel's existing CV / cover-letter formatting habits.
 
 ### 4.6 UI surfaces per source doc §13
 
@@ -243,9 +245,32 @@ Source §12 requires four commercial styles to carry expanded writing-engine beh
 
 Research Formal's expansion is covered separately in §4.8 above.
 
+### 4.10 Unicode bullet and contact glyph rules (dual-track) <!-- added 2026-05-26 from source §14 -->
+
+Glyph and bullet choices are *dual*. The writing-engine side decides *which* glyphs are allowed and *when* to use them — contextual to language register, writing style, and ATS mode. The visual side (colour, size, weight, font rendering) is governed by the `bullet` and `glyph` colour tokens in the Unified Visual Package System and is not duplicated here.
+
+**Writing-engine-side rules (source §14):**
+
+| Rule | Allowed / behaviour | Export instruction |
+|---|---|---|
+| Allowed Unicode bullets | • ◦ ▪ ✓ → ▲ | Bullet glyph inherits the package's `bullet` colour token. |
+| Allowed contact glyphs | ☎ ✉ 🔗 ★ ⌂ | Allowed in Word / PDF / preview. Prefer monochrome text-glyph rendering; colour inherits the package's `glyph` token. |
+| Native colour emoji | Not allowed | Avoids inconsistent PDF / preview behaviour across platforms. |
+| ATS-safe mode | Convert glyphs and icons to plain text labels | Examples: ☎ → "Phone:", ✉ → "Email:", 🔗 → "Link:", ⌂ → "Location:". Matches §8.6 ATS-mode test. |
+
+**Per-style contextual notes (writing-engine side):**
+
+- **Cold Outreach, Precision Formal:** keep glyph density low — one-page rigour prefers plain bullets.
+- **Research Formal:** keep contact glyphs in the header, but use plain bullets for publication / citation lists where typographic neutrality matters.
+- **Nordic Minimal:** preserve the current sparse glyph pattern; do not add decorative glyphs.
+- **Credential Forward, Structured Professional:** glyphs allowed but secondary to typographic structure (tables, grids).
+- **Hybrid Balanced:** inherits glyph behaviour from the base style; chips never override the allowed-glyph list.
+
+Cross-reference: the colour / size / rendering side of bullets and glyphs lives in the Unified Visual Package System doc, alongside the per-package `bullet` and `glyph` colour tokens (see §2.1, §3 of this plan).
+
 ---
 
-*§ 4 audit footnote (2026-05-26):* two cells in the §4.1 engine table were corrected against source §1 — Density + Compression Engine controls now end with "evidence preservation, detail depth" (was "evidence preservation"); ATS/Export Engine controls now end with "table simplification, parsing-safe section names" (was "table simplification"). All other §4 content from the previous revision was left intact; new material is inline with `added 2026-05-26` markers identifying its source-doc section.
+*§ 4 audit footnote (2026-05-26):* two cells in the §4.1 engine table were corrected against source §1 — Density + Compression Engine controls now end with "evidence preservation, detail depth" (was "evidence preservation"); ATS/Export Engine controls now end with "table simplification, parsing-safe section names" (was "table simplification"). Additions on the same date: source §1 engine-level rules (under §4.1), source §15 + §13 matching and integrity rules (under §4.5), source §13 UI behaviour notes (under §4.6), source §11 Research Formal academic rules (new §4.8), source §12 non-academic expansions (new §4.9), and source §14 dual-track Unicode-bullet and contact-glyph rules (new §4.10). §4.5.2 was reframed from a one-shot migration note into a current-master record of Gabriel's evolving personal defaults, and now also records his default writing style (`nordic-minimal`). All other §4 content from the previous revision was left intact; new material is inline with `added 2026-05-26` markers identifying its source-doc section.
 
 ---
 

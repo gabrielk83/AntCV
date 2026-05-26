@@ -2,29 +2,62 @@
 
 | | |
 |---|---|
-| Source spec | `AntCV_UI_UX_Spec_and_QA_Plan.docx` (combined functional spec + bug report + QA plan) |
-| Scope | Cover Letter editor, page-break model, AI watermark, Candidate/Application, drag-and-drop, tables, Selected Outcomes, Publications |
+| Source spec | `AntCV_UI_UX_Spec_and_QA_Plan_v2.docx` (v2 supersedes v1) |
+| Plan version | v2 — adds Preview shell + routing, Application History foregrounding, loading status, warning/error severity, CL table capture, Publications regression warning, Professional Experience positive PB reference |
+| Scope | Cover Letter editor, page-break model, AI watermark, Candidate/Application, drag-and-drop, tables, Selected Outcomes, Publications, Preview shell routing/visibility, LLM input pipeline |
 | Output rule | Every change must behave identically in Preview, DOCX, and PDF unless the requirement explicitly excludes export |
-| Authority | This document overrides the screenshots referenced in the source spec. Screenshots describe the current defective state, not the target state. |
+| Authority | This plan paraphrases the source spec for execution. On any conflict, the source spec wins. |
 | Acceptance gate | A requirement is done only when the Definition of Done block (§9) is filled in and all linked test cases pass in Preview **and** DOCX **and** PDF |
 
-The spec contains 30 numbered requirements plus 10 visual findings. They cluster into seven implementation areas. Within each area the work is mostly downstream of one shared refactor: collapsing the duplicated per-section control toolbars into one component with a single action contract. Doing that refactor first turns most of the per-section fixes into small configuration changes; doing it last forces ten near-identical patches.
+The v2 spec contains **44 numbered requirements** plus **18 visual findings**. They cluster into **nine implementation areas**. Most of the section-level fixes are downstream of one shared refactor (the `SectionControlBar`), so doing that first turns the per-section fixes into configuration changes. The Preview-shell, Application History, validation-severity, and CL-table-capture fixes are independent of that refactor and can run in parallel — see §1.
 
 ---
 
 ## 1. Priority and sequencing
 
-Implement in this order. Each phase is a coherent commit/PR boundary.
+Implement in this order. Each phase is a coherent commit/PR boundary. Phases marked **(parallel)** do not depend on P0-A and can run alongside it.
 
 | Phase | IDs | Why this phase |
 |---|---|---|
-| **P0-A — Shared control component** | GEN-001..GEN-008 | All other section-level fixes ride on this. Without it, the same defect is patched 7 times in 7 files. |
-| **P0-B — Page-break model** | PB-001..PB-005 | Page breaks must live in the document model, not DOM state, because exporters consume the model. This is the second prerequisite. |
+| **P0-A — Shared control component** | GEN-001..GEN-008 | All section-level fixes ride on this. Without it, the same defect is patched 7+ times in 7+ files. |
+| **P0-B — Page-break model** | PB-001..PB-006 | Page breaks must live in the document model, not DOM state, because exporters consume the model. PB-006 (Professional Experience) is the positive reference UX — match it. |
 | **P0-C — Cover Letter editor** | CL-001..CL-005, VF-001..VF-003 | Highest-visibility defect set (duplicate overlay on every text selection). |
 | **P0-D — Candidate, Application, drag-and-drop** | CA-001..CA-005, VF-005..VF-007 | Drag-and-drop corrupts placement and styling; blocks any further layout work. |
+| **P0-E — Preview shell + routing (parallel)** | PRV-001..PRV-004, AH-001, GEN-009, GEN-010, VF-011..VF-015 | Desktop users intermittently cannot see export buttons. Independent of P0-A. Should ship as soon as possible. |
+| **P0-F — CL table capture (parallel)** | CL-006, GEN-011, VF-017 | Silent data loss in Cover Letter generation. Affects letter content, not layout. Independent of UI refactor. |
 | **P1-A — AI watermark anchoring** | WM-001..WM-002, VF-004 | Final-output quality. Must be page-box-anchored, not flow-anchored. |
-| **P1-B — Tables, Selected Outcomes, Publications** | TB-001..TB-003, SO-001..SO-002, PP-001..PP-002, VF-008..VF-010 | Extends the shared control model to row-based sections. Cheap once P0-A lands. |
+| **P1-B — Tables, Selected Outcomes, Publications** | TB-001..TB-003, SO-001..SO-002, PP-001..PP-003, VF-008..VF-010 | Extends the shared control model to row-based sections. PP-003 is a stability risk warning — test thoroughly. |
+| **P1-C — Validation severity** | VAL-001, VF-016 | Warnings yellow, errors red. Small but visible. |
 | **P2** | Accessibility labels, keyboard focus order, fixture set | Polish after behavior is stable. |
+
+### Dependency diagram
+
+```mermaid
+flowchart LR
+    P0A[P0-A Shared control bar] --> P0B[P0-B Page-break model]
+    P0A --> P0C[P0-C Cover Letter editor]
+    P0A --> P0D[P0-D Candidate/Application/DnD]
+    P0A --> P1B[P1-B Tables/Outcomes/Publications]
+    P0B --> P1B
+
+    P0E[P0-E Preview shell + routing]
+    P0F[P0-F CL table capture]
+    P1A[P1-A Watermark]
+    P1C[P1-C Validation severity]
+
+    P0B --> P1A
+
+    P0A & P0B & P0C & P0D & P0E & P0F --> GATE{Regression sweep TC-020}
+    P1A & P1B & P1C --> GATE
+    GATE --> P2[P2 Polish]
+
+    classDef p0 fill:#283556,color:#fff,stroke:#01B7BB
+    classDef par fill:#01B7BB,color:#fff,stroke:#00746E
+    classDef p1 fill:#00746E,color:#fff,stroke:#283556
+    class P0A,P0B,P0C,P0D p0
+    class P0E,P0F par
+    class P1A,P1B,P1C,P2 p1
+```
 
 ---
 
@@ -70,49 +103,105 @@ Two contracts derive from this:
 1. **Action contract.** Every control event carries `{ itemId, action, payload? }`. Actions without `itemId` are rejected and logged. This is what enforces GEN-002 (control locality) — there is no path by which "click Page Break on row 3" can update row 4.
 2. **Capabilities contract.** Each section declares what its items support: `{ canMove, canDelete, canPageBreak, canAlign, canEnhance, canFit }`. The `SectionControlBar` reads this and renders only the relevant buttons in the standard order (GEN-003).
 
+### Preview shell state contract (added in v2 for PRV-* and AH-001)
+
+```mermaid
+flowchart TB
+    subgraph Shell["PreviewShell (single mounted instance)"]
+        SS["shellState<br/>{ topBar, lowerRightUtils, sideButtons }<br/>derived from app state, NOT from route side-effects"]
+    end
+
+    subgraph TopBar["Top of gray Preview zone"]
+        PDF[PDF export]
+        DOCX[DOCX export]
+    end
+
+    subgraph LowerRight["Lower-right of gray Preview zone"]
+        U1[Utility 1]
+        U2[Utility 2]
+        U3[Utility 3]
+    end
+
+    subgraph RightSide["Right side of gray Preview zone"]
+        PRIV[Privacy]
+        FUSE["Fuse CL → CV"]
+    end
+
+    Route["Route change<br/>(Set → Preview → Set → Preview)"] --> Shell
+    HardRefresh["Hard refresh<br/>in Preview or Set"] --> Shell
+    Shell --> TopBar
+    Shell --> LowerRight
+    Shell --> RightSide
+
+    classDef shell fill:#283556,color:#fff,stroke:#01B7BB
+    classDef zone fill:#01B7BB,color:#fff,stroke:#00746E
+    classDef input fill:#00746E,color:#fff,stroke:#283556
+    class SS shell
+    class PDF,DOCX,U1,U2,U3,PRIV,FUSE zone
+    class Route,HardRefresh input
+```
+
+The rule: the Preview shell mounts its visible controls from one derived state. No control's visibility may depend on which route was hard-refreshed last. Today, hard-refresh in Preview restores PDF/DOCX while hard-refresh in Set hides them — that's a side-effect leak that this contract removes.
+
 ---
 
 ## 3. Repo file map — where each fix lands
 
-The PWA is the single `pwa/app.js` (804 KB) plus a stack of patch overlays loaded after it. Most defects live in the overlays. Touch the overlay, not `app.js`, unless the underlying model needs to change.
+The PWA is the single `pwa/app.js` (804 KB) plus a stack of patch overlays. Most defects live in the overlays. Touch the overlay, not `app.js`, unless the underlying model needs to change.
+
+### Existing-issue mapping (v1)
 
 | Area | Primary file(s) to edit | Notes |
 |---|---|---|
 | Duplicate Preview action overlay (CL-001, VF-001) | `pwa/antcv-overlay.js` (66 KB) | Likely emits the "second" 8-button group on text selection. Hunt for the selection listener and remove the Preview-side overlay; panel-side controls remain authoritative. |
-| Shared control bar component | New: `pwa/antcv-section-control-bar.js` | Centralises Page Break + CJLR + Enhance + Fit + Delete + Move into one React component with a capabilities prop. |
-| How I Would Contribute bullets (CL-003, VF-002) | `pwa/antcv-how-contribute-controls-245.js`, `pwa/antcv-bullet-targets.js` | Currently has one shared 8-button row instead of per-bullet rows. Rewire to one `SectionControlBar` per bullet. |
-| Foundation textbox split (CL-004, VF-003) | Search `app.js` for `Foundation` section renderer; add overlay if needed | Each textbox gets its own 4-button bar. |
-| Cover letter body section move buttons (CL-005, CA-003, VF-006) | `pwa/antcv-section-panel-211.js`, `pwa/antcv-section-main-panel-fix.js` | The move button exists on Candidate items but is missing on body rows. Same component should be reused. |
-| Page-break model (PB-001..PB-005) | `pwa/antcv-page-breaks-everywhere-284.js`, `pwa/antcv-sidebar-subsection-pagebreaks-329.js`, `pwa/antcv-item-pages-render.js`, `pwa/antcv-page-button-polish-327.js`, `pwa/antcv-table-page-splits-327.js` | Page-break state must be persisted in the document model and read by Preview, DOCX, and PDF. Replace the down-arrow icon and remove "compress" wording. |
-| Table page-break + CJLR (TB-001..TB-003, VF-008) | `pwa/antcv-core-competencies-row-controls-234.js`, `pwa/antcv-what-i-bring-row-controls-327.js`, `pwa/antcv-table-page-splits-327.js`, `pwa/antcv-table-row-page-controls-328.js` | Per-line CJLR + per-row Page Break. Update help text — no "compress" string left visible. |
-| Selected Outcomes (SO-001, SO-002, VF-009) | `pwa/antcv-selected-outcomes-row-controls-237.js` | Add Page Break / CJLR / Enhance / Fit before the existing Delete in each row. |
-| Publications row layout (PP-001, PP-002, VF-010) | `pwa/antcv-publications-strict-row-layout-273.js`, `pwa/antcv-publications-section-panel-row-fix-278.js` | All controls must remain visible at narrow editor widths; wrap to a second line rather than clip. |
-| AI watermark (WM-001, WM-002, VF-004) | Likely `pwa/antcv-overlay.js` (Preview), `pwa/antcv-docx-client.js` (DOCX), `pwa/antcv-pdf-page-mismatch.js` + PDF render path | Anchor to page box, not text flow. Last page only. Pick lower-left vs lower-right by content distance. |
-| Candidate/Application sentence (CA-001, CA-002, VF-005) | `pwa/antcv-personality.js` or wherever Candidate items render; `pwa/antcv-i18n.js` for the "Application:" label | Panel fields (Role, Company) and Preview sentence ("Application: Role - Company") must stay synchronised. |
-| Drag-and-drop placement (CA-004, CA-005, VF-007) | `pwa/antcv-table-fast-drag.js`, `pwa/antcv-section-bar-freeze-fix.js`, `pwa/antcv-splitter-flip.js` | Insertion-point semantics, not append-to-end. Re-render moved item with destination style tokens. |
-| Banned-wording sweep (GEN-004, PB-005) | `pwa/antcv-banned-audit.js`, `pwa/antcv-i18n.js` | Add "Compress" / "compress" to the audit's banned-string list. Update DA + EN i18n keys. |
-| Continuation heading 18 pt offset (PB-003) | DOCX exporter (`pwa/antcv-docx-client.js`), PDF exporter, Preview CSS | The 18 pt is from the top edge of the page, not from the previous block. Must be the same in all three outputs. |
+| Shared control bar component | New: `pwa/antcv-section-control-bar.js` | Centralises PB + CJLR + Enhance + Fit + Delete + Move into one component with a capabilities prop. |
+| How I Would Contribute bullets (CL-003, VF-002) | `pwa/antcv-how-contribute-controls-245.js`, `pwa/antcv-bullet-targets.js` | Currently has one shared 8-button row instead of per-bullet rows. |
+| Foundation textbox split (CL-004, VF-003) | Search `app.js` for `Foundation` renderer; add overlay if needed | One 4-button bar per textbox. |
+| Cover letter body section move (CL-005, CA-003, VF-006) | `pwa/antcv-section-panel-211.js`, `pwa/antcv-section-main-panel-fix.js` | Move button exists on Candidate items but is missing on body rows. |
+| Page-break model (PB-001..PB-005) | `pwa/antcv-page-breaks-everywhere-284.js`, `pwa/antcv-sidebar-subsection-pagebreaks-329.js`, `pwa/antcv-item-pages-render.js`, `pwa/antcv-page-button-polish-327.js`, `pwa/antcv-table-page-splits-327.js` | PB state must be persisted in the document model and read by Preview, DOCX, and PDF. |
+| **PE positive reference (PB-006)** | **`pwa/antcv-exp-continuation-fix.js` (11.8 KB)** | **The "EXPERIENCE (CONT.)" pattern is already working here. Read this overlay first and reuse the same panel-marker + Preview-boundary + continuation-heading pattern for all other sub-subsection page breaks.** |
+| Table page-break + CJLR (TB-001..TB-003, VF-008) | `pwa/antcv-core-competencies-row-controls-234.js`, `pwa/antcv-what-i-bring-row-controls-327.js`, `pwa/antcv-table-page-splits-327.js`, `pwa/antcv-table-row-page-controls-328.js` | Per-line CJLR + per-row Page Break. |
+| Selected Outcomes (SO-001, SO-002, VF-009) | `pwa/antcv-selected-outcomes-row-controls-237.js` | Add PB / CJLR / Enhance / Fit before the existing Delete. |
+| Publications row layout (PP-001..PP-003, VF-010) | `pwa/antcv-publications-strict-row-layout-273.js`, `pwa/antcv-publications-section-panel-row-fix-278.js` | All controls visible at narrow widths. **PP-003: this section is regression-prone — only refactor through the shared row-control model. No ad-hoc absolute positioning.** |
+| AI watermark (WM-001, WM-002, VF-004) | `pwa/antcv-overlay.js` (Preview), `pwa/antcv-docx-client.js` (DOCX), `pwa/antcv-pdf-page-mismatch.js` + PDF render path | Anchor to page box, not text flow. Last page only. |
+| Candidate/Application sentence (CA-001, CA-002, VF-005) | `pwa/antcv-personality.js` (Candidate render), `pwa/antcv-i18n.js` ("Application:" label) | Panel and Preview sentence stay synchronised. |
+| Drag-and-drop placement (CA-004, CA-005, VF-007) | `pwa/antcv-table-fast-drag.js`, `pwa/antcv-section-bar-freeze-fix.js`, `pwa/antcv-splitter-flip.js` | Insertion-point semantics. Re-render moved item with destination style tokens. |
+| Banned-wording sweep (GEN-004, PB-005) | `pwa/antcv-banned-audit.js`, `pwa/antcv-i18n.js` | Add "Compress"/"compress" to the banned-string list. Update DA + EN keys. |
+| Continuation heading 18 pt offset (PB-003) | `pwa/antcv-docx-client.js` (DOCX), PDF exporter, Preview CSS | 18 pt is from the top of the page, not from the previous block. |
 
-If a file above isn't where the defect actually lives, the recovery move is `github_search_code` on a distinctive string (e.g. `Compress` or `down-arrow` SVG path data) and follow the hits.
+### Second-pass mapping (v2)
+
+| Area | Primary file(s) to edit | Notes |
+|---|---|---|
+| **Desktop Preview shell — utilities, Privacy, Fuse, PDF/DOCX (PRV-001..PRV-003, VF-011..VF-013)** | `pwa/app.js` (Preview shell component), `pwa/antcv-mobile-controls.css` (33 KB), `pwa/antcv-editor-layout-cleanup-331.js`, `pwa/antcv-settings-front-327.js` | The bug is route-dependent visibility. Hunt for `useEffect` hooks that mount these buttons only on certain route transitions. The fix is one Preview-shell state, derived from app state — not from route side-effects. Mobile must keep parity. |
+| **Loading status disappearing on click (PRV-004, VF-015)** | `pwa/antcv-stale-status.js`, `pwa/antcv-wait-screen-times.js`, possibly `pwa/antcv-pdf-error-toast.js` | Currently any click dismisses the status. Make it either non-click-dismissable while a job is active, or click-opens-details. Never click-hides while job running. |
+| **Application History foregrounding (AH-001, VF-014)** | **`pwa/antcv-app-history-zfix-291.js` (9.2 KB)** | **The "zfix" suffix suggests an earlier attempt that didn't fully solve it. The action must: (1) close the popup, (2) route to Set, (3) move focus to the Application History panel, (4) scroll it into view. Today, only the route changes — the visible UI doesn't move.** |
+| **Warning vs error colours (VAL-001, VF-016)** | `pwa/antcv-banned-audit.js`, `pwa/antcv-llm-audit.js`, `pwa/antcv-shape-guard.js` + their CSS | Introduce separate severity tokens. Errors red, warnings yellow. Distinct icon + aria-label. Today both render red. |
+| **CL table capture (CL-006, GEN-011, VF-017)** | `pwa/antcv-data-importer.js` (41 KB), `pwa/antcv-jd-analysis-and-reupload-fix.js`, `pwa/antcv-jd-watch.js`, `pwa/antcv-jd-image-ocr.js`, `pwa/antcv-personality.js` (LLM context prep) | Extend the JD/source extraction layer to parse tables from DOCX, pasted HTML, Markdown-like, and PDF-derived text. Preserve row/column associations where they matter. Today, table content is silently dropped. |
+
+If a file above isn't where the defect actually lives, the recovery move is `github_search_code` on a distinctive string (e.g. `Compress`, `down-arrow` SVG path, `Application History`, `loading-status`) and follow the hits.
 
 ---
 
 ## 4. Detailed implementation — area by area
 
-Each block below states **what to change**, **acceptance criteria** (lifted from the source spec), and the **regression hazard** to retest.
+Each block states **what to change**, **acceptance criteria** (lifted from the source spec), and the **regression hazard** to retest.
 
-### 4.1 GEN — global requirements (P0-A)
+### 4.1 GEN — global requirements (P0-A + cross-cutting)
 
 | ID | What to change | Acceptance | Regression hazard |
 |---|---|---|---|
-| GEN-001 | Make Preview/DOCX/PDF all consume the same model. No DOM-only state. | Same text, order, page-break behaviour, styling, watermark in all three. | Any place that reads from a React ref instead of the model. |
+| GEN-001 | Make Preview/DOCX/PDF all consume the same model. No DOM-only state. | Same text, order, PB behaviour, styling, watermark in all three. | Any place that reads from a React ref instead of the model. |
 | GEN-002 | Every control event carries `itemId`. Reject events without one. | Clicking PB/CJLR/Enhance/Fit/Delete on row N never mutates row N±1. | Bulk operations must explicitly iterate IDs; no "active section" implicit target. |
-| GEN-003 | Standard order: `[Move] PB CJLR Enhance Fit [Delete]`. Move only if movable, Delete only if deletable. | Every editor renders controls in this order. | Custom one-off orders in older overlays. |
-| GEN-004 | Remove all user-facing "Compress" wording: visible text, tooltips, aria-labels, help text. | Banned-audit shows zero hits for "compress". | i18n DA + EN keys + any hardcoded strings. |
+| GEN-003 | Standard order: `[Move] PB CJLR Enhance Fit [Delete]`. Move only if movable; Delete only if deletable. | Every editor renders controls in this order. | Custom one-off orders in older overlays. |
+| GEN-004 | Remove all user-facing "Compress" wording: visible text, tooltips, aria-labels, help text. | Banned-audit shows zero hits for "compress". | i18n DA + EN keys + hardcoded strings. |
 | GEN-005 | Preview-edited text persists after blur, reopen, and DOCX/PDF export. | Edit → blur → reopen → export round-trip is lossless. | Sections that read from DOM textContent at export time. |
 | GEN-006 | No clipped controls. Wrap to a second control line if the row is narrow. | All required buttons visible without horizontal scroll at supported viewports. | Publications row, table rows at narrow editor width. |
 | GEN-007 | Drag result == panel-control result. | Same final model after either path. | Style classes that travel with the dragged DOM node. |
 | GEN-008 | Every icon button has a deterministic tooltip + aria-label naming action + target. | Example: `Page break for Selected outcome 2`. | i18n template keys, not concatenated strings. |
+| **GEN-009 (v2)** | Preview utility + export buttons remain visible on desktop and mobile across route changes and refreshes. | After Set → Preview → Set → Preview, and hard refresh in either route, every utility/export button is visible. | Mounting Preview shell controls from route side-effects. |
+| **GEN-010 (v2)** | Loading status doesn't vanish from accidental clicks. Warnings are yellow; errors stay red. | Status survives a click while job is active. Warnings visually distinct from errors. | Any global click handler on toast/status containers. |
+| **GEN-011 (v2)** | CL generation captures content from source tables, not only plain paragraphs. | Table-only requirements appear in generation context. | DOCX/HTML/Markdown/PDF table parsing paths. |
 
 ### 4.2 PB — Page-break behaviour (P0-B)
 
@@ -122,19 +211,25 @@ Each block below states **what to change**, **acceptance criteria** (lifted from
 | PB-002 | First sub-subsection rule: PB on first sub-subsection moves the whole parent subsection to next page with the original heading (no duplication). | Whole subsection starts on next page; heading present once; internal order preserved. |
 | PB-003 | Continuation heading rule: PB on later sub-subsection — earlier content stays on current page; next page repeats the subsection heading with localised "Cont." suffix at 18 pt from top of page. | Continuation heading appears at 18 pt; localised in active language; original content order preserved. |
 | PB-004 | Table rules: PB from first row/cell moves whole table; PB from later row splits table at that row and **repeats table header** on the new page. | Whole-move vs split behaviour matches; headers repeat; no row loss or reorder. |
-| PB-005 | Replace the down-arrow icon with a semantic page-change icon. Remove "compress" from all surrounding help text and tooltips. | No PB control uses a down arrow; no user-facing "Compress" remains. |
+| PB-005 | Replace down-arrow icon with semantic page-change icon. Remove "compress" from help text and tooltips. | No PB control uses a down arrow; no user-facing "Compress" remains. |
+| **PB-006 (v2)** | Preserve the Professional Experience PB UX pattern as the reference for all non-first sub-subsection page breaks. Panel shows an inline page marker at the split point; the target item shows active page-break state + page number; Preview shows the page boundary + repeated continuation heading ("EXPERIENCE (CONT.)" etc.). | Panel + Preview communicate the split clearly; continuation heading appears at the correct next-page position; DOCX/PDF match Preview. |
 
-**Implementation note.** The Page-break flag belongs on the item, not on the control: `item.pageBreakBefore = true`. The rule logic (PB-002 / PB-003 / PB-004) is then a pure function of `(items, index)` consumed identically by Preview and exporters. Avoid encoding the rule inside the exporters — it duplicates and drifts.
+**Implementation note (v1).** The page-break flag belongs on the item, not on the control: `item.pageBreakBefore = true`. The rule logic (PB-002 / PB-003 / PB-004) is then a pure function of `(items, index)` consumed identically by Preview and exporters. Avoid encoding the rule inside the exporters — it duplicates and drifts.
 
-### 4.3 CL — Cover Letter editor (P0-C)
+**Implementation note (v2 — PB-006).** Read `pwa/antcv-exp-continuation-fix.js` first. That overlay already produces the panel-marker + Preview-boundary + "(CONT.)" pattern correctly for Professional Experience. The other sub-subsection page breaks should reuse the same primitives, not re-invent them. If the implementation diverges across sections, the bug surface grows; if it converges, fixing it once fixes all.
+
+### 4.3 CL — Cover Letter editor (P0-C + P0-F)
 
 | ID | What to change | Acceptance |
 |---|---|---|
 | CL-001 | Remove the duplicate 8-button overlay that appears when text is selected in Preview. Keep direct editing + focus state. | Selecting Greeting/Opening/Who I Am/What I Bring/Why This Position/How/Foundation/Closure shows editable focus only — no duplicate button array. |
 | CL-002 | Closure becomes directly editable in Preview, persists across blur/reopen/export. | Round-trip lossless in Preview, panel, DOCX, PDF. |
 | CL-003 | How I Would Contribute: model as `{intro, bullets[], closing}`. Each bullet is its own item with its own SectionControlBar. Intro + closing get their own bars too. Add `+ Add` under the last bullet. | Each bullet independently controllable. Closing stays a paragraph, never becomes a bullet. `+ Add` appends a bullet at the end. Delete removes only the selected bullet. |
-| CL-004 | Foundation: attach one 4-button bar (PB, CJLR, Enhance, Fit) to each textbox (Hands-on, Professionally). Bars do not float between textboxes. | Changing the first textbox does not affect the second; and vice versa. Exports match Preview. |
-| CL-005 | Cover letter body rows get the section-move button to the left of the action cluster. Existing on/off visibility stays as an independent control. Standard order applies to the rest. | Move button visible on every movable body row. Toggling visibility doesn't corrupt content. Required controls remain visible. |
+| CL-004 | Foundation: attach one 4-button bar (PB, CJLR, Enhance, Fit) to each textbox. Bars do not float between textboxes. | Changing the first textbox does not affect the second; and vice versa. Exports match Preview. |
+| CL-005 | Cover letter body rows get the section-move button to the left of the action cluster. On/off visibility stays as an independent control. Standard order applies to the rest. | Move button visible on every movable body row. Toggling visibility doesn't corrupt content. Required controls remain visible. |
+| **CL-006 (v2)** | Extend the CL input extraction layer to parse tables from DOCX, pasted HTML, Markdown-like, and PDF-derived text. Preserve row/column associations where they matter. Convert useful table facts into the LLM generation context instead of dropping them. | Relevant table facts appear in the generated Cover Letter context and output. No table-only requirements are omitted. Irrelevant formatting artifacts are not copied into the letter. |
+
+**Implementation note (v2 — CL-006).** This is silent data loss: today a job description where the requirements live in a table produces a Cover Letter that doesn't reference those requirements. The extraction layer should normalise tables to a flat "Field: Value" or "Column1 | Column2 | Column3" representation before passing to the LLM context. Pasted HTML tables and Markdown-like tables (`| a | b |` lines) are common job-description formats — both must be handled. PDF-derived text often loses the table grid entirely; falling back to spatial clustering or just treating cell text as inline paragraphs is acceptable as long as the content is not dropped.
 
 ### 4.4 CA — Candidate, Application, section movement (P0-D)
 
@@ -144,13 +239,13 @@ Each block below states **what to change**, **acceptance criteria** (lifted from
 | CA-002 | Application model: panel exposes `applicationLabel` (default "Application") + `role` + `company`. Preview renders `${applicationLabel}: ${role} - ${company}` and is editable in place. Edits to the rendered sentence parse back into the three fields. | Panel and Preview stay synchronised. No duplicate label. Exports match Preview. |
 | CA-003 | Section move button on every movable item: Candidate, cover letter body, CV sidebar, CV main. Placed left of the action cluster. Tooltip and aria-label name the allowed destinations. | Move button visible and usable on every movable item, consistently placed. |
 | CA-004 | Drag-and-drop uses **insertion-point** semantics: drop preview shows the target index; drop inserts exactly at that index. Works in main and sidebar. | Drag to first/middle/last positions in main and sidebar lands at the indicator, not the end. |
-| CA-005 | Moving items between containers preserves the data but re-renders with destination-container style tokens (text colour, icon colour, background, spacing, heading). Restore returns the item to its previous container and order. | Moved Contact (top→main, main→sidebar, sidebar→top) is readable, uses destination styling, keeps order. Restore round-trips. |
+| CA-005 | Moving items between containers preserves the data but re-renders with destination-container style tokens. Restore returns the item to its previous container and order. | Moved Contact (top→main, main→sidebar, sidebar→top) is readable, uses destination styling, keeps order. Restore round-trips. |
 
 ### 4.5 WM — AI watermark (P1-A)
 
 | ID | What to change | Acceptance |
 |---|---|---|
-| WM-001 | Watermark is a page-level object anchored to the last page only. Never part of body flow. Does not move when content reflows. | One-page, two-page, three-page docs all show the watermark only on the last page lower corner in Preview, DOCX, PDF. |
+| WM-001 | Watermark is a page-level object anchored to the last page only. Never part of body flow. Does not move when content reflows. | One-, two-, three-page docs all show the watermark only on the last page lower corner in Preview, DOCX, PDF. |
 | WM-002 | Choose lower-left vs lower-right by available visual distance from main content. Keep visible on coloured backgrounds. Never overlap text. | Watermark is visible, does not overlap body, picks the lower corner with better separation. |
 
 **Implementation note.** In DOCX this is a header/footer or a floating shape anchored to the page, not an in-flow paragraph. In PDF it's drawn after the last-page content pass. In the React Preview it's a positioned element inside the last page's page-box, not inside the content flow.
@@ -166,6 +261,33 @@ Each block below states **what to change**, **acceptance criteria** (lifted from
 | SO-002 | `+ Outcome` adds a new row with editable bold prefix + result text + reorder + standard control group + delete. | New rows behave identically to existing rows; appear in the same order in all outputs. |
 | PP-001 | Publications row layout exposes `PB CJLR Enhance Fit Delete` all visible at supported viewports. Wrap to a secondary line if needed; do not clip. | All controls clickable for every publication row at supported viewport widths. |
 | PP-002 | Keep the single publication input. All row controls act on the whole entry; Delete removes only that entry. | No unrelated publication changes; exports match Preview. |
+| **PP-003 (v2) — HIGH-RISK WARNING** | Refactor Publications & Patents controls **only through the shared row-control model**. Buttons must stay anchored to their own row, keep the required order, and remain stable during application generation. **No ad-hoc absolute positioning. No duplicated render paths.** | PB / CJLR / Enhance / Fit / Delete stay visible, ordered, row-scoped, and stable through long text, many rows, narrow widths, route changes, hard refresh, and while generation status is active. |
+
+**Implementation note (v2 — PP-003).** The history says this section breaks in creative ways after every change — buttons floating, attaching to the wrong row, duplicating, showing during generation. Do not test only the simplest row state. The TC-028 stress test is the gate.
+
+### 4.7 PRV / AH — Preview shell + routing + status (P0-E, v2)
+
+This area is independent of P0-A. It addresses the regression where desktop Preview intermittently loses its export and utility buttons.
+
+| ID | What to change | Acceptance |
+|---|---|---|
+| **PRV-001** | Render the three desktop Preview utility buttons in the lower-right gray Preview zone at all supported desktop widths. Must include Privacy, Fuse CL → CV, and the third utility button (visible on mobile). Not hidden by the canvas, zoom bar, CV/CL toggle, scrollbars, or bottom nav. | All three buttons visible, clickable, labelled, and stable after route changes and hard refreshes. Mobile keeps same controls visible. |
+| **PRV-002** | Place Privacy and Fuse CL → CV in the right-side Preview utility cluster on desktop. Same state, tooltip, and action as mobile. No duplicate hidden DOM instances. | Both buttons visible and usable on desktop and mobile, no duplicated/hidden/offscreen copies. |
+| **PRV-003** | Render PDF and DOCX as persistent Preview export actions in the top Preview gray area. Visibility independent of which route was hard-refreshed. Initialise from a single Preview-shell state, not from route-specific side-effects. | PDF and DOCX visible after: direct Preview load; Set → Preview navigation; Preview → Set → Preview; hard refresh in Preview; hard refresh in Set then navigate to Preview. |
+| **PRV-004** | Loading status either non-click-dismissable while a job is active, or click-opens-details. Never click-hides while a job is running. | Status survives a click while job is active. Click during loading either does nothing or opens job details. After completion, dismiss is allowed. |
+| **AH-001** | Application History "Open in Settings" must: close/dismiss the popup, navigate the visible UI to Set, foreground the Application History section, move focus to it, and scroll it into view. | After pressing the action: visible route is Set; Application History panel is visible and focused; user is not silently left in Preview. |
+
+**Implementation note (PRV-001..PRV-003).** Today the Preview shell mounts these buttons via route-specific side-effects, which is why a hard refresh in Set can hide them while a hard refresh in Preview restores them. The fix is one `<PreviewShell>` component whose visible button set is derived from app state (CV vs CL active, has-document, generation-in-progress, etc.) — not from `useEffect` hooks tied to route transitions. Mobile uses the same component with a different layout breakpoint; mobile is the parity reference for which buttons should be available at all.
+
+**Implementation note (AH-001).** The existing `antcv-app-history-zfix-291.js` is the third place to start reading — the "zfix" naming suggests at least one earlier attempt to solve a layering/z-index symptom. The current bug is that the *route* changes (proven by returning from Preview to Set landing inside Application History) but the *visible UI* doesn't. The action handler should do all four things atomically: dismiss popup, push route, focus the target panel, scroll into view.
+
+### 4.8 VAL — validation severity (P1-C, v2)
+
+| ID | What to change | Acceptance |
+|---|---|---|
+| **VAL-001** | Use separate severity tokens: errors red, warnings yellow. Keep wording, icon, and aria-label distinct (Error for blocking missing content, Warning for non-critical misleading/incomplete content). | Errors red, warnings yellow, both readable; screen-reader labels distinguish Error from Warning; works in light and dark browser settings if supported. |
+
+**Implementation note.** Today both severities are red. Defining the two tokens once (CSS custom properties on `--validation-error` and `--validation-warning`) and threading them through `antcv-banned-audit.js`, `antcv-llm-audit.js`, `antcv-shape-guard.js` is preferable to changing colour inline at each call site.
 
 ---
 
@@ -181,6 +303,10 @@ These follow directly from the source spec §7 plus what's visible in the repo l
 - **Old saved CVs and cover letters must still load.** Migrate missing per-row control state to defaults; don't crash on schema drift.
 - **Add stable test IDs to repeated controls**: `data-testid="{itemType}.{itemId}.{action}"`. This is what makes automated test selectors not brittle.
 - **Treat any Preview ↔ DOCX ↔ PDF mismatch as a failed implementation, not an export-only issue.**
+- **(v2) Mobile is the parity reference for desktop.** Where mobile shows a control and desktop doesn't, mobile is correct and desktop is broken. Apply this to PRV-001..PRV-003.
+- **(v2) Preview shell visibility derives from app state, not route side-effects.** If a hard refresh in route A produces different visible controls than a hard refresh in route B, the shell is initialised wrong.
+- **(v2) Reuse `antcv-exp-continuation-fix.js` as the PB-006 reference.** The "EXPERIENCE (CONT.)" pattern already works there.
+- **(v2) Refactor Publications & Patents only through the shared row-control model.** No ad-hoc positioning. PP-003 has a track record of breaking.
 
 ### Local hazards specific to this repo
 
@@ -206,13 +332,15 @@ Adapted from the source spec §8. The tester verifies from both the user perspec
 | Panel UI | Inspect every affected row and textbox at normal **and** narrow widths. | Controls visible, ordered, scoped, labelled. |
 | Preview editing | Edit text, click away, reopen item, refresh Preview where supported. | Edited text persists; remains editable. |
 | Export parity | Export DOCX and PDF after each class of change. | DOCX and PDF match Preview for order, page break, style, watermark placement. |
+| **Route + refresh (v2)** | For Preview-shell tests: navigate Set ↔ Preview multiple times, hard-refresh in each route, switch CV/CL, resize viewport. | All Preview utility/export buttons remain visible in every state. Mobile keeps parity. |
+| **Long-running job (v2)** | Start generation, click loading status during the job, navigate between Set/Preview, return after completion. | Status doesn't vanish on click while job is active. Buttons remain stable. Publications stays stable during generation (PP-003). |
 | Regression | Repeat tests in adjacent sections that share controls. | A fix in one section does not break another. |
 
 ---
 
 ## 7. Minimum test cases
 
-From the source spec §9. These are the gating cases — every commit in P0/P1 must keep these green.
+From the source spec §9 + §13.5. These are the gating cases — every commit in P0/P1 must keep these green.
 
 | ID | Area | Steps | Expected result |
 |---|---|---|---|
@@ -236,6 +364,16 @@ From the source spec §9. These are the gating cases — every commit in P0/P1 m
 | TC-018 | Selected Outcomes controls | Apply every row action to one outcome. | Only that outcome changes; prefix/result formatting preserved. |
 | TC-019 | Publications at narrow width | Long publication row + narrow viewport. | PB, CJLR, Enhance, Fit, Delete all visible and usable. |
 | TC-020 | Regression sweep | Repeat smoke tests on every section using PB, CJLR, Enhance, Fit, Delete, Move. | No shared-control regressions. |
+| **TC-021 (v2)** | Desktop Preview utilities | Open desktop Preview at normal width. Inspect lower-right gray Preview zone. | Three utility buttons are visible, including Privacy and Fuse CL → CV. |
+| **TC-022 (v2)** | Preview utility route stability | Switch Set → Preview → Set → Preview, then hard refresh in Preview and in Set. | Preview utilities, Privacy, Fuse CL → CV, PDF, and DOCX remain visible in all routes. |
+| **TC-023 (v2)** | Export buttons | Open Preview from a fresh load and from Set menu. Click PDF and DOCX. | Buttons are visible and export the current CV or Cover Letter. |
+| **TC-024 (v2)** | Application History foregrounding | Open Application History popup and press Open in Settings. | Set menu is shown onscreen with Application History visible and focused. |
+| **TC-025 (v2)** | Loading status click | Start generation and click the loading status area. | Status stays visible or opens details. It does not disappear while the task is active. |
+| **TC-026 (v2)** | Validation colors | Create one error and one warning in the Set menu. | Error is red. Warning is yellow. Labels and icons distinguish severity. |
+| **TC-027 (v2)** | CL table capture | Generate a Cover Letter from a source where key requirements appear only in tables. | Relevant table data appears in the generation context and letter sections. |
+| **TC-028 (v2) — STRESS** | Publications stress test | Edit Publications & Patents with long text, several rows, route changes, and generation running. | Buttons remain row-bound, ordered, and stable. No floating or random button placement occurs. |
+| **TC-029 (v2)** | Professional Experience page break | Apply Page Break to a later Professional Experience sub-subsection. | Panel shows the inline page marker. Preview and exports show EXPERIENCE (CONT.) on the next page. |
+| **TC-030 (v2)** | Mobile parity reference | Repeat Preview utility and export-button checks on mobile. | Mobile stays functional and matches intended button availability. |
 
 ---
 
@@ -252,6 +390,8 @@ Build before refactoring exporters. Each fixture is a saved CV/cover letter JSON
 | `Colored-layout` | Coloured header + coloured sidebar + dense final page — watermark contrast and collision. |
 | `Narrow-editor` | Editor viewport narrow enough to stress row controls. |
 | `Localized-continuation` | DA + EN active language to verify continuation labels. |
+| **`JD-table-only` (v2)** | Job description where key requirements appear only in tables (DOCX, pasted HTML, Markdown, PDF-derived). Drives TC-027. |
+| **`Publications-stress` (v2)** | Many publication rows, long text, narrow width — drives TC-028. |
 
 ---
 
@@ -260,7 +400,7 @@ Build before refactoring exporters. Each fixture is a saved CV/cover letter JSON
 A requirement is accepted only when this block is filled. Copy-paste per ID into the PR description.
 
 ```
-Requirement ID:        e.g. PB-004
+Requirement ID:        e.g. PRV-003
 Implemented behaviour: <what changed: model, UI, Preview, exporters>
 Tests performed:       <automated + manual, fixture names, steps>
 Observed result:       <what the tester saw in Preview, DOCX, PDF — include failures, not only passes>
@@ -276,37 +416,45 @@ Regression notes:      <sections retested because they share the same control fa
 - Not accepted if drag-and-drop lands at the end when the indicator showed another position.
 - Not accepted if the watermark is attached to text flow instead of the page box.
 - Not accepted if any control is hidden, clipped, or requires horizontal scrolling.
+- **(v2) Not accepted if a Preview button is visible after one route refresh path but hidden after another.**
+- **(v2) Not accepted if "Open in Settings" changes the route in the background while leaving the user in Preview.**
+- **(v2) Not accepted if a Cover Letter generated from a table-only JD silently omits the table's content.**
+- **(v2) Not accepted if Publications & Patents buttons look correct only in the simplest row state.**
 
 ---
 
 ## 10. Branch and commit plan
 
-Suggested branches, one per phase. Each merges to `main` only after the linked test cases pass.
+One branch per phase. Each merges to `main` only after the linked test cases pass.
 
 | Branch | Phase | Linked IDs | Linked TCs |
 |---|---|---|---|
 | `fix/shared-control-bar` | P0-A | GEN-001..GEN-008 | TC-001, TC-002, TC-003 |
-| `fix/page-break-model` | P0-B | PB-001..PB-005 | TC-008, TC-009, TC-010 |
+| `fix/page-break-model` | P0-B | PB-001..PB-006 | TC-008, TC-009, TC-010, TC-029 |
 | `fix/cover-letter-editor` | P0-C | CL-001..CL-005, VF-001..VF-003 | TC-004, TC-005, TC-006, TC-007 |
 | `fix/candidate-application-dnd` | P0-D | CA-001..CA-005, VF-005..VF-007 | TC-013, TC-014, TC-015, TC-016 |
+| **`fix/preview-shell-routing`** | **P0-E (v2)** | **PRV-001..PRV-004, AH-001, GEN-009, GEN-010, VF-011..VF-015** | **TC-021, TC-022, TC-023, TC-024, TC-025, TC-030** |
+| **`fix/cl-table-capture`** | **P0-F (v2)** | **CL-006, GEN-011, VF-017** | **TC-027** |
 | `fix/watermark-page-anchor` | P1-A | WM-001, WM-002, VF-004 | TC-011, TC-012 |
-| `fix/tables-outcomes-publications` | P1-B | TB-001..TB-003, SO-001..SO-002, PP-001..PP-002, VF-008..VF-010 | TC-017, TC-018, TC-019 |
+| `fix/tables-outcomes-publications` | P1-B | TB-001..TB-003, SO-001..SO-002, PP-001..PP-003, VF-008..VF-010 | TC-017, TC-018, TC-019, TC-028 |
+| **`fix/validation-severity`** | **P1-C (v2)** | **VAL-001, VF-016** | **TC-026** |
 | `fix/regression-sweep` | gate | — | TC-020 |
 
 ---
 
 ## 11. Open questions for the product owner
 
-These are decisions that affect implementation but the source spec leaves under-specified.
-
-1. **Application sentence editability — parser strictness.** When the user edits the rendered Preview sentence directly (CA-002), do we hard-parse it back into `{role, company}` on every keystroke, or only on blur? Hard-parse on every keystroke is brittle when the user is mid-typing the `-` separator.
-2. **Fit limits.** The spec defines Fit as "reduce or rebalance within defined limits, but must not change content meaning". The limits themselves are not enumerated. Without them, the tester cannot deterministically verify Fit behaviour.
-3. **Watermark contrast threshold.** WM-002 says "lowest reasonable visual attention" and "visible on supported backgrounds". A measurable contrast floor (e.g. WCAG AA on the chosen corner background) would make this testable.
-4. **Continuation label localisation.** PB-003 requires localised continuation suffix. DA + EN are confirmed. ES + Mandarin are on the roadmap — does this phase need them, or only DA + EN?
-5. **Section move destinations per section type.** CA-003 says "every movable item gets a move button". The exact destination matrix (which item types may move to which containers) is not in the spec and should be confirmed before the tooltip/aria-label text is finalised.
+1. **Application sentence editability — parser strictness.** Edits to the rendered Preview sentence (CA-002): hard-parse back into `{role, company}` on every keystroke, or only on blur? Keystroke-parsing is brittle mid-typing the `-` separator.
+2. **Fit limits.** Fit is "reduce or rebalance within defined limits, but must not change content meaning". The limits themselves are not enumerated. Without them the tester cannot deterministically verify Fit behaviour.
+3. **Watermark contrast threshold.** WM-002 says "lowest reasonable visual attention". A measurable contrast floor (e.g. WCAG AA against the chosen corner background) would make this testable.
+4. **Continuation label localisation.** PB-003 requires localised "Cont." suffix. DA + EN confirmed. ES + Mandarin are on the roadmap — does this phase need them, or only DA + EN?
+5. **Section move destinations per section type.** CA-003 says "every movable item gets a move button". The exact destination matrix per item type should be confirmed before tooltips/aria-labels are finalised.
+6. **(v2) Loading status click — open details or no-op?** PRV-004 allows either non-click-dismissable or click-opens-details. Which is the intended UX? "Click-opens-details" requires a details view — does one exist, or does it need to be built? "No-op while loading" is simpler.
+7. **(v2) CL-006 table parsing scope.** The spec lists DOCX, pasted HTML, Markdown, and PDF-derived. PDF tables are notoriously lossy — is "best-effort, no row/column preservation" acceptable, or must PDF tables also keep their structure? An explicit fallback policy avoids over-engineering.
+8. **(v2) Application History foregrounding — back-button behaviour.** After AH-001, what should the browser back button do from the foregrounded Application History view? Return to Preview (where the popup was opened from) or close Application History and stay in Set?
 
 ---
 
 ## 12. Source of truth
 
-`AntCV_UI_UX_Spec_and_QA_Plan.docx`. This implementation plan paraphrases and rearranges it for execution; the source spec wins on any conflict.
+`AntCV_UI_UX_Spec_and_QA_Plan_v2.docx`. This implementation plan paraphrases and rearranges it for execution; the source spec wins on any conflict. v1 of this plan is preserved in git history at commit `1b80cd6`.

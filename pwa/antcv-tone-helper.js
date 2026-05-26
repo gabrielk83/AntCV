@@ -1,4 +1,11 @@
-/* AntCV writing-tone helper sidecar (v1.40.150)
+/* AntCV writing-tone helper sidecar (v1.40.340)
+ *
+ * v1.40.340: findWritingToneWrap() now recognises both "WRITING STYLE" (new
+ * label as of v1.40.340-f Settings refactor) and "WRITING TONE" (legacy) so
+ * the helper continues to anchor on the right wrap after the app.js rename.
+ * No other behavioural change vs v1.40.159.
+ *
+ * --- v1.40.150 original notes follow ---
  * ============================================================
  * Replaces v1.40.149 with Gabriel's redesigned tone UX.
  *
@@ -51,7 +58,7 @@
 (function () {
   'use strict';
 
-  const SCRIPT_VERSION = '1.40.159';
+  const SCRIPT_VERSION = '1.40.340';
   const CUSTOMS_KEY = 'antcv:tone:customs';
   const SELECTED_SLOT_KEY = 'antcv:tone:selected-slot';
   const ACTIVE_CUSTOM_KEY = 'antcv:tone:active-custom';
@@ -61,10 +68,6 @@
   if (window.__antcvToneHelperInstalled) return;
   window.__antcvToneHelperInstalled = SCRIPT_VERSION;
 
-  // v1.40.168: 'american' → 'usa' rename + LATAM addition. Migration
-  // for users with stored 'american' lives in app.js where toneRegister
-  // is read from localStorage; this sidecar just needs to recognise the
-  // new key set when discovering the dropdown.
   const STANDARD_TONES = ['scandinavian', 'usa', 'latam', 'british', 'indian'];
 
   const TONE_PRESETS = {
@@ -78,11 +81,6 @@
       'clear', 'direct', 'concrete examples', 'outcome-focused',
       'specific', 'practical', 'human',
     ],
-    // LATAM (Latin American business register). Sources: Uruguay
-    // CV style notes — more formal, more descriptive, more
-    // hierarchical, responsibilities listed alongside outcomes,
-    // stronger self-presentation, elaborate but precise wording,
-    // credentials carry weight, personal-info section conventional.
     latam: [
       'formal', 'descriptive', 'thorough', 'hierarchical',
       'responsibilities + outcomes', 'credentials named',
@@ -105,8 +103,6 @@
     tone:      'Tone & banned terms',
   };
 
-  // ─── Discovery
-
   function findToneSelect() {
     const sels = document.querySelectorAll('select');
     for (const s of sels) {
@@ -121,7 +117,7 @@
     let wrap = sel.parentElement;
     for (let i = 0; i < 4 && wrap; i++) {
       const txt = (wrap.textContent || '').trim();
-      if (txt.indexOf('WRITING TONE') === 0) return wrap;
+      if (txt.indexOf('WRITING STYLE') === 0 || txt.indexOf('WRITING TONE') === 0) return wrap;
       wrap = wrap.parentElement;
     }
     return sel.parentElement || sel;
@@ -151,8 +147,6 @@
     }
     return null;
   }
-
-  // ─── Chip operations
 
   function readActiveChips(bank) {
     if (!bank) return [];
@@ -197,7 +191,6 @@
     const current = readActiveChips(bank);
     const targetSet = new Set(target);
     const currentSet = new Set(current);
-    // Mark force-apply so the locking listener skips our own clicks.
     window.__antcvForceApplyInProgress = true;
     try {
       for (const term of current) {
@@ -224,8 +217,6 @@
     const sel = findToneSelect();
     return sel ? sel.value : null;
   }
-
-  // ─── Storage
 
   function readCustomsRaw() {
     try {
@@ -289,8 +280,6 @@
     } catch (_) { return null; }
   }
 
-  // ─── Force-apply preset
-
   let lastForcedTone = null;
 
   function ensurePresetForCurrentTone(forceReapply) {
@@ -303,8 +292,6 @@
     applyChipSet(preset);
     lastForcedTone = tone;
   }
-
-  // ─── Lock preset chips
 
   function isLockedChip(term) {
     if (readActiveCustom() !== null) return false;
@@ -338,8 +325,6 @@
     }, 350);
   }, true);
 
-  // ─── Section reorder (CSS order on the three details + wrap)
-
   function reorderSections() {
     const cvSidebar = findDetailsBySummary(LABELS.cvSidebar);
     const optional  = findDetailsBySummary(LABELS.optional);
@@ -361,24 +346,14 @@
       parent.dataset.antcvSectionParent = '1';
     }
 
-    // If the section-panel-tweaks sidecar (v1.40.152+) has built an
-    // "Advanced Tone" details, wtWrap belongs OUTSIDE it (just
-    // above), per Gabriel's v1.40.155 ask. We give wtWrap order 25
-    // — between Optional Details (20) and Advanced Tone (30) — so
-    // it sits visibly above Advanced Tone. We do NOT put it inside
-    // Advanced Tone.
     const advTone = document.querySelector('details[data-antcv-advanced-tone="1"]');
 
     if (advTone) {
-      // Advanced Tone is present. wtWrap stays in the section
-      // parent (NOT inside Advanced Tone) at order 25.
       if (wtWrap.parentElement !== parent) {
         try { parent.appendChild(wtWrap); } catch (_) {}
       }
       if (wtWrap.style.order !== '25') wtWrap.style.order = '25';
     } else {
-      // Pre-Advanced-Tone behaviour from v1.40.150: place wtWrap
-      // between Optional Details and Tone & banned terms with order 30.
       if (wtWrap.parentElement !== parent) {
         try { parent.appendChild(wtWrap); } catch (_) {}
       }
@@ -392,19 +367,12 @@
     return true;
   }
 
-  // ─── Helper UI render
-
   function renderHelper() {
     const wrap = findWritingToneWrap();
     if (!wrap || !wrap.parentElement) return false;
 
     let helper = document.querySelector('[' + HELPER_MARK + '="1"]');
     if (helper) {
-      // v1.40.159: when the section-panel-tweaks sidecar moves the
-      // helper INTO Advanced Tone (where Gabriel asked it to live),
-      // do NOT yank it back to wtWrap.nextSibling on every tick. That
-      // fight closes the Custom-slot <select> dropdown a few ms after
-      // the user clicks it.
       const advTone = document.querySelector('details[data-antcv-advanced-tone="1"]');
       if (advTone && advTone.contains(helper)) {
         return true;
@@ -425,9 +393,6 @@
 
     const slotLabel = document.createElement('span');
     slotLabel.style.cssText = 'min-width:80px;font-size:10px;font-weight:600;color:rgba(255,255,255,0.65);letter-spacing:0.4px;text-transform:uppercase;';
-    // v1.40.169 i18n migration: was 'Custom slot' literal. Falls back
-    // to EN when AntcvI18n hasn't loaded (load order in index.html puts
-    // i18n before tone-helper, but the optional-chain is defensive).
     slotLabel.textContent = (window.AntcvI18n && window.AntcvI18n.t)
       ? window.AntcvI18n.t('tone.custom_slot', 'Custom slot')
       : 'Custom slot';
@@ -439,16 +404,10 @@
     for (let n = 1; n <= 3; n++) {
       const o = document.createElement('option');
       o.value = String(n);
-      // v1.40.169 i18n migration: was 'Custom ' + n. Uses translated
-      // base ('Brugerdef.' in DA) + the slot number, so the dropdown
-      // renders "Brugerdef. 1 / 2 / 3" in Danish.
       const customBase = (window.AntcvI18n && window.AntcvI18n.t)
         ? window.AntcvI18n.t('tone.custom', 'Custom')
         : 'Custom';
       o.textContent = customBase + ' ' + n;
-      // Explicit option colours so the dropdown is readable when the
-      // browser pops it on a system-default light background. Without
-      // this the white-on-system-bg option text is invisible.
       o.style.color = '#1a1a1a';
       o.style.background = '#ffffff';
       slotSelect.appendChild(o);
@@ -591,8 +550,6 @@
     }
   }
 
-  // ─── Boot
-
   let pending = null;
   function schedule() {
     if (pending) return;
@@ -642,7 +599,6 @@
     boot();
   }
 
-  // Test/debug API
   window.AntcvToneHelper = {
     version: SCRIPT_VERSION,
     _findToneSelect: findToneSelect,

@@ -202,39 +202,43 @@ For `publications` (academic), `teaching_supervision`, `grants_fellowships`:
 
 ### Cover letter section
 
-When the request includes cover-letter sections, the output has a top-level `cover_letter` key:
+When the request includes cover-letter sections, the `cover_letter` key sits inside the `sections` object alongside the CV sections — it is treated as one more section key rather than a separate top-level structure:
 
 ```json
 {
-  "cover_letter": {
-    "cl_header": {
-      "name": "Gabriel Alexander Karp-Gershon",
-      "application_line": "Application: Senior Product Manager — Maersk",
-      "contacts": ["email@example.com", "linkedin.com/in/...", "Copenhagen, Denmark"]
-    },
-    "cl_opener": {
-      "salutation": "Dear Hiring Team,",
-      "opening": "I am applying for the Senior Product Manager position at Maersk..."
-    },
-    "who_i_am": "I am a technical product manager with twelve years across...",
-    "what_i_bring": {
-      "format": "table-grid",
-      "parser_safe_separator": "em_dash",
-      "rows": [
-        {"focus_area": "Customer-facing product ownership", "expertise": "..."}
-      ]
-    },
-    "why_this_position": "This role sits at the intersection of...",
-    "how_i_would_contribute": ["...", "...", "..."],
-    "foundation": {
-      "hands_on": "I am ready to spend the first weeks...",
-      "professionally": "This role would be a natural continuation..."
-    },
-    "cl_close": {
-      "sign_off": "Kind regards,",
-      "signature": "Gabriel Alexander Karp-Gershon"
-    },
-    "char_count": 1240
+  "sections": {
+    "profile": { "...": "..." },
+    "experience": [ "..." ],
+    "cover_letter": {
+      "cl_header": {
+        "name": "Gabriel Alexander Karp-Gershon",
+        "application_line": "Application: Senior Product Manager — Maersk",
+        "contacts": ["email@example.com", "linkedin.com/in/...", "Copenhagen, Denmark"]
+      },
+      "cl_opener": {
+        "salutation": "Dear Hiring Team,",
+        "opening": "I am applying for the Senior Product Manager position at Maersk..."
+      },
+      "who_i_am": "I am a technical product manager with twelve years across...",
+      "what_i_bring": {
+        "format": "table-grid",
+        "parser_safe_separator": "em_dash",
+        "rows": [
+          {"focus_area": "Customer-facing product ownership", "expertise": "..."}
+        ]
+      },
+      "why_this_position": "This role sits at the intersection of...",
+      "how_i_would_contribute": ["...", "...", "..."],
+      "foundation": {
+        "hands_on": "I am ready to spend the first weeks...",
+        "professionally": "This role would be a natural continuation..."
+      },
+      "cl_close": {
+        "sign_off": "Kind regards,",
+        "signature": "Gabriel Alexander Karp-Gershon"
+      },
+      "char_count": 1240
+    }
   }
 }
 ```

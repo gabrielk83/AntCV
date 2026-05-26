@@ -1,0 +1,163 @@
+# AntCV deploy
+#
+# Design notes (history: prior incarnation deployed all six workers in a single
+# matrix on every push to main; a stale wrangler.toml in one of them dropped
+# bindings on deploy and caused data loss):
+#
+#   - PWA: safe to auto-deploy on push to main. Pages keeps every deploy and
+#     rollback is one click. Path-filtered to pwa/** so unrelated commits don't
+#     redeploy.
+#
+#   - Workers: NEVER auto-deploy. They have KV / D1 / R2 / Durable Object
+#     bindings whose IDs live in wrangler.toml; deploying with stale source
+#     can drop a binding and orphan its data. Worker deploys are
+#     workflow_dispatch only, one worker at a time, with:
+#       * an explicit choice input (no matrix)
+#       * a confirm input that must match the choice (typo guard)
+#       * mode=dry-run by default (operator opts into the real deploy)
+#
+#   - Lint is a shared pre-flight: confirms repo layout and that every worker
+#     has observability enabled.
+#
+# Required repo secrets:
+#   CLOUDFLARE_API_TOKEN   (Account → Pages → Edit, Account → Workers → Edit)
+#   CLOUDFLARE_ACCOUNT_ID
+
+name: AntCV deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'pwa/**'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'What to deploy'
+        type: choice
+        required: true
+        default: pwa
+        options:
+          - pwa
+          - antcv-mcp
+          - proxy
+          - demo-proxy
+          - docx-worker
+          - c2pa-worker
+          - access-relay
+      mode:
+        description: 'dry-run (preview, no upload) or deploy (real)'
+        type: choice
+        required: true
+        default: dry-run
+        options:
+          - dry-run
+          - deploy
+      confirm:
+        description: 'For worker deploys with mode=deploy: re-type the worker name'
+        type: string
+        required: false
+        default: ''
+
+jobs:
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sanity check repo layout
+        run: |
+          set -e
+          test -f pwa/index.html
+          test -f pwa/sw.js
+          for w in proxy demo-proxy docx-worker c2pa-worker access-relay antcv-mcp; do
+            test -f "workers/$w/wrangler.toml" || (echo "missing workers/$w/wrangler.toml"; exit 1)
+          done
+      - name: Confirm observability is on in every wrangler.toml
+        run: |
+          set -e
+          for f in workers/*/wrangler.toml; do
+            grep -q "enabled = true" "$f" && grep -q "invocation_logs = true" "$f" \
+              || (echo "missing [observability.logs] in $f" && exit 1)
+          done
+
+  deploy-pwa:
+    needs: lint
+    runs-on: ubuntu-latest
+    if: >
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && inputs.target == 'pwa')
+    concurrency:
+      group: deploy-pwa-main
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install wrangler
+        run: npm install -g wrangler@4
+      - name: Deploy PWA to Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MSG: ${{ github.event.head_commit.message || format('manual deploy by {0}', github.actor) }}
+        run: |
+          cd pwa
+          wrangler pages deploy . \
+            --project-name=antcv \
+            --branch=main \
+            --commit-message="$MSG"
+
+  deploy-worker:
+    needs: lint
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' &&
+      inputs.target != 'pwa'
+    concurrency:
+      group: deploy-worker-${{ inputs.target }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate confirm input matches target (real deploys only)
+        if: inputs.mode == 'deploy'
+        env:
+          TARGET: ${{ inputs.target }}
+          CONFIRM: ${{ inputs.confirm }}
+        run: |
+          if [ "$CONFIRM" != "$TARGET" ]; then
+            echo "::error::confirm='$CONFIRM' does not match target='$TARGET'. Real deploy aborted."
+            echo "Re-run with confirm set to the exact worker name, or use mode=dry-run to preview."
+            exit 1
+          fi
+          echo "confirm matches target ($TARGET); real deploy will proceed."
+
+      - name: Install wrangler
+        run: npm install -g wrangler@4
+
+      - name: Show wrangler.toml bindings for ${{ inputs.target }}
+        run: |
+          echo "=== workers/${{ inputs.target }}/wrangler.toml ==="
+          cat "workers/${{ inputs.target }}/wrangler.toml"
+          echo
+          echo "=== binding section summary ==="
+          grep -nE '^\s*(\[\[|binding|id|class_name|database_id|bucket_name|database_name)' \
+            "workers/${{ inputs.target }}/wrangler.toml" || echo "(no bindings detected)"
+
+      - name: Dry-run (validate + print plan, no upload)
+        if: inputs.mode == 'dry-run'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          cd "workers/${{ inputs.target }}"
+          wrangler deploy --dry-run
+
+      - name: Deploy ${{ inputs.target }}
+        if: inputs.mode == 'deploy'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          cd "workers/${{ inputs.target }}"
+          wrangler deploy

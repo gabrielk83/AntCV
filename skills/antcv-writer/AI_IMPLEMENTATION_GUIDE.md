@@ -165,7 +165,7 @@ type GenerateRequest = {
 
 Auth: Cloudflare Access JWT in `Cf-Access-Jwt-Assertion` header. `user_id` is derived from the JWT `sub` claim. **Never trust a `user_id` in the request body.**
 
-Outbound to the LLM: assembled prompt with the eleven inputs documented in `SKILL.md` § Inputs.
+Outbound to the LLM: assembled prompt with the inputs documented in `SKILL.md` § Inputs.
 
 Response to PWA: the LLM's JSON output (validated against `references/output-schema.md`) plus server-generated `application_id` and `generation_id`.
 
@@ -211,6 +211,12 @@ async function handleGenerate(req: GenerateRequest, env: Env, uid: string) {
 
   await ensureApplicationExists(env, application_id, uid, { ...req, role_slug });
 
+  // Step 1.5 — Resolve ATS tier (see §3.2)
+  // Hard inference from request or named portal in the JD; modern is the
+  // safe default. Industry/company signals run separately as an advisory
+  // via getTierAdvisory() and surface to the PWA, never override here.
+  const target_ats_tier = inferAtsTier(req, req.jd_text);
+
   // Step 2 — Load user state from KV
   const kv = req.mode === "demo" ? env.CV_DEMO_PROXY_DATA : env.CV_PROXY_DATA;
   const user_state = await loadUserState(kv, uid);
@@ -232,6 +238,7 @@ async function handleGenerate(req: GenerateRequest, env: Env, uid: string) {
       jd_text: req.jd_text,
       target_language: req.target_language,
       target_pages: req.target_pages,
+      target_ats_tier,
       target_use_case,
       career_stage,
       commercial_seniority,

@@ -265,7 +265,7 @@
           app.src = 'app.js?v=1.40.340-watermark';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.40.340-watermark';
+            vo.src = 'antcv-version-override.js?v=1.50.0-pass1';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -592,6 +592,13 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      exact useEffect hook. Until that hook is wired into app.js, the LS key
      still records the cloud value for the next bundle version to consume. -->
 <script src="antcv-user-mode-restore-340.js?v=1.40.340-a" defer></script>
-<script src="antcv-stability-core-334.js?v=1.40.339-b" defer></script>
+<script src="antcv-stability-core-334.js?v=1.50.0-pass1" defer></script>
+<!-- v1.50.0 Pass 1: React-islands bundle. Vite-built from /src, single IIFE.
+     React/ReactDOM are externalised — they come from the UMD <script> tags at
+     the top of this file. Islands replace the imperative DOM patches that
+     used to live in antcv-stability-core-334.js (LanguageCard, PreviewToolbar,
+     SettingsRouter, wizardState). See docs/plan/AntCV_Plan_v2_LockedSources.md
+     §7 Pass 1. -->
+<script src="antcv-react-islands.js?v=1.50.0-pass1" defer></script>
 </body>
 </html>

@@ -1,10 +1,11 @@
-const CACHE = 'antcv-1.40.340-watermark';
+const CACHE = 'antcv-1.50.0-pass1';
 const SHELL = [
   './manifest.json',
   './antcv-mobile-controls.css',
   './antcv-mobile-controls.js',
   './antcv-docx-client.js',
   './antcv-data-importer.js',
+  './antcv-react-islands.js',
   './antcv-section-align.js',
   './antcv-recheck-fit.js',
   './antcv-jd-watch.js',

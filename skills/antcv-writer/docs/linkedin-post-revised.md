@@ -12,11 +12,11 @@ In practice, no model was "best." One was cleaner at extracting requirements. An
 
 That pushed the app toward routing and supervision, not model loyalty.
 
-AntCV runs as supervisor-driven orchestration — task routing, output validation, retries on banned terms or invented metrics, watermarking, change logging:
+AntCV runs as supervisor-driven orchestration — task routing, output validation, retries on banned terms, invented metrics, or overclaimed role scope, watermarking, change logging:
 
 * requirement extraction
 * fit and gap analysis
-* multilingual adaptation
+* multilingual adaptation with per-language banned-term lists
 * validation checks
 * deterministic document export
 * provenance tracking with confidence and risk
@@ -86,6 +86,8 @@ Three things in 200 chars:
 | Dropped "That is where it becomes interesting" pivot | Space tradeoff — personalization paragraph already carries the trust framing |
 | Hashtags expanded: +#C2PA, +#PrivacyByDesign, +#ATSCompatibility | Your direction |
 | Signature added: name only | Your direction |
+| Role-scope added to retry list ("overclaimed role scope") | Aligned with locked plan §4.5 role-boundary integrity (added 2026-05-27) |
+| Multilingual bullet refined to "per-language banned-term lists" | Aligned with locked plan §4.5.3 language-partitioned schema (added 2026-05-27) |
 
 ## Voice and constraint check
 

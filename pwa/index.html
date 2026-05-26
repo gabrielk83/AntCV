@@ -1,1 +1,590 @@
-REPLACE_ME_BELOW
+<html lang="en">
+<head>
+<meta http-equiv="Cache-Control" content="no-store" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="AntCV">
+  <meta name="theme-color" content="#283556">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <title>AntCV</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script>window.loadMammoth=()=>new Promise((res,rej)=>{if(window.mammoth)return res(window.mammoth);const s=document.createElement('script');s.src='https://unpkg.com/mammoth/mammoth.browser.min.js';s.onload=()=>res(window.mammoth);s.onerror=()=>rej(new Error('Failed to load Mammoth (.docx parser)'));document.head.appendChild(s);});</script>
+  <script>window.loadJSZip=()=>new Promise((res,rej)=>{if(window.JSZip)return res(window.JSZip);const s=document.createElement('script');s.src='https://unpkg.com/jszip@3.10.1/dist/jszip.min.js';s.onload=()=>res(window.JSZip);s.onerror=()=>rej(new Error('Failed to load JSZip'));document.head.appendChild(s);});</script>
+  <script>
+    window.loadPDFJS=()=>new Promise((res,rej)=>{
+      if(window.pdfjsLib) return res(window.pdfjsLib);
+      const ver='3.11.174';
+      const cdns=[
+        `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${ver}/pdf.min.js`,
+        `https://cdn.jsdelivr.net/npm/pdfjs-dist@${ver}/build/pdf.min.js`,
+        `https://unpkg.com/pdfjs-dist@${ver}/build/pdf.min.js`
+      ];
+      const workerUrls=[
+        `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${ver}/pdf.worker.min.js`,
+        `https://cdn.jsdelivr.net/npm/pdfjs-dist@${ver}/build/pdf.worker.min.js`,
+        `https://unpkg.com/pdfjs-dist@${ver}/build/pdf.worker.min.js`
+      ];
+      let idx=0;
+      const tryNext=()=>{
+        if(idx>=cdns.length){
+          return rej(new Error('Failed to load PDF.js from all 3 CDNs (cdnjs, jsdelivr, unpkg). Check your connection or firewall.'));
+        }
+        const s=document.createElement('script');
+        s.src=cdns[idx];
+        s.onload=()=>{
+          try{
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc=workerUrls[idx];
+            console.log('[AntCV] PDF.js loaded from', cdns[idx]);
+            res(window.pdfjsLib);
+          }catch(e){rej(e);}
+        };
+        s.onerror=()=>{
+          console.warn('[AntCV] PDF.js CDN failed:', cdns[idx]);
+          idx++;
+          tryNext();
+        };
+        document.head.appendChild(s);
+      };
+      tryNext();
+    });
+  </script>
+  <style>
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0;}
+    body{font-family:'Georgia',serif;background:#283556;overscroll-behavior:none;}
+    #root{min-height:100dvh;}
+    textarea,input,select,button{font-family:inherit;}
+    ::-webkit-scrollbar{width:4px;}
+    ::-webkit-scrollbar-thumb{background:#01B7BB55;border-radius:2px;}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+    .fade{animation:fadeIn .3s ease;}
+
+    button:focus-visible,
+    a:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    textarea:focus-visible,
+    [role="button"]:focus-visible,
+    [tabindex]:focus-visible {
+      outline: 2.5px solid #01B7BB !important;
+      outline-offset: 2px !important;
+      box-shadow: 0 0 0 1px #fff inset, 0 0 0 4px rgba(1,183,187,0.35) !important;
+    }
+    :focus:not(:focus-visible) { outline: none; }
+
+    .antcv-skip-link {
+      position: absolute; top: -100px; left: 8px; z-index: 99999;
+      background: #00746E; color: #fff; padding: 10px 16px;
+      border-radius: 6px; font-weight: 700; font-size: 14px;
+      text-decoration: none; font-family: Calibri, Arial, sans-serif;
+    }
+    .antcv-skip-link:focus { top: 8px; outline: 2.5px solid #fff; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+      }
+    }
+
+    @media print {
+      [data-antcv-ai-disclosure="visible"] {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+    }
+
+    html.antcv-dragging, html.antcv-dragging *,
+    html.antcv-dragging [contenteditable="true"] {
+      cursor: ew-resize !important;
+      user-select: none !important;
+      -webkit-user-select: none !important;
+    }
+
+    body.antcv-banner-active {
+      padding-top: 52px !important;
+    }
+    body.antcv-banner-active > div[role="alert"],
+    body.antcv-banner-active > div[role="status"] {
+      margin-top: 0 !important;
+    }
+
+    @media print {
+      .no-print, [class*="no-print"] { display: none !important; }
+      .antcv-fab, [class*="antcv-fab"],
+      .antcv-overlay, [class*="antcv-overlay"],
+      .antcv-mc-action, [class*="antcv-mc-action"] {
+        display: none !important;
+      }
+      body > div[style*="position: fixed"][style*="bottom"],
+      body > div[style*="position:fixed"][style*="bottom"] {
+        display: none !important;
+      }
+    }
+
+    .antcv-preview-scroll{
+      touch-action: pan-x pan-y;
+      -webkit-overflow-scrolling: touch;
+    }
+    .antcv-preview-wrap, .antcv-preview-paper{
+      touch-action: auto;
+    }
+    .antcv-preview-paper [contenteditable="true"]{
+      -webkit-user-select: text;
+      user-select: text;
+      cursor: text;
+      pointer-events: auto;
+    }
+    .antcv-preview-paper [data-antcv-editable-text="true"]:not([contenteditable="true"]){
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    .antcv-preview-actions, .antcv-preview-actions *,
+    .antcv-react-bottom-nav, .antcv-react-bottom-nav *{
+      touch-action: manipulation;
+    }
+    @media (max-width: 900px){
+      .antcv-preview-actions .antcv-export-buttons{
+        transform:none!important;
+      }
+    }
+    .antcv-col-splitter{
+      transition: background 120ms ease-out;
+      background: transparent !important;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .antcv-col-splitter::before{
+      content: '';
+      width: 6px;
+      height: 32px;
+      background: rgba(1,183,187,0.55);
+      border: 1px solid rgba(1,183,187,0.85);
+      border-radius: 4px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+      pointer-events: none;
+      background-image: linear-gradient(
+        to bottom,
+        transparent 0%, transparent 28%,
+        rgba(255,255,255,0.55) 28%, rgba(255,255,255,0.55) 36%,
+        transparent 36%, transparent 46%,
+        rgba(255,255,255,0.55) 46%, rgba(255,255,255,0.55) 54%,
+        transparent 54%, transparent 64%,
+        rgba(255,255,255,0.55) 64%, rgba(255,255,255,0.55) 72%,
+        transparent 72%, transparent 100%
+      );
+    }
+    .antcv-col-splitter:hover::before,
+    .antcv-col-splitter:active::before{
+      background-color: rgba(1,183,187,0.9);
+      border-color: rgba(0,116,110,1);
+      width: 8px;
+    }
+    @media print{
+      .no-print{display:none!important;}
+      .app-root .no-print{display:none!important;}
+      body.antcv-printing-cv > #root > * {display:none!important;}
+      body.antcv-printing-cv > #root > .app-root { display:block!important; }
+      body.antcv-printing-cv .app-root .preview-print-area{display:block!important;}
+      .print-wrap{position:fixed;top:0;left:0;width:100%;height:100%;overflow:auto;background:#fff;}
+      .antcv-page-row{
+        display:table!important;
+        width:100%!important;
+        table-layout:fixed!important;
+      }
+      .antcv-page-row > .antcv-document-sidebar,
+      .antcv-page-row > .antcv-document-main{
+        display:table-cell!important;
+        vertical-align:top!important;
+        float:none!important;
+        min-height:0!important;
+        page-break-inside:auto!important;
+        break-inside:auto!important;
+      }
+      .antcv-page-row{
+        page-break-inside:auto!important;
+        break-inside:auto!important;
+      }
+      [style*="page-break-before:always"],
+      [style*="break-before:page"]{
+        page-break-before:always!important;
+        break-before:page!important;
+      }
+    }
+  </style>
+<link rel="stylesheet" href="./antcv-mobile-controls.css">
+<script>
+  (function hydrateDocxWorker(){
+    function isUsable(u){
+      if (!u) return false;
+      try {
+        var p = new URL(u);
+        if (p.protocol !== 'https:') return false;
+        if (p.hostname === location.hostname) return false;
+        if (/\.pages\.dev$/i.test(p.hostname)) return false;
+        return true;
+      } catch(_) { return false; }
+    }
+    try {
+      var v = localStorage.getItem('docxWorkerUrl') || localStorage.getItem('antcv:docxWorker') || localStorage.getItem('antcvDocxWorker') || '';
+      if (v && v.charAt(0)=='"' && v.charAt(v.length-1)=='"') v = v.slice(1,-1);
+      v = (v || '').replace(/\/+$/, '');
+      if (!v) v = 'https://docx-worker.karp-gabriel-a.workers.dev';
+      if (isUsable(v)) {
+        window.ANTCV_DOCX_WORKER = v;
+        try { localStorage.setItem('docxWorkerUrl', v); localStorage.setItem('antcvDocxWorker', JSON.stringify(v)); localStorage.setItem('antcv:docxWorker', v); } catch(_) {}
+      }
+    } catch(_) {}
+  })();
+</script>
+<script type="module">
+  import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.40.202';
+  window.exportDocxViaWorker = exportDocxViaWorker;
+  window.ANTCV_VERSION = '1.40.339-l';
+  if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
+</script>
+<script>
+  (function bootAntCV() {
+    function loadAppScripts(){
+      var shapeGuard = document.createElement('script');
+      shapeGuard.src = 'antcv-shape-guard.js?v=1.40.202';
+      shapeGuard.onload = function(){
+        var auth = document.createElement('script');
+        auth.src = 'antcv-auth.js?v=1.40.202';
+        auth.onload = function(){
+          var app = document.createElement('script');
+          app.src = 'app.js?v=1.40.339';
+          app.onload = function(){
+            var vo = document.createElement('script');
+            vo.src = 'antcv-version-override.js?v=1.40.339';
+            document.head.appendChild(vo);
+          };
+          document.head.appendChild(app);
+        };
+        document.head.appendChild(auth);
+      };
+      document.head.appendChild(shapeGuard);
+    }
+
+    fetch('relay-config.json', { cache: 'no-store' })
+      .then(function(r){ if (!r.ok) throw new Error('HTTP_'+r.status); return r.json(); })
+      .then(function(j){
+        var raw = (j && typeof j.relay === 'string') ? j.relay.trim().replace(/\/+$/, '') : '';
+        if (raw && raw.indexOf('https://') === 0 && raw.indexOf('REPLACE_WITH_YOUR') < 0) {
+          window.ANTCV_RELAY_URL = raw;
+        } else {
+          window.ANTCV_RELAY_CONFIG_ERROR = 'invalid_relay_in_config';
+          console.error('[AntCV admin] relay-config.json has no valid "relay" URL.');
+        }
+      })
+      .catch(function(e){
+        window.ANTCV_RELAY_CONFIG_ERROR = String((e && e.message) || e);
+        console.error('[AntCV admin] relay-config.json could not be loaded:', e);
+      })
+      .finally(loadAppScripts);
+  })();
+</script>
+<script>
+(function(){
+  async function clearAntcvHardReset(opts){
+    opts=opts||{};
+    var keepProxy='';
+    try{ keepProxy=localStorage.getItem('proxyUrl')||''; }catch(e){}
+    try{ localStorage.clear(); }catch(e){}
+    try{ localStorage.removeItem('session'); localStorage.removeItem('antcv:auth:token'); localStorage.removeItem('antcv:auth:email'); localStorage.removeItem('antcv:auth:expires_at'); }catch(e){}
+    try{ if(keepProxy) localStorage.setItem('proxyUrl', keepProxy); }catch(e){}
+    try{ sessionStorage.clear(); }catch(e){}
+    try{
+      document.cookie.split(';').forEach(function(c){
+        var name=c.replace(/^ +/,'').split('=')[0];
+        if(!name) return;
+        document.cookie=name+'=;expires='+new Date(0).toUTCString()+';path=/';
+        document.cookie=name+'=;expires='+new Date(0).toUTCString()+';path=/;SameSite=None;Secure';
+      });
+    }catch(e){}
+    try{
+      if('caches' in window){
+        var keys=await caches.keys();
+        await Promise.all(keys.map(function(k){return caches.delete(k)}));
+      }
+    }catch(e){}
+    try{
+      if('serviceWorker' in navigator){
+        var regs=await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(function(r){return r.unregister()}));
+      }
+    }catch(e){}
+    if(opts.redirect!==false){
+      try{
+        var clean=location.origin+location.pathname;
+        if(opts.target){
+          try{ clean=String(opts.target).replace(/[?#].*$/,''); }catch(e){}
+        }
+        if(clean!==location.href){
+          location.replace(clean);
+        }else{
+          location.reload();
+        }
+      }catch(e){ try{ location.reload(); }catch(_){} }
+    }
+  }
+  window.AntcvHardReset=clearAntcvHardReset;
+
+  async function antcvFullErase(){
+    try{ sessionStorage.setItem('antcv:just-erased', String(Date.now())); }catch(e){}
+    var proxyUrl='';
+    try{ proxyUrl=localStorage.getItem('proxyUrl')||''; if(proxyUrl.startsWith('"')&&proxyUrl.endsWith('"'))proxyUrl=proxyUrl.slice(1,-1); }catch(e){}
+
+    if(proxyUrl){
+      var base=proxyUrl.replace(/\/+$/,'');
+      var withTimeout=function(p,ms){
+        return Promise.race([p,new Promise(function(res){setTimeout(function(){res({_timeout:true})},ms)})]);
+      };
+      var EMPTY_STATE={
+        proxyUrl:'',
+        photo:'',
+        apiKeys:{anthropic:'',openai:'',mistral:'',gemini:''},
+        personalInfo:{
+          name:'',firstName:'',lastName:'',headline:'',
+          city:'',country:'',location:'',citizenship:'',
+          email:'',phone:'',landline:'',linkedin:'',github:'',website:'',
+          contactExtra:[],patentNumber:'',patentDescription:'',
+          publications:[],background:'',
+          tools:[],certifications:[],education:[],regulatory:[],additional:[],
+          stylePrefs:{banned_words:'',banned_phrases:'',preferred_tone:''}
+        },
+        sections:{cv:[],cl:[]},
+        meta:{},
+        rationale:{},
+        headerItemLoc:{},
+        wizardCompleted:false,
+        memoryDigest:'',
+        memoryDigestHash:'',
+        profileDoc:'',
+        skillsDoc:'',
+        danishDoc:'',
+        wordsDoc:'',
+        _erasedAt:new Date().toISOString()
+      };
+      try{
+        await withTimeout(
+          fetch(base+'/api/prefs',{method:'DELETE',credentials:'include'}).catch(function(e){return{_err:e}}),
+          2000
+        );
+      }catch(e){}
+      try{
+        await withTimeout(
+          fetch(base+'/api/prefs',{
+            method:'PUT',credentials:'include',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify(EMPTY_STATE)
+          }).catch(function(){return null}),
+          2000
+        );
+      }catch(e){}
+      try{
+        await withTimeout(
+          fetch(base+'/auth/logout',{method:'POST',credentials:'include'}).catch(function(){return null}),
+          2000
+        );
+      }catch(e){}
+      try{
+        await withTimeout(
+          fetch(base+'/api/profile/kernel',{method:'DELETE',credentials:'include'}).catch(function(){return null}),
+          2000
+        );
+      }catch(e){}
+    }
+
+    try{ localStorage.clear(); }catch(e){}
+    try{ sessionStorage.clear(); }catch(e){}
+    try{ sessionStorage.setItem('antcv:just-erased', String(Date.now())); }catch(e){}
+    try{
+      document.cookie.split(';').forEach(function(c){
+        var name=c.replace(/^ +/,'').split('=')[0];
+        if(!name) return;
+        document.cookie=name+'=;expires='+new Date(0).toUTCString()+';path=/';
+        document.cookie=name+'=;expires='+new Date(0).toUTCString()+';path=/;SameSite=None;Secure';
+        try{
+          var domain=location.hostname.split('.').slice(-2).join('.');
+          document.cookie=name+'=;expires='+new Date(0).toUTCString()+';path=/;domain=.'+domain;
+        }catch(_){}
+      });
+    }catch(e){}
+    try{
+      if('caches' in window){
+        var keys=await caches.keys();
+        await Promise.all(keys.map(function(k){return caches.delete(k)}));
+      }
+    }catch(e){}
+    try{
+      if('serviceWorker' in navigator){
+        var regs=await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(function(r){return r.unregister()}));
+      }
+    }catch(e){}
+    await new Promise(function(r){setTimeout(r,150)});
+    try{ location.reload(); }catch(e){ try{ location.replace(location.origin+location.pathname); }catch(_){} }
+  }
+  window.AntcvFullErase=antcvFullErase;
+  try{
+    var p=new URLSearchParams(location.search);
+    if(p.get('hardReset')=='1'){
+      clearAntcvHardReset({target:location.origin+location.pathname});
+    }
+  }catch(e){}
+})();
+</script>
+<script>window.__hardResetEnabled=true;</script></head>
+<body>
+<a href="#root" class="antcv-skip-link">Skip to main content</a>
+<div id="root" role="main" aria-label="AntCV application"></div>
+<script>
+const PHOTO_B64 = "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";
+</script>
+
+<script>
+  (function hydrateOverlayCfg(){
+    function readLs(k){
+      try {
+        var v = localStorage.getItem(k) || '';
+        if (v.charAt(0)=='"' && v.charAt(v.length-1)=='"') v = v.slice(1,-1);
+        v = (v || '').replace(/\/+$/, '');
+        if (!v) return '';
+        try {
+          var p = new URL(v);
+          if (p.protocol !== 'https:') return '';
+          if (p.hostname === location.hostname) return '';
+          if (/\.pages\.dev$/i.test(p.hostname)) return '';
+          return v;
+        } catch(_) { return ''; }
+      } catch(_) { return ''; }
+    }
+    var proxy = readLs('proxyUrl');
+    var docx  = readLs('docxWorkerUrl') || readLs('antcv:docxWorker');
+    window.AntCVOverlayConfig = {
+      cvProxyOrigin:    proxy || '',
+      docxWorkerOrigin: docx  || '',
+      enabled: { supervisor: true, wordWarning: true, resetButton: true, jdAnalysis: true, fusionButton: true },
+      position: 'bottom-right',
+      sourceCvLocalStorageKey: 'sections',
+      contentLocalStorageKeys: [
+        'sections',
+        'meta',
+        'rationale',
+        'cv_pwa_sections',
+        'cv_pwa_meta',
+        'cv_pwa_rationale',
+        'cv_pwa_undo_stack',
+        'cv_pwa_redo_stack',
+        'cv_pwa_status',
+        'cv_pwa_header_item_loc',
+        'headerItemLoc',
+      ],
+    };
+  })();
+</script>
+<script src="antcv-json-repair-bundle-339.js?v=1.40.339-f" defer></script>
+<script src="antcv-pdf-po-shim.js?v=1.40.153" defer></script>
+<script src="antcv-hide-gsi-button.js?v=1.40.154" defer></script>
+<script src="antcv-stale-status.js?v=1.40.339-h" defer></script>
+<script src="antcv-publication-titles.js?v=1.40.178" defer></script>
+<script src="antcv-overlay.js?v=1.40.7" defer></script>
+<script src="antcv-data-importer.js?v=1.40.336" defer></script>
+<script src="antcv-personality.js?v=1.40.296" defer></script>
+<script src="antcv-cloud-delete-296.js?v=1.40.302" defer></script>
+<script src="antcv-cloud-restore-filter-298.js?v=1.40.339-d" defer></script>
+<script src="antcv-i18n.js?v=1.40.178" defer></script>
+<script src="antcv-format-prefs.js?v=1.40.178" defer></script>
+<script src="antcv-page-budget.js?v=1.40.178" defer></script>
+<script src="antcv-language-prefs.js?v=1.40.323" defer></script>
+<script src="antcv-section-align.js?v=1.40.203" defer></script>
+<script src="antcv-recheck-fit.js?v=1.40.139" defer></script>
+<script src="antcv-jd-watch.js?v=1.40.131" defer></script>
+<script src="antcv-privacy-led.js?v=1.40.295" defer></script>
+<script src="antcv-bullet-targets.js?v=1.40.136" defer></script>
+<script src="antcv-photo-position.js?v=1.40.194" defer></script>
+<script src="antcv-tone-helper.js?v=1.40.159" defer></script>
+<script src="antcv-banned-audit.js?v=1.40.178" defer></script>
+<script src="antcv-llm-audit.js?v=1.40.178" defer></script>
+<script src="antcv-jd-image-ocr.js?v=1.40.139" defer></script>
+<script src="antcv-panel-bottom-pad.js?v=1.40.145" defer></script>
+<script src="antcv-sidebar-position.js?v=1.40.146" defer></script>
+<script src="antcv-splitter-flip.js?v=1.40.151" defer></script>
+<script src="antcv-section-panel-tweaks.js?v=1.40.203" defer></script>
+<script src="antcv-item-align.js?v=1.40.178" defer></script>
+<script src="antcv-page-fit.js?v=1.40.151" defer></script>
+<script src="antcv-table-fast-drag.js?v=1.40.147" defer></script>
+<script src="antcv-pdf-error-toast.js?v=1.40.194" defer></script>
+<script src="antcv-item-pages-render.js?v=1.40.194" defer></script>
+<script src="antcv-exp-continuation-fix.js?v=1.40.195" defer></script>
+<script src="antcv-translation-patch.js?v=1.40.195" defer></script>
+<script src="antcv-print-iframe-preview.js?v=1.40.195" defer></script>
+<script src="antcv-wait-screen-times.js?v=1.40.196" defer></script>
+<script src="antcv-fit-cv-cloud-sync.js?v=1.40.196" defer></script>
+<script src="antcv-jd-analysis-and-reupload-fix.js?v=1.40.196" defer></script>
+<script src="antcv-pdf-page-mismatch.js?v=1.40.196" defer></script>
+<script src="antcv-ai-consent-cloud-sync-224.js?v=1.40.239" defer></script>
+<!-- v1.40.339-l: cookie-clear guard. Writes a persistent marker cookie on
+     AI-notice acceptance. At boot, if LS shows consent but the marker
+     cookie is gone (and a backfill LS key is present), treat as
+     cookie-clear: scrub local + cloud consent so the bundle re-prompts.
+     Pairs with antcv-ai-consent-cloud-sync-224 (no conflict). -->
+<script src="antcv-ai-consent-cookie-guard-339.js?v=1.40.339-l" defer></script>
+<script src="antcv-wizard-section-format-step10.js?v=1.40.239" defer></script>
+<script src="antcv-lang-bar-filter.js?v=1.40.212" defer></script>
+<script src="antcv-language-prefs-defaults.js?v=1.40.339" defer></script>
+<script src="antcv-wizard-language-slide-339.js?v=1.40.339-j" defer></script>
+<script src="antcv-upload-recount-339.js?v=1.40.339-g" defer></script>
+<script src="antcv-preview-touch-fix.js?v=1.40.197" defer></script>
+<script src="antcv-panel-escape.js?v=1.40.203" defer></script>
+<script src="antcv-section-bar-freeze-fix.js?v=1.40.203" defer></script>
+<script src="antcv-section-main-panel-fix.js?v=1.40.205" defer></script>
+<script src="antcv-section-panel-206.js?v=1.40.206" defer></script>
+<script src="antcv-section-panel-207.js?v=1.40.207" defer></script>
+<script src="antcv-section-panel-208.js?v=1.40.209" defer></script>
+<script src="antcv-section-panel-211.js?v=1.40.239" defer></script>
+<script src="antcv-experience-role-cjlr-230.js?v=1.40.239" defer></script>
+<script src="antcv-core-competencies-row-controls-234.js?v=1.40.246" defer></script>
+<script src="antcv-selected-outcomes-row-controls-237.js?v=1.40.239" defer></script>
+<script src="antcv-profile-workstyle-cjlr-238.js?v=1.40.239" defer></script>
+<script src="antcv-how-contribute-controls-245.js?v=1.40.245" defer></script>
+<script src="antcv-what-i-bring-cjlr-cleanup-246.js?v=1.40.246" defer></script>
+<script src="antcv-additional-info-row-controls-247.js?v=1.40.247" defer></script>
+<script src="antcv-add-cjlr-order-swap-241.js?v=1.40.243" defer></script>
+<script src="antcv-embedded-controls-248.js?v=1.40.248" defer></script>
+<script src="antcv-what-i-bring-header-cjlr-249.js?v=1.40.249" defer></script>
+<script src="antcv-publications-strict-row-layout-273.js?v=1.40.273" defer></script>
+<script src="antcv-core-wib-strict-row-layout-274.js?v=1.40.274" defer></script>
+<script src="antcv-mobile-topbar-cleanup-275.js?v=1.40.275" defer></script>
+<script src="antcv-generate-cloud-sync-277.js?v=1.40.277" defer></script>
+<script src="antcv-publications-section-panel-row-fix-278.js?v=1.40.278" defer></script>
+<script src="antcv-sidebar-section-row-hide-page-279.js?v=1.40.281" defer></script>
+<script src="antcv-personal-info-cloud-restore-282.js?v=1.40.282" defer></script>
+<script src="antcv-photo-cloud-restore-339.js?v=1.40.339-i" defer></script>
+<script src="antcv-load-from-cloud-personal-info-hook-283.js?v=1.40.283" defer></script>
+<script src="antcv-page-breaks-everywhere-284.js?v=1.40.284" defer></script>
+<script src="antcv-what-i-bring-row-controls-327.js?v=1.40.327" defer></script>
+<script src="antcv-table-page-splits-327.js?v=1.40.339" defer></script>
+<script src="antcv-page-button-polish-327.js?v=1.40.327" defer></script>
+<script src="antcv-settings-front-327.js?v=1.40.327" defer></script>
+<script src="antcv-cloud-put-shrink-guard-289.js?v=1.40.289" defer></script>
+<script src="antcv-kernel-completeness-290.js?v=1.40.290" defer></script>
+<script src="antcv-app-history-zfix-291.js?v=1.40.291" defer></script>
+<script src="antcv-language-ui-fixes-292.js?v=1.40.292" defer></script>
+<script src="antcv-table-row-page-controls-328.js?v=1.40.328" defer></script>
+<script src="antcv-sidebar-subsection-pagebreaks-329.js?v=1.40.329" defer></script>
+<script src="antcv-editor-layout-cleanup-331.js?v=1.40.331" defer></script>
+<script src="antcv-wizard-mode-bridge-337.js?v=1.40.339" defer></script>
+<script src="antcv-stability-core-334.js?v=1.40.339-b" defer></script>
+</body>
+</html>

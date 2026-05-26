@@ -143,7 +143,7 @@ Three bullets. Concrete contributions the candidate would make in the first 6 â€
 
 - I would expect to spend the first three months mapping the customer change request workflow as it exists today, identifying friction points the way I did when joining Innoviz.
 - A near-term contribution would be a structured pre-board screening process for high-impact change requests, modelled on what I built and standardised at Innoviz across three programmes.
-- Longer-term, I would aim to apply the ASPICE-aligned discipline I have developed to whichever process the Maersk product organisation flags as the highest-leverage point for governance improvement.
+- Longer-term, I would aim to apply the ASPICE-aligned discipline I have developed to whichever process the Maersk product organisation flags as the highest-priority point for governance improvement.
 
 **Avoid:** generic contribution claims ("I would add value"). Concrete contribution claims that the candidate cannot actually deliver. Speculative framing without grounding.
 

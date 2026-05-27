@@ -4,7 +4,7 @@
   "source": "skills/antcv-writer/references/style-matrix.md + per-style markdowns + locked-source plan §4",
   "planRef": "docs/plan/AntCV_Plan_v2_LockedSources.md §4",
   "default": "nordic-minimal",
-  "activeAtCut": ["nordic-minimal", "achievement-driven", "measured-professional", "context-rich", "cold-outreach"],
+  "activeAtCut": ["nordic-minimal", "achievement-driven", "measured-professional", "structured-professional", "mediterranean-formal", "prestige-structured", "credential-forward", "precision-formal", "context-rich", "cold-outreach"],
   "densityTiers": {
     "low":         { "wordsPerBullet": { "min": 8,  "max": 14 }, "profileChars": { "min": 160, "max": 280 }, "bulletsPerRole3pg": { "min": 2, "max": 3 } },
     "medium":      { "wordsPerBullet": { "min": 11, "max": 18 }, "profileChars": { "min": 260, "max": 340 }, "bulletsPerRole3pg": { "min": 3, "max": 4 } },
@@ -99,8 +99,7 @@
     },
     "structured-professional": {
       "displayName": "Structured Professional",
-      "active": false,
-      "comingInRelease": "v1.51",
+      "active": true,
       "primaryConstraint": "process-led framing",
       "constraintAvoid": "hero-narrative framing, outcome-only bullets without method, vague verbs",
       "constraintPrefer": "method-named, framework-cited, scope-defined bullets",
@@ -129,8 +128,7 @@
     },
     "mediterranean-formal": {
       "displayName": "Mediterranean Formal",
-      "active": false,
-      "comingInRelease": "v1.51",
+      "active": true,
       "primaryConstraint": "relational warmth within formality",
       "constraintAvoid": "clipped Nordic-style brevity, transactional tone, distance markers, fragment bullets",
       "constraintPrefer": "longer sentences acknowledging context and people, formal vocabulary, relational framing",
@@ -157,8 +155,7 @@
     },
     "prestige-structured": {
       "displayName": "Prestige Structured",
-      "active": false,
-      "comingInRelease": "v1.51",
+      "active": true,
       "primaryConstraint": "institutional weight",
       "constraintAvoid": "casual register, startup vocabulary, hedging, low-scope verbs",
       "constraintPrefer": "scope-heavy verbs (revenue, headcount, geographic remit), polished formal vocabulary, institutional framing",
@@ -185,8 +182,7 @@
     },
     "credential-forward": {
       "displayName": "Credential Forward",
-      "active": false,
-      "comingInRelease": "v1.51",
+      "active": true,
       "primaryConstraint": "credentials surfaced early",
       "constraintAvoid": "hiding accreditations in sidebar tail, generic skill claims without certification, implied qualifications",
       "constraintPrefer": "named certifications inline, accreditation levels stated, regulatory bodies named",
@@ -216,8 +212,7 @@
     },
     "precision-formal": {
       "displayName": "Precision Formal",
-      "active": false,
-      "comingInRelease": "v1.51",
+      "active": true,
       "primaryConstraint": "numerical precision",
       "constraintAvoid": "vague magnitude words, hedged metrics, range-padding",
       "constraintPrefer": "exact percentages, ranges, units, technical vocabulary used precisely",

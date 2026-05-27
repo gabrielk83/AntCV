@@ -13,7 +13,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="antcv-packages-registry.css?v=1.50.1">
+  <link rel="stylesheet" href="antcv-packages-registry.css?v=1.50.7">
   <title>AntCV</title>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -266,7 +266,7 @@
           app.src = 'app.js?v=1.40.340-watermark';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.50.1';
+            vo.src = 'antcv-version-override.js?v=1.50.7';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -515,8 +515,13 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-bullet-targets.js?v=1.40.136" defer></script>
 <script src="antcv-photo-position.js?v=1.40.194" defer></script>
 <script src="antcv-tone-helper.js?v=1.40.159" defer></script>
-<script src="antcv-banned-audit.js?v=1.40.178" defer></script>
+<script src="antcv-banned-audit.js?v=1.40.341-p0a" defer></script>
 <script src="antcv-llm-audit.js?v=1.40.178" defer></script>
+<script src="antcv-section-control-bar.js?v=1.40.341-p0a" defer></script>
+<script src="antcv-candidate-preview-editor-341.js?v=1.40.341-p0d" defer></script>
+<script src="antcv-section-move-button-341.js?v=1.40.341-p0d" defer></script>
+<script src="antcv-dnd-insertion-point-341.js?v=1.40.341-p0d" defer></script>
+<script src="antcv-regression-sweep-341.js?v=1.40.341-gate" defer></script>
 <script src="antcv-jd-image-ocr.js?v=1.40.139" defer></script>
 <script src="antcv-panel-bottom-pad.js?v=1.40.145" defer></script>
 <script src="antcv-sidebar-position.js?v=1.40.146" defer></script>
@@ -584,6 +589,11 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-preview-shell-sticky-341.js?v=1.40.341-p0e" defer></script>
 <script src="antcv-language-ui-fixes-292.js?v=1.40.292" defer></script>
 <script src="antcv-table-row-page-controls-328.js?v=1.40.328" defer></script>
+<script src="antcv-sidebar-subsection-pagebreaks-329.js?v=1.40.329" defer></script>
+<script src="antcv-editor-layout-cleanup-331.js?v=1.40.341-p0c" defer></script>
+<script src="antcv-cl-preview-cluster-guard-341.js?v=1.40.341-p0c" defer></script>
+<script src="antcv-cl-body-move-button-341.js?v=1.40.341-p0c" defer></script>
+<script src="antcv-cl-closure-editable-341.js?v=1.40.341-p0c" defer></script>
 <script src="antcv-sidebar-subsection-pagebreaks-329.js?v=1.40.341-p0b" defer></script>
 <script src="antcv-editor-layout-cleanup-331.js?v=1.40.331" defer></script>
 <script src="antcv-wizard-mode-bridge-337.js?v=1.40.339" defer></script>
@@ -595,13 +605,18 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      exact useEffect hook. Until that hook is wired into app.js, the LS key
      still records the cloud value for the next bundle version to consume. -->
 <script src="antcv-user-mode-restore-340.js?v=1.40.340-a" defer></script>
-<script src="antcv-stability-core-334.js?v=1.50.0-pass1" defer></script>
+<!-- v1.50.6: antcv-stability-core-334.js no longer loaded. The React-islands
+     bundle (below) is now the sole owner of the LanguageCard, PreviewToolbar,
+     SettingsRouter, and wizardState behaviours that used to live there. The
+     file remains on disk under pwa/antcv-stability-core-334.js for the audit
+     trail; re-adding the <script> tag is a one-line revert if a regression
+     ever shows up. See docs/qa/v1.50.6-status-report.md. -->
 <!-- v1.50.0 Pass 1: React-islands bundle. Vite-built from /src, single IIFE.
      React/ReactDOM are externalised — they come from the UMD <script> tags at
      the top of this file. Islands replace the imperative DOM patches that
      used to live in antcv-stability-core-334.js (LanguageCard, PreviewToolbar,
      SettingsRouter, wizardState). See docs/plan/AntCV_Plan_v2_LockedSources.md
      §7 Pass 1. -->
-<script src="antcv-react-islands.js?v=1.50.1" defer></script>
+<script src="antcv-react-islands.js?v=1.50.7" defer></script>
 </body>
 </html>

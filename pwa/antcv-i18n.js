@@ -30,7 +30,7 @@
 (function () {
   'use strict';
 
-  const SCRIPT_VERSION = '1.40.172';
+  const SCRIPT_VERSION = '1.40.341-p0b';
   if (window.__antcvI18nInstalled) return;
   window.__antcvI18nInstalled = SCRIPT_VERSION;
 
@@ -118,6 +118,13 @@
     // ─── Audit labels ──────────────────────────────────────────────
     'audit.banned_label':                 { en: 'banned-word audit',                                                                      da: 'forbudte-ord-revision',                                                                     es: 'auditoría de palabras prohibidas',                                                             zh: '禁用词审核' },
     'audit.llm_label':                    { en: 'LLM audit',                                                                              da: 'LLM-revision',                                                                              es: 'auditoría de LLM',                                                                             zh: 'LLM 审核' },
+
+    // ─── Page-break continuation suffix (PB-003) ───────────────────
+    // Appended to a repeated section heading when the section is
+    // split across pages. Brackets and trailing punctuation are part
+    // of the value so consumers concatenate verbatim:
+    //   '<TITLE>' + ' ' + t('pb.cont') → "EXPERIENCE (CONT.)"
+    'pb.cont':                            { en: '(CONT.)',                                                                                 da: '(FORTS.)',                                                                                  es: '(CONT.)',                                                                                      zh: '（续）' },
   };
 
   // ─── Language selection ─────────────────────────────────────────

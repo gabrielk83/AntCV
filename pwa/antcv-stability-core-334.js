@@ -9,6 +9,12 @@
   'use strict';
   var VERSION='1.40.339';
   if(window.__antcvStabilityCore===VERSION) return;
+  // Pass 1 (v1.50.0) opt-out: set localStorage 'antcv:disable-stability-core-334'
+  // to '1' to stand down so the React-islands bundle (pwa/antcv-react-islands.js,
+  // src/islands/*) can take over the LanguageCard / PreviewToolbar /
+  // SettingsRouter logic. Verification toggle — flipping it on reproduces the
+  // post-deletion behaviour without touching index.html.
+  try { if(localStorage.getItem('antcv:disable-stability-core-334')==='1'){ try{console.info('[stability-core] standing down — antcv:disable-stability-core-334=1');}catch(_){} return; } } catch(_) {}
   window.__antcvStabilityCore=VERSION;
 
   var LANG_CARD_ID='antcv-stability-personal-languages';

@@ -1,0 +1,174 @@
+{
+  "$schema": "./registry.schema.json",
+  "version": "1.50.0-pass2",
+  "source": "docs/design/Unified_Visual_Package_System.docx — Unified Package Defaults + Alternatives table",
+  "planRef": "docs/plan/AntCV_Plan_v2_LockedSources.md §3",
+  "default": "copenhagen-modern",
+  "packages": {
+    "copenhagen-modern": {
+      "displayName": "Copenhagen Modern",
+      "base": "#283556",
+      "primary": "#00746E",
+      "interactive": "#0B74DE",
+      "bullet": "#00746E",
+      "glyph": "#0B74DE",
+      "headingFont": "Segoe UI Bold",
+      "bodyFont": "Calibri",
+      "shape": "circle",
+      "imageSize": 120,
+      "alt1": { "head": "#0B74DE", "sidebar": "#E8F4F5" },
+      "alt2": { "head": "#283556", "sidebar": "#DCE5EA" },
+      "dark": {
+        "alt1": { "head": "#6FAEFF", "sidebar": "#203040" },
+        "alt2": { "head": "#89C5D9", "sidebar": "#182132" }
+      }
+    },
+    "navy-executive": {
+      "displayName": "Navy Executive",
+      "base": "#1D2B45",
+      "primary": "#D9A441",
+      "interactive": "#6BC5C9",
+      "bullet": "#D9A441",
+      "glyph": "#D9A441",
+      "headingFont": "Cambria Bold",
+      "bodyFont": "Calibri",
+      "shape": "rounded",
+      "imageSize": 110,
+      "alt1": { "head": "#D9A441", "sidebar": "#F5F1E8" },
+      "alt2": { "head": "#7F8FA6", "sidebar": "#E8EDF3" },
+      "dark": {
+        "alt1": { "head": "#C89A38", "sidebar": "#2A3442" },
+        "alt2": { "head": "#AAB7C7", "sidebar": "#1B2432" }
+      }
+    },
+    "warm-terracotta": {
+      "displayName": "Warm Terracotta",
+      "base": "#8C4A32",
+      "primary": "#5C2E1F",
+      "interactive": "#B85E3B",
+      "bullet": "#5C2E1F",
+      "glyph": "#5C2E1F",
+      "headingFont": "Georgia Bold",
+      "bodyFont": "Georgia",
+      "shape": "rounded",
+      "imageSize": 130,
+      "alt1": { "head": "#5C2E1F", "sidebar": "#F7ECE5" },
+      "alt2": { "head": "#B85E3B", "sidebar": "#F3DDD2" },
+      "dark": {
+        "alt1": { "head": "#D38A65", "sidebar": "#3A221B" },
+        "alt2": { "head": "#E6A489", "sidebar": "#2B1A16" }
+      }
+    },
+    "nordic-frost": {
+      "displayName": "Nordic Frost",
+      "base": "#1A3A4F",
+      "primary": "#4A8FA8",
+      "interactive": "#3E82CC",
+      "bullet": "#4A8FA8",
+      "glyph": "#4A8FA8",
+      "headingFont": "Trebuchet MS Bold",
+      "bodyFont": "Calibri",
+      "shape": "circle",
+      "imageSize": 125,
+      "alt1": { "head": "#4A8FA8", "sidebar": "#EDF8FB" },
+      "alt2": { "head": "#7ECEE3", "sidebar": "#DCEEF4" },
+      "dark": {
+        "alt1": { "head": "#7FB6C8", "sidebar": "#203542" },
+        "alt2": { "head": "#9ADAE8", "sidebar": "#182B35" }
+      }
+    },
+    "pampas-contemporary": {
+      "displayName": "Pampas Contemporary",
+      "base": "#1B2D5E",
+      "primary": "#7A3B1E",
+      "interactive": "#4B6CB7",
+      "bullet": "#7A3B1E",
+      "glyph": "#7A3B1E",
+      "headingFont": "Palatino Linotype Bold",
+      "bodyFont": "Calibri",
+      "shape": "rounded-square",
+      "imageSize": 120,
+      "alt1": { "head": "#7A3B1E", "sidebar": "#F6F1DD" },
+      "alt2": { "head": "#5C5C5C", "sidebar": "#ECECEC" },
+      "dark": {
+        "alt1": { "head": "#C89B5B", "sidebar": "#25324D" },
+        "alt2": { "head": "#B0B0B0", "sidebar": "#1A243D" }
+      }
+    },
+    "tokyo-precision": {
+      "displayName": "Tokyo Precision",
+      "base": "#2C2C2C",
+      "primary": "#4E5B6E",
+      "interactive": "#5C7DA5",
+      "bullet": "#4E5B6E",
+      "glyph": "#4E5B6E",
+      "headingFont": "Tahoma Bold",
+      "bodyFont": "Calibri",
+      "shape": "square",
+      "imageSize": 90,
+      "alt1": { "head": "#4E5B6E", "sidebar": "#F3F4F6" },
+      "alt2": { "head": "#B0B7C3", "sidebar": "#E8E8E8" },
+      "dark": {
+        "alt1": { "head": "#8EA2BB", "sidebar": "#2A2A2A" },
+        "alt2": { "head": "#C4CBD5", "sidebar": "#1B1B1B" }
+      }
+    },
+    "delhi-technical": {
+      "displayName": "Delhi Technical",
+      "base": "#1F3A5F",
+      "primary": "#007C80",
+      "interactive": "#00A6A6",
+      "bullet": "#007C80",
+      "glyph": "#007C80",
+      "headingFont": "Segoe UI Bold",
+      "bodyFont": "Calibri",
+      "shape": "hexagon",
+      "shapeSecondary": "square",
+      "imageSize": 85,
+      "alt1": { "head": "#007C80", "sidebar": "#E8F8F8" },
+      "alt2": { "head": "#4B6A88", "sidebar": "#EAF1F8" },
+      "dark": {
+        "alt1": { "head": "#49B8BA", "sidebar": "#22364A" },
+        "alt2": { "head": "#81A6C4", "sidebar": "#17293D" }
+      }
+    }
+  },
+  "globalSemanticTokens": [
+    "main-head-color",
+    "main-text-color",
+    "main-bullet-color",
+    "sidebar-bullet-color",
+    "main-line-color",
+    "main-sub-head-color",
+    "main-company-color",
+    "main-year-color",
+    "header-bg",
+    "header-name-color",
+    "header-contact-color",
+    "sidebar-bg",
+    "sidebar-head-color",
+    "sidebar-text-color",
+    "table-header-bg",
+    "table-odd-bg",
+    "table-even-bg",
+    "achievement-marker-color",
+    "warning-marker-color",
+    "bullet-text-color",
+    "emoji-bullet-color"
+  ],
+  "atsRules": {
+    "photo": "hidden",
+    "layout": "single-column",
+    "fonts": "Calibri-only",
+    "tables": "flatten-where-needed",
+    "glyphReplacements": {
+      "☎": "Phone:",
+      "✉": "Email:",
+      "🔗": "Link:",
+      "⌂": "Location:",
+      "★": "Highlight:"
+    }
+  },
+  "allowedBullets": ["•", "◦", "▪", "✓", "→", "▲"],
+  "allowedContactGlyphs": ["☎", "✉", "🔗", "★", "⌂"]
+}

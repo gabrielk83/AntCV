@@ -30,7 +30,7 @@
 (function () {
   'use strict';
 
-  const SCRIPT_VERSION = '1.40.341-p0b';
+  const SCRIPT_VERSION = '1.40.341-p0d';
   if (window.__antcvI18nInstalled) return;
   window.__antcvI18nInstalled = SCRIPT_VERSION;
 
@@ -119,6 +119,11 @@
     'audit.banned_label':                 { en: 'banned-word audit',                                                                      da: 'forbudte-ord-revision',                                                                     es: 'auditoría de palabras prohibidas',                                                             zh: '禁用词审核' },
     'audit.llm_label':                    { en: 'LLM audit',                                                                              da: 'LLM-revision',                                                                              es: 'auditoría de LLM',                                                                             zh: 'LLM 审核' },
 
+    // ─── Candidate / Application sentence (CA-002) ─────────────────
+    // Rendered in Preview as `${applicationLabel}: ${role} - ${company}`.
+    // The user can override the label via panel preference; the i18n
+    // value is the default fallback when no override is set.
+    'candidate.application':              { en: 'Application',                                                                            da: 'Ansøgning',                                                                                  es: 'Solicitud',                                                                                    zh: '应聘职位' },
     // ─── Page-break continuation suffix (PB-003) ───────────────────
     // Appended to a repeated section heading when the section is
     // split across pages. Brackets and trailing punctuation are part

@@ -12,14 +12,19 @@ import {
 import {
   DEFAULT_TARGET_PAGES_OPTIONS,
   addBannedItem,
+  deleteSlot,
+  loadSlot,
   readEditorLanguage,
   readLayoutPrefs,
   readWritingPrefs,
   removeBannedItem,
+  renameSlot,
+  saveCurrentAsSlot,
   setWritingStyleWithCascade,
   writeEditorLanguage,
   writeLayoutPrefs,
   writeWritingPrefs,
+  type SavedToneSlot,
   type WritingPrefs,
   type LayoutPrefs,
 } from '../../lib/writing-prefs';
@@ -160,6 +165,176 @@ function ToneChipsEditor({
         </div>
       )}
     </>
+  );
+}
+
+function SavedTonesEditor({
+  slots,
+  onSave,
+  onLoad,
+  onRename,
+  onDelete,
+}: {
+  slots: SavedToneSlot[];
+  onSave: () => void;
+  onLoad: (id: string) => void;
+  onRename: (id: string, name: string) => void;
+  onDelete: (id: string) => void;
+}): JSX.Element {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <button
+        type="button"
+        onClick={onSave}
+        style={{
+          padding: '6px 12px',
+          background: 'rgba(1,183,187,.18)',
+          color: '#e6eef3',
+          border: '1px solid rgba(1,183,187,.55)',
+          borderRadius: 6,
+          cursor: 'pointer',
+          fontWeight: 700,
+          fontSize: 12,
+          alignSelf: 'flex-start',
+        }}
+      >
+        + Save current as new slot
+      </button>
+      {slots.length === 0 && (
+        <span style={{ fontSize: 11, opacity: 0.6 }}>
+          No saved tones yet. Saving a slot snapshots the active style, chips, and banned-list buckets so you can switch back later.
+        </span>
+      )}
+      {slots.map((s) => (
+        <SavedToneRow key={s.id} slot={s} onLoad={() => onLoad(s.id)} onRename={(n) => onRename(s.id, n)} onDelete={() => onDelete(s.id)} />
+      ))}
+    </div>
+  );
+}
+
+function SavedToneRow({
+  slot,
+  onLoad,
+  onRename,
+  onDelete,
+}: {
+  slot: SavedToneSlot;
+  onLoad: () => void;
+  onRename: (next: string) => void;
+  onDelete: () => void;
+}): JSX.Element {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(slot.name);
+  useEffect(() => { if (!editing) setDraft(slot.name); }, [slot.name, editing]);
+
+  const commit = useCallback(() => {
+    setEditing(false);
+    const trimmed = draft.trim();
+    if (trimmed && trimmed !== slot.name) onRename(trimmed);
+    else setDraft(slot.name);
+  }, [draft, slot.name, onRename]);
+
+  const styleLabel = STYLES[slot.snapshot.style]?.displayName ?? slot.snapshot.style;
+  const chipCount = slot.snapshot.chips.length;
+
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr auto auto',
+        gap: 8,
+        alignItems: 'center',
+        padding: '6px 8px',
+        background: 'rgba(255,255,255,.04)',
+        border: '1px solid rgba(255,255,255,.14)',
+        borderRadius: 8,
+      }}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+        {editing ? (
+          <input
+            type="text"
+            value={draft}
+            autoFocus
+            onChange={(e) => setDraft(e.currentTarget.value)}
+            onBlur={commit}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') { e.preventDefault(); (e.currentTarget as HTMLInputElement).blur(); }
+              if (e.key === 'Escape') { setDraft(slot.name); setEditing(false); }
+            }}
+            style={{
+              padding: '3px 6px',
+              background: 'rgba(0,0,0,.18)',
+              color: '#e6eef3',
+              border: '1px solid rgba(1,183,187,.55)',
+              borderRadius: 4,
+              fontFamily: 'inherit',
+              fontWeight: 700,
+              fontSize: 13,
+            }}
+          />
+        ) : (
+          <button
+            type="button"
+            onDoubleClick={() => setEditing(true)}
+            onClick={() => setEditing(true)}
+            title="Click to rename"
+            style={{
+              background: 'transparent',
+              border: 0,
+              color: '#e6eef3',
+              cursor: 'text',
+              padding: 0,
+              textAlign: 'left',
+              fontWeight: 700,
+              fontSize: 13,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {slot.name}
+          </button>
+        )}
+        <span style={{ fontSize: 10, opacity: 0.6 }}>
+          {styleLabel}{chipCount > 0 ? ` · ${chipCount} chip${chipCount === 1 ? '' : 's'}` : ''}
+        </span>
+      </div>
+      <button
+        type="button"
+        onClick={onLoad}
+        style={{
+          padding: '4px 10px',
+          background: 'rgba(1,183,187,.12)',
+          color: '#e6eef3',
+          border: '1px solid rgba(1,183,187,.45)',
+          borderRadius: 6,
+          cursor: 'pointer',
+          fontWeight: 650,
+          fontSize: 12,
+        }}
+      >
+        Load
+      </button>
+      <button
+        type="button"
+        onClick={onDelete}
+        aria-label={`Delete slot ${slot.name}`}
+        title="Delete slot"
+        style={{
+          padding: '4px 8px',
+          background: 'transparent',
+          color: '#e6eef3',
+          opacity: 0.65,
+          border: '1px solid rgba(255,255,255,.18)',
+          borderRadius: 6,
+          cursor: 'pointer',
+          fontSize: 14,
+        }}
+      >
+        ×
+      </button>
+    </div>
   );
 }
 
@@ -362,6 +537,20 @@ export function WritingStylePicker(): JSX.Element {
     setPrefs(writeWritingPrefs({ overrides }));
   }, [prefs.overrides]);
 
+  const onSaveSlot = useCallback(() => {
+    setPrefs(saveCurrentAsSlot());
+  }, []);
+  const onLoadSlot = useCallback((id: string) => {
+    setPrefs(loadSlot(id));
+    setLayout(readLayoutPrefs());
+  }, []);
+  const onRenameSlot = useCallback((id: string, name: string) => {
+    setPrefs(renameSlot(id, name));
+  }, []);
+  const onDeleteSlot = useCallback((id: string) => {
+    setPrefs(deleteSlot(id));
+  }, []);
+
   return (
     <section
       data-antcv-react-island="writing-style-picker"
@@ -391,6 +580,15 @@ export function WritingStylePicker(): JSX.Element {
 
       <SectionHeader>Tone chips</SectionHeader>
       <ToneChipsEditor styleId={prefs.style} chips={prefs.chips} onChange={onChipsChange} />
+
+      <SectionHeader>Saved tones</SectionHeader>
+      <SavedTonesEditor
+        slots={prefs.savedSlots}
+        onSave={onSaveSlot}
+        onLoad={onLoadSlot}
+        onRename={onRenameSlot}
+        onDelete={onDeleteSlot}
+      />
 
       <SectionHeader>Target CV length</SectionHeader>
       <select

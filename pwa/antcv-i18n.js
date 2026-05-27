@@ -124,6 +124,12 @@
     // The user can override the label via panel preference; the i18n
     // value is the default fallback when no override is set.
     'candidate.application':              { en: 'Application',                                                                            da: 'Ansøgning',                                                                                  es: 'Solicitud',                                                                                    zh: '应聘职位' },
+    // ─── Page-break continuation suffix (PB-003) ───────────────────
+    // Appended to a repeated section heading when the section is
+    // split across pages. Brackets and trailing punctuation are part
+    // of the value so consumers concatenate verbatim:
+    //   '<TITLE>' + ' ' + t('pb.cont') → "EXPERIENCE (CONT.)"
+    'pb.cont':                            { en: '(CONT.)',                                                                                 da: '(FORTS.)',                                                                                  es: '(CONT.)',                                                                                      zh: '（续）' },
   };
 
   // ─── Language selection ─────────────────────────────────────────

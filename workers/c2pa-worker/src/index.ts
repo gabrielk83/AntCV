@@ -53,6 +53,28 @@ interface SignRequest {
   };
   /** Author asserted by the user; goes into the manifest's author assertion. */
   author?: { name?: string; identifier?: string };
+  /**
+   * v1.50.7 — visual disclosure colour. Tracks the active package's `base`
+   * token per locked-source plan §3 / §9.3. Optional: when present, embedded
+   * in the `com.antcv.ai_disclosure` assertion so downstream verifiers and
+   * the visual watermark renderer pick the same colour as the document
+   * itself.
+   *
+   * Shape: `#RRGGBB`. Anything else is silently dropped (logged via
+   * console.warn) so an older PWA that doesn't send it stays compatible.
+   */
+  visual?: {
+    package?: string;             // package id, e.g. "copenhagen-modern"
+    package_base_color?: string;  // hex, e.g. "#283556"
+  };
+}
+
+/** Normalise + validate a hex colour. Returns null on anything that isn't #RRGGBB. */
+function normaliseHexColor(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null;
+  const trimmed = raw.trim();
+  if (!/^#[0-9A-Fa-f]{6}$/.test(trimmed)) return null;
+  return trimmed.toUpperCase();
 }
 
 async function instantiate(env: Env) {
@@ -151,6 +173,18 @@ function buildManifest(env: Env, req: SignRequest): object {
           author_responsibility: 'Author retains responsibility for content.',
           providers_available: ['anthropic', 'openai', 'mistral', 'google'],
           provider_used: req.ai_event.model_provider,
+          // v1.50.7 — visual disclosure colour. Mirrors the active package's
+          // `base` token so the watermark renderer and the document share a
+          // palette. Null when the PWA didn't supply visual context.
+          visual: (() => {
+            const pkg = typeof req.visual?.package === 'string' && req.visual.package.trim() ? req.visual.package.trim() : null;
+            const color = normaliseHexColor(req.visual?.package_base_color);
+            if (!pkg && !color) return null;
+            if (req.visual?.package_base_color && !color) {
+              try { console.warn('[c2pa] dropped invalid package_base_color:', req.visual.package_base_color); } catch { /* */ }
+            }
+            return { package: pkg, package_base_color: color };
+          })(),
         },
       },
     ],

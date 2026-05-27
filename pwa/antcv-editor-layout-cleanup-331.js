@@ -8,7 +8,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.40.331';
+  const VERSION='1.40.341-p0c';
   if(window.__antcvEditorLayoutCleanup331===VERSION) return;
   window.__antcvEditorLayoutCleanup331=VERSION;
 
@@ -31,10 +31,114 @@
   function enrichText(v){const t=clean(v);if(!t)return t;if(/[.;:]$/.test(t))return t;return t+'.';}
   function nextAlign(a){const i=ALIGN.indexOf(a);return ALIGN[(i<0?2:i+1)%ALIGN.length];}
 
-  function button(kind,text,title){const b=document.createElement('button');b.type='button';b.textContent=text;b.title=title;b.setAttribute('aria-label',title);b.setAttribute('data-antcv331-tool',kind);Object.assign(b.style,{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'28px',minWidth:'28px',height:'24px',minHeight:'24px',padding:'0 3px',margin:'0 2px',borderRadius:'6px',border:'1px solid #01B7BB',background:'rgba(1,183,187,.08)',color:'#00746E',fontSize:'12px',fontWeight:'700',lineHeight:'1',cursor:'pointer',boxSizing:'border-box',verticalAlign:'middle'});if(kind==='enhance'){b.style.borderColor='#f0b429';b.style.color='#c77800';}if(kind==='compress'){b.style.borderColor='#7b2ff2';b.style.color='#7b2ff2';}if(kind==='remove'){b.style.borderColor='#ff5c5c';b.style.color='#e52b2b';b.style.background='transparent';}return b;}
-  function pageBtn(page,title){const p=Math.min(4,Math.max(1,Number(page)||1));const c=COLORS[p]||COLORS[0];const b=button('page','📄 '+p,title||'Page');b.setAttribute('data-antcv331-page','1');b.style.border='2px solid '+c;b.style.color=c;b.style.background=p>1?'rgba(255,255,255,.96)':'rgba(255,255,255,.78)';b.style.width='32px';b.style.minWidth='32px';b.style.fontSize='11px';return b;}
-  function cjlrBtn(a){const b=button('cjlr',ICON[a]||ICON.left,'CJLR alignment');return b;}
-  function toolbar(key,field,opts){opts=opts||{};const wrap=document.createElement('span');wrap.setAttribute('data-antcv331-toolbar',key);Object.assign(wrap.style,{display:'inline-flex',alignItems:'center',gap:'2px',marginLeft:'4px',whiteSpace:'nowrap',flex:'0 0 auto',verticalAlign:'middle'});let page=opts.getPage?opts.getPage():1;const pg=pageBtn(page,'Page '+page);pg.onclick=e=>{e.preventDefault();e.stopPropagation();const n=opts.setPage?opts.setPage():1;const fresh=pageBtn(n,'Page '+n);pg.replaceWith(fresh);fresh.onclick=pg.onclick;};const a=opts.getAlign?opts.getAlign():'left';const cj=cjlrBtn(a);cj.onclick=e=>{e.preventDefault();e.stopPropagation();const n=opts.setAlign?opts.setAlign():nextAlign(a);cj.textContent=ICON[n]||ICON.left;if(field)field.style.textAlign=n;};const enh=button('enhance','✨','Enhance');enh.onclick=e=>{e.preventDefault();e.stopPropagation();setVal(field,enrichText(val(field)));pulse('enhance');};const comp=button('compress','⇥','Compress');comp.onclick=e=>{e.preventDefault();e.stopPropagation();setVal(field,compressText(val(field)));pulse('compress');};wrap.append(pg,cj,enh,comp);if(opts.remove){const x=button('remove','×','Remove');x.onclick=e=>{e.preventDefault();e.stopPropagation();opts.remove();};wrap.appendChild(x);}return wrap;}
+  // P0-C (v1.40.341-p0c): the bespoke toolbar() is replaced by a thin
+  // wrapper around window.SectionControlBar (the shared P0-A bar).
+  // GEN-003 standard order [Move] PB CJLR Enhance Fit [Delete] is
+  // enforced by the bar itself; "Fit" wording replaces "Compress"
+  // (GEN-004). The remove() callback (when supplied) wires to
+  // capabilities.delete, so the bar's delete button removes a bullet
+  // row when used on HIWC bullets.
+  //
+  // toolbar(key, field, opts) → mount span. Mounted lazily via
+  // SectionControlBar so partial-cap visibility (Foundation has no
+  // delete, intro/closing has no delete, bullets do) is data-driven.
+  function toolbar(key, field, opts) {
+    opts = opts || {};
+    const wrap = document.createElement('span');
+    wrap.setAttribute('data-antcv331-toolbar', key);
+    Object.assign(wrap.style, {
+      display: 'inline-flex', alignItems: 'center', gap: '2px',
+      marginLeft: '4px', whiteSpace: 'nowrap', flex: '0 0 auto',
+      verticalAlign: 'middle',
+    });
+
+    // Fallback: SectionControlBar not yet installed (very early boot,
+    // or a build where P0-A's sidecar didn't load). Render an inert
+    // placeholder rather than crashing — the next schedule() tick
+    // re-runs run() and the bar mounts properly.
+    if (!window.SectionControlBar || typeof window.SectionControlBar.mount !== 'function') {
+      try { console.debug('[editor-cleanup-331] SectionControlBar not ready; skipping toolbar for', key); } catch (_) {}
+      return wrap;
+    }
+
+    const capabilities = {
+      pageBreak: true,
+      align: true,
+      enhance: true,
+      fit: true,
+      delete: typeof opts.remove === 'function',
+    };
+
+    const itemType = /^bullet_/.test(key) ? 'hiwc-bullet'
+                   : /^hiwc-/.test(key) ? 'hiwc-line'
+                   : /^foundation-/.test(key) ? 'foundation-textbox'
+                   : 'editor-line';
+    const itemLabel = (function () {
+      // Friendly name for the deterministic tooltip template.
+      if (key === 'intro') return 'How I Would Contribute — intro';
+      if (key === 'closing') return 'How I Would Contribute — closing';
+      if (/^bullet_(\d+)$/.test(key)) return 'How I Would Contribute — bullet ' + (Number(key.split('_')[1]) + 1);
+      if (key === 'foundation-hands_on') return 'Foundation — hands-on';
+      if (key === 'foundation-professionally') return 'Foundation — professionally';
+      return key;
+    })();
+
+    const readState = () => ({
+      page: opts.getPage ? opts.getPage() : 1,
+      alignment: opts.getAlign ? opts.getAlign() : 'left',
+      pageBreakActive: (opts.getPage ? opts.getPage() : 1) >= 2,
+    });
+
+    let unmount = window.SectionControlBar.mount(wrap, {
+      itemId: 'cl-editor.' + key,
+      itemType: itemType,
+      itemLabel: itemLabel,
+      capabilities: capabilities,
+      state: readState(),
+      onAction: function (evt) {
+        if (!evt || typeof evt !== 'object') return;
+        switch (evt.action) {
+          case 'page-break': {
+            if (opts.setPage) opts.setPage();
+            break;
+          }
+          case 'align-cycle': {
+            let next;
+            if (opts.setAlign) {
+              next = opts.setAlign();
+            } else if (evt.payload && evt.payload.next) {
+              next = evt.payload.next;
+            }
+            if (field && next) field.style.textAlign = next;
+            break;
+          }
+          case 'enhance': {
+            if (field) {
+              setVal(field, enrichText(val(field)));
+              pulse('enhance');
+            }
+            break;
+          }
+          case 'fit': {
+            if (field) {
+              setVal(field, compressText(val(field)));
+              pulse('fit');
+            }
+            break;
+          }
+          case 'delete': {
+            if (typeof opts.remove === 'function') opts.remove();
+            break;
+          }
+        }
+        if (typeof unmount.update === 'function') {
+          try { unmount.update({ state: readState() }); } catch (_) {}
+        }
+      },
+    });
+
+    return wrap;
+  }
 
   function allFields(root){return Array.from((root||document).querySelectorAll('input[type="text"],textarea,[contenteditable="true"]')).filter(visible);}
   function hostAfterField(field,key){if(!field||!field.parentNode)return null;let host=field.parentNode.querySelector(':scope > [data-antcv331-host="'+key+'"]');if(!host){host=document.createElement('span');host.setAttribute('data-antcv331-host',key);field.parentNode.insertBefore(host,field.nextSibling);}host.innerHTML='';host.style.display='inline-flex';host.style.alignItems='center';host.style.gap='2px';host.style.marginLeft='4px';return host;}
@@ -53,7 +157,7 @@
   function rowHostForField(f,key){const p=f.parentElement;if(!p)return null;p.style.display='flex';p.style.alignItems='center';p.style.gap='4px';p.style.flexWrap='nowrap';let h=p.querySelector(':scope > [data-antcv331-host="'+key+'"]');if(!h){h=document.createElement('span');h.setAttribute('data-antcv331-host',key);p.appendChild(h);}h.innerHTML='';return h;}
   function syncBullets(box,source){const vals=Array.from(box.querySelectorAll('[data-antcv331-bullet-text]')).map(i=>clean(i.value)).filter(Boolean);setVal(source,vals.join('\n'));}
   function addBullet(box,source,text){const idx=box.querySelectorAll('[data-antcv331-bullet-row]').length;const row=document.createElement('div');row.setAttribute('data-antcv331-bullet-row','1');Object.assign(row.style,{display:'flex',alignItems:'center',gap:'4px',margin:'3px 0',width:'100%'});const mark=document.createElement('input');mark.value='•';mark.title='Bullet or emoji';Object.assign(mark.style,{width:'30px',minWidth:'30px',height:'24px',textAlign:'center',boxSizing:'border-box'});const inp=document.createElement('input');inp.type='text';inp.value=text||'';inp.placeholder='Bullet text';inp.setAttribute('data-antcv331-bullet-text','1');Object.assign(inp.style,{flex:'1 1 auto',minWidth:'0',height:'24px',boxSizing:'border-box'});inp.style.textAlign=hgetAlign('bullet_'+idx);inp.oninput=()=>syncBullets(box,source);row.append(mark,inp,toolbar('bullet_'+idx,inp,{getPage:()=>hgetPage('bullet_'+idx),setPage:()=>hsetPage('bullet_'+idx),getAlign:()=>hgetAlign('bullet_'+idx),setAlign:()=>hsetAlign('bullet_'+idx),remove:()=>{row.remove();syncBullets(box,source);}}));box.insertBefore(row,box.querySelector('[data-antcv331-add-bullet]'));}
-  function fixHIWC(){const r=hiwcRoot();if(!r)return;cleanupHIWC(r);const {intro,bullet,closing}=hiwcFields(r);if(intro){intro.style.textAlign=hgetAlign('intro');const h=rowHostForField(intro,'hiwc-intro');if(h)h.appendChild(toolbar('intro',intro,{getPage:()=>hgetPage('intro'),setPage:()=>hsetPage('intro'),getAlign:()=>hgetAlign('intro'),setAlign:()=>hsetAlign('intro')}));}if(bullet){bullet.style.display='none';const box=document.createElement('div');box.setAttribute('data-antcv331-hiwc-bullet-list','1');Object.assign(box.style,{display:'flex',flexDirection:'column',gap:'2px',margin:'4px 0',width:'100%'});const add=document.createElement('button');add.type='button';add.textContent='+ Bullet';add.setAttribute('data-antcv331-add-bullet','1');Object.assign(add.style,{alignSelf:'flex-start',border:'1px solid #008b8b',background:'white',color:'#006b6b',borderRadius:'4px',padding:'2px 8px',cursor:'pointer'});add.onclick=e=>{e.preventDefault();e.stopPropagation();addBullet(box,bullet,'');};box.appendChild(add);bullet.parentNode.insertBefore(box,bullet.nextSibling);const vals=String(bullet.value||'').split(/[\n]+/).map(x=>x.replace(/^[\t ]*[•\-*][\t ]*/,'').trim()).filter(Boolean);(vals.length?vals:['']).forEach(v=>addBullet(box,bullet,v));}if(closing&&closing!==intro&&closing!==bullet){closing.style.textAlign=hgetAlign('closing');const h=rowHostForField(closing,'hiwc-closing');if(h)h.appendChild(toolbar('closing',closing,{getPage:()=>hgetPage('closing'),setPage:()=>hsetPage('closing'),getAlign:()=>hgetAlign('closing'),setAlign:()=>hsetAlign('closing')}));}}
+  function fixHIWC(){const r=hiwcRoot();if(!r)return;cleanupHIWC(r);const {intro,bullet,closing}=hiwcFields(r);if(intro){intro.style.textAlign=hgetAlign('intro');const h=rowHostForField(intro,'hiwc-intro');if(h)h.appendChild(toolbar('intro',intro,{getPage:()=>hgetPage('intro'),setPage:()=>hsetPage('intro'),getAlign:()=>hgetAlign('intro'),setAlign:()=>hsetAlign('intro')}));}if(bullet){bullet.style.display='none';const box=document.createElement('div');box.setAttribute('data-antcv331-hiwc-bullet-list','1');Object.assign(box.style,{display:'flex',flexDirection:'column',gap:'2px',margin:'4px 0',width:'100%'});const add=document.createElement('button');add.type='button';add.textContent='+ Add';add.title='Add bullet';add.setAttribute('aria-label','Add bullet');add.setAttribute('data-antcv331-add-bullet','1');add.setAttribute('data-antcv-hiwc-add','1');Object.assign(add.style,{alignSelf:'flex-start',border:'1px solid #008b8b',background:'white',color:'#006b6b',borderRadius:'4px',padding:'2px 8px',cursor:'pointer'});add.onclick=e=>{e.preventDefault();e.stopPropagation();addBullet(box,bullet,'');};box.appendChild(add);bullet.parentNode.insertBefore(box,bullet.nextSibling);const vals=String(bullet.value||'').split(/[\n]+/).map(x=>x.replace(/^[\t ]*[•\-*][\t ]*/,'').trim()).filter(Boolean);(vals.length?vals:['']).forEach(v=>addBullet(box,bullet,v));}if(closing&&closing!==intro&&closing!==bullet){closing.style.textAlign=hgetAlign('closing');const h=rowHostForField(closing,'hiwc-closing');if(h)h.appendChild(toolbar('closing',closing,{getPage:()=>hgetPage('closing'),setPage:()=>hsetPage('closing'),getAlign:()=>hgetAlign('closing'),setAlign:()=>hsetAlign('closing')}));}}
 
   function injectCss(){if(document.getElementById('antcv-editor-cleanup-331-css'))return;const s=document.createElement('style');s.id='antcv-editor-cleanup-331-css';s.textContent='@media (min-width:761px){.antcv-preview-core-actions,[data-antcv-mobile-preview-actions-strip-276],.antcv-preview-action-strip{display:none!important;visibility:hidden!important;pointer-events:none!important}}\n[data-antcv331-toolbar] button{font-family:Georgia,serif!important}';document.head.appendChild(s);}
   function run(){try{injectCss();fixFoundation();fixHIWC();}catch(e){try{console.warn('[editor-cleanup-331]',e&&e.message);}catch(_){}}}

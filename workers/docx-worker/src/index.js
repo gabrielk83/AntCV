@@ -26,9 +26,9 @@
 
 import { generateDocx } from './generate.js';
 import { validatePayload } from './schema.js';
-import { convertDocxToPdf, pdfProvider } from './cloudconvert.js';
+import { convertDocxToPdf, convertPdfToDocx, pdfProvider } from './cloudconvert.js';
 
-const VERSION = '1.13.0-pdf';
+const VERSION = '1.13.0-pdf+p0f';
 
 // ──────────────────────────────────────────────────────────────────
 // Entry
@@ -90,6 +90,15 @@ export default {
 
       if (url.pathname === '/generate-pdf' && request.method === 'POST') {
         return await handleGeneratePdf(request, origin, env);
+      }
+
+      // P0-F (plan §4.3 CL-006): normalise PDF JDs into DOCX so the
+      // canonical DOCX table parser can extract structured tables.
+      // The PWA POSTs raw PDF bytes; we return DOCX bytes (or an
+      // error JSON that the PWA reads to trigger its
+      // "PDF tables may not have been fully captured" fallback).
+      if (url.pathname === '/api/jd/pdf-to-docx' && request.method === 'POST') {
+        return await handlePdfToDocx(request, origin, env);
       }
 
       return json({ error: 'not found', path: url.pathname }, 404, origin, env);
@@ -453,6 +462,88 @@ function isAnalyticsExportPath(pathname) {
     '/analytics.csv',
     '/analytics.json',
   ].includes(pathname);
+}
+
+// ──────────────────────────────────────────────────────────────────
+// P0-F: /api/jd/pdf-to-docx handler
+// ──────────────────────────────────────────────────────────────────
+// PWA-side: pwa/antcv-data-importer.js detects a PDF JD upload, POSTs
+// the raw bytes here, then feeds the returned DOCX into the canonical
+// DOCX table parser. If we return a non-2xx, the PWA falls back to
+// the existing PDF text-extraction path with an audit-panel warning.
+//
+// Request:  application/pdf bytes in the body. Optional
+//           X-AntCV-Filename header for nicer CloudConvert logs.
+// Response: application/vnd.openxmlformats-officedocument.wordprocessingml.document
+//           bytes on success. JSON error on failure.
+async function handlePdfToDocx(request, origin, env) {
+  if (env.WORKER_SECRET) {
+    const presented = request.headers.get('X-AntCV-Secret') || '';
+    if (presented !== env.WORKER_SECRET) {
+      return json({ error: 'unauthorized' }, 401, origin, env);
+    }
+  }
+
+  if (!env.CLOUDCONVERT_API_KEY || !String(env.CLOUDCONVERT_API_KEY).trim()) {
+    return json(
+      { error: 'cloudconvert_not_configured',
+        message: 'CLOUDCONVERT_API_KEY is not set on this worker; PDF→DOCX normalisation unavailable.' },
+      503, origin, env,
+    );
+  }
+
+  // 30 MB cap — PDF JDs above that are pathological and a worker
+  // memory risk. CloudConvert itself accepts up to 1 GB but the
+  // worker's CPU budget gates much earlier.
+  const PDF_BYTES_CAP = 30 * 1024 * 1024;
+  let pdfBytes;
+  try {
+    const buf = await request.arrayBuffer();
+    pdfBytes = new Uint8Array(buf);
+    if (pdfBytes.length === 0) {
+      return json({ error: 'empty_body', message: 'PDF body is empty.' }, 400, origin, env);
+    }
+    if (pdfBytes.length > PDF_BYTES_CAP) {
+      return json({ error: 'too_large',
+                    message: 'PDF exceeds ' + PDF_BYTES_CAP + ' B cap.',
+                    received: pdfBytes.length }, 413, origin, env);
+    }
+  } catch (e) {
+    return json({ error: 'invalid_body', message: String(e && e.message || e) }, 400, origin, env);
+  }
+
+  // Sanity-check the first bytes — `%PDF-` is the canonical PDF
+  // magic header. Reject anything that clearly isn't a PDF before
+  // burning CloudConvert minutes on it.
+  const head = String.fromCharCode(...pdfBytes.subarray(0, 5));
+  if (head !== '%PDF-') {
+    return json({ error: 'not_a_pdf',
+                  message: 'Request body does not start with %PDF-; refusing CloudConvert call.',
+                  head: head }, 415, origin, env);
+  }
+
+  const filename = (request.headers.get('X-AntCV-Filename') || 'jd').replace(/[^A-Za-z0-9_.-]/g, '_').slice(0, 64);
+
+  try {
+    const { buffer, jobId, durationMs } = await convertPdfToDocx(pdfBytes, env.CLOUDCONVERT_API_KEY, { filename });
+    const respHeaders = corsHeaders(origin, env);
+    respHeaders['Content-Type'] = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    respHeaders['Content-Disposition'] = 'attachment; filename="' + filename + '.docx"';
+    respHeaders['X-AntCV-CloudConvert-Job'] = String(jobId);
+    respHeaders['X-AntCV-CloudConvert-Duration-Ms'] = String(durationMs);
+    return new Response(buffer, { status: 200, headers: respHeaders });
+  } catch (e) {
+    console.error('[docx-worker] pdf-to-docx failed', e);
+    return json(
+      { error: 'cloudconvert_failed',
+        message: String(e && e.message || e),
+        // The PWA reads this code to decide whether to fall back to
+        // raw-PDF text extraction (with an audit warning).
+        fallback: 'pdf_text_extraction',
+      },
+      502, origin, env,
+    );
+  }
 }
 
 async function handleAnalyticsExport(request, origin, env) {

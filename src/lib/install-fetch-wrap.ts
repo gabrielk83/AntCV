@@ -22,6 +22,8 @@
 
 import { readLayoutPrefs, readWritingPrefs } from './writing-prefs';
 import { normaliseLangCode } from './writing-systems';
+import { readExportPrefs } from './export-prefs';
+import { entryFromResponse, hasWritingEngineHeaders, recordEntry } from './observability';
 
 interface AntcvWritingStylePayload {
   writingStyle: string;
@@ -75,6 +77,7 @@ function readActiveLanguage(): string {
 function buildWritingStylePayload(): AntcvWritingStylePayload {
   const wp = readWritingPrefs();
   const lp = readLayoutPrefs();
+  const ep = readExportPrefs();
   return {
     writingStyle: wp.style,
     toneChips: wp.chips,
@@ -85,7 +88,7 @@ function buildWritingStylePayload(): AntcvWritingStylePayload {
     sectionFormat: 'default', // Per-section override is wired in Pass 4 (editor line sliders).
     target_language: readActiveLanguage(),
     package: readActivePackageId(),
-    ats: false,
+    ats: ep.ats,
   };
 }
 
@@ -140,13 +143,30 @@ export function installWritingStyleFetchWrap(): boolean {
 
   const inner = existing.bind(window);
 
+  // Observability tap — record any response that carries our X-AntCV-*
+  // headers. Used by both the modified-body path (POSTs) and the
+  // passthrough path so we never miss a proxy response.
+  const tapResponse = async (input: RequestInfo | URL, p: Promise<Response>): Promise<Response> => {
+    let res: Response;
+    try { res = await p; } catch (e) { throw e; }
+    try {
+      if (hasWritingEngineHeaders(res.headers)) {
+        recordEntry(entryFromResponse(input, res));
+      }
+    } catch (e) {
+      // Observability must never break the response.
+      try { console.warn('[antcv-observability] recordEntry failed', e); } catch { /* */ }
+    }
+    return res;
+  };
+
   const wrapped: typeof fetch & MarkedFetch = async function (
     input: RequestInfo | URL,
     init?: RequestInit,
   ): Promise<Response> {
     try {
       const method = (init?.method ?? (input instanceof Request ? input.method : 'GET')).toUpperCase();
-      if (method !== 'POST') return inner(input as RequestInfo, init);
+      if (method !== 'POST') return tapResponse(input, inner(input as RequestInfo, init));
 
       // Pull the body text we can read non-destructively.
       let bodySource: BodyInit | null | undefined;
@@ -159,17 +179,17 @@ export function installWritingStyleFetchWrap(): boolean {
       }
 
       const text = await readBodyAsText(bodySource ?? null);
-      if (!text) return inner(input as RequestInfo, init);
+      if (!text) return tapResponse(input, inner(input as RequestInfo, init));
 
       let parsed: unknown;
       try { parsed = JSON.parse(text); }
-      catch { return inner(input as RequestInfo, init); }
+      catch { return tapResponse(input, inner(input as RequestInfo, init)); }
 
-      if (!isLlmShapedBody(parsed)) return inner(input as RequestInfo, init);
+      if (!isLlmShapedBody(parsed)) return tapResponse(input, inner(input as RequestInfo, init));
       const obj = parsed as Record<string, unknown>;
       if (obj._antcv_writing_style) {
-        // Already injected — pass through unchanged.
-        return inner(input as RequestInfo, init);
+        // Already injected — pass through unchanged but still tap.
+        return tapResponse(input, inner(input as RequestInfo, init));
       }
 
       obj._antcv_writing_style = buildWritingStylePayload();
@@ -177,10 +197,10 @@ export function installWritingStyleFetchWrap(): boolean {
 
       if (input instanceof Request) {
         const newReq = new Request(input, { body: newBody });
-        return inner(newReq, init);
+        return tapResponse(input, inner(newReq, init));
       }
       const newInit: RequestInit = { ...(init ?? {}), body: newBody };
-      return inner(input as RequestInfo, newInit);
+      return tapResponse(input, inner(input as RequestInfo, newInit));
     } catch (e) {
       // Wrap must never break the underlying fetch — log and pass through.
       console.warn('[writing-style-fetch-wrap] failed', e);

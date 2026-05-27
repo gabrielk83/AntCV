@@ -26,6 +26,13 @@ const VERSION='3.4.0-model-chain-fallback';
 // See ./supervisor.js.
 
 import { augmentBodyText } from './prompt-augment.js';
+import {
+  parseWritingStyleRequest,
+  buildStyleSystemPreamble,
+  logWritingEngineEvent,
+  // evaluateSce + runWithSceRetry land in v1.50.2 once the LLM-response path
+  // is restructured to support retry. See writing-style-engine.test.notes.md.
+} from './writing-style-engine.js';
 import { handleJDAnalysis } from './jd-analysis.js';
 import { handleKernelExtraction } from './kernel-extraction.js';
 import { handleFetchJdUrl } from './fetch-jd-url.js';
@@ -662,6 +669,90 @@ async function handleRequest(request, env = {}) {
     console.warn('[prompt-augment] failed:', e && e.message ? e.message : e);
   }
 
+  // v1.50.1 — writing-style engine integration (locked-source plan §4 + §9.2).
+  // The PWA fetch-wrap in pwa/antcv-react-islands.js merges the user's
+  // personalInfo.writingPrefs + layoutPrefs into the outgoing body under
+  // `_antcv_writing_style`. We read those, build the §4.7 style preamble,
+  // prepend it to whatever system content augmentBodyText already produced,
+  // and strip the `_antcv_writing_style` field so upstream providers don't
+  // see it. Evaluation of the response (SCE) and the retry loop happen
+  // after the LLM call further down (search for "SCE evaluation").
+  //
+  // Tracking the parsed style request here so the post-response code can
+  // see it without re-parsing the body.
+  let writingStyleRequest = null;
+  let writingStylePreamble = '';
+  try {
+    const parsed = JSON.parse(bodyText);
+    if (parsed && typeof parsed === 'object' && parsed._antcv_writing_style) {
+      writingStyleRequest = parseWritingStyleRequest(parsed._antcv_writing_style);
+      writingStylePreamble = buildStyleSystemPreamble(writingStyleRequest);
+      // Strip the extension field — providers don't accept unknown fields
+      // on /v1/messages / /v1/chat/completions and Anthropic in particular
+      // returns 400 on schema violations.
+      delete parsed._antcv_writing_style;
+
+      // Prepend the preamble to the existing system content.
+      //   - Anthropic shape: top-level `system` string
+      //   - OpenAI / Mistral shape: messages[0].role === 'system'
+      //   - Gemini shape: systemInstruction.parts[0].text
+      if (typeof parsed.system === 'string') {
+        parsed.system = writingStylePreamble + '\n\n' + parsed.system;
+      } else if (Array.isArray(parsed.messages)) {
+        const first = parsed.messages[0];
+        if (first && first.role === 'system' && typeof first.content === 'string') {
+          first.content = writingStylePreamble + '\n\n' + first.content;
+        } else {
+          // For Anthropic the top-level `system` field is the right home;
+          // for OpenAI / Mistral the system message lives at messages[0].
+          // We can safely set BOTH — Anthropic ignores OpenAI-shaped fields
+          // and vice versa per provider-shape detection downstream.
+          parsed.system = writingStylePreamble;
+          parsed.messages.unshift({ role: 'system', content: writingStylePreamble });
+        }
+      } else if (parsed.systemInstruction && Array.isArray(parsed.systemInstruction.parts) && parsed.systemInstruction.parts[0]) {
+        parsed.systemInstruction.parts[0].text = writingStylePreamble + '\n\n' + (parsed.systemInstruction.parts[0].text ?? '');
+      }
+
+      bodyText = JSON.stringify(parsed);
+    }
+  } catch (e) {
+    // Same fail-soft posture as augmentBodyText — never block the request
+    // because of a writing-style integration failure. Log so we can
+    // investigate.
+    console.warn('[writing-style-engine] preamble injection failed:', e && e.message ? e.message : e);
+    writingStyleRequest = null;
+    writingStylePreamble = '';
+  }
+
+  // v1.50.1 — fire-and-forget writing-style selection telemetry. Plan §9.2:
+  // "Log writing-style selection and per-category violation counts to
+  // analytics KV." This event fires on selection (one per request); the
+  // per-category violation count needs the SCE retry loop wired into the
+  // response path, which is a follow-up (see workers/proxy/src/
+  // writing-style-engine.test.notes.md). Logged via ctx.waitUntil so the
+  // request hot-path is never blocked.
+  if (writingStyleRequest) {
+    try {
+      // Don't await — fire and forget. Cloudflare keeps the worker alive
+      // long enough for the KV put to land via the ctx.waitUntil pattern,
+      // but we don't have ctx here (the index.js wrapper hides it). Use a
+      // best-effort void promise — KV puts complete within ms.
+      void logWritingEngineEvent(env, {
+        userId: demo && demo.email ? demo.email : null,
+        writingStyle: writingStyleRequest.writingStyle,
+        toneChips: writingStyleRequest.toneChips,
+        target_language: writingStyleRequest.target_language,
+        targetPages: writingStyleRequest.targetPages,
+        package: writingStyleRequest.package,
+        ats: writingStyleRequest.ats,
+        augTask: augTask,
+      });
+    } catch (e) {
+      console.warn('[writing-style-engine] selection event log failed:', e && e.message);
+    }
+  }
+
   // v2.2 prompt-injection defense.
   //
   // After the existing augmentation has set up the system prompt
@@ -833,6 +924,13 @@ async function handleRequest(request, env = {}) {
     if (demo && demo.headers) Object.assign(out, demo.headers);
     if (injectionStats.redacted > 0) {
       out['X-AntCV-Sanitized-Patterns'] = String(injectionStats.redacted);
+    }
+    if (writingStyleRequest) {
+      out['X-AntCV-Writing-Style'] = writingStyleRequest.writingStyle;
+      out['X-AntCV-Target-Language'] = writingStyleRequest.target_language;
+      if (writingStyleRequest.toneChips.length) {
+        out['X-AntCV-Tone-Chips'] = writingStyleRequest.toneChips.slice(0, 8).join(',');
+      }
     }
     return out;
   };

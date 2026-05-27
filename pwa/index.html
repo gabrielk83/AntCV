@@ -13,6 +13,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="antcv-packages-registry.css?v=1.50.1">
   <title>AntCV</title>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -265,7 +266,7 @@
           app.src = 'app.js?v=1.40.340-watermark';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.40.340-watermark';
+            vo.src = 'antcv-version-override.js?v=1.50.1';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -503,7 +504,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-personality.js?v=1.40.296" defer></script>
 <script src="antcv-cloud-delete-296.js?v=1.40.302" defer></script>
 <script src="antcv-cloud-restore-filter-298.js?v=1.40.339-d" defer></script>
-<script src="antcv-i18n.js?v=1.40.178" defer></script>
+<script src="antcv-i18n.js?v=1.40.341-p0b" defer></script>
 <script src="antcv-format-prefs.js?v=1.40.178" defer></script>
 <script src="antcv-page-budget.js?v=1.40.178" defer></script>
 <script src="antcv-language-prefs.js?v=1.40.323" defer></script>
@@ -526,7 +527,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-page-fit.js?v=1.40.151" defer></script>
 <script src="antcv-table-fast-drag.js?v=1.40.147" defer></script>
 <script src="antcv-pdf-error-toast.js?v=1.40.194" defer></script>
-<script src="antcv-item-pages-render.js?v=1.40.194" defer></script>
+<script src="antcv-item-pages-render.js?v=1.40.341-p0b" defer></script>
 <script src="antcv-exp-continuation-fix.js?v=1.40.195" defer></script>
 <script src="antcv-translation-patch.js?v=1.40.195" defer></script>
 <script src="antcv-print-iframe-preview.js?v=1.40.195" defer></script>
@@ -572,9 +573,9 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-ai-consent-restore-339.js?v=1.40.339-n" defer></script>
 <script src="antcv-photo-cloud-restore-339.js?v=1.40.339-i" defer></script>
 <script src="antcv-load-from-cloud-personal-info-hook-283.js?v=1.40.283" defer></script>
-<script src="antcv-page-breaks-everywhere-284.js?v=1.40.284" defer></script>
+<script src="antcv-page-breaks-everywhere-284.js?v=1.40.341-p0b" defer></script>
 <script src="antcv-what-i-bring-row-controls-327.js?v=1.40.327" defer></script>
-<script src="antcv-table-page-splits-327.js?v=1.40.339" defer></script>
+<script src="antcv-table-page-splits-327.js?v=1.40.341-p0b" defer></script>
 <script src="antcv-page-button-polish-327.js?v=1.40.327" defer></script>
 <script src="antcv-settings-front-327.js?v=1.40.327" defer></script>
 <script src="antcv-cloud-put-shrink-guard-289.js?v=1.40.289" defer></script>
@@ -582,7 +583,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-app-history-zfix-291.js?v=1.40.291" defer></script>
 <script src="antcv-language-ui-fixes-292.js?v=1.40.292" defer></script>
 <script src="antcv-table-row-page-controls-328.js?v=1.40.328" defer></script>
-<script src="antcv-sidebar-subsection-pagebreaks-329.js?v=1.40.329" defer></script>
+<script src="antcv-sidebar-subsection-pagebreaks-329.js?v=1.40.341-p0b" defer></script>
 <script src="antcv-editor-layout-cleanup-331.js?v=1.40.331" defer></script>
 <script src="antcv-wizard-mode-bridge-337.js?v=1.40.339" defer></script>
 <!-- v1.40.340-a: Phase 2 of the wizard-mode bridge. Reads /api/user/mode at
@@ -593,6 +594,13 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      exact useEffect hook. Until that hook is wired into app.js, the LS key
      still records the cloud value for the next bundle version to consume. -->
 <script src="antcv-user-mode-restore-340.js?v=1.40.340-a" defer></script>
-<script src="antcv-stability-core-334.js?v=1.40.339-b" defer></script>
+<script src="antcv-stability-core-334.js?v=1.50.0-pass1" defer></script>
+<!-- v1.50.0 Pass 1: React-islands bundle. Vite-built from /src, single IIFE.
+     React/ReactDOM are externalised — they come from the UMD <script> tags at
+     the top of this file. Islands replace the imperative DOM patches that
+     used to live in antcv-stability-core-334.js (LanguageCard, PreviewToolbar,
+     SettingsRouter, wizardState). See docs/plan/AntCV_Plan_v2_LockedSources.md
+     §7 Pass 1. -->
+<script src="antcv-react-islands.js?v=1.50.1" defer></script>
 </body>
 </html>

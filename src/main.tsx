@@ -11,11 +11,14 @@ import { mountLanguageCardIsland } from './islands/LanguageCard/mount';
 import { mountPreviewToolbarIsland } from './islands/PreviewToolbar/mount';
 import { mountSettingsRouterIsland } from './islands/SettingsRouter/mount';
 import { mountPackagePickerIsland } from './islands/PackagePicker/mount';
+import { mountWritingStylePickerIsland } from './islands/WritingStylePicker/mount';
 import { exposeDebugApi, installWizardStateGuard } from './lib/wizard-state';
 import { installPackageBodyBinding, exposePackageDebugApi } from './lib/body-package';
 import { installCustomModeApi } from './lib/custom-mode';
+import { exposeMigrationDebugApi, runGabrielMigration } from './lib/gabriel-migration';
+import { installWritingStyleFetchWrap } from './lib/install-fetch-wrap';
 
-const VERSION = '1.50.0-pass1';
+const VERSION = '1.50.1';
 
 declare global {
   interface Window {
@@ -39,6 +42,20 @@ try { installPackageBodyBinding(); } catch (e) { console.warn('[react-islands] p
 try { exposePackageDebugApi(); } catch (e) { console.warn('[react-islands] package debug api failed', e); }
 try { installCustomModeApi(); } catch (e) { console.warn('[react-islands] custom-mode api failed', e); }
 
+// Plan §4.5.2 + §4.5.3 — idempotent v1.50 migration. Sets the default writing
+// style and partitions Gabriel's banned items into en / da buckets. Re-running
+// is a no-op.
+try { runGabrielMigration(); } catch (e) { console.warn('[react-islands] gabriel migration failed', e); }
+try { exposeMigrationDebugApi(); } catch (e) { console.warn('[react-islands] migration debug api failed', e); }
+
+// v1.50.1 — outermost fetch wrap that injects writing-style fields from
+// personalInfo.writingPrefs + .layoutPrefs into outgoing LLM-shaped POSTs.
+// The proxy worker (workers/proxy/src/index.js) reads `_antcv_writing_style`
+// and strips it before forwarding to the upstream provider. Installed
+// AFTER all defer-loaded sidecars wrap window.fetch so we sit outermost
+// per the CLAUDE.md fetch-chain note.
+try { installWritingStyleFetchWrap(); } catch (e) { console.warn('[react-islands] writing-style fetch wrap failed', e); }
+
 const api: AntcvReactIslandsAPI = {
   version: VERSION,
   mountAll() {
@@ -46,6 +63,7 @@ const api: AntcvReactIslandsAPI = {
     try { mountPreviewToolbarIsland(); } catch (e) { console.warn('[react-islands] PreviewToolbar mount failed', e); }
     try { mountSettingsRouterIsland(); } catch (e) { console.warn('[react-islands] SettingsRouter mount failed', e); }
     try { mountPackagePickerIsland(); } catch (e) { console.warn('[react-islands] PackagePicker mount failed', e); }
+    try { mountWritingStylePickerIsland(); } catch (e) { console.warn('[react-islands] WritingStylePicker mount failed', e); }
   },
 };
 

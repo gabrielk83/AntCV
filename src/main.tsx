@@ -12,13 +12,15 @@ import { mountPreviewToolbarIsland } from './islands/PreviewToolbar/mount';
 import { mountSettingsRouterIsland } from './islands/SettingsRouter/mount';
 import { mountPackagePickerIsland } from './islands/PackagePicker/mount';
 import { mountWritingStylePickerIsland } from './islands/WritingStylePicker/mount';
+import { mountExportOptionsIsland } from './islands/ExportOptions/mount';
 import { exposeDebugApi, installWizardStateGuard } from './lib/wizard-state';
 import { installPackageBodyBinding, exposePackageDebugApi } from './lib/body-package';
 import { installCustomModeApi } from './lib/custom-mode';
 import { exposeMigrationDebugApi, runGabrielMigration } from './lib/gabriel-migration';
 import { installWritingStyleFetchWrap } from './lib/install-fetch-wrap';
+import { exposeObservabilityApi } from './lib/observability';
 
-const VERSION = '1.50.1';
+const VERSION = '1.50.5';
 
 declare global {
   interface Window {
@@ -55,6 +57,7 @@ try { exposeMigrationDebugApi(); } catch (e) { console.warn('[react-islands] mig
 // AFTER all defer-loaded sidecars wrap window.fetch so we sit outermost
 // per the CLAUDE.md fetch-chain note.
 try { installWritingStyleFetchWrap(); } catch (e) { console.warn('[react-islands] writing-style fetch wrap failed', e); }
+try { exposeObservabilityApi(); } catch (e) { console.warn('[react-islands] observability api failed', e); }
 
 const api: AntcvReactIslandsAPI = {
   version: VERSION,
@@ -64,6 +67,7 @@ const api: AntcvReactIslandsAPI = {
     try { mountSettingsRouterIsland(); } catch (e) { console.warn('[react-islands] SettingsRouter mount failed', e); }
     try { mountPackagePickerIsland(); } catch (e) { console.warn('[react-islands] PackagePicker mount failed', e); }
     try { mountWritingStylePickerIsland(); } catch (e) { console.warn('[react-islands] WritingStylePicker mount failed', e); }
+    try { mountExportOptionsIsland(); } catch (e) { console.warn('[react-islands] ExportOptions mount failed', e); }
   },
 };
 

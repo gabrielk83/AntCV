@@ -18,8 +18,9 @@ import { installPackageBodyBinding, exposePackageDebugApi } from './lib/body-pac
 import { installCustomModeApi } from './lib/custom-mode';
 import { exposeMigrationDebugApi, runGabrielMigration } from './lib/gabriel-migration';
 import { installWritingStyleFetchWrap } from './lib/install-fetch-wrap';
+import { exposeObservabilityApi } from './lib/observability';
 
-const VERSION = '1.50.4';
+const VERSION = '1.50.5';
 
 declare global {
   interface Window {
@@ -56,6 +57,7 @@ try { exposeMigrationDebugApi(); } catch (e) { console.warn('[react-islands] mig
 // AFTER all defer-loaded sidecars wrap window.fetch so we sit outermost
 // per the CLAUDE.md fetch-chain note.
 try { installWritingStyleFetchWrap(); } catch (e) { console.warn('[react-islands] writing-style fetch wrap failed', e); }
+try { exposeObservabilityApi(); } catch (e) { console.warn('[react-islands] observability api failed', e); }
 
 const api: AntcvReactIslandsAPI = {
   version: VERSION,

@@ -49,6 +49,7 @@ import {
 } from './vendor/docx.mjs';
 
 import { postProcessDocx } from './post-process.js';
+import { getPackageStyle, normalisePackageId } from './palette.js';
 
 const PAGE_W = 11906;
 const PAGE_H = 16838;
@@ -321,7 +322,13 @@ function inlineRuns(text, baseRun) {
 // Public entry
 // ──────────────────────────────────────────────────────────────────
 export async function generateDocx(payload) {
-  const style = mergeStyle(payload.style || {});
+  // v1.50.8 — when the PWA sends `package` (locked-source plan §3) the
+  // worker derives its base palette from packages/registry.json via
+  // palette.js. payload.style is then layered on top so explicit user
+  // overrides still win. When `package` is absent (pre-v1.50.8 PWAs),
+  // mergeStyle starts from the legacy DEFAULTS — guaranteed-identical
+  // behaviour for existing clients.
+  const style = mergeStyle(payload.style || {}, payload.package, payload.legacy_ats_tier === true);
   const fontSizes = { ...FONT_DEFAULTS, ...(payload.font_sizes || {}) };
   const lang = payload.language || 'en';
   // PB-003: continuation suffix localised against `lang`. Mirrors the
@@ -465,12 +472,32 @@ function countByteMatches(haystack, needle) {
   return count;
 }
 
-function mergeStyle(input) {
-  const s = { ...DEFAULTS };
+function mergeStyle(input, packageId, legacyAtsTier) {
+  // v1.50.8 — when `packageId` is a non-empty string, derive the base
+  // palette from packages/registry.json via palette.js. Otherwise fall
+  // back to the legacy DEFAULTS so pre-v1.50.8 PWAs see no behavioural
+  // change. payload.style overrides win over both.
+  //
   // Non-color string keys that should pass through verbatim (not be
   // uppercased by hex()). Extend this list when new layout-control
   // string keys are added.
   const PASSTHROUGH = new Set(['sidebarPosition']);
+
+  let basePalette;
+  if (typeof packageId === 'string' && packageId.trim()) {
+    // getPackageStyle always returns a complete DEFAULTS-shaped object,
+    // even when the input is unknown or a legacy alias.
+    basePalette = getPackageStyle(packageId, legacyAtsTier === true);
+    // The previous DEFAULTS had a 'mainHeadFont' that included " Bold"
+    // suffix in some legacy bakes — the registry-derived palette uses
+    // the bare family name plus the existing per-run bold attribute.
+    // Nothing else from DEFAULTS should leak through when a package is
+    // supplied.
+  } else {
+    basePalette = { ...DEFAULTS };
+  }
+
+  const s = { ...basePalette };
   for (const [k, v] of Object.entries(input || {})) {
     if (typeof v === 'string') {
       s[k] = PASSTHROUGH.has(k) ? v : hex(v);

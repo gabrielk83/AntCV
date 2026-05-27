@@ -168,6 +168,74 @@ function ToneChipsEditor({
   );
 }
 
+function AutoShiftBanner({
+  fromStyleLabel,
+  onUndo,
+  onDismiss,
+}: {
+  fromStyleLabel: string;
+  onUndo: () => void;
+  onDismiss: () => void;
+}): JSX.Element {
+  return (
+    <div
+      data-antcv-auto-shift-banner="1"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        padding: '8px 10px',
+        marginBottom: 8,
+        background: 'rgba(1,183,187,.10)',
+        border: '1px solid rgba(1,183,187,.55)',
+        borderRadius: 8,
+        fontSize: 11,
+      }}
+    >
+      <span aria-hidden="true" style={{ fontSize: 14 }}>↺</span>
+      <span style={{ flex: 1, lineHeight: 1.4 }}>
+        Switched style to <strong>Hybrid Balanced</strong> to absorb a chip conflict
+        (was <strong>{fromStyleLabel}</strong>). The two registers coexist under
+        Hybrid Balanced. The worker treats this as an intentional override.
+      </span>
+      <button
+        type="button"
+        onClick={onUndo}
+        style={{
+          padding: '3px 10px',
+          background: 'rgba(1,183,187,.18)',
+          color: '#e6eef3',
+          border: '1px solid rgba(1,183,187,.55)',
+          borderRadius: 6,
+          cursor: 'pointer',
+          fontSize: 11,
+          fontWeight: 700,
+        }}
+      >
+        Undo
+      </button>
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label="Dismiss banner"
+        title="Dismiss"
+        style={{
+          padding: '3px 8px',
+          background: 'transparent',
+          color: '#e6eef3',
+          opacity: 0.7,
+          border: '1px solid rgba(255,255,255,.18)',
+          borderRadius: 6,
+          cursor: 'pointer',
+          fontSize: 12,
+        }}
+      >
+        ×
+      </button>
+    </div>
+  );
+}
+
 function SavedTonesEditor({
   slots,
   onSave,
@@ -507,16 +575,63 @@ export function WritingStylePicker(): JSX.Element {
     (v) => v >= allowed.min && v <= allowed.max,
   );
 
+  // v1.50.13 — auto-shift state. Set when a chip toggle introduces a new
+  // conflict; carries the prior style + chips so Undo restores them.
+  const [autoShifted, setAutoShifted] = useState<{ fromStyle: StyleId; fromChips: string[] } | null>(null);
+
   const onStyleChange = useCallback((id: StyleId) => {
     if (!ACTIVE_STYLE_IDS.includes(id)) return;
     setPrefs(setWritingStyleWithCascade(id));
     setLayout(readLayoutPrefs());
+    // Manual style change clears the auto-shift banner.
+    setAutoShifted(null);
   }, []);
 
   const onChipsChange = useCallback((chips: string[]) => {
     const overrides = { ...prefs.overrides, chips: true };
+
+    // v1.50.13 — chip-conflict auto-shift (plan §4.6). If the new chip
+    // set introduces a conflict that wasn't there before AND the active
+    // style isn't already hybrid-balanced, switch to hybrid-balanced and
+    // remember the prior style + chips so the banner's Undo can restore.
+    const prevConflicts = detectChipConflicts(prefs.chips).length;
+    const nextConflicts = detectChipConflicts(chips).length;
+    const conflictsIncreased = nextConflicts > prevConflicts;
+
+    if (conflictsIncreased && prefs.style !== 'hybrid-balanced') {
+      const fromStyle = prefs.style;
+      const fromChips = prefs.chips.slice();
+      // Single write — style + chips together so the worker's cascade
+      // doesn't re-seed chips between writes.
+      setPrefs(writeWritingPrefs({ style: 'hybrid-balanced', chips, overrides }));
+      // Clamp targetPages to hybrid-balanced's range (1-3) if needed.
+      const lp = readLayoutPrefs();
+      const hybMax = STYLES['hybrid-balanced'].allowedLength.max;
+      if (lp.targetPages > hybMax) {
+        setLayout(writeLayoutPrefs({ targetPages: hybMax }));
+      }
+      setAutoShifted({ fromStyle, fromChips });
+      return;
+    }
+
     setPrefs(writeWritingPrefs({ chips, overrides }));
-  }, [prefs.overrides]);
+  }, [prefs.style, prefs.chips, prefs.overrides]);
+
+  const onUndoAutoShift = useCallback(() => {
+    if (!autoShifted) return;
+    const overrides = { ...prefs.overrides, chips: true };
+    setPrefs(writeWritingPrefs({
+      style: autoShifted.fromStyle,
+      chips: autoShifted.fromChips,
+      overrides,
+    }));
+    setLayout(readLayoutPrefs());
+    setAutoShifted(null);
+  }, [autoShifted, prefs.overrides]);
+
+  const onDismissAutoShift = useCallback(() => {
+    setAutoShifted(null);
+  }, []);
 
   const onAddBanned = useCallback((kind: 'words' | 'phrases', value: string) => {
     setPrefs(addBannedItem(kind, editorLang, value));
@@ -579,6 +694,13 @@ export function WritingStylePicker(): JSX.Element {
       </div>
 
       <SectionHeader>Tone chips</SectionHeader>
+      {autoShifted && (
+        <AutoShiftBanner
+          fromStyleLabel={STYLES[autoShifted.fromStyle]?.displayName ?? autoShifted.fromStyle}
+          onUndo={onUndoAutoShift}
+          onDismiss={onDismissAutoShift}
+        />
+      )}
       <ToneChipsEditor styleId={prefs.style} chips={prefs.chips} onChange={onChipsChange} />
 
       <SectionHeader>Saved tones</SectionHeader>

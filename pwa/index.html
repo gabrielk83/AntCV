@@ -248,9 +248,9 @@
   })();
 </script>
 <script type="module">
-  import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.50.8';
+  import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.50.9';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.40.340-watermark';
+  window.ANTCV_VERSION = '1.50.9';
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <script>
@@ -263,7 +263,7 @@
         auth.src = 'antcv-auth.js?v=1.40.202';
         auth.onload = function(){
           var app = document.createElement('script');
-          app.src = 'app.js?v=1.40.340-watermark';
+          app.src = 'app.js?v=1.50.9';
           app.onload = function(){
             var vo = document.createElement('script');
             vo.src = 'antcv-version-override.js?v=1.50.9';

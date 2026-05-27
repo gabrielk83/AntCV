@@ -9,7 +9,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
-
+.dev.vars
 # Environment
 .env
 .env.local
@@ -19,6 +19,12 @@ yarn-error.log*
 dist/
 build/
 *.tsbuildinfo
+.vite/
+
+# Vite library-mode output lands inside pwa/ alongside the vanilla files
+# (so `wrangler pages deploy pwa/` is unchanged). We DO commit the built
+# bundle so deploys don't require a build step on Cloudflare. Source lives
+# in /src/; the built /pwa/antcv-react-islands.js* is tracked.
 
 # Editor / OS
 .DS_Store
@@ -31,6 +37,12 @@ Thumbs.db
 # Backups
 *.bak
 *.orig
+
+# Word / Office lock files (open-document temp files)
+~$*.docx
+~$*.docm
+~$*.xlsx
+~$*.pptx
 
 # Logs
 *.log

@@ -18,7 +18,7 @@ import { installCustomModeApi } from './lib/custom-mode';
 import { exposeMigrationDebugApi, runGabrielMigration } from './lib/gabriel-migration';
 import { installWritingStyleFetchWrap } from './lib/install-fetch-wrap';
 
-const VERSION = '1.50.1';
+const VERSION = '1.50.2';
 
 declare global {
   interface Window {

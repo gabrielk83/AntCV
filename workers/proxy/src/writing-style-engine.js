@@ -302,6 +302,126 @@ export function applyAtsGlyphConversion(input) {
   return out;
 }
 
+// ─── Provider-agnostic LLM text extract / replace (v1.50.2) ─────────────
+// `shape` is 'openai_compat' (OpenAI / Mistral / Gemini-normalised) or
+// 'anthropic_messages' (Anthropic /v1/messages non-streaming response).
+
+/**
+ * Extract the LLM-generated text from a parsed provider response.
+ * @returns {string | null}
+ */
+export function extractLlmText(shape, json) {
+  if (!json || typeof json !== 'object') return null;
+  if (shape === 'openai_compat') {
+    const c = json.choices?.[0]?.message?.content;
+    return typeof c === 'string' ? c : null;
+  }
+  if (shape === 'anthropic_messages') {
+    const blocks = json.content;
+    if (!Array.isArray(blocks)) return null;
+    return blocks
+      .filter((b) => b && b.type === 'text' && typeof b.text === 'string')
+      .map((b) => b.text)
+      .join('');
+  }
+  return null;
+}
+
+/**
+ * Replace the LLM-generated text in a parsed provider response. Mutates
+ * `json` in place and returns true on success.
+ */
+export function replaceLlmText(shape, json, newText) {
+  if (!json || typeof json !== 'object') return false;
+  if (shape === 'openai_compat') {
+    if (json.choices?.[0]?.message) {
+      json.choices[0].message.content = newText;
+      return true;
+    }
+    return false;
+  }
+  if (shape === 'anthropic_messages') {
+    if (!Array.isArray(json.content)) return false;
+    const idx = json.content.findIndex((b) => b && b.type === 'text');
+    if (idx < 0) return false;
+    // Replace the first text block; drop later text blocks so combined
+    // output isn't double-counted on the consumer side.
+    json.content[idx].text = newText;
+    json.content = json.content.filter((b, i) => !(b && b.type === 'text') || i === idx);
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Post-process a buffered provider response per v1.50.2 SCE+ATS scope.
+ * Returns the possibly-modified body string and a small headers object
+ * for the X-AntCV-Sce-* response headers. Fire-and-forget analytics is
+ * logged inside.
+ *
+ * Retry loop is OUT OF SCOPE for v1.50.2 — the eval runs once on the
+ * single response and the result is reported to analytics. Retry ships
+ * in v1.50.3 after this baseline measures real-world violation rates.
+ *
+ * @returns {{ data: string, headers: Record<string,string>, sce: object | null }}
+ */
+export function postProcessLlmResponse({ data, shape, writingStyleRequest, env, userId, augTask }) {
+  if (!writingStyleRequest) return { data, headers: {}, sce: null };
+  try {
+    const json = JSON.parse(data);
+    const text = extractLlmText(shape, json);
+    if (text == null) return { data, headers: {}, sce: null };
+
+    const sce = evaluateSce(text, writingStyleRequest);
+    let modified = text;
+    let atsApplied = false;
+
+    if (writingStyleRequest.ats) {
+      const converted = applyAtsGlyphConversion(modified);
+      if (converted !== modified) {
+        modified = converted;
+        atsApplied = true;
+      }
+    }
+
+    let finalData = data;
+    if (modified !== text) {
+      if (replaceLlmText(shape, json, modified)) {
+        finalData = JSON.stringify(json);
+      }
+    }
+
+    try {
+      void logWritingEngineEvent(env, {
+        kind: 'sce-eval',
+        userId: userId ?? null,
+        writingStyle: writingStyleRequest.writingStyle,
+        target_language: writingStyleRequest.target_language,
+        bannedWordHits: sce.bannedWordHits.length,
+        bannedPhraseHits: sce.bannedPhraseHits.length,
+        sceClean: sce.clean,
+        ats: !!writingStyleRequest.ats,
+        atsApplied,
+        augTask: augTask ?? null,
+      });
+    } catch (e) {
+      console.warn('[writing-style-engine] sce-eval log failed', e && e.message);
+    }
+
+    const headers = {
+      'X-AntCV-Sce-Banned-Words': String(sce.bannedWordHits.length),
+      'X-AntCV-Sce-Banned-Phrases': String(sce.bannedPhraseHits.length),
+      'X-AntCV-Sce-Clean': sce.clean ? '1' : '0',
+    };
+    if (atsApplied) headers['X-AntCV-Ats-Applied'] = '1';
+
+    return { data: finalData, headers, sce };
+  } catch (e) {
+    console.warn('[writing-style-engine] postProcessLlmResponse failed', e && e.message);
+    return { data, headers: {}, sce: null };
+  }
+}
+
 // ─── Analytics KV logging ────────────────────────────────────────────────
 // ANALYTICS_SECRET + analytics KV namespace are pre-existing on the worker —
 // see workers/proxy/wrangler.toml. The log shape mirrors the existing
@@ -337,6 +457,9 @@ export const WritingStyleEngine = {
   evaluateSce,
   runWithSceRetry,
   applyAtsGlyphConversion,
+  extractLlmText,
+  replaceLlmText,
+  postProcessLlmResponse,
   logWritingEngineEvent,
   STYLES,
   SHARED_BANNED_WORDS,

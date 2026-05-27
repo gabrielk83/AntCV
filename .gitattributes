@@ -1,0 +1,18 @@
+# Treat these file types as binary so git doesn't apply
+# line-ending normalisation (CRLF↔LF) that would corrupt them.
+*.pdf  binary
+*.docx binary
+*.xlsx binary
+*.pptx binary
+*.zip  binary
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.woff binary
+*.woff2 binary
+*.ttf  binary
+*.otf  binary
+*.eot  binary
+*.wasm binary

@@ -12,16 +12,18 @@ In practice, no model was "best." One was cleaner at extracting requirements. An
 
 That pushed the app toward routing and supervision, not model loyalty.
 
-AntCV runs as supervisor-driven orchestration — task routing, output validation, retries on banned terms or invented metrics, watermarking, change logging:
+AntCV runs as supervisor-driven orchestration — task routing, output validation, retries on banned terms, invented metrics, or overclaimed role scope, watermarking, change logging:
 
 * requirement extraction
 * fit and gap analysis
-* multilingual adaptation
+* multilingual adaptation with per-language banned-term lists
 * validation checks
 * deterministic document export
 * provenance tracking with confidence and risk
 * replayable orchestration flows
 * 12 styles × 7 packages, orthogonal — per seniority, target company, taste; JD signals suggest switches
+
+The development workflow mirrored the architecture. I used Claude Code as the agentic operator for refactors, regression matrices, test corpora, and documentation alignment — with my own review and rollback at every commit. Coursework at DTU on AI systems and agentic development, combined with independent study, sharpened how I think about when to delegate, when to validate, and where the human stays in the loop.
 
 The same rules ship as a Claude skill, portable across models. Content and style are entangled with the user, improve with each manual edit, are watermarked, and require human review.
 
@@ -86,6 +88,9 @@ Three things in 200 chars:
 | Dropped "That is where it becomes interesting" pivot | Space tradeoff — personalization paragraph already carries the trust framing |
 | Hashtags expanded: +#C2PA, +#PrivacyByDesign, +#ATSCompatibility | Your direction |
 | Signature added: name only | Your direction |
+| Role-scope added to retry list ("overclaimed role scope") | Aligned with locked plan §4.5 role-boundary integrity (added 2026-05-27) |
+| Multilingual bullet refined to "per-language banned-term lists" | Aligned with locked plan §4.5.3 language-partitioned schema (added 2026-05-27) |
+| Agentic-development paragraph added (Claude Code as operator + DTU coursework + independent study) | Your direction: surface the learning and the dev workflow that mirrored the product's supervisor architecture (added 2026-05-27) |
 
 ## Voice and constraint check
 

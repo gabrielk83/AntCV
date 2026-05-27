@@ -1,0 +1,296 @@
+/*
+ * pwa/antcv-packages-registry.css — generated from packages/registry.json by
+ * scripts/generate-registry-css.mjs. DO NOT EDIT BY HAND. Re-run the script
+ * whenever the registry changes.
+ *
+ * Selector convention: body[data-package="<id>"]. Switching the attribute
+ * swaps every visible colour in a single paint per plan §2.3.
+ */
+
+:root {
+  /* Universal text-on-light defaults (not per-package). */
+  --main-text-color: #1F2937;
+  --bullet-text-color: var(--main-text-color);
+  --main-year-color: #6B7280;
+  --achievement-marker-color: #16A34A;
+  --warning-marker-color: #DC2626;
+  --header-name-color: #FFFFFF;
+  --table-odd-bg: #FFFFFF;
+  --table-even-bg: #F7F9FB;
+}
+
+body[data-package="copenhagen-modern"] {
+  /* Copenhagen Modern — locked from Unified Visual doc */
+  --package-base: #283556;
+  --package-primary: #00746E;
+  --package-interactive: #0B74DE;
+  --package-bullet: #00746E;
+  --package-glyph: #0B74DE;
+  --package-heading-font: 'Segoe UI Bold', system-ui, sans-serif;
+  --package-body-font: 'Calibri', system-ui, sans-serif;
+  --package-image-size: 120px;
+  --package-image-shape: circle;
+  --package-alt1-head: #0B74DE;
+  --package-alt1-sidebar: #E8F4F5;
+  --package-alt2-head: #283556;
+  --package-alt2-sidebar: #DCE5EA;
+  --package-dark-alt1-head: #6FAEFF;
+  --package-dark-alt1-sidebar: #203040;
+  --package-dark-alt2-head: #89C5D9;
+  --package-dark-alt2-sidebar: #182132;
+  --main-head-color: #283556;
+  --main-bullet-color: #00746E;
+  --sidebar-bullet-color: #00746E;
+  --emoji-bullet-color: #0B74DE;
+  --main-line-color: #00746E;
+  --main-sub-head-color: #00746E;
+  --main-company-color: #00746E;
+  --header-bg: #283556;
+  --header-contact-color: #00746E;
+  --sidebar-bg: #DCE5EA;
+  --sidebar-head-color: #00746E;
+  --sidebar-text-color: var(--main-text-color);
+  --table-header-bg: #E8F4F5;
+}
+
+body[data-package="navy-executive"] {
+  /* Navy Executive — locked from Unified Visual doc */
+  --package-base: #1D2B45;
+  --package-primary: #D9A441;
+  --package-interactive: #6BC5C9;
+  --package-bullet: #D9A441;
+  --package-glyph: #D9A441;
+  --package-heading-font: 'Cambria Bold', system-ui, sans-serif;
+  --package-body-font: 'Calibri', system-ui, sans-serif;
+  --package-image-size: 110px;
+  --package-image-shape: rounded;
+  --package-alt1-head: #D9A441;
+  --package-alt1-sidebar: #F5F1E8;
+  --package-alt2-head: #7F8FA6;
+  --package-alt2-sidebar: #E8EDF3;
+  --package-dark-alt1-head: #C89A38;
+  --package-dark-alt1-sidebar: #2A3442;
+  --package-dark-alt2-head: #AAB7C7;
+  --package-dark-alt2-sidebar: #1B2432;
+  --main-head-color: #1D2B45;
+  --main-bullet-color: #D9A441;
+  --sidebar-bullet-color: #D9A441;
+  --emoji-bullet-color: #D9A441;
+  --main-line-color: #D9A441;
+  --main-sub-head-color: #D9A441;
+  --main-company-color: #D9A441;
+  --header-bg: #1D2B45;
+  --header-contact-color: #D9A441;
+  --sidebar-bg: #E8EDF3;
+  --sidebar-head-color: #D9A441;
+  --sidebar-text-color: var(--main-text-color);
+  --table-header-bg: #F5F1E8;
+}
+
+body[data-package="warm-terracotta"] {
+  /* Warm Terracotta — locked from Unified Visual doc */
+  --package-base: #8C4A32;
+  --package-primary: #5C2E1F;
+  --package-interactive: #B85E3B;
+  --package-bullet: #5C2E1F;
+  --package-glyph: #5C2E1F;
+  --package-heading-font: 'Georgia Bold', system-ui, sans-serif;
+  --package-body-font: 'Georgia', system-ui, sans-serif;
+  --package-image-size: 130px;
+  --package-image-shape: rounded;
+  --package-alt1-head: #5C2E1F;
+  --package-alt1-sidebar: #F7ECE5;
+  --package-alt2-head: #B85E3B;
+  --package-alt2-sidebar: #F3DDD2;
+  --package-dark-alt1-head: #D38A65;
+  --package-dark-alt1-sidebar: #3A221B;
+  --package-dark-alt2-head: #E6A489;
+  --package-dark-alt2-sidebar: #2B1A16;
+  --main-head-color: #8C4A32;
+  --main-bullet-color: #5C2E1F;
+  --sidebar-bullet-color: #5C2E1F;
+  --emoji-bullet-color: #5C2E1F;
+  --main-line-color: #5C2E1F;
+  --main-sub-head-color: #5C2E1F;
+  --main-company-color: #5C2E1F;
+  --header-bg: #8C4A32;
+  --header-contact-color: #5C2E1F;
+  --sidebar-bg: #F3DDD2;
+  --sidebar-head-color: #5C2E1F;
+  --sidebar-text-color: var(--main-text-color);
+  --table-header-bg: #F7ECE5;
+}
+
+body[data-package="nordic-frost"] {
+  /* Nordic Frost — locked from Unified Visual doc */
+  --package-base: #1A3A4F;
+  --package-primary: #4A8FA8;
+  --package-interactive: #3E82CC;
+  --package-bullet: #4A8FA8;
+  --package-glyph: #4A8FA8;
+  --package-heading-font: 'Trebuchet MS Bold', system-ui, sans-serif;
+  --package-body-font: 'Calibri', system-ui, sans-serif;
+  --package-image-size: 125px;
+  --package-image-shape: circle;
+  --package-alt1-head: #4A8FA8;
+  --package-alt1-sidebar: #EDF8FB;
+  --package-alt2-head: #7ECEE3;
+  --package-alt2-sidebar: #DCEEF4;
+  --package-dark-alt1-head: #7FB6C8;
+  --package-dark-alt1-sidebar: #203542;
+  --package-dark-alt2-head: #9ADAE8;
+  --package-dark-alt2-sidebar: #182B35;
+  --main-head-color: #1A3A4F;
+  --main-bullet-color: #4A8FA8;
+  --sidebar-bullet-color: #4A8FA8;
+  --emoji-bullet-color: #4A8FA8;
+  --main-line-color: #4A8FA8;
+  --main-sub-head-color: #4A8FA8;
+  --main-company-color: #4A8FA8;
+  --header-bg: #1A3A4F;
+  --header-contact-color: #4A8FA8;
+  --sidebar-bg: #DCEEF4;
+  --sidebar-head-color: #4A8FA8;
+  --sidebar-text-color: var(--main-text-color);
+  --table-header-bg: #EDF8FB;
+}
+
+body[data-package="pampas-contemporary"] {
+  /* Pampas Contemporary — locked from Unified Visual doc */
+  --package-base: #1B2D5E;
+  --package-primary: #7A3B1E;
+  --package-interactive: #4B6CB7;
+  --package-bullet: #7A3B1E;
+  --package-glyph: #7A3B1E;
+  --package-heading-font: 'Palatino Linotype Bold', system-ui, sans-serif;
+  --package-body-font: 'Calibri', system-ui, sans-serif;
+  --package-image-size: 120px;
+  --package-image-shape: rounded-square;
+  --package-alt1-head: #7A3B1E;
+  --package-alt1-sidebar: #F6F1DD;
+  --package-alt2-head: #5C5C5C;
+  --package-alt2-sidebar: #ECECEC;
+  --package-dark-alt1-head: #C89B5B;
+  --package-dark-alt1-sidebar: #25324D;
+  --package-dark-alt2-head: #B0B0B0;
+  --package-dark-alt2-sidebar: #1A243D;
+  --main-head-color: #1B2D5E;
+  --main-bullet-color: #7A3B1E;
+  --sidebar-bullet-color: #7A3B1E;
+  --emoji-bullet-color: #7A3B1E;
+  --main-line-color: #7A3B1E;
+  --main-sub-head-color: #7A3B1E;
+  --main-company-color: #7A3B1E;
+  --header-bg: #1B2D5E;
+  --header-contact-color: #7A3B1E;
+  --sidebar-bg: #ECECEC;
+  --sidebar-head-color: #7A3B1E;
+  --sidebar-text-color: var(--main-text-color);
+  --table-header-bg: #F6F1DD;
+}
+
+body[data-package="tokyo-precision"] {
+  /* Tokyo Precision — locked from Unified Visual doc */
+  --package-base: #2C2C2C;
+  --package-primary: #4E5B6E;
+  --package-interactive: #5C7DA5;
+  --package-bullet: #4E5B6E;
+  --package-glyph: #4E5B6E;
+  --package-heading-font: 'Tahoma Bold', system-ui, sans-serif;
+  --package-body-font: 'Calibri', system-ui, sans-serif;
+  --package-image-size: 90px;
+  --package-image-shape: square;
+  --package-alt1-head: #4E5B6E;
+  --package-alt1-sidebar: #F3F4F6;
+  --package-alt2-head: #B0B7C3;
+  --package-alt2-sidebar: #E8E8E8;
+  --package-dark-alt1-head: #8EA2BB;
+  --package-dark-alt1-sidebar: #2A2A2A;
+  --package-dark-alt2-head: #C4CBD5;
+  --package-dark-alt2-sidebar: #1B1B1B;
+  --main-head-color: #2C2C2C;
+  --main-bullet-color: #4E5B6E;
+  --sidebar-bullet-color: #4E5B6E;
+  --emoji-bullet-color: #4E5B6E;
+  --main-line-color: #4E5B6E;
+  --main-sub-head-color: #4E5B6E;
+  --main-company-color: #4E5B6E;
+  --header-bg: #2C2C2C;
+  --header-contact-color: #4E5B6E;
+  --sidebar-bg: #E8E8E8;
+  --sidebar-head-color: #4E5B6E;
+  --sidebar-text-color: var(--main-text-color);
+  --table-header-bg: #F3F4F6;
+}
+
+body[data-package="delhi-technical"] {
+  /* Delhi Technical — locked from Unified Visual doc */
+  --package-base: #1F3A5F;
+  --package-primary: #007C80;
+  --package-interactive: #00A6A6;
+  --package-bullet: #007C80;
+  --package-glyph: #007C80;
+  --package-heading-font: 'Segoe UI Bold', system-ui, sans-serif;
+  --package-body-font: 'Calibri', system-ui, sans-serif;
+  --package-image-size: 85px;
+  --package-image-shape: hexagon;
+  --package-alt1-head: #007C80;
+  --package-alt1-sidebar: #E8F8F8;
+  --package-alt2-head: #4B6A88;
+  --package-alt2-sidebar: #EAF1F8;
+  --package-dark-alt1-head: #49B8BA;
+  --package-dark-alt1-sidebar: #22364A;
+  --package-dark-alt2-head: #81A6C4;
+  --package-dark-alt2-sidebar: #17293D;
+  --main-head-color: #1F3A5F;
+  --main-bullet-color: #007C80;
+  --sidebar-bullet-color: #007C80;
+  --emoji-bullet-color: #007C80;
+  --main-line-color: #007C80;
+  --main-sub-head-color: #007C80;
+  --main-company-color: #007C80;
+  --header-bg: #1F3A5F;
+  --header-contact-color: #007C80;
+  --sidebar-bg: #EAF1F8;
+  --sidebar-head-color: #007C80;
+  --sidebar-text-color: var(--main-text-color);
+  --table-header-bg: #E8F8F8;
+}
+
+@media (prefers-color-scheme: dark) {
+  body[data-package="copenhagen-modern"][data-dark-mode="active"] {
+    --main-head-color: #6FAEFF;
+    --sidebar-bg: #182132;
+    --header-bg: #182132;
+  }
+  body[data-package="navy-executive"][data-dark-mode="active"] {
+    --main-head-color: #C89A38;
+    --sidebar-bg: #1B2432;
+    --header-bg: #1B2432;
+  }
+  body[data-package="warm-terracotta"][data-dark-mode="active"] {
+    --main-head-color: #D38A65;
+    --sidebar-bg: #2B1A16;
+    --header-bg: #2B1A16;
+  }
+  body[data-package="nordic-frost"][data-dark-mode="active"] {
+    --main-head-color: #7FB6C8;
+    --sidebar-bg: #182B35;
+    --header-bg: #182B35;
+  }
+  body[data-package="pampas-contemporary"][data-dark-mode="active"] {
+    --main-head-color: #C89B5B;
+    --sidebar-bg: #1A243D;
+    --header-bg: #1A243D;
+  }
+  body[data-package="tokyo-precision"][data-dark-mode="active"] {
+    --main-head-color: #8EA2BB;
+    --sidebar-bg: #1B1B1B;
+    --header-bg: #1B1B1B;
+  }
+  body[data-package="delhi-technical"][data-dark-mode="active"] {
+    --main-head-color: #49B8BA;
+    --sidebar-bg: #17293D;
+    --header-bg: #17293D;
+  }
+}

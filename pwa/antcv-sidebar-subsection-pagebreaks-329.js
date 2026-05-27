@@ -7,7 +7,7 @@
  */
 (function(){
   'use strict';
-  var VERSION = '1.40.329';
+  var VERSION = '1.40.341-p0b';
   if (window.__antcvSidebarSubsectionPagebreaks === VERSION) return;
   window.__antcvSidebarSubsectionPagebreaks = VERSION;
 
@@ -65,11 +65,20 @@
     });
     return kids;
   }
+  // PB-003: continuation suffix is localised via antcv-i18n.
+  function contSuffix(){
+    var i18n = window.AntcvI18n;
+    if (i18n && typeof i18n.t === 'function') {
+      return i18n.t('pb.cont', '(CONT.)');
+    }
+    return '(CONT.)';
+  }
   function makeBreakBar(page, title, cont){
     var frag=document.createDocumentFragment();
+    var suffix = contSuffix();
     var br=document.createElement('div'); br.setAttribute('data-antcv-sidebar-pagebreak-329','1'); br.className='antcv-sidebar-pagebreak-329'; br.setAttribute('aria-hidden','true');
-    var bar=document.createElement('div'); bar.setAttribute('data-antcv-sidebar-pagebreak-329','1'); bar.className='antcv-sidebar-pagebar-329'; bar.textContent='PAGE '+page+' — '+title+(cont?' (CONT.)':'');
-    var head=document.createElement('div'); head.setAttribute('data-antcv-sidebar-cont-329','1'); head.className='antcv-sidebar-cont-329'; head.textContent=title+' (Cont.)';
+    var bar=document.createElement('div'); bar.setAttribute('data-antcv-sidebar-pagebreak-329','1'); bar.className='antcv-sidebar-pagebar-329'; bar.textContent='PAGE '+page+' — '+title+(cont?' '+suffix:'');
+    var head=document.createElement('div'); head.setAttribute('data-antcv-sidebar-cont-329','1'); head.className='antcv-sidebar-cont-329'; head.textContent=title+' '+suffix;
     frag.appendChild(br); frag.appendChild(bar); if(cont) frag.appendChild(head); return frag;
   }
   function applySection(secEl){

@@ -58,7 +58,7 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.50.3';
+  const TARGET_VERSION = '1.50.4';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
@@ -82,6 +82,7 @@
     '1.50.0-pass3',
     '1.50.1',
     '1.50.2',
+    '1.50.3',
     // INVARIANT: never add the current TARGET_VERSION to this list.
     // Doing so causes the rewrite loop to match its own output and
     // append the suffix on every MutationObserver cycle. See the

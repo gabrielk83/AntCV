@@ -22,6 +22,7 @@
 
 import { readLayoutPrefs, readWritingPrefs } from './writing-prefs';
 import { normaliseLangCode } from './writing-systems';
+import { readExportPrefs } from './export-prefs';
 
 interface AntcvWritingStylePayload {
   writingStyle: string;
@@ -75,6 +76,7 @@ function readActiveLanguage(): string {
 function buildWritingStylePayload(): AntcvWritingStylePayload {
   const wp = readWritingPrefs();
   const lp = readLayoutPrefs();
+  const ep = readExportPrefs();
   return {
     writingStyle: wp.style,
     toneChips: wp.chips,
@@ -85,7 +87,7 @@ function buildWritingStylePayload(): AntcvWritingStylePayload {
     sectionFormat: 'default', // Per-section override is wired in Pass 4 (editor line sliders).
     target_language: readActiveLanguage(),
     package: readActivePackageId(),
-    ats: false,
+    ats: ep.ats,
   };
 }
 

@@ -1,6 +1,47 @@
-import React, { useState } from 'react';
-import { ACADEMIC_SECTIONS, KNOWN_SECTIONS } from '../../lib/writing-prefs';
+import React, { useMemo, useState } from 'react';
+import { ACADEMIC_SECTIONS, KNOWN_SECTIONS, type LayoutPrefs } from '../../lib/writing-prefs';
 import { SectionFormatPicker, useLayoutPrefsSnapshot } from './SectionFormatPicker';
+
+// v1.50.26 — count how many sections in `ids` carry either a line-
+// limit or section-format override. Used to surface the "n tuned"
+// badge in each group header so the user can see at a glance how
+// many overrides they have set without expanding the section.
+function countOverrides(layout: LayoutPrefs, ids: readonly string[]): number {
+  const ll = layout.lineLimits || {};
+  const sf = layout.sectionFormats || {};
+  let n = 0;
+  for (const id of ids) {
+    if (typeof ll[id] === 'number' || typeof sf[id] === 'string') n++;
+  }
+  return n;
+}
+
+function OverrideBadge({ count, total }: { count: number; total: number }): JSX.Element | null {
+  if (count <= 0) return null;
+  return (
+    <span
+      title={`${count} of ${total} sections have overrides`}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 4,
+        marginLeft: 8,
+        padding: '1px 6px',
+        borderRadius: 999,
+        background: 'rgba(1,183,187,.18)',
+        border: '1px solid rgba(1,183,187,.55)',
+        color: '#e6eef3',
+        fontSize: 9,
+        fontWeight: 700,
+        letterSpacing: 0,
+        textTransform: 'none',
+      }}
+    >
+      <span aria-hidden="true">●</span>
+      {count} tuned
+    </span>
+  );
+}
 
 // v1.50.14 — section-by-section format + line-limit picker. Mounted as a
 // distinct island in Settings → Personal (between WritingStylePicker and
@@ -18,6 +59,18 @@ export function LayoutPicker(): JSX.Element {
   // the user wants per-section overrides for an academic CV.
   const isResearch = styleId === 'research-formal';
   const [academicOpen, setAcademicOpen] = useState<boolean>(isResearch);
+
+  // v1.50.26 — override counts per group. Drives the "N tuned" badges
+  // in each group header. Re-computed when layout state changes (the
+  // hook resubscribes to antcv:layout-prefs-changed).
+  const commercialOverrides = useMemo(
+    () => countOverrides(layout, KNOWN_SECTIONS.map((s) => s.id)),
+    [layout],
+  );
+  const academicOverrides = useMemo(
+    () => countOverrides(layout, ACADEMIC_SECTIONS.map((s) => s.id)),
+    [layout],
+  );
 
   return (
     <section
@@ -53,8 +106,9 @@ export function LayoutPicker(): JSX.Element {
         back to the active style&apos;s default.
       </p>
 
-      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', opacity: 0.75, margin: '6px 0 4px' }}>
-        Commercial sections
+      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', opacity: 0.75, margin: '6px 0 4px', display: 'flex', alignItems: 'center' }}>
+        <span>Commercial sections</span>
+        <OverrideBadge count={commercialOverrides} total={KNOWN_SECTIONS.length} />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {KNOWN_SECTIONS.map((s) => (
@@ -90,8 +144,10 @@ export function LayoutPicker(): JSX.Element {
           opacity: 0.85,
         }}
       >
-        <span>
-          <span aria-hidden="true">{academicOpen ? '▾' : '▸'}</span> Academic sections
+        <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+          <span aria-hidden="true">{academicOpen ? '▾' : '▸'}</span>
+          <span style={{ marginLeft: 6 }}>Academic sections</span>
+          <OverrideBadge count={academicOverrides} total={ACADEMIC_SECTIONS.length} />
           {isResearch && (
             <span style={{ marginLeft: 6, fontSize: 10, opacity: 0.7, textTransform: 'none', letterSpacing: 0, fontWeight: 500 }}>
               (active style uses these)

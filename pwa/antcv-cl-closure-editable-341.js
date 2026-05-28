@@ -38,7 +38,7 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.40.341-p0c-fix3';
+  var SCRIPT_VERSION = '1.40.341-p0c-fix4';
   if (window.__antcvClClosureEditable341 === SCRIPT_VERSION) return;
   window.__antcvClClosureEditable341 = SCRIPT_VERSION;
 
@@ -110,7 +110,32 @@
   // is rendered as a nested div inside the preview paper with
   // no section marker. Locate it by text match against a list
   // of canonical closing phrases.
+  // v1.40.341-p0c-fix4: TWO closure surfaces exist in a CL —
+  //   (a) the closure PARAGRAPH (1-2 sentences inviting a meeting),
+  //       rendered in Preview either as the unfilled placeholder
+  //       "[CLOSURE — 1-2 sentences. Use this structure: ..."
+  //       OR as the user's / model's filled paragraph;
+  //   (b) the SIGNATURE LINE ("Sincerely, Anita" / "Venlig hilsen, …").
+  //
+  // The fix3 version matched (b) only — so the closure paragraph
+  // placeholder was never made editable, which is exactly what the
+  // user is reporting. Add placeholder patterns + the canonical
+  // model-suggested opener ("I would welcome the opportunity…") so
+  // the paragraph surface is editable too.
   var CLOSING_PATTERNS = [
+    // (a) Closure-paragraph placeholders (square-bracket tokens
+    // produced by the writing-engine template). Matched anywhere
+    // in the leaf so wrapping whitespace / outer quotes don't
+    // defeat the regex.
+    /\[CLOSURE\b/i,
+    /\[CLOSING\b/i,
+    // (a) Canonical structure example the placeholder suggests —
+    // model outputs frequently keep this verbatim when no JD
+    // tailoring kicks in.
+    /^i would welcome the opportunity/i,
+    /^jeg vil med glæde/i,         // Danish equivalent
+    /^me encantaría/i,             // Spanish
+    // (b) Signature-line greetings.
     /^kind regards/i,
     /^sincerely/i,
     /^best regards/i,

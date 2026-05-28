@@ -1319,6 +1319,26 @@ async function handleRequest(request, env = {}) {
     body.stream = (demo || writingStyleRequest) ? false : true;
     bodyText = JSON.stringify(body);
   } catch(e) {}
+  // v1.50.18-anthropic-debug: temporary log to verify the normaliser
+  // ran and the outgoing body is system-message-free. Remove after
+  // verification. Lines are cheap; the body is bounded by the existing
+  // request-size cap so log size is bounded too.
+  try {
+    const dbg = JSON.parse(bodyText);
+    const sysRoles = Array.isArray(dbg.messages)
+      ? dbg.messages.filter(m => m && m.role === 'system').length : 0;
+    console.log(
+      '[anthropic-debug] outgoing body — model=' + (dbg.model || '?') +
+      ', has top-level system=' + (typeof dbg.system === 'string' && dbg.system.length > 0) +
+      ', messages count=' + (Array.isArray(dbg.messages) ? dbg.messages.length : '?') +
+      ', messages-with-role-system=' + sysRoles +
+      (sysRoles > 0 ? ' [BUG: normaliser missed these]' : ' [OK]'),
+    );
+    if (sysRoles > 0) {
+      // Dump the first ~2 KB so we can see the exact shape.
+      console.log('[anthropic-debug] full body slice=', bodyText.slice(0, 2000));
+    }
+  } catch (_) {}
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {

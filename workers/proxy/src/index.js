@@ -1268,41 +1268,47 @@ async function handleRequest(request, env = {}) {
   if (!apiKey.startsWith('sk-ant-')) return errJson('Anthropic server key is not available on cv-proxy. Set Claude_API_Key or ANTHROPIC_API_KEY as a Worker secret.', 401);
   try {
     const body = JSON.parse(bodyText);
-    // v1.50.18-fix-anthropic-system: Anthropic's Messages API REJECTS
-    // role:"system" inside the messages array (HTTP 400:
-    // "messages: Unexpected role 'system'. The Messages API accepts
-    //  user and assistant roles only.").
+    // v1.50.18-fix-anthropic-system (v2 — handle ALL positions):
+    // Anthropic's Messages API REJECTS role:"system" anywhere
+    // inside the messages array (HTTP 400: "messages: Unexpected
+    // role 'system'. The Messages API accepts user and assistant
+    // roles only.").
     // The PWA / prompt-augment / writing-style preamble can each
-    // produce a body with messages[0].role === 'system'; we normalise
-    // here so whatever upstream shape arrives, Anthropic gets a valid
-    // request: lift every leading system message into the top-level
-    // `system` string (merging with any existing top-level system).
+    // produce a body with role:"system" messages — not necessarily
+    // at messages[0]. v1 of this fix only handled the leading
+    // case; v2 walks the WHOLE array, lifts every role:system
+    // entry into top-level `system`, and removes them from
+    // messages. Order of collection is preserved (top-down) so
+    // semantically-significant ordering of prompt fragments is
+    // retained inside body.system.
     if (Array.isArray(body.messages) && body.messages.length > 0) {
       const collectedSystem = [];
-      let firstNonSystem = 0;
-      while (firstNonSystem < body.messages.length) {
-        const m = body.messages[firstNonSystem];
-        if (!m || m.role !== 'system') break;
-        // Content may be a string OR an Anthropic-style array of blocks.
-        if (typeof m.content === 'string') {
-          if (m.content.trim()) collectedSystem.push(m.content);
-        } else if (Array.isArray(m.content)) {
-          const txt = m.content
-            .filter(b => b && b.type === 'text' && typeof b.text === 'string')
-            .map(b => b.text)
-            .join('\n');
-          if (txt.trim()) collectedSystem.push(txt);
+      const remainingMessages = [];
+      for (let i = 0; i < body.messages.length; i++) {
+        const m = body.messages[i];
+        if (m && m.role === 'system') {
+          // Content may be a string OR an Anthropic-style array of blocks.
+          if (typeof m.content === 'string') {
+            if (m.content.trim()) collectedSystem.push(m.content);
+          } else if (Array.isArray(m.content)) {
+            const txt = m.content
+              .filter(b => b && b.type === 'text' && typeof b.text === 'string')
+              .map(b => b.text)
+              .join('\n');
+            if (txt.trim()) collectedSystem.push(txt);
+          }
+          // Skip pushing onto remainingMessages — we're dropping it.
+        } else {
+          remainingMessages.push(m);
         }
-        firstNonSystem++;
       }
       if (collectedSystem.length > 0) {
-        // Prepend lifted content to any pre-existing top-level system.
         const existingTopSystem =
           typeof body.system === 'string' ? body.system : '';
         const merged = collectedSystem.join('\n\n') +
           (existingTopSystem ? '\n\n' + existingTopSystem : '');
         body.system = merged;
-        body.messages = body.messages.slice(firstNonSystem);
+        body.messages = remainingMessages;
       }
     }
     // v2.0 + v1.50.2: force non-streaming when EITHER demo mode is on (so

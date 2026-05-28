@@ -45,6 +45,59 @@ function Swatch({ color, size = 18, ring = false }: { color: string; size?: numb
   );
 }
 
+// v1.50.28 — visual preview of the package's photo shape. Each
+// package's registry.json `shape` field is one of:
+//   circle, rounded, rounded-square, square, hexagon
+// The svg silhouette is rendered next to the colour swatches so
+// users can see the photo treatment at a glance without scanning
+// the meta line. Falls back to a circle for unrecognised shapes.
+function ShapePreview({ shape, color, size = 18 }: { shape: string; color: string; size?: number }): JSX.Element {
+  const half = size / 2;
+  const stroke = color;
+  const fill = 'rgba(255,255,255,.08)';
+  const common = { fill, stroke, strokeWidth: 1.5 };
+  let inner: JSX.Element;
+  switch (shape) {
+    case 'square':
+      inner = <rect x={1} y={1} width={size - 2} height={size - 2} {...common} />;
+      break;
+    case 'rounded-square':
+      inner = <rect x={1} y={1} width={size - 2} height={size - 2} rx={3} ry={3} {...common} />;
+      break;
+    case 'rounded':
+      inner = <rect x={1} y={1} width={size - 2} height={size - 2} rx={half / 1.7} ry={half / 1.7} {...common} />;
+      break;
+    case 'hexagon': {
+      // Regular hexagon with flat top/bottom, centred at (half, half).
+      const r = half - 1.5;
+      const cx = half;
+      const cy = half;
+      const pts: string[] = [];
+      for (let i = 0; i < 6; i++) {
+        const a = (Math.PI / 3) * i + Math.PI / 6; // pointy top
+        pts.push(`${(cx + r * Math.cos(a)).toFixed(2)},${(cy + r * Math.sin(a)).toFixed(2)}`);
+      }
+      inner = <polygon points={pts.join(' ')} {...common} />;
+      break;
+    }
+    case 'circle':
+    default:
+      inner = <circle cx={half} cy={half} r={half - 1.5} {...common} />;
+      break;
+  }
+  return (
+    <svg
+      aria-hidden="true"
+      width={size}
+      height={size}
+      viewBox={`0 0 ${size} ${size}`}
+      style={{ display: 'inline-block', flex: '0 0 auto' }}
+    >
+      {inner}
+    </svg>
+  );
+}
+
 function PackageCard({
   id,
   active,
@@ -81,6 +134,8 @@ function PackageCard({
         <Swatch color={pkg.interactive} />
         <Swatch color={pkg.bullet} />
         <Swatch color={pkg.glyph} />
+        <span style={{ width: 4 }} />
+        <ShapePreview shape={pkg.shape} color={pkg.primary} />
       </span>
       <span style={{ fontSize: 11, opacity: 0.7 }}>
         {pkg.headingFont.replace(/ Bold$/, '')} · {pkg.shape} · {pkg.imageSize}px

@@ -512,6 +512,61 @@ function numberingConfig(style) {
 }
 
 // ──────────────────────────────────────────────────────────────────
+// AI-assisted disclosure — "hanging textbox"
+// ──────────────────────────────────────────────────────────────────
+// v1.14.13 — shared builder for the AI-assisted notice. The PWA
+// preview renders this as a small bordered chip in the lower-right
+// corner of the last page (app.js v1.40.338). DOCX mirrors that look
+// with a 1pt bordered paragraph; no wp:anchor floating frames — they
+// don't survive LibreOffice/CloudConvert PDF conversion (see the
+// v1.14.0 photo-floating regression note further down).
+//
+// context: 'sidebar' (dark navy bg) | 'linear' (white body of CL)
+//
+// The text matches what the PWA writes ("AI-assisted document") plus
+// the responsibility clause, since the docx is the artifact that
+// leaves the user's machine and the long form reads better there.
+function buildAiDisclosureHangingTextbox(ctx, opts) {
+  const context = (opts && opts.context) || 'linear';
+  const isSidebar = context === 'sidebar';
+  // Sidebar: light-grey-blue on dark navy (no fill, the cell bg shows
+  // through). Linear: muted teal on a very light fill.
+  const borderColor = isSidebar ? 'C8D0DC' : '95B0AE';
+  const textColor   = isSidebar ? 'C8D0DC' : '4D7976';
+  const para = {
+    alignment: isSidebar ? AlignmentType.CENTER : AlignmentType.RIGHT,
+    spacing: { before: 360, after: 0, line: 220, lineRule: 'auto' },
+    border: {
+      top:    { color: borderColor, space: 2, style: BorderStyle.SINGLE, size: 4 },
+      bottom: { color: borderColor, space: 2, style: BorderStyle.SINGLE, size: 4 },
+      left:   { color: borderColor, space: 4, style: BorderStyle.SINGLE, size: 4 },
+      right:  { color: borderColor, space: 4, style: BorderStyle.SINGLE, size: 4 },
+    },
+    children: [new TextRun({
+      text: 'AI-assisted — author retains responsibility for content.',
+      font: 'Calibri',
+      size: 13, // 6.5pt (half-points)
+      italics: true,
+      color: textColor,
+    })],
+  };
+  if (isSidebar) {
+    // Small symmetric indent inside the sidebar so the box doesn't
+    // touch the cell margins.
+    para.indent = { left: 120, right: 120 };
+  } else {
+    // Linear/CL: push the box to the right of the body so it hangs in
+    // the bottom-right corner of the last page, far from the
+    // left-aligned body prose. PAGE_W minus body cell L/R margins
+    // (100+100) gives ~11706 dxa usable; left-indent of 7000 leaves
+    // ~4700 dxa for the chip (~3.25").
+    para.indent = { left: 7000 };
+    para.shading = { type: ShadingType.CLEAR, fill: 'F4F8F8', color: 'auto' };
+  }
+  return new Paragraph(para);
+}
+
+// ──────────────────────────────────────────────────────────────────
 // Two-column document (CV)
 // ──────────────────────────────────────────────────────────────────
 function buildTwoColumnDocument(ctx) {
@@ -528,33 +583,22 @@ function buildTwoColumnDocument(ctx) {
   const photoInHeader        = maybeBuildPhotoFor(ctx, 'header');
   const photoInMain          = maybeBuildPhotoFor(ctx, 'main');
 
-  // v1.14.7 — AI disclosure inside the sidebar cell, at the bottom.
-  // Previously injected by post-process.js as a trailing body
-  // paragraph in light grey. That worked but the disclosure sat
-  // BELOW the CV content like an addendum. Moving it into the
-  // sidebar puts it in dead space (sidebars usually have room at
-  // the bottom) and aligns visually with the rest of the chrome.
+  // v1.14.13 — AI disclosure rendered as a "hanging textbox" rather
+  // than a plain footer line. The PWA preview ships the same notice
+  // as a small bordered chip in the lower-right corner of the last
+  // page (app.js v1.40.338). The docx exporter mirrors that look by
+  // wrapping the existing paragraph with a 1pt border on all four
+  // sides and tight inner padding. We do NOT use wp:anchor floating
+  // frames here — see the note at ~line 1036; LibreOffice/CloudConvert
+  // drops anchored frames during PDF conversion, which was the v1.14.0
+  // photo-floating regression. A bordered paragraph survives both.
   //
-  // Color is a light grey-blue that reads on dark sidebars without
-  // shouting. For very light sidebars (rare in AntCV defaults) the
-  // contrast is lower but still legible. A future improvement
-  // could pick the color from sidebarTextColor with luminance-aware
-  // alpha blending, but a fixed value keeps this patch minimal.
-  //
-  // The first-before spacing (240 = 12pt) creates visible separation
-  // from the last sidebar section above. There's no after-spacing
-  // since this is the last paragraph in the cell.
-  const aiDisclosurePara = new Paragraph({
-    alignment: AlignmentType.CENTER,
-    spacing: { before: 240, after: 0, line: 240, lineRule: 'auto' },
-    children: [new TextRun({
-      text: 'AI-assisted — author retains responsibility for content.',
-      font: 'Calibri',
-      size: 13, // 6.5pt (half-points)
-      italics: true,
-      color: 'C8D0DC',
-    })],
-  });
+  // For the sidebar context the bg is dark and we keep the existing
+  // light-grey-blue text colour with a matching border. The paragraph
+  // stays at the bottom of the sidebar cell (current placement) — the
+  // cell sits in a cantSplit body row, so moving the disclosure
+  // outside the body table would push it onto its own page.
+  const aiDisclosurePara = buildAiDisclosureHangingTextbox(ctx, { context: 'sidebar' });
 
   const sidebarChildren = [
     ...(photoTopOfSidebar ? [photoTopOfSidebar] : []),
@@ -787,6 +831,16 @@ function buildLinearDocument(ctx) {
     })],
   }));
 
+  // v1.14.13 — AI-assisted disclosure hanging textbox in the lower
+  // corner of the last page. For a single-page CL this is page 1;
+  // when jd_questions is on (page 2) the same chip is also appended
+  // to that page below — see the jdqSec branch in the section
+  // children construction further down. We add it here too so that
+  // single-page CLs still get the chip on their only page.
+  if (!jdqSec) {
+    bodyChildren.push(buildAiDisclosureHangingTextbox(ctx, { context: 'linear' }));
+  }
+
   // Wrap header + body in a single full-width table with zero page
   // margins. The preview uses @page margin:0 plus a 5pt indent on the
   // body's left/right via inner cell margins; we mirror that here so
@@ -901,6 +955,9 @@ function buildLinearDocument(ctx) {
                             font: style.mainBodyFont,
                           })],
                         }),
+                        // v1.14.13 — AI-assisted disclosure on the
+                        // last page of a 2-page CL (jd_questions).
+                        buildAiDisclosureHangingTextbox(ctx, { context: 'linear' }),
                       ],
                     })],
                   }),

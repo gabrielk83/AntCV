@@ -58,7 +58,7 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.40.341-p0d-fix3';
+  var SCRIPT_VERSION = '1.40.341-p0d-fix4';
   if (window.__antcvCandidatePreviewEditor341 === SCRIPT_VERSION) return;
   window.__antcvCandidatePreviewEditor341 = SCRIPT_VERSION;
 
@@ -230,32 +230,49 @@
     var host = block.querySelector(':scope [data-antcv-candidate-application-sentence="1"]');
     if (!host) {
       // Find the leaf element that contains the role or company string
-      // and host the sentence at its parent. If there's no obvious
-      // anchor, append at the block's end.
+      // (or the localised "Application" label, or the literal
+      // "[role and company]" placeholder that app.js renders when the
+      // application slot is unfilled) and host the sentence at its
+      // parent.
+      // v1.40.341-p0d-fix4: previously fell back to
+      // block.appendChild(host) when no anchor was found. On the CV
+      // paper there is NO application sentence semantically, so the
+      // fallback dumped an editable "Application: [Role] - [Company]"
+      // span at the CV preview's bottom-left corner. Abort instead —
+      // the candidate's application sentence belongs to CL only, and
+      // forcing it onto CV produces a phantom block.
       var anchor = null;
       var probes = block.querySelectorAll('div, p, span');
+      var lcLabel = label.toLowerCase();
       for (var i = 0; i < probes.length; i++) {
         var el = probes[i];
         if (el.children.length > 0) continue;
         var t = clean(el.textContent || '');
         if (!t) continue;
-        if (role && t.indexOf(role) >= 0) { anchor = el; break; }
-        if (company && t.indexOf(company) >= 0) { anchor = el; break; }
+        var lct = t.toLowerCase();
+        var roleHit = (role && role !== '[Role]' && t.indexOf(role) >= 0);
+        var companyHit = (company && company !== '[Company]' && t.indexOf(company) >= 0);
+        var labelHit = (lcLabel && lct.indexOf(lcLabel + ':') >= 0);
+        var placeholderHit = (lct.indexOf('[role and company]') >= 0
+                              || lct.indexOf('[role/company]') >= 0
+                              || lct.indexOf('application:') >= 0);
+        if (roleHit || companyHit || labelHit || placeholderHit) { anchor = el; break; }
+      }
+      if (!anchor) {
+        // No anchor in this block — refuse to materialise a phantom
+        // application sentence. The CV paper hits this path.
+        return;
       }
       host = document.createElement('div');
       host.setAttribute('data-antcv-candidate-application-sentence', '1');
       host.style.display = 'block';
       host.style.whiteSpace = 'normal';
-      if (anchor && anchor.parentNode) {
-        anchor.parentNode.insertBefore(host, anchor);
-        // Hide the original anchor — we render the canonical sentence
-        // in our host. The anchor stays in DOM so React state remains
-        // consistent.
-        anchor.style.display = 'none';
-        anchor.setAttribute('data-antcv-candidate-anchor-hidden', '1');
-      } else {
-        block.appendChild(host);
-      }
+      anchor.parentNode.insertBefore(host, anchor);
+      // Hide the original anchor — we render the canonical sentence
+      // in our host. The anchor stays in DOM so React state remains
+      // consistent.
+      anchor.style.display = 'none';
+      anchor.setAttribute('data-antcv-candidate-anchor-hidden', '1');
     }
 
     // (Re)build the host's children: three editable spans + two

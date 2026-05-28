@@ -17,7 +17,7 @@
   //      Core Competencies never enters this code path.
   //   3. coreSection()/coreSid() renamed mentally — physical names
   //      unchanged to keep this a single-hunk targeted fix.
-  const VERSION='1.40.249-fix-cjlr-isolate';
+  const VERSION='1.40.249-fix-cjlr-isolate-preview-guard';
   if(window.__antcvWhatIBringHeaderCjlr249===VERSION) return;
   window.__antcvWhatIBringHeaderCjlr249=VERSION;
 
@@ -74,11 +74,20 @@
     }
     return best;
   }
+  // v1.40.249-fix-cjlr-isolate-preview-guard (2026-05-28): refuse to
+  // treat any row whose ancestor is .antcv-preview-paper as an editor
+  // row. Otherwise ensure() mounts the CJLR + page-break host on top
+  // of the WHAT I BRING table headers in the CL Preview, which the
+  // user is seeing as a duplicate visible button. The applyPreview()
+  // function elsewhere in this script handles per-row alignment in
+  // the rendered preview without injecting button hosts.
+  function inPreviewPaper(el){const paper=document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]');return !!(paper && el && paper.contains(el));}
   function findRows(){
     const root=editorRoot(); if(!root) return [];
+    if(inPreviewPaper(root)) return []; // root resolved inside preview — refuse
     const seeds=Array.from(root.querySelectorAll('input,textarea,[contenteditable="true"]')).filter(f=>/focus area/i.test(f.value||f.placeholder||f.textContent||''));
     const rows=[];
-    seeds.forEach(f=>{const r=directRowForField(f,root); if(r&&visible(r)&&!rows.includes(r)) rows.push(r);});
+    seeds.forEach(f=>{const r=directRowForField(f,root); if(r&&visible(r)&&!rows.includes(r)&&!inPreviewPaper(r)) rows.push(r);});
     return rows;
   }
   function rowFields(row){return Array.from(row.querySelectorAll('input,textarea,[contenteditable="true"]')).filter(visible);}

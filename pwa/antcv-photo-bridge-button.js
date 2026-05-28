@@ -48,7 +48,7 @@
   'use strict';
 
   if (window.__antcvPhotoBridgeButtonInstalled) return;
-  window.__antcvPhotoBridgeButtonInstalled = '1.50.30';
+  window.__antcvPhotoBridgeButtonInstalled = '1.50.34';
 
   const STORAGE_KEY = 'photoPosition';
   const BRIDGE_VALUE = 'band-overlap';
@@ -118,45 +118,78 @@
   // position labels. We piggyback on the row's own parent so the
   // bridge button inherits the same flex / wrap rules and visually
   // joins the row instead of sitting on its own line.
+  //
+  // v1.50.34 — the actual buttons in app.js render with icon prefixes
+  // ("📍Sidebar top", "♦ header left", "× Hidden", …). v1.50.30's
+  // strict-equality match (`text === 'sidebar top'`) never matched,
+  // so findButtonRow returned null and the bridge button fell
+  // through to `section.appendChild` at the BOTTOM of the card.
+  // Switch to substring matching and require at least TWO known
+  // labels in the same parent — that confirms the parent is the
+  // photo-position row, not some unrelated button container.
+  var POSITION_LABEL_FRAGMENTS = [
+    'sidebar top', 'sidebar btm', 'sidebar bottom',
+    'header left', 'header right',
+    'main left', 'main right',
+    'hidden',
+  ];
+  function labelMatchesPosition(text) {
+    var t = String(text || '').toLowerCase();
+    for (var i = 0; i < POSITION_LABEL_FRAGMENTS.length; i++) {
+      if (t.indexOf(POSITION_LABEL_FRAGMENTS[i]) >= 0) return true;
+    }
+    return false;
+  }
   function findButtonRow(section) {
     if (!section) return null;
-    const buttons = section.querySelectorAll('button');
-    for (const b of buttons) {
-      const t = (b.textContent || '').trim().toLowerCase();
-      if (t === 'sidebar top' || t === 'sidebar btm' || t === 'main left' || t === 'main right' || t === 'hidden') {
-        const parent = b.parentElement;
-        if (parent && parent.children.length >= 2) return parent;
-      }
+    var buttons = section.querySelectorAll('button');
+    var counts = new Map();
+    for (var i = 0; i < buttons.length; i++) {
+      var b = buttons[i];
+      if (!labelMatchesPosition(b.textContent)) continue;
+      var parent = b.parentElement;
+      if (!parent) continue;
+      counts.set(parent, (counts.get(parent) || 0) + 1);
     }
-    return null;
+    // Pick the parent that holds the most position-labelled buttons
+    // (the row itself). Require ≥ 2 matches so a stray standalone
+    // button can't masquerade as the row.
+    var bestParent = null;
+    var bestCount = 0;
+    counts.forEach(function (n, p) {
+      if (n > bestCount) { bestCount = n; bestParent = p; }
+    });
+    return bestCount >= 2 ? bestParent : null;
   }
 
   function buildBridgeButton() {
-    const btn = document.createElement('button');
+    var btn = document.createElement('button');
     btn.type = 'button';
     btn.setAttribute(TAG_ATTR, '1');
     btn.textContent = '◐ Sidebar bridge';
     btn.title = 'Photo straddles the seam between the header band and the sidebar (medallion overlap).';
-    // Use inline styles matched as closely as possible to the existing
-    // photo-position buttons in the layout panel. The panel uses a
-    // dark navy theme with teal accents on the active button.
+    // v1.50.34 — minimal inline styles. Setting `all: revert` would
+    // wipe parent flex/gap rules, so instead we set just the few
+    // properties that need to match the existing position-button row.
+    // Padding and font-size are matched to the legacy buttons; the
+    // active/idle background+border swap is driven by
+    // refreshActiveState() and stays in sync via the storage poll.
     btn.style.cssText = [
-      'padding: 6px 12px',
+      'padding: 4px 10px',
       'background: rgba(255,255,255,.04)',
       'color: #d7e6ee',
       'border: 1px solid rgba(255,255,255,.18)',
       'border-radius: 6px',
       'cursor: pointer',
       'font-family: inherit',
-      'font-size: 12px',
+      'font-size: 11px',
       'font-weight: 600',
-      'margin: 2px',
       'display: inline-flex',
       'align-items: center',
       'gap: 4px',
       'white-space: nowrap',
     ].join(';');
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', function () {
       writePosition(BRIDGE_VALUE);
       refreshActiveState();
     });

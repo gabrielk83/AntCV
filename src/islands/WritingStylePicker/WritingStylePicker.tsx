@@ -113,6 +113,23 @@ function ToneChipsEditor({
   );
   const conflicts = useMemo(() => detectChipConflicts(chips), [chips]);
 
+  // v1.50.25 — search filter. Matches the chip name OR its `effect`
+  // text (case-insensitive substring). Active chips ALWAYS stay
+  // visible even when they don't match the query, so the user never
+  // loses sight of what they currently have selected.
+  const [query, setQuery] = useState('');
+  const filteredCompatible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return compatible;
+    return compatible.filter((chip) => {
+      if (chips.includes(chip)) return true; // always keep active chips
+      if (chip.toLowerCase().includes(q)) return true;
+      const effect = TONE_CHIPS_CATALOGUE[chip]?.effect ?? '';
+      return effect.toLowerCase().includes(q);
+    });
+  }, [compatible, chips, query]);
+  const hiddenByFilter = compatible.length - filteredCompatible.length;
+
   const toggle = useCallback(
     (chip: string) => {
       const has = chips.includes(chip);
@@ -124,8 +141,48 @@ function ToneChipsEditor({
 
   return (
     <>
+      {compatible.length > 8 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={`Filter ${compatible.length} chips…`}
+            aria-label="Filter tone chips"
+            style={{
+              flex: 1,
+              padding: '5px 10px',
+              fontSize: 12,
+              borderRadius: 6,
+              border: '1px solid rgba(255,255,255,.14)',
+              background: 'rgba(255,255,255,.04)',
+              color: '#e6eef3',
+            }}
+          />
+          {query && (
+            <button
+              type="button"
+              onClick={() => setQuery('')}
+              aria-label="Clear chip filter"
+              title="Clear filter"
+              style={{
+                padding: '4px 8px',
+                fontSize: 11,
+                fontWeight: 700,
+                borderRadius: 6,
+                background: 'transparent',
+                border: '1px solid rgba(255,255,255,.18)',
+                color: '#e6eef3',
+                cursor: 'pointer',
+              }}
+            >
+              ×
+            </button>
+          )}
+        </div>
+      )}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-        {compatible.map((chip) => {
+        {filteredCompatible.map((chip) => {
           const active = chips.includes(chip);
           const inConflict = conflicts.some((c) => c.pair.includes(chip));
           const meta = TONE_CHIPS_CATALOGUE[chip];
@@ -153,7 +210,17 @@ function ToneChipsEditor({
             </button>
           );
         })}
+        {filteredCompatible.length === 0 && (
+          <span style={{ fontSize: 11, opacity: 0.6 }}>
+            No chips match “{query}”. Active chips would appear here if any were set.
+          </span>
+        )}
       </div>
+      {query && hiddenByFilter > 0 && (
+        <div style={{ fontSize: 10, opacity: 0.6, marginTop: 4 }}>
+          {hiddenByFilter} more {hiddenByFilter === 1 ? 'chip' : 'chips'} hidden by filter.
+        </div>
+      )}
       {conflicts.length > 0 && (
         <div
           style={{

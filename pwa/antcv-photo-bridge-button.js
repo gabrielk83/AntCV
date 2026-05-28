@@ -48,7 +48,7 @@
   'use strict';
 
   if (window.__antcvPhotoBridgeButtonInstalled) return;
-  window.__antcvPhotoBridgeButtonInstalled = '1.50.35';
+  window.__antcvPhotoBridgeButtonInstalled = '1.50.36';
 
   const STORAGE_KEY = 'photoPosition';
   const BRIDGE_VALUE = 'band-overlap';
@@ -196,8 +196,30 @@
     return btn;
   }
 
+  // v1.50.36 — CSS suppression so sibling photo-position buttons
+  // appear de-highlighted when our bridge button is the active
+  // position. app.js manages its own React-driven highlight on the
+  // legacy buttons and writes localStorage.photoPosition only after
+  // its handler runs, so even with a fast poll there's a brief
+  // window where both highlights look active. The stylesheet
+  // forces sibling backgrounds + borders to the neutral pill state
+  // whenever the row carries `data-antcv-bridge-active="1"`.
+  function installSuppressionStyle() {
+    if (document.getElementById('antcv-bridge-suppress-style')) return;
+    var s = document.createElement('style');
+    s.id = 'antcv-bridge-suppress-style';
+    s.textContent =
+      '[data-antcv-bridge-active="1"] button:not([data-antcv-bridge-button="1"]):not([data-antcv-photo-shape-btn]) {' +
+        'background: rgba(255,255,255,.04) !important;' +
+        'border: 1px solid rgba(255,255,255,.18) !important;' +
+        'color: rgba(215,230,238,.62) !important;' +
+        'box-shadow: none !important;' +
+      '}';
+    document.head.appendChild(s);
+  }
+
   function refreshActiveState() {
-    const isActive = readPosition() === BRIDGE_VALUE;
+    var isActive = readPosition() === BRIDGE_VALUE;
     document.querySelectorAll('[' + TAG_ATTR + '="1"]').forEach(function (b) {
       if (isActive) {
         b.style.background = 'rgba(1,183,187,.18)';
@@ -208,7 +230,31 @@
         b.style.border = '1px solid rgba(255,255,255,.18)';
         b.style.color = '#d7e6ee';
       }
+      // Mark the parent row so the suppression stylesheet can swap
+      // sibling buttons into the neutral pill state.
+      var row = b.parentElement;
+      if (row) {
+        if (isActive) row.setAttribute('data-antcv-bridge-active', '1');
+        else row.removeAttribute('data-antcv-bridge-active');
+      }
     });
+  }
+
+  // v1.50.36 — fast refresh on ANY click inside the photo-position
+  // row. Capture phase so we run before app.js's onClick can settle
+  // its React state; 50ms and 200ms timers ride two phases — the
+  // first catches app.js's synchronous localStorage write (if any),
+  // the second catches an async write triggered by React's commit
+  // phase. Without this the 800ms setInterval was the only signal
+  // and the two highlights could coexist for the better part of a
+  // second.
+  function wireSiblingClickRefresh(row) {
+    if (!row || row._antcvBridgeWired) return;
+    row._antcvBridgeWired = true;
+    row.addEventListener('click', function () {
+      setTimeout(refreshActiveState, 50);
+      setTimeout(refreshActiveState, 200);
+    }, true);
   }
 
   // v1.50.32 / v1.50.33 — sweep stray CJLR cycler buttons from the
@@ -302,6 +348,11 @@
     } else {
       target.appendChild(bridgeBtn);
     }
+    // v1.50.36 — wire the row for fast click-driven refresh AND
+    // install the sibling suppression stylesheet (cheap — guarded
+    // by id check).
+    if (row) wireSiblingClickRefresh(row);
+    installSuppressionStyle();
     refreshActiveState();
     return true;
   }
@@ -327,10 +378,14 @@
       if (ev.key === STORAGE_KEY) refreshActiveState();
     });
 
-    // Same-tab: poll every 800ms so when the user clicks one of the
-    // legacy app.js buttons (which writes localStorage but does NOT
-    // fire 'storage' in the same tab), our highlight de-asserts.
-    setInterval(refreshActiveState, 800);
+    // Same-tab: poll every 400ms (down from 800ms in v1.50.30) so
+    // when the user clicks one of the legacy app.js buttons (which
+    // writes localStorage but does NOT fire 'storage' in the same
+    // tab), our highlight de-asserts faster. v1.50.36 also wires
+    // capture-phase click handlers on the row itself for sub-200ms
+    // response, so the poll is now a safety net rather than the
+    // primary signal.
+    setInterval(refreshActiveState, 400);
   }
 
   if (document.readyState === 'loading') {

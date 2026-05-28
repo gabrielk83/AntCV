@@ -48,7 +48,7 @@
   'use strict';
 
   if (window.__antcvPhotoBridgeButtonInstalled) return;
-  window.__antcvPhotoBridgeButtonInstalled = '1.50.34';
+  window.__antcvPhotoBridgeButtonInstalled = '1.50.35';
 
   const STORAGE_KEY = 'photoPosition';
   const BRIDGE_VALUE = 'band-overlap';
@@ -280,7 +280,28 @@
     });
     const row = findButtonRow(section);
     const target = row || section;
-    target.appendChild(buildBridgeButton());
+    const bridgeBtn = buildBridgeButton();
+    // v1.50.35 — insert BEFORE the "Hidden" button so the row reads
+    // …, Main left, Main right, Sidebar bridge, Hidden — which puts
+    // every visible position together at the top and keeps Hidden as
+    // the last (terminal) option. v1.50.34 used appendChild which
+    // dropped the bridge button after Hidden. If a Hidden button
+    // can't be found (renamed in a future build, or the row was
+    // restructured), fall back to appendChild so the button is
+    // still reachable.
+    let hiddenBtn = null;
+    if (row) {
+      const rowButtons = row.querySelectorAll('button');
+      for (let i = 0; i < rowButtons.length; i++) {
+        const t = String(rowButtons[i].textContent || '').toLowerCase();
+        if (t.indexOf('hidden') >= 0) { hiddenBtn = rowButtons[i]; break; }
+      }
+    }
+    if (hiddenBtn && hiddenBtn.parentElement === target) {
+      target.insertBefore(bridgeBtn, hiddenBtn);
+    } else {
+      target.appendChild(bridgeBtn);
+    }
     refreshActiveState();
     return true;
   }

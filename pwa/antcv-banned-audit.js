@@ -61,7 +61,7 @@
 (function () {
   'use strict';
 
-  const SCRIPT_VERSION = '1.40.172';
+  const SCRIPT_VERSION = '1.40.341-p0a';
 
   if (window.__antcvBannedAuditInstalled) return;
   window.__antcvBannedAuditInstalled = SCRIPT_VERSION;
@@ -92,12 +92,37 @@
     return out;
   }
 
+  // System-level baseline banned words enforced regardless of user
+  // prefs. Added for GEN-004 (UI/UX bugfix plan P0-A): "Compress" is
+  // never the right wording — "Fit" is. The audit reports any
+  // surviving user-facing use of "compress" so per-section migrations
+  // in later phases can clear it from the UI.
+  //
+  // Add ONLY system-mandated terms here. User-facing customisation
+  // belongs in personalInfo.stylePrefs.banned_words.
+  const BASELINE_WORDS = ['compress'];
+  const BASELINE_PHRASES = [];
+
+  function mergeUnique(a, b) {
+    const seen = new Set();
+    const out = [];
+    function add(v) {
+      const s = String(v || '').trim().toLowerCase();
+      if (!s || seen.has(s)) return;
+      seen.add(s);
+      out.push(s);
+    }
+    (a || []).forEach(add);
+    (b || []).forEach(add);
+    return out;
+  }
+
   function readPrefs() {
     const pi = Store.get('personalInfo', {}) || {};
     const sp = pi.stylePrefs || {};
     return {
-      words:   parseTerms(sp.banned_words),
-      phrases: parseTerms(sp.banned_phrases),
+      words:   mergeUnique(parseTerms(sp.banned_words),   BASELINE_WORDS),
+      phrases: mergeUnique(parseTerms(sp.banned_phrases), BASELINE_PHRASES),
     };
   }
 
@@ -345,5 +370,7 @@
     get lastReport() { return lastReport; },
     parseTerms:     parseTerms,
     slotsForSection: slotsForSection,
+    baselineWords:   BASELINE_WORDS.slice(),
+    baselinePhrases: BASELINE_PHRASES.slice(),
   };
 })();

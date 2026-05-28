@@ -49,7 +49,7 @@
 (function () {
   'use strict';
 
-  const SCRIPT_VERSION = '1.40.194';
+  const SCRIPT_VERSION = '1.40.341-p0b';
   if (window.__antcvItemPagesRenderInstalled) return;
   window.__antcvItemPagesRenderInstalled = SCRIPT_VERSION;
 
@@ -162,18 +162,28 @@
     return div;
   }
 
+  // PB-003: continuation suffix is localised via antcv-i18n (key
+  // 'pb.cont'). Falls back to '(CONT.)' if i18n hasn't installed yet.
+  function contSuffix() {
+    const i18n = window.AntcvI18n;
+    if (i18n && typeof i18n.t === 'function') {
+      return i18n.t('pb.cont', '(CONT.)');
+    }
+    return '(CONT.)';
+  }
   function makeContinuationHeader(sectionTitle) {
     const div = document.createElement('div');
     div.setAttribute('data-antcv-continuation-header', '1');
     div.style.color = '#00746E';
     div.style.fontWeight = '700';
     div.style.fontSize = '12pt';
-    div.style.marginTop = '4pt';
+    // PB-003: continuation heading sits 18pt from page top.
+    div.style.marginTop = '18pt';
     div.style.marginBottom = '8pt';
     div.style.borderBottom = '1pt solid #00746E';
     div.style.paddingBottom = '2pt';
     div.style.fontFamily = 'Trebuchet MS, Calibri, sans-serif';
-    div.textContent = sectionTitle + ' (CONT.)';
+    div.textContent = sectionTitle + ' ' + contSuffix();
     return div;
   }
 
@@ -201,10 +211,25 @@
       const target = items[i];
       const parent = target.parentNode;
       if (!parent) continue;
-      const spacer = makeBreakSpacer();
-      const header = makeContinuationHeader(sectionTitle);
-      parent.insertBefore(spacer, target);
-      parent.insertBefore(header, target);
+      if (i === 0) {
+        // PB-002: a page break on the first item moves the entire
+        // section to the next page. The section's own heading IS
+        // the heading on the new page — do not emit a (CONT.)
+        // header (would duplicate it). Insert only the break spacer
+        // inside the section, before its first child, so the
+        // section heading itself sits immediately after the break.
+        const spacer = makeBreakSpacer();
+        if (sectionEl.firstChild) {
+          sectionEl.insertBefore(spacer, sectionEl.firstChild);
+        } else {
+          sectionEl.appendChild(spacer);
+        }
+      } else {
+        const spacer = makeBreakSpacer();
+        const header = makeContinuationHeader(sectionTitle);
+        parent.insertBefore(spacer, target);
+        parent.insertBefore(header, target);
+      }
     }
   }
 

@@ -36,11 +36,12 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.40.341-tb004-fix1';
+  var SCRIPT_VERSION = '1.40.341-tb004-fix2';
   if (window.__antcvTableHeadersEditable341 === SCRIPT_VERSION) return;
   window.__antcvTableHeadersEditable341 = SCRIPT_VERSION;
 
   var STORAGE_KEY = 'antcv.tableHeaders.v1';
+  var SECTIONS_KEY = 'sections';
 
   function clean(s) {
     return String(s == null ? '' : s).replace(/[\t\n\r ]+/g, ' ').trim();
@@ -140,6 +141,54 @@
     } catch (_) {}
   }
 
+  // v1.40.341-tb004-fix2: round-trip plumbing. fix1 persisted edits
+  // ONLY to the sidecar override store. The DOCX worker at
+  // workers/docx-worker/src/generate.js:1781 (renderCompetencyTable)
+  // reads `const [header, ...data] = s.rows;` from the canonical
+  // localStorage['sections'] bundle — never sees the sidecar key —
+  // so fix1 round-tripped through Preview but DOCX/PDF export silently
+  // dropped the user's edits. fix2 mirrors the blur-time commit into
+  // the canonical store so all three surfaces stay in sync.
+  //
+  // Section matching: sectionKey is a slug derived from the table's
+  // heading ("core-competencies"). The canonical store keys sections
+  // by short `id` ("core_comp"), which doesn't slugify to the same
+  // value — but every section also has `title` ("CORE COMPETENCIES")
+  // which slugifies cleanly. Try title, name, id, type — first slug
+  // match wins.
+  function slugify(s) {
+    return String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  }
+  function commitToSections(doc, sectionKey, colIndex, text) {
+    try {
+      var raw = localStorage.getItem(SECTIONS_KEY);
+      if (!raw) return false;
+      var bundle = JSON.parse(raw);
+      if (!bundle || typeof bundle !== 'object') return false;
+      var list = bundle[doc];
+      if (!Array.isArray(list)) return false;
+      for (var i = 0; i < list.length; i++) {
+        var sec = list[i];
+        if (!sec || typeof sec !== 'object') continue;
+        var candidates = [sec.title, sec.name, sec.id, sec.type];
+        var matches = false;
+        for (var c = 0; c < candidates.length; c++) {
+          if (slugify(candidates[c]) === sectionKey) { matches = true; break; }
+        }
+        if (!matches) continue;
+        if (!Array.isArray(sec.rows) || sec.rows.length === 0) continue;
+        var header = sec.rows[0];
+        if (!Array.isArray(header)) continue;
+        if (colIndex < 0 || colIndex >= header.length) continue;
+        if (header[colIndex] === text) return true;
+        header[colIndex] = text;
+        localStorage.setItem(SECTIONS_KEY, JSON.stringify(bundle));
+        return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
   function attachTh(th, doc, sectionKey, colIndex) {
     if (th.getAttribute('data-antcv-th-editable') === '1') return;
     th.setAttribute('data-antcv-th-editable', '1');
@@ -163,7 +212,22 @@
     th.addEventListener('blur', function () {
       try {
         var text = clean(th.textContent || '');
-        setOverride(doc, sectionKey, colIndex, text);
+        // v1.40.341-tb004-fix2: write to the canonical sections store
+        // so DOCX/PDF export pick up the edit. If commit succeeded,
+        // clear the sidecar override (canonical is now authoritative);
+        // otherwise fall back to the sidecar so Preview at least
+        // retains the user's edit visually.
+        var committed = commitToSections(doc, sectionKey, colIndex, text);
+        if (committed) {
+          setOverrideSilent(doc, sectionKey, colIndex, '');
+        } else {
+          setOverrideSilent(doc, sectionKey, colIndex, text);
+        }
+        try {
+          window.dispatchEvent(new CustomEvent('antcv:sections-updated', {
+            detail: { source: 'table-headers-editable-341' },
+          }));
+        } catch (_) {}
       } catch (_) {}
     });
     th.addEventListener('keydown', function (ev) {

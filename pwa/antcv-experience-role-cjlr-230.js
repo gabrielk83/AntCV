@@ -6,7 +6,10 @@
  */
 (function(){
   'use strict';
-  const VERSION = '1.40.230';
+  const VERSION = '1.40.230-preview-guard';
+  // v1.40.230-preview-guard: Preview is button-free. Role cards from
+  // inside .antcv-preview-paper must not get CJLR buttons.
+  const isInPreviewPaper = el => { if(!el) return false; const p=document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]'); return !!(p && p.contains(el)); };
   const KEY = 'antcv.experienceRoleContentAlignment.v2';
   const ALIGN = ['center','justify','left','right'];
   const ICON = { left:'⇤', center:'↔', justify:'☰', right:'⇥' };
@@ -46,8 +49,9 @@
   function findEditorCards(){
     const cards=[];
     document.querySelectorAll('textarea').forEach(ta=>{
+      if(isInPreviewPaper(ta)) return;
       const c=roleCardForTextarea(ta);
-      if(c && !cards.includes(c)) cards.push(c);
+      if(c && !isInPreviewPaper(c) && !cards.includes(c)) cards.push(c);
     });
     return cards.filter(visible);
   }

@@ -5,7 +5,10 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.40.237';
+  const VERSION='1.40.237-preview-guard';
+  // v1.40.237-preview-guard: Preview is button-free. Reject seeds and
+  // hosts inside .antcv-preview-paper.
+  const isInPreviewPaper=el=>{if(!el)return false;const p=document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]');return !!(p&&p.contains(el));};
   const ALIGN_KEY='antcv.selectedOutcomes.rowAlignment.v1';
   const PAGE_KEY='antcv:itemPages';
   const SECTIONS_KEY='sections';
@@ -33,13 +36,14 @@
   function dispatchInput(el){try{el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));}catch(_){}}
 
   function editorRoot(){
-    const fields=Array.from(document.querySelectorAll('input,textarea,[contenteditable="true"]'));
+    const fields=Array.from(document.querySelectorAll('input,textarea,[contenteditable="true"]')).filter(f=>!isInPreviewPaper(f));
     const seed=fields.find(f=>/\[?verb\]?/i.test(String(f.value||f.placeholder||f.textContent||'')));
     if(!seed) return null;
     let p=seed.parentElement,best=null;
     for(let d=0;p&&d<9;d++,p=p.parentElement){
+      if(isInPreviewPaper(p)) break;
       const txt=clean(p.textContent);
-      const count=Array.from(p.querySelectorAll('input,textarea,[contenteditable="true"]')).filter(x=>/\[?verb\]?|outcome text/i.test(String(x.value||x.placeholder||x.textContent||''))).length;
+      const count=Array.from(p.querySelectorAll('input,textarea,[contenteditable="true"]')).filter(x=>!isInPreviewPaper(x)&&/\[?verb\]?|outcome text/i.test(String(x.value||x.placeholder||x.textContent||''))).length;
       if(count>=2) best=p;
       if(OUTCOME_RX.test(txt)){best=p;break;}
     }

@@ -13,7 +13,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="antcv-packages-registry.css?v=1.50.36">
+  <link rel="stylesheet" href="antcv-packages-registry.css?v=1.50.39">
   <title>AntCV</title>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -266,7 +266,7 @@
           app.src = 'app.js?v=1.50.9';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.50.36';
+            vo.src = 'antcv-version-override.js?v=1.50.39';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -521,7 +521,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-banned-audit.js?v=1.40.341-p0a" defer></script>
 <script src="antcv-llm-audit.js?v=1.40.178" defer></script>
 <script src="antcv-validation-severity-341.js?v=1.40.341-p1c" defer></script>
-<script src="antcv-section-control-bar.js?v=1.50.18-brand" defer></script>
+<script src="antcv-section-control-bar.js?v=1.50.18-brand-preview-guard" defer></script>
 <script src="antcv-candidate-preview-editor-341.js?v=1.40.341-p0d-fix5" defer></script>
 <script src="antcv-table-headers-editable-341.js?v=1.40.341-tb004-fix2" defer></script>
 <script src="antcv-section-move-button-341.js?v=1.40.341-p0d" defer></script>
@@ -549,7 +549,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-wizard-section-format-step10.js?v=1.40.239" defer></script>
 <script src="antcv-lang-bar-filter.js?v=1.40.212" defer></script>
 <script src="antcv-language-prefs-defaults.js?v=1.40.339" defer></script>
-<script src="antcv-wizard-language-slide-339.js?v=1.40.339-j" defer></script>
+<script src="antcv-wizard-language-slide-339.js?v=1.50.39-react-lang" defer></script>
 <script src="antcv-upload-recount-339.js?v=1.40.339-g" defer></script>
 <script src="antcv-preview-touch-fix.js?v=1.40.197" defer></script>
 <script src="antcv-panel-escape.js?v=1.40.203" defer></script>
@@ -559,17 +559,17 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-section-panel-207.js?v=1.40.207" defer></script>
 <script src="antcv-section-panel-208.js?v=1.40.209" defer></script>
 <script src="antcv-section-panel-211.js?v=1.40.239" defer></script>
-<script src="antcv-experience-role-cjlr-230.js?v=1.40.239" defer></script>
-<script src="antcv-core-competencies-row-controls-234.js?v=1.40.246" defer></script>
-<script src="antcv-selected-outcomes-row-controls-237.js?v=1.40.239" defer></script>
-<script src="antcv-profile-workstyle-cjlr-238.js?v=1.40.239" defer></script>
-<script src="antcv-how-contribute-controls-245.js?v=1.40.245" defer></script>
+<script src="antcv-experience-role-cjlr-230.js?v=1.40.239-preview-guard" defer></script>
+<script src="antcv-core-competencies-row-controls-234.js?v=1.40.246-preview-guard" defer></script>
+<script src="antcv-selected-outcomes-row-controls-237.js?v=1.40.239-preview-guard" defer></script>
+<script src="antcv-profile-workstyle-cjlr-238.js?v=1.40.239-preview-guard" defer></script>
+<script src="antcv-how-contribute-controls-245.js?v=1.40.245-preview-guard" defer></script>
 <script src="antcv-what-i-bring-cjlr-cleanup-246.js?v=1.40.246" defer></script>
-<script src="antcv-additional-info-row-controls-247.js?v=1.40.247" defer></script>
+<script src="antcv-additional-info-row-controls-247.js?v=1.40.247-preview-guard" defer></script>
 <script src="antcv-add-cjlr-order-swap-241.js?v=1.40.243" defer></script>
 <script src="antcv-embedded-controls-248.js?v=1.40.248" defer></script>
 <script src="antcv-what-i-bring-header-cjlr-249.js?v=1.40.249-fix-cjlr-isolate-preview-guard" defer></script>
-<script src="antcv-publications-strict-row-layout-273.js?v=1.40.273" defer></script>
+<script src="antcv-publications-strict-row-layout-273.js?v=1.40.273-preview-guard" defer></script>
 <script src="antcv-core-wib-strict-row-layout-274.js?v=1.40.274" defer></script>
 <script src="antcv-row-controls-wording-341.js?v=1.40.341-p1b" defer></script>
 <script src="antcv-mobile-topbar-cleanup-275.js?v=1.40.275" defer></script>
@@ -585,7 +585,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-photo-cloud-restore-339.js?v=1.40.339-i" defer></script>
 <script src="antcv-load-from-cloud-personal-info-hook-283.js?v=1.40.283" defer></script>
 <script src="antcv-page-breaks-everywhere-284.js?v=1.40.341-p0b" defer></script>
-<script src="antcv-what-i-bring-row-controls-327.js?v=1.40.327" defer></script>
+<script src="antcv-what-i-bring-row-controls-327.js?v=1.40.327-preview-guard" defer></script>
 <script src="antcv-table-page-splits-327.js?v=1.40.341-p0b" defer></script>
 <script src="antcv-page-button-polish-327.js?v=1.40.327" defer></script>
 <script src="antcv-settings-front-327.js?v=1.40.327" defer></script>
@@ -595,7 +595,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-app-history-back-to-preview-341.js?v=1.40.341-p0e" defer></script>
 <script src="antcv-preview-shell-sticky-341.js?v=1.40.341-p0e" defer></script>
 <script src="antcv-language-ui-fixes-292.js?v=1.40.292" defer></script>
-<script src="antcv-table-row-page-controls-328.js?v=1.40.328-fix1" defer></script>
+<script src="antcv-table-row-page-controls-328.js?v=1.40.328-preview-guard" defer></script>
 <script src="antcv-sidebar-subsection-pagebreaks-329.js?v=1.40.341-p0b" defer></script>
 <script src="antcv-editor-layout-cleanup-331.js?v=1.40.341-p0c-fix9" defer></script>
 <script src="antcv-cl-preview-cluster-guard-341.js?v=1.40.341-p0c" defer></script>
@@ -622,6 +622,6 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      used to live in antcv-stability-core-334.js (LanguageCard, PreviewToolbar,
      SettingsRouter, wizardState). See docs/plan/AntCV_Plan_v2_LockedSources.md
      §7 Pass 1. -->
-<script src="antcv-react-islands.js?v=1.50.36" defer></script>
+<script src="antcv-react-islands.js?v=1.50.39" defer></script>
 </body>
 </html>

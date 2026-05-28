@@ -80,7 +80,7 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.40.341-p0a';
+  var SCRIPT_VERSION = '1.40.341-p0a-preview-guard';
   if (window.__antcvSectionControlBarInstalled === SCRIPT_VERSION) return;
   window.__antcvSectionControlBarInstalled = SCRIPT_VERSION;
 
@@ -344,6 +344,25 @@
       try { console.warn('[section-control-bar] mount called without itemId; refusing (GEN-002)'); } catch (_) {}
       return function noop() {};
     }
+    // v1.40.341-p0a-preview-guard: Preview is display-only — control
+    // bars NEVER mount inside .antcv-preview-paper. Single backstop
+    // for every caller (editor-cleanup-331, cl-body-move-button-341,
+    // any future sidecar). If a caller's root-detection wandered into
+    // the Preview tree, refuse the mount here. Also reflexively strip
+    // any [data-antcv-control-item] already in the paper to recover
+    // users from stale state.
+    try {
+      var paper = document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]');
+      if (paper) {
+        if (paper.contains(hostEl)) {
+          return function noop() {};
+        }
+        var stale = paper.querySelectorAll('[data-antcv-control-item], [data-antcv-control-bar-host]');
+        for (var sx = 0; sx < stale.length; sx++) {
+          try { stale[sx].remove(); } catch (_) {}
+        }
+      }
+    } catch (_) {}
 
     var itemId = opts.itemId;
     var itemType = opts.itemType || 'item';

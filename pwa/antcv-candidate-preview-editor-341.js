@@ -58,7 +58,7 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.40.341-p0d-fix4';
+  var SCRIPT_VERSION = '1.40.341-p0d-fix5';
   if (window.__antcvCandidatePreviewEditor341 === SCRIPT_VERSION) return;
   window.__antcvCandidatePreviewEditor341 = SCRIPT_VERSION;
 
@@ -274,6 +274,39 @@
       anchor.style.display = 'none';
       anchor.setAttribute('data-antcv-candidate-anchor-hidden', '1');
     }
+
+    // v1.40.341-p0d-fix5: mirror the candidate Name leaf's computed
+    // typography onto the host so the application sentence inherits
+    // bold weight, the header color (typically #fff on dark bg), and
+    // the header font (serif). fix4 inserted a parallel <div> as the
+    // host without copying any styling, so it rendered as the
+    // browser default (black, fw 400, sans-serif) and looked like a
+    // disabled placeholder hint instead of part of the candidate
+    // header. Diagnostic that motivated this fix:
+    //   {tag:'DIV', cls:'', color:'rgb(0, 0, 0)', fw:'400', ...}
+    // wrapName() is called before wrapApplicationSentence() in
+    // sweepOnce(), so by the time we get here the Name is already
+    // tagged with data-antcv-candidate-edit="name" and we can read
+    // its computed styles. If no Name leaf is found (rare — e.g. the
+    // candidate has no name yet), we leave host as-is.
+    try {
+      var nameLeaf = block.querySelector('[data-antcv-candidate-edit="name"]');
+      if (nameLeaf) {
+        var cs = window.getComputedStyle(nameLeaf);
+        if (cs) {
+          if (cs.fontFamily) host.style.fontFamily = cs.fontFamily;
+          if (cs.color) host.style.color = cs.color;
+          // Name is usually bold (700-800). Reuse the same weight so
+          // the sentence below visually parallels the name.
+          if (cs.fontWeight) host.style.fontWeight = cs.fontWeight;
+          // Keep the sentence slightly smaller than the name so it
+          // reads as a subtitle, not a duplicate heading.
+          var px = parseFloat(cs.fontSize);
+          if (Number.isFinite(px) && px > 0) host.style.fontSize = Math.max(11, Math.round(px * 0.6)) + 'px';
+          if (cs.letterSpacing && cs.letterSpacing !== 'normal') host.style.letterSpacing = cs.letterSpacing;
+        }
+      }
+    } catch (_) {}
 
     // (Re)build the host's children: three editable spans + two
     // static separator spans.

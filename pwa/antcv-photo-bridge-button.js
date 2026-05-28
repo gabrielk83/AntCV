@@ -178,9 +178,41 @@
     });
   }
 
+  // v1.50.32 — sweep stray CJLR cycler buttons from the PROFILE
+  // PHOTO settings card. The section-align sidecar
+  // (antcv-section-align.js) and the row-order swap sidecar
+  // (antcv-add-cjlr-order-swap-241.js) inject alignment cyclers into
+  // any element whose data attribute looks like a section-panel
+  // action row. The format-prefs SHADOW row (Off / On) is
+  // misidentified as a panel row, and the injected cycler ends up
+  // between Off and On — clicking it shifts the PROFILE PHOTO
+  // headline alignment, which is nonsense for a settings card.
+  //
+  // Strip every cycler that lives inside the PROFILE PHOTO section.
+  // Section-content cyclers (inside the actual document preview)
+  // are untouched because they live in a different DOM subtree.
+  function stripStrayCjlrButtons(section) {
+    if (!section) return;
+    const selectors = [
+      '[data-antcv-align-cycler]',
+      '[data-antcv-headline-cjlr="1"]',
+      '[data-antcv-add-cjlr-swap-241="cjlr"]',
+      '[data-antcv-panel-action-211="cjlr"]',
+      '[data-antcv-panel-action-208="cjlr"]',
+      '[data-antcv-panel-action-207="cjlr"]',
+    ];
+    section.querySelectorAll(selectors.join(', ')).forEach(function (b) {
+      try { b.parentElement && b.parentElement.removeChild(b); } catch (_) {}
+    });
+  }
+
   function inject() {
     const section = findSectionByHeading(/^PROFILE PHOTO$/, 2);
     if (!section) return false;
+    // v1.50.32 — always run the cleanup pass; the section-align
+    // sidecar may re-inject cyclers on any React commit, so we strip
+    // on every observer tick. Cheap (O(few)) and idempotent.
+    stripStrayCjlrButtons(section);
     if (section.querySelector('[' + TAG_ATTR + '="1"]')) {
       refreshActiveState();
       return true;

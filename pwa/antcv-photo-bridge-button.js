@@ -178,36 +178,58 @@
     });
   }
 
-  // v1.50.32 — sweep stray CJLR cycler buttons from the PROFILE
-  // PHOTO settings card. The section-align sidecar
-  // (antcv-section-align.js) and the row-order swap sidecar
-  // (antcv-add-cjlr-order-swap-241.js) inject alignment cyclers into
-  // any element whose data attribute looks like a section-panel
-  // action row. The format-prefs SHADOW row (Off / On) is
-  // misidentified as a panel row, and the injected cycler ends up
-  // between Off and On — clicking it shifts the PROFILE PHOTO
-  // headline alignment, which is nonsense for a settings card.
+  // v1.50.32 / v1.50.33 — sweep stray CJLR cycler buttons from the
+  // PROFILE PHOTO settings card.
   //
-  // Strip every cycler that lives inside the PROFILE PHOTO section.
-  // Section-content cyclers (inside the actual document preview)
-  // are untouched because they live in a different DOM subtree.
+  // The format-prefs Shape / Contour / Shadow rows each carry the
+  // class `.antcv-fp-shape-row` and contain ONLY `.antcv-fp-shape-btn`
+  // buttons. Any other element that ends up as a direct child of one
+  // of these rows is a stray injected by a section-panel sidecar
+  // (section-align, item-align, the *-row-controls files, etc.) and
+  // doesn't belong there — clicking it shifts the PROFILE PHOTO
+  // heading alignment, which is meaningless for a settings card.
+  //
+  // v1.50.33 fix: in addition to the selector-based pass (which v32
+  // already had), do a structure-based pass — remove any direct
+  // child of `.antcv-fp-shape-row` that isn't an `.antcv-fp-shape-btn`.
+  // This catches buttons we don't yet know the attribute names of.
+  // Document-preview cyclers are untouched because they live in a
+  // completely different DOM subtree.
   function stripStrayCjlrButtons(section) {
     if (!section) return;
-    const selectors = [
+    // Pass 1: known-attribute sweep. Fast, runs first.
+    var selectors = [
       '[data-antcv-align-cycler]',
       '[data-antcv-headline-cjlr="1"]',
       '[data-antcv-add-cjlr-swap-241="cjlr"]',
       '[data-antcv-panel-action-211="cjlr"]',
       '[data-antcv-panel-action-208="cjlr"]',
       '[data-antcv-panel-action-207="cjlr"]',
+      '[data-antcv-add-cjlr-swap-241]',
     ];
     section.querySelectorAll(selectors.join(', ')).forEach(function (b) {
       try { b.parentElement && b.parentElement.removeChild(b); } catch (_) {}
     });
+    // Pass 2: structure sweep. Remove any direct child of a
+    // .antcv-fp-shape-row that isn't an .antcv-fp-shape-btn. Skips
+    // our own bridge button (sits in a different row) and any text
+    // nodes (they're not Element children of a flexbox row).
+    section.querySelectorAll('.antcv-fp-shape-row').forEach(function (row) {
+      Array.prototype.slice.call(row.children).forEach(function (child) {
+        if (child && child.classList && !child.classList.contains('antcv-fp-shape-btn')) {
+          try { row.removeChild(child); } catch (_) {}
+        }
+      });
+    });
   }
 
   function inject() {
-    const section = findSectionByHeading(/^PROFILE PHOTO$/, 2);
+    // v1.50.33 — walk up only ONE level. v1.50.32 used 2 which could
+    // grab a parent containing both the photo card AND other Settings
+    // content; the structure-based CJLR sweep would then accidentally
+    // touch .antcv-fp-shape-row rows from neighbouring cards. The
+    // format-prefs injectShape uses depth=1 — match that.
+    const section = findSectionByHeading(/^PROFILE PHOTO$/, 1);
     if (!section) return false;
     // v1.50.32 — always run the cleanup pass; the section-align
     // sidecar may re-inject cyclers on any React commit, so we strip

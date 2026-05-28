@@ -58,7 +58,7 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.40.341-p0d-fix2';
+  var SCRIPT_VERSION = '1.40.341-p0d-fix3';
   if (window.__antcvCandidatePreviewEditor341 === SCRIPT_VERSION) return;
   window.__antcvCandidatePreviewEditor341 = SCRIPT_VERSION;
 
@@ -164,9 +164,13 @@
         if (pi.applicationLabel) { delete pi.applicationLabel; changed = true; }
       }
     } else if (field === 'role') {
-      if (pi.role !== newText) { pi.role = newText; changed = true; }
+      // v1.40.341-p0d-fix3: skip the literal placeholder so leaving
+      // an empty slot untouched doesn't write "[Role]" to storage.
+      var nextRole = newText === '[Role]' ? '' : newText;
+      if (pi.role !== nextRole) { pi.role = nextRole; changed = true; }
     } else if (field === 'company') {
-      if (pi.company !== newText) { pi.company = newText; changed = true; }
+      var nextCompany = newText === '[Company]' ? '' : newText;
+      if (pi.company !== nextCompany) { pi.company = nextCompany; changed = true; }
     }
     if (changed) writePI(pi);
   }
@@ -205,9 +209,22 @@
   function wrapApplicationSentence(block) {
     var pi = readPI();
     var label = applicationLabel();
-    var role = clean(pi.role || '');
-    var company = clean(pi.company || '');
-    if (!role && !company) return;
+    // v1.40.341-p0d-fix3: accept multiple personalInfo key names —
+    // the schema diverged across writing-engine passes. Earlier
+    // builds used pi.role/pi.company; some newer JD-tailoring code
+    // writes pi.position/pi.jobTitle/pi.targetRole and
+    // pi.targetCompany. Probe all of them.
+    var role = clean(pi.role || pi.position || pi.jobTitle || pi.targetRole || '');
+    var company = clean(pi.company || pi.targetCompany || pi.employer || '');
+    // v1.40.341-p0d-fix3: previously bailed when both role+company
+    // were empty. That meant the application sentence was NEVER made
+    // editable on a fresh CV — the user had to fill the panel first
+    // before they could click in Preview. CA-002 acceptance says
+    // "Preview renders the concatenated sentence and is editable in
+    // place" — so we must wrap even when the slots are empty. Render
+    // the sentence with placeholder hints; the user can type over them.
+    if (!role) role = '[Role]';
+    if (!company) company = '[Company]';
 
     // Look for an existing host we control; if found, reuse it.
     var host = block.querySelector(':scope [data-antcv-candidate-application-sentence="1"]');

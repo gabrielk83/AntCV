@@ -127,6 +127,13 @@
 
   // ─── Toast ────────────────────────────────────────────────────────
 
+  // v1.50.23 — BRAND constants for the JD-watch toast.
+  const BRAND = {
+    navy:       '#283556',  // toast bg
+    white:      '#fff',     // toast text
+    tealBright: '#01B7BB',  // toast left-border accent
+  };
+
   function injectStylesOnce() {
     if (document.getElementById(STYLE_ID)) return;
     const css = `
@@ -137,9 +144,9 @@
         z-index: 3000;
         max-width: 360px;
         padding: 12px 16px;
-        background: #283556;
-        color: #fff;
-        border-left: 3px solid #01B7BB;
+        background: ${BRAND.navy};
+        color: ${BRAND.white};
+        border-left: 3px solid ${BRAND.tealBright};
         border-radius: 4px;
         font-family: Calibri, Arial, sans-serif;
         font-size: 13px;

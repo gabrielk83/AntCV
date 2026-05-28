@@ -54,29 +54,39 @@
   function injectStylesOnce() {
     if (document.getElementById(STYLE_ID)) return;
     const css = `
+      /* v1.50.32 — pill-shaped FAB with text label "Preview PDF". The
+         previous emoji-only round icon was easy to miss (and the 📄
+         glyph rendered as an invisible Tofu box on some systems
+         where the user couldn't find the FAB at all). z-index now
+         clears the overlay (99999) and most editor chrome but stays
+         below the mobile bottom-nav (2147481600). */
       #${FAB_ID} {
         position: fixed;
         bottom: 100px;
         left: 16px;
-        z-index: 99997;
-        width: 48px;
-        height: 48px;
-        border-radius: 24px;
-        background: #283556;
+        z-index: 2147481400;
+        padding: 0 16px;
+        height: 44px;
+        min-width: 44px;
+        border-radius: 22px;
+        background: #00746E;
         color: #fff;
-        border: 1px solid rgba(1,183,187,.55);
+        border: 1px solid #00867F;
         cursor: pointer;
-        font-size: 20px;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
         font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        box-shadow: 0 4px 12px rgba(0,0,0,.32);
-        display: flex;
+        box-shadow: 0 4px 14px rgba(0,0,0,.40);
+        display: inline-flex;
         align-items: center;
-        justify-content: center;
-        opacity: 0.92;
-        transition: opacity 0.15s, transform 0.15s;
+        gap: 6px;
+        opacity: 0.96;
+        transition: opacity 0.15s, transform 0.15s, background 0.15s;
       }
-      #${FAB_ID}:hover { opacity: 1; transform: scale(1.04); }
+      #${FAB_ID}:hover { opacity: 1; background: #00867F; transform: translateY(-1px); }
       #${FAB_ID}:focus-visible { outline: 2.5px solid #01B7BB; outline-offset: 2px; }
+      #${FAB_ID} svg { width: 16px; height: 16px; flex: 0 0 auto; }
 
       #${MODAL_ID}-backdrop {
         position: fixed;
@@ -202,24 +212,21 @@
     document.head.appendChild(s);
   }
 
-  // ─── Find the live preview paper ─────────────────────────────────
-  // Pick the paper that contains a photo image — same heuristic the
-  // photo-position sidecar uses since v1.50.29 — so we always preview
-  // the CV (which has the sidebar + photo) rather than the cover
-  // letter. Falls back to the first paper if no photo is present.
-  function findActivePaper() {
-    const papers = Array.from(document.querySelectorAll('.antcv-preview-paper'));
-    if (!papers.length) return null;
-    for (const p of papers) {
-      const imgs = p.querySelectorAll('img');
-      for (const img of imgs) {
-        const style = img.getAttribute('style') || '';
-        if (style.indexOf('border-radius:50%') >= 0 || style.indexOf('border-radius: 50%') >= 0) {
-          return p;
-        }
-      }
-    }
-    return papers[0];
+  // ─── Find the live preview papers ────────────────────────────────
+  // v1.50.32 — return EVERY .antcv-preview-paper in DOM order. v1.50.31
+  // returned only the paper containing the photo, which on a multi-page
+  // CV meant the iframe carried only page 1 and the print dialog
+  // cropped the rest. Multi-page CVs render as multiple paper elements
+  // stacked vertically; we need all of them.
+  //
+  // When BOTH the CV and the CL are mounted (dual-view mode), the
+  // function still returns all papers. The user can disambiguate by
+  // switching to the document they want before opening the modal.
+  // Practical disambiguation that worked for v1.50.29 (find the paper
+  // with a photo) is too brittle here because only page 1 of the CV
+  // carries the photo; pages 2+ would be excluded.
+  function findAllActivePapers() {
+    return Array.from(document.querySelectorAll('.antcv-preview-paper'));
   }
 
   // ─── Build the modal ─────────────────────────────────────────────
@@ -245,7 +252,14 @@
     header.id = MODAL_ID + '-header';
     const title = document.createElement('span');
     title.id = MODAL_ID + '-title';
-    title.textContent = 'PDF preview';
+    // v1.50.32 — page count in the title so the user sees at a glance
+    // whether the preview captured all pages of their CV.
+    const previewPapers = findAllActivePapers();
+    if (previewPapers.length > 1) {
+      title.textContent = 'PDF preview · ' + previewPapers.length + ' pages';
+    } else {
+      title.textContent = 'PDF preview';
+    }
     const close = document.createElement('button');
     close.id = MODAL_ID + '-close';
     close.type = 'button';
@@ -270,8 +284,8 @@
     const wrap = document.createElement('div');
     wrap.id = MODAL_ID + '-iframe-wrap';
 
-    const paper = findActivePaper();
-    if (!paper) {
+    const papers = findAllActivePapers();
+    if (!papers.length) {
       const empty = document.createElement('div');
       empty.id = MODAL_ID + '-iframe-empty';
       empty.textContent =
@@ -292,7 +306,13 @@
       const inlineStyles = Array.from(document.querySelectorAll('style'))
         .map(s => '<style>' + (s.textContent || '') + '</style>')
         .join('\n');
-      const paperHtml = paper.outerHTML;
+      // v1.50.32 — stack EVERY paper. Multi-page CVs render as N
+      // .antcv-preview-paper elements in DOM order; v1.50.31 grabbed
+      // just one and the print cropped the rest. Joining outerHTML
+      // preserves each paper\'s inline styles, fonts, and table
+      // layouts so the iframe matches what the user sees on screen.
+      const paperHtml = papers.map(p => p.outerHTML).join('\n');
+      const pageCount = papers.length;
       const srcdoc = `<!doctype html>
 <html lang="en">
 <head>
@@ -303,17 +323,48 @@ ${inlineStyles}
 <style>
   html, body { margin: 0; padding: 0; background: #e8eef3; }
   body { padding: 12px; }
-  .antcv-preview-paper { margin: 0 auto; box-shadow: 0 2px 12px rgba(0,0,0,.15); }
+  .antcv-preview-paper {
+    margin: 0 auto 14px auto;
+    box-shadow: 0 2px 12px rgba(0,0,0,.15);
+    /* v1.50.32 — fixed A4 width so multi-page CVs print at the
+       intended size. The PWA renders the paper at this width too;
+       echoing it here decouples the iframe from any inherited
+       layout constraints. */
+    width: 210mm;
+    min-height: 297mm;
+    box-sizing: border-box;
+    background: #fff;
+    overflow: hidden;
+  }
+  .antcv-preview-paper:last-child { margin-bottom: 0; }
   /* Hide any sidecar overlays that might be cloned along with the paper. */
   .antcv-fab, [class*="antcv-fab"], .antcv-overlay, [class*="antcv-overlay"] { display: none !important; }
+
+  /* v1.50.32 — print pagination. @page sets the printable size to
+     A4 with zero margin (the paper already carries its own internal
+     padding). Each .antcv-preview-paper gets page-break-after:
+     always so multi-page CVs paginate cleanly — without this rule
+     the browser dumped everything onto sheet 1 and clipped the
+     rest. The :last-child override prevents a trailing blank
+     sheet after the final page. */
+  @page { size: A4; margin: 0; }
   @media print {
     html, body { background: #fff; }
     body { padding: 0; }
-    .antcv-preview-paper { box-shadow: none !important; margin: 0 !important; }
+    .antcv-preview-paper {
+      box-shadow: none !important;
+      margin: 0 !important;
+      page-break-after: always;
+      break-after: page;
+    }
+    .antcv-preview-paper:last-child {
+      page-break-after: auto;
+      break-after: auto;
+    }
   }
 </style>
 </head>
-<body>${paperHtml}</body>
+<body data-antcv-pages="${pageCount}">${paperHtml}</body>
 </html>`;
       iframe.srcdoc = srcdoc;
       wrap.appendChild(iframe);
@@ -403,7 +454,17 @@ ${inlineStyles}
     fab.type = 'button';
     fab.setAttribute('aria-label', 'Preview document and save as PDF');
     fab.title = 'Preview the CV and save as PDF via browser print';
-    fab.textContent = '📄'; // 📄
+    // v1.50.32 — SVG document icon + "Preview PDF" text label.
+    // Replaces the 📄 emoji that didn\'t render on some systems and
+    // gave the FAB no apparent affordance. innerHTML is safe here —
+    // no user input flows into this string.
+    fab.innerHTML =
+      '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
+        '<path d="M7 3h7l5 5v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/>' +
+        '<path d="M14 3v6h5"/>' +
+        '<path d="M9 14h6"/>' +
+        '<path d="M9 18h4"/>' +
+      '</svg><span>Preview PDF</span>';
     fab.addEventListener('click', () => openModal());
     document.body.appendChild(fab);
   }

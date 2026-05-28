@@ -48,7 +48,7 @@
 (function () {
   'use strict';
 
-  const SCRIPT_VERSION = '1.40.194';
+  const SCRIPT_VERSION = '1.50.29';
 
   // Settings key + valid values, mirroring the dropdown in Settings.
   //
@@ -102,8 +102,19 @@
   // `border-radius:50%`. We identify it by that styling marker plus
   // by its presence inside the sidebar `<td>` (bgcolor=navy).
 
-  function findPaper() {
-    return document.querySelector('.antcv-preview-paper');
+  // v1.50.29 — return ALL preview-paper elements. The PWA can mount
+  // BOTH the CV paper and the CL paper at the same time (dual-view
+  // mode, print preview, or simply because both renderers are wired
+  // in parallel). Earlier versions returned only the FIRST one via
+  // querySelector, which meant `applyLayout` could find the original
+  // photo in the CV paper but then clone it into the CL paper's main
+  // TD when CL happened to appear first in DOM order — the photo
+  // would visually move from the CV sidebar to the COVER LETTER's
+  // body. The new `pickActivePaper` function disambiguates by picking
+  // the paper that actually contains the original photo, so the
+  // clone always lands in the same paper as the source.
+  function findAllPapers() {
+    return Array.from(document.querySelectorAll('.antcv-preview-paper'));
   }
 
   function findOriginalPhoto(paper) {
@@ -118,6 +129,34 @@
       }
     }
     return null;
+  }
+
+  // v1.50.29 — pick the paper to operate on. Strategy:
+  //   1. Iterate every .antcv-preview-paper in the document.
+  //   2. Return the first one whose findOriginalPhoto returns a
+  //      non-null img — that's the paper where the photo physically
+  //      lives, and where the clone MUST also land so the user's
+  //      "move photo to main column" intent stays inside the CV.
+  //   3. If no paper has a photo (user has no photo set), fall back
+  //      to the first paper so cleanup paths (clearExistingClones,
+  //      setOriginalVisible no-op) still run somewhere.
+  // Returns { paper, original } so callers don't have to call
+  // findOriginalPhoto a second time.
+  function pickActivePaper() {
+    const papers = findAllPapers();
+    if (!papers.length) return { paper: null, original: null };
+    for (const p of papers) {
+      const img = findOriginalPhoto(p);
+      if (img) return { paper: p, original: img };
+    }
+    return { paper: papers[0], original: null };
+  }
+
+  // Backward-compatible alias. The MutationObserver bootstrap below
+  // and the click/storage handlers all call findPaper(); keeping the
+  // function name avoids invasive churn through the rest of the file.
+  function findPaper() {
+    return pickActivePaper().paper;
   }
 
   // The header band is the navy table that sits above the main 2-col
@@ -352,13 +391,26 @@
   }
 
   function applyLayout() {
-    const paper = findPaper();
+    // v1.50.29 — pick the paper that owns the photo. Earlier code
+    // called findPaper() then findOriginalPhoto(paper) separately,
+    // which meant the chosen paper could be one without a photo
+    // (e.g. the cover letter), and findOriginalPhoto would then
+    // return null while findMainTd / findHeaderTable / findSidebarTd
+    // still succeeded against the WRONG paper. Net effect: nothing
+    // happened — except the user's previous photo placement stayed
+    // wherever the last successful clone went, which on a fresh
+    // dual-view session was the CL paper. pickActivePaper now
+    // returns paper + photo as a matched pair.
+    const { paper, original } = pickActivePaper();
     if (!paper) return;
 
     const position = readPosition();
-    const original = findOriginalPhoto(paper);
-    // Always start from a clean slate.
-    clearExistingClones(paper);
+    // Always start from a clean slate. Sweep clones from BOTH papers
+    // so a previously-mounted photo in the wrong paper (the bug this
+    // fix addresses) is cleared even after the user switches setting.
+    for (const p of findAllPapers()) {
+      clearExistingClones(p);
+    }
 
     // Sidebar positions: original is correct; nothing to do (and the
     // app.js render itself hides/shows for sidebar-bottom vs top).

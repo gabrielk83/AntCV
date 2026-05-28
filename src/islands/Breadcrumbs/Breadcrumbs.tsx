@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ObservabilityEntry } from '../../lib/observability';
+import { copySnapshot, downloadSnapshot } from '../../lib/observability';
 
 // Floating bottom-right panel that surfaces the writing-engine activity
 // flowing through the proxy worker. Subscribes to the
@@ -74,6 +75,9 @@ export function Breadcrumbs(): JSX.Element | null {
     };
   }, [expanded]);
 
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'ok' | 'fail'>('idle');
+  const copyResetRef = useRef<number | null>(null);
+
   const onToggle = useCallback(() => setExpanded((v) => !v), []);
   const onDismiss = useCallback(() => {
     setDismissed(true);
@@ -85,6 +89,39 @@ export function Breadcrumbs(): JSX.Element | null {
       try { localStorage.setItem('antcv:observability-verbose', next ? '1' : '0'); } catch { /* */ }
       return next;
     });
+  }, []);
+
+  // v1.50.24 — copy the full observability snapshot (full 50-entry
+  // buffer + build version + active prefs, minus banned-word lists) as
+  // pretty-printed JSON to the clipboard. Useful when a user wants to
+  // attach diagnostic state to a bug report. Falls back to a hidden
+  // textarea + execCommand path on browsers without the Clipboard API.
+  // Shift-click bypasses the clipboard and downloads the JSON file
+  // directly — handy when the page lost focus and writeText would
+  // reject (Safari, Firefox under some focus conditions).
+  const onCopy = useCallback(async (ev: React.MouseEvent) => {
+    if (copyResetRef.current != null) {
+      window.clearTimeout(copyResetRef.current);
+      copyResetRef.current = null;
+    }
+    if (ev.shiftKey) {
+      try { downloadSnapshot(); setCopyStatus('ok'); }
+      catch { setCopyStatus('fail'); }
+    } else {
+      const ok = await copySnapshot();
+      setCopyStatus(ok ? 'ok' : 'fail');
+    }
+    copyResetRef.current = window.setTimeout(() => {
+      setCopyStatus('idle');
+      copyResetRef.current = null;
+    }, 1800);
+  }, []);
+
+  useEffect(() => () => {
+    if (copyResetRef.current != null) {
+      window.clearTimeout(copyResetRef.current);
+      copyResetRef.current = null;
+    }
   }, []);
 
   const latest = entries.length ? entries[entries.length - 1] : null;
@@ -189,6 +226,35 @@ export function Breadcrumbs(): JSX.Element | null {
               </button>
               <button
                 type="button"
+                onClick={onCopy}
+                title={
+                  copyStatus === 'ok'  ? 'Snapshot copied (or downloaded with Shift-click)' :
+                  copyStatus === 'fail' ? 'Copy failed — Shift-click to download instead' :
+                  'Copy diagnostic snapshot (Shift-click to download)'
+                }
+                aria-label="Copy diagnostic snapshot"
+                style={{
+                  padding: '2px 8px',
+                  borderRadius: 6,
+                  background:
+                    copyStatus === 'ok'   ? 'rgba(155,224,165,.20)' :
+                    copyStatus === 'fail' ? 'rgba(217,164,65,.20)'  :
+                    'transparent',
+                  border: '1px solid ' + (
+                    copyStatus === 'ok'   ? 'rgba(155,224,165,.55)' :
+                    copyStatus === 'fail' ? 'rgba(217,164,65,.55)'  :
+                    'rgba(255,255,255,.18)'
+                  ),
+                  color: '#e6eef3',
+                  cursor: 'pointer',
+                  fontSize: 10,
+                  fontWeight: 700,
+                }}
+              >
+                {copyStatus === 'ok' ? 'OK' : copyStatus === 'fail' ? '!?' : 'COPY'}
+              </button>
+              <button
+                type="button"
                 onClick={onToggle}
                 aria-label="Collapse breadcrumbs"
                 style={{
@@ -232,7 +298,8 @@ export function Breadcrumbs(): JSX.Element | null {
 
           <div style={{ fontSize: 10, opacity: 0.55, marginTop: 8 }}>
             Reading <code>window.AntcvObservability.readBuffer()</code>. Subscribe via{' '}
-            <code>antcv:writing-engine-response</code>.
+            <code>antcv:writing-engine-response</code>. COPY/download via{' '}
+            <code>copySnapshot()</code> / <code>downloadSnapshot()</code>.
           </div>
         </div>
       )}

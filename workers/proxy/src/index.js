@@ -704,10 +704,23 @@ async function handleRequest(request, env = {}) {
         } else {
           // For Anthropic the top-level `system` field is the right home;
           // for OpenAI / Mistral the system message lives at messages[0].
-          // We can safely set BOTH — Anthropic ignores OpenAI-shaped fields
-          // and vice versa per provider-shape detection downstream.
-          parsed.system = writingStylePreamble;
-          parsed.messages.unshift({ role: 'system', content: writingStylePreamble });
+          //
+          // Previous comment claimed "Anthropic ignores OpenAI-shaped
+          // fields" — that is WRONG. Anthropic's Messages API REJECTS
+          // role:"system" inside the messages array with HTTP 400:
+          //   "messages: Unexpected role \"system\". The Messages
+          //    API accepts user and assistant roles only."
+          // Setting both forms therefore broke every Anthropic call
+          // that came through the writing-style preamble path. Detect
+          // Anthropic by model name (claude-*) and route accordingly.
+          const isAnthropic =
+            typeof parsed.model === 'string' && /^claude[-_]/i.test(parsed.model);
+          if (isAnthropic) {
+            parsed.system = writingStylePreamble;
+            // do NOT unshift — Anthropic rejects role:system in messages.
+          } else {
+            parsed.messages.unshift({ role: 'system', content: writingStylePreamble });
+          }
         }
       } else if (parsed.systemInstruction && Array.isArray(parsed.systemInstruction.parts) && parsed.systemInstruction.parts[0]) {
         parsed.systemInstruction.parts[0].text = writingStylePreamble + '\n\n' + (parsed.systemInstruction.parts[0].text ?? '');

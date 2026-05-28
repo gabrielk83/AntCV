@@ -1,0 +1,253 @@
+{
+  "schema_version": "0.1.0",
+  "generation_id": "gen_01H7XYZ123",
+  "application_id": "app_01H7XYZ456",
+  "role_slug": "product-manager",
+  "role_label_raw": "Senior Product Manager — Maersk",
+  "writing_style": "measured-professional",
+  "package": "copenhagen-modern",
+  "target_language": "en",
+  "target_pages": 1.5,
+  "target_ats_tier": "modern",
+  "target_use_case": "commercial",
+  "career_stage": null,
+  "commercial_seniority": "senior",
+  "sections": {
+    "profile": {
+      "format": "paragraph",
+      "content": "Technical product manager with 15 years across automotive LiDAR and electro-optical systems. Works between hardware engineering and customer programmes, focused on change governance, system architecture, and customer requirements traceability. Currently leading programme work in regulated industries.",
+      "char_count": 312
+    },
+    "core_competencies": {
+      "format": "table-grid",
+      "parser_safe_separator": "em_dash",
+      "rows": [
+        {"focus_area": "System architecture", "expertise": "Hardware-software interface, requirements traceability"},
+        {"focus_area": "Change governance", "expertise": "Multi-vendor change boards across automotive tier-1 programmes"},
+        {"focus_area": "Functional safety", "expertise": "ISO 26262 assessor; two ASPICE re-certifications"},
+        {"focus_area": "Programme delivery", "expertise": "Customer change requests closed under deadline"},
+        {"focus_area": "Stakeholder coordination", "expertise": "Cross-supplier negotiation, on-deadline closure"}
+      ]
+    },
+    "selected_outcomes": {
+      "format": "bullets",
+      "items": [
+        {
+          "title": "Customer change requests closed under deadline",
+          "body": "Cross-supplier negotiation across two tier-1 programmes; no escalation needed; closure within agreed window.",
+          "word_count": 15
+        },
+        {
+          "title": "Two ASPICE re-certifications, zero major findings",
+          "body": "Coordinated optical, electrical, and software teams; pre-board screening before assessor reviews.",
+          "word_count": 13
+        },
+        {
+          "title": "40% reduction in review cycle time",
+          "body": "Introduced pre-board ASPICE checklist; average closure dropped from 25 days to 15.",
+          "word_count": 14
+        }
+      ]
+    },
+    "experience": [
+      {
+        "company": "Innoviz Technologies",
+        "role": "System Architect & Change Control Lead",
+        "years": "2020 — 2025",
+        "location": "Israel / Remote",
+        "format": "bullets",
+        "items": [
+          "Led change control across three automotive tier-1 customer programmes; owned customer change request closure and system architecture handover.",
+          "Introduced ASPICE-aligned pre-board screening for customer change requests; coordinated optical, electrical, and software team inputs.",
+          "Cut average review cycle time 40%; supported two ASPICE re-certifications with zero major findings."
+        ]
+      },
+      {
+        "company": "Innoviz Technologies",
+        "role": "Customer Change Requests Specialist",
+        "years": "2017 — 2020",
+        "location": "Israel",
+        "format": "bullets",
+        "items": [
+          "Owned customer change request workflow for two tier-1 customer programmes; first point of contact for engineering and customer change boards.",
+          "Built the requirements traceability framework that the System Architect role later extended; documented across optical and ECU teams.",
+          "Closed 28 customer change requests across the period; no requests escalated to the executive change board."
+        ]
+      },
+      {
+        "company": "Sirin Labs",
+        "role": "Senior Electro-Optical Engineer",
+        "years": "2014 — 2017",
+        "location": "Israel",
+        "format": "bullets",
+        "items": [
+          "Led a seven-person electro-optical engineering team; owned the optical subsystem specification for the company's primary consumer product.",
+          "Coordinated with mechanical, electrical, and software teams to deliver the optical subsystem within target volume and cost constraints.",
+          "Recruited and onboarded three engineers during the period; established the optical characterisation lab and test methodology."
+        ]
+      },
+      {
+        "company": "Kanzen konsulenter i nord ApS",
+        "role": "Founder, Programme Management Specialist",
+        "years": "2022 — 2025",
+        "location": "Copenhagen, Denmark",
+        "format": "bullets",
+        "items": [
+          "Founded the consultancy alongside the Innoviz role; advised three companies on programme management and change governance in regulated industries.",
+          "Authored the ASPICE-adoption framework that one client now uses as the basis for their internal change-control standard.",
+          "Established the local Danish entity, registered for VAT and tax, and managed the operational side of the consultancy across three years."
+        ]
+      }
+    ],
+    "tools_methods": {
+      "format": "structured-grid",
+      "groups": [
+        {
+          "label": "Project and change",
+          "items": "Jira, Confluence, ServiceNow, ASPICE, Six Sigma Black Belt"
+        },
+        {
+          "label": "Engineering",
+          "items": "Python, MATLAB, LabVIEW, COMSOL, Zemax"
+        },
+        {
+          "label": "Quality and risk",
+          "items": "ISO 26262, FMEA, DFMEA, design reviews"
+        }
+      ]
+    },
+    "certifications": {
+      "format": "bullets",
+      "items": [
+        "BABOK — IIBA (2022)",
+        "Certified AI Practitioner (CNX-CAIP) — CNX (2024)",
+        "Six Sigma Black Belt — ASQ (2018)",
+        "Automotive SPICE — intacs (2021)",
+        "Prøve i Dansk 2 — Danish Language Test (2023)"
+      ]
+    },
+    "education": {
+      "format": "bullets",
+      "items": [
+        "MBA — Technion, Israel Institute of Technology (2015)",
+        "M.Sc., Electrical Engineering — Tel Aviv University (2010)",
+        "B.Sc., Physics and Electrical Engineering (dual) — Tel Aviv University (2008)"
+      ]
+    },
+    "publications_patents": {
+      "format": "bullets",
+      "items": [
+        "Karp-Gershon, G., et al. (2018). Optical materials characterisation paper. Optics Letters.",
+        "Patent: Optical sensor arrangement (granted, 2017)."
+      ]
+    },
+    "additional_information": {
+      "format": "structured-grid",
+      "groups": [
+        {
+          "label": "Languages",
+          "items": "English and Hebrew (native/bilingual), Spanish (professional), Danish (B1)"
+        },
+        {
+          "label": "Volunteer",
+          "items": "Operations Manager, Copenhagen Wolves RFC"
+        },
+        {
+          "label": "Accessibility",
+          "items": "Available for relocation; right to work in Denmark and EU"
+        }
+      ]
+    },
+    "cover_letter": {
+      "cl_header": {
+        "name": "Gabriel Alexander Karp-Gershon",
+        "application_line": "Application: Senior Product Manager — Maersk",
+        "contacts": ["email@example.com", "linkedin.com/in/...", "Copenhagen, Denmark"]
+      },
+      "cl_opener": {
+        "salutation": "Dear Hiring Team,",
+        "opening": "I am applying for the Senior Product Manager position at Maersk because the role's combination of customer-facing product ownership and large-scale operational complexity matches the work I have been doing for the past five years."
+      },
+      "who_i_am": "I am a technical product manager with twelve years across hardware programmes and customer-facing operational work in regulated industries. My most recent five years have been at Innoviz, where I led change governance and customer change request closure across three automotive tier-1 customer programmes. The work has lived at the interface between hardware engineering, customer integration, and ASPICE-aligned process discipline.",
+      "what_i_bring": {
+        "format": "table-grid",
+        "parser_safe_separator": "em_dash",
+        "rows": [
+          {"focus_area": "Customer-facing product ownership", "expertise": "Customer change request closure across three automotive tier-1 programmes"},
+          {"focus_area": "Operational complexity at scale", "expertise": "Multi-vendor change governance, ASPICE-aligned workflows"},
+          {"focus_area": "Stakeholder coordination", "expertise": "Cross-supplier negotiation, customer change board engagement"},
+          {"focus_area": "Process discipline", "expertise": "Six Sigma Black Belt, ISO 26262 assessor, ASPICE governance"}
+        ]
+      },
+      "why_this_position": "This role sits at the intersection of customer-facing product work and operational complexity — the same intersection my last five years at Innoviz have lived in. The shift from automotive tier-1 customer programmes to Maersk's logistics-tech customer base brings a change in industry, but the underlying work — owning the product and the customer relationship through change cycles, with operational discipline behind it — is recognisably the same.",
+      "how_i_would_contribute": [
+        "I would expect to spend the first three months mapping the customer change request workflow as it exists today, identifying friction points the way I did when joining Innoviz.",
+        "A near-term contribution would be a structured pre-board screening process for high-impact change requests, modelled on what I built and standardised at Innoviz across three programmes.",
+        "Longer-term, I would aim to apply the ASPICE-aligned discipline I have developed to whichever process the Maersk product organisation flags as the highest-priority point for governance improvement."
+      ],
+      "foundation": {
+        "hands_on": "I am ready to spend the first weeks reading the existing change workflow documentation, sitting with the operational team, and writing up what I see before proposing changes.",
+        "professionally": "This role would be a natural continuation of the work I have been doing — moving from automotive hardware programmes to logistics-tech product work, but keeping the operational and customer-facing core that defines how I work."
+      },
+      "cl_close": {
+        "sign_off": "Kind regards,",
+        "signature": "Gabriel Alexander Karp-Gershon"
+      },
+      "char_count": 1840
+    }
+  },
+  "change_log_proposals": [
+    {
+      "section": "profile",
+      "source": "llm",
+      "before_text": null,
+      "after_text": "Technical product manager with 15 years across automotive LiDAR and electro-optical systems. Works between hardware engineering and customer programmes, focused on change governance, system architecture, and customer requirements traceability. Currently leading programme work in regulated industries.",
+      "reason": "first draft applying measured-professional voice; role + domain lede with operating-mode follow-up",
+      "confidence": "high",
+      "risk": "none",
+      "char_delta": 312
+    },
+    {
+      "section": "selected_outcomes",
+      "source": "llm",
+      "before_text": null,
+      "after_text": "[3 outcome bullets]",
+      "reason": "outcomes selected to match Maersk JD's emphasis on customer-facing ownership and operational complexity; metrics traced to user_state.profile.experiences",
+      "confidence": "high",
+      "risk": "none",
+      "char_delta": 423
+    },
+    {
+      "section": "core_competencies",
+      "source": "llm",
+      "before_text": null,
+      "after_text": "[5 competency rows]",
+      "reason": "rows selected to match JD's stated requirements: customer ownership, operational scale, process discipline",
+      "confidence": "high",
+      "risk": "none",
+      "char_delta": 380
+    },
+    {
+      "section": "experience",
+      "source": "llm",
+      "before_text": null,
+      "after_text": "[4 roles with 3 bullets each]",
+      "reason": "newest-first; bullet rhythm: scope, action, outcome per measured-professional",
+      "confidence": "high",
+      "risk": "none",
+      "char_delta": 1620
+    },
+    {
+      "section": "cover_letter.why_this_position",
+      "source": "llm",
+      "before_text": null,
+      "after_text": "[paragraph]",
+      "reason": "specifically referenced the JD's ASPICE-equivalent process-maturity language; named the industry shift explicitly",
+      "confidence": "medium",
+      "risk": "none",
+      "char_delta": 440
+    }
+  ],
+  "flagged": false,
+  "warnings": []
+}

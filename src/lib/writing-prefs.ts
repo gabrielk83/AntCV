@@ -289,6 +289,140 @@ export const DEFAULT_TARGET_PAGES_OPTIONS = [1, 1.5, 2, 2.5, 3, 4, 5] as const;
 
 export type TargetPagesOption = (typeof DEFAULT_TARGET_PAGES_OPTIONS)[number];
 
+// ─── Per-section layout (v1.50.14 — plan §7 Pass 4 step 21) ─────────────
+//
+// Section list mirrors skills/antcv-writer/references/cv-skeleton.md. Each
+// section gets its own line-limit + format choice; the proxy worker reads
+// the maps via the v1.50.1 fetch-wrap and emits a "Per-section overrides"
+// block in the §4.7 system preamble.
+
+export interface KnownSection { id: string; label: string }
+
+export const KNOWN_SECTIONS: readonly KnownSection[] = [
+  { id: 'profile',                label: 'Profile' },
+  { id: 'core_competencies',      label: 'Core Competencies' },
+  { id: 'selected_outcomes',      label: 'Selected Outcomes' },
+  { id: 'experience',             label: 'Experience' },
+  { id: 'tools_methods',          label: 'Tools & Methods' },
+  { id: 'certifications',         label: 'Certifications' },
+  { id: 'education',              label: 'Education' },
+  { id: 'publications_patents',   label: 'Publications & Patents' },
+  { id: 'additional_information', label: 'Additional Information' },
+];
+
+// 9-format taxonomy per plan §4.4 + writingSystems/registry.json
+// `sectionFormatTaxonomy`. The picker offers these in order.
+export interface SectionFormatOption { value: string; label: string }
+export const SECTION_FORMAT_OPTIONS: readonly SectionFormatOption[] = [
+  { value: 'default',         label: 'Default (style choice)' },
+  { value: 'paragraph',       label: 'Paragraph' },
+  { value: 'bullets',         label: 'Bullets' },
+  { value: 'unicode-bullets', label: 'Unicode bullets' },
+  { value: 'hybrid-1',        label: 'Hybrid 1' },
+  { value: 'hybrid-2',        label: 'Hybrid 2' },
+  { value: 'hybrid-3',        label: 'Hybrid 3' },
+  { value: 'table-grid',      label: 'Table / Grid' },
+  { value: 'structured-grid', label: 'Structured Grid' },
+];
+
+export const LINE_LIMIT_MIN = 1;
+export const LINE_LIMIT_MAX = 15;
+
+const LINE_LIMIT_BASE: Record<string, number> = {
+  low: 3,
+  medium: 4,
+  'medium-high': 5,
+  high: 6,
+};
+
+/**
+ * Derive the default line-limit for `sectionId` from the active style's
+ * lineDensity band, scaled by targetPages. The slider snaps to this when
+ * the user hasn't explicitly set a value.
+ *
+ * The mapping is intentionally coarse — the LLM interprets the number
+ * relative to the section (e.g. for `profile` it's lines of paragraph;
+ * for `experience` it's bullets per role).
+ */
+export function defaultLineLimitFor(styleId: StyleId, targetPages: number): number {
+  const tier = STYLES[styleId]?.lineDensity ?? 'medium';
+  const base = LINE_LIMIT_BASE[tier] ?? 4;
+  const scale = Math.max(0.5, Math.min(2.5, targetPages / 2));
+  return Math.max(LINE_LIMIT_MIN, Math.min(LINE_LIMIT_MAX, Math.round(base * scale)));
+}
+
+/**
+ * Resolve the line-limit currently in effect for a section. Returns the
+ * user override when set, else the style+targetPages default.
+ */
+export function readSectionLineLimit(sectionId: string): number {
+  const lp = readLayoutPrefs();
+  const v = lp.lineLimits?.[sectionId];
+  if (typeof v === 'number' && Number.isFinite(v)) {
+    return Math.max(LINE_LIMIT_MIN, Math.min(LINE_LIMIT_MAX, Math.round(v)));
+  }
+  const wp = readWritingPrefs();
+  return defaultLineLimitFor(wp.style, lp.targetPages);
+}
+
+export function writeSectionLineLimit(sectionId: string, value: number): LayoutPrefs {
+  const lp = readLayoutPrefs();
+  const next = { ...lp.lineLimits, [sectionId]: Math.max(LINE_LIMIT_MIN, Math.min(LINE_LIMIT_MAX, Math.round(value))) };
+  return writeLayoutPrefs({ lineLimits: next });
+}
+
+export function clearSectionLineLimit(sectionId: string): LayoutPrefs {
+  const lp = readLayoutPrefs();
+  if (!(sectionId in (lp.lineLimits ?? {}))) return lp;
+  const next = { ...lp.lineLimits };
+  delete next[sectionId];
+  return writeLayoutPrefs({ lineLimits: next });
+}
+
+/**
+ * Resolve the section format currently in effect. Returns the user
+ * override when set, else the style's sectionFormatDefaults entry, else
+ * 'default'.
+ */
+export function readSectionFormat(sectionId: string): string {
+  const lp = readLayoutPrefs();
+  const v = lp.sectionFormats?.[sectionId];
+  if (typeof v === 'string' && v) return v;
+  const wp = readWritingPrefs();
+  const styleDefault = STYLES[wp.style]?.sectionFormatDefaults?.[sectionId];
+  if (typeof styleDefault === 'string' && styleDefault) return styleDefault;
+  return 'default';
+}
+
+export function writeSectionFormat(sectionId: string, value: string): LayoutPrefs {
+  const lp = readLayoutPrefs();
+  const next = { ...lp.sectionFormats, [sectionId]: value };
+  return writeLayoutPrefs({ sectionFormats: next });
+}
+
+export function clearSectionFormat(sectionId: string): LayoutPrefs {
+  const lp = readLayoutPrefs();
+  if (!(sectionId in (lp.sectionFormats ?? {}))) return lp;
+  const next = { ...lp.sectionFormats };
+  delete next[sectionId];
+  return writeLayoutPrefs({ sectionFormats: next });
+}
+
+/**
+ * Combined reset — drops both line-limit and format overrides for one
+ * section so it falls back to the style defaults.
+ */
+export function resetSectionLayout(sectionId: string): LayoutPrefs {
+  const lp = readLayoutPrefs();
+  const nextLines = { ...lp.lineLimits };
+  const nextFormats = { ...lp.sectionFormats };
+  let changed = false;
+  if (sectionId in nextLines) { delete nextLines[sectionId]; changed = true; }
+  if (sectionId in nextFormats) { delete nextFormats[sectionId]; changed = true; }
+  if (!changed) return lp;
+  return writeLayoutPrefs({ lineLimits: nextLines, sectionFormats: nextFormats });
+}
+
 export function defaultStyleId(): StyleId {
   return DEFAULT_STYLE;
 }

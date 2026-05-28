@@ -144,6 +144,27 @@ function clampTargetPages(targetPages, styleId) {
 
 // ─── Request schema parser ───────────────────────────────────────────────
 
+function normaliseStringMap(raw) {
+  if (!raw || typeof raw !== 'object') return {};
+  const out = {};
+  for (const [k, v] of Object.entries(raw)) {
+    if (typeof k === 'string' && typeof v === 'string' && v) out[k] = v;
+  }
+  return out;
+}
+
+function normaliseNumberMap(raw) {
+  if (!raw || typeof raw !== 'object') return {};
+  const out = {};
+  for (const [k, v] of Object.entries(raw)) {
+    if (typeof k === 'string' && typeof v === 'number' && Number.isFinite(v)) {
+      // Clamp to the PWA's documented LINE_LIMIT_MIN / MAX (1..15).
+      out[k] = Math.max(1, Math.min(15, Math.round(v)));
+    }
+  }
+  return out;
+}
+
 export function parseWritingStyleRequest(body) {
   const b = body && typeof body === 'object' ? body : {};
   const writingStyle = normaliseStyleId(b.writingStyle);
@@ -156,6 +177,10 @@ export function parseWritingStyleRequest(body) {
   const extraConstraints = Array.isArray(b.extraConstraints) ? b.extraConstraints : [];
   const targetPages = clampTargetPages(b.targetPages, writingStyle);
   const sectionFormat = typeof b.sectionFormat === 'string' ? b.sectionFormat : 'default';
+  // v1.50.14 — per-section overrides. Empty objects when the PWA is
+  // older than v1.50.14; the preamble simply skips the override block.
+  const sectionFormats = normaliseStringMap(b.sectionFormats);
+  const sectionLineLimits = normaliseNumberMap(b.sectionLineLimits);
   const pkg = typeof b.package === 'string' ? b.package : 'copenhagen-modern';
   const ats = b.ats === true;
 
@@ -168,12 +193,33 @@ export function parseWritingStyleRequest(body) {
     extraConstraints,
     targetPages,
     sectionFormat,
+    sectionFormats,
+    sectionLineLimits,
     package: pkg,
     ats,
   };
 }
 
 // ─── Step 2 — system-prompt enrichment ───────────────────────────────────
+
+function buildPerSectionOverrideBlock(req) {
+  const fmts = req.sectionFormats ?? {};
+  const lines = req.sectionLineLimits ?? {};
+  const sectionIds = Array.from(new Set([...Object.keys(fmts), ...Object.keys(lines)]));
+  if (sectionIds.length === 0) return '';
+  const out = ['Per-section overrides (apply when generating the named section):'];
+  for (const id of sectionIds) {
+    const parts = [];
+    if (typeof fmts[id] === 'string' && fmts[id] && fmts[id] !== 'default') {
+      parts.push(`format=${fmts[id]}`);
+    }
+    if (typeof lines[id] === 'number') {
+      parts.push(`lineLimit=${lines[id]}`);
+    }
+    if (parts.length) out.push(`  - ${id}: ${parts.join(', ')}`);
+  }
+  return out.length > 1 ? out.join('\n') : '';
+}
 
 export function buildStyleSystemPreamble(req) {
   const s = STYLES[req.writingStyle];
@@ -185,6 +231,7 @@ export function buildStyleSystemPreamble(req) {
   const langPhrases = req.target_language === 'en'
     ? SHARED_BANNED_PHRASES.en.concat(req.extraBannedPhrases.en)
     : (SHARED_BANNED_PHRASES[req.target_language] ?? []).concat(req.extraBannedPhrases[req.target_language] ?? []);
+  const perSectionBlock = buildPerSectionOverrideBlock(req);
 
   return [
     `Writing style: ${req.writingStyle}`,
@@ -194,7 +241,8 @@ export function buildStyleSystemPreamble(req) {
     `Active tone chips: ${chips.join(', ')}`,
     `Target language: ${req.target_language}`,
     `Target pages: ${req.targetPages}`,
-    `Section format: ${req.sectionFormat}`,
+    `Section format (default): ${req.sectionFormat}`,
+    perSectionBlock,
     req.ats ? 'ATS-safe mode: ON — convert glyphs to plain-text labels, force Calibri, single column, no photo.' : '',
     `Allowed Unicode bullets: ${Object.keys(ATS_GLYPH_LABELS).length ? '• ◦ ▪ ✓ → ▲' : ''}`,
     'Native colour emoji: NOT ALLOWED.',

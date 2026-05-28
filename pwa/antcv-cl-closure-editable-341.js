@@ -38,7 +38,7 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.40.341-p0c';
+  var SCRIPT_VERSION = '1.40.341-p0c-fix1';
   if (window.__antcvClClosureEditable341 === SCRIPT_VERSION) return;
   window.__antcvClClosureEditable341 = SCRIPT_VERSION;
 
@@ -97,14 +97,34 @@
       if (!el.isConnected) continue;
       if (el.children && el.children.length > 0) continue;          // leaf only
       if (el.querySelector && el.querySelector('button')) continue; // no buttons
+      // v1.40.341-p1c-fix-1: do NOT skip empty text leaves.
+      // Closure is editable per CL-002 acceptance — even when the
+      // section has no signature line yet, the user must be able to
+      // CLICK INTO it and type. Skipping empty leaves meant an empty
+      // Closure section had no contenteditable target.
+      // Only skip elements that look STRUCTURAL (PB-006 boundary
+      // markers, page-break spacers, control-bar hosts).
       var t = (el.textContent || '').replace(/[\t\n\r ]+/g, ' ').trim();
-      if (!t) continue;
       // Skip our own markers and any cooperator markers.
       if (el.getAttribute && (
         el.getAttribute('data-antcv-continuation-header') === '1' ||
         el.getAttribute('data-antcv-page-break') === '1' ||
-        el.getAttribute('data-antcv-control-bar') === '1'
+        el.getAttribute('data-antcv-control-bar') === '1' ||
+        el.getAttribute('data-antcv-pb284-bar') === '1' ||
+        el.getAttribute('data-antcv-pb284-mark') === '1' ||
+        el.getAttribute('aria-hidden') === 'true'
       )) continue;
+      // Skip spacer / divider / decorative leaves: zero-height,
+      // role="separator", or visually-empty padded boxes. We use
+      // a conservative shape check — a leaf with no text AND no
+      // padding/border is almost certainly a decorative artefact.
+      if (!t) {
+        var tagName = (el.tagName || '').toLowerCase();
+        // Empty SPAN is almost always a decorative artefact (gap,
+        // spacer, icon-holder). Allow empty P / DIV / heading
+        // through as a typeable slot.
+        if (tagName === 'span') continue;
+      }
       leaves.push(el);
     }
     return leaves;
@@ -155,8 +175,30 @@
     if (!leafEl.hasAttribute('tabindex')) leafEl.setAttribute('tabindex', '0');
     // Keep cursor caret visible.
     leafEl.style.cursor = 'text';
+    // v1.40.341-p1c-fix-1: empty Closure leaves collapse to zero
+    // height in browser default block layout — the user has nowhere
+    // to click. Give the leaf a minimum hit-area so it's typeable
+    // even when empty.
+    var currentText = (leafEl.textContent || '').replace(/[\t\n\r ]+/g, ' ').trim();
+    if (!currentText) {
+      if (!leafEl.style.minHeight) leafEl.style.minHeight = '1.4em';
+      if (!leafEl.style.minWidth)  leafEl.style.minWidth  = '8em';
+      // Visual hint via attribute so external CSS can render a
+      // placeholder via [data-antcv-cl-closure-editable="1"]:empty::before.
+      // We don't inject text content because that would persist.
+      leafEl.setAttribute('data-antcv-cl-closure-empty', '1');
+    }
     // Don't trigger any parent click handlers when editing.
     leafEl.addEventListener('click', function (ev) { ev.stopPropagation(); });
+    leafEl.addEventListener('input', function () {
+      // Once the user types anything, strip the empty marker so the
+      // placeholder CSS rule stops showing and the min-height can
+      // collapse on the next render if desired.
+      var t = (leafEl.textContent || '').replace(/[\t\n\r ]+/g, ' ').trim();
+      if (t && leafEl.getAttribute('data-antcv-cl-closure-empty') === '1') {
+        leafEl.removeAttribute('data-antcv-cl-closure-empty');
+      }
+    });
     leafEl.addEventListener('blur', function () {
       try {
         var text = (leafEl.textContent || '').replace(/[\t\n\r ]+/g, ' ').trim();
@@ -170,6 +212,27 @@
         leafEl.blur();
       }
     });
+  }
+
+  // CSS placeholder + min-hit-area for empty closure slots.
+  // Injected once per session, idempotent.
+  function injectCss() {
+    if (document.getElementById('antcv-cl-closure-editable-341-css')) return;
+    var s = document.createElement('style');
+    s.id = 'antcv-cl-closure-editable-341-css';
+    s.textContent = [
+      '[data-antcv-cl-closure-editable="1"][data-antcv-cl-closure-empty="1"]:empty::before {',
+      '  content: "Click to add closing line (e.g. \\"Sincerely, Anita\\")";',
+      '  color: #999;',
+      '  font-style: italic;',
+      '  pointer-events: none;',
+      '}',
+      // When focused, hide the placeholder so the caret is alone.
+      '[data-antcv-cl-closure-editable="1"][data-antcv-cl-closure-empty="1"]:empty:focus::before {',
+      '  content: "";',
+      '}',
+    ].join('\n');
+    (document.head || document.documentElement).appendChild(s);
   }
 
   function sweepOnce() {
@@ -196,6 +259,7 @@
     });
   }
 
+  injectCss();
   schedule();
   var delays = [200, 600, 1500, 3000];
   for (var d = 0; d < delays.length; d++) setTimeout(schedule, delays[d]);

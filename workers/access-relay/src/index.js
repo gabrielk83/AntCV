@@ -520,6 +520,77 @@ async function userScopedKeyHashed(prefix, email) {
   return prefix + ':' + b64.slice(0, 32);
 }
 
+// =====================================================================
+//  v2.10: User mode (paid vs demo) for upstream routing
+// =====================================================================
+//
+// Each authenticated user has a `mode` field on their prefs2 KV record:
+//   - "paid" (default): forward to cv-proxy (UPSTREAM binding /
+//                       UPSTREAM_ORIGIN). Paid is BYOK; users without
+//                       their own keys hit a setup-required warning.
+//   - "demo":           forward to antcv-demo-proxy (UPSTREAM_DEMO
+//                       binding / UPSTREAM_ORIGIN_DEMO). Demo proxy
+//                       holds shared keys and enforces its own caps.
+//
+// Read path is hot — called on every upstream forward — so we keep an
+// in-memory cache in module scope. Cloudflare keeps isolates warm
+// across requests for active users, so first request per (isolate, user)
+// hits KV (~5ms), subsequent requests within the TTL skip it. Cache is
+// naturally evicted on isolate restart; we also invalidate after a
+// mode-write so the writer's next request sees the new value immediately.
+const _modeCache = new Map();  // email (lowercased) -> { mode, expiresAt }
+const _MODE_TTL_MS = 60000;
+
+function invalidateModeCache(email) {
+  if (email) _modeCache.delete(String(email).toLowerCase());
+}
+
+async function getUserMode(env, email) {
+  if (!email) return 'paid';
+  const norm = String(email).toLowerCase();
+  const now = Date.now();
+  const cached = _modeCache.get(norm);
+  if (cached && cached.expiresAt > now) return cached.mode;
+
+  const kv = env.KV_BINDING || env.ANALYTICS || null;
+  let mode = 'paid';
+  if (kv) {
+    try {
+      const key = await userScopedKeyHashed('prefs2', norm);
+      const raw = await kv.get(key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.mode === 'demo') mode = 'demo';
+      }
+    } catch (_) { /* fall through to default 'paid' */ }
+  }
+  _modeCache.set(norm, { mode, expiresAt: now + _MODE_TTL_MS });
+  return mode;
+}
+
+// Resolve the user's effective mode for an incoming request.
+// Anonymous (no JWT) defaults to 'paid' — same as having no record.
+async function getUpstreamContext(request, env) {
+  const id = await identityFromRequest(request, env);
+  const mode = id ? await getUserMode(env, id.email) : 'paid';
+  return { mode, email: id ? id.email : null };
+}
+
+function hasDemoServiceBinding(env) {
+  return !!(env && env.UPSTREAM_DEMO && typeof env.UPSTREAM_DEMO.fetch === 'function');
+}
+
+function originForMode(env, mode) {
+  return mode === 'demo'
+    ? (env.UPSTREAM_ORIGIN_DEMO || null)
+    : (env.UPSTREAM_ORIGIN      || null);
+}
+
+function hasUpstreamForMode(env, mode) {
+  if (mode === 'demo') return hasDemoServiceBinding(env) || !!env.UPSTREAM_ORIGIN_DEMO;
+  return hasServiceBinding(env) || !!env.UPSTREAM_ORIGIN;
+}
+
 // v2.5: parse ADMIN_EMAIL_ALLOWLIST env var (comma-separated) and check membership.
 // v2.9.1: fall back to ADMIN_EMAILS (the var used by isAdmin) when
 // ADMIN_EMAIL_ALLOWLIST is unset. Before this change the two checks read
@@ -1231,6 +1302,68 @@ async function handleApiPrefs(request, env) {
 
 // v2.8: POST /api/prefs/renew — extends data-retention clock by another full year.
 // Used by the "Keep my data" button in the PWA's annual-retention modal.
+// v2.10: GET /api/user/mode -> { ok, mode }
+//        POST /api/user/mode { mode: 'paid' | 'demo' } -> persist
+// The mode field lives on prefs2:<hash>, alongside other prefs. We
+// invalidate the in-isolate mode cache after a write so the writer's
+// next request sees the new value immediately. Cross-isolate staleness
+// is bounded by _MODE_TTL_MS (60s).
+async function handleApiUserMode(request, env) {
+  const id = await identityFromRequest(request, env);
+  if (!id) {
+    return jsonResponse(
+      { error: 'unauthenticated', hint: 'Sign in first.' },
+      401, request, env
+    );
+  }
+  const refresh = await maybeRefreshHeader(env, id);
+  const kv = env.KV_BINDING || env.ANALYTICS || null;
+  if (!kv) {
+    return jsonResponse(
+      { error: 'no_kv', hint: 'KV_BINDING required for user mode storage.' },
+      503, request, env, refresh
+    );
+  }
+  const key = await userScopedKeyHashed('prefs2', id.email);
+  const m = request.method;
+
+  if (m === 'GET') {
+    const mode = await getUserMode(env, id.email);
+    return jsonResponse({ ok: true, mode }, 200, request, env, refresh);
+  }
+
+  if (m === 'POST' || m === 'PUT') {
+    let body = {};
+    try {
+      body = await request.json();
+    } catch (_) {
+      return jsonResponse({ error: 'invalid_json' }, 400, request, env, refresh);
+    }
+    const wanted = String((body && body.mode) || '').toLowerCase();
+    if (wanted !== 'paid' && wanted !== 'demo') {
+      return jsonResponse(
+        { error: 'invalid_mode', hint: 'mode must be "paid" or "demo"' },
+        400, request, env, refresh
+      );
+    }
+    let existing = {};
+    try {
+      const raw = await kv.get(key);
+      if (raw) existing = JSON.parse(raw) || {};
+    } catch (_) { existing = {}; }
+    existing.mode = wanted;
+    existing.modeUpdatedAt = new Date().toISOString();
+    await kv.put(key, JSON.stringify(existing));
+    invalidateModeCache(id.email);
+    return jsonResponse({ ok: true, mode: wanted }, 200, request, env, refresh);
+  }
+
+  return jsonResponse(
+    { error: 'method_not_allowed', allow: ['GET', 'POST', 'PUT'] },
+    405, request, env, refresh
+  );
+}
+
 async function handleApiPrefsRenew(request, env) {
   const kv = env.KV_BINDING || env.ANALYTICS || null;
   const id = await identityFromRequest(request, env);
@@ -2159,7 +2292,8 @@ async function handleApiProfileExtractKernel(request, env) {
   // touch the texts — they go straight through.
   const upstreamUrl = buildUpstreamUrl(env, new URL(request.url), '/api/extract-kernel');
   try {
-    const upstreamResp = await rawForward(request, env, upstreamUrl, 'POST', bodyBytes);
+    const _ctx9 = await getUpstreamContext(request, env);
+    const upstreamResp = await rawForward(request, env, upstreamUrl, 'POST', bodyBytes, _ctx9.mode);
     // Copy upstream body verbatim. We DO add the refresh header if one
     // was issued, so the PWA's session JWT stays fresh on long
     // extraction calls.
@@ -2186,20 +2320,27 @@ function hasServiceBinding(env) {
   return !!(env && env.UPSTREAM && typeof env.UPSTREAM.fetch === 'function');
 }
 
-function buildUpstreamUrl(env, incomingUrl, overridePath) {
+function buildUpstreamUrl(env, incomingUrl, overridePath, mode) {
   // For service bindings we still need a URL, but only the path/search are
   // honoured by the binding. We use a synthetic placeholder origin when no
-  // UPSTREAM_ORIGIN is configured.
-  const baseStr = (env.UPSTREAM_ORIGIN || 'https://upstream.invalid').replace(/\/+$/, '');
+  // origin var is configured. The origin var depends on `mode`:
+  //   - 'demo' -> UPSTREAM_ORIGIN_DEMO
+  //   - else (default 'paid') -> UPSTREAM_ORIGIN
+  const originVar = (mode === 'demo' ? env.UPSTREAM_ORIGIN_DEMO : env.UPSTREAM_ORIGIN);
+  const baseStr = (originVar || 'https://upstream.invalid').replace(/\/+$/, '');
   const base = new URL(baseStr);
   const pathToUse = overridePath != null ? overridePath : incomingUrl.pathname;
   return new URL(pathToUse + incomingUrl.search, base);
 }
 
 // Single fetch entry point used by both rawForward and probeUpstream.
-// Prefers service binding when available, falls back to HTTP fetch.
-async function callUpstream(env, upstreamUrl, init) {
-  if (hasServiceBinding(env)) {
+// Prefers the service binding for the requested mode (UPSTREAM for paid,
+// UPSTREAM_DEMO for demo), falls back to HTTP fetch if no binding.
+async function callUpstream(env, upstreamUrl, init, mode) {
+  if (mode === 'demo' && hasDemoServiceBinding(env)) {
+    return env.UPSTREAM_DEMO.fetch(upstreamUrl.toString(), init);
+  }
+  if (mode !== 'demo' && hasServiceBinding(env)) {
     // Service binding: invoke cv-proxy directly. The Request URL still needs
     // to look like the upstream so cv-proxy routes it correctly.
     return env.UPSTREAM.fetch(upstreamUrl.toString(), init);
@@ -2207,7 +2348,7 @@ async function callUpstream(env, upstreamUrl, init) {
   return fetch(upstreamUrl.toString(), init);
 }
 
-async function rawForward(request, env, upstreamUrl, methodOverride, bodyBytes) {
+async function rawForward(request, env, upstreamUrl, methodOverride, bodyBytes, mode) {
   const headers = new Headers(request.headers);
   // Service tokens still get sent if configured — cv-proxy may sit behind
   // Cloudflare Access even when called via service binding (Access ignores
@@ -2223,7 +2364,7 @@ async function rawForward(request, env, upstreamUrl, methodOverride, bodyBytes) 
   if (!['GET', 'HEAD'].includes(method)) {
     init.body = bodyBytes ?? request.body;
   }
-  return callUpstream(env, upstreamUrl, init);
+  return callUpstream(env, upstreamUrl, init, mode);
 }
 
 function isCloudflareErrorPage(status, contentType, bodyText) {
@@ -2301,13 +2442,16 @@ function classifyForwardFailure(status, upstreamOrigin, bodyText) {
   };
 }
 
-async function forwardWithDiagnostics(request, env, upstreamUrl, methodOverride, bodyBytes) {
-  const upstreamOrigin = env.UPSTREAM_ORIGIN
-    ? new URL(env.UPSTREAM_ORIGIN).origin
-    : (hasServiceBinding(env) ? 'service:cv-proxy' : 'unknown');
+async function forwardWithDiagnostics(request, env, upstreamUrl, methodOverride, bodyBytes, mode) {
+  const originVal = originForMode(env, mode);
+  const upstreamOrigin = originVal
+    ? new URL(originVal).origin
+    : (mode === 'demo'
+        ? (hasDemoServiceBinding(env) ? 'service:antcv-demo-proxy' : 'unknown')
+        : (hasServiceBinding(env)     ? 'service:cv-proxy'         : 'unknown'));
   let res;
   try {
-    res = await rawForward(request, env, upstreamUrl, methodOverride, bodyBytes);
+    res = await rawForward(request, env, upstreamUrl, methodOverride, bodyBytes, mode);
   } catch (e) {
     return {
       kind: 'error_response',
@@ -2350,15 +2494,15 @@ async function forwardWithDiagnostics(request, env, upstreamUrl, methodOverride,
   return { kind: 'ok_response', response: res };
 }
 
-async function probeUpstream(env) {
-  const useBinding = hasServiceBinding(env);
-  if (!useBinding && !env.UPSTREAM_ORIGIN) {
-    return { reachable: false, error: 'no_upstream_configured', hint: 'Bind cv-proxy as a service binding (binding=UPSTREAM, service=cv-proxy) in wrangler.toml, or set UPSTREAM_ORIGIN.' };
+async function probeUpstreamMode(env, mode) {
+  const useBinding = (mode === 'demo' ? hasDemoServiceBinding(env) : hasServiceBinding(env));
+  if (!useBinding && !(mode === 'demo' ? env.UPSTREAM_ORIGIN_DEMO : env.UPSTREAM_ORIGIN)) {
+    return { reachable: false, error: 'no_upstream_configured', hint: 'Bind cv-proxy as a service binding (binding=UPSTREAM(_DEMO), service=cv-proxy or antcv-demo-proxy) in wrangler.toml, or set UPSTREAM_ORIGIN.' };
   }
   if (!useBinding && (!env.CF_ACCESS_CLIENT_ID || !env.CF_ACCESS_CLIENT_SECRET)) {
     return { reachable: false, error: 'no_service_token_configured', hint: 'When using HTTP fallback (no service binding), CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET must be set.' };
   }
-  const baseStr = (env.UPSTREAM_ORIGIN || 'https://cv-proxy.invalid').replace(/\/+$/, '');
+  const baseStr = ((mode === 'demo' ? env.UPSTREAM_ORIGIN_DEMO : env.UPSTREAM_ORIGIN) || 'https://cv-proxy.invalid').replace(/\/+$/, '');
   const upstreamUrl = new URL(baseStr + '/config');
   const ctrl = new AbortController();
   const tmo = setTimeout(() => ctrl.abort(), 4000);
@@ -2370,7 +2514,7 @@ async function probeUpstream(env) {
       method: 'GET',
       headers,
       signal: ctrl.signal,
-    });
+    }, mode);
     clearTimeout(tmo);
     const ctype = res.headers.get('content-type') || '';
     let bodyText = ''; try { bodyText = await res.text(); } catch (e) {}
@@ -2393,6 +2537,15 @@ async function probeUpstream(env) {
       message: e && e.message ? e.message : String(e),
     };
   }
+}
+
+// /__diag wrapper: probe both tiers so admins can see at a glance
+// whether each upstream path is reachable.
+async function probeUpstream(env) {
+  return {
+    paid: await probeUpstreamMode(env, 'paid'),
+    demo: await probeUpstreamMode(env, 'demo'),
+  };
 }
 
 // =====================================================================
@@ -2680,16 +2833,20 @@ const method = request.method;
 
   if ((path === '/' || path === '/__health' || path === '/health') && (method === 'GET' || method === 'HEAD')) {
     const id = await identityFromRequest(request, env);
+    const userMode = id ? await getUserMode(env, id.email) : null;
     return jsonResponse(
       {
         ok: true, worker: 'antcv-access-relay', version: RELAY_VERSION,
         upstream: env.UPSTREAM_ORIGIN || null,
+        upstream_demo: env.UPSTREAM_ORIGIN_DEMO || null,
         authenticated: !!id,
+        user_mode: userMode,
         endpoints: {
           me:       url.origin + '/me',
           config:   url.origin + '/config',
           diag:     url.origin + '/__diag',
           logout:   url.origin + '/logout',
+          mode:     url.origin + '/api/user/mode',
           auth_google:        url.origin + '/auth/google',
           auth_email_request: url.origin + '/auth/email/request',
           auth_email_verify:  url.origin + '/auth/email/verify',
@@ -2710,6 +2867,10 @@ const method = request.method;
           upstream_origin_configured: !!env.UPSTREAM_ORIGIN,
           upstream_service_binding: hasServiceBinding(env),
           upstream_transport: hasServiceBinding(env) ? 'service_binding' : (env.UPSTREAM_ORIGIN ? 'http' : 'none'),
+          upstream_origin_demo: env.UPSTREAM_ORIGIN_DEMO || null,
+          upstream_origin_demo_configured: !!env.UPSTREAM_ORIGIN_DEMO,
+          upstream_demo_service_binding: hasDemoServiceBinding(env),
+          upstream_demo_transport: hasDemoServiceBinding(env) ? 'service_binding' : (env.UPSTREAM_ORIGIN_DEMO ? 'http' : 'none'),
           cf_access_client_id_set: !!env.CF_ACCESS_CLIENT_ID,
           cf_access_client_secret_set: !!env.CF_ACCESS_CLIENT_SECRET,
           jwt_secret_set: !!env.JWT_SECRET,
@@ -2771,12 +2932,17 @@ const method = request.method;
   // --- /config (probes upstream for honest reporting) ---
 
   if (path === '/config' && (method === 'GET' || method === 'POST')) {
+    // v2.10: probeUpstream now returns { paid, demo }. We surface server_keys
+    // and analytics flags from the user's effective tier (or paid by default),
+    // and expose both upstreams in parallel `upstream` / `upstream_demo` blocks.
     const probe = await probeUpstream(env);
     const id = await identityFromRequest(request, env);
+    const userMode = id ? await getUserMode(env, id.email) : null;
+    const activeProbe = (userMode === 'demo') ? probe.demo : probe.paid;
     let serverKeys = { anthropic: false, openai: false, mistral: false, gemini: false };
     let analyticsKv = !!env.ANALYTICS, signalsKv = !!(env.KV_BINDING || env.ANALYTICS), preferencesKv = !!(env.KV_BINDING || env.ANALYTICS), analyticsEngine = false;
-    if (probe.reachable && probe.upstream_config) {
-      const u = probe.upstream_config;
+    if (activeProbe && activeProbe.reachable && activeProbe.upstream_config) {
+      const u = activeProbe.upstream_config;
       if (u.server_keys) serverKeys = u.server_keys;
       analyticsKv = !!u.analytics_kv;
       analyticsEngine = !!u.analytics_engine;
@@ -2792,6 +2958,8 @@ const method = request.method;
         signals_kv: signalsKv,
         preferences_kv: preferencesKv,
         relay: true,
+        user_mode: userMode,
+        mode_endpoint: url.origin + '/api/user/mode',
         auth: {
           required: true,
           methods: { google: !!env.GOOGLE_CLIENT_ID, email_otp: !!env.RESEND_API_KEY },
@@ -2801,8 +2969,13 @@ const method = request.method;
         },
         upstream: {
           origin: env.UPSTREAM_ORIGIN ? new URL(env.UPSTREAM_ORIGIN).origin : null,
-          reachable: !!probe.reachable,
-          ...(probe.reachable ? {} : { error: probe.error, hint: probe.hint, status: probe.upstream_status }),
+          reachable: !!(probe.paid && probe.paid.reachable),
+          ...((probe.paid && probe.paid.reachable) ? {} : { error: probe.paid && probe.paid.error, hint: probe.paid && probe.paid.hint, status: probe.paid && probe.paid.upstream_status }),
+        },
+        upstream_demo: {
+          origin: env.UPSTREAM_ORIGIN_DEMO ? new URL(env.UPSTREAM_ORIGIN_DEMO).origin : null,
+          reachable: !!(probe.demo && probe.demo.reachable),
+          ...((probe.demo && probe.demo.reachable) ? {} : { error: probe.demo && probe.demo.error, hint: probe.demo && probe.demo.hint, status: probe.demo && probe.demo.upstream_status }),
         },
       },
       200, request, env, refresh
@@ -2873,6 +3046,7 @@ const method = request.method;
     return handleApiPrefsRenew(request, env);
   }
   if (path === '/api/prefs')          return handleApiPrefs(request, env);
+  if (path === '/api/user/mode')      return handleApiUserMode(request, env);
   if (path === '/api/admin/demo')     return handleApiAdminDemo(request, env);
   if (path === '/api/admin/demo-usage-history') return handleApiAdminDemoHistory(request, env);
   if (path === '/api/admin/access-requests') return handleApiAdminAccessRequests(request, env);
@@ -2946,8 +3120,9 @@ const method = request.method;
     if (!haveUpstream) {
       return jsonResponse({ ok: true, persisted: false, reason: 'no_upstream' }, 200, request, env);
     }
-    const upstreamUrl = buildUpstreamUrl(env, url);
-    const result = await forwardWithDiagnostics(request, env, upstreamUrl, null, bodyBytes);
+    const _ctx10 = await getUpstreamContext(request, env);
+    const upstreamUrl = buildUpstreamUrl(env, url, null, _ctx10.mode);
+    const result = await forwardWithDiagnostics(request, env, upstreamUrl, null, bodyBytes, _ctx10.mode);
     if (result.kind === 'ok_response' && result.response.ok) {
       return withCors(result.response, request, env);
     }
@@ -3114,7 +3289,10 @@ const method = request.method;
     }
     // Build upstream URL with the secret as a query param. The cv-proxy
     // verifies the secret as defense in depth.
-    const baseStr = (env.UPSTREAM_ORIGIN || 'https://cv-proxy.invalid').replace(/\/+$/, '');
+    const _adminCtx = await getUpstreamContext(request, env);
+    const _adminMode = _adminCtx.mode;
+    const _adminBase = originForMode(env, _adminMode) || 'https://cv-proxy.invalid';
+    const baseStr = _adminBase.replace(/\/+$/, '');
     const upstreamUrl = new URL(baseStr + '/analytics/summary');
     if (env.UPSTREAM_ANALYTICS_SECRET) {
       upstreamUrl.searchParams.set('secret', env.UPSTREAM_ANALYTICS_SECRET);
@@ -3124,7 +3302,7 @@ const method = request.method;
       const headers = { Accept: 'application/json' };
       if (env.CF_ACCESS_CLIENT_ID)     headers['CF-Access-Client-Id']     = env.CF_ACCESS_CLIENT_ID;
       if (env.CF_ACCESS_CLIENT_SECRET) headers['CF-Access-Client-Secret'] = env.CF_ACCESS_CLIENT_SECRET;
-      const upstreamRes = await callUpstream(env, upstreamUrl, { method: 'GET', headers });
+      const upstreamRes = await callUpstream(env, upstreamUrl, { method: 'GET', headers }, _adminMode);
       const ctype = upstreamRes.headers.get('content-type') || 'application/json';
       const bodyText = await upstreamRes.text();
       const cors = corsHeaders(request, env);
@@ -3193,7 +3371,10 @@ const method = request.method;
     if (!haveUpstream) {
       return jsonResponse({ error: 'no_upstream' }, 502, request, env);
     }
-    const baseStr = (env.UPSTREAM_ORIGIN || 'https://cv-proxy.invalid').replace(/\/+$/, '');
+    const _adminCtx2 = await getUpstreamContext(request, env);
+    const _adminMode2 = _adminCtx2.mode;
+    const _adminBase2 = originForMode(env, _adminMode2) || 'https://cv-proxy.invalid';
+    const baseStr = _adminBase2.replace(/\/+$/, '');
     const upstreamUrl = new URL(baseStr + '/analytics/export');
     // Forward original query (format, view, date range, etc.) so the
     // upstream selects the right view and serialiser.
@@ -3206,7 +3387,7 @@ const method = request.method;
       const headers = { Accept: 'application/json, text/csv' };
       if (env.CF_ACCESS_CLIENT_ID)     headers['CF-Access-Client-Id']     = env.CF_ACCESS_CLIENT_ID;
       if (env.CF_ACCESS_CLIENT_SECRET) headers['CF-Access-Client-Secret'] = env.CF_ACCESS_CLIENT_SECRET;
-      const upstreamRes = await callUpstream(env, upstreamUrl, { method: 'GET', headers });
+      const upstreamRes = await callUpstream(env, upstreamUrl, { method: 'GET', headers }, _adminMode2);
       const bodyText = await upstreamRes.text();
 
       // Pass through Content-Type and Content-Disposition unchanged so
@@ -3261,8 +3442,9 @@ const method = request.method;
     catch (e) {
       return jsonResponse({ error: 'body_read_failed', message: e.message }, 400, request, env, refresh);
     }
-    const upstreamUrl = buildUpstreamUrl(env, url);
-    const result = await forwardWithDiagnostics(request, env, upstreamUrl, null, bodyBytes);
+    const _ctx10 = await getUpstreamContext(request, env);
+    const upstreamUrl = buildUpstreamUrl(env, url, null, _ctx10.mode);
+    const result = await forwardWithDiagnostics(request, env, upstreamUrl, null, bodyBytes, _ctx10.mode);
     if (result.kind === 'error_response') {
       // Re-attach refresh header to the error response.
       const r = result.response;
@@ -3314,8 +3496,9 @@ const method = request.method;
         return jsonResponse({ error: 'body_read_failed', message: e.message }, 400, request, env, refresh);
       }
     }
-    const upstreamUrl = buildUpstreamUrl(env, url);
-    const result = await forwardWithDiagnostics(request, env, upstreamUrl, null, bodyBytes);
+    const _ctx10 = await getUpstreamContext(request, env);
+    const upstreamUrl = buildUpstreamUrl(env, url, null, _ctx10.mode);
+    const result = await forwardWithDiagnostics(request, env, upstreamUrl, null, bodyBytes, _ctx10.mode);
     if (result.kind === 'error_response') {
       const r = result.response;
       const headers = new Headers(r.headers);

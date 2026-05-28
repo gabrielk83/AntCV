@@ -48,6 +48,16 @@ function SectionHeader({ children }: { children: React.ReactNode }): JSX.Element
   );
 }
 
+// v1.50.17 — native <option> elements on Windows/Chrome don't inherit
+// their parent <select>'s color / background. Without explicit styling
+// the dropdown reads near-invisible against the OS-default light menu.
+// We force the same dark + light-text combination used elsewhere in the
+// React-islands UI on every option element.
+const DARK_OPTION_STYLE: React.CSSProperties = {
+  background: '#283556',
+  color: '#e6eef3',
+};
+
 function StyleDropdown({
   value,
   onChange,
@@ -77,7 +87,7 @@ function StyleDropdown({
           : '';
         const suffix = disabled ? `  (Coming ${s.comingInRelease ?? 'soon'})` : '';
         return (
-          <option key={id} value={id} disabled={disabled}>
+          <option key={id} value={id} disabled={disabled} style={DARK_OPTION_STYLE}>
             {s.displayName}
             {legacy}
             {suffix}
@@ -726,7 +736,7 @@ export function WritingStylePicker(): JSX.Element {
         }}
       >
         {allowedPageValues.map((v) => (
-          <option key={v} value={v}>{v} page{v === 1 ? '' : 's'}</option>
+          <option key={v} value={v} style={DARK_OPTION_STYLE}>{v} page{v === 1 ? '' : 's'}</option>
         ))}
       </select>
       <div style={{ fontSize: 11, opacity: 0.65, marginTop: 4 }}>

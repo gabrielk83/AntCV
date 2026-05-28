@@ -40,6 +40,10 @@ interface AntcvWritingStylePayload {
   extraConstraints: unknown[];
   targetPages: number;
   sectionFormat: string;
+  /** v1.50.14 — per-section overrides from the LayoutPicker. */
+  sectionFormats: Record<string, string>;
+  /** v1.50.14 — per-section line-limit hints from the LayoutPicker. */
+  sectionLineLimits: Record<string, number>;
   target_language: string;
   package: string;
   ats: boolean;
@@ -92,7 +96,12 @@ function buildWritingStylePayload(): AntcvWritingStylePayload {
     extraBannedPhrases: wp.extraBannedPhrases,
     extraConstraints: wp.extraConstraints,
     targetPages: lp.targetPages,
-    sectionFormat: 'default', // Per-section override is wired in Pass 4 (editor line sliders).
+    // v1.50.14 — `sectionFormat` is the legacy single-section field kept
+    // for backward compat with older workers. New behaviour reads the
+    // sectionFormats / sectionLineLimits maps below.
+    sectionFormat: 'default',
+    sectionFormats: { ...(lp.sectionFormats ?? {}) },
+    sectionLineLimits: { ...(lp.lineLimits ?? {}) },
     target_language: readActiveLanguage(),
     package: readActivePackageId(),
     ats: ep.ats,

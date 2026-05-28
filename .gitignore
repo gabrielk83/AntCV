@@ -3,6 +3,15 @@
 .dev.vars
 wrangler.toml.bak
 
+# The Cloudflare GitHub bot (cloudflare-workers-and-pages[bot]) periodically
+# pushes a /wrangler.jsonc at the repo root that says name="docx-worker" and
+# assets={directory:"pwa"}. That file HIJACKS `wrangler deploy` from every
+# worker subdirectory — wrangler walks up, finds it, and uploads docx-worker
+# instead of whatever worker you cd'd into. See scripts/git-hooks/pre-commit
+# for the matching commit guard. Per-worker wrangler.toml files are NOT
+# affected; this glob is root-anchored.
+/wrangler.jsonc
+
 # Node
 node_modules/
 npm-debug.log*
@@ -59,7 +68,3 @@ candidates/
 .dev.vars*
 !.dev.vars.example
 !.env.example
-
-# docx-worker bundled outputs (built from src/)
-workers/docx-worker/docx-worker.js
-workers/docx-worker/docx-worker.min.js

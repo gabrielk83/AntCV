@@ -3442,6 +3442,80 @@ const method = request.method;
     catch (e) {
       return jsonResponse({ error: 'body_read_failed', message: e.message }, 400, request, env, refresh);
     }
+
+    // v1.50.18-debug-body: ALWAYS log a slice of the inbound body so
+    // we can see what the PWA is sending and confirm the relay's
+    // code is the version we expect. Surfaces the field shape that
+    // governs the normaliser conditional below.
+    try {
+      const debugBodyText = new TextDecoder().decode(bodyBytes);
+      try {
+        const dbg = JSON.parse(debugBodyText);
+        console.log('[access-relay debug] inbound POST / — model=' + String(dbg.model) +
+          ', has-system-top=' + (typeof dbg.system === 'string') +
+          ', messages.length=' + (Array.isArray(dbg.messages) ? dbg.messages.length : 'NA') +
+          ', messages-with-role-system=' + (Array.isArray(dbg.messages)
+            ? dbg.messages.filter(m => m && m.role === 'system').length : 'NA'));
+      } catch (_) {
+        console.log('[access-relay debug] inbound POST / — non-JSON body (first 200):', debugBodyText.slice(0, 200));
+      }
+    } catch (_) {}
+
+    // v1.50.18-fix-anthropic-system: Anthropic's Messages API rejects
+    // role:"system" inside the messages array (HTTP 400). The PWA
+    // (app.js — minified bundle) constructs Anthropic requests with
+    // role:"system" at messages[0] (OpenAI shape). The downstream
+    // proxy is supposed to normalise, but we cannot rely on every
+    // downstream deployment being on the latest version — service
+    // bindings and edge caches can lag. Normalise here at the relay
+    // EDGE so the bytes that leave this worker are always valid
+    // regardless of which downstream proxy receives them (cv-proxy,
+    // antcv-demo-proxy, or any future variant).
+    //
+    // Detection: only mutate if the body parses as JSON and the
+    // model field starts with claude- (Anthropic naming convention).
+    // OpenAI / Mistral / Gemini bodies are passed through untouched.
+    try {
+      const textBody = new TextDecoder().decode(bodyBytes);
+      const parsed = JSON.parse(textBody);
+      const isClaude = parsed && typeof parsed.model === 'string'
+        && /^claude[-_]/i.test(parsed.model);
+      if (isClaude && Array.isArray(parsed.messages) && parsed.messages.length > 0) {
+        const collectedSystem = [];
+        const remainingMessages = [];
+        for (let i = 0; i < parsed.messages.length; i++) {
+          const m = parsed.messages[i];
+          if (m && m.role === 'system') {
+            if (typeof m.content === 'string') {
+              if (m.content.trim()) collectedSystem.push(m.content);
+            } else if (Array.isArray(m.content)) {
+              const txt = m.content
+                .filter(b => b && b.type === 'text' && typeof b.text === 'string')
+                .map(b => b.text)
+                .join('\n');
+              if (txt.trim()) collectedSystem.push(txt);
+            }
+          } else {
+            remainingMessages.push(m);
+          }
+        }
+        if (collectedSystem.length > 0) {
+          const existingTopSystem =
+            typeof parsed.system === 'string' ? parsed.system : '';
+          const merged = collectedSystem.join('\n\n') +
+            (existingTopSystem ? '\n\n' + existingTopSystem : '');
+          parsed.system = merged;
+          parsed.messages = remainingMessages;
+          // Re-encode and replace bodyBytes so the forward sends the
+          // normalised version.
+          bodyBytes = new TextEncoder().encode(JSON.stringify(parsed)).buffer;
+          try { console.log('[access-relay anthropic-normalise] lifted', collectedSystem.length, 'system message(s) to top-level system for model=' + parsed.model); } catch (_) {}
+        }
+      }
+    } catch (_) {
+      // Non-JSON or non-Claude body — pass through unchanged.
+    }
+
     const _ctx10 = await getUpstreamContext(request, env);
     const upstreamUrl = buildUpstreamUrl(env, url, null, _ctx10.mode);
     const result = await forwardWithDiagnostics(request, env, upstreamUrl, null, bodyBytes, _ctx10.mode);

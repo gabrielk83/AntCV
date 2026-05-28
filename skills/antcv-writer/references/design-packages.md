@@ -31,13 +31,13 @@ Package values live in `packages/registry.json` per locked-source plan §3. The 
 
 | Package | Character | Typical context |
 |---|---|---|
-| **Copenhagen Modern** | Navy band with green and blue accents. Segoe UI Bold headings and Segoe UI body — unified Microsoft system font family. Circular photo. The AntCV default. | Default for European and global commercial roles. Strong choice when no specific cultural fit is needed. |
-| **Navy Executive** | Deep navy with gold accent. Cambria Bold headings and Cambria body — full-serif executive document. Rounded photo. | Senior commercial roles in finance, consulting, executive search. Conveys formality without stiffness. |
-| **Warm Terracotta** | Earthy terracotta with deep brown accent. Georgia Bold headings, Palatino Linotype body — warm serif character throughout with parser-safe Microsoft system fonts. Rounded photo, slightly larger. | Humanities, creative industries, education, NGOs. Pairs naturally with narrative writing styles (Context Rich, Mediterranean Formal). |
-| **Nordic Frost** | Cool blue with teal accent. Trebuchet MS Bold headings, Verdana body — humanist sans designed for screen reading. Circular photo. | Nordic-region applications, public sector, healthcare. Calm visual register. |
-| **Pampas Contemporary** | Navy with terracotta accent. Palatino Linotype Bold headings and Palatino Linotype body — classical executive feel. Rounded-square photo. | LATAM-region applications, hybrid creative-commercial roles. Pairs naturally with Context Rich. |
-| **Tokyo Precision** | Charcoal with cool grey-blue accent. Tahoma Bold headings and Tahoma body — geometric coherence. Square photo, smallest size (90 px). | Dense-information roles: engineering, research, technical product management. Maximises content density. |
-| **Delhi Technical** | Navy with teal and bright teal accent. Segoe UI Bold headings and Segoe UI body — modern technical feel. Hexagon or square photo, also small (85 px). | Engineering, applied science, technical academic positions. Pairs naturally with Research Formal and Credential Forward. |
+| **Copenhagen Modern** | Navy band with green and blue accents. Segoe UI Bold headings, Calibri body — parser-safe ATS-Modern pairing. Circular photo. The AntCV default. | Default for European and global commercial roles. Strong choice when no specific cultural fit is needed. |
+| **Navy Executive** | Deep navy with gold accent. Cambria Bold headings, Calibri body — serif heading against a parser-safe body. Rounded photo. | Senior commercial roles in finance, consulting, executive search. Conveys formality without stiffness. |
+| **Warm Terracotta** | Earthy terracotta with deep brown accent. Georgia Bold headings, Georgia body — warm serif character throughout. Rounded photo, slightly larger. | Humanities, creative industries, education, NGOs. Pairs naturally with narrative writing styles (Context Rich, Mediterranean Formal). |
+| **Nordic Frost** | Cool blue with teal accent. Trebuchet MS Bold headings, Calibri body — humanist sans heading with a parser-safe body. Circular photo. | Nordic-region applications, public sector, healthcare. Calm visual register. |
+| **Pampas Contemporary** | Navy with terracotta accent. Palatino Linotype Bold headings, Calibri body — classical executive heading with a parser-safe body. Rounded-square photo. | LATAM-region applications, hybrid creative-commercial roles. Pairs naturally with Context Rich. |
+| **Tokyo Precision** | Charcoal with cool grey-blue accent. Tahoma Bold headings, Calibri body — geometric coherence with a parser-safe body. Square photo, smallest size (90 px). | Dense-information roles: engineering, research, technical product management. Maximises content density. |
+| **Delhi Technical** | Navy with teal and bright teal accent. Segoe UI Bold headings, Calibri body — modern technical feel with a parser-safe body. Hexagon or square photo, also small (85 px). | Engineering, applied science, technical academic positions. Pairs naturally with Research Formal and Credential Forward. |
 
 Each package also ships with two quick-alternative pairs (`alt1.head/sidebar`, `alt2.head/sidebar`) and dark-mode equivalents per the Unified Visual doc. These are visual variations within a package — not separate packages — and do not affect the (writing × package) matrix.
 
@@ -97,13 +97,15 @@ Body fonts are matched per package to the heading font's typographic family. All
 
 | Package | Heading | Body (default) | ATS-Modern safety |
 |---|---|---|---|
-| Copenhagen Modern | Segoe UI Bold | Segoe UI | 99% |
-| Navy Executive | Cambria Bold | Cambria | 98% |
-| Warm Terracotta | Georgia Bold | Palatino Linotype | 98% |
-| Nordic Frost | Trebuchet MS Bold | Verdana | 99% |
-| Pampas Contemporary | Palatino Linotype Bold | Palatino Linotype | 98% |
-| Tokyo Precision | Tahoma Bold | Tahoma | 99% |
-| Delhi Technical | Segoe UI Bold | Segoe UI | 99% |
+| Copenhagen Modern | Segoe UI Bold | Calibri | 99% |
+| Navy Executive | Cambria Bold | Calibri | 99% |
+| Warm Terracotta | Georgia Bold | Georgia | 98% |
+| Nordic Frost | Trebuchet MS Bold | Calibri | 99% |
+| Pampas Contemporary | Palatino Linotype Bold | Calibri | 99% |
+| Tokyo Precision | Tahoma Bold | Calibri | 99% |
+| Delhi Technical | Segoe UI Bold | Calibri | 99% |
+
+*Body fonts mirror the locked Unified Visual Package System doc's "Unified Package Defaults + Alternatives" table. If this skill ref and the docx ever diverge again, the docx wins.*
 
 Confidence figures reflect modern ATS parser handling (Greenhouse, Lever, Ashby, modern Workday). The gap between Calibri (99%) and the chosen body fonts (98 – 99%) is statistically zero — the "Calibri is universally safest" advice from 2010 – 2015 is no longer accurate for ATS-Modern. PDF embedding makes the parsing server's font availability irrelevant for text extraction.
 

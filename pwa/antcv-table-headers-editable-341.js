@@ -36,7 +36,7 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.40.341-tb004';
+  var SCRIPT_VERSION = '1.40.341-tb004-fix1';
   if (window.__antcvTableHeadersEditable341 === SCRIPT_VERSION) return;
   window.__antcvTableHeadersEditable341 = SCRIPT_VERSION;
 
@@ -116,14 +116,28 @@
     return (typeof v === 'string') ? v : null;
   }
 
-  function setOverride(doc, sectionKey, colIndex, text) {
+  // v1.40.341-tb004-fix1: split persistence into silent (every
+  // keystroke, no event) and committed (on blur, fires
+  // antcv:sections-updated). Without silent-per-keystroke persistence
+  // the React component owning the <th> rerenders on its own clock
+  // and resets the cell's textContent to the original ("Core
+  // Competencies"), wiping the user's in-progress edit.
+  function setOverrideSilent(doc, sectionKey, colIndex, text) {
     var s = readStore();
     if (!s[doc] || typeof s[doc] !== 'object') s[doc] = {};
     if (!s[doc][sectionKey] || typeof s[doc][sectionKey] !== 'object') s[doc][sectionKey] = {};
     var key = String(colIndex);
     if (text == null || text === '') delete s[doc][sectionKey][key];
     else s[doc][sectionKey][key] = String(text);
-    writeStore(s);
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s || {})); } catch (_) {}
+  }
+  function setOverride(doc, sectionKey, colIndex, text) {
+    setOverrideSilent(doc, sectionKey, colIndex, text);
+    try {
+      window.dispatchEvent(new CustomEvent('antcv:sections-updated', {
+        detail: { source: 'table-headers-editable-341' },
+      }));
+    } catch (_) {}
   }
 
   function attachTh(th, doc, sectionKey, colIndex) {
@@ -135,6 +149,17 @@
     th.style.cursor = 'text';
     // Don't bubble click into row-drag / focus-stealing handlers.
     th.addEventListener('click', function (ev) { ev.stopPropagation(); });
+    // v1.40.341-tb004-fix1: persist EVERY keystroke silently so the
+    // React component's re-render (which can fire mid-edit) reads
+    // the user's current text from localStorage and restoreText()
+    // keeps the cell consistent. Only the blur emits the
+    // sections-updated event so we don't trigger a render loop.
+    th.addEventListener('input', function () {
+      try {
+        var text = clean(th.textContent || '');
+        setOverrideSilent(doc, sectionKey, colIndex, text);
+      } catch (_) {}
+    });
     th.addEventListener('blur', function () {
       try {
         var text = clean(th.textContent || '');

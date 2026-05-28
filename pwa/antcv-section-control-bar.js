@@ -98,6 +98,34 @@
 
   var ALIGN_CYCLE = ['left', 'center', 'justify', 'right'];
 
+  // ─── Brand colours (v1.50.18) ────────────────────────────────────
+  //
+  // The SectionControlBar is UI chrome — these colours stay consistent
+  // regardless of which visual package the user has applied to the CV
+  // they're editing. Centralised here so future tweaks (rebrand, action
+  // colour shifts) are one-file edits rather than 14-site search-and-
+  // replace. The hex values themselves are unchanged from the inline
+  // literals they replaced; no visual change at runtime.
+  //
+  // Token convention:
+  //   accent           — AntCV bright teal, ubiquitous brand border
+  //   accentDeep       — AntCV deep teal, primary button text
+  //   warning          — Enhance action border (orange)
+  //   warningText      — Enhance action text (deep orange)
+  //   info             — Fit action (purple, matches the per-row Fit
+  //                       icon used across the row-controls sidecars)
+  //   danger           — Delete action border (red)
+  //   dangerText       — Delete action text (deep red)
+  var BRAND = {
+    accent:      '#01B7BB',
+    accentDeep:  '#00746E',
+    warning:     '#ff8a00',
+    warningText: '#a04a00',
+    info:        '#7b2ff2',
+    danger:      '#dc2626',
+    dangerText:  '#b91c1c',
+  };
+
   // Glyphs — keep in sync with existing sidecars (publications-273,
   // selected-outcomes-237, what-i-bring-327). Changing these would
   // require updating the classifier patterns in those sidecars during
@@ -235,8 +263,8 @@
     btn.style.position = 'static';
     btn.style.float = 'none';
     btn.style.background = 'rgba(1,183,187,0.08)';
-    btn.style.color = '#00746E';
-    btn.style.border = '1px solid #01B7BB';
+    btn.style.color = BRAND.accentDeep;
+    btn.style.border = '1px solid ' + BRAND.accent;
     btn.style.order = String(ACTION_ORDER[action] || 99);
     return btn;
   }
@@ -259,8 +287,8 @@
     btn.style.fontSize = '10px';
     if (state && state.pageBreakActive) {
       btn.style.background = 'rgba(255,138,0,0.18)';
-      btn.style.borderColor = '#ff8a00';
-      btn.style.color = '#a04a00';
+      btn.style.borderColor = BRAND.warning;
+      btn.style.color = BRAND.warningText;
     }
     var verb = tooltipText(locale, 'page-break', itemLabel);
     btn.title = verb + ' (page ' + n + '/4 — click to cycle)';
@@ -297,8 +325,8 @@
   function paintDelete(btn, locale, itemLabel) {
     paintSimple(btn, 'delete', locale, itemLabel);
     btn.style.background = 'rgba(220,38,38,0.06)';
-    btn.style.borderColor = '#dc2626';
-    btn.style.color = '#b91c1c';
+    btn.style.borderColor = BRAND.danger;
+    btn.style.color = BRAND.dangerText;
   }
 
   // ─── Mount ───────────────────────────────────────────────────────
@@ -399,8 +427,8 @@
         function (b) {
           paintSimple(b, 'enhance', locale, itemLabel);
           b.style.background = 'rgba(255,138,0,0.08)';
-          b.style.borderColor = '#ff8a00';
-          b.style.color = '#a04a00';
+          b.style.borderColor = BRAND.warning;
+          b.style.color = BRAND.warningText;
         },
         function () { dispatch('enhance'); });
     }
@@ -410,8 +438,8 @@
         function (b) {
           paintSimple(b, 'fit', locale, itemLabel);
           b.style.background = 'rgba(123,47,242,0.06)';
-          b.style.borderColor = '#7b2ff2';
-          b.style.color = '#7b2ff2';
+          b.style.borderColor = BRAND.info;
+          b.style.color = BRAND.info;
         },
         function () { dispatch('fit'); });
     }
@@ -436,14 +464,14 @@
       if (buttons['enhance']) {
         paintSimple(buttons['enhance'], 'enhance', locale, itemLabel);
         buttons['enhance'].style.background = 'rgba(255,138,0,0.08)';
-        buttons['enhance'].style.borderColor = '#ff8a00';
-        buttons['enhance'].style.color = '#a04a00';
+        buttons['enhance'].style.borderColor = BRAND.warning;
+        buttons['enhance'].style.color = BRAND.warningText;
       }
       if (buttons['fit']) {
         paintSimple(buttons['fit'], 'fit', locale, itemLabel);
         buttons['fit'].style.background = 'rgba(123,47,242,0.06)';
-        buttons['fit'].style.borderColor = '#7b2ff2';
-        buttons['fit'].style.color = '#7b2ff2';
+        buttons['fit'].style.borderColor = BRAND.info;
+        buttons['fit'].style.color = BRAND.info;
       }
       if (buttons['delete']) paintDelete(buttons['delete'], locale, itemLabel);
     }

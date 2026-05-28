@@ -52,6 +52,65 @@
 // tables to different widths, the wider one wins — narrower tables
 // in the export will appear wider than in the live preview.
 
+// v1.50.8 — read the active visual package id (e.g. "copenhagen-modern")
+// from localStorage personalInfo.stylePackage. Set by the React-islands
+// PackagePicker (src/islands/PackagePicker/). Returns the canonical
+// default when absent or invalid.
+export function readPackageId() {
+  const ALLOWED = new Set([
+    'copenhagen-modern', 'navy-executive', 'warm-terracotta',
+    'nordic-frost', 'pampas-contemporary', 'tokyo-precision', 'delhi-technical',
+  ]);
+  // Legacy aliases that the worker also accepts — surface the canonical
+  // id from the PWA side so the wire format is uniform.
+  const ALIASES = {
+    default: 'copenhagen-modern',
+    copenhagen: 'copenhagen-modern',
+    navy: 'navy-executive',
+    executive: 'navy-executive',
+    terracotta: 'warm-terracotta',
+    warm: 'warm-terracotta',
+    nordic: 'nordic-frost',
+    frost: 'nordic-frost',
+    pampas: 'pampas-contemporary',
+    tokyo: 'tokyo-precision',
+    precision: 'tokyo-precision',
+    delhi: 'delhi-technical',
+    technical: 'delhi-technical',
+  };
+  try {
+    if (typeof localStorage === 'undefined') return 'copenhagen-modern';
+    const raw = localStorage.getItem('personalInfo');
+    if (!raw) return 'copenhagen-modern';
+    const pi = JSON.parse(raw);
+    const v = pi && typeof pi.stylePackage === 'string' ? pi.stylePackage.trim().toLowerCase() : '';
+    if (!v) return 'copenhagen-modern';
+    if (ALLOWED.has(v)) return v;
+    if (ALIASES[v]) return ALIASES[v];
+    return 'copenhagen-modern';
+  } catch (_) {
+    return 'copenhagen-modern';
+  }
+}
+
+// v1.50.8 — read the user's "legacy ATS tier" preference from
+// personalInfo.exportPrefs.legacyAtsTier. Toggled in the React-islands
+// ExportOptionsCard (src/islands/ExportOptions/). When true, the
+// worker forces Calibri as the body font regardless of the active
+// package's bodyFont, so legacy parsers (Taleo pre-2018, iCIMS
+// pre-2018, older SuccessFactors) can extract the text reliably.
+export function readLegacyAtsTier() {
+  try {
+    if (typeof localStorage === 'undefined') return false;
+    const raw = localStorage.getItem('personalInfo');
+    if (!raw) return false;
+    const pi = JSON.parse(raw);
+    return !!(pi && pi.exportPrefs && pi.exportPrefs.legacyAtsTier === true);
+  } catch (_) {
+    return false;
+  }
+}
+
 export function readTableWidthPctMap() {
   try {
     if (typeof localStorage === 'undefined') return {};
@@ -367,6 +426,13 @@ export function buildPayload({
       company:  meta.company  || '',
     },
     header_align: align,
+    // v1.50.8 — pass the active visual package + ATS legacy-tier flag
+    // so the worker derives its base palette from
+    // packages/registry.json. The worker falls back to its legacy
+    // DEFAULTS palette when these fields are absent, so older docx-
+    // client builds keep working unchanged.
+    ...(typeof readPackageId === 'function' ? { package: readPackageId() } : {}),
+    ...(typeof readLegacyAtsTier === 'function' && readLegacyAtsTier() ? { legacy_ats_tier: true } : {}),
     style: buildStyle(styleConfig, navyColor),
     font_sizes: buildFontSizes(fontSizes),
     sections: normalizeSections(docSections),

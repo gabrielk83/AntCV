@@ -1,27 +1,37 @@
-# cv-proxy with /preferences
+# demo-proxy (`antcv-demo-proxy`)
 
-Deploy:
+Public-demo variant of `proxy/`. Same module surface; differences:
 
-```powershell
-npm install
-npx wrangler deploy
+- Bundled API keys for Anthropic / OpenAI / Mistral / Gemini, gated by demo-enforcement.
+- Per-IP and per-day rate limits in `src/demo-enforcement.js`.
+- No BYOK qualification path.
+- Conservative model defaults (cheapest tier per provider).
+
+Use this worker for the public demo URL. Real users on the production app hit `proxy/`.
+
+## Deploy
+
+```bash
+cd workers/demo-proxy
+wrangler deploy
 ```
 
-Set secrets:
+Workflow_dispatch in `.github/workflows/deploy.yml`: target `demo-proxy`, confirm `demo-proxy`, dry-run first.
 
-```powershell
-npx wrangler secret put Claude_API_Key
-npx wrangler secret put ChatGPT_API_Key
-npx wrangler secret put Mistral_API_Key
-npx wrangler secret put Gemini_API_Key
-```
+## Secrets
 
-Cloud save needs a KV binding named `KV_BINDING`.
+Same as `proxy/` — see [`workers/proxy/README.md`](../proxy/README.md).
 
-Cloudflare Dashboard:
-Workers & Pages -> cv-proxy -> Settings -> Bindings -> KV namespace bindings -> Add binding
+## Bindings
 
-Variable name:
-`KV_BINDING`
+| Binding | Type | Purpose |
+|---|---|---|
+| `KV_BINDING` | KV namespace | Demo rate-limit counters per IP |
 
-Then redeploy or save/deploy in dashboard.
+## Observability
+
+`wrangler.toml` must contain the observability block — same as every other worker.
+
+## Plan refs
+
+Out of scope for the v1.50.0 writing-engine rollout. `demo-proxy` tracks `proxy/` once that pass lands — same seven-step pipeline, same request shape, different defaults.

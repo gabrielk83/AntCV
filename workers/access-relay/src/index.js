@@ -3443,6 +3443,24 @@ const method = request.method;
       return jsonResponse({ error: 'body_read_failed', message: e.message }, 400, request, env, refresh);
     }
 
+    // v1.50.18-debug-body: ALWAYS log a slice of the inbound body so
+    // we can see what the PWA is sending and confirm the relay's
+    // code is the version we expect. Surfaces the field shape that
+    // governs the normaliser conditional below.
+    try {
+      const debugBodyText = new TextDecoder().decode(bodyBytes);
+      try {
+        const dbg = JSON.parse(debugBodyText);
+        console.log('[access-relay debug] inbound POST / — model=' + String(dbg.model) +
+          ', has-system-top=' + (typeof dbg.system === 'string') +
+          ', messages.length=' + (Array.isArray(dbg.messages) ? dbg.messages.length : 'NA') +
+          ', messages-with-role-system=' + (Array.isArray(dbg.messages)
+            ? dbg.messages.filter(m => m && m.role === 'system').length : 'NA'));
+      } catch (_) {
+        console.log('[access-relay debug] inbound POST / — non-JSON body (first 200):', debugBodyText.slice(0, 200));
+      }
+    } catch (_) {}
+
     // v1.50.18-fix-anthropic-system: Anthropic's Messages API rejects
     // role:"system" inside the messages array (HTTP 400). The PWA
     // (app.js — minified bundle) constructs Anthropic requests with

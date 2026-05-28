@@ -8,7 +8,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.40.341-p0c-fix6';
+  const VERSION='1.40.341-p0c-fix7';
   if(window.__antcvEditorLayoutCleanup331===VERSION) return;
   window.__antcvEditorLayoutCleanup331=VERSION;
 
@@ -156,7 +156,16 @@
   function setFoundation(part,patch){const s=foundationState();s[part]=Object.assign({},s[part]||{},patch||{});write(FOUNDATION_KEY,s);pulse('foundation-controls');return s[part];}
   function isInPreviewPaper(el){const paper=document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]');return !!(paper && el && paper.contains(el));}
   function foundationRoot(){const heads=Array.from(document.querySelectorAll('h1,h2,h3,strong,b,div,span')).filter(visible);for(const h of heads){if(isInPreviewPaper(h)) continue; /* v1.40.341-p0c-fix2: scope to editor panel — never mount the cluster in Preview */ const t=clean(h.textContent);if(!/^FOUNDATION/i.test(t)||t.length>90)continue;let p=h;for(let d=0;p&&p!==document.body&&d<10;d++,p=p.parentElement){if(isInPreviewPaper(p)) break; const tx=clean(p.textContent).toLowerCase();const fs=allFields(p);if(fs.length>=2&&tx.indexOf('hands')>=0&&tx.indexOf('profession')>=0)return p;}}return null;}
-  function labelledFoundationField(root,part){const fs=allFields(root);let hit=null;fs.forEach(f=>{if(hit)return;let p=f.parentElement;for(let d=0;p&&p!==root.parentElement&&d<5;d++,p=p.parentElement){const t=clean(p.textContent).toLowerCase();if(part==='hands_on'&&t.indexOf('hands')>=0)hit=f;if(part==='professionally'&&t.indexOf('profession')>=0)hit=f;if(hit)break;}});return hit||(part==='hands_on'?fs[0]:fs[1])||null;}
+  // v1.40.341-p0c-fix7 (2026-05-28): the previous ancestor-text
+  // matcher walked up from each field looking for "hands" or
+  // "profession" — but the Foundation panel wrapper always contains
+  // BOTH labels, plus the Professionally placeholder contains the
+  // word "hands-on", so the matcher resolved both parts to fs[0]
+  // and stacked both toolbars after Hands-on, leaving Professionally
+  // with no controls. Use position-based mapping instead — the
+  // panel deterministically renders Hands-on first and
+  // Professionally second.
+  function labelledFoundationField(root,part){const fs=allFields(root);if(part==='hands_on')return fs[0]||null;if(part==='professionally')return fs[1]||fs[0]||null;return null;}
   function cleanupFoundation(root){if(!root)return;Array.from(root.querySelectorAll('[data-antcv-foundation-host],[data-antcv330-hiwc-toolbar],[data-antcv331-toolbar]')).forEach(n=>n.remove());}
   function fixFoundation(){const r=foundationRoot();if(!r)return;cleanupFoundation(r);const st=foundationState();[['hands_on','hands_on'],['professionally','professionally']].forEach(([part,key])=>{const f=labelledFoundationField(r,part);if(!f)return;f.style.textAlign=st[part].align||'left';const h=hostAfterField(f,'foundation-'+key);h.appendChild(toolbar('foundation-'+key,f,{getPage:()=>foundationState()[part].page||1,setPage:()=>setFoundation(part,{page:(Number(foundationState()[part].page)||1)%4+1}).page,getAlign:()=>foundationState()[part].align||'left',setAlign:()=>setFoundation(part,{align:nextAlign(foundationState()[part].align||'left')}).align}));});}
 

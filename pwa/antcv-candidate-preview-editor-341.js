@@ -58,7 +58,7 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.40.341-p0d';
+  var SCRIPT_VERSION = '1.40.341-p0d-fix2';
   if (window.__antcvCandidatePreviewEditor341 === SCRIPT_VERSION) return;
   window.__antcvCandidatePreviewEditor341 = SCRIPT_VERSION;
 
@@ -104,13 +104,17 @@
   function findCandidateBlock() {
     var paper = findPreviewPaper();
     if (!paper) return null;
-    // The topbar drop-loc is where Candidate sits per the
-    // section-bar-freeze-fix sidecar's drop-loc anchors.
+    // Path A: anchor-based (older builds that expose drop-loc).
     var topbar = paper.querySelector('[data-candidate-drop-loc="topbar"]');
     if (topbar) return topbar;
-    // Fallback: a [data-sid] of 'candidate' / 'top_bar' / 'topbar'.
+    // Path B: [data-sid] of canonical Candidate ids.
     var sidCand = paper.querySelector('[data-sid="candidate"], [data-sid="topbar"], [data-sid="top_bar"]');
-    return sidCand || null;
+    if (sidCand) return sidCand;
+    // Path C (v1.40.341-p0d-fix2): no Candidate anchor in this
+    // build — fall back to the preview paper itself. wrapName /
+    // wrapApplicationSentence then locate their target leaves by
+    // text match against personalInfo values.
+    return paper;
   }
 
   // ─── Name editability (CA-001) ───────────────────────────────────

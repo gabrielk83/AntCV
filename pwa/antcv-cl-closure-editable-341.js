@@ -38,7 +38,7 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.40.341-p0c-fix1';
+  var SCRIPT_VERSION = '1.40.341-p0c-fix2';
   if (window.__antcvClClosureEditable341 === SCRIPT_VERSION) return;
   window.__antcvClClosureEditable341 = SCRIPT_VERSION;
 
@@ -82,6 +82,59 @@
     for (var i = 0; i < all.length; i++) {
       var sid = all[i].getAttribute('data-sid') || '';
       if (TARGET_SIDS.hasOwnProperty(sid)) out.push(all[i]);
+    }
+    return out;
+  }
+
+  // v1.40.341-p0c-fix2: this build of app.js does NOT expose
+  // [data-sid="closure"] / "closing" — the Closure greeting
+  // ("Kind regards," / "Sincerely," / "Venlig hilsen," / ...)
+  // is rendered as a nested div inside the preview paper with
+  // no section marker. Locate it by text match against a list
+  // of canonical closing phrases.
+  var CLOSING_PATTERNS = [
+    /^kind regards/i,
+    /^sincerely/i,
+    /^best regards/i,
+    /^yours truly/i,
+    /^yours sincerely/i,
+    /^venlig hilsen/i,            // Danish
+    /^med venlig hilsen/i,
+    /^atentamente/i,              // Spanish
+    /^cordialmente/i,
+    /^saludos/i,
+    /^此致/,                       // Chinese
+    /^敬礼/,
+  ];
+
+  function findClosureLeavesByText(paper) {
+    var out = [];
+    if (!paper) return out;
+    // Walk LEAF candidates inside the preview paper.
+    var probes = paper.querySelectorAll('p, div, span, h1, h2, h3, h4, h5, h6');
+    for (var i = 0; i < probes.length; i++) {
+      var el = probes[i];
+      if (!el.isConnected) continue;
+      if (el.children && el.children.length > 0) continue;
+      // Skip structural markers (PB-006 boundary primitives, our own).
+      if (el.getAttribute && (
+        el.getAttribute('data-antcv-continuation-header') === '1' ||
+        el.getAttribute('data-antcv-page-break') === '1' ||
+        el.getAttribute('data-antcv-control-bar') === '1' ||
+        el.getAttribute('data-antcv-pb284-bar') === '1' ||
+        el.getAttribute('data-antcv-pb284-mark') === '1' ||
+        el.getAttribute('aria-hidden') === 'true' ||
+        el.getAttribute('data-antcv-cl-closure-editable') === '1'  // already wrapped
+      )) continue;
+      var t = (el.textContent || '').replace(/[\t\n\r ]+/g, ' ').trim();
+      if (!t) continue;
+      // Match against any canonical closing phrase.
+      for (var p = 0; p < CLOSING_PATTERNS.length; p++) {
+        if (CLOSING_PATTERNS[p].test(t)) {
+          out.push(el);
+          break;
+        }
+      }
     }
     return out;
   }
@@ -238,6 +291,8 @@
   function sweepOnce() {
     var paper = findPreviewPaper();
     if (!paper) return;
+    // Path A: anchor-based — works when the build exposes
+    // [data-sid="closure"] / [data-sid="closing"] sections.
     var sections = findClosureSections(paper);
     for (var i = 0; i < sections.length; i++) {
       var sec = sections[i];
@@ -246,6 +301,15 @@
       for (var j = 0; j < leaves.length; j++) {
         try { attachEditableHandlers(leaves[j], sid); } catch (_) {}
       }
+    }
+    // Path B: content-based fallback for builds where the
+    // Closure greeting renders as a nested div with no section
+    // marker. We pass sid='closure' as the conventional id so
+    // persistClosureText still resolves against
+    // localStorage.sections.cl[id=closure] if it exists.
+    var fallback = findClosureLeavesByText(paper);
+    for (var k = 0; k < fallback.length; k++) {
+      try { attachEditableHandlers(fallback[k], 'closure'); } catch (_) {}
     }
   }
 

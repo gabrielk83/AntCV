@@ -1,3 +1,9 @@
+## 1.14.13
+
+- AI-assisted disclosure rendered as a bordered "hanging textbox" matching the PWA preview chip (app.js v1.40.338). 1pt border on all four sides; sidebar context keeps the light-grey-blue palette, linear/CL context uses a muted teal on a very light fill.
+- Linear (CL) builder now emits the disclosure on the last page: page 1 for a single-page CL, the jd_questions page (page 2) when present.
+- Uses a styled paragraph, not `wp:anchor` floating frames — those don't survive LibreOffice/CloudConvert PDF conversion (v1.14.0 photo-floating regression).
+
 ## 1.14.12
 
 - Sidebar Regulatory Context and Additional Information item page breaks are now honored without duplicating the first-section break.

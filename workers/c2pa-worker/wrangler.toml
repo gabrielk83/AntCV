@@ -25,6 +25,6 @@ invocation_logs = true
 
 [vars]
 # Public, non-sensitive metadata baked into every manifest.
-C2PA_CLAIM_GENERATOR = "AntCV/1.40.180 c2pa-rs/0.45"
-C2PA_VENDOR = "kanzen.dk"
-C2PA_PRODUCT_URL = "https://cv-generator-det.pages.dev"
+C2PA_CLAIM_GENERATOR = "AntCV/1.40.336 c2pa-rs/0.45"
+C2PA_VENDOR = "AntCV"
+C2PA_PRODUCT_URL = "https://antcv.pages.dev"

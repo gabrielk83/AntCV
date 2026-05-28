@@ -142,13 +142,61 @@
   if (!CFG.cvProxyOrigin && isWorkerUrl(lsProxyUrl))   CFG.cvProxyOrigin   = lsProxyUrl;
   if (!CFG.docxWorkerOrigin && isWorkerUrl(lsDocxUrl)) CFG.docxWorkerOrigin = lsDocxUrl;
 
+  // ─── BRAND constants (v1.50.20) ────────────────────────────────
+  // Bucket 2 hex-extraction: every hex literal that previously lived
+  // inline in the CSS template / cssText calls below is now sourced
+  // from this single named object. This is editor / sidecar chrome,
+  // not document content — so the colours stay consistent across all
+  // visual packages and don't map to package CSS variables. Future
+  // colour adjustments are now a single-source edit.
+  var BRAND = {
+    // navy family (primary brand, headings, primary button)
+    navy:            '#283556',
+    navyDeep:        '#1f2a44',  // primary button hover
+    navyText:        '#1a2433',  // body text on light bg
+
+    // neutrals
+    white:           '#fff',
+    black:           '#000',
+    bgHover:         '#f5f5f5',  // secondary button hover
+    borderLight:     '#d0d8e0',  // panel borders
+    borderFaint:     '#ccc',     // spinner / muted dividers
+    separator:       '#eef0f3',  // panel header underline
+    mutedStrong:     '#666',     // panel close button
+    mutedText:       '#555',     // banner / summary body text
+
+    // teal family (success / accent)
+    teal:            '#00746E',
+    tealBgLight:     '#e7f4f3',  // low-severity / success chip bg
+    subtleBg:        '#f7f9fc',  // deviation card bg
+    infoBg:          '#f0f4f8',  // summary card bg
+
+    // warning family
+    warning:         '#d9a23a',  // border + accent
+    warningBg:       '#fff5e1',  // banner / medium-sev bg
+    warningTextDeep: '#8a4a00',  // ungrounded answer text
+
+    // danger family
+    danger:          '#b8001f',
+    dangerDeep:      '#8a0017',  // hover / fail score text
+    dangerBg:        '#fdecea',  // warning banner + high-sev bg
+
+    // score chips (pass / warn / fail)
+    scorePassBg:     '#c8e6c9',
+    scorePassText:   '#1b5e20',
+    scoreWarnBg:     '#ffe0b2',
+    scoreWarnText:   '#6d4c11',
+    scoreFailBg:     '#ffcdd2',
+    // scoreFailText reuses dangerDeep (#8a0017)
+  };
+
   // ─── CSS ───────────────────────────────────────────────────────
   const style = document.createElement('style');
   style.textContent = `
     .antcv-overlay {
       position: fixed; z-index: 99999;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      font-size: 13px; color: #1a2433;
+      font-size: 13px; color: ${BRAND.navyText};
       max-width: min(440px, calc(100vw - 32px));
       display: flex; flex-direction: column; align-items: flex-end; gap: 6px;
     }
@@ -164,30 +212,30 @@
     .antcv-overlay-hidden { display: none !important; }
 
     .antcv-btn {
-      background: #283556; color: #fff; border: none; padding: 8px 12px;
+      background: ${BRAND.navy}; color: ${BRAND.white}; border: none; padding: 8px 12px;
       border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500;
       box-shadow: 0 2px 6px rgba(0,0,0,0.15);
     }
-    .antcv-btn:hover { background: #1f2a44; }
-    .antcv-btn.antcv-btn-secondary { background: #fff; color: #283556; border: 1px solid #283556; }
-    .antcv-btn.antcv-btn-secondary:hover { background: #f5f5f5; }
-    .antcv-btn.antcv-btn-danger { background: #b8001f; }
-    .antcv-btn.antcv-btn-danger:hover { background: #8a0017; }
-    .antcv-btn.antcv-btn-success { background: #00746E; }
+    .antcv-btn:hover { background: ${BRAND.navyDeep}; }
+    .antcv-btn.antcv-btn-secondary { background: ${BRAND.white}; color: ${BRAND.navy}; border: 1px solid ${BRAND.navy}; }
+    .antcv-btn.antcv-btn-secondary:hover { background: ${BRAND.bgHover}; }
+    .antcv-btn.antcv-btn-danger { background: ${BRAND.danger}; }
+    .antcv-btn.antcv-btn-danger:hover { background: ${BRAND.dangerDeep}; }
+    .antcv-btn.antcv-btn-success { background: ${BRAND.teal}; }
 
     /* Compact icon-only button — the default reset button state.
        40x40 circle that sits unobtrusively in the corner. Click
        expands to the labeled version. */
     .antcv-fab {
       width: 40px; height: 40px; border-radius: 20px;
-      background: #fff; color: #283556; border: 1px solid #283556;
+      background: ${BRAND.white}; color: ${BRAND.navy}; border: 1px solid ${BRAND.navy};
       cursor: pointer; font-size: 18px; font-weight: 500;
       box-shadow: 0 2px 6px rgba(0,0,0,0.15);
       display: flex; align-items: center; justify-content: center;
       padding: 0; line-height: 1;
       opacity: 0.85; transition: opacity 0.15s, background 0.15s;
     }
-    .antcv-fab:hover { opacity: 1; background: #f5f5f5; }
+    .antcv-fab:hover { opacity: 1; background: ${BRAND.bgHover}; }
     /* Busy state: the FAB icon swaps to an hourglass and pulses
        gently. Pulse rather than spin because the hourglass char
        looks awkward rotating, and pulse is less attention-stealing
@@ -207,7 +255,7 @@
     }
 
     .antcv-panel {
-      background: #fff; border: 1px solid #d0d8e0; border-radius: 8px;
+      background: ${BRAND.white}; border: 1px solid ${BRAND.borderLight}; border-radius: 8px;
       padding: 14px; max-width: 420px; box-shadow: 0 8px 24px rgba(0,0,0,0.15);
       margin-top: 8px;
       /* Cap to ~70% of viewport height so long analyses (lots of
@@ -226,44 +274,44 @@
          red flags + recruiter info can easily exceed viewport
          height even with the panel's own max-height cap). */
       position: sticky; top: -14px; /* match panel padding-top */
-      background: #fff; z-index: 2;
+      background: ${BRAND.white}; z-index: 2;
       padding-top: 14px; margin-top: -14px;
-      padding-bottom: 6px; border-bottom: 1px solid #eef0f3;
+      padding-bottom: 6px; border-bottom: 1px solid ${BRAND.separator};
     }
-    .antcv-panel-title { font-weight: 600; font-size: 14px; color: #283556; }
-    .antcv-panel-close { background: none; border: none; cursor: pointer; font-size: 16px; color: #666; padding: 0 4px; }
-    .antcv-panel-close:hover { color: #000; }
+    .antcv-panel-title { font-weight: 600; font-size: 14px; color: ${BRAND.navy}; }
+    .antcv-panel-close { background: none; border: none; cursor: pointer; font-size: 16px; color: ${BRAND.mutedStrong}; padding: 0 4px; }
+    .antcv-panel-close:hover { color: ${BRAND.black}; }
 
     .antcv-banner {
-      background: #fff5e1; border: 1px solid #d9a23a; border-left: 4px solid #d9a23a;
+      background: ${BRAND.warningBg}; border: 1px solid ${BRAND.warning}; border-left: 4px solid ${BRAND.warning};
       padding: 10px 14px; border-radius: 4px; margin-bottom: 8px; max-width: 420px;
     }
-    .antcv-banner-warning { background: #fdecea; border-color: #b8001f; }
+    .antcv-banner-warning { background: ${BRAND.dangerBg}; border-color: ${BRAND.danger}; }
     .antcv-banner-title { font-weight: 600; margin-bottom: 4px; }
-    .antcv-banner-body { font-size: 12px; color: #555; }
+    .antcv-banner-body { font-size: 12px; color: ${BRAND.mutedText}; }
 
-    .antcv-deviation { margin-bottom: 8px; padding: 8px; background: #f7f9fc; border-radius: 4px; border-left: 3px solid #ccc; }
-    .antcv-deviation.sev-high   { border-left-color: #b8001f; background: #fdecea; }
-    .antcv-deviation.sev-medium { border-left-color: #d9a23a; background: #fff5e1; }
-    .antcv-deviation.sev-low    { border-left-color: #00746E; background: #e7f4f3; }
-    .antcv-deviation-type { font-weight: 600; font-size: 11px; text-transform: uppercase; color: #283556; letter-spacing: 0.5px; }
+    .antcv-deviation { margin-bottom: 8px; padding: 8px; background: ${BRAND.subtleBg}; border-radius: 4px; border-left: 3px solid ${BRAND.borderFaint}; }
+    .antcv-deviation.sev-high   { border-left-color: ${BRAND.danger}; background: ${BRAND.dangerBg}; }
+    .antcv-deviation.sev-medium { border-left-color: ${BRAND.warning}; background: ${BRAND.warningBg}; }
+    .antcv-deviation.sev-low    { border-left-color: ${BRAND.teal}; background: ${BRAND.tealBgLight}; }
+    .antcv-deviation-type { font-weight: 600; font-size: 11px; text-transform: uppercase; color: ${BRAND.navy}; letter-spacing: 0.5px; }
     .antcv-deviation-evidence { margin: 4px 0; font-size: 12px; }
-    .antcv-deviation-fix { font-size: 12px; color: #555; font-style: italic; }
+    .antcv-deviation-fix { font-size: 12px; color: ${BRAND.mutedText}; font-style: italic; }
 
     .antcv-actions { display: flex; gap: 6px; margin-top: 10px; }
 
     .antcv-summary {
-      font-size: 12px; color: #555; margin-bottom: 8px; padding: 6px;
-      background: #f0f4f8; border-radius: 4px;
+      font-size: 12px; color: ${BRAND.mutedText}; margin-bottom: 8px; padding: 6px;
+      background: ${BRAND.infoBg}; border-radius: 4px;
     }
     .antcv-score { display: inline-block; padding: 2px 8px; border-radius: 12px; font-weight: 600; font-size: 11px; margin-left: 6px; }
-    .antcv-score.pass { background: #c8e6c9; color: #1b5e20; }
-    .antcv-score.warn { background: #ffe0b2; color: #6d4c11; }
-    .antcv-score.fail { background: #ffcdd2; color: #8a0017; }
+    .antcv-score.pass { background: ${BRAND.scorePassBg}; color: ${BRAND.scorePassText}; }
+    .antcv-score.warn { background: ${BRAND.scoreWarnBg}; color: ${BRAND.scoreWarnText}; }
+    .antcv-score.fail { background: ${BRAND.scoreFailBg}; color: ${BRAND.dangerDeep}; }
 
     .antcv-spinner {
-      display: inline-block; width: 12px; height: 12px; border: 2px solid #ccc;
-      border-top-color: #283556; border-radius: 50%; animation: antcv-spin 0.8s linear infinite;
+      display: inline-block; width: 12px; height: 12px; border: 2px solid ${BRAND.borderFaint};
+      border-top-color: ${BRAND.navy}; border-radius: 50%; animation: antcv-spin 0.8s linear infinite;
     }
     @keyframes antcv-spin { to { transform: rotate(360deg); } }
   `;
@@ -756,15 +804,15 @@
       const lines = [];
       if (a.recruiter.name)  lines.push(`<b>${escapeHtml(a.recruiter.name)}</b>`);
       if (a.recruiter.title) lines.push(escapeHtml(a.recruiter.title));
-      if (a.recruiter.email) lines.push(`<a href="mailto:${encodeURIComponent(a.recruiter.email)}" style="color:#283556">${escapeHtml(a.recruiter.email)}</a>`);
+      if (a.recruiter.email) lines.push(`<a href="mailto:${encodeURIComponent(a.recruiter.email)}" style="color:${BRAND.navy}">${escapeHtml(a.recruiter.email)}</a>`);
       const lin = a.recruiter.linkedin || a.recruiter.web_signals?.linkedin_url;
       if (lin) {
         const partial = a.recruiter.web_signals && a.recruiter.web_signals.linkedin_match_strong === false ? ' (partial match — verify)' : '';
-        lines.push(`<a href="${encodeURIComponent(lin)}" target="_blank" rel="noopener" style="color:#283556">LinkedIn${escapeHtml(partial)}</a>`);
+        lines.push(`<a href="${encodeURIComponent(lin)}" target="_blank" rel="noopener" style="color:${BRAND.navy}">LinkedIn${escapeHtml(partial)}</a>`);
       }
       if (a.recruiter.notes) lines.push(escapeHtml(a.recruiter.notes));
       if (a.recruiter.web_signals?.snippets?.length) {
-        lines.push(`<small style="color:#666">Web: ${escapeHtml(a.recruiter.web_signals.snippets[0].slice(0, 180))}</small>`);
+        lines.push(`<small style="color:${BRAND.mutedStrong}">Web: ${escapeHtml(a.recruiter.web_signals.snippets[0].slice(0, 180))}</small>`);
       }
       const div = document.createElement('div');
       div.className = 'antcv-deviation-evidence';
@@ -786,10 +834,10 @@
       list.style.cssText = 'display: flex; flex-direction: column; gap: 10px; margin-top: 6px;';
       for (const q of a.questions_in_jd) {
         const qDiv = document.createElement('div');
-        qDiv.style.cssText = 'padding: 6px; background: #fff; border-left: 3px solid #00746E; border-radius: 3px;';
+        qDiv.style.cssText = `padding: 6px; background: ${BRAND.white}; border-left: 3px solid ${BRAND.teal}; border-radius: 3px;`;
         qDiv.innerHTML = `<div style="font-weight:600;font-size:12px;margin-bottom:4px">Q. ${escapeHtml(q.question)}</div>` +
-          `<div style="font-size:12px;color:${q.grounded ? '#1a2433' : '#8a4a00'}">A. ${escapeHtml(q.suggested_answer || '(no answer)')}</div>` +
-          (q.grounded ? '' : '<div style="font-size:10px;color:#8a4a00;margin-top:4px">⚠ not grounded in your CV — fill in manually</div>');
+          `<div style="font-size:12px;color:${q.grounded ? BRAND.navyText : BRAND.warningTextDeep}">A. ${escapeHtml(q.suggested_answer || '(no answer)')}</div>` +
+          (q.grounded ? '' : `<div style="font-size:10px;color:${BRAND.warningTextDeep};margin-top:4px">⚠ not grounded in your CV — fill in manually</div>`);
         list.appendChild(qDiv);
       }
       block.appendChild(list);
@@ -805,7 +853,7 @@
       div.style.cssText = 'display: flex; flex-wrap: wrap; gap: 4px;';
       a.role.keywords.slice(0, 12).forEach(k => {
         const chip = document.createElement('span');
-        chip.style.cssText = 'background:#e7f4f3;color:#00746E;padding:2px 8px;border-radius:10px;font-size:11px;';
+        chip.style.cssText = `background:${BRAND.tealBgLight};color:${BRAND.teal};padding:2px 8px;border-radius:10px;font-size:11px;`;
         chip.textContent = k;
         div.appendChild(chip);
       });
@@ -1015,7 +1063,7 @@
       'No JD captured yet. Paste the JD here (or upload one in the PWA first, then click 🔍 again).'
     ));
     const ta = document.createElement('textarea');
-    ta.style.cssText = 'width: 100%; min-height: 140px; padding: 8px; border: 1px solid #d0d8e0; border-radius: 4px; font-family: monospace; font-size: 11px; resize: vertical;';
+    ta.style.cssText = `width: 100%; min-height: 140px; padding: 8px; border: 1px solid ${BRAND.borderLight}; border-radius: 4px; font-family: monospace; font-size: 11px; resize: vertical;`;
     ta.placeholder = 'Paste job description here…';
     panel.appendChild(ta);
     const actions = el('div', 'antcv-actions');

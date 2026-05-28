@@ -12,6 +12,8 @@ import {
 import {
   DEFAULT_TARGET_PAGES_OPTIONS,
   addBannedItem,
+  addBannedItems,
+  clearBannedBucket,
   deleteSlot,
   loadSlot,
   readEditorLanguage,
@@ -488,15 +490,22 @@ function BannedListEditor({
   language,
   items,
   onAdd,
+  onAddBulk,
   onRemove,
+  onClearAll,
 }: {
   kind: 'words' | 'phrases';
   language: LangCode;
   items: string[];
   onAdd: (value: string) => void;
+  onAddBulk: (raw: string) => { added: number; skipped: number };
   onRemove: (value: string) => void;
+  onClearAll: () => void;
 }): JSX.Element {
   const [draft, setDraft] = useState('');
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkDraft, setBulkDraft] = useState('');
+  const [bulkStatus, setBulkStatus] = useState<string>('');
   const langLabels: Record<LangCode, string> = {
     en: 'English',
     da: 'Danish',
@@ -508,8 +517,30 @@ function BannedListEditor({
     e.preventDefault();
     const v = draft.trim();
     if (!v) return;
-    onAdd(v);
+    // v1.50.27 — accept comma/newline-separated paste in the single-
+    // entry field too. Single token → addOne; multi → addBulk.
+    if (/[\n,;]/.test(v)) {
+      const { added, skipped } = onAddBulk(v);
+      setBulkStatus(`Added ${added}${skipped > 0 ? ` (${skipped} duplicate${skipped === 1 ? '' : 's'} skipped)` : ''}`);
+      setTimeout(() => setBulkStatus(''), 2400);
+    } else {
+      onAdd(v);
+    }
     setDraft('');
+  };
+  const bulkSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const raw = bulkDraft.trim();
+    if (!raw) return;
+    const { added, skipped } = onAddBulk(raw);
+    setBulkStatus(`Added ${added}${skipped > 0 ? ` (${skipped} duplicate${skipped === 1 ? '' : 's'} skipped)` : ''}`);
+    setBulkDraft('');
+    setTimeout(() => setBulkStatus(''), 2400);
+  };
+  const onClearConfirm = () => {
+    if (items.length === 0) return;
+    const ok = window.confirm(`Remove all ${items.length} ${kind} from ${langLabels[language]}?`);
+    if (ok) onClearAll();
   };
   return (
     <>
@@ -545,6 +576,74 @@ function BannedListEditor({
           Add
         </button>
       </form>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6, fontSize: 11, opacity: 0.7 }}>
+        <span>{items.length} item{items.length === 1 ? '' : 's'}</span>
+        <button
+          type="button"
+          onClick={() => { setBulkOpen((v) => !v); setBulkStatus(''); }}
+          aria-expanded={bulkOpen ? 'true' : 'false'}
+          style={{
+            background: 'transparent', border: 0, color: '#e6eef3',
+            cursor: 'pointer', textDecoration: 'underline', fontSize: 11, padding: 0,
+          }}
+        >
+          {bulkOpen ? 'Hide bulk paste' : 'Bulk paste'}
+        </button>
+        {items.length > 0 && (
+          <button
+            type="button"
+            onClick={onClearConfirm}
+            title={`Remove all ${items.length} ${kind} from ${langLabels[language]}`}
+            style={{
+              background: 'transparent', border: 0, color: '#e6eef3',
+              cursor: 'pointer', textDecoration: 'underline', fontSize: 11, padding: 0,
+            }}
+          >
+            Clear all
+          </button>
+        )}
+        {bulkStatus && (
+          <span style={{ marginLeft: 'auto', color: '#9be0a5' }}>{bulkStatus}</span>
+        )}
+      </div>
+      {bulkOpen && (
+        <form onSubmit={bulkSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 6 }}>
+          <textarea
+            value={bulkDraft}
+            onChange={(e) => setBulkDraft(e.currentTarget.value)}
+            placeholder={`Paste a list, one per line — or comma/semicolon-separated. Already-present items are skipped.`}
+            rows={4}
+            style={{
+              padding: '6px 8px',
+              background: 'rgba(255,255,255,.05)',
+              color: '#e6eef3',
+              border: '1px solid rgba(255,255,255,.18)',
+              borderRadius: 6,
+              fontFamily: 'inherit',
+              fontSize: 12,
+              resize: 'vertical',
+            }}
+          />
+          <button
+            type="submit"
+            disabled={!bulkDraft.trim()}
+            style={{
+              alignSelf: 'flex-end',
+              padding: '6px 14px',
+              background: 'rgba(1,183,187,.18)',
+              color: '#e6eef3',
+              border: '1px solid rgba(1,183,187,.55)',
+              borderRadius: 6,
+              cursor: bulkDraft.trim() ? 'pointer' : 'not-allowed',
+              opacity: bulkDraft.trim() ? 1 : 0.5,
+              fontWeight: 700,
+              fontSize: 12,
+            }}
+          >
+            Add all
+          </button>
+        </form>
+      )}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 6 }}>
         {items.length === 0 && (
           <span style={{ fontSize: 11, opacity: 0.6 }}>
@@ -714,8 +813,18 @@ export function WritingStylePicker(): JSX.Element {
     setPrefs(addBannedItem(kind, editorLang, value));
   }, [editorLang]);
 
+  const onAddBannedBulk = useCallback((kind: 'words' | 'phrases', raw: string): { added: number; skipped: number } => {
+    const { prefs: next, added, skipped } = addBannedItems(kind, editorLang, raw);
+    setPrefs(next);
+    return { added, skipped };
+  }, [editorLang]);
+
   const onRemoveBanned = useCallback((kind: 'words' | 'phrases', value: string) => {
     setPrefs(removeBannedItem(kind, editorLang, value));
+  }, [editorLang]);
+
+  const onClearBanned = useCallback((kind: 'words' | 'phrases') => {
+    setPrefs(clearBannedBucket(kind, editorLang));
   }, [editorLang]);
 
   const onLangChange = useCallback((lang: LangCode) => {
@@ -821,7 +930,9 @@ export function WritingStylePicker(): JSX.Element {
         language={editorLang}
         items={prefs.extraBannedWords[editorLang] ?? []}
         onAdd={(v) => onAddBanned('words', v)}
+        onAddBulk={(raw) => onAddBannedBulk('words', raw)}
         onRemove={(v) => onRemoveBanned('words', v)}
+        onClearAll={() => onClearBanned('words')}
       />
 
       <SectionHeader>
@@ -832,7 +943,9 @@ export function WritingStylePicker(): JSX.Element {
         language={editorLang}
         items={prefs.extraBannedPhrases[editorLang] ?? []}
         onAdd={(v) => onAddBanned('phrases', v)}
+        onAddBulk={(raw) => onAddBannedBulk('phrases', raw)}
         onRemove={(v) => onRemoveBanned('phrases', v)}
+        onClearAll={() => onClearBanned('phrases')}
       />
 
       <button

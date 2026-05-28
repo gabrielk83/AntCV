@@ -13,6 +13,8 @@ import { mountSettingsRouterIsland } from './islands/SettingsRouter/mount';
 import { mountPackagePickerIsland } from './islands/PackagePicker/mount';
 import { mountWritingStylePickerIsland } from './islands/WritingStylePicker/mount';
 import { mountExportOptionsIsland } from './islands/ExportOptions/mount';
+import { mountLayoutPickerIsland } from './islands/LayoutPicker/mount';
+import { mountBreadcrumbsIsland } from './islands/Breadcrumbs/mount';
 import { exposeDebugApi, installWizardStateGuard } from './lib/wizard-state';
 import { installPackageBodyBinding, exposePackageDebugApi } from './lib/body-package';
 import { installCustomModeApi } from './lib/custom-mode';
@@ -20,7 +22,7 @@ import { exposeMigrationDebugApi, runGabrielMigration } from './lib/gabriel-migr
 import { installWritingStyleFetchWrap } from './lib/install-fetch-wrap';
 import { exposeObservabilityApi } from './lib/observability';
 
-const VERSION = '1.50.8';
+const VERSION = '1.50.15';
 
 declare global {
   interface Window {
@@ -68,6 +70,8 @@ const api: AntcvReactIslandsAPI = {
     try { mountPackagePickerIsland(); } catch (e) { console.warn('[react-islands] PackagePicker mount failed', e); }
     try { mountWritingStylePickerIsland(); } catch (e) { console.warn('[react-islands] WritingStylePicker mount failed', e); }
     try { mountExportOptionsIsland(); } catch (e) { console.warn('[react-islands] ExportOptions mount failed', e); }
+    try { mountLayoutPickerIsland(); } catch (e) { console.warn('[react-islands] LayoutPicker mount failed', e); }
+    try { mountBreadcrumbsIsland(); } catch (e) { console.warn('[react-islands] Breadcrumbs mount failed', e); }
   },
 };
 

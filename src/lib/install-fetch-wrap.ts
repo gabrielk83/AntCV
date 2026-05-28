@@ -1,5 +1,5 @@
-// install-fetch-wrap.ts — outermost fetch wrap that injects
-// `_antcv_writing_style` into outgoing LLM-shaped requests.
+// install-fetch-wrap.ts — outermost fetch wrap that injects writing-style
+// + c2pa visual-disclosure context into outgoing requests.
 //
 // Installed in main.tsx via installWritingStyleFetchWrap(). Runs AFTER
 // every other defer-loaded sidecar's wrap, so this wrap sits OUTERMOST
@@ -7,23 +7,30 @@
 // means body modifications here survive every existing wrapper's
 // processing and land in the upstream worker's body untouched.
 //
-// Detection: any POST whose body parses as JSON and contains a
-// `messages` array or a top-level `system` string is treated as an
-// LLM-shaped call. Non-LLM POSTs (cloud sync, kernel extraction) parse
-// but lack those fields, and our injection skips them. The worker side
-// reads `_antcv_writing_style` and strips it before forwarding to the
-// upstream LLM provider — see workers/proxy/src/index.js.
+// Two injection paths:
 //
-// The values injected come from personalInfo.writingPrefs +
-// personalInfo.layoutPrefs (written by WritingStylePicker in
-// src/islands/WritingStylePicker/). When neither is populated yet, we
-// still inject defaults so the worker can build a coherent style
-// preamble — defaults match the Gabriel-migration first-run values.
+//   1. LLM-shaped POSTs — body has `messages` / `system` / `contents` /
+//      `systemInstruction`. We add a top-level `_antcv_writing_style`
+//      field carrying the active writing style, chips, banned lists,
+//      target language, package, and ATS flag. The proxy worker reads
+//      it, prepends a §4.7 system preamble, then deletes the field
+//      before forwarding upstream. See workers/proxy/src/index.js.
+//
+//   2. C2PA-shaped POSTs (v1.50.10) — body has `asset_base64` +
+//      `asset_kind` (the c2pa SignRequest signature). We add a top-
+//      level `visual: { package, package_base_color }` field carrying
+//      the active package id + its `base` hex. The c2pa worker embeds
+//      these in the `com.antcv.ai_disclosure.visual` assertion of the
+//      C2PA manifest. See workers/c2pa-worker/src/index.ts.
+//
+// Non-LLM, non-c2pa POSTs (cloud sync, kernel extraction, etc.) parse
+// but match neither detector and pass through untouched.
 
 import { readLayoutPrefs, readWritingPrefs } from './writing-prefs';
 import { normaliseLangCode } from './writing-systems';
 import { readExportPrefs } from './export-prefs';
 import { entryFromResponse, hasWritingEngineHeaders, recordEntry } from './observability';
+import { PACKAGES, normalisePackageId, type PackageId } from './packages';
 
 interface AntcvWritingStylePayload {
   writingStyle: string;
@@ -33,6 +40,10 @@ interface AntcvWritingStylePayload {
   extraConstraints: unknown[];
   targetPages: number;
   sectionFormat: string;
+  /** v1.50.14 — per-section overrides from the LayoutPicker. */
+  sectionFormats: Record<string, string>;
+  /** v1.50.14 — per-section line-limit hints from the LayoutPicker. */
+  sectionLineLimits: Record<string, number>;
   target_language: string;
   package: string;
   ats: boolean;
@@ -85,7 +96,12 @@ function buildWritingStylePayload(): AntcvWritingStylePayload {
     extraBannedPhrases: wp.extraBannedPhrases,
     extraConstraints: wp.extraConstraints,
     targetPages: lp.targetPages,
-    sectionFormat: 'default', // Per-section override is wired in Pass 4 (editor line sliders).
+    // v1.50.14 — `sectionFormat` is the legacy single-section field kept
+    // for backward compat with older workers. New behaviour reads the
+    // sectionFormats / sectionLineLimits maps below.
+    sectionFormat: 'default',
+    sectionFormats: { ...(lp.sectionFormats ?? {}) },
+    sectionLineLimits: { ...(lp.lineLimits ?? {}) },
     target_language: readActiveLanguage(),
     package: readActivePackageId(),
     ats: ep.ats,
@@ -101,6 +117,40 @@ function isLlmShapedBody(payload: unknown): boolean {
     Array.isArray(obj.contents) ||
     !!obj.systemInstruction
   );
+}
+
+/**
+ * v1.50.10 — detect c2pa-worker /sign payloads. The worker's SignRequest
+ * (workers/c2pa-worker/src/index.ts) requires `asset_base64` + `asset_kind`
+ * — checking those two is enough to recognise the shape without false
+ * positives against any other POST.
+ */
+function isC2paShapedBody(payload: unknown): boolean {
+  if (!payload || typeof payload !== 'object') return false;
+  const obj = payload as Record<string, unknown>;
+  return (
+    typeof obj.asset_base64 === 'string' &&
+    typeof obj.asset_kind === 'string'
+  );
+}
+
+interface AntcvC2paVisualPayload {
+  package: PackageId;
+  package_base_color: string;
+}
+
+/**
+ * Build the `visual` field for an outgoing c2pa /sign POST. Reads the
+ * active package id from personalInfo.stylePackage (via the shared
+ * normaliser) and looks up its locked `base` hex from packages/registry.json
+ * (via src/lib/packages.ts).
+ */
+function buildC2paVisualPayload(): AntcvC2paVisualPayload {
+  const id = normalisePackageId(readActivePackageId());
+  return {
+    package: id,
+    package_base_color: PACKAGES[id].base,
+  };
 }
 
 async function readBodyAsText(input: BodyInit | null | undefined): Promise<string | null> {
@@ -185,22 +235,42 @@ export function installWritingStyleFetchWrap(): boolean {
       try { parsed = JSON.parse(text); }
       catch { return tapResponse(input, inner(input as RequestInfo, init)); }
 
-      if (!isLlmShapedBody(parsed)) return tapResponse(input, inner(input as RequestInfo, init));
       const obj = parsed as Record<string, unknown>;
-      if (obj._antcv_writing_style) {
-        // Already injected — pass through unchanged but still tap.
-        return tapResponse(input, inner(input as RequestInfo, init));
+
+      // Path 1 — LLM-shaped POST: inject writing-style context.
+      if (isLlmShapedBody(obj)) {
+        if (obj._antcv_writing_style) {
+          // Already injected — pass through unchanged but still tap.
+          return tapResponse(input, inner(input as RequestInfo, init));
+        }
+        obj._antcv_writing_style = buildWritingStylePayload();
+        const newBody = JSON.stringify(obj);
+        if (input instanceof Request) {
+          const newReq = new Request(input, { body: newBody });
+          return tapResponse(input, inner(newReq, init));
+        }
+        const newInit: RequestInit = { ...(init ?? {}), body: newBody };
+        return tapResponse(input, inner(input as RequestInfo, newInit));
       }
 
-      obj._antcv_writing_style = buildWritingStylePayload();
-      const newBody = JSON.stringify(obj);
-
-      if (input instanceof Request) {
-        const newReq = new Request(input, { body: newBody });
-        return tapResponse(input, inner(newReq, init));
+      // Path 2 — C2PA-shaped POST: inject visual context (v1.50.10).
+      if (isC2paShapedBody(obj)) {
+        if (obj.visual && typeof obj.visual === 'object') {
+          // Caller already supplied visual context — don't overwrite.
+          return tapResponse(input, inner(input as RequestInfo, init));
+        }
+        obj.visual = buildC2paVisualPayload();
+        const newBody = JSON.stringify(obj);
+        if (input instanceof Request) {
+          const newReq = new Request(input, { body: newBody });
+          return tapResponse(input, inner(newReq, init));
+        }
+        const newInit: RequestInit = { ...(init ?? {}), body: newBody };
+        return tapResponse(input, inner(input as RequestInfo, newInit));
       }
-      const newInit: RequestInit = { ...(init ?? {}), body: newBody };
-      return tapResponse(input, inner(input as RequestInfo, newInit));
+
+      // Neither shape — pass through.
+      return tapResponse(input, inner(input as RequestInfo, init));
     } catch (e) {
       // Wrap must never break the underlying fetch — log and pass through.
       console.warn('[writing-style-fetch-wrap] failed', e);

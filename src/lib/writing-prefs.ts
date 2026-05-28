@@ -310,6 +310,24 @@ export const KNOWN_SECTIONS: readonly KnownSection[] = [
   { id: 'additional_information', label: 'Additional Information' },
 ];
 
+// v1.50.15 — academic sections from cv-skeleton-academic.md + research-
+// formal's sectionOrder in writingSystems/registry.json. The LayoutPicker
+// renders these as a separate group; per-section overrides flow through
+// the worker preamble regardless of which style is currently active.
+export const ACADEMIC_SECTIONS: readonly KnownSection[] = [
+  { id: 'research_summary',           label: 'Research Summary' },
+  { id: 'research_experience',        label: 'Research Experience' },
+  { id: 'publications',               label: 'Publications (main)' },
+  { id: 'selected_research_outcomes', label: 'Selected Research Outcomes' },
+  { id: 'grants_fellowships',         label: 'Grants & Fellowships' },
+  { id: 'conferences_talks',          label: 'Conferences & Talks' },
+  { id: 'teaching_supervision',       label: 'Teaching & Supervision' },
+  { id: 'technical_methods',          label: 'Technical Methods' },
+  { id: 'industry_experience',        label: 'Industry Experience' },
+  { id: 'professional_service',       label: 'Professional Service' },
+  { id: 'work_style',                 label: 'Work Style' },
+];
+
 // 9-format taxonomy per plan §4.4 + writingSystems/registry.json
 // `sectionFormatTaxonomy`. The picker offers these in order.
 export interface SectionFormatOption { value: string; label: string }

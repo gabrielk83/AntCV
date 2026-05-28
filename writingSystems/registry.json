@@ -4,7 +4,7 @@
   "source": "skills/antcv-writer/references/style-matrix.md + per-style markdowns + locked-source plan §4",
   "planRef": "docs/plan/AntCV_Plan_v2_LockedSources.md §4",
   "default": "nordic-minimal",
-  "activeAtCut": ["nordic-minimal", "achievement-driven", "measured-professional", "structured-professional", "mediterranean-formal", "prestige-structured", "credential-forward", "precision-formal", "context-rich", "cold-outreach", "hybrid-balanced"],
+  "activeAtCut": ["nordic-minimal", "achievement-driven", "measured-professional", "structured-professional", "mediterranean-formal", "prestige-structured", "credential-forward", "precision-formal", "context-rich", "cold-outreach", "research-formal", "hybrid-balanced"],
   "densityTiers": {
     "low":         { "wordsPerBullet": { "min": 8,  "max": 14 }, "profileChars": { "min": 160, "max": 280 }, "bulletsPerRole3pg": { "min": 2, "max": 3 } },
     "medium":      { "wordsPerBullet": { "min": 11, "max": 18 }, "profileChars": { "min": 260, "max": 340 }, "bulletsPerRole3pg": { "min": 3, "max": 4 } },
@@ -298,8 +298,7 @@
     },
     "research-formal": {
       "displayName": "Research Formal",
-      "active": false,
-      "comingInRelease": "v1.52",
+      "active": true,
       "primaryConstraint": "academic register",
       "constraintAvoid": "commercial outcome framing, revenue or growth metrics, KPI vocabulary, hero-narrative",
       "constraintPrefer": "research questions, methodological contributions, publications, citations, grants, named techniques",

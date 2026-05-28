@@ -116,7 +116,28 @@ export function SectionFormatPicker({
       }}
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-        <span style={{ fontWeight: 700, fontSize: 12 }}>{label}</span>
+        <span style={{ fontWeight: 700, fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          {/* v1.50.26 — override-active dot. Visible only when this
+              section has a line-limit or format override set, so the
+              user can see at a glance which rows are tuned vs at
+              style defaults. Mirrors the existing reset-button enable
+              state on the right edge of the row. */}
+          {overrideActive && (
+            <span
+              aria-hidden="true"
+              title="Override active"
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                background: '#01B7BB',
+                boxShadow: '0 0 0 1px rgba(1,183,187,.45)',
+                flex: '0 0 auto',
+              }}
+            />
+          )}
+          {label}
+        </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <select
             value={format}

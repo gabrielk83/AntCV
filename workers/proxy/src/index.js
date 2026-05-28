@@ -704,10 +704,23 @@ async function handleRequest(request, env = {}) {
         } else {
           // For Anthropic the top-level `system` field is the right home;
           // for OpenAI / Mistral the system message lives at messages[0].
-          // We can safely set BOTH — Anthropic ignores OpenAI-shaped fields
-          // and vice versa per provider-shape detection downstream.
-          parsed.system = writingStylePreamble;
-          parsed.messages.unshift({ role: 'system', content: writingStylePreamble });
+          //
+          // Previous comment claimed "Anthropic ignores OpenAI-shaped
+          // fields" — that is WRONG. Anthropic's Messages API REJECTS
+          // role:"system" inside the messages array with HTTP 400:
+          //   "messages: Unexpected role \"system\". The Messages
+          //    API accepts user and assistant roles only."
+          // Setting both forms therefore broke every Anthropic call
+          // that came through the writing-style preamble path. Detect
+          // Anthropic by model name (claude-*) and route accordingly.
+          const isAnthropic =
+            typeof parsed.model === 'string' && /^claude[-_]/i.test(parsed.model);
+          if (isAnthropic) {
+            parsed.system = writingStylePreamble;
+            // do NOT unshift — Anthropic rejects role:system in messages.
+          } else {
+            parsed.messages.unshift({ role: 'system', content: writingStylePreamble });
+          }
         }
       } else if (parsed.systemInstruction && Array.isArray(parsed.systemInstruction.parts) && parsed.systemInstruction.parts[0]) {
         parsed.systemInstruction.parts[0].text = writingStylePreamble + '\n\n' + (parsed.systemInstruction.parts[0].text ?? '');
@@ -1255,6 +1268,43 @@ async function handleRequest(request, env = {}) {
   if (!apiKey.startsWith('sk-ant-')) return errJson('Anthropic server key is not available on cv-proxy. Set Claude_API_Key or ANTHROPIC_API_KEY as a Worker secret.', 401);
   try {
     const body = JSON.parse(bodyText);
+    // v1.50.18-fix-anthropic-system: Anthropic's Messages API REJECTS
+    // role:"system" inside the messages array (HTTP 400:
+    // "messages: Unexpected role 'system'. The Messages API accepts
+    //  user and assistant roles only.").
+    // The PWA / prompt-augment / writing-style preamble can each
+    // produce a body with messages[0].role === 'system'; we normalise
+    // here so whatever upstream shape arrives, Anthropic gets a valid
+    // request: lift every leading system message into the top-level
+    // `system` string (merging with any existing top-level system).
+    if (Array.isArray(body.messages) && body.messages.length > 0) {
+      const collectedSystem = [];
+      let firstNonSystem = 0;
+      while (firstNonSystem < body.messages.length) {
+        const m = body.messages[firstNonSystem];
+        if (!m || m.role !== 'system') break;
+        // Content may be a string OR an Anthropic-style array of blocks.
+        if (typeof m.content === 'string') {
+          if (m.content.trim()) collectedSystem.push(m.content);
+        } else if (Array.isArray(m.content)) {
+          const txt = m.content
+            .filter(b => b && b.type === 'text' && typeof b.text === 'string')
+            .map(b => b.text)
+            .join('\n');
+          if (txt.trim()) collectedSystem.push(txt);
+        }
+        firstNonSystem++;
+      }
+      if (collectedSystem.length > 0) {
+        // Prepend lifted content to any pre-existing top-level system.
+        const existingTopSystem =
+          typeof body.system === 'string' ? body.system : '';
+        const merged = collectedSystem.join('\n\n') +
+          (existingTopSystem ? '\n\n' + existingTopSystem : '');
+        body.system = merged;
+        body.messages = body.messages.slice(firstNonSystem);
+      }
+    }
     // v2.0 + v1.50.2: force non-streaming when EITHER demo mode is on (so
     // we can parse usage) OR a writingStyleRequest is set (so we can
     // buffer the response for SCE + ATS post-processing). Production

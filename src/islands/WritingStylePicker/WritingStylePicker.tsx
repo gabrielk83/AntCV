@@ -12,14 +12,19 @@ import {
 import {
   DEFAULT_TARGET_PAGES_OPTIONS,
   addBannedItem,
+  deleteSlot,
+  loadSlot,
   readEditorLanguage,
   readLayoutPrefs,
   readWritingPrefs,
   removeBannedItem,
+  renameSlot,
+  saveCurrentAsSlot,
   setWritingStyleWithCascade,
   writeEditorLanguage,
   writeLayoutPrefs,
   writeWritingPrefs,
+  type SavedToneSlot,
   type WritingPrefs,
   type LayoutPrefs,
 } from '../../lib/writing-prefs';
@@ -160,6 +165,244 @@ function ToneChipsEditor({
         </div>
       )}
     </>
+  );
+}
+
+function AutoShiftBanner({
+  fromStyleLabel,
+  onUndo,
+  onDismiss,
+}: {
+  fromStyleLabel: string;
+  onUndo: () => void;
+  onDismiss: () => void;
+}): JSX.Element {
+  return (
+    <div
+      data-antcv-auto-shift-banner="1"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        padding: '8px 10px',
+        marginBottom: 8,
+        background: 'rgba(1,183,187,.10)',
+        border: '1px solid rgba(1,183,187,.55)',
+        borderRadius: 8,
+        fontSize: 11,
+      }}
+    >
+      <span aria-hidden="true" style={{ fontSize: 14 }}>↺</span>
+      <span style={{ flex: 1, lineHeight: 1.4 }}>
+        Switched style to <strong>Hybrid Balanced</strong> to absorb a chip conflict
+        (was <strong>{fromStyleLabel}</strong>). The two registers coexist under
+        Hybrid Balanced. The worker treats this as an intentional override.
+      </span>
+      <button
+        type="button"
+        onClick={onUndo}
+        style={{
+          padding: '3px 10px',
+          background: 'rgba(1,183,187,.18)',
+          color: '#e6eef3',
+          border: '1px solid rgba(1,183,187,.55)',
+          borderRadius: 6,
+          cursor: 'pointer',
+          fontSize: 11,
+          fontWeight: 700,
+        }}
+      >
+        Undo
+      </button>
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label="Dismiss banner"
+        title="Dismiss"
+        style={{
+          padding: '3px 8px',
+          background: 'transparent',
+          color: '#e6eef3',
+          opacity: 0.7,
+          border: '1px solid rgba(255,255,255,.18)',
+          borderRadius: 6,
+          cursor: 'pointer',
+          fontSize: 12,
+        }}
+      >
+        ×
+      </button>
+    </div>
+  );
+}
+
+function SavedTonesEditor({
+  slots,
+  onSave,
+  onLoad,
+  onRename,
+  onDelete,
+}: {
+  slots: SavedToneSlot[];
+  onSave: () => void;
+  onLoad: (id: string) => void;
+  onRename: (id: string, name: string) => void;
+  onDelete: (id: string) => void;
+}): JSX.Element {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <button
+        type="button"
+        onClick={onSave}
+        style={{
+          padding: '6px 12px',
+          background: 'rgba(1,183,187,.18)',
+          color: '#e6eef3',
+          border: '1px solid rgba(1,183,187,.55)',
+          borderRadius: 6,
+          cursor: 'pointer',
+          fontWeight: 700,
+          fontSize: 12,
+          alignSelf: 'flex-start',
+        }}
+      >
+        + Save current as new slot
+      </button>
+      {slots.length === 0 && (
+        <span style={{ fontSize: 11, opacity: 0.6 }}>
+          No saved tones yet. Saving a slot snapshots the active style, chips, and banned-list buckets so you can switch back later.
+        </span>
+      )}
+      {slots.map((s) => (
+        <SavedToneRow key={s.id} slot={s} onLoad={() => onLoad(s.id)} onRename={(n) => onRename(s.id, n)} onDelete={() => onDelete(s.id)} />
+      ))}
+    </div>
+  );
+}
+
+function SavedToneRow({
+  slot,
+  onLoad,
+  onRename,
+  onDelete,
+}: {
+  slot: SavedToneSlot;
+  onLoad: () => void;
+  onRename: (next: string) => void;
+  onDelete: () => void;
+}): JSX.Element {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(slot.name);
+  useEffect(() => { if (!editing) setDraft(slot.name); }, [slot.name, editing]);
+
+  const commit = useCallback(() => {
+    setEditing(false);
+    const trimmed = draft.trim();
+    if (trimmed && trimmed !== slot.name) onRename(trimmed);
+    else setDraft(slot.name);
+  }, [draft, slot.name, onRename]);
+
+  const styleLabel = STYLES[slot.snapshot.style]?.displayName ?? slot.snapshot.style;
+  const chipCount = slot.snapshot.chips.length;
+
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr auto auto',
+        gap: 8,
+        alignItems: 'center',
+        padding: '6px 8px',
+        background: 'rgba(255,255,255,.04)',
+        border: '1px solid rgba(255,255,255,.14)',
+        borderRadius: 8,
+      }}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+        {editing ? (
+          <input
+            type="text"
+            value={draft}
+            autoFocus
+            onChange={(e) => setDraft(e.currentTarget.value)}
+            onBlur={commit}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') { e.preventDefault(); (e.currentTarget as HTMLInputElement).blur(); }
+              if (e.key === 'Escape') { setDraft(slot.name); setEditing(false); }
+            }}
+            style={{
+              padding: '3px 6px',
+              background: 'rgba(0,0,0,.18)',
+              color: '#e6eef3',
+              border: '1px solid rgba(1,183,187,.55)',
+              borderRadius: 4,
+              fontFamily: 'inherit',
+              fontWeight: 700,
+              fontSize: 13,
+            }}
+          />
+        ) : (
+          <button
+            type="button"
+            onDoubleClick={() => setEditing(true)}
+            onClick={() => setEditing(true)}
+            title="Click to rename"
+            style={{
+              background: 'transparent',
+              border: 0,
+              color: '#e6eef3',
+              cursor: 'text',
+              padding: 0,
+              textAlign: 'left',
+              fontWeight: 700,
+              fontSize: 13,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {slot.name}
+          </button>
+        )}
+        <span style={{ fontSize: 10, opacity: 0.6 }}>
+          {styleLabel}{chipCount > 0 ? ` · ${chipCount} chip${chipCount === 1 ? '' : 's'}` : ''}
+        </span>
+      </div>
+      <button
+        type="button"
+        onClick={onLoad}
+        style={{
+          padding: '4px 10px',
+          background: 'rgba(1,183,187,.12)',
+          color: '#e6eef3',
+          border: '1px solid rgba(1,183,187,.45)',
+          borderRadius: 6,
+          cursor: 'pointer',
+          fontWeight: 650,
+          fontSize: 12,
+        }}
+      >
+        Load
+      </button>
+      <button
+        type="button"
+        onClick={onDelete}
+        aria-label={`Delete slot ${slot.name}`}
+        title="Delete slot"
+        style={{
+          padding: '4px 8px',
+          background: 'transparent',
+          color: '#e6eef3',
+          opacity: 0.65,
+          border: '1px solid rgba(255,255,255,.18)',
+          borderRadius: 6,
+          cursor: 'pointer',
+          fontSize: 14,
+        }}
+      >
+        ×
+      </button>
+    </div>
   );
 }
 
@@ -332,16 +575,63 @@ export function WritingStylePicker(): JSX.Element {
     (v) => v >= allowed.min && v <= allowed.max,
   );
 
+  // v1.50.13 — auto-shift state. Set when a chip toggle introduces a new
+  // conflict; carries the prior style + chips so Undo restores them.
+  const [autoShifted, setAutoShifted] = useState<{ fromStyle: StyleId; fromChips: string[] } | null>(null);
+
   const onStyleChange = useCallback((id: StyleId) => {
     if (!ACTIVE_STYLE_IDS.includes(id)) return;
     setPrefs(setWritingStyleWithCascade(id));
     setLayout(readLayoutPrefs());
+    // Manual style change clears the auto-shift banner.
+    setAutoShifted(null);
   }, []);
 
   const onChipsChange = useCallback((chips: string[]) => {
     const overrides = { ...prefs.overrides, chips: true };
+
+    // v1.50.13 — chip-conflict auto-shift (plan §4.6). If the new chip
+    // set introduces a conflict that wasn't there before AND the active
+    // style isn't already hybrid-balanced, switch to hybrid-balanced and
+    // remember the prior style + chips so the banner's Undo can restore.
+    const prevConflicts = detectChipConflicts(prefs.chips).length;
+    const nextConflicts = detectChipConflicts(chips).length;
+    const conflictsIncreased = nextConflicts > prevConflicts;
+
+    if (conflictsIncreased && prefs.style !== 'hybrid-balanced') {
+      const fromStyle = prefs.style;
+      const fromChips = prefs.chips.slice();
+      // Single write — style + chips together so the worker's cascade
+      // doesn't re-seed chips between writes.
+      setPrefs(writeWritingPrefs({ style: 'hybrid-balanced', chips, overrides }));
+      // Clamp targetPages to hybrid-balanced's range (1-3) if needed.
+      const lp = readLayoutPrefs();
+      const hybMax = STYLES['hybrid-balanced'].allowedLength.max;
+      if (lp.targetPages > hybMax) {
+        setLayout(writeLayoutPrefs({ targetPages: hybMax }));
+      }
+      setAutoShifted({ fromStyle, fromChips });
+      return;
+    }
+
     setPrefs(writeWritingPrefs({ chips, overrides }));
-  }, [prefs.overrides]);
+  }, [prefs.style, prefs.chips, prefs.overrides]);
+
+  const onUndoAutoShift = useCallback(() => {
+    if (!autoShifted) return;
+    const overrides = { ...prefs.overrides, chips: true };
+    setPrefs(writeWritingPrefs({
+      style: autoShifted.fromStyle,
+      chips: autoShifted.fromChips,
+      overrides,
+    }));
+    setLayout(readLayoutPrefs());
+    setAutoShifted(null);
+  }, [autoShifted, prefs.overrides]);
+
+  const onDismissAutoShift = useCallback(() => {
+    setAutoShifted(null);
+  }, []);
 
   const onAddBanned = useCallback((kind: 'words' | 'phrases', value: string) => {
     setPrefs(addBannedItem(kind, editorLang, value));
@@ -361,6 +651,20 @@ export function WritingStylePicker(): JSX.Element {
     setLayout(writeLayoutPrefs({ targetPages: v }));
     setPrefs(writeWritingPrefs({ overrides }));
   }, [prefs.overrides]);
+
+  const onSaveSlot = useCallback(() => {
+    setPrefs(saveCurrentAsSlot());
+  }, []);
+  const onLoadSlot = useCallback((id: string) => {
+    setPrefs(loadSlot(id));
+    setLayout(readLayoutPrefs());
+  }, []);
+  const onRenameSlot = useCallback((id: string, name: string) => {
+    setPrefs(renameSlot(id, name));
+  }, []);
+  const onDeleteSlot = useCallback((id: string) => {
+    setPrefs(deleteSlot(id));
+  }, []);
 
   return (
     <section
@@ -390,7 +694,23 @@ export function WritingStylePicker(): JSX.Element {
       </div>
 
       <SectionHeader>Tone chips</SectionHeader>
+      {autoShifted && (
+        <AutoShiftBanner
+          fromStyleLabel={STYLES[autoShifted.fromStyle]?.displayName ?? autoShifted.fromStyle}
+          onUndo={onUndoAutoShift}
+          onDismiss={onDismissAutoShift}
+        />
+      )}
       <ToneChipsEditor styleId={prefs.style} chips={prefs.chips} onChange={onChipsChange} />
+
+      <SectionHeader>Saved tones</SectionHeader>
+      <SavedTonesEditor
+        slots={prefs.savedSlots}
+        onSave={onSaveSlot}
+        onLoad={onLoadSlot}
+        onRename={onRenameSlot}
+        onDelete={onDeleteSlot}
+      />
 
       <SectionHeader>Target CV length</SectionHeader>
       <select

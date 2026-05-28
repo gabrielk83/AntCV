@@ -29,9 +29,8 @@ import { augmentBodyText } from './prompt-augment.js';
 import {
   parseWritingStyleRequest,
   buildStyleSystemPreamble,
+  executeSceWithRetry,
   logWritingEngineEvent,
-  // evaluateSce + runWithSceRetry land in v1.50.2 once the LLM-response path
-  // is restructured to support retry. See writing-style-engine.test.notes.md.
 } from './writing-style-engine.js';
 import { handleJDAnalysis } from './jd-analysis.js';
 import { handleKernelExtraction } from './kernel-extraction.js';
@@ -1007,7 +1006,39 @@ async function handleRequest(request, env = {}) {
         { status: res.status, headers: { 'Content-Type': 'application/json', ...CORS, ...taskHeader() } }
       );
     }
-    return new Response(data, { status: res.status, headers: { 'Content-Type': 'application/json', ...CORS, ...(demo ? await trackAndHeader(data) : taskHeader()) } });
+    // v1.50.2 / v1.50.3 — SCE evaluation + ATS glyph conversion + retry
+    // loop. No-op when writingStyleRequest is null (non-writing-style call).
+    let openaiFinal = data;
+    let openaiSceHeaders = {};
+    if (writingStyleRequest) {
+      const ws = await executeSceWithRetry({
+        data: openaiFinal, shape: 'openai_compat', writingStyleRequest, env,
+        userId: demo && demo.email ? demo.email : null, augTask,
+        reCallProvider: async (fixInstruction) => {
+          try {
+            const reqParsed = JSON.parse(outBody);
+            if (Array.isArray(reqParsed.messages) && reqParsed.messages[0] && reqParsed.messages[0].role === 'system' && typeof reqParsed.messages[0].content === 'string') {
+              reqParsed.messages[0].content = reqParsed.messages[0].content + '\n\n' + fixInstruction;
+            } else {
+              return { ok: false };
+            }
+            const retryRes = await fetch('https://api.openai.com/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+              body: JSON.stringify(reqParsed),
+            });
+            if (!retryRes.ok) return { ok: false };
+            return { ok: true, text: await retryRes.text() };
+          } catch (e) {
+            console.warn('[writing-style-engine] openai retry failed', e && e.message);
+            return { ok: false };
+          }
+        },
+      });
+      openaiFinal = ws.data;
+      openaiSceHeaders = ws.headers;
+    }
+    return new Response(openaiFinal, { status: res.status, headers: { 'Content-Type': 'application/json', ...CORS, ...(demo ? await trackAndHeader(openaiFinal) : taskHeader()), ...openaiSceHeaders } });
   }
 
   if (provider === 'mistral') {
@@ -1061,7 +1092,38 @@ async function handleRequest(request, env = {}) {
         { status: res.status, headers: { 'Content-Type': 'application/json', ...CORS, ...taskHeader() } }
       );
     }
-    return new Response(data, { status: res.status, headers: { 'Content-Type': 'application/json', ...CORS, ...(demo ? await trackAndHeader(data) : taskHeader()) } });
+    // v1.50.2 / v1.50.3 — SCE + ATS + retry (Mistral uses OpenAI shape).
+    let mistralFinal = data;
+    let mistralSceHeaders = {};
+    if (writingStyleRequest) {
+      const ws = await executeSceWithRetry({
+        data: mistralFinal, shape: 'openai_compat', writingStyleRequest, env,
+        userId: demo && demo.email ? demo.email : null, augTask,
+        reCallProvider: async (fixInstruction) => {
+          try {
+            const reqParsed = JSON.parse(mistralBody);
+            if (Array.isArray(reqParsed.messages) && reqParsed.messages[0] && reqParsed.messages[0].role === 'system' && typeof reqParsed.messages[0].content === 'string') {
+              reqParsed.messages[0].content = reqParsed.messages[0].content + '\n\n' + fixInstruction;
+            } else {
+              return { ok: false };
+            }
+            const retryRes = await fetch('https://api.mistral.ai/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+              body: JSON.stringify(reqParsed),
+            });
+            if (!retryRes.ok) return { ok: false };
+            return { ok: true, text: await retryRes.text() };
+          } catch (e) {
+            console.warn('[writing-style-engine] mistral retry failed', e && e.message);
+            return { ok: false };
+          }
+        },
+      });
+      mistralFinal = ws.data;
+      mistralSceHeaders = ws.headers;
+    }
+    return new Response(mistralFinal, { status: res.status, headers: { 'Content-Type': 'application/json', ...CORS, ...(demo ? await trackAndHeader(mistralFinal) : taskHeader()), ...mistralSceHeaders } });
   }
 
   if (provider === 'gemini') {
@@ -1141,17 +1203,64 @@ async function handleRequest(request, env = {}) {
       usage: parsed.usageMetadata || {},
       model,
     };
-    const normalizedStr = JSON.stringify(normalized);
-    return new Response(normalizedStr, { status: 200, headers: { 'Content-Type': 'application/json', ...CORS, ...(demo ? await trackAndHeader(dataText, model) : taskHeader()) } });
+    // v1.50.2 / v1.50.3 — SCE + ATS + retry on the normalised OpenAI-shape
+    // Gemini response. The retry has to re-call Gemini in its native shape
+    // (modifying systemInstruction.parts[0].text) and then re-normalise.
+    let geminiFinal = JSON.stringify(normalized);
+    let geminiSceHeaders = {};
+    if (writingStyleRequest) {
+      const ws = await executeSceWithRetry({
+        data: geminiFinal, shape: 'openai_compat', writingStyleRequest, env,
+        userId: demo && demo.email ? demo.email : null, augTask,
+        reCallProvider: async (fixInstruction) => {
+          try {
+            // Deep-clone the Gemini payload and append the fix instruction.
+            const newPayload = JSON.parse(JSON.stringify(payload));
+            if (newPayload.systemInstruction && Array.isArray(newPayload.systemInstruction.parts) && newPayload.systemInstruction.parts[0]) {
+              const cur = newPayload.systemInstruction.parts[0].text ?? '';
+              newPayload.systemInstruction.parts[0].text = cur + '\n\n' + fixInstruction;
+            } else {
+              newPayload.systemInstruction = { parts: [{ text: fixInstruction }] };
+            }
+            const retryRes = await fetch(gUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(newPayload),
+            });
+            if (!retryRes.ok) return { ok: false };
+            const retryText = await retryRes.text();
+            let retryParsed;
+            try { retryParsed = JSON.parse(retryText); } catch { return { ok: false }; }
+            const newText = (retryParsed.candidates && retryParsed.candidates[0] && retryParsed.candidates[0].content && Array.isArray(retryParsed.candidates[0].content.parts))
+              ? retryParsed.candidates[0].content.parts.map((p) => p.text || '').join('')
+              : '';
+            const renormalized = {
+              choices: [{ message: { role: 'assistant', content: newText }, finish_reason: retryParsed.candidates?.[0]?.finishReason || 'stop' }],
+              usage: retryParsed.usageMetadata || {},
+              model,
+            };
+            return { ok: true, text: JSON.stringify(renormalized) };
+          } catch (e) {
+            console.warn('[writing-style-engine] gemini retry failed', e && e.message);
+            return { ok: false };
+          }
+        },
+      });
+      geminiFinal = ws.data;
+      geminiSceHeaders = ws.headers;
+    }
+    return new Response(geminiFinal, { status: 200, headers: { 'Content-Type': 'application/json', ...CORS, ...(demo ? await trackAndHeader(dataText, model) : taskHeader()), ...geminiSceHeaders } });
   }
 
   if (!apiKey.startsWith('sk-ant-')) return errJson('Anthropic server key is not available on cv-proxy. Set Claude_API_Key or ANTHROPIC_API_KEY as a Worker secret.', 401);
   try {
     const body = JSON.parse(bodyText);
-    // v2.0: demo mode forces non-streaming so we can parse usage from
-    // the buffered response. Production (non-demo) keeps streaming for
-    // best PWA UX (incremental token rendering).
-    body.stream = demo ? false : true;
+    // v2.0 + v1.50.2: force non-streaming when EITHER demo mode is on (so
+    // we can parse usage) OR a writingStyleRequest is set (so we can
+    // buffer the response for SCE + ATS post-processing). Production
+    // requests without writing-style preferences keep streaming for best
+    // PWA UX (incremental token rendering).
+    body.stream = (demo || writingStyleRequest) ? false : true;
     bodyText = JSON.stringify(body);
   } catch(e) {}
   const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -1175,15 +1284,57 @@ async function handleRequest(request, env = {}) {
       { status: res.status, headers: { 'Content-Type': 'application/json', ...CORS, ...taskHeader() } }
     );
   }
-  // Demo mode: buffer the non-stream response, parse usage, bump
-  // counter, return as application/json so the PWA's non-stream code
-  // path handles it.
-  if (demo) {
+  // Buffered (non-streaming) path. Hit when EITHER demo mode is on OR a
+  // writingStyleRequest is set — both force stream:false above. v1.50.2
+  // added SCE eval + ATS on the buffered body; v1.50.3 layers the retry
+  // loop on top via executeSceWithRetry.
+  if (demo || writingStyleRequest) {
     const buffered = await res.text();
-    const headers = await trackAndHeader(buffered);
-    return new Response(buffered, {
+    let finalData = buffered;
+    let sceHeaders = {};
+    if (writingStyleRequest) {
+      const ws = await executeSceWithRetry({
+        data: finalData, shape: 'anthropic_messages', writingStyleRequest, env,
+        userId: demo && demo.email ? demo.email : null, augTask,
+        reCallProvider: async (fixInstruction) => {
+          try {
+            const reqParsed = JSON.parse(bodyText);
+            if (typeof reqParsed.system === 'string') {
+              reqParsed.system = reqParsed.system + '\n\n' + fixInstruction;
+            } else {
+              return { ok: false };
+            }
+            // Body already has stream:false from the earlier mutation when
+            // writingStyleRequest is set.
+            const retryRes = await fetch('https://api.anthropic.com/v1/messages', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': apiKey,
+                'anthropic-version': '2023-06-01',
+              },
+              body: JSON.stringify(reqParsed),
+            });
+            if (!retryRes.ok) return { ok: false };
+            return { ok: true, text: await retryRes.text() };
+          } catch (e) {
+            console.warn('[writing-style-engine] anthropic retry failed', e && e.message);
+            return { ok: false };
+          }
+        },
+      });
+      finalData = ws.data;
+      sceHeaders = ws.headers;
+    }
+    const demoHeaders = demo ? await trackAndHeader(buffered) : {};
+    return new Response(finalData, {
       status: res.status,
-      headers: { 'Content-Type': 'application/json', ...CORS, ...headers },
+      headers: {
+        'Content-Type': 'application/json',
+        ...CORS,
+        ...(demo ? demoHeaders : taskHeader()),
+        ...sceHeaders,
+      },
     });
   }
   return new Response(res.body, {

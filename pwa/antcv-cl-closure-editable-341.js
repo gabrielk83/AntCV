@@ -38,7 +38,7 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.40.341-p0c-fix2';
+  var SCRIPT_VERSION = '1.40.341-p0c-fix3';
   if (window.__antcvClClosureEditable341 === SCRIPT_VERSION) return;
   window.__antcvClClosureEditable341 = SCRIPT_VERSION;
 
@@ -65,9 +65,27 @@
   function writeSections(bundle) {
     try {
       localStorage.setItem(SECTIONS_KEY, JSON.stringify(bundle));
-      window.dispatchEvent(new CustomEvent('antcv:sections-updated', {
-        detail: { source: 'cl-closure-editable-341' },
-      }));
+      // v1.40.341-p0c-fix3: DO NOT dispatch antcv:sections-updated.
+      // antcv-personality.js listens for that event and runs a
+      // forceRebuild from personalInfo.notes/summary that
+      // OVERWRITES the just-written closure text — making it
+      // look like the edit didn't persist + repeated clicks
+      // appeared to make Closure disappear entirely.
+      //
+      // The localStorage write still happens, so the edit is
+      // persisted; the user's typed text stays in the DOM
+      // because nothing triggers an app.js re-render of the
+      // leaf. On next page load app.js reads the new value
+      // from storage and renders it directly. Live preview-
+      // update for closure isn't critical — Closure is a
+      // single short signature line; users don't expect it to
+      // refresh other Preview surfaces.
+      //
+      // Name persistence (handled by antcv-candidate-preview-
+      // editor-341) is UNAFFECTED — that sidecar writes to
+      // personalInfo.name which app.js reads directly, and the
+      // personality rebuild from notes/summary doesn't touch
+      // personalInfo.name.
     } catch (_) {}
   }
 

@@ -41,7 +41,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.38-react-showcase';
+  var VERSION = '1.50.39-react-lang';
   if (window.__antcvWizardLanguageSlide339 === VERSION) return;
   window.__antcvWizardLanguageSlide339 = VERSION;
 
@@ -226,66 +226,29 @@
     blurb.style.cssText = 'margin:0 0 16px;font-size:13px;line-height:1.5;color:rgba(255,255,255,0.78);';
     panel.appendChild(blurb);
 
-    // --- Primary language (radio group) ----------------------------------
-    var primaryLabel = document.createElement('div');
-    primaryLabel.textContent = 'PRIMARY LANGUAGE';
-    primaryLabel.style.cssText = 'font-size:10.5px;font-weight:800;letter-spacing:.3px;color:rgba(255,255,255,0.6);margin:4px 0 8px;';
-    panel.appendChild(primaryLabel);
-
-    var primaryRow = document.createElement('div');
-    primaryRow.style.cssText = 'display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:18px;';
-    LANG_OPTIONS.forEach(function (opt) {
-      var lab = document.createElement('label');
-      lab.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid rgba(255,255,255,0.18);border-radius:8px;background:rgba(255,255,255,0.04);cursor:pointer;font-size:13px;';
-      var rb = document.createElement('input');
-      rb.type = 'radio';
-      rb.name = 'antcv-wls-primary';
-      rb.value = opt.code;
-      rb.checked = opt.code === primary;
-      rb.style.accentColor = '#01B7BB';
-      var span = document.createElement('span');
-      span.innerHTML = '<strong>' + opt.label + '</strong> <span style="opacity:.65;font-size:11px">' + opt.native + '</span>';
-      lab.appendChild(rb);
-      lab.appendChild(span);
-      primaryRow.appendChild(lab);
-    });
-    panel.appendChild(primaryRow);
-
-    // --- Additional languages (checkboxes) -------------------------------
-    var addLabel = document.createElement('div');
-    addLabel.textContent = 'ADDITIONAL LANGUAGES IN TOP BAR';
-    addLabel.style.cssText = 'font-size:10.5px;font-weight:800;letter-spacing:.3px;color:rgba(255,255,255,0.6);margin:4px 0 8px;';
-    panel.appendChild(addLabel);
-
-    var addRow = document.createElement('div');
-    addRow.style.cssText = 'display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:18px;';
-    LANG_OPTIONS.forEach(function (opt) {
-      var lab = document.createElement('label');
-      lab.dataset.langCode = opt.code;
-      lab.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid rgba(255,255,255,0.18);border-radius:8px;background:rgba(255,255,255,0.04);cursor:pointer;font-size:13px;';
-      var cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.value = opt.code;
-      cb.checked = additional.indexOf(opt.code) >= 0;
-      cb.style.accentColor = '#01B7BB';
-      var span = document.createElement('span');
-      span.innerHTML = '<strong>' + opt.label + '</strong> <span style="opacity:.65;font-size:11px">' + opt.native + '</span>';
-      lab.appendChild(cb);
-      lab.appendChild(span);
-      if (opt.code === primary) lab.style.display = 'none';
-      addRow.appendChild(lab);
-    });
-    panel.appendChild(addRow);
-
-    primaryRow.addEventListener('change', function () {
-      var sel = primaryRow.querySelector('input[type="radio"]:checked');
-      var p = sel ? sel.value : DEFAULT_PRIMARY;
-      Array.prototype.slice.call(addRow.querySelectorAll('label[data-lang-code]')).forEach(function (lab) {
-        lab.style.display = (lab.dataset.langCode === p) ? 'none' : 'flex';
-        var cb = lab.querySelector('input[type="checkbox"]');
-        if (cb && lab.dataset.langCode === p) cb.checked = false;
-      });
-    });
+    // --- v1.50.39 Phase B: language picker is now a React island ---------
+    // See src/islands/WizardLanguagePicker/. The legacy DOM-building
+    // for the primary radio + additional checkboxes is replaced by a
+    // single anchor div and a mount dispatch. The legacy LANG_OPTIONS,
+    // DEFAULT_PRIMARY, DEFAULT_ADDITIONAL constants at the top of this
+    // file are now dead code — kept for one release cycle so any
+    // analytics that pin this version can still introspect them via
+    // window.AntcvWizardLanguageSlide._formats and friends.
+    //
+    // Continue handler reads the user's picks via
+    // window.AntcvWizardLanguagePicker.getState() instead of walking
+    // the DOM. State publish is owned by the React component itself.
+    var langAnchor = document.createElement('div');
+    langAnchor.setAttribute('data-antcv-wizard-language-picker', '1');
+    panel.appendChild(langAnchor);
+    try {
+      window.dispatchEvent(new CustomEvent('antcv:mount-wizard-language-picker'));
+    } catch (_) {}
+    try {
+      if (window.AntcvReactIslands && typeof window.AntcvReactIslands.mountAll === 'function') {
+        window.AntcvReactIslands.mountAll();
+      }
+    } catch (_) {}
 
     // --- v339-j: section-format showcase ---------------------------------
     // Extracted from the retired antcv-onboarding.js Step 10 panel. Read-
@@ -379,11 +342,17 @@
     contBtn.addEventListener('click', function (ev) {
       ev.stopPropagation();
       try { console.info('[wizard-language-slide-339] save-and-continue clicked'); } catch (_) {}
-      var sel = primaryRow.querySelector('input[type="radio"]:checked');
-      var p = sel ? sel.value : DEFAULT_PRIMARY;
-      var others = Array.prototype.slice
-        .call(addRow.querySelectorAll('input[type="checkbox"]:checked'))
-        .map(function (cb) { return cb.value; })
+      // v1.50.39: read picks from the React island instead of the DOM.
+      // The legacy primaryRow.querySelector path no longer exists.
+      // If the island hasn't booted (e.g. service worker mid-update),
+      // fall back to DEFAULT_PRIMARY + DEFAULT_ADDITIONAL so the
+      // continue path never throws on a missing window global.
+      var picked = (window.AntcvWizardLanguagePicker &&
+                    typeof window.AntcvWizardLanguagePicker.getState === 'function')
+        ? window.AntcvWizardLanguagePicker.getState()
+        : { primary: DEFAULT_PRIMARY, additional: DEFAULT_ADDITIONAL.slice() };
+      var p = picked && picked.primary ? picked.primary : DEFAULT_PRIMARY;
+      var others = (picked && Array.isArray(picked.additional) ? picked.additional : [])
         .filter(function (c) { return c !== p; });
       var seen = {};
       var finalList = [p].concat(others).filter(function (c) {

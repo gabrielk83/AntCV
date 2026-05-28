@@ -6,7 +6,10 @@
  */
 (function(){
   'use strict';
-  const VERSION = '1.40.242';
+  const VERSION = '1.40.242-preview-guard';
+  // v1.40.242-preview-guard: Preview is button-free. Reject seeds and
+  // hosts inside .antcv-preview-paper.
+  const isInPreviewPaper = el => { if(!el) return false; const p=document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]'); return !!(p && p.contains(el)); };
   const ALIGN_KEY = 'antcv.coreCompetencies.rowAlignment.v1';
   const PAGE_KEY = 'antcv:itemPages';
   const SECTIONS_KEY = 'sections';
@@ -45,7 +48,7 @@
   }
 
   function editorContainer(){
-    const fields = Array.from(document.querySelectorAll('input,textarea,[contenteditable="true"]'));
+    const fields = Array.from(document.querySelectorAll('input,textarea,[contenteditable="true"]')).filter(f=>!isInPreviewPaper(f));
     const seed = fields.find(f => /focus area/i.test((f.value||f.placeholder||f.textContent||'')));
     if(!seed) return null;
     let p=seed.parentElement, best=null;

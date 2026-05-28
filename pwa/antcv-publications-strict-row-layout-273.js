@@ -8,9 +8,15 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.40.273';
+  const VERSION='1.40.273-preview-guard';
   if(window.__antcvPublicationsStrictRowLayout273===VERSION) return;
   window.__antcvPublicationsStrictRowLayout273=VERSION;
+  // v1.40.273-preview-guard: Preview is button-free. panelRoot() must
+  // never resolve to anything inside .antcv-preview-paper. PP-003
+  // territory — this is an EXCLUSION-ONLY change (never broadens
+  // detection), so the layout pipeline behaves identically for the
+  // editor panel; we just refuse to mount inside Preview.
+  const isInPreviewPaper=el=>{if(!el)return false;const p=document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]');return !!(p&&p.contains(el));};
 
   const PAGE_KEY='antcv:itemPages';
   const ALIGN_KEY='antcvItemAlignment';
@@ -37,12 +43,13 @@
   function pubSection(){return sections().find(s=>s&&String(s.loc||'').toLowerCase()==='sidebar'&&/publication|patent/i.test([s.id,s.title,s.name,s.type].join(' ')))||sections().find(s=>s&&/publication|patent/i.test([s.id,s.title,s.name,s.type].join(' ')))||{id:'publications'};}
 
   function panelRoot(){
-    const nodes=Array.from(document.querySelectorAll('h1,h2,h3,b,strong,div,span')).filter(visible);
+    const nodes=Array.from(document.querySelectorAll('h1,h2,h3,b,strong,div,span')).filter(n=>visible(n)&&!isInPreviewPaper(n));
     for(const h of nodes){
       const ht=clean(h.textContent||'');
       if(!/publications?\s*(?:&|and)\s*patent/i.test(ht)||ht.length>120) continue;
       let p=h;
       for(let d=0;p&&p!==document.body&&d<10;d++,p=p.parentElement){
+        if(isInPreviewPaper(p)) break;
         const txt=clean(p.textContent||'');
         if(/cv preview|docx/i.test(txt)) continue;
         if(/publications?\s*(?:&|and)\s*patent/i.test(txt)&&/←\s*back/i.test(txt)&&/\+\s*(publication|entry)/i.test(txt)) return p;

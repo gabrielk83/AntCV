@@ -13,9 +13,12 @@
 (function () {
   'use strict';
 
-  const VERSION = '1.40.247';
+  const VERSION = '1.40.247-preview-guard';
   if (window.__antcvAdditionalInfoRowControls === VERSION) return;
   window.__antcvAdditionalInfoRowControls = VERSION;
+  // v1.40.247-preview-guard: Preview is button-free. panelRoot() and
+  // likelyItemRows() must reject any candidate inside .antcv-preview-paper.
+  function isInPreviewPaper(el){if(!el)return false;const p=document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]');return !!(p&&p.contains(el));}
 
   const ALIGN_KEY = 'antcvItemAlignment';
   const PAGE_KEY = 'antcv:itemPages';
@@ -148,12 +151,13 @@
 
   function panelRoot() {
     const headers = Array.from(document.querySelectorAll('h1,h2,h3,div,span')).filter(function (el) {
-      return /additional information/i.test(norm(el.textContent || ''));
+      return !isInPreviewPaper(el) && /additional information/i.test(norm(el.textContent || ''));
     });
     for (const h of headers) {
       let p = h;
       for (let i = 0; i < 6 && p; i++, p = p.parentElement) {
         if (!p || p === document.body) break;
+        if (isInPreviewPaper(p)) break;
         const txt = low(p.textContent);
         if (txt.indexOf('additional information') >= 0 && txt.indexOf('+ item') >= 0) return p;
       }

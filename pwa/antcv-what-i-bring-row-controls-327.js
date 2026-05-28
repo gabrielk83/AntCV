@@ -6,9 +6,12 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.40.264';
+  const VERSION='1.40.264-preview-guard';
   if(window.__antcvWhatIBringRowControls264===VERSION) return;
   window.__antcvWhatIBringRowControls264=VERSION;
+  // v1.40.264-preview-guard: Preview is button-free. Reject seeds and
+  // hosts inside .antcv-preview-paper.
+  const isInPreviewPaper=el=>{if(!el)return false;const p=document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]');return !!(p&&p.contains(el));};
 
   const PAGE_KEY='antcv:itemPages';
   const SECTIONS_KEY='sections';
@@ -32,15 +35,16 @@
   }
 
   function activePanel(){
-    const heads=Array.from(document.querySelectorAll('h1,h2,h3,strong,b,div,span')).filter(visible);
+    const heads=Array.from(document.querySelectorAll('h1,h2,h3,strong,b,div,span')).filter(v=>visible(v)&&!isInPreviewPaper(v));
     for(const h of heads){
       const t=clean(h.textContent||'');
       if(!PANEL_RX.test(t) || t.length>90) continue;
       let p=h;
       for(let d=0;p&&p!==document.body&&d<9;d++,p=p.parentElement){
+        if(isInPreviewPaper(p)) break;
         const txt=clean(p.textContent||'');
         if(CORE_RX.test(txt) && !PANEL_RX.test(txt)) continue;
-        const fields=Array.from(p.querySelectorAll('input,textarea,[contenteditable="true"]')).filter(f=>/focus\s*area|strategic\s*expertise/i.test(f.value||f.placeholder||f.textContent||''));
+        const fields=Array.from(p.querySelectorAll('input,textarea,[contenteditable="true"]')).filter(f=>!isInPreviewPaper(f)&&/focus\s*area|strategic\s*expertise/i.test(f.value||f.placeholder||f.textContent||''));
         if(fields.length>=2 && /\+\s*row/i.test(txt)) return p;
       }
     }

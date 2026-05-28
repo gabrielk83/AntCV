@@ -41,6 +41,14 @@ export interface SectionFormatPickerProps {
   compact?: boolean;
 }
 
+// v1.50.17 — native <option> elements need explicit background + color
+// or they render with OS-default light menu colors against our dark
+// theme. Same constant used elsewhere in the React-islands UI.
+const DARK_OPTION_STYLE: React.CSSProperties = {
+  background: '#283556',
+  color: '#e6eef3',
+};
+
 export function SectionFormatPicker({
   sectionId,
   label,
@@ -127,7 +135,7 @@ export function SectionFormatPicker({
             }}
           >
             {SECTION_FORMAT_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
+              <option key={o.value} value={o.value} style={DARK_OPTION_STYLE}>{o.label}</option>
             ))}
           </select>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>

@@ -306,11 +306,21 @@
       const inlineStyles = Array.from(document.querySelectorAll('style'))
         .map(s => '<style>' + (s.textContent || '') + '</style>')
         .join('\n');
-      // v1.50.32 — stack EVERY paper. Multi-page CVs render as N
-      // .antcv-preview-paper elements in DOM order; v1.50.31 grabbed
-      // just one and the print cropped the rest. Joining outerHTML
-      // preserves each paper\'s inline styles, fonts, and table
-      // layouts so the iframe matches what the user sees on screen.
+      // v1.50.33 — multi-page handling. The PWA renders the WHOLE CV
+      // as a single tall .antcv-preview-paper with internal page-break
+      // markers (see antcv-page-breaks-everywhere-284.js). v1.50.32
+      // forced width:210mm + min-height:297mm + overflow:hidden which
+      // clipped everything past the first A4 sheet — that's exactly
+      // why the user saw "page 1 only, squeezed". The fix:
+      //   - DO NOT force paper width / height / overflow. Let the
+      //     paper render at its natural dimensions (the inherited
+      //     stylesheet already targets A4 layout).
+      //   - @page sets the print sheet size to A4 with small margins
+      //     so headers/footers added by the browser don't crop CV
+      //     content.
+      //   - Add explicit page-break-before on any element flagged by
+      //     the existing page-break sidecars so multi-page CVs split
+      //     cleanly at the intended boundaries instead of mid-section.
       const paperHtml = papers.map(p => p.outerHTML).join('\n');
       const pageCount = papers.length;
       const srcdoc = `<!doctype html>
@@ -321,46 +331,60 @@
 ${sheetLinks}
 ${inlineStyles}
 <style>
+  /* Screen view inside the iframe — soft slate bg so the white
+     paper stands out. */
   html, body { margin: 0; padding: 0; background: #e8eef3; }
   body { padding: 12px; }
   .antcv-preview-paper {
     margin: 0 auto 14px auto;
-    box-shadow: 0 2px 12px rgba(0,0,0,.15);
-    /* v1.50.32 — fixed A4 width so multi-page CVs print at the
-       intended size. The PWA renders the paper at this width too;
-       echoing it here decouples the iframe from any inherited
-       layout constraints. */
-    width: 210mm;
-    min-height: 297mm;
-    box-sizing: border-box;
     background: #fff;
-    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0,0,0,.15);
+    /* NO fixed width / height / overflow — let the cloned paper
+       keep its inherited PWA-rendered dimensions. */
   }
   .antcv-preview-paper:last-child { margin-bottom: 0; }
-  /* Hide any sidecar overlays that might be cloned along with the paper. */
-  .antcv-fab, [class*="antcv-fab"], .antcv-overlay, [class*="antcv-overlay"] { display: none !important; }
+  /* Hide any sidecar overlays / FABs that may have been cloned. */
+  .antcv-fab, [class*="antcv-fab"], .antcv-overlay, [class*="antcv-overlay"] {
+    display: none !important;
+  }
 
-  /* v1.50.32 — print pagination. @page sets the printable size to
-     A4 with zero margin (the paper already carries its own internal
-     padding). Each .antcv-preview-paper gets page-break-after:
-     always so multi-page CVs paginate cleanly — without this rule
-     the browser dumped everything onto sheet 1 and clipped the
-     rest. The :last-child override prevents a trailing blank
-     sheet after the final page. */
-  @page { size: A4; margin: 0; }
+  /* Print pagination. */
+  @page { size: A4; margin: 10mm; }
   @media print {
-    html, body { background: #fff; }
-    body { padding: 0; }
+    html, body { background: #fff; margin: 0; padding: 0; }
     .antcv-preview-paper {
       box-shadow: none !important;
       margin: 0 !important;
-      page-break-after: always;
-      break-after: page;
+      page-break-after: avoid;
+      break-after: avoid;
     }
-    .antcv-preview-paper:last-child {
-      page-break-after: auto;
-      break-after: auto;
+    /* Multi-paper case (rare): each separate .antcv-preview-paper
+       starts a new sheet so they don't blend together on print. */
+    .antcv-preview-paper + .antcv-preview-paper {
+      page-break-before: always;
+      break-before: page;
     }
+    /* Existing page-break markers injected by
+       antcv-page-breaks-everywhere-284 / item-pages-render. Honour
+       them in print so a single tall paper splits at the right
+       points instead of mid-section. */
+    [data-antcv-page-break],
+    [data-antcv-page-marker],
+    .antcv-page-break,
+    .antcv-page-marker,
+    [data-page-break-before="true"] {
+      page-break-before: always;
+      break-before: page;
+    }
+    /* Keep each section's heading on the same page as its first
+       row of content. */
+    [data-sid] > :first-child,
+    h1, h2, h3, h4 {
+      page-break-after: avoid;
+      break-after: avoid;
+    }
+    /* Reduce orphan/widow risk on multi-line paragraphs. */
+    p, li, tr { page-break-inside: avoid; break-inside: avoid; }
   }
 </style>
 </head>

@@ -1,0 +1,253 @@
+{
+  "schema_version": "0.1.0",
+  "generation_id": "gen_01H7XYZ123",
+  "application_id": "app_01H7XYZ456",
+  "role_slug": "product-manager",
+  "role_label_raw": "Senior Product Manager — Maersk",
+  "writing_style": "measured-professional",
+  "package": "copenhagen-modern",
+  "target_language": "zh",
+  "target_pages": 1.5,
+  "target_ats_tier": "modern",
+  "target_use_case": "commercial",
+  "career_stage": null,
+  "commercial_seniority": "senior",
+  "sections": {
+    "profile": {
+      "format": "paragraph",
+      "content": "技术产品经理,在汽车LiDAR与电光系统领域拥有15年经验。工作于硬件工程团队与客户项目之间,专注于变更治理、系统架构以及客户需求可追溯性。目前在受监管行业领导项目交付与跨供应商变更管理工作,内容涵盖功能安全、ASPICE治理与客户集成事务。",
+      "char_count": 123
+    },
+    "core_competencies": {
+      "format": "table-grid",
+      "parser_safe_separator": "em_dash",
+      "rows": [
+        {"focus_area": "系统架构", "expertise": "硬件与软件接口、客户需求可追溯性"},
+        {"focus_area": "变更治理", "expertise": "覆盖汽车一级供应商项目的多方变更评审"},
+        {"focus_area": "功能安全", "expertise": "ISO 26262评估员;主导两次ASPICE重新认证"},
+        {"focus_area": "项目交付", "expertise": "按约定时限完成客户变更请求关闭"},
+        {"focus_area": "利益相关者协调", "expertise": "跨供应商谈判,按期关闭,无升级事件"}
+      ]
+    },
+    "selected_outcomes": {
+      "format": "bullets",
+      "items": [
+        {
+          "title": "客户变更请求按期完成关闭",
+          "body": "在两个一级供应商项目中协调跨供应商谈判;无升级事件;按约定时限完成关闭。",
+          "word_count": 33
+        },
+        {
+          "title": "两次ASPICE重新认证,零重大发现",
+          "body": "协调光学、电气与软件团队的准备工作;在评估员正式审核前完成预审。",
+          "word_count": 30
+        },
+        {
+          "title": "审核周期缩短40%",
+          "body": "引入ASPICE对齐的预审清单;平均关闭时间从25天降至15天。",
+          "word_count": 27
+        }
+      ]
+    },
+    "experience": [
+      {
+        "company": "Innoviz Technologies",
+        "role": "系统架构师与变更控制负责人",
+        "years": "2020年 — 2025年",
+        "location": "以色列 / 远程",
+        "format": "bullets",
+        "items": [
+          "在三个汽车一级供应商客户项目中领导变更控制;负责客户变更请求关闭与系统架构交接。",
+          "为客户变更请求引入ASPICE对齐的预审流程;协调光学、电气与软件团队的输入。",
+          "将平均审核周期缩短40%;支持两次ASPICE重新认证,均无重大发现。"
+        ]
+      },
+      {
+        "company": "Innoviz Technologies",
+        "role": "客户变更请求专员",
+        "years": "2017年 — 2020年",
+        "location": "以色列",
+        "format": "bullets",
+        "items": [
+          "负责两个一级供应商客户项目的变更请求流程;作为工程团队与客户变更评审的首要对接人。",
+          "构建需求可追溯性框架,后由系统架构师角色进一步扩展;覆盖光学与ECU团队的文档。",
+          "在该期间完成28项客户变更请求关闭;未有任何请求升级至执行级变更评审。"
+        ]
+      },
+      {
+        "company": "Sirin Labs",
+        "role": "高级电光工程师",
+        "years": "2014年 — 2017年",
+        "location": "以色列",
+        "format": "bullets",
+        "items": [
+          "领导一支七人电光工程团队;负责公司主要消费产品光学子系统规格的制定。",
+          "与机械、电气与软件团队协作,在目标体积与成本约束内交付光学子系统。",
+          "在该期间招募并培养三名工程师;建立光学表征实验室与测试方法体系。"
+        ]
+      },
+      {
+        "company": "Kanzen konsulenter i nord ApS",
+        "role": "创始人,项目管理专员",
+        "years": "2022年 — 2025年",
+        "location": "丹麦哥本哈根",
+        "format": "bullets",
+        "items": [
+          "在Innoviz任职的同时创办本顾问公司;为三家企业提供项目管理与受监管行业变更治理咨询。",
+          "撜写ASPICE采纳框架,目前为其中一家客户内部变更控制标准的基础。",
+          "建立丹麦本地实体,完成增值税与税务登记,在三年期间管理顾问业务的运营事务。"
+        ]
+      }
+    ],
+    "tools_methods": {
+      "format": "structured-grid",
+      "groups": [
+        {
+          "label": "项目与变更管理",
+          "items": "Jira, Confluence, ServiceNow, ASPICE, Six Sigma Black Belt"
+        },
+        {
+          "label": "工程",
+          "items": "Python, MATLAB, LabVIEW, COMSOL, Zemax"
+        },
+        {
+          "label": "质量与风险",
+          "items": "ISO 26262, FMEA, DFMEA, 设计评审"
+        }
+      ]
+    },
+    "certifications": {
+      "format": "bullets",
+      "items": [
+        "BABOK — IIBA (2022年)",
+        "Certified AI Practitioner (CNX-CAIP) — CNX (2024年)",
+        "Six Sigma Black Belt — ASQ (2018年)",
+        "Automotive SPICE — intacs (2021年)",
+        "Prøve i Dansk 2 — 丹麦语等级考试 (2023年)"
+      ]
+    },
+    "education": {
+      "format": "bullets",
+      "items": [
+        "MBA — Technion, Israel Institute of Technology (2015年)",
+        "M.Sc., 电气工程 — Tel Aviv University (2010年)",
+        "B.Sc., 物理学与电气工程(双学位) — Tel Aviv University (2008年)"
+      ]
+    },
+    "publications_patents": {
+      "format": "bullets",
+      "items": [
+        "Karp-Gershon, G., et al. (2018). 光学材料表征. Optics Letters.",
+        "专利:光学传感器配置 (授权于2017年)。"
+      ]
+    },
+    "additional_information": {
+      "format": "structured-grid",
+      "groups": [
+        {
+          "label": "语言",
+          "items": "英语与希伯来语(母语 / 双语)、西班牙语(专业水平)、丹麦语(B1)"
+        },
+        {
+          "label": "志愿工作",
+          "items": "Operations Manager, Copenhagen Wolves RFC"
+        },
+        {
+          "label": "可用性",
+          "items": "可接受迁移;持有丹麦及欧盟工作许可"
+        }
+      ]
+    },
+    "cover_letter": {
+      "cl_header": {
+        "name": "Gabriel Alexander Karp-Gershon",
+        "application_line": "申请:Senior Product Manager — Maersk",
+        "contacts": ["email@example.com", "linkedin.com/in/...", "丹麦哥本哈根"]
+      },
+      "cl_opener": {
+        "salutation": "尊敬的招聘团队,",
+        "opening": "本人现申请贵公司Senior Product Manager职位。该职位将面向客户的产品负责与大规模运营复杂性结合在一起,正与本人过去五年的工作内容高度契合。"
+      },
+      "who_i_am": "本人为技术产品经理,在硬件项目与受监管行业的客户运营工作领域拥有十二年经验。最近五年任职于Innoviz,负责三个汽车一级供应商客户项目的变更治理与客户变更请求关闭工作。该工作位于硬件工程、客户集成与ASPICE对齐流程纪律的交叉地带。",
+      "what_i_bring": {
+        "format": "table-grid",
+        "parser_safe_separator": "em_dash",
+        "rows": [
+          {"focus_area": "面向客户的产品负责", "expertise": "在三个汽车一级供应商项目中完成客户变更请求关闭"},
+          {"focus_area": "大规模运营复杂性", "expertise": "多方变更治理,ASPICE对齐的工作流程"},
+          {"focus_area": "利益相关者协调", "expertise": "跨供应商谈判与客户变更评审的对接"},
+          {"focus_area": "流程纪律", "expertise": "Six Sigma Black Belt、ISO 26262评估员、ASPICE治理"}
+        ]
+      },
+      "why_this_position": "该职位位于面向客户的产品工作与运营复杂性的交叉地带——这正是本人在Innoviz最近五年所处的位置。从汽车一级供应商客户项目转向Maersk的物流科技客户群,意味着行业的转变,但底层的工作——通过变更周期管理产品与客户关系,并以运营纪律作支撑——在本质上是一致的。职位描述中关于工作方式部分提到的、与ASPICE等同的流程成熟度,是促使本人提交申请的因素之一。",
+      "how_i_would_contribute": [
+        "预计将以前三个月的时间梳理当前的客户变更请求工作流程,识别其中的摩擦点,正如本人加入Innoviz时所做的那样。",
+        "短期内可贡献的成果将是面向高影响变更请求的结构化预审流程,以本人在Innoviz跨三个项目所构建与标准化的方法为蓝本。",
+        "长远而言,本人希望将所发展的ASPICE对齐纪律,应用于Maersk产品组织认定的、治理改进优先级最高的流程之上。"
+      ],
+      "foundation": {
+        "hands_on": "本人愿在最初的几周内阅读现有的变更工作流程文档,与运营团队共同工作,先将所见所闻记录下来,而后再提出修改建议。",
+        "professionally": "该职位将是本人当前工作的自然延续——从汽车硬件项目转向物流科技产品工作,但保留定义本人工作方式的运营性与面向客户的核心。"
+      },
+      "cl_close": {
+        "sign_off": "此致敬礼,",
+        "signature": "Gabriel Alexander Karp-Gershon"
+      },
+      "char_count": 712
+    }
+  },
+  "change_log_proposals": [
+    {
+      "section": "profile",
+      "source": "llm",
+      "before_text": null,
+      "after_text": "技术产品经理,在汽车LiDAR与电光系统领域拥有15年经验。工作于硬件工程团队与客户项目之间,专注于变更治理、系统架构以及客户需求可追溯性。目前在受监管行业领导项目交付与跨供应商变更管理工作,内容涵盖功能安全、ASPICE治理与客户集成事务。",
+      "reason": "first draft applying measured-professional voice in Mandarin; 123 chars within 120-180 range per language-output.md",
+      "confidence": "high",
+      "risk": "none",
+      "char_delta": 123
+    },
+    {
+      "section": "selected_outcomes",
+      "source": "llm",
+      "before_text": null,
+      "after_text": "[3 outcome bullets]",
+      "reason": "outcomes mirror EN; Mandarin character counts 27-33 per bullet within medium tier 25-38 chars",
+      "confidence": "high",
+      "risk": "none",
+      "char_delta": 282
+    },
+    {
+      "section": "core_competencies",
+      "source": "llm",
+      "before_text": null,
+      "after_text": "[5 competency rows]",
+      "reason": "same competencies as EN; Mandarin expertise text averages 16-24 chars per row",
+      "confidence": "high",
+      "risk": "none",
+      "char_delta": 198
+    },
+    {
+      "section": "experience",
+      "source": "llm",
+      "before_text": null,
+      "after_text": "[4 roles with 3 bullets each]",
+      "reason": "newest-first; bullet rhythm preserved from EN, role titles localised to Mandarin, company names and acronyms (ASPICE, ECU, MBA, M.Sc., B.Sc.) kept original per language-output.md",
+      "confidence": "high",
+      "risk": "none",
+      "char_delta": 1380
+    },
+    {
+      "section": "cover_letter.why_this_position",
+      "source": "llm",
+      "before_text": null,
+      "after_text": "[paragraph]",
+      "reason": "referenced JD's ASPICE-equivalent process-maturity language; named the industry shift explicitly; Mandarin register more formal-impersonal than EN per CV convention",
+      "confidence": "medium",
+      "risk": "none",
+      "char_delta": 188
+    }
+  ],
+  "flagged": false,
+  "warnings": []
+}

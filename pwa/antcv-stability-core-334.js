@@ -1,13 +1,20 @@
-/* AntCV stability core (v1.40.334)
+/* AntCV stability core (v1.40.339)
  * Consolidates the three remaining UI stability fixes without adding duplicate UI:
  * 1) Settings -> language selector is owned by Standard > Personal only.
  * 2) Application history "Open in Settings" routes to Standard > Application history and raises the modal above preview.
  * 3) Preview action placement is single-source: top actions on mobile, floating/FAB actions on desktop, never both.
+ * v1.40.339: DEFAULT_LANGS changed from ['en'] to ['en','da'] to match the rest of the app and the user's expected post-delete starting state.
  */
 (function(){
   'use strict';
-  var VERSION='1.40.334';
+  var VERSION='1.40.339';
   if(window.__antcvStabilityCore===VERSION) return;
+  // Pass 1 (v1.50.0) opt-out: set localStorage 'antcv:disable-stability-core-334'
+  // to '1' to stand down so the React-islands bundle (pwa/antcv-react-islands.js,
+  // src/islands/*) can take over the LanguageCard / PreviewToolbar /
+  // SettingsRouter logic. Verification toggle — flipping it on reproduces the
+  // post-deletion behaviour without touching index.html.
+  try { if(localStorage.getItem('antcv:disable-stability-core-334')==='1'){ try{console.info('[stability-core] standing down — antcv:disable-stability-core-334=1');}catch(_){} return; } } catch(_) {}
   window.__antcvStabilityCore=VERSION;
 
   var LANG_CARD_ID='antcv-stability-personal-languages';
@@ -18,7 +25,7 @@
     {code:'es',label:'Spanish'},
     {code:'zh',label:'Chinese'}
   ];
-  var DEFAULT_LANGS=['en'];
+  var DEFAULT_LANGS=['en','da'];
   var BREAKPOINT=760;
 
   function norm(v){ return String(v||'').replace(/[ \t\n\r]+/g,' ').trim(); }

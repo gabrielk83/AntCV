@@ -8,7 +8,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.40.341-p0c-fix8';
+  const VERSION='1.40.341-p0c-fix9';
   if(window.__antcvEditorLayoutCleanup331===VERSION) return;
   window.__antcvEditorLayoutCleanup331=VERSION;
 
@@ -167,7 +167,7 @@
   // Professionally second.
   function labelledFoundationField(root,part){const fs=allFields(root);if(part==='hands_on')return fs[0]||null;if(part==='professionally')return fs[1]||fs[0]||null;return null;}
   function cleanupFoundation(root){if(!root)return;Array.from(root.querySelectorAll('[data-antcv-foundation-host],[data-antcv330-hiwc-toolbar],[data-antcv331-toolbar]')).forEach(n=>n.remove());}
-  function fixFoundation(){const r=foundationRoot();if(!r)return;cleanupFoundation(r);const st=foundationState();[['hands_on','hands_on'],['professionally','professionally']].forEach(([part,key])=>{const f=labelledFoundationField(r,part);if(!f)return;f.style.textAlign=st[part].align||'left';const h=hostAfterField(f,'foundation-'+key);h.appendChild(toolbar('foundation-'+key,f,{getPage:()=>foundationState()[part].page||1,setPage:()=>setFoundation(part,{page:(Number(foundationState()[part].page)||1)%4+1}).page,getAlign:()=>foundationState()[part].align||'left',setAlign:()=>setFoundation(part,{align:nextAlign(foundationState()[part].align||'left')}).align}));});}
+  function fixFoundation(){const r=foundationRoot();if(!r)return;cleanupFoundation(r);const st=foundationState();[['hands_on','hands_on'],['professionally','professionally']].forEach(([part,key])=>{const f=labelledFoundationField(r,part);if(!f)return;f.style.textAlign=st[part].align||'left';const h=hostAfterField(f,'foundation-'+key);if(!h)return;/* v1.40.341-p0c-fix9: hostAfterField now returns null when the field is inside preview-paper (fix5 guard). Without this if(!h) bail, h.appendChild crashes with "Cannot read properties of null" and floods the console hundreds of times per second. */h.appendChild(toolbar('foundation-'+key,f,{getPage:()=>foundationState()[part].page||1,setPage:()=>setFoundation(part,{page:(Number(foundationState()[part].page)||1)%4+1}).page,getAlign:()=>foundationState()[part].align||'left',setAlign:()=>setFoundation(part,{align:nextAlign(foundationState()[part].align||'left')}).align}));});}
 
   function hiwcRoot(){const fields=allFields(document).filter(f=>!isInPreviewPaper(f));/* v1.40.341-p0c-fix2: editor-only seeds, never Preview */const seed=fields.find(f=>/Intro[ —-]|one sentence framing/i.test(String(f.value||f.placeholder||f.textContent||'')));if(!seed)return null;let p=seed.parentElement,best=null;for(let d=0;p&&p!==document.body&&d<12;d++,p=p.parentElement){if(isInPreviewPaper(p)) break; const t=clean(p.textContent);if(/HOW I WOULD CONTRIBUTE/i.test(t)||(/Intro line/i.test(t)&&/Closing line/i.test(t)))best=p;}return best;}
   function hiwcFields(root){const fs=allFields(root);const intro=fs.find(f=>/Intro[ —-]|one sentence framing/i.test(String(f.value||f.placeholder||f.textContent||'')))||fs[0]||null;const closing=fs.slice().reverse().find(f=>/Closing[ —-]|one sentence/i.test(String(f.value||f.placeholder||f.textContent||'')))||fs[fs.length-1]||null;let bullet=fs.find(f=>f.tagName==='TEXTAREA'&&f!==intro&&f!==closing)||null;return {intro,bullet,closing};}

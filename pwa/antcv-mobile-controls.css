@@ -1,6 +1,36 @@
 
 /* AntCV v069 mobile controls. External only. */
 
+/* -------- BRAND custom properties (v1.50.22) ----------------------
+ * Bucket 2 hex-extraction. This stylesheet is mobile editor chrome —
+ * the language switch, bottom nav, file chip, and contact submenu. The
+ * palette stays constant across all 7 visual packages, so per-package
+ * tokens (--package-*) would be wrong here. Centralising the 29 inline
+ * hex literals into 13 semantic custom properties makes future colour
+ * adjustments a single-source edit. Native CSS var() inheritance means
+ * every selector below — including those tagged !important — picks up
+ * the value at parse time. */
+:root {
+  /* teal family (primary accent + lang chip + spinner) */
+  --antcv-mc-teal-deepest:    #073f46;  /* deep text on light teal bg */
+  --antcv-mc-teal-deep:       #07545e;  /* lang chip text */
+  --antcv-mc-teal-mid:        #087f7a;  /* active lang chip / heading */
+  --antcv-mc-teal-accent:     #16b8b0;  /* underline + chip border */
+  --antcv-mc-teal-short:      #0aa;     /* spinner outline + border-top */
+  --antcv-mc-teal-bg-light:   #dff4f4;  /* card bg */
+  --antcv-mc-teal-bg-ultra:   #eef9f9;  /* lang chip bg */
+  --antcv-mc-teal-bg-fainter:#f9ffff;  /* subtle row bg */
+
+  /* neutrals */
+  --antcv-mc-white:           #fff;
+  --antcv-mc-border-light:    #d0d2d6;  /* spacer border */
+  --antcv-mc-gray-subtle:     #e8eeee;  /* disabled chip bg */
+  --antcv-mc-gray-muted:      #6b7778;  /* disabled chip text */
+
+  /* success */
+  --antcv-mc-success:         #1ca34a;  /* save-success chip */
+}
+
 /* -------- Setup language switch -------- */
 .antcv-setup-lang-floating {
   position: fixed !important;
@@ -25,7 +55,7 @@
   border-radius: 11px !important;
   border: 1px solid rgba(8,86,96,.18) !important;
   background: rgba(238,249,249,.92) !important;
-  color: #07545e !important;
+  color: var(--antcv-mc-teal-deep) !important;
   font: 850 13px/1 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif !important;
   box-shadow: none !important;
 }
@@ -34,8 +64,8 @@
 .antcv-setup-lang-floating button[aria-pressed="true"],
 .antcv-setup-lang-floating .active,
 .antcv-setup-lang-floating [data-active="true"] {
-  background: #087f7a !important;
-  color: #fff !important;
+  background: var(--antcv-mc-teal-mid) !important;
+  color: var(--antcv-mc-white) !important;
 }
 
 /* -------- Bottom editor controls -------- */
@@ -72,7 +102,7 @@ body.antcv-editor-ready {
   padding: 4px 9px;
   border-radius: 999px;
   background: rgba(9,92,103,.88);
-  color: #fff;
+  color: var(--antcv-mc-white);
   font: 650 11px/1.2 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   box-shadow: 0 2px 8px rgba(0,0,0,.18);
 }
@@ -98,8 +128,8 @@ body.antcv-editor-ready {
 .antcv-inline-btn,
 #antcv-contact-submenu button {
   border: 1px solid rgba(8,86,96,.20);
-  background: #eef9f9;
-  color: #07545e;
+  background: var(--antcv-mc-teal-bg-ultra);
+  color: var(--antcv-mc-teal-deep);
   border-radius: 10px;
   min-height: 32px;
   min-width: 34px;
@@ -124,7 +154,7 @@ body.antcv-editor-ready {
   height: 36px;
   border-radius: 999px;
   padding: 3px;
-  background: #dff4f4;
+  background: var(--antcv-mc-teal-bg-light);
   border: 1px solid rgba(8,86,96,.20);
   box-sizing: border-box;
 }
@@ -137,7 +167,7 @@ body.antcv-editor-ready {
   left: 3px;
   width: calc(50% - 3px);
   border-radius: 999px;
-  background: #087f7a;
+  background: var(--antcv-mc-teal-mid);
   transition: transform .16s ease;
 }
 
@@ -152,12 +182,12 @@ body.antcv-editor-ready {
   place-items: center;
   font-size: 11px;
   font-weight: 900;
-  color: #07545e;
+  color: var(--antcv-mc-teal-deep);
 }
 
 #antcv-doc-rocker[data-mode="cv"] span:first-child,
 #antcv-doc-rocker[data-mode="cl"] span:last-child {
-  color: #fff;
+  color: var(--antcv-mc-white);
 }
 
 #antcv-lang-wrap {
@@ -172,7 +202,7 @@ body.antcv-editor-ready {
   min-width: 116px;
   padding: 6px;
   border-radius: 14px;
-  background: #fff;
+  background: var(--antcv-mc-white);
   border: 1px solid rgba(8,86,96,.15);
   box-shadow: 0 8px 24px rgba(0,0,0,.22);
 }
@@ -216,7 +246,7 @@ body.antcv-editor-ready {
   background: rgba(255,255,255,.98);
   border: 1px solid rgba(8,86,96,.16);
   box-shadow: 0 8px 26px rgba(0,0,0,.22);
-  color: #073f46;
+  color: var(--antcv-mc-teal-deepest);
   font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   overflow: auto;
 }
@@ -231,7 +261,7 @@ body.antcv-editor-ready {
   justify-content: space-between;
   gap: 8px;
   padding-bottom: 8px;
-  border-bottom: 2px solid #16b8b0;
+  border-bottom: 2px solid var(--antcv-mc-teal-accent);
   font-weight: 900;
   font-size: 18px;
 }
@@ -244,7 +274,7 @@ body.antcv-editor-ready {
   padding: 7px;
   border: 1px solid rgba(8,86,96,.12);
   border-radius: 12px;
-  background: #f9ffff;
+  background: var(--antcv-mc-teal-bg-fainter);
 }
 
 #antcv-contact-submenu .fields {
@@ -270,13 +300,13 @@ body.antcv-editor-ready {
 }
 
 #antcv-contact-submenu .on {
-  background: #1ca34a;
-  color: #fff;
+  background: var(--antcv-mc-success);
+  color: var(--antcv-mc-white);
 }
 
 #antcv-contact-submenu .off {
-  background: #e8eeee;
-  color: #6b7778;
+  background: var(--antcv-mc-gray-subtle);
+  color: var(--antcv-mc-gray-muted);
 }
 
 /* Reorder */
@@ -287,12 +317,12 @@ body.antcv-editor-ready {
 
 .antcv-dragging {
   opacity: .72;
-  outline: 2px solid #0aa;
+  outline: 2px solid var(--antcv-mc-teal-short);
   background: rgba(0,170,170,.08) !important;
 }
 
 .antcv-drop-target {
-  border-top: 3px solid #0aa !important;
+  border-top: 3px solid var(--antcv-mc-teal-short) !important;
 }
 
 /* Preview scroll */
@@ -367,7 +397,7 @@ body.antcv-editor-ready {
 #antcv-setup-lang-owned button.active,
 #antcv-setup-lang-owned button[aria-pressed="true"] {
   background: rgba(8,127,122,.70) !important;
-  color: #fff !important;
+  color: var(--antcv-mc-white) !important;
   border-color: rgba(255,255,255,.30) !important;
 }
 
@@ -521,7 +551,7 @@ body.antcv-editor-ready [class*="setup-lang"] {
     z-index: 1250 !important;
     border-radius: 16px !important;
     box-shadow: 0 8px 26px rgba(0,0,0,.22) !important;
-    background: #fff !important;
+    background: var(--antcv-mc-white) !important;
     box-sizing: border-box !important;
     margin: 0 !important;
     transform: none !important;
@@ -580,7 +610,7 @@ body.antcv-editor-ready [class*="setup-lang"] {
     z-index: 1250 !important;
     border-radius: 16px !important;
     box-shadow: 0 8px 26px rgba(0,0,0,.22) !important;
-    background: #fff !important;
+    background: var(--antcv-mc-white) !important;
     box-sizing: border-box !important;
     margin: 0 !important;
     transform: none !important;
@@ -638,7 +668,7 @@ body.antcv-editor-ready [class*="setup-lang"] {
   overflow-x: hidden !important;
   border-radius: 16px !important;
   z-index: 1500 !important;
-  background: #fff !important;
+  background: var(--antcv-mc-white) !important;
   box-shadow: 0 8px 26px rgba(0,0,0,.22) !important;
   box-sizing: border-box !important;
 }
@@ -646,7 +676,7 @@ body.antcv-editor-ready [class*="setup-lang"] {
 #antcv-contact-submenu .header {
   position: sticky !important;
   top: 0 !important;
-  background: #fff !important;
+  background: var(--antcv-mc-white) !important;
   z-index: 2 !important;
 }
 
@@ -669,7 +699,7 @@ body.antcv-editor-ready [class*="setup-lang"] {
     z-index: 1250 !important;
     border-radius: 16px !important;
     box-shadow: 0 8px 26px rgba(0,0,0,.22) !important;
-    background: #fff !important;
+    background: var(--antcv-mc-white) !important;
     box-sizing: border-box !important;
     margin: 0 !important;
     transform: none !important;
@@ -977,7 +1007,7 @@ body.antcv-editor-ready {
     z-index: 1250 !important;
     border-radius: 16px !important;
     box-shadow: 0 8px 26px rgba(0,0,0,.22) !important;
-    background: #fff !important;
+    background: var(--antcv-mc-white) !important;
     transform: none !important;
   }
   body.antcv-editor-ready .antcv-mobile-panel-fixed > div,
@@ -1024,7 +1054,7 @@ body.antcv-editor-ready {
     z-index: 1250 !important;
     border-radius: 16px !important;
     box-shadow: 0 8px 26px rgba(0,0,0,.22) !important;
-    background: #fff !important;
+    background: var(--antcv-mc-white) !important;
     transform: none !important;
   }
   body.antcv-editor-ready .antcv-preview-scroll .antcv-mobile-panel-fixed,
@@ -1082,7 +1112,7 @@ body.antcv-editor-ready {
     padding: 0 0 76px 0 !important;
     margin: 0 !important;
     overflow: auto !important;
-    background: #d0d2d6 !important;
+    background: var(--antcv-mc-border-light) !important;
     overscroll-behavior: contain !important;
   }
   body.antcv-editor-ready .antcv-preview-wrap {

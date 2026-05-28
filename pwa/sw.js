@@ -1,10 +1,12 @@
-const CACHE = 'antcv-1.40.337-ai-notice-fix';
+const CACHE = 'antcv-1.50.15-p0c-fix2';
 const SHELL = [
   './manifest.json',
   './antcv-mobile-controls.css',
   './antcv-mobile-controls.js',
   './antcv-docx-client.js',
   './antcv-data-importer.js',
+  './antcv-packages-registry.css',
+  './antcv-react-islands.js',
   './antcv-section-align.js',
   './antcv-recheck-fit.js',
   './antcv-jd-watch.js',

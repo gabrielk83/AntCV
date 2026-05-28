@@ -92,9 +92,17 @@ Copenhagen Modern is the default. Base / Primary / Heading-main hex values are u
 |---|---|---|
 | Writing System Engine | Tone, register, section naming, content priority, evidence depth, default chips | Runs first |
 | Layout + Section Engine | Section order, main/sidebar placement, visibility, section format type | Second |
-| Density + Compression Engine | Length target, line limits, compression tolerance, evidence preservation | Third |
+| Density + Compression Engine | Length target, line limits, compression tolerance, evidence preservation, detail depth | Third |
 | Semantic Constraint Engine | Banned words, banned phrases, role-boundary rules, triggered constraints | Fourth — after drafting, before polishing |
-| ATS/Export Engine | ATS-safe flattening, glyph conversion, table simplification | Runs only on ATS export |
+| ATS/Export Engine | ATS-safe flattening, glyph conversion, table simplification, parsing-safe section names | Runs only on ATS export |
+
+<!-- added 2026-05-26 from source §1 -->
+Engine-level rules carried verbatim from source §1 paragraphs (in addition to the controls/execution columns above):
+
+- **Layout + Section Engine** may reorder sections based on writing style, except Nordic Minimal where the current template order is the default.
+- **Density + Compression Engine** decides what to shorten, keep, hide, or expand — and never invents metrics to satisfy density.
+- **Semantic Constraint Engine** prevents wording errors such as inflated ownership, unsupported metrics, or academic evidence loss.
+- **ATS/Export Engine** produces a parser-safe version without changing the human-facing writing style; it is separate from visual-design export rules.
 
 Per the source doc §AI Pipeline Step 7: changing writing style must not modify visual design tokens, fonts, image settings, or colour packages.
 
@@ -151,11 +159,68 @@ I look forward to hearing from you, responsible for
 
 **Differentiation across styles is via the Semantic Constraint Engine (§9 of source), not via diverging banned-word lists.** Each style has its own `primaryConstraint`, `constraintAvoid`, `constraintPrefer` triple, plus optional trigger-based rules (Trigger + Avoid + Prefer + Reason; dormant until trigger matches).
 
-#### 4.5.1 User-extended bans
-UI exposes "Banned words" and "Banned phrases" lists where the user can add to the shared base. Stored under `personalInfo.writingPrefs.extraBannedWords` and `extraBannedPhrases`.
+<!-- added 2026-05-26 from source §15 + §13 -->
+**Matching and integrity rules (source §15, §13):**
 
-#### 4.5.2 Migration for Gabriel's current list
-Gabriel's project-memory list contains several items not in the source doc base (multi-faceted, tværgående, tværfunktionel, central, end-to-end, strong leader, client-focused, customer-centric, all the "My expertise lies in" / "At the heart of my work" / etc.). On v1.50 first launch, these items are silently added to Gabriel's `extraBannedWords` and `extraBannedPhrases` so existing behaviour is preserved without contaminating the shared base.
+- **Scope of banned lists:** banned words apply to **generated** text. Do not remove banned words from quoted source text unless that quoted text is being rewritten.
+- **Matching mode:** banned-word matching is case-insensitive, exact-match recommended. Banned-phrase matching is **case-insensitive and punctuation-tolerant**.
+- **Internal SCE ordering:** within the Semantic Constraint Engine phase (pipeline step 5), banned-word/phrase filtering runs **before** trigger-based semantic constraints, because the constraints preserve meaning boundaries.
+- **Metric integrity:** never invent metrics. If a metric is missing, use scope, method, or outcome without numbers.
+- **Role-boundary integrity:** do not imply account, people, or product ownership unless supported. Use "contributed", "supported", "partnered", "coordinated", or "led" only when the underlying scope supports the verb.
+- **Research-evidence integrity:** do not compress away publications, thesis, methods, or grants in Research Formal. Academic evidence outranks commercial brevity.
+
+#### 4.5.1 User-extended bans
+UI exposes "Banned words" and "Banned phrases" lists where the user can add to the shared base. Stored under `personalInfo.writingPrefs.extraBannedWords` and `extraBannedPhrases`. **Shape:** both are objects keyed by ISO two-letter language code (see §4.5.3) — items added in the UI are scoped to the active editor language. Items in other languages are stored separately and only enforced when generating in that language.
+
+#### 4.5.2 Gabriel's current personal defaults
+Gabriel's project-memory list of banned words and phrases is a **current master** — a snapshot of his preferences at migration time, expected to evolve as he refines wording over future sessions. Items not in the source doc base are silently added on v1.50 first launch to Gabriel's `extraBannedWords` and `extraBannedPhrases`, partitioned into the language buckets defined in §4.5.3:
+
+- **`en` bucket:** multi-faceted, central, end-to-end, strong leader, client-focused, customer-centric, "My expertise lies in", "I am known for", "At the heart of my work", "My approach is", "I thrive in", "I bring a wealth of experience", "Proven ability to", "I am committed to", "Passionate about driving", "Known for fostering".
+- **`da` bucket:** tværgående, tværfunktionel.
+- **`es`, `zh` buckets:** empty at migration; grow as Gabriel reviews output in those languages.
+
+The extras remain user-editable in Settings → Personal → Writing style; nothing about the migration is one-way or locked.
+
+**Default writing style for Gabriel:** `personalInfo.writingPrefs.style = "nordic-minimal"` on migration. This is also the system default per source §1 and matches Gabriel's existing CV / cover-letter formatting habits.
+
+#### 4.5.3 Language-partitioned banned-list schema <!-- added 2026-05-27 (extension beyond source) -->
+
+Banned words and phrases are **not portable across languages** — "results-driven" is banned in English; its Danish translation "resultatorienteret" is banned in Danish; neither filters the other. Source §15 specifies the English shared base only; the AntCV implementation extends this to a per-language model so multilingual users (Gabriel: English, Danish, eventual Spanish and Mandarin) keep their bans tidy and language-correct.
+
+**Storage shape.** Both `personalInfo.writingPrefs.extraBannedWords` and `personalInfo.writingPrefs.extraBannedPhrases` are objects keyed by ISO two-letter language code:
+
+```json
+{
+  "extraBannedWords": {
+    "en": ["multi-faceted", "client-focused", "customer-centric", "strong leader", "end-to-end", "central"],
+    "da": ["tværgående", "tværfunktionel"],
+    "es": [],
+    "zh": []
+  },
+  "extraBannedPhrases": {
+    "en": ["My expertise lies in", "At the heart of my work", "I thrive in", "Proven ability to"],
+    "da": [],
+    "es": [],
+    "zh": []
+  }
+}
+```
+
+An empty array is permitted. An absent language key is treated as empty. The shared base from source §15 implicitly applies under `en` only; per-language shared bases (Danish, Spanish, Mandarin) are author-curated and bundled with the worker — see `skills/antcv-writer/references/language-output.md`.
+
+**Worker behaviour during generation.** When the proxy worker runs pipeline step 5 (Semantic Constraint Engine) for a section in `target_language = L`, the active banned-word filter is:
+
+```
+shared_base[L] ∪ user_extras.extraBannedWords[L]
+```
+
+…and similarly for phrases. Items stored under any other language are not enforced for this generation. A Danish output is **not** filtered against English bans, and vice versa. This avoids false positives where the target-language word happens to match a foreign-language banned token.
+
+**UI behaviour.** The "Banned words" and "Banned phrases" controls under Settings → Personal → Writing style are scoped to the **editor language** active when the user adds an item. Switching the editor language switches which bucket the UI reads from and writes to. A header in the control surfaces the current bucket — e.g. "Banned words (English)" — and a language switcher lets the user view and edit other buckets explicitly.
+
+**Migration semantics (extending §4.5.2).** Gabriel's project-memory items are partitioned at migration time as listed in §4.5.2. The migration is idempotent — re-running it produces the same partitioned object and does not duplicate entries. Empty buckets are created for all four currently supported languages (`en`, `da`, `es`, `zh`) so the UI can render the language switcher consistently from day one.
+
+**Cross-reference.** `skills/antcv-writer/references/language-output.md` defines per-language curated shared bases (Danish: "Stor erfaring i", "Dyb forståelse af", "Resultatorienteret"; Spanish: "Apasionado/a por", "Orientado/a a resultados", "Liderazgo demostrado"; etc.) and any per-language tone-register adjustments. The worker merges those shared bases with the user-extras under the same language key during step 5.
 
 ### 4.6 UI surfaces per source doc §13
 
@@ -171,6 +236,15 @@ Gabriel's project-memory list contains several items not in the source doc base 
 | Section format selector | Editor → per section | `personalInfo.layoutPrefs.sectionFormats.<section>` |
 | Custom tone slots | Settings → Personal → Writing style → Slots | `personalInfo.writingPrefs.savedSlots[]` |
 
+<!-- added 2026-05-26 from source §13 -->
+**Source §13 behaviour notes that govern the UI surfaces above:**
+
+- **Tone dropdown** drives default chips, section order, density, and section-format defaults atomically — picking a style updates all four together.
+- **Tone chips** that conflict with the base style move the style to Hybrid Balanced (or Custom Tone) automatically.
+- **Section format selector** applies the chosen format without deleting content (the layout engine reformats; it never drops data).
+- **Custom tone slots** save the full bundle atomically: writing style, chips, extra banned words, extra banned phrases, extra constraints, target length, line sliders, section formats. No partial-update path.
+- **Target CV length** values are 1, 1.5, 2, 2.5, 3, 4, and 5 pages. Research Formal and Context Rich may exceed 3 pages; other styles default within their per-style `allowedLength` band.
+
 ### 4.7 Execution pipeline (source doc §16)
 
 The proxy worker runs every section through this sequence:
@@ -184,6 +258,64 @@ The proxy worker runs every section through this sequence:
 7. Validate visual tokens unchanged
 
 Step 5 is where the post-draft retry loop sits — if the output contains banned words or violates metric integrity, retry up to two times with an injected fix instruction; third draft returns with `flagged: true`.
+
+### 4.8 Research Formal — integrated academic rules <!-- added 2026-05-26 from source §11 -->
+
+The Research Formal style overrides standard commercial CV ordering. Source §11 gives per-area rules that the registry's Research Formal row must encode:
+
+| Area | Rule | AI instruction | Density |
+|---|---|---|---|
+| Education | Major primary section; often top-half main column. | Include thesis, methods, advisors, distinctions, grants, projects, relevant coursework when useful. | 0.5–1.5 pages for early-career research CV. |
+| Research Experience | Primary experience category; equal or higher priority than industry experience. | Use methods, contribution, evidence, instrumentation, datasets, supervision, collaborations. | Expanded detail allowed. |
+| Publications | Dedicated primary section; never hidden in sidebar by default. | Preserve citation structure: title, venue, year, role when known. | May span multiple pages if justified. |
+| Teaching / Supervision | First-class when relevant. | Course names, level, student supervision, labs, tutorials. | Medium. |
+| Grants / Fellowships | First-class when present. | Funding body, project title, role, amount only when known. | Do not overcompress. |
+| Conferences / Talks | Dedicated section when relevant. | Talk title, event, date or year, format. | Medium. |
+| Technical Methods | Sidebar or main depending on density. | Methods, instruments, software, lab techniques, analysis tools. | High allowed. |
+| Work Style | Secondary; move to sidebar or lower page. | Keep short and factual. | Low. |
+| Length | 2–5 pages accepted. | Do not force commercial 1-page behaviour. | Preserve evidence over compactness. |
+
+**Recommended Research Formal section order (source §11):** Research Summary → Education → Research Experience → Publications → Selected Research Outcomes → Teaching / Supervision → Grants / Fellowships → Conferences / Talks → Technical Methods → Industry Experience (if relevant) → Professional Service / Committees → Work Style / Soft Skills.
+
+### 4.9 Expansions for non-academic styles <!-- added 2026-05-26 from source §12 -->
+
+Source §12 requires four commercial styles to carry expanded writing-engine behaviour beyond the per-style matrix in the registry:
+
+| Writing style | Expansion required |
+|---|---|
+| Credential Forward | First-class handling for certifications, education, methods, tools, domain knowledge, licences, language credentials, and technical systems. Allow 2–4 pages. Use tables / grids in the visual CV; flatten them in ATS export. |
+| Structured Professional | Traceability-first handling for requirements, governance, standards, change control, validation, decision logs, audits, and risk controls. Allow process detail when evidence supports it. |
+| Prestige Structured | Institution-fit handling: education, organisation contribution, alignment, reliability, and collective outcomes. Use restrained self-promotion. |
+| Context Rich | Narrative handling: motivation, transition logic, relational trust, and background. Allow a longer profile / context block but keep it relevant. |
+
+Research Formal's expansion is covered separately in §4.8 above.
+
+### 4.10 Unicode bullet and contact glyph rules (dual-track) <!-- added 2026-05-26 from source §14 -->
+
+Glyph and bullet choices are *dual*. The writing-engine side decides *which* glyphs are allowed and *when* to use them — contextual to language register, writing style, and ATS mode. The visual side (colour, size, weight, font rendering) is governed by the `bullet` and `glyph` colour tokens in the Unified Visual Package System and is not duplicated here.
+
+**Writing-engine-side rules (source §14):**
+
+| Rule | Allowed / behaviour | Export instruction |
+|---|---|---|
+| Allowed Unicode bullets | • ◦ ▪ ✓ → ▲ | Bullet glyph inherits the package's `bullet` colour token. |
+| Allowed contact glyphs | ☎ ✉ 🔗 ★ ⌂ | Allowed in Word / PDF / preview. Prefer monochrome text-glyph rendering; colour inherits the package's `glyph` token. |
+| Native colour emoji | Not allowed | Avoids inconsistent PDF / preview behaviour across platforms. |
+| ATS-safe mode | Convert glyphs and icons to plain text labels | Examples: ☎ → "Phone:", ✉ → "Email:", 🔗 → "Link:", ⌂ → "Location:". Matches §8.6 ATS-mode test. |
+
+**Per-style contextual notes (writing-engine side):**
+
+- **Cold Outreach, Precision Formal:** keep glyph density low — one-page rigour prefers plain bullets.
+- **Research Formal:** keep contact glyphs in the header, but use plain bullets for publication / citation lists where typographic neutrality matters.
+- **Nordic Minimal:** preserve the current sparse glyph pattern; do not add decorative glyphs.
+- **Credential Forward, Structured Professional:** glyphs allowed but secondary to typographic structure (tables, grids).
+- **Hybrid Balanced:** inherits glyph behaviour from the base style; chips never override the allowed-glyph list.
+
+Cross-reference: the colour / size / rendering side of bullets and glyphs lives in the Unified Visual Package System doc, alongside the per-package `bullet` and `glyph` colour tokens (see §2.1, §3 of this plan).
+
+---
+
+*§ 4 audit footnote (last revised 2026-05-27):* two cells in the §4.1 engine table were corrected against source §1 — Density + Compression Engine controls now end with "evidence preservation, detail depth" (was "evidence preservation"); ATS/Export Engine controls now end with "table simplification, parsing-safe section names" (was "table simplification"). Additions: source §1 engine-level rules (under §4.1), source §15 + §13 matching and integrity rules (under §4.5), source §13 UI behaviour notes (under §4.6), source §11 Research Formal academic rules (new §4.8), source §12 non-academic expansions (new §4.9), source §14 dual-track Unicode-bullet and contact-glyph rules (new §4.10), and a formal language-partitioned banned-list schema (new §4.5.3; extension beyond source). §4.5.2 was reframed from a one-shot migration note into a current-master record of Gabriel's evolving personal defaults, now also records his default writing style (`nordic-minimal`), and lists his migration items per language bucket. §4.5.1 now points at §4.5.3 for the storage shape. All other §4 content from the previous revision was left intact; new material is inline with `added 2026-05-26` (round 1–2) and `added 2026-05-27` (round 3) markers identifying its source-doc section or extension status.
 
 ---
 
@@ -253,7 +385,7 @@ Additional cleanups bundled: `wizardState` triple-state (`new`/`skipped`/`comple
 14. Proxy worker accepts `writingStyle`, `toneChips`, `extraBannedWords`, `extraBannedPhrases`, `extraConstraints` per request.
 15. Proxy implements 7-step pipeline §4.7. Banned-word post-filter with two retries; third draft returns `flagged: true`.
 16. PWA writing-system picker in Settings → Personal → Writing style.
-17. Gabriel migration: pre-populate `extraBannedWords`/`extraBannedPhrases` with his existing items not in the source-doc base.
+17. Gabriel migration: pre-populate `extraBannedWords`/`extraBannedPhrases` (language-partitioned per §4.5.3) with his existing items not in the source-doc base; Danish items into `da`, English items into `en`. Set default `style = "nordic-minimal"` per §4.5.2.
 18. Showcase hard isolation. Soften kernel validator in showcase.
 19. Centralised `scrubPlaceholders()`.
 
@@ -389,8 +521,9 @@ Switch writing style across all 12 with package fixed → screenshot diff should
 - Sidebar pagination is colour-agnostic if it reads tokens correctly. Regression-test under every package.
 
 ### 9.2 Proxy worker (`antcv-proxy`)
-- Request payload adds `writingStyle`, `toneChips[]`, `extraBannedWords[]`, `extraBannedPhrases[]`, `extraConstraints[]`, `targetPages`, `sectionFormat`.
+- Request payload adds `writingStyle`, `toneChips[]`, `extraBannedWords` (object keyed by lang per §4.5.3), `extraBannedPhrases` (object keyed by lang per §4.5.3), `extraConstraints[]`, `targetPages`, `sectionFormat`, `target_language`.
 - Server-side execution: 7-step pipeline §4.7.
+- SCE step (5): merge `shared_base[target_language]` ∪ `extraBannedWords[target_language]` (same for phrases); apply only the target-language bucket — other languages are not enforced.
 - Banned-word post-filter with two retries; third returns `flagged: true`.
 - Log writing-style selection and per-category violation counts to analytics KV.
 

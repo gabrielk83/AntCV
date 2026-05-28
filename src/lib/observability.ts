@@ -161,26 +161,170 @@ export function clearBuffer(): void {
   buffer.length = 0;
 }
 
+/**
+ * v1.50.24 — build a self-contained diagnostic snapshot that's safe to
+ * share in bug reports. Includes the response-header buffer, build
+ * version stamps from window globals, and the user's current
+ * writing-engine preferences (style id + chip list — but NOT the
+ * banned-word lists or extraConstraints, because those can contain
+ * names of people, companies, or other PII).
+ */
+export interface ObservabilitySnapshot {
+  v: '1';                            // snapshot format version
+  generatedAt: string;               // ISO timestamp
+  antcvVersion: string | null;       // window.ANTCV_VERSION
+  islandsVersion: string | null;     // window.__antcvReactIslandsBooted
+  userAgent: string;
+  language: string | null;           // navigator.language
+  url: string;                       // location.origin + pathname
+  entries: ObservabilityEntry[];     // the full circular buffer
+  prefs: {
+    writingStyle: string | null;
+    toneChips: string[];
+    targetPages: number | null;
+    activePackage: string | null;
+    legacyAtsTier: boolean;
+  };
+}
+
+function readPiPath<T>(getter: (pi: Record<string, unknown>) => T): T | null {
+  try {
+    const raw = localStorage.getItem('personalInfo');
+    if (!raw) return null;
+    const pi = JSON.parse(raw) as Record<string, unknown>;
+    return getter(pi);
+  } catch {
+    return null;
+  }
+}
+
+function buildPrefsSnapshot(): ObservabilitySnapshot['prefs'] {
+  const writingStyle = readPiPath((pi) => {
+    const wp = pi.writingPrefs as Record<string, unknown> | undefined;
+    const v = wp && typeof wp.style === 'string' ? wp.style : null;
+    return v;
+  });
+  const toneChips = readPiPath((pi) => {
+    const wp = pi.writingPrefs as Record<string, unknown> | undefined;
+    const v = wp && Array.isArray(wp.chips)
+      ? wp.chips.filter((c): c is string => typeof c === 'string')
+      : [];
+    return v;
+  }) ?? [];
+  const targetPages = readPiPath((pi) => {
+    const lp = pi.layoutPrefs as Record<string, unknown> | undefined;
+    const v = lp && typeof lp.targetPages === 'number' ? lp.targetPages : null;
+    return v;
+  });
+  const activePackage = readPiPath((pi) => {
+    return typeof pi.stylePackage === 'string' ? pi.stylePackage : null;
+  });
+  const legacyAtsTier = readPiPath((pi) => {
+    const ep = pi.exportPrefs as Record<string, unknown> | undefined;
+    return !!(ep && ep.legacyAtsTier === true);
+  }) ?? false;
+  return { writingStyle, toneChips, targetPages, activePackage, legacyAtsTier };
+}
+
+export function buildSnapshot(): ObservabilitySnapshot {
+  return {
+    v: '1',
+    generatedAt: new Date().toISOString(),
+    antcvVersion: typeof window !== 'undefined' && typeof window.ANTCV_VERSION === 'string'
+      ? window.ANTCV_VERSION
+      : null,
+    islandsVersion: typeof window !== 'undefined' && typeof window.__antcvReactIslandsBooted === 'string'
+      ? window.__antcvReactIslandsBooted
+      : null,
+    userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+    language: typeof navigator !== 'undefined' ? navigator.language : null,
+    url: typeof location !== 'undefined' ? location.origin + location.pathname : '',
+    entries: readBuffer().slice(),
+    prefs: buildPrefsSnapshot(),
+  };
+}
+
+/**
+ * Copy the snapshot as pretty-printed JSON to the clipboard. Returns
+ * a Promise that resolves true on success, false on failure (e.g.
+ * Permissions API rejected, no Clipboard API available).
+ */
+export async function copySnapshot(): Promise<boolean> {
+  const json = JSON.stringify(buildSnapshot(), null, 2);
+  try {
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      await navigator.clipboard.writeText(json);
+      return true;
+    }
+  } catch { /* fall through to legacy path */ }
+  // Legacy fallback for browsers without Clipboard API (or when the
+  // page is not focused, which can reject writeText).
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = json;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Trigger a browser download of the snapshot as a .json file.
+ * Filename includes the ISO timestamp so multiple snapshots don't
+ * collide.
+ */
+export function downloadSnapshot(): void {
+  try {
+    const json = JSON.stringify(buildSnapshot(), null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const ts = new Date().toISOString().replace(/[:.]/g, '-');
+    a.href = url;
+    a.download = `antcv-observability-${ts}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch (e) {
+    try { console.warn('[antcv-observability] downloadSnapshot failed', e); } catch { /* */ }
+  }
+}
+
 declare global {
   interface Window {
+    ANTCV_VERSION?: string;
     AntcvObservability?: {
       version: string;
       readBuffer: () => readonly ObservabilityEntry[];
       clearBuffer: () => void;
       setVerbose: (on: boolean) => void;
       isVerbose: () => boolean;
+      // v1.50.24 — diagnostic-snapshot helpers
+      buildSnapshot: () => ObservabilitySnapshot;
+      copySnapshot: () => Promise<boolean>;
+      downloadSnapshot: () => void;
     };
   }
 }
 
 export function exposeObservabilityApi(): void {
   window.AntcvObservability = {
-    version: '1.50.5',
+    version: '1.50.24',
     readBuffer,
     clearBuffer,
     setVerbose: (on: boolean) => {
       try { localStorage.setItem('antcv:observability-verbose', on ? '1' : '0'); } catch { /* */ }
     },
     isVerbose: readVerboseFlag,
+    buildSnapshot,
+    copySnapshot,
+    downloadSnapshot,
   };
 }

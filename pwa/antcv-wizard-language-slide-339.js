@@ -41,7 +41,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.40.339-j';
+  var VERSION = '1.50.38-react-showcase';
   if (window.__antcvWizardLanguageSlide339 === VERSION) return;
   window.__antcvWizardLanguageSlide339 = VERSION;
 
@@ -300,22 +300,33 @@
     fmtIntro.style.cssText = 'margin:0 0 10px;font-size:11.5px;line-height:1.5;color:rgba(255,255,255,0.7);';
     panel.appendChild(fmtIntro);
 
-    var fmtGrid = document.createElement('div');
-    fmtGrid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(115px,1fr));gap:6px;margin-bottom:16px;';
-    FORMATS.forEach(function (f) {
-      var tile = document.createElement('div');
-      tile.style.cssText = 'background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:7px 8px;';
-      var name = document.createElement('div');
-      name.textContent = f.name;
-      name.style.cssText = 'font-size:10.5px;font-weight:700;color:#fff;margin-bottom:5px;letter-spacing:.2px;';
-      tile.appendChild(name);
-      var preview = document.createElement('div');
-      preview.style.cssText = 'min-height:48px;background:rgba(0,0,0,0.22);border-radius:4px;padding:5px 6px;overflow:hidden;';
-      preview.innerHTML = f.preview;
-      tile.appendChild(preview);
-      fmtGrid.appendChild(tile);
-    });
-    panel.appendChild(fmtGrid);
+    // v1.50.38 — section-format showcase is now a React island
+    // (src/islands/WizardSectionShowcase/). Phase A of the wizard
+    // step 10 port (see docs/plan/v1.50.37-wizard-step-10-scoping.md).
+    // We append an anchor div and dispatch a mount event so the
+    // React bundle attaches its root immediately rather than waiting
+    // for a MutationObserver tick. The legacy FORMATS constant
+    // declared at the top of this file is now dead-code — kept in
+    // place for one release cycle so any analytics / a-b tests that
+    // pin the version can still introspect it (window.
+    // AntcvWizardLanguageSlide._formats below). Will be deleted in
+    // Phase B (v1.50.39).
+    var fmtAnchor = document.createElement('div');
+    fmtAnchor.setAttribute('data-antcv-wizard-section-showcase', '1');
+    fmtAnchor.style.cssText = 'min-height:60px;margin-bottom:16px;';
+    panel.appendChild(fmtAnchor);
+    try {
+      window.dispatchEvent(new CustomEvent('antcv:mount-wizard-showcase'));
+    } catch (_) {}
+    // Defence in depth: if the React bundle hasn't booted yet when
+    // we open the modal, mountAll runs on DOMContentLoaded, then our
+    // mount.ts's MutationObserver / event listener picks the anchor
+    // up. Either path lands us at the same outcome.
+    try {
+      if (window.AntcvReactIslands && typeof window.AntcvReactIslands.mountAll === 'function') {
+        window.AntcvReactIslands.mountAll();
+      }
+    } catch (_) {}
 
     var hint = document.createElement('div');
     hint.style.cssText = 'margin:4px 0 18px;padding:10px 12px;background:rgba(1,183,187,0.08);border:1px solid rgba(1,183,187,0.35);border-radius:8px;font-size:11.5px;line-height:1.55;color:rgba(255,255,255,0.85);';

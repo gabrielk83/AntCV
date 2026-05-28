@@ -1268,6 +1268,43 @@ async function handleRequest(request, env = {}) {
   if (!apiKey.startsWith('sk-ant-')) return errJson('Anthropic server key is not available on cv-proxy. Set Claude_API_Key or ANTHROPIC_API_KEY as a Worker secret.', 401);
   try {
     const body = JSON.parse(bodyText);
+    // v1.50.18-fix-anthropic-system: Anthropic's Messages API REJECTS
+    // role:"system" inside the messages array (HTTP 400:
+    // "messages: Unexpected role 'system'. The Messages API accepts
+    //  user and assistant roles only.").
+    // The PWA / prompt-augment / writing-style preamble can each
+    // produce a body with messages[0].role === 'system'; we normalise
+    // here so whatever upstream shape arrives, Anthropic gets a valid
+    // request: lift every leading system message into the top-level
+    // `system` string (merging with any existing top-level system).
+    if (Array.isArray(body.messages) && body.messages.length > 0) {
+      const collectedSystem = [];
+      let firstNonSystem = 0;
+      while (firstNonSystem < body.messages.length) {
+        const m = body.messages[firstNonSystem];
+        if (!m || m.role !== 'system') break;
+        // Content may be a string OR an Anthropic-style array of blocks.
+        if (typeof m.content === 'string') {
+          if (m.content.trim()) collectedSystem.push(m.content);
+        } else if (Array.isArray(m.content)) {
+          const txt = m.content
+            .filter(b => b && b.type === 'text' && typeof b.text === 'string')
+            .map(b => b.text)
+            .join('\n');
+          if (txt.trim()) collectedSystem.push(txt);
+        }
+        firstNonSystem++;
+      }
+      if (collectedSystem.length > 0) {
+        // Prepend lifted content to any pre-existing top-level system.
+        const existingTopSystem =
+          typeof body.system === 'string' ? body.system : '';
+        const merged = collectedSystem.join('\n\n') +
+          (existingTopSystem ? '\n\n' + existingTopSystem : '');
+        body.system = merged;
+        body.messages = body.messages.slice(firstNonSystem);
+      }
+    }
     // v2.0 + v1.50.2: force non-streaming when EITHER demo mode is on (so
     // we can parse usage) OR a writingStyleRequest is set (so we can
     // buffer the response for SCE + ATS post-processing). Production

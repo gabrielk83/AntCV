@@ -239,6 +239,67 @@ export function removeBannedItem(
 }
 
 /**
+ * v1.50.27 — bulk add. Accepts a raw string the user pasted (comma-,
+ * newline-, or semicolon-separated) and appends every distinct,
+ * non-empty item to the target bucket. Items already present in the
+ * bucket (case-insensitive) are silently skipped — matches
+ * addBannedItem semantics. Returns the number of items actually
+ * appended via the second slot of the tuple so the UI can show a
+ * "added N (M duplicates skipped)" status line.
+ */
+export function addBannedItems(
+  kind: 'words' | 'phrases',
+  lang: LangCode,
+  raw: string,
+): { prefs: WritingPrefs; added: number; skipped: number } {
+  const prev = readWritingPrefs();
+  const bucket = kind === 'words' ? { ...prev.extraBannedWords } : { ...prev.extraBannedPhrases };
+  const list = bucket[lang] ? bucket[lang].slice() : [];
+  const seen = new Set(list.map((x) => x.toLowerCase()));
+  const candidates = raw
+    .split(/[\n,;]+/)
+    .map((x) => x.trim())
+    .filter(Boolean);
+  let added = 0;
+  let skipped = 0;
+  for (const c of candidates) {
+    const key = c.toLowerCase();
+    if (seen.has(key)) { skipped++; continue; }
+    seen.add(key);
+    list.push(c);
+    added++;
+  }
+  if (added === 0) return { prefs: prev, added: 0, skipped };
+  bucket[lang] = list;
+  const next = writeWritingPrefs(
+    kind === 'words'
+      ? { extraBannedWords: bucket }
+      : { extraBannedPhrases: bucket },
+  );
+  return { prefs: next, added, skipped };
+}
+
+/**
+ * v1.50.27 — wipe every entry in the given (kind, lang) bucket.
+ * Useful as a "reset language" button. Other-language buckets are
+ * left untouched.
+ */
+export function clearBannedBucket(
+  kind: 'words' | 'phrases',
+  lang: LangCode,
+): WritingPrefs {
+  const prev = readWritingPrefs();
+  const bucket = kind === 'words' ? { ...prev.extraBannedWords } : { ...prev.extraBannedPhrases };
+  if (!bucket[lang] || bucket[lang].length === 0) return prev;
+  bucket[lang] = [];
+  return writeWritingPrefs(
+    kind === 'words'
+      ? { extraBannedWords: bucket }
+      : { extraBannedPhrases: bucket },
+  );
+}
+
+/**
  * Detect the editor language for the banned-words / banned-phrases panel.
  * Falls back to enabled-languages first item, then 'en'.
  */

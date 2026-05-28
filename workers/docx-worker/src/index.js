@@ -28,7 +28,7 @@ import { generateDocx } from './generate.js';
 import { validatePayload } from './schema.js';
 import { convertDocxToPdf, convertPdfToDocx, pdfProvider } from './cloudconvert.js';
 
-const VERSION = '1.13.0-pdf+p0f';
+const VERSION = '1.13.1-academic';
 
 // ──────────────────────────────────────────────────────────────────
 // Entry

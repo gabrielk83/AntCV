@@ -36,6 +36,15 @@ export function validatePayload(p) {
     errs.push(`layout must be one of: two_column, linear`);
   }
 
+  // v1.50.19 — writing_style is an open-ended string id (the writing-
+  // systems registry can add more over time, so we don't enum-check
+  // here). The renderer only acts on specific values it knows about
+  // (currently 'research-formal'); unknown strings fall through to
+  // legacy behaviour.
+  if (p.writing_style != null && typeof p.writing_style !== 'string') {
+    errs.push(`writing_style must be a string`);
+  }
+
   if (!p.personal_info || typeof p.personal_info !== 'object') {
     errs.push('personal_info object is required');
   } else {

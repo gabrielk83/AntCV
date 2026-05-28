@@ -111,6 +111,28 @@ export function readLegacyAtsTier() {
   }
 }
 
+// v1.50.19 — active writing style id (e.g. "research-formal"). Pulled
+// from personalInfo.writingPrefs.style so the DOCX worker can apply
+// style-specific layout for academic citation sections under
+// research-formal (hanging indent + justified, no bullets). Returns
+// '' (empty) when absent so the payload field can be omitted, keeping
+// the wire format compatible with older PWA bundles. The worker's
+// schema also tolerates an absent field — see docx-worker schema.js.
+export function readWritingStyle() {
+  try {
+    if (typeof localStorage === 'undefined') return '';
+    const raw = localStorage.getItem('personalInfo');
+    if (!raw) return '';
+    const pi = JSON.parse(raw);
+    const v = pi && pi.writingPrefs && typeof pi.writingPrefs.style === 'string'
+      ? pi.writingPrefs.style.trim().toLowerCase()
+      : '';
+    return v;
+  } catch (_) {
+    return '';
+  }
+}
+
 export function readTableWidthPctMap() {
   try {
     if (typeof localStorage === 'undefined') return {};
@@ -433,6 +455,14 @@ export function buildPayload({
     // client builds keep working unchanged.
     ...(typeof readPackageId === 'function' ? { package: readPackageId() } : {}),
     ...(typeof readLegacyAtsTier === 'function' && readLegacyAtsTier() ? { legacy_ats_tier: true } : {}),
+    // v1.50.19 — active writing style id. Worker v1.13.1+ uses this
+    // to switch academic citation sections (publications,
+    // conferences_talks, grants_fellowships, selected_research_outcomes,
+    // research_experience) to hanging-indent + justified layout when
+    // the value is 'research-formal'. Older workers silently ignore.
+    ...(typeof readWritingStyle === 'function'
+      ? (() => { const s = readWritingStyle(); return s ? { writing_style: s } : {}; })()
+      : {}),
     style: buildStyle(styleConfig, navyColor),
     font_sizes: buildFontSizes(fontSizes),
     sections: normalizeSections(docSections),

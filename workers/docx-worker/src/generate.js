@@ -245,6 +245,36 @@ function isPublicationsSection(s) {
   return /publications?/.test(t) || /\bpatent\b/.test(t);
 }
 
+// v1.50.19 — academic reference / citation sections. When the active
+// writing style is `research-formal` AND the section is one of these,
+// the renderer applies a hanging-indent + justified layout with no
+// bullets, matching the academic CV reference convention (first line
+// flush left, wrapped lines indented under the title).
+//
+// Identification is by stable section id first (matches src/lib/
+// writing-prefs.ts ACADEMIC_SECTIONS), then by title text as a
+// fallback for old payloads that pre-date the id rename.
+function isAcademicReferenceSection(s) {
+  const id = String(s?.id || '').toLowerCase().replace(/[\s-]+/g, '_').trim();
+  const ACADEMIC_IDS = new Set([
+    'publications',
+    'publications_main',
+    'selected_research_outcomes',
+    'grants_fellowships',
+    'conferences_talks',
+    'research_experience',
+  ]);
+  if (ACADEMIC_IDS.has(id)) return true;
+  // Title fallback — only used when id is empty / unrecognised. The
+  // narrow set of phrases here avoids hijacking unrelated sections.
+  const t = String(s?.title || '').toLowerCase();
+  if (/\b(?:grants?|fellowships?)\b/.test(t)) return true;
+  if (/\bconferences?\b/.test(t) && /\btalks?\b/.test(t)) return true;
+  if (/\bselected\s+research\s+outcomes?\b/.test(t)) return true;
+  if (/\bresearch\s+experience\b/.test(t)) return true;
+  return false;
+}
+
 // Split a publication citation into <name> + <description> at the first
 // em-dash, en-dash, or colon. Returns { name, rest }. Used to render
 // publication entries with the name in bold italic and the rest in
@@ -370,6 +400,15 @@ export async function generateDocx(payload) {
     // version of the worker generated it. Lets us tell at a glance
     // whether a bug report refers to old or new code.
     workerVersion: payload._workerVersion || '',
+    // v1.50.19 — active writing style (e.g. 'research-formal'). The
+    // PWA reads localStorage personalInfo.writingPrefs.style and
+    // forwards it on every export. Used by renderSimpleList /
+    // renderLabeledList to apply hanging-indent + justified layout
+    // for academic reference sections under research-formal. Absent
+    // when an older PWA bundle posts — falls back to legacy behaviour.
+    writingStyle: typeof payload.writing_style === 'string'
+      ? payload.writing_style.trim().toLowerCase()
+      : '',
     // contCounter is incremented inside `headingParagraph` to allocate
     // a unique placeholder + bookmark id per section heading. The
     // post-processor pairs each placeholder with its bookmark by this
@@ -2087,16 +2126,29 @@ function renderSimpleList(s, ctx, isSidebar, italic) {
   const { style, fs } = ctx;
   if (!Array.isArray(s.items)) return [];
   const autoNoBullet = isNoBulletCenteredSection(s);
+  // v1.50.19 — academic-reference auto-format. Activates when the
+  // active writing style is research-formal AND the section is one of
+  // the academic citation sections (publications, conferences_talks,
+  // grants_fellowships, selected_research_outcomes, research_experience).
+  // Layout: no bullets, justified, hanging indent so wrapped lines
+  // align under the first character of the entry — standard academic
+  // CV reference convention. The hanging indent is applied per-
+  // paragraph below; this flag controls the bullet + alignment choice.
+  const isAcademic = ctx.writingStyle === 'research-formal' &&
+                     isAcademicReferenceSection(s);
   // Sidebar lists are bullet-free by default — the user spec is:
   // "all sidebar content has no bullets in sidebar items by default".
   // Explicit s.bullet_style: 'bullet' opts back in. Main column keeps
   // the legacy "bullets unless explicitly off" behaviour.
-  const useBullets = autoNoBullet
+  const useBullets = isAcademic
     ? false
-    : (isSidebar
-        ? (s.bullet_style === 'bullet')
-        : (s.bullet_style || 'bullet') !== 'none');
+    : autoNoBullet
+      ? false
+      : (isSidebar
+          ? (s.bullet_style === 'bullet')
+          : (s.bullet_style || 'bullet') !== 'none');
   // Default alignment depends on which auto-format applies:
+  //   - academic-reference  → justified + hanging indent (research-formal)
   //   - publications/patent → justified (multi-line citation wrapping)
   //   - certifications      → centred (short single-line entries)
   //   - sidebar bullets     → justified (multi-line skill descriptions in
@@ -2105,11 +2157,13 @@ function renderSimpleList(s, ctx, isSidebar, italic) {
   //   - main bullets        → left
   //   - centered no-bullet  → center
   // An explicit `s.align` overrides the auto choice.
-  const autoAlign = isPublicationsSection(s)
+  const autoAlign = isAcademic
     ? 'justify'
-    : autoNoBullet
-      ? 'center'
-      : (useBullets ? (isSidebar ? 'justify' : 'left') : 'center');
+    : isPublicationsSection(s)
+      ? 'justify'
+      : autoNoBullet
+        ? 'center'
+        : (useBullets ? (isSidebar ? 'justify' : 'left') : 'center');
   // CJLR v1.14.3 — `item_alignment.__group__` is the highest-
   // priority section-wide source (set by the per-section cycler
   // in the editor). Per-item overrides at "items.<i>" are checked
@@ -2238,13 +2292,22 @@ function renderSimpleList(s, ctx, isSidebar, italic) {
     // CJLR v1.14.3 — per-item override path is "items.<original_idx>"
     const itemAlign = paraAlignPath(s, 'items.' + idx) ?? a;
     const para = {
-      spacing: { before: 30, after: 30, line: 252, lineRule: 'auto' },
+      spacing: isAcademic
+        ? { before: 80, after: 80, line: 264, lineRule: 'auto' }
+        : { before: 30, after: 30, line: 252, lineRule: 'auto' },
       alignment: itemAlign,
       shading: isSidebar
         ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: 'auto' }
         : undefined,
       children,
     };
+    // v1.50.19 — hanging indent on academic-reference entries.
+    // left = 360 dxa (~0.25") shifts the whole paragraph right;
+    // hanging = 360 pulls the first line back to the margin, leaving
+    // wrapped lines aligned under the first character of the entry.
+    if (isAcademic) {
+      para.indent = { left: 360, hanging: 360 };
+    }
     if (useBullets) {
       para.numbering = { reference: isSidebar ? 'antcv-sb-bullet' : 'antcv-bullet', level: 0 };
     }

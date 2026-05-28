@@ -16,3 +16,8 @@
 *.otf  binary
 *.eot  binary
 *.wasm binary
+
+# Shell scripts and git hooks MUST stay LF-terminated. POSIX sh chokes on
+# `#!/usr/bin/env sh\r` if Windows checkout rewrites the shebang line.
+scripts/git-hooks/* text eol=lf
+*.sh                text eol=lf

@@ -15,6 +15,17 @@
   'use strict';
 
   const SCRIPT_VERSION = '1.40.341';
+
+  // v1.50.23 — BRAND constants. Tone helper sits inside the sidebar
+  // tone-bank UI (dark navy bg); colours are editor chrome, constant
+  // across all 7 visual packages.
+  const BRAND = {
+    white:       '#fff',         // option/button text on dark bg
+    optionText:  '#1a1a1a',      // dropdown option text (light bg)
+    optionBg:    '#ffffff',      // dropdown option bg
+    tealBright:  '#01B7BB',      // save-button accent
+  };
+
   const CUSTOMS_KEY = 'antcv:tone:customs';
   const SELECTED_SLOT_KEY = 'antcv:tone:selected-slot';
   const ACTIVE_CUSTOM_KEY = 'antcv:tone:active-custom';
@@ -378,7 +389,7 @@
 
     const slotSelect = document.createElement('select');
     slotSelect.setAttribute('data-antcv-tone-helper-slot-select', '1');
-    slotSelect.style.cssText = 'padding:3px 6px;font-size:11px;background:rgba(255,255,255,0.06);color:#fff;border:1px solid rgba(255,255,255,0.18);border-radius:4px;font-family:inherit;min-width:140px;';
+    slotSelect.style.cssText = `padding:3px 6px;font-size:11px;background:rgba(255,255,255,0.06);color:${BRAND.white};border:1px solid rgba(255,255,255,0.18);border-radius:4px;font-family:inherit;min-width:140px;`;
     for (let n = 1; n <= 3; n++) {
       const o = document.createElement('option');
       o.value = String(n);
@@ -386,8 +397,8 @@
         ? window.AntcvI18n.t('tone.custom', 'Custom')
         : 'Custom';
       o.textContent = customBase + ' ' + n;
-      o.style.color = '#1a1a1a';
-      o.style.background = '#ffffff';
+      o.style.color = BRAND.optionText;
+      o.style.background = BRAND.optionBg;
       slotSelect.appendChild(o);
     }
     slotSelect.value = String(readSelectedSlot());
@@ -397,7 +408,7 @@
     });
     slotRow.appendChild(slotSelect);
 
-    const saveBtn = makeBtn('Save', '#01B7BB');
+    const saveBtn = makeBtn('Save', BRAND.tealBright);
     saveBtn.setAttribute('data-antcv-tone-helper-save', '1');
     saveBtn.addEventListener('click', function () {
       const bank = findPreferredToneBank();
@@ -481,7 +492,7 @@
     b.textContent = label;
     const bg = accent ? 'rgba(1,183,187,0.15)' : 'rgba(255,255,255,0.06)';
     const border = accent ? ('1px solid ' + accent) : '1px solid rgba(255,255,255,0.18)';
-    const color = accent || '#fff';
+    const color = accent || BRAND.white;
     b.style.cssText = 'padding:3px 8px;font-size:11px;font-weight:600;background:' + bg + ';color:' + color + ';border:' + border + ';border-radius:4px;cursor:pointer;font-family:inherit;';
     return b;
   }

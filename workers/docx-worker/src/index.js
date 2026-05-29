@@ -29,7 +29,7 @@ import { validatePayload } from './schema.js';
 import { convertDocxToPdf, pdfProvider } from './cloudconvert.js';
 import { countPdfPages } from './pdf-page-count.js';
 
-const VERSION = '1.13.0-pdf';
+const VERSION = '1.14.13';
 
 // ──────────────────────────────────────────────────────────────────
 // Entry

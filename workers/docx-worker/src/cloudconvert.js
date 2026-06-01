@@ -213,3 +213,138 @@ export function pdfProvider(env) {
   }
   return null;
 }
+
+/**
+ * P0-F: convert PDF bytes to DOCX bytes via CloudConvert.
+ * Used by the /api/jd/pdf-to-docx route so the PWA can normalise
+ * PDF JDs into DOCX upstream of the canonical DOCX table parser.
+ *
+ * Mirrors convertDocxToPdf above with formats swapped:
+ *   import/base64 (pdf) → convert (pdf → docx) → export/url → fetch
+ *
+ * @param {Uint8Array|ArrayBuffer|Buffer} pdfBytes - input PDF bytes
+ * @param {string} apiKey - CloudConvert API key (from env)
+ * @param {Object} [opts]
+ * @param {string} [opts.filename] - optional filename for the import task
+ * @returns {Promise<{ buffer: Uint8Array, jobId: string, durationMs: number }>}
+ * @throws Error if any step fails or the timeout is hit
+ */
+export async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
+  if (!apiKey) {
+    throw new Error('CLOUDCONVERT_API_KEY not configured on the worker');
+  }
+  const filename = (opts.filename || 'jd') + '.pdf';
+  const startMs = Date.now();
+
+  let bytes;
+  if (pdfBytes instanceof Uint8Array) {
+    bytes = pdfBytes;
+  } else if (pdfBytes instanceof ArrayBuffer) {
+    bytes = new Uint8Array(pdfBytes);
+  } else if (typeof Buffer !== 'undefined' && Buffer.isBuffer(pdfBytes)) {
+    bytes = new Uint8Array(pdfBytes.buffer, pdfBytes.byteOffset, pdfBytes.byteLength);
+  } else {
+    throw new Error('convertPdfToDocx: unsupported input type');
+  }
+
+  let binStr = '';
+  const CHUNK = 8192;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binStr += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  const b64 = btoa(binStr);
+
+  console.log(`[cloudconvert] pdf-to-docx: creating job, input=${bytes.length}B base64=${b64.length}ch`);
+  const createResp = await fetch(`${API_BASE}/jobs`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      tasks: {
+        'import-pdf': {
+          operation: 'import/base64',
+          file: b64,
+          filename,
+        },
+        'convert-to-docx': {
+          operation: 'convert',
+          input: 'import-pdf',
+          input_format: 'pdf',
+          output_format: 'docx',
+          // LibreOffice is the default engine. It preserves table
+          // structure well — that's the whole point of this route.
+          engine: 'libreoffice',
+        },
+        'export-docx': {
+          operation: 'export/url',
+          input: 'convert-to-docx',
+          inline: false,
+          archive_multiple_files: false,
+        },
+      },
+      tag: 'antcv-pdf-to-docx',
+    }),
+  });
+
+  if (!createResp.ok) {
+    const errBody = await createResp.text().catch(() => '');
+    throw new Error(`CloudConvert pdf-to-docx job creation failed: ${createResp.status} ${errBody.slice(0, 500)}`);
+  }
+  const createJson = await createResp.json();
+  const jobId = createJson?.data?.id;
+  if (!jobId) {
+    throw new Error('CloudConvert pdf-to-docx job created but no id returned');
+  }
+  console.log(`[cloudconvert] pdf-to-docx job ${jobId} created`);
+
+  let exportFileUrl = null;
+  let pollCount = 0;
+  while (Date.now() - startMs < TIMEOUT_MS) {
+    await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+    pollCount++;
+    const statusResp = await fetch(`${API_BASE}/jobs/${jobId}`, {
+      headers: { 'Authorization': `Bearer ${apiKey}` },
+    });
+    if (!statusResp.ok) {
+      const errBody = await statusResp.text().catch(() => '');
+      throw new Error(`CloudConvert pdf-to-docx status check failed: ${statusResp.status} ${errBody.slice(0, 500)}`);
+    }
+    const statusJson = await statusResp.json();
+    const jobStatus = statusJson?.data?.status;
+    if (jobStatus === 'error') {
+      const tasks = statusJson?.data?.tasks || [];
+      const failed = tasks.find((t) => t.status === 'error');
+      throw new Error(`CloudConvert pdf-to-docx job ${jobId} errored: ${failed?.code || 'unknown'} — ${failed?.message || ''}`);
+    }
+    if (jobStatus === 'finished') {
+      const tasks = statusJson?.data?.tasks || [];
+      const exportTask = tasks.find((t) => t.name === 'export-docx');
+      const files = exportTask?.result?.files || [];
+      if (!files.length || !files[0].url) {
+        throw new Error(`CloudConvert pdf-to-docx finished but export-docx produced no file URL`);
+      }
+      exportFileUrl = files[0].url;
+      console.log(`[cloudconvert] pdf-to-docx job ${jobId} finished after ${pollCount} polls (${Date.now() - startMs}ms)`);
+      break;
+    }
+  }
+
+  if (!exportFileUrl) {
+    throw new Error(`CloudConvert pdf-to-docx job ${jobId} did not complete within ${TIMEOUT_MS}ms (polled ${pollCount} times)`);
+  }
+
+  const docxResp = await fetch(exportFileUrl);
+  if (!docxResp.ok) {
+    throw new Error(`CloudConvert pdf-to-docx download failed: ${docxResp.status}`);
+  }
+  const docxBuffer = new Uint8Array(await docxResp.arrayBuffer());
+  console.log(`[cloudconvert] downloaded DOCX: ${docxBuffer.length}B`);
+
+  return {
+    buffer: docxBuffer,
+    jobId,
+    durationMs: Date.now() - startMs,
+  };
+}

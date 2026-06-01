@@ -5,7 +5,10 @@
  */
 (function(){
   'use strict';
-  const VERSION = '1.40.238';
+  const VERSION = '1.40.238-preview-guard';
+  // v1.40.238-preview-guard: Preview is button-free. Profile/Work-style
+  // CJLR controls must not attach to rows inside .antcv-preview-paper.
+  const isInPreviewPaper = el => { if(!el) return false; const p=document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]'); return !!(p && p.contains(el)); };
   const KEY = 'antcv.profileWorkstyleParagraphAlignment.v1';
   const ALIGN = ['center','justify','left','right'];
   const ICON = { left:'⇤', center:'↔', justify:'☰', right:'⇥' };
@@ -42,8 +45,10 @@
   function panelRows(){
     const out=[];
     document.querySelectorAll('button').forEach(btn=>{
+      if(isInPreviewPaper(btn)) return;
       let p=btn.parentElement;
       for(let d=0; p && d<7; d++,p=p.parentElement){
+        if(isInPreviewPaper(p)) break;
         const text = clean(p.textContent);
         const sec = sectionFromText(text);
         if(sec && p.querySelectorAll && p.querySelectorAll('button').length>=3){

@@ -522,6 +522,31 @@ ${text}`;
     return out;
   }
 
+  // ─── BRAND constants (v1.50.23) ──────────────────────────────────
+  // Bucket 2 hex-extraction. The data-import modal + FAB is editor
+  // chrome — palette stays constant across all 7 visual packages.
+  // 22+ inline hex literals → single named map. Roles:
+  var BRAND = {
+    teal:        '#00746E',  // FAB bg + heading
+    tealBright:  '#01B7BB',  // FAB hover, primary button, busy text
+    white:       '#fff',
+    navy:        '#283556',  // secondary button, code text
+    navyText:    '#1a2433',  // modal body text
+    bodyMuted:   '#444',     // blurb text
+    mutedDark:   '#666',     // staged-file summary, empty diff
+    mutedSoft:   '#888',     // diff "before" column
+    subtleBg:    '#fbfcfd',  // files-list card bg
+    borderLight: '#d6dde3',  // files-list border
+    tableHead:   '#f5f7f9',  // diff table thead bg
+    borderMed:   '#ddd',     // diff table borders
+    borderFaint: '#eee',     // diff row borders
+    successBg:   '#f0faf3',  // new-row bg
+    warningBg:   '#fff8e8',  // changed-row bg
+    errorBg:     '#fdecea',  // error banner bg
+    errorBorder: '#f5c2c0',  // error banner border
+    errorText:   '#a33',     // error banner text + per-file error
+  };
+
   // ─── UI ──────────────────────────────────────────────────────────
   const style = document.createElement('style');
   style.textContent = `
@@ -529,12 +554,12 @@ ${text}`;
       position: fixed; z-index: 99998;
       bottom: ${CFG.bottomOffset}px; left: ${CFG.leftOffset}px;
       width: 44px; height: 44px; border-radius: 50%;
-      background: #00746E; color: #fff; border: none; cursor: pointer;
+      background: ${BRAND.teal}; color: ${BRAND.white}; border: none; cursor: pointer;
       font-size: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.18);
       display: flex; align-items: center; justify-content: center;
       transition: background 0.15s;
     }
-    .antcv-import-fab:hover { background: #01B7BB; }
+    .antcv-import-fab:hover { background: ${BRAND.tealBright}; }
 
     .antcv-import-backdrop {
       position: fixed; inset: 0; z-index: 2147483300;
@@ -544,19 +569,19 @@ ${text}`;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
     .antcv-import-modal {
-      background: #fff; color: #1a2433;
+      background: ${BRAND.white}; color: ${BRAND.navyText};
       max-width: 720px; width: 100%; max-height: 90vh; overflow: auto;
       border-radius: 10px; padding: 20px;
       box-shadow: 0 8px 32px rgba(0,0,0,0.25);
     }
     .antcv-import-modal h2 {
-      margin: 0 0 6px; color: #00746E; font-size: 18px; font-weight: 600;
+      margin: 0 0 6px; color: ${BRAND.teal}; font-size: 18px; font-weight: 600;
     }
     .antcv-import-modal .antcv-import-blurb {
-      color: #444; font-size: 13px; line-height: 1.5; margin-bottom: 14px;
+      color: ${BRAND.bodyMuted}; font-size: 13px; line-height: 1.5; margin-bottom: 14px;
     }
     .antcv-import-modal .antcv-import-files {
-      background: #fbfcfd; border: 1px solid #d6dde3; border-radius: 6px;
+      background: ${BRAND.subtleBg}; border: 1px solid ${BRAND.borderLight}; border-radius: 6px;
       padding: 12px; margin-bottom: 12px;
     }
     .antcv-import-modal .antcv-import-staged {
@@ -569,37 +594,37 @@ ${text}`;
       width: 100%; border-collapse: collapse; font-size: 12px;
     }
     .antcv-import-modal table.antcv-diff th {
-      background: #f5f7f9; text-align: left; padding: 6px;
-      position: sticky; top: 0; border-bottom: 1px solid #ddd;
+      background: ${BRAND.tableHead}; text-align: left; padding: 6px;
+      position: sticky; top: 0; border-bottom: 1px solid ${BRAND.borderMed};
     }
     .antcv-import-modal table.antcv-diff td {
-      padding: 4px 6px; border-top: 1px solid #eee; vertical-align: top;
+      padding: 4px 6px; border-top: 1px solid ${BRAND.borderFaint}; vertical-align: top;
     }
-    .antcv-import-modal table.antcv-diff tr.new { background: #f0faf3; }
-    .antcv-import-modal table.antcv-diff tr.change { background: #fff8e8; }
+    .antcv-import-modal table.antcv-diff tr.new { background: ${BRAND.successBg}; }
+    .antcv-import-modal table.antcv-diff tr.change { background: ${BRAND.warningBg}; }
     .antcv-import-modal .antcv-diff-wrap {
-      max-height: 320px; overflow: auto; border: 1px solid #ddd; border-radius: 6px;
+      max-height: 320px; overflow: auto; border: 1px solid ${BRAND.borderMed}; border-radius: 6px;
     }
     .antcv-import-modal .antcv-import-actions {
       margin-top: 14px; display: flex; gap: 8px; justify-content: flex-end;
     }
     .antcv-import-modal button.primary {
-      background: #01B7BB; color: #fff; border: none; padding: 8px 16px;
+      background: ${BRAND.tealBright}; color: ${BRAND.white}; border: none; padding: 8px 16px;
       border-radius: 5px; cursor: pointer; font-size: 13px; font-weight: 500;
     }
     .antcv-import-modal button.secondary {
-      background: #fff; color: #283556; border: 1px solid #283556;
+      background: ${BRAND.white}; color: ${BRAND.navy}; border: 1px solid ${BRAND.navy};
       padding: 8px 16px; border-radius: 5px; cursor: pointer; font-size: 13px;
     }
     .antcv-import-modal button:disabled { opacity: 0.5; cursor: not-allowed; }
     .antcv-import-modal .antcv-import-err {
-      background: #fdecea; border: 1px solid #f5c2c0; color: #a33;
+      background: ${BRAND.errorBg}; border: 1px solid ${BRAND.errorBorder}; color: ${BRAND.errorText};
       padding: 8px 10px; border-radius: 5px; margin: 8px 0; font-size: 12px;
     }
     .antcv-import-modal .antcv-import-busy {
-      color: #01B7BB; font-size: 13px; margin: 12px 0;
+      color: ${BRAND.tealBright}; font-size: 13px; margin: 12px 0;
     }
-    .antcv-import-modal code { font-size: 11px; color: #283556; }
+    .antcv-import-modal code { font-size: 11px; color: ${BRAND.navy}; }
   `;
   document.head.appendChild(style);
 
@@ -691,9 +716,9 @@ ${text}`;
     const stagedDiv = modalState.modal.querySelector('#antcv-import-staged');
     const lines = modalState.staged.map(s => {
       const safeName = String(s.file.name).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
-      if (s.error) return `<li style="color:#a33"><code>${safeName}</code> → ${s.error}</li>`;
+      if (s.error) return `<li style="color:${BRAND.errorText}"><code>${safeName}</code> → ${s.error}</li>`;
       const label = KIND_LABELS[s.kind] || s.kind;
-      return `<li><code>${safeName}</code> → <strong>${label}</strong> · <span style="color:#666">${s.summary || ''}</span></li>`;
+      return `<li><code>${safeName}</code> → <strong>${label}</strong> · <span style="color:${BRAND.mutedDark}">${s.summary || ''}</span></li>`;
     }).join('');
     stagedDiv.innerHTML = lines ? `<div class="antcv-import-staged"><strong>Detected files:</strong><ul>${lines}</ul></div>` : '';
 
@@ -719,7 +744,7 @@ ${text}`;
     }
 
     if (!rows.length) {
-      diffDiv.innerHTML = '<div style="padding:8px;color:#666;font-size:13px">No changes to apply.</div>';
+      diffDiv.innerHTML = `<div style="padding:8px;color:${BRAND.mutedDark};font-size:13px">No changes to apply.</div>`;
       modalState.modal.querySelector('#antcv-import-apply').disabled = true;
       return;
     }
@@ -737,7 +762,7 @@ ${text}`;
               <tr class="${r.kind}" data-key="${r.key.replace(/"/g, '&quot;')}">
                 <td><input type="checkbox" checked data-toggle="${r.key.replace(/"/g, '&quot;')}"></td>
                 <td><code>${r.key}</code></td>
-                <td style="color:#888">${r.before === undefined ? '—' : escapeHtml(String(r.before))}</td>
+                <td style="color:${BRAND.mutedSoft}">${r.before === undefined ? '—' : escapeHtml(String(r.before))}</td>
                 <td>${escapeHtml(String(r.after))}</td>
               </tr>`).join('')}
           </tbody>
@@ -908,7 +933,7 @@ ${text}`;
         background: rgba(1, 183, 187, 0.18);
         border: 1px solid rgba(1, 183, 187, 0.5);
         border-radius: 6px;
-        color: #01B7BB;
+        color: ${BRAND.tealBright};
         font-size: 11px;
         font-weight: 600;
         cursor: pointer;

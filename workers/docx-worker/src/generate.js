@@ -49,6 +49,7 @@ import {
 } from './vendor/docx.mjs';
 
 import { postProcessDocx } from './post-process.js';
+import { getPackageStyle, normalisePackageId } from './palette.js';
 
 const PAGE_W = 11906;
 const PAGE_H = 16838;
@@ -244,6 +245,36 @@ function isPublicationsSection(s) {
   return /publications?/.test(t) || /\bpatent\b/.test(t);
 }
 
+// v1.50.19 — academic reference / citation sections. When the active
+// writing style is `research-formal` AND the section is one of these,
+// the renderer applies a hanging-indent + justified layout with no
+// bullets, matching the academic CV reference convention (first line
+// flush left, wrapped lines indented under the title).
+//
+// Identification is by stable section id first (matches src/lib/
+// writing-prefs.ts ACADEMIC_SECTIONS), then by title text as a
+// fallback for old payloads that pre-date the id rename.
+function isAcademicReferenceSection(s) {
+  const id = String(s?.id || '').toLowerCase().replace(/[\s-]+/g, '_').trim();
+  const ACADEMIC_IDS = new Set([
+    'publications',
+    'publications_main',
+    'selected_research_outcomes',
+    'grants_fellowships',
+    'conferences_talks',
+    'research_experience',
+  ]);
+  if (ACADEMIC_IDS.has(id)) return true;
+  // Title fallback — only used when id is empty / unrecognised. The
+  // narrow set of phrases here avoids hijacking unrelated sections.
+  const t = String(s?.title || '').toLowerCase();
+  if (/\b(?:grants?|fellowships?)\b/.test(t)) return true;
+  if (/\bconferences?\b/.test(t) && /\btalks?\b/.test(t)) return true;
+  if (/\bselected\s+research\s+outcomes?\b/.test(t)) return true;
+  if (/\bresearch\s+experience\b/.test(t)) return true;
+  return false;
+}
+
 // Split a publication citation into <name> + <description> at the first
 // em-dash, en-dash, or colon. Returns { name, rest }. Used to render
 // publication entries with the name in bold italic and the rest in
@@ -321,9 +352,19 @@ function inlineRuns(text, baseRun) {
 // Public entry
 // ──────────────────────────────────────────────────────────────────
 export async function generateDocx(payload) {
-  const style = mergeStyle(payload.style || {});
+  // v1.50.8 — when the PWA sends `package` (locked-source plan §3) the
+  // worker derives its base palette from packages/registry.json via
+  // palette.js. payload.style is then layered on top so explicit user
+  // overrides still win. When `package` is absent (pre-v1.50.8 PWAs),
+  // mergeStyle starts from the legacy DEFAULTS — guaranteed-identical
+  // behaviour for existing clients.
+  const style = mergeStyle(payload.style || {}, payload.package, payload.legacy_ats_tier === true);
   const fontSizes = { ...FONT_DEFAULTS, ...(payload.font_sizes || {}) };
   const lang = payload.language || 'en';
+  // PB-003: continuation suffix localised against `lang`. Mirrors the
+  // PWA-side antcv-i18n key 'pb.cont'. Falls back to English.
+  const CONT_SUFFIX = { en: '(CONT.)', da: '(FORTS.)', es: '(CONT.)', zh: '（续）' };
+  const contSuffix = CONT_SUFFIX[lang] || CONT_SUFFIX.en;
   const layout = payload.layout || (payload.doc === 'cl' ? 'linear' : 'two_column');
   const headerAlign = {
     name: previewAlign(payload, 'name', 'center'),
@@ -335,6 +376,7 @@ export async function generateDocx(payload) {
     style,
     fs: fontSizes,
     lang,
+    contSuffix,
     pi: payload.personal_info || {},
     meta: payload.meta || {},
     doc: payload.doc,
@@ -358,6 +400,15 @@ export async function generateDocx(payload) {
     // version of the worker generated it. Lets us tell at a glance
     // whether a bug report refers to old or new code.
     workerVersion: payload._workerVersion || '',
+    // v1.50.19 — active writing style (e.g. 'research-formal'). The
+    // PWA reads localStorage personalInfo.writingPrefs.style and
+    // forwards it on every export. Used by renderSimpleList /
+    // renderLabeledList to apply hanging-indent + justified layout
+    // for academic reference sections under research-formal. Absent
+    // when an older PWA bundle posts — falls back to legacy behaviour.
+    writingStyle: typeof payload.writing_style === 'string'
+      ? payload.writing_style.trim().toLowerCase()
+      : '',
     // contCounter is incremented inside `headingParagraph` to allocate
     // a unique placeholder + bookmark id per section heading. The
     // post-processor pairs each placeholder with its bookmark by this
@@ -460,12 +511,32 @@ function countByteMatches(haystack, needle) {
   return count;
 }
 
-function mergeStyle(input) {
-  const s = { ...DEFAULTS };
+function mergeStyle(input, packageId, legacyAtsTier) {
+  // v1.50.8 — when `packageId` is a non-empty string, derive the base
+  // palette from packages/registry.json via palette.js. Otherwise fall
+  // back to the legacy DEFAULTS so pre-v1.50.8 PWAs see no behavioural
+  // change. payload.style overrides win over both.
+  //
   // Non-color string keys that should pass through verbatim (not be
   // uppercased by hex()). Extend this list when new layout-control
   // string keys are added.
   const PASSTHROUGH = new Set(['sidebarPosition']);
+
+  let basePalette;
+  if (typeof packageId === 'string' && packageId.trim()) {
+    // getPackageStyle always returns a complete DEFAULTS-shaped object,
+    // even when the input is unknown or a legacy alias.
+    basePalette = getPackageStyle(packageId, legacyAtsTier === true);
+    // The previous DEFAULTS had a 'mainHeadFont' that included " Bold"
+    // suffix in some legacy bakes — the registry-derived palette uses
+    // the bare family name plus the existing per-run bold attribute.
+    // Nothing else from DEFAULTS should leak through when a package is
+    // supplied.
+  } else {
+    basePalette = { ...DEFAULTS };
+  }
+
+  const s = { ...basePalette };
   for (const [k, v] of Object.entries(input || {})) {
     if (typeof v === 'string') {
       s[k] = PASSTHROUGH.has(k) ? v : hex(v);
@@ -1289,10 +1360,19 @@ function renderSection(s, ctx, isSidebar) {
   // would inherit font-size styling and visibly nudge spacing on
   // the new page; an empty pageBreakBefore paragraph collapses to
   // zero height.
-  const _sidebarTargetTitle = String([s.title, s.id, s.type].join(' '));
-  const _sidebarFirstItemBreak = !!(isSidebar && /regulatory context|additional information/i.test(_sidebarTargetTitle) && Array.isArray(s.items) && s.items.length && s.items[0] && typeof s.items[0] === 'object' && Number(s.items[0]._page) >= 2);
-  if (_sidebarFirstItemBreak) s._antcvFirstItemPageMoved = true;
-  const pageBreakPara = (s.pageBreakBefore === true || _sidebarFirstItemBreak)
+  // PB-002 (v2): a page break on the FIRST item in a section moves
+  // the WHOLE section (including its heading) to the next page. This
+  // generalises v1.14.12's sidebar-only detection — the same rule
+  // applies to every section type. The renderer for each section
+  // shape then skips the redundant in-loop break+contHeader for that
+  // first item via the s._antcvFirstItemPageMoved flag.
+  const _firstItemPageBreak = !!(
+    Array.isArray(s.items) && s.items.length &&
+    s.items[0] && typeof s.items[0] === 'object' &&
+    Number(s.items[0]._page) >= 2
+  );
+  if (_firstItemPageBreak) s._antcvFirstItemPageMoved = true;
+  const pageBreakPara = (s.pageBreakBefore === true || _firstItemPageBreak)
     ? [new Paragraph({ pageBreakBefore: true, spacing: { before: 0, after: 0 } })]
     : [];
 
@@ -2046,16 +2126,29 @@ function renderSimpleList(s, ctx, isSidebar, italic) {
   const { style, fs } = ctx;
   if (!Array.isArray(s.items)) return [];
   const autoNoBullet = isNoBulletCenteredSection(s);
+  // v1.50.19 — academic-reference auto-format. Activates when the
+  // active writing style is research-formal AND the section is one of
+  // the academic citation sections (publications, conferences_talks,
+  // grants_fellowships, selected_research_outcomes, research_experience).
+  // Layout: no bullets, justified, hanging indent so wrapped lines
+  // align under the first character of the entry — standard academic
+  // CV reference convention. The hanging indent is applied per-
+  // paragraph below; this flag controls the bullet + alignment choice.
+  const isAcademic = ctx.writingStyle === 'research-formal' &&
+                     isAcademicReferenceSection(s);
   // Sidebar lists are bullet-free by default — the user spec is:
   // "all sidebar content has no bullets in sidebar items by default".
   // Explicit s.bullet_style: 'bullet' opts back in. Main column keeps
   // the legacy "bullets unless explicitly off" behaviour.
-  const useBullets = autoNoBullet
+  const useBullets = isAcademic
     ? false
-    : (isSidebar
-        ? (s.bullet_style === 'bullet')
-        : (s.bullet_style || 'bullet') !== 'none');
+    : autoNoBullet
+      ? false
+      : (isSidebar
+          ? (s.bullet_style === 'bullet')
+          : (s.bullet_style || 'bullet') !== 'none');
   // Default alignment depends on which auto-format applies:
+  //   - academic-reference  → justified + hanging indent (research-formal)
   //   - publications/patent → justified (multi-line citation wrapping)
   //   - certifications      → centred (short single-line entries)
   //   - sidebar bullets     → justified (multi-line skill descriptions in
@@ -2064,11 +2157,13 @@ function renderSimpleList(s, ctx, isSidebar, italic) {
   //   - main bullets        → left
   //   - centered no-bullet  → center
   // An explicit `s.align` overrides the auto choice.
-  const autoAlign = isPublicationsSection(s)
+  const autoAlign = isAcademic
     ? 'justify'
-    : autoNoBullet
-      ? 'center'
-      : (useBullets ? (isSidebar ? 'justify' : 'left') : 'center');
+    : isPublicationsSection(s)
+      ? 'justify'
+      : autoNoBullet
+        ? 'center'
+        : (useBullets ? (isSidebar ? 'justify' : 'left') : 'center');
   // CJLR v1.14.3 — `item_alignment.__group__` is the highest-
   // priority section-wide source (set by the per-section cycler
   // in the editor). Per-item overrides at "items.<i>" are checked
@@ -2139,7 +2234,7 @@ function renderSimpleList(s, ctx, isSidebar, italic) {
       ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: 'auto' }
       : undefined,
     children: [new TextRun({
-      text: sectionTitleUpper + ' (CONT.)',
+      text: sectionTitleUpper + ' ' + (ctx.contSuffix || '(CONT.)'),
       bold: true,
       color: isSidebar ? style.sidebarHeadColor : style.mainHeadColor,
       size: pt2hp(isSidebar ? fs.sbHead : fs.mainHead),
@@ -2153,14 +2248,23 @@ function renderSimpleList(s, ctx, isSidebar, italic) {
 
   const isPubs = isPublicationsSection(s);
   const outParas = [];
+  let _simpleSkippedFirstSectionBreak = false;
   for (const { idx, text: item } of dedupedPairs) {
     // Check the ORIGINAL item for a _page assignment. The source
     // could be a plain string, in which case there's no page metadata.
     const src = s.items && s.items[idx];
     const page = (src && typeof src === 'object' && Number(src._page) >= 2) ? Number(src._page) : 0;
     if (page >= 2) {
-      outParas.push(makeBreakPara());
-      outParas.push(makeContHeader());
+      // PB-002: when the section's first item already moved the whole
+      // section to the next page (s._antcvFirstItemPageMoved set in
+      // renderSection), skip the in-loop break+contHeader for that
+      // first flagged item to avoid duplicating the section heading.
+      if (idx === 0 && s._antcvFirstItemPageMoved && !_simpleSkippedFirstSectionBreak) {
+        _simpleSkippedFirstSectionBreak = true;
+      } else {
+        outParas.push(makeBreakPara());
+        outParas.push(makeContHeader());
+      }
     }
     const baseRun = {
       color: isSidebar ? style.sidebarTextColor : style.mainTextColor,
@@ -2188,13 +2292,22 @@ function renderSimpleList(s, ctx, isSidebar, italic) {
     // CJLR v1.14.3 — per-item override path is "items.<original_idx>"
     const itemAlign = paraAlignPath(s, 'items.' + idx) ?? a;
     const para = {
-      spacing: { before: 30, after: 30, line: 252, lineRule: 'auto' },
+      spacing: isAcademic
+        ? { before: 80, after: 80, line: 264, lineRule: 'auto' }
+        : { before: 30, after: 30, line: 252, lineRule: 'auto' },
       alignment: itemAlign,
       shading: isSidebar
         ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: 'auto' }
         : undefined,
       children,
     };
+    // v1.50.19 — hanging indent on academic-reference entries.
+    // left = 360 dxa (~0.25") shifts the whole paragraph right;
+    // hanging = 360 pulls the first line back to the margin, leaving
+    // wrapped lines aligned under the first character of the entry.
+    if (isAcademic) {
+      para.indent = { left: 360, hanging: 360 };
+    }
     if (useBullets) {
       para.numbering = { reference: isSidebar ? 'antcv-sb-bullet' : 'antcv-bullet', level: 0 };
     }
@@ -2397,7 +2510,7 @@ function renderLabeledList(s, ctx, isSidebar) {
         ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: 'auto' }
         : undefined,
       children: [new TextRun({
-        text: sectionTitleUpper + ' (CONT.)',
+        text: sectionTitleUpper + ' ' + (ctx.contSuffix || '(CONT.)'),
         bold: true,
         color: isSidebar ? style.sidebarHeadColor : style.mainHeadColor,
         size: pt2hp(isSidebar ? fs.sbHead : fs.mainHead),
@@ -2586,7 +2699,7 @@ function renderEducation(s, ctx, isSidebar) {
         ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: 'auto' }
         : undefined,
       children: [new TextRun({
-        text: eduSectionTitleUpper + ' (CONT.)',
+        text: eduSectionTitleUpper + ' ' + (ctx.contSuffix || '(CONT.)'),
         bold: true,
         color: isSidebar ? style.sidebarHeadColor : style.mainHeadColor,
         size: pt2hp(isSidebar ? fs.sbHead : fs.mainHead),
@@ -2595,9 +2708,18 @@ function renderEducation(s, ctx, isSidebar) {
     }));
   };
 
+  let _eduSkippedFirstSectionBreak = false;
   deduped.forEach(it => {
     if (it && typeof it === 'object' && Number(it._page) >= 2) {
-      try { emitEduBreakAndCont(); } catch (_) {}
+      // PB-002: when the first item in this section already moved the
+      // whole section to the next page (s._antcvFirstItemPageMoved
+      // set above), skip the in-loop break+contHeader for that first
+      // flagged item — otherwise the heading duplicates.
+      if (s._antcvFirstItemPageMoved && !_eduSkippedFirstSectionBreak) {
+        _eduSkippedFirstSectionBreak = true;
+      } else {
+        try { emitEduBreakAndCont(); } catch (_) {}
+      }
     }
     let deg = (it.deg || it.degree || '').toString();
     let sch = (it.sch || it.school || '').toString();

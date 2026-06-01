@@ -4,6 +4,11 @@ Build a clean CV and cover letter. Fast, structured, easy to edit. AI-assisted v
 
 Cloudflare Pages (PWA) + Workers (proxy, DOCX renderer, C2PA signer, access relay, demo proxy) + optional MCP server.
 
+AntCV is a supervisor-driven multi-agent orchestration platform for generating and validating tailored job applications.
+
+Rather than relying on a single LLM, AntCV routes specialized tasks such as requirement extraction, fit and gap analysis, multilingual adaptation, document generation, and validation to the most suitable provider based on observed quality, language pair performance, reliability, latency, and cost.
+
+The platform emphasizes traceability, replayability, provenance, accessibility, ATS compatibility, and human review.
 ---
 
 ## Documentation map
@@ -83,13 +88,15 @@ antcv/
 
 | Component | Version | Notes |
 |---|---|---|
-| PWA | v1.40.337-ai-notice-fix | Wizard "Next" on the worker-URL step now clears any stale `.antcv-ai-notice-host` before injecting a fresh notice. Carries the version-grow-fix from v1.40.336 and the four mechanical patches from v1.40.335-hotfix-b. See `pwa/README-v1.40.337-ai-notice-fix.txt`. |
-| proxy worker | v3.4.0 | |
-| docx-worker | v1.14.13 (renderer at v1.14.12 sidebar pagebreak fix) | |
-| c2pa-worker | v1.0.1 | |
-| access-relay | v2.5.4 | |
+| PWA | v1.50.9 | v1.50 release line — React-islands bundle (LanguageCard, PreviewToolbar, SettingsRouter, PackagePicker, WritingStylePicker, ExportOptionsCard, Breadcrumbs). Vite + TS source in `src/`, IIFE output at `pwa/antcv-react-islands.js`. `packages/registry.json` drives both the `data-package="…"` CSS bundle and the DOCX worker palette. `writingSystems/registry.json` drives the 12-style writing engine. See `docs/qa/v1.50-rollup.md`. |
+| proxy worker | v1.50.3 (`faab3ae0`) | Full §4.7 writing-engine pipeline live: preamble injection + per-language banned-list SCE + retry loop (≤2 retries) + ATS glyph conversion. Telemetry to `ANALYTICS` KV (`writing-engine:*` events). |
+| docx-worker | v1.50.8 (`96702a96`) | Per-package palette wired to `packages/registry.json` via `workers/docx-worker/src/palette.js`. `legacy_ats_tier` flag forces Calibri body for legacy parsers. Backward-compatible with pre-v1.50.8 PWAs (no `package` field → legacy DEFAULTS). |
+| c2pa-worker | v1.50.7 (`dca2eb93`) | Manifest assertion `com.antcv.ai_disclosure.visual.{package, package_base_color}` for downstream watermark renderers. WASM signing still scaffolded (see README §2 of that worker). |
+| access-relay | v2.5.4 | Unchanged. |
 | demo-proxy | tracks proxy | |
 | antcv-mcp | (not user-facing) | |
+
+For the implementation rollup across the v1.50 cycle, see [`docs/qa/v1.50-rollup.md`](docs/qa/v1.50-rollup.md).
 
 ---
 

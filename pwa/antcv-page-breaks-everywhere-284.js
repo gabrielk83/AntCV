@@ -53,7 +53,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.40.284';
+  var VERSION = '1.40.341-p0b';
   if (window.__antcvPageBreaksEverywhere284 === VERSION) return;
   window.__antcvPageBreaksEverywhere284 = VERSION;
 
@@ -162,16 +162,32 @@
     d.style.cssText = 'break-before:page;page-break-before:always;height:0;margin:0;padding:0;line-height:0';
     return d;
   }
+  // PB-003: continuation suffix is localised via antcv-i18n (key
+  // 'pb.cont'). Falls back to the English '(CONT.)' if i18n hasn't
+  // installed yet (very early boot — rare and self-corrects on the
+  // next applyAll tick).
+  function contSuffix() {
+    var i18n = window.AntcvI18n;
+    if (i18n && typeof i18n.t === 'function') {
+      return i18n.t('pb.cont', '(CONT.)');
+    }
+    return '(CONT.)';
+  }
   function makeContHeader(title) {
     var d = document.createElement('div');
     d.setAttribute(HEADER_ATTR, '1');
+    // PB-003: margin-top set to 18pt so the continuation heading
+    // sits 18pt below whatever @page top margin the print engine
+    // uses. In Preview's continuous-scroll layout the same value
+    // gives clear visual separation between the boundary marker
+    // and the heading.
     d.style.cssText = [
       'color:#00746E', 'font-weight:700', 'font-size:14pt',
-      'margin-top:8pt', 'margin-bottom:4pt',
+      'margin-top:18pt', 'margin-bottom:4pt',
       'border-bottom:1pt solid #00746E', 'padding-bottom:2pt',
       'font-family:Trebuchet MS, Calibri, sans-serif'
     ].join(';');
-    d.textContent = title + ' (CONT.)';
+    d.textContent = title + ' ' + contSuffix();
     return d;
   }
 
@@ -221,9 +237,27 @@
       var parent = target.parentNode;
       if (!parent) continue;
       try {
-        parent.insertBefore(makeBar(pageByIndex[ii]), target);
-        parent.insertBefore(makeBreak(), target);
-        parent.insertBefore(makeContHeader(title), target);
+        if (ii === 0) {
+          // PB-002: a page break on the FIRST item moves the whole
+          // section to the next page. The section's own native
+          // heading is the first element on the new page — do NOT
+          // inject a (CONT.) header (would duplicate the heading).
+          // Insert the boundary marker INSIDE the section but before
+          // its first child so the section heading itself sits after
+          // the break.
+          var firstChild = sectionEl.firstChild;
+          if (firstChild) {
+            sectionEl.insertBefore(makeBar(pageByIndex[ii]), firstChild);
+            sectionEl.insertBefore(makeBreak(), firstChild);
+          } else {
+            sectionEl.appendChild(makeBar(pageByIndex[ii]));
+            sectionEl.appendChild(makeBreak());
+          }
+        } else {
+          parent.insertBefore(makeBar(pageByIndex[ii]), target);
+          parent.insertBefore(makeBreak(), target);
+          parent.insertBefore(makeContHeader(title), target);
+        }
       } catch (_) {}
     }
   }

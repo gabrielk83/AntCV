@@ -310,6 +310,46 @@
     return e;
   }
 
+  // ─── BRAND constants (v1.50.21) ────────────────────────────────
+  // Bucket 2 hex-extraction. The JD analysis modal is editor chrome,
+  // not document content — its palette stays constant across all 7
+  // visual packages. All 61 inline hex literals previously embedded
+  // in the CSS template + one inline `style` object are now sourced
+  // from this single named map. Future colour adjustments are a
+  // single-source edit.
+  var BRAND = {
+    // navy + neutrals
+    navy:         '#283556',
+    white:        '#fff',
+    bodyText:     '#333',     // primary body text
+    mutedText:    '#595959',  // labels, rationale
+    mutedSoft:    '#6b7280',  // tab labels, upload status
+    mutedFaint:   '#9ca3af',  // empty-state italic
+    disabled:     '#999',     // disabled run button + inline subdued
+    borderLight:  '#d0d2d6',  // textarea / select border
+    borderCard:   '#e0e3e8',  // edit-card border
+    separator:    '#e5e7eb',  // tab underline
+    bgHover:      '#f5f5f5',  // upload button hover
+    bgSubtle:     '#fafafa',  // jdsec card bg
+    bgCard:       '#fafbfc',  // edit card bg
+    bgInfo:       '#f7fafa',  // summary card bg
+
+    // teal (success / brand accent)
+    teal:         '#00746E',  // headings, links, success badges
+    tealBright:   '#01B7BB',  // accent (focus rings, copy button)
+    tealBgLight:  '#eaf7f7',  // info banner bg
+    tealTextDeep: '#07545e',  // info banner text
+
+    // warning / danger
+    warningAmber: '#f59e0b',  // error border + fitscore gradient mid
+    dangerPink:   '#c22b50',  // error text + gaps heading + fitscore low
+    dangerBgLite: '#ffe9ec',  // error banner bg
+    dangerDeep:   '#b8001f',  // high-severity flag text
+
+    // misc
+    purple:       '#6d28d9',  // CL edit badge
+  };
+
   function injectStylesOnce() {
     if (document.getElementById(STYLE_ID)) return;
     const css = `
@@ -331,18 +371,18 @@
         width: min(820px, 100%);
         max-height: 88vh;
         overflow-y: auto;
-        background: #fff;
+        background: ${BRAND.white};
         border-radius: 10px;
         box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
         font-family: Calibri, Arial, sans-serif;
-        color: #283556;
+        color: ${BRAND.navy};
       }
       .antcv-rf-header {
         position: sticky;
         top: 0;
         padding: 14px 18px;
-        background: #283556;
-        color: #fff;
+        background: ${BRAND.navy};
+        color: ${BRAND.white};
         border-radius: 10px 10px 0 0;
         display: flex;
         align-items: center;
@@ -356,7 +396,7 @@
       .antcv-rf-close {
         background: transparent;
         border: 1px solid rgba(255, 255, 255, 0.35);
-        color: #fff;
+        color: ${BRAND.white};
         border-radius: 6px;
         padding: 4px 10px;
         cursor: pointer;
@@ -369,7 +409,7 @@
         display: block;
         font-size: 11px;
         font-weight: 700;
-        color: #595959;
+        color: ${BRAND.mutedText};
         letter-spacing: 0.4px;
         text-transform: uppercase;
         margin-bottom: 4px;
@@ -381,53 +421,53 @@
         font-family: Georgia, serif;
         font-size: 13px;
         line-height: 1.45;
-        color: #333;
-        border: 1px solid #d0d2d6;
+        color: ${BRAND.bodyText};
+        border: 1px solid ${BRAND.borderLight};
         border-radius: 6px;
         resize: vertical;
         box-sizing: border-box;
       }
       .antcv-rf-textarea:focus {
         outline: none;
-        border-color: #01B7BB;
+        border-color: ${BRAND.tealBright};
         box-shadow: 0 0 0 3px rgba(1, 183, 187, 0.18);
       }
       .antcv-rf-select {
         padding: 6px 10px;
         font-size: 12px;
-        border: 1px solid #d0d2d6;
+        border: 1px solid ${BRAND.borderLight};
         border-radius: 6px;
-        background: #fff;
+        background: ${BRAND.white};
       }
       .antcv-rf-runbtn {
         padding: 10px 16px;
         font-size: 13px;
         font-weight: 700;
-        color: #fff;
-        background: #00746E;
+        color: ${BRAND.white};
+        background: ${BRAND.teal};
         border: none;
         border-radius: 6px;
         cursor: pointer;
       }
-      .antcv-rf-runbtn:hover { background: #01B7BB; }
+      .antcv-rf-runbtn:hover { background: ${BRAND.tealBright}; }
       .antcv-rf-runbtn:disabled {
-        background: #999;
+        background: ${BRAND.disabled};
         cursor: wait;
       }
       .antcv-rf-error {
         padding: 10px 12px;
-        background: #ffe9ec;
-        color: #c22b50;
-        border: 1px solid #f59e0b;
+        background: ${BRAND.dangerBgLite};
+        color: ${BRAND.dangerPink};
+        border: 1px solid ${BRAND.warningAmber};
         border-radius: 6px;
         font-size: 12px;
         margin-bottom: 12px;
       }
       .antcv-rf-info {
         padding: 8px 12px;
-        background: #eaf7f7;
-        color: #07545e;
-        border-left: 3px solid #00746E;
+        background: ${BRAND.tealBgLight};
+        color: ${BRAND.tealTextDeep};
+        border-left: 3px solid ${BRAND.teal};
         border-radius: 4px;
         font-size: 12px;
         margin-bottom: 12px;
@@ -438,7 +478,7 @@
         display: flex;
         gap: 4px;
         margin-bottom: 12px;
-        border-bottom: 2px solid #e5e7eb;
+        border-bottom: 2px solid ${BRAND.separator};
       }
       .antcv-rf-tab {
         background: transparent;
@@ -446,17 +486,17 @@
         padding: 8px 14px;
         font-size: 12px;
         font-weight: 700;
-        color: #6b7280;
+        color: ${BRAND.mutedSoft};
         cursor: pointer;
         border-bottom: 2px solid transparent;
         margin-bottom: -2px;
         font-family: inherit;
         transition: color 0.12s, border-color 0.12s;
       }
-      .antcv-rf-tab:hover { color: #00746E; }
+      .antcv-rf-tab:hover { color: ${BRAND.teal}; }
       .antcv-rf-tab-active {
-        color: #00746E;
-        border-bottom-color: #00746E;
+        color: ${BRAND.teal};
+        border-bottom-color: ${BRAND.teal};
       }
 
       /* ─── File upload row (v1.40.133) ─── */
@@ -469,26 +509,26 @@
       }
       .antcv-rf-upload-label {
         font-size: 11px;
-        color: #6b7280;
+        color: ${BRAND.mutedSoft};
         font-weight: 600;
       }
       .antcv-rf-upload-btn {
         font-size: 11px;
         font-weight: 600;
         padding: 4px 10px;
-        background: #fff;
-        color: #283556;
-        border: 1px solid #283556;
+        background: ${BRAND.white};
+        color: ${BRAND.navy};
+        border: 1px solid ${BRAND.navy};
         border-radius: 4px;
         cursor: pointer;
         font-family: inherit;
       }
       .antcv-rf-upload-btn:hover {
-        background: #f5f5f5;
+        background: ${BRAND.bgHover};
       }
       .antcv-rf-upload-status {
         font-size: 11px;
-        color: #6b7280;
+        color: ${BRAND.mutedSoft};
         margin-top: 4px;
         min-height: 14px;
       }
@@ -497,21 +537,21 @@
       .antcv-rf-jdsec {
         margin-bottom: 14px;
         padding: 10px 12px;
-        background: #fafafa;
-        border-left: 3px solid #01B7BB;
+        background: ${BRAND.bgSubtle};
+        border-left: 3px solid ${BRAND.tealBright};
         border-radius: 4px;
       }
       .antcv-rf-jdsec h3 {
         margin: 0 0 8px 0;
         font-size: 13px;
-        color: #283556;
+        color: ${BRAND.navy};
       }
       .antcv-rf-recruiter {
         font-size: 12px;
         line-height: 1.5;
       }
       .antcv-rf-link {
-        color: #00746E;
+        color: ${BRAND.teal};
         text-decoration: underline;
       }
       .antcv-rf-jdlist {
@@ -525,20 +565,20 @@
         padding-left: 4px;
       }
       .antcv-rf-jdlist-flags li[data-sev="high"] {
-        color: #b8001f;
+        color: ${BRAND.dangerDeep};
       }
       .antcv-rf-jdlist-flags li[data-sev="low"] {
-        color: #6b7280;
+        color: ${BRAND.mutedSoft};
       }
       .antcv-rf-empty {
         font-size: 12px;
-        color: #9ca3af;
+        color: ${BRAND.mutedFaint};
         font-style: italic;
       }
       .antcv-rf-fitscore-bar {
         position: relative;
         height: 18px;
-        background: linear-gradient(to right, #c22b50 0%, #f59e0b 40%, #00746E 75%);
+        background: linear-gradient(to right, ${BRAND.dangerPink} 0%, ${BRAND.warningAmber} 40%, ${BRAND.teal} 75%);
         border-radius: 9px;
         overflow: hidden;
         margin: 6px 0 14px;
@@ -548,8 +588,8 @@
         top: -2px;
         height: 22px;
         width: 4px;
-        background: #283556;
-        border: 1px solid #fff;
+        background: ${BRAND.navy};
+        border: 1px solid ${BRAND.white};
         border-radius: 2px;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
         transform: translateX(-50%);
@@ -557,12 +597,12 @@
       .antcv-rf-fitscore-text {
         font-size: 11px;
         font-weight: 700;
-        color: #595959;
+        color: ${BRAND.mutedText};
         margin-left: 6px;
       }
       .antcv-rf-summary {
         padding: 10px 12px;
-        background: #f7fafa;
+        background: ${BRAND.bgInfo};
         border-radius: 6px;
         font-size: 13px;
         line-height: 1.5;
@@ -572,14 +612,14 @@
       .antcv-rf-col h3 { font-size: 12px; margin: 0 0 6px; text-transform: uppercase; letter-spacing: 0.5px; }
       .antcv-rf-col ul { margin: 0; padding-left: 18px; font-size: 12px; line-height: 1.5; }
       .antcv-rf-col li { margin-bottom: 4px; }
-      .antcv-rf-col.strengths h3 { color: #00746E; }
-      .antcv-rf-col.gaps h3 { color: #c22b50; }
+      .antcv-rf-col.strengths h3 { color: ${BRAND.teal}; }
+      .antcv-rf-col.gaps h3 { color: ${BRAND.dangerPink}; }
       .antcv-rf-edit {
-        border: 1px solid #e0e3e8;
+        border: 1px solid ${BRAND.borderCard};
         border-radius: 8px;
         padding: 10px 12px;
         margin-bottom: 10px;
-        background: #fafbfc;
+        background: ${BRAND.bgCard};
       }
       .antcv-rf-edit-head {
         display: flex;
@@ -588,33 +628,33 @@
         margin-bottom: 6px;
         font-size: 12px;
         font-weight: 700;
-        color: #283556;
+        color: ${BRAND.navy};
       }
       .antcv-rf-edit-badge {
         font-size: 10px;
         padding: 1px 6px;
         border-radius: 8px;
-        background: #00746E;
-        color: #fff;
+        background: ${BRAND.teal};
+        color: ${BRAND.white};
         text-transform: uppercase;
         letter-spacing: 0.4px;
       }
-      .antcv-rf-edit-badge.cl { background: #6d28d9; }
+      .antcv-rf-edit-badge.cl { background: ${BRAND.purple}; }
       .antcv-rf-edit-rationale {
         font-size: 12px;
-        color: #595959;
+        color: ${BRAND.mutedText};
         margin-bottom: 8px;
         line-height: 1.45;
       }
       .antcv-rf-edit-preview {
         padding: 8px 10px;
-        background: #fff;
-        border: 1px dashed #d0d2d6;
+        background: ${BRAND.white};
+        border: 1px dashed ${BRAND.borderLight};
         border-radius: 4px;
         font-family: Georgia, serif;
         font-size: 12.5px;
         line-height: 1.5;
-        color: #333;
+        color: ${BRAND.bodyText};
         white-space: pre-wrap;
         word-wrap: break-word;
         max-height: 180px;
@@ -630,16 +670,16 @@
         font-size: 11px;
         font-weight: 700;
         padding: 4px 10px;
-        background: #01B7BB;
-        color: #fff;
+        background: ${BRAND.tealBright};
+        color: ${BRAND.white};
         border: none;
         border-radius: 4px;
         cursor: pointer;
       }
-      .antcv-rf-copy-btn:hover { background: #00746E; }
+      .antcv-rf-copy-btn:hover { background: ${BRAND.teal}; }
       .antcv-rf-copy-status {
         font-size: 10px;
-        color: #00746E;
+        color: ${BRAND.teal};
         font-weight: 700;
       }
       @media print {
@@ -1033,7 +1073,7 @@
         el('div', { className: 'antcv-rf-edit-head' },
           badge,
           ' ' + (edit.section_id || '?'),
-          el('span', { style: { fontWeight: '400', color: '#999' } },
+          el('span', { style: { fontWeight: '400', color: BRAND.disabled } },
             ' · ' + (edit.change_type || 'reword'),
           ),
         ),

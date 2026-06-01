@@ -1050,6 +1050,38 @@ async function handleRequest(request, env = {}) {
   if (!apiKey.startsWith('sk-ant-')) return errJson('Anthropic server key is not available on cv-proxy. Set Claude_API_Key or ANTHROPIC_API_KEY as a Worker secret.', 401);
   try {
     const body = JSON.parse(bodyText);
+    // v1.50.18-fix-anthropic-system (v2 — handle ALL positions).
+    // Anthropic's Messages API REJECTS role:"system" anywhere
+    // inside the messages array. Walk the WHOLE array, lift every
+    // role:system entry into top-level `system`, and remove them.
+    if (Array.isArray(body.messages) && body.messages.length > 0) {
+      const collectedSystem = [];
+      const remainingMessages = [];
+      for (let i = 0; i < body.messages.length; i++) {
+        const m = body.messages[i];
+        if (m && m.role === 'system') {
+          if (typeof m.content === 'string') {
+            if (m.content.trim()) collectedSystem.push(m.content);
+          } else if (Array.isArray(m.content)) {
+            const txt = m.content
+              .filter(b => b && b.type === 'text' && typeof b.text === 'string')
+              .map(b => b.text)
+              .join('\n');
+            if (txt.trim()) collectedSystem.push(txt);
+          }
+        } else {
+          remainingMessages.push(m);
+        }
+      }
+      if (collectedSystem.length > 0) {
+        const existingTopSystem =
+          typeof body.system === 'string' ? body.system : '';
+        const merged = collectedSystem.join('\n\n') +
+          (existingTopSystem ? '\n\n' + existingTopSystem : '');
+        body.system = merged;
+        body.messages = remainingMessages;
+      }
+    }
     // v2.0: demo mode forces non-streaming so we can parse usage from
     // the buffered response. Production (non-demo) keeps streaming for
     // best PWA UX (incremental token rendering).

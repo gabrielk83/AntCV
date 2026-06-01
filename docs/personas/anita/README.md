@@ -1,4 +1,4 @@
-# Anita Mayr-Kornfeldt — test persona
+# Anita Myre-Kornfeldt — test persona
 
 Synthetic candidate for end-to-end testing. Ant-themed identity, deliberately unmistakable so test runs never get confused with real candidate data.
 
@@ -14,7 +14,7 @@ Synthetic candidate for end-to-end testing. Ant-themed identity, deliberately un
 
 ## Profile summary
 
-- **Name:** Anita Mayr-Kornfeldt
+- **Name:** Anita Myre-Kornfeldt
 - **Headline:** MSc in Subterranean Micro-Climates, Grasshopper Mitigation Lead
 - **Location:** Greater Nordic Foraging Region / Copenhagen, Denmark
 - **Affiliation:** Nordic Ant Colony, 500+ colony members

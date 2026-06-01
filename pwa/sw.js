@@ -1,16 +1,21 @@
-const CACHE = 'antcv-1.40.340-watermark';
+const CACHE = 'antcv-1.50.41';
 const SHELL = [
   './manifest.json',
   './antcv-mobile-controls.css',
   './antcv-mobile-controls.js',
   './antcv-docx-client.js',
   './antcv-data-importer.js',
+  './antcv-packages-registry.css',
+  './antcv-react-islands.js',
   './antcv-section-align.js',
   './antcv-recheck-fit.js',
   './antcv-jd-watch.js',
   './antcv-privacy-led.js',
   './antcv-bullet-targets.js',
   './antcv-photo-position.js',
+  './antcv-preview-header-tokens.js',
+  './antcv-photo-bridge-button.js',
+  './antcv-pdf-preview-gate.js',
   './antcv-tone-helper.js',
   './antcv-jd-image-ocr.js',
   './antcv-panel-bottom-pad.js',

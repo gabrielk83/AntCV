@@ -8,17 +8,26 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.40.249';
+  // v1.40.249-fix-cjlr-isolate (2026-05-28):
+  //   1. ALIGN_KEY was shared with Core Competencies, so toggling
+  //      CJLR in Core changed What I Bring (and vice-versa). Each
+  //      section now owns its own storage key.
+  //   2. CORE_RX matched either section name; this script is the
+  //      WHAT I BRING handler — tightened to only that title so
+  //      Core Competencies never enters this code path.
+  //   3. coreSection()/coreSid() renamed mentally — physical names
+  //      unchanged to keep this a single-hunk targeted fix.
+  const VERSION='1.40.249-fix-cjlr-isolate-preview-guard';
   if(window.__antcvWhatIBringHeaderCjlr249===VERSION) return;
   window.__antcvWhatIBringHeaderCjlr249=VERSION;
 
-  const ALIGN_KEY='antcv.coreCompetencies.rowAlignment.v1';
+  const ALIGN_KEY='antcv.whatIBring.rowAlignment.v1';
   const PAGE_KEY='antcv:itemPages';
   const SECTIONS_KEY='sections';
   const ALIGN=['center','justify','left','right'];
   const ICON={left:'⇤',center:'↔',justify:'☰',right:'⇥'};
   const LABEL={left:'Left aligned',center:'Centered',justify:'Justified',right:'Right aligned'};
-  const CORE_RX=/what\s+i\s+bring|core\s+competenc/i;
+  const CORE_RX=/what\s+i\s+bring/i;
 
   function clean(s){return String(s||'').replace(/\s+/g,' ').trim();}
   function visible(el){return !!(el&&el.isConnected&&(el.offsetWidth||el.offsetHeight||el.getClientRects().length));}
@@ -65,11 +74,20 @@
     }
     return best;
   }
+  // v1.40.249-fix-cjlr-isolate-preview-guard (2026-05-28): refuse to
+  // treat any row whose ancestor is .antcv-preview-paper as an editor
+  // row. Otherwise ensure() mounts the CJLR + page-break host on top
+  // of the WHAT I BRING table headers in the CL Preview, which the
+  // user is seeing as a duplicate visible button. The applyPreview()
+  // function elsewhere in this script handles per-row alignment in
+  // the rendered preview without injecting button hosts.
+  function inPreviewPaper(el){const paper=document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]');return !!(paper && el && paper.contains(el));}
   function findRows(){
     const root=editorRoot(); if(!root) return [];
+    if(inPreviewPaper(root)) return []; // root resolved inside preview — refuse
     const seeds=Array.from(root.querySelectorAll('input,textarea,[contenteditable="true"]')).filter(f=>/focus area/i.test(f.value||f.placeholder||f.textContent||''));
     const rows=[];
-    seeds.forEach(f=>{const r=directRowForField(f,root); if(r&&visible(r)&&!rows.includes(r)) rows.push(r);});
+    seeds.forEach(f=>{const r=directRowForField(f,root); if(r&&visible(r)&&!rows.includes(r)&&!inPreviewPaper(r)) rows.push(r);});
     return rows;
   }
   function rowFields(row){return Array.from(row.querySelectorAll('input,textarea,[contenteditable="true"]')).filter(visible);}

@@ -5,7 +5,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.40.245';
+  const VERSION='1.40.245-preview-guard';
   const ALIGN_KEY='antcv.hiwc.alignment.v1';
   const PAGE_KEY='antcv:itemPages';
   const SECTIONS_KEY='sections';
@@ -16,6 +16,9 @@
   const LABEL={left:'Left aligned',center:'Centered',justify:'Justified',right:'Right aligned'};
   const clean=s=>String(s||'').replace(/\s+/g,' ').trim();
   const visible=el=>!!(el&&el.isConnected&&(el.offsetWidth||el.offsetHeight||el.getClientRects().length));
+  // v1.40.245-preview-guard: Preview is button-free. All seeds and
+  // host resolutions must reject elements inside .antcv-preview-paper.
+  const isInPreviewPaper=el=>{if(!el)return false;const p=document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]');return !!(p&&p.contains(el));};
   function readJson(k,f){try{const v=JSON.parse(localStorage.getItem(k)||'');return v&&typeof v==='object'?v:f;}catch(_){return f;}}
   function writeJson(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(_){}}
   function activeDoc(){try{return localStorage.getItem('doc')==='cv'?'cv':'cl';}catch(_){return 'cl';}}
@@ -50,18 +53,19 @@
   function setVal(f,v){if(!f)return;if(f.isContentEditable)f.textContent=v;else f.value=v;dispatchInput(f);}
 
   function root(){
-    const fields=Array.from(document.querySelectorAll('input,textarea,[contenteditable="true"]'));
+    const fields=Array.from(document.querySelectorAll('input,textarea,[contenteditable="true"]')).filter(f=>!isInPreviewPaper(f));
     const seed=fields.find(f=>/intro\s*[—-]|closing\s*[—-]|one sentence framing|one sentence summar/i.test(String(f.value||f.placeholder||f.textContent||'')));
     if(!seed) return null;
     let p=seed.parentElement,best=null;
     for(let d=0;p&&d<10;d++,p=p.parentElement){
+      if(isInPreviewPaper(p)) break;
       const txt=clean(p.textContent);
       if(/Intro line/i.test(txt)&&/Closing line/i.test(txt)&&/Bullets/i.test(txt)) best=p;
       if(RX.test(txt)){best=p;break;}
     }
     return best;
   }
-  function allFields(r){return Array.from((r||document).querySelectorAll('input,textarea,[contenteditable="true"]')).filter(visible);}
+  function allFields(r){return Array.from((r||document).querySelectorAll('input,textarea,[contenteditable="true"]')).filter(f=>visible(f)&&!isInPreviewPaper(f));}
   function findIntro(r){return allFields(r).find(f=>/intro\s*[—-]|one sentence framing/i.test(String(f.value||f.placeholder||f.textContent||'')))||allFields(r)[0]||null;}
   function findClosing(r){const fs=allFields(r);return fs.find(f=>/closing\s*[—-]|one sentence summar/i.test(String(f.value||f.placeholder||f.textContent||'')))||fs[fs.length-1]||null;}
   function findBullets(r){const intro=findIntro(r), closing=findClosing(r);return allFields(r).find(f=>f.tagName==='TEXTAREA'&&f!==intro&&f!==closing)||null;}
@@ -128,8 +132,10 @@
   }
   function controlsForField(f,k){
     f=ensureTextArea(f,k);
-    if(!f)return;applyField(f,k);
-    const h=lineHost(f); if(!h) return;
+    if(!f)return;
+    if(isInPreviewPaper(f))return;
+    applyField(f,k);
+    const h=lineHost(f); if(!h||isInPreviewPaper(h)) return;
     if(h.style){h.style.display=h.style.display||'flex';h.style.alignItems=h.style.alignItems||'center';h.style.gap=h.style.gap||'4px';}
     let wrap=h.querySelector('[data-antcv-hiwc-controls="'+k+'"]');
     if(!wrap){wrap=document.createElement('span');wrap.setAttribute('data-antcv-hiwc-controls',k);Object.assign(wrap.style,{display:'inline-flex',alignItems:'center',gap:'2px',marginLeft:'4px',whiteSpace:'nowrap'});h.appendChild(wrap);}

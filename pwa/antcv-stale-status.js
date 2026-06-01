@@ -49,7 +49,7 @@
 (function () {
   'use strict';
 
-  const SCRIPT_VERSION = '1.40.339-h';
+  const SCRIPT_VERSION = '1.40.341-p0e';
   const PILL_SELECTOR = '[title^="Live status from the current operation"]';
   const STALE_MS_DEFAULT = 60 * 1000;
   const POLL_MS = 1000;
@@ -121,11 +121,17 @@
       if (!/ — operation in progress$/.test(pill.title)) {
         pill.title = baseTitle + ' — operation in progress';
       }
+      // PRV-004 (plan §0): aria polish — screen readers announce
+      // the locked-out state during loading.
+      pill.setAttribute('aria-label', 'Job in progress — click disabled');
+      pill.setAttribute('aria-disabled', 'true');
     } else {
       pill.style.cursor = 'pointer';
       if (!/ — click to dismiss$/.test(pill.title)) {
         pill.title = baseTitle + ' — click to dismiss';
       }
+      pill.setAttribute('aria-label', 'Status — click to dismiss');
+      pill.removeAttribute('aria-disabled');
     }
   }
 

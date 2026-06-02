@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.50.60';
+const CACHE = 'antcv-1.50.61';
 const SHELL = [
   './manifest.json',
   './antcv-mobile-controls.css',
@@ -7,6 +7,7 @@ const SHELL = [
   './antcv-data-importer.js',
   './antcv-packages-registry.css',
   './antcv-react-islands.js',
+  './antcv-personal-info-anti-thinning-353.js',
   './antcv-section-align.js',
   './antcv-recheck-fit.js',
   './antcv-gap-closure-342.js',
@@ -15,6 +16,7 @@ const SHELL = [
   './antcv-sections-icon-346.js',
   './antcv-topbar-tools-347.js',
   './antcv-mobile-fab-cleanup-351.js',
+  './antcv-pub-injected-reaper-352.js',
   './antcv-jd-watch.js',
   './antcv-privacy-led.js',
   './antcv-bullet-targets.js',

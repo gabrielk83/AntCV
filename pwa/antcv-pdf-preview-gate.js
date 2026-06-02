@@ -44,7 +44,7 @@
   'use strict';
 
   if (window.__antcvPdfPreviewGateInstalled) return;
-  window.__antcvPdfPreviewGateInstalled = '1.50.48';
+  window.__antcvPdfPreviewGateInstalled = '1.50.49';
 
   const FAB_ID = 'antcv-pdf-preview-fab';
   const MODAL_ID = 'antcv-pdf-preview-modal';
@@ -419,13 +419,26 @@ ${inlineStyles}
     const print = document.createElement('button');
     print.id = MODAL_ID + '-print';
     print.type = 'button';
-    print.textContent = 'Save as PDF (Print)';
+    print.textContent = 'Save as PDF';
     print.title =
-      'Opens your browser’s print dialog. Choose "Save as PDF" as the destination. ' +
-      'Works regardless of whether the built-in export is currently broken.';
+      'Save as PDF. Uses the app’s server-side ATS PDF export when available, ' +
+      'falling back to the browser print dialog (choose "Save as PDF").';
     print.addEventListener('click', () => {
+      // Prefer the app's real PDF export (CloudConvert /generate-pdf when the
+      // docx-worker has CLOUDCONVERT_API_KEY — proper Unicode-embedded ATS
+      // PDF). Identify it by its stable title prefix. Fall back to printing
+      // the iframe clone if that button isn't present.
+      const realPdf = document.querySelector('button[title^="Export as PDF"]');
+      if (realPdf) {
+        closeModal();
+        setTimeout(() => { try { realPdf.click(); } catch (_) {} }, 60);
+        return;
+      }
       const target = modal._antcvPrintTarget;
-      if (!target || !target.contentWindow) return;
+      if (!target || !target.contentWindow) {
+        try { window.print(); } catch (_) {}
+        return;
+      }
       try {
         target.contentWindow.focus();
         target.contentWindow.print();
@@ -445,7 +458,7 @@ ${inlineStyles}
     docx.type = 'button';
     docx.textContent = 'Save as DOCX';
     docx.title =
-      'Export as .docx (recommended for job applications). Opens in Word, ' +
+      'Save as .docx (recommended for job applications). Opens in Word, ' +
       'Google Docs, LibreOffice. Uses the same export as the main DOCX button.';
     docx.addEventListener('click', () => {
       const btn = document.querySelector('button[title^="Export as .docx"]');
@@ -524,6 +537,40 @@ ${inlineStyles}
     } catch (_) {}
     return false;
   }
+  // v1.50.49 — the preview modal is now the single export surface, so the
+  // embedded gray-zone export buttons are hidden. We hide (not remove) them so
+  // the modal's Save-as-PDF / Save-as-DOCX can still find and click them to
+  // reuse the app's real export pipelines. Visually-hidden + out of tab order.
+  function hideEmbeddedExportButtons() {
+    try {
+      var sels = ['button[title^="Export as PDF"]', 'button[title^="Export as .docx"]'];
+      for (var k = 0; k < sels.length; k++) {
+        var btns = document.querySelectorAll(sels[k]);
+        for (var i = 0; i < btns.length; i++) {
+          var b = btns[i];
+          // Never touch buttons inside our own preview modal.
+          if (b.closest && b.closest('#' + MODAL_ID + '-backdrop')) continue;
+          if (b.id && b.id.indexOf(MODAL_ID) === 0) continue;
+          if (b.getAttribute('data-antcv-embedded-export-hidden') === '1') continue;
+          b.setAttribute('data-antcv-embedded-export-hidden', '1');
+          b.setAttribute('aria-hidden', 'true');
+          b.setAttribute('tabindex', '-1');
+          b.style.setProperty('position', 'absolute', 'important');
+          b.style.setProperty('width', '1px', 'important');
+          b.style.setProperty('height', '1px', 'important');
+          b.style.setProperty('padding', '0', 'important');
+          b.style.setProperty('margin', '-1px', 'important');
+          b.style.setProperty('overflow', 'hidden', 'important');
+          b.style.setProperty('clip', 'rect(0 0 0 0)', 'important');
+          b.style.setProperty('white-space', 'nowrap', 'important');
+          b.style.setProperty('border', '0', 'important');
+          b.style.setProperty('opacity', '0', 'important');
+          b.style.setProperty('pointer-events', 'none', 'important');
+        }
+      }
+    } catch (_) {}
+  }
+
   function syncFabVisibility() {
     var fab = document.getElementById(FAB_ID);
     if (!fab) return;
@@ -587,13 +634,15 @@ ${inlineStyles}
     const observer = new MutationObserver(() => {
       if (!document.getElementById(FAB_ID)) injectFab();
       syncFabVisibility();
+      hideEmbeddedExportButtons();
     });
     observer.observe(document.body, { childList: true, subtree: true });
     // Backstop: views can change without a body childList mutation
     // (e.g. a CSS/display toggle deep in the tree). A light poll keeps
     // the FAB's visibility correct without depending on mutations.
-    setInterval(syncFabVisibility, 600);
+    setInterval(function () { syncFabVisibility(); hideEmbeddedExportButtons(); }, 600);
     syncFabVisibility();
+    hideEmbeddedExportButtons();
   }
 
   if (document.readyState === 'loading') {
@@ -604,7 +653,7 @@ ${inlineStyles}
 
   // Public API for diagnostics / power-users.
   window.AntcvPdfPreviewGate = {
-    version: '1.50.48',
+    version: '1.50.49',
     open: openModal,
     close: closeModal,
   };

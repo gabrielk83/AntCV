@@ -1,9 +1,16 @@
-/* AntCV bottom-bar Fusion button (v1.40.343)
+/* AntCV bottom-bar Fusion button (v1.40.345)
  * ============================================================================
  *
  * Bundle 2 (part 1 of the analysis-panel rework): relocate the CL->CV Fusion
  * action from the floating overlay FAB into the bottom navigation bar, placed
  * immediately to the RIGHT of the CV/CL switch, as requested.
+ *
+ * v1.40.345: replaced the label's leading glyph. It was U+2728 SPARKLES (the
+ * "enhance" icon), which misrepresented the action. Now a small inline SVG
+ * crossroads/merge mark (two paths converging into one) that reads as fuse/
+ * merge and renders identically across platforms (no emoji-font variance).
+ * The label is built via innerHTML so the SVG + word render together; the
+ * busy/restore path captures and restores innerHTML to match.
  *
  * Why a DOM-injection sidecar
  * ---------------------------
@@ -26,8 +33,8 @@
  * Behaviour
  * ---------
  *   - Pill button matching the switch's visual language (teal #087f7a accent,
- *     #dff4f4 ground, height 42, rounded). Label "Fuse" (compact) so the
- *     bar stays within width; full intent in title + aria-label.
+ *     #dff4f4 ground, height 42, rounded). Label: crossroads SVG + "Fuse"
+ *     (compact) so the bar stays within width; full intent in title + aria.
  *   - Click -> window.AntcvFusion(). While running, shows the busy glyph and
  *     disables. Fusion is async; app.js manages the real busy state, so we
  *     restore the button when the promise settles (with a 90s safety cap).
@@ -35,17 +42,21 @@
  *
  * Companion change (in index.html, hydrateOverlayCfg): the overlay's floating
  * fusion FAB is disabled (enabled.fusionButton=false) so the action lives in
- * exactly one place. That edit ships in the same commit.
+ * exactly one place.
  */
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.40.343';
+  var SCRIPT_VERSION = '1.40.345';
   if (window.__antcvBottomFusion343 === SCRIPT_VERSION) return;
   window.__antcvBottomFusion343 = SCRIPT_VERSION;
 
   var SWITCH_SEL = 'button[aria-label="Switch CV or CL"]';
   var MARKER = 'data-antcv-bottom-fusion-343';
+
+  // Crossroads / merge mark: two paths converging into one downward stroke.
+  // 14px, currentColor so it inherits the pill's teal text colour.
+  var ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px" aria-hidden="true"><path d="M5 3v4c0 2 1.5 3.5 3.5 4.5S12 13 12 15v6"/><path d="M19 3v4c0 2-1.5 3.5-3.5 4.5"/><path d="M9 18l3 3 3-3"/></svg>';
 
   function isDanish() {
     try {
@@ -67,7 +78,7 @@
     btn.title = da
       ? 'Sammenflet: v\u00e6v f\u00f8lgebrevets signaler ind i CV-ets profil og resultater'
       : 'Fuse: weave the cover letter signals into the CV profile and outcomes';
-    btn.textContent = da ? '\u2728 Flet' : '\u2728 Fuse';
+    btn.innerHTML = ICON + (da ? 'Flet' : 'Fuse');
     // Match the switch pill's visual language: flex:0 0 auto, height 42,
     // rounded, teal accent on a pale-teal ground.
     btn.style.cssText = [
@@ -97,16 +108,16 @@
         return;
       }
       if (btn.disabled) return;
-      var original = btn.textContent;
+      var original = btn.innerHTML;
       btn.disabled = true;
-      btn.textContent = da ? '\u23f3 Fletter\u2026' : '\u23f3 Fusing\u2026';
+      btn.innerHTML = da ? '\u23f3 Fletter\u2026' : '\u23f3 Fusing\u2026';
       btn.style.cursor = 'wait';
       var restored = false;
       var restore = function () {
         if (restored) return;
         restored = true;
         btn.disabled = false;
-        btn.textContent = original;
+        btn.innerHTML = original;
         btn.style.cursor = 'pointer';
       };
       // Safety cap so the button never sticks on the busy glyph if the

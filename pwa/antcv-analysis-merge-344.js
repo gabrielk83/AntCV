@@ -5,30 +5,32 @@
  *
  * Goal (user spec)
  * ----------------
- * Merge the 🎯 JD-analysis modal's content INTO the in-app Analysis tab so the
- * floating 🎯 FAB becomes redundant. The Analysis tab (rendered by app.js from
- * the `rationale`/`yo` object) already shows fit summary, top fit points, gaps
- * (with native per-gap closure), tailoring decisions and CL strategy. It was
- * missing the two things the modal had: the RECRUITER card and RED FLAGS.
+ * Merge the JD-analysis modal's content INTO the in-app Analysis tab so the
+ * floating JD-analysis FAB becomes redundant. The Analysis tab (rendered by
+ * app.js from the `rationale`/`yo` object) already shows fit summary, top fit
+ * points, gaps (with native per-gap closure), tailoring decisions and CL
+ * strategy. It was missing the two things the modal had: the RECRUITER card
+ * and RED FLAGS.
  *
- * app.js side (shipped in the same release)
- * -----------------------------------------
- * Two additive, guarded render blocks were added to the analysis branch that
+ * app.js side (ships separately — large minified bundle)
+ * ------------------------------------------------------
+ * Two additive, guarded render blocks are added to the analysis branch that
  * read `yo.recruiter` and `yo.red_flags` (render nothing when absent), plus a
  * `antcv:rationale-merge` event listener that re-hydrates `yo` from the stored
- * rationale. The Analysis button label gained a 🎯 prefix.
+ * rationale. The Analysis button label gains a target-emoji prefix. This
+ * sidecar gates its FAB-retirement on detecting that app.js release as live,
+ * so shipping the sidecar first is non-breaking.
  *
  * This sidecar's job
  * ------------------
- *   1. When the Analysis view opens (or a JD is present), fetch
+ *   1. When the Analysis view opens (and a JD is present), fetch
  *      /api/jd-analysis exactly as antcv-recheck-fit.js does.
  *   2. Merge { recruiter, red_flags } into the persisted `rationale` object
  *      (localStorage key "rationale") so app.js's `yo` carries them.
  *   3. Dispatch antcv:rationale-merge so the tab re-renders live.
- *   4. Retire the floating 🎯 FAB (data-antcv-recheck-fab) — hide it, since
- *      its content now lives in the tab. The recheck-fit MODAL itself stays
- *      reachable via window.AntcvRecheckFit.open() for power users, but the
- *      FAB no longer clutters the corner.
+ *   4. Retire the floating JD-analysis FAB (data-antcv-recheck-fab) ONLY once
+ *      the new app.js is detected live. The recheck-fit MODAL stays reachable
+ *      via window.AntcvRecheckFit.open() for power users.
  *
  * Open-direction note
  * -------------------
@@ -38,9 +40,7 @@
  * only write data into `rationale` and let app.js render, that desktop/mobile
  * open-direction split is preserved automatically.
  *
- * Discipline: additive sidecar, removable in one <script> line. The only
- * app.js coupling is the read of `yo.recruiter`/`yo.red_flags` + the
- * rationale-merge listener, both shipped additively.
+ * Discipline: additive sidecar, removable in one <script> line.
  */
 (function () {
   'use strict';
@@ -79,11 +79,6 @@
       if (!raw) return '';
       return JSON.stringify(JSON.parse(raw)).slice(0, 8000);
     } catch (_) { return ''; }
-  }
-  function readActiveJD() {
-    // Best-effort: app.js keeps JD text in React refs, not LS. The modal
-    // fetches /api/active to recover it. We mirror that.
-    return null; // resolved async in fetchActiveJd
   }
 
   function fireMerge() {
@@ -160,36 +155,35 @@
     }
   }
 
-  // Trigger a merge when the Analysis view is open. We detect the view by
-  // the 🎯-labelled Analysis button being in its active state, or simply by
-  // the analysis panel header being present in the DOM.
+  // Trigger a merge when the Analysis view is open. We detect the view by the
+  // analysis panel header being present in the DOM.
   function analysisViewOpen() {
-    // The app.js analysis branch renders a "📊 Application Analysis" heading.
+    // The app.js analysis branch renders a "Application Analysis" heading.
     var nodes = document.querySelectorAll('div');
     for (var i = 0; i < nodes.length; i++) {
       var t = nodes[i].textContent;
-      if (t && t.indexOf('📊 Application Analysis') === 0) return true;
+      if (t && t.indexOf('\uD83D\uDCCA Application Analysis') === 0) return true;
     }
     return false;
   }
 
   // Detect whether the app.js that renders recruiter/red_flags in the tab is
-  // live. We only retire the 🎯 FAB once the tab can actually show that
-  // content — otherwise shipping this sidecar before the app.js release would
-  // hide the FAB AND leave recruiter/red-flags unreachable. The marker is the
-  // 🎯 prefix on the Analysis button (added in the same app.js release).
+  // live. We only retire the JD-analysis FAB once the tab can actually show
+  // that content — otherwise shipping this sidecar before the app.js release
+  // would hide the FAB AND leave recruiter/red-flags unreachable. The marker
+  // is the target-emoji prefix on the Analysis button (added in that release).
   function newAppJsLive() {
     try {
       var btns = document.querySelectorAll('button');
       for (var i = 0; i < btns.length; i++) {
         var t = btns[i].textContent || '';
-        if (t.indexOf('🎯') === 0) return true; // "🎯 Analysis" / "🎯 Analyse"
+        if (t.indexOf('\uD83C\uDFAF') === 0) return true; // "🎯 Analysis" / "🎯 Analyse"
       }
     } catch (_) {}
     return false;
   }
 
-  // --- retire the floating 🎯 FAB (content now lives in the tab) ---
+  // --- retire the floating JD-analysis FAB (content now lives in the tab) ---
   function hideRecheckFab() {
     if (!newAppJsLive()) return; // safe: keep FAB until the tab can render the content
     var fab = document.querySelector(FAB_SEL);
@@ -225,7 +219,6 @@
 
   // Re-attempt when sections/rationale change (e.g. a fresh generation).
   window.addEventListener('antcv:sections-updated', function () {
-    // A new generation resets rationale; allow a fresh fetch.
     lastFetchedKey = '';
     schedule();
   });

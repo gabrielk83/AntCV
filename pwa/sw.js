@@ -1,4 +1,3 @@
-
 const CACHE = 'antcv-1.50.56';
 const SHELL = [
   './manifest.json',

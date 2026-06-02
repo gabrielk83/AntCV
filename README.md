@@ -4,6 +4,11 @@ Build a clean CV and cover letter. Fast, structured, easy to edit. AI-assisted v
 
 Cloudflare Pages (PWA) + Workers (proxy, DOCX renderer, C2PA signer, access relay, demo proxy) + optional MCP server.
 
+AntCV is a supervisor-driven multi-agent orchestration platform for generating and validating tailored job applications.
+
+Rather than relying on a single LLM, AntCV routes specialized tasks such as requirement extraction, fit and gap analysis, multilingual adaptation, document generation, and validation to the most suitable provider based on observed quality, language pair performance, reliability, latency, and cost.
+
+The platform emphasizes traceability, replayability, provenance, accessibility, ATS compatibility, and human review.
 ---
 
 ## Documentation map

@@ -27,8 +27,9 @@
 import { generateDocx } from './generate.js';
 import { validatePayload } from './schema.js';
 import { convertDocxToPdf, convertPdfToDocx, pdfProvider } from './cloudconvert.js';
+import { countPdfPages } from './pdf-page-count.js';
 
-const VERSION = '1.13.1-academic';
+const VERSION = '1.14.13';
 
 // ──────────────────────────────────────────────────────────────────
 // Entry
@@ -424,8 +425,16 @@ async function handleGeneratePdf(request, origin, env) {
   }
 
   const filename = sanitizeFilename(payload.filename || 'document') + '.pdf';
+
+  let pdfPages = 0;
+  try {
+    pdfPages = countPdfPages(pdfResult.buffer);
+  } catch (e) {
+    console.warn('[docx-worker] countPdfPages failed:', e && e.message);
+  }
+
   console.log(
-    `[docx-worker] /generate-pdf ok: docx ${docxMs}ms, pdf ${pdfResult.durationMs}ms, ` +
+    `[docx-worker] /generate-pdf ok: pages=${pdfPages}, docx ${docxMs}ms, pdf ${pdfResult.durationMs}ms, ` +
       `total ${Date.now() - t0}ms, jobId=${pdfResult.jobId}`,
   );
 
@@ -438,11 +447,13 @@ async function handleGeneratePdf(request, origin, env) {
     'X-AntCV-Pdf-JobId': pdfResult.jobId,
     'X-AntCV-Docx-Ms': String(docxMs),
     'X-AntCV-Pdf-Ms': String(pdfResult.durationMs),
+    'X-AntCV-Pdf-Pages': String(pdfPages),
     'Access-Control-Expose-Headers': [
       'X-AntCV-Pdf-Provider',
       'X-AntCV-Pdf-JobId',
       'X-AntCV-Docx-Ms',
       'X-AntCV-Pdf-Ms',
+      'X-AntCV-Pdf-Pages',
       'Content-Disposition',
     ].join(', '),
   };

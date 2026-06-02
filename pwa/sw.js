@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.50.58';
+const CACHE = 'antcv-1.50.59';
 const SHELL = [
   './manifest.json',
   './antcv-mobile-controls.css',
@@ -14,6 +14,7 @@ const SHELL = [
   './antcv-analysis-merge-344.js',
   './antcv-sections-icon-346.js',
   './antcv-topbar-tools-347.js',
+  './antcv-mobile-fab-cleanup-351.js',
   './antcv-jd-watch.js',
   './antcv-privacy-led.js',
   './antcv-bullet-targets.js',

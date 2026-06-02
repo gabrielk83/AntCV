@@ -44,7 +44,7 @@
   'use strict';
 
   if (window.__antcvPdfPreviewGateInstalled) return;
-  window.__antcvPdfPreviewGateInstalled = '1.50.31';
+  window.__antcvPdfPreviewGateInstalled = '1.50.48';
 
   const FAB_ID = 'antcv-pdf-preview-fab';
   const MODAL_ID = 'antcv-pdf-preview-modal';
@@ -189,6 +189,12 @@
         border: 1px solid #00746E;
       }
       #${MODAL_ID}-print:hover { background: #00867F; }
+      #${MODAL_ID}-docx {
+        background: #6d28d9;
+        color: #fff;
+        border: 1px solid #6d28d9;
+      }
+      #${MODAL_ID}-docx:hover { background: #5b21b6; }
       #${MODAL_ID}-secondary {
         background: #fff;
         color: #283556;
@@ -429,7 +435,32 @@ ${inlineStyles}
       }
     });
 
+    // Save as DOCX — delegates to the app's existing DOCX export button
+    // (which owns the worker call, inline fallback, password gate, and the
+    // CV/CL layout choice). We find it by its stable title prefix and click
+    // it, then close the preview so the user sees the download/flow. Distinct
+    // purple to set it apart from the teal PDF/Print action.
+    const docx = document.createElement('button');
+    docx.id = MODAL_ID + '-docx';
+    docx.type = 'button';
+    docx.textContent = 'Save as DOCX';
+    docx.title =
+      'Export as .docx (recommended for job applications). Opens in Word, ' +
+      'Google Docs, LibreOffice. Uses the same export as the main DOCX button.';
+    docx.addEventListener('click', () => {
+      const btn = document.querySelector('button[title^="Export as .docx"]');
+      if (!btn) {
+        alert('The DOCX export button isn\'t available right now.\n\n' +
+          'Switch to the document view and try the DOCX export there.');
+        return;
+      }
+      closeModal();
+      // Defer so the modal teardown finishes before the export dialog/flow.
+      setTimeout(() => { try { btn.click(); } catch (_) {} }, 60);
+    });
+
     actions.appendChild(cancel);
+    actions.appendChild(docx);
     actions.appendChild(print);
 
     // Assemble
@@ -470,6 +501,39 @@ ${inlineStyles}
   }
 
   // ─── Floating FAB ────────────────────────────────────────────────
+  // ─── Visibility gate (v1.50.47) ──────────────────────────────────
+  // The FAB must appear ONLY when the document preview is actually on
+  // screen — not on the login screen, the Settings panels, or the wizard.
+  // Earlier builds injected the FAB unconditionally, so it bled into those
+  // views. We gate on a real, RENDERED .antcv-preview-paper: present in the
+  // DOM and actually visible (has layout boxes / non-zero size). On login
+  // and Settings there is no rendered preview paper, so the FAB hides.
+  function previewIsOnScreen() {
+    try {
+      var papers = document.querySelectorAll('.antcv-preview-paper');
+      for (var i = 0; i < papers.length; i++) {
+        var p = papers[i];
+        // offsetParent is null for display:none / detached nodes. Also
+        // require a non-trivial rendered size so a 0x0 placeholder doesn't
+        // count.
+        if (p.offsetParent !== null) {
+          var r = p.getBoundingClientRect();
+          if (r.width > 40 && r.height > 40) return true;
+        }
+      }
+    } catch (_) {}
+    return false;
+  }
+  function syncFabVisibility() {
+    var fab = document.getElementById(FAB_ID);
+    if (!fab) return;
+    var show = previewIsOnScreen();
+    fab.style.setProperty('display', show ? '' : 'none', 'important');
+    // Keep it out of the tab order when hidden.
+    if (show) fab.removeAttribute('tabindex');
+    else fab.setAttribute('tabindex', '-1');
+  }
+
   function injectFab() {
     if (document.getElementById(FAB_ID)) return;
     injectStylesOnce();
@@ -491,6 +555,7 @@ ${inlineStyles}
       '</svg><span>Preview PDF</span>';
     fab.addEventListener('click', () => openModal());
     document.body.appendChild(fab);
+    syncFabVisibility();
   }
 
   // ─── window.alert wrap ───────────────────────────────────────────
@@ -521,8 +586,14 @@ ${inlineStyles}
     // Re-inject FAB if the React shell remounts and wipes the body.
     const observer = new MutationObserver(() => {
       if (!document.getElementById(FAB_ID)) injectFab();
+      syncFabVisibility();
     });
-    observer.observe(document.body, { childList: true });
+    observer.observe(document.body, { childList: true, subtree: true });
+    // Backstop: views can change without a body childList mutation
+    // (e.g. a CSS/display toggle deep in the tree). A light poll keeps
+    // the FAB's visibility correct without depending on mutations.
+    setInterval(syncFabVisibility, 600);
+    syncFabVisibility();
   }
 
   if (document.readyState === 'loading') {
@@ -533,7 +604,7 @@ ${inlineStyles}
 
   // Public API for diagnostics / power-users.
   window.AntcvPdfPreviewGate = {
-    version: '1.50.31',
+    version: '1.50.48',
     open: openModal,
     close: closeModal,
   };

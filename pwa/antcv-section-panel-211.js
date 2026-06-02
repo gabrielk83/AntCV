@@ -1,40 +1,37 @@
-/* AntCV section headline controls + Publications buttons + role content CJLR (v1.40.350)
+/* AntCV section headline controls + role content CJLR (v1.40.351)
  * - Defaults: CAND. center, SIDEBAR center, MAIN justify.
  * - Keeps user-changed headline alignment after first click.
  * - Button order in all section headers: Undo, Fit, Comp-icon, Enr., CJLR, +.
  * - CJLR affects the section headline only.
- * - Adds missing compact Comp/Enr controls to PUBLICATIONS & PATENT row.
  *
- * v1.40.350 — FLICKER FIX (endless re-injection / re-write loop)
- * --------------------------------------------------------------
- * Two compounding bugs caused buttons to flicker forever and the
- * Publications Enhance/Compress buttons to re-clone every sweep:
+ * v1.40.351 — STOP injecting Publications mini-buttons
+ * ----------------------------------------------------
+ * Publications & Patent controls are owned by
+ * antcv-publications-strict-row-layout-273.js, which mounts its own
+ * page / CJLR / compress / enhance buttons (data-antcv-pub273-control)
+ * on the per-publication item rows. 211 used to ALSO inject a pair of
+ * Enhance/Compress buttons (data-antcv-pub-injected) onto the
+ * Publications SECTION-HEADER row. Those were redundant and unwanted —
+ * and because they sit on the section header (outside 273's panelRoot,
+ * which requires "← back" + "+ publication" text) 273's own purge()
+ * never removed them. They lingered as two empty CSS-glyph buttons.
  *
- * (1) MutationObserver feedback loop. The observer watches
- *     attributes ['style','data-antcv-panel-label-211',
- *     'data-antcv-panel-action-211','data-antcv-align-cycler'].
- *     applyPanel() SET those exact attributes + style.order on every
- *     sweep unconditionally — even when unchanged — so each sweep's
- *     own writes re-triggered the observer → schedule → sweep → …
- *     infinite loop → visible flicker.
- *     FIX: setAttr()/setOrder() helpers that write ONLY when the value
- *     actually differs. No-op sweeps now make zero mutations, so the
- *     observer goes quiet once the panel is in its target state.
+ * Fix: 211 no longer injects them. ensurePublicationsMiniButtons() is
+ * replaced by removePublicationsMiniButtons(), which deletes any
+ * data-antcv-pub-injected / data-antcv-pub-mini-kind button that 211 (or
+ * an older version) left on the Publications section-header row. 273
+ * remains the sole owner of Publications controls.
  *
- * (2) Empty injected buttons mis-classified. The injected Publications
- *     Enhance/Compress buttons render their glyph via CSS ::after
- *     (content: attr(data-antcv-panel-label-211)); their textContent
- *     is EMPTY. miniKind() read title+textContent, and a clone could
- *     end up with empty title in some states → miniKind '' → escaped
- *     the dedup → re-injected.
- *     FIX: miniKind()/isKind() check the stable attributes
- *     data-antcv-pub-injected / data-antcv-pub-mini-kind /
- *     data-antcv-panel-action-211 FIRST, before any text heuristic.
+ * v1.40.350 — FLICKER FIX (retained)
+ * ----------------------------------
+ * Idempotent setAttr/setOrder/setTextAlign writers + an `applying` guard
+ * + mo.takeRecords() so the MutationObserver never re-fires on our own
+ * no-op writes. This stopped the endless re-write/flicker loop.
  */
 (function () {
   'use strict';
 
-  const VERSION = '1.40.350';
+  const VERSION = '1.40.351';
   if (window.__antcvSectionPanel211Installed === VERSION) return;
   window.__antcvSectionPanel211Installed = VERSION;
 
@@ -263,125 +260,25 @@
     }, true);
   }
 
-  function rowHasText(el, needle) { return low(el.textContent).indexOf(low(needle)) >= 0; }
-  function isPubRow(el) { return rowHasText(el, 'PUBLICATIONS & PATENT') || rowHasText(el, 'PUBLICATIONS AND PATENT'); }
-  function isSectionHeaderRow(el) { return !!(el && el.querySelector && el.querySelector('[data-candidate-drop-loc]')); }
-
-  function findSubsectionRows() {
-    const rows = [];
-    Array.from(document.querySelectorAll('button')).forEach(function (btn) {
-      let p = btn.parentElement;
-      for (let i = 0; i < 5 && p; i++, p = p.parentElement) {
-        if (!p || isSectionHeaderRow(p)) continue;
-        const txt = clean(p.textContent).toUpperCase();
-        if (/TOOLS & METHODS|CERTIFICATIONS|EDUCATION|PUBLICATIONS & PATENT|REGULATORY CONTEXT|ADDITIONAL INFORMATION/.test(txt) && rows.indexOf(p) < 0) {
-          rows.push(p);
-          break;
-        }
-      }
-    });
-    return rows;
-  }
-
-  function getButtons(el) { return el ? Array.from(el.querySelectorAll('button')) : []; }
-
-  // Attribute-first: injected buttons carry data-antcv-pub-injected /
-  // data-antcv-pub-mini-kind even when their textContent is empty (glyph
-  // is CSS ::after). Check those before the text heuristic.
-  function miniKind(btn) {
-    const inj = btn.getAttribute('data-antcv-pub-injected') || btn.getAttribute('data-antcv-pub-mini-kind');
-    if (inj === 'enr' || inj === 'comp') return inj;
-    const act = btn.getAttribute('data-antcv-panel-action-211');
-    if (act === 'enr' || act === 'comp') return act;
-    const t = low((btn.getAttribute('title') || '') + ' ' + (btn.textContent || ''));
-    if (t.indexOf('enrich') >= 0 || t.indexOf('enhance') >= 0 || /enr\.?|enh\.?|✨/.test(t)) return 'enr';
-    if (t.indexOf('compress') >= 0 || /comp\.?|↹|⇥|→/.test(t)) return 'comp';
-    if (/^\s*on\s*$/.test(t) || t.indexOf('toggle') >= 0) return 'on';
-    if (/\b1\b|page|📄/.test(t)) return 'page';
-    return '';
-  }
-
-  function cloneMini(proto, kind) {
-    const b = proto ? proto.cloneNode(true) : document.createElement('button');
-    b.type = 'button';
-    b.removeAttribute('id');
-    b.setAttribute('data-antcv-pub-injected', kind);
-    b.setAttribute('data-antcv-pub-mini-kind', kind);
-    b.setAttribute('data-antcv-panel-label-211', kind === 'comp' ? '↹' : '✨');
-    b.setAttribute('data-antcv-panel-action-211', kind);
-    b.title = kind === 'comp' ? 'Compress Publications & Patent' : 'Enhance Publications & Patent';
-    b.setAttribute('aria-label', b.title);
-    Object.keys(b).forEach(function (k) { if (/^__react/.test(k)) { try { delete b[k]; } catch (_) {} } });
-    b.addEventListener('click', function (ev) {
-      ev.preventDefault();
-      ev.stopPropagation();
-      const rowEl = b.closest('[data-antcv-publications-row="1"]') || b.parentElement;
-      const real = getButtons(rowEl).find(function (x) { return x !== b && x.getAttribute('data-antcv-pub-injected') !== kind && miniKind(x) === kind; });
-      if (real) real.click();
-    }, true);
-    return b;
-  }
-
-  function ensurePublicationsMiniButtons() {
-    const allRows = findSubsectionRows();
-    const pub = allRows.find(isPubRow);
-    if (!pub) return;
-    setAttr(pub, 'data-antcv-publications-row', '1');
-    const liveButtons = getButtons(pub);
-    const hasComp = liveButtons.some(function (b) { return miniKind(b) === 'comp'; });
-    const hasEnr = liveButtons.some(function (b) { return miniKind(b) === 'enr'; });
-    if (hasComp && hasEnr) {
-      // Already complete — just keep order correct without re-injecting.
-      orderPubMiniButtons(pub);
-      return;
+  // ─── Publications mini-button REMOVAL (v1.40.351) ───────────────
+  // 211 no longer injects Enhance/Compress onto the Publications row.
+  // Remove any data-antcv-pub-injected / data-antcv-pub-mini-kind buttons
+  // that 211 (or an older version of it) left behind anywhere in the DOM.
+  // 273 owns Publications controls now.
+  function removePublicationsMiniButtons() {
+    var stale = document.querySelectorAll(
+      'button[data-antcv-pub-injected],button[data-antcv-pub-mini-kind]'
+    );
+    for (var i = 0; i < stale.length; i++) {
+      var b = stale[i];
+      // Defensive: never touch 273's own controls (different attribute).
+      if (b.hasAttribute('data-antcv-pub273-control')) continue;
+      try { b.remove(); } catch (_) { try { b.style.display = 'none'; } catch (__) {} }
     }
-
-    const donor = allRows.find(function (r) { return r !== pub && getButtons(r).some(function (b) { return miniKind(b) === 'comp'; }) && getButtons(r).some(function (b) { return miniKind(b) === 'enr'; }); });
-    const donorBtns = getButtons(donor);
-    const protoComp = donorBtns.find(function (b) { return miniKind(b) === 'comp'; });
-    const protoEnr = donorBtns.find(function (b) { return miniKind(b) === 'enr'; });
-
-    const pageBtn = liveButtons.find(function (b) { return miniKind(b) === 'page'; });
-    const onBtn = liveButtons.find(function (b) { return miniKind(b) === 'on'; }) || liveButtons[liveButtons.length - 2] || null;
-    const enrBtn = liveButtons.find(function (b) { return miniKind(b) === 'enr'; });
-    const parent = (enrBtn && enrBtn.parentElement) || (pageBtn && pageBtn.parentElement) || (onBtn && onBtn.parentElement) || pub;
-
-    function placeMini(btn, before) {
-      if (!btn || !parent) return;
-      if (btn.parentElement !== parent) parent.appendChild(btn);
-      if (before && before.parentElement === parent && btn.nextSibling !== before) parent.insertBefore(btn, before);
-    }
-    function isKind(b, kind) {
-      return b.getAttribute('data-antcv-pub-injected') === kind || miniKind(b) === kind;
-    }
-    let liveEnr = liveButtons.find(function (b) { return isKind(b, 'enr'); });
-    let liveComp = liveButtons.find(function (b) { return isKind(b, 'comp'); });
-    const liveOn = liveButtons.find(function (b) { return miniKind(b) === 'on'; }) || onBtn;
-
-    if (!liveEnr) {
-      liveEnr = cloneMini(protoEnr, 'enr');
-      placeMini(liveEnr, liveOn);
-    }
-    if (!liveComp) {
-      liveComp = cloneMini(protoComp, 'comp');
-      placeMini(liveComp, liveOn);
-    }
-    orderPubMiniButtons(pub);
-  }
-
-  function orderPubMiniButtons(pub) {
-    const btns = getButtons(pub);
-    const liveEnr = btns.find(function (b) { return miniKind(b) === 'enr'; });
-    const liveComp = btns.find(function (b) { return miniKind(b) === 'comp'; });
-    const liveOn = btns.find(function (b) { return miniKind(b) === 'on'; });
-    if (!liveEnr || !liveComp) return;
-    const parent = liveEnr.parentElement;
-    if (!parent || liveComp.parentElement !== parent) return;
-    // Compress directly after Enhance.
-    if (liveEnr.nextSibling !== liveComp) parent.insertBefore(liveComp, liveEnr.nextSibling);
-    // ...and before ON.
-    if (liveOn && liveOn.parentElement === parent && (liveComp.compareDocumentPosition(liveOn) & Node.DOCUMENT_POSITION_PRECEDING)) {
-      parent.insertBefore(liveComp, liveOn);
+    // Drop the row marker 211 previously set so nothing keys off it.
+    var marked = document.querySelectorAll('[data-antcv-publications-row="1"]');
+    for (var j = 0; j < marked.length; j++) {
+      marked[j].removeAttribute('data-antcv-publications-row');
     }
   }
 
@@ -457,38 +354,6 @@
       [data-antcv-panel-211] button[data-antcv-panel-action-211="cjlr"] { order: 45 !important; border-color: ${TITLE_COLOR} !important; color: #00746E !important; background: rgba(1, 183, 187, 0.08) !important; }
       [data-antcv-panel-211] button[data-antcv-panel-action-211="add"] { order: 50 !important; }
 
-      [data-antcv-publications-row="1"] button[data-antcv-pub-injected] {
-        width: 23px !important;
-        min-width: 23px !important;
-        height: 23px !important;
-        min-height: 23px !important;
-        padding: 1px 3px !important;
-        margin-left: 3px !important;
-        font-size: 0 !important;
-        line-height: 1 !important;
-        border-radius: 5px !important;
-        box-sizing: border-box !important;
-      }
-      [data-antcv-publications-row="1"] button[data-antcv-pub-injected]::after {
-        content: attr(data-antcv-panel-label-211) !important;
-        font-size: 12px !important;
-        line-height: 1 !important;
-        font-weight: 700 !important;
-      }
-      [data-antcv-publications-row="1"] button[data-antcv-pub-injected="comp"] {
-        border-color: #8a3ffc !important;
-        color: #7b2ff2 !important;
-        background: #fff !important;
-      }
-      [data-antcv-publications-row="1"] button[data-antcv-pub-injected="enr"] {
-        border-color: #00a86b !important;
-        color: #00a86b !important;
-        background: #fff !important;
-      }
-      [data-antcv-publications-row="1"] button[data-antcv-pub-mini-kind="enr"] { order: 30 !important; }
-      [data-antcv-publications-row="1"] button[data-antcv-pub-mini-kind="comp"] { order: 35 !important; }
-
-
       [data-antcv-experience-role-card="1"] button[data-antcv-role-content-cjlr="1"] {
         width: 28px !important;
         min-width: 28px !important;
@@ -548,7 +413,7 @@
   function applyAll() {
     seedDefaults();
     LOCS.forEach(applyPanel);
-    ensurePublicationsMiniButtons();
+    removePublicationsMiniButtons();
     ensureRoleContentCjlr();
   }
   function schedule() {

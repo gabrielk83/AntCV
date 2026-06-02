@@ -10,7 +10,6 @@ import {
   type LangCode,
 } from '../../lib/writing-systems';
 import {
-  DEFAULT_TARGET_PAGES_OPTIONS,
   addBannedItem,
   addBannedItems,
   clearBannedBucket,
@@ -724,7 +723,7 @@ function LanguageSwitcher({
 
 export function WritingStylePicker(): JSX.Element {
   const [prefs, setPrefs] = useState<WritingPrefs>(() => readWritingPrefs());
-  const [layout, setLayout] = useState<LayoutPrefs>(() => readLayoutPrefs());
+  const [, setLayout] = useState<LayoutPrefs>(() => readLayoutPrefs());
   const [editorLang, setEditorLang] = useState<LangCode>(() => readEditorLanguage());
   const [advanced, setAdvanced] = useState(false);
 
@@ -746,10 +745,6 @@ export function WritingStylePicker(): JSX.Element {
   }, []);
 
   const style = STYLES[prefs.style];
-  const allowed = style.allowedLength;
-  const allowedPageValues = DEFAULT_TARGET_PAGES_OPTIONS.filter(
-    (v) => v >= allowed.min && v <= allowed.max,
-  );
 
   // v1.50.13 — auto-shift state. Set when a chip toggle introduces a new
   // conflict; carries the prior style + chips so Undo restores them.
@@ -832,12 +827,6 @@ export function WritingStylePicker(): JSX.Element {
     setEditorLang(lang);
   }, []);
 
-  const onTargetPages = useCallback((v: number) => {
-    const overrides = { ...prefs.overrides, targetPages: true };
-    setLayout(writeLayoutPrefs({ targetPages: v }));
-    setPrefs(writeWritingPrefs({ overrides }));
-  }, [prefs.overrides]);
-
   const onSaveSlot = useCallback(() => {
     setPrefs(saveCurrentAsSlot());
   }, []);
@@ -898,26 +887,10 @@ export function WritingStylePicker(): JSX.Element {
         onDelete={onDeleteSlot}
       />
 
-      <SectionHeader>Target CV length</SectionHeader>
-      <select
-        value={layout.targetPages}
-        onChange={(e) => onTargetPages(Number(e.currentTarget.value))}
-        style={{
-          width: '100%',
-          padding: '8px 10px',
-          background: 'rgba(255,255,255,.05)',
-          color: '#e6eef3',
-          border: '1px solid rgba(255,255,255,.18)',
-          borderRadius: 8,
-        }}
-      >
-        {allowedPageValues.map((v) => (
-          <option key={v} value={v} style={DARK_OPTION_STYLE}>{v} page{v === 1 ? '' : 's'}</option>
-        ))}
-      </select>
-      <div style={{ fontSize: 11, opacity: 0.65, marginTop: 4 }}>
-        {style.displayName}: allowed {allowed.min}–{allowed.max} pages
-      </div>
+      {/* v1.50.x — "Target CV length" removed from here. It now lives only in
+          Advanced Styles (added by antcv-page-budget.js). Keeping a second
+          copy in the Personal-tab picker was a confusing duplicate writing the
+          same layout.targetPages. */}
 
       <SectionHeader>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>

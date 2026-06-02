@@ -44,7 +44,7 @@
   'use strict';
 
   if (window.__antcvPdfPreviewGateInstalled) return;
-  window.__antcvPdfPreviewGateInstalled = '1.50.49';
+  window.__antcvPdfPreviewGateInstalled = '1.50.50';
 
   const FAB_ID = 'antcv-pdf-preview-fab';
   const MODAL_ID = 'antcv-pdf-preview-modal';
@@ -262,9 +262,9 @@
     // whether the preview captured all pages of their CV.
     const previewPapers = findAllActivePapers();
     if (previewPapers.length > 1) {
-      title.textContent = 'PDF preview · ' + previewPapers.length + ' pages';
+      title.textContent = 'Document export · ' + previewPapers.length + ' pages';
     } else {
-      title.textContent = 'PDF preview';
+      title.textContent = 'Document export';
     }
     const close = document.createElement('button');
     close.id = MODAL_ID + '-close';
@@ -587,8 +587,8 @@ ${inlineStyles}
     const fab = document.createElement('button');
     fab.id = FAB_ID;
     fab.type = 'button';
-    fab.setAttribute('aria-label', 'Preview document and save as PDF');
-    fab.title = 'Preview the CV and save as PDF via browser print';
+    fab.setAttribute('aria-label', 'Document export — preview and save as PDF or DOCX');
+    fab.title = 'Document export — preview the document and save as PDF or DOCX';
     // v1.50.32 — SVG document icon + "Preview PDF" text label.
     // Replaces the 📄 emoji that didn\'t render on some systems and
     // gave the FAB no apparent affordance. innerHTML is safe here —
@@ -599,7 +599,7 @@ ${inlineStyles}
         '<path d="M14 3v6h5"/>' +
         '<path d="M9 14h6"/>' +
         '<path d="M9 18h4"/>' +
-      '</svg><span>Preview PDF</span>';
+      '</svg><span>Document export</span>';
     fab.addEventListener('click', () => openModal());
     document.body.appendChild(fab);
     syncFabVisibility();
@@ -653,7 +653,7 @@ ${inlineStyles}
 
   // Public API for diagnostics / power-users.
   window.AntcvPdfPreviewGate = {
-    version: '1.50.49',
+    version: '1.50.50',
     open: openModal,
     close: closeModal,
   };

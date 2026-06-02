@@ -286,8 +286,11 @@
       if (before && before.parentElement === parent && btn.nextSibling !== before) parent.insertBefore(btn, before);
     }
     const liveButtons = getButtons(pub);
-    let liveEnr = liveButtons.find(function (b) { return miniKind(b) === 'enr'; });
-    let liveComp = liveButtons.find(function (b) { return miniKind(b) === 'comp'; });
+    function isKind(b, kind) {
+      return b.getAttribute('data-antcv-pub-injected') === kind || miniKind(b) === kind;
+    }
+    let liveEnr = liveButtons.find(function (b) { return isKind(b, 'enr'); });
+    let liveComp = liveButtons.find(function (b) { return isKind(b, 'comp'); });
     const liveOn = liveButtons.find(function (b) { return miniKind(b) === 'on'; }) || onBtn;
 
     if (!liveEnr) {

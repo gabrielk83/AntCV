@@ -44,7 +44,7 @@
   'use strict';
 
   if (window.__antcvPdfPreviewGateInstalled) return;
-  window.__antcvPdfPreviewGateInstalled = '1.50.31';
+  window.__antcvPdfPreviewGateInstalled = '1.50.49';
 
   const FAB_ID = 'antcv-pdf-preview-fab';
   const MODAL_ID = 'antcv-pdf-preview-modal';
@@ -189,6 +189,12 @@
         border: 1px solid #00746E;
       }
       #${MODAL_ID}-print:hover { background: #00867F; }
+      #${MODAL_ID}-docx {
+        background: #6d28d9;
+        color: #fff;
+        border: 1px solid #6d28d9;
+      }
+      #${MODAL_ID}-docx:hover { background: #5b21b6; }
       #${MODAL_ID}-secondary {
         background: #fff;
         color: #283556;
@@ -413,13 +419,26 @@ ${inlineStyles}
     const print = document.createElement('button');
     print.id = MODAL_ID + '-print';
     print.type = 'button';
-    print.textContent = 'Save as PDF (Print)';
+    print.textContent = 'Save as PDF';
     print.title =
-      'Opens your browser’s print dialog. Choose "Save as PDF" as the destination. ' +
-      'Works regardless of whether the built-in export is currently broken.';
+      'Save as PDF. Uses the app’s server-side ATS PDF export when available, ' +
+      'falling back to the browser print dialog (choose "Save as PDF").';
     print.addEventListener('click', () => {
+      // Prefer the app's real PDF export (CloudConvert /generate-pdf when the
+      // docx-worker has CLOUDCONVERT_API_KEY — proper Unicode-embedded ATS
+      // PDF). Identify it by its stable title prefix. Fall back to printing
+      // the iframe clone if that button isn't present.
+      const realPdf = document.querySelector('button[title^="Export as PDF"]');
+      if (realPdf) {
+        closeModal();
+        setTimeout(() => { try { realPdf.click(); } catch (_) {} }, 60);
+        return;
+      }
       const target = modal._antcvPrintTarget;
-      if (!target || !target.contentWindow) return;
+      if (!target || !target.contentWindow) {
+        try { window.print(); } catch (_) {}
+        return;
+      }
       try {
         target.contentWindow.focus();
         target.contentWindow.print();
@@ -429,7 +448,32 @@ ${inlineStyles}
       }
     });
 
+    // Save as DOCX — delegates to the app's existing DOCX export button
+    // (which owns the worker call, inline fallback, password gate, and the
+    // CV/CL layout choice). We find it by its stable title prefix and click
+    // it, then close the preview so the user sees the download/flow. Distinct
+    // purple to set it apart from the teal PDF/Print action.
+    const docx = document.createElement('button');
+    docx.id = MODAL_ID + '-docx';
+    docx.type = 'button';
+    docx.textContent = 'Save as DOCX';
+    docx.title =
+      'Save as .docx (recommended for job applications). Opens in Word, ' +
+      'Google Docs, LibreOffice. Uses the same export as the main DOCX button.';
+    docx.addEventListener('click', () => {
+      const btn = document.querySelector('button[title^="Export as .docx"]');
+      if (!btn) {
+        alert('The DOCX export button isn\'t available right now.\n\n' +
+          'Switch to the document view and try the DOCX export there.');
+        return;
+      }
+      closeModal();
+      // Defer so the modal teardown finishes before the export dialog/flow.
+      setTimeout(() => { try { btn.click(); } catch (_) {} }, 60);
+    });
+
     actions.appendChild(cancel);
+    actions.appendChild(docx);
     actions.appendChild(print);
 
     // Assemble
@@ -470,6 +514,73 @@ ${inlineStyles}
   }
 
   // ─── Floating FAB ────────────────────────────────────────────────
+  // ─── Visibility gate (v1.50.47) ──────────────────────────────────
+  // The FAB must appear ONLY when the document preview is actually on
+  // screen — not on the login screen, the Settings panels, or the wizard.
+  // Earlier builds injected the FAB unconditionally, so it bled into those
+  // views. We gate on a real, RENDERED .antcv-preview-paper: present in the
+  // DOM and actually visible (has layout boxes / non-zero size). On login
+  // and Settings there is no rendered preview paper, so the FAB hides.
+  function previewIsOnScreen() {
+    try {
+      var papers = document.querySelectorAll('.antcv-preview-paper');
+      for (var i = 0; i < papers.length; i++) {
+        var p = papers[i];
+        // offsetParent is null for display:none / detached nodes. Also
+        // require a non-trivial rendered size so a 0x0 placeholder doesn't
+        // count.
+        if (p.offsetParent !== null) {
+          var r = p.getBoundingClientRect();
+          if (r.width > 40 && r.height > 40) return true;
+        }
+      }
+    } catch (_) {}
+    return false;
+  }
+  // v1.50.49 — the preview modal is now the single export surface, so the
+  // embedded gray-zone export buttons are hidden. We hide (not remove) them so
+  // the modal's Save-as-PDF / Save-as-DOCX can still find and click them to
+  // reuse the app's real export pipelines. Visually-hidden + out of tab order.
+  function hideEmbeddedExportButtons() {
+    try {
+      var sels = ['button[title^="Export as PDF"]', 'button[title^="Export as .docx"]'];
+      for (var k = 0; k < sels.length; k++) {
+        var btns = document.querySelectorAll(sels[k]);
+        for (var i = 0; i < btns.length; i++) {
+          var b = btns[i];
+          // Never touch buttons inside our own preview modal.
+          if (b.closest && b.closest('#' + MODAL_ID + '-backdrop')) continue;
+          if (b.id && b.id.indexOf(MODAL_ID) === 0) continue;
+          if (b.getAttribute('data-antcv-embedded-export-hidden') === '1') continue;
+          b.setAttribute('data-antcv-embedded-export-hidden', '1');
+          b.setAttribute('aria-hidden', 'true');
+          b.setAttribute('tabindex', '-1');
+          b.style.setProperty('position', 'absolute', 'important');
+          b.style.setProperty('width', '1px', 'important');
+          b.style.setProperty('height', '1px', 'important');
+          b.style.setProperty('padding', '0', 'important');
+          b.style.setProperty('margin', '-1px', 'important');
+          b.style.setProperty('overflow', 'hidden', 'important');
+          b.style.setProperty('clip', 'rect(0 0 0 0)', 'important');
+          b.style.setProperty('white-space', 'nowrap', 'important');
+          b.style.setProperty('border', '0', 'important');
+          b.style.setProperty('opacity', '0', 'important');
+          b.style.setProperty('pointer-events', 'none', 'important');
+        }
+      }
+    } catch (_) {}
+  }
+
+  function syncFabVisibility() {
+    var fab = document.getElementById(FAB_ID);
+    if (!fab) return;
+    var show = previewIsOnScreen();
+    fab.style.setProperty('display', show ? '' : 'none', 'important');
+    // Keep it out of the tab order when hidden.
+    if (show) fab.removeAttribute('tabindex');
+    else fab.setAttribute('tabindex', '-1');
+  }
+
   function injectFab() {
     if (document.getElementById(FAB_ID)) return;
     injectStylesOnce();
@@ -491,6 +602,7 @@ ${inlineStyles}
       '</svg><span>Preview PDF</span>';
     fab.addEventListener('click', () => openModal());
     document.body.appendChild(fab);
+    syncFabVisibility();
   }
 
   // ─── window.alert wrap ───────────────────────────────────────────
@@ -521,8 +633,16 @@ ${inlineStyles}
     // Re-inject FAB if the React shell remounts and wipes the body.
     const observer = new MutationObserver(() => {
       if (!document.getElementById(FAB_ID)) injectFab();
+      syncFabVisibility();
+      hideEmbeddedExportButtons();
     });
-    observer.observe(document.body, { childList: true });
+    observer.observe(document.body, { childList: true, subtree: true });
+    // Backstop: views can change without a body childList mutation
+    // (e.g. a CSS/display toggle deep in the tree). A light poll keeps
+    // the FAB's visibility correct without depending on mutations.
+    setInterval(function () { syncFabVisibility(); hideEmbeddedExportButtons(); }, 600);
+    syncFabVisibility();
+    hideEmbeddedExportButtons();
   }
 
   if (document.readyState === 'loading') {
@@ -533,7 +653,7 @@ ${inlineStyles}
 
   // Public API for diagnostics / power-users.
   window.AntcvPdfPreviewGate = {
-    version: '1.50.31',
+    version: '1.50.49',
     open: openModal,
     close: closeModal,
   };

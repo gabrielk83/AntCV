@@ -1,4 +1,4 @@
-/* AntCV CL body Move button (v1.40.341-p0c)
+/* AntCV CL body Move button (v1.40.341-p0c / sel-fix 1.40.350)
  * ============================================================
  *
  * CL-005 (Cover Letter body section Move button)
@@ -14,6 +14,14 @@
  * the leftmost position of the existing action cluster on every
  * movable CL body row.
  *
+ * v1.40.350 selector fix
+ * ----------------------
+ * The editor row markup uses data-antcv-align-sid (+ data-section-row-loc)
+ * for the section id, NOT data-sid. The original rowsInEditor() queried
+ * only [data-sid], so on the live CL editor it matched nothing and the
+ * Move button never mounted. We now match rows by EITHER attribute and
+ * read the sid from whichever is present.
+ *
  * Movable body row section IDs (from CL canonical structure):
  *   greeting, opening, who_am, what_bring, why_position,
  *   how_found, foundation, closure, closing
@@ -27,7 +35,7 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.40.341-p0c';
+  var SCRIPT_VERSION = '1.40.350';
   if (window.__antcvClBodyMoveButton341 === SCRIPT_VERSION) return;
   window.__antcvClBodyMoveButton341 = SCRIPT_VERSION;
 
@@ -44,17 +52,28 @@
     'closing':       'Closing',
   };
 
+  // Read the section id from whichever attribute the row carries.
+  function rowSid(el) {
+    return (
+      el.getAttribute('data-sid') ||
+      el.getAttribute('data-antcv-align-sid') ||
+      el.getAttribute('data-section-sid') ||
+      ''
+    );
+  }
+
   function rowsInEditor() {
-    // Editor-panel rows live OUTSIDE .antcv-preview-paper. Find every
-    // element with data-sid that ISN'T inside the preview paper.
+    // Editor-panel rows live OUTSIDE .antcv-preview-paper. Match rows by
+    // EITHER data-sid OR data-antcv-align-sid (the live editor uses the
+    // latter), then skip anything inside the preview paper.
     var paper = document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]');
-    var all = document.querySelectorAll('[data-sid]');
+    var all = document.querySelectorAll('[data-sid],[data-antcv-align-sid],[data-section-sid]');
     var out = [];
     for (var i = 0; i < all.length; i++) {
       var el = all[i];
       if (!el || el.nodeType !== 1) continue;
       if (paper && paper.contains(el)) continue;
-      var sid = el.getAttribute('data-sid') || '';
+      var sid = rowSid(el);
       if (!CL_BODY_SIDS.hasOwnProperty(sid)) continue;
       // Skip rows that already carry our marker (idempotent).
       if (el.getAttribute('data-antcv-cl-body-move-341') === '1') continue;
@@ -85,7 +104,7 @@
     var b = document.createElement('button');
     b.type = 'button';
     b.textContent = '☰';
-    var tooltip = 'Move ' + label;
+    var tooltip = 'Move ' + label + ' to the candidate area';
     b.title = tooltip;
     b.setAttribute('aria-label', tooltip);
     b.setAttribute('data-antcv-cl-body-move-button', sid);
@@ -125,7 +144,7 @@
   }
 
   function ensureMoveOnRow(row) {
-    var sid = row.getAttribute('data-sid') || '';
+    var sid = rowSid(row);
     var label = CL_BODY_SIDS[sid];
     if (!label) return;
     // Already injected on this row? Skip.

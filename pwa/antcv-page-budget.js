@@ -1,45 +1,49 @@
 /* AntCV page-budget sidecar (v1.40.172)
  * ============================================================
  *
- * Adds a "Target CV length" dropdown to the LINE TARGETS panel in
- * Advanced Styles. Lets the user pick how many pages their CV should
- * aim for (1pp / 1.5pp / 2pp / 2.5pp / 3pp). The value is persisted
- * to localStorage["pageBudget"] in the same JSON-stringified form
- * the app's own `u.get/u.set` wrapper uses, so app.js reads the
- * value back natively via `u.get("pageBudget", 1.5)`.
+ * Adds a "Target CV length" dropdown to Advanced Styles. Lets the user pick
+ * how many pages their CV should aim for (1pp / 1.5pp / 2pp / 2.5pp / 3pp).
+ * The value is persisted to localStorage["pageBudget"] in the same
+ * JSON-stringified form the app's own `u.get/u.set` wrapper uses, so app.js
+ * reads the value back natively via `u.get("pageBudget", 1.5)`.
  *
- * The system prompt for CV generation interpolates this value into
- * its LENGTH BUDGETS preamble so the LLM aims for the chosen page
- * count rather than the previously-hardcoded 1.5pp default.
+ * The system prompt for CV generation interpolates this value into its
+ * LENGTH BUDGETS preamble so the LLM aims for the chosen page count rather
+ * than the previously-hardcoded 1.5pp default.
+ *
+ * v1.40.349 — placement change
+ * ----------------------------
+ * Previously this row was injected INSIDE the LINE TARGETS collapsible
+ * (<details>). Per request, it now sits in Advanced Styles but OUTSIDE that
+ * collapsible: we find the LINE TARGETS <details> and insert the row as a
+ * sibling immediately BEFORE it. (Also: the duplicate Target CV length that
+ * used to appear in the Personal-tab WritingStylePicker island has been
+ * removed in src/islands/WritingStylePicker — this is now the single home
+ * for the control.)
  *
  * Why a sidecar rather than direct app.js modification
  * ----------------------------------------------------
- * The line-targets UI is built inside a heavily-minified React
- * render block. Surgically inserting a new field into the React
- * tree requires identifying exact minified variable names and is
- * fragile across versions. A sidecar that watches for the panel
- * and injects a DOM row is robust: matching the LINE TARGETS
- * heading text is stable across releases.
+ * The line-targets UI is built inside a heavily-minified React render block.
+ * Surgically inserting a new field into the React tree requires identifying
+ * exact minified variable names and is fragile across versions. A sidecar
+ * that watches for the panel and injects a DOM row is robust: matching the
+ * LINE TARGETS heading text is stable across releases.
  *
  * Storage convention
  * ------------------
- * app.js's `u` wrapper does `JSON.stringify` on writes and
- * `JSON.parse` on reads with a default fallback. We follow the
- * same convention: write `JSON.stringify(value)` to
- * localStorage["pageBudget"]. Direct localStorage access is fine
- * since `u` is a thin wrapper, not a value-validation layer.
+ * app.js's `u` wrapper does `JSON.stringify` on writes and `JSON.parse` on
+ * reads with a default fallback. We follow the same convention.
  *
  * Public API
  * ----------
- *   window.AntcvPageBudget.get()         — current budget (number)
- *   window.AntcvPageBudget.set(n)        — set budget; persists +
- *                                          dispatches change event
- *   window.AntcvPageBudget.OPTIONS       — array of supported values
+ *   window.AntcvPageBudget.get()   — current budget (number)
+ *   window.AntcvPageBudget.set(n)  — set budget; persists + dispatches event
+ *   window.AntcvPageBudget.OPTIONS — array of supported values
  */
 (function () {
   'use strict';
 
-  const SCRIPT_VERSION = '1.40.172';
+  const SCRIPT_VERSION = '1.40.349';
   if (window.__antcvPageBudgetInstalled) return;
   window.__antcvPageBudgetInstalled = SCRIPT_VERSION;
 
@@ -85,28 +89,19 @@
   };
 
   // ─── UI injection ───────────────────────────────────────────────
-  // The LINE TARGETS panel is rendered by app.js's React tree. It
-  // has a heading element with the exact text "LINE TARGETS". We
-  // walk up from that heading to find its container, then inject
-  // our row right after the description div that explains line
-  // targets — same visual context, just one row above the sliders.
-
-  function findLineTargetsContainer() {
-    const headings = document.querySelectorAll('div, span, summary');
-    for (const h of headings) {
+  // v1.40.349: return the LINE TARGETS collapsible <details> element itself
+  // (the <summary> text is "LINE TARGETS"). We insert the Target CV length
+  // row as a SIBLING BEFORE this element, so it lives in Advanced Styles but
+  // OUTSIDE the LINE TARGETS collapsible (previously it was injected inside).
+  function findLineTargetsDetails() {
+    const summaries = document.querySelectorAll('summary, div, span');
+    for (const h of summaries) {
       const txt = (h.textContent || '').trim();
       if (txt === 'LINE TARGETS') {
-        // Walk up until we find the panel container — the heading's
-        // parent is the wrapper that contains the description + sliders.
-        let parent = h.parentElement;
-        for (let i = 0; i < 3 && parent; i++) {
-          // Look for sibling content with "Set min/max line counts"
-          if ((parent.textContent || '').includes('Set min/max line counts')) {
-            return parent;
-          }
-          parent = parent.parentElement;
-        }
-        // Fall back to the heading's immediate parent
+        // Prefer the enclosing <details> (the collapsible group).
+        const details = h.closest ? h.closest('details') : null;
+        if (details) return details;
+        // Fallback: the heading's parent wrapper.
         return h.parentElement;
       }
     }
@@ -177,29 +172,14 @@
 
   function inject() {
     if (document.querySelector('[data-antcv-page-budget-row="1"]')) return;
-    const container = findLineTargetsContainer();
-    if (!container) return;
+    const details = findLineTargetsDetails();
+    if (!details || !details.parentElement) return;
 
-    // Insert after the description div (the one that contains "Set min/max line counts")
-    let inserted = false;
-    const kids = Array.from(container.children);
-    for (let i = 0; i < kids.length; i++) {
-      if ((kids[i].textContent || '').includes('Set min/max line counts')) {
-        const row = buildRow();
-        if (i + 1 < kids.length) {
-          container.insertBefore(row, kids[i + 1]);
-        } else {
-          container.appendChild(row);
-        }
-        inserted = true;
-        break;
-      }
-    }
-    // Fallback: prepend if we couldn't find the description div
-    if (!inserted) {
-      const row = buildRow();
-      container.insertBefore(row, container.firstChild);
-    }
+    // Insert the Target CV length row as a sibling immediately BEFORE the
+    // LINE TARGETS collapsible, so it sits in Advanced Styles above the
+    // line-target sliders but is not nested inside the <details>.
+    const row = buildRow();
+    details.parentElement.insertBefore(row, details);
   }
 
   // The LINE TARGETS panel is inside a collapsible <details> — it

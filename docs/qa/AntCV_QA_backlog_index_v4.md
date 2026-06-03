@@ -1,9 +1,11 @@
 # AntCV QA backlog — requirement index (v4)
 
 > Quick-reference index of every requirement/bug ID in the v4 UI/UX spec and QA plan.
-> Full prose, acceptance criteria, and test steps are in the companion digest
-> `AntCV_UI_UX_Spec_and_QA_Plan_v4.md` (same folder), generated verbatim from the product
-> owner's Word document. Retrieve either file via the antcv-mcp `github_read_file` tool.
+> This file is the machine-retrievable source of truth (read it via the antcv-mcp
+> `github_read_file` tool). It was generated from the product owner's Word document
+> `AntCV_UI_UX_Spec_and_QA_Plan_v4.docx`, which remains the formatted master.
+> For the full prose, acceptance criteria, and test steps of any single ID, ask the
+> product owner for the relevant section of that Word document.
 
 **Authority rule:** written requirements override screenshots. **Output rule:** every
 change must behave identically in Preview, DOCX, and PDF, and on desktop and mobile,
@@ -23,7 +25,7 @@ semantic page-change glyph, never a down arrow. No user-facing text may say "Com
 
 > ID collision note: the source reuses `GEN-001`/`GEN-002`. In §3 they are global rules
 > (listed below); in §14.2 they are generation-content bugs (shown as GEN-001b/GEN-002b
-> here). Disambiguate by section when reading the digest.
+> here). Disambiguate by section when reading the source document.
 
 ## Global requirements (GEN-001..011, §3)
 

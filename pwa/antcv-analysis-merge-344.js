@@ -31,6 +31,11 @@
  *   4. Retire the floating JD-analysis FAB (data-antcv-recheck-fab) ONLY once
  *      the new app.js is detected live. The recheck-fit MODAL stays reachable
  *      via window.AntcvRecheckFit.open() for power users.
+ *   5. (v1.40.344-b) Bootstrap-load the embedded JD-block sidecar
+ *      antcv-analysis-panel-jd-block-356.js. We inject its <script> tag from
+ *      here instead of index.html to avoid editing the large index.html (whose
+ *      inline base64 photo constant makes full-file rewrites error-prone). The
+ *      SW SHELL already precaches 356, so this only adds the runtime <script>.
  *
  * Open-direction note
  * -------------------
@@ -51,6 +56,29 @@
 
   var RATIONALE_KEY = 'rationale';
   var FAB_SEL = 'button.antcv-fab[aria-label="JD analysis"],button.antcv-fab[data-antcv-recheck-fab="1"]';
+
+  // --- (v1.40.344-b) bootstrap the embedded JD-block sidecar (356) ---
+  // Injected here rather than from index.html: index.html carries a large
+  // inline base64 photo constant that makes full-file rewrites fragile, and
+  // 344 is already guaranteed loaded. Idempotent; the SW precaches the file.
+  (function loadJdBlock356() {
+    try {
+      var SRC = 'antcv-analysis-panel-jd-block-356.js';
+      var VER = '1.40.356';
+      if (window.__antcvAnalysisPanelJdBlock356) return; // already running
+      var existing = document.querySelector('script[data-antcv-jd-block-356="1"]');
+      if (existing) return;
+      var s = document.createElement('script');
+      s.src = SRC + '?v=' + VER;
+      s.async = false;
+      s.setAttribute('data-antcv-jd-block-356', '1');
+      s.onerror = function () {
+        try { console.warn('[analysis-merge-344] failed to load ' + SRC); } catch (_) {}
+      };
+      (document.body || document.head || document.documentElement).appendChild(s);
+      try { console.debug('[analysis-merge-344] bootstrapped ' + SRC); } catch (_) {}
+    } catch (_) {}
+  })();
 
   // --- storage helpers (match app.js's quote-wrapping tolerance) ---
   function readProxyUrl() {

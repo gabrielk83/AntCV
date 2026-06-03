@@ -13,6 +13,32 @@ import {
 // pwa/antcv-stability-core-334.js (lines 149-182). Default collapsed
 // (§5 hotfix item 1). Reads / writes the same localStorage keys and
 // dispatches the same events so other sidecars notice no difference.
+//
+// v1.50.58 — relocated to sit immediately AFTER the Banned Words panel
+// (see mount.tsx anchoring) and the collapsed-summary header restyled to
+// match the Banned Words sub-header register: 9px, uppercase, .8px
+// letter-spacing, muted white. The expanded body keeps the standard
+// island spacing.
+
+// Matches the Banned Words <summary> register so the two read as siblings.
+const SUMMARY_STYLE: React.CSSProperties = {
+  width: '100%',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 8,
+  padding: 0,
+  marginBottom: 6,
+  background: 'transparent',
+  border: 0,
+  color: 'rgba(255,255,255,.5)',
+  cursor: 'pointer',
+  textAlign: 'left',
+  textTransform: 'uppercase',
+  letterSpacing: '.8px',
+  fontSize: 9,
+  fontWeight: 600,
+};
 
 export function LanguageCard(): JSX.Element {
   const [expanded, setExpanded] = useState<boolean>(() => readLangExpanded());
@@ -72,9 +98,8 @@ export function LanguageCard(): JSX.Element {
       data-antcv-language-card="standard-personal-only"
       data-antcv-react-island="language-card"
       style={{
-        marginTop: 16,
-        borderTop: '1px dashed rgba(255,255,255,.14)',
-        paddingTop: 10,
+        marginTop: 12,
+        paddingTop: 6,
         color: '#d7e6ee',
       }}
     >
@@ -82,22 +107,7 @@ export function LanguageCard(): JSX.Element {
         type="button"
         onClick={toggleExpanded}
         aria-expanded={expanded ? 'true' : 'false'}
-        style={{
-          width: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 8,
-          padding: '7px 0',
-          background: 'transparent',
-          border: 0,
-          color: '#d7e6ee',
-          cursor: 'pointer',
-          textAlign: 'left',
-          textTransform: 'uppercase',
-          letterSpacing: '.08em',
-          fontWeight: 800,
-        }}
+        style={SUMMARY_STYLE}
       >
         <span>
           <span aria-hidden="true">{expanded ? '▾' : '▸'}</span> Languages in the top bar

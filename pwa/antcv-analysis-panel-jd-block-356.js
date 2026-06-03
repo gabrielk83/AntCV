@@ -48,11 +48,16 @@
  *   window.AntcvRecheckFit._renderJdAnalysis(container, data, T)
  * Plus its own recheck-fit POST (same endpoint app.js/recheck use) and an
  * in-block renderer for fit/strengths/gaps so we do not depend on app.js.
+ *
+ * v1.40.356-b: fix findAnalysisPanel — it returned the OUTERMOST div whose
+ * descendant text contained "Application Analysis", so the block was appended
+ * to a large wrapper (pushed off-screen / into a React-rerendered region) and
+ * never appeared. Now it targets the heading LEAF and returns its parent.
  */
 (function () {
   'use strict';
 
-  var VERSION = '1.40.357';
+  var VERSION = '1.40.356-b';
   if (window.__antcvAnalysisPanelJdBlock356 === VERSION) return;
   window.__antcvAnalysisPanelJdBlock356 = VERSION;
 
@@ -199,14 +204,45 @@
 
   // Strategy 1: the analysis-present panel, keyed by its heading text.
   function findByHeading() {
+  // Find the Analysis panel container by its app.js heading text.
+  //
+  // The heading is a div whose OWN text is "📊 Application Analysis" (a short
+  // leaf, not a big wrapper). The previous implementation walked every div and
+  // returned the first one whose first child contained that text — but because
+  // textContent matches recursively and ancestors come first in document
+  // order, that returned a large OUTER wrapper. Appending the block there
+  // pushed it far below the visible panel (or into a region React re-renders),
+  // so it never showed.
+  //
+  // Fix: locate the heading LEAF precisely (its own trimmed text starts with
+  // "Application Analysis", ignoring the emoji, and it is short), then return
+  // its PARENT — the panel body that holds the rendered analysis. Prefer the
+  // LAST match in document order (innermost / most-recently-mounted panel).
+  function findAnalysisPanel() {
     var nodes = document.querySelectorAll('div');
+    var headings = [];
     for (var i = 0; i < nodes.length; i++) {
       var head = nodes[i].querySelector && nodes[i].querySelector(':scope > div');
       if (head && (head.textContent || '').indexOf('Application Analysis') >= 0) {
         return nodes[i];
       }
+      var node = nodes[i];
+      var txt = (node.textContent || '').replace(/\s+/g, ' ').trim();
+      if (txt.indexOf('Application Analysis') < 0) continue;
+      // Must be the heading LEAF, not a wrapper: short text and few element
+      // children (the heading div itself, possibly with an inline icon span).
+      var stripped = txt.replace(/[^\x20-\x7E]/g, '').trim(); // drop emoji
+      if (stripped.indexOf('Application Analysis') !== 0) continue;
+      if (stripped.length > 40) continue;            // a wrapper would be long
+      if (node.children && node.children.length > 1) continue; // leaf-ish
+      headings.push(node);
     }
-    return null;
+    if (!headings.length) return null;
+    // Innermost / latest heading; its parent is the panel body.
+    var heading = headings[headings.length - 1];
+    return heading.parentNode && heading.parentNode.nodeType === 1
+      ? heading.parentNode
+      : heading;
   }
 
   // Strategy 2: the EMPTY-state panel, keyed by its message text. We find the

@@ -1,942 +1,11 @@
 var __defProp = Object.defineProperty;
-var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
-
-// ../../../../AppData/Roaming/npm/node_modules/wrangler/node_modules/unenv/dist/runtime/_internal/utils.mjs
-// @__NO_SIDE_EFFECTS__
-function createNotImplementedError(name) {
-  return new Error(`[unenv] ${name} is not implemented yet!`);
-}
-__name(createNotImplementedError, "createNotImplementedError");
-// @__NO_SIDE_EFFECTS__
-function notImplemented(name) {
-  const fn = /* @__PURE__ */ __name(() => {
-    throw /* @__PURE__ */ createNotImplementedError(name);
-  }, "fn");
-  return Object.assign(fn, { __unenv__: true });
-}
-__name(notImplemented, "notImplemented");
-// @__NO_SIDE_EFFECTS__
-function notImplementedClass(name) {
-  return class {
-    __unenv__ = true;
-    constructor() {
-      throw new Error(`[unenv] ${name} is not implemented yet!`);
-    }
-  };
-}
-__name(notImplementedClass, "notImplementedClass");
-
-// ../../../../AppData/Roaming/npm/node_modules/wrangler/node_modules/unenv/dist/runtime/node/internal/perf_hooks/performance.mjs
-var _timeOrigin = globalThis.performance?.timeOrigin ?? Date.now();
-var _performanceNow = globalThis.performance?.now ? globalThis.performance.now.bind(globalThis.performance) : () => Date.now() - _timeOrigin;
-var nodeTiming = {
-  name: "node",
-  entryType: "node",
-  startTime: 0,
-  duration: 0,
-  nodeStart: 0,
-  v8Start: 0,
-  bootstrapComplete: 0,
-  environment: 0,
-  loopStart: 0,
-  loopExit: 0,
-  idleTime: 0,
-  uvMetricsInfo: {
-    loopCount: 0,
-    events: 0,
-    eventsWaiting: 0
-  },
-  detail: void 0,
-  toJSON() {
-    return this;
-  }
-};
-var PerformanceEntry = class {
-  static {
-    __name(this, "PerformanceEntry");
-  }
-  __unenv__ = true;
-  detail;
-  entryType = "event";
-  name;
-  startTime;
-  constructor(name, options) {
-    this.name = name;
-    this.startTime = options?.startTime || _performanceNow();
-    this.detail = options?.detail;
-  }
-  get duration() {
-    return _performanceNow() - this.startTime;
-  }
-  toJSON() {
-    return {
-      name: this.name,
-      entryType: this.entryType,
-      startTime: this.startTime,
-      duration: this.duration,
-      detail: this.detail
-    };
-  }
-};
-var PerformanceMark = class PerformanceMark2 extends PerformanceEntry {
-  static {
-    __name(this, "PerformanceMark");
-  }
-  entryType = "mark";
-  constructor() {
-    super(...arguments);
-  }
-  get duration() {
-    return 0;
-  }
-};
-var PerformanceMeasure = class extends PerformanceEntry {
-  static {
-    __name(this, "PerformanceMeasure");
-  }
-  entryType = "measure";
-};
-var PerformanceResourceTiming = class extends PerformanceEntry {
-  static {
-    __name(this, "PerformanceResourceTiming");
-  }
-  entryType = "resource";
-  serverTiming = [];
-  connectEnd = 0;
-  connectStart = 0;
-  decodedBodySize = 0;
-  domainLookupEnd = 0;
-  domainLookupStart = 0;
-  encodedBodySize = 0;
-  fetchStart = 0;
-  initiatorType = "";
-  name = "";
-  nextHopProtocol = "";
-  redirectEnd = 0;
-  redirectStart = 0;
-  requestStart = 0;
-  responseEnd = 0;
-  responseStart = 0;
-  secureConnectionStart = 0;
-  startTime = 0;
-  transferSize = 0;
-  workerStart = 0;
-  responseStatus = 0;
-};
-var PerformanceObserverEntryList = class {
-  static {
-    __name(this, "PerformanceObserverEntryList");
-  }
-  __unenv__ = true;
-  getEntries() {
-    return [];
-  }
-  getEntriesByName(_name, _type) {
-    return [];
-  }
-  getEntriesByType(type2) {
-    return [];
-  }
-};
-var Performance = class {
-  static {
-    __name(this, "Performance");
-  }
-  __unenv__ = true;
-  timeOrigin = _timeOrigin;
-  eventCounts = /* @__PURE__ */ new Map();
-  _entries = [];
-  _resourceTimingBufferSize = 0;
-  navigation = void 0;
-  timing = void 0;
-  timerify(_fn, _options) {
-    throw createNotImplementedError("Performance.timerify");
-  }
-  get nodeTiming() {
-    return nodeTiming;
-  }
-  eventLoopUtilization() {
-    return {};
-  }
-  markResourceTiming() {
-    return new PerformanceResourceTiming("");
-  }
-  onresourcetimingbufferfull = null;
-  now() {
-    if (this.timeOrigin === _timeOrigin) {
-      return _performanceNow();
-    }
-    return Date.now() - this.timeOrigin;
-  }
-  clearMarks(markName) {
-    this._entries = markName ? this._entries.filter((e) => e.name !== markName) : this._entries.filter((e) => e.entryType !== "mark");
-  }
-  clearMeasures(measureName) {
-    this._entries = measureName ? this._entries.filter((e) => e.name !== measureName) : this._entries.filter((e) => e.entryType !== "measure");
-  }
-  clearResourceTimings() {
-    this._entries = this._entries.filter((e) => e.entryType !== "resource" || e.entryType !== "navigation");
-  }
-  getEntries() {
-    return this._entries;
-  }
-  getEntriesByName(name, type2) {
-    return this._entries.filter((e) => e.name === name && (!type2 || e.entryType === type2));
-  }
-  getEntriesByType(type2) {
-    return this._entries.filter((e) => e.entryType === type2);
-  }
-  mark(name, options) {
-    const entry = new PerformanceMark(name, options);
-    this._entries.push(entry);
-    return entry;
-  }
-  measure(measureName, startOrMeasureOptions, endMark) {
-    let start;
-    let end;
-    if (typeof startOrMeasureOptions === "string") {
-      start = this.getEntriesByName(startOrMeasureOptions, "mark")[0]?.startTime;
-      end = this.getEntriesByName(endMark, "mark")[0]?.startTime;
-    } else {
-      start = Number.parseFloat(startOrMeasureOptions?.start) || this.now();
-      end = Number.parseFloat(startOrMeasureOptions?.end) || this.now();
-    }
-    const entry = new PerformanceMeasure(measureName, {
-      startTime: start,
-      detail: {
-        start,
-        end
-      }
-    });
-    this._entries.push(entry);
-    return entry;
-  }
-  setResourceTimingBufferSize(maxSize) {
-    this._resourceTimingBufferSize = maxSize;
-  }
-  addEventListener(type2, listener, options) {
-    throw createNotImplementedError("Performance.addEventListener");
-  }
-  removeEventListener(type2, listener, options) {
-    throw createNotImplementedError("Performance.removeEventListener");
-  }
-  dispatchEvent(event) {
-    throw createNotImplementedError("Performance.dispatchEvent");
-  }
-  toJSON() {
-    return this;
-  }
-};
-var PerformanceObserver = class {
-  static {
-    __name(this, "PerformanceObserver");
-  }
-  __unenv__ = true;
-  static supportedEntryTypes = [];
-  _callback = null;
-  constructor(callback) {
-    this._callback = callback;
-  }
-  takeRecords() {
-    return [];
-  }
-  disconnect() {
-    throw createNotImplementedError("PerformanceObserver.disconnect");
-  }
-  observe(options) {
-    throw createNotImplementedError("PerformanceObserver.observe");
-  }
-  bind(fn) {
-    return fn;
-  }
-  runInAsyncScope(fn, thisArg, ...args) {
-    return fn.call(thisArg, ...args);
-  }
-  asyncId() {
-    return 0;
-  }
-  triggerAsyncId() {
-    return 0;
-  }
-  emitDestroy() {
-    return this;
-  }
-};
-var performance = globalThis.performance && "addEventListener" in globalThis.performance ? globalThis.performance : new Performance();
-
-// ../../../../AppData/Roaming/npm/node_modules/wrangler/node_modules/@cloudflare/unenv-preset/dist/runtime/polyfill/performance.mjs
-if (!("__unenv__" in performance)) {
-  const proto = Performance.prototype;
-  for (const key of Object.getOwnPropertyNames(proto)) {
-    if (key !== "constructor" && !(key in performance)) {
-      const desc = Object.getOwnPropertyDescriptor(proto, key);
-      if (desc) {
-        Object.defineProperty(performance, key, desc);
-      }
-    }
-  }
-}
-globalThis.performance = performance;
-globalThis.Performance = Performance;
-globalThis.PerformanceEntry = PerformanceEntry;
-globalThis.PerformanceMark = PerformanceMark;
-globalThis.PerformanceMeasure = PerformanceMeasure;
-globalThis.PerformanceObserver = PerformanceObserver;
-globalThis.PerformanceObserverEntryList = PerformanceObserverEntryList;
-globalThis.PerformanceResourceTiming = PerformanceResourceTiming;
-
-// ../../../../AppData/Roaming/npm/node_modules/wrangler/node_modules/unenv/dist/runtime/node/console.mjs
-import { Writable } from "node:stream";
-
-// ../../../../AppData/Roaming/npm/node_modules/wrangler/node_modules/unenv/dist/runtime/mock/noop.mjs
-var noop_default = Object.assign(() => {
-}, { __unenv__: true });
-
-// ../../../../AppData/Roaming/npm/node_modules/wrangler/node_modules/unenv/dist/runtime/node/console.mjs
-var _console = globalThis.console;
-var _ignoreErrors = true;
-var _stderr = new Writable();
-var _stdout = new Writable();
-var log = _console?.log ?? noop_default;
-var info = _console?.info ?? log;
-var trace = _console?.trace ?? info;
-var debug = _console?.debug ?? log;
-var table = _console?.table ?? log;
-var error = _console?.error ?? log;
-var warn = _console?.warn ?? error;
-var createTask = _console?.createTask ?? /* @__PURE__ */ notImplemented("console.createTask");
-var clear = _console?.clear ?? noop_default;
-var count = _console?.count ?? noop_default;
-var countReset = _console?.countReset ?? noop_default;
-var dir = _console?.dir ?? noop_default;
-var dirxml = _console?.dirxml ?? noop_default;
-var group = _console?.group ?? noop_default;
-var groupEnd = _console?.groupEnd ?? noop_default;
-var groupCollapsed = _console?.groupCollapsed ?? noop_default;
-var profile = _console?.profile ?? noop_default;
-var profileEnd = _console?.profileEnd ?? noop_default;
-var time = _console?.time ?? noop_default;
-var timeEnd = _console?.timeEnd ?? noop_default;
-var timeLog = _console?.timeLog ?? noop_default;
-var timeStamp = _console?.timeStamp ?? noop_default;
-var Console = _console?.Console ?? /* @__PURE__ */ notImplementedClass("console.Console");
-var _times = /* @__PURE__ */ new Map();
-var _stdoutErrorHandler = noop_default;
-var _stderrErrorHandler = noop_default;
-
-// ../../../../AppData/Roaming/npm/node_modules/wrangler/node_modules/@cloudflare/unenv-preset/dist/runtime/node/console.mjs
-var workerdConsole = globalThis["console"];
-var {
-  assert,
-  clear: clear2,
-  // @ts-expect-error undocumented public API
-  context,
-  count: count2,
-  countReset: countReset2,
-  // @ts-expect-error undocumented public API
-  createTask: createTask2,
-  debug: debug2,
-  dir: dir2,
-  dirxml: dirxml2,
-  error: error2,
-  group: group2,
-  groupCollapsed: groupCollapsed2,
-  groupEnd: groupEnd2,
-  info: info2,
-  log: log2,
-  profile: profile2,
-  profileEnd: profileEnd2,
-  table: table2,
-  time: time2,
-  timeEnd: timeEnd2,
-  timeLog: timeLog2,
-  timeStamp: timeStamp2,
-  trace: trace2,
-  warn: warn2
-} = workerdConsole;
-Object.assign(workerdConsole, {
-  Console,
-  _ignoreErrors,
-  _stderr,
-  _stderrErrorHandler,
-  _stdout,
-  _stdoutErrorHandler,
-  _times
-});
-var console_default = workerdConsole;
-
-// ../../../../AppData/Roaming/npm/node_modules/wrangler/_virtual_unenv_global_polyfill-@cloudflare-unenv-preset-node-console
-globalThis.console = console_default;
-
-// ../../../../AppData/Roaming/npm/node_modules/wrangler/node_modules/unenv/dist/runtime/node/internal/process/hrtime.mjs
-var hrtime = /* @__PURE__ */ Object.assign(/* @__PURE__ */ __name(function hrtime2(startTime) {
-  const now = Date.now();
-  const seconds = Math.trunc(now / 1e3);
-  const nanos = now % 1e3 * 1e6;
-  if (startTime) {
-    let diffSeconds = seconds - startTime[0];
-    let diffNanos = nanos - startTime[0];
-    if (diffNanos < 0) {
-      diffSeconds = diffSeconds - 1;
-      diffNanos = 1e9 + diffNanos;
-    }
-    return [diffSeconds, diffNanos];
-  }
-  return [seconds, nanos];
-}, "hrtime"), { bigint: /* @__PURE__ */ __name(function bigint() {
-  return BigInt(Date.now() * 1e6);
-}, "bigint") });
-
-// ../../../../AppData/Roaming/npm/node_modules/wrangler/node_modules/unenv/dist/runtime/node/internal/process/process.mjs
-import { EventEmitter } from "node:events";
-
-// ../../../../AppData/Roaming/npm/node_modules/wrangler/node_modules/unenv/dist/runtime/node/internal/tty/read-stream.mjs
-var ReadStream = class {
-  static {
-    __name(this, "ReadStream");
-  }
-  fd;
-  isRaw = false;
-  isTTY = false;
-  constructor(fd2) {
-    this.fd = fd2;
-  }
-  setRawMode(mode) {
-    this.isRaw = mode;
-    return this;
-  }
-};
-
-// ../../../../AppData/Roaming/npm/node_modules/wrangler/node_modules/unenv/dist/runtime/node/internal/tty/write-stream.mjs
-var WriteStream = class {
-  static {
-    __name(this, "WriteStream");
-  }
-  fd;
-  columns = 80;
-  rows = 24;
-  isTTY = false;
-  constructor(fd2) {
-    this.fd = fd2;
-  }
-  clearLine(dir3, callback) {
-    callback && callback();
-    return false;
-  }
-  clearScreenDown(callback) {
-    callback && callback();
-    return false;
-  }
-  cursorTo(x, y, callback) {
-    callback && typeof callback === "function" && callback();
-    return false;
-  }
-  moveCursor(dx, dy, callback) {
-    callback && callback();
-    return false;
-  }
-  getColorDepth(env2) {
-    return 1;
-  }
-  hasColors(count3, env2) {
-    return false;
-  }
-  getWindowSize() {
-    return [this.columns, this.rows];
-  }
-  write(str, encoding, cb) {
-    if (str instanceof Uint8Array) {
-      str = new TextDecoder().decode(str);
-    }
-    try {
-      console.log(str);
-    } catch {
-    }
-    cb && typeof cb === "function" && cb();
-    return false;
-  }
-};
-
-// ../../../../AppData/Roaming/npm/node_modules/wrangler/node_modules/unenv/dist/runtime/node/internal/process/node-version.mjs
-var NODE_VERSION = "22.14.0";
-
-// ../../../../AppData/Roaming/npm/node_modules/wrangler/node_modules/unenv/dist/runtime/node/internal/process/process.mjs
-var Process = class _Process extends EventEmitter {
-  static {
-    __name(this, "Process");
-  }
-  env;
-  hrtime;
-  nextTick;
-  constructor(impl) {
-    super();
-    this.env = impl.env;
-    this.hrtime = impl.hrtime;
-    this.nextTick = impl.nextTick;
-    for (const prop of [...Object.getOwnPropertyNames(_Process.prototype), ...Object.getOwnPropertyNames(EventEmitter.prototype)]) {
-      const value = this[prop];
-      if (typeof value === "function") {
-        this[prop] = value.bind(this);
-      }
-    }
-  }
-  // --- event emitter ---
-  emitWarning(warning, type2, code) {
-    console.warn(`${code ? `[${code}] ` : ""}${type2 ? `${type2}: ` : ""}${warning}`);
-  }
-  emit(...args) {
-    return super.emit(...args);
-  }
-  listeners(eventName) {
-    return super.listeners(eventName);
-  }
-  // --- stdio (lazy initializers) ---
-  #stdin;
-  #stdout;
-  #stderr;
-  get stdin() {
-    return this.#stdin ??= new ReadStream(0);
-  }
-  get stdout() {
-    return this.#stdout ??= new WriteStream(1);
-  }
-  get stderr() {
-    return this.#stderr ??= new WriteStream(2);
-  }
-  // --- cwd ---
-  #cwd = "/";
-  chdir(cwd2) {
-    this.#cwd = cwd2;
-  }
-  cwd() {
-    return this.#cwd;
-  }
-  // --- dummy props and getters ---
-  arch = "";
-  platform = "";
-  argv = [];
-  argv0 = "";
-  execArgv = [];
-  execPath = "";
-  title = "";
-  pid = 200;
-  ppid = 100;
-  get version() {
-    return `v${NODE_VERSION}`;
-  }
-  get versions() {
-    return { node: NODE_VERSION };
-  }
-  get allowedNodeEnvironmentFlags() {
-    return /* @__PURE__ */ new Set();
-  }
-  get sourceMapsEnabled() {
-    return false;
-  }
-  get debugPort() {
-    return 0;
-  }
-  get throwDeprecation() {
-    return false;
-  }
-  get traceDeprecation() {
-    return false;
-  }
-  get features() {
-    return {};
-  }
-  get release() {
-    return {};
-  }
-  get connected() {
-    return false;
-  }
-  get config() {
-    return {};
-  }
-  get moduleLoadList() {
-    return [];
-  }
-  constrainedMemory() {
-    return 0;
-  }
-  availableMemory() {
-    return 0;
-  }
-  uptime() {
-    return 0;
-  }
-  resourceUsage() {
-    return {};
-  }
-  // --- noop methods ---
-  ref() {
-  }
-  unref() {
-  }
-  // --- unimplemented methods ---
-  umask() {
-    throw createNotImplementedError("process.umask");
-  }
-  getBuiltinModule() {
-    return void 0;
-  }
-  getActiveResourcesInfo() {
-    throw createNotImplementedError("process.getActiveResourcesInfo");
-  }
-  exit() {
-    throw createNotImplementedError("process.exit");
-  }
-  reallyExit() {
-    throw createNotImplementedError("process.reallyExit");
-  }
-  kill() {
-    throw createNotImplementedError("process.kill");
-  }
-  abort() {
-    throw createNotImplementedError("process.abort");
-  }
-  dlopen() {
-    throw createNotImplementedError("process.dlopen");
-  }
-  setSourceMapsEnabled() {
-    throw createNotImplementedError("process.setSourceMapsEnabled");
-  }
-  loadEnvFile() {
-    throw createNotImplementedError("process.loadEnvFile");
-  }
-  disconnect() {
-    throw createNotImplementedError("process.disconnect");
-  }
-  cpuUsage() {
-    throw createNotImplementedError("process.cpuUsage");
-  }
-  setUncaughtExceptionCaptureCallback() {
-    throw createNotImplementedError("process.setUncaughtExceptionCaptureCallback");
-  }
-  hasUncaughtExceptionCaptureCallback() {
-    throw createNotImplementedError("process.hasUncaughtExceptionCaptureCallback");
-  }
-  initgroups() {
-    throw createNotImplementedError("process.initgroups");
-  }
-  openStdin() {
-    throw createNotImplementedError("process.openStdin");
-  }
-  assert() {
-    throw createNotImplementedError("process.assert");
-  }
-  binding() {
-    throw createNotImplementedError("process.binding");
-  }
-  // --- attached interfaces ---
-  permission = { has: /* @__PURE__ */ notImplemented("process.permission.has") };
-  report = {
-    directory: "",
-    filename: "",
-    signal: "SIGUSR2",
-    compact: false,
-    reportOnFatalError: false,
-    reportOnSignal: false,
-    reportOnUncaughtException: false,
-    getReport: /* @__PURE__ */ notImplemented("process.report.getReport"),
-    writeReport: /* @__PURE__ */ notImplemented("process.report.writeReport")
-  };
-  finalization = {
-    register: /* @__PURE__ */ notImplemented("process.finalization.register"),
-    unregister: /* @__PURE__ */ notImplemented("process.finalization.unregister"),
-    registerBeforeExit: /* @__PURE__ */ notImplemented("process.finalization.registerBeforeExit")
-  };
-  memoryUsage = Object.assign(() => ({
-    arrayBuffers: 0,
-    rss: 0,
-    external: 0,
-    heapTotal: 0,
-    heapUsed: 0
-  }), { rss: /* @__PURE__ */ __name(() => 0, "rss") });
-  // --- undefined props ---
-  mainModule = void 0;
-  domain = void 0;
-  // optional
-  send = void 0;
-  exitCode = void 0;
-  channel = void 0;
-  getegid = void 0;
-  geteuid = void 0;
-  getgid = void 0;
-  getgroups = void 0;
-  getuid = void 0;
-  setegid = void 0;
-  seteuid = void 0;
-  setgid = void 0;
-  setgroups = void 0;
-  setuid = void 0;
-  // internals
-  _events = void 0;
-  _eventsCount = void 0;
-  _exiting = void 0;
-  _maxListeners = void 0;
-  _debugEnd = void 0;
-  _debugProcess = void 0;
-  _fatalException = void 0;
-  _getActiveHandles = void 0;
-  _getActiveRequests = void 0;
-  _kill = void 0;
-  _preload_modules = void 0;
-  _rawDebug = void 0;
-  _startProfilerIdleNotifier = void 0;
-  _stopProfilerIdleNotifier = void 0;
-  _tickCallback = void 0;
-  _disconnect = void 0;
-  _handleQueue = void 0;
-  _pendingMessage = void 0;
-  _channel = void 0;
-  _send = void 0;
-  _linkedBinding = void 0;
-};
-
-// ../../../../AppData/Roaming/npm/node_modules/wrangler/node_modules/@cloudflare/unenv-preset/dist/runtime/node/process.mjs
-var globalProcess = globalThis["process"];
-var getBuiltinModule = globalProcess.getBuiltinModule;
-var workerdProcess = getBuiltinModule("node:process");
-var unenvProcess = new Process({
-  env: globalProcess.env,
-  hrtime,
-  // `nextTick` is available from workerd process v1
-  nextTick: workerdProcess.nextTick
-});
-var { exit, features, platform } = workerdProcess;
-var {
-  _channel,
-  _debugEnd,
-  _debugProcess,
-  _disconnect,
-  _events,
-  _eventsCount,
-  _exiting,
-  _fatalException,
-  _getActiveHandles,
-  _getActiveRequests,
-  _handleQueue,
-  _kill,
-  _linkedBinding,
-  _maxListeners,
-  _pendingMessage,
-  _preload_modules,
-  _rawDebug,
-  _send,
-  _startProfilerIdleNotifier,
-  _stopProfilerIdleNotifier,
-  _tickCallback,
-  abort,
-  addListener,
-  allowedNodeEnvironmentFlags,
-  arch,
-  argv,
-  argv0,
-  assert: assert2,
-  availableMemory,
-  binding,
-  channel,
-  chdir,
-  config,
-  connected,
-  constrainedMemory,
-  cpuUsage,
-  cwd,
-  debugPort,
-  disconnect,
-  dlopen,
-  domain,
-  emit,
-  emitWarning,
-  env,
-  eventNames,
-  execArgv,
-  execPath,
-  exitCode,
-  finalization,
-  getActiveResourcesInfo,
-  getegid,
-  geteuid,
-  getgid,
-  getgroups,
-  getMaxListeners,
-  getuid,
-  hasUncaughtExceptionCaptureCallback,
-  hrtime: hrtime3,
-  initgroups,
-  kill,
-  listenerCount,
-  listeners,
-  loadEnvFile,
-  mainModule,
-  memoryUsage,
-  moduleLoadList,
-  nextTick,
-  off,
-  on,
-  once,
-  openStdin,
-  permission,
-  pid,
-  ppid,
-  prependListener,
-  prependOnceListener,
-  rawListeners,
-  reallyExit,
-  ref,
-  release,
-  removeAllListeners,
-  removeListener,
-  report,
-  resourceUsage,
-  send,
-  setegid,
-  seteuid,
-  setgid,
-  setgroups,
-  setMaxListeners,
-  setSourceMapsEnabled,
-  setuid,
-  setUncaughtExceptionCaptureCallback,
-  sourceMapsEnabled,
-  stderr,
-  stdin,
-  stdout,
-  throwDeprecation,
-  title,
-  traceDeprecation,
-  umask,
-  unref,
-  uptime,
-  version,
-  versions
-} = unenvProcess;
-var _process = {
-  abort,
-  addListener,
-  allowedNodeEnvironmentFlags,
-  hasUncaughtExceptionCaptureCallback,
-  setUncaughtExceptionCaptureCallback,
-  loadEnvFile,
-  sourceMapsEnabled,
-  arch,
-  argv,
-  argv0,
-  chdir,
-  config,
-  connected,
-  constrainedMemory,
-  availableMemory,
-  cpuUsage,
-  cwd,
-  debugPort,
-  dlopen,
-  disconnect,
-  emit,
-  emitWarning,
-  env,
-  eventNames,
-  execArgv,
-  execPath,
-  exit,
-  finalization,
-  features,
-  getBuiltinModule,
-  getActiveResourcesInfo,
-  getMaxListeners,
-  hrtime: hrtime3,
-  kill,
-  listeners,
-  listenerCount,
-  memoryUsage,
-  nextTick,
-  on,
-  off,
-  once,
-  pid,
-  platform,
-  ppid,
-  prependListener,
-  prependOnceListener,
-  rawListeners,
-  release,
-  removeAllListeners,
-  removeListener,
-  report,
-  resourceUsage,
-  setMaxListeners,
-  setSourceMapsEnabled,
-  stderr,
-  stdin,
-  stdout,
-  title,
-  throwDeprecation,
-  traceDeprecation,
-  umask,
-  uptime,
-  version,
-  versions,
-  // @ts-expect-error old API
-  domain,
-  initgroups,
-  moduleLoadList,
-  reallyExit,
-  openStdin,
-  assert: assert2,
-  binding,
-  send,
-  exitCode,
-  channel,
-  getegid,
-  geteuid,
-  getgid,
-  getgroups,
-  getuid,
-  setegid,
-  seteuid,
-  setgid,
-  setgroups,
-  setuid,
-  permission,
-  mainModule,
-  _events,
-  _eventsCount,
-  _exiting,
-  _maxListeners,
-  _debugEnd,
-  _debugProcess,
-  _fatalException,
-  _getActiveHandles,
-  _getActiveRequests,
-  _kill,
-  _preload_modules,
-  _rawDebug,
-  _startProfilerIdleNotifier,
-  _stopProfilerIdleNotifier,
-  _tickCallback,
-  _disconnect,
-  _handleQueue,
-  _pendingMessage,
-  _channel,
-  _send,
-  _linkedBinding
-};
-var process_default = _process;
-
-// ../../../../AppData/Roaming/npm/node_modules/wrangler/_virtual_unenv_global_polyfill-@cloudflare-unenv-preset-node-process
-globalThis.process = process_default;
-
-// src/vendor/docx.mjs
-var __defProp2 = Object.defineProperty;
 var __defProps = Object.defineProperties;
 var __getOwnPropDescs = Object.getOwnPropertyDescriptors;
 var __getOwnPropSymbols = Object.getOwnPropertySymbols;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __propIsEnum = Object.prototype.propertyIsEnumerable;
-var __defNormalProp = /* @__PURE__ */ __name((obj, key, value) => key in obj ? __defProp2(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value, "__defNormalProp");
-var __spreadValues = /* @__PURE__ */ __name((a, b) => {
+var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __spreadValues = (a, b) => {
   for (var prop in b || (b = {}))
     if (__hasOwnProp.call(b, prop))
       __defNormalProp(a, prop, b[prop]);
@@ -946,48 +15,55 @@ var __spreadValues = /* @__PURE__ */ __name((a, b) => {
         __defNormalProp(a, prop, b[prop]);
     }
   return a;
-}, "__spreadValues");
-var __spreadProps = /* @__PURE__ */ __name((a, b) => __defProps(a, __getOwnPropDescs(b)), "__spreadProps");
-var __publicField = /* @__PURE__ */ __name((obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value), "__publicField");
-var __async = /* @__PURE__ */ __name((__this, __arguments, generator) => {
+};
+var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
+var __objRest = (source, exclude) => {
+  var target = {};
+  for (var prop in source)
+    if (__hasOwnProp.call(source, prop) && exclude.indexOf(prop) < 0)
+      target[prop] = source[prop];
+  if (source != null && __getOwnPropSymbols)
+    for (var prop of __getOwnPropSymbols(source)) {
+      if (exclude.indexOf(prop) < 0 && __propIsEnum.call(source, prop))
+        target[prop] = source[prop];
+    }
+  return target;
+};
+var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+var __async = (__this, __arguments, generator) => {
   return new Promise((resolve, reject) => {
-    var fulfilled = /* @__PURE__ */ __name((value) => {
+    var fulfilled = (value) => {
       try {
         step(generator.next(value));
       } catch (e) {
         reject(e);
       }
-    }, "fulfilled");
-    var rejected = /* @__PURE__ */ __name((value) => {
+    };
+    var rejected = (value) => {
       try {
         step(generator.throw(value));
       } catch (e) {
         reject(e);
       }
-    }, "rejected");
-    var step = /* @__PURE__ */ __name((x) => x.done ? resolve(x.value) : Promise.resolve(x.value).then(fulfilled, rejected), "step");
+    };
+    var step = (x) => x.done ? resolve(x.value) : Promise.resolve(x.value).then(fulfilled, rejected);
     step((generator = generator.apply(__this, __arguments)).next());
   });
-}, "__async");
-var BaseXmlComponent = class {
-  static {
-    __name(this, "BaseXmlComponent");
-  }
+};
+class BaseXmlComponent {
   /**
    * Creates a new BaseXmlComponent with the specified XML element name.
    *
    * @param rootKey - The XML element name (e.g., "w:p", "w:r", "w:t")
    */
   constructor(rootKey) {
+    /** The XML element name for this component (e.g., "w:p" for paragraph). */
     __publicField(this, "rootKey");
     this.rootKey = rootKey;
   }
-};
-var EMPTY_OBJECT = Object.seal({});
-var XmlComponent = class extends BaseXmlComponent {
-  static {
-    __name(this, "XmlComponent");
-  }
+}
+const EMPTY_OBJECT = Object.seal({});
+class XmlComponent extends BaseXmlComponent {
   /**
    * Creates a new XmlComponent.
    *
@@ -995,6 +71,13 @@ var XmlComponent = class extends BaseXmlComponent {
    */
   constructor(rootKey) {
     super(rootKey);
+    /**
+     * Array of child components, text nodes, and attributes.
+     *
+     * This array forms the content of the XML element. It can contain other
+     * XmlComponents, string values (text nodes), or attribute components.
+     */
+    // eslint-disable-next-line functional/prefer-readonly-type, @typescript-eslint/no-explicit-any
     __publicField(this, "root");
     this.root = new Array();
   }
@@ -1021,18 +104,18 @@ var XmlComponent = class extends BaseXmlComponent {
    * }
    * ```
    */
-  prepForXml(context2) {
-    var _a2;
-    context2.stack.push(this);
+  prepForXml(context) {
+    var _a;
+    context.stack.push(this);
     const children = this.root.map((comp) => {
       if (comp instanceof BaseXmlComponent) {
-        return comp.prepForXml(context2);
+        return comp.prepForXml(context);
       }
       return comp;
     }).filter((comp) => comp !== void 0);
-    context2.stack.pop();
+    context.stack.pop();
     return {
-      [this.rootKey]: children.length ? children.length === 1 && ((_a2 = children[0]) == null ? void 0 : _a2._attr) ? children[0] : children : EMPTY_OBJECT
+      [this.rootKey]: children.length ? children.length === 1 && ((_a = children[0]) == null ? void 0 : _a._attr) ? children[0] : children : EMPTY_OBJECT
     };
   }
   /**
@@ -1046,11 +129,8 @@ var XmlComponent = class extends BaseXmlComponent {
     this.root.push(child);
     return this;
   }
-};
-var IgnoreIfEmptyXmlComponent = class extends XmlComponent {
-  static {
-    __name(this, "IgnoreIfEmptyXmlComponent");
-  }
+}
+class IgnoreIfEmptyXmlComponent extends XmlComponent {
   constructor(rootKey, includeIfEmpty) {
     super(rootKey);
     __publicField(this, "includeIfEmpty");
@@ -1062,8 +142,8 @@ var IgnoreIfEmptyXmlComponent = class extends XmlComponent {
    * @param context - The serialization context
    * @returns The XML-serializable object, or undefined if empty
    */
-  prepForXml(context2) {
-    const result = super.prepForXml(context2);
+  prepForXml(context) {
+    const result = super.prepForXml(context);
     if (this.includeIfEmpty) {
       return result;
     }
@@ -1072,11 +152,8 @@ var IgnoreIfEmptyXmlComponent = class extends XmlComponent {
     }
     return void 0;
   }
-};
-var XmlAttributeComponent = class extends BaseXmlComponent {
-  static {
-    __name(this, "XmlAttributeComponent");
-  }
+}
+class XmlAttributeComponent extends BaseXmlComponent {
   /**
    * Creates a new attribute component.
    *
@@ -1084,6 +161,7 @@ var XmlAttributeComponent = class extends BaseXmlComponent {
    */
   constructor(root) {
     super("_attr");
+    /** Optional mapping from property names to XML attribute names. */
     __publicField(this, "xmlKeys");
     this.root = root;
   }
@@ -1106,11 +184,8 @@ var XmlAttributeComponent = class extends BaseXmlComponent {
     });
     return { _attr: attrs };
   }
-};
-var NextAttributeComponent = class extends BaseXmlComponent {
-  static {
-    __name(this, "NextAttributeComponent");
-  }
+}
+class NextAttributeComponent extends BaseXmlComponent {
   /**
    * Creates a new NextAttributeComponent.
    *
@@ -1133,11 +208,8 @@ var NextAttributeComponent = class extends BaseXmlComponent {
     const attrs = Object.values(this.root).filter(({ value }) => value !== void 0).reduce((acc, { key, value }) => __spreadProps(__spreadValues({}, acc), { [key]: value }), {});
     return { _attr: attrs };
   }
-};
-var Attributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "Attributes");
-  }
+}
+class Attributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", {
@@ -1163,12 +235,11 @@ var Attributes = class extends XmlAttributeComponent {
       pos: "w:pos"
     });
   }
-};
+}
 var commonjsGlobal = typeof globalThis !== "undefined" ? globalThis : typeof window !== "undefined" ? window : typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : {};
 function getDefaultExportFromCjs$1(x) {
   return x && x.__esModule && Object.prototype.hasOwnProperty.call(x, "default") ? x["default"] : x;
 }
-__name(getDefaultExportFromCjs$1, "getDefaultExportFromCjs$1");
 var sax = {};
 var events = { exports: {} };
 var hasRequiredEvents;
@@ -1176,81 +247,77 @@ function requireEvents() {
   if (hasRequiredEvents) return events.exports;
   hasRequiredEvents = 1;
   var R = typeof Reflect === "object" ? Reflect : null;
-  var ReflectApply = R && typeof R.apply === "function" ? R.apply : /* @__PURE__ */ __name(function ReflectApply2(target, receiver, args) {
+  var ReflectApply = R && typeof R.apply === "function" ? R.apply : function ReflectApply2(target, receiver, args) {
     return Function.prototype.apply.call(target, receiver, args);
-  }, "ReflectApply2");
+  };
   var ReflectOwnKeys;
   if (R && typeof R.ownKeys === "function") {
     ReflectOwnKeys = R.ownKeys;
   } else if (Object.getOwnPropertySymbols) {
-    ReflectOwnKeys = /* @__PURE__ */ __name(function ReflectOwnKeys2(target) {
+    ReflectOwnKeys = function ReflectOwnKeys2(target) {
       return Object.getOwnPropertyNames(target).concat(Object.getOwnPropertySymbols(target));
-    }, "ReflectOwnKeys2");
+    };
   } else {
-    ReflectOwnKeys = /* @__PURE__ */ __name(function ReflectOwnKeys2(target) {
+    ReflectOwnKeys = function ReflectOwnKeys2(target) {
       return Object.getOwnPropertyNames(target);
-    }, "ReflectOwnKeys2");
+    };
   }
   function ProcessEmitWarning(warning) {
     if (console && console.warn) console.warn(warning);
   }
-  __name(ProcessEmitWarning, "ProcessEmitWarning");
-  var NumberIsNaN = Number.isNaN || /* @__PURE__ */ __name(function NumberIsNaN2(value) {
+  var NumberIsNaN = Number.isNaN || function NumberIsNaN2(value) {
     return value !== value;
-  }, "NumberIsNaN2");
-  function EventEmitter2() {
-    EventEmitter2.init.call(this);
+  };
+  function EventEmitter() {
+    EventEmitter.init.call(this);
   }
-  __name(EventEmitter2, "EventEmitter");
-  events.exports = EventEmitter2;
-  events.exports.once = once2;
-  EventEmitter2.EventEmitter = EventEmitter2;
-  EventEmitter2.prototype._events = void 0;
-  EventEmitter2.prototype._eventsCount = 0;
-  EventEmitter2.prototype._maxListeners = void 0;
+  events.exports = EventEmitter;
+  events.exports.once = once;
+  EventEmitter.EventEmitter = EventEmitter;
+  EventEmitter.prototype._events = void 0;
+  EventEmitter.prototype._eventsCount = 0;
+  EventEmitter.prototype._maxListeners = void 0;
   var defaultMaxListeners = 10;
   function checkListener(listener) {
     if (typeof listener !== "function") {
       throw new TypeError('The "listener" argument must be of type Function. Received type ' + typeof listener);
     }
   }
-  __name(checkListener, "checkListener");
-  Object.defineProperty(EventEmitter2, "defaultMaxListeners", {
+  Object.defineProperty(EventEmitter, "defaultMaxListeners", {
     enumerable: true,
-    get: /* @__PURE__ */ __name(function() {
+    get: function() {
       return defaultMaxListeners;
-    }, "get"),
-    set: /* @__PURE__ */ __name(function(arg) {
+    },
+    set: function(arg) {
       if (typeof arg !== "number" || arg < 0 || NumberIsNaN(arg)) {
         throw new RangeError('The value of "defaultMaxListeners" is out of range. It must be a non-negative number. Received ' + arg + ".");
       }
       defaultMaxListeners = arg;
-    }, "set")
+    }
   });
-  EventEmitter2.init = function() {
+  EventEmitter.init = function() {
     if (this._events === void 0 || this._events === Object.getPrototypeOf(this)._events) {
       this._events = /* @__PURE__ */ Object.create(null);
       this._eventsCount = 0;
     }
     this._maxListeners = this._maxListeners || void 0;
   };
-  EventEmitter2.prototype.setMaxListeners = /* @__PURE__ */ __name(function setMaxListeners2(n) {
+  EventEmitter.prototype.setMaxListeners = function setMaxListeners(n) {
     if (typeof n !== "number" || n < 0 || NumberIsNaN(n)) {
       throw new RangeError('The value of "n" is out of range. It must be a non-negative number. Received ' + n + ".");
     }
     this._maxListeners = n;
     return this;
-  }, "setMaxListeners");
+  };
   function _getMaxListeners(that) {
     if (that._maxListeners === void 0)
-      return EventEmitter2.defaultMaxListeners;
+      return EventEmitter.defaultMaxListeners;
     return that._maxListeners;
   }
-  __name(_getMaxListeners, "_getMaxListeners");
-  EventEmitter2.prototype.getMaxListeners = /* @__PURE__ */ __name(function getMaxListeners2() {
+  EventEmitter.prototype.getMaxListeners = function getMaxListeners() {
     return _getMaxListeners(this);
-  }, "getMaxListeners");
-  EventEmitter2.prototype.emit = /* @__PURE__ */ __name(function emit2(type2) {
+  };
+  EventEmitter.prototype.emit = function emit(type2) {
     var args = [];
     for (var i = 1; i < arguments.length; i++) args.push(arguments[i]);
     var doError = type2 === "error";
@@ -1266,9 +333,9 @@ function requireEvents() {
       if (er instanceof Error) {
         throw er;
       }
-      var err2 = new Error("Unhandled error." + (er ? " (" + er.message + ")" : ""));
-      err2.context = er;
-      throw err2;
+      var err = new Error("Unhandled error." + (er ? " (" + er.message + ")" : ""));
+      err.context = er;
+      throw err;
     }
     var handler = events2[type2];
     if (handler === void 0)
@@ -1277,12 +344,12 @@ function requireEvents() {
       ReflectApply(handler, this, args);
     } else {
       var len = handler.length;
-      var listeners2 = arrayClone(handler, len);
+      var listeners = arrayClone(handler, len);
       for (var i = 0; i < len; ++i)
-        ReflectApply(listeners2[i], this, args);
+        ReflectApply(listeners[i], this, args);
     }
     return true;
-  }, "emit");
+  };
   function _addListener(target, type2, listener, prepend) {
     var m;
     var events2;
@@ -1327,14 +394,13 @@ function requireEvents() {
     }
     return target;
   }
-  __name(_addListener, "_addListener");
-  EventEmitter2.prototype.addListener = /* @__PURE__ */ __name(function addListener2(type2, listener) {
+  EventEmitter.prototype.addListener = function addListener(type2, listener) {
     return _addListener(this, type2, listener, false);
-  }, "addListener");
-  EventEmitter2.prototype.on = EventEmitter2.prototype.addListener;
-  EventEmitter2.prototype.prependListener = /* @__PURE__ */ __name(function prependListener2(type2, listener) {
+  };
+  EventEmitter.prototype.on = EventEmitter.prototype.addListener;
+  EventEmitter.prototype.prependListener = function prependListener(type2, listener) {
     return _addListener(this, type2, listener, true);
-  }, "prependListener");
+  };
   function onceWrapper() {
     if (!this.fired) {
       this.target.removeListener(this.type, this.wrapFn);
@@ -1344,7 +410,6 @@ function requireEvents() {
       return this.listener.apply(this.target, arguments);
     }
   }
-  __name(onceWrapper, "onceWrapper");
   function _onceWrap(target, type2, listener) {
     var state2 = { fired: false, wrapFn: void 0, target, type: type2, listener };
     var wrapped = onceWrapper.bind(state2);
@@ -1352,18 +417,17 @@ function requireEvents() {
     state2.wrapFn = wrapped;
     return wrapped;
   }
-  __name(_onceWrap, "_onceWrap");
-  EventEmitter2.prototype.once = /* @__PURE__ */ __name(function once22(type2, listener) {
+  EventEmitter.prototype.once = function once2(type2, listener) {
     checkListener(listener);
     this.on(type2, _onceWrap(this, type2, listener));
     return this;
-  }, "once2");
-  EventEmitter2.prototype.prependOnceListener = /* @__PURE__ */ __name(function prependOnceListener2(type2, listener) {
+  };
+  EventEmitter.prototype.prependOnceListener = function prependOnceListener(type2, listener) {
     checkListener(listener);
     this.prependListener(type2, _onceWrap(this, type2, listener));
     return this;
-  }, "prependOnceListener");
-  EventEmitter2.prototype.removeListener = /* @__PURE__ */ __name(function removeListener2(type2, listener) {
+  };
+  EventEmitter.prototype.removeListener = function removeListener(type2, listener) {
     var list, events2, position, i, originalListener;
     checkListener(listener);
     events2 = this._events;
@@ -1402,10 +466,10 @@ function requireEvents() {
         this.emit("removeListener", type2, originalListener || listener);
     }
     return this;
-  }, "removeListener");
-  EventEmitter2.prototype.off = EventEmitter2.prototype.removeListener;
-  EventEmitter2.prototype.removeAllListeners = /* @__PURE__ */ __name(function removeAllListeners2(type2) {
-    var listeners2, events2, i;
+  };
+  EventEmitter.prototype.off = EventEmitter.prototype.removeListener;
+  EventEmitter.prototype.removeAllListeners = function removeAllListeners(type2) {
+    var listeners, events2, i;
     events2 = this._events;
     if (events2 === void 0)
       return this;
@@ -1434,16 +498,16 @@ function requireEvents() {
       this._eventsCount = 0;
       return this;
     }
-    listeners2 = events2[type2];
-    if (typeof listeners2 === "function") {
-      this.removeListener(type2, listeners2);
-    } else if (listeners2 !== void 0) {
-      for (i = listeners2.length - 1; i >= 0; i--) {
-        this.removeListener(type2, listeners2[i]);
+    listeners = events2[type2];
+    if (typeof listeners === "function") {
+      this.removeListener(type2, listeners);
+    } else if (listeners !== void 0) {
+      for (i = listeners.length - 1; i >= 0; i--) {
+        this.removeListener(type2, listeners[i]);
       }
     }
     return this;
-  }, "removeAllListeners");
+  };
   function _listeners(target, type2, unwrap) {
     var events2 = target._events;
     if (events2 === void 0)
@@ -1455,22 +519,21 @@ function requireEvents() {
       return unwrap ? [evlistener.listener || evlistener] : [evlistener];
     return unwrap ? unwrapListeners(evlistener) : arrayClone(evlistener, evlistener.length);
   }
-  __name(_listeners, "_listeners");
-  EventEmitter2.prototype.listeners = /* @__PURE__ */ __name(function listeners2(type2) {
+  EventEmitter.prototype.listeners = function listeners(type2) {
     return _listeners(this, type2, true);
-  }, "listeners");
-  EventEmitter2.prototype.rawListeners = /* @__PURE__ */ __name(function rawListeners2(type2) {
+  };
+  EventEmitter.prototype.rawListeners = function rawListeners(type2) {
     return _listeners(this, type2, false);
-  }, "rawListeners");
-  EventEmitter2.listenerCount = function(emitter, type2) {
+  };
+  EventEmitter.listenerCount = function(emitter, type2) {
     if (typeof emitter.listenerCount === "function") {
       return emitter.listenerCount(type2);
     } else {
-      return listenerCount2.call(emitter, type2);
+      return listenerCount.call(emitter, type2);
     }
   };
-  EventEmitter2.prototype.listenerCount = listenerCount2;
-  function listenerCount2(type2) {
+  EventEmitter.prototype.listenerCount = listenerCount;
+  function listenerCount(type2) {
     var events2 = this._events;
     if (events2 !== void 0) {
       var evlistener = events2[type2];
@@ -1482,23 +545,20 @@ function requireEvents() {
     }
     return 0;
   }
-  __name(listenerCount2, "listenerCount");
-  EventEmitter2.prototype.eventNames = /* @__PURE__ */ __name(function eventNames2() {
+  EventEmitter.prototype.eventNames = function eventNames() {
     return this._eventsCount > 0 ? ReflectOwnKeys(this._events) : [];
-  }, "eventNames");
+  };
   function arrayClone(arr, n) {
     var copy = new Array(n);
     for (var i = 0; i < n; ++i)
       copy[i] = arr[i];
     return copy;
   }
-  __name(arrayClone, "arrayClone");
   function spliceOne(list, index) {
     for (; index + 1 < list.length; index++)
       list[index] = list[index + 1];
     list.pop();
   }
-  __name(spliceOne, "spliceOne");
   function unwrapListeners(arr) {
     var ret = new Array(arr.length);
     for (var i = 0; i < ret.length; ++i) {
@@ -1506,34 +566,29 @@ function requireEvents() {
     }
     return ret;
   }
-  __name(unwrapListeners, "unwrapListeners");
-  function once2(emitter, name) {
+  function once(emitter, name) {
     return new Promise(function(resolve, reject) {
-      function errorListener(err2) {
+      function errorListener(err) {
         emitter.removeListener(name, resolver);
-        reject(err2);
+        reject(err);
       }
-      __name(errorListener, "errorListener");
       function resolver() {
         if (typeof emitter.removeListener === "function") {
           emitter.removeListener("error", errorListener);
         }
         resolve([].slice.call(arguments));
       }
-      __name(resolver, "resolver");
       eventTargetAgnosticAddListener(emitter, name, resolver, { once: true });
       if (name !== "error") {
         addErrorHandlerIfEventEmitter(emitter, errorListener, { once: true });
       }
     });
   }
-  __name(once2, "once");
   function addErrorHandlerIfEventEmitter(emitter, handler, flags) {
     if (typeof emitter.on === "function") {
       eventTargetAgnosticAddListener(emitter, "error", handler, flags);
     }
   }
-  __name(addErrorHandlerIfEventEmitter, "addErrorHandlerIfEventEmitter");
   function eventTargetAgnosticAddListener(emitter, name, listener, flags) {
     if (typeof emitter.on === "function") {
       if (flags.once) {
@@ -1542,27 +597,25 @@ function requireEvents() {
         emitter.on(name, listener);
       }
     } else if (typeof emitter.addEventListener === "function") {
-      emitter.addEventListener(name, /* @__PURE__ */ __name(function wrapListener(arg) {
+      emitter.addEventListener(name, function wrapListener(arg) {
         if (flags.once) {
           emitter.removeEventListener(name, wrapListener);
         }
         listener(arg);
-      }, "wrapListener"));
+      });
     } else {
       throw new TypeError('The "emitter" argument must be of type EventEmitter. Received type ' + typeof emitter);
     }
   }
-  __name(eventTargetAgnosticAddListener, "eventTargetAgnosticAddListener");
   return events.exports;
 }
-__name(requireEvents, "requireEvents");
 var inherits_browser = { exports: {} };
 var hasRequiredInherits_browser;
 function requireInherits_browser() {
   if (hasRequiredInherits_browser) return inherits_browser.exports;
   hasRequiredInherits_browser = 1;
   if (typeof Object.create === "function") {
-    inherits_browser.exports = /* @__PURE__ */ __name(function inherits(ctor, superCtor) {
+    inherits_browser.exports = function inherits(ctor, superCtor) {
       if (superCtor) {
         ctor.super_ = superCtor;
         ctor.prototype = Object.create(superCtor.prototype, {
@@ -1574,26 +627,24 @@ function requireInherits_browser() {
           }
         });
       }
-    }, "inherits");
+    };
   } else {
-    inherits_browser.exports = /* @__PURE__ */ __name(function inherits(ctor, superCtor) {
+    inherits_browser.exports = function inherits(ctor, superCtor) {
       if (superCtor) {
         ctor.super_ = superCtor;
-        var TempCtor = /* @__PURE__ */ __name(function() {
-        }, "TempCtor");
+        var TempCtor = function() {
+        };
         TempCtor.prototype = superCtor.prototype;
         ctor.prototype = new TempCtor();
         ctor.prototype.constructor = ctor;
       }
-    }, "inherits");
+    };
   }
   return inherits_browser.exports;
 }
-__name(requireInherits_browser, "requireInherits_browser");
 function getDefaultExportFromCjs(x) {
   return x && x.__esModule && Object.prototype.hasOwnProperty.call(x, "default") ? x["default"] : x;
 }
-__name(getDefaultExportFromCjs, "getDefaultExportFromCjs");
 var browser$1 = { exports: {} };
 var process = browser$1.exports = {};
 var cachedSetTimeout;
@@ -1601,11 +652,9 @@ var cachedClearTimeout;
 function defaultSetTimout() {
   throw new Error("setTimeout has not been defined");
 }
-__name(defaultSetTimout, "defaultSetTimout");
 function defaultClearTimeout() {
   throw new Error("clearTimeout has not been defined");
 }
-__name(defaultClearTimeout, "defaultClearTimeout");
 (function() {
   try {
     if (typeof setTimeout === "function") {
@@ -1644,7 +693,6 @@ function runTimeout(fun) {
     }
   }
 }
-__name(runTimeout, "runTimeout");
 function runClearTimeout(marker) {
   if (cachedClearTimeout === clearTimeout) {
     return clearTimeout(marker);
@@ -1663,7 +711,6 @@ function runClearTimeout(marker) {
     }
   }
 }
-__name(runClearTimeout, "runClearTimeout");
 var queue = [];
 var draining = false;
 var currentQueue;
@@ -1682,7 +729,6 @@ function cleanUpNextTick() {
     drainQueue();
   }
 }
-__name(cleanUpNextTick, "cleanUpNextTick");
 function drainQueue() {
   if (draining) {
     return;
@@ -1705,7 +751,6 @@ function drainQueue() {
   draining = false;
   runClearTimeout(timeout);
 }
-__name(drainQueue, "drainQueue");
 process.nextTick = function(fun) {
   var args = new Array(arguments.length - 1);
   if (arguments.length > 1) {
@@ -1722,7 +767,6 @@ function Item(fun, array) {
   this.fun = fun;
   this.array = array;
 }
-__name(Item, "Item");
 Item.prototype.run = function() {
   this.fun.apply(null, this.array);
 };
@@ -1734,7 +778,6 @@ process.version = "";
 process.versions = {};
 function noop() {
 }
-__name(noop, "noop");
 process.on = noop;
 process.addListener = noop;
 process.once = noop;
@@ -1753,14 +796,14 @@ process.binding = function(name) {
 process.cwd = function() {
   return "/";
 };
-process.chdir = function(dir3) {
+process.chdir = function(dir) {
   throw new Error("process.chdir is not supported");
 };
 process.umask = function() {
   return 0;
 };
 var browserExports = browser$1.exports;
-var process$1 = /* @__PURE__ */ getDefaultExportFromCjs(browserExports);
+const process$1 = /* @__PURE__ */ getDefaultExportFromCjs(browserExports);
 var streamBrowser;
 var hasRequiredStreamBrowser;
 function requireStreamBrowser() {
@@ -1769,7 +812,6 @@ function requireStreamBrowser() {
   streamBrowser = requireEvents().EventEmitter;
   return streamBrowser;
 }
-__name(requireStreamBrowser, "requireStreamBrowser");
 var buffer = {};
 var base64Js = {};
 var hasRequiredBase64Js;
@@ -1799,18 +841,15 @@ function requireBase64Js() {
     var placeHoldersLen = validLen === len2 ? 0 : 4 - validLen % 4;
     return [validLen, placeHoldersLen];
   }
-  __name(getLens, "getLens");
   function byteLength(b64) {
     var lens = getLens(b64);
     var validLen = lens[0];
     var placeHoldersLen = lens[1];
     return (validLen + placeHoldersLen) * 3 / 4 - placeHoldersLen;
   }
-  __name(byteLength, "byteLength");
   function _byteLength(b64, validLen, placeHoldersLen) {
     return (validLen + placeHoldersLen) * 3 / 4 - placeHoldersLen;
   }
-  __name(_byteLength, "_byteLength");
   function toByteArray(b64) {
     var tmp;
     var lens = getLens(b64);
@@ -1837,11 +876,9 @@ function requireBase64Js() {
     }
     return arr;
   }
-  __name(toByteArray, "toByteArray");
   function tripletToBase64(num) {
     return lookup[num >> 18 & 63] + lookup[num >> 12 & 63] + lookup[num >> 6 & 63] + lookup[num & 63];
   }
-  __name(tripletToBase64, "tripletToBase64");
   function encodeChunk(uint8, start, end) {
     var tmp;
     var output = [];
@@ -1851,7 +888,6 @@ function requireBase64Js() {
     }
     return output.join("");
   }
-  __name(encodeChunk, "encodeChunk");
   function fromByteArray(uint8) {
     var tmp;
     var len2 = uint8.length;
@@ -1874,10 +910,8 @@ function requireBase64Js() {
     }
     return parts.join("");
   }
-  __name(fromByteArray, "fromByteArray");
   return base64Js;
 }
-__name(requireBase64Js, "requireBase64Js");
 var ieee754 = {};
 var hasRequiredIeee754;
 function requireIeee754() {
@@ -1962,7 +996,6 @@ function requireIeee754() {
   };
   return ieee754;
 }
-__name(requireIeee754, "requireIeee754");
 var hasRequiredBuffer;
 function requireBuffer() {
   if (hasRequiredBuffer) return buffer;
@@ -1985,9 +1018,9 @@ function requireBuffer() {
     function typedArraySupport() {
       try {
         var arr = new Uint8Array(1);
-        var proto = { foo: /* @__PURE__ */ __name(function() {
+        var proto = { foo: function() {
           return 42;
-        }, "foo") };
+        } };
         Object.setPrototypeOf(proto, Uint8Array.prototype);
         Object.setPrototypeOf(arr, proto);
         return arr.foo() === 42;
@@ -1995,20 +1028,19 @@ function requireBuffer() {
         return false;
       }
     }
-    __name(typedArraySupport, "typedArraySupport");
     Object.defineProperty(Buffer2.prototype, "parent", {
       enumerable: true,
-      get: /* @__PURE__ */ __name(function() {
+      get: function() {
         if (!Buffer2.isBuffer(this)) return void 0;
         return this.buffer;
-      }, "get")
+      }
     });
     Object.defineProperty(Buffer2.prototype, "offset", {
       enumerable: true,
-      get: /* @__PURE__ */ __name(function() {
+      get: function() {
         if (!Buffer2.isBuffer(this)) return void 0;
         return this.byteOffset;
-      }, "get")
+      }
     });
     function createBuffer(length) {
       if (length > K_MAX_LENGTH) {
@@ -2018,7 +1050,6 @@ function requireBuffer() {
       Object.setPrototypeOf(buf, Buffer2.prototype);
       return buf;
     }
-    __name(createBuffer, "createBuffer");
     function Buffer2(arg, encodingOrOffset, length) {
       if (typeof arg === "number") {
         if (typeof encodingOrOffset === "string") {
@@ -2030,7 +1061,6 @@ function requireBuffer() {
       }
       return from(arg, encodingOrOffset, length);
     }
-    __name(Buffer2, "Buffer2");
     Buffer2.poolSize = 8192;
     function from(value, encodingOrOffset, length) {
       if (typeof value === "string") {
@@ -2072,7 +1102,6 @@ function requireBuffer() {
         "The first argument must be one of type string, Buffer, ArrayBuffer, Array, or Array-like Object. Received type " + typeof value
       );
     }
-    __name(from, "from");
     Buffer2.from = function(value, encodingOrOffset, length) {
       return from(value, encodingOrOffset, length);
     };
@@ -2085,7 +1114,6 @@ function requireBuffer() {
         throw new RangeError('The value "' + size + '" is invalid for option "size"');
       }
     }
-    __name(assertSize, "assertSize");
     function alloc(size, fill, encoding) {
       assertSize(size);
       if (size <= 0) {
@@ -2096,7 +1124,6 @@ function requireBuffer() {
       }
       return createBuffer(size);
     }
-    __name(alloc, "alloc");
     Buffer2.alloc = function(size, fill, encoding) {
       return alloc(size, fill, encoding);
     };
@@ -2104,7 +1131,6 @@ function requireBuffer() {
       assertSize(size);
       return createBuffer(size < 0 ? 0 : checked(size) | 0);
     }
-    __name(allocUnsafe, "allocUnsafe");
     Buffer2.allocUnsafe = function(size) {
       return allocUnsafe(size);
     };
@@ -2126,7 +1152,6 @@ function requireBuffer() {
       }
       return buf;
     }
-    __name(fromString, "fromString");
     function fromArrayLike(array) {
       var length = array.length < 0 ? 0 : checked(array.length) | 0;
       var buf = createBuffer(length);
@@ -2135,7 +1160,6 @@ function requireBuffer() {
       }
       return buf;
     }
-    __name(fromArrayLike, "fromArrayLike");
     function fromArrayView(arrayView) {
       if (isInstance(arrayView, Uint8Array)) {
         var copy = new Uint8Array(arrayView);
@@ -2143,7 +1167,6 @@ function requireBuffer() {
       }
       return fromArrayLike(arrayView);
     }
-    __name(fromArrayView, "fromArrayView");
     function fromArrayBuffer(array, byteOffset, length) {
       if (byteOffset < 0 || array.byteLength < byteOffset) {
         throw new RangeError('"offset" is outside of buffer bounds');
@@ -2162,7 +1185,6 @@ function requireBuffer() {
       Object.setPrototypeOf(buf, Buffer2.prototype);
       return buf;
     }
-    __name(fromArrayBuffer, "fromArrayBuffer");
     function fromObject(obj) {
       if (Buffer2.isBuffer(obj)) {
         var len = checked(obj.length) | 0;
@@ -2183,25 +1205,22 @@ function requireBuffer() {
         return fromArrayLike(obj.data);
       }
     }
-    __name(fromObject, "fromObject");
     function checked(length) {
       if (length >= K_MAX_LENGTH) {
         throw new RangeError("Attempt to allocate Buffer larger than maximum size: 0x" + K_MAX_LENGTH.toString(16) + " bytes");
       }
       return length | 0;
     }
-    __name(checked, "checked");
     function SlowBuffer(length) {
       if (+length != length) {
         length = 0;
       }
       return Buffer2.alloc(+length);
     }
-    __name(SlowBuffer, "SlowBuffer");
-    Buffer2.isBuffer = /* @__PURE__ */ __name(function isBuffer(b) {
+    Buffer2.isBuffer = function isBuffer(b) {
       return b != null && b._isBuffer === true && b !== Buffer2.prototype;
-    }, "isBuffer");
-    Buffer2.compare = /* @__PURE__ */ __name(function compare(a, b) {
+    };
+    Buffer2.compare = function compare(a, b) {
       if (isInstance(a, Uint8Array)) a = Buffer2.from(a, a.offset, a.byteLength);
       if (isInstance(b, Uint8Array)) b = Buffer2.from(b, b.offset, b.byteLength);
       if (!Buffer2.isBuffer(a) || !Buffer2.isBuffer(b)) {
@@ -2222,8 +1241,8 @@ function requireBuffer() {
       if (x < y) return -1;
       if (y < x) return 1;
       return 0;
-    }, "compare");
-    Buffer2.isEncoding = /* @__PURE__ */ __name(function isEncoding(encoding) {
+    };
+    Buffer2.isEncoding = function isEncoding(encoding) {
       switch (String(encoding).toLowerCase()) {
         case "hex":
         case "utf8":
@@ -2240,8 +1259,8 @@ function requireBuffer() {
         default:
           return false;
       }
-    }, "isEncoding");
-    Buffer2.concat = /* @__PURE__ */ __name(function concat(list, length) {
+    };
+    Buffer2.concat = function concat(list, length) {
       if (!Array.isArray(list)) {
         throw new TypeError('"list" argument must be an Array of Buffers');
       }
@@ -2277,7 +1296,7 @@ function requireBuffer() {
         pos += buf.length;
       }
       return buffer2;
-    }, "concat");
+    };
     function byteLength(string, encoding) {
       if (Buffer2.isBuffer(string)) {
         return string.length;
@@ -2321,7 +1340,6 @@ function requireBuffer() {
         }
       }
     }
-    __name(byteLength, "byteLength");
     Buffer2.byteLength = byteLength;
     function slowToString(encoding, start, end) {
       var loweredCase = false;
@@ -2369,15 +1387,13 @@ function requireBuffer() {
         }
       }
     }
-    __name(slowToString, "slowToString");
     Buffer2.prototype._isBuffer = true;
     function swap(b, n, m) {
       var i = b[n];
       b[n] = b[m];
       b[m] = i;
     }
-    __name(swap, "swap");
-    Buffer2.prototype.swap16 = /* @__PURE__ */ __name(function swap16() {
+    Buffer2.prototype.swap16 = function swap16() {
       var len = this.length;
       if (len % 2 !== 0) {
         throw new RangeError("Buffer size must be a multiple of 16-bits");
@@ -2386,8 +1402,8 @@ function requireBuffer() {
         swap(this, i, i + 1);
       }
       return this;
-    }, "swap16");
-    Buffer2.prototype.swap32 = /* @__PURE__ */ __name(function swap32() {
+    };
+    Buffer2.prototype.swap32 = function swap32() {
       var len = this.length;
       if (len % 4 !== 0) {
         throw new RangeError("Buffer size must be a multiple of 32-bits");
@@ -2397,8 +1413,8 @@ function requireBuffer() {
         swap(this, i + 1, i + 2);
       }
       return this;
-    }, "swap32");
-    Buffer2.prototype.swap64 = /* @__PURE__ */ __name(function swap64() {
+    };
+    Buffer2.prototype.swap64 = function swap64() {
       var len = this.length;
       if (len % 8 !== 0) {
         throw new RangeError("Buffer size must be a multiple of 64-bits");
@@ -2410,30 +1426,30 @@ function requireBuffer() {
         swap(this, i + 3, i + 4);
       }
       return this;
-    }, "swap64");
-    Buffer2.prototype.toString = /* @__PURE__ */ __name(function toString() {
+    };
+    Buffer2.prototype.toString = function toString() {
       var length = this.length;
       if (length === 0) return "";
       if (arguments.length === 0) return utf8Slice(this, 0, length);
       return slowToString.apply(this, arguments);
-    }, "toString");
+    };
     Buffer2.prototype.toLocaleString = Buffer2.prototype.toString;
-    Buffer2.prototype.equals = /* @__PURE__ */ __name(function equals(b) {
+    Buffer2.prototype.equals = function equals(b) {
       if (!Buffer2.isBuffer(b)) throw new TypeError("Argument must be a Buffer");
       if (this === b) return true;
       return Buffer2.compare(this, b) === 0;
-    }, "equals");
-    Buffer2.prototype.inspect = /* @__PURE__ */ __name(function inspect() {
+    };
+    Buffer2.prototype.inspect = function inspect() {
       var str = "";
-      var max22 = exports$1.INSPECT_MAX_BYTES;
-      str = this.toString("hex", 0, max22).replace(/(.{2})/g, "$1 ").trim();
-      if (this.length > max22) str += " ... ";
+      var max2 = exports$1.INSPECT_MAX_BYTES;
+      str = this.toString("hex", 0, max2).replace(/(.{2})/g, "$1 ").trim();
+      if (this.length > max2) str += " ... ";
       return "<Buffer " + str + ">";
-    }, "inspect");
+    };
     if (customInspectSymbol) {
       Buffer2.prototype[customInspectSymbol] = Buffer2.prototype.inspect;
     }
-    Buffer2.prototype.compare = /* @__PURE__ */ __name(function compare(target, start, end, thisStart, thisEnd) {
+    Buffer2.prototype.compare = function compare(target, start, end, thisStart, thisEnd) {
       if (isInstance(target, Uint8Array)) {
         target = Buffer2.from(target, target.offset, target.byteLength);
       }
@@ -2486,8 +1502,8 @@ function requireBuffer() {
       if (x < y) return -1;
       if (y < x) return 1;
       return 0;
-    }, "compare");
-    function bidirectionalIndexOf(buffer2, val, byteOffset, encoding, dir3) {
+    };
+    function bidirectionalIndexOf(buffer2, val, byteOffset, encoding, dir) {
       if (buffer2.length === 0) return -1;
       if (typeof byteOffset === "string") {
         encoding = byteOffset;
@@ -2499,14 +1515,14 @@ function requireBuffer() {
       }
       byteOffset = +byteOffset;
       if (numberIsNaN(byteOffset)) {
-        byteOffset = dir3 ? 0 : buffer2.length - 1;
+        byteOffset = dir ? 0 : buffer2.length - 1;
       }
       if (byteOffset < 0) byteOffset = buffer2.length + byteOffset;
       if (byteOffset >= buffer2.length) {
-        if (dir3) return -1;
+        if (dir) return -1;
         else byteOffset = buffer2.length - 1;
       } else if (byteOffset < 0) {
-        if (dir3) byteOffset = 0;
+        if (dir) byteOffset = 0;
         else return -1;
       }
       if (typeof val === "string") {
@@ -2516,22 +1532,21 @@ function requireBuffer() {
         if (val.length === 0) {
           return -1;
         }
-        return arrayIndexOf(buffer2, val, byteOffset, encoding, dir3);
+        return arrayIndexOf(buffer2, val, byteOffset, encoding, dir);
       } else if (typeof val === "number") {
         val = val & 255;
         if (typeof Uint8Array.prototype.indexOf === "function") {
-          if (dir3) {
+          if (dir) {
             return Uint8Array.prototype.indexOf.call(buffer2, val, byteOffset);
           } else {
             return Uint8Array.prototype.lastIndexOf.call(buffer2, val, byteOffset);
           }
         }
-        return arrayIndexOf(buffer2, [val], byteOffset, encoding, dir3);
+        return arrayIndexOf(buffer2, [val], byteOffset, encoding, dir);
       }
       throw new TypeError("val must be string, number or Buffer");
     }
-    __name(bidirectionalIndexOf, "bidirectionalIndexOf");
-    function arrayIndexOf(arr, val, byteOffset, encoding, dir3) {
+    function arrayIndexOf(arr, val, byteOffset, encoding, dir) {
       var indexSize = 1;
       var arrLength = arr.length;
       var valLength = val.length;
@@ -2554,9 +1569,8 @@ function requireBuffer() {
           return buf.readUInt16BE(i2 * indexSize);
         }
       }
-      __name(read, "read");
       var i;
-      if (dir3) {
+      if (dir) {
         var foundIndex = -1;
         for (i = byteOffset; i < arrLength; i++) {
           if (read(arr, i) === read(val, foundIndex === -1 ? 0 : i - foundIndex)) {
@@ -2582,16 +1596,15 @@ function requireBuffer() {
       }
       return -1;
     }
-    __name(arrayIndexOf, "arrayIndexOf");
-    Buffer2.prototype.includes = /* @__PURE__ */ __name(function includes(val, byteOffset, encoding) {
+    Buffer2.prototype.includes = function includes(val, byteOffset, encoding) {
       return this.indexOf(val, byteOffset, encoding) !== -1;
-    }, "includes");
-    Buffer2.prototype.indexOf = /* @__PURE__ */ __name(function indexOf(val, byteOffset, encoding) {
+    };
+    Buffer2.prototype.indexOf = function indexOf(val, byteOffset, encoding) {
       return bidirectionalIndexOf(this, val, byteOffset, encoding, true);
-    }, "indexOf");
-    Buffer2.prototype.lastIndexOf = /* @__PURE__ */ __name(function lastIndexOf(val, byteOffset, encoding) {
+    };
+    Buffer2.prototype.lastIndexOf = function lastIndexOf(val, byteOffset, encoding) {
       return bidirectionalIndexOf(this, val, byteOffset, encoding, false);
-    }, "lastIndexOf");
+    };
     function hexWrite(buf, string, offset, length) {
       offset = Number(offset) || 0;
       var remaining = buf.length - offset;
@@ -2614,24 +1627,19 @@ function requireBuffer() {
       }
       return i;
     }
-    __name(hexWrite, "hexWrite");
     function utf8Write(buf, string, offset, length) {
       return blitBuffer(utf8ToBytes(string, buf.length - offset), buf, offset, length);
     }
-    __name(utf8Write, "utf8Write");
     function asciiWrite(buf, string, offset, length) {
       return blitBuffer(asciiToBytes(string), buf, offset, length);
     }
-    __name(asciiWrite, "asciiWrite");
     function base64Write(buf, string, offset, length) {
       return blitBuffer(base64ToBytes(string), buf, offset, length);
     }
-    __name(base64Write, "base64Write");
     function ucs2Write(buf, string, offset, length) {
       return blitBuffer(utf16leToBytes(string, buf.length - offset), buf, offset, length);
     }
-    __name(ucs2Write, "ucs2Write");
-    Buffer2.prototype.write = /* @__PURE__ */ __name(function write(string, offset, length, encoding) {
+    Buffer2.prototype.write = function write(string, offset, length, encoding) {
       if (offset === void 0) {
         encoding = "utf8";
         length = this.length;
@@ -2685,13 +1693,13 @@ function requireBuffer() {
             loweredCase = true;
         }
       }
-    }, "write");
-    Buffer2.prototype.toJSON = /* @__PURE__ */ __name(function toJSON() {
+    };
+    Buffer2.prototype.toJSON = function toJSON() {
       return {
         type: "Buffer",
         data: Array.prototype.slice.call(this._arr || this, 0)
       };
-    }, "toJSON");
+    };
     function base64Slice(buf, start, end) {
       if (start === 0 && end === buf.length) {
         return base64.fromByteArray(buf);
@@ -2699,7 +1707,6 @@ function requireBuffer() {
         return base64.fromByteArray(buf.slice(start, end));
       }
     }
-    __name(base64Slice, "base64Slice");
     function utf8Slice(buf, start, end) {
       end = Math.min(buf.length, end);
       var res = [];
@@ -2760,7 +1767,6 @@ function requireBuffer() {
       }
       return decodeCodePointsArray(res);
     }
-    __name(utf8Slice, "utf8Slice");
     var MAX_ARGUMENTS_LENGTH = 4096;
     function decodeCodePointsArray(codePoints) {
       var len = codePoints.length;
@@ -2777,7 +1783,6 @@ function requireBuffer() {
       }
       return res;
     }
-    __name(decodeCodePointsArray, "decodeCodePointsArray");
     function asciiSlice(buf, start, end) {
       var ret = "";
       end = Math.min(buf.length, end);
@@ -2786,7 +1791,6 @@ function requireBuffer() {
       }
       return ret;
     }
-    __name(asciiSlice, "asciiSlice");
     function latin1Slice(buf, start, end) {
       var ret = "";
       end = Math.min(buf.length, end);
@@ -2795,7 +1799,6 @@ function requireBuffer() {
       }
       return ret;
     }
-    __name(latin1Slice, "latin1Slice");
     function hexSlice(buf, start, end) {
       var len = buf.length;
       if (!start || start < 0) start = 0;
@@ -2806,7 +1809,6 @@ function requireBuffer() {
       }
       return out;
     }
-    __name(hexSlice, "hexSlice");
     function utf16leSlice(buf, start, end) {
       var bytes = buf.slice(start, end);
       var res = "";
@@ -2815,8 +1817,7 @@ function requireBuffer() {
       }
       return res;
     }
-    __name(utf16leSlice, "utf16leSlice");
-    Buffer2.prototype.slice = /* @__PURE__ */ __name(function slice(start, end) {
+    Buffer2.prototype.slice = function slice(start, end) {
       var len = this.length;
       start = ~~start;
       end = end === void 0 ? len : ~~end;
@@ -2836,13 +1837,12 @@ function requireBuffer() {
       var newBuf = this.subarray(start, end);
       Object.setPrototypeOf(newBuf, Buffer2.prototype);
       return newBuf;
-    }, "slice");
+    };
     function checkOffset(offset, ext, length) {
       if (offset % 1 !== 0 || offset < 0) throw new RangeError("offset is not uint");
       if (offset + ext > length) throw new RangeError("Trying to access beyond buffer length");
     }
-    __name(checkOffset, "checkOffset");
-    Buffer2.prototype.readUintLE = Buffer2.prototype.readUIntLE = /* @__PURE__ */ __name(function readUIntLE(offset, byteLength2, noAssert) {
+    Buffer2.prototype.readUintLE = Buffer2.prototype.readUIntLE = function readUIntLE(offset, byteLength2, noAssert) {
       offset = offset >>> 0;
       byteLength2 = byteLength2 >>> 0;
       if (!noAssert) checkOffset(offset, byteLength2, this.length);
@@ -2853,8 +1853,8 @@ function requireBuffer() {
         val += this[offset + i] * mul;
       }
       return val;
-    }, "readUIntLE");
-    Buffer2.prototype.readUintBE = Buffer2.prototype.readUIntBE = /* @__PURE__ */ __name(function readUIntBE(offset, byteLength2, noAssert) {
+    };
+    Buffer2.prototype.readUintBE = Buffer2.prototype.readUIntBE = function readUIntBE(offset, byteLength2, noAssert) {
       offset = offset >>> 0;
       byteLength2 = byteLength2 >>> 0;
       if (!noAssert) {
@@ -2866,33 +1866,33 @@ function requireBuffer() {
         val += this[offset + --byteLength2] * mul;
       }
       return val;
-    }, "readUIntBE");
-    Buffer2.prototype.readUint8 = Buffer2.prototype.readUInt8 = /* @__PURE__ */ __name(function readUInt8(offset, noAssert) {
+    };
+    Buffer2.prototype.readUint8 = Buffer2.prototype.readUInt8 = function readUInt8(offset, noAssert) {
       offset = offset >>> 0;
       if (!noAssert) checkOffset(offset, 1, this.length);
       return this[offset];
-    }, "readUInt8");
-    Buffer2.prototype.readUint16LE = Buffer2.prototype.readUInt16LE = /* @__PURE__ */ __name(function readUInt16LE(offset, noAssert) {
+    };
+    Buffer2.prototype.readUint16LE = Buffer2.prototype.readUInt16LE = function readUInt16LE(offset, noAssert) {
       offset = offset >>> 0;
       if (!noAssert) checkOffset(offset, 2, this.length);
       return this[offset] | this[offset + 1] << 8;
-    }, "readUInt16LE");
-    Buffer2.prototype.readUint16BE = Buffer2.prototype.readUInt16BE = /* @__PURE__ */ __name(function readUInt16BE(offset, noAssert) {
+    };
+    Buffer2.prototype.readUint16BE = Buffer2.prototype.readUInt16BE = function readUInt16BE(offset, noAssert) {
       offset = offset >>> 0;
       if (!noAssert) checkOffset(offset, 2, this.length);
       return this[offset] << 8 | this[offset + 1];
-    }, "readUInt16BE");
-    Buffer2.prototype.readUint32LE = Buffer2.prototype.readUInt32LE = /* @__PURE__ */ __name(function readUInt32LE(offset, noAssert) {
+    };
+    Buffer2.prototype.readUint32LE = Buffer2.prototype.readUInt32LE = function readUInt32LE(offset, noAssert) {
       offset = offset >>> 0;
       if (!noAssert) checkOffset(offset, 4, this.length);
       return (this[offset] | this[offset + 1] << 8 | this[offset + 2] << 16) + this[offset + 3] * 16777216;
-    }, "readUInt32LE");
-    Buffer2.prototype.readUint32BE = Buffer2.prototype.readUInt32BE = /* @__PURE__ */ __name(function readUInt32BE(offset, noAssert) {
+    };
+    Buffer2.prototype.readUint32BE = Buffer2.prototype.readUInt32BE = function readUInt32BE(offset, noAssert) {
       offset = offset >>> 0;
       if (!noAssert) checkOffset(offset, 4, this.length);
       return this[offset] * 16777216 + (this[offset + 1] << 16 | this[offset + 2] << 8 | this[offset + 3]);
-    }, "readUInt32BE");
-    Buffer2.prototype.readIntLE = /* @__PURE__ */ __name(function readIntLE(offset, byteLength2, noAssert) {
+    };
+    Buffer2.prototype.readIntLE = function readIntLE(offset, byteLength2, noAssert) {
       offset = offset >>> 0;
       byteLength2 = byteLength2 >>> 0;
       if (!noAssert) checkOffset(offset, byteLength2, this.length);
@@ -2905,8 +1905,8 @@ function requireBuffer() {
       mul *= 128;
       if (val >= mul) val -= Math.pow(2, 8 * byteLength2);
       return val;
-    }, "readIntLE");
-    Buffer2.prototype.readIntBE = /* @__PURE__ */ __name(function readIntBE(offset, byteLength2, noAssert) {
+    };
+    Buffer2.prototype.readIntBE = function readIntBE(offset, byteLength2, noAssert) {
       offset = offset >>> 0;
       byteLength2 = byteLength2 >>> 0;
       if (!noAssert) checkOffset(offset, byteLength2, this.length);
@@ -2919,62 +1919,61 @@ function requireBuffer() {
       mul *= 128;
       if (val >= mul) val -= Math.pow(2, 8 * byteLength2);
       return val;
-    }, "readIntBE");
-    Buffer2.prototype.readInt8 = /* @__PURE__ */ __name(function readInt8(offset, noAssert) {
+    };
+    Buffer2.prototype.readInt8 = function readInt8(offset, noAssert) {
       offset = offset >>> 0;
       if (!noAssert) checkOffset(offset, 1, this.length);
       if (!(this[offset] & 128)) return this[offset];
       return (255 - this[offset] + 1) * -1;
-    }, "readInt8");
-    Buffer2.prototype.readInt16LE = /* @__PURE__ */ __name(function readInt16LE(offset, noAssert) {
+    };
+    Buffer2.prototype.readInt16LE = function readInt16LE(offset, noAssert) {
       offset = offset >>> 0;
       if (!noAssert) checkOffset(offset, 2, this.length);
       var val = this[offset] | this[offset + 1] << 8;
       return val & 32768 ? val | 4294901760 : val;
-    }, "readInt16LE");
-    Buffer2.prototype.readInt16BE = /* @__PURE__ */ __name(function readInt16BE(offset, noAssert) {
+    };
+    Buffer2.prototype.readInt16BE = function readInt16BE(offset, noAssert) {
       offset = offset >>> 0;
       if (!noAssert) checkOffset(offset, 2, this.length);
       var val = this[offset + 1] | this[offset] << 8;
       return val & 32768 ? val | 4294901760 : val;
-    }, "readInt16BE");
-    Buffer2.prototype.readInt32LE = /* @__PURE__ */ __name(function readInt32LE(offset, noAssert) {
+    };
+    Buffer2.prototype.readInt32LE = function readInt32LE(offset, noAssert) {
       offset = offset >>> 0;
       if (!noAssert) checkOffset(offset, 4, this.length);
       return this[offset] | this[offset + 1] << 8 | this[offset + 2] << 16 | this[offset + 3] << 24;
-    }, "readInt32LE");
-    Buffer2.prototype.readInt32BE = /* @__PURE__ */ __name(function readInt32BE(offset, noAssert) {
+    };
+    Buffer2.prototype.readInt32BE = function readInt32BE(offset, noAssert) {
       offset = offset >>> 0;
       if (!noAssert) checkOffset(offset, 4, this.length);
       return this[offset] << 24 | this[offset + 1] << 16 | this[offset + 2] << 8 | this[offset + 3];
-    }, "readInt32BE");
-    Buffer2.prototype.readFloatLE = /* @__PURE__ */ __name(function readFloatLE(offset, noAssert) {
+    };
+    Buffer2.prototype.readFloatLE = function readFloatLE(offset, noAssert) {
       offset = offset >>> 0;
       if (!noAssert) checkOffset(offset, 4, this.length);
       return ieee7542.read(this, offset, true, 23, 4);
-    }, "readFloatLE");
-    Buffer2.prototype.readFloatBE = /* @__PURE__ */ __name(function readFloatBE(offset, noAssert) {
+    };
+    Buffer2.prototype.readFloatBE = function readFloatBE(offset, noAssert) {
       offset = offset >>> 0;
       if (!noAssert) checkOffset(offset, 4, this.length);
       return ieee7542.read(this, offset, false, 23, 4);
-    }, "readFloatBE");
-    Buffer2.prototype.readDoubleLE = /* @__PURE__ */ __name(function readDoubleLE(offset, noAssert) {
+    };
+    Buffer2.prototype.readDoubleLE = function readDoubleLE(offset, noAssert) {
       offset = offset >>> 0;
       if (!noAssert) checkOffset(offset, 8, this.length);
       return ieee7542.read(this, offset, true, 52, 8);
-    }, "readDoubleLE");
-    Buffer2.prototype.readDoubleBE = /* @__PURE__ */ __name(function readDoubleBE(offset, noAssert) {
+    };
+    Buffer2.prototype.readDoubleBE = function readDoubleBE(offset, noAssert) {
       offset = offset >>> 0;
       if (!noAssert) checkOffset(offset, 8, this.length);
       return ieee7542.read(this, offset, false, 52, 8);
-    }, "readDoubleBE");
-    function checkInt(buf, value, offset, ext, max22, min2) {
+    };
+    function checkInt(buf, value, offset, ext, max2, min2) {
       if (!Buffer2.isBuffer(buf)) throw new TypeError('"buffer" argument must be a Buffer instance');
-      if (value > max22 || value < min2) throw new RangeError('"value" argument is out of bounds');
+      if (value > max2 || value < min2) throw new RangeError('"value" argument is out of bounds');
       if (offset + ext > buf.length) throw new RangeError("Index out of range");
     }
-    __name(checkInt, "checkInt");
-    Buffer2.prototype.writeUintLE = Buffer2.prototype.writeUIntLE = /* @__PURE__ */ __name(function writeUIntLE(value, offset, byteLength2, noAssert) {
+    Buffer2.prototype.writeUintLE = Buffer2.prototype.writeUIntLE = function writeUIntLE(value, offset, byteLength2, noAssert) {
       value = +value;
       offset = offset >>> 0;
       byteLength2 = byteLength2 >>> 0;
@@ -2989,8 +1988,8 @@ function requireBuffer() {
         this[offset + i] = value / mul & 255;
       }
       return offset + byteLength2;
-    }, "writeUIntLE");
-    Buffer2.prototype.writeUintBE = Buffer2.prototype.writeUIntBE = /* @__PURE__ */ __name(function writeUIntBE(value, offset, byteLength2, noAssert) {
+    };
+    Buffer2.prototype.writeUintBE = Buffer2.prototype.writeUIntBE = function writeUIntBE(value, offset, byteLength2, noAssert) {
       value = +value;
       offset = offset >>> 0;
       byteLength2 = byteLength2 >>> 0;
@@ -3005,31 +2004,31 @@ function requireBuffer() {
         this[offset + i] = value / mul & 255;
       }
       return offset + byteLength2;
-    }, "writeUIntBE");
-    Buffer2.prototype.writeUint8 = Buffer2.prototype.writeUInt8 = /* @__PURE__ */ __name(function writeUInt8(value, offset, noAssert) {
+    };
+    Buffer2.prototype.writeUint8 = Buffer2.prototype.writeUInt8 = function writeUInt8(value, offset, noAssert) {
       value = +value;
       offset = offset >>> 0;
       if (!noAssert) checkInt(this, value, offset, 1, 255, 0);
       this[offset] = value & 255;
       return offset + 1;
-    }, "writeUInt8");
-    Buffer2.prototype.writeUint16LE = Buffer2.prototype.writeUInt16LE = /* @__PURE__ */ __name(function writeUInt16LE(value, offset, noAssert) {
+    };
+    Buffer2.prototype.writeUint16LE = Buffer2.prototype.writeUInt16LE = function writeUInt16LE(value, offset, noAssert) {
       value = +value;
       offset = offset >>> 0;
       if (!noAssert) checkInt(this, value, offset, 2, 65535, 0);
       this[offset] = value & 255;
       this[offset + 1] = value >>> 8;
       return offset + 2;
-    }, "writeUInt16LE");
-    Buffer2.prototype.writeUint16BE = Buffer2.prototype.writeUInt16BE = /* @__PURE__ */ __name(function writeUInt16BE(value, offset, noAssert) {
+    };
+    Buffer2.prototype.writeUint16BE = Buffer2.prototype.writeUInt16BE = function writeUInt16BE(value, offset, noAssert) {
       value = +value;
       offset = offset >>> 0;
       if (!noAssert) checkInt(this, value, offset, 2, 65535, 0);
       this[offset] = value >>> 8;
       this[offset + 1] = value & 255;
       return offset + 2;
-    }, "writeUInt16BE");
-    Buffer2.prototype.writeUint32LE = Buffer2.prototype.writeUInt32LE = /* @__PURE__ */ __name(function writeUInt32LE(value, offset, noAssert) {
+    };
+    Buffer2.prototype.writeUint32LE = Buffer2.prototype.writeUInt32LE = function writeUInt32LE(value, offset, noAssert) {
       value = +value;
       offset = offset >>> 0;
       if (!noAssert) checkInt(this, value, offset, 4, 4294967295, 0);
@@ -3038,8 +2037,8 @@ function requireBuffer() {
       this[offset + 1] = value >>> 8;
       this[offset] = value & 255;
       return offset + 4;
-    }, "writeUInt32LE");
-    Buffer2.prototype.writeUint32BE = Buffer2.prototype.writeUInt32BE = /* @__PURE__ */ __name(function writeUInt32BE(value, offset, noAssert) {
+    };
+    Buffer2.prototype.writeUint32BE = Buffer2.prototype.writeUInt32BE = function writeUInt32BE(value, offset, noAssert) {
       value = +value;
       offset = offset >>> 0;
       if (!noAssert) checkInt(this, value, offset, 4, 4294967295, 0);
@@ -3048,8 +2047,8 @@ function requireBuffer() {
       this[offset + 2] = value >>> 8;
       this[offset + 3] = value & 255;
       return offset + 4;
-    }, "writeUInt32BE");
-    Buffer2.prototype.writeIntLE = /* @__PURE__ */ __name(function writeIntLE(value, offset, byteLength2, noAssert) {
+    };
+    Buffer2.prototype.writeIntLE = function writeIntLE(value, offset, byteLength2, noAssert) {
       value = +value;
       offset = offset >>> 0;
       if (!noAssert) {
@@ -3067,8 +2066,8 @@ function requireBuffer() {
         this[offset + i] = (value / mul >> 0) - sub & 255;
       }
       return offset + byteLength2;
-    }, "writeIntLE");
-    Buffer2.prototype.writeIntBE = /* @__PURE__ */ __name(function writeIntBE(value, offset, byteLength2, noAssert) {
+    };
+    Buffer2.prototype.writeIntBE = function writeIntBE(value, offset, byteLength2, noAssert) {
       value = +value;
       offset = offset >>> 0;
       if (!noAssert) {
@@ -3086,32 +2085,32 @@ function requireBuffer() {
         this[offset + i] = (value / mul >> 0) - sub & 255;
       }
       return offset + byteLength2;
-    }, "writeIntBE");
-    Buffer2.prototype.writeInt8 = /* @__PURE__ */ __name(function writeInt8(value, offset, noAssert) {
+    };
+    Buffer2.prototype.writeInt8 = function writeInt8(value, offset, noAssert) {
       value = +value;
       offset = offset >>> 0;
       if (!noAssert) checkInt(this, value, offset, 1, 127, -128);
       if (value < 0) value = 255 + value + 1;
       this[offset] = value & 255;
       return offset + 1;
-    }, "writeInt8");
-    Buffer2.prototype.writeInt16LE = /* @__PURE__ */ __name(function writeInt16LE(value, offset, noAssert) {
+    };
+    Buffer2.prototype.writeInt16LE = function writeInt16LE(value, offset, noAssert) {
       value = +value;
       offset = offset >>> 0;
       if (!noAssert) checkInt(this, value, offset, 2, 32767, -32768);
       this[offset] = value & 255;
       this[offset + 1] = value >>> 8;
       return offset + 2;
-    }, "writeInt16LE");
-    Buffer2.prototype.writeInt16BE = /* @__PURE__ */ __name(function writeInt16BE(value, offset, noAssert) {
+    };
+    Buffer2.prototype.writeInt16BE = function writeInt16BE(value, offset, noAssert) {
       value = +value;
       offset = offset >>> 0;
       if (!noAssert) checkInt(this, value, offset, 2, 32767, -32768);
       this[offset] = value >>> 8;
       this[offset + 1] = value & 255;
       return offset + 2;
-    }, "writeInt16BE");
-    Buffer2.prototype.writeInt32LE = /* @__PURE__ */ __name(function writeInt32LE(value, offset, noAssert) {
+    };
+    Buffer2.prototype.writeInt32LE = function writeInt32LE(value, offset, noAssert) {
       value = +value;
       offset = offset >>> 0;
       if (!noAssert) checkInt(this, value, offset, 4, 2147483647, -2147483648);
@@ -3120,8 +2119,8 @@ function requireBuffer() {
       this[offset + 2] = value >>> 16;
       this[offset + 3] = value >>> 24;
       return offset + 4;
-    }, "writeInt32LE");
-    Buffer2.prototype.writeInt32BE = /* @__PURE__ */ __name(function writeInt32BE(value, offset, noAssert) {
+    };
+    Buffer2.prototype.writeInt32BE = function writeInt32BE(value, offset, noAssert) {
       value = +value;
       offset = offset >>> 0;
       if (!noAssert) checkInt(this, value, offset, 4, 2147483647, -2147483648);
@@ -3131,12 +2130,11 @@ function requireBuffer() {
       this[offset + 2] = value >>> 8;
       this[offset + 3] = value & 255;
       return offset + 4;
-    }, "writeInt32BE");
-    function checkIEEE754(buf, value, offset, ext, max22, min2) {
+    };
+    function checkIEEE754(buf, value, offset, ext, max2, min2) {
       if (offset + ext > buf.length) throw new RangeError("Index out of range");
       if (offset < 0) throw new RangeError("Index out of range");
     }
-    __name(checkIEEE754, "checkIEEE754");
     function writeFloat(buf, value, offset, littleEndian, noAssert) {
       value = +value;
       offset = offset >>> 0;
@@ -3146,13 +2144,12 @@ function requireBuffer() {
       ieee7542.write(buf, value, offset, littleEndian, 23, 4);
       return offset + 4;
     }
-    __name(writeFloat, "writeFloat");
-    Buffer2.prototype.writeFloatLE = /* @__PURE__ */ __name(function writeFloatLE(value, offset, noAssert) {
+    Buffer2.prototype.writeFloatLE = function writeFloatLE(value, offset, noAssert) {
       return writeFloat(this, value, offset, true, noAssert);
-    }, "writeFloatLE");
-    Buffer2.prototype.writeFloatBE = /* @__PURE__ */ __name(function writeFloatBE(value, offset, noAssert) {
+    };
+    Buffer2.prototype.writeFloatBE = function writeFloatBE(value, offset, noAssert) {
       return writeFloat(this, value, offset, false, noAssert);
-    }, "writeFloatBE");
+    };
     function writeDouble(buf, value, offset, littleEndian, noAssert) {
       value = +value;
       offset = offset >>> 0;
@@ -3162,14 +2159,13 @@ function requireBuffer() {
       ieee7542.write(buf, value, offset, littleEndian, 52, 8);
       return offset + 8;
     }
-    __name(writeDouble, "writeDouble");
-    Buffer2.prototype.writeDoubleLE = /* @__PURE__ */ __name(function writeDoubleLE(value, offset, noAssert) {
+    Buffer2.prototype.writeDoubleLE = function writeDoubleLE(value, offset, noAssert) {
       return writeDouble(this, value, offset, true, noAssert);
-    }, "writeDoubleLE");
-    Buffer2.prototype.writeDoubleBE = /* @__PURE__ */ __name(function writeDoubleBE(value, offset, noAssert) {
+    };
+    Buffer2.prototype.writeDoubleBE = function writeDoubleBE(value, offset, noAssert) {
       return writeDouble(this, value, offset, false, noAssert);
-    }, "writeDoubleBE");
-    Buffer2.prototype.copy = /* @__PURE__ */ __name(function copy(target, targetStart, start, end) {
+    };
+    Buffer2.prototype.copy = function copy(target, targetStart, start, end) {
       if (!Buffer2.isBuffer(target)) throw new TypeError("argument should be a Buffer");
       if (!start) start = 0;
       if (!end && end !== 0) end = this.length;
@@ -3198,8 +2194,8 @@ function requireBuffer() {
         );
       }
       return len;
-    }, "copy");
-    Buffer2.prototype.fill = /* @__PURE__ */ __name(function fill(val, start, end, encoding) {
+    };
+    Buffer2.prototype.fill = function fill(val, start, end, encoding) {
       if (typeof val === "string") {
         if (typeof start === "string") {
           encoding = start;
@@ -3251,7 +2247,7 @@ function requireBuffer() {
         }
       }
       return this;
-    }, "fill");
+    };
     var INVALID_BASE64_RE = /[^+/0-9A-Za-z-_]/g;
     function base64clean(str) {
       str = str.split("=")[0];
@@ -3262,7 +2258,6 @@ function requireBuffer() {
       }
       return str;
     }
-    __name(base64clean, "base64clean");
     function utf8ToBytes(string, units) {
       units = units || Infinity;
       var codePoint;
@@ -3323,7 +2318,6 @@ function requireBuffer() {
       }
       return bytes;
     }
-    __name(utf8ToBytes, "utf8ToBytes");
     function asciiToBytes(str) {
       var byteArray = [];
       for (var i = 0; i < str.length; ++i) {
@@ -3331,7 +2325,6 @@ function requireBuffer() {
       }
       return byteArray;
     }
-    __name(asciiToBytes, "asciiToBytes");
     function utf16leToBytes(str, units) {
       var c, hi, lo;
       var byteArray = [];
@@ -3345,11 +2338,9 @@ function requireBuffer() {
       }
       return byteArray;
     }
-    __name(utf16leToBytes, "utf16leToBytes");
     function base64ToBytes(str) {
       return base64.toByteArray(base64clean(str));
     }
-    __name(base64ToBytes, "base64ToBytes");
     function blitBuffer(src, dst, offset, length) {
       for (var i = 0; i < length; ++i) {
         if (i + offset >= dst.length || i >= src.length) break;
@@ -3357,30 +2348,26 @@ function requireBuffer() {
       }
       return i;
     }
-    __name(blitBuffer, "blitBuffer");
     function isInstance(obj, type2) {
       return obj instanceof type2 || obj != null && obj.constructor != null && obj.constructor.name != null && obj.constructor.name === type2.name;
     }
-    __name(isInstance, "isInstance");
     function numberIsNaN(obj) {
       return obj !== obj;
     }
-    __name(numberIsNaN, "numberIsNaN");
     var hexSliceLookupTable = (function() {
       var alphabet = "0123456789abcdef";
-      var table3 = new Array(256);
+      var table = new Array(256);
       for (var i = 0; i < 16; ++i) {
         var i16 = i * 16;
         for (var j = 0; j < 16; ++j) {
-          table3[i16 + j] = alphabet[i] + alphabet[j];
+          table[i16 + j] = alphabet[i] + alphabet[j];
         }
       }
-      return table3;
+      return table;
     })();
   })(buffer);
   return buffer;
 }
-__name(requireBuffer, "requireBuffer");
 var util = {};
 var types = {};
 var shams$1;
@@ -3388,7 +2375,7 @@ var hasRequiredShams$1;
 function requireShams$1() {
   if (hasRequiredShams$1) return shams$1;
   hasRequiredShams$1 = 1;
-  shams$1 = /* @__PURE__ */ __name(function hasSymbols2() {
+  shams$1 = function hasSymbols2() {
     if (typeof Symbol !== "function" || typeof Object.getOwnPropertySymbols !== "function") {
       return false;
     }
@@ -3435,22 +2422,20 @@ function requireShams$1() {
       }
     }
     return true;
-  }, "hasSymbols2");
+  };
   return shams$1;
 }
-__name(requireShams$1, "requireShams$1");
 var shams;
 var hasRequiredShams;
 function requireShams() {
   if (hasRequiredShams) return shams;
   hasRequiredShams = 1;
   var hasSymbols2 = requireShams$1();
-  shams = /* @__PURE__ */ __name(function hasToStringTagShams() {
+  shams = function hasToStringTagShams() {
     return hasSymbols2() && !!Symbol.toStringTag;
-  }, "hasToStringTagShams");
+  };
   return shams;
 }
-__name(requireShams, "requireShams");
 var esObjectAtoms;
 var hasRequiredEsObjectAtoms;
 function requireEsObjectAtoms() {
@@ -3459,7 +2444,6 @@ function requireEsObjectAtoms() {
   esObjectAtoms = Object;
   return esObjectAtoms;
 }
-__name(requireEsObjectAtoms, "requireEsObjectAtoms");
 var esErrors;
 var hasRequiredEsErrors;
 function requireEsErrors() {
@@ -3468,7 +2452,6 @@ function requireEsErrors() {
   esErrors = Error;
   return esErrors;
 }
-__name(requireEsErrors, "requireEsErrors");
 var _eval;
 var hasRequired_eval;
 function require_eval() {
@@ -3477,7 +2460,6 @@ function require_eval() {
   _eval = EvalError;
   return _eval;
 }
-__name(require_eval, "require_eval");
 var range;
 var hasRequiredRange;
 function requireRange() {
@@ -3486,16 +2468,14 @@ function requireRange() {
   range = RangeError;
   return range;
 }
-__name(requireRange, "requireRange");
-var ref2;
+var ref;
 var hasRequiredRef;
 function requireRef() {
-  if (hasRequiredRef) return ref2;
+  if (hasRequiredRef) return ref;
   hasRequiredRef = 1;
-  ref2 = ReferenceError;
-  return ref2;
+  ref = ReferenceError;
+  return ref;
 }
-__name(requireRef, "requireRef");
 var syntax;
 var hasRequiredSyntax;
 function requireSyntax() {
@@ -3504,7 +2484,6 @@ function requireSyntax() {
   syntax = SyntaxError;
   return syntax;
 }
-__name(requireSyntax, "requireSyntax");
 var type;
 var hasRequiredType;
 function requireType() {
@@ -3513,7 +2492,6 @@ function requireType() {
   type = TypeError;
   return type;
 }
-__name(requireType, "requireType");
 var uri;
 var hasRequiredUri;
 function requireUri() {
@@ -3522,7 +2500,6 @@ function requireUri() {
   uri = URIError;
   return uri;
 }
-__name(requireUri, "requireUri");
 var abs;
 var hasRequiredAbs;
 function requireAbs() {
@@ -3531,7 +2508,6 @@ function requireAbs() {
   abs = Math.abs;
   return abs;
 }
-__name(requireAbs, "requireAbs");
 var floor;
 var hasRequiredFloor;
 function requireFloor() {
@@ -3540,7 +2516,6 @@ function requireFloor() {
   floor = Math.floor;
   return floor;
 }
-__name(requireFloor, "requireFloor");
 var max;
 var hasRequiredMax;
 function requireMax() {
@@ -3549,7 +2524,6 @@ function requireMax() {
   max = Math.max;
   return max;
 }
-__name(requireMax, "requireMax");
 var min;
 var hasRequiredMin;
 function requireMin() {
@@ -3558,7 +2532,6 @@ function requireMin() {
   min = Math.min;
   return min;
 }
-__name(requireMin, "requireMin");
 var pow;
 var hasRequiredPow;
 function requirePow() {
@@ -3567,7 +2540,6 @@ function requirePow() {
   pow = Math.pow;
   return pow;
 }
-__name(requirePow, "requirePow");
 var round;
 var hasRequiredRound;
 function requireRound() {
@@ -3576,33 +2548,30 @@ function requireRound() {
   round = Math.round;
   return round;
 }
-__name(requireRound, "requireRound");
 var _isNaN;
 var hasRequired_isNaN;
 function require_isNaN() {
   if (hasRequired_isNaN) return _isNaN;
   hasRequired_isNaN = 1;
-  _isNaN = Number.isNaN || /* @__PURE__ */ __name(function isNaN2(a) {
+  _isNaN = Number.isNaN || function isNaN2(a) {
     return a !== a;
-  }, "isNaN2");
+  };
   return _isNaN;
 }
-__name(require_isNaN, "require_isNaN");
 var sign;
 var hasRequiredSign;
 function requireSign() {
   if (hasRequiredSign) return sign;
   hasRequiredSign = 1;
   var $isNaN = /* @__PURE__ */ require_isNaN();
-  sign = /* @__PURE__ */ __name(function sign2(number) {
+  sign = function sign2(number) {
     if ($isNaN(number) || number === 0) {
       return number;
     }
     return number < 0 ? -1 : 1;
-  }, "sign2");
+  };
   return sign;
 }
-__name(requireSign, "requireSign");
 var gOPD;
 var hasRequiredGOPD;
 function requireGOPD() {
@@ -3611,7 +2580,6 @@ function requireGOPD() {
   gOPD = Object.getOwnPropertyDescriptor;
   return gOPD;
 }
-__name(requireGOPD, "requireGOPD");
 var gopd;
 var hasRequiredGopd;
 function requireGopd() {
@@ -3628,7 +2596,6 @@ function requireGopd() {
   gopd = $gOPD;
   return gopd;
 }
-__name(requireGopd, "requireGopd");
 var esDefineProperty;
 var hasRequiredEsDefineProperty;
 function requireEsDefineProperty() {
@@ -3645,7 +2612,6 @@ function requireEsDefineProperty() {
   esDefineProperty = $defineProperty;
   return esDefineProperty;
 }
-__name(requireEsDefineProperty, "requireEsDefineProperty");
 var hasSymbols;
 var hasRequiredHasSymbols;
 function requireHasSymbols() {
@@ -3653,7 +2619,7 @@ function requireHasSymbols() {
   hasRequiredHasSymbols = 1;
   var origSymbol = typeof Symbol !== "undefined" && Symbol;
   var hasSymbolSham = requireShams$1();
-  hasSymbols = /* @__PURE__ */ __name(function hasNativeSymbols() {
+  hasSymbols = function hasNativeSymbols() {
     if (typeof origSymbol !== "function") {
       return false;
     }
@@ -3667,10 +2633,9 @@ function requireHasSymbols() {
       return false;
     }
     return hasSymbolSham();
-  }, "hasNativeSymbols");
+  };
   return hasSymbols;
 }
-__name(requireHasSymbols, "requireHasSymbols");
 var Reflect_getPrototypeOf;
 var hasRequiredReflect_getPrototypeOf;
 function requireReflect_getPrototypeOf() {
@@ -3679,7 +2644,6 @@ function requireReflect_getPrototypeOf() {
   Reflect_getPrototypeOf = typeof Reflect !== "undefined" && Reflect.getPrototypeOf || null;
   return Reflect_getPrototypeOf;
 }
-__name(requireReflect_getPrototypeOf, "requireReflect_getPrototypeOf");
 var Object_getPrototypeOf;
 var hasRequiredObject_getPrototypeOf;
 function requireObject_getPrototypeOf() {
@@ -3689,7 +2653,6 @@ function requireObject_getPrototypeOf() {
   Object_getPrototypeOf = $Object.getPrototypeOf || null;
   return Object_getPrototypeOf;
 }
-__name(requireObject_getPrototypeOf, "requireObject_getPrototypeOf");
 var implementation;
 var hasRequiredImplementation;
 function requireImplementation() {
@@ -3697,9 +2660,9 @@ function requireImplementation() {
   hasRequiredImplementation = 1;
   var ERROR_MESSAGE = "Function.prototype.bind called on incompatible ";
   var toStr = Object.prototype.toString;
-  var max22 = Math.max;
+  var max2 = Math.max;
   var funcType = "[object Function]";
-  var concatty = /* @__PURE__ */ __name(function concatty2(a, b) {
+  var concatty = function concatty2(a, b) {
     var arr = [];
     for (var i = 0; i < a.length; i += 1) {
       arr[i] = a[i];
@@ -3708,15 +2671,15 @@ function requireImplementation() {
       arr[j + a.length] = b[j];
     }
     return arr;
-  }, "concatty2");
-  var slicy = /* @__PURE__ */ __name(function slicy2(arrLike, offset) {
+  };
+  var slicy = function slicy2(arrLike, offset) {
     var arr = [];
     for (var i = offset, j = 0; i < arrLike.length; i += 1, j += 1) {
       arr[j] = arrLike[i];
     }
     return arr;
-  }, "slicy2");
-  var joiny = /* @__PURE__ */ __name(function(arr, joiner) {
+  };
+  var joiny = function(arr, joiner) {
     var str = "";
     for (var i = 0; i < arr.length; i += 1) {
       str += arr[i];
@@ -3725,15 +2688,15 @@ function requireImplementation() {
       }
     }
     return str;
-  }, "joiny");
-  implementation = /* @__PURE__ */ __name(function bind(that) {
+  };
+  implementation = function bind(that) {
     var target = this;
     if (typeof target !== "function" || toStr.apply(target) !== funcType) {
       throw new TypeError(ERROR_MESSAGE + target);
     }
     var args = slicy(arguments, 1);
     var bound;
-    var binder = /* @__PURE__ */ __name(function() {
+    var binder = function() {
       if (this instanceof bound) {
         var result = target.apply(
           this,
@@ -3748,25 +2711,24 @@ function requireImplementation() {
         that,
         concatty(args, arguments)
       );
-    }, "binder");
-    var boundLength = max22(0, target.length - args.length);
+    };
+    var boundLength = max2(0, target.length - args.length);
     var boundArgs = [];
     for (var i = 0; i < boundLength; i++) {
       boundArgs[i] = "$" + i;
     }
     bound = Function("binder", "return function (" + joiny(boundArgs, ",") + "){ return binder.apply(this,arguments); }")(binder);
     if (target.prototype) {
-      var Empty = /* @__PURE__ */ __name(function Empty2() {
-      }, "Empty2");
+      var Empty = function Empty2() {
+      };
       Empty.prototype = target.prototype;
       bound.prototype = new Empty();
       Empty.prototype = null;
     }
     return bound;
-  }, "bind");
+  };
   return implementation;
 }
-__name(requireImplementation, "requireImplementation");
 var functionBind;
 var hasRequiredFunctionBind;
 function requireFunctionBind() {
@@ -3776,7 +2738,6 @@ function requireFunctionBind() {
   functionBind = Function.prototype.bind || implementation2;
   return functionBind;
 }
-__name(requireFunctionBind, "requireFunctionBind");
 var functionCall;
 var hasRequiredFunctionCall;
 function requireFunctionCall() {
@@ -3785,7 +2746,6 @@ function requireFunctionCall() {
   functionCall = Function.prototype.call;
   return functionCall;
 }
-__name(requireFunctionCall, "requireFunctionCall");
 var functionApply;
 var hasRequiredFunctionApply;
 function requireFunctionApply() {
@@ -3794,7 +2754,6 @@ function requireFunctionApply() {
   functionApply = Function.prototype.apply;
   return functionApply;
 }
-__name(requireFunctionApply, "requireFunctionApply");
 var reflectApply;
 var hasRequiredReflectApply;
 function requireReflectApply() {
@@ -3803,7 +2762,6 @@ function requireReflectApply() {
   reflectApply = typeof Reflect !== "undefined" && Reflect && Reflect.apply;
   return reflectApply;
 }
-__name(requireReflectApply, "requireReflectApply");
 var actualApply;
 var hasRequiredActualApply;
 function requireActualApply() {
@@ -3816,7 +2774,6 @@ function requireActualApply() {
   actualApply = $reflectApply || bind.call($call, $apply);
   return actualApply;
 }
-__name(requireActualApply, "requireActualApply");
 var callBindApplyHelpers;
 var hasRequiredCallBindApplyHelpers;
 function requireCallBindApplyHelpers() {
@@ -3826,15 +2783,14 @@ function requireCallBindApplyHelpers() {
   var $TypeError = /* @__PURE__ */ requireType();
   var $call = requireFunctionCall();
   var $actualApply = requireActualApply();
-  callBindApplyHelpers = /* @__PURE__ */ __name(function callBindBasic(args) {
+  callBindApplyHelpers = function callBindBasic(args) {
     if (args.length < 1 || typeof args[0] !== "function") {
       throw new $TypeError("a function is required");
     }
     return $actualApply(bind, $call, args);
-  }, "callBindBasic");
+  };
   return callBindApplyHelpers;
 }
-__name(requireCallBindApplyHelpers, "requireCallBindApplyHelpers");
 var get;
 var hasRequiredGet;
 function requireGet() {
@@ -3860,13 +2816,12 @@ function requireGet() {
   var $getPrototypeOf = $Object.getPrototypeOf;
   get = desc && typeof desc.get === "function" ? callBind2([desc.get]) : typeof $getPrototypeOf === "function" ? (
     /** @type {import('./get')} */
-    /* @__PURE__ */ __name((function getDunder(value) {
+    function getDunder(value) {
       return $getPrototypeOf(value == null ? value : $Object(value));
-    }), "getDunder")
+    }
   ) : false;
   return get;
 }
-__name(requireGet, "requireGet");
 var getProto;
 var hasRequiredGetProto;
 function requireGetProto() {
@@ -3875,19 +2830,18 @@ function requireGetProto() {
   var reflectGetProto = requireReflect_getPrototypeOf();
   var originalGetProto = requireObject_getPrototypeOf();
   var getDunderProto = /* @__PURE__ */ requireGet();
-  getProto = reflectGetProto ? /* @__PURE__ */ __name(function getProto2(O) {
+  getProto = reflectGetProto ? function getProto2(O) {
     return reflectGetProto(O);
-  }, "getProto2") : originalGetProto ? /* @__PURE__ */ __name(function getProto2(O) {
+  } : originalGetProto ? function getProto2(O) {
     if (!O || typeof O !== "object" && typeof O !== "function") {
       throw new TypeError("getProto: not an object");
     }
     return originalGetProto(O);
-  }, "getProto2") : getDunderProto ? /* @__PURE__ */ __name(function getProto2(O) {
+  } : getDunderProto ? function getProto2(O) {
     return getDunderProto(O);
-  }, "getProto2") : null;
+  } : null;
   return getProto;
 }
-__name(requireGetProto, "requireGetProto");
 var hasown;
 var hasRequiredHasown;
 function requireHasown() {
@@ -3899,7 +2853,6 @@ function requireHasown() {
   hasown = bind.call(call, $hasOwn);
   return hasown;
 }
-__name(requireHasown, "requireHasown");
 var getIntrinsic;
 var hasRequiredGetIntrinsic;
 function requireGetIntrinsic() {
@@ -3916,23 +2869,23 @@ function requireGetIntrinsic() {
   var $URIError = /* @__PURE__ */ requireUri();
   var abs2 = /* @__PURE__ */ requireAbs();
   var floor2 = /* @__PURE__ */ requireFloor();
-  var max22 = /* @__PURE__ */ requireMax();
+  var max2 = /* @__PURE__ */ requireMax();
   var min2 = /* @__PURE__ */ requireMin();
   var pow2 = /* @__PURE__ */ requirePow();
   var round2 = /* @__PURE__ */ requireRound();
   var sign2 = /* @__PURE__ */ requireSign();
   var $Function = Function;
-  var getEvalledConstructor = /* @__PURE__ */ __name(function(expressionSyntax) {
+  var getEvalledConstructor = function(expressionSyntax) {
     try {
       return $Function('"use strict"; return (' + expressionSyntax + ").constructor;")();
     } catch (e) {
     }
-  }, "getEvalledConstructor");
+  };
   var $gOPD = /* @__PURE__ */ requireGopd();
   var $defineProperty = /* @__PURE__ */ requireEsDefineProperty();
-  var throwTypeError = /* @__PURE__ */ __name(function() {
+  var throwTypeError = function() {
     throw new $TypeError();
-  }, "throwTypeError");
+  };
   var ThrowTypeError = $gOPD ? (function() {
     try {
       arguments.callee;
@@ -4030,7 +2983,7 @@ function requireGetIntrinsic() {
     "%Object.getPrototypeOf%": $ObjectGPO,
     "%Math.abs%": abs2,
     "%Math.floor%": floor2,
-    "%Math.max%": max22,
+    "%Math.max%": max2,
     "%Math.min%": min2,
     "%Math.pow%": pow2,
     "%Math.round%": round2,
@@ -4045,7 +2998,7 @@ function requireGetIntrinsic() {
       INTRINSICS["%Error.prototype%"] = errorProto;
     }
   }
-  var doEval = /* @__PURE__ */ __name(function doEval2(name) {
+  var doEval = function doEval2(name) {
     var value;
     if (name === "%AsyncFunction%") {
       value = getEvalledConstructor("async function () {}");
@@ -4066,8 +3019,8 @@ function requireGetIntrinsic() {
     }
     INTRINSICS[name] = value;
     return value;
-  }, "doEval2");
-  var LEGACY_ALIASES2 = {
+  };
+  var LEGACY_ALIASES = {
     __proto__: null,
     "%ArrayBufferPrototype%": ["ArrayBuffer", "prototype"],
     "%ArrayPrototype%": ["Array", "prototype"],
@@ -4130,7 +3083,7 @@ function requireGetIntrinsic() {
   var $exec = bind.call($call, RegExp.prototype.exec);
   var rePropName = /[^%.[\]]+|\[(?:(-?\d+(?:\.\d+)?)|(["'])((?:(?!\2)[^\\]|\\.)*?)\2)\]|(?=(?:\.|\[\])(?:\.|\[\]|%$))/g;
   var reEscapeChar = /\\(\\)?/g;
-  var stringToPath = /* @__PURE__ */ __name(function stringToPath2(string) {
+  var stringToPath = function stringToPath2(string) {
     var first = $strSlice(string, 0, 1);
     var last = $strSlice(string, -1);
     if (first === "%" && last !== "%") {
@@ -4143,12 +3096,12 @@ function requireGetIntrinsic() {
       result[result.length] = quote ? $replace(subString, reEscapeChar, "$1") : number || match;
     });
     return result;
-  }, "stringToPath2");
-  var getBaseIntrinsic = /* @__PURE__ */ __name(function getBaseIntrinsic2(name, allowMissing) {
+  };
+  var getBaseIntrinsic = function getBaseIntrinsic2(name, allowMissing) {
     var intrinsicName = name;
     var alias;
-    if (hasOwn(LEGACY_ALIASES2, intrinsicName)) {
-      alias = LEGACY_ALIASES2[intrinsicName];
+    if (hasOwn(LEGACY_ALIASES, intrinsicName)) {
+      alias = LEGACY_ALIASES[intrinsicName];
       intrinsicName = "%" + alias[0] + "%";
     }
     if (hasOwn(INTRINSICS, intrinsicName)) {
@@ -4166,8 +3119,8 @@ function requireGetIntrinsic() {
       };
     }
     throw new $SyntaxError("intrinsic " + name + " does not exist!");
-  }, "getBaseIntrinsic2");
-  getIntrinsic = /* @__PURE__ */ __name(function GetIntrinsic(name, allowMissing) {
+  };
+  getIntrinsic = function GetIntrinsic(name, allowMissing) {
     if (typeof name !== "string" || name.length === 0) {
       throw new $TypeError("intrinsic name must be a non-empty string");
     }
@@ -4227,10 +3180,9 @@ function requireGetIntrinsic() {
       }
     }
     return value;
-  }, "GetIntrinsic");
+  };
   return getIntrinsic;
 }
-__name(requireGetIntrinsic, "requireGetIntrinsic");
 var callBound;
 var hasRequiredCallBound;
 function requireCallBound() {
@@ -4239,7 +3191,7 @@ function requireCallBound() {
   var GetIntrinsic = /* @__PURE__ */ requireGetIntrinsic();
   var callBindBasic = requireCallBindApplyHelpers();
   var $indexOf = callBindBasic([GetIntrinsic("%String.prototype.indexOf%")]);
-  callBound = /* @__PURE__ */ __name(function callBoundIntrinsic(name, allowMissing) {
+  callBound = function callBoundIntrinsic(name, allowMissing) {
     var intrinsic = (
       /** @type {(this: unknown, ...args: unknown[]) => unknown} */
       GetIntrinsic(name, !!allowMissing)
@@ -4251,10 +3203,9 @@ function requireCallBound() {
       );
     }
     return intrinsic;
-  }, "callBoundIntrinsic");
+  };
   return callBound;
 }
-__name(requireCallBound, "requireCallBound");
 var isArguments;
 var hasRequiredIsArguments;
 function requireIsArguments() {
@@ -4263,18 +3214,18 @@ function requireIsArguments() {
   var hasToStringTag = requireShams()();
   var callBound2 = /* @__PURE__ */ requireCallBound();
   var $toString = callBound2("Object.prototype.toString");
-  var isStandardArguments = /* @__PURE__ */ __name(function isArguments2(value) {
+  var isStandardArguments = function isArguments2(value) {
     if (hasToStringTag && value && typeof value === "object" && Symbol.toStringTag in value) {
       return false;
     }
     return $toString(value) === "[object Arguments]";
-  }, "isArguments2");
-  var isLegacyArguments = /* @__PURE__ */ __name(function isArguments2(value) {
+  };
+  var isLegacyArguments = function isArguments2(value) {
     if (isStandardArguments(value)) {
       return true;
     }
     return value !== null && typeof value === "object" && "length" in value && typeof value.length === "number" && value.length >= 0 && $toString(value) !== "[object Array]" && "callee" in value && $toString(value.callee) === "[object Function]";
-  }, "isArguments2");
+  };
   var supportsStandardArguments = (function() {
     return isStandardArguments(arguments);
   })();
@@ -4282,7 +3233,6 @@ function requireIsArguments() {
   isArguments = supportsStandardArguments ? isStandardArguments : isLegacyArguments;
   return isArguments;
 }
-__name(requireIsArguments, "requireIsArguments");
 var isGeneratorFunction;
 var hasRequiredIsGeneratorFunction;
 function requireIsGeneratorFunction() {
@@ -4293,7 +3243,7 @@ function requireIsGeneratorFunction() {
   var isFnRegex = /^\s*(?:function)?\*/;
   var hasToStringTag = requireShams()();
   var getProto2 = Object.getPrototypeOf;
-  var getGeneratorFunc = /* @__PURE__ */ __name(function() {
+  var getGeneratorFunc = function() {
     if (!hasToStringTag) {
       return false;
     }
@@ -4301,9 +3251,9 @@ function requireIsGeneratorFunction() {
       return Function("return function*() {}")();
     } catch (e) {
     }
-  }, "getGeneratorFunc");
+  };
   var GeneratorFunction;
-  isGeneratorFunction = /* @__PURE__ */ __name(function isGeneratorFunction2(fn) {
+  isGeneratorFunction = function isGeneratorFunction2(fn) {
     if (typeof fn !== "function") {
       return false;
     }
@@ -4322,10 +3272,9 @@ function requireIsGeneratorFunction() {
       GeneratorFunction = generatorFunc ? getProto2(generatorFunc) : false;
     }
     return getProto2(fn) === GeneratorFunction;
-  }, "isGeneratorFunction2");
+  };
   return isGeneratorFunction;
 }
-__name(requireIsGeneratorFunction, "requireIsGeneratorFunction");
 var isCallable;
 var hasRequiredIsCallable;
 function requireIsCallable() {
@@ -4338,9 +3287,9 @@ function requireIsCallable() {
   if (typeof reflectApply2 === "function" && typeof Object.defineProperty === "function") {
     try {
       badArrayLike = Object.defineProperty({}, "length", {
-        get: /* @__PURE__ */ __name(function() {
+        get: function() {
           throw isCallableMarker;
-        }, "get")
+        }
       });
       isCallableMarker = {};
       reflectApply2(function() {
@@ -4355,15 +3304,15 @@ function requireIsCallable() {
     reflectApply2 = null;
   }
   var constructorRegex = /^\s*class\b/;
-  var isES6ClassFn = /* @__PURE__ */ __name(function isES6ClassFunction(value) {
+  var isES6ClassFn = function isES6ClassFunction(value) {
     try {
       var fnStr = fnToStr.call(value);
       return constructorRegex.test(fnStr);
     } catch (e) {
       return false;
     }
-  }, "isES6ClassFunction");
-  var tryFunctionObject = /* @__PURE__ */ __name(function tryFunctionToStr(value) {
+  };
+  var tryFunctionObject = function tryFunctionToStr(value) {
     try {
       if (isES6ClassFn(value)) {
         return false;
@@ -4373,7 +3322,7 @@ function requireIsCallable() {
     } catch (e) {
       return false;
     }
-  }, "tryFunctionToStr");
+  };
   var toStr = Object.prototype.toString;
   var objectClass = "[object Object]";
   var fnClass = "[object Function]";
@@ -4383,13 +3332,13 @@ function requireIsCallable() {
   var ddaClass3 = "[object HTMLCollection]";
   var hasToStringTag = typeof Symbol === "function" && !!Symbol.toStringTag;
   var isIE68 = !(0 in [,]);
-  var isDDA = /* @__PURE__ */ __name(function isDocumentDotAll() {
+  var isDDA = function isDocumentDotAll() {
     return false;
-  }, "isDocumentDotAll");
+  };
   if (typeof document === "object") {
     var all = document.all;
     if (toStr.call(all) === toStr.call(document.all)) {
-      isDDA = /* @__PURE__ */ __name(function isDocumentDotAll(value) {
+      isDDA = function isDocumentDotAll(value) {
         if ((isIE68 || !value) && (typeof value === "undefined" || typeof value === "object")) {
           try {
             var str = toStr.call(value);
@@ -4398,10 +3347,10 @@ function requireIsCallable() {
           }
         }
         return false;
-      }, "isDocumentDotAll");
+      };
     }
   }
-  isCallable = reflectApply2 ? /* @__PURE__ */ __name(function isCallable2(value) {
+  isCallable = reflectApply2 ? function isCallable2(value) {
     if (isDDA(value)) {
       return true;
     }
@@ -4419,7 +3368,7 @@ function requireIsCallable() {
       }
     }
     return !isES6ClassFn(value) && tryFunctionObject(value);
-  }, "isCallable2") : /* @__PURE__ */ __name(function isCallable2(value) {
+  } : function isCallable2(value) {
     if (isDDA(value)) {
       return true;
     }
@@ -4440,10 +3389,9 @@ function requireIsCallable() {
       return false;
     }
     return tryFunctionObject(value);
-  }, "isCallable2");
+  };
   return isCallable;
 }
-__name(requireIsCallable, "requireIsCallable");
 var forEach;
 var hasRequiredForEach;
 function requireForEach() {
@@ -4452,7 +3400,7 @@ function requireForEach() {
   var isCallable2 = requireIsCallable();
   var toStr = Object.prototype.toString;
   var hasOwnProperty = Object.prototype.hasOwnProperty;
-  var forEachArray = /* @__PURE__ */ __name(function forEachArray2(array, iterator, receiver) {
+  var forEachArray = function forEachArray2(array, iterator, receiver) {
     for (var i = 0, len = array.length; i < len; i++) {
       if (hasOwnProperty.call(array, i)) {
         if (receiver == null) {
@@ -4462,8 +3410,8 @@ function requireForEach() {
         }
       }
     }
-  }, "forEachArray2");
-  var forEachString = /* @__PURE__ */ __name(function forEachString2(string, iterator, receiver) {
+  };
+  var forEachString = function forEachString2(string, iterator, receiver) {
     for (var i = 0, len = string.length; i < len; i++) {
       if (receiver == null) {
         iterator(string.charAt(i), i, string);
@@ -4471,8 +3419,8 @@ function requireForEach() {
         iterator.call(receiver, string.charAt(i), i, string);
       }
     }
-  }, "forEachString2");
-  var forEachObject = /* @__PURE__ */ __name(function forEachObject2(object, iterator, receiver) {
+  };
+  var forEachObject = function forEachObject2(object, iterator, receiver) {
     for (var k in object) {
       if (hasOwnProperty.call(object, k)) {
         if (receiver == null) {
@@ -4482,12 +3430,11 @@ function requireForEach() {
         }
       }
     }
-  }, "forEachObject2");
+  };
   function isArray(x) {
     return toStr.call(x) === "[object Array]";
   }
-  __name(isArray, "isArray");
-  forEach = /* @__PURE__ */ __name(function forEach2(list, iterator, thisArg) {
+  forEach = function forEach2(list, iterator, thisArg) {
     if (!isCallable2(iterator)) {
       throw new TypeError("iterator must be a function");
     }
@@ -4502,10 +3449,9 @@ function requireForEach() {
     } else {
       forEachObject(list, iterator, receiver);
     }
-  }, "forEach2");
+  };
   return forEach;
 }
-__name(requireForEach, "requireForEach");
 var possibleTypedArrayNames;
 var hasRequiredPossibleTypedArrayNames;
 function requirePossibleTypedArrayNames() {
@@ -4526,7 +3472,6 @@ function requirePossibleTypedArrayNames() {
   ];
   return possibleTypedArrayNames;
 }
-__name(requirePossibleTypedArrayNames, "requirePossibleTypedArrayNames");
 var availableTypedArrays;
 var hasRequiredAvailableTypedArrays;
 function requireAvailableTypedArrays() {
@@ -4534,7 +3479,7 @@ function requireAvailableTypedArrays() {
   hasRequiredAvailableTypedArrays = 1;
   var possibleNames = /* @__PURE__ */ requirePossibleTypedArrayNames();
   var g = typeof globalThis === "undefined" ? commonjsGlobal : globalThis;
-  availableTypedArrays = /* @__PURE__ */ __name(function availableTypedArrays2() {
+  availableTypedArrays = function availableTypedArrays2() {
     var out = [];
     for (var i = 0; i < possibleNames.length; i++) {
       if (typeof g[possibleNames[i]] === "function") {
@@ -4542,10 +3487,9 @@ function requireAvailableTypedArrays() {
       }
     }
     return out;
-  }, "availableTypedArrays2");
+  };
   return availableTypedArrays;
 }
-__name(requireAvailableTypedArrays, "requireAvailableTypedArrays");
 var callBind = { exports: {} };
 var defineDataProperty;
 var hasRequiredDefineDataProperty;
@@ -4556,7 +3500,7 @@ function requireDefineDataProperty() {
   var $SyntaxError = /* @__PURE__ */ requireSyntax();
   var $TypeError = /* @__PURE__ */ requireType();
   var gopd2 = /* @__PURE__ */ requireGopd();
-  defineDataProperty = /* @__PURE__ */ __name(function defineDataProperty2(obj, property, value) {
+  defineDataProperty = function defineDataProperty2(obj, property, value) {
     if (!obj || typeof obj !== "object" && typeof obj !== "function") {
       throw new $TypeError("`obj` must be an object or a function`");
     }
@@ -4592,20 +3536,19 @@ function requireDefineDataProperty() {
     } else {
       throw new $SyntaxError("This environment does not support defining a property as non-configurable, non-writable, or non-enumerable.");
     }
-  }, "defineDataProperty2");
+  };
   return defineDataProperty;
 }
-__name(requireDefineDataProperty, "requireDefineDataProperty");
 var hasPropertyDescriptors_1;
 var hasRequiredHasPropertyDescriptors;
 function requireHasPropertyDescriptors() {
   if (hasRequiredHasPropertyDescriptors) return hasPropertyDescriptors_1;
   hasRequiredHasPropertyDescriptors = 1;
   var $defineProperty = /* @__PURE__ */ requireEsDefineProperty();
-  var hasPropertyDescriptors = /* @__PURE__ */ __name(function hasPropertyDescriptors2() {
+  var hasPropertyDescriptors = function hasPropertyDescriptors2() {
     return !!$defineProperty;
-  }, "hasPropertyDescriptors2");
-  hasPropertyDescriptors.hasArrayLengthDefineBug = /* @__PURE__ */ __name(function hasArrayLengthDefineBug() {
+  };
+  hasPropertyDescriptors.hasArrayLengthDefineBug = function hasArrayLengthDefineBug() {
     if (!$defineProperty) {
       return null;
     }
@@ -4614,11 +3557,10 @@ function requireHasPropertyDescriptors() {
     } catch (e) {
       return true;
     }
-  }, "hasArrayLengthDefineBug");
+  };
   hasPropertyDescriptors_1 = hasPropertyDescriptors;
   return hasPropertyDescriptors_1;
 }
-__name(requireHasPropertyDescriptors, "requireHasPropertyDescriptors");
 var setFunctionLength;
 var hasRequiredSetFunctionLength;
 function requireSetFunctionLength() {
@@ -4630,7 +3572,7 @@ function requireSetFunctionLength() {
   var gOPD2 = /* @__PURE__ */ requireGopd();
   var $TypeError = /* @__PURE__ */ requireType();
   var $floor = GetIntrinsic("%Math.floor%");
-  setFunctionLength = /* @__PURE__ */ __name(function setFunctionLength2(fn, length) {
+  setFunctionLength = function setFunctionLength2(fn, length) {
     if (typeof fn !== "function") {
       throw new $TypeError("`fn` is not a function");
     }
@@ -4669,10 +3611,9 @@ function requireSetFunctionLength() {
       }
     }
     return fn;
-  }, "setFunctionLength2");
+  };
   return setFunctionLength;
 }
-__name(requireSetFunctionLength, "requireSetFunctionLength");
 var applyBind;
 var hasRequiredApplyBind;
 function requireApplyBind() {
@@ -4681,12 +3622,11 @@ function requireApplyBind() {
   var bind = requireFunctionBind();
   var $apply = requireFunctionApply();
   var actualApply2 = requireActualApply();
-  applyBind = /* @__PURE__ */ __name(function applyBind2() {
+  applyBind = function applyBind2() {
     return actualApply2(bind, $apply, arguments);
-  }, "applyBind2");
+  };
   return applyBind;
 }
-__name(requireApplyBind, "requireApplyBind");
 var hasRequiredCallBind;
 function requireCallBind() {
   if (hasRequiredCallBind) return callBind.exports;
@@ -4696,7 +3636,7 @@ function requireCallBind() {
     var $defineProperty = /* @__PURE__ */ requireEsDefineProperty();
     var callBindBasic = requireCallBindApplyHelpers();
     var applyBind2 = requireApplyBind();
-    module.exports = /* @__PURE__ */ __name(function callBind2(originalFunction) {
+    module.exports = function callBind2(originalFunction) {
       var func = callBindBasic(arguments);
       var adjustedLength = originalFunction.length - (arguments.length - 1);
       return setFunctionLength2(
@@ -4704,7 +3644,7 @@ function requireCallBind() {
         1 + (adjustedLength > 0 ? adjustedLength : 0),
         true
       );
-    }, "callBind2");
+    };
     if ($defineProperty) {
       $defineProperty(module.exports, "apply", { value: applyBind2 });
     } else {
@@ -4713,7 +3653,6 @@ function requireCallBind() {
   })(callBind);
   return callBind.exports;
 }
-__name(requireCallBind, "requireCallBind");
 var whichTypedArray;
 var hasRequiredWhichTypedArray;
 function requireWhichTypedArray() {
@@ -4730,14 +3669,14 @@ function requireWhichTypedArray() {
   var g = typeof globalThis === "undefined" ? commonjsGlobal : globalThis;
   var typedArrays = availableTypedArrays2();
   var $slice = callBound2("String.prototype.slice");
-  var $indexOf = callBound2("Array.prototype.indexOf", true) || /* @__PURE__ */ __name(function indexOf(array, value) {
+  var $indexOf = callBound2("Array.prototype.indexOf", true) || function indexOf(array, value) {
     for (var i = 0; i < array.length; i += 1) {
       if (array[i] === value) {
         return i;
       }
     }
     return -1;
-  }, "indexOf");
+  };
   var cache = { __proto__: null };
   if (hasToStringTag && gOPD2 && getProto2) {
     forEach2(typedArrays, function(typedArray) {
@@ -4766,7 +3705,7 @@ function requireWhichTypedArray() {
       }
     });
   }
-  var tryTypedArrays = /* @__PURE__ */ __name(function tryAllTypedArrays(value) {
+  var tryTypedArrays = function tryAllTypedArrays(value) {
     var found = false;
     forEach2(
       /** @type {Record<`\$${import('.').TypedArrayName}`, Getter>} */
@@ -4785,8 +3724,8 @@ function requireWhichTypedArray() {
       }
     );
     return found;
-  }, "tryAllTypedArrays");
-  var trySlices = /* @__PURE__ */ __name(function tryAllSlices(value) {
+  };
+  var trySlices = function tryAllSlices(value) {
     var found = false;
     forEach2(
       /** @type {Record<`\$${import('.').TypedArrayName}`, Getter>} */
@@ -4804,8 +3743,8 @@ function requireWhichTypedArray() {
       }
     );
     return found;
-  }, "tryAllSlices");
-  whichTypedArray = /* @__PURE__ */ __name(function whichTypedArray2(value) {
+  };
+  whichTypedArray = function whichTypedArray2(value) {
     if (!value || typeof value !== "object") {
       return false;
     }
@@ -4823,22 +3762,20 @@ function requireWhichTypedArray() {
       return null;
     }
     return tryTypedArrays(value);
-  }, "whichTypedArray2");
+  };
   return whichTypedArray;
 }
-__name(requireWhichTypedArray, "requireWhichTypedArray");
 var isTypedArray;
 var hasRequiredIsTypedArray;
 function requireIsTypedArray() {
   if (hasRequiredIsTypedArray) return isTypedArray;
   hasRequiredIsTypedArray = 1;
   var whichTypedArray2 = /* @__PURE__ */ requireWhichTypedArray();
-  isTypedArray = /* @__PURE__ */ __name(function isTypedArray2(value) {
+  isTypedArray = function isTypedArray2(value) {
     return !!whichTypedArray2(value);
-  }, "isTypedArray2");
+  };
   return isTypedArray;
 }
-__name(requireIsTypedArray, "requireIsTypedArray");
 var hasRequiredTypes;
 function requireTypes() {
   if (hasRequiredTypes) return types;
@@ -4851,7 +3788,6 @@ function requireTypes() {
     function uncurryThis(f) {
       return f.call.bind(f);
     }
-    __name(uncurryThis, "uncurryThis");
     var BigIntSupported = typeof BigInt !== "undefined";
     var SymbolSupported = typeof Symbol !== "undefined";
     var ObjectToString = uncurryThis(Object.prototype.toString);
@@ -4875,14 +3811,12 @@ function requireTypes() {
         return false;
       }
     }
-    __name(checkBoxedPrimitive, "checkBoxedPrimitive");
     exports$1.isArgumentsObject = isArgumentsObject;
     exports$1.isGeneratorFunction = isGeneratorFunction2;
     exports$1.isTypedArray = isTypedArray2;
     function isPromise(input) {
       return typeof Promise !== "undefined" && input instanceof Promise || input !== null && typeof input === "object" && typeof input.then === "function" && typeof input.catch === "function";
     }
-    __name(isPromise, "isPromise");
     exports$1.isPromise = isPromise;
     function isArrayBufferView(value) {
       if (typeof ArrayBuffer !== "undefined" && ArrayBuffer.isView) {
@@ -4890,67 +3824,54 @@ function requireTypes() {
       }
       return isTypedArray2(value) || isDataView(value);
     }
-    __name(isArrayBufferView, "isArrayBufferView");
     exports$1.isArrayBufferView = isArrayBufferView;
     function isUint8Array(value) {
       return whichTypedArray2(value) === "Uint8Array";
     }
-    __name(isUint8Array, "isUint8Array");
     exports$1.isUint8Array = isUint8Array;
     function isUint8ClampedArray(value) {
       return whichTypedArray2(value) === "Uint8ClampedArray";
     }
-    __name(isUint8ClampedArray, "isUint8ClampedArray");
     exports$1.isUint8ClampedArray = isUint8ClampedArray;
     function isUint16Array(value) {
       return whichTypedArray2(value) === "Uint16Array";
     }
-    __name(isUint16Array, "isUint16Array");
     exports$1.isUint16Array = isUint16Array;
     function isUint32Array(value) {
       return whichTypedArray2(value) === "Uint32Array";
     }
-    __name(isUint32Array, "isUint32Array");
     exports$1.isUint32Array = isUint32Array;
     function isInt8Array(value) {
       return whichTypedArray2(value) === "Int8Array";
     }
-    __name(isInt8Array, "isInt8Array");
     exports$1.isInt8Array = isInt8Array;
     function isInt16Array(value) {
       return whichTypedArray2(value) === "Int16Array";
     }
-    __name(isInt16Array, "isInt16Array");
     exports$1.isInt16Array = isInt16Array;
     function isInt32Array(value) {
       return whichTypedArray2(value) === "Int32Array";
     }
-    __name(isInt32Array, "isInt32Array");
     exports$1.isInt32Array = isInt32Array;
     function isFloat32Array(value) {
       return whichTypedArray2(value) === "Float32Array";
     }
-    __name(isFloat32Array, "isFloat32Array");
     exports$1.isFloat32Array = isFloat32Array;
     function isFloat64Array(value) {
       return whichTypedArray2(value) === "Float64Array";
     }
-    __name(isFloat64Array, "isFloat64Array");
     exports$1.isFloat64Array = isFloat64Array;
     function isBigInt64Array(value) {
       return whichTypedArray2(value) === "BigInt64Array";
     }
-    __name(isBigInt64Array, "isBigInt64Array");
     exports$1.isBigInt64Array = isBigInt64Array;
     function isBigUint64Array(value) {
       return whichTypedArray2(value) === "BigUint64Array";
     }
-    __name(isBigUint64Array, "isBigUint64Array");
     exports$1.isBigUint64Array = isBigUint64Array;
     function isMapToString(value) {
       return ObjectToString(value) === "[object Map]";
     }
-    __name(isMapToString, "isMapToString");
     isMapToString.working = typeof Map !== "undefined" && isMapToString(/* @__PURE__ */ new Map());
     function isMap(value) {
       if (typeof Map === "undefined") {
@@ -4958,12 +3879,10 @@ function requireTypes() {
       }
       return isMapToString.working ? isMapToString(value) : value instanceof Map;
     }
-    __name(isMap, "isMap");
     exports$1.isMap = isMap;
     function isSetToString(value) {
       return ObjectToString(value) === "[object Set]";
     }
-    __name(isSetToString, "isSetToString");
     isSetToString.working = typeof Set !== "undefined" && isSetToString(/* @__PURE__ */ new Set());
     function isSet(value) {
       if (typeof Set === "undefined") {
@@ -4971,12 +3890,10 @@ function requireTypes() {
       }
       return isSetToString.working ? isSetToString(value) : value instanceof Set;
     }
-    __name(isSet, "isSet");
     exports$1.isSet = isSet;
     function isWeakMapToString(value) {
       return ObjectToString(value) === "[object WeakMap]";
     }
-    __name(isWeakMapToString, "isWeakMapToString");
     isWeakMapToString.working = typeof WeakMap !== "undefined" && isWeakMapToString(/* @__PURE__ */ new WeakMap());
     function isWeakMap(value) {
       if (typeof WeakMap === "undefined") {
@@ -4984,22 +3901,18 @@ function requireTypes() {
       }
       return isWeakMapToString.working ? isWeakMapToString(value) : value instanceof WeakMap;
     }
-    __name(isWeakMap, "isWeakMap");
     exports$1.isWeakMap = isWeakMap;
     function isWeakSetToString(value) {
       return ObjectToString(value) === "[object WeakSet]";
     }
-    __name(isWeakSetToString, "isWeakSetToString");
     isWeakSetToString.working = typeof WeakSet !== "undefined" && isWeakSetToString(/* @__PURE__ */ new WeakSet());
     function isWeakSet(value) {
       return isWeakSetToString(value);
     }
-    __name(isWeakSet, "isWeakSet");
     exports$1.isWeakSet = isWeakSet;
     function isArrayBufferToString(value) {
       return ObjectToString(value) === "[object ArrayBuffer]";
     }
-    __name(isArrayBufferToString, "isArrayBufferToString");
     isArrayBufferToString.working = typeof ArrayBuffer !== "undefined" && isArrayBufferToString(new ArrayBuffer());
     function isArrayBuffer(value) {
       if (typeof ArrayBuffer === "undefined") {
@@ -5007,12 +3920,10 @@ function requireTypes() {
       }
       return isArrayBufferToString.working ? isArrayBufferToString(value) : value instanceof ArrayBuffer;
     }
-    __name(isArrayBuffer, "isArrayBuffer");
     exports$1.isArrayBuffer = isArrayBuffer;
     function isDataViewToString(value) {
       return ObjectToString(value) === "[object DataView]";
     }
-    __name(isDataViewToString, "isDataViewToString");
     isDataViewToString.working = typeof ArrayBuffer !== "undefined" && typeof DataView !== "undefined" && isDataViewToString(new DataView(new ArrayBuffer(1), 0, 1));
     function isDataView(value) {
       if (typeof DataView === "undefined") {
@@ -5020,13 +3931,11 @@ function requireTypes() {
       }
       return isDataViewToString.working ? isDataViewToString(value) : value instanceof DataView;
     }
-    __name(isDataView, "isDataView");
     exports$1.isDataView = isDataView;
     var SharedArrayBufferCopy = typeof SharedArrayBuffer !== "undefined" ? SharedArrayBuffer : void 0;
     function isSharedArrayBufferToString(value) {
       return ObjectToString(value) === "[object SharedArrayBuffer]";
     }
-    __name(isSharedArrayBufferToString, "isSharedArrayBufferToString");
     function isSharedArrayBuffer(value) {
       if (typeof SharedArrayBufferCopy === "undefined") {
         return false;
@@ -5036,104 +3945,89 @@ function requireTypes() {
       }
       return isSharedArrayBufferToString.working ? isSharedArrayBufferToString(value) : value instanceof SharedArrayBufferCopy;
     }
-    __name(isSharedArrayBuffer, "isSharedArrayBuffer");
     exports$1.isSharedArrayBuffer = isSharedArrayBuffer;
     function isAsyncFunction(value) {
       return ObjectToString(value) === "[object AsyncFunction]";
     }
-    __name(isAsyncFunction, "isAsyncFunction");
     exports$1.isAsyncFunction = isAsyncFunction;
     function isMapIterator(value) {
       return ObjectToString(value) === "[object Map Iterator]";
     }
-    __name(isMapIterator, "isMapIterator");
     exports$1.isMapIterator = isMapIterator;
     function isSetIterator(value) {
       return ObjectToString(value) === "[object Set Iterator]";
     }
-    __name(isSetIterator, "isSetIterator");
     exports$1.isSetIterator = isSetIterator;
     function isGeneratorObject(value) {
       return ObjectToString(value) === "[object Generator]";
     }
-    __name(isGeneratorObject, "isGeneratorObject");
     exports$1.isGeneratorObject = isGeneratorObject;
     function isWebAssemblyCompiledModule(value) {
       return ObjectToString(value) === "[object WebAssembly.Module]";
     }
-    __name(isWebAssemblyCompiledModule, "isWebAssemblyCompiledModule");
     exports$1.isWebAssemblyCompiledModule = isWebAssemblyCompiledModule;
     function isNumberObject(value) {
       return checkBoxedPrimitive(value, numberValue);
     }
-    __name(isNumberObject, "isNumberObject");
     exports$1.isNumberObject = isNumberObject;
     function isStringObject(value) {
       return checkBoxedPrimitive(value, stringValue);
     }
-    __name(isStringObject, "isStringObject");
     exports$1.isStringObject = isStringObject;
     function isBooleanObject(value) {
       return checkBoxedPrimitive(value, booleanValue);
     }
-    __name(isBooleanObject, "isBooleanObject");
     exports$1.isBooleanObject = isBooleanObject;
     function isBigIntObject(value) {
       return BigIntSupported && checkBoxedPrimitive(value, bigIntValue);
     }
-    __name(isBigIntObject, "isBigIntObject");
     exports$1.isBigIntObject = isBigIntObject;
     function isSymbolObject(value) {
       return SymbolSupported && checkBoxedPrimitive(value, symbolValue);
     }
-    __name(isSymbolObject, "isSymbolObject");
     exports$1.isSymbolObject = isSymbolObject;
     function isBoxedPrimitive(value) {
       return isNumberObject(value) || isStringObject(value) || isBooleanObject(value) || isBigIntObject(value) || isSymbolObject(value);
     }
-    __name(isBoxedPrimitive, "isBoxedPrimitive");
     exports$1.isBoxedPrimitive = isBoxedPrimitive;
     function isAnyArrayBuffer(value) {
       return typeof Uint8Array !== "undefined" && (isArrayBuffer(value) || isSharedArrayBuffer(value));
     }
-    __name(isAnyArrayBuffer, "isAnyArrayBuffer");
     exports$1.isAnyArrayBuffer = isAnyArrayBuffer;
     ["isProxy", "isExternal", "isModuleNamespaceObject"].forEach(function(method) {
       Object.defineProperty(exports$1, method, {
         enumerable: false,
-        value: /* @__PURE__ */ __name(function() {
+        value: function() {
           throw new Error(method + " is not supported in userland");
-        }, "value")
+        }
       });
     });
   })(types);
   return types;
 }
-__name(requireTypes, "requireTypes");
 var isBufferBrowser;
 var hasRequiredIsBufferBrowser;
 function requireIsBufferBrowser() {
   if (hasRequiredIsBufferBrowser) return isBufferBrowser;
   hasRequiredIsBufferBrowser = 1;
-  isBufferBrowser = /* @__PURE__ */ __name(function isBuffer(arg) {
+  isBufferBrowser = function isBuffer(arg) {
     return arg && typeof arg === "object" && typeof arg.copy === "function" && typeof arg.fill === "function" && typeof arg.readUInt8 === "function";
-  }, "isBuffer");
+  };
   return isBufferBrowser;
 }
-__name(requireIsBufferBrowser, "requireIsBufferBrowser");
 var hasRequiredUtil;
 function requireUtil() {
   if (hasRequiredUtil) return util;
   hasRequiredUtil = 1;
   (function(exports$1) {
-    var getOwnPropertyDescriptors = Object.getOwnPropertyDescriptors || /* @__PURE__ */ __name(function getOwnPropertyDescriptors2(obj) {
+    var getOwnPropertyDescriptors = Object.getOwnPropertyDescriptors || function getOwnPropertyDescriptors2(obj) {
       var keys = Object.keys(obj);
       var descriptors = {};
       for (var i = 0; i < keys.length; i++) {
         descriptors[keys[i]] = Object.getOwnPropertyDescriptor(obj, keys[i]);
       }
       return descriptors;
-    }, "getOwnPropertyDescriptors2");
+    };
     var formatRegExp = /%[sdj%]/g;
     exports$1.format = function(f) {
       if (!isString(f)) {
@@ -5196,7 +4090,6 @@ function requireUtil() {
         }
         return fn.apply(this, arguments);
       }
-      __name(deprecated, "deprecated");
       return deprecated;
     };
     var debugs = {};
@@ -5210,10 +4103,10 @@ function requireUtil() {
       set = set.toUpperCase();
       if (!debugs[set]) {
         if (debugEnvRegex.test(set)) {
-          var pid2 = process$1.pid;
+          var pid = process$1.pid;
           debugs[set] = function() {
             var msg = exports$1.format.apply(exports$1, arguments);
-            console.error("%s %d: %s", set, pid2, msg);
+            console.error("%s %d: %s", set, pid, msg);
           };
         } else {
           debugs[set] = function() {
@@ -5241,7 +4134,6 @@ function requireUtil() {
       if (ctx.colors) ctx.stylize = stylizeWithColor;
       return formatValue(ctx, obj, ctx.depth);
     }
-    __name(inspect, "inspect");
     exports$1.inspect = inspect;
     inspect.colors = {
       "bold": [1, 22],
@@ -5277,11 +4169,9 @@ function requireUtil() {
         return str;
       }
     }
-    __name(stylizeWithColor, "stylizeWithColor");
     function stylizeNoColor(str, styleType) {
       return str;
     }
-    __name(stylizeNoColor, "stylizeNoColor");
     function arrayToHash(array) {
       var hash2 = {};
       array.forEach(function(val, idx) {
@@ -5289,7 +4179,6 @@ function requireUtil() {
       });
       return hash2;
     }
-    __name(arrayToHash, "arrayToHash");
     function formatValue(ctx, value, recurseTimes) {
       if (ctx.customInspect && value && isFunction(value.inspect) && // Filter out the util module, it's inspect function is special
       value.inspect !== exports$1.inspect && // Also filter out any prototype objects using the circular check.
@@ -5367,7 +4256,6 @@ function requireUtil() {
       ctx.seen.pop();
       return reduceToSingleString(output, base, braces);
     }
-    __name(formatValue, "formatValue");
     function formatPrimitive(ctx, value) {
       if (isUndefined(value))
         return ctx.stylize("undefined", "undefined");
@@ -5382,11 +4270,9 @@ function requireUtil() {
       if (isNull(value))
         return ctx.stylize("null", "null");
     }
-    __name(formatPrimitive, "formatPrimitive");
     function formatError(value) {
       return "[" + Error.prototype.toString.call(value) + "]";
     }
-    __name(formatError, "formatError");
     function formatArray(ctx, value, recurseTimes, visibleKeys, keys) {
       var output = [];
       for (var i = 0, l = value.length; i < l; ++i) {
@@ -5417,7 +4303,6 @@ function requireUtil() {
       });
       return output;
     }
-    __name(formatArray, "formatArray");
     function formatProperty(ctx, value, recurseTimes, visibleKeys, key, array) {
       var name, str, desc;
       desc = Object.getOwnPropertyDescriptor(value, key) || { value: value[key] };
@@ -5472,7 +4357,6 @@ function requireUtil() {
       }
       return name + ": " + str;
     }
-    __name(formatProperty, "formatProperty");
     function reduceToSingleString(output, base, braces) {
       var length = output.reduce(function(prev, cur) {
         if (cur.indexOf("\n") >= 0) ;
@@ -5483,91 +4367,74 @@ function requireUtil() {
       }
       return braces[0] + base + " " + output.join(", ") + " " + braces[1];
     }
-    __name(reduceToSingleString, "reduceToSingleString");
     exports$1.types = requireTypes();
     function isArray(ar) {
       return Array.isArray(ar);
     }
-    __name(isArray, "isArray");
     exports$1.isArray = isArray;
     function isBoolean(arg) {
       return typeof arg === "boolean";
     }
-    __name(isBoolean, "isBoolean");
     exports$1.isBoolean = isBoolean;
     function isNull(arg) {
       return arg === null;
     }
-    __name(isNull, "isNull");
     exports$1.isNull = isNull;
     function isNullOrUndefined(arg) {
       return arg == null;
     }
-    __name(isNullOrUndefined, "isNullOrUndefined");
     exports$1.isNullOrUndefined = isNullOrUndefined;
     function isNumber(arg) {
       return typeof arg === "number";
     }
-    __name(isNumber, "isNumber");
     exports$1.isNumber = isNumber;
     function isString(arg) {
       return typeof arg === "string";
     }
-    __name(isString, "isString");
     exports$1.isString = isString;
     function isSymbol(arg) {
       return typeof arg === "symbol";
     }
-    __name(isSymbol, "isSymbol");
     exports$1.isSymbol = isSymbol;
     function isUndefined(arg) {
       return arg === void 0;
     }
-    __name(isUndefined, "isUndefined");
     exports$1.isUndefined = isUndefined;
     function isRegExp(re) {
       return isObject(re) && objectToString(re) === "[object RegExp]";
     }
-    __name(isRegExp, "isRegExp");
     exports$1.isRegExp = isRegExp;
     exports$1.types.isRegExp = isRegExp;
     function isObject(arg) {
       return typeof arg === "object" && arg !== null;
     }
-    __name(isObject, "isObject");
     exports$1.isObject = isObject;
     function isDate(d) {
       return isObject(d) && objectToString(d) === "[object Date]";
     }
-    __name(isDate, "isDate");
     exports$1.isDate = isDate;
     exports$1.types.isDate = isDate;
     function isError(e) {
       return isObject(e) && (objectToString(e) === "[object Error]" || e instanceof Error);
     }
-    __name(isError, "isError");
     exports$1.isError = isError;
     exports$1.types.isNativeError = isError;
     function isFunction(arg) {
       return typeof arg === "function";
     }
-    __name(isFunction, "isFunction");
     exports$1.isFunction = isFunction;
     function isPrimitive(arg) {
       return arg === null || typeof arg === "boolean" || typeof arg === "number" || typeof arg === "string" || typeof arg === "symbol" || // ES6 symbol
       typeof arg === "undefined";
     }
-    __name(isPrimitive, "isPrimitive");
     exports$1.isPrimitive = isPrimitive;
     exports$1.isBuffer = requireIsBufferBrowser();
     function objectToString(o) {
       return Object.prototype.toString.call(o);
     }
-    __name(objectToString, "objectToString");
     function pad(n) {
       return n < 10 ? "0" + n.toString(10) : n.toString(10);
     }
-    __name(pad, "pad");
     var months = [
       "Jan",
       "Feb",
@@ -5584,14 +4451,13 @@ function requireUtil() {
     ];
     function timestamp() {
       var d = /* @__PURE__ */ new Date();
-      var time3 = [
+      var time = [
         pad(d.getHours()),
         pad(d.getMinutes()),
         pad(d.getSeconds())
       ].join(":");
-      return [d.getDate(), months[d.getMonth()], time3].join(" ");
+      return [d.getDate(), months[d.getMonth()], time].join(" ");
     }
-    __name(timestamp, "timestamp");
     exports$1.log = function() {
       console.log("%s - %s", timestamp(), exports$1.format.apply(exports$1, arguments));
     };
@@ -5608,9 +4474,8 @@ function requireUtil() {
     function hasOwnProperty(obj, prop) {
       return Object.prototype.hasOwnProperty.call(obj, prop);
     }
-    __name(hasOwnProperty, "hasOwnProperty");
     var kCustomPromisifiedSymbol = typeof Symbol !== "undefined" ? /* @__PURE__ */ Symbol("util.promisify.custom") : void 0;
-    exports$1.promisify = /* @__PURE__ */ __name(function promisify(original) {
+    exports$1.promisify = function promisify(original) {
       if (typeof original !== "function")
         throw new TypeError('The "original" argument must be of type Function');
       if (kCustomPromisifiedSymbol && original[kCustomPromisifiedSymbol]) {
@@ -5636,21 +4501,20 @@ function requireUtil() {
         for (var i = 0; i < arguments.length; i++) {
           args.push(arguments[i]);
         }
-        args.push(function(err2, value) {
-          if (err2) {
-            promiseReject(err2);
+        args.push(function(err, value) {
+          if (err) {
+            promiseReject(err);
           } else {
             promiseResolve(value);
           }
         });
         try {
           original.apply(this, args);
-        } catch (err2) {
-          promiseReject(err2);
+        } catch (err) {
+          promiseReject(err);
         }
         return promise;
       }
-      __name(fn, "fn");
       Object.setPrototypeOf(fn, Object.getPrototypeOf(original));
       if (kCustomPromisifiedSymbol) Object.defineProperty(fn, kCustomPromisifiedSymbol, {
         value: fn,
@@ -5662,7 +4526,7 @@ function requireUtil() {
         fn,
         getOwnPropertyDescriptors(original)
       );
-    }, "promisify");
+    };
     exports$1.promisify.custom = kCustomPromisifiedSymbol;
     function callbackifyOnRejected(reason, cb) {
       if (!reason) {
@@ -5672,7 +4536,6 @@ function requireUtil() {
       }
       return cb(reason);
     }
-    __name(callbackifyOnRejected, "callbackifyOnRejected");
     function callbackify(original) {
       if (typeof original !== "function") {
         throw new TypeError('The "original" argument must be of type Function');
@@ -5687,9 +4550,9 @@ function requireUtil() {
           throw new TypeError("The last argument must be of type Function");
         }
         var self2 = this;
-        var cb = /* @__PURE__ */ __name(function() {
+        var cb = function() {
           return maybeCb.apply(self2, arguments);
-        }, "cb");
+        };
         original.apply(this, args).then(
           function(ret) {
             process$1.nextTick(cb.bind(null, null, ret));
@@ -5699,7 +4562,6 @@ function requireUtil() {
           }
         );
       }
-      __name(callbackified, "callbackified");
       Object.setPrototypeOf(callbackified, Object.getPrototypeOf(original));
       Object.defineProperties(
         callbackified,
@@ -5707,12 +4569,10 @@ function requireUtil() {
       );
       return callbackified;
     }
-    __name(callbackify, "callbackify");
     exports$1.callbackify = callbackify;
   })(util);
   return util;
 }
-__name(requireUtil, "requireUtil");
 var buffer_list;
 var hasRequiredBuffer_list;
 function requireBuffer_list() {
@@ -5728,7 +4588,6 @@ function requireBuffer_list() {
     }
     return keys;
   }
-  __name(ownKeys, "ownKeys");
   function _objectSpread(target) {
     for (var i = 1; i < arguments.length; i++) {
       var source = null != arguments[i] ? arguments[i] : {};
@@ -5740,7 +4599,6 @@ function requireBuffer_list() {
     }
     return target;
   }
-  __name(_objectSpread, "_objectSpread");
   function _defineProperty(obj, key, value) {
     key = _toPropertyKey(key);
     if (key in obj) {
@@ -5750,13 +4608,11 @@ function requireBuffer_list() {
     }
     return obj;
   }
-  __name(_defineProperty, "_defineProperty");
   function _classCallCheck(instance, Constructor) {
     if (!(instance instanceof Constructor)) {
       throw new TypeError("Cannot call a class as a function");
     }
   }
-  __name(_classCallCheck, "_classCallCheck");
   function _defineProperties(target, props) {
     for (var i = 0; i < props.length; i++) {
       var descriptor = props[i];
@@ -5766,18 +4622,15 @@ function requireBuffer_list() {
       Object.defineProperty(target, _toPropertyKey(descriptor.key), descriptor);
     }
   }
-  __name(_defineProperties, "_defineProperties");
   function _createClass(Constructor, protoProps, staticProps) {
     if (protoProps) _defineProperties(Constructor.prototype, protoProps);
     Object.defineProperty(Constructor, "prototype", { writable: false });
     return Constructor;
   }
-  __name(_createClass, "_createClass");
   function _toPropertyKey(arg) {
     var key = _toPrimitive(arg, "string");
     return typeof key === "symbol" ? key : String(key);
   }
-  __name(_toPropertyKey, "_toPropertyKey");
   function _toPrimitive(input, hint) {
     if (typeof input !== "object" || input === null) return input;
     var prim = input[Symbol.toPrimitive];
@@ -5788,14 +4641,12 @@ function requireBuffer_list() {
     }
     return String(input);
   }
-  __name(_toPrimitive, "_toPrimitive");
   var _require = requireBuffer(), Buffer2 = _require.Buffer;
   var _require2 = requireUtil(), inspect = _require2.inspect;
   var custom = inspect && inspect.custom || "inspect";
   function copyBuffer(src, target, offset) {
     Buffer2.prototype.copy.call(src, target, offset);
   }
-  __name(copyBuffer, "copyBuffer");
   buffer_list = /* @__PURE__ */ (function() {
     function BufferList() {
       _classCallCheck(this, BufferList);
@@ -5803,10 +4654,9 @@ function requireBuffer_list() {
       this.tail = null;
       this.length = 0;
     }
-    __name(BufferList, "BufferList");
     _createClass(BufferList, [{
       key: "push",
-      value: /* @__PURE__ */ __name(function push(v) {
+      value: function push(v) {
         var entry = {
           data: v,
           next: null
@@ -5815,10 +4665,10 @@ function requireBuffer_list() {
         else this.head = entry;
         this.tail = entry;
         ++this.length;
-      }, "push")
+      }
     }, {
       key: "unshift",
-      value: /* @__PURE__ */ __name(function unshift(v) {
+      value: function unshift(v) {
         var entry = {
           data: v,
           next: this.head
@@ -5826,35 +4676,35 @@ function requireBuffer_list() {
         if (this.length === 0) this.tail = entry;
         this.head = entry;
         ++this.length;
-      }, "unshift")
+      }
     }, {
       key: "shift",
-      value: /* @__PURE__ */ __name(function shift() {
+      value: function shift() {
         if (this.length === 0) return;
         var ret = this.head.data;
         if (this.length === 1) this.head = this.tail = null;
         else this.head = this.head.next;
         --this.length;
         return ret;
-      }, "shift")
+      }
     }, {
       key: "clear",
-      value: /* @__PURE__ */ __name(function clear3() {
+      value: function clear() {
         this.head = this.tail = null;
         this.length = 0;
-      }, "clear")
+      }
     }, {
       key: "join",
-      value: /* @__PURE__ */ __name(function join(s) {
+      value: function join(s) {
         if (this.length === 0) return "";
         var p = this.head;
         var ret = "" + p.data;
         while (p = p.next) ret += s + p.data;
         return ret;
-      }, "join")
+      }
     }, {
       key: "concat",
-      value: /* @__PURE__ */ __name(function concat(n) {
+      value: function concat(n) {
         if (this.length === 0) return Buffer2.alloc(0);
         var ret = Buffer2.allocUnsafe(n >>> 0);
         var p = this.head;
@@ -5865,11 +4715,11 @@ function requireBuffer_list() {
           p = p.next;
         }
         return ret;
-      }, "concat")
+      }
       // Consumes a specified amount of bytes or characters from the buffered data.
     }, {
       key: "consume",
-      value: /* @__PURE__ */ __name(function consume(n, hasStrings) {
+      value: function consume(n, hasStrings) {
         var ret;
         if (n < this.head.data.length) {
           ret = this.head.data.slice(0, n);
@@ -5880,16 +4730,16 @@ function requireBuffer_list() {
           ret = hasStrings ? this._getString(n) : this._getBuffer(n);
         }
         return ret;
-      }, "consume")
+      }
     }, {
       key: "first",
-      value: /* @__PURE__ */ __name(function first() {
+      value: function first() {
         return this.head.data;
-      }, "first")
+      }
       // Consumes a specified amount of characters from the buffered data.
     }, {
       key: "_getString",
-      value: /* @__PURE__ */ __name(function _getString(n) {
+      value: function _getString(n) {
         var p = this.head;
         var c = 1;
         var ret = p.data;
@@ -5915,11 +4765,11 @@ function requireBuffer_list() {
         }
         this.length -= c;
         return ret;
-      }, "_getString")
+      }
       // Consumes a specified amount of bytes from the buffered data.
     }, {
       key: "_getBuffer",
-      value: /* @__PURE__ */ __name(function _getBuffer(n) {
+      value: function _getBuffer(n) {
         var ret = Buffer2.allocUnsafe(n);
         var p = this.head;
         var c = 1;
@@ -5945,42 +4795,41 @@ function requireBuffer_list() {
         }
         this.length -= c;
         return ret;
-      }, "_getBuffer")
+      }
       // Make sure the linked list only shows the minimal necessary information.
     }, {
       key: custom,
-      value: /* @__PURE__ */ __name(function value(_, options) {
+      value: function value(_, options) {
         return inspect(this, _objectSpread(_objectSpread({}, options), {}, {
           // Only inspect one level.
           depth: 0,
           // It should not recurse.
           customInspect: false
         }));
-      }, "value")
+      }
     }]);
     return BufferList;
   })();
   return buffer_list;
 }
-__name(requireBuffer_list, "requireBuffer_list");
 var destroy_1;
 var hasRequiredDestroy;
 function requireDestroy() {
   if (hasRequiredDestroy) return destroy_1;
   hasRequiredDestroy = 1;
-  function destroy(err2, cb) {
+  function destroy(err, cb) {
     var _this = this;
     var readableDestroyed = this._readableState && this._readableState.destroyed;
     var writableDestroyed = this._writableState && this._writableState.destroyed;
     if (readableDestroyed || writableDestroyed) {
       if (cb) {
-        cb(err2);
-      } else if (err2) {
+        cb(err);
+      } else if (err) {
         if (!this._writableState) {
-          process$1.nextTick(emitErrorNT, this, err2);
+          process$1.nextTick(emitErrorNT, this, err);
         } else if (!this._writableState.errorEmitted) {
           this._writableState.errorEmitted = true;
-          process$1.nextTick(emitErrorNT, this, err2);
+          process$1.nextTick(emitErrorNT, this, err);
         }
       }
       return this;
@@ -5991,37 +4840,34 @@ function requireDestroy() {
     if (this._writableState) {
       this._writableState.destroyed = true;
     }
-    this._destroy(err2 || null, function(err22) {
-      if (!cb && err22) {
+    this._destroy(err || null, function(err2) {
+      if (!cb && err2) {
         if (!_this._writableState) {
-          process$1.nextTick(emitErrorAndCloseNT, _this, err22);
+          process$1.nextTick(emitErrorAndCloseNT, _this, err2);
         } else if (!_this._writableState.errorEmitted) {
           _this._writableState.errorEmitted = true;
-          process$1.nextTick(emitErrorAndCloseNT, _this, err22);
+          process$1.nextTick(emitErrorAndCloseNT, _this, err2);
         } else {
           process$1.nextTick(emitCloseNT, _this);
         }
       } else if (cb) {
         process$1.nextTick(emitCloseNT, _this);
-        cb(err22);
+        cb(err2);
       } else {
         process$1.nextTick(emitCloseNT, _this);
       }
     });
     return this;
   }
-  __name(destroy, "destroy");
-  function emitErrorAndCloseNT(self2, err2) {
-    emitErrorNT(self2, err2);
+  function emitErrorAndCloseNT(self2, err) {
+    emitErrorNT(self2, err);
     emitCloseNT(self2);
   }
-  __name(emitErrorAndCloseNT, "emitErrorAndCloseNT");
   function emitCloseNT(self2) {
     if (self2._writableState && !self2._writableState.emitClose) return;
     if (self2._readableState && !self2._readableState.emitClose) return;
     self2.emit("close");
   }
-  __name(emitCloseNT, "emitCloseNT");
   function undestroy() {
     if (this._readableState) {
       this._readableState.destroyed = false;
@@ -6039,18 +4885,15 @@ function requireDestroy() {
       this._writableState.errorEmitted = false;
     }
   }
-  __name(undestroy, "undestroy");
-  function emitErrorNT(self2, err2) {
-    self2.emit("error", err2);
+  function emitErrorNT(self2, err) {
+    self2.emit("error", err);
   }
-  __name(emitErrorNT, "emitErrorNT");
-  function errorOrDestroy(stream, err2) {
+  function errorOrDestroy(stream, err) {
     var rState = stream._readableState;
     var wState = stream._writableState;
-    if (rState && rState.autoDestroy || wState && wState.autoDestroy) stream.destroy(err2);
-    else stream.emit("error", err2);
+    if (rState && rState.autoDestroy || wState && wState.autoDestroy) stream.destroy(err);
+    else stream.emit("error", err);
   }
-  __name(errorOrDestroy, "errorOrDestroy");
   destroy_1 = {
     destroy,
     undestroy,
@@ -6058,7 +4901,6 @@ function requireDestroy() {
   };
   return destroy_1;
 }
-__name(requireDestroy, "requireDestroy");
 var errorsBrowser = {};
 var hasRequiredErrorsBrowser;
 function requireErrorsBrowser() {
@@ -6069,7 +4911,6 @@ function requireErrorsBrowser() {
     subClass.prototype.constructor = subClass;
     subClass.__proto__ = superClass;
   }
-  __name(_inheritsLoose, "_inheritsLoose");
   var codes = {};
   function createErrorType(code, message, Base) {
     if (!Base) {
@@ -6082,20 +4923,17 @@ function requireErrorsBrowser() {
         return message(arg1, arg2, arg3);
       }
     }
-    __name(getMessage, "getMessage");
     var NodeError = /* @__PURE__ */ (function(_Base) {
       _inheritsLoose(NodeError2, _Base);
       function NodeError2(arg1, arg2, arg3) {
         return _Base.call(this, getMessage(arg1, arg2, arg3)) || this;
       }
-      __name(NodeError2, "NodeError2");
       return NodeError2;
     })(Base);
     NodeError.prototype.name = Base.name;
     NodeError.prototype.code = code;
     codes[code] = NodeError;
   }
-  __name(createErrorType, "createErrorType");
   function oneOf(expected, thing) {
     if (Array.isArray(expected)) {
       var len = expected.length;
@@ -6113,18 +4951,15 @@ function requireErrorsBrowser() {
       return "of ".concat(thing, " ").concat(String(expected));
     }
   }
-  __name(oneOf, "oneOf");
   function startsWith(str, search, pos) {
     return str.substr(0, search.length) === search;
   }
-  __name(startsWith, "startsWith");
   function endsWith(str, search, this_len) {
     if (this_len === void 0 || this_len > str.length) {
       this_len = str.length;
     }
     return str.substring(this_len - search.length, this_len) === search;
   }
-  __name(endsWith, "endsWith");
   function includes(str, search, start) {
     if (typeof start !== "number") {
       start = 0;
@@ -6135,7 +4970,6 @@ function requireErrorsBrowser() {
       return str.indexOf(search, start) !== -1;
     }
   }
-  __name(includes, "includes");
   createErrorType("ERR_INVALID_OPT_VALUE", function(name, value) {
     return 'The value "' + value + '" is invalid for option "' + name + '"';
   }, TypeError);
@@ -6176,7 +5010,6 @@ function requireErrorsBrowser() {
   errorsBrowser.codes = codes;
   return errorsBrowser;
 }
-__name(requireErrorsBrowser, "requireErrorsBrowser");
 var state;
 var hasRequiredState;
 function requireState() {
@@ -6186,7 +5019,6 @@ function requireState() {
   function highWaterMarkFrom(options, isDuplex, duplexKey) {
     return options.highWaterMark != null ? options.highWaterMark : isDuplex ? options[duplexKey] : null;
   }
-  __name(highWaterMarkFrom, "highWaterMarkFrom");
   function getHighWaterMark(state2, options, duplexKey, isDuplex) {
     var hwm = highWaterMarkFrom(options, isDuplex, duplexKey);
     if (hwm != null) {
@@ -6198,13 +5030,11 @@ function requireState() {
     }
     return state2.objectMode ? 16 : 16 * 1024;
   }
-  __name(getHighWaterMark, "getHighWaterMark");
   state = {
     getHighWaterMark
   };
   return state;
 }
-__name(requireState, "requireState");
 var browser;
 var hasRequiredBrowser;
 function requireBrowser() {
@@ -6212,15 +5042,15 @@ function requireBrowser() {
   hasRequiredBrowser = 1;
   browser = deprecate;
   function deprecate(fn, msg) {
-    if (config2("noDeprecation")) {
+    if (config("noDeprecation")) {
       return fn;
     }
     var warned = false;
     function deprecated() {
       if (!warned) {
-        if (config2("throwDeprecation")) {
+        if (config("throwDeprecation")) {
           throw new Error(msg);
-        } else if (config2("traceDeprecation")) {
+        } else if (config("traceDeprecation")) {
           console.trace(msg);
         } else {
           console.warn(msg);
@@ -6229,11 +5059,9 @@ function requireBrowser() {
       }
       return fn.apply(this, arguments);
     }
-    __name(deprecated, "deprecated");
     return deprecated;
   }
-  __name(deprecate, "deprecate");
-  function config2(name) {
+  function config(name) {
     try {
       if (!commonjsGlobal.localStorage) return false;
     } catch (_) {
@@ -6243,16 +5071,14 @@ function requireBrowser() {
     if (null == val) return false;
     return String(val).toLowerCase() === "true";
   }
-  __name(config2, "config");
   return browser;
 }
-__name(requireBrowser, "requireBrowser");
 var _stream_writable;
 var hasRequired_stream_writable;
 function require_stream_writable() {
   if (hasRequired_stream_writable) return _stream_writable;
   hasRequired_stream_writable = 1;
-  _stream_writable = Writable2;
+  _stream_writable = Writable;
   function CorkedRequest(state2) {
     var _this = this;
     this.next = null;
@@ -6261,9 +5087,8 @@ function require_stream_writable() {
       onCorkedFinish(_this, state2);
     };
   }
-  __name(CorkedRequest, "CorkedRequest");
   var Duplex;
-  Writable2.WritableState = WritableState;
+  Writable.WritableState = WritableState;
   var internalUtil = {
     deprecate: requireBrowser()
   };
@@ -6274,19 +5099,16 @@ function require_stream_writable() {
   function _uint8ArrayToBuffer(chunk) {
     return Buffer2.from(chunk);
   }
-  __name(_uint8ArrayToBuffer, "_uint8ArrayToBuffer");
   function _isUint8Array(obj) {
     return Buffer2.isBuffer(obj) || obj instanceof OurUint8Array;
   }
-  __name(_isUint8Array, "_isUint8Array");
   var destroyImpl = requireDestroy();
   var _require = requireState(), getHighWaterMark = _require.getHighWaterMark;
   var _require$codes = requireErrorsBrowser().codes, ERR_INVALID_ARG_TYPE = _require$codes.ERR_INVALID_ARG_TYPE, ERR_METHOD_NOT_IMPLEMENTED = _require$codes.ERR_METHOD_NOT_IMPLEMENTED, ERR_MULTIPLE_CALLBACK = _require$codes.ERR_MULTIPLE_CALLBACK, ERR_STREAM_CANNOT_PIPE = _require$codes.ERR_STREAM_CANNOT_PIPE, ERR_STREAM_DESTROYED = _require$codes.ERR_STREAM_DESTROYED, ERR_STREAM_NULL_VALUES = _require$codes.ERR_STREAM_NULL_VALUES, ERR_STREAM_WRITE_AFTER_END = _require$codes.ERR_STREAM_WRITE_AFTER_END, ERR_UNKNOWN_ENCODING = _require$codes.ERR_UNKNOWN_ENCODING;
   var errorOrDestroy = destroyImpl.errorOrDestroy;
-  requireInherits_browser()(Writable2, Stream);
+  requireInherits_browser()(Writable, Stream);
   function nop() {
   }
-  __name(nop, "nop");
   function WritableState(options, stream, isDuplex) {
     Duplex = Duplex || require_stream_duplex();
     options = options || {};
@@ -6323,8 +5145,7 @@ function require_stream_writable() {
     this.bufferedRequestCount = 0;
     this.corkedRequestsFree = new CorkedRequest(this);
   }
-  __name(WritableState, "WritableState");
-  WritableState.prototype.getBuffer = /* @__PURE__ */ __name(function getBuffer() {
+  WritableState.prototype.getBuffer = function getBuffer() {
     var current = this.bufferedRequest;
     var out = [];
     while (current) {
@@ -6332,13 +5153,13 @@ function require_stream_writable() {
       current = current.next;
     }
     return out;
-  }, "getBuffer");
+  };
   (function() {
     try {
       Object.defineProperty(WritableState.prototype, "buffer", {
-        get: internalUtil.deprecate(/* @__PURE__ */ __name(function writableStateBufferGetter() {
+        get: internalUtil.deprecate(function writableStateBufferGetter() {
           return this.getBuffer();
-        }, "writableStateBufferGetter"), "_writableState.buffer is deprecated. Use _writableState.getBuffer instead.", "DEP0003")
+        }, "_writableState.buffer is deprecated. Use _writableState.getBuffer instead.", "DEP0003")
       });
     } catch (_) {
     }
@@ -6346,22 +5167,22 @@ function require_stream_writable() {
   var realHasInstance;
   if (typeof Symbol === "function" && Symbol.hasInstance && typeof Function.prototype[Symbol.hasInstance] === "function") {
     realHasInstance = Function.prototype[Symbol.hasInstance];
-    Object.defineProperty(Writable2, Symbol.hasInstance, {
-      value: /* @__PURE__ */ __name(function value(object) {
+    Object.defineProperty(Writable, Symbol.hasInstance, {
+      value: function value(object) {
         if (realHasInstance.call(this, object)) return true;
-        if (this !== Writable2) return false;
+        if (this !== Writable) return false;
         return object && object._writableState instanceof WritableState;
-      }, "value")
+      }
     });
   } else {
-    realHasInstance = /* @__PURE__ */ __name(function realHasInstance2(object) {
+    realHasInstance = function realHasInstance2(object) {
       return object instanceof this;
-    }, "realHasInstance2");
+    };
   }
-  function Writable2(options) {
+  function Writable(options) {
     Duplex = Duplex || require_stream_duplex();
     var isDuplex = this instanceof Duplex;
-    if (!isDuplex && !realHasInstance.call(Writable2, this)) return new Writable2(options);
+    if (!isDuplex && !realHasInstance.call(Writable, this)) return new Writable(options);
     this._writableState = new WritableState(options, this, isDuplex);
     this.writable = true;
     if (options) {
@@ -6372,8 +5193,7 @@ function require_stream_writable() {
     }
     Stream.call(this);
   }
-  __name(Writable2, "Writable");
-  Writable2.prototype.pipe = function() {
+  Writable.prototype.pipe = function() {
     errorOrDestroy(this, new ERR_STREAM_CANNOT_PIPE());
   };
   function writeAfterEnd(stream, cb) {
@@ -6381,7 +5201,6 @@ function require_stream_writable() {
     errorOrDestroy(stream, er);
     process$1.nextTick(cb, er);
   }
-  __name(writeAfterEnd, "writeAfterEnd");
   function validChunk(stream, state2, chunk, cb) {
     var er;
     if (chunk === null) {
@@ -6396,8 +5215,7 @@ function require_stream_writable() {
     }
     return true;
   }
-  __name(validChunk, "validChunk");
-  Writable2.prototype.write = function(chunk, encoding, cb) {
+  Writable.prototype.write = function(chunk, encoding, cb) {
     var state2 = this._writableState;
     var ret = false;
     var isBuf = !state2.objectMode && _isUint8Array(chunk);
@@ -6418,30 +5236,30 @@ function require_stream_writable() {
     }
     return ret;
   };
-  Writable2.prototype.cork = function() {
+  Writable.prototype.cork = function() {
     this._writableState.corked++;
   };
-  Writable2.prototype.uncork = function() {
+  Writable.prototype.uncork = function() {
     var state2 = this._writableState;
     if (state2.corked) {
       state2.corked--;
       if (!state2.writing && !state2.corked && !state2.bufferProcessing && state2.bufferedRequest) clearBuffer(this, state2);
     }
   };
-  Writable2.prototype.setDefaultEncoding = /* @__PURE__ */ __name(function setDefaultEncoding(encoding) {
+  Writable.prototype.setDefaultEncoding = function setDefaultEncoding(encoding) {
     if (typeof encoding === "string") encoding = encoding.toLowerCase();
     if (!(["hex", "utf8", "utf-8", "ascii", "binary", "base64", "ucs2", "ucs-2", "utf16le", "utf-16le", "raw"].indexOf((encoding + "").toLowerCase()) > -1)) throw new ERR_UNKNOWN_ENCODING(encoding);
     this._writableState.defaultEncoding = encoding;
     return this;
-  }, "setDefaultEncoding");
-  Object.defineProperty(Writable2.prototype, "writableBuffer", {
+  };
+  Object.defineProperty(Writable.prototype, "writableBuffer", {
     // making it explicit this property is not enumerable
     // because otherwise some prototype manipulation in
     // userland will fail
     enumerable: false,
-    get: /* @__PURE__ */ __name(function get2() {
+    get: function get2() {
       return this._writableState && this._writableState.getBuffer();
-    }, "get2")
+    }
   });
   function decodeChunk(state2, chunk, encoding) {
     if (!state2.objectMode && state2.decodeStrings !== false && typeof chunk === "string") {
@@ -6449,15 +5267,14 @@ function require_stream_writable() {
     }
     return chunk;
   }
-  __name(decodeChunk, "decodeChunk");
-  Object.defineProperty(Writable2.prototype, "writableHighWaterMark", {
+  Object.defineProperty(Writable.prototype, "writableHighWaterMark", {
     // making it explicit this property is not enumerable
     // because otherwise some prototype manipulation in
     // userland will fail
     enumerable: false,
-    get: /* @__PURE__ */ __name(function get2() {
+    get: function get2() {
       return this._writableState.highWaterMark;
-    }, "get2")
+    }
   });
   function writeOrBuffer(stream, state2, isBuf, chunk, encoding, cb) {
     if (!isBuf) {
@@ -6492,7 +5309,6 @@ function require_stream_writable() {
     }
     return ret;
   }
-  __name(writeOrBuffer, "writeOrBuffer");
   function doWrite(stream, state2, writev, len, chunk, encoding, cb) {
     state2.writelen = len;
     state2.writecb = cb;
@@ -6503,7 +5319,6 @@ function require_stream_writable() {
     else stream._write(chunk, encoding, state2.onwrite);
     state2.sync = false;
   }
-  __name(doWrite, "doWrite");
   function onwriteError(stream, state2, sync, er, cb) {
     --state2.pendingcb;
     if (sync) {
@@ -6518,14 +5333,12 @@ function require_stream_writable() {
       finishMaybe(stream, state2);
     }
   }
-  __name(onwriteError, "onwriteError");
   function onwriteStateUpdate(state2) {
     state2.writing = false;
     state2.writecb = null;
     state2.length -= state2.writelen;
     state2.writelen = 0;
   }
-  __name(onwriteStateUpdate, "onwriteStateUpdate");
   function onwrite(stream, er) {
     var state2 = stream._writableState;
     var sync = state2.sync;
@@ -6545,21 +5358,18 @@ function require_stream_writable() {
       }
     }
   }
-  __name(onwrite, "onwrite");
   function afterWrite(stream, state2, finished, cb) {
     if (!finished) onwriteDrain(stream, state2);
     state2.pendingcb--;
     cb();
     finishMaybe(stream, state2);
   }
-  __name(afterWrite, "afterWrite");
   function onwriteDrain(stream, state2) {
     if (state2.length === 0 && state2.needDrain) {
       state2.needDrain = false;
       stream.emit("drain");
     }
   }
-  __name(onwriteDrain, "onwriteDrain");
   function clearBuffer(stream, state2) {
     state2.bufferProcessing = true;
     var entry = state2.bufferedRequest;
@@ -6568,13 +5378,13 @@ function require_stream_writable() {
       var buffer2 = new Array(l);
       var holder = state2.corkedRequestsFree;
       holder.entry = entry;
-      var count3 = 0;
+      var count = 0;
       var allBuffers = true;
       while (entry) {
-        buffer2[count3] = entry;
+        buffer2[count] = entry;
         if (!entry.isBuf) allBuffers = false;
         entry = entry.next;
-        count3 += 1;
+        count += 1;
       }
       buffer2.allBuffers = allBuffers;
       doWrite(stream, state2, true, state2.length, buffer2, "", holder.finish);
@@ -6605,12 +5415,11 @@ function require_stream_writable() {
     state2.bufferedRequest = entry;
     state2.bufferProcessing = false;
   }
-  __name(clearBuffer, "clearBuffer");
-  Writable2.prototype._write = function(chunk, encoding, cb) {
+  Writable.prototype._write = function(chunk, encoding, cb) {
     cb(new ERR_METHOD_NOT_IMPLEMENTED("_write()"));
   };
-  Writable2.prototype._writev = null;
-  Writable2.prototype.end = function(chunk, encoding, cb) {
+  Writable.prototype._writev = null;
+  Writable.prototype.end = function(chunk, encoding, cb) {
     var state2 = this._writableState;
     if (typeof chunk === "function") {
       cb = chunk;
@@ -6628,31 +5437,29 @@ function require_stream_writable() {
     if (!state2.ending) endWritable(this, state2, cb);
     return this;
   };
-  Object.defineProperty(Writable2.prototype, "writableLength", {
+  Object.defineProperty(Writable.prototype, "writableLength", {
     // making it explicit this property is not enumerable
     // because otherwise some prototype manipulation in
     // userland will fail
     enumerable: false,
-    get: /* @__PURE__ */ __name(function get2() {
+    get: function get2() {
       return this._writableState.length;
-    }, "get2")
+    }
   });
   function needFinish(state2) {
     return state2.ending && state2.length === 0 && state2.bufferedRequest === null && !state2.finished && !state2.writing;
   }
-  __name(needFinish, "needFinish");
   function callFinal(stream, state2) {
-    stream._final(function(err2) {
+    stream._final(function(err) {
       state2.pendingcb--;
-      if (err2) {
-        errorOrDestroy(stream, err2);
+      if (err) {
+        errorOrDestroy(stream, err);
       }
       state2.prefinished = true;
       stream.emit("prefinish");
       finishMaybe(stream, state2);
     });
   }
-  __name(callFinal, "callFinal");
   function prefinish(stream, state2) {
     if (!state2.prefinished && !state2.finalCalled) {
       if (typeof stream._final === "function" && !state2.destroyed) {
@@ -6665,7 +5472,6 @@ function require_stream_writable() {
       }
     }
   }
-  __name(prefinish, "prefinish");
   function finishMaybe(stream, state2) {
     var need = needFinish(state2);
     if (need) {
@@ -6683,7 +5489,6 @@ function require_stream_writable() {
     }
     return need;
   }
-  __name(finishMaybe, "finishMaybe");
   function endWritable(stream, state2, cb) {
     state2.ending = true;
     finishMaybe(stream, state2);
@@ -6694,45 +5499,42 @@ function require_stream_writable() {
     state2.ended = true;
     stream.writable = false;
   }
-  __name(endWritable, "endWritable");
-  function onCorkedFinish(corkReq, state2, err2) {
+  function onCorkedFinish(corkReq, state2, err) {
     var entry = corkReq.entry;
     corkReq.entry = null;
     while (entry) {
       var cb = entry.callback;
       state2.pendingcb--;
-      cb(err2);
+      cb(err);
       entry = entry.next;
     }
     state2.corkedRequestsFree.next = corkReq;
   }
-  __name(onCorkedFinish, "onCorkedFinish");
-  Object.defineProperty(Writable2.prototype, "destroyed", {
+  Object.defineProperty(Writable.prototype, "destroyed", {
     // making it explicit this property is not enumerable
     // because otherwise some prototype manipulation in
     // userland will fail
     enumerable: false,
-    get: /* @__PURE__ */ __name(function get2() {
+    get: function get2() {
       if (this._writableState === void 0) {
         return false;
       }
       return this._writableState.destroyed;
-    }, "get2"),
-    set: /* @__PURE__ */ __name(function set(value) {
+    },
+    set: function set(value) {
       if (!this._writableState) {
         return;
       }
       this._writableState.destroyed = value;
-    }, "set")
+    }
   });
-  Writable2.prototype.destroy = destroyImpl.destroy;
-  Writable2.prototype._undestroy = destroyImpl.undestroy;
-  Writable2.prototype._destroy = function(err2, cb) {
-    cb(err2);
+  Writable.prototype.destroy = destroyImpl.destroy;
+  Writable.prototype._undestroy = destroyImpl.undestroy;
+  Writable.prototype._destroy = function(err, cb) {
+    cb(err);
   };
   return _stream_writable;
 }
-__name(require_stream_writable, "require_stream_writable");
 var _stream_duplex;
 var hasRequired_stream_duplex;
 function require_stream_duplex() {
@@ -6745,19 +5547,19 @@ function require_stream_duplex() {
   };
   _stream_duplex = Duplex;
   var Readable = require_stream_readable();
-  var Writable2 = require_stream_writable();
+  var Writable = require_stream_writable();
   requireInherits_browser()(Duplex, Readable);
   {
-    var keys = objectKeys(Writable2.prototype);
+    var keys = objectKeys(Writable.prototype);
     for (var v = 0; v < keys.length; v++) {
       var method = keys[v];
-      if (!Duplex.prototype[method]) Duplex.prototype[method] = Writable2.prototype[method];
+      if (!Duplex.prototype[method]) Duplex.prototype[method] = Writable.prototype[method];
     }
   }
   function Duplex(options) {
     if (!(this instanceof Duplex)) return new Duplex(options);
     Readable.call(this, options);
-    Writable2.call(this, options);
+    Writable.call(this, options);
     this.allowHalfOpen = true;
     if (options) {
       if (options.readable === false) this.readable = false;
@@ -6768,65 +5570,61 @@ function require_stream_duplex() {
       }
     }
   }
-  __name(Duplex, "Duplex");
   Object.defineProperty(Duplex.prototype, "writableHighWaterMark", {
     // making it explicit this property is not enumerable
     // because otherwise some prototype manipulation in
     // userland will fail
     enumerable: false,
-    get: /* @__PURE__ */ __name(function get2() {
+    get: function get2() {
       return this._writableState.highWaterMark;
-    }, "get2")
+    }
   });
   Object.defineProperty(Duplex.prototype, "writableBuffer", {
     // making it explicit this property is not enumerable
     // because otherwise some prototype manipulation in
     // userland will fail
     enumerable: false,
-    get: /* @__PURE__ */ __name(function get2() {
+    get: function get2() {
       return this._writableState && this._writableState.getBuffer();
-    }, "get2")
+    }
   });
   Object.defineProperty(Duplex.prototype, "writableLength", {
     // making it explicit this property is not enumerable
     // because otherwise some prototype manipulation in
     // userland will fail
     enumerable: false,
-    get: /* @__PURE__ */ __name(function get2() {
+    get: function get2() {
       return this._writableState.length;
-    }, "get2")
+    }
   });
   function onend() {
     if (this._writableState.ended) return;
     process$1.nextTick(onEndNT, this);
   }
-  __name(onend, "onend");
   function onEndNT(self2) {
     self2.end();
   }
-  __name(onEndNT, "onEndNT");
   Object.defineProperty(Duplex.prototype, "destroyed", {
     // making it explicit this property is not enumerable
     // because otherwise some prototype manipulation in
     // userland will fail
     enumerable: false,
-    get: /* @__PURE__ */ __name(function get2() {
+    get: function get2() {
       if (this._readableState === void 0 || this._writableState === void 0) {
         return false;
       }
       return this._readableState.destroyed && this._writableState.destroyed;
-    }, "get2"),
-    set: /* @__PURE__ */ __name(function set(value) {
+    },
+    set: function set(value) {
       if (this._readableState === void 0 || this._writableState === void 0) {
         return;
       }
       this._readableState.destroyed = value;
       this._writableState.destroyed = value;
-    }, "set")
+    }
   });
   return _stream_duplex;
 }
-__name(require_stream_duplex, "require_stream_duplex");
 var string_decoder = {};
 var safeBuffer = { exports: {} };
 var hasRequiredSafeBuffer;
@@ -6841,7 +5639,6 @@ function requireSafeBuffer() {
         dst[key] = src[key];
       }
     }
-    __name(copyProps, "copyProps");
     if (Buffer2.from && Buffer2.alloc && Buffer2.allocUnsafe && Buffer2.allocUnsafeSlow) {
       module.exports = buffer2;
     } else {
@@ -6851,7 +5648,6 @@ function requireSafeBuffer() {
     function SafeBuffer(arg, encodingOrOffset, length) {
       return Buffer2(arg, encodingOrOffset, length);
     }
-    __name(SafeBuffer, "SafeBuffer");
     copyProps(Buffer2, SafeBuffer);
     SafeBuffer.from = function(arg, encodingOrOffset, length) {
       if (typeof arg === "number") {
@@ -6890,7 +5686,6 @@ function requireSafeBuffer() {
   })(safeBuffer, safeBuffer.exports);
   return safeBuffer.exports;
 }
-__name(requireSafeBuffer, "requireSafeBuffer");
 var hasRequiredString_decoder;
 function requireString_decoder() {
   if (hasRequiredString_decoder) return string_decoder;
@@ -6942,13 +5737,11 @@ function requireString_decoder() {
       }
     }
   }
-  __name(_normalizeEncoding, "_normalizeEncoding");
   function normalizeEncoding(enc) {
     var nenc = _normalizeEncoding(enc);
     if (typeof nenc !== "string" && (Buffer2.isEncoding === isEncoding || !isEncoding(enc))) throw new Error("Unknown encoding: " + enc);
     return nenc || enc;
   }
-  __name(normalizeEncoding, "normalizeEncoding");
   string_decoder.StringDecoder = StringDecoder;
   function StringDecoder(encoding) {
     this.encoding = normalizeEncoding(encoding);
@@ -6977,7 +5770,6 @@ function requireString_decoder() {
     this.lastTotal = 0;
     this.lastChar = Buffer2.allocUnsafe(nb);
   }
-  __name(StringDecoder, "StringDecoder");
   StringDecoder.prototype.write = function(buf) {
     if (buf.length === 0) return "";
     var r;
@@ -7010,7 +5802,6 @@ function requireString_decoder() {
     else if (byte >> 3 === 30) return 4;
     return byte >> 6 === 2 ? -1 : -2;
   }
-  __name(utf8CheckByte, "utf8CheckByte");
   function utf8CheckIncomplete(self2, buf, i) {
     var j = buf.length - 1;
     if (j < i) return 0;
@@ -7036,26 +5827,24 @@ function requireString_decoder() {
     }
     return 0;
   }
-  __name(utf8CheckIncomplete, "utf8CheckIncomplete");
   function utf8CheckExtraBytes(self2, buf, p) {
     if ((buf[0] & 192) !== 128) {
       self2.lastNeed = 0;
-      return "\uFFFD";
+      return "�";
     }
     if (self2.lastNeed > 1 && buf.length > 1) {
       if ((buf[1] & 192) !== 128) {
         self2.lastNeed = 1;
-        return "\uFFFD";
+        return "�";
       }
       if (self2.lastNeed > 2 && buf.length > 2) {
         if ((buf[2] & 192) !== 128) {
           self2.lastNeed = 2;
-          return "\uFFFD";
+          return "�";
         }
       }
     }
   }
-  __name(utf8CheckExtraBytes, "utf8CheckExtraBytes");
   function utf8FillLast(buf) {
     var p = this.lastTotal - this.lastNeed;
     var r = utf8CheckExtraBytes(this, buf);
@@ -7067,7 +5856,6 @@ function requireString_decoder() {
     buf.copy(this.lastChar, p, 0, buf.length);
     this.lastNeed -= buf.length;
   }
-  __name(utf8FillLast, "utf8FillLast");
   function utf8Text(buf, i) {
     var total = utf8CheckIncomplete(this, buf, i);
     if (!this.lastNeed) return buf.toString("utf8", i);
@@ -7076,13 +5864,11 @@ function requireString_decoder() {
     buf.copy(this.lastChar, 0, end);
     return buf.toString("utf8", i, end);
   }
-  __name(utf8Text, "utf8Text");
   function utf8End(buf) {
     var r = buf && buf.length ? this.write(buf) : "";
-    if (this.lastNeed) return r + "\uFFFD";
+    if (this.lastNeed) return r + "�";
     return r;
   }
-  __name(utf8End, "utf8End");
   function utf16Text(buf, i) {
     if ((buf.length - i) % 2 === 0) {
       var r = buf.toString("utf16le", i);
@@ -7103,7 +5889,6 @@ function requireString_decoder() {
     this.lastChar[0] = buf[buf.length - 1];
     return buf.toString("utf16le", i, buf.length - 1);
   }
-  __name(utf16Text, "utf16Text");
   function utf16End(buf) {
     var r = buf && buf.length ? this.write(buf) : "";
     if (this.lastNeed) {
@@ -7112,7 +5897,6 @@ function requireString_decoder() {
     }
     return r;
   }
-  __name(utf16End, "utf16End");
   function base64Text(buf, i) {
     var n = (buf.length - i) % 3;
     if (n === 0) return buf.toString("base64", i);
@@ -7126,31 +5910,26 @@ function requireString_decoder() {
     }
     return buf.toString("base64", i, buf.length - n);
   }
-  __name(base64Text, "base64Text");
   function base64End(buf) {
     var r = buf && buf.length ? this.write(buf) : "";
     if (this.lastNeed) return r + this.lastChar.toString("base64", 0, 3 - this.lastNeed);
     return r;
   }
-  __name(base64End, "base64End");
   function simpleWrite(buf) {
     return buf.toString(this.encoding);
   }
-  __name(simpleWrite, "simpleWrite");
   function simpleEnd(buf) {
     return buf && buf.length ? this.write(buf) : "";
   }
-  __name(simpleEnd, "simpleEnd");
   return string_decoder;
 }
-__name(requireString_decoder, "requireString_decoder");
 var endOfStream;
 var hasRequiredEndOfStream;
 function requireEndOfStream() {
   if (hasRequiredEndOfStream) return endOfStream;
   hasRequiredEndOfStream = 1;
   var ERR_STREAM_PREMATURE_CLOSE = requireErrorsBrowser().codes.ERR_STREAM_PREMATURE_CLOSE;
-  function once2(callback) {
+  function once(callback) {
     var called = false;
     return function() {
       if (called) return;
@@ -7161,52 +5940,49 @@ function requireEndOfStream() {
       callback.apply(this, args);
     };
   }
-  __name(once2, "once");
   function noop2() {
   }
-  __name(noop2, "noop2");
   function isRequest(stream) {
     return stream.setHeader && typeof stream.abort === "function";
   }
-  __name(isRequest, "isRequest");
   function eos(stream, opts, callback) {
     if (typeof opts === "function") return eos(stream, null, opts);
     if (!opts) opts = {};
-    callback = once2(callback || noop2);
+    callback = once(callback || noop2);
     var readable = opts.readable || opts.readable !== false && stream.readable;
     var writable = opts.writable || opts.writable !== false && stream.writable;
-    var onlegacyfinish = /* @__PURE__ */ __name(function onlegacyfinish2() {
+    var onlegacyfinish = function onlegacyfinish2() {
       if (!stream.writable) onfinish();
-    }, "onlegacyfinish2");
+    };
     var writableEnded = stream._writableState && stream._writableState.finished;
-    var onfinish = /* @__PURE__ */ __name(function onfinish2() {
+    var onfinish = function onfinish2() {
       writable = false;
       writableEnded = true;
       if (!readable) callback.call(stream);
-    }, "onfinish2");
+    };
     var readableEnded = stream._readableState && stream._readableState.endEmitted;
-    var onend = /* @__PURE__ */ __name(function onend2() {
+    var onend = function onend2() {
       readable = false;
       readableEnded = true;
       if (!writable) callback.call(stream);
-    }, "onend2");
-    var onerror = /* @__PURE__ */ __name(function onerror2(err2) {
-      callback.call(stream, err2);
-    }, "onerror2");
-    var onclose = /* @__PURE__ */ __name(function onclose2() {
-      var err2;
+    };
+    var onerror = function onerror2(err) {
+      callback.call(stream, err);
+    };
+    var onclose = function onclose2() {
+      var err;
       if (readable && !readableEnded) {
-        if (!stream._readableState || !stream._readableState.ended) err2 = new ERR_STREAM_PREMATURE_CLOSE();
-        return callback.call(stream, err2);
+        if (!stream._readableState || !stream._readableState.ended) err = new ERR_STREAM_PREMATURE_CLOSE();
+        return callback.call(stream, err);
       }
       if (writable && !writableEnded) {
-        if (!stream._writableState || !stream._writableState.ended) err2 = new ERR_STREAM_PREMATURE_CLOSE();
-        return callback.call(stream, err2);
+        if (!stream._writableState || !stream._writableState.ended) err = new ERR_STREAM_PREMATURE_CLOSE();
+        return callback.call(stream, err);
       }
-    }, "onclose2");
-    var onrequest = /* @__PURE__ */ __name(function onrequest2() {
+    };
+    var onrequest = function onrequest2() {
       stream.req.on("finish", onfinish);
-    }, "onrequest2");
+    };
     if (isRequest(stream)) {
       stream.on("complete", onfinish);
       stream.on("abort", onclose);
@@ -7233,11 +6009,9 @@ function requireEndOfStream() {
       stream.removeListener("close", onclose);
     };
   }
-  __name(eos, "eos");
   endOfStream = eos;
   return endOfStream;
 }
-__name(requireEndOfStream, "requireEndOfStream");
 var async_iterator;
 var hasRequiredAsync_iterator;
 function requireAsync_iterator() {
@@ -7253,12 +6027,10 @@ function requireAsync_iterator() {
     }
     return obj;
   }
-  __name(_defineProperty, "_defineProperty");
   function _toPropertyKey(arg) {
     var key = _toPrimitive(arg, "string");
     return typeof key === "symbol" ? key : String(key);
   }
-  __name(_toPropertyKey, "_toPropertyKey");
   function _toPrimitive(input, hint) {
     if (typeof input !== "object" || input === null) return input;
     var prim = input[Symbol.toPrimitive];
@@ -7269,7 +6041,6 @@ function requireAsync_iterator() {
     }
     return (hint === "string" ? String : Number)(input);
   }
-  __name(_toPrimitive, "_toPrimitive");
   var finished = requireEndOfStream();
   var kLastResolve = /* @__PURE__ */ Symbol("lastResolve");
   var kLastReject = /* @__PURE__ */ Symbol("lastReject");
@@ -7284,7 +6055,6 @@ function requireAsync_iterator() {
       done
     };
   }
-  __name(createIterResult, "createIterResult");
   function readAndResolve(iter) {
     var resolve = iter[kLastResolve];
     if (resolve !== null) {
@@ -7297,11 +6067,9 @@ function requireAsync_iterator() {
       }
     }
   }
-  __name(readAndResolve, "readAndResolve");
   function onReadable(iter) {
     process$1.nextTick(readAndResolve, iter);
   }
-  __name(onReadable, "onReadable");
   function wrapForNext(lastPromise, iter) {
     return function(resolve, reject) {
       lastPromise.then(function() {
@@ -7313,18 +6081,17 @@ function requireAsync_iterator() {
       }, reject);
     };
   }
-  __name(wrapForNext, "wrapForNext");
   var AsyncIteratorPrototype = Object.getPrototypeOf(function() {
   });
   var ReadableStreamAsyncIteratorPrototype = Object.setPrototypeOf((_Object$setPrototypeO = {
     get stream() {
       return this[kStream];
     },
-    next: /* @__PURE__ */ __name(function next() {
+    next: function next() {
       var _this = this;
-      var error3 = this[kError];
-      if (error3 !== null) {
-        return Promise.reject(error3);
+      var error = this[kError];
+      if (error !== null) {
+        return Promise.reject(error);
       }
       if (this[kEnded]) {
         return Promise.resolve(createIterResult(void 0, true));
@@ -7353,22 +6120,22 @@ function requireAsync_iterator() {
       }
       this[kLastPromise] = promise;
       return promise;
-    }, "next")
+    }
   }, _defineProperty(_Object$setPrototypeO, Symbol.asyncIterator, function() {
     return this;
-  }), _defineProperty(_Object$setPrototypeO, "return", /* @__PURE__ */ __name(function _return() {
+  }), _defineProperty(_Object$setPrototypeO, "return", function _return() {
     var _this2 = this;
     return new Promise(function(resolve, reject) {
-      _this2[kStream].destroy(null, function(err2) {
-        if (err2) {
-          reject(err2);
+      _this2[kStream].destroy(null, function(err) {
+        if (err) {
+          reject(err);
           return;
         }
         resolve(createIterResult(void 0, true));
       });
     });
-  }, "_return")), _Object$setPrototypeO), AsyncIteratorPrototype);
-  var createReadableStreamAsyncIterator = /* @__PURE__ */ __name(function createReadableStreamAsyncIterator2(stream) {
+  }), _Object$setPrototypeO), AsyncIteratorPrototype);
+  var createReadableStreamAsyncIterator = function createReadableStreamAsyncIterator2(stream) {
     var _Object$create;
     var iterator = Object.create(ReadableStreamAsyncIteratorPrototype, (_Object$create = {}, _defineProperty(_Object$create, kStream, {
       value: stream,
@@ -7386,7 +6153,7 @@ function requireAsync_iterator() {
       value: stream._readableState.endEmitted,
       writable: true
     }), _defineProperty(_Object$create, kHandlePromise, {
-      value: /* @__PURE__ */ __name(function value(resolve, reject) {
+      value: function value(resolve, reject) {
         var data = iterator[kStream].read();
         if (data) {
           iterator[kLastPromise] = null;
@@ -7397,20 +6164,20 @@ function requireAsync_iterator() {
           iterator[kLastResolve] = resolve;
           iterator[kLastReject] = reject;
         }
-      }, "value"),
+      },
       writable: true
     }), _Object$create));
     iterator[kLastPromise] = null;
-    finished(stream, function(err2) {
-      if (err2 && err2.code !== "ERR_STREAM_PREMATURE_CLOSE") {
+    finished(stream, function(err) {
+      if (err && err.code !== "ERR_STREAM_PREMATURE_CLOSE") {
         var reject = iterator[kLastReject];
         if (reject !== null) {
           iterator[kLastPromise] = null;
           iterator[kLastResolve] = null;
           iterator[kLastReject] = null;
-          reject(err2);
+          reject(err);
         }
-        iterator[kError] = err2;
+        iterator[kError] = err;
         return;
       }
       var resolve = iterator[kLastResolve];
@@ -7424,22 +6191,20 @@ function requireAsync_iterator() {
     });
     stream.on("readable", onReadable.bind(null, iterator));
     return iterator;
-  }, "createReadableStreamAsyncIterator2");
+  };
   async_iterator = createReadableStreamAsyncIterator;
   return async_iterator;
 }
-__name(requireAsync_iterator, "requireAsync_iterator");
 var fromBrowser;
 var hasRequiredFromBrowser;
 function requireFromBrowser() {
   if (hasRequiredFromBrowser) return fromBrowser;
   hasRequiredFromBrowser = 1;
-  fromBrowser = /* @__PURE__ */ __name(function() {
+  fromBrowser = function() {
     throw new Error("Readable.from is not available in the browser");
-  }, "fromBrowser");
+  };
   return fromBrowser;
 }
-__name(requireFromBrowser, "requireFromBrowser");
 var _stream_readable;
 var hasRequired_stream_readable;
 function require_stream_readable() {
@@ -7449,9 +6214,9 @@ function require_stream_readable() {
   var Duplex;
   Readable.ReadableState = ReadableState;
   requireEvents().EventEmitter;
-  var EElistenerCount = /* @__PURE__ */ __name(function EElistenerCount2(emitter, type2) {
+  var EElistenerCount = function EElistenerCount2(emitter, type2) {
     return emitter.listeners(type2).length;
-  }, "EElistenerCount2");
+  };
   var Stream = requireStreamBrowser();
   var Buffer2 = requireBuffer().Buffer;
   var OurUint8Array = (typeof commonjsGlobal !== "undefined" ? commonjsGlobal : typeof window !== "undefined" ? window : typeof self !== "undefined" ? self : {}).Uint8Array || function() {
@@ -7459,18 +6224,16 @@ function require_stream_readable() {
   function _uint8ArrayToBuffer(chunk) {
     return Buffer2.from(chunk);
   }
-  __name(_uint8ArrayToBuffer, "_uint8ArrayToBuffer");
   function _isUint8Array(obj) {
     return Buffer2.isBuffer(obj) || obj instanceof OurUint8Array;
   }
-  __name(_isUint8Array, "_isUint8Array");
   var debugUtil = requireUtil();
-  var debug3;
+  var debug;
   if (debugUtil && debugUtil.debuglog) {
-    debug3 = debugUtil.debuglog("stream");
+    debug = debugUtil.debuglog("stream");
   } else {
-    debug3 = /* @__PURE__ */ __name(function debug22() {
-    }, "debug2");
+    debug = function debug2() {
+    };
   }
   var BufferList = requireBuffer_list();
   var destroyImpl = requireDestroy();
@@ -7482,13 +6245,12 @@ function require_stream_readable() {
   requireInherits_browser()(Readable, Stream);
   var errorOrDestroy = destroyImpl.errorOrDestroy;
   var kProxyEvents = ["error", "close", "destroy", "pause", "resume"];
-  function prependListener2(emitter, event, fn) {
+  function prependListener(emitter, event, fn) {
     if (typeof emitter.prependListener === "function") return emitter.prependListener(event, fn);
     if (!emitter._events || !emitter._events[event]) emitter.on(event, fn);
     else if (Array.isArray(emitter._events[event])) emitter._events[event].unshift(fn);
     else emitter._events[event] = [fn, emitter._events[event]];
   }
-  __name(prependListener2, "prependListener");
   function ReadableState(options, stream, isDuplex) {
     Duplex = Duplex || require_stream_duplex();
     options = options || {};
@@ -7524,7 +6286,6 @@ function require_stream_readable() {
       this.encoding = options.encoding;
     }
   }
-  __name(ReadableState, "ReadableState");
   function Readable(options) {
     Duplex = Duplex || require_stream_duplex();
     if (!(this instanceof Readable)) return new Readable(options);
@@ -7537,29 +6298,28 @@ function require_stream_readable() {
     }
     Stream.call(this);
   }
-  __name(Readable, "Readable");
   Object.defineProperty(Readable.prototype, "destroyed", {
     // making it explicit this property is not enumerable
     // because otherwise some prototype manipulation in
     // userland will fail
     enumerable: false,
-    get: /* @__PURE__ */ __name(function get2() {
+    get: function get2() {
       if (this._readableState === void 0) {
         return false;
       }
       return this._readableState.destroyed;
-    }, "get2"),
-    set: /* @__PURE__ */ __name(function set(value) {
+    },
+    set: function set(value) {
       if (!this._readableState) {
         return;
       }
       this._readableState.destroyed = value;
-    }, "set")
+    }
   });
   Readable.prototype.destroy = destroyImpl.destroy;
   Readable.prototype._undestroy = destroyImpl.undestroy;
-  Readable.prototype._destroy = function(err2, cb) {
-    cb(err2);
+  Readable.prototype._destroy = function(err, cb) {
+    cb(err);
   };
   Readable.prototype.push = function(chunk, encoding) {
     var state2 = this._readableState;
@@ -7582,7 +6342,7 @@ function require_stream_readable() {
     return readableAddChunk(this, chunk, null, true, false);
   };
   function readableAddChunk(stream, chunk, encoding, addToFront, skipChunkCheck) {
-    debug3("readableAddChunk", chunk);
+    debug("readableAddChunk", chunk);
     var state2 = stream._readableState;
     if (chunk === null) {
       state2.reading = false;
@@ -7620,7 +6380,6 @@ function require_stream_readable() {
     }
     return !state2.ended && (state2.length < state2.highWaterMark || state2.length === 0);
   }
-  __name(readableAddChunk, "readableAddChunk");
   function addChunk(stream, state2, chunk, addToFront) {
     if (state2.flowing && state2.length === 0 && !state2.sync) {
       state2.awaitDrain = 0;
@@ -7633,7 +6392,6 @@ function require_stream_readable() {
     }
     maybeReadMore(stream, state2);
   }
-  __name(addChunk, "addChunk");
   function chunkInvalid(state2, chunk) {
     var er;
     if (!_isUint8Array(chunk) && typeof chunk !== "string" && chunk !== void 0 && !state2.objectMode) {
@@ -7641,7 +6399,6 @@ function require_stream_readable() {
     }
     return er;
   }
-  __name(chunkInvalid, "chunkInvalid");
   Readable.prototype.isPaused = function() {
     return this._readableState.flowing === false;
   };
@@ -7676,7 +6433,6 @@ function require_stream_readable() {
     }
     return n;
   }
-  __name(computeNewHighWaterMark, "computeNewHighWaterMark");
   function howMuchToRead(n, state2) {
     if (n <= 0 || state2.length === 0 && state2.ended) return 0;
     if (state2.objectMode) return 1;
@@ -7692,15 +6448,14 @@ function require_stream_readable() {
     }
     return state2.length;
   }
-  __name(howMuchToRead, "howMuchToRead");
   Readable.prototype.read = function(n) {
-    debug3("read", n);
+    debug("read", n);
     n = parseInt(n, 10);
     var state2 = this._readableState;
     var nOrig = n;
     if (n !== 0) state2.emittedReadable = false;
     if (n === 0 && state2.needReadable && ((state2.highWaterMark !== 0 ? state2.length >= state2.highWaterMark : state2.length > 0) || state2.ended)) {
-      debug3("read: emitReadable", state2.length, state2.ended);
+      debug("read: emitReadable", state2.length, state2.ended);
       if (state2.length === 0 && state2.ended) endReadable(this);
       else emitReadable(this);
       return null;
@@ -7711,16 +6466,16 @@ function require_stream_readable() {
       return null;
     }
     var doRead = state2.needReadable;
-    debug3("need readable", doRead);
+    debug("need readable", doRead);
     if (state2.length === 0 || state2.length - n < state2.highWaterMark) {
       doRead = true;
-      debug3("length less than watermark", doRead);
+      debug("length less than watermark", doRead);
     }
     if (state2.ended || state2.reading) {
       doRead = false;
-      debug3("reading or ended", doRead);
+      debug("reading or ended", doRead);
     } else if (doRead) {
-      debug3("do read");
+      debug("do read");
       state2.reading = true;
       state2.sync = true;
       if (state2.length === 0) state2.needReadable = true;
@@ -7746,7 +6501,7 @@ function require_stream_readable() {
     return ret;
   };
   function onEofChunk(stream, state2) {
-    debug3("onEofChunk");
+    debug("onEofChunk");
     if (state2.ended) return;
     if (state2.decoder) {
       var chunk = state2.decoder.end();
@@ -7766,21 +6521,19 @@ function require_stream_readable() {
       }
     }
   }
-  __name(onEofChunk, "onEofChunk");
   function emitReadable(stream) {
     var state2 = stream._readableState;
-    debug3("emitReadable", state2.needReadable, state2.emittedReadable);
+    debug("emitReadable", state2.needReadable, state2.emittedReadable);
     state2.needReadable = false;
     if (!state2.emittedReadable) {
-      debug3("emitReadable", state2.flowing);
+      debug("emitReadable", state2.flowing);
       state2.emittedReadable = true;
       process$1.nextTick(emitReadable_, stream);
     }
   }
-  __name(emitReadable, "emitReadable");
   function emitReadable_(stream) {
     var state2 = stream._readableState;
-    debug3("emitReadable_", state2.destroyed, state2.length, state2.ended);
+    debug("emitReadable_", state2.destroyed, state2.length, state2.ended);
     if (!state2.destroyed && (state2.length || state2.ended)) {
       stream.emit("readable");
       state2.emittedReadable = false;
@@ -7788,25 +6541,22 @@ function require_stream_readable() {
     state2.needReadable = !state2.flowing && !state2.ended && state2.length <= state2.highWaterMark;
     flow(stream);
   }
-  __name(emitReadable_, "emitReadable_");
   function maybeReadMore(stream, state2) {
     if (!state2.readingMore) {
       state2.readingMore = true;
       process$1.nextTick(maybeReadMore_, stream, state2);
     }
   }
-  __name(maybeReadMore, "maybeReadMore");
   function maybeReadMore_(stream, state2) {
     while (!state2.reading && !state2.ended && (state2.length < state2.highWaterMark || state2.flowing && state2.length === 0)) {
       var len = state2.length;
-      debug3("maybeReadMore read 0");
+      debug("maybeReadMore read 0");
       stream.read(0);
       if (len === state2.length)
         break;
     }
     state2.readingMore = false;
   }
-  __name(maybeReadMore_, "maybeReadMore_");
   Readable.prototype._read = function(n) {
     errorOrDestroy(this, new ERR_METHOD_NOT_IMPLEMENTED("_read()"));
   };
@@ -7825,14 +6575,14 @@ function require_stream_readable() {
         break;
     }
     state2.pipesCount += 1;
-    debug3("pipe count=%d opts=%j", state2.pipesCount, pipeOpts);
+    debug("pipe count=%d opts=%j", state2.pipesCount, pipeOpts);
     var doEnd = (!pipeOpts || pipeOpts.end !== false) && dest !== process$1.stdout && dest !== process$1.stderr;
     var endFn = doEnd ? onend : unpipe;
     if (state2.endEmitted) process$1.nextTick(endFn);
     else src.once("end", endFn);
     dest.on("unpipe", onunpipe);
     function onunpipe(readable, unpipeInfo) {
-      debug3("onunpipe");
+      debug("onunpipe");
       if (readable === src) {
         if (unpipeInfo && unpipeInfo.hasUnpiped === false) {
           unpipeInfo.hasUnpiped = true;
@@ -7840,17 +6590,15 @@ function require_stream_readable() {
         }
       }
     }
-    __name(onunpipe, "onunpipe");
     function onend() {
-      debug3("onend");
+      debug("onend");
       dest.end();
     }
-    __name(onend, "onend");
     var ondrain = pipeOnDrain(src);
     dest.on("drain", ondrain);
     var cleanedUp = false;
     function cleanup() {
-      debug3("cleanup");
+      debug("cleanup");
       dest.removeListener("close", onclose);
       dest.removeListener("finish", onfinish);
       dest.removeListener("drain", ondrain);
@@ -7862,66 +6610,59 @@ function require_stream_readable() {
       cleanedUp = true;
       if (state2.awaitDrain && (!dest._writableState || dest._writableState.needDrain)) ondrain();
     }
-    __name(cleanup, "cleanup");
     src.on("data", ondata);
     function ondata(chunk) {
-      debug3("ondata");
+      debug("ondata");
       var ret = dest.write(chunk);
-      debug3("dest.write", ret);
+      debug("dest.write", ret);
       if (ret === false) {
         if ((state2.pipesCount === 1 && state2.pipes === dest || state2.pipesCount > 1 && indexOf(state2.pipes, dest) !== -1) && !cleanedUp) {
-          debug3("false write response, pause", state2.awaitDrain);
+          debug("false write response, pause", state2.awaitDrain);
           state2.awaitDrain++;
         }
         src.pause();
       }
     }
-    __name(ondata, "ondata");
     function onerror(er) {
-      debug3("onerror", er);
+      debug("onerror", er);
       unpipe();
       dest.removeListener("error", onerror);
       if (EElistenerCount(dest, "error") === 0) errorOrDestroy(dest, er);
     }
-    __name(onerror, "onerror");
-    prependListener2(dest, "error", onerror);
+    prependListener(dest, "error", onerror);
     function onclose() {
       dest.removeListener("finish", onfinish);
       unpipe();
     }
-    __name(onclose, "onclose");
     dest.once("close", onclose);
     function onfinish() {
-      debug3("onfinish");
+      debug("onfinish");
       dest.removeListener("close", onclose);
       unpipe();
     }
-    __name(onfinish, "onfinish");
     dest.once("finish", onfinish);
     function unpipe() {
-      debug3("unpipe");
+      debug("unpipe");
       src.unpipe(dest);
     }
-    __name(unpipe, "unpipe");
     dest.emit("pipe", src);
     if (!state2.flowing) {
-      debug3("pipe resume");
+      debug("pipe resume");
       src.resume();
     }
     return dest;
   };
   function pipeOnDrain(src) {
-    return /* @__PURE__ */ __name(function pipeOnDrainFunctionResult() {
+    return function pipeOnDrainFunctionResult() {
       var state2 = src._readableState;
-      debug3("pipeOnDrain", state2.awaitDrain);
+      debug("pipeOnDrain", state2.awaitDrain);
       if (state2.awaitDrain) state2.awaitDrain--;
       if (state2.awaitDrain === 0 && EElistenerCount(src, "data")) {
         state2.flowing = true;
         flow(src);
       }
-    }, "pipeOnDrainFunctionResult");
+    };
   }
-  __name(pipeOnDrain, "pipeOnDrain");
   Readable.prototype.unpipe = function(dest) {
     var state2 = this._readableState;
     var unpipeInfo = {
@@ -7967,7 +6708,7 @@ function require_stream_readable() {
         state2.readableListening = state2.needReadable = true;
         state2.flowing = false;
         state2.emittedReadable = false;
-        debug3("on readable", state2.length, state2.reading);
+        debug("on readable", state2.length, state2.reading);
         if (state2.length) {
           emitReadable(this);
         } else if (!state2.reading) {
@@ -8001,16 +6742,14 @@ function require_stream_readable() {
       self2.resume();
     }
   }
-  __name(updateReadableListening, "updateReadableListening");
   function nReadingNextTick(self2) {
-    debug3("readable nexttick read 0");
+    debug("readable nexttick read 0");
     self2.read(0);
   }
-  __name(nReadingNextTick, "nReadingNextTick");
   Readable.prototype.resume = function() {
     var state2 = this._readableState;
     if (!state2.flowing) {
-      debug3("resume");
+      debug("resume");
       state2.flowing = !state2.readableListening;
       resume(this, state2);
     }
@@ -8023,9 +6762,8 @@ function require_stream_readable() {
       process$1.nextTick(resume_, stream, state2);
     }
   }
-  __name(resume, "resume");
   function resume_(stream, state2) {
-    debug3("resume", state2.reading);
+    debug("resume", state2.reading);
     if (!state2.reading) {
       stream.read(0);
     }
@@ -8034,11 +6772,10 @@ function require_stream_readable() {
     flow(stream);
     if (state2.flowing && !state2.reading) stream.read(0);
   }
-  __name(resume_, "resume_");
   Readable.prototype.pause = function() {
-    debug3("call pause flowing=%j", this._readableState.flowing);
+    debug("call pause flowing=%j", this._readableState.flowing);
     if (this._readableState.flowing !== false) {
-      debug3("pause");
+      debug("pause");
       this._readableState.flowing = false;
       this.emit("pause");
     }
@@ -8047,16 +6784,15 @@ function require_stream_readable() {
   };
   function flow(stream) {
     var state2 = stream._readableState;
-    debug3("flow", state2.flowing);
+    debug("flow", state2.flowing);
     while (state2.flowing && stream.read() !== null) ;
   }
-  __name(flow, "flow");
   Readable.prototype.wrap = function(stream) {
     var _this = this;
     var state2 = this._readableState;
     var paused = false;
     stream.on("end", function() {
-      debug3("wrapped end");
+      debug("wrapped end");
       if (state2.decoder && !state2.ended) {
         var chunk = state2.decoder.end();
         if (chunk && chunk.length) _this.push(chunk);
@@ -8064,7 +6800,7 @@ function require_stream_readable() {
       _this.push(null);
     });
     stream.on("data", function(chunk) {
-      debug3("wrapped data");
+      debug("wrapped data");
       if (state2.decoder) chunk = state2.decoder.write(chunk);
       if (state2.objectMode && (chunk === null || chunk === void 0)) return;
       else if (!state2.objectMode && (!chunk || !chunk.length)) return;
@@ -8076,18 +6812,18 @@ function require_stream_readable() {
     });
     for (var i in stream) {
       if (this[i] === void 0 && typeof stream[i] === "function") {
-        this[i] = /* @__PURE__ */ (/* @__PURE__ */ __name((function methodWrap(method) {
-          return /* @__PURE__ */ __name(function methodWrapReturnFunction() {
+        this[i] = /* @__PURE__ */ (function methodWrap(method) {
+          return function methodWrapReturnFunction() {
             return stream[method].apply(stream, arguments);
-          }, "methodWrapReturnFunction");
-        }), "methodWrap"))(i);
+          };
+        })(i);
       }
     }
     for (var n = 0; n < kProxyEvents.length; n++) {
       stream.on(kProxyEvents[n], this.emit.bind(this, kProxyEvents[n]));
     }
     this._read = function(n2) {
-      debug3("wrapped _read", n2);
+      debug("wrapped _read", n2);
       if (paused) {
         paused = false;
         stream.resume();
@@ -8108,32 +6844,32 @@ function require_stream_readable() {
     // because otherwise some prototype manipulation in
     // userland will fail
     enumerable: false,
-    get: /* @__PURE__ */ __name(function get2() {
+    get: function get2() {
       return this._readableState.highWaterMark;
-    }, "get2")
+    }
   });
   Object.defineProperty(Readable.prototype, "readableBuffer", {
     // making it explicit this property is not enumerable
     // because otherwise some prototype manipulation in
     // userland will fail
     enumerable: false,
-    get: /* @__PURE__ */ __name(function get2() {
+    get: function get2() {
       return this._readableState && this._readableState.buffer;
-    }, "get2")
+    }
   });
   Object.defineProperty(Readable.prototype, "readableFlowing", {
     // making it explicit this property is not enumerable
     // because otherwise some prototype manipulation in
     // userland will fail
     enumerable: false,
-    get: /* @__PURE__ */ __name(function get2() {
+    get: function get2() {
       return this._readableState.flowing;
-    }, "get2"),
-    set: /* @__PURE__ */ __name(function set(state2) {
+    },
+    set: function set(state2) {
       if (this._readableState) {
         this._readableState.flowing = state2;
       }
-    }, "set")
+    }
   });
   Readable._fromList = fromList;
   Object.defineProperty(Readable.prototype, "readableLength", {
@@ -8141,9 +6877,9 @@ function require_stream_readable() {
     // because otherwise some prototype manipulation in
     // userland will fail
     enumerable: false,
-    get: /* @__PURE__ */ __name(function get2() {
+    get: function get2() {
       return this._readableState.length;
-    }, "get2")
+    }
   });
   function fromList(n, state2) {
     if (state2.length === 0) return null;
@@ -8159,18 +6895,16 @@ function require_stream_readable() {
     }
     return ret;
   }
-  __name(fromList, "fromList");
   function endReadable(stream) {
     var state2 = stream._readableState;
-    debug3("endReadable", state2.endEmitted);
+    debug("endReadable", state2.endEmitted);
     if (!state2.endEmitted) {
       state2.ended = true;
       process$1.nextTick(endReadableNT, state2, stream);
     }
   }
-  __name(endReadable, "endReadable");
   function endReadableNT(state2, stream) {
-    debug3("endReadableNT", state2.endEmitted, state2.length);
+    debug("endReadableNT", state2.endEmitted, state2.length);
     if (!state2.endEmitted && state2.length === 0) {
       state2.endEmitted = true;
       stream.readable = false;
@@ -8183,7 +6917,6 @@ function require_stream_readable() {
       }
     }
   }
-  __name(endReadableNT, "endReadableNT");
   if (typeof Symbol === "function") {
     Readable.from = function(iterable, opts) {
       if (from === void 0) {
@@ -8198,10 +6931,8 @@ function require_stream_readable() {
     }
     return -1;
   }
-  __name(indexOf, "indexOf");
   return _stream_readable;
 }
-__name(require_stream_readable, "require_stream_readable");
 var _stream_transform;
 var hasRequired_stream_transform;
 function require_stream_transform() {
@@ -8229,7 +6960,6 @@ function require_stream_transform() {
       this._read(rs.highWaterMark);
     }
   }
-  __name(afterTransform, "afterTransform");
   function Transform(options) {
     if (!(this instanceof Transform)) return new Transform(options);
     Duplex.call(this, options);
@@ -8249,7 +6979,6 @@ function require_stream_transform() {
     }
     this.on("prefinish", prefinish);
   }
-  __name(Transform, "Transform");
   function prefinish() {
     var _this = this;
     if (typeof this._flush === "function" && !this._readableState.destroyed) {
@@ -8260,7 +6989,6 @@ function require_stream_transform() {
       done(this, null, null);
     }
   }
-  __name(prefinish, "prefinish");
   Transform.prototype.push = function(chunk, encoding) {
     this._transformState.needTransform = false;
     return Duplex.prototype.push.call(this, chunk, encoding);
@@ -8287,9 +7015,9 @@ function require_stream_transform() {
       ts.needTransform = true;
     }
   };
-  Transform.prototype._destroy = function(err2, cb) {
-    Duplex.prototype._destroy.call(this, err2, function(err22) {
-      cb(err22);
+  Transform.prototype._destroy = function(err, cb) {
+    Duplex.prototype._destroy.call(this, err, function(err2) {
+      cb(err2);
     });
   };
   function done(stream, er, data) {
@@ -8300,10 +7028,8 @@ function require_stream_transform() {
     if (stream._transformState.transforming) throw new ERR_TRANSFORM_ALREADY_TRANSFORMING();
     return stream.push(null);
   }
-  __name(done, "done");
   return _stream_transform;
 }
-__name(require_stream_transform, "require_stream_transform");
 var _stream_passthrough;
 var hasRequired_stream_passthrough;
 function require_stream_passthrough() {
@@ -8316,20 +7042,18 @@ function require_stream_passthrough() {
     if (!(this instanceof PassThrough)) return new PassThrough(options);
     Transform.call(this, options);
   }
-  __name(PassThrough, "PassThrough");
   PassThrough.prototype._transform = function(chunk, encoding, cb) {
     cb(null, chunk);
   };
   return _stream_passthrough;
 }
-__name(require_stream_passthrough, "require_stream_passthrough");
 var pipeline_1;
 var hasRequiredPipeline;
 function requirePipeline() {
   if (hasRequiredPipeline) return pipeline_1;
   hasRequiredPipeline = 1;
   var eos;
-  function once2(callback) {
+  function once(callback) {
     var called = false;
     return function() {
       if (called) return;
@@ -8337,18 +7061,15 @@ function requirePipeline() {
       callback.apply(void 0, arguments);
     };
   }
-  __name(once2, "once");
   var _require$codes = requireErrorsBrowser().codes, ERR_MISSING_ARGS = _require$codes.ERR_MISSING_ARGS, ERR_STREAM_DESTROYED = _require$codes.ERR_STREAM_DESTROYED;
-  function noop2(err2) {
-    if (err2) throw err2;
+  function noop2(err) {
+    if (err) throw err;
   }
-  __name(noop2, "noop2");
   function isRequest(stream) {
     return stream.setHeader && typeof stream.abort === "function";
   }
-  __name(isRequest, "isRequest");
   function destroyer(stream, reading, writing, callback) {
-    callback = once2(callback);
+    callback = once(callback);
     var closed = false;
     stream.on("close", function() {
       closed = true;
@@ -8357,36 +7078,32 @@ function requirePipeline() {
     eos(stream, {
       readable: reading,
       writable: writing
-    }, function(err2) {
-      if (err2) return callback(err2);
+    }, function(err) {
+      if (err) return callback(err);
       closed = true;
       callback();
     });
     var destroyed = false;
-    return function(err2) {
+    return function(err) {
       if (closed) return;
       if (destroyed) return;
       destroyed = true;
       if (isRequest(stream)) return stream.abort();
       if (typeof stream.destroy === "function") return stream.destroy();
-      callback(err2 || new ERR_STREAM_DESTROYED("pipe"));
+      callback(err || new ERR_STREAM_DESTROYED("pipe"));
     };
   }
-  __name(destroyer, "destroyer");
   function call(fn) {
     fn();
   }
-  __name(call, "call");
   function pipe(from, to) {
     return from.pipe(to);
   }
-  __name(pipe, "pipe");
   function popCallback(streams) {
     if (!streams.length) return noop2;
     if (typeof streams[streams.length - 1] !== "function") return noop2;
     return streams.pop();
   }
-  __name(popCallback, "popCallback");
   function pipeline() {
     for (var _len = arguments.length, streams = new Array(_len), _key = 0; _key < _len; _key++) {
       streams[_key] = arguments[_key];
@@ -8396,25 +7113,23 @@ function requirePipeline() {
     if (streams.length < 2) {
       throw new ERR_MISSING_ARGS("streams");
     }
-    var error3;
+    var error;
     var destroys = streams.map(function(stream, i) {
       var reading = i < streams.length - 1;
       var writing = i > 0;
-      return destroyer(stream, reading, writing, function(err2) {
-        if (!error3) error3 = err2;
-        if (err2) destroys.forEach(call);
+      return destroyer(stream, reading, writing, function(err) {
+        if (!error) error = err;
+        if (err) destroys.forEach(call);
         if (reading) return;
         destroys.forEach(call);
-        callback(error3);
+        callback(error);
       });
     });
     return streams.reduce(pipe);
   }
-  __name(pipeline, "pipeline");
   pipeline_1 = pipeline;
   return pipeline_1;
 }
-__name(requirePipeline, "requirePipeline");
 var streamBrowserify;
 var hasRequiredStreamBrowserify;
 function requireStreamBrowserify() {
@@ -8435,7 +7150,6 @@ function requireStreamBrowserify() {
   function Stream() {
     EE.call(this);
   }
-  __name(Stream, "Stream");
   Stream.prototype.pipe = function(dest, options) {
     var source = this;
     function ondata(chunk) {
@@ -8445,14 +7159,12 @@ function requireStreamBrowserify() {
         }
       }
     }
-    __name(ondata, "ondata");
     source.on("data", ondata);
     function ondrain() {
       if (source.readable && source.resume) {
         source.resume();
       }
     }
-    __name(ondrain, "ondrain");
     dest.on("drain", ondrain);
     if (!dest._isStdio && (!options || options.end !== false)) {
       source.on("end", onend);
@@ -8464,20 +7176,17 @@ function requireStreamBrowserify() {
       didOnEnd = true;
       dest.end();
     }
-    __name(onend, "onend");
     function onclose() {
       if (didOnEnd) return;
       didOnEnd = true;
       if (typeof dest.destroy === "function") dest.destroy();
     }
-    __name(onclose, "onclose");
     function onerror(er) {
       cleanup();
       if (EE.listenerCount(this, "error") === 0) {
         throw er;
       }
     }
-    __name(onerror, "onerror");
     source.on("error", onerror);
     dest.on("error", onerror);
     function cleanup() {
@@ -8491,7 +7200,6 @@ function requireStreamBrowserify() {
       source.removeListener("close", cleanup);
       dest.removeListener("close", cleanup);
     }
-    __name(cleanup, "cleanup");
     source.on("end", cleanup);
     source.on("close", cleanup);
     dest.on("close", cleanup);
@@ -8500,7 +7208,6 @@ function requireStreamBrowserify() {
   };
   return streamBrowserify;
 }
-__name(requireStreamBrowserify, "requireStreamBrowserify");
 var hasRequiredSax;
 function requireSax() {
   if (hasRequiredSax) return sax;
@@ -8575,14 +7282,12 @@ function requireSax() {
         if (parser.trackPosition) {
           parser.position = parser.line = parser.column = 0;
         }
-        emit2(parser, "onready");
+        emit(parser, "onready");
       }
-      __name(SAXParser, "SAXParser");
       if (!Object.create) {
         Object.create = function(o) {
           function F() {
           }
-          __name(F, "F");
           F.prototype = o;
           var newf = new F();
           return newf;
@@ -8614,7 +7319,7 @@ function requireSax() {
                 parser.script = "";
                 break;
               default:
-                error3(parser, "Max buffer length exceeded: " + buffers[i]);
+                error(parser, "Max buffer length exceeded: " + buffers[i]);
             }
           }
           maxActual = Math.max(maxActual, len);
@@ -8622,13 +7327,11 @@ function requireSax() {
         var m = sax2.MAX_BUFFER_LENGTH - maxActual;
         parser.bufferCheckPosition = m + parser.position;
       }
-      __name(checkBufferLength, "checkBufferLength");
       function clearBuffers(parser) {
         for (var i = 0, l = buffers.length; i < l; i++) {
           parser[buffers[i]] = "";
         }
       }
-      __name(clearBuffers, "clearBuffers");
       function flushBuffers(parser) {
         closeText(parser);
         if (parser.cdata !== "") {
@@ -8640,29 +7343,28 @@ function requireSax() {
           parser.script = "";
         }
       }
-      __name(flushBuffers, "flushBuffers");
       SAXParser.prototype = {
-        end: /* @__PURE__ */ __name(function() {
+        end: function() {
           end(this);
-        }, "end"),
+        },
         write,
-        resume: /* @__PURE__ */ __name(function() {
+        resume: function() {
           this.error = null;
           return this;
-        }, "resume"),
-        close: /* @__PURE__ */ __name(function() {
+        },
+        close: function() {
           return this.write(null);
-        }, "close"),
-        flush: /* @__PURE__ */ __name(function() {
+        },
+        flush: function() {
           flushBuffers(this);
-        }, "flush")
+        }
       };
       var Stream;
       try {
         Stream = requireStreamBrowserify().Stream;
       } catch (ex) {
-        Stream = /* @__PURE__ */ __name(function() {
-        }, "Stream");
+        Stream = function() {
+        };
       }
       var streamWraps = sax2.EVENTS.filter(function(ev) {
         return ev !== "error" && ev !== "end";
@@ -8670,7 +7372,6 @@ function requireSax() {
       function createStream(strict, opt) {
         return new SAXStream(strict, opt);
       }
-      __name(createStream, "createStream");
       function SAXStream(strict, opt) {
         if (!(this instanceof SAXStream)) {
           return new SAXStream(strict, opt);
@@ -8690,23 +7391,22 @@ function requireSax() {
         this._decoder = null;
         streamWraps.forEach(function(ev) {
           Object.defineProperty(me, "on" + ev, {
-            get: /* @__PURE__ */ __name(function() {
+            get: function() {
               return me._parser["on" + ev];
-            }, "get"),
-            set: /* @__PURE__ */ __name(function(h) {
+            },
+            set: function(h) {
               if (!h) {
                 me.removeAllListeners(ev);
                 me._parser["on" + ev] = h;
                 return h;
               }
               me.on(ev, h);
-            }, "set"),
+            },
             enumerable: true,
             configurable: false
           });
         });
       }
-      __name(SAXStream, "SAXStream");
       SAXStream.prototype = Object.create(Stream.prototype, {
         constructor: {
           value: SAXStream
@@ -8754,23 +7454,18 @@ function requireSax() {
       function isWhitespace(c) {
         return c === " " || c === "\n" || c === "\r" || c === "	";
       }
-      __name(isWhitespace, "isWhitespace");
       function isQuote(c) {
         return c === '"' || c === "'";
       }
-      __name(isQuote, "isQuote");
       function isAttribEnd(c) {
         return c === ">" || isWhitespace(c);
       }
-      __name(isAttribEnd, "isAttribEnd");
       function isMatch(regex, c) {
         return regex.test(c);
       }
-      __name(isMatch, "isMatch");
       function notMatch(regex, c) {
         return !isMatch(regex, c);
       }
-      __name(notMatch, "notMatch");
       var S = 0;
       sax2.STATE = {
         BEGIN: S++,
@@ -9117,60 +7812,53 @@ function requireSax() {
         sax2.STATE[sax2.STATE[s]] = s;
       }
       S = sax2.STATE;
-      function emit2(parser, event, data) {
+      function emit(parser, event, data) {
         parser[event] && parser[event](data);
       }
-      __name(emit2, "emit");
       function emitNode(parser, nodeType, data) {
         if (parser.textNode) closeText(parser);
-        emit2(parser, nodeType, data);
+        emit(parser, nodeType, data);
       }
-      __name(emitNode, "emitNode");
       function closeText(parser) {
         parser.textNode = textopts(parser.opt, parser.textNode);
-        if (parser.textNode) emit2(parser, "ontext", parser.textNode);
+        if (parser.textNode) emit(parser, "ontext", parser.textNode);
         parser.textNode = "";
       }
-      __name(closeText, "closeText");
       function textopts(opt, text) {
         if (opt.trim) text = text.trim();
         if (opt.normalize) text = text.replace(/\s+/g, " ");
         return text;
       }
-      __name(textopts, "textopts");
-      function error3(parser, er) {
+      function error(parser, er) {
         closeText(parser);
         if (parser.trackPosition) {
           er += "\nLine: " + parser.line + "\nColumn: " + parser.column + "\nChar: " + parser.c;
         }
         er = new Error(er);
         parser.error = er;
-        emit2(parser, "onerror", er);
+        emit(parser, "onerror", er);
         return parser;
       }
-      __name(error3, "error");
       function end(parser) {
         if (parser.sawRoot && !parser.closedRoot) strictFail(parser, "Unclosed root tag");
         if (parser.state !== S.BEGIN && parser.state !== S.BEGIN_WHITESPACE && parser.state !== S.TEXT) {
-          error3(parser, "Unexpected end");
+          error(parser, "Unexpected end");
         }
         closeText(parser);
         parser.c = "";
         parser.closed = true;
-        emit2(parser, "onend");
+        emit(parser, "onend");
         SAXParser.call(parser, parser.strict, parser.opt);
         return parser;
       }
-      __name(end, "end");
       function strictFail(parser, message) {
         if (typeof parser !== "object" || !(parser instanceof SAXParser)) {
           throw new Error("bad call to strictFail");
         }
         if (parser.strict) {
-          error3(parser, message);
+          error(parser, message);
         }
       }
-      __name(strictFail, "strictFail");
       function newTag(parser) {
         if (!parser.strict) parser.tagName = parser.tagName[parser.looseCase]();
         var parent = parser.tags[parser.tags.length - 1] || parser;
@@ -9181,7 +7869,6 @@ function requireSax() {
         parser.attribList.length = 0;
         emitNode(parser, "onopentagstart", tag);
       }
-      __name(newTag, "newTag");
       function qname(name, attribute) {
         var i = name.indexOf(":");
         var qualName = i < 0 ? ["", name] : name.split(":");
@@ -9193,7 +7880,6 @@ function requireSax() {
         }
         return { prefix, local };
       }
-      __name(qname, "qname");
       function attrib(parser) {
         if (!parser.strict) {
           parser.attribName = parser.attribName[parser.looseCase]();
@@ -9236,7 +7922,6 @@ function requireSax() {
         }
         parser.attribName = parser.attribValue = "";
       }
-      __name(attrib, "attrib");
       function openTag(parser, selfClosing) {
         if (parser.opt.xmlns) {
           var tag = parser.tag;
@@ -9297,7 +7982,6 @@ function requireSax() {
         parser.attribName = parser.attribValue = "";
         parser.attribList.length = 0;
       }
-      __name(openTag, "openTag");
       function closeTag(parser) {
         if (!parser.tagName) {
           strictFail(parser, "Weird empty close tag.");
@@ -9358,7 +8042,6 @@ function requireSax() {
         parser.attribList.length = 0;
         parser.state = S.TEXT;
       }
-      __name(closeTag, "closeTag");
       function parseEntity(parser) {
         var entity = parser.entity;
         var entityLC = entity.toLowerCase();
@@ -9389,7 +8072,6 @@ function requireSax() {
         }
         return String.fromCodePoint(num);
       }
-      __name(parseEntity, "parseEntity");
       function beginWhiteSpace(parser, c) {
         if (c === "<") {
           parser.state = S.OPEN_WAKA;
@@ -9400,7 +8082,6 @@ function requireSax() {
           parser.state = S.TEXT;
         }
       }
-      __name(beginWhiteSpace, "beginWhiteSpace");
       function charAt(chunk, i) {
         var result = "";
         if (i < chunk.length) {
@@ -9408,14 +8089,13 @@ function requireSax() {
         }
         return result;
       }
-      __name(charAt, "charAt");
       function write(chunk) {
         var parser = this;
         if (this.error) {
           throw this.error;
         }
         if (parser.closed) {
-          return error3(
+          return error(
             parser,
             "Cannot write after close. Assign an onready handler."
           );
@@ -9909,12 +8589,11 @@ function requireSax() {
         }
         return parser;
       }
-      __name(write, "write");
       if (!String.fromCodePoint) {
         (function() {
           var stringFromCharCode = String.fromCharCode;
           var floor2 = Math.floor;
-          var fromCodePoint = /* @__PURE__ */ __name(function() {
+          var fromCodePoint = function() {
             var MAX_SIZE = 16384;
             var codeUnits = [];
             var highSurrogate;
@@ -9947,7 +8626,7 @@ function requireSax() {
               }
             }
             return result;
-          }, "fromCodePoint");
+          };
           if (Object.defineProperty) {
             Object.defineProperty(String, "fromCodePoint", {
               value: fromCodePoint,
@@ -9963,23 +8642,21 @@ function requireSax() {
   })(sax);
   return sax;
 }
-__name(requireSax, "requireSax");
 var arrayHelper;
 var hasRequiredArrayHelper;
 function requireArrayHelper() {
   if (hasRequiredArrayHelper) return arrayHelper;
   hasRequiredArrayHelper = 1;
   arrayHelper = {
-    isArray: /* @__PURE__ */ __name(function(value) {
+    isArray: function(value) {
       if (Array.isArray) {
         return Array.isArray(value);
       }
       return Object.prototype.toString.call(value) === "[object Array]";
-    }, "isArray")
+    }
   };
   return arrayHelper;
 }
-__name(requireArrayHelper, "requireArrayHelper");
 var optionsHelper;
 var hasRequiredOptionsHelper;
 function requireOptionsHelper() {
@@ -9987,7 +8664,7 @@ function requireOptionsHelper() {
   hasRequiredOptionsHelper = 1;
   var isArray = requireArrayHelper().isArray;
   optionsHelper = {
-    copyOptions: /* @__PURE__ */ __name(function(options) {
+    copyOptions: function(options) {
       var key, copy = {};
       for (key in options) {
         if (options.hasOwnProperty(key)) {
@@ -9995,34 +8672,33 @@ function requireOptionsHelper() {
         }
       }
       return copy;
-    }, "copyOptions"),
-    ensureFlagExists: /* @__PURE__ */ __name(function(item, options) {
+    },
+    ensureFlagExists: function(item, options) {
       if (!(item in options) || typeof options[item] !== "boolean") {
         options[item] = false;
       }
-    }, "ensureFlagExists"),
-    ensureSpacesExists: /* @__PURE__ */ __name(function(options) {
+    },
+    ensureSpacesExists: function(options) {
       if (!("spaces" in options) || typeof options.spaces !== "number" && typeof options.spaces !== "string") {
         options.spaces = 0;
       }
-    }, "ensureSpacesExists"),
-    ensureAlwaysArrayExists: /* @__PURE__ */ __name(function(options) {
+    },
+    ensureAlwaysArrayExists: function(options) {
       if (!("alwaysArray" in options) || typeof options.alwaysArray !== "boolean" && !isArray(options.alwaysArray)) {
         options.alwaysArray = false;
       }
-    }, "ensureAlwaysArrayExists"),
-    ensureKeyExists: /* @__PURE__ */ __name(function(key, options) {
+    },
+    ensureKeyExists: function(key, options) {
       if (!(key + "Key" in options) || typeof options[key + "Key"] !== "string") {
         options[key + "Key"] = options.compact ? "_" + key : key;
       }
-    }, "ensureKeyExists"),
-    checkFnExists: /* @__PURE__ */ __name(function(key, options) {
+    },
+    checkFnExists: function(key, options) {
       return key + "Fn" in options;
-    }, "checkFnExists")
+    }
   };
   return optionsHelper;
 }
-__name(requireOptionsHelper, "requireOptionsHelper");
 var xml2js;
 var hasRequiredXml2js;
 function requireXml2js() {
@@ -10075,7 +8751,6 @@ function requireXml2js() {
     helper.checkFnExists("attributes", options);
     return options;
   }
-  __name(validateOptions, "validateOptions");
   function nativeType(value) {
     var nValue = Number(value);
     if (!isNaN(nValue)) {
@@ -10089,7 +8764,6 @@ function requireXml2js() {
     }
     return value;
   }
-  __name(nativeType, "nativeType");
   function addField(type2, value) {
     var key;
     if (options.compact) {
@@ -10156,7 +8830,6 @@ function requireXml2js() {
       currentElement[options.elementsKey].push(element);
     }
   }
-  __name(addField, "addField");
   function manipulateAttributes(attributes) {
     if ("attributesFn" in options && attributes) {
       attributes = options.attributesFn(attributes, currentElement);
@@ -10180,7 +8853,6 @@ function requireXml2js() {
     }
     return attributes;
   }
-  __name(manipulateAttributes, "manipulateAttributes");
   function onInstruction(instruction) {
     var attributes = {};
     if (instruction.body && (instruction.name.toLowerCase() === "xml" || options.instructionHasAttributes)) {
@@ -10219,7 +8891,6 @@ function requireXml2js() {
       addField("instruction", value);
     }
   }
-  __name(onInstruction, "onInstruction");
   function onStartElement(name, attributes) {
     var element;
     if (typeof name === "object") {
@@ -10270,7 +8941,6 @@ function requireXml2js() {
     element[options.parentKey] = currentElement;
     currentElement = element;
   }
-  __name(onStartElement, "onStartElement");
   function onText(text) {
     if (options.ignoreText) {
       return;
@@ -10289,7 +8959,6 @@ function requireXml2js() {
     }
     addField("text", text);
   }
-  __name(onText, "onText");
   function onComment(comment) {
     if (options.ignoreComment) {
       return;
@@ -10299,7 +8968,6 @@ function requireXml2js() {
     }
     addField("comment", comment);
   }
-  __name(onComment, "onComment");
   function onEndElement(name) {
     var parentElement = currentElement[options.parentKey];
     if (!options.addParent) {
@@ -10307,7 +8975,6 @@ function requireXml2js() {
     }
     currentElement = parentElement;
   }
-  __name(onEndElement, "onEndElement");
   function onCdata(cdata) {
     if (options.ignoreCdata) {
       return;
@@ -10317,7 +8984,6 @@ function requireXml2js() {
     }
     addField("cdata", cdata);
   }
-  __name(onCdata, "onCdata");
   function onDoctype(doctype) {
     if (options.ignoreDoctype) {
       return;
@@ -10328,12 +8994,10 @@ function requireXml2js() {
     }
     addField("doctype", doctype);
   }
-  __name(onDoctype, "onDoctype");
-  function onError(error3) {
-    error3.note = error3;
+  function onError(error) {
+    error.note = error;
   }
-  __name(onError, "onError");
-  xml2js = /* @__PURE__ */ __name(function(xml2, userOptions) {
+  xml2js = function(xml2, userOptions) {
     var parser = sax2.parser(true, {});
     var result = {};
     currentElement = result;
@@ -10359,10 +9023,9 @@ function requireXml2js() {
       delete result.text;
     }
     return result;
-  }, "xml2js");
+  };
   return xml2js;
 }
-__name(requireXml2js, "requireXml2js");
 var xml2json;
 var hasRequiredXml2json;
 function requireXml2json() {
@@ -10375,24 +9038,22 @@ function requireXml2json() {
     helper.ensureSpacesExists(options);
     return options;
   }
-  __name(validateOptions, "validateOptions");
-  xml2json = /* @__PURE__ */ __name(function(xml2, userOptions) {
-    var options, js, json2, parentKey;
+  xml2json = function(xml2, userOptions) {
+    var options, js, json, parentKey;
     options = validateOptions(userOptions);
     js = xml2js2(xml2, options);
     parentKey = "compact" in options && options.compact ? "_parent" : "parent";
     if ("addParent" in options && options.addParent) {
-      json2 = JSON.stringify(js, function(k, v) {
+      json = JSON.stringify(js, function(k, v) {
         return k === parentKey ? "_" : v;
       }, options.spaces);
     } else {
-      json2 = JSON.stringify(js, null, options.spaces);
+      json = JSON.stringify(js, null, options.spaces);
     }
-    return json2.replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
-  }, "xml2json");
+    return json.replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
+  };
   return xml2json;
 }
-__name(requireXml2json, "requireXml2json");
 var js2xml;
 var hasRequiredJs2xml;
 function requireJs2xml() {
@@ -10444,11 +9105,9 @@ function requireJs2xml() {
     helper.checkFnExists("fullTagEmptyElement", options);
     return options;
   }
-  __name(validateOptions, "validateOptions");
   function writeIndentation(options, depth, firstLine) {
     return (!firstLine && options.spaces ? "\n" : "") + Array(depth + 1).join(options.spaces);
   }
-  __name(writeIndentation, "writeIndentation");
   function writeAttributes(attributes, options, depth) {
     if (options.ignoreAttributes) {
       return "";
@@ -10472,13 +9131,11 @@ function requireJs2xml() {
     }
     return result.join("");
   }
-  __name(writeAttributes, "writeAttributes");
   function writeDeclaration(declaration, options, depth) {
     currentElement = declaration;
     currentElementName = "xml";
     return options.ignoreDeclaration ? "" : "<?xml" + writeAttributes(declaration[options.attributesKey], options, depth) + "?>";
   }
-  __name(writeDeclaration, "writeDeclaration");
   function writeInstruction(instruction, options, depth) {
     if (options.ignoreInstruction) {
       return "";
@@ -10500,19 +9157,15 @@ function requireJs2xml() {
       return "<?" + instructionName + (instructionValue ? " " + instructionValue : "") + "?>";
     }
   }
-  __name(writeInstruction, "writeInstruction");
   function writeComment(comment, options) {
     return options.ignoreComment ? "" : "<!--" + ("commentFn" in options ? options.commentFn(comment, currentElementName, currentElement) : comment) + "-->";
   }
-  __name(writeComment, "writeComment");
   function writeCdata(cdata, options) {
     return options.ignoreCdata ? "" : "<![CDATA[" + ("cdataFn" in options ? options.cdataFn(cdata, currentElementName, currentElement) : cdata.replace("]]>", "]]]]><![CDATA[>")) + "]]>";
   }
-  __name(writeCdata, "writeCdata");
   function writeDoctype(doctype, options) {
     return options.ignoreDoctype ? "" : "<!DOCTYPE " + ("doctypeFn" in options ? options.doctypeFn(doctype, currentElementName, currentElement) : doctype) + ">";
   }
-  __name(writeDoctype, "writeDoctype");
   function writeText(text, options) {
     if (options.ignoreText) return "";
     text = "" + text;
@@ -10520,7 +9173,6 @@ function requireJs2xml() {
     text = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     return "textFn" in options ? options.textFn(text, currentElementName, currentElement) : text;
   }
-  __name(writeText, "writeText");
   function hasContent(element, options) {
     var i;
     if (element.elements && element.elements.length) {
@@ -10555,7 +9207,6 @@ function requireJs2xml() {
     }
     return false;
   }
-  __name(hasContent, "hasContent");
   function writeElement(element, options, depth) {
     currentElement = element;
     currentElementName = element.name;
@@ -10586,7 +9237,6 @@ function requireJs2xml() {
     }
     return xml2.join("");
   }
-  __name(writeElement, "writeElement");
   function writeElements(elements, options, depth, firstLine) {
     return elements.reduce(function(xml2, element) {
       var indent = writeIndentation(options, depth, firstLine && !xml2);
@@ -10608,7 +9258,6 @@ function requireJs2xml() {
       }
     }, "");
   }
-  __name(writeElements, "writeElements");
   function hasContentCompact(element, options, anyContent) {
     var key;
     for (key in element) {
@@ -10646,7 +9295,6 @@ function requireJs2xml() {
     }
     return false;
   }
-  __name(hasContentCompact, "hasContentCompact");
   function writeElementCompact(element, name, options, depth, indent) {
     currentElement = element;
     currentElementName = name;
@@ -10687,7 +9335,6 @@ function requireJs2xml() {
     }
     return xml2.join("");
   }
-  __name(writeElementCompact, "writeElementCompact");
   function writeElementsCompact(element, options, depth, firstLine) {
     var i, key, nodes, xml2 = [];
     for (key in element) {
@@ -10726,8 +9373,7 @@ function requireJs2xml() {
     }
     return xml2.join("");
   }
-  __name(writeElementsCompact, "writeElementsCompact");
-  js2xml = /* @__PURE__ */ __name(function(js, options) {
+  js2xml = function(js, options) {
     options = validateOptions(options);
     var xml2 = [];
     currentElement = js;
@@ -10743,35 +9389,33 @@ function requireJs2xml() {
       }
     }
     return xml2.join("");
-  }, "js2xml");
+  };
   return js2xml;
 }
-__name(requireJs2xml, "requireJs2xml");
 var json2xml;
 var hasRequiredJson2xml;
 function requireJson2xml() {
   if (hasRequiredJson2xml) return json2xml;
   hasRequiredJson2xml = 1;
   var js2xml2 = requireJs2xml();
-  json2xml = /* @__PURE__ */ __name(function(json2, options) {
-    if (json2 instanceof Buffer) {
-      json2 = json2.toString();
+  json2xml = function(json, options) {
+    if (json instanceof Buffer) {
+      json = json.toString();
     }
     var js = null;
-    if (typeof json2 === "string") {
+    if (typeof json === "string") {
       try {
-        js = JSON.parse(json2);
+        js = JSON.parse(json);
       } catch (e) {
         throw new Error("The JSON structure is invalid");
       }
     } else {
-      js = json2;
+      js = json;
     }
     return js2xml2(js, options);
-  }, "json2xml");
+  };
   return json2xml;
 }
-__name(requireJson2xml, "requireJson2xml");
 var lib;
 var hasRequiredLib;
 function requireLib() {
@@ -10789,9 +9433,8 @@ function requireLib() {
   };
   return lib;
 }
-__name(requireLib, "requireLib");
 var libExports = requireLib();
-var convertToXmlComponent = /* @__PURE__ */ __name((element) => {
+const convertToXmlComponent = (element) => {
   switch (element.type) {
     case void 0:
     case "element":
@@ -10809,17 +9452,11 @@ var convertToXmlComponent = /* @__PURE__ */ __name((element) => {
     default:
       return void 0;
   }
-}, "convertToXmlComponent");
-var ImportedXmlComponentAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "ImportedXmlComponentAttributes");
-  }
-  // noop
 };
-var ImportedXmlComponent = class extends XmlComponent {
-  static {
-    __name(this, "ImportedXmlComponent");
-  }
+class ImportedXmlComponentAttributes extends XmlAttributeComponent {
+  // noop
+}
+class ImportedXmlComponent extends XmlComponent {
   /**
    * Parses an XML string and converts it to an ImportedXmlComponent tree.
    *
@@ -10861,11 +9498,8 @@ var ImportedXmlComponent = class extends XmlComponent {
   push(xmlComponent) {
     this.root.push(xmlComponent);
   }
-};
-var ImportedRootElementAttributes = class extends XmlComponent {
-  static {
-    __name(this, "ImportedRootElementAttributes");
-  }
+}
+class ImportedRootElementAttributes extends XmlComponent {
   /**
    * Creates an ImportedRootElementAttributes component.
    *
@@ -10887,11 +9521,9 @@ var ImportedRootElementAttributes = class extends XmlComponent {
       _attr: this._attr
     };
   }
-};
-var InitializableXmlComponent = class extends XmlComponent {
-  static {
-    __name(this, "InitializableXmlComponent");
-  }
+}
+const WORKAROUND3 = "";
+class InitializableXmlComponent extends XmlComponent {
   /**
    * Creates a new InitializableXmlComponent.
    *
@@ -10904,55 +9536,58 @@ var InitializableXmlComponent = class extends XmlComponent {
       this.root = initComponent.root;
     }
   }
-};
-var decimalNumber = /* @__PURE__ */ __name((val) => {
+}
+const decimalNumber = (val) => {
   if (isNaN(val)) {
     throw new Error(`Invalid value '${val}' specified. Must be an integer.`);
   }
   return Math.floor(val);
-}, "decimalNumber");
-var unsignedDecimalNumber = /* @__PURE__ */ __name((val) => {
+};
+const unsignedDecimalNumber = (val) => {
   const value = decimalNumber(val);
   if (value < 0) {
     throw new Error(`Invalid value '${val}' specified. Must be a positive integer.`);
   }
   return value;
-}, "unsignedDecimalNumber");
-var hexBinary = /* @__PURE__ */ __name((val, length) => {
+};
+const hexBinary = (val, length) => {
   const expectedLength = length * 2;
   if (val.length !== expectedLength || isNaN(Number(`0x${val}`))) {
     throw new Error(`Invalid hex value '${val}'. Expected ${expectedLength} digit hex value`);
   }
   return val;
-}, "hexBinary");
-var uCharHexNumber = /* @__PURE__ */ __name((val) => hexBinary(val, 1), "uCharHexNumber");
-var universalMeasureValue = /* @__PURE__ */ __name((val) => {
+};
+const longHexNumber = (val) => hexBinary(val, 4);
+const shortHexNumber = (val) => hexBinary(val, 2);
+const uCharHexNumber = (val) => hexBinary(val, 1);
+const universalMeasureValue = (val) => {
   const unit = val.slice(-2);
   const amount = val.substring(0, val.length - 2);
   return `${Number(amount)}${unit}`;
-}, "universalMeasureValue");
-var positiveUniversalMeasureValue = /* @__PURE__ */ __name((val) => {
+};
+const positiveUniversalMeasureValue = (val) => {
   const value = universalMeasureValue(val);
   if (parseFloat(value) < 0) {
     throw new Error(`Invalid value '${value}' specified. Expected a positive number.`);
   }
   return value;
-}, "positiveUniversalMeasureValue");
-var hexColorValue = /* @__PURE__ */ __name((val) => {
+};
+const hexColorValue = (val) => {
   if (val === "auto") {
     return val;
   }
   const color = val.charAt(0) === "#" ? val.substring(1) : val;
   return hexBinary(color, 3);
-}, "hexColorValue");
-var signedTwipsMeasureValue = /* @__PURE__ */ __name((val) => typeof val === "string" ? universalMeasureValue(val) : decimalNumber(val), "signedTwipsMeasureValue");
-var hpsMeasureValue = /* @__PURE__ */ __name((val) => typeof val === "string" ? positiveUniversalMeasureValue(val) : unsignedDecimalNumber(val), "hpsMeasureValue");
-var twipsMeasureValue = /* @__PURE__ */ __name((val) => typeof val === "string" ? positiveUniversalMeasureValue(val) : unsignedDecimalNumber(val), "twipsMeasureValue");
-var percentageValue = /* @__PURE__ */ __name((val) => {
+};
+const signedTwipsMeasureValue = (val) => typeof val === "string" ? universalMeasureValue(val) : decimalNumber(val);
+const hpsMeasureValue = (val) => typeof val === "string" ? positiveUniversalMeasureValue(val) : unsignedDecimalNumber(val);
+const signedHpsMeasureValue = (val) => typeof val === "string" ? universalMeasureValue(val) : decimalNumber(val);
+const twipsMeasureValue = (val) => typeof val === "string" ? positiveUniversalMeasureValue(val) : unsignedDecimalNumber(val);
+const percentageValue = (val) => {
   const percent = val.substring(0, val.length - 1);
   return `${Number(percent)}%`;
-}, "percentageValue");
-var measurementOrPercentValue = /* @__PURE__ */ __name((val) => {
+};
+const measurementOrPercentValue = (val) => {
   if (typeof val === "number") {
     return decimalNumber(val);
   }
@@ -10960,14 +9595,11 @@ var measurementOrPercentValue = /* @__PURE__ */ __name((val) => {
     return percentageValue(val);
   }
   return universalMeasureValue(val);
-}, "measurementOrPercentValue");
-var eighthPointMeasureValue = unsignedDecimalNumber;
-var pointMeasureValue = unsignedDecimalNumber;
-var dateTimeValue = /* @__PURE__ */ __name((val) => val.toISOString(), "dateTimeValue");
-var OnOffElement = class extends XmlComponent {
-  static {
-    __name(this, "OnOffElement");
-  }
+};
+const eighthPointMeasureValue = unsignedDecimalNumber;
+const pointMeasureValue = unsignedDecimalNumber;
+const dateTimeValue = (val) => val.toISOString();
+class OnOffElement extends XmlComponent {
   /**
    * Creates an OnOffElement.
    *
@@ -10980,11 +9612,8 @@ var OnOffElement = class extends XmlComponent {
       this.root.push(new Attributes({ val }));
     }
   }
-};
-var HpsMeasureElement = class extends XmlComponent {
-  static {
-    __name(this, "HpsMeasureElement");
-  }
+}
+class HpsMeasureElement extends XmlComponent {
   /**
    * Creates an HpsMeasureElement.
    *
@@ -10995,16 +9624,10 @@ var HpsMeasureElement = class extends XmlComponent {
     super(name);
     this.root.push(new Attributes({ val: hpsMeasureValue(val) }));
   }
-};
-var EmptyElement = class extends XmlComponent {
-  static {
-    __name(this, "EmptyElement");
-  }
-};
-var StringValueElement = class extends XmlComponent {
-  static {
-    __name(this, "StringValueElement");
-  }
+}
+class EmptyElement extends XmlComponent {
+}
+class StringValueElement extends XmlComponent {
   /**
    * Creates a StringValueElement.
    *
@@ -11015,17 +9638,14 @@ var StringValueElement = class extends XmlComponent {
     super(name);
     this.root.push(new Attributes({ val }));
   }
-};
-var createStringElement = /* @__PURE__ */ __name((name, value) => new BuilderElement({
+}
+const createStringElement = (name, value) => new BuilderElement({
   name,
   attributes: {
     value: { key: "w:val", value }
   }
-}), "createStringElement");
-var NumberValueElement = class extends XmlComponent {
-  static {
-    __name(this, "NumberValueElement");
-  }
+});
+class NumberValueElement extends XmlComponent {
   /**
    * Creates a NumberValueElement.
    *
@@ -11036,11 +9656,20 @@ var NumberValueElement = class extends XmlComponent {
     super(name);
     this.root.push(new Attributes({ val }));
   }
-};
-var StringContainer = class extends XmlComponent {
-  static {
-    __name(this, "StringContainer");
+}
+class StringEnumValueElement extends XmlComponent {
+  /**
+   * Creates a StringEnumValueElement.
+   *
+   * @param name - The XML element name
+   * @param val - The enum value
+   */
+  constructor(name, val) {
+    super(name);
+    this.root.push(new Attributes({ val }));
   }
+}
+class StringContainer extends XmlComponent {
   /**
    * Creates a StringContainer.
    *
@@ -11051,11 +9680,8 @@ var StringContainer = class extends XmlComponent {
     super(name);
     this.root.push(val);
   }
-};
-var BuilderElement = class extends XmlComponent {
-  static {
-    __name(this, "BuilderElement");
-  }
+}
+class BuilderElement extends XmlComponent {
   /**
    * Creates a BuilderElement with the specified configuration.
    *
@@ -11077,8 +9703,8 @@ var BuilderElement = class extends XmlComponent {
       this.root.push(...children);
     }
   }
-};
-var AlignmentType = {
+}
+const AlignmentType = {
   /** Align Start */
   START: "start",
   /** Align Center */
@@ -11106,13 +9732,13 @@ var AlignmentType = {
   /** Justified */
   JUSTIFIED: "both"
 };
-var createAlignment = /* @__PURE__ */ __name((type2) => new BuilderElement({
+const createAlignment = (type2) => new BuilderElement({
   name: "w:jc",
   attributes: {
     val: { key: "w:val", value: type2 }
   }
-}), "createAlignment");
-var createBorderElement = /* @__PURE__ */ __name((elementName, { color, size, space, style }) => new BuilderElement({
+});
+const createBorderElement = (elementName, { color, size, space, style }) => new BuilderElement({
   name: elementName,
   attributes: {
     style: { key: "w:val", value: style },
@@ -11120,8 +9746,8 @@ var createBorderElement = /* @__PURE__ */ __name((elementName, { color, size, sp
     size: { key: "w:sz", value: size === void 0 ? void 0 : eighthPointMeasureValue(size) },
     space: { key: "w:space", value: space === void 0 ? void 0 : pointMeasureValue(space) }
   }
-}), "createBorderElement");
-var BorderStyle = {
+});
+const BorderStyle = {
   /** a single line */
   SINGLE: "single",
   /** a line with a series of alternating thin and thick strokes */
@@ -11177,10 +9803,7 @@ var BorderStyle = {
   /** a wavy line */
   WAVE: "wave"
 };
-var Border = class extends IgnoreIfEmptyXmlComponent {
-  static {
-    __name(this, "Border");
-  }
+class Border extends IgnoreIfEmptyXmlComponent {
   constructor(options) {
     super("w:pBdr");
     if (options.top) {
@@ -11199,11 +9822,8 @@ var Border = class extends IgnoreIfEmptyXmlComponent {
       this.root.push(createBorderElement("w:between", options.between));
     }
   }
-};
-var ThematicBreak = class extends XmlComponent {
-  static {
-    __name(this, "ThematicBreak");
-  }
+}
+class ThematicBreak extends XmlComponent {
   constructor() {
     super("w:pBdr");
     const bottom = createBorderElement("w:bottom", {
@@ -11214,8 +9834,8 @@ var ThematicBreak = class extends XmlComponent {
     });
     this.root.push(bottom);
   }
-};
-var createIndent = /* @__PURE__ */ __name(({ start, end, left, right, hanging, firstLine }) => new BuilderElement({
+}
+const createIndent = ({ start, end, left, right, hanging, firstLine }) => new BuilderElement({
   name: "w:ind",
   attributes: {
     start: { key: "w:start", value: start === void 0 ? void 0 : signedTwipsMeasureValue(start) },
@@ -11225,87 +9845,161 @@ var createIndent = /* @__PURE__ */ __name(({ start, end, left, right, hanging, f
     hanging: { key: "w:hanging", value: hanging === void 0 ? void 0 : twipsMeasureValue(hanging) },
     firstLine: { key: "w:firstLine", value: firstLine === void 0 ? void 0 : twipsMeasureValue(firstLine) }
   }
-}), "createIndent");
-var createBreak = /* @__PURE__ */ __name(() => new BuilderElement({
+});
+const createBreak = () => new BuilderElement({
   name: "w:br"
-}), "createBreak");
-var FieldCharacterType = {
+});
+const FieldCharacterType = {
   BEGIN: "begin",
   END: "end",
   SEPARATE: "separate"
 };
-var createFieldChar = /* @__PURE__ */ __name((type2, dirty) => new BuilderElement({
+const createFieldChar = (type2, dirty) => new BuilderElement({
   name: "w:fldChar",
   attributes: {
     type: { key: "w:fldCharType", value: type2 },
     dirty: { key: "w:dirty", value: dirty }
   }
-}), "createFieldChar");
-var createBegin = /* @__PURE__ */ __name((dirty) => createFieldChar(FieldCharacterType.BEGIN, dirty), "createBegin");
-var createSeparate = /* @__PURE__ */ __name((dirty) => createFieldChar(FieldCharacterType.SEPARATE, dirty), "createSeparate");
-var createEnd = /* @__PURE__ */ __name((dirty) => createFieldChar(FieldCharacterType.END, dirty), "createEnd");
-var SpaceType = {
+});
+const createBegin = (dirty) => createFieldChar(FieldCharacterType.BEGIN, dirty);
+const createSeparate = (dirty) => createFieldChar(FieldCharacterType.SEPARATE, dirty);
+const createEnd = (dirty) => createFieldChar(FieldCharacterType.END, dirty);
+const HorizontalPositionAlign = {
+  /** Center horizontally */
+  CENTER: "center",
+  /** Align to inside margin (left on odd, right on even pages) */
+  INSIDE: "inside",
+  /** Align to left */
+  LEFT: "left",
+  /** Align to outside margin (right on odd, left on even pages) */
+  OUTSIDE: "outside",
+  /** Align to right */
+  RIGHT: "right"
+};
+const VerticalPositionAlign = {
+  /** Align to bottom */
+  BOTTOM: "bottom",
+  /** Center vertically */
+  CENTER: "center",
+  /** Align to inside margin */
+  INSIDE: "inside",
+  /** Align to outside margin */
+  OUTSIDE: "outside",
+  /** Align to top */
+  TOP: "top"
+};
+const NumberFormat$1 = {
+  DECIMAL: "decimal",
+  UPPER_ROMAN: "upperRoman",
+  LOWER_ROMAN: "lowerRoman",
+  UPPER_LETTER: "upperLetter",
+  LOWER_LETTER: "lowerLetter",
+  ORDINAL: "ordinal",
+  CARDINAL_TEXT: "cardinalText",
+  ORDINAL_TEXT: "ordinalText",
+  HEX: "hex",
+  CHICAGO: "chicago",
+  IDEOGRAPH_DIGITAL: "ideographDigital",
+  JAPANESE_COUNTING: "japaneseCounting",
+  AIUEO: "aiueo",
+  IROHA: "iroha",
+  DECIMAL_FULL_WIDTH: "decimalFullWidth",
+  DECIMAL_HALF_WIDTH: "decimalHalfWidth",
+  JAPANESE_LEGAL: "japaneseLegal",
+  JAPANESE_DIGITAL_TEN_THOUSAND: "japaneseDigitalTenThousand",
+  DECIMAL_ENCLOSED_CIRCLE: "decimalEnclosedCircle",
+  DECIMAL_FULL_WIDTH_2: "decimalFullWidth2",
+  AIUEO_FULL_WIDTH: "aiueoFullWidth",
+  IROHA_FULL_WIDTH: "irohaFullWidth",
+  DECIMAL_ZERO: "decimalZero",
+  BULLET: "bullet",
+  GANADA: "ganada",
+  CHOSUNG: "chosung",
+  DECIMAL_ENCLOSED_FULL_STOP: "decimalEnclosedFullstop",
+  DECIMAL_ENCLOSED_PAREN: "decimalEnclosedParen",
+  DECIMAL_ENCLOSED_CIRCLE_CHINESE: "decimalEnclosedCircleChinese",
+  IDEOGRAPH_ENCLOSED_CIRCLE: "ideographEnclosedCircle",
+  IDEOGRAPH_TRADITIONAL: "ideographTraditional",
+  IDEOGRAPH_ZODIAC: "ideographZodiac",
+  IDEOGRAPH_ZODIAC_TRADITIONAL: "ideographZodiacTraditional",
+  TAIWANESE_COUNTING: "taiwaneseCounting",
+  IDEOGRAPH_LEGAL_TRADITIONAL: "ideographLegalTraditional",
+  TAIWANESE_COUNTING_THOUSAND: "taiwaneseCountingThousand",
+  TAIWANESE_DIGITAL: "taiwaneseDigital",
+  CHINESE_COUNTING: "chineseCounting",
+  CHINESE_LEGAL_SIMPLIFIED: "chineseLegalSimplified",
+  CHINESE_COUNTING_TEN_THOUSAND: "chineseCountingThousand",
+  KOREAN_DIGITAL: "koreanDigital",
+  KOREAN_COUNTING: "koreanCounting",
+  KOREAN_LEGAL: "koreanLegal",
+  KOREAN_DIGITAL_2: "koreanDigital2",
+  VIETNAMESE_COUNTING: "vietnameseCounting",
+  RUSSIAN_LOWER: "russianLower",
+  RUSSIAN_UPPER: "russianUpper",
+  NONE: "none",
+  NUMBER_IN_DASH: "numberInDash",
+  HEBREW_1: "hebrew1",
+  HEBREW_2: "hebrew2",
+  ARABIC_ALPHA: "arabicAlpha",
+  ARABIC_ABJAD: "arabicAbjad",
+  HINDI_VOWELS: "hindiVowels",
+  HINDI_CONSONANTS: "hindiConsonants",
+  HINDI_NUMBERS: "hindiNumbers",
+  HINDI_COUNTING: "hindiCounting",
+  THAI_LETTERS: "thaiLetters",
+  THAI_NUMBERS: "thaiNumbers",
+  THAI_COUNTING: "thaiCounting",
+  BAHT_TEXT: "bahtText",
+  DOLLAR_TEXT: "dollarText"
+  //   <xsd:enumeration value="custom"/>
+};
+const SpaceType = {
   DEFAULT: "default",
   PRESERVE: "preserve"
 };
-var TextAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "TextAttributes");
-  }
+class TextAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", { space: "xml:space" });
   }
-};
-var Page = class extends XmlComponent {
-  static {
-    __name(this, "Page");
-  }
+}
+class Page extends XmlComponent {
   constructor() {
     super("w:instrText");
     this.root.push(new TextAttributes({ space: SpaceType.PRESERVE }));
     this.root.push("PAGE");
   }
-};
-var NumberOfPages = class extends XmlComponent {
-  static {
-    __name(this, "NumberOfPages");
-  }
+}
+class NumberOfPages extends XmlComponent {
   constructor() {
     super("w:instrText");
     this.root.push(new TextAttributes({ space: SpaceType.PRESERVE }));
     this.root.push("NUMPAGES");
   }
-};
-var NumberOfPagesSection = class extends XmlComponent {
-  static {
-    __name(this, "NumberOfPagesSection");
-  }
+}
+class NumberOfPagesSection extends XmlComponent {
   constructor() {
     super("w:instrText");
     this.root.push(new TextAttributes({ space: SpaceType.PRESERVE }));
     this.root.push("SECTIONPAGES");
   }
-};
-var CurrentSection = class extends XmlComponent {
-  static {
-    __name(this, "CurrentSection");
-  }
+}
+class CurrentSection extends XmlComponent {
   constructor() {
     super("w:instrText");
     this.root.push(new TextAttributes({ space: SpaceType.PRESERVE }));
     this.root.push("SECTION");
   }
-};
-var createShading = /* @__PURE__ */ __name(({ fill, color, type: type2 }) => new BuilderElement({
+}
+const createShading = ({ fill, color, type: type2 }) => new BuilderElement({
   name: "w:shd",
   attributes: {
     fill: { key: "w:fill", value: fill === void 0 ? void 0 : hexColorValue(fill) },
     color: { key: "w:color", value: color === void 0 ? void 0 : hexColorValue(color) },
     type: { key: "w:val", value: type2 }
   }
-}), "createShading");
-var ShadingType = {
+});
+const ShadingType = {
   /** Clear shading - no pattern, fill color only */
   CLEAR: "clear",
   DIAGONAL_CROSS: "diagCross",
@@ -11345,10 +10039,7 @@ var ShadingType = {
   THIN_VERTICAL_STRIPE: "thinVertStripe",
   VERTICAL_STRIPE: "vertStripe"
 };
-var ChangeAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "ChangeAttributes");
-  }
+class ChangeAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", {
@@ -11357,11 +10048,8 @@ var ChangeAttributes = class extends XmlAttributeComponent {
       date: "w:date"
     });
   }
-};
-var DeletionTrackChange = class extends XmlComponent {
-  static {
-    __name(this, "DeletionTrackChange");
-  }
+}
+class DeletionTrackChange extends XmlComponent {
   constructor(options) {
     super("w:del");
     this.root.push(
@@ -11372,11 +10060,8 @@ var DeletionTrackChange = class extends XmlComponent {
       })
     );
   }
-};
-var InsertionTrackChange = class extends XmlComponent {
-  static {
-    __name(this, "InsertionTrackChange");
-  }
+}
+class InsertionTrackChange extends XmlComponent {
   constructor(options) {
     super("w:ins");
     this.root.push(
@@ -11387,21 +10072,19 @@ var InsertionTrackChange = class extends XmlComponent {
       })
     );
   }
-};
-var EmphasisMarkType = {
+}
+const EmphasisMarkType = {
   /** Dot emphasis mark */
   DOT: "dot"
 };
-var createEmphasisMark = /* @__PURE__ */ __name((emphasisMarkType = EmphasisMarkType.DOT) => new BuilderElement({
+const createEmphasisMark = (emphasisMarkType = EmphasisMarkType.DOT) => new BuilderElement({
   name: "w:em",
   attributes: {
     val: { key: "w:val", value: emphasisMarkType }
   }
-}), "createEmphasisMark");
-var CharacterSpacing = class extends XmlComponent {
-  static {
-    __name(this, "CharacterSpacing");
-  }
+});
+const createDotEmphasisMark = () => createEmphasisMark(EmphasisMarkType.DOT);
+class CharacterSpacing extends XmlComponent {
   constructor(value) {
     super("w:spacing");
     this.root.push(
@@ -11410,11 +10093,8 @@ var CharacterSpacing = class extends XmlComponent {
       })
     );
   }
-};
-var Color = class extends XmlComponent {
-  static {
-    __name(this, "Color");
-  }
+}
+class Color extends XmlComponent {
   constructor(color) {
     super("w:color");
     this.root.push(
@@ -11423,11 +10103,8 @@ var Color = class extends XmlComponent {
       })
     );
   }
-};
-var Highlight = class extends XmlComponent {
-  static {
-    __name(this, "Highlight");
-  }
+}
+class Highlight extends XmlComponent {
   constructor(color) {
     super("w:highlight");
     this.root.push(
@@ -11436,11 +10113,8 @@ var Highlight = class extends XmlComponent {
       })
     );
   }
-};
-var HighlightComplexScript = class extends XmlComponent {
-  static {
-    __name(this, "HighlightComplexScript");
-  }
+}
+class HighlightComplexScript extends XmlComponent {
   constructor(color) {
     super("w:highlightCs");
     this.root.push(
@@ -11449,8 +10123,8 @@ var HighlightComplexScript = class extends XmlComponent {
       })
     );
   }
-};
-var createLanguageComponent = /* @__PURE__ */ __name((options) => new BuilderElement({
+}
+const createLanguageComponent = (options) => new BuilderElement({
   name: "w:lang",
   attributes: {
     value: {
@@ -11466,8 +10140,8 @@ var createLanguageComponent = /* @__PURE__ */ __name((options) => new BuilderEle
       value: options.bidirectional
     }
   }
-}), "createLanguageComponent");
-var createRunFonts = /* @__PURE__ */ __name((nameOrAttrs, hint) => {
+});
+const createRunFonts = (nameOrAttrs, hint) => {
   if (typeof nameOrAttrs === "string") {
     const name = nameOrAttrs;
     return new BuilderElement({
@@ -11492,16 +10166,16 @@ var createRunFonts = /* @__PURE__ */ __name((nameOrAttrs, hint) => {
       hint: { key: "w:hint", value: attrs.hint }
     }
   });
-}, "createRunFonts");
-var createVerticalAlignRun = /* @__PURE__ */ __name((type2) => new BuilderElement({
+};
+const createVerticalAlignRun = (type2) => new BuilderElement({
   name: "w:vertAlign",
   attributes: {
     val: { key: "w:val", value: type2 }
   }
-}), "createVerticalAlignRun");
-var createSuperScript = /* @__PURE__ */ __name(() => createVerticalAlignRun("superscript"), "createSuperScript");
-var createSubScript = /* @__PURE__ */ __name(() => createVerticalAlignRun("subscript"), "createSubScript");
-var UnderlineType = {
+});
+const createSuperScript = () => createVerticalAlignRun("superscript");
+const createSubScript = () => createVerticalAlignRun("subscript");
+const UnderlineType = {
   /** Single underline */
   SINGLE: "single",
   /** Underline words only (not spaces) */
@@ -11539,19 +10213,68 @@ var UnderlineType = {
   /** No underline */
   NONE: "none"
 };
-var createUnderline = /* @__PURE__ */ __name((underlineType = UnderlineType.SINGLE, color) => new BuilderElement({
+const createUnderline = (underlineType = UnderlineType.SINGLE, color) => new BuilderElement({
   name: "w:u",
   attributes: {
     val: { key: "w:val", value: underlineType },
     color: { key: "w:color", value: color === void 0 ? void 0 : hexColorValue(color) }
   }
-}), "createUnderline");
-var RunProperties = class extends IgnoreIfEmptyXmlComponent {
-  static {
-    __name(this, "RunProperties");
-  }
+});
+const TextEffect = {
+  /** Blinking background animation */
+  BLINK_BACKGROUND: "blinkBackground",
+  /** Lights animation effect */
+  LIGHTS: "lights",
+  /** Black marching ants animation */
+  ANTS_BLACK: "antsBlack",
+  /** Red marching ants animation */
+  ANTS_RED: "antsRed",
+  /** Shimmer animation effect */
+  SHIMMER: "shimmer",
+  /** Sparkle animation effect */
+  SPARKLE: "sparkle",
+  /** No text effect */
+  NONE: "none"
+};
+const HighlightColor = {
+  /** Black highlight */
+  BLACK: "black",
+  /** Blue highlight */
+  BLUE: "blue",
+  /** Cyan highlight */
+  CYAN: "cyan",
+  /** Dark blue highlight */
+  DARK_BLUE: "darkBlue",
+  /** Dark cyan highlight */
+  DARK_CYAN: "darkCyan",
+  /** Dark gray highlight */
+  DARK_GRAY: "darkGray",
+  /** Dark green highlight */
+  DARK_GREEN: "darkGreen",
+  /** Dark magenta highlight */
+  DARK_MAGENTA: "darkMagenta",
+  /** Dark red highlight */
+  DARK_RED: "darkRed",
+  /** Dark yellow highlight */
+  DARK_YELLOW: "darkYellow",
+  /** Green highlight */
+  GREEN: "green",
+  /** Light gray highlight */
+  LIGHT_GRAY: "lightGray",
+  /** Magenta highlight */
+  MAGENTA: "magenta",
+  /** No highlight */
+  NONE: "none",
+  /** Red highlight */
+  RED: "red",
+  /** White highlight */
+  WHITE: "white",
+  /** Yellow highlight */
+  YELLOW: "yellow"
+};
+class RunProperties extends IgnoreIfEmptyXmlComponent {
   constructor(options) {
-    var _a2, _b2;
+    var _a, _b;
     super("w:rPr");
     if (!options) {
       return;
@@ -11572,13 +10295,13 @@ var RunProperties = class extends IgnoreIfEmptyXmlComponent {
       this.push(new OnOffElement("w:b", options.bold));
     }
     if (options.boldComplexScript === void 0 && options.bold !== void 0 || options.boldComplexScript) {
-      this.push(new OnOffElement("w:bCs", (_a2 = options.boldComplexScript) != null ? _a2 : options.bold));
+      this.push(new OnOffElement("w:bCs", (_a = options.boldComplexScript) != null ? _a : options.bold));
     }
     if (options.italics !== void 0) {
       this.push(new OnOffElement("w:i", options.italics));
     }
     if (options.italicsComplexScript === void 0 && options.italics !== void 0 || options.italicsComplexScript) {
-      this.push(new OnOffElement("w:iCs", (_b2 = options.italicsComplexScript) != null ? _b2 : options.italics));
+      this.push(new OnOffElement("w:iCs", (_b = options.italicsComplexScript) != null ? _b : options.italics));
     }
     if (options.smallCaps !== void 0) {
       this.push(new OnOffElement("w:smallCaps", options.smallCaps));
@@ -11675,11 +10398,8 @@ var RunProperties = class extends IgnoreIfEmptyXmlComponent {
   push(item) {
     this.root.push(item);
   }
-};
-var ParagraphRunProperties = class extends RunProperties {
-  static {
-    __name(this, "ParagraphRunProperties");
-  }
+}
+class ParagraphRunProperties extends RunProperties {
   constructor(options) {
     super(options);
     if (options == null ? void 0 : options.insertion) {
@@ -11689,11 +10409,8 @@ var ParagraphRunProperties = class extends RunProperties {
       this.push(new DeletionTrackChange(options.deletion));
     }
   }
-};
-var RunPropertiesChange = class extends XmlComponent {
-  static {
-    __name(this, "RunPropertiesChange");
-  }
+}
+class RunPropertiesChange extends XmlComponent {
   constructor(options) {
     super("w:rPrChange");
     this.root.push(
@@ -11705,24 +10422,21 @@ var RunPropertiesChange = class extends XmlComponent {
     );
     this.addChildElement(new RunProperties(options));
   }
-};
-var Text = class extends XmlComponent {
-  static {
-    __name(this, "Text");
-  }
+}
+class Text extends XmlComponent {
   constructor(options) {
-    var _a2;
+    var _a;
     super("w:t");
     if (typeof options === "string") {
       this.root.push(new TextAttributes({ space: SpaceType.PRESERVE }));
       this.root.push(options);
     } else {
-      this.root.push(new TextAttributes({ space: (_a2 = options.space) != null ? _a2 : SpaceType.DEFAULT }));
+      this.root.push(new TextAttributes({ space: (_a = options.space) != null ? _a : SpaceType.DEFAULT }));
       this.root.push(options.text);
     }
   }
-};
-var PageNumber = {
+}
+const PageNumber = {
   /** Inserts the current page number */
   CURRENT: "CURRENT",
   /** Inserts the total number of pages in the document */
@@ -11732,10 +10446,7 @@ var PageNumber = {
   /** Inserts the current section number */
   CURRENT_SECTION: "SECTION"
 };
-var Run = class extends XmlComponent {
-  static {
-    __name(this, "Run");
-  }
+class Run extends XmlComponent {
   constructor(options) {
     super("w:r");
     __publicField(this, "properties");
@@ -11786,15 +10497,38 @@ var Run = class extends XmlComponent {
       this.root.push(new Text(options.text));
     }
   }
-};
-var TextRun = class extends Run {
-  static {
-    __name(this, "TextRun");
-  }
+}
+class TextRun extends Run {
   constructor(options) {
     super(typeof options === "string" ? { text: options } : options);
   }
+}
+class SymbolAttributes extends XmlAttributeComponent {
+  constructor() {
+    super(...arguments);
+    __publicField(this, "xmlKeys", {
+      char: "w:char",
+      symbolfont: "w:font"
+    });
+  }
+}
+let Symbol$1 = class Symbol2 extends XmlComponent {
+  constructor(char = "", symbolfont = "Wingdings") {
+    super("w:sym");
+    this.root.push(new SymbolAttributes({ char, symbolfont }));
+  }
 };
+class SymbolRun extends Run {
+  constructor(options) {
+    if (typeof options === "string") {
+      super({});
+      this.root.push(new Symbol$1(options));
+      return this;
+    }
+    super(options);
+    this.root.push(new Symbol$1(options.char, options.symbolfont));
+  }
+}
 var hash$1 = {};
 var utils = {};
 var minimalisticAssert;
@@ -11802,24 +10536,22 @@ var hasRequiredMinimalisticAssert;
 function requireMinimalisticAssert() {
   if (hasRequiredMinimalisticAssert) return minimalisticAssert;
   hasRequiredMinimalisticAssert = 1;
-  minimalisticAssert = assert3;
-  function assert3(val, msg) {
+  minimalisticAssert = assert;
+  function assert(val, msg) {
     if (!val)
       throw new Error(msg || "Assertion failed");
   }
-  __name(assert3, "assert");
-  assert3.equal = /* @__PURE__ */ __name(function assertEqual(l, r, msg) {
+  assert.equal = function assertEqual(l, r, msg) {
     if (l != r)
       throw new Error(msg || "Assertion failed: " + l + " != " + r);
-  }, "assertEqual");
+  };
   return minimalisticAssert;
 }
-__name(requireMinimalisticAssert, "requireMinimalisticAssert");
 var hasRequiredUtils;
 function requireUtils() {
   if (hasRequiredUtils) return utils;
   hasRequiredUtils = 1;
-  var assert3 = requireMinimalisticAssert();
+  var assert = requireMinimalisticAssert();
   var inherits = requireInherits_browser();
   utils.inherits = inherits;
   function isSurrogatePair(msg, i) {
@@ -11831,7 +10563,6 @@ function requireUtils() {
     }
     return (msg.charCodeAt(i + 1) & 64512) === 56320;
   }
-  __name(isSurrogatePair, "isSurrogatePair");
   function toArray(msg, enc) {
     if (Array.isArray(msg))
       return msg.slice();
@@ -11873,7 +10604,6 @@ function requireUtils() {
     }
     return res;
   }
-  __name(toArray, "toArray");
   utils.toArray = toArray;
   function toHex(msg) {
     var res = "";
@@ -11881,13 +10611,11 @@ function requireUtils() {
       res += zero2(msg[i].toString(16));
     return res;
   }
-  __name(toHex, "toHex");
   utils.toHex = toHex;
   function htonl(w) {
     var res = w >>> 24 | w >>> 8 & 65280 | w << 8 & 16711680 | (w & 255) << 24;
     return res >>> 0;
   }
-  __name(htonl, "htonl");
   utils.htonl = htonl;
   function toHex32(msg, endian) {
     var res = "";
@@ -11899,7 +10627,6 @@ function requireUtils() {
     }
     return res;
   }
-  __name(toHex32, "toHex32");
   utils.toHex32 = toHex32;
   function zero2(word) {
     if (word.length === 1)
@@ -11907,7 +10634,6 @@ function requireUtils() {
     else
       return word;
   }
-  __name(zero2, "zero2");
   utils.zero2 = zero2;
   function zero8(word) {
     if (word.length === 7)
@@ -11927,11 +10653,10 @@ function requireUtils() {
     else
       return word;
   }
-  __name(zero8, "zero8");
   utils.zero8 = zero8;
   function join32(msg, start, end, endian) {
     var len = end - start;
-    assert3(len % 4 === 0);
+    assert(len % 4 === 0);
     var res = new Array(len / 4);
     for (var i = 0, k = start; i < res.length; i++, k += 4) {
       var w;
@@ -11943,7 +10668,6 @@ function requireUtils() {
     }
     return res;
   }
-  __name(join32, "join32");
   utils.join32 = join32;
   function split32(msg, endian) {
     var res = new Array(msg.length * 4);
@@ -11963,37 +10687,30 @@ function requireUtils() {
     }
     return res;
   }
-  __name(split32, "split32");
   utils.split32 = split32;
   function rotr32(w, b) {
     return w >>> b | w << 32 - b;
   }
-  __name(rotr32, "rotr32");
   utils.rotr32 = rotr32;
   function rotl32(w, b) {
     return w << b | w >>> 32 - b;
   }
-  __name(rotl32, "rotl32");
   utils.rotl32 = rotl32;
   function sum32(a, b) {
     return a + b >>> 0;
   }
-  __name(sum32, "sum32");
   utils.sum32 = sum32;
   function sum32_3(a, b, c) {
     return a + b + c >>> 0;
   }
-  __name(sum32_3, "sum32_3");
   utils.sum32_3 = sum32_3;
   function sum32_4(a, b, c, d) {
     return a + b + c + d >>> 0;
   }
-  __name(sum32_4, "sum32_4");
   utils.sum32_4 = sum32_4;
   function sum32_5(a, b, c, d, e) {
     return a + b + c + d + e >>> 0;
   }
-  __name(sum32_5, "sum32_5");
   utils.sum32_5 = sum32_5;
   function sum64(buf, pos, ah, al) {
     var bh = buf[pos];
@@ -12003,20 +10720,17 @@ function requireUtils() {
     buf[pos] = hi >>> 0;
     buf[pos + 1] = lo;
   }
-  __name(sum64, "sum64");
   utils.sum64 = sum64;
   function sum64_hi(ah, al, bh, bl) {
     var lo = al + bl >>> 0;
     var hi = (lo < al ? 1 : 0) + ah + bh;
     return hi >>> 0;
   }
-  __name(sum64_hi, "sum64_hi");
   utils.sum64_hi = sum64_hi;
   function sum64_lo(ah, al, bh, bl) {
     var lo = al + bl;
     return lo >>> 0;
   }
-  __name(sum64_lo, "sum64_lo");
   utils.sum64_lo = sum64_lo;
   function sum64_4_hi(ah, al, bh, bl, ch, cl, dh, dl) {
     var carry = 0;
@@ -12030,13 +10744,11 @@ function requireUtils() {
     var hi = ah + bh + ch + dh + carry;
     return hi >>> 0;
   }
-  __name(sum64_4_hi, "sum64_4_hi");
   utils.sum64_4_hi = sum64_4_hi;
   function sum64_4_lo(ah, al, bh, bl, ch, cl, dh, dl) {
     var lo = al + bl + cl + dl;
     return lo >>> 0;
   }
-  __name(sum64_4_lo, "sum64_4_lo");
   utils.sum64_4_lo = sum64_4_lo;
   function sum64_5_hi(ah, al, bh, bl, ch, cl, dh, dl, eh, el) {
     var carry = 0;
@@ -12052,47 +10764,40 @@ function requireUtils() {
     var hi = ah + bh + ch + dh + eh + carry;
     return hi >>> 0;
   }
-  __name(sum64_5_hi, "sum64_5_hi");
   utils.sum64_5_hi = sum64_5_hi;
   function sum64_5_lo(ah, al, bh, bl, ch, cl, dh, dl, eh, el) {
     var lo = al + bl + cl + dl + el;
     return lo >>> 0;
   }
-  __name(sum64_5_lo, "sum64_5_lo");
   utils.sum64_5_lo = sum64_5_lo;
   function rotr64_hi(ah, al, num) {
     var r = al << 32 - num | ah >>> num;
     return r >>> 0;
   }
-  __name(rotr64_hi, "rotr64_hi");
   utils.rotr64_hi = rotr64_hi;
   function rotr64_lo(ah, al, num) {
     var r = ah << 32 - num | al >>> num;
     return r >>> 0;
   }
-  __name(rotr64_lo, "rotr64_lo");
   utils.rotr64_lo = rotr64_lo;
   function shr64_hi(ah, al, num) {
     return ah >>> num;
   }
-  __name(shr64_hi, "shr64_hi");
   utils.shr64_hi = shr64_hi;
   function shr64_lo(ah, al, num) {
     var r = ah << 32 - num | al >>> num;
     return r >>> 0;
   }
-  __name(shr64_lo, "shr64_lo");
   utils.shr64_lo = shr64_lo;
   return utils;
 }
-__name(requireUtils, "requireUtils");
 var common$1 = {};
 var hasRequiredCommon$1;
 function requireCommon$1() {
   if (hasRequiredCommon$1) return common$1;
   hasRequiredCommon$1 = 1;
   var utils2 = requireUtils();
-  var assert3 = requireMinimalisticAssert();
+  var assert = requireMinimalisticAssert();
   function BlockHash() {
     this.pending = null;
     this.pendingTotal = 0;
@@ -12104,9 +10809,8 @@ function requireCommon$1() {
     this._delta8 = this.blockSize / 8;
     this._delta32 = this.blockSize / 32;
   }
-  __name(BlockHash, "BlockHash");
   common$1.BlockHash = BlockHash;
-  BlockHash.prototype.update = /* @__PURE__ */ __name(function update(msg, enc) {
+  BlockHash.prototype.update = function update(msg, enc) {
     msg = utils2.toArray(msg, enc);
     if (!this.pending)
       this.pending = msg;
@@ -12124,13 +10828,13 @@ function requireCommon$1() {
         this._update(msg, i, i + this._delta32);
     }
     return this;
-  }, "update");
-  BlockHash.prototype.digest = /* @__PURE__ */ __name(function digest(enc) {
+  };
+  BlockHash.prototype.digest = function digest(enc) {
     this.update(this._pad());
-    assert3(this.pending === null);
+    assert(this.pending === null);
     return this._digest(enc);
-  }, "digest");
-  BlockHash.prototype._pad = /* @__PURE__ */ __name(function pad() {
+  };
+  BlockHash.prototype._pad = function pad() {
     var len = this.pendingTotal;
     var bytes = this._delta8;
     var k = bytes - (len + this.padLength) % bytes;
@@ -12163,10 +10867,9 @@ function requireCommon$1() {
         res[i++] = 0;
     }
     return res;
-  }, "pad");
+  };
   return common$1;
 }
-__name(requireCommon$1, "requireCommon$1");
 var sha = {};
 var common = {};
 var hasRequiredCommon;
@@ -12183,46 +10886,37 @@ function requireCommon() {
     if (s === 2)
       return maj32(x, y, z);
   }
-  __name(ft_1, "ft_1");
   common.ft_1 = ft_1;
   function ch32(x, y, z) {
     return x & y ^ ~x & z;
   }
-  __name(ch32, "ch32");
   common.ch32 = ch32;
   function maj32(x, y, z) {
     return x & y ^ x & z ^ y & z;
   }
-  __name(maj32, "maj32");
   common.maj32 = maj32;
   function p32(x, y, z) {
     return x ^ y ^ z;
   }
-  __name(p32, "p32");
   common.p32 = p32;
   function s0_256(x) {
     return rotr32(x, 2) ^ rotr32(x, 13) ^ rotr32(x, 22);
   }
-  __name(s0_256, "s0_256");
   common.s0_256 = s0_256;
   function s1_256(x) {
     return rotr32(x, 6) ^ rotr32(x, 11) ^ rotr32(x, 25);
   }
-  __name(s1_256, "s1_256");
   common.s1_256 = s1_256;
   function g0_256(x) {
     return rotr32(x, 7) ^ rotr32(x, 18) ^ x >>> 3;
   }
-  __name(g0_256, "g0_256");
   common.g0_256 = g0_256;
   function g1_256(x) {
     return rotr32(x, 17) ^ rotr32(x, 19) ^ x >>> 10;
   }
-  __name(g1_256, "g1_256");
   common.g1_256 = g1_256;
   return common;
 }
-__name(requireCommon, "requireCommon");
 var _1;
 var hasRequired_1;
 function require_1() {
@@ -12255,14 +10949,13 @@ function require_1() {
     ];
     this.W = new Array(80);
   }
-  __name(SHA1, "SHA1");
   utils2.inherits(SHA1, BlockHash);
   _1 = SHA1;
   SHA1.blockSize = 512;
   SHA1.outSize = 160;
   SHA1.hmacStrength = 80;
   SHA1.padLength = 64;
-  SHA1.prototype._update = /* @__PURE__ */ __name(function _update(msg, start) {
+  SHA1.prototype._update = function _update(msg, start) {
     var W = this.W;
     for (var i = 0; i < 16; i++)
       W[i] = msg[start + i];
@@ -12287,16 +10980,15 @@ function require_1() {
     this.h[2] = sum32(this.h[2], c);
     this.h[3] = sum32(this.h[3], d);
     this.h[4] = sum32(this.h[4], e);
-  }, "_update");
-  SHA1.prototype._digest = /* @__PURE__ */ __name(function digest(enc) {
+  };
+  SHA1.prototype._digest = function digest(enc) {
     if (enc === "hex")
       return utils2.toHex32(this.h, "big");
     else
       return utils2.split32(this.h, "big");
-  }, "digest");
+  };
   return _1;
 }
-__name(require_1, "require_1");
 var _256;
 var hasRequired_256;
 function require_256() {
@@ -12305,7 +10997,7 @@ function require_256() {
   var utils2 = requireUtils();
   var common2 = requireCommon$1();
   var shaCommon = requireCommon();
-  var assert3 = requireMinimalisticAssert();
+  var assert = requireMinimalisticAssert();
   var sum32 = utils2.sum32;
   var sum32_4 = utils2.sum32_4;
   var sum32_5 = utils2.sum32_5;
@@ -12399,14 +11091,13 @@ function require_256() {
     this.k = sha256_K;
     this.W = new Array(64);
   }
-  __name(SHA256, "SHA256");
   utils2.inherits(SHA256, BlockHash);
   _256 = SHA256;
   SHA256.blockSize = 512;
   SHA256.outSize = 256;
   SHA256.hmacStrength = 192;
   SHA256.padLength = 64;
-  SHA256.prototype._update = /* @__PURE__ */ __name(function _update(msg, start) {
+  SHA256.prototype._update = function _update(msg, start) {
     var W = this.W;
     for (var i = 0; i < 16; i++)
       W[i] = msg[start + i];
@@ -12420,7 +11111,7 @@ function require_256() {
     var f = this.h[5];
     var g = this.h[6];
     var h = this.h[7];
-    assert3(this.k.length === W.length);
+    assert(this.k.length === W.length);
     for (i = 0; i < W.length; i++) {
       var T1 = sum32_5(h, s1_256(e), ch32(e, f, g), this.k[i], W[i]);
       var T2 = sum32(s0_256(a), maj32(a, b, c));
@@ -12441,16 +11132,15 @@ function require_256() {
     this.h[5] = sum32(this.h[5], f);
     this.h[6] = sum32(this.h[6], g);
     this.h[7] = sum32(this.h[7], h);
-  }, "_update");
-  SHA256.prototype._digest = /* @__PURE__ */ __name(function digest(enc) {
+  };
+  SHA256.prototype._digest = function digest(enc) {
     if (enc === "hex")
       return utils2.toHex32(this.h, "big");
     else
       return utils2.split32(this.h, "big");
-  }, "digest");
+  };
   return _256;
 }
-__name(require_256, "require_256");
 var _224;
 var hasRequired_224;
 function require_224() {
@@ -12473,22 +11163,20 @@ function require_224() {
       3204075428
     ];
   }
-  __name(SHA224, "SHA224");
   utils2.inherits(SHA224, SHA256);
   _224 = SHA224;
   SHA224.blockSize = 512;
   SHA224.outSize = 224;
   SHA224.hmacStrength = 192;
   SHA224.padLength = 64;
-  SHA224.prototype._digest = /* @__PURE__ */ __name(function digest(enc) {
+  SHA224.prototype._digest = function digest(enc) {
     if (enc === "hex")
       return utils2.toHex32(this.h.slice(0, 7), "big");
     else
       return utils2.split32(this.h.slice(0, 7), "big");
-  }, "digest");
+  };
   return _224;
 }
-__name(require_224, "require_224");
 var _512;
 var hasRequired_512;
 function require_512() {
@@ -12496,7 +11184,7 @@ function require_512() {
   hasRequired_512 = 1;
   var utils2 = requireUtils();
   var common2 = requireCommon$1();
-  var assert3 = requireMinimalisticAssert();
+  var assert = requireMinimalisticAssert();
   var rotr64_hi = utils2.rotr64_hi;
   var rotr64_lo = utils2.rotr64_lo;
   var shr64_hi = utils2.shr64_hi;
@@ -12696,14 +11384,13 @@ function require_512() {
     this.k = sha512_K;
     this.W = new Array(160);
   }
-  __name(SHA512, "SHA512");
   utils2.inherits(SHA512, BlockHash);
   _512 = SHA512;
   SHA512.blockSize = 1024;
   SHA512.outSize = 512;
   SHA512.hmacStrength = 192;
   SHA512.padLength = 128;
-  SHA512.prototype._prepareBlock = /* @__PURE__ */ __name(function _prepareBlock(msg, start) {
+  SHA512.prototype._prepareBlock = function _prepareBlock(msg, start) {
     var W = this.W;
     for (var i = 0; i < 32; i++)
       W[i] = msg[start + i];
@@ -12737,8 +11424,8 @@ function require_512() {
         c3_lo
       );
     }
-  }, "_prepareBlock");
-  SHA512.prototype._update = /* @__PURE__ */ __name(function _update(msg, start) {
+  };
+  SHA512.prototype._update = function _update(msg, start) {
     this._prepareBlock(msg, start);
     var W = this.W;
     var ah = this.h[0];
@@ -12752,19 +11439,19 @@ function require_512() {
     var eh = this.h[8];
     var el = this.h[9];
     var fh = this.h[10];
-    var fl2 = this.h[11];
+    var fl = this.h[11];
     var gh = this.h[12];
     var gl = this.h[13];
     var hh = this.h[14];
     var hl = this.h[15];
-    assert3(this.k.length === W.length);
+    assert(this.k.length === W.length);
     for (var i = 0; i < W.length; i += 2) {
       var c0_hi = hh;
       var c0_lo = hl;
       var c1_hi = s1_512_hi(eh, el);
       var c1_lo = s1_512_lo(eh, el);
-      var c2_hi = ch64_hi(eh, el, fh, fl2, gh);
-      var c2_lo = ch64_lo(eh, el, fh, fl2, gh, gl);
+      var c2_hi = ch64_hi(eh, el, fh, fl, gh);
+      var c2_lo = ch64_lo(eh, el, fh, fl, gh, gl);
       var c3_hi = this.k[i];
       var c3_lo = this.k[i + 1];
       var c4_hi = W[i];
@@ -12802,9 +11489,9 @@ function require_512() {
       hh = gh;
       hl = gl;
       gh = fh;
-      gl = fl2;
+      gl = fl;
       fh = eh;
-      fl2 = el;
+      fl = el;
       eh = sum64_hi(dh, dl, T1_hi, T1_lo);
       el = sum64_lo(dl, dl, T1_hi, T1_lo);
       dh = ch;
@@ -12821,44 +11508,40 @@ function require_512() {
     sum64(this.h, 4, ch, cl);
     sum64(this.h, 6, dh, dl);
     sum64(this.h, 8, eh, el);
-    sum64(this.h, 10, fh, fl2);
+    sum64(this.h, 10, fh, fl);
     sum64(this.h, 12, gh, gl);
     sum64(this.h, 14, hh, hl);
-  }, "_update");
-  SHA512.prototype._digest = /* @__PURE__ */ __name(function digest(enc) {
+  };
+  SHA512.prototype._digest = function digest(enc) {
     if (enc === "hex")
       return utils2.toHex32(this.h, "big");
     else
       return utils2.split32(this.h, "big");
-  }, "digest");
-  function ch64_hi(xh, xl, yh, yl, zh2) {
-    var r = xh & yh ^ ~xh & zh2;
+  };
+  function ch64_hi(xh, xl, yh, yl, zh) {
+    var r = xh & yh ^ ~xh & zh;
     if (r < 0)
       r += 4294967296;
     return r;
   }
-  __name(ch64_hi, "ch64_hi");
-  function ch64_lo(xh, xl, yh, yl, zh2, zl) {
+  function ch64_lo(xh, xl, yh, yl, zh, zl) {
     var r = xl & yl ^ ~xl & zl;
     if (r < 0)
       r += 4294967296;
     return r;
   }
-  __name(ch64_lo, "ch64_lo");
-  function maj64_hi(xh, xl, yh, yl, zh2) {
-    var r = xh & yh ^ xh & zh2 ^ yh & zh2;
+  function maj64_hi(xh, xl, yh, yl, zh) {
+    var r = xh & yh ^ xh & zh ^ yh & zh;
     if (r < 0)
       r += 4294967296;
     return r;
   }
-  __name(maj64_hi, "maj64_hi");
-  function maj64_lo(xh, xl, yh, yl, zh2, zl) {
+  function maj64_lo(xh, xl, yh, yl, zh, zl) {
     var r = xl & yl ^ xl & zl ^ yl & zl;
     if (r < 0)
       r += 4294967296;
     return r;
   }
-  __name(maj64_lo, "maj64_lo");
   function s0_512_hi(xh, xl) {
     var c0_hi = rotr64_hi(xh, xl, 28);
     var c1_hi = rotr64_hi(xl, xh, 2);
@@ -12868,7 +11551,6 @@ function require_512() {
       r += 4294967296;
     return r;
   }
-  __name(s0_512_hi, "s0_512_hi");
   function s0_512_lo(xh, xl) {
     var c0_lo = rotr64_lo(xh, xl, 28);
     var c1_lo = rotr64_lo(xl, xh, 2);
@@ -12878,7 +11560,6 @@ function require_512() {
       r += 4294967296;
     return r;
   }
-  __name(s0_512_lo, "s0_512_lo");
   function s1_512_hi(xh, xl) {
     var c0_hi = rotr64_hi(xh, xl, 14);
     var c1_hi = rotr64_hi(xh, xl, 18);
@@ -12888,7 +11569,6 @@ function require_512() {
       r += 4294967296;
     return r;
   }
-  __name(s1_512_hi, "s1_512_hi");
   function s1_512_lo(xh, xl) {
     var c0_lo = rotr64_lo(xh, xl, 14);
     var c1_lo = rotr64_lo(xh, xl, 18);
@@ -12898,7 +11578,6 @@ function require_512() {
       r += 4294967296;
     return r;
   }
-  __name(s1_512_lo, "s1_512_lo");
   function g0_512_hi(xh, xl) {
     var c0_hi = rotr64_hi(xh, xl, 1);
     var c1_hi = rotr64_hi(xh, xl, 8);
@@ -12908,7 +11587,6 @@ function require_512() {
       r += 4294967296;
     return r;
   }
-  __name(g0_512_hi, "g0_512_hi");
   function g0_512_lo(xh, xl) {
     var c0_lo = rotr64_lo(xh, xl, 1);
     var c1_lo = rotr64_lo(xh, xl, 8);
@@ -12918,7 +11596,6 @@ function require_512() {
       r += 4294967296;
     return r;
   }
-  __name(g0_512_lo, "g0_512_lo");
   function g1_512_hi(xh, xl) {
     var c0_hi = rotr64_hi(xh, xl, 19);
     var c1_hi = rotr64_hi(xl, xh, 29);
@@ -12928,7 +11605,6 @@ function require_512() {
       r += 4294967296;
     return r;
   }
-  __name(g1_512_hi, "g1_512_hi");
   function g1_512_lo(xh, xl) {
     var c0_lo = rotr64_lo(xh, xl, 19);
     var c1_lo = rotr64_lo(xl, xh, 29);
@@ -12938,10 +11614,8 @@ function require_512() {
       r += 4294967296;
     return r;
   }
-  __name(g1_512_lo, "g1_512_lo");
   return _512;
 }
-__name(require_512, "require_512");
 var _384;
 var hasRequired_384;
 function require_384() {
@@ -12972,22 +11646,20 @@ function require_384() {
       3204075428
     ];
   }
-  __name(SHA384, "SHA384");
   utils2.inherits(SHA384, SHA512);
   _384 = SHA384;
   SHA384.blockSize = 1024;
   SHA384.outSize = 384;
   SHA384.hmacStrength = 192;
   SHA384.padLength = 128;
-  SHA384.prototype._digest = /* @__PURE__ */ __name(function digest(enc) {
+  SHA384.prototype._digest = function digest(enc) {
     if (enc === "hex")
       return utils2.toHex32(this.h.slice(0, 12), "big");
     else
       return utils2.split32(this.h.slice(0, 12), "big");
-  }, "digest");
+  };
   return _384;
 }
-__name(require_384, "require_384");
 var hasRequiredSha;
 function requireSha() {
   if (hasRequiredSha) return sha;
@@ -12999,7 +11671,6 @@ function requireSha() {
   sha.sha512 = require_512();
   return sha;
 }
-__name(requireSha, "requireSha");
 var ripemd = {};
 var hasRequiredRipemd;
 function requireRipemd() {
@@ -13019,14 +11690,13 @@ function requireRipemd() {
     this.h = [1732584193, 4023233417, 2562383102, 271733878, 3285377520];
     this.endian = "little";
   }
-  __name(RIPEMD160, "RIPEMD160");
   utils2.inherits(RIPEMD160, BlockHash);
   ripemd.ripemd160 = RIPEMD160;
   RIPEMD160.blockSize = 512;
   RIPEMD160.outSize = 160;
   RIPEMD160.hmacStrength = 192;
   RIPEMD160.padLength = 64;
-  RIPEMD160.prototype._update = /* @__PURE__ */ __name(function update(msg, start) {
+  RIPEMD160.prototype._update = function update(msg, start) {
     var A = this.h[0];
     var B = this.h[1];
     var C = this.h[2];
@@ -13069,13 +11739,13 @@ function requireRipemd() {
     this.h[3] = sum32_3(this.h[4], A, Bh);
     this.h[4] = sum32_3(this.h[0], B, Ch);
     this.h[0] = T;
-  }, "update");
-  RIPEMD160.prototype._digest = /* @__PURE__ */ __name(function digest(enc) {
+  };
+  RIPEMD160.prototype._digest = function digest(enc) {
     if (enc === "hex")
       return utils2.toHex32(this.h, "little");
     else
       return utils2.split32(this.h, "little");
-  }, "digest");
+  };
   function f(j, x, y, z) {
     if (j <= 15)
       return x ^ y ^ z;
@@ -13088,7 +11758,6 @@ function requireRipemd() {
     else
       return x ^ (y | ~z);
   }
-  __name(f, "f");
   function K(j) {
     if (j <= 15)
       return 0;
@@ -13101,7 +11770,6 @@ function requireRipemd() {
     else
       return 2840853838;
   }
-  __name(K, "K");
   function Kh(j) {
     if (j <= 15)
       return 1352829926;
@@ -13114,7 +11782,6 @@ function requireRipemd() {
     else
       return 0;
   }
-  __name(Kh, "Kh");
   var r = [
     0,
     1,
@@ -13445,14 +12112,13 @@ function requireRipemd() {
   ];
   return ripemd;
 }
-__name(requireRipemd, "requireRipemd");
 var hmac;
 var hasRequiredHmac;
 function requireHmac() {
   if (hasRequiredHmac) return hmac;
   hasRequiredHmac = 1;
   var utils2 = requireUtils();
-  var assert3 = requireMinimalisticAssert();
+  var assert = requireMinimalisticAssert();
   function Hmac(hash2, key, enc) {
     if (!(this instanceof Hmac))
       return new Hmac(hash2, key, enc);
@@ -13463,12 +12129,11 @@ function requireHmac() {
     this.outer = null;
     this._init(utils2.toArray(key, enc));
   }
-  __name(Hmac, "Hmac");
   hmac = Hmac;
-  Hmac.prototype._init = /* @__PURE__ */ __name(function init(key) {
+  Hmac.prototype._init = function init(key) {
     if (key.length > this.blockSize)
       key = new this.Hash().update(key).digest();
-    assert3(key.length <= this.blockSize);
+    assert(key.length <= this.blockSize);
     for (var i = key.length; i < this.blockSize; i++)
       key.push(0);
     for (i = 0; i < key.length; i++)
@@ -13477,18 +12142,17 @@ function requireHmac() {
     for (i = 0; i < key.length; i++)
       key[i] ^= 106;
     this.outer = new this.Hash().update(key);
-  }, "init");
-  Hmac.prototype.update = /* @__PURE__ */ __name(function update(msg, enc) {
+  };
+  Hmac.prototype.update = function update(msg, enc) {
     this.inner.update(msg, enc);
     return this;
-  }, "update");
-  Hmac.prototype.digest = /* @__PURE__ */ __name(function digest(enc) {
+  };
+  Hmac.prototype.digest = function digest(enc) {
     this.outer.update(this.inner.digest());
     return this.outer.digest(enc);
-  }, "digest");
+  };
   return hmac;
 }
-__name(requireHmac, "requireHmac");
 var hasRequiredHash;
 function requireHash() {
   if (hasRequiredHash) return hash$1;
@@ -13509,11 +12173,10 @@ function requireHash() {
   })(hash$1);
   return hash$1;
 }
-__name(requireHash, "requireHash");
 var hashExports = requireHash();
-var hash = /* @__PURE__ */ getDefaultExportFromCjs$1(hashExports);
-var urlAlphabet = "useandom-26T198340PX75pxJACKVERYMINDBUSHWOLF_GQZbfghjklqvwyzrict";
-var customAlphabet = /* @__PURE__ */ __name((alphabet, defaultSize = 21) => {
+const hash = /* @__PURE__ */ getDefaultExportFromCjs$1(hashExports);
+let urlAlphabet = "useandom-26T198340PX75pxJACKVERYMINDBUSHWOLF_GQZbfghjklqvwyzrict";
+let customAlphabet = (alphabet, defaultSize = 21) => {
   return (size = defaultSize) => {
     let id = "";
     let i = size | 0;
@@ -13522,30 +12185,31 @@ var customAlphabet = /* @__PURE__ */ __name((alphabet, defaultSize = 21) => {
     }
     return id;
   };
-}, "customAlphabet");
-var nanoid = /* @__PURE__ */ __name((size = 21) => {
+};
+let nanoid = (size = 21) => {
   let id = "";
   let i = size | 0;
   while (i--) {
     id += urlAlphabet[Math.random() * 64 | 0];
   }
   return id;
-}, "nanoid");
-var convertInchesToTwip = /* @__PURE__ */ __name((inches) => Math.floor(inches * 72 * 20), "convertInchesToTwip");
-var uniqueNumericIdCreator = /* @__PURE__ */ __name((initial = 0) => {
+};
+const convertMillimetersToTwip = (millimeters) => Math.floor(millimeters / 25.4 * 72 * 20);
+const convertInchesToTwip = (inches) => Math.floor(inches * 72 * 20);
+const uniqueNumericIdCreator = (initial = 0) => {
   let currentCount = initial;
   return () => ++currentCount;
-}, "uniqueNumericIdCreator");
-var abstractNumUniqueNumericIdGen = /* @__PURE__ */ __name(() => uniqueNumericIdCreator(), "abstractNumUniqueNumericIdGen");
-var concreteNumUniqueNumericIdGen = /* @__PURE__ */ __name(() => uniqueNumericIdCreator(1), "concreteNumUniqueNumericIdGen");
-var docPropertiesUniqueNumericIdGen = /* @__PURE__ */ __name(() => uniqueNumericIdCreator(), "docPropertiesUniqueNumericIdGen");
-var bookmarkUniqueNumericIdGen = /* @__PURE__ */ __name(() => uniqueNumericIdCreator(), "bookmarkUniqueNumericIdGen");
-var uniqueId = /* @__PURE__ */ __name(() => nanoid().toLowerCase(), "uniqueId");
-var hashedId = /* @__PURE__ */ __name((data) => hash.sha1().update(data instanceof ArrayBuffer ? new Uint8Array(data) : data).digest("hex"), "hashedId");
-var generateUuidPart = /* @__PURE__ */ __name((count3) => customAlphabet("1234567890abcdef", count3)(), "generateUuidPart");
-var uniqueUuid = /* @__PURE__ */ __name(() => `${generateUuidPart(8)}-${generateUuidPart(4)}-${generateUuidPart(4)}-${generateUuidPart(4)}-${generateUuidPart(12)}`, "uniqueUuid");
-var encodeUtf8 = /* @__PURE__ */ __name((str) => new Uint8Array(new TextEncoder().encode(str)), "encodeUtf8");
-var HorizontalPositionRelativeFrom = {
+};
+const abstractNumUniqueNumericIdGen = () => uniqueNumericIdCreator();
+const concreteNumUniqueNumericIdGen = () => uniqueNumericIdCreator(1);
+const docPropertiesUniqueNumericIdGen = () => uniqueNumericIdCreator();
+const bookmarkUniqueNumericIdGen = () => uniqueNumericIdCreator();
+const uniqueId = () => nanoid().toLowerCase();
+const hashedId = (data) => hash.sha1().update(data instanceof ArrayBuffer ? new Uint8Array(data) : data).digest("hex");
+const generateUuidPart = (count) => customAlphabet("1234567890abcdef", count)();
+const uniqueUuid = () => `${generateUuidPart(8)}-${generateUuidPart(4)}-${generateUuidPart(4)}-${generateUuidPart(4)}-${generateUuidPart(12)}`;
+const encodeUtf8 = (str) => new Uint8Array(new TextEncoder().encode(str));
+const HorizontalPositionRelativeFrom = {
   /**
    * ## Character
    *
@@ -13595,7 +12259,7 @@ var HorizontalPositionRelativeFrom = {
    */
   RIGHT_MARGIN: "rightMargin"
 };
-var VerticalPositionRelativeFrom = {
+const VerticalPositionRelativeFrom = {
   /**
    * ## Bottom Margin
    *
@@ -13645,25 +12309,25 @@ var VerticalPositionRelativeFrom = {
    */
   TOP_MARGIN: "topMargin"
 };
-var createSimplePos = /* @__PURE__ */ __name(() => new BuilderElement({
+const createSimplePos = () => new BuilderElement({
   name: "wp:simplePos",
   // NOTE: It's not fully supported in Microsoft Word, but this element is needed anyway
   attributes: {
     x: { key: "x", value: 0 },
     y: { key: "y", value: 0 }
   }
-}), "createSimplePos");
-var createAlign = /* @__PURE__ */ __name((value) => new BuilderElement({
+});
+const createAlign = (value) => new BuilderElement({
   name: "wp:align",
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   children: [value]
-}), "createAlign");
-var createPositionOffset = /* @__PURE__ */ __name((offsetValue) => new BuilderElement({
+});
+const createPositionOffset = (offsetValue) => new BuilderElement({
   name: "wp:posOffset",
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   children: [offsetValue.toString()]
-}), "createPositionOffset");
-var createHorizontalPosition = /* @__PURE__ */ __name(({ relative, align, offset }) => new BuilderElement({
+});
+const createHorizontalPosition = ({ relative, align, offset }) => new BuilderElement({
   name: "wp:positionH",
   attributes: {
     relativeFrom: { key: "relativeFrom", value: relative != null ? relative : HorizontalPositionRelativeFrom.PAGE }
@@ -13679,8 +12343,8 @@ var createHorizontalPosition = /* @__PURE__ */ __name(({ relative, align, offset
       }
     })()
   ]
-}), "createHorizontalPosition");
-var createVerticalPosition = /* @__PURE__ */ __name(({ relative, align, offset }) => new BuilderElement({
+});
+const createVerticalPosition = ({ relative, align, offset }) => new BuilderElement({
   name: "wp:positionV",
   attributes: {
     relativeFrom: { key: "relativeFrom", value: relative != null ? relative : VerticalPositionRelativeFrom.PAGE }
@@ -13696,39 +12360,42 @@ var createVerticalPosition = /* @__PURE__ */ __name(({ relative, align, offset }
       }
     })()
   ]
-}), "createVerticalPosition");
-var createBodyProperties = /* @__PURE__ */ __name((options = {}) => {
-  var _a2, _b2, _c, _d;
+});
+var VerticalAnchor = /* @__PURE__ */ ((VerticalAnchor2) => {
+  VerticalAnchor2["CENTER"] = "ctr";
+  VerticalAnchor2["TOP"] = "t";
+  VerticalAnchor2["BOTTOM"] = "b";
+  return VerticalAnchor2;
+})(VerticalAnchor || {});
+const createBodyProperties = (options = {}) => {
+  var _a, _b, _c, _d;
   return new BuilderElement({
     name: "wps:bodyPr",
     attributes: {
-      lIns: { key: "lIns", value: (_a2 = options.margins) == null ? void 0 : _a2.left },
-      rIns: { key: "rIns", value: (_b2 = options.margins) == null ? void 0 : _b2.right },
+      lIns: { key: "lIns", value: (_a = options.margins) == null ? void 0 : _a.left },
+      rIns: { key: "rIns", value: (_b = options.margins) == null ? void 0 : _b.right },
       tIns: { key: "tIns", value: (_c = options.margins) == null ? void 0 : _c.top },
       bIns: { key: "bIns", value: (_d = options.margins) == null ? void 0 : _d.bottom },
       anchor: { key: "anchor", value: options.verticalAnchor }
     },
     children: [...options.noAutoFit ? [new OnOffElement("a:noAutofit", options.noAutoFit)] : []]
   });
-}, "createBodyProperties");
-var createNonVisualShapeProperties = /* @__PURE__ */ __name((options = { txBox: "1" }) => new BuilderElement({
+};
+const createNonVisualShapeProperties = (options = { txBox: "1" }) => new BuilderElement({
   name: "wps:cNvSpPr",
   attributes: {
     txBox: { key: "txBox", value: options.txBox }
   }
-}), "createNonVisualShapeProperties");
-var createTextBoxContent = /* @__PURE__ */ __name((children) => new BuilderElement({
+});
+const createTextBoxContent = (children) => new BuilderElement({
   name: "w:txbxContent",
   children: [...children]
-}), "createTextBoxContent");
-var createWpsTextBox = /* @__PURE__ */ __name((children) => new BuilderElement({
+});
+const createWpsTextBox = (children) => new BuilderElement({
   name: "wps:txbx",
   children: [createTextBoxContent(children)]
-}), "createWpsTextBox");
-var ExtentsAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "ExtentsAttributes");
-  }
+});
+class ExtentsAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", {
@@ -13736,11 +12403,8 @@ var ExtentsAttributes = class extends XmlAttributeComponent {
       cy: "cy"
     });
   }
-};
-var Extents = class extends XmlComponent {
-  static {
-    __name(this, "Extents");
-  }
+}
+class Extents extends XmlComponent {
   constructor(x, y) {
     super("a:ext");
     __publicField(this, "attributes");
@@ -13750,11 +12414,8 @@ var Extents = class extends XmlComponent {
     });
     this.root.push(this.attributes);
   }
-};
-var OffsetAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "OffsetAttributes");
-  }
+}
+class OffsetAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", {
@@ -13762,11 +12423,8 @@ var OffsetAttributes = class extends XmlAttributeComponent {
       y: "y"
     });
   }
-};
-var Offset = class extends XmlComponent {
-  static {
-    __name(this, "Offset");
-  }
+}
+class Offset extends XmlComponent {
   constructor(x, y) {
     super("a:off");
     this.root.push(
@@ -13776,11 +12434,8 @@ var Offset = class extends XmlComponent {
       })
     );
   }
-};
-var FormAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "FormAttributes");
-  }
+}
+class FormAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", {
@@ -13789,20 +12444,17 @@ var FormAttributes = class extends XmlAttributeComponent {
       rotation: "rot"
     });
   }
-};
-var Form = class extends XmlComponent {
-  static {
-    __name(this, "Form");
-  }
+}
+class Form extends XmlComponent {
   constructor(options) {
-    var _a2, _b2, _c, _d, _e, _f;
+    var _a, _b, _c, _d, _e, _f;
     super("a:xfrm");
     __publicField(this, "extents");
     __publicField(this, "offset");
     this.root.push(
       new FormAttributes({
-        flipVertical: (_a2 = options.flip) == null ? void 0 : _a2.vertical,
-        flipHorizontal: (_b2 = options.flip) == null ? void 0 : _b2.horizontal,
+        flipVertical: (_a = options.flip) == null ? void 0 : _a.vertical,
+        flipHorizontal: (_b = options.flip) == null ? void 0 : _b.horizontal,
         rotation: options.rotation
       })
     );
@@ -13811,9 +12463,9 @@ var Form = class extends XmlComponent {
     this.root.push(this.offset);
     this.root.push(this.extents);
   }
-};
-var createNoFill = /* @__PURE__ */ __name(() => new BuilderElement({ name: "a:noFill" }), "createNoFill");
-var createSolidRgbColor = /* @__PURE__ */ __name((options) => new BuilderElement({
+}
+const createNoFill = () => new BuilderElement({ name: "a:noFill" });
+const createSolidRgbColor = (options) => new BuilderElement({
   name: "a:srgbClr",
   attributes: {
     value: {
@@ -13821,8 +12473,8 @@ var createSolidRgbColor = /* @__PURE__ */ __name((options) => new BuilderElement
       value: options.value
     }
   }
-}), "createSolidRgbColor");
-var createSchemeColor = /* @__PURE__ */ __name((options) => new BuilderElement({
+});
+const createSchemeColor = (options) => new BuilderElement({
   name: "a:schemeClr",
   attributes: {
     value: {
@@ -13830,12 +12482,12 @@ var createSchemeColor = /* @__PURE__ */ __name((options) => new BuilderElement({
       value: options.value
     }
   }
-}), "createSchemeColor");
-var createSolidFill = /* @__PURE__ */ __name((options) => new BuilderElement({
+});
+const createSolidFill = (options) => new BuilderElement({
   name: "a:solidFill",
   children: [options.type === "rgb" ? createSolidRgbColor(options) : createSchemeColor(options)]
-}), "createSolidFill");
-var createOutline = /* @__PURE__ */ __name((options) => new BuilderElement({
+});
+const createOutline = (options) => new BuilderElement({
   name: "a:ln",
   attributes: {
     width: {
@@ -13864,30 +12516,21 @@ var createOutline = /* @__PURE__ */ __name((options) => new BuilderElement({
       value: options.value
     })
   ]
-}), "createOutline");
-var AdjustmentValues = class extends XmlComponent {
-  static {
-    __name(this, "AdjustmentValues");
-  }
+});
+class AdjustmentValues extends XmlComponent {
   constructor() {
     super("a:avLst");
   }
-};
-var PresetGeometryAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "PresetGeometryAttributes");
-  }
+}
+class PresetGeometryAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", {
       prst: "prst"
     });
   }
-};
-var PresetGeometry = class extends XmlComponent {
-  static {
-    __name(this, "PresetGeometry");
-  }
+}
+class PresetGeometry extends XmlComponent {
   constructor() {
     super("a:prstGeom");
     this.root.push(
@@ -13897,22 +12540,16 @@ var PresetGeometry = class extends XmlComponent {
     );
     this.root.push(new AdjustmentValues());
   }
-};
-var ShapePropertiesAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "ShapePropertiesAttributes");
-  }
+}
+class ShapePropertiesAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", {
       bwMode: "bwMode"
     });
   }
-};
-var ShapeProperties = class extends XmlComponent {
-  static {
-    __name(this, "ShapeProperties");
-  }
+}
+class ShapeProperties extends XmlComponent {
   constructor({
     element,
     outline,
@@ -13937,8 +12574,8 @@ var ShapeProperties = class extends XmlComponent {
       this.root.push(createSolidFill(solidFill));
     }
   }
-};
-var createWpsShape = /* @__PURE__ */ __name((options) => new BuilderElement({
+}
+const createWpsShape = (options) => new BuilderElement({
   name: "wps:wsp",
   children: [
     createNonVisualShapeProperties(options.nonVisualProperties),
@@ -13951,19 +12588,16 @@ var createWpsShape = /* @__PURE__ */ __name((options) => new BuilderElement({
     createWpsTextBox(options.children),
     createBodyProperties(options.bodyProperties)
   ]
-}), "createWpsShape");
-var GraphicDataAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "GraphicDataAttributes");
-  }
+});
+class GraphicDataAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", {
       uri: "uri"
     });
   }
-};
-var createSvgBlip = /* @__PURE__ */ __name((mediaData) => new BuilderElement({
+}
+const createSvgBlip = (mediaData) => new BuilderElement({
   name: "asvg:svgBlip",
   attributes: {
     asvg: {
@@ -13975,8 +12609,8 @@ var createSvgBlip = /* @__PURE__ */ __name((mediaData) => new BuilderElement({
       value: `rId{${mediaData.fileName}}`
     }
   }
-}), "createSvgBlip");
-var createExtention = /* @__PURE__ */ __name((mediaData) => new BuilderElement({
+});
+const createExtention = (mediaData) => new BuilderElement({
   name: "a:ext",
   attributes: {
     uri: {
@@ -13985,12 +12619,12 @@ var createExtention = /* @__PURE__ */ __name((mediaData) => new BuilderElement({
     }
   },
   children: [createSvgBlip(mediaData)]
-}), "createExtention");
-var createExtentionList = /* @__PURE__ */ __name((mediaData) => new BuilderElement({
+});
+const createExtentionList = (mediaData) => new BuilderElement({
   name: "a:extLst",
   children: [createExtention(mediaData)]
-}), "createExtentionList");
-var createBlip = /* @__PURE__ */ __name((mediaData) => new BuilderElement({
+});
+const createBlip = (mediaData) => new BuilderElement({
   name: "a:blip",
   attributes: {
     embed: {
@@ -14003,47 +12637,32 @@ var createBlip = /* @__PURE__ */ __name((mediaData) => new BuilderElement({
     }
   },
   children: mediaData.type === "svg" ? [createExtentionList(mediaData)] : []
-}), "createBlip");
-var SourceRectangle = class extends XmlComponent {
-  static {
-    __name(this, "SourceRectangle");
-  }
+});
+class SourceRectangle extends XmlComponent {
   constructor() {
     super("a:srcRect");
   }
-};
-var FillRectangle = class extends XmlComponent {
-  static {
-    __name(this, "FillRectangle");
-  }
+}
+class FillRectangle extends XmlComponent {
   constructor() {
     super("a:fillRect");
   }
-};
-var Stretch = class extends XmlComponent {
-  static {
-    __name(this, "Stretch");
-  }
+}
+class Stretch extends XmlComponent {
   constructor() {
     super("a:stretch");
     this.root.push(new FillRectangle());
   }
-};
-var BlipFill = class extends XmlComponent {
-  static {
-    __name(this, "BlipFill");
-  }
+}
+class BlipFill extends XmlComponent {
   constructor(mediaData) {
     super("pic:blipFill");
     this.root.push(createBlip(mediaData));
     this.root.push(new SourceRectangle());
     this.root.push(new Stretch());
   }
-};
-var PicLocksAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "PicLocksAttributes");
-  }
+}
+class PicLocksAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", {
@@ -14051,11 +12670,8 @@ var PicLocksAttributes = class extends XmlAttributeComponent {
       noChangeArrowheads: "noChangeArrowheads"
     });
   }
-};
-var PicLocks = class extends XmlComponent {
-  static {
-    __name(this, "PicLocks");
-  }
+}
+class PicLocks extends XmlComponent {
   constructor() {
     super("a:picLocks");
     this.root.push(
@@ -14065,17 +12681,14 @@ var PicLocks = class extends XmlComponent {
       })
     );
   }
-};
-var ChildNonVisualProperties = class extends XmlComponent {
-  static {
-    __name(this, "ChildNonVisualProperties");
-  }
+}
+class ChildNonVisualProperties extends XmlComponent {
   constructor() {
     super("pic:cNvPicPr");
     this.root.push(new PicLocks());
   }
-};
-var createHyperlinkClick = /* @__PURE__ */ __name((linkId, hasXmlNs) => new BuilderElement({
+}
+const createHyperlinkClick = (linkId, hasXmlNs) => new BuilderElement({
   name: "a:hlinkClick",
   attributes: __spreadProps(__spreadValues({}, hasXmlNs ? {
     xmlns: {
@@ -14088,11 +12701,8 @@ var createHyperlinkClick = /* @__PURE__ */ __name((linkId, hasXmlNs) => new Buil
       value: `rId${linkId}`
     }
   })
-}), "createHyperlinkClick");
-var NonVisualPropertiesAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "NonVisualPropertiesAttributes");
-  }
+});
+class NonVisualPropertiesAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", {
@@ -14101,11 +12711,8 @@ var NonVisualPropertiesAttributes = class extends XmlAttributeComponent {
       descr: "descr"
     });
   }
-};
-var NonVisualProperties = class extends XmlComponent {
-  static {
-    __name(this, "NonVisualProperties");
-  }
+}
+class NonVisualProperties extends XmlComponent {
   constructor() {
     super("pic:cNvPr");
     this.root.push(
@@ -14116,43 +12723,34 @@ var NonVisualProperties = class extends XmlComponent {
       })
     );
   }
-  prepForXml(context2) {
-    for (let i = context2.stack.length - 1; i >= 0; i--) {
-      const element = context2.stack[i];
+  prepForXml(context) {
+    for (let i = context.stack.length - 1; i >= 0; i--) {
+      const element = context.stack[i];
       if (!(element instanceof ConcreteHyperlink)) {
         continue;
       }
       this.root.push(createHyperlinkClick(element.linkId, false));
       break;
     }
-    return super.prepForXml(context2);
+    return super.prepForXml(context);
   }
-};
-var NonVisualPicProperties = class extends XmlComponent {
-  static {
-    __name(this, "NonVisualPicProperties");
-  }
+}
+class NonVisualPicProperties extends XmlComponent {
   constructor() {
     super("pic:nvPicPr");
     this.root.push(new NonVisualProperties());
     this.root.push(new ChildNonVisualProperties());
   }
-};
-var PicAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "PicAttributes");
-  }
+}
+class PicAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", {
       xmlns: "xmlns:pic"
     });
   }
-};
-var Pic = class extends XmlComponent {
-  static {
-    __name(this, "Pic");
-  }
+}
+class Pic extends XmlComponent {
   constructor({
     mediaData,
     transform,
@@ -14168,22 +12766,19 @@ var Pic = class extends XmlComponent {
     this.root.push(new BlipFill(mediaData));
     this.root.push(new ShapeProperties({ element: "pic", transform, outline }));
   }
-};
-var createGroupProperties = /* @__PURE__ */ __name((transform) => new BuilderElement({
+}
+const createGroupProperties = (transform) => new BuilderElement({
   name: "wpg:grpSpPr",
   children: [new Form(transform)]
-}), "createGroupProperties");
-var createNonVisualGroupProperties = /* @__PURE__ */ __name(() => new BuilderElement({
+});
+const createNonVisualGroupProperties = () => new BuilderElement({
   name: "wpg:cNvGrpSpPr"
-}), "createNonVisualGroupProperties");
-var createWpgGroup = /* @__PURE__ */ __name((options) => new BuilderElement({
+});
+const createWpgGroup = (options) => new BuilderElement({
   name: "wpg:wgp",
   children: [createNonVisualGroupProperties(), createGroupProperties(options.transformation), ...options.children]
-}), "createWpgGroup");
-var GraphicData = class extends XmlComponent {
-  static {
-    __name(this, "GraphicData");
-  }
+});
+class GraphicData extends XmlComponent {
   // private readonly pic: Pic;
   constructor({
     mediaData,
@@ -14231,22 +12826,16 @@ var GraphicData = class extends XmlComponent {
       this.root.push(pic);
     }
   }
-};
-var GraphicAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "GraphicAttributes");
-  }
+}
+class GraphicAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", {
       a: "xmlns:a"
     });
   }
-};
-var Graphic = class extends XmlComponent {
-  static {
-    __name(this, "Graphic");
-  }
+}
+class Graphic extends XmlComponent {
   constructor({
     mediaData,
     transform,
@@ -14263,14 +12852,14 @@ var Graphic = class extends XmlComponent {
     this.data = new GraphicData({ mediaData, transform, outline, solidFill });
     this.root.push(this.data);
   }
-};
-var TextWrappingType = {
+}
+const TextWrappingType = {
   NONE: 0,
   SQUARE: 1,
   TIGHT: 2,
   TOP_AND_BOTTOM: 3
 };
-var TextWrappingSide = {
+const TextWrappingSide = {
   /** Text wraps on both sides of the drawing */
   BOTH_SIDES: "bothSides",
   /** Text wraps only on the left side */
@@ -14280,10 +12869,10 @@ var TextWrappingSide = {
   /** Text wraps on the side with more space */
   LARGEST: "largest"
 };
-var createWrapNone = /* @__PURE__ */ __name(() => new BuilderElement({
+const createWrapNone = () => new BuilderElement({
   name: "wp:wrapNone"
-}), "createWrapNone");
-var createWrapSquare = /* @__PURE__ */ __name((textWrapping, margins = {
+});
+const createWrapSquare = (textWrapping, margins = {
   top: 0,
   bottom: 0,
   left: 0,
@@ -14297,8 +12886,8 @@ var createWrapSquare = /* @__PURE__ */ __name((textWrapping, margins = {
     distL: { key: "distL", value: margins.left },
     distR: { key: "distR", value: margins.right }
   }
-}), "createWrapSquare");
-var createWrapTight = /* @__PURE__ */ __name((margins = {
+});
+const createWrapTight = (margins = {
   top: 0,
   bottom: 0
 }) => new BuilderElement({
@@ -14307,8 +12896,8 @@ var createWrapTight = /* @__PURE__ */ __name((margins = {
     distT: { key: "distT", value: margins.top },
     distB: { key: "distB", value: margins.bottom }
   }
-}), "createWrapTight");
-var createWrapTopAndBottom = /* @__PURE__ */ __name((margins = {
+});
+const createWrapTopAndBottom = (margins = {
   top: 0,
   bottom: 0
 }) => new BuilderElement({
@@ -14317,12 +12906,9 @@ var createWrapTopAndBottom = /* @__PURE__ */ __name((margins = {
     distT: { key: "distT", value: margins.top },
     distB: { key: "distB", value: margins.bottom }
   }
-}), "createWrapTopAndBottom");
-var DocProperties = class extends XmlComponent {
-  static {
-    __name(this, "DocProperties");
-  }
-  constructor({ name, description, title: title2, id } = { name: "", description: "", title: "" }) {
+});
+class DocProperties extends XmlComponent {
+  constructor({ name, description, title, id } = { name: "", description: "", title: "" }) {
     super("wp:docPr");
     __publicField(this, "docPropertiesUniqueNumericId", docPropertiesUniqueNumericIdGen());
     const attributes = {
@@ -14341,27 +12927,27 @@ var DocProperties = class extends XmlComponent {
         value: description
       };
     }
-    if (title2 !== null && title2 !== void 0) {
+    if (title !== null && title !== void 0) {
       attributes.title = {
         key: "title",
-        value: title2
+        value: title
       };
     }
     this.root.push(new NextAttributeComponent(attributes));
   }
-  prepForXml(context2) {
-    for (let i = context2.stack.length - 1; i >= 0; i--) {
-      const element = context2.stack[i];
+  prepForXml(context) {
+    for (let i = context.stack.length - 1; i >= 0; i--) {
+      const element = context.stack[i];
       if (!(element instanceof ConcreteHyperlink)) {
         continue;
       }
       this.root.push(createHyperlinkClick(element.linkId, true));
       break;
     }
-    return super.prepForXml(context2);
+    return super.prepForXml(context);
   }
-};
-var createEffectExtent = /* @__PURE__ */ __name(({ top, right, bottom, left }) => new BuilderElement({
+}
+const createEffectExtent = ({ top, right, bottom, left }) => new BuilderElement({
   name: "wp:effectExtent",
   attributes: {
     top: {
@@ -14381,18 +12967,15 @@ var createEffectExtent = /* @__PURE__ */ __name(({ top, right, bottom, left }) =
       value: left
     }
   }
-}), "createEffectExtent");
-var createExtent = /* @__PURE__ */ __name(({ x, y }) => new BuilderElement({
+});
+const createExtent = ({ x, y }) => new BuilderElement({
   name: "wp:extent",
   attributes: {
     x: { key: "cx", value: x },
     y: { key: "cy", value: y }
   }
-}), "createExtent");
-var GraphicFrameLockAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "GraphicFrameLockAttributes");
-  }
+});
+class GraphicFrameLockAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", {
@@ -14400,11 +12983,8 @@ var GraphicFrameLockAttributes = class extends XmlAttributeComponent {
       noChangeAspect: "noChangeAspect"
     });
   }
-};
-var GraphicFrameLocks = class extends XmlComponent {
-  static {
-    __name(this, "GraphicFrameLocks");
-  }
+}
+class GraphicFrameLocks extends XmlComponent {
   constructor() {
     super("a:graphicFrameLocks");
     this.root.push(
@@ -14414,15 +12994,12 @@ var GraphicFrameLocks = class extends XmlComponent {
       })
     );
   }
-};
-var createGraphicFrameProperties = /* @__PURE__ */ __name(() => new BuilderElement({
+}
+const createGraphicFrameProperties = () => new BuilderElement({
   name: "wp:cNvGraphicFramePr",
   children: [new GraphicFrameLocks()]
-}), "createGraphicFrameProperties");
-var AnchorAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "AnchorAttributes");
-  }
+});
+class AnchorAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", {
@@ -14438,11 +13015,8 @@ var AnchorAttributes = class extends XmlAttributeComponent {
       simplePos: "simplePos"
     });
   }
-};
-var Anchor = class extends XmlComponent {
-  static {
-    __name(this, "Anchor");
-  }
+}
+class Anchor extends XmlComponent {
   constructor({
     mediaData,
     transform,
@@ -14499,9 +13073,9 @@ var Anchor = class extends XmlComponent {
     this.root.push(createGraphicFrameProperties());
     this.root.push(new Graphic({ mediaData, transform, outline: drawingOptions.outline, solidFill: drawingOptions.solidFill }));
   }
-};
-var createInline = /* @__PURE__ */ __name(({ mediaData, transform, docProperties, outline, solidFill }) => {
-  var _a2, _b2, _c, _d;
+}
+const createInline = ({ mediaData, transform, docProperties, outline, solidFill }) => {
+  var _a, _b, _c, _d;
   return new BuilderElement({
     name: "wp:inline",
     attributes: {
@@ -14526,8 +13100,8 @@ var createInline = /* @__PURE__ */ __name(({ mediaData, transform, docProperties
       createExtent({ x: transform.emus.x, y: transform.emus.y }),
       createEffectExtent(
         outline ? {
-          top: ((_a2 = outline.width) != null ? _a2 : 9525) * 2,
-          right: ((_b2 = outline.width) != null ? _b2 : 9525) * 2,
+          top: ((_a = outline.width) != null ? _a : 9525) * 2,
+          right: ((_b = outline.width) != null ? _b : 9525) * 2,
           bottom: ((_c = outline.width) != null ? _c : 9525) * 2,
           left: ((_d = outline.width) != null ? _d : 9525) * 2
         } : { top: 0, right: 0, bottom: 0, left: 0 }
@@ -14537,11 +13111,8 @@ var createInline = /* @__PURE__ */ __name(({ mediaData, transform, docProperties
       new Graphic({ mediaData, transform, outline, solidFill })
     ]
   });
-}, "createInline");
-var Drawing = class extends XmlComponent {
-  static {
-    __name(this, "Drawing");
-  }
+};
+class Drawing extends XmlComponent {
   constructor(imageData, drawingOptions = {}) {
     super("w:drawing");
     if (!drawingOptions.floating) {
@@ -14558,17 +13129,17 @@ var Drawing = class extends XmlComponent {
       this.root.push(new Anchor({ mediaData: imageData, transform: imageData.transformation, drawingOptions }));
     }
   }
-};
-var convertDataURIToBinary = /* @__PURE__ */ __name((dataURI) => {
+}
+const convertDataURIToBinary = (dataURI) => {
   const BASE64_MARKER = ";base64,";
   const base64Index = dataURI.indexOf(BASE64_MARKER);
   const base64IndexWithOffset = base64Index === -1 ? 0 : base64Index + BASE64_MARKER.length;
   return new Uint8Array(
     atob(dataURI.substring(base64IndexWithOffset)).split("").map((c) => c.charCodeAt(0))
   );
-}, "convertDataURIToBinary");
-var standardizeData = /* @__PURE__ */ __name((data) => typeof data === "string" ? convertDataURIToBinary(data) : data, "standardizeData");
-var createImageData = /* @__PURE__ */ __name((options, key) => ({
+};
+const standardizeData = (data) => typeof data === "string" ? convertDataURIToBinary(data) : data;
+const createImageData = (options, key) => ({
   data: standardizeData(options.data),
   fileName: key,
   transformation: {
@@ -14583,11 +13154,8 @@ var createImageData = /* @__PURE__ */ __name((options, key) => ({
     flip: options.transformation.flip,
     rotation: options.transformation.rotation ? options.transformation.rotation * 6e4 : void 0
   }
-}), "createImageData");
-var ImageRun = class extends Run {
-  static {
-    __name(this, "ImageRun");
-  }
+});
+class ImageRun extends Run {
   constructor(options) {
     super({});
     __publicField(this, "imageData");
@@ -14614,30 +13182,133 @@ var ImageRun = class extends Run {
     });
     this.root.push(drawing);
   }
-  prepForXml(context2) {
-    context2.file.Media.addImage(this.imageData.fileName, this.imageData);
+  prepForXml(context) {
+    context.file.Media.addImage(this.imageData.fileName, this.imageData);
     if (this.imageData.type === "svg") {
-      context2.file.Media.addImage(this.imageData.fallback.fileName, this.imageData.fallback);
+      context.file.Media.addImage(this.imageData.fallback.fileName, this.imageData.fallback);
     }
-    return super.prepForXml(context2);
+    return super.prepForXml(context);
   }
+}
+const createTransformation = (options) => {
+  var _a, _b, _c, _d, _e, _f, _g, _h;
+  return {
+    offset: {
+      pixels: {
+        x: Math.round((_b = (_a = options.offset) == null ? void 0 : _a.left) != null ? _b : 0),
+        y: Math.round((_d = (_c = options.offset) == null ? void 0 : _c.top) != null ? _d : 0)
+      },
+      emus: {
+        x: Math.round(((_f = (_e = options.offset) == null ? void 0 : _e.left) != null ? _f : 0) * 9525),
+        y: Math.round(((_h = (_g = options.offset) == null ? void 0 : _g.top) != null ? _h : 0) * 9525)
+      }
+    },
+    pixels: {
+      x: Math.round(options.width),
+      y: Math.round(options.height)
+    },
+    emus: {
+      x: Math.round(options.width * 9525),
+      y: Math.round(options.height * 9525)
+    },
+    flip: options.flip,
+    rotation: options.rotation ? options.rotation * 6e4 : void 0
+  };
 };
-var RelationshipsAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "RelationshipsAttributes");
+class WpsShapeRun extends Run {
+  constructor(options) {
+    super({});
+    __publicField(this, "wpsShapeData");
+    this.wpsShapeData = {
+      type: options.type,
+      transformation: createTransformation(options.transformation),
+      data: __spreadValues({}, options)
+    };
+    const drawing = new Drawing(this.wpsShapeData, {
+      floating: options.floating,
+      docProperties: options.altText,
+      outline: options.outline,
+      solidFill: options.solidFill
+    });
+    this.root.push(drawing);
   }
+}
+class WpgGroupRun extends Run {
+  constructor(options) {
+    super({});
+    __publicField(this, "wpgGroupData");
+    __publicField(this, "mediaDatas");
+    this.wpgGroupData = {
+      type: options.type,
+      transformation: createTransformation(options.transformation),
+      children: options.children
+    };
+    const drawing = new Drawing(this.wpgGroupData, {
+      floating: options.floating,
+      docProperties: options.altText
+    });
+    this.mediaDatas = options.children.filter((child) => child.type !== "wps").map((child) => child);
+    this.root.push(drawing);
+  }
+  prepForXml(context) {
+    this.mediaDatas.forEach((child) => {
+      context.file.Media.addImage(child.fileName, child);
+      if (child.type === "svg") {
+        context.file.Media.addImage(child.fallback.fileName, child.fallback);
+      }
+    });
+    return super.prepForXml(context);
+  }
+}
+class SequentialIdentifierInstruction extends XmlComponent {
+  constructor(identifier) {
+    super("w:instrText");
+    this.root.push(new TextAttributes({ space: SpaceType.PRESERVE }));
+    this.root.push(`SEQ ${identifier}`);
+  }
+}
+class SequentialIdentifier extends Run {
+  constructor(identifier) {
+    super({});
+    this.root.push(createBegin(true));
+    this.root.push(new SequentialIdentifierInstruction(identifier));
+    this.root.push(createSeparate());
+    this.root.push(createEnd());
+  }
+}
+class FldSimpleAttrs extends XmlAttributeComponent {
+  constructor() {
+    super(...arguments);
+    __publicField(this, "xmlKeys", { instr: "w:instr" });
+  }
+}
+class SimpleField extends XmlComponent {
+  constructor(instruction, cachedValue) {
+    super("w:fldSimple");
+    this.root.push(new FldSimpleAttrs({ instr: instruction }));
+    if (cachedValue !== void 0) {
+      this.root.push(new TextRun(cachedValue));
+    }
+  }
+}
+class SimpleMailMergeField extends SimpleField {
+  constructor(fieldName) {
+    super(` MERGEFIELD ${fieldName} `, `«${fieldName}»`);
+  }
+}
+class RelationshipsAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", {
       xmlns: "xmlns"
     });
   }
-};
-var TargetModeType = {
+}
+const TargetModeType = {
   /** Target is external to the package (e.g., hyperlink to a URL) */
   EXTERNAL: "External"
 };
-var createRelationship = /* @__PURE__ */ __name((id, type2, target, targetMode) => new BuilderElement({
+const createRelationship = (id, type2, target, targetMode) => new BuilderElement({
   name: "Relationship",
   attributes: {
     id: { key: "Id", value: id },
@@ -14645,11 +13316,8 @@ var createRelationship = /* @__PURE__ */ __name((id, type2, target, targetMode) 
     target: { key: "Target", value: target },
     targetMode: { key: "TargetMode", value: targetMode }
   }
-}), "createRelationship");
-var Relationships = class extends XmlComponent {
-  static {
-    __name(this, "Relationships");
-  }
+});
+class Relationships extends XmlComponent {
   constructor() {
     super("Relationships");
     this.root.push(
@@ -14676,20 +13344,20 @@ var Relationships = class extends XmlComponent {
   get RelationshipCount() {
     return this.root.length - 1;
   }
-};
-var CommentAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "CommentAttributes");
-  }
+}
+class CommentAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", { id: "w:id", initials: "w:initials", author: "w:author", date: "w:date" });
   }
-};
-var RootCommentsAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "RootCommentsAttributes");
+}
+class CommentRangeAttributes extends XmlAttributeComponent {
+  constructor() {
+    super(...arguments);
+    __publicField(this, "xmlKeys", { id: "w:id" });
   }
+}
+class RootCommentsAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", {
@@ -14726,11 +13394,26 @@ var RootCommentsAttributes = class extends XmlAttributeComponent {
       "xmlns:wps": "xmlns:wps"
     });
   }
-};
-var Comment = class extends XmlComponent {
-  static {
-    __name(this, "Comment");
+}
+class CommentRangeStart extends XmlComponent {
+  constructor(id) {
+    super("w:commentRangeStart");
+    this.root.push(new CommentRangeAttributes({ id }));
   }
+}
+class CommentRangeEnd extends XmlComponent {
+  constructor(id) {
+    super("w:commentRangeEnd");
+    this.root.push(new CommentRangeAttributes({ id }));
+  }
+}
+class CommentReference extends XmlComponent {
+  constructor(id) {
+    super("w:commentReference");
+    this.root.push(new CommentRangeAttributes({ id }));
+  }
+}
+class Comment extends XmlComponent {
   constructor({ id, initials, author, date = /* @__PURE__ */ new Date(), children }) {
     super("w:comment");
     this.root.push(
@@ -14745,11 +13428,8 @@ var Comment = class extends XmlComponent {
       this.root.push(child);
     }
   }
-};
-var Comments = class extends XmlComponent {
-  static {
-    __name(this, "Comments");
-  }
+}
+class Comments extends XmlComponent {
   constructor({ children }) {
     super("w:comments");
     __publicField(this, "relationships");
@@ -14796,24 +13476,175 @@ var Comments = class extends XmlComponent {
   get Relationships() {
     return this.relationships;
   }
-};
-var EndnoteReference = class extends EmptyElement {
-  static {
-    __name(this, "EndnoteReference");
+}
+class NoBreakHyphen extends EmptyElement {
+  constructor() {
+    super("w:noBreakHyphen");
   }
+}
+class SoftHyphen extends EmptyElement {
+  constructor() {
+    super("w:softHyphen");
+  }
+}
+class DayShort extends EmptyElement {
+  constructor() {
+    super("w:dayShort");
+  }
+}
+class MonthShort extends EmptyElement {
+  constructor() {
+    super("w:monthShort");
+  }
+}
+class YearShort extends EmptyElement {
+  constructor() {
+    super("w:yearShort");
+  }
+}
+class DayLong extends EmptyElement {
+  constructor() {
+    super("w:dayLong");
+  }
+}
+class MonthLong extends EmptyElement {
+  constructor() {
+    super("w:monthLong");
+  }
+}
+class YearLong extends EmptyElement {
+  constructor() {
+    super("w:yearLong");
+  }
+}
+class AnnotationReference extends EmptyElement {
+  constructor() {
+    super("w:annotationRef");
+  }
+}
+class FootnoteReferenceElement extends EmptyElement {
+  constructor() {
+    super("w:footnoteRef");
+  }
+}
+class EndnoteReference extends EmptyElement {
   constructor() {
     super("w:endnoteRef");
   }
-};
-var PageBreakBefore = class extends XmlComponent {
-  static {
-    __name(this, "PageBreakBefore");
+}
+class Separator extends EmptyElement {
+  constructor() {
+    super("w:separator");
   }
+}
+class ContinuationSeparator extends EmptyElement {
+  constructor() {
+    super("w:continuationSeparator");
+  }
+}
+class PageNumberElement extends EmptyElement {
+  constructor() {
+    super("w:pgNum");
+  }
+}
+class CarriageReturn extends EmptyElement {
+  constructor() {
+    super("w:cr");
+  }
+}
+class Tab extends EmptyElement {
+  constructor() {
+    super("w:tab");
+  }
+}
+class LastRenderedPageBreak extends EmptyElement {
+  constructor() {
+    super("w:lastRenderedPageBreak");
+  }
+}
+const PositionalTabAlignment = {
+  /** Left-aligned tab */
+  LEFT: "left",
+  /** Center-aligned tab */
+  CENTER: "center",
+  /** Right-aligned tab */
+  RIGHT: "right"
+};
+const PositionalTabRelativeTo = {
+  /** Position relative to margin */
+  MARGIN: "margin",
+  /** Position relative to indent */
+  INDENT: "indent"
+};
+const PositionalTabLeader = {
+  /** No leader character */
+  NONE: "none",
+  /** Dot leader (...) */
+  DOT: "dot",
+  /** Hyphen leader (---) */
+  HYPHEN: "hyphen",
+  /** Underscore leader (___) */
+  UNDERSCORE: "underscore",
+  /** Middle dot leader (···) */
+  MIDDLE_DOT: "middleDot"
+};
+class PositionalTabAttributes extends XmlAttributeComponent {
+  constructor() {
+    super(...arguments);
+    __publicField(this, "xmlKeys", {
+      alignment: "w:alignment",
+      relativeTo: "w:relativeTo",
+      leader: "w:leader"
+    });
+  }
+}
+class PositionalTab extends XmlComponent {
+  constructor(options) {
+    super("w:ptab");
+    this.root.push(
+      new PositionalTabAttributes({
+        alignment: options.alignment,
+        relativeTo: options.relativeTo,
+        leader: options.leader
+      })
+    );
+  }
+}
+const BreakType = {
+  /** Column break - text continues at the beginning of the next column */
+  COLUMN: "column",
+  /** Page break - text continues at the beginning of the next page */
+  PAGE: "page"
+  // textWrapping breaks are the default and already exposed via the "Run" class
+};
+class Break extends XmlComponent {
+  constructor(type2) {
+    super("w:br");
+    this.root.push(
+      new Attributes({
+        type: type2
+      })
+    );
+  }
+}
+class PageBreak extends Run {
+  constructor() {
+    super({});
+    this.root.push(new Break(BreakType.PAGE));
+  }
+}
+class ColumnBreak extends Run {
+  constructor() {
+    super({});
+    this.root.push(new Break(BreakType.COLUMN));
+  }
+}
+class PageBreakBefore extends XmlComponent {
   constructor() {
     super("w:pageBreakBefore");
   }
-};
-var LineRuleType = {
+}
+const LineRuleType = {
   /** Line spacing is at least the specified value */
   AT_LEAST: "atLeast",
   /** Line spacing is exactly the specified value */
@@ -14823,7 +13654,7 @@ var LineRuleType = {
   /** Line spacing is automatically determined based on content */
   AUTO: "auto"
 };
-var createSpacing = /* @__PURE__ */ __name(({ after, before, line, lineRule, beforeAutoSpacing, afterAutoSpacing }) => new BuilderElement({
+const createSpacing = ({ after, before, line, lineRule, beforeAutoSpacing, afterAutoSpacing }) => new BuilderElement({
   name: "w:spacing",
   attributes: {
     after: { key: "w:after", value: after },
@@ -14833,14 +13664,30 @@ var createSpacing = /* @__PURE__ */ __name(({ after, before, line, lineRule, bef
     beforeAutoSpacing: { key: "w:beforeAutospacing", value: beforeAutoSpacing },
     afterAutoSpacing: { key: "w:afterAutospacing", value: afterAutoSpacing }
   }
-}), "createSpacing");
-var createParagraphStyle = /* @__PURE__ */ __name((styleId) => new BuilderElement({
+});
+const HeadingLevel = {
+  /** Heading 1 style */
+  HEADING_1: "Heading1",
+  /** Heading 2 style */
+  HEADING_2: "Heading2",
+  /** Heading 3 style */
+  HEADING_3: "Heading3",
+  /** Heading 4 style */
+  HEADING_4: "Heading4",
+  /** Heading 5 style */
+  HEADING_5: "Heading5",
+  /** Heading 6 style */
+  HEADING_6: "Heading6",
+  /** Title style */
+  TITLE: "Title"
+};
+const createParagraphStyle = (styleId) => new BuilderElement({
   name: "w:pStyle",
   attributes: {
     val: { key: "w:val", value: styleId }
   }
-}), "createParagraphStyle");
-var TabStopType = {
+});
+const TabStopType = {
   /** Left-aligned tab stop */
   LEFT: "left",
   /** Right-aligned tab stop */
@@ -14860,32 +13707,42 @@ var TabStopType = {
   /** Start-aligned tab stop (left-to-right equivalent) */
   START: "start"
 };
-var createTabStopItem = /* @__PURE__ */ __name(({ type: type2, position, leader }) => new BuilderElement({
+const LeaderType = {
+  /** Dot leader (....) */
+  DOT: "dot",
+  /** Hyphen leader (----) */
+  HYPHEN: "hyphen",
+  /** Middle dot leader (····) */
+  MIDDLE_DOT: "middleDot",
+  /** No leader */
+  NONE: "none",
+  /** Underscore leader (____) */
+  UNDERSCORE: "underscore"
+};
+const TabStopPosition = {
+  /** Maximum tab stop position (right margin) */
+  MAX: 9026
+};
+const createTabStopItem = ({ type: type2, position, leader }) => new BuilderElement({
   name: "w:tab",
   attributes: {
     val: { key: "w:val", value: type2 },
     pos: { key: "w:pos", value: position },
     leader: { key: "w:leader", value: leader }
   }
-}), "createTabStopItem");
-var createTabStop = /* @__PURE__ */ __name((tabDefinitions) => new BuilderElement({
+});
+const createTabStop = (tabDefinitions) => new BuilderElement({
   name: "w:tabs",
   children: tabDefinitions.map((tabDefinition) => createTabStopItem(tabDefinition))
-}), "createTabStop");
-var NumberProperties = class extends XmlComponent {
-  static {
-    __name(this, "NumberProperties");
-  }
+});
+class NumberProperties extends XmlComponent {
   constructor(numberId, indentLevel) {
     super("w:numPr");
     this.root.push(new IndentLevel(indentLevel));
     this.root.push(new NumberId(numberId));
   }
-};
-var IndentLevel = class extends XmlComponent {
-  static {
-    __name(this, "IndentLevel");
-  }
+}
+class IndentLevel extends XmlComponent {
   constructor(level) {
     super("w:ilvl");
     if (level > 9) {
@@ -14899,11 +13756,8 @@ var IndentLevel = class extends XmlComponent {
       })
     );
   }
-};
-var NumberId = class extends XmlComponent {
-  static {
-    __name(this, "NumberId");
-  }
+}
+class NumberId extends XmlComponent {
   constructor(id) {
     super("w:numId");
     this.root.push(
@@ -14912,20 +13766,15 @@ var NumberId = class extends XmlComponent {
       })
     );
   }
-};
-var FileChild = class extends XmlComponent {
-  static {
-    __name(this, "FileChild");
-  }
+}
+class FileChild extends XmlComponent {
   constructor() {
     super(...arguments);
+    /** Marker property identifying this as a FileChild */
     __publicField(this, "fileChild", /* @__PURE__ */ Symbol());
   }
-};
-var HyperlinkAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "HyperlinkAttributes");
-  }
+}
+class HyperlinkAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", {
@@ -14934,11 +13783,14 @@ var HyperlinkAttributes = class extends XmlAttributeComponent {
       anchor: "w:anchor"
     });
   }
+}
+const HyperlinkType = {
+  /** Internal hyperlink to a bookmark within the document */
+  INTERNAL: "INTERNAL",
+  /** External hyperlink to a URL outside the document */
+  EXTERNAL: "EXTERNAL"
 };
-var ConcreteHyperlink = class extends XmlComponent {
-  static {
-    __name(this, "ConcreteHyperlink");
-  }
+class ConcreteHyperlink extends XmlComponent {
   constructor(children, relationshipId, anchor) {
     super("w:hyperlink");
     __publicField(this, "linkId");
@@ -14954,20 +13806,19 @@ var ConcreteHyperlink = class extends XmlComponent {
       this.root.push(child);
     });
   }
-};
-var ExternalHyperlink = class extends XmlComponent {
-  static {
-    __name(this, "ExternalHyperlink");
+}
+class InternalHyperlink extends ConcreteHyperlink {
+  constructor(options) {
+    super(options.children, uniqueId(), options.anchor);
   }
+}
+class ExternalHyperlink extends XmlComponent {
   constructor(options) {
     super("w:externalHyperlink");
     this.options = options;
   }
-};
-var BookmarkStartAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "BookmarkStartAttributes");
-  }
+}
+class BookmarkStartAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", {
@@ -14975,22 +13826,16 @@ var BookmarkStartAttributes = class extends XmlAttributeComponent {
       name: "w:name"
     });
   }
-};
-var BookmarkEndAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "BookmarkEndAttributes");
-  }
+}
+class BookmarkEndAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", {
       id: "w:id"
     });
   }
-};
-var Bookmark = class {
-  static {
-    __name(this, "Bookmark");
-  }
+}
+class Bookmark {
   constructor(options) {
     __publicField(this, "bookmarkUniqueNumericId", bookmarkUniqueNumericIdGen());
     __publicField(this, "start");
@@ -15001,11 +13846,8 @@ var Bookmark = class {
     this.children = options.children;
     this.end = new BookmarkEnd(linkId);
   }
-};
-var BookmarkStart = class extends XmlComponent {
-  static {
-    __name(this, "BookmarkStart");
-  }
+}
+class BookmarkStart extends XmlComponent {
   constructor(id, linkId) {
     super("w:bookmarkStart");
     const attributes = new BookmarkStartAttributes({
@@ -15014,11 +13856,8 @@ var BookmarkStart = class extends XmlComponent {
     });
     this.root.push(attributes);
   }
-};
-var BookmarkEnd = class extends XmlComponent {
-  static {
-    __name(this, "BookmarkEnd");
-  }
+}
+class BookmarkEnd extends XmlComponent {
   constructor(linkId) {
     super("w:bookmarkEnd");
     const attributes = new BookmarkEndAttributes({
@@ -15026,21 +13865,101 @@ var BookmarkEnd = class extends XmlComponent {
     });
     this.root.push(attributes);
   }
+}
+var NumberedItemReferenceFormat = /* @__PURE__ */ ((NumberedItemReferenceFormat2) => {
+  NumberedItemReferenceFormat2["NONE"] = "none";
+  NumberedItemReferenceFormat2["RELATIVE"] = "relative";
+  NumberedItemReferenceFormat2["NO_CONTEXT"] = "no_context";
+  NumberedItemReferenceFormat2["FULL_CONTEXT"] = "full_context";
+  return NumberedItemReferenceFormat2;
+})(NumberedItemReferenceFormat || {});
+const SWITCH_MAP = {
+  [
+    "relative"
+    /* RELATIVE */
+  ]: "\\r",
+  [
+    "no_context"
+    /* NO_CONTEXT */
+  ]: "\\n",
+  [
+    "full_context"
+    /* FULL_CONTEXT */
+  ]: "\\w",
+  [
+    "none"
+    /* NONE */
+  ]: void 0
 };
-var createOutlineLevel = /* @__PURE__ */ __name((level) => new BuilderElement({
+class NumberedItemReference extends SimpleField {
+  constructor(bookmarkId, cachedValue, options = {}) {
+    const {
+      hyperlink = true,
+      referenceFormat = "full_context"
+      /* FULL_CONTEXT */
+    } = options;
+    const baseInstruction = `REF ${bookmarkId}`;
+    const switches = [...hyperlink ? ["\\h"] : [], ...[SWITCH_MAP[referenceFormat]].filter((a) => !!a)];
+    const instruction = `${baseInstruction} ${switches.join(" ")}`;
+    super(instruction, cachedValue);
+  }
+}
+const createOutlineLevel = (level) => new BuilderElement({
   name: "w:outlineLvl",
   attributes: {
     val: { key: "w:val", value: level }
   }
-}), "createOutlineLevel");
-var createFontRelationship = /* @__PURE__ */ __name(({ id, fontKey, subsetted }, name) => new BuilderElement({
+});
+class PageReferenceFieldInstruction extends XmlComponent {
+  constructor(bookmarkId, options = {}) {
+    super("w:instrText");
+    this.root.push(new TextAttributes({ space: SpaceType.PRESERVE }));
+    let instruction = `PAGEREF ${bookmarkId}`;
+    if (options.hyperlink) {
+      instruction = `${instruction} \\h`;
+    }
+    if (options.useRelativePosition) {
+      instruction = `${instruction} \\p`;
+    }
+    this.root.push(instruction);
+  }
+}
+class PageReference extends Run {
+  constructor(bookmarkId, options = {}) {
+    super({
+      children: [createBegin(true), new PageReferenceFieldInstruction(bookmarkId, options), createEnd()]
+    });
+  }
+}
+const CharacterSet = {
+  ANSI: "00",
+  DEFAULT: "01",
+  SYMBOL: "02",
+  MAC: "4D",
+  JIS: "80",
+  HANGUL: "81",
+  JOHAB: "82",
+  GB_2312: "86",
+  CHINESEBIG5: "88",
+  GREEK: "A1",
+  TURKISH: "A2",
+  VIETNAMESE: "A3",
+  HEBREW: "B1",
+  ARABIC: "B2",
+  BALTIC: "BA",
+  RUSSIAN: "CC",
+  THAI: "DE",
+  EASTEUROPE: "EE",
+  OEM: "FF"
+};
+const createFontRelationship = ({ id, fontKey, subsetted }, name) => new BuilderElement({
   name,
   attributes: __spreadValues({
     id: { key: "r:id", value: id }
   }, fontKey ? { fontKey: { key: "w:fontKey", value: `{${fontKey}}` } } : {}),
   children: [...subsetted ? [new OnOffElement("w:subsetted", subsetted)] : []]
-}), "createFontRelationship");
-var createFont = /* @__PURE__ */ __name(({
+});
+const createFont = ({
   name,
   altName,
   panose1,
@@ -15093,8 +14012,8 @@ var createFont = /* @__PURE__ */ __name(({
     // http://www.datypic.com/sc/ooxml/e-w_embedBoldItalic-1.html
     ...embedBoldItalic ? [createFontRelationship(embedBoldItalic, "w:embedBoldItalic")] : []
   ]
-}), "createFont");
-var createRegularFont = /* @__PURE__ */ __name(({
+});
+const createRegularFont = ({
   name,
   index,
   fontKey,
@@ -15116,8 +14035,8 @@ var createRegularFont = /* @__PURE__ */ __name(({
     fontKey,
     id: `rId${index}`
   }
-}), "createRegularFont");
-var createFontTable = /* @__PURE__ */ __name((fonts) => (
+});
+const createFontTable = (fonts) => (
   // https://c-rex.net/projects/samples/ooxml/e1/Part4/OOXML_P4_DOCX_Font_topic_ID0ERNCU.html
   // http://www.datypic.com/sc/ooxml/e-w_fonts.html
   new BuilderElement({
@@ -15144,11 +14063,8 @@ var createFontTable = /* @__PURE__ */ __name((fonts) => (
       })
     )
   })
-), "createFontTable");
-var FontWrapper = class {
-  static {
-    __name(this, "FontWrapper");
-  }
+);
+class FontWrapper {
   constructor(options) {
     __publicField(this, "fontTable");
     __publicField(this, "relationships");
@@ -15171,15 +14087,45 @@ var FontWrapper = class {
   get Relationships() {
     return this.relationships;
   }
-};
-var createWordWrap = /* @__PURE__ */ __name(() => new BuilderElement({
+}
+const createWordWrap = () => new BuilderElement({
   name: "w:wordWrap",
   attributes: {
     val: { key: "w:val", value: 0 }
   }
-}), "createWordWrap");
-var createFrameProperties = /* @__PURE__ */ __name((options) => {
-  var _a2, _b2;
+});
+const DropCapType = {
+  /** No drop cap effect */
+  NONE: "none",
+  /** Drop cap that drops down into the paragraph text */
+  DROP: "drop",
+  /** Drop cap that extends into the margin */
+  MARGIN: "margin"
+};
+const FrameAnchorType = {
+  /** Anchor relative to the page margin */
+  MARGIN: "margin",
+  /** Anchor relative to the page edge */
+  PAGE: "page",
+  /** Anchor relative to the text column */
+  TEXT: "text"
+};
+const FrameWrap = {
+  /** Wrap text around the frame on all sides */
+  AROUND: "around",
+  /** Automatic wrapping based on available space */
+  AUTO: "auto",
+  /** No text wrapping */
+  NONE: "none",
+  /** Do not allow text beside the frame */
+  NOT_BESIDE: "notBeside",
+  /** Allow text to flow through the frame */
+  THROUGH: "through",
+  /** Wrap text tightly around the frame */
+  TIGHT: "tight"
+};
+const createFrameProperties = (options) => {
+  var _a, _b;
   return new BuilderElement({
     name: "w:framePr",
     attributes: {
@@ -15217,11 +14163,11 @@ var createFrameProperties = /* @__PURE__ */ __name((options) => {
       },
       spaceHorizontal: {
         key: "w:hSpace",
-        value: (_a2 = options.space) == null ? void 0 : _a2.horizontal
+        value: (_a = options.space) == null ? void 0 : _a.horizontal
       },
       spaceVertical: {
         key: "w:vSpace",
-        value: (_b2 = options.space) == null ? void 0 : _b2.vertical
+        value: (_b = options.space) == null ? void 0 : _b.vertical
       },
       rule: {
         key: "w:hRule",
@@ -15245,14 +14191,12 @@ var createFrameProperties = /* @__PURE__ */ __name((options) => {
       }
     }
   });
-}, "createFrameProperties");
-var ParagraphProperties = class extends IgnoreIfEmptyXmlComponent {
-  static {
-    __name(this, "ParagraphProperties");
-  }
+};
+class ParagraphProperties extends IgnoreIfEmptyXmlComponent {
   constructor(options) {
-    var _a2, _b2;
+    var _a, _b;
     super("w:pPr", options == null ? void 0 : options.includeIfEmpty);
+    // eslint-disable-next-line functional/prefer-readonly-type
     __publicField(this, "numberingReferences", []);
     if (!options) {
       return this;
@@ -15294,9 +14238,9 @@ var ParagraphProperties = class extends IgnoreIfEmptyXmlComponent {
     if (options.numbering) {
       this.numberingReferences.push({
         reference: options.numbering.reference,
-        instance: (_a2 = options.numbering.instance) != null ? _a2 : 0
+        instance: (_a = options.numbering.instance) != null ? _a : 0
       });
-      this.push(new NumberProperties(`${options.numbering.reference}-${(_b2 = options.numbering.instance) != null ? _b2 : 0}`, options.numbering.level));
+      this.push(new NumberProperties(`${options.numbering.reference}-${(_b = options.numbering.instance) != null ? _b : 0}`, options.numbering.level));
     } else if (options.numbering === false) {
       this.push(new NumberProperties(0, 0));
     }
@@ -15371,19 +14315,16 @@ var ParagraphProperties = class extends IgnoreIfEmptyXmlComponent {
    * @param context - The XML context containing document and file information
    * @returns The prepared XML object, or undefined if the component should be ignored
    */
-  prepForXml(context2) {
-    if (!(context2.viewWrapper instanceof FontWrapper)) {
+  prepForXml(context) {
+    if (!(context.viewWrapper instanceof FontWrapper)) {
       for (const reference of this.numberingReferences) {
-        context2.file.Numbering.createConcreteNumberingInstance(reference.reference, reference.instance);
+        context.file.Numbering.createConcreteNumberingInstance(reference.reference, reference.instance);
       }
     }
-    return super.prepForXml(context2);
+    return super.prepForXml(context);
   }
-};
-var ParagraphPropertiesChange = class extends XmlComponent {
-  static {
-    __name(this, "ParagraphPropertiesChange");
-  }
+}
+class ParagraphPropertiesChange extends XmlComponent {
   constructor(options) {
     super("w:pPrChange");
     this.root.push(
@@ -15395,11 +14336,8 @@ var ParagraphPropertiesChange = class extends XmlComponent {
     );
     this.root.push(new ParagraphProperties(__spreadProps(__spreadValues({}, options), { includeIfEmpty: true })));
   }
-};
-var Paragraph = class extends FileChild {
-  static {
-    __name(this, "Paragraph");
-  }
+}
+class Paragraph extends FileChild {
   constructor(options) {
     super("w:p");
     __publicField(this, "properties");
@@ -15428,12 +14366,12 @@ var Paragraph = class extends FileChild {
       }
     }
   }
-  prepForXml(context2) {
+  prepForXml(context) {
     for (const element of this.root) {
       if (element instanceof ExternalHyperlink) {
         const index = this.root.indexOf(element);
         const concreteHyperlink = new ConcreteHyperlink(element.options.children, uniqueId());
-        context2.viewWrapper.Relationships.addRelationship(
+        context.viewWrapper.Relationships.addRelationship(
           concreteHyperlink.linkId,
           "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
           element.options.link,
@@ -15442,23 +14380,352 @@ var Paragraph = class extends FileChild {
         this.root[index] = concreteHyperlink;
       }
     }
-    return super.prepForXml(context2);
+    return super.prepForXml(context);
   }
   addRunToFront(run) {
     this.root.splice(1, 0, run);
     return this;
   }
+}
+let Math$1 = class Math2 extends XmlComponent {
+  constructor(options) {
+    super("m:oMath");
+    for (const child of options.children) {
+      this.root.push(child);
+    }
+  }
 };
-var createGridCol = /* @__PURE__ */ __name((width) => new BuilderElement({
+class MathText extends XmlComponent {
+  constructor(text) {
+    super("m:t");
+    this.root.push(text);
+  }
+}
+class MathRun extends XmlComponent {
+  constructor(text) {
+    super("m:r");
+    this.root.push(new MathText(text));
+  }
+}
+class MathDenominator extends XmlComponent {
+  constructor(children) {
+    super("m:den");
+    for (const child of children) {
+      this.root.push(child);
+    }
+  }
+}
+class MathNumerator extends XmlComponent {
+  constructor(children) {
+    super("m:num");
+    for (const child of children) {
+      this.root.push(child);
+    }
+  }
+}
+class MathFraction extends XmlComponent {
+  constructor(options) {
+    super("m:f");
+    this.root.push(new MathNumerator(options.numerator));
+    this.root.push(new MathDenominator(options.denominator));
+  }
+}
+const createMathAccentCharacter = ({ accent }) => new BuilderElement({
+  name: "m:chr",
+  attributes: {
+    accent: { key: "m:val", value: accent }
+  }
+});
+const createMathBase = ({ children }) => new BuilderElement({
+  name: "m:e",
+  children
+});
+const createMathLimitLocation = ({ value }) => new BuilderElement({
+  name: "m:limLoc",
+  attributes: {
+    value: { key: "m:val", value: value || "undOvr" }
+  }
+});
+const createMathSubScriptHide = () => new BuilderElement({
+  name: "m:subHide",
+  attributes: {
+    hide: { key: "m:val", value: 1 }
+  }
+});
+const createMathSuperScriptHide = () => new BuilderElement({
+  name: "m:supHide",
+  attributes: {
+    hide: { key: "m:val", value: 1 }
+  }
+});
+const createMathNAryProperties = ({
+  accent,
+  hasSuperScript,
+  hasSubScript,
+  limitLocationVal
+}) => new BuilderElement({
+  name: "m:naryPr",
+  children: [
+    ...!!accent ? [createMathAccentCharacter({ accent })] : [],
+    createMathLimitLocation({ value: limitLocationVal }),
+    ...!hasSuperScript ? [createMathSuperScriptHide()] : [],
+    ...!hasSubScript ? [createMathSubScriptHide()] : []
+  ]
+});
+const createMathSubScriptElement = ({ children }) => new BuilderElement({
+  name: "m:sub",
+  children
+});
+const createMathSuperScriptElement = ({ children }) => new BuilderElement({
+  name: "m:sup",
+  children
+});
+class MathSum extends XmlComponent {
+  constructor(options) {
+    super("m:nary");
+    this.root.push(
+      createMathNAryProperties({
+        accent: "∑",
+        hasSuperScript: !!options.superScript,
+        hasSubScript: !!options.subScript
+      })
+    );
+    if (!!options.subScript) {
+      this.root.push(createMathSubScriptElement({ children: options.subScript }));
+    }
+    if (!!options.superScript) {
+      this.root.push(createMathSuperScriptElement({ children: options.superScript }));
+    }
+    this.root.push(createMathBase({ children: options.children }));
+  }
+}
+class MathIntegral extends XmlComponent {
+  constructor(options) {
+    super("m:nary");
+    this.root.push(
+      createMathNAryProperties({
+        accent: "",
+        hasSuperScript: !!options.superScript,
+        hasSubScript: !!options.subScript,
+        limitLocationVal: "subSup"
+      })
+    );
+    if (!!options.subScript) {
+      this.root.push(createMathSubScriptElement({ children: options.subScript }));
+    }
+    if (!!options.superScript) {
+      this.root.push(createMathSuperScriptElement({ children: options.superScript }));
+    }
+    this.root.push(createMathBase({ children: options.children }));
+  }
+}
+class MathLimit extends XmlComponent {
+  constructor(children) {
+    super("m:lim");
+    for (const child of children) {
+      this.root.push(child);
+    }
+  }
+}
+class MathLimitUpper extends XmlComponent {
+  constructor(options) {
+    super("m:limUpp");
+    this.root.push(createMathBase({ children: options.children }));
+    this.root.push(new MathLimit(options.limit));
+  }
+}
+class MathLimitLower extends XmlComponent {
+  constructor(options) {
+    super("m:limLow");
+    this.root.push(createMathBase({ children: options.children }));
+    this.root.push(new MathLimit(options.limit));
+  }
+}
+const createMathSuperScriptProperties = () => new BuilderElement({
+  name: "m:sSupPr"
+});
+class MathSuperScript extends XmlComponent {
+  constructor(options) {
+    super("m:sSup");
+    this.root.push(createMathSuperScriptProperties());
+    this.root.push(createMathBase({ children: options.children }));
+    this.root.push(createMathSuperScriptElement({ children: options.superScript }));
+  }
+}
+const createMathSubScriptProperties = () => new BuilderElement({
+  name: "m:sSubPr"
+});
+class MathSubScript extends XmlComponent {
+  constructor(options) {
+    super("m:sSub");
+    this.root.push(createMathSubScriptProperties());
+    this.root.push(createMathBase({ children: options.children }));
+    this.root.push(createMathSubScriptElement({ children: options.subScript }));
+  }
+}
+const createMathSubSuperScriptProperties = () => new BuilderElement({
+  name: "m:sSubSupPr"
+});
+class MathSubSuperScript extends XmlComponent {
+  constructor(options) {
+    super("m:sSubSup");
+    this.root.push(createMathSubSuperScriptProperties());
+    this.root.push(createMathBase({ children: options.children }));
+    this.root.push(createMathSubScriptElement({ children: options.subScript }));
+    this.root.push(createMathSuperScriptElement({ children: options.superScript }));
+  }
+}
+const createMathPreSubSuperScriptProperties = () => new BuilderElement({
+  name: "m:sPrePr"
+});
+class MathPreSubSuperScript extends BuilderElement {
+  constructor({ children, subScript, superScript }) {
+    super({
+      name: "m:sPre",
+      children: [
+        createMathPreSubSuperScriptProperties(),
+        createMathBase({ children }),
+        createMathSubScriptElement({ children: subScript }),
+        createMathSuperScriptElement({ children: superScript })
+      ]
+    });
+  }
+}
+const WORKAROUND4 = "";
+class MathDegree extends XmlComponent {
+  constructor(children) {
+    super("m:deg");
+    if (!!children) {
+      for (const child of children) {
+        this.root.push(child);
+      }
+    }
+  }
+}
+class MathDegreeHideAttributes extends XmlAttributeComponent {
+  constructor() {
+    super(...arguments);
+    __publicField(this, "xmlKeys", { hide: "m:val" });
+  }
+}
+class MathDegreeHide extends XmlComponent {
+  constructor() {
+    super("m:degHide");
+    this.root.push(new MathDegreeHideAttributes({ hide: 1 }));
+  }
+}
+class MathRadicalProperties extends XmlComponent {
+  constructor(hasDegree) {
+    super("m:radPr");
+    if (!hasDegree) {
+      this.root.push(new MathDegreeHide());
+    }
+  }
+}
+class MathRadical extends XmlComponent {
+  constructor(options) {
+    super("m:rad");
+    this.root.push(new MathRadicalProperties(!!options.degree));
+    this.root.push(new MathDegree(options.degree));
+    this.root.push(createMathBase({ children: options.children }));
+  }
+}
+class MathFunctionName extends XmlComponent {
+  constructor(children) {
+    super("m:fName");
+    for (const child of children) {
+      this.root.push(child);
+    }
+  }
+}
+class MathFunctionProperties extends XmlComponent {
+  constructor() {
+    super("m:funcPr");
+  }
+}
+class MathFunction extends XmlComponent {
+  constructor(options) {
+    super("m:func");
+    this.root.push(new MathFunctionProperties());
+    this.root.push(new MathFunctionName(options.name));
+    this.root.push(createMathBase({ children: options.children }));
+  }
+}
+const createMathBeginningCharacter = ({ character }) => new BuilderElement({
+  name: "m:begChr",
+  attributes: {
+    character: { key: "m:val", value: character }
+  }
+});
+const createMathEndingCharacter = ({ character }) => new BuilderElement({
+  name: "m:endChr",
+  attributes: {
+    character: { key: "m:val", value: character }
+  }
+});
+const createMathBracketProperties = ({ characters }) => new BuilderElement({
+  name: "m:dPr",
+  children: !!characters ? [
+    createMathBeginningCharacter({ character: characters.beginningCharacter }),
+    createMathEndingCharacter({ character: characters.endingCharacter })
+  ] : []
+});
+class MathRoundBrackets extends XmlComponent {
+  constructor(options) {
+    super("m:d");
+    this.root.push(createMathBracketProperties({}));
+    this.root.push(createMathBase({ children: options.children }));
+  }
+}
+class MathSquareBrackets extends XmlComponent {
+  constructor(options) {
+    super("m:d");
+    this.root.push(
+      createMathBracketProperties({
+        characters: {
+          beginningCharacter: "[",
+          endingCharacter: "]"
+        }
+      })
+    );
+    this.root.push(createMathBase({ children: options.children }));
+  }
+}
+class MathCurlyBrackets extends XmlComponent {
+  constructor(options) {
+    super("m:d");
+    this.root.push(
+      createMathBracketProperties({
+        characters: {
+          beginningCharacter: "{",
+          endingCharacter: "}"
+        }
+      })
+    );
+    this.root.push(createMathBase({ children: options.children }));
+  }
+}
+class MathAngledBrackets extends XmlComponent {
+  constructor(options) {
+    super("m:d");
+    this.root.push(
+      createMathBracketProperties({
+        characters: {
+          beginningCharacter: "〈",
+          endingCharacter: "〉"
+        }
+      })
+    );
+    this.root.push(createMathBase({ children: options.children }));
+  }
+}
+const createGridCol = (width) => new BuilderElement({
   name: "w:gridCol",
   attributes: width !== void 0 ? {
     width: { key: "w:w", value: twipsMeasureValue(width) }
   } : void 0
-}), "createGridCol");
-var TableGrid = class extends XmlComponent {
-  static {
-    __name(this, "TableGrid");
-  }
+});
+class TableGrid extends XmlComponent {
   constructor(widths, revision) {
     super("w:tblGrid");
     for (const width of widths) {
@@ -15468,20 +14735,14 @@ var TableGrid = class extends XmlComponent {
       this.root.push(new TableGridChange(revision));
     }
   }
-};
-var TableGridChangeAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "TableGridChangeAttributes");
-  }
+}
+class TableGridChangeAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", { id: "w:id" });
   }
-};
-var TableGridChange = class extends XmlComponent {
-  static {
-    __name(this, "TableGridChange");
-  }
+}
+class TableGridChange extends XmlComponent {
   constructor(options) {
     super("w:tblGridChange");
     this.root.push(
@@ -15491,11 +14752,108 @@ var TableGridChange = class extends XmlComponent {
     );
     this.root.push(new TableGrid(options.columnWidths));
   }
-};
-var InsertedTableRow = class extends XmlComponent {
-  static {
-    __name(this, "InsertedTableRow");
+}
+class InsertedTextRun extends XmlComponent {
+  constructor(options) {
+    super("w:ins");
+    this.root.push(
+      new ChangeAttributes({
+        id: options.id,
+        author: options.author,
+        date: options.date
+      })
+    );
+    this.addChildElement(new TextRun(options));
   }
+}
+class DeletedPage extends XmlComponent {
+  constructor() {
+    super("w:delInstrText");
+    this.root.push(new TextAttributes({ space: SpaceType.PRESERVE }));
+    this.root.push("PAGE");
+  }
+}
+class DeletedNumberOfPages extends XmlComponent {
+  constructor() {
+    super("w:delInstrText");
+    this.root.push(new TextAttributes({ space: SpaceType.PRESERVE }));
+    this.root.push("NUMPAGES");
+  }
+}
+class DeletedNumberOfPagesSection extends XmlComponent {
+  constructor() {
+    super("w:delInstrText");
+    this.root.push(new TextAttributes({ space: SpaceType.PRESERVE }));
+    this.root.push("SECTIONPAGES");
+  }
+}
+class DeletedText extends XmlComponent {
+  constructor(text) {
+    super("w:delText");
+    this.root.push(new TextAttributes({ space: SpaceType.PRESERVE }));
+    this.root.push(text);
+  }
+}
+class DeletedTextRun extends XmlComponent {
+  constructor(options) {
+    super("w:del");
+    __publicField(this, "deletedTextRunWrapper");
+    this.root.push(
+      new ChangeAttributes({
+        id: options.id,
+        author: options.author,
+        date: options.date
+      })
+    );
+    this.deletedTextRunWrapper = new DeletedTextRunWrapper(options);
+    this.addChildElement(this.deletedTextRunWrapper);
+  }
+}
+class DeletedTextRunWrapper extends XmlComponent {
+  constructor(options) {
+    super("w:r");
+    this.root.push(new RunProperties(options));
+    if (options.children) {
+      for (const child of options.children) {
+        if (typeof child === "string") {
+          switch (child) {
+            case PageNumber.CURRENT:
+              this.root.push(createBegin());
+              this.root.push(new DeletedPage());
+              this.root.push(createSeparate());
+              this.root.push(createEnd());
+              break;
+            case PageNumber.TOTAL_PAGES:
+              this.root.push(createBegin());
+              this.root.push(new DeletedNumberOfPages());
+              this.root.push(createSeparate());
+              this.root.push(createEnd());
+              break;
+            case PageNumber.TOTAL_PAGES_IN_SECTION:
+              this.root.push(createBegin());
+              this.root.push(new DeletedNumberOfPagesSection());
+              this.root.push(createSeparate());
+              this.root.push(createEnd());
+              break;
+            default:
+              this.root.push(new DeletedText(child));
+              break;
+          }
+          continue;
+        }
+        this.root.push(child);
+      }
+    } else if (options.text) {
+      this.root.push(new DeletedText(options.text));
+    }
+    if (options.break) {
+      for (let i = 0; i < options.break; i++) {
+        this.root.splice(1, 0, createBreak());
+      }
+    }
+  }
+}
+class InsertedTableRow extends XmlComponent {
   constructor(options) {
     super("w:ins");
     this.root.push(
@@ -15506,11 +14864,8 @@ var InsertedTableRow = class extends XmlComponent {
       })
     );
   }
-};
-var DeletedTableRow = class extends XmlComponent {
-  static {
-    __name(this, "DeletedTableRow");
-  }
+}
+class DeletedTableRow extends XmlComponent {
   constructor(options) {
     super("w:del");
     this.root.push(
@@ -15521,11 +14876,8 @@ var DeletedTableRow = class extends XmlComponent {
       })
     );
   }
-};
-var InsertedTableCell = class extends XmlComponent {
-  static {
-    __name(this, "InsertedTableCell");
-  }
+}
+class InsertedTableCell extends XmlComponent {
   constructor(options) {
     super("w:cellIns");
     this.root.push(
@@ -15536,11 +14888,8 @@ var InsertedTableCell = class extends XmlComponent {
       })
     );
   }
-};
-var DeletedTableCell = class extends XmlComponent {
-  static {
-    __name(this, "DeletedTableCell");
-  }
+}
+class DeletedTableCell extends XmlComponent {
   constructor(options) {
     super("w:cellDel");
     this.root.push(
@@ -15551,11 +14900,18 @@ var DeletedTableCell = class extends XmlComponent {
       })
     );
   }
+}
+const VerticalMergeRevisionType = {
+  /**
+   * Cell that is merged with upper one.
+   */
+  CONTINUE: "cont",
+  /**
+   * Cell that is starting the vertical merge.
+   */
+  RESTART: "rest"
 };
-var CellMergeAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "CellMergeAttributes");
-  }
+class CellMergeAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", {
@@ -15566,32 +14922,29 @@ var CellMergeAttributes = class extends XmlAttributeComponent {
       verticalMergeOriginal: "w:vMergeOrig"
     });
   }
-};
-var CellMerge = class extends XmlComponent {
-  static {
-    __name(this, "CellMerge");
-  }
+}
+class CellMerge extends XmlComponent {
   constructor(options) {
     super("w:cellMerge");
     this.root.push(new CellMergeAttributes(options));
   }
-};
-var VerticalAlignTable = {
+}
+const VerticalAlignTable = {
   TOP: "top",
   CENTER: "center",
   BOTTOM: "bottom"
 };
-var VerticalAlignSection = __spreadProps(__spreadValues({}, VerticalAlignTable), {
+const VerticalAlignSection = __spreadProps(__spreadValues({}, VerticalAlignTable), {
   BOTH: "both"
 });
-var VerticalAlign = VerticalAlignSection;
-var createVerticalAlign = /* @__PURE__ */ __name((value) => new BuilderElement({
+const VerticalAlign = VerticalAlignSection;
+const createVerticalAlign = (value) => new BuilderElement({
   name: "w:vAlign",
   attributes: {
     verticalAlign: { key: "w:val", value }
   }
-}), "createVerticalAlign");
-var buildMarginChildren = /* @__PURE__ */ __name(({
+});
+const buildMarginChildren = ({
   marginUnitType = WidthType.DXA,
   top,
   left,
@@ -15602,8 +14955,8 @@ var buildMarginChildren = /* @__PURE__ */ __name(({
   { name: "w:left", size: left },
   { name: "w:bottom", size: bottom },
   { name: "w:right", size: right }
-].filter((entry) => entry.size !== void 0).map(({ name, size }) => createTableWidthElement(name, { type: marginUnitType, size })), "buildMarginChildren");
-var createTableCellMargin = /* @__PURE__ */ __name((options) => {
+].filter((entry) => entry.size !== void 0).map(({ name, size }) => createTableWidthElement(name, { type: marginUnitType, size }));
+const createTableCellMargin = (options) => {
   const children = buildMarginChildren(options);
   if (children.length === 0) {
     return void 0;
@@ -15612,8 +14965,8 @@ var createTableCellMargin = /* @__PURE__ */ __name((options) => {
     name: "w:tblCellMar",
     children
   });
-}, "createTableCellMargin");
-var createCellMargin = /* @__PURE__ */ __name((options) => {
+};
+const createCellMargin = (options) => {
   const children = buildMarginChildren(options);
   if (children.length === 0) {
     return void 0;
@@ -15622,8 +14975,8 @@ var createCellMargin = /* @__PURE__ */ __name((options) => {
     name: "w:tcMar",
     children
   });
-}, "createCellMargin");
-var WidthType = {
+};
+const WidthType = {
   /** Auto. */
   AUTO: "auto",
   /** Value is in twentieths of a point */
@@ -15633,7 +14986,7 @@ var WidthType = {
   /** Value is in percentage. */
   PERCENTAGE: "pct"
 };
-var createTableWidthElement = /* @__PURE__ */ __name((name, { type: type2 = WidthType.AUTO, size }) => {
+const createTableWidthElement = (name, { type: type2 = WidthType.AUTO, size }) => {
   let tableWidthValue = size;
   if (type2 === WidthType.PERCENTAGE && typeof size === "number") {
     tableWidthValue = `${size}%`;
@@ -15645,11 +14998,8 @@ var createTableWidthElement = /* @__PURE__ */ __name((name, { type: type2 = Widt
       size: { key: "w:w", value: measurementOrPercentValue(tableWidthValue) }
     }
   });
-}, "createTableWidthElement");
-var TableCellBorders = class extends IgnoreIfEmptyXmlComponent {
-  static {
-    __name(this, "TableCellBorders");
-  }
+};
+class TableCellBorders extends IgnoreIfEmptyXmlComponent {
   constructor(options) {
     super("w:tcBorders");
     if (options.top) {
@@ -15671,20 +15021,14 @@ var TableCellBorders = class extends IgnoreIfEmptyXmlComponent {
       this.root.push(createBorderElement("w:right", options.right));
     }
   }
-};
-var GridSpanAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "GridSpanAttributes");
-  }
+}
+class GridSpanAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", { val: "w:val" });
   }
-};
-var GridSpan = class extends XmlComponent {
-  static {
-    __name(this, "GridSpan");
-  }
+}
+class GridSpan extends XmlComponent {
   constructor(value) {
     super("w:gridSpan");
     this.root.push(
@@ -15693,8 +15037,8 @@ var GridSpan = class extends XmlComponent {
       })
     );
   }
-};
-var VerticalMergeType = {
+}
+const VerticalMergeType = {
   /**
    * Cell that is merged with upper one.
    * This cell continues a vertical merge started by a cell above it.
@@ -15706,19 +15050,13 @@ var VerticalMergeType = {
    */
   RESTART: "restart"
 };
-var VerticalMergeAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "VerticalMergeAttributes");
-  }
+class VerticalMergeAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", { val: "w:val" });
   }
-};
-var VerticalMerge = class extends XmlComponent {
-  static {
-    __name(this, "VerticalMerge");
-  }
+}
+class VerticalMerge extends XmlComponent {
   constructor(value) {
     super("w:vMerge");
     this.root.push(
@@ -15727,20 +15065,22 @@ var VerticalMerge = class extends XmlComponent {
       })
     );
   }
+}
+const TextDirection = {
+  /** Text flows from bottom to top, left to right */
+  BOTTOM_TO_TOP_LEFT_TO_RIGHT: "btLr",
+  /** Text flows from left to right, top to bottom (default) */
+  LEFT_TO_RIGHT_TOP_TO_BOTTOM: "lrTb",
+  /** Text flows from top to bottom, right to left */
+  TOP_TO_BOTTOM_RIGHT_TO_LEFT: "tbRl"
 };
-var TDirectionAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "TDirectionAttributes");
-  }
+class TDirectionAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", { val: "w:val" });
   }
-};
-var TDirection = class extends XmlComponent {
-  static {
-    __name(this, "TDirection");
-  }
+}
+class TDirection extends XmlComponent {
   constructor(value) {
     super("w:textDirection");
     this.root.push(
@@ -15749,11 +15089,8 @@ var TDirection = class extends XmlComponent {
       })
     );
   }
-};
-var TableCellProperties = class extends IgnoreIfEmptyXmlComponent {
-  static {
-    __name(this, "TableCellProperties");
-  }
+}
+class TableCellProperties extends IgnoreIfEmptyXmlComponent {
   constructor(options) {
     super("w:tcPr", options.includeIfEmpty);
     if (options.width) {
@@ -15798,11 +15135,8 @@ var TableCellProperties = class extends IgnoreIfEmptyXmlComponent {
       this.root.push(new CellMerge(options.cellMerge));
     }
   }
-};
-var TableCellPropertiesChange = class extends XmlComponent {
-  static {
-    __name(this, "TableCellPropertiesChange");
-  }
+}
+class TableCellPropertiesChange extends XmlComponent {
   constructor(options) {
     super("w:tcPrChange");
     this.root.push(
@@ -15814,11 +15148,8 @@ var TableCellPropertiesChange = class extends XmlComponent {
     );
     this.root.push(new TableCellProperties(__spreadProps(__spreadValues({}, options), { includeIfEmpty: true })));
   }
-};
-var TableCell = class extends XmlComponent {
-  static {
-    __name(this, "TableCell");
-  }
+}
+class TableCell extends XmlComponent {
   constructor(options) {
     super("w:tc");
     this.options = options;
@@ -15827,38 +15158,35 @@ var TableCell = class extends XmlComponent {
       this.root.push(child);
     }
   }
-  prepForXml(context2) {
+  prepForXml(context) {
     if (!(this.root[this.root.length - 1] instanceof Paragraph)) {
       this.root.push(new Paragraph({}));
     }
-    return super.prepForXml(context2);
+    return super.prepForXml(context);
   }
-};
-var NONE_BORDER = {
+}
+const NONE_BORDER = {
   style: BorderStyle.NONE,
   size: 0,
   color: "auto"
 };
-var DEFAULT_BORDER = {
+const DEFAULT_BORDER = {
   style: BorderStyle.SINGLE,
   size: 4,
   color: "auto"
 };
-var TableBorders = class extends XmlComponent {
-  static {
-    __name(this, "TableBorders");
-  }
+class TableBorders extends XmlComponent {
   constructor(options) {
-    var _a2, _b2, _c, _d, _e, _f;
+    var _a, _b, _c, _d, _e, _f;
     super("w:tblBorders");
-    this.root.push(createBorderElement("w:top", (_a2 = options.top) != null ? _a2 : DEFAULT_BORDER));
-    this.root.push(createBorderElement("w:left", (_b2 = options.left) != null ? _b2 : DEFAULT_BORDER));
+    this.root.push(createBorderElement("w:top", (_a = options.top) != null ? _a : DEFAULT_BORDER));
+    this.root.push(createBorderElement("w:left", (_b = options.left) != null ? _b : DEFAULT_BORDER));
     this.root.push(createBorderElement("w:bottom", (_c = options.bottom) != null ? _c : DEFAULT_BORDER));
     this.root.push(createBorderElement("w:right", (_d = options.right) != null ? _d : DEFAULT_BORDER));
     this.root.push(createBorderElement("w:insideH", (_e = options.insideHorizontal) != null ? _e : DEFAULT_BORDER));
     this.root.push(createBorderElement("w:insideV", (_f = options.insideVertical) != null ? _f : DEFAULT_BORDER));
   }
-};
+}
 __publicField(TableBorders, "NONE", {
   top: NONE_BORDER,
   bottom: NONE_BORDER,
@@ -15867,13 +15195,37 @@ __publicField(TableBorders, "NONE", {
   insideHorizontal: NONE_BORDER,
   insideVertical: NONE_BORDER
 });
-var createOverlapElement = /* @__PURE__ */ __name((overlap) => new BuilderElement({
+const TableAnchorType = {
+  MARGIN: "margin",
+  PAGE: "page",
+  TEXT: "text"
+};
+const RelativeHorizontalPosition = {
+  CENTER: "center",
+  INSIDE: "inside",
+  LEFT: "left",
+  OUTSIDE: "outside",
+  RIGHT: "right"
+};
+const RelativeVerticalPosition = {
+  CENTER: "center",
+  INSIDE: "inside",
+  BOTTOM: "bottom",
+  OUTSIDE: "outside",
+  INLINE: "inline",
+  TOP: "top"
+};
+const OverlapType = {
+  NEVER: "never",
+  OVERLAP: "overlap"
+};
+const createOverlapElement = (overlap) => new BuilderElement({
   name: "w:tblOverlap",
   attributes: {
     val: { key: "w:val", value: overlap }
   }
-}), "createOverlapElement");
-var createTableFloatProperties = /* @__PURE__ */ __name(({
+});
+const createTableFloatProperties = ({
   horizontalAnchor,
   verticalAnchor,
   absoluteHorizontalPosition,
@@ -15930,25 +15282,31 @@ var createTableFloatProperties = /* @__PURE__ */ __name(({
     }
   },
   children: overlap ? [createOverlapElement(overlap)] : void 0
-}), "createTableFloatProperties");
-var createTableLayout = /* @__PURE__ */ __name((type2) => new BuilderElement({
+});
+const TableLayoutType = {
+  /** Auto-fit layout - column widths are adjusted based on content */
+  AUTOFIT: "autofit",
+  /** Fixed layout - column widths are fixed as specified */
+  FIXED: "fixed"
+};
+const createTableLayout = (type2) => new BuilderElement({
   name: "w:tblLayout",
   attributes: {
     type: { key: "w:type", value: type2 }
   }
-}), "createTableLayout");
-var CellSpacingType = {
+});
+const CellSpacingType = {
   /** Value is in twentieths of a point */
   DXA: "dxa"
 };
-var createTableCellSpacing = /* @__PURE__ */ __name(({ type: type2 = CellSpacingType.DXA, value }) => new BuilderElement({
+const createTableCellSpacing = ({ type: type2 = CellSpacingType.DXA, value }) => new BuilderElement({
   name: "w:tblCellSpacing",
   attributes: {
     type: { key: "w:type", value: type2 },
     value: { key: "w:w", value: measurementOrPercentValue(value) }
   }
-}), "createTableCellSpacing");
-var createTableLook = /* @__PURE__ */ __name(({ firstRow, lastRow, firstColumn, lastColumn, noHBand, noVBand }) => new BuilderElement({
+});
+const createTableLook = ({ firstRow, lastRow, firstColumn, lastColumn, noHBand, noVBand }) => new BuilderElement({
   name: "w:tblLook",
   attributes: {
     firstRow: { key: "w:firstRow", value: firstRow },
@@ -15958,11 +15316,8 @@ var createTableLook = /* @__PURE__ */ __name(({ firstRow, lastRow, firstColumn, 
     noHBand: { key: "w:noHBand", value: noHBand },
     noVBand: { key: "w:noVBand", value: noVBand }
   }
-}), "createTableLook");
-var TableProperties = class extends IgnoreIfEmptyXmlComponent {
-  static {
-    __name(this, "TableProperties");
-  }
+});
+class TableProperties extends IgnoreIfEmptyXmlComponent {
   constructor(options) {
     super("w:tblPr", options.includeIfEmpty);
     if (options.style) {
@@ -16008,11 +15363,8 @@ var TableProperties = class extends IgnoreIfEmptyXmlComponent {
       this.root.push(new TablePropertiesChange(options.revision));
     }
   }
-};
-var TablePropertiesChange = class extends XmlComponent {
-  static {
-    __name(this, "TablePropertiesChange");
-  }
+}
+class TablePropertiesChange extends XmlComponent {
   constructor(options) {
     super("w:tblPrChange");
     this.root.push(
@@ -16024,11 +15376,8 @@ var TablePropertiesChange = class extends XmlComponent {
     );
     this.root.push(new TableProperties(__spreadProps(__spreadValues({}, options), { includeIfEmpty: true })));
   }
-};
-var Table = class extends FileChild {
-  static {
-    __name(this, "Table");
-  }
+}
+class Table extends FileChild {
   constructor({
     rows,
     width,
@@ -16089,18 +15438,23 @@ var Table = class extends FileChild {
       });
     });
   }
+}
+const HeightRule = {
+  /** Height is determined based on the content, so value is ignored. */
+  AUTO: "auto",
+  /** At least the value specified */
+  ATLEAST: "atLeast",
+  /** Exactly the value specified */
+  EXACT: "exact"
 };
-var createTableRowHeight = /* @__PURE__ */ __name((value, rule) => new BuilderElement({
+const createTableRowHeight = (value, rule) => new BuilderElement({
   name: "w:trHeight",
   attributes: {
     value: { key: "w:val", value: twipsMeasureValue(value) },
     rule: { key: "w:hRule", value: rule }
   }
-}), "createTableRowHeight");
-var TableRowProperties = class extends IgnoreIfEmptyXmlComponent {
-  static {
-    __name(this, "TableRowProperties");
-  }
+});
+class TableRowProperties extends IgnoreIfEmptyXmlComponent {
   constructor(options) {
     super("w:trPr", options.includeIfEmpty);
     if (options.cantSplit !== void 0) {
@@ -16125,11 +15479,8 @@ var TableRowProperties = class extends IgnoreIfEmptyXmlComponent {
       this.root.push(new TableRowPropertiesChange(options.revision));
     }
   }
-};
-var TableRowPropertiesChange = class extends XmlComponent {
-  static {
-    __name(this, "TableRowPropertiesChange");
-  }
+}
+class TableRowPropertiesChange extends XmlComponent {
   constructor(options) {
     super("w:trPrChange");
     this.root.push(
@@ -16141,11 +15492,8 @@ var TableRowPropertiesChange = class extends XmlComponent {
     );
     this.root.push(new TableRowProperties(__spreadProps(__spreadValues({}, options), { includeIfEmpty: true })));
   }
-};
-var TableRow = class extends XmlComponent {
-  static {
-    __name(this, "TableRow");
-  }
+}
+class TableRow extends XmlComponent {
   constructor(options) {
     super("w:tr");
     this.options = options;
@@ -16198,11 +15546,8 @@ var TableRow = class extends XmlComponent {
     }
     return rootIdx - 1;
   }
-};
-var AppPropertiesAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "AppPropertiesAttributes");
-  }
+}
+class AppPropertiesAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", {
@@ -16210,11 +15555,8 @@ var AppPropertiesAttributes = class extends XmlAttributeComponent {
       vt: "xmlns:vt"
     });
   }
-};
-var AppProperties = class extends XmlComponent {
-  static {
-    __name(this, "AppProperties");
-  }
+}
+class AppProperties extends XmlComponent {
   constructor() {
     super("Properties");
     this.root.push(
@@ -16224,36 +15566,30 @@ var AppProperties = class extends XmlComponent {
       })
     );
   }
-};
-var ContentTypeAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "ContentTypeAttributes");
-  }
+}
+class ContentTypeAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", {
       xmlns: "xmlns"
     });
   }
-};
-var createDefault = /* @__PURE__ */ __name((contentType, extension) => new BuilderElement({
+}
+const createDefault = (contentType, extension) => new BuilderElement({
   name: "Default",
   attributes: {
     contentType: { key: "ContentType", value: contentType },
     extension: { key: "Extension", value: extension }
   }
-}), "createDefault");
-var createOverride = /* @__PURE__ */ __name((contentType, partName) => new BuilderElement({
+});
+const createOverride = (contentType, partName) => new BuilderElement({
   name: "Override",
   attributes: {
     contentType: { key: "ContentType", value: contentType },
     partName: { key: "PartName", value: partName }
   }
-}), "createOverride");
-var ContentTypes = class extends XmlComponent {
-  static {
-    __name(this, "ContentTypes");
-  }
+});
+class ContentTypes extends XmlComponent {
   constructor() {
     super("Types");
     this.root.push(
@@ -16310,8 +15646,8 @@ var ContentTypes = class extends XmlComponent {
       createOverride("application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml", `/word/header${index}.xml`)
     );
   }
-};
-var DocumentAttributeNamespaces = {
+}
+const DocumentAttributeNamespaces = {
   wpc: "http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas",
   mc: "http://schemas.openxmlformats.org/markup-compatibility/2006",
   o: "urn:schemas-microsoft-com:office:office",
@@ -16350,21 +15686,15 @@ var DocumentAttributeNamespaces = {
   w16sdtdh: "http://schemas.microsoft.com/office/word/2020/wordml/sdtdatahash",
   w16se: "http://schemas.microsoft.com/office/word/2015/wordml/symex"
 };
-var DocumentAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "DocumentAttributes");
-  }
+class DocumentAttributes extends XmlAttributeComponent {
   constructor(ns, Ignorable) {
     super(__spreadValues({ Ignorable }, Object.fromEntries(ns.map((n) => [n, DocumentAttributeNamespaces[n]]))));
     __publicField(this, "xmlKeys", __spreadValues({
       Ignorable: "mc:Ignorable"
     }, Object.fromEntries(Object.keys(DocumentAttributeNamespaces).map((key) => [key, `xmlns:${key}`]))));
   }
-};
-var CoreProperties = class extends XmlComponent {
-  static {
-    __name(this, "CoreProperties");
-  }
+}
+class CoreProperties extends XmlComponent {
   constructor(options) {
     super("cp:coreProperties");
     this.root.push(new DocumentAttributes(["cp", "dc", "dcterms", "dcmitype", "xsi"]));
@@ -16392,20 +15722,14 @@ var CoreProperties = class extends XmlComponent {
     this.root.push(new TimestampElement("dcterms:created"));
     this.root.push(new TimestampElement("dcterms:modified"));
   }
-};
-var TimestampElementProperties = class extends XmlAttributeComponent {
-  static {
-    __name(this, "TimestampElementProperties");
-  }
+}
+class TimestampElementProperties extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", { type: "xsi:type" });
   }
-};
-var TimestampElement = class extends XmlComponent {
-  static {
-    __name(this, "TimestampElement");
-  }
+}
+class TimestampElement extends XmlComponent {
   constructor(name) {
     super(name);
     this.root.push(
@@ -16415,11 +15739,8 @@ var TimestampElement = class extends XmlComponent {
     );
     this.root.push(dateTimeValue(/* @__PURE__ */ new Date()));
   }
-};
-var CustomPropertiesAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "CustomPropertiesAttributes");
-  }
+}
+class CustomPropertiesAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", {
@@ -16427,11 +15748,8 @@ var CustomPropertiesAttributes = class extends XmlAttributeComponent {
       vt: "xmlns:vt"
     });
   }
-};
-var CustomPropertyAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "CustomPropertyAttributes");
-  }
+}
+class CustomPropertyAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", {
@@ -16440,11 +15758,8 @@ var CustomPropertyAttributes = class extends XmlAttributeComponent {
       name: "name"
     });
   }
-};
-var CustomProperty = class extends XmlComponent {
-  static {
-    __name(this, "CustomProperty");
-  }
+}
+class CustomProperty extends XmlComponent {
   constructor(id, properties) {
     super("property");
     this.root.push(
@@ -16456,23 +15771,19 @@ var CustomProperty = class extends XmlComponent {
     );
     this.root.push(new CustomPropertyValue(properties.value));
   }
-};
-var CustomPropertyValue = class extends XmlComponent {
-  static {
-    __name(this, "CustomPropertyValue");
-  }
+}
+class CustomPropertyValue extends XmlComponent {
   constructor(value) {
     super("vt:lpwstr");
     this.root.push(value);
   }
-};
-var CustomProperties = class extends XmlComponent {
-  static {
-    __name(this, "CustomProperties");
-  }
+}
+class CustomProperties extends XmlComponent {
   constructor(properties) {
     super("Properties");
+    // eslint-disable-next-line functional/prefer-readonly-type
     __publicField(this, "nextId");
+    // eslint-disable-next-line functional/prefer-readonly-type
     __publicField(this, "properties", []);
     this.root.push(
       new CustomPropertiesAttributes({
@@ -16485,33 +15796,54 @@ var CustomProperties = class extends XmlComponent {
       this.addCustomProperty(property);
     }
   }
-  prepForXml(context2) {
+  prepForXml(context) {
     this.properties.forEach((x) => this.root.push(x));
-    return super.prepForXml(context2);
+    return super.prepForXml(context);
   }
   addCustomProperty(property) {
     this.properties.push(new CustomProperty(this.nextId++, property));
   }
-};
-var createColumns = /* @__PURE__ */ __name(({ space, count: count3, separate, equalWidth, children }) => new BuilderElement({
+}
+const createColumns = ({ space, count, separate, equalWidth, children }) => new BuilderElement({
   name: "w:cols",
   attributes: {
     space: { key: "w:space", value: space === void 0 ? void 0 : twipsMeasureValue(space) },
-    count: { key: "w:num", value: count3 === void 0 ? void 0 : decimalNumber(count3) },
+    count: { key: "w:num", value: count === void 0 ? void 0 : decimalNumber(count) },
     separate: { key: "w:sep", value: separate },
     equalWidth: { key: "w:equalWidth", value: equalWidth }
   },
   children: !equalWidth && children ? children : void 0
-}), "createColumns");
-var createDocumentGrid = /* @__PURE__ */ __name(({ type: type2, linePitch, charSpace }) => new BuilderElement({
+});
+const DocumentGridType = {
+  /**
+   * Specifies that no document grid shall be applied to the contents of the current section in the document.
+   */
+  DEFAULT: "default",
+  /**
+   * Specifies that the parent section shall have additional line pitch added to each line within it (as specified on the <docGrid> element (§2.6.5)) in order to maintain the specified number of lines per page.
+   */
+  LINES: "lines",
+  /**
+   * Specifies that the parent section shall have both the additional line pitch and character pitch added to each line and character within it (as specified on the <docGrid> element (§2.6.5)) in order to maintain a specific number of lines per page and characters per line.
+   *
+   * When this value is set, the input specified via the user interface may be allowed in exact number of line/character pitch units. */
+  LINES_AND_CHARS: "linesAndChars",
+  /**
+   * Specifies that the parent section shall have both the additional line pitch and character pitch added to each line and character within it (as specified on the <docGrid> element (§2.6.5)) in order to maintain a specific number of lines per page and characters per line.
+   *
+   * When this value is set, the input specified via the user interface may be restricted to the number of lines per page and characters per line, with the consumer or producer translating this information based on the current font data to get the resulting line and character pitch values
+   */
+  SNAP_TO_CHARS: "snapToChars"
+};
+const createDocumentGrid = ({ type: type2, linePitch, charSpace }) => new BuilderElement({
   name: "w:docGrid",
   attributes: {
     type: { key: "w:type", value: type2 },
     linePitch: { key: "w:linePitch", value: decimalNumber(linePitch) },
     charSpace: { key: "w:charSpace", value: charSpace ? decimalNumber(charSpace) : void 0 }
   }
-}), "createDocumentGrid");
-var HeaderFooterReferenceType = {
+});
+const HeaderFooterReferenceType = {
   /** Specifies that this header or footer shall appear on every page in this section which is not overridden with a specific `even` or `first` page header/footer. In a section with all three types specified, this type shall be used on all odd numbered pages (counting from the `first` page in the section, not the section numbering). */
   DEFAULT: "default",
   /** Specifies that this header or footer shall appear on the first page in this section. The appearance of this header or footer is contingent on the setting of the `titlePg` element (§2.10.6). */
@@ -16519,18 +15851,38 @@ var HeaderFooterReferenceType = {
   /** Specifies that this header or footer shall appear on all even numbered pages in this section (counting from the first page in the section, not the section numbering). The appearance of this header or footer is contingent on the setting of the `evenAndOddHeaders` element (§2.10.1). */
   EVEN: "even"
 };
-var HeaderFooterType = {
+const HeaderFooterType = {
   HEADER: "w:headerReference",
   FOOTER: "w:footerReference"
 };
-var createHeaderFooterReference = /* @__PURE__ */ __name((type2, options) => new BuilderElement({
+const createHeaderFooterReference = (type2, options) => new BuilderElement({
   name: type2,
   attributes: {
     type: { key: "w:type", value: options.type || HeaderFooterReferenceType.DEFAULT },
     id: { key: "r:id", value: `rId${options.id}` }
   }
-}), "createHeaderFooterReference");
-var createLineNumberType = /* @__PURE__ */ __name(({ countBy, start, restart, distance }) => new BuilderElement({
+});
+const LineNumberRestartFormat = {
+  /**
+   * ## Restart Line Numbering on Each Page
+   *
+   * Specifies that line numbering for the parent section shall restart to the starting value whenever a new page is displayed.
+   */
+  NEW_PAGE: "newPage",
+  /**
+   * ## Restart Line Numbering for Each Section
+   *
+   * Specifies that line numbering for the parent section shall restart to the starting value whenever the parent begins.
+   */
+  NEW_SECTION: "newSection",
+  /**
+   * ## Continue Line Numbering From Previous Section
+   *
+   * Specifies that line numbering for the parent section shall continue from the line numbering from the end of the previous section, if any.
+   */
+  CONTINUOUS: "continuous"
+};
+const createLineNumberType = ({ countBy, start, restart, distance }) => new BuilderElement({
   name: "w:lnNumType",
   attributes: {
     countBy: { key: "w:countBy", value: countBy === void 0 ? void 0 : decimalNumber(countBy) },
@@ -16541,11 +15893,28 @@ var createLineNumberType = /* @__PURE__ */ __name(({ countBy, start, restart, di
       value: distance === void 0 ? void 0 : twipsMeasureValue(distance)
     }
   }
-}), "createLineNumberType");
-var PageBordersAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "PageBordersAttributes");
-  }
+});
+const PageBorderDisplay = {
+  /** Display border on all pages */
+  ALL_PAGES: "allPages",
+  /** Display border only on first page */
+  FIRST_PAGE: "firstPage",
+  /** Display border on all pages except first page */
+  NOT_FIRST_PAGE: "notFirstPage"
+};
+const PageBorderOffsetFrom = {
+  /** Position border relative to page edge */
+  PAGE: "page",
+  /** Position border relative to text (default) */
+  TEXT: "text"
+};
+const PageBorderZOrder = {
+  /** Display border behind page contents */
+  BACK: "back",
+  /** Display border in front of page contents (default) */
+  FRONT: "front"
+};
+class PageBordersAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", {
@@ -16554,11 +15923,8 @@ var PageBordersAttributes = class extends XmlAttributeComponent {
       zOrder: "w:zOrder"
     });
   }
-};
-var PageBorders = class extends IgnoreIfEmptyXmlComponent {
-  static {
-    __name(this, "PageBorders");
-  }
+}
+class PageBorders extends IgnoreIfEmptyXmlComponent {
   constructor(options) {
     super("w:pgBorders");
     if (!options) {
@@ -16588,8 +15954,8 @@ var PageBorders = class extends IgnoreIfEmptyXmlComponent {
       this.root.push(createBorderElement("w:right", options.pageBorderRight));
     }
   }
-};
-var createPageMargin = /* @__PURE__ */ __name((top, right, bottom, left, header, footer, gutter) => new BuilderElement({
+}
+const createPageMargin = (top, right, bottom, left, header, footer, gutter) => new BuilderElement({
   name: "w:pgMar",
   attributes: {
     top: { key: "w:top", value: signedTwipsMeasureValue(top) },
@@ -16600,16 +15966,28 @@ var createPageMargin = /* @__PURE__ */ __name((top, right, bottom, left, header,
     footer: { key: "w:footer", value: twipsMeasureValue(footer) },
     gutter: { key: "w:gutter", value: twipsMeasureValue(gutter) }
   }
-}), "createPageMargin");
-var createPageNumberType = /* @__PURE__ */ __name(({ start, formatType, separator }) => new BuilderElement({
+});
+const PageNumberSeparator = {
+  /** Hyphen separator (-) */
+  HYPHEN: "hyphen",
+  /** Period separator (.) */
+  PERIOD: "period",
+  /** Colon separator (:) */
+  COLON: "colon",
+  /** Em dash separator (—) */
+  EM_DASH: "emDash",
+  /** En dash separator (–) */
+  EN_DASH: "endash"
+};
+const createPageNumberType = ({ start, formatType, separator }) => new BuilderElement({
   name: "w:pgNumType",
   attributes: {
     start: { key: "w:start", value: start === void 0 ? void 0 : decimalNumber(start) },
     formatType: { key: "w:fmt", value: formatType },
     separator: { key: "w:chapSep", value: separator }
   }
-}), "createPageNumberType");
-var PageOrientation = {
+});
+const PageOrientation = {
   /**
    * ## Portrait Mode
    *
@@ -16623,7 +16001,7 @@ var PageOrientation = {
    */
   LANDSCAPE: "landscape"
 };
-var createPageSize = /* @__PURE__ */ __name(({ width, height, orientation, code }) => {
+const createPageSize = ({ width, height, orientation, code }) => {
   const widthTwips = twipsMeasureValue(width);
   const heightTwips = twipsMeasureValue(height);
   return new BuilderElement({
@@ -16635,20 +16013,20 @@ var createPageSize = /* @__PURE__ */ __name(({ width, height, orientation, code 
       code: { key: "w:code", value: code }
     }
   });
-}, "createPageSize");
-var PageTextDirectionAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "PageTextDirectionAttributes");
-  }
+};
+const PageTextDirectionType = {
+  /** Left-to-right, top-to-bottom (standard Western text flow) */
+  LEFT_TO_RIGHT_TOP_TO_BOTTOM: "lrTb",
+  /** Top-to-bottom, right-to-left (vertical East Asian text flow) */
+  TOP_TO_BOTTOM_RIGHT_TO_LEFT: "tbRl"
+};
+class PageTextDirectionAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", { val: "w:val" });
   }
-};
-var PageTextDirection = class extends XmlComponent {
-  static {
-    __name(this, "PageTextDirection");
-  }
+}
+class PageTextDirection extends XmlComponent {
   constructor(value) {
     super("w:textDirection");
     this.root.push(
@@ -16657,14 +16035,26 @@ var PageTextDirection = class extends XmlComponent {
       })
     );
   }
+}
+const SectionType = {
+  /** Section begins on the next page */
+  NEXT_PAGE: "nextPage",
+  /** Section begins on the next column */
+  NEXT_COLUMN: "nextColumn",
+  /** Section begins immediately following the previous section */
+  CONTINUOUS: "continuous",
+  /** Section begins on the next even-numbered page */
+  EVEN_PAGE: "evenPage",
+  /** Section begins on the next odd-numbered page */
+  ODD_PAGE: "oddPage"
 };
-var createSectionType = /* @__PURE__ */ __name((value) => new BuilderElement({
+const createSectionType = (value) => new BuilderElement({
   name: "w:type",
   attributes: {
     val: { key: "w:val", value }
   }
-}), "createSectionType");
-var sectionMarginDefaults = {
+});
+const sectionMarginDefaults = {
   /** Top margin: 1440 twips (1 inch) */
   TOP: 1440,
   /** Right margin: 1440 twips (1 inch) */
@@ -16680,7 +16070,7 @@ var sectionMarginDefaults = {
   /** Gutter margin for binding: 0 twips */
   GUTTER: 0
 };
-var sectionPageSizeDefaults = {
+const sectionPageSizeDefaults = {
   /** Page width: 11906 twips (8.27 inches, 210mm) */
   WIDTH: 11906,
   /** Page height: 16838 twips (11.69 inches, 297mm) */
@@ -16688,10 +16078,7 @@ var sectionPageSizeDefaults = {
   /** Page orientation: portrait */
   ORIENTATION: PageOrientation.PORTRAIT
 };
-var SectionProperties = class extends XmlComponent {
-  static {
-    __name(this, "SectionProperties");
-  }
+class SectionProperties extends XmlComponent {
   constructor({
     page: {
       size: {
@@ -16754,37 +16141,34 @@ var SectionProperties = class extends XmlComponent {
     }
     this.root.push(createDocumentGrid({ linePitch, charSpace, type: gridType }));
   }
-  addHeaderFooterGroup(type2, group3) {
-    if (group3.default) {
+  addHeaderFooterGroup(type2, group) {
+    if (group.default) {
       this.root.push(
         createHeaderFooterReference(type2, {
           type: HeaderFooterReferenceType.DEFAULT,
-          id: group3.default.View.ReferenceId
+          id: group.default.View.ReferenceId
         })
       );
     }
-    if (group3.first) {
+    if (group.first) {
       this.root.push(
         createHeaderFooterReference(type2, {
           type: HeaderFooterReferenceType.FIRST,
-          id: group3.first.View.ReferenceId
+          id: group.first.View.ReferenceId
         })
       );
     }
-    if (group3.even) {
+    if (group.even) {
       this.root.push(
         createHeaderFooterReference(type2, {
           type: HeaderFooterReferenceType.EVEN,
-          id: group3.even.View.ReferenceId
+          id: group.even.View.ReferenceId
         })
       );
     }
   }
-};
-var SectionPropertiesChange = class extends XmlComponent {
-  static {
-    __name(this, "SectionPropertiesChange");
-  }
+}
+class SectionPropertiesChange extends XmlComponent {
   constructor(options) {
     super("w:sectPrChange");
     this.root.push(
@@ -16796,13 +16180,31 @@ var SectionPropertiesChange = class extends XmlComponent {
     );
     this.root.push(new SectionProperties(options));
   }
-};
-var Body = class extends XmlComponent {
-  static {
-    __name(this, "Body");
+}
+class ColumnAttributes extends XmlAttributeComponent {
+  constructor() {
+    super(...arguments);
+    __publicField(this, "xmlKeys", {
+      width: "w:w",
+      space: "w:space"
+    });
   }
+}
+class Column extends XmlComponent {
+  constructor(options) {
+    super("w:col");
+    this.root.push(
+      new ColumnAttributes({
+        width: twipsMeasureValue(options.width),
+        space: options.space === void 0 ? void 0 : twipsMeasureValue(options.space)
+      })
+    );
+  }
+}
+class Body extends XmlComponent {
   constructor() {
     super("w:body");
+    // eslint-disable-next-line functional/prefer-readonly-type
     __publicField(this, "sections", []);
   }
   /**
@@ -16832,12 +16234,12 @@ var Body = class extends XmlComponent {
    * @param context - The XML serialization context
    * @returns The prepared XML object or undefined
    */
-  prepForXml(context2) {
+  prepForXml(context) {
     if (this.sections.length === 1) {
       this.root.splice(0, 1);
       this.root.push(this.sections.pop());
     }
-    return super.prepForXml(context2);
+    return super.prepForXml(context);
   }
   /**
    * Adds a block-level component to the body.
@@ -16857,11 +16259,8 @@ var Body = class extends XmlComponent {
     paragraph.addChildElement(properties);
     return paragraph;
   }
-};
-var DocumentBackgroundAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "DocumentBackgroundAttributes");
-  }
+}
+class DocumentBackgroundAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", {
@@ -16871,11 +16270,8 @@ var DocumentBackgroundAttributes = class extends XmlAttributeComponent {
       themeTint: "w:themeTint"
     });
   }
-};
-var DocumentBackground = class extends XmlComponent {
-  static {
-    __name(this, "DocumentBackground");
-  }
+}
+class DocumentBackground extends XmlComponent {
   constructor(options) {
     super("w:background");
     this.root.push(
@@ -16887,11 +16283,8 @@ var DocumentBackground = class extends XmlComponent {
       })
     );
   }
-};
-var Document = class extends XmlComponent {
-  static {
-    __name(this, "Document");
-  }
+}
+class Document extends XmlComponent {
   constructor(options) {
     super("w:document");
     __publicField(this, "body");
@@ -16958,11 +16351,8 @@ var Document = class extends XmlComponent {
   get Body() {
     return this.body;
   }
-};
-var DocumentWrapper = class {
-  static {
-    __name(this, "DocumentWrapper");
-  }
+}
+class DocumentWrapper {
   constructor(options) {
     __publicField(this, "document");
     __publicField(this, "relationships");
@@ -16975,11 +16365,8 @@ var DocumentWrapper = class {
   get Relationships() {
     return this.relationships;
   }
-};
-var EndnotesAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "EndnotesAttributes");
-  }
+}
+class EndnotesAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", {
@@ -17002,11 +16389,8 @@ var EndnotesAttributes = class extends XmlAttributeComponent {
       Ignorable: "mc:Ignorable"
     });
   }
-};
-var EndnoteAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "EndnoteAttributes");
-  }
+}
+class EndnoteAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", {
@@ -17014,26 +16398,20 @@ var EndnoteAttributes = class extends XmlAttributeComponent {
       id: "w:id"
     });
   }
-};
-var EndnoteRefRun = class extends Run {
-  static {
-    __name(this, "EndnoteRefRun");
-  }
+}
+class EndnoteRefRun extends Run {
   constructor() {
     super({
       style: "EndnoteReference"
     });
     this.root.push(new EndnoteReference());
   }
-};
-var EndnoteType = {
+}
+const EndnoteType = {
   SEPARATOR: "separator",
   CONTINUATION_SEPARATOR: "continuationSeparator"
 };
-var Endnote = class extends XmlComponent {
-  static {
-    __name(this, "Endnote");
-  }
+class Endnote extends XmlComponent {
   constructor(options) {
     super("w:endnote");
     this.root.push(
@@ -17050,45 +16428,30 @@ var Endnote = class extends XmlComponent {
       this.root.push(child);
     }
   }
-};
-var ContinuationSeperator = class extends XmlComponent {
-  static {
-    __name(this, "ContinuationSeperator");
-  }
+}
+class ContinuationSeperator extends XmlComponent {
   constructor() {
     super("w:continuationSeparator");
   }
-};
-var ContinuationSeperatorRun = class extends Run {
-  static {
-    __name(this, "ContinuationSeperatorRun");
-  }
+}
+class ContinuationSeperatorRun extends Run {
   constructor() {
     super({});
     this.root.push(new ContinuationSeperator());
   }
-};
-var Seperator = class extends XmlComponent {
-  static {
-    __name(this, "Seperator");
-  }
+}
+class Seperator extends XmlComponent {
   constructor() {
     super("w:separator");
   }
-};
-var SeperatorRun = class extends Run {
-  static {
-    __name(this, "SeperatorRun");
-  }
+}
+class SeperatorRun extends Run {
   constructor() {
     super({});
     this.root.push(new Seperator());
   }
-};
-var Endnotes = class extends XmlComponent {
-  static {
-    __name(this, "Endnotes");
-  }
+}
+class Endnotes extends XmlComponent {
   constructor() {
     super("w:endnotes");
     this.root.push(
@@ -17150,11 +16513,8 @@ var Endnotes = class extends XmlComponent {
     });
     this.root.push(endnote);
   }
-};
-var EndnotesWrapper = class {
-  static {
-    __name(this, "EndnotesWrapper");
-  }
+}
+class EndnotesWrapper {
   constructor() {
     __publicField(this, "endnotes");
     __publicField(this, "relationships");
@@ -17167,11 +16527,8 @@ var EndnotesWrapper = class {
   get Relationships() {
     return this.relationships;
   }
-};
-var FooterAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "FooterAttributes");
-  }
+}
+class FooterAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", {
@@ -17199,11 +16556,8 @@ var FooterAttributes = class extends XmlAttributeComponent {
       type: "xsi:type"
     });
   }
-};
-var Footer$1 = class Footer extends InitializableXmlComponent {
-  static {
-    __name(this, "Footer");
-  }
+}
+let Footer$1 = class Footer extends InitializableXmlComponent {
   constructor(referenceNumber, initContent) {
     super("w:ftr", initContent);
     __publicField(this, "refId");
@@ -17238,10 +16592,7 @@ var Footer$1 = class Footer extends InitializableXmlComponent {
     this.root.push(item);
   }
 };
-var FooterWrapper = class {
-  static {
-    __name(this, "FooterWrapper");
-  }
+class FooterWrapper {
   constructor(media, referenceId, initContent) {
     __publicField(this, "footer");
     __publicField(this, "relationships");
@@ -17264,11 +16615,8 @@ var FooterWrapper = class {
   get Media() {
     return this.media;
   }
-};
-var FootnoteAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "FootnoteAttributes");
-  }
+}
+class FootnoteAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", {
@@ -17276,36 +16624,27 @@ var FootnoteAttributes = class extends XmlAttributeComponent {
       id: "w:id"
     });
   }
-};
-var FootnoteRef = class extends XmlComponent {
-  static {
-    __name(this, "FootnoteRef");
-  }
+}
+class FootnoteRef extends XmlComponent {
   constructor() {
     super("w:footnoteRef");
   }
-};
-var FootnoteRefRun = class extends Run {
-  static {
-    __name(this, "FootnoteRefRun");
-  }
+}
+class FootnoteRefRun extends Run {
   constructor() {
     super({
       style: "FootnoteReference"
     });
     this.root.push(new FootnoteRef());
   }
-};
-var FootnoteType = {
+}
+const FootnoteType = {
   /** Separator line between body text and footnotes */
   SEPERATOR: "separator",
   /** Continuation separator for footnotes spanning pages */
   CONTINUATION_SEPERATOR: "continuationSeparator"
 };
-var Footnote = class extends XmlComponent {
-  static {
-    __name(this, "Footnote");
-  }
+class Footnote extends XmlComponent {
   constructor(options) {
     super("w:footnote");
     this.root.push(
@@ -17322,11 +16661,8 @@ var Footnote = class extends XmlComponent {
       this.root.push(child);
     }
   }
-};
-var FootnotesAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "FootnotesAttributes");
-  }
+}
+class FootnotesAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", {
@@ -17349,11 +16685,8 @@ var FootnotesAttributes = class extends XmlAttributeComponent {
       Ignorable: "mc:Ignorable"
     });
   }
-};
-var FootNotes = class extends XmlComponent {
-  static {
-    __name(this, "FootNotes");
-  }
+}
+class FootNotes extends XmlComponent {
   constructor() {
     super("w:footnotes");
     this.root.push(
@@ -17421,11 +16754,8 @@ var FootNotes = class extends XmlComponent {
     });
     this.root.push(footnote);
   }
-};
-var FootnotesWrapper = class {
-  static {
-    __name(this, "FootnotesWrapper");
-  }
+}
+class FootnotesWrapper {
   constructor() {
     __publicField(this, "footnotess");
     __publicField(this, "relationships");
@@ -17438,11 +16768,8 @@ var FootnotesWrapper = class {
   get Relationships() {
     return this.relationships;
   }
-};
-var HeaderAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "HeaderAttributes");
-  }
+}
+class HeaderAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", {
@@ -17481,11 +16808,8 @@ var HeaderAttributes = class extends XmlAttributeComponent {
       w16se: "xmlns:w16se"
     });
   }
-};
-var Header$1 = class Header extends InitializableXmlComponent {
-  static {
-    __name(this, "Header");
-  }
+}
+let Header$1 = class Header extends InitializableXmlComponent {
   constructor(referenceNumber, initContent) {
     super("w:hdr", initContent);
     __publicField(this, "refId");
@@ -17531,10 +16855,7 @@ var Header$1 = class Header extends InitializableXmlComponent {
     this.root.push(item);
   }
 };
-var HeaderWrapper = class {
-  static {
-    __name(this, "HeaderWrapper");
-  }
+class HeaderWrapper {
   constructor(media, referenceId, initContent) {
     __publicField(this, "header");
     __publicField(this, "relationships");
@@ -17558,12 +16879,10 @@ var HeaderWrapper = class {
   get Media() {
     return this.media;
   }
-};
-var Media = class {
-  static {
-    __name(this, "Media");
-  }
+}
+class Media {
   constructor() {
+    // eslint-disable-next-line functional/prefer-readonly-type
     __publicField(this, "map");
     this.map = /* @__PURE__ */ new Map();
   }
@@ -17584,8 +16903,9 @@ var Media = class {
   get Array() {
     return Array.from(this.map.values());
   }
-};
-var LevelFormat = {
+}
+const WORKAROUND2 = "";
+const LevelFormat = {
   /** Decimal numbering (1, 2, 3...). */
   DECIMAL: "decimal",
   /** Uppercase roman numerals (I, II, III...). */
@@ -17713,10 +17033,7 @@ var LevelFormat = {
   /** Custom numbering format. */
   CUSTOM: "custom"
 };
-var LevelAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "LevelAttributes");
-  }
+class LevelAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", {
@@ -17724,11 +17041,8 @@ var LevelAttributes = class extends XmlAttributeComponent {
       tentative: "w15:tentative"
     });
   }
-};
-var NumberFormat = class extends XmlComponent {
-  static {
-    __name(this, "NumberFormat");
-  }
+}
+class NumberFormat extends XmlComponent {
   constructor(value) {
     super("w:numFmt");
     this.root.push(
@@ -17737,11 +17051,8 @@ var NumberFormat = class extends XmlComponent {
       })
     );
   }
-};
-var LevelText = class extends XmlComponent {
-  static {
-    __name(this, "LevelText");
-  }
+}
+class LevelText extends XmlComponent {
   constructor(value) {
     super("w:lvlText");
     this.root.push(
@@ -17750,11 +17061,8 @@ var LevelText = class extends XmlComponent {
       })
     );
   }
-};
-var LevelJc = class extends XmlComponent {
-  static {
-    __name(this, "LevelJc");
-  }
+}
+class LevelJc extends XmlComponent {
   constructor(value) {
     super("w:lvlJc");
     this.root.push(
@@ -17763,11 +17071,16 @@ var LevelJc = class extends XmlComponent {
       })
     );
   }
+}
+const LevelSuffix = {
+  /** No separator after the numbering. */
+  NOTHING: "nothing",
+  /** Space character after the numbering. */
+  SPACE: "space",
+  /** Tab character after the numbering. */
+  TAB: "tab"
 };
-var Suffix = class extends XmlComponent {
-  static {
-    __name(this, "Suffix");
-  }
+class Suffix extends XmlComponent {
   constructor(value) {
     super("w:suff");
     this.root.push(
@@ -17776,19 +17089,13 @@ var Suffix = class extends XmlComponent {
       })
     );
   }
-};
-var IsLegalNumberingStyle = class extends XmlComponent {
-  static {
-    __name(this, "IsLegalNumberingStyle");
-  }
+}
+class IsLegalNumberingStyle extends XmlComponent {
   constructor() {
     super("w:isLgl");
   }
-};
-var LevelBase = class extends XmlComponent {
-  static {
-    __name(this, "LevelBase");
-  }
+}
+class LevelBase extends XmlComponent {
   /**
    * Creates a new numbering level.
    *
@@ -17838,17 +17145,13 @@ var LevelBase = class extends XmlComponent {
       })
     );
   }
-};
-var Level = class extends LevelBase {
-  static {
-    __name(this, "Level");
-  }
+}
+class Level extends LevelBase {
   // This is the level that sits under abstractNum
-};
-var MultiLevelType = class extends XmlComponent {
-  static {
-    __name(this, "MultiLevelType");
-  }
+}
+class LevelForOverride extends LevelBase {
+}
+class MultiLevelType extends XmlComponent {
   /**
    * Creates a new multi-level type specification.
    *
@@ -17862,11 +17165,8 @@ var MultiLevelType = class extends XmlComponent {
       })
     );
   }
-};
-var AbstractNumberingAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "AbstractNumberingAttributes");
-  }
+}
+class AbstractNumberingAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", {
@@ -17874,11 +17174,8 @@ var AbstractNumberingAttributes = class extends XmlAttributeComponent {
       restartNumberingAfterBreak: "w15:restartNumberingAfterBreak"
     });
   }
-};
-var AbstractNumbering = class extends XmlComponent {
-  static {
-    __name(this, "AbstractNumbering");
-  }
+}
+class AbstractNumbering extends XmlComponent {
   /**
    * Creates a new abstract numbering definition.
    *
@@ -17887,6 +17184,7 @@ var AbstractNumbering = class extends XmlComponent {
    */
   constructor(id, levelOptions) {
     super("w:abstractNum");
+    /** The unique identifier for this abstract numbering definition. */
     __publicField(this, "id");
     this.root.push(
       new AbstractNumberingAttributes({
@@ -17900,11 +17198,8 @@ var AbstractNumbering = class extends XmlComponent {
       this.root.push(new Level(option));
     }
   }
-};
-var AbstractNumId = class extends XmlComponent {
-  static {
-    __name(this, "AbstractNumId");
-  }
+}
+class AbstractNumId extends XmlComponent {
   constructor(value) {
     super("w:abstractNumId");
     this.root.push(
@@ -17913,20 +17208,14 @@ var AbstractNumId = class extends XmlComponent {
       })
     );
   }
-};
-var NumAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "NumAttributes");
-  }
+}
+class NumAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", { numId: "w:numId" });
   }
-};
-var ConcreteNumbering = class extends XmlComponent {
-  static {
-    __name(this, "ConcreteNumbering");
-  }
+}
+class ConcreteNumbering extends XmlComponent {
   /**
    * Creates a new concrete numbering instance.
    *
@@ -17934,8 +17223,11 @@ var ConcreteNumbering = class extends XmlComponent {
    */
   constructor(options) {
     super("w:num");
+    /** The unique identifier for this numbering instance. */
     __publicField(this, "numId");
+    /** The reference name for this numbering instance. */
     __publicField(this, "reference");
+    /** The instance number for tracking multiple uses. */
     __publicField(this, "instance");
     this.numId = options.numId;
     this.reference = options.reference;
@@ -17952,20 +17244,14 @@ var ConcreteNumbering = class extends XmlComponent {
       }
     }
   }
-};
-var LevelOverrideAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "LevelOverrideAttributes");
-  }
+}
+class LevelOverrideAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", { ilvl: "w:ilvl" });
   }
-};
-var LevelOverride = class extends XmlComponent {
-  static {
-    __name(this, "LevelOverride");
-  }
+}
+class LevelOverride extends XmlComponent {
   /**
    * Creates a new level override.
    *
@@ -17979,20 +17265,14 @@ var LevelOverride = class extends XmlComponent {
       this.root.push(new StartOverride(start));
     }
   }
-};
-var StartOverrideAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "StartOverrideAttributes");
-  }
+}
+class StartOverrideAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", { val: "w:val" });
   }
-};
-var StartOverride = class extends XmlComponent {
-  static {
-    __name(this, "StartOverride");
-  }
+}
+class StartOverride extends XmlComponent {
   /**
    * Creates a new start override.
    *
@@ -18002,11 +17282,8 @@ var StartOverride = class extends XmlComponent {
     super("w:startOverride");
     this.root.push(new StartOverrideAttributes({ val: start }));
   }
-};
-var Numbering = class extends XmlComponent {
-  static {
-    __name(this, "Numbering");
-  }
+}
+class Numbering extends XmlComponent {
   /**
    * Creates a new numbering definition collection.
    *
@@ -18019,6 +17296,7 @@ var Numbering = class extends XmlComponent {
     super("w:numbering");
     __publicField(this, "abstractNumberingMap", /* @__PURE__ */ new Map());
     __publicField(this, "concreteNumberingMap", /* @__PURE__ */ new Map());
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     __publicField(this, "referenceConfigMap", /* @__PURE__ */ new Map());
     __publicField(this, "abstractNumUniqueNumericId", abstractNumUniqueNumericIdGen());
     __publicField(this, "concreteNumUniqueNumericId", concreteNumUniqueNumericIdGen());
@@ -18032,7 +17310,7 @@ var Numbering = class extends XmlComponent {
       {
         level: 0,
         format: LevelFormat.BULLET,
-        text: "\u25CF",
+        text: "●",
         alignment: AlignmentType.LEFT,
         style: {
           paragraph: {
@@ -18043,7 +17321,7 @@ var Numbering = class extends XmlComponent {
       {
         level: 1,
         format: LevelFormat.BULLET,
-        text: "\u25CB",
+        text: "○",
         alignment: AlignmentType.LEFT,
         style: {
           paragraph: {
@@ -18054,7 +17332,7 @@ var Numbering = class extends XmlComponent {
       {
         level: 2,
         format: LevelFormat.BULLET,
-        text: "\u25A0",
+        text: "■",
         alignment: AlignmentType.LEFT,
         style: {
           paragraph: {
@@ -18065,7 +17343,7 @@ var Numbering = class extends XmlComponent {
       {
         level: 3,
         format: LevelFormat.BULLET,
-        text: "\u25CF",
+        text: "●",
         alignment: AlignmentType.LEFT,
         style: {
           paragraph: {
@@ -18076,7 +17354,7 @@ var Numbering = class extends XmlComponent {
       {
         level: 4,
         format: LevelFormat.BULLET,
-        text: "\u25CB",
+        text: "○",
         alignment: AlignmentType.LEFT,
         style: {
           paragraph: {
@@ -18087,7 +17365,7 @@ var Numbering = class extends XmlComponent {
       {
         level: 5,
         format: LevelFormat.BULLET,
-        text: "\u25A0",
+        text: "■",
         alignment: AlignmentType.LEFT,
         style: {
           paragraph: {
@@ -18098,7 +17376,7 @@ var Numbering = class extends XmlComponent {
       {
         level: 6,
         format: LevelFormat.BULLET,
-        text: "\u25CF",
+        text: "●",
         alignment: AlignmentType.LEFT,
         style: {
           paragraph: {
@@ -18109,7 +17387,7 @@ var Numbering = class extends XmlComponent {
       {
         level: 7,
         format: LevelFormat.BULLET,
-        text: "\u25CF",
+        text: "●",
         alignment: AlignmentType.LEFT,
         style: {
           paragraph: {
@@ -18120,7 +17398,7 @@ var Numbering = class extends XmlComponent {
       {
         level: 8,
         format: LevelFormat.BULLET,
-        text: "\u25CF",
+        text: "●",
         alignment: AlignmentType.LEFT,
         style: {
           paragraph: {
@@ -18158,14 +17436,14 @@ var Numbering = class extends XmlComponent {
    * @param context - The XML context
    * @returns The prepared XML object
    */
-  prepForXml(context2) {
+  prepForXml(context) {
     for (const numbering of this.abstractNumberingMap.values()) {
       this.root.push(numbering);
     }
     for (const numbering of this.concreteNumberingMap.values()) {
       this.root.push(numbering);
     }
-    return super.prepForXml(context2);
+    return super.prepForXml(context);
   }
   /**
    * Creates a concrete numbering instance from an abstract numbering definition.
@@ -18222,19 +17500,16 @@ var Numbering = class extends XmlComponent {
   get ReferenceConfig() {
     return Array.from(this.referenceConfigMap.values());
   }
-};
-var createCompatibilitySetting = /* @__PURE__ */ __name((version2) => new BuilderElement({
+}
+const createCompatibilitySetting = (version) => new BuilderElement({
   name: "w:compatSetting",
   attributes: {
-    version: { key: "w:val", value: version2 },
+    version: { key: "w:val", value: version },
     name: { key: "w:name", value: "compatibilityMode" },
     uri: { key: "w:uri", value: "http://schemas.microsoft.com/office/word" }
   }
-}), "createCompatibilitySetting");
-var Compatibility = class extends XmlComponent {
-  static {
-    __name(this, "Compatibility");
-  }
+});
+class Compatibility extends XmlComponent {
   constructor(options) {
     super("w:compat");
     if (options.version) {
@@ -18436,11 +17711,8 @@ var Compatibility = class extends XmlComponent {
       this.root.push(new OnOffElement("w:cachedColBalance", options.cachedColumnBalance));
     }
   }
-};
-var SettingsAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "SettingsAttributes");
-  }
+}
+class SettingsAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", {
@@ -18463,13 +17735,10 @@ var SettingsAttributes = class extends XmlAttributeComponent {
       Ignorable: "mc:Ignorable"
     });
   }
-};
-var Settings = class extends XmlComponent {
-  static {
-    __name(this, "Settings");
-  }
+}
+class Settings extends XmlComponent {
   constructor(options) {
-    var _a2, _b2, _c, _d, _e, _f, _g, _h;
+    var _a, _b, _c, _d, _e, _f, _g, _h;
     super("w:settings");
     this.root.push(
       new SettingsAttributes({
@@ -18505,10 +17774,10 @@ var Settings = class extends XmlComponent {
     if (options.defaultTabStop !== void 0) {
       this.root.push(new NumberValueElement("w:defaultTabStop", options.defaultTabStop));
     }
-    if (((_a2 = options.hyphenation) == null ? void 0 : _a2.autoHyphenation) !== void 0) {
+    if (((_a = options.hyphenation) == null ? void 0 : _a.autoHyphenation) !== void 0) {
       this.root.push(new OnOffElement("w:autoHyphenation", options.hyphenation.autoHyphenation));
     }
-    if (((_b2 = options.hyphenation) == null ? void 0 : _b2.hyphenationZone) !== void 0) {
+    if (((_b = options.hyphenation) == null ? void 0 : _b.hyphenationZone) !== void 0) {
       this.root.push(new NumberValueElement("w:hyphenationZone", options.hyphenation.hyphenationZone));
     }
     if (((_c = options.hyphenation) == null ? void 0 : _c.consecutiveHyphenLimit) !== void 0) {
@@ -18523,38 +17792,26 @@ var Settings = class extends XmlComponent {
       }))
     );
   }
-};
-var ComponentAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "ComponentAttributes");
-  }
+}
+class ComponentAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", { val: "w:val" });
   }
-};
-var Name = class extends XmlComponent {
-  static {
-    __name(this, "Name");
-  }
+}
+class Name extends XmlComponent {
   constructor(value) {
     super("w:name");
     this.root.push(new ComponentAttributes({ val: value }));
   }
-};
-var UiPriority = class extends XmlComponent {
-  static {
-    __name(this, "UiPriority");
-  }
+}
+class UiPriority extends XmlComponent {
   constructor(value) {
     super("w:uiPriority");
     this.root.push(new ComponentAttributes({ val: decimalNumber(value) }));
   }
-};
-var StyleAttributes = class extends XmlAttributeComponent {
-  static {
-    __name(this, "StyleAttributes");
-  }
+}
+class StyleAttributes extends XmlAttributeComponent {
   constructor() {
     super(...arguments);
     __publicField(this, "xmlKeys", {
@@ -18564,11 +17821,8 @@ var StyleAttributes = class extends XmlAttributeComponent {
       customStyle: "w:customStyle"
     });
   }
-};
-var Style = class extends XmlComponent {
-  static {
-    __name(this, "Style");
-  }
+}
+class Style extends XmlComponent {
   constructor(attributes, options) {
     super("w:style");
     this.root.push(new StyleAttributes(attributes));
@@ -18597,11 +17851,8 @@ var Style = class extends XmlComponent {
       this.root.push(new OnOffElement("w:qFormat", options.quickFormat));
     }
   }
-};
-var StyleForParagraph = class extends Style {
-  static {
-    __name(this, "StyleForParagraph");
-  }
+}
+class StyleForParagraph extends Style {
   constructor(options) {
     super({ type: "paragraph", styleId: options.id }, options);
     __publicField(this, "paragraphProperties");
@@ -18611,11 +17862,8 @@ var StyleForParagraph = class extends Style {
     this.root.push(this.paragraphProperties);
     this.root.push(this.runProperties);
   }
-};
-var StyleForCharacter = class extends Style {
-  static {
-    __name(this, "StyleForCharacter");
-  }
+}
+class StyleForCharacter extends Style {
   constructor(options) {
     super(
       { type: "character", styleId: options.id },
@@ -18628,11 +17876,8 @@ var StyleForCharacter = class extends Style {
     this.runProperties = new RunProperties(options.run);
     this.root.push(this.runProperties);
   }
-};
-var HeadingStyle = class extends StyleForParagraph {
-  static {
-    __name(this, "HeadingStyle");
-  }
+}
+class HeadingStyle extends StyleForParagraph {
   constructor(options) {
     super(__spreadValues({
       basedOn: "Normal",
@@ -18640,99 +17885,72 @@ var HeadingStyle = class extends StyleForParagraph {
       quickFormat: true
     }, options));
   }
-};
-var TitleStyle = class extends HeadingStyle {
-  static {
-    __name(this, "TitleStyle");
-  }
+}
+class TitleStyle extends HeadingStyle {
   constructor(options) {
     super(__spreadValues({
       id: "Title",
       name: "Title"
     }, options));
   }
-};
-var Heading1Style = class extends HeadingStyle {
-  static {
-    __name(this, "Heading1Style");
-  }
+}
+class Heading1Style extends HeadingStyle {
   constructor(options) {
     super(__spreadValues({
       id: "Heading1",
       name: "Heading 1"
     }, options));
   }
-};
-var Heading2Style = class extends HeadingStyle {
-  static {
-    __name(this, "Heading2Style");
-  }
+}
+class Heading2Style extends HeadingStyle {
   constructor(options) {
     super(__spreadValues({
       id: "Heading2",
       name: "Heading 2"
     }, options));
   }
-};
-var Heading3Style = class extends HeadingStyle {
-  static {
-    __name(this, "Heading3Style");
-  }
+}
+class Heading3Style extends HeadingStyle {
   constructor(options) {
     super(__spreadValues({
       id: "Heading3",
       name: "Heading 3"
     }, options));
   }
-};
-var Heading4Style = class extends HeadingStyle {
-  static {
-    __name(this, "Heading4Style");
-  }
+}
+class Heading4Style extends HeadingStyle {
   constructor(options) {
     super(__spreadValues({
       id: "Heading4",
       name: "Heading 4"
     }, options));
   }
-};
-var Heading5Style = class extends HeadingStyle {
-  static {
-    __name(this, "Heading5Style");
-  }
+}
+class Heading5Style extends HeadingStyle {
   constructor(options) {
     super(__spreadValues({
       id: "Heading5",
       name: "Heading 5"
     }, options));
   }
-};
-var Heading6Style = class extends HeadingStyle {
-  static {
-    __name(this, "Heading6Style");
-  }
+}
+class Heading6Style extends HeadingStyle {
   constructor(options) {
     super(__spreadValues({
       id: "Heading6",
       name: "Heading 6"
     }, options));
   }
-};
-var StrongStyle = class extends HeadingStyle {
-  static {
-    __name(this, "StrongStyle");
-  }
+}
+class StrongStyle extends HeadingStyle {
   constructor(options) {
     super(__spreadValues({
       id: "Strong",
       name: "Strong"
     }, options));
   }
-};
-var ListParagraph = class extends StyleForParagraph {
-  static {
-    __name(this, "ListParagraph");
-  }
+}
+class ListParagraph extends StyleForParagraph {
   constructor(options) {
     super(__spreadValues({
       id: "ListParagraph",
@@ -18741,11 +17959,8 @@ var ListParagraph = class extends StyleForParagraph {
       quickFormat: true
     }, options));
   }
-};
-var FootnoteText = class extends StyleForParagraph {
-  static {
-    __name(this, "FootnoteText");
-  }
+}
+class FootnoteText extends StyleForParagraph {
   constructor(options) {
     super(__spreadValues({
       id: "FootnoteText",
@@ -18767,11 +17982,8 @@ var FootnoteText = class extends StyleForParagraph {
       }
     }, options));
   }
-};
-var FootnoteReferenceStyle = class extends StyleForCharacter {
-  static {
-    __name(this, "FootnoteReferenceStyle");
-  }
+}
+class FootnoteReferenceStyle extends StyleForCharacter {
   constructor(options) {
     super(__spreadValues({
       id: "FootnoteReference",
@@ -18783,11 +17995,8 @@ var FootnoteReferenceStyle = class extends StyleForCharacter {
       }
     }, options));
   }
-};
-var FootnoteTextChar = class extends StyleForCharacter {
-  static {
-    __name(this, "FootnoteTextChar");
-  }
+}
+class FootnoteTextChar extends StyleForCharacter {
   constructor(options) {
     super(__spreadValues({
       id: "FootnoteTextChar",
@@ -18800,11 +18009,8 @@ var FootnoteTextChar = class extends StyleForCharacter {
       }
     }, options));
   }
-};
-var EndnoteText = class extends StyleForParagraph {
-  static {
-    __name(this, "EndnoteText");
-  }
+}
+class EndnoteText extends StyleForParagraph {
   constructor(options) {
     super(__spreadValues({
       id: "EndnoteText",
@@ -18826,11 +18032,8 @@ var EndnoteText = class extends StyleForParagraph {
       }
     }, options));
   }
-};
-var EndnoteReferenceStyle = class extends StyleForCharacter {
-  static {
-    __name(this, "EndnoteReferenceStyle");
-  }
+}
+class EndnoteReferenceStyle extends StyleForCharacter {
   constructor(options) {
     super(__spreadValues({
       id: "EndnoteReference",
@@ -18842,11 +18045,8 @@ var EndnoteReferenceStyle = class extends StyleForCharacter {
       }
     }, options));
   }
-};
-var EndnoteTextChar = class extends StyleForCharacter {
-  static {
-    __name(this, "EndnoteTextChar");
-  }
+}
+class EndnoteTextChar extends StyleForCharacter {
   constructor(options) {
     super(__spreadValues({
       id: "EndnoteTextChar",
@@ -18859,11 +18059,8 @@ var EndnoteTextChar = class extends StyleForCharacter {
       }
     }, options));
   }
-};
-var HyperlinkStyle = class extends StyleForCharacter {
-  static {
-    __name(this, "HyperlinkStyle");
-  }
+}
+class HyperlinkStyle extends StyleForCharacter {
   constructor(options) {
     super(__spreadValues({
       id: "Hyperlink",
@@ -18877,11 +18074,8 @@ var HyperlinkStyle = class extends StyleForCharacter {
       }
     }, options));
   }
-};
-var Styles = class extends XmlComponent {
-  static {
-    __name(this, "Styles");
-  }
+}
+class Styles extends XmlComponent {
   constructor(options) {
     super("w:styles");
     if (options.initialStyles) {
@@ -18903,29 +18097,20 @@ var Styles = class extends XmlComponent {
       }
     }
   }
-};
-var ParagraphPropertiesDefaults = class extends XmlComponent {
-  static {
-    __name(this, "ParagraphPropertiesDefaults");
-  }
+}
+class ParagraphPropertiesDefaults extends XmlComponent {
   constructor(options) {
     super("w:pPrDefault");
     this.root.push(new ParagraphProperties(options));
   }
-};
-var RunPropertiesDefaults = class extends XmlComponent {
-  static {
-    __name(this, "RunPropertiesDefaults");
-  }
+}
+class RunPropertiesDefaults extends XmlComponent {
   constructor(options) {
     super("w:rPrDefault");
     this.root.push(new RunProperties(options));
   }
-};
-var DocumentDefaults = class extends XmlComponent {
-  static {
-    __name(this, "DocumentDefaults");
-  }
+}
+class DocumentDefaults extends XmlComponent {
   constructor(options) {
     super("w:docDefaults");
     __publicField(this, "runPropertiesDefaults");
@@ -18935,11 +18120,8 @@ var DocumentDefaults = class extends XmlComponent {
     this.root.push(this.runPropertiesDefaults);
     this.root.push(this.paragraphPropertiesDefaults);
   }
-};
-var ExternalStylesFactory = class {
-  static {
-    __name(this, "ExternalStylesFactory");
-  }
+}
+class ExternalStylesFactory {
   /**
    * Creates new Styles based on the given XML data.
    *
@@ -18982,18 +18164,15 @@ var ExternalStylesFactory = class {
       importedStyles: stylesElements.map((childElm) => convertToXmlComponent(childElm))
     };
   }
-};
-var DefaultStylesFactory = class {
-  static {
-    __name(this, "DefaultStylesFactory");
-  }
+}
+class DefaultStylesFactory {
   newInstance(options = {}) {
-    var _a2;
+    var _a;
     const documentAttributes = new DocumentAttributes(["mc", "r", "w", "w14", "w15"], "w14 w15");
     return {
       initialStyles: documentAttributes,
       importedStyles: [
-        new DocumentDefaults((_a2 = options.document) != null ? _a2 : {}),
+        new DocumentDefaults((_a = options.document) != null ? _a : {}),
         new TitleStyle(__spreadValues({
           run: {
             size: 56
@@ -19049,15 +18228,15 @@ var DefaultStylesFactory = class {
       ]
     };
   }
-};
-var File = class {
-  static {
-    __name(this, "File");
-  }
+}
+class File {
   constructor(options) {
+    // eslint-disable-next-line functional/prefer-readonly-type
     __publicField(this, "currentRelationshipId", 1);
     __publicField(this, "documentWrapper");
+    // eslint-disable-next-line functional/prefer-readonly-type
     __publicField(this, "headers", []);
+    // eslint-disable-next-line functional/prefer-readonly-type
     __publicField(this, "footers", []);
     __publicField(this, "coreProperties");
     __publicField(this, "numbering");
@@ -19072,10 +18251,10 @@ var File = class {
     __publicField(this, "styles");
     __publicField(this, "comments");
     __publicField(this, "fontWrapper");
-    var _a2, _b2, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m;
     this.coreProperties = new CoreProperties(__spreadProps(__spreadValues({}, options), {
-      creator: (_a2 = options.creator) != null ? _a2 : "Un-named",
-      revision: (_b2 = options.revision) != null ? _b2 : 1,
+      creator: (_a = options.creator) != null ? _a : "Un-named",
+      revision: (_b = options.revision) != null ? _b : 1,
       lastModifiedBy: (_c = options.lastModifiedBy) != null ? _c : "Un-named"
     }));
     this.numbering = new Numbering(options.numbering ? options.numbering : { config: [] });
@@ -19291,12 +18470,423 @@ var File = class {
   get FontTable() {
     return this.fontWrapper;
   }
+}
+class FieldInstruction extends XmlComponent {
+  constructor(properties = {}) {
+    super("w:instrText");
+    __publicField(this, "properties");
+    this.properties = properties;
+    this.root.push(new TextAttributes({ space: SpaceType.PRESERVE }));
+    let instruction = "TOC";
+    if (this.properties.captionLabel) {
+      instruction = `${instruction} \\a "${this.properties.captionLabel}"`;
+    }
+    if (this.properties.entriesFromBookmark) {
+      instruction = `${instruction} \\b "${this.properties.entriesFromBookmark}"`;
+    }
+    if (this.properties.captionLabelIncludingNumbers) {
+      instruction = `${instruction} \\c "${this.properties.captionLabelIncludingNumbers}"`;
+    }
+    if (this.properties.sequenceAndPageNumbersSeparator) {
+      instruction = `${instruction} \\d "${this.properties.sequenceAndPageNumbersSeparator}"`;
+    }
+    if (this.properties.tcFieldIdentifier) {
+      instruction = `${instruction} \\f "${this.properties.tcFieldIdentifier}"`;
+    }
+    if (this.properties.hyperlink) {
+      instruction = `${instruction} \\h`;
+    }
+    if (this.properties.tcFieldLevelRange) {
+      instruction = `${instruction} \\l "${this.properties.tcFieldLevelRange}"`;
+    }
+    if (this.properties.pageNumbersEntryLevelsRange) {
+      instruction = `${instruction} \\n "${this.properties.pageNumbersEntryLevelsRange}"`;
+    }
+    if (this.properties.headingStyleRange) {
+      instruction = `${instruction} \\o "${this.properties.headingStyleRange}"`;
+    }
+    if (this.properties.entryAndPageNumberSeparator) {
+      instruction = `${instruction} \\p "${this.properties.entryAndPageNumberSeparator}"`;
+    }
+    if (this.properties.seqFieldIdentifierForPrefix) {
+      instruction = `${instruction} \\s "${this.properties.seqFieldIdentifierForPrefix}"`;
+    }
+    if (this.properties.stylesWithLevels && this.properties.stylesWithLevels.length) {
+      const styles = this.properties.stylesWithLevels.map((sl) => `${sl.styleName},${sl.level}`).join(",");
+      instruction = `${instruction} \\t "${styles}"`;
+    }
+    if (this.properties.useAppliedParagraphOutlineLevel) {
+      instruction = `${instruction} \\u`;
+    }
+    if (this.properties.preserveTabInEntries) {
+      instruction = `${instruction} \\w`;
+    }
+    if (this.properties.preserveNewLineInEntries) {
+      instruction = `${instruction} \\x`;
+    }
+    if (this.properties.hideTabAndPageNumbersInWebView) {
+      instruction = `${instruction} \\z`;
+    }
+    this.root.push(instruction);
+  }
+}
+class StructuredDocumentTagContent extends XmlComponent {
+  constructor() {
+    super("w:sdtContent");
+  }
+}
+class StructuredDocumentTagProperties extends XmlComponent {
+  constructor(alias) {
+    super("w:sdtPr");
+    if (alias) {
+      this.root.push(new StringValueElement("w:alias", alias));
+    }
+  }
+}
+class TableOfContents extends FileChild {
+  constructor(alias = "Table of Contents", _a = {}) {
+    var _b = _a, {
+      contentChildren = [],
+      cachedEntries = [],
+      beginDirty = true
+    } = _b, properties = __objRest(_b, [
+      "contentChildren",
+      "cachedEntries",
+      "beginDirty"
+    ]);
+    super("w:sdt");
+    this.root.push(new StructuredDocumentTagProperties(alias));
+    const content = new StructuredDocumentTagContent();
+    const beginParagraphMandatoryChildren = [
+      new Run({
+        children: [createBegin(beginDirty), new FieldInstruction(properties), createSeparate()]
+      })
+    ];
+    const endParagraphMandatoryChildren = [
+      new Run({
+        children: [createEnd()]
+      })
+    ];
+    const hasCachedContent = cachedEntries !== void 0 && cachedEntries.length > 0;
+    if (hasCachedContent) {
+      const { stylesWithLevels } = properties;
+      const cachedParagraphs = cachedEntries.map((entry, i) => {
+        var _a2, _b2;
+        const contentChild = this.buildCachedContentParagraphChild(entry, properties);
+        const style = (_b2 = (_a2 = stylesWithLevels == null ? void 0 : stylesWithLevels.find((s) => s.level === entry.level)) == null ? void 0 : _a2.styleName) != null ? _b2 : `TOC${entry.level}`;
+        const children = i === 0 ? [...beginParagraphMandatoryChildren, contentChild] : i === cachedEntries.length - 1 ? [contentChild, ...endParagraphMandatoryChildren] : [contentChild];
+        return new Paragraph({
+          style,
+          tabStops: this.getTabStopsForLevel(entry.level),
+          children
+        });
+      });
+      let paragraphs = cachedParagraphs;
+      if (cachedEntries.length <= 1) {
+        paragraphs = [
+          ...cachedParagraphs,
+          new Paragraph({
+            children: endParagraphMandatoryChildren
+          })
+        ];
+      }
+      for (const paragraph of paragraphs) {
+        content.addChildElement(paragraph);
+      }
+    } else {
+      const beginParagraph = new Paragraph({
+        children: beginParagraphMandatoryChildren
+      });
+      content.addChildElement(beginParagraph);
+      for (const child of contentChildren) {
+        content.addChildElement(child);
+      }
+      const endParagraph = new Paragraph({
+        children: endParagraphMandatoryChildren
+      });
+      content.addChildElement(endParagraph);
+    }
+    this.root.push(content);
+  }
+  getTabStopsForLevel(level, pageWidth = 9025) {
+    const levelSpace = 240;
+    const levelPosition = pageWidth + 1 - (level - 1) * levelSpace;
+    return [
+      {
+        type: "clear",
+        position: levelPosition
+      },
+      {
+        type: "right",
+        position: pageWidth,
+        leader: "dot"
+      }
+    ];
+  }
+  buildCachedContentRun(entry, properties) {
+    var _a, _b;
+    return new Run({
+      // TODO: The IndexLink style might always need to be set regardless of the hyperlink property. This needs to be verified.
+      style: (properties == null ? void 0 : properties.hyperlink) && entry.href !== void 0 ? "IndexLink" : void 0,
+      children: [
+        new Text({
+          text: entry.title
+        }),
+        new Tab(),
+        new Text({
+          text: (_b = (_a = entry.page) == null ? void 0 : _a.toString()) != null ? _b : ""
+        })
+      ]
+    });
+  }
+  buildCachedContentParagraphChild(entry, properties) {
+    const run = this.buildCachedContentRun(entry, properties);
+    if ((properties == null ? void 0 : properties.hyperlink) && entry.href !== void 0) {
+      return new InternalHyperlink({
+        anchor: entry.href,
+        children: [run]
+      });
+    }
+    return run;
+  }
+}
+class StyleLevel {
+  constructor(styleName, level) {
+    /** The name of the paragraph style. */
+    __publicField(this, "styleName");
+    /** The TOC level (1-9) to assign to this style. */
+    __publicField(this, "level");
+    this.styleName = styleName;
+    this.level = level;
+  }
+}
+class Header2 {
+  constructor(options = { children: [] }) {
+    __publicField(this, "options");
+    this.options = options;
+  }
+}
+class Footer2 {
+  constructor(options = { children: [] }) {
+    __publicField(this, "options");
+    this.options = options;
+  }
+}
+class FootNoteReferenceRunAttributes extends XmlAttributeComponent {
+  constructor() {
+    super(...arguments);
+    __publicField(this, "xmlKeys", {
+      id: "w:id"
+    });
+  }
+}
+class FootnoteReference extends XmlComponent {
+  constructor(id) {
+    super("w:footnoteReference");
+    this.root.push(
+      new FootNoteReferenceRunAttributes({
+        id
+      })
+    );
+  }
+}
+class FootnoteReferenceRun extends Run {
+  /**
+   * Creates a new footnote reference run.
+   *
+   * @param id - Unique identifier linking to the footnote content
+   */
+  constructor(id) {
+    super({ style: "FootnoteReference" });
+    this.root.push(new FootnoteReference(id));
+  }
+}
+class EndnoteReferenceRunAttributes extends XmlAttributeComponent {
+  constructor() {
+    super(...arguments);
+    __publicField(this, "xmlKeys", {
+      id: "w:id"
+    });
+  }
+}
+class EndnoteIdReference extends XmlComponent {
+  constructor(id) {
+    super("w:endnoteReference");
+    this.root.push(
+      new EndnoteReferenceRunAttributes({
+        id
+      })
+    );
+  }
+}
+class EndnoteReferenceRun extends Run {
+  constructor(id) {
+    super({ style: "EndnoteReference" });
+    this.root.push(new EndnoteIdReference(id));
+  }
+}
+class CheckboxSymbolAttributes extends XmlAttributeComponent {
+  constructor() {
+    super(...arguments);
+    __publicField(this, "xmlKeys", {
+      val: "w14:val",
+      symbolfont: "w14:font"
+    });
+  }
+}
+class CheckBoxSymbolElement extends XmlComponent {
+  constructor(name, val, font) {
+    super(name);
+    if (font) {
+      this.root.push(new CheckboxSymbolAttributes({ val: shortHexNumber(val), symbolfont: font }));
+    } else {
+      this.root.push(new CheckboxSymbolAttributes({ val }));
+    }
+  }
+}
+class CheckBoxUtil extends XmlComponent {
+  constructor(options) {
+    var _a, _b, _c, _d, _e, _f, _g, _h;
+    super("w14:checkbox");
+    __publicField(this, "DEFAULT_UNCHECKED_SYMBOL", "2610");
+    __publicField(this, "DEFAULT_CHECKED_SYMBOL", "2612");
+    __publicField(this, "DEFAULT_FONT", "MS Gothic");
+    const value = (options == null ? void 0 : options.checked) ? "1" : "0";
+    let symbol;
+    let font;
+    this.root.push(new CheckBoxSymbolElement("w14:checked", value));
+    symbol = ((_a = options == null ? void 0 : options.checkedState) == null ? void 0 : _a.value) ? (_b = options == null ? void 0 : options.checkedState) == null ? void 0 : _b.value : this.DEFAULT_CHECKED_SYMBOL;
+    font = ((_c = options == null ? void 0 : options.checkedState) == null ? void 0 : _c.font) ? (_d = options == null ? void 0 : options.checkedState) == null ? void 0 : _d.font : this.DEFAULT_FONT;
+    this.root.push(new CheckBoxSymbolElement("w14:checkedState", symbol, font));
+    symbol = ((_e = options == null ? void 0 : options.uncheckedState) == null ? void 0 : _e.value) ? (_f = options == null ? void 0 : options.uncheckedState) == null ? void 0 : _f.value : this.DEFAULT_UNCHECKED_SYMBOL;
+    font = ((_g = options == null ? void 0 : options.uncheckedState) == null ? void 0 : _g.font) ? (_h = options == null ? void 0 : options.uncheckedState) == null ? void 0 : _h.font : this.DEFAULT_FONT;
+    this.root.push(new CheckBoxSymbolElement("w14:uncheckedState", symbol, font));
+  }
+}
+class CheckBox extends XmlComponent {
+  constructor(options) {
+    var _a, _b, _c, _d;
+    super("w:sdt");
+    // default values per Microsoft
+    __publicField(this, "DEFAULT_UNCHECKED_SYMBOL", "2610");
+    __publicField(this, "DEFAULT_CHECKED_SYMBOL", "2612");
+    __publicField(this, "DEFAULT_FONT", "MS Gothic");
+    const properties = new StructuredDocumentTagProperties(options == null ? void 0 : options.alias);
+    properties.addChildElement(new CheckBoxUtil(options));
+    this.root.push(properties);
+    const content = new StructuredDocumentTagContent();
+    const checkedFont = (_a = options == null ? void 0 : options.checkedState) == null ? void 0 : _a.font;
+    const checkedText = (_b = options == null ? void 0 : options.checkedState) == null ? void 0 : _b.value;
+    const uncheckedFont = (_c = options == null ? void 0 : options.uncheckedState) == null ? void 0 : _c.font;
+    const uncheckedText = (_d = options == null ? void 0 : options.uncheckedState) == null ? void 0 : _d.value;
+    let symbolFont;
+    let char;
+    if (options == null ? void 0 : options.checked) {
+      symbolFont = checkedFont ? checkedFont : this.DEFAULT_FONT;
+      char = checkedText ? checkedText : this.DEFAULT_CHECKED_SYMBOL;
+    } else {
+      symbolFont = uncheckedFont ? uncheckedFont : this.DEFAULT_FONT;
+      char = uncheckedText ? uncheckedText : this.DEFAULT_UNCHECKED_SYMBOL;
+    }
+    const initialRenderedChar = new SymbolRun({
+      char,
+      symbolfont: symbolFont
+    });
+    content.addChildElement(initialRenderedChar);
+    this.root.push(content);
+  }
+}
+const createPictElement = ({ shape }) => new BuilderElement({
+  name: "w:pict",
+  children: [shape]
+});
+const createTextboxContent = ({ children = [] }) => new BuilderElement({
+  name: "w:txbxContent",
+  children
+});
+const createVmlTextbox = ({ style, children, inset }) => new BuilderElement({
+  name: "v:textbox",
+  attributes: {
+    style: {
+      key: "style",
+      value: style
+    },
+    insetMode: {
+      key: "insetmode",
+      value: inset ? "custom" : "auto"
+    },
+    inset: {
+      key: "inset",
+      value: inset ? `${inset.left}, ${inset.top}, ${inset.right}, ${inset.bottom}` : void 0
+    }
+  },
+  children: [createTextboxContent({ children })]
+});
+const SHAPE_TYPE = "#_x0000_t202";
+const styleToKeyMap = {
+  flip: "flip",
+  height: "height",
+  left: "left",
+  marginBottom: "margin-bottom",
+  marginLeft: "margin-left",
+  marginRight: "margin-right",
+  marginTop: "margin-top",
+  positionHorizontal: "mso-position-horizontal",
+  positionHorizontalRelative: "mso-position-horizontal-relative",
+  positionVertical: "mso-position-vertical",
+  positionVerticalRelative: "mso-position-vertical-relative",
+  wrapDistanceBottom: "mso-wrap-distance-bottom",
+  wrapDistanceLeft: "mso-wrap-distance-left",
+  wrapDistanceRight: "mso-wrap-distance-right",
+  wrapDistanceTop: "mso-wrap-distance-top",
+  wrapEdited: "mso-wrap-edited",
+  wrapStyle: "mso-wrap-style",
+  position: "position",
+  rotation: "rotation",
+  top: "top",
+  visibility: "visibility",
+  width: "width",
+  zIndex: "z-index"
 };
+const formatShapeStyle = (style) => style ? Object.entries(style).map(([key, value]) => `${styleToKeyMap[key]}:${value}`).join(";") : void 0;
+const createShape = ({ id, children, type: type2 = SHAPE_TYPE, style }) => new BuilderElement({
+  name: "v:shape",
+  attributes: {
+    id: {
+      key: "id",
+      value: id
+    },
+    type: {
+      key: "type",
+      value: type2
+    },
+    style: {
+      key: "style",
+      value: formatShapeStyle(style)
+    }
+  },
+  children: [createVmlTextbox({ style: "mso-fit-shape-to-text:t;", children })]
+});
+class Textbox extends FileChild {
+  constructor(_c) {
+    var _d = _c, { style, children } = _d, rest = __objRest(_d, ["style", "children"]);
+    super("w:p");
+    this.root.push(new ParagraphProperties(rest));
+    this.root.push(
+      createPictElement({
+        shape: createShape({
+          children,
+          id: uniqueId(),
+          style
+        })
+      })
+    );
+  }
+}
 var streamBrowserifyExports = requireStreamBrowserify();
 function commonjsRequire(path) {
   throw new Error('Could not dynamically require "' + path + '". Please configure the dynamicRequireTargets or/and ignoreDynamicRequires option of @rollup/plugin-commonjs appropriately for this require call to work.');
 }
-__name(commonjsRequire, "commonjsRequire");
 var jszip_min = { exports: {} };
 var hasRequiredJszip_min;
 function requireJszip_min() {
@@ -19306,7 +18896,7 @@ function requireJszip_min() {
     !(function(e) {
       module.exports = e();
     })(function() {
-      return (/* @__PURE__ */ __name((function s(a, o, h) {
+      return (function s(a, o, h) {
         function u(r, e2) {
           if (!o[r]) {
             if (!a[r]) {
@@ -19324,10 +18914,9 @@ function requireJszip_min() {
           }
           return o[r].exports;
         }
-        __name(u, "u");
         for (var l = "function" == typeof commonjsRequire && commonjsRequire, e = 0; e < h.length; e++) u(h[e]);
         return u;
-      }), "s"))({ 1: [function(e, t, r) {
+      })({ 1: [function(e, t, r) {
         var d = e("./utils"), c = e("./support"), p = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
         r.encode = function(e2) {
           for (var t2, r2, n, i, s, a, o, h = [], u = 0, l = e2.length, f = l, c2 = "string" !== d.getTypeOf(e2); u < e2.length; ) f = l - u, n = c2 ? (t2 = e2[u++], r2 = u < l ? e2[u++] : 0, u < l ? e2[u++] : 0) : (t2 = e2.charCodeAt(u++), r2 = u < l ? e2.charCodeAt(u++) : 0, u < l ? e2.charCodeAt(u++) : 0), i = t2 >> 2, s = (3 & t2) << 4 | r2 >> 4, a = 1 < f ? (15 & r2) << 2 | n >> 6 : 64, o = 2 < f ? 63 & n : 64, h.push(p.charAt(i) + p.charAt(s) + p.charAt(a) + p.charAt(o));
@@ -19345,24 +18934,23 @@ function requireJszip_min() {
         function o(e2, t2, r2, n2, i2) {
           this.compressedSize = e2, this.uncompressedSize = t2, this.crc32 = r2, this.compression = n2, this.compressedContent = i2;
         }
-        __name(o, "o");
-        o.prototype = { getContentWorker: /* @__PURE__ */ __name(function() {
+        o.prototype = { getContentWorker: function() {
           var e2 = new i(n.Promise.resolve(this.compressedContent)).pipe(this.compression.uncompressWorker()).pipe(new a("data_length")), t2 = this;
           return e2.on("end", function() {
             if (this.streamInfo.data_length !== t2.uncompressedSize) throw new Error("Bug : uncompressed data size mismatch");
           }), e2;
-        }, "getContentWorker"), getCompressedWorker: /* @__PURE__ */ __name(function() {
+        }, getCompressedWorker: function() {
           return new i(n.Promise.resolve(this.compressedContent)).withStreamInfo("compressedSize", this.compressedSize).withStreamInfo("uncompressedSize", this.uncompressedSize).withStreamInfo("crc32", this.crc32).withStreamInfo("compression", this.compression);
-        }, "getCompressedWorker") }, o.createWorkerFrom = function(e2, t2, r2) {
+        } }, o.createWorkerFrom = function(e2, t2, r2) {
           return e2.pipe(new s()).pipe(new a("uncompressedSize")).pipe(t2.compressWorker(r2)).pipe(new a("compressedSize")).withStreamInfo("compression", t2);
         }, t.exports = o;
       }, { "./external": 6, "./stream/Crc32Probe": 25, "./stream/DataLengthProbe": 26, "./stream/DataWorker": 27 }], 3: [function(e, t, r) {
         var n = e("./stream/GenericWorker");
-        r.STORE = { magic: "\0\0", compressWorker: /* @__PURE__ */ __name(function() {
+        r.STORE = { magic: "\0\0", compressWorker: function() {
           return new n("STORE compression");
-        }, "compressWorker"), uncompressWorker: /* @__PURE__ */ __name(function() {
+        }, uncompressWorker: function() {
           return new n("STORE decompression");
-        }, "uncompressWorker") }, r.DEFLATE = e("./flate");
+        } }, r.DEFLATE = e("./flate");
       }, { "./flate": 7, "./stream/GenericWorker": 28 }], 4: [function(e, t, r) {
         var n = e("./utils");
         var o = (function() {
@@ -19396,7 +18984,6 @@ function requireJszip_min() {
         function h(e2, t2) {
           a.call(this, "FlateWorker/" + e2), this._pako = null, this._pakoAction = e2, this._pakoOptions = t2, this.meta = {};
         }
-        __name(h, "h");
         r.magic = "\b\0", s.inherits(h, a), h.prototype.processChunk = function(e2) {
           this.meta = e2.meta, null === this._pako && this._createPako(), this._pako.push(s.transformTo(o, e2.data), false);
         }, h.prototype.flush = function() {
@@ -19420,7 +19007,6 @@ function requireJszip_min() {
           for (r2 = 0; r2 < t2; r2++) n2 += String.fromCharCode(255 & e2), e2 >>>= 8;
           return n2;
         }
-        __name(A, "A");
         function n(e2, t2, r2, n2, i2, s2) {
           var a, o, h = e2.file, u = e2.compression, l = s2 !== O.utf8encode, f = I.transformTo("string", s2(h.name)), c = I.transformTo("string", O.utf8encode(h.name)), d = h.comment, p = I.transformTo("string", s2(d)), m = I.transformTo("string", O.utf8encode(d)), _ = c.length !== h.name.length, g = m.length !== d.length, b = "", v = "", y = "", w = h.dir, k = h.date, x = { crc32: 0, compressedSize: 0, uncompressedSize: 0 };
           t2 && !r2 || (x.crc32 = e2.crc32, x.compressedSize = e2.compressedSize, x.uncompressedSize = e2.uncompressedSize);
@@ -19436,12 +19022,10 @@ function requireJszip_min() {
           var E = "";
           return E += "\n\0", E += A(S, 2), E += u.magic, E += A(a, 2), E += A(o, 2), E += A(x.crc32, 4), E += A(x.compressedSize, 4), E += A(x.uncompressedSize, 4), E += A(f.length, 2), E += A(b.length, 2), { fileRecord: R.LOCAL_FILE_HEADER + E + f + b, dirRecord: R.CENTRAL_FILE_HEADER + A(C, 2) + E + A(p.length, 2) + "\0\0\0\0" + A(z, 4) + A(n2, 4) + f + b + p };
         }
-        __name(n, "n");
         var I = e("../utils"), i = e("../stream/GenericWorker"), O = e("../utf8"), B = e("../crc32"), R = e("../signature");
         function s(e2, t2, r2, n2) {
           i.call(this, "ZipFileWorker"), this.bytesWritten = 0, this.zipComment = t2, this.zipPlatform = r2, this.encodeFileName = n2, this.streamFiles = e2, this.accumulate = false, this.contentBuffer = [], this.dirRecords = [], this.currentSourceOffset = 0, this.entriesCount = 0, this.currentFile = null, this._sources = [];
         }
-        __name(s, "s");
         I.inherits(s, i), s.prototype.push = function(e2) {
           var t2 = e2.meta.percent || 0, r2 = this.entriesCount, n2 = this._sources.length;
           this.accumulate ? this.contentBuffer.push(e2) : (this.bytesWritten += e2.data.length, i.prototype.push.call(this, { data: e2.data, meta: { currentFile: this.currentFile, percent: r2 ? (t2 + 100 * (r2 - n2 - 1)) / r2 : 100 } }));
@@ -19522,7 +19106,6 @@ function requireJszip_min() {
             return e2;
           };
         }
-        __name(n, "n");
         (n.prototype = e("./object")).loadAsync = e("./load"), n.support = e("./support"), n.defaults = e("./defaults"), n.version = "3.10.1", n.loadAsync = function(e2, t2) {
           return new n().loadAsync(e2, t2);
         }, n.external = e("./external"), t.exports = n;
@@ -19538,7 +19121,6 @@ function requireJszip_min() {
             }).resume();
           });
         }
-        __name(f, "f");
         t.exports = function(e2, o) {
           var h = this;
           return o = u.extend(o || {}, { base64: false, checkCRC32: false, optimizedBinaryString: false, createFolders: false, decodeFileName: n.utf8decode }), l.isNode && l.isStream(e2) ? i.Promise.reject(new Error("JSZip can't accept a stream when loading a zip file.")) : u.prepareContent("the loaded zip file", e2, true, o.optimizedBinaryString, o.base64).then(function(e3) {
@@ -19561,7 +19143,6 @@ function requireJszip_min() {
         function s(e2, t2) {
           i.call(this, "Nodejs stream input adapter for " + e2), this._upstreamEnded = false, this._bindStream(t2);
         }
-        __name(s, "s");
         n.inherits(s, i), s.prototype._bindStream = function(e2) {
           var t2 = this;
           (this._stream = e2).pause(), e2.on("data", function(e3) {
@@ -19589,24 +19170,23 @@ function requireJszip_min() {
             n2.push(null);
           });
         }
-        __name(n, "n");
         e("../utils").inherits(n, i), n.prototype._read = function() {
           this._helper.resume();
         }, t.exports = n;
       }, { "../utils": 32, "readable-stream": 16 }], 14: [function(e, t, r) {
-        t.exports = { isNode: "undefined" != typeof Buffer, newBufferFrom: /* @__PURE__ */ __name(function(e2, t2) {
+        t.exports = { isNode: "undefined" != typeof Buffer, newBufferFrom: function(e2, t2) {
           if (Buffer.from && Buffer.from !== Uint8Array.from) return Buffer.from(e2, t2);
           if ("number" == typeof e2) throw new Error('The "data" argument must not be a number');
           return new Buffer(e2, t2);
-        }, "newBufferFrom"), allocBuffer: /* @__PURE__ */ __name(function(e2) {
+        }, allocBuffer: function(e2) {
           if (Buffer.alloc) return Buffer.alloc(e2);
           var t2 = new Buffer(e2);
           return t2.fill(0), t2;
-        }, "allocBuffer"), isBuffer: /* @__PURE__ */ __name(function(e2) {
+        }, isBuffer: function(e2) {
           return Buffer.isBuffer(e2);
-        }, "isBuffer"), isStream: /* @__PURE__ */ __name(function(e2) {
+        }, isStream: function(e2) {
           return e2 && "function" == typeof e2.on && "function" == typeof e2.pause && "function" == typeof e2.resume;
-        }, "isStream") };
+        } };
       }, {}], 15: [function(e, t, r) {
         function s(e2, t2, r2) {
           var n2, i2 = u.getTypeOf(t2), s2 = u.extend(r2 || {}, f);
@@ -19618,31 +19198,29 @@ function requireJszip_min() {
           var h2 = new d(e2, o2, s2);
           this.files[e2] = h2;
         }
-        __name(s, "s");
-        var i = e("./utf8"), u = e("./utils"), l = e("./stream/GenericWorker"), a = e("./stream/StreamHelper"), f = e("./defaults"), c = e("./compressedObject"), d = e("./zipObject"), o = e("./generate"), p = e("./nodejsUtils"), m = e("./nodejs/NodejsStreamInputAdapter"), _ = /* @__PURE__ */ __name(function(e2) {
+        var i = e("./utf8"), u = e("./utils"), l = e("./stream/GenericWorker"), a = e("./stream/StreamHelper"), f = e("./defaults"), c = e("./compressedObject"), d = e("./zipObject"), o = e("./generate"), p = e("./nodejsUtils"), m = e("./nodejs/NodejsStreamInputAdapter"), _ = function(e2) {
           "/" === e2.slice(-1) && (e2 = e2.substring(0, e2.length - 1));
           var t2 = e2.lastIndexOf("/");
           return 0 < t2 ? e2.substring(0, t2) : "";
-        }, "_"), g = /* @__PURE__ */ __name(function(e2) {
+        }, g = function(e2) {
           return "/" !== e2.slice(-1) && (e2 += "/"), e2;
-        }, "g"), b = /* @__PURE__ */ __name(function(e2, t2) {
+        }, b = function(e2, t2) {
           return t2 = void 0 !== t2 ? t2 : f.createFolders, e2 = g(e2), this.files[e2] || s.call(this, e2, null, { dir: true, createFolders: t2 }), this.files[e2];
-        }, "b");
+        };
         function h(e2) {
           return "[object RegExp]" === Object.prototype.toString.call(e2);
         }
-        __name(h, "h");
-        var n = { load: /* @__PURE__ */ __name(function() {
+        var n = { load: function() {
           throw new Error("This method has been removed in JSZip 3.0, please check the upgrade guide.");
-        }, "load"), forEach: /* @__PURE__ */ __name(function(e2) {
+        }, forEach: function(e2) {
           var t2, r2, n2;
           for (t2 in this.files) n2 = this.files[t2], (r2 = t2.slice(this.root.length, t2.length)) && t2.slice(0, this.root.length) === this.root && e2(r2, n2);
-        }, "forEach"), filter: /* @__PURE__ */ __name(function(r2) {
+        }, filter: function(r2) {
           var n2 = [];
           return this.forEach(function(e2, t2) {
             r2(e2, t2) && n2.push(t2);
           }), n2;
-        }, "filter"), file: /* @__PURE__ */ __name(function(e2, t2, r2) {
+        }, file: function(e2, t2, r2) {
           if (1 !== arguments.length) return e2 = this.root + e2, s.call(this, e2, t2, r2), this;
           if (h(e2)) {
             var n2 = e2;
@@ -19652,14 +19230,14 @@ function requireJszip_min() {
           }
           var i2 = this.files[this.root + e2];
           return i2 && !i2.dir ? i2 : null;
-        }, "file"), folder: /* @__PURE__ */ __name(function(r2) {
+        }, folder: function(r2) {
           if (!r2) return this;
           if (h(r2)) return this.filter(function(e3, t3) {
             return t3.dir && r2.test(e3);
           });
           var e2 = this.root + r2, t2 = b.call(this, e2), n2 = this.clone();
           return n2.root = t2.name, n2;
-        }, "folder"), remove: /* @__PURE__ */ __name(function(r2) {
+        }, remove: function(r2) {
           r2 = this.root + r2;
           var e2 = this.files[r2];
           if (e2 || ("/" !== r2.slice(-1) && (r2 += "/"), e2 = this.files[r2]), e2 && !e2.dir) delete this.files[r2];
@@ -19667,9 +19245,9 @@ function requireJszip_min() {
             return t3.name.slice(0, r2.length) === r2;
           }), n2 = 0; n2 < t2.length; n2++) delete this.files[t2[n2].name];
           return this;
-        }, "remove"), generate: /* @__PURE__ */ __name(function() {
+        }, generate: function() {
           throw new Error("This method has been removed in JSZip 3.0, please check the upgrade guide.");
-        }, "generate"), generateInternalStream: /* @__PURE__ */ __name(function(e2) {
+        }, generateInternalStream: function(e2) {
           var t2, r2 = {};
           try {
             if ((r2 = u.extend(e2 || {}, { streamFiles: false, compression: "STORE", compressionOptions: null, type: "", platform: "DOS", comment: null, mimeType: "application/zip", encodeFileName: i.utf8encode })).type = r2.type.toLowerCase(), r2.compression = r2.compression.toUpperCase(), "binarystring" === r2.type && (r2.type = "string"), !r2.type) throw new Error("No output type specified.");
@@ -19680,11 +19258,11 @@ function requireJszip_min() {
             (t2 = new l("error")).error(e3);
           }
           return new a(t2, r2.type || "string", r2.mimeType);
-        }, "generateInternalStream"), generateAsync: /* @__PURE__ */ __name(function(e2, t2) {
+        }, generateAsync: function(e2, t2) {
           return this.generateInternalStream(e2).accumulate(t2);
-        }, "generateAsync"), generateNodeStream: /* @__PURE__ */ __name(function(e2, t2) {
+        }, generateNodeStream: function(e2, t2) {
           return (e2 = e2 || {}).type || (e2.type = "nodebuffer"), this.generateInternalStream(e2).toNodejsStream(t2);
-        }, "generateNodeStream") };
+        } };
         t.exports = n;
       }, { "./compressedObject": 2, "./defaults": 5, "./generate": 9, "./nodejs/NodejsStreamInputAdapter": 12, "./nodejsUtils": 14, "./stream/GenericWorker": 28, "./stream/StreamHelper": 29, "./utf8": 31, "./utils": 32, "./zipObject": 35 }], 16: [function(e, t, r) {
         t.exports = e("stream");
@@ -19694,7 +19272,6 @@ function requireJszip_min() {
           n.call(this, e2);
           for (var t2 = 0; t2 < this.data.length; t2++) e2[t2] = 255 & e2[t2];
         }
-        __name(i, "i");
         e("../utils").inherits(i, n), i.prototype.byteAt = function(e2) {
           return this.data[this.zero + e2];
         }, i.prototype.lastIndexOfSignature = function(e2) {
@@ -19713,35 +19290,33 @@ function requireJszip_min() {
         function i(e2) {
           this.data = e2, this.length = e2.length, this.index = 0, this.zero = 0;
         }
-        __name(i, "i");
-        i.prototype = { checkOffset: /* @__PURE__ */ __name(function(e2) {
+        i.prototype = { checkOffset: function(e2) {
           this.checkIndex(this.index + e2);
-        }, "checkOffset"), checkIndex: /* @__PURE__ */ __name(function(e2) {
+        }, checkIndex: function(e2) {
           if (this.length < this.zero + e2 || e2 < 0) throw new Error("End of data reached (data length = " + this.length + ", asked index = " + e2 + "). Corrupted zip ?");
-        }, "checkIndex"), setIndex: /* @__PURE__ */ __name(function(e2) {
+        }, setIndex: function(e2) {
           this.checkIndex(e2), this.index = e2;
-        }, "setIndex"), skip: /* @__PURE__ */ __name(function(e2) {
+        }, skip: function(e2) {
           this.setIndex(this.index + e2);
-        }, "skip"), byteAt: /* @__PURE__ */ __name(function() {
-        }, "byteAt"), readInt: /* @__PURE__ */ __name(function(e2) {
+        }, byteAt: function() {
+        }, readInt: function(e2) {
           var t2, r2 = 0;
           for (this.checkOffset(e2), t2 = this.index + e2 - 1; t2 >= this.index; t2--) r2 = (r2 << 8) + this.byteAt(t2);
           return this.index += e2, r2;
-        }, "readInt"), readString: /* @__PURE__ */ __name(function(e2) {
+        }, readString: function(e2) {
           return n.transformTo("string", this.readData(e2));
-        }, "readString"), readData: /* @__PURE__ */ __name(function() {
-        }, "readData"), lastIndexOfSignature: /* @__PURE__ */ __name(function() {
-        }, "lastIndexOfSignature"), readAndCheckSignature: /* @__PURE__ */ __name(function() {
-        }, "readAndCheckSignature"), readDate: /* @__PURE__ */ __name(function() {
+        }, readData: function() {
+        }, lastIndexOfSignature: function() {
+        }, readAndCheckSignature: function() {
+        }, readDate: function() {
           var e2 = this.readInt(4);
           return new Date(Date.UTC(1980 + (e2 >> 25 & 127), (e2 >> 21 & 15) - 1, e2 >> 16 & 31, e2 >> 11 & 31, e2 >> 5 & 63, (31 & e2) << 1));
-        }, "readDate") }, t.exports = i;
+        } }, t.exports = i;
       }, { "../utils": 32 }], 19: [function(e, t, r) {
         var n = e("./Uint8ArrayReader");
         function i(e2) {
           n.call(this, e2);
         }
-        __name(i, "i");
         e("../utils").inherits(i, n), i.prototype.readData = function(e2) {
           this.checkOffset(e2);
           var t2 = this.data.slice(this.zero + this.index, this.zero + this.index + e2);
@@ -19752,7 +19327,6 @@ function requireJszip_min() {
         function i(e2) {
           n.call(this, e2);
         }
-        __name(i, "i");
         e("../utils").inherits(i, n), i.prototype.byteAt = function(e2) {
           return this.data.charCodeAt(this.zero + e2);
         }, i.prototype.lastIndexOfSignature = function(e2) {
@@ -19769,7 +19343,6 @@ function requireJszip_min() {
         function i(e2) {
           n.call(this, e2);
         }
-        __name(i, "i");
         e("../utils").inherits(i, n), i.prototype.readData = function(e2) {
           if (this.checkOffset(e2), 0 === e2) return new Uint8Array(0);
           var t2 = this.data.subarray(this.zero + this.index, this.zero + this.index + e2);
@@ -19788,7 +19361,6 @@ function requireJszip_min() {
         function s(e2) {
           n.call(this, "ConvertWorker to " + e2), this.destType = e2;
         }
-        __name(s, "s");
         i.inherits(s, n), s.prototype.processChunk = function(e2) {
           this.push({ data: i.transformTo(this.destType, e2.data), meta: e2.meta });
         }, t.exports = s;
@@ -19797,7 +19369,6 @@ function requireJszip_min() {
         function s() {
           n.call(this, "Crc32Probe"), this.withStreamInfo("crc32", 0);
         }
-        __name(s, "s");
         e("../utils").inherits(s, n), s.prototype.processChunk = function(e2) {
           this.streamInfo.crc32 = i(e2.data, this.streamInfo.crc32 || 0), this.push(e2);
         }, t.exports = s;
@@ -19806,7 +19377,6 @@ function requireJszip_min() {
         function s(e2) {
           i.call(this, "DataLengthProbe for " + e2), this.propName = e2, this.withStreamInfo(e2, 0);
         }
-        __name(s, "s");
         n.inherits(s, i), s.prototype.processChunk = function(e2) {
           if (e2) {
             var t2 = this.streamInfo[this.propName] || 0;
@@ -19825,7 +19395,6 @@ function requireJszip_min() {
             t2.error(e3);
           });
         }
-        __name(s, "s");
         n.inherits(s, i), s.prototype.cleanUp = function() {
           i.prototype.cleanUp.call(this), this.data = null;
         }, s.prototype.resume = function() {
@@ -19853,10 +19422,9 @@ function requireJszip_min() {
         function n(e2) {
           this.name = e2 || "default", this.streamInfo = {}, this.generatedError = null, this.extraStreamInfo = {}, this.isPaused = true, this.isFinished = false, this.isLocked = false, this._listeners = { data: [], end: [], error: [] }, this.previous = null;
         }
-        __name(n, "n");
-        n.prototype = { push: /* @__PURE__ */ __name(function(e2) {
+        n.prototype = { push: function(e2) {
           this.emit("data", e2);
-        }, "push"), end: /* @__PURE__ */ __name(function() {
+        }, end: function() {
           if (this.isFinished) return false;
           this.flush();
           try {
@@ -19865,17 +19433,17 @@ function requireJszip_min() {
             this.emit("error", e2);
           }
           return true;
-        }, "end"), error: /* @__PURE__ */ __name(function(e2) {
+        }, error: function(e2) {
           return !this.isFinished && (this.isPaused ? this.generatedError = e2 : (this.isFinished = true, this.emit("error", e2), this.previous && this.previous.error(e2), this.cleanUp()), true);
-        }, "error"), on: /* @__PURE__ */ __name(function(e2, t2) {
+        }, on: function(e2, t2) {
           return this._listeners[e2].push(t2), this;
-        }, "on"), cleanUp: /* @__PURE__ */ __name(function() {
+        }, cleanUp: function() {
           this.streamInfo = this.generatedError = this.extraStreamInfo = null, this._listeners = [];
-        }, "cleanUp"), emit: /* @__PURE__ */ __name(function(e2, t2) {
+        }, emit: function(e2, t2) {
           if (this._listeners[e2]) for (var r2 = 0; r2 < this._listeners[e2].length; r2++) this._listeners[e2][r2].call(this, t2);
-        }, "emit"), pipe: /* @__PURE__ */ __name(function(e2) {
+        }, pipe: function(e2) {
           return e2.registerPrevious(this);
-        }, "pipe"), registerPrevious: /* @__PURE__ */ __name(function(e2) {
+        }, registerPrevious: function(e2) {
           if (this.isLocked) throw new Error("The stream '" + this + "' has already been used.");
           this.streamInfo = e2.streamInfo, this.mergeStreamInfo(), this.previous = e2;
           var t2 = this;
@@ -19886,26 +19454,26 @@ function requireJszip_min() {
           }), e2.on("error", function(e3) {
             t2.error(e3);
           }), this;
-        }, "registerPrevious"), pause: /* @__PURE__ */ __name(function() {
+        }, pause: function() {
           return !this.isPaused && !this.isFinished && (this.isPaused = true, this.previous && this.previous.pause(), true);
-        }, "pause"), resume: /* @__PURE__ */ __name(function() {
+        }, resume: function() {
           if (!this.isPaused || this.isFinished) return false;
           var e2 = this.isPaused = false;
           return this.generatedError && (this.error(this.generatedError), e2 = true), this.previous && this.previous.resume(), !e2;
-        }, "resume"), flush: /* @__PURE__ */ __name(function() {
-        }, "flush"), processChunk: /* @__PURE__ */ __name(function(e2) {
+        }, flush: function() {
+        }, processChunk: function(e2) {
           this.push(e2);
-        }, "processChunk"), withStreamInfo: /* @__PURE__ */ __name(function(e2, t2) {
+        }, withStreamInfo: function(e2, t2) {
           return this.extraStreamInfo[e2] = t2, this.mergeStreamInfo(), this;
-        }, "withStreamInfo"), mergeStreamInfo: /* @__PURE__ */ __name(function() {
+        }, mergeStreamInfo: function() {
           for (var e2 in this.extraStreamInfo) Object.prototype.hasOwnProperty.call(this.extraStreamInfo, e2) && (this.streamInfo[e2] = this.extraStreamInfo[e2]);
-        }, "mergeStreamInfo"), lock: /* @__PURE__ */ __name(function() {
+        }, lock: function() {
           if (this.isLocked) throw new Error("The stream '" + this + "' has already been used.");
           this.isLocked = true, this.previous && this.previous.lock();
-        }, "lock"), toString: /* @__PURE__ */ __name(function() {
+        }, toString: function() {
           var e2 = "Worker " + this.name;
           return this.previous ? this.previous + " -> " + e2 : e2;
-        }, "toString") }, t.exports = n;
+        } }, t.exports = n;
       }, {}], 29: [function(e, t, r) {
         var h = e("../utils"), i = e("./ConvertWorker"), s = e("./GenericWorker"), u = e("../base64"), n = e("../support"), a = e("../external"), o = null;
         if (n.nodestream) try {
@@ -19955,7 +19523,6 @@ function requireJszip_min() {
             }).resume();
           });
         }
-        __name(l, "l");
         function f(e2, t2, r2) {
           var n2 = t2;
           switch (t2) {
@@ -19972,24 +19539,23 @@ function requireJszip_min() {
             this._worker = new s("error"), this._worker.error(e3);
           }
         }
-        __name(f, "f");
-        f.prototype = { accumulate: /* @__PURE__ */ __name(function(e2) {
+        f.prototype = { accumulate: function(e2) {
           return l(this, e2);
-        }, "accumulate"), on: /* @__PURE__ */ __name(function(e2, t2) {
+        }, on: function(e2, t2) {
           var r2 = this;
           return "data" === e2 ? this._worker.on(e2, function(e3) {
             t2.call(r2, e3.data, e3.meta);
           }) : this._worker.on(e2, function() {
             h.delay(t2, arguments, r2);
           }), this;
-        }, "on"), resume: /* @__PURE__ */ __name(function() {
+        }, resume: function() {
           return h.delay(this._worker.resume, [], this._worker), this;
-        }, "resume"), pause: /* @__PURE__ */ __name(function() {
+        }, pause: function() {
           return this._worker.pause(), this;
-        }, "pause"), toNodejsStream: /* @__PURE__ */ __name(function(e2) {
+        }, toNodejsStream: function(e2) {
           if (h.checkSupport("nodestream"), "nodebuffer" !== this._outputType) throw new Error(this._outputType + " is not supported by this method");
           return new o(this, { objectMode: "nodebuffer" !== this._outputType }, e2);
-        }, "toNodejsStream") }, t.exports = f;
+        } }, t.exports = f;
       }, { "../base64": 1, "../external": 6, "../nodejs/NodejsStreamOutputAdapter": 13, "../support": 30, "../utils": 32, "./ConvertWorker": 24, "./GenericWorker": 28 }], 30: [function(e, t, r) {
         if (r.base64 = true, r.array = true, r.string = true, r.arraybuffer = "undefined" != typeof ArrayBuffer && "undefined" != typeof Uint8Array, r.nodebuffer = "undefined" != typeof Buffer, r.uint8array = "undefined" != typeof Uint8Array, "undefined" == typeof ArrayBuffer) r.blob = false;
         else {
@@ -20016,11 +19582,9 @@ function requireJszip_min() {
         function a() {
           n.call(this, "utf-8 decode"), this.leftOver = null;
         }
-        __name(a, "a");
         function l() {
           n.call(this, "utf-8 encode");
         }
-        __name(l, "l");
         s.utf8encode = function(e2) {
           return h.nodebuffer ? r.newBufferFrom(e2, "utf-8") : (function(e3) {
             var t2, r2, n2, i2, s2, a2 = e3.length, o2 = 0;
@@ -20064,12 +19628,10 @@ function requireJszip_min() {
         function n(e2) {
           return e2;
         }
-        __name(n, "n");
         function l(e2, t2) {
           for (var r2 = 0; r2 < e2.length; ++r2) t2[r2] = 255 & e2.charCodeAt(r2);
           return t2;
         }
-        __name(l, "l");
         e("setimmediate"), a.newBlob = function(t2, r2) {
           a.checkSupport("blob");
           try {
@@ -20083,15 +19645,15 @@ function requireJszip_min() {
             }
           }
         };
-        var i = { stringifyByChunk: /* @__PURE__ */ __name(function(e2, t2, r2) {
+        var i = { stringifyByChunk: function(e2, t2, r2) {
           var n2 = [], i2 = 0, s2 = e2.length;
           if (s2 <= r2) return String.fromCharCode.apply(null, e2);
           for (; i2 < s2; ) "array" === t2 || "nodebuffer" === t2 ? n2.push(String.fromCharCode.apply(null, e2.slice(i2, Math.min(i2 + r2, s2)))) : n2.push(String.fromCharCode.apply(null, e2.subarray(i2, Math.min(i2 + r2, s2)))), i2 += r2;
           return n2.join("");
-        }, "stringifyByChunk"), stringifyByChar: /* @__PURE__ */ __name(function(e2) {
+        }, stringifyByChar: function(e2) {
           for (var t2 = "", r2 = 0; r2 < e2.length; r2++) t2 += String.fromCharCode(e2[r2]);
           return t2;
-        }, "stringifyByChar"), applyCanBeUsed: { uint8array: (function() {
+        }, applyCanBeUsed: { uint8array: (function() {
           try {
             return o.uint8array && 1 === String.fromCharCode.apply(null, new Uint8Array(1)).length;
           } catch (e2) {
@@ -20113,49 +19675,47 @@ function requireJszip_min() {
           }
           return i.stringifyByChar(e2);
         }
-        __name(s, "s");
         function f(e2, t2) {
           for (var r2 = 0; r2 < e2.length; r2++) t2[r2] = e2[r2];
           return t2;
         }
-        __name(f, "f");
         a.applyFromCharCode = s;
         var c = {};
-        c.string = { string: n, array: /* @__PURE__ */ __name(function(e2) {
+        c.string = { string: n, array: function(e2) {
           return l(e2, new Array(e2.length));
-        }, "array"), arraybuffer: /* @__PURE__ */ __name(function(e2) {
+        }, arraybuffer: function(e2) {
           return c.string.uint8array(e2).buffer;
-        }, "arraybuffer"), uint8array: /* @__PURE__ */ __name(function(e2) {
+        }, uint8array: function(e2) {
           return l(e2, new Uint8Array(e2.length));
-        }, "uint8array"), nodebuffer: /* @__PURE__ */ __name(function(e2) {
+        }, nodebuffer: function(e2) {
           return l(e2, r.allocBuffer(e2.length));
-        }, "nodebuffer") }, c.array = { string: s, array: n, arraybuffer: /* @__PURE__ */ __name(function(e2) {
+        } }, c.array = { string: s, array: n, arraybuffer: function(e2) {
           return new Uint8Array(e2).buffer;
-        }, "arraybuffer"), uint8array: /* @__PURE__ */ __name(function(e2) {
+        }, uint8array: function(e2) {
           return new Uint8Array(e2);
-        }, "uint8array"), nodebuffer: /* @__PURE__ */ __name(function(e2) {
+        }, nodebuffer: function(e2) {
           return r.newBufferFrom(e2);
-        }, "nodebuffer") }, c.arraybuffer = { string: /* @__PURE__ */ __name(function(e2) {
+        } }, c.arraybuffer = { string: function(e2) {
           return s(new Uint8Array(e2));
-        }, "string"), array: /* @__PURE__ */ __name(function(e2) {
+        }, array: function(e2) {
           return f(new Uint8Array(e2), new Array(e2.byteLength));
-        }, "array"), arraybuffer: n, uint8array: /* @__PURE__ */ __name(function(e2) {
+        }, arraybuffer: n, uint8array: function(e2) {
           return new Uint8Array(e2);
-        }, "uint8array"), nodebuffer: /* @__PURE__ */ __name(function(e2) {
+        }, nodebuffer: function(e2) {
           return r.newBufferFrom(new Uint8Array(e2));
-        }, "nodebuffer") }, c.uint8array = { string: s, array: /* @__PURE__ */ __name(function(e2) {
+        } }, c.uint8array = { string: s, array: function(e2) {
           return f(e2, new Array(e2.length));
-        }, "array"), arraybuffer: /* @__PURE__ */ __name(function(e2) {
+        }, arraybuffer: function(e2) {
           return e2.buffer;
-        }, "arraybuffer"), uint8array: n, nodebuffer: /* @__PURE__ */ __name(function(e2) {
+        }, uint8array: n, nodebuffer: function(e2) {
           return r.newBufferFrom(e2);
-        }, "nodebuffer") }, c.nodebuffer = { string: s, array: /* @__PURE__ */ __name(function(e2) {
+        } }, c.nodebuffer = { string: s, array: function(e2) {
           return f(e2, new Array(e2.length));
-        }, "array"), arraybuffer: /* @__PURE__ */ __name(function(e2) {
+        }, arraybuffer: function(e2) {
           return c.nodebuffer.uint8array(e2).buffer;
-        }, "arraybuffer"), uint8array: /* @__PURE__ */ __name(function(e2) {
+        }, uint8array: function(e2) {
           return f(e2, new Uint8Array(e2.length));
-        }, "uint8array"), nodebuffer: n }, a.transformTo = function(e2, t2) {
+        }, nodebuffer: n }, a.transformTo = function(e2, t2) {
           if (t2 = t2 || "", !e2) return t2;
           a.checkSupport(e2);
           var r2 = a.getTypeOf(t2);
@@ -20181,7 +19741,6 @@ function requireJszip_min() {
         }, a.inherits = function(e2, t2) {
           function r2() {
           }
-          __name(r2, "r2");
           r2.prototype = t2.prototype, e2.prototype = new r2();
         }, a.extend = function() {
           var e2, t2, r2 = {};
@@ -20209,35 +19768,34 @@ function requireJszip_min() {
         function h(e2) {
           this.files = [], this.loadOptions = e2;
         }
-        __name(h, "h");
-        h.prototype = { checkSignature: /* @__PURE__ */ __name(function(e2) {
+        h.prototype = { checkSignature: function(e2) {
           if (!this.reader.readAndCheckSignature(e2)) {
             this.reader.index -= 4;
             var t2 = this.reader.readString(4);
             throw new Error("Corrupted zip or bug: unexpected signature (" + i.pretty(t2) + ", expected " + i.pretty(e2) + ")");
           }
-        }, "checkSignature"), isSignature: /* @__PURE__ */ __name(function(e2, t2) {
+        }, isSignature: function(e2, t2) {
           var r2 = this.reader.index;
           this.reader.setIndex(e2);
           var n2 = this.reader.readString(4) === t2;
           return this.reader.setIndex(r2), n2;
-        }, "isSignature"), readBlockEndOfCentral: /* @__PURE__ */ __name(function() {
+        }, readBlockEndOfCentral: function() {
           this.diskNumber = this.reader.readInt(2), this.diskWithCentralDirStart = this.reader.readInt(2), this.centralDirRecordsOnThisDisk = this.reader.readInt(2), this.centralDirRecords = this.reader.readInt(2), this.centralDirSize = this.reader.readInt(4), this.centralDirOffset = this.reader.readInt(4), this.zipCommentLength = this.reader.readInt(2);
           var e2 = this.reader.readData(this.zipCommentLength), t2 = o.uint8array ? "uint8array" : "array", r2 = i.transformTo(t2, e2);
           this.zipComment = this.loadOptions.decodeFileName(r2);
-        }, "readBlockEndOfCentral"), readBlockZip64EndOfCentral: /* @__PURE__ */ __name(function() {
+        }, readBlockZip64EndOfCentral: function() {
           this.zip64EndOfCentralSize = this.reader.readInt(8), this.reader.skip(4), this.diskNumber = this.reader.readInt(4), this.diskWithCentralDirStart = this.reader.readInt(4), this.centralDirRecordsOnThisDisk = this.reader.readInt(8), this.centralDirRecords = this.reader.readInt(8), this.centralDirSize = this.reader.readInt(8), this.centralDirOffset = this.reader.readInt(8), this.zip64ExtensibleData = {};
           for (var e2, t2, r2, n2 = this.zip64EndOfCentralSize - 44; 0 < n2; ) e2 = this.reader.readInt(2), t2 = this.reader.readInt(4), r2 = this.reader.readData(t2), this.zip64ExtensibleData[e2] = { id: e2, length: t2, value: r2 };
-        }, "readBlockZip64EndOfCentral"), readBlockZip64EndOfCentralLocator: /* @__PURE__ */ __name(function() {
+        }, readBlockZip64EndOfCentralLocator: function() {
           if (this.diskWithZip64CentralDirStart = this.reader.readInt(4), this.relativeOffsetEndOfZip64CentralDir = this.reader.readInt(8), this.disksCount = this.reader.readInt(4), 1 < this.disksCount) throw new Error("Multi-volumes zip are not supported");
-        }, "readBlockZip64EndOfCentralLocator"), readLocalFiles: /* @__PURE__ */ __name(function() {
+        }, readLocalFiles: function() {
           var e2, t2;
           for (e2 = 0; e2 < this.files.length; e2++) t2 = this.files[e2], this.reader.setIndex(t2.localHeaderOffset), this.checkSignature(s.LOCAL_FILE_HEADER), t2.readLocalPart(this.reader), t2.handleUTF8(), t2.processAttributes();
-        }, "readLocalFiles"), readCentralDir: /* @__PURE__ */ __name(function() {
+        }, readCentralDir: function() {
           var e2;
           for (this.reader.setIndex(this.centralDirOffset); this.reader.readAndCheckSignature(s.CENTRAL_FILE_HEADER); ) (e2 = new a({ zip64: this.zip64 }, this.loadOptions)).readCentralPart(this.reader), this.files.push(e2);
           if (this.centralDirRecords !== this.files.length && 0 !== this.centralDirRecords && 0 === this.files.length) throw new Error("Corrupted zip or bug: expected " + this.centralDirRecords + " records in central dir, got " + this.files.length);
-        }, "readCentralDir"), readEndOfCentral: /* @__PURE__ */ __name(function() {
+        }, readEndOfCentral: function() {
           var e2 = this.reader.lastIndexOfSignature(s.CENTRAL_DIRECTORY_END);
           if (e2 < 0) throw !this.isSignature(0, s.LOCAL_FILE_HEADER) ? new Error("Can't find end of central directory : is this a zip file ? If it is, see https://stuk.github.io/jszip/documentation/howto/read_zip.html") : new Error("Corrupted zip: can't find end of central directory");
           this.reader.setIndex(e2);
@@ -20252,22 +19810,21 @@ function requireJszip_min() {
           var n2 = t2 - r2;
           if (0 < n2) this.isSignature(t2, s.CENTRAL_FILE_HEADER) || (this.reader.zero = n2);
           else if (n2 < 0) throw new Error("Corrupted zip: missing " + Math.abs(n2) + " bytes.");
-        }, "readEndOfCentral"), prepareReader: /* @__PURE__ */ __name(function(e2) {
+        }, prepareReader: function(e2) {
           this.reader = n(e2);
-        }, "prepareReader"), load: /* @__PURE__ */ __name(function(e2) {
+        }, load: function(e2) {
           this.prepareReader(e2), this.readEndOfCentral(), this.readCentralDir(), this.readLocalFiles();
-        }, "load") }, t.exports = h;
+        } }, t.exports = h;
       }, { "./reader/readerFor": 22, "./signature": 23, "./support": 30, "./utils": 32, "./zipEntry": 34 }], 34: [function(e, t, r) {
         var n = e("./reader/readerFor"), s = e("./utils"), i = e("./compressedObject"), a = e("./crc32"), o = e("./utf8"), h = e("./compressions"), u = e("./support");
         function l(e2, t2) {
           this.options = e2, this.loadOptions = t2;
         }
-        __name(l, "l");
-        l.prototype = { isEncrypted: /* @__PURE__ */ __name(function() {
+        l.prototype = { isEncrypted: function() {
           return 1 == (1 & this.bitFlag);
-        }, "isEncrypted"), useUTF8: /* @__PURE__ */ __name(function() {
+        }, useUTF8: function() {
           return 2048 == (2048 & this.bitFlag);
-        }, "useUTF8"), readLocalPart: /* @__PURE__ */ __name(function(e2) {
+        }, readLocalPart: function(e2) {
           var t2, r2;
           if (e2.skip(22), this.fileNameLength = e2.readInt(2), r2 = e2.readInt(2), this.fileName = e2.readData(this.fileNameLength), e2.skip(r2), -1 === this.compressedSize || -1 === this.uncompressedSize) throw new Error("Bug or corrupted zip : didn't get enough information from the central directory (compressedSize === -1 || uncompressedSize === -1)");
           if (null === (t2 = (function(e3) {
@@ -20275,25 +19832,25 @@ function requireJszip_min() {
             return null;
           })(this.compressionMethod))) throw new Error("Corrupted zip : compression " + s.pretty(this.compressionMethod) + " unknown (inner file : " + s.transformTo("string", this.fileName) + ")");
           this.decompressed = new i(this.compressedSize, this.uncompressedSize, this.crc32, t2, e2.readData(this.compressedSize));
-        }, "readLocalPart"), readCentralPart: /* @__PURE__ */ __name(function(e2) {
+        }, readCentralPart: function(e2) {
           this.versionMadeBy = e2.readInt(2), e2.skip(2), this.bitFlag = e2.readInt(2), this.compressionMethod = e2.readString(2), this.date = e2.readDate(), this.crc32 = e2.readInt(4), this.compressedSize = e2.readInt(4), this.uncompressedSize = e2.readInt(4);
           var t2 = e2.readInt(2);
           if (this.extraFieldsLength = e2.readInt(2), this.fileCommentLength = e2.readInt(2), this.diskNumberStart = e2.readInt(2), this.internalFileAttributes = e2.readInt(2), this.externalFileAttributes = e2.readInt(4), this.localHeaderOffset = e2.readInt(4), this.isEncrypted()) throw new Error("Encrypted zip are not supported");
           e2.skip(t2), this.readExtraFields(e2), this.parseZIP64ExtraField(e2), this.fileComment = e2.readData(this.fileCommentLength);
-        }, "readCentralPart"), processAttributes: /* @__PURE__ */ __name(function() {
+        }, processAttributes: function() {
           this.unixPermissions = null, this.dosPermissions = null;
           var e2 = this.versionMadeBy >> 8;
           this.dir = !!(16 & this.externalFileAttributes), 0 == e2 && (this.dosPermissions = 63 & this.externalFileAttributes), 3 == e2 && (this.unixPermissions = this.externalFileAttributes >> 16 & 65535), this.dir || "/" !== this.fileNameStr.slice(-1) || (this.dir = true);
-        }, "processAttributes"), parseZIP64ExtraField: /* @__PURE__ */ __name(function() {
+        }, parseZIP64ExtraField: function() {
           if (this.extraFields[1]) {
             var e2 = n(this.extraFields[1].value);
             this.uncompressedSize === s.MAX_VALUE_32BITS && (this.uncompressedSize = e2.readInt(8)), this.compressedSize === s.MAX_VALUE_32BITS && (this.compressedSize = e2.readInt(8)), this.localHeaderOffset === s.MAX_VALUE_32BITS && (this.localHeaderOffset = e2.readInt(8)), this.diskNumberStart === s.MAX_VALUE_32BITS && (this.diskNumberStart = e2.readInt(4));
           }
-        }, "parseZIP64ExtraField"), readExtraFields: /* @__PURE__ */ __name(function(e2) {
+        }, readExtraFields: function(e2) {
           var t2, r2, n2, i2 = e2.index + this.extraFieldsLength;
           for (this.extraFields || (this.extraFields = {}); e2.index + 4 < i2; ) t2 = e2.readInt(2), r2 = e2.readInt(2), n2 = e2.readData(r2), this.extraFields[t2] = { id: t2, length: r2, value: n2 };
           e2.setIndex(i2);
-        }, "readExtraFields"), handleUTF8: /* @__PURE__ */ __name(function() {
+        }, handleUTF8: function() {
           var e2 = u.uint8array ? "uint8array" : "array";
           if (this.useUTF8()) this.fileNameStr = o.utf8decode(this.fileName), this.fileCommentStr = o.utf8decode(this.fileComment);
           else {
@@ -20310,28 +19867,27 @@ function requireJszip_min() {
               this.fileCommentStr = this.loadOptions.decodeFileName(i2);
             }
           }
-        }, "handleUTF8"), findExtraFieldUnicodePath: /* @__PURE__ */ __name(function() {
+        }, findExtraFieldUnicodePath: function() {
           var e2 = this.extraFields[28789];
           if (e2) {
             var t2 = n(e2.value);
             return 1 !== t2.readInt(1) ? null : a(this.fileName) !== t2.readInt(4) ? null : o.utf8decode(t2.readData(e2.length - 5));
           }
           return null;
-        }, "findExtraFieldUnicodePath"), findExtraFieldUnicodeComment: /* @__PURE__ */ __name(function() {
+        }, findExtraFieldUnicodeComment: function() {
           var e2 = this.extraFields[25461];
           if (e2) {
             var t2 = n(e2.value);
             return 1 !== t2.readInt(1) ? null : a(this.fileComment) !== t2.readInt(4) ? null : o.utf8decode(t2.readData(e2.length - 5));
           }
           return null;
-        }, "findExtraFieldUnicodeComment") }, t.exports = l;
+        } }, t.exports = l;
       }, { "./compressedObject": 2, "./compressions": 3, "./crc32": 4, "./reader/readerFor": 22, "./support": 30, "./utf8": 31, "./utils": 32 }], 35: [function(e, t, r) {
         function n(e2, t2, r2) {
           this.name = e2, this.dir = r2.dir, this.date = r2.date, this.comment = r2.comment, this.unixPermissions = r2.unixPermissions, this.dosPermissions = r2.dosPermissions, this._data = t2, this._dataBinary = r2.binary, this.options = { compression: r2.compression, compressionOptions: r2.compressionOptions };
         }
-        __name(n, "n");
         var s = e("./stream/StreamHelper"), i = e("./stream/DataWorker"), a = e("./utf8"), o = e("./compressedObject"), h = e("./stream/GenericWorker");
-        n.prototype = { internalStream: /* @__PURE__ */ __name(function(e2) {
+        n.prototype = { internalStream: function(e2) {
           var t2 = null, r2 = "string";
           try {
             if (!e2) throw new Error("No output type specified.");
@@ -20343,17 +19899,17 @@ function requireJszip_min() {
             (t2 = new h("error")).error(e3);
           }
           return new s(t2, r2, "");
-        }, "internalStream"), async: /* @__PURE__ */ __name(function(e2, t2) {
+        }, async: function(e2, t2) {
           return this.internalStream(e2).accumulate(t2);
-        }, "async"), nodeStream: /* @__PURE__ */ __name(function(e2, t2) {
+        }, nodeStream: function(e2, t2) {
           return this.internalStream(e2 || "nodebuffer").toNodejsStream(t2);
-        }, "nodeStream"), _compressWorker: /* @__PURE__ */ __name(function(e2, t2) {
+        }, _compressWorker: function(e2, t2) {
           if (this._data instanceof o && this._data.compression.magic === e2.magic) return this._data.getCompressedWorker();
           var r2 = this._decompressWorker();
           return this._dataBinary || (r2 = r2.pipe(new a.Utf8EncodeWorker())), o.createWorkerFrom(r2, e2, t2);
-        }, "_compressWorker"), _decompressWorker: /* @__PURE__ */ __name(function() {
+        }, _decompressWorker: function() {
           return this._data instanceof o ? this._data.getContentWorker() : this._data instanceof h ? this._data : new i(this._data);
-        }, "_decompressWorker") };
+        } };
         for (var u = ["asText", "asBinary", "asNodeBuffer", "asUint8Array", "asArrayBuffer"], l = function() {
           throw new Error("This method has been removed in JSZip 3.0, please check the upgrade guide.");
         }, f = 0; f < u.length; f++) n.prototype[u[f]] = l;
@@ -20363,9 +19919,9 @@ function requireJszip_min() {
           var r, n, e2 = t2.MutationObserver || t2.WebKitMutationObserver;
           if (e2) {
             var i = 0, s = new e2(u), a = t2.document.createTextNode("");
-            s.observe(a, { characterData: true }), r = /* @__PURE__ */ __name(function() {
+            s.observe(a, { characterData: true }), r = function() {
               a.data = i = ++i % 2;
-            }, "r");
+            };
           } else if (t2.setImmediate || void 0 === t2.MessageChannel) r = "document" in t2 && "onreadystatechange" in t2.document.createElement("script") ? function() {
             var e3 = t2.document.createElement("script");
             e3.onreadystatechange = function() {
@@ -20376,9 +19932,9 @@ function requireJszip_min() {
           };
           else {
             var o = new t2.MessageChannel();
-            o.port1.onmessage = u, r = /* @__PURE__ */ __name(function() {
+            o.port1.onmessage = u, r = function() {
               o.port2.postMessage(0);
-            }, "r");
+            };
           }
           var h = [];
           function u() {
@@ -20390,7 +19946,6 @@ function requireJszip_min() {
             }
             n = false;
           }
-          __name(u, "u");
           l.exports = function(e3) {
             1 !== h.push(e3) || n || r();
           };
@@ -20399,17 +19954,14 @@ function requireJszip_min() {
         var i = e("immediate");
         function u() {
         }
-        __name(u, "u");
         var l = {}, s = ["REJECTED"], a = ["FULFILLED"], n = ["PENDING"];
         function o(e2) {
           if ("function" != typeof e2) throw new TypeError("resolver must be a function");
           this.state = n, this.queue = [], this.outcome = void 0, e2 !== u && d(this, e2);
         }
-        __name(o, "o");
         function h(e2, t2, r2) {
           this.promise = e2, "function" == typeof t2 && (this.onFulfilled = t2, this.callFulfilled = this.otherCallFulfilled), "function" == typeof r2 && (this.onRejected = r2, this.callRejected = this.otherCallRejected);
         }
-        __name(h, "h");
         function f(t2, r2, n2) {
           i(function() {
             var e2;
@@ -20421,30 +19973,25 @@ function requireJszip_min() {
             e2 === t2 ? l.reject(t2, new TypeError("Cannot resolve promise with itself")) : l.resolve(t2, e2);
           });
         }
-        __name(f, "f");
         function c(e2) {
           var t2 = e2 && e2.then;
           if (e2 && ("object" == typeof e2 || "function" == typeof e2) && "function" == typeof t2) return function() {
             t2.apply(e2, arguments);
           };
         }
-        __name(c, "c");
         function d(t2, e2) {
           var r2 = false;
           function n2(e3) {
             r2 || (r2 = true, l.reject(t2, e3));
           }
-          __name(n2, "n2");
           function i2(e3) {
             r2 || (r2 = true, l.resolve(t2, e3));
           }
-          __name(i2, "i2");
           var s2 = p(function() {
             e2(i2, n2);
           });
           "error" === s2.status && n2(s2.value);
         }
-        __name(d, "d");
         function p(e2, t2) {
           var r2 = {};
           try {
@@ -20454,7 +20001,6 @@ function requireJszip_min() {
           }
           return r2;
         }
-        __name(p, "p");
         (t.exports = o).prototype.finally = function(t2) {
           if ("function" != typeof t2) return this;
           var r2 = this.constructor;
@@ -20517,7 +20063,6 @@ function requireJszip_min() {
               i2 || (i2 = true, l.reject(o2, e4));
             });
           }
-          __name(h2, "h2");
         }, o.race = function(e2) {
           var t2 = this;
           if ("[object Array]" !== Object.prototype.toString.call(e2)) return this.reject(new TypeError("must be an array"));
@@ -20550,13 +20095,11 @@ function requireJszip_min() {
             this._dict_set = true;
           }
         }
-        __name(p, "p");
         function n(e2, t2) {
           var r2 = new p(t2);
           if (r2.push(e2, true), r2.err) throw r2.msg || i[r2.err];
           return r2.result;
         }
-        __name(n, "n");
         p.prototype.push = function(e2, t2) {
           var r2, n2, i2 = this.strm, s2 = this.options.chunkSize;
           if (this.ended) return false;
@@ -20586,13 +20129,11 @@ function requireJszip_min() {
           if (r2 !== m.Z_OK) throw new Error(n[r2]);
           this.header = new s(), c.inflateGetHeader(this.strm, this.header);
         }
-        __name(a, "a");
         function o(e2, t2) {
           var r2 = new a(t2);
           if (r2.push(e2, true), r2.err) throw r2.msg || n[r2.err];
           return r2.result;
         }
-        __name(o, "o");
         a.prototype.push = function(e2, t2) {
           var r2, n2, i2, s2, a2, o2, h = this.strm, u = this.options.chunkSize, l = this.options.dictionary, f = false;
           if (this.ended) return false;
@@ -20623,19 +20164,19 @@ function requireJszip_min() {
         }, r.shrinkBuf = function(e2, t2) {
           return e2.length === t2 ? e2 : e2.subarray ? e2.subarray(0, t2) : (e2.length = t2, e2);
         };
-        var i = { arraySet: /* @__PURE__ */ __name(function(e2, t2, r2, n2, i2) {
+        var i = { arraySet: function(e2, t2, r2, n2, i2) {
           if (t2.subarray && e2.subarray) e2.set(t2.subarray(r2, r2 + n2), i2);
           else for (var s2 = 0; s2 < n2; s2++) e2[i2 + s2] = t2[r2 + s2];
-        }, "arraySet"), flattenChunks: /* @__PURE__ */ __name(function(e2) {
+        }, flattenChunks: function(e2) {
           var t2, r2, n2, i2, s2, a;
           for (t2 = n2 = 0, r2 = e2.length; t2 < r2; t2++) n2 += e2[t2].length;
           for (a = new Uint8Array(n2), t2 = i2 = 0, r2 = e2.length; t2 < r2; t2++) s2 = e2[t2], a.set(s2, i2), i2 += s2.length;
           return a;
-        }, "flattenChunks") }, s = { arraySet: /* @__PURE__ */ __name(function(e2, t2, r2, n2, i2) {
+        } }, s = { arraySet: function(e2, t2, r2, n2, i2) {
           for (var s2 = 0; s2 < n2; s2++) e2[i2 + s2] = t2[r2 + s2];
-        }, "arraySet"), flattenChunks: /* @__PURE__ */ __name(function(e2) {
+        }, flattenChunks: function(e2) {
           return [].concat.apply([], e2);
-        }, "flattenChunks") };
+        } };
         r.setTyped = function(e2) {
           e2 ? (r.Buf8 = Uint8Array, r.Buf16 = Uint16Array, r.Buf32 = Int32Array, r.assign(r, i)) : (r.Buf8 = Array, r.Buf16 = Array, r.Buf32 = Array, r.assign(r, s));
         }, r.setTyped(n);
@@ -20657,7 +20198,6 @@ function requireJszip_min() {
           for (var r2 = "", n2 = 0; n2 < t2; n2++) r2 += String.fromCharCode(e2[n2]);
           return r2;
         }
-        __name(l, "l");
         u[254] = u[254] = 1, r.string2buf = function(e2) {
           var t2, r2, n2, i2, s2, a = e2.length, o = 0;
           for (i2 = 0; i2 < a; i2++) 55296 == (64512 & (r2 = e2.charCodeAt(i2))) && i2 + 1 < a && 56320 == (64512 & (n2 = e2.charCodeAt(i2 + 1))) && (r2 = 65536 + (r2 - 55296 << 10) + (n2 - 56320), i2++), o += r2 < 128 ? 1 : r2 < 2048 ? 2 : r2 < 65536 ? 3 : 4;
@@ -20712,32 +20252,25 @@ function requireJszip_min() {
         function R(e2, t2) {
           return e2.msg = n[t2], t2;
         }
-        __name(R, "R");
         function T(e2) {
           return (e2 << 1) - (4 < e2 ? 9 : 0);
         }
-        __name(T, "T");
         function D(e2) {
           for (var t2 = e2.length; 0 <= --t2; ) e2[t2] = 0;
         }
-        __name(D, "D");
         function F(e2) {
           var t2 = e2.state, r2 = t2.pending;
           r2 > e2.avail_out && (r2 = e2.avail_out), 0 !== r2 && (c.arraySet(e2.output, t2.pending_buf, t2.pending_out, r2, e2.next_out), e2.next_out += r2, t2.pending_out += r2, e2.total_out += r2, e2.avail_out -= r2, t2.pending -= r2, 0 === t2.pending && (t2.pending_out = 0));
         }
-        __name(F, "F");
         function N(e2, t2) {
           u._tr_flush_block(e2, 0 <= e2.block_start ? e2.block_start : -1, e2.strstart - e2.block_start, t2), e2.block_start = e2.strstart, F(e2.strm);
         }
-        __name(N, "N");
         function U(e2, t2) {
           e2.pending_buf[e2.pending++] = t2;
         }
-        __name(U, "U");
         function P(e2, t2) {
           e2.pending_buf[e2.pending++] = t2 >>> 8 & 255, e2.pending_buf[e2.pending++] = 255 & t2;
         }
-        __name(P, "P");
         function L(e2, t2) {
           var r2, n2, i2 = e2.max_chain_length, s2 = e2.strstart, a2 = e2.prev_length, o2 = e2.nice_match, h2 = e2.strstart > e2.w_size - z ? e2.strstart - (e2.w_size - z) : 0, u2 = e2.window, l2 = e2.w_mask, f2 = e2.prev, c2 = e2.strstart + S, d2 = u2[s2 + a2 - 1], p2 = u2[s2 + a2];
           e2.prev_length >= e2.good_match && (i2 >>= 2), o2 > e2.lookahead && (o2 = e2.lookahead);
@@ -20754,7 +20287,6 @@ function requireJszip_min() {
           } while ((t2 = f2[t2 & l2]) > h2 && 0 != --i2);
           return a2 <= e2.lookahead ? a2 : e2.lookahead;
         }
-        __name(L, "L");
         function j(e2) {
           var t2, r2, n2, i2, s2, a2, o2, h2, u2, l2, f2 = e2.w_size;
           do {
@@ -20767,7 +20299,6 @@ function requireJszip_min() {
             if (a2 = e2.strm, o2 = e2.window, h2 = e2.strstart + e2.lookahead, u2 = i2, l2 = void 0, l2 = a2.avail_in, u2 < l2 && (l2 = u2), r2 = 0 === l2 ? 0 : (a2.avail_in -= l2, c.arraySet(o2, a2.input, a2.next_in, l2, h2), 1 === a2.state.wrap ? a2.adler = d(a2.adler, o2, l2, h2) : 2 === a2.state.wrap && (a2.adler = p(a2.adler, o2, l2, h2)), a2.next_in += l2, a2.total_in += l2, l2), e2.lookahead += r2, e2.lookahead + e2.insert >= x) for (s2 = e2.strstart - e2.insert, e2.ins_h = e2.window[s2], e2.ins_h = (e2.ins_h << e2.hash_shift ^ e2.window[s2 + 1]) & e2.hash_mask; e2.insert && (e2.ins_h = (e2.ins_h << e2.hash_shift ^ e2.window[s2 + x - 1]) & e2.hash_mask, e2.prev[s2 & e2.w_mask] = e2.head[e2.ins_h], e2.head[e2.ins_h] = s2, s2++, e2.insert--, !(e2.lookahead + e2.insert < x)); ) ;
           } while (e2.lookahead < z && 0 !== e2.strm.avail_in);
         }
-        __name(j, "j");
         function Z(e2, t2) {
           for (var r2, n2; ; ) {
             if (e2.lookahead < z) {
@@ -20783,7 +20314,6 @@ function requireJszip_min() {
           }
           return e2.insert = e2.strstart < x - 1 ? e2.strstart : x - 1, t2 === f ? (N(e2, true), 0 === e2.strm.avail_out ? O : B) : e2.last_lit && (N(e2, false), 0 === e2.strm.avail_out) ? A : I;
         }
-        __name(Z, "Z");
         function W(e2, t2) {
           for (var r2, n2, i2; ; ) {
             if (e2.lookahead < z) {
@@ -20799,27 +20329,22 @@ function requireJszip_min() {
           }
           return e2.match_available && (n2 = u._tr_tally(e2, 0, e2.window[e2.strstart - 1]), e2.match_available = 0), e2.insert = e2.strstart < x - 1 ? e2.strstart : x - 1, t2 === f ? (N(e2, true), 0 === e2.strm.avail_out ? O : B) : e2.last_lit && (N(e2, false), 0 === e2.strm.avail_out) ? A : I;
         }
-        __name(W, "W");
         function M(e2, t2, r2, n2, i2) {
           this.good_length = e2, this.max_lazy = t2, this.nice_length = r2, this.max_chain = n2, this.func = i2;
         }
-        __name(M, "M");
         function H() {
           this.strm = null, this.status = 0, this.pending_buf = null, this.pending_buf_size = 0, this.pending_out = 0, this.pending = 0, this.wrap = 0, this.gzhead = null, this.gzindex = 0, this.method = v, this.last_flush = -1, this.w_size = 0, this.w_bits = 0, this.w_mask = 0, this.window = null, this.window_size = 0, this.prev = null, this.head = null, this.ins_h = 0, this.hash_size = 0, this.hash_bits = 0, this.hash_mask = 0, this.hash_shift = 0, this.block_start = 0, this.match_length = 0, this.prev_match = 0, this.match_available = 0, this.strstart = 0, this.match_start = 0, this.lookahead = 0, this.prev_length = 0, this.max_chain_length = 0, this.max_lazy_match = 0, this.level = 0, this.strategy = 0, this.good_match = 0, this.nice_match = 0, this.dyn_ltree = new c.Buf16(2 * w), this.dyn_dtree = new c.Buf16(2 * (2 * a + 1)), this.bl_tree = new c.Buf16(2 * (2 * o + 1)), D(this.dyn_ltree), D(this.dyn_dtree), D(this.bl_tree), this.l_desc = null, this.d_desc = null, this.bl_desc = null, this.bl_count = new c.Buf16(k + 1), this.heap = new c.Buf16(2 * s + 1), D(this.heap), this.heap_len = 0, this.heap_max = 0, this.depth = new c.Buf16(2 * s + 1), D(this.depth), this.l_buf = 0, this.lit_bufsize = 0, this.last_lit = 0, this.d_buf = 0, this.opt_len = 0, this.static_len = 0, this.matches = 0, this.insert = 0, this.bi_buf = 0, this.bi_valid = 0;
         }
-        __name(H, "H");
         function G(e2) {
           var t2;
           return e2 && e2.state ? (e2.total_in = e2.total_out = 0, e2.data_type = i, (t2 = e2.state).pending = 0, t2.pending_out = 0, t2.wrap < 0 && (t2.wrap = -t2.wrap), t2.status = t2.wrap ? C : E, e2.adler = 2 === t2.wrap ? 0 : 1, t2.last_flush = l, u._tr_init(t2), m) : R(e2, _);
         }
-        __name(G, "G");
         function K(e2) {
           var t2 = G(e2);
           return t2 === m && (function(e3) {
             e3.window_size = 2 * e3.w_size, D(e3.head), e3.max_lazy_match = h[e3.level].max_lazy, e3.good_match = h[e3.level].good_length, e3.nice_match = h[e3.level].nice_length, e3.max_chain_length = h[e3.level].max_chain, e3.strstart = 0, e3.block_start = 0, e3.lookahead = 0, e3.insert = 0, e3.match_length = e3.prev_length = x - 1, e3.match_available = 0, e3.ins_h = 0;
           })(e2.state), t2;
         }
-        __name(K, "K");
         function Y(e2, t2, r2, n2, i2, s2) {
           if (!e2) return _;
           var a2 = 1;
@@ -20828,7 +20353,6 @@ function requireJszip_min() {
           var o2 = new H();
           return (e2.state = o2).strm = e2, o2.wrap = a2, o2.gzhead = null, o2.w_bits = n2, o2.w_size = 1 << o2.w_bits, o2.w_mask = o2.w_size - 1, o2.hash_bits = i2 + 7, o2.hash_size = 1 << o2.hash_bits, o2.hash_mask = o2.hash_size - 1, o2.hash_shift = ~~((o2.hash_bits + x - 1) / x), o2.window = new c.Buf8(2 * o2.w_size), o2.head = new c.Buf16(o2.hash_size), o2.prev = new c.Buf16(o2.w_size), o2.lit_bufsize = 1 << i2 + 6, o2.pending_buf_size = 4 * o2.lit_bufsize, o2.pending_buf = new c.Buf8(o2.pending_buf_size), o2.d_buf = 1 * o2.lit_bufsize, o2.l_buf = 3 * o2.lit_bufsize, o2.level = t2, o2.strategy = s2, o2.method = r2, K(e2);
         }
-        __name(Y, "Y");
         h = [new M(0, 0, 0, 0, function(e2, t2) {
           var r2 = 65535;
           for (r2 > e2.pending_buf_size - 5 && (r2 = e2.pending_buf_size - 5); ; ) {
@@ -21008,31 +20532,25 @@ function requireJszip_min() {
         function L(e2) {
           return (e2 >>> 24 & 255) + (e2 >>> 8 & 65280) + ((65280 & e2) << 8) + ((255 & e2) << 24);
         }
-        __name(L, "L");
         function s() {
           this.mode = 0, this.last = false, this.wrap = 0, this.havedict = false, this.flags = 0, this.dmax = 0, this.check = 0, this.total = 0, this.head = null, this.wbits = 0, this.wsize = 0, this.whave = 0, this.wnext = 0, this.window = null, this.hold = 0, this.bits = 0, this.length = 0, this.offset = 0, this.extra = 0, this.lencode = null, this.distcode = null, this.lenbits = 0, this.distbits = 0, this.ncode = 0, this.nlen = 0, this.ndist = 0, this.have = 0, this.next = null, this.lens = new I.Buf16(320), this.work = new I.Buf16(288), this.lendyn = null, this.distdyn = null, this.sane = 0, this.back = 0, this.was = 0;
         }
-        __name(s, "s");
         function a(e2) {
           var t2;
           return e2 && e2.state ? (t2 = e2.state, e2.total_in = e2.total_out = t2.total = 0, e2.msg = "", t2.wrap && (e2.adler = 1 & t2.wrap), t2.mode = P, t2.last = 0, t2.havedict = 0, t2.dmax = 32768, t2.head = null, t2.hold = 0, t2.bits = 0, t2.lencode = t2.lendyn = new I.Buf32(n), t2.distcode = t2.distdyn = new I.Buf32(i), t2.sane = 1, t2.back = -1, N) : U;
         }
-        __name(a, "a");
         function o(e2) {
           var t2;
           return e2 && e2.state ? ((t2 = e2.state).wsize = 0, t2.whave = 0, t2.wnext = 0, a(e2)) : U;
         }
-        __name(o, "o");
         function h(e2, t2) {
           var r2, n2;
           return e2 && e2.state ? (n2 = e2.state, t2 < 0 ? (r2 = 0, t2 = -t2) : (r2 = 1 + (t2 >> 4), t2 < 48 && (t2 &= 15)), t2 && (t2 < 8 || 15 < t2) ? U : (null !== n2.window && n2.wbits !== t2 && (n2.window = null), n2.wrap = r2, n2.wbits = t2, o(e2))) : U;
         }
-        __name(h, "h");
         function u(e2, t2) {
           var r2, n2;
           return e2 ? (n2 = new s(), (e2.state = n2).window = null, (r2 = h(e2, t2)) !== N && (e2.state = null), r2) : U;
         }
-        __name(u, "u");
         var l, f, c = true;
         function j(e2) {
           if (c) {
@@ -21046,12 +20564,10 @@ function requireJszip_min() {
           }
           e2.lencode = l, e2.lenbits = 9, e2.distcode = f, e2.distbits = 5;
         }
-        __name(j, "j");
         function Z(e2, t2, r2, n2) {
           var i2, s2 = e2.state;
           return null === s2.window && (s2.wsize = 1 << s2.wbits, s2.wnext = 0, s2.whave = 0, s2.window = new I.Buf8(s2.wsize)), n2 >= s2.wsize ? (I.arraySet(s2.window, t2, r2 - s2.wsize, s2.wsize, 0), s2.wnext = 0, s2.whave = s2.wsize) : (n2 < (i2 = s2.wsize - s2.wnext) && (i2 = n2), I.arraySet(s2.window, t2, r2 - n2, i2, s2.wnext), (n2 -= i2) ? (I.arraySet(s2.window, t2, r2 - n2, n2, 0), s2.wnext = n2, s2.whave = s2.wsize) : (s2.wnext += i2, s2.wnext === s2.wsize && (s2.wnext = 0), s2.whave < s2.wsize && (s2.whave += i2))), 0;
         }
-        __name(Z, "Z");
         r.inflateReset = o, r.inflateReset2 = h, r.inflateResetKeep = a, r.inflateInit = function(e2) {
           return u(e2, 15);
         }, r.inflateInit2 = u, r.inflate = function(e2, t2) {
@@ -21457,7 +20973,6 @@ function requireJszip_min() {
         function n(e2) {
           for (var t2 = e2.length; 0 <= --t2; ) e2[t2] = 0;
         }
-        __name(n, "n");
         var s = 0, a = 29, u = 256, l = u + 1 + a, f = 30, c = 19, _ = 2 * l + 1, g = 15, d = 16, p = 7, m = 256, b = 16, v = 17, y = 18, w = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0], k = [0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13], x = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 3, 7], S = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15], z = new Array(2 * (l + 2));
         n(z);
         var C = new Array(2 * f);
@@ -21472,32 +20987,25 @@ function requireJszip_min() {
         function D(e2, t2, r2, n2, i2) {
           this.static_tree = e2, this.extra_bits = t2, this.extra_base = r2, this.elems = n2, this.max_length = i2, this.has_stree = e2 && e2.length;
         }
-        __name(D, "D");
         function F(e2, t2) {
           this.dyn_tree = e2, this.max_code = 0, this.stat_desc = t2;
         }
-        __name(F, "F");
         function N(e2) {
           return e2 < 256 ? E[e2] : E[256 + (e2 >>> 7)];
         }
-        __name(N, "N");
         function U(e2, t2) {
           e2.pending_buf[e2.pending++] = 255 & t2, e2.pending_buf[e2.pending++] = t2 >>> 8 & 255;
         }
-        __name(U, "U");
         function P(e2, t2, r2) {
           e2.bi_valid > d - r2 ? (e2.bi_buf |= t2 << e2.bi_valid & 65535, U(e2, e2.bi_buf), e2.bi_buf = t2 >> d - e2.bi_valid, e2.bi_valid += r2 - d) : (e2.bi_buf |= t2 << e2.bi_valid & 65535, e2.bi_valid += r2);
         }
-        __name(P, "P");
         function L(e2, t2, r2) {
           P(e2, r2[2 * t2], r2[2 * t2 + 1]);
         }
-        __name(L, "L");
         function j(e2, t2) {
           for (var r2 = 0; r2 |= 1 & e2, e2 >>>= 1, r2 <<= 1, 0 < --t2; ) ;
           return r2 >>> 1;
         }
-        __name(j, "j");
         function Z(e2, t2, r2) {
           var n2, i2, s2 = new Array(g + 1), a2 = 0;
           for (n2 = 1; n2 <= g; n2++) s2[n2] = a2 = a2 + r2[n2 - 1] << 1;
@@ -21506,7 +21014,6 @@ function requireJszip_min() {
             0 !== o2 && (e2[2 * i2] = j(s2[o2]++, o2));
           }
         }
-        __name(Z, "Z");
         function W(e2) {
           var t2;
           for (t2 = 0; t2 < l; t2++) e2.dyn_ltree[2 * t2] = 0;
@@ -21514,27 +21021,22 @@ function requireJszip_min() {
           for (t2 = 0; t2 < c; t2++) e2.bl_tree[2 * t2] = 0;
           e2.dyn_ltree[2 * m] = 1, e2.opt_len = e2.static_len = 0, e2.last_lit = e2.matches = 0;
         }
-        __name(W, "W");
         function M(e2) {
           8 < e2.bi_valid ? U(e2, e2.bi_buf) : 0 < e2.bi_valid && (e2.pending_buf[e2.pending++] = e2.bi_buf), e2.bi_buf = 0, e2.bi_valid = 0;
         }
-        __name(M, "M");
         function H(e2, t2, r2, n2) {
           var i2 = 2 * t2, s2 = 2 * r2;
           return e2[i2] < e2[s2] || e2[i2] === e2[s2] && n2[t2] <= n2[r2];
         }
-        __name(H, "H");
         function G(e2, t2, r2) {
           for (var n2 = e2.heap[r2], i2 = r2 << 1; i2 <= e2.heap_len && (i2 < e2.heap_len && H(t2, e2.heap[i2 + 1], e2.heap[i2], e2.depth) && i2++, !H(t2, n2, e2.heap[i2], e2.depth)); ) e2.heap[r2] = e2.heap[i2], r2 = i2, i2 <<= 1;
           e2.heap[r2] = n2;
         }
-        __name(G, "G");
         function K(e2, t2, r2) {
           var n2, i2, s2, a2, o2 = 0;
           if (0 !== e2.last_lit) for (; n2 = e2.pending_buf[e2.d_buf + 2 * o2] << 8 | e2.pending_buf[e2.d_buf + 2 * o2 + 1], i2 = e2.pending_buf[e2.l_buf + o2], o2++, 0 === n2 ? L(e2, i2, t2) : (L(e2, (s2 = A[i2]) + u + 1, t2), 0 !== (a2 = w[s2]) && P(e2, i2 -= I[s2], a2), L(e2, s2 = N(--n2), r2), 0 !== (a2 = k[s2]) && P(e2, n2 -= T[s2], a2)), o2 < e2.last_lit; ) ;
           L(e2, m, t2);
         }
-        __name(K, "K");
         function Y(e2, t2) {
           var r2, n2, i2, s2 = t2.dyn_tree, a2 = t2.stat_desc.static_tree, o2 = t2.stat_desc.has_stree, h2 = t2.stat_desc.elems, u2 = -1;
           for (e2.heap_len = 0, e2.heap_max = _, r2 = 0; r2 < h2; r2++) 0 !== s2[2 * r2] ? (e2.heap[++e2.heap_len] = u2 = r2, e2.depth[r2] = 0) : s2[2 * r2 + 1] = 0;
@@ -21554,12 +21056,10 @@ function requireJszip_min() {
             }
           })(e2, t2), Z(s2, u2, e2.bl_count);
         }
-        __name(Y, "Y");
         function X(e2, t2, r2) {
           var n2, i2, s2 = -1, a2 = t2[1], o2 = 0, h2 = 7, u2 = 4;
           for (0 === a2 && (h2 = 138, u2 = 3), t2[2 * (r2 + 1) + 1] = 65535, n2 = 0; n2 <= r2; n2++) i2 = a2, a2 = t2[2 * (n2 + 1) + 1], ++o2 < h2 && i2 === a2 || (o2 < u2 ? e2.bl_tree[2 * i2] += o2 : 0 !== i2 ? (i2 !== s2 && e2.bl_tree[2 * i2]++, e2.bl_tree[2 * b]++) : o2 <= 10 ? e2.bl_tree[2 * v]++ : e2.bl_tree[2 * y]++, s2 = i2, u2 = (o2 = 0) === a2 ? (h2 = 138, 3) : i2 === a2 ? (h2 = 6, 3) : (h2 = 7, 4));
         }
-        __name(X, "X");
         function V(e2, t2, r2) {
           var n2, i2, s2 = -1, a2 = t2[1], o2 = 0, h2 = 7, u2 = 4;
           for (0 === a2 && (h2 = 138, u2 = 3), n2 = 0; n2 <= r2; n2++) if (i2 = a2, a2 = t2[2 * (n2 + 1) + 1], !(++o2 < h2 && i2 === a2)) {
@@ -21568,7 +21068,6 @@ function requireJszip_min() {
             s2 = i2, u2 = (o2 = 0) === a2 ? (h2 = 138, 3) : i2 === a2 ? (h2 = 6, 3) : (h2 = 7, 4);
           }
         }
-        __name(V, "V");
         n(T);
         var q = false;
         function J(e2, t2, r2, n2) {
@@ -21576,7 +21075,6 @@ function requireJszip_min() {
             M(e3), U(e3, r3), U(e3, ~r3), i.arraySet(e3.pending_buf, e3.window, t3, r3, e3.pending), e3.pending += r3;
           })(e2, t2, r2);
         }
-        __name(J, "J");
         r._tr_init = function(e2) {
           q || ((function() {
             var e3, t2, r2, n2, i2, s2 = new Array(g + 1);
@@ -21658,7 +21156,6 @@ function requireJszip_min() {
             function f(e4) {
               delete h[e4];
             }
-            __name(f, "f");
             function c(e4) {
               if (u) setTimeout(c, 0, e4);
               else {
@@ -21691,11 +21188,9 @@ function requireJszip_min() {
                 }
               }
             }
-            __name(c, "c");
             function d(e4) {
               e4.source === r2 && "string" == typeof e4.data && 0 === e4.data.indexOf(a) && c(+e4.data.slice(a.length));
             }
-            __name(d, "d");
           })("undefined" == typeof self ? void 0 === e2 ? this : e2 : self);
         }).call(this, "undefined" != typeof commonjsGlobal ? commonjsGlobal : "undefined" != typeof self ? self : "undefined" != typeof window ? window : {});
       }, {}] }, {}, [10])(10);
@@ -21703,9 +21198,8 @@ function requireJszip_min() {
   })(jszip_min);
   return jszip_min.exports;
 }
-__name(requireJszip_min, "requireJszip_min");
 var jszip_minExports = requireJszip_min();
-var JSZip = /* @__PURE__ */ getDefaultExportFromCjs$1(jszip_minExports);
+const JSZip = /* @__PURE__ */ getDefaultExportFromCjs$1(jszip_minExports);
 var xml$1 = { exports: {} };
 var escapeForXML_1;
 var hasRequiredEscapeForXML;
@@ -21724,11 +21218,9 @@ function requireEscapeForXML() {
       return XML_CHARACTER_MAP[item];
     }) : string;
   }
-  __name(escapeForXML, "escapeForXML");
   escapeForXML_1 = escapeForXML;
   return escapeForXML_1;
 }
-__name(requireEscapeForXML, "requireEscapeForXML");
 var hasRequiredXml;
 function requireXml() {
   if (hasRequiredXml) return xml$1.exports;
@@ -21750,7 +21242,6 @@ function requireXml() {
         process$1.nextTick(func);
       }
     }
-    __name(delay, "delay");
     function append(interrupt, out) {
       if (out !== void 0) {
         output += out;
@@ -21767,11 +21258,9 @@ function requireXml() {
         output = "";
       }
     }
-    __name(append, "append");
     function add(value, last) {
       format(append, resolve(value, indent, indent ? 1 : 0), last);
     }
-    __name(add, "add");
     function end() {
       if (stream) {
         var data = output;
@@ -21783,7 +21272,6 @@ function requireXml() {
         });
       }
     }
-    __name(end, "end");
     function addXmlDeclaration(declaration) {
       var encoding = declaration.encoding || "UTF-8", attr = { version: "1.0", encoding };
       if (declaration.standalone) {
@@ -21792,7 +21280,6 @@ function requireXml() {
       add({ "?xml": { _attr: attr } });
       output = output.replace("/>", "?>");
     }
-    __name(addXmlDeclaration, "addXmlDeclaration");
     delay(function() {
       instant = false;
     });
@@ -21815,7 +21302,6 @@ function requireXml() {
     }
     return output;
   }
-  __name(xml2, "xml2");
   function element() {
     var input = Array.prototype.slice.call(arguments), self2 = {
       _elem: resolve(input)
@@ -21848,11 +21334,9 @@ function requireXml() {
     };
     return self2;
   }
-  __name(element, "element");
-  function create_indent(character, count3) {
-    return new Array(count3 || 0).join(character || "");
+  function create_indent(character, count) {
+    return new Array(count || 0).join(character || "");
   }
-  __name(create_indent, "create_indent");
   function resolve(data, indent, indent_count) {
     indent_count = indent_count || 0;
     var indent_spaces = create_indent(indent, indent_count);
@@ -21880,7 +21364,6 @@ function requireXml() {
         attributes.push(attribute(key, obj[key]));
       });
     }
-    __name(get_attributes, "get_attributes");
     switch (typeof values) {
       case "object":
         if (values === null) break;
@@ -21931,7 +21414,6 @@ function requireXml() {
       indent
     };
   }
-  __name(resolve, "resolve");
   function format(append, elem, end) {
     if (typeof elem != "object") {
       return append(false, elem);
@@ -21949,7 +21431,6 @@ function requireXml() {
         end();
       }
     }
-    __name(proceed, "proceed");
     function interrupt(value) {
       if (value.interrupt) {
         value.interrupt.append = append;
@@ -21960,7 +21441,6 @@ function requireXml() {
       }
       return false;
     }
-    __name(interrupt, "interrupt");
     append(false, elem.indents + (elem.name ? "<" + elem.name : "") + (elem.attributes.length ? " " + elem.attributes.join(" ") : "") + (len ? elem.name ? ">" : "" : elem.name ? "/>" : "") + (elem.indent && len > 1 ? "\n" : ""));
     if (!len) {
       return append(false, elem.indent ? "\n" : "");
@@ -21969,22 +21449,19 @@ function requireXml() {
       proceed();
     }
   }
-  __name(format, "format");
   function attribute(key, value) {
     return key + '="' + escapeForXML(value) + '"';
   }
-  __name(attribute, "attribute");
   xml$1.exports = xml2;
   xml$1.exports.element = xml$1.exports.Element = element;
   return xml$1.exports;
 }
-__name(requireXml, "requireXml");
 var xmlExports = requireXml();
-var xml = /* @__PURE__ */ getDefaultExportFromCjs$1(xmlExports);
-var obfuscatedStartOffset = 0;
-var obfuscatedEndOffset = 32;
-var guidSize = 32;
-var obfuscate = /* @__PURE__ */ __name((buf, fontKey) => {
+const xml = /* @__PURE__ */ getDefaultExportFromCjs$1(xmlExports);
+const obfuscatedStartOffset = 0;
+const obfuscatedEndOffset = 32;
+const guidSize = 32;
+const obfuscate = (buf, fontKey) => {
   const guid = fontKey.replace(/-/g, "");
   if (guid.length !== guidSize) {
     throw new Error(`Error: Cannot extract GUID from font filename: ${fontKey}`);
@@ -21999,11 +21476,8 @@ var obfuscate = /* @__PURE__ */ __name((buf, fontKey) => {
   out.set(obfuscatedBytes, obfuscatedStartOffset);
   out.set(buf.slice(obfuscatedEndOffset), obfuscatedStartOffset + obfuscatedBytes.length);
   return out;
-}, "obfuscate");
-var Formatter = class {
-  static {
-    __name(this, "Formatter");
-  }
+};
+class Formatter {
   /**
    * Formats an XML component into a serializable object.
    *
@@ -22012,19 +21486,16 @@ var Formatter = class {
    * @returns A serializable XML object structure
    * @throws Error if the component cannot be formatted correctly
    */
-  format(input, context2 = { stack: [] }) {
-    const output = input.prepForXml(context2);
+  format(input, context = { stack: [] }) {
+    const output = input.prepForXml(context);
     if (output) {
       return output;
     } else {
       throw Error("XMLComponent did not format correctly");
     }
   }
-};
-var ImageReplacer = class {
-  static {
-    __name(this, "ImageReplacer");
-  }
+}
+class ImageReplacer {
   /**
    * Replaces image placeholder tokens with relationship IDs.
    *
@@ -22050,11 +21521,8 @@ var ImageReplacer = class {
   getMediaData(xmlData, media) {
     return media.Array.filter((image) => xmlData.search(`{${image.fileName}}`) > 0);
   }
-};
-var NumberingReplacer = class {
-  static {
-    __name(this, "NumberingReplacer");
-  }
+}
+class NumberingReplacer {
   /**
    * Replaces numbering placeholder tokens with actual numbering IDs.
    *
@@ -22075,11 +21543,8 @@ var NumberingReplacer = class {
     }
     return currentXmlData;
   }
-};
-var Compiler = class {
-  static {
-    __name(this, "Compiler");
-  }
+}
+class Compiler {
   /**
    * Creates a new Compiler instance.
    *
@@ -22625,8 +22090,8 @@ var Compiler = class {
       }
     };
   }
-};
-var PrettifyType = {
+}
+const PrettifyType = {
   /** No prettification (smallest file size) */
   NONE: "",
   /** Indent with 2 spaces */
@@ -22636,11 +22101,8 @@ var PrettifyType = {
   /** Indent with tab character */
   WITH_TAB: "	"
 };
-var convertPrettifyType = /* @__PURE__ */ __name((prettify) => prettify === true ? PrettifyType.WITH_2_BLANKS : prettify === false ? void 0 : prettify, "convertPrettifyType");
-var _Packer = class _Packer2 {
-  static {
-    __name(this, "_Packer");
-  }
+const convertPrettifyType = (prettify) => prettify === true ? PrettifyType.WITH_2_BLANKS : prettify === false ? void 0 : prettify;
+const _Packer = class _Packer {
   /**
    * Exports a document to the specified output format.
    *
@@ -22670,7 +22132,7 @@ var _Packer = class _Packer2 {
    * @returns A promise resolving to the document as a string
    */
   static toString(file, prettify, overrides = []) {
-    return _Packer2.pack(file, "string", prettify, overrides);
+    return _Packer.pack(file, "string", prettify, overrides);
   }
   /**
    * Exports a document to a Node.js Buffer.
@@ -22681,7 +22143,7 @@ var _Packer = class _Packer2 {
    * @returns A promise resolving to the document as a Buffer
    */
   static toBuffer(file, prettify, overrides = []) {
-    return _Packer2.pack(file, "nodebuffer", prettify, overrides);
+    return _Packer.pack(file, "nodebuffer", prettify, overrides);
   }
   /**
    * Exports a document to a base64-encoded string.
@@ -22692,7 +22154,7 @@ var _Packer = class _Packer2 {
    * @returns A promise resolving to the document as a base64 string
    */
   static toBase64String(file, prettify, overrides = []) {
-    return _Packer2.pack(file, "base64", prettify, overrides);
+    return _Packer.pack(file, "base64", prettify, overrides);
   }
   /**
    * Exports a document to a Blob (for browser environments).
@@ -22703,7 +22165,7 @@ var _Packer = class _Packer2 {
    * @returns A promise resolving to the document as a Blob
    */
   static toBlob(file, prettify, overrides = []) {
-    return _Packer2.pack(file, "blob", prettify, overrides);
+    return _Packer.pack(file, "blob", prettify, overrides);
   }
   /**
    * Exports a document to an ArrayBuffer.
@@ -22714,7 +22176,7 @@ var _Packer = class _Packer2 {
    * @returns A promise resolving to the document as an ArrayBuffer
    */
   static toArrayBuffer(file, prettify, overrides = []) {
-    return _Packer2.pack(file, "arraybuffer", prettify, overrides);
+    return _Packer.pack(file, "arraybuffer", prettify, overrides);
   }
   /**
    * Exports a document to a Node.js Stream.
@@ -22739,4080 +22201,872 @@ var _Packer = class _Packer2 {
   }
 };
 __publicField(_Packer, "compiler", new Compiler());
-var Packer = _Packer;
-var formatter$1 = new Formatter();
-var formatter = new Formatter();
-var imageReplacer = new ImageReplacer();
-var UTF16LE = new Uint8Array([255, 254]);
-var UTF16BE = new Uint8Array([254, 255]);
-
-// src/vendor/fflate.mjs
-var u8 = Uint8Array;
-var u16 = Uint16Array;
-var i32 = Int32Array;
-var fleb = new u8([
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  1,
-  1,
-  1,
-  1,
-  2,
-  2,
-  2,
-  2,
-  3,
-  3,
-  3,
-  3,
-  4,
-  4,
-  4,
-  4,
-  5,
-  5,
-  5,
-  5,
-  0,
-  /* unused */
-  0,
-  0,
-  /* impossible */
-  0
-]);
-var fdeb = new u8([
-  0,
-  0,
-  0,
-  0,
-  1,
-  1,
-  2,
-  2,
-  3,
-  3,
-  4,
-  4,
-  5,
-  5,
-  6,
-  6,
-  7,
-  7,
-  8,
-  8,
-  9,
-  9,
-  10,
-  10,
-  11,
-  11,
-  12,
-  12,
-  13,
-  13,
-  /* unused */
-  0,
-  0
-]);
-var clim = new u8([16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15]);
-var freb = /* @__PURE__ */ __name(function(eb, start) {
-  var b = new u16(31);
-  for (var i = 0; i < 31; ++i) {
-    b[i] = start += 1 << eb[i - 1];
-  }
-  var r = new i32(b[30]);
-  for (var i = 1; i < 30; ++i) {
-    for (var j = b[i]; j < b[i + 1]; ++j) {
-      r[j] = j - b[i] << 5 | i;
-    }
-  }
-  return { b, r };
-}, "freb");
-var _a = freb(fleb, 2);
-var fl = _a.b;
-var revfl = _a.r;
-fl[28] = 258, revfl[258] = 28;
-var _b = freb(fdeb, 0);
-var fd = _b.b;
-var revfd = _b.r;
-var rev = new u16(32768);
-for (i = 0; i < 32768; ++i) {
-  x = (i & 43690) >> 1 | (i & 21845) << 1;
-  x = (x & 52428) >> 2 | (x & 13107) << 2;
-  x = (x & 61680) >> 4 | (x & 3855) << 4;
-  rev[i] = ((x & 65280) >> 8 | (x & 255) << 8) >> 1;
-}
-var x;
-var i;
-var hMap = /* @__PURE__ */ __name((function(cd, mb, r) {
-  var s = cd.length;
-  var i = 0;
-  var l = new u16(mb);
-  for (; i < s; ++i) {
-    if (cd[i])
-      ++l[cd[i] - 1];
-  }
-  var le = new u16(mb);
-  for (i = 1; i < mb; ++i) {
-    le[i] = le[i - 1] + l[i - 1] << 1;
-  }
-  var co;
-  if (r) {
-    co = new u16(1 << mb);
-    var rvb = 15 - mb;
-    for (i = 0; i < s; ++i) {
-      if (cd[i]) {
-        var sv = i << 4 | cd[i];
-        var r_1 = mb - cd[i];
-        var v = le[cd[i] - 1]++ << r_1;
-        for (var m = v | (1 << r_1) - 1; v <= m; ++v) {
-          co[rev[v] >> rvb] = sv;
-        }
-      }
-    }
-  } else {
-    co = new u16(s);
-    for (i = 0; i < s; ++i) {
-      if (cd[i]) {
-        co[i] = rev[le[cd[i] - 1]++] >> 15 - cd[i];
-      }
-    }
-  }
-  return co;
-}), "hMap");
-var flt = new u8(288);
-for (i = 0; i < 144; ++i)
-  flt[i] = 8;
-var i;
-for (i = 144; i < 256; ++i)
-  flt[i] = 9;
-var i;
-for (i = 256; i < 280; ++i)
-  flt[i] = 7;
-var i;
-for (i = 280; i < 288; ++i)
-  flt[i] = 8;
-var i;
-var fdt = new u8(32);
-for (i = 0; i < 32; ++i)
-  fdt[i] = 5;
-var i;
-var flm = /* @__PURE__ */ hMap(flt, 9, 0);
-var flrm = /* @__PURE__ */ hMap(flt, 9, 1);
-var fdm = /* @__PURE__ */ hMap(fdt, 5, 0);
-var fdrm = /* @__PURE__ */ hMap(fdt, 5, 1);
-var max2 = /* @__PURE__ */ __name(function(a) {
-  var m = a[0];
-  for (var i = 1; i < a.length; ++i) {
-    if (a[i] > m)
-      m = a[i];
-  }
-  return m;
-}, "max");
-var bits = /* @__PURE__ */ __name(function(d, p, m) {
-  var o = p / 8 | 0;
-  return (d[o] | d[o + 1] << 8) >> (p & 7) & m;
-}, "bits");
-var bits16 = /* @__PURE__ */ __name(function(d, p) {
-  var o = p / 8 | 0;
-  return (d[o] | d[o + 1] << 8 | d[o + 2] << 16) >> (p & 7);
-}, "bits16");
-var shft = /* @__PURE__ */ __name(function(p) {
-  return (p + 7) / 8 | 0;
-}, "shft");
-var slc = /* @__PURE__ */ __name(function(v, s, e) {
-  if (s == null || s < 0)
-    s = 0;
-  if (e == null || e > v.length)
-    e = v.length;
-  return new u8(v.subarray(s, e));
-}, "slc");
-var ec = [
-  "unexpected EOF",
-  "invalid block type",
-  "invalid length/literal",
-  "invalid distance",
-  "stream finished",
-  "no stream handler",
-  ,
-  "no callback",
-  "invalid UTF-8 data",
-  "extra field too long",
-  "date not in range 1980-2099",
-  "filename too long",
-  "stream finishing",
-  "invalid zip data"
-  // determined by unknown compression method
-];
-var err = /* @__PURE__ */ __name(function(ind, msg, nt) {
-  var e = new Error(msg || ec[ind]);
-  e.code = ind;
-  if (Error.captureStackTrace)
-    Error.captureStackTrace(e, err);
-  if (!nt)
-    throw e;
-  return e;
-}, "err");
-var inflt = /* @__PURE__ */ __name(function(dat, st, buf, dict) {
-  var sl = dat.length, dl = dict ? dict.length : 0;
-  if (!sl || st.f && !st.l)
-    return buf || new u8(0);
-  var noBuf = !buf;
-  var resize = noBuf || st.i != 2;
-  var noSt = st.i;
-  if (noBuf)
-    buf = new u8(sl * 3);
-  var cbuf = /* @__PURE__ */ __name(function(l2) {
-    var bl = buf.length;
-    if (l2 > bl) {
-      var nbuf = new u8(Math.max(bl * 2, l2));
-      nbuf.set(buf);
-      buf = nbuf;
-    }
-  }, "cbuf");
-  var final = st.f || 0, pos = st.p || 0, bt = st.b || 0, lm = st.l, dm = st.d, lbt = st.m, dbt = st.n;
-  var tbts = sl * 8;
-  do {
-    if (!lm) {
-      final = bits(dat, pos, 1);
-      var type2 = bits(dat, pos + 1, 3);
-      pos += 3;
-      if (!type2) {
-        var s = shft(pos) + 4, l = dat[s - 4] | dat[s - 3] << 8, t = s + l;
-        if (t > sl) {
-          if (noSt)
-            err(0);
-          break;
-        }
-        if (resize)
-          cbuf(bt + l);
-        buf.set(dat.subarray(s, t), bt);
-        st.b = bt += l, st.p = pos = t * 8, st.f = final;
-        continue;
-      } else if (type2 == 1)
-        lm = flrm, dm = fdrm, lbt = 9, dbt = 5;
-      else if (type2 == 2) {
-        var hLit = bits(dat, pos, 31) + 257, hcLen = bits(dat, pos + 10, 15) + 4;
-        var tl = hLit + bits(dat, pos + 5, 31) + 1;
-        pos += 14;
-        var ldt = new u8(tl);
-        var clt = new u8(19);
-        for (var i = 0; i < hcLen; ++i) {
-          clt[clim[i]] = bits(dat, pos + i * 3, 7);
-        }
-        pos += hcLen * 3;
-        var clb = max2(clt), clbmsk = (1 << clb) - 1;
-        var clm = hMap(clt, clb, 1);
-        for (var i = 0; i < tl; ) {
-          var r = clm[bits(dat, pos, clbmsk)];
-          pos += r & 15;
-          var s = r >> 4;
-          if (s < 16) {
-            ldt[i++] = s;
-          } else {
-            var c = 0, n = 0;
-            if (s == 16)
-              n = 3 + bits(dat, pos, 3), pos += 2, c = ldt[i - 1];
-            else if (s == 17)
-              n = 3 + bits(dat, pos, 7), pos += 3;
-            else if (s == 18)
-              n = 11 + bits(dat, pos, 127), pos += 7;
-            while (n--)
-              ldt[i++] = c;
-          }
-        }
-        var lt = ldt.subarray(0, hLit), dt = ldt.subarray(hLit);
-        lbt = max2(lt);
-        dbt = max2(dt);
-        lm = hMap(lt, lbt, 1);
-        dm = hMap(dt, dbt, 1);
-      } else
-        err(1);
-      if (pos > tbts) {
-        if (noSt)
-          err(0);
-        break;
-      }
-    }
-    if (resize)
-      cbuf(bt + 131072);
-    var lms = (1 << lbt) - 1, dms = (1 << dbt) - 1;
-    var lpos = pos;
-    for (; ; lpos = pos) {
-      var c = lm[bits16(dat, pos) & lms], sym = c >> 4;
-      pos += c & 15;
-      if (pos > tbts) {
-        if (noSt)
-          err(0);
-        break;
-      }
-      if (!c)
-        err(2);
-      if (sym < 256)
-        buf[bt++] = sym;
-      else if (sym == 256) {
-        lpos = pos, lm = null;
-        break;
-      } else {
-        var add = sym - 254;
-        if (sym > 264) {
-          var i = sym - 257, b = fleb[i];
-          add = bits(dat, pos, (1 << b) - 1) + fl[i];
-          pos += b;
-        }
-        var d = dm[bits16(dat, pos) & dms], dsym = d >> 4;
-        if (!d)
-          err(3);
-        pos += d & 15;
-        var dt = fd[dsym];
-        if (dsym > 3) {
-          var b = fdeb[dsym];
-          dt += bits16(dat, pos) & (1 << b) - 1, pos += b;
-        }
-        if (pos > tbts) {
-          if (noSt)
-            err(0);
-          break;
-        }
-        if (resize)
-          cbuf(bt + 131072);
-        var end = bt + add;
-        if (bt < dt) {
-          var shift = dl - dt, dend = Math.min(dt, end);
-          if (shift + bt < 0)
-            err(3);
-          for (; bt < dend; ++bt)
-            buf[bt] = dict[shift + bt];
-        }
-        for (; bt < end; ++bt)
-          buf[bt] = buf[bt - dt];
-      }
-    }
-    st.l = lm, st.p = lpos, st.b = bt, st.f = final;
-    if (lm)
-      final = 1, st.m = lbt, st.d = dm, st.n = dbt;
-  } while (!final);
-  return bt != buf.length && noBuf ? slc(buf, 0, bt) : buf.subarray(0, bt);
-}, "inflt");
-var wbits = /* @__PURE__ */ __name(function(d, p, v) {
-  v <<= p & 7;
-  var o = p / 8 | 0;
-  d[o] |= v;
-  d[o + 1] |= v >> 8;
-}, "wbits");
-var wbits16 = /* @__PURE__ */ __name(function(d, p, v) {
-  v <<= p & 7;
-  var o = p / 8 | 0;
-  d[o] |= v;
-  d[o + 1] |= v >> 8;
-  d[o + 2] |= v >> 16;
-}, "wbits16");
-var hTree = /* @__PURE__ */ __name(function(d, mb) {
-  var t = [];
-  for (var i = 0; i < d.length; ++i) {
-    if (d[i])
-      t.push({ s: i, f: d[i] });
-  }
-  var s = t.length;
-  var t2 = t.slice();
-  if (!s)
-    return { t: et, l: 0 };
-  if (s == 1) {
-    var v = new u8(t[0].s + 1);
-    v[t[0].s] = 1;
-    return { t: v, l: 1 };
-  }
-  t.sort(function(a, b) {
-    return a.f - b.f;
-  });
-  t.push({ s: -1, f: 25001 });
-  var l = t[0], r = t[1], i0 = 0, i1 = 1, i2 = 2;
-  t[0] = { s: -1, f: l.f + r.f, l, r };
-  while (i1 != s - 1) {
-    l = t[t[i0].f < t[i2].f ? i0++ : i2++];
-    r = t[i0 != i1 && t[i0].f < t[i2].f ? i0++ : i2++];
-    t[i1++] = { s: -1, f: l.f + r.f, l, r };
-  }
-  var maxSym = t2[0].s;
-  for (var i = 1; i < s; ++i) {
-    if (t2[i].s > maxSym)
-      maxSym = t2[i].s;
-  }
-  var tr = new u16(maxSym + 1);
-  var mbt = ln(t[i1 - 1], tr, 0);
-  if (mbt > mb) {
-    var i = 0, dt = 0;
-    var lft = mbt - mb, cst = 1 << lft;
-    t2.sort(function(a, b) {
-      return tr[b.s] - tr[a.s] || a.f - b.f;
-    });
-    for (; i < s; ++i) {
-      var i2_1 = t2[i].s;
-      if (tr[i2_1] > mb) {
-        dt += cst - (1 << mbt - tr[i2_1]);
-        tr[i2_1] = mb;
-      } else
-        break;
-    }
-    dt >>= lft;
-    while (dt > 0) {
-      var i2_2 = t2[i].s;
-      if (tr[i2_2] < mb)
-        dt -= 1 << mb - tr[i2_2]++ - 1;
-      else
-        ++i;
-    }
-    for (; i >= 0 && dt; --i) {
-      var i2_3 = t2[i].s;
-      if (tr[i2_3] == mb) {
-        --tr[i2_3];
-        ++dt;
-      }
-    }
-    mbt = mb;
-  }
-  return { t: new u8(tr), l: mbt };
-}, "hTree");
-var ln = /* @__PURE__ */ __name(function(n, l, d) {
-  return n.s == -1 ? Math.max(ln(n.l, l, d + 1), ln(n.r, l, d + 1)) : l[n.s] = d;
-}, "ln");
-var lc = /* @__PURE__ */ __name(function(c) {
-  var s = c.length;
-  while (s && !c[--s])
-    ;
-  var cl = new u16(++s);
-  var cli = 0, cln = c[0], cls = 1;
-  var w = /* @__PURE__ */ __name(function(v) {
-    cl[cli++] = v;
-  }, "w");
-  for (var i = 1; i <= s; ++i) {
-    if (c[i] == cln && i != s)
-      ++cls;
-    else {
-      if (!cln && cls > 2) {
-        for (; cls > 138; cls -= 138)
-          w(32754);
-        if (cls > 2) {
-          w(cls > 10 ? cls - 11 << 5 | 28690 : cls - 3 << 5 | 12305);
-          cls = 0;
-        }
-      } else if (cls > 3) {
-        w(cln), --cls;
-        for (; cls > 6; cls -= 6)
-          w(8304);
-        if (cls > 2)
-          w(cls - 3 << 5 | 8208), cls = 0;
-      }
-      while (cls--)
-        w(cln);
-      cls = 1;
-      cln = c[i];
-    }
-  }
-  return { c: cl.subarray(0, cli), n: s };
-}, "lc");
-var clen = /* @__PURE__ */ __name(function(cf, cl) {
-  var l = 0;
-  for (var i = 0; i < cl.length; ++i)
-    l += cf[i] * cl[i];
-  return l;
-}, "clen");
-var wfblk = /* @__PURE__ */ __name(function(out, pos, dat) {
-  var s = dat.length;
-  var o = shft(pos + 2);
-  out[o] = s & 255;
-  out[o + 1] = s >> 8;
-  out[o + 2] = out[o] ^ 255;
-  out[o + 3] = out[o + 1] ^ 255;
-  for (var i = 0; i < s; ++i)
-    out[o + i + 4] = dat[i];
-  return (o + 4 + s) * 8;
-}, "wfblk");
-var wblk = /* @__PURE__ */ __name(function(dat, out, final, syms, lf, df, eb, li, bs, bl, p) {
-  wbits(out, p++, final);
-  ++lf[256];
-  var _a2 = hTree(lf, 15), dlt = _a2.t, mlb = _a2.l;
-  var _b2 = hTree(df, 15), ddt = _b2.t, mdb = _b2.l;
-  var _c = lc(dlt), lclt = _c.c, nlc = _c.n;
-  var _d = lc(ddt), lcdt = _d.c, ndc = _d.n;
-  var lcfreq = new u16(19);
-  for (var i = 0; i < lclt.length; ++i)
-    ++lcfreq[lclt[i] & 31];
-  for (var i = 0; i < lcdt.length; ++i)
-    ++lcfreq[lcdt[i] & 31];
-  var _e = hTree(lcfreq, 7), lct = _e.t, mlcb = _e.l;
-  var nlcc = 19;
-  for (; nlcc > 4 && !lct[clim[nlcc - 1]]; --nlcc)
-    ;
-  var flen = bl + 5 << 3;
-  var ftlen = clen(lf, flt) + clen(df, fdt) + eb;
-  var dtlen = clen(lf, dlt) + clen(df, ddt) + eb + 14 + 3 * nlcc + clen(lcfreq, lct) + 2 * lcfreq[16] + 3 * lcfreq[17] + 7 * lcfreq[18];
-  if (bs >= 0 && flen <= ftlen && flen <= dtlen)
-    return wfblk(out, p, dat.subarray(bs, bs + bl));
-  var lm, ll, dm, dl;
-  wbits(out, p, 1 + (dtlen < ftlen)), p += 2;
-  if (dtlen < ftlen) {
-    lm = hMap(dlt, mlb, 0), ll = dlt, dm = hMap(ddt, mdb, 0), dl = ddt;
-    var llm = hMap(lct, mlcb, 0);
-    wbits(out, p, nlc - 257);
-    wbits(out, p + 5, ndc - 1);
-    wbits(out, p + 10, nlcc - 4);
-    p += 14;
-    for (var i = 0; i < nlcc; ++i)
-      wbits(out, p + 3 * i, lct[clim[i]]);
-    p += 3 * nlcc;
-    var lcts = [lclt, lcdt];
-    for (var it = 0; it < 2; ++it) {
-      var clct = lcts[it];
-      for (var i = 0; i < clct.length; ++i) {
-        var len = clct[i] & 31;
-        wbits(out, p, llm[len]), p += lct[len];
-        if (len > 15)
-          wbits(out, p, clct[i] >> 5 & 127), p += clct[i] >> 12;
-      }
-    }
-  } else {
-    lm = flm, ll = flt, dm = fdm, dl = fdt;
-  }
-  for (var i = 0; i < li; ++i) {
-    var sym = syms[i];
-    if (sym > 255) {
-      var len = sym >> 18 & 31;
-      wbits16(out, p, lm[len + 257]), p += ll[len + 257];
-      if (len > 7)
-        wbits(out, p, sym >> 23 & 31), p += fleb[len];
-      var dst = sym & 31;
-      wbits16(out, p, dm[dst]), p += dl[dst];
-      if (dst > 3)
-        wbits16(out, p, sym >> 5 & 8191), p += fdeb[dst];
-    } else {
-      wbits16(out, p, lm[sym]), p += ll[sym];
-    }
-  }
-  wbits16(out, p, lm[256]);
-  return p + ll[256];
-}, "wblk");
-var deo = /* @__PURE__ */ new i32([65540, 131080, 131088, 131104, 262176, 1048704, 1048832, 2114560, 2117632]);
-var et = /* @__PURE__ */ new u8(0);
-var dflt = /* @__PURE__ */ __name(function(dat, lvl, plvl, pre, post, st) {
-  var s = st.z || dat.length;
-  var o = new u8(pre + s + 5 * (1 + Math.ceil(s / 7e3)) + post);
-  var w = o.subarray(pre, o.length - post);
-  var lst = st.l;
-  var pos = (st.r || 0) & 7;
-  if (lvl) {
-    if (pos)
-      w[0] = st.r >> 3;
-    var opt = deo[lvl - 1];
-    var n = opt >> 13, c = opt & 8191;
-    var msk_1 = (1 << plvl) - 1;
-    var prev = st.p || new u16(32768), head = st.h || new u16(msk_1 + 1);
-    var bs1_1 = Math.ceil(plvl / 3), bs2_1 = 2 * bs1_1;
-    var hsh = /* @__PURE__ */ __name(function(i2) {
-      return (dat[i2] ^ dat[i2 + 1] << bs1_1 ^ dat[i2 + 2] << bs2_1) & msk_1;
-    }, "hsh");
-    var syms = new i32(25e3);
-    var lf = new u16(288), df = new u16(32);
-    var lc_1 = 0, eb = 0, i = st.i || 0, li = 0, wi = st.w || 0, bs = 0;
-    for (; i + 2 < s; ++i) {
-      var hv = hsh(i);
-      var imod = i & 32767, pimod = head[hv];
-      prev[imod] = pimod;
-      head[hv] = imod;
-      if (wi <= i) {
-        var rem = s - i;
-        if ((lc_1 > 7e3 || li > 24576) && (rem > 423 || !lst)) {
-          pos = wblk(dat, w, 0, syms, lf, df, eb, li, bs, i - bs, pos);
-          li = lc_1 = eb = 0, bs = i;
-          for (var j = 0; j < 286; ++j)
-            lf[j] = 0;
-          for (var j = 0; j < 30; ++j)
-            df[j] = 0;
-        }
-        var l = 2, d = 0, ch_1 = c, dif = imod - pimod & 32767;
-        if (rem > 2 && hv == hsh(i - dif)) {
-          var maxn = Math.min(n, rem) - 1;
-          var maxd = Math.min(32767, i);
-          var ml = Math.min(258, rem);
-          while (dif <= maxd && --ch_1 && imod != pimod) {
-            if (dat[i + l] == dat[i + l - dif]) {
-              var nl = 0;
-              for (; nl < ml && dat[i + nl] == dat[i + nl - dif]; ++nl)
-                ;
-              if (nl > l) {
-                l = nl, d = dif;
-                if (nl > maxn)
-                  break;
-                var mmd = Math.min(dif, nl - 2);
-                var md = 0;
-                for (var j = 0; j < mmd; ++j) {
-                  var ti = i - dif + j & 32767;
-                  var pti = prev[ti];
-                  var cd = ti - pti & 32767;
-                  if (cd > md)
-                    md = cd, pimod = ti;
-                }
-              }
-            }
-            imod = pimod, pimod = prev[imod];
-            dif += imod - pimod & 32767;
-          }
-        }
-        if (d) {
-          syms[li++] = 268435456 | revfl[l] << 18 | revfd[d];
-          var lin = revfl[l] & 31, din = revfd[d] & 31;
-          eb += fleb[lin] + fdeb[din];
-          ++lf[257 + lin];
-          ++df[din];
-          wi = i + l;
-          ++lc_1;
-        } else {
-          syms[li++] = dat[i];
-          ++lf[dat[i]];
-        }
-      }
-    }
-    for (i = Math.max(i, wi); i < s; ++i) {
-      syms[li++] = dat[i];
-      ++lf[dat[i]];
-    }
-    pos = wblk(dat, w, lst, syms, lf, df, eb, li, bs, i - bs, pos);
-    if (!lst) {
-      st.r = pos & 7 | w[pos / 8 | 0] << 3;
-      pos -= 7;
-      st.h = head, st.p = prev, st.i = i, st.w = wi;
-    }
-  } else {
-    for (var i = st.w || 0; i < s + lst; i += 65535) {
-      var e = i + 65535;
-      if (e >= s) {
-        w[pos / 8 | 0] = lst;
-        e = s;
-      }
-      pos = wfblk(w, pos + 1, dat.subarray(i, e));
-    }
-    st.i = s;
-  }
-  return slc(o, 0, pre + shft(pos) + post);
-}, "dflt");
-var crct = /* @__PURE__ */ (function() {
-  var t = new Int32Array(256);
-  for (var i = 0; i < 256; ++i) {
-    var c = i, k = 9;
-    while (--k)
-      c = (c & 1 && -306674912) ^ c >>> 1;
-    t[i] = c;
-  }
-  return t;
-})();
-var crc = /* @__PURE__ */ __name(function() {
-  var c = -1;
-  return {
-    p: /* @__PURE__ */ __name(function(d) {
-      var cr = c;
-      for (var i = 0; i < d.length; ++i)
-        cr = crct[cr & 255 ^ d[i]] ^ cr >>> 8;
-      c = cr;
-    }, "p"),
-    d: /* @__PURE__ */ __name(function() {
-      return ~c;
-    }, "d")
-  };
-}, "crc");
-var dopt = /* @__PURE__ */ __name(function(dat, opt, pre, post, st) {
-  if (!st) {
-    st = { l: 1 };
-    if (opt.dictionary) {
-      var dict = opt.dictionary.subarray(-32768);
-      var newDat = new u8(dict.length + dat.length);
-      newDat.set(dict);
-      newDat.set(dat, dict.length);
-      dat = newDat;
-      st.w = dict.length;
-    }
-  }
-  return dflt(dat, opt.level == null ? 6 : opt.level, opt.mem == null ? st.l ? Math.ceil(Math.max(8, Math.min(13, Math.log(dat.length))) * 1.5) : 20 : 12 + opt.mem, pre, post, st);
-}, "dopt");
-var mrg = /* @__PURE__ */ __name(function(a, b) {
-  var o = {};
-  for (var k in a)
-    o[k] = a[k];
-  for (var k in b)
-    o[k] = b[k];
-  return o;
-}, "mrg");
-var b2 = /* @__PURE__ */ __name(function(d, b) {
-  return d[b] | d[b + 1] << 8;
-}, "b2");
-var b4 = /* @__PURE__ */ __name(function(d, b) {
-  return (d[b] | d[b + 1] << 8 | d[b + 2] << 16 | d[b + 3] << 24) >>> 0;
-}, "b4");
-var b8 = /* @__PURE__ */ __name(function(d, b) {
-  return b4(d, b) + b4(d, b + 4) * 4294967296;
-}, "b8");
-var wbytes = /* @__PURE__ */ __name(function(d, b, v) {
-  for (; v; ++b)
-    d[b] = v, v >>>= 8;
-}, "wbytes");
-function deflateSync(data, opts) {
-  return dopt(data, opts || {}, 0, 0);
-}
-__name(deflateSync, "deflateSync");
-function inflateSync(data, opts) {
-  return inflt(data, { i: 2 }, opts && opts.out, opts && opts.dictionary);
-}
-__name(inflateSync, "inflateSync");
-var fltn = /* @__PURE__ */ __name(function(d, p, t, o) {
-  for (var k in d) {
-    var val = d[k], n = p + k, op = o;
-    if (Array.isArray(val))
-      op = mrg(o, val[1]), val = val[0];
-    if (val instanceof u8)
-      t[n] = [val, op];
-    else {
-      t[n += "/"] = [new u8(0), op];
-      fltn(val, n, t, o);
-    }
-  }
-}, "fltn");
-var te = typeof TextEncoder != "undefined" && /* @__PURE__ */ new TextEncoder();
-var td = typeof TextDecoder != "undefined" && /* @__PURE__ */ new TextDecoder();
-var tds = 0;
-try {
-  td.decode(et, { stream: true });
-  tds = 1;
-} catch (e) {
-}
-var dutf8 = /* @__PURE__ */ __name(function(d) {
-  for (var r = "", i = 0; ; ) {
-    var c = d[i++];
-    var eb = (c > 127) + (c > 223) + (c > 239);
-    if (i + eb > d.length)
-      return { s: r, r: slc(d, i - 1) };
-    if (!eb)
-      r += String.fromCharCode(c);
-    else if (eb == 3) {
-      c = ((c & 15) << 18 | (d[i++] & 63) << 12 | (d[i++] & 63) << 6 | d[i++] & 63) - 65536, r += String.fromCharCode(55296 | c >> 10, 56320 | c & 1023);
-    } else if (eb & 1)
-      r += String.fromCharCode((c & 31) << 6 | d[i++] & 63);
-    else
-      r += String.fromCharCode((c & 15) << 12 | (d[i++] & 63) << 6 | d[i++] & 63);
-  }
-}, "dutf8");
-function strToU8(str, latin1) {
-  if (latin1) {
-    var ar_1 = new u8(str.length);
-    for (var i = 0; i < str.length; ++i)
-      ar_1[i] = str.charCodeAt(i);
-    return ar_1;
-  }
-  if (te)
-    return te.encode(str);
-  var l = str.length;
-  var ar = new u8(str.length + (str.length >> 1));
-  var ai = 0;
-  var w = /* @__PURE__ */ __name(function(v) {
-    ar[ai++] = v;
-  }, "w");
-  for (var i = 0; i < l; ++i) {
-    if (ai + 5 > ar.length) {
-      var n = new u8(ai + 8 + (l - i << 1));
-      n.set(ar);
-      ar = n;
-    }
-    var c = str.charCodeAt(i);
-    if (c < 128 || latin1)
-      w(c);
-    else if (c < 2048)
-      w(192 | c >> 6), w(128 | c & 63);
-    else if (c > 55295 && c < 57344)
-      c = 65536 + (c & 1023 << 10) | str.charCodeAt(++i) & 1023, w(240 | c >> 18), w(128 | c >> 12 & 63), w(128 | c >> 6 & 63), w(128 | c & 63);
-    else
-      w(224 | c >> 12), w(128 | c >> 6 & 63), w(128 | c & 63);
-  }
-  return slc(ar, 0, ai);
-}
-__name(strToU8, "strToU8");
-function strFromU8(dat, latin1) {
-  if (latin1) {
-    var r = "";
-    for (var i = 0; i < dat.length; i += 16384)
-      r += String.fromCharCode.apply(null, dat.subarray(i, i + 16384));
-    return r;
-  } else if (td) {
-    return td.decode(dat);
-  } else {
-    var _a2 = dutf8(dat), s = _a2.s, r = _a2.r;
-    if (r.length)
-      err(8);
-    return s;
-  }
-}
-__name(strFromU8, "strFromU8");
-var slzh = /* @__PURE__ */ __name(function(d, b) {
-  return b + 30 + b2(d, b + 26) + b2(d, b + 28);
-}, "slzh");
-var zh = /* @__PURE__ */ __name(function(d, b, z) {
-  var fnl = b2(d, b + 28), fn = strFromU8(d.subarray(b + 46, b + 46 + fnl), !(b2(d, b + 8) & 2048)), es = b + 46 + fnl, bs = b4(d, b + 20);
-  var _a2 = z && bs == 4294967295 ? z64e(d, es) : [bs, b4(d, b + 24), b4(d, b + 42)], sc = _a2[0], su = _a2[1], off2 = _a2[2];
-  return [b2(d, b + 10), sc, su, fn, es + b2(d, b + 30) + b2(d, b + 32), off2];
-}, "zh");
-var z64e = /* @__PURE__ */ __name(function(d, b) {
-  for (; b2(d, b) != 1; b += 4 + b2(d, b + 2))
-    ;
-  return [b8(d, b + 12), b8(d, b + 4), b8(d, b + 20)];
-}, "z64e");
-var exfl = /* @__PURE__ */ __name(function(ex) {
-  var le = 0;
-  if (ex) {
-    for (var k in ex) {
-      var l = ex[k].length;
-      if (l > 65535)
-        err(9);
-      le += l + 4;
-    }
-  }
-  return le;
-}, "exfl");
-var wzh = /* @__PURE__ */ __name(function(d, b, f, fn, u, c, ce, co) {
-  var fl2 = fn.length, ex = f.extra, col = co && co.length;
-  var exl = exfl(ex);
-  wbytes(d, b, ce != null ? 33639248 : 67324752), b += 4;
-  if (ce != null)
-    d[b++] = 20, d[b++] = f.os;
-  d[b] = 20, b += 2;
-  d[b++] = f.flag << 1 | (c < 0 && 8), d[b++] = u && 8;
-  d[b++] = f.compression & 255, d[b++] = f.compression >> 8;
-  var dt = new Date(f.mtime == null ? Date.now() : f.mtime), y = dt.getFullYear() - 1980;
-  if (y < 0 || y > 119)
-    err(10);
-  wbytes(d, b, y << 25 | dt.getMonth() + 1 << 21 | dt.getDate() << 16 | dt.getHours() << 11 | dt.getMinutes() << 5 | dt.getSeconds() >> 1), b += 4;
-  if (c != -1) {
-    wbytes(d, b, f.crc);
-    wbytes(d, b + 4, c < 0 ? -c - 2 : c);
-    wbytes(d, b + 8, f.size);
-  }
-  wbytes(d, b + 12, fl2);
-  wbytes(d, b + 14, exl), b += 16;
-  if (ce != null) {
-    wbytes(d, b, col);
-    wbytes(d, b + 6, f.attrs);
-    wbytes(d, b + 10, ce), b += 14;
-  }
-  d.set(fn, b);
-  b += fl2;
-  if (exl) {
-    for (var k in ex) {
-      var exf = ex[k], l = exf.length;
-      wbytes(d, b, +k);
-      wbytes(d, b + 2, l);
-      d.set(exf, b + 4), b += 4 + l;
-    }
-  }
-  if (col)
-    d.set(co, b), b += col;
-  return b;
-}, "wzh");
-var wzf = /* @__PURE__ */ __name(function(o, b, c, d, e) {
-  wbytes(o, b, 101010256);
-  wbytes(o, b + 8, c);
-  wbytes(o, b + 10, c);
-  wbytes(o, b + 12, d);
-  wbytes(o, b + 16, e);
-}, "wzf");
-function zipSync(data, opts) {
-  if (!opts)
-    opts = {};
-  var r = {};
-  var files = [];
-  fltn(data, "", r, opts);
-  var o = 0;
-  var tot = 0;
-  for (var fn in r) {
-    var _a2 = r[fn], file = _a2[0], p = _a2[1];
-    var compression = p.level == 0 ? 0 : 8;
-    var f = strToU8(fn), s = f.length;
-    var com = p.comment, m = com && strToU8(com), ms = m && m.length;
-    var exl = exfl(p.extra);
-    if (s > 65535)
-      err(11);
-    var d = compression ? deflateSync(file, p) : file, l = d.length;
-    var c = crc();
-    c.p(file);
-    files.push(mrg(p, {
-      size: file.length,
-      crc: c.d(),
-      c: d,
-      f,
-      m,
-      u: s != fn.length || m && com.length != ms,
-      o,
-      compression
-    }));
-    o += 30 + s + exl + l;
-    tot += 76 + 2 * (s + exl) + (ms || 0) + l;
-  }
-  var out = new u8(tot + 22), oe = o, cdl = tot - o;
-  for (var i = 0; i < files.length; ++i) {
-    var f = files[i];
-    wzh(out, f.o, f, f.f, f.u, f.c.length);
-    var badd = 30 + f.f.length + exfl(f.extra);
-    out.set(f.c, f.o + badd);
-    wzh(out, o, f, f.f, f.u, f.c.length, f.o, f.m), o += 16 + badd + (f.m ? f.m.length : 0);
-  }
-  wzf(out, o, files.length, cdl, oe);
-  return out;
-}
-__name(zipSync, "zipSync");
-function unzipSync(data, opts) {
-  var files = {};
-  var e = data.length - 22;
-  for (; b4(data, e) != 101010256; --e) {
-    if (!e || data.length - e > 65558)
-      err(13);
-  }
-  ;
-  var c = b2(data, e + 8);
-  if (!c)
-    return {};
-  var o = b4(data, e + 16);
-  var z = o == 4294967295 || c == 65535;
-  if (z) {
-    var ze = b4(data, e - 12);
-    z = b4(data, ze) == 101075792;
-    if (z) {
-      c = b4(data, ze + 32);
-      o = b4(data, ze + 48);
-    }
-  }
-  var fltr = opts && opts.filter;
-  for (var i = 0; i < c; ++i) {
-    var _a2 = zh(data, o, z), c_2 = _a2[0], sc = _a2[1], su = _a2[2], fn = _a2[3], no = _a2[4], off2 = _a2[5], b = slzh(data, off2);
-    o = no;
-    if (!fltr || fltr({
-      name: fn,
-      size: sc,
-      originalSize: su,
-      compression: c_2
-    })) {
-      if (!c_2)
-        files[fn] = slc(data, b, b + sc);
-      else if (c_2 == 8)
-        files[fn] = inflateSync(data.subarray(b, b + sc), { out: new u8(su) });
-      else
-        err(14, "unknown compression type " + c_2);
-    }
-  }
-  return files;
-}
-__name(unzipSync, "unzipSync");
-
-// src/post-process.js
-var PLACEHOLDER_T_RE = /<w:t(?:\s[^>]*)?>[\s\u00A0]*__ANTCV_CONT_(\d+)__[\s\u00A0]*<\/w:t>/g;
-var RUN_OPEN_RE = /<w:r\b[^>]*>/g;
-var RUN_CLOSE_TAG = "</w:r>";
-var PIC_SP_PR_RE = /<pic:spPr\b[^>]*>([\s\S]*?)<\/pic:spPr>/g;
-function stripPlaceholderRuns(documentXml) {
-  PLACEHOLDER_T_RE.lastIndex = 0;
-  const placeholders = [];
-  let pm;
-  while ((pm = PLACEHOLDER_T_RE.exec(documentXml)) !== null) {
-    placeholders.push({
-      tStart: pm.index,
-      tEnd: pm.index + pm[0].length,
-      contId: pm[1]
-    });
-  }
-  if (placeholders.length === 0) return { xml: documentXml, count: 0 };
-  const removals = [];
-  for (const p of placeholders) {
-    RUN_OPEN_RE.lastIndex = 0;
-    let lastOpen = -1;
-    let om;
-    while ((om = RUN_OPEN_RE.exec(documentXml)) !== null) {
-      if (om.index >= p.tStart) break;
-      lastOpen = om.index;
-    }
-    if (lastOpen < 0) continue;
-    const closeIdx = documentXml.indexOf(RUN_CLOSE_TAG, p.tEnd);
-    if (closeIdx < 0) continue;
-    const closeEnd = closeIdx + RUN_CLOSE_TAG.length;
-    removals.push({ start: lastOpen, end: closeEnd });
-  }
-  removals.sort((a, b) => b.start - a.start);
-  let out = documentXml;
-  for (const r of removals) {
-    out = out.substring(0, r.start) + out.substring(r.end);
-  }
-  return { xml: out, count: removals.length };
-}
-__name(stripPlaceholderRuns, "stripPlaceholderRuns");
-// v1.15 — shape-aware photo geometry. docx-js emits every picture with
-// <a:prstGeom prst="rect">. We rewrite that to the preset geometry the
-// PWA asked for via payload.personal_info.photoShape (falling back to the
-// package default, then circle). Mapping to OOXML preset geometry names:
-//   circle         -> ellipse
-//   rounded        -> roundRect
-//   rounded-square -> roundRect
-//   square         -> rect (no rewrite; already rect)
-//   hexagon        -> hexagon
-//   pentagon       -> pentagon
-// All targets are native ECMA-376 preset geometries, so the OOXML
-// validator round-trips them and Word/LibreOffice (PDF) render them
-// identically — preserving GEN-001 Preview/DOCX/PDF parity.
-function shapeToPrst(shape) {
-  switch (String(shape || "").trim().toLowerCase()) {
-    case "square": return "rect";
-    case "rounded":
-    case "rounded-square": return "roundRect";
-    case "hexagon": return "hexagon";
-    case "pentagon": return "pentagon";
-    case "circle":
-    default: return "ellipse";
-  }
-}
-__name(shapeToPrst, "shapeToPrst");
-function makePhotosCircular(documentXml, shape) {
-  const prst = shapeToPrst(shape);
-  // "square" keeps the docx-js default rect — nothing to rewrite.
-  if (prst === "rect") return { xml: documentXml, count: 0 };
-  let count3 = 0;
-  const next = documentXml.replace(PIC_SP_PR_RE, (full, inner) => {
-    const rewritten = inner.replace(
-      /<a:prstGeom\s+prst="rect"\s*>/g,
-      () => {
-        count3++;
-        return '<a:prstGeom prst="' + prst + '">';
-      }
-    );
-    if (rewritten === inner) return full;
-    return full.replace(inner, rewritten);
-  });
-  return { xml: next, count: count3 };
-}
-__name(makePhotosCircular, "makePhotosCircular");
-function postProcessDocx(input, opts = {}) {
-  let bytes;
-  if (input instanceof Uint8Array) {
-    bytes = input;
-  } else if (input instanceof ArrayBuffer) {
-    bytes = new Uint8Array(input);
-  } else if (typeof Buffer !== "undefined" && Buffer.isBuffer && Buffer.isBuffer(input)) {
-    bytes = new Uint8Array(input.buffer, input.byteOffset, input.byteLength);
-  } else if (input && typeof input.byteLength === "number") {
-    bytes = new Uint8Array(input.buffer, input.byteOffset, input.byteLength);
-  } else {
-    throw new Error("postProcessDocx: unsupported input type");
-  }
-  const files = unzipSync(bytes);
-  let replacements = 0;
-  let photosCircular = 0;
-  let watermarked = false;
-  if (files["word/document.xml"]) {
-    let xml2 = strFromU8(files["word/document.xml"]);
-    const placeholderResult = stripPlaceholderRuns(xml2);
-    if (placeholderResult.count > 0) {
-      xml2 = placeholderResult.xml;
-      replacements = placeholderResult.count;
-    }
-    const photoResult = makePhotosCircular(xml2, opts && opts.photoShape);
-    if (photoResult.count > 0) {
-      xml2 = photoResult.xml;
-      photosCircular = photoResult.count;
-    }
-    if (opts && opts.watermark && String(opts.watermark).trim()) {
-      const wm = String(opts.watermark).trim().replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" })[c]);
-      const watermarkRun = '<w:r><w:rPr><w:noProof/></w:rPr><w:pict><v:shapetype id="_x0000_t136" coordsize="21600,21600" o:spt="136" adj="10800" path="m@7,l@8,m@5,21600l@6,21600e"><v:formulas><v:f eqn="sum #0 0 10800"/><v:f eqn="prod #0 2 1"/><v:f eqn="sum 21600 0 @1"/><v:f eqn="sum 0 0 @2"/><v:f eqn="sum 21600 0 @3"/><v:f eqn="if @0 @3 0"/><v:f eqn="if @0 21600 @1"/><v:f eqn="if @0 0 @2"/><v:f eqn="if @0 @4 21600"/><v:f eqn="mid @5 @6"/><v:f eqn="mid @8 @5"/><v:f eqn="mid @7 @8"/><v:f eqn="mid @6 @7"/><v:f eqn="sum @6 0 @5"/></v:formulas><v:path o:extrusionok="f" gradientshapeok="t" o:connecttype="custom" o:connectlocs="@9,0;@10,10800;@11,21600;@12,10800" o:connectangles="270,180,90,0" textpathok="t"/><v:textpath on="t" fitshape="t"/><v:handles><v:h position="#0,bottomRight" xrange="6629,14971"/></v:handles><o:lock v:ext="edit" text="t" shapetype="t"/></v:shapetype><v:shape id="AntCVWatermark" type="#_x0000_t136" style="position:absolute;margin-left:0;margin-top:0;width:468pt;height:117pt;rotation:-30;z-index:-251654144;mso-position-horizontal:center;mso-position-horizontal-relative:margin;mso-position-vertical:center;mso-position-vertical-relative:margin" fillcolor="#D0D0D0" stroked="f"><v:fill opacity=".4"/><v:textpath style="font-family:&quot;Arial&quot;;font-size:1pt" string="' + wm + '"/><w10:wrap anchorx="margin" anchory="margin"/></v:shape></w:pict></w:r>';
-      const bodyOpenIdx = xml2.indexOf("<w:body>");
-      if (bodyOpenIdx >= 0) {
-        const after = bodyOpenIdx + "<w:body>".length;
-        xml2 = xml2.slice(0, after) + "<w:p>" + watermarkRun + "</w:p>" + xml2.slice(after);
-        watermarked = true;
-      }
-    }
-    if (placeholderResult.count > 0 || photoResult.count > 0 || watermarked) {
-      files["word/document.xml"] = strToU8(xml2);
-    }
-  }
-  const out = zipSync(files);
-  return { buffer: out, replacements, photosCircular, watermarked };
-}
-__name(postProcessDocx, "postProcessDocx");
-
-// src/palette.js
-var PACKAGES = {
-  "copenhagen-modern": {
-    base: "283556",
-    primary: "00746E",
-    interactive: "0B74DE",
-    bullet: "00746E",
-    glyph: "0B74DE",
-    headingFont: "Segoe UI",
-    bodyFont: "Calibri"
-  },
-  "navy-executive": {
-    base: "1D2B45",
-    primary: "D9A441",
-    interactive: "6BC5C9",
-    bullet: "D9A441",
-    glyph: "D9A441",
-    headingFont: "Cambria",
-    bodyFont: "Calibri"
-  },
-  "warm-terracotta": {
-    base: "8C4A32",
-    primary: "5C2E1F",
-    interactive: "B85E3B",
-    bullet: "5C2E1F",
-    glyph: "5C2E1F",
-    headingFont: "Georgia",
-    bodyFont: "Georgia"
-  },
-  "nordic-frost": {
-    base: "1A3A4F",
-    primary: "4A8FA8",
-    interactive: "3E82CC",
-    bullet: "4A8FA8",
-    glyph: "4A8FA8",
-    headingFont: "Trebuchet MS",
-    bodyFont: "Calibri"
-  },
-  "pampas-contemporary": {
-    base: "1B2D5E",
-    primary: "7A3B1E",
-    interactive: "4B6CB7",
-    bullet: "7A3B1E",
-    glyph: "7A3B1E",
-    headingFont: "Palatino Linotype",
-    bodyFont: "Calibri"
-  },
-  "tokyo-precision": {
-    base: "2C2C2C",
-    primary: "4E5B6E",
-    interactive: "5C7DA5",
-    bullet: "4E5B6E",
-    glyph: "4E5B6E",
-    headingFont: "Tahoma",
-    bodyFont: "Calibri"
-  },
-  "delhi-technical": {
-    base: "1F3A5F",
-    primary: "007C80",
-    interactive: "00A6A6",
-    bullet: "007C80",
-    glyph: "007C80",
-    headingFont: "Segoe UI",
-    bodyFont: "Calibri"
-  }
+let Packer = _Packer;
+const formatter$1 = new Formatter();
+const toJson = (xmlData) => {
+  const xmlObj = libExports.xml2js(xmlData, { compact: false, captureSpacesBetweenElements: true });
+  return xmlObj;
 };
-var LEGACY_ALIASES = {
-  default: "copenhagen-modern",
-  copenhagen: "copenhagen-modern",
-  navy: "navy-executive",
-  executive: "navy-executive",
-  terracotta: "warm-terracotta",
-  warm: "warm-terracotta",
-  nordic: "nordic-frost",
-  frost: "nordic-frost",
-  pampas: "pampas-contemporary",
-  tokyo: "tokyo-precision",
-  precision: "tokyo-precision",
-  delhi: "delhi-technical",
-  technical: "delhi-technical"
+const createTextElementContents = (text) => {
+  var _a;
+  const textJson = toJson(xml(formatter$1.format(new Text({ text }))));
+  return (_a = textJson.elements[0].elements) != null ? _a : [];
 };
-var DEFAULT_PACKAGE = "copenhagen-modern";
-var UNIVERSAL_MAIN_TEXT = "1F2937";
-var UNIVERSAL_WHITE = "FFFFFF";
-function normalisePackageId(raw) {
-  if (typeof raw !== "string") return DEFAULT_PACKAGE;
-  const lower = raw.trim().toLowerCase();
-  if (PACKAGES[lower]) return lower;
-  if (LEGACY_ALIASES[lower]) return LEGACY_ALIASES[lower];
-  return DEFAULT_PACKAGE;
-}
-__name(normalisePackageId, "normalisePackageId");
-function getPackageStyle(packageId, legacyAtsTier = false) {
-  const id = normalisePackageId(packageId);
-  const p = PACKAGES[id];
-  const bodyFont = legacyAtsTier ? "Calibri" : p.bodyFont;
-  return {
-    // Legacy aliases that pre-v1.50.8 code may still read.
-    navy: p.base,
-    accent: p.interactive,
-    teal: p.primary,
-    // Active style tokens consumed throughout generate.js.
-    mainHeadColor: p.base,
-    mainTextColor: UNIVERSAL_MAIN_TEXT,
-    mainBulletColor: p.bullet,
-    sidebarBg: p.base,
-    sidebarHeadColor: p.primary,
-    sidebarTextColor: UNIVERSAL_WHITE,
-    sidebarLabelColor: UNIVERSAL_WHITE,
-    headerBg: p.base,
-    headerNameColor: UNIVERSAL_WHITE,
-    headerSpecColor: UNIVERSAL_WHITE,
-    headerContactColor: UNIVERSAL_WHITE,
-    photoBorderColor: p.primary,
-    tableHeaderBg: p.base,
-    // Fonts. The registry stores headingFont as e.g. "Segoe UI Bold";
-    // OOXML treats the font name as a face name, and bold weight is
-    // applied as a separate attribute on text runs. Strip the trailing
-    // " Bold" so headings resolve to the family face and the bold
-    // weight comes from each run's bold:true attribute (already set
-    // for headings throughout generate.js).
-    mainHeadFont: p.headingFont,
-    mainBodyFont: bodyFont,
-    sidebarFont: p.headingFont,
-    sidebarBodyFont: bodyFont,
-    headerFont: p.headingFont
-  };
-}
-__name(getPackageStyle, "getPackageStyle");
-var PACKAGE_SHAPE = {
-  "copenhagen-modern": "circle",
-  "navy-executive": "rounded",
-  "warm-terracotta": "rounded",
-  "nordic-frost": "circle",
-  "pampas-contemporary": "rounded-square",
-  "tokyo-precision": "square",
-  "delhi-technical": "hexagon"
+const patchSpaceAttribute = (element) => __spreadProps(__spreadValues({}, element), {
+  attributes: {
+    "xml:space": "preserve"
+  }
+});
+const getFirstLevelElements = (relationships, id) => {
+  var _a, _b;
+  return (_b = (_a = relationships.elements) == null ? void 0 : _a.filter((e) => e.name === id)[0].elements) != null ? _b : [];
 };
-var VALID_PHOTO_SHAPES = new Set(["circle","rounded","rounded-square","square","hexagon","pentagon"]);
-function resolvePhotoShape(payload) {
-  // Explicit per-user override wins; else the active package default; else circle.
-  var pi = (payload && payload.personal_info) || {};
-  var s = typeof pi.photoShape === "string" ? pi.photoShape.trim().toLowerCase() : "";
-  if (VALID_PHOTO_SHAPES.has(s)) return s;
-  var pkg = normalisePackageId(payload && payload.package);
-  return PACKAGE_SHAPE[pkg] || "circle";
-}
-__name(resolvePhotoShape, "resolvePhotoShape");
-
-var SUPPORTED_PACKAGES = Object.keys(PACKAGES);
-
-// src/generate.js
-var PAGE_W = 11906;
-var PAGE_H = 16838;
-var SIDEBAR_W = 4636;
-var MAIN_W = PAGE_W - SIDEBAR_W;
-var EMU_PER_INCH = 914400;
-var DEFAULTS = {
-  navy: "283556",
-  accent: "01B7BB",
-  teal: "00746E",
-  // v1.40.135 — main head colour bumped from '00746E' (old teal) to
-  // '1B627F' to match the candidate-section header band. This is the
-  // colour used for both the "Application: ..." top band and the
-  // WHAT I BRING / CORE COMPETENCIES table header shading, so the
-  // two elements visually line up across the document. The PWA can
-  // still override either via `payload.style`.
-  mainHeadColor: "1B627F",
-  mainTextColor: "333333",
-  mainBulletColor: "1B627F",
-  sidebarBg: "283556",
-  sidebarHeadColor: "01B7BB",
-  sidebarTextColor: "FFFFFF",
-  sidebarLabelColor: "FFFFFF",
-  // labels in sidebar (TOOLS & METHODS first words) — white not teal
-  // v1.40.135 — candidate header band aligned with mainHeadColor so
-  // the top "Application: ..." block matches the WHAT I BRING table
-  // header by default.
-  headerBg: "1B627F",
-  headerNameColor: "FFFFFF",
-  headerSpecColor: "FFFFFF",
-  headerContactColor: "FFFFFF",
-  photoBorderColor: "01B7BB",
-  mainHeadFont: "Trebuchet MS",
-  mainBodyFont: "Calibri",
-  sidebarFont: "Trebuchet MS",
-  // headings only
-  sidebarBodyFont: "Calibri",
-  // body content (lists, labels, paragraphs)
-  headerFont: "Trebuchet MS"
-};
-var FONT_DEFAULTS = {
-  mainBody: 10.5,
-  mainHead: 11,
-  sbBody: 10,
-  sbHead: 11,
-  nameSize: 16,
-  specialisation: 11,
-  contactSize: 9,
-  expSubHead: 10.5,
-  bulletContent: 10.5,
-  mainTblH: 10.5,
-  mainTblCell: 10
-};
-var pt2hp = /* @__PURE__ */ __name((pt) => Math.round(Number(pt) * 2), "pt2hp");
-var hex = /* @__PURE__ */ __name((s) => (s || "").toString().replace(/^#/, "").toUpperCase(), "hex");
-function alignType(a) {
-  switch ((a || "").toLowerCase()) {
-    case "center":
-      return AlignmentType.CENTER;
-    case "right":
-      return AlignmentType.RIGHT;
-    case "justify":
-      return AlignmentType.JUSTIFIED;
-    default:
-      return AlignmentType.LEFT;
-  }
-}
-__name(alignType, "alignType");
-function paraAlign(s, path, fallback) {
-  const m = s && s.item_alignment;
-  if (m && typeof m === "object") {
-    if (path && (m[path] === "left" || m[path] === "center" || m[path] === "right" || m[path] === "justify")) {
-      return alignType(m[path]);
+const appendContentType = (element, contentType, extension) => {
+  const relationshipElements = getFirstLevelElements(element, "Types");
+  const exist = relationshipElements.some(
+    (el) => {
+      var _a, _b;
+      return el.type === "element" && el.name === "Default" && ((_a = el == null ? void 0 : el.attributes) == null ? void 0 : _a.ContentType) === contentType && ((_b = el == null ? void 0 : el.attributes) == null ? void 0 : _b.Extension) === extension;
     }
-    const g = m.__group__;
-    if (g === "left" || g === "center" || g === "right" || g === "justify") {
-      return alignType(g);
-    }
+  );
+  if (exist) {
+    return;
   }
-  if (fallback == null) return void 0;
-  if (typeof fallback === "string") return alignType(fallback);
-  return fallback;
-}
-__name(paraAlign, "paraAlign");
-function paraAlignPath(s, path) {
-  const m = s && s.item_alignment;
-  if (!m || typeof m !== "object" || !path) return null;
-  const v = m[path];
-  return v === "left" || v === "center" || v === "right" || v === "justify" ? alignType(v) : null;
-}
-__name(paraAlignPath, "paraAlignPath");
-function firstNonEmpty(...vals) {
-  for (const v of vals) {
-    if (v !== void 0 && v !== null && String(v).trim() !== "") return v;
-  }
-  return "";
-}
-__name(firstNonEmpty, "firstNonEmpty");
-function previewAlign(payload, key, fallback = "left") {
-  const candidates = [
-    payload?.header_align?.[key],
-    payload?.preview_align?.[key],
-    payload?.previewAlign?.[key],
-    payload?.align?.[key],
-    payload?.alignment?.[key]
-  ];
-  return String(firstNonEmpty(...candidates, fallback)).toLowerCase();
-}
-__name(previewAlign, "previewAlign");
-function decodeBasicEntities(s) {
-  return String(s ?? "").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, "\xA0");
-}
-__name(decodeBasicEntities, "decodeBasicEntities");
-function stripInlineHtmlTags(s) {
-  return decodeBasicEntities(s).replace(/<\/?\s*(?:b|strong|i|em)\b[^>]*>/gi, "");
-}
-__name(stripInlineHtmlTags, "stripInlineHtmlTags");
-function isNoBulletCenteredSection(s) {
-  const t = String(s?.title || s?.id || "").toLowerCase();
-  return /certifications?|publications?/.test(t);
-}
-__name(isNoBulletCenteredSection, "isNoBulletCenteredSection");
-function isPublicationsSection(s) {
-  const t = String(s?.title || s?.id || "").toLowerCase();
-  return /publications?/.test(t) || /\bpatent\b/.test(t);
-}
-__name(isPublicationsSection, "isPublicationsSection");
-function isAcademicReferenceSection(s) {
-  const id = String(s?.id || "").toLowerCase().replace(/[\s-]+/g, "_").trim();
-  const ACADEMIC_IDS = /* @__PURE__ */ new Set([
-    "publications",
-    "publications_main",
-    "selected_research_outcomes",
-    "grants_fellowships",
-    "conferences_talks",
-    "research_experience"
-  ]);
-  if (ACADEMIC_IDS.has(id)) return true;
-  const t = String(s?.title || "").toLowerCase();
-  if (/\b(?:grants?|fellowships?)\b/.test(t)) return true;
-  if (/\bconferences?\b/.test(t) && /\btalks?\b/.test(t)) return true;
-  if (/\bselected\s+research\s+outcomes?\b/.test(t)) return true;
-  if (/\bresearch\s+experience\b/.test(t)) return true;
-  return false;
-}
-__name(isAcademicReferenceSection, "isAcademicReferenceSection");
-function splitPublicationCitation(s) {
-  const str = String(s || "");
-  const m = str.match(/^([^\u2014\u2013:]+?)\s*[\u2014\u2013:]\s*(.+)$/);
-  if (m) return { name: m[1].trim(), rest: m[2].trim() };
-  return { name: str, rest: "" };
-}
-__name(splitPublicationCitation, "splitPublicationCitation");
-function isWorkStyleSection(s) {
-  const id = String(s?.id || "").toLowerCase().replace(/[\s_-]+/g, " ").trim();
-  const t = String(s?.title || "").toLowerCase().replace(/[\s_-]+/g, " ").trim();
-  if (id === "work style" || id === "workstyle" || id === "work_style") return true;
-  return t === "work style" || t === "workstyle" || t === "arbejdsstil" || t === "arbejdsform" || t === "arbejdsform stil" || t === "min arbejdsstil" || t === "personlig stil" || t === "arbejdsmetode";
-}
-__name(isWorkStyleSection, "isWorkStyleSection");
-function inlineRuns(text, baseRun) {
-  const out = [];
-  if (text === null || text === void 0) return out;
-  const s = decodeBasicEntities(text);
-  if (!/<\/?\s*(b|strong|i|em)\b/i.test(s)) {
-    out.push(new TextRun({ ...baseRun, text: s }));
-    return out;
-  }
-  const re = /<\s*(\/?)\s*(b|strong|i|em)\b[^>]*>/ig;
-  let bold = false;
-  let italic = false;
-  let cursor = 0;
-  let m;
-  while ((m = re.exec(s)) !== null) {
-    const before = s.slice(cursor, m.index);
-    if (before) {
-      out.push(new TextRun({
-        ...baseRun,
-        text: before,
-        bold: Boolean(bold || baseRun.bold),
-        italics: Boolean(italic || baseRun.italics)
-      }));
-    }
-    const close = m[1] === "/";
-    const tag = m[2].toLowerCase();
-    if (tag === "b" || tag === "strong") bold = !close;
-    if (tag === "i" || tag === "em") italic = !close;
-    cursor = m.index + m[0].length;
-  }
-  const tail = s.slice(cursor);
-  if (tail) {
-    out.push(new TextRun({
-      ...baseRun,
-      text: tail,
-      bold: Boolean(bold || baseRun.bold),
-      italics: Boolean(italic || baseRun.italics)
-    }));
-  }
-  return out;
-}
-__name(inlineRuns, "inlineRuns");
-async function generateDocx(payload) {
-  const style = mergeStyle(payload.style || {}, payload.package, payload.legacy_ats_tier === true);
-  const fontSizes = { ...FONT_DEFAULTS, ...payload.font_sizes || {} };
-  const lang = payload.language || "en";
-  const CONT_SUFFIX = { en: "(CONT.)", da: "(FORTS.)", es: "(CONT.)", zh: "\uFF08\u7EED\uFF09" };
-  const contSuffix = CONT_SUFFIX[lang] || CONT_SUFFIX.en;
-  const layout = payload.layout || (payload.doc === "cl" ? "linear" : "two_column");
-  const headerAlign = {
-    name: previewAlign(payload, "name", "center"),
-    specialisation: previewAlign(payload, "specialisation", previewAlign(payload, "subtitle", "center")),
-    contact: previewAlign(payload, "contact", "center")
-  };
-  const ctx = {
-    style,
-    fs: fontSizes,
-    lang,
-    contSuffix,
-    pi: payload.personal_info || {},
-    meta: payload.meta || {},
-    doc: payload.doc,
-    headerAlign,
-    sections: Array.isArray(payload.sections) ? payload.sections.filter((s) => s.on !== false) : [],
-    // v1.14.8: per-item page assignments from the PWA's
-    // antcv:itemPages map. Shape: { '<sid>': { '<itemIdx>': <page> } }.
-    // renderLabeledList consumes this to insert page-break-before
-    // paragraphs ahead of each item flagged for page ≥ 2, mirroring
-    // the preview-side renderer in antcv-item-pages-render.js.
-    itemPages: payload.item_pages && typeof payload.item_pages === "object" ? payload.item_pages : {},
-    // v1.14.8: per-panel default alignment from the PWA's
-    // personalInfo.stylePrefs.panelDefaultAlignment map. Shape:
-    // { topbar|sidebar|main: 'left'|'center'|'right'|'justify' }.
-    // Falls back to the existing per-loc defaults when absent.
-    panelDefaultAlignment: payload.panel_default_alignment && typeof payload.panel_default_alignment === "object" ? payload.panel_default_alignment : null,
-    // Worker version stamp — propagated into the Document's
-    // `description` property so the .docx itself records which
-    // version of the worker generated it. Lets us tell at a glance
-    // whether a bug report refers to old or new code.
-    workerVersion: payload._workerVersion || "",
-    // v1.50.19 — active writing style (e.g. 'research-formal'). The
-    // PWA reads localStorage personalInfo.writingPrefs.style and
-    // forwards it on every export. Used by renderSimpleList /
-    // renderLabeledList to apply hanging-indent + justified layout
-    // for academic reference sections under research-formal. Absent
-    // when an older PWA bundle posts — falls back to legacy behaviour.
-    writingStyle: typeof payload.writing_style === "string" ? payload.writing_style.trim().toLowerCase() : "",
-    // contCounter is incremented inside `headingParagraph` to allocate
-    // a unique placeholder + bookmark id per section heading. The
-    // post-processor pairs each placeholder with its bookmark by this
-    // numeric id.
-    contCounter: 0
-  };
-  const document2 = layout === "two_column" ? buildTwoColumnDocument(ctx) : buildLinearDocument(ctx);
-  const raw = await Packer.toBuffer(document2);
-  let buffer2 = raw;
-  let postProcessStatus = "skipped";
-  let replacements = 0;
-  let postProcessError = null;
-  let markersRemaining = 0;
-  try {
-    const result = postProcessDocx(raw, { watermark: payload.watermark || "", photoShape: resolvePhotoShape(payload) });
-    buffer2 = result.buffer;
-    replacements = result.replacements || 0;
-    if (replacements > 0) {
-      try {
-        const bytes = buffer2 instanceof Uint8Array ? buffer2 : new Uint8Array(buffer2);
-        const marker = [95, 95, 65, 78, 84, 67, 86, 95, 67, 79, 78, 84, 95];
-        markersRemaining = countByteMatches(bytes, marker);
-      } catch (_) {
-      }
-    }
-    if (replacements === 0) {
-      postProcessStatus = "skipped";
-    } else if (markersRemaining > 0) {
-      postProcessStatus = "partial";
-    } else {
-      postProcessStatus = "ok";
-    }
-  } catch (e) {
-    console.error("[docx-worker] post-process failed; falling back to raw docx", e, e && e.stack);
-    buffer2 = raw;
-    postProcessStatus = "failed";
-    postProcessError = String(e && e.message || e).slice(0, 200);
-  }
-  if (typeof buffer2 === "object" && buffer2 !== null) {
-    try {
-      buffer2.__antcv_cont_replacements = replacements;
-      buffer2.__antcv_post_process_status = postProcessStatus;
-      buffer2.__antcv_post_process_error = postProcessError;
-      buffer2.__antcv_markers_remaining = markersRemaining;
-    } catch (_) {
-    }
-  }
-  return buffer2;
-}
-__name(generateDocx, "generateDocx");
-function countByteMatches(haystack, needle) {
-  let count3 = 0;
-  if (!needle || needle.length === 0) return 0;
-  const n = needle.length;
-  const lim = haystack.length - n;
-  outer: for (let i = 0; i <= lim; i++) {
-    for (let j = 0; j < n; j++) {
-      if (haystack[i + j] !== needle[j]) continue outer;
-    }
-    count3++;
-    i += n - 1;
-  }
-  return count3;
-}
-__name(countByteMatches, "countByteMatches");
-function mergeStyle(input, packageId, legacyAtsTier) {
-  const PASSTHROUGH = /* @__PURE__ */ new Set(["sidebarPosition"]);
-  let basePalette;
-  if (typeof packageId === "string" && packageId.trim()) {
-    basePalette = getPackageStyle(packageId, legacyAtsTier === true);
-  } else {
-    basePalette = { ...DEFAULTS };
-  }
-  const s = { ...basePalette };
-  for (const [k, v] of Object.entries(input || {})) {
-    if (typeof v === "string") {
-      s[k] = PASSTHROUGH.has(k) ? v : hex(v);
-    }
-  }
-  return s;
-}
-__name(mergeStyle, "mergeStyle");
-function numberingConfig(style) {
-  return {
-    config: [
-      {
-        reference: "antcv-bullet",
-        levels: [
-          {
-            level: 0,
-            format: LevelFormat.BULLET,
-            text: "\u25AA",
-            alignment: AlignmentType.LEFT,
-            style: {
-              run: { color: style.mainBulletColor },
-              paragraph: { indent: { left: 360, hanging: 200 } }
-            }
-          }
-        ]
-      },
-      {
-        reference: "antcv-sb-bullet",
-        levels: [
-          {
-            level: 0,
-            format: LevelFormat.BULLET,
-            text: "\u25AA",
-            alignment: AlignmentType.LEFT,
-            style: {
-              run: { color: style.sidebarHeadColor },
-              paragraph: { indent: { left: 280, hanging: 160 } }
-            }
-          }
-        ]
-      }
-    ]
-  };
-}
-__name(numberingConfig, "numberingConfig");
-function buildAiDisclosureHangingTextbox(ctx, opts) {
-  const context2 = opts && opts.context || "linear";
-  const isSidebar = context2 === "sidebar";
-  const borderColor = isSidebar ? "C8D0DC" : "95B0AE";
-  const textColor = isSidebar ? "C8D0DC" : "4D7976";
-  const para = {
-    alignment: isSidebar ? AlignmentType.CENTER : AlignmentType.RIGHT,
-    spacing: { before: 360, after: 0, line: 220, lineRule: "auto" },
-    border: {
-      top: { color: borderColor, space: 2, style: BorderStyle.SINGLE, size: 4 },
-      bottom: { color: borderColor, space: 2, style: BorderStyle.SINGLE, size: 4 },
-      left: { color: borderColor, space: 4, style: BorderStyle.SINGLE, size: 4 },
-      right: { color: borderColor, space: 4, style: BorderStyle.SINGLE, size: 4 }
+  relationshipElements.push({
+    attributes: {
+      ContentType: contentType,
+      Extension: extension
     },
-    children: [new TextRun({
-      text: "AI-assisted \u2014 author retains responsibility for content.",
-      font: "Calibri",
-      size: 13,
-      // 6.5pt (half-points)
-      italics: true,
-      color: textColor
-    })]
-  };
-  if (isSidebar) {
-    para.indent = { left: 120, right: 120 };
-  } else {
-    para.indent = { left: 7e3 };
-    para.shading = { type: ShadingType.CLEAR, fill: "F4F8F8", color: "auto" };
+    name: "Default",
+    type: "element"
+  });
+};
+const getIdFromRelationshipId = (relationshipId) => {
+  const output = parseInt(relationshipId.substring(3), 10);
+  return isNaN(output) ? 0 : output;
+};
+const getNextRelationshipIndex = (relationships) => {
+  const relationshipElements = getFirstLevelElements(relationships, "Relationships");
+  return relationshipElements.map((e) => {
+    var _a, _b, _c;
+    return getIdFromRelationshipId((_c = (_b = (_a = e.attributes) == null ? void 0 : _a.Id) == null ? void 0 : _b.toString()) != null ? _c : "");
+  }).reduce((acc, curr) => Math.max(acc, curr), 0) + 1;
+};
+const appendRelationship = (relationships, id, type2, target, targetMode) => {
+  const relationshipElements = getFirstLevelElements(relationships, "Relationships");
+  relationshipElements.push({
+    attributes: {
+      Id: `rId${id}`,
+      Type: type2,
+      Target: target,
+      TargetMode: targetMode
+    },
+    name: "Relationship",
+    type: "element"
+  });
+  return relationshipElements;
+};
+class TokenNotFoundError extends Error {
+  constructor(token) {
+    super(`Token ${token} not found`);
+    this.name = "TokenNotFoundError";
   }
-  return new Paragraph(para);
 }
-__name(buildAiDisclosureHangingTextbox, "buildAiDisclosureHangingTextbox");
-function buildTwoColumnDocument(ctx) {
-  const { style, sections } = ctx;
-  const headerCell = buildHeaderCell(ctx);
-  const sidebarSecs = sections.filter((s) => s.loc === "sidebar");
-  const mainSecs = sections.filter((s) => s.loc !== "sidebar");
-  const photoTopOfSidebar = maybeBuildPhotoFor(ctx, "sidebar-top");
-  const photoBottomOfSidebar = maybeBuildPhotoFor(ctx, "sidebar-bottom");
-  const photoInHeader = maybeBuildPhotoFor(ctx, "header");
-  const photoInMain = maybeBuildPhotoFor(ctx, "main");
-  const aiDisclosurePara = buildAiDisclosureHangingTextbox(ctx, { context: "sidebar" });
-  const sidebarChildren = [
-    ...photoTopOfSidebar ? [photoTopOfSidebar] : [],
-    ...sidebarSecs.flatMap((s) => renderSection(
-      s,
-      ctx,
-      /*isSidebar*/
-      true
-    )),
-    ...photoBottomOfSidebar ? [photoBottomOfSidebar] : [],
-    aiDisclosurePara
-  ];
-  let mainChildren;
-  if (photoInMain && mainSecs.length > 0) {
-    const firstSec = mainSecs[0];
-    const restSecs = mainSecs.slice(1);
-    const firstSecParas = renderSection(
-      firstSec,
-      ctx,
-      /*isSidebar*/
-      false
-    );
-    const innerW = MAIN_W - 320;
-    const photoTable = buildPhotoRowTable(ctx, photoInMain, firstSecParas, innerW);
-    mainChildren = [
-      photoTable,
-      ...restSecs.flatMap((s) => renderSection(
-        s,
-        ctx,
-        /*isSidebar*/
-        false
-      ))
-    ];
-  } else {
-    mainChildren = mainSecs.flatMap((s) => renderSection(
-      s,
-      ctx,
-      /*isSidebar*/
-      false
-    ));
-  }
-  if (photoInHeader) {
-    const headerInnerW = PAGE_W - 720;
-    const wrappedHeader = buildPhotoRowTable(ctx, photoInHeader, headerCell.slice(), headerInnerW);
-    headerCell.length = 0;
-    headerCell.push(wrappedHeader);
-  }
-  const sidebarOnRight = style && style.sidebarPosition === "right";
-  const colWidths = sidebarOnRight ? [MAIN_W, SIDEBAR_W] : [SIDEBAR_W, MAIN_W];
-  const sidebarCell = new TableCell({
-    width: { size: SIDEBAR_W, type: WidthType.DXA },
-    shading: { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" },
-    borders: noBorders(),
-    // Sidebar text pad: 0.10" L/R (144 DXA) — gives content a touch
-    // more breathing room from the sidebar edges. Was 0.05" (72 DXA);
-    // user requested +0.05" more distance.
-    margins: { top: 240, bottom: 240, left: 144, right: 144 },
-    children: sidebarChildren.length ? sidebarChildren : [emptyParagraph()]
-  });
-  const mainCell = new TableCell({
-    width: { size: MAIN_W, type: WidthType.DXA },
-    borders: noBorders(),
-    // Main column pad: 0.10" L/R (144 DXA) — slightly more breathing
-    // room for body prose and tables.
-    // v1.10.3: top reduced 240 → 120 (12pt → 6pt) so the first
-    // section heading (typically PROFILE) sits closer to the
-    // candidate header band — fixes "too much space above the
-    // profile". Combined with the 80-DXA header bottom this leaves
-    // ~10pt total between contact line and PROFILE, was 22pt.
-    margins: { top: 120, bottom: 240, left: 144, right: 144 },
-    children: mainChildren.length ? mainChildren : [emptyParagraph()]
-  });
-  const hasSidebarItemPageBreaks = sidebarSecs.some((sec) => {
-    const b = ctx.itemPages && sec && sec.id ? ctx.itemPages[sec.id] : null;
-    if (!b || typeof b !== "object") return false;
-    return Object.keys(b).some((k) => Number(b[k]) >= 2);
-  });
-  const bodyTable = new Table({
-    width: { size: PAGE_W, type: WidthType.DXA },
-    columnWidths: colWidths,
-    borders: noBorders(),
-    rows: [
-      new TableRow({
-        children: [
-          new TableCell({
-            columnSpan: 2,
-            width: { size: PAGE_W, type: WidthType.DXA },
-            shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
-            borders: noBorders(),
-            // Candidate header pad: 0.25" L/R (360 DXA), matches preview band.
-            // v1.10.3: bottom margin reduced from 200 → 80 (10pt → 4pt) to
-            // close the teal-band extension under the contact line that the
-            // user flagged as "too much space above the profile".
-            margins: { top: 240, bottom: 80, left: 360, right: 360 },
-            children: headerCell
-          })
-        ]
-      }),
-      new TableRow({
-        // v1.14.2 — cantSplit on the body row tells Word to keep the
-        // entire sidebar+main row on one page where possible. Without
-        // it, sidebar content slightly taller than the page generates
-        // a near-empty page 2 (just the sidebar tail) followed by a
-        // page 3 with only the CloudConvert footer. With it, Word
-        // either fits everything on page 1 or pushes the whole row
-        // to page 2 — no orphaned trailing pages.
-        //
-        // Caveat: if the body row is INHERENTLY taller than one page
-        // (very large sidebar OR very large main), Word ignores
-        // cantSplit and breaks as before. The user must then trim
-        // their sidebar content to fit. Future ships may add a
-        // density-based shrink-to-fit pass.
-        cantSplit: !hasSidebarItemPageBreaks,
-        children: sidebarOnRight ? [mainCell, sidebarCell] : [sidebarCell, mainCell]
-      })
-    ]
-  });
-  return new File({
-    creator: ctx.pi.name || "AntCV user",
-    lastModifiedBy: ctx.pi.name || "AntCV user",
-    title: ctx.meta.role ? `${ctx.pi.name || "CV"} \u2014 ${ctx.meta.role}` : ctx.pi.name || "CV",
-    subject: "Curriculum Vitae",
-    keywords: "AntCV, AI-assisted",
-    description: `Generated by AntCV docx-worker ${ctx.workerVersion || ""} \u2014 AI-assisted document. Author retains all rights to the content. https://cv-generator-det.pages.dev`.trim(),
-    revision: 1,
-    styles: buildStyles(ctx),
-    numbering: numberingConfig(style),
-    sections: [
-      {
-        properties: {
-          page: {
-            size: { width: PAGE_W, height: PAGE_H, orientation: PageOrientation.PORTRAIT },
-            margin: { top: 0, right: 0, bottom: 0, left: 0, header: 0, footer: 0, gutter: 0 }
-          }
-        },
-        children: [bodyTable]
-      }
-    ]
-  });
-}
-__name(buildTwoColumnDocument, "buildTwoColumnDocument");
-function buildLinearDocument(ctx) {
-  const { style, fs, pi, lang, sections } = ctx;
-  const headerCell = buildHeaderCell(ctx);
-  const closureSec = sections.find((s) => s && s.id === "closure");
-  const jdqSec = sections.find((s) => s && s.id === "jd_questions" && s.on !== false);
-  const otherSecs = sections.filter((s) => !s || s.id !== "closure" && s.id !== "jd_questions");
-  const bodyChildren = [];
-  const photoInHeaderCL = maybeBuildPhotoFor(ctx, "header");
-  const photoInMainCL = maybeBuildPhotoFor(ctx, "main");
-  if (photoInHeaderCL) {
-    const headerInnerW = PAGE_W - 720;
-    const wrappedHeader = buildPhotoRowTable(ctx, photoInHeaderCL, headerCell.slice(), headerInnerW);
-    headerCell.length = 0;
-    headerCell.push(wrappedHeader);
-  }
-  if (photoInMainCL && otherSecs.length > 0) {
-    const firstSec = otherSecs[0];
-    const restSecs = otherSecs.slice(1);
-    const firstSecParas = renderSection(
-      firstSec,
-      ctx,
-      /*isSidebar*/
-      false
-    );
-    const bodyInnerW = PAGE_W - 720;
-    const photoTable = buildPhotoRowTable(ctx, photoInMainCL, firstSecParas, bodyInnerW);
-    bodyChildren.push(photoTable);
-    for (const s of restSecs) bodyChildren.push(...renderSection(
-      s,
-      ctx,
-      /*isSidebar*/
-      false
-    ));
-  } else {
-    for (const s of otherSecs) bodyChildren.push(...renderSection(
-      s,
-      ctx,
-      /*isSidebar*/
-      false
-    ));
-  }
-  if (closureSec && closureSec.content) {
-    bodyChildren.push(new Paragraph({
-      border: { top: { color: style.mainHeadColor, space: 4, style: BorderStyle.SINGLE, size: 6 } },
-      spacing: { before: 120, after: 0, line: 40, lineRule: "exact" },
-      children: []
-    }));
-    bodyChildren.push(...renderSection(closureSec, ctx, false));
-  }
-  const closeWord = lang === "da" ? "Med venlig hilsen," : "Kind regards,";
-  bodyChildren.push(new Paragraph({
-    spacing: { before: 240, after: 60, line: 276, lineRule: "auto" },
-    alignment: AlignmentType.LEFT,
-    children: [new TextRun({
-      text: closeWord,
-      color: style.mainTextColor,
-      size: pt2hp(fs.mainBody),
-      font: style.mainBodyFont
-    })]
-  }));
-  bodyChildren.push(new Paragraph({
-    spacing: { before: 60, after: 0, line: 276, lineRule: "auto" },
-    alignment: AlignmentType.LEFT,
-    children: [new TextRun({
-      text: pi.name || (lang === "da" ? "Dit navn" : "Your Name"),
-      bold: true,
-      color: style.mainTextColor,
-      size: pt2hp(fs.mainBody),
-      font: style.mainBodyFont
-    })]
-  }));
-  if (!jdqSec) {
-    bodyChildren.push(buildAiDisclosureHangingTextbox(ctx, { context: "linear" }));
-  }
-  const bodyTable = new Table({
-    width: { size: PAGE_W, type: WidthType.DXA },
-    columnWidths: [PAGE_W],
-    borders: noBorders(),
-    rows: [
-      new TableRow({
-        children: [new TableCell({
-          width: { size: PAGE_W, type: WidthType.DXA },
-          shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
-          borders: noBorders(),
-          // Candidate header pad: 0.25" L/R (360 DXA), matches CV header.
-          margins: { top: 240, bottom: 200, left: 360, right: 360 },
-          children: headerCell
-        })]
-      }),
-      new TableRow({
-        children: [new TableCell({
-          width: { size: PAGE_W, type: WidthType.DXA },
-          borders: noBorders(),
-          margins: { top: 120, bottom: 280, left: 100, right: 100 },
-          children: bodyChildren.length ? bodyChildren : [emptyParagraph()]
-        })]
-      })
-    ]
-  });
-  return new File({
-    creator: pi.name || "AntCV user",
-    lastModifiedBy: pi.name || "AntCV user",
-    title: ctx.meta.role ? `${pi.name || "Cover Letter"} \u2014 ${ctx.meta.role}` : pi.name || "Cover Letter",
-    subject: "Cover Letter",
-    keywords: "AntCV, AI-assisted",
-    description: `Generated by AntCV docx-worker ${ctx.workerVersion || ""} \u2014 AI-assisted document. Author retains all rights to the content. https://cv-generator-det.pages.dev`.trim(),
-    revision: 1,
-    styles: buildStyles(ctx),
-    numbering: numberingConfig(style),
-    sections: [
-      {
-        properties: {
-          page: {
-            size: { width: PAGE_W, height: PAGE_H, orientation: PageOrientation.PORTRAIT },
-            margin: { top: 0, right: 0, bottom: 0, left: 0, header: 0, footer: 0, gutter: 0 }
-          }
-        },
-        children: jdqSec ? [
-          bodyTable,
-          // Hard page break paragraph between pages 1 and 2.
-          // Word collapses zero-height paragraphs that have only a
-          // pageBreakBefore; using a small exact line-rule keeps
-          // the break visible to the layout engine without adding
-          // a visible blank line. The paragraph lives outside the
-          // tables, between them, so the page-2 table starts
-          // cleanly at the top of the new physical page.
-          new Paragraph({
-            pageBreakBefore: true,
-            spacing: { before: 0, after: 0, line: 14, lineRule: "exact" },
-            children: []
-          }),
-          new Table({
-            width: { size: PAGE_W, type: WidthType.DXA },
-            columnWidths: [PAGE_W],
-            borders: noBorders(),
-            rows: [
-              // Page-2 navy header band — duplicate of page 1
-              new TableRow({
-                children: [new TableCell({
-                  width: { size: PAGE_W, type: WidthType.DXA },
-                  shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
-                  borders: noBorders(),
-                  margins: { top: 240, bottom: 200, left: 360, right: 360 },
-                  children: buildHeaderCell(ctx)
-                })]
-              }),
-              // Page-2 body: jd_questions section + fresh signature
-              new TableRow({
-                children: [new TableCell({
-                  width: { size: PAGE_W, type: WidthType.DXA },
-                  borders: noBorders(),
-                  margins: { top: 120, bottom: 280, left: 100, right: 100 },
-                  children: [
-                    ...renderSection(
-                      jdqSec,
-                      ctx,
-                      /*isSidebar*/
-                      false
-                    ),
-                    new Paragraph({
-                      spacing: { before: 240, after: 60, line: 276, lineRule: "auto" },
-                      alignment: AlignmentType.LEFT,
-                      children: [new TextRun({
-                        text: closeWord,
-                        color: style.mainTextColor,
-                        size: pt2hp(fs.mainBody),
-                        font: style.mainBodyFont
-                      })]
-                    }),
-                    new Paragraph({
-                      spacing: { before: 60, after: 0, line: 276, lineRule: "auto" },
-                      alignment: AlignmentType.LEFT,
-                      children: [new TextRun({
-                        text: pi.name || (lang === "da" ? "Dit navn" : "Your Name"),
-                        bold: true,
-                        color: style.mainTextColor,
-                        size: pt2hp(fs.mainBody),
-                        font: style.mainBodyFont
-                      })]
-                    }),
-                    // v1.14.13 — AI-assisted disclosure on the
-                    // last page of a 2-page CL (jd_questions).
-                    buildAiDisclosureHangingTextbox(ctx, { context: "linear" })
-                  ]
-                })]
-              })
-            ]
-          })
-        ] : [bodyTable]
-      }
-    ]
-  });
-}
-__name(buildLinearDocument, "buildLinearDocument");
-function buildHeaderCell(ctx) {
-  const { style, fs, pi, meta, headerAlign } = ctx;
-  const out = [];
-  if (pi.name) {
-    out.push(new Paragraph({
-      alignment: alignType(headerAlign.name),
-      spacing: { before: 60, after: 40, line: 240, lineRule: "exact" },
-      shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
-      children: [
-        new TextRun({
-          text: pi.name,
-          bold: true,
-          color: style.headerNameColor,
-          size: pt2hp(fs.nameSize),
-          font: style.headerFont
-        })
-      ]
-    }));
-  }
-  const subtitle = (meta.subtitle || "").replace(/\s*\|\s*/g, "  \u2022  ");
-  if (subtitle) {
-    out.push(new Paragraph({
-      alignment: alignType(headerAlign.specialisation),
-      spacing: { before: 0, after: 60 },
-      shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
-      children: [
-        new TextRun({
-          text: subtitle,
-          color: style.headerSpecColor,
-          size: pt2hp(fs.specialisation),
-          font: style.headerFont
-        })
-      ]
-    }));
-  }
-  const LINK_GLYPH = "\u{1F517}\uFE0E";
-  const contactBits = [];
-  if (pi.location) contactBits.push(`\u2302\xA0${pi.location}`);
-  if (pi.citizenship) contactBits.push(`\u2605\xA0${pi.citizenship}`);
-  if (pi.email) contactBits.push(`@\xA0${pi.email}`);
-  if (pi.phone) contactBits.push(`\u260E\xA0${pi.phone}`);
-  if (pi.linkedin) contactBits.push(`${LINK_GLYPH}\xA0${pi.linkedin}`);
-  if (pi.website) contactBits.push(`${LINK_GLYPH}\xA0${pi.website}`);
-  if (Array.isArray(pi.contact_extra)) {
-    for (const it of pi.contact_extra) {
-      if (it && it.value) {
-        const icon = it.icon || "\u2022";
-        contactBits.push(`${icon}\xA0${it.value}`);
-      }
-    }
-  }
-  if (contactBits.length) {
-    out.push(new Paragraph({
-      shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
-      border: { bottom: { color: style.accent, space: 1, style: BorderStyle.SINGLE, size: 6 } },
-      spacing: { before: 0, after: 60, line: 40, lineRule: "exact" },
-      children: []
-    }));
-    out.push(new Paragraph({
-      alignment: alignType(headerAlign.contact),
-      shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
-      border: { bottom: { color: style.accent, space: 4, style: BorderStyle.SINGLE, size: 6 } },
-      spacing: { before: 0, after: 60 },
-      children: [
-        new TextRun({
-          text: contactBits.join("   \u2022   "),
-          color: style.headerContactColor,
-          size: pt2hp(fs.contactSize),
-          font: style.headerFont
-        })
-      ]
-    }));
-  }
-  if (out.length === 0) {
-    out.push(new Paragraph({
-      shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
-      spacing: { before: 0, after: 0, line: 200, lineRule: "exact" },
-      children: []
-    }));
-  }
-  return out;
-}
-__name(buildHeaderCell, "buildHeaderCell");
-var PHOTO_POSITIONS = /* @__PURE__ */ new Set([
-  "sidebar-top",
-  "sidebar-bottom",
-  "header-left",
-  "header-right",
-  "main-left",
-  "main-right",
-  "hidden"
-]);
-var PHOTO_CELL_W_MAIN = 1800;
-var PHOTO_CELL_W_HEADER = 1280;
-function normalisePhotoPosition(v) {
-  if (typeof v !== "string") return "sidebar-top";
-  const s = v.trim().toLowerCase();
-  return PHOTO_POSITIONS.has(s) ? s : "sidebar-top";
-}
-__name(normalisePhotoPosition, "normalisePhotoPosition");
-function buildPhotoParagraph(ctx, position) {
-  const { pi, style } = ctx;
-  const data = base64ToUint8Array(pi.photo_b64);
-  const pos = normalisePhotoPosition(position);
-  let inches = 1.25;
-  if (pos === "header-left" || pos === "header-right") inches = 0.85;
-  if (pos === "main-left" || pos === "main-right") inches = 1.2;
-  const sizePx = Math.round(inches * EMU_PER_INCH / 9525);
-  const outlineColor = (style && style.photoBorderColor || style && style.sidebarHeadColor || style && style.accent || "01B7BB").replace(/^#/, "");
-  if (pos === "sidebar-top" || pos === "sidebar-bottom") {
-    return new Paragraph({
-      alignment: AlignmentType.CENTER,
-      spacing: { before: 120, after: 120 },
-      children: [
-        new ImageRun({
-          data,
-          type: detectImageType(pi.photo_b64),
-          transformation: { width: sizePx, height: sizePx },
-          outline: { width: 12700, solidFillType: "rgb", value: outlineColor },
-          altText: {
-            title: "Profile photo",
-            description: pi.name ? "Profile photo of " + pi.name : "Profile photo",
-            name: "profile-photo"
-          }
-        })
-      ]
-    });
-  }
-  return new Paragraph({
-    alignment: AlignmentType.CENTER,
-    spacing: { before: 60, after: 60 },
-    children: [
-      new ImageRun({
-        data,
-        type: detectImageType(pi.photo_b64),
-        transformation: { width: sizePx, height: sizePx },
-        outline: { width: 12700, solidFillType: "rgb", value: outlineColor },
-        altText: {
-          title: "Profile photo",
-          description: pi.name ? "Profile photo of " + pi.name : "Profile photo",
-          name: "profile-photo"
+const findRunElementIndexWithToken = (paragraphElement, token) => {
+  var _a, _b, _c, _d;
+  for (let i = 0; i < ((_a = paragraphElement.elements) != null ? _a : []).length; i++) {
+    const element = paragraphElement.elements[i];
+    if (element.type === "element" && element.name === "w:r") {
+      const textElement = ((_b = element.elements) != null ? _b : []).filter((e) => e.type === "element" && e.name === "w:t");
+      for (const text of textElement) {
+        if (!((_c = text.elements) == null ? void 0 : _c[0])) {
+          continue;
         }
-      })
-    ]
-  });
-}
-__name(buildPhotoParagraph, "buildPhotoParagraph");
-function buildPhotoRowTable(ctx, position, contentParagraphs, containerWidth) {
-  const photoPara = buildPhotoParagraph(ctx, position);
-  const isHeader = position === "header-left" || position === "header-right";
-  const isLeft = position === "main-left" || position === "header-left";
-  const photoCellW = isHeader ? PHOTO_CELL_W_HEADER : PHOTO_CELL_W_MAIN;
-  const contentCellW = Math.max(2880, containerWidth - photoCellW);
-  const photoCell = new TableCell({
-    width: { size: photoCellW, type: WidthType.DXA },
-    children: [photoPara],
-    borders: noBorders(),
-    margins: { top: 80, bottom: 80, left: 80, right: 80 },
-    verticalAlign: VerticalAlign.TOP
-  });
-  const contentCell = new TableCell({
-    width: { size: contentCellW, type: WidthType.DXA },
-    children: contentParagraphs && contentParagraphs.length ? contentParagraphs : [new Paragraph({ children: [] })],
-    borders: noBorders(),
-    margins: { top: 0, bottom: 0, left: 0, right: 0 },
-    verticalAlign: VerticalAlign.TOP
-  });
-  return new Table({
-    width: { size: containerWidth, type: WidthType.DXA },
-    columnWidths: isLeft ? [photoCellW, contentCellW] : [contentCellW, photoCellW],
-    borders: noBorders(),
-    rows: [
-      new TableRow({
-        children: isLeft ? [photoCell, contentCell] : [contentCell, photoCell]
-      })
-    ]
-  });
-}
-__name(buildPhotoRowTable, "buildPhotoRowTable");
-function maybeBuildPhotoFor(ctx, target) {
-  if (!ctx.pi || !ctx.pi.photo_b64) return null;
-  const pos = normalisePhotoPosition(ctx.pi.photoPosition);
-  if (pos === "hidden") return null;
-  switch (target) {
-    case "sidebar-top":
-      return pos === "sidebar-top" ? buildPhotoParagraph(ctx, pos) : null;
-    case "sidebar-bottom":
-      return pos === "sidebar-bottom" ? buildPhotoParagraph(ctx, pos) : null;
-    case "header":
-      return pos === "header-left" || pos === "header-right" ? pos : null;
-    case "main":
-      return pos === "main-left" || pos === "main-right" ? pos : null;
-    default:
-      return null;
+        if ((_d = text.elements[0].text) == null ? void 0 : _d.includes(token)) {
+          return i;
+        }
+      }
+    }
   }
-}
-__name(maybeBuildPhotoFor, "maybeBuildPhotoFor");
-function detectImageType(b64) {
-  if (!b64) return "png";
-  const head = b64.slice(0, 12);
-  if (head.startsWith("/9j/")) return "jpg";
-  if (head.startsWith("iVBORw")) return "png";
-  if (head.startsWith("R0lGOD")) return "gif";
-  return "png";
-}
-__name(detectImageType, "detectImageType");
-function base64ToUint8Array(b64) {
-  const binary = atob(b64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes;
-}
-__name(base64ToUint8Array, "base64ToUint8Array");
-function renderSection(s, ctx, isSidebar) {
-  const isCLBoilerplate = ["greeting", "opening", "closure"].includes(s.id);
-  const inlineTitleType = !isCLBoilerplate && (s.type === "text_inline" || isWorkStyleSection(s));
-  const skipHeading = inlineTitleType || isCLBoilerplate;
-  const _firstItemPageBreak = !!(Array.isArray(s.items) && s.items.length && s.items[0] && typeof s.items[0] === "object" && Number(s.items[0]._page) >= 2);
-  if (_firstItemPageBreak) s._antcvFirstItemPageMoved = true;
-  const pageBreakPara = s.pageBreakBefore === true || _firstItemPageBreak ? [new Paragraph({ pageBreakBefore: true, spacing: { before: 0, after: 0 } })] : [];
-  const body = [];
-  switch (s.type) {
-    case "text":
-      if (isWorkStyleSection(s) && !isCLBoilerplate) body.push(...renderTextInline(s, ctx, isSidebar));
-      else body.push(...renderText(s, ctx, isSidebar));
-      break;
-    case "text_inline":
-      if (isCLBoilerplate) body.push(...renderText(s, ctx, isSidebar));
-      else body.push(...renderTextInline(s, ctx, isSidebar));
-      break;
-    case "text_bullets":
-      body.push(...renderTextBullets(s, ctx, isSidebar));
-      break;
-    case "foundation":
-      body.push(...renderFoundation(s, ctx, isSidebar));
-      break;
-    case "bullets":
-      body.push(...renderBullets(s, ctx, isSidebar));
-      break;
-    case "table":
-      body.push(...renderCompetencyTable(s, ctx));
-      break;
-    case "experience":
-      body.push(...renderExperience(s, ctx));
-      break;
-    case "list":
-    case "list_italic":
-      body.push(...renderSimpleList(s, ctx, isSidebar, s.type === "list_italic"));
-      break;
-    case "labeled_list":
-      body.push(...renderLabeledList(s, ctx, isSidebar));
-      break;
-    case "education":
-      body.push(...renderEducation(s, ctx, isSidebar));
-      break;
-    default:
-      break;
+  throw new TokenNotFoundError(token);
+};
+const splitRunElement = (runElement, token) => {
+  var _a, _b;
+  let splitIndex = -1;
+  const splitElements = (_b = (_a = runElement.elements) == null ? void 0 : _a.map((e, i) => {
+    var _a2, _b2, _c;
+    if (splitIndex !== -1) {
+      return e;
+    }
+    if (e.type === "element" && e.name === "w:t") {
+      const text = (_c = (_b2 = (_a2 = e.elements) == null ? void 0 : _a2[0]) == null ? void 0 : _b2.text) != null ? _c : "";
+      const splitText = text.split(token);
+      const newElements = splitText.map((t) => __spreadProps(__spreadValues(__spreadValues({}, e), patchSpaceAttribute(e)), {
+        elements: createTextElementContents(t)
+      }));
+      if (splitText.length > 1) {
+        splitIndex = i;
+      }
+      return newElements;
+    } else {
+      return e;
+    }
+  }).flat()) != null ? _b : [];
+  const leftRunElement = __spreadProps(__spreadValues({}, JSON.parse(JSON.stringify(runElement))), {
+    elements: splitElements.slice(0, splitIndex + 1)
+  });
+  const rightRunElement = __spreadProps(__spreadValues({}, JSON.parse(JSON.stringify(runElement))), {
+    elements: splitElements.slice(splitIndex + 1)
+  });
+  return { left: leftRunElement, right: rightRunElement };
+};
+const ReplaceMode = {
+  /** Looking for the start of the replacement text */
+  START: 0,
+  /** Processing runs in the middle of the replacement text */
+  MIDDLE: 1,
+  /** Reached the end of the replacement text */
+  END: 2
+};
+const replaceTokenInParagraphElement = ({
+  paragraphElement,
+  renderedParagraph,
+  originalText,
+  replacementText
+}) => {
+  const startIndex = renderedParagraph.text.indexOf(originalText);
+  const endIndex = startIndex + originalText.length - 1;
+  let replaceMode = ReplaceMode.START;
+  for (const run of renderedParagraph.runs) {
+    for (const { text, index, start, end } of run.parts) {
+      switch (replaceMode) {
+        case ReplaceMode.START:
+          if (startIndex >= start && startIndex <= end) {
+            const offsetStartIndex = startIndex - start;
+            const offsetEndIndex = Math.min(endIndex, end) - start;
+            const partToReplace = run.text.substring(offsetStartIndex, offsetEndIndex + 1);
+            if (partToReplace === "") {
+              continue;
+            }
+            const firstPart = text.replace(partToReplace, replacementText);
+            patchTextElement(paragraphElement.elements[run.index].elements[index], firstPart);
+            replaceMode = ReplaceMode.MIDDLE;
+            continue;
+          }
+          break;
+        case ReplaceMode.MIDDLE:
+          if (endIndex <= end) {
+            const lastPart = text.substring(endIndex - start + 1);
+            patchTextElement(paragraphElement.elements[run.index].elements[index], lastPart);
+            const currentElement = paragraphElement.elements[run.index].elements[index];
+            paragraphElement.elements[run.index].elements[index] = patchSpaceAttribute(currentElement);
+            replaceMode = ReplaceMode.END;
+          } else {
+            patchTextElement(paragraphElement.elements[run.index].elements[index], "");
+          }
+          break;
+      }
+    }
   }
-  if (skipHeading || !s.title) return [...pageBreakPara, ...body];
-  if (body.length === 0) return [];
-  const headingCell = new TableCell({
-    borders: noBorders(),
-    margins: { top: 0, bottom: 0, left: 0, right: 0 },
-    children: [headingParagraph(s.title, ctx, isSidebar)]
-  });
-  const bodyCell = new TableCell({
-    borders: noBorders(),
-    margins: { top: 0, bottom: 0, left: 0, right: 0 },
-    children: body.length ? body : [emptyParagraph()]
-  });
-  return [
-    ...pageBreakPara,
-    new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
-      borders: noBorders(),
-      rows: [
-        new TableRow({
-          tableHeader: true,
-          cantSplit: true,
-          children: [headingCell]
-        }),
-        new TableRow({
-          children: [bodyCell]
-        })
-      ]
+  return paragraphElement;
+};
+const patchTextElement = (element, text) => {
+  element.elements = createTextElementContents(text);
+  return element;
+};
+const renderParagraphNode = (node) => {
+  if (node.element.name !== "w:p") {
+    throw new Error(`Invalid node type: ${node.element.name}`);
+  }
+  if (!node.element.elements) {
+    return {
+      text: "",
+      runs: [],
+      index: -1,
+      pathToParagraph: []
+    };
+  }
+  let currentRunStringLength = 0;
+  const runs = node.element.elements.map((element, i) => ({ element, i })).filter(({ element }) => element.name === "w:r").map(({ element, i }) => {
+    const renderedRunNode = renderRunNode(element, i, currentRunStringLength);
+    currentRunStringLength += renderedRunNode.text.length;
+    return renderedRunNode;
+  }).filter((e) => !!e);
+  const text = runs.reduce((acc, curr) => acc + curr.text, "");
+  return {
+    text,
+    runs,
+    index: node.index,
+    pathToParagraph: buildNodePath(node)
+  };
+};
+const renderRunNode = (node, index, currentRunStringIndex) => {
+  if (!node.elements) {
+    return {
+      text: "",
+      parts: [],
+      index: -1,
+      start: currentRunStringIndex,
+      end: currentRunStringIndex
+    };
+  }
+  let currentTextStringIndex = currentRunStringIndex;
+  const parts = node.elements.map(
+    (element, i) => {
+      var _a, _b;
+      return element.name === "w:t" && element.elements && element.elements.length > 0 ? {
+        text: (_b = (_a = element.elements[0].text) == null ? void 0 : _a.toString()) != null ? _b : "",
+        index: i,
+        start: currentTextStringIndex,
+        end: (() => {
+          var _a2, _b2;
+          currentTextStringIndex += ((_b2 = (_a2 = element.elements[0].text) == null ? void 0 : _a2.toString()) != null ? _b2 : "").length - 1;
+          return currentTextStringIndex;
+        })()
+      } : void 0;
+    }
+  ).filter((e) => !!e).map((e) => e);
+  const text = parts.reduce((acc, curr) => acc + curr.text, "");
+  return {
+    text,
+    parts,
+    index,
+    start: currentRunStringIndex,
+    end: currentTextStringIndex
+  };
+};
+const buildNodePath = (node) => node.parent ? [...buildNodePath(node.parent), node.index] : [node.index];
+const elementsToWrapper = (wrapper) => {
+  var _a, _b;
+  return (_b = (_a = wrapper.element.elements) == null ? void 0 : _a.map((e, i) => ({
+    element: e,
+    index: i,
+    parent: wrapper
+  }))) != null ? _b : [];
+};
+const traverse = (node) => {
+  let renderedParagraphs = [];
+  const queue2 = [
+    ...elementsToWrapper({
+      element: node,
+      index: 0,
+      parent: void 0
     })
   ];
-}
-__name(renderSection, "renderSection");
-function headingParagraph(title2, ctx, isSidebar) {
-  const { style, fs } = ctx;
-  if (typeof ctx.contCounter !== "number") ctx.contCounter = 0;
-  const contId = ctx.contCounter++;
-  const bookmarkName = `antcv_sec_${contId}`;
-  const bookmarkNumericId = 9e4 + contId;
-  const headingRunOpts = {
-    bold: true,
-    color: isSidebar ? style.sidebarHeadColor : style.mainHeadColor,
-    size: pt2hp(isSidebar ? fs.sbHead : fs.mainHead),
-    font: isSidebar ? style.sidebarFont : style.mainHeadFont,
-    characterSpacing: 10
+  let currentNode;
+  while (queue2.length > 0) {
+    currentNode = queue2.shift();
+    if (currentNode.element.name === "w:p") {
+      renderedParagraphs = [...renderedParagraphs, renderParagraphNode(currentNode)];
+    }
+    queue2.push(...elementsToWrapper(currentNode));
+  }
+  return renderedParagraphs;
+};
+const findLocationOfText = (node, text) => traverse(node).filter((p) => p.text.includes(text));
+const formatter = new Formatter();
+const SPLIT_TOKEN = "ɵ";
+const replacer = ({
+  json,
+  patch,
+  patchText,
+  context,
+  keepOriginalStyles = true
+}) => {
+  const renderedParagraphs = findLocationOfText(json, patchText);
+  if (renderedParagraphs.length === 0) {
+    return { element: json, didFindOccurrence: false };
+  }
+  for (const renderedParagraph of renderedParagraphs) {
+    const textJson = patch.children.map((c) => toJson(xml(formatter.format(c, context)))).map((c) => c.elements[0]);
+    switch (patch.type) {
+      case PatchType.DOCUMENT: {
+        const parentElement = goToParentElementFromPath(json, renderedParagraph.pathToParagraph);
+        const elementIndex = getLastElementIndexFromPath(renderedParagraph.pathToParagraph);
+        parentElement.elements.splice(elementIndex, 1, ...textJson);
+        break;
+      }
+      case PatchType.PARAGRAPH:
+      default: {
+        const paragraphElement = goToElementFromPath(json, renderedParagraph.pathToParagraph);
+        replaceTokenInParagraphElement({
+          paragraphElement,
+          renderedParagraph,
+          originalText: patchText,
+          replacementText: SPLIT_TOKEN
+        });
+        const index = findRunElementIndexWithToken(paragraphElement, SPLIT_TOKEN);
+        const runElementToBeReplaced = paragraphElement.elements[index];
+        const { left, right } = splitRunElement(runElementToBeReplaced, SPLIT_TOKEN);
+        let newRunElements = textJson;
+        let patchedRightElement = right;
+        if (keepOriginalStyles) {
+          const runElementNonTextualElements = runElementToBeReplaced.elements.filter(
+            (e) => e.type === "element" && e.name === "w:rPr"
+          );
+          newRunElements = textJson.map((e) => {
+            var _a;
+            return __spreadProps(__spreadValues({}, e), {
+              elements: [...runElementNonTextualElements, ...(_a = e.elements) != null ? _a : []]
+            });
+          });
+          patchedRightElement = __spreadProps(__spreadValues({}, right), {
+            elements: [...runElementNonTextualElements, ...right.elements]
+          });
+        }
+        paragraphElement.elements.splice(index, 1, left, ...newRunElements, patchedRightElement);
+        break;
+      }
+    }
+  }
+  return { element: json, didFindOccurrence: true };
+};
+const goToElementFromPath = (json, path) => {
+  let element = json;
+  for (let i = 1; i < path.length; i++) {
+    const index = path[i];
+    const nextElements = element.elements;
+    element = nextElements[index];
+  }
+  return element;
+};
+const goToParentElementFromPath = (json, path) => goToElementFromPath(json, path.slice(0, path.length - 1));
+const getLastElementIndexFromPath = (path) => path[path.length - 1];
+const PatchType = {
+  /** Replace entire file-level elements (e.g., whole paragraphs) */
+  DOCUMENT: "file",
+  /** Replace content within paragraphs (inline replacement) */
+  PARAGRAPH: "paragraph"
+};
+const imageReplacer = new ImageReplacer();
+const UTF16LE = new Uint8Array([255, 254]);
+const UTF16BE = new Uint8Array([254, 255]);
+const compareByteArrays = (a, b) => {
+  if (a.length !== b.length) {
+    return false;
+  }
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) {
+      return false;
+    }
+  }
+  return true;
+};
+const patchDocument = (_0) => __async(null, [_0], function* ({
+  outputType,
+  data,
+  patches,
+  keepOriginalStyles,
+  placeholderDelimiters = { start: "{{", end: "}}" },
+  /**
+   * Search for occurrences over patched document
+   */
+  recursive = true
+}) {
+  var _a, _b, _c;
+  const zipContent = data instanceof JSZip ? data : yield JSZip.loadAsync(data);
+  const contexts = /* @__PURE__ */ new Map();
+  const file = {
+    Media: new Media()
   };
-  return new Paragraph({
-    spacing: { before: 80, after: 40 },
-    // keepNext: heading must stay glued to whatever follows it, so a
-    // heading never appears alone at the bottom of a page with its
-    // content pushed to the next page. keepLines: never split the
-    // heading text across pages (it's typically one line anyway, but
-    // this is defensive against very long titles).
-    keepNext: true,
-    keepLines: true,
-    // Sidebar headings are centred over the narrow sidebar column. Main
-    // column headings stay left-aligned so they line up with body prose.
-    alignment: isSidebar ? AlignmentType.CENTER : void 0,
-    shading: isSidebar ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" } : void 0,
-    border: { bottom: { color: isSidebar ? style.sidebarHeadColor : style.mainHeadColor, space: 4, style: BorderStyle.SINGLE, size: 8 } },
-    children: [
-      new BookmarkStart(bookmarkName, bookmarkNumericId),
-      new TextRun({ text: title2, ...headingRunOpts }),
-      new BookmarkEnd(bookmarkNumericId),
-      // Placeholder run — same styling as the heading text. The
-      // post-processor replaces this entire <w:r>...</w:r> element
-      // (recognised by its `__ANTCV_CONT_<N>__` text content) with the
-      // complex IF/PAGE/PAGEREF field XML. The leading non-breaking
-      // space gives a visual separator if for any reason the marker
-      // is left untouched (defensive).
-      new TextRun({ text: `\xA0__ANTCV_CONT_${contId}__`, ...headingRunOpts })
-    ]
-  });
-}
-__name(headingParagraph, "headingParagraph");
-function renderText(s, ctx, isSidebar) {
-  if (!s.content) return [];
-  const paras = String(s.content).split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
-  const align = paraAlignPath(s, "content") ?? paraAlign(s, null, void 0) ?? AlignmentType.JUSTIFIED;
-  return paras.map((p) => bodyParagraphRich(p, ctx, isSidebar, { align }));
-}
-__name(renderText, "renderText");
-function renderTextInline(s, ctx, isSidebar) {
-  if (!s.content) return [];
-  const { style, fs } = ctx;
-  const title2 = (s.title || "").trim();
-  const paras = String(s.content).split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
-  const isWorkStyle = isWorkStyleSection(s);
-  const spacing = isWorkStyle ? { before: 20, after: 140, line: 276, lineRule: "auto" } : { before: 60, after: 60, line: 276, lineRule: "auto" };
-  const align = paraAlignPath(s, "content") ?? paraAlign(s, null, void 0) ?? AlignmentType.JUSTIFIED;
-  return paras.map((p, i) => new Paragraph({
-    spacing,
-    alignment: align,
-    shading: isSidebar ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" } : void 0,
-    children: [
-      ...i === 0 && title2 ? [new TextRun({
-        text: title2 + ": ",
-        bold: true,
-        color: isSidebar ? style.sidebarHeadColor : style.mainHeadColor,
-        size: pt2hp(isSidebar ? fs.sbBody : fs.mainBody),
-        font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont
-      })] : [],
-      ...inlineRuns(p, {
-        color: isSidebar ? style.sidebarTextColor : style.mainTextColor,
-        size: pt2hp(isSidebar ? fs.sbBody : fs.mainBody),
-        font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont
-      })
-    ]
-  }));
-}
-__name(renderTextInline, "renderTextInline");
-function bodyParagraphRich(text, ctx, isSidebar, opts = {}) {
-  const { style, fs } = ctx;
-  return new Paragraph({
-    spacing: { before: 60, after: 60, line: 276, lineRule: "auto" },
-    alignment: opts.align || AlignmentType.JUSTIFIED,
-    shading: isSidebar ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" } : void 0,
-    children: inlineRuns(text, {
-      color: isSidebar ? style.sidebarTextColor : style.mainTextColor,
-      size: pt2hp(isSidebar ? fs.sbBody : fs.mainBody),
-      font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont,
-      italics: opts.italic || false,
-      bold: opts.bold || false
-    })
-  });
-}
-__name(bodyParagraphRich, "bodyParagraphRich");
-function renderTextBullets(s, ctx, isSidebar) {
-  const out = [];
-  const groupCjlr = paraAlign(s, null, void 0);
-  if (s.intro) {
-    const a = paraAlignPath(s, "intro") ?? groupCjlr;
-    out.push(bodyParagraphRich(s.intro, ctx, isSidebar, a ? { align: a } : {}));
-  }
-  if (Array.isArray(s.items)) {
-    s.items.filter(Boolean).forEach((it, i) => {
-      const a = paraAlignPath(s, "items." + i) ?? groupCjlr;
-      out.push(bulletParagraphRich("", String(it), ctx, isSidebar, a));
-    });
-  }
-  if (s.closing) {
-    const a = paraAlignPath(s, "closing") ?? groupCjlr;
-    out.push(bodyParagraphRich(s.closing, ctx, isSidebar, a ? { align: a } : {}));
-  }
-  return out;
-}
-__name(renderTextBullets, "renderTextBullets");
-function renderFoundation(s, ctx, isSidebar) {
-  const out = [];
-  const { style, fs, lang } = ctx;
-  const handsOnLabel = lang === "da" ? "Praktisk: " : "Hands-on: ";
-  const professionallyLabel = lang === "da" ? "Professionelt: " : "Professionally: ";
-  const make = /* @__PURE__ */ __name((label, body, align) => new Paragraph({
-    spacing: { before: 60, after: 60, line: 276, lineRule: "auto" },
-    alignment: align,
-    children: [
-      new TextRun({
-        text: label,
-        bold: true,
-        color: style.mainHeadColor,
-        size: pt2hp(fs.mainBody),
-        font: style.mainBodyFont
-      }),
-      ...inlineRuns(body, {
-        color: style.mainTextColor,
-        size: pt2hp(fs.mainBody),
-        font: style.mainBodyFont
-      })
-    ]
-  }), "make");
-  const groupCjlr = paraAlign(s, null, void 0);
-  const controls = s.foundation_controls && typeof s.foundation_controls === "object" ? s.foundation_controls : {};
-  const ctlAlign = /* @__PURE__ */ __name((part) => {
-    const v = controls && controls[part] && controls[part].align;
-    return v === "left" || v === "center" || v === "right" || v === "justify" ? alignType(v) : null;
-  }, "ctlAlign");
-  const ctlPage = /* @__PURE__ */ __name((part) => {
-    const n = Number(controls && controls[part] && controls[part].page);
-    return Number.isFinite(n) && n >= 2 ? Math.round(n) : 1;
-  }, "ctlPage");
-  const handsOnAlign = ctlAlign("hands_on") ?? paraAlignPath(s, "hands_on") ?? groupCjlr ?? AlignmentType.JUSTIFIED;
-  const professionallyAlign = ctlAlign("professionally") ?? paraAlignPath(s, "professionally") ?? groupCjlr ?? AlignmentType.JUSTIFIED;
-  if (s.hands_on) {
-    if (ctlPage("hands_on") >= 2) out.push(new Paragraph({ pageBreakBefore: true, spacing: { before: 0, after: 0 } }));
-    out.push(make(handsOnLabel, s.hands_on, handsOnAlign));
-  }
-  if (s.professionally) {
-    if (ctlPage("professionally") >= 2) {
-      out.push(new Paragraph({ pageBreakBefore: true, spacing: { before: 0, after: 0 } }));
-      out.push(headingParagraph(String(s.title || "FOUNDATION").toUpperCase() + " (Cont.)", ctx, false));
-    }
-    out.push(make(professionallyLabel, s.professionally, professionallyAlign));
-  }
-  return out;
-}
-__name(renderFoundation, "renderFoundation");
-function renderBullets(s, ctx, isSidebar) {
-  if (!Array.isArray(s.items)) return [];
-  return s.items.filter((it) => it && (it.t || typeof it === "string")).map((it, i) => {
-    const itemAlign = paraAlignPath(s, "items." + i + ".t") ?? paraAlignPath(s, "items." + i) ?? paraAlign(s, null, void 0);
-    if (typeof it === "string") return bulletParagraphRich("", it, ctx, isSidebar, itemAlign);
-    const lead = it.b ? `${it.b}: ` : "";
-    return bulletParagraphRich(lead, it.t, ctx, isSidebar, itemAlign);
-  });
-}
-__name(renderBullets, "renderBullets");
-function bulletParagraphRich(lead, body, ctx, isSidebar, align) {
-  const { style, fs } = ctx;
-  const baseRun = {
-    color: isSidebar ? style.sidebarTextColor : style.mainTextColor,
-    size: pt2hp(isSidebar ? fs.sbBody : fs.bulletContent),
-    font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont
-  };
-  return new Paragraph({
-    numbering: { reference: isSidebar ? "antcv-sb-bullet" : "antcv-bullet", level: 0 },
-    spacing: { before: 20, after: 20, line: 276, lineRule: "auto" },
-    alignment: align || AlignmentType.JUSTIFIED,
-    children: [
-      ...lead ? [new TextRun({
-        text: lead,
-        bold: true,
-        // Selected Outcomes lead (the verb / action title) renders in
-        // BOLD BLACK in the main column to match the preview — previously
-        // it was teal which made the action read as a sub-heading rather
-        // than as a continuous bold run with the result text. In the
-        // sidebar we keep the head colour for visibility against navy.
-        color: isSidebar ? style.sidebarHeadColor : style.mainTextColor,
-        size: baseRun.size,
-        font: baseRun.font
-      })] : [],
-      ...inlineRuns(body || "", baseRun)
-    ]
-  });
-}
-__name(bulletParagraphRich, "bulletParagraphRich");
-function renderCompetencyTable(s, ctx) {
-  const { style, fs } = ctx;
-  const rows = Array.isArray(s.rows) ? s.rows : [];
-  if (rows.length === 0) return [];
-  const [header, ...data] = rows;
-  const isCl = ctx.doc === "cl";
-  const defaultCvW = MAIN_W - 640;
-  const defaultClW = PAGE_W - 2304;
-  const baseW = isCl ? defaultClW : defaultCvW;
-  const tableW = typeof s.tableWidth === "number" && s.tableWidth > 0 ? Math.max(2880, Math.min(PAGE_W - 720, Math.round(s.tableWidth))) : baseW;
-  const explicitRatio = typeof s.tableRatio === "number" && s.tableRatio > 0.05 && s.tableRatio < 0.95 ? s.tableRatio : null;
-  const col1 = Math.round(tableW * (explicitRatio !== null ? explicitRatio : 0.326));
-  const col2 = tableW - col1;
-  const tableHeaderBg = style && style.tableHeaderBg || style.mainHeadColor;
-  const border = { style: BorderStyle.SINGLE, size: 4, color: tableHeaderBg };
-  const cellBorders = { top: border, bottom: border, left: border, right: border };
-  const headerAlignT = alignType(s.headerAlign || "center");
-  function makeHeaderRow() {
-    return new TableRow({
-      tableHeader: true,
-      children: (header || ["", ""]).map((cell, i) => new TableCell({
-        width: { size: i === 0 ? col1 : col2, type: WidthType.DXA },
-        shading: { type: ShadingType.CLEAR, fill: tableHeaderBg, color: "auto" },
-        borders: cellBorders,
-        margins: { top: 80, bottom: 80, left: 120, right: 120 },
-        verticalAlign: VerticalAlign.CENTER,
-        children: [new Paragraph({
-          alignment: headerAlignT,
-          children: inlineRuns(cell, {
-            bold: true,
-            color: "FFFFFF",
-            size: pt2hp(fs.mainTblH),
-            font: style.mainHeadFont
-          })
-        })]
-      }))
-    });
-  }
-  __name(makeHeaderRow, "makeHeaderRow");
-  function makeDataRow(r, idx) {
-    return new TableRow({
-      children: (r || []).slice(0, 2).map((cell, i) => new TableCell({
-        width: { size: i === 0 ? col1 : col2, type: WidthType.DXA },
-        shading: idx % 2 === 0 ? void 0 : { type: ShadingType.CLEAR, fill: "FAFAFA", color: "auto" },
-        borders: cellBorders,
-        margins: { top: 80, bottom: 80, left: 120, right: 120 },
-        children: [new Paragraph({
-          alignment: i === 0 ? AlignmentType.LEFT : AlignmentType.JUSTIFIED,
-          children: inlineRuns(cell, {
-            bold: i === 0,
-            color: style.mainTextColor,
-            size: pt2hp(fs.mainTblCell),
-            font: style.mainBodyFont
-          })
-        })]
-      }))
-    });
-  }
-  __name(makeDataRow, "makeDataRow");
-  function makeTable(dataRows, offset) {
-    return new Table({
-      width: { size: tableW, type: WidthType.DXA },
-      columnWidths: [col1, col2],
-      borders: cellBorders,
-      alignment: AlignmentType.CENTER,
-      rows: [makeHeaderRow(), ...dataRows.map((r, i) => makeDataRow(r, offset + i))]
-    });
-  }
-  __name(makeTable, "makeTable");
-  const rowPages = s.row_pages && typeof s.row_pages === "object" ? s.row_pages : {};
-  function pageForDataIndex(dataIdx) {
-    const withHeader = Number(rowPages[String(dataIdx + 1)]);
-    const withoutHeader = Number(rowPages[String(dataIdx)]);
-    const n = Number.isFinite(withHeader) ? withHeader : withoutHeader;
-    return Number.isFinite(n) && n >= 2 ? Math.round(n) : 1;
-  }
-  __name(pageForDataIndex, "pageForDataIndex");
-  const chunks = [];
-  let current = [];
-  let currentStart = 0;
-  for (let i = 0; i < data.length; i++) {
-    const p = pageForDataIndex(i);
-    if (p >= 2 && current.length) {
-      chunks.push({ rows: current, start: currentStart, page: 1 });
-      current = [];
-      currentStart = i;
-    }
-    current.push(data[i]);
-  }
-  if (current.length) chunks.push({ rows: current, start: currentStart, page: chunks.length ? 2 : 1 });
-  const out = [];
-  chunks.forEach((chunk, chunkIdx) => {
-    if (chunkIdx > 0) {
-      out.push(new Paragraph({ pageBreakBefore: true, spacing: { before: 0, after: 0 } }));
-      if (s.title) out.push(headingParagraph(String(s.title || "").toUpperCase() + " (Cont.)", ctx, false));
-    }
-    out.push(makeTable(chunk.rows, chunk.start));
-    out.push(new Paragraph({ spacing: { before: 0, after: 40, line: 20, lineRule: "exact" }, children: [] }));
-  });
-  return out;
-}
-__name(renderCompetencyTable, "renderCompetencyTable");
-function renderExperience(s, ctx) {
-  const { style, fs } = ctx;
-  const out = [];
-  const roles = Array.isArray(s.roles) ? s.roles.filter((r) => r && r.on !== false) : [];
-  const rightTab = MAIN_W - 640 - 40;
-  roles.forEach((role, ri) => {
-    const left = [];
-    if (role.title) {
-      left.push(new TextRun({
-        text: role.title,
-        bold: true,
-        italics: true,
-        color: style.mainHeadColor,
-        size: pt2hp(fs.expSubHead),
-        font: style.mainBodyFont
-      }));
-    }
-    if (role.company) {
-      left.push(new TextRun({
-        text: (left.length ? " | " : "") + role.company,
-        italics: true,
-        // Spec: role title in main head colour, COMPANY in BLACK, year in gray.
-        color: style.mainTextColor,
-        size: pt2hp(fs.expSubHead),
-        font: style.mainBodyFont
-      }));
-    }
-    const yearsRun = role.years ? new TextRun({
-      text: "	" + role.years,
-      color: "595959",
-      size: pt2hp(fs.expSubHead),
-      font: style.mainBodyFont
-    }) : null;
-    if (left.length || yearsRun) {
-      const roleAlign = paraAlignPath(s, "roles." + ri + ".title") ?? paraAlignPath(s, "roles." + ri) ?? paraAlign(s, null, void 0);
-      out.push(new Paragraph({
-        spacing: { before: 120, after: 40 },
-        alignment: roleAlign,
-        // keepNext: the role title (e.g. "Customer Change Requests Specialist
-        // | Innoviz Technologies | 2020 — 2025") must stay glued to its
-        // first bullet. Otherwise Word can leave the title alone at the
-        // bottom of a page with bullets stranded on the next page.
-        keepNext: true,
-        keepLines: true,
-        tabStops: [{ type: TabStopType.RIGHT, position: rightTab }],
-        children: [...left, ...yearsRun ? [yearsRun] : []]
-      }));
-    }
-    if (Array.isArray(role.bullets)) {
-      role.bullets.filter(Boolean).forEach((b, bi) => {
-        const bAlign = paraAlignPath(s, "roles." + ri + ".bullets." + bi) ?? paraAlign(s, null, void 0);
-        out.push(bulletParagraphRich(
-          "",
-          String(b),
-          ctx,
-          /*isSidebar*/
-          false,
-          bAlign
-        ));
-      });
-    }
-  });
-  return out;
-}
-__name(renderExperience, "renderExperience");
-function dedupeKey(s) {
-  return String(s || "").replace(/<\/?[a-z][^>]*>/gi, "").split(/\s+[—–]\s+|\s+-\s+|:\s+/)[0].replace(/\b(?:no\.?|nr\.?|num\.?|number)\b/gi, "").replace(/\([^)]*\)/g, "").replace(/\b(?:and|og|och|et|y)\b/gi, "").replace(/[^a-z0-9]/gi, "").toLowerCase();
-}
-__name(dedupeKey, "dedupeKey");
-function normalizeItem(item) {
-  if (item == null) return null;
-  if (typeof item === "string") {
-    const t = item.trim();
-    return t.length > 0 ? t : null;
-  }
-  if (typeof item !== "object") {
-    const s = String(item).trim();
-    return s.length > 0 ? s : null;
-  }
-  if (item.on === false) return null;
-  const tryKeys = ["text", "value", "title", "body", "name", "citation"];
-  for (const k of tryKeys) {
-    const v = item[k];
-    if (typeof v === "string" && v.trim().length > 0) {
-      const more = k !== "citation" && typeof item.citation === "string" && item.citation.trim() ? item.citation.trim() : k !== "value" && typeof item.value === "string" && item.value.trim() ? item.value.trim() : null;
-      return more ? `${v.trim()} \u2014 ${more}` : v.trim();
-    }
-  }
-  if (typeof item.label === "string" && typeof item.value === "string" && (item.label.trim() || item.value.trim())) {
-    const l = item.label.trim();
-    const v = item.value.trim();
-    if (l && v) return `${l}: ${v}`;
-    return l || v;
-  }
-  return null;
-}
-__name(normalizeItem, "normalizeItem");
-function renderSimpleList(s, ctx, isSidebar, italic) {
-  const { style, fs } = ctx;
-  if (!Array.isArray(s.items)) return [];
-  const autoNoBullet = isNoBulletCenteredSection(s);
-  const isAcademic = ctx.writingStyle === "research-formal" && isAcademicReferenceSection(s);
-  const useBullets = isAcademic ? false : autoNoBullet ? false : isSidebar ? s.bullet_style === "bullet" : (s.bullet_style || "bullet") !== "none";
-  const autoAlign = isAcademic ? "justify" : isPublicationsSection(s) ? "justify" : autoNoBullet ? "center" : useBullets ? isSidebar ? "justify" : "left" : "center";
-  const groupCjlr = paraAlign(s, null, null);
-  const a = groupCjlr != null ? groupCjlr : alignType(s.align || autoAlign);
-  const visibleIndexes = (s.items || []).map((_, i) => i).filter((i) => !(s.hidden && s.hidden[i])).filter((i) => {
-    const it = s.items[i];
-    return !(it && typeof it === "object" && it.hidden);
-  });
-  const normalizedPairs = visibleIndexes.map((i) => ({ idx: i, text: normalizeItem(s.items[i]) })).filter((p) => typeof p.text === "string" && p.text.length > 0);
-  const keptKeys = [];
-  const dedupedPairs = [];
-  for (const p of normalizedPairs) {
-    const k = dedupeKey(p.text);
-    if (!k) {
-      dedupedPairs.push(p);
+  const map = /* @__PURE__ */ new Map();
+  const imageRelationshipAdditions = [];
+  const hyperlinkRelationshipAdditions = [];
+  let hasMedia = false;
+  const binaryContentMap = /* @__PURE__ */ new Map();
+  for (const [key, value] of Object.entries(zipContent.files)) {
+    const binaryValue = yield value.async("uint8array");
+    const startBytes = binaryValue.slice(0, 2);
+    if (compareByteArrays(startBytes, UTF16LE) || compareByteArrays(startBytes, UTF16BE)) {
+      binaryContentMap.set(key, binaryValue);
       continue;
     }
-    let isDup = false;
-    for (const k2 of keptKeys) {
-      if (k === k2) {
-        isDup = true;
-        break;
-      }
-      const minLen = Math.min(k.length, k2.length);
-      if (minLen >= 8 && (k.startsWith(k2) || k2.startsWith(k))) {
-        isDup = true;
-        break;
-      }
-      if (k.length >= 30 && k2.length >= 30) {
-        let lcp = 0;
-        const max3 = Math.min(k.length, k2.length);
-        while (lcp < max3 && k[lcp] === k2[lcp]) lcp++;
-        if (lcp >= 25) {
-          isDup = true;
-          break;
+    if (!key.endsWith(".xml") && !key.endsWith(".rels")) {
+      binaryContentMap.set(key, binaryValue);
+      continue;
+    }
+    const json = toJson(yield value.async("text"));
+    if (key === "word/document.xml") {
+      const document2 = (_a = json.elements) == null ? void 0 : _a.find((i) => i.name === "w:document");
+      if (document2 && document2.attributes) {
+        for (const ns of ["mc", "wp", "r", "w15", "m"]) {
+          document2.attributes[`xmlns:${ns}`] = DocumentAttributeNamespaces[ns];
         }
+        document2.attributes["mc:Ignorable"] = `${document2.attributes["mc:Ignorable"] || ""} w15`.trim();
       }
     }
-    if (!isDup) {
-      keptKeys.push(k);
-      dedupedPairs.push(p);
-    }
-  }
-  if (dedupedPairs.length === 0) return [];
-  const sectionTitleUpper = String(s.title || "").toUpperCase();
-  const makeContHeader = /* @__PURE__ */ __name(() => new Paragraph({
-    spacing: { before: 0, after: 120 },
-    alignment: a,
-    border: {
-      bottom: { style: BorderStyle.SINGLE, size: 8, color: isSidebar ? style.sidebarHeadColor : style.mainHeadColor }
-    },
-    shading: isSidebar ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" } : void 0,
-    children: [new TextRun({
-      text: sectionTitleUpper + " " + (ctx.contSuffix || "(CONT.)"),
-      bold: true,
-      color: isSidebar ? style.sidebarHeadColor : style.mainHeadColor,
-      size: pt2hp(isSidebar ? fs.sbHead : fs.mainHead),
-      font: isSidebar ? style.sidebarFont : style.mainHeadFont
-    })]
-  }), "makeContHeader");
-  const makeBreakPara = /* @__PURE__ */ __name(() => new Paragraph({
-    pageBreakBefore: true,
-    spacing: { before: 0, after: 0 }
-  }), "makeBreakPara");
-  const isPubs = isPublicationsSection(s);
-  const outParas = [];
-  let _simpleSkippedFirstSectionBreak = false;
-  for (const { idx, text: item } of dedupedPairs) {
-    const src = s.items && s.items[idx];
-    const page = src && typeof src === "object" && Number(src._page) >= 2 ? Number(src._page) : 0;
-    if (page >= 2) {
-      if (idx === 0 && s._antcvFirstItemPageMoved && !_simpleSkippedFirstSectionBreak) {
-        _simpleSkippedFirstSectionBreak = true;
-      } else {
-        outParas.push(makeBreakPara());
-        outParas.push(makeContHeader());
-      }
-    }
-    const baseRun = {
-      color: isSidebar ? style.sidebarTextColor : style.mainTextColor,
-      size: pt2hp(isSidebar ? fs.sbBody : fs.mainBody),
-      font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont
-    };
-    let children;
-    if (isPubs) {
-      const stripHtml = /* @__PURE__ */ __name((t) => String(t || "").replace(
-        /<\/?(?:b|i|strong|em)\b[^>]*>/gi,
-        ""
-      ), "stripHtml");
-      const { name, rest } = splitPublicationCitation(item);
-      children = [
-        new TextRun({ ...baseRun, text: stripHtml(name), bold: true, italics: true })
-      ];
-      if (rest) {
-        children.push(new TextRun({ ...baseRun, text: " \u2014 " + stripHtml(rest) }));
-      }
-    } else {
-      children = inlineRuns(item, { ...baseRun, italics: italic });
-    }
-    const itemAlign = paraAlignPath(s, "items." + idx) ?? a;
-    const para = {
-      spacing: isAcademic ? { before: 80, after: 80, line: 264, lineRule: "auto" } : { before: 30, after: 30, line: 252, lineRule: "auto" },
-      alignment: itemAlign,
-      shading: isSidebar ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" } : void 0,
-      children
-    };
-    if (isAcademic) {
-      para.indent = { left: 360, hanging: 360 };
-    }
-    if (useBullets) {
-      para.numbering = { reference: isSidebar ? "antcv-sb-bullet" : "antcv-bullet", level: 0 };
-    }
-    outParas.push(new Paragraph(para));
-  }
-  return outParas;
-}
-__name(renderSimpleList, "renderSimpleList");
-function renderLabeledList(s, ctx, isSidebar) {
-  const { style, fs } = ctx;
-  if (!Array.isArray(s.items)) return [];
-  const out = [];
-  let groupHidden = false;
-  const visible = [];
-  s.items.forEach((it, i) => {
-    if (!it) return;
-    const isSubhead = it.group !== void 0 || it.subhead !== void 0 || it.header !== void 0 || it.category !== void 0;
-    if (isSubhead) {
-      groupHidden = !!it.hidden || s.hidden && !!s.hidden[i];
-      if (groupHidden) return;
-      visible.push(it);
-      return;
-    }
-    if (s.hidden && s.hidden[i]) return;
-    if (it.hidden === true) return;
-    if (it.on === false) return;
-    const hasValue = typeof it.v === "string" && it.v.trim() || typeof it.value === "string" && it.value.trim();
-    if (!hasValue) return;
-    visible.push(it);
-  });
-  const keptLabelKeys = [];
-  const keptSubheadKeys = [];
-  const dedupeFromList = /* @__PURE__ */ __name((k, list) => {
-    if (!k) return false;
-    for (const k2 of list) {
-      if (k === k2) return true;
-      const minLen = Math.min(k.length, k2.length);
-      if (minLen >= 7 && (k.startsWith(k2) || k2.startsWith(k))) return true;
-      if (k.length >= 25 && k2.length >= 25) {
-        let lcp = 0;
-        const max3 = Math.min(k.length, k2.length);
-        while (lcp < max3 && k[lcp] === k2[lcp]) lcp++;
-        if (lcp >= 20) return true;
-      }
-    }
-    return false;
-  }, "dedupeFromList");
-  const deduped = visible.filter((it) => {
-    const isSubhead = it.group !== void 0 || it.subhead !== void 0 || it.header !== void 0 || it.category !== void 0;
-    if (isSubhead) {
-      const sub = it.group || it.subhead || it.header || it.category || "";
-      const k2 = dedupeKey(String(sub));
-      if (!k2) return true;
-      if (dedupeFromList(k2, keptSubheadKeys)) return false;
-      keptSubheadKeys.push(k2);
-      return true;
-    }
-    const label = (it.l || it.label || "").toString().trim();
-    const value = (it.v || it.value || "").toString().trim();
-    const k = dedupeKey(label || value);
-    if (!k) return true;
-    if (dedupeFromList(k, keptLabelKeys)) return false;
-    keptLabelKeys.push(k);
-    return true;
-  });
-  if (deduped.length === 0) return [];
-  const isMaybeSubhead = /* @__PURE__ */ __name((it) => !!(it && (it.group || it.subhead || it.header || it.category || String(s.id || "").toLowerCase().includes("regulatory") && (it.l || it.label) && !(it.v || it.value))), "isMaybeSubhead");
-  const noOrphans = [];
-  for (let i = 0; i < deduped.length; i++) {
-    const it = deduped[i];
-    if (isMaybeSubhead(it)) {
-      let hasContent = false;
-      for (let j = i + 1; j < deduped.length; j++) {
-        if (isMaybeSubhead(deduped[j])) break;
-        hasContent = true;
-        break;
-      }
-      if (!hasContent) continue;
-    }
-    noOrphans.push(it);
-  }
-  if (noOrphans.length === 0) return [];
-  const subheadString = /* @__PURE__ */ __name((value) => {
-    if (value == null) return "";
-    if (typeof value === "string") return value.trim();
-    if (typeof value !== "object") return String(value).trim();
-    for (const k of ["text", "title", "name", "value", "label", "group", "subhead", "header", "category"]) {
-      const v = value[k];
-      if (typeof v === "string" && v.trim()) return v.trim();
-    }
-    return "";
-  }, "subheadString");
-  const groupCjlr = paraAlign(s, null, null);
-  const sectionTitleUpper = String(s.title || "").toUpperCase();
-  const emitPageBreakAndContHeader = /* @__PURE__ */ __name(() => {
-    out.push(new Paragraph({
-      pageBreakBefore: true,
-      spacing: { before: 0, after: 0 }
-    }));
-    out.push(new Paragraph({
-      spacing: { before: 0, after: 120 },
-      alignment: groupCjlr != null ? groupCjlr : isSidebar ? AlignmentType.CENTER : AlignmentType.LEFT,
-      border: {
-        bottom: { style: BorderStyle.SINGLE, size: 8, color: isSidebar ? style.sidebarHeadColor : style.mainHeadColor }
-      },
-      shading: isSidebar ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" } : void 0,
-      children: [new TextRun({
-        text: sectionTitleUpper + " " + (ctx.contSuffix || "(CONT.)"),
-        bold: true,
-        color: isSidebar ? style.sidebarHeadColor : style.mainHeadColor,
-        size: pt2hp(isSidebar ? fs.sbHead : fs.mainHead),
-        font: isSidebar ? style.sidebarFont : style.mainHeadFont
-      })]
-    }));
-  }, "emitPageBreakAndContHeader");
-  let _skippedFirstSectionBreak = false;
-  noOrphans.forEach((it) => {
-    if (it && typeof it === "object" && Number(it._page) >= 2) {
-      if (s._antcvFirstItemPageMoved && !_skippedFirstSectionBreak) {
-        _skippedFirstSectionBreak = true;
-      } else {
-        try {
-          emitPageBreakAndContHeader();
-        } catch (_) {
-        }
-      }
-    }
-    const maybeSubhead = it.group || it.subhead || it.header || it.category || String(s.id || "").toLowerCase().includes("regulatory") && (it.l || it.label) && !(it.v || it.value);
-    if (maybeSubhead) {
-      const subheadText = subheadString(maybeSubhead);
-      if (!subheadText) return;
-      out.push(new Paragraph({
-        spacing: { before: 120, after: 40 },
-        // keepNext: the group subhead must stay with at least the
-        // first item under it (no orphaned subhead at bottom of page).
-        keepNext: true,
-        keepLines: true,
-        // CJLR group default overrides the sidebar-CENTER default
-        // when set; otherwise the existing per-loc rule applies.
-        alignment: groupCjlr != null ? groupCjlr : isSidebar ? AlignmentType.CENTER : void 0,
-        shading: isSidebar ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" } : void 0,
-        children: [
-          new TextRun({
-            text: subheadText,
-            bold: true,
-            // Sidebar group subheads render in the same teal as the
-            // sidebar section headings (sidebarHeadColor). User spec:
-            // group labels should match the heading colour, not be
-            // white. Main column keeps the same teal heading colour.
-            color: isSidebar ? style.sidebarHeadColor : style.mainHeadColor,
-            size: pt2hp(isSidebar ? fs.sbBody : fs.mainBody),
-            font: isSidebar ? style.sidebarFont : style.mainHeadFont
-          })
-        ]
-      }));
-      return;
-    }
-    const label = stripInlineHtmlTags(it.l || it.label || "").toString();
-    const value = (it.v || it.value || "").toString();
-    const labelColor = isSidebar ? style.sidebarLabelColor || style.sidebarTextColor : style.mainHeadColor;
-    out.push(new Paragraph({
-      spacing: { before: 40, after: 40, line: 252, lineRule: "auto" },
-      // CJLR group default overrides the sidebar-JUSTIFIED default
-      // when set; otherwise the existing per-loc rule applies.
-      alignment: groupCjlr != null ? groupCjlr : isSidebar ? AlignmentType.JUSTIFIED : void 0,
-      shading: isSidebar ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" } : void 0,
-      children: [
-        ...label ? [new TextRun({
-          text: `${label}: `,
-          bold: true,
-          color: labelColor,
-          size: pt2hp(isSidebar ? fs.sbBody : fs.mainBody),
-          font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont
-        })] : [],
-        ...inlineRuns(value, {
-          color: isSidebar ? style.sidebarTextColor : style.mainTextColor,
-          size: pt2hp(isSidebar ? fs.sbBody : fs.mainBody),
-          font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont
-        })
-      ]
-    }));
-  });
-  return out;
-}
-__name(renderLabeledList, "renderLabeledList");
-function renderEducation(s, ctx, isSidebar) {
-  const { style, fs } = ctx;
-  if (!Array.isArray(s.items)) return [];
-  const out = [];
-  const visible = s.items.filter((it, i) => {
-    if (!it) return false;
-    if (s.hidden && s.hidden[i]) return false;
-    if (it.hidden === true) return false;
-    if (it.on === false) return false;
-    const deg = (it.deg || it.degree || "").toString().trim();
-    const sch = (it.sch || it.school || "").toString().trim();
-    return Boolean(deg || sch);
-  });
-  const eduKey = /* @__PURE__ */ __name((deg, sch) => {
-    const words = String(deg || "").toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter(Boolean).slice(0, 3).join("");
-    const schoolPart = String(sch || "").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 10);
-    return words + schoolPart;
-  }, "eduKey");
-  const seenKeys = /* @__PURE__ */ new Set();
-  const deduped = visible.filter((it) => {
-    const deg = (it.deg || it.degree || "").toString().trim();
-    const sch = (it.sch || it.school || "").toString().trim();
-    const key = eduKey(deg, sch);
-    if (!key) return true;
-    if (seenKeys.has(key)) return false;
-    seenKeys.add(key);
-    return true;
-  });
-  if (deduped.length === 0) return [];
-  const groupCjlr = paraAlign(s, null, null);
-  const eduSectionTitleUpper = String(s.title || "").toUpperCase();
-  const emitEduBreakAndCont = /* @__PURE__ */ __name(() => {
-    out.push(new Paragraph({
-      pageBreakBefore: true,
-      spacing: { before: 0, after: 0 }
-    }));
-    out.push(new Paragraph({
-      spacing: { before: 0, after: 120 },
-      alignment: groupCjlr != null ? groupCjlr : isSidebar ? AlignmentType.CENTER : AlignmentType.LEFT,
-      border: {
-        bottom: { style: BorderStyle.SINGLE, size: 8, color: isSidebar ? style.sidebarHeadColor : style.mainHeadColor }
-      },
-      shading: isSidebar ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" } : void 0,
-      children: [new TextRun({
-        text: eduSectionTitleUpper + " " + (ctx.contSuffix || "(CONT.)"),
-        bold: true,
-        color: isSidebar ? style.sidebarHeadColor : style.mainHeadColor,
-        size: pt2hp(isSidebar ? fs.sbHead : fs.mainHead),
-        font: isSidebar ? style.sidebarFont : style.mainHeadFont
-      })]
-    }));
-  }, "emitEduBreakAndCont");
-  let _eduSkippedFirstSectionBreak = false;
-  deduped.forEach((it) => {
-    if (it && typeof it === "object" && Number(it._page) >= 2) {
-      if (s._antcvFirstItemPageMoved && !_eduSkippedFirstSectionBreak) {
-        _eduSkippedFirstSectionBreak = true;
-      } else {
-        try {
-          emitEduBreakAndCont();
-        } catch (_) {
-        }
-      }
-    }
-    let deg = (it.deg || it.degree || "").toString();
-    let sch = (it.sch || it.school || "").toString();
-    if (!sch.trim() && /\n/.test(deg)) {
-      const nl = deg.indexOf("\n");
-      sch = deg.substring(nl + 1).trim();
-      deg = deg.substring(0, nl).trim();
-    }
-    deg = deg.replace(/\s*\n\s*/g, " ").trim();
-    sch = sch.replace(/\s*\n\s*/g, " ").trim();
-    if (!deg && !sch) return;
-    const runs = [];
-    if (deg) {
-      runs.push(new TextRun({
-        text: deg,
-        bold: true,
-        color: isSidebar ? style.sidebarTextColor : style.mainHeadColor,
-        size: pt2hp(isSidebar ? fs.sbBody : fs.mainBody),
-        font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont
-      }));
-    }
-    if (deg && sch) {
-      runs.push(new TextRun({
-        text: ": ",
-        bold: true,
-        color: isSidebar ? style.sidebarTextColor : style.mainHeadColor,
-        size: pt2hp(isSidebar ? fs.sbBody : fs.mainBody),
-        font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont
-      }));
-    }
-    if (sch) {
-      runs.push(new TextRun({
-        text: sch,
-        italics: !isSidebar,
-        color: isSidebar ? style.sidebarTextColor : "595959",
-        size: pt2hp(isSidebar ? fs.sbBody : fs.mainBody),
-        font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont
-      }));
-    }
-    out.push(new Paragraph({
-      spacing: { before: 40, after: 40 },
-      alignment: groupCjlr != null ? groupCjlr : isSidebar ? AlignmentType.JUSTIFIED : void 0,
-      shading: isSidebar ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" } : void 0,
-      children: runs
-    }));
-  });
-  return out;
-}
-__name(renderEducation, "renderEducation");
-function buildStyles(ctx) {
-  return {
-    default: {
-      document: {
-        run: { font: ctx.style.mainBodyFont, size: pt2hp(ctx.fs.mainBody) }
-      }
-    },
-    paragraphStyles: []
-  };
-}
-__name(buildStyles, "buildStyles");
-function emptyParagraph() {
-  return new Paragraph({
-    spacing: { before: 0, after: 0, line: 20, lineRule: "exact" },
-    children: []
-  });
-}
-__name(emptyParagraph, "emptyParagraph");
-function noBorders() {
-  const n = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
-  return { top: n, bottom: n, left: n, right: n, insideHorizontal: n, insideVertical: n };
-}
-__name(noBorders, "noBorders");
-
-// src/schema.js
-var VALID_TYPES = /* @__PURE__ */ new Set([
-  "text",
-  "text_inline",
-  "text_bullets",
-  "foundation",
-  "bullets",
-  "table",
-  "experience",
-  "list",
-  "list_italic",
-  "labeled_list",
-  "education"
-]);
-var VALID_DOC = /* @__PURE__ */ new Set(["cv", "cl"]);
-var VALID_LOC = /* @__PURE__ */ new Set(["main", "sidebar"]);
-var VALID_LANG = /* @__PURE__ */ new Set(["en", "da"]);
-var VALID_LAYOUT = /* @__PURE__ */ new Set(["two_column", "linear"]);
-function validatePayload(p) {
-  const errs = [];
-  if (!p || typeof p !== "object") {
-    return ["payload must be a JSON object"];
-  }
-  if (p.schema_version && p.schema_version !== "1.0") {
-    errs.push(`unsupported schema_version: ${p.schema_version} (this worker speaks 1.0)`);
-  }
-  if (!VALID_DOC.has(p.doc)) {
-    errs.push(`doc must be one of: cv, cl (got: ${JSON.stringify(p.doc)})`);
-  }
-  if (p.language && !VALID_LANG.has(p.language)) {
-    errs.push(`language must be one of: en, da`);
-  }
-  if (p.layout && !VALID_LAYOUT.has(p.layout)) {
-    errs.push(`layout must be one of: two_column, linear`);
-  }
-  if (p.writing_style != null && typeof p.writing_style !== "string") {
-    errs.push(`writing_style must be a string`);
-  }
-  if (!p.personal_info || typeof p.personal_info !== "object") {
-    errs.push("personal_info object is required");
-  } else {
-    const pi = p.personal_info;
-    if (pi.photo_b64 && typeof pi.photo_b64 !== "string") {
-      errs.push("personal_info.photo_b64 must be a base64 string");
-    }
-    if (pi.photo_b64 && pi.photo_b64.length > 15e5) {
-      errs.push("personal_info.photo_b64 too large (max ~1.1MB decoded)");
-    }
-  }
-  if (!Array.isArray(p.sections)) {
-    errs.push("sections must be an array");
-    return errs;
-  }
-  p.sections.forEach((s, i) => {
-    const ctx = `sections[${i}]`;
-    if (!s || typeof s !== "object") {
-      errs.push(`${ctx} must be an object`);
-      return;
-    }
-    if (typeof s.id !== "string" || !s.id) {
-      errs.push(`${ctx}.id must be a non-empty string`);
-    }
-    if (typeof s.title !== "string") {
-      errs.push(`${ctx}.title must be a string`);
-    }
-    if (s.loc && !VALID_LOC.has(s.loc)) {
-      errs.push(`${ctx}.loc must be one of: main, sidebar`);
-    }
-    if (!VALID_TYPES.has(s.type)) {
-      errs.push(`${ctx}.type must be one of: ${[...VALID_TYPES].join(", ")} (got: ${s.type})`);
-      return;
-    }
-    switch (s.type) {
-      case "text":
-      case "text_inline":
-        if (s.content != null && typeof s.content !== "string") {
-          errs.push(`${ctx}.content must be a string`);
-        }
-        break;
-      case "text_bullets":
-        if (s.intro != null && typeof s.intro !== "string") errs.push(`${ctx}.intro must be string`);
-        if (s.items != null && !Array.isArray(s.items)) errs.push(`${ctx}.items must be array`);
-        if (s.closing != null && typeof s.closing !== "string") errs.push(`${ctx}.closing must be string`);
-        break;
-      case "foundation":
-        if (s.hands_on != null && typeof s.hands_on !== "string") errs.push(`${ctx}.hands_on must be string`);
-        if (s.professionally != null && typeof s.professionally !== "string") errs.push(`${ctx}.professionally must be string`);
-        break;
-      case "bullets":
-        if (!Array.isArray(s.items)) errs.push(`${ctx}.items must be an array`);
-        break;
-      case "table":
-        if (!Array.isArray(s.rows)) errs.push(`${ctx}.rows must be an array`);
-        else {
-          s.rows.forEach((r, j) => {
-            if (!Array.isArray(r)) errs.push(`${ctx}.rows[${j}] must be an array of cells`);
-          });
-        }
-        break;
-      case "experience":
-        if (!Array.isArray(s.roles)) errs.push(`${ctx}.roles must be an array`);
-        else {
-          s.roles.forEach((r, j) => {
-            if (!r || typeof r !== "object") {
-              errs.push(`${ctx}.roles[${j}] must be an object`);
-              return;
+    if (key.startsWith("word/") && !key.endsWith(".xml.rels")) {
+      const context = {
+        file,
+        viewWrapper: {
+          Relationships: {
+            addRelationship: (linkId, _, target, __) => {
+              hyperlinkRelationshipAdditions.push({
+                key,
+                hyperlink: {
+                  id: linkId,
+                  link: target
+                }
+              });
             }
-            if (typeof r.title !== "string") errs.push(`${ctx}.roles[${j}].title must be string`);
-            if (r.bullets != null && !Array.isArray(r.bullets)) {
-              errs.push(`${ctx}.roles[${j}].bullets must be array`);
-            }
+          }
+        },
+        stack: []
+      };
+      contexts.set(key, context);
+      if (!(placeholderDelimiters == null ? void 0 : placeholderDelimiters.start.trim()) || !(placeholderDelimiters == null ? void 0 : placeholderDelimiters.end.trim())) {
+        throw new Error("Both start and end delimiters must be non-empty strings.");
+      }
+      const { start, end } = placeholderDelimiters;
+      for (const [patchKey, patchValue] of Object.entries(patches)) {
+        const patchText = `${start}${patchKey}${end}`;
+        while (true) {
+          const { didFindOccurrence } = replacer({
+            json,
+            patch: __spreadProps(__spreadValues({}, patchValue), {
+              children: patchValue.children.map((element) => {
+                if (element instanceof ExternalHyperlink) {
+                  const concreteHyperlink = new ConcreteHyperlink(element.options.children, uniqueId());
+                  hyperlinkRelationshipAdditions.push({
+                    key,
+                    hyperlink: {
+                      id: concreteHyperlink.linkId,
+                      link: element.options.link
+                    }
+                  });
+                  return concreteHyperlink;
+                } else {
+                  return element;
+                }
+              })
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            }),
+            patchText,
+            context,
+            keepOriginalStyles
           });
+          if (!recursive || !didFindOccurrence) {
+            break;
+          }
         }
-        break;
-      case "list":
-      case "list_italic":
-        if (!Array.isArray(s.items)) errs.push(`${ctx}.items must be an array`);
-        break;
-      case "labeled_list":
-        if (!Array.isArray(s.items)) errs.push(`${ctx}.items must be an array`);
-        else {
-          s.items.forEach((it, j) => {
-            if (!it || typeof it !== "object") {
-              errs.push(`${ctx}.items[${j}] must be {l, v}`);
-            }
-          });
-        }
-        break;
-      case "education":
-        if (!Array.isArray(s.items)) errs.push(`${ctx}.items must be an array`);
-        else {
-          s.items.forEach((it, j) => {
-            if (!it || typeof it !== "object") {
-              errs.push(`${ctx}.items[${j}] must be {deg, sch}`);
-            }
-          });
-        }
-        break;
-    }
-  });
-  return errs;
-}
-__name(validatePayload, "validatePayload");
-
-// src/cloudconvert.js
-var API_BASE = "https://api.cloudconvert.com/v2";
-var TIMEOUT_MS = 6e4;
-var POLL_INTERVAL_MS = 1500;
-async function convertDocxToPdf(docxBytes, apiKey, opts = {}) {
-  if (!apiKey) {
-    throw new Error("CLOUDCONVERT_API_KEY not configured on the worker");
-  }
-  const filename = (opts.filename || "document") + ".docx";
-  const startMs = Date.now();
-  let bytes;
-  if (docxBytes instanceof Uint8Array) {
-    bytes = docxBytes;
-  } else if (docxBytes instanceof ArrayBuffer) {
-    bytes = new Uint8Array(docxBytes);
-  } else if (typeof Buffer !== "undefined" && Buffer.isBuffer(docxBytes)) {
-    bytes = new Uint8Array(docxBytes.buffer, docxBytes.byteOffset, docxBytes.byteLength);
-  } else {
-    throw new Error("convertDocxToPdf: unsupported input type");
-  }
-  let binStr = "";
-  const CHUNK = 8192;
-  for (let i = 0; i < bytes.length; i += CHUNK) {
-    binStr += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
-  }
-  const b64 = btoa(binStr);
-  console.log(`[cloudconvert] creating job, input=${bytes.length}B base64=${b64.length}ch`);
-  const createResp = await fetch(`${API_BASE}/jobs`, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${apiKey}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      tasks: {
-        "import-docx": {
-          operation: "import/base64",
-          file: b64,
-          filename
-        },
-        "convert-to-pdf": {
-          operation: "convert",
-          input: "import-docx",
-          input_format: "docx",
-          output_format: "pdf",
-          // engine_version 'libreoffice' is the default; explicit for
-          // clarity. LibreOffice produces PDFs with proper PDF/A-style
-          // ToUnicode mappings, which is the entire reason we're here.
-          engine: "libreoffice"
-        },
-        "export-pdf": {
-          operation: "export/url",
-          input: "convert-to-pdf",
-          inline: false,
-          archive_multiple_files: false
-        }
-      },
-      tag: "antcv-docx-to-pdf"
-    })
-  });
-  if (!createResp.ok) {
-    const errBody = await createResp.text().catch(() => "");
-    throw new Error(`CloudConvert job creation failed: ${createResp.status} ${errBody.slice(0, 500)}`);
-  }
-  const createJson = await createResp.json();
-  const jobId = createJson?.data?.id;
-  if (!jobId) {
-    throw new Error("CloudConvert job created but no id returned");
-  }
-  console.log(`[cloudconvert] job ${jobId} created`);
-  let exportFileUrl = null;
-  let pollCount = 0;
-  while (Date.now() - startMs < TIMEOUT_MS) {
-    await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
-    pollCount++;
-    const statusResp = await fetch(`${API_BASE}/jobs/${jobId}`, {
-      headers: { "Authorization": `Bearer ${apiKey}` }
-    });
-    if (!statusResp.ok) {
-      const errBody = await statusResp.text().catch(() => "");
-      throw new Error(`CloudConvert status check failed: ${statusResp.status} ${errBody.slice(0, 500)}`);
-    }
-    const statusJson = await statusResp.json();
-    const jobStatus = statusJson?.data?.status;
-    if (jobStatus === "error") {
-      const tasks = statusJson?.data?.tasks || [];
-      const failed = tasks.find((t) => t.status === "error");
-      throw new Error(`CloudConvert job ${jobId} errored: ${failed?.code || "unknown"} \u2014 ${failed?.message || ""}`);
-    }
-    if (jobStatus === "finished") {
-      const tasks = statusJson?.data?.tasks || [];
-      const exportTask = tasks.find((t) => t.name === "export-pdf");
-      const files = exportTask?.result?.files || [];
-      if (!files.length || !files[0].url) {
-        throw new Error(`CloudConvert finished but export-pdf produced no file URL`);
       }
-      exportFileUrl = files[0].url;
-      console.log(`[cloudconvert] job ${jobId} finished after ${pollCount} polls (${Date.now() - startMs}ms)`);
-      break;
+      const mediaDatas = imageReplacer.getMediaData(JSON.stringify(json), context.file.Media);
+      if (mediaDatas.length > 0) {
+        hasMedia = true;
+        imageRelationshipAdditions.push({
+          key,
+          mediaDatas
+        });
+      }
     }
+    map.set(key, json);
   }
-  if (!exportFileUrl) {
-    throw new Error(`CloudConvert job ${jobId} did not complete within ${TIMEOUT_MS}ms (polled ${pollCount} times)`);
-  }
-  const pdfResp = await fetch(exportFileUrl);
-  if (!pdfResp.ok) {
-    throw new Error(`CloudConvert PDF download failed: ${pdfResp.status}`);
-  }
-  const pdfBuffer = new Uint8Array(await pdfResp.arrayBuffer());
-  console.log(`[cloudconvert] downloaded PDF: ${pdfBuffer.length}B`);
-  return {
-    buffer: pdfBuffer,
-    jobId,
-    durationMs: Date.now() - startMs
-  };
-}
-__name(convertDocxToPdf, "convertDocxToPdf");
-function pdfProvider(env2) {
-  if (env2 && env2.CLOUDCONVERT_API_KEY && String(env2.CLOUDCONVERT_API_KEY).trim()) {
-    return "cloudconvert";
-  }
-  return null;
-}
-__name(pdfProvider, "pdfProvider");
-async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
-  if (!apiKey) {
-    throw new Error("CLOUDCONVERT_API_KEY not configured on the worker");
-  }
-  const filename = (opts.filename || "jd") + ".pdf";
-  const startMs = Date.now();
-  let bytes;
-  if (pdfBytes instanceof Uint8Array) {
-    bytes = pdfBytes;
-  } else if (pdfBytes instanceof ArrayBuffer) {
-    bytes = new Uint8Array(pdfBytes);
-  } else if (typeof Buffer !== "undefined" && Buffer.isBuffer(pdfBytes)) {
-    bytes = new Uint8Array(pdfBytes.buffer, pdfBytes.byteOffset, pdfBytes.byteLength);
-  } else {
-    throw new Error("convertPdfToDocx: unsupported input type");
-  }
-  let binStr = "";
-  const CHUNK = 8192;
-  for (let i = 0; i < bytes.length; i += CHUNK) {
-    binStr += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
-  }
-  const b64 = btoa(binStr);
-  console.log(`[cloudconvert] pdf-to-docx: creating job, input=${bytes.length}B base64=${b64.length}ch`);
-  const createResp = await fetch(`${API_BASE}/jobs`, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${apiKey}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      tasks: {
-        "import-pdf": {
-          operation: "import/base64",
-          file: b64,
-          filename
-        },
-        "convert-to-docx": {
-          operation: "convert",
-          input: "import-pdf",
-          input_format: "pdf",
-          output_format: "docx",
-          // LibreOffice is the default engine. It preserves table
-          // structure well — that's the whole point of this route.
-          engine: "libreoffice"
-        },
-        "export-docx": {
-          operation: "export/url",
-          input: "convert-to-docx",
-          inline: false,
-          archive_multiple_files: false
-        }
-      },
-      tag: "antcv-pdf-to-docx"
-    })
-  });
-  if (!createResp.ok) {
-    const errBody = await createResp.text().catch(() => "");
-    throw new Error(`CloudConvert pdf-to-docx job creation failed: ${createResp.status} ${errBody.slice(0, 500)}`);
-  }
-  const createJson = await createResp.json();
-  const jobId = createJson?.data?.id;
-  if (!jobId) {
-    throw new Error("CloudConvert pdf-to-docx job created but no id returned");
-  }
-  console.log(`[cloudconvert] pdf-to-docx job ${jobId} created`);
-  let exportFileUrl = null;
-  let pollCount = 0;
-  while (Date.now() - startMs < TIMEOUT_MS) {
-    await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
-    pollCount++;
-    const statusResp = await fetch(`${API_BASE}/jobs/${jobId}`, {
-      headers: { "Authorization": `Bearer ${apiKey}` }
-    });
-    if (!statusResp.ok) {
-      const errBody = await statusResp.text().catch(() => "");
-      throw new Error(`CloudConvert pdf-to-docx status check failed: ${statusResp.status} ${errBody.slice(0, 500)}`);
-    }
-    const statusJson = await statusResp.json();
-    const jobStatus = statusJson?.data?.status;
-    if (jobStatus === "error") {
-      const tasks = statusJson?.data?.tasks || [];
-      const failed = tasks.find((t) => t.status === "error");
-      throw new Error(`CloudConvert pdf-to-docx job ${jobId} errored: ${failed?.code || "unknown"} \u2014 ${failed?.message || ""}`);
-    }
-    if (jobStatus === "finished") {
-      const tasks = statusJson?.data?.tasks || [];
-      const exportTask = tasks.find((t) => t.name === "export-docx");
-      const files = exportTask?.result?.files || [];
-      if (!files.length || !files[0].url) {
-        throw new Error(`CloudConvert pdf-to-docx finished but export-docx produced no file URL`);
-      }
-      exportFileUrl = files[0].url;
-      console.log(`[cloudconvert] pdf-to-docx job ${jobId} finished after ${pollCount} polls (${Date.now() - startMs}ms)`);
-      break;
-    }
-  }
-  if (!exportFileUrl) {
-    throw new Error(`CloudConvert pdf-to-docx job ${jobId} did not complete within ${TIMEOUT_MS}ms (polled ${pollCount} times)`);
-  }
-  const docxResp = await fetch(exportFileUrl);
-  if (!docxResp.ok) {
-    throw new Error(`CloudConvert pdf-to-docx download failed: ${docxResp.status}`);
-  }
-  const docxBuffer = new Uint8Array(await docxResp.arrayBuffer());
-  console.log(`[cloudconvert] downloaded DOCX: ${docxBuffer.length}B`);
-  return {
-    buffer: docxBuffer,
-    jobId,
-    durationMs: Date.now() - startMs
-  };
-}
-__name(convertPdfToDocx, "convertPdfToDocx");
-
-// src/index.js
-var VERSION = "1.13.1-academic";
-var index_default = {
-  async fetch(request, env2, ctx) {
-    const url = new URL(request.url);
-    const origin = request.headers.get("Origin") || "";
-    if (request.method === "OPTIONS") {
-      return new Response(null, {
-        status: 204,
-        headers: corsHeaders(origin, env2)
-      });
-    }
-    if (origin && !isAllowedOrigin(origin, env2)) {
-      return json({ error: "origin not allowed", origin }, 403, origin, env2);
-    }
-    try {
-      if (url.pathname === "/health" && request.method === "GET") {
-        return json(
-          {
-            ok: true,
-            version: VERSION,
-            // v1.13.0: PWA reads this to decide whether to call the
-            // server PDF endpoint or fall back to the client-side
-            // window.print() path. Null when CLOUDCONVERT_API_KEY
-            // isn't set, in which case the PWA continues using
-            // the client-side print fallback with the @media print
-            // Arial override from v1.40.95.
-            pdf_via: pdfProvider(env2)
-          },
-          200,
-          origin,
-          env2
-        );
-      }
-      if (url.pathname === "/schema" && request.method === "GET") {
-        return json(getSchemaDoc(), 200, origin, env2);
-      }
-      if (url.pathname === "/logout" && request.method === "GET") {
-        return handleLogout(env2);
-      }
-      if (isAnalyticsExportPath(url.pathname) && request.method === "GET") {
-        return await handleAnalyticsExport(request, origin, env2);
-      }
-      if (url.pathname === "/generate" && request.method === "POST") {
-        return await handleGenerate(request, origin, env2);
-      }
-      if (url.pathname === "/generate-pdf" && request.method === "POST") {
-        return await handleGeneratePdf(request, origin, env2);
-      }
-      if (url.pathname === "/api/jd/pdf-to-docx" && request.method === "POST") {
-        return await handlePdfToDocx(request, origin, env2);
-      }
-      return json({ error: "not found", path: url.pathname }, 404, origin, env2);
-    } catch (err2) {
-      console.error("[docx-worker] unhandled", err2);
-      return json(
-        { error: "internal error", message: String(err2 && err2.message || err2) },
-        500,
-        origin,
-        env2
+  for (const { key, mediaDatas } of imageRelationshipAdditions) {
+    const relationshipKey = `word/_rels/${key.split("/").pop()}.rels`;
+    const relationshipsJson = (_b = map.get(relationshipKey)) != null ? _b : createRelationshipFile();
+    map.set(relationshipKey, relationshipsJson);
+    const index = getNextRelationshipIndex(relationshipsJson);
+    const newJson = imageReplacer.replace(JSON.stringify(map.get(key)), mediaDatas, index);
+    map.set(key, JSON.parse(newJson));
+    for (let i = 0; i < mediaDatas.length; i++) {
+      const { fileName } = mediaDatas[i];
+      appendRelationship(
+        relationshipsJson,
+        index + i,
+        "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image",
+        `media/${fileName}`
       );
     }
   }
+  for (const { key, hyperlink } of hyperlinkRelationshipAdditions) {
+    const relationshipKey = `word/_rels/${key.split("/").pop()}.rels`;
+    const relationshipsJson = (_c = map.get(relationshipKey)) != null ? _c : createRelationshipFile();
+    map.set(relationshipKey, relationshipsJson);
+    appendRelationship(
+      relationshipsJson,
+      hyperlink.id,
+      "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+      hyperlink.link,
+      TargetModeType.EXTERNAL
+    );
+  }
+  if (hasMedia) {
+    const contentTypesJson = map.get("[Content_Types].xml");
+    if (!contentTypesJson) {
+      throw new Error("Could not find content types file");
+    }
+    appendContentType(contentTypesJson, "image/png", "png");
+    appendContentType(contentTypesJson, "image/jpeg", "jpeg");
+    appendContentType(contentTypesJson, "image/jpeg", "jpg");
+    appendContentType(contentTypesJson, "image/bmp", "bmp");
+    appendContentType(contentTypesJson, "image/gif", "gif");
+    appendContentType(contentTypesJson, "image/svg+xml", "svg");
+  }
+  const zip = new JSZip();
+  for (const [key, value] of map) {
+    const output = toXml(value);
+    zip.file(key, encodeUtf8(output));
+  }
+  for (const [key, value] of binaryContentMap) {
+    zip.file(key, value);
+  }
+  for (const { data: stream, fileName } of file.Media.Array) {
+    zip.file(`word/media/${fileName}`, stream);
+  }
+  return zip.generateAsync({
+    type: outputType,
+    mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    compression: "DEFLATE"
+  });
+});
+const toXml = (jsonObj) => {
+  const output = libExports.js2xml(jsonObj, {
+    attributeValueFn: (str) => String(str).replace(/&(?!amp;|lt;|gt;|quot;|apos;)/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;")
+    // cspell:words apos
+  });
+  return output;
 };
-async function handleGenerate(request, origin, env2) {
-  if (env2.WORKER_SECRET) {
-    const presented = request.headers.get("X-AntCV-Secret") || "";
-    if (presented !== env2.WORKER_SECRET) {
-      return json({ error: "unauthorized" }, 401, origin, env2);
+const createRelationshipFile = () => ({
+  declaration: {
+    attributes: {
+      version: "1.0",
+      encoding: "UTF-8",
+      standalone: "yes"
     }
-  }
-  const MAX_BYTES = 4 * 1024 * 1024;
-  const raw = await request.text();
-  if (raw.length > MAX_BYTES) {
-    return json({
-      error: "payload too large",
-      max_bytes: MAX_BYTES,
-      received_bytes: raw.length,
-      hint: "Reduce the profile photo size or split very large CVs into multiple sections."
-    }, 413, origin, env2);
-  }
-  let payload;
-  try {
-    payload = JSON.parse(raw);
-  } catch (e) {
-    return json({ error: "invalid JSON", detail: String(e.message || e) }, 400, origin, env2);
-  }
-  const errors = validatePayload(payload);
-  if (errors.length) {
-    return json({ error: "schema validation failed", errors }, 422, origin, env2);
-  }
-  let buffer2;
-  const t0 = Date.now();
-  try {
-    buffer2 = await generateDocx({ ...payload, _workerVersion: VERSION });
-  } catch (e) {
-    console.error("[docx-worker] generation failed", e, e.stack);
-    return json(
-      { error: "generation failed", message: String(e.message || e) },
-      500,
-      origin,
-      env2
-    );
-  }
-  const ms = Date.now() - t0;
-  if (payload.password && String(payload.password).trim()) {
-    let officecrypto = null;
-    try {
-      officecrypto = await import("officecrypto-tool");
-    } catch (e) {
-      console.error("[docx-worker] officecrypto-tool not installed", e);
-      return json(
-        {
-          error: "password_lib_missing",
-          message: "Password protection was requested but the docx-worker has not been built with officecrypto-tool. Run `npm install officecrypto-tool` in the worker repo and redeploy."
-        },
-        501,
-        origin,
-        env2
-      );
-    }
-    try {
-      const inputBuf = Buffer.isBuffer(buffer2) ? buffer2 : Buffer.from(buffer2);
-      const encrypted = await officecrypto.encrypt(inputBuf, {
-        password: String(payload.password)
-      });
-      encrypted.__antcv_post_process_status = buffer2.__antcv_post_process_status;
-      encrypted.__antcv_post_process_error = buffer2.__antcv_post_process_error;
-      encrypted.__antcv_cont_replacements = buffer2.__antcv_cont_replacements;
-      encrypted.__antcv_markers_remaining = buffer2.__antcv_markers_remaining;
-      buffer2 = encrypted;
-    } catch (e) {
-      console.error("[docx-worker] encryption failed", e);
-      return json(
-        { error: "encryption_failed", message: String(e.message || e) },
-        500,
-        origin,
-        env2
-      );
-    }
-  }
-  const filename = sanitizeFilename(payload.filename || "document") + ".docx";
-  const ppStatus = buffer2 && buffer2.__antcv_post_process_status || "unknown";
-  const ppError = buffer2 && buffer2.__antcv_post_process_error || null;
-  const replacements = buffer2 && buffer2.__antcv_cont_replacements || 0;
-  const markersRemaining = buffer2 && buffer2.__antcv_markers_remaining || 0;
-  const wordCompatible = ppStatus === "ok" || ppStatus === "skipped" ? "true" : ppStatus === "partial" || ppStatus === "failed" ? "maybe" : "unknown";
-  const headers = {
-    "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "Content-Disposition": `attachment; filename="${filename}"`,
-    "Content-Length": String(buffer2.byteLength || buffer2.length),
-    "X-AntCV-Generation-Ms": String(ms),
-    "X-AntCV-Worker-Version": VERSION,
-    "X-AntCV-Post-Process-Status": ppStatus,
-    "X-AntCV-Word-Compatible": wordCompatible,
-    "X-AntCV-Cont-Replacements": String(replacements),
-    "X-AntCV-Markers-Remaining": String(markersRemaining),
-    "X-AntCV-Encrypted": payload.password && String(payload.password).trim() ? "true" : "false",
-    "Cache-Control": "no-store",
-    // Expose the AntCV headers to the browser fetch() — without
-    // Access-Control-Expose-Headers, the PWA can't read them
-    // even though CORS allows the response body through.
-    "Access-Control-Expose-Headers": [
-      "X-AntCV-Generation-Ms",
-      "X-AntCV-Worker-Version",
-      "X-AntCV-Post-Process-Status",
-      "X-AntCV-Word-Compatible",
-      "X-AntCV-Cont-Replacements",
-      "X-AntCV-Markers-Remaining",
-      "X-AntCV-Encrypted",
-      "X-AntCV-Post-Process-Error"
-    ].join(", "),
-    ...corsHeaders(origin, env2)
-  };
-  if (ppError) {
-    headers["X-AntCV-Post-Process-Error"] = ppError.replace(/[\r\n]/g, " ").slice(0, 200);
-  }
-  return new Response(buffer2, {
-    status: 200,
-    headers
-  });
-}
-__name(handleGenerate, "handleGenerate");
-async function handleGeneratePdf(request, origin, env2) {
-  if (env2.WORKER_SECRET) {
-    const presented = request.headers.get("X-AntCV-Secret") || "";
-    if (presented !== env2.WORKER_SECRET) {
-      return json({ error: "unauthorized" }, 401, origin, env2);
-    }
-  }
-  const provider = pdfProvider(env2);
-  if (!provider) {
-    return json(
-      {
-        error: "pdf_not_configured",
-        message: "Server-side PDF generation is not configured on this worker. Set the CLOUDCONVERT_API_KEY secret to enable: `npx wrangler secret put CLOUDCONVERT_API_KEY`. The PWA will fall back to client-side PDF print until configured.",
-        provider: null
+  },
+  elements: [
+    {
+      type: "element",
+      name: "Relationships",
+      attributes: {
+        xmlns: "http://schemas.openxmlformats.org/package/2006/relationships"
       },
-      503,
-      origin,
-      env2
-    );
-  }
-  const MAX_BYTES = 4 * 1024 * 1024;
-  const raw = await request.text();
-  if (raw.length > MAX_BYTES) {
-    return json(
-      {
-        error: "payload too large",
-        max_bytes: MAX_BYTES,
-        received_bytes: raw.length
-      },
-      413,
-      origin,
-      env2
-    );
-  }
-  let payload;
-  try {
-    payload = JSON.parse(raw);
-  } catch (e) {
-    return json({ error: "invalid JSON", detail: String(e.message || e) }, 400, origin, env2);
-  }
-  const errors = validatePayload(payload);
-  if (errors.length) {
-    return json({ error: "schema validation failed", errors }, 422, origin, env2);
-  }
-  let docxBuffer;
-  const t0 = Date.now();
-  try {
-    docxBuffer = await generateDocx({ ...payload, _workerVersion: VERSION });
-  } catch (e) {
-    console.error("[docx-worker] DOCX generation failed in /generate-pdf", e, e.stack);
-    return json({ error: "docx_generation_failed", message: String(e.message || e) }, 500, origin, env2);
-  }
-  const docxMs = Date.now() - t0;
-  let pdfResult;
-  try {
-    pdfResult = await convertDocxToPdf(docxBuffer, env2.CLOUDCONVERT_API_KEY, {
-      filename: payload.filename || "document"
-    });
-  } catch (e) {
-    console.error("[docx-worker] CloudConvert PDF conversion failed", e);
-    return json(
-      {
-        error: "pdf_conversion_failed",
-        message: String(e.message || e),
-        provider,
-        suggestion: "The PWA can fall back to client-side PDF (less visual fidelity but works offline). Check the worker logs for the upstream error."
-      },
-      502,
-      origin,
-      env2
-    );
-  }
-  const filename = sanitizeFilename(payload.filename || "document") + ".pdf";
-  console.log(
-    `[docx-worker] /generate-pdf ok: docx ${docxMs}ms, pdf ${pdfResult.durationMs}ms, total ${Date.now() - t0}ms, jobId=${pdfResult.jobId}`
-  );
-  const headers = {
-    ...corsHeaders(origin, env2),
-    "Content-Type": "application/pdf",
-    "Content-Disposition": `attachment; filename="${filename}"`,
-    "Content-Length": String(pdfResult.buffer.length),
-    "X-AntCV-Pdf-Provider": provider,
-    "X-AntCV-Pdf-JobId": pdfResult.jobId,
-    "X-AntCV-Docx-Ms": String(docxMs),
-    "X-AntCV-Pdf-Ms": String(pdfResult.durationMs),
-    "Access-Control-Expose-Headers": [
-      "X-AntCV-Pdf-Provider",
-      "X-AntCV-Pdf-JobId",
-      "X-AntCV-Docx-Ms",
-      "X-AntCV-Pdf-Ms",
-      "Content-Disposition"
-    ].join(", ")
-  };
-  return new Response(pdfResult.buffer, { status: 200, headers });
-}
-__name(handleGeneratePdf, "handleGeneratePdf");
-function isAnalyticsExportPath(pathname) {
-  return [
-    "/analytics/export",
-    "/export-analytics",
-    "/analytics.csv",
-    "/analytics.json"
-  ].includes(pathname);
-}
-__name(isAnalyticsExportPath, "isAnalyticsExportPath");
-async function handlePdfToDocx(request, origin, env2) {
-  if (env2.WORKER_SECRET) {
-    const presented = request.headers.get("X-AntCV-Secret") || "";
-    if (presented !== env2.WORKER_SECRET) {
-      return json({ error: "unauthorized" }, 401, origin, env2);
+      elements: []
+    }
+  ]
+});
+const patchDetector = (_0) => __async(null, [_0], function* ({ data }) {
+  const zipContent = data instanceof JSZip ? data : yield JSZip.loadAsync(data);
+  const patches = /* @__PURE__ */ new Set();
+  for (const [key, value] of Object.entries(zipContent.files)) {
+    if (!key.endsWith(".xml") && !key.endsWith(".rels")) {
+      continue;
+    }
+    if (key.startsWith("word/") && !key.endsWith(".xml.rels")) {
+      const json = toJson(yield value.async("text"));
+      traverse(json).forEach((p) => findPatchKeys(p.text).forEach((patch) => patches.add(patch)));
     }
   }
-  if (!env2.CLOUDCONVERT_API_KEY || !String(env2.CLOUDCONVERT_API_KEY).trim()) {
-    return json(
-      {
-        error: "cloudconvert_not_configured",
-        message: "CLOUDCONVERT_API_KEY is not set on this worker; PDF\u2192DOCX normalisation unavailable."
-      },
-      503,
-      origin,
-      env2
-    );
-  }
-  const PDF_BYTES_CAP = 30 * 1024 * 1024;
-  let pdfBytes;
-  try {
-    const buf = await request.arrayBuffer();
-    pdfBytes = new Uint8Array(buf);
-    if (pdfBytes.length === 0) {
-      return json({ error: "empty_body", message: "PDF body is empty." }, 400, origin, env2);
-    }
-    if (pdfBytes.length > PDF_BYTES_CAP) {
-      return json({
-        error: "too_large",
-        message: "PDF exceeds " + PDF_BYTES_CAP + " B cap.",
-        received: pdfBytes.length
-      }, 413, origin, env2);
-    }
-  } catch (e) {
-    return json({ error: "invalid_body", message: String(e && e.message || e) }, 400, origin, env2);
-  }
-  const head = String.fromCharCode(...pdfBytes.subarray(0, 5));
-  if (head !== "%PDF-") {
-    return json({
-      error: "not_a_pdf",
-      message: "Request body does not start with %PDF-; refusing CloudConvert call.",
-      head
-    }, 415, origin, env2);
-  }
-  const filename = (request.headers.get("X-AntCV-Filename") || "jd").replace(/[^A-Za-z0-9_.-]/g, "_").slice(0, 64);
-  try {
-    const { buffer: buffer2, jobId, durationMs } = await convertPdfToDocx(pdfBytes, env2.CLOUDCONVERT_API_KEY, { filename });
-    const respHeaders = corsHeaders(origin, env2);
-    respHeaders["Content-Type"] = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-    respHeaders["Content-Disposition"] = 'attachment; filename="' + filename + '.docx"';
-    respHeaders["X-AntCV-CloudConvert-Job"] = String(jobId);
-    respHeaders["X-AntCV-CloudConvert-Duration-Ms"] = String(durationMs);
-    return new Response(buffer2, { status: 200, headers: respHeaders });
-  } catch (e) {
-    console.error("[docx-worker] pdf-to-docx failed", e);
-    return json(
-      {
-        error: "cloudconvert_failed",
-        message: String(e && e.message || e),
-        // The PWA reads this code to decide whether to fall back to
-        // raw-PDF text extraction (with an audit warning).
-        fallback: "pdf_text_extraction"
-      },
-      502,
-      origin,
-      env2
-    );
-  }
-}
-__name(handlePdfToDocx, "handlePdfToDocx");
-async function handleAnalyticsExport(request, origin, env2) {
-  const url = new URL(request.url);
-  const wantsCsv = url.pathname.endsWith(".csv") || /text\/csv/i.test(request.headers.get("Accept") || "");
-  if (!env2.ANALYTICS || typeof env2.ANALYTICS.list !== "function") {
-    if (wantsCsv) {
-      return new Response("timestamp,event,path,status,detail\n", {
-        status: 200,
-        headers: {
-          "Content-Type": "text/csv; charset=utf-8",
-          "Content-Disposition": 'attachment; filename="antcv-analytics-empty.csv"',
-          "X-AntCV-Analytics": "not-bound",
-          "Cache-Control": "no-store",
-          ...corsHeaders(origin, env2)
-        }
-      });
-    }
-    return json({ ok: true, analytics_bound: false, rows: [], note: "ANALYTICS KV is not bound; returned empty export." }, 200, origin, env2);
-  }
-  const rows = [];
-  let cursor;
-  do {
-    const page = await env2.ANALYTICS.list({ prefix: "event:", cursor });
-    for (const key of page.keys || []) {
-      const value = await env2.ANALYTICS.get(key.name, "json");
-      if (value) rows.push(value);
-    }
-    cursor = page.list_complete ? void 0 : page.cursor;
-  } while (cursor);
-  if (wantsCsv) {
-    const header = "timestamp,event,path,status,detail\n";
-    const csv = header + rows.map(rowToCsv).join("");
-    return new Response(csv, {
-      status: 200,
-      headers: {
-        "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": 'attachment; filename="antcv-analytics.csv"',
-        "Cache-Control": "no-store",
-        ...corsHeaders(origin, env2)
-      }
-    });
-  }
-  return json({ ok: true, analytics_bound: true, rows }, 200, origin, env2);
-}
-__name(handleAnalyticsExport, "handleAnalyticsExport");
-function rowToCsv(row) {
-  const cols = [row.timestamp, row.event, row.path, row.status, row.detail];
-  return cols.map(csvCell).join(",") + "\n";
-}
-__name(rowToCsv, "rowToCsv");
-function csvCell(value) {
-  const s = value == null ? "" : String(value);
-  return '"' + s.replace(/"/g, '""') + '"';
-}
-__name(csvCell, "csvCell");
-function handleLogout(env2) {
-  const target = withHardResetParams(getSetupUrl(env2));
-  return new Response(null, {
-    status: 302,
-    headers: {
-      Location: target,
-      "Cache-Control": "no-store",
-      "Clear-Site-Data": '"cache", "cookies", "storage"',
-      "Set-Cookie": [
-        "antcv_session=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=Lax",
-        "antcv_auth=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=Lax",
-        "antcv_access=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=Lax"
-      ].join(", ")
-    }
-  });
-}
-__name(handleLogout, "handleLogout");
-function withHardResetParams(target) {
-  const url = new URL(target);
-  url.searchParams.set("hardReset", "1");
-  url.searchParams.set("logout", "1");
-  return url.toString();
-}
-__name(withHardResetParams, "withHardResetParams");
-function getSetupUrl(env2) {
-  const explicit = String(env2.SETUP_URL || "").trim();
-  if (explicit) return explicit;
-  const firstAllowedOrigin = String(env2.ALLOWED_ORIGINS || "").split(",").map((s) => s.trim()).find((s) => s && s !== "*");
-  return firstAllowedOrigin || "https://cv-generator-det.pages.dev";
-}
-__name(getSetupUrl, "getSetupUrl");
-function corsHeaders(origin, env2) {
-  const allowed = isAllowedOrigin(origin, env2) ? origin : "";
-  return {
-    "Access-Control-Allow-Origin": allowed || "*",
-    "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, X-AntCV-Secret",
-    "Access-Control-Max-Age": "86400",
-    "Vary": "Origin"
-  };
-}
-__name(corsHeaders, "corsHeaders");
-function isAllowedOrigin(origin, env2) {
-  if (!origin) return true;
-  const list = (env2.ALLOWED_ORIGINS || "").split(",").map((s) => s.trim()).filter(Boolean);
-  if (list.length === 0) return true;
-  if (list.includes("*")) return true;
-  return list.includes(origin);
-}
-__name(isAllowedOrigin, "isAllowedOrigin");
-function json(obj, status, origin, env2) {
-  return new Response(JSON.stringify(obj), {
-    status,
-    headers: {
-      "Content-Type": "application/json",
-      ...corsHeaders(origin, env2)
-    }
-  });
-}
-__name(json, "json");
-function sanitizeFilename(s) {
-  return String(s || "document").replace(/[^a-zA-Z0-9æøåÆØÅ_\-.]+/g, "_").replace(/_+/g, "_").replace(/^_|_$/g, "").slice(0, 80) || "document";
-}
-__name(sanitizeFilename, "sanitizeFilename");
-function getSchemaDoc() {
-  return {
-    schema_version: "1.0",
-    description: "AntCV DOCX generation request. Send a JSON body matching this schema to /generate. Response is a binary .docx file.",
-    required_fields: ["schema_version", "doc", "personal_info", "sections"],
-    doc: { enum: ["cv", "cl"], description: "CV or cover letter" },
-    language: { enum: ["en", "da"], default: "en" },
-    layout: {
-      enum: ["two_column", "linear"],
-      default: "two_column",
-      description: "two_column = navy sidebar + main; linear = single-column (CL default)"
-    },
-    style: {
-      object: "palette and font tokens \u2014 all optional, sensible defaults",
-      tokens: [
-        "navy",
-        "accent",
-        "teal",
-        "mainHeadColor",
-        "mainTextColor",
-        "mainBulletColor",
-        "sidebarBg",
-        "sidebarHeadColor",
-        "sidebarTextColor",
-        "headerBg",
-        "headerNameColor",
-        "headerSpecColor",
-        "headerContactColor",
-        "photoBorderColor",
-        "mainHeadFont",
-        "mainBodyFont",
-        "sidebarFont",
-        "headerFont"
-      ]
-    },
-    font_sizes: {
-      object: "font sizes in pt",
-      tokens: [
-        "mainBody",
-        "mainHead",
-        "sbBody",
-        "sbHead",
-        "nameSize",
-        "specialisation",
-        "contactSize",
-        "expSubHead",
-        "bulletContent",
-        "mainTblH",
-        "mainTblCell"
-      ]
-    },
-    personal_info: {
-      name: "string",
-      email: "string",
-      phone: "string",
-      location: "string",
-      website: "string",
-      linkedin: "string",
-      photo_b64: "optional base64 PNG/JPG, max ~1.1MB decoded"
-    },
-    meta: {
-      subtitle: "string \u2014 specialisation line (CV) or application line (CL)",
-      role: "string \u2014 used for filename",
-      company: "string \u2014 used for filename"
-    },
-    sections: {
-      type: "array",
-      element_shape: {
-        id: "string",
-        title: "string",
-        loc: { enum: ["main", "sidebar"] },
-        on: "boolean \u2014 false hides the section",
-        type: { enum: [
-          "text",
-          "text_inline",
-          "text_bullets",
-          "foundation",
-          "bullets",
-          "table",
-          "experience",
-          "list",
-          "list_italic",
-          "labeled_list",
-          "education"
-        ] },
-        "...content fields": "depend on type \u2014 see frontend integration helper"
-      }
-    },
-    filename: "string \u2014 without .docx extension; will be sanitized"
-  };
-}
-__name(getSchemaDoc, "getSchemaDoc");
+  return Array.from(patches);
+});
+const findPatchKeys = (text) => {
+  var _a;
+  const pattern = new RegExp("(?<=\\{\\{).+?(?=\\}\\})", "gs");
+  return (_a = text.match(pattern)) != null ? _a : [];
+};
 export {
-  index_default as default
+  AbstractNumbering,
+  AlignmentType,
+  AnnotationReference,
+  Attributes,
+  BaseXmlComponent,
+  Body,
+  Bookmark,
+  BookmarkEnd,
+  BookmarkStart,
+  Border,
+  BorderStyle,
+  BuilderElement,
+  CarriageReturn,
+  CellMerge,
+  CellMergeAttributes,
+  CharacterSet,
+  CheckBox,
+  CheckBoxSymbolElement,
+  CheckBoxUtil,
+  Column,
+  ColumnBreak,
+  Comment,
+  CommentRangeEnd,
+  CommentRangeStart,
+  CommentReference,
+  Comments,
+  ConcreteHyperlink,
+  ConcreteNumbering,
+  ContinuationSeparator,
+  DayLong,
+  DayShort,
+  DeletedTableCell,
+  DeletedTableRow,
+  DeletedTextRun,
+  File as Document,
+  DocumentAttributeNamespaces,
+  DocumentAttributes,
+  DocumentBackground,
+  DocumentBackgroundAttributes,
+  DocumentDefaults,
+  DocumentGridType,
+  Drawing,
+  DropCapType,
+  EMPTY_OBJECT,
+  EmphasisMarkType,
+  EmptyElement,
+  EndnoteIdReference,
+  EndnoteReference,
+  EndnoteReferenceRun,
+  EndnoteReferenceRunAttributes,
+  Endnotes,
+  ExternalHyperlink,
+  File,
+  FileChild,
+  FootNoteReferenceRunAttributes,
+  FootNotes,
+  Footer2 as Footer,
+  FooterWrapper,
+  FootnoteReference,
+  FootnoteReferenceElement,
+  FootnoteReferenceRun,
+  FrameAnchorType,
+  FrameWrap,
+  GridSpan,
+  Header2 as Header,
+  HeaderFooterReferenceType,
+  HeaderFooterType,
+  HeaderWrapper,
+  HeadingLevel,
+  HeightRule,
+  HighlightColor,
+  HorizontalPositionAlign,
+  HorizontalPositionRelativeFrom,
+  HpsMeasureElement,
+  HyperlinkType,
+  IgnoreIfEmptyXmlComponent,
+  ImageRun,
+  ImportedRootElementAttributes,
+  ImportedXmlComponent,
+  InitializableXmlComponent,
+  InsertedTableCell,
+  InsertedTableRow,
+  InsertedTextRun,
+  InternalHyperlink,
+  LastRenderedPageBreak,
+  LeaderType,
+  Level,
+  LevelBase,
+  LevelForOverride,
+  LevelFormat,
+  LevelOverride,
+  LevelSuffix,
+  LineNumberRestartFormat,
+  LineRuleType,
+  Math$1 as Math,
+  MathAngledBrackets,
+  MathCurlyBrackets,
+  MathDegree,
+  MathDenominator,
+  MathFraction,
+  MathFunction,
+  MathFunctionName,
+  MathFunctionProperties,
+  MathIntegral,
+  MathLimit,
+  MathLimitLower,
+  MathLimitUpper,
+  MathNumerator,
+  MathPreSubSuperScript,
+  MathRadical,
+  MathRadicalProperties,
+  MathRoundBrackets,
+  MathRun,
+  MathSquareBrackets,
+  MathSubScript,
+  MathSubSuperScript,
+  MathSum,
+  MathSuperScript,
+  Media,
+  MonthLong,
+  MonthShort,
+  NextAttributeComponent,
+  NoBreakHyphen,
+  NumberFormat$1 as NumberFormat,
+  NumberProperties,
+  NumberValueElement,
+  NumberedItemReference,
+  NumberedItemReferenceFormat,
+  Numbering,
+  OnOffElement,
+  OverlapType,
+  Packer,
+  PageBorderDisplay,
+  PageBorderOffsetFrom,
+  PageBorderZOrder,
+  PageBorders,
+  PageBreak,
+  PageBreakBefore,
+  PageNumber,
+  PageNumberElement,
+  PageNumberSeparator,
+  PageOrientation,
+  PageReference,
+  PageTextDirection,
+  PageTextDirectionType,
+  Paragraph,
+  ParagraphProperties,
+  ParagraphPropertiesChange,
+  ParagraphPropertiesDefaults,
+  ParagraphRunProperties,
+  PatchType,
+  PositionalTab,
+  PositionalTabAlignment,
+  PositionalTabLeader,
+  PositionalTabRelativeTo,
+  PrettifyType,
+  RelativeHorizontalPosition,
+  RelativeVerticalPosition,
+  Run,
+  RunProperties,
+  RunPropertiesChange,
+  RunPropertiesDefaults,
+  SectionProperties,
+  SectionPropertiesChange,
+  SectionType,
+  Separator,
+  SequentialIdentifier,
+  ShadingType,
+  SimpleField,
+  SimpleMailMergeField,
+  SoftHyphen,
+  SpaceType,
+  StringContainer,
+  StringEnumValueElement,
+  StringValueElement,
+  StyleForCharacter,
+  StyleForParagraph,
+  StyleLevel,
+  Styles,
+  SymbolRun,
+  TDirection,
+  Tab,
+  TabStopPosition,
+  TabStopType,
+  Table,
+  TableAnchorType,
+  TableBorders,
+  TableCell,
+  TableCellBorders,
+  TableLayoutType,
+  TableOfContents,
+  TableProperties,
+  TableRow,
+  TableRowProperties,
+  TableRowPropertiesChange,
+  TextDirection,
+  TextEffect,
+  TextRun,
+  TextWrappingSide,
+  TextWrappingType,
+  Textbox,
+  ThematicBreak,
+  UnderlineType,
+  VerticalAlign,
+  VerticalAlignSection,
+  VerticalAlignTable,
+  VerticalAnchor,
+  VerticalMerge,
+  VerticalMergeRevisionType,
+  VerticalMergeType,
+  VerticalPositionAlign,
+  VerticalPositionRelativeFrom,
+  WORKAROUND2,
+  WORKAROUND3,
+  WORKAROUND4,
+  WidthType,
+  WpgGroupRun,
+  WpsShapeRun,
+  XmlAttributeComponent,
+  XmlComponent,
+  YearLong,
+  YearShort,
+  abstractNumUniqueNumericIdGen,
+  bookmarkUniqueNumericIdGen,
+  concreteNumUniqueNumericIdGen,
+  convertInchesToTwip,
+  convertMillimetersToTwip,
+  convertToXmlComponent,
+  createAlignment,
+  createBodyProperties,
+  createBorderElement,
+  createColumns,
+  createDocumentGrid,
+  createDotEmphasisMark,
+  createEmphasisMark,
+  createFrameProperties,
+  createHeaderFooterReference,
+  createHorizontalPosition,
+  createIndent,
+  createLineNumberType,
+  createMathAccentCharacter,
+  createMathBase,
+  createMathLimitLocation,
+  createMathNAryProperties,
+  createMathPreSubSuperScriptProperties,
+  createMathSubScriptElement,
+  createMathSubScriptProperties,
+  createMathSubSuperScriptProperties,
+  createMathSuperScriptElement,
+  createMathSuperScriptProperties,
+  createOutlineLevel,
+  createPageMargin,
+  createPageNumberType,
+  createPageSize,
+  createParagraphStyle,
+  createRunFonts,
+  createSectionType,
+  createShading,
+  createSimplePos,
+  createSpacing,
+  createStringElement,
+  createTabStop,
+  createTabStopItem,
+  createTableFloatProperties,
+  createTableLayout,
+  createTableLook,
+  createTableRowHeight,
+  createTableWidthElement,
+  createTransformation,
+  createUnderline,
+  createVerticalAlign,
+  createVerticalPosition,
+  createWrapNone,
+  createWrapSquare,
+  createWrapTight,
+  createWrapTopAndBottom,
+  dateTimeValue,
+  decimalNumber,
+  docPropertiesUniqueNumericIdGen,
+  eighthPointMeasureValue,
+  encodeUtf8,
+  hashedId,
+  hexColorValue,
+  hpsMeasureValue,
+  longHexNumber,
+  measurementOrPercentValue,
+  patchDetector,
+  patchDocument,
+  percentageValue,
+  pointMeasureValue,
+  positiveUniversalMeasureValue,
+  sectionMarginDefaults,
+  sectionPageSizeDefaults,
+  shortHexNumber,
+  signedHpsMeasureValue,
+  signedTwipsMeasureValue,
+  standardizeData,
+  twipsMeasureValue,
+  uCharHexNumber,
+  uniqueId,
+  uniqueNumericIdCreator,
+  uniqueUuid,
+  universalMeasureValue,
+  unsignedDecimalNumber
 };
-//# sourceMappingURL=index.js.map

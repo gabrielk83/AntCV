@@ -1,0 +1,106 @@
+# antcv-access-relay — auth + hardening
+# Same worker name so the PWA's saved proxyUrl keeps working.
+
+name = "antcv-access-relay"
+main = "src/index.js"
+compatibility_date = "2024-12-01"
+
+
+# --- Observability (Cloudflare Logs) ---
+# Keep this enabled. Without it, console.log/warn/error from the worker is
+# unreadable in the dashboard, and we have to guess from client-side errors
+# what the worker actually did. invocation_logs adds one row per request
+# with status + duration, useful for spotting timeouts and CORS failures.
+[observability.logs]
+enabled = true
+invocation_logs = true
+
+[vars]
+# --- Upstream proxies (paid + demo) ---
+# The relay forwards each request to ONE of two upstream Workers based on
+# the authenticated user's `mode` field (stored in their prefs2 KV record):
+#
+#   mode = "paid"  -> UPSTREAM (service binding to cv-proxy)
+#                     or UPSTREAM_ORIGIN (HTTP fallback)
+#   mode = "demo"  -> UPSTREAM_DEMO (service binding to antcv-demo-proxy)
+#                     or UPSTREAM_ORIGIN_DEMO (HTTP fallback)
+#
+# Service bindings are preferred (bypass error 1042, no DNS/TLS overhead).
+# The *_ORIGIN values exist as HTTP-fallback URLs when bindings aren't
+# available (local dev, separate Cloudflare accounts).
+#
+# Default mode for users with no explicit choice is "paid" — safer, since
+# paid is BYOK and a user without keys hits a clear setup-required warning
+# rather than silently consuming demo budget.
+UPSTREAM_ORIGIN      = "https://cv-proxy.karp-gabriel-a.workers.dev"
+UPSTREAM_ORIGIN_DEMO = "https://antcv-demo-proxy.karp-gabriel-a.workers.dev"
+
+# CORS allowlist (comma-separated). The PWA origin must be listed.
+ALLOWED_ORIGINS = "https://antcv.pages.dev"
+SETUP_URL = "https://antcv.pages.dev"
+
+# Google OAuth client ID for in-app sign-in.
+GOOGLE_CLIENT_ID = "817851000754-74anhmb0s3842igqplae20d8426qnc9r.apps.googleusercontent.com"
+
+# Sender for OTP emails.
+EMAIL_FROM = "AntCV <onboarding@resend.dev>"
+
+# Optional email allowlist (comma-separated, case-insensitive).
+EMAIL_ALLOWLIST = "karp.gabriel.a@gmail.com,51pegasib@gmail.com"
+
+# --- Admin (analytics access) ---
+ADMIN_EMAILS = "karp.gabriel.a@gmail.com"
+
+# --- Service binding to cv-proxy (paid tier) ---
+# Without this, Cloudflare blocks same-account Worker-to-Worker fetches via
+# *.workers.dev with "error code: 1042". The service binding bypasses HTTP
+# entirely — direct Worker-to-Worker invocation, no DNS, no TLS, no Access
+# layer. The relay code prefers this binding over UPSTREAM_ORIGIN.
+[[services]]
+binding = "UPSTREAM"
+service = "cv-proxy"
+environment = "production"
+
+# --- Service binding to antcv-demo-proxy (demo tier) ---
+# Same setup as UPSTREAM above, but targets the demo proxy. The relay
+# picks this binding when the authenticated user's mode is "demo".
+[[services]]
+binding = "UPSTREAM_DEMO"
+service = "antcv-demo-proxy"
+environment = "production"
+
+# Secrets to set via `npx wrangler secret put …`:
+#   JWT_SECRET                    >=32-byte random string for HS256 signing
+#   RESEND_API_KEY                Resend API key
+#   UPSTREAM_ANALYTICS_SECRET     Same value as cv-proxy's ANALYTICS_SECRET.
+#
+# Optional (only needed if the service bindings above aren't bound):
+#   CF_ACCESS_CLIENT_ID       service-token id for cv-proxy's Access policy
+#   CF_ACCESS_CLIENT_SECRET   service-token secret
+
+# --- KV bindings (REQUIRED) ---
+# KV_BINDING is the canonical user-prefs store (prefs2:<hash>). The new
+# `mode` field for paid/demo routing lives there. Shared across the three
+# workers (relay, cv-proxy, antcv-demo-proxy) so the proxies can read user
+# state if they ever need to.
+[[kv_namespaces]]
+binding = "KV_BINDING"
+id = "4524070751e04a30834b7ee46df98e2e"
+
+[[kv_namespaces]]
+binding = "ANALYTICS"
+id = "1cfec90c37c043c9a03d7db32df178ba"
+
+# --- D1 database binding (REQUIRED for D1 routes) ---
+# Holds user_kernel, application, language_view, active_application,
+# plus the LLM telemetry tables.
+[[d1_databases]]
+binding = "DB"
+database_name = "ant_memory"
+database_id = "499c3de9-8371-428a-9b9f-5d695d58e32b"
+
+# --- Cron triggers ---
+# Every 5 minutes, aggregate llm_calls into llm_provider_health for
+# the rolling-window dashboard and autorotate logic.
+[triggers]
+crons = ["*/5 * * * *"]

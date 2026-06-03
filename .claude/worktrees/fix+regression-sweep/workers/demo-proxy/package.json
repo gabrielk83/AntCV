@@ -1,0 +1,13 @@
+{
+  "name": "cv-proxy",
+  "version": "3.4.0-model-chain-fallback",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy": "wrangler deploy --env=\"\"",
+    "dev": "wrangler dev"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

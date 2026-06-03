@@ -1,0 +1,30 @@
+name = "antcv-c2pa-worker"
+main = "src/index.ts"
+compatibility_date = "2026-05-18"
+
+[observability.logs]
+enabled = true
+invocation_logs = true
+
+# c2pa-rs compiled to WASM is imported directly in src/index.ts via
+#   import C2PA_WASM from '../wasm/c2pa.wasm';
+# Modern ES-module Workers do NOT use [wasm_modules] bindings or the
+# [[rules]] CompiledWasm fallback — Wrangler bundles .wasm imports
+# automatically. Build artefact must be at wasm/c2pa.wasm; see README.
+
+# Public route. Front the worker behind a custom domain in production.
+# Example:
+#   routes = [
+#     { pattern = "c2pa.antcv.example/*", custom_domain = true }
+#   ]
+
+# Secrets are set out-of-band via `wrangler secret put`:
+#   - C2PA_SIGNING_KEY_PEM        — the private key (PEM-encoded)
+#   - C2PA_SIGNING_CERT_PEM       — the signing certificate (PEM-encoded)
+#   - C2PA_TIMESTAMP_AUTHORITY_URL — RFC 3161 TSA URL (e.g. http://timestamp.digicert.com)
+
+[vars]
+# Public, non-sensitive metadata baked into every manifest.
+C2PA_CLAIM_GENERATOR = "AntCV/1.40.336 c2pa-rs/0.45"
+C2PA_VENDOR = "AntCV"
+C2PA_PRODUCT_URL = "https://antcv.pages.dev"

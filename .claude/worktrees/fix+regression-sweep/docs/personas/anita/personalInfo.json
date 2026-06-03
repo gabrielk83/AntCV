@@ -1,0 +1,412 @@
+{
+  "_comments": [
+    "Regenerated Anita profile to match the enhanced Gabriel JSON structure.",
+    "Added headline, targetRoles and targetIndustries for role matching.",
+    "Added proofPoints for reusable evidence in CVs, cover letters and fit analysis.",
+    "Added positioning and applicationPrefs to guide application tailoring.",
+    "Added visibilityControls for context-aware display decisions.",
+    "Added semantic_constraints for ant-world timeline consistency, authority boundaries and humour control.",
+    "Added qualityGuards to reduce hallucinations when fields are empty or incomplete.",
+    "Added gapClosingPreferences and fitAnalysisPreferences for better fit/gap recommendations.",
+    "Preserved Anita's stylePrefs with calm, structured, Scandinavian operational tone.",
+    "Spring 2026 is treated as the current timeline reference."
+  ],
+  "name": "Anita Myre-Kornfeldt",
+  "firstName": "Anita",
+  "lastName": "Myre-Kornfeldt",
+  "headline": "Operations and Winter Preparedness Specialist | Colony Logistics, Granary Planning & Seasonal Risk Control",
+  "email": "anita.kornfeldt@winterready.eu",
+  "phone": "+45 26 22 26 22",
+  "linkedin": "linkedin.com/in/anita-myre-kornfeldt",
+  "location": "Copenhagen, Denmark",
+  "city": "Copenhagen",
+  "country": "Denmark",
+  "citizenship": "EU Citizen",
+  "patentNumber": "EP-AC-0042",
+  "patentDescription": "Co-inventor of a modular subterranean granary geometry that reduces moisture migration between adjacent storage chambers, cited in three colony-wide winter readiness audits.",
+  "background": "Reliable planner inspired by the hardworking ant from Aesop's fable. Known for preparing early, documenting thoroughly, and keeping projects moving through difficult seasons. Strong at logistics, contingency planning, and steady operational delivery.",
+  "tools": [
+    {
+      "l": "Operations",
+      "v": "Operations planning, Winter preparedness, Supply logistics, Harvest coordination"
+    },
+    {
+      "l": "Methods",
+      "v": "Risk mitigation, Inventory tracking, Documentation, Project tracking"
+    },
+    {
+      "l": "Tooling",
+      "v": "Spreadsheets, Colour-coded Kanban boards, Pheromone-trail planning maps"
+    },
+    {
+      "l": "Domain",
+      "v": "Granary architecture, Cold-chain logistics, Seasonal forecasting, Foraging route optimisation"
+    }
+  ],
+  "certifications": [
+    "Cold Storage Cooperative Auditor (CSCA)",
+    "Seasonal Logistics Planner — Level 3 (Nordic Granary Council)",
+    "ISO-ANT 26262 Six-Leg Functional Safety (Intecs)",
+    "Lean Foraging Practitioner (Aesop Institute)",
+    "Prøve i dansk 2"
+  ],
+  "education": [
+    {
+      "deg": "BSc-equivalent in Seasonal Resource Management",
+      "sch": "Institute of Logistics — Copenhagen, completed across three colony learning cycles, Autumn 2025–Late Winter 2026"
+    },
+    {
+      "deg": "Postgraduate Certificate in Contingency Logistics",
+      "sch": "Aesop School of Operations, Copenhagen, Pre-Spring Intensive 2026"
+    }
+  ],
+  "publications": [
+    "<b>“Comparative Winter Preparedness Strategies: Ants vs. Grasshoppers, A Six-Season Retrospective”</b> — Mayr-Kornfeldt, A., Journal of Seasonal Operations, Spring 2026",
+    "<b>“Pheromone-Trail Heuristics for Multi-Sector Foraging Route Optimisation”</b> — Mayr-Kornfeldt, A. & Hill, S., Proceedings of the Nordic Colony Logistics Symposium, Late Winter 2026",
+    "<b>Patent EP-AC-0042:</b> Modular subterranean granary geometry reducing inter-chamber moisture migration"
+  ],
+  "publicationsStructured": [
+    {
+      "name": "Comparative Winter Preparedness Strategies: Ants vs. Grasshoppers, A Six-Season Retrospective",
+      "details": "Mayr-Kornfeldt, A., Journal of Seasonal Operations, Spring 2026",
+      "visible": true
+    },
+    {
+      "name": "Pheromone-Trail Heuristics for Multi-Sector Foraging Route Optimisation",
+      "details": "Mayr-Kornfeldt, A. & Hill, S., Proceedings of the Nordic Colony Logistics Symposium, Late Winter 2026",
+      "visible": true
+    },
+    {
+      "name": "Patent EP-AC-0042:",
+      "details": "Modular subterranean granary geometry reducing inter-chamber moisture migration",
+      "visible": true
+    }
+  ],
+  "regulatory": [
+    {
+      "group": "Storage & cold chain"
+    },
+    {
+      "l": "ISO 22000",
+      "v": "Food safety management"
+    },
+    {
+      "l": "HACCP",
+      "v": "Hazard analysis and critical control points"
+    },
+    {
+      "l": "EN 13485",
+      "v": "Thermometers for measuring environment of chilled / frozen goods"
+    },
+    {
+      "group": "Seasonal & operational governance"
+    },
+    {
+      "l": "NGC-WP-01",
+      "v": "Nordic Granary Council — winter preparedness audit"
+    },
+    {
+      "l": "AESOP-OPS-7",
+      "v": "Six-season contingency planning framework"
+    },
+    {
+      "l": "ISO 31000",
+      "v": "Risk management"
+    },
+    {
+      "group": "Documentation & traceability"
+    },
+    {
+      "l": "ISO 9001",
+      "v": "Quality management systems"
+    },
+    {
+      "l": "ISO 30301",
+      "v": "Records management"
+    }
+  ],
+  "additional": [
+    {
+      "l": "Languages",
+      "v": "English (Professional), Ant Colony Signaling (Fluent)"
+    },
+    {
+      "l": "Work style",
+      "v": "Methodical, calm under pressure, winter-ready, evidence-driven, consistent, structured, resourceful"
+    },
+    {
+      "l": "Volunteer",
+      "v": "Copenhagen Anthill Mentorship Programme — pairs senior workers with first-season foragers"
+    },
+    {
+      "l": "Hobbies",
+      "v": "Long-distance walking, weather logging, dried-grain photography"
+    },
+    {
+      "l": "Accessibility",
+      "v": "Comfortable presenting in writing; prefers asynchronous reviews over live meetings"
+    },
+    {
+      "l": "Career timescale",
+      "v": "Profile uses ant-scale seasonal cycles. Current reference point: Spring 2026."
+    }
+  ],
+  "contactItems": [
+    {
+      "key": "email",
+      "label": "Email",
+      "icon": "✉",
+      "value": "anita.kornfeldt@winterready.eu",
+      "visible": true
+    },
+    {
+      "key": "phone",
+      "label": "Phone",
+      "icon": "☎",
+      "value": "+45 26 22 26 22",
+      "visible": true
+    },
+    {
+      "key": "linkedin",
+      "label": "LinkedIn",
+      "icon": "▸",
+      "value": "linkedin.com/in/anita-mayr-kornfeldt",
+      "visible": true
+    },
+    {
+      "key": "location",
+      "label": "Location",
+      "icon": "◉",
+      "value": "Copenhagen, Denmark",
+      "visible": true
+    },
+    {
+      "key": "citizenship",
+      "label": "Citizenship",
+      "icon": "★",
+      "value": "EU Citizen",
+      "visible": true
+    }
+  ],
+  "experience": [
+    {
+      "title": "Senior Grain Storage Coordinator",
+      "company": "Northfield Cooperative",
+      "years": "Spring 2026 – Present",
+      "bullets": [
+        "Managed seasonal food storage planning for large ant colonies in Copenhagen.",
+        "Reduced winter shortages through detailed inventory tracking and contingency planning.",
+        "Maintained operational continuity through demanding late-winter and early-spring transition peaks."
+      ]
+    },
+    {
+      "title": "Operations Planner",
+      "company": "Hill & Colony Logistics",
+      "years": "Late Winter 2026 – Spring 2026",
+      "bullets": [
+        "Coordinated grain transport routes and weather-response plans across Aarhus region.",
+        "Maintained colour-coded tracking systems through repeated rainy-season cycles.",
+        "Owned documentation handover between seasonal teams during the winter-to-spring transition."
+      ]
+    },
+    {
+      "title": "Junior Harvest Analyst",
+      "company": "Summer Stockpile Group",
+      "years": "Early Winter 2026 – Late Winter 2026",
+      "bullets": [
+        "Tracked harvest efficiency and optimised carrying routes between field sectors in Odense.",
+        "Produced weekly reports that informed planning for the following seasonal cycle."
+      ]
+    },
+    {
+      "title": "Junior Forager (Intern)",
+      "company": "Ant Hill Collective",
+      "years": "Late Autumn 2025 – Early Winter 2026",
+      "bullets": [
+        "Walked assigned sectors twice daily; logged seed-yield by grid square in a paper notebook later digitised by the Operations team.",
+        "Earned the 'Reliable Returner' badge — six weeks without a misplaced carry.",
+        "Wrote the first draft of what became the colony's foul-weather protocol after a memorable autumn downpour."
+      ]
+    }
+  ],
+  "workStyle": {
+    "keywords": [
+      "methodical",
+      "calm under pressure",
+      "winter-ready",
+      "evidence-driven",
+      "consistent",
+      "structured",
+      "resourceful"
+    ],
+    "strengths": [
+      "Perseverance",
+      "Judgement",
+      "Prudence",
+      "Teamwork",
+      "Self-regulation"
+    ],
+    "notes": "Prefers preparing early rather than reacting late. Keeps written contingency plans and detailed tracking systems. Comfortable carrying operational work during difficult seasons without creating noise around it.",
+    "summary": "Operations and logistics specialist inspired by the hardworking ant from Aesop's fable. Known for consistency, preparation, and maintaining calm during demanding delivery periods."
+  },
+  "stylePrefs": {
+    "banned_words": "passionate, dynamic, rockstar, ninja, visionary, disruptive, world-class, cutting-edge, fast-paced, synergy, leverage, empower, proactive, results-driven, innovative, expertly, robust solutions, go-getter, thought leader",
+    "banned_phrases": "think outside the box, hit the ground running, works well under pressure, team player with excellent communication skills, proven track record, detail-oriented professional, motivated self-starter, thrives in fast-paced environments, responsible for, references available upon request",
+    "preferred_tone": "Calm, structured, practical and evidence-driven. Short factual sentences. Scandinavian professional tone. Emphasize preparation, reliability, continuity, operational stability and documentation quality. Avoid exaggeration and sales language. Dry understated humour acceptable when fitting the ant setting."
+  },
+  "targetRoles": [
+    "Winter Preparedness Coordinator",
+    "Operations Planner",
+    "Supply Logistics Coordinator",
+    "Granary Operations Specialist",
+    "Seasonal Risk and Continuity Planner",
+    "Inventory and Traceability Coordinator",
+    "Cold-Chain Logistics Assistant Manager",
+    "Colony Preparedness Lead"
+  ],
+  "targetIndustries": [
+    "Seasonal operations",
+    "Supply logistics",
+    "Cold-chain logistics",
+    "Food storage and preservation",
+    "Inventory planning",
+    "Risk management",
+    "Operational preparedness",
+    "Granary architecture",
+    "Colony-scale resource planning",
+    "Public-sector resilience"
+  ],
+  "proofPoints": [
+    "Maintained operational continuity through repeated winter-preparedness cycles across Nordic colony sites",
+    "Managed seasonal food storage planning for large ant colonies in Copenhagen",
+    "Reduced winter shortages through inventory tracking and contingency planning",
+    "Co-inventor of Patent EP-AC-0042 for modular subterranean granary geometry reducing moisture migration",
+    "Produced documentation and handover material used by seasonal operations teams",
+    "Published work on winter preparedness and pheromone-trail route optimisation",
+    "Built colour-coded tracking systems for rainy-season logistics coordination"
+  ],
+  "positioning": {
+    "primary": "Structured operations and logistics profile focused on preparation, continuity, documentation and seasonal risk control.",
+    "secondary": "Best fit for roles where inventory planning, contingency procedures, storage operations and calm execution during seasonal peaks matter.",
+    "avoid": "Highly speculative innovation roles, sales-heavy roles, unstructured emergency-only roles, or positions requiring loud self-promotion rather than steady operational delivery."
+  },
+  "applicationPrefs": {
+    "location": "Copenhagen or Nordic-region hybrid roles",
+    "workMode": "Hybrid preferred; onsite acceptable for storage, logistics or preparedness operations",
+    "language": "English preferred; Danish acceptable for structured operational documentation",
+    "tone": "Calm, factual, structured and practical. Mild dry humour is acceptable when the ant-world setting is intentional.",
+    "exportPreference": "PDF for immediate submission; DOCX when further editing is expected"
+  },
+  "visibilityControls": {
+    "showPhoneByDefault": false,
+    "showAccessibilityByDefault": false,
+    "showCitizenshipByDefault": true,
+    "showHobbiesByDefault": false,
+    "showPatentByDefault": true,
+    "showPublicationsByDefault": true,
+    "showAntWorldHumourByDefault": true
+  },
+  "semantic_constraints": [
+    {
+      "trigger": "ant-world career timeline",
+      "avoid": [
+        "decade of experience",
+        "15 years of experience",
+        "long career",
+        "multi-decade career",
+        "senior executive career"
+      ],
+      "prefer": [
+        "several seasonal cycles",
+        "multiple winter-preparedness cycles",
+        "repeated harvest seasons",
+        "colony-scale operational experience",
+        "several ant-career stages"
+      ],
+      "reason": "Maintain biological and narrative consistency. Ant experience should use seasonal cycles rather than human-scale career durations."
+    },
+    {
+      "trigger": "steady operational responsibility without executive authority",
+      "avoid": [
+        "executive leader",
+        "strategic transformation leader",
+        "owned the organization",
+        "led enterprise-wide change"
+      ],
+      "prefer": [
+        "coordinated operational planning",
+        "maintained continuity",
+        "prepared documentation",
+        "supported cross-colony coordination",
+        "kept seasonal work on track"
+      ],
+      "reason": "Avoid overstating formal authority. Anita should read as a reliable operations specialist, not an inflated executive profile."
+    },
+    {
+      "trigger": "ant-world humour",
+      "avoid": [
+        "cartoonish insect jokes",
+        "overly cute phrasing",
+        "mascot-heavy language",
+        "parody tone"
+      ],
+      "prefer": [
+        "subtle ant-world references",
+        "dry understated humour",
+        "professional logistics language",
+        "seasonal preparedness framing"
+      ],
+      "reason": "Preserve the ant identity while keeping the CV credible and readable."
+    }
+  ],
+  "qualityGuards": {
+    "emptyFieldPolicy": "Do not invent missing facts. If a field is empty, omit it, ask for input, or generate a clearly marked placeholder suggestion depending on context.",
+    "factSourcePriority": [
+      "explicit user-provided structured fields",
+      "explicit user-provided background text",
+      "derived but clearly supported summaries",
+      "clearly marked suggestions"
+    ],
+    "unsupportedClaimPolicy": "Flag unsupported claims instead of placing them directly into CV, cover letter or application material.",
+    "timelinePolicy": "Use Spring 2026 as the current reference point and keep Anita's career expressed in seasonal cycles or colony stages rather than human-year seniority.",
+    "humourPolicy": "Use ant-world references only when they support the test scenario. Keep professional documents readable by humans and machines."
+  },
+  "gapClosingPreferences": {
+    "recommendationStyle": "Practical, short and closeable. Suggest realistic next steps, micro-courses, wording changes or transferable framing.",
+    "acceptableGapTypes": [
+      "tool exposure",
+      "language requirement",
+      "formal certification",
+      "domain terminology",
+      "reporting automation",
+      "ERP familiarity",
+      "executive reporting format"
+    ],
+    "avoidGapHandling": [
+      "pretending the gap is already covered",
+      "inflating adjacent experience",
+      "claiming certifications not listed",
+      "overstating leadership scope"
+    ]
+  },
+  "fitAnalysisPreferences": {
+    "strengthSignalExamples": [
+      "seasonal preparedness",
+      "inventory tracking",
+      "documentation",
+      "contingency planning",
+      "granary architecture",
+      "cold-chain/storage governance",
+      "route optimisation"
+    ],
+    "gapSignalExamples": [
+      "SAP or Oracle ERP",
+      "Python or SQL automation",
+      "ISO 27001",
+      "German or Swedish",
+      "formal executive reporting",
+      "large-scale grasshopper crisis simulation"
+    ],
+    "recommendationRequirement": "Every gap should include a realistic closure recommendation when possible."
+  }
+}

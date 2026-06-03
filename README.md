@@ -130,9 +130,10 @@ Visual and writing are independent layers — a writing style does not change to
 
 Active test suites:
 
+- [`workers/proxy/test/`](./workers/proxy/test/) — 40 `node:test` unit tests for the §4.7 writing-engine pipeline: request parse + normalisation, system-prompt preamble, the Semantic Constraint Engine banned-word / banned-phrase filter (with the language-partition invariant), the retry loop, ATS glyph conversion, provider-agnostic extract/replace, and a drift guard tying the worker's inline style + banned-list subset back to `writingSystems/registry.json`. Run with `npm test` (`node --test`) from inside the worker dir. Runs in CI on every pull request.
 - [`workers/docx-worker/test/`](./workers/docx-worker/test/) — 15 smoke files covering OOXML output, sidebar pagination, page breaks, dedupe, photo spacing. Run with `npm test` or `node test/<name>.js` from inside the worker dir.
-- [`workers/access-relay/tests/`](./workers/access-relay/tests/) — telemetry insertion, normalisation, cost recomputation, aggregation, prune retention (`smoke.mjs`, 16 tests); delete-wipe path (`delete-wipe.mjs`). Both use sql.js to mock D1 in-process.
-- [`.github/workflows/deploy.yml`](./.github/workflows/deploy.yml) `lint` job — repo-layout sanity + observability-block presence in every `wrangler.toml`. Runs on every push.
+- [`workers/access-relay/tests/`](./workers/access-relay/tests/) — telemetry insertion, normalisation, cost recomputation, aggregation, prune retention (`smoke.mjs`, 16 tests); delete-wipe path (`delete-wipe.mjs`). Both use sql.js to mock D1 in-process (set the sql-wasm path noted at the top of each file before first run).
+- [`.github/workflows/deploy.yml`](./.github/workflows/deploy.yml) `lint` + `unit-tests` jobs — repo-layout sanity + observability-block presence in every `wrangler.toml`, plus the proxy unit suites. Run on every push and pull request.
 
 Planned (LockedSources § 8): visual regression (21 baselines), DOCX regression (140 files), showcase isolation (20 cold-start runs), writing-style violation matrix (50 generations per style × section), ATS-mode parser round-trip, modal stacking, independence test (style swap = content only, package swap = tokens only).
 

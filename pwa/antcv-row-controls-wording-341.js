@@ -1,73 +1,61 @@
-/* AntCV row-controls wording sweep (v1.40.341-p1b)
+/* AntCV row-controls wording sweep (v1.40.357-p1b2)
  * ============================================================
  *
- * P1-B partial — GEN-004 wording in row controls
- * ----------------------------------------------
+ * P1-B partial — GEN-004 / TB-003 / PB-005 wording
+ * ------------------------------------------------
  * Acceptance per plan §4.6:
  *   TB-003: "Update visible help text: describe the actual
  *           controls (hide where supported, Fit, Enhance, CJLR,
  *           Page Break). No 'compress' wording."
+ *   PB-005: "Update help text, tooltip, accessible label, and any
+ *           visible legend. Replace Compress with Fit."
  *   PP-003 (HIGH-RISK): "Refactor Publications & Patent controls
  *           ONLY through the shared row-control model. No ad-hoc
- *           absolute positioning. No duplicated render paths.
- *           Buttons remain row-bound, ordered, and stable through
- *           long text, many rows, narrow widths, route changes,
- *           hard refresh, and while generation status is active."
+ *           absolute positioning. No duplicated render paths."
  *
- * Scope decision (see docs/plan/PP-003-regression-history.md)
- * ----------------------------------------------------------
- * Publications row-controls have seven prior iterations that
- * failed and were removed; the eighth (the current 273 + 278
- * pair) is finally stable. Per PP-003's HIGH-RISK warning,
- * touching the layout primitives now risks an eighth regression.
+ * What changed in p1b2 (this revision)
+ * ------------------------------------
+ * The original p1b swept only <button> elements (text / title /
+ * aria-label). TB-003 and PB-005 also call out *help text* and
+ * *visible legends* that are NOT buttons — short hint/caption
+ * nodes near the row controls that still say "compress". This
+ * revision adds a SECOND, equally conservative sweep over those
+ * help/legend text nodes:
  *
- * This P1-B deliberately scopes to the SAFEST subset that still
- * advances the plan: sweep user-facing "Compress" wording out
- * of every row-control title / aria-label / button text in the
- * editor panel. Layout, positioning, ordering, and the existing
- * sidecars' state machines are untouched.
+ *   - Only leaf elements (no child elements) whose tag is a known
+ *     hint/caption/label container, OR which carry a hint-like
+ *     class/role. We never rewrite a node that has element
+ *     children (would risk collapsing structure / breaking
+ *     listeners) — same rule the button sweep already follows.
+ *   - Editor-panel scope only: never inside .antcv-preview-paper.
+ *   - Same idempotent per-element marker + loose [Cc]omp gate.
+ *
+ * Layout, positioning, ordering, and every existing sidecar's
+ * state machine remain untouched (PP-003 safety).
  *
  * Out of scope for this PR
  * ------------------------
- * The full SectionControlBar.mount() migration for table /
- * outcome / publication rows is documented as a follow-up. The
- * SO-001 / TB-001..002 / PP-001..002 acceptance criteria are
- * already mostly met by the existing per-section sidecars
- * (CJLR per line, per-row Page Break, etc.) — they just emit
- * the wrong word ("Compress") which this sidecar fixes.
- *
- * Behaviour
- * ---------
- *   1. On every tick (MutationObserver + delayed sweeps), find
- *      every button whose visible text, title, OR aria-label
- *      contains "compress" / "Compress" / "Comp." (loose
- *      match: any of these substrings; case-insensitive).
- *   2. Replace the offending substring with "Fit" / "fit" /
- *      "Fit" preserving case style.
- *   3. Skip elements with a prior-pass marker
- *      (data-antcv-row-wording-fixed) to keep the sweep O(new
- *      elements) per tick.
- *   4. Operate ONLY in editor panels — never inside
- *      .antcv-preview-paper (the Preview never gets a
- *      "Compress" button; if it does that's CL-001's domain).
+ * The full SectionControlBar.mount() migration and the Page-Break
+ * ICON swap (down-arrow -> page glyph) are handled elsewhere
+ * (icon swap: antcv-page-break-icon-357.js). This file is wording
+ * only.
  *
  * Hazards
  * -------
  *   - No \s in regex literals.
  *   - No \u escapes.
  *   - Idempotency: per-element marker + check.
- *   - PP-003: this sidecar does NOT add positioning, ordering,
- *     or DOM-structure changes. Layout is owned by the
- *     existing row-control sidecars and is untouched.
+ *   - PP-003: no positioning / ordering / DOM-structure changes.
  */
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.40.341-p1b';
+  var SCRIPT_VERSION = '1.40.357-p1b2';
   if (window.__antcvRowControlsWording341 === SCRIPT_VERSION) return;
   window.__antcvRowControlsWording341 = SCRIPT_VERSION;
 
   var MARK = 'data-antcv-row-wording-fixed';
+  var MARK_HINT = 'data-antcv-hint-wording-fixed';
 
   function findPreviewPaper() {
     return document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]');
@@ -133,13 +121,83 @@
     return fixed;
   }
 
+  // p1b2: help-text / legend sweep. Targets short hint/caption/label
+  // leaf nodes that still say "compress" but are NOT buttons (TB-003,
+  // PB-005 "visible legend"). Conservative: leaf-only (no element
+  // children), editor-scoped, idempotent, title/aria-label included.
+  var HINT_SELECTOR = [
+    'small',
+    'figcaption',
+    'legend',
+    'label',
+    '.antcv-help',
+    '.antcv-hint',
+    '.antcv-help-text',
+    '.antcv-controls-help',
+    '.antcv-legend',
+    '[data-antcv-help]',
+    '[data-antcv-hint]',
+    '[role="note"]',
+  ].join(',');
+
+  function sweepHints() {
+    var paper = findPreviewPaper();
+    var nodes;
+    try { nodes = document.querySelectorAll(HINT_SELECTOR); }
+    catch (_) { return 0; }
+    var fixed = 0;
+    for (var i = 0; i < nodes.length; i++) {
+      var el = nodes[i];
+      if (!el.isConnected) continue;
+      if (el.getAttribute(MARK_HINT) === '1') continue;
+      if (paper && paper.contains(el)) continue;
+      // Leaf-only: never touch a node that has element children, to
+      // avoid collapsing structure or breaking listeners.
+      if (el.children && el.children.length > 0) continue;
+      var changed = false;
+      // title
+      var t = el.getAttribute && el.getAttribute('title');
+      if (t && /[Cc]omp/.test(t)) {
+        var nt = rewriteCompressToFit(t);
+        if (nt !== t) { el.setAttribute('title', nt); changed = true; }
+      }
+      // aria-label
+      var al = el.getAttribute && el.getAttribute('aria-label');
+      if (al && /[Cc]omp/.test(al)) {
+        var nal = rewriteCompressToFit(al);
+        if (nal !== al) { el.setAttribute('aria-label', nal); changed = true; }
+      }
+      // visible text (leaf only)
+      var tc = el.textContent || '';
+      if (/[Cc]omp/.test(tc)) {
+        var ntc = rewriteCompressToFit(tc);
+        if (ntc !== tc) { el.textContent = ntc; changed = true; }
+      }
+      if (changed) {
+        el.setAttribute(MARK_HINT, '1');
+        fixed++;
+      }
+    }
+    if (fixed > 0) {
+      try { console.debug('[row-controls-wording] rewrote', fixed, 'hint/legend node(s)'); } catch (_) {}
+    }
+    return fixed;
+  }
+
+  function sweepAll() {
+    var n = 0;
+    try { n += sweepButtons(); } catch (_) {}
+    try { n += sweepHints(); } catch (_) {}
+    return n;
+  }
+
   var pending = false;
   function schedule() {
     if (pending) return;
     pending = true;
     requestAnimationFrame(function () {
       pending = false;
-      try { sweepButtons(); } catch (_) {}
+      try { sweepAll(); } catch (_) {}
     });
   }
 
@@ -155,7 +213,8 @@
       var meaningful = false;
       for (var r = 0; r < records.length; r++) {
         var rec = records[r];
-        if (rec.type === 'attributes' && rec.attributeName === MARK) continue;
+        if (rec.type === 'attributes' &&
+            (rec.attributeName === MARK || rec.attributeName === MARK_HINT)) continue;
         meaningful = true;
         break;
       }
@@ -171,6 +230,8 @@
   window.AntcvRowControlsWording341 = {
     version: SCRIPT_VERSION,
     sweepButtons: sweepButtons,
+    sweepHints: sweepHints,
+    sweep: sweepAll,
     _rewriteCompressToFit: rewriteCompressToFit,
   };
 

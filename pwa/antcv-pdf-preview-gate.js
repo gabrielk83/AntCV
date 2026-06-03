@@ -587,19 +587,19 @@ ${inlineStyles}
     const fab = document.createElement('button');
     fab.id = FAB_ID;
     fab.type = 'button';
-    fab.setAttribute('aria-label', 'Document export — preview and save as PDF or DOCX');
-    fab.title = 'Document export — preview the document and save as PDF or DOCX';
-    // v1.50.32 — SVG document icon + "Preview PDF" text label.
-    // Replaces the 📄 emoji that didn\'t render on some systems and
-    // gave the FAB no apparent affordance. innerHTML is safe here —
-    // no user input flows into this string.
+    fab.setAttribute('aria-label', 'Export — preview and save as PDF or DOCX');
+    fab.title = 'Export — preview the document and save as PDF or DOCX';
+    // v1.50.51 — keep the SVG document icon (the "page" affordance the user
+    // asked to retain) but shorten the visible text label from
+    // "Document export" to "Export". innerHTML is safe here — no user input
+    // flows into this string.
     fab.innerHTML =
       '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
         '<path d="M7 3h7l5 5v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/>' +
         '<path d="M14 3v6h5"/>' +
         '<path d="M9 14h6"/>' +
         '<path d="M9 18h4"/>' +
-      '</svg><span>Document export</span>';
+      '</svg><span>Export</span>';
     fab.addEventListener('click', () => openModal());
     document.body.appendChild(fab);
     syncFabVisibility();

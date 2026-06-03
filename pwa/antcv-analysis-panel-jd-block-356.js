@@ -1,4 +1,4 @@
-/* AntCV Analysis-panel embedded JD block (v1.40.356)
+/* AntCV Analysis-panel embedded JD block (v1.40.357)
  * ============================================================================
  *
  * Goal (user spec)
@@ -11,6 +11,20 @@
  *   - When an analysis IS present       -> the JD block sits BELOW the rendered
  *     analysis result (used to compare the generated CV against an existing JD).
  *
+ * v1.40.357 fix
+ * -------------
+ * The original findAnalysisPanel() matched ONLY a container whose heading text
+ * contained "Application Analysis". But in the EMPTY state (the exact case we
+ * are fixing) that heading is NOT rendered — the panel only shows the bar-chart
+ * icon and "Generate a CV first to see the analysis." So the block never
+ * attached and the panel stayed empty.
+ *
+ * findAnalysisPanel() now tries TWO strategies:
+ *   1. The "Application Analysis" heading container (analysis-present state).
+ *   2. The empty-state container, located by its message text ("Generate a CV
+ *      first to see the analysis" / Danish equivalent), then climbing to a
+ *      stable panel ancestor to inject into.
+ *
  * Behaviour (user spec)
  * ---------------------
  *   - ONE unified block, NO tabs. A single run does BOTH analyses:
@@ -18,11 +32,6 @@
  *                                    suggested_edits
  *       * POST /api/jd-analysis   -> recruiter, red_flags, questions
  *     and merges ALL of it.
- *   - Results: rendered IN-PANEL immediately (Option A), AND written into the
- *     persisted `rationale` object so app.js's native panel render picks them
- *     up too once its recruiter/red-flags render blocks ship. (The deployed
- *     app.js does not yet render recruiter/red_flags, so in-panel render is
- *     what the user sees today.)
  *
  * Why a separate sidecar
  * ----------------------
@@ -55,6 +64,15 @@
   var BLOCK_ID = 'antcv-analysis-panel-jd-block';
   var STYLE_ID = 'antcv-analysis-panel-jd-block-css';
   var RATIONALE_KEY = 'rationale';
+
+  // Empty-state message fragments (EN + DA). Kept lowercase for compare.
+  var EMPTY_MARKERS = [
+    'generate a cv first',
+    'see the analysis',
+    'generér et cv',
+    'generer et cv',
+    'for at se analysen'
+  ];
 
   // ---- storage helpers ----
   function readProxyUrl() {
@@ -180,6 +198,12 @@
     document.head.appendChild(s);
   }
 
+  function previewPaper() {
+    return document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]');
+  }
+
+  // Strategy 1: the analysis-present panel, keyed by its heading text.
+  function findByHeading() {
   // Find the Analysis panel container by its app.js heading text.
   //
   // The heading is a div whose OWN text is "📊 Application Analysis" (a short
@@ -198,6 +222,10 @@
     var nodes = document.querySelectorAll('div');
     var headings = [];
     for (var i = 0; i < nodes.length; i++) {
+      var head = nodes[i].querySelector && nodes[i].querySelector(':scope > div');
+      if (head && (head.textContent || '').indexOf('Application Analysis') >= 0) {
+        return nodes[i];
+      }
       var node = nodes[i];
       var txt = (node.textContent || '').replace(/\s+/g, ' ').trim();
       if (txt.indexOf('Application Analysis') < 0) continue;
@@ -217,8 +245,48 @@
       : heading;
   }
 
-  // Local recheck-fit POST (the recheck-fit sidecar keeps postRecheckFit
-  // private, so we issue our own; same endpoint + shape).
+  // Strategy 2: the EMPTY-state panel, keyed by its message text. We find the
+  // smallest element whose text matches an empty-state marker, then climb to a
+  // panel-like ancestor (a block container that is NOT the whole app shell and
+  // NOT inside the rendered document) to inject into.
+  function findByEmptyState() {
+    var paper = previewPaper();
+    var nodes = document.querySelectorAll('div, p, span');
+    var marker = null;
+    for (var i = 0; i < nodes.length; i++) {
+      var n = nodes[i];
+      if (n.children && n.children.length > 3) continue;
+      var tc = (n.textContent || '').toLowerCase();
+      if (tc.length > 120) continue;
+      var hit = false;
+      for (var m = 0; m < EMPTY_MARKERS.length; m++) {
+        if (tc.indexOf(EMPTY_MARKERS[m]) >= 0) { hit = true; break; }
+      }
+      if (!hit) continue;
+      if (paper && paper.contains(n)) continue;
+      marker = n;
+      break;
+    }
+    if (!marker) return null;
+
+    var cur = marker;
+    var hops = 0;
+    var best = marker.parentElement || marker;
+    while (cur && hops < 6) {
+      var p = cur.parentElement;
+      if (!p) break;
+      if (p === document.body || p.id === 'root' || p.tagName === 'HTML') break;
+      best = p;
+      cur = p;
+      hops++;
+    }
+    return best;
+  }
+
+  function findAnalysisPanel() {
+    return findByHeading() || findByEmptyState();
+  }
+
   async function postRecheckFit(proxyUrl, body) {
     var r = await fetch(proxyUrl + '/api/recheck-fit', {
       method: 'POST', credentials: 'include',
@@ -230,9 +298,6 @@
     return { status: r.status, body: parsed };
   }
 
-  // In-panel renderer for fit/strengths/gaps (Option A: do not depend on
-  // app.js). Recruiter/red-flags/questions reuse the recheck-fit sidecar's
-  // renderJdAnalysis into the same results container.
   function renderFit(container, a, t) {
     if (!a || typeof a !== 'object') return;
     var score = Math.max(0, Math.min(1, Number(a.fit_score) || 0));
@@ -255,6 +320,27 @@
       var gu = el('ul', { style: { margin: '0 0 10px', paddingLeft: '18px', fontSize: '12px', lineHeight: '1.5' } });
       gaps.forEach(function (x) { var li = el('li', null); var b = el('b', null, x.missing || ''); li.appendChild(b); if (x.jd_mention) li.appendChild(document.createTextNode(' — ' + x.jd_mention)); gu.appendChild(li); });
       container.appendChild(gu);
+    }
+  }
+
+  // Hide the native empty-state placeholder once our block is present, so the
+  // panel does not show both "Generate a CV first" AND our input block.
+  function hideEmptyPlaceholder(panel) {
+    if (!panel) return;
+    var nodes = panel.querySelectorAll('div, p, span');
+    for (var i = 0; i < nodes.length; i++) {
+      var n = nodes[i];
+      if (n.id === BLOCK_ID || (n.closest && n.closest('#' + BLOCK_ID))) continue;
+      if (n.children && n.children.length > 1) continue;
+      var tc = (n.textContent || '').toLowerCase();
+      if (tc.length > 120) continue;
+      for (var m = 0; m < EMPTY_MARKERS.length; m++) {
+        if (tc.indexOf(EMPTY_MARKERS[m]) >= 0) {
+          n.setAttribute('data-antcv-jd-empty-hidden', '1');
+          n.style.display = 'none';
+          break;
+        }
+      }
     }
   }
 
@@ -313,7 +399,6 @@
 
       runBtn.disabled = true; runBtn.textContent = t.running;
       try {
-        // Run BOTH endpoints in parallel.
         var summaryStr = cvSections ? JSON.stringify(cvSections).slice(0, 8000) : '';
         var rfBody = { jd_text: jd, cv_sections: cvSections || [], doc_target: clSections ? 'both' : 'cv' };
         if (clSections) rfBody.cl_sections = clSections;
@@ -330,7 +415,6 @@
         var fit = (resFit && resFit.status === 200 && resFit.body && resFit.body.ok) ? resFit.body.analysis : null;
         var jdA = (resJd && resJd.status === 200 && resJd.body && resJd.body.ok) ? (resJd.body.analysis || resJd.body) : null;
 
-        // Render in-panel (Option A).
         if (fit) renderFit(results, fit, t);
         if (jdA && rf && typeof rf._renderJdAnalysis === 'function') {
           rf._renderJdAnalysis(results, jdA, {
@@ -339,7 +423,6 @@
           });
         }
 
-        // Merge everything into rationale (forward-compat with native render).
         var merged = readRationale() || {};
         if (fit) {
           if (fit.summary !== undefined) merged.summary = fit.summary;
@@ -380,15 +463,13 @@
   function ensureBlock() {
     var panel = findAnalysisPanel();
     if (!panel) return;
-    // Already present in this panel?
     var existing = panel.querySelector('#' + BLOCK_ID);
-    if (existing) return;
-    // Remove any stale copy elsewhere (panel re-mounted).
+    if (existing) { hideEmptyPlaceholder(panel); return; }
     var stale = document.getElementById(BLOCK_ID);
     if (stale && stale.parentNode) stale.parentNode.removeChild(stale);
     injectStyles();
-    // Append at the END of the panel so it sits BELOW any rendered analysis.
     panel.appendChild(buildBlock());
+    hideEmptyPlaceholder(panel);
   }
 
   var pending = false;
@@ -402,13 +483,20 @@
   }
 
   schedule();
-  [300, 800, 1800, 3500].forEach(function (d) { setTimeout(schedule, d); });
+  [300, 800, 1800, 3500, 6000].forEach(function (d) { setTimeout(schedule, d); });
   try {
-    new MutationObserver(schedule).observe(document.body || document.documentElement, { childList: true, subtree: true });
+    new MutationObserver(function (records) {
+      var meaningful = false;
+      for (var r = 0; r < records.length; r++) {
+        if (records[r].type === 'attributes' && records[r].attributeName === 'data-antcv-jd-empty-hidden') continue;
+        meaningful = true; break;
+      }
+      if (meaningful) schedule();
+    }).observe(document.body || document.documentElement, { childList: true, subtree: true });
   } catch (_) {}
   window.addEventListener('antcv:rationale-merge', schedule);
   window.addEventListener('antcv:sections-updated', schedule);
 
-  window.AntcvAnalysisPanelJdBlock356 = { version: VERSION, ensure: ensureBlock };
+  window.AntcvAnalysisPanelJdBlock356 = { version: VERSION, ensure: ensureBlock, _findPanel: findAnalysisPanel };
   try { console.debug('[analysis-panel-jd-block-356] installed v' + VERSION); } catch (_) {}
 })();

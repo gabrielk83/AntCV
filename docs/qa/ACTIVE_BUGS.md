@@ -1,7 +1,7 @@
 # AntCV — Active Bug Tracker
 
 Living list of open issues. Newest section at top. Mark items `[FIXED]`, `[VERIFYING]`, or `[OPEN]`.
-This file now folds in the canonical `AntCV_UI_UX_Spec_and_QA_Plan_v4.docx` backlog (see "QA SPEC BACKLOG" below) so there is a single working list. The .docx remains the source of full prose detail.
+This file now folds in the canonical `AntCV_UI_UX_Spec_and_QA_Plan_v4.docx` backlog (see "QA SPEC BACKLOG" below) so there is a single working list. The .docx remains the source of full prose detail; a machine-retrievable ID index lives alongside this file at `docs/qa/AntCV_QA_backlog_index_v4.md`.
 
 ---
 
@@ -33,6 +33,7 @@ This file now folds in the canonical `AntCV_UI_UX_Spec_and_QA_Plan_v4.docx` back
 ## QA SPEC BACKLOG (merged from AntCV_UI_UX_Spec_and_QA_Plan_v4.docx)
 
 Status legend: `[ ]` open · `[~]` partially addressed · `[x]` believed fixed (verify). Update as work lands.
+Full ID list with severities: `docs/qa/AntCV_QA_backlog_index_v4.md`.
 
 ### Core rules / Definition of Done (GEN)
 - **GEN-001..011** — [~] Preview/DOCX/PDF parity; control locality (a button acts only on its own item); standard control order = Page Break, CJLR, Enhance, Fit, Delete; "Compress" renamed "Fit" everywhere; edit persistence; no clipped/hidden controls; drag-drop parity; a11y labels; preview-utility responsive parity; warning = yellow, error = red; CL generation must capture table data.
@@ -82,6 +83,21 @@ Status legend: `[ ]` open · `[~]` partially addressed · `[x]` believed fixed (
 - **AH-001** — [ ] "Open in Settings" foregrounds Application History [see APPHIST-ZIDX-001].
 - **VAL-001** — [ ] Errors red, warnings yellow, distinct labels. (Overlaps GEN-011.)
 
+### Onboarding / generation / layout / export / responsive (third + fourth pass)
+- **LANG-001** — [ ] (Med) Settings vs top-bar language mismatch (Chinese ticked, not in bar); fallback EN+DA, wizard is source of truth.
+- **IMPORT-001** — [ ] (High) Import reports 0 work entries despite valid JSON; map experience/education/certifications/publicationsStructured lengths.
+- **ONBOARD-001** — [ ] (High) Step 3B writing-register list not scrollable on mobile; Next unreachable (dvh, sticky footer).
+- **GEN-001b** — [ ] (High, §14.2) Kernel generation leaves major CV sections empty/underfilled; add unsolicited fallback + warnings.
+- **GEN-002b** — [ ] (High, §14.2) CL generation drops What I Bring table signals + Why This Position bullets.
+- **GEN-UI-001** — [ ] (Med) Redundant Enhance/Fit buttons under generation Cancel action.
+- **GEN-UI-002** — [ ] (Med) Generation time estimate too optimistic; almost-done shown too early (use ~4 min default).
+- **GEN-UI-003** — [ ] (High) Repeated/endless Fit controls under "Cancel & return to editor"; hard rendering guard when generation view active.
+- **LAYOUT-001** — [ ] (High) Sidebar background does not extend to page bottom in Preview/PDF/DOCX.
+- **EXPORT-001** — [ ] (Med) Missing download-start indicator for PDF/DOCX export.
+- **EXPORT-002** — [ ] (Critical) PDF export fails; needs visible recovery + retry, must not corrupt current doc.
+- **RESPONSIVE-001** — [ ] (High) Mobile Preview loads desktop split-pane layout; Section/Analysis/Preview must be mobile bottom modes.
+- **PDF-LAYOUT-001** — [ ] (High) PDF page 2 shows stray Selected Outcomes heading before Professional Experience continuation.
+
 ---
 
 ## VERIFYING (shipped this session, confirm on fresh code)
@@ -100,4 +116,4 @@ Status legend: `[ ]` open · `[~]` partially addressed · `[x]` believed fixed (
 
 - Deployed app.js does NOT yet render `recruiter` / `red_flags` from `rationale`. The 356 block renders those in-panel itself (Option A). Native panel render of those fields needs an app.js push (manual; minified bundle).
 - Housekeeping (low priority): prune stale `.claude/worktrees/*` once page-break/watermark/CL work is closed; keep `fix+page-break-model`, `fix+watermark-page-anchor`, `fix+cover-letter-editor`, `fix+regression-sweep`.
-- The QA-spec IDs above are summarized from `AntCV_UI_UX_Spec_and_QA_Plan_v4.docx`; consult that doc for full per-ID prose, screenshots, and acceptance detail.
+- The QA-spec IDs above are summarized from `AntCV_UI_UX_Spec_and_QA_Plan_v4.docx`; consult that doc for full per-ID prose, screenshots, and acceptance detail. The retrievable ID index is `docs/qa/AntCV_QA_backlog_index_v4.md`.

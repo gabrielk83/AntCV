@@ -48,12 +48,24 @@
  *
  * `worst` is the max across all observed calls, so once a session
  * sees a level-3 call it stays at 3 until reset.
+ *
+ * Contrast note (v1.40.296)
+ * ─────────────────────────
+ * After the FAB was relocated into the dark (#283556) top bar by
+ * antcv-topbar-tools-347, the level-0 "Local only" appearance — a 6%
+ * teal tint on a teal border — was effectively invisible against the
+ * navy background. The glyph and dot were the only visible parts and
+ * they read as faint. Each level now carries an explicit `fg`
+ * (foreground/glyph colour) plus a higher-opacity, SOLID tint chosen
+ * to sit legibly on the navy top bar. Level 0 in particular uses a
+ * filled teal chip with a white shield glyph and a white dot ring so
+ * "Local only" is clearly visible at a glance.
  */
 
 (function () {
   'use strict';
 
-  const SCRIPT_VERSION = '1.40.295';
+  const SCRIPT_VERSION = '1.40.296';
   const STORAGE_KEY = 'antcv:privacy:led';
   const FAB_MARKER = 'data-antcv-privacy-led-fab';
   const STYLE_ID = 'antcv-privacy-led-styles';
@@ -86,7 +98,17 @@
   }
 
   // ─── Level palette ────────────────────────────────────────────────
-
+  //
+  // v1.40.296 — each level now carries:
+  //   border : ring / accent colour
+  //   tint   : SOLID fill behind the glyph (chosen to read on the dark
+  //            #283556 top bar — no more 6% wash that vanished)
+  //   fg     : glyph + dot colour, picked for contrast against `tint`
+  //   dotRing: colour of the 1.5px ring around the status dot
+  //
+  // Level 0 ("Local only") is the common case and was the one that
+  // disappeared into the navy bar, so it gets the strongest treatment:
+  // a filled teal chip with a white shield and white dot ring.
   function levelInfo(level) {
     const n = Number(level) || 0;
     if (n <= 0) return {
@@ -94,28 +116,36 @@
       label: 'Local only',
       detail: 'No LLM calls observed this session.',
       border: '#01B7BB',
-      tint: 'rgba(1,183,187,0.06)',
+      tint: '#01B7BB',          // solid teal chip — visible on navy
+      fg: '#ffffff',            // white shield glyph
+      dotRing: '#ffffff',
     };
     if (n === 1) return {
       glyph: '🛡',
       label: 'Private',
       detail: 'LLM calls went through your own proxy.',
       border: '#10b981',
-      tint: 'rgba(16,185,129,0.10)',
+      tint: '#10b981',          // solid emerald chip
+      fg: '#ffffff',
+      dotRing: '#ffffff',
     };
     if (n === 2) return {
       glyph: '⚠',
       label: 'Demo proxy',
       detail: 'LLM calls went through a shared / demo proxy.',
       border: '#f59e0b',
-      tint: 'rgba(245,158,11,0.10)',
+      tint: '#f59e0b',          // solid amber chip
+      fg: '#1a2433',            // dark glyph reads better on amber
+      dotRing: '#ffffff',
     };
     return {
       glyph: '⚠',
       label: 'Direct third-party',
       detail: 'LLM calls went directly to a third-party provider.',
       border: '#dc2626',
-      tint: 'rgba(220,38,38,0.10)',
+      tint: '#dc2626',          // solid red chip
+      fg: '#ffffff',
+      dotRing: '#ffffff',
     };
   }
 
@@ -125,12 +155,16 @@
     if (document.getElementById(STYLE_ID)) return;
     const css = `
       /* The FAB inherits .antcv-fab sizing from antcv-overlay.js; we
-         only override colour and add a small level badge. */
+         only override colour and add a small level badge. v1.40.296:
+         a subtle outline keeps the filled chip legible even when it
+         lands on a light surface (e.g. before relocation into the
+         navy top bar). */
       .antcv-fab[${FAB_MARKER}="1"] {
         position: relative;
         font-size: 18px;
         line-height: 1;
-        transition: border-color 0.15s ease, background-color 0.15s ease;
+        font-weight: 700;
+        transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
       }
       .antcv-fab[${FAB_MARKER}="1"] .antcv-privacy-dot {
         position: absolute;
@@ -269,10 +303,18 @@
       newDot.className = 'antcv-privacy-dot';
       target.appendChild(newDot);
     }
-    target.style.borderColor = info.border;
-    target.style.background = info.tint;
+    // v1.40.296: drive border, SOLID fill, and glyph colour from the
+    // palette so the chip is legible on the dark top bar. setProperty
+    // with priority keeps these ahead of any inline styling that the
+    // top-bar relocation sidecar applies.
+    target.style.setProperty('border-color', info.border, 'important');
+    target.style.setProperty('background', info.tint, 'important');
+    target.style.setProperty('color', info.fg || '#ffffff', 'important');
     const dotEl = target.querySelector('.antcv-privacy-dot');
-    if (dotEl) dotEl.style.background = info.border;
+    if (dotEl) {
+      dotEl.style.background = info.fg || info.border;
+      dotEl.style.borderColor = info.dotRing || '#ffffff';
+    }
     target.title = info.label + ' — ' + info.detail
       + (state.calls ? ' (' + state.calls + ' calls)' : '');
   }
@@ -686,7 +728,8 @@
     window.addEventListener('storage', onStorageChange);
     // Periodic refresh in case __antcvUpdatePrivacyLED updates state
     // without firing a storage event (same-tab writes don't trigger
-    // storage events).
+    // storage events). Also re-asserts the contrast styling after the
+    // top-bar relocation sidecar re-styles the FAB inline.
     setInterval(() => {
       if (document.querySelector('.antcv-fab[' + FAB_MARKER + '="1"]')) {
         refreshFabAppearance();

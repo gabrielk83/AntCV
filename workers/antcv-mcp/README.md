@@ -14,6 +14,37 @@ The MCP server (powered by [Cloudflare Workers](https://developers.cloudflare.co
 > [!WARNING]
 > This is a demo template designed to help you get started quickly. While we have implemented several security controls, **you must implement all preventive and defense-in-depth security measures before deploying to production**. Please review our comprehensive security guide: [Securing MCP Servers](https://github.com/cloudflare/agents/blob/main/docs/securing-mcp-servers.md)
 
+## AntCV tool surface
+
+This deployment is customised for the AntCV repo. Beyond the OAuth scaffolding, it exposes GitHub and Cloudflare-deployment tools. Access to the deployment tools is gated by `ALLOWED_USERNAMES`.
+
+GitHub tools:
+
+| Tool | Purpose |
+|------|---------|
+| `github_read_file` | Read one file; returns content + SHA (SHA needed for updates). |
+| `github_read_docx` | Read a `.docx` and return extracted plain text (handles >1 MB via the Git Blob API). |
+| `github_list_directory` | List a directory's contents. |
+| `github_write_file` | Create or update a single file on a branch (pass SHA to update). |
+| `github_create_branch` | Branch off an existing ref (defaults to the repo's default branch). |
+| `github_open_pull_request` | Open a PR. Defaults base to the repo's default branch. Idempotent: on GitHub's 422 "already exists" it returns the existing open PR instead of erroring. Optional `draft` flag and `reviewers` (reviewer request is best-effort and never fails the PR). |
+| `github_search_code` | Code search across a repo (GitHub code-search syntax). |
+| `github_commit_multiple_files` | Atomic multi-file commit via the Git Data API (blob -> tree -> commit -> ref), with optional deletes. |
+
+Cloudflare deployment tools:
+
+| Tool | Purpose |
+|------|---------|
+| `deploy_worker` | Deploy a Worker script (full JS source). |
+| `deploy_pages` | Direct-upload deploy to a Pages project. |
+| `list_workers` / `list_pages_projects` | Enumerate Workers / Pages projects. |
+| `get_worker_code` | Fetch a Worker's deployed source. |
+| `set_worker_secret` | Set/update an encrypted Worker secret. |
+| `cloudflare_pages_deploy_status` | Recent Pages deployment status. |
+
+> [!NOTE]
+> The tool list only refreshes when a **new** MCP conversation starts **after** the Worker has been rebuilt and redeployed (`npx wrangler deploy` from `workers/antcv-mcp/`). Adding a tool to `src/index.ts` is not enough on its own. The server's `version` (in `new McpServer({ ... })`) is bumped on each tool-surface change so you can confirm a redeploy took.
+
 ## Getting Started
 
 Clone the repo directly & install dependencies: `npm install`.

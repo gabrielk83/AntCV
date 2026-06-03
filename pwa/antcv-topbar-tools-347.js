@@ -47,7 +47,7 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.40.347';
+  var SCRIPT_VERSION = '1.50.58-privacy-vis';
   if (window.__antcvTopbarTools347 === SCRIPT_VERSION) return;
   window.__antcvTopbarTools347 = SCRIPT_VERSION;
 
@@ -78,6 +78,14 @@
     el.style.setProperty('font-size', '13px', 'important');
     el.style.setProperty('display', 'inline-flex', 'important');
     el.style.setProperty('align-items', 'center', 'important');
+    // v1.50.58 — the relocated privacy pill was being blanked under 900px
+    // (display:none + visibility:hidden, set by the islands PreviewToolbar's
+    // viewport FAB-hide). Once it lives in the top bar it must stay visible at
+    // every width, so re-assert visibility here; relocate() calls this every
+    // sweep, so it wins over the periodic hide.
+    el.style.setProperty('visibility', 'visible', 'important');
+    el.style.setProperty('opacity', '1', 'important');
+    el.removeAttribute('aria-hidden');
   }
 
   // Compact top-bar sizing for the Document-export button (icon + short text).
@@ -117,6 +125,11 @@
     } else if (privacy && privacy.parentNode !== tools) {
       // app.js / overlay re-homed it back to the corner; pull it back.
       try { stylePrivacyForTopbar(privacy); tools.insertBefore(privacy, tools.firstChild); } catch (_) {}
+    } else if (privacy) {
+      // v1.50.58 — already in the tools row: re-assert styling+visibility every
+      // sweep so the islands PreviewToolbar's periodic viewport-hide cannot
+      // blank the pill under 900px.
+      try { stylePrivacyForTopbar(privacy); } catch (_) {}
     }
 
     // 2) Document-export -> top tools

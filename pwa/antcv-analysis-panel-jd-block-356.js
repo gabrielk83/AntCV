@@ -76,7 +76,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.40.358';
+  var VERSION = '1.50.58-merge-repair';
   if (window.__antcvAnalysisPanelJdBlock356 === VERSION) return;
   window.__antcvAnalysisPanelJdBlock356 = VERSION;
 
@@ -254,22 +254,19 @@
     return (heading.parentNode && heading.parentNode.nodeType === 1) ? heading.parentNode : heading;
   }
 
-  // Strategy 2: EMPTY-state panel. Find the smallest node carrying an
-  // empty-state marker, then climb to the nearest PLAUSIBLE panel container.
-  // Tightened: stop climbing when the candidate (a) reaches the app shell,
-  // (b) starts to contain shell controls (topbar / advanced button), or
-  // (c) grows much wider than the marker's own column.
-  function findByEmptyState() {
-  // The Analysis content (both the "📊 Application Analysis" heading AND the
-  // empty-state "Generate a CV first…" message) is rendered by app.js INSIDE
+  // v1.50.58 — single, correct panel finder (repairs the merge-corrupted
+  // region that left a stray `marker` reference + duplicate definition, which
+  // broke the whole sidecar with "Unexpected token ')'").
+  //
+  // The Analysis content (both the "Application Analysis" heading AND the
+  // empty-state "Generate a CV first..." message) is rendered by app.js inside
   // the editor side-panel container:
   //   desktop -> .antcv-editor-side-panel   (data-antcv-app-panel="desktop-side-panel")
   //   mobile  -> .antcv-mobile-bottom-panel (data-antcv-app-panel="mobile-bottom-panel")
-  // The SAME container is reused for the Section panel, so we must NOT inject
-  // unless the panel currently holds analysis content. We anchor to that exact
-  // container (never climb the tree) so the block stays in the lower part of
-  // the side/bottom panel, is hidden when the panel closes (preview toggle),
-  // and never bleeds into the sidebar or the Section view.
+  // The SAME container is reused for the Section panel, so we inject ONLY when
+  // the panel currently holds analysis content. We anchor to that exact
+  // container (no DOM climb) so the block stays in the side/bottom panel and
+  // never bleeds into the sidebar or the Section view.
   var PANEL_SEL = '.antcv-editor-side-panel, .antcv-mobile-bottom-panel, [data-antcv-app-panel]';
 
   function panelShowsAnalysis(panel) {
@@ -292,31 +289,9 @@
       if (paper && (paper.contains(p) || p.contains(paper))) continue;
       if (panelShowsAnalysis(p)) return p;
     }
-    if (!marker) return null;
-
-    var markerW = 0;
-    try { markerW = marker.getBoundingClientRect().width; } catch (_) {}
-    var maxW = Math.max(markerW * 2.2, 520); // a panel column, not the shell
-
-    var best = marker.parentElement || marker;
-    var cur = marker.parentElement;
-    var hops = 0;
-    while (cur && hops < 8) {
-      if (cur === document.body || cur.id === 'root' || cur.tagName === 'HTML') break;
-      if (containsShellMarker(cur)) break; // climbed into the shell — stop
-      var w = 0;
-      try { w = cur.getBoundingClientRect().width; } catch (_) {}
-      if (w && w > maxW) break;            // too wide to be the panel column
-      best = cur;
-      cur = cur.parentElement;
-      hops++;
-    }
-    return best;
-  }
-
-  function findAnalysisPanel() {
-    return findByHeading() || findByEmptyState();
-    return null;
+    // Fallback: the heading-leaf strategy (covers layouts that do not expose
+    // the data-antcv-app-panel container).
+    return findByHeading();
   }
 
   async function postRecheckFit(proxyUrl, body) {

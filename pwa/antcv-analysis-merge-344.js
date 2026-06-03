@@ -64,7 +64,7 @@
   (function loadJdBlock356() {
     try {
       var SRC = 'antcv-analysis-panel-jd-block-356.js';
-      var VER = '1.40.356-c';
+      var VER = '1.40.356-d';
       if (window.__antcvAnalysisPanelJdBlock356) return; // already running
       var existing = document.querySelector('script[data-antcv-jd-block-356="1"]');
       if (existing) return;

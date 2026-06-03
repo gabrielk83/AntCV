@@ -3,15 +3,13 @@
  *
  * Four things, all DOM/storage-layer (no bundle internals required):
  *
- *   1. Pre-populate "zh" in localStorage.enabledLanguages so Chinese
- *      shows up in the language bar. The bundle's language selector
- *      filters by this list. If the user has never enabled Chinese
- *      through onboarding (which predated zh support), it's missing
- *      from the list and zh is hidden from the dropdown.
- *
- *      Only touches the list when it exists and is missing "zh".
- *      Doesn't create a new list (null = all-languages-visible already).
- *      Idempotent — running twice does nothing the second time.
+ *   1. Enable "zh" in localStorage.enabledLanguages — but ONLY when the
+ *      user actually chose Chinese (onboarding wizard or Settings toggle,
+ *      persisted into personalInfo.stylePrefs.visibleLanguages). v1.50.58
+ *      stopped the old unconditional force-add, which overrode the clean
+ *      ['en','da'] default on every boot and made zh look permanently
+ *      selected. zh still appears in the LanguageCard selector regardless,
+ *      so the user can opt in and make it default themselves.
  *
  *   2. Override the "Translating to English..." progress bar text
  *      when the actual target is Spanish or Chinese. The bundle's
@@ -100,8 +98,39 @@
   }
 
   // ────────────────────────────────────────────────────────────────────
-  // Fix 1 — Enable Chinese in the language bar
+  // Fix 1 — Enable Chinese in the language bar (gated on user choice)
   // ────────────────────────────────────────────────────────────────────
+
+  // v1.50.58 — zh is NO LONGER force-enabled on every load. The previous
+  // behaviour unconditionally pushed "zh" into enabledLanguages whenever the
+  // list existed and lacked it, which (a) overrode the clean ['en','da']
+  // default on every boot and (b) made Chinese appear permanently selected
+  // rather than an opt-in choice. Per product decision, zh is enabled ONLY
+  // when the user actually chose it — in the onboarding wizard or by toggling
+  // it in Settings — both of which persist into
+  // personalInfo.stylePrefs.visibleLanguages (the wizard's canonical sink).
+  // Otherwise we leave enabledLanguages untouched; zh still appears in the
+  // LanguageCard selector (which renders all languages regardless of enabled
+  // state), so the user can turn it on themselves and make it default.
+  function userChoseChinese() {
+    // Signal 1: saved style prefs (wizard + Settings write here).
+    try {
+      var piRaw = localStorage.getItem('personalInfo');
+      if (piRaw) {
+        var pi = JSON.parse(piRaw);
+        var sp = (pi && pi.stylePrefs) || {};
+        var lists = [sp.visibleLanguages, sp.enabledLanguages, sp.languageBar];
+        for (var i = 0; i < lists.length; i++) {
+          if (Array.isArray(lists[i]) && lists[i].indexOf('zh') !== -1) return true;
+        }
+      }
+    } catch (_) {}
+    // Signal 2: explicit wizard flag, if the wizard recorded one.
+    try {
+      if (localStorage.getItem('antcv:wizard:zh-selected') === '1') return true;
+    } catch (_) {}
+    return false;
+  }
 
   function enableChineseLanguage() {
     try {
@@ -119,10 +148,15 @@
         // Already enabled.
         return;
       }
+      // Only enable zh if the user actually chose it. Otherwise leave the
+      // list alone — zh remains available in the selector for opt-in.
+      if (!userChoseChinese()) {
+        return;
+      }
       arr.push('zh');
       localStorage.setItem('enabledLanguages', JSON.stringify(arr));
       try {
-        console.info('[language-ui-fixes-292] added "zh" to enabledLanguages. New list:', arr.slice());
+        console.info('[language-ui-fixes-292] zh enabled from saved user choice. New list:', arr.slice());
       } catch (_) {}
     } catch (e) {
       try { console.warn('[language-ui-fixes-292] enable-Chinese failed:', e && e.message); } catch (_) {}
@@ -351,6 +385,7 @@
     _LANG_NAMES: LANG_NAMES,
     _EU_CITIZEN: EU_CITIZEN,
     _KIND_REGARDS: KIND_REGARDS,
+    _userChoseChinese: userChoseChinese,
     _enableChinese: enableChineseLanguage,
     _processSubtree: function () { try { processSubtree(document.body); } catch (_) {} },
   };

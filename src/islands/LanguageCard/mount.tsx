@@ -33,9 +33,22 @@ function ensureMountContainer(settingsRoot: HTMLElement): HTMLElement {
   container.id = REACT_CARD_ID;
   container.setAttribute('data-antcv-react-mount', 'language-card');
 
-  // Same anchoring logic as antcv-stability-core-334.js insertTarget(): try
-  // to insert just before the Settings "Done" button so the card hangs at
-  // the bottom of the Personal tab content.
+  // v1.50.58 — anchor the Languages card immediately AFTER the Writing
+  // Style picker section (which ends with Banned words / Banned phrases),
+  // so "Languages in the top bar" reads as a sibling sub-header right
+  // below Banned Words rather than floating at the very bottom of the tab.
+  //
+  // Primary anchor: insert right after the writing-style-picker island.
+  // Fallback (older bundle / island not yet mounted): the previous
+  // behaviour — just before the Settings "Done" button.
+  const writingStyle = settingsRoot.querySelector<HTMLElement>(
+    '[data-antcv-react-island="writing-style-picker"]',
+  );
+  if (writingStyle && writingStyle.parentElement) {
+    writingStyle.parentElement.insertBefore(container, writingStyle.nextSibling);
+    return container;
+  }
+
   const done = findDoneButton(settingsRoot);
   if (done && done.parentElement) {
     done.parentElement.insertBefore(container, done);

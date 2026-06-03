@@ -59,6 +59,8 @@ Thumbs.db
 # Test output
 coverage/
 .nyc_output/
+# DOCX worker smoke tests write a one-shot out.docx for manual inspection.
+workers/docx-worker/out.docx
 
 # Local-only secrets / candidate data
 secrets/

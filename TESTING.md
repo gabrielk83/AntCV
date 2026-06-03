@@ -8,7 +8,8 @@ Canonical index for everything testable in the repo. Test files live next to the
 
 | Level | What | Where | Tooling |
 |---|---|---|---|
-| Unit | Token resolution, package switch, banned-word detector, placeholder scrubber, wizard state machine, semantic-constraint trigger matching | (Pass 1 + Pass 3 will populate; not present yet) | Vitest |
+| Unit | Banned-word detector, semantic-constraint matching, writing-style request parse, ATS glyph conversion, registry-drift guard | `workers/proxy/test/*.test.mjs` (40 tests, present) | node:test |
+| Unit | Token resolution, package switch, placeholder scrubber, wizard state machine | (Pass 1 + Pass 3 will populate; not present yet) | Vitest |
 | Integration | Proxy returns valid section after style swap; DOCX worker generates valid OOXML per package | (Pass 2 + Pass 3 will populate) | Vitest + xmllint |
 | Visual regression | Screenshot diff of each section × package, light + dark | (Pass 2 + Pass 5 will populate) | Playwright + pixelmatch |
 | DOCX regression | Generated DOCX validates against strict OOXML | `workers/docx-worker/test/*.js` (15 smoke files, present) | Existing OOXML validator (manual) |
@@ -59,15 +60,38 @@ Two test files. Run with `node tests/<name>.mjs` from inside `workers/access-rel
 
 Both expect `node ≥ 22` (uses native `globalThis.crypto.subtle`) and the sql-wasm files at the path noted at the top of each file — adjust before first run.
 
-### CI lint — `.github/workflows/deploy.yml`
+### Proxy worker — `workers/proxy/test/`
 
-The `lint` job runs on every push and every workflow_dispatch. It checks:
+Two `node:test` suites covering the §4.7 writing-engine pipeline. Pure logic — no
+Cloudflare bindings, no network: every LLM call is dependency-injected. Run with
+`npm test` (which is `node --test`) from inside `workers/proxy/`, or `node --test`
+directly.
+
+| File | Test count | Covers |
+|---|---|---|
+| `writing-style-engine.test.mjs` | 32 | Request parse + normalisation (legacy-style aliases, language fallback, targetPages clamp per style, extra-banned buckets, ATS flag, per-section line-limit clamp); system-prompt preamble (style row, integrity rules, ATS announce, **language-partitioned banned lists**, user-extra union, tone-chip fallback); SCE banned-word + banned-phrase detection (word-boundary guard, hyphen-tolerant phrase match, **language partition — English bans never applied to Danish text**); ATS glyph conversion; the SCE retry loop (clean first pass, dirty-then-clean re-request with fix instruction, flagged-after-budget, ATS applied to final text); provider-agnostic extract/replace for both `openai_compat` and `anthropic_messages`; `executeSceWithRetry` re-call + SCE response headers. |
+| `registry-sync.test.mjs` | 8 | Drift guard between the worker's inline style/banned-list subset and the canonical `writingSystems/registry.json`: style-id set, default style, supported-language partition, shared banned words + phrases (exact), per-style active flag / allowed length / tone chips / glyph density, every registry legacy alias resolves through the parser, active-at-cut roster matches the worker's active flags. |
+
+These seed the §8.4 writing-style-violation matrix and the §4.5/§4.7 banned-list
+and semantic-constraint contracts. They run in CI on every pull request (see
+below). When `writingSystems/registry.json` and the worker's inline copy drift,
+`registry-sync.test.mjs` fails before merge.
+
+### CI lint + unit tests — `.github/workflows/deploy.yml`
+
+The `lint` job runs on every push, every pull request, and every
+workflow_dispatch. It checks:
 
 1. `pwa/index.html` and `pwa/sw.js` exist.
 2. Every worker has a `wrangler.toml` at `workers/<name>/wrangler.toml`.
 3. Every `wrangler.toml` contains both `enabled = true` and `invocation_logs = true` (the observability gate from `CONTRIBUTING.md`).
 
-This is the only continuously-running check. It's a sanity guard, not a functional test. PRs cannot land if `lint` is red.
+It's a sanity guard, not a functional test. PRs cannot land if `lint` is red.
+
+Alongside it, the `unit-tests` job runs `node --test` in `workers/proxy/` on every
+push and pull request (Node 22, no install step — the suites have no dependencies).
+This is the first functional check wired into CI. A registry-drift or
+banned-list-contract regression fails the PR.
 
 ---
 
@@ -80,7 +104,7 @@ Pass 2 + Pass 3 add the matrices below. Currently empty pending implementation.
 | § 8.2 | Visual regression: 7 packages × 1 CV × 3 breakpoints = 21 baselines | `pwa/test/visual/` |
 | § 8.2 | DOCX regression: 7 packages × 5 active styles × 2 CVs × EN + DA = 140 files | `workers/docx-worker/test/regression/` |
 | § 8.3 | Showcase isolation: 20 cold-start runs, zero leakage of kernel names (Innoviz, Sirin, Meprolight, TAU, Therma, DTU, Kanzen, Maersk, LEGO, Danfoss) | `pwa/test/e2e/showcase-isolation.spec.ts` |
-| § 8.4 | Writing-style violations: 50 generations per (style × section), ≤5 violations / 100 per category (banned word, banned phrase, semantic constraint, metric integrity, role-boundary integrity) | `workers/proxy/test/violations.js` |
+| § 8.4 | Writing-style violations: 50 generations per (style × section), ≤5 violations / 100 per category (banned word, banned phrase, semantic constraint, metric integrity, role-boundary integrity). **Detector + filter contract now unit-covered** by `workers/proxy/test/writing-style-engine.test.mjs`; the full live-generation matrix is still pending. | `workers/proxy/test/violations.js` |
 | § 8.5 | Custom mode: 5 scenarios on the package picker (quick alt, off-palette hex, restricted font, incompatible image setting, refresh without save) | `pwa/test/e2e/custom-mode.spec.ts` |
 | § 8.6 | ATS mode: each package + each active style, parser round-trip via Workday CV import + LinkedIn Easy Apply | `workers/docx-worker/test/ats/` |
 | § 8.7 | Modal stacking: 6 modals × mobile + desktop | `pwa/test/e2e/modal-stacking.spec.ts` |

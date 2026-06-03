@@ -2,14 +2,14 @@
  * ============================================================================
  *
  * Consolidates floating corner FABs into the top bar's tools container, and
- * fixes a stuck-visible JD FAB.
+ * retires the redundant JD-analysis FAB.
  *
  * User spec
  * ---------
  *   1. Move the Privacy LED button into the top bar.
  *   2. Move the "Document export" button into the top bar.
- *   3. The redundant JD-analysis FAB is still visible even though the
- *      analysis-merge sidecar flagged it hidden — re-assert the hide.
+ *   3. The redundant JD-analysis FAB must be removed entirely (not just
+ *      hidden) — detach it from the DOM every sweep.
  *
  * Anchors (verified against live app.js + DOM)
  * --------------------------------------------
@@ -19,13 +19,14 @@
  *   Document-export FAB     : #antcv-pdf-preview-fab
  *   JD FAB (retire)         : button[data-antcv-recheck-fab="1"]
  *
- * Why the JD FAB was still showing
- * --------------------------------
+ * Why the JD FAB needed full removal
+ * ----------------------------------
  * antcv-analysis-merge-344 set data-antcv-recheck-fab-hidden="1" + aria-hidden
- * + tabindex once, then early-returned on subsequent sweeps. But the overlay
- * re-creates / re-styles the FAB (its inline style was reset to ""), so the
- * one-shot display:none was wiped and never re-applied. Here we re-assert
- * display:none every sweep, unconditionally, so it stays hidden.
+ * + tabindex once, then early-returned on subsequent sweeps. The overlay
+ * re-creates / re-styles the FAB (its inline style was reset to ""), so any
+ * one-shot display:none was wiped and never re-applied — the button kept
+ * flickering back into view. Hiding is not enough; we now REMOVE the node
+ * from the DOM every sweep so it cannot re-surface.
  *
  * Approach
  * --------
@@ -131,14 +132,24 @@
     }
   }
 
-  // Re-assert the JD FAB hide every sweep (the one-shot hide in -344 gets
-  // wiped when the overlay re-styles the FAB).
-  function hideJdFab() {
+  // Retire the JD-analysis FAB completely. display:none was not enough —
+  // the overlay re-styles the FAB and wiped the one-shot hide, so it kept
+  // reappearing. Remove the node from the DOM every sweep so it cannot
+  // re-surface. (If the overlay re-creates it on a later render, the next
+  // sweep removes the fresh copy.)
+  function removeJdFab() {
     var jd = document.querySelector(JD_SEL);
     if (!jd) return;
-    jd.style.setProperty('display', 'none', 'important');
-    jd.setAttribute('aria-hidden', 'true');
-    jd.setAttribute('tabindex', '-1');
+    try {
+      if (jd.parentNode) jd.parentNode.removeChild(jd);
+    } catch (_) {
+      // Fallback: if removal is blocked for any reason, hard-hide it.
+      try {
+        jd.style.setProperty('display', 'none', 'important');
+        jd.setAttribute('aria-hidden', 'true');
+        jd.setAttribute('tabindex', '-1');
+      } catch (__) {}
+    }
   }
 
   var pending = false;
@@ -148,7 +159,7 @@
     requestAnimationFrame(function () {
       pending = false;
       try { relocate(); } catch (_) {}
-      try { hideJdFab(); } catch (_) {}
+      try { removeJdFab(); } catch (_) {}
     });
   }
 

@@ -148,6 +148,29 @@ export function readTableWidthPctMap() {
 // localStorage and return one of the seven valid values. The PWA's
 // settings panel writes to `localStorage.photoPosition`; some app.js
 // versions JSON-wrap the value, some don't. We tolerate both.
+// v1.50.56 — read the user/package photo SHAPE so the DOCX/PDF worker can
+// match the live preview. Priority: explicit per-user override in
+// personalInfo.photoShape (written by the preview shape-row sidecar), else
+// the active package default, else "circle". Valid OOXML-mappable values:
+// circle | rounded | rounded-square | square | hexagon | pentagon.
+export function readPhotoShape() {
+  const VALID = new Set(["circle","rounded","rounded-square","square","hexagon","pentagon"]);
+  const PKG_SHAPE = {
+    "copenhagen-modern":"circle","navy-executive":"rounded","warm-terracotta":"rounded",
+    "nordic-frost":"circle","pampas-contemporary":"rounded-square","tokyo-precision":"square",
+    "delhi-technical":"hexagon",
+  };
+  try {
+    if (typeof localStorage === "undefined") return "circle";
+    const raw = localStorage.getItem("personalInfo");
+    const pi = raw ? JSON.parse(raw) : {};
+    let v = pi && typeof pi.photoShape === "string" ? pi.photoShape.trim().toLowerCase() : "";
+    if (VALID.has(v)) return v;
+    const pkg = (typeof readPackageId === "function") ? readPackageId() : "copenhagen-modern";
+    return PKG_SHAPE[pkg] || "circle";
+  } catch (_) { return "circle"; }
+}
+
 export function readPhotoPosition() {
   const VALID = new Set([
     'sidebar-top', 'sidebar-bottom',
@@ -440,6 +463,13 @@ export function buildPayload({
       // tolerant unwrapping (some app.js versions JSON-wrap the value).
       ...(typeof readPhotoPosition === 'function'
         ? { photoPosition: readPhotoPosition() }
+        : {}),
+      // v1.50.56 — photo shape for worker-side picture geometry. Worker
+      // v1.15+ maps this to a:prstGeom prst (ellipse/roundRect/rect/
+      // hexagon/pentagon). Older workers ignore the field and keep the
+      // legacy circle behaviour.
+      ...(typeof readPhotoShape === 'function'
+        ? { photoShape: readPhotoShape() }
         : {}),
     },
     meta: {

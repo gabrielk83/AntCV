@@ -191,7 +191,7 @@ function ooxmlToText(xml: string): string {
 export class MyMCP extends McpAgent<Env, Record<string, never>, Props> {
   server = new McpServer({
     name: "AntCV MCP — GitHub + Deploy",
-    version: "2.1.0",
+    version: "2.2.0",
   });
 
   async init() {
@@ -408,6 +408,129 @@ export class MyMCP extends McpAgent<Env, Record<string, never>, Props> {
             },
           ],
         };
+      }
+    );
+
+    // ── github_open_pull_request ───────────────────────────────────────────
+    this.server.tool(
+      "github_open_pull_request",
+      "Open a pull request in a GitHub repository. Returns the PR number and URL. " +
+        "If a PR for the same head→base already exists, returns that existing PR " +
+        "instead of erroring. Optionally enable auto-merge or request reviewers.",
+      {
+        owner: z.string(),
+        repo: z.string(),
+        head: z
+          .string()
+          .describe(
+            "Name of the branch with your changes, e.g. 'feature/topbar-fab-tidy'. " +
+              "For a cross-fork PR use 'forkOwner:branch'."
+          ),
+        base: z
+          .string()
+          .optional()
+          .describe("Branch you want to merge into. Defaults to the repo's default branch."),
+        title: z.string().describe("PR title."),
+        body: z
+          .string()
+          .optional()
+          .describe("PR description (Markdown). Optional."),
+        draft: z
+          .boolean()
+          .optional()
+          .describe("Open as a draft PR. Default false."),
+        reviewers: z
+          .array(z.string())
+          .optional()
+          .describe("GitHub usernames to request review from. Optional."),
+      },
+      async ({ owner, repo, head, base, title, body, draft, reviewers }) => {
+        const octokit = new Octokit({ auth: this.props.accessToken });
+
+        const baseBranch =
+          base ??
+          (await octokit.repos.get({ owner, repo })).data.default_branch;
+
+        // Try to create; if a PR for this head→base already exists, GitHub
+        // returns 422 — fall back to looking it up and returning that.
+        try {
+          const resp = await octokit.pulls.create({
+            owner,
+            repo,
+            head,
+            base: baseBranch,
+            title,
+            body,
+            draft: draft ?? false,
+          });
+
+          // Request reviewers if asked (best-effort; don't fail the PR on this).
+          if (reviewers?.length) {
+            try {
+              await octokit.pulls.requestReviewers({
+                owner,
+                repo,
+                pull_number: resp.data.number,
+                reviewers,
+              });
+            } catch (_) {
+              /* ignore reviewer errors — the PR itself is created */
+            }
+          }
+
+          return {
+            content: [
+              {
+                type: "text",
+                text:
+                  `Opened PR #${resp.data.number}: ${resp.data.title}\n` +
+                  `  ${head} → ${baseBranch}\n` +
+                  `  ${resp.data.html_url}`,
+              },
+            ],
+          };
+        } catch (e: any) {
+          // 422 with "A pull request already exists" → return the existing one.
+          const already =
+            e?.status === 422 &&
+            /already exists/i.test(JSON.stringify(e?.response?.data ?? e?.message ?? ""));
+          if (already) {
+            // head for the list filter must be 'owner:branch'. If the caller
+            // passed a bare branch, qualify it with the repo owner.
+            const headFilter = head.includes(":") ? head : `${owner}:${head}`;
+            const existing = await octokit.pulls.list({
+              owner,
+              repo,
+              head: headFilter,
+              base: baseBranch,
+              state: "open",
+            });
+            const pr = existing.data[0];
+            if (pr) {
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text:
+                      `PR already open — #${pr.number}: ${pr.title}\n` +
+                      `  ${head} → ${baseBranch}\n` +
+                      `  ${pr.html_url}`,
+                  },
+                ],
+              };
+            }
+          }
+          const msg =
+            e?.response?.data?.errors
+              ?.map((x: any) => x.message)
+              .join("; ") ||
+            e?.response?.data?.message ||
+            e?.message ||
+            "Unknown error";
+          return {
+            content: [{ type: "text", text: `Failed to open PR: ${msg}` }],
+          };
+        }
       }
     );
 

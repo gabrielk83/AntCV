@@ -44,7 +44,7 @@
   'use strict';
 
   if (window.__antcvPdfPreviewGateInstalled) return;
-  window.__antcvPdfPreviewGateInstalled = '1.50.50';
+  window.__antcvPdfPreviewGateInstalled = '1.50.57';
 
   const FAB_ID = 'antcv-pdf-preview-fab';
   const MODAL_ID = 'antcv-pdf-preview-modal';
@@ -463,8 +463,8 @@ ${inlineStyles}
     docx.addEventListener('click', () => {
       const btn = document.querySelector('button[title^="Export as .docx"]');
       if (!btn) {
-        alert('The DOCX export button isn\'t available right now.\n\n' +
-          'Switch to the document view and try the DOCX export there.');
+        alert('The DOCX export isn\'t ready yet.\n\n' +
+          'Open your CV or cover-letter preview first (so the document is on screen), then use the Export button.');
         return;
       }
       closeModal();
@@ -653,7 +653,7 @@ ${inlineStyles}
 
   // Public API for diagnostics / power-users.
   window.AntcvPdfPreviewGate = {
-    version: '1.50.50',
+    version: '1.50.57',
     open: openModal,
     close: closeModal,
   };

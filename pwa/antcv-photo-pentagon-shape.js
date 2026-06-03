@@ -32,7 +32,7 @@
   'use strict';
 
   if (window.__antcvPentagonShapeInstalled) return;
-  window.__antcvPentagonShapeInstalled = '1.50.56';
+  window.__antcvPentagonShapeInstalled = '1.50.57';
 
   var SHAPE_KEY_ATTR = 'data-shape';
   var PENTAGON = 'pentagon';
@@ -171,8 +171,42 @@
     return out;
   }
 
+  // v1.50.57 — contour colour + width. The app's default photo contour is a
+  // 1.5pt line in the package primary colour. A CSS border traces the
+  // rectangular box, so once we clip the img to a pentagon the border only
+  // survives at the rectangle's corners (the reported bug). Instead we drop
+  // the CSS border and synthesize the outline with stacked drop-shadow
+  // filters: a drop-shadow follows the CLIPPED alpha shape, so eight shadows
+  // offset around a small radius trace the full pentagon edge cleanly.
+  var CONTOUR_COLOR = '#01B7BB';
+  function readContourColor() {
+    // Prefer the package primary colour the app exposes on <body data-package>.
+    try {
+      var imgs = previewPhotos();
+      for (var i = 0; i < imgs.length; i++) {
+        var bc = getComputedStyle(imgs[i]).borderTopColor;
+        if (bc && bc !== 'rgba(0, 0, 0, 0)' && bc !== 'transparent') return bc;
+      }
+    } catch (_) {}
+    return CONTOUR_COLOR;
+  }
+  function pentagonOutlineFilter(color, w) {
+    // Eight directions around radius w trace the clipped pentagon edge.
+    var d = [
+      [w, 0], [-w, 0], [0, w], [0, -w],
+      [w, w], [w, -w], [-w, w], [-w, -w]
+    ];
+    var parts = [];
+    for (var i = 0; i < d.length; i++) {
+      parts.push('drop-shadow(' + d[i][0] + 'px ' + d[i][1] + 'px 0 ' + color + ')');
+    }
+    return parts.join(' ');
+  }
+
   function applyPreviewShape() {
     if (currentPhotoShape() !== PENTAGON) { clearPreviewShape(); return; }
+    var color = readContourColor();
+    var outline = pentagonOutlineFilter(color, 1.2);
     var imgs = previewPhotos();
     for (var i = 0; i < imgs.length; i++) {
       var img = imgs[i];
@@ -181,6 +215,12 @@
       // A clip-path overrides border-radius visually; keep it square-bound
       // so the pentagon isn't itself rounded at the tips.
       img.style.setProperty('border-radius', '0', 'important');
+      // Suppress the rectangular CSS border (only its corners would survive
+      // the clip) and draw a pentagon-following outline via drop-shadow.
+      img.style.setProperty('border', '0', 'important');
+      img.style.setProperty('box-shadow', 'none', 'important');
+      img.style.setProperty('filter', outline, 'important');
+      img.style.setProperty('-webkit-filter', outline, 'important');
       img.setAttribute('data-antcv-pentagon-clip', '1');
     }
   }
@@ -192,6 +232,12 @@
       img.style.removeProperty('clip-path');
       img.style.removeProperty('-webkit-clip-path');
       img.style.removeProperty('border-radius');
+      // v1.50.57: remove our synthesized outline so the app's own border /
+      // shadow styling takes over again for circle/rounded/square.
+      img.style.removeProperty('border');
+      img.style.removeProperty('box-shadow');
+      img.style.removeProperty('filter');
+      img.style.removeProperty('-webkit-filter');
       img.removeAttribute('data-antcv-pentagon-clip');
     }
   }
@@ -227,7 +273,7 @@
 
   // Debug / test API
   window.AntcvPentagonShape = {
-    version: '1.50.56',
+    version: '1.50.57',
     POLY: PENTAGON_POLY,
     _current: currentPhotoShape,
     _apply: applyPreviewShape,

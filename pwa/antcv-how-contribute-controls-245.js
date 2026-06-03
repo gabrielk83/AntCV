@@ -5,7 +5,8 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.40.245-preview-guard';
+  const VERSION='1.50.57-flicker-fix';
+  let __applying=false; // v1.50.57: re-entrancy guard so our own DOM writes don't re-trigger the observer/flicker.
   const ALIGN_KEY='antcv.hiwc.alignment.v1';
   const PAGE_KEY='antcv:itemPages';
   const SECTIONS_KEY='sections';
@@ -195,17 +196,35 @@
   function syncPreviewBulletNodes(secEl,p){
     const vals=currentBulletValues(); if(!secEl||!vals.length)return p;
     let list=(p.bullets&&p.bullets[0]&&p.bullets[0].parentElement&&/^(UL|OL)$/i.test(p.bullets[0].parentElement.tagName))?p.bullets[0].parentElement:null;
+    // v1.50.57 idempotency: if a list already exists and its <li> text +
+    // count already match `vals`, do nothing. Writing identical content
+    // every 2s was the flicker engine — React would repaint the section
+    // (dropping our <li>s or restoring placeholders), we would re-add
+    // them, the bullet COUNT would swing 2<->0, and every section below
+    // shifted by those lines. No-op-on-match stops the fight.
+    if(list){
+      const lisNow=Array.from(list.children).filter(x=>/^(LI)$/i.test(x.tagName));
+      let same=lisNow.length===vals.length;
+      if(same){for(let i=0;i<vals.length;i++){if(clean(lisNow[i].textContent)!==clean(vals[i])){same=false;break;}}}
+      if(same) return previewParts(secEl);
+    }
     if(!list){list=document.createElement('ul'); list.setAttribute('data-antcv-hiwc-list','1'); if(p.closing&&p.closing.parentNode)p.closing.parentNode.insertBefore(list,p.closing); else secEl.appendChild(list);}
-    list.setAttribute('data-antcv-hiwc-list','1'); Object.assign(list.style,{margin:'2px 0 4px 0',paddingLeft:'1.05em',listStylePosition:'outside'}); const lis=Array.from(list.children).filter(x=>/^(LI)$/i.test(x.tagName));
+    list.setAttribute('data-antcv-hiwc-list','1'); Object.assign(list.style,{margin:'2px 0 4px 0',paddingLeft:'1.05em',listStylePosition:'outside'}); let lis=Array.from(list.children).filter(x=>/^(LI)$/i.test(x.tagName));
     while(lis.length<vals.length){const li=document.createElement('li');list.appendChild(li);lis.push(li);}
-    lis.forEach((li,i)=>{if(i<vals.length)li.textContent=vals[i];});
+    // v1.50.57: reconcile the count DOWN too. Without this, a stale list
+    // with more <li>s than `vals` kept extra bullets, feeding the count
+    // oscillation. Remove the surplus so the rendered count is stable.
+    while(lis.length>vals.length){const li=lis.pop();if(li&&li.parentNode)li.parentNode.removeChild(li);}
+    lis.forEach((li,i)=>{if(i<vals.length&&clean(li.textContent)!==clean(vals[i]))li.textContent=vals[i];});
     return previewParts(secEl);
   }
   function applyPreview(){
+    if(__applying)return; __applying=true; try{
     const s=previewSection();if(!s)return; s.querySelectorAll('[data-antcv-hiwc-page-break="1"]').forEach(n=>n.remove());
     let p=previewParts(s); p=syncPreviewBulletNodes(s,p);
     [['intro',p.intro],['closing',p.closing]].forEach(([k,el])=>{if(!el)return; const a=getAlign(k); el.style.textAlign=a; Array.from(el.querySelectorAll('span,div,p')).forEach(x=>x.style.textAlign=a); if(getPage(k)>1&&el.parentNode)el.parentNode.insertBefore(makeBreakHeader(),el);});
     (p.bullets||[]).forEach((el,idx)=>{const k='bullet_'+idx; const a=getAlign(k); el.style.textAlign=a; Array.from(el.querySelectorAll('span,div,p')).forEach(x=>x.style.textAlign=a); if(getPage(k)>1&&el.parentNode)el.parentNode.insertBefore(makeBreakHeader(),el);});
+    } finally { __applying=false; }
   }
 
   function pruneCoreDuplicateCJLR(){
@@ -218,7 +237,7 @@
 
   let pending=false;function runSoon(){if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;run();});}
   function run(){try{const r=root();if(r){cleanupClosingHelperText(r);controlsForField(findIntro(r),'intro');controlsForField(findClosing(r),'closing');renderBulletList(r,findBullets(r));}/* core CJLR cleanup handled by antcv-core-competencies-row-controls; do not prune across the whole Core section */ applyPreview();}catch(e){try{console.warn('[how-contribute-controls-245] failed:',e&&e.message);}catch(_){}}}
-  function start(){injectCss();run();[100,300,800,1600,3000].forEach(ms=>setTimeout(run,ms));try{new MutationObserver(runSoon).observe(document.body||document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style','value']});}catch(_){}window.addEventListener('input',runSoon,true);window.addEventListener('click',()=>setTimeout(run,0),true);window.addEventListener('antcv:sections-updated',()=>setTimeout(run,0));setInterval(run,2000);}
+  function start(){injectCss();run();[100,300,800,1600,3000].forEach(ms=>setTimeout(run,ms));try{new MutationObserver(()=>{if(__applying)return;runSoon();}).observe(document.body||document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style','value']});}catch(_){}window.addEventListener('input',runSoon,true);window.addEventListener('click',()=>setTimeout(run,0),true);window.addEventListener('antcv:sections-updated',()=>setTimeout(run,0));/* v1.50.57: blind setInterval(run,2000) removed — it was the flicker clock. Updates are now event-driven (sections-updated/input/click) plus a slow safety re-sync that no-ops when nothing changed. */setInterval(()=>{if(!__applying)run();},8000);}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
   window.AntcvHowContributeControls239={version:VERSION,run};
 })();

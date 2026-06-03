@@ -1,7 +1,7 @@
 // Small helpers for finding the Settings modal root and detecting which
 // subtab is visible. Mirrors the logic in pwa/antcv-stability-core-334.js
 // (settingsRoot, tabState, isPersonal). React islands need the same
-// detection so they only render when Settings → Personal is open.
+// detection so they only render when the right Settings subtab is open.
 
 function norm(v: unknown): string {
   return String(v ?? '').replace(/[ \t\n\r]+/g, ' ').trim();
@@ -104,6 +104,26 @@ export function getTabState(root: Element): TabState {
 export function isPersonalSubtab(root: Element): boolean {
   const st = getTabState(root);
   return st.top === 'standard' && st.sub === 'personal';
+}
+
+// Locate the "Open Advanced -> Style ..." hand-off button shown in the Layout
+// subtab. Matches on a stable visible-text fragment (case-insensitive),
+// tolerant of the arrow glyphs and the exact wording tail.
+export function findAdvancedStyleButton(root: Element): Element | null {
+  const re = /open advanced.*style|advanced.*style for/i;
+  const hit = buttonsIn(root).filter((b) => re.test(norm(b.textContent)));
+  return hit[0] ?? null;
+}
+
+// True when the Layout subtab is the active view. That subtab carries the
+// "Open Advanced -> Style ..." button as its hand-off control, so we accept
+// either the active-subtab detection OR the presence of that button as a
+// body-text fallback (the active-chip heuristic can miss when the subtab chip
+// is styled unusually).
+export function isLayoutSubtab(root: Element): boolean {
+  const st = getTabState(root);
+  if (st.sub === 'layout') return true;
+  return findAdvancedStyleButton(root) != null;
 }
 
 export function findDoneButton(root: Element): Element | null {

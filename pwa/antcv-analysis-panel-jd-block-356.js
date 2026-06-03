@@ -26,6 +26,52 @@
  *   window.AntcvRecheckFit._extractTextFromFile(file) -> Promise<string>
  *   window.AntcvRecheckFit._postJdAnalysis(proxyUrl, body) -> {status,body,raw}
  *   window.AntcvRecheckFit._renderJdAnalysis(container, data, T)
+ * a single "Analyse JD" button) INSIDE the in-app Analysis panel — not in the
+ * separate recheck-fit modal, and NOWHERE ELSE.
+ *   - When NO analysis is captured yet  -> the JD block IS the visible content.
+ *   - When an analysis IS present       -> the JD block sits BELOW the rendered
+ *     analysis result.
+ *
+ * Placement contract (v1.40.356-d)
+ * --------------------------------
+ * The block MUST live only inside the editor side/bottom panel that app.js
+ * renders for the Analysis view:
+ *   desktop -> .antcv-editor-side-panel    (data-antcv-app-panel="desktop-side-panel")
+ *   mobile  -> .antcv-mobile-bottom-panel  (data-antcv-app-panel="mobile-bottom-panel")
+ * That SAME container is reused for the Section panel, so we inject ONLY when
+ * the panel currently shows analysis content (the "📊 Application Analysis"
+ * heading or the "Generate a CV first…" empty-state). We anchor to that exact
+ * container and NEVER climb the DOM tree. Consequences (all intended):
+ *   - desktop: block sits in the lower part of the right-side panel;
+ *   - mobile: block sits in the bottom panel;
+ *   - switching to the Section panel does NOT show it;
+ *   - toggling the preview (which closes the side/bottom panel) hides it;
+ *   - it never bleeds into the sidebar, the candidate band, or the setup view.
+ *
+ * Behaviour (user spec)
+ * ---------------------
+ *   - ONE unified block, NO tabs. A single run does BOTH analyses:
+ *       * POST /api/recheck-fit   -> fit_score, summary, strengths, gaps
+ *       * POST /api/jd-analysis   -> recruiter, red_flags, questions
+ *     and merges ALL of it (rendered in-panel + written into `rationale`).
+ *
+ * Why a separate sidecar
+ * ----------------------
+ * The Analysis panel is rendered by app.js (minified, not hand-editable). This
+ * sidecar only INJECTS a child block into that panel and reuses the transport
+ * + renderers exposed by antcv-recheck-fit.js via window.AntcvRecheckFit. It
+ * never edits app.js. Additive, idempotent, removable in one <script> line.
+ *
+ * History
+ * -------
+ * v1.40.356-b: target the heading leaf (the original matched the outermost
+ *   wrapper, pushing the block off-screen).
+ * v1.40.356-c: repair a botched auto-merge that left a brace unclosed so the
+ *   file failed to parse ("Unexpected token ')'").
+ * v1.40.356-d: remove the greedy empty-state DOM-climb that injected into a
+ *   top-level container (the block spread across the sidebar / setup view).
+ *   Anchor strictly to .antcv-editor-side-panel / .antcv-mobile-bottom-panel,
+ *   and only when that panel shows analysis content.
  */
 (function () {
   'use strict';
@@ -214,22 +260,37 @@
   // (b) starts to contain shell controls (topbar / advanced button), or
   // (c) grows much wider than the marker's own column.
   function findByEmptyState() {
+  // The Analysis content (both the "📊 Application Analysis" heading AND the
+  // empty-state "Generate a CV first…" message) is rendered by app.js INSIDE
+  // the editor side-panel container:
+  //   desktop -> .antcv-editor-side-panel   (data-antcv-app-panel="desktop-side-panel")
+  //   mobile  -> .antcv-mobile-bottom-panel (data-antcv-app-panel="mobile-bottom-panel")
+  // The SAME container is reused for the Section panel, so we must NOT inject
+  // unless the panel currently holds analysis content. We anchor to that exact
+  // container (never climb the tree) so the block stays in the lower part of
+  // the side/bottom panel, is hidden when the panel closes (preview toggle),
+  // and never bleeds into the sidebar or the Section view.
+  var PANEL_SEL = '.antcv-editor-side-panel, .antcv-mobile-bottom-panel, [data-antcv-app-panel]';
+
+  function panelShowsAnalysis(panel) {
+    if (!panel) return false;
+    var txt = (panel.textContent || '');
+    if (txt.indexOf('Application Analysis') >= 0) return true; // analysis present
+    var low = txt.toLowerCase();
+    for (var m = 0; m < EMPTY_MARKERS.length; m++) {
+      if (low.indexOf(EMPTY_MARKERS[m]) >= 0) return true;      // empty state
+    }
+    return false;
+  }
+
+  function findAnalysisPanel() {
     var paper = previewPaper();
-    var nodes = document.querySelectorAll('div, p, span');
-    var marker = null;
-    for (var i = 0; i < nodes.length; i++) {
-      var n = nodes[i];
-      if (n.children && n.children.length > 3) continue;
-      var tc = (n.textContent || '').toLowerCase();
-      if (tc.length > 120) continue;
-      var hit = false;
-      for (var m = 0; m < EMPTY_MARKERS.length; m++) {
-        if (tc.indexOf(EMPTY_MARKERS[m]) >= 0) { hit = true; break; }
-      }
-      if (!hit) continue;
-      if (paper && paper.contains(n)) continue;
-      marker = n;
-      break;
+    var panels = document.querySelectorAll(PANEL_SEL);
+    for (var i = 0; i < panels.length; i++) {
+      var p = panels[i];
+      // Never inject into something inside the rendered document/preview.
+      if (paper && (paper.contains(p) || p.contains(paper))) continue;
+      if (panelShowsAnalysis(p)) return p;
     }
     if (!marker) return null;
 
@@ -255,6 +316,7 @@
 
   function findAnalysisPanel() {
     return findByHeading() || findByEmptyState();
+    return null;
   }
 
   async function postRecheckFit(proxyUrl, body) {
@@ -430,9 +492,16 @@
 
   function ensureBlock() {
     var panel = findAnalysisPanel();
-    if (!panel) return;
+    if (!panel) {
+      // Panel not showing analysis (Section view / preview-only / closed):
+      // remove any stale block so it never lingers outside the analysis panel.
+      var orphan = document.getElementById(BLOCK_ID);
+      if (orphan && orphan.parentNode) orphan.parentNode.removeChild(orphan);
+      return;
+    }
     var existing = panel.querySelector('#' + BLOCK_ID);
     if (existing) { hideEmptyPlaceholder(panel); return; }
+    // Remove any stale copy elsewhere before injecting fresh.
     var stale = document.getElementById(BLOCK_ID);
     if (stale && stale.parentNode) stale.parentNode.removeChild(stale);
     injectStyles();

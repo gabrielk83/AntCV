@@ -11,15 +11,7 @@
  *   - When an analysis IS present       -> the JD block sits BELOW the rendered
  *     analysis result (used to compare the generated CV against an existing JD).
  *
- * v1.40.357 fix
- * -------------
- * The original findAnalysisPanel() matched ONLY a container whose heading text
- * contained "Application Analysis". But in the EMPTY state (the exact case we
- * are fixing) that heading is NOT rendered — the panel only shows the bar-chart
- * icon and "Generate a CV first to see the analysis." So the block never
- * attached and the panel stayed empty.
- *
- * findAnalysisPanel() now tries TWO strategies:
+ * findAnalysisPanel() tries TWO strategies:
  *   1. The "Application Analysis" heading container (analysis-present state).
  *   2. The empty-state container, located by its message text ("Generate a CV
  *      first to see the analysis" / Danish equivalent), then climbing to a
@@ -49,15 +41,17 @@
  * Plus its own recheck-fit POST (same endpoint app.js/recheck use) and an
  * in-block renderer for fit/strengths/gaps so we do not depend on app.js.
  *
- * v1.40.356-b: fix findAnalysisPanel — it returned the OUTERMOST div whose
- * descendant text contained "Application Analysis", so the block was appended
- * to a large wrapper (pushed off-screen / into a React-rerendered region) and
- * never appeared. Now it targets the heading LEAF and returns its parent.
+ * v1.40.356-c: repair a botched auto-merge. The v357 edit added a valuable
+ * empty-state strategy (findByEmptyState) but stitched the older heading logic
+ * INSIDE findByHeading() and left a function-body brace unclosed, so the whole
+ * file failed to parse ("Unexpected token ')'") and nothing ran. findByHeading
+ * is now a single clean function (heading-leaf detection), findByEmptyState is
+ * preserved, and findAnalysisPanel() dispatches to both.
  */
 (function () {
   'use strict';
 
-  var VERSION = '1.40.356-b';
+  var VERSION = '1.40.356-c';
   if (window.__antcvAnalysisPanelJdBlock356 === VERSION) return;
   window.__antcvAnalysisPanelJdBlock356 = VERSION;
 
@@ -203,29 +197,17 @@
   }
 
   // Strategy 1: the analysis-present panel, keyed by its heading text.
-  function findByHeading() {
-  // Find the Analysis panel container by its app.js heading text.
   //
   // The heading is a div whose OWN text is "📊 Application Analysis" (a short
-  // leaf, not a big wrapper). The previous implementation walked every div and
-  // returned the first one whose first child contained that text — but because
-  // textContent matches recursively and ancestors come first in document
-  // order, that returned a large OUTER wrapper. Appending the block there
-  // pushed it far below the visible panel (or into a region React re-renders),
-  // so it never showed.
-  //
-  // Fix: locate the heading LEAF precisely (its own trimmed text starts with
-  // "Application Analysis", ignoring the emoji, and it is short), then return
-  // its PARENT — the panel body that holds the rendered analysis. Prefer the
-  // LAST match in document order (innermost / most-recently-mounted panel).
-  function findAnalysisPanel() {
+  // leaf, not a big wrapper). Matching any div whose DESCENDANT text contains
+  // the phrase returns a large OUTER wrapper (textContent is recursive and
+  // ancestors come first in document order); appending there pushes the block
+  // off-screen. So locate the heading LEAF precisely and return its PARENT —
+  // the panel body — preferring the innermost / last match.
+  function findByHeading() {
     var nodes = document.querySelectorAll('div');
     var headings = [];
     for (var i = 0; i < nodes.length; i++) {
-      var head = nodes[i].querySelector && nodes[i].querySelector(':scope > div');
-      if (head && (head.textContent || '').indexOf('Application Analysis') >= 0) {
-        return nodes[i];
-      }
       var node = nodes[i];
       var txt = (node.textContent || '').replace(/\s+/g, ' ').trim();
       if (txt.indexOf('Application Analysis') < 0) continue;
@@ -238,7 +220,6 @@
       headings.push(node);
     }
     if (!headings.length) return null;
-    // Innermost / latest heading; its parent is the panel body.
     var heading = headings[headings.length - 1];
     return heading.parentNode && heading.parentNode.nodeType === 1
       ? heading.parentNode

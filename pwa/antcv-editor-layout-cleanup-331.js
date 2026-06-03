@@ -8,13 +8,23 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.40.341-p0c-fix9';
+  const VERSION='1.40.341-p0c-fix10';
   if(window.__antcvEditorLayoutCleanup331===VERSION) return;
   window.__antcvEditorLayoutCleanup331=VERSION;
 
   const FOUNDATION_KEY='antcv.foundationControls.v1';
   const HIWC_PAGE_KEY='antcv.hiwc.page.v1';
   const HIWC_ALIGN_KEY='antcv.hiwc.alignment.v1';
+  // v1.40.341-p0c-fix10 (F1): per-doc flag tracking whether the
+  // template default bullets were already seeded. Prevents the seeds
+  // from reappearing if the user intentionally cleared all bullets
+  // and reloaded. Set the first time we seed; never cleared
+  // automatically. The user can reset via:
+  //   localStorage.removeItem('antcv.hiwc.seeded.v1')
+  const HIWC_SEEDED_KEY='antcv.hiwc.seeded.v1';
+  function activeDocForHIWC(){try{var v=localStorage.getItem('doc');return v==='cl'?'cl':'cv';}catch(_){return 'cv';}}
+  function hiwcSeededFor(doc){try{var raw=localStorage.getItem(HIWC_SEEDED_KEY);if(!raw)return false;var v=JSON.parse(raw);return !!(v&&v[doc]);}catch(_){return false;}}
+  function markHIWCSeeded(doc){try{var raw=localStorage.getItem(HIWC_SEEDED_KEY);var v=raw?JSON.parse(raw):{};if(!v||typeof v!=='object')v={};v[doc]=true;localStorage.setItem(HIWC_SEEDED_KEY,JSON.stringify(v));}catch(_){}}
   const COLORS=['#9aa0a6','#8A6BE8','#D98C00','#00746E','#B85E3B'];
   const ALIGN=['center','justify','left','right'];
   const ICON={center:'↔',justify:'☰',left:'⇤',right:'⇥'};
@@ -165,7 +175,55 @@
   // with no controls. Use position-based mapping instead — the
   // panel deterministically renders Hands-on first and
   // Professionally second.
-  function labelledFoundationField(root,part){const fs=allFields(root);if(part==='hands_on')return fs[0]||null;if(part==='professionally')return fs[1]||fs[0]||null;return null;}
+  //
+  // v1.40.341-p0c-fix10 (G1): position-based mapping is fragile —
+  // if React ever renders an extra input above either field (a third
+  // Foundation slot, a Korean variant, a textarea moved to the top
+  // by a future layout change), Hands-on and Professionally would
+  // silently swap or both attach to the wrong field. Replace with
+  // EXACT-text label detection: walk up from each field looking for
+  // a sibling/parent label whose clean lowercase text is EXACTLY
+  // "hands-on" / "hands on" or "professionally". The strictness on
+  // exact match avoids the fix7 collision (placeholder text contained
+  // "hands-on" but never EQUALED it). Falls back to positional
+  // mapping if no label is found, preserving fix7 behaviour for
+  // builds that don't render explicit labels.
+  function foundationLabelFor(field){
+    if(!field)return null;
+    var seen=new Set();
+    var node=field;
+    // Walk up looking at preceding siblings at each level. The label
+    // is typically a sibling positioned just before the input.
+    for(var depth=0;node&&depth<6;depth++,node=node.parentElement){
+      var sib=node.previousElementSibling;
+      var guard=0;
+      while(sib&&guard<8){
+        if(!seen.has(sib)){
+          seen.add(sib);
+          var t=clean(sib.textContent||'').toLowerCase();
+          // Strict equality — the placeholder text contains "hands-on"
+          // but never EQUALS it. This is what makes the matcher safe
+          // against the fix7 collision.
+          if(t==='hands-on'||t==='hands on')return 'hands_on';
+          if(t==='professionally')return 'professionally';
+        }
+        sib=sib.previousElementSibling;
+        guard++;
+      }
+    }
+    return null;
+  }
+  function labelledFoundationField(root,part){
+    var fs=allFields(root);
+    // Prefer label-based detection (G1).
+    for(var i=0;i<fs.length;i++){
+      if(foundationLabelFor(fs[i])===part)return fs[i];
+    }
+    // Fallback: positional (preserves fix7 behaviour).
+    if(part==='hands_on')return fs[0]||null;
+    if(part==='professionally')return fs[1]||fs[0]||null;
+    return null;
+  }
   function cleanupFoundation(root){if(!root)return;Array.from(root.querySelectorAll('[data-antcv-foundation-host],[data-antcv330-hiwc-toolbar],[data-antcv331-toolbar]')).forEach(n=>n.remove());}
   function fixFoundation(){const r=foundationRoot();if(!r)return;cleanupFoundation(r);const st=foundationState();[['hands_on','hands_on'],['professionally','professionally']].forEach(([part,key])=>{const f=labelledFoundationField(r,part);if(!f)return;f.style.textAlign=st[part].align||'left';const h=hostAfterField(f,'foundation-'+key);if(!h)return;/* v1.40.341-p0c-fix9: hostAfterField now returns null when the field is inside preview-paper (fix5 guard). Without this if(!h) bail, h.appendChild crashes with "Cannot read properties of null" and floods the console hundreds of times per second. */h.appendChild(toolbar('foundation-'+key,f,{getPage:()=>foundationState()[part].page||1,setPage:()=>setFoundation(part,{page:(Number(foundationState()[part].page)||1)%4+1}).page,getAlign:()=>foundationState()[part].align||'left',setAlign:()=>setFoundation(part,{align:nextAlign(foundationState()[part].align||'left')}).align}));});}
 
@@ -201,7 +259,7 @@
     return next;
   }
   function addBullet(box,source,text){const idx=box.querySelectorAll('[data-antcv331-bullet-row]').length;const row=document.createElement('div');row.setAttribute('data-antcv331-bullet-row','1');Object.assign(row.style,{display:'flex',alignItems:'center',gap:'4px',margin:'3px 0',width:'100%'});const mark=document.createElement('input');mark.value='•';mark.title='Bullet or emoji';Object.assign(mark.style,{width:'30px',minWidth:'30px',height:'24px',textAlign:'center',boxSizing:'border-box'});const inp=document.createElement('input');inp.type='text';inp.value=text||'';inp.placeholder='Bullet text';inp.setAttribute('data-antcv331-bullet-text','1');Object.assign(inp.style,{flex:'1 1 auto',minWidth:'0',height:'24px',boxSizing:'border-box'});inp.style.textAlign=hgetAlign('bullet_'+idx);inp.oninput=()=>syncBullets(box,source);row.append(mark,inp,toolbar('bullet_'+idx,inp,{getPage:()=>hgetPage('bullet_'+idx),setPage:()=>hsetBulletPageCascade(idx,box),getAlign:()=>hgetAlign('bullet_'+idx),setAlign:()=>hsetAlign('bullet_'+idx),remove:()=>{row.remove();syncBullets(box,source);}}));box.insertBefore(row,box.querySelector('[data-antcv331-add-bullet]'));}
-  function fixHIWC(){const r=hiwcRoot();if(!r)return;cleanupHIWC(r);const {intro,bullet,closing}=hiwcFields(r);if(intro){intro.style.textAlign=hgetAlign('intro');const h=rowHostForField(intro,'hiwc-intro');if(h)h.appendChild(toolbar('intro',intro,{getPage:()=>hgetPage('intro'),setPage:()=>hsetPage('intro'),getAlign:()=>hgetAlign('intro'),setAlign:()=>hsetAlign('intro')}));}if(bullet){bullet.style.display='none';const box=document.createElement('div');box.setAttribute('data-antcv331-hiwc-bullet-list','1');Object.assign(box.style,{display:'flex',flexDirection:'column',gap:'2px',margin:'4px 0',width:'100%'});const add=document.createElement('button');add.type='button';add.textContent='+ Add';add.title='Add bullet';add.setAttribute('aria-label','Add bullet');add.setAttribute('data-antcv331-add-bullet','1');add.setAttribute('data-antcv-hiwc-add','1');Object.assign(add.style,{alignSelf:'flex-start',border:'1px solid #008b8b',background:'white',color:'#006b6b',borderRadius:'4px',padding:'2px 8px',cursor:'pointer'});add.onclick=e=>{e.preventDefault();e.stopPropagation();addBullet(box,bullet,'');};box.appendChild(add);bullet.parentNode.insertBefore(box,bullet.nextSibling);const vals=String(bullet.value||'').split(/[\n]+/).map(x=>x.replace(/^[\t ]*[•\-*][\t ]*/,'').trim()).filter(Boolean);/* v1.40.341-p0c-fix6: seed 3 bracketed template placeholders when the section is empty so HIWC matches Foundation/Closure UX of always showing structure. The writing engine and the user can type over each. */const HIWC_DEFAULT_BULLETS=['[Action — what you would do in the first weeks]','[Action — what you would tackle in the first month]','[Action — what you would deliver by quarter end]'];(vals.length?vals:HIWC_DEFAULT_BULLETS).forEach(v=>addBullet(box,bullet,v));}if(closing&&closing!==intro&&closing!==bullet){closing.style.textAlign=hgetAlign('closing');/* v1.40.341-p0c-fix8: when Closing is a <textarea> it renders as a multi-line box with resize handle that looks visually different from Intro's single-line input. Force single-line styling so the two surfaces match per CL-002. */if(closing.tagName==='TEXTAREA'){try{closing.rows=1;closing.style.resize='none';closing.style.overflow='hidden';closing.style.minHeight='1.6em';closing.style.height='auto';}catch(_){}}const h=rowHostForField(closing,'hiwc-closing');if(h)h.appendChild(toolbar('closing',closing,{getPage:()=>hgetPage('closing'),setPage:()=>hsetPage('closing'),getAlign:()=>hgetAlign('closing'),setAlign:()=>hsetAlign('closing')}));}}
+  function fixHIWC(){const r=hiwcRoot();if(!r)return;cleanupHIWC(r);const {intro,bullet,closing}=hiwcFields(r);if(intro){intro.style.textAlign=hgetAlign('intro');const h=rowHostForField(intro,'hiwc-intro');if(h)h.appendChild(toolbar('intro',intro,{getPage:()=>hgetPage('intro'),setPage:()=>hsetPage('intro'),getAlign:()=>hgetAlign('intro'),setAlign:()=>hsetAlign('intro')}));}if(bullet){bullet.style.display='none';const box=document.createElement('div');box.setAttribute('data-antcv331-hiwc-bullet-list','1');Object.assign(box.style,{display:'flex',flexDirection:'column',gap:'2px',margin:'4px 0',width:'100%'});const add=document.createElement('button');add.type='button';add.textContent='+ Add';add.title='Add bullet';add.setAttribute('aria-label','Add bullet');add.setAttribute('data-antcv331-add-bullet','1');add.setAttribute('data-antcv-hiwc-add','1');Object.assign(add.style,{alignSelf:'flex-start',border:'1px solid #008b8b',background:'white',color:'#006b6b',borderRadius:'4px',padding:'2px 8px',cursor:'pointer'});add.onclick=e=>{e.preventDefault();e.stopPropagation();addBullet(box,bullet,'');};box.appendChild(add);bullet.parentNode.insertBefore(box,bullet.nextSibling);const vals=String(bullet.value||'').split(/[\n]+/).map(x=>x.replace(/^[\t ]*[•\-*][\t ]*/,'').trim()).filter(Boolean);/* v1.40.341-p0c-fix6: seed 3 bracketed template placeholders when the section is empty so HIWC matches Foundation/Closure UX of always showing structure. The writing engine and the user can type over each. v1.40.341-p0c-fix10 (F1): only seed ONCE per doc. If the user cleared the bullets intentionally and reloaded, do NOT re-inject seeds. Tracked via localStorage['antcv.hiwc.seeded.v1'][doc]. */const HIWC_DEFAULT_BULLETS=['[Action — what you would do in the first weeks]','[Action — what you would tackle in the first month]','[Action — what you would deliver by quarter end]'];const _hiwcDoc=activeDocForHIWC();const _shouldSeed=!vals.length&&!hiwcSeededFor(_hiwcDoc);const _toRender=vals.length?vals:(_shouldSeed?HIWC_DEFAULT_BULLETS:[]);_toRender.forEach(v=>addBullet(box,bullet,v));if(_shouldSeed)markHIWCSeeded(_hiwcDoc);}if(closing&&closing!==intro&&closing!==bullet){closing.style.textAlign=hgetAlign('closing');/* v1.40.341-p0c-fix8: when Closing is a <textarea> it renders as a multi-line box with resize handle that looks visually different from Intro's single-line input. Force single-line styling so the two surfaces match per CL-002. */if(closing.tagName==='TEXTAREA'){try{closing.rows=1;closing.style.resize='none';closing.style.overflow='hidden';closing.style.minHeight='1.6em';closing.style.height='auto';}catch(_){}}const h=rowHostForField(closing,'hiwc-closing');if(h)h.appendChild(toolbar('closing',closing,{getPage:()=>hgetPage('closing'),setPage:()=>hsetPage('closing'),getAlign:()=>hgetAlign('closing'),setAlign:()=>hsetAlign('closing')}));}}
 
   function injectCss(){if(document.getElementById('antcv-editor-cleanup-331-css'))return;const s=document.createElement('style');s.id='antcv-editor-cleanup-331-css';s.textContent='@media (min-width:761px){.antcv-preview-core-actions,[data-antcv-mobile-preview-actions-strip-276],.antcv-preview-action-strip{display:none!important;visibility:hidden!important;pointer-events:none!important}}\n[data-antcv331-toolbar] button{font-family:Georgia,serif!important}';document.head.appendChild(s);}
   function run(){try{injectCss();fixFoundation();fixHIWC();}catch(e){try{console.warn('[editor-cleanup-331]',e&&e.message);}catch(_){}}}

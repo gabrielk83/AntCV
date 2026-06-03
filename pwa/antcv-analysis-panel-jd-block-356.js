@@ -1,63 +1,36 @@
-/* AntCV Analysis-panel embedded JD block (v1.40.357)
+/* AntCV Analysis-panel embedded JD block (v1.40.358)
  * ============================================================================
  *
- * Goal (user spec)
- * ----------------
+ * Goal
+ * ----
  * Put the JD-analysis INPUT controls (paste textarea + PDF/Word/Image upload +
- * a single "Analyse JD" button) INSIDE the in-app Analysis panel — not in the
- * separate recheck-fit modal. Placement:
- *   - When NO analysis is captured yet  -> the JD block IS the visible content
- *     (so the user can paste/upload a JD and run it).
- *   - When an analysis IS present       -> the JD block sits BELOW the rendered
- *     analysis result (used to compare the generated CV against an existing JD).
+ * a single "Analyse JD" button) INSIDE the in-app Analysis panel.
+ *   - NO analysis captured yet -> the JD block IS the visible content.
+ *   - An analysis IS present    -> the JD block sits BELOW the rendered result.
  *
- * v1.40.357 fix
- * -------------
- * The original findAnalysisPanel() matched ONLY a container whose heading text
- * contained "Application Analysis". But in the EMPTY state (the exact case we
- * are fixing) that heading is NOT rendered — the panel only shows the bar-chart
- * icon and "Generate a CV first to see the analysis." So the block never
- * attached and the panel stayed empty.
+ * v1.40.358
+ * ---------
+ * Clean rewrite. The branch copy had become corrupted (two conflicting
+ * findAnalysisPanel definitions merged from parallel worktrees, leaving a
+ * syntax error that stopped the whole sidecar from parsing). This version:
+ *   - single, correct findAnalysisPanel() with two strategies;
+ *   - TIGHTENED empty-state ancestor selection: instead of a fixed 6-hop
+ *     climb, it climbs only while the ancestor stays a plausible panel column
+ *     (bounded width growth, not the app shell, does not also contain the
+ *     topbar / "Application history" controls), and picks the nearest scroll-
+ *     ish container. This stops the block attaching to an oversized wrapper.
  *
- * findAnalysisPanel() now tries TWO strategies:
- *   1. The "Application Analysis" heading container (analysis-present state).
- *   2. The empty-state container, located by its message text ("Generate a CV
- *      first to see the analysis" / Danish equivalent), then climbing to a
- *      stable panel ancestor to inject into.
+ * Never edits app.js. Additive, idempotent, removable in one <script> line.
  *
- * Behaviour (user spec)
- * ---------------------
- *   - ONE unified block, NO tabs. A single run does BOTH analyses:
- *       * POST /api/recheck-fit   -> fit_score, summary, strengths, gaps,
- *                                    suggested_edits
- *       * POST /api/jd-analysis   -> recruiter, red_flags, questions
- *     and merges ALL of it.
- *
- * Why a separate sidecar
- * ----------------------
- * The Analysis panel is rendered by app.js (minified, not hand-editable). This
- * sidecar only INJECTS a child block into that panel's DOM and reuses the
- * transport + renderers already exposed by antcv-recheck-fit.js via
- * window.AntcvRecheckFit. It never edits app.js. Additive, idempotent,
- * removable in one <script> line.
- *
- * Dependencies
- * ------------
+ * Dependencies (from antcv-recheck-fit.js):
  *   window.AntcvRecheckFit._extractTextFromFile(file) -> Promise<string>
  *   window.AntcvRecheckFit._postJdAnalysis(proxyUrl, body) -> {status,body,raw}
  *   window.AntcvRecheckFit._renderJdAnalysis(container, data, T)
- * Plus its own recheck-fit POST (same endpoint app.js/recheck use) and an
- * in-block renderer for fit/strengths/gaps so we do not depend on app.js.
- *
- * v1.40.356-b: fix findAnalysisPanel — it returned the OUTERMOST div whose
- * descendant text contained "Application Analysis", so the block was appended
- * to a large wrapper (pushed off-screen / into a React-rerendered region) and
- * never appeared. Now it targets the heading LEAF and returns its parent.
  */
 (function () {
   'use strict';
 
-  var VERSION = '1.40.356-b';
+  var VERSION = '1.40.358';
   if (window.__antcvAnalysisPanelJdBlock356 === VERSION) return;
   window.__antcvAnalysisPanelJdBlock356 = VERSION;
 
@@ -65,16 +38,21 @@
   var STYLE_ID = 'antcv-analysis-panel-jd-block-css';
   var RATIONALE_KEY = 'rationale';
 
-  // Empty-state message fragments (EN + DA). Kept lowercase for compare.
+  // Empty-state message fragments (EN + DA), lowercase for compare.
   var EMPTY_MARKERS = [
     'generate a cv first',
     'see the analysis',
-    'generér et cv',
     'generer et cv',
     'for at se analysen'
   ];
+  // Text that means we have climbed OUT of the panel into the app shell.
+  var SHELL_MARKERS = [
+    'application history',
+    'current file',
+    'switch to advanced',
+    'open advanced'
+  ];
 
-  // ---- storage helpers ----
   function readProxyUrl() {
     try {
       var raw = localStorage.getItem('proxyUrl');
@@ -202,53 +180,39 @@
     return document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]');
   }
 
-  // Strategy 1: the analysis-present panel, keyed by its heading text.
+  function containsShellMarker(node) {
+    var tc = (node.textContent || '').toLowerCase();
+    for (var i = 0; i < SHELL_MARKERS.length; i++) {
+      if (tc.indexOf(SHELL_MARKERS[i]) >= 0) return true;
+    }
+    return false;
+  }
+
+  // Strategy 1: analysis-present panel, keyed by the heading LEAF
+  // "Application Analysis"; return its parent (the panel body).
   function findByHeading() {
-  // Find the Analysis panel container by its app.js heading text.
-  //
-  // The heading is a div whose OWN text is "📊 Application Analysis" (a short
-  // leaf, not a big wrapper). The previous implementation walked every div and
-  // returned the first one whose first child contained that text — but because
-  // textContent matches recursively and ancestors come first in document
-  // order, that returned a large OUTER wrapper. Appending the block there
-  // pushed it far below the visible panel (or into a region React re-renders),
-  // so it never showed.
-  //
-  // Fix: locate the heading LEAF precisely (its own trimmed text starts with
-  // "Application Analysis", ignoring the emoji, and it is short), then return
-  // its PARENT — the panel body that holds the rendered analysis. Prefer the
-  // LAST match in document order (innermost / most-recently-mounted panel).
-  function findAnalysisPanel() {
     var nodes = document.querySelectorAll('div');
     var headings = [];
     for (var i = 0; i < nodes.length; i++) {
-      var head = nodes[i].querySelector && nodes[i].querySelector(':scope > div');
-      if (head && (head.textContent || '').indexOf('Application Analysis') >= 0) {
-        return nodes[i];
-      }
       var node = nodes[i];
-      var txt = (node.textContent || '').replace(/\s+/g, ' ').trim();
+      var txt = (node.textContent || '').replace(/[ \t\r\n]+/g, ' ').trim();
       if (txt.indexOf('Application Analysis') < 0) continue;
-      // Must be the heading LEAF, not a wrapper: short text and few element
-      // children (the heading div itself, possibly with an inline icon span).
       var stripped = txt.replace(/[^\x20-\x7E]/g, '').trim(); // drop emoji
       if (stripped.indexOf('Application Analysis') !== 0) continue;
-      if (stripped.length > 40) continue;            // a wrapper would be long
+      if (stripped.length > 40) continue;                 // wrapper would be long
       if (node.children && node.children.length > 1) continue; // leaf-ish
       headings.push(node);
     }
     if (!headings.length) return null;
-    // Innermost / latest heading; its parent is the panel body.
     var heading = headings[headings.length - 1];
-    return heading.parentNode && heading.parentNode.nodeType === 1
-      ? heading.parentNode
-      : heading;
+    return (heading.parentNode && heading.parentNode.nodeType === 1) ? heading.parentNode : heading;
   }
 
-  // Strategy 2: the EMPTY-state panel, keyed by its message text. We find the
-  // smallest element whose text matches an empty-state marker, then climb to a
-  // panel-like ancestor (a block container that is NOT the whole app shell and
-  // NOT inside the rendered document) to inject into.
+  // Strategy 2: EMPTY-state panel. Find the smallest node carrying an
+  // empty-state marker, then climb to the nearest PLAUSIBLE panel container.
+  // Tightened: stop climbing when the candidate (a) reaches the app shell,
+  // (b) starts to contain shell controls (topbar / advanced button), or
+  // (c) grows much wider than the marker's own column.
   function findByEmptyState() {
     var paper = previewPaper();
     var nodes = document.querySelectorAll('div, p, span');
@@ -269,15 +233,21 @@
     }
     if (!marker) return null;
 
-    var cur = marker;
-    var hops = 0;
+    var markerW = 0;
+    try { markerW = marker.getBoundingClientRect().width; } catch (_) {}
+    var maxW = Math.max(markerW * 2.2, 520); // a panel column, not the shell
+
     var best = marker.parentElement || marker;
-    while (cur && hops < 6) {
-      var p = cur.parentElement;
-      if (!p) break;
-      if (p === document.body || p.id === 'root' || p.tagName === 'HTML') break;
-      best = p;
-      cur = p;
+    var cur = marker.parentElement;
+    var hops = 0;
+    while (cur && hops < 8) {
+      if (cur === document.body || cur.id === 'root' || cur.tagName === 'HTML') break;
+      if (containsShellMarker(cur)) break; // climbed into the shell — stop
+      var w = 0;
+      try { w = cur.getBoundingClientRect().width; } catch (_) {}
+      if (w && w > maxW) break;            // too wide to be the panel column
+      best = cur;
+      cur = cur.parentElement;
       hops++;
     }
     return best;
@@ -323,8 +293,6 @@
     }
   }
 
-  // Hide the native empty-state placeholder once our block is present, so the
-  // panel does not show both "Generate a CV first" AND our input block.
   function hideEmptyPlaceholder(panel) {
     if (!panel) return;
     var nodes = panel.querySelectorAll('div, p, span');

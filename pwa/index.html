@@ -248,7 +248,7 @@
   })();
 </script>
 <script type="module">
-  import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.50.19-academic';
+  import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.50.56-shape';
   window.exportDocxViaWorker = exportDocxViaWorker;
   window.ANTCV_VERSION = '1.50.9';
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
@@ -521,6 +521,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-privacy-led.js?v=1.40.295" defer></script>
 <script src="antcv-bullet-targets.js?v=1.40.136" defer></script>
 <script src="antcv-photo-position.js?v=1.50.29-fix" defer></script>
+<script src="antcv-photo-pentagon-shape.js?v=1.50.56" defer></script>
 <script src="antcv-preview-header-tokens.js?v=1.50.41" defer></script>
 <script src="antcv-photo-bridge-button.js?v=1.50.36-sync" defer></script>
 <script src="antcv-pdf-preview-gate.js?v=1.50.50" defer></script>
@@ -528,6 +529,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-banned-audit.js?v=1.40.341-p0a" defer></script>
 <script src="antcv-llm-audit.js?v=1.40.178" defer></script>
 <script src="antcv-validation-severity-341.js?v=1.40.341-p1c" defer></script>
+<script src="antcv-validation-severity-consumer-357.js?v=1.40.357-val001c" defer></script>
 <script src="antcv-section-control-bar.js?v=1.50.18-brand-preview-guard" defer></script>
 <script src="antcv-candidate-preview-editor-341.js?v=1.40.341-p0d-fix5" defer></script>
 <script src="antcv-table-headers-editable-341.js?v=1.40.341-tb004-fix2" defer></script>
@@ -579,6 +581,8 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-publications-strict-row-layout-273.js?v=1.40.273-preview-guard" defer></script>
 <script src="antcv-core-wib-strict-row-layout-274.js?v=1.40.274" defer></script>
 <script src="antcv-row-controls-wording-341.js?v=1.40.341-p1b" defer></script>
+<script src="antcv-help-text-wording-357.js?v=1.40.357-p1b2" defer></script>
+<script src="antcv-page-break-icon-357.js?v=1.40.357-pb005b" defer></script>
 <script src="antcv-pub-injected-reaper-352.js?v=1.40.352" defer></script>
 <script src="antcv-mobile-topbar-cleanup-275.js?v=1.40.275" defer></script>
 <script src="antcv-generate-cloud-sync-277.js?v=1.40.277" defer></script>
@@ -605,7 +609,9 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-language-ui-fixes-292.js?v=1.40.292" defer></script>
 <script src="antcv-table-row-page-controls-328.js?v=1.40.328-preview-guard" defer></script>
 <script src="antcv-sidebar-subsection-pagebreaks-329.js?v=1.40.341-p0b" defer></script>
-<script src="antcv-editor-layout-cleanup-331.js?v=1.40.341-p0c-fix9" defer></script>
+<script src="antcv-editor-layout-cleanup-331.js?v=1.40.341-p0c-fix10" defer></script>
+<script src="antcv-personal-tab-dedup-341.js?v=1.40.341-pt-dedup" defer></script>
+<script src="antcv-preview-bullets-dedup-341.js?v=1.40.341-prv-bullets" defer></script>
 <script src="antcv-cl-preview-cluster-guard-341.js?v=1.40.341-p0c" defer></script>
 <script src="antcv-cl-body-move-button-341.js?v=1.40.350" defer></script>
 <script src="antcv-cl-closure-editable-341.js?v=1.50.33-rerun" defer></script>
@@ -622,6 +628,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      renders them; retires the JD-analysis FAB once the matching app.js
      release is detected live. Companion app.js render blocks ship via deploy. -->
 <script src="antcv-analysis-merge-344.js?v=1.40.344" defer></script>
+<script src="antcv-analysis-panel-jd-block-356.js?v=1.40.356" defer></script>
 <script src="antcv-sections-icon-346.js?v=1.40.346" defer></script>
 <script src="antcv-topbar-tools-347.js?v=1.40.347" defer></script>
 <!-- v1.40.351: mobile-only FAB cleanup. Hides the redundant mobile JD-analysis
@@ -650,6 +657,6 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      used to live in antcv-stability-core-334.js (LanguageCard, PreviewToolbar,
      SettingsRouter, wizardState). See docs/plan/AntCV_Plan_v2_LockedSources.md
      §7 Pass 1. -->
-<script src="antcv-react-islands.js?v=1.50.55" defer></script>
+<script src="antcv-react-islands.js?v=1.50.56" defer></script>
 </body>
 </html>

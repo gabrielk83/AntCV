@@ -1,4 +1,4 @@
-/* AntCV Page-Break icon fix (v1.40.357-pb005)
+/* AntCV Page-Break icon fix (v1.40.357-pb005b)
  * ============================================================
  *
  * PB-005 / GEN-DoD — semantic Page-Break glyph
@@ -11,8 +11,8 @@
  * a down-arrow glyph as its visible symbol. A down arrow reads as
  * "move down" / "scroll", not "start on the next page". This
  * sidecar swaps the arrow glyph for a semantic next-page glyph
- * (U+2398 NEXT PAGE, "next-page" document symbol) on controls that
- * are unambiguously Page-Break controls.
+ * (U+2398 NEXT PAGE) on controls that are unambiguously Page-Break
+ * controls.
  *
  * Why a separate sidecar (not an edit to each control sidecar)
  * -----------------------------------------------------------
@@ -34,35 +34,35 @@
  *
  * Down-arrow glyphs handled: U+2193 (down arrow), U+2B07 (heavy),
  * U+21E9 (downwards white arrow), U+2913 (down to bar),
- * U+21E3 (dashed). The arrow is REPLACED with U+2398 (next page);
- * any surrounding label text is preserved.
+ * U+21E3 (dashed), plus a trailing U+FE0F variation selector. The
+ * arrow is REPLACED with U+2398 (next page); surrounding label
+ * text is preserved.
  *
  * Scope + safety
  * --------------
  *   - Editor panel only (never inside .antcv-preview-paper).
  *   - Leaf-only for textContent edits (no element children).
  *   - Idempotent: per-element marker.
- *   - No \s in regex literals. No \u escapes (glyphs are written
- *     as literal characters in single strings).
+ *   - No \s in regex literals. No \u escapes anywhere: every glyph
+ *     and code point is expressed as a numeric literal and built
+ *     with String.fromCharCode.
  *   - No layout / positioning / ordering changes (PP-003 safety).
  */
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.40.357-pb005';
+  var SCRIPT_VERSION = '1.40.357-pb005b';
   if (window.__antcvPageBreakIcon357 === SCRIPT_VERSION) return;
   window.__antcvPageBreakIcon357 = SCRIPT_VERSION;
 
   var MARK = 'data-antcv-pb-icon-fixed';
-  // Semantic next-page glyph (U+2398). Reads as a page with a turned
-  // corner, not an arrow.
-  var PAGE_GLYPH = '\u2398';
+  // Semantic next-page glyph (U+2398). Built via fromCharCode so the
+  // source contains no \u escape (house rule).
+  var PAGE_GLYPH = String.fromCharCode(0x2398);
 
-  // Down-arrow glyphs that may have been used as the page-break symbol.
-  // Written via \u in a CHARACTER CLASS inside the RegExp constructor
-  // string is disallowed by house rules; instead we list the literal
-  // code points and build a matcher from String.fromCharCode so there
-  // are no \u escapes in source.
+  // Down-arrow glyphs that may have been used as the page-break
+  // symbol, plus the VS16 variation selector (0xFE0F). Listed as
+  // numeric code points so there are no \u escapes in source.
   var ARROW_CODEPOINTS = [0x2193, 0x2B07, 0x21E9, 0x2913, 0x21E3, 0xFE0F];
   function isArrowChar(ch) {
     var c = ch.charCodeAt(0);

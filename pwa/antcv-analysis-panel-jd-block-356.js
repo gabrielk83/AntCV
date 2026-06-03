@@ -1,57 +1,60 @@
-/* AntCV Analysis-panel embedded JD block (v1.40.357)
+/* AntCV Analysis-panel embedded JD block (v1.40.356-d)
  * ============================================================================
  *
  * Goal (user spec)
  * ----------------
  * Put the JD-analysis INPUT controls (paste textarea + PDF/Word/Image upload +
  * a single "Analyse JD" button) INSIDE the in-app Analysis panel — not in the
- * separate recheck-fit modal. Placement:
- *   - When NO analysis is captured yet  -> the JD block IS the visible content
- *     (so the user can paste/upload a JD and run it).
+ * separate recheck-fit modal, and NOWHERE ELSE.
+ *   - When NO analysis is captured yet  -> the JD block IS the visible content.
  *   - When an analysis IS present       -> the JD block sits BELOW the rendered
- *     analysis result (used to compare the generated CV against an existing JD).
+ *     analysis result.
  *
- * findAnalysisPanel() tries TWO strategies:
- *   1. The "Application Analysis" heading container (analysis-present state).
- *   2. The empty-state container, located by its message text ("Generate a CV
- *      first to see the analysis" / Danish equivalent), then climbing to a
- *      stable panel ancestor to inject into.
+ * Placement contract (v1.40.356-d)
+ * --------------------------------
+ * The block MUST live only inside the editor side/bottom panel that app.js
+ * renders for the Analysis view:
+ *   desktop -> .antcv-editor-side-panel    (data-antcv-app-panel="desktop-side-panel")
+ *   mobile  -> .antcv-mobile-bottom-panel  (data-antcv-app-panel="mobile-bottom-panel")
+ * That SAME container is reused for the Section panel, so we inject ONLY when
+ * the panel currently shows analysis content (the "📊 Application Analysis"
+ * heading or the "Generate a CV first…" empty-state). We anchor to that exact
+ * container and NEVER climb the DOM tree. Consequences (all intended):
+ *   - desktop: block sits in the lower part of the right-side panel;
+ *   - mobile: block sits in the bottom panel;
+ *   - switching to the Section panel does NOT show it;
+ *   - toggling the preview (which closes the side/bottom panel) hides it;
+ *   - it never bleeds into the sidebar, the candidate band, or the setup view.
  *
  * Behaviour (user spec)
  * ---------------------
  *   - ONE unified block, NO tabs. A single run does BOTH analyses:
- *       * POST /api/recheck-fit   -> fit_score, summary, strengths, gaps,
- *                                    suggested_edits
+ *       * POST /api/recheck-fit   -> fit_score, summary, strengths, gaps
  *       * POST /api/jd-analysis   -> recruiter, red_flags, questions
- *     and merges ALL of it.
+ *     and merges ALL of it (rendered in-panel + written into `rationale`).
  *
  * Why a separate sidecar
  * ----------------------
  * The Analysis panel is rendered by app.js (minified, not hand-editable). This
- * sidecar only INJECTS a child block into that panel's DOM and reuses the
- * transport + renderers already exposed by antcv-recheck-fit.js via
- * window.AntcvRecheckFit. It never edits app.js. Additive, idempotent,
- * removable in one <script> line.
+ * sidecar only INJECTS a child block into that panel and reuses the transport
+ * + renderers exposed by antcv-recheck-fit.js via window.AntcvRecheckFit. It
+ * never edits app.js. Additive, idempotent, removable in one <script> line.
  *
- * Dependencies
- * ------------
- *   window.AntcvRecheckFit._extractTextFromFile(file) -> Promise<string>
- *   window.AntcvRecheckFit._postJdAnalysis(proxyUrl, body) -> {status,body,raw}
- *   window.AntcvRecheckFit._renderJdAnalysis(container, data, T)
- * Plus its own recheck-fit POST (same endpoint app.js/recheck use) and an
- * in-block renderer for fit/strengths/gaps so we do not depend on app.js.
- *
- * v1.40.356-c: repair a botched auto-merge. The v357 edit added a valuable
- * empty-state strategy (findByEmptyState) but stitched the older heading logic
- * INSIDE findByHeading() and left a function-body brace unclosed, so the whole
- * file failed to parse ("Unexpected token ')'") and nothing ran. findByHeading
- * is now a single clean function (heading-leaf detection), findByEmptyState is
- * preserved, and findAnalysisPanel() dispatches to both.
+ * History
+ * -------
+ * v1.40.356-b: target the heading leaf (the original matched the outermost
+ *   wrapper, pushing the block off-screen).
+ * v1.40.356-c: repair a botched auto-merge that left a brace unclosed so the
+ *   file failed to parse ("Unexpected token ')'").
+ * v1.40.356-d: remove the greedy empty-state DOM-climb that injected into a
+ *   top-level container (the block spread across the sidebar / setup view).
+ *   Anchor strictly to .antcv-editor-side-panel / .antcv-mobile-bottom-panel,
+ *   and only when that panel shows analysis content.
  */
 (function () {
   'use strict';
 
-  var VERSION = '1.40.356-c';
+  var VERSION = '1.40.356-d';
   if (window.__antcvAnalysisPanelJdBlock356 === VERSION) return;
   window.__antcvAnalysisPanelJdBlock356 = VERSION;
 
@@ -196,76 +199,39 @@
     return document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]');
   }
 
-  // Strategy 1: the analysis-present panel, keyed by its heading text.
-  //
-  // The heading is a div whose OWN text is "📊 Application Analysis" (a short
-  // leaf, not a big wrapper). Matching any div whose DESCENDANT text contains
-  // the phrase returns a large OUTER wrapper (textContent is recursive and
-  // ancestors come first in document order); appending there pushes the block
-  // off-screen. So locate the heading LEAF precisely and return its PARENT —
-  // the panel body — preferring the innermost / last match.
-  function findByHeading() {
-    var nodes = document.querySelectorAll('div');
-    var headings = [];
-    for (var i = 0; i < nodes.length; i++) {
-      var node = nodes[i];
-      var txt = (node.textContent || '').replace(/\s+/g, ' ').trim();
-      if (txt.indexOf('Application Analysis') < 0) continue;
-      // Must be the heading LEAF, not a wrapper: short text and few element
-      // children (the heading div itself, possibly with an inline icon span).
-      var stripped = txt.replace(/[^\x20-\x7E]/g, '').trim(); // drop emoji
-      if (stripped.indexOf('Application Analysis') !== 0) continue;
-      if (stripped.length > 40) continue;            // a wrapper would be long
-      if (node.children && node.children.length > 1) continue; // leaf-ish
-      headings.push(node);
-    }
-    if (!headings.length) return null;
-    var heading = headings[headings.length - 1];
-    return heading.parentNode && heading.parentNode.nodeType === 1
-      ? heading.parentNode
-      : heading;
-  }
+  // The Analysis content (both the "📊 Application Analysis" heading AND the
+  // empty-state "Generate a CV first…" message) is rendered by app.js INSIDE
+  // the editor side-panel container:
+  //   desktop -> .antcv-editor-side-panel   (data-antcv-app-panel="desktop-side-panel")
+  //   mobile  -> .antcv-mobile-bottom-panel (data-antcv-app-panel="mobile-bottom-panel")
+  // The SAME container is reused for the Section panel, so we must NOT inject
+  // unless the panel currently holds analysis content. We anchor to that exact
+  // container (never climb the tree) so the block stays in the lower part of
+  // the side/bottom panel, is hidden when the panel closes (preview toggle),
+  // and never bleeds into the sidebar or the Section view.
+  var PANEL_SEL = '.antcv-editor-side-panel, .antcv-mobile-bottom-panel, [data-antcv-app-panel]';
 
-  // Strategy 2: the EMPTY-state panel, keyed by its message text. We find the
-  // smallest element whose text matches an empty-state marker, then climb to a
-  // panel-like ancestor (a block container that is NOT the whole app shell and
-  // NOT inside the rendered document) to inject into.
-  function findByEmptyState() {
-    var paper = previewPaper();
-    var nodes = document.querySelectorAll('div, p, span');
-    var marker = null;
-    for (var i = 0; i < nodes.length; i++) {
-      var n = nodes[i];
-      if (n.children && n.children.length > 3) continue;
-      var tc = (n.textContent || '').toLowerCase();
-      if (tc.length > 120) continue;
-      var hit = false;
-      for (var m = 0; m < EMPTY_MARKERS.length; m++) {
-        if (tc.indexOf(EMPTY_MARKERS[m]) >= 0) { hit = true; break; }
-      }
-      if (!hit) continue;
-      if (paper && paper.contains(n)) continue;
-      marker = n;
-      break;
+  function panelShowsAnalysis(panel) {
+    if (!panel) return false;
+    var txt = (panel.textContent || '');
+    if (txt.indexOf('Application Analysis') >= 0) return true; // analysis present
+    var low = txt.toLowerCase();
+    for (var m = 0; m < EMPTY_MARKERS.length; m++) {
+      if (low.indexOf(EMPTY_MARKERS[m]) >= 0) return true;      // empty state
     }
-    if (!marker) return null;
-
-    var cur = marker;
-    var hops = 0;
-    var best = marker.parentElement || marker;
-    while (cur && hops < 6) {
-      var p = cur.parentElement;
-      if (!p) break;
-      if (p === document.body || p.id === 'root' || p.tagName === 'HTML') break;
-      best = p;
-      cur = p;
-      hops++;
-    }
-    return best;
+    return false;
   }
 
   function findAnalysisPanel() {
-    return findByHeading() || findByEmptyState();
+    var paper = previewPaper();
+    var panels = document.querySelectorAll(PANEL_SEL);
+    for (var i = 0; i < panels.length; i++) {
+      var p = panels[i];
+      // Never inject into something inside the rendered document/preview.
+      if (paper && (paper.contains(p) || p.contains(paper))) continue;
+      if (panelShowsAnalysis(p)) return p;
+    }
+    return null;
   }
 
   async function postRecheckFit(proxyUrl, body) {
@@ -443,9 +409,16 @@
 
   function ensureBlock() {
     var panel = findAnalysisPanel();
-    if (!panel) return;
+    if (!panel) {
+      // Panel not showing analysis (Section view / preview-only / closed):
+      // remove any stale block so it never lingers outside the analysis panel.
+      var orphan = document.getElementById(BLOCK_ID);
+      if (orphan && orphan.parentNode) orphan.parentNode.removeChild(orphan);
+      return;
+    }
     var existing = panel.querySelector('#' + BLOCK_ID);
     if (existing) { hideEmptyPlaceholder(panel); return; }
+    // Remove any stale copy elsewhere before injecting fresh.
     var stale = document.getElementById(BLOCK_ID);
     if (stale && stale.parentNode) stale.parentNode.removeChild(stale);
     injectStyles();

@@ -58,7 +58,7 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.40.341-p0d-fix5';
+  var SCRIPT_VERSION = '1.40.341-p0d-fix6';
   if (window.__antcvCandidatePreviewEditor341 === SCRIPT_VERSION) return;
   window.__antcvCandidatePreviewEditor341 = SCRIPT_VERSION;
 
@@ -307,6 +307,26 @@
         }
       }
     } catch (_) {}
+
+    // v1.40.341-p0d-fix6 — edit-safety + idempotency guard. The preview
+    // re-renders frequently; rebuilding the host on EVERY sweep destroyed
+    // the contenteditable span the user was typing into (focus lost, text
+    // reverted to the placeholder), so the Application line was effectively
+    // not editable and never showed the entered role/company. Two guards:
+    //   (a) if focus is inside the host, the user is editing — leave it be.
+    //   (b) if the existing spans already match label/role/company, skip the
+    //       teardown so we neither thrash the DOM nor drop the caret.
+    var existingLabel = host.querySelector('[data-antcv-candidate-edit="applicationLabel"]');
+    var existingRole = host.querySelector('[data-antcv-candidate-edit="role"]');
+    var existingCompany = host.querySelector('[data-antcv-candidate-edit="company"]');
+    if (existingLabel && existingRole && existingCompany) {
+      if (host.contains(document.activeElement)) return;
+      if (clean(existingLabel.textContent) === clean(label)
+        && clean(existingRole.textContent) === clean(role)
+        && clean(existingCompany.textContent) === clean(company)) {
+        return;
+      }
+    }
 
     // (Re)build the host's children: three editable spans + two
     // static separator spans.

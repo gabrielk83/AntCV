@@ -51,11 +51,31 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.40.341-prv-bullets';
+  var VERSION = '1.40.341-prv-bullets2';
   if (window.__antcvPreviewBulletsDedup341 === VERSION) return;
   window.__antcvPreviewBulletsDedup341 = VERSION;
 
   var SECTIONS_KEY = 'sections';
+
+  // v1.40.341-prv-bullets2 — the per-node "hid template-only list" debug
+  // line flooded the console: a re-render loop elsewhere keeps re-mounting
+  // the template list as FRESH nodes (without our marker), so this sidecar
+  // re-hides each one and logged it every time, drowning out everything
+  // else. Collapse those into one debounced summary. The reported count is
+  // itself a useful signal for how fast the list is being re-rendered.
+  var hidLogPending = false;
+  var hidCountSinceLog = 0;
+  function noteHidden() {
+    hidCountSinceLog += 1;
+    if (hidLogPending) return;
+    hidLogPending = true;
+    setTimeout(function () {
+      hidLogPending = false;
+      var n = hidCountSinceLog;
+      hidCountSinceLog = 0;
+      try { console.debug('[preview-bullets-dedup] hid ' + n + ' template-only list(s) since last report'); } catch (_) {}
+    }, 2000);
+  }
 
   function clean(s) {
     return String(s == null ? '' : s).replace(/[\t\n\r ]+/g, ' ').trim();
@@ -206,7 +226,7 @@
       if (!isTemplateOnlyList(list)) continue;
       list.style.setProperty('display', 'none', 'important');
       list.setAttribute('data-antcv-prv-bullets-hidden', '1');
-      try { console.debug('[preview-bullets-dedup] hid template-only list', list); } catch (_) {}
+      noteHidden();
     }
   }
 

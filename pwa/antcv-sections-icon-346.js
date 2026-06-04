@@ -42,8 +42,17 @@
   var PREFIX = PILCROW + THINSP;
   var NAV_SEL = '.antcv-react-bottom-nav';
 
-  // The Sections button's exact label text, EN + DA, as app.js renders it.
-  var PLAIN_LABELS = ['Section', 'Sektion'];
+  // v1.40.347 — decorate the Preview tab too, so the three view tabs are
+  // visually parallel: [pilcrow Section] [target Analysis] [eye Preview].
+  // Each group lists the PLAIN label app.js renders (EN + DA). EN is the
+  // verified case; DA "Sektion" verified; Preview's DA label varies, so match
+  // common forms. A prefixed button no longer matches a plain label, so this
+  // stays idempotent and self-heals after an app.js re-render.
+  var EYE = '👁';
+  var GROUPS = [
+    { prefix: PREFIX, labels: ['Section', 'Sektion'] },
+    { prefix: EYE + THINSP, labels: ['Preview', 'Forhåndsvisning', 'Vis'] },
+  ];
 
   function decorate() {
     // Scope to the bottom nav so we never touch a "Section"-labelled button
@@ -55,11 +64,14 @@
       for (var i = 0; i < btns.length; i++) {
         var b = btns[i];
         var txt = (b.textContent || '').trim();
-        // Only act on the PLAIN label — a button already showing the prefixed
-        // label won't match, so this is idempotent and self-heals after a
+        // Only act on a PLAIN label — a button already showing a prefix no
+        // longer matches, so this is idempotent and self-heals after a
         // re-render.
-        if (PLAIN_LABELS.indexOf(txt) >= 0) {
-          b.textContent = PREFIX + txt;
+        for (var g = 0; g < GROUPS.length; g++) {
+          if (GROUPS[g].labels.indexOf(txt) >= 0) {
+            b.textContent = GROUPS[g].prefix + txt;
+            break;
+          }
         }
       }
     }

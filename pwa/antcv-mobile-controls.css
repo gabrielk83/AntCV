@@ -1222,3 +1222,20 @@ body.antcv-editor-ready {
   user-select: text !important;
   cursor: text !important;
 }
+
+/* v1.50.78 — MOBILE-NAV-OVERLAP-001. The fixed bottom nav is a flex row of
+   ~8 controls ([Section][Analysis][Preview][-][zoom][+][CV][CL]). On narrow
+   viewports they overflowed the 10px-inset bar and the right-most buttons
+   (CV/CL) clipped off-screen. Let the bar wrap to multiple rows so every
+   control stays visible; cap its height and scroll if it ever gets tall.
+   Additive + scoped to mobile; reversible. */
+@media (max-width: 900px) {
+  body.antcv-editor-ready .antcv-react-bottom-nav {
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    align-content: center !important;
+    gap: 6px !important;
+    max-height: 38vh !important;
+    overflow-y: auto !important;
+  }
+}

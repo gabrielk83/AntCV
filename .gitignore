@@ -74,3 +74,5 @@ candidates/
 !.env.example
 
 .claude/worktrees/
+
+pwa/antcv-react-islands.js.map

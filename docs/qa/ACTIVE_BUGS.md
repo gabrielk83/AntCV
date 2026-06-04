@@ -5,6 +5,39 @@ This file now folds in the canonical `AntCV_UI_UX_Spec_and_QA_Plan_v4.docx` back
 
 ---
 
+## VISUAL-SETTINGS PLACEMENT — v1.50.95 (built, NOT yet deployed; live verification owed)
+
+Addresses the **placement** of visual settings across the STANDARD Personal / Layout subtabs — the placement aspects of `VISUAL-PKG-003`, `SETTINGS-HEAD-001`, `SECTION-LAYOUT-001` (see the 2026-06-04 batch triage below). Some behavioural sub-items of those IDs remain (see Deferred). Source-only (React islands + protocol version bumps); `pwa/antcv-react-islands.js` rebuilt via `npm run build`. Not committed/deployed yet — deploy + live acceptance gate owed.
+
+Context found this session: local `main` was **70 commits behind** `origin/main` (prod v1.50.93); synced via fast-forward to `160ccd2` before editing. The earlier "Visual-package Layout move" (`75911dc`) had been a hand-edit to the minified bundle only and was silently reverted when the bundle was later rebuilt from un-updated source.
+
+### What changed (source)
+- **VISUAL PACKAGE (PackagePicker) moved out of Personal → Layout.** Mount gates on `isLayoutSubtab`, anchored immediately after the native STYLE PACKAGE section. Rendered with `context="layout"`: the redundant 7-package grid is hidden (native STYLE PACKAGE buttons own selection); surfaces the **Quick-alternative** selector + explanation and the **Custom** explanation (auto-engages via the existing `window.AntcvCustomMode` tolerance evaluator). Personal carries no visual-package control. (VISUAL-PKG-001..003)
+- **LANGUAGES (LanguageCard)** re-anchored into the Personal order-based flex column at `order:35` → after the writing-style/tone group, immediately before Banned Words.
+- **SECTION LAYOUT (LayoutPicker)** re-anchored into the same column at `order:45` → after Banned Words. (SECTION-LAYOUT-001)
+- **Styling:** the three injected cards' headers use the shared native register `NATIVE_SECTION_HEADER_STYLE` (Georgia 11px / 600 / .4px / rgba(255,255,255,.55)) so they read as native sections. (SETTINGS-HEAD-001)
+- Helpers added to `src/lib/settings-dom.ts`: `findSettingsFlexColumn` (Personal order-column), `findSectionBlockBeforeNext` (Layout block-flow), `NATIVE_SECTION_HEADER_STYLE`.
+
+### Verification (run on live, desktop AND mobile, after deploy)
+- [ ] Personal: Languages after WRITING STYLE/Advanced Tone, immediately before Banned Words; Section layout immediately after Banned Words. No cramped bottom 3-column row.
+- [ ] Personal: NO Visual-package control present (no duplicate/orphan).
+- [ ] Layout: "Within-package style" card (Quick-alt + Custom) sits directly under the STYLE PACKAGE buttons, before SIDEBAR POSITION. Quick-alt Default/Alt 1/Alt 2 apply; Custom explanation shown.
+- [ ] The three injected card headers match the native section register (font/size/colour).
+- [ ] Native STYLE PACKAGE buttons and Quick-alt both apply to the preview; no Preview-only / after-hard-refresh-only behaviour.
+
+### Anchoring mechanics (so a future session doesn't re-derive)
+Personal subtab = `display:flex; flex-direction:column` ordered by CSS `order` (WRITING STYLE 25 / ADVANCED TONE 30 / BANNED WORDS 40). Layout subtab = block flow. Both placement helpers were prototyped against the live deployed DOM and confirmed to land in the correct slots before the source was finalised.
+
+### Deferred follow-up (remaining sub-items of the same IDs)
+- **VISUAL-PKG-001** — rename the native app.js panel label "STYLE PACKAGE" → "Visual package" (app.js; fold into the MERGE-DUP pass).
+- **VISUAL-PKG-002** — enrich each native STYLE PACKAGE button with the package-card detail (palette / font / shape / photo-size icons).
+- **VISUAL-PKG-003** — move the "Segoe UI · circle · 120px" descriptor out of the package card to sit next to the Alt circles (the caption wording is now aligned; descriptor relocation pending).
+- **SECTION-LAYOUT-001** — make the whole Section-layout island collapsible + collapsed by default, refresh it when the writing style changes, and route out-of-definition edits into a custom writing style.
+- Fold Quick-alt + Custom natively into the Layout STYLE PACKAGE section in `app.js` and delete the PackagePicker island (the "deprecated afterwards" end state). Wire the native Advanced → Style colour/font/image pickers to `window.AntcvCustomMode` so Custom auto-engages on out-of-tolerance edits.
+- WritingStylePicker island renders empty (width 0) on production and sits inert in Personal — separate pre-existing issue, not addressed here.
+
+---
+
 ## 2026-06-04 (batch) — owner feature + bug dump triaged
 
 Full triage with per-item IDs, layer, and sidecar-vs-app.js verdict lives in

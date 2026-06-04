@@ -130,3 +130,93 @@ export function findDoneButton(root: Element): Element | null {
   const done = buttonsIn(root).filter((b) => /^Done$/i.test(norm(b.textContent))).pop();
   return done ?? null;
 }
+
+// ─── native-section anchoring ─────────────────────────────────────────────
+//
+// The STANDARD Settings subtabs render their sections inside a
+// `display:flex; flex-direction:column` container that arranges children by
+// CSS `order` (e.g. in Personal: WRITING STYLE=25, ADVANCED TONE=30, BANNED
+// WORDS=40). DOM insertion order therefore does NOT control visual position —
+// an injected island lands wherever its `order` puts it (default 0 → up among
+// the identity fields). React islands that want to read as native sections
+// must (a) mount INTO this flex column and (b) set an explicit `order`.
+//
+// Sampled native section-header register, matched by the helpers below so the
+// injected cards read as siblings of the real sections, not bolted-on widgets.
+export const NATIVE_SECTION_HEADER_STYLE: Readonly<Record<string, string | number>> = {
+  fontFamily: 'Georgia, serif',
+  fontSize: 11,
+  fontWeight: 600,
+  letterSpacing: '0.4px',
+  textTransform: 'uppercase',
+  color: 'rgba(255,255,255,.55)',
+};
+
+function ownText(el: Element): string {
+  let s = '';
+  for (const n of Array.from(el.childNodes)) {
+    if (n.nodeType === 3) s += n.textContent ?? '';
+  }
+  return norm(s);
+}
+
+// Find the flex-column section container in `root` that holds the most section
+// headers matching any of `labels`. Robust against duplicate headers rendered
+// by an empty/inert island elsewhere in the modal — we pick the column with
+// the densest cluster of real native headers.
+export function findSettingsFlexColumn(root: Element, labels: RegExp[]): HTMLElement | null {
+  const hits: Element[] = [];
+  for (const el of Array.from(root.querySelectorAll('div,span,label,h3,h4'))) {
+    const t = ownText(el);
+    if (t && labels.some((re) => re.test(t))) hits.push(el);
+  }
+  const tally = new Map<HTMLElement, number>();
+  for (const h of hits) {
+    let n: HTMLElement | null = h.parentElement;
+    for (let i = 0; i < 6 && n; i++) {
+      let cs: CSSStyleDeclaration | null = null;
+      try { cs = getComputedStyle(n); } catch { /* */ }
+      if (cs && cs.display === 'flex' && cs.flexDirection === 'column' && n.childElementCount >= 4) {
+        tally.set(n, (tally.get(n) ?? 0) + 1);
+        break;
+      }
+      n = n.parentElement;
+    }
+  }
+  let best: HTMLElement | null = null;
+  let bestN = 0;
+  tally.forEach((v, k) => { if (v > bestN) { bestN = v; best = k; } });
+  return best;
+}
+
+// Locate the top-level section block for `headerRe` in a BLOCK-FLOW subtab
+// (e.g. Layout, which lays sections out in normal document order rather than
+// the order-based flex column Personal uses). Climb from the header element
+// until the candidate has a LATER sibling that contains `nextHeaderRe` (the
+// following native section) — that proves the candidate is itself a top-level
+// section block sitting beside its neighbours, so inserting immediately after
+// it lands an island between the two sections. Returns null if the structure
+// doesn't match (caller should fall back to a coarser anchor).
+export function findSectionBlockBeforeNext(
+  root: Element,
+  headerRe: RegExp,
+  nextHeaderRe: RegExp,
+): HTMLElement | null {
+  let hdr: Element | null = null;
+  for (const el of Array.from(root.querySelectorAll('div,span,label,h3,h4'))) {
+    if (headerRe.test(ownText(el))) { hdr = el; break; }
+  }
+  if (!hdr) return null;
+  let node: Element = hdr;
+  for (let i = 0; i < 8 && node.parentElement && node.parentElement !== root; i++) {
+    const parent = node.parentElement;
+    const sibs = Array.from(parent.children);
+    const idx = sibs.indexOf(node);
+    const followedByNext = sibs
+      .slice(idx + 1)
+      .some((s) => nextHeaderRe.test(norm(s.textContent)));
+    if (followedByNext) return node as HTMLElement;
+    node = parent;
+  }
+  return null;
+}

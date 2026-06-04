@@ -9,10 +9,25 @@
 import { createRoot, type Root } from 'react-dom/client';
 import { createElement } from 'react';
 import { LanguageCard } from './LanguageCard';
-import { findDoneButton, findSettingsRoot, isPersonalSubtab } from '../../lib/settings-dom';
+import {
+  findDoneButton,
+  findSettingsFlexColumn,
+  findSettingsRoot,
+  isPersonalSubtab,
+} from '../../lib/settings-dom';
 
 const REACT_CARD_ID = 'antcv-react-personal-languages';
 const LEGACY_CARD_ID = 'antcv-stability-personal-languages';
+
+// Native Personal-subtab section headers (literal uppercase) used to locate
+// the order-based flex column the sections live in.
+const PERSONAL_LABELS = [/^WRITING STYLE$/i, /^ADVANCED TONE$/i, /^BANNED WORDS$/i];
+
+// CSS order slot: WRITING STYLE=25, ADVANCED TONE=30, BANNED WORDS=40.
+// 27 lands Languages immediately after the WRITING STYLE label (before
+// Advanced Tone / Banned Words) per SETTINGS-HEAD-001 — "after the style
+// selector, before the banned words".
+const LANGUAGES_ORDER = '27';
 
 interface MountState {
   root: Root | null;
@@ -27,28 +42,28 @@ function legacyCardPresent(): boolean {
 
 function ensureMountContainer(settingsRoot: HTMLElement): HTMLElement {
   let container = document.getElementById(REACT_CARD_ID) as HTMLElement | null;
-  if (container) return container;
+  if (!container) {
+    container = document.createElement('div');
+    container.id = REACT_CARD_ID;
+    container.setAttribute('data-antcv-react-mount', 'language-card');
+    container.style.order = LANGUAGES_ORDER;
+  }
 
-  container = document.createElement('div');
-  container.id = REACT_CARD_ID;
-  container.setAttribute('data-antcv-react-mount', 'language-card');
-
-  // v1.50.58 — anchor the Languages card immediately AFTER the Writing
-  // Style picker section (which ends with Banned words / Banned phrases),
-  // so "Languages in the top bar" reads as a sibling sub-header right
-  // below Banned Words rather than floating at the very bottom of the tab.
-  //
-  // Primary anchor: insert right after the writing-style-picker island.
-  // Fallback (older bundle / island not yet mounted): the previous
-  // behaviour — just before the Settings "Done" button.
-  const writingStyle = settingsRoot.querySelector<HTMLElement>(
-    '[data-antcv-react-island="writing-style-picker"]',
-  );
-  if (writingStyle && writingStyle.parentElement) {
-    writingStyle.parentElement.insertBefore(container, writingStyle.nextSibling);
+  // Primary anchor: the order-based flex column that holds the native Personal
+  // sections. Mount INTO it and let CSS `order` place the card after the
+  // writing-style / tone group and immediately before Banned Words. DOM
+  // position inside the column is irrelevant — `order` decides — so we only
+  // (re)attach when our node has been dropped (e.g. app.js re-rendered the
+  // column), which keeps the observer from thrashing.
+  const column = findSettingsFlexColumn(settingsRoot, PERSONAL_LABELS);
+  if (column) {
+    container.style.order = LANGUAGES_ORDER;
+    if (container.parentElement !== column) column.appendChild(container);
     return container;
   }
 
+  // Fallback (column not detected): just before the Settings "Done" button.
+  if (container.parentElement) return container;
   const done = findDoneButton(settingsRoot);
   if (done && done.parentElement) {
     done.parentElement.insertBefore(container, done);

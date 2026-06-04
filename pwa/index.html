@@ -60,6 +60,9 @@
   <!-- Loop damper REVERTED (1.50.89): the global MutationObserver wrap broke
        the per-row control injectors' self-cleanup, so WIB/Experience/Core
        Competencies controls multiplied. File kept in repo but no longer loaded. -->
+  <!-- sections-updated de-duper: DEFAULT-OFF event-level circuit breaker for the
+       re-render churn. Enable: localStorage.antcvSecDedupe=1. Must run early. -->
+  <script src="antcv-sections-updated-dedupe.js?v=1.0.0"></script>
   <style>
     *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0;}
     body{font-family:'Georgia',serif;background:#283556;overscroll-behavior:none;}
@@ -634,6 +637,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-analysis-merge-344.js?v=1.40.344" defer></script>
 <script src="antcv-analysis-panel-jd-block-356.js?v=1.50.74-jd-compact" defer></script>
 <script src="antcv-sections-icon-346.js?v=1.40.347-preview-eye" defer></script>
+<script src="antcv-label-history.js?v=1.0.0" defer></script>
 <script src="antcv-topbar-tools-347.js?v=1.50.84-fab-css" defer></script>
 <!-- v1.40.351: mobile-only FAB cleanup. Hides the redundant mobile JD-analysis
      and Fusion FABs (title-keyed; they lack the data-attrs topbar-tools-347

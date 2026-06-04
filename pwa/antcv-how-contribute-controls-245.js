@@ -211,28 +211,11 @@
 
   function currentBulletValues(){const s=sec();const b=s&&(Array.isArray(s.bullets)?s.bullets:Array.isArray(s.items)?s.items:[]);return (b||[]).map(clean).filter(Boolean);}
   function syncPreviewBulletNodes(secEl,p){
-    const vals=currentBulletValues(); if(!secEl||!vals.length)return p;
-    let list=(p.bullets&&p.bullets[0]&&p.bullets[0].parentElement&&/^(UL|OL)$/i.test(p.bullets[0].parentElement.tagName))?p.bullets[0].parentElement:null;
-    // v1.50.57 idempotency: if a list already exists and its <li> text +
-    // count already match `vals`, do nothing. Writing identical content
-    // every 2s was the flicker engine — React would repaint the section
-    // (dropping our <li>s or restoring placeholders), we would re-add
-    // them, the bullet COUNT would swing 2<->0, and every section below
-    // shifted by those lines. No-op-on-match stops the fight.
-    if(list){
-      const lisNow=Array.from(list.children).filter(x=>/^(LI)$/i.test(x.tagName));
-      let same=lisNow.length===vals.length;
-      if(same){for(let i=0;i<vals.length;i++){if(clean(lisNow[i].textContent)!==clean(vals[i])){same=false;break;}}}
-      if(same) return previewParts(secEl);
-    }
-    if(!list){list=document.createElement('ul'); list.setAttribute('data-antcv-hiwc-list','1'); if(p.closing&&p.closing.parentNode)p.closing.parentNode.insertBefore(list,p.closing); else secEl.appendChild(list);}
-    list.setAttribute('data-antcv-hiwc-list','1'); Object.assign(list.style,{margin:'2px 0 4px 0',paddingLeft:'1.05em',listStylePosition:'outside'}); let lis=Array.from(list.children).filter(x=>/^(LI)$/i.test(x.tagName));
-    while(lis.length<vals.length){const li=document.createElement('li');list.appendChild(li);lis.push(li);}
-    // v1.50.57: reconcile the count DOWN too. Without this, a stale list
-    // with more <li>s than `vals` kept extra bullets, feeding the count
-    // oscillation. Remove the surplus so the rendered count is stable.
-    while(lis.length>vals.length){const li=lis.pop();if(li&&li.parentNode)li.parentNode.removeChild(li);}
-    lis.forEach((li,i)=>{if(i<vals.length&&clean(li.textContent)!==clean(vals[i]))li.textContent=vals[i];});
+    // v1.50.88 — the app renders the HIWC bullets in the preview from the
+    // section data, so injecting our own <ul> produced TWO copies of every
+    // bullet (owner screenshot). Remove any list we previously injected and
+    // let the app own the bullet rendering; never inject a duplicate.
+    if(secEl){ Array.prototype.forEach.call(secEl.querySelectorAll('[data-antcv-hiwc-list]'),function(n){ if(n.parentNode) n.parentNode.removeChild(n); }); }
     return previewParts(secEl);
   }
   function applyPreview(){

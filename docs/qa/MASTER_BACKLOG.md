@@ -137,8 +137,7 @@ Branch: `claude/antcv-roadmap-bugs-L9Sqa`. Compiled 2026-06-04.
 | IMPORT-001 | Import reports 0 work entries | High | PARTIAL | `[console]` Verify in-app import live; adopt `lib/import-normalize.js` inside sidecars. |
 | IMPORT-COUNT-001 | Upload extract count wrong | — | OPEN | `[console]` Fix importer→personalInfo mapping in app.js (root, not recount). |
 | LANG-001 | Settings vs top-bar language mismatch | Med | OPEN | `[console]` Make wizard source of truth; fallback EN+DA. |
-| ONBOARD-001 | Step 3B not scrollable on mobile | High | OPEN | `[console]` Identify the step-3B list element; add dvh-safe scroll + reachable Next. |
-| WIZARD-001 | Step 6b not scrollable | — | OPEN | `[console]` Add max-height/overflow to the wizard card (needs stable selector). |
+| ONBOARD-001 / WIZARD-001 | Wizard walk-through ("How should AntCV write?" / Step 6B) not scrollable on mobile | High | VERIFYING | Shipped `antcv-wizard-walkthrough-scroll.js` (1.50.122): finds the overlay by heading text, mobile-only `overflow-y:auto` + `align-items:flex-start` so the whole step + Next scroll. `[verify]` Confirm on phone after deploy + `?hardReset=1`. |
 
 ## 9. Generation content + generation UI (§14.2)
 

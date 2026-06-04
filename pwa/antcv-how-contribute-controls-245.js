@@ -175,7 +175,11 @@
       const enr=makeBtn('enrich','✨','Enrich bullet',inp);
       const cjlr=makeBtn('cjlr','⇤','Alignment',inp);paintCJLR(cjlr,getAlign(key));
       const del=makeBtn('bullet-delete','×','Delete bullet',inp);del.style.borderColor='#ff5c5c';del.style.color='#e52b2b';del.style.background='transparent';
-      inp.oninput=()=>{syncFromInputs(); applyPreview();};
+      // v1.50.86 — debounce the section write so typing does NOT pulse a
+      // forceRebuild per keystroke (which re-created this input and stole
+      // focus = "not typable"). Sync after a short pause, and on blur.
+      inp.oninput=()=>{ scheduleBulletSync(syncFromInputs); };
+      inp.addEventListener('blur',()=>{ flushBulletSync(syncFromInputs); });
       page.onclick=ev=>{ev.preventDefault();ev.stopPropagation();setPage(key,getPage(key)%4+1);paintPage(page,key);applyPreview();};
       comp.onclick=ev=>{ev.preventDefault();ev.stopPropagation();inp.value=compressText(inp.value);dispatchInput(inp);syncFromInputs();applyPreview();};
       enr.onclick=ev=>{ev.preventDefault();ev.stopPropagation();inp.value=enrichText(inp.value);dispatchInput(inp);syncFromInputs();applyPreview();};
@@ -242,8 +246,16 @@
     });
   }
 
+  // v1.50.86 — edit-safety helpers for HIWC bullet typing.
+  function isTypingInHiwc(){
+    try{ var a=document.activeElement; return !!(a && a.matches && a.matches('[data-antcv-hiwc-bullet-input]')); }catch(_){ return false; }
+  }
+  var __hiwcSyncTimer=null;
+  function scheduleBulletSync(syncFn){ clearTimeout(__hiwcSyncTimer); __hiwcSyncTimer=setTimeout(function(){ __hiwcSyncTimer=null; try{ syncFn(); applyPreview(); }catch(_){} }, 600); }
+  function flushBulletSync(syncFn){ clearTimeout(__hiwcSyncTimer); __hiwcSyncTimer=null; try{ syncFn(); applyPreview(); }catch(_){} }
+
   let pending=false;function runSoon(){if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;run();});}
-  function run(){try{const r=root();if(r){cleanupClosingHelperText(r);controlsForField(findIntro(r),'intro');controlsForField(findClosing(r),'closing');renderBulletList(r,findBullets(r));}/* core CJLR cleanup handled by antcv-core-competencies-row-controls; do not prune across the whole Core section */ applyPreview();}catch(e){try{console.warn('[how-contribute-controls-245] failed:',e&&e.message);}catch(_){}}}
+  function run(){if(isTypingInHiwc())return;try{const r=root();if(r){cleanupClosingHelperText(r);controlsForField(findIntro(r),'intro');controlsForField(findClosing(r),'closing');renderBulletList(r,findBullets(r));}/* core CJLR cleanup handled by antcv-core-competencies-row-controls; do not prune across the whole Core section */ applyPreview();}catch(e){try{console.warn('[how-contribute-controls-245] failed:',e&&e.message);}catch(_){}}}
   function start(){injectCss();run();[100,300,800,1600,3000].forEach(ms=>setTimeout(run,ms));try{new MutationObserver(()=>{if(__applying)return;runSoon();}).observe(document.body||document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style','value']});}catch(_){}window.addEventListener('input',runSoon,true);window.addEventListener('click',()=>setTimeout(run,0),true);window.addEventListener('antcv:sections-updated',()=>setTimeout(run,0));/* v1.50.57: blind setInterval(run,2000) removed — it was the flicker clock. Updates are now event-driven (sections-updated/input/click) plus a slow safety re-sync that no-ops when nothing changed. */setInterval(()=>{if(!__applying)run();},8000);}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
   window.AntcvHowContributeControls239={version:VERSION,run};

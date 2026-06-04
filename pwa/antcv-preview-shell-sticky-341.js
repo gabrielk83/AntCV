@@ -129,13 +129,22 @@
     return true;
   }
 
+  // v1.50.81 — anti-ping-pong back-off. antcv-overlay re-adds
+  // `antcv-overlay-hidden` whenever isContentReady() is false (Settings open,
+  // or transient empty sections during cloud-sync). We strip it. Both observe
+  // the overlay, so we fought each other at frame rate → the privacy-FAB
+  // flicker + a contributor to the rAF flood, AND the FAB showed "on the side"
+  // in Settings where the overlay is meant to be hidden. Distinguish a single
+  // transient hide (preview bug — correct it once) from a persistent hide
+  // (Settings / not-ready — antcv-overlay should win): after repeated unhides
+  // in a short window, yield for a few seconds so it settles hidden.
+  var unhideTimes = [];
+  var yieldUntil = 0;
+  function nowMs() { return (window.performance && performance.now) ? performance.now() : Date.now(); }
   function tick() {
     if (!isDesktop()) return;
     var overlays = findOverlayRoots();
     if (!overlays.length) return;
-    // Arm: if any overlay is currently visible (i.e., its hidden
-    // class is absent), record that we've seen it visible. From
-    // this point on, future hides are reverted unless legitimate.
     for (var i = 0; i < overlays.length; i++) {
       if (isOverlayVisible(overlays[i])) {
         armed = true;
@@ -144,8 +153,22 @@
     }
     if (!armed) return;
     if (isLegitimateReset()) return;
+    var now = nowMs();
+    if (now < yieldUntil) return; // backed off — let antcv-overlay's hide stand
+    var didUnhide = false;
     for (var k = 0; k < overlays.length; k++) {
-      unhide(overlays[k]);
+      if (unhide(overlays[k])) didUnhide = true;
+    }
+    if (didUnhide) {
+      unhideTimes.push(now);
+      unhideTimes = unhideTimes.filter(function (t) { return now - t < 2000; });
+      if (unhideTimes.length >= 3) {
+        // antcv-overlay keeps re-hiding (persistent) — stop fighting so it
+        // doesn't flicker and stays hidden where intended (e.g. Settings).
+        yieldUntil = now + 5000;
+        unhideTimes = [];
+        try { console.debug('[preview-shell-sticky] persistent hide — backing off 5s'); } catch (_) {}
+      }
     }
   }
 
@@ -158,24 +181,23 @@
     var delays = [150, 500, 1500, 3000];
     for (var d = 0; d < delays.length; d++) setTimeout(tick, delays[d]);
     try {
+      // v1.50.81 — only react to class changes ON an overlay root (the
+      // hide/show toggle), not every class mutation in the document. Reacting
+      // to the whole body made this tick on every sidecar's class write and
+      // amplified the fight. The 1.5s poll covers overlay re-mounts.
       var mo = new MutationObserver(function (records) {
-        var anyClassChange = false;
         for (var r = 0; r < records.length; r++) {
           var rec = records[r];
-          if (rec.type === 'attributes' && rec.attributeName === 'class') {
-            anyClassChange = true;
-            break;
-          }
-          if (rec.type === 'childList') {
-            anyClassChange = true;
-            break;
+          var t = rec.target;
+          if (rec.type === 'attributes' && rec.attributeName === 'class'
+            && t && t.nodeType === 1 && t.classList && t.classList.contains('antcv-overlay')) {
+            tick();
+            return;
           }
         }
-        if (anyClassChange) tick();
       });
       mo.observe(document.body || document.documentElement, {
-        attributes: true, attributeFilter: ['class'],
-        childList: true, subtree: true,
+        attributes: true, attributeFilter: ['class'], subtree: true,
       });
     } catch (_) {}
     window.addEventListener('antcv:sections-updated', tick);

@@ -195,7 +195,7 @@
       } catch (_) {}
     }
 
-    let hidden = 0, shown = 0;
+    let hidden = 0, shown = 0, changed = false;
     for (const e of entries) {
       const want = wantedSet.has(e.code);
       if (want) {
@@ -205,6 +205,7 @@
             e.btn.style.display = e.btn.__antcvOriginalDisplay || '';
             delete e.btn.__antcvOriginalDisplay;
           } catch (_) {}
+          changed = true;
         }
         shown++;
       } else {
@@ -214,11 +215,15 @@
             e.btn.__antcvOriginalDisplay = e.btn.style.display || '';
             e.btn.style.display = 'none';
           } catch (_) {}
+          changed = true;
         }
         hidden++;
       }
     }
-    if (hidden > 0 || shown > 0) {
+    // v1.50.81 — log only when something actually changed. The apply is
+    // idempotent (guarded writes), but it logged every run while woken by the
+    // re-render storm, flooding the console. No behaviour change.
+    if (changed) {
       try {
         console.debug('[lang-bar-filter] wanted=' + Array.from(wantedSet).join(',') +
           ' shown=' + shown + ' hidden=' + hidden);

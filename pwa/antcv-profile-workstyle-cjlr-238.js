@@ -120,8 +120,13 @@
   function applyEditors(){
     editorBlocks().forEach(({el,sec})=>{
       const a=getAlign(sec.id);
-      el.style.textAlign=a;
-      el.setAttribute('data-antcv-profile-workstyle-align',a);
+      // v1.50.80 — idempotency. These ran unconditionally every sweep on ~12
+      // spans, and the sweep is woken ~13x/sec -> ~150 attribute mutations/sec
+      // (confirmed top of the mutation-source probe). That storm woke every
+      // body-MutationObserver in the app (the re-render loop). Only write when
+      // the value actually differs so a stable state produces ZERO mutations.
+      if(el.style.textAlign!==a) el.style.textAlign=a;
+      if(el.getAttribute('data-antcv-profile-workstyle-align')!==a) el.setAttribute('data-antcv-profile-workstyle-align',a);
     });
   }
 
@@ -154,8 +159,8 @@
       textTargets(root).forEach(el=>{
         const owner = el.closest('[data-sid], [data-section-id]');
         if(owner && owner!==root && sectionFromElement(owner)!==sec) return;
-        el.style.textAlign=a;
-        el.setAttribute('data-antcv-profile-workstyle-preview-align',a);
+        if(el.style.textAlign!==a) el.style.textAlign=a;
+        if(el.getAttribute('data-antcv-profile-workstyle-preview-align')!==a) el.setAttribute('data-antcv-profile-workstyle-preview-align',a);
       });
     });
   }

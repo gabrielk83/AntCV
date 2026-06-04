@@ -82,8 +82,13 @@
 
   function rowFields(row){ return Array.from(row.querySelectorAll('input,textarea,[contenteditable="true"]')).filter(visible); }
   function applyEditor(row, align){
-    row.setAttribute('data-antcv-core-row-align', align);
-    rowFields(row).forEach(f=>{ f.style.textAlign = align; f.setAttribute('data-antcv-core-row-align', align); });
+    // v1.50.80 — idempotency: write only on change (was unconditional every
+    // sweep -> part of the attribute-mutation storm driving the re-render loop).
+    if(row.getAttribute('data-antcv-core-row-align')!==align) row.setAttribute('data-antcv-core-row-align', align);
+    rowFields(row).forEach(f=>{
+      if(f.style.textAlign!==align) f.style.textAlign = align;
+      if(f.getAttribute('data-antcv-core-row-align')!==align) f.setAttribute('data-antcv-core-row-align', align);
+    });
   }
 
   function makeButton(cls, text, title){
@@ -213,9 +218,10 @@
     const bodyRows = rows.filter(r => !headerRows.includes(r));
     const applyAlign = (r,a) => {
       if(!r) return;
-      r.style.textAlign=a;
-      r.setAttribute('data-antcv-core-row-preview-align',a);
-      Array.from(r.querySelectorAll('td,th,span,div,p')).forEach(x=>{ x.style.textAlign=a; });
+      // v1.50.80 — idempotency (was unconditional every sweep ~25/sec).
+      if(r.style.textAlign!==a) r.style.textAlign=a;
+      if(r.getAttribute('data-antcv-core-row-preview-align')!==a) r.setAttribute('data-antcv-core-row-preview-align',a);
+      Array.from(r.querySelectorAll('td,th,span,div,p')).forEach(x=>{ if(x.style.textAlign!==a) x.style.textAlign=a; });
     };
     // Editor row 0 is the table heading row, so its CJLR controls preview table headings only.
     headerRows.forEach(r=>applyAlign(r,getAlign(0)));

@@ -5,7 +5,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.50.117-textarea-surface';
+  const VERSION='1.50.118-strip-own-row';
   let __applying=false; // v1.50.57: re-entrancy guard so our own DOM writes don't re-trigger the observer/flicker.
   const ALIGN_KEY='antcv.hiwc.alignment.v1';
   const PAGE_KEY='antcv:itemPages';
@@ -238,13 +238,19 @@
     // re-render storm kept wiping, so taps never stuck. Undo any leftover hide.)
     if(ta.style.display==='none') ta.style.display='';
     const host=ta.parentNode; if(!host)return;
-    let panel=host.querySelector(':scope > [data-antcv-hiwc-bullet-controls]');
+    // Put the control strip on its OWN row BELOW the whole field row, not as a
+    // flex sibling of the textarea (which squeezed the textarea down to ~20px so
+    // it was unreadable). Anchor it after `host` inside host's parent.
+    const container=host.parentNode||host;
+    // Drop any stale strip left inside the field row by older builds.
+    const inner=host.querySelector(':scope > [data-antcv-hiwc-bullet-controls]'); if(inner) inner.remove();
+    let panel=container.querySelector(':scope > [data-antcv-hiwc-bullet-controls]');
     const sig=bulletSig(ta);
     if(panel && panel.getAttribute('data-antcv-hiwc-bullet-sig')===sig) return;
     if(!panel){
       panel=document.createElement('div');panel.setAttribute('data-antcv-hiwc-bullet-controls','1');
       Object.assign(panel.style,{display:'flex',flexDirection:'column',gap:'3px',margin:'4px 0 6px 0',width:'100%',boxSizing:'border-box'});
-      host.insertBefore(panel, ta.nextSibling);
+      container.insertBefore(panel, host.nextSibling);
     }
     panel.setAttribute('data-antcv-hiwc-bullet-sig',sig);
     panel.textContent='';

@@ -164,19 +164,23 @@
   // matches it.
   function applyAlignmentToSection(sectionEl, alignment) {
     if (!sectionEl) return;
-    sectionEl.setAttribute('data-antcv-align', alignment);
+    // v1.50.80 — idempotency: only write when the value differs. These ran
+    // unconditionally every reapply pass; combined with the woken-by-everything
+    // observer that was ~33 attribute mutations/sec (data-antcv-aligned), a
+    // contributor to the re-render storm. Stable state now produces no writes.
+    if (sectionEl.getAttribute('data-antcv-align') !== alignment) sectionEl.setAttribute('data-antcv-align', alignment);
     const targets = sectionEl.querySelectorAll(TEXT_TARGET_SELECTOR);
     for (const t of targets) {
       // Skip targets that live inside a child section (nested data-sid).
       // Each section owns its own alignment; the inner one wins.
       const owner = t.closest('[data-sid]');
       if (owner !== sectionEl) continue;
-      t.style.textAlign = alignment;
-      t.setAttribute('data-antcv-aligned', alignment);
+      if (t.style.textAlign !== alignment) t.style.textAlign = alignment;
+      if (t.getAttribute('data-antcv-aligned') !== alignment) t.setAttribute('data-antcv-aligned', alignment);
     }
     // Also align the section block itself so block-level elements
     // (like single-line headers) line up.
-    sectionEl.style.textAlign = alignment;
+    if (sectionEl.style.textAlign !== alignment) sectionEl.style.textAlign = alignment;
   }
 
   // ─── Cycler button ────────────────────────────────────────────────

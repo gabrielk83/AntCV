@@ -6,7 +6,7 @@
  */
 (function(){
   'use strict';
-  const VERSION = '1.50.96-native-pagebreak';
+  const VERSION = '1.50.101-reliable-pbreak';
   // v1.40.242-preview-guard: Preview is button-free. Reject seeds and
   // hosts inside .antcv-preview-paper.
   const isInPreviewPaper = el => { if(!el) return false; const p=document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]'); return !!(p && p.contains(el)); };
@@ -149,6 +149,21 @@
     }
   }
 
+  // v1.50.101 — RELIABLE page-break toggle. Writes core_comp.pageBreakRows
+  // (persisted) + antcv:itemPages directly so the break reaches the DOCX worker
+  // (row_pages) and the preview splitter, independent of the flaky native ↧.
+  function coreBlob(){ return readJson(SECTIONS_KEY,null)||{}; }
+  function getCorePbr(i){ const list=coreBlob()[activeDoc()]; const sec=Array.isArray(list)?list.find(x=>x&&String(x.id||'')===coreSid()):null; const pbr=sec&&Array.isArray(sec.pageBreakRows)?sec.pageBreakRows:[]; return !!pbr[i]; }
+  function paintCorePbreak(b,i){ const on=getCorePbr(i); b.textContent=on?'↧✓':'↧'; b.title=(on?'Page break ON before this row — tap to remove':'Start this row (and the rest) on a new page')+' (row '+i+')'; b.setAttribute('aria-label',b.title); b.style.background=on?'rgba(1,183,187,.20)':'rgba(1,183,187,.08)'; }
+  function toggleCorePbreak(i){
+    const blob=coreBlob(); const list=blob[activeDoc()]; if(!Array.isArray(list))return; const sec=list.find(x=>x&&String(x.id||'')===coreSid()); if(!sec)return;
+    const pbr=Array.isArray(sec.pageBreakRows)?sec.pageBreakRows.slice():[]; pbr[i]=!pbr[i]; sec.pageBreakRows=pbr;
+    writeJson(SECTIONS_KEY,blob);
+    try{ localStorage.setItem(activeDoc()==='cv'?'cv_pwa_sections':'cl_pwa_sections',JSON.stringify(list)); }catch(_){}
+    try{ const ip=readJson(PAGE_KEY,{}); const bk={}; for(let k=1;k<pbr.length;k++){ if(pbr[k]) bk[String(k)]=2; } const sid=coreSid(); if(Object.keys(bk).length) ip[sid]=bk; else delete ip[sid]; writeJson(PAGE_KEY,ip); }catch(_){}
+    pulse();
+  }
+
   function ensureControls(row, idx){
     row.setAttribute('data-antcv-core-row','1'); applyEditor(row, getAlign(idx));
     // Keep controls strictly per row. Do not allow a section-level cleanup to steal
@@ -172,6 +187,12 @@
       if(wrap && !wrap.querySelector('button')) wrap.remove();
       return;
     }
+
+    // v1.50.101 — RELIABLE page-break toggle (replaces the flaky native ↧).
+    let pbrk=wrap.querySelector('[data-antcv-core-pbreak]');
+    if(!pbrk){ pbrk=makeButton('antcv-core-pbreak','↧','Page break'); pbrk.setAttribute('data-antcv-core-pbreak','1'); wrap.appendChild(pbrk); }
+    paintCorePbreak(pbrk,idx);
+    pbrk.onclick=ev=>{ ev.preventDefault(); ev.stopPropagation(); toggleCorePbreak(idx); paintCorePbreak(pbrk,idx); };
 
     let roller=row.querySelector('[data-antcv-core-roller="1"]');
     if(!roller){ roller=makeRoller(); const h=rollerHost(row); h.insertBefore(roller, h.firstChild); }

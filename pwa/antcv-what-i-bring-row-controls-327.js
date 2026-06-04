@@ -6,7 +6,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.50.96-native-pagebreak';
+  const VERSION='1.50.101-reliable-pbreak';
   if(window.__antcvWhatIBringRowControls264===VERSION) return;
   window.__antcvWhatIBringRowControls264=VERSION;
   // v1.40.264-preview-guard: Preview is button-free. Reject seeds and
@@ -82,6 +82,20 @@
   function getPage(sid,i){const all=readJson(PAGE_KEY,{}); const b=all[sid]||{}; const n=Number(b[String(i)]||1); return Number.isFinite(n)&&n>0?Math.min(4,Math.max(1,Math.round(n))):1;}
   function setPage(sid,i,n){const all=readJson(PAGE_KEY,{}); if(!all[sid]||typeof all[sid]!=='object') all[sid]={}; const nn=Math.min(4,Math.max(1,Math.round(Number(n)||1))); if(nn<=1) delete all[sid][String(i)]; else all[sid][String(i)]=nn; writeJson(PAGE_KEY,all); pulse('what-i-bring-page',{sid,index:i,page:nn});}
   function paintPage(b,sid,i){const p=getPage(sid,i); b.textContent='📄 '+p; b.title='What I Bring row '+i+' page: '+p+'. Click to cycle page 1-4.'; b.setAttribute('aria-label',b.title);}
+  // v1.50.101 — RELIABLE page-break toggle. Writes section.pageBreakRows
+  // (persisted to localStorage.sections + doc copy) AND antcv:itemPages directly,
+  // so the break reaches the DOCX worker (row_pages) and the preview splitter
+  // without depending on the flaky app-native ↧ button or mirror timing.
+  function getPbr(sid,i){const list=sectionList(sectionsBlob());const sec=list.find(x=>x&&String(x.id||'')===String(sid));const pbr=sec&&Array.isArray(sec.pageBreakRows)?sec.pageBreakRows:[];return !!pbr[i];}
+  function paintPbreak(b,sid,i){const on=getPbr(sid,i);b.textContent=on?'↧✓':'↧';b.title=(on?'Page break ON before this row — tap to remove':'Start this row (and the rest) on a new page')+' (row '+i+')';b.setAttribute('aria-label',b.title);b.style.background=on?'rgba(1,183,187,.20)':'rgba(1,183,187,.08)';}
+  function togglePageBreak(sid,i){
+    const blob=sectionsBlob();const list=sectionList(blob);const sec=list.find(x=>x&&String(x.id||'')===String(sid));if(!sec)return;
+    const pbr=Array.isArray(sec.pageBreakRows)?sec.pageBreakRows.slice():[];pbr[i]=!pbr[i];sec.pageBreakRows=pbr;
+    writeJson(SECTIONS_KEY,blob);
+    try{localStorage.setItem(activeDoc()==='cv'?'cv_pwa_sections':'cl_pwa_sections',JSON.stringify(list));}catch(_){}
+    try{const ip=readJson(PAGE_KEY,{});const bk={};for(let k=1;k<pbr.length;k++){if(pbr[k])bk[String(k)]=2;}if(Object.keys(bk).length)ip[sid]=bk;else delete ip[sid];writeJson(PAGE_KEY,ip);}catch(_){}
+    pulse('what-i-bring-pbreak',{sid,index:i});
+  }
   function compressText(s){let t=clean(s); t=t.replace(/\b(responsible for|worked on|helped with|involved in|various|different|extensive|strong|solid)\b/gi,'').replace(/\s*,\s*/g,', ').replace(/\s+/g,' ').trim(); if(t.length>170)t=t.slice(0,167).replace(/\s+\S*$/,'')+'…'; return t;}
   function valueOf(f){return f?(f.value!==undefined?f.value:f.textContent||''):'';}
   function setValue(f,v){if(!f)return; if(f.value!==undefined)f.value=v; else f.textContent=v; fireField(f);}
@@ -135,10 +149,12 @@
     if(!del) del=btn('delete','×','Delete What I Bring row '+rowIndex);
     del.onclick=function(ev){ev.preventDefault();ev.stopPropagation();if(ev.stopImmediatePropagation)ev.stopImmediatePropagation();deleteRow(row,rowIndex);};
 
-    // v1.50.96 — the sidecar 📄 page button is RETIRED. Table page breaks are
-    // unified on the app-native ↧ per-row toggle (section.pageBreakRows). Drop
-    // any 📄 button we previously injected so only the native control remains.
+    // v1.50.101 — RELIABLE page-break toggle replaces the flaky native ↧.
     Array.from(row.querySelectorAll('[data-antcv-wib264="page"]')).forEach(b=>b.remove());
+    let pbrk=existing && existing.pbreak || h.querySelector('[data-antcv-wib264="pbreak"]');
+    if(!pbrk){ pbrk=btn('page','↧','Page break'); pbrk.setAttribute('data-antcv-wib264','pbreak'); }
+    paintPbreak(pbrk,sid,rowIndex);
+    pbrk.onclick=function(ev){ev.preventDefault();ev.stopPropagation();if(ev.stopImmediatePropagation)ev.stopImmediatePropagation();togglePageBreak(sid,rowIndex);paintPbreak(pbrk,sid,rowIndex);};
 
     let comp=existing.compress || h.querySelector('[data-antcv-wib264="compress"]');
     if(!comp) comp=btn('compress','⇥⇤','Compress What I Bring row '+rowIndex+'. Applies to Strategic Expertise only.');
@@ -146,7 +162,7 @@
     comp.onclick=function(ev){ev.preventDefault();ev.stopPropagation();if(ev.stopImmediatePropagation)ev.stopImmediatePropagation(); const fs=Array.from(row.querySelectorAll('input,textarea,[contenteditable="true"]')).filter(visible); setValue(fs[1]||fs[0],compressText(valueOf(fs[1]||fs[0]))); pulse('what-i-bring-compress',{sid,index:rowIndex});};
 
     const cjlr=existing.cjlr, enhance=existing.enhance, eye=existing.eye;
-    [del,comp,cjlr,enhance,eye].filter(Boolean).forEach(b=>{ if(b.parentElement!==h) h.appendChild(b); else h.appendChild(b); });
+    [del,pbrk,comp,cjlr,enhance,eye].filter(Boolean).forEach(b=>{ if(b.parentElement!==h) h.appendChild(b); else h.appendChild(b); });
 
     // Remove duplicates left behind outside the final host, without touching up/down reorder buttons.
     const seen=Object.create(null);

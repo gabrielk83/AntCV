@@ -6,7 +6,7 @@
  */
 (function(){
   'use strict';
-  const VERSION = '1.50.101-reliable-pbreak';
+  const VERSION = '1.40.242-preview-guard';
   // v1.40.242-preview-guard: Preview is button-free. Reject seeds and
   // hosts inside .antcv-preview-paper.
   const isInPreviewPaper = el => { if(!el) return false; const p=document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]'); return !!(p && p.contains(el)); };
@@ -149,21 +149,6 @@
     }
   }
 
-  // v1.50.101 — RELIABLE page-break toggle. Writes core_comp.pageBreakRows
-  // (persisted) + antcv:itemPages directly so the break reaches the DOCX worker
-  // (row_pages) and the preview splitter, independent of the flaky native ↧.
-  function coreBlob(){ return readJson(SECTIONS_KEY,null)||{}; }
-  function getCorePbr(i){ const list=coreBlob()[activeDoc()]; const sec=Array.isArray(list)?list.find(x=>x&&String(x.id||'')===coreSid()):null; const pbr=sec&&Array.isArray(sec.pageBreakRows)?sec.pageBreakRows:[]; return !!pbr[i]; }
-  function paintCorePbreak(b,i){ const on=getCorePbr(i); b.textContent=on?'↧✓':'↧'; b.title=(on?'Page break ON before this row — tap to remove':'Start this row (and the rest) on a new page')+' (row '+i+')'; b.setAttribute('aria-label',b.title); b.style.background=on?'rgba(1,183,187,.20)':'rgba(1,183,187,.08)'; }
-  function toggleCorePbreak(i){
-    const blob=coreBlob(); const list=blob[activeDoc()]; if(!Array.isArray(list))return; const sec=list.find(x=>x&&String(x.id||'')===coreSid()); if(!sec)return;
-    const pbr=Array.isArray(sec.pageBreakRows)?sec.pageBreakRows.slice():[]; pbr[i]=!pbr[i]; sec.pageBreakRows=pbr;
-    writeJson(SECTIONS_KEY,blob);
-    try{ localStorage.setItem(activeDoc()==='cv'?'cv_pwa_sections':'cl_pwa_sections',JSON.stringify(list)); }catch(_){}
-    try{ const ip=readJson(PAGE_KEY,{}); const bk={}; for(let k=1;k<pbr.length;k++){ if(pbr[k]) bk[String(k)]=2; } const sid=coreSid(); if(Object.keys(bk).length) ip[sid]=bk; else delete ip[sid]; writeJson(PAGE_KEY,ip); }catch(_){}
-    pulse();
-  }
-
   function ensureControls(row, idx){
     row.setAttribute('data-antcv-core-row','1'); applyEditor(row, getAlign(idx));
     // Keep controls strictly per row. Do not allow a section-level cleanup to steal
@@ -178,21 +163,16 @@
     // The app already provides the CJLR control at the end of each row. Keep that one.
     Array.from(wrap.querySelectorAll('[data-antcv-core-cjlr], .antcv-core-cjlr')).forEach(x=>x.remove());
 
-    // v1.50.96 — the sidecar 📄 page button is RETIRED. Core Competencies page
-    // breaks are unified on the app-native ↧ per-row toggle (pageBreakRows),
-    // rendered by antcv-table-page-splits-327. Drop any 📄 we previously added.
-    row.querySelectorAll('[data-antcv-core-page]').forEach(x=>x.remove());
+    let page=wrap.querySelector('[data-antcv-core-page]');
     if(idx===0){
-      row.querySelectorAll('[data-antcv-core-roller],[data-antcv-core-up],[data-antcv-core-down],[data-antcv-core-cjlr],.antcv-core-cjlr').forEach(x=>x.remove());
+      row.querySelectorAll('[data-antcv-core-page],[data-antcv-core-roller],[data-antcv-core-up],[data-antcv-core-down],[data-antcv-core-cjlr],.antcv-core-cjlr').forEach(x=>x.remove());
       if(wrap && !wrap.querySelector('button')) wrap.remove();
       return;
     }
 
-    // v1.50.101 — RELIABLE page-break toggle (replaces the flaky native ↧).
-    let pbrk=wrap.querySelector('[data-antcv-core-pbreak]');
-    if(!pbrk){ pbrk=makeButton('antcv-core-pbreak','↧','Page break'); pbrk.setAttribute('data-antcv-core-pbreak','1'); wrap.appendChild(pbrk); }
-    paintCorePbreak(pbrk,idx);
-    pbrk.onclick=ev=>{ ev.preventDefault(); ev.stopPropagation(); toggleCorePbreak(idx); paintCorePbreak(pbrk,idx); };
+    if(!page){ page=makeButton('antcv-core-page','📄 1','Page'); page.setAttribute('data-antcv-core-page','1'); wrap.appendChild(page); }
+    paintPage(page,idx);
+    page.onclick = ev => { ev.preventDefault(); ev.stopPropagation(); setPage(idx, getPage(idx)%4 + 1); paintPage(page,idx); applyPreview(); };
 
     let roller=row.querySelector('[data-antcv-core-roller="1"]');
     if(!roller){ roller=makeRoller(); const h=rollerHost(row); h.insertBefore(roller, h.firstChild); }
@@ -246,11 +226,13 @@
     // Editor row 0 is the table heading row, so its CJLR controls preview table headings only.
     headerRows.forEach(r=>applyAlign(r,getAlign(0)));
     bodyRows.forEach((r,i)=>applyAlign(r,getAlign(i+1)));
-    // v1.50.96 — page-break SPLIT rendering removed. It used to inject header
-    // clones here from itemPages, which collided with the other splitter and
-    // produced duplicate "(Cont.)" headings. Table splits are now rendered in
-    // ONE place (antcv-table-page-splits-327) from the app-native pageBreakRows.
-    // This function keeps alignment only.
+    bodyRows.forEach((r,i)=>{
+      const rowIndex=i+1;
+      if(getPage(rowIndex)<2) return;
+      const table=r.closest('table');
+      if(table && r.parentNode){ r.parentNode.insertBefore(cloneHeaderFor(table,r), r); }
+      else { const br=document.createElement('div'); br.setAttribute('data-antcv-core-page-break','1'); br.style.breakBefore='page'; br.style.pageBreakBefore='always'; br.style.height='0'; r.parentNode && r.parentNode.insertBefore(br,r); }
+    });
   }
 
   function pulse(){ try{ window.dispatchEvent(new CustomEvent('antcv:sections-updated',{detail:{source:'core-competencies-row-controls', version:VERSION}})); }catch(_){} }

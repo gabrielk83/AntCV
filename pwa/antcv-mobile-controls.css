@@ -1239,3 +1239,39 @@ body.antcv-editor-ready {
     overflow-y: auto !important;
   }
 }
+
+/* v1.50.104 — mobile control trim (user request). Additive + scoped to mobile,
+   reversible.
+   1) Hide the per-row page-cycle (📄) buttons and the 12–40px font-size range
+      sliders on mobile, where they crowd the row panels.
+   2) Shrink the Section / Analysis / Preview tabs and the Fusion button so the
+      Fusion button stays visible on a narrow bar. The Fusion button uses inline
+      cssText, so its overrides need !important. */
+@media (max-width: 900px) {
+  button[data-antcv-addinfo-control="page"],
+  button[data-antcv-rowfix-control="page"],
+  button[data-antcv-core-page],
+  button[data-antcv-page-color] { display: none !important; }
+  input[type="range"][min="12"][max="40"] { display: none !important; }
+
+  #antcv-bottom-nav button[data-act="section"],
+  #antcv-bottom-nav button[data-act="analysis"],
+  #antcv-bottom-nav button[data-act="preview"] {
+    max-width: 110px !important;
+    font-size: 11px !important;
+    height: 38px !important;
+  }
+  #antcv-bottom-nav { gap: 6px !important; padding: 6px 8px !important; }
+
+  [data-antcv-bottom-fusion-343] {
+    height: 36px !important;
+    padding: 0 8px !important;
+    font-size: 11px !important;
+    flex: 0 0 auto !important;
+  }
+  [data-antcv-bottom-fusion-343] svg {
+    width: 12px !important;
+    height: 12px !important;
+    margin-right: 3px !important;
+  }
+}

@@ -1291,3 +1291,16 @@ body.antcv-editor-ready {
     display: none !important;
   }
 }
+
+/* v1.50.114 — keep the topbar tools (privacy pill) reachable on mobile.
+ * .antcv-topbar is a non-wrapping flex row with flex-shrink:0 children, so on a
+ * narrow phone the right-most .antcv-top-tools (which now holds the relocated
+ * Privacy LED) was pushed off-screen and clipped. Let the bar wrap and let the
+ * file name yield space, so the privacy pill always stays visible.
+ */
+@media (max-width: 900px) {
+  .antcv-topbar { flex-wrap: wrap !important; row-gap: 4px !important; }
+  .antcv-top-file-name { min-width: 0 !important; flex: 1 1 40px !important; }
+  .antcv-top-tools { flex-shrink: 0 !important; }
+  button[data-antcv-privacy-led-fab="1"] { display: inline-flex !important; }
+}

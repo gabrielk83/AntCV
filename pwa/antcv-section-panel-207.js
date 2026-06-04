@@ -61,11 +61,13 @@
     Array.from(r.querySelectorAll('button')).forEach(function (btn) {
       const meta = classify(btn);
       if (!meta) return;
-      btn.setAttribute('data-antcv-panel-action-207', meta.key);
-      btn.setAttribute('data-antcv-panel-action-206', meta.key);
-      btn.setAttribute('data-antcv-panel-label-207', meta.label);
-      btn.setAttribute('data-antcv-panel-label-206', meta.label);
-      btn.style.order = String(meta.order);
+      // v1.50.83 — idempotency: write only on change (was ~296/sec per the
+      // mutation-source probe — the top re-render-storm pump on this screen).
+      if (btn.getAttribute('data-antcv-panel-action-207') !== meta.key) btn.setAttribute('data-antcv-panel-action-207', meta.key);
+      if (btn.getAttribute('data-antcv-panel-action-206') !== meta.key) btn.setAttribute('data-antcv-panel-action-206', meta.key);
+      if (btn.getAttribute('data-antcv-panel-label-207') !== meta.label) btn.setAttribute('data-antcv-panel-label-207', meta.label);
+      if (btn.getAttribute('data-antcv-panel-label-206') !== meta.label) btn.setAttribute('data-antcv-panel-label-206', meta.label);
+      if (btn.style.order !== String(meta.order)) btn.style.order = String(meta.order);
       if (loc === 'topbar' && meta.key === 'fit') {
         btn.setAttribute('data-antcv-fit-scope', 'topbar');
         btn.setAttribute('data-antcv-cand-fit-207', '1');

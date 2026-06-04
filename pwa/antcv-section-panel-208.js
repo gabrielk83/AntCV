@@ -125,11 +125,14 @@
       const meta = classify(btn);
       if (!meta) return;
       if (meta.key === 'cjlr') refreshCjlr(btn, loc);
-      btn.setAttribute('data-antcv-panel-action-208', meta.key);
-      btn.setAttribute('data-antcv-panel-label-208', meta.key === 'cjlr' ? (btn.getAttribute('data-antcv-panel-label-208') || meta.label) : meta.label);
-      btn.setAttribute('data-antcv-panel-action-207', meta.key);
-      btn.setAttribute('data-antcv-panel-label-207', meta.key === 'cjlr' ? (btn.getAttribute('data-antcv-panel-label-208') || meta.label) : meta.label);
-      btn.style.order = String(meta.order);
+      // v1.50.83 — idempotency: write only on change (was ~202/sec per the
+      // mutation-source probe — a top re-render-storm pump on this screen).
+      var lbl = meta.key === 'cjlr' ? (btn.getAttribute('data-antcv-panel-label-208') || meta.label) : meta.label;
+      if (btn.getAttribute('data-antcv-panel-action-208') !== meta.key) btn.setAttribute('data-antcv-panel-action-208', meta.key);
+      if (btn.getAttribute('data-antcv-panel-label-208') !== lbl) btn.setAttribute('data-antcv-panel-label-208', lbl);
+      if (btn.getAttribute('data-antcv-panel-action-207') !== meta.key) btn.setAttribute('data-antcv-panel-action-207', meta.key);
+      if (btn.getAttribute('data-antcv-panel-label-207') !== lbl) btn.setAttribute('data-antcv-panel-label-207', lbl);
+      if (btn.style.order !== String(meta.order)) btn.style.order = String(meta.order);
       if (loc === 'topbar' && meta.key === 'fit') {
         btn.setAttribute('data-antcv-fit-scope', 'topbar');
         btn.setAttribute('data-antcv-cand-fit-207', '1');

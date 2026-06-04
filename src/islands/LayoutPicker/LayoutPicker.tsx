@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { ACADEMIC_SECTIONS, KNOWN_SECTIONS, type LayoutPrefs } from '../../lib/writing-prefs';
+import { NATIVE_SECTION_HEADER_STYLE } from '../../lib/settings-dom';
 import { SectionFormatPicker, useLayoutPrefsSnapshot } from './SectionFormatPicker';
 
 // v1.50.26 — count how many sections in `ids` carry either a line-
@@ -91,9 +92,7 @@ export function LayoutPicker(): JSX.Element {
     >
       <div
         style={{
-          textTransform: 'uppercase',
-          letterSpacing: '.08em',
-          fontWeight: 800,
+          ...(NATIVE_SECTION_HEADER_STYLE as React.CSSProperties),
           marginBottom: 8,
           display: 'flex',
           alignItems: 'center',

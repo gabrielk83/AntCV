@@ -1,36 +1,60 @@
-// Mount the PackagePicker inside Settings → Personal. Companion to the
-// LanguageCard mount — same detection (Settings root + Personal subtab),
-// same scoped-MutationObserver-on-body pattern, separate anchor id.
+// Mount the PackagePicker inside Settings → LAYOUT (moved out of Personal in
+// v1.50.95). The native Layout subtab already owns package SELECTION via the
+// STYLE PACKAGE buttons; this island supplies the parts the native buttons
+// lack — the Quick-alternative selector and the Custom-mode explanation —
+// anchored immediately below the native STYLE PACKAGE section. The redundant
+// 7-package grid is hidden (context="layout"); package choice stays with the
+// native buttons. Personal no longer carries any visual-package control.
 
 import { createRoot, type Root } from 'react-dom/client';
 import { createElement } from 'react';
 import { PackagePicker } from './PackagePicker';
-import { findDoneButton, findSettingsRoot, isPersonalSubtab } from '../../lib/settings-dom';
+import {
+  findAdvancedStyleButton,
+  findDoneButton,
+  findSectionBlockBeforeNext,
+  findSettingsRoot,
+  isLayoutSubtab,
+} from '../../lib/settings-dom';
 import { applyPackageToBody, exposePackageDebugApi, installPackageBodyBinding } from '../../lib/body-package';
 
 const MOUNT_ID = 'antcv-react-package-picker';
-const LANG_CARD_ID = 'antcv-react-personal-languages';
-const LEGACY_LANG_CARD_ID = 'antcv-stability-personal-languages';
+
+// Native Layout-subtab section headers (literal uppercase). The Layout subtab
+// is block-flow (not the order-based flex column Personal uses), so we anchor
+// the card immediately after the STYLE PACKAGE section block — proven to be a
+// top-level section because SIDEBAR POSITION follows it.
+const STYLE_PACKAGE_RE = /^STYLE PACKAGE$/i;
+// Contains-match: the following section's full textContent is "SIDEBAR
+// POSITION" + its button labels, so this must not be anchored with $.
+const SIDEBAR_POSITION_RE = /SIDEBAR POSITION/i;
 
 interface MountState { root: Root | null; container: HTMLElement | null }
 const state: MountState = { root: null, container: null };
 
 function ensureMountContainer(settingsRoot: HTMLElement): HTMLElement {
   let container = document.getElementById(MOUNT_ID) as HTMLElement | null;
-  if (container) return container;
+  if (!container) {
+    container = document.createElement('div');
+    container.id = MOUNT_ID;
+    container.setAttribute('data-antcv-react-mount', 'package-picker');
+  }
 
-  container = document.createElement('div');
-  container.id = MOUNT_ID;
-  container.setAttribute('data-antcv-react-mount', 'package-picker');
+  // Primary anchor: immediately after the native STYLE PACKAGE section, so the
+  // Quick-alt / Custom card reads as a continuation of the package buttons.
+  const styleSection = findSectionBlockBeforeNext(settingsRoot, STYLE_PACKAGE_RE, SIDEBAR_POSITION_RE);
+  if (styleSection) {
+    if (container.previousElementSibling !== styleSection) {
+      styleSection.insertAdjacentElement('afterend', container);
+    }
+    return container;
+  }
 
-  // Prefer to mount just above the LanguageCard (or its legacy equivalent)
-  // so Personal reads: existing identity / appearance / language. Falls
-  // back to "before Done button" or end of root.
-  const langCard =
-    (document.getElementById(LANG_CARD_ID) as HTMLElement | null) ??
-    (document.getElementById(LEGACY_LANG_CARD_ID) as HTMLElement | null);
-  if (langCard && langCard.parentElement) {
-    langCard.parentElement.insertBefore(container, langCard);
+  // Fallbacks: above the "Open Advanced → Style" hand-off button, else above Done.
+  if (container.parentElement) return container;
+  const advBtn = findAdvancedStyleButton(settingsRoot);
+  if (advBtn && advBtn.parentElement) {
+    advBtn.parentElement.insertBefore(container, advBtn);
     return container;
   }
   const done = findDoneButton(settingsRoot);
@@ -59,7 +83,7 @@ function applyOnce(): void {
     unmountIfMounted();
     return;
   }
-  if (!isPersonalSubtab(settingsRoot)) {
+  if (!isLayoutSubtab(settingsRoot)) {
     unmountIfMounted();
     return;
   }
@@ -73,7 +97,7 @@ function applyOnce(): void {
   }
   if (!state.root) {
     state.root = createRoot(container);
-    state.root.render(createElement(PackagePicker));
+    state.root.render(createElement(PackagePicker, { context: 'layout' }));
   }
 }
 

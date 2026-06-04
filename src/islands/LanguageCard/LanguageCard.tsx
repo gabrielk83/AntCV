@@ -8,20 +8,21 @@ import {
   writeEnabledLangs,
   writeLangExpanded,
 } from '../../lib/lang-prefs';
+import { NATIVE_SECTION_HEADER_STYLE } from '../../lib/settings-dom';
 
 // React port of the "Languages in the top bar" card from
 // pwa/antcv-stability-core-334.js (lines 149-182). Default collapsed
 // (§5 hotfix item 1). Reads / writes the same localStorage keys and
 // dispatches the same events so other sidecars notice no difference.
 //
-// v1.50.58 — relocated to sit immediately AFTER the Banned Words panel
-// (see mount.tsx anchoring) and the collapsed-summary header restyled to
-// match the Banned Words sub-header register: 9px, uppercase, .8px
-// letter-spacing, muted white. The expanded body keeps the standard
-// island spacing.
-
-// Matches the Banned Words <summary> register so the two read as siblings.
+// v1.50.95 — mounted into the Personal sections flex column at order 35
+// (after the writing-style/tone group, before Banned Words; see mount.tsx).
+// The collapsed-summary header uses the shared native section-header register
+// (Georgia 11px / 600 / .4px / muted white) so Languages, Section layout, and
+// the relocated Visual-package card all read identically to the real native
+// sections. The expanded body keeps the standard island spacing.
 const SUMMARY_STYLE: React.CSSProperties = {
+  ...(NATIVE_SECTION_HEADER_STYLE as React.CSSProperties),
   width: '100%',
   display: 'flex',
   alignItems: 'center',
@@ -31,13 +32,8 @@ const SUMMARY_STYLE: React.CSSProperties = {
   marginBottom: 6,
   background: 'transparent',
   border: 0,
-  color: 'rgba(255,255,255,.5)',
   cursor: 'pointer',
   textAlign: 'left',
-  textTransform: 'uppercase',
-  letterSpacing: '.8px',
-  fontSize: 9,
-  fontWeight: 600,
 };
 
 export function LanguageCard(): JSX.Element {

@@ -11,6 +11,7 @@ import {
   writePackageState,
   type PackageState,
 } from '../../lib/body-package';
+import { NATIVE_SECTION_HEADER_STYLE } from '../../lib/settings-dom';
 
 // Three-mode picker per plan §3.3:
 //   - Package         (one of seven)
@@ -20,11 +21,19 @@ import {
 // State is held in React; persisted to localStorage personalInfo on each
 // selection AND broadcast via the antcv:package-changed event so the
 // vanilla app.js sidecar can pick the change up.
+//
+// `context` controls which modes are exposed:
+//   - 'personal' (legacy): all three modes incl. the 7-package grid.
+//   - 'layout'   (v1.50.95): mounted under the native STYLE PACKAGE buttons,
+//     which already own package SELECTION — so the redundant grid is hidden
+//     and the card supplies only Quick-alt + Custom, defaulting to Quick-alt.
 
 type Mode = 'package' | 'quickAlt' | 'custom';
+type Context = 'personal' | 'layout';
 
 interface Props {
   initialMode?: Mode;
+  context?: Context;
 }
 
 // ─── small UI primitives ─────────────────────────────────────────────────
@@ -146,8 +155,12 @@ function PackageCard({
 
 // ─── main component ──────────────────────────────────────────────────────
 
-export function PackagePicker({ initialMode = 'package' }: Props): JSX.Element {
-  const [mode, setMode] = useState<Mode>(initialMode);
+export function PackagePicker({ initialMode, context = 'personal' }: Props): JSX.Element {
+  const isLayout = context === 'layout';
+  // In Layout the native STYLE PACKAGE buttons own selection, so the package
+  // grid is dropped and Quick-alt is the landing mode.
+  const modes: Mode[] = isLayout ? ['quickAlt', 'custom'] : ['package', 'quickAlt', 'custom'];
+  const [mode, setMode] = useState<Mode>(initialMode ?? (isLayout ? 'quickAlt' : 'package'));
   const [state, setState] = useState<PackageState>(() => readPackageState());
 
   // Cross-tab + external sync.
@@ -195,8 +208,8 @@ export function PackagePicker({ initialMode = 'package' }: Props): JSX.Element {
           marginBottom: 8,
         }}
       >
-        <span style={{ textTransform: 'uppercase', letterSpacing: '.08em', fontWeight: 800 }}>
-          Visual package
+        <span style={{ ...NATIVE_SECTION_HEADER_STYLE }}>
+          {isLayout ? 'Within-package style' : 'Visual package'}
         </span>
         {state.isCustom && (
           <span
@@ -217,7 +230,7 @@ export function PackagePicker({ initialMode = 'package' }: Props): JSX.Element {
       </div>
 
       <div role="tablist" style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
-        {(['package', 'quickAlt', 'custom'] as Mode[]).map((m) => (
+        {modes.map((m) => (
           <button
             key={m}
             type="button"
@@ -260,7 +273,7 @@ export function PackagePicker({ initialMode = 'package' }: Props): JSX.Element {
       {mode === 'quickAlt' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <span style={{ fontSize: 12, opacity: 0.7 }}>
-            Within <strong>{pkg.displayName}</strong>. Two ready-made head/sidebar pairs are part of the package — picking one does not switch to Custom.
+            Within the selected visual style (<strong>{pkg.displayName}</strong>). Two ready-made head/sidebar pairs are part of the package — picking one does not switch to Custom.
           </span>
           {(['default', 'alt1', 'alt2'] as QuickAlt[]).map((alt) => {
             const isActive = state.quickAlt === alt && !state.isCustom;

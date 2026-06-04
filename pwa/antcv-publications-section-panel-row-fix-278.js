@@ -49,7 +49,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.40.278';
+  var VERSION = '1.50.121-gen004';
   if (window.__antcvPublicationsSectionRow278 === VERSION) return;
   window.__antcvPublicationsSectionRow278 = VERSION;
 
@@ -156,8 +156,8 @@
     b.removeAttribute('id');
     b.setAttribute(ATTR_COMP_INJ, '1');
     b.setAttribute(ATTR_KIND, 'comp');
-    b.title = 'Compress publication details';
-    b.setAttribute('aria-label', 'Compress publication details');
+    b.title = 'Fit publication details';
+    b.setAttribute('aria-label', 'Fit publication details');
     // Strip React internal handlers so our click listener is the only one.
     for (var i = 0, keys = Object.keys(b); i < keys.length; i++) {
       var k = keys[i];

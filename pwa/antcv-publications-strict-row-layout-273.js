@@ -8,7 +8,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.40.273-preview-guard';
+  const VERSION='1.50.121-gen004';
   if(window.__antcvPublicationsStrictRowLayout273===VERSION) return;
   window.__antcvPublicationsStrictRowLayout273=VERSION;
   // v1.40.273-preview-guard: Preview is button-free. panelRoot() must
@@ -136,7 +136,7 @@
     Object.assign(detail.style,{order:'20',minWidth:'0',width:'138px',maxWidth:'150px',flex:'1 1 128px',boxSizing:'border-box',textAlign:getAlign(sid,i)});
     const h=host(row);h.innerHTML='';
     const page=make('page'), cjlr=make('cjlr'), comp=make('compress'), enh=make('enhance');
-    comp.textContent='⇥⇤';comp.title='Compress only the Journal / patent no. / year / details field.';comp.setAttribute('aria-label',comp.title);
+    comp.textContent='⇥⇤';comp.title='Fit only the Journal / patent no. / year / details field.';comp.setAttribute('aria-label',comp.title);
     enh.textContent='✨';enh.title='Enhance only the Journal / patent no. / year / details field.';enh.setAttribute('aria-label',enh.title);
     paintPage(page,sid,i);paintAlign(cjlr,sid,i);
     [page,cjlr,comp,enh].forEach(x=>h.appendChild(x));

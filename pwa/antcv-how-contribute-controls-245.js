@@ -5,7 +5,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.50.99-bullet-inputs';
+  const VERSION='1.50.100-bullet-model';
   let __applying=false; // v1.50.57: re-entrancy guard so our own DOM writes don't re-trigger the observer/flicker.
   const ALIGN_KEY='antcv.hiwc.alignment.v1';
   const PAGE_KEY='antcv:itemPages';
@@ -290,11 +290,22 @@
     if(!ta||isInPreviewPaper(ta))return;
     if(ta.style.display!=='none') ta.style.display='none';
     const host=ta.parentNode; if(!host)return;
-    let panel=host.querySelector(':scope > [data-antcv-hiwc-bullet-controls]');
-    let rows=bulletRowsFromText(getVal(ta)); if(!rows.length) rows=[''];
+    const ctxKey=activeDoc()+'/'+sid();
+    const taRows=bulletRowsFromText(getVal(ta));
+    const focusedHere=!!(document.activeElement && document.activeElement.closest && document.activeElement.closest('[data-antcv-hiwc-bullet-controls]'));
+    // Load/refresh the model. Reload from the textarea only on a context switch
+    // or a genuine external change (e.g. AI regen) while NOT editing — so an
+    // empty new bullet the user just added is never wiped by a rebuild.
+    if(__hiwcModel===null || __hiwcModelKey!==ctxKey){ __hiwcModel = taRows.length?taRows.slice():['']; __hiwcModelKey=ctxKey; }
+    else if(!focusedHere){
+      const mk=__hiwcModel.map(function(x){return String(x).trim();}).filter(Boolean).join('');
+      if(mk!==taRows.join('')) __hiwcModel = taRows.length?taRows.slice():[''];
+    }
+    if(!__hiwcModel.length) __hiwcModel=[''];
+    const rows=__hiwcModel;
     const meta=rows.map((_,i)=>getAlign('bullet_'+i)+getPage('bullet_'+i)).join(',');
     const sig=rows.length+'|'+meta;
-    const focusedHere=!!(document.activeElement && document.activeElement.closest && document.activeElement.closest('[data-antcv-hiwc-bullet-controls]'));
+    let panel=host.querySelector(':scope > [data-antcv-hiwc-bullet-controls]');
     if(panel && panel.isConnected && (panel.getAttribute('data-antcv-hiwc-bullet-sig')===sig || focusedHere)) return;
     if(!panel || !panel.isConnected){
       panel=document.createElement('div');panel.setAttribute('data-antcv-hiwc-bullet-controls','1');
@@ -304,7 +315,9 @@
     panel.setAttribute('data-antcv-hiwc-bullet-sig',sig);
     panel.textContent='';
     function inputs(){return Array.from(panel.querySelectorAll('[data-antcv-hiwc-bullet-input]'));}
-    function writeAll(){const vals=inputs().map(x=>x.value.trim()).filter(Boolean);setVal(ta,vals.join('\n'));syncSectionField('bullets',vals.join('\n'));}
+    // writeAll: refresh model from current inputs (by position), then push the
+    // non-empty bullets to the hidden textarea + section.
+    function writeAll(){__hiwcModel=inputs().map(function(x){return x.value;});const vals=__hiwcModel.map(function(x){return String(x).trim();}).filter(Boolean);setVal(ta,vals.join('\n'));syncSectionField('bullets',vals.join('\n'));}
     function addRow(txt,idx){
       const key='bullet_'+idx;
       const row=document.createElement('div');row.setAttribute('data-antcv-hiwc-bullet-row','1');
@@ -312,7 +325,7 @@
       const inp=document.createElement('input');inp.type='text';inp.value=txt||'';inp.placeholder='Bullet text';inp.setAttribute('data-antcv-hiwc-bullet-input','1');
       Object.assign(inp.style,{flex:'1 1 auto',minWidth:'0',height:'26px',boxSizing:'border-box'});applyField(inp,key);
       ['focus','keyup','click','select','input'].forEach(function(ev){inp.addEventListener(ev,function(){noteHiwcFocus(idx,inp);});});
-      inp.addEventListener('input',function(){scheduleBulletSync(writeAll);});
+      inp.addEventListener('input',function(){ if(__hiwcModel) __hiwcModel[idx]=inp.value; scheduleBulletSync(writeAll); });
       inp.addEventListener('blur',function(){flushBulletSync(writeAll);});
       inp.addEventListener('keydown',function(ev){if(ev.key==='Enter'){ev.preventDefault();ev.stopPropagation();writeAll();addNew();}});
       const page=makeBtn('page','📄 1','Page for bullet '+(idx+1),inp);paintPage(page,key);
@@ -329,7 +342,7 @@
       panel.insertBefore(row, panel.querySelector('[data-antcv-hiwc-bullet-add]')||null);
       return inp;
     }
-    function addNew(){writeAll();const inp=addRow('',inputs().length);panel.setAttribute('data-antcv-hiwc-bullet-sig',inputs().length+'|'+meta);setTimeout(function(){inp.focus();},0);}
+    function addNew(){__hiwcModel=inputs().map(function(x){return x.value;});__hiwcModel.push('');const idx=__hiwcModel.length-1;const inp=addRow('',idx);panel.setAttribute('data-antcv-hiwc-bullet-sig',__hiwcModel.length+'|'+meta);setTimeout(function(){try{inp.focus();}catch(_){}},0);}
     rows.forEach(function(t,i){addRow(t,i);});
     const add=document.createElement('button');add.type='button';add.textContent='＋ Bullet';add.setAttribute('data-antcv-hiwc-bullet-add','1');
     Object.assign(add.style,{alignSelf:'flex-start',border:'1px solid #008b8b',background:'white',color:'#006b6b',borderRadius:'4px',padding:'3px 10px',cursor:'pointer',marginTop:'2px'});
@@ -450,6 +463,10 @@
   // the last-focused bullet index + caret, and after the editor is rebuilt we
   // restore focus to the same input/caret so typing is uninterrupted.
   var __hiwcFocus=null;
+  // v1.50.100 — in-memory bullet model: the editor's source of truth so an
+  // empty new bullet (and the caret) survives the app re-render that destroys
+  // the foreign bullet panel.
+  var __hiwcModel=null, __hiwcModelKey='';
   function noteHiwcFocus(idx, inp){ try{ __hiwcFocus={idx:idx, caret:(inp.selectionStart!=null?inp.selectionStart:(inp.value||'').length), at:Date.now()}; }catch(_){} }
   function restoreHiwcFocus(box){
     try{

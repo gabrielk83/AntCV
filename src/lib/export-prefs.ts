@@ -20,7 +20,12 @@ interface PersonalInfoBlob {
   exportPrefs?: Partial<ExportPrefs>;
 }
 
-const DEFAULT: ExportPrefs = { ats: false, legacyAtsTier: false };
+// ATS-safe generation is ON by default (owner decision 2026-06-04): a fresh
+// user should get ATS-convertible output without having to find the toggle.
+// legacyAtsTier stays opt-in (only for known legacy parsers). An explicit
+// user choice is always honoured — see readExportPrefs (ats defaults true
+// unless the user has explicitly set it to false).
+const DEFAULT: ExportPrefs = { ats: true, legacyAtsTier: false };
 
 function readJSON<T>(key: string): T | null {
   try {
@@ -39,7 +44,8 @@ export function readExportPrefs(): ExportPrefs {
   const pi = readJSON<PersonalInfoBlob>('personalInfo') ?? {};
   const e = pi.exportPrefs ?? {};
   return {
-    ats: e.ats === true,
+    // Default ON: true unless the user has explicitly stored false.
+    ats: e.ats !== false,
     legacyAtsTier: e.legacyAtsTier === true,
   };
 }

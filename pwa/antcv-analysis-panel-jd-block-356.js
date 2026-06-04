@@ -203,7 +203,11 @@
       + '#' + BLOCK_ID + '{margin-top:16px;padding-top:14px;border-top:1px solid #e8e8e8;font-family:Calibri,Arial,sans-serif;}'
       + '#' + BLOCK_ID + ' .apjb-heading{font-size:12px;font-weight:700;color:#283556;letter-spacing:.4px;text-transform:uppercase;margin-bottom:8px;}'
       + '#' + BLOCK_ID + ' .apjb-hint{font-size:11px;color:#6b7280;margin-bottom:8px;line-height:1.4;}'
-      + '#' + BLOCK_ID + ' .apjb-textarea{width:100%;min-height:96px;padding:8px 10px;font-family:Georgia,serif;font-size:12.5px;line-height:1.45;color:#333;border:1px solid #d0d2d6;border-radius:6px;resize:vertical;box-sizing:border-box;}'
+      // v1.50.74 — JD textarea halved (96->48) so it stops hiding the rows
+      // below it; still user-resizable. The host side/bottom panels are made
+      // scrollable so the Analyse button + results stay reachable on mobile.
+      + '#' + BLOCK_ID + ' .apjb-textarea{width:100%;min-height:48px;padding:8px 10px;font-family:Georgia,serif;font-size:12.5px;line-height:1.45;color:#333;border:1px solid #d0d2d6;border-radius:6px;resize:vertical;box-sizing:border-box;}'
+      + '.antcv-editor-side-panel,.antcv-mobile-bottom-panel{overflow-y:auto;-webkit-overflow-scrolling:touch;}'
       + '#' + BLOCK_ID + ' .apjb-textarea:focus{outline:none;border-color:#01B7BB;box-shadow:0 0 0 3px rgba(1,183,187,.18);}'
       + '#' + BLOCK_ID + ' .apjb-uprow{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px;}'
       + '#' + BLOCK_ID + ' .apjb-uplabel{font-size:11px;color:#6b7280;font-weight:600;}'

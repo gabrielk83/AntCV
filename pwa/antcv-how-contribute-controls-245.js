@@ -5,7 +5,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.50.57-flicker-fix';
+  const VERSION='1.50.92-bullets-native';
   let __applying=false; // v1.50.57: re-entrancy guard so our own DOM writes don't re-trigger the observer/flicker.
   const ALIGN_KEY='antcv.hiwc.alignment.v1';
   const PAGE_KEY='antcv:itemPages';
@@ -44,6 +44,7 @@
       [data-antcv-hiwc-bullet-list] { max-width:100%!important; overflow:hidden!important; box-sizing:border-box!important; }
       [data-antcv-hiwc-bullet-row] { max-width:100%!important; box-sizing:border-box!important; }
       [data-antcv-hiwc-closing-area] { min-height:44px!important; resize:vertical!important; line-height:1.15!important; }
+      textarea[data-antcv-hiwc-field="bullets"] { display:block!important; min-height:96px!important; resize:vertical!important; line-height:1.3!important; width:100%!important; box-sizing:border-box!important; }
       [data-antcv-hiwc-list] { margin:2px 0 4px 0!important; padding-left:1.05em!important; list-style-position:outside!important; }
       [data-antcv-hiwc-list] > li { margin:0 0 2px 0!important; padding-left:0!important; }
     `;document.head&&document.head.appendChild(st);
@@ -143,6 +144,11 @@
     if(!f)return;
     if(isInPreviewPaper(f))return;
     applyField(f,k);
+    // v1.50.92 — mark the native field so isTypingInHiwc() can bail run() while
+    // the user types here (prevents the background re-render loop from churning
+    // the cluster mid-edit). Bullets now ride this same native-textarea path as
+    // intro/closing instead of the fragile injected-row editor.
+    if(f.getAttribute('data-antcv-hiwc-field')!==k) f.setAttribute('data-antcv-hiwc-field',k);
     const h=lineHost(f); if(!h||isInPreviewPaper(h)) return;
     if(h.style){h.style.display=h.style.display||'flex';h.style.alignItems=h.style.alignItems||'center';h.style.gap=h.style.gap||'4px';}
     let wrap=h.querySelector('[data-antcv-hiwc-controls="'+k+'"]');
@@ -155,7 +161,10 @@
     comp.onclick=ev=>{ev.preventDefault();ev.stopPropagation();setVal(f,compressText(getVal(f)));syncSectionField(k,getVal(f));applyPreview();};
     enr.onclick=ev=>{ev.preventDefault();ev.stopPropagation();setVal(f,enrichText(getVal(f)));syncSectionField(k,getVal(f));applyPreview();};
     cjlr.onclick=ev=>{ev.preventDefault();ev.stopPropagation();const n=nextAlign(getAlign(k));setAlign(k,n);paintCJLR(cjlr,n);applyField(f,k);applyPreview();};
-    f.addEventListener('input',()=>syncSectionField(k,getVal(f)),{passive:true});
+    // v1.50.92 — bind the section-sync input listener ONCE. controlsForField
+    // runs on every sweep; re-adding the listener each time stacked duplicate
+    // syncSectionField calls per keystroke (extra pulses = more churn).
+    if(!f.__antcvHiwcInputBound){ f.__antcvHiwcInputBound=1; f.addEventListener('input',()=>syncSectionField(k,getVal(f)),{passive:true}); }
   }
 
   function bulletRowsFromText(v){return String(v||'').split(/\n+/).map(s=>s.replace(/^\s*[•\-*]\s*/,'').trim()).filter(Boolean);}
@@ -203,6 +212,25 @@
     restoreHiwcFocus(box); setTimeout(function(){ restoreHiwcFocus(box); }, 0);
   }
 
+  // v1.50.92 — the injected per-bullet row editor (renderBulletList) fought the
+  // app re-render loop: React kept reconciling the Bullets container and
+  // destroying our foreign <input> rows faster than a click could land, so the
+  // bullet inputs were "not clickable" while intro/closing (native textareas)
+  // stayed editable. We retire that editor. This restores the app's NATIVE
+  // Bullets textarea — un-hide it, drop the bound flag, and remove any leftover
+  // injected box — so controlsForField('bullets') can attach to it just like
+  // intro/closing. Idempotent: no-ops once nothing injected remains.
+  function restoreNativeBullets(r){
+    if(!r)return;
+    try{
+      Array.prototype.forEach.call(r.querySelectorAll('[data-antcv-hiwc-bullet-list]'),function(box){ if(box.parentNode) box.parentNode.removeChild(box); });
+      Array.prototype.forEach.call(r.querySelectorAll('textarea[data-antcv-hiwc-bullets-bound]'),function(ta){
+        ta.removeAttribute('data-antcv-hiwc-bullets-bound');
+        if(ta.style && ta.style.display==='none') ta.style.display='';
+      });
+    }catch(_){}
+  }
+
   function previewSection(){return document.querySelector('[data-sid="'+CSS.escape(sid())+'"]')||Array.from(document.querySelectorAll('[data-sid],section,div')).find(el=>visible(el)&&RX.test(clean(el.textContent).slice(0,180)));}
   function previewParts(secEl){
     if(!secEl)return{};const els=Array.from(secEl.querySelectorAll('p,li,div,[data-edit-path],[data-antcv-row-path]')).filter(visible).filter(el=>!el.querySelector('input,textarea,button'));
@@ -243,7 +271,7 @@
     // v1.50.87 — bail run() while the user is interacting anywhere in the HIWC
     // bullet editor (input, its row, or controls), not just the text input, so
     // pressing a bullet/control no longer triggers a rebuild = flicker.
-    try{ var a=document.activeElement; return !!(a && a.closest && a.closest('[data-antcv-hiwc-bullet-list],[data-antcv-hiwc-bullet-row]')); }catch(_){ return false; }
+    try{ var a=document.activeElement; return !!(a && a.closest && a.closest('[data-antcv-hiwc-bullet-list],[data-antcv-hiwc-bullet-row],[data-antcv-hiwc-field]')); }catch(_){ return false; }
   }
   var __hiwcSyncTimer=null;
   function scheduleBulletSync(syncFn){ clearTimeout(__hiwcSyncTimer); __hiwcSyncTimer=setTimeout(function(){ __hiwcSyncTimer=null; try{ syncFn(); applyPreview(); }catch(_){} }, 600); }
@@ -264,7 +292,7 @@
   }
 
   let pending=false;function runSoon(){if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;run();});}
-  function run(){if(isTypingInHiwc())return;try{const r=root();if(r){cleanupClosingHelperText(r);controlsForField(findIntro(r),'intro');controlsForField(findClosing(r),'closing');renderBulletList(r,findBullets(r));}/* core CJLR cleanup handled by antcv-core-competencies-row-controls; do not prune across the whole Core section */ applyPreview();}catch(e){try{console.warn('[how-contribute-controls-245] failed:',e&&e.message);}catch(_){}}}
+  function run(){if(isTypingInHiwc())return;try{const r=root();if(r){cleanupClosingHelperText(r);controlsForField(findIntro(r),'intro');controlsForField(findClosing(r),'closing');restoreNativeBullets(r);controlsForField(findBullets(r),'bullets');}/* core CJLR cleanup handled by antcv-core-competencies-row-controls; do not prune across the whole Core section */ applyPreview();}catch(e){try{console.warn('[how-contribute-controls-245] failed:',e&&e.message);}catch(_){}}}
   function start(){injectCss();run();[100,300,800,1600,3000].forEach(ms=>setTimeout(run,ms));try{new MutationObserver(()=>{if(__applying)return;runSoon();}).observe(document.body||document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style','value']});}catch(_){}window.addEventListener('input',runSoon,true);window.addEventListener('click',()=>setTimeout(run,0),true);window.addEventListener('antcv:sections-updated',()=>setTimeout(run,0));/* v1.50.57: blind setInterval(run,2000) removed — it was the flicker clock. Updates are now event-driven (sections-updated/input/click) plus a slow safety re-sync that no-ops when nothing changed. */setInterval(()=>{if(!__applying)run();},8000);}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
   window.AntcvHowContributeControls239={version:VERSION,run};

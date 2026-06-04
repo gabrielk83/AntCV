@@ -24388,7 +24388,9 @@ function buildAiDisclosureHangingTextbox(ctx, opts) {
     };
     para.indent = { left: 120, right: 120 };
   } else {
-    para.indent = { left: 7e3 };
+    // Linear/CL: TEXT-ONLY, right-aligned, NO large indent (a heavy left
+    // indent rendered EMPTY in the LibreOffice/CloudConvert PDF path; pure
+    // right-alignment pins it to the right margin in both Word and PDF).
   }
   return new Paragraph(para);
 }

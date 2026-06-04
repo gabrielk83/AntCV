@@ -629,10 +629,10 @@ function buildAiDisclosureHangingTextbox(ctx, opts) {
     para.indent = { left: 120, right: 120 };
   } else {
     // Linear/CL (owner WM request): a TEXT-ONLY marker — no bounding box,
-    // no fill — in light muted teal, right-aligned, hanging to the right of
-    // the body. PAGE_W minus body cell L/R margins (100+100) gives ~11706
-    // dxa usable; left-indent of 7000 leaves ~4700 dxa for the chip (~3.25").
-    para.indent = { left: 7000 };
+    // no fill — in light muted teal, right-aligned. NO large left-indent:
+    // Word renders a heavily-indented borderless line fine, but the
+    // LibreOffice/CloudConvert PDF path rendered it EMPTY. Right-alignment
+    // alone pins the text to the right margin in both Word and the PDF.
   }
   return new Paragraph(para);
 }

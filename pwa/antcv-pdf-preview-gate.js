@@ -556,6 +556,11 @@ ${inlineStyles}
   function buildDocxPayloadFromStorage() {
     function s(k, d) { try { var v = localStorage.getItem(k); return v == null ? d : v; } catch (_) { return d; } }
     function j(k, d) { try { var v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (_) { return d; } }
+    // The DOCX worker schema only accepts language en|da. Sending anything else
+    // (e.g. es/zh while the UI is in those languages) makes the worker reject
+    // the whole request with HTTP 422. Clamp to a supported value so export
+    // never hard-fails; da when Danish, otherwise en.
+    function clampLang(l) { return /^da/i.test(String(l || '')) ? 'da' : 'en'; }
     var doc = s('doc', 'cv') === 'cl' ? 'cl' : 'cv';
     var pi = j('personalInfo', {}) || {};
     return {
@@ -566,7 +571,7 @@ ${inlineStyles}
       personalInfo: pi,
       styleConfig: pi.customStyleConfig || undefined,
       fontSizes: pi.fontSizes || undefined,
-      language: s('language', 'en'),
+      language: clampLang(s('language', 'en')),
       navyColor: s('navyColor', '#283556'),
     };
   }

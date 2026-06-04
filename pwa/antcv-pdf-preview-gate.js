@@ -461,15 +461,9 @@ ${inlineStyles}
       'Save as .docx (recommended for job applications). Opens in Word, ' +
       'Google Docs, LibreOffice. Uses the same export as the main DOCX button.';
     docx.addEventListener('click', () => {
-      const btn = document.querySelector('button[title^="Export as .docx"]');
-      if (!btn) {
-        alert('The DOCX export isn\'t ready yet.\n\n' +
-          'Open your CV or cover-letter preview first (so the document is on screen), then use the Export button.');
-        return;
-      }
       closeModal();
       // Defer so the modal teardown finishes before the export dialog/flow.
-      setTimeout(() => { try { btn.click(); } catch (_) {} }, 60);
+      setTimeout(() => { triggerDocxExport(); }, 60);
     });
 
     actions.appendChild(cancel);
@@ -541,6 +535,63 @@ ${inlineStyles}
   // embedded gray-zone export buttons are hidden. We hide (not remove) them so
   // the modal's Save-as-PDF / Save-as-DOCX can still find and click them to
   // reuse the app's real export pipelines. Visually-hidden + out of tab order.
+  // v1.50.90 — DOCX export from the preview modal. Previously this ONLY found
+  // and clicked the app's hidden `button[title^="Export as .docx"]`; when that
+  // button wasn't reachable in the current view it just alerted "isn't ready"
+  // and nothing downloaded. Now: (1) try several ways to find + click the app
+  // button (it owns the exact payload), (2) if it can't be found, call
+  // window.exportDocxViaWorker directly with a payload rebuilt from
+  // localStorage. Logs which path it took so the failure mode is visible.
+  function findAppDocxButton() {
+    var b = document.querySelector('button[title^="Export as .docx"], button[title*="Export as .docx"]');
+    if (b) return b;
+    var all = document.querySelectorAll('button');
+    for (var i = 0; i < all.length; i++) {
+      var t = ((all[i].textContent || '') + ' ' + (all[i].getAttribute('title') || '')).toLowerCase();
+      if (all[i].id && all[i].id.indexOf('antcv-pdf-preview-modal') === 0) continue;
+      if (/export as \.?docx|save as docx|export.*\bword\b/.test(t)) return all[i];
+    }
+    return null;
+  }
+  function buildDocxPayloadFromStorage() {
+    function s(k, d) { try { var v = localStorage.getItem(k); return v == null ? d : v; } catch (_) { return d; } }
+    function j(k, d) { try { var v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (_) { return d; } }
+    var doc = s('doc', 'cv') === 'cl' ? 'cl' : 'cv';
+    var pi = j('personalInfo', {}) || {};
+    return {
+      sections: j('sections', { cv: [], cl: [] }),
+      meta: j('meta', {}),
+      doc: doc,
+      photo: pi.photo || s('antcv_photo', null) || null,
+      personalInfo: pi,
+      styleConfig: pi.customStyleConfig || undefined,
+      fontSizes: pi.fontSizes || undefined,
+      language: s('language', 'en'),
+      navyColor: s('navyColor', '#283556'),
+    };
+  }
+  function triggerDocxExport() {
+    var btn = findAppDocxButton();
+    if (btn) {
+      try { console.debug('[pdf-preview-gate] DOCX: delegating to app button'); } catch (_) {}
+      try { btn.click(); return; } catch (_) {}
+    }
+    if (typeof window.exportDocxViaWorker === 'function' && window.ANTCV_DOCX_WORKER) {
+      try {
+        console.debug('[pdf-preview-gate] DOCX: app button not found — calling exportDocxViaWorker directly');
+        var p = window._antcvShrinkPhoto && (typeof window._antcvShrinkPhoto === 'function');
+        var payload = buildDocxPayloadFromStorage();
+        Promise.resolve(p ? window._antcvShrinkPhoto(payload.photo).catch(function () { return payload.photo; }) : payload.photo)
+          .then(function (ph) { payload.photo = ph; return window.exportDocxViaWorker(payload); })
+          .catch(function (e) { try { console.warn('[pdf-preview-gate] DOCX export failed', e && e.message); } catch (_) {} alert('DOCX export failed: ' + (e && e.message || e)); });
+        return;
+      } catch (e) { try { console.warn('[pdf-preview-gate] DOCX direct call threw', e && e.message); } catch (_) {} }
+    }
+    alert('The DOCX export isn\'t ready yet.\n\n' +
+      'Open your CV or cover-letter preview first (so the document is on screen), then use the Export button. ' +
+      'If this keeps happening, the DOCX worker URL may not be configured (Settings → Account).');
+  }
+
   function hideEmbeddedExportButtons() {
     try {
       var sels = ['button[title^="Export as PDF"]', 'button[title^="Export as .docx"]'];

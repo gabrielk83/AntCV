@@ -10,6 +10,7 @@ Canonical index for everything testable in the repo. Test files live next to the
 |---|---|---|---|
 | Unit | Banned-word detector, semantic-constraint matching, writing-style request parse, ATS glyph conversion, registry-drift guard | `workers/proxy/test/*.test.mjs` (40 tests, present) | node:test |
 | Unit | Import / personalInfo normalisation: dual-key cross-fill, upload-summary counts, experience→roles mapping, sidecar drift guard (IMPORT-001) | `pwa/test/unit/import-normalize.test.mjs` (18 tests, present) | node:test |
+| Unit | DOCX package palette: id normalisation + aliases, registry integrity, palette↔registry colour/font drift guard, legacy-ATS font tier | `workers/docx-worker/test/palette.test.mjs` (11 tests, present) | node:test |
 | Unit | Token resolution, package switch, placeholder scrubber, wizard state machine | (Pass 1 + Pass 3 will populate; not present yet) | Vitest |
 | Integration | Proxy returns valid section after style swap; DOCX worker generates valid OOXML per package | (Pass 2 + Pass 3 will populate) | Vitest + xmllint |
 | Visual regression | Screenshot diff of each section × package, light + dark | (Pass 2 + Pass 5 will populate) | Playwright + pixelmatch |
@@ -45,6 +46,14 @@ Fifteen smoke files, each a self-contained Node script that calls `generateDocx(
 | `smoke-v110-formatting.js` | Formatting regression from v1.1.0. |
 | `smoke-workstyle-spacing.js` | Work-style sidebar spacing. |
 | `edges.js` | Edge-case payload variants. |
+
+Separately, `test/palette.test.mjs` (11 `node:test` tests) covers the package
+palette: `normalisePackageId` (aliases, case/whitespace, default fallback),
+registry integrity (seven packages, valid `#RRGGBB` hex), the legacy-ATS Calibri
+font tier, and a drift guard tying `src/palette.js` back to
+`packages/registry.json` (encoding the two intentional transforms — OOXML hex
+drops the `#`, and `headingFont` drops the trailing ` Bold`). It has no fflate
+dependency, runs with `node --test test/palette.test.mjs`, and is in CI.
 
 The npm script `npm test` (in `workers/docx-worker/package.json`) runs `smoke.js` by default. Other smokes are run by file name. After running, open the produced `out.docx` in Word or LibreOffice — the test passes if no "minor errors" dialog appears and the layout matches the expectation noted at the top of the test file.
 
@@ -104,9 +113,11 @@ It's a sanity guard, not a functional test. PRs cannot land if `lint` is red.
 
 Alongside it, the `unit-tests` job runs the pure-logic suites on every push and
 pull request (Node 22, no install step — the suites have no dependencies): the
-proxy writing-engine + registry-drift tests (`node --test` in `workers/proxy/`)
-and the PWA import/normalise tests (`node --test pwa/test/unit/*.test.mjs`). A
-registry-drift, banned-list-contract, or import-key regression fails the PR.
+proxy writing-engine + registry-drift tests (`node --test` in `workers/proxy/`),
+the PWA import/normalise tests (`node --test pwa/test/unit/*.test.mjs`), and the
+DOCX palette + registry-drift tests
+(`node --test workers/docx-worker/test/palette.test.mjs`). A registry-drift,
+banned-list-contract, import-key, or palette-colour regression fails the PR.
 
 ---
 

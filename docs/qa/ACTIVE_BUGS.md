@@ -5,10 +5,40 @@ This file now folds in the canonical `AntCV_UI_UX_Spec_and_QA_Plan_v4.docx` back
 
 ---
 
+## 2026-06-04 (batch) — owner feature + bug dump triaged
+
+Full triage with per-item IDs, layer, and sidecar-vs-app.js verdict lives in
+`docs/plan/Batch_2026-06-04_feature-and-bug-triage.md`. Summary:
+
+- **Landed (sidecar):** `JD-TEXTAREA-001` (JD textarea halved + host panels
+  scrollable, incl. mobile); `PRIVACY-FAB-FLICKER-001` (top-bar pill background
+  bleep — see below).
+- **New feature, NOT in locked docs:** `FEATURE-CONF-001` — per-sentence
+  confidence overlay (Application-tab toggle, default off; red=low/yellow=medium;
+  hover shows issue). Locked docs use "confidence" only in the tone sense. Needs
+  a WORKER self-check pass + app.js toggle/store + preview renderer. Spec'd in the
+  triage doc; raise as a new Writing-System "verification/confidence" section.
+- **Priority regression:** `DOCX-EXPORT-REGRESSION-001` — DOCX export was wired to
+  the preview-panel button only; export now runs from the print-setup view, which
+  doesn't call `exportDocxViaWorker`. Needs branch-archaeology (find the prior
+  fix) + re-wire the print-setup export handler in app.js.
+- **Registered (app.js / React / worker):** `PAGEBREAK-001..005` (export-preview
+  marker, on-entry + A4-overflow detection, continuation header, cascade colour
+  across all sections + CL), `VISUAL-PKG-001..003`, `MERGE-DUP-001..003`,
+  `SETTINGS-HEAD-001`, `SECTION-LAYOUT-001`, `LOCATION-001`, `DEMO-WARN-001`,
+  `PRIVACY-SETTINGS-001`, `WIZARD-001..002`, `IMPORT-COUNT-001`.
+
+---
+
 ## 2026-06-04 (later) — section-layout help text trimmed + CL-HEADER-001 DOM captured
 
 ### Fixed — LAYOUT help-text overflow
 - Owner: the Per-section-overrides help paragraph is too long. Replaced the §4.4 wall of text in `src/islands/LayoutPicker/LayoutPicker.tsx` with "Per-section overrides — pick a layout and set a length hint, or reset (↺) to use the style default." Rebuilt `pwa/antcv-react-islands.js` (Vite); bundle `?v=` → 1.50.70, `sw.js` → `antcv-1.50.70`, `version-override` TARGET → 1.50.70 (1.50.69 added to STALE).
+
+### PRIVACY-FAB-FLICKER-001 — FIXED (the "bleeping" background)
+- Owner (high priority): the privacy 🛡 pill in the top bar pulses ("bleeps") its background.
+- **Diagnosis:** `worst` (the privacy level) is read from a stable localStorage key, so it does not legitimately flap. The only periodic actor is `antcv-privacy-led.js`'s **2 s `setInterval` → `refreshFabAppearance`**, which every tick rewrote `textContent`, detached/re-appended the `.antcv-privacy-dot`, and re-asserted `background … !important`. The element carried `transition: background-color 0.15s`, so each re-assert cross-faded the fill — a periodic repaint seen as a pulse. (`topbar-tools-347` restyles size/visibility only — no background; `mobile-fab-cleanup-351` uses a translucent fill but only on the separate mobile FAB, which privacy-led's `FAB_MARKER` selector does not match — so no cross-sidecar background contention on the desktop pill.)
+- **Fix (v1.50.74):** (1) dropped `background-color` from the FAB's `transition` so the fill can never animate; (2) added an idempotency guard in `refreshFabAppearance` — a `data-antcv-pl-sig` (worst|glyph|calls) short-circuits all DOM writes when the visible appearance is unchanged, so the 2 s tick stops repainting. Border/glyph colour still fade on a real level change. Cache-bust: `?v=1.50.74-nobleep`, `sw.js` → `antcv-1.50.74`, `version-override` TARGET → `1.50.74` (1.50.73 → STALE).
 
 ### NAME-ALIGN-001 — FIXED (sidecar)
 - Owner: the candidate Name renders `text-align: left` while its CJLR control reads "current: center". Confirmed the editor's `wrapEditable` does NOT touch text-align — the `left` comes from app.js rendering the Name with `text-align: y("name")`, which is desynced from the CJLR control. Pure app.js-internal state desync (the control's displayed value and `y("name")` disagree).

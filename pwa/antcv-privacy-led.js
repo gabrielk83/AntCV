@@ -164,7 +164,11 @@
         font-size: 18px;
         line-height: 1;
         font-weight: 700;
-        transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+        /* v1.50.74 — background-color is deliberately NOT transitioned. A
+           transitioned fill cross-fades whenever the colour is re-asserted
+           (the 2s refresh, or a relocation sidecar re-styling), which read as
+           a pulsing "bleep" on the top-bar pill. Border/glyph still fade. */
+        transition: border-color 0.15s ease, color 0.15s ease;
       }
       .antcv-fab[${FAB_MARKER}="1"] .antcv-privacy-dot {
         position: absolute;
@@ -294,6 +298,15 @@
     if (!target) return;
     const state = readState();
     const info = levelInfo(state.worst);
+    // v1.50.74 — idempotency guard. The 2s interval (and MutationObserver-
+    // driven re-checks) call this constantly; without a guard each call
+    // rewrote textContent, detached/re-appended the dot, and re-asserted the
+    // fill every tick — a needless repaint that read as a flicker/"bleep".
+    // Skip all DOM writes when the visible appearance is unchanged. A fresh
+    // element (no signature) always paints; real level/calls changes repaint.
+    const sig = state.worst + '|' + info.glyph + '|' + (state.calls || 0);
+    if (target.getAttribute('data-antcv-pl-sig') === sig) return;
+    target.setAttribute('data-antcv-pl-sig', sig);
     // Clear textContent but preserve the dot child.
     const dot = target.querySelector('.antcv-privacy-dot');
     target.textContent = info.glyph;

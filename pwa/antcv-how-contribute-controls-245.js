@@ -5,7 +5,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.50.118-strip-own-row';
+  const VERSION='1.50.119-strip-wrap';
   let __applying=false; // v1.50.57: re-entrancy guard so our own DOM writes don't re-trigger the observer/flicker.
   const ALIGN_KEY='antcv.hiwc.alignment.v1';
   const PAGE_KEY='antcv:itemPages';
@@ -259,9 +259,11 @@
     rows.forEach((txt,idx)=>{
       const key='bullet_'+idx;
       const row=document.createElement('div');row.setAttribute('data-antcv-hiwc-bullet-ctl-row','1');
-      Object.assign(row.style,{display:'flex',alignItems:'center',gap:'3px',width:'100%',maxWidth:'100%',boxSizing:'border-box',overflow:'hidden'});
+      // Wrap so the buttons never get clipped on a narrow phone: the label
+      // takes the first line (ellipsised), the buttons flow onto the next.
+      Object.assign(row.style,{display:'flex',alignItems:'center',flexWrap:'wrap',gap:'3px',rowGap:'3px',width:'100%',maxWidth:'100%',boxSizing:'border-box',overflow:'visible'});
       const lab=document.createElement('span');lab.textContent=(idx+1)+'. '+txt;lab.title=txt;
-      Object.assign(lab.style,{flex:'1 1 auto',minWidth:'0',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontSize:'11px',lineHeight:'1.2',color:'#3a4a4a'});
+      Object.assign(lab.style,{flex:'1 1 100%',minWidth:'0',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontSize:'11px',lineHeight:'1.2',color:'#3a4a4a'});
       const page=makeBtn('page','📄 1','Page for bullet '+(idx+1),ta);paintPage(page,key);
       const comp=makeBtn('compress','↹','Compress bullet '+(idx+1),ta);
       const enr=makeBtn('enrich','✨','Enrich bullet '+(idx+1),ta);

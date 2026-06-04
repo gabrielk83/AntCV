@@ -7,7 +7,7 @@
  */
 (function(){
   'use strict';
-  var VERSION = '1.40.341-p0b';
+  var VERSION = '1.50.115-all-sidebar';
   if (window.__antcvSidebarSubsectionPagebreaks === VERSION) return;
   window.__antcvSidebarSubsectionPagebreaks = VERSION;
 
@@ -21,7 +21,10 @@
   function activeDoc(){ try{ var d=localStorage.getItem('doc'); return d === 'cl' ? 'cl' : 'cv'; }catch(_){ return 'cv'; } }
   function sections(){ var all=readJson(SECTIONS_KEY,{}); var list=all && all[activeDoc()]; return Array.isArray(list) ? list : []; }
   function sectionBySid(sid){ return sections().find(function(s){ return s && String(s.id||'') === String(sid||''); }) || null; }
-  function isTargetSection(s){ return !!(s && String(s.loc||'').toLowerCase() === 'sidebar' && TARGET.test([s.title,s.id,s.type,s.name].join(' '))); }
+  // v1.50.115 — page breaks apply to EVERY sidebar sub/subsection, not just
+  // Regulatory Context / Additional Information. Still only acts where a break is
+  // actually set (bucket keys >= 2), so untouched sidebar sections stay as-is.
+  function isTargetSection(s){ return !!(s && String(s.loc||'').toLowerCase() === 'sidebar'); }
   function readPages(){ return readJson(PAGE_KEY,{}); }
   function bucket(sid){ var m=readPages(); return m && m[sid] && typeof m[sid] === 'object' ? m[sid] : {}; }
   function pageOf(sid, idx){ var b=bucket(sid); var n=Number(b[String(idx)]); return Number.isFinite(n) && n >= 2 && n <= 4 ? (n|0) : 1; }

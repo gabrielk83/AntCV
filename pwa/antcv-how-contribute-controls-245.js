@@ -126,9 +126,16 @@
   function syncSectionField(k,v){
     const all=sectionsObj();const doc=activeDoc();const list=all&&all[doc];if(!Array.isArray(list))return;
     const s=list.find(x=>x&&(String(x.id||'')===sid()||RX.test(clean(x.title||x.name||''))));if(!s)return;
-    if(k==='intro'){if('intro' in s)s.intro=v;else if('introLine' in s)s.introLine=v;else s.intro=v;}
-    if(k==='closing'){if('closing' in s)s.closing=v;else if('closingLine' in s)s.closingLine=v;else s.closing=v;}
-    if(k==='bullets'){const vals=v.split(/\n+/).map(clean).filter(Boolean);s.bullets=vals;s.items=vals;}
+    // v1.50.82 — idempotency. This wrote sections + pulse()d (antcv:sections-updated,
+    // source 'how-contribute-controls') on EVERY call. pulse -> personality
+    // forceRebuild -> app re-renders the section -> this sidecar re-runs -> writes
+    // again: the residual re-render loop (and why HIWC was hard to type / the
+    // preview bullets duplicated). Only write + pulse when the value changed.
+    let changed=false;
+    if(k==='intro'){const cur=('intro' in s)?s.intro:('introLine' in s?s.introLine:undefined);if(clean(cur)!==clean(v)){if('intro' in s)s.intro=v;else if('introLine' in s)s.introLine=v;else s.intro=v;changed=true;}}
+    if(k==='closing'){const cur=('closing' in s)?s.closing:('closingLine' in s?s.closingLine:undefined);if(clean(cur)!==clean(v)){if('closing' in s)s.closing=v;else if('closingLine' in s)s.closingLine=v;else s.closing=v;changed=true;}}
+    if(k==='bullets'){const vals=v.split(/\n+/).map(clean).filter(Boolean);const cur=Array.isArray(s.bullets)?s.bullets:(Array.isArray(s.items)?s.items:[]);if(cur.length!==vals.length||cur.some((x,i)=>clean(x)!==vals[i])){s.bullets=vals;s.items=vals;changed=true;}}
+    if(!changed)return;
     writeJson(SECTIONS_KEY,all);writeDocSpecificSections(doc,list);pulse();
   }
   function controlsForField(f,k){

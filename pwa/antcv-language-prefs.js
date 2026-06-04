@@ -4,7 +4,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.40.323';
+  const VERSION='1.50.110-font-harmonize';
   if(window.__antcvLanguagePrefsInstalled===VERSION)return;
   window.__antcvLanguagePrefsInstalled=VERSION;
   const OPTIONS=[
@@ -33,13 +33,38 @@
     const kids=Array.from(root.children).filter(shown);return kids.length?kids[kids.length-1]:root;
   }
   function build(){
-    const wrap=document.createElement('details');wrap.dataset.antcvLanguagePrefs='1';wrap.setAttribute('data-antcv-language-prefs','1');wrap.open=false;wrap.style.cssText='margin:14px 0 16px 0;padding:0;border-radius:8px;';
+    const wrap=document.createElement('details');wrap.dataset.antcvLanguagePrefs='1';wrap.setAttribute('data-antcv-language-prefs','1');wrap.open=false;wrap.style.cssText='margin:4px 0 12px 0;padding:0;border-radius:8px;';
     const sum=document.createElement('summary');sum.textContent='LANGUAGES IN THE TOP BAR';sum.style.cssText='cursor:pointer;user-select:none;font-size:11px;font-weight:800;color:rgba(255,255,255,.72);padding:9px 12px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.15);border-radius:8px;letter-spacing:.25px;list-style:none;text-transform:uppercase;';wrap.appendChild(sum);
     const body=document.createElement('div');body.style.cssText='padding:10px 12px 4px 12px;';const help=document.createElement('div');help.textContent='Choose which language buttons appear in the top bar. This does not translate or regenerate anything. At least one must stay enabled.';help.style.cssText='font-size:10px;color:rgba(255,255,255,.50);line-height:1.45;margin-bottom:10px;';body.appendChild(help);
     function repaint(){const on=new Set(read());body.querySelectorAll('input[data-code]').forEach(cb=>{cb.checked=on.has(cb.dataset.code)})}
     OPTIONS.forEach(o=>{const lab=document.createElement('label');lab.style.cssText='display:flex;align-items:center;gap:8px;padding:6px 8px;margin:0 0 5px 0;border-radius:6px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08);cursor:pointer;';const cb=document.createElement('input');cb.type='checkbox';cb.dataset.code=o.code;cb.checked=read().includes(o.code);cb.style.cssText='accent-color:#01B7BB;';const span=document.createElement('span');span.textContent=o.label+' — '+o.name;span.style.cssText='font-size:11px;color:rgba(255,255,255,.88);font-weight:700;';lab.appendChild(cb);lab.appendChild(span);body.appendChild(lab);cb.addEventListener('click',ev=>ev.stopPropagation(),true);cb.addEventListener('change',ev=>{ev.stopPropagation();let next=Array.from(body.querySelectorAll('input[data-code]')).filter(x=>x.checked).map(x=>x.dataset.code);if(!next.length){cb.checked=true;next=[o.code]}write(next);repaint()})});wrap.appendChild(body);return wrap
   }
-  let busy=false;function apply(){if(busy)return;busy=true;try{const root=settingsRoot();if(!root){removeAllExcept(null);return}if(!isPersonal(root)){removeAllExcept(null);return}let panel=document.querySelector('[data-antcv-language-prefs="1"]');removeAllExcept(panel);if(!panel){panel=build()}const host=contentHost(root);if(!host.contains(panel))host.appendChild(panel);removeAllExcept(panel)}catch(e){console.warn('[antcv-language-prefs] apply failed:',e&&e.message)}finally{busy=false}}
+  // v1.50.110 — give WRITING STYLE and LANGUAGES the SAME font + size as
+  // ADVANCED TONE. We read ADVANCED TONE's COMPUTED style at runtime (robust to
+  // whatever the bundle renders) and copy font-size/weight/family/letter-spacing/
+  // text-transform onto the two targets. Signature-guarded so the style/class
+  // MutationObserver does not loop on our own writes.
+  function shortHeader(root,re){return Array.from(root.querySelectorAll('summary,button,div,span,h1,h2,h3,h4')).find(el=>shown(el)&&re.test(norm(el.textContent))&&norm(el.textContent).length<40)||null;}
+  function harmonizeFonts(root){try{
+    const adv=shortHeader(root,/^advanced tone\b/i);if(!adv)return;
+    const cs=getComputedStyle(adv);
+    const sig=[cs.fontSize,cs.fontWeight,cs.letterSpacing,cs.textTransform].join('|');
+    const targets=[];
+    const ws=Array.from(root.querySelectorAll('div,span,label,h1,h2,h3,h4')).find(el=>shown(el)&&/^writing style$/i.test(norm(el.textContent)));
+    if(ws)targets.push(ws);
+    const langSum=document.querySelector('[data-antcv-language-prefs="1"]>summary');
+    if(langSum)targets.push(langSum);
+    targets.forEach(el=>{
+      if(el.getAttribute('data-antcv-font-harmonized-327')===sig)return;
+      el.style.setProperty('font-size',cs.fontSize,'important');
+      el.style.setProperty('font-weight',cs.fontWeight,'important');
+      el.style.setProperty('font-family',cs.fontFamily,'important');
+      el.style.setProperty('letter-spacing',cs.letterSpacing==='normal'?'normal':cs.letterSpacing,'important');
+      el.style.setProperty('text-transform',cs.textTransform,'important');
+      el.setAttribute('data-antcv-font-harmonized-327',sig);
+    });
+  }catch(_){}}
+  let busy=false;function apply(){if(busy)return;busy=true;try{const root=settingsRoot();if(!root){removeAllExcept(null);return}if(!isPersonal(root)){removeAllExcept(null);return}let panel=document.querySelector('[data-antcv-language-prefs="1"]');removeAllExcept(panel);if(!panel){panel=build()}const host=contentHost(root);if(!host.contains(panel))host.appendChild(panel);removeAllExcept(panel);harmonizeFonts(root)}catch(e){console.warn('[antcv-language-prefs] apply failed:',e&&e.message)}finally{busy=false}}
   let scheduled=false;function schedule(){if(scheduled)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;apply()})}
   window.AntcvLanguagePrefs={get:read,set:write,apply,VERSION};if(!readJSON('enabledLanguages'))write(DEFAULT);
   document.addEventListener('click',()=>setTimeout(schedule,0),true);

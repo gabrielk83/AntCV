@@ -26,7 +26,10 @@ Full triage with per-item IDs, layer, and sidecar-vs-app.js verdict lives in
   marker, on-entry + A4-overflow detection, continuation header, cascade colour
   across all sections + CL), `VISUAL-PKG-001..003`, `MERGE-DUP-001..003`,
   `SETTINGS-HEAD-001`, `SECTION-LAYOUT-001`, `LOCATION-001`, `DEMO-WARN-001`,
-  `PRIVACY-SETTINGS-001`, `WIZARD-001..002`, `IMPORT-COUNT-001`.
+  `PRIVACY-SETTINGS-001`, `WIZARD-001..002`, `IMPORT-COUNT-001`,
+  `PHOTO-PLACEMENT-001` (only sidebar photo positions render in the preview;
+  header/main/bridge placements are no-ops — app.js render gap, format-prefs
+  sidecar only stores the pref).
 
 ---
 
@@ -34,6 +37,12 @@ Full triage with per-item IDs, layer, and sidecar-vs-app.js verdict lives in
 
 ### Fixed — LAYOUT help-text overflow
 - Owner: the Per-section-overrides help paragraph is too long. Replaced the §4.4 wall of text in `src/islands/LayoutPicker/LayoutPicker.tsx` with "Per-section overrides — pick a layout and set a length hint, or reset (↺) to use the style default." Rebuilt `pwa/antcv-react-islands.js` (Vite); bundle `?v=` → 1.50.70, `sw.js` → `antcv-1.50.70`, `version-override` TARGET → 1.50.70 (1.50.69 added to STALE).
+
+### BLEEP-MULTI-001 — name + location + privacy all bleep together (video 2026-06-04)
+- Owner attached a video: the candidate **Name**, **Location**, and the **Privacy** pill all pulse/"bleep" in sync.
+- **Read:** three unrelated elements bleeping in lock-step is one global driver, not three bugs — the preview/topbar **re-render loop (HIWC-RERENDER-LOOP-001)** repaints the header and re-mounts the topbar. Under that loop: (a) `topbar-tools-347` re-parents the privacy FAB each tick → flicker (my v1.50.74 transition/guard fix stops the FAB's *own* repaint but not re-parenting under a topbar re-mount); (b) Location is re-rendered by app.js; (c) the Name oscillated because `antcv-name-align-fix` re-applied `text-align` inline on every re-render, fighting app.js's `left`.
+- **Action this round:** hardened `antcv-name-align-fix` v1.1.0 — removed the per-render inline writes; alignment is now a single injected `!important` **stylesheet rule** that wins passively, so the Name no longer races app.js (no oscillation). `?v=1.1.0-norace`, sw → `antcv-1.50.75`, TARGET → 1.50.75 (1.50.74 → STALE).
+- **Still root:** the loop itself. Location + privacy bleep until HIWC-RERENDER-LOOP-001 is fixed. Probe `docs/qa/probes/rerender-loop-probe.js` measures the loop rate, the `antcv:sections-updated` emit rate, and whether the FAB/name nodes are being recreated — run it live, then patch the emit at source.
 
 ### PRIVACY-FAB-FLICKER-001 — FIXED (the "bleeping" background)
 - Owner (high priority): the privacy 🛡 pill in the top bar pulses ("bleeps") its background.

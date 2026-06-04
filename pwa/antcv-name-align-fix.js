@@ -21,7 +21,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.0.0';
+  var VERSION = '1.1.0';
   if (window.__antcvNameAlignFix === VERSION) return;
   window.__antcvNameAlignFix = VERSION;
 
@@ -53,46 +53,50 @@
     return m ? m[1].toLowerCase() : null;
   }
 
-  function nameNodes() {
-    try { return document.querySelectorAll('[data-antcv-candidate-edit="name"]'); }
-    catch (_) { return []; }
+  // v1.1.0 — apply the alignment as a single injected !important STYLE RULE,
+  // not per-node inline writes. A stylesheet `!important` declaration beats
+  // app.js's non-important inline `text-align:left`, so the name stays put
+  // WITHOUT this sidecar touching the node on every re-render. The old inline
+  // re-apply fought app.js on each tick of the preview re-render loop
+  // (HIWC-RERENDER-LOOP-001), making the name oscillate left<->center — a
+  // visible "bleep". The rule wins passively, so there is no per-render race.
+  var STYLE_EL_ID = 'antcv-name-align-style';
+  var lastApplied = null;
+
+  function styleEl() {
+    var s = document.getElementById(STYLE_EL_ID);
+    if (!s) {
+      s = document.createElement('style');
+      s.id = STYLE_EL_ID;
+      (document.head || document.documentElement).appendChild(s);
+    }
+    return s;
   }
 
   function apply() {
-    if (disabled()) return;
+    if (disabled()) {
+      var off = document.getElementById(STYLE_EL_ID);
+      if (off) off.textContent = '';
+      lastApplied = null;
+      return;
+    }
     var align = lsGet(STORE);
     // Refresh from the live control when the panel is open — that is the
     // value the user actually set.
     var cur = currentFromButton(nameCjlrButton());
     if (cur && VALID[cur] && cur !== align) { lsSet(STORE, cur); align = cur; }
     if (!align || !VALID[align]) return;
-    var els = nameNodes();
-    for (var i = 0; i < els.length; i++) {
-      var el = els[i];
-      if (el.style.getPropertyValue('text-align') !== align
-        || el.style.getPropertyPriority('text-align') !== 'important') {
-        el.style.setProperty('text-align', align, 'important');
-      }
-    }
-  }
-
-  var pending = false;
-  function schedule() {
-    if (pending) return;
-    pending = true;
-    requestAnimationFrame(function () { pending = false; try { apply(); } catch (_) {} });
+    if (align === lastApplied) return; // value unchanged -> no DOM write at all
+    lastApplied = align;
+    styleEl().textContent =
+      '[data-antcv-candidate-edit="name"]{text-align:' + align + ' !important;}';
   }
 
   function boot() {
     apply();
+    // Catch the CJLR control appearing (panel opened after load).
     var delays = [150, 400, 1000, 2500];
     for (var d = 0; d < delays.length; d++) setTimeout(apply, delays[d]);
-    // Re-apply when app.js re-renders the candidate header.
-    try {
-      new MutationObserver(schedule).observe(document.body || document.documentElement, {
-        childList: true, subtree: true,
-      });
-    } catch (_) {}
     // Capture a CJLR cycle promptly — the title updates just after the click.
     document.addEventListener('click', function (ev) {
       var b = ev.target && ev.target.closest ? ev.target.closest('button') : null;
@@ -100,9 +104,10 @@
       var t = (b.getAttribute('aria-label') || '') + ' ' + (b.getAttribute('title') || '');
       if (/CJLR for Name line/i.test(t)) { setTimeout(apply, 0); setTimeout(apply, 90); }
     }, true);
-    window.addEventListener('antcv:sections-updated', schedule);
-    // Backstop for in-place style resets the observer doesn't see.
-    setInterval(apply, 1200);
+    window.addEventListener('storage', function (ev) { if (ev && ev.key === STORE) apply(); });
+    // Light poll: only updates the rule when the value actually changes, so
+    // it never writes to the DOM on a steady state.
+    setInterval(apply, 1500);
   }
 
   if (document.readyState === 'loading') {

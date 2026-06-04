@@ -21,7 +21,7 @@
 (function () {
   'use strict';
   if (window.__antcvClAiNoticeInline) return;
-  window.__antcvClAiNoticeInline = '1.50.97';
+  window.__antcvClAiNoticeInline = '1.50.125';
 
   var NOTICE = {
     en: 'AI-assisted',
@@ -72,23 +72,70 @@
     try { if (document.body) document.body.classList.toggle('antcv-cl-doc', activeDoc() === 'cl'); } catch (_) {}
   }
 
+  function candidateName() {
+    try {
+      var pi = JSON.parse(localStorage.getItem('personalInfo') || '{}');
+      var n = (pi && (pi.name || pi.fullName)) ||
+              clean(((pi && pi.firstName) || '') + ' ' + ((pi && pi.lastName) || ''));
+      return clean(n || '');
+    } catch (_) { return ''; }
+  }
+  function isExcluded(el) {
+    if (!el || el.nodeType !== 1) return true;
+    if (el.hasAttribute && el.hasAttribute('data-antcv-cl-ai-notice')) return true;
+    if (el.classList && (el.classList.contains('antcv-page-row') ||
+        el.classList.contains('antcv-ai-document-watermark'))) return true;
+    if (el.querySelector && el.querySelector('input,textarea,button')) return true;
+    return false;
+  }
+  function lowerHalf(el, p) {
+    try {
+      var r = el.getBoundingClientRect(), pr = p.getBoundingClientRect();
+      return pr.height > 0 && r.top >= pr.top + pr.height * 0.45;
+    } catch (_) { return true; }
+  }
+
   function findSignoffNameRow(p) {
-    // The sign-off line ("Kind regards,") is followed by the name row. Walk
-    // short text blocks; on a sign-off match, return the next block (the name),
-    // or the sign-off element itself if there is no separate name block.
-    var blocks = Array.from(p.querySelectorAll('p,div'));
+    // Goal: the signature NAME row (name on the left → marker floats right).
+    // Robust to CLs that don't render a separate "Kind regards," block.
+    var blocks = Array.from(p.querySelectorAll('p,div')).filter(function (el) {
+      return visible(el) && !isExcluded(el);
+    });
+    var signoffEl = null;
+
+    // 1. Sign-off line ("Kind regards,") → the following name block (best case).
     for (var i = 0; i < blocks.length; i++) {
-      var el = blocks[i];
-      if (!visible(el)) continue;
-      var t = clean(el.textContent).toLowerCase();
+      var t = clean(blocks[i].textContent).toLowerCase();
       if (!t || t.length > 60) continue;
       for (var s = 0; s < SIGNOFFS.length; s++) {
         if (t.indexOf(SIGNOFFS[s]) === 0 || t === SIGNOFFS[s]) {
-          var next = el.nextElementSibling;
-          if (next && visible(next) && clean(next.textContent) && clean(next.textContent).length <= 60) return next;
-          return el;
+          if (!signoffEl) signoffEl = blocks[i];
+          var next = blocks[i].nextElementSibling;
+          while (next && (isExcluded(next) || !visible(next))) next = next.nextElementSibling;
+          if (next) {
+            var nt = clean(next.textContent);
+            if (nt && nt.length <= 60) return next;
+          }
         }
       }
+    }
+
+    // 2. A block whose text equals the candidate's name (lowest such block).
+    var name = candidateName();
+    if (name) {
+      for (var j = blocks.length - 1; j >= 0; j--) {
+        var bt = clean(blocks[j].textContent);
+        if (bt && bt.length <= 60 && bt.toLowerCase() === name.toLowerCase()) return blocks[j];
+      }
+    }
+
+    // 3. The sign-off element itself, if we found one but no name block after it.
+    if (signoffEl) return signoffEl;
+
+    // 4. Last short, leaf-ish text block in the lower half (the signature line).
+    for (var k = blocks.length - 1; k >= 0; k--) {
+      var lt = clean(blocks[k].textContent);
+      if (lt && lt.length >= 2 && lt.length <= 48 && lowerHalf(blocks[k], p)) return blocks[k];
     }
     return null;
   }
@@ -145,6 +192,6 @@
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
   else start();
-  window.AntcvClAiNoticeInline = { version: '1.50.97', _tick: tick, _lang: lang };
-  try { console.debug('[cl-ai-notice-inline] installed v1.50.97'); } catch (_) {}
+  window.AntcvClAiNoticeInline = { version: '1.50.125', _tick: tick, _lang: lang };
+  try { console.debug('[cl-ai-notice-inline] installed v1.50.125'); } catch (_) {}
 })();

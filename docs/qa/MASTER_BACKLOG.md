@@ -73,7 +73,7 @@ Branch: `claude/antcv-roadmap-bugs-L9Sqa`. Compiled 2026-06-04.
 | PB-001 | Manual break from main + sidebar → all outputs | PARTIAL | `[console]` Confirm whether break shows in preview vs only fails in export; close main-area path. |
 | PB-002 | First sub-subsection moves whole subsection, no dup | OPEN | `[console]` Repro on a sub-subsection; implement move-with-heading in page model. |
 | PB-003 | Continuation heading + "Cont." 18pt from top | OPEN | `[code]` Extend continuation-header render in `284`/`329` to all sections. |
-| PB-004 / TB-002 | Table: first row moves table; later row splits + repeats headers | OPEN | `[owner]` Scope per-doc-keyed row break reaching DOCX worker (TABLE-PAGEBREAK parked). |
+| PB-004 / TB-002 | Table: first row moves table; later row splits + repeats headers | OPEN | **Owner-decided: proper feature pass.** `[worker]`+`[console]` Per-document-keyed row-break store (CV-Core vs CL-WIB must not collide on a shared section id) that also reaches the DOCX worker's `row_pages`. Not a hotfix. |
 | PB-005 | Semantic page glyph + "Fit" wording | VERIFYING | `[verify]` Confirm no down-arrow / "Compress" on live; report any control the matcher misses. |
 | PB-006 / VF-018 | Preserve Professional Experience CONT pattern | OPEN | `[verify]` Reference behaviour — confirm it stays intact as PB work lands. |
 | EXPORT-PAGE2-001 | Export preview shows only page 1 | PROBE-GATED | `[console]` Run `antcv-export-page2-probe.js`; fix the `pdf-preview-gate` clone path. |
@@ -186,7 +186,7 @@ Branch: `claude/antcv-roadmap-bugs-L9Sqa`. Compiled 2026-06-04.
 | VISUAL-PKG-001 | Rename "STYLE PACKAGE" → "Visual package" | OPEN | `[code]` Relabel app.js text node; fold into MERGE-DUP pass. |
 | VISUAL-PKG-002 | Package buttons show icons + enabled fn | OPEN | `[islands]` Enrich PackagePicker buttons. |
 | VISUAL-PKG-003 | Move descriptor next to Alt circles | PARTIAL | `[islands]` Relocate "Segoe UI · circle · 120px" descriptor. |
-| MERGE-DUP-001 | Merge two Writing-style selects | OPEN | `[owner]` Decide which engine wins; then live probe + bridge. |
+| MERGE-DUP-001 | Merge two Writing-style selects | OPEN | **Owner-decided: the React island engine wins** (`WritingStylePicker`). `[islands]`+`[console]` Hide the legacy app.js select but **keep the two legacy buttons working** (owner: "we are using the old buttons") — bridge them to the island engine, don't break them. |
 | MERGE-DUP-002 | Merge tone-chip sections; split run-on chip | PARTIAL | `[console]` Confirm `dedup-341` split on live; merge the sections. |
 | MERGE-DUP-003 | Merge "save tones" into "save customs" | OPEN | `[islands]` Unify on `saveCurrentAsSlot`/`loadSlot`. |
 | SETTINGS-HEAD-001 | Unify headlines to "▸" style; Languages placement | PARTIAL | `[verify]` Confirm 1.50.95 placement; collapsible headline style owed. |
@@ -216,9 +216,9 @@ Branch: `claude/antcv-roadmap-bugs-L9Sqa`. Compiled 2026-06-04.
 
 | ID | Feature | Layers | Status | Next action |
 |----|---------|--------|--------|-------------|
-| **FEATURE-CONF-001** | Per-sentence confidence overlay in Application tab (toggle default OFF; red=low/yellow=med; hover=issue+score; preview-only). | WORKER + APP.JS + UI | DESIGNED | `[owner]` Confirm it becomes a Writing-System "Verification/confidence" section + the data contract. Then: `[worker/code]` extend `jd-analysis.js` schema+`normalize()` for `document_confidence` (+ unit test) and `[code]` build renderer+toggle; `[console]` wire app.js persistence + verify model scores. |
-| **DATA-EXPORT-001** | Personal menu: download stored data + analytics to a protected file. | APP.JS | REGISTERED | `[owner]` Confirm whether encryption is required (vs plain JSON). Then `[console]` serialize personalInfo/writingPrefs/analytics keys to a download. |
-| **DELETE-SAVE-001** | Erase flow: "Save my data locally first" checkbox → triggers DATA-EXPORT-001 before erase. | APP.JS | REGISTERED | `[console]` Add checkbox to the red confirm card; share the export serializer. |
+| **FEATURE-CONF-001** | Per-sentence confidence overlay, as a **button in the Analysis panel** (toggle default OFF; red=low/yellow=med; hover=issue+score; preview-only). | WORKER + APP.JS + UI | SPEC'D ✓ | **Owner-decided:** Analysis-panel button; formalised in `docs/design/Verification_Confidence_Section.md` (to fold into the Writing System spec .docx). Build: `[worker]` extend `jd-analysis.js` schema+`normalize()` for `document_confidence` (+ unit test); `[code]` renderer+toggle sidecar in the Analysis panel; `[console]` app.js persistence + verify model scores. |
+| **DATA-EXPORT-001** | Personal menu: download stored data + analytics to a protected file. | APP.JS | REGISTERED | **Owner-decided: crypto** — passphrase-encrypted export (WebCrypto/AES). `[code]` Build the serialize+encrypt module (+ unit test, blind-safe); `[console]` wire the Personal-menu download + passphrase prompt. |
+| **DELETE-SAVE-001** | Erase flow: "Save my data locally first" checkbox → triggers DATA-EXPORT-001 before erase. | APP.JS | REGISTERED | `[console]` Add checkbox to the red confirm card; share the encrypted export serializer from DATA-EXPORT-001. |
 | **WIZARD-002** | New wizard Step 6d: default-languages + inform about Personal/Layout/Advanced panels. | APP.JS | REGISTERED | `[console]` Author the new step in the app.js wizard. |
 | **PHOTO-PLACEMENT-001** | Implement non-sidebar photo placements (header/main/bridge) in preview render. | APP.JS | REGISTERED | `[console]` Implement the non-sidebar placements in app.js render path. |
 

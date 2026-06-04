@@ -1275,3 +1275,19 @@ body.antcv-editor-ready {
     margin-right: 3px !important;
   }
 }
+
+/* v1.50.112 — mobile topbar trim.
+ * Per owner: on mobile, drop the Ant logo and the leftover table control.
+ *  - .antcv-top-ant-wrap : the Ant icon (logo) + its 30x30 box.
+ *  - .antcv-top-sliders  : the PC-oriented CV/CL "Focus Area column width" +
+ *    "Sidebar width" sliders (each shows a CV/CL label + a % — the "CL / 30%"
+ *    leftover). One of its own tooltips says "Works on PC", so it is dead weight
+ *    on a phone. CV/CL switch and zoom live in the BOTTOM bar and are untouched.
+ */
+@media (max-width: 900px) {
+  .antcv-top-ant-wrap,
+  .antcv-top-ant-icon,
+  .antcv-top-sliders {
+    display: none !important;
+  }
+}

@@ -165,7 +165,13 @@
     ta.setAttribute('data-antcv-hiwc-bullets-bound','1');
     const box=document.createElement('div');box.setAttribute('data-antcv-hiwc-bullet-list','1');Object.assign(box.style,{display:'flex',flexDirection:'column',gap:'4px',margin:'4px 0',width:'100%',maxWidth:'100%',overflow:'hidden',boxSizing:'border-box'});
     function currentInputs(){return Array.from(box.querySelectorAll('[data-antcv-hiwc-bullet-input]'));}
-    function syncFromInputs(){const vals=currentInputs().map(x=>x.value.trim()).filter(Boolean); syncBulletTextarea(ta,vals); return vals;}
+    function syncFromInputs(force){const vals=currentInputs().map(x=>x.value.trim()).filter(Boolean);
+      // v1.50.87 — preserve the template. When nothing is typed (all inputs
+      // empty) do NOT write an empty bullets[] — that clears the section's
+      // template placeholders and the preview shows no HIWC template. Only
+      // write once there's a real bullet; the × delete passes force=true to
+      // actually clear.
+      if(vals.length||force){ syncBulletTextarea(ta,vals); } return vals;}
     function addRow(txt,idx){
       const key='bullet_'+idx;
       const row=document.createElement('div');row.setAttribute('data-antcv-hiwc-bullet-row','1');Object.assign(row.style,{display:'flex',alignItems:'center',gap:'3px',width:'100%',maxWidth:'100%',boxSizing:'border-box',overflow:'hidden'});
@@ -184,7 +190,7 @@
       comp.onclick=ev=>{ev.preventDefault();ev.stopPropagation();inp.value=compressText(inp.value);dispatchInput(inp);syncFromInputs();applyPreview();};
       enr.onclick=ev=>{ev.preventDefault();ev.stopPropagation();inp.value=enrichText(inp.value);dispatchInput(inp);syncFromInputs();applyPreview();};
       cjlr.onclick=ev=>{ev.preventDefault();ev.stopPropagation();const n=nextAlign(getAlign(key));setAlign(key,n);paintCJLR(cjlr,n);applyField(inp,key);applyPreview();};
-      del.onclick=ev=>{ev.preventDefault();ev.stopPropagation();row.remove();syncFromInputs();applyPreview();};
+      del.onclick=ev=>{ev.preventDefault();ev.stopPropagation();row.remove();syncFromInputs(true);applyPreview();};
       row.appendChild(inp);row.appendChild(page);row.appendChild(comp);row.appendChild(enr);row.appendChild(cjlr);row.appendChild(del);box.insertBefore(row,box.querySelector('[data-antcv-hiwc-add]'));
       return inp;
     }
@@ -248,7 +254,10 @@
 
   // v1.50.86 — edit-safety helpers for HIWC bullet typing.
   function isTypingInHiwc(){
-    try{ var a=document.activeElement; return !!(a && a.matches && a.matches('[data-antcv-hiwc-bullet-input]')); }catch(_){ return false; }
+    // v1.50.87 — bail run() while the user is interacting anywhere in the HIWC
+    // bullet editor (input, its row, or controls), not just the text input, so
+    // pressing a bullet/control no longer triggers a rebuild = flicker.
+    try{ var a=document.activeElement; return !!(a && a.closest && a.closest('[data-antcv-hiwc-bullet-list],[data-antcv-hiwc-bullet-row]')); }catch(_){ return false; }
   }
   var __hiwcSyncTimer=null;
   function scheduleBulletSync(syncFn){ clearTimeout(__hiwcSyncTimer); __hiwcSyncTimer=setTimeout(function(){ __hiwcSyncTimer=null; try{ syncFn(); applyPreview(); }catch(_){} }, 600); }

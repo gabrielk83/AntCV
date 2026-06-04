@@ -623,17 +623,40 @@
   //     just after the event fires
   //   - listens for storage events too (cross-tab safety)
   //   - exposes refresh() on the public API for manual recovery
+  let _lastBlockSig = null;
+  function blockSig(ws) {
+    return [
+      (ws.keywords || []).join(''),
+      (ws.strengths || []).join(''),
+      ws.notes || '',
+      ws.summary || '',
+    ].join('');
+  }
   function forceRebuild(reason) {
     try {
       const ws = readWorkStyle();
+      // v1.40.296-loopgate — idempotency gate. forceRebuild runs on every
+      // antcv:sections-updated; its remove+append of the block is a DOM
+      // mutation that wakes the whole sidecar herd, one of which re-emits
+      // sections-updated → a ~12/sec re-render loop (HIWC-RERENDER-LOOP-001).
+      // When the block data is unchanged AND a single block is already
+      // present + connected in the current panel, skip the rebuild entirely:
+      // it would produce identical DOM, so this is behaviour-preserving and
+      // it removes the per-cycle mutation that pumps the loop.
+      const sig = blockSig(ws);
+      const existing = Array.from(document.querySelectorAll('[data-antcv-personality-block="1"]'));
+      if (sig === _lastBlockSig && existing.length === 1 && existing[0].isConnected) {
+        const p = findPersonalPanel();
+        if (p && p.contains(existing[0])) return true;
+      }
       console.info('[antcv-personality] forceRebuild', reason, {
         kw: (ws.keywords || []).length,
         st: (ws.strengths || []).length,
         notes: (ws.notes || '').length,
         summary: (ws.summary || '').length,
       });
-      Array.from(document.querySelectorAll('[data-antcv-personality-block="1"]'))
-        .forEach(n => { if (n.parentElement) n.parentElement.removeChild(n); });
+      existing.forEach(n => { if (n.parentElement) n.parentElement.removeChild(n); });
+      _lastBlockSig = sig;
       const panel = findPersonalPanel();
       if (!panel) {
         // Panel not visible right now — next MutationObserver tick will

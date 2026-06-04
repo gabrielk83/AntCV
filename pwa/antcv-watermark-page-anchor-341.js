@@ -56,7 +56,7 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.40.341-p1a';
+  var SCRIPT_VERSION = '1.50.97-cl-skip';
   if (window.__antcvWatermarkPageAnchor341 === SCRIPT_VERSION) return;
   window.__antcvWatermarkPageAnchor341 = SCRIPT_VERSION;
 
@@ -172,6 +172,10 @@
   function tick() {
     var paper = findPreviewPaper();
     if (!paper) return;
+    // v1.50.97 — in the cover letter the CL inline sidecar owns the notice
+    // (hides this watermark via CSS, renders its own on the signature row).
+    // Do nothing here so we never move/clone the React watermark in the CL.
+    try { if (document.body && document.body.classList.contains('antcv-cl-doc')) return; } catch (_) {}
     var watermarks = findWatermarks(paper);
     if (!watermarks.length) return;
     var pageBoxes = findPageBoxes(paper);

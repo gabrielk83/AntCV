@@ -5,6 +5,21 @@ This file now folds in the canonical `AntCV_UI_UX_Spec_and_QA_Plan_v4.docx` back
 
 ---
 
+## 2026-06-04 (later) — section-layout help text trimmed + CL-HEADER-001 DOM captured
+
+### Fixed — LAYOUT help-text overflow
+- Owner: the Per-section-overrides help paragraph is too long. Replaced the §4.4 wall of text in `src/islands/LayoutPicker/LayoutPicker.tsx` with "Per-section overrides — pick a layout and set a length hint, or reset (↺) to use the style default." Rebuilt `pwa/antcv-react-islands.js` (Vite); bundle `?v=` → 1.50.70, `sw.js` → `antcv-1.50.70`, `version-override` TARGET → 1.50.70 (1.50.69 added to STALE).
+
+### CL-HEADER-001 — visible line DOM captured (still OPEN)
+- The "Application:" line is a `<div>` inside the navy header (`background: rgb(40,53,86)`), `font-family: Trebuchet MS`, `color: rgba(255,255,255,0.9)`, `white-space: nowrap; overflow: hidden`, `editable:false`, with child nodes. `candidate-preview-editor-341.wrapApplicationSentence` skips it because its anchor search only accepts LEAF elements (`children.length===0`) and this div has children — so no editable host attaches (matches the earlier `hosts:0`). Fix direction: teach the editor to bind this header div directly (make its role/company portions editable in place and re-render from `personalInfo.role/company`), rather than searching for a leaf anchor. The `nowrap; overflow:hidden` also explains CL-LAYOUT-002 (line clipped to page width).
+- **Still owed from live:** the div's full inner structure (child spans for role/company vs single text node) — needed to bind the right nodes.
+
+### Still-not-fixed reports (need version confirm / further work)
+- **HIWC template still hidden in CL (owner):** `prv-bullets3` keeps the template when no real-data sibling exists; if it is still blank, either 1.50.70 had not loaded yet, or the empty template is not emitted by the app render at all (not a dedup case). Confirm `ANTCV_VERSION` = 1.50.70 after hard refresh; if still blank, this is an app-render gap, not the dedup.
+- **PRIVACY-FAB-FLICKER-001 worse:** now invisible when section tabs are closed, flickers when the section panel is open; should be a persistent topbar pill. Captured node still carries `display:none !important` + `opacity:1 !important` + `data-antcv-topbar-moved="1"` — `mobile-fab-cleanup-351` / `topbar-tools-347` / `privacy-led` fighting. Needs a mutation-source probe before patching.
+
+---
+
 ## 2026-06-04 — HIWC bullet-dedup console flood (fixed) + re-render loop (new, OPEN)
 
 Owner report: in the cover-letter "How I Would Contribute" the second group of three bullets pops in and out continuously, and the console is flooded so a probe readout can't be taken.

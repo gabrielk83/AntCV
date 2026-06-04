@@ -58,7 +58,7 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.50.105-style';
+  var SCRIPT_VERSION = '1.50.106-spec-edit';
   if (window.__antcvCandidatePreviewEditor341 === SCRIPT_VERSION) return;
   window.__antcvCandidatePreviewEditor341 = SCRIPT_VERSION;
 
@@ -217,6 +217,13 @@
       var nextCompany = newText === '[Company]' ? '' : newText;
       var mCompany = readMeta();
       if (mCompany.company !== nextCompany) { mCompany.company = nextCompany; writeMeta(mCompany); }
+    } else if (field === 'subtitle') {
+      // Specialisation line. Stored as meta.subtitle (the same string the app
+      // renders as `io.subtitle`, joined by " • "). Treat the localised
+      // "[Specialisation — …]" / "[Specialisering — …]" hint as empty.
+      var nextSub = /^\[\s*specialis/i.test(newText) ? '' : newText;
+      var mSub = readMeta();
+      if (mSub.subtitle !== nextSub) { mSub.subtitle = nextSub; writeMeta(mSub); }
     }
     if (changed) writePI(pi);
   }
@@ -414,12 +421,43 @@
     wrapEditable(companySpan, 'company');
   }
 
+  // ─── Find + wrap Specialisation (meta.subtitle) ─────────────────
+  function wrapSpecialisation(block) {
+    // Already wrapped? wrapEditable is idempotent, so just stop.
+    if (block.querySelector('[data-antcv-candidate-edit="subtitle"]')) return;
+    var sub = clean(readMeta().subtitle || '');
+    // Find the leaf element that renders the specialisation value or the
+    // localised "[Specialisation — …]" / "[Specialisering — …]" placeholder.
+    var probes = block.querySelectorAll('div, p, span');
+    var target = null;
+    for (var i = 0; i < probes.length; i++) {
+      var el = probes[i];
+      if (el.querySelector('[data-antcv-candidate-edit]')) continue; // skip name/application hosts
+      var t = clean(el.textContent || '');
+      if (!t) continue;
+      var isPlaceholder = /^\[\s*specialis/i.test(t) || /fokusomr[aå]der/i.test(t);
+      var isValue = sub && t === sub;
+      if (isPlaceholder || isValue) {
+        // Prefer a leaf; a placeholder element is always the leaf we want.
+        if (el.children.length === 0 || isPlaceholder) { target = el; break; }
+        target = el;
+      }
+    }
+    if (!target) return;
+    // Let the user see what they type (the rendered line is nowrap+ellipsis).
+    target.style.whiteSpace = 'normal';
+    target.style.overflow = 'visible';
+    target.style.textOverflow = 'clip';
+    wrapEditable(target, 'subtitle');
+  }
+
   // ─── Main sweep ─────────────────────────────────────────────────
   function sweepOnce() {
     var block = findCandidateBlock();
     if (!block) return;
     try { wrapName(block); } catch (_) {}
     try { wrapApplicationSentence(block); } catch (_) {}
+    try { wrapSpecialisation(block); } catch (_) {}
   }
 
   var pending = false;

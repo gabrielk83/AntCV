@@ -6,7 +6,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.40.328-preview-guard';
+  const VERSION='1.50.92-defer-dedicated';
   // v1.40.328-preview-guard: Preview is button-free. After TB-004 made
   // table headers contenteditable, the seed filter started matching
   // <th> cells AND any preview-side input that survived a React
@@ -40,7 +40,19 @@
   function hostFor(row){let h=row.querySelector(':scope > [data-antcv-table-page-host-328="1"]');if(!h){h=document.createElement('span');h.setAttribute('data-antcv-table-page-host-328','1');Object.assign(h.style,{display:'inline-flex',alignItems:'center',gap:'2px',marginLeft:'3px',whiteSpace:'nowrap',verticalAlign:'middle'});const btns=Array.from(row.querySelectorAll('button')).filter(visible);const firstAction=btns.find(b=>/✨|enhance|enrich/i.test(clean((b.title||'')+' '+b.textContent)))||btns[0];if(firstAction&&firstAction.parentElement)firstAction.parentElement.insertBefore(h,firstAction);else row.appendChild(h);}return h;}
   function normalize(){
     try{const paper=document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]');if(paper){paper.querySelectorAll('[data-antcv-table-page-host-328], [data-antcv-table-page-328]').forEach(n=>{try{n.remove();}catch(_){}});}}catch(_){}
-    panels().forEach(root=>{if(isInPreviewPaper(root))return;const target=targetForPanel(root);if(!target)return;const sid=targetSid(target);rows(root).forEach((row,idx)=>{if(isInPreviewPaper(row))return;if(idx===0){row.querySelectorAll('[data-antcv-table-page-328]').forEach(x=>x.remove());return;}let b=row.querySelector('[data-antcv-table-page-328]');if(!b){b=makeBtn();hostFor(row).appendChild(b);}paint(b,sid,idx);b.onclick=function(ev){ev.preventDefault();ev.stopPropagation();if(ev.stopImmediatePropagation)ev.stopImmediatePropagation();setPage(sid,idx,getPage(sid,idx)%4+1);paint(b,sid,idx);};});});
+    panels().forEach(root=>{if(isInPreviewPaper(root))return;const target=targetForPanel(root);if(!target)return;const sid=targetSid(target);rows(root).forEach((row,idx)=>{if(isInPreviewPaper(row))return;if(idx===0){row.querySelectorAll('[data-antcv-table-page-328]').forEach(x=>x.remove());return;}
+      // v1.50.92 — defer to the dedicated per-table page button. Core rows get
+      // one from core-competencies-row-controls-234 (data-antcv-core-page) and
+      // WHAT I BRING rows from what-i-bring-row-controls-264
+      // (data-antcv-wib264="page"). Adding our own here produced TWO page
+      // buttons per row, and ours wrote antcv:itemPages under a *guessed* sid
+      // that the preview splitter (table-page-splits-327, keyed by the preview
+      // section's data-sid) did not always match — so clicking it only
+      // re-painted the label ("flicker") without advancing the row to the next
+      // page. When a dedicated button exists, remove ours and skip.
+      var dedicated=row.querySelector('[data-antcv-core-page],[data-antcv-wib264="page"]');
+      if(dedicated){row.querySelectorAll('[data-antcv-table-page-328]').forEach(function(x){x.remove();});var host=row.querySelector(':scope > [data-antcv-table-page-host-328="1"]');if(host&&!host.querySelector('button'))host.remove();return;}
+      let b=row.querySelector('[data-antcv-table-page-328]');if(!b){b=makeBtn();hostFor(row).appendChild(b);}paint(b,sid,idx);b.onclick=function(ev){ev.preventDefault();ev.stopPropagation();if(ev.stopImmediatePropagation)ev.stopImmediatePropagation();setPage(sid,idx,getPage(sid,idx)%4+1);paint(b,sid,idx);};});});
   }
   let pending=false;function soon(){if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;try{normalize();}catch(e){try{console.warn('[table-row-page-controls-328]',e&&e.message);}catch(_){}}});}
   function start(){soon();[100,300,800,1600,3000].forEach(ms=>setTimeout(soon,ms));try{new MutationObserver(soon).observe(document.body||document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style','value']});}catch(_){}window.addEventListener('click',()=>setTimeout(soon,0),true);window.addEventListener('input',soon,true);window.addEventListener('antcv:sections-updated',soon);setInterval(soon,2000);}

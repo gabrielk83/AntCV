@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.50.122';
+const CACHE = 'antcv-1.50.123';
 const SHELL = [
   './manifest.json',
   './antcv-mobile-controls.css',

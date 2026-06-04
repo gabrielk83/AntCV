@@ -5,7 +5,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.50.94-bullet-addremove';
+  const VERSION='1.50.95-bullet-strip';
   let __applying=false; // v1.50.57: re-entrancy guard so our own DOM writes don't re-trigger the observer/flicker.
   const ALIGN_KEY='antcv.hiwc.alignment.v1';
   const PAGE_KEY='antcv:itemPages';
@@ -202,14 +202,13 @@
     comp.onclick=ev=>{ev.preventDefault();ev.stopPropagation();setVal(f,compressText(getVal(f)));syncSectionField(k,getVal(f));applyPreview();};
     enr.onclick=ev=>{ev.preventDefault();ev.stopPropagation();setVal(f,enrichText(getVal(f)));syncSectionField(k,getVal(f));applyPreview();};
     cjlr.onclick=ev=>{ev.preventDefault();ev.stopPropagation();const n=nextAlign(getAlign(k));setAlign(k,n);paintCJLR(cjlr,n);applyField(f,k);applyPreview();};
-    // v1.50.94 — bullets get explicit add/delete buttons + a reliable Enter.
+    // v1.50.95 — bullets keep ONE shared add button + reliable Enter on the
+    // native textarea (edit surface). Per-bullet enhance/page/compress/align/
+    // delete live in the separate control strip below (renderBulletControls).
     if(k==='bullets'){
       let addb=wrap.querySelector('[data-antcv-hiwc-bullet-add]');
       if(!addb){ addb=makeBtn('bullet-add','＋','Add a bullet (new line)',f); addb.setAttribute('data-antcv-hiwc-bullet-add','1'); addb.style.borderColor='#008b8b'; addb.style.color='#006b6b'; wrap.appendChild(addb); }
-      let delb=wrap.querySelector('[data-antcv-hiwc-bullet-del]');
-      if(!delb){ delb=makeBtn('bullet-delete','×','Delete the bullet at the cursor',f); delb.setAttribute('data-antcv-hiwc-bullet-del','1'); delb.style.borderColor='#ff5c5c'; delb.style.color='#e52b2b'; delb.style.background='transparent'; wrap.appendChild(delb); }
-      addb.onclick=ev=>{ev.preventDefault();ev.stopPropagation();addBulletLine(f);applyPreview();};
-      delb.onclick=ev=>{ev.preventDefault();ev.stopPropagation();deleteBulletLineAtCaret(f);applyPreview();};
+      addb.onclick=ev=>{ev.preventDefault();ev.stopPropagation();addBulletLine(f);renderBulletControls(root(),f);applyPreview();};
     }
     // v1.50.92 — bind the section-sync input listener ONCE. controlsForField
     // runs on every sweep; re-adding the listener each time stacked duplicate
@@ -219,6 +218,55 @@
 
   function bulletRowsFromText(v){return String(v||'').split(/\n+/).map(s=>s.replace(/^\s*[•\-*]\s*/,'').trim()).filter(Boolean);}
   function syncBulletTextarea(ta, rows){setVal(ta,rows.join('\n'));syncSectionField('bullets',rows.join('\n'));}
+
+  // v1.50.95 — per-bullet control strip. The editable surface stays the native
+  // textarea (stable, clickable). For each bullet line we render ONE row of
+  // controls (page, compress, enrich, align, delete) — the per-bullet enhance/
+  // page/compress the owner needs. The strip holds NO focus, so the re-render
+  // churn that made the old inline bullet INPUTS un-clickable cannot strand a
+  // click here. Rebuilt only when the bullet text / its align+page changes
+  // (signature guard) so it does not flicker on every sweep.
+  function bulletSig(ta){
+    const rows=bulletRowsFromText(getVal(ta));
+    const meta=rows.map((_,i)=>getAlign('bullet_'+i)+getPage('bullet_'+i)).join(',');
+    return rows.join('')+'||'+meta;
+  }
+  function renderBulletControls(r,ta){
+    if(!ta||isInPreviewPaper(ta))return;
+    const host=ta.parentNode; if(!host)return;
+    let panel=host.querySelector(':scope > [data-antcv-hiwc-bullet-controls]');
+    const sig=bulletSig(ta);
+    if(panel && panel.getAttribute('data-antcv-hiwc-bullet-sig')===sig) return;
+    if(!panel){
+      panel=document.createElement('div');panel.setAttribute('data-antcv-hiwc-bullet-controls','1');
+      Object.assign(panel.style,{display:'flex',flexDirection:'column',gap:'3px',margin:'4px 0 6px 0',width:'100%',boxSizing:'border-box'});
+      host.insertBefore(panel, ta.nextSibling);
+    }
+    panel.setAttribute('data-antcv-hiwc-bullet-sig',sig);
+    panel.textContent='';
+    const rows=bulletRowsFromText(getVal(ta));
+    function writeRows(newRows){setVal(ta,newRows.join('\n'));syncSectionField('bullets',newRows.join('\n'));renderBulletControls(r,ta);applyPreview();}
+    rows.forEach((txt,idx)=>{
+      const key='bullet_'+idx;
+      const row=document.createElement('div');row.setAttribute('data-antcv-hiwc-bullet-ctl-row','1');
+      Object.assign(row.style,{display:'flex',alignItems:'center',gap:'3px',width:'100%',maxWidth:'100%',boxSizing:'border-box',overflow:'hidden'});
+      const lab=document.createElement('span');lab.textContent=(idx+1)+'. '+txt;lab.title=txt;
+      Object.assign(lab.style,{flex:'1 1 auto',minWidth:'0',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontSize:'11px',lineHeight:'1.2',color:'#3a4a4a'});
+      const page=makeBtn('page','📄 1','Page for bullet '+(idx+1),ta);paintPage(page,key);
+      const comp=makeBtn('compress','↹','Compress bullet '+(idx+1),ta);
+      const enr=makeBtn('enrich','✨','Enrich bullet '+(idx+1),ta);
+      const cjlr=makeBtn('cjlr','⇤','Alignment of bullet '+(idx+1),ta);paintCJLR(cjlr,getAlign(key));
+      const del=makeBtn('bullet-delete','×','Delete bullet '+(idx+1),ta);del.style.borderColor='#ff5c5c';del.style.color='#e52b2b';del.style.background='transparent';
+      page.onclick=ev=>{ev.preventDefault();ev.stopPropagation();setPage(key,getPage(key)%4+1);paintPage(page,key);applyPreview();renderBulletControls(r,ta);};
+      comp.onclick=ev=>{ev.preventDefault();ev.stopPropagation();const rr=bulletRowsFromText(getVal(ta));rr[idx]=compressText(rr[idx]||'');writeRows(rr);};
+      enr.onclick=ev=>{ev.preventDefault();ev.stopPropagation();const rr=bulletRowsFromText(getVal(ta));rr[idx]=enrichText(rr[idx]||'');writeRows(rr);};
+      cjlr.onclick=ev=>{ev.preventDefault();ev.stopPropagation();const n=nextAlign(getAlign(key));setAlign(key,n);paintCJLR(cjlr,n);applyPreview();renderBulletControls(r,ta);};
+      del.onclick=ev=>{ev.preventDefault();ev.stopPropagation();const rr=bulletRowsFromText(getVal(ta));rr.splice(idx,1);writeRows(rr);};
+      row.appendChild(lab);row.appendChild(page);row.appendChild(comp);row.appendChild(enr);row.appendChild(cjlr);row.appendChild(del);
+      panel.appendChild(row);
+    });
+  }
+
   function renderBulletList(r,ta){
     if(!ta||ta.getAttribute('data-antcv-hiwc-bullets-bound')==='1') return;
     ta.setAttribute('data-antcv-hiwc-bullets-bound','1');
@@ -342,7 +390,7 @@
   }
 
   let pending=false;function runSoon(){if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;run();});}
-  function run(){if(isTypingInHiwc())return;try{const r=root();if(r){cleanupClosingHelperText(r);controlsForField(findIntro(r),'intro');controlsForField(findClosing(r),'closing');restoreNativeBullets(r);controlsForField(findBullets(r),'bullets');}/* core CJLR cleanup handled by antcv-core-competencies-row-controls; do not prune across the whole Core section */ applyPreview();}catch(e){try{console.warn('[how-contribute-controls-245] failed:',e&&e.message);}catch(_){}}}
+  function run(){if(isTypingInHiwc())return;try{const r=root();if(r){cleanupClosingHelperText(r);controlsForField(findIntro(r),'intro');controlsForField(findClosing(r),'closing');restoreNativeBullets(r);controlsForField(findBullets(r),'bullets');renderBulletControls(r,findBullets(r));}/* core CJLR cleanup handled by antcv-core-competencies-row-controls; do not prune across the whole Core section */ applyPreview();}catch(e){try{console.warn('[how-contribute-controls-245] failed:',e&&e.message);}catch(_){}}}
   function start(){injectCss();run();[100,300,800,1600,3000].forEach(ms=>setTimeout(run,ms));try{new MutationObserver(()=>{if(__applying)return;runSoon();}).observe(document.body||document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style','value']});}catch(_){}window.addEventListener('input',runSoon,true);window.addEventListener('click',()=>setTimeout(run,0),true);window.addEventListener('antcv:sections-updated',()=>setTimeout(run,0));/* v1.50.57: blind setInterval(run,2000) removed — it was the flicker clock. Updates are now event-driven (sections-updated/input/click) plus a slow safety re-sync that no-ops when nothing changed. */setInterval(()=>{if(!__applying)run();},8000);}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
   window.AntcvHowContributeControls239={version:VERSION,run};

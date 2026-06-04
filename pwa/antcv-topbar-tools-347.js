@@ -76,16 +76,25 @@
     el.style.setProperty('min-width', '28px', 'important');
     el.style.setProperty('padding', '0 6px', 'important');
     el.style.setProperty('font-size', '13px', 'important');
-    el.style.setProperty('display', 'inline-flex', 'important');
     el.style.setProperty('align-items', 'center', 'important');
-    // v1.50.58 — the relocated privacy pill was being blanked under 900px
-    // (display:none + visibility:hidden, set by the islands PreviewToolbar's
-    // viewport FAB-hide). Once it lives in the top bar it must stay visible at
-    // every width, so re-assert visibility here; relocate() calls this every
-    // sweep, so it wins over the periodic hide.
-    el.style.setProperty('visibility', 'visible', 'important');
-    el.style.setProperty('opacity', '1', 'important');
-    el.removeAttribute('aria-hidden');
+    // v1.50.84 — visibility is now forced by a passive CSS !important rule
+    // (injectPrivacyVisibilityCss), NOT re-asserted here every sweep. The old
+    // per-sweep display/visibility/opacity writes fought the islands
+    // PreviewToolbar's periodic inline hide -> a ping-pong that mutated the
+    // FAB's style ~29/sec = the privacy "blip". CSS wins passively, no JS
+    // counter-write, no blip.
+    if (el.hasAttribute('aria-hidden')) el.removeAttribute('aria-hidden');
+  }
+
+  // Passive visibility lock for the relocated privacy pill — beats the island's
+  // non-important inline display:none/visibility:hidden without any JS sweep.
+  function injectPrivacyVisibilityCss() {
+    if (document.getElementById('antcv-topbar-tools-347-css')) return;
+    var s = document.createElement('style');
+    s.id = 'antcv-topbar-tools-347-css';
+    s.textContent = 'button[data-antcv-privacy-led-fab="1"][' + MOVED_ATTR +
+      '="1"]{display:inline-flex!important;visibility:visible!important;opacity:1!important;}';
+    (document.head || document.documentElement).appendChild(s);
   }
 
   // Compact top-bar sizing for the Document-export button (icon + short text).
@@ -177,6 +186,7 @@
   }
 
   schedule();
+  injectPrivacyVisibilityCss();
   [200, 600, 1500, 3000].forEach(function (d) { setTimeout(schedule, d); });
 
   try {

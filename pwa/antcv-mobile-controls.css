@@ -344,6 +344,7 @@ body.antcv-editor-ready {
     overscroll-behavior: contain !important;
     max-width: 100vw !important;
     max-height: calc(100vh - 72px) !important;
+    max-height: calc(100dvh - 72px) !important;
   }
 
   .antcv-preview-scroll,
@@ -351,7 +352,9 @@ body.antcv-editor-ready {
   .cv-preview-wrap,
   .cv-preview-container {
     height: calc(100vh - 96px) !important;
+    height: calc(100dvh - 96px) !important;
     max-height: calc(100vh - 96px) !important;
+    max-height: calc(100dvh - 96px) !important;
   }
 
   .antcv-preview-scroll > div,

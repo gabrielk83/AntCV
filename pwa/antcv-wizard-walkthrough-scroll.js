@@ -12,11 +12,15 @@
  * viewport (every phone), flex-centering pins it and there is no scroll, so the
  * lower options + the Next button are clipped.
  *
- * Fix: locate the overlay by the unique heading text, and ON MOBILE ONLY make it
- * scrollable — overflow-y:auto + start content at the top (align-items:flex-start)
- * so the whole step (heading → all register cards → Next) scrolls into reach. The
- * immediate card child is de-clipped (max-height:none) so it can't re-trap the
- * overflow. Desktop is untouched; originals are restored if we leave the screen.
+ * Fix: locate the overlay by a unique wizard-step heading phrase, and ON MOBILE
+ * ONLY make it scrollable — overflow-y:auto + start content at the top
+ * (align-items:flex-start) so the whole step (heading → all content → Next) scrolls
+ * into reach. The immediate card child is de-clipped (max-height:none) so it can't
+ * re-trap the overflow. Desktop is untouched; originals restored on leave.
+ *
+ * v1.50.123: generalised beyond the writing-register step to every tall wizard
+ * step (Welcome, Worker URL, API keys, Test connection) — they share the same
+ * overlay and clip identically on mobile. See MARKERS below.
  *
  * Light + idempotent: a textContent guard (no reflow) skips all work off-screen;
  * an applied-marker prevents re-styling the same node; an 800ms poll re-applies if
@@ -24,12 +28,22 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.122-walkthrough-scroll';
+  var VERSION = '1.50.123-wizard-scroll';
   if (window.__antcvWalkthroughScroll === VERSION) return;
   window.__antcvWalkthroughScroll = VERSION;
 
   var MARK = 'data-antcv-walkthrough-scroll';
-  var MARKER_TEXT = 'How should AntCV write';
+  // Wizard-step heading phrases that are unique to the setup wizard (zero
+  // false-positive risk — they appear nowhere else). Each is a full-screen
+  // app.js overlay that clips tall content on mobile the same way, so the same
+  // scroll fix applies to all of them, not just the writing-register step.
+  var MARKERS = [
+    'How should AntCV write',
+    'Welcome to AntCV',
+    'Paste your Worker URL',
+    'Add LLM API keys',
+    'Test the connection',
+  ];
   var orig = new WeakMap();
 
   function isMobile() {
@@ -40,14 +54,19 @@
 
   // Cheap off-screen guard (textContent = no reflow), then a bounded scan for the
   // heading element itself.
+  function bodyMarker(bt) {
+    for (var i = 0; i < MARKERS.length; i++) if (bt.indexOf(MARKERS[i]) >= 0) return MARKERS[i];
+    return null;
+  }
   function findHeading() {
     var bt = '';
     try { bt = String((document.body && document.body.textContent) || ''); } catch (_) {}
-    if (bt.indexOf(MARKER_TEXT) < 0) return null;
+    if (!bodyMarker(bt)) return null;
     var nodes = document.querySelectorAll('h1,h2,h3,p,div,span');
     for (var i = 0; i < nodes.length; i++) {
       var t = (nodes[i].textContent || '').trim();
-      if (t.indexOf(MARKER_TEXT) === 0 && t.length < 60) return nodes[i];
+      if (t.length >= 60) continue;
+      for (var j = 0; j < MARKERS.length; j++) if (t.indexOf(MARKERS[j]) === 0) return nodes[i];
     }
     return null;
   }

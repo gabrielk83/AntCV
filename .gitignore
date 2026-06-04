@@ -61,6 +61,8 @@ coverage/
 .nyc_output/
 # DOCX worker smoke tests write a one-shot out.docx for manual inspection.
 workers/docx-worker/out.docx
+# Vite emits a source map next to the islands bundle; the bundle ships, the map does not.
+pwa/antcv-react-islands.js.map
 
 # Local-only secrets / candidate data
 secrets/

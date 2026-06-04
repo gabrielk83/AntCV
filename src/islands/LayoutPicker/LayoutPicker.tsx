@@ -108,10 +108,7 @@ export function LayoutPicker(): JSX.Element {
       </div>
 
       <p style={{ fontSize: 11, opacity: 0.65, margin: '0 0 8px' }}>
-        Per-section overrides. The format picker maps to the 9 layouts in plan §4.4. The slider hint passes through to
-        the proxy worker preamble as <code>sectionLineLimits</code>; the worker interprets the number per section type
-        (lines for paragraph sections, bullets per role for experience, etc.). Reset (↺) drops the override and falls
-        back to the active style&apos;s default.
+        Per-section overrides &mdash; pick a layout and set a length hint, or reset (↺) to use the style default.
       </p>
 
       <button

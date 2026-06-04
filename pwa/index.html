@@ -57,6 +57,9 @@
       tryNext();
     });
   </script>
+  <!-- Loop damper: wraps MutationObserver to throttle whole-document observers
+       (the ~60-sidecar re-render herd). Must run before all sidecars + app.js. -->
+  <script src="antcv-loop-damper.js?v=1.0.0"></script>
   <style>
     *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0;}
     body{font-family:'Georgia',serif;background:#283556;overscroll-behavior:none;}

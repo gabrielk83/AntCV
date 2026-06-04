@@ -1015,11 +1015,19 @@
   // Debounce re-apply so a burst of mutations doesn't run the loop
   // 30 times. 16ms = ~1 frame; visible delay is imperceptible.
   let pending = false;
+  let lastRunAt = 0;
+  function nowMs() { return (window.performance && performance.now) ? performance.now() : Date.now(); }
   function schedule(root) {
     if (pending) return;
     pending = true;
-    requestAnimationFrame(function () {
+    // v1.50.79 — throttle to >=300ms between passes. The observer is woken by
+    // the React-islands re-render churn; an unthrottled rAF ran the full
+    // reapply (querySelectorAll + style writes = forced reflow) ~12x/sec,
+    // amplifying the re-render storm. Alignment is not real-time-critical.
+    var wait = Math.max(0, 300 - (nowMs() - lastRunAt));
+    var runPass = function () {
       pending = false;
+      lastRunAt = nowMs();
       try {
         // v1.40.203: do not touch Section-panel rows/buttons.
         if (!DISABLE_SECTION_PANEL_BUTTON_INJECTION) {
@@ -1032,7 +1040,8 @@
       } catch (e) {
         console.warn('[section-align] render pass failed:', e);
       }
-    });
+    };
+    if (wait > 0) setTimeout(runPass, wait); else requestAnimationFrame(runPass);
   }
 
   let observer = null;
@@ -1112,9 +1121,19 @@
 
   // Wire the role hook into the main scheduler.
   const origSchedule = schedule;
+  let rolePending = false;
   schedule = function (root) {
     origSchedule(root);
+    // v1.50.79 — role cyclers stay inert until app.js emits [data-role-id].
+    // The previous unguarded rAF here fired on EVERY schedule() call (~24/sec
+    // per the rAF-attribution probe) running a querySelectorAll reflow for a
+    // feature that matches nothing today. Skip when none exist + guard the
+    // burst so it coalesces.
+    if (rolePending) return;
+    if (!document.querySelector('[data-role-id]')) return;
+    rolePending = true;
     requestAnimationFrame(function () {
+      rolePending = false;
       const sections = (root || document).querySelectorAll('[data-sid="experience"]');
       for (const s of sections) maybeEnsureRoleCyclers(s);
     });

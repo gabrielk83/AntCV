@@ -89,7 +89,15 @@
       if(allow) show(c); else hide(c);
     });
   }
-  try{ new MutationObserver(function(){ requestAnimationFrame(apply); }).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style','hidden','aria-hidden']}); }catch(_){ }
+  // v1.40.226-throttle — LOOP FIX. apply() WRITES style (show/hide cards) and
+  // iterates every div/section each run; this observer WATCHED style/class
+  // document-wide, so it fired ~60x/sec off its own writes + the sidecar herd's
+  // style churn (a top contributor to the rAF-violation flood + bleep).
+  // Throttle to <=2/sec; the setTimeout/click/hashchange paths keep it timely.
+  var _wsLast=0,_wsPend=false;
+  function _wsNow(){return (window.performance&&performance.now)?performance.now():Date.now();}
+  function scheduleApply(){if(_wsPend)return;_wsPend=true;var wait=Math.max(0,500-(_wsNow()-_wsLast));var fn=function(){_wsPend=false;_wsLast=_wsNow();requestAnimationFrame(apply);};if(wait>0)setTimeout(fn,wait);else fn();}
+  try{ new MutationObserver(scheduleApply).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style','hidden','aria-hidden']}); }catch(_){ }
   [0,50,150,300,600,1000,1800,3000,5000,8000,12000].forEach(function(t){ setTimeout(apply,t); });
   window.addEventListener('hashchange', apply, true);
   window.addEventListener('popstate', apply, true);

@@ -191,14 +191,43 @@
     return n;
   }
 
+  // v1.40.357-p1b3 — LOOP FIX. The sweep WRITES title/aria-label/textContent;
+  // the observer below WATCHES title/aria-label + childList on the whole body.
+  // So every rewrite re-triggered the observer -> another rAF sweep -> rewrite,
+  // every frame (the "[Violation] requestAnimationFrame/Forced reflow took Nms"
+  // flood and a contributor to the preview bleep). The MARK-attribute filter
+  // did not cover our content writes. Fix: (1) disconnect the observer for the
+  // duration of our own sweep and re-arm after, so our writes can't feed back;
+  // (2) throttle to >=500ms between sweeps so a re-render that re-creates a
+  // button can't drive us at frame rate. Wording behaviour is unchanged.
+  var OBS_OPTS = {
+    childList: true, subtree: true,
+    attributes: true, attributeFilter: ['title', 'aria-label'],
+  };
+  var mo = null;
   var pending = false;
+  var sweeping = false;
+  var lastSweepAt = 0;
+  function nowMs() {
+    return (window.performance && performance.now) ? performance.now() : Date.now();
+  }
+  function runSweep() {
+    sweeping = true;
+    if (mo) { try { mo.disconnect(); } catch (_) {} }
+    try { sweepAll(); } catch (_) {}
+    // Re-arm only AFTER our own mutations have been made, so they are not
+    // queued as records that would re-schedule us.
+    if (mo) { try { mo.observe(document.body || document.documentElement, OBS_OPTS); } catch (_) {} }
+    lastSweepAt = nowMs();
+    sweeping = false;
+  }
   function schedule() {
-    if (pending) return;
+    if (pending || sweeping) return;
     pending = true;
-    requestAnimationFrame(function () {
-      pending = false;
-      try { sweepAll(); } catch (_) {}
-    });
+    var wait = Math.max(0, 500 - (nowMs() - lastSweepAt));
+    var fn = function () { pending = false; runSweep(); };
+    if (wait > 0) setTimeout(fn, wait);
+    else requestAnimationFrame(fn);
   }
 
   schedule();
@@ -206,7 +235,8 @@
   for (var d = 0; d < delays.length; d++) setTimeout(schedule, delays[d]);
 
   try {
-    new MutationObserver(function (records) {
+    mo = new MutationObserver(function (records) {
+      if (sweeping) return; // ignore our own in-sweep mutations
       // Filter: schedule only on additions / title-changes. We
       // ignore mutations whose only effect was setting our own
       // marker (avoid feedback loop).
@@ -219,10 +249,8 @@
         break;
       }
       if (meaningful) schedule();
-    }).observe(document.body || document.documentElement, {
-      childList: true, subtree: true,
-      attributes: true, attributeFilter: ['title', 'aria-label'],
     });
+    mo.observe(document.body || document.documentElement, OBS_OPTS);
   } catch (_) {}
 
   window.addEventListener('antcv:sections-updated', schedule);

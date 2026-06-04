@@ -17,7 +17,15 @@
     [0,80,200,500,1000].forEach(function(ms){setTimeout(forceAppHistory,ms);});
   }
   document.addEventListener('click',function(ev){var t=ev.target&&ev.target.nodeType===1?ev.target:null;if(!t)return;var b=t.closest&&t.closest('button,[role="button"],a,div');if(!b)return;if(!/^Open in Settings\s*→?$/i.test(norm(b.textContent)))return;var n=b,ok=false;for(var i=0;i<9&&n;i++,n=n.parentElement){var tx=norm(n.textContent).slice(0,1500);if(/\bAPPLICATIONS\b/i.test(tx)||/No applications saved yet/i.test(tx)||/Application history/i.test(tx)){ok=true;break;}}if(!ok)return;try{ev.preventDefault();ev.stopPropagation();ev.stopImmediatePropagation&&ev.stopImmediatePropagation();}catch(_){}openAppHistory();},true);
-  try{new MutationObserver(function(){requestAnimationFrame(bringFront);}).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['style','class']});}catch(_){}
+  // v1.40.327-throttle — LOOP FIX. bringFront WRITES style (z-index/position)
+  // and this observer WATCHES style/class document-wide, so it fired ~60x/sec
+  // reacting to its own writes and the whole sidecar herd's style churn (a top
+  // contributor to the rAF-violation flood + preview bleep). Throttle the
+  // scheduler to <=2/sec; reactivity is preserved, the per-frame storm is not.
+  var _sfLast=0,_sfPend=false;
+  function _sfNow(){return (window.performance&&performance.now)?performance.now():Date.now();}
+  function scheduleBringFront(){if(_sfPend)return;_sfPend=true;var wait=Math.max(0,500-(_sfNow()-_sfLast));var fn=function(){_sfPend=false;_sfLast=_sfNow();requestAnimationFrame(bringFront);};if(wait>0)setTimeout(fn,wait);else fn();}
+  try{new MutationObserver(scheduleBringFront).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['style','class']});}catch(_){}
   [0,100,300,800,1600].forEach(function(ms){setTimeout(bringFront,ms);});
   window.AntcvOpenApplicationHistorySettings=openAppHistory;
 })();

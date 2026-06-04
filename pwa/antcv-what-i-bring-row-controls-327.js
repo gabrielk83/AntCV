@@ -6,7 +6,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.40.264-preview-guard';
+  const VERSION='1.50.121-gen004';
   if(window.__antcvWhatIBringRowControls264===VERSION) return;
   window.__antcvWhatIBringRowControls264=VERSION;
   // v1.40.264-preview-guard: Preview is button-free. Reject seeds and
@@ -141,8 +141,8 @@
     page.onclick=function(ev){ev.preventDefault();ev.stopPropagation();if(ev.stopImmediatePropagation)ev.stopImmediatePropagation();setPage(sid,rowIndex,getPage(sid,rowIndex)%4+1);paintPage(page,sid,rowIndex);};
 
     let comp=existing.compress || h.querySelector('[data-antcv-wib264="compress"]');
-    if(!comp) comp=btn('compress','⇥⇤','Compress What I Bring row '+rowIndex+'. Applies to Strategic Expertise only.');
-    comp.title='Compress What I Bring row '+rowIndex+'. Applies to Strategic Expertise only.'; comp.setAttribute('aria-label',comp.title);
+    if(!comp) comp=btn('compress','⇥⇤','Fit What I Bring row '+rowIndex+'. Applies to Strategic Expertise only.');
+    comp.title='Fit What I Bring row '+rowIndex+'. Applies to Strategic Expertise only.'; comp.setAttribute('aria-label',comp.title);
     comp.onclick=function(ev){ev.preventDefault();ev.stopPropagation();if(ev.stopImmediatePropagation)ev.stopImmediatePropagation(); const fs=Array.from(row.querySelectorAll('input,textarea,[contenteditable="true"]')).filter(visible); setValue(fs[1]||fs[0],compressText(valueOf(fs[1]||fs[0]))); pulse('what-i-bring-compress',{sid,index:rowIndex});};
 
     const cjlr=existing.cjlr, enhance=existing.enhance, eye=existing.eye;

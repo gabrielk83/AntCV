@@ -30,6 +30,8 @@ Branch: `claude/antcv-roadmap-bugs-L9Sqa`. Compiled 2026-06-04.
 
 **Next-action tags:** `[console]` needs a live browser/probe; `[code]` safe to do from source now; `[islands]` needs a Vite rebuild of `antcv-react-islands.js`; `[worker]` Cloudflare worker change; `[owner]` needs an owner decision; `[verify]` just confirm on live.
 
+> **Re-scope note (1.50.121):** the safe-blind `[code]` items shipped are **GEN-003** (control order, 1.50.120) and **GEN-004** (no "Compress", 1.50.120-121). Several rows still tagged `[code]` below are, on closer inspection, **not** safe to do blind because they trip the acceptance gate: page-break render (PB-003, PAGEBREAK-002) and watermark (WM-003) need export verification, not preview-only; generation-view guards (GEN-UI-001/003) need the live generation DOM; APP-SENTENCE-STYLE-001 needs the live package colour; the GEN-003 Core/WIB reorder is the shared-section corruption zone. Treat those as `[console]`.
+
 ---
 
 # PART 1 — ACTIVE BUGS
@@ -40,8 +42,8 @@ Branch: `claude/antcv-roadmap-bugs-L9Sqa`. Compiled 2026-06-04.
 |----|-------------|--------|-------------|
 | GEN-001 | Preview / DOCX / PDF parity | PARTIAL | `[verify]` Enforced per-item; no standalone task — gate each fix against it. |
 | GEN-002 | Control locality | PARTIAL | `[console]` Audit any control that acts on the wrong item; covered per-area below. |
-| GEN-003 | Standard control order | PARTIAL | `[code]` Extend the 1.50.120 reorder to Publications + Core/WIB rows (after PP-003 risk check). |
-| GEN-004 | No "Compress"; say "Fit" | PARTIAL | `[code]` Grep all sidecars for user-facing "Compress" titles/labels; rename at source. |
+| GEN-003 | Standard control order | PARTIAL | HIWC + Selected Outcomes reordered at source (1.50.120). `[console]` Publications + Core/WIB reorder remain — fragile shared-section zone (Core-corruption risk), verify live before touching. |
+| GEN-004 | No "Compress"; say "Fit" | ADDRESSED (verify) | Source sweep complete: HIWC + Outcomes (1.50.120), Publications 273/278 + WIB 327 (1.50.121). Detection/rewriter sidecars + engine `compressionTolerance` keep the word by design. `[verify]` Confirm no user-facing "Compress" on live. |
 | GEN-005 | Edit persistence | PARTIAL | `[console]` Spot-check edits survive blur/reopen/export per area. |
 | GEN-006 | Controls visible (not clipped) | PARTIAL | `[console]` Roll up under PRV/PP/mobile items below. |
 | GEN-007 | Drag-and-drop parity | OPEN | `[console]` Tackle with CA-004 (insertion-point dnd). |
@@ -203,8 +205,8 @@ Branch: `claude/antcv-roadmap-bugs-L9Sqa`. Compiled 2026-06-04.
 | MOB-ALT-001/002 | Alt-circles dropdown, opens down, escapes clip | VERIFYING | `[verify]` Confirm dropdown opens downward unclipped. |
 | MOB-BOTTOMNAV-001 | Bottom-nav buttons clipped | VERIFYING | `[verify]` Confirm all controls visible on narrow viewport. |
 | HIWC-EDIT-001/002/003 | HIWC editable on mobile; strip own row; wrap | FIXED✓ | — Done (owner-confirmed). |
-| MOBILE-FUSE-001 | Fuse not visible in mobile bottom panel | OPEN | `[console]` Surface 🔀 in mobile bottom panel. |
-| MOBILE-TABLEWIDTH-001 | Table-width controls partly visible on mobile | OPEN | `[code]` Hide table-width controls entirely on mobile. |
+| MOBILE-FUSE-001 | Fuse not visible in mobile bottom panel | OPEN | `[console]` Note: `mobile-fab-cleanup-351` *hides* the redundant Fusion FAB but doesn't confirm 🔀 is surfaced in the bottom panel — verify, then surface if absent. |
+| MOBILE-TABLEWIDTH-001 | Table-width controls partly visible on mobile | VERIFYING | `[verify]` Done in code — `mobile-controls.css` `@media(max-width:900px)` hides `.antcv-top-sliders` (the Focus-area/Sidebar-width sliders) entirely. Confirm on live. |
 | MOBILE-EXTRACTION-001 | Extraction button hovers in grey area | OPEN | `[console]` Re-anchor the document-Extraction button on mobile. |
 | LABEL-HISTORY-001 | Rename "Application history" → "History" | FIXED✓ | `[verify]` Confirm top-bar label. |
 

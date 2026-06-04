@@ -123,8 +123,28 @@ function decorateNativePackageButtons(settingsRoot: HTMLElement): void {
     if (mount && mount.contains(btn)) continue;            // never our own card
     if (btn.hasAttribute('data-antcv-package-card')) continue; // legacy React card
     const text = (btn.textContent ?? '').replace(/[ \t\n\r]+/g, ' ').trim().toLowerCase();
+
+    // The Custom button carries its own one-line explanation (moved here from
+    // the LayoutNotes card so it sits beside the control it describes). Shrunk,
+    // package-agnostic, idempotent.
+    if (text.startsWith('custom')) {
+      if (!btn.querySelector('[data-antcv-custom-note]')) {
+        const note = document.createElement('span');
+        note.setAttribute('data-antcv-custom-note', '1');
+        note.style.cssText =
+          'display:block;margin-top:4px;font-size:9px;line-height:1.3;font-weight:500;' +
+          'opacity:.6;text-transform:none;letter-spacing:0;white-space:normal';
+        note.textContent = 'Auto when you edit beyond the package range.';
+        btn.style.display = 'flex';
+        btn.style.flexDirection = 'column';
+        btn.style.alignItems = 'flex-start';
+        btn.appendChild(note);
+      }
+      continue;
+    }
+
     const pkg = byName.get(text);
-    if (!pkg) continue;                                     // skip "Custom" + non-package buttons
+    if (!pkg) continue;                                     // skip non-package buttons
     if (btn.querySelector(`[${DECO_ATTR}]`)) continue;      // idempotent
 
     const strip = document.createElement('span');

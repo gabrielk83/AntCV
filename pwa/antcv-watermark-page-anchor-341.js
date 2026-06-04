@@ -56,7 +56,7 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.40.341-p1a';
+  var SCRIPT_VERSION = '1.50.96-cl-inline-yield';
   if (window.__antcvWatermarkPageAnchor341 === SCRIPT_VERSION) return;
   window.__antcvWatermarkPageAnchor341 = SCRIPT_VERSION;
 
@@ -188,6 +188,10 @@
     for (var i = 0; i < watermarks.length; i++) {
       var wm = watermarks[i];
       if (!wm.isConnected) continue;
+      // v1.50.96 — the cover-letter inline sidecar (antcv-cl-ai-notice-inline)
+      // takes this watermark over and places it on the signature row. Leave any
+      // watermark it has claimed alone so the two don't fight.
+      if (wm.getAttribute('data-antcv-cl-inline') === '1') { anchored = wm; continue; }
       if (lastPage.contains(wm) && !anchored) {
         unhideWatermark(wm);
         try {

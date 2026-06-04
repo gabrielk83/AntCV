@@ -16,6 +16,7 @@ const SHELL = [
   './antcv-analysis-panel-jd-block-356.js',
   './antcv-sections-icon-346.js',
   './antcv-topbar-tools-347.js',
+  './antcv-cl-ai-notice-inline.js',
   './antcv-mobile-fab-cleanup-351.js',
   './antcv-pub-injected-reaper-352.js',
   './antcv-cloud-put-shrink-guard-355.js',

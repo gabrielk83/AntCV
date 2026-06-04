@@ -6,7 +6,21 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.50.92-defer-dedicated';
+  const VERSION='1.50.96-retired';
+  // v1.50.96 — RETIRED. Table page breaks are unified on the app-native
+  // section.pageBreakRows field (toggled by the app's own per-row ↧ button) and
+  // rendered by antcv-table-page-splits-327. This sidecar's redundant 📄 button
+  // is gone; it now only sweeps away any 📄 button it left in a cached DOM.
+  try{
+    if(window.__antcvTableRowPageControls328!=='1.50.96-retired'){
+      window.__antcvTableRowPageControls328='1.50.96-retired';
+      var sweep=function(){ try{ document.querySelectorAll('[data-antcv-table-page-328],[data-antcv-table-page-host-328]').forEach(function(n){ if(n.parentNode) n.parentNode.removeChild(n); }); }catch(_){} };
+      sweep(); [200,800,2000].forEach(function(d){ setTimeout(sweep,d); });
+      try{ new MutationObserver(sweep).observe(document.body||document.documentElement,{childList:true,subtree:true}); }catch(_){}
+    }
+  }catch(_){}
+  return;
+  /* eslint-disable no-unreachable */
   // v1.40.328-preview-guard: Preview is button-free. After TB-004 made
   // table headers contenteditable, the seed filter started matching
   // <th> cells AND any preview-side input that survived a React

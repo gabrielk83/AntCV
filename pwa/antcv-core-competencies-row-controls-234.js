@@ -6,7 +6,7 @@
  */
 (function(){
   'use strict';
-  const VERSION = '1.40.242-preview-guard';
+  const VERSION = '1.50.96-native-pagebreak';
   // v1.40.242-preview-guard: Preview is button-free. Reject seeds and
   // hosts inside .antcv-preview-paper.
   const isInPreviewPaper = el => { if(!el) return false; const p=document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]'); return !!(p && p.contains(el)); };
@@ -163,16 +163,15 @@
     // The app already provides the CJLR control at the end of each row. Keep that one.
     Array.from(wrap.querySelectorAll('[data-antcv-core-cjlr], .antcv-core-cjlr')).forEach(x=>x.remove());
 
-    let page=wrap.querySelector('[data-antcv-core-page]');
+    // v1.50.96 — the sidecar 📄 page button is RETIRED. Core Competencies page
+    // breaks are unified on the app-native ↧ per-row toggle (pageBreakRows),
+    // rendered by antcv-table-page-splits-327. Drop any 📄 we previously added.
+    row.querySelectorAll('[data-antcv-core-page]').forEach(x=>x.remove());
     if(idx===0){
-      row.querySelectorAll('[data-antcv-core-page],[data-antcv-core-roller],[data-antcv-core-up],[data-antcv-core-down],[data-antcv-core-cjlr],.antcv-core-cjlr').forEach(x=>x.remove());
+      row.querySelectorAll('[data-antcv-core-roller],[data-antcv-core-up],[data-antcv-core-down],[data-antcv-core-cjlr],.antcv-core-cjlr').forEach(x=>x.remove());
       if(wrap && !wrap.querySelector('button')) wrap.remove();
       return;
     }
-
-    if(!page){ page=makeButton('antcv-core-page','📄 1','Page'); page.setAttribute('data-antcv-core-page','1'); wrap.appendChild(page); }
-    paintPage(page,idx);
-    page.onclick = ev => { ev.preventDefault(); ev.stopPropagation(); setPage(idx, getPage(idx)%4 + 1); paintPage(page,idx); applyPreview(); };
 
     let roller=row.querySelector('[data-antcv-core-roller="1"]');
     if(!roller){ roller=makeRoller(); const h=rollerHost(row); h.insertBefore(roller, h.firstChild); }
@@ -226,13 +225,11 @@
     // Editor row 0 is the table heading row, so its CJLR controls preview table headings only.
     headerRows.forEach(r=>applyAlign(r,getAlign(0)));
     bodyRows.forEach((r,i)=>applyAlign(r,getAlign(i+1)));
-    bodyRows.forEach((r,i)=>{
-      const rowIndex=i+1;
-      if(getPage(rowIndex)<2) return;
-      const table=r.closest('table');
-      if(table && r.parentNode){ r.parentNode.insertBefore(cloneHeaderFor(table,r), r); }
-      else { const br=document.createElement('div'); br.setAttribute('data-antcv-core-page-break','1'); br.style.breakBefore='page'; br.style.pageBreakBefore='always'; br.style.height='0'; r.parentNode && r.parentNode.insertBefore(br,r); }
-    });
+    // v1.50.96 — page-break SPLIT rendering removed. It used to inject header
+    // clones here from itemPages, which collided with the other splitter and
+    // produced duplicate "(Cont.)" headings. Table splits are now rendered in
+    // ONE place (antcv-table-page-splits-327) from the app-native pageBreakRows.
+    // This function keeps alignment only.
   }
 
   function pulse(){ try{ window.dispatchEvent(new CustomEvent('antcv:sections-updated',{detail:{source:'core-competencies-row-controls', version:VERSION}})); }catch(_){} }

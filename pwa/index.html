@@ -57,9 +57,9 @@
       tryNext();
     });
   </script>
-  <!-- Loop damper: wraps MutationObserver to throttle whole-document observers
-       (the ~60-sidecar re-render herd). Must run before all sidecars + app.js. -->
-  <script src="antcv-loop-damper.js?v=1.0.0"></script>
+  <!-- Loop damper REVERTED (1.50.89): the global MutationObserver wrap broke
+       the per-row control injectors' self-cleanup, so WIB/Experience/Core
+       Competencies controls multiplied. File kept in repo but no longer loaded. -->
   <style>
     *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0;}
     body{font-family:'Georgia',serif;background:#283556;overscroll-behavior:none;}
@@ -576,7 +576,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-core-competencies-row-controls-234.js?v=1.50.80-idem" defer></script>
 <script src="antcv-selected-outcomes-row-controls-237.js?v=1.40.239-preview-guard" defer></script>
 <script src="antcv-profile-workstyle-cjlr-238.js?v=1.50.80-idem" defer></script>
-<script src="antcv-how-contribute-controls-245.js?v=1.50.88-nodup" defer></script>
+<script src="antcv-how-contribute-controls-245.js?v=1.50.89-focus" defer></script>
 <script src="antcv-what-i-bring-cjlr-cleanup-246.js?v=1.40.246" defer></script>
 <script src="antcv-additional-info-row-controls-247.js?v=1.40.247-preview-guard" defer></script>
 <script src="antcv-add-cjlr-order-swap-241.js?v=1.40.243" defer></script>

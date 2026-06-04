@@ -176,6 +176,7 @@
       const key='bullet_'+idx;
       const row=document.createElement('div');row.setAttribute('data-antcv-hiwc-bullet-row','1');Object.assign(row.style,{display:'flex',alignItems:'center',gap:'3px',width:'100%',maxWidth:'100%',boxSizing:'border-box',overflow:'hidden'});
       const inp=document.createElement('input');inp.type='text';inp.value=txt||'';inp.placeholder='Bullet text';inp.setAttribute('data-antcv-hiwc-bullet-input','1');Object.assign(inp.style,{flex:'1 1 auto',minWidth:'0',height:'22px',boxSizing:'border-box'});applyField(inp,key);
+      ['focus','keyup','click','select'].forEach(function(ev){ inp.addEventListener(ev,function(){ noteHiwcFocus(idx,inp); }); });
       const page=makeBtn('page','📄 1','Page',inp);paintPage(page,key);
       const comp=makeBtn('compress','↹','Compress bullet',inp);
       const enr=makeBtn('enrich','✨','Enrich bullet',inp);
@@ -184,7 +185,7 @@
       // v1.50.86 — debounce the section write so typing does NOT pulse a
       // forceRebuild per keystroke (which re-created this input and stole
       // focus = "not typable"). Sync after a short pause, and on blur.
-      inp.oninput=()=>{ scheduleBulletSync(syncFromInputs); };
+      inp.oninput=()=>{ noteHiwcFocus(idx,inp); scheduleBulletSync(syncFromInputs); };
       inp.addEventListener('blur',()=>{ flushBulletSync(syncFromInputs); });
       page.onclick=ev=>{ev.preventDefault();ev.stopPropagation();setPage(key,getPage(key)%4+1);paintPage(page,key);applyPreview();};
       comp.onclick=ev=>{ev.preventDefault();ev.stopPropagation();inp.value=compressText(inp.value);dispatchInput(inp);syncFromInputs();applyPreview();};
@@ -198,6 +199,8 @@
     add.onclick=ev=>{ev.preventDefault();ev.stopPropagation();syncFromInputs();const inp=addRow('',currentInputs().length);setTimeout(()=>inp.focus(),0);};
     ta.style.display='none';ta.parentNode&&ta.parentNode.insertBefore(box,ta);box.appendChild(add);
     const current=bulletRowsFromText(getVal(ta)); if(!current.length) current.push(''); current.forEach((txt,idx)=>addRow(txt,idx));
+    // v1.50.89 — restore caret after a rebuild so the user keeps typing.
+    restoreHiwcFocus(box); setTimeout(function(){ restoreHiwcFocus(box); }, 0);
   }
 
   function previewSection(){return document.querySelector('[data-sid="'+CSS.escape(sid())+'"]')||Array.from(document.querySelectorAll('[data-sid],section,div')).find(el=>visible(el)&&RX.test(clean(el.textContent).slice(0,180)));}
@@ -245,6 +248,20 @@
   var __hiwcSyncTimer=null;
   function scheduleBulletSync(syncFn){ clearTimeout(__hiwcSyncTimer); __hiwcSyncTimer=setTimeout(function(){ __hiwcSyncTimer=null; try{ syncFn(); applyPreview(); }catch(_){} }, 600); }
   function flushBulletSync(syncFn){ clearTimeout(__hiwcSyncTimer); __hiwcSyncTimer=null; try{ syncFn(); applyPreview(); }catch(_){} }
+  // v1.50.89 — focus preservation. When the app re-renders the HIWC section it
+  // re-creates the bullet input, dropping the caret = "hard to type". We track
+  // the last-focused bullet index + caret, and after the editor is rebuilt we
+  // restore focus to the same input/caret so typing is uninterrupted.
+  var __hiwcFocus=null;
+  function noteHiwcFocus(idx, inp){ try{ __hiwcFocus={idx:idx, caret:(inp.selectionStart!=null?inp.selectionStart:(inp.value||'').length), at:Date.now()}; }catch(_){} }
+  function restoreHiwcFocus(box){
+    try{
+      if(!__hiwcFocus || (Date.now()-__hiwcFocus.at)>2500) return;
+      var inputs=box.querySelectorAll('[data-antcv-hiwc-bullet-input]');
+      var t=inputs[__hiwcFocus.idx];
+      if(t && document.activeElement!==t){ t.focus(); var c=Math.min(__hiwcFocus.caret,(t.value||'').length); try{ t.setSelectionRange(c,c); }catch(_){} }
+    }catch(_){}
+  }
 
   let pending=false;function runSoon(){if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;run();});}
   function run(){if(isTypingInHiwc())return;try{const r=root();if(r){cleanupClosingHelperText(r);controlsForField(findIntro(r),'intro');controlsForField(findClosing(r),'closing');renderBulletList(r,findBullets(r));}/* core CJLR cleanup handled by antcv-core-competencies-row-controls; do not prune across the whole Core section */ applyPreview();}catch(e){try{console.warn('[how-contribute-controls-245] failed:',e&&e.message);}catch(_){}}}

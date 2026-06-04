@@ -60,6 +60,9 @@
       '[data-antcv-altdrop="1"]{position:relative;}',
       '[data-antcv-altdrop="1"][data-antcv-altdrop-open="1"]{z-index:9002;}',
       '[data-antcv-alttrigger="1"]{position:relative;}',
+      /* open DOWN: the other circles drop as an absolute vertical column under
+         the trigger (JS sets each one's top). */
+      '[data-antcv-altdrop="1"][data-antcv-altdrop-open="1"] [data-antcv-altcircle="1"]:not([data-antcv-alttrigger="1"]){position:absolute!important;left:0!important;margin:0!important;z-index:9003!important;}',
       '[data-antcv-altdrop="1"][data-antcv-altdrop-open="0"] [data-antcv-alttrigger="1"]::after{content:"";position:absolute;right:-2px;bottom:-2px;width:0;height:0;border-left:3px solid transparent;border-right:3px solid transparent;border-top:4px solid rgba(255,255,255,.9);}',
       '}'
     ].join('');
@@ -74,12 +77,19 @@
     groups().forEach(function(g){
       g.host.setAttribute('data-antcv-altdrop','1');
       if(g.host.getAttribute('data-antcv-altdrop-open')!=='1') g.host.setAttribute('data-antcv-altdrop-open','0');
+      var open=g.host.getAttribute('data-antcv-altdrop-open')==='1';
       var trigger=null;
       for(var i=0;i<g.circles.length;i++){ if(isActive(g.circles[i])){trigger=g.circles[i];break;} }
       if(!trigger)trigger=g.circles[0];
+      var below=0;
       g.circles.forEach(function(c){
         c.setAttribute('data-antcv-altcircle','1');
-        if(c===trigger)c.setAttribute('data-antcv-alttrigger','1'); else c.removeAttribute('data-antcv-alttrigger');
+        if(c===trigger){ c.setAttribute('data-antcv-alttrigger','1'); c.style.removeProperty('top'); }
+        else {
+          c.removeAttribute('data-antcv-alttrigger');
+          if(open){ below++; c.style.setProperty('top',(below*20)+'px','important'); } // stack downward
+          else { c.style.removeProperty('top'); }
+        }
       });
     });
   }
@@ -94,6 +104,7 @@
     }else{
       ev.preventDefault();ev.stopPropagation();if(ev.stopImmediatePropagation)ev.stopImmediatePropagation();
       host.setAttribute('data-antcv-altdrop-open','1');
+      paint();
     }
   },true);
   // Tap elsewhere closes any open group.

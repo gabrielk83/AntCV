@@ -5,7 +5,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.50.100-bullet-model';
+  const VERSION='1.50.107-bullet-focus';
   let __applying=false; // v1.50.57: re-entrancy guard so our own DOM writes don't re-trigger the observer/flicker.
   const ALIGN_KEY='antcv.hiwc.alignment.v1';
   const PAGE_KEY='antcv:itemPages';
@@ -342,7 +342,22 @@
       panel.insertBefore(row, panel.querySelector('[data-antcv-hiwc-bullet-add]')||null);
       return inp;
     }
-    function addNew(){__hiwcModel=inputs().map(function(x){return x.value;});__hiwcModel.push('');const idx=__hiwcModel.length-1;const inp=addRow('',idx);panel.setAttribute('data-antcv-hiwc-bullet-sig',__hiwcModel.length+'|'+meta);setTimeout(function(){try{inp.focus();}catch(_){}},0);}
+    function addNew(){
+      __hiwcModel=inputs().map(function(x){return x.value;});__hiwcModel.push('');
+      const idx=__hiwcModel.length-1;const inp=addRow('',idx);
+      // v1.50.107 — set the signature using the NEW model (its own align/page
+      // entries), not the stale `meta` captured before the add. The next run()
+      // recomputes sig over the longer model; if our stored sig still used the
+      // old meta they would differ, the panel would rebuild, and the just-added
+      // input lost its caret before the old setTimeout focus could land — that
+      // is the "new bullet doesn't blink / hard to add" report. Match the sig so
+      // run() early-returns, focus synchronously, and record the focus intent so
+      // any rebuild that still slips through is recovered by restoreHiwcFocus.
+      const sig2=__hiwcModel.length+'|'+__hiwcModel.map(function(_,i){return getAlign('bullet_'+i)+getPage('bullet_'+i);}).join(',');
+      panel.setAttribute('data-antcv-hiwc-bullet-sig',sig2);
+      noteHiwcFocus(idx,inp);
+      try{inp.focus();inp.setSelectionRange(0,0);}catch(_){}
+    }
     rows.forEach(function(t,i){addRow(t,i);});
     const add=document.createElement('button');add.type='button';add.textContent='＋ Bullet';add.setAttribute('data-antcv-hiwc-bullet-add','1');
     Object.assign(add.style,{alignSelf:'flex-start',border:'1px solid #008b8b',background:'white',color:'#006b6b',borderRadius:'4px',padding:'3px 10px',cursor:'pointer',marginTop:'2px'});

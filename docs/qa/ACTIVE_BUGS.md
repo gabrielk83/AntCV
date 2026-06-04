@@ -23,8 +23,10 @@ desktop AND mobile still owed except where "owner-confirmed".
 | HIWC-EDIT-001 | "How I would contribute" bullets not editable (esp. mobile) — inputs injected into React tree were wiped by the re-render storm; switched edit surface to the native textarea | sidecar | 1.50.117 | **FIXED (owner-confirmed working)** |
 | HIWC-EDIT-002 | Per-bullet control strip squeezed the textarea — moved strip to its own row below | sidecar | 1.50.118 | FIXED (owner-confirmed) |
 | HIWC-EDIT-003 | Control strip buttons clipped on phone — wrap the row | sidecar | 1.50.119 | **FIXED (owner-confirmed working)** |
-| PAGEBREAK-SIDEBAR-001 | Page breaks for ALL sidebar sub/subsections (was wrongly narrowed in a revert) | sidecar `329` | 1.50.115 | FIXED (verify live export) |
-| SETTINGS-AHZ-001 | "Open in Settings" Application-history subtab opened BEHIND preview — broadened detection + lift ancestor chain out of the stacking trap | sidecar `327` | 1.50.109 | FIXED (verify live) |
+| PAGEBREAK-SIDEBAR-001 | Page breaks for ALL sidebar sub/subsections (was wrongly narrowed in a revert) → PB-001 | sidecar `329` | 1.50.115 | FIXED (verify live export) |
+| SETTINGS-AHZ-001 / **AH-001 / VF-014 / APPHIST-ZIDX-001** | "Open in Settings" Application-history subtab opens BEHIND preview | sidecar `327` | 1.50.109 | **STILL BROKEN per owner — blind ancestor-lift did not beat the trap. Reproduce → run `antcv-apphist-zindex-probe.js` → targeted patch. RE-OPEN.** |
+| VF-005 / CA-002 | Application "Role - Company" sentence editable + follows package style | sidecar `341` | (main) | FIXED (owner-confirmed) |
+| CA-001 (spec line) | `[Specialisation — …]` editable in preview (meta.subtitle) | sidecar `341` | (main) | FIXED (owner-confirmed) |
 | SETTINGS-HEAD-002 | WRITING STYLE + LANGUAGES headers match ADVANCED TONE font/size; tighten gap | sidecar | 1.50.110 | FIXED (verify live) |
 | LAYOUT-NOTES-001 | "Within-package style" notes: shrink, drop package name, relocate (Quick-alt under packages, Custom onto the Custom button) | island source (vite) | 1.50.111 | FIXED (verify live) |
 
@@ -36,6 +38,16 @@ desktop AND mobile still owed except where "owner-confirmed".
   collide across documents — pressing WIB's ↧ corrupted Core. Restored to the
   known-good `📄` page system. **A correct per-row table break needs per-doc
   keying that also reaches the DOCX worker — a deliberate redesign, not a hotfix.**
+
+### Canonical page-break family (PB-001..006) — reconciled with the v4 index
+Owner: "page break in general" still not right. The locked requirements:
+- **PB-001** — manual Page Break from BOTH main area and sidebar (sidebar partly via `329`/1.50.115; main-area + on-entry manual control unverified).
+- **PB-002** — first sub-subsection moves the WHOLE subsection with its original heading (no dup).
+- **PB-003** — continuation heading: duplicate heading + localized "Cont." 18pt from top.
+- **PB-004** — table rules: first row moves the table; a later row splits it and repeats headers. (TABLE-PAGEBREAK-001 is the per-row toggle, parked — see above.)
+- **PB-005** — replace the down-arrow icon + "Compress" text (semantic page glyph; "Fit"). (`page-break-icon-357` / `help-text-wording-357` — VERIFYING.)
+- **PB-006** — preserve the Professional Experience pattern (reference, VF-018).
+- **EXPORT-PAGE2-001** — export PREVIEW shows only page 1 / breaks not applied. Worker engine passes smoke tests; defect is the client `antcv-pdf-preview-gate.js` clone path. Read-only probe: `antcv-export-page2-probe.js`. RE-OPEN — drive with the probe.
 
 ### Still OPEN from earlier in the engagement (not addressed this session)
 - **RERENDER-STORM-001 [OPEN]** — the `requestAnimationFrame` violation flood is

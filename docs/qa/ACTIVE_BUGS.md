@@ -5,6 +5,67 @@ This file now folds in the canonical `AntCV_UI_UX_Spec_and_QA_Plan_v4.docx` back
 
 ---
 
+## 2026-06-04 (session) — mobile UI + page-break + HIWC editability (v1.50.102 → v1.50.119)
+
+Branch `claude/antcv-roadmap-bugs-L9Sqa`. All items below are shipped to that
+branch (PRs merged into `main` through the session). Live verification on
+desktop AND mobile still owed except where "owner-confirmed".
+
+### Status
+
+| ID | Item | Layer | Version | Status |
+|----|------|-------|---------|--------|
+| MOB-TOPBAR-001 | Hide Ant icon + leftover table control (`CL`/`30%` = `.antcv-top-sliders`) on mobile | sidecar CSS | 1.50.112 | FIXED (verify live) |
+| MOB-TOPBAR-002 | Privacy pill clipped off-screen — crop filename, single-row topbar | sidecar CSS | 1.50.114→115 | FIXED (verify live) |
+| MOB-ALT-001 | Alt-circles palette → tap-to-open dropdown (one circle, opens the rest) | new sidecar | 1.50.113 | FIXED (verify live) |
+| MOB-ALT-002 | Dropdown must open DOWN and escape the topbar overflow clip | sidecar | 1.50.116 | FIXED (verify live) |
+| MOB-BOTTOMNAV-001 | Bottom-nav buttons clipped — shrink text/padding on mobile | new sidecar | 1.50.108 | FIXED (verify live) |
+| HIWC-EDIT-001 | "How I would contribute" bullets not editable (esp. mobile) — inputs injected into React tree were wiped by the re-render storm; switched edit surface to the native textarea | sidecar | 1.50.117 | **FIXED (owner-confirmed working)** |
+| HIWC-EDIT-002 | Per-bullet control strip squeezed the textarea — moved strip to its own row below | sidecar | 1.50.118 | FIXED (owner-confirmed) |
+| HIWC-EDIT-003 | Control strip buttons clipped on phone — wrap the row | sidecar | 1.50.119 | **FIXED (owner-confirmed working)** |
+| PAGEBREAK-SIDEBAR-001 | Page breaks for ALL sidebar sub/subsections (was wrongly narrowed in a revert) → PB-001 | sidecar `329` | 1.50.115 | FIXED (verify live export) |
+| SETTINGS-AHZ-001 / **AH-001 / VF-014 / APPHIST-ZIDX-001** | "Open in Settings" Application-history subtab opens BEHIND preview | sidecar `327` | 1.50.109 | **STILL BROKEN per owner — blind ancestor-lift did not beat the trap. Reproduce → run `antcv-apphist-zindex-probe.js` → targeted patch. RE-OPEN.** |
+| VF-005 / CA-002 | Application "Role - Company" sentence editable + follows package style | sidecar `341` | (main) | FIXED (owner-confirmed) |
+| CA-001 (spec line) | `[Specialisation — …]` editable in preview (meta.subtitle) | sidecar `341` | (main) | FIXED (owner-confirmed) |
+| SETTINGS-HEAD-002 | WRITING STYLE + LANGUAGES headers match ADVANCED TONE font/size; tighten gap | sidecar | 1.50.110 | FIXED (verify live) |
+| LAYOUT-NOTES-001 | "Within-package style" notes: shrink, drop package name, relocate (Quick-alt under packages, Custom onto the Custom button) | island source (vite) | 1.50.111 | FIXED (verify live) |
+
+### Reverted / parked this session
+- **TABLE-PAGEBREAK-001 (Core/WIB per-row `↧`) — REVERTED at 1.50.103.** The
+  reliable per-row toggle wrote to the wrong section: the WIB control falls back
+  to `sid:'core_competencies'`, and `pageBreakRows`/`itemPages` are keyed by
+  section id only, so the CL "What I Bring" and the CV "Core Competencies"
+  collide across documents — pressing WIB's ↧ corrupted Core. Restored to the
+  known-good `📄` page system. **A correct per-row table break needs per-doc
+  keying that also reaches the DOCX worker — a deliberate redesign, not a hotfix.**
+
+### Canonical page-break family (PB-001..006) — reconciled with the v4 index
+Owner: "page break in general" still not right. The locked requirements:
+- **PB-001** — manual Page Break from BOTH main area and sidebar (sidebar partly via `329`/1.50.115; main-area + on-entry manual control unverified).
+- **PB-002** — first sub-subsection moves the WHOLE subsection with its original heading (no dup).
+- **PB-003** — continuation heading: duplicate heading + localized "Cont." 18pt from top.
+- **PB-004** — table rules: first row moves the table; a later row splits it and repeats headers. (TABLE-PAGEBREAK-001 is the per-row toggle, parked — see above.)
+- **PB-005** — replace the down-arrow icon + "Compress" text (semantic page glyph; "Fit"). (`page-break-icon-357` / `help-text-wording-357` — VERIFYING.)
+- **PB-006** — preserve the Professional Experience pattern (reference, VF-018).
+- **EXPORT-PAGE2-001** — export PREVIEW shows only page 1 / breaks not applied. Worker engine passes smoke tests; defect is the client `antcv-pdf-preview-gate.js` clone path. Read-only probe: `antcv-export-page2-probe.js`. RE-OPEN — drive with the probe.
+
+### Still OPEN from earlier in the engagement (not addressed this session)
+- **RERENDER-STORM-001 [OPEN]** — the `requestAnimationFrame` violation flood is
+  still live (visible in the owner's mobile console). It is the root cause of the
+  HIWC input churn (worked around, not cured) and a general perf drain. Needs the
+  mutation-source probe to find the pump. HIGH value.
+- **APP-SENTENCE-STYLE-001 [OPEN]** — the candidate "Application: Role - Company"
+  sentence does not follow the chosen package style (e.g. Nordic = white). Code
+  located: `antcv-candidate-preview-editor-341.js:334–350` copies the Name leaf's
+  computed style onto the sentence host; falls back to default when that leaf
+  isn't found.
+- **SPECIALISATION-EDIT-001 [OPEN]** — the `[Specialisation — …]` line in the
+  preview header is React-rendered and not yet wrapped as editable.
+- **DOCX-EXPORT-REGRESSION-001 [OPEN]** — see batch triage below (export from the
+  print-setup view doesn't call `exportDocxViaWorker`).
+
+---
+
 ## VISUAL-SETTINGS PLACEMENT — v1.50.95 (built, NOT yet deployed; live verification owed)
 
 Addresses the **placement** of visual settings across the STANDARD Personal / Layout subtabs — the placement aspects of `VISUAL-PKG-003`, `SETTINGS-HEAD-001`, `SECTION-LAYOUT-001` (see the 2026-06-04 batch triage below). Some behavioural sub-items of those IDs remain (see Deferred). Source-only (React islands + protocol version bumps); `pwa/antcv-react-islands.js` rebuilt via `npm run build`. Not committed/deployed yet — deploy + live acceptance gate owed.

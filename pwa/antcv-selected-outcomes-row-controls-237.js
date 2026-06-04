@@ -5,7 +5,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.40.237-preview-guard';
+  const VERSION='1.50.120-gen003-004';
   // v1.40.237-preview-guard: Preview is button-free. Reject seeds and
   // hosts inside .antcv-preview-paper.
   const isInPreviewPaper=el=>{if(!el)return false;const p=document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]');return !!(p&&p.contains(el));};
@@ -128,9 +128,11 @@
     // Keep controls compact enough for the delete/X button to stay on the same line.
     const fields=rowFields(row); if(fields[0]){fields[0].style.maxWidth='124px';fields[0].style.flex='0 1 124px';} if(fields[1]){fields[1].style.minWidth='120px';fields[1].style.flex='1 1 160px';}
     let page=wrap.querySelector('[data-antcv-selected-outcome-page]'); if(!page){page=makeBtn('page','📄 1','Page',ref);page.setAttribute('data-antcv-selected-outcome-page','1');wrap.appendChild(page);}
-    let comp=wrap.querySelector('[data-antcv-selected-outcome-compress]'); if(!comp){comp=makeBtn('compress','↹','Compress selected outcome',ref);wrap.appendChild(comp);}
+    let comp=wrap.querySelector('[data-antcv-selected-outcome-compress]'); if(!comp){comp=makeBtn('compress','↹','Fit selected outcome',ref);wrap.appendChild(comp);}
     let enr=wrap.querySelector('[data-antcv-selected-outcome-enrich]'); if(!enr){enr=makeBtn('enrich','✨','Enrich selected outcome',ref);wrap.appendChild(enr);}
     let cjlr=wrap.querySelector('[data-antcv-selected-outcome-cjlr]'); if(!cjlr){cjlr=makeBtn('cjlr','⇤','Selected outcome alignment',ref);wrap.appendChild(cjlr);}
+    // GEN-003 standard order: Page Break, CJLR, Enhance, Fit (Delete is owned elsewhere).
+    [page,cjlr,enr,comp].forEach(function(b){if(b&&b.parentNode===wrap)wrap.appendChild(b);});
     paintPage(page,idx); paintCJLR(cjlr,getAlign(idx));
     page.onclick=ev=>{ev.preventDefault();ev.stopPropagation();setPage(idx,getPage(idx)%4+1);paintPage(page,idx);applyPreview();};
     comp.onclick=ev=>{ev.preventDefault();ev.stopPropagation();const f=resultField(row);setVal(f,compressText(getVal(f)));syncStorageFromRow(idx,row);applyPreview();};

@@ -60,10 +60,13 @@
     buttons.forEach(function (btn) {
       const meta = classify(btn);
       if (!meta) return;
-      btn.setAttribute('data-antcv-panel-action-206', meta.key);
-      btn.setAttribute('data-antcv-panel-label-206', meta.label);
-      btn.style.order = String(meta.order);
-      if (loc === 'main') btn.setAttribute('data-antcv-main-action', meta.key);
+      // v1.50.83 — idempotency. These stamped attrs + style.order on every
+      // button every sweep (~228/sec per the mutation-source probe) — a top
+      // pump of the re-render storm. Write only on change.
+      if (btn.getAttribute('data-antcv-panel-action-206') !== meta.key) btn.setAttribute('data-antcv-panel-action-206', meta.key);
+      if (btn.getAttribute('data-antcv-panel-label-206') !== meta.label) btn.setAttribute('data-antcv-panel-label-206', meta.label);
+      if (btn.style.order !== String(meta.order)) btn.style.order = String(meta.order);
+      if (loc === 'main' && btn.getAttribute('data-antcv-main-action') !== meta.key) btn.setAttribute('data-antcv-main-action', meta.key);
     });
   }
 

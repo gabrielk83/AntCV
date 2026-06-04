@@ -5,7 +5,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.50.95-bullet-strip';
+  const VERSION='1.50.99-bullet-inputs';
   let __applying=false; // v1.50.57: re-entrancy guard so our own DOM writes don't re-trigger the observer/flicker.
   const ALIGN_KEY='antcv.hiwc.alignment.v1';
   const PAGE_KEY='antcv:itemPages';
@@ -267,6 +267,77 @@
     });
   }
 
+  // Find the bullets textarea even after we hide it (stable source of truth).
+  function findBulletsAny(r){
+    if(!r) return null;
+    let ta=r.querySelector('textarea[data-antcv-hiwc-bullets-src="1"]');
+    if(ta && ta.isConnected) return ta;
+    ta=findBullets(r);
+    if(ta) ta.setAttribute('data-antcv-hiwc-bullets-src','1');
+    return ta;
+  }
+
+  // v1.50.99 — EACH BULLET ITS OWN INPUT. The owner rejected the single shared
+  // textarea. Hide the app's "Bullets (one per line)" textarea (kept synced as
+  // the source of truth) and render one editable <input> per bullet, each with
+  // its own page/compress/enrich/align/delete.
+  //
+  // Stability: rebuild is keyed to the bullet COUNT + align/page only (NOT the
+  // text), so typing never triggers a rebuild that steals the caret; we never
+  // rebuild while focused inside the editor; per-keystroke writes are debounced;
+  // and noteHiwcFocus/restoreHiwcFocus restores the caret if a rebuild happens.
+  function renderBulletEditors(r,ta){
+    if(!ta||isInPreviewPaper(ta))return;
+    if(ta.style.display!=='none') ta.style.display='none';
+    const host=ta.parentNode; if(!host)return;
+    let panel=host.querySelector(':scope > [data-antcv-hiwc-bullet-controls]');
+    let rows=bulletRowsFromText(getVal(ta)); if(!rows.length) rows=[''];
+    const meta=rows.map((_,i)=>getAlign('bullet_'+i)+getPage('bullet_'+i)).join(',');
+    const sig=rows.length+'|'+meta;
+    const focusedHere=!!(document.activeElement && document.activeElement.closest && document.activeElement.closest('[data-antcv-hiwc-bullet-controls]'));
+    if(panel && panel.isConnected && (panel.getAttribute('data-antcv-hiwc-bullet-sig')===sig || focusedHere)) return;
+    if(!panel || !panel.isConnected){
+      panel=document.createElement('div');panel.setAttribute('data-antcv-hiwc-bullet-controls','1');
+      Object.assign(panel.style,{display:'flex',flexDirection:'column',gap:'4px',margin:'4px 0 6px 0',width:'100%',boxSizing:'border-box'});
+      host.insertBefore(panel, ta.nextSibling);
+    }
+    panel.setAttribute('data-antcv-hiwc-bullet-sig',sig);
+    panel.textContent='';
+    function inputs(){return Array.from(panel.querySelectorAll('[data-antcv-hiwc-bullet-input]'));}
+    function writeAll(){const vals=inputs().map(x=>x.value.trim()).filter(Boolean);setVal(ta,vals.join('\n'));syncSectionField('bullets',vals.join('\n'));}
+    function addRow(txt,idx){
+      const key='bullet_'+idx;
+      const row=document.createElement('div');row.setAttribute('data-antcv-hiwc-bullet-row','1');
+      Object.assign(row.style,{display:'flex',alignItems:'center',gap:'3px',width:'100%',maxWidth:'100%',boxSizing:'border-box',overflow:'hidden'});
+      const inp=document.createElement('input');inp.type='text';inp.value=txt||'';inp.placeholder='Bullet text';inp.setAttribute('data-antcv-hiwc-bullet-input','1');
+      Object.assign(inp.style,{flex:'1 1 auto',minWidth:'0',height:'26px',boxSizing:'border-box'});applyField(inp,key);
+      ['focus','keyup','click','select','input'].forEach(function(ev){inp.addEventListener(ev,function(){noteHiwcFocus(idx,inp);});});
+      inp.addEventListener('input',function(){scheduleBulletSync(writeAll);});
+      inp.addEventListener('blur',function(){flushBulletSync(writeAll);});
+      inp.addEventListener('keydown',function(ev){if(ev.key==='Enter'){ev.preventDefault();ev.stopPropagation();writeAll();addNew();}});
+      const page=makeBtn('page','📄 1','Page for bullet '+(idx+1),inp);paintPage(page,key);
+      const comp=makeBtn('compress','↹','Compress bullet '+(idx+1),inp);
+      const enr=makeBtn('enrich','✨','Enrich bullet '+(idx+1),inp);
+      const cjlr=makeBtn('cjlr','⇤','Alignment of bullet '+(idx+1),inp);paintCJLR(cjlr,getAlign(key));
+      const del=makeBtn('bullet-delete','×','Delete bullet '+(idx+1),inp);del.style.borderColor='#ff5c5c';del.style.color='#e52b2b';del.style.background='transparent';
+      page.onclick=ev=>{ev.preventDefault();ev.stopPropagation();setPage(key,getPage(key)%4+1);paintPage(page,key);applyPreview();};
+      comp.onclick=ev=>{ev.preventDefault();ev.stopPropagation();inp.value=compressText(inp.value);writeAll();applyPreview();};
+      enr.onclick=ev=>{ev.preventDefault();ev.stopPropagation();inp.value=enrichText(inp.value);writeAll();applyPreview();};
+      cjlr.onclick=ev=>{ev.preventDefault();ev.stopPropagation();const n=nextAlign(getAlign(key));setAlign(key,n);paintCJLR(cjlr,n);applyField(inp,key);applyPreview();};
+      del.onclick=ev=>{ev.preventDefault();ev.stopPropagation();row.remove();writeAll();applyPreview();};
+      row.appendChild(inp);row.appendChild(page);row.appendChild(comp);row.appendChild(enr);row.appendChild(cjlr);row.appendChild(del);
+      panel.insertBefore(row, panel.querySelector('[data-antcv-hiwc-bullet-add]')||null);
+      return inp;
+    }
+    function addNew(){writeAll();const inp=addRow('',inputs().length);panel.setAttribute('data-antcv-hiwc-bullet-sig',inputs().length+'|'+meta);setTimeout(function(){inp.focus();},0);}
+    rows.forEach(function(t,i){addRow(t,i);});
+    const add=document.createElement('button');add.type='button';add.textContent='＋ Bullet';add.setAttribute('data-antcv-hiwc-bullet-add','1');
+    Object.assign(add.style,{alignSelf:'flex-start',border:'1px solid #008b8b',background:'white',color:'#006b6b',borderRadius:'4px',padding:'3px 10px',cursor:'pointer',marginTop:'2px'});
+    add.onclick=ev=>{ev.preventDefault();ev.stopPropagation();addNew();};
+    panel.appendChild(add);
+    restoreHiwcFocus(panel); setTimeout(function(){restoreHiwcFocus(panel);},0);
+  }
+
   function renderBulletList(r,ta){
     if(!ta||ta.getAttribute('data-antcv-hiwc-bullets-bound')==='1') return;
     ta.setAttribute('data-antcv-hiwc-bullets-bound','1');
@@ -390,7 +461,7 @@
   }
 
   let pending=false;function runSoon(){if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;run();});}
-  function run(){if(isTypingInHiwc())return;try{const r=root();if(r){cleanupClosingHelperText(r);controlsForField(findIntro(r),'intro');controlsForField(findClosing(r),'closing');restoreNativeBullets(r);controlsForField(findBullets(r),'bullets');renderBulletControls(r,findBullets(r));}/* core CJLR cleanup handled by antcv-core-competencies-row-controls; do not prune across the whole Core section */ applyPreview();}catch(e){try{console.warn('[how-contribute-controls-245] failed:',e&&e.message);}catch(_){}}}
+  function run(){if(isTypingInHiwc())return;try{const r=root();if(r){cleanupClosingHelperText(r);controlsForField(findIntro(r),'intro');controlsForField(findClosing(r),'closing');renderBulletEditors(r,findBulletsAny(r));}/* core CJLR cleanup handled by antcv-core-competencies-row-controls; do not prune across the whole Core section */ applyPreview();}catch(e){try{console.warn('[how-contribute-controls-245] failed:',e&&e.message);}catch(_){}}}
   function start(){injectCss();run();[100,300,800,1600,3000].forEach(ms=>setTimeout(run,ms));try{new MutationObserver(()=>{if(__applying)return;runSoon();}).observe(document.body||document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style','value']});}catch(_){}window.addEventListener('input',runSoon,true);window.addEventListener('click',()=>setTimeout(run,0),true);window.addEventListener('antcv:sections-updated',()=>setTimeout(run,0));/* v1.50.57: blind setInterval(run,2000) removed — it was the flicker clock. Updates are now event-driven (sections-updated/input/click) plus a slow safety re-sync that no-ops when nothing changed. */setInterval(()=>{if(!__applying)run();},8000);}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
   window.AntcvHowContributeControls239={version:VERSION,run};

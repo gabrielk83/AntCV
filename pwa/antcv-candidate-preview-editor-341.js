@@ -58,7 +58,7 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.40.341-p0d-fix7';
+  var SCRIPT_VERSION = '1.50.105-style';
   if (window.__antcvCandidatePreviewEditor341 === SCRIPT_VERSION) return;
   window.__antcvCandidatePreviewEditor341 = SCRIPT_VERSION;
 
@@ -333,23 +333,44 @@
     // tagged with data-antcv-candidate-edit="name" and we can read
     // its computed styles. If no Name leaf is found (rare — e.g. the
     // candidate has no name yet), we leave host as-is.
+    // v1.50.105 — follow the CHOSEN STYLE. The previous fix only read the
+    // candidate Name leaf; when it was absent the host kept the browser default
+    // (black, sans-serif) and the sentence vanished on a dark template (e.g.
+    // Nordic, white-on-#283556). Prefer the hidden ORIGINAL sentence we replaced
+    // — it already carries the template's exact color/font for this slot — then
+    // fall back to the Name leaf, then to the host's parent (the header context
+    // the template colors). Color is the part that must always be set so the
+    // text never disappears under the active style.
     try {
+      var anchorSrc = block.querySelector('[data-antcv-candidate-anchor-hidden="1"]');
       var nameLeaf = block.querySelector('[data-antcv-candidate-edit="name"]');
-      if (nameLeaf) {
-        var cs = window.getComputedStyle(nameLeaf);
+      var styleSrc = anchorSrc || nameLeaf || host.parentElement;
+      if (styleSrc) {
+        var cs = window.getComputedStyle(styleSrc);
         if (cs) {
           if (cs.fontFamily) host.style.fontFamily = cs.fontFamily;
           if (cs.color) host.style.color = cs.color;
-          // Name is usually bold (700-800). Reuse the same weight so
-          // the sentence below visually parallels the name.
-          if (cs.fontWeight) host.style.fontWeight = cs.fontWeight;
-          // Keep the sentence slightly smaller than the name so it
-          // reads as a subtitle, not a duplicate heading.
-          var px = parseFloat(cs.fontSize);
-          if (Number.isFinite(px) && px > 0) host.style.fontSize = Math.max(11, Math.round(px * 0.6)) + 'px';
+          if (styleSrc === nameLeaf) {
+            // Name is usually bold; parallel its weight but read as a subtitle
+            // (slightly smaller than the name).
+            if (cs.fontWeight) host.style.fontWeight = cs.fontWeight;
+            var px = parseFloat(cs.fontSize);
+            if (Number.isFinite(px) && px > 0) host.style.fontSize = Math.max(11, Math.round(px * 0.6)) + 'px';
+          } else if (styleSrc === anchorSrc) {
+            // The original sentence already had the correct size/weight — adopt
+            // them verbatim so we match the template exactly.
+            if (cs.fontWeight) host.style.fontWeight = cs.fontWeight;
+            var apx = parseFloat(cs.fontSize);
+            if (Number.isFinite(apx) && apx > 0) host.style.fontSize = Math.round(apx) + 'px';
+          }
           if (cs.letterSpacing && cs.letterSpacing !== 'normal') host.style.letterSpacing = cs.letterSpacing;
         }
       }
+      // Make the editable spans inherit the host's resolved color/font so the
+      // chosen style reaches the text the user actually types into.
+      Array.prototype.forEach.call(host.querySelectorAll('[data-antcv-candidate-edit]'), function (sp) {
+        sp.style.color = 'inherit'; sp.style.fontFamily = 'inherit'; sp.style.fontWeight = 'inherit';
+      });
     } catch (_) {}
 
     // v1.40.341-p0d-fix6 — edit-safety + idempotency guard. The preview

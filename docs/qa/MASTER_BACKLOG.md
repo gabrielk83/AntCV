@@ -203,8 +203,8 @@ Branch: `claude/antcv-roadmap-bugs-L9Sqa`. Compiled 2026-06-04.
 | MOB-ALT-001/002 | Alt-circles dropdown, opens down, escapes clip | VERIFYING | `[verify]` Confirm dropdown opens downward unclipped. |
 | MOB-BOTTOMNAV-001 | Bottom-nav buttons clipped | VERIFYING | `[verify]` Confirm all controls visible on narrow viewport. |
 | HIWC-EDIT-001/002/003 | HIWC editable on mobile; strip own row; wrap | FIXED✓ | — Done (owner-confirmed). |
-| MOBILE-FUSE-001 | Fuse not visible in mobile bottom panel | OPEN | `[console]` Surface 🔀 in mobile bottom panel. |
-| MOBILE-TABLEWIDTH-001 | Table-width controls partly visible on mobile | OPEN | `[code]` Hide table-width controls entirely on mobile. |
+| MOBILE-FUSE-001 | Fuse not visible in mobile bottom panel | OPEN | `[console]` Note: `mobile-fab-cleanup-351` *hides* the redundant Fusion FAB but doesn't confirm 🔀 is surfaced in the bottom panel — verify, then surface if absent. |
+| MOBILE-TABLEWIDTH-001 | Table-width controls partly visible on mobile | VERIFYING | `[verify]` Done in code — `mobile-controls.css` `@media(max-width:900px)` hides `.antcv-top-sliders` (the Focus-area/Sidebar-width sliders) entirely. Confirm on live. |
 | MOBILE-EXTRACTION-001 | Extraction button hovers in grey area | OPEN | `[console]` Re-anchor the document-Extraction button on mobile. |
 | LABEL-HISTORY-001 | Rename "Application history" → "History" | FIXED✓ | `[verify]` Confirm top-bar label. |
 

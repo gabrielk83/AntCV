@@ -607,12 +607,6 @@ function buildAiDisclosureHangingTextbox(ctx, opts) {
   const para = {
     alignment: isSidebar ? AlignmentType.CENTER : AlignmentType.RIGHT,
     spacing: { before: 360, after: 0, line: 220, lineRule: 'auto' },
-    border: {
-      top:    { color: borderColor, space: 2, style: BorderStyle.SINGLE, size: 4 },
-      bottom: { color: borderColor, space: 2, style: BorderStyle.SINGLE, size: 4 },
-      left:   { color: borderColor, space: 4, style: BorderStyle.SINGLE, size: 4 },
-      right:  { color: borderColor, space: 4, style: BorderStyle.SINGLE, size: 4 },
-    },
     children: [new TextRun({
       text: 'AI-assisted — author retains responsibility for content.',
       font: 'Calibri',
@@ -622,17 +616,23 @@ function buildAiDisclosureHangingTextbox(ctx, opts) {
     })],
   };
   if (isSidebar) {
+    // CV sidebar: keep the bordered chip on the dark navy cell (owner's
+    // CL-only de-box request does not apply to the CV sidebar look).
+    para.border = {
+      top:    { color: borderColor, space: 2, style: BorderStyle.SINGLE, size: 4 },
+      bottom: { color: borderColor, space: 2, style: BorderStyle.SINGLE, size: 4 },
+      left:   { color: borderColor, space: 4, style: BorderStyle.SINGLE, size: 4 },
+      right:  { color: borderColor, space: 4, style: BorderStyle.SINGLE, size: 4 },
+    };
     // Small symmetric indent inside the sidebar so the box doesn't
     // touch the cell margins.
     para.indent = { left: 120, right: 120 };
   } else {
-    // Linear/CL: push the box to the right of the body so it hangs in
-    // the bottom-right corner of the last page, far from the
-    // left-aligned body prose. PAGE_W minus body cell L/R margins
-    // (100+100) gives ~11706 dxa usable; left-indent of 7000 leaves
-    // ~4700 dxa for the chip (~3.25").
+    // Linear/CL (owner WM request): a TEXT-ONLY marker — no bounding box,
+    // no fill — in light muted teal, right-aligned, hanging to the right of
+    // the body. PAGE_W minus body cell L/R margins (100+100) gives ~11706
+    // dxa usable; left-indent of 7000 leaves ~4700 dxa for the chip (~3.25").
     para.indent = { left: 7000 };
-    para.shading = { type: ShadingType.CLEAR, fill: 'F4F8F8', color: 'auto' };
   }
   return new Paragraph(para);
 }

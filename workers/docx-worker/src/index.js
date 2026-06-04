@@ -24370,12 +24370,6 @@ function buildAiDisclosureHangingTextbox(ctx, opts) {
   const para = {
     alignment: isSidebar ? AlignmentType.CENTER : AlignmentType.RIGHT,
     spacing: { before: 360, after: 0, line: 220, lineRule: "auto" },
-    border: {
-      top: { color: borderColor, space: 2, style: BorderStyle.SINGLE, size: 4 },
-      bottom: { color: borderColor, space: 2, style: BorderStyle.SINGLE, size: 4 },
-      left: { color: borderColor, space: 4, style: BorderStyle.SINGLE, size: 4 },
-      right: { color: borderColor, space: 4, style: BorderStyle.SINGLE, size: 4 }
-    },
     children: [new TextRun({
       text: "AI-assisted \u2014 author retains responsibility for content.",
       font: "Calibri",
@@ -24386,10 +24380,15 @@ function buildAiDisclosureHangingTextbox(ctx, opts) {
     })]
   };
   if (isSidebar) {
+    para.border = {
+      top: { color: borderColor, space: 2, style: BorderStyle.SINGLE, size: 4 },
+      bottom: { color: borderColor, space: 2, style: BorderStyle.SINGLE, size: 4 },
+      left: { color: borderColor, space: 4, style: BorderStyle.SINGLE, size: 4 },
+      right: { color: borderColor, space: 4, style: BorderStyle.SINGLE, size: 4 }
+    };
     para.indent = { left: 120, right: 120 };
   } else {
     para.indent = { left: 7e3 };
-    para.shading = { type: ShadingType.CLEAR, fill: "F4F8F8", color: "auto" };
   }
   return new Paragraph(para);
 }

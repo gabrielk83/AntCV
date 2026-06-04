@@ -332,13 +332,14 @@ export function PackagePicker({ initialMode, context = 'personal' }: Props): JSX
 // STYLE PACKAGE buttons own selection and quick-alternatives.
 function LayoutNotes({ packageName, isCustom }: { packageName: string; isCustom: boolean }): JSX.Element {
   const strong: React.CSSProperties = { color: '#cfe3ea', fontWeight: 650 };
+  // Shrunk + generalised (v1.50.111): the Quick-alt note sits directly under the
+  // native STYLE PACKAGE buttons, so it reads as a caption for the colour-pair
+  // alts on those buttons. The Custom note moved onto the Custom button itself
+  // (see mount.tsx decorateNativePackageButtons), so it is not repeated here.
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 11, lineHeight: 1.4, opacity: 0.7 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: 9, lineHeight: 1.3, opacity: 0.6 }}>
       <p style={{ margin: 0 }}>
-        <span style={strong}>Quick alt:</span> ready-made colour pairs within {packageName} — stays on the package.
-      </p>
-      <p style={{ margin: 0 }}>
-        <span style={strong}>Custom:</span> set automatically when you edit beyond the package&rsquo;s range.
+        <span style={strong}>Quick alt:</span> ready-made colour pairs — stays on the package.
       </p>
       {isCustom && (
         <p style={{ margin: 0, opacity: 0.85 }}>

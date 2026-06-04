@@ -1,57 +1,48 @@
-// Mount the LayoutPicker (Section layout) inside Settings → Personal,
-// immediately AFTER the native Banned Words section. The Personal subtab is
-// an order-based flex column (WRITING STYLE=25, ADVANCED TONE=30, BANNED
-// WORDS=40); Section layout takes order 45 so it sits just below Banned
-// Words. The flow reads: Writing style → (Languages) → Banned words →
-// Section layout.
+// Mount the LayoutPicker (Section layout) inside Settings → ADVANCED → Style,
+// immediately AFTER the native SECTION FORMATS control (the per-section
+// Paragraph/Bullets/Table picker, `data-antcv-format-prefs`). Moved out of
+// Personal in v1.50.101: the per-section line/format overrides belong next to
+// the section-format control, not in Personal. We gate on the presence of the
+// SECTION FORMATS block (only rendered in Adv → Style) rather than tab-state
+// detection, so the two read as one combined section-layout control.
 
 import { createRoot, type Root } from 'react-dom/client';
 import { createElement } from 'react';
 import { LayoutPicker } from './LayoutPicker';
 import {
-  findDoneButton,
-  findSettingsFlexColumn,
   findSettingsRoot,
-  isPersonalSubtab,
+  isElementVisible,
 } from '../../lib/settings-dom';
 
 const MOUNT_ID = 'antcv-react-layout-picker';
 
-// Native Personal-subtab section headers (literal uppercase) used to locate
-// the order-based flex column the sections live in.
-const PERSONAL_LABELS = [/^WRITING STYLE$/i, /^ADVANCED TONE$/i, /^BANNED WORDS$/i];
+// The native SECTION FORMATS control in Adv → Style. Its presence (visible)
+// is our anchor + gate — it is not rendered in any other subtab.
+const FORMAT_PREFS_SEL = '[data-antcv-format-prefs]';
 
-// CSS order slot: just after BANNED WORDS (40) → "after the banned words".
-const SECTION_LAYOUT_ORDER = '45';
+function findFormatPrefsBlock(settingsRoot: HTMLElement): HTMLElement | null {
+  const el = settingsRoot.querySelector<HTMLElement>(FORMAT_PREFS_SEL);
+  return el && isElementVisible(el) ? el : null;
+}
 
 let root: Root | null = null;
 let container: HTMLElement | null = null;
 
-function ensureMountContainer(settingsRoot: HTMLElement): HTMLElement {
+function ensureMountContainer(formatPrefs: HTMLElement): HTMLElement {
   let c = document.getElementById(MOUNT_ID) as HTMLElement | null;
   if (!c) {
     c = document.createElement('div');
     c.id = MOUNT_ID;
     c.setAttribute('data-antcv-react-mount', 'layout-picker');
-    c.style.order = SECTION_LAYOUT_ORDER;
   }
+  // Leftover order from the previous Personal placement would misposition the
+  // card in any flex parent — clear it.
+  if (c.style.order) c.style.order = '';
 
-  // Primary anchor: the order-based flex column of native Personal sections.
-  // CSS `order` (45) places Section layout right after Banned Words (40).
-  const column = findSettingsFlexColumn(settingsRoot, PERSONAL_LABELS);
-  if (column) {
-    c.style.order = SECTION_LAYOUT_ORDER;
-    if (c.parentElement !== column) column.appendChild(c);
-    return c;
-  }
-
-  // Fallback (column not detected): just before the Settings "Done" button.
-  if (c.parentElement) return c;
-  const done = findDoneButton(settingsRoot);
-  if (done && done.parentElement) {
-    done.parentElement.insertBefore(c, done);
-  } else {
-    settingsRoot.appendChild(c);
+  // Primary anchor: immediately after the SECTION FORMATS block, so the
+  // per-section line/format overrides read as a continuation of it.
+  if (c.previousElementSibling !== formatPrefs || c.parentElement !== formatPrefs.parentElement) {
+    formatPrefs.insertAdjacentElement('afterend', c);
   }
   return c;
 }
@@ -66,11 +57,17 @@ function unmountIfMounted(): void {
 
 function applyOnce(): void {
   const settingsRoot = findSettingsRoot();
-  if (!settingsRoot || !isPersonalSubtab(settingsRoot)) {
+  if (!settingsRoot) {
     unmountIfMounted();
     return;
   }
-  const next = ensureMountContainer(settingsRoot);
+  const formatPrefs = findFormatPrefsBlock(settingsRoot);
+  if (!formatPrefs) {
+    // Not on Adv → Style (SECTION FORMATS absent) — stand down.
+    unmountIfMounted();
+    return;
+  }
+  const next = ensureMountContainer(formatPrefs);
   if (container !== next) {
     if (root) { try { root.unmount(); } catch { /* */ } root = null; }
     container = next;

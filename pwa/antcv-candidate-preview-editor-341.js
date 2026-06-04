@@ -58,7 +58,7 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.40.341-p0d-fix6';
+  var SCRIPT_VERSION = '1.40.341-p0d-fix7';
   if (window.__antcvCandidatePreviewEditor341 === SCRIPT_VERSION) return;
   window.__antcvCandidatePreviewEditor341 = SCRIPT_VERSION;
 
@@ -80,6 +80,49 @@
         detail: { source: 'candidate-preview-editor-341' },
       }));
     } catch (_) {}
+  }
+
+  // The application role + company are owned by the localStorage "meta"
+  // object: the Set-panel "Application — Role/Company" inputs write here and
+  // the top-bar chip renders `${meta.role} @ ${meta.company}`. personalInfo
+  // role/company are only a legacy/showcase fallback. v1.40.341-p0d-fix7:
+  // read + write `meta` so the panel and the preview sentence share one
+  // source of truth (previously the panel wrote `meta` while the sentence
+  // read personalInfo, so panel edits never reached the preview).
+  var META_KEY = 'meta';
+
+  function readMeta() {
+    try {
+      var raw = localStorage.getItem(META_KEY);
+      if (!raw) return {};
+      var v = JSON.parse(raw);
+      return v && typeof v === 'object' ? v : {};
+    } catch (_) { return {}; }
+  }
+
+  function writeMeta(meta) {
+    try {
+      localStorage.setItem(META_KEY, JSON.stringify(meta));
+      // Same-tab localStorage writes don't fire 'storage', so nudge the app
+      // shell explicitly so the top-bar chip + generation see the edit.
+      try {
+        window.dispatchEvent(new StorageEvent('storage', { key: META_KEY, newValue: localStorage.getItem(META_KEY) }));
+      } catch (_) {}
+    } catch (_) {}
+  }
+
+  function readApplicationRole() {
+    var meta = readMeta();
+    if (typeof meta.role === 'string' && meta.role.trim()) return meta.role;
+    var pi = readPI();
+    return clean(pi.role || pi.position || pi.jobTitle || pi.targetRole || '');
+  }
+
+  function readApplicationCompany() {
+    var meta = readMeta();
+    if (typeof meta.company === 'string' && meta.company.trim()) return meta.company;
+    var pi = readPI();
+    return clean(pi.company || pi.targetCompany || pi.employer || '');
   }
 
   function applicationLabel() {
@@ -164,13 +207,16 @@
         if (pi.applicationLabel) { delete pi.applicationLabel; changed = true; }
       }
     } else if (field === 'role') {
-      // v1.40.341-p0d-fix3: skip the literal placeholder so leaving
-      // an empty slot untouched doesn't write "[Role]" to storage.
+      // v1.40.341-p0d-fix7: write the application role to the shared `meta`
+      // store (the panel + chip's source), not personalInfo. Skip the
+      // literal placeholder so an untouched empty slot stays empty.
       var nextRole = newText === '[Role]' ? '' : newText;
-      if (pi.role !== nextRole) { pi.role = nextRole; changed = true; }
+      var mRole = readMeta();
+      if (mRole.role !== nextRole) { mRole.role = nextRole; writeMeta(mRole); }
     } else if (field === 'company') {
       var nextCompany = newText === '[Company]' ? '' : newText;
-      if (pi.company !== nextCompany) { pi.company = nextCompany; changed = true; }
+      var mCompany = readMeta();
+      if (mCompany.company !== nextCompany) { mCompany.company = nextCompany; writeMeta(mCompany); }
     }
     if (changed) writePI(pi);
   }
@@ -209,13 +255,11 @@
   function wrapApplicationSentence(block) {
     var pi = readPI();
     var label = applicationLabel();
-    // v1.40.341-p0d-fix3: accept multiple personalInfo key names —
-    // the schema diverged across writing-engine passes. Earlier
-    // builds used pi.role/pi.company; some newer JD-tailoring code
-    // writes pi.position/pi.jobTitle/pi.targetRole and
-    // pi.targetCompany. Probe all of them.
-    var role = clean(pi.role || pi.position || pi.jobTitle || pi.targetRole || '');
-    var company = clean(pi.company || pi.targetCompany || pi.employer || '');
+    // v1.40.341-p0d-fix7: role/company come from the shared `meta` store
+    // first (the Set-panel inputs write there), falling back to the legacy
+    // personalInfo keys. This is what connects panel edits to the preview.
+    var role = clean(readApplicationRole());
+    var company = clean(readApplicationCompany());
     // v1.40.341-p0d-fix3: previously bailed when both role+company
     // were empty. That meant the application sentence was NEVER made
     // editable on a fresh CV — the user had to fill the panel first
@@ -378,6 +422,12 @@
   } catch (_) {}
 
   window.addEventListener('antcv:sections-updated', schedule);
+  // Re-sweep when the shared application `meta` changes (cross-tab, or when
+  // any sidecar dispatches a storage event for it) so the sentence tracks
+  // the Set-panel Role/Company inputs.
+  window.addEventListener('storage', function (ev) {
+    if (ev && ev.key === META_KEY) schedule();
+  });
 
   window.AntcvCandidatePreviewEditor341 = {
     version: SCRIPT_VERSION,

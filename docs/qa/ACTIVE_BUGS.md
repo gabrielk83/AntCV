@@ -26,7 +26,10 @@ Full triage with per-item IDs, layer, and sidecar-vs-app.js verdict lives in
   marker, on-entry + A4-overflow detection, continuation header, cascade colour
   across all sections + CL), `VISUAL-PKG-001..003`, `MERGE-DUP-001..003`,
   `SETTINGS-HEAD-001`, `SECTION-LAYOUT-001`, `LOCATION-001`, `DEMO-WARN-001`,
-  `PRIVACY-SETTINGS-001`, `WIZARD-001..002`, `IMPORT-COUNT-001`.
+  `PRIVACY-SETTINGS-001`, `WIZARD-001..002`, `IMPORT-COUNT-001`,
+  `PHOTO-PLACEMENT-001` (only sidebar photo positions render in the preview;
+  header/main/bridge placements are no-ops — app.js render gap, format-prefs
+  sidecar only stores the pref).
 
 ---
 

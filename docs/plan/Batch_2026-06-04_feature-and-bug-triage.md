@@ -131,6 +131,7 @@ Sidecars in play (readable): `antcv-page-breaks-everywhere-284.js` (draws
 |----|-----------|-------|---------|
 | WIZARD-001 | Step 6b must be **scrollable** — the Next button is unreachable | APP.JS | wizard card in app.js (`_wiz_file_input`, "Step 6b — walk-through"). Sidecar could add `max-height/overflow:auto` to the card, but there is no stable selector — register, confirm a hook live. |
 | WIZARD-002 | Add a missing **Step 6d**: default-languages selection + inform the user about the Personal / Layout / Advanced-Style settings panels where they keep control | APP.JS | new wizard step. |
+| PHOTO-PLACEMENT-001 | Only the **sidebar** photo positions render in the preview; header-left/right, main-left/right, and sidebar-bridge do nothing | APP.JS | `antcv-format-prefs.js` only writes the placement pref + asks React to re-render; the actual photo-at-position render lives in app.js, which honours sidebar positions only. Register: implement the non-sidebar placements in the preview render. |
 | IMPORT-COUNT-001 | Upload extract count wrong: shows "0 work · 0 education · N certs · 0 publications" — should reflect the real 6 work / 3 education / 2 publications etc. | APP.JS | `antcv-upload-recount-339.js` recomputes from `personalInfo.workHistory/education/publications`; if those arrays are empty the importer wrote the data elsewhere. Root is the **importer→personalInfo mapping** in app.js, not the recount sidecar. |
 
 ---

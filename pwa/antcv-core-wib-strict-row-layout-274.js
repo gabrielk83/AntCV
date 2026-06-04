@@ -11,7 +11,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.40.274';
+  const VERSION='1.50.92-wider-cells';
   if(window.__antcvCoreWibStrictRowLayout274===VERSION) return;
   window.__antcvCoreWibStrictRowLayout274=VERSION;
 
@@ -87,13 +87,17 @@
     row.setAttribute('data-antcv-core-wib274-index',String(index));
     Object.assign(row.style,{
       display:'flex',alignItems:'center',gap:'3px',flexWrap:'nowrap',
-      maxWidth:'calc(100% - 72px)',width:'calc(100% - 72px)',
+      maxWidth:'calc(100% - 52px)',width:'calc(100% - 52px)',
       overflow:'visible',boxSizing:'border-box',whiteSpace:'nowrap'
     });
     focus.setAttribute('data-antcv-core-wib274-focus','1');
     strategic.setAttribute('data-antcv-core-wib274-strategic','1');
-    Object.assign(focus.style,{order:'10',minWidth:'0',width:'88px',maxWidth:'96px',flex:'0 1 88px',boxSizing:'border-box'});
-    Object.assign(strategic.style,{order:'20',minWidth:'0',width:'126px',maxWidth:'142px',flex:'1 1 118px',boxSizing:'border-box'});
+    // v1.50.92 — wider cells. Removing the redundant 328 page button freed
+    // horizontal space, so the Focus Area / Strategic Expertise boxes no longer
+    // need to be squeezed to ~88/126px. Give them usable width; Strategic still
+    // flex-grows to absorb the rest of the row.
+    Object.assign(focus.style,{order:'10',minWidth:'0',width:'120px',maxWidth:'150px',flex:'0 1 120px',boxSizing:'border-box'});
+    Object.assign(strategic.style,{order:'20',minWidth:'0',width:'170px',flex:'1 1 150px',boxSizing:'border-box'});
     // Keep all existing control hosts compact and attached to the row.
     row.querySelectorAll('[data-antcv-core-controls="1"],[data-antcv-wib264-host="1"],[data-antcv-rowfix-host]').forEach(h=>{
       Object.assign(h.style,{display:'inline-flex',alignItems:'center',gap:'2px',whiteSpace:'nowrap',flex:'0 0 auto',position:'static',float:'none',marginLeft:'2px'});
@@ -106,10 +110,10 @@
     const s=document.createElement('style');
     s.id='antcv-core-wib-strict-row-layout-274-css';
     s.textContent=`
-      [data-antcv-core-wib274-row]{display:flex!important;align-items:center!important;gap:3px!important;flex-wrap:nowrap!important;max-width:calc(100% - 72px)!important;width:calc(100% - 72px)!important;overflow:visible!important;box-sizing:border-box!important;white-space:nowrap!important;}
+      [data-antcv-core-wib274-row]{display:flex!important;align-items:center!important;gap:3px!important;flex-wrap:nowrap!important;max-width:calc(100% - 52px)!important;width:calc(100% - 52px)!important;overflow:visible!important;box-sizing:border-box!important;white-space:nowrap!important;}
       [data-antcv-core-wib274-row] input,[data-antcv-core-wib274-row] textarea,[data-antcv-core-wib274-row] [contenteditable="true"]{min-width:0!important;box-sizing:border-box!important;flex-shrink:1!important;}
-      [data-antcv-core-wib274-focus="1"]{width:88px!important;max-width:96px!important;flex:0 1 88px!important;}
-      [data-antcv-core-wib274-strategic="1"]{width:126px!important;max-width:142px!important;flex:1 1 118px!important;}
+      [data-antcv-core-wib274-focus="1"]{width:120px!important;max-width:150px!important;flex:0 1 120px!important;}
+      [data-antcv-core-wib274-strategic="1"]{width:170px!important;flex:1 1 150px!important;}
       [data-antcv-core-wib274-row] button{width:23px!important;min-width:23px!important;max-width:23px!important;height:22px!important;min-height:22px!important;padding:0!important;margin:0 1px!important;flex:0 0 auto!important;position:static!important;float:none!important;box-sizing:border-box!important;line-height:1!important;}
       [data-antcv-core-wib274-row] button[data-antcv-core-wib274-button="page"]{width:30px!important;min-width:30px!important;max-width:30px!important;font-size:10px!important;}
       [data-antcv-core-controls="1"],[data-antcv-wib264-host="1"],[data-antcv-rowfix-host]{display:inline-flex!important;align-items:center!important;gap:2px!important;white-space:nowrap!important;flex:0 0 auto!important;position:static!important;float:none!important;margin-left:2px!important;}

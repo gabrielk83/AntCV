@@ -60,9 +60,10 @@
       '[data-antcv-altdrop="1"]{position:relative;}',
       '[data-antcv-altdrop="1"][data-antcv-altdrop-open="1"]{z-index:9002;}',
       '[data-antcv-alttrigger="1"]{position:relative;}',
-      /* open DOWN: the other circles drop as an absolute vertical column under
-         the trigger (JS sets each one's top). */
-      '[data-antcv-altdrop="1"][data-antcv-altdrop-open="1"] [data-antcv-altcircle="1"]:not([data-antcv-alttrigger="1"]){position:absolute!important;left:0!important;margin:0!important;z-index:9003!important;}',
+      /* open DOWN: the other circles drop as a FIXED vertical column under the
+         trigger (JS sets each one's left/top from the trigger rect). Fixed —
+         not absolute — so the column escapes the topbar's overflow clip. */
+      '[data-antcv-altdrop="1"][data-antcv-altdrop-open="1"] [data-antcv-altcircle="1"]:not([data-antcv-alttrigger="1"]){position:fixed!important;margin:0!important;z-index:2147483000!important;}',
       '[data-antcv-altdrop="1"][data-antcv-altdrop-open="0"] [data-antcv-alttrigger="1"]::after{content:"";position:absolute;right:-2px;bottom:-2px;width:0;height:0;border-left:3px solid transparent;border-right:3px solid transparent;border-top:4px solid rgba(255,255,255,.9);}',
       '}'
     ].join('');
@@ -81,14 +82,17 @@
       var trigger=null;
       for(var i=0;i<g.circles.length;i++){ if(isActive(g.circles[i])){trigger=g.circles[i];break;} }
       if(!trigger)trigger=g.circles[0];
+      var tr=null; if(open){ try{ tr=trigger.getBoundingClientRect(); }catch(_){ tr=null; } }
       var below=0;
       g.circles.forEach(function(c){
         c.setAttribute('data-antcv-altcircle','1');
-        if(c===trigger){ c.setAttribute('data-antcv-alttrigger','1'); c.style.removeProperty('top'); }
+        if(c===trigger){ c.setAttribute('data-antcv-alttrigger','1'); c.style.removeProperty('left'); c.style.removeProperty('top'); }
         else {
           c.removeAttribute('data-antcv-alttrigger');
-          if(open){ below++; c.style.setProperty('top',(below*20)+'px','important'); } // stack downward
-          else { c.style.removeProperty('top'); }
+          if(open&&tr){ below++; // fixed column dropping straight down from the trigger, clear of the topbar clip
+            c.style.setProperty('left',Math.round(tr.left)+'px','important');
+            c.style.setProperty('top',Math.round(tr.bottom+4+(below-1)*20)+'px','important');
+          } else { c.style.removeProperty('left'); c.style.removeProperty('top'); }
         }
       });
     });

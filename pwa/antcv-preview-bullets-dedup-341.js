@@ -51,7 +51,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.40.341-prv-bullets2';
+  var VERSION = '1.40.341-prv-bullets3';
   if (window.__antcvPreviewBulletsDedup341 === VERSION) return;
   window.__antcvPreviewBulletsDedup341 = VERSION;
 
@@ -216,6 +216,30 @@
     return true;
   }
 
+  // v1.40.341-prv-bullets3 — only hide a template-only list when a real
+  // (non-placeholder) rendering exists to fall back to. The original code
+  // hid EVERY template-only list unconditionally, so an empty section (only
+  // the template, no real data yet) went blank. The module header always
+  // intended the sibling check ("a sibling editable-text span shows the
+  // same text"); this restores it. When the section is empty the template
+  // stays visible so the user can see and fill the placeholders.
+  function hasRealDataSibling(list) {
+    var node = list;
+    for (var depth = 0; depth < 4 && node; depth++) {
+      node = node.parentElement;
+      if (!node) break;
+      var spans = node.querySelectorAll('[data-antcv-editable-text="true"]');
+      for (var i = 0; i < spans.length; i++) {
+        var sp = spans[i];
+        if (list.contains(sp)) continue;
+        var t = clean(sp.textContent || '');
+        // Real content = non-empty AND not itself a [bracketed] placeholder.
+        if (t && !BRACKETED.test(t)) return true;
+      }
+    }
+    return false;
+  }
+
   function hideTemplateLists() {
     var paper = previewPaper();
     if (!paper) return;
@@ -224,6 +248,9 @@
       var list = lists[i];
       if (list.getAttribute('data-antcv-prv-bullets-hidden') === '1') continue;
       if (!isTemplateOnlyList(list)) continue;
+      // Keep the template visible when there is nothing real to show in its
+      // place — otherwise an empty section renders blank.
+      if (!hasRealDataSibling(list)) continue;
       list.style.setProperty('display', 'none', 'important');
       list.setAttribute('data-antcv-prv-bullets-hidden', '1');
       noteHidden();

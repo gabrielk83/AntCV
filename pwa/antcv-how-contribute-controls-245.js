@@ -5,7 +5,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.50.107-bullet-focus';
+  const VERSION='1.50.117-textarea-surface';
   let __applying=false; // v1.50.57: re-entrancy guard so our own DOM writes don't re-trigger the observer/flicker.
   const ALIGN_KEY='antcv.hiwc.alignment.v1';
   const PAGE_KEY='antcv:itemPages';
@@ -233,6 +233,10 @@
   }
   function renderBulletControls(r,ta){
     if(!ta||isInPreviewPaper(ta))return;
+    // The native textarea IS the edit surface — keep it visible. (Older builds
+    // ran renderBulletEditors, which hid it and injected <input>s that the React
+    // re-render storm kept wiping, so taps never stuck. Undo any leftover hide.)
+    if(ta.style.display==='none') ta.style.display='';
     const host=ta.parentNode; if(!host)return;
     let panel=host.querySelector(':scope > [data-antcv-hiwc-bullet-controls]');
     const sig=bulletSig(ta);
@@ -493,7 +497,7 @@
   }
 
   let pending=false;function runSoon(){if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;run();});}
-  function run(){if(isTypingInHiwc())return;try{const r=root();if(r){cleanupClosingHelperText(r);controlsForField(findIntro(r),'intro');controlsForField(findClosing(r),'closing');renderBulletEditors(r,findBulletsAny(r));}/* core CJLR cleanup handled by antcv-core-competencies-row-controls; do not prune across the whole Core section */ applyPreview();}catch(e){try{console.warn('[how-contribute-controls-245] failed:',e&&e.message);}catch(_){}}}
+  function run(){if(isTypingInHiwc())return;try{const r=root();if(r){cleanupClosingHelperText(r);controlsForField(findIntro(r),'intro');controlsForField(findClosing(r),'closing');const __ta=findBulletsAny(r);if(__ta){controlsForField(__ta,'bullets');}renderBulletControls(r,__ta);}/* core CJLR cleanup handled by antcv-core-competencies-row-controls; do not prune across the whole Core section */ applyPreview();}catch(e){try{console.warn('[how-contribute-controls-245] failed:',e&&e.message);}catch(_){}}}
   function start(){injectCss();run();[100,300,800,1600,3000].forEach(ms=>setTimeout(run,ms));try{new MutationObserver(()=>{if(__applying)return;runSoon();}).observe(document.body||document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style','value']});}catch(_){}window.addEventListener('input',runSoon,true);window.addEventListener('click',()=>setTimeout(run,0),true);window.addEventListener('antcv:sections-updated',()=>setTimeout(run,0));/* v1.50.57: blind setInterval(run,2000) removed — it was the flicker clock. Updates are now event-driven (sections-updated/input/click) plus a slow safety re-sync that no-ops when nothing changed. */setInterval(()=>{if(!__applying)run();},8000);}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
   window.AntcvHowContributeControls239={version:VERSION,run};

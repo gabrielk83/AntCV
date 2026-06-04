@@ -229,92 +229,126 @@ export function PackagePicker({ initialMode, context = 'personal' }: Props): JSX
         )}
       </div>
 
-      <div role="tablist" style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
-        {modes.map((m) => (
-          <button
-            key={m}
-            type="button"
-            role="tab"
-            aria-selected={mode === m}
-            onClick={() => setMode(m)}
-            style={{
-              flex: 1,
-              padding: '6px 8px',
-              borderRadius: 8,
-              background: mode === m ? 'rgba(1,183,187,.16)' : 'transparent',
-              border: '1px solid ' + (mode === m ? 'rgba(1,183,187,.55)' : 'rgba(255,255,255,.14)'),
-              color: '#e6eef3',
-              cursor: 'pointer',
-              fontWeight: mode === m ? 700 : 500,
-              fontSize: 12,
-              textTransform: 'uppercase',
-              letterSpacing: '.06em',
-            }}
-          >
-            {m === 'package' ? 'Package' : m === 'quickAlt' ? 'Quick alt.' : 'Custom'}
-          </button>
-        ))}
-      </div>
-
-      {mode === 'package' && (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill,minmax(170px,1fr))',
-            gap: 8,
-          }}
-        >
-          {PACKAGE_IDS.map((id) => (
-            <PackageCard key={id} id={id} active={!state.isCustom && id === state.packageId} onSelect={selectPackage} />
-          ))}
-        </div>
-      )}
-
-      {mode === 'quickAlt' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <span style={{ fontSize: 12, opacity: 0.7 }}>
-            Within the selected visual style (<strong>{pkg.displayName}</strong>). Two ready-made head/sidebar pairs are part of the package — picking one does not switch to Custom.
-          </span>
-          {(['default', 'alt1', 'alt2'] as QuickAlt[]).map((alt) => {
-            const isActive = state.quickAlt === alt && !state.isCustom;
-            const head = alt === 'default' ? pkg.primary : alt === 'alt1' ? pkg.alt1.head : pkg.alt2.head;
-            const sidebar = alt === 'default' ? pkg.base : alt === 'alt1' ? pkg.alt1.sidebar : pkg.alt2.sidebar;
-            const label = alt === 'default' ? 'Default' : alt === 'alt1' ? 'Alt 1' : 'Alt 2';
-            return (
+      {isLayout ? (
+        // The native STYLE PACKAGE buttons above already own package
+        // selection AND expose the ready-made quick-alternatives (the colour
+        // pairs shown on each button). This card must NOT re-implement that
+        // selector — it only explains the two within-package behaviours.
+        <LayoutNotes packageName={pkg.displayName} isCustom={state.isCustom} />
+      ) : (
+        <>
+          <div role="tablist" style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+            {modes.map((m) => (
               <button
-                key={alt}
+                key={m}
                 type="button"
-                onClick={() => selectQuickAlt(alt)}
-                aria-pressed={isActive}
+                role="tab"
+                aria-selected={mode === m}
+                onClick={() => setMode(m)}
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '8px 10px',
+                  flex: 1,
+                  padding: '6px 8px',
                   borderRadius: 8,
-                  background: isActive ? 'rgba(1,183,187,.14)' : 'rgba(255,255,255,.04)',
-                  border: '1px solid ' + (isActive ? 'rgba(1,183,187,.55)' : 'rgba(255,255,255,.14)'),
+                  background: mode === m ? 'rgba(1,183,187,.16)' : 'transparent',
+                  border: '1px solid ' + (mode === m ? 'rgba(1,183,187,.55)' : 'rgba(255,255,255,.14)'),
                   color: '#e6eef3',
                   cursor: 'pointer',
-                  textAlign: 'left',
+                  fontWeight: mode === m ? 700 : 500,
+                  fontSize: 12,
+                  textTransform: 'uppercase',
+                  letterSpacing: '.06em',
                 }}
               >
-                <Swatch color={head} ring={isActive} />
-                <Swatch color={sidebar} />
-                <span style={{ fontWeight: 650 }}>{label}</span>
-                <span style={{ marginLeft: 'auto', fontSize: 11, opacity: 0.65 }}>
-                  {head} / {sidebar}
-                </span>
+                {m === 'package' ? 'Package' : m === 'quickAlt' ? 'Quick alt.' : 'Custom'}
               </button>
-            );
-          })}
-        </div>
-      )}
+            ))}
+          </div>
 
-      {mode === 'custom' && (
-        <CustomPanel state={state} onChange={setState} />
+          {mode === 'package' && (
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill,minmax(170px,1fr))',
+                gap: 8,
+              }}
+            >
+              {PACKAGE_IDS.map((id) => (
+                <PackageCard key={id} id={id} active={!state.isCustom && id === state.packageId} onSelect={selectPackage} />
+              ))}
+            </div>
+          )}
+
+          {mode === 'quickAlt' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <span style={{ fontSize: 12, opacity: 0.7 }}>
+                Within the selected visual style (<strong>{pkg.displayName}</strong>). Two ready-made head/sidebar pairs are part of the package — picking one does not switch to Custom.
+              </span>
+              {(['default', 'alt1', 'alt2'] as QuickAlt[]).map((alt) => {
+                const isActive = state.quickAlt === alt && !state.isCustom;
+                const head = alt === 'default' ? pkg.primary : alt === 'alt1' ? pkg.alt1.head : pkg.alt2.head;
+                const sidebar = alt === 'default' ? pkg.base : alt === 'alt1' ? pkg.alt1.sidebar : pkg.alt2.sidebar;
+                const label = alt === 'default' ? 'Default' : alt === 'alt1' ? 'Alt 1' : 'Alt 2';
+                return (
+                  <button
+                    key={alt}
+                    type="button"
+                    onClick={() => selectQuickAlt(alt)}
+                    aria-pressed={isActive}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '8px 10px',
+                      borderRadius: 8,
+                      background: isActive ? 'rgba(1,183,187,.14)' : 'rgba(255,255,255,.04)',
+                      border: '1px solid ' + (isActive ? 'rgba(1,183,187,.55)' : 'rgba(255,255,255,.14)'),
+                      color: '#e6eef3',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <Swatch color={head} ring={isActive} />
+                    <Swatch color={sidebar} />
+                    <span style={{ fontWeight: 650 }}>{label}</span>
+                    <span style={{ marginLeft: 'auto', fontSize: 11, opacity: 0.65 }}>
+                      {head} / {sidebar}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {mode === 'custom' && (
+            <CustomPanel state={state} onChange={setState} />
+          )}
+        </>
       )}
     </section>
+  );
+}
+
+// Explanation-only body for the Layout subtab. No selectors — the native
+// STYLE PACKAGE buttons own selection and quick-alternatives.
+function LayoutNotes({ packageName, isCustom }: { packageName: string; isCustom: boolean }): JSX.Element {
+  const strong: React.CSSProperties = { color: '#cfe3ea', fontWeight: 650 };
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 12, opacity: 0.8 }}>
+      <p style={{ margin: 0 }}>
+        <span style={strong}>Quick alternatives.</span> Each package ships with ready-made head / sidebar colour
+        pairs — the swatches on the buttons above. Switching between them stays within{' '}
+        <strong>{packageName}</strong>; it does not become Custom.
+      </p>
+      <p style={{ margin: 0 }}>
+        <span style={strong}>Custom.</span> Editing a colour, font, or photo setting beyond the package&rsquo;s
+        range switches the style to Custom automatically. Pick a package above to return to its defaults.
+      </p>
+      {isCustom && (
+        <p style={{ margin: 0, opacity: 0.7 }}>
+          Your style is currently <strong>Custom</strong> — it has overrides outside <strong>{packageName}</strong>.
+        </p>
+      )}
+    </div>
   );
 }
 

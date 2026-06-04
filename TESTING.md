@@ -9,6 +9,7 @@ Canonical index for everything testable in the repo. Test files live next to the
 | Level | What | Where | Tooling |
 |---|---|---|---|
 | Unit | Banned-word detector, semantic-constraint matching, writing-style request parse, ATS glyph conversion, registry-drift guard | `workers/proxy/test/*.test.mjs` (40 tests, present) | node:test |
+| Unit | Import / personalInfo normalisation: dual-key cross-fill, upload-summary counts, experience→roles mapping, sidecar drift guard (IMPORT-001) | `pwa/test/unit/import-normalize.test.mjs` (18 tests, present) | node:test |
 | Unit | Token resolution, package switch, placeholder scrubber, wizard state machine | (Pass 1 + Pass 3 will populate; not present yet) | Vitest |
 | Integration | Proxy returns valid section after style swap; DOCX worker generates valid OOXML per package | (Pass 2 + Pass 3 will populate) | Vitest + xmllint |
 | Visual regression | Screenshot diff of each section × package, light + dark | (Pass 2 + Pass 5 will populate) | Playwright + pixelmatch |
@@ -77,6 +78,19 @@ and semantic-constraint contracts. They run in CI on every pull request (see
 below). When `writingSystems/registry.json` and the worker's inline copy drift,
 `registry-sync.test.mjs` fails before merge.
 
+### PWA — `pwa/test/unit/`
+
+`import-normalize.test.mjs` (18 `node:test` tests) exercises the IMPORT-001
+contract through `pwa/lib/import-normalize.js` — the canonical, tested copy of
+the import-mapping logic that today lives inline in two loaded sidecars
+(`antcv-upload-recount-339.js`, `antcv-data-importer.js`). It covers the dual-key
+cross-fill (`workHistory↔experience`, `publications↔publicationsStructured`), the
+upload-summary counts (the "0 work entries" symptom), and the experience→roles
+mapping, using the Anita persona JSON as a real fixture. The last two tests are a
+static drift guard: they read the two sidecar sources and fail if either stops
+encoding the same keys the module does. Run with `node --test pwa/test/unit/`.
+Pure logic, no DOM, no dependencies.
+
 ### CI lint + unit tests — `.github/workflows/deploy.yml`
 
 The `lint` job runs on every push, every pull request, and every
@@ -88,10 +102,11 @@ workflow_dispatch. It checks:
 
 It's a sanity guard, not a functional test. PRs cannot land if `lint` is red.
 
-Alongside it, the `unit-tests` job runs `node --test` in `workers/proxy/` on every
-push and pull request (Node 22, no install step — the suites have no dependencies).
-This is the first functional check wired into CI. A registry-drift or
-banned-list-contract regression fails the PR.
+Alongside it, the `unit-tests` job runs the pure-logic suites on every push and
+pull request (Node 22, no install step — the suites have no dependencies): the
+proxy writing-engine + registry-drift tests (`node --test` in `workers/proxy/`)
+and the PWA import/normalise tests (`node --test pwa/test/unit/*.test.mjs`). A
+registry-drift, banned-list-contract, or import-key regression fails the PR.
 
 ---
 

@@ -28,199 +28,201 @@ Branch: `claude/antcv-roadmap-bugs-L9Sqa`. Compiled 2026-06-04.
 | `FIXED✓` | Owner-confirmed working. |
 | `PROBE-GATED` | Diagnostic-first per CLAUDE.md: read-only probe must run before any patch. |
 
+**Next-action tags:** `[console]` needs a live browser/probe; `[code]` safe to do from source now; `[islands]` needs a Vite rebuild of `antcv-react-islands.js`; `[worker]` Cloudflare worker change; `[owner]` needs an owner decision; `[verify]` just confirm on live.
+
 ---
 
 # PART 1 — ACTIVE BUGS
 
 ## 1. Global requirements / Definition of Done (§3)
 
-| ID | Requirement | Status |
-|----|-------------|--------|
-| GEN-001 | Preview / DOCX / PDF parity | PARTIAL (enforced per-item) |
-| GEN-002 | Control locality (button affects only its owning item) | PARTIAL |
-| GEN-003 | Standard control order | PARTIAL — HIWC + Selected Outcomes reordered (1.50.120); Publications/Core/WIB still owed |
-| GEN-004 | No "Compress" wording; must say "Fit" | PARTIAL — runtime rewriters + HIWC/Outcomes source renamed (1.50.120); audit remaining surfaces |
-| GEN-005 | Edit persistence (survives blur, reopen, export) | PARTIAL |
-| GEN-006 | Controls visible (not clipped/hidden/h-scroll) | PARTIAL |
-| GEN-007 | Drag-and-drop parity with panel controls | OPEN |
-| GEN-008 | Accessible controls (deterministic tooltip + label) | PARTIAL |
-| GEN-009 | Preview utility visibility + responsive parity | OPEN |
-| GEN-010 | Status/validation severity clarity (warn=yellow, err=red) | VERIFYING (see VAL-001) |
-| GEN-011 | Generation captures source-table content, not only paragraphs | OPEN (see CL-006 / GEN-002b) |
+| ID | Requirement | Status | Next action |
+|----|-------------|--------|-------------|
+| GEN-001 | Preview / DOCX / PDF parity | PARTIAL | `[verify]` Enforced per-item; no standalone task — gate each fix against it. |
+| GEN-002 | Control locality | PARTIAL | `[console]` Audit any control that acts on the wrong item; covered per-area below. |
+| GEN-003 | Standard control order | PARTIAL | `[code]` Extend the 1.50.120 reorder to Publications + Core/WIB rows (after PP-003 risk check). |
+| GEN-004 | No "Compress"; say "Fit" | PARTIAL | `[code]` Grep all sidecars for user-facing "Compress" titles/labels; rename at source. |
+| GEN-005 | Edit persistence | PARTIAL | `[console]` Spot-check edits survive blur/reopen/export per area. |
+| GEN-006 | Controls visible (not clipped) | PARTIAL | `[console]` Roll up under PRV/PP/mobile items below. |
+| GEN-007 | Drag-and-drop parity | OPEN | `[console]` Tackle with CA-004 (insertion-point dnd). |
+| GEN-008 | Accessible tooltips/labels | PARTIAL | `[code]` Sweep button `title`/`aria-label` for "action + target" naming. |
+| GEN-009 | Preview utility responsive parity | OPEN | `[console]` Pair with PRV-001..003 + RESPONSIVE-001. |
+| GEN-010 | Validation severity clarity | VERIFYING | `[console]` Confirm VAL-001 consumer renders yellow/red on live. |
+| GEN-011 | Generation captures table content | OPEN | `[worker]` Same work as CL-006 / GEN-002b. |
 
 ## 2. Cover Letter (CL)
 
-| ID | Item | Sev | Status |
-|----|------|-----|--------|
-| CL-001 / VF-001 | Remove duplicated Preview action-button overlay (two 4-button groups) | — | OPEN |
-| CL-002 | Make Closure directly editable + persist | — | OPEN |
-| CL-003 / VF-002 | Model "How I Would Contribute" as Intro + per-bullet rows + Closing (+Add at end; closing never a bullet) | — | PARTIAL (editing shipped; full model owed) |
-| CL-004 / VF-003 | Attach one control group per Foundation textbox (not between textboxes) | — | OPEN |
-| CL-005 / VF-006 | Normalize CL body controls + add section-move button | — | PARTIAL (`cl-body-move-button-341` ☰ Move — VERIFYING) |
-| CL-006 / VF-017 | Capture table data in CL generation | — | OPEN |
-| CL-007 | HIWC bullets flicker on the cover letter (oscillate rendered ↔ kernel placeholders) | High | VERIFYING (idempotent repaint, 1.50.57) |
-| CL-HEADER-001 | "Application: [Role] — [Company]" header not editable in CL preview + wrong font/colour | High | PROBE-GATED (`antcv-cl-header-probe.js`; root: `wrapApplicationSentence` never attaches host on CL) |
-| CL-LAYOUT-002 | Constrain Application line to usable page width in Preview/PDF/DOCX | High | OPEN |
+| ID | Item | Status | Next action |
+|----|------|--------|-------------|
+| CL-001 / VF-001 | Remove duplicated Preview action-button overlay | OPEN | `[console]` Capture the two 4-button groups' DOM; remove the duplicate emitter. |
+| CL-002 | Closure directly editable + persist | OPEN | `[console]` Find Closure node; wrap editable + write-back store. |
+| CL-003 / VF-002 | Model HIWC as Intro + per-bullet rows + Closing | PARTIAL | `[code]` Finish per-bullet row model in `how-contribute-controls-245`; closing stays paragraph. |
+| CL-004 / VF-003 | One control group per Foundation textbox | OPEN | `[console]` Identify Foundation textboxes; attach a group to each. |
+| CL-005 / VF-006 | Normalize CL body controls + section-move | PARTIAL | `[console]` Verify `cl-body-move-button-341` ☰ Move fires on live; add ▶ first button. |
+| CL-006 / VF-017 | Capture table data in CL generation | OPEN | `[worker]` Feed WIB/table signals into CL generation prompt+payload. |
+| CL-007 | HIWC bullets flicker on CL | VERIFYING | `[console]` Confirm no oscillation on 1.50.57+; if persists, find 2nd repaint writer. |
+| CL-HEADER-001 | Application header not editable + wrong font/colour | PROBE-GATED | `[console]` Run `antcv-cl-header-probe.js`; fix `wrapApplicationSentence` attach on CL. |
+| CL-LAYOUT-002 | Constrain Application line to page width | OPEN | `[console]` Confirm overflow in export (not just preview), then wrap/clamp with parity. |
 
 ## 3. Page Break (PB) + export-preview
 
-| ID | Item | Status |
-|----|------|--------|
-| PB-001 | Manual break from BOTH main + sidebar updates state, page model, numbering, all outputs | PARTIAL (sidebar via `329`/1.50.115; main-area + on-entry control unverified) |
-| PB-002 | Break on first sub-subsection moves whole subsection to next page w/ original heading, no dup | OPEN |
-| PB-003 | Non-first sub-subsection duplicates heading + localized "Cont." 18pt from top | OPEN |
-| PB-004 / TB-002 | Table: first row moves whole table; later row splits + repeats headers | OPEN (per-row toggle TABLE-PAGEBREAK-001 PARKED — needs per-doc keying that reaches DOCX worker) |
-| PB-005 | Replace down-arrow icon + "Compress" text (semantic page glyph; "Fit") | VERIFYING (`page-break-icon-357`, `help-text-wording-357`, `row-controls-wording-341`) |
-| PB-006 / VF-018 | Preserve Professional Experience CONT pattern (reference) | OPEN (reference behaviour to keep) |
-| EXPORT-PAGE2-001 | Export preview shows only page 1 / breaks not applied | PROBE-GATED (`antcv-export-page2-probe.js`; worker engine passes smoke tests → defect in client `antcv-pdf-preview-gate.js` clone path) |
-| PDF-LAYOUT-001 | PDF page 2 shows stray Selected Outcomes heading before Professional Experience continuation | High · OPEN |
-| PAGEBREAK-002 | Break should show on entry + on natural A4 overflow, not only after pressing button | OPEN (add overflow probe to `284`) |
-| PAGEBREAK-005 | Cascade colour across ALL CV sections + CL (today only Professional Experience) | OPEN (extend `page-button-polish-327`) |
+| ID | Item | Status | Next action |
+|----|------|--------|-------------|
+| PB-001 | Manual break from main + sidebar → all outputs | PARTIAL | `[console]` Confirm whether break shows in preview vs only fails in export; close main-area path. |
+| PB-002 | First sub-subsection moves whole subsection, no dup | OPEN | `[console]` Repro on a sub-subsection; implement move-with-heading in page model. |
+| PB-003 | Continuation heading + "Cont." 18pt from top | OPEN | `[code]` Extend continuation-header render in `284`/`329` to all sections. |
+| PB-004 / TB-002 | Table: first row moves table; later row splits + repeats headers | OPEN | `[owner]` Scope per-doc-keyed row break reaching DOCX worker (TABLE-PAGEBREAK parked). |
+| PB-005 | Semantic page glyph + "Fit" wording | VERIFYING | `[verify]` Confirm no down-arrow / "Compress" on live; report any control the matcher misses. |
+| PB-006 / VF-018 | Preserve Professional Experience CONT pattern | OPEN | `[verify]` Reference behaviour — confirm it stays intact as PB work lands. |
+| EXPORT-PAGE2-001 | Export preview shows only page 1 | PROBE-GATED | `[console]` Run `antcv-export-page2-probe.js`; fix the `pdf-preview-gate` clone path. |
+| PDF-LAYOUT-001 | Stray Selected Outcomes heading on PDF page 2 | OPEN | `[console]` Reproduce in PDF; suppress orphan heading before Experience CONT. |
+| PAGEBREAK-002 | Break on entry + natural A4 overflow | OPEN | `[code]` Add A4-overflow measurement to `284` to auto-insert markers. |
+| PAGEBREAK-005 | Cascade colour across all CV sections + CL | OPEN | `[console]` Get CL button selectors live; extend cascade in `page-button-polish-327`. |
 
 ## 4. Watermark (WM)
 
-| ID | Item | Sev | Status |
-|----|------|-----|--------|
-| WM-001 / VF-004 | Anchor watermark to last-page corner, page-level not text flow | — | OPEN |
-| WM-002 | Avoid collision; lower corner by clearance | — | OPEN |
-| WM-003 | Text-only, no border/fill/shadow | Med | OPEN |
-| WM-004 | CL watermark page-anchored | High | OPEN |
-| WM-005 | PDF watermark last page only | High | OPEN |
+| ID | Item | Sev | Status | Next action |
+|----|------|-----|--------|-------------|
+| WM-001 / VF-004 | Anchor watermark to last-page corner (page-level) | — | OPEN | `[console]` Re-anchor to page box, not text flow; verify PDF+DOCX. |
+| WM-002 | Avoid collision; lower corner by clearance | — | OPEN | `[console]` Add corner clearance; do with WM-001. |
+| WM-003 | Text-only, no border/fill/shadow | Med | OPEN | `[code]` Strip border/fill/shadow from watermark style. |
+| WM-004 | CL watermark page-anchored | High | OPEN | `[console]` Same fix as WM-001 applied to CL. |
+| WM-005 | PDF watermark last page only | High | OPEN | `[console]` Restrict PDF watermark to final page. |
 
 ## 5. Candidate / Application / movement (CA)
 
-| ID | Item | Status |
-|----|------|--------|
-| CA-001 / VF-005 | Candidate Preview editing (spec line `[Specialisation — …]` editable) | PARTIAL (FIXED✓ for spec line via `341`; SPECIALISATION-EDIT-001 react-rendered line still owed) |
-| CA-002 | Application sentence sync (panel Role/Company ↔ rendered sentence, no dup label) | OPEN (see CL-HEADER-001) |
-| CA-003 / VF-006 | Section-move button on all movable rows (CL body, CV sidebar, CV main) | OPEN |
-| CA-004 / VF-007 | Precise insertion-point drag-and-drop (not drop-at-end) | OPEN |
-| CA-005 | Preserve destination styling/contrast after move + Restore | OPEN |
-| APP-SENTENCE-STYLE-001 | Application sentence doesn't follow chosen package style (e.g. Nordic=white) | OPEN (`candidate-preview-editor-341:334–350`) |
-| NAME-ALIGN-001 | Name renders left while CJLR control reads "center" | FIXED✓ (sidecar `name-align-fix` 1.1.0, passive CSS rule) |
+| ID | Item | Status | Next action |
+|----|------|--------|-------------|
+| CA-001 / VF-005 | Candidate Preview editing (spec line editable) | PARTIAL | `[console]` Wrap the React-rendered `[Specialisation — …]` line as editable (SPECIALISATION-EDIT-001). |
+| CA-002 | Application sentence sync (no dup label) | OPEN | `[console]` Resolve with CL-HEADER-001 probe + fix. |
+| CA-003 / VF-006 | Section-move on all movable rows | OPEN | `[console]` Add move button left of control group on CL body / CV sidebar / CV main. |
+| CA-004 / VF-007 | Precise insertion-point drag-and-drop | OPEN | `[console]` Capture drop logic; land at indicator, not end. |
+| CA-005 | Preserve destination styling + Restore | OPEN | `[console]` After-move style/contrast + Restore action. |
+| APP-SENTENCE-STYLE-001 | Sentence doesn't follow package style | OPEN | `[code]` Fix style copy in `candidate-preview-editor-341:334–350` fallback. |
+| NAME-ALIGN-001 | Name left vs CJLR "center" | FIXED✓ | `[verify]` Confirm Name follows CJLR on live. |
 
 ## 6. Tables / Selected Outcomes / Publications
 
-| ID | Item | Status |
-|----|------|--------|
-| TB-001 | Per-line CJLR on Core Competencies | OPEN |
-| TB-003 / VF-008 | Fix "What I Bring" help text; no "Compress"/down arrow | VERIFYING (`help-text-wording-357`) |
-| SO-001 / VF-009 | Add Page Break, CJLR, Enhance, Fit before Delete on each Selected Outcome row | PARTIAL (controls present; order fixed 1.50.120; Page-Break behaviour owed) |
-| SO-002 | New outcome rows identical | OPEN |
-| PP-001 / VF-010 | Expose hidden Publications controls in row layout | PARTIAL (`273` strict-row + `278` exclusion shipped; eye-leftmost / ✕-adjacent / ▲▼ visible owed) |
-| PP-002 | Single input acts on whole entry | OPEN |
-| PP-003 | HIGH-RISK; shared row-control model only; buttons row-anchored + stable in generation | PARTIAL (`pub-injected-reaper-352` — VERIFYING) |
-| PUB-ROW-MULTIROW-001 | `273` controls attach only to row 1; rows 2-3 show input+delete only | OPEN (re-check after loop fix) |
-| MERGED-MOVE-CONTROL-001 | Replace big up/down with compact stacked control across all list sub-subsections + drag-to-move reflected in preview | OPEN |
-| CL-BODY-CONTROLS-001 | CL Body rows missing the ▶ first button; ☰ "Move Greeting" handler doesn't work | OPEN |
+| ID | Item | Status | Next action |
+|----|------|--------|-------------|
+| TB-001 | Per-line CJLR on Core Competencies | OPEN | `[console]` Add per-line CJLR (fragile table zone — verify live). |
+| TB-003 / VF-008 | Fix "What I Bring" help text | VERIFYING | `[verify]` Confirm no "Compress"/down-arrow in WIB help on live. |
+| SO-001 / VF-009 | Selected Outcome row controls + order | PARTIAL | `[console]` Order fixed 1.50.120; verify each control acts + Page-Break behaviour. |
+| SO-002 | New outcome rows identical | OPEN | `[console]` Confirm added rows get the same control set. |
+| PP-001 / VF-010 | Expose hidden Publications controls | PARTIAL | `[console]` 273 grid→flex; eye-leftmost, ✕-adjacent, ▲▼ visible (needs prod/relay DOM). |
+| PP-002 | Single input acts on whole entry | OPEN | `[console]` Make one input drive the whole publication entry. |
+| PP-003 | HIGH-RISK shared row-control model | PARTIAL | `[console]` Confirm `pub-injected-reaper-352` removes stale buttons; no blind edits. |
+| PUB-ROW-MULTIROW-001 | Controls attach only to pub row 1 | OPEN | `[console]` Re-check after loop fix; debug per-row `wire()` if persists. |
+| MERGED-MOVE-CONTROL-001 | Compact stacked move control everywhere + drag | OPEN | `[code]` Replace big up/down with compact stacked control across list sub-subsections. |
+| CL-BODY-CONTROLS-001 | CL Body missing ▶; ☰ Move Greeting broken | OPEN | `[console]` Fix move handler wiring in `cl-body-move-button-341`; add ▶. |
 
 ## 7. Preview shell / routing / validation (PRV / AH / VAL)
 
-| ID | Item | Sev | Status |
-|----|------|-----|--------|
-| PRV-001 / VF-011 | Restore 3 desktop lower-right Preview utility buttons | — | OPEN |
-| PRV-002 / VF-012 | Restore Privacy + Fuse CL→CV desktop placement, no hidden dups | — | OPEN |
-| PRV-003 / VF-013 | PDF + DOCX buttons persistent in top Preview area, route-independent | — | OPEN |
-| PRV-004 / VF-015 | Loading status not click-dismissable while a job runs | — | OPEN |
-| PRV-005 | Circular buttons viewport-specific; mobile bottom-right kept | Med | VERIFYING (`mobile-fab-cleanup-351`) |
-| AH-001 / VF-014 / APPHIST-ZIDX-001 | "Open in Settings" Application-history opens BEHIND preview | — | PROBE-GATED — **owner reports STILL BROKEN** (blind ancestor-lift failed); run `antcv-apphist-zindex-probe.js` |
-| VAL-001 / VF-016 | Errors red, warnings yellow, distinct labels | — | VERIFYING (`validation-severity-341` + `-consumer-357`) |
+| ID | Item | Sev | Status | Next action |
+|----|------|-----|--------|-------------|
+| PRV-001 / VF-011 | Restore 3 desktop lower-right utility buttons | — | OPEN | `[console]` Identify missing buttons on desktop; restore placement. |
+| PRV-002 / VF-012 | Restore Privacy + Fuse desktop placement | — | OPEN | `[console]` Restore both circular buttons right side, no dups. |
+| PRV-003 / VF-013 | PDF+DOCX buttons persistent, route-independent | — | OPEN | `[console]` Make export buttons render regardless of route. |
+| PRV-004 / VF-015 | Loading status not click-dismissable | — | OPEN | `[code]` Block dismiss while a job is running. |
+| PRV-005 | Circular buttons viewport-specific | Med | VERIFYING | `[verify]` Confirm `mobile-fab-cleanup-351` placement on mobile+desktop. |
+| AH-001 / APPHIST-ZIDX-001 | "Open in Settings" opens BEHIND preview | — | PROBE-GATED | `[console]` **Owner: still broken.** Run `antcv-apphist-zindex-probe.js`, then targeted z-fix. |
+| VAL-001 / VF-016 | Errors red, warnings yellow | — | VERIFYING | `[verify]` Confirm severity colours on live Set-menu. |
 
 ## 8. Onboarding / import / language / wizard
 
-| ID | Item | Sev | Status |
-|----|------|-----|--------|
-| IMPORT-001 | Import reports 0 work entries despite valid JSON | High | PARTIAL (`upload-recount-339` + importer bridge + `pwa/lib/import-normalize.js` 18 tests; live verify + sidecar adoption owed) |
-| IMPORT-COUNT-001 | Upload extract count wrong (0 work/0 edu) — importer→personalInfo mapping | — | OPEN (app.js) |
-| LANG-001 | Settings vs top-bar language mismatch; fallback EN+DA, wizard source of truth | Med | OPEN |
-| ONBOARD-001 | Step 3B writing-register list not scrollable on mobile; Next unreachable | High | OPEN |
-| WIZARD-001 | Step 6b must be scrollable — Next button unreachable | — | OPEN (app.js) |
+| ID | Item | Sev | Status | Next action |
+|----|------|-----|--------|-------------|
+| IMPORT-001 | Import reports 0 work entries | High | PARTIAL | `[console]` Verify in-app import live; adopt `lib/import-normalize.js` inside sidecars. |
+| IMPORT-COUNT-001 | Upload extract count wrong | — | OPEN | `[console]` Fix importer→personalInfo mapping in app.js (root, not recount). |
+| LANG-001 | Settings vs top-bar language mismatch | Med | OPEN | `[console]` Make wizard source of truth; fallback EN+DA. |
+| ONBOARD-001 | Step 3B not scrollable on mobile | High | OPEN | `[console]` Identify the step-3B list element; add dvh-safe scroll + reachable Next. |
+| WIZARD-001 | Step 6b not scrollable | — | OPEN | `[console]` Add max-height/overflow to the wizard card (needs stable selector). |
 
 ## 9. Generation content + generation UI (§14.2)
 
-| ID | Item | Sev | Status |
-|----|------|-----|--------|
-| GEN-001b | Kernel generation leaves major CV sections empty/underfilled; add unsolicited fallback + warnings | High | OPEN |
-| GEN-002b / VF-017 | CL generation drops What I Bring table signals + Why This Position bullets | High | OPEN |
-| GEN-UI-001 | Redundant Enhance/Fit buttons under generation Cancel action | Med | OPEN |
-| GEN-UI-002 | Time estimate too optimistic; almost-done shown too early (use ~4 min) | Med | OPEN |
-| GEN-UI-003 | Repeated/endless Fit controls under "Cancel & return to editor"; hard render guard when generation view active | High | OPEN |
+| ID | Item | Sev | Status | Next action |
+|----|------|-----|--------|-------------|
+| GEN-001b | Kernel leaves CV sections empty/underfilled | High | OPEN | `[worker]` Add unsolicited fallback + warnings to kernel generation. |
+| GEN-002b / VF-017 | CL drops WIB table signals + Why-This-Position bullets | High | OPEN | `[worker]` Capture table signals in CL generation. |
+| GEN-UI-001 | Redundant Enhance/Fit under Cancel | Med | OPEN | `[code]` Suppress row controls in the generation/cancel view. |
+| GEN-UI-002 | Time estimate too optimistic | Med | OPEN | `[console]` Default estimate to ~4 min; delay almost-done messaging. |
+| GEN-UI-003 | Endless Fit controls under Cancel & return | High | OPEN | `[code]` Hard render guard when generation view active. |
 
 ## 10. Layout / export / responsive
 
-| ID | Item | Sev | Status |
-|----|------|-----|--------|
-| LAYOUT-001 | Sidebar background does not extend to page bottom in Preview/PDF/DOCX | High | OPEN |
-| EXPORT-001 | Missing download-start indicator for PDF/DOCX export | Med | OPEN |
-| EXPORT-002 | PDF export fails; needs visible recovery + retry; must not corrupt current doc | Critical | OPEN |
-| RESPONSIVE-001 | Mobile Preview loads desktop split-pane; Section/Analysis/Preview must be mobile bottom modes | High | OPEN |
-| DOCX-EXPORT-REGRESSION-001 | DOCX export wired to preview-panel button only; print-setup view doesn't fire it | High | PARTIAL (`pdf-preview-gate` 1.50.90 hardened to find button or call worker directly — VERIFYING; root re-wire is app.js) |
+| ID | Item | Sev | Status | Next action |
+|----|------|-----|--------|-------------|
+| LAYOUT-001 | Sidebar background doesn't reach page bottom | High | OPEN | `[console]` Extend sidebar fill to page box in Preview/PDF/DOCX. |
+| EXPORT-001 | No download-start indicator | Med | OPEN | `[code]` Show a start indicator on PDF/DOCX export click. |
+| EXPORT-002 | PDF export fails; needs recovery | Critical | OPEN | `[console]` Reproduce failure; add visible retry without corrupting doc. |
+| RESPONSIVE-001 | Mobile loads desktop split-pane | High | OPEN | `[console]` Route mobile Preview to bottom-mode layout. |
+| DOCX-EXPORT-REGRESSION-001 | Print-setup export doesn't fire DOCX | High | PARTIAL | `[console]` Verify 1.50.90 gate path on live; re-wire print-setup handler in app.js. |
 
 ## 11. Profile photo (PHOTO) — largely shipped, export verify owed
 
-| ID | Item | Sev | Status |
-|----|------|-----|--------|
-| PHOTO-001 | Pentagon shape, full Preview/DOCX/PDF parity | High | SHIPPED 1.50.56 (verify export) |
-| PHOTO-002 | Shape round-trip fix (DOCX no longer forces circle) | High | SHIPPED 1.50.56 (verify export) |
-| PHOTO-003 | Pentagon contour follows all five edges | Med | PARTIAL (preview/PDF shipped 1.50.57; downloaded DOCX stroke unverified) |
-| PHOTO-004 | Photo shape persists + restores from cloud | Med | SHIPPED (verify) |
-| PHOTO-005 | Pentagon swatch glyph in package picker | Low | SHIPPED 1.50.57 |
-| PHOTO-PLACEMENT-001 | Only sidebar photo positions render; header/main/bridge are no-ops | — | OPEN (app.js render gap) |
+| ID | Item | Sev | Status | Next action |
+|----|------|-----|--------|-------------|
+| PHOTO-001 | Pentagon shape parity | High | SHIPPED | `[verify]` Export pentagon from a rendered preview; DOCX geometry matches. |
+| PHOTO-002 | Shape round-trip fix | High | SHIPPED | `[verify]` Export each shape; DOCX not forced to circle. |
+| PHOTO-003 | Pentagon contour all five edges | Med | PARTIAL | `[verify]` Confirm 5-edge stroke in the downloaded Word DOCX. |
+| PHOTO-004 | Shape persists + restores | Med | SHIPPED | `[verify]` Reload + fresh export keeps the shape. |
+| PHOTO-005 | Pentagon swatch glyph | Low | SHIPPED | `[verify]` Picker swatch shows pentagon. |
+| PHOTO-PLACEMENT-001 | Non-sidebar placements are no-ops | — | OPEN | `[console]` Implement header/main/bridge placements in app.js render. |
 
 ## 12. Performance / re-render loop
 
-| ID | Item | Sev | Status |
-|----|------|-----|--------|
-| HIWC-RERENDER-LOOP-001 | Coupled-oscillator re-render storm (~50 body-observing sidecars) | High | PARTIAL — rounds 1-7 idempotency fixes shipped; loop-damper REVERTED (1.50.89); residual rAF remains |
-| RERENDER-STORM-001 | `requestAnimationFrame` violation flood (root of HIWC churn + perf drain) | High | OPEN (needs mutation-source probe) |
-| PERF-001 | Long main-thread handlers on export/preview path (`click` 4-11s) | Med | OPEN (not root-caused) |
+| ID | Item | Sev | Status | Next action |
+|----|------|-----|--------|-------------|
+| HIWC-RERENDER-LOOP-001 | Coupled-oscillator re-render storm | High | PARTIAL | `[console]` Re-run rAF + mutation-source probes; gate the residual emitter at source. |
+| RERENDER-STORM-001 | rAF violation flood | High | OPEN | `[console]` Run mutation-source probe to name the pump (HIGH value). |
+| PERF-001 | Long export/preview handlers (4-11s) | Med | OPEN | `[console]` Profile one export click; defer iframe build off the click thread. |
 
 ## 13. Settings panel / visual package (mostly APP.JS / React islands)
 
-| ID | Item | Status |
-|----|------|--------|
-| VISUAL-PKG-001 | Rename app.js panel "STYLE PACKAGE" → "Visual package" | OPEN (fold into MERGE-DUP) |
-| VISUAL-PKG-002 | Each package button shows icons + enabled functionality (palette/font/shape/photo size) | OPEN (PackagePicker island) |
-| VISUAL-PKG-003 | Move "Segoe UI · circle · 120px" descriptor next to Alt circles; Alt keeps head/sidebar-pair fn | PARTIAL (caption aligned; descriptor relocation pending) |
-| MERGE-DUP-001 | Merge two Writing-style selects into one (keep new engine) | OPEN (needs live probe + owner decision on which engine wins) |
-| MERGE-DUP-002 | Merge duplicate Preferred-tone/Tone-chips; split run-on chip | PARTIAL (`dedup-341` splits run-on) |
-| MERGE-DUP-003 | Merge "save tones" into "save customs" | OPEN |
-| SETTINGS-HEAD-001 | Unify settings headlines to collapsible "▸" style; Languages after WRITING STYLE | PARTIAL (placement shipped 1.50.95 — VERIFYING) |
-| SECTION-LAYOUT-001 | Move Section layout below Writing styles; collapsible, collapsed by default; refresh on style change | PARTIAL (placement shipped; collapsible/refresh owed) |
-| LOCATION-001 | Remove combined Location input; add Location + City that load/write user data | OPEN (app.js) |
-| DEMO-WARN-001 | Demo user shouldn't see "⚠ Setup needed" when demo config valid | OPEN |
-| PRIVACY-SETTINGS-001 | Privacy 🛡 FAB hidden in Settings view | VERIFYING (sticky back-off) |
-| PRIVACY-FAB-FLICKER-001 | Privacy pill background "bleeps" | FIXED✓ (1.50.84 CSS-passive) |
+| ID | Item | Status | Next action |
+|----|------|--------|-------------|
+| VISUAL-PKG-001 | Rename "STYLE PACKAGE" → "Visual package" | OPEN | `[code]` Relabel app.js text node; fold into MERGE-DUP pass. |
+| VISUAL-PKG-002 | Package buttons show icons + enabled fn | OPEN | `[islands]` Enrich PackagePicker buttons. |
+| VISUAL-PKG-003 | Move descriptor next to Alt circles | PARTIAL | `[islands]` Relocate "Segoe UI · circle · 120px" descriptor. |
+| MERGE-DUP-001 | Merge two Writing-style selects | OPEN | `[owner]` Decide which engine wins; then live probe + bridge. |
+| MERGE-DUP-002 | Merge tone-chip sections; split run-on chip | PARTIAL | `[console]` Confirm `dedup-341` split on live; merge the sections. |
+| MERGE-DUP-003 | Merge "save tones" into "save customs" | OPEN | `[islands]` Unify on `saveCurrentAsSlot`/`loadSlot`. |
+| SETTINGS-HEAD-001 | Unify headlines to "▸" style; Languages placement | PARTIAL | `[verify]` Confirm 1.50.95 placement; collapsible headline style owed. |
+| SECTION-LAYOUT-001 | Section layout collapsible/collapsed; refresh on style change | PARTIAL | `[islands]` Add collapse + refresh-on-style-change to LayoutPicker. |
+| LOCATION-001 | Replace combined Location with Location + City | OPEN | `[console]` app.js: split fields, load/write user data, relabel city. |
+| DEMO-WARN-001 | Hide "⚠ Setup needed" when demo valid | OPEN | `[console]` Gate badge on a demo-valid signal. |
+| PRIVACY-SETTINGS-001 | Hide Privacy FAB in Settings | VERIFYING | `[verify]` Confirm FAB hidden in Settings on live. |
+| PRIVACY-FAB-FLICKER-001 | Privacy pill background bleeps | FIXED✓ | `[verify]` Confirm no bleep on live. |
 
 ## 14. Mobile / top-bar (this engagement — VERIFYING)
 
-| ID | Item | Status |
-|----|------|--------|
-| MOB-TOPBAR-001 | Hide Ant icon + leftover table control on mobile | VERIFYING (1.50.112) |
-| MOB-TOPBAR-002 | Privacy pill clipped — single-row topbar, crop filename | VERIFYING (1.50.114-115) |
-| MOB-ALT-001/002 | Alt-circles → tap-to-open dropdown, opens downward, escapes clip | VERIFYING (1.50.113/116) |
-| MOB-BOTTOMNAV-001 | Bottom-nav buttons clipped — shrink on mobile | VERIFYING (1.50.108) |
-| HIWC-EDIT-001/002/003 | HIWC bullets editable on mobile; strip on own row; wrap row | FIXED✓ (owner-confirmed, 1.50.117-119) |
-| MOBILE-FUSE-001 | Fuse (🔀) not visible in mobile bottom panel | OPEN |
-| MOBILE-TABLEWIDTH-001 | Hide table-width controls entirely on mobile | OPEN |
-| MOBILE-EXTRACTION-001 | Document-Extraction button hovers in grey area on mobile — re-anchor | OPEN |
-| LABEL-HISTORY-001 | Rename top-bar "Application history" → "History" | FIXED✓ (`antcv-label-history.js`) |
+| ID | Item | Status | Next action |
+|----|------|--------|-------------|
+| MOB-TOPBAR-001 | Hide Ant icon + table control on mobile | VERIFYING | `[verify]` Confirm hidden on mobile. |
+| MOB-TOPBAR-002 | Privacy pill clipped; single-row topbar | VERIFYING | `[verify]` Confirm pill visible, filename cropped. |
+| MOB-ALT-001/002 | Alt-circles dropdown, opens down, escapes clip | VERIFYING | `[verify]` Confirm dropdown opens downward unclipped. |
+| MOB-BOTTOMNAV-001 | Bottom-nav buttons clipped | VERIFYING | `[verify]` Confirm all controls visible on narrow viewport. |
+| HIWC-EDIT-001/002/003 | HIWC editable on mobile; strip own row; wrap | FIXED✓ | — Done (owner-confirmed). |
+| MOBILE-FUSE-001 | Fuse not visible in mobile bottom panel | OPEN | `[console]` Surface 🔀 in mobile bottom panel. |
+| MOBILE-TABLEWIDTH-001 | Table-width controls partly visible on mobile | OPEN | `[code]` Hide table-width controls entirely on mobile. |
+| MOBILE-EXTRACTION-001 | Extraction button hovers in grey area | OPEN | `[console]` Re-anchor the document-Extraction button on mobile. |
+| LABEL-HISTORY-001 | Rename "Application history" → "History" | FIXED✓ | `[verify]` Confirm top-bar label. |
 
 ---
 
 # PART 2 — PLANNED FEATURES (net-new, beyond bug-fixing)
 
-| ID | Feature | Layers | Status / notes |
-|----|---------|--------|----------------|
-| **FEATURE-CONF-001** | Per-sentence **confidence visualization** in the Application tab. Toggle (default OFF); ON tints sentences red=low / yellow=medium, hover shows issue + score. Preview-only, never serialised to DOCX/PDF. | WORKER + APP.JS + UI | **Design decided:** confidence is emitted **as part of the existing analysis pass** (`workers/demo-proxy/src/jd-analysis.js`), reusing its anti-fabrication / `grounded` logic — not a separate self-check call. Proposed contract: `document_confidence: [{doc, section_id, idx, text, confidence:0..1, issue}]`. Blind-safe parts (analysis schema+normalize+unit test, and the renderer+toggle) buildable now; prompt behaviour + app.js persistence need a live run. NOT in the locked docs — owner to decide whether it becomes a Writing-System "Verification / confidence" section. |
-| **DATA-EXPORT-001** | Personal menu: download stored data + personal analytics to a protected file. | APP.JS | Registered. Serialize `personalInfo`/`writingPrefs`/analytics localStorage keys to a JSON blob; "protected" = clear filename + optional WebCrypto passphrase encryption (confirm with owner whether encryption is required). |
-| **DELETE-SAVE-001** | In the erase ("Are you sure?") flow, add "Save my data locally first" checkbox that triggers DATA-EXPORT-001 before `AntcvFullErase`. | APP.JS | Registered; shares the export serializer with DATA-EXPORT-001. |
-| **WIZARD-002** | Add a missing wizard Step 6d: default-languages selection + inform user about Personal / Layout / Advanced-Style panels. | APP.JS | Registered (new wizard step). |
-| **PHOTO-PLACEMENT-001** | Implement non-sidebar photo placements (header-left/right, main-left/right, sidebar-bridge) in the preview render. | APP.JS | Registered — `format-prefs` only stores the pref; render lives in app.js (honours sidebar positions only today). |
+| ID | Feature | Layers | Status | Next action |
+|----|---------|--------|--------|-------------|
+| **FEATURE-CONF-001** | Per-sentence confidence overlay in Application tab (toggle default OFF; red=low/yellow=med; hover=issue+score; preview-only). | WORKER + APP.JS + UI | DESIGNED | `[owner]` Confirm it becomes a Writing-System "Verification/confidence" section + the data contract. Then: `[worker/code]` extend `jd-analysis.js` schema+`normalize()` for `document_confidence` (+ unit test) and `[code]` build renderer+toggle; `[console]` wire app.js persistence + verify model scores. |
+| **DATA-EXPORT-001** | Personal menu: download stored data + analytics to a protected file. | APP.JS | REGISTERED | `[owner]` Confirm whether encryption is required (vs plain JSON). Then `[console]` serialize personalInfo/writingPrefs/analytics keys to a download. |
+| **DELETE-SAVE-001** | Erase flow: "Save my data locally first" checkbox → triggers DATA-EXPORT-001 before erase. | APP.JS | REGISTERED | `[console]` Add checkbox to the red confirm card; share the export serializer. |
+| **WIZARD-002** | New wizard Step 6d: default-languages + inform about Personal/Layout/Advanced panels. | APP.JS | REGISTERED | `[console]` Author the new step in the app.js wizard. |
+| **PHOTO-PLACEMENT-001** | Implement non-sidebar photo placements (header/main/bridge) in preview render. | APP.JS | REGISTERED | `[console]` Implement the non-sidebar placements in app.js render path. |
 
 ---
 
-# PART 3 — Shipped this engagement (context; live acceptance still owed except FIXED✓)
+# PART 3 — Shipped this engagement (context; live acceptance owed except FIXED✓)
 
 - **GEN-003 + GEN-004** standard control order + "Fit" wording at source — HIWC + Selected Outcomes (1.50.120, VERIFYING).
 - **357 sidecars:** validation-severity-consumer (VAL-001), help-text-wording (PB-005/TB-003), page-break-icon (PB-005/GEN-003).

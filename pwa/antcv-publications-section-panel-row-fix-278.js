@@ -266,6 +266,21 @@
     var unclassified = [];
     for (var i = 0; i < rowButtons.length; i++) {
       var b = rowButtons[i];
+      // v1.40.278-excl273: EXCLUSION-ONLY. 278 is for the section-HEADER
+      // card row only. The strict-row-layout sidecar (273) owns the
+      // per-item editor rows (name + journal inputs + their eye/delete/move/
+      // page/cjlr/compress/enhance controls). Re-classifying a 273-owned
+      // per-item button stamped it kind=on/del at order 50/60, fighting
+      // 273's order 40/50 and breaking the per-item row layout (blank gap,
+      // mis-placed eye/delete). Skip anything 273 manages — never broadens
+      // 278's scope, only narrows it.
+      if (b.hasAttribute('data-antcv-pub273-eye') ||
+          b.hasAttribute('data-antcv-pub273-delete') ||
+          b.hasAttribute('data-antcv-pub273-move') ||
+          b.hasAttribute('data-antcv-pub273-control') ||
+          (b.closest && b.closest('[data-antcv-pub273-row="1"]'))) {
+        continue;
+      }
       var k = classify(b);
       if (k && !byKind[k]) {
         byKind[k] = b;

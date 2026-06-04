@@ -56,7 +56,7 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.50.96-cl-inline-yield';
+  var SCRIPT_VERSION = '1.50.97-cl-skip';
   if (window.__antcvWatermarkPageAnchor341 === SCRIPT_VERSION) return;
   window.__antcvWatermarkPageAnchor341 = SCRIPT_VERSION;
 
@@ -172,6 +172,10 @@
   function tick() {
     var paper = findPreviewPaper();
     if (!paper) return;
+    // v1.50.97 — in the cover letter the CL inline sidecar owns the notice
+    // (hides this watermark via CSS, renders its own on the signature row).
+    // Do nothing here so we never move/clone the React watermark in the CL.
+    try { if (document.body && document.body.classList.contains('antcv-cl-doc')) return; } catch (_) {}
     var watermarks = findWatermarks(paper);
     if (!watermarks.length) return;
     var pageBoxes = findPageBoxes(paper);
@@ -188,10 +192,6 @@
     for (var i = 0; i < watermarks.length; i++) {
       var wm = watermarks[i];
       if (!wm.isConnected) continue;
-      // v1.50.96 — the cover-letter inline sidecar (antcv-cl-ai-notice-inline)
-      // takes this watermark over and places it on the signature row. Leave any
-      // watermark it has claimed alone so the two don't fight.
-      if (wm.getAttribute('data-antcv-cl-inline') === '1') { anchored = wm; continue; }
       if (lastPage.contains(wm) && !anchored) {
         unhideWatermark(wm);
         try {

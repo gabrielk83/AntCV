@@ -194,9 +194,9 @@ export function PackagePicker({ initialMode, context = 'personal' }: Props): JSX
     <section
       data-antcv-react-island="package-picker"
       style={{
-        marginTop: 16,
+        marginTop: isLayout ? 8 : 16,
         borderTop: '1px dashed rgba(255,255,255,.14)',
-        paddingTop: 10,
+        paddingTop: isLayout ? 6 : 10,
         color: '#d7e6ee',
       }}
     >
@@ -333,19 +333,16 @@ export function PackagePicker({ initialMode, context = 'personal' }: Props): JSX
 function LayoutNotes({ packageName, isCustom }: { packageName: string; isCustom: boolean }): JSX.Element {
   const strong: React.CSSProperties = { color: '#cfe3ea', fontWeight: 650 };
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 12, opacity: 0.8 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 11, lineHeight: 1.4, opacity: 0.7 }}>
       <p style={{ margin: 0 }}>
-        <span style={strong}>Quick alternatives.</span> Each package ships with ready-made head / sidebar colour
-        pairs — the swatches on the buttons above. Switching between them stays within{' '}
-        <strong>{packageName}</strong>; it does not become Custom.
+        <span style={strong}>Quick alt:</span> ready-made colour pairs within {packageName} — stays on the package.
       </p>
       <p style={{ margin: 0 }}>
-        <span style={strong}>Custom.</span> Editing a colour, font, or photo setting beyond the package&rsquo;s
-        range switches the style to Custom automatically. Pick a package above to return to its defaults.
+        <span style={strong}>Custom:</span> set automatically when you edit beyond the package&rsquo;s range.
       </p>
       {isCustom && (
-        <p style={{ margin: 0, opacity: 0.7 }}>
-          Your style is currently <strong>Custom</strong> — it has overrides outside <strong>{packageName}</strong>.
+        <p style={{ margin: 0, opacity: 0.85 }}>
+          Now <strong>Custom</strong> — overrides outside {packageName}.
         </p>
       )}
     </div>

@@ -77,9 +77,11 @@ function ensureMountContainer(settingsRoot: HTMLElement): HTMLElement {
 // rides on top of app.js's own buttons without owning their click wiring;
 // idempotent via DECO_ATTR and re-applied by the observer if app.js repaints.
 
-function shapeGlyphSvg(shape: string, color: string, size = 12): string {
+function shapeGlyphSvg(shape: string, color: string, size = 16): string {
   const half = size / 2;
-  const common = `fill="rgba(255,255,255,.10)" stroke="${color}" stroke-width="1.3"`;
+  // Filled silhouette in the package's primary colour with a light outline —
+  // far more distinguishable at a glance than a thin same-colour stroke.
+  const common = `fill="${color}" fill-opacity="0.9" stroke="rgba(255,255,255,.85)" stroke-width="1.4"`;
   let inner: string;
   switch (shape) {
     case 'square':
@@ -128,9 +130,13 @@ function decorateNativePackageButtons(settingsRoot: HTMLElement): void {
     const strip = document.createElement('span');
     strip.setAttribute(DECO_ATTR, '1');
     strip.style.cssText = 'display:flex;align-items:center;gap:3px;margin-top:5px';
+    // Hover / long-press tooltip explaining the row.
+    strip.title =
+      `${pkg.displayName} — palette swatches: base, primary, interactive, bullet, glyph. ` +
+      `Right glyph = profile-photo shape (${pkg.shape}).`;
     strip.innerHTML =
       swatch(pkg.base) + swatch(pkg.primary) + swatch(pkg.interactive) + swatch(pkg.bullet) + swatch(pkg.glyph) +
-      '<span style="width:3px"></span>' + shapeGlyphSvg(pkg.shape, pkg.primary, 12);
+      '<span style="width:4px"></span>' + shapeGlyphSvg(pkg.shape, pkg.primary, 16);
 
     // Stack the name over the swatch strip without disturbing the native pill.
     btn.style.display = 'flex';

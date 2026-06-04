@@ -100,6 +100,8 @@ jobs:
           node --test
       - name: PWA import/normalise unit tests + sidecar drift guard
         run: node --test pwa/test/unit/*.test.mjs
+      - name: DOCX worker palette + registry-drift unit tests
+        run: node --test workers/docx-worker/test/palette.test.mjs
 
   deploy-pwa:
     needs: lint

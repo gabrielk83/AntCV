@@ -573,7 +573,7 @@ ${inlineStyles}
       sections: j('sections', { cv: [], cl: [] }),
       meta: j('meta', {}),
       doc: doc,
-      photo: pi.photo || s('antcv_photo', null) || null,
+      photo: pi.photo || j('photo', null) || s('antcv_photo', null) || null,
       personalInfo: pi,
       styleConfig: pi.customStyleConfig || undefined,
       fontSizes: pi.fontSizes || undefined,

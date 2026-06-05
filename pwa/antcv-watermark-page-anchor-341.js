@@ -56,7 +56,7 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.50.127-debox';
+  var SCRIPT_VERSION = '1.50.140-wm-unify';
   if (window.__antcvWatermarkPageAnchor341 === SCRIPT_VERSION) return;
   window.__antcvWatermarkPageAnchor341 = SCRIPT_VERSION;
 
@@ -159,6 +159,15 @@
     watermark.style.setProperty('padding', '0', 'important');
     watermark.style.setProperty('border-radius', '0', 'important');
     watermark.style.setProperty('max-width', 'none', 'important');
+    // WM-002 (owner): adapt text colour to the corner's background. Over the
+    // navy sidebar use a light colour (the muted teal is unreadable on navy);
+    // over the white main column keep the muted teal.
+    var sidebarSide = 'left';
+    try {
+      var sp = localStorage.getItem('sidebarPosition');
+      if (sp) { try { var pp = JSON.parse(sp); if (typeof pp === 'string') sp = pp; } catch (_) {} sidebarSide = (String(sp).toLowerCase() === 'right') ? 'right' : 'left'; }
+    } catch (_) {}
+    watermark.style.setProperty('color', (corner === sidebarSide) ? 'rgba(255,255,255,0.78)' : 'rgba(0,116,110,0.72)', 'important');
   }
 
   function hideWatermark(wm) {
@@ -181,10 +190,6 @@
   function tick() {
     var paper = findPreviewPaper();
     if (!paper) return;
-    // v1.50.97 — in the cover letter the CL inline sidecar owns the notice
-    // (hides this watermark via CSS, renders its own on the signature row).
-    // Do nothing here so we never move/clone the React watermark in the CL.
-    try { if (document.body && document.body.classList.contains('antcv-cl-doc')) return; } catch (_) {}
     var watermarks = findWatermarks(paper);
     if (!watermarks.length) return;
     var pageBoxes = findPageBoxes(paper);

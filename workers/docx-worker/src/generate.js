@@ -616,16 +616,9 @@ function buildAiDisclosureHangingTextbox(ctx, opts) {
     })],
   };
   if (isSidebar) {
-    // CV sidebar: keep the bordered chip on the dark navy cell (owner's
-    // CL-only de-box request does not apply to the CV sidebar look).
-    para.border = {
-      top:    { color: borderColor, space: 2, style: BorderStyle.SINGLE, size: 4 },
-      bottom: { color: borderColor, space: 2, style: BorderStyle.SINGLE, size: 4 },
-      left:   { color: borderColor, space: 4, style: BorderStyle.SINGLE, size: 4 },
-      right:  { color: borderColor, space: 4, style: BorderStyle.SINGLE, size: 4 },
-    };
-    // Small symmetric indent inside the sidebar so the box doesn't
-    // touch the cell margins.
+    // CV sidebar: TEXT-ONLY now (owner 2026-06-05: no bounding box for CV or
+    // CL). Light text colour (C8D0DC) reads on the navy cell; small symmetric
+    // indent so it doesn't touch the cell margins. No border.
     para.indent = { left: 120, right: 120 };
   } else {
     // Linear/CL (owner WM request): a TEXT-ONLY marker — no bounding box,

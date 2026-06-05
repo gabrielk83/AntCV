@@ -21,7 +21,7 @@
 (function () {
   'use strict';
   if (window.__antcvClAiNoticeInline) return;
-  window.__antcvClAiNoticeInline = '1.50.136';
+  window.__antcvClAiNoticeInline = '1.50.140-off';
 
   var NOTICE = {
     en: 'AI-assisted',
@@ -141,6 +141,19 @@
   }
 
   function tick() {
+    // v1.50.140: DISABLED — watermark handling unified into
+    // antcv-watermark-page-anchor-341, which now de-boxes + anchors the CL
+    // watermark (text colour adapted over the navy sidebar). This sidecar's own
+    // span was landing at Foundation (the redundant 2nd watermark). Clean up any
+    // span we created + un-hide any watermark we hid, then no-op.
+    try {
+      var __sp = document.querySelector('[data-antcv-cl-ai-notice]');
+      if (__sp && __sp.parentNode) __sp.parentNode.removeChild(__sp);
+      var __w = document.querySelectorAll('.antcv-ai-document-watermark, [data-antcv-watermark], [data-antcv-ai-disclosure]');
+      for (var __i = 0; __i < __w.length; __i++) { if (__w[__i].style && __w[__i].style.display === 'none') __w[__i].style.removeProperty('display'); }
+    } catch (_) {}
+    return;
+    // --- below is retired (unreachable) ---
     injectCss();
     setDocClass();
     var existing = document.querySelector('[data-antcv-cl-ai-notice]');

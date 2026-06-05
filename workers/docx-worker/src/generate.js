@@ -1195,6 +1195,7 @@ const PHOTO_POSITIONS = new Set([
   'sidebar-top', 'sidebar-bottom',
   'header-left', 'header-right',
   'main-left', 'main-right',
+  'band-overlap',
   'hidden',
 ]);
 
@@ -1230,10 +1231,15 @@ function buildPhotoParagraph(ctx, position) {
 
   // For sidebar variants: classic centred inline image, used directly
   // as a top-or-bottom paragraph in the sidebar cell.
-  if (pos === 'sidebar-top' || pos === 'sidebar-bottom') {
+  if (pos === 'sidebar-top' || pos === 'sidebar-bottom' || pos === 'band-overlap') {
+    // band-overlap ("sidebar bridge"): the preview straddles the photo across
+    // the header-band/sidebar seam. A literal straddle needs a floating frame,
+    // which LibreOffice/CloudConvert drop during PDF conversion (the v1.14.0
+    // photo-floating regression). The faithful PDF-safe mapping is the TOP of
+    // the sidebar with zero top spacing so the disc hugs the band seam.
     return new Paragraph({
       alignment: AlignmentType.CENTER,
-      spacing: { before: 120, after: 120 },
+      spacing: { before: pos === 'band-overlap' ? 0 : 120, after: 120 },
       children: [
         new ImageRun({
           data,
@@ -1325,7 +1331,7 @@ function maybeBuildPhotoFor(ctx, target) {
   if (pos === 'hidden') return null;
   // target is one of: 'sidebar-top', 'sidebar-bottom', 'header', 'main'
   switch (target) {
-    case 'sidebar-top':    return pos === 'sidebar-top'    ? buildPhotoParagraph(ctx, pos) : null;
+    case 'sidebar-top':    return (pos === 'sidebar-top' || pos === 'band-overlap') ? buildPhotoParagraph(ctx, pos) : null;
     case 'sidebar-bottom': return pos === 'sidebar-bottom' ? buildPhotoParagraph(ctx, pos) : null;
     case 'header':         return (pos === 'header-left' || pos === 'header-right')
                                   ? pos : null;

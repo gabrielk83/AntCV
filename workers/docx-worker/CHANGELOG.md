@@ -1,3 +1,7 @@
+## 1.14.17
+
+- Photo position `band-overlap` (the PWA "sidebar bridge") is now a RECOGNISED position instead of silently falling back to `sidebar-top` via the unknown-value default. It renders at the TOP of the sidebar with zero top spacing so the disc hugs the header-band/sidebar seam — the faithful PDF-safe mapping. A literal medallion-straddle (half the disc over the navy band) needs a floating frame, which LibreOffice/CloudConvert drop during PDF conversion (the v1.14.0 photo-floating regression), so it is intentionally not attempted. header/main left-vs-right and the other positions are unchanged.
+
 ## 1.14.13
 
 - AI-assisted disclosure rendered as a bordered "hanging textbox" matching the PWA preview chip (app.js v1.40.338). 1pt border on all four sides; sidebar context keeps the light-grey-blue palette, linear/CL context uses a muted teal on a very light fill.

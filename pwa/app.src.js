@@ -35573,7 +35573,37 @@
                   },
                   o = Di.map((e) =>
                     e.items ? { ...e, items: n(e.items) } : e,
-                  ).filter((e) => !e.items || e.items.length > 0),
+                  ).filter((e) => !e.items || e.items.length > 0).flatMap((sec) => {
+                    // Owner 2026-06-05 (page-split unit 1 — sidebar sub-subsections):
+                    // split a sidebar section across page-boxes by its per-item page
+                    // breaks (localStorage antcv:itemPages[sec.id][itemIndex]). The
+                    // existing m(e) loop then paginates each split as its own section.
+                    // STRICT NO-OP when no item page >= 2 is set, and fully wrapped in
+                    // try/catch so a bug can never crash the preview (falls back to the
+                    // unsplit section). So documents without a mid-section break render
+                    // byte-identically to before.
+                    try {
+                      const items = Array.isArray(sec && sec.items) ? sec.items : null;
+                      let bucket = null;
+                      try { bucket = sec && sec.id ? (JSON.parse(localStorage.getItem("antcv:itemPages") || "{}") || {})[sec.id] : null; } catch (_) { bucket = null; }
+                      if (!items || !items.length || !bucket || typeof bucket !== "object") return [sec];
+                      let hasBreak = false;
+                      for (const k in bucket) { if (Number(bucket[k]) >= 2) { hasBreak = true; break; } }
+                      if (!hasBreak) return [sec];
+                      const basePage = Math.max(1, parseInt(sec.page || 1, 10));
+                      let run = basePage; const groups = []; const idxByPage = {};
+                      for (let i = 0; i < items.length; i++) {
+                        let p = Number(bucket[String(i)]);
+                        p = (Number.isFinite(p) && p >= 1) ? Math.max(p, basePage) : run;
+                        if (p > run) run = p; else p = run;
+                        if (idxByPage[p] === undefined) { idxByPage[p] = groups.length; groups.push({ page: p, items: [] }); }
+                        groups[idxByPage[p]].items.push(items[i]);
+                      }
+                      if (groups.length <= 1) return [sec];
+                      groups.sort((a, b) => a.page - b.page);
+                      return groups.map((gp, gi) => ({ ...sec, items: gp.items, page: gp.page, _antcvSplitCont: gi > 0 }));
+                    } catch (_) { return [sec]; }
+                  }),
                   a = (e) => Math.max(1, parseInt(e.page || 1, 10)),
                   i = t.map((e) => Math.max(1, parseInt(e.page || 1, 10))),
                   c = i.length > 0 && i.every((e) => e >= 2),

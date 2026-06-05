@@ -56,7 +56,7 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.50.160-wm-offsetparent';
+  var SCRIPT_VERSION = '1.50.162-wm-cl-right';
   if (window.__antcvWatermarkPageAnchor341 === SCRIPT_VERSION) return;
   window.__antcvWatermarkPageAnchor341 = SCRIPT_VERSION;
 
@@ -279,7 +279,12 @@
           var box = lastPage.contains(wm)
             ? lastPage
             : (paper.contains(wm) ? paper : (wm.parentElement || lastPage));
-          var corner = chooseCorner(box);
+          // Owner 2026-06-05: DECOUPLE the CL from the CV. On the cover letter
+          // the signature name sits bottom-LEFT, and chooseCorner kept landing
+          // the marker on top of it ("hidden inside the name"). The CL marker
+          // belongs on the RIGHT — opposite the left-aligned signature — per the
+          // original spec. The CV stays dynamic (whichever column has more room).
+          var corner = docIsCl() ? 'right' : chooseCorner(box);
           anchorToCorner(wm, box, corner);
           stashWmSide(corner);
         } catch (_) {}

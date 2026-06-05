@@ -260,3 +260,34 @@ via app.js's native pagination — NO app.js edit needed (Path A).
 cross-column sync; overflow→manual-break / forward-only (PB-007 steps 3-6); panel-marker
 relocation. The `329` yellowish bar may now be redundant with app.js's native divider —
 review/disable once verified.
+
+---
+
+## UPDATE 2026-06-05 (f) — owner: DOCX 500, PDF page-1, CL watermark, MID-SECTION breaks
+
+- **DOCX 500 (`'"#283556"'`)** — the value was QUOTED (`navyColor` is a JSON-encoded string
+  `'"#283556"'`); the first strip (/^#.../) missed it. Fixed in docx-client 1.50.139:
+  normalize any color value by stripping surrounding quotes + leading '#'.
+- **PDF only outputs page 1** — almost certainly a *fallback*: when the worker DOCX/PDF 500s
+  on the hex error, the client falls back to `window.print()` which captures only page 1
+  (EXPORT-PAGE2-001). Re-test PDF after the hex fix lands; if still page-1, it's the
+  pdf-preview-gate clone path.
+- **CL watermark shows TWICE in PDF/PDF-preview** — the cl-ai-notice JS hide applies to the
+  app preview DOM, but the export render path (worker disclosure + the print clone) doesn't
+  get it. Needs the hide to also apply on the export path. OPEN.
+
+### NEW (big): MID-SECTION page breaks + table-header decoupling
+
+Owner wants breaks **inside** sub-subsections, not just whole-section:
+- **HIWC bullets** (How I Would Contribute) — break between bullets.
+- **Foundation** — break between Hands-on and Professionally.
+- **Tables** (Core Competencies, What I Bring) — break between rows (PB-004).
+- **Decouple the two tables' headers** — Core Competencies and What I Bring currently share
+  a coupled header; they must be independent.
+
+This is the genuinely hard part: app.js paginates per **section.page** (sidebar) and per
+**role.page** (experience). It does NOT support splitting *within* a sub-subsection (bullets,
+Foundation halves, table rows). Building mid-section splits requires either app.js engine
+work (per-bullet / per-row `.page`, Path B — needs the external app.js source) or a sidecar
+that re-renders those blocks into the page boxes. NOT a quick fix — scope as the next major
+PB-007 step. Table decoupling (PB-004 / the shared-header coupling) is a related sub-task.

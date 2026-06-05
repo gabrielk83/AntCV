@@ -21,7 +21,7 @@
 (function () {
   'use strict';
   if (window.__antcvClAiNoticeInline) return;
-  window.__antcvClAiNoticeInline = '1.50.140-off';
+  window.__antcvClAiNoticeInline = '1.50.142-no-unhide';
 
   var NOTICE = {
     en: 'AI-assisted',
@@ -150,7 +150,12 @@
       var __sp = document.querySelector('[data-antcv-cl-ai-notice]');
       if (__sp && __sp.parentNode) __sp.parentNode.removeChild(__sp);
       var __w = document.querySelectorAll('.antcv-ai-document-watermark, [data-antcv-watermark], [data-antcv-ai-disclosure]');
-      for (var __i = 0; __i < __w.length; __i++) { if (__w[__i].style && __w[__i].style.display === 'none') __w[__i].style.removeProperty('display'); }
+      for (var __i = 0; __i < __w.length; __i++) {
+        // Leave 341's hides alone — it hides every non-last-page watermark and
+        // flags them. Un-hiding them here re-showed the duplicate (the ping-pong).
+        if (__w[__i].getAttribute && __w[__i].getAttribute('data-antcv-watermark-hidden-by-anchor') === '1') continue;
+        if (__w[__i].style && __w[__i].style.display === 'none') __w[__i].style.removeProperty('display');
+      }
     } catch (_) {}
     return;
     // --- below is retired (unreachable) ---

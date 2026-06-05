@@ -86,11 +86,23 @@ Markers are cosmetic until content genuinely moves; stop blind-patching markers.
 
 ## Open questions (need owner / live DOM)
 
-- **Q1.** How does app.js paginate the main column today (the mechanism that makes
-  Professional Experience visibly move to page 2)? Need to inspect it to replicate for the
-  sidebar — likely the cleanest path is to drive both columns through one detector.
-- **Q2.** Is the preview ever a true multi-page render, or always continuous-scroll with a
-  single `.antcv-preview-paper`? (Determines whether we add real page blocks or simulate.)
+- **Q1 — PARTIALLY ANSWERED (code, 2026-06-05).** app.js stores the break **per item** as
+  `e.pageBreakBefore` and renders `break-before:page` / `page-break-before:always` on that
+  item (grep app.js: `breakBefore:e.pageBreakBefore?"page":void 0`). It does NOT read
+  `antcv:itemPages` (that's the sidecars' key) — so the main column and the sidebar use
+  **two different page models**: app.js `e.pageBreakBefore` (main, native) vs
+  `antcv:itemPages[sid][idx]` (sidebar, via `329`/`247`/`359`). Unifying these is part of
+  PB-007.
+- **Q2 — THE PIVOTAL UNKNOWN (needs live DOM / Claude-for-Chrome).** `break-before:page`
+  is a *print-media* property. For Professional Experience to **visibly move on the screen
+  preview**, the preview must be split into real page boxes (`.antcv-page-row` /
+  `[data-antcv-page]` exist in selectors). Confirm live: does the screen preview actually
+  render multiple `.antcv-page-row` containers (true on-screen pagination), or is the owner
+  seeing the content reflow some other way? This determines the ENTIRE approach: if the
+  preview paginates into page boxes, the sidebar just needs its items assigned to the right
+  box; if not, we must build on-screen pagination from scratch. **Do not build the overflow
+  detector / pagination until Q2 is answered** — it decides whether we place items into
+  existing page boxes or create them.
 - **Q3.** Sidebar marker: confirm it lives on the **editor panel** above the broken item
   (yellowish), with NO bar in the preview — the preview just moves the content.
 

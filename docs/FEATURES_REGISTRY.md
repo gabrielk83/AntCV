@@ -21,7 +21,7 @@ Status legend: ✅ CLOSED (shipped) · 🟡 OPEN (active/planned) · ⚪ PARKED.
 | FT-LOADING-GATE | "Loading…" cover on login for returning users (masks the wizard flash + palette/tone settle) + orphan tone migration | `antcv-login-loading-gate.js` | PR #220. |
 | FT-PHOTO-POS | Photo placements in preview (sidebar-top/bottom, header L/R, main L/R, band-overlap) | `antcv-photo-position.js` + app.js | Finders repaired for the single-table renderer (PR #196). Alt-position *persistence* still OPEN — see bug tracker. |
 | FT-DOCX-PHOTO | DOCX photo placement incl. `band-overlap` → top-of-sidebar | docx-worker `generate.js` | PR #200 (worker 1.14.17). |
-| FT-VISUAL-PACKAGES | 7 visual style packages (Copenhagen Modern, Navy Executive, Warm Terracotta, Nordic Frost, Pampas Contemporary, Tokyo Precision, Delhi Technical) | registry + islands + app.js | Palette now re-derives on load (PR #226). |
+| FT-VISUAL-PACKAGES | 7 visual style packages (Copenhagen Modern, Navy Executive, Warm Terracotta, Nordic Frost, Pampas Contemporary, Tokyo Precision, Delhi Technical) | registry + islands + app.js | Palette re-derives render colours on load (PR #226), but the default-palette "black mix" bug **PACKAGE-PALETTE-MIX-001 is still OPEN** — persisted id stays orphan `scandinavian`. Close-out = APPJS-ID-SCHEME-UNIFY. |
 | FT-WRITING-STYLES | 12 writing systems (nordic-minimal … hybrid-balanced) + banned lists + tone chips | `writingSystems/registry.json`, proxy worker | Pre-existing; tone orphan default migrated this session. |
 | FT-EXPORT | DOCX + PDF export (cv-proxy / docx-worker / CloudConvert) | workers | Pre-existing. |
 | FT-ANALYSIS-REPORT | Branded AI-watermarked JD-analysis PDF | `antcv-analysis-report-pdf-360.js` | Landed in parallel work (#219 family). |

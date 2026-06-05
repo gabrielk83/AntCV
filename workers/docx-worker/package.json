@@ -1,6 +1,6 @@
 {
   "name": "antcv-docx-worker",
-  "version": "1.14.17",
+  "version": "1.14.18",
   "description": "Cloudflare Worker that renders strict-Word-compliant .docx files from AntCV JSON payloads.",
   "private": true,
   "type": "module",

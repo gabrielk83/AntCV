@@ -263,6 +263,23 @@
       return String((result && result.value) || '').trim();
     }
     if (ext === 'pdf') {
+      // v1.50.152 — REUSE app.js's hardened JD extractor (extractPDFText),
+      // exposed as window.AntcvExtractPDFText. It runs the SAME cascade the
+      // Generate-CV/CL and wizard uploads already use: pdf.js text → garbled
+      // detector → LLM text extraction → vision OCR for image-based PDFs
+      // (a LinkedIn "Save as PDF" etc.). This replaces the duplicated, weaker
+      // OCR path this sidecar briefly carried (v1.50.151).
+      if (typeof window.AntcvExtractPDFText === 'function') {
+        const r = await window.AntcvExtractPDFText(file);
+        const t = (r && typeof r.text === 'string') ? r.text.trim() : '';
+        if (t) return t;
+        throw new Error(
+          'This PDF has no usable text — it looks image-based and OCR found nothing. ' +
+          'Paste the JD text, or upload a screenshot (PNG/JPEG) instead.'
+        );
+      }
+      // Defensive fallback only if the app shell predates the export (should
+      // not happen in a same-deploy load): plain pdf.js text, no OCR.
       if (typeof window.loadPDFJS !== 'function') {
         throw new Error('PDF extractor (PDF.js) is not available. Refresh and try again.');
       }
@@ -1279,7 +1296,7 @@
   window.AntcvRecheckFit = {
     open: openModal,
     close: closeModal,
-    version: '1.40.139',
+    version: '1.50.152',
     // v1.40.133 internals exposed for tests
     _extractTextFromFile: extractTextFromFile,
     _postJdAnalysis: postJdAnalysis,

@@ -1,4 +1,4 @@
-/* AntCV shape-guard sidecar (v1.40.195)
+/* AntCV shape-guard sidecar (v1.50.148)
  * ============================================================
  *
  * Purpose
@@ -72,7 +72,7 @@
   'use strict';
 
   if (window.__antcvShapeGuardInstalled) return;
-  window.__antcvShapeGuardInstalled = '1.40.195';
+  window.__antcvShapeGuardInstalled = '1.50.148';
 
   const SECTIONS_KEY = 'sections';
   const LANG_CACHE_KEY = 'languageCache';
@@ -91,6 +91,23 @@
     return v !== null && typeof v === 'object' && !Array.isArray(v);
   }
 
+  // A "bullets"-type section stores each bullet as a COMPACT LEAF —
+  // {b:"<bold lead>", t:"<text>"} — and key/value rows as {l, v}. These
+  // legitimately have no bullets[] array: they ARE the bullets (the renderer
+  // reads e.b / e.t), not a structured role/experience item. The missing-
+  // bullets diagnostic targets the latter (the language-switch crash signature),
+  // so it should stay quiet for leaves. An item is a leaf when every own key is
+  // one of b/t/l/v.
+  function isCompactLeaf(item) {
+    const keys = Object.keys(item);
+    if (!keys.length) return false;
+    for (let i = 0; i < keys.length; i++) {
+      const k = keys[i];
+      if (k !== 'b' && k !== 't' && k !== 'l' && k !== 'v') return false;
+    }
+    return true;
+  }
+
   // Normalize a single item: ensure bullets[], string fields exist.
   function normalizeItem(item, ctx) {
     if (!isPlainObject(item)) return null;
@@ -101,8 +118,9 @@
       // 'bullets')" crash on language switch. Logging the surrounding
       // item shape lets us trace which translation-pipeline path
       // leaves the hole. Module-level throttle: max 5 warnings per
-      // page load (cap reset on reload).
-      if (bulletWarnCount < BULLET_WARN_CAP) {
+      // page load (cap reset on reload). Skip compact-leaf bullets/kv
+      // items — they have no bullets[] by design (false positive).
+      if (!isCompactLeaf(item) && bulletWarnCount < BULLET_WARN_CAP) {
         try {
           const sample = JSON.stringify({
             type: item.type, title: item.title, role: item.role,
@@ -327,12 +345,12 @@
 
   // Public API.
   window.AntcvShapeGuard = {
-    version: '1.40.195',
+    version: '1.50.148',
     stats: stats,
     _normalizeSectionsBundle: normalizeSectionsBundle,
     _normalizeLanguageCache: normalizeLanguageCache,
     _eagerNormalize: eagerNormalize,
   };
 
-  try { console.debug('[shape-guard] installed v1.40.195'); } catch (_) {}
+  try { console.debug('[shape-guard] installed v1.50.148'); } catch (_) {}
 })();

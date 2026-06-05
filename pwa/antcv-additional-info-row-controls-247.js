@@ -13,7 +13,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '1.50.135-sidebar-pg';
+  const VERSION = '1.50.138-cascade';
   if (window.__antcvAdditionalInfoRowControls === VERSION) return;
   window.__antcvAdditionalInfoRowControls = VERSION;
   // v1.40.247-preview-guard: Preview is button-free. panelRoot() and
@@ -110,11 +110,17 @@
       const all = readJson(SECTIONS_KEY);
       const list = all && all[activeDoc()];
       if (Array.isArray(list)) {
-        for (let i = 0; i < list.length; i++) {
-          if (list[i] && String(list[i].id || '') === String(sid)) {
-            if (list[i].page !== nv) { list[i].page = nv; writeJson(SECTIONS_KEY, all); }
-            break;
+        // Cascade: clicked section + all following sidebar sections → nv.
+        let startIdx = -1;
+        for (let i = 0; i < list.length; i++) { if (list[i] && String(list[i].id || '') === String(sid)) { startIdx = i; break; } }
+        if (startIdx >= 0) {
+          let changed = false;
+          for (let j = startIdx; j < list.length; j++) {
+            const s = list[j];
+            if (!s || String(s.loc || '').toLowerCase() !== 'sidebar') continue;
+            if (s.page !== nv) { s.page = nv; changed = true; }
           }
+          if (changed) writeJson(SECTIONS_KEY, all);
         }
       }
     } catch (_) {}

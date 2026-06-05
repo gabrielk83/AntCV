@@ -23,7 +23,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.135-sidebar-pg';
+  var VERSION = '1.50.138-cascade';
   if (window.__antcvSidebarItemPageControls === VERSION) return;
   window.__antcvSidebarItemPageControls = VERSION;
 
@@ -72,12 +72,18 @@
     try {
       var all = readJson(SECTIONS_KEY, {}); var doc = activeDoc(); var list = all[doc];
       if (!Array.isArray(list)) return;
+      // Cascade: set the clicked section AND all FOLLOWING sidebar sections to nv
+      // (like the main column's "moves this role and all roles after it"). app.js
+      // renders each sidebar section on its own .page, so a following section left
+      // on page 1 would stay above — cascade keeps them moving together.
+      var startIdx = -1;
+      for (var i = 0; i < list.length; i++) { if (list[i] && String(list[i].id || '') === String(sid)) { startIdx = i; break; } }
+      if (startIdx < 0) return;
       var changed = false;
-      for (var i = 0; i < list.length; i++) {
-        if (list[i] && String(list[i].id || '') === String(sid)) {
-          if (list[i].page !== nv) { list[i].page = nv; changed = true; }
-          break;
-        }
+      for (var j = startIdx; j < list.length; j++) {
+        var s = list[j];
+        if (!s || String(s.loc || '').toLowerCase() !== 'sidebar') continue;
+        if (s.page !== nv) { s.page = nv; changed = true; }
       }
       if (changed) localStorage.setItem(SECTIONS_KEY, JSON.stringify(all));
     } catch (_) {}

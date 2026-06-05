@@ -36,6 +36,33 @@ Branch: `claude/antcv-roadmap-bugs-L9Sqa`. Compiled 2026-06-04.
 
 # PART 1 — ACTIVE BUGS
 
+## 0. Session 2026-06-05/06 roll-up (analysis report · JD ingestion · demo · generate)
+
+Full prose + the resolved list live in `docs/qa/ACTIVE_BUGS.md` (top section). Only the
+**still-open** items are rolled up here.
+
+| ID | Tag | Item | Next action |
+|----|-----|------|-------------|
+| HARDREFRESH-001 | `OPEN` | In-app Hard Refresh: "are you sure?" confirm fires, but nothing reloads after OK. | `[code]` find the reload handler gated/awaiting something that never resolves |
+| DEMO-PERSIST-001 | `OPEN` `HIGH` | **Demo user classified as paid.** `51pegasib@gmail.com` reads relay `user_mode:"paid"`/`demo_mode:false`; `AntcvSetUserMode("demo")`+reload won't flip it. Consequences: "⚠ Setup needed" shows + **no DEMO watermark in preview, export preview, or DOCX/PDF**. Master demo bug (blocks DEMO-SETUP-001, DEMO-WM-001). | `[console]` SET-MODE POST status, then `[worker]` relay mode write + initial-mode assignment |
+| DEMO-BADGE-001 | `OPEN` | "🟡 DEMO" badge hardcoded to email `51pegasib@gmail.com`, not `demo_mode`/`user_mode`; badge can show while demo features are off. | `[code]` re-gate on real signal |
+| PRIVACY-DEMO-001 | `OPEN` | Privacy LED not visible in demo mode (desktop + mobile). | `[console]` — may overlap `fix/label-mobile-privacy-audit` |
+| SETTINGS-SUBTAB-001 | `OPEN` | "EN"/applications-history doesn't open the right settings subtab; settings render behind the preview (z-index). | `[console]` live DOM + z-index |
+| GEN-UNSOL-002 | `OPEN` | Follow-up to GEN-UNSOL-001: generation schema doesn't request company/role, so if the model omits `meta.company` the header still falls to Unsolicited. | `[code]` have generate_cv extract+emit grounded company/role |
+| DEMO-TOGGLE-001 | `OPEN` | No in-app Demo⇄Paid toggle (wizard only). | `[code][owner]` Settings toggle → `AntcvSetUserMode` |
+| HOWCONTRIBUTE-001 | `OPEN` | "How I would contribute" bullets missing in the **template preview**. | `[code]` contribute/`text_bullets` preview renderer; verify Preview↔DOCX/PDF parity |
+| LOGIN-GATE-001 | `OPEN` `HIGH` | Force-default-settings / hide-wizard change boots **blue screen → wizard → set menu** (wrong order, broken first paint). Candidate fix branch `feat/login-loading-gate`. | `[code]` review/verify loader→app sequence (app-shell boot path) |
+| APP-HISTORY-001 | `OPEN` | Application History not reachable from the **preview pop/overflow menu**. | `[console]` preview-menu entry + handler |
+| PERF-002 | `OPEN` | Consensus quorum/timeout — proceed on 2–3 of 4, don't wait for the slowest provider. | `[code]` |
+| PERF-003 | `OPEN` | Trim consensus width on mechanical tasks only (extract/extract_pdf, parse_jd, compress, fix_orphans). Owner-confirmed split. | `[code]` |
+| PERF-004 | `OPEN` | enrich↔compress convergence skip (no-change → skip next cycle). | `[code]` |
+| PERF-005 | `PARTIAL` | Retire redundant `/api/jd-analysis` for generated docs (merge-344 reuses it; full fold-in tried 1.50.154, reverted for truncation). | `[code]` |
+
+**Resolved this session (see ACTIVE_BUGS.md for detail):** ANALYSIS-PDF-001, JD-OCR-001,
+JD-UPLOAD-001, PERF-CB-001, PERF-WARN-001, SW-SHELL-001, DEMO-SETUP-001, DEMO-CONFIG-001,
+DEMO-WM-001, GEN-EMPTY-001, GEN-UNSOL-001, GEN-REPORT-001 (PWA 1.50.146→1.50.164 + worker
+deploys cv-proxy/demo-proxy/access-relay).
+
 ## 1. Global requirements / Definition of Done (§3)
 
 | ID | Requirement | Status | Next action |

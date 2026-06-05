@@ -2959,6 +2959,12 @@ const method = request.method;
         preferences_kv: preferencesKv,
         relay: true,
         user_mode: userMode,
+        // The PWA reads B.demo_mode from /config to gate ALL demo-only UI
+        // (hide "Setup needed", DEMO watermark on preview + exports, DEMO
+        // badge). The relay tracks the user's choice as user_mode; surface it
+        // as demo_mode too so the PWA's flag is fed on the relay path (which
+        // is what the PWA actually reads — relay-config.json points here).
+        demo_mode: userMode === 'demo',
         mode_endpoint: url.origin + '/api/user/mode',
         auth: {
           required: true,

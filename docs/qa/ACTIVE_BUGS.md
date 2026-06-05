@@ -5,6 +5,138 @@ This file now folds in the canonical `AntCV_UI_UX_Spec_and_QA_Plan_v4.docx` back
 
 ---
 
+## SESSION 2026-06-05/06 — Analysis report, JD ingestion, demo mode, generate fixes
+
+Worklog for the analysis-PDF + JD-extraction + demo-mode + generate-flow engagement.
+Newest registry section; individual IDs below. Live owner-acceptance still owed on
+items marked VERIFYING.
+
+### Resolved this session
+
+- **ANALYSIS-PDF-001** — Branded, downloadable Analysis report (AntCV icon, slogan,
+  app name, date, application name, low/medium-confidence statements, assumptions,
+  recommendations, diagonal AI-ASSISTED watermark + AI notice). New sidecar
+  `antcv-analysis-report-pdf-360.js`; client-side print-to-PDF. jd-analysis worker
+  (cv-proxy + demo-proxy) extended to return `assumptions`/`recommendations`/
+  `confidence_notes`. — FIXED✓ (1.50.146, workers deployed).
+- **JD-OCR-001** — Image-based PDF (LinkedIn "Save as PDF": ~18 chars text, 98 images)
+  failed with "no usable text" in the Analyse-JD block. Root cause: the block had its
+  own pdf.js-text-only extractor. Fix: delegate to app.js's hardened `extractPDFText`
+  cascade (pdf.js → garbled-detect → LLM text → vision OCR), exposed as
+  `window.AntcvExtractPDFText`. Reuse, not a duplicate. — FIXED✓ (1.50.152).
+- **JD-UPLOAD-001** — JD panel's PDF/Word/Image trio → single "⬆ Upload JD" button
+  (accepts .pdf/.doc/.docx/.txt/.json/image; JSON parsed locally for jd_text). —
+  FIXED✓ (1.50.153).
+- **PERF-CB-001** — Provider circuit-breaker: a quota/auth-failed provider is dropped
+  for the session instead of being re-hit + retried on every one of ~23 generate
+  tasks (the ~7-minute-run cause). — FIXED✓ (1.50.155).
+- **PERF-WARN-001** — OpenAI `429 "exceeded your current quota"` (classed rate_limit,
+  not billing) never surfaced. Broadened the credit-banner trigger to fire on
+  rate_limit-with-quota with a "using fallback providers, this run is slower" note. —
+  FIXED✓ (1.50.154).
+- **SW-SHELL-001** — `sw.js` SHELL precached `./antcv-mobile-controls.js` (+
+  `antcv-tone-custom-slots.js`) which 404'd, so `cache.addAll` rejected and the shell
+  never precached (offline broken). Removed stale entries; made install resilient
+  (per-asset `cache.add().catch()`). — FIXED✓ (1.50.149/151).
+- **DEMO-SETUP-001** — "⚠ Setup needed" wrongly shown to demo users. Gated it on
+  `!(B&&B.demo_mode)`. (Note: a first attempt at 1.50.156 reverted M() too broadly and
+  hid the "🟡 Use demo" cost chip — regression fixed at 1.50.157 by gating only the
+  Setup-needed chip.) — FIXED✓ (1.50.157).
+- **DEMO-CONFIG-001** — `/config` never returned `demo_mode`, so `B.demo_mode` was
+  always false → ALL demo UI dead. The PWA reads the **relay** `/config`, which only
+  returned `user_mode`. Added `demo_mode` to cv-proxy + demo-proxy `handleConfig`, and
+  (the real fix) `demo_mode: userMode === 'demo'` to the **access-relay** `/config`.
+  Workers deployed. — FIXED✓ (worker-side).
+- **DEMO-WM-001** — DEMO watermark. Export path already stamps when `demo_mode`;
+  added a preview overlay sidecar `antcv-demo-watermark.js` (tiled diagonal DEMO,
+  pointer-events:none, prints). — Mechanism FIXED✓ (1.50.159), but **BLOCKED by
+  DEMO-PERSIST-001**: a real demo account reads `demo_mode:false`, so the watermark
+  appears in neither preview, export preview, nor DOCX/PDF until that is fixed.
+  Not owner-confirmable yet.
+- **GEN-EMPTY-001** — Empty Analysis panel after Generate ("Detailed analysis was not
+  returned by the model" placeholder + empty fit/gaps). The 1.50.154 generate_cv
+  fold-in enlarged the rationale → JSON truncation dropped it. Reverted the fold-in. —
+  FIXED✓ (1.50.163).
+- **GEN-UNSOL-001** — A known posting ("Optics/Camera Engineer at Sigma Connectivity")
+  was stamped "Open Application — Unsolicited". The showcase guard forced Unsolicited
+  whenever the Company field was blank, discarding the company the model extracted
+  (`D.company = T.meta.company`). Fix: force Unsolicited only when the Company field is
+  blank AND no real `D.company` was extracted. — FIXED✓ (1.50.164).
+- **GEN-REPORT-001** — Full analysis report now appears on **Generate** (auto, via
+  `merge-344` running `/api/jd-analysis` on the active JD) **and** Analyse JD (jd-block),
+  both merging recruiter/red_flags/questions/assumptions/confidence/recommendations.
+  Unblocked by GEN-EMPTY-001 + GEN-UNSOL-001. — FIXED✓ (1.50.163/164).
+
+### Still OPEN after this session
+
+- **HARDREFRESH-001** `[OPEN]` — In-app Hard Refresh shows the "are you sure?" confirm
+  but does nothing after OK (no reload). Not yet diagnosed.
+- **DEMO-PERSIST-001** `[OPEN][HIGH][console][worker]` — **A demo user is server-
+  classified as "paid".** Confirmed live: `51pegasib@gmail.com` (who carries the demo
+  "⚠ Setup needed" chip) reads relay `/config` → `user_mode:"paid"`, `demo_mode:false`.
+  `AntcvSetUserMode("demo")` + reload does **not** flip it (still `"paid"`). Because the
+  account is treated as paid, every demo behaviour is wrong for them:
+    - **"⚠ Setup needed"** chip shows (it should not for a demo account);
+    - **no "DEMO" watermark** anywhere — **preview, export preview, and DOCX/PDF**
+      (export stamping is gated on `demo_mode`, which is false here).
+  This is the master demo bug; DEMO-SETUP-001 and DEMO-WM-001 are correct in mechanism
+  but **cannot manifest until this is fixed** (a real demo account never reaches
+  `demo_mode:true`). Relay write/read logic *looks* correct; suspects: the client POST
+  (`/api/user/mode`, fire-and-forget, relies on `antcv-auth.js` header injection) silently
+  failing, OR the account is pinned to "paid" by an admin/allowlist default. Decisive
+  probe: the `SET-MODE` console snippet (POST status 401 vs 200+stale read), then check
+  how the relay assigns the initial mode for this email.
+- **DEMO-BADGE-001** `[OPEN]` — The "🟡 DEMO" badge is hardcoded to a specific email
+  (`51pegasib@gmail.com`), not to `demo_mode`/`user_mode`. Badge can show while the demo
+  features are off (the "mix" the owner saw). Re-gate on the real signal.
+- **PRIVACY-DEMO-001** `[OPEN]` — Privacy LED not visible in demo mode (desktop +
+  mobile). Not investigated; may overlap the parallel `fix/label-mobile-privacy-audit`.
+- **SETTINGS-SUBTAB-001** `[OPEN]` — Pressing "EN"/applications-history doesn't open the
+  relevant settings subtab; the settings panel renders **behind the preview** (z-index).
+- **GEN-UNSOL-002** `[OPEN]` (follow-up to GEN-UNSOL-001) — The fix keeps `D.company`
+  *if the model returns it*; the generation output schema doesn't explicitly request
+  company/role, so if the model omits `meta.company` for a JD the header still falls to
+  Unsolicited. Prompt-side: have generate_cv extract+emit company/role grounded in the
+  JD.
+- **DEMO-TOGGLE-001** `[OPEN][feature]` — No in-app Demo⇄Paid toggle (only the wizard).
+  Proposed: a Settings toggle calling `AntcvSetUserMode`.
+- **HOWCONTRIBUTE-001** `[OPEN]` — "How I would contribute" bullets are **missing in the
+  template preview** (the section renders without its bullet list). Check the
+  `text_bullets`/contribute renderer + the `mergeHowContributeFromLocalStorage` path
+  (docx-client has the export-side merge; the preview side is dropping the bullets).
+  Verify parity Preview ↔ DOCX/PDF (GEN-001).
+- **LOGIN-GATE-001** `[OPEN][HIGH]` — The change that **forces default settings and hides
+  the wizard when no wizard is needed landed badly**: on load the user gets a **blue
+  screen instead of the loader**, then the wizard, then the set menu (wrong order, broken
+  first paint). Candidate fix branch already exists:
+  `feat/login-loading-gate` —
+  https://github.com/gabrielk83/AntCV/compare/main...feat/login-loading-gate
+  (review + verify the loader→app sequence before merge; this is the app-shell boot path —
+  diagnostic-first, prior blue-screen incidents on this path).
+- **APP-HISTORY-001** `[OPEN]` — **Application History is still not reachable from the
+  preview's pop/overflow menu.** (Related to SETTINGS-SUBTAB-001 but distinct: this is the
+  preview-side menu entry, not the Settings subtab.) The history control either isn't in
+  that menu or its handler doesn't open the history view.
+
+### Optimization roadmap (see `docs/perf/Generate_Cycle_and_Optimisation.md`)
+
+- **PERF-002** `[OPEN]` — Consensus quorum/timeout: a consensus waits for ALL providers
+  (`allSettled`), so one slow/retrying provider stalls it. Proceed on 2–3 of 4, or cap
+  per-provider wait. (Note: consensus is already parallel; this is the real lever.)
+- **PERF-003** `[OPEN][owner-confirmed split]` — Trim consensus width to 1–2 providers
+  on the **mechanical** tasks only: `extract`/`extract_pdf`, `parse_jd`, `compress`,
+  `fix_orphans`. Keep wide on `generate_cv`, `consensus_poll`, `consensus_reinforce`,
+  `fuse`, `analyze_fit`, `long_context`, **`enrich`**, **`apply_correction`**, and all
+  translation (DA/ES/ZH) — owner: these are quality-critical.
+- **PERF-004** `[OPEN]` — enrich↔compress convergence skip: if a cycle produced no
+  material change (or further compression loses signal), skip the next cycle instead of
+  running a fixed 3×.
+- **PERF-005** `[PARTIAL]` — Retire the redundant `/api/jd-analysis` cycle for generated
+  docs. `merge-344` already reuses it; a full fold into generate was tried (1.50.154) and
+  reverted (GEN-EMPTY-001), so the separate pass stays for now.
+
+---
+
 ## DELETE-SAVE-001 — "Save my data locally first" tick not appearing — FIXED (v1.50.145)
 
 **Owner (screenshot):** the DANGER ZONE "Are you sure?" confirm card showed

@@ -19,6 +19,12 @@
        it swallows the ~70 sidecar "installed" banners + repeated app.js status
        chatter. Errors always pass through. Full logs: localStorage.antcvVerboseConsole=1. -->
   <script src="antcv-console-quiet.js?v=1.50.149"></script>
+  <!-- v1.50.165: login loading gate. Runs BEFORE app.js: migrates the orphan
+       writing-tone default (toneRegister "scandinavian" -> "nordic-minimal") and
+       shows a "Loading…" cover for returning users until the editor is ready, so
+       the wizard flash + palette/tone settling are masked. New users see the
+       real wizard. Escape: localStorage['antcv:disable-loading-gate']='1'. -->
+  <script src="antcv-login-loading-gate.js?v=1.50.165"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script>window.loadMammoth=()=>new Promise((res,rej)=>{if(window.mammoth)return res(window.mammoth);const s=document.createElement('script');s.src='https://unpkg.com/mammoth/mammoth.browser.min.js';s.onload=()=>res(window.mammoth);s.onerror=()=>rej(new Error('Failed to load Mammoth (.docx parser)'));document.head.appendChild(s);});</script>
@@ -279,7 +285,7 @@
         auth.src = 'antcv-auth.js?v=1.40.202';
         auth.onload = function(){
           var app = document.createElement('script');
-          app.src = 'app.js?v=1.50.163-pagesplit1';
+          app.src = 'app.js?v=1.50.164';
           app.onload = function(){
             var vo = document.createElement('script');
             vo.src = 'antcv-version-override.js?v=1.50.41';
@@ -529,6 +535,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-recheck-fit.js?v=1.50.161-proxy-relay" defer></script>
 <script src="antcv-jd-watch.js?v=1.50.23-brand" defer></script>
 <script src="antcv-privacy-led.js?v=1.50.74-nobleep" defer></script>
+<script src="antcv-demo-watermark.js?v=1.50.159" defer></script>
 <script src="antcv-bullet-targets.js?v=1.40.136" defer></script>
 <script src="antcv-photo-position.js?v=1.50.153" defer></script>
 <script src="antcv-photo-pentagon-shape.js?v=1.50.57" defer></script>
@@ -691,6 +698,10 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      SettingsRouter, wizardState). See docs/plan/AntCV_Plan_v2_LockedSources.md
      §7 Pass 1. -->
       <script src="antcv-357-loader.js?v=1.40.357-loader" defer></script>
-      <script src="antcv-react-islands.js?v=1.50.158" defer></script>
+      <script src="antcv-react-islands.js?v=1.50.160" defer></script>
+      <!-- v1.50.164: auto-apply the correct palette when the stored package is the
+           legacy orphan default ("scandinavian"), by pressing the Copenhagen Modern
+           button — fixes the permanent palette mix on load without a manual click. -->
+      <script src="antcv-package-orphan-apply.js?v=1.50.164" defer></script>
 </body>
 </html>

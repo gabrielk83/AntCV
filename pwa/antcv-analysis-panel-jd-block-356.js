@@ -102,10 +102,22 @@
   function readProxyUrl() {
     try {
       var raw = localStorage.getItem('proxyUrl');
-      if (!raw) return '';
-      try { return String(JSON.parse(raw)).trim().replace(/\/+$/, ''); }
-      catch (_) { return String(raw).trim().replace(/\/+$/, ''); }
-    } catch (_) { return ''; }
+      var v = '';
+      if (raw) {
+        try { v = String(JSON.parse(raw)); } catch (_) { v = String(raw); }
+      }
+      v = v.trim().replace(/\/+$/, '');
+      if (v) return v;
+      // Demo / shared mode: localStorage.proxyUrl is empty (the user never set a
+      // proxy) but the JD /api/* endpoints run on the access-relay, whose base
+      // lives in window.ANTCV_RELAY_URL (relay-config.json). Fall back to it so
+      // "Analyse JD" works in demo instead of erroring "Proxy URL not configured".
+      if (typeof window !== 'undefined' && typeof window.ANTCV_RELAY_URL === 'string') {
+        var rel = window.ANTCV_RELAY_URL.trim().replace(/\/+$/, '');
+        if (rel) return rel;
+      }
+    } catch (_) {}
+    return '';
   }
   function readSections(key) {
     try {

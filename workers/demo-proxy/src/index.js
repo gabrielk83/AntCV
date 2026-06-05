@@ -1,4 +1,4 @@
-const VERSION='3.4.0-model-chain-fallback';
+const VERSION='3.5.0-cross-provider-fallback';
 // Cloudflare Worker — multi-provider LLM proxy with streaming for Anthropic
 // Includes /preferences route for AntCV cloud save.
 //
@@ -48,9 +48,75 @@ import {
 
 export default {
   async fetch(request, env, ctx) {
-    return handleRequest(request, env || {});
+    return handleWithProviderFallback(request, env || {});
+  },
+  // Model-freshness cron (owner 2026-06-05): the pinned model IDs are hardcoded
+  // and nothing polled the providers for changes. This daily check lists the
+  // provider's models and LOGS (no behaviour change) when a configured default
+  // is no longer offered (retired) or a newer generation appears — so the
+  // config can't rot silently. Wired via [triggers].crons in wrangler.toml.
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(runModelFreshnessCheck(env || {}));
   }
 };
+
+async function runModelFreshnessCheck(env) {
+  try {
+    const key = env.Gemini_API_Key || env.GEMINI_API_KEY;
+    if (!key) { console.warn('[model-freshness] no Gemini key configured; skipping'); return; }
+    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000&key=' + encodeURIComponent(key));
+    if (!r.ok) { console.warn('[model-freshness] gemini models.list failed: ' + r.status); return; }
+    const j = await r.json();
+    const ids = (j.models || []).map(function (m) { return String(m.name || '').replace(/^models\//, ''); });
+    const want = ['gemini-2.5-flash', 'gemini-2.5-pro'];
+    const missing = want.filter(function (w) { return ids.indexOf(w) < 0; });
+    if (missing.length) {
+      console.warn('[model-freshness] CONFIGURED GEMINI DEFAULTS NOT LISTED (retired?): ' + missing.join(', ') + ' — bump PROVIDER_MODELS + index.js default');
+    }
+    const newer = ids.filter(function (id) { return /^gemini-(3|4|5)[.\-]/.test(id); });
+    if (newer.length) {
+      console.warn('[model-freshness] NEWER GEMINI MODELS AVAILABLE — consider updating the config: ' + newer.slice(0, 12).join(', '));
+    }
+    console.log('[model-freshness] gemini ok: ' + ids.length + ' models listed; defaults present=' + (missing.length === 0));
+  } catch (e) {
+    console.warn('[model-freshness] check failed: ' + (e && e.message || e));
+  }
+}
+
+// Cross-provider auto-fallback (owner 2026-06-05): a single provider returning
+// 503/overloaded (e.g. Gemini) used to fail the whole generation with no
+// fallback. This wrapper replays the SAME request to the next available
+// provider on a 5xx — ONLY for POST calls in demo/server-key mode (every
+// provider has a server key). Requests with the user's own x-api-key pass
+// straight through. 4xx responses are returned as-is.
+const FALLBACK_PROVIDERS = ['anthropic', 'openai', 'mistral', 'gemini'];
+async function handleWithProviderFallback(request, env) {
+  const isPost = request.method === 'POST';
+  const hasClientKey = !!((request.headers.get('x-api-key') || '').trim());
+  if (!isPost || hasClientKey) return handleRequest(request, env || {});
+  let bodyBuf = null;
+  try { bodyBuf = await request.arrayBuffer(); } catch (_) { bodyBuf = null; }
+  if (bodyBuf === null) return handleRequest(request, env || {});
+  const requested = (request.headers.get('x-provider') || 'anthropic').toLowerCase();
+  const order = [requested].concat(FALLBACK_PROVIDERS.filter(function (p) { return p !== requested; }));
+  let lastResp = null;
+  for (let i = 0; i < order.length; i++) {
+    const headers = new Headers(request.headers);
+    headers.set('x-provider', order[i]);
+    const attempt = new Request(request.url, { method: 'POST', headers: headers, body: bodyBuf });
+    try {
+      lastResp = await handleRequest(attempt, env || {});
+    } catch (_) {
+      lastResp = null;
+      continue;
+    }
+    if (lastResp && lastResp.status < 500) return lastResp;
+  }
+  return lastResp || new Response(
+    JSON.stringify({ error: 'all_providers_unavailable', message: 'Every configured provider returned a 5xx. Try again shortly.' }),
+    { status: 503, headers: { 'Content-Type': 'application/json' } }
+  );
+}
 
 async function getKey(env, names) {
   if (!env) return '';

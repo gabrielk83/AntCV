@@ -15,19 +15,33 @@ Owner-driven batch (Claude Opus). Production reached **PWA 1.50.166** + **docx-w
 marked otherwise. Cloudflare Pages auto-builds production from `main`; the docx
 worker was deployed via `wrangler deploy`.
 
-### Headline — package "colour mix" fixed at the ROOT (app.js)
+### Headline — package "colour mix" — partial mitigation shipped, ROOT still OPEN
 
-- **PACKAGE-PALETTE-MIX-001 — [FIXED, in review]** ([PR #226](https://github.com/gabrielk83/AntCV/pull/226), v1.50.166).
+- **PACKAGE-PALETTE-MIX-001 — [OPEN]** (owner-confirmed 2026-06-06; partial
+  mitigation [PR #226](https://github.com/gabrielk83/AntCV/pull/226), v1.50.166).
+  **Owner directive (2026-06-06): keep this OPEN.** The default Copenhagen Modern
+  palette must render on load — not the "undefined ugly mix with black". #226 is a
+  render-time patch, not a close-out.
   Returning users were stuck on a mismatched palette ("colour mix"); only
   re-pressing the package in Settings fixed it, and it never persisted.
   **Root cause:** the document colour state (`styleConfig`/`ya`) only ever
   initialised from the *saved* config, never from the selected package, so the
-  accents stayed stale on reload. **Fix (in `app.js` itself):** a one-time mount
-  effect derives the palette from the selected package's `va[Sa].style` for
+  accents stayed stale on reload — AND the persisted package id is the legacy
+  orphan `"scandinavian"`, which never gets rewritten to the registry id
+  `copenhagen-modern`. **Partial fix in #226 (in `app.js` itself):** a one-time
+  mount effect derives the palette from the selected package's `va[Sa].style` for
   non-custom packages (Custom keeps its saved config; `navyColor` keeps owning
   the backgrounds). Done in both `pwa/app.src.js` (the de-minified **SOURCE OF
   TRUTH**, now tracked) and the deployed `pwa/app.js` (inserted by exact unique
   string replace — only +230 bytes change; round-trip verified within ~64 bytes).
+  **Why still OPEN — Chrome verification on the `fix-app-src-package-id-root`
+  branch preview (2026-06-06):** seeding the returning-user orphan and reloading,
+  `localStorage.stylePackage` is *still* `"scandinavian"` while
+  `body[data-package]` is `copenhagen-modern` — the persisted-id mismatch that
+  produces the black mix is unchanged. #226 only re-derives the render colours; it
+  does not rewrite or persist the orphan id. The durable close-out is
+  **APPJS-ID-SCHEME-UNIFY** (unify app.js's id scheme with the registry + persist
+  the selection through cloud-restore) — tracked in the feature registry.
 - **ORPHAN-DEFAULT audit (owner request) — done.** `"scandinavian"` is app.js's
   legacy umbrella default for BOTH the visual package (`stylePackage`, registry
   default `copenhagen-modern`) AND the writing tone (`toneRegister`, registry
@@ -72,14 +86,15 @@ worker was deployed via `wrangler deploy`.
 - **FEATURE-CONF-001 — [OPEN feature]** per-sentence confidence overlay (see
   feature registry). Not started.
 
-### Retire-when-verified (workarounds superseded by #226)
+### Workaround sidecars — KEEP (do NOT retire yet)
 
-Once PR #226 is live-verified, the visual nudge sidecar (`antcv-package-orphan-apply.js`,
-#217) and the loading-gate's tone migration become redundant safety nets and can
-be retired. The `antcv-sidebar-bg-token.js` (#210) stays (it complements the root
-render). The durable app.js source cleanups (unify the id scheme with the
-registry; persist the selection through cloud-restore) are tracked in the feature
-registry as **APPJS-ID-SCHEME-UNIFY**.
+PACKAGE-PALETTE-MIX-001 is still OPEN, so the workaround sidecars stay in place:
+`antcv-package-orphan-apply.js` (#217), the loading-gate tone migration (#220),
+and `antcv-sidebar-bg-token.js` (#210) all remain load-bearing until the durable
+fix lands. Only retire them once **APPJS-ID-SCHEME-UNIFY** ships — that cleanup
+unifies app.js's id scheme with the registry and persists the selection through
+cloud-restore (so `stylePackage` stops being the orphan `"scandinavian"`),
+closing the bug at the data layer. Tracked in the feature registry.
 
 ---
 

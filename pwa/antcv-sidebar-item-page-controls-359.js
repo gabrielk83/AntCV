@@ -23,7 +23,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.133-no-storm';
+  var VERSION = '1.50.134-section-page';
   if (window.__antcvSidebarItemPageControls === VERSION) return;
   window.__antcvSidebarItemPageControls = VERSION;
 
@@ -48,18 +48,45 @@
     });
   }
 
-  function getPage(sid, idx) { var m = readJson(PAGE_KEY, {}); var b = m[sid] || {}; var n = Number(b[String(idx)]); return Number.isFinite(n) && n >= 1 && n <= 4 ? (n | 0) : 1; }
+  function getPage(sid, idx) {
+    // PB-007: app.js paginates the sidebar by section.page (NOT itemPages).
+    try {
+      var all = readJson(SECTIONS_KEY, {}); var list = all[activeDoc()];
+      if (Array.isArray(list)) {
+        for (var i = 0; i < list.length; i++) {
+          if (list[i] && String(list[i].id || '') === String(sid)) {
+            var n = Number(list[i].page);
+            return Number.isFinite(n) && n >= 1 && n <= 4 ? (n | 0) : 1;
+          }
+        }
+      }
+    } catch (_) {}
+    return 1;
+  }
   function setPage(sid, idx, val) {
-    var m = readJson(PAGE_KEY, {});
-    if (!m[sid] || typeof m[sid] !== 'object') m[sid] = {};
-    if (val <= 1) delete m[sid][String(idx)]; else m[sid][String(idx)] = val;
-    writeJson(PAGE_KEY, m);
-    // v1.50.133: do NOT dispatch antcv:sections-updated here. It triggers the
-    // personality forceRebuild (full kernel re-render) → a requestAnimationFrame
-    // violation flood, and it does NOT help the sidebar (app.js only creates a
-    // page-2 box from the main column's e.pageBreakBefore — see PB-007 Q2). The
-    // 329 renderer re-runs on its own timers/observer + item-pages-changed.
-    try { window.dispatchEvent(new CustomEvent('antcv:item-pages-changed', { detail: { source: 'sidebar-item-page', sid: sid } })); } catch (_) {}
+    // PB-007 (Path A): write section.page on the matching sidebar section so
+    // app.js's NATIVE pagination engine moves the whole section to that page,
+    // creates the page-N box, and draws its own divider. app.js reads
+    // section.page (a=e=>parseInt(e.page||1)); it never reads antcv:itemPages.
+    var nv = val <= 1 ? 1 : val;
+    try {
+      var all = readJson(SECTIONS_KEY, {}); var doc = activeDoc(); var list = all[doc];
+      if (!Array.isArray(list)) return;
+      var changed = false;
+      for (var i = 0; i < list.length; i++) {
+        if (list[i] && String(list[i].id || '') === String(sid)) {
+          if (list[i].page !== nv) { list[i].page = nv; changed = true; }
+          break;
+        }
+      }
+      if (changed) localStorage.setItem(SECTIONS_KEY, JSON.stringify(all));
+    } catch (_) {}
+    // Clear the dead itemPages bucket so 329 doesn't draw a stale/duplicate marker
+    // (app.js now draws the native divider).
+    try { var pm = readJson(PAGE_KEY, {}); if (pm && pm[sid]) { delete pm[sid]; writeJson(PAGE_KEY, pm); } } catch (_) {}
+    // One re-render so app.js re-derives Pi (with the new .page) — sidecars can't
+    // call app.js's React setter, so a single sections-updated per click is the cost.
+    try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { source: 'sidebar-section-page', sid: sid, page: nv } })); } catch (_) {}
   }
 
   function isDelete(b) { var t = low(b.textContent || b.title || b.getAttribute('aria-label')); return t === '×' || t === 'x' || t.indexOf('delete') >= 0 || t.indexOf('remove') >= 0; }
@@ -85,7 +112,7 @@
   function paint(btn, sid, idx) {
     var p = getPage(sid, idx);
     btn.textContent = '📄 ' + p;
-    btn.title = 'Start this sidebar item on page ' + p + '. Click to cycle page 1 to 4.';
+    btn.title = 'Start this sidebar sub-section on page ' + p + ' (moves the whole sub-section). Click to cycle page 1 to 4.';
     btn.setAttribute('aria-label', btn.title);
     btn.setAttribute('data-antcv-sidebar-item-page-sid', sid);
     btn.setAttribute('data-antcv-sidebar-item-page-idx', String(idx));

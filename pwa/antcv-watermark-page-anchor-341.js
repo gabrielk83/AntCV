@@ -56,7 +56,7 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.50.144-wm-lowest';
+  var SCRIPT_VERSION = '1.50.146-wm-side';
   if (window.__antcvWatermarkPageAnchor341 === SCRIPT_VERSION) return;
   window.__antcvWatermarkPageAnchor341 = SCRIPT_VERSION;
 
@@ -213,7 +213,9 @@
         unhideWatermark(wm);
         try {
           var box = (lastPage.contains(wm) ? lastPage : (wm.parentElement || lastPage));
-          anchorToCorner(wm, box, chooseCorner(box));
+          var corner = chooseCorner(box);
+          anchorToCorner(wm, box, corner);
+          stashWmSide(corner);
         } catch (_) {}
         anchored = wm;
       } else {
@@ -232,8 +234,25 @@
         lastPage.appendChild(clone);
         var corner2 = chooseCorner(lastPage);
         anchorToCorner(clone, lastPage, corner2);
+        stashWmSide(corner2);
       } catch (_) {}
     }
+  }
+
+  // Owner 2026-06-05: the DOCX/PDF worker can't measure rendered column
+  // heights, so it can't decide which COLUMN's text ends higher (the one
+  // with empty space below it, where the watermark belongs). We already
+  // compute that here as the larger-gap corner — persist it so the export
+  // payload (antcv-docx-client) forwards it as `ai_wm_side`. Two-column CV
+  // only; the single-column CL ignores the hint, so don't overwrite a CV
+  // value while the CL is showing.
+  function stashWmSide(corner) {
+    try {
+      if (localStorage.getItem('doc') === 'cl') return;
+      var side = (corner === 'left') ? 'left' : 'right';
+      window.__antcvAiWmSide = side;
+      localStorage.setItem('antcv:aiWmSide', side);
+    } catch (_) {}
   }
 
   var pending = false;

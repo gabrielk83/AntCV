@@ -409,6 +409,13 @@ export async function generateDocx(payload) {
     writingStyle: typeof payload.writing_style === 'string'
       ? payload.writing_style.trim().toLowerCase()
       : '',
+    // Owner 2026-06-05: AI watermark goes to whichever COLUMN's text ends
+    // higher (empty space below it). The PWA measures the live preview and
+    // forwards the page side here ('left'|'right'); buildTwoColumnDocument
+    // maps it to the sidebar/main cell. Absent → null → default to main.
+    aiWmSide: (payload.ai_wm_side === 'left' || payload.ai_wm_side === 'right')
+      ? payload.ai_wm_side
+      : null,
     // contCounter is incremented inside `headingParagraph` to allocate
     // a unique placeholder + bookmark id per section heading. The
     // post-processor pairs each placeholder with its bookmark by this
@@ -657,19 +664,23 @@ function buildTwoColumnDocument(ctx) {
   // drops anchored frames during PDF conversion, which was the v1.14.0
   // photo-floating regression. A bordered paragraph survives both.
   //
-  // Owner 2026-06-05: the CV disclosure must sit at the END OF THE MAIN
-  // CONTENT (lower-right of the last page), matching the CL — NOT at the
-  // bottom of the navy sidebar (the sidebar usually ends higher than the
-  // main column, so the old placement floated the notice mid-page). We
-  // build it 'linear' (muted teal, right-aligned for the white main
-  // column) and append it to mainChildren below. It stays inside the same
-  // body row, so it does not spill onto its own page.
-  const aiDisclosurePara = buildAiDisclosureHangingTextbox(ctx, { context: 'linear' });
+  // Owner 2026-06-05: the AI disclosure goes to whichever COLUMN's text
+  // ends higher — the one with empty space below it, so the notice sits
+  // low AND away from text. That flips per document (sometimes the sidebar
+  // is shorter, sometimes the main). The worker can't measure rendered
+  // heights, so the PWA measures the live preview (the same chooseCorner
+  // logic the preview watermark uses) and forwards the page side here
+  // (ctx.aiWmSide: 'left'|'right'). We map it to the sidebar or main cell.
+  // No hint (older PWA) → main, the common case.
+  const sidebarSide = (style && style.sidebarPosition === 'right') ? 'right' : 'left';
+  const wmInSidebar = ctx.aiWmSide ? (ctx.aiWmSide === sidebarSide) : false;
+  const aiDisclosurePara = buildAiDisclosureHangingTextbox(ctx, { context: wmInSidebar ? 'sidebar' : 'linear' });
 
   const sidebarChildren = [
     ...(photoTopOfSidebar ? [photoTopOfSidebar] : []),
     ...sidebarSecs.flatMap(s => renderSection(s, ctx, /*isSidebar*/ true)),
     ...(photoBottomOfSidebar ? [photoBottomOfSidebar] : []),
+    ...(wmInSidebar ? [aiDisclosurePara] : []),
   ];
 
   // v1.14.1 — main-left/right: wrap the FIRST main section's
@@ -696,9 +707,10 @@ function buildTwoColumnDocument(ctx) {
     mainChildren = mainSecs.flatMap(s => renderSection(s, ctx, /*isSidebar*/ false));
   }
 
-  // Owner 2026-06-05: AI disclosure anchored to the END of the main column
-  // (lower-right of the last page), matching the CL — not the sidebar tail.
-  mainChildren.push(aiDisclosurePara);
+  // When the hint puts the disclosure in the main column (the default),
+  // append it at the end of the main content. When it belongs in the
+  // sidebar, it was already added to sidebarChildren above.
+  if (!wmInSidebar) mainChildren.push(aiDisclosurePara);
 
   // v1.14.1 — header-left/right: same cell-split treatment for the
   // candidate header band. Wrap name/spec/contact paragraphs in a

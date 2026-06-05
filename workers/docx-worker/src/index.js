@@ -24243,6 +24243,14 @@ async function generateDocx(payload) {
     // for academic reference sections under research-formal. Absent
     // when an older PWA bundle posts — falls back to legacy behaviour.
     writingStyle: typeof payload.writing_style === "string" ? payload.writing_style.trim().toLowerCase() : "",
+    // Owner 2026-06-05: AI watermark goes to whichever COLUMN's text ends
+    // higher (the one with empty space below it, so the notice is low AND
+    // away from text) — and that flips per document. The worker can't
+    // measure rendered heights, so the PWA measures the live preview
+    // (antcv-watermark-page-anchor-341 chooseCorner) and forwards the page
+    // side here: 'left' | 'right'. buildTwoColumnDocument maps it to the
+    // sidebar or main cell. Absent (older PWA) → null → default to main.
+    aiWmSide: (payload.ai_wm_side === "left" || payload.ai_wm_side === "right") ? payload.ai_wm_side : null,
     // contCounter is incremented inside `headingParagraph` to allocate
     // a unique placeholder + bookmark id per section heading. The
     // post-processor pairs each placeholder with its bookmark by this
@@ -24398,7 +24406,14 @@ function buildTwoColumnDocument(ctx) {
   const photoBottomOfSidebar = maybeBuildPhotoFor(ctx, "sidebar-bottom");
   const photoInHeader = maybeBuildPhotoFor(ctx, "header");
   const photoInMain = maybeBuildPhotoFor(ctx, "main");
-  const aiDisclosurePara = buildAiDisclosureHangingTextbox(ctx, { context: "linear" });
+  // Owner 2026-06-05: the AI disclosure goes to whichever COLUMN's text
+  // ends higher (more empty space below it). The PWA forwards the page
+  // side it measured (ctx.aiWmSide: 'left'|'right'); map it to the sidebar
+  // or main cell. Default (no hint) → main, which is usually the taller,
+  // text-dense column's neighbour and matches the common case.
+  const sidebarSide = style && style.sidebarPosition === "right" ? "right" : "left";
+  const wmInSidebar = ctx.aiWmSide ? ctx.aiWmSide === sidebarSide : false;
+  const aiDisclosurePara = buildAiDisclosureHangingTextbox(ctx, { context: wmInSidebar ? "sidebar" : "linear" });
   const sidebarChildren = [
     ...photoTopOfSidebar ? [photoTopOfSidebar] : [],
     ...sidebarSecs.flatMap((s) => renderSection(
@@ -24407,7 +24422,8 @@ function buildTwoColumnDocument(ctx) {
       /*isSidebar*/
       true
     )),
-    ...photoBottomOfSidebar ? [photoBottomOfSidebar] : []
+    ...photoBottomOfSidebar ? [photoBottomOfSidebar] : [],
+    ...wmInSidebar ? [aiDisclosurePara] : []
   ];
   let mainChildren;
   if (photoInMain && mainSecs.length > 0) {
@@ -24438,7 +24454,7 @@ function buildTwoColumnDocument(ctx) {
       false
     ));
   }
-  mainChildren.push(aiDisclosurePara);
+  if (!wmInSidebar) mainChildren.push(aiDisclosurePara);
   if (photoInHeader) {
     const headerInnerW = PAGE_W - 720;
     const wrappedHeader = buildPhotoRowTable(ctx, photoInHeader, headerCell.slice(), headerInnerW);
@@ -26240,7 +26256,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.14-cv-wm-main";
+var VERSION = "1.14.15-cv-wm-dyn";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

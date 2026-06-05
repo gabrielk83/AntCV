@@ -523,9 +523,32 @@ export function buildPayload({
     ...(typeof readPanelDefaultAlign === 'function'
       ? { panel_default_alignment: readPanelDefaultAlign() }
       : {}),
+    /* Owner 2026-06-05: the AI watermark belongs in whichever COLUMN's
+       text ends higher (empty space below it). The worker can't measure
+       rendered heights, so antcv-watermark-page-anchor-341 measures the
+       live preview and stores the page side ('left'|'right'). Forward it
+       so the two-column CV places the disclosure in the matching cell.
+       Older workers ignore it; the linear CL ignores it too. */
+    ...((() => { const s = readAiWmSide(); return s ? { ai_wm_side: s } : {}; })()),
   };
 
   return payload;
+}
+
+// Which page side the AI watermark should sit on, as measured by the
+// preview sidecar (antcv-watermark-page-anchor-341). Returns 'left',
+// 'right', or '' when unset.
+function readAiWmSide() {
+  try {
+    if (typeof window !== 'undefined' && (window.__antcvAiWmSide === 'left' || window.__antcvAiWmSide === 'right')) {
+      return window.__antcvAiWmSide;
+    }
+    if (typeof localStorage !== 'undefined') {
+      const v = localStorage.getItem('antcv:aiWmSide');
+      if (v === 'left' || v === 'right') return v;
+    }
+  } catch (_) { /* localStorage may be disabled */ }
+  return '';
 }
 
 // Read antcv:itemPages from localStorage. Returns a plain object

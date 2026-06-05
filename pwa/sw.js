@@ -1,8 +1,7 @@
-const CACHE = 'antcv-1.50.148';
+const CACHE = 'antcv-1.50.149';
 const SHELL = [
   './manifest.json',
   './antcv-mobile-controls.css',
-  './antcv-mobile-controls.js',
   './antcv-docx-client.js',
   './antcv-data-importer.js',
   './antcv-packages-registry.css',
@@ -34,7 +33,6 @@ const SHELL = [
   './antcv-sidebar-position.js',
   './antcv-page-fit.js',
   './antcv-table-fast-drag.js',
-  './antcv-tone-custom-slots.js',
   './antcv-auth.js',
   './icons/icon-192.png',
   './icons/icon-512.png',
@@ -52,8 +50,21 @@ const SHELL = [
 const NETWORK_FIRST = /\.(html|js|css|jsx)(\?|$)|\/$|relay-config\.json/;
 
 self.addEventListener('install', e => {
+  // Resilient precache: add each asset INDEPENDENTLY so a single missing
+  // or failing resource (a 404 on a retired sidecar, a CDN hiccup, a CORS
+  // rejection on a cross-origin URL) cannot abort the whole install — which
+  // is exactly what caches.addAll(SHELL) used to do (one bad entry rejected
+  // the batch and the app shell was never precached, breaking offline).
+  // Skipped assets are logged and left to the runtime fetch handler to cache
+  // on first use.
   e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())
+    caches.open(CACHE).then(c =>
+      Promise.allSettled(SHELL.map(u =>
+        c.add(u).catch(err => {
+          try { console.warn('[sw] precache skipped:', u, (err && err.message) || err); } catch (_) {}
+        })
+      ))
+    ).then(() => self.skipWaiting())
   );
 });
 

@@ -40,15 +40,18 @@ function label(el: Element): string {
 // desktop build uses button.antcv-fab with data-antcv-*-fab attributes.
 function isActionFab(el: Element): boolean {
   if (el.tagName !== 'BUTTON') return false;
+  // Guard FIRST: a privacy LED relocated into the top bar (topbar-tools-347
+  // sets data-antcv-topbar-moved="1") must always stay visible in its new home.
+  // This must run BEFORE the attribute matches below — otherwise the
+  // data-antcv-privacy-led-fab branch short-circuits to true and the moved pill
+  // gets hidden on mobile (the "privacy LED missing on mobile" bug: the mobile
+  // branch of applyPreviewActions stamped it display:none/visibility:hidden).
+  if (el.getAttribute('data-antcv-topbar-moved') === '1') return false;
   if (el.getAttribute('data-antcv-privacy-led-fab') === '1') return true;
   if (el.getAttribute('data-antcv-recheck-fab') === '1') return true;
   const txt = label(el);
   // Title/aria forms used by both desktop and the plain mobile FABs.
   if (/Analyze JD|JD analysis|Fuse CV\/CL|Fusion CL|Fuse|Privacy Status|Privacy/i.test(txt)) {
-    // Guard: don't catch the privacy LED that has already been relocated into
-    // the top bar (topbar-tools-347 sets data-antcv-topbar-moved="1"). That
-    // one must stay visible in its new home.
-    if (el.getAttribute('data-antcv-topbar-moved') === '1') return false;
     return true;
   }
   return false;

@@ -22,6 +22,7 @@ const SHELL = [
   './antcv-cloud-put-shrink-guard-355.js',
   './antcv-jd-watch.js',
   './antcv-privacy-led.js',
+  './antcv-demo-watermark.js',
   './antcv-bullet-targets.js',
   './antcv-photo-position.js',
   './antcv-preview-header-tokens.js',

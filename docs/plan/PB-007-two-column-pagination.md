@@ -196,3 +196,45 @@ list/add-repo tool). So Path B cannot be executed from this session as-is.
    break flag) → owner applies it in their app.js build.
 3. Fall back to **Path A** (sidecar replicates sidebar pagination) — fully doable here, no
    external access — if a working result is wanted before the app.js build can change.
+
+---
+
+## UPDATE 2026-06-05 (d) — BREAKTHROUGH: app.js already paginates the sidebar by `section.page`
+
+De-minified `pwa/app.js` (prettier → /tmp/app.beautified.js, 40,511 lines). Found the real
+pagination engine (~line 35546) and the page-button handler (~line 6790):
+
+```
+Pi = ro[Lt]                                  // sections for active doc
+Di = Pi.filter(e => e.loc==="sidebar")       // sidebar sections
+o = Di...; a = e => Math.max(1, parseInt(e.page||1))   // a section's page = section.page
+p = [...o.map(a), ...rolePages]; u = Math.max(1,...p)  // u = page count
+m = e => o.filter(t => a(t)===e)             // sidebar sections on page e
+```
+Main page button: `t[n] = {...t[n], page:o}; l({roles:t})` (React setter), and `.page`
+persists (survives reload via the sections store).
+
+**Root cause (final):** app.js paginates BOTH columns by the `.page` property on each
+role / sidebar section. The sidebar sidecars (`329`/`247`/`359`) write `antcv:itemPages`,
+which app.js **never reads** — so the sidebar section's `.page` stayed 1 → `u` stayed 1 →
+no page-2 box, no move.
+
+**Fix (no app.js edit needed):** set **`section.page = N`** on the sidebar section in the
+`sections` store, then re-render. app.js's native engine then raises `u`, creates the
+page-N box, places the section via `m(N)`, and draws the pink "▼ PAGE N ▼" divider — exactly
+the main-column behaviour. This is the **whole-section** move (= PB-002 first-item rule).
+
+### Remaining nuance
+- app.js's sidebar pagination is **per-section** (`section.page`), not per-item. So
+  "move the whole sidebar sub-section to page N" is directly supported by setting
+  `section.page`. **Mid-section item splits** (break between items of one sidebar section)
+  are NOT supported by app.js's engine and would need more (item-level) work — but the
+  primary owner case (move Regulatory Context to page 2) is the whole-section case.
+- Verify: does setting `.page` in the `sections` store + `antcv:sections-updated` get picked
+  up live, or only on reload? (personality forceRebuild must preserve `.page`.) If it wipes
+  `.page`, fall back to writing through whatever store survives forceRebuild.
+
+### Next implementable step
+Change the sidebar page control to set `section.page` (whole-section move) instead of
+`antcv:itemPages`; keep `329` only for the marker if still wanted. Verify the section moves
+to page 2 in the preview (boxes 1→2). No app.js source change required.

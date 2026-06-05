@@ -5,7 +5,7 @@ This file now folds in the canonical `AntCV_UI_UX_Spec_and_QA_Plan_v4.docx` back
 
 ---
 
-## DATA-EXPORT-001 + DELETE-SAVE-001 — v1.50.140 (built; live verification owed)
+## DATA-EXPORT-001 + DELETE-SAVE-001 — v1.50.142 (built; live verification owed)
 
 New readable sidecar `pwa/antcv-data-export-360.js` (loaded in index.html after
 `cloud-delete-296` + app.js). No app.js / fetch-wrapper change — reads

@@ -18,6 +18,10 @@ AntCV is a React PWA that helps a job seeker draft a CV and cover letter, tailor
 - No filler, no banned-list corporate language. Banned-words list is enforced in the writing-engine layer; the same standard applies to your replies and to any prose you produce in the repo (READMEs, comments, commit messages).
 - Iterative; expect rapid back-and-forth and follow-up patches. Ship tight, named hotfix bundles rather than sweeping rewrites.
 
+## app.js source of truth (do not lose it again)
+
+`pwa/app.src.js` is the **de-minified, human-editable SOURCE** for `pwa/app.js`. EDIT `app.src.js`, then rebuild the deployed bundle with `npm run build:app` (esbuild minify → `pwa/app.js`). Do **NOT** re-de-minify `pwa/app.js` into a throwaway `/tmp` file again — that source already exists and is committed. After `build:app`, bump the `app.js?v=` query in `pwa/index.html` and `sw.js` CACHE per the cache-bust protocol.
+
 ## Hotfix discipline
 
 Anything that touches `pwa/app.js` or any of the fetch-wrapper sidecars goes through diagnostic-first protocol: reproduce → console probe → targeted patch. Don't guess. There was a prior incident (v1.40.335 first attempt) where speculative changes to the `fetch` wrap chain and to an `app.js` z-index caused a downstream blue screen. The lessons:

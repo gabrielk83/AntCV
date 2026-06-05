@@ -5,6 +5,43 @@ This file now folds in the canonical `AntCV_UI_UX_Spec_and_QA_Plan_v4.docx` back
 
 ---
 
+## DELETE-SAVE-001 — "Save my data locally first" tick not appearing — FIXED (v1.50.145)
+
+**Owner (screenshot):** the DANGER ZONE "Are you sure?" confirm card showed
+"🗑 Yes, erase everything" / "Cancel" but **no save-data checkbox and no Download
+button**.
+
+**Root cause:** the v1.50.142 injector anchored on button text `/delete my
+account/i`. The live card uses different labels — the confirm button is "🗑 Yes,
+erase everything" and the trigger is "🗑 Delete user" — so `findDeleteButton`
+returned null and nothing injected. (The `AntcvFullErase` save-first wrap still
+fired, since `saveFirst` defaults on, but the user had no visible control.)
+
+**Card structure (app.js):** DANGER ZONE section → "⚠ DANGER ZONE" header →
+always-visible description ("…Logs you out. No undo.") → `sn ? confirmCard :
+"🗑 Delete user"`; confirmCard = "Are you sure?" + warning + flex button row
+["🗑 Yes, erase everything", "Cancel"].
+
+**Fix (v1.50.145):**
+- `findEraseButton` now matches `/erase everything|delete my account/i`.
+- **Checkbox** injects above the confirm card's button row (appears when armed).
+- **Download button** anchors to the always-visible description leaf
+  (`/Logs you out\. No undo\./`) and is inserted right after it, so it shows
+  whether or not the confirm card is open.
+- Both idempotent (marker-guarded). `?v=1.50.145`; cache trio → 1.50.145
+  (1.50.144 → STALE).
+
+**Verified (Node harness, 7/7):** Download lands directly after the description;
+checkbox lands directly above the button row; both finders match the live labels;
+re-inject is idempotent (one of each).
+
+**Live verification owed:** open Settings → DANGER ZONE, click "Delete user",
+confirm the "Save my data locally first" checkbox shows above the buttons and the
+"⬇ Download my data" button shows under the description; unchecking it skips the
+backup; checked → a backup downloads before erase.
+
+---
+
 ## IMPORT-COUNT-001 — upload extract count wrong — FIXED (v1.50.143; live verification owed)
 
 **Symptom:** after a CV upload the wizard toast read "✓ Found 0 work · 0

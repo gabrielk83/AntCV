@@ -1,4 +1,4 @@
-/* AntCV data export + delete-save (v1.50.145)
+/* AntCV data export + delete-save (v1.50.147)
  * ============================================================================
  * Implements two owner items from the 2026-06-04 batch triage:
  *
@@ -49,7 +49,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.145';
+  var VERSION = '1.50.147';
   if (window.__antcvDataExport360 === VERSION) return;
   window.__antcvDataExport360 = VERSION;
 
@@ -233,12 +233,15 @@
     return true;
   }
 
-  // ── UI injection: anchor to the Settings "DANGER ZONE" card ────────────
-  // The live card (app.js) is: "⚠ DANGER ZONE" header, an always-visible
-  // description ("…Logs you out. No undo."), then either a "🗑 Delete user"
-  // trigger or — once armed — an "Are you sure?" confirm card whose button row
-  // holds "🗑 Yes, erase everything" + "Cancel". The checkbox goes above that
-  // button row; the Download button goes after the always-visible description.
+  // ── UI injection ───────────────────────────────────────────────────────
+  // Two homes in Settings:
+  //   * the "Save my data locally first" checkbox goes into the DANGER ZONE
+  //     "Are you sure?" confirm card, above its "🗑 Yes, erase everything" /
+  //     "Cancel" button row;
+  //   * the "⬇ Download my data" button goes at the END of the PRIVACY zone,
+  //     right after the "What LLM providers see" box (its last line mentions
+  //     "zero-retention modes"). (Owner placement, v1.50.146 — was the danger
+  //     zone in v1.50.145, v1.50.146.)
   function findEraseButton() {
     var btns = document.querySelectorAll('button');
     for (var i = 0; i < btns.length; i++) {
@@ -250,14 +253,19 @@
     return null;
   }
 
-  function findDangerDescription() {
+  // Returns the "What LLM providers see" box (the privacy zone's last block) so
+  // the Download button can be appended after it, ending the privacy zone.
+  function findPrivacyProvidersBox() {
     var els = document.querySelectorAll('div');
     for (var i = 0; i < els.length; i++) {
       var el = els[i];
-      // Match the description leaf only (single text node) so we land on the
-      // paragraph itself, not an ancestor wrapper.
+      // The provider-text leaf is a single text node mentioning zero-retention.
       if (el.childNodes.length === 1 && el.firstChild && el.firstChild.nodeType === 3) {
-        if (/Logs you out\. No undo\./i.test(el.textContent || '')) return el;
+        if (/zero-retention modes/i.test(el.textContent || '')) {
+          // el = the text leaf; its parent = the bordered "What LLM providers
+          // see" box. Return the box so we insert after it.
+          return el.parentNode || el;
+        }
       }
     }
     return null;
@@ -315,17 +323,17 @@
     try { card.insertBefore(buildCheckRow(), row); } catch (_) {}
   }
 
-  // Download button -> right after the always-visible danger-zone description,
-  // so it shows whether or not the confirm card is armed.
+  // Download button -> end of the PRIVACY zone, just after the "What LLM
+  // providers see" box.
   function injectDownload() {
-    var desc = findDangerDescription();
-    if (!desc) return;
-    var section = desc.parentNode;
-    if (!section) return;
-    if (section.querySelector('[' + UI_MARK + '="download"]')) return;
+    var box = findPrivacyProvidersBox();
+    if (!box) return;
+    var zone = box.parentNode;
+    if (!zone) return;
+    if (zone.querySelector('[' + UI_MARK + '="download"]')) return;
     try {
-      if (desc.nextSibling) section.insertBefore(buildButton(), desc.nextSibling);
-      else section.appendChild(buildButton());
+      if (box.nextSibling) zone.insertBefore(buildButton(), box.nextSibling);
+      else zone.appendChild(buildButton());
     } catch (_) {}
   }
 
@@ -371,7 +379,7 @@
     collectData: collectData,
     _injectUi: injectUi,
     _findEraseButton: findEraseButton,
-    _findDangerDescription: findDangerDescription,
+    _findPrivacyProvidersBox: findPrivacyProvidersBox,
     _setSaveFirst: function (v) { saveFirst = !!v; },
     _saveFirst: function () { return saveFirst; }
   };

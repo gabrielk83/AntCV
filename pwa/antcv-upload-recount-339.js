@@ -63,7 +63,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.40.339-g';
+  var VERSION = '1.50.143-multinode';
   if (window.__antcvUploadRecount339 === VERSION) return;
   window.__antcvUploadRecount339 = VERSION;
 
@@ -161,6 +161,24 @@
       if (el.childNodes.length === 1 && el.firstChild.nodeType === 3) {
         var newText = t.replace(SUMMARY_RE, expected);
         if (newText !== t) el.textContent = newText;
+        continue;
+      }
+      // React split-text case (the real production structure): app.js emits the
+      // line as many sibling text nodes —
+      //   "✓ Found ", count, " work entr", "ies", " · ", count2, " education · ", ...
+      // so textContent on the container MATCHES but no SINGLE child text node
+      // does, and the TreeWalker below finds nothing to rewrite (this is why the
+      // count stayed wrong even with the sidecar loaded). If every child of the
+      // matching element is a text node, it is the leaf holding the split line —
+      // collapse it to the corrected string. The styled wrapper above it has an
+      // element child, so it is correctly skipped here and by the walker.
+      var allText = el.childNodes.length > 1;
+      for (var ci = 0; ci < el.childNodes.length && allText; ci++) {
+        if (el.childNodes[ci].nodeType !== 3) allText = false;
+      }
+      if (allText) {
+        var rebuilt = t.replace(SUMMARY_RE, expected);
+        if (rebuilt !== t) el.textContent = rebuilt;
         continue;
       }
       // Mixed-node case: walk for the specific text node.

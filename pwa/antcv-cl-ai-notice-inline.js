@@ -21,7 +21,7 @@
 (function () {
   'use strict';
   if (window.__antcvClAiNoticeInline) return;
-  window.__antcvClAiNoticeInline = '1.50.125';
+  window.__antcvClAiNoticeInline = '1.50.136';
 
   var NOTICE = {
     en: 'AI-assisted',
@@ -147,8 +147,29 @@
     var p = paper();
     if (!p || activeDoc() !== 'cl') {
       if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
+      // Defensive: un-hide any app.js watermark we hid while in CL (so the CV
+      // watermark isn't left hidden after a doc switch).
+      try {
+        var u = document.querySelectorAll('.antcv-ai-document-watermark, [data-antcv-watermark], [data-antcv-ai-disclosure]');
+        for (var ui = 0; ui < u.length; ui++) {
+          if (u[ui].hasAttribute && u[ui].hasAttribute('data-antcv-cl-ai-notice')) continue;
+          if (u[ui].style && u[ui].style.display === 'none') u[ui].style.removeProperty('display');
+        }
+      } catch (_) {}
       return;
     }
+    // Owner: "turn it off and add a new watermark." The CSS hide didn't catch
+    // app.js's boxed/anchored watermark, so hide it directly via JS (display:none
+    // !important beats any inline style) — document-wide in CL mode, excluding our
+    // own span. app.js's watermark text is "AI-assisted document"; ours is below.
+    try {
+      var wms = document.querySelectorAll('.antcv-ai-document-watermark, [data-antcv-watermark], [data-antcv-ai-disclosure]');
+      for (var wi = 0; wi < wms.length; wi++) {
+        var w = wms[wi];
+        if (w.hasAttribute && w.hasAttribute('data-antcv-cl-ai-notice')) continue;
+        w.style.setProperty('display', 'none', 'important');
+      }
+    } catch (_) {}
     var row = findSignoffNameRow(p);
     if (!row) {
       if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
@@ -192,6 +213,6 @@
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
   else start();
-  window.AntcvClAiNoticeInline = { version: '1.50.125', _tick: tick, _lang: lang };
-  try { console.debug('[cl-ai-notice-inline] installed v1.50.125'); } catch (_) {}
+  window.AntcvClAiNoticeInline = { version: '1.50.136', _tick: tick, _lang: lang };
+  try { console.debug('[cl-ai-notice-inline] installed v1.50.136'); } catch (_) {}
 })();

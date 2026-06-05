@@ -238,3 +238,25 @@ the main-column behaviour. This is the **whole-section** move (= PB-002 first-it
 Change the sidebar page control to set `section.page` (whole-section move) instead of
 `antcv:itemPages`; keep `329` only for the marker if still wanted. Verify the section moves
 to page 2 in the preview (boxes 1→2). No app.js source change required.
+
+---
+
+## UPDATE 2026-06-05 (e) — Path A WORKS; sidebar pagination shipped
+
+Owner confirmed: setting `section.page` (1.50.134) makes the sidebar section actually
+transition to page 2 (app.js's native engine moves it + draws its divider). Follow-ups
+shipped:
+- **1.50.135:** `247` (Additional Information) switched from dead `itemPages` to
+  `section.page` (now moves too; no more 329 red flicker). Page control is now
+  **first-item-only** on both `247` + `359` = "move the whole sub-section" (app.js paginates
+  the sidebar per-section; per-item buttons that moved the whole section were confusing).
+- **1.50.136:** CL watermark — `cl-ai-notice` now JS-hides app.js's watermark in CL
+  (display:none !important) + renders its own signature-line marker (owner's "turn it off,
+  add a new one"). Un-hides on doc switch.
+
+**DONE:** whole-section sidebar page breaks (Regulatory Context, Additional Information, etc.)
+via app.js's native pagination — NO app.js edit needed (Path A).
+**STILL OPEN:** mid-section item splits (app.js's sidebar engine is per-section only);
+cross-column sync; overflow→manual-break / forward-only (PB-007 steps 3-6); panel-marker
+relocation. The `329` yellowish bar may now be redundant with app.js's native divider —
+review/disable once verified.

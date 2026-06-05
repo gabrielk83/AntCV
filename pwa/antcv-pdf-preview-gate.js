@@ -561,7 +561,13 @@ ${inlineStyles}
     // the whole request with HTTP 422. Clamp to a supported value so export
     // never hard-fails; da when Danish, otherwise en.
     function clampLang(l) { return /^da/i.test(String(l || '')) ? 'da' : 'en'; }
-    var doc = s('doc', 'cv') === 'cl' ? 'cl' : 'cv';
+    // doc may be stored bare ('cl') OR JSON-encoded ('"cl"'); handle both so the
+    // CL preview never exports the CV (the bare === 'cl' check missed '"cl"').
+    var doc = (function () {
+      var d = s('doc', 'cv');
+      try { var p = JSON.parse(d); if (typeof p === 'string') d = p; } catch (_) {}
+      return String(d).toLowerCase() === 'cl' ? 'cl' : 'cv';
+    })();
     var pi = j('personalInfo', {}) || {};
     return {
       sections: j('sections', { cv: [], cl: [] }),

@@ -1,4 +1,4 @@
-/* AntCV data export + delete-save (v1.50.140)
+/* AntCV data export + delete-save (v1.50.142)
  * ============================================================================
  * Implements two owner items from the 2026-06-04 batch triage:
  *
@@ -49,7 +49,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.140';
+  var VERSION = '1.50.142';
   if (window.__antcvDataExport360 === VERSION) return;
   window.__antcvDataExport360 = VERSION;
 

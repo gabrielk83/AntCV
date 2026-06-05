@@ -56,7 +56,7 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.50.146-wm-side';
+  var SCRIPT_VERSION = '1.50.147-wm-clamp';
   if (window.__antcvWatermarkPageAnchor341 === SCRIPT_VERSION) return;
   window.__antcvWatermarkPageAnchor341 = SCRIPT_VERSION;
 
@@ -141,11 +141,26 @@
     watermark.style.position = 'absolute';
     watermark.style.bottom = '12pt';
     watermark.style.zIndex = '5';
+    // Owner 2026-06-05 (mobile): the preview paper is wider than a phone
+    // viewport, so anchoring 14pt from the page-box's right edge pushed the
+    // watermark off-screen (it looked "gone" on the cover letter). Clamp the
+    // offset so the watermark always lands inside the visible viewport: when
+    // the page-box edge overflows the viewport by N px, add N to the offset
+    // so the marker sits ~14px inside the screen edge instead. On desktop
+    // (no overflow) this is exactly the previous 14pt corner inset.
+    var DEFAULT_INSET = 18; // ~14pt
+    var vw = window.innerWidth || (document.documentElement && document.documentElement.clientWidth) || 0;
+    var pbr = null;
+    try { pbr = pageBox.getBoundingClientRect(); } catch (_) {}
     if (corner === 'left') {
-      watermark.style.left = '14pt';
+      var leftPx = DEFAULT_INSET;
+      if (pbr && pbr.left < 0) leftPx = (-pbr.left) + 14;
+      watermark.style.left = leftPx + 'px';
       watermark.style.right = 'auto';
     } else {
-      watermark.style.right = '14pt';
+      var rightPx = DEFAULT_INSET;
+      if (pbr && vw && pbr.right > vw) rightPx = (pbr.right - vw) + 14;
+      watermark.style.right = rightPx + 'px';
       watermark.style.left = 'auto';
     }
     watermark.setAttribute('data-antcv-watermark-corner', corner);

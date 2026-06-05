@@ -56,7 +56,7 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.50.150-wm-cl-teal';
+  var SCRIPT_VERSION = '1.50.156-wm-paper';
   if (window.__antcvWatermarkPageAnchor341 === SCRIPT_VERSION) return;
   window.__antcvWatermarkPageAnchor341 = SCRIPT_VERSION;
 
@@ -251,7 +251,15 @@
       if (!anchored) {
         unhideWatermark(wm);
         try {
-          var box = (lastPage.contains(wm) ? lastPage : (wm.parentElement || lastPage));
+          // BUGFIX 2026-06-05 (CL watermark off-paper): anchor relative to an
+          // element that ACTUALLY contains the watermark, else position:absolute
+          // resolves against the wrong offset parent and the marker lands ~400px
+          // left of the paper (probe: x=20 while paperLeft=424). Prefer the last
+          // page-box when it contains the watermark, then the paper (always
+          // contains it on the CL), and only fall back to wm.parentElement last.
+          var box = lastPage.contains(wm)
+            ? lastPage
+            : (paper.contains(wm) ? paper : (wm.parentElement || lastPage));
           var corner = chooseCorner(box);
           anchorToCorner(wm, box, corner);
           stashWmSide(corner);

@@ -853,6 +853,31 @@ function normalizeSections(raw) {
     return out;
   }
 
+  // Owner 2026-06-05: MANUAL page breaks were ignored in the export. The
+  // page-control sidecars persist `section.page` (a page number) on each
+  // section, and app.js paginates the preview from it — but this payload
+  // never carried it, so DOCX/PDF stayed single-page. Translate it to the
+  // worker's `pageBreakBefore` flag, which the worker already honours (the
+  // same path the working role "slider" uses). A break is emitted on the
+  // FIRST section (in document order, per column) whose page jumps above
+  // the running max — so a cascade of page-2 sections breaks once, not on
+  // every one. Sidebar and main are paginated independently (separate
+  // table cells), so we track the running max per column.
+  const sectionBreakIds = (function () {
+    const ids = new Set();
+    const maxByLoc = { sidebar: 1, main: 1 };
+    for (const s of raw) {
+      if (!s || s.on === false) continue;
+      const loc = s.loc === 'sidebar' ? 'sidebar' : 'main';
+      const pg = Math.max(1, parseInt((s && s.page) || 1, 10) || 1);
+      if (pg > maxByLoc[loc]) {
+        if (s.id) ids.add(s.id);
+        maxByLoc[loc] = pg;
+      }
+    }
+    return ids;
+  })();
+
   return raw.filter(s => s && s.on !== false).map(s => {
     const itemAlign = alignFor(s.id);
     const base = {
@@ -862,6 +887,7 @@ function normalizeSections(raw) {
       on: s.on !== false,
       type: s.type,
       ...(itemAlign ? { item_alignment: itemAlign } : {}),
+      ...(sectionBreakIds.has(s.id) ? { pageBreakBefore: true } : {}),
     };
     switch (s.type) {
       case 'text':

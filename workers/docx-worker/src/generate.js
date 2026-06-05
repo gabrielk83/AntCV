@@ -766,6 +766,11 @@ function buildTwoColumnDocument(ctx) {
     if (!b || typeof b !== 'object') return false;
     return Object.keys(b).some(k => Number(b[k]) >= 2);
   });
+  // Owner 2026-06-05: a manual section page break (s.pageBreakBefore, set by
+  // the PWA from section.page) only takes effect if the body row may split
+  // across pages — disable cantSplit whenever any section carries a break.
+  const hasSectionPageBreak = sections.some(s => s && s.pageBreakBefore === true);
+  const allowRowSplit = hasSidebarItemPageBreaks || hasSectionPageBreak;
 
   const bodyTable = new Table({
     width: { size: PAGE_W, type: WidthType.DXA },
@@ -802,7 +807,7 @@ function buildTwoColumnDocument(ctx) {
         // cantSplit and breaks as before. The user must then trim
         // their sidebar content to fit. Future ships may add a
         // density-based shrink-to-fit pass.
-        cantSplit: !hasSidebarItemPageBreaks,
+        cantSplit: !allowRowSplit,
         children: sidebarOnRight
           ? [mainCell, sidebarCell]
           : [sidebarCell, mainCell],

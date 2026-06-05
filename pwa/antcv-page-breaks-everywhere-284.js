@@ -53,7 +53,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.40.341-p0b';
+  var VERSION = '1.50.128-pink';
   if (window.__antcvPageBreaksEverywhere284 === VERSION) return;
   window.__antcvPageBreaksEverywhere284 = VERSION;
 
@@ -142,12 +142,14 @@
     var d = document.createElement('div');
     d.setAttribute(BAR_ATTR, '1');
     d.setAttribute('aria-hidden', 'true');
-    // Visible amber band, matching what Professional Experience shows.
+    // v1.50.128: match the Professional-Experience "▼ PAGE N ▼" divider that
+    // the owner likes — pink (rgba(200,40,40,0.7)) with white text, no border —
+    // so every section's page break uses the same marker globally.
     d.style.cssText = [
       'display:block', 'width:100%', 'box-sizing:border-box',
-      'background:#FFF4D6', 'color:#A8770A',
-      'border:1px solid #E8C36B', 'border-radius:3px',
-      'text-align:center', 'font-family:system-ui,sans-serif',
+      'background:rgba(200,40,40,0.7)', 'color:#fff',
+      'border:0', 'border-radius:2px',
+      'text-align:center', 'font-family:Arial,sans-serif',
       'font-size:11pt', 'font-weight:700',
       'padding:4px 8px', 'margin:12px 0 4px',
       'letter-spacing:0.04em'

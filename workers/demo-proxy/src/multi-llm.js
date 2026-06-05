@@ -82,6 +82,14 @@ const PER_CALL_TIMEOUT_MS = 60_000;
 // instead of skipping the provider entirely.
 //
 // Verified against public model lists 2026-05-18.
+//
+// MODEL FRESHNESS — CANONICAL LIST. This object is the single source of truth
+// for which provider models the cascade tries (current first, older as
+// fallback). When a provider ships a new generation or retires one, update it
+// HERE. Keep this copy in sync with the demo-proxy copy, and with the
+// main-generation default in index.js (the gemini `gemini-2.5-flash` default +
+// its `deprecated` remap list). The scheduled freshness check (cron) flags when
+// a listed default is no longer returned by the provider's models endpoint.
 const PROVIDER_MODELS = {
   anthropic: [
     // Current flagship + 4.x family (2025-2026)
@@ -89,7 +97,6 @@ const PROVIDER_MODELS = {
     'claude-opus-4-7',           // 2026-04 flagship, available with appropriate tier
     'claude-sonnet-4-6',         // 2026-02 mainline
     'claude-haiku-4-5',          // fast/cheap current
-    'claude-mythos-preview',     // preview channel — newer capability, may rate-limit harder
     // 3.x family (still on many production accounts)
     'claude-3-7-sonnet-20250219',// late-2024 generation
     'claude-3-5-sonnet-20241022',// previous-gen stable fallback

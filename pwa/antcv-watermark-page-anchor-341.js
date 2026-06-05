@@ -56,7 +56,7 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.50.147-wm-clamp';
+  var SCRIPT_VERSION = '1.50.150-wm-cl-teal';
   if (window.__antcvWatermarkPageAnchor341 === SCRIPT_VERSION) return;
   window.__antcvWatermarkPageAnchor341 = SCRIPT_VERSION;
 
@@ -66,6 +66,16 @@
 
   function findPreviewPaper() {
     return document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]');
+  }
+
+  // The active doc is stored in localStorage as a JSON string, so the raw
+  // value is '"cl"' (with quotes), not 'cl'. Parse/strip before comparing.
+  function docIsCl() {
+    try {
+      var v = localStorage.getItem('doc') || '';
+      try { var p = JSON.parse(v); if (typeof p === 'string') v = p; } catch (_) {}
+      return String(v).toLowerCase() === 'cl';
+    } catch (_) { return false; }
   }
 
   function findPageBoxes(paper) {
@@ -115,6 +125,13 @@
       var r;
       try { r = n.getBoundingClientRect(); } catch (_) { continue; }
       if (!r || (r.width === 0 && r.height === 0)) continue;
+      // Owner 2026-06-05: skip full-height structural/background containers
+      // (the navy sidebar panel, the main-column wrapper, the page-row box).
+      // They reach the page bottom even when their TEXT ends much higher, so
+      // counting them made the "gap" look ~0 on the sidebar side and pushed
+      // the watermark to the dense main column. We want the gap below actual
+      // CONTENT, so ignore anything spanning most of the page height.
+      if (rect.height && r.height >= rect.height * 0.8) continue;
       var nodeMid = r.left + r.width / 2;
       if (nodeMid < midX) {
         if (r.bottom > leftMaxBottom) leftMaxBottom = r.bottom;
@@ -177,12 +194,19 @@
     // WM-002 (owner): adapt text colour to the corner's background. Over the
     // navy sidebar use a light colour (the muted teal is unreadable on navy);
     // over the white main column keep the muted teal.
+    //
+    // CRITICAL (owner 2026-06-05): this white-over-navy rule applies ONLY to
+    // the two-column CV. The COVER LETTER is a single white column with no
+    // navy sidebar, so painting it white made the watermark invisible
+    // (white-on-white) — it looked "missing" in the preview even though the
+    // export rendered it fine in teal. So: CL → always teal.
     var sidebarSide = 'left';
     try {
       var sp = localStorage.getItem('sidebarPosition');
       if (sp) { try { var pp = JSON.parse(sp); if (typeof pp === 'string') sp = pp; } catch (_) {} sidebarSide = (String(sp).toLowerCase() === 'right') ? 'right' : 'left'; }
     } catch (_) {}
-    watermark.style.setProperty('color', (corner === sidebarSide) ? 'rgba(255,255,255,0.78)' : 'rgba(0,116,110,0.72)', 'important');
+    var overNavy = !docIsCl() && (corner === sidebarSide);
+    watermark.style.setProperty('color', overNavy ? 'rgba(255,255,255,0.78)' : 'rgba(0,116,110,0.72)', 'important');
   }
 
   function hideWatermark(wm) {
@@ -263,7 +287,7 @@
   // value while the CL is showing.
   function stashWmSide(corner) {
     try {
-      if (localStorage.getItem('doc') === 'cl') return;
+      if (docIsCl()) return;
       var side = (corner === 'left') ? 'left' : 'right';
       window.__antcvAiWmSide = side;
       localStorage.setItem('antcv:aiWmSide', side);

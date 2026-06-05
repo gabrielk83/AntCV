@@ -49,8 +49,39 @@ import {
 export default {
   async fetch(request, env, ctx) {
     return handleWithProviderFallback(request, env || {});
+  },
+  // Model-freshness cron (owner 2026-06-05): the pinned model IDs are hardcoded
+  // and nothing polled the providers for changes. This daily check lists the
+  // provider's models and LOGS (no behaviour change) when a configured default
+  // is no longer offered (retired) or a newer generation appears — so the
+  // config can't rot silently. Wired via [triggers].crons in wrangler.toml.
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(runModelFreshnessCheck(env || {}));
   }
 };
+
+async function runModelFreshnessCheck(env) {
+  try {
+    const key = env.Gemini_API_Key || env.GEMINI_API_KEY;
+    if (!key) { console.warn('[model-freshness] no Gemini key configured; skipping'); return; }
+    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000&key=' + encodeURIComponent(key));
+    if (!r.ok) { console.warn('[model-freshness] gemini models.list failed: ' + r.status); return; }
+    const j = await r.json();
+    const ids = (j.models || []).map(function (m) { return String(m.name || '').replace(/^models\//, ''); });
+    const want = ['gemini-2.5-flash', 'gemini-2.5-pro'];
+    const missing = want.filter(function (w) { return ids.indexOf(w) < 0; });
+    if (missing.length) {
+      console.warn('[model-freshness] CONFIGURED GEMINI DEFAULTS NOT LISTED (retired?): ' + missing.join(', ') + ' — bump PROVIDER_MODELS + index.js default');
+    }
+    const newer = ids.filter(function (id) { return /^gemini-(3|4|5)[.\-]/.test(id); });
+    if (newer.length) {
+      console.warn('[model-freshness] NEWER GEMINI MODELS AVAILABLE — consider updating the config: ' + newer.slice(0, 12).join(', '));
+    }
+    console.log('[model-freshness] gemini ok: ' + ids.length + ' models listed; defaults present=' + (missing.length === 0));
+  } catch (e) {
+    console.warn('[model-freshness] check failed: ' + (e && e.message || e));
+  }
+}
 
 // Cross-provider auto-fallback (owner 2026-06-05): a single provider returning
 // 503/overloaded (e.g. Gemini) used to fail the whole generation with no

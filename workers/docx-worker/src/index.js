@@ -24845,6 +24845,7 @@ var PHOTO_POSITIONS = /* @__PURE__ */ new Set([
   "header-right",
   "main-left",
   "main-right",
+  "band-overlap",
   "hidden"
 ]);
 var PHOTO_CELL_W_MAIN = 1800;
@@ -24864,10 +24865,10 @@ function buildPhotoParagraph(ctx, position) {
   if (pos === "main-left" || pos === "main-right") inches = 1.2;
   const sizePx = Math.round(inches * EMU_PER_INCH / 9525);
   const outlineColor = (style && style.photoBorderColor || style && style.sidebarHeadColor || style && style.accent || "01B7BB").replace(/^#/, "");
-  if (pos === "sidebar-top" || pos === "sidebar-bottom") {
+  if (pos === "sidebar-top" || pos === "sidebar-bottom" || pos === "band-overlap") {
     return new Paragraph({
       alignment: AlignmentType.CENTER,
-      spacing: { before: 120, after: 120 },
+      spacing: { before: pos === "band-overlap" ? 0 : 120, after: 120 },
       children: [
         new ImageRun({
           data,
@@ -24940,7 +24941,7 @@ function maybeBuildPhotoFor(ctx, target) {
   if (pos === "hidden") return null;
   switch (target) {
     case "sidebar-top":
-      return pos === "sidebar-top" ? buildPhotoParagraph(ctx, pos) : null;
+      return pos === "sidebar-top" || pos === "band-overlap" ? buildPhotoParagraph(ctx, pos) : null;
     case "sidebar-bottom":
       return pos === "sidebar-bottom" ? buildPhotoParagraph(ctx, pos) : null;
     case "header":
@@ -26277,7 +26278,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.17-hiwc-bullets";
+var VERSION = "1.14.17-photo-band-overlap-and-hiwc-bullets";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

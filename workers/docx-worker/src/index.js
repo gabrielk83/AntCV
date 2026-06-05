@@ -24491,6 +24491,12 @@ function buildTwoColumnDocument(ctx) {
     if (!b || typeof b !== "object") return false;
     return Object.keys(b).some((k) => Number(b[k]) >= 2);
   });
+  // Owner 2026-06-05: a manual section page break (s.pageBreakBefore, set by
+  // the PWA from section.page) only takes effect if the body row is allowed
+  // to split across pages. Disable cantSplit whenever any section — sidebar
+  // or main — carries a break, same as we already do for item breaks.
+  const hasSectionPageBreak = sections.some((s) => s && s.pageBreakBefore === true);
+  const allowRowSplit = hasSidebarItemPageBreaks || hasSectionPageBreak;
   const bodyTable = new Table({
     width: { size: PAGE_W, type: WidthType.DXA },
     columnWidths: colWidths,
@@ -24526,7 +24532,7 @@ function buildTwoColumnDocument(ctx) {
         // cantSplit and breaks as before. The user must then trim
         // their sidebar content to fit. Future ships may add a
         // density-based shrink-to-fit pass.
-        cantSplit: !hasSidebarItemPageBreaks,
+        cantSplit: !allowRowSplit,
         children: sidebarOnRight ? [mainCell, sidebarCell] : [sidebarCell, mainCell]
       })
     ]
@@ -26256,7 +26262,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.15-cv-wm-dyn";
+var VERSION = "1.14.16-manual-breaks";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

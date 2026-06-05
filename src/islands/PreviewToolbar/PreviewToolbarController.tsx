@@ -100,7 +100,13 @@ function applyPreviewActions(): void {
     const key = fabKey(b);
     const keep = !seen[key];
     seen[key] = true;
-    if (mobile || !keep) {
+    // A privacy LED reaching here is the NON-relocated floating copy: the
+    // canonical pill lives in the top bar and is exempted by isActionFab
+    // (data-antcv-topbar-moved). Always hide the floating privacy FAB so it
+    // never shows in Settings/Generation or duplicates the top-bar pill — on
+    // desktop too. (Before this, the first-seen floating privacy FAB was
+    // un-hidden on desktop, which surfaced a stray ⚠ FAB in Settings/Gen.)
+    if (mobile || !keep || key === 'privacy') {
       b.style.setProperty('display', 'none', 'important');
       b.style.setProperty('visibility', 'hidden', 'important');
       b.style.setProperty('pointer-events', 'none', 'important');

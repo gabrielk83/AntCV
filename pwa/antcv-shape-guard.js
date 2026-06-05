@@ -1,4 +1,4 @@
-/* AntCV shape-guard sidecar (v1.40.195)
+/* AntCV shape-guard sidecar (v1.50.150)
  * ============================================================
  *
  * Purpose
@@ -72,7 +72,7 @@
   'use strict';
 
   if (window.__antcvShapeGuardInstalled) return;
-  window.__antcvShapeGuardInstalled = '1.40.195';
+  window.__antcvShapeGuardInstalled = '1.50.150';
 
   const SECTIONS_KEY = 'sections';
   const LANG_CACHE_KEY = 'languageCache';
@@ -91,6 +91,28 @@
     return v !== null && typeof v === 'object' && !Array.isArray(v);
   }
 
+  // Several section types store each row as a COMPACT LEAF that legitimately
+  // has no bullets[] array — the row IS the content, and the renderer reads its
+  // own fields, not .bullets. The missing-bullets diagnostic targets structured
+  // role/experience items (the language-switch crash signature), so it should
+  // stay quiet for leaves. Leaf field names (per the importer schema in
+  // antcv-data-importer.js PERSONAL_PROMPT):
+  //   b, t   — bullets section row  ({b:"<bold lead>", t:"<text>"})
+  //   l, v   — regulatory / key-value row ({l:"<label>", v:"<value>"})
+  //   deg, sch — education row ({deg:"<degree>", sch:"<school>"})
+  //   group  — regulatory group row ({group:"<name>"})
+  // An item is a leaf when EVERY own key is one of these (a structured item also
+  // carries role/company/title/bullets, so it never matches).
+  const LEAF_KEYS = { b: 1, t: 1, l: 1, v: 1, deg: 1, sch: 1, group: 1 };
+  function isCompactLeaf(item) {
+    const keys = Object.keys(item);
+    if (!keys.length) return false;
+    for (let i = 0; i < keys.length; i++) {
+      if (!LEAF_KEYS[keys[i]]) return false;
+    }
+    return true;
+  }
+
   // Normalize a single item: ensure bullets[], string fields exist.
   function normalizeItem(item, ctx) {
     if (!isPlainObject(item)) return null;
@@ -101,8 +123,9 @@
       // 'bullets')" crash on language switch. Logging the surrounding
       // item shape lets us trace which translation-pipeline path
       // leaves the hole. Module-level throttle: max 5 warnings per
-      // page load (cap reset on reload).
-      if (bulletWarnCount < BULLET_WARN_CAP) {
+      // page load (cap reset on reload). Skip compact-leaf bullets/kv
+      // items — they have no bullets[] by design (false positive).
+      if (!isCompactLeaf(item) && bulletWarnCount < BULLET_WARN_CAP) {
         try {
           const sample = JSON.stringify({
             type: item.type, title: item.title, role: item.role,
@@ -327,12 +350,12 @@
 
   // Public API.
   window.AntcvShapeGuard = {
-    version: '1.40.195',
+    version: '1.50.150',
     stats: stats,
     _normalizeSectionsBundle: normalizeSectionsBundle,
     _normalizeLanguageCache: normalizeLanguageCache,
     _eagerNormalize: eagerNormalize,
   };
 
-  try { console.debug('[shape-guard] installed v1.40.195'); } catch (_) {}
+  try { console.debug('[shape-guard] installed v1.50.150'); } catch (_) {}
 })();

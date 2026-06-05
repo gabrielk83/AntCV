@@ -1,4 +1,4 @@
-/* AntCV data export + delete-save (v1.50.142)
+/* AntCV data export + delete-save (v1.50.147)
  * ============================================================================
  * Implements two owner items from the 2026-06-04 batch triage:
  *
@@ -49,7 +49,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.142';
+  var VERSION = '1.50.147';
   if (window.__antcvDataExport360 === VERSION) return;
   window.__antcvDataExport360 = VERSION;
 
@@ -233,12 +233,40 @@
     return true;
   }
 
-  // ── UI injection: anchor to the red "Delete my account" card ───────────
-  function findDeleteButton() {
+  // ── UI injection ───────────────────────────────────────────────────────
+  // Two homes in Settings:
+  //   * the "Save my data locally first" checkbox goes into the DANGER ZONE
+  //     "Are you sure?" confirm card, above its "🗑 Yes, erase everything" /
+  //     "Cancel" button row;
+  //   * the "⬇ Download my data" button goes at the END of the PRIVACY zone,
+  //     right after the "What LLM providers see" box (its last line mentions
+  //     "zero-retention modes"). (Owner placement, v1.50.146 — was the danger
+  //     zone in v1.50.145, v1.50.146.)
+  function findEraseButton() {
     var btns = document.querySelectorAll('button');
     for (var i = 0; i < btns.length; i++) {
       var t = (btns[i].textContent || '');
-      if (/delete my account/i.test(t)) return btns[i];
+      // "Yes, erase everything" (current confirm card) or the legacy
+      // "Delete my account & all data" button.
+      if (/erase everything|delete my account/i.test(t)) return btns[i];
+    }
+    return null;
+  }
+
+  // Returns the "What LLM providers see" box (the privacy zone's last block) so
+  // the Download button can be appended after it, ending the privacy zone.
+  function findPrivacyProvidersBox() {
+    var els = document.querySelectorAll('div');
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i];
+      // The provider-text leaf is a single text node mentioning zero-retention.
+      if (el.childNodes.length === 1 && el.firstChild && el.firstChild.nodeType === 3) {
+        if (/zero-retention modes/i.test(el.textContent || '')) {
+          // el = the text leaf; its parent = the bordered "What LLM providers
+          // see" box. Return the box so we insert after it.
+          return el.parentNode || el;
+        }
+      }
     }
     return null;
   }
@@ -284,22 +312,35 @@
     return wrap;
   }
 
+  // Checkbox -> above the confirm card's button row (appears when armed).
+  function injectCheckbox() {
+    var eraseBtn = findEraseButton();
+    if (!eraseBtn) return;
+    var row = eraseBtn.parentNode;        // flex row: [Yes, erase][Cancel]
+    if (!row) return;
+    var card = row.parentNode || row;     // the "Are you sure?" confirm card
+    if (card.querySelector('[' + UI_MARK + '="savefirst"]')) return;
+    try { card.insertBefore(buildCheckRow(), row); } catch (_) {}
+  }
+
+  // Download button -> end of the PRIVACY zone, just after the "What LLM
+  // providers see" box.
+  function injectDownload() {
+    var box = findPrivacyProvidersBox();
+    if (!box) return;
+    var zone = box.parentNode;
+    if (!zone) return;
+    if (zone.querySelector('[' + UI_MARK + '="download"]')) return;
+    try {
+      if (box.nextSibling) zone.insertBefore(buildButton(), box.nextSibling);
+      else zone.appendChild(buildButton());
+    } catch (_) {}
+  }
+
   function injectUi() {
     if (disabled()) return;
-    var delBtn = findDeleteButton();
-    if (!delBtn) return;
-    var card = delBtn.parentNode;
-    if (!card) return;
-    // Idempotent: only inject what isn't already present in this card.
-    if (!card.querySelector('[' + UI_MARK + '="savefirst"]')) {
-      try { card.insertBefore(buildCheckRow(), delBtn); } catch (_) {}
-    }
-    if (!card.querySelector('[' + UI_MARK + '="download"]')) {
-      try {
-        var row = card.querySelector('[' + UI_MARK + '="savefirst"]');
-        card.insertBefore(buildButton(), row || delBtn);
-      } catch (_) {}
-    }
+    injectDownload();
+    injectCheckbox();
   }
 
   // Throttled, idempotent sweep. Once the nodes exist the sweep is a no-op, so
@@ -337,7 +378,8 @@
     exportData: exportData,
     collectData: collectData,
     _injectUi: injectUi,
-    _findDeleteButton: findDeleteButton,
+    _findEraseButton: findEraseButton,
+    _findPrivacyProvidersBox: findPrivacyProvidersBox,
     _setSaveFirst: function (v) { saveFirst = !!v; },
     _saveFirst: function () { return saveFirst; }
   };

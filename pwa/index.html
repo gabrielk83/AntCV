@@ -15,6 +15,10 @@
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="stylesheet" href="antcv-packages-registry.css?v=1.50.41">
   <title>AntCV</title>
+  <!-- v1.50.149: console quieter — wraps console.{log,info,debug,warn} FIRST so
+       it swallows the ~70 sidecar "installed" banners + repeated app.js status
+       chatter. Errors always pass through. Full logs: localStorage.antcvVerboseConsole=1. -->
+  <script src="antcv-console-quiet.js?v=1.50.149"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script>window.loadMammoth=()=>new Promise((res,rej)=>{if(window.mammoth)return res(window.mammoth);const s=document.createElement('script');s.src='https://unpkg.com/mammoth/mammoth.browser.min.js';s.onload=()=>res(window.mammoth);s.onerror=()=>rej(new Error('Failed to load Mammoth (.docx parser)'));document.head.appendChild(s);});</script>
@@ -269,7 +273,7 @@
   (function bootAntCV() {
     function loadAppScripts(){
       var shapeGuard = document.createElement('script');
-      shapeGuard.src = 'antcv-shape-guard.js?v=1.40.202';
+      shapeGuard.src = 'antcv-shape-guard.js?v=1.50.150';
       shapeGuard.onload = function(){
         var auth = document.createElement('script');
         auth.src = 'antcv-auth.js?v=1.40.202';
@@ -568,7 +572,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-language-prefs-defaults.js?v=1.40.339" defer></script>
 <script src="antcv-wizard-language-slide-339.js?v=1.50.39-react-lang" defer></script>
 <script src="antcv-wizard-walkthrough-scroll.js?v=1.50.123-wizard-scroll" defer></script>
-<script src="antcv-upload-recount-339.js?v=1.40.339-g" defer></script>
+<script src="antcv-upload-recount-339.js?v=1.50.143-multinode" defer></script>
 <script src="antcv-preview-touch-fix.js?v=1.40.197" defer></script>
 <script src="antcv-panel-escape.js?v=1.40.203" defer></script>
 <script src="antcv-section-bar-freeze-fix.js?v=1.40.203" defer></script>
@@ -637,8 +641,13 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      open and merges recruiter + red_flags into the rationale so the tab
      renders them; retires the JD-analysis FAB once the matching app.js
      release is detected live. Companion app.js render blocks ship via deploy. -->
-<script src="antcv-analysis-merge-344.js?v=1.40.344" defer></script>
-<script src="antcv-analysis-panel-jd-block-356.js?v=1.50.74-jd-compact" defer></script>
+<script src="antcv-analysis-merge-344.js?v=1.50.146" defer></script>
+<script src="antcv-analysis-panel-jd-block-356.js?v=1.50.146" defer></script>
+<!-- v1.50.146: Analysis report — enhances the panel with assumptions /
+     confidence review / recommendations, and exports the analysis as a
+     branded, AI-watermarked PDF (client-side print). Reads `rationale`
+     (incl. the new jd-analysis fields); never edits app.js. -->
+<script src="antcv-analysis-report-pdf-360.js?v=1.50.146" defer></script>
 <script src="antcv-sections-icon-346.js?v=1.40.347-preview-eye" defer></script>
 <script src="antcv-label-history.js?v=1.0.0" defer></script>
 <script src="antcv-topbar-tools-347.js?v=1.50.84-fab-css" defer></script>
@@ -664,7 +673,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      first" checkbox into the red Delete-account card, and wraps AntcvFullErase to
      back up before erasing. Loads AFTER cloud-delete-296 + app.js so its erase
      wrap composes outside the original. Escape: localStorage['antcv:disable-data-export']='1'. -->
-<script src="antcv-data-export-360.js?v=1.50.142" defer></script>
+<script src="antcv-data-export-360.js?v=1.50.147" defer></script>
 <!-- v1.50.6: antcv-stability-core-334.js no longer loaded. The React-islands
      bundle (below) is now the sole owner of the LanguageCard, PreviewToolbar,
      SettingsRouter, and wizardState behaviours that used to live there. The

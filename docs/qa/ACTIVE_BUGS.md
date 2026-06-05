@@ -5,6 +5,83 @@ This file now folds in the canonical `AntCV_UI_UX_Spec_and_QA_Plan_v4.docx` back
 
 ---
 
+## DELETE-SAVE-001 — "Save my data locally first" tick not appearing — FIXED (v1.50.145)
+
+**Owner (screenshot):** the DANGER ZONE "Are you sure?" confirm card showed
+"🗑 Yes, erase everything" / "Cancel" but **no save-data checkbox and no Download
+button**.
+
+**Root cause:** the v1.50.142 injector anchored on button text `/delete my
+account/i`. The live card uses different labels — the confirm button is "🗑 Yes,
+erase everything" and the trigger is "🗑 Delete user" — so `findDeleteButton`
+returned null and nothing injected. (The `AntcvFullErase` save-first wrap still
+fired, since `saveFirst` defaults on, but the user had no visible control.)
+
+**Card structure (app.js):** DANGER ZONE section → "⚠ DANGER ZONE" header →
+always-visible description ("…Logs you out. No undo.") → `sn ? confirmCard :
+"🗑 Delete user"`; confirmCard = "Are you sure?" + warning + flex button row
+["🗑 Yes, erase everything", "Cancel"].
+
+**Fix (v1.50.145):**
+- `findEraseButton` now matches `/erase everything|delete my account/i`.
+- **Checkbox** injects above the confirm card's button row (appears when armed).
+- **Download button** anchors to the always-visible description leaf
+  (`/Logs you out\. No undo\./`) and is inserted right after it, so it shows
+  whether or not the confirm card is open.
+- Both idempotent (marker-guarded). `?v=1.50.145`; cache trio → 1.50.145
+  (1.50.144 → STALE).
+
+**Verified (Node harness, 7/7):** Download lands directly after the description;
+checkbox lands directly above the button row; both finders match the live labels;
+re-inject is idempotent (one of each).
+
+**Live verification owed:** open Settings → DANGER ZONE, click "Delete user",
+confirm the "Save my data locally first" checkbox shows above the buttons and the
+"⬇ Download my data" button shows under the description; unchecking it skips the
+backup; checked → a backup downloads before erase.
+
+---
+
+## IMPORT-COUNT-001 — upload extract count wrong — FIXED (v1.50.143; live verification owed)
+
+**Symptom:** after a CV upload the wizard toast read "✓ Found 0 work · 0
+education · N certifications · 0 publications" even though the data imported
+fine (real 6 work / 3 education / 2 publications).
+
+**Root cause (diagnosed in app.js, fixed in the existing sidecar):**
+- The toast counts come from a separate import-**preview** object (`On`), not
+  from `personalInfo`. In the `_direct` upload path app.js persists the full
+  profile via `le(t)` but sets the preview to **identity + certifications only**
+  → work/education/publications show 0. (The toast also reads `On.work_history`,
+  snake_case, which nothing ever populates — the data is under
+  `experience`/`workHistory`.) So the count line was structurally wrong while the
+  data was correct in `personalInfo`.
+- `antcv-upload-recount-339.js` already recomputes the right counts from
+  `personalInfo` (workHistory||experience, education, certifications,
+  publicationsStructured||publications) and normalises the dual keys — but its
+  **DOM rewrite silently no-opped**: app.js emits the line as many sibling React
+  text nodes (`"✓ Found ", count, " work entr", "ies", " · ", …`), so the
+  container's `textContent` matched the regex but no SINGLE child text node did,
+  and the TreeWalker found nothing to rewrite.
+
+**Fix:** added a split-text branch to `recountUploadSummary` — when a matching
+element's children are ALL text nodes (the React leaf holding the split line),
+collapse it to the corrected string. The styled wrapper above it (element child)
+is correctly skipped, and the idempotency guard (`textContent` already equals the
+expected string) prevents re-writes. `?v=1.50.143-multinode`; cache trio →
+1.50.143 (1.50.142 → STALE).
+
+**Verified (Node harness, 5/5):** split-text toast "0/0/6/0" rewritten to real
+"6/3/6/2"; wrapper reflects it; experience→workHistory and
+publications→publicationsStructured normalised; second tick idempotent (single
+text node, no growth).
+
+**Live verification owed:** upload a real CV (Anita persona), confirm the toast
+shows the true work/education/publication counts (not 0), on the `_direct` JSON
+path and the worker `extract-kernel` path, desktop + mobile.
+
+---
+
 ## DATA-EXPORT-001 + DELETE-SAVE-001 — v1.50.142 (built; live verification owed)
 
 New readable sidecar `pwa/antcv-data-export-360.js` (loaded in index.html after

@@ -23,7 +23,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.134-section-page';
+  var VERSION = '1.50.135-sidebar-pg';
   if (window.__antcvSidebarItemPageControls === VERSION) return;
   window.__antcvSidebarItemPageControls = VERSION;
 
@@ -190,13 +190,15 @@
     var f = focusedSection();
     if (!f || !f.sec || !f.sec.id) return;
     if (ADDL_RX.test(String(f.sec.title || f.sec.name || ''))) return; // 247's domain
+    // app.js paginates the sidebar per-SECTION (section.page), so only the FIRST
+    // item carries the page control = "move this whole sub-section to page N".
+    // (Mid-section item splits aren't supported by app.js's engine.)
     var rows = itemRows(f.root);
-    var wi = 0;
-    rows.forEach(function (r) {
-      if (hasForeignPageControl(r)) return; // another sidecar already owns this row's page button
-      wire(r, f.sec.id, wi);
-      wi++;
-    });
+    for (var i = 0; i < rows.length; i++) {
+      if (hasForeignPageControl(rows[i])) continue;
+      wire(rows[i], f.sec.id, 0);
+      break;
+    }
   }
 
   var pending = false;

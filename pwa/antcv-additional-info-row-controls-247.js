@@ -13,7 +13,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '1.50.129-scope';
+  const VERSION = '1.50.135-sidebar-pg';
   if (window.__antcvAdditionalInfoRowControls === VERSION) return;
   window.__antcvAdditionalInfoRowControls = VERSION;
   // v1.40.247-preview-guard: Preview is button-free. panelRoot() and
@@ -85,18 +85,41 @@
   }
 
   function getPage(sid, index) {
-    const map = readJson(PAGE_KEY);
-    const bucket = map[sid] || {};
-    const n = Number(bucket[String(index)] || bucket[itemPath(index)] || 1);
-    return Number.isFinite(n) && n >= 1 && n <= 4 ? (n | 0) : 1;
+    // PB-007: app.js paginates the sidebar by section.page (NOT itemPages).
+    try {
+      const all = readJson(SECTIONS_KEY);
+      const list = all && all[activeDoc()];
+      if (Array.isArray(list)) {
+        for (let i = 0; i < list.length; i++) {
+          if (list[i] && String(list[i].id || '') === String(sid)) {
+            const n = Number(list[i].page);
+            return Number.isFinite(n) && n >= 1 && n <= 4 ? (n | 0) : 1;
+          }
+        }
+      }
+    } catch (_) {}
+    return 1;
   }
 
   function setPage(sid, index, value) {
-    const map = readJson(PAGE_KEY);
-    if (!map[sid] || typeof map[sid] !== 'object') map[sid] = {};
-    map[sid][String(index)] = value;
-    writeJson(PAGE_KEY, map);
-    dispatchUpdate('additional-info-page', { sid, index, page: value });
+    // PB-007 (Path A): write section.page on the Additional Information section so
+    // app.js's native engine moves the whole section. Clear the dead itemPages so
+    // 329 doesn't draw a stale/flickering marker. One sections-updated re-render.
+    const nv = value <= 1 ? 1 : value;
+    try {
+      const all = readJson(SECTIONS_KEY);
+      const list = all && all[activeDoc()];
+      if (Array.isArray(list)) {
+        for (let i = 0; i < list.length; i++) {
+          if (list[i] && String(list[i].id || '') === String(sid)) {
+            if (list[i].page !== nv) { list[i].page = nv; writeJson(SECTIONS_KEY, all); }
+            break;
+          }
+        }
+      }
+    } catch (_) {}
+    try { const pm = readJson(PAGE_KEY); if (pm && pm[sid]) { delete pm[sid]; writeJson(PAGE_KEY, pm); } } catch (_) {}
+    dispatchUpdate('sidebar-section-page', { sid, index, page: nv });
   }
 
   function dispatchUpdate(source, detail) {
@@ -254,9 +277,16 @@
     if (!alignBtn) { alignBtn = makeButton('cjlr'); host.appendChild(alignBtn); }
     paintAlign(alignBtn, sid, index);
 
+    // PB-007: app.js paginates the sidebar per-SECTION (section.page), so the
+    // page control lives only on the FIRST item = "move the whole sub-section".
+    // CJLR stays per item. Remove a stale page button from non-first rows.
     let pageBtn = host.querySelector(':scope [data-antcv-addinfo-control="page"]');
-    if (!pageBtn) { pageBtn = makeButton('page'); host.appendChild(pageBtn); }
-    paintPage(pageBtn, sid, index);
+    if (index === 0) {
+      if (!pageBtn) { pageBtn = makeButton('page'); host.appendChild(pageBtn); }
+      paintPage(pageBtn, sid, index);
+    } else if (pageBtn && pageBtn.parentNode) {
+      pageBtn.parentNode.removeChild(pageBtn); pageBtn = null;
+    }
 
     applyEditorRowAlignment(row, getAlign(sid, index));
 
@@ -270,12 +300,14 @@
       applyPreview(sid);
     };
 
-    pageBtn.onclick = function (ev) {
-      ev.preventDefault(); ev.stopPropagation();
-      const next = (getPage(sid, index) % 4) + 1;
-      setPage(sid, index, next);
-      paintPage(pageBtn, sid, index);
-    };
+    if (pageBtn) {
+      pageBtn.onclick = function (ev) {
+        ev.preventDefault(); ev.stopPropagation();
+        const next = (getPage(sid, index) % 4) + 1;
+        setPage(sid, index, next);
+        paintPage(pageBtn, sid, index);
+      };
+    }
   }
 
   // v1.50.129 (PB-001): some sidebar sub-section editors (e.g. Regulatory

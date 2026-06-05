@@ -1,4 +1,4 @@
-/* AntCV data export + delete-save (v1.50.142)
+/* AntCV data export + delete-save (v1.50.145)
  * ============================================================================
  * Implements two owner items from the 2026-06-04 batch triage:
  *
@@ -49,7 +49,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.142';
+  var VERSION = '1.50.145';
   if (window.__antcvDataExport360 === VERSION) return;
   window.__antcvDataExport360 = VERSION;
 
@@ -233,12 +233,32 @@
     return true;
   }
 
-  // ── UI injection: anchor to the red "Delete my account" card ───────────
-  function findDeleteButton() {
+  // ── UI injection: anchor to the Settings "DANGER ZONE" card ────────────
+  // The live card (app.js) is: "⚠ DANGER ZONE" header, an always-visible
+  // description ("…Logs you out. No undo."), then either a "🗑 Delete user"
+  // trigger or — once armed — an "Are you sure?" confirm card whose button row
+  // holds "🗑 Yes, erase everything" + "Cancel". The checkbox goes above that
+  // button row; the Download button goes after the always-visible description.
+  function findEraseButton() {
     var btns = document.querySelectorAll('button');
     for (var i = 0; i < btns.length; i++) {
       var t = (btns[i].textContent || '');
-      if (/delete my account/i.test(t)) return btns[i];
+      // "Yes, erase everything" (current confirm card) or the legacy
+      // "Delete my account & all data" button.
+      if (/erase everything|delete my account/i.test(t)) return btns[i];
+    }
+    return null;
+  }
+
+  function findDangerDescription() {
+    var els = document.querySelectorAll('div');
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i];
+      // Match the description leaf only (single text node) so we land on the
+      // paragraph itself, not an ancestor wrapper.
+      if (el.childNodes.length === 1 && el.firstChild && el.firstChild.nodeType === 3) {
+        if (/Logs you out\. No undo\./i.test(el.textContent || '')) return el;
+      }
     }
     return null;
   }
@@ -284,22 +304,35 @@
     return wrap;
   }
 
+  // Checkbox -> above the confirm card's button row (appears when armed).
+  function injectCheckbox() {
+    var eraseBtn = findEraseButton();
+    if (!eraseBtn) return;
+    var row = eraseBtn.parentNode;        // flex row: [Yes, erase][Cancel]
+    if (!row) return;
+    var card = row.parentNode || row;     // the "Are you sure?" confirm card
+    if (card.querySelector('[' + UI_MARK + '="savefirst"]')) return;
+    try { card.insertBefore(buildCheckRow(), row); } catch (_) {}
+  }
+
+  // Download button -> right after the always-visible danger-zone description,
+  // so it shows whether or not the confirm card is armed.
+  function injectDownload() {
+    var desc = findDangerDescription();
+    if (!desc) return;
+    var section = desc.parentNode;
+    if (!section) return;
+    if (section.querySelector('[' + UI_MARK + '="download"]')) return;
+    try {
+      if (desc.nextSibling) section.insertBefore(buildButton(), desc.nextSibling);
+      else section.appendChild(buildButton());
+    } catch (_) {}
+  }
+
   function injectUi() {
     if (disabled()) return;
-    var delBtn = findDeleteButton();
-    if (!delBtn) return;
-    var card = delBtn.parentNode;
-    if (!card) return;
-    // Idempotent: only inject what isn't already present in this card.
-    if (!card.querySelector('[' + UI_MARK + '="savefirst"]')) {
-      try { card.insertBefore(buildCheckRow(), delBtn); } catch (_) {}
-    }
-    if (!card.querySelector('[' + UI_MARK + '="download"]')) {
-      try {
-        var row = card.querySelector('[' + UI_MARK + '="savefirst"]');
-        card.insertBefore(buildButton(), row || delBtn);
-      } catch (_) {}
-    }
+    injectDownload();
+    injectCheckbox();
   }
 
   // Throttled, idempotent sweep. Once the nodes exist the sweep is a no-op, so
@@ -337,7 +370,8 @@
     exportData: exportData,
     collectData: collectData,
     _injectUi: injectUi,
-    _findDeleteButton: findDeleteButton,
+    _findEraseButton: findEraseButton,
+    _findDangerDescription: findDangerDescription,
     _setSaveFirst: function (v) { saveFirst = !!v; },
     _saveFirst: function () { return saveFirst; }
   };

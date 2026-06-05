@@ -5,7 +5,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.50.120-gen003-004';
+  const VERSION='1.50.152-bullet-guard';
   let __applying=false; // v1.50.57: re-entrancy guard so our own DOM writes don't re-trigger the observer/flicker.
   const ALIGN_KEY='antcv.hiwc.alignment.v1';
   const PAGE_KEY='antcv:itemPages';
@@ -135,7 +135,15 @@
     let changed=false;
     if(k==='intro'){const cur=('intro' in s)?s.intro:('introLine' in s?s.introLine:undefined);if(clean(cur)!==clean(v)){if('intro' in s)s.intro=v;else if('introLine' in s)s.introLine=v;else s.intro=v;changed=true;}}
     if(k==='closing'){const cur=('closing' in s)?s.closing:('closingLine' in s?s.closingLine:undefined);if(clean(cur)!==clean(v)){if('closing' in s)s.closing=v;else if('closingLine' in s)s.closingLine=v;else s.closing=v;changed=true;}}
-    if(k==='bullets'){const vals=v.split(/\n+/).map(clean).filter(Boolean);const cur=Array.isArray(s.bullets)?s.bullets:(Array.isArray(s.items)?s.items:[]);if(cur.length!==vals.length||cur.some((x,i)=>clean(x)!==vals[i])){s.bullets=vals;s.items=vals;changed=true;}}
+    if(k==='bullets'){const vals=v.split(/\n+/).map(clean).filter(Boolean);const cur=Array.isArray(s.bullets)?s.bullets:(Array.isArray(s.items)?s.items:[]);
+      // Owner 2026-06-05 data-loss guard: the native bullets textarea is empty
+      // while the section still holds template/real bullets, so a stray sync —
+      // e.g. the re-render a page-cycle click triggers — would write bullets:[]
+      // and WIPE the content (reported: "cycling page break to 4 deletes the
+      // HIWC bullets"; CL template bullets vanishing). Never let an empty editor
+      // overwrite existing bullets; require a real value.
+      if(vals.length===0 && cur.length>0) return;
+      if(cur.length!==vals.length||cur.some((x,i)=>clean(x)!==vals[i])){s.bullets=vals;s.items=vals;changed=true;}}
     if(!changed)return;
     writeJson(SECTIONS_KEY,all);writeDocSpecificSections(doc,list);pulse();
   }

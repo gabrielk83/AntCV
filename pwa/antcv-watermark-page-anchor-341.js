@@ -56,7 +56,7 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.50.156-wm-paper';
+  var SCRIPT_VERSION = '1.50.160-wm-offsetparent';
   if (window.__antcvWatermarkPageAnchor341 === SCRIPT_VERSION) return;
   window.__antcvWatermarkPageAnchor341 = SCRIPT_VERSION;
 
@@ -156,29 +156,48 @@
       }
     } catch (_) {}
     watermark.style.position = 'absolute';
-    watermark.style.bottom = '12pt';
     watermark.style.zIndex = '5';
-    // Owner 2026-06-05 (mobile): the preview paper is wider than a phone
-    // viewport, so anchoring 14pt from the page-box's right edge pushed the
-    // watermark off-screen (it looked "gone" on the cover letter). Clamp the
-    // offset so the watermark always lands inside the visible viewport: when
-    // the page-box edge overflows the viewport by N px, add N to the offset
-    // so the marker sits ~14px inside the screen edge instead. On desktop
-    // (no overflow) this is exactly the previous 14pt corner inset.
+    // BUGFIX 2026-06-05 (CL watermark "gone"): a `bottom`/`right` inset only
+    // lands on the page when the OFFSET PARENT is the page-box. On the cover
+    // letter a closer positioned ancestor sits between the watermark and the
+    // paper, so `bottom:12pt; right:14pt` resolved against that wrapper and the
+    // marker ended up ~400px LEFT of the paper (probe: x=20, paperLeft=424).
+    // Position relative to the ACTUAL offset parent, computed from the
+    // page-box's rect, so it lands at the page-box's bottom corner no matter
+    // what the offset parent is. Clamp into the viewport on narrow screens.
     var DEFAULT_INSET = 18; // ~14pt
     var vw = window.innerWidth || (document.documentElement && document.documentElement.clientWidth) || 0;
-    var pbr = null;
-    try { pbr = pageBox.getBoundingClientRect(); } catch (_) {}
-    if (corner === 'left') {
-      var leftPx = DEFAULT_INSET;
-      if (pbr && pbr.left < 0) leftPx = (-pbr.left) + 14;
-      watermark.style.left = leftPx + 'px';
-      watermark.style.right = 'auto';
+    var pbr = null, wmr = null, opr = null;
+    try {
+      // reading offsetParent after setting position:absolute forces the
+      // up-to-date value (and a layout) — that's what we want here.
+      var op = watermark.offsetParent || pageBox;
+      pbr = pageBox.getBoundingClientRect();
+      wmr = watermark.getBoundingClientRect();
+      opr = op.getBoundingClientRect();
+    } catch (_) {}
+    if (pbr && opr) {
+      var wmH = (wmr && wmr.height) || 12;
+      var wmW = (wmr && wmr.width) || 60;
+      // vertical: sit ~16px above the page-box bottom.
+      watermark.style.bottom = 'auto';
+      watermark.style.top = ((pbr.bottom - opr.top) - wmH - 16) + 'px';
+      if (corner === 'left') {
+        var leftEdge = pbr.left + DEFAULT_INSET;
+        if (leftEdge < opr.left + 2) leftEdge = opr.left + 2;
+        watermark.style.left = (leftEdge - opr.left) + 'px';
+        watermark.style.right = 'auto';
+      } else {
+        var rightEdge = pbr.right - DEFAULT_INSET;
+        if (vw && rightEdge > vw - 6) rightEdge = vw - 6; // keep on screen
+        watermark.style.left = ((rightEdge - wmW) - opr.left) + 'px';
+        watermark.style.right = 'auto';
+      }
     } else {
-      var rightPx = DEFAULT_INSET;
-      if (pbr && vw && pbr.right > vw) rightPx = (pbr.right - vw) + 14;
-      watermark.style.right = rightPx + 'px';
-      watermark.style.left = 'auto';
+      // Fallback to the old corner inset if rects are unavailable.
+      watermark.style.bottom = '12pt';
+      if (corner === 'left') { watermark.style.left = DEFAULT_INSET + 'px'; watermark.style.right = 'auto'; }
+      else { watermark.style.right = DEFAULT_INSET + 'px'; watermark.style.left = 'auto'; }
     }
     watermark.setAttribute('data-antcv-watermark-corner', corner);
     watermark.setAttribute('data-antcv-watermark-anchored', '1');

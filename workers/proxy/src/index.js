@@ -1,4 +1,4 @@
-const VERSION='3.4.0-model-chain-fallback';
+const VERSION='3.5.0-cross-provider-fallback';
 // Cloudflare Worker — multi-provider LLM proxy with streaming for Anthropic
 // Includes /preferences route for AntCV cloud save.
 //
@@ -54,9 +54,48 @@ import {
 
 export default {
   async fetch(request, env, ctx) {
-    return handleRequest(request, env || {});
+    return handleWithProviderFallback(request, env || {});
   }
 };
+
+// Cross-provider auto-fallback (owner 2026-06-05): a single provider returning
+// 503/overloaded (e.g. Gemini) used to fail the whole generation with no
+// fallback. This wrapper replays the SAME request to the next available
+// provider on a 5xx — but ONLY for POST calls that use SERVER keys (demo /
+// shared mode, where every provider has a key). Requests carrying the user's
+// own x-api-key are passed straight through (their key is provider-specific, so
+// switching providers wouldn't authenticate). 4xx responses are returned as-is
+// (they're not a provider-availability problem).
+const FALLBACK_PROVIDERS = ['anthropic', 'openai', 'mistral', 'gemini'];
+async function handleWithProviderFallback(request, env) {
+  const isPost = request.method === 'POST';
+  const hasClientKey = !!((request.headers.get('x-api-key') || '').trim());
+  if (!isPost || hasClientKey) return handleRequest(request, env || {});
+  let bodyBuf = null;
+  try { bodyBuf = await request.arrayBuffer(); } catch (_) { bodyBuf = null; }
+  if (bodyBuf === null) return handleRequest(request, env || {});
+  const requested = (request.headers.get('x-provider') || 'anthropic').toLowerCase();
+  const order = [requested].concat(FALLBACK_PROVIDERS.filter(function (p) { return p !== requested; }));
+  let lastResp = null;
+  for (let i = 0; i < order.length; i++) {
+    const headers = new Headers(request.headers);
+    headers.set('x-provider', order[i]);
+    const attempt = new Request(request.url, { method: 'POST', headers: headers, body: bodyBuf });
+    try {
+      lastResp = await handleRequest(attempt, env || {});
+    } catch (_) {
+      lastResp = null;
+      continue;
+    }
+    // Success or a client error -> done. Only a 5xx means "provider
+    // unavailable", so keep trying the next provider.
+    if (lastResp && lastResp.status < 500) return lastResp;
+  }
+  return lastResp || new Response(
+    JSON.stringify({ error: 'all_providers_unavailable', message: 'Every configured provider returned a 5xx. Try again shortly.' }),
+    { status: 503, headers: { 'Content-Type': 'application/json' } }
+  );
+}
 
 async function getKey(env, names) {
   if (!env) return '';

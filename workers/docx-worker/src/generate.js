@@ -657,18 +657,19 @@ function buildTwoColumnDocument(ctx) {
   // drops anchored frames during PDF conversion, which was the v1.14.0
   // photo-floating regression. A bordered paragraph survives both.
   //
-  // For the sidebar context the bg is dark and we keep the existing
-  // light-grey-blue text colour with a matching border. The paragraph
-  // stays at the bottom of the sidebar cell (current placement) — the
-  // cell sits in a cantSplit body row, so moving the disclosure
-  // outside the body table would push it onto its own page.
-  const aiDisclosurePara = buildAiDisclosureHangingTextbox(ctx, { context: 'sidebar' });
+  // Owner 2026-06-05: the CV disclosure must sit at the END OF THE MAIN
+  // CONTENT (lower-right of the last page), matching the CL — NOT at the
+  // bottom of the navy sidebar (the sidebar usually ends higher than the
+  // main column, so the old placement floated the notice mid-page). We
+  // build it 'linear' (muted teal, right-aligned for the white main
+  // column) and append it to mainChildren below. It stays inside the same
+  // body row, so it does not spill onto its own page.
+  const aiDisclosurePara = buildAiDisclosureHangingTextbox(ctx, { context: 'linear' });
 
   const sidebarChildren = [
     ...(photoTopOfSidebar ? [photoTopOfSidebar] : []),
     ...sidebarSecs.flatMap(s => renderSection(s, ctx, /*isSidebar*/ true)),
     ...(photoBottomOfSidebar ? [photoBottomOfSidebar] : []),
-    aiDisclosurePara,
   ];
 
   // v1.14.1 — main-left/right: wrap the FIRST main section's
@@ -694,6 +695,10 @@ function buildTwoColumnDocument(ctx) {
   } else {
     mainChildren = mainSecs.flatMap(s => renderSection(s, ctx, /*isSidebar*/ false));
   }
+
+  // Owner 2026-06-05: AI disclosure anchored to the END of the main column
+  // (lower-right of the last page), matching the CL — not the sidebar tail.
+  mainChildren.push(aiDisclosurePara);
 
   // v1.14.1 — header-left/right: same cell-split treatment for the
   // candidate header band. Wrap name/spec/contact paragraphs in a

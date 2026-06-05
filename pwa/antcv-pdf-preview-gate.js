@@ -44,7 +44,7 @@
   'use strict';
 
   if (window.__antcvPdfPreviewGateInstalled) return;
-  window.__antcvPdfPreviewGateInstalled = '1.50.57';
+  window.__antcvPdfPreviewGateInstalled = '1.50.145-fitwidth';
 
   const FAB_ID = 'antcv-pdf-preview-fab';
   const MODAL_ID = 'antcv-pdf-preview-modal';
@@ -349,6 +349,12 @@ ${inlineStyles}
        keep its inherited PWA-rendered dimensions. */
   }
   .antcv-preview-paper:last-child { margin-bottom: 0; }
+  /* Fit-to-width (owner: export preview was "too stretched", main column
+     cut on the right on mobile). The A4 paper (~794px) is wider than a
+     phone iframe, so we scale the whole body down to fit via a JS-set CSS
+     var. SCREEN ONLY — print keeps full A4 (@page below) so the PDF is not
+     shrunk. */
+  @media screen { body.antcv-fit-width { zoom: var(--antcv-fit, 1); } }
   /* Hide any sidecar overlays / FABs that may have been cloned. */
   .antcv-fab, [class*="antcv-fab"], .antcv-overlay, [class*="antcv-overlay"] {
     display: none !important;
@@ -403,6 +409,30 @@ ${inlineStyles}
       iframe.addEventListener('load', () => {
         // Stash a reference on the modal so onPrint can use it later.
         modal._antcvPrintTarget = iframe;
+        // Fit-to-width (owner #7): squeeze the A4 paper so its full width
+        // fits the iframe viewport — no right-edge clipping on mobile. We
+        // set a CSS var consumed by a SCREEN-ONLY zoom rule, so the print
+        // path stays full A4. Re-fit on resize/orientation change.
+        const fitWidth = () => {
+          try {
+            const idoc = iframe.contentDocument;
+            const ibody = idoc && idoc.body;
+            const paper = ibody && ibody.querySelector('.antcv-preview-paper');
+            if (!ibody || !paper) return;
+            // Measure at natural scale: clear any prior fit first.
+            ibody.classList.remove('antcv-fit-width');
+            ibody.style.removeProperty('--antcv-fit');
+            const avail = (iframe.clientWidth || ibody.clientWidth || 0) - 24; // body padding
+            const pw = paper.getBoundingClientRect().width;
+            if (pw > 0 && avail > 0 && pw > avail) {
+              ibody.style.setProperty('--antcv-fit', String(Math.max(0.3, avail / pw)));
+              ibody.classList.add('antcv-fit-width');
+            }
+          } catch (_) {}
+        };
+        fitWidth();
+        try { window.addEventListener('resize', fitWidth, { passive: true }); } catch (_) {}
+        iframe._antcvFitWidth = fitWidth;
       });
     }
 
@@ -498,6 +528,12 @@ ${inlineStyles}
     try {
       const handler = el._antcvKeyHandler;
       if (handler) document.removeEventListener('keydown', handler);
+    } catch (_) {}
+    // Drop the fit-to-width resize listener so it doesn't accumulate / pin
+    // the iframe across re-opens.
+    try {
+      const ifr = document.getElementById(MODAL_ID + '-iframe');
+      if (ifr && ifr._antcvFitWidth) window.removeEventListener('resize', ifr._antcvFitWidth);
     } catch (_) {}
     if (el.parentElement) el.parentElement.removeChild(el);
   }
@@ -715,7 +751,7 @@ ${inlineStyles}
 
   // Public API for diagnostics / power-users.
   window.AntcvPdfPreviewGate = {
-    version: '1.50.57',
+    version: '1.50.145-fitwidth',
     open: openModal,
     close: closeModal,
   };

@@ -24398,7 +24398,7 @@ function buildTwoColumnDocument(ctx) {
   const photoBottomOfSidebar = maybeBuildPhotoFor(ctx, "sidebar-bottom");
   const photoInHeader = maybeBuildPhotoFor(ctx, "header");
   const photoInMain = maybeBuildPhotoFor(ctx, "main");
-  const aiDisclosurePara = buildAiDisclosureHangingTextbox(ctx, { context: "sidebar" });
+  const aiDisclosurePara = buildAiDisclosureHangingTextbox(ctx, { context: "linear" });
   const sidebarChildren = [
     ...photoTopOfSidebar ? [photoTopOfSidebar] : [],
     ...sidebarSecs.flatMap((s) => renderSection(
@@ -24407,8 +24407,7 @@ function buildTwoColumnDocument(ctx) {
       /*isSidebar*/
       true
     )),
-    ...photoBottomOfSidebar ? [photoBottomOfSidebar] : [],
-    aiDisclosurePara
+    ...photoBottomOfSidebar ? [photoBottomOfSidebar] : []
   ];
   let mainChildren;
   if (photoInMain && mainSecs.length > 0) {
@@ -24439,6 +24438,7 @@ function buildTwoColumnDocument(ctx) {
       false
     ));
   }
+  mainChildren.push(aiDisclosurePara);
   if (photoInHeader) {
     const headerInnerW = PAGE_W - 720;
     const wrappedHeader = buildPhotoRowTable(ctx, photoInHeader, headerCell.slice(), headerInnerW);
@@ -26240,7 +26240,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.13.1-academic";
+var VERSION = "1.14.14-cv-wm-main";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

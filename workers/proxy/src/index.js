@@ -1428,6 +1428,11 @@ async function handleConfig(request, env) {
   const proxyUrl = (env && typeof env.proxy_url === 'string') ? env.proxy_url : '';
   const body = {
     proxy_url: proxyUrl,
+    // The PWA reads B.demo_mode from /config to gate demo-only UI (hides the
+    // "Setup needed" chip, stamps the DEMO watermark on exports, shows the
+    // editor DEMO badge). Without it here, demo_mode was always false even on
+    // the demo worker.
+    demo_mode: isDemoMode(env),
     server_keys: await serverKeyAvailability(env),
     analytics_kv: !!(env && env.ANALYTICS),
     analytics_engine: !!(env && env.ANT_ANALYTIC_ENGINE),

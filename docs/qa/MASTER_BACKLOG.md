@@ -81,7 +81,7 @@ Branch: `claude/antcv-roadmap-bugs-L9Sqa`. Compiled 2026-06-04.
 | PAGEBREAK-002 | Break on entry + natural A4 overflow | OPEN | `[code]` Add A4-overflow measurement to `284` to auto-insert markers. |
 | PAGEBREAK-005 | Cascade colour across all CV sections + CL | OPEN | `[console]` Get CL button selectors live; extend cascade in `page-button-polish-327`. |
 | PB-SIDEBAR-001 | Every sidebar sub-section (Regulatory Context, Tools & Methods, Education, Languages, Additional Information) gets its OWN correctly-scoped page-break control | OPEN | Owner-requested. 247 was the only one + mis-scoped (fixed 1.50.129). Make `sidebar-subsection-pagebreaks-329` own per-sub-section breaks, each writing its own sid. Reaches DOCX worker. |
-| **PB-007** | **Two-column break sync + overflow-as-manual-break** (owner spec 2026-06-04) | OPEN · design-locked | Multi-layer feature — see spec block below. |
+| **PB-007** | **Two-column break sync + overflow-as-manual-break** (owner spec) | OPEN · design-locked | Full design + build order + current state + open questions in `docs/plan/PB-007-two-column-pagination.md`. |
 
 ### PB-007 — two-column page-break sync + overflow-as-manual-break (spec)
 
@@ -245,6 +245,9 @@ Owner requirement for the 2-column CV preview + export:
 ---
 
 # PART 3 — Shipped this engagement (context; live acceptance owed except FIXED✓)
+
+- **DATE-001 (deployed):** the analysis model now receives `TODAY'S DATE` so it stops flagging real deadlines as "far in the future" — `jd-analysis.js` `buildUserPrompt` injects `new Date()`; red_flags judges deadline imminence/expiry against it. Applied to both **demo-proxy + proxy**, both deployed live.
+- **Page-break work (1.50.128–132):** main marker → global pink (`284`); sidebar break-bar yellowish + **red-bar flood fixed** (`329` root-level clear); `247` scope-fixed (no cross-section hijack); new `359` adds a per-section page control to every sidebar sub-section item. Real pagination (content actually moving) is **not** done — see `docs/plan/PB-007-two-column-pagination.md`.
 
 - **ATS-EXPORT-DEFAULT-001 (1.50.126):** ATS-safe generation is now the **default** (`src/lib/export-prefs.ts`: `DEFAULT.ats=true`, `readExportPrefs` returns `ats: e.ats !== false` — ON unless the user explicitly opted out). One authoritative change: both the Export-options checkbox and `install-fetch-wrap` (which sends `ats` in the `_antcv_writing_style` payload) read `readExportPrefs()`, and the proxy already applies ATS-safe glyph conversion when `ats:true` — so no worker change is required. Islands bundle rebuilt (vite). `legacyAtsTier` stays opt-in. **Optional defense-in-depth (not done):** the proxy worker still treats an *absent* `ats` flag as off (`b.ats === true`); flipping it to `!== false` would default-on for callers that omit the flag entirely (pre-1.50.126 cached clients / direct API) — separate proxy deploy, needs approval.
 

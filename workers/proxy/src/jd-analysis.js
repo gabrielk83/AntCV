@@ -89,13 +89,17 @@ For "suggested_answer" on each question:
 - If the candidate_summary doesn't cover the answer, write a SHORT placeholder ("[needs candidate input on X]") and set "grounded": false.
 - NEVER make up candidate experience. NEVER claim domains not in the candidate_summary.
 
-- "red_flags" — surface anything that warrants attention: vague compensation, unrealistic skill mix, no recruiter contact path, application deadline imminent, requires citizenship the JD lists, garbled text in the source, etc.
+- "red_flags" — surface anything that warrants attention: vague compensation, unrealistic skill mix, no recruiter contact path, application deadline imminent OR already passed (judge against TODAY'S DATE given in the user message — never assume a different current year), requires citizenship the JD lists, garbled text in the source, etc.
 - "summary" — 2-3 sentence plain-language briefing for the candidate.
 
 Output ONLY the JSON object. Begin your response with { and end with }.`;
 
-function buildUserPrompt(jdText, candidateSummary) {
+function buildUserPrompt(jdText, candidateSummary, todayISO) {
   const parts = [];
+  if (todayISO) {
+    parts.push("TODAY'S DATE: " + todayISO + ' (use this as "now" when judging whether an application deadline is imminent, past, or far in the future — do NOT assume any other current date).');
+    parts.push('');
+  }
   parts.push('JOB DESCRIPTION:');
   parts.push('---');
   parts.push(jdText);
@@ -324,7 +328,7 @@ export async function handleJDAnalysis(request, env, getCORS, getServerKey) {
   const providerOrder = Array.isArray(body.providers) && body.providers.length
     ? body.providers.filter(p => typeof p === 'string')
     : undefined;  // undefined → module default
-  const userPrompt = buildUserPrompt(jd, cv);
+  const userPrompt = buildUserPrompt(jd, cv, new Date().toISOString().slice(0, 10));
 
   const t0 = Date.now();
   // v2.2 (cv-proxy): validator-aware cascade — see kernel-extraction.js for

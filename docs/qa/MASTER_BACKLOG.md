@@ -225,6 +225,8 @@ Branch: `claude/antcv-roadmap-bugs-L9Sqa`. Compiled 2026-06-04.
 
 # PART 3 — Shipped this engagement (context; live acceptance owed except FIXED✓)
 
+- **ATS-EXPORT-DEFAULT-001 (1.50.126):** ATS-safe generation is now the **default** (`src/lib/export-prefs.ts`: `DEFAULT.ats=true`, `readExportPrefs` returns `ats: e.ats !== false` — ON unless the user explicitly opted out). One authoritative change: both the Export-options checkbox and `install-fetch-wrap` (which sends `ats` in the `_antcv_writing_style` payload) read `readExportPrefs()`, and the proxy already applies ATS-safe glyph conversion when `ats:true` — so no worker change is required. Islands bundle rebuilt (vite). `legacyAtsTier` stays opt-in. **Optional defense-in-depth (not done):** the proxy worker still treats an *absent* `ats` flag as off (`b.ats === true`); flipping it to `!== false` would default-on for callers that omit the flag entirely (pre-1.50.126 cached clients / direct API) — separate proxy deploy, needs approval.
+
 - **GEN-003 + GEN-004** standard control order + "Fit" wording at source — HIWC + Selected Outcomes (1.50.120, VERIFYING).
 - **357 sidecars:** validation-severity-consumer (VAL-001), help-text-wording (PB-005/TB-003), page-break-icon (PB-005/GEN-003).
 - **analysis-panel-jd-block-356 → v1.40.358** clean rewrite (empty-state panel attach).

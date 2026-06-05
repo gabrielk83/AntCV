@@ -24380,12 +24380,6 @@ function buildAiDisclosureHangingTextbox(ctx, opts) {
     })]
   };
   if (isSidebar) {
-    para.border = {
-      top: { color: borderColor, space: 2, style: BorderStyle.SINGLE, size: 4 },
-      bottom: { color: borderColor, space: 2, style: BorderStyle.SINGLE, size: 4 },
-      left: { color: borderColor, space: 4, style: BorderStyle.SINGLE, size: 4 },
-      right: { color: borderColor, space: 4, style: BorderStyle.SINGLE, size: 4 }
-    };
     para.indent = { left: 120, right: 120 };
   } else {
     // Linear/CL: TEXT-ONLY, right-aligned, NO large indent (a heavy left

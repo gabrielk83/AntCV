@@ -111,3 +111,34 @@ Markers are cosmetic until content genuinely moves; stop blind-patching markers.
 This is the contended page-break zone with a corruption history (see CLAUDE.md). Diagnose
 live before patching; the owner has Claude-for-Chrome for DOM inspection. Build the
 detector as a measurement utility first (testable), then layer pagination on top.
+
+---
+
+## UPDATE 2026-06-05 — Q2 answered + the real mechanism (owner console + clarification)
+
+**Q2 ANSWERED.** The screen preview DOES paginate into real `.antcv-page-row` boxes:
+- ProfExp break → `page-row boxes: 1 → 2` (a second physical page box is created on screen).
+- Sidebar-only break (Regulatory Context p2) → `page-row boxes: 1` (NO second box).
+
+So app.js creates page boxes **only** from the main column's native `e.pageBreakBefore`. The
+sidebar's `antcv:itemPages` model never triggers a box, so sidebar content has nowhere to go.
+
+**Two things are required to actually move a sidebar section to page 2:**
+1. **Page-box creation** — a sidebar break must cause app.js to create/extend the page-2 box
+   (today only the main column does). Unify the page model or set an app.js-visible flag.
+2. **Table break (owner)** — sidebar sub-sections are rendered as **tables**; a page break
+   *inside* a table doesn't move it — the **table itself must break** (PB-004 logic). Both
+   the page break AND the table break are needed. This ties PB-007 to PB-004.
+
+**Perf (fixed 1.50.133):** `359` was dispatching `antcv:sections-updated` per click →
+personality `forceRebuild` → rAF violation flood. Removed it (kept `item-pages-changed`);
+the main-column button never did this and the forceRebuild wasn't helping (no box created).
+
+**Still-open marker:** the editor-PANEL marker app.js shows for ProfExp —
+`📄 PAGE 2 — EXPERIENCE (CONT.) header appears here ▼` (amber, in the panel, not the preview)
+— is missing for sidebar sub-sections. Owner wants the same panel marker above the broken
+sidebar item. Add it when building sidebar pagination.
+
+**Next build step:** find app.js's page-box creation (how `e.pageBreakBefore` makes a new
+`.antcv-page-row`) and the sidebar TABLE structure; drive both from a unified page model so a
+sidebar break (a) creates the box and (b) breaks the table into it.

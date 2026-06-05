@@ -23,7 +23,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.130-sidebar-items';
+  var VERSION = '1.50.133-no-storm';
   if (window.__antcvSidebarItemPageControls === VERSION) return;
   window.__antcvSidebarItemPageControls = VERSION;
 
@@ -54,7 +54,11 @@
     if (!m[sid] || typeof m[sid] !== 'object') m[sid] = {};
     if (val <= 1) delete m[sid][String(idx)]; else m[sid][String(idx)] = val;
     writeJson(PAGE_KEY, m);
-    try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { source: 'sidebar-item-page', sid: sid, index: idx, page: val } })); } catch (_) {}
+    // v1.50.133: do NOT dispatch antcv:sections-updated here. It triggers the
+    // personality forceRebuild (full kernel re-render) → a requestAnimationFrame
+    // violation flood, and it does NOT help the sidebar (app.js only creates a
+    // page-2 box from the main column's e.pageBreakBefore — see PB-007 Q2). The
+    // 329 renderer re-runs on its own timers/observer + item-pages-changed.
     try { window.dispatchEvent(new CustomEvent('antcv:item-pages-changed', { detail: { source: 'sidebar-item-page', sid: sid } })); } catch (_) {}
   }
 

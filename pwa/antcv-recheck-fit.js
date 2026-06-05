@@ -61,12 +61,21 @@
   function readProxyUrl() {
     try {
       const raw = localStorage.getItem('proxyUrl');
-      if (!raw) return null;
-      // Some app.js versions JSON-wrap the value, others store it raw.
-      // Try JSON parse, fall back to the raw string.
-      try { return String(JSON.parse(raw)).trim().replace(/\/+$/, ''); }
-      catch (_) { return String(raw).trim().replace(/\/+$/, ''); }
-    } catch (_) { return null; }
+      let v = '';
+      if (raw) {
+        // Some app.js versions JSON-wrap the value, others store it raw.
+        try { v = String(JSON.parse(raw)); } catch (_) { v = String(raw); }
+      }
+      v = v.trim().replace(/\/+$/, '');
+      if (v) return v;
+      // Demo / shared mode: proxyUrl unset, but the JD /api/* endpoints run on
+      // the access-relay (window.ANTCV_RELAY_URL from relay-config.json).
+      if (typeof window !== 'undefined' && typeof window.ANTCV_RELAY_URL === 'string') {
+        const rel = window.ANTCV_RELAY_URL.trim().replace(/\/+$/, '');
+        if (rel) return rel;
+      }
+    } catch (_) {}
+    return null;
   }
 
   function readSections(key) {

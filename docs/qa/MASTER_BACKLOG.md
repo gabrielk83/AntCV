@@ -91,7 +91,9 @@ Owner requirement for the 2-column CV preview + export:
 2. **Overflow promoted to a real break** — if one column has a manual break to page N, OR a column is longer than the page and *slides* to the next page, the slid content gets the full manual-break treatment: pink "▼ PAGE N ▼" separator before it; its page button reflects the page it landed on; the button is **forward-only** (an item that naturally lands on page 2 cycles 2→3→4→2, never back to 1).
 3. **Parity** — holds in Preview and exports identically in DOCX/PDF.
 
-**Foundation (everything depends on it):** an **A4 overflow detector** that measures each column's rendered content height against the page box and computes, per item, the *natural* page it falls on. Today the system only honours manual `itemPages` values; it never measures real overflow (this is the open `PAGEBREAK-002`).
+**Granularity (owner clarification 2026-06-04):** breaks operate at the **sub-subsection (item) level in BOTH columns** — sidebar items (Standards, Context, …) are the equivalent of the main column's per-role job lines. A sidebar sub-section break "opens" the continued sidebar tables on the next page (heading + table structure repeat, per `329`). The overflow detector must therefore compute the natural page **per item in the sidebar as well as the main column**, not per section.
+
+**Foundation (everything depends on it):** an **A4 overflow detector** that measures each column's rendered content height against the page box and computes, **per item (both columns)**, the *natural* page it falls on. Today the system only honours manual `itemPages` values; it never measures real overflow (this is the open `PAGEBREAK-002`).
 
 **Proposed build order (incremental, each verified live):**
 1. Overflow detector — measure per-column item→natural-page map. `[console]`

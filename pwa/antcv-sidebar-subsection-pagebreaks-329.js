@@ -18,7 +18,7 @@
 
   function norm(s){ return String(s || '').replace(/\s+/g,' ').trim(); }
   function readJson(k, fallback){ try{ var v=JSON.parse(localStorage.getItem(k)||''); return v && typeof v === 'object' ? v : fallback; }catch(_){ return fallback; } }
-  function activeDoc(){ try{ var d=localStorage.getItem('doc'); return d === 'cl' ? 'cl' : 'cv'; }catch(_){ return 'cv'; } }
+  function activeDoc(){ try{ var d=localStorage.getItem('doc')||''; try{ var p=JSON.parse(d); if(typeof p==='string') d=p; }catch(e){} return String(d).toLowerCase() === 'cl' ? 'cl' : 'cv'; }catch(_){ return 'cv'; } }
   function sections(){ var all=readJson(SECTIONS_KEY,{}); var list=all && all[activeDoc()]; return Array.isArray(list) ? list : []; }
   function sectionBySid(sid){ return sections().find(function(s){ return s && String(s.id||'') === String(sid||''); }) || null; }
   // v1.50.115 — page breaks apply to EVERY sidebar sub/subsection, not just

@@ -16,7 +16,7 @@
   function clean(s){return String(s||'').replace(/\s+/g,' ').trim();}
   function visible(el){return !!(el&&el.isConnected&&(el.offsetWidth||el.offsetHeight||el.getClientRects().length));}
   function read(k,f){try{const v=JSON.parse(localStorage.getItem(k)||'');return v&&typeof v==='object'?v:f;}catch(_){return f;}}
-  function doc(){try{return localStorage.getItem('doc')==='cl'?'cl':'cv';}catch(_){return 'cv';}}
+  function doc(){try{var d=localStorage.getItem('doc')||'';try{var p=JSON.parse(d);if(typeof p==='string')d=p;}catch(e){}return String(d).toLowerCase()==='cl'?'cl':'cv';}catch(_){return 'cv';}}
   function sectionBySid(sid){const all=read(SECTIONS_KEY,{});const list=all&&Array.isArray(all[doc()])?all[doc()]:[];return list.find(x=>x&&String(x.id||'')===String(sid))||null;}
   function titleOf(secEl,sid){const s=sectionBySid(sid);let t=clean((s&&(s.title||s.name))||'');if(!t){const h=secEl.querySelector('h1,h2,h3,h4,strong,b,[data-antcv-section-title]');t=clean(h&&h.textContent||'');}return (t||'SECTION').toUpperCase();}
   function pageMap(sid){const all=read(PAGE_KEY,{});const b=all&&all[sid];return b&&typeof b==='object'?b:{};}

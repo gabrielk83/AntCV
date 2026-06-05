@@ -1195,6 +1195,7 @@ const PHOTO_POSITIONS = new Set([
   'sidebar-top', 'sidebar-bottom',
   'header-left', 'header-right',
   'main-left', 'main-right',
+  'band-overlap',
   'hidden',
 ]);
 
@@ -1230,10 +1231,15 @@ function buildPhotoParagraph(ctx, position) {
 
   // For sidebar variants: classic centred inline image, used directly
   // as a top-or-bottom paragraph in the sidebar cell.
-  if (pos === 'sidebar-top' || pos === 'sidebar-bottom') {
+  if (pos === 'sidebar-top' || pos === 'sidebar-bottom' || pos === 'band-overlap') {
+    // band-overlap ("sidebar bridge"): the preview straddles the photo across
+    // the header-band/sidebar seam. A literal straddle needs a floating frame,
+    // which LibreOffice/CloudConvert drop during PDF conversion (the v1.14.0
+    // photo-floating regression). The faithful PDF-safe mapping is the TOP of
+    // the sidebar with zero top spacing so the disc hugs the band seam.
     return new Paragraph({
       alignment: AlignmentType.CENTER,
-      spacing: { before: 120, after: 120 },
+      spacing: { before: pos === 'band-overlap' ? 0 : 120, after: 120 },
       children: [
         new ImageRun({
           data,
@@ -1325,7 +1331,7 @@ function maybeBuildPhotoFor(ctx, target) {
   if (pos === 'hidden') return null;
   // target is one of: 'sidebar-top', 'sidebar-bottom', 'header', 'main'
   switch (target) {
-    case 'sidebar-top':    return pos === 'sidebar-top'    ? buildPhotoParagraph(ctx, pos) : null;
+    case 'sidebar-top':    return (pos === 'sidebar-top' || pos === 'band-overlap') ? buildPhotoParagraph(ctx, pos) : null;
     case 'sidebar-bottom': return pos === 'sidebar-bottom' ? buildPhotoParagraph(ctx, pos) : null;
     case 'header':         return (pos === 'header-left' || pos === 'header-right')
                                   ? pos : null;
@@ -1387,7 +1393,18 @@ function renderSection(s, ctx, isSidebar) {
     Number(s.items[0]._page) >= 2
   );
   if (_firstItemPageBreak) s._antcvFirstItemPageMoved = true;
-  const pageBreakPara = (s.pageBreakBefore === true || _firstItemPageBreak)
+  // Owner 2026-06-05: paging the FIRST part (intro / bullet_0) of a text_bullets
+  // section moves the WHOLE subsection — heading included. Break before the
+  // heading and stamp the page so renderTextBullets starts its run there.
+  let _firstPartPage = 0;
+  if (s.type === 'text_bullets' && ctx.itemPages && s.id && typeof ctx.itemPages[s.id] === 'object') {
+    const ipx = ctx.itemPages[s.id];
+    const introN = Number(ipx.intro);
+    const b0N = Number(ipx.bullet_0);
+    const fp = Math.max(Number.isFinite(introN) ? introN : 1, Number.isFinite(b0N) ? b0N : 1);
+    if (fp >= 2 && fp <= 4) { _firstPartPage = fp; s._antcvFirstPartPage = fp; }
+  }
+  const pageBreakPara = (s.pageBreakBefore === true || _firstItemPageBreak || _firstPartPage >= 2)
     ? [new Paragraph({ pageBreakBefore: true, spacing: { before: 0, after: 0 } })]
     : [];
 
@@ -1666,7 +1683,9 @@ function renderTextBullets(s, ctx, isSidebar) {
   // "closing". Cascades set a run to the same page; insert ONE pageBreakBefore
   // at each increase so the bullet and everything after it start on the next page.
   const ip = (ctx.itemPages && s.id && typeof ctx.itemPages[s.id] === 'object') ? ctx.itemPages[s.id] : {};
-  let runMax = 1;
+  // First-part page (intro/bullet_0) moves the heading too — start runMax there
+  // so we don't double-break and orphan the heading (set in renderSection).
+  let runMax = (Number(s._antcvFirstPartPage) >= 2 && Number(s._antcvFirstPartPage) <= 4) ? Number(s._antcvFirstPartPage) : 1;
   const brk = (key) => {
     const n = Number(ip[key]);
     const pg = (Number.isFinite(n) && n >= 2 && n <= 4) ? n : 1;

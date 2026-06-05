@@ -24845,6 +24845,7 @@ var PHOTO_POSITIONS = /* @__PURE__ */ new Set([
   "header-right",
   "main-left",
   "main-right",
+  "band-overlap",
   "hidden"
 ]);
 var PHOTO_CELL_W_MAIN = 1800;
@@ -24864,10 +24865,10 @@ function buildPhotoParagraph(ctx, position) {
   if (pos === "main-left" || pos === "main-right") inches = 1.2;
   const sizePx = Math.round(inches * EMU_PER_INCH / 9525);
   const outlineColor = (style && style.photoBorderColor || style && style.sidebarHeadColor || style && style.accent || "01B7BB").replace(/^#/, "");
-  if (pos === "sidebar-top" || pos === "sidebar-bottom") {
+  if (pos === "sidebar-top" || pos === "sidebar-bottom" || pos === "band-overlap") {
     return new Paragraph({
       alignment: AlignmentType.CENTER,
-      spacing: { before: 120, after: 120 },
+      spacing: { before: pos === "band-overlap" ? 0 : 120, after: 120 },
       children: [
         new ImageRun({
           data,
@@ -24940,7 +24941,7 @@ function maybeBuildPhotoFor(ctx, target) {
   if (pos === "hidden") return null;
   switch (target) {
     case "sidebar-top":
-      return pos === "sidebar-top" ? buildPhotoParagraph(ctx, pos) : null;
+      return pos === "sidebar-top" || pos === "band-overlap" ? buildPhotoParagraph(ctx, pos) : null;
     case "sidebar-bottom":
       return pos === "sidebar-bottom" ? buildPhotoParagraph(ctx, pos) : null;
     case "header":
@@ -24974,7 +24975,20 @@ function renderSection(s, ctx, isSidebar) {
   const skipHeading = inlineTitleType || isCLBoilerplate;
   const _firstItemPageBreak = !!(Array.isArray(s.items) && s.items.length && s.items[0] && typeof s.items[0] === "object" && Number(s.items[0]._page) >= 2);
   if (_firstItemPageBreak) s._antcvFirstItemPageMoved = true;
-  const pageBreakPara = s.pageBreakBefore === true || _firstItemPageBreak ? [new Paragraph({ pageBreakBefore: true, spacing: { before: 0, after: 0 } })] : [];
+  // Owner 2026-06-05: for a text_bullets section (How I Would Contribute),
+  // paging the FIRST part (intro, or bullet_0 when there's no intro) moves the
+  // WHOLE subsection — heading included — to that page. We break before the
+  // heading here and stamp the page so renderTextBullets starts its run there
+  // (no second break that would orphan the heading from its first line).
+  let _firstPartPage = 0;
+  if (s.type === "text_bullets" && ctx.itemPages && s.id && typeof ctx.itemPages[s.id] === "object") {
+    const ipx = ctx.itemPages[s.id];
+    const introN = Number(ipx.intro);
+    const b0N = Number(ipx.bullet_0);
+    const fp = Math.max(Number.isFinite(introN) ? introN : 1, Number.isFinite(b0N) ? b0N : 1);
+    if (fp >= 2 && fp <= 4) { _firstPartPage = fp; s._antcvFirstPartPage = fp; }
+  }
+  const pageBreakPara = s.pageBreakBefore === true || _firstItemPageBreak || _firstPartPage >= 2 ? [new Paragraph({ pageBreakBefore: true, spacing: { before: 0, after: 0 } })] : [];
   const body = [];
   switch (s.type) {
     case "text":
@@ -25147,7 +25161,12 @@ function renderTextBullets(s, ctx, isSidebar) {
   // insert ONE pageBreakBefore at each point where the page increases, so the
   // bullet and everything after it start on the next page.
   const ip = (ctx.itemPages && s.id && typeof ctx.itemPages[s.id] === "object") ? ctx.itemPages[s.id] : {};
-  let runMax = 1;
+  // Owner 2026-06-05: when the FIRST part (intro / bullet_0) is paged, the whole
+  // subsection — INCLUDING its heading — moves. renderSection emits that break
+  // before the heading and stamps s._antcvFirstPartPage; start runMax there so we
+  // don't ALSO break before the intro/first bullet (which would split the heading
+  // from its content).
+  let runMax = (Number(s._antcvFirstPartPage) >= 2 && Number(s._antcvFirstPartPage) <= 4) ? Number(s._antcvFirstPartPage) : 1;
   const brk = (key) => {
     const n = Number(ip[key]);
     const pg = (Number.isFinite(n) && n >= 2 && n <= 4) ? n : 1;
@@ -26277,7 +26296,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.17-hiwc-bullets";
+var VERSION = "1.14.18-hiwc-first-part-moves-heading";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

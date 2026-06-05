@@ -242,6 +242,55 @@
     return i < 0 ? '' : s.slice(i + 1).toLowerCase();
   }
 
+  // v1.50.151 — render PDF pages to JPEG blobs so they can be OCR'd.
+  // Used as a fallback when a PDF carries little/no selectable text
+  // (image-based PDFs — notably a LinkedIn "Save as PDF", which renders
+  // the whole posting as images, so pdf.js returns near-zero text).
+  async function renderPdfPagesToBlobs(doc, maxPages) {
+    const blobs = [];
+    const n = Math.min(doc.numPages, maxPages || 6);
+    for (let p = 1; p <= n; p++) {
+      const page = await doc.getPage(p);
+      // Scale up for OCR legibility, but cap the longest side so each
+      // JPEG stays well under the extract-jd-image endpoint's ~5 MB
+      // base64 cap.
+      let scale = 2.0;
+      let vp = page.getViewport({ scale });
+      const maxSide = Math.max(vp.width, vp.height);
+      if (maxSide > 2200) { scale *= (2200 / maxSide); vp = page.getViewport({ scale }); }
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.floor(vp.width));
+      canvas.height = Math.max(1, Math.floor(vp.height));
+      const ctx = canvas.getContext('2d');
+      // White matte — OCR on a transparent canvas reads as a black box.
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      await page.render({ canvasContext: ctx, viewport: vp }).promise;
+      const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.85));
+      if (blob) blobs.push(blob);
+    }
+    return blobs;
+  }
+
+  // OCR each rendered page through /api/extract-jd-image and join. Page
+  // failures are tolerated (one bad page shouldn't lose the rest); if
+  // EVERY page fails, the first error is rethrown so the caller can show
+  // a useful reason.
+  async function ocrPdfViaImages(doc) {
+    const blobs = await renderPdfPagesToBlobs(doc, 6);
+    if (!blobs.length) return '';
+    const parts = [];
+    let firstErr = null;
+    for (const blob of blobs) {
+      try {
+        const t = await extractTextFromImage(blob, { hint: 'job description page (image-based PDF)' });
+        if (t && t.trim()) parts.push(t.trim());
+      } catch (e) { if (!firstErr) firstErr = e; }
+    }
+    if (!parts.length && firstErr) throw firstErr;
+    return parts.join('\n\n').trim();
+  }
+
   async function extractTextFromFile(file) {
     if (!file) throw new Error('No file provided.');
     const ext = fileExtension(file.name);
@@ -276,7 +325,24 @@
         const items = (tc && tc.items) || [];
         parts.push(items.map(i => i.str || '').join(' '));
       }
-      return parts.join('\n').trim();
+      const text = parts.join('\n').trim();
+      // v1.50.151 — image-based PDF fallback. When pdf.js returns almost
+      // no selectable text (a scanned or LinkedIn "Save as PDF"), OCR the
+      // rendered pages via the same /api/extract-jd-image path used for
+      // image uploads. Keep whichever yields more text.
+      const TEXT_MIN = 120;
+      if (text.length >= TEXT_MIN) return text;
+      let ocrText = '';
+      let ocrErr = null;
+      try { ocrText = await ocrPdfViaImages(doc); }
+      catch (e) { ocrErr = e; }
+      if (ocrText && ocrText.length > text.length) return ocrText;
+      if (text.length >= 20) return text; // a little real text — let the caller use it
+      throw new Error(
+        'This PDF has no selectable text — it looks image-based (e.g. a LinkedIn "Save as PDF"). ' +
+        (ocrErr ? 'OCR fallback failed: ' + ((ocrErr && ocrErr.message) || ocrErr) + '. ' : '') +
+        'Paste the JD text, or upload a screenshot (PNG/JPEG) instead.'
+      );
     }
     if (['png', 'jpg', 'jpeg', 'webp', 'gif', 'heic'].indexOf(ext) >= 0) {
       return await extractTextFromImage(file);
@@ -1279,7 +1345,7 @@
   window.AntcvRecheckFit = {
     open: openModal,
     close: closeModal,
-    version: '1.40.139',
+    version: '1.50.151',
     // v1.40.133 internals exposed for tests
     _extractTextFromFile: extractTextFromFile,
     _postJdAnalysis: postJdAnalysis,
@@ -1294,8 +1360,12 @@
   // Public OCR helper. Other sidecars (e.g. antcv-jd-image-ocr.js
   // which hooks the wizard's JD file inputs) call this to avoid
   // duplicating the cv-proxy call.
-  window.AntcvJdImageOcr = window.AntcvJdImageOcr || {
-    version: '1.40.139',
-    extract: extractTextFromImage,
-  };
+  //   - extract(file)     : image → OCR text (unchanged).
+  //   - extractFile(file) : v1.50.151 full router (txt/docx/pdf/image)
+  //                         WITH the image-based-PDF OCR fallback, so the
+  //                         wizard/re-upload PDF inputs get OCR too.
+  window.AntcvJdImageOcr = window.AntcvJdImageOcr || {};
+  window.AntcvJdImageOcr.version = '1.50.151';
+  if (!window.AntcvJdImageOcr.extract) window.AntcvJdImageOcr.extract = extractTextFromImage;
+  window.AntcvJdImageOcr.extractFile = extractTextFromFile;
 })();

@@ -47,7 +47,7 @@
 (function () {
   'use strict';
 
-  const SCRIPT_VERSION = '1.50.151';
+  const SCRIPT_VERSION = '1.40.139';
   const HOOK_MARK = '__antcvJdImageOcrHooked';
   const SYNTHETIC_MARK = '__antcvJdImageOcrSynthetic';
 
@@ -72,16 +72,6 @@
     if (type.indexOf('image/') === 0) return true;
     const name = String(file.name || '').toLowerCase();
     return /\.(png|jpg|jpeg|gif|webp|heic)$/.test(name);
-  }
-
-  // v1.50.151 — PDF detection. We also intercept PDFs now so image-based
-  // PDFs (a LinkedIn "Save as PDF" etc.) reach the OCR fallback in the
-  // shared extractor instead of app.js's text-only parse, which returns
-  // near-zero text for them.
-  function isPdfFile(file) {
-    if (!file) return false;
-    if (String(file.type || '').toLowerCase() === 'application/pdf') return true;
-    return /\.pdf$/i.test(String(file.name || ''));
   }
 
   // ─── Toast helper (lightweight, no app.js dependency) ─────────────
@@ -146,11 +136,6 @@
     if (!input || input[HOOK_MARK]) return false;
     if (input.type !== 'file') return false;
     if (!isJdShapedAccept(input.getAttribute('accept'))) return false;
-    // v1.50.151 — skip the merged Analysis-panel JD block's own input.
-    // That block already extracts via AntcvRecheckFit._extractTextFromFile
-    // (now image-PDF/OCR-capable), so hooking it too would double-handle
-    // the same file. This hook is only for app.js's wizard/re-upload inputs.
-    if (input.closest && input.closest('#antcv-analysis-panel-jd-block')) return false;
 
     input[HOOK_MARK] = true;
 
@@ -177,32 +162,23 @@
 
     const file = input.files && input.files[0];
     if (!file) return;
-    const pdf = isPdfFile(file);
-    if (!isImageFile(file) && !pdf) return; // not image/pdf: let app.js handle
+    if (!isImageFile(file)) return; // non-image: let app.js handle
 
-    // Intercept and extract (image → OCR; PDF → text, with an image-based
-    // PDF OCR fallback inside the shared extractor).
+    // Intercept and OCR.
     ev.stopImmediatePropagation();
     ev.preventDefault();
 
-    const toast = showToast(pdf ? 'Reading JD (PDF — OCR if image-based)…' : 'Extracting JD text from image…');
+    const toast = showToast('Extracting JD text from image…');
     let extractedText = '';
     try {
       const ocr = await waitForOcrHelper(5000);
-      if (pdf) {
-        if (typeof ocr.extractFile !== 'function') {
-          throw new Error('PDF extractor unavailable — refresh and retry.');
-        }
-        extractedText = await ocr.extractFile(file);
-      } else {
-        extractedText = await ocr.extract(file);
-      }
+      extractedText = await ocr.extract(file);
       if (!extractedText || !extractedText.trim()) {
-        throw new Error('Empty result from extraction');
+        throw new Error('Empty result from OCR');
       }
     } catch (err) {
       if (toast && toast.parentElement) toast.parentElement.removeChild(toast);
-      showToast((pdf ? 'JD PDF read failed: ' : 'Image OCR failed: ') + (err && err.message || err), 'error');
+      showToast('Image OCR failed: ' + (err && err.message || err), 'error');
       // Reset so the user can pick another file
       try { input.value = ''; } catch (_) {}
       return;

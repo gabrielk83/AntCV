@@ -685,13 +685,15 @@ function buildStyle(styleConfig, navyColor) {
   // be color-only by convention).
   const sp = readSidebarPosition();
   if (sp === 'left' || sp === 'right') out.sidebarPosition = sp;
-  // v1.50.137 — strip a leading '#' from any hex colour. The DOCX worker's
-  // docx library rejects '#RRGGBB' and returns a 500 ("Invalid hex value
-  // '#283556'"). navyColor arrives as '#283556', so headerBg/sidebarBg/
-  // tableHeaderBg (and any passthrough styleConfig colour) must be 6-digit
-  // hex with no '#'. Fonts / sidebarPosition don't match and are untouched.
+  // v1.50.139 — normalize every hex colour to a bare 6-digit value. The DOCX
+  // worker's docx library rejects anything but 6 hex digits and returned a 500
+  // ("Invalid hex value '"#283556"'"). The value arrives quoted AND #-prefixed
+  // (navyColor is a JSON-encoded string '"#283556"'), so strip surrounding
+  // quotes + a leading '#'. Fonts / sidebarPosition don't match and are left.
   for (const k of Object.keys(out)) {
-    if (typeof out[k] === 'string' && /^#[0-9a-fA-F]{6}$/.test(out[k])) out[k] = out[k].slice(1);
+    if (typeof out[k] !== 'string') continue;
+    const m = out[k].match(/^\s*["']?\s*#?([0-9a-fA-F]{6})\s*["']?\s*$/);
+    if (m) out[k] = m[1].toUpperCase();
   }
   return out;
 }

@@ -13,7 +13,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '1.40.247-preview-guard';
+  const VERSION = '1.50.129-scope';
   if (window.__antcvAdditionalInfoRowControls === VERSION) return;
   window.__antcvAdditionalInfoRowControls = VERSION;
   // v1.40.247-preview-guard: Preview is button-free. panelRoot() and
@@ -278,6 +278,30 @@
     };
   }
 
+  // v1.50.129 (PB-001): some sidebar sub-section editors (e.g. Regulatory
+  // Context) render their item rows inside the same container panelRoot()
+  // resolves to, so likelyItemRows() picked them up and run() bound them to
+  // the hardcoded 'additional' sid — pressing THEIR page button moved
+  // Additional Information instead of their own section. Guard: walk up from a
+  // candidate row to its nearest section header; if that header belongs to a
+  // different known section, the row is foreign and must not be wired here.
+  var FOREIGN_SECTION_RX = /(regulatory context|tools\s*&?\s*methods|tools and methods|\beducation\b|\blanguages\b|\bprofile\b|core competenc|selected outcomes|professional experience|\bpublications?\b|\bpatents?\b|certifications?)/i;
+  function rowIsForeign(row) {
+    var el = row;
+    for (var depth = 0; el && el !== document.body && depth < 10; depth++, el = el.parentElement) {
+      var sib = el.previousElementSibling, scanned = 0;
+      while (sib && scanned < 8) {
+        var t = norm(sib.textContent || '');
+        if (t && t.length <= 48) {
+          if (/additional information/i.test(t)) return false; // our own header reached first -> not foreign
+          if (FOREIGN_SECTION_RX.test(t)) return true;          // a different section's header is nearer
+        }
+        sib = sib.previousElementSibling; scanned++;
+      }
+    }
+    return false; // no foreign header found -> preserve prior behaviour (wire it)
+  }
+
   function run() {
     const sec = findAdditionalSection();
     if (!sec || !sec.id) return;
@@ -285,7 +309,12 @@
     if (!root) return;
     const rows = likelyItemRows(root);
     if (!rows.length) return;
-    rows.forEach(function (r, idx) { wireRow(r, sec.id, idx); });
+    let wi = 0;
+    rows.forEach(function (r) {
+      if (rowIsForeign(r)) return;       // skip rows belonging to a different sidebar sub-section
+      wireRow(r, sec.id, wi);
+      wi++;
+    });
     applyPreview(sec.id);
   }
 

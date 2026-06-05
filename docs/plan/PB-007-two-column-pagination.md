@@ -142,3 +142,39 @@ sidebar item. Add it when building sidebar pagination.
 **Next build step:** find app.js's page-box creation (how `e.pageBreakBefore` makes a new
 `.antcv-page-row`) and the sidebar TABLE structure; drive both from a unified page model so a
 sidebar break (a) creates the box and (b) breaks the table into it.
+
+---
+
+## UPDATE 2026-06-05 (b) — structural confirmation: why the sidebar can't paginate
+
+Owner: "sidebar sub-subsections must act like the main role boxes." Confirmed the actual
+structure in app.js:
+
+- **Main role boxes** = `div`s (NOT tables) that carry app.js's **native** flag
+  `e.pageBreakBefore` → rendered as `breakBefore:"page"`. app.js's **own pagination engine**
+  consumes that and creates a new `.antcv-page-row` box (boxes 1→2). This is why the main
+  column moves.
+- **Sidebar items** = `div`s (`data-antcv-row-path:"items.N"`) in the **sidebar column,
+  which app.js's pagination engine does NOT process**, and they use the SEPARATE
+  `antcv:itemPages` model (sidecars `329`/`247`/`359`) that app.js never reads.
+- `<table>` is used only for Core Competencies / What-I-Bring grids, not the role boxes.
+
+**So the fix is not "div → table".** It is: make the sidebar sub-subsections **participate
+in app.js's native pagination** — carry the native break flag AND be processed into page
+boxes the same way the main role boxes are.
+
+### Hard constraint: app.js is an EXTERNAL build (per CLAUDE.md)
+
+app.js is minified + built outside this repo; sidecars patch *around* it. We cannot edit
+app.js's pagination engine here. Two realistic paths:
+
+- **Path A (sidecar replicates sidebar pagination):** a sidecar measures the sidebar column,
+  creates/extends the `.antcv-page-row` page box for the sidebar, and moves the broken
+  sidebar sub-section (table/items) into it — i.e. build sidebar pagination to mirror what
+  app.js does for the main column. Self-contained but non-trivial; must also break the table.
+- **Path B (change app.js source):** if the owner has the app.js source/build pipeline, make
+  the sidebar column run through the same pagination as the main column and have the sidebar
+  page control set the native `e.pageBreakBefore`. Cleanest, but requires the external build.
+
+**Decision needed (owner):** Path A (sidecar, we can do it here) or Path B (needs app.js
+source access)? This decides the whole PB-007 sidebar build.

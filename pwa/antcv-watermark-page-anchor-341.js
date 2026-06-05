@@ -56,7 +56,7 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.50.140-wm-unify';
+  var SCRIPT_VERSION = '1.50.144-wm-lowest';
   if (window.__antcvWatermarkPageAnchor341 === SCRIPT_VERSION) return;
   window.__antcvWatermarkPageAnchor341 = SCRIPT_VERSION;
 
@@ -201,16 +201,19 @@
       var sids = paper.querySelectorAll('[data-sid]');
       lastPage = sids.length ? sids[sids.length - 1] : paper;
     }
-    // For every watermark, decide: keep + anchor on last page, or hide.
+    // Keep the LAST watermark in document order — that's the lowest one, nearest
+    // the content end (owner: the CL watermark must sit next to the end, like
+    // Word — not the higher duplicate). Hide the rest. Anchor relative to the
+    // last page-box when it contains the watermark, else the watermark's own parent.
     var anchored = null;
-    for (var i = 0; i < watermarks.length; i++) {
+    for (var i = watermarks.length - 1; i >= 0; i--) {
       var wm = watermarks[i];
       if (!wm.isConnected) continue;
-      if (lastPage.contains(wm) && !anchored) {
+      if (!anchored) {
         unhideWatermark(wm);
         try {
-          var corner = chooseCorner(lastPage);
-          anchorToCorner(wm, lastPage, corner);
+          var box = (lastPage.contains(wm) ? lastPage : (wm.parentElement || lastPage));
+          anchorToCorner(wm, box, chooseCorner(box));
         } catch (_) {}
         anchored = wm;
       } else {

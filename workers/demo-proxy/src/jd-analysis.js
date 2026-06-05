@@ -12,6 +12,9 @@
 //       questions_in_jd: [{ question, suggested_answer, grounded }],
 //       language:   'en' | 'da' | …,
 //       red_flags:  [string],
+//       assumptions:      [string],   // working assumptions not directly stated
+//       recommendations:  [string],   // concrete, honest next actions
+//       confidence_notes: [{ text, confidence: 0..1, issue: string|null }],
 //       summary:    string
 //     },
 //     model: '<which LLM produced this>',
@@ -45,6 +48,9 @@ Your output MUST be valid JSON matching this exact schema. No prose before or af
   "detected_language": string,
   "category": "engineering_hardware"|"engineering_software"|"product_management"|"research_phd"|"program_management"|"operations"|"data_analytics"|"consulting"|"executive"|"finance"|"people_soft"|"unsolicited",
   "red_flags": string[],
+  "assumptions": string[],
+  "recommendations": string[],
+  "confidence_notes": [ { "text": string, "confidence": number, "issue": string|null } ],
   "summary": string
 }
 
@@ -91,6 +97,11 @@ For "suggested_answer" on each question:
 
 - "red_flags" — surface anything that warrants attention: vague compensation, unrealistic skill mix, no recruiter contact path, application deadline imminent OR already passed (judge against TODAY'S DATE given in the user message — never assume a different current year), requires citizenship the JD lists, garbled text in the source, etc.
 - "summary" — 2-3 sentence plain-language briefing for the candidate.
+
+HONESTY-FIRST OUTPUTS — assumptions, recommendations, confidence_notes:
+- "assumptions" — the working assumptions this briefing makes that are NOT directly stated in the JD or the candidate summary (e.g. an inferred seniority, an assumed domain transfer, an unstated tooling overlap). Each one short sentence phrased AS an assumption ("Assumes the candidate's X transfers to the role's Y"). [] when the analysis rests only on stated facts.
+- "recommendations" — concrete, honest next actions the candidate can take to strengthen fit: close a gap, reframe adjacent experience, attach proof, complete a short course. Adjacent experience MUST be described as adjacent — never claimed as already held. Order by impact. [] if none.
+- "confidence_notes" — score how well the KEY claims in THIS analysis are grounded in the JD + candidate summary. Each: { "text": the claim as a short sentence, "confidence": a number 0..1, "issue": a short reason when confidence < 0.7, else null }. Use the SAME standard as the ANTI-FABRICATION block and the "grounded" flag: an unsupported or overstated claim scores LOW (< 0.4) and carries an issue; a partially-supported / adjacent claim scores MEDIUM (0.4–0.7) with a short issue; a fully-grounded claim scores HIGH (>= 0.7) with issue null. Cover the 4–10 most decision-relevant claims. NEVER invent support to raise a score.
 
 Output ONLY the JSON object. Begin your response with { and end with }.`;
 
@@ -174,6 +185,18 @@ function normalize(analysis) {
       })),
     language: str(a.language) || 'unknown',
     red_flags: arr(a.red_flags).filter(x => typeof x === 'string').slice(0, 20),
+    assumptions: arr(a.assumptions).filter(x => typeof x === 'string' && x.trim()).slice(0, 20),
+    recommendations: arr(a.recommendations).filter(x => typeof x === 'string' && x.trim()).slice(0, 20),
+    confidence_notes: arr(a.confidence_notes)
+      .filter(c => c && typeof c.text === 'string' && c.text.trim())
+      .slice(0, 24)
+      .map(c => {
+        let conf = Number(c.confidence);
+        if (!Number.isFinite(conf)) conf = 0.5;
+        conf = Math.max(0, Math.min(1, conf));
+        const issue = (typeof c.issue === 'string' && c.issue.trim()) ? c.issue.trim() : null;
+        return { text: c.text.trim(), confidence: conf, issue };
+      }),
     summary: str(a.summary) || '',
   };
 }

@@ -176,6 +176,11 @@
       if (a.red_flags !== undefined) merged.red_flags = a.red_flags;
       else merged.red_flags = merged.red_flags || [];
       if (a.questions_in_jd !== undefined) merged.questions_in_jd = a.questions_in_jd;
+      // v1.50.146 — honesty-first fields for the Analysis report PDF
+      // (antcv-analysis-report-pdf-360.js). Same jd-analysis pass.
+      if (a.assumptions !== undefined) merged.assumptions = a.assumptions;
+      if (a.recommendations !== undefined) merged.recommendations = a.recommendations;
+      if (a.confidence_notes !== undefined) merged.confidence_notes = a.confidence_notes;
       merged._jdAnalysisMergedAt = Date.now();
       if (writeRationale(merged)) fireMerge();
     } catch (_) {

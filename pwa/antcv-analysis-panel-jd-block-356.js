@@ -76,7 +76,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.58-merge-repair';
+  var VERSION = '1.50.153-upload-jd';
   if (window.__antcvAnalysisPanelJdBlock356 === VERSION) return;
   window.__antcvAnalysisPanelJdBlock356 = VERSION;
 
@@ -165,7 +165,7 @@
     return da ? {
       heading: 'Analysér mod et jobopslag',
       jdLabel: 'Jobopslag (indsæt teksten)',
-      upload: 'Eller upload:',
+      upload: 'Eller upload:', uploadJd: '⬆ Upload jobopslag',
       pdf: 'PDF', word: 'Word', image: 'Billede',
       run: 'Analysér JD', running: 'Analyserer…',
       reading: 'Læser {file}…',
@@ -181,7 +181,7 @@
     } : {
       heading: 'Analyse against a job description',
       jdLabel: 'Job description (paste here)',
-      upload: 'Or upload:',
+      upload: 'Or upload:', uploadJd: '⬆ Upload JD',
       pdf: 'PDF', word: 'Word', image: 'Image',
       run: 'Analyse JD', running: 'Analysing…',
       reading: 'Reading {file}…',
@@ -366,17 +366,34 @@
     wrap.appendChild(ta);
 
     var status = el('div', { className: 'apjb-status' });
-    var fileInput = el('input', { type: 'file', accept: '.pdf,.doc,.docx,.txt,image/*', style: { display: 'none' } });
+    // v1.50.153 — one "Upload JD" input accepting every JD-bearing format.
+    // PDF/DOCX/TXT/image go through AntcvRecheckFit._extractTextFromFile (the
+    // shared extractor — same pdf.js→garbled→LLM→vision-OCR cascade the
+    // Generate/wizard uploads use). JSON (a saved application export) is parsed
+    // locally and its JD text pulled out.
+    var fileInput = el('input', { type: 'file', accept: '.pdf,.doc,.docx,.txt,.json,image/*', style: { display: 'none' } });
     fileInput.addEventListener('change', async function (ev) {
       var f = ev.target.files && ev.target.files[0];
       ev.target.value = '';
       if (!f) return;
       status.textContent = t.reading.replace('{file}', f.name);
       try {
-        var rf = window.AntcvRecheckFit;
-        if (!rf || typeof rf._extractTextFromFile !== 'function') throw new Error('extractor unavailable');
-        var text = await rf._extractTextFromFile(f);
-        if (!text || text.length < 20) throw new Error('no usable text');
+        var ext = (f.name.split('.').pop() || '').toLowerCase();
+        var text;
+        if (ext === 'json') {
+          var raw = await f.text();
+          try {
+            var j = JSON.parse(raw);
+            text = j.jd_text || j.jd || j.description ||
+                   (j.application && (j.application.jd_text || j.application.jd)) ||
+                   (typeof j === 'string' ? j : JSON.stringify(j, null, 2));
+          } catch (_) { text = raw; }
+        } else {
+          var rf = window.AntcvRecheckFit;
+          if (!rf || typeof rf._extractTextFromFile !== 'function') throw new Error('extractor unavailable');
+          text = await rf._extractTextFromFile(f);
+        }
+        if (!text || String(text).length < 20) throw new Error('no usable text');
         ta.value = text;
         status.textContent = '';
       } catch (e) {
@@ -386,9 +403,10 @@
     function upBtn(label, accept) {
       return el('button', { className: 'apjb-upbtn', type: 'button', onClick: function () { fileInput.setAttribute('accept', accept); fileInput.click(); } }, label);
     }
+    // v1.50.153 — single "Upload JD" button (replaces the PDF/Word/Image trio).
+    // Accepts every supported format incl. JSON; the OS picker filters by it.
     var uprow = el('div', { className: 'apjb-uprow' },
-      el('span', { className: 'apjb-uplabel' }, t.upload),
-      upBtn(t.pdf, '.pdf'), upBtn(t.word, '.doc,.docx'), upBtn(t.image, 'image/*'), fileInput);
+      upBtn(t.uploadJd, '.pdf,.doc,.docx,.txt,.json,image/*'), fileInput);
     wrap.appendChild(uprow);
     wrap.appendChild(status);
 

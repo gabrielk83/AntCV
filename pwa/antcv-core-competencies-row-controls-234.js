@@ -22,7 +22,7 @@
 
   function readJson(k, fallback){ try { const v=JSON.parse(localStorage.getItem(k)||''); return v && typeof v==='object' ? v : fallback; } catch(_){ return fallback; } }
   function writeJson(k,v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(_){} }
-  function activeDoc(){ try { const d=localStorage.getItem('doc'); return d==='cl'?'cl':'cv'; } catch(_){ return 'cv'; } }
+  function activeDoc(){ try { let d=localStorage.getItem('doc')||''; try { const p=JSON.parse(d); if(typeof p==='string') d=p; } catch(e){} return String(d).toLowerCase()==='cl'?'cl':'cv'; } catch(_){ return 'cv'; } }
 
   function readAlignMap(){ return readJson(ALIGN_KEY, {}); }
   function writeAlignMap(m){ writeJson(ALIGN_KEY, m||{}); }

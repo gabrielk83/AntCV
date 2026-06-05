@@ -40,7 +40,7 @@
   }
   function readJson(k, f) { try { var v = JSON.parse(localStorage.getItem(k) || ''); return v && typeof v === 'object' ? v : f; } catch (_) { return f; } }
   function writeJson(k, v) { try { localStorage.setItem(k, JSON.stringify(v || {})); } catch (_) {} }
-  function activeDoc() { try { var d = localStorage.getItem('doc'); return d === 'cl' ? 'cl' : 'cv'; } catch (_) { return 'cv'; } }
+  function activeDoc() { try { var d = localStorage.getItem('doc') || ''; try { var p = JSON.parse(d); if (typeof p === 'string') d = p; } catch (e) {} return String(d).toLowerCase() === 'cl' ? 'cl' : 'cv'; } catch (_) { return 'cv'; } }
   function sections() { var all = readJson(SECTIONS_KEY, {}); var l = all && all[activeDoc()]; return Array.isArray(l) ? l : []; }
   function sidebarSections() {
     return sections().filter(function (s) {

@@ -21,7 +21,7 @@
   const visible=el=>!!(el&&el.isConnected&&(el.offsetWidth||el.offsetHeight||el.getClientRects().length));
   const readJson=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k)||'');return v&&typeof v==='object'?v:f;}catch(_){return f;}};
   const writeJson=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v||{}));}catch(_){}};
-  const activeDoc=()=>{try{return localStorage.getItem('doc')==='cl'?'cl':'cv';}catch(_){return 'cv';}};
+  const activeDoc=()=>{try{let d=localStorage.getItem('doc')||'';try{const p=JSON.parse(d);if(typeof p==='string')d=p;}catch(e){}return String(d).toLowerCase()==='cl'?'cl':'cv';}catch(_){return 'cv';}};
   const pulse=(source,detail)=>{try{window.dispatchEvent(new CustomEvent('antcv:sections-updated',{detail:Object.assign({source,version:VERSION},detail||{})}));}catch(_){} };
   const fireField=f=>['input','change'].forEach(t=>{try{f&&f.dispatchEvent(new Event(t,{bubbles:true}));}catch(_){}});
 

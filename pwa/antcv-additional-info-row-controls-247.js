@@ -42,7 +42,9 @@
 
   function activeDoc() {
     try {
-      const d = localStorage.getItem('doc');
+      let d = localStorage.getItem('doc') || '';
+      try { const p = JSON.parse(d); if (typeof p === 'string') d = p; } catch (e) {}
+      d = String(d).toLowerCase();
       return (d === 'cl' || d === 'cv') ? d : 'cv';
     } catch (_) { return 'cv'; }
   }

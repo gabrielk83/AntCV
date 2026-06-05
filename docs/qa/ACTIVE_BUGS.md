@@ -49,7 +49,10 @@ items marked VERIFYING.
   Workers deployed. — FIXED✓ (worker-side).
 - **DEMO-WM-001** — DEMO watermark. Export path already stamps when `demo_mode`;
   added a preview overlay sidecar `antcv-demo-watermark.js` (tiled diagonal DEMO,
-  pointer-events:none, prints). — FIXED✓ (1.50.159).
+  pointer-events:none, prints). — Mechanism FIXED✓ (1.50.159), but **BLOCKED by
+  DEMO-PERSIST-001**: a real demo account reads `demo_mode:false`, so the watermark
+  appears in neither preview, export preview, nor DOCX/PDF until that is fixed.
+  Not owner-confirmable yet.
 - **GEN-EMPTY-001** — Empty Analysis panel after Generate ("Detailed analysis was not
   returned by the model" placeholder + empty fit/gaps). The 1.50.154 generate_cv
   fold-in enlarged the rationale → JSON truncation dropped it. Reverted the fold-in. —
@@ -68,11 +71,21 @@ items marked VERIFYING.
 
 - **HARDREFRESH-001** `[OPEN]` — In-app Hard Refresh shows the "are you sure?" confirm
   but does nothing after OK (no reload). Not yet diagnosed.
-- **DEMO-PERSIST-001** `[OPEN][console][worker]` — `AntcvSetUserMode("demo")` + reload
-  still returns relay `user_mode:"paid"` (diag confirmed). Demo mode won't activate, so
-  no demo UI even after DEMO-CONFIG-001. Relay write/read logic looks correct; the
-  client POST (`/api/user/mode`, fire-and-forget, auth-header-injected) is the suspect.
-  Decisive probe: the `SET-MODE` console snippet (POST status 401 vs 200+stale).
+- **DEMO-PERSIST-001** `[OPEN][HIGH][console][worker]` — **A demo user is server-
+  classified as "paid".** Confirmed live: `51pegasib@gmail.com` (who carries the demo
+  "⚠ Setup needed" chip) reads relay `/config` → `user_mode:"paid"`, `demo_mode:false`.
+  `AntcvSetUserMode("demo")` + reload does **not** flip it (still `"paid"`). Because the
+  account is treated as paid, every demo behaviour is wrong for them:
+    - **"⚠ Setup needed"** chip shows (it should not for a demo account);
+    - **no "DEMO" watermark** anywhere — **preview, export preview, and DOCX/PDF**
+      (export stamping is gated on `demo_mode`, which is false here).
+  This is the master demo bug; DEMO-SETUP-001 and DEMO-WM-001 are correct in mechanism
+  but **cannot manifest until this is fixed** (a real demo account never reaches
+  `demo_mode:true`). Relay write/read logic *looks* correct; suspects: the client POST
+  (`/api/user/mode`, fire-and-forget, relies on `antcv-auth.js` header injection) silently
+  failing, OR the account is pinned to "paid" by an admin/allowlist default. Decisive
+  probe: the `SET-MODE` console snippet (POST status 401 vs 200+stale read), then check
+  how the relay assigns the initial mode for this email.
 - **DEMO-BADGE-001** `[OPEN]` — The "🟡 DEMO" badge is hardcoded to a specific email
   (`51pegasib@gmail.com`), not to `demo_mode`/`user_mode`. Badge can show while the demo
   features are off (the "mix" the owner saw). Re-gate on the real signal.
@@ -87,6 +100,23 @@ items marked VERIFYING.
   JD.
 - **DEMO-TOGGLE-001** `[OPEN][feature]` — No in-app Demo⇄Paid toggle (only the wizard).
   Proposed: a Settings toggle calling `AntcvSetUserMode`.
+- **HOWCONTRIBUTE-001** `[OPEN]` — "How I would contribute" bullets are **missing in the
+  template preview** (the section renders without its bullet list). Check the
+  `text_bullets`/contribute renderer + the `mergeHowContributeFromLocalStorage` path
+  (docx-client has the export-side merge; the preview side is dropping the bullets).
+  Verify parity Preview ↔ DOCX/PDF (GEN-001).
+- **LOGIN-GATE-001** `[OPEN][HIGH]` — The change that **forces default settings and hides
+  the wizard when no wizard is needed landed badly**: on load the user gets a **blue
+  screen instead of the loader**, then the wizard, then the set menu (wrong order, broken
+  first paint). Candidate fix branch already exists:
+  `feat/login-loading-gate` —
+  https://github.com/gabrielk83/AntCV/compare/main...feat/login-loading-gate
+  (review + verify the loader→app sequence before merge; this is the app-shell boot path —
+  diagnostic-first, prior blue-screen incidents on this path).
+- **APP-HISTORY-001** `[OPEN]` — **Application History is still not reachable from the
+  preview's pop/overflow menu.** (Related to SETTINGS-SUBTAB-001 but distinct: this is the
+  preview-side menu entry, not the Settings subtab.) The history control either isn't in
+  that menu or its handler doesn't open the history view.
 
 ### Optimization roadmap (see `docs/perf/Generate_Cycle_and_Optimisation.md`)
 

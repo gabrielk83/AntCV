@@ -159,6 +159,7 @@ Owner requirement for the 2-column CV preview + export:
 | IMPORT-COUNT-001 | Upload extract count wrong | — | OPEN | `[console]` Fix importer→personalInfo mapping in app.js (root, not recount). |
 | LANG-001 | Settings vs top-bar language mismatch | Med | OPEN | `[console]` Make wizard source of truth; fallback EN+DA. |
 | ONBOARD-001 / WIZARD-001 | Wizard walk-through ("How should AntCV write?" / Step 6B) not scrollable on mobile | High | VERIFYING | Shipped `antcv-wizard-walkthrough-scroll.js` (1.50.122): finds the overlay by heading text, mobile-only `overflow-y:auto` + `align-items:flex-start` so the whole step + Next scroll. `[verify]` Confirm on phone after deploy + `?hardReset=1`. |
+| WIZARD-BLIP-001 | On load, the **wizard flashes for ~1s for users who already completed it**, then the Set-menu opens (owner video 2026-06-05) | Med | OPEN | `[console]` Gate the boot so a completed user never sees the wizard frame — show a loading state until wizard-or-settings is resolved. Owner's preferred fallback if the blip is unavoidable: default the blip to the **Set-menu** (not the wizard); for a user who never did the wizard, show Set-menu then immediately open the wizard. Root: boot renders the wizard before the `wizardCompleted` check resolves. |
 
 ## 9. Generation content + generation UI (§14.2)
 

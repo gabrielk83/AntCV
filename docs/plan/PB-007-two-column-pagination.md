@@ -111,3 +111,130 @@ Markers are cosmetic until content genuinely moves; stop blind-patching markers.
 This is the contended page-break zone with a corruption history (see CLAUDE.md). Diagnose
 live before patching; the owner has Claude-for-Chrome for DOM inspection. Build the
 detector as a measurement utility first (testable), then layer pagination on top.
+
+---
+
+## UPDATE 2026-06-05 — Q2 answered + the real mechanism (owner console + clarification)
+
+**Q2 ANSWERED.** The screen preview DOES paginate into real `.antcv-page-row` boxes:
+- ProfExp break → `page-row boxes: 1 → 2` (a second physical page box is created on screen).
+- Sidebar-only break (Regulatory Context p2) → `page-row boxes: 1` (NO second box).
+
+So app.js creates page boxes **only** from the main column's native `e.pageBreakBefore`. The
+sidebar's `antcv:itemPages` model never triggers a box, so sidebar content has nowhere to go.
+
+**Two things are required to actually move a sidebar section to page 2:**
+1. **Page-box creation** — a sidebar break must cause app.js to create/extend the page-2 box
+   (today only the main column does). Unify the page model or set an app.js-visible flag.
+2. **Table break (owner)** — sidebar sub-sections are rendered as **tables**; a page break
+   *inside* a table doesn't move it — the **table itself must break** (PB-004 logic). Both
+   the page break AND the table break are needed. This ties PB-007 to PB-004.
+
+**Perf (fixed 1.50.133):** `359` was dispatching `antcv:sections-updated` per click →
+personality `forceRebuild` → rAF violation flood. Removed it (kept `item-pages-changed`);
+the main-column button never did this and the forceRebuild wasn't helping (no box created).
+
+**Still-open marker:** the editor-PANEL marker app.js shows for ProfExp —
+`📄 PAGE 2 — EXPERIENCE (CONT.) header appears here ▼` (amber, in the panel, not the preview)
+— is missing for sidebar sub-sections. Owner wants the same panel marker above the broken
+sidebar item. Add it when building sidebar pagination.
+
+**Next build step:** find app.js's page-box creation (how `e.pageBreakBefore` makes a new
+`.antcv-page-row`) and the sidebar TABLE structure; drive both from a unified page model so a
+sidebar break (a) creates the box and (b) breaks the table into it.
+
+---
+
+## UPDATE 2026-06-05 (b) — structural confirmation: why the sidebar can't paginate
+
+Owner: "sidebar sub-subsections must act like the main role boxes." Confirmed the actual
+structure in app.js:
+
+- **Main role boxes** = `div`s (NOT tables) that carry app.js's **native** flag
+  `e.pageBreakBefore` → rendered as `breakBefore:"page"`. app.js's **own pagination engine**
+  consumes that and creates a new `.antcv-page-row` box (boxes 1→2). This is why the main
+  column moves.
+- **Sidebar items** = `div`s (`data-antcv-row-path:"items.N"`) in the **sidebar column,
+  which app.js's pagination engine does NOT process**, and they use the SEPARATE
+  `antcv:itemPages` model (sidecars `329`/`247`/`359`) that app.js never reads.
+- `<table>` is used only for Core Competencies / What-I-Bring grids, not the role boxes.
+
+**So the fix is not "div → table".** It is: make the sidebar sub-subsections **participate
+in app.js's native pagination** — carry the native break flag AND be processed into page
+boxes the same way the main role boxes are.
+
+### Hard constraint: app.js is an EXTERNAL build (per CLAUDE.md)
+
+app.js is minified + built outside this repo; sidecars patch *around* it. We cannot edit
+app.js's pagination engine here. Two realistic paths:
+
+- **Path A (sidecar replicates sidebar pagination):** a sidecar measures the sidebar column,
+  creates/extends the `.antcv-page-row` page box for the sidebar, and moves the broken
+  sidebar sub-section (table/items) into it — i.e. build sidebar pagination to mirror what
+  app.js does for the main column. Self-contained but non-trivial; must also break the table.
+- **Path B (change app.js source):** if the owner has the app.js source/build pipeline, make
+  the sidebar column run through the same pagination as the main column and have the sidebar
+  page control set the native `e.pageBreakBefore`. Cleanest, but requires the external build.
+
+**Decision needed (owner):** Path A (sidecar, we can do it here) or Path B (needs app.js
+source access)? This decides the whole PB-007 sidebar build.
+
+---
+
+## UPDATE 2026-06-05 (c) — owner chose PATH B; access blocker
+
+Owner selected **Path B (change app.js source)** so the sidebar column runs through app.js's
+native pagination. BLOCKER: the app.js source is NOT in this repo — `pwa/app.js` is the
+minified external-build artifact (12 long lines, no sourcemap), `vite build` only produces
+the islands bundle, and the session's GitHub scope is `gabrielk83/antcv` only (no
+list/add-repo tool). So Path B cannot be executed from this session as-is.
+
+**Ways forward (owner to pick):**
+1. Add/point the app.js **source repo** into the session scope → I implement Path B there.
+2. I write a precise change-spec for the app.js pagination (make the sidebar column run the
+   same page-box pagination as the main column + sidebar page control sets the native
+   break flag) → owner applies it in their app.js build.
+3. Fall back to **Path A** (sidecar replicates sidebar pagination) — fully doable here, no
+   external access — if a working result is wanted before the app.js build can change.
+
+---
+
+## UPDATE 2026-06-05 (d) — BREAKTHROUGH: app.js already paginates the sidebar by `section.page`
+
+De-minified `pwa/app.js` (prettier → /tmp/app.beautified.js, 40,511 lines). Found the real
+pagination engine (~line 35546) and the page-button handler (~line 6790):
+
+```
+Pi = ro[Lt]                                  // sections for active doc
+Di = Pi.filter(e => e.loc==="sidebar")       // sidebar sections
+o = Di...; a = e => Math.max(1, parseInt(e.page||1))   // a section's page = section.page
+p = [...o.map(a), ...rolePages]; u = Math.max(1,...p)  // u = page count
+m = e => o.filter(t => a(t)===e)             // sidebar sections on page e
+```
+Main page button: `t[n] = {...t[n], page:o}; l({roles:t})` (React setter), and `.page`
+persists (survives reload via the sections store).
+
+**Root cause (final):** app.js paginates BOTH columns by the `.page` property on each
+role / sidebar section. The sidebar sidecars (`329`/`247`/`359`) write `antcv:itemPages`,
+which app.js **never reads** — so the sidebar section's `.page` stayed 1 → `u` stayed 1 →
+no page-2 box, no move.
+
+**Fix (no app.js edit needed):** set **`section.page = N`** on the sidebar section in the
+`sections` store, then re-render. app.js's native engine then raises `u`, creates the
+page-N box, places the section via `m(N)`, and draws the pink "▼ PAGE N ▼" divider — exactly
+the main-column behaviour. This is the **whole-section** move (= PB-002 first-item rule).
+
+### Remaining nuance
+- app.js's sidebar pagination is **per-section** (`section.page`), not per-item. So
+  "move the whole sidebar sub-section to page N" is directly supported by setting
+  `section.page`. **Mid-section item splits** (break between items of one sidebar section)
+  are NOT supported by app.js's engine and would need more (item-level) work — but the
+  primary owner case (move Regulatory Context to page 2) is the whole-section case.
+- Verify: does setting `.page` in the `sections` store + `antcv:sections-updated` get picked
+  up live, or only on reload? (personality forceRebuild must preserve `.page`.) If it wipes
+  `.page`, fall back to writing through whatever store survives forceRebuild.
+
+### Next implementable step
+Change the sidebar page control to set `section.page` (whole-section move) instead of
+`antcv:itemPages`; keep `329` only for the marker if still wanted. Verify the section moves
+to page 2 in the preview (boxes 1→2). No app.js source change required.

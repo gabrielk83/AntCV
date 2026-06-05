@@ -80,6 +80,25 @@ Branch: `claude/antcv-roadmap-bugs-L9Sqa`. Compiled 2026-06-04.
 | PDF-LAYOUT-001 | Stray Selected Outcomes heading on PDF page 2 | OPEN | `[console]` Reproduce in PDF; suppress orphan heading before Experience CONT. |
 | PAGEBREAK-002 | Break on entry + natural A4 overflow | OPEN | `[code]` Add A4-overflow measurement to `284` to auto-insert markers. |
 | PAGEBREAK-005 | Cascade colour across all CV sections + CL | OPEN | `[console]` Get CL button selectors live; extend cascade in `page-button-polish-327`. |
+| PB-SIDEBAR-001 | Every sidebar sub-section (Regulatory Context, Tools & Methods, Education, Languages, Additional Information) gets its OWN correctly-scoped page-break control | OPEN | Owner-requested. 247 was the only one + mis-scoped (fixed 1.50.129). Make `sidebar-subsection-pagebreaks-329` own per-sub-section breaks, each writing its own sid. Reaches DOCX worker. |
+| **PB-007** | **Two-column break sync + overflow-as-manual-break** (owner spec 2026-06-04) | OPEN · design-locked | Multi-layer feature — see spec block below. |
+
+### PB-007 — two-column page-break sync + overflow-as-manual-break (spec)
+
+Owner requirement for the 2-column CV preview + export:
+
+1. **Cross-column sync** — main + sidebar share physical pages; if a main item is on page N AND a sidebar item is on page N, both start together on physical page N (aligned boundary).
+2. **Overflow promoted to a real break** — if one column has a manual break to page N, OR a column is longer than the page and *slides* to the next page, the slid content gets the full manual-break treatment: pink "▼ PAGE N ▼" separator before it; its page button reflects the page it landed on; the button is **forward-only** (an item that naturally lands on page 2 cycles 2→3→4→2, never back to 1).
+3. **Parity** — holds in Preview and exports identically in DOCX/PDF.
+
+**Foundation (everything depends on it):** an **A4 overflow detector** that measures each column's rendered content height against the page box and computes, per item, the *natural* page it falls on. Today the system only honours manual `itemPages` values; it never measures real overflow (this is the open `PAGEBREAK-002`).
+
+**Proposed build order (incremental, each verified live):**
+1. Overflow detector — measure per-column item→natural-page map. `[console]`
+2. Forward-only page button — clamp each item's minimum page to its natural page (2→3→4→2). `[code]` once (1) exists.
+3. Auto-marker — render the pink "▼ PAGE N ▼" + (CONT.) at every natural overflow boundary, not just manual ones (extend `284`). `[code]`
+4. Cross-column sync — align main/sidebar page boundaries so shared page-N content renders together. `[console]`
+5. Export parity — mirror the computed pagination into the DOCX worker. `[worker]`
 
 ## 4. Watermark (WM)
 

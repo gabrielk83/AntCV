@@ -445,6 +445,12 @@
           merged.red_flags = (jdA.red_flags !== undefined) ? jdA.red_flags : (merged.red_flags || []);
           if (jdA.questions !== undefined) merged.questions_in_jd = jdA.questions;
           else if (jdA.questions_in_jd !== undefined) merged.questions_in_jd = jdA.questions_in_jd;
+          // v1.50.146 — honesty-first fields for the Analysis report PDF
+          // (antcv-analysis-report-pdf-360.js). Produced by the same
+          // jd-analysis pass; merged here so the panel + export see them.
+          if (jdA.assumptions !== undefined) merged.assumptions = jdA.assumptions;
+          if (jdA.recommendations !== undefined) merged.recommendations = jdA.recommendations;
+          if (jdA.confidence_notes !== undefined) merged.confidence_notes = jdA.confidence_notes;
         }
         merged._jdAnalysisMergedAt = Date.now();
         if (writeRationale(merged)) fireMerge();

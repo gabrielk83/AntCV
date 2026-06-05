@@ -178,3 +178,21 @@ app.js's pagination engine here. Two realistic paths:
 
 **Decision needed (owner):** Path A (sidecar, we can do it here) or Path B (needs app.js
 source access)? This decides the whole PB-007 sidebar build.
+
+---
+
+## UPDATE 2026-06-05 (c) — owner chose PATH B; access blocker
+
+Owner selected **Path B (change app.js source)** so the sidebar column runs through app.js's
+native pagination. BLOCKER: the app.js source is NOT in this repo — `pwa/app.js` is the
+minified external-build artifact (12 long lines, no sourcemap), `vite build` only produces
+the islands bundle, and the session's GitHub scope is `gabrielk83/antcv` only (no
+list/add-repo tool). So Path B cannot be executed from this session as-is.
+
+**Ways forward (owner to pick):**
+1. Add/point the app.js **source repo** into the session scope → I implement Path B there.
+2. I write a precise change-spec for the app.js pagination (make the sidebar column run the
+   same page-box pagination as the main column + sidebar page control sets the native
+   break flag) → owner applies it in their app.js build.
+3. Fall back to **Path A** (sidecar replicates sidebar pagination) — fully doable here, no
+   external access — if a working result is wanted before the app.js build can change.

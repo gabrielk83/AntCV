@@ -1661,17 +1661,31 @@ function renderTextBullets(s, ctx, isSidebar) {
   // back to the group default. paraAlignPath gives us path-only
   // lookup so the group default doesn't mask a missing override.
   const groupCjlr = paraAlign(s, null, undefined);
+  // Owner 2026-06-05: per-bullet page breaks (How I Would Contribute). The PWA
+  // stores page numbers under ctx.itemPages[sid] keyed "intro"|"bullet_<i>"|
+  // "closing". Cascades set a run to the same page; insert ONE pageBreakBefore
+  // at each increase so the bullet and everything after it start on the next page.
+  const ip = (ctx.itemPages && s.id && typeof ctx.itemPages[s.id] === 'object') ? ctx.itemPages[s.id] : {};
+  let runMax = 1;
+  const brk = (key) => {
+    const n = Number(ip[key]);
+    const pg = (Number.isFinite(n) && n >= 2 && n <= 4) ? n : 1;
+    if (pg > runMax) { runMax = pg; out.push(new Paragraph({ pageBreakBefore: true, spacing: { before: 0, after: 0 } })); }
+  };
   if (s.intro) {
+    brk('intro');
     const a = paraAlignPath(s, 'intro') ?? groupCjlr;
     out.push(bodyParagraphRich(s.intro, ctx, isSidebar, a ? { align: a } : {}));
   }
   if (Array.isArray(s.items)) {
     s.items.filter(Boolean).forEach((it, i) => {
+      brk('bullet_' + i);
       const a = paraAlignPath(s, 'items.' + i) ?? groupCjlr;
       out.push(bulletParagraphRich('', String(it), ctx, isSidebar, a));
     });
   }
   if (s.closing) {
+    brk('closing');
     const a = paraAlignPath(s, 'closing') ?? groupCjlr;
     out.push(bodyParagraphRich(s.closing, ctx, isSidebar, a ? { align: a } : {}));
   }

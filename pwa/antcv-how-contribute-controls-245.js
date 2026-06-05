@@ -5,7 +5,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.50.152-bullet-guard';
+  const VERSION='1.50.153-cascade';
   let __applying=false; // v1.50.57: re-entrancy guard so our own DOM writes don't re-trigger the observer/flicker.
   const ALIGN_KEY='antcv.hiwc.alignment.v1';
   const PAGE_KEY='antcv:itemPages';
@@ -34,6 +34,12 @@
   function readPages(){return readJson(PAGE_KEY,{});}
   function getPage(k){const all=readPages();const b=all[sid()]||all.how_i_would_contribute||{};const n=Number(b[k]||1);return Number.isFinite(n)&&n>=1?Math.min(4,Math.max(1,Math.round(n))):1;}
   function setPage(k,n){const all=readPages();const s=sid();if(!all[s]||typeof all[s]!=='object')all[s]={};const nn=Math.min(4,Math.max(1,Math.round(Number(n)||1)));if(nn<=1)delete all[s][k];else all[s][k]=nn;writeJson(PAGE_KEY,all);pulse();}
+  // Owner 2026-06-05: per-bullet page break CASCADES. Setting bullet `fromIdx`
+  // to page `n` starts that bullet AND everything after it (the remaining
+  // bullets + the closing line) on page `n` — so the break moves the bullet
+  // and all info below it. A later bullet can still be bumped to a higher page
+  // (its own cascade). Writes once, pulses once.
+  function setPageCascade(fromIdx,n,rowCount){const all=readPages();const s=sid();if(!all[s]||typeof all[s]!=='object')all[s]={};const nn=Math.min(4,Math.max(1,Math.round(Number(n)||1)));for(let j=fromIdx;j<rowCount;j++){const k='bullet_'+j;if(nn<=1)delete all[s][k];else all[s][k]=nn;}if(nn<=1)delete all[s].closing;else all[s].closing=nn;writeJson(PAGE_KEY,all);pulse();}
 
   function injectCss(){
     if(document.getElementById('antcv-hiwc-245-css'))return;
@@ -277,7 +283,7 @@
       const enr=makeBtn('enrich','✨','Enrich bullet '+(idx+1),ta);
       const cjlr=makeBtn('cjlr','⇤','Alignment of bullet '+(idx+1),ta);paintCJLR(cjlr,getAlign(key));
       const del=makeBtn('bullet-delete','×','Delete bullet '+(idx+1),ta);del.style.borderColor='#ff5c5c';del.style.color='#e52b2b';del.style.background='transparent';
-      page.onclick=ev=>{ev.preventDefault();ev.stopPropagation();setPage(key,getPage(key)%4+1);paintPage(page,key);applyPreview();renderBulletControls(r,ta);};
+      page.onclick=ev=>{ev.preventDefault();ev.stopPropagation();setPageCascade(idx,getPage(key)%4+1,rows.length);applyPreview();renderBulletControls(r,ta);};
       comp.onclick=ev=>{ev.preventDefault();ev.stopPropagation();const rr=bulletRowsFromText(getVal(ta));rr[idx]=compressText(rr[idx]||'');writeRows(rr);};
       enr.onclick=ev=>{ev.preventDefault();ev.stopPropagation();const rr=bulletRowsFromText(getVal(ta));rr[idx]=enrichText(rr[idx]||'');writeRows(rr);};
       cjlr.onclick=ev=>{ev.preventDefault();ev.stopPropagation();const n=nextAlign(getAlign(key));setAlign(key,n);paintCJLR(cjlr,n);applyPreview();renderBulletControls(r,ta);};
@@ -469,9 +475,22 @@
   function applyPreview(){
     if(__applying)return; __applying=true; try{
     const s=previewSection();if(!s)return; s.querySelectorAll('[data-antcv-hiwc-page-break="1"]').forEach(n=>n.remove());
-    let p=previewParts(s); p=syncPreviewBulletNodes(s,p);
-    [['intro',p.intro],['closing',p.closing]].forEach(([k,el])=>{if(!el)return; const a=getAlign(k); el.style.textAlign=a; Array.from(el.querySelectorAll('span,div,p')).forEach(x=>x.style.textAlign=a); if(getPage(k)>1&&el.parentNode)el.parentNode.insertBefore(makeBreakHeader(),el);});
-    (p.bullets||[]).forEach((el,idx)=>{const k='bullet_'+idx; const a=getAlign(k); el.style.textAlign=a; Array.from(el.querySelectorAll('span,div,p')).forEach(x=>x.style.textAlign=a); if(getPage(k)>1&&el.parentNode)el.parentNode.insertBefore(makeBreakHeader(),el);});
+    let p=syncPreviewBulletNodes(s,previewParts(s));
+    // Walk intro -> bullets -> closing in document order. Apply each part's
+    // alignment, and insert the "(CONT.)" page-break divider ONLY where the
+    // page number increases above the running max — so a cascade (many
+    // consecutive parts sharing page N) breaks ONCE, at the first part of the
+    // new page, instead of stamping a divider before every cascaded bullet.
+    const ordered=[];
+    if(p.intro) ordered.push(['intro',p.intro]);
+    (p.bullets||[]).forEach((el,idx)=>{ if(el) ordered.push(['bullet_'+idx,el]); });
+    if(p.closing) ordered.push(['closing',p.closing]);
+    let runMax=1;
+    ordered.forEach(([k,el])=>{
+      const a=getAlign(k); el.style.textAlign=a; Array.from(el.querySelectorAll('span,div,p')).forEach(x=>x.style.textAlign=a);
+      const pg=getPage(k);
+      if(pg>runMax){ if(el.parentNode) el.parentNode.insertBefore(makeBreakHeader(),el); runMax=pg; }
+    });
     } finally { __applying=false; }
   }
 

@@ -1,4 +1,4 @@
-/* AntCV photo-position sidecar (v1.40.137)
+﻿/* AntCV photo-position sidecar (v1.40.137)
  * ============================================================
  * Fixes the broken `photoPosition` settings in the preview.
  *
@@ -9,10 +9,10 @@
  *   main-left, main-right, hidden
  *
  * In the current (immutable, minified) `app.js`:
- *   ✓ sidebar-top, sidebar-bottom — photo renders in the sidebar
- *   ✓ hidden                      — photo not rendered
- *   ✗ header-left, header-right   — BROKEN (dead code path)
- *   ✗ main-left, main-right       — BROKEN (dead code path)
+ *   âœ“ sidebar-top, sidebar-bottom â€” photo renders in the sidebar
+ *   âœ“ hidden                      â€” photo not rendered
+ *   âœ— header-left, header-right   â€” BROKEN (dead code path)
+ *   âœ— main-left, main-right       â€” BROKEN (dead code path)
  *
  * The settings panel saves the chosen value to
  * `localStorage.photoPosition` and updates a React state pair
@@ -21,13 +21,13 @@
  * never assigns the result. So clicking those four buttons updates
  * the highlight in Settings but does nothing visible.
  *
- * Fix (DOM-level — no app.js changes)
+ * Fix (DOM-level â€” no app.js changes)
  * -----------------------------------
  * This sidecar watches `.antcv-preview-paper` via MutationObserver.
  * On each mutation it:
  *   1. Reads the current `photoPosition` from localStorage.
  *   2. Locates the originally rendered photo image (the one in the
- *      sidebar that `app.js` already places via `k(R)` → `C`).
+ *      sidebar that `app.js` already places via `k(R)` â†’ `C`).
  *   3. If the active setting is one of the four broken positions,
  *      clones the photo into a new "floating" wrap at the right
  *      location (header band or main column) and hides the
@@ -36,8 +36,8 @@
  *      removes any leftover clones we'd inserted previously.
  *
  * The sidecar also listens to:
- *   - `storage` events     — settings panel changes from another tab
- *   - `click` events on the settings panel — same-tab changes (the
+ *   - `storage` events     â€” settings panel changes from another tab
+ *   - `click` events on the settings panel â€” same-tab changes (the
  *     panel writes to localStorage but `storage` only fires on
  *     OTHER tabs, so we poll on click events too)
  *   - Periodic re-apply on a slow setInterval as a belt-and-braces
@@ -48,11 +48,11 @@
 (function () {
   'use strict';
 
-  const SCRIPT_VERSION = '1.50.29';
+  const SCRIPT_VERSION = '1.50.153';
 
   // Settings key + valid values, mirroring the dropdown in Settings.
   //
-  // v1.40.194: added 'band-overlap' — the medallion-straddle position
+  // v1.40.194: added 'band-overlap' â€” the medallion-straddle position
   // where the photo sits centred in the sidebar column with its
   // vertical mid-line aligned to the seam between the candidate header
   // band and the sidebar. Half the disc overlaps the navy header band;
@@ -68,7 +68,7 @@
   ];
   const DEFAULT_POSITION = 'sidebar-top';
 
-  // ─── Storage read ─────────────────────────────────────────────────
+  // â”€â”€â”€ Storage read â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   //
   // The settings panel writes the value via `u.set("photoPosition", v)`.
   // Looking at `u.set` (the app's localStorage wrapper) the value can
@@ -91,7 +91,7 @@
     }
   }
 
-  // ─── Preview discovery ────────────────────────────────────────────
+  // â”€â”€â”€ Preview discovery â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   //
   // The live preview is rendered into:
   //   .antcv-preview-frame > .antcv-preview-wrap > .antcv-preview-paper
@@ -102,13 +102,13 @@
   // `border-radius:50%`. We identify it by that styling marker plus
   // by its presence inside the sidebar `<td>` (bgcolor=navy).
 
-  // v1.50.29 — return ALL preview-paper elements. The PWA can mount
+  // v1.50.29 â€” return ALL preview-paper elements. The PWA can mount
   // BOTH the CV paper and the CL paper at the same time (dual-view
   // mode, print preview, or simply because both renderers are wired
   // in parallel). Earlier versions returned only the FIRST one via
   // querySelector, which meant `applyLayout` could find the original
   // photo in the CV paper but then clone it into the CL paper's main
-  // TD when CL happened to appear first in DOM order — the photo
+  // TD when CL happened to appear first in DOM order â€” the photo
   // would visually move from the CV sidebar to the COVER LETTER's
   // body. The new `pickActivePaper` function disambiguates by picking
   // the paper that actually contains the original photo, so the
@@ -131,10 +131,10 @@
     return null;
   }
 
-  // v1.50.29 — pick the paper to operate on. Strategy:
+  // v1.50.29 â€” pick the paper to operate on. Strategy:
   //   1. Iterate every .antcv-preview-paper in the document.
   //   2. Return the first one whose findOriginalPhoto returns a
-  //      non-null img — that's the paper where the photo physically
+  //      non-null img â€” that's the paper where the photo physically
   //      lives, and where the clone MUST also land so the user's
   //      "move photo to main column" intent stays inside the CV.
   //   3. If no paper has a photo (user has no photo set), fall back
@@ -163,11 +163,11 @@
   // table inside the preview paper. We identify it as: the FIRST table
   // child of the paper whose top-level cells carry the candidate-band
   // navy bgcolor. The original v1.40.137 probe required exactly 1
-  // row × 1 cell which silently broke once the candidate band picked
+  // row Ã— 1 cell which silently broke once the candidate band picked
   // up multi-cell layouts. The new probe is shape-agnostic: any table
   // whose first row's first TD has the same bgcolor as the paper's
   // root-level navy band counts. As a safety net we also accept the
-  // FIRST <table> in document order — that's always the band on the
+  // FIRST <table> in document order â€” that's always the band on the
   // current renderer.
 
   function findHeaderTable(paper) {
@@ -175,7 +175,7 @@
     if (!tables.length) return null;
     // Fast path: first table is the band.
     const first = tables[0];
-    // Sanity check — does it look like the header band? It must NOT
+    // Sanity check â€” does it look like the header band? It must NOT
     // contain the main two-column structure (which has at least one
     // row with two TDs). The main column table is the second table
     // in the paper; the first table is the band.
@@ -186,62 +186,101 @@
       if (cells.length >= 2) { isMainTable = true; break; }
     }
     if (!isMainTable) return first;
-    // Fallback — return null rather than mistakenly returning the
+    // Fallback â€” return null rather than mistakenly returning the
     // main table as the header band.
     return null;
   }
 
   // The main two-column table (sidebar + main). We need it both for
-  // findMainTd() and findSidebarTd() — the band-overlap clone needs
+  // findMainTd() and findSidebarTd() â€” the band-overlap clone needs
   // the sidebar TD as its insertion point.
-  function findMainTable(paper) {
+  // v1.50.153 â€” PHOTO-ANCHORED finders.
+  // The previous finders keyed the sidebar/main split off the cells' `bgcolor`
+  // attribute (navy vs white). The current renderer dropped `bgcolor` (the
+  // navy/white now comes from CSS) and merged the band + 2-col layout into a
+  // SINGLE table whose rows carry [sidebar, main] cells â€” so the bgcolor probes
+  // matched nothing and all four non-sidebar positions silently did nothing
+  // (probe: headerTable/mainTd/sidebarTd all false, clones 0).
+  //
+  // app.js always renders the profile photo inside the SIDEBAR column, so we
+  // anchor off the ORIGINAL photo: its own <td> IS the sidebar cell, and the
+  // main cell is that row's sibling. This is independent of bgcolor/CSS. The
+  // legacy bgcolor probes are kept as a fallback for older renderers.
+
+  // Legacy 2-col table (a table with at least one 2+ cell row).
+  function findTwoColTable(paper) {
     const tables = paper.querySelectorAll('table');
     for (const t of tables) {
       const rows = t.querySelectorAll(':scope > tbody > tr, :scope > tr');
       for (const row of rows) {
-        const cells = row.querySelectorAll(':scope > td');
-        if (cells.length === 2) return t;
-      }
-    }
-    return null;
-  }
-
-  function findMainTd(paper) {
-    const t = findMainTable(paper);
-    if (!t) return null;
-    const rows = t.querySelectorAll(':scope > tbody > tr, :scope > tr');
-    for (const row of rows) {
-      const cells = row.querySelectorAll(':scope > td');
-      if (cells.length === 2) {
-        for (const td of cells) {
-          const bg = (td.getAttribute('bgcolor') || '').toLowerCase();
-          if (bg === '#ffffff' || bg === 'white' || bg === 'ffffff') return td;
-        }
+        if (row.querySelectorAll(':scope > td').length >= 2) return t;
       }
     }
     return null;
   }
 
   function findSidebarTd(paper) {
-    const t = findMainTable(paper);
-    if (!t) return null;
-    const rows = t.querySelectorAll(':scope > tbody > tr, :scope > tr');
-    for (const row of rows) {
-      const cells = row.querySelectorAll(':scope > td');
-      if (cells.length === 2) {
-        // The sidebar TD is the one whose bgcolor is NOT white. It
-        // also typically has a non-empty bgcolor attribute set by
-        // app.js's renderer.
-        for (const td of cells) {
-          const bg = (td.getAttribute('bgcolor') || '').toLowerCase();
-          if (bg && bg !== '#ffffff' && bg !== 'white' && bg !== 'ffffff') return td;
+    // Primary: the cell that holds the original photo.
+    const img = findOriginalPhoto(paper);
+    if (img && typeof img.closest === 'function') {
+      const td = img.closest('td');
+      if (td) return td;
+    }
+    // Fallback: the non-white cell of a 2-col row (legacy bgcolor renderer).
+    const t = findTwoColTable(paper);
+    if (t) {
+      const rows = t.querySelectorAll(':scope > tbody > tr, :scope > tr');
+      for (const row of rows) {
+        const cells = row.querySelectorAll(':scope > td');
+        if (cells.length >= 2) {
+          for (const td of cells) {
+            const bg = (td.getAttribute('bgcolor') || '').toLowerCase();
+            if (bg && bg !== '#ffffff' && bg !== 'white' && bg !== 'ffffff') return td;
+          }
         }
       }
     }
     return null;
   }
 
-  // ─── Clone the photo ──────────────────────────────────────────────
+  function findMainTable(paper) {
+    const sb = findSidebarTd(paper);
+    if (sb && typeof sb.closest === 'function') {
+      const t = sb.closest('table');
+      if (t) return t;
+    }
+    return findTwoColTable(paper);
+  }
+
+  function findMainTd(paper) {
+    // Primary: the sidebar cell's row sibling (the other column).
+    const sb = findSidebarTd(paper);
+    if (sb && typeof sb.closest === 'function') {
+      const row = sb.closest('tr');
+      if (row) {
+        const sibs = Array.from(row.children).filter(function (c) { return c.tagName === 'TD'; });
+        const other = sibs.find(function (td) { return td !== sb; });
+        if (other) return other;
+      }
+    }
+    // Fallback: the white cell of a 2-col row (legacy bgcolor renderer).
+    const t = findMainTable(paper);
+    if (t) {
+      const rows = t.querySelectorAll(':scope > tbody > tr, :scope > tr');
+      for (const row of rows) {
+        const cells = row.querySelectorAll(':scope > td');
+        if (cells.length >= 2) {
+          for (const td of cells) {
+            const bg = (td.getAttribute('bgcolor') || '').toLowerCase();
+            if (bg === '#ffffff' || bg === 'white' || bg === 'ffffff') return td;
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  // â”€â”€â”€ Clone the photo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   //
   // We clone the existing `<img>` (so the user's chosen border colour,
   // diameter, and image source carry over automatically) and wrap it
@@ -260,7 +299,7 @@
     const wrap = document.createElement('div');
     wrap.setAttribute('data-antcv-photo-clone', '1');
     wrap.setAttribute('data-antcv-photo-position', position);
-    // Common attributes — fine-tune below per position.
+    // Common attributes â€” fine-tune below per position.
     wrap.style.display = 'inline-block';
     wrap.style.lineHeight = '0'; // collapse the line-height halo around the img
     wrap.appendChild(clone);
@@ -294,7 +333,7 @@
         // center on a block wrapper.
         //
         // The original photo's `<img>` carries `width: <Npt>` (set by
-        // app.js from the user's Settings → photo diameter). We read
+        // app.js from the user's Settings â†’ photo diameter). We read
         // it back at apply time so the negative offset matches the
         // actual rendered diameter; here we just declare the position
         // semantics, and applyLayout() computes the pull.
@@ -341,7 +380,7 @@
         if (Number.isFinite(n) && n > 0) return n;
       }
     } catch (_) {}
-    // 3. computed style (last resort — only works post-layout)
+    // 3. computed style (last resort â€” only works post-layout)
     try {
       const rect = img.getBoundingClientRect();
       if (rect && rect.width > 8) return rect.width;
@@ -349,7 +388,7 @@
     return 96;
   }
 
-  // ─── Layout application ──────────────────────────────────────────
+  // â”€â”€â”€ Layout application â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   //
   // Per-pass plan:
   //   1. Remove all existing clones we own (they may now be in the
@@ -391,13 +430,13 @@
   }
 
   function applyLayout() {
-    // v1.50.29 — pick the paper that owns the photo. Earlier code
+    // v1.50.29 â€” pick the paper that owns the photo. Earlier code
     // called findPaper() then findOriginalPhoto(paper) separately,
     // which meant the chosen paper could be one without a photo
     // (e.g. the cover letter), and findOriginalPhoto would then
     // return null while findMainTd / findHeaderTable / findSidebarTd
     // still succeeded against the WRONG paper. Net effect: nothing
-    // happened — except the user's previous photo placement stayed
+    // happened â€” except the user's previous photo placement stayed
     // wherever the last successful clone went, which on a fresh
     // dual-view session was the CL paper. pickActivePaper now
     // returns paper + photo as a matched pair.
@@ -426,17 +465,26 @@
 
     // For the four broken positions: hide the original, insert a clone
     // at the target. If we can't find the original (e.g., user has no
-    // photo set), there's nothing to clone — just bail.
+    // photo set), there's nothing to clone â€” just bail.
     if (!original) return;
     setOriginalVisible(original, false);
 
     const clone = buildCloneWrap(original, position);
 
     if (position === 'header-left' || position === 'header-right') {
+      // Prefer a dedicated header band table; the current single-table
+      // renderer has none, so fall back to the TOP of the main column (the
+      // photo then reads as a header-area photo above the first content).
       const header = findHeaderTable(paper);
-      if (!header) return;
-      const td = header.querySelector(':scope > tbody > td, :scope > tbody > tr > td, :scope > tr > td');
-      const cell = td || header;
+      let cell = null;
+      if (header) {
+        const td = header.querySelector(':scope > tbody > td, :scope > tbody > tr > td, :scope > tr > td');
+        cell = td || header;
+      } else {
+        cell = findMainTd(paper);
+      }
+      // Never leave the photo hidden with no clone â€” restore the original.
+      if (!cell) { setOriginalVisible(original, true); return; }
       // The header TD has `text-align:center` (the name+spec+contact are
       // centred). Floats inside a centred parent still float to the TD
       // edges, which is what we want.
@@ -447,7 +495,7 @@
       }
     } else if (position === 'main-left' || position === 'main-right') {
       const mainTd = findMainTd(paper);
-      if (!mainTd) return;
+      if (!mainTd) { setOriginalVisible(original, true); return; }
       // Drop the clone at the very top of the main column so the
       // floated photo wraps with the first paragraph that follows.
       mainTd.insertBefore(clone, mainTd.firstChild);
@@ -458,7 +506,7 @@
       // of the band (in document order it's a child of the sidebar TD
       // with negative margin) so it visually straddles both regions.
       const sidebarTd = findSidebarTd(paper);
-      if (!sidebarTd) return;
+      if (!sidebarTd) { setOriginalVisible(original, true); return; }
       const px = measurePhotoPx(original);
       // Pull up by half-diameter plus a tiny visual bias so the
       // medallion's geometric centre sits exactly on the seam. A 2px
@@ -471,13 +519,13 @@
     }
   }
 
-  // ─── Observers + triggers ─────────────────────────────────────────
+  // â”€â”€â”€ Observers + triggers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   //
   // We re-apply on:
   //   - MutationObserver hits on the paper (debounced)
   //   - `storage` events (cross-tab changes)
   //   - `click` events anywhere on the document (same-tab Settings
-  //     button taps — `storage` doesn't fire same-tab, so we treat
+  //     button taps â€” `storage` doesn't fire same-tab, so we treat
   //     every click as a trigger to re-read and re-apply; cheap)
   //   - A slow 2s polling tick as belt-and-braces
 
@@ -516,7 +564,7 @@
     });
 
     document.addEventListener('click', () => {
-      // Tiny debounce — let app.js write to localStorage first.
+      // Tiny debounce â€” let app.js write to localStorage first.
       setTimeout(maybeReapplyIfChanged, 30);
     }, true);
 

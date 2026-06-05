@@ -56,7 +56,7 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.50.97-cl-skip';
+  var SCRIPT_VERSION = '1.50.127-debox';
   if (window.__antcvWatermarkPageAnchor341 === SCRIPT_VERSION) return;
   window.__antcvWatermarkPageAnchor341 = SCRIPT_VERSION;
 
@@ -150,6 +150,15 @@
     }
     watermark.setAttribute('data-antcv-watermark-corner', corner);
     watermark.setAttribute('data-antcv-watermark-anchored', '1');
+    // WM-003 (owner): text-only marker — strip the box (border, fill, padding,
+    // radius, shadow) that app.js renders inline, leaving the light teal text
+    // anchored in the corner. Matches the de-boxed DOCX/PDF export.
+    watermark.style.setProperty('border', 'none', 'important');
+    watermark.style.setProperty('background', 'transparent', 'important');
+    watermark.style.setProperty('box-shadow', 'none', 'important');
+    watermark.style.setProperty('padding', '0', 'important');
+    watermark.style.setProperty('border-radius', '0', 'important');
+    watermark.style.setProperty('max-width', 'none', 'important');
   }
 
   function hideWatermark(wm) {

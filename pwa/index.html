@@ -15,6 +15,10 @@
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="stylesheet" href="antcv-packages-registry.css?v=1.50.41">
   <title>AntCV</title>
+  <!-- v1.50.149: console quieter — wraps console.{log,info,debug,warn} FIRST so
+       it swallows the ~70 sidecar "installed" banners + repeated app.js status
+       chatter. Errors always pass through. Full logs: localStorage.antcvVerboseConsole=1. -->
+  <script src="antcv-console-quiet.js?v=1.50.149"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script>window.loadMammoth=()=>new Promise((res,rej)=>{if(window.mammoth)return res(window.mammoth);const s=document.createElement('script');s.src='https://unpkg.com/mammoth/mammoth.browser.min.js';s.onload=()=>res(window.mammoth);s.onerror=()=>rej(new Error('Failed to load Mammoth (.docx parser)'));document.head.appendChild(s);});</script>
@@ -254,7 +258,7 @@
   })();
 </script>
 <script type="module">
-  import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.50.146-wm-side';
+  import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.50.148-breaks';
   window.exportDocxViaWorker = exportDocxViaWorker;
   window.ANTCV_VERSION = '1.50.9';
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
@@ -269,7 +273,7 @@
   (function bootAntCV() {
     function loadAppScripts(){
       var shapeGuard = document.createElement('script');
-      shapeGuard.src = 'antcv-shape-guard.js?v=1.50.148';
+      shapeGuard.src = 'antcv-shape-guard.js?v=1.50.150';
       shapeGuard.onload = function(){
         var auth = document.createElement('script');
         auth.src = 'antcv-auth.js?v=1.40.202';

@@ -1,4 +1,4 @@
-/* AntCV shape-guard sidecar (v1.50.148)
+/* AntCV shape-guard sidecar (v1.50.150)
  * ============================================================
  *
  * Purpose
@@ -72,7 +72,7 @@
   'use strict';
 
   if (window.__antcvShapeGuardInstalled) return;
-  window.__antcvShapeGuardInstalled = '1.50.148';
+  window.__antcvShapeGuardInstalled = '1.50.150';
 
   const SECTIONS_KEY = 'sections';
   const LANG_CACHE_KEY = 'languageCache';
@@ -91,19 +91,24 @@
     return v !== null && typeof v === 'object' && !Array.isArray(v);
   }
 
-  // A "bullets"-type section stores each bullet as a COMPACT LEAF —
-  // {b:"<bold lead>", t:"<text>"} — and key/value rows as {l, v}. These
-  // legitimately have no bullets[] array: they ARE the bullets (the renderer
-  // reads e.b / e.t), not a structured role/experience item. The missing-
-  // bullets diagnostic targets the latter (the language-switch crash signature),
-  // so it should stay quiet for leaves. An item is a leaf when every own key is
-  // one of b/t/l/v.
+  // Several section types store each row as a COMPACT LEAF that legitimately
+  // has no bullets[] array — the row IS the content, and the renderer reads its
+  // own fields, not .bullets. The missing-bullets diagnostic targets structured
+  // role/experience items (the language-switch crash signature), so it should
+  // stay quiet for leaves. Leaf field names (per the importer schema in
+  // antcv-data-importer.js PERSONAL_PROMPT):
+  //   b, t   — bullets section row  ({b:"<bold lead>", t:"<text>"})
+  //   l, v   — regulatory / key-value row ({l:"<label>", v:"<value>"})
+  //   deg, sch — education row ({deg:"<degree>", sch:"<school>"})
+  //   group  — regulatory group row ({group:"<name>"})
+  // An item is a leaf when EVERY own key is one of these (a structured item also
+  // carries role/company/title/bullets, so it never matches).
+  const LEAF_KEYS = { b: 1, t: 1, l: 1, v: 1, deg: 1, sch: 1, group: 1 };
   function isCompactLeaf(item) {
     const keys = Object.keys(item);
     if (!keys.length) return false;
     for (let i = 0; i < keys.length; i++) {
-      const k = keys[i];
-      if (k !== 'b' && k !== 't' && k !== 'l' && k !== 'v') return false;
+      if (!LEAF_KEYS[keys[i]]) return false;
     }
     return true;
   }
@@ -345,12 +350,12 @@
 
   // Public API.
   window.AntcvShapeGuard = {
-    version: '1.50.148',
+    version: '1.50.150',
     stats: stats,
     _normalizeSectionsBundle: normalizeSectionsBundle,
     _normalizeLanguageCache: normalizeLanguageCache,
     _eagerNormalize: eagerNormalize,
   };
 
-  try { console.debug('[shape-guard] installed v1.50.148'); } catch (_) {}
+  try { console.debug('[shape-guard] installed v1.50.150'); } catch (_) {}
 })();

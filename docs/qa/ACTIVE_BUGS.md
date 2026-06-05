@@ -5,6 +5,57 @@ This file now folds in the canonical `AntCV_UI_UX_Spec_and_QA_Plan_v4.docx` back
 
 ---
 
+## DATA-EXPORT-001 + DELETE-SAVE-001 — v1.50.142 (built; live verification owed)
+
+New readable sidecar `pwa/antcv-data-export-360.js` (loaded in index.html after
+`cloud-delete-296` + app.js). No app.js / fetch-wrapper change — reads
+localStorage only, wraps the documented `AntcvFullErase` hook additively.
+
+### What it does
+- **DATA-EXPORT-001** — `window.AntcvDataExport(opts)` serialises every
+  localStorage key (personalInfo, sections / cv_pwa_sections, meta, antcv:prefs,
+  `antcv:analytics:counts`, antcv:apply:*, writing prefs, ...) into a downloadable
+  JSON backup. Credential-looking keys (token/secret/jwt/apikey/...) and transient
+  erase markers are excluded from a plain file. "Protected" = optional passphrase
+  → WebCrypto **AES-GCM** (PBKDF2-SHA256, 250k iters); falls back to a plain file
+  with a console warning if WebCrypto is unavailable (non-secure context).
+  Filenames: `antcv-backup-YYYY-MM-DD.json` / `…encrypted.json`.
+- A **"⬇ Download my data"** button is injected into the red Delete-account card
+  (anchored by the "Delete my account" button text); clicking it prompts for an
+  optional passphrase.
+- **DELETE-SAVE-001** — a **"Save my data locally first"** checkbox (default ON,
+  protective) is injected into the same card; when checked, the `AntcvFullErase`
+  wrapper takes a fast unencrypted backup BEFORE deferring to the original erase.
+  Backup failure never blocks the erase.
+
+### Verified (Node harness, 13/13)
+collectData includes user data + analytics and parses JSON values; excludes
+apiKey/authToken/transient markers from a plain backup; `includeSecrets` re-includes
+them; AES-GCM encrypt→decrypt round-trips; tampered IV fails (authenticated
+encryption); plain export emits a dated filename; UI injection adds both nodes and
+is idempotent (no dupes on re-sweep).
+
+### Live verification owed (desktop + mobile, after deploy)
+- [ ] Delete-account card shows the Download button + checkbox; styling reads native.
+- [ ] Download (plain) yields a JSON file containing personalInfo + analytics; no
+      api keys/tokens in the plain file.
+- [ ] Download with a passphrase yields `…encrypted.json` that decrypts back.
+- [ ] With the box checked, clicking "Delete my account" downloads a backup, THEN
+      the existing erase + cloud-delete + reload runs (compose with cloud-delete-296).
+- [ ] Escape hatch `localStorage['antcv:disable-data-export']='1'` removes the UI
+      and the erase wrap.
+
+### Decisions / follow-ups
+- Default-CHECKED on the save-first box (protect irreversible loss); change to OFF
+  if the owner prefers opt-in.
+- Download button is anchored to the delete card (a stable, co-located data/privacy
+  spot). If the owner wants it elsewhere in the Personal menu, give the target
+  container and I'll re-anchor.
+- **Import/restore is NOT implemented** (owner asked for download only). Reading a
+  backup back in is a natural follow-up (DATA-IMPORT-001).
+
+---
+
 ## 2026-06-04 (session) — mobile UI + page-break + HIWC editability (v1.50.102 → v1.50.119)
 
 Branch `claude/antcv-roadmap-bugs-L9Sqa`. All items below are shipped to that

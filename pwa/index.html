@@ -658,6 +658,13 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      exact useEffect hook. Until that hook is wired into app.js, the LS key
      still records the cloud value for the next bundle version to consume. -->
 <script src="antcv-user-mode-restore-340.js?v=1.40.340-a" defer></script>
+<!-- v1.50.140 (DATA-EXPORT-001 / DELETE-SAVE-001): exposes window.AntcvDataExport
+     (serialise localStorage -> downloadable JSON, optional WebCrypto passphrase
+     encryption), injects a "Download my data" button + "Save my data locally
+     first" checkbox into the red Delete-account card, and wraps AntcvFullErase to
+     back up before erasing. Loads AFTER cloud-delete-296 + app.js so its erase
+     wrap composes outside the original. Escape: localStorage['antcv:disable-data-export']='1'. -->
+<script src="antcv-data-export-360.js?v=1.50.142" defer></script>
 <!-- v1.50.6: antcv-stability-core-334.js no longer loaded. The React-islands
      bundle (below) is now the sole owner of the LanguageCard, PreviewToolbar,
      SettingsRouter, and wizardState behaviours that used to live there. The

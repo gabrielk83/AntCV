@@ -685,6 +685,14 @@ function buildStyle(styleConfig, navyColor) {
   // be color-only by convention).
   const sp = readSidebarPosition();
   if (sp === 'left' || sp === 'right') out.sidebarPosition = sp;
+  // v1.50.137 — strip a leading '#' from any hex colour. The DOCX worker's
+  // docx library rejects '#RRGGBB' and returns a 500 ("Invalid hex value
+  // '#283556'"). navyColor arrives as '#283556', so headerBg/sidebarBg/
+  // tableHeaderBg (and any passthrough styleConfig colour) must be 6-digit
+  // hex with no '#'. Fonts / sidebarPosition don't match and are untouched.
+  for (const k of Object.keys(out)) {
+    if (typeof out[k] === 'string' && /^#[0-9a-fA-F]{6}$/.test(out[k])) out[k] = out[k].slice(1);
+  }
   return out;
 }
 

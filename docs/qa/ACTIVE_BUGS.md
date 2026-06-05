@@ -5,6 +5,46 @@ This file now folds in the canonical `AntCV_UI_UX_Spec_and_QA_Plan_v4.docx` back
 
 ---
 
+## IMPORT-COUNT-001 — upload extract count wrong — FIXED (v1.50.143; live verification owed)
+
+**Symptom:** after a CV upload the wizard toast read "✓ Found 0 work · 0
+education · N certifications · 0 publications" even though the data imported
+fine (real 6 work / 3 education / 2 publications).
+
+**Root cause (diagnosed in app.js, fixed in the existing sidecar):**
+- The toast counts come from a separate import-**preview** object (`On`), not
+  from `personalInfo`. In the `_direct` upload path app.js persists the full
+  profile via `le(t)` but sets the preview to **identity + certifications only**
+  → work/education/publications show 0. (The toast also reads `On.work_history`,
+  snake_case, which nothing ever populates — the data is under
+  `experience`/`workHistory`.) So the count line was structurally wrong while the
+  data was correct in `personalInfo`.
+- `antcv-upload-recount-339.js` already recomputes the right counts from
+  `personalInfo` (workHistory||experience, education, certifications,
+  publicationsStructured||publications) and normalises the dual keys — but its
+  **DOM rewrite silently no-opped**: app.js emits the line as many sibling React
+  text nodes (`"✓ Found ", count, " work entr", "ies", " · ", …`), so the
+  container's `textContent` matched the regex but no SINGLE child text node did,
+  and the TreeWalker found nothing to rewrite.
+
+**Fix:** added a split-text branch to `recountUploadSummary` — when a matching
+element's children are ALL text nodes (the React leaf holding the split line),
+collapse it to the corrected string. The styled wrapper above it (element child)
+is correctly skipped, and the idempotency guard (`textContent` already equals the
+expected string) prevents re-writes. `?v=1.50.143-multinode`; cache trio →
+1.50.143 (1.50.142 → STALE).
+
+**Verified (Node harness, 5/5):** split-text toast "0/0/6/0" rewritten to real
+"6/3/6/2"; wrapper reflects it; experience→workHistory and
+publications→publicationsStructured normalised; second tick idempotent (single
+text node, no growth).
+
+**Live verification owed:** upload a real CV (Anita persona), confirm the toast
+shows the true work/education/publication counts (not 0), on the `_direct` JSON
+path and the worker `extract-kernel` path, desktop + mobile.
+
+---
+
 ## DATA-EXPORT-001 + DELETE-SAVE-001 — v1.50.142 (built; live verification owed)
 
 New readable sidecar `pwa/antcv-data-export-360.js` (loaded in index.html after

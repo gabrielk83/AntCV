@@ -22,11 +22,17 @@
        there is no devtools/terminal. Open: add #antcv-debug to the URL, 4-tap the
        top-right corner, or window.AntcvDebug.open(). Disable: localStorage
        ['antcv:debug:disable']='1'. Does NOT touch window.fetch. -->
-  <script src="antcv-debug-logger.js?v=1.50.182"></script>
+  <script src="antcv-debug-logger.js?v=1.50.186"></script>
   <!-- v1.50.149: console quieter — wraps console.{log,info,debug,warn} FIRST so
        it swallows the ~70 sidecar "installed" banners + repeated app.js status
        chatter. Errors always pass through. Full logs: localStorage.antcvVerboseConsole=1. -->
   <script src="antcv-console-quiet.js?v=1.50.149"></script>
+  <!-- v1.50.185: React DOM guard. MUST load before React commits. Makes
+       Node.removeChild/insertBefore defensive so a DOM-decorating sidecar
+       moving a React-owned node can no longer crash React's commit phase
+       (the mobile "Settings→Personal→edit name" blue screen, a NotFoundError
+       removeChild). Diagnose the offending sidecar: localStorage.antcvDomGuardVerbose=1. -->
+  <script src="antcv-react-dom-guard.js?v=1.50.185-react-dom-guard"></script>
   <!-- v1.50.165: login loading gate. Runs BEFORE app.js: migrates the orphan
        writing-tone default (toneRegister "scandinavian" -> "nordic-minimal") and
        shows a "Loading…" cover for returning users until the editor is ready, so
@@ -293,7 +299,7 @@
         auth.src = 'antcv-auth.js?v=1.40.202';
         auth.onload = function(){
           var app = document.createElement('script');
-          app.src = 'app.js?v=1.50.182-advanced-debug';
+          app.src = 'app.js?v=1.50.186-advanced-debug';
           app.onload = function(){
             var vo = document.createElement('script');
             vo.src = 'antcv-version-override.js?v=1.50.41';
@@ -543,7 +549,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-recheck-fit.js?v=1.50.161-proxy-relay" defer></script>
 <script src="antcv-jd-watch.js?v=1.50.23-brand" defer></script>
 <script src="antcv-privacy-led.js?v=1.50.74-nobleep" defer></script>
-<script src="antcv-demo-watermark.js?v=1.50.175-cl-after-maxz" defer></script>
+<script src="antcv-demo-watermark.js?v=1.50.184-no-docx-config" defer></script>
 <script src="antcv-bullet-targets.js?v=1.40.136" defer></script>
 <script src="antcv-photo-position.js?v=1.50.153" defer></script>
 <script src="antcv-photo-pentagon-shape.js?v=1.50.57" defer></script>
@@ -710,7 +716,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      SettingsRouter, wizardState). See docs/plan/AntCV_Plan_v2_LockedSources.md
      §7 Pass 1. -->
       <script src="antcv-357-loader.js?v=1.40.357-loader" defer></script>
-      <script src="antcv-react-islands.js?v=1.50.160" defer></script>
+      <script src="antcv-react-islands.js?v=1.50.182-islands-recache" defer></script>
       <!-- v1.50.164: auto-apply the correct palette when the stored package is the
            legacy orphan default ("scandinavian"), by pressing the Copenhagen Modern
            button — fixes the permanent palette mix on load without a manual click. -->

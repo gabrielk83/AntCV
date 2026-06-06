@@ -27,17 +27,19 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.182-demo-multi-origin';
+  var VERSION = '1.50.184-no-docx-config';
   if (window.__antcvDemoWatermark === VERSION) return;
   window.__antcvDemoWatermark = VERSION;
 
   var CSS_ID = 'antcv-demo-watermark-css';
   var ATTR = 'data-antcv-demo-wm';
   var OVERLAY_CLASS = 'antcv-demo-wm-overlay';
-  // Cache the PROMISE (not a flag) so every caller — including ones that fire
-  // while the /config fetch is still in flight — awaits the same resolution
-  // and gets the final value. A plain "resolving" flag returned a stale null
-  // mid-flight, which made an early apply() clear the watermark.
+  // 1.50.182 (demo-multi-origin): /config (which reports demo_mode) can be
+  // served by any of several origins depending on how the user is configured —
+  // the access-relay (signed-in / demo users, via window.ANTCV_RELAY_URL or
+  // localStorage.relayUrl), a custom proxyUrl, or the docx worker. Query every
+  // known origin and treat demo as ON if ANY reports demo_mode:true, so a stale
+  // or mis-set proxyUrl can't suppress the watermark.
   var demoPromise = null;
 
   // Tolerant unwrap: some app.js versions JSON-wrap localStorage strings,
@@ -62,16 +64,22 @@
   // that one is the load-bearing addition vs the old proxyUrl-only read.
   function configOrigins() {
     var set = {};
-    var add = function (u) { var o = originOf(u); if (o) set[o] = 1; };
+    // NEVER query the docx-worker: it has NO /config route (that lives on the
+    // access-relay), so hitting it only yields a 404 + a CORS failure (it sends
+    // no Access-Control-Allow-Credentials). Skip any origin whose host is the
+    // docx-worker — even if a stale proxyUrl/docxWorkerUrl points there. The
+    // docx worker stamps DEMO during EXPORT from the watermark flag the PWA
+    // sends; it is not a demo-detection /config source.
+    var add = function (u) {
+      var o = originOf(u);
+      if (!o) return;
+      try { if (new URL(o).hostname.indexOf('docx-worker') !== -1) return; } catch (_) {}
+      set[o] = 1;
+    };
     try { add(unwrap(localStorage.getItem('proxyUrl'))); } catch (_) {}
     try { add(unwrap(localStorage.getItem('relayUrl'))); } catch (_) {}
     try { if (typeof window.ANTCV_RELAY_URL === 'string') add(window.ANTCV_RELAY_URL); } catch (_) {}
     try { if (typeof window.ANTCV_UPSTREAM_URL === 'string') add(window.ANTCV_UPSTREAM_URL); } catch (_) {}
-    // The docx worker also exposes /config (it stamps DEMO from the same
-    // signal), so it's a reliable last-resort origin when nothing else is set.
-    try { if (typeof window.ANTCV_DOCX_WORKER === 'string') add(window.ANTCV_DOCX_WORKER); } catch (_) {}
-    try { add(unwrap(localStorage.getItem('docxWorkerUrl'))); } catch (_) {}
-    try { add(unwrap(localStorage.getItem('antcv:docxWorker'))); } catch (_) {}
     return Object.keys(set);
   }
 

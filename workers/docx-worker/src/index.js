@@ -23855,7 +23855,7 @@ function postProcessDocx(input, opts = {}) {
       const headerXml =
         '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
         '<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w10="urn:schemas-microsoft-com:office:word">' +
-        '<w:p><w:pPr>' + (headerBgHex ? '<w:shd w:val="clear" w:color="auto" w:fill="' + headerBgHex + '"/>' : '') + '<w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="exact"/></w:pPr>' + watermarkRun + '</w:p></w:hdr>';
+        '<w:p><w:pPr>' + (headerBgHex ? '<w:shd w:val="clear" w:color="auto" w:fill="' + headerBgHex + '"/>' : '') + '<w:spacing w:before="0" w:after="0" w:line="40" w:lineRule="exact"/></w:pPr>' + watermarkRun + '</w:p></w:hdr>';
       files["word/header1.xml"] = strToU8(headerXml);
       // Relationship (choose a non-colliding rId).
       const relsName = "word/_rels/document.xml.rels";
@@ -24807,9 +24807,10 @@ function buildHeaderCell(ctx) {
   if (pi.name) {
     out.push(new Paragraph({
       alignment: alignType(headerAlign.name),
-      // 1.14.25: top space removed (was before:60) — the running header now
-      // provides the coloured top strip, so the name sits flush at the band top.
-      spacing: { before: 0, after: 40, line: 240, lineRule: "exact" },
+      // 1.14.27: the running-header strip is now a thin 2pt line, so give the
+      // name back 3pt (before:60) of top space inside the band so it isn't
+      // clipped at the top edge of the candidate section.
+      spacing: { before: 60, after: 40, line: 240, lineRule: "exact" },
       shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
       children: [
         new TextRun({
@@ -25346,10 +25347,11 @@ function renderCompetencyTable(s, ctx) {
   const [header, ...data] = rows;
   const isCl = ctx.doc === "cl";
   const defaultCvW = MAIN_W - 640;
-  // 1.14.24: CL is full-width linear — the bring table fills the titled-section
-  // wrapper (PAGE_W-200=11706), sized just under it to avoid a flush-edge
-  // overflow in Google Docs. 1.14.23's MAIN_W-640 made it ~60% of the page.
-  const defaultClW = PAGE_W - 560;
+  // 1.14.26: CL is full-width linear. Body + text sections span the full body
+  // cell (PAGE_W-200), but the WHAT-I-BRING table should be LARGE yet INSET and
+  // CENTERED — 1.14.25's PAGE_W-560 (~97%) looked edge-to-edge. ~80% of the body
+  // width, centered, leaves a balanced ~0.8" margin each side.
+  const defaultClW = Math.round((PAGE_W - 200) * 0.8);
   const baseW = isCl ? defaultClW : defaultCvW;
   const tableW = typeof s.tableWidth === "number" && s.tableWidth > 0 ? Math.max(2880, Math.min(PAGE_W - 720, Math.round(s.tableWidth))) : baseW;
   const explicitRatio = typeof s.tableRatio === "number" && s.tableRatio > 0.05 && s.tableRatio < 0.95 ? s.tableRatio : null;
@@ -26358,7 +26360,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.25-cl-fullwidth-sections-and-colored-header";
+var VERSION = "1.14.27-header-thin-2pt-name-pad";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

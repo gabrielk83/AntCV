@@ -60,12 +60,28 @@ A companion **feature registry** (open vs shipped features) lives at
   The demo-watermark sidecar calls `<localStorage.proxyUrl>/config`, and the owner's stored
   `proxyUrl` is pointed at the **docx-worker**. The 1.14.24/1.14.25 deploys only changed
   table-width logic, the header, and the VERSION string — no routes/CORS/secrets touched,
-  and `wrangler deploy` never clears secrets. Resolution: point `proxyUrl` back at the
-  cv-proxy/relay. Document generation (`/generate`) is unaffected.
+  and `wrangler deploy` never clears secrets. Confirmed via `git log -S'"/config"'`: the
+  docx-worker has **never** had a `/config` route, so restoring an older deploy can't help.
+  **Durable fix (PWA 1.50.182):** the demo-watermark sidecar now resolves `/config` from
+  the relay (`window.ANTCV_RELAY_URL` → `localStorage.relayUrl`), falling back to `proxyUrl`
+  only as a last resort, and caches only on a successful response. Relay URL (from
+  `pwa/relay-config.json`): `https://antcv-access-relay.karp-gabriel-a.workers.dev`. Ships
+  to production when the branch merges to `main` (Pages auto-deploys PWA from `main` only).
+  Immediate workaround: reset the Proxy/Relay URL in Settings to the relay URL above.
+  Document generation (`/generate`) is unaffected throughout.
 
 ### New — OPEN
 
-- **PERSONAL-EDIT-CRASH-001** `[OPEN][HIGH][mobile]` — Typing into a **Settings → Personal**
+- **PERSONAL-EDIT-CRASH-001** `[FIXED✓ 1.50.185]` — fixed by the **React DOM guard**
+  (`antcv-react-dom-guard.js`, commit f9e9f0a): a new early-loading sidecar makes
+  `Node.removeChild`/`insertBefore` defensive — when the target isn't actually a child
+  of the parent (the only case the native call throws), it no-ops instead of crashing,
+  converting the fatal throw into a harmless no-op. Loads after the console quieter,
+  before React mounts. Set `localStorage.antcvDomGuardVerbose=1` to log the offending
+  sidecar so the root mutator can later be fixed and the guard retired. This is the
+  canonical React-vs-third-party-DOM mitigation and exactly matches the diagnosis below.
+  Removed from open bugs. Diagnostic history retained for reference:
+  Typing into a **Settings → Personal**
   subtab field (e.g. the name) **blue-screens on a real mobile device** (not in the
   simulator; no other subtab affected). The typed value **persists** (the `PUT /api/prefs`
   save succeeds — confirmed in Cloudflare worker logs), so the state update works and the
@@ -98,8 +114,10 @@ A companion **feature registry** (open vs shipped features) lives at
   component (`((glDemo = ({proxyUrl}) => {…})`) and uses it at `28873`; the committed
   working bundle resolves this (glDemo appears once), a fresh esbuild build does not
   (appears twice, lazy global write never lands before the read). This is the
-  `250ec8d` revert reproduced. **Impact: blocks every native `app.src.js` change**,
-  including the PERSONAL-EDIT-CRASH-001 fix. Fix options: (a) declare `glDemo`
+  `250ec8d` revert reproduced. **Impact: blocks every native `app.src.js` change**
+  (the PERSONAL-EDIT-CRASH-001 fix sidestepped this by shipping as a standalone
+  sidecar, but any future *source* edit is still blocked until this is fixed). Fix
+  options: (a) declare `glDemo`
   properly (`window.glDemo`/hoisted `var` at module top) and re-verify the full boot,
   or (b) pin the exact esbuild used for the deployed bundle. Until fixed, app.js
   changes ship via surgical unique-string injection into the working bundle (the #226

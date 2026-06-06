@@ -1499,6 +1499,12 @@ function renderSection(s, ctx, isSidebar) {
     ...pageBreakPara,
     new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
+      // 1.14.22: give the single section column a REAL width. With only
+      // width:100% the docx lib emits <w:gridCol w:w="100"/> (100 twips); Word
+      // tolerates it but Google Docs honours the 100-twip grid absolutely and
+      // collapses the column to one character per line. The section sits in the
+      // sidebar or main cell (minus its ~288-twip L+R cell margins).
+      columnWidths: [(isSidebar ? SIDEBAR_W : MAIN_W) - 288],
       borders: noBorders(),
       rows: [
         new TableRow({

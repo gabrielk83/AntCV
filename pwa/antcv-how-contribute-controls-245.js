@@ -5,7 +5,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.50.153-cascade';
+  const VERSION='1.50.189-section-cascade';
   let __applying=false; // v1.50.57: re-entrancy guard so our own DOM writes don't re-trigger the observer/flicker.
   const ALIGN_KEY='antcv.hiwc.alignment.v1';
   const PAGE_KEY='antcv:itemPages';
@@ -39,7 +39,28 @@
   // bullets + the closing line) on page `n` — so the break moves the bullet
   // and all info below it. A later bullet can still be bumped to a higher page
   // (its own cascade). Writes once, pulses once.
-  function setPageCascade(fromIdx,n,rowCount){const all=readPages();const s=sid();if(!all[s]||typeof all[s]!=='object')all[s]={};const nn=Math.min(4,Math.max(1,Math.round(Number(n)||1)));for(let j=fromIdx;j<rowCount;j++){const k='bullet_'+j;if(nn<=1)delete all[s][k];else all[s][k]=nn;}if(nn<=1)delete all[s].closing;else all[s].closing=nn;writeJson(PAGE_KEY,all);pulse();}
+  // Highest page any HIWC item (bullet_* or closing) currently sits on.
+  function maxHiwcPage(bucket){let m=1;if(bucket&&typeof bucket==='object'){for(const k of Object.keys(bucket)){const v=Number(bucket[k]);if(Number.isFinite(v)&&v>m)m=v;}}return m;}
+  // 1.50.189 (owner 2026-06-06): a HIWC page break carries the SECTIONS that
+  // follow HIWC in the cover letter (FOUNDATION, CLOSURE, …) onto the same page
+  // — the whole tail of the letter moves together, not just HIWC's own bullets.
+  // We tag each following section's item 0 to page `n` (PB-002 "first item ->
+  // whole section moves"). n<=1 clears the markers. Robust to section reorder:
+  // we walk the live section list and act only on sections AFTER HIWC.
+  function cascadeFollowingSections(all,n){
+    try{
+      const list=sections();const myId=sid();const nn=Math.min(4,Math.max(1,Math.round(Number(n)||1)));
+      let after=false;
+      for(const so of list){
+        if(!so||!so.id)continue;const id=String(so.id);
+        if(id===myId){after=true;continue;}
+        if(!after)continue;
+        if(nn<=1){if(all[id]&&typeof all[id]==='object'){delete all[id]['0'];if(!Object.keys(all[id]).length)delete all[id];}}
+        else{if(!all[id]||typeof all[id]!=='object')all[id]={};all[id]['0']=nn;}
+      }
+    }catch(_){}
+  }
+  function setPageCascade(fromIdx,n,rowCount){const all=readPages();const s=sid();if(!all[s]||typeof all[s]!=='object')all[s]={};const nn=Math.min(4,Math.max(1,Math.round(Number(n)||1)));for(let j=fromIdx;j<rowCount;j++){const k='bullet_'+j;if(nn<=1)delete all[s][k];else all[s][k]=nn;}if(nn<=1)delete all[s].closing;else all[s].closing=nn;cascadeFollowingSections(all,maxHiwcPage(all[s]));writeJson(PAGE_KEY,all);pulse();}
 
   function injectCss(){
     if(document.getElementById('antcv-hiwc-245-css'))return;

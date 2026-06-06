@@ -20,7 +20,9 @@ AntCV is a React PWA that helps a job seeker draft a CV and cover letter, tailor
 
 ## app.js source of truth (do not lose it again)
 
-`pwa/app.src.js` is the **de-minified, human-editable SOURCE** for `pwa/app.js`. EDIT `app.src.js`, then rebuild the deployed bundle with `npm run build:app` (esbuild minify → `pwa/app.js`). Do **NOT** re-de-minify `pwa/app.js` into a throwaway `/tmp` file again — that source already exists and is committed. After `build:app`, bump the `app.js?v=` query in `pwa/index.html` and `sw.js` CACHE per the cache-bust protocol.
+`pwa/app.src.js` is the **de-minified, human-editable SOURCE** for `pwa/app.js`. EDIT `app.src.js` — do **NOT** re-de-minify `pwa/app.js` into a throwaway `/tmp` file again; that source already exists and is committed.
+
+**Rebuilding is gated — read `docs/deployment/app-js-source-and-rebuild.md` first.** `npm run build:app` (esbuild `--minify`) is **known-unsafe today**: it prepends `"use strict"` and is not behaviour-preserving for this sloppy-mode bundle — it blue-screened the app on 2026-06-06 (`APPJS-BLUESCREEN-001`, reverted at 1.50.166). A rebuilt `app.js` may NOT be deployed until a minifier/config passes the **identity round-trip gate** (rebuild an UNEDITED source → confirm it boots identically in a real browser). Until then, make small fixes as **surgical in-place edits to the minified `app.js`**, mirrored into `app.src.js` for traceability. After any change, follow the cache-bust protocol (bump `app.js?v=` in `index.html`, `sw.js` CACHE, `antcv-version-override.js` TARGET_VERSION). Deploy via deploy.yml only — one deployer at a time, never in parallel.
 
 ## Hotfix discipline
 

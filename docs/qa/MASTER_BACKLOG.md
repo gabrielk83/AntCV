@@ -36,6 +36,20 @@ Branch: `claude/antcv-roadmap-bugs-L9Sqa`. Compiled 2026-06-04.
 
 # PART 1 — ACTIVE BUGS
 
+## Session 2026-06-06 roll-up (newest — app.js rebuild safety · page-split engine)
+
+Full prose in `docs/qa/ACTIVE_BUGS.md` (top section). Safe-rebuild procedure:
+`docs/deployment/app-js-source-and-rebuild.md`.
+
+| ID | Tag | Item | Next action |
+|----|-----|------|-------------|
+| APPJS-REBUILD-001 | `OPEN` `HIGH` | No verified behaviour-preserving way to rebuild `app.js` from `app.src.js`. `npm run build:app` (esbuild `--minify`) blue-screens (prepends `"use strict"`; bundle is sloppy-mode). Blocks every `app.src.js` change. | `[code]` find a minifier/config that passes the **identity round-trip gate**, OR surgical in-place edits on minified `app.js` mirrored into `app.src.js` |
+| ENGINE-PAGESPLIT-001 | `OPEN` `PAUSED` | Real on-screen per-item pagination so a forced break moves content — for sidebar sub-subsections, table rows, and HIWC bullets (export side already honours per-item `_page`). Lives in `app.src.js` ~35574; design in `docs/plan/PB-007-two-column-pagination.md`. First cut (`636cda7`) reverted with the blue-screen fix. | **Blocked on APPJS-REBUILD-001** |
+
+**Resolved this session:** APPJS-BLUESCREEN-001 — esbuild rebuild blue-screened the app;
+restored original `app.js` + clean `app.src.js` from `0a7c459`, cache trio → 1.50.166,
+deployed live (deploy-pwa green).
+
 ## 0. Session 2026-06-05/06 roll-up (analysis report · JD ingestion · demo · generate)
 
 Full prose + the resolved list live in `docs/qa/ACTIVE_BUGS.md` (top section). Only the
@@ -269,6 +283,7 @@ Owner requirement for the 2-column CV preview + export:
 | **DELETE-SAVE-001** | Erase flow: "Save my data locally first" checkbox → triggers DATA-EXPORT-001 before erase. | APP.JS | REGISTERED | `[console]` Add checkbox to the red confirm card; share the encrypted export serializer from DATA-EXPORT-001. |
 | **WIZARD-002** | New wizard Step 6d: default-languages + inform about Personal/Layout/Advanced panels. | APP.JS | REGISTERED | `[console]` Author the new step in the app.js wizard. |
 | **PHOTO-PLACEMENT-001** | Implement non-sidebar photo placements (header/main/bridge) in preview render. | APP.JS | REGISTERED | `[console]` Implement the non-sidebar placements in app.js render path. |
+| **ENGINE-PAGESPLIT-001** | Real on-screen per-item pagination — a forced break actually moves content to the next page for the three split units: sidebar sub-subsections, table rows, HIWC bullets (heading moves with its first part). Export side (docx-worker ≥1.14.18) already honours per-item `_page`/`item_pages`. | APP.JS | PAUSED | **Blocked on APPJS-REBUILD-001** (needs a safe `app.src.js` rebuild). Design: `docs/plan/PB-007-two-column-pagination.md`; first cut `636cda7` reverted with the blue-screen fix. |
 
 ---
 

@@ -8,6 +8,51 @@ A companion **feature registry** (open vs shipped features) lives at
 
 ---
 
+## STATUS UPDATE — 2026-06-06 (owner live-confirmed)
+
+### Closed ✓ (owner-confirmed on real devices)
+
+- **DEMO-PERSIST-001** — `[FIXED✓]` The demo account was server-classified as "paid"
+  (`demo_mode:false`), turning off every demo signal. Root cause: the relay's
+  `getUserMode` defaulted everyone to `paid`, and a client mode-POST could overwrite it.
+  Fixed by **pinning `DEMO_EMAILS` accounts to `demo`** (relay `auth-25`), so `demo_mode`
+  stays reliably true (badge, setup-chip gating, watermark all correct). Owner-confirmed.
+- **DEMO-BADGE-001** — `[FIXED✓]` The "🟡 DEMO" badge was hard-coded to one email. Re-gated
+  to the real `B.demo_mode` (unpaid) signal (PWA 1.50.170), unblocked by DEMO-PERSIST-001
+  above. Owner-confirmed.
+- **PACKAGE-PALETTE-MIX-001** — `[FIXED✓]` The "mixed visual style" (e.g. Copenhagen
+  structure + stale Warm-Terracotta accents) on load / mobile. Root cause: the deployed
+  `app.js` had diverged and lacked the v1.50.166 derive-on-mount effect; even that ran once
+  before cloud-restore. Fixed with a **self-healing effect** (PWA 1.50.180) that re-derives
+  a named package's accents whenever `styleConfig` drifts from its palette — survives
+  cloud-restore, works on mobile, custom configs exempt. Owner-confirmed ("finally
+  resolved 🎉"). The orphan-apply workaround sidecars can now retire.
+- **HARDREFRESH-001** — `[FIXED✓]` In-app Hard Refresh did not force a reload after
+  clearing caches/SW. Fixed (PWA 1.50.172/1.50.180) by firing a `location.reload()`
+  ~3s after the confirm passes. Owner-confirmed ("in app hard refresh works").
+- **DOCX-CL-SECTION-WIDTH-001** — `[FIXED✓]` Every **titled cover-letter section**
+  (WHO I AM, WHAT I BRING, WHY THIS POSITION, HOW I WOULD CONTRIBUTE, FOUNDATION) rendered
+  at **~60% width** in Google Docs. Root cause: the 1.14.22 heading-repetition wrapper sized
+  its column to `MAIN_W − 288 = 6982` (the CV's *main-column* width). The CL is a single
+  full-width **linear** doc — its body cell content is `PAGE_W − 200 = 11706`, so 6982 is
+  ~60% of the available width. 1.14.23 then mis-sized the WHAT-I-BRING competency table to
+  `MAIN_W − 640 = 6630` for the same wrong reason. Fixed (**docx-worker 1.14.24**): CL
+  titled-section wrappers now span the full body width (`PAGE_W − 200`) and the nested
+  competency table fits just under it (`PAGE_W − 560`). CV paths unchanged.
+
+### New — OPEN
+
+- **PERSONAL-EDIT-CRASH-001** `[OPEN][HIGH][mobile]` — Typing into a **Settings → Personal**
+  subtab field (e.g. the name) **blue-screens on a real mobile device** (not in the
+  simulator; no other subtab affected). The typed value **persists** (the `PUT /api/prefs`
+  save succeeds — confirmed in Cloudflare worker logs), so the state update works and the
+  **React render crashes** (caught by the error boundary, which swallows the error). No
+  device console available. Crash capture added (PWA 1.50.181) + a remote crash logger
+  (POSTs the error to the relay so it appears in exportable worker logs) — awaiting the
+  captured error to pinpoint the throwing render.
+
+---
+
 ## SESSION 2026-06-06 — visual-package/palette root fix + UX/data/console batch
 
 Owner-driven batch (Claude Opus). Production reached **PWA 1.50.166** + **docx-worker

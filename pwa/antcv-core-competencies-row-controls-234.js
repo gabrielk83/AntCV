@@ -6,7 +6,7 @@
  */
 (function(){
   'use strict';
-  const VERSION = '1.40.242-preview-guard';
+  const VERSION = '1.50.203-native-render';
   // v1.40.242-preview-guard: Preview is button-free. Reject seeds and
   // hosts inside .antcv-preview-paper.
   const isInPreviewPaper = el => { if(!el) return false; const p=document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]'); return !!(p && p.contains(el)); };
@@ -226,13 +226,13 @@
     // Editor row 0 is the table heading row, so its CJLR controls preview table headings only.
     headerRows.forEach(r=>applyAlign(r,getAlign(0)));
     bodyRows.forEach((r,i)=>applyAlign(r,getAlign(i+1)));
-    bodyRows.forEach((r,i)=>{
-      const rowIndex=i+1;
-      if(getPage(rowIndex)<2) return;
-      const table=r.closest('table');
-      if(table && r.parentNode){ r.parentNode.insertBefore(cloneHeaderFor(table,r), r); }
-      else { const br=document.createElement('div'); br.setAttribute('data-antcv-core-page-break','1'); br.style.breakBefore='page'; br.style.pageBreakBefore='always'; br.style.height='0'; r.parentNode && r.parentNode.insertBefore(br,r); }
-    });
+    // 1.50.203: the page split is now rendered NATIVELY in app.js (React) — the
+    // table renderer reads the SAME antcv:itemPages model (key = full-table row
+    // index) and emits a salmon bar + "CORE COMPETENCIES (Cont.)" + a SEPARATE
+    // <table> with a repeated header per segment. Injecting a cloned-header <tr>
+    // here only added local heading lines inside the one table (no real new table)
+    // and got reconciled away. The page button (setPage, above) still writes the
+    // model; rendering is app.js's job. Per-row alignment above is kept.
   }
 
   function pulse(){ try{ window.dispatchEvent(new CustomEvent('antcv:sections-updated',{detail:{source:'core-competencies-row-controls', version:VERSION}})); }catch(_){} }

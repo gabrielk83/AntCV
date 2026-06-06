@@ -436,6 +436,14 @@
         try { console.debug('[wizard-language-slide-339] pass-through: force:true (intermediate step gate)'); } catch (_) {}
         return orig.apply(this, arguments);
       }
+      // 1.50.186: the language slide is the FINAL step of a COMPLETED wizard.
+      // When the user SKIPS the wizard, app.js passes skipLanguageSlide:true so
+      // we pass straight through to the AI notice (shown only if not yet
+      // accepted — orig handles that) and never show the language picker.
+      if (opts && opts.skipLanguageSlide === true) {
+        try { console.debug('[wizard-language-slide-339] pass-through: skipLanguageSlide (wizard skipped)'); } catch (_) {}
+        return orig.apply(this, arguments);
+      }
       if (!opts || typeof opts.onContinue !== 'function') {
         try { console.debug('[wizard-language-slide-339] pass-through: no onContinue function'); } catch (_) {}
         return orig.apply(this, arguments);

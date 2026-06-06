@@ -23985,7 +23985,10 @@
                   } catch (e) {}
                 })(),
                 window.AntcvShowAiNotice
-                  ? window.AntcvShowAiNotice({ onContinue: () => yn(!1) })
+                  ? window.AntcvShowAiNotice({
+                      onContinue: () => yn(!1),
+                      skipLanguageSlide: !0,
+                    })
                   : yn(!1));
             },
             r = () => {

@@ -26345,6 +26345,15 @@
                                 "Hard Refresh will unregister the service worker, delete all caches, and reload the page. Your saved settings and CV data are NOT affected (those live in localStorage). Continue?",
                               )
                             ) {
+                              // HARDREFRESH-001: guarantee the reload even if an
+                              // awaited cleanup step (SW unregister / caches.delete)
+                              // hangs and never resolves — otherwise location.reload()
+                              // below is never reached.
+                              setTimeout(() => {
+                                try {
+                                  location.reload();
+                                } catch (_) {}
+                              }, 3000);
                               try {
                                 if ("serviceWorker" in navigator) {
                                   const e =

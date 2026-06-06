@@ -285,7 +285,7 @@
         auth.src = 'antcv-auth.js?v=1.40.202';
         auth.onload = function(){
           var app = document.createElement('script');
-          app.src = 'app.js?v=1.50.171-diag-probes';
+          app.src = 'app.js?v=1.50.172-hardrefresh-guard';
           app.onload = function(){
             var vo = document.createElement('script');
             vo.src = 'antcv-version-override.js?v=1.50.41';
@@ -706,6 +706,6 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
       <!-- v1.50.164: auto-apply the correct palette when the stored package is the
            legacy orphan default ("scandinavian"), by pressing the Copenhagen Modern
            button — fixes the permanent palette mix on load without a manual click. -->
-      <script src="antcv-package-orphan-apply.js?v=1.50.164" defer></script>
+      <script src="antcv-package-orphan-apply.js?v=1.50.172-yield-to-user" defer></script>
 </body>
 </html>

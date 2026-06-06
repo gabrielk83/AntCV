@@ -35,7 +35,7 @@ const VERSION='1.3.0';
 // Required binding (declare in wrangler.toml):
 //   KV_BINDING        KV namespace (stores OTPs, rate counters, prefs, signals)
 
-const RELAY_VERSION = 'auth-23-wizard-skipped-and-ai-notice-bool';
+const RELAY_VERSION = 'auth-24-demo-emails-default-tier';
 const SESSION_TTL_SECONDS    = 7 * 24 * 60 * 60;       // 7 days
 const SESSION_REFRESH_WINDOW = 1 * 24 * 60 * 60;       // refresh in last day
 const OTP_TTL_SECONDS        = 10 * 60;                // 10 min
@@ -545,6 +545,15 @@ function invalidateModeCache(email) {
   if (email) _modeCache.delete(String(email).toLowerCase());
 }
 
+// Emails that default to the demo (unpaid) tier when they have no explicit
+// stored mode. Comma-separated env var; lowercased. Empty when unset.
+function demoDefaultEmails(env) {
+  return String((env && env.DEMO_EMAILS) || '')
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+}
+
 async function getUserMode(env, email) {
   if (!email) return 'paid';
   const norm = String(email).toLowerCase();
@@ -553,16 +562,21 @@ async function getUserMode(env, email) {
   if (cached && cached.expiresAt > now) return cached.mode;
 
   const kv = env.KV_BINDING || env.ANALYTICS || null;
-  let mode = 'paid';
+  // Default tier: emails listed in DEMO_EMAILS are demo (unpaid) unless they
+  // have explicitly chosen a mode; everyone else defaults to paid (BYOK). This
+  // makes a known demo/unpaid account read as demo deterministically, without
+  // depending on a client POST /api/user/mode having succeeded (DEMO-PERSIST-001).
+  let mode = demoDefaultEmails(env).includes(norm) ? 'demo' : 'paid';
   if (kv) {
     try {
       const key = await userScopedKeyHashed('prefs2', norm);
       const raw = await kv.get(key);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (parsed && parsed.mode === 'demo') mode = 'demo';
+        // An explicit stored choice ALWAYS wins over the DEMO_EMAILS default.
+        if (parsed && (parsed.mode === 'demo' || parsed.mode === 'paid')) mode = parsed.mode;
       }
-    } catch (_) { /* fall through to default 'paid' */ }
+    } catch (_) { /* keep the default computed above */ }
   }
   _modeCache.set(norm, { mode, expiresAt: now + _MODE_TTL_MS });
   return mode;

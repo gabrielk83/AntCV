@@ -53,7 +53,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.128-pink';
+  var VERSION = '1.50.190-light-splitter';
   if (window.__antcvPageBreaksEverywhere284 === VERSION) return;
   window.__antcvPageBreaksEverywhere284 = VERSION;
 
@@ -142,19 +142,24 @@
     var d = document.createElement('div');
     d.setAttribute(BAR_ATTR, '1');
     d.setAttribute('aria-hidden', 'true');
-    // v1.50.128: match the Professional-Experience "▼ PAGE N ▼" divider that
-    // the owner likes — pink (rgba(200,40,40,0.7)) with white text, no border —
-    // so every section's page break uses the same marker globally.
+    // 1.50.190: the owner prefers the LIGHT Professional-Experience splitter —
+    // a thin salmon top border over a faint salmon wash with a small centered
+    // "▼ PAGE N ▼" badge — not the old heavy full-width pink bar. Matches the
+    // CV experience splitter app.js draws (borderTop 3px / bg 0.06 / small badge).
     d.style.cssText = [
-      'display:block', 'width:100%', 'box-sizing:border-box',
-      'background:rgba(200,40,40,0.7)', 'color:#fff',
-      'border:0', 'border-radius:2px',
-      'text-align:center', 'font-family:Arial,sans-serif',
-      'font-size:11pt', 'font-weight:700',
-      'padding:4px 8px', 'margin:12px 0 4px',
-      'letter-spacing:0.04em'
+      'border-top:3px solid rgba(200,40,40,0.6)', 'margin:12px 0 4px',
+      'display:flex', 'align-items:center', 'justify-content:center',
+      'background:rgba(200,40,40,0.06)', 'padding:3px 0',
+      'width:100%', 'box-sizing:border-box'
     ].join(';');
-    d.textContent = '▼ PAGE ' + pageN + ' ▼';
+    var badge = document.createElement('span');
+    badge.style.cssText = [
+      'background:rgba(200,40,40,0.7)', 'color:#fff', 'font-size:8px',
+      'padding:2px 10px', 'border-radius:2px', 'font-family:Arial,sans-serif',
+      'letter-spacing:0.5px', 'white-space:nowrap'
+    ].join(';');
+    badge.textContent = '▼ PAGE ' + pageN + ' ▼';
+    d.appendChild(badge);
     return d;
   }
   function makeBreak() {

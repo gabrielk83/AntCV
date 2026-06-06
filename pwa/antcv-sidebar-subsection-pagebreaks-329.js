@@ -7,7 +7,7 @@
  */
 (function(){
   'use strict';
-  var VERSION = '1.50.132-flood-fix';
+  var VERSION = '1.50.206-native-render-retired';
   if (window.__antcvSidebarSubsectionPagebreaks === VERSION) return;
   window.__antcvSidebarSubsectionPagebreaks = VERSION;
 
@@ -85,7 +85,14 @@
     frag.appendChild(br); frag.appendChild(bar); if(cont) frag.appendChild(head); return frag;
   }
   function applySection(secEl){
+    // 1.50.206: sidebar group page breaks now render NATIVELY via the CV page-box
+    // engine — the "cv" === Lt flatMap splits a sidebar section at any item index
+    // with antcv:itemPages[sid][index] >= 2 and the page-box draws its own
+    // full-width "▼ PAGE n ▼" splitter. Sidecar DOM injection here only duplicated
+    // that (and React reconciled it away). We still sweep stale markers, then bail.
     var sid=secEl.getAttribute('data-sid'); if(!sid) return;
+    clearMarkers(secEl);
+    return;
     var sec=sectionBySid(sid); if(!isTargetSection(sec)) return;
     clearMarkers(secEl);
     var b=bucket(sid); var keys=Object.keys(b).map(function(k){return parseInt(k,10);}).filter(function(n){return Number.isFinite(n) && Number(b[String(n)]) >= 2;}).sort(function(a,b){return a-b;});

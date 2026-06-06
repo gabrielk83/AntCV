@@ -1836,7 +1836,11 @@ function renderCompetencyTable(s, ctx) {
 
   const isCl = ctx.doc === 'cl';
   const defaultCvW = MAIN_W - 640;
-  const defaultClW = PAGE_W - 2304;
+  // 1.14.23: the CL WHAT-I-BRING table sits inside the main-column section wrapper
+  // (MAIN_W cell), not the full page. The old PAGE_W-2304 (=9602) was wider than
+  // that column (MAIN_W-288=6982), so Word/Docs cut/centred it (~60% visible, Focus
+  // Area clipped). Fit it to the main column like the CV.
+  const defaultClW = MAIN_W - 640;
   const baseW = isCl ? defaultClW : defaultCvW;
   const tableW = (typeof s.tableWidth === 'number' && s.tableWidth > 0)
     ? Math.max(2880, Math.min(PAGE_W - 720, Math.round(s.tableWidth)))

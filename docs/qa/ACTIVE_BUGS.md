@@ -39,6 +39,29 @@ A companion **feature registry** (open vs shipped features) lives at
   `MAIN_W − 640 = 6630` for the same wrong reason. Fixed (**docx-worker 1.14.24**): CL
   titled-section wrappers now span the full body width (`PAGE_W − 200`) and the nested
   competency table fits just under it (`PAGE_W − 560`). CV paths unchanged.
+  **Follow-up (docx-worker 1.14.25):** 1.14.24 fixed the *emitted* gridCol (11706) but
+  Word + Google Docs still rendered the sections at **~80%** — the heading-repetition
+  wrapper nested them THREE tables deep and both renderers mis-compute widths for
+  triple-nested tables. Final fix: for the CL, emit the heading + body **directly** into
+  the full-width body cell (no wrapper — that only exists for the CV's sidebar/main
+  columns), so titled sections match the untitled CL paragraphs. WHAT-I-BRING drops from
+  triple- to single-nested. Verified in emitted XML.
+- **DOCX-HEADER-BAND-001** — `[SHIPPED, awaiting owner confirm]` The running header (which
+  carries the DEMO watermark) rendered as **white "lines" above the name** in Word and
+  Google Docs. Fix (**docx-worker 1.14.25**): shade the header paragraph with the
+  candidate-band colour (`headerBg`, palette-responsive) and create the header for **every**
+  doc — CV + CL, demo **and** non-demo — so the band colour repeats at the top of every page
+  (page-break continuity, per owner request). DEMO WordArt included only when a watermark is
+  requested. Name paragraph top space removed (`before:60→0`). The 12-pt strip height may
+  need tuning once seen in Word/Google (render can't be verified server-side).
+- **DOCX-CONFIG-404 / proxyUrl misconfig** — `[NOT A BUG / config]` Owner saw a CORS + 404
+  on `GET https://docx-worker.../config` and worried a deploy "damaged the secrets". The
+  docx-worker has **no `/config` route** (by design — `/config` lives on the access-relay).
+  The demo-watermark sidecar calls `<localStorage.proxyUrl>/config`, and the owner's stored
+  `proxyUrl` is pointed at the **docx-worker**. The 1.14.24/1.14.25 deploys only changed
+  table-width logic, the header, and the VERSION string — no routes/CORS/secrets touched,
+  and `wrangler deploy` never clears secrets. Resolution: point `proxyUrl` back at the
+  cv-proxy/relay. Document generation (`/generate`) is unaffected.
 
 ### New — OPEN
 

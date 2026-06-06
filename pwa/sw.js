@@ -1,6 +1,7 @@
-const CACHE = 'antcv-1.50.185';
+const CACHE = 'antcv-1.50.186';
 const SHELL = [
   './manifest.json',
+  './antcv-debug-logger.js',
   './antcv-mobile-controls.css',
   './antcv-docx-client.js',
   './antcv-data-importer.js',

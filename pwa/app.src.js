@@ -4202,7 +4202,18 @@
           _antcvPbStarts = [...new Set(_antcvPbStarts)].filter(
             (e) => e > 0 && e < rows.length,
           );
-          if (c && "bring" === e.id && _antcvPbStarts.length > 1)
+          if (c && "bring" === e.id && _antcvPbStarts.length > 1) {
+            // Per-segment page numbers, monotonic: each break uses its explicit
+            // antcv:itemPages value (key = full-table row index) when set, else the
+            // previous segment's page + 1, and is forced strictly after the previous
+            // segment so out-of-order row pages still propagate in reading order.
+            const __segPages = [1];
+            for (let idx = 1; idx < _antcvPbStarts.length; idx++) {
+              const ip = parseInt(__tblBucket[String(_antcvPbStarts[idx])], 10);
+              let pg = ip >= 2 ? ip : __segPages[idx - 1] + 1;
+              if (pg <= __segPages[idx - 1]) pg = __segPages[idx - 1] + 1;
+              __segPages.push(pg);
+            }
             return React.createElement(
               "div",
               {
@@ -4248,7 +4259,7 @@
                             letterSpacing: 0.5,
                           },
                         },
-                        "▼ PAGE " + (idx + 1) + " ▼",
+                        "▼ PAGE " + __segPages[idx] + " ▼",
                       ),
                     ),
                   idx > 0 &&
@@ -4302,6 +4313,7 @@
                 );
               }),
             );
+          }
           // CORE COMPETENCIES (CV main): NO in-place table split here. The CV preview
           // paginates into page-boxes and pins every non-experience main section to
           // page-box 0 (only experience roles flow to later boxes), so splitting the
@@ -4803,7 +4815,7 @@
             },
             React.createElement(B, {
               path: ["title"],
-              value: L(F) || F,
+              value: (L(F) || F) + (e._antcvSplitCont ? " (CONT.)" : ""),
               placeholder: "[Title]",
             }),
           ),

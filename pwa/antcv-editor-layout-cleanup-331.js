@@ -8,7 +8,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.50.202-foundation-native';
+  const VERSION='1.50.207-foundation-own-page';
   if(window.__antcvEditorLayoutCleanup331===VERSION) return;
   window.__antcvEditorLayoutCleanup331=VERSION;
 
@@ -188,14 +188,17 @@
   function syncFoundationPages(){
     try{
       const all=ipRead();const before=JSON.stringify(all);const fId=foundationSid();
-      // 1.50.202: foundation breaks are now rendered NATIVELY in app.js (React)
-      // from antcv:itemPages — hands_on=item "0", professionally=item "1". So we
-      // WRITE the effective pages into the model (the native renderer reads them
-      // and draws salmon + "(CONT.)"). hands_on on page>=2 moves the whole section
-      // (handled by app.js's wrapper); professionally on page>=2 is a mid-section
-      // break. We also cascade: every section AFTER foundation starts at >= the
-      // highest page foundation reaches.
-      const h=fEff('hands_on'),pr=fEff('professionally');
+      // 1.50.207: write foundation's OWN explicit page (NOT the floored effective
+      // page) into antcv:itemPages — hands_on=item "0", professionally=item "1".
+      // The native renderer applies the monotonic floor at render time. Writing the
+      // FLOORED page here meant foundation that merely INHERITED HIWC's page-2 floor
+      // (without the user moving it) got its own itemPages["0"]=2 marker, drawing a
+      // redundant salmon before FOUNDATION right after a HIWC break (owner: "extra
+      // page propagation after HIWC"). With own-page only, foundation just flows
+      // after HIWC unless the user explicitly moves it.
+      const fst=foundationState();
+      const h=Math.min(4,Math.max(1,Math.round(Number(fst.hands_on.page)||1)));
+      const pr=Math.min(4,Math.max(1,Math.round(Number(fst.professionally.page)||1)));
       if(!all[fId]||typeof all[fId]!=='object')all[fId]={};
       if(h>1)all[fId]['0']=h;else delete all[fId]['0'];
       if(pr>1)all[fId]['1']=pr;else delete all[fId]['1'];

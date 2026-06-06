@@ -8,7 +8,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.40.341-p0c-fix10';
+  const VERSION='1.50.191-foundation-cascade';
   if(window.__antcvEditorLayoutCleanup331===VERSION) return;
   window.__antcvEditorLayoutCleanup331=VERSION;
 
@@ -164,6 +164,46 @@
 
   function foundationState(){const s=read(FOUNDATION_KEY,{});return {hands_on:Object.assign({page:1,align:'left'},s.hands_on||{}),professionally:Object.assign({page:1,align:'left'},s.professionally||{})};}
   function setFoundation(part,patch){const s=foundationState();s[part]=Object.assign({},s[part]||{},patch||{});write(FOUNDATION_KEY,s);pulse('foundation-controls');return s[part];}
+  // ─── Unified CL page cascade (1.50.191) ───────────────────────────────
+  // Foundation's page buttons now share the SAME model as HIWC + the 284
+  // preview renderer (localStorage['antcv:itemPages']). A part can't sit on a
+  // page earlier than the content before it (the "floor"); pressing a button
+  // moves that part up (wrapping to the floor, never below it) and carries
+  // every item after it — the rest of foundation, then closure / signature /
+  // AI notice — onto the same page. Cover-letter equivalent of the
+  // Professional-Experience cascade. hands_on = item 0, professionally = item 1.
+  const ITEMPAGES_KEY='antcv:itemPages';
+  function ipRead(){const v=read(ITEMPAGES_KEY,{});return v&&typeof v==='object'?v:{};}
+  function clDocId(){try{return localStorage.getItem('doc')==='cv'?'cv':'cl';}catch(_){return 'cl';}}
+  function clSecs(){const s=read('sections',null);const a=s&&s[clDocId()];return Array.isArray(a)?a:[];}
+  function bucketMax(b){let m=1;if(b&&typeof b==='object')for(const k in b){const v=Number(b[k]);if(Number.isFinite(v)&&v>m)m=v;}return Math.min(4,m);}
+  function foundationSid(){const s=clSecs().find(x=>x&&(x.type==='foundation'||/foundation/i.test(clean(x.title||x.id||''))));return s&&s.id?String(s.id):'foundation';}
+  // Highest page reached by every section BEFORE foundation (HIWC etc.).
+  function foundationFloor(){const all=ipRead();const fId=foundationSid();let f=1;for(const so of clSecs()){if(!so||!so.id)continue;if(String(so.id)===fId)break;f=Math.max(f,bucketMax(all[String(so.id)]));}return Math.min(4,f);}
+  function fEff(part){const st=foundationState();const e0=Math.min(4,Math.max(Number(st.hands_on.page)||1,foundationFloor()));if(part==='hands_on')return e0;return Math.min(4,Math.max(Number(st.professionally.page)||1,e0));}
+  // Persist foundation's effective pages into itemPages (so 284 draws the light
+  // splitter) and carry sections AFTER foundation to the same page. Change-
+  // guarded: writes + pulses only when the map actually changes, so the
+  // fixFoundation re-render it triggers converges instead of looping.
+  function syncFoundationPages(){
+    try{
+      const all=ipRead();const before=JSON.stringify(all);const fId=foundationSid();
+      const e0=fEff('hands_on'),e1=fEff('professionally');
+      if(!all[fId]||typeof all[fId]!=='object')all[fId]={};
+      if(e0>1)all[fId]['0']=e0;else delete all[fId]['0'];
+      if(e1>1)all[fId]['1']=e1;else delete all[fId]['1'];
+      if(!Object.keys(all[fId]).length)delete all[fId];
+      let after=false;const tail=Math.max(e0,e1);
+      for(const so of clSecs()){if(!so||!so.id)continue;const id=String(so.id);if(id===fId){after=true;continue;}if(!after)continue;if(!all[id]||typeof all[id]!=='object')all[id]={};const e=Math.max(Number(all[id]['0'])||1,tail);if(e>1)all[id]['0']=e;else{delete all[id]['0'];if(!Object.keys(all[id]).length)delete all[id];}}
+      if(JSON.stringify(all)!==before){write(ITEMPAGES_KEY,all);pulse('foundation-cascade');}
+    }catch(_){}
+  }
+  // Cycle a foundation part within [floor .. 4], wrapping to floor, then cascade.
+  function setFoundationPageCascade(part){
+    const floor=part==='hands_on'?foundationFloor():fEff('hands_on');
+    const cur=fEff(part);let next=cur>=4?floor:cur+1;next=Math.min(4,Math.max(next,floor,1));
+    setFoundation(part,{page:next});syncFoundationPages();return next;
+  }
   function isInPreviewPaper(el){const paper=document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]');return !!(paper && el && paper.contains(el));}
   function foundationRoot(){const heads=Array.from(document.querySelectorAll('h1,h2,h3,strong,b,div,span')).filter(visible);for(const h of heads){if(isInPreviewPaper(h)) continue; /* v1.40.341-p0c-fix2: scope to editor panel — never mount the cluster in Preview */ const t=clean(h.textContent);if(!/^FOUNDATION/i.test(t)||t.length>90)continue;let p=h;for(let d=0;p&&p!==document.body&&d<10;d++,p=p.parentElement){if(isInPreviewPaper(p)) break; const tx=clean(p.textContent).toLowerCase();const fs=allFields(p);if(fs.length>=2&&tx.indexOf('hands')>=0&&tx.indexOf('profession')>=0)return p;}}return null;}
   // v1.40.341-p0c-fix7 (2026-05-28): the previous ancestor-text
@@ -225,7 +265,7 @@
     return null;
   }
   function cleanupFoundation(root){if(!root)return;Array.from(root.querySelectorAll('[data-antcv-foundation-host],[data-antcv330-hiwc-toolbar],[data-antcv331-toolbar]')).forEach(n=>n.remove());}
-  function fixFoundation(){const r=foundationRoot();if(!r)return;cleanupFoundation(r);const st=foundationState();[['hands_on','hands_on'],['professionally','professionally']].forEach(([part,key])=>{const f=labelledFoundationField(r,part);if(!f)return;f.style.textAlign=st[part].align||'left';const h=hostAfterField(f,'foundation-'+key);if(!h)return;/* v1.40.341-p0c-fix9: hostAfterField now returns null when the field is inside preview-paper (fix5 guard). Without this if(!h) bail, h.appendChild crashes with "Cannot read properties of null" and floods the console hundreds of times per second. */h.appendChild(toolbar('foundation-'+key,f,{getPage:()=>foundationState()[part].page||1,setPage:()=>setFoundation(part,{page:(Number(foundationState()[part].page)||1)%4+1}).page,getAlign:()=>foundationState()[part].align||'left',setAlign:()=>setFoundation(part,{align:nextAlign(foundationState()[part].align||'left')}).align}));});}
+  function fixFoundation(){const r=foundationRoot();if(!r)return;cleanupFoundation(r);const st=foundationState();[['hands_on','hands_on'],['professionally','professionally']].forEach(([part,key])=>{const f=labelledFoundationField(r,part);if(!f)return;f.style.textAlign=st[part].align||'left';const h=hostAfterField(f,'foundation-'+key);if(!h)return;/* v1.40.341-p0c-fix9: hostAfterField now returns null when the field is inside preview-paper (fix5 guard). Without this if(!h) bail, h.appendChild crashes with "Cannot read properties of null" and floods the console hundreds of times per second. */h.appendChild(toolbar('foundation-'+key,f,{getPage:()=>fEff(part),setPage:()=>setFoundationPageCascade(part),getAlign:()=>foundationState()[part].align||'left',setAlign:()=>setFoundation(part,{align:nextAlign(foundationState()[part].align||'left')}).align}));});try{syncFoundationPages();}catch(_){}}
 
   function hiwcRoot(){const fields=allFields(document).filter(f=>!isInPreviewPaper(f));/* v1.40.341-p0c-fix2: editor-only seeds, never Preview */const seed=fields.find(f=>/Intro[ —-]|one sentence framing/i.test(String(f.value||f.placeholder||f.textContent||'')));if(!seed)return null;let p=seed.parentElement,best=null;for(let d=0;p&&p!==document.body&&d<12;d++,p=p.parentElement){if(isInPreviewPaper(p)) break; const t=clean(p.textContent);if(/HOW I WOULD CONTRIBUTE/i.test(t)||(/Intro line/i.test(t)&&/Closing line/i.test(t)))best=p;}return best;}
   function hiwcFields(root){const fs=allFields(root);const intro=fs.find(f=>/Intro[ —-]|one sentence framing/i.test(String(f.value||f.placeholder||f.textContent||'')))||fs[0]||null;const closing=fs.slice().reverse().find(f=>/Closing[ —-]|one sentence/i.test(String(f.value||f.placeholder||f.textContent||'')))||fs[fs.length-1]||null;let bullet=fs.find(f=>f.tagName==='TEXTAREA'&&f!==intro&&f!==closing)||null;return {intro,bullet,closing};}

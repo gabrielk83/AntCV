@@ -5,7 +5,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.50.197-page-only-pulse';
+  const VERSION='1.50.198-coherent-pages';
   let __applying=false; // v1.50.57: re-entrancy guard so our own DOM writes don't re-trigger the observer/flicker.
   const ALIGN_KEY='antcv.hiwc.alignment.v1';
   const PAGE_KEY='antcv:itemPages';
@@ -53,6 +53,17 @@
   // Cycle: step up, wrap back to the FLOOR (not to 1) so an item never lands
   // before the content above it ("only allowed to go to two" when intro is on 2).
   function cyclePage(cur,floor){const c=Math.max(cur,floor);const n=c>=4?floor:c+1;return Math.min(4,Math.max(n,floor,1));}
+  // 1.50.198: COHERENT page numbers. Each item's displayed page is its EFFECTIVE
+  // page = max(its own marker, the floor it inherits from the content above it).
+  // This makes the buttons read monotonically (1,1,2,2…) instead of the raw,
+  // disconnected per-item markers, and matches where the content actually sits.
+  function floorFor(k){
+    if(k==='intro')return 1;
+    const m=/^bullet_(\d+)$/.exec(k);if(m)return hiwcFloorBefore(+m[1]);
+    if(k==='closing'){let f=getPage('intro');const all=readPages();const b=all[sid()]||all.how_i_would_contribute||{};Object.keys(b).forEach(kk=>{if(/^bullet_/.test(kk)){const v=Number(b[kk]);if(v>f)f=v;}});return Math.min(4,Math.max(1,f));}
+    return 1;
+  }
+  function effPage(k){return Math.min(4,Math.max(floorFor(k),getPage(k)));}
   function setPage(k,n){const all=readPages();const s=sid();if(!all[s]||typeof all[s]!=='object')all[s]={};const nn=Math.min(4,Math.max(1,Math.round(Number(n)||1)));if(nn<=1)delete all[s][k];else all[s][k]=nn;writeJson(PAGE_KEY,all);pulsePages();}
   // Owner 2026-06-05: per-bullet page break CASCADES. Setting bullet `fromIdx`
   // to page `n` starts that bullet AND everything after it (the remaining
@@ -169,7 +180,7 @@
     return b;
   }
   function paintCJLR(b,a){b.textContent=ICON[a]||ICON.left;b.title='Alignment: '+(LABEL[a]||a)+'. Click to cycle Center, Justify, Left, Right.';b.setAttribute('aria-label',b.title);}
-  function paintPage(b,k){const p=getPage(k);b.textContent='📄 '+p;b.title='Start this line on page '+p+'. Click to cycle page 1-4.';b.setAttribute('aria-label',b.title);}
+  function paintPage(b,k){const p=effPage(k);b.textContent='📄 '+p;b.title='Start this line on page '+p+'. Click to cycle page 1-4.';b.setAttribute('aria-label',b.title);}
   const weak=[/\b(successfully\b\s*)/gi,/\b(effectively\b\s*)/gi,/\b(various\b\s*)/gi,/\bmultiple\b/gi,/\bin order to\b/gi,/\bwas responsible for\b/gi];
   function compressText(s){let t=clean(s);weak.forEach(rx=>t=t.replace(rx,''));t=t.replace(/\s*,\s*/g,', ').replace(/\s+/g,' ').trim();if(t.length>190){const parts=t.split(/(?<=[.!?])\s+/);if(parts[0]&&parts[0].length>50)t=parts[0];}return t;}
   function enrichText(s){const t=clean(s);if(!t)return t;if(/\b(because|so that|by|through|using|with)\b/i.test(t)||/\d/.test(t))return t;return t.replace(/[.!?]?$/,'')+' with clearer scope and expected value.';}
@@ -263,7 +274,7 @@
     let comp=wrap.querySelector('[data-antcv-hiwc-compress]'); if(!comp){comp=makeBtn('compress','↹','Fit',f);wrap.appendChild(comp);}
     let enr=wrap.querySelector('[data-antcv-hiwc-enrich]'); if(!enr){enr=makeBtn('enrich','✨','Enrich',f);wrap.appendChild(enr);}
     let cjlr=wrap.querySelector('[data-antcv-hiwc-cjlr]'); if(!cjlr){cjlr=makeBtn('cjlr','⇤','Alignment',f);wrap.appendChild(cjlr);} paintCJLR(cjlr,getAlign(k));
-    page.onclick=ev=>{ev.preventDefault();ev.stopPropagation();markPageCycle();setPage(k,getPage(k)%4+1);paintPage(page,k);applyPreview();};
+    page.onclick=ev=>{ev.preventDefault();ev.stopPropagation();markPageCycle();setPage(k,cyclePage(effPage(k),floorFor(k)));paintPage(page,k);applyPreview();};
     comp.onclick=ev=>{ev.preventDefault();ev.stopPropagation();setVal(f,compressText(getVal(f)));syncSectionField(k,getVal(f));applyPreview();};
     enr.onclick=ev=>{ev.preventDefault();ev.stopPropagation();setVal(f,enrichText(getVal(f)));syncSectionField(k,getVal(f));applyPreview();};
     cjlr.onclick=ev=>{ev.preventDefault();ev.stopPropagation();const n=nextAlign(getAlign(k));setAlign(k,n);paintCJLR(cjlr,n);applyField(f,k);applyPreview();};
@@ -346,7 +357,7 @@
       const enr=makeBtn('enrich','✨','Enrich bullet '+(idx+1),ta);
       const cjlr=makeBtn('cjlr','⇤','Alignment of bullet '+(idx+1),ta);paintCJLR(cjlr,getAlign(key));
       const del=makeBtn('bullet-delete','×','Delete bullet '+(idx+1),ta);del.style.borderColor='#ff5c5c';del.style.color='#e52b2b';del.style.background='transparent';
-      page.onclick=ev=>{ev.preventDefault();ev.stopPropagation();markPageCycle();const __fl=hiwcFloorBefore(idx);setPageCascade(idx,cyclePage(getPage(key),__fl),rows.length);applyPreview();renderBulletControls(r,ta);};
+      page.onclick=ev=>{ev.preventDefault();ev.stopPropagation();markPageCycle();const __fl=hiwcFloorBefore(idx);setPageCascade(idx,cyclePage(effPage(key),__fl),rows.length);applyPreview();renderBulletControls(r,ta);};
       comp.onclick=ev=>{ev.preventDefault();ev.stopPropagation();const rr=bulletRowsFromText(getVal(ta));rr[idx]=compressText(rr[idx]||'');writeRows(rr);};
       enr.onclick=ev=>{ev.preventDefault();ev.stopPropagation();const rr=bulletRowsFromText(getVal(ta));rr[idx]=enrichText(rr[idx]||'');writeRows(rr);};
       cjlr.onclick=ev=>{ev.preventDefault();ev.stopPropagation();const n=nextAlign(getAlign(key));setAlign(key,n);paintCJLR(cjlr,n);applyPreview();renderBulletControls(r,ta);};
@@ -422,7 +433,7 @@
       const enr=makeBtn('enrich','✨','Enrich bullet '+(idx+1),inp);
       const cjlr=makeBtn('cjlr','⇤','Alignment of bullet '+(idx+1),inp);paintCJLR(cjlr,getAlign(key));
       const del=makeBtn('bullet-delete','×','Delete bullet '+(idx+1),inp);del.style.borderColor='#ff5c5c';del.style.color='#e52b2b';del.style.background='transparent';
-      page.onclick=ev=>{ev.preventDefault();ev.stopPropagation();markPageCycle();setPage(key,getPage(key)%4+1);paintPage(page,key);applyPreview();};
+      page.onclick=ev=>{ev.preventDefault();ev.stopPropagation();markPageCycle();setPage(key,cyclePage(effPage(key),floorFor(key)));paintPage(page,key);applyPreview();};
       comp.onclick=ev=>{ev.preventDefault();ev.stopPropagation();inp.value=compressText(inp.value);writeAll();applyPreview();};
       enr.onclick=ev=>{ev.preventDefault();ev.stopPropagation();inp.value=enrichText(inp.value);writeAll();applyPreview();};
       cjlr.onclick=ev=>{ev.preventDefault();ev.stopPropagation();const n=nextAlign(getAlign(key));setAlign(key,n);paintCJLR(cjlr,n);applyField(inp,key);applyPreview();};
@@ -482,7 +493,7 @@
       // focus = "not typable"). Sync after a short pause, and on blur.
       inp.oninput=()=>{ noteHiwcFocus(idx,inp); scheduleBulletSync(syncFromInputs); };
       inp.addEventListener('blur',()=>{ flushBulletSync(syncFromInputs); });
-      page.onclick=ev=>{ev.preventDefault();ev.stopPropagation();markPageCycle();setPage(key,getPage(key)%4+1);paintPage(page,key);applyPreview();};
+      page.onclick=ev=>{ev.preventDefault();ev.stopPropagation();markPageCycle();setPage(key,cyclePage(effPage(key),floorFor(key)));paintPage(page,key);applyPreview();};
       comp.onclick=ev=>{ev.preventDefault();ev.stopPropagation();inp.value=compressText(inp.value);dispatchInput(inp);syncFromInputs();applyPreview();};
       enr.onclick=ev=>{ev.preventDefault();ev.stopPropagation();inp.value=enrichText(inp.value);dispatchInput(inp);syncFromInputs();applyPreview();};
       cjlr.onclick=ev=>{ev.preventDefault();ev.stopPropagation();const n=nextAlign(getAlign(key));setAlign(key,n);paintCJLR(cjlr,n);applyField(inp,key);applyPreview();};

@@ -4062,11 +4062,11 @@
                       {
                         className: "no-print",
                         style: {
-                          borderTop: "3px solid rgba(0,116,110,.55)",
+                          borderTop: "3px solid rgba(200,40,40,0.6)",
                           margin: "10px 0 5px",
                           display: "flex",
                           justifyContent: "center",
-                          background: "rgba(0,116,110,.06)",
+                          background: "rgba(200,40,40,0.06)",
                           padding: "2px 0",
                         },
                       },
@@ -4074,7 +4074,7 @@
                         "span",
                         {
                           style: {
-                            background: "rgba(0,116,110,.75)",
+                            background: "rgba(200,40,40,0.7)",
                             color: "#fff",
                             fontSize: 8,
                             padding: "2px 10px",

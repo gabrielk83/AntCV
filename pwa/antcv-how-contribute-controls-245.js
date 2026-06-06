@@ -5,7 +5,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.50.194-panel-break-sep';
+  const VERSION='1.50.195-intro-moves-section';
   let __applying=false; // v1.50.57: re-entrancy guard so our own DOM writes don't re-trigger the observer/flicker.
   const ALIGN_KEY='antcv.hiwc.alignment.v1';
   const PAGE_KEY='antcv:itemPages';
@@ -509,17 +509,24 @@
   // (matching the CV experience splitter the owner wants back) ABOVE the teal
   // "(CONT.)" continuation header, as one block inserted before the bullet that
   // starts the new page.
-  function makeBreakHeader(pageN){
+  // Just the light salmon "▼ PAGE N ▼" bar (used when the WHOLE section moves —
+  // the section's own heading is the page-N header, so no "(CONT.)" line).
+  function makeSalmonBar(pageN){
     const wrap=document.createElement('div');wrap.setAttribute('data-antcv-hiwc-page-break','1');
     wrap.style.breakBefore='page';wrap.style.pageBreakBefore='always';
     const bar=document.createElement('div');
     bar.style.cssText='border-top:3px solid rgba(200,40,40,0.6);margin:12px 0 4px;display:flex;align-items:center;justify-content:center;background:rgba(200,40,40,0.06);padding:3px 0;width:100%;box-sizing:border-box';
     const badge=document.createElement('span');
     badge.style.cssText='background:rgba(200,40,40,0.7);color:#fff;font-size:8px;padding:2px 10px;border-radius:2px;font-family:Arial,sans-serif;letter-spacing:0.5px;white-space:nowrap';
-    badge.textContent='▼ PAGE '+(pageN||2)+' ▼';bar.appendChild(badge);
+    badge.textContent='▼ PAGE '+(pageN||2)+' ▼';bar.appendChild(badge);return wrap;
+  }
+  // Salmon bar + teal "(CONT.)" header — used for a mid-section break (a bullet
+  // or the closing starts the new page while the heading stays on page 1).
+  function makeBreakHeader(pageN){
+    const wrap=makeSalmonBar(pageN);
     const hd=document.createElement('div');hd.textContent='HOW I WOULD CONTRIBUTE (CONT.)';
     hd.style.cssText='color:#00746E;font-weight:700;font-size:12pt;margin-top:4pt;margin-bottom:8pt;border-bottom:1pt solid #00746E;padding-bottom:2pt';
-    wrap.appendChild(bar);wrap.appendChild(hd);return wrap;
+    wrap.appendChild(hd);return wrap;
   }
 
   function currentBulletValues(){const s=sec();const b=s&&(Array.isArray(s.bullets)?s.bullets:Array.isArray(s.items)?s.items:[]);return (b||[]).map(clean).filter(Boolean);}
@@ -545,10 +552,21 @@
     (p.bullets||[]).forEach((el,idx)=>{ if(el) ordered.push(['bullet_'+idx,el]); });
     if(p.closing) ordered.push(['closing',p.closing]);
     let runMax=1;
-    ordered.forEach(([k,el])=>{
+    ordered.forEach(([k,el],i)=>{
       const a=getAlign(k); el.style.textAlign=a; Array.from(el.querySelectorAll('span,div,p')).forEach(x=>x.style.textAlign=a);
       const pg=getPage(k);
-      if(pg>runMax){ if(el.parentNode) el.parentNode.insertBefore(makeBreakHeader(pg),el); runMax=pg; }
+      if(pg>runMax){
+        if(i===0){
+          // 1.50.195: a break on the FIRST part (the intro) moves the WHOLE
+          // HIWC section — insert the salmon bar at the very top of the section
+          // (before its heading) with NO "(CONT.)" header, so the heading and
+          // everything after it ride to the next page together.
+          if(s.firstChild) s.insertBefore(makeSalmonBar(pg),s.firstChild); else s.appendChild(makeSalmonBar(pg));
+        } else if(el.parentNode){
+          el.parentNode.insertBefore(makeBreakHeader(pg),el);
+        }
+        runMax=pg;
+      }
     });
     } finally { __applying=false; }
   }

@@ -5,7 +5,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.50.196-bullet-wipe-guard';
+  const VERSION='1.50.197-page-only-pulse';
   let __applying=false; // v1.50.57: re-entrancy guard so our own DOM writes don't re-trigger the observer/flicker.
   const ALIGN_KEY='antcv.hiwc.alignment.v1';
   const PAGE_KEY='antcv:itemPages';
@@ -37,9 +37,23 @@
   // cycling 4→1. Suppress any bullets write while a page-cycle is in flight.
   let __pageCycling=false,__pcTimer=null;
   function markPageCycle(){__pageCycling=true;clearTimeout(__pcTimer);__pcTimer=setTimeout(()=>{__pageCycling=false;},1200);}
+  // 1.50.197: a page change is NOT a content change — fire only the page event,
+  // never 'antcv:sections-updated'. The latter made the app re-render the whole
+  // HIWC section, which (1) stripped 245's salmon from the preview (it survived
+  // only in the panel) and (2) read the momentarily-empty bullets textarea and
+  // wrote bullets:[] — wiping them on a page-cycle. applyPreview() runs directly
+  // from the button and the 284 renderer listens to this page event, so the
+  // break still updates everywhere without a content re-render.
+  function pulsePages(){try{window.dispatchEvent(new CustomEvent('antcv:item-pages-changed',{detail:{source:'how-contribute-page',version:VERSION}}));}catch(_){}}
   function readPages(){return readJson(PAGE_KEY,{});}
   function getPage(k){const all=readPages();const b=all[sid()]||all.how_i_would_contribute||{};const n=Number(b[k]||1);return Number.isFinite(n)&&n>=1?Math.min(4,Math.max(1,Math.round(n))):1;}
-  function setPage(k,n){const all=readPages();const s=sid();if(!all[s]||typeof all[s]!=='object')all[s]={};const nn=Math.min(4,Math.max(1,Math.round(Number(n)||1)));if(nn<=1)delete all[s][k];else all[s][k]=nn;writeJson(PAGE_KEY,all);pulse();}
+  // Floor for a bullet = highest page the content BEFORE it sits on (intro +
+  // earlier bullets). An item can't move to a page before the content above it.
+  function hiwcFloorBefore(idx){let f=getPage('intro');for(let j=0;j<idx;j++)f=Math.max(f,getPage('bullet_'+j));return Math.min(4,Math.max(1,f));}
+  // Cycle: step up, wrap back to the FLOOR (not to 1) so an item never lands
+  // before the content above it ("only allowed to go to two" when intro is on 2).
+  function cyclePage(cur,floor){const c=Math.max(cur,floor);const n=c>=4?floor:c+1;return Math.min(4,Math.max(n,floor,1));}
+  function setPage(k,n){const all=readPages();const s=sid();if(!all[s]||typeof all[s]!=='object')all[s]={};const nn=Math.min(4,Math.max(1,Math.round(Number(n)||1)));if(nn<=1)delete all[s][k];else all[s][k]=nn;writeJson(PAGE_KEY,all);pulsePages();}
   // Owner 2026-06-05: per-bullet page break CASCADES. Setting bullet `fromIdx`
   // to page `n` starts that bullet AND everything after it (the remaining
   // bullets + the closing line) on page `n` — so the break moves the bullet
@@ -66,7 +80,7 @@
       }
     }catch(_){}
   }
-  function setPageCascade(fromIdx,n,rowCount){const all=readPages();const s=sid();if(!all[s]||typeof all[s]!=='object')all[s]={};const nn=Math.min(4,Math.max(1,Math.round(Number(n)||1)));for(let j=fromIdx;j<rowCount;j++){const k='bullet_'+j;if(nn<=1)delete all[s][k];else all[s][k]=nn;}if(nn<=1)delete all[s].closing;else all[s].closing=nn;writeJson(PAGE_KEY,all);pulse();}
+  function setPageCascade(fromIdx,n,rowCount){const all=readPages();const s=sid();if(!all[s]||typeof all[s]!=='object')all[s]={};const nn=Math.min(4,Math.max(1,Math.round(Number(n)||1)));for(let j=fromIdx;j<rowCount;j++){const k='bullet_'+j;if(nn<=1)delete all[s][k];else all[s][k]=nn;}if(nn<=1)delete all[s].closing;else all[s].closing=nn;writeJson(PAGE_KEY,all);pulsePages();}
   // 1.50.192: cross-section cascade-tagging REVERTED. In the continuous preview
   // one break at the broken bullet already flows the whole tail (closing,
   // FOUNDATION, CLOSURE …) onto the next page; tagging each following section
@@ -332,7 +346,7 @@
       const enr=makeBtn('enrich','✨','Enrich bullet '+(idx+1),ta);
       const cjlr=makeBtn('cjlr','⇤','Alignment of bullet '+(idx+1),ta);paintCJLR(cjlr,getAlign(key));
       const del=makeBtn('bullet-delete','×','Delete bullet '+(idx+1),ta);del.style.borderColor='#ff5c5c';del.style.color='#e52b2b';del.style.background='transparent';
-      page.onclick=ev=>{ev.preventDefault();ev.stopPropagation();markPageCycle();setPageCascade(idx,getPage(key)%4+1,rows.length);applyPreview();renderBulletControls(r,ta);};
+      page.onclick=ev=>{ev.preventDefault();ev.stopPropagation();markPageCycle();const __fl=hiwcFloorBefore(idx);setPageCascade(idx,cyclePage(getPage(key),__fl),rows.length);applyPreview();renderBulletControls(r,ta);};
       comp.onclick=ev=>{ev.preventDefault();ev.stopPropagation();const rr=bulletRowsFromText(getVal(ta));rr[idx]=compressText(rr[idx]||'');writeRows(rr);};
       enr.onclick=ev=>{ev.preventDefault();ev.stopPropagation();const rr=bulletRowsFromText(getVal(ta));rr[idx]=enrichText(rr[idx]||'');writeRows(rr);};
       cjlr.onclick=ev=>{ev.preventDefault();ev.stopPropagation();const n=nextAlign(getAlign(key));setAlign(key,n);paintCJLR(cjlr,n);applyPreview();renderBulletControls(r,ta);};

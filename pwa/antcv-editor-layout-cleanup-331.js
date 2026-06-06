@@ -200,6 +200,11 @@
       const floor1=Math.max(floor,own0);
       if(own1>floor1)all[fId]['1']=own1;else delete all[fId]['1'];
       if(!Object.keys(all[fId]).length)delete all[fId];
+      // 1.50.192: sections AFTER foundation (CLOSURE, …) have no page control
+      // and just flow — strip any stale section-level ['0'] markers left by the
+      // reverted Step-1 cascade so they don't draw a redundant bar.
+      let after=false;
+      for(const so of clSecs()){if(!so||!so.id)continue;const id=String(so.id);if(id===fId){after=true;continue;}if(!after)continue;if(all[id]&&typeof all[id]==='object'&&all[id]['0']!==undefined){delete all[id]['0'];if(!Object.keys(all[id]).length)delete all[id];}}
       if(JSON.stringify(all)!==before){write(ITEMPAGES_KEY,all);pulse('foundation-cascade');}
     }catch(_){}
   }

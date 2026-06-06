@@ -4177,7 +4177,7 @@
                             letterSpacing: 0.5,
                           },
                         },
-                        "▼ PAGE BREAK ▼",
+                        "▼ PAGE " + (idx + 1) + " ▼",
                       ),
                     ),
                   idx > 0 &&
@@ -4231,102 +4231,13 @@
                 );
               }),
             );
-          // CORE COMPETENCIES (CV main) — INDEPENDENT segmentation. Deliberately a
-          // separate branch from WHAT I BRING (CL): same shared mk/head/_antcvPbStarts
-          // primitives, but its own id gate, its own full-width wrap, and its own
-          // continuation title. Per docs/plan §3d the two tables never share a code path.
-          if (!c && "core_comp" === e.id && _antcvPbStarts.length > 1)
-            return React.createElement(
-              "div",
-              {
-                "data-table-resize-wrap": "true",
-                "data-antcv-row-pagebreak-table": "true",
-                style: wrapStyle,
-              },
-              _antcvPbStarts.map((st, idx) => {
-                const en =
-                  idx + 1 < _antcvPbStarts.length
-                    ? _antcvPbStarts[idx + 1]
-                    : rows.length;
-                return React.createElement(
-                  React.Fragment,
-                  { key: "cseg" + idx },
-                  idx > 0 &&
-                    React.createElement(
-                      "div",
-                      {
-                        className: "no-print",
-                        style: {
-                          borderTop: "3px solid rgba(200,40,40,0.6)",
-                          margin: "10px 0 5px",
-                          display: "flex",
-                          justifyContent: "center",
-                          background: "rgba(200,40,40,0.06)",
-                          padding: "2px 0",
-                        },
-                      },
-                      React.createElement(
-                        "span",
-                        {
-                          style: {
-                            background: "rgba(200,40,40,0.7)",
-                            color: "#fff",
-                            fontSize: 8,
-                            padding: "2px 10px",
-                            borderRadius: 2,
-                            fontFamily: "Arial,sans-serif",
-                            letterSpacing: 0.5,
-                          },
-                        },
-                        "▼ PAGE BREAK ▼",
-                      ),
-                    ),
-                  idx > 0 &&
-                    React.createElement("div", {
-                      style: {
-                        pageBreakBefore: "always",
-                        breakBefore: "page",
-                        height: 0,
-                        lineHeight: 0,
-                      },
-                    }),
-                  idx > 0 &&
-                    React.createElement(
-                      "div",
-                      {
-                        style: {
-                          fontFamily: A,
-                          fontWeight: 700,
-                          color: C,
-                          fontSize: $.head,
-                          letterSpacing: 0.5,
-                          textTransform: "uppercase",
-                          textAlign: "left",
-                          lineHeight: 1,
-                          marginBottom: 1,
-                          marginTop: 4,
-                        },
-                      },
-                      (L(e.title) || "CORE COMPETENCIES") + " (Cont.)",
-                    ),
-                  idx > 0 &&
-                    React.createElement("div", {
-                      style: {
-                        borderBottom: `1px solid ${C}`,
-                        marginBottom: 4,
-                      },
-                    }),
-                  mk(st, en, idx),
-                );
-              }),
-              f &&
-                React.createElement(ke, {
-                  leftPct: (100 * u) / p,
-                  ratio: c ? a : r,
-                  onChange: f,
-                  accent: k.tableHeaderBg || s,
-                }),
-            );
+          // CORE COMPETENCIES (CV main): NO in-place table split here. The CV preview
+          // paginates into page-boxes and pins every non-experience main section to
+          // page-box 0 (only experience roles flow to later boxes), so splitting the
+          // table inside Ce just stacked two tables on page 1 (the "two sets / doesn't
+          // move" the owner saw). Real cross-page movement for CORE COMPETENCIES needs
+          // the main-column page-box pagination (delivered with the export / real
+          // page-break work). The 📄 row buttons still write antcv:itemPages for that.
           return React.createElement(
             "div",
             { "data-table-resize-wrap": "true", style: wrapStyle },

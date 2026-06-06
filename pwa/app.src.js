@@ -25364,7 +25364,7 @@
                     "div",
                     {
                       key: e,
-                      onClick: () => a(e),
+                      onClick: () => (e === r ? In(2) : a(e)),
                       style: {
                         padding: 12,
                         background:
@@ -25593,7 +25593,21 @@
                     "div",
                     {
                       key: e,
-                      onClick: () => a(e),
+                      onClick: () => {
+                        a(e),
+                          window.AntcvWizardLanguageSlide339 &&
+                          window.AntcvWizardLanguageSlide339._show
+                            ? window.AntcvWizardLanguageSlide339._show(
+                                () => {
+                                  In(0), xn(6);
+                                },
+                                () => {
+                                  In(0), xn(6);
+                                },
+                                () => In(2),
+                              )
+                            : (In(0), xn(6));
+                      },
                       style: {
                         padding: 12,
                         background:
@@ -25729,9 +25743,20 @@
                   },
                   c("← Back", () => In(1), { compact: !0 }),
                   c(
-                    "Continue →",
+                    "Next →",
                     () => {
-                      (In(0), xn(6));
+                      window.AntcvWizardLanguageSlide339 &&
+                      window.AntcvWizardLanguageSlide339._show
+                        ? window.AntcvWizardLanguageSlide339._show(
+                            () => {
+                              In(0), xn(6);
+                            },
+                            () => {
+                              In(0), xn(6);
+                            },
+                            () => In(2),
+                          )
+                        : (In(0), xn(6));
                     },
                     { primary: !0 },
                   ),

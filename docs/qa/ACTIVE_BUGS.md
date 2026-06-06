@@ -107,6 +107,18 @@ repeat the mistake.
 
 ### Resolved this session
 
+- **GEN-UNSOL-002** — generate_cv could omit `meta.company`/`meta.role` even with a JD
+  present, so the header fell to "Unsolicited". Fix: the generation prompt now requires
+  both to be filled from the JD when one is present (never empty, never "Unsolicited" when
+  the JD names the employer); empty only for a true open application. Additive prompt text,
+  surgical app.js edit mirrored to `app.src.js`. — FIXED✓ (1.50.169). Live-verify owed:
+  generate against a real JD → header shows the real company/role.
+- **PERF-002/003/004** `[OPEN][backlog-mislabel]` — DEFERRED. The backlog frames these as
+  "trim consensus width" on mechanical tasks, but `ee` (app.src.js ~1146) is a **cascade**:
+  it returns on the first successful provider and only advances on failure; the per-task `Z`
+  map (~1110) is fallback ORDER, not a fan-out. Mechanical tasks make one call, so trimming
+  `Z` cuts resilience, not latency. Real consensus is the separate `consensus_poll` path
+  (~20547). NEEDS owner intent before any edit (target the consensus_poll fan-out, not `Z`).
 - **WM-MOBILE-SCALE-001** — AI watermark "lost" on mobile (again). The preview paper
   renders inside a `transform: scale(ui)` zoom container (app.js preview zoom; phone
   auto-fit factor well below 1). `antcv-watermark-page-anchor-341` positioned via

@@ -60,8 +60,15 @@ A companion **feature registry** (open vs shipped features) lives at
   The demo-watermark sidecar calls `<localStorage.proxyUrl>/config`, and the owner's stored
   `proxyUrl` is pointed at the **docx-worker**. The 1.14.24/1.14.25 deploys only changed
   table-width logic, the header, and the VERSION string — no routes/CORS/secrets touched,
-  and `wrangler deploy` never clears secrets. Resolution: point `proxyUrl` back at the
-  cv-proxy/relay. Document generation (`/generate`) is unaffected.
+  and `wrangler deploy` never clears secrets. Confirmed via `git log -S'"/config"'`: the
+  docx-worker has **never** had a `/config` route, so restoring an older deploy can't help.
+  **Durable fix (PWA 1.50.182):** the demo-watermark sidecar now resolves `/config` from
+  the relay (`window.ANTCV_RELAY_URL` → `localStorage.relayUrl`), falling back to `proxyUrl`
+  only as a last resort, and caches only on a successful response. Relay URL (from
+  `pwa/relay-config.json`): `https://antcv-access-relay.karp-gabriel-a.workers.dev`. Ships
+  to production when the branch merges to `main` (Pages auto-deploys PWA from `main` only).
+  Immediate workaround: reset the Proxy/Relay URL in Settings to the relay URL above.
+  Document generation (`/generate`) is unaffected throughout.
 
 ### New — OPEN
 

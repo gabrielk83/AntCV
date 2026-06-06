@@ -1857,12 +1857,13 @@ function renderCompetencyTable(s, ctx) {
 
   const isCl = ctx.doc === 'cl';
   const defaultCvW = MAIN_W - 640;
-  // 1.14.24: the CL is full-width linear (no sidebar). The WHAT-I-BRING table
-  // sits inside the titled-section wrapper, which now spans the full CL body
-  // cell (PAGE_W - 200 = 11706). 1.14.23's MAIN_W-640 (=6630) made it ~60% of
-  // the page. Size the nested table just under the wrapper so it fills the
-  // column without a flush-edge overflow in Google Docs.
-  const defaultClW = PAGE_W - 560;
+  // 1.14.26: the CL is full-width linear (no sidebar). The body + text sections
+  // now span the full CL body cell (PAGE_W - 200 = 11706), but the owner wants
+  // the WHAT-I-BRING table LARGE yet clearly INSET from the page edges and
+  // CENTERED — 1.14.25's PAGE_W-560 (~97%) read as edge-to-edge / left-justified.
+  // Use ~80% of the body width; the table's CENTER alignment then leaves a
+  // balanced ~0.8" margin on each side.
+  const defaultClW = Math.round((PAGE_W - 200) * 0.8);
   const baseW = isCl ? defaultClW : defaultCvW;
   const tableW = (typeof s.tableWidth === 'number' && s.tableWidth > 0)
     ? Math.max(2880, Math.min(PAGE_W - 720, Math.round(s.tableWidth)))

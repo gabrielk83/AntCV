@@ -171,6 +171,17 @@ export function postProcessDocx(input, opts = {}) {
         const after = bodyOpenIdx + '<w:body>'.length;
         xml = xml.slice(0, after) + '<w:p>' + watermarkRun + '</w:p>' + xml.slice(after);
         watermarked = true;
+        // Microsoft Word (unlike LibreOffice/CloudConvert, which renders the PDF)
+        // silently DROPS the VML watermark unless the VML namespaces are declared
+        // on the <w:document> root. The packer does not declare xmlns:v/o/w10, so
+        // the DEMO mark showed only in the PDF, not in Word. Ensure them here.
+        xml = xml.replace(/<w:document\b[^>]*>/, (tag) => {
+          let t = tag;
+          if (!/\bxmlns:v=/.test(t)) t = t.replace(/>$/, ' xmlns:v="urn:schemas-microsoft-com:vml">');
+          if (!/\bxmlns:o=/.test(t)) t = t.replace(/>$/, ' xmlns:o="urn:schemas-microsoft-com:office:office">');
+          if (!/\bxmlns:w10=/.test(t)) t = t.replace(/>$/, ' xmlns:w10="urn:schemas-microsoft-com:office:word">');
+          return t;
+        });
       }
     }
 

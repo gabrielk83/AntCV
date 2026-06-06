@@ -15,7 +15,7 @@
  */
 (function () {
   'use strict';
-  var V = '1.50.174-370';
+  var V = '1.50.177-370';
   if (window.__antcvDiagProbes === V) return;
   window.__antcvDiagProbes = V;
 
@@ -202,15 +202,50 @@
     }).observe(document.body || document.documentElement, { childList: true, subtree: true });
   } catch (_) {}
 
+  // ---- PALETTE-MIX-001 ---------------------------------------------------
+  // The "mixed visual style": app.js renders accent colours from its own
+  // styleConfig/stylePackage while the CSS tokenises structure from a registry
+  // package id. Capture BOTH sources + the actual computed colours of key
+  // rendered elements so the exact mismatch can be pinpointed (no browser here).
+  function cc(el, prop) {
+    try { return el ? window.getComputedStyle(el)[prop] : '(no-el)'; } catch (_) { return '(err)'; }
+  }
+  function probePalette() {
+    try {
+      var sc = readJSON('styleConfig') || {};
+      var rep = {
+        stylePackage_raw: (function () { try { return localStorage.getItem('stylePackage'); } catch (_) { return null; } })(),
+        navyColor: readJSON('navyColor'),
+        styleConfig_keys: {
+          headerBg: sc.headerBg, sidebarBg: sc.sidebarBg, mainHeadColor: sc.mainHeadColor,
+          sidebarHeadColor: sc.sidebarHeadColor, headerLineColor: sc.headerLineColor, mainLineColor: sc.mainLineColor
+        },
+        body_data_package: (document.body && (document.body.getAttribute('data-package') || document.body.getAttribute('data-style'))) || null
+      };
+      // Computed colours of the actually-rendered preview.
+      var sidebar = document.querySelector('.antcv-preview-paper [class*="sidebar"], .antcv-preview-paper [style*="background"][style*="283556"], .antcv-cv-sidebar');
+      var head = document.querySelector('.antcv-preview-paper h1, .antcv-preview-paper [class*="header"]');
+      var mainHead = document.querySelector('.antcv-preview-paper h2, .antcv-preview-paper [class*="section"] h2, .antcv-preview-paper [class*="mainHead"]');
+      rep.computed = {
+        sidebarBg: cc(sidebar, 'backgroundColor'),
+        headerColor: cc(head, 'color'),
+        mainHeadColor: cc(mainHead, 'color')
+      };
+      log('PALETTE-MIX-001', rep);
+      log('PALETTE-MIX-001 raw styleConfig', JSON.stringify(sc).slice(0, 700));
+    } catch (e) { log('PALETTE-MIX-001 probe error', e && e.message); }
+  }
+
   // ---- dump-all + auto snapshot -----------------------------------------
   function dumpAll() {
     log('==== AntcvDiag snapshot v' + V + ' ====');
-    probeContribute(); probeSettings(); probeBoot();
+    probeContribute(); probeSettings(); probeBoot(); probePalette();
     log('HARDREFRESH-001: click "↻ Hard Refresh" to probe its reload path live.');
   }
   window.AntcvDiag = dumpAll;
   window.AntcvDiag.contribute = probeContribute;
   window.AntcvDiag.settings = probeSettings;
+  window.AntcvDiag.palette = probePalette;
   window.AntcvDiag.boot = probeBoot;
   window.AntcvDiag.hardrefresh = function () { log('HARDREFRESH-001: click the "↻ Hard Refresh" button to capture timing.'); };
 

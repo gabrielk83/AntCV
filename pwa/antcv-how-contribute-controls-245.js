@@ -5,7 +5,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.50.193-bullet-break-salmon';
+  const VERSION='1.50.196-bullet-wipe-guard';
   let __applying=false; // v1.50.57: re-entrancy guard so our own DOM writes don't re-trigger the observer/flicker.
   const ALIGN_KEY='antcv.hiwc.alignment.v1';
   const PAGE_KEY='antcv:itemPages';
@@ -31,6 +31,12 @@
   function getAlign(k){const v=readAlign()[k];return ALIGN.includes(v)?v:'left';}
   function setAlign(k,v){const m=readAlign();m[k]=v;writeJson(ALIGN_KEY,m);}
   function nextAlign(v){return ALIGN[(Math.max(0,ALIGN.indexOf(v))+1)%ALIGN.length];}
+  // 1.50.196: a page-cycle never edits bullet TEXT — only page markers. But the
+  // pulse it fires makes the app re-render the HIWC editor, and a stray re-render
+  // sync (momentarily empty/placeholder textarea) was WIPING the bullets when
+  // cycling 4→1. Suppress any bullets write while a page-cycle is in flight.
+  let __pageCycling=false,__pcTimer=null;
+  function markPageCycle(){__pageCycling=true;clearTimeout(__pcTimer);__pcTimer=setTimeout(()=>{__pageCycling=false;},1200);}
   function readPages(){return readJson(PAGE_KEY,{});}
   function getPage(k){const all=readPages();const b=all[sid()]||all.how_i_would_contribute||{};const n=Number(b[k]||1);return Number.isFinite(n)&&n>=1?Math.min(4,Math.max(1,Math.round(n))):1;}
   function setPage(k,n){const all=readPages();const s=sid();if(!all[s]||typeof all[s]!=='object')all[s]={};const nn=Math.min(4,Math.max(1,Math.round(Number(n)||1)));if(nn<=1)delete all[s][k];else all[s][k]=nn;writeJson(PAGE_KEY,all);pulse();}
@@ -168,7 +174,11 @@
     let changed=false;
     if(k==='intro'){const cur=('intro' in s)?s.intro:('introLine' in s?s.introLine:undefined);if(clean(cur)!==clean(v)){if('intro' in s)s.intro=v;else if('introLine' in s)s.introLine=v;else s.intro=v;changed=true;}}
     if(k==='closing'){const cur=('closing' in s)?s.closing:('closingLine' in s?s.closingLine:undefined);if(clean(cur)!==clean(v)){if('closing' in s)s.closing=v;else if('closingLine' in s)s.closingLine=v;else s.closing=v;changed=true;}}
-    if(k==='bullets'){const vals=v.split(/\n+/).map(clean).filter(Boolean);const cur=Array.isArray(s.bullets)?s.bullets:(Array.isArray(s.items)?s.items:[]);
+    if(k==='bullets'){
+      // 1.50.196: never rewrite bullets during a page-cycle (the click only
+      // moves page markers; the re-render it triggers must not touch text).
+      if(__pageCycling) return;
+      const vals=v.split(/\n+/).map(clean).filter(Boolean);const cur=Array.isArray(s.bullets)?s.bullets:(Array.isArray(s.items)?s.items:[]);
       // Owner 2026-06-05 data-loss guard: the native bullets textarea is empty
       // while the section still holds template/real bullets, so a stray sync —
       // e.g. the re-render a page-cycle click triggers — would write bullets:[]
@@ -239,7 +249,7 @@
     let comp=wrap.querySelector('[data-antcv-hiwc-compress]'); if(!comp){comp=makeBtn('compress','↹','Fit',f);wrap.appendChild(comp);}
     let enr=wrap.querySelector('[data-antcv-hiwc-enrich]'); if(!enr){enr=makeBtn('enrich','✨','Enrich',f);wrap.appendChild(enr);}
     let cjlr=wrap.querySelector('[data-antcv-hiwc-cjlr]'); if(!cjlr){cjlr=makeBtn('cjlr','⇤','Alignment',f);wrap.appendChild(cjlr);} paintCJLR(cjlr,getAlign(k));
-    page.onclick=ev=>{ev.preventDefault();ev.stopPropagation();setPage(k,getPage(k)%4+1);paintPage(page,k);applyPreview();};
+    page.onclick=ev=>{ev.preventDefault();ev.stopPropagation();markPageCycle();setPage(k,getPage(k)%4+1);paintPage(page,k);applyPreview();};
     comp.onclick=ev=>{ev.preventDefault();ev.stopPropagation();setVal(f,compressText(getVal(f)));syncSectionField(k,getVal(f));applyPreview();};
     enr.onclick=ev=>{ev.preventDefault();ev.stopPropagation();setVal(f,enrichText(getVal(f)));syncSectionField(k,getVal(f));applyPreview();};
     cjlr.onclick=ev=>{ev.preventDefault();ev.stopPropagation();const n=nextAlign(getAlign(k));setAlign(k,n);paintCJLR(cjlr,n);applyField(f,k);applyPreview();};
@@ -296,9 +306,21 @@
     panel.setAttribute('data-antcv-hiwc-bullet-sig',sig);
     panel.textContent='';
     const rows=bulletRowsFromText(getVal(ta));
+    let __pbRunMax=1; // 1.50.194: mirror the preview's page-break divider in the panel.
     function writeRows(newRows){setVal(ta,newRows.join('\n'));syncSectionField('bullets',newRows.join('\n'));renderBulletControls(r,ta);applyPreview();}
     rows.forEach((txt,idx)=>{
       const key='bullet_'+idx;
+      // 1.50.194: when this bullet starts a new page, drop a light salmon
+      // "▼ PAGE N ▼" separator above its control row — so the panel shows the
+      // same break the preview does, right before the bullet that moved.
+      const __pg=getPage(key);
+      if(__pg>__pbRunMax){
+        const sep=document.createElement('div');sep.setAttribute('data-antcv-hiwc-panel-break','1');
+        Object.assign(sep.style,{display:'flex',alignItems:'center',justifyContent:'center',borderTop:'2px solid rgba(200,40,40,0.6)',background:'rgba(200,40,40,0.06)',margin:'4px 0 2px',padding:'1px 0',width:'100%',boxSizing:'border-box'});
+        const sb=document.createElement('span');sb.textContent='▼ PAGE '+__pg+' ▼';
+        Object.assign(sb.style,{background:'rgba(200,40,40,0.7)',color:'#fff',fontSize:'8px',padding:'1px 8px',borderRadius:'2px',fontFamily:'Arial,sans-serif',letterSpacing:'0.5px',whiteSpace:'nowrap'});
+        sep.appendChild(sb);panel.appendChild(sep);__pbRunMax=__pg;
+      }
       const row=document.createElement('div');row.setAttribute('data-antcv-hiwc-bullet-ctl-row','1');
       // Wrap so the buttons never get clipped on a narrow phone: the label
       // takes the first line (ellipsised), the buttons flow onto the next.
@@ -310,7 +332,7 @@
       const enr=makeBtn('enrich','✨','Enrich bullet '+(idx+1),ta);
       const cjlr=makeBtn('cjlr','⇤','Alignment of bullet '+(idx+1),ta);paintCJLR(cjlr,getAlign(key));
       const del=makeBtn('bullet-delete','×','Delete bullet '+(idx+1),ta);del.style.borderColor='#ff5c5c';del.style.color='#e52b2b';del.style.background='transparent';
-      page.onclick=ev=>{ev.preventDefault();ev.stopPropagation();setPageCascade(idx,getPage(key)%4+1,rows.length);applyPreview();renderBulletControls(r,ta);};
+      page.onclick=ev=>{ev.preventDefault();ev.stopPropagation();markPageCycle();setPageCascade(idx,getPage(key)%4+1,rows.length);applyPreview();renderBulletControls(r,ta);};
       comp.onclick=ev=>{ev.preventDefault();ev.stopPropagation();const rr=bulletRowsFromText(getVal(ta));rr[idx]=compressText(rr[idx]||'');writeRows(rr);};
       enr.onclick=ev=>{ev.preventDefault();ev.stopPropagation();const rr=bulletRowsFromText(getVal(ta));rr[idx]=enrichText(rr[idx]||'');writeRows(rr);};
       cjlr.onclick=ev=>{ev.preventDefault();ev.stopPropagation();const n=nextAlign(getAlign(key));setAlign(key,n);paintCJLR(cjlr,n);applyPreview();renderBulletControls(r,ta);};
@@ -386,7 +408,7 @@
       const enr=makeBtn('enrich','✨','Enrich bullet '+(idx+1),inp);
       const cjlr=makeBtn('cjlr','⇤','Alignment of bullet '+(idx+1),inp);paintCJLR(cjlr,getAlign(key));
       const del=makeBtn('bullet-delete','×','Delete bullet '+(idx+1),inp);del.style.borderColor='#ff5c5c';del.style.color='#e52b2b';del.style.background='transparent';
-      page.onclick=ev=>{ev.preventDefault();ev.stopPropagation();setPage(key,getPage(key)%4+1);paintPage(page,key);applyPreview();};
+      page.onclick=ev=>{ev.preventDefault();ev.stopPropagation();markPageCycle();setPage(key,getPage(key)%4+1);paintPage(page,key);applyPreview();};
       comp.onclick=ev=>{ev.preventDefault();ev.stopPropagation();inp.value=compressText(inp.value);writeAll();applyPreview();};
       enr.onclick=ev=>{ev.preventDefault();ev.stopPropagation();inp.value=enrichText(inp.value);writeAll();applyPreview();};
       cjlr.onclick=ev=>{ev.preventDefault();ev.stopPropagation();const n=nextAlign(getAlign(key));setAlign(key,n);paintCJLR(cjlr,n);applyField(inp,key);applyPreview();};
@@ -446,7 +468,7 @@
       // focus = "not typable"). Sync after a short pause, and on blur.
       inp.oninput=()=>{ noteHiwcFocus(idx,inp); scheduleBulletSync(syncFromInputs); };
       inp.addEventListener('blur',()=>{ flushBulletSync(syncFromInputs); });
-      page.onclick=ev=>{ev.preventDefault();ev.stopPropagation();setPage(key,getPage(key)%4+1);paintPage(page,key);applyPreview();};
+      page.onclick=ev=>{ev.preventDefault();ev.stopPropagation();markPageCycle();setPage(key,getPage(key)%4+1);paintPage(page,key);applyPreview();};
       comp.onclick=ev=>{ev.preventDefault();ev.stopPropagation();inp.value=compressText(inp.value);dispatchInput(inp);syncFromInputs();applyPreview();};
       enr.onclick=ev=>{ev.preventDefault();ev.stopPropagation();inp.value=enrichText(inp.value);dispatchInput(inp);syncFromInputs();applyPreview();};
       cjlr.onclick=ev=>{ev.preventDefault();ev.stopPropagation();const n=nextAlign(getAlign(key));setAlign(key,n);paintCJLR(cjlr,n);applyField(inp,key);applyPreview();};
@@ -497,17 +519,24 @@
   // (matching the CV experience splitter the owner wants back) ABOVE the teal
   // "(CONT.)" continuation header, as one block inserted before the bullet that
   // starts the new page.
-  function makeBreakHeader(pageN){
+  // Just the light salmon "▼ PAGE N ▼" bar (used when the WHOLE section moves —
+  // the section's own heading is the page-N header, so no "(CONT.)" line).
+  function makeSalmonBar(pageN){
     const wrap=document.createElement('div');wrap.setAttribute('data-antcv-hiwc-page-break','1');
     wrap.style.breakBefore='page';wrap.style.pageBreakBefore='always';
     const bar=document.createElement('div');
     bar.style.cssText='border-top:3px solid rgba(200,40,40,0.6);margin:12px 0 4px;display:flex;align-items:center;justify-content:center;background:rgba(200,40,40,0.06);padding:3px 0;width:100%;box-sizing:border-box';
     const badge=document.createElement('span');
     badge.style.cssText='background:rgba(200,40,40,0.7);color:#fff;font-size:8px;padding:2px 10px;border-radius:2px;font-family:Arial,sans-serif;letter-spacing:0.5px;white-space:nowrap';
-    badge.textContent='▼ PAGE '+(pageN||2)+' ▼';bar.appendChild(badge);
+    badge.textContent='▼ PAGE '+(pageN||2)+' ▼';bar.appendChild(badge);return wrap;
+  }
+  // Salmon bar + teal "(CONT.)" header — used for a mid-section break (a bullet
+  // or the closing starts the new page while the heading stays on page 1).
+  function makeBreakHeader(pageN){
+    const wrap=makeSalmonBar(pageN);
     const hd=document.createElement('div');hd.textContent='HOW I WOULD CONTRIBUTE (CONT.)';
     hd.style.cssText='color:#00746E;font-weight:700;font-size:12pt;margin-top:4pt;margin-bottom:8pt;border-bottom:1pt solid #00746E;padding-bottom:2pt';
-    wrap.appendChild(bar);wrap.appendChild(hd);return wrap;
+    wrap.appendChild(hd);return wrap;
   }
 
   function currentBulletValues(){const s=sec();const b=s&&(Array.isArray(s.bullets)?s.bullets:Array.isArray(s.items)?s.items:[]);return (b||[]).map(clean).filter(Boolean);}
@@ -533,10 +562,21 @@
     (p.bullets||[]).forEach((el,idx)=>{ if(el) ordered.push(['bullet_'+idx,el]); });
     if(p.closing) ordered.push(['closing',p.closing]);
     let runMax=1;
-    ordered.forEach(([k,el])=>{
+    ordered.forEach(([k,el],i)=>{
       const a=getAlign(k); el.style.textAlign=a; Array.from(el.querySelectorAll('span,div,p')).forEach(x=>x.style.textAlign=a);
       const pg=getPage(k);
-      if(pg>runMax){ if(el.parentNode) el.parentNode.insertBefore(makeBreakHeader(pg),el); runMax=pg; }
+      if(pg>runMax){
+        if(i===0){
+          // 1.50.195: a break on the FIRST part (the intro) moves the WHOLE
+          // HIWC section — insert the salmon bar at the very top of the section
+          // (before its heading) with NO "(CONT.)" header, so the heading and
+          // everything after it ride to the next page together.
+          if(s.firstChild) s.insertBefore(makeSalmonBar(pg),s.firstChild); else s.appendChild(makeSalmonBar(pg));
+        } else if(el.parentNode){
+          el.parentNode.insertBefore(makeBreakHeader(pg),el);
+        }
+        runMax=pg;
+      }
     });
     } finally { __applying=false; }
   }

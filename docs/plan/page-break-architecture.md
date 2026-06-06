@@ -53,10 +53,17 @@ The editor **panel** keeps its own salmon chip (already working) by reading the 
 
 ## 3. Per‑object‑type
 
-### 3a. Single‑content section — WHO I AM, WHY THIS POSITION, OPENING, CLOSURE, work_style
+### Universal rule (applies to every multi-item type below)
+**Breaking item index 0 moves the WHOLE section** (heading + everything), no `(CONT.)` — the
+section's own heading is the page‑N header. Breaking item `i>0` is a mid‑section break (that item
++ the rest, with a `<TITLE> (CONT.)` header). The `renderWithBreaks` contract (§2) encodes this
+with the `i===0` branch, so it holds for HIWC, foundation, lists, tables and sidebar groups alike.
+
+### 3a. Single‑content section — CL: WHO I AM, WHY THIS POSITION, OPENING, CLOSURE, work_style · **CV: PROFILE, WORK STYLE** (and any one‑text‑chunk section in either column)
 Item set = `["0"]` (the section is one unit). Page button lives on the **subsection level**.
 Press → `itemPages[sec]["0"]=N` → whole section (heading + body) moves; cascade carries every
-**following** section to ≥N.
+**following** section to ≥N. The CV single objects (PROFILE, WORK STYLE) use this exact path —
+they are not special‑cased.
 
 ```
  page 1                         page 2
@@ -112,9 +119,25 @@ Items = data rows `1..N` (`row 0` = column header). Reuses the existing `e.pageB
 CV Core Competencies = an **independent** copy of this renderer keyed to its own section id +
 its own `pageBreakRows`. The two never share state or code paths.
 
-### 3e. Sidebar subsection groups
-Each `{group:"…"}` divider starts a group; a group = one breakable unit (item key = the group
-index). Same `renderWithBreaks` contract, rendered by the sidebar renderer.
+### 3e. Bullet-only / list sections — sidebar **and** main (no intro)
+SELECTED OUTCOMES (CV main), ADDITIONAL INFORMATION, CERTIFICATIONS, EDUCATION, PUBLICATIONS,
+TOOLS — wherever the section is **just a list of items with no intro line**. Items =
+`bullet_0 … bullet_N` (the list entries). Conceptually **identical to HIWC, minus the intro** —
+so there is nothing "above" the first bullet inside the section, which means:
+- **first bullet (index 0)** break → the **entire subsection moves** (heading + every entry),
+  no `(CONT.)`.
+- **bullet k>0** break → mid‑section: salmon + `<TITLE> (CONT.)` + the remaining entries.
+This is the universal rule (§3 top) with `item 0 = first list entry`.
+
+### 3f. Sidebar grouped sections — REGULATORY CONTEXT, METHODS, … (`{group:"…"}` dividers)
+A `{group:"…"}` divider opens a group; **a group + all its rows until the next divider = one
+breakable unit** (item key = the group's start index). So:
+- **first group** break → the **entire subsection moves** (its heading + every group below it) —
+  e.g. moving the first Regulatory‑Context group carries the whole REGULATORY CONTEXT section,
+  all its sub‑groups and rows, to the next page.
+- a **later group** break → salmon + `<TITLE> (CONT.)` then that group and everything after it.
+Same `renderWithBreaks` contract; the sidebar renderer supplies the group boundaries as the
+`orderedItems`.
 
 ## 4. Manual break → real PDF/DOCX page break
 - **Preview**: the `break-before:page` div already triggers `window.print()`/PDF pagination; the

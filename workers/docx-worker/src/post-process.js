@@ -164,25 +164,36 @@ export function postProcessDocx(input, opts = {}) {
         '<w10:wrap anchorx="margin" anchory="margin"/>' +
         '</v:shape>' +
         '</w:pict></w:r>';
-      // Insert immediately after the first <w:body> opening tag, inside
-      // a new <w:p> wrapper so Word's body-paragraph rule is satisfied.
-      const bodyOpenIdx = xml.indexOf('<w:body>');
-      if (bodyOpenIdx >= 0) {
-        const after = bodyOpenIdx + '<w:body>'.length;
-        xml = xml.slice(0, after) + '<w:p>' + watermarkRun + '</w:p>' + xml.slice(after);
-        watermarked = true;
-        // Microsoft Word (unlike LibreOffice/CloudConvert, which renders the PDF)
-        // silently DROPS the VML watermark unless the VML namespaces are declared
-        // on the <w:document> root. The packer does not declare xmlns:v/o/w10, so
-        // the DEMO mark showed only in the PDF, not in Word. Ensure them here.
-        xml = xml.replace(/<w:document\b[^>]*>/, (tag) => {
-          let t = tag;
-          if (!/\bxmlns:v=/.test(t)) t = t.replace(/>$/, ' xmlns:v="urn:schemas-microsoft-com:vml">');
-          if (!/\bxmlns:o=/.test(t)) t = t.replace(/>$/, ' xmlns:o="urn:schemas-microsoft-com:office:office">');
-          if (!/\bxmlns:w10=/.test(t)) t = t.replace(/>$/, ' xmlns:w10="urn:schemas-microsoft-com:office:word">');
-          return t;
-        });
+      // 1.14.20: HEADER-based Word watermark (the standard, robust approach). The
+      // VML WordArt run lives in a HEADER part and floats over every page. Renders
+      // in Word, LibreOffice (PDF) and Google Docs, and adds NO body paragraph —
+      // the old body-paragraph insertion squished the cover-letter layout once
+      // demo_mode came on.
+      const headerXml =
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+        '<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w10="urn:schemas-microsoft-com:office:word">' +
+        '<w:p>' + watermarkRun + '</w:p></w:hdr>';
+      files['word/header1.xml'] = strToU8(headerXml);
+      const relsName = 'word/_rels/document.xml.rels';
+      let rels = files[relsName] ? strFromU8(files[relsName]) : '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';
+      let maxRid = 0;
+      rels.replace(/Id="rId(\d+)"/g, (m0, n) => { const k = parseInt(n, 10); if (k > maxRid) maxRid = k; return m0; });
+      const rid = 'rId' + (maxRid + 1);
+      if (rels.indexOf('Target="header1.xml"') < 0) {
+        rels = rels.replace('</Relationships>', '<Relationship Id="' + rid + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/></Relationships>');
+        files[relsName] = strToU8(rels);
       }
+      if (files['[Content_Types].xml']) {
+        let ct = strFromU8(files['[Content_Types].xml']);
+        if (ct.indexOf('/word/header1.xml') < 0) {
+          ct = ct.replace('</Types>', '<Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/></Types>');
+          files['[Content_Types].xml'] = strToU8(ct);
+        }
+      }
+      if (xml.indexOf('w:headerReference') < 0) {
+        xml = xml.replace(/<w:sectPr(\s[^>]*)?>/g, (m0) => m0 + '<w:headerReference w:type="default" r:id="' + rid + '"/>');
+      }
+      watermarked = true;
     }
 
     if (placeholderResult.count > 0 || photoResult.count > 0 || watermarked) {

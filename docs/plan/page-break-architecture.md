@@ -188,14 +188,22 @@ mark each auto break with a salmon "▼ PAGE n (auto) ▼" in the preview
  p3: [EXPERIENCE — whole block]              p2: ░▼ PAGE 2 (auto) ▼░ [experience r4..r6]
 ```
 
-## 6. Build order (each shipped + verified before the next)
-1. `text_bullets` (HIWC) native render — makes the preview salmon real/permanent.
-2. Tables (WHAT I BRING, then CORE COMPETENCIES as a separate renderer).
-3. Single‑content sections (whole‑section move + cascade).
-4. Foundation (two parts).
-5. Sidebar groups.
-6. Manual → DOCX/PDF export wiring.
-7. Auto‑overflow detection + salmon "(auto)".
+## 6. Build order — TWO checkpoints (minimum)
+Everything in the preview shares the one `renderWithBreaks` contract, so it all lands together —
+no per‑type checkups.
 
-Each step is an `app.js`/`app.src.js` render change behind the 1.50.185 React‑DOM guard, verified
-on device before moving on — never all at once.
+**Checkpoint 1 — Preview, all types at once.** Shared `renderWithBreaks` + the `itemPages`
+model + the unified page-button behaviour, applied in `app.js` to *every* type in one pass:
+single-content (CL+CV), HIWC, foundation, bullet-only lists (sidebar+main), grouped sidebar
+sections, and the two tables (separate renderers). Sidecar preview-injection retired. → You look
+at the preview once: salmon + `(CONT.)` land correctly across types, panel matches, nothing
+blue-screens.
+
+**Checkpoint 2 — Export + auto-overflow.** (a) Feed the same model to `docx-worker`/PDF so manual
+breaks become real page breaks; (b) auto-overflow detection (fine-grained, no blank pages) with
+salmon "(auto)". → You look once: export paginates correctly and long content auto-breaks.
+
+Why not one: preview (React/DOM) and export (docx-worker) are different surfaces, and auto-overflow
+needs the preview render to exist first; collapsing them into one blind drop is the maximal
+blue-screen risk on `app.js`. Two is the safe minimum. Each checkpoint is behind the 1.50.185
+React-DOM guard.

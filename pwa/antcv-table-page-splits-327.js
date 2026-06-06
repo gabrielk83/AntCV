@@ -7,7 +7,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.40.341-p0b';
+  const VERSION='1.50.203-native-render-retired';
   if(window.__antcvTablePageSplits324===VERSION) return;
   window.__antcvTablePageSplits324=VERSION;
   const PAGE_KEY='antcv:itemPages';
@@ -36,6 +36,13 @@
     if(src){tr.innerHTML=src.innerHTML;Array.from(tr.children).forEach(c=>{c.style.fontWeight='700';});}
     else{const th=document.createElement('th');th.colSpan=2;th.textContent='Continued';tr.appendChild(th);}return tr;}
   function apply(sec){
+    // 1.50.203: table page splits are now rendered NATIVELY in app.js (React) — the
+    // table renderer reads the SAME antcv:itemPages model and emits a salmon bar +
+    // "(Cont.)" heading + a SEPARATE <table> with a repeated header per segment.
+    // Sidecar DOM injection corrupted that (cloned-header rows inside the one table,
+    // multiple headings, React reconciling the salmon away). run() already swept our
+    // markers before calling apply(); just bail so there is no double render.
+    return;
     const sid=sec.getAttribute('data-sid'); if(!sid)return;
     const map=pageMap(sid); if(!Object.keys(map).length)return;
     const table=sec.querySelector('table'); if(!table)return;

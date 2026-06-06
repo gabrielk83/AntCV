@@ -4117,8 +4117,17 @@
                   }),
                 ),
               );
+          // A data row i (1-based over the full rows incl. header at 0) starts a new
+          // table segment if it carries EITHER break model: e.pageBreakRows[i] (the
+          // app.js "↧" editor button) OR antcv:itemPages[sid][i] >= 2 (the per-row 📄
+          // sidecar button — what-i-bring-row-controls / core-competencies-row-controls).
+          // Both tables read this shared primitive; their render branches stay separate.
+          const __tblBucket = __antcvPB(e.id);
           let _antcvPbStarts = [1];
-          for (let i = 2; i < rows.length; i++) bb[i] && _antcvPbStarts.push(i);
+          for (let i = 2; i < rows.length; i++) {
+            const __ip = parseInt(__tblBucket[String(i)], 10);
+            if (bb[i] || __ip >= 2) _antcvPbStarts.push(i);
+          }
           _antcvPbStarts = [...new Set(_antcvPbStarts)].filter(
             (e) => e > 0 && e < rows.length,
           );

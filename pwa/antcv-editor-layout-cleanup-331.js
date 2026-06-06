@@ -8,7 +8,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.50.192-foundation-flow';
+  const VERSION='1.50.200-foundation-stabilize';
   if(window.__antcvEditorLayoutCleanup331===VERSION) return;
   window.__antcvEditorLayoutCleanup331=VERSION;
 
@@ -188,21 +188,15 @@
   function syncFoundationPages(){
     try{
       const all=ipRead();const before=JSON.stringify(all);const fId=foundationSid();
-      const st=foundationState();const floor=foundationFloor();
-      const own0=Math.min(4,Math.max(Number(st.hands_on.page)||1,1));
-      const own1=Math.min(4,Math.max(Number(st.professionally.page)||1,1));
-      if(!all[fId]||typeof all[fId]!=='object')all[fId]={};
-      // 1.50.192: draw a FOUNDATION bar ONLY when the user pushed a part ABOVE
-      // the inherited floor. At/under the floor it just flows on that page (the
-      // single break above already carried it there) — no redundant bar, and no
-      // tagging of the sections after foundation (they flow too).
-      if(own0>floor)all[fId]['0']=own0;else delete all[fId]['0'];
-      const floor1=Math.max(floor,own0);
-      if(own1>floor1)all[fId]['1']=own1;else delete all[fId]['1'];
-      if(!Object.keys(all[fId]).length)delete all[fId];
-      // 1.50.192: sections AFTER foundation (CLOSURE, …) have no page control
-      // and just flow — strip any stale section-level ['0'] markers left by the
-      // reverted Step-1 cascade so they don't draw a redundant bar.
+      // 1.50.200 STABILIZE: the sidecar-injected foundation break (284) produced
+      // garbage — multiple "▼ PAGE N ▼", "SECTION (CONT.)", and duplicate
+      // FOUNDATION headings — because 284 mis-counts foundation's heading/divider
+      // as item rows, and React reconciles the injected bars. Until foundation's
+      // break is rendered NATIVELY in app.js (the only place it can persist), do
+      // NOT feed 284 any foundation markers: clear them so foundation flows
+      // cleanly after the content above it. (Foundation page buttons are inert
+      // for now; the native render is the proper fix.)
+      if(all[fId]&&typeof all[fId]==='object'){delete all[fId]['0'];delete all[fId]['1'];if(!Object.keys(all[fId]).length)delete all[fId];}
       let after=false;
       for(const so of clSecs()){if(!so||!so.id)continue;const id=String(so.id);if(id===fId){after=true;continue;}if(!after)continue;if(all[id]&&typeof all[id]==='object'&&all[id]['0']!==undefined){delete all[id]['0'];if(!Object.keys(all[id]).length)delete all[id];}}
       if(JSON.stringify(all)!==before){write(ITEMPAGES_KEY,all);pulse('foundation-cascade');}

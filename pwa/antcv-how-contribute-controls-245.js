@@ -5,7 +5,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.50.189-section-cascade';
+  const VERSION='1.50.192-flow-cascade';
   let __applying=false; // v1.50.57: re-entrancy guard so our own DOM writes don't re-trigger the observer/flicker.
   const ALIGN_KEY='antcv.hiwc.alignment.v1';
   const PAGE_KEY='antcv:itemPages';
@@ -60,7 +60,13 @@
       }
     }catch(_){}
   }
-  function setPageCascade(fromIdx,n,rowCount){const all=readPages();const s=sid();if(!all[s]||typeof all[s]!=='object')all[s]={};const nn=Math.min(4,Math.max(1,Math.round(Number(n)||1)));for(let j=fromIdx;j<rowCount;j++){const k='bullet_'+j;if(nn<=1)delete all[s][k];else all[s][k]=nn;}if(nn<=1)delete all[s].closing;else all[s].closing=nn;cascadeFollowingSections(all,maxHiwcPage(all[s]));writeJson(PAGE_KEY,all);pulse();}
+  function setPageCascade(fromIdx,n,rowCount){const all=readPages();const s=sid();if(!all[s]||typeof all[s]!=='object')all[s]={};const nn=Math.min(4,Math.max(1,Math.round(Number(n)||1)));for(let j=fromIdx;j<rowCount;j++){const k='bullet_'+j;if(nn<=1)delete all[s][k];else all[s][k]=nn;}if(nn<=1)delete all[s].closing;else all[s].closing=nn;writeJson(PAGE_KEY,all);pulse();}
+  // 1.50.192: cross-section cascade-tagging REVERTED. In the continuous preview
+  // one break at the broken bullet already flows the whole tail (closing,
+  // FOUNDATION, CLOSURE …) onto the next page; tagging each following section
+  // with its OWN break produced a redundant second "▼ PAGE N ▼" bar before
+  // FOUNDATION. Following sections now just flow; FOUNDATION only draws its own
+  // bar when the user pushes it ABOVE the inherited floor (see 331).
 
   function injectCss(){
     if(document.getElementById('antcv-hiwc-245-css'))return;

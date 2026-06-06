@@ -8,7 +8,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.50.191-foundation-cascade';
+  const VERSION='1.50.192-foundation-flow';
   if(window.__antcvEditorLayoutCleanup331===VERSION) return;
   window.__antcvEditorLayoutCleanup331=VERSION;
 
@@ -188,13 +188,18 @@
   function syncFoundationPages(){
     try{
       const all=ipRead();const before=JSON.stringify(all);const fId=foundationSid();
-      const e0=fEff('hands_on'),e1=fEff('professionally');
+      const st=foundationState();const floor=foundationFloor();
+      const own0=Math.min(4,Math.max(Number(st.hands_on.page)||1,1));
+      const own1=Math.min(4,Math.max(Number(st.professionally.page)||1,1));
       if(!all[fId]||typeof all[fId]!=='object')all[fId]={};
-      if(e0>1)all[fId]['0']=e0;else delete all[fId]['0'];
-      if(e1>1)all[fId]['1']=e1;else delete all[fId]['1'];
+      // 1.50.192: draw a FOUNDATION bar ONLY when the user pushed a part ABOVE
+      // the inherited floor. At/under the floor it just flows on that page (the
+      // single break above already carried it there) — no redundant bar, and no
+      // tagging of the sections after foundation (they flow too).
+      if(own0>floor)all[fId]['0']=own0;else delete all[fId]['0'];
+      const floor1=Math.max(floor,own0);
+      if(own1>floor1)all[fId]['1']=own1;else delete all[fId]['1'];
       if(!Object.keys(all[fId]).length)delete all[fId];
-      let after=false;const tail=Math.max(e0,e1);
-      for(const so of clSecs()){if(!so||!so.id)continue;const id=String(so.id);if(id===fId){after=true;continue;}if(!after)continue;if(!all[id]||typeof all[id]!=='object')all[id]={};const e=Math.max(Number(all[id]['0'])||1,tail);if(e>1)all[id]['0']=e;else{delete all[id]['0'];if(!Object.keys(all[id]).length)delete all[id];}}
       if(JSON.stringify(all)!==before){write(ITEMPAGES_KEY,all);pulse('foundation-cascade');}
     }catch(_){}
   }

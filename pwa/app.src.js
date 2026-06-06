@@ -25364,7 +25364,7 @@
                     "div",
                     {
                       key: e,
-                      onClick: () => (e === r ? In(2) : a(e)),
+                      onClick: () => (e === r && "custom" !== e ? In(2) : a(e)),
                       style: {
                         padding: 12,
                         background:
@@ -25595,18 +25595,19 @@
                       key: e,
                       onClick: () => {
                         a(e),
-                          window.AntcvWizardLanguageSlide339 &&
-                          window.AntcvWizardLanguageSlide339._show
-                            ? window.AntcvWizardLanguageSlide339._show(
-                                () => {
-                                  In(0), xn(6);
-                                },
-                                () => {
-                                  In(0), xn(6);
-                                },
-                                () => In(2),
-                              )
-                            : (In(0), xn(6));
+                          "custom" !== e &&
+                            (window.AntcvWizardLanguageSlide339 &&
+                            window.AntcvWizardLanguageSlide339._show
+                              ? window.AntcvWizardLanguageSlide339._show(
+                                  () => {
+                                    In(0), xn(6);
+                                  },
+                                  () => {
+                                    In(0), xn(6);
+                                  },
+                                  () => In(2),
+                                )
+                              : (In(0), xn(6)));
                       },
                       style: {
                         padding: 12,

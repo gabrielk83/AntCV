@@ -452,7 +452,7 @@ export async function generateDocx(payload) {
   try {
     /* v1.12: pass watermark from payload through to post-processor. The
        PWA sets watermark="DEMO" when /config reports demo_mode=true. */
-    const result = postProcessDocx(raw, { watermark: payload.watermark || '' });
+    const result = postProcessDocx(raw, { watermark: payload.watermark || '', headerBg: (style && style.headerBg) || '' });
     buffer = result.buffer;
     replacements = result.replacements || 0;
 
@@ -1066,7 +1066,9 @@ function buildHeaderCell(ctx) {
   if (pi.name) {
     out.push(new Paragraph({
       alignment: alignType(headerAlign.name),
-      spacing: { before: 60, after: 40, line: 240, lineRule: 'exact' },
+      // 1.14.25: top space removed (was before:60) — the running header now
+      // provides the coloured top strip, so the name sits flush at the band top.
+      spacing: { before: 0, after: 40, line: 240, lineRule: 'exact' },
       shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: 'auto' },
       children: [
         new TextRun({
@@ -1462,6 +1464,20 @@ function renderSection(s, ctx, isSidebar) {
   // an empty body cell, which is exactly the failure the user
   // reported (heading appears in Word even when nothing's there).
   if (body.length === 0) return [];
+
+  // 1.14.25: the cover letter is a single full-width linear doc. Wrapping each
+  // titled section in the heading-repetition table (below) nests it THREE deep
+  // (competency/foundation table → wrapper → body table); Word AND Google Docs
+  // mis-compute widths for triple-nested tables and shrink the inner content to
+  // ~80% even though the emitted gridCol is full-width. The CV needs the wrapper
+  // (sidebar/main columns), but the CL does not — emit the heading + body
+  // directly into the full-width body cell, exactly like the untitled CL
+  // paragraphs (greeting/opening/closure), so titled sections match them. CL
+  // continuation headings are handled by renderCompetencyTable's own chunking
+  // and the jd_questions page-2 re-emit, so no repetition is lost in practice.
+  if (ctx && ctx.doc === 'cl') {
+    return [...pageBreakPara, headingParagraph(s.title, ctx, false), ...body];
+  }
 
   // ──────────────────────────────────────────────────────────────────
   // Heading repetition across page breaks:

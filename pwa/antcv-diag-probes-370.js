@@ -15,7 +15,7 @@
  */
 (function () {
   'use strict';
-  var V = '1.50.171-370';
+  var V = '1.50.174-370';
   if (window.__antcvDiagProbes === V) return;
   window.__antcvDiagProbes = V;
 
@@ -72,6 +72,9 @@
         looksLikeTemplatePlaceholder: contribute ? /\[[A-Z][^\]]{2,}\]/.test(JSON.stringify(contribute)) : null,
       };
       log('HOWCONTRIBUTE-001', report);
+      // Full stored shape (untruncated by the console object collapse) so we can
+      // see whether the placeholder items were scrubbed to [] or never stored.
+      log('HOWCONTRIBUTE-001 raw', contribute ? JSON.stringify(contribute).slice(0, 900) : 'n/a');
     } catch (e) { log('HOWCONTRIBUTE-001 probe error', e && e.message); }
   }
 
@@ -177,6 +180,26 @@
         }, 6000);
       } catch (e) { log('HARDREFRESH-001 click probe error', e && e.message); }
     }, true);
+  } catch (_) {}
+
+  // ---- SETTINGS-SUBTAB-001 auto-capture ---------------------------------
+  // The owner ran the snapshot with Settings closed (panel not found). Watch for
+  // a Settings panel appearing and auto-run probeSettings the moment it opens.
+  try {
+    var lastSettingsRun = 0;
+    new MutationObserver(function () {
+      var now = Date.now();
+      if (now - lastSettingsRun < 800) return;
+      var hit = false, divs = document.querySelectorAll('div');
+      for (var i = 0; i < divs.length; i++) {
+        var t = divs[i].textContent || '';
+        if (/\bSettings\b/.test(t) && /\bAdvanced\b/.test(t) && /\bStandard\b/.test(t)) {
+          var cs = window.getComputedStyle(divs[i]);
+          if (cs.position === 'fixed' || cs.position === 'absolute') { hit = true; break; }
+        }
+      }
+      if (hit) { lastSettingsRun = now; log('SETTINGS-SUBTAB-001 panel opened — auto-probe:'); probeSettings(); }
+    }).observe(document.body || document.documentElement, { childList: true, subtree: true });
   } catch (_) {}
 
   // ---- dump-all + auto snapshot -----------------------------------------

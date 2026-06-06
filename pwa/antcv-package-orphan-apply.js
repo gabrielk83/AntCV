@@ -31,7 +31,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.164';
+  var VERSION = '1.50.172-yield-to-user';
   if (window.__antcvPackageOrphanApply === VERSION) return;
   window.__antcvPackageOrphanApply = VERSION;
 
@@ -86,9 +86,44 @@
   var clicks = 0;
   var MAX = 6;
   var lastClick = 0;
+  var selfClicking = false;   // true only while WE synthesize a click
+  var userOverride = false;   // set once the USER picks any package -> we yield
+
+  // The orphan migration must NEVER fight a deliberate user choice. The moment
+  // the user clicks a package button themselves, stop auto-applying for the rest
+  // of the session (otherwise the MutationObserver re-detects the orphan id that
+  // app.js still stores and reverts the pick back to Copenhagen — the "have to
+  // click several times" bug). The deeper persistence fix is APPJS-ID-SCHEME-UNIFY.
+  function isPackageButton(el) {
+    try {
+      var node = el, hops = 0;
+      while (node && hops < 4) {
+        if (node.tagName === 'BUTTON' || (node.getAttribute && node.getAttribute('role') === 'button')) {
+          var t = (node.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
+          if (t && t.length <= 140) {
+            for (var id in DISPLAY) {
+              if (DISPLAY.hasOwnProperty(id) && t.indexOf(DISPLAY[id].toLowerCase()) >= 0) return true;
+            }
+          }
+          return false;
+        }
+        node = node.parentElement; hops++;
+      }
+    } catch (_) {}
+    return false;
+  }
+  try {
+    document.addEventListener('click', function (ev) {
+      if (selfClicking) return;            // ignore our own synthetic clicks
+      if (isPackageButton(ev.target)) {
+        userOverride = true;
+        try { console.info('[package-orphan-apply] user picked a package — yielding (no more auto-apply)'); } catch (_) {}
+      }
+    }, true);
+  } catch (_) {}
 
   function attempt() {
-    if (disabled()) return;
+    if (disabled() || userOverride) return;
     if (!isOrphan()) return;            // clean / custom / nothing stored -> done
     if (clicks >= MAX) return;
     var now = Date.now();
@@ -96,10 +131,12 @@
     var btn = findPackageButton(DISPLAY[TARGET]);
     if (!btn) return;                   // buttons not rendered yet (Settings closed)
     try {
+      selfClicking = true;
       btn.click();
+      selfClicking = false;
       clicks++; lastClick = now;
       try { console.info('[package-orphan-apply] orphan stylePackage detected; applied ' + TARGET + ' (click ' + clicks + ')'); } catch (_) {}
-    } catch (_) {}
+    } catch (_) { selfClicking = false; }
   }
 
   var pending = false;

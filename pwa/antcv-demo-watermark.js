@@ -17,12 +17,13 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.159';
+  var VERSION = '1.50.173-cl-overlay';
   if (window.__antcvDemoWatermark === VERSION) return;
   window.__antcvDemoWatermark = VERSION;
 
   var CSS_ID = 'antcv-demo-watermark-css';
   var ATTR = 'data-antcv-demo-wm';
+  var OVERLAY_CLASS = 'antcv-demo-wm-overlay';
   // Cache the PROMISE (not a flag) so every caller — including ones that fire
   // while the /config fetch is still in flight — awaits the same resolution
   // and gets the final value. A plain "resolving" flag returned a stale null
@@ -53,13 +54,16 @@
     if (document.getElementById(CSS_ID)) return;
     var s = document.createElement('style');
     s.id = CSS_ID;
-    // Tiled, faint, rotated "DEMO" so it covers the whole page (incl. long
-    // multi-page papers) without obscuring the content. pointer-events:none
-    // keeps the preview fully editable beneath it.
+    // 1.50.173: paint the DEMO tiling onto a REAL appended overlay child rather
+    // than a ::after pseudo-element. On the cover letter the single full-bleed
+    // white letter body painted over the ::after (z-index:6), so the watermark
+    // was invisible in the CL preview. A real last child with a high z-index
+    // and pointer-events:none reliably stacks above the content (same approach
+    // the AI-disclosure sidecar uses, which DOES show on the CL). Tiled, faint,
+    // rotated, non-interactive so the preview stays editable beneath it.
     s.textContent =
       '.antcv-preview-paper[' + ATTR + '="1"]{position:relative;}' +
-      '.antcv-preview-paper[' + ATTR + '="1"]::after{content:"";position:absolute;inset:0;' +
-      'pointer-events:none;z-index:6;' +
+      '.' + OVERLAY_CLASS + '{position:absolute;inset:0;pointer-events:none;z-index:50;' +
       "background-image:url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='200'><text x='150' y='110' font-family='Arial,sans-serif' font-size='44' font-weight='800' fill='rgba(220,50,50,0.10)' text-anchor='middle' transform='rotate(-30 150 100)'>DEMO</text></svg>\");" +
       'background-repeat:repeat;}';
     (document.head || document.documentElement).appendChild(s);
@@ -68,8 +72,32 @@
   function apply(on) {
     var papers = document.querySelectorAll('.antcv-preview-paper, [data-antcv-preview-paper]');
     for (var i = 0; i < papers.length; i++) {
-      if (on) papers[i].setAttribute(ATTR, '1');
-      else papers[i].removeAttribute(ATTR);
+      var p = papers[i];
+      if (on) {
+        p.setAttribute(ATTR, '1');
+        // Ensure the paper is a positioning context for the absolute overlay.
+        try {
+          var cs = window.getComputedStyle ? window.getComputedStyle(p) : null;
+          if (cs && cs.position === 'static') p.style.position = 'relative';
+        } catch (_) {}
+        // Append exactly one overlay child (idempotent). querySelector with a
+        // direct-child guard so nested papers don't share one.
+        var existing = null;
+        for (var c = 0; c < p.children.length; c++) {
+          if (p.children[c].classList && p.children[c].classList.contains(OVERLAY_CLASS)) { existing = p.children[c]; break; }
+        }
+        if (!existing) {
+          var ov = document.createElement('div');
+          ov.className = OVERLAY_CLASS;
+          ov.setAttribute('aria-hidden', 'true');
+          p.appendChild(ov);
+        }
+      } else {
+        p.removeAttribute(ATTR);
+        for (var d = p.children.length - 1; d >= 0; d--) {
+          if (p.children[d].classList && p.children[d].classList.contains(OVERLAY_CLASS)) p.removeChild(p.children[d]);
+        }
+      }
     }
   }
 

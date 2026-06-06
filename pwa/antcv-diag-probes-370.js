@@ -15,7 +15,7 @@
  */
 (function () {
   'use strict';
-  var V = '1.50.178-370';
+  var V = '1.50.181-370';
   if (window.__antcvDiagProbes === V) return;
   window.__antcvDiagProbes = V;
 
@@ -136,11 +136,30 @@
     bootObs.observe(document.documentElement, { childList: true, subtree: true });
     setTimeout(function () { try { bootObs.disconnect(); } catch (_) {} }, 8000);
   } catch (_) {}
-  // Log any error during first paint (the blue-screen window).
+  // CRASH CAPTURE (1.50.181): a blue screen is a React render crash caught by the
+  // error boundary — it doesn't surface as an uncaught window error, React logs it
+  // via console.error. Capture uncaught errors, promise rejections, AND error-like
+  // console.error args, re-logged loudly as [antcv-diag] CRASH so the owner can find
+  // and paste the message + stack after reproducing the blue screen.
   try {
     window.addEventListener('error', function (e) {
-      if (performance.now() < 10000) log('LOGIN-GATE-001 boot ERROR', (e && e.message) || e, e && e.filename, e && e.lineno);
+      log('CRASH (window.error):', (e && e.message) || e, '@', (e && e.filename) || '', (e && e.lineno) || '',
+        (e && e.error && e.error.stack) ? String(e.error.stack).slice(0, 500) : '');
     }, true);
+    window.addEventListener('unhandledrejection', function (e) {
+      var r = e && e.reason;
+      log('CRASH (rejection):', (r && r.message) || r, (r && r.stack) ? String(r.stack).slice(0, 500) : '');
+    });
+    var _ce = console.error;
+    console.error = function () {
+      try {
+        for (var i = 0; i < arguments.length; i++) {
+          var a = arguments[i];
+          if (a && a.stack && a.message) { log('CRASH (react):', a.message, String(a.stack).slice(0, 500)); break; }
+        }
+      } catch (_) {}
+      return _ce.apply(console, arguments);
+    };
   } catch (_) {}
 
   // ---- HARDREFRESH-001 ---------------------------------------------------

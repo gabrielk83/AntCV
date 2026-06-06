@@ -23855,7 +23855,7 @@ function postProcessDocx(input, opts = {}) {
       const headerXml =
         '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
         '<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w10="urn:schemas-microsoft-com:office:word">' +
-        '<w:p><w:pPr>' + (headerBgHex ? '<w:shd w:val="clear" w:color="auto" w:fill="' + headerBgHex + '"/>' : '') + '<w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="exact"/></w:pPr>' + watermarkRun + '</w:p></w:hdr>';
+        '<w:p><w:pPr>' + (headerBgHex ? '<w:shd w:val="clear" w:color="auto" w:fill="' + headerBgHex + '"/>' : '') + '<w:spacing w:before="0" w:after="0" w:line="40" w:lineRule="exact"/></w:pPr>' + watermarkRun + '</w:p></w:hdr>';
       files["word/header1.xml"] = strToU8(headerXml);
       // Relationship (choose a non-colliding rId).
       const relsName = "word/_rels/document.xml.rels";
@@ -24807,9 +24807,10 @@ function buildHeaderCell(ctx) {
   if (pi.name) {
     out.push(new Paragraph({
       alignment: alignType(headerAlign.name),
-      // 1.14.25: top space removed (was before:60) — the running header now
-      // provides the coloured top strip, so the name sits flush at the band top.
-      spacing: { before: 0, after: 40, line: 240, lineRule: "exact" },
+      // 1.14.27: the running-header strip is now a thin 2pt line, so give the
+      // name back 3pt (before:60) of top space inside the band so it isn't
+      // clipped at the top edge of the candidate section.
+      spacing: { before: 60, after: 40, line: 240, lineRule: "exact" },
       shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
       children: [
         new TextRun({
@@ -26359,7 +26360,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.26-cl-table-inset-centered";
+var VERSION = "1.14.27-header-thin-2pt-name-pad";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

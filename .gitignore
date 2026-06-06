@@ -59,8 +59,9 @@ Thumbs.db
 # Test output
 coverage/
 .nyc_output/
-# DOCX worker smoke tests write a one-shot out.docx for manual inspection.
+# DOCX worker smoke tests write one-shot out*.docx files for manual inspection.
 workers/docx-worker/out.docx
+workers/docx-worker/out_*.docx
 # Vite emits a source map next to the islands bundle; the bundle ships, the map does not.
 pwa/antcv-react-islands.js.map
 

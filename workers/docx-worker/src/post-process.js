@@ -129,6 +129,17 @@ export function postProcessDocx(input, opts = {}) {
       replacements = placeholderResult.count;
     }
 
+    // 1.14.21: the section wrapper tables are width:100% with no explicit column
+    // widths, so the docx lib emits <w:gridCol w:w="100"/> (100 twips). LibreOffice
+    // honours the 100% (PDF is fine) but Word/Google Docs honour the 100-twip grid
+    // and collapse the column to ~1.7mm — text then wraps ONE CHARACTER PER LINE
+    // (the broken cover-letter render). Marking those tables autofit makes Word
+    // stretch them to the container width.
+    xml = xml.replace(/<w:tblPr>((?:(?!<\/w:tblPr>)[\s\S])*?)<\/w:tblPr>/g, (m, inner) =>
+      (inner.indexOf('w:type="pct" w:w="100%"') >= 0 && inner.indexOf('<w:tblLayout') < 0)
+        ? '<w:tblPr>' + inner + '<w:tblLayout w:type="autofit"/></w:tblPr>'
+        : m);
+
     const photoResult = makePhotosCircular(xml);
     if (photoResult.count > 0) {
       xml = photoResult.xml;

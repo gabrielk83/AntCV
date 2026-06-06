@@ -17,7 +17,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.173-cl-overlay';
+  var VERSION = '1.50.175-cl-after-maxz';
   if (window.__antcvDemoWatermark === VERSION) return;
   window.__antcvDemoWatermark = VERSION;
 
@@ -54,16 +54,18 @@
     if (document.getElementById(CSS_ID)) return;
     var s = document.createElement('style');
     s.id = CSS_ID;
-    // 1.50.173: paint the DEMO tiling onto a REAL appended overlay child rather
-    // than a ::after pseudo-element. On the cover letter the single full-bleed
-    // white letter body painted over the ::after (z-index:6), so the watermark
-    // was invisible in the CL preview. A real last child with a high z-index
-    // and pointer-events:none reliably stacks above the content (same approach
-    // the AI-disclosure sidecar uses, which DOES show on the CL). Tiled, faint,
-    // rotated, non-interactive so the preview stays editable beneath it.
+    // 1.50.175: render the DEMO tiling as a ::after pseudo-element at the MAX
+    // z-index. Two earlier tries failed on the cover-letter preview: ::after at
+    // z-index:6 (1.50.159) was painted over by the CL's full-bleed letter body,
+    // and an injected child overlay (1.50.173) showed on the CV but not the CL
+    // (React reconciliation can drop an injected child when the CL re-renders).
+    // ::after can't be wiped by React, and a top-of-stack z-index beats any CL
+    // content layer (the app stacks dropdowns/overlays at ~9000). pointer-events
+    // :none keeps the preview editable beneath it.
     s.textContent =
       '.antcv-preview-paper[' + ATTR + '="1"]{position:relative;}' +
-      '.' + OVERLAY_CLASS + '{position:absolute;inset:0;pointer-events:none;z-index:50;' +
+      '.antcv-preview-paper[' + ATTR + '="1"]::after{content:"";position:absolute;inset:0;' +
+      'pointer-events:none;z-index:2147483000;' +
       "background-image:url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='200'><text x='150' y='110' font-family='Arial,sans-serif' font-size='44' font-weight='800' fill='rgba(220,50,50,0.10)' text-anchor='middle' transform='rotate(-30 150 100)'>DEMO</text></svg>\");" +
       'background-repeat:repeat;}';
     (document.head || document.documentElement).appendChild(s);
@@ -75,28 +77,16 @@
       var p = papers[i];
       if (on) {
         p.setAttribute(ATTR, '1');
-        // Ensure the paper is a positioning context for the absolute overlay.
         try {
           var cs = window.getComputedStyle ? window.getComputedStyle(p) : null;
           if (cs && cs.position === 'static') p.style.position = 'relative';
         } catch (_) {}
-        // Append exactly one overlay child (idempotent). querySelector with a
-        // direct-child guard so nested papers don't share one.
-        var existing = null;
-        for (var c = 0; c < p.children.length; c++) {
-          if (p.children[c].classList && p.children[c].classList.contains(OVERLAY_CLASS)) { existing = p.children[c]; break; }
-        }
-        if (!existing) {
-          var ov = document.createElement('div');
-          ov.className = OVERLAY_CLASS;
-          ov.setAttribute('aria-hidden', 'true');
-          p.appendChild(ov);
-        }
       } else {
         p.removeAttribute(ATTR);
-        for (var d = p.children.length - 1; d >= 0; d--) {
-          if (p.children[d].classList && p.children[d].classList.contains(OVERLAY_CLASS)) p.removeChild(p.children[d]);
-        }
+      }
+      // Clean up any 1.50.173 injected child overlays (superseded by ::after).
+      for (var d = p.children.length - 1; d >= 0; d--) {
+        if (p.children[d].classList && p.children[d].classList.contains(OVERLAY_CLASS)) p.removeChild(p.children[d]);
       }
     }
   }

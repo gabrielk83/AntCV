@@ -25346,10 +25346,11 @@ function renderCompetencyTable(s, ctx) {
   const [header, ...data] = rows;
   const isCl = ctx.doc === "cl";
   const defaultCvW = MAIN_W - 640;
-  // 1.14.24: CL is full-width linear — the bring table fills the titled-section
-  // wrapper (PAGE_W-200=11706), sized just under it to avoid a flush-edge
-  // overflow in Google Docs. 1.14.23's MAIN_W-640 made it ~60% of the page.
-  const defaultClW = PAGE_W - 560;
+  // 1.14.26: CL is full-width linear. Body + text sections span the full body
+  // cell (PAGE_W-200), but the WHAT-I-BRING table should be LARGE yet INSET and
+  // CENTERED — 1.14.25's PAGE_W-560 (~97%) looked edge-to-edge. ~80% of the body
+  // width, centered, leaves a balanced ~0.8" margin each side.
+  const defaultClW = Math.round((PAGE_W - 200) * 0.8);
   const baseW = isCl ? defaultClW : defaultCvW;
   const tableW = typeof s.tableWidth === "number" && s.tableWidth > 0 ? Math.max(2880, Math.min(PAGE_W - 720, Math.round(s.tableWidth))) : baseW;
   const explicitRatio = typeof s.tableRatio === "number" && s.tableRatio > 0.05 && s.tableRatio < 0.95 ? s.tableRatio : null;
@@ -26358,7 +26359,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.25-cl-fullwidth-sections-and-colored-header";
+var VERSION = "1.14.26-cl-table-inset-centered";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

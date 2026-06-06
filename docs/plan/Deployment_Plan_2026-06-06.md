@@ -95,6 +95,40 @@ Ordered by value × safety. Each ships as its own version bundle + deploy + repo
 
 ---
 
+## Wave 1/2 execution findings (2026-06-06, autonomous pass)
+
+Owner greenlit "proceed automatically in wave 1/2". On investigation, every remaining
+item is `app.js`-side (not the clean sidecars first assumed) and not live-verifiable from
+the build env. Outcome of the pass:
+
+- **GEN-UNSOL-002 — SHIPPED (1.50.169).** Prompt now requires `meta.company`/`meta.role` to
+  be filled from the JD when one is present (never empty, never "Unsolicited" when the JD
+  names the employer); empty only for a true open application. Additive instruction text in
+  the generation prompt `k` — surgical, mirrored to `app.src.js`, parse-checked. Live-verify
+  owed: generate against a real JD → header shows the real company/role, not "Unsolicited".
+- **PERF-002/003/004 — DEFERRED (mislabelled in the backlog).** The backlog frames these as
+  "trim consensus width" on mechanical tasks, but the code (`ee`, app.src.js ~1146) is a
+  **cascade**: it returns on the FIRST successful provider (line ~1292) and only advances on
+  failure. The per-task `Z` arrays (~1110) are fallback ORDER, not a fan-out — mechanical
+  tasks (`parse_jd`/`compress`/`fix_orphans`) make exactly one call. Trimming `Z` would cut
+  resilience, not latency. Real consensus is the separate `consensus_poll`/`consensus_reinforce`
+  path (~20547). NEEDS owner intent: confirm the target is the consensus_poll fan-out (quorum
+  / fewer providers), not `Z`. Not a safe blind edit.
+- **DEMO-BADGE-001 — DEFERRED (blocked on DEMO-PERSIST-001).** Re-gating the badge from the
+  hardcoded email to `demo_mode` would HIDE it for the real demo account, because that account
+  currently reads `demo_mode:false` (DEMO-PERSIST-001, server-side, owner-console). The email
+  hardcode is a deliberate stopgap. Do DEMO-PERSIST-001 first.
+- **HOWCONTRIBUTE-001 — DEFERRED (needs a live probe).** Whether the missing template bullets
+  are dropped by the contribute/`text_bullets` preview renderer or by
+  `mergeHowContributeFromLocalStorage` can't be told apart without the live DOM. `OWNER —
+  console`, or a diagnostic-first probe session.
+
+Net: 1 of the 6 was a safe autonomous change; the other 5 are either blocked, owner-console,
+or mis-specified in the backlog (PERF). The PERF finding corrects the backlog — see updated
+notes in `MASTER_BACKLOG.md`/`ACTIVE_BUGS.md`.
+
 ## Execution log (updated as items land)
 
-- 2026-06-06 — Wave 0 shipped: 1.50.166 / 1.50.167 / 1.50.168 (see table above).
+- 2026-06-06 — Wave 0 shipped: 1.50.166 / 1.50.167 / 1.50.168.
+- 2026-06-06 — Wave 1: GEN-UNSOL-002 shipped (1.50.169). PERF-*/DEMO-BADGE-001/
+  HOWCONTRIBUTE-001 deferred with findings (above).

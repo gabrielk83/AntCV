@@ -36070,39 +36070,44 @@
                     }
                     return t;
                   },
-                  o = Di.map((e) =>
-                    e.items ? { ...e, items: n(e.items) } : e,
-                  ).filter((e) => !e.items || e.items.length > 0).flatMap((sec) => {
-                    // Owner 2026-06-05 (page-split unit 1 — sidebar sub-subsections):
-                    // split a sidebar section across page-boxes by its per-item page
-                    // breaks (localStorage antcv:itemPages[sec.id][itemIndex]). The
-                    // existing m(e) loop then paginates each split as its own section.
-                    // STRICT NO-OP when no item page >= 2 is set, and fully wrapped in
-                    // try/catch so a bug can never crash the preview (falls back to the
-                    // unsplit section). So documents without a mid-section break render
-                    // byte-identically to before.
+                  o = Di.flatMap((sec) => {
+                    // Sidebar sub-section page-box split by per-item breaks
+                    // (antcv:itemPages[sec.id][ORIGINAL itemIndex]). The hidden-item
+                    // filter n() is applied AFTER the split (not before), so hiding a
+                    // group can't shift the original indices and strand a break on an
+                    // empty page; a split that becomes empty after filtering is dropped
+                    // (fixes "hide the group and the salmon page break stays"). STRICT
+                    // NO-OP when no break is set; try/catch falls back to the section.
                     try {
-                      const items = Array.isArray(sec && sec.items) ? sec.items : null;
+                      const origItems = Array.isArray(sec && sec.items) ? sec.items : null;
+                      if (!origItems) return [sec];
                       let bucket = null;
                       try { bucket = sec && sec.id ? (JSON.parse(localStorage.getItem("antcv:itemPages") || "{}") || {})[sec.id] : null; } catch (_) { bucket = null; }
-                      if (!items || !items.length || !bucket || typeof bucket !== "object") return [sec];
                       let hasBreak = false;
-                      for (const k in bucket) { if (Number(bucket[k]) >= 2) { hasBreak = true; break; } }
-                      if (!hasBreak) return [sec];
+                      if (bucket && typeof bucket === "object") for (const k in bucket) { if (Number(bucket[k]) >= 2) { hasBreak = true; break; } }
+                      if (!origItems.length || !hasBreak) {
+                        const fi = n(origItems);
+                        return fi.length ? [{ ...sec, items: fi }] : [];
+                      }
                       const basePage = Math.max(1, parseInt(sec.page || 1, 10));
                       let run = basePage; const groups = []; const idxByPage = {};
-                      for (let i = 0; i < items.length; i++) {
+                      for (let i = 0; i < origItems.length; i++) {
                         let p = Number(bucket[String(i)]);
                         p = (Number.isFinite(p) && p >= 1) ? Math.max(p, basePage) : run;
                         if (p > run) run = p; else p = run;
                         if (idxByPage[p] === undefined) { idxByPage[p] = groups.length; groups.push({ page: p, items: [] }); }
-                        groups[idxByPage[p]].items.push(items[i]);
+                        groups[idxByPage[p]].items.push(origItems[i]);
                       }
-                      if (groups.length <= 1) return [sec];
                       groups.sort((a, b) => a.page - b.page);
-                      return groups.map((gp, gi) => ({ ...sec, items: gp.items, page: gp.page, _antcvSplitCont: gi > 0 }));
+                      const out = [];
+                      for (const gp of groups) {
+                        const fi = n(gp.items);
+                        if (!fi.length) continue;
+                        out.push({ ...sec, items: fi, page: gp.page, _antcvSplitCont: out.length > 0 });
+                      }
+                      return out.length ? out : [];
                     } catch (_) { return [sec]; }
-                  }),
+                  }).filter((e) => !e.items || e.items.length > 0),
                   a = (e) => Math.max(1, parseInt(e.page || 1, 10)),
                   d = (() => {
                     // Role effective page = its own page, floored monotonically so a

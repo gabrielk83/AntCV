@@ -31,7 +31,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.167';
+  var VERSION = '1.50.187';
   if (window.__antcvDebugLogger === VERSION) return;
   window.__antcvDebugLogger = VERSION;
 
@@ -355,12 +355,10 @@
       anchor.parentNode.insertBefore(b, anchor.nextSibling);
     } catch (e) {}
   }
-  // Retry a handful of times as the React Settings view mounts; then stop.
-  var mountTries = 0;
-  var mountTimer = setInterval(function () {
-    mountSettingsButton();
-    if (++mountTries > 20 || document.querySelector('[data-antcv-debug-settings-btn]')) clearInterval(mountTimer);
-  }, 1500);
+  // NOTE: no auto-mount. The access point is the native Settings > Advanced >
+  // Debug subtab (in app.js). mountSettingsButton() stays exposed for manual
+  // use, but is NOT called automatically — the old version-text anchor leaked
+  // the button onto the login screen (which also shows the version string).
 
   // ─── public API ──────────────────────────────────────────────────────────────
   function setVerbose(on) { ls(0, VERBOSE_KEY, on ? '1' : '0'); }

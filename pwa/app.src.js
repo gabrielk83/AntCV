@@ -26496,6 +26496,7 @@
                       { k: "styles", l: "Adv. Styles", tier: "advanced" },
                       { k: "routing", l: "Routing", tier: "advanced" },
                       { k: "keys", l: "API Keys", tier: "advanced" },
+                      { k: "debug", l: "Debug", tier: "advanced" },
                       ...(B.is_admin
                         ? [
                             { k: "adminGeneral", l: "General", tier: "admin" },
@@ -27204,6 +27205,121 @@
                               },
                               "🗑 Delete user",
                             ),
+                      ),
+                    ),
+                  "debug" === lt &&
+                    React.createElement(
+                      "div",
+                      null,
+                      React.createElement(
+                        "div",
+                        {
+                          style: {
+                            fontSize: 13,
+                            fontWeight: 700,
+                            color: "#fff",
+                            marginBottom: 6,
+                          },
+                        },
+                        "🐞 Debug / diagnostics",
+                      ),
+                      React.createElement(
+                        "div",
+                        {
+                          style: {
+                            fontSize: 12,
+                            color: "rgba(255,255,255,0.6)",
+                            lineHeight: 1.5,
+                            marginBottom: 12,
+                          },
+                        },
+                        "On-device error log for crashes that only happen on a real phone (no devtools). It records uncaught errors plus the actions just before them, and survives a crash and reload.",
+                      ),
+                      React.createElement(
+                        "div",
+                        { style: { display: "flex", flexWrap: "wrap", gap: 8 } },
+                        React.createElement(
+                          "button",
+                          {
+                            onClick: () => {
+                              try {
+                                window.AntcvDebug && window.AntcvDebug.open();
+                              } catch (e) {}
+                            },
+                            style: {
+                              padding: "9px 14px",
+                              background: l,
+                              border: 0,
+                              borderRadius: 8,
+                              color: "#fff",
+                              fontSize: 13,
+                              fontWeight: 700,
+                              cursor: "pointer",
+                            },
+                          },
+                          "Open debug log",
+                        ),
+                        React.createElement(
+                          "button",
+                          {
+                            onClick: () => {
+                              try {
+                                window.AntcvDebug && window.AntcvDebug.clear();
+                              } catch (e) {}
+                            },
+                            style: {
+                              padding: "9px 14px",
+                              background: "rgba(255,255,255,0.06)",
+                              border: "1px solid rgba(255,255,255,0.15)",
+                              borderRadius: 8,
+                              color: "rgba(255,255,255,0.7)",
+                              fontSize: 13,
+                              fontWeight: 600,
+                              cursor: "pointer",
+                            },
+                          },
+                          "Clear log",
+                        ),
+                      ),
+                      React.createElement(
+                        "label",
+                        {
+                          style: {
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            marginTop: 12,
+                            fontSize: 12,
+                            color: "rgba(255,255,255,0.6)",
+                            cursor: "pointer",
+                          },
+                        },
+                        React.createElement("input", {
+                          type: "checkbox",
+                          defaultChecked: !!(
+                            window.AntcvDebug &&
+                            window.AntcvDebug.isVerbose &&
+                            window.AntcvDebug.isVerbose()
+                          ),
+                          onChange: (e) => {
+                            try {
+                              window.AntcvDebug &&
+                                window.AntcvDebug.setVerbose(e.target.checked);
+                            } catch (x) {}
+                          },
+                        }),
+                        "Capture typed values (helps reproduce input bugs)",
+                      ),
+                      React.createElement(
+                        "div",
+                        {
+                          style: {
+                            fontSize: 11,
+                            color: "rgba(255,255,255,0.4)",
+                            marginTop: 10,
+                          },
+                        },
+                        "Also openable any time with #antcv-debug in the URL, or a 4-tap on the top-right corner.",
                       ),
                     ),
                   "keys" === lt &&

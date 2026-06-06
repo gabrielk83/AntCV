@@ -72,7 +72,16 @@ A companion **feature registry** (open vs shipped features) lives at
 
 ### New — OPEN
 
-- **PERSONAL-EDIT-CRASH-001** `[OPEN][HIGH][mobile]` — Typing into a **Settings → Personal**
+- **PERSONAL-EDIT-CRASH-001** `[FIXED✓ 1.50.185]` — fixed by the **React DOM guard**
+  (`antcv-react-dom-guard.js`, commit f9e9f0a): a new early-loading sidecar makes
+  `Node.removeChild`/`insertBefore` defensive — when the target isn't actually a child
+  of the parent (the only case the native call throws), it no-ops instead of crashing,
+  converting the fatal throw into a harmless no-op. Loads after the console quieter,
+  before React mounts. Set `localStorage.antcvDomGuardVerbose=1` to log the offending
+  sidecar so the root mutator can later be fixed and the guard retired. This is the
+  canonical React-vs-third-party-DOM mitigation and exactly matches the diagnosis below.
+  Removed from open bugs. Diagnostic history retained for reference:
+  Typing into a **Settings → Personal**
   subtab field (e.g. the name) **blue-screens on a real mobile device** (not in the
   simulator; no other subtab affected). The typed value **persists** (the `PUT /api/prefs`
   save succeeds — confirmed in Cloudflare worker logs), so the state update works and the
@@ -80,6 +89,74 @@ A companion **feature registry** (open vs shipped features) lives at
   device console available. Crash capture added (PWA 1.50.181) + a remote crash logger
   (POSTs the error to the relay so it appears in exportable worker logs) — awaiting the
   captured error to pinpoint the throwing render.
+  **Captured stack (owner, 2026-06-06):** `Uncaught NotFoundError: Failed to execute
+  'removeChild' on 'Node': The node to be removed is not a child of this node` from
+  react-dom's commit/deletion phase (`Di`/`Aa`/`Fi`). This is the signature of **a
+  sidecar mutating DOM that React owns**: the Name keystroke re-renders the
+  candidate/preview subtree, but a preview-editor sidecar had already moved/replaced
+  nodes there, so React's `removeChild` hits a node that is no longer its child →
+  unmount → blue screen (data persists because the PUT already ran). Prime suspect: the
+  contenteditable Name/Specialisation wrap (`antcv-candidate-preview-editor-341.js`) or a
+  newer preview-control sidecar. Fix direction: stop that sidecar mutating React-owned
+  nodes (wrap/move via a portal or React-safe anchor), or guard so reconciliation can't
+  trip. **On-device capture (complements the relay logger):** `antcv-debug-logger.js`
+  (v1.50.182) persists the error + a breadcrumb trail to localStorage and shows them in a
+  plain-DOM viewer that survives the crash + reload — open with `#antcv-debug` or a 4-tap
+  top-right corner; readable on the phone with no terminal.
+
+### Infra + features (2026-06-06, session branch)
+
+- **BUILD-APP-BROKEN-001** `[OPEN][HIGH][infra]` — **`npm run build:app` produces a
+  broken bundle.** Rebuilding `pwa/app.js` from `pwa/app.src.js` with esbuild 0.21.5
+  yields `Uncaught ReferenceError: glDemo is not defined` at render (verified via the
+  browser-QA `boot` gate: committed bundle = 0 JS errors, rebuilt = throws). Root
+  cause: `app.src.js:16092` assigns `glDemo` as an **implicit global** inside a
+  component (`((glDemo = ({proxyUrl}) => {…})`) and uses it at `28873`; the committed
+  working bundle resolves this (glDemo appears once), a fresh esbuild build does not
+  (appears twice, lazy global write never lands before the read). This is the
+  `250ec8d` revert reproduced. **Impact: blocks every native `app.src.js` change**
+  (the PERSONAL-EDIT-CRASH-001 fix sidestepped this by shipping as a standalone
+  sidecar, but any future *source* edit is still blocked until this is fixed). Fix
+  options: (a) declare `glDemo`
+  properly (`window.glDemo`/hoisted `var` at module top) and re-verify the full boot,
+  or (b) pin the exact esbuild used for the deployed bundle. Until fixed, app.js
+  changes ship via surgical unique-string injection into the working bundle (the #226
+  technique) + a `boot` gate.
+- **FT-DEBUG-LOGGER subtab** `[SHIPPED]` — added **Settings → Advanced → Debug** (a
+  native subtab in `app.src.js`, and injected into the working `app.js` at 1.50.182):
+  Open debug log / Clear / "Capture typed values" toggle + the `#antcv-debug` /
+  4-tap hints. Boot-verified (0 JS errors). Gives on-device access to the crash
+  logger with no terminal.
+
+### Triage round 2 — additional dispositions (owner chat 2026-06-06)
+
+- **SETTINGS-NAV-Z-001** `[OPEN]` (canonical) — Settings subtab / Application-History
+  opens BEHIND the preview (z-index trap); the preview overflow menu doesn't route to it
+  either. Absorbs **APP-HISTORY-001, SETTINGS-SUBTAB-001, SETTINGS-AHZ-001, AH-001,
+  VF-014, APPHIST-ZIDX-001** (owner: all the same bug). Drive with
+  `antcv-apphist-zindex-probe.js`.
+- **SPECIALISATION-EDIT-001** `[FIXED]` — verified in code: `wrapSpecialisation()` makes
+  `meta.subtitle` contenteditable; loaded `?v=1.50.106-spec-edit`.
+- **DEMO-TOGGLE-001** `[WONTFIX]` — not needed; the wizard handles demo→normal.
+- **DOCX-EXPORT-REGRESSION-001** `[WONTFIX]` — redundant; the print-setup view is skipped.
+- **WIZARD step 6b** `[DONE]` — already scrollable; only step 6d remains.
+- **DEMO-WARN-NONDEMO-001** `[BLOCKED]` — not testable until the privacy LED renders.
+- **GEN-UNSOL-002** `[OPEN, needs live JD test]` — confirm generate emits a JD-grounded
+  `meta.company`/`role` so a blank Company field doesn't fall to "Unsolicited".
+- **PROCESSING-QUEUE-INDICATOR-001** `[OPEN][feature]` — per-subsection **pink
+  "processing"** while actively worked (language change, new JD/kernel, compress, enhance)
+  and **yellow "queue"** when scheduled later in the same command (enhance-over-subsection
+  → first pink, rest yellow). Plus: **CJLR** (Center/Justify/Left/Right) buttons working in
+  **every** sub-subsection. Also in the feature registry.
+- **AUTO-PAGEBREAK-BLOCK-001** `[OPEN][feature]` — **always** show the salmon splitter when
+  content exceeds one A4 page in preview; sliding is **block-level** (a whole sub-subsection
+  moves to the next page — never partial, never the whole parent subsection). Reconcile with
+  PB-001..006 + EXPORT-PAGE2-001. Also in the feature registry.
+- **PACKAGE-PALETTE-MIX-001** — superseded: **FIXED✓** per the status update above
+  (self-healing effect, PWA 1.50.180). My earlier "still OPEN" re-verification ran against
+  the stale 1.50.166 tree; the browser-QA `palette-mix` gate should be re-pointed at the
+  1.50.180 self-heal (it asserts `localStorage.stylePackage` resolves to a registry id — now
+  expected to pass).
 
 ---
 

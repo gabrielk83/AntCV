@@ -15,6 +15,14 @@
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="stylesheet" href="antcv-packages-registry.css?v=1.50.41">
   <title>AntCV</title>
+  <!-- v1.50.167: in-app debug logger. Loads FIRST so window error handlers are
+       installed earliest. Captures uncaught errors + breadcrumbs to localStorage
+       SYNCHRONOUSLY (survives a crash + reload) and renders a plain-DOM viewer
+       that works even after a React crash — for the mobile-only blue screen where
+       there is no devtools/terminal. Open: add #antcv-debug to the URL, 4-tap the
+       top-right corner, or window.AntcvDebug.open(). Disable: localStorage
+       ['antcv:debug:disable']='1'. Does NOT touch window.fetch. -->
+  <script src="antcv-debug-logger.js?v=1.50.186"></script>
   <!-- v1.50.149: console quieter — wraps console.{log,info,debug,warn} FIRST so
        it swallows the ~70 sidecar "installed" banners + repeated app.js status
        chatter. Errors always pass through. Full logs: localStorage.antcvVerboseConsole=1. -->
@@ -291,7 +299,7 @@
         auth.src = 'antcv-auth.js?v=1.40.202';
         auth.onload = function(){
           var app = document.createElement('script');
-          app.src = 'app.js?v=1.50.181-crash-capture';
+          app.src = 'app.js?v=1.50.186-advanced-debug';
           app.onload = function(){
             var vo = document.createElement('script');
             vo.src = 'antcv-version-override.js?v=1.50.41';

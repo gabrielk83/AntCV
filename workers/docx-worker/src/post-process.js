@@ -155,9 +155,11 @@ export function postProcessDocx(input, opts = {}) {
        watermark without needing a separate header XML file.
        The mso namespace prefix is declared at the document root by
        Packer; we only emit the v: and o: elements. */
-    if (opts && opts.watermark && String(opts.watermark).trim()) {
-      const wm = String(opts.watermark).trim().replace(/[<>&"]/g, c => ({ '<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;' }[c]));
-      const watermarkRun =
+    const hasWm = !!(opts && opts.watermark && String(opts.watermark).trim());
+    const headerBgHex = (opts && opts.headerBg ? String(opts.headerBg).trim().replace(/[^0-9A-Fa-f]/g, '') : '').slice(0, 6);
+    if (hasWm || headerBgHex) {
+      const wm = hasWm ? String(opts.watermark).trim().replace(/[<>&"]/g, c => ({ '<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;' }[c])) : '';
+      const watermarkRun = !hasWm ? '' :
         '<w:r><w:rPr><w:noProof/></w:rPr><w:pict>' +
         '<v:shapetype id="_x0000_t136" coordsize="21600,21600" o:spt="136" adj="10800" path="m@7,l@8,m@5,21600l@6,21600e">' +
         '<v:formulas><v:f eqn="sum #0 0 10800"/><v:f eqn="prod #0 2 1"/><v:f eqn="sum 21600 0 @1"/>' +
@@ -183,7 +185,7 @@ export function postProcessDocx(input, opts = {}) {
       const headerXml =
         '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
         '<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w10="urn:schemas-microsoft-com:office:word">' +
-        '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/></w:pPr>' + watermarkRun + '</w:p></w:hdr>';
+        '<w:p><w:pPr>' + (headerBgHex ? '<w:shd w:val="clear" w:color="auto" w:fill="' + headerBgHex + '"/>' : '') + '<w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="exact"/></w:pPr>' + watermarkRun + '</w:p></w:hdr>';
       files['word/header1.xml'] = strToU8(headerXml);
       const relsName = 'word/_rels/document.xml.rels';
       let rels = files[relsName] ? strFromU8(files[relsName]) : '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';

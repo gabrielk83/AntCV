@@ -15,7 +15,7 @@
  */
 (function () {
   'use strict';
-  var V = '1.50.177-370';
+  var V = '1.50.178-370';
   if (window.__antcvDiagProbes === V) return;
   window.__antcvDiagProbes = V;
 
@@ -182,25 +182,12 @@
     }, true);
   } catch (_) {}
 
-  // ---- SETTINGS-SUBTAB-001 auto-capture ---------------------------------
-  // The owner ran the snapshot with Settings closed (panel not found). Watch for
-  // a Settings panel appearing and auto-run probeSettings the moment it opens.
-  try {
-    var lastSettingsRun = 0;
-    new MutationObserver(function () {
-      var now = Date.now();
-      if (now - lastSettingsRun < 800) return;
-      var hit = false, divs = document.querySelectorAll('div');
-      for (var i = 0; i < divs.length; i++) {
-        var t = divs[i].textContent || '';
-        if (/\bSettings\b/.test(t) && /\bAdvanced\b/.test(t) && /\bStandard\b/.test(t)) {
-          var cs = window.getComputedStyle(divs[i]);
-          if (cs.position === 'fixed' || cs.position === 'absolute') { hit = true; break; }
-        }
-      }
-      if (hit) { lastSettingsRun = now; log('SETTINGS-SUBTAB-001 panel opened — auto-probe:'); probeSettings(); }
-    }).observe(document.body || document.documentElement, { childList: true, subtree: true });
-  } catch (_) {}
+  // SETTINGS-SUBTAB-001 auto-capture REMOVED in 1.50.178: the MutationObserver
+  // ran querySelectorAll('div') + getComputedStyle over the WHOLE DOM on every
+  // mutation (its throttle only armed on a panel match, so normally it never
+  // throttled). While typing in Settings that fires constantly -> forced reflow
+  // storm -> main-thread freeze / blue screen. Run AntcvDiag.settings() by hand
+  // with Settings open instead.
 
   // ---- PALETTE-MIX-001 ---------------------------------------------------
   // The "mixed visual style": app.js renders accent colours from its own

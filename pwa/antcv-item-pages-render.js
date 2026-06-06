@@ -49,7 +49,7 @@
 (function () {
   'use strict';
 
-  const SCRIPT_VERSION = '1.40.341-p0b';
+  const SCRIPT_VERSION = '1.50.202-native-render-retired';
   if (window.__antcvItemPagesRenderInstalled) return;
   window.__antcvItemPagesRenderInstalled = SCRIPT_VERSION;
 
@@ -188,7 +188,13 @@
   }
 
   function applySection(sectionEl, sid) {
+    // 1.50.202: list / labeled_list / education page breaks are now rendered
+    // NATIVELY in app.js (React) from the same antcv:itemPages model — see
+    // docs/plan/page-break-architecture.md. Sidecar DOM injection is retired
+    // (React reconciled it away). We only sweep up markers a prior version left
+    // behind so there's no double render, then bail. Panel chips are unaffected.
     clearOurMarkers(sectionEl);
+    return;
     const map = readMap();
     const bucket = map[sid];
     if (!bucket || typeof bucket !== 'object') return;

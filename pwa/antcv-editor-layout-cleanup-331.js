@@ -8,7 +8,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.50.200-foundation-stabilize';
+  const VERSION='1.50.202-foundation-native';
   if(window.__antcvEditorLayoutCleanup331===VERSION) return;
   window.__antcvEditorLayoutCleanup331=VERSION;
 
@@ -188,18 +188,29 @@
   function syncFoundationPages(){
     try{
       const all=ipRead();const before=JSON.stringify(all);const fId=foundationSid();
-      // 1.50.200 STABILIZE: the sidecar-injected foundation break (284) produced
-      // garbage — multiple "▼ PAGE N ▼", "SECTION (CONT.)", and duplicate
-      // FOUNDATION headings — because 284 mis-counts foundation's heading/divider
-      // as item rows, and React reconciles the injected bars. Until foundation's
-      // break is rendered NATIVELY in app.js (the only place it can persist), do
-      // NOT feed 284 any foundation markers: clear them so foundation flows
-      // cleanly after the content above it. (Foundation page buttons are inert
-      // for now; the native render is the proper fix.)
-      if(all[fId]&&typeof all[fId]==='object'){delete all[fId]['0'];delete all[fId]['1'];if(!Object.keys(all[fId]).length)delete all[fId];}
+      // 1.50.202: foundation breaks are now rendered NATIVELY in app.js (React)
+      // from antcv:itemPages — hands_on=item "0", professionally=item "1". So we
+      // WRITE the effective pages into the model (the native renderer reads them
+      // and draws salmon + "(CONT.)"). hands_on on page>=2 moves the whole section
+      // (handled by app.js's wrapper); professionally on page>=2 is a mid-section
+      // break. We also cascade: every section AFTER foundation starts at >= the
+      // highest page foundation reaches.
+      const h=fEff('hands_on'),pr=fEff('professionally');
+      if(!all[fId]||typeof all[fId]!=='object')all[fId]={};
+      if(h>1)all[fId]['0']=h;else delete all[fId]['0'];
+      if(pr>1)all[fId]['1']=pr;else delete all[fId]['1'];
+      if(!Object.keys(all[fId]).length)delete all[fId];
+      // No cross-section cascade: the CL preview is a continuous flow, so once
+      // foundation moves to page N the sections after it (closure …) flow onto the
+      // same page naturally. Tagging each following section with its OWN page>=2
+      // marker produced a redundant 2nd salmon bar before CLOSURE (owner flagged
+      // this on HIWC; same rule here). Clear any stale following-section markers a
+      // prior build left behind.
       let after=false;
-      for(const so of clSecs()){if(!so||!so.id)continue;const id=String(so.id);if(id===fId){after=true;continue;}if(!after)continue;if(all[id]&&typeof all[id]==='object'&&all[id]['0']!==undefined){delete all[id]['0'];if(!Object.keys(all[id]).length)delete all[id];}}
-      if(JSON.stringify(all)!==before){write(ITEMPAGES_KEY,all);pulse('foundation-cascade');}
+      for(const so of clSecs()){if(!so||!so.id)continue;const id=String(so.id);if(id===fId){after=true;continue;}if(!after)continue;
+        if(all[id]&&typeof all[id]==='object'&&all[id]['0']!==undefined){delete all[id]['0'];if(!Object.keys(all[id]).length)delete all[id];}
+      }
+      if(JSON.stringify(all)!==before){write(ITEMPAGES_KEY,all);try{window.dispatchEvent(new CustomEvent('antcv:item-pages-changed',{detail:{source:'foundation-cascade'}}));}catch(_){}pulse('foundation-cascade');}
     }catch(_){}
   }
   // Cycle a foundation part within [floor .. 4], wrapping to floor, then cascade.

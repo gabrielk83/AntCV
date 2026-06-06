@@ -8,6 +8,53 @@
 // Regenerated from pwa/app.js via prettier on 2026-06-05; kept from now on.
 // ============================================================================
 (() => {
+  // 1.50.202: native (React-rendered) page breaks. The break MUST be a React
+  // child of the section so reconciliation keeps it (sidecar-injected breaks get
+  // removed/duplicated). See docs/plan/page-break-architecture.md.
+  const __antcvPB = (sid) => { try { return (JSON.parse(localStorage.getItem("antcv:itemPages") || "{}") || {})[sid] || {}; } catch (_) { return {}; } };
+  const __antcvSalmon = (pg, contTitle) =>
+    React.createElement(React.Fragment, { key: "pb_" + pg + "_" + (contTitle || "x") },
+      React.createElement("div", { className: "no-print", "aria-hidden": "true", style: { borderTop: "3px solid rgba(200,40,40,0.6)", margin: "10px 0 5px", display: "flex", justifyContent: "center", background: "rgba(200,40,40,0.06)", padding: "2px 0" } },
+        React.createElement("span", { style: { background: "rgba(200,40,40,0.7)", color: "#fff", fontSize: 8, padding: "2px 10px", borderRadius: 2, fontFamily: "Arial,sans-serif", letterSpacing: 0.5, whiteSpace: "nowrap" } }, "▼ PAGE " + pg + " ▼")),
+      React.createElement("div", { "aria-hidden": "true", style: { pageBreakBefore: "always", breakBefore: "page", height: 0, lineHeight: 0 } }),
+      contTitle ? React.createElement("div", { style: { color: "#00746E", fontWeight: 700, fontSize: "12pt", marginTop: "4pt", marginBottom: "8pt", borderBottom: "1pt solid #00746E", paddingBottom: "2pt", fontFamily: "Trebuchet MS, Calibri, sans-serif" } }, contTitle + " (CONT.)") : null
+    );
+  // renderWithBreaks (docs/plan §2): walk ordered items in document order, keep a
+  // monotonic running page (an item can't precede the content above it), and emit a
+  // salmon splitter before any item whose effective page exceeds the running max.
+  // item 0 breaking => whole section moves (no "(CONT.)"); item i>0 => mid-section
+  // break titled "<TITLE> (CONT.)". One contract for HIWC, foundation, lists, groups.
+  const __antcvBreaks = (sid, items, title) => {
+    const pages = __antcvPB(sid);
+    let run = 1;
+    const out = [];
+    items.forEach(({ key, node }, i) => {
+      let pg = parseInt(pages[key], 10);
+      if (!(pg >= 1)) pg = 1;
+      if (pg < run) pg = run; // monotonic floor
+      // item 0 breaking moves the WHOLE section — the salmon + break for that is
+      // drawn once by the section wrapper (before the heading), so here we only
+      // advance the running page and never emit a mid-section splitter for i===0.
+      if (i > 0 && pg > run) out.push(__antcvSalmon(pg, title));
+      if (pg > run) run = pg;
+      out.push(node);
+    });
+    return out;
+  };
+  // First-item key for a section (its page drives the whole-section move drawn by
+  // the wrapper). HIWC: intro (or bullet_0 if no intro); everything else: "0".
+  const __antcvFirstKey = (e) =>
+    e && e.type === "text_bullets"
+      ? e.intro != null && String(e.intro).trim()
+        ? "intro"
+        : "bullet_0"
+      : "0";
+  // Page the section as a whole starts on (>=1). >1 => whole section moves.
+  const __antcvSecStart = (e) => {
+    if (!e || !e.id) return 1;
+    const pg = parseInt(__antcvPB(e.id)[__antcvFirstKey(e)], 10);
+    return pg >= 1 ? pg : 1;
+  };
   const {
       useState: e,
       useRef: t,
@@ -3656,43 +3703,86 @@
         }
         case "text_bullets": {
           const t = e.items || [];
-          return React.createElement(
-            React.Fragment,
-            null,
-            e.intro || p
-              ? React.createElement(
-                  "p",
-                  {
-                    style: {
-                      margin: "4px 0 3px",
-                      fontFamily: T,
-                      fontSize: $.text,
-                      color: O,
-                      lineHeight: I,
-                      textAlign: "justify",
-                    },
+          const __sid = e.id;
+          const __title = (e.title || "HOW I WOULD CONTRIBUTE").toUpperCase();
+          const __items = [];
+          if (e.intro || p)
+            __items.push({
+              key: "intro",
+              node: React.createElement(
+                "p",
+                {
+                  key: "intro",
+                  style: {
+                    margin: "4px 0 3px",
+                    fontFamily: T,
+                    fontSize: $.text,
+                    color: O,
+                    lineHeight: I,
+                    textAlign: "justify",
                   },
-                  React.createElement(B, {
-                    path: ["intro"],
-                    value: P(e.intro || ""),
-                    placeholder: "(intro — click to add)",
-                  }),
-                )
-              : null,
-            t.map((e, n) => {
-              const o = P(e || ""),
-                r = n === t.length - 1,
-                a =
-                  "string" == typeof o
-                    ? o.match(/^(.+?)\s+([-—]\s+[Aa]nd that.+)$/s)
-                    : null;
-              return r && a
-                ? React.createElement(
-                    React.Fragment,
-                    { key: n },
-                    React.createElement(
+                },
+                React.createElement(B, {
+                  path: ["intro"],
+                  value: P(e.intro || ""),
+                  placeholder: "(intro — click to add)",
+                }),
+              ),
+            });
+          t.forEach((it, n) => {
+            const o = P(it || ""),
+              r = n === t.length - 1,
+              a =
+                "string" == typeof o
+                  ? o.match(/^(.+?)\s+([-—]\s+[Aa]nd that.+)$/s)
+                  : null;
+            __items.push({
+              key: "bullet_" + n,
+              node:
+                r && a
+                  ? React.createElement(
+                      React.Fragment,
+                      { key: "b" + n },
+                      React.createElement(
+                        "div",
+                        {
+                          style: {
+                            fontFamily: T,
+                            fontSize: $.bullet,
+                            paddingLeft: 10,
+                            marginBottom: 3,
+                            color: O,
+                            textAlign: "justify",
+                            lineHeight: I,
+                          },
+                        },
+                        BM(n),
+                        React.createElement(B, {
+                          path: ["items", n],
+                          value: a[1].trim(),
+                          placeholder: "(click to add)",
+                        }),
+                      ),
+                      React.createElement(
+                        "div",
+                        {
+                          style: {
+                            fontFamily: T,
+                            fontSize: $.bullet,
+                            paddingLeft: 10,
+                            marginBottom: 3,
+                            color: O,
+                            lineHeight: I,
+                            marginTop: 5,
+                          },
+                        },
+                        a[2].trim().replace(/^[-—]\s*/, ""),
+                      ),
+                    )
+                  : React.createElement(
                       "div",
                       {
+                        key: "b" + n,
                         style: {
                           fontFamily: T,
                           fontSize: $.bullet,
@@ -3706,169 +3796,161 @@
                       BM(n),
                       React.createElement(B, {
                         path: ["items", n],
-                        value: a[1].trim(),
+                        value: o,
                         placeholder: "(click to add)",
                       }),
                     ),
-                    React.createElement(
-                      "div",
-                      {
-                        style: {
-                          fontFamily: T,
-                          fontSize: $.bullet,
-                          paddingLeft: 10,
-                          marginBottom: 3,
-                          color: O,
-                          lineHeight: I,
-                          marginTop: 5,
-                        },
-                      },
-                      a[2].trim().replace(/^[-—]\s*/, ""),
-                    ),
-                  )
-                : React.createElement(
-                    "div",
-                    {
-                      key: n,
-                      style: {
-                        fontFamily: T,
-                        fontSize: $.bullet,
-                        paddingLeft: 10,
-                        marginBottom: 3,
-                        color: O,
-                        textAlign: "justify",
-                        lineHeight: I,
-                      },
-                    },
-                    BM(n),
-                    React.createElement(B, {
-                      path: ["items", n],
-                      value: o,
-                      placeholder: "(click to add)",
-                    }),
-                  );
-            }),
-            e.closing || p
-              ? React.createElement(
-                  "p",
-                  {
-                    style: {
-                      margin: "5px 0 3px",
-                      fontFamily: T,
-                      fontSize: $.text,
-                      color: O,
-                      lineHeight: I,
-                      textAlign: "justify",
-                    },
+            });
+          });
+          if (e.closing || p)
+            __items.push({
+              key: "closing",
+              node: React.createElement(
+                "p",
+                {
+                  key: "closing",
+                  style: {
+                    margin: "5px 0 3px",
+                    fontFamily: T,
+                    fontSize: $.text,
+                    color: O,
+                    lineHeight: I,
+                    textAlign: "justify",
                   },
-                  React.createElement(B, {
-                    path: ["closing"],
-                    value: P(e.closing || ""),
-                    placeholder: "(closing — click to add)",
-                  }),
-                )
-              : null,
+                },
+                React.createElement(B, {
+                  path: ["closing"],
+                  value: P(e.closing || ""),
+                  placeholder: "(closing — click to add)",
+                }),
+              ),
+            });
+          return React.createElement(
+            React.Fragment,
+            null,
+            n ? __antcvBreaks(__sid, __items, __title) : __items.map((it) => it.node),
           );
         }
         case "foundation": {
           const t = L("Hands-on:"),
             o = L("Professionally:"),
             r = k.mainHeadColor || s;
-          return React.createElement(
-            React.Fragment,
-            null,
-            React.createElement(
-              "p",
-              {
-                style: {
-                  margin: "4px 0 3px",
-                  fontFamily: T,
-                  fontSize: $.text,
-                  color: O,
-                  textAlign: "justify",
-                  lineHeight: I,
-                },
-              },
-              React.createElement("b", { style: { color: r } }, t, " "),
-              React.createElement(B, {
-                path: ["hands_on"],
-                value: P(e.hands_on || ""),
-                placeholder: "(click to add)",
-              }),
-            ),
-            !n &&
-              React.createElement("div", {
-                style: { borderBottom: `1px solid ${s}`, margin: "4px 0" },
-              }),
-            React.createElement(
-              "p",
-              {
-                style: {
-                  margin: "3px 0 4px",
-                  fontFamily: T,
-                  fontSize: $.text,
-                  color: O,
-                  textAlign: "justify",
-                  lineHeight: I,
-                },
-              },
-              React.createElement("b", { style: { color: r } }, o, " "),
-              React.createElement(B, {
-                path: ["professionally"],
-                value: P(e.professionally || ""),
-                placeholder: "(click to add)",
-              }),
-            ),
-          );
-        }
-        case "bullets":
-          return React.createElement(
-            React.Fragment,
-            null,
-            (e.items || []).map((e, t) =>
-              React.createElement(
-                "div",
+          const __sid = e.id;
+          const __title = (e.title || "FOUNDATION").toUpperCase();
+          const __items = [
+            {
+              key: "0",
+              node: React.createElement(
+                "p",
                 {
-                  key: t,
+                  key: "hands_on",
                   style: {
+                    margin: "4px 0 3px",
                     fontFamily: T,
-                    fontSize: $.bullet,
-                    paddingLeft: 10,
-                    marginBottom: 3,
+                    fontSize: $.text,
                     color: O,
                     textAlign: "justify",
                     lineHeight: I,
                   },
                 },
-                BM(t),
-                e.b
-                  ? React.createElement(
-                      React.Fragment,
-                      null,
-                      React.createElement(
-                        "b",
-                        null,
-                        React.createElement(B, {
-                          path: ["items", t, "b"],
-                          value: P(e.b),
-                          placeholder: "[Lead]",
-                        }),
-                      ),
-                      " ",
-                      React.createElement(B, {
-                        path: ["items", t, "t"],
-                        value: P(e.t || ""),
-                        placeholder: "[Text]",
-                      }),
-                    )
-                  : React.createElement(B, {
-                      path: ["items", t, "t"],
-                      value: P(e.t || e || ""),
-                      placeholder: "(click to add)",
-                    }),
+                React.createElement("b", { style: { color: r } }, t, " "),
+                React.createElement(B, {
+                  path: ["hands_on"],
+                  value: P(e.hands_on || ""),
+                  placeholder: "(click to add)",
+                }),
               ),
-            ),
+            },
+            {
+              key: "1",
+              node: React.createElement(
+                React.Fragment,
+                { key: "professionally" },
+                !n &&
+                  React.createElement("div", {
+                    style: { borderBottom: `1px solid ${s}`, margin: "4px 0" },
+                  }),
+                React.createElement(
+                  "p",
+                  {
+                    style: {
+                      margin: "3px 0 4px",
+                      fontFamily: T,
+                      fontSize: $.text,
+                      color: O,
+                      textAlign: "justify",
+                      lineHeight: I,
+                    },
+                  },
+                  React.createElement("b", { style: { color: r } }, o, " "),
+                  React.createElement(B, {
+                    path: ["professionally"],
+                    value: P(e.professionally || ""),
+                    placeholder: "(click to add)",
+                  }),
+                ),
+              ),
+            },
+          ];
+          return React.createElement(
+            React.Fragment,
+            null,
+            n ? __antcvBreaks(__sid, __items, __title) : __items.map((it) => it.node),
           );
+        }
+        case "bullets": {
+          const __sid = e.id;
+          const __title = (e.title || "").toUpperCase();
+          const __items = (e.items || []).map((it, t) => ({
+            key: String(t),
+            node: React.createElement(
+              "div",
+              {
+                key: t,
+                style: {
+                  fontFamily: T,
+                  fontSize: $.bullet,
+                  paddingLeft: 10,
+                  marginBottom: 3,
+                  color: O,
+                  textAlign: "justify",
+                  lineHeight: I,
+                },
+              },
+              BM(t),
+              it.b
+                ? React.createElement(
+                    React.Fragment,
+                    null,
+                    React.createElement(
+                      "b",
+                      null,
+                      React.createElement(B, {
+                        path: ["items", t, "b"],
+                        value: P(it.b),
+                        placeholder: "[Lead]",
+                      }),
+                    ),
+                    " ",
+                    React.createElement(B, {
+                      path: ["items", t, "t"],
+                      value: P(it.t || ""),
+                      placeholder: "[Text]",
+                    }),
+                  )
+                : React.createElement(B, {
+                    path: ["items", t, "t"],
+                    value: P(it.t || it || ""),
+                    placeholder: "(click to add)",
+                  }),
+            ),
+          }));
+          return React.createElement(
+            React.Fragment,
+            null,
+            n ? __antcvBreaks(__sid, __items, __title) : __items.map((it) => it.node),
+          );
+        }
         case "table": {
           const c = n,
             d = n ? a : r,
@@ -4132,6 +4214,102 @@
                   accent: k.tableHeaderBg || s,
                 }),
             );
+          // CORE COMPETENCIES (CV main) — INDEPENDENT segmentation. Deliberately a
+          // separate branch from WHAT I BRING (CL): same shared mk/head/_antcvPbStarts
+          // primitives, but its own id gate, its own full-width wrap, and its own
+          // continuation title. Per docs/plan §3d the two tables never share a code path.
+          if (!c && "core_comp" === e.id && _antcvPbStarts.length > 1)
+            return React.createElement(
+              "div",
+              {
+                "data-table-resize-wrap": "true",
+                "data-antcv-row-pagebreak-table": "true",
+                style: wrapStyle,
+              },
+              _antcvPbStarts.map((st, idx) => {
+                const en =
+                  idx + 1 < _antcvPbStarts.length
+                    ? _antcvPbStarts[idx + 1]
+                    : rows.length;
+                return React.createElement(
+                  React.Fragment,
+                  { key: "cseg" + idx },
+                  idx > 0 &&
+                    React.createElement(
+                      "div",
+                      {
+                        className: "no-print",
+                        style: {
+                          borderTop: "3px solid rgba(200,40,40,0.6)",
+                          margin: "10px 0 5px",
+                          display: "flex",
+                          justifyContent: "center",
+                          background: "rgba(200,40,40,0.06)",
+                          padding: "2px 0",
+                        },
+                      },
+                      React.createElement(
+                        "span",
+                        {
+                          style: {
+                            background: "rgba(200,40,40,0.7)",
+                            color: "#fff",
+                            fontSize: 8,
+                            padding: "2px 10px",
+                            borderRadius: 2,
+                            fontFamily: "Arial,sans-serif",
+                            letterSpacing: 0.5,
+                          },
+                        },
+                        "▼ PAGE BREAK ▼",
+                      ),
+                    ),
+                  idx > 0 &&
+                    React.createElement("div", {
+                      style: {
+                        pageBreakBefore: "always",
+                        breakBefore: "page",
+                        height: 0,
+                        lineHeight: 0,
+                      },
+                    }),
+                  idx > 0 &&
+                    React.createElement(
+                      "div",
+                      {
+                        style: {
+                          fontFamily: A,
+                          fontWeight: 700,
+                          color: C,
+                          fontSize: $.head,
+                          letterSpacing: 0.5,
+                          textTransform: "uppercase",
+                          textAlign: "left",
+                          lineHeight: 1,
+                          marginBottom: 1,
+                          marginTop: 4,
+                        },
+                      },
+                      (L(e.title) || "CORE COMPETENCIES") + " (Cont.)",
+                    ),
+                  idx > 0 &&
+                    React.createElement("div", {
+                      style: {
+                        borderBottom: `1px solid ${C}`,
+                        marginBottom: 4,
+                      },
+                    }),
+                  mk(st, en, idx),
+                );
+              }),
+              f &&
+                React.createElement(ke, {
+                  leftPct: (100 * u) / p,
+                  ratio: c ? a : r,
+                  onChange: f,
+                  accent: k.tableHeaderBg || s,
+                }),
+            );
           return React.createElement(
             "div",
             { "data-table-resize-wrap": "true", style: wrapStyle },
@@ -4264,40 +4442,42 @@
               return !1;
             };
           let o = !1;
-          return React.createElement(
-            React.Fragment,
-            null,
-            t.map((e, t) => {
-              if (e && void 0 !== e.group)
-                return (
-                  (o = !!e.hidden),
-                  o || !n(t)
-                    ? null
-                    : React.createElement(
-                        "div",
-                        {
-                          key: t,
-                          style: {
-                            fontSize: S ? 0.96 * $.sb : $.exp,
-                            fontFamily: T,
-                            color: C,
-                            fontWeight: 700,
-                            marginTop: 0 === t ? 0 : 6,
-                            marginBottom: 2,
-                            textAlign: "left",
-                            letterSpacing: 0.3,
-                            overflowWrap: "break-word",
-                            wordBreak: "break-word",
-                          },
+          const __sid = e.id;
+          const __title = (e.title || "").toUpperCase();
+          const __items = [];
+          t.forEach((row, t) => {
+            let node = null;
+            if (row && void 0 !== row.group) {
+              o = !!row.hidden;
+              node =
+                o || !n(t)
+                  ? null
+                  : React.createElement(
+                      "div",
+                      {
+                        key: t,
+                        style: {
+                          fontSize: S ? 0.96 * $.sb : $.exp,
+                          fontFamily: T,
+                          color: C,
+                          fontWeight: 700,
+                          marginTop: 0 === t ? 0 : 6,
+                          marginBottom: 2,
+                          textAlign: "left",
+                          letterSpacing: 0.3,
+                          overflowWrap: "break-word",
+                          wordBreak: "break-word",
                         },
-                        React.createElement(B, {
-                          path: ["items", t, "group"],
-                          value: P(e.group),
-                          placeholder: "[Sub-group]",
-                        }),
-                      )
-                );
-              if (e && e.hidden) return null;
+                      },
+                      React.createElement(B, {
+                        path: ["items", t, "group"],
+                        value: P(row.group),
+                        placeholder: "[Sub-group]",
+                      }),
+                    );
+            } else if (row && row.hidden) {
+              node = null;
+            } else {
               const r = (e) => {
                 let t = e || "";
                 for (; t.length; ) {
@@ -4314,13 +4494,13 @@
                 }
                 return t;
               };
-              let a = r(e.l || ""),
-                i = r(e.v || "");
+              let a = r(row.l || ""),
+                i = r(row.v || "");
               if (!i && a.indexOf(":") >= 0) {
                 const e = a.indexOf(":");
                 ((i = a.slice(e + 1).trim()), (a = a.slice(0, e).trim()));
               }
-              return React.createElement(
+              node = React.createElement(
                 "div",
                 {
                   key: t,
@@ -4332,7 +4512,7 @@
                     color: S ? "#fff" : "#333",
                     textAlign: S ? "justify" : "left",
                     lineHeight: I,
-                    paddingLeft: e.indent ? 8 : 0,
+                    paddingLeft: row.indent ? 8 : 0,
                     overflowWrap: "break-word",
                     wordBreak: "break-word",
                   },
@@ -4358,44 +4538,57 @@
                   }),
                 ),
               );
-            }),
-          );
-        }
-        case "list":
+            }
+            if (node) __items.push({ key: String(t), node });
+          });
           return React.createElement(
             React.Fragment,
             null,
-            (e.items || []).map((t, n) =>
-              e.hidden && e.hidden[n]
-                ? null
-                : React.createElement(
-                    "div",
-                    {
-                      key: n,
-                      "data-antcv-row-path": `items.${n}`,
-                      style: {
-                        fontSize: S ? $.sb : $.text,
-                        fontFamily: T,
-                        color: S ? "#fff" : "#333",
-                        marginBottom: 2,
-                        textAlign: S
-                          ? "certs" === e.id || /cert/i.test(e.title || "")
-                            ? "center"
-                            : "justify"
-                          : "left",
-                        lineHeight: I,
-                        overflowWrap: "break-word",
-                        wordBreak: "break-word",
-                      },
-                    },
-                    React.createElement(B, {
-                      path: ["items", n],
-                      value: P(t),
-                      placeholder: "(click to add)",
-                    }),
-                  ),
-            ),
+            n ? __antcvBreaks(__sid, __items, __title) : __items.map((it) => it.node),
           );
+        }
+        case "list": {
+          const __sid = e.id;
+          const __title = (e.title || "").toUpperCase();
+          const __items = [];
+          (e.items || []).forEach((t, n) => {
+            if (e.hidden && e.hidden[n]) return;
+            __items.push({
+              key: String(n),
+              node: React.createElement(
+                "div",
+                {
+                  key: n,
+                  "data-antcv-row-path": `items.${n}`,
+                  style: {
+                    fontSize: S ? $.sb : $.text,
+                    fontFamily: T,
+                    color: S ? "#fff" : "#333",
+                    marginBottom: 2,
+                    textAlign: S
+                      ? "certs" === e.id || /cert/i.test(e.title || "")
+                        ? "center"
+                        : "justify"
+                      : "left",
+                    lineHeight: I,
+                    overflowWrap: "break-word",
+                    wordBreak: "break-word",
+                  },
+                },
+                React.createElement(B, {
+                  path: ["items", n],
+                  value: P(t),
+                  placeholder: "(click to add)",
+                }),
+              ),
+            });
+          });
+          return React.createElement(
+            React.Fragment,
+            null,
+            n ? __antcvBreaks(__sid, __items, __title) : __items.map((it) => it.node),
+          );
+        }
         case "list_italic":
           return React.createElement(
             React.Fragment,
@@ -4430,53 +4623,60 @@
               );
             }),
           );
-        case "education":
+        case "education": {
+          const __sid = e.id;
+          const __title = (e.title || "").toUpperCase();
+          const __items = [];
+          (e.items || []).forEach((t, n) => {
+            if (e.hidden && e.hidden[n]) return;
+            __items.push({
+              key: String(n),
+              node: React.createElement(
+                "div",
+                {
+                  key: n,
+                  "data-antcv-row-path": `items.${n}`,
+                  style: {
+                    fontSize: S ? $.sb : $.text,
+                    fontFamily: T,
+                    marginBottom: 4,
+                    color: S ? "#fff" : "#333",
+                    textAlign: S ? "justify" : "left",
+                    lineHeight: I,
+                    overflowWrap: "break-word",
+                    wordBreak: "break-word",
+                  },
+                },
+                React.createElement(
+                  "b",
+                  { style: { color: S ? "#fff" : C } },
+                  React.createElement(B, {
+                    path: ["items", n, "deg"],
+                    value: L(t.deg),
+                    placeholder: "[Degree]",
+                  }),
+                ),
+                t.sch || p
+                  ? React.createElement(
+                      React.Fragment,
+                      null,
+                      " — ",
+                      React.createElement(B, {
+                        path: ["items", n, "sch"],
+                        value: P(t.sch || ""),
+                        placeholder: "[School]",
+                      }),
+                    )
+                  : "",
+              ),
+            });
+          });
           return React.createElement(
             React.Fragment,
             null,
-            (e.items || []).map((t, n) =>
-              e.hidden && e.hidden[n]
-                ? null
-                : React.createElement(
-                    "div",
-                    {
-                      key: n,
-                      "data-antcv-row-path": `items.${n}`,
-                      style: {
-                        fontSize: S ? $.sb : $.text,
-                        fontFamily: T,
-                        marginBottom: 4,
-                        color: S ? "#fff" : "#333",
-                        textAlign: S ? "justify" : "left",
-                        lineHeight: I,
-                        overflowWrap: "break-word",
-                        wordBreak: "break-word",
-                      },
-                    },
-                    React.createElement(
-                      "b",
-                      { style: { color: S ? "#fff" : C } },
-                      React.createElement(B, {
-                        path: ["items", n, "deg"],
-                        value: L(t.deg),
-                        placeholder: "[Degree]",
-                      }),
-                    ),
-                    t.sch || p
-                      ? React.createElement(
-                          React.Fragment,
-                          null,
-                          " — ",
-                          React.createElement(B, {
-                            path: ["items", n, "sch"],
-                            value: P(t.sch || ""),
-                            placeholder: "[School]",
-                          }),
-                        )
-                      : "",
-                  ),
-            ),
+            n ? __antcvBreaks(__sid, __items, __title) : __items.map((it) => it.node),
           );
+        }
         default:
           return null;
       }
@@ -4520,6 +4720,20 @@
       })()
     )
       return null;
+    // Whole-section move: if the section's first item sits on page >=2, the entire
+    // section (heading + body) moves to that page. The salmon splitter + the real
+    // CSS page break are drawn ONCE here, before the section, so reconciliation
+    // keeps them (no sidecar injection). Mid-section breaks are drawn inside the
+    // body renderers via __antcvBreaks. Experience/table keep their own break paths.
+    // Gated to the cover letter (n === isCL): the CL preview is a single
+    // continuous flow, so the native salmon + CSS break IS the paginator. The CV
+    // preview paginates into discrete page-boxes (see the "cv" === Lt branch /
+    // flatMap split), so a section-level break here would fight that engine.
+    const __ss = n ? __antcvSecStart(e) : 1;
+    const __secMove =
+      "experience" !== e.type && "table" !== e.type && __ss > 1
+        ? __antcvSalmon(__ss, null)
+        : null;
     if (
       ["greeting", "opening", "closure", "closing", "work_style"].includes(
         String(e.id || "").toLowerCase(),
@@ -4528,9 +4742,14 @@
     )
       return R(
         React.createElement(
-          "div",
-          { "data-sid": e.id, style: { marginBottom: 5 } },
-          D,
+          React.Fragment,
+          null,
+          __secMove,
+          React.createElement(
+            "div",
+            { "data-sid": e.id, style: { marginBottom: 5 } },
+            D,
+          ),
         ),
       );
     const z = S ? "center" : "left",
@@ -4550,6 +4769,10 @@
               breakBefore: e.pageBreakBefore ? "page" : void 0,
             };
     return R(
+      React.createElement(
+        React.Fragment,
+        null,
+        __secMove,
       React.createElement(
         "div",
         { "data-sid": e.id, style: M },
@@ -4590,6 +4813,7 @@
           }),
         ),
         D,
+      ),
       ),
     );
   }
@@ -12254,6 +12478,25 @@
           return (
             window.addEventListener("antcv:sections-updated", e),
             () => window.removeEventListener("antcv:sections-updated", e)
+          );
+        }, []),
+        // 1.50.202: page-break model changed (antcv:item-pages-changed). Force a
+        // re-render so the native salmon splitters re-read antcv:itemPages, WITHOUT
+        // re-reading sections from localStorage (that path wiped HIWC bullets when a
+        // sidecar's textarea sync hadn't persisted yet). Clone the in-memory section
+        // arrays so memoized children re-render; section objects keep their identity.
+        React.useEffect(() => {
+          const e = () => {
+            try {
+              ao((s) => ({
+                cv: (s && s.cv ? s.cv : []).slice(),
+                cl: (s && s.cl ? s.cl : []).slice(),
+              }));
+            } catch (_) {}
+          };
+          return (
+            window.addEventListener("antcv:item-pages-changed", e),
+            () => window.removeEventListener("antcv:item-pages-changed", e)
           );
         }, []),
         React.useEffect(() => {

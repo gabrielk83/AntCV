@@ -53,7 +53,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.190-light-splitter';
+  var VERSION = '1.50.202-native-render-retired';
   if (window.__antcvPageBreaksEverywhere284 === VERSION) return;
   window.__antcvPageBreaksEverywhere284 = VERSION;
 
@@ -210,6 +210,14 @@
   }
 
   function applySection(sectionEl, sid) {
+    // 1.50.202: page breaks are now rendered natively in app.js (React) from the
+    // same itemPages model — see docs/plan/page-break-architecture.md. Sidecar DOM
+    // injection is retired (React reconciled it away, which is why preview salmon
+    // never stuck). We only sweep up any markers a prior version left behind so
+    // there is no double render, then bail. Panel chips live in the row-control
+    // sidecars and are untouched.
+    clearOurMarkers(sectionEl);
+    return;
     var title = getSectionTitle(sid);
     if (isProfessionalExperience(title)) return;
     // If v194 already inserted markers, just remove ours and leave its.

@@ -5,7 +5,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.50.198-coherent-pages';
+  const VERSION='1.50.202-native-render';
   let __applying=false; // v1.50.57: re-entrancy guard so our own DOM writes don't re-trigger the observer/flicker.
   const ALIGN_KEY='antcv.hiwc.alignment.v1';
   const PAGE_KEY='antcv:itemPages';
@@ -586,22 +586,12 @@
     if(p.intro) ordered.push(['intro',p.intro]);
     (p.bullets||[]).forEach((el,idx)=>{ if(el) ordered.push(['bullet_'+idx,el]); });
     if(p.closing) ordered.push(['closing',p.closing]);
-    let runMax=1;
-    ordered.forEach(([k,el],i)=>{
+    // 1.50.202: the salmon splitter + "(CONT.)" header are now rendered NATIVELY in
+    // app.js (React) from the same itemPages model, so sidecar DOM injection here is
+    // retired — React reconciled it away, which is why preview salmon never stuck.
+    // We still apply per-part text alignment (not part of the React break model).
+    ordered.forEach(([k,el])=>{
       const a=getAlign(k); el.style.textAlign=a; Array.from(el.querySelectorAll('span,div,p')).forEach(x=>x.style.textAlign=a);
-      const pg=getPage(k);
-      if(pg>runMax){
-        if(i===0){
-          // 1.50.195: a break on the FIRST part (the intro) moves the WHOLE
-          // HIWC section — insert the salmon bar at the very top of the section
-          // (before its heading) with NO "(CONT.)" header, so the heading and
-          // everything after it ride to the next page together.
-          if(s.firstChild) s.insertBefore(makeSalmonBar(pg),s.firstChild); else s.appendChild(makeSalmonBar(pg));
-        } else if(el.parentNode){
-          el.parentNode.insertBefore(makeBreakHeader(pg),el);
-        }
-        runMax=pg;
-      }
     });
     } finally { __applying=false; }
   }

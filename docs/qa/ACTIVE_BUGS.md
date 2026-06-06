@@ -3,6 +3,99 @@
 Living list of open issues. Newest section at top. Mark items `[FIXED]`, `[VERIFYING]`, or `[OPEN]`.
 This file now folds in the canonical `AntCV_UI_UX_Spec_and_QA_Plan_v4.docx` backlog (see "QA SPEC BACKLOG" below) so there is a single working list. The .docx remains the source of full prose detail; a machine-retrievable ID index lives alongside this file at `docs/qa/AntCV_QA_backlog_index_v4.md`.
 
+A companion **feature registry** (open vs shipped features) lives at
+`docs/FEATURES_REGISTRY.md`.
+
+---
+
+## SESSION 2026-06-06 — visual-package/palette root fix + UX/data/console batch
+
+Owner-driven batch (Claude Opus). Production reached **PWA 1.50.166** + **docx-worker
+1.14.17**. All items below MERGED to `main` and live on `antcv.pages.dev` unless
+marked otherwise. Cloudflare Pages auto-builds production from `main`; the docx
+worker was deployed via `wrangler deploy`.
+
+### Headline — package "colour mix" — partial mitigation shipped, ROOT still OPEN
+
+- **PACKAGE-PALETTE-MIX-001 — [OPEN]** (owner-confirmed 2026-06-06; partial
+  mitigation [PR #226](https://github.com/gabrielk83/AntCV/pull/226), v1.50.166).
+  **Owner directive (2026-06-06): keep this OPEN.** The default Copenhagen Modern
+  palette must render on load — not the "undefined ugly mix with black". #226 is a
+  render-time patch, not a close-out.
+  Returning users were stuck on a mismatched palette ("colour mix"); only
+  re-pressing the package in Settings fixed it, and it never persisted.
+  **Root cause:** the document colour state (`styleConfig`/`ya`) only ever
+  initialised from the *saved* config, never from the selected package, so the
+  accents stayed stale on reload — AND the persisted package id is the legacy
+  orphan `"scandinavian"`, which never gets rewritten to the registry id
+  `copenhagen-modern`. **Partial fix in #226 (in `app.js` itself):** a one-time
+  mount effect derives the palette from the selected package's `va[Sa].style` for
+  non-custom packages (Custom keeps its saved config; `navyColor` keeps owning
+  the backgrounds). Done in both `pwa/app.src.js` (the de-minified **SOURCE OF
+  TRUTH**, now tracked) and the deployed `pwa/app.js` (inserted by exact unique
+  string replace — only +230 bytes change; round-trip verified within ~64 bytes).
+  **Why still OPEN — Chrome verification on the `fix-app-src-package-id-root`
+  branch preview (2026-06-06):** seeding the returning-user orphan and reloading,
+  `localStorage.stylePackage` is *still* `"scandinavian"` while
+  `body[data-package]` is `copenhagen-modern` — the persisted-id mismatch that
+  produces the black mix is unchanged. #226 only re-derives the render colours; it
+  does not rewrite or persist the orphan id. The durable close-out is
+  **APPJS-ID-SCHEME-UNIFY** (unify app.js's id scheme with the registry + persist
+  the selection through cloud-restore) — tracked in the feature registry.
+- **ORPHAN-DEFAULT audit (owner request) — done.** `"scandinavian"` is app.js's
+  legacy umbrella default for BOTH the visual package (`stylePackage`, registry
+  default `copenhagen-modern`) AND the writing tone (`toneRegister`, registry
+  default `nordic-minimal`); neither registry contains it, and app.js uses a
+  *different id scheme* than the registry (e.g. `copenhagen_executive` vs
+  `navy-executive`). **No other orphan defaults** exist (language `en`,
+  `photoPosition sidebar-top`, etc. are all valid — the "American/British" hits
+  are a DOCX lang attribute + a prompt instruction, not settings).
+
+### Fixed this session (all MERGED + live)
+
+| ID | Item | PR | Ver |
+|----|------|----|-----|
+| DATA-EXPORT-001 | Download all stored data/analytics (optional AES passphrase) | [#176](https://github.com/gabrielk83/AntCV/pull/176)/[#185](https://github.com/gabrielk83/AntCV/pull/185) | 1.50.140/147 |
+| DELETE-SAVE-001 | "Save my data locally first" before erase | [#176](https://github.com/gabrielk83/AntCV/pull/176)/[#181](https://github.com/gabrielk83/AntCV/pull/181) | 1.50.140/145 |
+| IMPORT-COUNT-001 | Upload toast showed 0 work/edu/pubs (React split-text rewrite) | [#178](https://github.com/gabrielk83/AntCV/pull/178) | 1.50.143 |
+| SHAPE-GUARD-NOISE-001 | False "missing bullets[]" warns for `{b,t}`/`{l,v}`/`{deg,sch}`/`{group}` leaves | [#186](https://github.com/gabrielk83/AntCV/pull/186)/[#189](https://github.com/gabrielk83/AntCV/pull/189) | 1.50.148/150 |
+| CONSOLE-NOISE-001 | Central console quieter (~70 boot banners) | [#188](https://github.com/gabrielk83/AntCV/pull/188) | 1.50.149 |
+| PRIVACY-FAB-MOBILE-001 | Privacy LED invisible on mobile (relocated pill exempt) | [#195](https://github.com/gabrielk83/AntCV/pull/195) | 1.50.152 |
+| PRIVACY-FAB-FLOATING-001 | Stray privacy ⚠ FAB in Settings/Generation (desktop) | [#207](https://github.com/gabrielk83/AntCV/pull/207) | 1.50.158 |
+| PHOTO-PREVIEW-001 | Alt photo positions broke under the single-table renderer (photo-anchored finders) | [#196](https://github.com/gabrielk83/AntCV/pull/196) | 1.50.153 |
+| DOCX-PHOTO-BANDOVERLAP-001 | `band-overlap` not recognised by the docx worker | [#200](https://github.com/gabrielk83/AntCV/pull/200) | worker 1.14.17 |
+| SIDEBAR-COLOR-001 | Sidebar stayed blue on colour styles (→ `var(--package-base)`) | [#210](https://github.com/gabrielk83/AntCV/pull/210) | 1.50.159 |
+| PACKAGE-RELOAD-DESYNC-001 | Palette applied the previous style on reload (read native key) | [#212](https://github.com/gabrielk83/AntCV/pull/212) | 1.50.160 |
+| PACKAGE-ORPHAN-001 | Auto-apply Copenhagen Modern for orphan `scandinavian` (sidecar) | [#217](https://github.com/gabrielk83/AntCV/pull/217) | 1.50.164 |
+| TONE-ORPHAN-001 | Migrate orphan `toneRegister scandinavian` → `nordic-minimal` | [#220](https://github.com/gabrielk83/AntCV/pull/220) | 1.50.165 |
+
+### Still OPEN (registered, not done this session)
+
+- **PHOTO-PREVIEW-ALT-PERSIST-001 — [OPEN]** owner reports the alt photo
+  positions still don't *stick* (image always lands at sidebar-top) even after
+  #196's finders resolve — needs a live clone-state probe (clone cleared/
+  re-overwritten). Distinct from #196 (which fixed the finders).
+- **PHOTO-SIDEBAR-BRIDGE-001 — [OPEN, design]** owner spec: implement `band-overlap`
+  by splitting the candidate-header cell so the photo hovers with its mid-line on
+  the header/sidebar seam — both preview and DOCX. A design build, not a sidecar.
+- **PRIVACY-FAB-FLICKER-MOBILE-001 — [OPEN]** the top-bar pill intermittently
+  disappears (fixed by toggling the editor) — `topbar-tools-347` relocation timing.
+- **DEMO-WARN-NONDEMO-001 — [partly addressed]** privacy LED showed the demo-proxy
+  warning for a non-demo user (workaround: Reset). A `demo-watermark`/privacy-led
+  state sidecar landed in parallel; verify it covers this.
+- **FEATURE-CONF-001 — [OPEN feature]** per-sentence confidence overlay (see
+  feature registry). Not started.
+
+### Workaround sidecars — KEEP (do NOT retire yet)
+
+PACKAGE-PALETTE-MIX-001 is still OPEN, so the workaround sidecars stay in place:
+`antcv-package-orphan-apply.js` (#217), the loading-gate tone migration (#220),
+and `antcv-sidebar-bg-token.js` (#210) all remain load-bearing until the durable
+fix lands. Only retire them once **APPJS-ID-SCHEME-UNIFY** ships — that cleanup
+unifies app.js's id scheme with the registry and persists the selection through
+cloud-restore (so `stylePackage` stops being the orphan `"scandinavian"`),
+closing the bug at the data layer. Tracked in the feature registry.
+
 ---
 
 ## SESSION 2026-06-06 — app.js rebuild safety + page-split engine (paused)

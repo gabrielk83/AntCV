@@ -19,6 +19,12 @@
        it swallows the ~70 sidecar "installed" banners + repeated app.js status
        chatter. Errors always pass through. Full logs: localStorage.antcvVerboseConsole=1. -->
   <script src="antcv-console-quiet.js?v=1.50.149"></script>
+  <!-- v1.50.185: React DOM guard. MUST load before React commits. Makes
+       Node.removeChild/insertBefore defensive so a DOM-decorating sidecar
+       moving a React-owned node can no longer crash React's commit phase
+       (the mobile "Settings→Personal→edit name" blue screen, a NotFoundError
+       removeChild). Diagnose the offending sidecar: localStorage.antcvDomGuardVerbose=1. -->
+  <script src="antcv-react-dom-guard.js?v=1.50.185-react-dom-guard"></script>
   <!-- v1.50.165: login loading gate. Runs BEFORE app.js: migrates the orphan
        writing-tone default (toneRegister "scandinavian" -> "nordic-minimal") and
        shows a "Loading…" cover for returning users until the editor is ready, so

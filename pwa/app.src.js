@@ -36567,9 +36567,8 @@
           }),
           Y &&
             Y.email &&
-            ["51pegasib@gmail.com"].indexOf(
-              String(Y.email || "").toLowerCase(),
-            ) >= 0 &&
+            B &&
+            B.demo_mode &&
             React.createElement(
               "span",
               {

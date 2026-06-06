@@ -23830,23 +23830,41 @@ function postProcessDocx(input, opts = {}) {
     if (opts && opts.watermark && String(opts.watermark).trim()) {
       const wm = String(opts.watermark).trim().replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" })[c]);
       const watermarkRun = '<w:r><w:rPr><w:noProof/></w:rPr><w:pict><v:shapetype id="_x0000_t136" coordsize="21600,21600" o:spt="136" adj="10800" path="m@7,l@8,m@5,21600l@6,21600e"><v:formulas><v:f eqn="sum #0 0 10800"/><v:f eqn="prod #0 2 1"/><v:f eqn="sum 21600 0 @1"/><v:f eqn="sum 0 0 @2"/><v:f eqn="sum 21600 0 @3"/><v:f eqn="if @0 @3 0"/><v:f eqn="if @0 21600 @1"/><v:f eqn="if @0 0 @2"/><v:f eqn="if @0 @4 21600"/><v:f eqn="mid @5 @6"/><v:f eqn="mid @8 @5"/><v:f eqn="mid @7 @8"/><v:f eqn="mid @6 @7"/><v:f eqn="sum @6 0 @5"/></v:formulas><v:path o:extrusionok="f" gradientshapeok="t" o:connecttype="custom" o:connectlocs="@9,0;@10,10800;@11,21600;@12,10800" o:connectangles="270,180,90,0" textpathok="t"/><v:textpath on="t" fitshape="t"/><v:handles><v:h position="#0,bottomRight" xrange="6629,14971"/></v:handles><o:lock v:ext="edit" text="t" shapetype="t"/></v:shapetype><v:shape id="AntCVWatermark" type="#_x0000_t136" style="position:absolute;margin-left:0;margin-top:0;width:468pt;height:117pt;rotation:-30;z-index:-251654144;mso-position-horizontal:center;mso-position-horizontal-relative:margin;mso-position-vertical:center;mso-position-vertical-relative:margin" fillcolor="#D0D0D0" stroked="f"><v:fill opacity=".4"/><v:textpath style="font-family:&quot;Arial&quot;;font-size:1pt" string="' + wm + '"/><w10:wrap anchorx="margin" anchory="margin"/></v:shape></w:pict></w:r>';
-      const bodyOpenIdx = xml2.indexOf("<w:body>");
-      if (bodyOpenIdx >= 0) {
-        const after = bodyOpenIdx + "<w:body>".length;
-        xml2 = xml2.slice(0, after) + "<w:p>" + watermarkRun + "</w:p>" + xml2.slice(after);
-        watermarked = true;
-        // Microsoft Word (unlike LibreOffice/CloudConvert, which renders the PDF)
-        // silently DROPS the VML watermark unless the VML namespaces are declared
-        // on the <w:document> root. The packer does not declare xmlns:v/o/w10, so
-        // the DEMO mark showed only in the PDF, not in Word. Ensure them here.
-        xml2 = xml2.replace(/<w:document\b[^>]*>/, (tag) => {
-          let t = tag;
-          if (!/\bxmlns:v=/.test(t)) t = t.replace(/>$/, ' xmlns:v="urn:schemas-microsoft-com:vml">');
-          if (!/\bxmlns:o=/.test(t)) t = t.replace(/>$/, ' xmlns:o="urn:schemas-microsoft-com:office:office">');
-          if (!/\bxmlns:w10=/.test(t)) t = t.replace(/>$/, ' xmlns:w10="urn:schemas-microsoft-com:office:word">');
-          return t;
-        });
+      // 1.14.20: HEADER-based Word watermark (the standard, robust approach). The
+      // VML WordArt run lives in a HEADER part and floats over every page. This
+      // renders in Word, LibreOffice (PDF) and Google Docs, and adds NO body
+      // paragraph — the old body-paragraph insertion squished the cover-letter
+      // layout (DEMO landed on top, body compressed) once demo_mode came on.
+      const headerXml =
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+        '<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w10="urn:schemas-microsoft-com:office:word">' +
+        '<w:p>' + watermarkRun + '</w:p></w:hdr>';
+      files["word/header1.xml"] = strToU8(headerXml);
+      // Relationship (choose a non-colliding rId).
+      const relsName = "word/_rels/document.xml.rels";
+      let rels = files[relsName] ? strFromU8(files[relsName]) : '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';
+      let maxRid = 0;
+      rels.replace(/Id="rId(\d+)"/g, (m0, n) => { const k = parseInt(n, 10); if (k > maxRid) maxRid = k; return m0; });
+      const rid = "rId" + (maxRid + 1);
+      if (rels.indexOf('Target="header1.xml"') < 0) {
+        rels = rels.replace("</Relationships>", '<Relationship Id="' + rid + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/></Relationships>');
+        files[relsName] = strToU8(rels);
       }
+      // Content-type override for the new header part.
+      if (files["[Content_Types].xml"]) {
+        let ct = strFromU8(files["[Content_Types].xml"]);
+        if (ct.indexOf("/word/header1.xml") < 0) {
+          ct = ct.replace("</Types>", '<Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/></Types>');
+          files["[Content_Types].xml"] = strToU8(ct);
+        }
+      }
+      // Reference the header from every section (headerReference must be the FIRST
+      // child of <w:sectPr>). No <w:titlePg>/evenAndOddHeaders here, so the default
+      // header applies to ALL pages.
+      if (xml2.indexOf("w:headerReference") < 0) {
+        xml2 = xml2.replace(/<w:sectPr(\s[^>]*)?>/g, (m0) => m0 + '<w:headerReference w:type="default" r:id="' + rid + '"/>');
+      }
+      watermarked = true;
     }
     if (placeholderResult.count > 0 || photoResult.count > 0 || watermarked) {
       files["word/document.xml"] = strToU8(xml2);
@@ -26307,7 +26325,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.19-watermark-word-namespaces";
+var VERSION = "1.14.20-header-watermark";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

@@ -4137,13 +4137,16 @@
               {
                 "data-table-resize-wrap": "true",
                 "data-antcv-row-pagebreak-table": "true",
-                style: wrapStyle,
+                style: { marginTop: 8 },
               },
               _antcvPbStarts.map((st, idx) => {
                 const en =
                   idx + 1 < _antcvPbStarts.length
                     ? _antcvPbStarts[idx + 1]
                     : rows.length;
+                // The salmon bar + (Cont.) heading are FULL-WIDTH siblings of the
+                // table (not inside the 72%-centered table wrap) so the splitter
+                // spans the whole page. Only the <table> stays in the inset wrap.
                 return React.createElement(
                   React.Fragment,
                   { key: "seg" + idx },
@@ -4212,16 +4215,21 @@
                         marginBottom: 4,
                       },
                     }),
-                  mk(st, en, idx),
+                  React.createElement(
+                    "div",
+                    { style: { ...wrapStyle, marginTop: 0 } },
+                    mk(st, en, idx),
+                    idx === 0 &&
+                      f &&
+                      React.createElement(ke, {
+                        leftPct: (100 * u) / p,
+                        ratio: c ? a : r,
+                        onChange: f,
+                        accent: k.tableHeaderBg || s,
+                      }),
+                  ),
                 );
               }),
-              f &&
-                React.createElement(ke, {
-                  leftPct: (100 * u) / p,
-                  ratio: c ? a : r,
-                  onChange: f,
-                  accent: k.tableHeaderBg || s,
-                }),
             );
           // CORE COMPETENCIES (CV main) — INDEPENDENT segmentation. Deliberately a
           // separate branch from WHAT I BRING (CL): same shared mk/head/_antcvPbStarts
@@ -12495,17 +12503,44 @@
         // sidecar's textarea sync hadn't persisted yet). Clone the in-memory section
         // arrays so memoized children re-render; section objects keep their identity.
         React.useEffect(() => {
+          // Re-render the preview when the page-break model changes so the native
+          // salmon re-reads antcv:itemPages — but LOOP-SAFE. Sidecars re-dispatch
+          // this event (foundation sync, table controls) and our re-render can
+          // trigger their MutationObservers, so an unguarded ao() here caused React
+          // #185 (max update depth). Guard with: (1) rAF coalescing so a burst is one
+          // update, (2) a snapshot of itemPages so we only re-render when it ACTUALLY
+          // changed — once the model is stable the loop terminates.
+          let raf = 0,
+            last = null;
+          try {
+            last = localStorage.getItem("antcv:itemPages") || "";
+          } catch (_) {
+            last = "";
+          }
           const e = () => {
-            try {
-              ao((s) => ({
-                cv: (s && s.cv ? s.cv : []).slice(),
-                cl: (s && s.cl ? s.cl : []).slice(),
-              }));
-            } catch (_) {}
+            if (raf) return;
+            raf = requestAnimationFrame(() => {
+              raf = 0;
+              let snap = "";
+              try {
+                snap = localStorage.getItem("antcv:itemPages") || "";
+              } catch (_) {}
+              if (snap === last) return;
+              last = snap;
+              try {
+                ao((s) => ({
+                  cv: (s && s.cv ? s.cv : []).slice(),
+                  cl: (s && s.cl ? s.cl : []).slice(),
+                }));
+              } catch (_) {}
+            });
           };
           return (
             window.addEventListener("antcv:item-pages-changed", e),
-            () => window.removeEventListener("antcv:item-pages-changed", e)
+            () => {
+              if (raf) cancelAnimationFrame(raf);
+              window.removeEventListener("antcv:item-pages-changed", e);
+            }
           );
         }, []),
         React.useEffect(() => {
@@ -36048,9 +36083,22 @@
                     } catch (_) { return [sec]; }
                   }),
                   a = (e) => Math.max(1, parseInt(e.page || 1, 10)),
-                  i = t.map((e) => Math.max(1, parseInt(e.page || 1, 10))),
-                  c = i.length > 0 && i.every((e) => e >= 2),
-                  d = c ? i.map((e, t) => (t < 4 ? 1 : 2)) : i,
+                  d = (() => {
+                    // Role effective page = its own page, floored monotonically so a
+                    // role can't sit on a page earlier than the role above it. The
+                    // role page button already cascades (sets this role + all after to
+                    // the new page), so moving role 0 to page 2 -> every role page 2 ->
+                    // the WHOLE experience moves. (The old heuristic remapped the first
+                    // 4 roles back to page 1 whenever all were >=2, which broke that —
+                    // it left only the last role on page 2.)
+                    let r = 1;
+                    return t.map((e) => {
+                      let p = Math.max(1, parseInt(e.page || 1, 10));
+                      if (p < r) p = r;
+                      else r = p;
+                      return p;
+                    });
+                  })(),
                   p = [...o.map(a), ...d],
                   u = p.length ? Math.max(1, ...p) : 1,
                   m = (e) => o.filter((t) => a(t) === e),

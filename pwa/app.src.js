@@ -13314,16 +13314,28 @@
         try {
           const ps =
             Sa && Sa !== "custom" && va[Sa] && va[Sa].style ? va[Sa].style : null;
-          if (ps)
-            ba((e) => {
+          // Self-heal the colour mix (PACKAGE-PALETTE-MIX-001): when a NAMED
+          // package's styleConfig drifts from its palette — e.g. cloud-restore
+          // brings back a stale styleConfig (Warm Terracotta) while stylePackage
+          // is the orphan default (Copenhagen Modern) — re-derive the package
+          // accents. Runs on every styleConfig change (deps include ya), so it
+          // also fires AFTER cloud-restore, and works on mobile with no button.
+          // Custom configs are exempt (any manual colour edit flips stylePackage
+          // to "custom"). navyColor (Ke) owns the backgrounds. Deps are [Ke, ya]
+          // only — Sa is declared later in the component, so it must NOT be in the
+          // dependency array (TDZ); it is read inside the callback, which is safe.
+          if (ps && ya.mainHeadColor !== ps.mainHeadColor)
+            ba(() => {
               const t = { ...c, ...ps };
-              t.headerBg = e.headerBg;
-              t.sidebarBg = e.sidebarBg;
-              t.tableHeaderBg = e.tableHeaderBg;
+              if (Ke) {
+                t.headerBg = Ke;
+                t.sidebarBg = Ke;
+                t.tableHeaderBg = Ke;
+              }
               return t;
             });
         } catch (e) {}
-      }, []);
+      }, [Ke, ya]);
       const va = {
           scandinavian: {
             label: "Copenhagen Modern",

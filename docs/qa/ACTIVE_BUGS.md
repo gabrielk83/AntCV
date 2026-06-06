@@ -98,6 +98,53 @@ closing the bug at the data layer. Tracked in the feature registry.
 
 ---
 
+## SESSION 2026-06-06 — app.js rebuild safety + page-split engine (paused)
+
+Worklog for the on-screen page-split engine attempt and the blue-screen it caused.
+Net result: the regression is reverted and live; the engine work is **paused** behind
+a missing safe-rebuild path. Both items below are tracked so the next channel does not
+repeat the mistake.
+
+### Resolved this session
+
+- **APPJS-BLUESCREEN-001** — A full blue screen on load after the page-split engine
+  was shipped via `npm run build:app`. **Root cause: the esbuild round-trip is NOT
+  behaviour-preserving for this bundle.** The working `app.js` begins
+  `(()=>{const{useState:e,…` (sloppy-mode global-React IIFE); the esbuild rebuild begins
+  `"use strict";(()=>{…` — esbuild prepends a strict-mode directive and emits other
+  minifier differences, and the original bundle relies on sloppy-mode semantics, so the
+  rebuilt bundle threw at boot. NOT caused by the parallel `main` merge (the
+  deployed/branch-HEAD `app.js` was confirmed to be the esbuild build). **Fix:** restored
+  the ORIGINAL minified `app.js` + the clean `app.src.js` from pre-rebuild commit
+  `0a7c459`; cache trio bumped to **1.50.166** (1.50.165 → STALE) so the broken cached
+  bundle is flushed. Deployed live (deploy.yml → deploy-pwa green). — FIXED✓ (1.50.166).
+
+### Still OPEN after this session
+
+- **APPJS-REBUILD-001** `[OPEN][HIGH][build]` — **There is no verified behaviour-preserving
+  way to rebuild `app.js` from `app.src.js` yet.** `npm run build:app` (esbuild `--minify`)
+  fails the only test that matters (it blue-screens, see APPJS-BLUESCREEN-001), so it must
+  not be used to ship until it passes the **identity round-trip gate** below. This blocks
+  every edit that has to go through the de-minified source (ENGINE-PAGESPLIT-001 and any
+  future `app.src.js` change). The safe procedure is documented in
+  `docs/deployment/app-js-source-and-rebuild.md` and summarised in `CLAUDE.md`. Next action:
+  `[code]` find a minifier/config that passes the identity round-trip (terser semantics-
+  preserving, or esbuild with the strict-directive suppressed), OR do surgical in-place
+  edits on the minified `app.js` mirrored into `app.src.js` for traceability.
+- **ENGINE-PAGESPLIT-001** `[OPEN][PAUSED][feature]` — The real on-screen page-split
+  engine — per-item pagination so a forced break actually moves content to the next page
+  for all three split units: **(1) sidebar sub-subsections, (2) table rows, (3) "How I
+  would contribute" bullets** (heading moves with its first part). Today the CV two-column
+  page-box engine paginates only WHOLE sidebar sections (`.page`) and WHOLE experience
+  roles (`role.page`); there is no per-item primitive. The export side (docx-worker
+  ≥1.14.18) already honours per-item `_page`/`item_pages`; this item is the matching
+  on-screen render. **Paused — blocked on APPJS-REBUILD-001** (the change lives in
+  `pwa/app.src.js` ~line 35574 and needs a working rebuild). Design notes:
+  `docs/plan/PB-007-two-column-pagination.md`. A first cut was built (commit `636cda7`)
+  and reverted with the blue-screen fix.
+
+---
+
 ## SESSION 2026-06-05/06 — Analysis report, JD ingestion, demo mode, generate fixes
 
 Worklog for the analysis-PDF + JD-extraction + demo-mode + generate-flow engagement.

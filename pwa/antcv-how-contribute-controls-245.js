@@ -5,7 +5,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.50.193-bullet-break-salmon';
+  const VERSION='1.50.194-panel-break-sep';
   let __applying=false; // v1.50.57: re-entrancy guard so our own DOM writes don't re-trigger the observer/flicker.
   const ALIGN_KEY='antcv.hiwc.alignment.v1';
   const PAGE_KEY='antcv:itemPages';
@@ -296,9 +296,21 @@
     panel.setAttribute('data-antcv-hiwc-bullet-sig',sig);
     panel.textContent='';
     const rows=bulletRowsFromText(getVal(ta));
+    let __pbRunMax=1; // 1.50.194: mirror the preview's page-break divider in the panel.
     function writeRows(newRows){setVal(ta,newRows.join('\n'));syncSectionField('bullets',newRows.join('\n'));renderBulletControls(r,ta);applyPreview();}
     rows.forEach((txt,idx)=>{
       const key='bullet_'+idx;
+      // 1.50.194: when this bullet starts a new page, drop a light salmon
+      // "▼ PAGE N ▼" separator above its control row — so the panel shows the
+      // same break the preview does, right before the bullet that moved.
+      const __pg=getPage(key);
+      if(__pg>__pbRunMax){
+        const sep=document.createElement('div');sep.setAttribute('data-antcv-hiwc-panel-break','1');
+        Object.assign(sep.style,{display:'flex',alignItems:'center',justifyContent:'center',borderTop:'2px solid rgba(200,40,40,0.6)',background:'rgba(200,40,40,0.06)',margin:'4px 0 2px',padding:'1px 0',width:'100%',boxSizing:'border-box'});
+        const sb=document.createElement('span');sb.textContent='▼ PAGE '+__pg+' ▼';
+        Object.assign(sb.style,{background:'rgba(200,40,40,0.7)',color:'#fff',fontSize:'8px',padding:'1px 8px',borderRadius:'2px',fontFamily:'Arial,sans-serif',letterSpacing:'0.5px',whiteSpace:'nowrap'});
+        sep.appendChild(sb);panel.appendChild(sep);__pbRunMax=__pg;
+      }
       const row=document.createElement('div');row.setAttribute('data-antcv-hiwc-bullet-ctl-row','1');
       // Wrap so the buttons never get clipped on a narrow phone: the label
       // takes the first line (ellipsised), the buttons flow onto the next.

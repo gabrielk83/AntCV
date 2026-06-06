@@ -1066,9 +1066,10 @@ function buildHeaderCell(ctx) {
   if (pi.name) {
     out.push(new Paragraph({
       alignment: alignType(headerAlign.name),
-      // 1.14.25: top space removed (was before:60) — the running header now
-      // provides the coloured top strip, so the name sits flush at the band top.
-      spacing: { before: 0, after: 40, line: 240, lineRule: 'exact' },
+      // 1.14.27: the running-header strip is now a thin 2pt line, so give the
+      // name back 3pt (before:60) of top space inside the band so it isn't
+      // clipped at the top edge of the candidate section.
+      spacing: { before: 60, after: 40, line: 240, lineRule: 'exact' },
       shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: 'auto' },
       children: [
         new TextRun({

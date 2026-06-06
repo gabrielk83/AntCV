@@ -27,52 +27,21 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.182-demo-multi-origin';
+  var VERSION = '1.50.183-demo-multi-origin';
   if (window.__antcvDemoWatermark === VERSION) return;
   window.__antcvDemoWatermark = VERSION;
 
   var CSS_ID = 'antcv-demo-watermark-css';
   var ATTR = 'data-antcv-demo-wm';
   var OVERLAY_CLASS = 'antcv-demo-wm-overlay';
-  // 1.50.182: /config (which reports demo_mode) is served by the ACCESS-RELAY,
-  // NOT by the user-settable proxyUrl. A stale/mis-set proxyUrl (e.g. pointed at
-  // the docx-worker, which has no /config and 404s) used to break demo detection
-  // and spam the console. Resolve the base from the relay first
-  // (window.ANTCV_RELAY_URL → localStorage.relayUrl), falling back to proxyUrl
-  // only as a last resort. Cache the answer ONLY on a successful response so an
-  // early call (before relay-config.json has loaded) doesn't pin a wrong value;
-  // the retry ticks (200/600/1500/3500ms) then succeed once the relay is known.
-  var demoSettled = false, demoValue = false, inFlight = null;
+  // 1.50.182 (demo-multi-origin): /config (which reports demo_mode) can be
+  // served by any of several origins depending on how the user is configured —
+  // the access-relay (signed-in / demo users, via window.ANTCV_RELAY_URL or
+  // localStorage.relayUrl), a custom proxyUrl, or the docx worker. Query every
+  // known origin and treat demo as ON if ANY reports demo_mode:true, so a stale
+  // or mis-set proxyUrl can't suppress the watermark.
+  var demoPromise = null;
 
-  function readLs(key) {
-    try {
-      var raw = localStorage.getItem(key);
-      if (!raw) return '';
-      try { return String(JSON.parse(raw)).trim().replace(/\/+$/, ''); }
-      catch (_) { return String(raw).trim().replace(/\/+$/, ''); }
-    } catch (_) { return ''; }
-  }
-
-  function configBase() {
-    try {
-      if (typeof window !== 'undefined' && window.ANTCV_RELAY_URL) {
-        var r = String(window.ANTCV_RELAY_URL).trim().replace(/\/+$/, '');
-        if (r) return r;
-      }
-    } catch (_) {}
-    return readLs('relayUrl') || readLs('proxyUrl');
-  }
-
-  function resolveDemo() {
-    if (demoSettled) return Promise.resolve(demoValue);
-    if (inFlight) return inFlight;
-    var base = configBase();
-    if (!base) return Promise.resolve(false); // relay not known yet — retry later, don't cache
-    inFlight = fetch(base + '/config', { credentials: 'include' })
-      .then(function (r) { if (!r.ok) throw new Error('HTTP_' + r.status); return r.json(); })
-      .then(function (j) { demoSettled = true; demoValue = !!(j && j.demo_mode); inFlight = null; return demoValue; })
-      .catch(function () { inFlight = null; return false; });
-    return inFlight;
   // Tolerant unwrap: some app.js versions JSON-wrap localStorage strings,
   // some don't. Strip surrounding quotes + trailing slashes; return ''.
   function unwrap(raw) {

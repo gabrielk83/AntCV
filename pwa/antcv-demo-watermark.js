@@ -1,4 +1,4 @@
-/* AntCV demo preview watermark (v1.50.159)
+/* AntCV demo preview watermark (v1.50.182)
  * ============================================================================
  * When the active proxy reports demo_mode:true, overlay a faint diagonal
  * "DEMO" watermark on the CV/CL preview page(s). This is the screen-side
@@ -11,13 +11,23 @@
  *                                   no-print, so the saved PDF carries it)
  *   - worker-rendered DOCX/PDF   -> worker stamps "DEMO" server-side
  *
- * Demo detection: reads the configured proxyUrl from localStorage and asks its
- * /config for demo_mode (cached for the session). No app.js dependency.
- * Additive, idempotent, removable in one <script> line.
+ * Demo detection: the previous build (<=1.50.175) read ONLY
+ * localStorage.proxyUrl and asked its /config for demo_mode. That key is
+ * empty for signed-in users (antcv-auth getProxyUrl falls back to
+ * window.ANTCV_RELAY_URL from relay-config.json), so on the demo account the
+ * preview watermark never appeared even though the EXPORT did — app.js drives
+ * the export through the relay with the correct demo_mode, while this sidecar
+ * was querying an empty origin and silently resolving false.
+ *
+ * 1.50.182 fix: resolve demo_mode the way the rest of the app does — query
+ * EVERY known origin (relay URL, proxyUrl, docx-worker origin) and treat demo
+ * as on if ANY of them reports demo_mode:true. Mirrors the privacy-LED
+ * readOwnProxyHosts() lesson (v1.40.194). Additive, idempotent, removable in
+ * one <script> line.
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.182-relay-config';
+  var VERSION = '1.50.182-demo-multi-origin';
   if (window.__antcvDemoWatermark === VERSION) return;
   window.__antcvDemoWatermark = VERSION;
 
@@ -63,6 +73,62 @@
       .then(function (j) { demoSettled = true; demoValue = !!(j && j.demo_mode); inFlight = null; return demoValue; })
       .catch(function () { inFlight = null; return false; });
     return inFlight;
+  // Tolerant unwrap: some app.js versions JSON-wrap localStorage strings,
+  // some don't. Strip surrounding quotes + trailing slashes; return ''.
+  function unwrap(raw) {
+    if (!raw) return '';
+    try {
+      var u = raw;
+      try { var p = JSON.parse(raw); if (typeof p === 'string') u = p; } catch (_) {}
+      return String(u).trim().replace(/\/+$/, '');
+    } catch (_) { return ''; }
+  }
+
+  function originOf(u) {
+    if (!u) return '';
+    try { return new URL(u).origin; } catch (_) { return ''; }
+  }
+
+  // Every origin the app might route /config through. De-duped, order-
+  // independent (we query them all and OR the results). Signed-in users
+  // typically have an empty proxyUrl and route through ANTCV_RELAY_URL, so
+  // that one is the load-bearing addition vs the old proxyUrl-only read.
+  function configOrigins() {
+    var set = {};
+    var add = function (u) { var o = originOf(u); if (o) set[o] = 1; };
+    try { add(unwrap(localStorage.getItem('proxyUrl'))); } catch (_) {}
+    try { add(unwrap(localStorage.getItem('relayUrl'))); } catch (_) {}
+    try { if (typeof window.ANTCV_RELAY_URL === 'string') add(window.ANTCV_RELAY_URL); } catch (_) {}
+    try { if (typeof window.ANTCV_UPSTREAM_URL === 'string') add(window.ANTCV_UPSTREAM_URL); } catch (_) {}
+    // The docx worker also exposes /config (it stamps DEMO from the same
+    // signal), so it's a reliable last-resort origin when nothing else is set.
+    try { if (typeof window.ANTCV_DOCX_WORKER === 'string') add(window.ANTCV_DOCX_WORKER); } catch (_) {}
+    try { add(unwrap(localStorage.getItem('docxWorkerUrl'))); } catch (_) {}
+    try { add(unwrap(localStorage.getItem('antcv:docxWorker'))); } catch (_) {}
+    return Object.keys(set);
+  }
+
+  function fetchDemo(origin) {
+    return fetch(origin + '/config', { credentials: 'include' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) { return !!(j && j.demo_mode); })
+      .catch(function () { return false; });
+  }
+
+  function resolveDemo() {
+    if (demoPromise) return demoPromise;
+    var origins = configOrigins();
+    if (!origins.length) { demoPromise = Promise.resolve(false); return demoPromise; }
+    // Query every origin; demo is ON if ANY reports demo_mode:true. Don't let
+    // one slow/failed origin block the others — Promise.all with per-origin
+    // catch (fetchDemo already catches) resolves once they've all settled.
+    demoPromise = Promise.all(origins.map(fetchDemo))
+      .then(function (results) {
+        for (var i = 0; i < results.length; i++) { if (results[i]) return true; }
+        return false;
+      })
+      .catch(function () { return false; });
+    return demoPromise;
   }
 
   function injectCss() {
@@ -132,6 +198,6 @@
   } catch (_) {}
   window.addEventListener('antcv:sections-updated', schedule);
 
-  window.AntcvDemoWatermark = { version: VERSION, _resolveDemo: resolveDemo, _apply: apply };
+  window.AntcvDemoWatermark = { version: VERSION, _resolveDemo: resolveDemo, _apply: apply, _origins: configOrigins };
   try { console.debug('[demo-watermark] installed v' + VERSION); } catch (_) {}
 })();

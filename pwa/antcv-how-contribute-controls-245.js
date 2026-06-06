@@ -5,7 +5,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.50.192-flow-cascade';
+  const VERSION='1.50.193-bullet-break-salmon';
   let __applying=false; // v1.50.57: re-entrancy guard so our own DOM writes don't re-trigger the observer/flicker.
   const ALIGN_KEY='antcv.hiwc.alignment.v1';
   const PAGE_KEY='antcv:itemPages';
@@ -484,11 +484,31 @@
   function previewSection(){return document.querySelector('[data-sid="'+CSS.escape(sid())+'"]')||Array.from(document.querySelectorAll('[data-sid],section,div')).find(el=>visible(el)&&RX.test(clean(el.textContent).slice(0,180)));}
   function previewParts(secEl){
     if(!secEl)return{};const els=Array.from(secEl.querySelectorAll('p,li,div,[data-edit-path],[data-antcv-row-path]')).filter(visible).filter(el=>!el.querySelector('input,textarea,button'));
-    const out={intro:null,closing:null,bullets:[]};
-    els.forEach(el=>{const t=clean(el.textContent); if(!t||RX.test(t))return; const path=String(el.getAttribute('data-edit-path')||el.getAttribute('data-antcv-row-path')||''); if(/intro/i.test(path)||/intro/i.test(t)){out.intro=out.intro||el;} else if(/closing/i.test(path)||/closing/i.test(t)){out.closing=el;} else if((el.tagName||'').toLowerCase()==='li'||/bullets|items/i.test(path)){out.bullets.push(el);} });
+    const out={intro:null,closing:null,bullets:[]};const cands=[];
+    els.forEach(el=>{const t=clean(el.textContent); if(!t||RX.test(t))return; const path=String(el.getAttribute('data-edit-path')||el.getAttribute('data-antcv-row-path')||''); if(/intro/i.test(path)||/intro/i.test(t)){out.intro=out.intro||el;} else if(/closing/i.test(path)||/closing/i.test(t)||/summaris|summariz/i.test(t)){out.closing=el;} else if((el.tagName||'').toLowerCase()==='li'||/bullets|items/i.test(path)||/^[▪•‣⁃●◦∙▸‧•·▪▸‣◦*\-–]/.test(t)){cands.push(el);} });
+    // 1.50.193: keep only the OUTERMOST bullet candidates — the preview wraps
+    // each bullet in a container <div> that holds the editable span, so both
+    // match; dropping nested ones avoids counting a bullet twice (which threw
+    // off the index → the break landed before the closing instead of bullet N).
+    out.bullets=cands.filter(el=>!cands.some(o=>o!==el&&o.contains(el)));
     if(!out.intro) out.intro=els[0]||null; if(!out.closing) out.closing=els[els.length-1]||null; return out;
   }
-  function makeBreakHeader(){const h=document.createElement('div');h.setAttribute('data-antcv-hiwc-page-break','1');h.textContent='HOW I WOULD CONTRIBUTE (CONT.)';Object.assign(h.style,{breakBefore:'page',pageBreakBefore:'always',color:'#00746E',fontWeight:'700',fontSize:'12pt',marginTop:'4pt',marginBottom:'8pt',borderBottom:'1pt solid #00746E',paddingBottom:'2pt'});return h;}
+  // 1.50.193: the break marker now carries the LIGHT salmon "▼ PAGE N ▼" bar
+  // (matching the CV experience splitter the owner wants back) ABOVE the teal
+  // "(CONT.)" continuation header, as one block inserted before the bullet that
+  // starts the new page.
+  function makeBreakHeader(pageN){
+    const wrap=document.createElement('div');wrap.setAttribute('data-antcv-hiwc-page-break','1');
+    wrap.style.breakBefore='page';wrap.style.pageBreakBefore='always';
+    const bar=document.createElement('div');
+    bar.style.cssText='border-top:3px solid rgba(200,40,40,0.6);margin:12px 0 4px;display:flex;align-items:center;justify-content:center;background:rgba(200,40,40,0.06);padding:3px 0;width:100%;box-sizing:border-box';
+    const badge=document.createElement('span');
+    badge.style.cssText='background:rgba(200,40,40,0.7);color:#fff;font-size:8px;padding:2px 10px;border-radius:2px;font-family:Arial,sans-serif;letter-spacing:0.5px;white-space:nowrap';
+    badge.textContent='▼ PAGE '+(pageN||2)+' ▼';bar.appendChild(badge);
+    const hd=document.createElement('div');hd.textContent='HOW I WOULD CONTRIBUTE (CONT.)';
+    hd.style.cssText='color:#00746E;font-weight:700;font-size:12pt;margin-top:4pt;margin-bottom:8pt;border-bottom:1pt solid #00746E;padding-bottom:2pt';
+    wrap.appendChild(bar);wrap.appendChild(hd);return wrap;
+  }
 
   function currentBulletValues(){const s=sec();const b=s&&(Array.isArray(s.bullets)?s.bullets:Array.isArray(s.items)?s.items:[]);return (b||[]).map(clean).filter(Boolean);}
   function syncPreviewBulletNodes(secEl,p){
@@ -516,7 +536,7 @@
     ordered.forEach(([k,el])=>{
       const a=getAlign(k); el.style.textAlign=a; Array.from(el.querySelectorAll('span,div,p')).forEach(x=>x.style.textAlign=a);
       const pg=getPage(k);
-      if(pg>runMax){ if(el.parentNode) el.parentNode.insertBefore(makeBreakHeader(),el); runMax=pg; }
+      if(pg>runMax){ if(el.parentNode) el.parentNode.insertBefore(makeBreakHeader(pg),el); runMax=pg; }
     });
     } finally { __applying=false; }
   }

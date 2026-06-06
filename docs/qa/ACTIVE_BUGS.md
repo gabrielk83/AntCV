@@ -88,6 +88,28 @@ A companion **feature registry** (open vs shipped features) lives at
   plain-DOM viewer that survives the crash + reload — open with `#antcv-debug` or a 4-tap
   top-right corner; readable on the phone with no terminal.
 
+### Infra + features (2026-06-06, session branch)
+
+- **BUILD-APP-BROKEN-001** `[OPEN][HIGH][infra]` — **`npm run build:app` produces a
+  broken bundle.** Rebuilding `pwa/app.js` from `pwa/app.src.js` with esbuild 0.21.5
+  yields `Uncaught ReferenceError: glDemo is not defined` at render (verified via the
+  browser-QA `boot` gate: committed bundle = 0 JS errors, rebuilt = throws). Root
+  cause: `app.src.js:16092` assigns `glDemo` as an **implicit global** inside a
+  component (`((glDemo = ({proxyUrl}) => {…})`) and uses it at `28873`; the committed
+  working bundle resolves this (glDemo appears once), a fresh esbuild build does not
+  (appears twice, lazy global write never lands before the read). This is the
+  `250ec8d` revert reproduced. **Impact: blocks every native `app.src.js` change**,
+  including the PERSONAL-EDIT-CRASH-001 fix. Fix options: (a) declare `glDemo`
+  properly (`window.glDemo`/hoisted `var` at module top) and re-verify the full boot,
+  or (b) pin the exact esbuild used for the deployed bundle. Until fixed, app.js
+  changes ship via surgical unique-string injection into the working bundle (the #226
+  technique) + a `boot` gate.
+- **FT-DEBUG-LOGGER subtab** `[SHIPPED]` — added **Settings → Advanced → Debug** (a
+  native subtab in `app.src.js`, and injected into the working `app.js` at 1.50.182):
+  Open debug log / Clear / "Capture typed values" toggle + the `#antcv-debug` /
+  4-tap hints. Boot-verified (0 JS errors). Gives on-device access to the crash
+  logger with no terminal.
+
 ### Triage round 2 — additional dispositions (owner chat 2026-06-06)
 
 - **SETTINGS-NAV-Z-001** `[OPEN]` (canonical) — Settings subtab / Application-History

@@ -68,8 +68,10 @@ const CHECKS = [
       await page.waitForTimeout(2500);
       await ctx.screenshot('boot');
       // Filter noise: 3rd-party + favicon + known benign network aborts.
+      // Off-production origins can't reach the *.workers.dev relay/proxy, so
+      // CORS + resource-load failures on /config are expected, not bundle bugs.
       const real = errors.filter((e) =>
-        !/favicon|net::ERR_|Failed to load resource|the server responded/i.test(e));
+        !/favicon|net::ERR_|Failed to load resource|the server responded|blocked by CORS|Access-Control-Allow|workers\.dev/i.test(e));
       return { pass: real.length === 0, detail: real.slice(0, 5) };
     },
   },

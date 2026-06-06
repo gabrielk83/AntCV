@@ -65,7 +65,7 @@
   'use strict';
 
   if (window.__antcvPreviewTouchFixInstalled) return;
-  window.__antcvPreviewTouchFixInstalled = '1.40.197';
+  window.__antcvPreviewTouchFixInstalled = '1.50.176-spare-modals';
 
   const STYLE_ID = 'antcv-preview-touch-fix-style';
 
@@ -224,6 +224,22 @@
       // pointer-events from CSS — if already none, no need to fix.
       const pe = cs.pointerEvents;
       if (pe === 'none') continue;
+      // 1.50.176: do NOT suppress a real interactive LAYER. A stray blocking
+      // scrim (the original bug) is empty/transparent with nothing to click;
+      // a modal/dialog/dropdown (Application History, the Settings panel) is
+      // ALSO a transparent high-z wrapper but CONTAINS interactive content.
+      // Setting pointer-events:none on such a wrapper kills its whole subtree,
+      // so the history/settings view "opens behind the preview" and can't be
+      // used. Skip any overlay that holds focusable content or a dialog/menu
+      // role — only genuinely empty scrims get suppressed.
+      try {
+        const role = el.getAttribute('role');
+        if (role === 'dialog' || role === 'menu' || role === 'listbox') continue;
+        if (el.querySelector(
+          'button, a[href], input, select, textarea, [role="button"], [role="dialog"],' +
+          ' [role="menu"], [role="menuitem"], [role="listbox"], [contenteditable="true"], [tabindex]'
+        )) continue;
+      } catch (_) {}
       // Suppress.
       el.setAttribute('data-antcv-touch-fix-overlay-suppressed', '1');
       n++;

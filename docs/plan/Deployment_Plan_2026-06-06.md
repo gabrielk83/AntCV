@@ -127,8 +127,24 @@ Net: 1 of the 6 was a safe autonomous change; the other 5 are either blocked, ow
 or mis-specified in the backlog (PERF). The PERF finding corrects the backlog — see updated
 notes in `MASTER_BACKLOG.md`/`ACTIVE_BUGS.md`.
 
+## Owner follow-up directives (2026-06-06)
+
+- **PERF — do NOT cut consensus.** PERF-002/003/004 (any consensus-width / quorum
+  trimming) are OFF. Consensus stays as is. Closed, not deferred.
+- **DEMO-BADGE-001 → key on "unpaid", and fix the demo environment.** Done both:
+  - Relay: new `DEMO_EMAILS` default-tier (auth-24) so listed emails read as `demo`
+    (unpaid) deterministically — DEMO-PERSIST-001 root cause was `getUserMode`
+    defaulting everyone to `paid`. `DEMO_EMAILS="51pegasib@gmail.com"`.
+  - PWA (1.50.170): badge now keys on `B.demo_mode` (unpaid/demo tier from /config),
+    not the hardcoded email.
+- **HOWCONTRIBUTE / SETTINGS-SUBTAB / HARDREFRESH / LOGIN-GATE — probes OK.** Shipped a
+  read-only probe sidecar (`antcv-diag-probes-370.js`, 1.50.171) — `window.AntcvDiag()`.
+
 ## Execution log (updated as items land)
 
 - 2026-06-06 — Wave 0 shipped: 1.50.166 / 1.50.167 / 1.50.168.
-- 2026-06-06 — Wave 1: GEN-UNSOL-002 shipped (1.50.169). PERF-*/DEMO-BADGE-001/
-  HOWCONTRIBUTE-001 deferred with findings (above).
+- 2026-06-06 — Wave 1: GEN-UNSOL-002 shipped (1.50.169). PERF-* deferred, then CLOSED by
+  owner ("do not cut consensus").
+- 2026-06-06 — Owner follow-up: DEMO-BADGE-001 + DEMO-PERSIST-001 mitigation shipped
+  (relay auth-24 DEMO_EMAILS + PWA 1.50.170 badge re-gate). Diagnostic probes shipped for
+  HOWCONTRIBUTE/SETTINGS-SUBTAB/HARDREFRESH/LOGIN-GATE (1.50.171).

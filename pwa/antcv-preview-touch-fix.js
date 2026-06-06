@@ -65,7 +65,7 @@
   'use strict';
 
   if (window.__antcvPreviewTouchFixInstalled) return;
-  window.__antcvPreviewTouchFixInstalled = '1.40.197';
+  window.__antcvPreviewTouchFixInstalled = '1.50.179-no-sweep-typing';
 
   const STYLE_ID = 'antcv-preview-touch-fix-style';
 
@@ -224,6 +224,22 @@
       // pointer-events from CSS — if already none, no need to fix.
       const pe = cs.pointerEvents;
       if (pe === 'none') continue;
+      // 1.50.176: do NOT suppress a real interactive LAYER. A stray blocking
+      // scrim (the original bug) is empty/transparent with nothing to click;
+      // a modal/dialog/dropdown (Application History, the Settings panel) is
+      // ALSO a transparent high-z wrapper but CONTAINS interactive content.
+      // Setting pointer-events:none on such a wrapper kills its whole subtree,
+      // so the history/settings view "opens behind the preview" and can't be
+      // used. Skip any overlay that holds focusable content or a dialog/menu
+      // role — only genuinely empty scrims get suppressed.
+      try {
+        const role = el.getAttribute('role');
+        if (role === 'dialog' || role === 'menu' || role === 'listbox') continue;
+        if (el.querySelector(
+          'button, a[href], input, select, textarea, [role="button"], [role="dialog"],' +
+          ' [role="menu"], [role="menuitem"], [role="listbox"], [contenteditable="true"], [tabindex]'
+        )) continue;
+      } catch (_) {}
       // Suppress.
       el.setAttribute('data-antcv-touch-fix-overlay-suppressed', '1');
       n++;
@@ -242,8 +258,24 @@
   // panel's own buttons should still work (their explicit pointer-
   // events:auto wins), but if the panel has an invisible scrim that
   // doesn't pass clicks, that scrim is what we want to suppress.
+  // 1.50.179: do NOT run the expensive full-body overlay sweep while the user is
+  // typing in a field. On mobile, React re-renders on every keystroke fire the
+  // MutationObserver -> a per-frame getComputedStyle()/getBoundingClientRect()
+  // sweep over the WHOLE DOM -> the page freezes ("blue screen" on mobile while
+  // typing in Settings). Typing in a form field needs no preview-overlay repair.
+  function isTypingInField() {
+    try {
+      var ae = document.activeElement;
+      if (!ae) return false;
+      var tag = (ae.tagName || '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') return true;
+      if (ae.isContentEditable) return true;
+    } catch (_) {}
+    return false;
+  }
   function repairAfterScroll() {
     if (!isActive()) return;
+    if (isTypingInField()) return;
     ensureStyle();
     try { repairAncestors(); } catch (_) {}
     try { suppressInvisibleOverlays(); } catch (_) {}

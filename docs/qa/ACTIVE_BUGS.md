@@ -8,105 +8,115 @@ A companion **feature registry** (open vs shipped features) lives at
 
 ---
 
-## SESSION 2026-06-06 (triage round 2) — owner dispositions + new requirements
+## STATUS UPDATE — 2026-06-06 (owner live-confirmed)
 
-Owner-driven triage pass. Closes/merges/descopes several items and registers
-three new ones. Code checks done this pass are noted inline.
+### Closed ✓ (owner-confirmed on real devices)
 
-### Closed by owner
+- **DEMO-PERSIST-001** — `[FIXED✓]` The demo account was server-classified as "paid"
+  (`demo_mode:false`), turning off every demo signal. Root cause: the relay's
+  `getUserMode` defaulted everyone to `paid`, and a client mode-POST could overwrite it.
+  Fixed by **pinning `DEMO_EMAILS` accounts to `demo`** (relay `auth-25`), so `demo_mode`
+  stays reliably true (badge, setup-chip gating, watermark all correct). Owner-confirmed.
+- **DEMO-BADGE-001** — `[FIXED✓]` The "🟡 DEMO" badge was hard-coded to one email. Re-gated
+  to the real `B.demo_mode` (unpaid) signal (PWA 1.50.170), unblocked by DEMO-PERSIST-001
+  above. Owner-confirmed.
+- **PACKAGE-PALETTE-MIX-001** — `[FIXED✓]` The "mixed visual style" (e.g. Copenhagen
+  structure + stale Warm-Terracotta accents) on load / mobile. Root cause: the deployed
+  `app.js` had diverged and lacked the v1.50.166 derive-on-mount effect; even that ran once
+  before cloud-restore. Fixed with a **self-healing effect** (PWA 1.50.180) that re-derives
+  a named package's accents whenever `styleConfig` drifts from its palette — survives
+  cloud-restore, works on mobile, custom configs exempt. Owner-confirmed ("finally
+  resolved 🎉"). The orphan-apply workaround sidecars can now retire.
+- **HARDREFRESH-001** — `[FIXED✓]` In-app Hard Refresh did not force a reload after
+  clearing caches/SW. Fixed (PWA 1.50.172/1.50.180) by firing a `location.reload()`
+  ~3s after the confirm passes. Owner-confirmed ("in app hard refresh works").
+- **DOCX-CL-SECTION-WIDTH-001** — `[FIXED✓]` Every **titled cover-letter section**
+  (WHO I AM, WHAT I BRING, WHY THIS POSITION, HOW I WOULD CONTRIBUTE, FOUNDATION) rendered
+  at **~60% width** in Google Docs. Root cause: the 1.14.22 heading-repetition wrapper sized
+  its column to `MAIN_W − 288 = 6982` (the CV's *main-column* width). The CL is a single
+  full-width **linear** doc — its body cell content is `PAGE_W − 200 = 11706`, so 6982 is
+  ~60% of the available width. 1.14.23 then mis-sized the WHAT-I-BRING competency table to
+  `MAIN_W − 640 = 6630` for the same wrong reason. Fixed (**docx-worker 1.14.24**): CL
+  titled-section wrappers now span the full body width (`PAGE_W − 200`) and the nested
+  competency table fits just under it (`PAGE_W − 560`). CV paths unchanged.
+  **Follow-up (docx-worker 1.14.25):** 1.14.24 fixed the *emitted* gridCol (11706) but
+  Word + Google Docs still rendered the sections at **~80%** — the heading-repetition
+  wrapper nested them THREE tables deep and both renderers mis-compute widths for
+  triple-nested tables. Final fix: for the CL, emit the heading + body **directly** into
+  the full-width body cell (no wrapper — that only exists for the CV's sidebar/main
+  columns), so titled sections match the untitled CL paragraphs. WHAT-I-BRING drops from
+  triple- to single-nested. Verified in emitted XML.
+- **DOCX-HEADER-BAND-001** — `[SHIPPED, awaiting owner confirm]` The running header (which
+  carries the DEMO watermark) rendered as **white "lines" above the name** in Word and
+  Google Docs. Fix (**docx-worker 1.14.25**): shade the header paragraph with the
+  candidate-band colour (`headerBg`, palette-responsive) and create the header for **every**
+  doc — CV + CL, demo **and** non-demo — so the band colour repeats at the top of every page
+  (page-break continuity, per owner request). DEMO WordArt included only when a watermark is
+  requested. Name paragraph top space removed (`before:60→0`). The 12-pt strip height may
+  need tuning once seen in Word/Google (render can't be verified server-side).
+- **DOCX-CONFIG-404 / proxyUrl misconfig** — `[NOT A BUG / config]` Owner saw a CORS + 404
+  on `GET https://docx-worker.../config` and worried a deploy "damaged the secrets". The
+  docx-worker has **no `/config` route** (by design — `/config` lives on the access-relay).
+  The demo-watermark sidecar calls `<localStorage.proxyUrl>/config`, and the owner's stored
+  `proxyUrl` is pointed at the **docx-worker**. The 1.14.24/1.14.25 deploys only changed
+  table-width logic, the header, and the VERSION string — no routes/CORS/secrets touched,
+  and `wrangler deploy` never clears secrets. Resolution: point `proxyUrl` back at the
+  cv-proxy/relay. Document generation (`/generate`) is unaffected.
 
-- **DEMO-PERSIST-001 — [FIXED]** owner-confirmed solved. (Was the master demo
-  bug: a demo user server-classified as "paid". The relay code was always
-  structurally correct — this was a runtime/data condition that is now resolved.)
-- **DEMO-BADGE-001 — [FIXED]** owner-confirmed solved (badge now gated on the
-  real demo signal, no longer the hardcoded email).
-- **SPECIALISATION-EDIT-001 — [FIXED]** verified in code: `wrapSpecialisation()`
-  in `antcv-candidate-preview-editor-341.js` makes `meta.subtitle` (the
-  `[Specialisation — …]` line) contenteditable and writes back on blur; the
-  sidecar is loaded in `index.html` as `?v=1.50.106-spec-edit`. Matches the
-  original ask. Owner expected this — confirmed.
+### New — OPEN
 
-### Descoped / redundant (WONTFIX)
+- **PERSONAL-EDIT-CRASH-001** `[OPEN][HIGH][mobile]` — Typing into a **Settings → Personal**
+  subtab field (e.g. the name) **blue-screens on a real mobile device** (not in the
+  simulator; no other subtab affected). The typed value **persists** (the `PUT /api/prefs`
+  save succeeds — confirmed in Cloudflare worker logs), so the state update works and the
+  **React render crashes** (caught by the error boundary, which swallows the error). No
+  device console available. Crash capture added (PWA 1.50.181) + a remote crash logger
+  (POSTs the error to the relay so it appears in exportable worker logs) — awaiting the
+  captured error to pinpoint the throwing render.
+  **Captured stack (owner, 2026-06-06):** `Uncaught NotFoundError: Failed to execute
+  'removeChild' on 'Node': The node to be removed is not a child of this node` from
+  react-dom's commit/deletion phase (`Di`/`Aa`/`Fi`). This is the signature of **a
+  sidecar mutating DOM that React owns**: the Name keystroke re-renders the
+  candidate/preview subtree, but a preview-editor sidecar had already moved/replaced
+  nodes there, so React's `removeChild` hits a node that is no longer its child →
+  unmount → blue screen (data persists because the PUT already ran). Prime suspect: the
+  contenteditable Name/Specialisation wrap (`antcv-candidate-preview-editor-341.js`) or a
+  newer preview-control sidecar. Fix direction: stop that sidecar mutating React-owned
+  nodes (wrap/move via a portal or React-safe anchor), or guard so reconciliation can't
+  trip. **On-device capture (complements the relay logger):** `antcv-debug-logger.js`
+  (v1.50.182) persists the error + a breadcrumb trail to localStorage and shows them in a
+  plain-DOM viewer that survives the crash + reload — open with `#antcv-debug` or a 4-tap
+  top-right corner; readable on the phone with no terminal.
 
-- **DEMO-TOGGLE-001 — [WONTFIX]** an in-app Demo⇄Paid toggle is not needed; the
-  user switches demo→normal by (re-)running the wizard.
-- **DOCX-EXPORT-REGRESSION-001 — [WONTFIX]** redundant: the print-setup view is
-  skipped, so the "export from print-setup doesn't call `exportDocxViaWorker`"
-  path no longer exists.
-- **WIZARD step 6b scrollable — [DONE]** already scrollable; the 6b portion of
-  WIZARD-001/002 is closed. (Step 6d default-languages hand-off remains.)
+### Triage round 2 — additional dispositions (owner chat 2026-06-06)
 
-### Blocked (not testable yet)
-
-- **DEMO-WARN-NONDEMO-001 — [BLOCKED]** cannot be tested because the privacy LED
-  is not visible — that LED-visibility defect (see PRIVACY-DEMO-001) gates this.
-  Re-test once the LED renders.
-
-### Merged — one bug, several aliases
-
-- **SETTINGS-NAV-Z-001 — [OPEN]** (canonical) — *Settings subtab / Application-
-  History navigation opens BEHIND the preview (z-index/stacking trap), and the
-  preview pop/overflow menu doesn't route to it either.* This single defect
-  absorbs all of: **APP-HISTORY-001, SETTINGS-SUBTAB-001, SETTINGS-AHZ-001,
-  AH-001, VF-014, APPHIST-ZIDX-001** (all owner-confirmed the same bug). Prior
-  blind ancestor-lift (sidecar `327`) did not beat the trap — drive with
-  `antcv-apphist-zindex-probe.js`: reproduce → probe the stacking context →
-  targeted z-index/portal fix → verify both the Settings subtab AND the preview
-  overflow-menu entry open in front.
-
-### Needs live test (not closed)
-
-- **GEN-UNSOL-002 — [OPEN, needs live JD test]** could not confirm a prompt-side
-  grounding fix landed after GEN-UNSOL-001. The generation prompt is built
-  client-side (`pwa/app.src.js`); the schema does not visibly request a
-  JD-grounded `meta.company`/`role`. Verify by generating from a real JD with a
-  blank Company field and checking the header does NOT fall to "Open Application
-  — Unsolicited". Good browser-QA candidate (auth + generation cost).
-
-### New — registered this pass
-
-- **PERSONAL-DATA-CRASH-001 — [OPEN][HIGH]** typing into a Personal-panel field
-  **blue-screens** the app on a single keystroke. **Repro (owner 2026-06-06):**
-  Settings → Personal, edit the Name from `Anita` → `Anita1` (one extra char) →
-  blue screen. Refresh → lands on the set menu → back to Settings → the value
-  **did persist** (`Anita1` shows). So the onChange persists state, then a
-  re-render crashes — a render fault on the edited value, NOT a save failure.
-  Edit handlers live around `pwa/app.src.js:8912` (`y("name", e)`) / `8925`
-  (`x({name:e.target.value})`) / `8932` (`y("name_input", e)`) and the
-  personalInfo writers at `~10410`. Blue-screen-risk path — **diagnostic-first**:
-  capture the live stack before patching. Plan: a headed browser-QA probe types
-  one char into the Name field and records the `pageerror` stack, then a targeted
-  fix in `app.src.js` (source of truth) → `build:app`. Suspect: a downstream
-  render/sidecar (e.g. the candidate-preview-editor MutationObserver or a derived
-  split/match on the name) throwing on the new value.
-  **Capture tool shipped (v1.50.167):** `antcv-debug-logger.js` records the
-  uncaught error + a breadcrumb trail (incl. the field that was edited) to
-  localStorage, surviving the crash and reload. On the phone: reproduce the blue
-  screen, refresh, add `#antcv-debug` to the URL (or 4-tap the top-right corner) →
-  tap the `error` entry → Share/Copy the stack. Enable "Capture typed values"
-  first to confirm it's the Name keystroke. That stack pinpoints the throwing line
-  before any `app.src.js` edit.
-- **PROCESSING-QUEUE-INDICATOR-001 — [OPEN][feature]** every subsection must show
-  a live work-state badge:
-    - **pink "processing"** while that subsection is actively being worked
-      (language change, new JD / new kernel, compress, enhance);
-    - **yellow "queue"** when it is scheduled to be modified later as part of the
-      same command. Example: *enhance over a subsection* → the first subsection
-      goes pink (processing) and the remaining queued subsections go yellow,
-      flipping to pink as each starts.
-    - Includes: confirm the **CJLR** (Center/Justify/Left/Right) alignment
-      buttons work in **every sub-subsection**, not just What I Bring / Core
-      Competencies. Currently no per-subsection lifecycle state exists (the
-      control-bar colours are button hover/active states only) — net-new.
-- **AUTO-PAGEBREAK-BLOCK-001 — [OPEN][feature]** automated page breaks in
-  preview:
-    - **always** render the salmon page-splitter line when content slides beyond
-      one A4 page (not only on a manual control);
-    - page sliding is **block-level**: a whole sub-subsection block moves to the
-      next page — never a partial block, and never the entire parent subsection.
-    Supersedes the manual-only page system for the auto case; reconcile with the
-    PB-001..006 family and EXPORT-PAGE2-001 (preview clone must carry the auto
-    splits to export). Tracked also in the feature registry.
+- **SETTINGS-NAV-Z-001** `[OPEN]` (canonical) — Settings subtab / Application-History
+  opens BEHIND the preview (z-index trap); the preview overflow menu doesn't route to it
+  either. Absorbs **APP-HISTORY-001, SETTINGS-SUBTAB-001, SETTINGS-AHZ-001, AH-001,
+  VF-014, APPHIST-ZIDX-001** (owner: all the same bug). Drive with
+  `antcv-apphist-zindex-probe.js`.
+- **SPECIALISATION-EDIT-001** `[FIXED]` — verified in code: `wrapSpecialisation()` makes
+  `meta.subtitle` contenteditable; loaded `?v=1.50.106-spec-edit`.
+- **DEMO-TOGGLE-001** `[WONTFIX]` — not needed; the wizard handles demo→normal.
+- **DOCX-EXPORT-REGRESSION-001** `[WONTFIX]` — redundant; the print-setup view is skipped.
+- **WIZARD step 6b** `[DONE]` — already scrollable; only step 6d remains.
+- **DEMO-WARN-NONDEMO-001** `[BLOCKED]` — not testable until the privacy LED renders.
+- **GEN-UNSOL-002** `[OPEN, needs live JD test]` — confirm generate emits a JD-grounded
+  `meta.company`/`role` so a blank Company field doesn't fall to "Unsolicited".
+- **PROCESSING-QUEUE-INDICATOR-001** `[OPEN][feature]` — per-subsection **pink
+  "processing"** while actively worked (language change, new JD/kernel, compress, enhance)
+  and **yellow "queue"** when scheduled later in the same command (enhance-over-subsection
+  → first pink, rest yellow). Plus: **CJLR** (Center/Justify/Left/Right) buttons working in
+  **every** sub-subsection. Also in the feature registry.
+- **AUTO-PAGEBREAK-BLOCK-001** `[OPEN][feature]` — **always** show the salmon splitter when
+  content exceeds one A4 page in preview; sliding is **block-level** (a whole sub-subsection
+  moves to the next page — never partial, never the whole parent subsection). Reconcile with
+  PB-001..006 + EXPORT-PAGE2-001. Also in the feature registry.
+- **PACKAGE-PALETTE-MIX-001** — superseded: **FIXED✓** per the status update above
+  (self-healing effect, PWA 1.50.180). My earlier "still OPEN" re-verification ran against
+  the stale 1.50.166 tree; the browser-QA `palette-mix` gate should be re-pointed at the
+  1.50.180 self-heal (it asserts `localStorage.stylePackage` resolves to a registry id — now
+  expected to pass).
 
 ---
 
@@ -118,17 +128,6 @@ marked otherwise. Cloudflare Pages auto-builds production from `main`; the docx
 worker was deployed via `wrangler deploy`.
 
 ### Headline — package "colour mix" — partial mitigation shipped, ROOT still OPEN
-
-> **Automated re-verification 2026-06-06 (browser-QA harness, production):** the
-> `palette-mix` check seeds the orphan and reloads `antcv.pages.dev`. Result:
-> `localStorage.stylePackage` = `"scandinavian"` (UNCHANGED orphan),
-> `body[data-package]` = `copenhagen-modern` (render mitigation only) — the two
-> disagree. `toneRegister` correctly migrates to `nordic-minimal`. **Confirms
-> PACKAGE-PALETTE-MIX-001 / APPJS-ID-SCHEME-UNIFY are NOT closed.** Source check:
-> `pwa/app.src.js` still does `u.get("stylePackage","scandinavian")` and uses the
-> legacy id scheme (`copenhagen_executive`, not `navy-executive`); the esbuild
-> rebuild was reverted (250ec8d). Reproduce any time: `node scripts/browser-qa.mjs
-> --only palette-mix`. Gate stays RED until the durable fix lands.
 
 - **PACKAGE-PALETTE-MIX-001 — [OPEN]** (owner-confirmed 2026-06-06; partial
   mitigation [PR #226](https://github.com/gabrielk83/AntCV/pull/226), v1.50.166).
@@ -211,6 +210,93 @@ closing the bug at the data layer. Tracked in the feature registry.
 
 ---
 
+## SESSION 2026-06-06 — app.js rebuild safety + page-split engine (paused)
+
+Worklog for the on-screen page-split engine attempt and the blue-screen it caused.
+Net result: the regression is reverted and live; the engine work is **paused** behind
+a missing safe-rebuild path. Both items below are tracked so the next channel does not
+repeat the mistake.
+
+### Resolved this session
+
+- **GEN-UNSOL-002** — generate_cv could omit `meta.company`/`meta.role` even with a JD
+  present, so the header fell to "Unsolicited". Fix: the generation prompt now requires
+  both to be filled from the JD when one is present (never empty, never "Unsolicited" when
+  the JD names the employer); empty only for a true open application. Additive prompt text,
+  surgical app.js edit mirrored to `app.src.js`. — FIXED✓ (1.50.169). Live-verify owed:
+  generate against a real JD → header shows the real company/role.
+- **PERF-002/003/004** `[OPEN][backlog-mislabel]` — DEFERRED. The backlog frames these as
+  "trim consensus width" on mechanical tasks, but `ee` (app.src.js ~1146) is a **cascade**:
+  it returns on the first successful provider and only advances on failure; the per-task `Z`
+  map (~1110) is fallback ORDER, not a fan-out. Mechanical tasks make one call, so trimming
+  `Z` cuts resilience, not latency. Real consensus is the separate `consensus_poll` path
+  (~20547). NEEDS owner intent before any edit (target the consensus_poll fan-out, not `Z`).
+- **WM-MOBILE-SCALE-001** — AI watermark "lost" on mobile (again). The preview paper
+  renders inside a `transform: scale(ui)` zoom container (app.js preview zoom; phone
+  auto-fit factor well below 1). `antcv-watermark-page-anchor-341` positioned via
+  `getBoundingClientRect()` (SCALED screen coords) but wrote `style.top/left` in the
+  offset parent's UNSCALED local space, so the offset was wrong by the scale factor and
+  pushed the marker off the visible paper. The 1.50.160 offset-parent rewrite dropped the
+  older 1.50.147 viewport clamp without accounting for the transform — that is the "again".
+  Fix: `anchorToCorner` recovers the cumulative scale from the offset parent
+  (`rect / offsetWidth`) and converts every screen-space delta into local space; no-op at
+  scale 1 (desktop). — FIXED✓ (1.50.167). **Live mobile verification owed** (no live
+  browser in the build env): on a phone, CV + CL preview should show the marker in the
+  last-page corner on the visible paper at any zoom.
+- **CL-UNSOL-SIGNAL-001** — An unsolicited / "Open Application" cover letter rendered the
+  literal template placeholders `[WHO I AM — …]` and `[WHY THIS POSITION — …]` instead of
+  content. Root cause: the CL merge reducer backfills who/why from the hardcoded `n.who`/
+  `n.why`, but `n` is gated on `p` (`kernelShowcaseInProgress || io.company === "Unsolicited"`
+  exact). After GEN-UNSOL-001 an unsolicited letter can carry a real extracted company, so
+  `p` is false, `n = {}`, and empty `who_content`/`why_content` collapse to `""` → the
+  empty field shows its template placeholder. (WHAT I BRING never shows this — it has a
+  row-level fallback independent of `p`.) Fix: a grounded, candidate-anchored backstop added
+  AFTER `n.who`/`n.why` in both chains — purely additive (only fires when everything before
+  is empty), so a normal/solicited letter never reaches it. Done as a **surgical in-place
+  edit of the minified `app.js`** (one occurrence each, verified parse) per
+  `docs/deployment/app-js-source-and-rebuild.md`, mirrored into `app.src.js` — NOT an
+  esbuild rebuild. First proof the surgical-minified-edit path (the sanctioned interim until
+  APPJS-REBUILD-001 is solved) works. — FIXED✓ (1.50.168). **Live verification owed:**
+  generate an unsolicited letter; WHO I AM + WHY THIS POSITION show grounded prose, no
+  brackets, in preview + DOCX/PDF.
+- **APPJS-BLUESCREEN-001** — A full blue screen on load after the page-split engine
+  was shipped via `npm run build:app`. **Root cause: the esbuild round-trip is NOT
+  behaviour-preserving for this bundle.** The working `app.js` begins
+  `(()=>{const{useState:e,…` (sloppy-mode global-React IIFE); the esbuild rebuild begins
+  `"use strict";(()=>{…` — esbuild prepends a strict-mode directive and emits other
+  minifier differences, and the original bundle relies on sloppy-mode semantics, so the
+  rebuilt bundle threw at boot. NOT caused by the parallel `main` merge (the
+  deployed/branch-HEAD `app.js` was confirmed to be the esbuild build). **Fix:** restored
+  the ORIGINAL minified `app.js` + the clean `app.src.js` from pre-rebuild commit
+  `0a7c459`; cache trio bumped to **1.50.166** (1.50.165 → STALE) so the broken cached
+  bundle is flushed. Deployed live (deploy.yml → deploy-pwa green). — FIXED✓ (1.50.166).
+
+### Still OPEN after this session
+
+- **APPJS-REBUILD-001** `[OPEN][HIGH][build]` — **There is no verified behaviour-preserving
+  way to rebuild `app.js` from `app.src.js` yet.** `npm run build:app` (esbuild `--minify`)
+  fails the only test that matters (it blue-screens, see APPJS-BLUESCREEN-001), so it must
+  not be used to ship until it passes the **identity round-trip gate** below. This blocks
+  every edit that has to go through the de-minified source (ENGINE-PAGESPLIT-001 and any
+  future `app.src.js` change). The safe procedure is documented in
+  `docs/deployment/app-js-source-and-rebuild.md` and summarised in `CLAUDE.md`. Next action:
+  `[code]` find a minifier/config that passes the identity round-trip (terser semantics-
+  preserving, or esbuild with the strict-directive suppressed), OR do surgical in-place
+  edits on the minified `app.js` mirrored into `app.src.js` for traceability.
+- **ENGINE-PAGESPLIT-001** `[OPEN][PAUSED][feature]` — The real on-screen page-split
+  engine — per-item pagination so a forced break actually moves content to the next page
+  for all three split units: **(1) sidebar sub-subsections, (2) table rows, (3) "How I
+  would contribute" bullets** (heading moves with its first part). Today the CV two-column
+  page-box engine paginates only WHOLE sidebar sections (`.page`) and WHOLE experience
+  roles (`role.page`); there is no per-item primitive. The export side (docx-worker
+  ≥1.14.18) already honours per-item `_page`/`item_pages`; this item is the matching
+  on-screen render. **Paused — blocked on APPJS-REBUILD-001** (the change lives in
+  `pwa/app.src.js` ~line 35574 and needs a working rebuild). Design notes:
+  `docs/plan/PB-007-two-column-pagination.md`. A first cut was built (commit `636cda7`)
+  and reverted with the blue-screen fix.
+
+---
+
 ## SESSION 2026-06-05/06 — Analysis report, JD ingestion, demo mode, generate fixes
 
 Worklog for the analysis-PDF + JD-extraction + demo-mode + generate-flow engagement.
@@ -278,18 +364,7 @@ items marked VERIFYING.
 - **HARDREFRESH-001** `[OPEN]` — In-app Hard Refresh shows the "are you sure?" confirm
   but does nothing after OK (no reload). Not yet diagnosed.
 - **DEMO-PERSIST-001** `[OPEN][HIGH][console][worker]` — **A demo user is server-
-  classified as "paid".**
-  **Code re-verification 2026-06-06:** the relay path is structurally correct and
-  UNCHANGED since filing — `getUserMode` reads `prefs2:<hash>.mode`, returns `demo`
-  only when stored; `handleApiUserMode` POST writes `mode` + invalidates cache;
-  `/config` surfaces `demo_mode: userMode === 'demo'`
-  (`workers/access-relay/src/index.js:548,1311,2967`). No fix commit landed. The
-  defect is therefore RUNTIME/DATA (the account's KV record reads `paid`, or the
-  client POST is failing/unauthenticated), not code — it CANNOT be closed by
-  reading source. Automated gate added: `node scripts/browser-qa.mjs --jwt <demo
-  token>` runs `demo-config` + `demo-mode-roundtrip` (POST `/api/user/mode {demo}`
-  → GET reads back). Run it with a real demo account's bearer to close or localise
-  the bug to the write path vs an allowlist pin. Stays OPEN until that probe is green. Confirmed live: `51pegasib@gmail.com` (who carries the demo
+  classified as "paid".** Confirmed live: `51pegasib@gmail.com` (who carries the demo
   "⚠ Setup needed" chip) reads relay `/config` → `user_mode:"paid"`, `demo_mode:false`.
   `AntcvSetUserMode("demo")` + reload does **not** flip it (still `"paid"`). Because the
   account is treated as paid, every demo behaviour is wrong for them:

@@ -35,7 +35,7 @@ const VERSION='1.3.0';
 // Required binding (declare in wrangler.toml):
 //   KV_BINDING        KV namespace (stores OTPs, rate counters, prefs, signals)
 
-const RELAY_VERSION = 'auth-23-wizard-skipped-and-ai-notice-bool';
+const RELAY_VERSION = 'auth-25-demo-emails-pinned';
 const SESSION_TTL_SECONDS    = 7 * 24 * 60 * 60;       // 7 days
 const SESSION_REFRESH_WINDOW = 1 * 24 * 60 * 60;       // refresh in last day
 const OTP_TTL_SECONDS        = 10 * 60;                // 10 min
@@ -545,14 +545,32 @@ function invalidateModeCache(email) {
   if (email) _modeCache.delete(String(email).toLowerCase());
 }
 
+// Emails that default to the demo (unpaid) tier when they have no explicit
+// stored mode. Comma-separated env var; lowercased. Empty when unset.
+function demoDefaultEmails(env) {
+  return String((env && env.DEMO_EMAILS) || '')
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+}
+
 async function getUserMode(env, email) {
   if (!email) return 'paid';
   const norm = String(email).toLowerCase();
+  // DEMO_EMAILS are PINNED to demo (unpaid): a known demo/test account stays demo
+  // regardless of any stored or client-POSTed mode. The PWA can fire-and-forget a
+  // POST /api/user/mode 'paid' (BYOK default) which would otherwise flip the demo
+  // account back to paid and silently turn OFF every demo signal — the DEMO badge,
+  // the "Setup needed" gating, and the DEMO watermark on preview AND on the
+  // exported DOCX/PDF (payload.watermark is gated on demo_mode). Pinning keeps
+  // demo_mode:true reliably on for these accounts. (DEMO-PERSIST-001.)
+  if (demoDefaultEmails(env).includes(norm)) return 'demo';
   const now = Date.now();
   const cached = _modeCache.get(norm);
   if (cached && cached.expiresAt > now) return cached.mode;
 
   const kv = env.KV_BINDING || env.ANALYTICS || null;
+  // Non-DEMO_EMAILS users: paid (BYOK) unless they explicitly chose demo.
   let mode = 'paid';
   if (kv) {
     try {
@@ -560,9 +578,10 @@ async function getUserMode(env, email) {
       const raw = await kv.get(key);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (parsed && parsed.mode === 'demo') mode = 'demo';
+        // An explicit stored choice ALWAYS wins over the DEMO_EMAILS default.
+        if (parsed && (parsed.mode === 'demo' || parsed.mode === 'paid')) mode = parsed.mode;
       }
-    } catch (_) { /* fall through to default 'paid' */ }
+    } catch (_) { /* keep the default computed above */ }
   }
   _modeCache.set(norm, { mode, expiresAt: now + _MODE_TTL_MS });
   return mode;

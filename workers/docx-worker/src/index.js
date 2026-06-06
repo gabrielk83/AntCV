@@ -23827,15 +23827,61 @@ function postProcessDocx(input, opts = {}) {
       xml2 = photoResult.xml;
       photosCircular = photoResult.count;
     }
-    if (opts && opts.watermark && String(opts.watermark).trim()) {
-      const wm = String(opts.watermark).trim().replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" })[c]);
-      const watermarkRun = '<w:r><w:rPr><w:noProof/></w:rPr><w:pict><v:shapetype id="_x0000_t136" coordsize="21600,21600" o:spt="136" adj="10800" path="m@7,l@8,m@5,21600l@6,21600e"><v:formulas><v:f eqn="sum #0 0 10800"/><v:f eqn="prod #0 2 1"/><v:f eqn="sum 21600 0 @1"/><v:f eqn="sum 0 0 @2"/><v:f eqn="sum 21600 0 @3"/><v:f eqn="if @0 @3 0"/><v:f eqn="if @0 21600 @1"/><v:f eqn="if @0 0 @2"/><v:f eqn="if @0 @4 21600"/><v:f eqn="mid @5 @6"/><v:f eqn="mid @8 @5"/><v:f eqn="mid @7 @8"/><v:f eqn="mid @6 @7"/><v:f eqn="sum @6 0 @5"/></v:formulas><v:path o:extrusionok="f" gradientshapeok="t" o:connecttype="custom" o:connectlocs="@9,0;@10,10800;@11,21600;@12,10800" o:connectangles="270,180,90,0" textpathok="t"/><v:textpath on="t" fitshape="t"/><v:handles><v:h position="#0,bottomRight" xrange="6629,14971"/></v:handles><o:lock v:ext="edit" text="t" shapetype="t"/></v:shapetype><v:shape id="AntCVWatermark" type="#_x0000_t136" style="position:absolute;margin-left:0;margin-top:0;width:468pt;height:117pt;rotation:-30;z-index:-251654144;mso-position-horizontal:center;mso-position-horizontal-relative:margin;mso-position-vertical:center;mso-position-vertical-relative:margin" fillcolor="#D0D0D0" stroked="f"><v:fill opacity=".4"/><v:textpath style="font-family:&quot;Arial&quot;;font-size:1pt" string="' + wm + '"/><w10:wrap anchorx="margin" anchory="margin"/></v:shape></w:pict></w:r>';
-      const bodyOpenIdx = xml2.indexOf("<w:body>");
-      if (bodyOpenIdx >= 0) {
-        const after = bodyOpenIdx + "<w:body>".length;
-        xml2 = xml2.slice(0, after) + "<w:p>" + watermarkRun + "</w:p>" + xml2.slice(after);
-        watermarked = true;
+    // 1.14.21: section wrapper tables are width:100% with no explicit column widths,
+    // so the docx lib emits <w:gridCol w:w="100"/> (100 twips). LibreOffice honours
+    // the 100% (PDF ok) but Word/Google Docs honour the 100-twip grid and collapse
+    // the column -> text wraps ONE CHARACTER PER LINE (the broken cover letter).
+    // Marking those tables autofit makes Word stretch them to the container width.
+    xml2 = xml2.replace(/<w:tblPr>((?:(?!<\/w:tblPr>)[\s\S])*?)<\/w:tblPr>/g, (m, inner) =>
+      (inner.indexOf('w:type="pct" w:w="100%"') >= 0 && inner.indexOf("<w:tblLayout") < 0)
+        ? "<w:tblPr>" + inner + '<w:tblLayout w:type="autofit"/></w:tblPr>'
+        : m);
+    const hasWm = !!(opts && opts.watermark && String(opts.watermark).trim());
+    const headerBgHex = (opts && opts.headerBg ? String(opts.headerBg).trim().replace(/[^0-9A-Fa-f]/g, "") : "").slice(0, 6);
+    if (hasWm || headerBgHex) {
+      const wm = hasWm ? String(opts.watermark).trim().replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" })[c]) : "";
+      const watermarkRun = hasWm ? '<w:r><w:rPr><w:noProof/></w:rPr><w:pict><v:shapetype id="_x0000_t136" coordsize="21600,21600" o:spt="136" adj="10800" path="m@7,l@8,m@5,21600l@6,21600e"><v:formulas><v:f eqn="sum #0 0 10800"/><v:f eqn="prod #0 2 1"/><v:f eqn="sum 21600 0 @1"/><v:f eqn="sum 0 0 @2"/><v:f eqn="sum 21600 0 @3"/><v:f eqn="if @0 @3 0"/><v:f eqn="if @0 21600 @1"/><v:f eqn="if @0 0 @2"/><v:f eqn="if @0 @4 21600"/><v:f eqn="mid @5 @6"/><v:f eqn="mid @8 @5"/><v:f eqn="mid @7 @8"/><v:f eqn="mid @6 @7"/><v:f eqn="sum @6 0 @5"/></v:formulas><v:path o:extrusionok="f" gradientshapeok="t" o:connecttype="custom" o:connectlocs="@9,0;@10,10800;@11,21600;@12,10800" o:connectangles="270,180,90,0" textpathok="t"/><v:textpath on="t" fitshape="t"/><v:handles><v:h position="#0,bottomRight" xrange="6629,14971"/></v:handles><o:lock v:ext="edit" text="t" shapetype="t"/></v:shapetype><v:shape id="AntCVWatermark" type="#_x0000_t136" style="position:absolute;margin-left:0;margin-top:0;width:468pt;height:117pt;rotation:-30;z-index:-251654144;mso-position-horizontal:center;mso-position-horizontal-relative:margin;mso-position-vertical:center;mso-position-vertical-relative:margin" fillcolor="#D0D0D0" stroked="f"><v:fill opacity=".4"/><v:textpath style="font-family:&quot;Arial&quot;;font-size:1pt" string="' + wm + '"/><w10:wrap anchorx="margin" anchory="margin"/></v:shape></w:pict></w:r>' : "";
+      // 1.14.20: HEADER-based Word watermark (the standard, robust approach). The
+      // VML WordArt run lives in a HEADER part and floats over every page. This
+      // renders in Word, LibreOffice (PDF) and Google Docs, and adds NO body
+      // paragraph — the old body-paragraph insertion squished the cover-letter
+      // layout (DEMO landed on top, body compressed) once demo_mode came on.
+      // 1.14.25: the header is now created for EVERY doc (CV + CL, demo AND
+      // non-demo) and its single paragraph is shaded with the candidate-band
+      // colour (headerBg). It rendered as white "lines" above the name before;
+      // shading it makes the running header blend with the band on page 1 and
+      // gives a colour strip at the top of every continuation page (page-break
+      // continuity). The DEMO WordArt is included only when opts.watermark is set.
+      const headerXml =
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+        '<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w10="urn:schemas-microsoft-com:office:word">' +
+        '<w:p><w:pPr>' + (headerBgHex ? '<w:shd w:val="clear" w:color="auto" w:fill="' + headerBgHex + '"/>' : '') + '<w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="exact"/></w:pPr>' + watermarkRun + '</w:p></w:hdr>';
+      files["word/header1.xml"] = strToU8(headerXml);
+      // Relationship (choose a non-colliding rId).
+      const relsName = "word/_rels/document.xml.rels";
+      let rels = files[relsName] ? strFromU8(files[relsName]) : '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';
+      let maxRid = 0;
+      rels.replace(/Id="rId(\d+)"/g, (m0, n) => { const k = parseInt(n, 10); if (k > maxRid) maxRid = k; return m0; });
+      const rid = "rId" + (maxRid + 1);
+      if (rels.indexOf('Target="header1.xml"') < 0) {
+        rels = rels.replace("</Relationships>", '<Relationship Id="' + rid + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/></Relationships>');
+        files[relsName] = strToU8(rels);
       }
+      // Content-type override for the new header part.
+      if (files["[Content_Types].xml"]) {
+        let ct = strFromU8(files["[Content_Types].xml"]);
+        if (ct.indexOf("/word/header1.xml") < 0) {
+          ct = ct.replace("</Types>", '<Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/></Types>');
+          files["[Content_Types].xml"] = strToU8(ct);
+        }
+      }
+      // Reference the header from every section (headerReference must be the FIRST
+      // child of <w:sectPr>). No <w:titlePg>/evenAndOddHeaders here, so the default
+      // header applies to ALL pages.
+      if (xml2.indexOf("w:headerReference") < 0) {
+        xml2 = xml2.replace(/<w:sectPr(\s[^>]*)?>/g, (m0) => m0 + '<w:headerReference w:type="default" r:id="' + rid + '"/>');
+      }
+      watermarked = true;
     }
     if (placeholderResult.count > 0 || photoResult.count > 0 || watermarked) {
       files["word/document.xml"] = strToU8(xml2);
@@ -24265,7 +24311,7 @@ async function generateDocx(payload) {
   let postProcessError = null;
   let markersRemaining = 0;
   try {
-    const result = postProcessDocx(raw, { watermark: payload.watermark || "", photoShape: resolvePhotoShape(payload) });
+    const result = postProcessDocx(raw, { watermark: payload.watermark || "", photoShape: resolvePhotoShape(payload), headerBg: (style && style.headerBg) || "" });
     buffer2 = result.buffer;
     replacements = result.replacements || 0;
     if (replacements > 0) {
@@ -24761,7 +24807,9 @@ function buildHeaderCell(ctx) {
   if (pi.name) {
     out.push(new Paragraph({
       alignment: alignType(headerAlign.name),
-      spacing: { before: 60, after: 40, line: 240, lineRule: "exact" },
+      // 1.14.25: top space removed (was before:60) — the running header now
+      // provides the coloured top strip, so the name sits flush at the band top.
+      spacing: { before: 0, after: 40, line: 240, lineRule: "exact" },
       shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
       children: [
         new TextRun({
@@ -25029,6 +25077,12 @@ function renderSection(s, ctx, isSidebar) {
   }
   if (skipHeading || !s.title) return [...pageBreakPara, ...body];
   if (body.length === 0) return [];
+  // 1.14.25: CL is full-width linear — emit heading + body directly (no
+  // heading-repetition wrapper) so titled sections aren't triple-nested and
+  // shrunk to ~80% by Word/Google Docs. CV keeps the wrapper for its columns.
+  if (ctx && ctx.doc === "cl") {
+    return [...pageBreakPara, headingParagraph(s.title, ctx, false), ...body];
+  }
   const headingCell = new TableCell({
     borders: noBorders(),
     margins: { top: 0, bottom: 0, left: 0, right: 0 },
@@ -25043,6 +25097,11 @@ function renderSection(s, ctx, isSidebar) {
     ...pageBreakPara,
     new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
+      // 1.14.22: real section column width (Google Docs collapses gridCol=100).
+      // 1.14.24: CL is full-width linear (body cell content = PAGE_W-200=11706),
+      // not the MAIN_W column — size CL section wrappers to the full body width
+      // so titled CL sections aren't collapsed to ~60%.
+      columnWidths: [(ctx && ctx.doc === "cl") ? (PAGE_W - 200) : ((isSidebar ? SIDEBAR_W : MAIN_W) - 288)],
       borders: noBorders(),
       rows: [
         new TableRow({
@@ -25287,7 +25346,10 @@ function renderCompetencyTable(s, ctx) {
   const [header, ...data] = rows;
   const isCl = ctx.doc === "cl";
   const defaultCvW = MAIN_W - 640;
-  const defaultClW = PAGE_W - 2304;
+  // 1.14.24: CL is full-width linear — the bring table fills the titled-section
+  // wrapper (PAGE_W-200=11706), sized just under it to avoid a flush-edge
+  // overflow in Google Docs. 1.14.23's MAIN_W-640 made it ~60% of the page.
+  const defaultClW = PAGE_W - 560;
   const baseW = isCl ? defaultClW : defaultCvW;
   const tableW = typeof s.tableWidth === "number" && s.tableWidth > 0 ? Math.max(2880, Math.min(PAGE_W - 720, Math.round(s.tableWidth))) : baseW;
   const explicitRatio = typeof s.tableRatio === "number" && s.tableRatio > 0.05 && s.tableRatio < 0.95 ? s.tableRatio : null;
@@ -26296,7 +26358,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.18-hiwc-first-part-moves-heading";
+var VERSION = "1.14.25-cl-fullwidth-sections-and-colored-header";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

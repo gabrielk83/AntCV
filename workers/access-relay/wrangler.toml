@@ -48,6 +48,11 @@ EMAIL_FROM = "AntCV <onboarding@resend.dev>"
 # Optional email allowlist (comma-separated, case-insensitive).
 EMAIL_ALLOWLIST = "karp.gabriel.a@gmail.com,51pegasib@gmail.com"
 
+# Emails that default to the DEMO (unpaid) tier when they have not explicitly
+# chosen a mode. An explicit POST /api/user/mode still wins. Keeps a known
+# demo/unpaid account reading as demo deterministically (DEMO-PERSIST-001).
+DEMO_EMAILS = "51pegasib@gmail.com"
+
 # --- Admin (analytics access) ---
 ADMIN_EMAILS = "karp.gabriel.a@gmail.com"
 

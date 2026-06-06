@@ -452,7 +452,7 @@ export async function generateDocx(payload) {
   try {
     /* v1.12: pass watermark from payload through to post-processor. The
        PWA sets watermark="DEMO" when /config reports demo_mode=true. */
-    const result = postProcessDocx(raw, { watermark: payload.watermark || '' });
+    const result = postProcessDocx(raw, { watermark: payload.watermark || '', headerBg: (style && style.headerBg) || '' });
     buffer = result.buffer;
     replacements = result.replacements || 0;
 
@@ -1066,7 +1066,9 @@ function buildHeaderCell(ctx) {
   if (pi.name) {
     out.push(new Paragraph({
       alignment: alignType(headerAlign.name),
-      spacing: { before: 60, after: 40, line: 240, lineRule: 'exact' },
+      // 1.14.25: top space removed (was before:60) — the running header now
+      // provides the coloured top strip, so the name sits flush at the band top.
+      spacing: { before: 0, after: 40, line: 240, lineRule: 'exact' },
       shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: 'auto' },
       children: [
         new TextRun({
@@ -1463,6 +1465,20 @@ function renderSection(s, ctx, isSidebar) {
   // reported (heading appears in Word even when nothing's there).
   if (body.length === 0) return [];
 
+  // 1.14.25: the cover letter is a single full-width linear doc. Wrapping each
+  // titled section in the heading-repetition table (below) nests it THREE deep
+  // (competency/foundation table → wrapper → body table); Word AND Google Docs
+  // mis-compute widths for triple-nested tables and shrink the inner content to
+  // ~80% even though the emitted gridCol is full-width. The CV needs the wrapper
+  // (sidebar/main columns), but the CL does not — emit the heading + body
+  // directly into the full-width body cell, exactly like the untitled CL
+  // paragraphs (greeting/opening/closure), so titled sections match them. CL
+  // continuation headings are handled by renderCompetencyTable's own chunking
+  // and the jd_questions page-2 re-emit, so no repetition is lost in practice.
+  if (ctx && ctx.doc === 'cl') {
+    return [...pageBreakPara, headingParagraph(s.title, ctx, false), ...body];
+  }
+
   // ──────────────────────────────────────────────────────────────────
   // Heading repetition across page breaks:
   //
@@ -1499,6 +1515,17 @@ function renderSection(s, ctx, isSidebar) {
     ...pageBreakPara,
     new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
+      // 1.14.22: give the single section column a REAL width. With only
+      // width:100% the docx lib emits <w:gridCol w:w="100"/> (100 twips); Word
+      // tolerates it but Google Docs honours the 100-twip grid absolutely and
+      // collapses the column to one character per line. The section sits in the
+      // sidebar or main cell (minus its ~288-twip L+R cell margins).
+      // 1.14.24: the CL is a single full-width linear doc (no sidebar) — its
+      // body cell content is PAGE_W minus the 100+100 cell margins (=11706),
+      // NOT the MAIN_W column. Sizing CL section wrappers to MAIN_W-288 (=6982)
+      // collapsed every titled CL section (WHO I AM / WHY THIS POSITION / HOW I
+      // WOULD CONTRIBUTE / WHAT I BRING / Foundation) to ~60% of the page.
+      columnWidths: [(ctx && ctx.doc === 'cl') ? (PAGE_W - 200) : ((isSidebar ? SIDEBAR_W : MAIN_W) - 288)],
       borders: noBorders(),
       rows: [
         new TableRow({
@@ -1830,7 +1857,12 @@ function renderCompetencyTable(s, ctx) {
 
   const isCl = ctx.doc === 'cl';
   const defaultCvW = MAIN_W - 640;
-  const defaultClW = PAGE_W - 2304;
+  // 1.14.24: the CL is full-width linear (no sidebar). The WHAT-I-BRING table
+  // sits inside the titled-section wrapper, which now spans the full CL body
+  // cell (PAGE_W - 200 = 11706). 1.14.23's MAIN_W-640 (=6630) made it ~60% of
+  // the page. Size the nested table just under the wrapper so it fills the
+  // column without a flush-edge overflow in Google Docs.
+  const defaultClW = PAGE_W - 560;
   const baseW = isCl ? defaultClW : defaultCvW;
   const tableW = (typeof s.tableWidth === 'number' && s.tableWidth > 0)
     ? Math.max(2880, Math.min(PAGE_W - 720, Math.round(s.tableWidth)))

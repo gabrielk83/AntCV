@@ -129,6 +129,17 @@ export function postProcessDocx(input, opts = {}) {
       replacements = placeholderResult.count;
     }
 
+    // 1.14.21: the section wrapper tables are width:100% with no explicit column
+    // widths, so the docx lib emits <w:gridCol w:w="100"/> (100 twips). LibreOffice
+    // honours the 100% (PDF is fine) but Word/Google Docs honour the 100-twip grid
+    // and collapse the column to ~1.7mm — text then wraps ONE CHARACTER PER LINE
+    // (the broken cover-letter render). Marking those tables autofit makes Word
+    // stretch them to the container width.
+    xml = xml.replace(/<w:tblPr>((?:(?!<\/w:tblPr>)[\s\S])*?)<\/w:tblPr>/g, (m, inner) =>
+      (inner.indexOf('w:type="pct" w:w="100%"') >= 0 && inner.indexOf('<w:tblLayout') < 0)
+        ? '<w:tblPr>' + inner + '<w:tblLayout w:type="autofit"/></w:tblPr>'
+        : m);
+
     const photoResult = makePhotosCircular(xml);
     if (photoResult.count > 0) {
       xml = photoResult.xml;
@@ -144,9 +155,11 @@ export function postProcessDocx(input, opts = {}) {
        watermark without needing a separate header XML file.
        The mso namespace prefix is declared at the document root by
        Packer; we only emit the v: and o: elements. */
-    if (opts && opts.watermark && String(opts.watermark).trim()) {
-      const wm = String(opts.watermark).trim().replace(/[<>&"]/g, c => ({ '<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;' }[c]));
-      const watermarkRun =
+    const hasWm = !!(opts && opts.watermark && String(opts.watermark).trim());
+    const headerBgHex = (opts && opts.headerBg ? String(opts.headerBg).trim().replace(/[^0-9A-Fa-f]/g, '') : '').slice(0, 6);
+    if (hasWm || headerBgHex) {
+      const wm = hasWm ? String(opts.watermark).trim().replace(/[<>&"]/g, c => ({ '<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;' }[c])) : '';
+      const watermarkRun = !hasWm ? '' :
         '<w:r><w:rPr><w:noProof/></w:rPr><w:pict>' +
         '<v:shapetype id="_x0000_t136" coordsize="21600,21600" o:spt="136" adj="10800" path="m@7,l@8,m@5,21600l@6,21600e">' +
         '<v:formulas><v:f eqn="sum #0 0 10800"/><v:f eqn="prod #0 2 1"/><v:f eqn="sum 21600 0 @1"/>' +
@@ -164,14 +177,36 @@ export function postProcessDocx(input, opts = {}) {
         '<w10:wrap anchorx="margin" anchory="margin"/>' +
         '</v:shape>' +
         '</w:pict></w:r>';
-      // Insert immediately after the first <w:body> opening tag, inside
-      // a new <w:p> wrapper so Word's body-paragraph rule is satisfied.
-      const bodyOpenIdx = xml.indexOf('<w:body>');
-      if (bodyOpenIdx >= 0) {
-        const after = bodyOpenIdx + '<w:body>'.length;
-        xml = xml.slice(0, after) + '<w:p>' + watermarkRun + '</w:p>' + xml.slice(after);
-        watermarked = true;
+      // 1.14.20: HEADER-based Word watermark (the standard, robust approach). The
+      // VML WordArt run lives in a HEADER part and floats over every page. Renders
+      // in Word, LibreOffice (PDF) and Google Docs, and adds NO body paragraph —
+      // the old body-paragraph insertion squished the cover-letter layout once
+      // demo_mode came on.
+      const headerXml =
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+        '<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w10="urn:schemas-microsoft-com:office:word">' +
+        '<w:p><w:pPr>' + (headerBgHex ? '<w:shd w:val="clear" w:color="auto" w:fill="' + headerBgHex + '"/>' : '') + '<w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="exact"/></w:pPr>' + watermarkRun + '</w:p></w:hdr>';
+      files['word/header1.xml'] = strToU8(headerXml);
+      const relsName = 'word/_rels/document.xml.rels';
+      let rels = files[relsName] ? strFromU8(files[relsName]) : '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';
+      let maxRid = 0;
+      rels.replace(/Id="rId(\d+)"/g, (m0, n) => { const k = parseInt(n, 10); if (k > maxRid) maxRid = k; return m0; });
+      const rid = 'rId' + (maxRid + 1);
+      if (rels.indexOf('Target="header1.xml"') < 0) {
+        rels = rels.replace('</Relationships>', '<Relationship Id="' + rid + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/></Relationships>');
+        files[relsName] = strToU8(rels);
       }
+      if (files['[Content_Types].xml']) {
+        let ct = strFromU8(files['[Content_Types].xml']);
+        if (ct.indexOf('/word/header1.xml') < 0) {
+          ct = ct.replace('</Types>', '<Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/></Types>');
+          files['[Content_Types].xml'] = strToU8(ct);
+        }
+      }
+      if (xml.indexOf('w:headerReference') < 0) {
+        xml = xml.replace(/<w:sectPr(\s[^>]*)?>/g, (m0) => m0 + '<w:headerReference w:type="default" r:id="' + rid + '"/>');
+      }
+      watermarked = true;
     }
 
     if (placeholderResult.count > 0 || photoResult.count > 0 || watermarked) {

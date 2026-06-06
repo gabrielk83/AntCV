@@ -55,6 +55,77 @@
     const pg = parseInt(__antcvPB(e.id)[__antcvFirstKey(e)], 10);
     return pg >= 1 ? pg : 1;
   };
+  // Sidebar grouped-section page break (docs/plan §3f). The CV preview paginates
+  // the sidebar into page-boxes via the "cv" === Lt flatMap, which splits a section
+  // at any item index carrying antcv:itemPages[sid][index] >= 2. So a per-group page
+  // button writes that index and the group + everything after it moves to the next
+  // page-box (the page-box draws its own full-width "▼ PAGE n ▼" splitter). The first
+  // group (item 0) moves the WHOLE section via section.page. Following sidebar
+  // sections cascade to >= the break page so they don't reorder above the moved
+  // group. All writes go through localStorage + a sections-updated/item-pages-changed
+  // pulse (sidecars can't call React's setter), matching how 359 moves whole sections.
+  const __antcvSidebarGroupPage = (sid, itemIdx, sec) => {
+    if (itemIdx === 0) return Math.min(4, Math.max(1, parseInt((sec && sec.page) || 1, 10)));
+    const pg = parseInt(__antcvPB(sid)[String(itemIdx)], 10);
+    return pg >= 1 ? Math.min(4, pg) : 1;
+  };
+  const __antcvSidebarGroupBreak = (sid, itemIdx, nv) => {
+    try {
+      nv = Math.min(4, Math.max(1, Math.round(Number(nv) || 1)));
+      const pmRaw = localStorage.getItem("antcv:itemPages");
+      const pm = pmRaw ? JSON.parse(pmRaw) || {} : {};
+      if (!pm[sid] || typeof pm[sid] !== "object") pm[sid] = {};
+      let docv = localStorage.getItem("doc") || "cv";
+      try {
+        const p = JSON.parse(docv);
+        if (typeof p === "string") docv = p;
+      } catch (_) {}
+      docv = String(docv).toLowerCase() === "cl" ? "cl" : "cv";
+      const secRaw = localStorage.getItem("sections");
+      const all = secRaw ? JSON.parse(secRaw) || {} : {};
+      const list = Array.isArray(all[docv]) ? all[docv] : null;
+      let start = -1;
+      if (list)
+        for (let i = 0; i < list.length; i++)
+          if (list[i] && String(list[i].id || "") === String(sid)) {
+            start = i;
+            break;
+          }
+      if (itemIdx === 0) {
+        // whole-section move: section.page (item 0 can't split via the flatMap)
+        if (start >= 0) {
+          if (nv > 1) list[start].page = nv;
+          else delete list[start].page;
+        }
+        delete pm[sid][String(itemIdx)];
+      } else if (nv <= 1) {
+        delete pm[sid][String(itemIdx)];
+      } else {
+        pm[sid][String(itemIdx)] = nv;
+      }
+      if (!Object.keys(pm[sid]).length) delete pm[sid];
+      localStorage.setItem("antcv:itemPages", JSON.stringify(pm));
+      // cascade following sidebar sections so page-boxes keep document order
+      if (list && start >= 0 && nv > 1) {
+        for (let j = start + 1; j < list.length; j++) {
+          const s = list[j];
+          if (!s || String(s.loc || "").toLowerCase() !== "sidebar") continue;
+          if ((parseInt(s.page || 1, 10) || 1) < nv) s.page = nv;
+        }
+      }
+      if (list) localStorage.setItem("sections", JSON.stringify(all));
+      window.dispatchEvent(
+        new CustomEvent("antcv:sections-updated", {
+          detail: { source: "sidebar-group-break", sid: sid },
+        }),
+      );
+      window.dispatchEvent(
+        new CustomEvent("antcv:item-pages-changed", {
+          detail: { source: "sidebar-group-break", sid: sid },
+        }),
+      );
+    } catch (_) {}
+  };
   const {
       useState: e,
       useRef: t,
@@ -5786,6 +5857,33 @@
                     color: l,
                   },
                 }),
+                "sidebar" === e.loc &&
+                  i > 0 &&
+                  (() => {
+                    const pg = __antcvSidebarGroupPage(e.id, i, e);
+                    return React.createElement(
+                      "button",
+                      {
+                        onClick: () =>
+                          __antcvSidebarGroupBreak(e.id, i, (pg % 4) + 1),
+                        title:
+                          "Page for this group. Tap to move this group and everything after it to the next page. Cycles 1→4.",
+                        style: {
+                          fontSize: 10,
+                          padding: "1px 5px",
+                          borderRadius: 3,
+                          border: "1px solid " + (pg > 1 ? "#d97706" : "#888"),
+                          background: pg > 1 ? "#fef3c7" : "none",
+                          color: pg > 1 ? "#92400e" : "#555",
+                          cursor: "pointer",
+                          whiteSpace: "nowrap",
+                          flexShrink: 0,
+                          fontWeight: 600,
+                        },
+                      },
+                      "📄" + pg,
+                    );
+                  })(),
                 React.createElement(
                   "button",
                   {

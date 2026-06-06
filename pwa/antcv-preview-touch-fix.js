@@ -65,7 +65,7 @@
   'use strict';
 
   if (window.__antcvPreviewTouchFixInstalled) return;
-  window.__antcvPreviewTouchFixInstalled = '1.50.176-spare-modals';
+  window.__antcvPreviewTouchFixInstalled = '1.50.179-no-sweep-typing';
 
   const STYLE_ID = 'antcv-preview-touch-fix-style';
 
@@ -258,8 +258,24 @@
   // panel's own buttons should still work (their explicit pointer-
   // events:auto wins), but if the panel has an invisible scrim that
   // doesn't pass clicks, that scrim is what we want to suppress.
+  // 1.50.179: do NOT run the expensive full-body overlay sweep while the user is
+  // typing in a field. On mobile, React re-renders on every keystroke fire the
+  // MutationObserver -> a per-frame getComputedStyle()/getBoundingClientRect()
+  // sweep over the WHOLE DOM -> the page freezes ("blue screen" on mobile while
+  // typing in Settings). Typing in a form field needs no preview-overlay repair.
+  function isTypingInField() {
+    try {
+      var ae = document.activeElement;
+      if (!ae) return false;
+      var tag = (ae.tagName || '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') return true;
+      if (ae.isContentEditable) return true;
+    } catch (_) {}
+    return false;
+  }
   function repairAfterScroll() {
     if (!isActive()) return;
+    if (isTypingInField()) return;
     ensureStyle();
     try { repairAncestors(); } catch (_) {}
     try { suppressInvisibleOverlays(); } catch (_) {}

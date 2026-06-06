@@ -183,7 +183,7 @@ export function postProcessDocx(input, opts = {}) {
       const headerXml =
         '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
         '<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w10="urn:schemas-microsoft-com:office:word">' +
-        '<w:p>' + watermarkRun + '</w:p></w:hdr>';
+        '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/></w:pPr>' + watermarkRun + '</w:p></w:hdr>';
       files['word/header1.xml'] = strToU8(headerXml);
       const relsName = 'word/_rels/document.xml.rels';
       let rels = files[relsName] ? strFromU8(files[relsName]) : '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';

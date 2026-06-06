@@ -4,7 +4,7 @@ A living registry of **features** (distinct from the bug tracker at
 `docs/qa/ACTIVE_BUGS.md`). Each feature is **CLOSED** (shipped + live), **OPEN**
 (planned or in progress), or **PARKED** (descoped / blocked).
 
-Last updated: **2026-06-06** — PWA `1.50.166`, docx-worker `1.14.17`.
+Last updated: **2026-06-06** (triage round 2) — PWA `1.50.166`, docx-worker `1.14.17`.
 
 Status legend: ✅ CLOSED (shipped) · 🟡 OPEN (active/planned) · ⚪ PARKED.
 
@@ -25,6 +25,7 @@ Status legend: ✅ CLOSED (shipped) · 🟡 OPEN (active/planned) · ⚪ PARKED.
 | FT-WRITING-STYLES | 12 writing systems (nordic-minimal … hybrid-balanced) + banned lists + tone chips | `writingSystems/registry.json`, proxy worker | Pre-existing; tone orphan default migrated this session. |
 | FT-EXPORT | DOCX + PDF export (cv-proxy / docx-worker / CloudConvert) | workers | Pre-existing. |
 | FT-ANALYSIS-REPORT | Branded AI-watermarked JD-analysis PDF | `antcv-analysis-report-pdf-360.js` | Landed in parallel work (#219 family). |
+| FT-DEBUG-LOGGER | Crash-proof in-app error logger + on-device viewer (for mobile-only blue screens with no devtools). Captures uncaught errors + breadcrumbs to localStorage synchronously (survives crash+reload); plain-DOM overlay opens via `#antcv-debug`, a 4-tap top-right gesture, a Settings button, or `window.AntcvDebug.open()`. Copy/Share/Download/Clear. | `antcv-debug-logger.js` (v1.50.167) | Loads first; does NOT touch `window.fetch`. Regression-guarded by the `debug-logger` browser-QA check. Built to diagnose PERSONAL-DATA-CRASH-001. |
 
 ## OPEN — planned / in progress
 
@@ -34,7 +35,9 @@ Status legend: ✅ CLOSED (shipped) · 🟡 OPEN (active/planned) · ⚪ PARKED.
 | PHOTO-SIDEBAR-BRIDGE-001 | True **sidebar-bridge** photo: split the candidate-header cell so the disc hovers on the header/sidebar seam (preview + DOCX) | 🟡 design build | Owner spec 2026-06-06. Bigger than the current top-of-sidebar approximation. |
 | APPJS-ID-SCHEME-UNIFY | Unify app.js's package id scheme with the registry (`scandinavian→copenhagen-modern`, `copenhagen_executive→navy-executive`, …) + persist the selection through cloud-restore | 🟡 source work | Removes the need for the orphan-apply / loading-gate workarounds. Do in `pwa/app.src.js` (source of truth) → re-minify. |
 | DATA-IMPORT-001 | **Restore** a downloaded backup file (counterpart to FT-DATA-EXPORT) | 🟡 not started | Export shipped; import is the natural follow-up. |
-| WIZARD-001/002 | Step 6b scrollable; add Step 6d (default languages + settings hand-off) | 🟡 registered | app.js wizard. |
+| PROCESSING-QUEUE-INDICATOR-001 | Per-subsection live work-state badge: pink **"processing"** while being worked (language change, new JD/kernel, compress, enhance), yellow **"queue"** when scheduled later in the same command (enhance-over-subsection → first pink, rest yellow). Plus: CJLR (Center/Justify/Left/Right) buttons working in **every** sub-subsection. | 🟡 not started | Owner spec 2026-06-06. No per-subsection lifecycle state exists today. Bug tracker: PROCESSING-QUEUE-INDICATOR-001. |
+| AUTO-PAGEBREAK-BLOCK-001 | Automated page breaks: **always** show the salmon splitter when content exceeds one A4 page in preview; sliding is **block-level** — a whole sub-subsection moves to the next page (never partial, never the whole parent subsection). | 🟡 not started | Owner spec 2026-06-06. Supersedes manual-only page system for the auto case; reconcile with PB-001..006 + EXPORT-PAGE2-001. |
+| WIZARD-002 | Step 6d (default languages + settings hand-off) | 🟡 registered | Step 6b scrollable is **DONE**; only 6d remains. |
 | DATA-PORTABILITY-CLOUD | Persist corrected defaults (package/tone) to the cloud/database so per-load migration isn't needed | 🟡 needs relay prefs PUT | Owner's "do the corrections in the database" idea — riskier cloud-write path, deferred. |
 
 ## PARKED / descoped

@@ -8,12 +8,18 @@
     "build": "vite build",
     "dev": "vite build --watch",
     "typecheck": "tsc --noEmit",
-    "build:app": "esbuild pwa/app.src.js --minify --legal-comments=none --outfile=pwa/app.js"
+    "build:app": "esbuild pwa/app.src.js --minify --legal-comments=none --outfile=pwa/app.js",
+    "test": "node scripts/run-tests.mjs",
+    "test:pwa": "node scripts/run-tests.mjs pwa",
+    "test:workers": "node scripts/run-tests.mjs workers",
+    "test:smoke": "node workers/docx-worker/test/smoke.js",
+    "qa:browser": "node scripts/browser-qa.mjs"
   },
   "devDependencies": {
     "@types/react": "18.3.12",
     "@types/react-dom": "18.3.1",
     "@vitejs/plugin-react": "4.3.4",
+    "playwright": "^1.60.0",
     "typescript": "5.6.3",
     "vite": "5.4.11"
   }

@@ -8,6 +8,108 @@ A companion **feature registry** (open vs shipped features) lives at
 
 ---
 
+## SESSION 2026-06-06 (triage round 2) — owner dispositions + new requirements
+
+Owner-driven triage pass. Closes/merges/descopes several items and registers
+three new ones. Code checks done this pass are noted inline.
+
+### Closed by owner
+
+- **DEMO-PERSIST-001 — [FIXED]** owner-confirmed solved. (Was the master demo
+  bug: a demo user server-classified as "paid". The relay code was always
+  structurally correct — this was a runtime/data condition that is now resolved.)
+- **DEMO-BADGE-001 — [FIXED]** owner-confirmed solved (badge now gated on the
+  real demo signal, no longer the hardcoded email).
+- **SPECIALISATION-EDIT-001 — [FIXED]** verified in code: `wrapSpecialisation()`
+  in `antcv-candidate-preview-editor-341.js` makes `meta.subtitle` (the
+  `[Specialisation — …]` line) contenteditable and writes back on blur; the
+  sidecar is loaded in `index.html` as `?v=1.50.106-spec-edit`. Matches the
+  original ask. Owner expected this — confirmed.
+
+### Descoped / redundant (WONTFIX)
+
+- **DEMO-TOGGLE-001 — [WONTFIX]** an in-app Demo⇄Paid toggle is not needed; the
+  user switches demo→normal by (re-)running the wizard.
+- **DOCX-EXPORT-REGRESSION-001 — [WONTFIX]** redundant: the print-setup view is
+  skipped, so the "export from print-setup doesn't call `exportDocxViaWorker`"
+  path no longer exists.
+- **WIZARD step 6b scrollable — [DONE]** already scrollable; the 6b portion of
+  WIZARD-001/002 is closed. (Step 6d default-languages hand-off remains.)
+
+### Blocked (not testable yet)
+
+- **DEMO-WARN-NONDEMO-001 — [BLOCKED]** cannot be tested because the privacy LED
+  is not visible — that LED-visibility defect (see PRIVACY-DEMO-001) gates this.
+  Re-test once the LED renders.
+
+### Merged — one bug, several aliases
+
+- **SETTINGS-NAV-Z-001 — [OPEN]** (canonical) — *Settings subtab / Application-
+  History navigation opens BEHIND the preview (z-index/stacking trap), and the
+  preview pop/overflow menu doesn't route to it either.* This single defect
+  absorbs all of: **APP-HISTORY-001, SETTINGS-SUBTAB-001, SETTINGS-AHZ-001,
+  AH-001, VF-014, APPHIST-ZIDX-001** (all owner-confirmed the same bug). Prior
+  blind ancestor-lift (sidecar `327`) did not beat the trap — drive with
+  `antcv-apphist-zindex-probe.js`: reproduce → probe the stacking context →
+  targeted z-index/portal fix → verify both the Settings subtab AND the preview
+  overflow-menu entry open in front.
+
+### Needs live test (not closed)
+
+- **GEN-UNSOL-002 — [OPEN, needs live JD test]** could not confirm a prompt-side
+  grounding fix landed after GEN-UNSOL-001. The generation prompt is built
+  client-side (`pwa/app.src.js`); the schema does not visibly request a
+  JD-grounded `meta.company`/`role`. Verify by generating from a real JD with a
+  blank Company field and checking the header does NOT fall to "Open Application
+  — Unsolicited". Good browser-QA candidate (auth + generation cost).
+
+### New — registered this pass
+
+- **PERSONAL-DATA-CRASH-001 — [OPEN][HIGH]** typing into a Personal-panel field
+  **blue-screens** the app on a single keystroke. **Repro (owner 2026-06-06):**
+  Settings → Personal, edit the Name from `Anita` → `Anita1` (one extra char) →
+  blue screen. Refresh → lands on the set menu → back to Settings → the value
+  **did persist** (`Anita1` shows). So the onChange persists state, then a
+  re-render crashes — a render fault on the edited value, NOT a save failure.
+  Edit handlers live around `pwa/app.src.js:8912` (`y("name", e)`) / `8925`
+  (`x({name:e.target.value})`) / `8932` (`y("name_input", e)`) and the
+  personalInfo writers at `~10410`. Blue-screen-risk path — **diagnostic-first**:
+  capture the live stack before patching. Plan: a headed browser-QA probe types
+  one char into the Name field and records the `pageerror` stack, then a targeted
+  fix in `app.src.js` (source of truth) → `build:app`. Suspect: a downstream
+  render/sidecar (e.g. the candidate-preview-editor MutationObserver or a derived
+  split/match on the name) throwing on the new value.
+  **Capture tool shipped (v1.50.167):** `antcv-debug-logger.js` records the
+  uncaught error + a breadcrumb trail (incl. the field that was edited) to
+  localStorage, surviving the crash and reload. On the phone: reproduce the blue
+  screen, refresh, add `#antcv-debug` to the URL (or 4-tap the top-right corner) →
+  tap the `error` entry → Share/Copy the stack. Enable "Capture typed values"
+  first to confirm it's the Name keystroke. That stack pinpoints the throwing line
+  before any `app.src.js` edit.
+- **PROCESSING-QUEUE-INDICATOR-001 — [OPEN][feature]** every subsection must show
+  a live work-state badge:
+    - **pink "processing"** while that subsection is actively being worked
+      (language change, new JD / new kernel, compress, enhance);
+    - **yellow "queue"** when it is scheduled to be modified later as part of the
+      same command. Example: *enhance over a subsection* → the first subsection
+      goes pink (processing) and the remaining queued subsections go yellow,
+      flipping to pink as each starts.
+    - Includes: confirm the **CJLR** (Center/Justify/Left/Right) alignment
+      buttons work in **every sub-subsection**, not just What I Bring / Core
+      Competencies. Currently no per-subsection lifecycle state exists (the
+      control-bar colours are button hover/active states only) — net-new.
+- **AUTO-PAGEBREAK-BLOCK-001 — [OPEN][feature]** automated page breaks in
+  preview:
+    - **always** render the salmon page-splitter line when content slides beyond
+      one A4 page (not only on a manual control);
+    - page sliding is **block-level**: a whole sub-subsection block moves to the
+      next page — never a partial block, and never the entire parent subsection.
+    Supersedes the manual-only page system for the auto case; reconcile with the
+    PB-001..006 family and EXPORT-PAGE2-001 (preview clone must carry the auto
+    splits to export). Tracked also in the feature registry.
+
+---
+
 ## SESSION 2026-06-06 — visual-package/palette root fix + UX/data/console batch
 
 Owner-driven batch (Claude Opus). Production reached **PWA 1.50.166** + **docx-worker
@@ -16,6 +118,17 @@ marked otherwise. Cloudflare Pages auto-builds production from `main`; the docx
 worker was deployed via `wrangler deploy`.
 
 ### Headline — package "colour mix" — partial mitigation shipped, ROOT still OPEN
+
+> **Automated re-verification 2026-06-06 (browser-QA harness, production):** the
+> `palette-mix` check seeds the orphan and reloads `antcv.pages.dev`. Result:
+> `localStorage.stylePackage` = `"scandinavian"` (UNCHANGED orphan),
+> `body[data-package]` = `copenhagen-modern` (render mitigation only) — the two
+> disagree. `toneRegister` correctly migrates to `nordic-minimal`. **Confirms
+> PACKAGE-PALETTE-MIX-001 / APPJS-ID-SCHEME-UNIFY are NOT closed.** Source check:
+> `pwa/app.src.js` still does `u.get("stylePackage","scandinavian")` and uses the
+> legacy id scheme (`copenhagen_executive`, not `navy-executive`); the esbuild
+> rebuild was reverted (250ec8d). Reproduce any time: `node scripts/browser-qa.mjs
+> --only palette-mix`. Gate stays RED until the durable fix lands.
 
 - **PACKAGE-PALETTE-MIX-001 — [OPEN]** (owner-confirmed 2026-06-06; partial
   mitigation [PR #226](https://github.com/gabrielk83/AntCV/pull/226), v1.50.166).
@@ -165,7 +278,18 @@ items marked VERIFYING.
 - **HARDREFRESH-001** `[OPEN]` — In-app Hard Refresh shows the "are you sure?" confirm
   but does nothing after OK (no reload). Not yet diagnosed.
 - **DEMO-PERSIST-001** `[OPEN][HIGH][console][worker]` — **A demo user is server-
-  classified as "paid".** Confirmed live: `51pegasib@gmail.com` (who carries the demo
+  classified as "paid".**
+  **Code re-verification 2026-06-06:** the relay path is structurally correct and
+  UNCHANGED since filing — `getUserMode` reads `prefs2:<hash>.mode`, returns `demo`
+  only when stored; `handleApiUserMode` POST writes `mode` + invalidates cache;
+  `/config` surfaces `demo_mode: userMode === 'demo'`
+  (`workers/access-relay/src/index.js:548,1311,2967`). No fix commit landed. The
+  defect is therefore RUNTIME/DATA (the account's KV record reads `paid`, or the
+  client POST is failing/unauthenticated), not code — it CANNOT be closed by
+  reading source. Automated gate added: `node scripts/browser-qa.mjs --jwt <demo
+  token>` runs `demo-config` + `demo-mode-roundtrip` (POST `/api/user/mode {demo}`
+  → GET reads back). Run it with a real demo account's bearer to close or localise
+  the bug to the write path vs an allowlist pin. Stays OPEN until that probe is green. Confirmed live: `51pegasib@gmail.com` (who carries the demo
   "⚠ Setup needed" chip) reads relay `/config` → `user_mode:"paid"`, `demo_mode:false`.
   `AntcvSetUserMode("demo")` + reload does **not** flip it (still `"paid"`). Because the
   account is treated as paid, every demo behaviour is wrong for them:

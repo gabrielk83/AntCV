@@ -20154,7 +20154,11 @@
                           ? {
                               ...e,
                               content:
-                                a(F.who_content) || a(e.content) || n.who || "",
+                                a(F.who_content) ||
+                                a(e.content) ||
+                                n.who ||
+                                `I am a ${String(g || "engineer").toLowerCase()} with ${f || "15"}+ years across the roles listed on my CV. I work at the seams between disciplines, keeping requirements, decisions, and trade-offs visible and traceable.` ||
+                                "",
                             }
                           : "bring" === e.id
                             ? {
@@ -20188,6 +20192,7 @@
                                     a(F.why_content) ||
                                     a(e.content) ||
                                     n.why ||
+                                    "My background centres on the work set out in this profile. I would welcome the chance to discuss how it maps to this role's scope and priorities, and to tailor the detail to what matters most for the position." ||
                                     "",
                                 }
                               : "contribute" === e.id

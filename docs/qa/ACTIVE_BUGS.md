@@ -107,6 +107,34 @@ repeat the mistake.
 
 ### Resolved this session
 
+- **WM-MOBILE-SCALE-001** — AI watermark "lost" on mobile (again). The preview paper
+  renders inside a `transform: scale(ui)` zoom container (app.js preview zoom; phone
+  auto-fit factor well below 1). `antcv-watermark-page-anchor-341` positioned via
+  `getBoundingClientRect()` (SCALED screen coords) but wrote `style.top/left` in the
+  offset parent's UNSCALED local space, so the offset was wrong by the scale factor and
+  pushed the marker off the visible paper. The 1.50.160 offset-parent rewrite dropped the
+  older 1.50.147 viewport clamp without accounting for the transform — that is the "again".
+  Fix: `anchorToCorner` recovers the cumulative scale from the offset parent
+  (`rect / offsetWidth`) and converts every screen-space delta into local space; no-op at
+  scale 1 (desktop). — FIXED✓ (1.50.167). **Live mobile verification owed** (no live
+  browser in the build env): on a phone, CV + CL preview should show the marker in the
+  last-page corner on the visible paper at any zoom.
+- **CL-UNSOL-SIGNAL-001** — An unsolicited / "Open Application" cover letter rendered the
+  literal template placeholders `[WHO I AM — …]` and `[WHY THIS POSITION — …]` instead of
+  content. Root cause: the CL merge reducer backfills who/why from the hardcoded `n.who`/
+  `n.why`, but `n` is gated on `p` (`kernelShowcaseInProgress || io.company === "Unsolicited"`
+  exact). After GEN-UNSOL-001 an unsolicited letter can carry a real extracted company, so
+  `p` is false, `n = {}`, and empty `who_content`/`why_content` collapse to `""` → the
+  empty field shows its template placeholder. (WHAT I BRING never shows this — it has a
+  row-level fallback independent of `p`.) Fix: a grounded, candidate-anchored backstop added
+  AFTER `n.who`/`n.why` in both chains — purely additive (only fires when everything before
+  is empty), so a normal/solicited letter never reaches it. Done as a **surgical in-place
+  edit of the minified `app.js`** (one occurrence each, verified parse) per
+  `docs/deployment/app-js-source-and-rebuild.md`, mirrored into `app.src.js` — NOT an
+  esbuild rebuild. First proof the surgical-minified-edit path (the sanctioned interim until
+  APPJS-REBUILD-001 is solved) works. — FIXED✓ (1.50.168). **Live verification owed:**
+  generate an unsolicited letter; WHO I AM + WHY THIS POSITION show grounded prose, no
+  brackets, in preview + DOCX/PDF.
 - **APPJS-BLUESCREEN-001** — A full blue screen on load after the page-split engine
   was shipped via `npm run build:app`. **Root cause: the esbuild round-trip is NOT
   behaviour-preserving for this bundle.** The working `app.js` begins

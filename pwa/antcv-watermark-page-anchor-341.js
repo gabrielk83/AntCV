@@ -56,7 +56,7 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.50.162-wm-cl-right';
+  var SCRIPT_VERSION = '1.50.167-wm-mobile-scale';
   if (window.__antcvWatermarkPageAnchor341 === SCRIPT_VERSION) return;
   window.__antcvWatermarkPageAnchor341 = SCRIPT_VERSION;
 
@@ -166,31 +166,46 @@
     // page-box's rect, so it lands at the page-box's bottom corner no matter
     // what the offset parent is. Clamp into the viewport on narrow screens.
     var DEFAULT_INSET = 18; // ~14pt
-    var vw = window.innerWidth || (document.documentElement && document.documentElement.clientWidth) || 0;
+    var op = watermark.offsetParent || pageBox;
     var pbr = null, wmr = null, opr = null;
     try {
       // reading offsetParent after setting position:absolute forces the
       // up-to-date value (and a layout) — that's what we want here.
-      var op = watermark.offsetParent || pageBox;
+      op = watermark.offsetParent || pageBox;
       pbr = pageBox.getBoundingClientRect();
       wmr = watermark.getBoundingClientRect();
       opr = op.getBoundingClientRect();
     } catch (_) {}
     if (pbr && opr) {
-      var wmH = (wmr && wmr.height) || 12;
-      var wmW = (wmr && wmr.width) || 60;
+      // BUGFIX 2026-06-06 (watermark "lost" on mobile): the preview paper is
+      // rendered inside a `transform: scale(ui)` zoom container (app.js preview
+      // zoom; on a phone the auto-fit factor is well below 1). getBoundingClientRect
+      // returns SCALED screen coords, but style.top/left are interpreted in the
+      // offset parent's UNSCALED local coordinate space — so a screen-space delta
+      // written as a local offset is wrong by the scale factor and pushes the
+      // marker off the visible paper. Recover the cumulative scale from the offset
+      // parent (rect size vs layout offset size) and convert every screen-space
+      // delta into the offset parent's LOCAL space before writing it. scale === 1
+      // on desktop, so this is a no-op there.
+      var scaleX = (op.offsetWidth && opr.width) ? (opr.width / op.offsetWidth) : 1;
+      var scaleY = (op.offsetHeight && opr.height) ? (opr.height / op.offsetHeight) : 1;
+      if (!isFinite(scaleX) || scaleX <= 0) scaleX = 1;
+      if (!isFinite(scaleY) || scaleY <= 0) scaleY = 1;
+      var wmHLocal = ((wmr && wmr.height) || 12) / scaleY;
+      var wmWLocal = ((wmr && wmr.width) || 60) / scaleX;
+      var pbBottomLocal = (pbr.bottom - opr.top) / scaleY;
+      var pbLeftLocal = (pbr.left - opr.left) / scaleX;
+      var pbRightLocal = (pbr.right - opr.left) / scaleX;
       // vertical: sit ~16px above the page-box bottom.
       watermark.style.bottom = 'auto';
-      watermark.style.top = ((pbr.bottom - opr.top) - wmH - 16) + 'px';
+      watermark.style.top = (pbBottomLocal - wmHLocal - 16) + 'px';
       if (corner === 'left') {
-        var leftEdge = pbr.left + DEFAULT_INSET;
-        if (leftEdge < opr.left + 2) leftEdge = opr.left + 2;
-        watermark.style.left = (leftEdge - opr.left) + 'px';
+        var leftLocal = pbLeftLocal + DEFAULT_INSET;
+        if (leftLocal < 2) leftLocal = 2;
+        watermark.style.left = leftLocal + 'px';
         watermark.style.right = 'auto';
       } else {
-        var rightEdge = pbr.right - DEFAULT_INSET;
-        if (vw && rightEdge > vw - 6) rightEdge = vw - 6; // keep on screen
-        watermark.style.left = ((rightEdge - wmW) - opr.left) + 'px';
+        watermark.style.left = (pbRightLocal - DEFAULT_INSET - wmWLocal) + 'px';
         watermark.style.right = 'auto';
       }
     } else {

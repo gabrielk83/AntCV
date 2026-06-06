@@ -25081,6 +25081,8 @@ function renderSection(s, ctx, isSidebar) {
     ...pageBreakPara,
     new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
+      // 1.14.22: real section column width (Google Docs collapses gridCol=100).
+      columnWidths: [(isSidebar ? SIDEBAR_W : MAIN_W) - 288],
       borders: noBorders(),
       rows: [
         new TableRow({
@@ -26334,7 +26336,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.21-cl-table-autofit";
+var VERSION = "1.14.22-cl-section-colwidth";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

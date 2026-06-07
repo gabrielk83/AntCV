@@ -12779,25 +12779,54 @@
                   (e && Array.isArray(e.applications)
                     ? zl(e.applications)
                     : e && e._err && console.warn("[apps] list error:", e._err),
-                    t && void 0 !== t.application_id
-                      ? Ml(t.application_id)
-                      : t &&
-                        t._err &&
-                        console.warn("[apps] active error:", t._err),
                     jl(!0));
-                  // 1.50.245: also HYDRATE the active application's content on
-                  // mount. Without this, hard-refresh shows the chrome (top bar
+                  // 1.50.246: on cold-start, ALWAYS prefer the latest UNSOLICITED
+                  // application as the active. Owner: if a tailored app were
+                  // active on hard-refresh, the user would land in a no-JD-attached
+                  // tailored context — the system asks for a JD or cancel, then
+                  // dumps the user back into a half-formed editor. Starting from
+                  // the unsolicited kernel gives a clean slate every cold-start;
+                  // the user can pick a tailored app from the dropdown when ready.
+                  let __chosenId = null;
+                  try {
+                    const apps =
+                      e && Array.isArray(e.applications) ? e.applications : [];
+                    const isUnsol = (a) =>
+                      a &&
+                      (a.category === "unsolicited" ||
+                        String(a.jd_company || "").trim().toLowerCase() ===
+                          "unsolicited");
+                    const unsol = apps.find(isUnsol);
+                    if (unsol && unsol.id) __chosenId = unsol.id;
+                    else if (t && void 0 !== t.application_id && t.application_id)
+                      __chosenId = t.application_id;
+                  } catch (e) {}
+                  if (__chosenId) {
+                    try {
+                      Ml(__chosenId);
+                    } catch (e) {}
+                    // Sync the server's active pointer too, so the next
+                    // cold-start (and the auto-sync push) target the same id.
+                    if (
+                      !t ||
+                      t.application_id !== __chosenId
+                    ) {
+                      try {
+                        oo.setActive(__chosenId).catch(() => {});
+                      } catch (e) {}
+                    }
+                  } else if (t && t._err) {
+                    console.warn("[apps] active error:", t._err);
+                  }
+                  // 1.50.245: HYDRATE the active application's content on mount.
+                  // Without this, hard-refresh shows the chrome (top bar
                   // company/role, active app badge, Fl/io) correctly but the
                   // editor body stays as the me() template because nothing
                   // ever loaded the saved cv/cl_sections into `ro`. Skip when
                   // local sections already look like real content (don't
                   // clobber in-progress edits or the kernel cloud-restore).
                   try {
-                    if (
-                      t &&
-                      void 0 !== t.application_id &&
-                      t.application_id
-                    ) {
+                    if (__chosenId) {
                       const s = u.get("sections", null),
                         isTemplate =
                           !s ||
@@ -12811,7 +12840,7 @@
                               String(s.cv[0].content).trim(),
                             ));
                       if (isTemplate) {
-                        const detail = await oo.get(t.application_id);
+                        const detail = await oo.get(__chosenId);
                         if (detail && detail.application) {
                           const n = detail.application;
                           try {
@@ -12847,7 +12876,7 @@
                           }
                           console.log(
                             "[apps] mount-hydrated active application",
-                            t.application_id,
+                            __chosenId,
                           );
                         }
                       }

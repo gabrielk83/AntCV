@@ -4467,6 +4467,13 @@
                     );
             } else if (row && row.hidden) {
               node = null;
+            } else if (!row) {
+              // 1.50.254: a deleted item briefly arrives here as a null
+              // row during React reconciliation while the items array is
+              // shifting. Skip it instead of crashing on row.l access —
+              // matches the "blue screen after deleting regulatory blank"
+              // report.
+              node = null;
             } else {
               const r = (e) => {
                 let t = e || "";
@@ -6164,8 +6171,30 @@
                 React.createElement(
                   "button",
                   {
-                    onClick: () =>
-                      d({ items: e.items.filter((e, t) => t !== i) }),
+                    onClick: () => {
+                      // 1.50.254: defensive delete. Owner reported a blue
+                      // screen "trying to remove regulatory context while
+                      // the blank section was exposed". e.items can be
+                      // null / non-array under edge cases; .filter() on
+                      // undefined throws. Coerce to a safe array first,
+                      // and SKIP entirely if the section is missing or
+                      // already empty.
+                      try {
+                        const items = Array.isArray(e && e.items)
+                          ? e.items
+                          : [];
+                        if (!items.length || i < 0 || i >= items.length) return;
+                        const next = items.filter((_, idx) => idx !== i);
+                        d({ items: next });
+                      } catch (er) {
+                        try {
+                          console.warn(
+                            "[panel] labeled_list group delete failed:",
+                            er && er.message,
+                          );
+                        } catch (_) {}
+                      }
+                    },
                     style: {
                       fontSize: 10,
                       background: "none",
@@ -6268,8 +6297,26 @@
                 React.createElement(
                   "button",
                   {
-                    onClick: () =>
-                      d({ items: e.items.filter((e, t) => t !== i) }),
+                    onClick: () => {
+                      // 1.50.254: defensive — same hardening as the group
+                      // delete above. Guards against e.items being null /
+                      // non-array under edge cases (the "blank section"
+                      // case the owner reported).
+                      try {
+                        const items = Array.isArray(e && e.items)
+                          ? e.items
+                          : [];
+                        if (!items.length || i < 0 || i >= items.length) return;
+                        d({ items: items.filter((_, idx) => idx !== i) });
+                      } catch (er) {
+                        try {
+                          console.warn(
+                            "[panel] labeled_list item delete failed:",
+                            er && er.message,
+                          );
+                        } catch (_) {}
+                      }
+                    },
                     title: "Delete item",
                     style: {
                       fontSize: 10,

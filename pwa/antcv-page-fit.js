@@ -1,4 +1,4 @@
-/* AntCV preview page-fit sidecar (v1.40.151)
+/* AntCV preview page-fit sidecar (v1.50.261)
  * ============================================================
  * Gabriel originally reported: "make sure sidebar length is up to
  * the page length but not crossing it, otherwise a new page is
@@ -9,29 +9,46 @@
  * ----------------------------
  * "Scrolling down is forcing to stay in the first page" — content
  * that overflowed the A4 cap was being hidden with no way to see
- * it. The user was stuck looking at the top of the page with no
- * indication of what was below the cap.
+ * it. So v1.40.151 changed overflow to `auto` — keeping the A4
+ * cap but adding a NESTED scrollbar inside the page-row.
+ *
+ * Follow-up report (v1.50.261, 2026-06-07)
+ * ----------------------------------------
+ * Owner screenshot + raw DOM inspection: "vertical ruller on right
+ * still does not go to the end only the bluish ruller on the right
+ * does — and even it the actual end is hidden behind horizontal
+ * roller". Diagnosis: the nested-scroll fix from v1.40.151 created
+ * a TRAP. The outer slider drives `.antcv-preview-scroll`, but the
+ * actual overflow lives INSIDE each `.antcv-page-row` (height-
+ * locked at 1123px with `overflow: auto`). The only way to reach
+ * the overflowed content is the thin styled native scrollbar on
+ * the right edge of the page-row — and the matching horizontal
+ * scrollbar at the bottom of the row eats the last line of content.
  *
  * Fix in this version
  * -------------------
- * Keep the A4 visual cap (min-height + max-height) BUT change the
- * overflow from `hidden` to `auto`. The page-row stays exactly
- * A4-sized in the preview, but a scrollbar appears inside it when
- * the content is taller than A4, letting the user see what's
- * clipped. DOCX export is unchanged — the docx-worker still uses
- * `cantSplit: true` on the body row, so phantom trailing pages
- * are suppressed in the export.
+ * Drop the `max-height` cap AND switch `overflow` from `auto` to
+ * `visible`. Content now flows naturally past the A4 visual line.
+ * The page-row grows tall enough to contain its children; the
+ * outer preview-scroll's scrollHeight reflects the true total; the
+ * left vertical slider can reach the true bottom; both nested
+ * scrollbars disappear.
  *
- * Trade-off: the user now sees a scrollbar inside the page-row
- * when content overflows. They can still use the `s.page` mech-
- * anism to mark sections as page=2,3,4 — those land on subsequent
- * page-rows. The scroll-inside-page is the visual hint that some
- * content needs to move to page 2.
+ * Keep `min-height: 1123px` so empty / lightly-filled pages still
+ * render at A4 size (the "is the sidebar tall enough?" visual).
+ *
+ * DOCX export is unchanged — the docx-worker renders independently
+ * with `cantSplit: true` on the body row.
+ *
+ * Proper end-state: AUTO-PAGEBREAK-BLOCK-001 (in FEATURES_REGISTRY)
+ * — overflow should AUTO-SPLIT into a new `.antcv-page-row` with
+ * the salmon splitter marker, not flow into a single tall row.
+ * This sidecar's loosening is the bridge until that ships.
  */
 (function () {
   'use strict';
 
-  const SCRIPT_VERSION = '1.40.151';
+  const SCRIPT_VERSION = '1.50.261';
   const PAGE_ROW_SEL = '.antcv-page-row';
   const APPLIED_FLAG = 'antcvPageFitApplied';
   const PAGE_WIDTH_PX = 794;
@@ -44,18 +61,20 @@
   function applyCap() {
     const rows = document.querySelectorAll(PAGE_ROW_SEL);
     rows.forEach(function (row) {
-      // Re-apply on every pass, but only if needed (avoid relayouts).
-      // The overflow style is set to 'auto' in v1.40.151 (was 'hidden'
-      // in v1.40.146). If a stale 'hidden' is found, override.
-      const wantOverflow = 'auto';
+      // 1.50.261: keep min-height (empty pages still look A4) but
+      // STRIP the max-height cap and the overflow:auto trap. If a
+      // stale max-height or overflow:auto/hidden is found, clear
+      // them. Re-apply on every pass — the React render reassigns
+      // inline styles on every meta change, so a one-shot fix would
+      // regress instantly.
       if (row.style.minHeight !== PAGE_HEIGHT_PX + 'px') {
         row.style.minHeight = PAGE_HEIGHT_PX + 'px';
       }
-      if (row.style.maxHeight !== PAGE_HEIGHT_PX + 'px') {
-        row.style.maxHeight = PAGE_HEIGHT_PX + 'px';
+      if (row.style.maxHeight !== '') {
+        row.style.maxHeight = '';
       }
-      if (row.style.overflow !== wantOverflow) {
-        row.style.overflow = wantOverflow;
+      if (row.style.overflow !== 'visible') {
+        row.style.overflow = 'visible';
       }
       row.dataset[APPLIED_FLAG] = '1';
     });

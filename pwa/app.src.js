@@ -13024,9 +13024,27 @@
         React.useEffect(() => {
           try {
             if (!io || "Unsolicited" !== io.company) return;
-            if (!u.get("kernelShowcaseGenerated", !1)) return;
             if (u.get("kernelShowcaseInProgress", !1)) return;
             if (Un && Un.current) return;
+            // 1.50.272: the kernel_showcase cloud slot was found EMPTY in
+            // production even though the owner had a real subtitle
+            // ("EO/LiDAR Systems Architecture • Change Control & Risk
+            // Governance • GenAI Product Development (PM)") — so loading
+            // fell back to the template. Cause: the re-save required
+            // kernelShowcaseGenerated===true, but an edit to a LOADED
+            // kernel's subtitle (without a fresh full generation, or after
+            // the flag was reset) never set that flag, so nothing persisted.
+            // Fix: also persist when the kernel carries REAL content — a
+            // non-placeholder subtitle. This captures the owner's manual
+            // subtitle edit so it survives a hard reset / new device.
+            // (Still gated to io.company==="Unsolicited" so only the kernel
+            // is ever written to this slot.)
+            const __sub = ((io && io.subtitle) || "").trim();
+            const __realSubtitle =
+              !!__sub &&
+              !/^\[\s*specialis/i.test(__sub) &&
+              !/^\[\s*focus/i.test(__sub);
+            if (!u.get("kernelShowcaseGenerated", !1) && !__realSubtitle) return;
           } catch (e) {
             return;
           }

@@ -28,6 +28,15 @@
 
   var applying = false; // guards our own style writes from re-triggering work
 
+  // 1.50.237: EXTEND-ONLY. The 1.50.227 logic wrote
+  // `side.style.height = mainH + 'px'` unconditionally, which TRUNCATES the
+  // sidebar to the main column's height. When the user has a tall sidebar
+  // (many regulatory groups + items), the navy <div> ends mid-content and the
+  // remaining items spill below into white background — exact regression the
+  // owner reported. Fix: only EXTEND the sidebar when it is SHORTER than main;
+  // when sidebar is taller, clear our inline writes so the natural content
+  // height wins (with align-self:stretch the page-row + flex stretch already
+  // make the columns equal in that direction).
   function equalize() {
     var paper = document.querySelector(PAPER_SEL);
     if (!paper) return;
@@ -39,20 +48,22 @@
         var side = row.querySelector(SIDE_SEL);
         var main = row.querySelector(MAIN_SEL);
         if (!side || !main) return;
-        // The main column drives the page height (it holds Experience/Outcomes).
-        // Measure its rendered height and make the sidebar exactly match it.
+        // Clear any prior write FIRST so we measure the natural intrinsic
+        // height of the sidebar (not the height we last set on it).
+        side.style.removeProperty('height');
+        side.style.removeProperty('min-height');
         var mainH = Math.ceil(main.getBoundingClientRect().height);
-        if (!(mainH > 0)) return;
         var sideH = Math.ceil(side.getBoundingClientRect().height);
-        // Only write when meaningfully different — avoids sub-pixel thrash and
-        // any feedback with the layout pass.
-        if (Math.abs(sideH - mainH) <= 2) return;
-        // Inline !important beats the 1.50.216 stylesheet rules
-        // (`height:auto!important`, `min-height:1123px!important`) so our exact
-        // height wins; min-height keeps a full-page floor on short single pages.
-        side.style.setProperty('height', mainH + 'px', 'important');
-        side.style.setProperty('min-height', mainH + 'px', 'important');
-        side.style.setProperty('align-self', 'stretch', 'important');
+        if (!(mainH > 0) || !(sideH > 0)) return;
+        // EXTEND only — when the sidebar is shorter than main, give it the
+        // main height so the navy bg reaches the page bottom. When the
+        // sidebar is taller, do NOTHING — its natural height wins, the
+        // page-row grows to match, and the navy already covers everything.
+        if (sideH + 2 < mainH) {
+          side.style.setProperty('height', mainH + 'px', 'important');
+          side.style.setProperty('min-height', mainH + 'px', 'important');
+          side.style.setProperty('align-self', 'stretch', 'important');
+        }
       });
     } catch (e) {
       try { console.warn('[sidebar-equalize-227]', e && e.message); } catch (_) {}

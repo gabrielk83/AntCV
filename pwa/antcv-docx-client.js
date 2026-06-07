@@ -809,6 +809,7 @@ function normalizeSections(raw) {
   // step below shifts indices and the worker can't recover the
   // mapping.
   let itemPagesMap = {};
+  let autoPagesMap = {};
   try {
     if (typeof localStorage !== 'undefined') {
       const raw = localStorage.getItem('antcv:itemPages');
@@ -818,13 +819,31 @@ function normalizeSections(raw) {
           itemPagesMap = parsed;
         }
       }
+      // Auto-overflow breaks (antcv-auto-overflow-362) live in a separate map.
+      // The export must honour them too, or the PDF/DOCX breaks mid-group while
+      // the preview breaks at the group boundary. Effective = max(manual, auto).
+      const rawAuto = localStorage.getItem('antcv:autoPages');
+      if (rawAuto) {
+        const pa = JSON.parse(rawAuto);
+        if (pa && typeof pa === 'object' && !Array.isArray(pa)) {
+          autoPagesMap = pa;
+        }
+      }
     }
   } catch (_) {}
   function pageFor(sid, origIdx) {
+    let best = 0;
     const b = itemPagesMap[sid];
-    if (!b || typeof b !== 'object') return 0;
-    const n = Number(b[String(origIdx)]);
-    return (Number.isFinite(n) && n >= 2 && n <= 4) ? (n | 0) : 0;
+    if (b && typeof b === 'object') {
+      const n = Number(b[String(origIdx)]);
+      if (Number.isFinite(n) && n >= 2 && n <= 4) best = Math.max(best, n | 0);
+    }
+    const a = autoPagesMap[sid];
+    if (a && typeof a === 'object') {
+      const n = Number(a[String(origIdx)]);
+      if (Number.isFinite(n) && n >= 2 && n <= 4) best = Math.max(best, n | 0);
+    }
+    return best;
   }
   // Walks items with original-index tracking, applies a per-item
   // mapper, and post-attaches the _page annotation to each kept item.

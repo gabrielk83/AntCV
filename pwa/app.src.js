@@ -1950,7 +1950,47 @@
           r.push(
             "STORED PUBLICATIONS & PATENTS — the output MUST include ALL of these VERBATIM in the PUBLICATIONS & PATENT section:\n  - " +
               a(o.publications).join("\n  - "),
-          ));
+          ),
+        // 1.50.282 KERNEL-EXPERIENCE-NO-SOURCE-001: GABRIEL_BG previously
+        // injected certs/tools/education/publications but NOT the work history,
+        // so a no-JD kernel generation gave the LLM nothing to fill
+        // experience_roles with — it echoed the schema placeholders and the
+        // merge scrubbed them to blank roles (and WHAT I BRING / HOW I WOULD
+        // CONTRIBUTE had no grounding either). Inject the STORED WORK HISTORY
+        // (workHistory, with experience/roles as legacy aliases; field is
+        // "role" not "title") so every generation has the real roles.
+        (() => {
+          try {
+            const wh = o.workHistory || o.experience || o.roles;
+            if (Array.isArray(wh) && wh.length) {
+              const lines = wh
+                .map((e, i) => {
+                  if (!e || "object" != typeof e) return "";
+                  const title = String(e.role || e.title || "").trim();
+                  const company = String(e.company || "").trim();
+                  const years = String(e.years || "").trim();
+                  if (!title && !company) return "";
+                  const bullets = (Array.isArray(e.bullets) ? e.bullets : [])
+                    .filter((b) => b && "string" == typeof b && b.trim());
+                  return (
+                    "  r" +
+                    (i + 1) +
+                    ". " +
+                    title +
+                    (company ? " | " + company : "") +
+                    (years ? " | " + years : "") +
+                    (bullets.length ? "\n    - " + bullets.join("\n    - ") : "")
+                  );
+                })
+                .filter(Boolean);
+              if (lines.length)
+                r.push(
+                  "STORED WORK HISTORY — these are the candidate's REAL roles, newest first (r1 = most recent). Fill cv_overrides.experience_roles from THESE: use the exact role title, company and years, and draft bullets from the listed responsibilities. NEVER invent roles/companies/dates not listed here, and NEVER return the schema placeholder markers (<...>) verbatim:\n" +
+                    lines.join("\n"),
+                );
+            }
+          } catch (_) {}
+        })());
       try {
         var _g_bw, _g_bp, _g_pt;
         if (

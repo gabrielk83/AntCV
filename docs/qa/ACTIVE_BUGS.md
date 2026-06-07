@@ -56,8 +56,15 @@ A companion **feature registry** (open vs shipped features) lives at
     client calls throw and are caught (no UI impact).
   **Needs:** relay deploy via `deploy.yml`, then owner live-verify (generate showcase →
   hard-refresh/new tab/2nd device → it restores instead of regenerating).
-- **KERNEL-SPECIALIZATION-LINE-001** — `[OPEN]` The kernel does **not write to the
-  specialization line**.
+- **KERNEL-SPECIALIZATION-LINE-001** — `[FIX SHIPPED 1.50.224 — owner verify]` The kernel does
+  **not write to the specialization line**.
+  **Trace:** the kernel/showcase generation DOES write the specialization line into meta
+  (`io.subtitle`) at `app.src.js:~19793/19876` (derived from the profile headline). The real
+  gap was downstream: that subtitle was **never persisted per-application** — the `application`
+  D1 table had no `subtitle` column, so it was lost on save and not restored on reload (so it
+  looked like the kernel "didn't write" it). Resolved by the subtitle-persistence change shared
+  with APPHISTORY-SAME-LINE-001 (1.50.224 below). Owner verify: generate → save → reload, the
+  specialization line should survive.
 - **APPHISTORY-SAME-LINE-001** — `[FIX SHIPPED 1.50.223 — needs relay deploy + owner verify]`
   Saving to Application History writes to the **same line** rather than its own slot — owner
   confirmed 2026-06-07: "new applications are saved to the first in list — no new saves (no
@@ -75,6 +82,13 @@ A companion **feature registry** (open vs shipped features) lives at
   rebuild, 0 `"use strict"`, 29/29 unit tests, browser boot 0 errors.
   **Needs:** access-relay worker deploy (same one 1.50.221 needs), then owner verify — save a
   couple of drafts → each appears as its own entry in the list.
+  **Subtitle-persistence follow-up (1.50.224):** the `application` table had no `subtitle`
+  column, so the specialization line was dropped on save and not restored on load. Added
+  `subtitle TEXT` to `schema.sql` + **live D1 `ALTER TABLE` applied** (additive); the relay
+  POST/PUT now store it (INSERT + UPSERT + `shapeApplicationRow` read shape); the client sends
+  `subtitle` on create and on the save-prior update, and both load handlers now restore
+  `n.subtitle` instead of keeping the current value. Resolves the lingering subtitle half of
+  SAME-LINE and KERNEL-SPECIALIZATION-LINE-001. Needs the relay deploy + owner verify.
 - **APPHISTORY-RELOAD-001** — `[FIX SHIPPED 1.50.222 — owner live-verify]` Pressing a saved
   Application-History item **does not load** that saved application — forces a full regenerate.
   **Trace (read-only, owner-approved fix):** there are two load surfaces, both in `app.src.js` —

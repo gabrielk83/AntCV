@@ -32896,6 +32896,7 @@
                                       jd_text: e,
                                       jd_company: (io && io.company) || "",
                                       jd_role: (io && io.role) || "",
+                                      subtitle: (io && io.subtitle) || "",
                                       jd_language: je,
                                       category: "unsolicited",
                                       supporting_context:
@@ -33137,6 +33138,8 @@
                                                       (io && io.company) || "",
                                                     jd_role:
                                                       (io && io.role) || "",
+                                                    subtitle:
+                                                      (io && io.subtitle) || "",
                                                     rationale: yo,
                                                   });
                                                 } catch (e) {
@@ -33176,7 +33179,9 @@
                                                     company: n.jd_company || "",
                                                     role: n.jd_role || "",
                                                     subtitle:
-                                                      (io && io.subtitle) || "",
+                                                      n.subtitle ||
+                                                      (io && io.subtitle) ||
+                                                      "",
                                                   }),
                                                   n.rationale &&
                                                     bo(n.rationale),
@@ -37571,6 +37576,7 @@
                                             jd_company:
                                               (io && io.company) || "",
                                             jd_role: (io && io.role) || "",
+                                            subtitle: (io && io.subtitle) || "",
                                             rationale: yo,
                                           });
                                         } catch (e) {
@@ -37604,7 +37610,10 @@
                                             ...(io || {}),
                                             company: n.jd_company || "",
                                             role: n.jd_role || "",
-                                            subtitle: (io && io.subtitle) || "",
+                                            subtitle:
+                                              n.subtitle ||
+                                              (io && io.subtitle) ||
+                                              "",
                                           }),
                                           n.rationale && bo(n.rationale),
                                           await oo.setActive(e.id),

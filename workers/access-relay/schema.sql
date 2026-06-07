@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS application (
   jd_language        TEXT NOT NULL,              -- ISO 639-1, auto-detected
   jd_company         TEXT,
   jd_role            TEXT,
+  subtitle           TEXT,                       -- specialization line (meta.subtitle)
   category           TEXT NOT NULL,              -- one of the 12 category ids
   rationale          TEXT,                       -- JSON: LLM JD-analysis output
   cv_sections        TEXT,                       -- JSON, in jd_language

@@ -1674,6 +1674,7 @@ function shapeApplicationRow(row) {
     jd_language:        row.jd_language,
     jd_company:         row.jd_company || '',
     jd_role:            row.jd_role || '',
+    subtitle:           row.subtitle || '',
     category:           row.category,
     rationale:          parseJsonField(row.rationale, null),
     cv_sections:        parseJsonField(row.cv_sections, null),
@@ -2040,6 +2041,7 @@ async function handleApiApplications(request, env) {
       : await jdHashFromText(jdText);
     const jdCompany        = typeof body.jd_company === 'string' ? body.jd_company.trim() : '';
     const jdRole           = typeof body.jd_role    === 'string' ? body.jd_role.trim()    : '';
+    const subtitle         = typeof body.subtitle   === 'string' ? body.subtitle.trim()   : '';
     const jdLanguage       = typeof body.jd_language === 'string' && body.jd_language.trim() ? body.jd_language.trim().slice(0, 5) : 'en';
     const category         = normalizeCategory(body.category);
     const supportingCtx    = typeof body.supporting_context === 'string' ? body.supporting_context : '';
@@ -2050,11 +2052,12 @@ async function handleApiApplications(request, env) {
       // Idempotent upsert on (user_hash, jd_hash).
       await env.DB.prepare(
         'INSERT INTO application ' +
-        '(user_hash, jd_hash, jd_text, supporting_context, jd_language, jd_company, jd_role, category, rationale, cv_sections, cl_sections, created_at, updated_at) ' +
-        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?) ' +
+        '(user_hash, jd_hash, jd_text, supporting_context, jd_language, jd_company, jd_role, subtitle, category, rationale, cv_sections, cl_sections, created_at, updated_at) ' +
+        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?) ' +
         'ON CONFLICT(user_hash, jd_hash) DO UPDATE SET ' +
         '  jd_company = excluded.jd_company, ' +
         '  jd_role = excluded.jd_role, ' +
+        '  subtitle = excluded.subtitle, ' +
         '  jd_language = excluded.jd_language, ' +
         '  supporting_context = excluded.supporting_context, ' +
         '  category = excluded.category, ' +
@@ -2062,7 +2065,7 @@ async function handleApiApplications(request, env) {
         '  updated_at = excluded.updated_at'
       ).bind(
         userHash, jdHash, jdText, supportingCtx, jdLanguage,
-        jdCompany, jdRole, category, rationale, now, now
+        jdCompany, jdRole, subtitle, category, rationale, now, now
       ).run();
       const row = await env.DB.prepare(
         'SELECT * FROM application WHERE user_hash = ? AND jd_hash = ?'
@@ -2153,6 +2156,7 @@ async function handleApiApplicationById(request, env, idStr) {
     const vals = [];
     if (typeof body.jd_company === 'string') { sets.push('jd_company = ?'); vals.push(body.jd_company); }
     if (typeof body.jd_role    === 'string') { sets.push('jd_role = ?');    vals.push(body.jd_role); }
+    if (typeof body.subtitle   === 'string') { sets.push('subtitle = ?');   vals.push(body.subtitle); }
     if (typeof body.jd_language === 'string' && body.jd_language.trim()) {
       sets.push('jd_language = ?'); vals.push(body.jd_language.trim().slice(0, 5));
     }

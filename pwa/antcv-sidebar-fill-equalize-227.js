@@ -168,6 +168,83 @@
       }
     } catch (_) {}
   }
+  // 1.50.259: deferred re-check after a near-bottom scroll. The
+  // ResizeObserver covers content-grows-AFTER-drag, but if pi.scrollHeight
+  // was already final at drag-time AND the slider's $i() math undershot
+  // (e.g. clientHeight was momentarily wrong during a layout flush), the
+  // ResizeObserver never fires and the user is left with a small gap.
+  // Schedule 3 nudges at increasing delays whenever the user lands near
+  // the bottom — each compares the CURRENT (scrollHeight - clientHeight)
+  // to the current scrollTop and closes any remaining gap. Bounded:
+  // only runs while __atBottom is still true.
+  var __nudgePending = false;
+  function scheduleNearBottomNudges(c) {
+    if (__nudgePending) return;
+    __nudgePending = true;
+    [120, 480, 1400].forEach(function (ms) {
+      setTimeout(function () {
+        try {
+          if (!__atBottom) return;
+          if (!c || !c.isConnected) return;
+          var newMax = c.scrollHeight - c.clientHeight;
+          if (newMax > 0 && c.scrollTop < newMax - 2) {
+            c.scrollTop = newMax;
+            // Re-dispatch so the slider value (bi) catches up.
+            if (typeof Event === 'function') {
+              c.dispatchEvent(new Event('scroll', { bubbles: false }));
+            }
+          }
+        } catch (_) {}
+      }, ms);
+    });
+    // Clear the pending flag after the last nudge so the next
+    // near-bottom landing re-arms.
+    setTimeout(function () { __nudgePending = false; }, 1600);
+  }
+  // 1.50.259: console diagnostic. Call window.__antcvPreviewScrollDiag()
+  // from devtools to print the exact measurements at the current
+  // moment — surfaces whether the bug is "scrollHeight wrong" vs
+  // "viewport showing past end" vs "nested scroll".
+  try {
+    window.__antcvPreviewScrollDiag = function () {
+      var c = document.querySelector('.antcv-preview-scroll');
+      if (!c) { try { console.log('[antcv preview diag] no .antcv-preview-scroll'); } catch (_) {} return null; }
+      var frame = c.querySelector('.antcv-preview-frame');
+      var wrap = c.querySelector('.antcv-preview-wrap');
+      var rect = c.getBoundingClientRect();
+      var fr = frame ? frame.getBoundingClientRect() : null;
+      var wr = wrap ? wrap.getBoundingClientRect() : null;
+      var d = {
+        version: VERSION,
+        atBottomFlag: __atBottom,
+        container: {
+          scrollTop: c.scrollTop,
+          scrollHeight: c.scrollHeight,
+          clientHeight: c.clientHeight,
+          gap: c.scrollHeight - c.clientHeight - c.scrollTop,
+          rect: { top: Math.round(rect.top), bottom: Math.round(rect.bottom), height: Math.round(rect.height) }
+        },
+        frame: frame ? {
+          offsetHeight: frame.offsetHeight,
+          scrollHeight: frame.scrollHeight,
+          rectBottom: Math.round(fr.bottom),
+          rectHeight: Math.round(fr.height)
+        } : null,
+        wrap: wrap ? {
+          offsetHeight: wrap.offsetHeight,
+          scrollHeight: wrap.scrollHeight,
+          rectBottom: Math.round(wr.bottom),
+          rectHeight: Math.round(wr.height)
+        } : null,
+        // Whether the visible bottom of the viewport reveals more content
+        // (i.e. the user can see something below scrollTop + clientHeight).
+        contentExtendsBelowViewport:
+          (wrap && wr.bottom > rect.bottom + 2) || (frame && fr.bottom > rect.bottom + 2)
+      };
+      try { console.log('[antcv preview diag]', JSON.stringify(d, null, 2)); } catch (_) {}
+      return d;
+    };
+  } catch (_) {}
   try {
     if (typeof ResizeObserver === 'function') {
       var ro = new ResizeObserver(fireScrollOnContainer);
@@ -183,9 +260,22 @@
           // is height-locked (height: calc(100dvh - 160px)).
           var inner = c.querySelector('.antcv-preview-frame, .antcv-preview-paper');
           if (inner) ro.observe(inner);
+          // 1.50.259: also observe the wrap — the inner-most container
+          // that holds the actual section rows. If the page-fit /
+          // bullet-targets / sidebar-fill sidecars grow content inside
+          // the wrap (the most likely place for late layout), we need
+          // to see it.
+          var wrap = c.querySelector('.antcv-preview-wrap');
+          if (wrap) ro.observe(wrap);
           // Continuously track whether the user is at the bottom so the
-          // ResizeObserver callback knows whether to re-pin.
-          c.addEventListener('scroll', function () { updateAtBottom(c); }, { passive: true });
+          // ResizeObserver callback knows whether to re-pin. Also
+          // schedule deferred nudges when the user lands near the
+          // bottom — covers the case where scrollHeight grew silently
+          // without triggering a ResizeObserver fire.
+          c.addEventListener('scroll', function () {
+            updateAtBottom(c);
+            if (__atBottom) scheduleNearBottomNudges(c);
+          }, { passive: true });
           updateAtBottom(c);
           attached = true;
         } catch (_) {}

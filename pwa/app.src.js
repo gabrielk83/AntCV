@@ -20617,10 +20617,31 @@
             } = T || {};
             let W = D;
             try {
+              // 1.50.270: showcase-misdetection fix. The old gate forced
+              // company="Unsolicited" whenever io.company was ALREADY
+              // "Unsolicited" — which self-perpetuates: load the kernel
+              // (io.company="Unsolicited"), then attach a JD and generate,
+              // and this clobbered the LLM's real JD company/role/recipient
+              // back to Unsolicited (owner 2026-06-07: CL body said "Kvadrat
+              // Acoustics / Portfolio Project Manager / Dear Ieuan Cohn
+              // Jones" but the application name stayed "Open Application —
+              // Unsolicited"). Fix: an EXPLICIT showcase (the in-progress
+              // flag or the showcase ref) always forces Unsolicited and
+              // discards any hallucinated company — that is correct for a
+              // no-JD kernel generation. But the stale-io.company fallback
+              // only applies when the LLM did NOT extract a real company
+              // from a JD. When a JD names the employer, the prompt
+              // guarantees D.company is filled (and never "Unsolicited"),
+              // so we KEEP it and never force the showcase override.
+              const __llmCo = ((D && D.company) || "").trim();
+              const __jdNamedCompany =
+                __llmCo &&
+                !/^(unsolicited|open\s+application|n\/?a)$/i.test(__llmCo);
+              const __explicitShowcase =
+                u.get("kernelShowcaseInProgress", !1) || (Un && Un.current);
               if (
-                u.get("kernelShowcaseInProgress", !1) ||
-                (Un && Un.current) ||
-                (io && "Unsolicited" === io.company)
+                __explicitShowcase ||
+                (!__jdNamedCompany && io && "Unsolicited" === io.company)
               ) {
                 const e = ie() || {},
                   t = ((e.roles || [])[0] && (e.roles || [])[0].title) || "";

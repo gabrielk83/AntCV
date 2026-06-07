@@ -34228,61 +34228,125 @@
                         // — regardless of hasKernel. A user pressing Edit and
                         // seeing the template should never be sticky: cloud
                         // wins if it has content.
-                        if (!hasLocal || !hasSubtitle)
+                        // 1.50.234: ONLY hydrate when local is template/empty
+                        // (i.e. !hasLocal). Removed the subtitle-only backfill
+                        // path — it could put a wrong/stale cloud subtitle on
+                        // top of real local content (the "Cover Letter • What I
+                        // Bring" symptom). If the user has real local sections
+                        // but a missing subtitle, they can edit the
+                        // specialization line directly in the preview (it is
+                        // contenteditable). All-or-nothing keeps the docs in
+                        // sync.
+                        if (!hasLocal)
                           (async () => {
                             try {
                               const r = await oo.getShowcase();
-                              if (!r || !r.showcase) return;
-                              const t = r.showcase;
-                              if (
-                                !hasLocal &&
-                                t.sections &&
-                                "object" == typeof t.sections
-                              ) {
-                                try {
-                                  u.set("sections", t.sections);
-                                } catch (e) {}
-                                try {
-                                  ao({
-                                    cv: t.sections.cv || [],
-                                    cl: t.sections.cl || [],
-                                  });
-                                } catch (e) {}
-                                if (t.rationale) {
+                              if (r && r.showcase) {
+                                const t = r.showcase;
+                                if (
+                                  t.sections &&
+                                  "object" == typeof t.sections
+                                ) {
                                   try {
-                                    u.set("rationale", t.rationale);
+                                    u.set("sections", t.sections);
                                   } catch (e) {}
                                   try {
-                                    bo(t.rationale);
+                                    ao({
+                                      cv: t.sections.cv || [],
+                                      cl: t.sections.cl || [],
+                                    });
                                   } catch (e) {}
+                                  if (t.rationale) {
+                                    try {
+                                      u.set("rationale", t.rationale);
+                                    } catch (e) {}
+                                    try {
+                                      bo(t.rationale);
+                                    } catch (e) {}
+                                  }
                                 }
-                              }
-                              if (t.meta && "object" == typeof t.meta) {
-                                if (!hasLocal) {
+                                if (t.meta && "object" == typeof t.meta) {
                                   try {
                                     u.set("meta", t.meta);
                                   } catch (e) {}
                                   try {
                                     lo(t.meta);
                                   } catch (e) {}
-                                } else if (!hasSubtitle && t.meta.subtitle) {
-                                  // Backfill ONLY the missing specialization line;
-                                  // never touch local section edits.
-                                  const o = {
-                                    ...(m || {}),
-                                    subtitle: t.meta.subtitle,
-                                  };
+                                }
+                                console.log(
+                                  "[KERNEL] Editor: hydrated saved kernel from cloud slot",
+                                );
+                                return;
+                              }
+                              // Cloud slot empty — fall back to the most recent
+                              // SAVED UNSOLICITED APPLICATION. The "kernel as
+                              // app" save (1.50.224 + applications table) is
+                              // effectively the same content; loading it
+                              // recovers the user from the local template state.
+                              try {
+                                const list = await oo.list();
+                                const apps =
+                                  list && Array.isArray(list.applications)
+                                    ? list.applications
+                                    : [];
+                                const recent = apps.find(
+                                  (a) =>
+                                    a &&
+                                    (a.category === "unsolicited" ||
+                                      String(a.jd_company || "")
+                                        .trim()
+                                        .toLowerCase() === "unsolicited"),
+                                );
+                                if (!recent || !recent.id) return;
+                                const detail = await oo.get(recent.id);
+                                if (!detail || !detail.application) return;
+                                const n = detail.application;
+                                try {
+                                  ao({
+                                    cv: n.cv_sections || [],
+                                    cl: n.cl_sections || [],
+                                  });
+                                } catch (e) {}
+                                try {
+                                  u.set("sections", {
+                                    cv: n.cv_sections || [],
+                                    cl: n.cl_sections || [],
+                                  });
+                                } catch (e) {}
+                                try {
+                                  lo({
+                                    ...(u.get("meta", null) || {}),
+                                    company: n.jd_company || "Unsolicited",
+                                    role: n.jd_role || "",
+                                    subtitle: n.subtitle || "",
+                                  });
+                                } catch (e) {}
+                                if (n.rationale) {
                                   try {
-                                    u.set("meta", o);
+                                    bo(n.rationale);
                                   } catch (e) {}
                                   try {
-                                    lo(o);
+                                    u.set("rationale", n.rationale);
                                   } catch (e) {}
                                 }
+                                try {
+                                  await oo.setActive(recent.id);
+                                } catch (e) {}
+                                try {
+                                  Ml(recent.id);
+                                } catch (e) {}
+                                console.log(
+                                  "[KERNEL] Editor: cloud slot empty, hydrated from latest unsolicited application #" +
+                                    recent.id,
+                                );
+                              } catch (e) {
+                                try {
+                                  console.warn(
+                                    "[KERNEL] Editor fallback to apps failed:",
+                                    e && e.message,
+                                  );
+                                } catch (_) {}
                               }
-                              console.log(
-                                "[KERNEL] Editor: hydrated saved kernel from cloud slot",
-                              );
                             } catch (e) {}
                           })();
                       } catch (e) {}
@@ -36007,25 +36071,96 @@
                 )
               : null,
             wo &&
-              React.createElement(
-                "div",
-                {
-                  style: {
-                    background: "rgba(200,40,40,0.2)",
-                    border: "1px solid rgba(200,40,40,0.4)",
-                    // 1.50.231: warning body text yellow (was light-red #ff8888)
-                    // — owner preference: everything after the ⚠️ reads yellow
-                    // for legibility against the dark-red warning bg.
-                    color: "#ffd166",
-                    borderRadius: 8,
-                    padding: "8px 10px",
-                    fontSize: 12,
-                    marginBottom: 10,
-                    whiteSpace: "pre-wrap",
+              (() => {
+                // 1.50.234: split the warning panel into two zones:
+                //   • Critical zone (errors) — text stays RED. Lines from the
+                //     "⚠ N key section(s) need content…" header through the blank
+                //     line before the warning header.
+                //   • Warning zone (non-critical) — text in YELLOW. The
+                //     "⚠️  Warning — N non-critical…" header and its bullets.
+                //   • Footer ("Click Generate…", "(Console has the full list.)")
+                //     in dim white so it doesn't compete with either.
+                // Owner spec: real errors red, warnings yellow.
+                const lines = String(wo).split("\n"),
+                  warnIdx = lines.findIndex((l) =>
+                    /^⚠️\s+Warning\b/.test(l),
+                  ),
+                  footerStart = (() => {
+                    for (let i = lines.length - 1; i >= 0; i--) {
+                      if (
+                        /^Click Generate\b|^These warnings won't block\b|^\(Console has the full list\.\)/.test(
+                          lines[i],
+                        )
+                      )
+                        return i;
+                    }
+                    return -1;
+                  })(),
+                  endCritical =
+                    warnIdx >= 0
+                      ? warnIdx
+                      : footerStart >= 0
+                        ? footerStart
+                        : lines.length,
+                  critical = lines.slice(0, endCritical).join("\n").replace(/\s+$/, ""),
+                  warning =
+                    warnIdx >= 0
+                      ? lines
+                          .slice(
+                            warnIdx,
+                            footerStart >= 0 ? footerStart : lines.length,
+                          )
+                          .join("\n")
+                          .replace(/\s+$/, "")
+                      : "",
+                  footer =
+                    footerStart >= 0
+                      ? lines.slice(footerStart).join("\n").replace(/\s+$/, "")
+                      : "";
+                return React.createElement(
+                  "div",
+                  {
+                    style: {
+                      background: "rgba(200,40,40,0.2)",
+                      border: "1px solid rgba(200,40,40,0.4)",
+                      borderRadius: 8,
+                      padding: "8px 10px",
+                      fontSize: 12,
+                      marginBottom: 10,
+                      whiteSpace: "pre-wrap",
+                    },
                   },
-                },
-                wo,
-              ),
+                  critical &&
+                    React.createElement(
+                      "div",
+                      { style: { color: "#ff8888" } },
+                      critical,
+                    ),
+                  warning &&
+                    React.createElement(
+                      "div",
+                      {
+                        style: {
+                          color: "#ffd166",
+                          marginTop: critical ? 8 : 0,
+                        },
+                      },
+                      warning,
+                    ),
+                  footer &&
+                    React.createElement(
+                      "div",
+                      {
+                        style: {
+                          color: "rgba(255,255,255,0.55)",
+                          marginTop: 8,
+                          fontSize: 11,
+                        },
+                      },
+                      footer,
+                    ),
+                );
+              })(),
             (() => {
               const e =
                   V("anthropic") || V("openai") || V("mistral") || V("gemini"),

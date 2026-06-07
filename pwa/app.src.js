@@ -24,13 +24,30 @@
     } catch (_) {}
     return out;
   };
-  const __antcvSalmon = (pg, contTitle) =>
-    React.createElement(React.Fragment, { key: "pb_" + pg + "_" + (contTitle || "x") },
-      React.createElement("div", { className: "no-print", "aria-hidden": "true", style: { borderTop: "3px solid rgba(200,40,40,0.6)", margin: "10px 0 5px", display: "flex", justifyContent: "center", background: "rgba(200,40,40,0.06)", padding: "2px 0" } },
-        React.createElement("span", { style: { background: "rgba(200,40,40,0.7)", color: "#fff", fontSize: 8, padding: "2px 10px", borderRadius: 2, fontFamily: "Arial,sans-serif", letterSpacing: 0.5, whiteSpace: "nowrap" } }, "▼ PAGE " + pg + " ▼")),
+  const __antcvSalmon = (pg, contTitle) => {
+    // 1.50.273: the VISIBLE salmon bar + "(CONT.)" header render ONLY for
+    // the CL. The CL is a continuous flow where this IS the page
+    // indicator. The CV paginates into page-boxes that already draw their
+    // OWN fixed separator (between boxes) + the editable section-header
+    // "(CONT.)" — so __antcvSalmon's copies were redundant DUPLICATES,
+    // and because they are drawn at the break ITEM (not the fixed A4
+    // line) they also drifted as content changed. Owner 2026-06-07:
+    // "keep the page-box salmon + bright cont, remove the red duplicate +
+    // dark cont". The invisible CSS page-break div is kept in both so
+    // print/export structure is unchanged.
+    let __isCL = false;
+    try {
+      var d = localStorage.getItem("doc") || "";
+      try { var p = JSON.parse(d); if ("string" == typeof p) d = p; } catch (_) {}
+      __isCL = "cl" === String(d).toLowerCase();
+    } catch (_) {}
+    return React.createElement(React.Fragment, { key: "pb_" + pg + "_" + (contTitle || "x") },
+      __isCL ? React.createElement("div", { className: "no-print", "aria-hidden": "true", style: { borderTop: "3px solid rgba(200,40,40,0.6)", margin: "10px 0 5px", display: "flex", justifyContent: "center", background: "rgba(200,40,40,0.06)", padding: "2px 0" } },
+        React.createElement("span", { style: { background: "rgba(200,40,40,0.7)", color: "#fff", fontSize: 8, padding: "2px 10px", borderRadius: 2, fontFamily: "Arial,sans-serif", letterSpacing: 0.5, whiteSpace: "nowrap" } }, "▼ PAGE " + pg + " ▼")) : null,
       React.createElement("div", { "aria-hidden": "true", style: { pageBreakBefore: "always", breakBefore: "page", height: 0, lineHeight: 0 } }),
-      contTitle ? React.createElement("div", { style: { color: "#00746E", fontWeight: 700, fontSize: "12pt", marginTop: "4pt", marginBottom: "8pt", borderBottom: "1pt solid #00746E", paddingBottom: "2pt", fontFamily: "Trebuchet MS, Calibri, sans-serif" } }, contTitle + " (CONT.)") : null
+      (__isCL && contTitle) ? React.createElement("div", { style: { color: "#00746E", fontWeight: 700, fontSize: "12pt", marginTop: "4pt", marginBottom: "8pt", borderBottom: "1pt solid #00746E", paddingBottom: "2pt", fontFamily: "Trebuchet MS, Calibri, sans-serif" } }, contTitle + " (CONT.)") : null
     );
+  };
   // renderWithBreaks (docs/plan §2): walk ordered items in document order, keep a
   // monotonic running page (an item can't precede the content above it), and emit a
   // salmon splitter before any item whose effective page exceeds the running max.

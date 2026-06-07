@@ -12,6 +12,18 @@
   // child of the section so reconciliation keeps it (sidecar-injected breaks get
   // removed/duplicated). See docs/plan/page-break-architecture.md.
   const __antcvPB = (sid) => { try { return (JSON.parse(localStorage.getItem("antcv:itemPages") || "{}") || {})[sid] || {}; } catch (_) { return {}; } };
+  // Auto-overflow breaks (antcv-auto-overflow-362) live in a SEPARATE map so they
+  // never fight the user's manual breaks. Effective per-section bucket = the
+  // per-key max of manual (itemPages) + auto (autoPages) — architecture §5.
+  const __antcvAutoPB = (sid) => { try { return (JSON.parse(localStorage.getItem("antcv:autoPages") || "{}") || {})[sid] || {}; } catch (_) { return {}; } };
+  const __antcvEffBucket = (sid) => {
+    const out = {};
+    try {
+      const a = __antcvPB(sid); for (const k in a) { const v = parseInt(a[k], 10); if (v >= 1) out[k] = v; }
+      const b = __antcvAutoPB(sid); for (const k in b) { const v = parseInt(b[k], 10); if (v >= 1) out[k] = Math.max(out[k] || 1, v); }
+    } catch (_) {}
+    return out;
+  };
   const __antcvSalmon = (pg, contTitle) =>
     React.createElement(React.Fragment, { key: "pb_" + pg + "_" + (contTitle || "x") },
       React.createElement("div", { className: "no-print", "aria-hidden": "true", style: { borderTop: "3px solid rgba(200,40,40,0.6)", margin: "10px 0 5px", display: "flex", justifyContent: "center", background: "rgba(200,40,40,0.06)", padding: "2px 0" } },
@@ -12533,19 +12545,17 @@
           // changed — once the model is stable the loop terminates.
           let raf = 0,
             last = null;
-          try {
-            last = localStorage.getItem("antcv:itemPages") || "";
-          } catch (_) {
-            last = "";
-          }
+          const __pbSnap = () => {
+            try {
+              return (localStorage.getItem("antcv:itemPages") || "") + "|" + (localStorage.getItem("antcv:autoPages") || "");
+            } catch (_) { return ""; }
+          };
+          last = __pbSnap();
           const e = () => {
             if (raf) return;
             raf = requestAnimationFrame(() => {
               raf = 0;
-              let snap = "";
-              try {
-                snap = localStorage.getItem("antcv:itemPages") || "";
-              } catch (_) {}
+              const snap = __pbSnap();
               if (snap === last) return;
               last = snap;
               try {
@@ -12558,9 +12568,11 @@
           };
           return (
             window.addEventListener("antcv:item-pages-changed", e),
+            window.addEventListener("antcv:auto-pages-changed", e),
             () => {
               if (raf) cancelAnimationFrame(raf);
               window.removeEventListener("antcv:item-pages-changed", e);
+              window.removeEventListener("antcv:auto-pages-changed", e);
             }
           );
         }, []),
@@ -36082,7 +36094,7 @@
                       const origItems = Array.isArray(sec && sec.items) ? sec.items : null;
                       if (!origItems) return [sec];
                       let bucket = null;
-                      try { bucket = sec && sec.id ? (JSON.parse(localStorage.getItem("antcv:itemPages") || "{}") || {})[sec.id] : null; } catch (_) { bucket = null; }
+                      try { bucket = sec && sec.id ? __antcvEffBucket(sec.id) : null; } catch (_) { bucket = null; }
                       let hasBreak = false;
                       if (bucket && typeof bucket === "object") for (const k in bucket) { if (Number(bucket[k]) >= 2) { hasBreak = true; break; } }
                       if (!origItems.length || !hasBreak) {
@@ -36142,7 +36154,7 @@
                         .flatMap((sec) => {
                           try {
                             const basePage = Math.max(1, parseInt(sec.page || 1, 10));
-                            const bucket = sec.id && ip[sec.id] && typeof ip[sec.id] === "object" ? ip[sec.id] : null;
+                            const bucket = sec.id ? __antcvEffBucket(sec.id) : null;
                             if ("table" === sec.type && Array.isArray(sec.rows) && sec.rows.length > 1) {
                               const pbr = Array.isArray(sec.pageBreakRows) ? sec.pageBreakRows : [];
                               let run = basePage; const groups = []; const idxByPage = {};

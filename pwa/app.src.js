@@ -36412,6 +36412,46 @@
                   [Lt]: a.map((r) => (r.id === e ? o(r, t, n) : r)),
                 };
               }));
+            // 1.50.236 PB-PREVIEW-GROUPNAME-EDIT-001: mirror inline edits of
+            // personalInfo-backed sections (regulatory, tools, certs, education,
+            // additional, publications) back into personalInfo so the cloud-/
+            // backup-restore paths (which rebuild section.items from personalInfo
+            // — see ~16297 and ~28984) don't wipe them on next load. We deep-set
+            // ONLY the touched path inside personalInfo, leaving every other
+            // field intact (no clobber, no thinning).
+            try {
+              if (!Array.isArray(t) || t[0] !== "items") return;
+              const SYNCED = {
+                tools: "tools",
+                certs: "certifications",
+                education: "education",
+                regulatory: "regulatory",
+                additional: "additional",
+                publications: "publications",
+              };
+              const piKey = SYNCED[e];
+              if (!piKey) return;
+              const pi = ie() || {};
+              const arr = Array.isArray(pi[piKey]) ? [...pi[piKey]] : [];
+              const updArr = o(arr, t.slice(1), n);
+              const nextPi = { ...pi, [piKey]: updArr };
+              try {
+                le(nextPi);
+              } catch (e) {}
+              try {
+                "function" == typeof Qn && Qn({ personalInfo: nextPi });
+              } catch (e) {}
+              try {
+                u.set("personalInfo", nextPi);
+              } catch (e) {}
+            } catch (e) {
+              try {
+                console.warn(
+                  "[inline-edit] personalInfo mirror failed:",
+                  e && e.message,
+                );
+              } catch (_) {}
+            }
           },
           a = ie(),
           i = ("object" == typeof gr && gr) || {},

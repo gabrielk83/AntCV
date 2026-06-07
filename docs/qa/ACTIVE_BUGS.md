@@ -10,6 +10,33 @@ A companion **feature registry** (open vs shipped features) lives at
 
 ## OPEN — 2026-06-07 (page-break arc + kernel / application-history)
 
+### Export
+- **DOCX-EXPORT-CORS-CPU-001** `[OPEN][HIGH][infra]` — DOCX export failed with
+  *"Access to fetch at 'https://docx-worker.../generate' from origin
+  'https://antcv.pages.dev' has been blocked by CORS policy: No
+  'Access-Control-Allow-Origin' header is present"* on a tailored Kvadrat
+  generation (CL+CV, consensus poll active). **Diagnosis (read-only probe of
+  the live worker):** the worker itself is healthy — OPTIONS preflight,
+  POST 422 on bad payload, and a minimal /generate call ALL return proper
+  CORS headers (`Access-Control-Allow-Origin: https://antcv.pages.dev`).
+  /health reports `1.14.27-header-thin-2pt-name-pad`. The error must therefore
+  be one of: (a) Cloudflare Workers **CPU limit exceeded** mid-request (the
+  worker is killed, Cloudflare serves its own error page WITHOUT CORS), (b)
+  payload > 4 MB (returns 413 *with* CORS — wouldn't produce this error), or
+  (c) intermittent edge timeout. (a) fits best for a tailored CV+CL with
+  consensus poll: docx-js packing is CPU-intensive and the worker isn't on
+  Workers Unbound. **Mitigations to consider (none deployed yet):**
+  - Move the worker to **Workers Unbound** (`[placement] mode = "smart"` +
+    paid Unbound subscription) so CPU caps go from ~50 ms → 30 s.
+  - Stream docx generation in chunks where possible.
+  - Smaller payload defaults (drop the photo to a much-smaller thumb
+    pre-export, skip optional sections by default).
+  Client-side todo: detect the `TypeError: Failed to fetch` after the
+  fetch and surface a user-readable message ("Document too large to render
+  on the current worker tier — try removing the photo or splitting the CV;
+  the worker exhausted its CPU budget on this request"), instead of letting
+  the raw CORS error reach the user.
+
 ### Wizard / languages
 - **WIZARD-LANG-SELECTOR-001** `[OPEN][feature]` — **Wizard language step + two-table language
   selector** (owner spec 2026-06-07; also in `docs/FEATURES_REGISTRY.md`).

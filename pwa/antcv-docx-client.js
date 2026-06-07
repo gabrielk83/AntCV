@@ -299,11 +299,40 @@ export async function exportDocxViaWorker({
   const secret = (typeof window !== 'undefined' && window.ANTCV_DOCX_SECRET) || '';
   if (secret) headers['X-AntCV-Secret'] = secret;
 
-  const res = await fetch(workerUrl.replace(/\/$/, '') + '/generate', {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(payload),
-  });
+  // 1.50.244 DOCX-EXPORT-CORS-CPU-001: wrap the fetch so a network-level
+  // failure (CORS-blocked, edge timeout, Cloudflare 1102 CPU-exceeded) does
+  // not throw the bare `TypeError: Failed to fetch` at the user. When the
+  // docx-worker is killed mid-request by the CF runtime (typical for very
+  // large CVs with photo + consensus content), the response that comes back
+  // has no CORS headers and the browser blocks it. The catch below translates
+  // that into a human-readable message with concrete next steps.
+  let res;
+  try {
+    res = await fetch(workerUrl.replace(/\/$/, '') + '/generate', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
+    });
+  } catch (netErr) {
+    // Estimate the payload size so the user can see if it's a likely cause.
+    let payloadKb = 0;
+    try { payloadKb = Math.round((JSON.stringify(payload) || '').length / 1024); } catch (_) {}
+    const photoBytes = (payload && typeof payload.photo === 'string') ? payload.photo.length : 0;
+    const photoKb = Math.round(photoBytes / 1024);
+    throw new Error(
+      'DOCX export failed before a response was received from the worker (' +
+      String((netErr && netErr.message) || netErr) + '). ' +
+      'This usually means the worker exhausted its CPU budget while ' +
+      'packing the document — Cloudflare killed the request and the ' +
+      'browser blocked the response (no CORS headers on the error page). ' +
+      'Payload was ~' + payloadKb + ' KB' +
+      (photoKb > 50 ? ' (photo alone ~' + photoKb + ' KB — try removing or downsizing the photo)' : '') +
+      '. Try: (1) remove the profile photo or use a smaller one, ' +
+      '(2) trim long sections, or (3) export again — Cloudflare cold-starts ' +
+      'have less CPU than warm ones, so a retry after the worker is warm ' +
+      'often succeeds.'
+    );
+  }
 
   // v1.18 — read body once into a Blob. Previously we did `.json()` in
   // one branch and `.text()` in another, which threw "body stream already

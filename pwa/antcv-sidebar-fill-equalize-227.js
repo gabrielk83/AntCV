@@ -65,6 +65,21 @@
           side.style.setProperty('align-self', 'stretch', 'important');
         }
       });
+      // 1.50.242: after writing sidebar styles, scrollHeight of the preview
+      // scroll container may have changed. The vertical-roller slider's value
+      // (`bi` in app.src.js, updated by `Ni` on scroll events) doesn't
+      // recompute automatically when content grows — so when the user
+      // scrolls, the slider's max maps to an old scrollHeight and the user
+      // can scroll PAST where the slider says is the end. Fix: dispatch a
+      // scroll event on the preview-scroll container to force Ni to
+      // re-compute the bi <-> scrollTop ratio against the current
+      // scrollHeight.
+      try {
+        var scrollContainer = document.querySelector('.antcv-preview-scroll');
+        if (scrollContainer && typeof Event === 'function') {
+          scrollContainer.dispatchEvent(new Event('scroll', { bubbles: false }));
+        }
+      } catch (e) {}
     } catch (e) {
       try { console.warn('[sidebar-equalize-227]', e && e.message); } catch (_) {}
     }

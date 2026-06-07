@@ -14,8 +14,8 @@ You are continuing AntCV development. Work ONLY on branch
 #265 (draft) as the single PR. Current deployed version on that branch: 1.50.218.
 
 ## Start of session (do this FIRST, in order)
-1. Force login to authorize remote control (complete the login so remote is allowed —
-   remote control will not attach without it).
+1. Run `/login` and complete it to authorize remote control (remote control will not
+   attach without a completed login).
 2. Run `/remote-control` to attach remote control for this session.
 3. Load the AntCV Claude API (load the AntCV Claude API integration AFTER login/remote
    is attached, so API-backed actions are available).

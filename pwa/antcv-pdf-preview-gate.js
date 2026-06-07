@@ -433,9 +433,16 @@ ${inlineStyles}
     /* Existing page-break markers injected by
        antcv-page-breaks-everywhere-284 / item-pages-render. Honour
        them in print so a single tall paper splits at the right
-       points instead of mid-section. */
+       points instead of mid-section.
+       1.50.249: include data-antcv-page-break-284 (the suffixed
+       attribute the sidecar actually writes — the unsuffixed selector
+       below was a no-op against the live DOM, which is why print
+       preview always collapsed to a single page). */
     [data-antcv-page-break],
+    [data-antcv-page-break-284],
     [data-antcv-page-marker],
+    [data-antcv-continuation-header],
+    [data-antcv-sidebar-pagebreak-329],
     .antcv-page-break,
     .antcv-page-marker,
     [data-page-break-before="true"] {

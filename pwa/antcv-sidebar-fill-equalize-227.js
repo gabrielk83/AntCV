@@ -106,5 +106,53 @@
   } catch (_) {}
   [0, 200, 600, 1200, 2500].forEach(function (ms) { setTimeout(schedule, ms); });
 
+  // 1.50.249: dispatch a synthetic scroll event on the preview-scroll
+  // container whenever its CONTENT SIZE changes. The vertical-roller's
+  // value (`bi` in app.src.js) is updated only by Ni on scroll events; it
+  // doesn't recompute when scrollHeight grows (e.g. when a page-break
+  // sidecar adds spacers post-mount). A single dispatch from inside
+  // equalize() (1.50.242) misses any growth caused by other sidecars
+  // firing later. A ResizeObserver on the scroll container fires on every
+  // size change, so bi tracks the current scrollHeight at all times and
+  // the user can never reach the slider's max while the document is
+  // still scrollable past it.
+  var __lastDispatchTs = 0;
+  function fireScrollOnContainer() {
+    try {
+      var now = (typeof performance !== 'undefined' && performance.now)
+        ? performance.now()
+        : Date.now();
+      // De-dupe rapid bursts (sub-100ms).
+      if (now - __lastDispatchTs < 100) return;
+      __lastDispatchTs = now;
+      var scrollContainer = document.querySelector('.antcv-preview-scroll');
+      if (scrollContainer && typeof Event === 'function') {
+        scrollContainer.dispatchEvent(new Event('scroll', { bubbles: false }));
+      }
+    } catch (_) {}
+  }
+  try {
+    if (typeof ResizeObserver === 'function') {
+      var ro = new ResizeObserver(fireScrollOnContainer);
+      var attached = false;
+      function tryAttach() {
+        if (attached) return;
+        var c = document.querySelector('.antcv-preview-scroll');
+        if (!c) return;
+        try {
+          ro.observe(c);
+          // Also observe the inner frame so size grows from page-break
+          // spacers, etc. are seen even when the scroll container itself
+          // is height-locked (height: calc(100dvh - 160px)).
+          var inner = c.querySelector('.antcv-preview-frame, .antcv-preview-paper');
+          if (inner) ro.observe(inner);
+          attached = true;
+        } catch (_) {}
+      }
+      // Retry briefly until the preview-scroll element exists.
+      [0, 200, 600, 1200, 2500, 5000].forEach(function (ms) { setTimeout(tryAttach, ms); });
+    }
+  } catch (_) {}
+
   window.AntcvSidebarEqualize = { version: VERSION, apply: equalize };
 })();

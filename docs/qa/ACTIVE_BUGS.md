@@ -80,6 +80,19 @@ A companion **feature registry** (open vs shipped features) lives at
   regenerates); it only bootstraps a starter kernel when none exists. The wizard-close
   (`~24355`) and Settings "Regenerate showcase" (`~33873`) force-paths are intentional and
   left as-is.
+  **Hardening (1.50.229) — Editor regression fixed:** owner reported "I have a kernel in
+  memory, hard refresh, pressing Edit still started a new kernel generation." Root cause:
+  both the Editor button guard AND `Cs()`'s own self-guard gated on the single boolean
+  `kernelShowcaseGenerated` — if that flag was missing (cloud-restore lag, older sessions,
+  any local-only kernel) BOTH guards failed and `Cs()` regenerated. Fix:
+  (a) The Editor button **never** calls `Cs()` anymore. It opens the editor, and if any
+  kernel-of-any-kind signal is present but the local copy is incomplete, hydrates from the
+  dedicated cloud slot. New users get an empty editor; generation is reserved for the
+  explicit (already-guarded) Generate button.
+  (b) Hardened `Cs()`'s self-guard with **multi-signal detection** — `{force:true}` is now
+  required if ANY of: the cloud flag, in-flight flag, **local `sections.cv`/`cl` content**,
+  or **`meta.company`** is set. So no future caller can accidentally wipe a kernel.
+  Verified: terser identity-safe, 0 `"use strict"`, 29/29 tests, boot 0 errors.
 - **KERNEL-CLOUD-PERSIST-001** — `[FIX SHIPPED 1.50.221 — needs relay deploy + owner live-verify]`
   The generated kernel is **not saved to cloud memory** — must be regenerated every
   session/tab-switch; makes page-length testing a long regenerate cycle.

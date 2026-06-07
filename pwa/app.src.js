@@ -11334,6 +11334,34 @@
           u.set("doc", Lt);
         } catch (e) {}
       }, [Lt]);
+      // Expose a window-level helper so non-React sidecars (e.g. the document-
+      // export modal in antcv-pdf-preview-gate.js) can flip CV<->CL preview
+      // without a brittle DOM click. Fires antcv:doc-changed so listeners can
+      // re-read the preview after React commits.
+      React.useEffect(() => {
+        try {
+          window.AntcvSetDoc = (d) => {
+            try {
+              const t = "cl" === String(d).toLowerCase() ? "cl" : "cv";
+              Pt(t);
+              try {
+                u.set("doc", t);
+              } catch (e) {}
+              try {
+                window.dispatchEvent(
+                  new CustomEvent("antcv:doc-changed", { detail: { doc: t } }),
+                );
+              } catch (e) {}
+              return t;
+            } catch (e) {
+              return null;
+            }
+          };
+          try {
+            window.AntcvGetDoc = () => Lt;
+          } catch (e) {}
+        } catch (e) {}
+      }, [Lt]);
       const [Bt, Dt] = e(null),
         [zt, Ft] = e(null),
         [Mt, Wt] = e(!1),
@@ -24200,17 +24228,31 @@
                 console.log("[showcase] skipping: no personalInfo.name yet"),
                 !1
               );
-            if (
-              !e.force &&
-              (u.get("kernelShowcaseGenerated", !1) ||
-                u.get("kernelShowcaseInProgress", !1))
-            )
-              return (
-                console.log(
-                  "[showcase] skipping: already generated or in flight; pass {force:true} to regenerate",
-                ),
-                !1
-              );
+            if (!e.force) {
+              // KERNEL-REGEN-GUARD-001 (hardened 1.50.229): multi-signal kernel
+              // detection — any of (a) the cloud flag, (b) generation in flight,
+              // (c) local sections content, or (d) meta.company being set means
+              // a kernel exists and we MUST NOT regenerate without explicit force.
+              // The flag alone is not enough: cloud-restore can lag a session,
+              // older sessions may never have set it, and the user's "Edit" press
+              // must never wipe out content that is plainly present locally.
+              const s = u.get("sections", null),
+                m = u.get("meta", null);
+              if (
+                u.get("kernelShowcaseGenerated", !1) ||
+                u.get("kernelShowcaseInProgress", !1) ||
+                (s &&
+                  ((Array.isArray(s.cv) && s.cv.length) ||
+                    (Array.isArray(s.cl) && s.cl.length))) ||
+                (m && "object" == typeof m && m.company)
+              )
+                return (
+                  console.log(
+                    "[showcase] skipping: kernel already present (flag/in-flight/sections/meta); pass {force:true} to regenerate",
+                  ),
+                  !1
+                );
+            }
             try {
               (Dt(null), Ft(null));
             } catch (e) {}
@@ -34080,95 +34122,96 @@
                   "button",
                   {
                     onClick: () => {
-                      // KERNEL-REGEN-GUARD-001 + show-saved-kernel: when a kernel
-                      // already exists, the Editor button must KEEP it (never
-                      // regenerate) AND surface it — open the editor and, if the
-                      // local copy is missing or has lost its specialization line,
-                      // hydrate the saved kernel (sections + meta incl. subtitle +
-                      // rationale) from the dedicated cloud slot. Only bootstrap a
-                      // starter kernel when none exists.
+                      // KERNEL-REGEN-GUARD-001 (hardened 1.50.229): the Editor button
+                      // OPENS THE EDITOR. Period. It NEVER auto-generates a kernel —
+                      // generation is reserved for the explicit Generate button (which
+                      // is itself guarded). If the user has any kernel-of-any-kind
+                      // (the cloud flag, OR local sections content, OR meta.company),
+                      // and the local copy is incomplete, hydrate from the dedicated
+                      // cloud slot. If none of that — still just open the editor.
+                      // No path here calls Cs() — that was the regression: when the
+                      // kernelShowcaseGenerated flag was missing (e.g. cloud-restore
+                      // hadn't run, or older sessions), Cs's own self-guard ALSO
+                      // gates on that single flag, so it would happily regenerate.
+                      $t("editor");
                       try {
-                        if (u.get("kernelShowcaseGenerated", !1)) {
-                          $t("editor");
-                          try {
-                            const s = u.get("sections", null),
-                              hasLocal =
-                                s &&
-                                ((Array.isArray(s.cv) && s.cv.length) ||
-                                  (Array.isArray(s.cl) && s.cl.length)),
-                              m = u.get("meta", null),
-                              hasSubtitle = !!(
-                                m &&
-                                "object" == typeof m &&
-                                m.subtitle &&
-                                String(m.subtitle).trim()
-                              );
-                            if (!hasLocal || !hasSubtitle)
-                              (async () => {
+                        const s = u.get("sections", null),
+                          hasLocal =
+                            s &&
+                            ((Array.isArray(s.cv) && s.cv.length) ||
+                              (Array.isArray(s.cl) && s.cl.length)),
+                          m = u.get("meta", null),
+                          hasSubtitle = !!(
+                            m &&
+                            "object" == typeof m &&
+                            m.subtitle &&
+                            String(m.subtitle).trim()
+                          ),
+                          flag = !!u.get("kernelShowcaseGenerated", !1),
+                          // Multi-signal kernel detection — any one means the user
+                          // has a kernel and we MUST NOT regenerate / overwrite it.
+                          hasKernel =
+                            flag ||
+                            hasLocal ||
+                            !!(m && "object" == typeof m && m.company);
+                        if (hasKernel && (!hasLocal || !hasSubtitle))
+                          (async () => {
+                            try {
+                              const r = await oo.getShowcase();
+                              if (!r || !r.showcase) return;
+                              const t = r.showcase;
+                              if (
+                                !hasLocal &&
+                                t.sections &&
+                                "object" == typeof t.sections
+                              ) {
                                 try {
-                                  const r = await oo.getShowcase();
-                                  if (!r || !r.showcase) return;
-                                  const t = r.showcase;
-                                  if (
-                                    !hasLocal &&
-                                    t.sections &&
-                                    "object" == typeof t.sections
-                                  ) {
-                                    try {
-                                      u.set("sections", t.sections);
-                                    } catch (e) {}
-                                    try {
-                                      ao({
-                                        cv: t.sections.cv || [],
-                                        cl: t.sections.cl || [],
-                                      });
-                                    } catch (e) {}
-                                    if (t.rationale) {
-                                      try {
-                                        u.set("rationale", t.rationale);
-                                      } catch (e) {}
-                                      try {
-                                        bo(t.rationale);
-                                      } catch (e) {}
-                                    }
-                                  }
-                                  if (t.meta && "object" == typeof t.meta) {
-                                    if (!hasLocal) {
-                                      try {
-                                        u.set("meta", t.meta);
-                                      } catch (e) {}
-                                      try {
-                                        lo(t.meta);
-                                      } catch (e) {}
-                                    } else if (!hasSubtitle && t.meta.subtitle) {
-                                      // Backfill ONLY the missing specialization
-                                      // line; never touch local section edits.
-                                      const o = {
-                                        ...(m || {}),
-                                        subtitle: t.meta.subtitle,
-                                      };
-                                      try {
-                                        u.set("meta", o);
-                                      } catch (e) {}
-                                      try {
-                                        lo(o);
-                                      } catch (e) {}
-                                    }
-                                  }
-                                  console.log(
-                                    "[KERNEL] Editor: hydrated saved kernel from cloud slot",
-                                  );
+                                  u.set("sections", t.sections);
                                 } catch (e) {}
-                              })();
-                          } catch (e) {}
-                          return;
-                        }
+                                try {
+                                  ao({
+                                    cv: t.sections.cv || [],
+                                    cl: t.sections.cl || [],
+                                  });
+                                } catch (e) {}
+                                if (t.rationale) {
+                                  try {
+                                    u.set("rationale", t.rationale);
+                                  } catch (e) {}
+                                  try {
+                                    bo(t.rationale);
+                                  } catch (e) {}
+                                }
+                              }
+                              if (t.meta && "object" == typeof t.meta) {
+                                if (!hasLocal) {
+                                  try {
+                                    u.set("meta", t.meta);
+                                  } catch (e) {}
+                                  try {
+                                    lo(t.meta);
+                                  } catch (e) {}
+                                } else if (!hasSubtitle && t.meta.subtitle) {
+                                  // Backfill ONLY the missing specialization line;
+                                  // never touch local section edits.
+                                  const o = {
+                                    ...(m || {}),
+                                    subtitle: t.meta.subtitle,
+                                  };
+                                  try {
+                                    u.set("meta", o);
+                                  } catch (e) {}
+                                  try {
+                                    lo(o);
+                                  } catch (e) {}
+                                }
+                              }
+                              console.log(
+                                "[KERNEL] Editor: hydrated saved kernel from cloud slot",
+                              );
+                            } catch (e) {}
+                          })();
                       } catch (e) {}
-                      let e = !1;
-                      try {
-                        e = !0 === Cs();
-                      } catch (e) {}
-                      e || $t("editor");
                     },
                     style: {
                       padding: "6px 12px",

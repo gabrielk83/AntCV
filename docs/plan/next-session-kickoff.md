@@ -14,8 +14,8 @@ You are continuing AntCV development. Work ONLY on branch
 #265 (draft) as the single PR. Current deployed version on that branch: 1.50.218.
 
 ## Start of session (do this FIRST, in order)
-1. Force login to authorize remote control (complete the login so remote is allowed —
-   remote control will not attach without it).
+1. Run `/login` and complete it to authorize remote control (remote control will not
+   attach without a completed login).
 2. Run `/remote-control` to attach remote control for this session.
 3. Load the AntCV Claude API (load the AntCV Claude API integration AFTER login/remote
    is attached, so API-backed actions are available).
@@ -23,6 +23,21 @@ You are continuing AntCV development. Work ONLY on branch
    mode, proxy URLs and worker endpoints are known before you change anything.
 5. GitHub MCP scope is ONLY `gabrielk83/antcv` (use mcp__github__* tools; no gh CLI).
 6. Sync the checkout (see env note) before reading/editing.
+
+## First action — review + ownership (BEFORE any code change)
+Open with a short, factual overview (no filler), then wait for the owner's go on the
+priority before editing:
+1. **Current feature/bug review** — read `docs/qa/ACTIVE_BUGS.md` (2026-06-07 section)
+   and `docs/FEATURES_REGISTRY.md`; summarise the OPEN items in both tracks (A kernel/
+   app-history, B page-split/export) and what's already shipped/working (don't regress).
+2. **Next-step plan with explicit ownership** — for each open item, state who owns the
+   next action and present it as a table:
+   - **You (agent):** investigate / read-only trace / write the fix / cache-bust / push.
+   - **Me (owner):** in-browser preview check, PDF/DOCX export check, live kernel/
+     app-history reproduction, deploy approval (deploy.yml), and any product decision.
+   Make clear which items are blocked on an owner verification vs. ready for you to start.
+3. Recommend the order (highest testing-pain-relief first: kernel persist+reload, then
+   stuck-on-last-command) and confirm the priority with the owner before coding.
 
 ## Environment & remote control
 - This is the Claude-Code-on-the-web remote env. The container REPEATEDLY reverts the

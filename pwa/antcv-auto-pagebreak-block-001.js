@@ -1,4 +1,4 @@
-/* AntCV auto page-break (block-level) sidecar — v1.50.266
+/* AntCV auto page-break (block-level) sidecar — v1.50.267
  * ============================================================
  * Owner feature AUTO-PAGEBREAK-BLOCK-001 (FEATURES_REGISTRY).
  *
@@ -84,7 +84,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.266';
+  var VERSION = '1.50.267';
   var PAGE_HEIGHT_PX = 1123; // A4 at 96dpi
   var SALMON = '#fa8072';
   var SPLITTER_CLASS = 'antcv-auto-page-splitter';
@@ -609,54 +609,136 @@
     }
   }
 
+  // 1.50.267: content fingerprint of the WHOLE preview (primary rows +
+  // injected continuation rows). A scroll-induced React re-render does
+  // NOT change document content, so the fingerprint is identical and we
+  // skip re-processing entirely — this is what stops the "text blinks
+  // on scroll" loop. Only a genuine content edit changes the
+  // fingerprint and triggers a real undo + re-split.
+  function previewFingerprint() {
+    try {
+      var scroll = document.querySelector('.antcv-preview-scroll');
+      var root = scroll || document.body;
+      var rows = root.querySelectorAll('.antcv-page-row');
+      var parts = [];
+      for (var i = 0; i < rows.length; i++) {
+        // textContent of each row, collapsed. Include row count + the
+        // sidebar/main split ratio so a width drag still re-paginates.
+        var t = (rows[i].textContent || '').replace(/\s+/g, ' ').trim();
+        parts.push(t.length + ':' + t.slice(0, 40) + '|' + t.slice(-40));
+      }
+      // Also fold in the clientHeight of the scroll container — a
+      // viewport resize (window/devtools) legitimately changes how much
+      // fits per page, so it SHOULD re-paginate.
+      var ch = scroll ? scroll.clientHeight : 0;
+      return rows.length + '#' + ch + '#' + parts.join('§');
+    } catch (_) { return String(Math.random()); }
+  }
+
   var pending = null;
-  var lastRunTs = 0;
+  var applying = false;           // hard guard: true while we mutate the DOM
+  var lastFingerprint = null;     // content fingerprint of last successful run
+  var runTimes = [];              // circuit-breaker: timestamps of recent runs
+  var brokenUntil = 0;            // circuit-breaker: suppress runs until this ts
+
+  function nowMs() {
+    return (typeof performance !== 'undefined' && performance.now)
+      ? performance.now() : Date.now();
+  }
+
+  function doRun() {
+    var now = nowMs();
+    if (now < brokenUntil) return; // circuit breaker active
+
+    // Skip if the document content hasn't changed since the last run.
+    // This is the primary defence against the scroll re-render loop:
+    // scrolling re-renders identical content → fingerprint matches →
+    // we do nothing → no DOM mutation → no blink.
+    var fp = previewFingerprint();
+    if (fp === lastFingerprint) return;
+
+    // Circuit breaker: if we've run > 12 times in the last 3s, the
+    // page is fighting us (cross-sidecar feedback). Back off 6s and
+    // log once so the situation is visible.
+    runTimes.push(now);
+    runTimes = runTimes.filter(function (t) { return now - t < 3000; });
+    if (runTimes.length > 12) {
+      brokenUntil = now + 6000;
+      runTimes = [];
+      try {
+        console.warn('[v' + VERSION + ' auto-pagebreak] feedback detected — '
+          + 'backing off 6s to protect the preview.');
+      } catch (_) {}
+      return;
+    }
+
+    applying = true;
+    try {
+      findPrimaryPageRows().forEach(processPrimary);
+      // Fingerprint AFTER splitting: the split moved content into
+      // injected rows but total text is unchanged, so the post-split
+      // fingerprint equals what a subsequent scroll-render will
+      // produce → next tick skips. Store it.
+      lastFingerprint = previewFingerprint();
+    } catch (e) {
+      try {
+        console.warn('[v' + VERSION + ' auto-pagebreak] run failed:',
+          e && e.message);
+      } catch (_) {}
+    } finally {
+      // Keep the guard up briefly so the trailing async mutations from
+      // our own DOM moves (and any ResizeObserver/scroll cascade they
+      // provoke in sibling sidecars) don't re-trigger us.
+      setTimeout(function () { applying = false; }, 250);
+    }
+  }
+
   function schedule() {
+    if (applying) return; // never queue while mutating
     if (pending) clearTimeout(pending);
     pending = setTimeout(function () {
       pending = null;
-      try {
-        var now = (typeof performance !== 'undefined' && performance.now)
-          ? performance.now()
-          : Date.now();
-        if (now - lastRunTs < 200) {
-          schedule();
-          return;
-        }
-        lastRunTs = now;
-        findPrimaryPageRows().forEach(processPrimary);
-      } catch (e) {
-        try {
-          console.warn('[v' + VERSION + ' auto-pagebreak] tick failed:',
-            e && e.message);
-        } catch (_) {}
-      }
+      doRun();
     }, 350);
   }
 
   try {
     var mo = new MutationObserver(function (mutations) {
-      // Skip mutations whose targets or added nodes are entirely our
-      // own injections (prevents feedback loop).
+      // 1.50.267: hard guard — ignore EVERY mutation while we are (or
+      // just were) applying our own DOM changes. This is the core fix
+      // for the self-feedback blink: undoPreviousSplits + processOnce
+      // move REAL content nodes, which previously read as "relevant"
+      // external changes and re-triggered us in a tight loop.
+      if (applying) return;
       var relevant = false;
       for (var i = 0; i < mutations.length; i++) {
         var m = mutations[i];
-        if (m.target && isInjected(m.target)) continue;
-        if (m.target && isSplitter(m.target)) continue;
+        if (m.target && (isInjected(m.target) || isSplitter(m.target))) continue;
         var added = m.addedNodes ? Array.from(m.addedNodes) : [];
-        if (added.length && added.every(function (n) {
-          return isInjected(n) || isSplitter(n);
-        })) continue;
+        var removed = m.removedNodes ? Array.from(m.removedNodes) : [];
+        var onlyOurs = function (n) { return isInjected(n) || isSplitter(n); };
+        if ((added.length || removed.length)
+          && added.every(onlyOurs) && removed.every(onlyOurs)) continue;
         relevant = true;
         break;
       }
       if (relevant) schedule();
     });
-    mo.observe(document.body, { childList: true, subtree: true });
+    mo.observe(document.body, { childList: true, subtree: true, characterData: true });
     [200, 800, 1800, 3500].forEach(function (ms) {
       setTimeout(schedule, ms);
     });
+    // Genuine content-change signals from the app — these are the
+    // events that SHOULD force a re-paginate (they fire on edits,
+    // generation, language change, page-button clicks, etc.).
+    ['antcv:sections-updated', 'antcv:item-pages-changed',
+     'antcv:preview-rescale'].forEach(function (ev) {
+      try { window.addEventListener(ev, schedule); } catch (_) {}
+    });
   } catch (_) {}
 
-  window.AntcvAutoPagebreak = { version: VERSION, run: schedule };
+  window.AntcvAutoPagebreak = {
+    version: VERSION,
+    run: function () { lastFingerprint = null; schedule(); },
+  };
 })();

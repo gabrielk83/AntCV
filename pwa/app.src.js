@@ -13000,6 +13000,48 @@
           }, 300);
           return () => clearTimeout(e);
         }, [io]),
+        // 1.50.267: re-persist the kernel showcase to its cloud slot
+        // when its meta/sections change AFTER generation. Owner
+        // regression 2026-06-07: edit the topbar specialisation line on
+        // the kernel showcase, hard-reset, and the field reverts to the
+        // "[Specialisation — …]" placeholder. Cause: putShowcase was
+        // only called once at generation-commit time (~22167). Manual
+        // edits flushed to localStorage.meta + the application row, but
+        // the dedicated /api/kernel-showcase cloud slot kept the
+        // generation-time value, and getShowcase (~13162) restores that
+        // stale meta on the next load — clobbering the edit. This effect
+        // pushes the current sections/meta/rationale to putShowcase,
+        // debounced 2s, but ONLY when we're actually viewing the kernel
+        // showcase (company === "Unsolicited" AND it has been generated).
+        // Gated tightly so tailored applications never write to the
+        // kernel slot, and skipped while a generation is still in flight
+        // (the commit site owns the first write).
+        React.useEffect(() => {
+          try {
+            if (!io || "Unsolicited" !== io.company) return;
+            if (!u.get("kernelShowcaseGenerated", !1)) return;
+            if (u.get("kernelShowcaseInProgress", !1)) return;
+            if (Un && Un.current) return;
+          } catch (e) {
+            return;
+          }
+          const e = setTimeout(() => {
+            try {
+              oo.putShowcase({
+                sections: u.get("sections", null),
+                meta: u.get("meta", null),
+                rationale: u.get("rationale", null),
+                jd_language: je,
+              });
+              try {
+                console.log(
+                  "[v1.50.267 KERNEL-CLOUD-PERSIST] re-saved kernel showcase after edit (subtitle/meta/sections)",
+                );
+              } catch (_) {}
+            } catch (_) {}
+          }, 2e3);
+          return () => clearTimeout(e);
+        }, [io, ro]),
         // 1.50.260: catch contenteditable edits that wrote directly to
         // localStorage.meta and pull them back into React state `io`.
         // Owner regression 2026-06-07: edit the topbar specialisation

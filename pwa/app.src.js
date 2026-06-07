@@ -87,50 +87,17 @@
       const pmRaw = localStorage.getItem("antcv:itemPages");
       const pm = pmRaw ? JSON.parse(pmRaw) || {} : {};
       if (!pm[sid] || typeof pm[sid] !== "object") pm[sid] = {};
-      let docv = localStorage.getItem("doc") || "cv";
-      try {
-        const p = JSON.parse(docv);
-        if (typeof p === "string") docv = p;
-      } catch (_) {}
-      docv = String(docv).toLowerCase() === "cl" ? "cl" : "cv";
-      const secRaw = localStorage.getItem("sections");
-      const all = secRaw ? JSON.parse(secRaw) || {} : {};
-      const list = Array.isArray(all[docv]) ? all[docv] : null;
-      let start = -1;
-      if (list)
-        for (let i = 0; i < list.length; i++)
-          if (list[i] && String(list[i].id || "") === String(sid)) {
-            start = i;
-            break;
-          }
-      if (itemIdx === 0) {
-        // whole-section move: section.page (item 0 can't split via the flatMap)
-        if (start >= 0) {
-          if (nv > 1) list[start].page = nv;
-          else delete list[start].page;
-        }
-        delete pm[sid][String(itemIdx)];
-      } else if (nv <= 1) {
-        delete pm[sid][String(itemIdx)];
-      } else {
-        pm[sid][String(itemIdx)] = nv;
-      }
+      if (nv <= 1) delete pm[sid][String(itemIdx)];
+      else pm[sid][String(itemIdx)] = nv;
       if (!Object.keys(pm[sid]).length) delete pm[sid];
       localStorage.setItem("antcv:itemPages", JSON.stringify(pm));
-      // cascade following sidebar sections so page-boxes keep document order
-      if (list && start >= 0 && nv > 1) {
-        for (let j = start + 1; j < list.length; j++) {
-          const s = list[j];
-          if (!s || String(s.loc || "").toLowerCase() !== "sidebar") continue;
-          if ((parseInt(s.page || 1, 10) || 1) < nv) s.page = nv;
-        }
-      }
-      if (list) localStorage.setItem("sections", JSON.stringify(all));
-      window.dispatchEvent(
-        new CustomEvent("antcv:sections-updated", {
-          detail: { source: "sidebar-group-break", sid: sid },
-        }),
-      );
+      // PAGE-ONLY event. Do NOT write the `sections` object back to localStorage
+      // and do NOT fire 'antcv:sections-updated' here: re-reading sections from
+      // localStorage would revert an in-flight group-name edit that hasn't hit the
+      // 500ms persist yet (the "group name not saved" bug). The native page-box
+      // engine reads itemPages on the item-pages-changed re-render. (We therefore
+      // also drop the following-section cascade — a minor ordering nicety — to
+      // eliminate the data-loss race entirely.)
       window.dispatchEvent(
         new CustomEvent("antcv:item-pages-changed", {
           detail: { source: "sidebar-group-break", sid: sid },

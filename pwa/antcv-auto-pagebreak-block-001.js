@@ -1,4 +1,4 @@
-/* AntCV auto page-break (block-level) sidecar — v1.50.265
+/* AntCV auto page-break (block-level) sidecar — v1.50.266
  * ============================================================
  * Owner feature AUTO-PAGEBREAK-BLOCK-001 (FEATURES_REGISTRY).
  *
@@ -84,7 +84,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.265';
+  var VERSION = '1.50.266';
   var PAGE_HEIGHT_PX = 1123; // A4 at 96dpi
   var SALMON = '#fa8072';
   var SPLITTER_CLASS = 'antcv-auto-page-splitter';
@@ -182,25 +182,35 @@
             }
           }
           if (existing) {
-            // 1.50.265: if both injected and existing sections contain
-            // a table, re-stitch tbody rows back into the original
-            // table (don't append a second table to the section).
-            var injTable = node.querySelector && node.querySelector('table');
-            var exTable = existing.querySelector && existing.querySelector('table');
-            if (injTable && exTable) {
-              var injTbody = injTable.querySelector('tbody');
-              var exTbody = exTable.querySelector('tbody');
-              if (injTbody && exTbody) {
-                while (injTbody.firstChild) {
-                  exTbody.appendChild(injTbody.firstChild);
+            // 1.50.266: walk the injected section's children. Skip any
+            // child marked as INJECTED (our cloned header + cloned
+            // table belong only to the page-2 copy; we must NOT push
+            // them back into the page-1 original or we'd duplicate the
+            // header and the table). For non-injected tables, merge
+            // their tbody rows back into the existing table. For
+            // anything else non-injected, move it to existing.
+            var srcKids = Array.from(node.children);
+            for (var nc = 0; nc < srcKids.length; nc++) {
+              var child = srcKids[nc];
+              if (isInjected(child)) {
+                // Cloned header / cloned table — drop it.
+                if (child.tagName === 'TABLE') {
+                  // Inside the table-row case, the injected TABLE
+                  // CONTAINS the moved tbody rows we DO want to put
+                  // back. Pull those rows out, then drop the table.
+                  var injTbody = child.querySelector('tbody');
+                  var exTable = existing.querySelector && existing.querySelector('table');
+                  var exTbody = exTable && exTable.querySelector('tbody');
+                  if (injTbody && exTbody) {
+                    while (injTbody.firstChild) {
+                      exTbody.appendChild(injTbody.firstChild);
+                    }
+                  }
                 }
-                srcCol.removeChild(node);
+                try { node.removeChild(child); } catch (_) {}
                 continue;
               }
-            }
-            // Move ALL children of node into existing (preserves order).
-            while (node.firstChild) {
-              existing.appendChild(node.firstChild);
+              existing.appendChild(child); // move
             }
             srcCol.removeChild(node);
             continue;
@@ -217,35 +227,55 @@
 
   function findChildrenLevelSplit(sectionEl, limit) {
     // Walk children: first child is the section header (title + separator),
-    // it always stays with the section on page 1. Find the highest index
-    // `g` such that:
-    //   - children[0..g-1] cumulative heights fit within `limit`
-    //   - g is a "valid" split point for this section's structure
+    // it always stays with the section on page 1. Find the highest DOM
+    // index `g` such that children[0..g-1] cumulative heights fit within
+    // `limit` AND `g` is a "valid" split point for this section.
     //
-    // For LABELED-LIST sections (mix of group sub-headers + items —
-    // e.g. REGULATORY): valid split points are the group-sub-header
-    // indices (children without the row-path attr, after the header).
-    // This keeps each group intact: the label stays with its items.
+    // Valid split points (1.50.266):
+    //   - VISIBLE GROUP LABELS (children with no row-path attr beyond
+    //     the header) — REGULATORY with the label rendered.
+    //   - HIDDEN GROUP BOUNDARIES — when item row-path numbers skip a
+    //     value, the missing index corresponds to a group label whose
+    //     React render returned null (row.hidden=true OR no visible
+    //     item follows). The DOM index immediately after the skip is
+    //     a valid split point — the hidden label travels with its
+    //     items conceptually even if it has no DOM presence.
     //
-    // For PLAIN-LIST sections (all non-header children are items, or
-    // all are unlabelled rows): any index > 1 is valid (split between
-    // any two items). i <= 1 is rejected so single-text/headers don't
-    // get an internal split — header always stays with at least one
-    // body child OR the whole section moves.
+    // If neither visible nor hidden boundaries exist, fall back to
+    // PLAIN-LIST: any index > 1 is valid. Single-text / header
+    // sections still can't intra-split (bestSplit > 1 fails).
     var children = Array.from(sectionEl.children);
     if (children.length <= 1) return null;
 
-    var sawItem = false, sawNonItem = false;
-    for (var k = 1; k < children.length; k++) {
-      if (isItemChild(children[k])) sawItem = true;
-      else sawNonItem = true;
+    var validSplits = new Set();
+    var sawItem = false;
+    var lastRowIdx = -1;
+    var lastWasItem = false;
+    for (var m = 1; m < children.length; m++) {
+      var c = children[m];
+      if (!isItemChild(c)) {
+        // Visible group sub-header.
+        validSplits.add(m);
+        lastWasItem = false;
+        continue;
+      }
+      sawItem = true;
+      var rp = c.getAttribute(ITEM_PATH_ATTR);
+      var num = parseInt((rp || '').split('.').pop(), 10);
+      if (!isNaN(num) && lastWasItem && num > lastRowIdx + 1) {
+        // Row-path gap → hidden group label sat at the missing index.
+        validSplits.add(m);
+      }
+      if (!isNaN(num)) lastRowIdx = num;
+      lastWasItem = true;
     }
-    var labeledList = sawItem && sawNonItem;
+
+    var grouped = validSplits.size > 0 && sawItem;
 
     function isValidSplitIndex(i) {
       if (i <= 1) return false;
-      if (!labeledList) return true;
-      return !isItemChild(children[i]);
+      if (grouped) return validSplits.has(i);
+      return true;
     }
 
     var sum = childHeight(children[0]);
@@ -259,7 +289,7 @@
       }
       sum += h;
     }
-    return null; // Whole section fits.
+    return null;
   }
 
   // 1.50.265: TABLE-ROW intra-split. Handles CV CORE COMPETENCIES and
@@ -377,22 +407,79 @@
     return newRow;
   }
 
-  function makeSplitter() {
+  // 1.50.266: salmon page-drift splitter now carries the running page
+  // number ("▼ PAGE N ▼ (auto)") so the user can see which page each
+  // chunk lands on, matching the native __antcvSalmon style. The
+  // "(auto)" suffix distinguishes from manual (sec.page / itemPages)
+  // splitters which read "▼ PAGE N ▼".
+  function makeSplitter(nextPg) {
     var el = document.createElement('div');
     el.className = SPLITTER_CLASS + ' no-print';
     el.setAttribute(INJECTED_ATTR, '1');
     el.style.cssText = [
-      'height:10px',
-      'margin:8px 0',
-      'background:' + SALMON,
-      'border-radius:3px',
-      'opacity:0.7',
-      'box-shadow:0 0 6px rgba(250,128,114,0.5)',
+      'border-top:3px solid rgba(250,128,114,0.7)',
+      'margin:10px 0 5px',
+      'display:flex',
+      'justify-content:center',
+      'background:rgba(250,128,114,0.08)',
+      'padding:2px 0',
       'position:relative',
     ].join(';') + ';';
-    el.title = 'Auto page break — content exceeded A4 height ('
+    var label = document.createElement('span');
+    label.style.cssText = [
+      'background:' + SALMON,
+      'color:#fff',
+      'font-size:9px',
+      'padding:2px 12px',
+      'border-radius:2px',
+      'font-family:Arial,sans-serif',
+      'letter-spacing:0.5px',
+      'white-space:nowrap',
+      'font-weight:700',
+    ].join(';') + ';';
+    label.textContent = '▼ PAGE ' + (nextPg || '?') + ' ▼ (auto)';
+    el.appendChild(label);
+    el.title = 'Auto page break — content exceeded A4 height (sidecar '
       + VERSION + ')';
     return el;
+  }
+
+  // 1.50.266: find the first deepest leaf with non-empty text content
+  // (typically the section title <span> inside the header wrapper).
+  function findFirstTextLeaf(root) {
+    if (!root) return null;
+    if (root.children && root.children.length > 0) {
+      for (var i = 0; i < root.children.length; i++) {
+        var r = findFirstTextLeaf(root.children[i]);
+        if (r) return r;
+      }
+      return null;
+    }
+    if (root.textContent && root.textContent.trim()) return root;
+    return null;
+  }
+
+  // 1.50.266: append " (CONT.)" to the cloned section header's title
+  // text so the user sees the section name on the continuation page.
+  // Removes contenteditable on the modified node so panel edits don't
+  // accidentally fire from the continuation copy.
+  function appendContSuffix(headerClone) {
+    var titleEl = findFirstTextLeaf(headerClone);
+    if (!titleEl) return;
+    var existing = (titleEl.textContent || '').trim();
+    if (!existing) return;
+    if (/\(CONT\.\)\s*$/i.test(existing)) return; // already suffixed
+    titleEl.textContent = existing + ' (CONT.)';
+    try { titleEl.removeAttribute('contenteditable'); } catch (_) {}
+  }
+
+  function cloneSectionHeader(sectionEl) {
+    var children = Array.from(sectionEl.children);
+    if (!children.length) return null;
+    var headerClone = children[0].cloneNode(true);
+    headerClone.setAttribute(INJECTED_ATTR, '1');
+    appendContSuffix(headerClone);
+    return headerClone;
   }
 
   function moveColumnTail(srcCol, dstCol, fromIndex) {
@@ -406,9 +493,13 @@
     // Wrap the moved children in a CLONE of the section element so the
     // styling (background colour, padding, data-sid) is preserved on
     // the continuation page. The header (children[0]) stays with the
-    // original on page 1.
+    // original on page 1; 1.50.266 also clones it (with " (CONT.)"
+    // suffix) into the continuation section so the user sees the
+    // section name on page 2.
     var sectionClone = sectionEl.cloneNode(false);
     sectionClone.setAttribute(INJECTED_ATTR, '1');
+    var headerClone = cloneSectionHeader(sectionEl);
+    if (headerClone) sectionClone.appendChild(headerClone);
     var children = Array.from(sectionEl.children);
     for (var i = startIndex; i < children.length; i++) {
       sectionClone.appendChild(children[i]);
@@ -421,6 +512,7 @@
   // tbody containing the moved overflow rows. Skips the
   // data-table-resize-wrap (continuation tables don't need a resize
   // handle — that lives only on the page-1 original).
+  // 1.50.266: also clones the section header with " (CONT.)" suffix.
   function applyTableRowSplit(sectionEl, startIndex, dstCol) {
     var srcTable = sectionEl.querySelector && sectionEl.querySelector('table');
     if (!srcTable) return;
@@ -429,6 +521,8 @@
     var srcThead = srcTable.querySelector('thead');
     var sectionClone = sectionEl.cloneNode(false);
     sectionClone.setAttribute(INJECTED_ATTR, '1');
+    var headerClone = cloneSectionHeader(sectionEl);
+    if (headerClone) sectionClone.appendChild(headerClone);
     var tableClone = srcTable.cloneNode(false);
     tableClone.setAttribute(INJECTED_ATTR, '1');
     if (srcThead) tableClone.appendChild(srcThead.cloneNode(true));
@@ -442,7 +536,7 @@
     dstCol.appendChild(sectionClone);
   }
 
-  function processOnce(row) {
+  function processOnce(row, nextPg) {
     var sidebarCol = row.querySelector('.antcv-document-sidebar');
     var mainCol = row.querySelector('.antcv-document-main');
     if (!sidebarCol && !mainCol) return null;
@@ -483,7 +577,7 @@
       }
     }
 
-    var splitter = makeSplitter();
+    var splitter = makeSplitter(nextPg);
     row.parentNode.insertBefore(splitter, row.nextSibling);
     row.parentNode.insertBefore(newRow, splitter.nextSibling);
     return newRow;
@@ -494,9 +588,17 @@
       undoPreviousSplits(primary);
       var current = primary;
       var maxIters = 6;
+      // 1.50.266: track running page number; the FIRST auto-injected
+      // splitter announces "PAGE 2", the next "PAGE 3", etc., per
+      // primary chain. (If the primary itself is on a manual page > 1
+      // via sec.page/itemPages, the user can read the numbering as
+      // relative to this primary; reconciling with manual page= is a
+      // tracked follow-up.)
+      var nextPg = 2;
       while (maxIters-- > 0) {
-        var next = processOnce(current);
+        var next = processOnce(current, nextPg);
         if (!next) break;
+        nextPg++;
         current = next;
       }
     } catch (e) {

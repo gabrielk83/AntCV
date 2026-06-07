@@ -34080,14 +34080,89 @@
                   "button",
                   {
                     onClick: () => {
-                      // KERNEL-REGEN-GUARD-001: when a kernel already exists, the
-                      // Editor button must KEEP it — just open the editor, never
-                      // (re)generate. Only bootstrap a starter kernel when none
-                      // exists yet (Cs() is non-force and self-guards too, but this
-                      // makes the keep-existing behaviour explicit and safe).
+                      // KERNEL-REGEN-GUARD-001 + show-saved-kernel: when a kernel
+                      // already exists, the Editor button must KEEP it (never
+                      // regenerate) AND surface it — open the editor and, if the
+                      // local copy is missing or has lost its specialization line,
+                      // hydrate the saved kernel (sections + meta incl. subtitle +
+                      // rationale) from the dedicated cloud slot. Only bootstrap a
+                      // starter kernel when none exists.
                       try {
-                        if (u.get("kernelShowcaseGenerated", !1))
-                          return void $t("editor");
+                        if (u.get("kernelShowcaseGenerated", !1)) {
+                          $t("editor");
+                          try {
+                            const s = u.get("sections", null),
+                              hasLocal =
+                                s &&
+                                ((Array.isArray(s.cv) && s.cv.length) ||
+                                  (Array.isArray(s.cl) && s.cl.length)),
+                              m = u.get("meta", null),
+                              hasSubtitle = !!(
+                                m &&
+                                "object" == typeof m &&
+                                m.subtitle &&
+                                String(m.subtitle).trim()
+                              );
+                            if (!hasLocal || !hasSubtitle)
+                              (async () => {
+                                try {
+                                  const r = await oo.getShowcase();
+                                  if (!r || !r.showcase) return;
+                                  const t = r.showcase;
+                                  if (
+                                    !hasLocal &&
+                                    t.sections &&
+                                    "object" == typeof t.sections
+                                  ) {
+                                    try {
+                                      u.set("sections", t.sections);
+                                    } catch (e) {}
+                                    try {
+                                      ao({
+                                        cv: t.sections.cv || [],
+                                        cl: t.sections.cl || [],
+                                      });
+                                    } catch (e) {}
+                                    if (t.rationale) {
+                                      try {
+                                        u.set("rationale", t.rationale);
+                                      } catch (e) {}
+                                      try {
+                                        bo(t.rationale);
+                                      } catch (e) {}
+                                    }
+                                  }
+                                  if (t.meta && "object" == typeof t.meta) {
+                                    if (!hasLocal) {
+                                      try {
+                                        u.set("meta", t.meta);
+                                      } catch (e) {}
+                                      try {
+                                        lo(t.meta);
+                                      } catch (e) {}
+                                    } else if (!hasSubtitle && t.meta.subtitle) {
+                                      // Backfill ONLY the missing specialization
+                                      // line; never touch local section edits.
+                                      const o = {
+                                        ...(m || {}),
+                                        subtitle: t.meta.subtitle,
+                                      };
+                                      try {
+                                        u.set("meta", o);
+                                      } catch (e) {}
+                                      try {
+                                        lo(o);
+                                      } catch (e) {}
+                                    }
+                                  }
+                                  console.log(
+                                    "[KERNEL] Editor: hydrated saved kernel from cloud slot",
+                                  );
+                                } catch (e) {}
+                              })();
+                          } catch (e) {}
+                          return;
+                        }
                       } catch (e) {}
                       let e = !1;
                       try {

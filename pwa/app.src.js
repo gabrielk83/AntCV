@@ -6348,6 +6348,51 @@
                   },
                   "▼",
                 ),
+                // 1.50.251 CJLR for labeled_list (tools/methods, regulatory items)
+                (() => {
+                  const __ALIGNS = ["center","justify","left","right"];
+                  const __AICON = {center:"↔",justify:"☰",left:"⇤",right:"⇥"};
+                  const __ALABEL = {center:"Center",justify:"Justify",left:"Left",right:"Right"};
+                  let __cur = "left";
+                  try {
+                    const m = JSON.parse(localStorage.getItem("antcvItemAlignment") || "{}") || {};
+                    const b = m[e.id] || {};
+                    const v = b["items." + i] || b[String(i)] || "left";
+                    if (__ALIGNS.includes(v)) __cur = v;
+                  } catch (_) {}
+                  return React.createElement(
+                    "button",
+                    {
+                      onClick: () => {
+                        try {
+                          const m = JSON.parse(localStorage.getItem("antcvItemAlignment") || "{}") || {};
+                          if (!m[e.id] || typeof m[e.id] !== "object") m[e.id] = {};
+                          const next = __ALIGNS[(__ALIGNS.indexOf(__cur) + 1) % __ALIGNS.length] || "left";
+                          m[e.id]["items." + i] = next;
+                          m[e.id][String(i)] = next;
+                          localStorage.setItem("antcvItemAlignment", JSON.stringify(m));
+                          window.dispatchEvent(new CustomEvent("antcv:item-align-changed", {
+                            detail: { sid: e.id, index: i, alignment: next },
+                          }));
+                          d({ _antcvAlignTick: Date.now() });
+                        } catch (_) {}
+                      },
+                      title: "Alignment: " + (__ALABEL[__cur] || __cur) + ". Click to cycle.",
+                      style: {
+                        fontSize: 11,
+                        padding: "1px 6px",
+                        borderRadius: 3,
+                        border: "1px solid #7b2ff2",
+                        background: "rgba(123,47,242,.06)",
+                        color: "#7b2ff2",
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                        flexShrink: 0,
+                      },
+                    },
+                    __AICON[__cur] || __AICON.left,
+                  );
+                })(),
                 n &&
                   React.createElement(
                     "button",
@@ -6587,6 +6632,51 @@
                   },
                   "▼",
                 ),
+                // 1.50.251 CJLR for list (certifications etc.)
+                (() => {
+                  const __ALIGNS = ["center","justify","left","right"];
+                  const __AICON = {center:"↔",justify:"☰",left:"⇤",right:"⇥"};
+                  const __ALABEL = {center:"Center",justify:"Justify",left:"Left",right:"Right"};
+                  let __cur = "left";
+                  try {
+                    const m = JSON.parse(localStorage.getItem("antcvItemAlignment") || "{}") || {};
+                    const b = m[e.id] || {};
+                    const v = b["items." + i] || b[String(i)] || "left";
+                    if (__ALIGNS.includes(v)) __cur = v;
+                  } catch (_) {}
+                  return React.createElement(
+                    "button",
+                    {
+                      onClick: () => {
+                        try {
+                          const m = JSON.parse(localStorage.getItem("antcvItemAlignment") || "{}") || {};
+                          if (!m[e.id] || typeof m[e.id] !== "object") m[e.id] = {};
+                          const next = __ALIGNS[(__ALIGNS.indexOf(__cur) + 1) % __ALIGNS.length] || "left";
+                          m[e.id]["items." + i] = next;
+                          m[e.id][String(i)] = next;
+                          localStorage.setItem("antcvItemAlignment", JSON.stringify(m));
+                          window.dispatchEvent(new CustomEvent("antcv:item-align-changed", {
+                            detail: { sid: e.id, index: i, alignment: next },
+                          }));
+                          d({ _antcvAlignTick: Date.now() });
+                        } catch (_) {}
+                      },
+                      title: "Alignment: " + (__ALABEL[__cur] || __cur) + ". Click to cycle.",
+                      style: {
+                        fontSize: 11,
+                        padding: "1px 6px",
+                        borderRadius: 3,
+                        border: "1px solid #7b2ff2",
+                        background: "rgba(123,47,242,.06)",
+                        color: "#7b2ff2",
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                        flexShrink: 0,
+                      },
+                    },
+                    __AICON[__cur] || __AICON.left,
+                  );
+                })(),
                 n &&
                   "list" === e.type &&
                   React.createElement(

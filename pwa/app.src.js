@@ -12818,6 +12818,28 @@
                   } else if (t && t._err) {
                     console.warn("[apps] active error:", t._err);
                   }
+                  // 1.50.247: also CLEAR the JD attachment state on cold-start.
+                  // Owner: hard refresh shows the "cadaver" of the previous
+                  // tailored JD text still pinned in the upload window — the
+                  // box reads "Project Manager Global Accounts, Kvadrat
+                  // Acoustics, Copenhagen…" from the last session. Since we
+                  // default the active to unsolicited (1.50.246), the JD
+                  // upload area must start empty too. Clears: zt (JD obj),
+                  // Bt (file meta), Ut (JD URL / pasted text), Yt (signal
+                  // files). The user can re-attach a JD when they're ready
+                  // to tailor.
+                  try {
+                    Ft(null);
+                  } catch (e) {}
+                  try {
+                    Dt(null);
+                  } catch (e) {}
+                  try {
+                    Vt("");
+                  } catch (e) {}
+                  try {
+                    Jt([]);
+                  } catch (e) {}
                   // 1.50.245: HYDRATE the active application's content on mount.
                   // Without this, hard-refresh shows the chrome (top bar
                   // company/role, active app badge, Fl/io) correctly but the

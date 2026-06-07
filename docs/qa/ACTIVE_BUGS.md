@@ -34,9 +34,28 @@ A companion **feature registry** (open vs shipped features) lives at
   1.50.217; the preview-inline path is separate.)
 
 ### Kernel / generation / application history (testing is painful because of these)
-- **KERNEL-CLOUD-PERSIST-001** — `[OPEN]` The generated kernel is **not saved to cloud
-  memory** — must be regenerated every session/tab-switch; makes page-length testing a
-  long regenerate cycle.
+- **KERNEL-CLOUD-PERSIST-001** — `[FIX SHIPPED 1.50.221 — needs relay deploy + owner live-verify]`
+  The generated kernel is **not saved to cloud memory** — must be regenerated every
+  session/tab-switch; makes page-length testing a long regenerate cycle.
+  **Trace (read-only):** the store `u` is localStorage-only (`app.src.js:296`); the showcase
+  content (sections/meta/rationale) was written to localStorage only, while just the boolean
+  `kernelShowcaseGenerated` synced to cloud via prefs (relay allowlist `index.js:739`). A fresh
+  session has empty localStorage + a true flag → it regenerates. The old nested
+  `personalInfo.showcaseBackup` field was deprecated (the `Zn` strip fn at `app.src.js:11438`
+  even says "future schema uses top-level cloud key instead").
+  **Fix (1.50.221) — dedicated cloud slot** (owner-chosen approach):
+  - **access-relay**: new `kernel_showcase` D1 table (one row/user; `schema.sql`) + `GET`/`PUT
+    /api/kernel-showcase` handler (`src/index.js`, modelled on `/api/applications`; defensive on
+    missing table). **D1 migration already applied to live `ant_memory`** (`CREATE TABLE IF NOT
+    EXISTS`, additive/non-destructive, verified via PRAGMA).
+  - **PWA** (`app.src.js`): `oo.getShowcase()`/`putShowcase()` clients; persist on showcase
+    completion (delayed read of canonical store values, fire-and-forget); restore effect on load
+    (signed-in + no local copy → hydrate sections/meta/rationale via `ao`/`lo`/`bo`).
+  - Verified: relay `node --check` OK; terser rebuild identity-safe, 0 `"use strict"`, 29/29 unit
+    tests, browser boot 0 errors. **Graceful pre-deploy:** if the relay route isn't live yet the
+    client calls throw and are caught (no UI impact).
+  **Needs:** relay deploy via `deploy.yml`, then owner live-verify (generate showcase →
+  hard-refresh/new tab/2nd device → it restores instead of regenerating).
 - **KERNEL-SPECIALIZATION-LINE-001** — `[OPEN]` The kernel does **not write to the
   specialization line**.
 - **APPHISTORY-SAME-LINE-001** — `[OPEN]` Saving to Application History writes to the **same

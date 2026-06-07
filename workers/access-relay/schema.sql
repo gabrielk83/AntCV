@@ -62,3 +62,19 @@ CREATE TABLE IF NOT EXISTS active_application (
 CREATE INDEX IF NOT EXISTS idx_app_user     ON application(user_hash);
 CREATE INDEX IF NOT EXISTS idx_app_jd       ON application(user_hash, jd_hash);
 CREATE INDEX IF NOT EXISTS idx_app_category ON application(user_hash, category);
+
+-- Dedicated per-user slot for the generated KERNEL SHOWCASE (the unsolicited CV
+-- built from the full profile). Kept separate from `application` so it never
+-- mixes into the saved-applications list, and out of KV prefs so it doesn't
+-- bloat the small prefs blob. One row per user; regenerating overwrites it.
+-- (KERNEL-CLOUD-PERSIST-001)
+CREATE TABLE IF NOT EXISTS kernel_showcase (
+  user_hash    TEXT PRIMARY KEY,
+  sections     TEXT,                       -- JSON {cv:[],cl:[]}
+  meta         TEXT,                       -- JSON {company,role,subtitle,greeting,opening,...}
+  rationale    TEXT,                       -- JSON
+  jd_language  TEXT,
+  created_at   INTEGER NOT NULL,
+  updated_at   INTEGER NOT NULL,
+  FOREIGN KEY (user_hash) REFERENCES user_kernel(user_hash) ON DELETE CASCADE
+);

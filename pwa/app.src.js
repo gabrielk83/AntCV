@@ -37,7 +37,12 @@
   // item 0 breaking => whole section moves (no "(CONT.)"); item i>0 => mid-section
   // break titled "<TITLE> (CONT.)". One contract for HIWC, foundation, lists, groups.
   const __antcvBreaks = (sid, items, title) => {
-    const pages = __antcvPB(sid);
+    // 1.50.268: read the EFFECTIVE bucket (manual itemPages + auto
+    // autoPages) so the CL continuous-flow paginator honours
+    // auto-overflow breaks written by antcv-auto-pagebreak-001, the
+    // same way the CV page-box flatMap already does via
+    // __antcvEffBucket. Manual breaks still win on a per-key max.
+    const pages = __antcvEffBucket(sid);
     let run = 1;
     const out = [];
     items.forEach(({ key, node }, i) => {

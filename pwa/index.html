@@ -299,7 +299,7 @@
         auth.src = 'antcv-auth.js?v=1.40.202';
         auth.onload = function(){
           var app = document.createElement('script');
-          app.src = 'app.js?v=1.50.267-showcase-subtitle-persist';
+          app.src = 'app.js?v=1.50.268-native-autopages-pagination';
           app.onload = function(){
             var vo = document.createElement('script');
             vo.src = 'antcv-version-override.js?v=1.50.41';
@@ -579,7 +579,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-section-panel-tweaks.js?v=1.40.203" defer></script>
 <script src="antcv-item-align.js?v=1.40.178" defer></script>
 <script src="antcv-page-fit.js?v=1.50.261-drop-pagerow-cap" defer></script>
-<script src="antcv-auto-pagebreak-block-001.js?v=1.50.267-blink-loop-guard" defer></script>
+<script src="antcv-auto-pagebreak-block-001.js?v=1.50.268-autopages-measurer" defer></script>
 <script src="antcv-table-fast-drag.js?v=1.40.147" defer></script>
 <script src="antcv-pdf-error-toast.js?v=1.40.194" defer></script>
 <script src="antcv-item-pages-render.js?v=1.50.202-native-render-retired" defer></script>
@@ -654,7 +654,9 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-sidebar-subsection-pagebreaks-329.js?v=1.50.216-sidebar-fill" defer></script>
 <script src="antcv-sidebar-item-page-controls-359.js?v=1.50.151-cldoc" defer></script>
 <script src="antcv-sidebar-fill-equalize-227.js?v=1.50.259-deferred-nudges-plus-diag" defer></script>
-<script src="antcv-auto-overflow-362.js?v=1.50.215-auto-overflow-standdown" defer></script>
+<!-- antcv-auto-overflow-362.js retired 1.50.268: its standdown run() cleared
+     antcv:autoPages, which would wipe the auto breaks written by
+     antcv-auto-pagebreak-block-001.js (now the sole autoPages writer). -->
 <script src="antcv-editor-layout-cleanup-331.js?v=1.50.209-hiwc-btn-wrap" defer></script>
 <script src="antcv-personal-tab-dedup-341.js?v=1.40.341-pt-dedup" defer></script>
 <script src="antcv-preview-bullets-dedup-341.js?v=1.40.341-prv-bullets3" defer></script>

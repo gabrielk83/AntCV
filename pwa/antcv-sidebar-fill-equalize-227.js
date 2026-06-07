@@ -117,6 +117,37 @@
   // the user can never reach the slider's max while the document is
   // still scrollable past it.
   var __lastDispatchTs = 0;
+  // 1.50.256: sticky-bottom for the slider.
+  // The vertical-roller's $i() function sets
+  //   scrollContainer.scrollTop = (scrollHeight - clientHeight) * (bi/100)
+  // at the moment the slider is dragged. If the scrollHeight then GROWS
+  // (page-break spacers, async content, font-load reflow, etc.) the
+  // scrollTop stays at the OLD max and the preview shows white space
+  // below — the user has to mouse-wheel manually to reach the true
+  // bottom. We watch scrollTop continuously; when the user is parked at
+  // (or within ~2px of) the current bottom, we mark __atBottom; on the
+  // next ResizeObserver-triggered growth, we re-pin scrollTop to the
+  // new bottom and dispatch a scroll so bi snaps back to 100.
+  var __atBottom = false;
+  function updateAtBottom(c) {
+    try {
+      if (!c) c = document.querySelector('.antcv-preview-scroll');
+      if (!c) return;
+      var max = c.scrollHeight - c.clientHeight;
+      __atBottom = max <= 1 || (c.scrollTop >= max - 2);
+    } catch (_) {}
+  }
+  function stickToBottomIfNeeded(c) {
+    try {
+      if (!__atBottom) return;
+      if (!c) c = document.querySelector('.antcv-preview-scroll');
+      if (!c) return;
+      var newMax = c.scrollHeight - c.clientHeight;
+      if (newMax > 0 && c.scrollTop < newMax - 2) {
+        c.scrollTop = newMax;
+      }
+    } catch (_) {}
+  }
   function fireScrollOnContainer() {
     try {
       var now = (typeof performance !== 'undefined' && performance.now)
@@ -126,7 +157,13 @@
       if (now - __lastDispatchTs < 100) return;
       __lastDispatchTs = now;
       var scrollContainer = document.querySelector('.antcv-preview-scroll');
-      if (scrollContainer && typeof Event === 'function') {
+      if (!scrollContainer) return;
+      // If the user was parked at the bottom and content grew, re-pin
+      // to the NEW bottom BEFORE we dispatch — so Ni reads the
+      // corrected scrollTop and bi maps to 100 (slider thumb stays at
+      // the bottom AND the viewport actually shows the document end).
+      stickToBottomIfNeeded(scrollContainer);
+      if (typeof Event === 'function') {
         scrollContainer.dispatchEvent(new Event('scroll', { bubbles: false }));
       }
     } catch (_) {}
@@ -146,6 +183,10 @@
           // is height-locked (height: calc(100dvh - 160px)).
           var inner = c.querySelector('.antcv-preview-frame, .antcv-preview-paper');
           if (inner) ro.observe(inner);
+          // Continuously track whether the user is at the bottom so the
+          // ResizeObserver callback knows whether to re-pin.
+          c.addEventListener('scroll', function () { updateAtBottom(c); }, { passive: true });
+          updateAtBottom(c);
           attached = true;
         } catch (_) {}
       }

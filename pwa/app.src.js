@@ -37699,6 +37699,133 @@
                       "load" === Hl ? "⏳" : "↻",
                     ),
                   ),
+                  // 1.50.230: Save + Reload row inside the Application-History
+                  // dropdown — mirrors the Settings → Apps row so the dropdown is
+                  // self-sufficient. Replaces the bottom "Open in Settings →"
+                  // button (retired below).
+                  React.createElement(
+                    "div",
+                    {
+                      style: {
+                        display: "flex",
+                        gap: 6,
+                        marginBottom: 8,
+                      },
+                    },
+                    React.createElement(
+                      "button",
+                      {
+                        onClick: async (e) => {
+                          try {
+                            (e && e.preventDefault && e.preventDefault(),
+                              e && e.stopPropagation && e.stopPropagation());
+                          } catch (e) {}
+                          if (!Hl) {
+                            (Ul("save"), Gl(""));
+                            try {
+                              const e =
+                                  (zt && zt.text) ||
+                                  Ut ||
+                                  (io && io.showcase ? ks : ""),
+                                t = await oo.create({
+                                  jd_text: e,
+                                  jd_company: (io && io.company) || "",
+                                  jd_role: (io && io.role) || "",
+                                  subtitle: (io && io.subtitle) || "",
+                                  jd_language: je,
+                                  category: "unsolicited",
+                                  supporting_context:
+                                    (yo && yo.supporting_context) || "",
+                                  rationale: yo,
+                                  save_as_new: !0,
+                                });
+                              t &&
+                                t.application &&
+                                t.application.id &&
+                                (await oo.update(t.application.id, {
+                                  cv_sections: (ro && ro.cv) || [],
+                                  cl_sections: (ro && ro.cl) || [],
+                                }),
+                                Ml(t.application.id));
+                              const n = await oo.list();
+                              n &&
+                                Array.isArray(n.applications) &&
+                                zl(n.applications);
+                            } catch (e) {
+                              (Gl((e && e.message) || String(e)),
+                                console.warn("[apps:dropdown] save failed:", e));
+                            } finally {
+                              Ul("");
+                            }
+                          }
+                        },
+                        disabled: !!Hl || !Y || !Y.email,
+                        title:
+                          Y && Y.email
+                            ? "Save the current CV/Cover Letter as a new application entry."
+                            : "Sign in to save applications.",
+                        style: {
+                          flex: 1,
+                          padding: "7px 10px",
+                          background:
+                            "save" === Hl
+                              ? "rgba(124,58,237,0.25)"
+                              : "rgba(124,58,237,0.12)",
+                          border: "1px solid #7c3aed",
+                          borderRadius: 6,
+                          color: "#c4b5fd",
+                          fontSize: 10,
+                          fontWeight: 600,
+                          cursor: Hl ? "wait" : "pointer",
+                          opacity: Y && Y.email ? 1 : 0.5,
+                        },
+                      },
+                      "save" === Hl
+                        ? "⏳ Saving…"
+                        : "💾 Save current as new application",
+                    ),
+                    React.createElement(
+                      "button",
+                      {
+                        onClick: async (e) => {
+                          try {
+                            (e && e.preventDefault && e.preventDefault(),
+                              e && e.stopPropagation && e.stopPropagation());
+                          } catch (e) {}
+                          if (!Hl) {
+                            (Ul("load"), Gl(""));
+                            try {
+                              const e = await oo.list();
+                              e &&
+                                Array.isArray(e.applications) &&
+                                zl(e.applications);
+                              const t = await oo.getActive();
+                              t &&
+                                void 0 !== t.application_id &&
+                                Ml(t.application_id);
+                            } catch (e) {
+                              Gl((e && e.message) || String(e));
+                            } finally {
+                              Ul("");
+                            }
+                          }
+                        },
+                        disabled: !!Hl,
+                        title: "Refresh the saved-applications list.",
+                        style: {
+                          padding: "7px 10px",
+                          background: "rgba(255,255,255,0.07)",
+                          border: "1px solid rgba(255,255,255,0.2)",
+                          borderRadius: 6,
+                          color: "rgba(255,255,255,0.7)",
+                          fontSize: 10,
+                          fontWeight: 600,
+                          cursor: Hl ? "wait" : "pointer",
+                        },
+                      },
+                      "load" === Hl ? "⏳" : "↻ Reload",
+                    ),
+                  ),
                   Dl && Dl.length > 0
                     ? Dl.slice(0, 5).map((e) =>
                         React.createElement(
@@ -37940,73 +38067,10 @@
                           ? "⏳ Loading…"
                           : "No applications saved yet.",
                       ),
-                  React.createElement(
-                    "div",
-                    {
-                      style: {
-                        borderTop: "1px solid rgba(255,255,255,0.08)",
-                        marginTop: 4,
-                        paddingTop: 4,
-                      },
-                    },
-                    React.createElement(
-                      "button",
-                      {
-                        onClick: (e) => {
-                          try {
-                            (e && e.preventDefault && e.preventDefault(),
-                              e && e.stopPropagation && e.stopPropagation());
-                          } catch (e) {}
-                          try {
-                            Jl(!1);
-                          } catch (e) {}
-                          try {
-                            console.log(
-                              "[v1.40.326 open-in-settings] application-history route",
-                            );
-                          } catch (e) {}
-                          setTimeout(() => {
-                            try {
-                              (u.set("settingsTab", "standard"),
-                                u.set("settingsSubTab", "apps"),
-                                window._antcvOpenSettingsRoute
-                                  ? window._antcvOpenSettingsRoute({
-                                      tier: "standard",
-                                      subtab: "apps",
-                                      source: "application-history-dropdown",
-                                    })
-                                  : (ut("standard"), st("apps"), q(!0)));
-                            } catch (e) {
-                              try {
-                                (console.warn(
-                                  "[v1.40.326 open-in-settings] route failed:",
-                                  e && e.message,
-                                ),
-                                  q(!0),
-                                  setTimeout(() => {
-                                    try {
-                                      (ut("standard"), st("apps"));
-                                    } catch (e) {}
-                                  }, 0));
-                              } catch (t) {}
-                            }
-                          }, 0);
-                        },
-                        style: {
-                          width: "100%",
-                          padding: "5px 8px",
-                          background: "rgba(255,255,255,0.04)",
-                          border: "1px solid rgba(255,255,255,0.12)",
-                          borderRadius: 5,
-                          color: "rgba(255,255,255,0.65)",
-                          fontSize: 10,
-                          fontWeight: 600,
-                          cursor: "pointer",
-                        },
-                      },
-                      "Open in Settings →",
-                    ),
-                  ),
+                  // 1.50.230: "Open in Settings →" retired — Save + Reload are
+                  // now inline in the dropdown header (above), so jumping to
+                  // Settings to perform those actions is no longer needed.
+                  null,
                   Vl &&
                     React.createElement(
                       "div",

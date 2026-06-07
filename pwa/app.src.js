@@ -24,6 +24,31 @@
     } catch (_) {}
     return out;
   };
+  // 1.50.274 KERNEL-SHOWCASE-EMPTY-SLOT-001: a sections blob counts as REAL
+  // only when it has at least one cv/cl item AND that item is not the me()
+  // template placeholder (content starts with "["). Used to gate every
+  // kernel-showcase cloud write/restore so an empty {cv:[],cl:[]} (or a
+  // half-generated template) can never be written to the /api/kernel-showcase
+  // slot, and a slot that is already empty/corrupted is ignored on restore so
+  // the app regenerates from the kernel instead of restoring a headline-only
+  // husk. Root cause (confirmed in D1 2026-06-08): the slot held empty
+  // sections + a real subtitle, so restore set sections={cv:[],cl:[]} + the
+  // real meta ("lost all data apart from the headline"), and the re-save
+  // effect — gated only on a real subtitle — wrote that empty ro straight back,
+  // a self-perpetuating empty loop.
+  const __antcvHasRealSections = (s) => {
+    try {
+      if (!s || "object" != typeof s) return false;
+      const cv = Array.isArray(s.cv) ? s.cv : [];
+      const cl = Array.isArray(s.cl) ? s.cl : [];
+      if (!cv.length && !cl.length) return false;
+      const first = (cv[0] && cv[0].content) || (cl[0] && cl[0].content) || "";
+      if ("string" == typeof first && /^\s*\[/.test(first.trim())) return false;
+      return true;
+    } catch (_) {
+      return false;
+    }
+  };
   const __antcvSalmon = (pg, contTitle) => {
     // 1.50.273: the VISIBLE salmon bar + "(CONT.)" header render ONLY for
     // the CL. The CL is a continuous flow where this IS the page
@@ -13067,8 +13092,19 @@
           }
           const e = setTimeout(() => {
             try {
+              const __secs = u.get("sections", null);
+              // 1.50.274: never write empty/template sections to the kernel
+              // slot — that is what corrupted it (headline-only restore loop).
+              if (!__antcvHasRealSections(__secs)) {
+                try {
+                  console.log(
+                    "[v1.50.274 KERNEL-CLOUD-PERSIST] skip re-save: sections empty/template (would clobber slot)",
+                  );
+                } catch (_) {}
+                return;
+              }
               oo.putShowcase({
-                sections: u.get("sections", null),
+                sections: __secs,
                 meta: u.get("meta", null),
                 rationale: u.get("rationale", null),
                 jd_language: je,
@@ -13243,6 +13279,19 @@
               try {
                 const e = await oo.getShowcase();
                 if (o || !e || !e.showcase) return;
+                // 1.50.274: ignore an empty/corrupted slot (empty sections +
+                // real meta) — restoring it produced the headline-only husk.
+                // Returning here lets the normal flow regenerate the showcase
+                // from the kernel, and the (now guarded) commit re-fills the
+                // slot with real content. Self-healing.
+                if (!__antcvHasRealSections(e.showcase && e.showcase.sections)) {
+                  try {
+                    console.log(
+                      "[v1.50.274 KERNEL-CLOUD-PERSIST] ignoring showcase slot: empty/corrupted sections — will regenerate from kernel",
+                    );
+                  } catch (_) {}
+                  return;
+                }
                 const t = e.showcase;
                 if (t.sections && "object" == typeof t.sections) {
                   try {
@@ -22269,8 +22318,12 @@
                 // non-blocking — failure just means the next session regenerates.
                 setTimeout(() => {
                   try {
+                    const __secs = u.get("sections", null);
+                    // 1.50.274: only persist a freshly-generated showcase if it
+                    // actually has content — never write an empty/template husk.
+                    if (!__antcvHasRealSections(__secs)) return;
                     oo.putShowcase({
-                      sections: u.get("sections", null),
+                      sections: __secs,
                       meta: u.get("meta", null),
                       rationale: u.get("rationale", null),
                       jd_language: je,

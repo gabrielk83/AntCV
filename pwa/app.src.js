@@ -19418,6 +19418,12 @@
             );
           (vr("Generate"),
             vo(""),
+            // 1.50.243: clear the previous generation's rationale so the
+            // Analysis panel doesn't keep showing "Generation completed for
+            // X at Y" from the prior run while a new one is in flight.
+            // bo(null) → yo is falsy → the panel falls to its empty state
+            // until the new generation lands a fresh rationale.
+            (() => { try { bo(null); } catch (e) {} })(),
             u.get("kernelShowcaseInProgress", !1) || $t("generating"),
             (() => {
               try {
@@ -33347,8 +33353,15 @@
                                                             "",
                                                         },
                                                   ),
-                                                  n.rationale &&
-                                                    bo(n.rationale),
+                                                  // 1.50.243: ALWAYS write
+                                                  // through, even when null —
+                                                  // otherwise the previous
+                                                  // app's rationale persists
+                                                  // and the Analysis panel
+                                                  // shows stale "Generation
+                                                  // completed for X at Y"
+                                                  // text.
+                                                  bo(n.rationale || null),
                                                   await oo.setActive(e.id),
                                                   Ml(e.id),
                                                   $t("editor"),
@@ -38296,7 +38309,10 @@
                                           );
                                         } catch (e) {}
                                       })(),
-                                      n.rationale && bo(n.rationale),
+                                      // 1.50.243: always overwrite so the
+                                      // Analysis panel doesn't keep stale
+                                      // rationale from the previous app.
+                                      bo(n.rationale || null),
                                       await oo.setActive(e.id),
                                       Ml(e.id),
                                       $t("editor"));

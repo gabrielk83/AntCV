@@ -54,7 +54,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.269';
+  var VERSION = '1.50.276';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -190,7 +190,7 @@
         if (!sid || map[sid]) continue;          // sticky: already broken
         var sec = sectionById(list, sid);
         if (!sec) continue;
-        if (sec.type === 'experience') continue;  // native role.page path
+        if (sec.type === 'experience') continue;  // measured in the role pass below
 
         var br = -1;
         if (sec.type === 'table' || secEl.querySelector('table')) {
@@ -202,6 +202,32 @@
         }
         if (br >= 1) { map[sid] = {}; map[sid][String(br)] = 2; }
       }
+
+      // 1.50.276 EXPERIENCE role auto-pagination. Each role renders inside a
+      // wrapper carrying data-antcv-role-index (its ORIGINAL index in
+      // e.roles). Within THIS page-box column, find the first role whose
+      // bottom crosses the usable page height and move it to the next page
+      // (autoPages[expId][idx]=2); the render's monotonic role-page floor
+      // cascades every later role with it. Whole roles move — a role is the
+      // atomic unit, never split. STICKY via map[expId]; one break (page 2)
+      // per the measurer's current 2-page scope, same as the other sections.
+      try {
+        var expSec = null;
+        for (var li = 0; li < list.length; li++) {
+          if (list[li] && list[li].type === 'experience') { expSec = list[li]; break; }
+        }
+        if (expSec && expSec.id && !map[expSec.id]) {
+          var roleEls = col.querySelectorAll('[data-antcv-role-index]');
+          for (var ri = 0; ri < roleEls.length; ri++) {
+            if (!visible(roleEls[ri])) continue;
+            if (roleEls[ri].getBoundingClientRect().bottom - colTop > USABLE) {
+              var rmi = parseInt(roleEls[ri].getAttribute('data-antcv-role-index'), 10);
+              if (rmi >= 1) { map[expSec.id] = {}; map[expSec.id][String(rmi)] = 2; }
+              break;
+            }
+          }
+        }
+      } catch (_) {}
     }
     return map;
   }

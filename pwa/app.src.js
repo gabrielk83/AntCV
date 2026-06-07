@@ -37718,9 +37718,29 @@
                     // the WHOLE experience moves. (The old heuristic remapped the first
                     // 4 roles back to page 1 whenever all were >=2, which broke that —
                     // it left only the last role on page 2.)
+                    // 1.50.276 AUTO-PAGEBREAK role flow: also honour the AUTO role
+                    // page written by the measurer (antcv:autoPages[expId][origIdx]),
+                    // keyed by the role's ORIGINAL index in e.roles. So an overflowing
+                    // role auto-moves to the next page-box and the monotonic floor
+                    // cascades the rest — whole roles pass the fixed salmon, no manual
+                    // 📄 needed. Manual role.page still wins via Math.max.
                     let r = 1;
-                    return t.map((e) => {
-                      let p = Math.max(1, parseInt(e.page || 1, 10));
+                    let __autoRP = {};
+                    const __exRoles = (e && e.roles) || [];
+                    try {
+                      __autoRP = e && e.id ? __antcvAutoPB(e.id) : {};
+                    } catch (_) {
+                      __autoRP = {};
+                    }
+                    return t.map((role) => {
+                      let p = Math.max(1, parseInt(role.page || 1, 10));
+                      try {
+                        const oi = __exRoles.findIndex(
+                          (x) => x && x.id === role.id,
+                        );
+                        const ap = parseInt(__autoRP[String(oi)], 10);
+                        if (oi >= 0 && ap >= 1) p = Math.max(p, ap);
+                      } catch (_) {}
                       if (p < r) p = r;
                       else r = p;
                       return p;
@@ -38168,22 +38188,29 @@
                                                 "debating" === d
                                               ? d
                                               : void 0),
-                                      React.createElement(Ce, {
-                                        key: t.id,
-                                        s: o,
-                                        navyColor: Ke,
-                                        isCL: !1,
-                                        language: je,
-                                        cvTableRatio: Xr,
-                                        clTableRatio: Qr,
-                                        onTableRatioChange: aa,
-                                        fontSizes: Yr,
-                                        styleConfig: ya,
-                                        onEdit: l,
-                                        textEditMode: gi,
-                                        onBeginTextEdit: () => fi(!0),
-                                        transitionState: p,
-                                      })
+                                      React.createElement(
+                                        "div",
+                                        {
+                                          key: t.id,
+                                          "data-antcv-role-index": a >= 0 ? a : n,
+                                        },
+                                        React.createElement(Ce, {
+                                          key: t.id,
+                                          s: o,
+                                          navyColor: Ke,
+                                          isCL: !1,
+                                          language: je,
+                                          cvTableRatio: Xr,
+                                          clTableRatio: Qr,
+                                          onTableRatioChange: aa,
+                                          fontSizes: Yr,
+                                          styleConfig: ya,
+                                          onEdit: l,
+                                          textEditMode: gi,
+                                          onBeginTextEdit: () => fi(!0),
+                                          transitionState: p,
+                                        }),
+                                      )
                                     );
                                   }),
                                 )],

@@ -45,6 +45,11 @@ A companion **feature registry** (open vs shipped features) lives at
   none exists. Verified: terser identity-safe, 0 `"use strict"`, 29/29 unit tests, boot 0
   errors. PWA-only (no worker deploy). Owner verify: with a saved kernel, Generate-without-JD
   should prompt to keep vs. rebuild rather than silently regenerating.
+  **Follow-up (1.50.226):** same keep-existing guard applied to the **Editor button** no-JD
+  path (`app.src.js:~34082`) — when a kernel exists it now just opens the editor (never
+  regenerates); it only bootstraps a starter kernel when none exists. The wizard-close
+  (`~24355`) and Settings "Regenerate showcase" (`~33873`) force-paths are intentional and
+  left as-is.
 - **KERNEL-CLOUD-PERSIST-001** — `[FIX SHIPPED 1.50.221 — needs relay deploy + owner live-verify]`
   The generated kernel is **not saved to cloud memory** — must be regenerated every
   session/tab-switch; makes page-length testing a long regenerate cycle.

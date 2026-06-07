@@ -34080,6 +34080,15 @@
                   "button",
                   {
                     onClick: () => {
+                      // KERNEL-REGEN-GUARD-001: when a kernel already exists, the
+                      // Editor button must KEEP it — just open the editor, never
+                      // (re)generate. Only bootstrap a starter kernel when none
+                      // exists yet (Cs() is non-force and self-guards too, but this
+                      // makes the keep-existing behaviour explicit and safe).
+                      try {
+                        if (u.get("kernelShowcaseGenerated", !1))
+                          return void $t("editor");
+                      } catch (e) {}
                       let e = !1;
                       try {
                         e = !0 === Cs();

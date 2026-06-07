@@ -5391,25 +5391,94 @@
           ),
         );
       case "bullets": {
+        // 1.50.250: SELECTED OUTCOMES subpanel — add the per-item buttons the
+        // owner expects in every list-shaped editor: eye / visibility,
+        // page break, CJLR alignment, enhance (✨), and fit/compress (⇥) —
+        // matching the table case below and the labeled_list case further
+        // down. The bullets case previously rendered only [up/down | verb |
+        // text | delete] and was missing every action control. Inline
+        // localStorage shims for page + alignment mirror the publications
+        // strict-row-layout sidecar so the values stay in the same store
+        // (antcv:itemPages, antcvItemAlignment) and the preview / docx
+        // worker continue to honour them.
+        const __sid = e.id;
+        const __ALIGNS = ["center", "justify", "left", "right"];
+        const __AICON = { center: "↔", justify: "☰", left: "⇤", right: "⇥" };
+        const __ALABEL = { center: "Center", justify: "Justify", left: "Left", right: "Right" };
+        const __readPages = () => {
+          try {
+            return JSON.parse(localStorage.getItem("antcv:itemPages") || "{}") || {};
+          } catch (_) { return {}; }
+        };
+        const __getItemPage = (i) => {
+          try {
+            const m = __readPages();
+            const b = m[__sid] || {};
+            const n = Number(b[String(i)] || b["items." + i] || 1);
+            return Number.isFinite(n) && n >= 1 && n <= 4 ? (n | 0) : 1;
+          } catch (_) { return 1; }
+        };
+        const __setItemPage = (i, n) => {
+          try {
+            const m = __readPages();
+            if (!m[__sid] || typeof m[__sid] !== "object") m[__sid] = {};
+            m[__sid][String(i)] = n;
+            m[__sid]["items." + i] = n;
+            localStorage.setItem("antcv:itemPages", JSON.stringify(m));
+            window.dispatchEvent(new CustomEvent("antcv:item-pages-changed", {
+              detail: { sid: __sid, index: i, page: n },
+            }));
+          } catch (_) {}
+        };
+        const __readAlign = () => {
+          try {
+            return JSON.parse(localStorage.getItem("antcvItemAlignment") || "{}") || {};
+          } catch (_) { return {}; }
+        };
+        const __getItemAlign = (i) => {
+          try {
+            const m = __readAlign();
+            const b = m[__sid] || {};
+            const v = b["items." + i] || b[String(i)] || "left";
+            return __ALIGNS.includes(v) ? v : "left";
+          } catch (_) { return "left"; }
+        };
+        const __setItemAlign = (i, v) => {
+          try {
+            const m = __readAlign();
+            if (!m[__sid] || typeof m[__sid] !== "object") m[__sid] = {};
+            m[__sid]["items." + i] = v;
+            m[__sid][String(i)] = v;
+            localStorage.setItem("antcvItemAlignment", JSON.stringify(m));
+            window.dispatchEvent(new CustomEvent("antcv:item-align-changed", {
+              detail: { sid: __sid, index: i, alignment: v },
+            }));
+          } catch (_) {}
+        };
+        // Capture the outer props BEFORE local shadows. n = onCompressRole,
+        // r = onEnrichRole, o = compressingRoleId, a = enrichingRoleId.
+        const __onCompress = n,
+          __onEnrich = r,
+          __compressBusyId = o,
+          __enrichBusyId = a;
         const t = (
             e.items && e.items.length ? e.items : [{ b: "", t: "" }]
           ).map((e) =>
             e && "object" == typeof e ? e : { b: "", t: String(e || "") },
           ),
-          n = (e, n) => {
+          updateItem = (e, n) => {
             const o = t.map((t, o) => (o === e ? { ...t, ...n } : t));
             d({ items: o });
           },
-          o = (e, n) => {
+          moveItem = (e, n) => {
             const o = [...t],
               r = e + n;
             r < 0 ||
               r >= o.length ||
               (([o[e], o[r]] = [o[r], o[e]]), d({ items: o }));
           },
-          r = {
-            display: "grid",
-            gridTemplateColumns: "28px minmax(72px,110px) 1fr auto",
+          rowStyle = {
+            display: "flex",
             gap: 4,
             alignItems: "center",
             marginBottom: 6,
@@ -5417,8 +5486,9 @@
             borderRadius: 4,
             padding: 4,
             background: "#fff",
+            flexWrap: "nowrap",
           },
-          a = {
+          inputStyle = {
             fontSize: 11,
             padding: 4,
             border: "1px solid #ddd",
@@ -5434,17 +5504,34 @@
             { style: { fontSize: 11, color: "#777", marginBottom: 6 } },
             "Each selected outcome is edited separately. Use the left field for the bold prefix and the right field for the result text.",
           ),
-          t.map((e, i) =>
-            React.createElement(
+          t.map((ev, i) => {
+            const __hiddenArr = e.hidden || [];
+            const __isHidden = !!__hiddenArr[i];
+            const __busyCompress = o === `item:${i}`;
+            const __busyEnrich = a === `item:${i}`;
+            const __thisPage = __getItemPage(i);
+            const __thisAlign = __getItemAlign(i);
+            return React.createElement(
               "div",
-              { key: i, style: r },
+              {
+                key: i,
+                style: { ...r, opacity: __isHidden ? 0.45 : 1 },
+              },
               React.createElement(
                 "div",
-                { style: { display: "grid", gap: 2, justifyItems: "center" } },
+                {
+                  style: {
+                    display: "grid",
+                    gap: 2,
+                    justifyItems: "center",
+                    flexShrink: 0,
+                    width: 28,
+                  },
+                },
                 React.createElement(
                   "button",
                   {
-                    onClick: () => o(i, -1),
+                    onClick: () => moveItem(i, -1),
                     disabled: 0 === i,
                     title: "Move up",
                     style: {
@@ -5460,7 +5547,7 @@
                 React.createElement(
                   "button",
                   {
-                    onClick: () => o(i, 1),
+                    onClick: () => moveItem(i, 1),
                     disabled: i === t.length - 1,
                     title: "Move down",
                     style: {
@@ -5474,18 +5561,156 @@
                   "▼",
                 ),
               ),
+              React.createElement(
+                "button",
+                {
+                  onClick: () => {
+                    const h = [...(e.hidden || [])];
+                    h[i] = !__isHidden;
+                    d({ hidden: h });
+                  },
+                  title: __isHidden
+                    ? "Hidden — tap to show this outcome in the CV"
+                    : "Visible — tap to hide this outcome",
+                  style: {
+                    fontSize: 11,
+                    background: "none",
+                    border: `1px solid ${__isHidden ? "#999" : s}`,
+                    color: __isHidden ? "#999" : s,
+                    borderRadius: 3,
+                    cursor: "pointer",
+                    padding: "1px 4px",
+                    flexShrink: 0,
+                    minWidth: 22,
+                  },
+                },
+                __isHidden ? "🙈" : "👁",
+              ),
               React.createElement("input", {
-                value: e.b || "",
-                onChange: (e) => n(i, { b: e.target.value }),
+                value: ev.b || "",
+                onChange: (e) => updateItem(i, { b: e.target.value }),
                 placeholder: "[Verb]",
-                style: a,
+                style: {
+                  ...inputStyle,
+                  flex: "0 1 110px",
+                  minWidth: 72,
+                  maxWidth: 130,
+                },
               }),
               React.createElement("input", {
-                value: e.t || "",
-                onChange: (e) => n(i, { t: e.target.value }),
+                value: ev.t || "",
+                onChange: (e) => updateItem(i, { t: e.target.value }),
                 placeholder: "Outcome text",
-                style: a,
+                style: {
+                  ...inputStyle,
+                  flex: "1 1 auto",
+                  textAlign: __thisAlign,
+                },
               }),
+              React.createElement(
+                "button",
+                {
+                  onClick: () => {
+                    const next = __thisPage >= 4 ? 1 : __thisPage + 1;
+                    __setItemPage(i, next);
+                  },
+                  title:
+                    "Outcome row page: " +
+                    __thisPage +
+                    ". Click to cycle 1→2→3→4.",
+                  style: {
+                    fontSize: 9,
+                    padding: "2px 5px",
+                    borderRadius: 3,
+                    border: "1px solid #01B7BB",
+                    background:
+                      __thisPage === 1
+                        ? "rgba(1,183,187,.08)"
+                        : "rgba(255,255,255,.10)",
+                    color: "#00746E",
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                    minWidth: 30,
+                  },
+                },
+                "📄" + __thisPage,
+              ),
+              React.createElement(
+                "button",
+                {
+                  onClick: () => {
+                    const idx = __ALIGNS.indexOf(__thisAlign);
+                    const nxt =
+                      __ALIGNS[(idx + 1) % __ALIGNS.length] || "left";
+                    __setItemAlign(i, nxt);
+                  },
+                  title:
+                    "Alignment: " +
+                    (__ALABEL[__thisAlign] || __thisAlign) +
+                    ". Click to cycle.",
+                  style: {
+                    fontSize: 11,
+                    padding: "2px 5px",
+                    borderRadius: 3,
+                    border: "1px solid #7b2ff2",
+                    background: "rgba(123,47,242,.06)",
+                    color: "#7b2ff2",
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                    minWidth: 22,
+                  },
+                },
+                __AICON[__thisAlign] || __AICON.left,
+              ),
+              __onEnrich &&
+                React.createElement(
+                  "button",
+                  {
+                    onClick: () => __onEnrich(`item:${i}`),
+                    disabled: __busyEnrich || __busyCompress,
+                    title:
+                      "Enhance this outcome — tighten verb / sharpen the result",
+                    style: {
+                      fontSize: 9,
+                      padding: "2px 5px",
+                      borderRadius: 3,
+                      border:
+                        "1px solid " + (__busyEnrich ? "#ccc" : "#10b981"),
+                      background: "none",
+                      color: __busyEnrich ? "#ccc" : "#10b981",
+                      cursor:
+                        __busyEnrich || __busyCompress ? "wait" : "pointer",
+                      whiteSpace: "nowrap",
+                      flexShrink: 0,
+                    },
+                  },
+                  __busyEnrich ? "⏳" : "✨",
+                ),
+              __onCompress &&
+                React.createElement(
+                  "button",
+                  {
+                    onClick: () => __onCompress(`item:${i}`),
+                    disabled: __busyCompress || __busyEnrich,
+                    title: "Fit this outcome — tighten to a single tight line",
+                    style: {
+                      fontSize: 9,
+                      padding: "2px 5px",
+                      borderRadius: 3,
+                      border:
+                        "1px solid " + (__busyCompress ? "#ccc" : "#7c3aed"),
+                      background: "none",
+                      color: __busyCompress ? "#ccc" : "#7c3aed",
+                      cursor:
+                        __busyCompress || __busyEnrich ? "wait" : "pointer",
+                      whiteSpace: "nowrap",
+                      flexShrink: 0,
+                    },
+                  },
+                  __busyCompress ? "⏳" : "⇥",
+                ),
               React.createElement(
                 "button",
                 {
@@ -5499,12 +5724,13 @@
                     borderRadius: 3,
                     cursor: "pointer",
                     padding: "2px 5px",
+                    flexShrink: 0,
                   },
                 },
                 "✕",
               ),
-            ),
-          ),
+            );
+          }),
           React.createElement(
             "button",
             {
@@ -5613,8 +5839,12 @@
                   },
                 }),
               ),
+              // 1.50.250: CJLR + page-break also for core_comp (CV's CORE
+              // COMPETENCIES). Was previously bring-only ("WHAT I BRING" in
+              // the CL); core_comp shares the same Focus-Area | Strategic-
+              // Expertise table shape so it gets the same controls.
               i > 0 &&
-                "bring" === e.id &&
+                ("bring" === e.id || "core_comp" === e.id) &&
                 React.createElement(Fe, {
                   value: p(i),
                   onChange: (t) =>
@@ -5622,11 +5852,14 @@
                       const o = [...(e.rowAlign || [])];
                       ((o[t] = n), d({ rowAlign: o }));
                     })(i, t),
-                  title: "CJLR for this What I Bring row",
+                  title:
+                    "bring" === e.id
+                      ? "CJLR for this What I Bring row"
+                      : "CJLR for this Core Competencies row",
                   size: 24,
                 }),
               i > 0 &&
-                "bring" === e.id &&
+                ("bring" === e.id || "core_comp" === e.id) &&
                 React.createElement(
                   "button",
                   {

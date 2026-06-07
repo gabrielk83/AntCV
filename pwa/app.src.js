@@ -16376,7 +16376,7 @@
           }
           return null;
         };
-      ((glDemo = ({ proxyUrl: t }) => {
+      ((window.glDemo = ({ proxyUrl: t }) => {
         const [n, o] = e(null),
           [r, a] = e(!1),
           [i, s] = e(""),
@@ -23607,6 +23607,34 @@
           };
         }, [Pl]),
         React.useEffect(() => {
+          if (!Pl) return;
+          // KERNEL-STUCK-LAST-CMD-001 self-heal: the kernel-showcase in-progress
+          // flag (Pl / kernelShowcaseInProgress) can stick true if a post-result
+          // step in vl() hangs or a completion path misses its Bl(!1), leaving the
+          // banner + "Showcase…" pill up although the result is already in state
+          // (today the user must reload to recover). This backstop clears the stale
+          // generating state after a generous margin past the ~60s max generation
+          // time, so recovery is automatic. UI-only — touches no generation/cloud path.
+          const e = setTimeout(() => {
+            try {
+              if (u.get("kernelShowcaseInProgress", !1)) {
+                try {
+                  u.set("kernelShowcaseInProgress", !1);
+                } catch (e) {}
+                try {
+                  Bl(!1);
+                } catch (e) {}
+                try {
+                  console.warn(
+                    "[KERNEL-STUCK-LAST-CMD-001] showcase in-progress watchdog fired — cleared stale generating state",
+                  );
+                } catch (e) {}
+              }
+            } catch (e) {}
+          }, 12e4);
+          return () => clearTimeout(e);
+        }, [Pl]),
+        React.useEffect(() => {
           if ("undefined" == typeof window) return;
           const e = () => {
               try {
@@ -29186,7 +29214,7 @@
                     React.createElement(
                       "div",
                       null,
-                      React.createElement(glDemo, { proxyUrl: re }),
+                      React.createElement(window.glDemo, { proxyUrl: re }),
                       React.createElement(
                         ({ proxyUrl: t }) => {
                           const [n, o] = e(null),

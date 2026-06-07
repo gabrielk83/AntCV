@@ -60,8 +60,24 @@ A companion **feature registry** (open vs shipped features) lives at
   specialization line**.
 - **APPHISTORY-SAME-LINE-001** — `[OPEN]` Saving to Application History writes to the **same
   (specialization) line** rather than its own slot.
-- **APPHISTORY-RELOAD-001** — `[OPEN]` Pressing a saved Application-History item **does not
-  load** that saved application — forces a full regenerate.
+- **APPHISTORY-RELOAD-001** — `[FIX SHIPPED 1.50.222 — owner live-verify]` Pressing a saved
+  Application-History item **does not load** that saved application — forces a full regenerate.
+  **Trace (read-only, owner-approved fix):** there are two load surfaces, both in `app.src.js` —
+  the Settings History list (`~33143`) and the top-bar dropdown (`~37556`). Both correctly
+  restore state on click — `oo.get(id)` → `ao({cv,cl})` + `lo({company,role})` + `bo(rationale)`
+  + `setActive` + `Ml(id)` — but **neither switched the view to the editor**: the Settings one
+  closed no panel (`q` = Settings overlay state, `[K,q]`), the top-bar one only closed its
+  dropdown (`Jl(!1)`). So the CV loaded into state while the user stayed on the
+  Settings/History view → looked like "nothing loaded".
+  **Fix (1.50.222):** after the restore, both handlers now `$t("editor")` (surface the editor),
+  and the Settings handler also `q(!1)` (close the Settings overlay) — matching the post-generate
+  pattern (`app.src.js:~21324`). Added a `[APPHISTORY-RELOAD-001]` diagnostic log of what
+  `oo.get` returned (cv/cl lengths, company) to confirm live whether any residual "blank load"
+  is empty stored sections vs. the now-fixed view-switch. Client-only. Verified: terser
+  identity-safe rebuild, 0 `"use strict"`, 29/29 unit tests, browser boot 0 errors.
+  **Owner live-verify:** click a saved app in Settings History AND in the top-bar dropdown →
+  editor should appear with that CV. If a load still looks blank, the console log shows whether
+  the stored cv/cl sections are empty (→ SAME-LINE save follow-up).
 - **KERNEL-STUCK-LAST-CMD-001** — `[FIX SHIPPED 1.50.220 — awaiting owner live-verify]`
   The kernel sometimes appears **stuck on the last command**; a **browser refresh**
   surfaces the generated kernel — i.e. the result was ready but the UI didn't update

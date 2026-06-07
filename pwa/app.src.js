@@ -33143,6 +33143,25 @@
                                               const t = await oo.get(e.id);
                                               if (t && t.application) {
                                                 const n = t.application;
+                                                try {
+                                                  console.log(
+                                                    "[APPHISTORY-RELOAD-001] settings switch loaded app",
+                                                    e.id,
+                                                    {
+                                                      cv: (n.cv_sections || [])
+                                                        .length,
+                                                      cl: (n.cl_sections || [])
+                                                        .length,
+                                                      company: n.jd_company || "",
+                                                    },
+                                                  );
+                                                } catch (e) {}
+                                                // APPHISTORY-RELOAD-001: the data
+                                                // loaded into state but the user was
+                                                // left on the Settings/History view,
+                                                // so it looked like nothing happened.
+                                                // Surface the loaded CV: switch to the
+                                                // editor and close the Settings panel.
                                                 (ao({
                                                   cv: n.cv_sections || [],
                                                   cl: n.cl_sections || [],
@@ -33157,7 +33176,9 @@
                                                   n.rationale &&
                                                     bo(n.rationale),
                                                   await oo.setActive(e.id),
-                                                  Ml(e.id));
+                                                  Ml(e.id),
+                                                  $t("editor"),
+                                                  q(!1));
                                               }
                                             } catch (e) {
                                               Gl((e && e.message) || String(e));
@@ -37556,6 +37577,20 @@
                                       const t = await oo.get(e.id);
                                       if (t && t.application) {
                                         const n = t.application;
+                                        try {
+                                          console.log(
+                                            "[APPHISTORY-RELOAD-001] topbar switch loaded app",
+                                            e.id,
+                                            {
+                                              cv: (n.cv_sections || []).length,
+                                              cl: (n.cl_sections || []).length,
+                                              company: n.jd_company || "",
+                                            },
+                                          );
+                                        } catch (e) {}
+                                        // APPHISTORY-RELOAD-001: surface the loaded
+                                        // CV — switch to the editor view (the dropdown
+                                        // is closed below via Jl(!1)).
                                         (ao({
                                           cv: n.cv_sections || [],
                                           cl: n.cl_sections || [],
@@ -37568,7 +37603,8 @@
                                           }),
                                           n.rationale && bo(n.rationale),
                                           await oo.setActive(e.id),
-                                          Ml(e.id));
+                                          Ml(e.id),
+                                          $t("editor"));
                                       }
                                       Jl(!1);
                                     } catch (e) {

@@ -1,4 +1,4 @@
-/* AntCV auto page-break (block-level) sidecar — v1.50.263
+/* AntCV auto page-break (block-level) sidecar — v1.50.264
  * ============================================================
  * Owner feature AUTO-PAGEBREAK-BLOCK-001 (FEATURES_REGISTRY).
  *
@@ -84,16 +84,20 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.263';
+  var VERSION = '1.50.264';
   var PAGE_HEIGHT_PX = 1123; // A4 at 96dpi
   var SALMON = '#fa8072';
   var SPLITTER_CLASS = 'antcv-auto-page-splitter';
   var INJECTED_ATTR = 'data-antcv-auto-pagebreak-injected';
+  // Item marker used by the labeled-list React renderer. Children
+  // WITH this attribute are list items; children WITHOUT it (other
+  // than the section header at index 0) are group sub-headers.
+  var ITEM_PATH_ATTR = 'data-antcv-row-path';
   // 1.50.263: removed INTRA_SPLIT_SECTIONS allowlist — any section
-  // (anything with data-sid) is intra-section splittable if it has
-  // more than one child block. Sections that can't actually split
-  // (header + 1 unsplittable child) fall through to whole-section
-  // move automatically via findIntraSectionSplit returning null.
+  // is intra-section splittable. 1.50.264: when a section is a
+  // labeled-list (mix of group sub-headers + items), restrict the
+  // valid split points to GROUP BOUNDARIES so groups stay intact
+  // across pages (no orphaned sub-header).
 
   if (window.__antcvAutoPagebreakInstalled) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
@@ -190,18 +194,57 @@
     }
   }
 
+  function isItemChild(el) {
+    return !!(el && el.hasAttribute && el.hasAttribute(ITEM_PATH_ATTR));
+  }
+
   function findIntraSectionSplit(sectionEl, limit) {
-    // Walk children: first child is the section header (title + separator).
-    // Find the first index where cumulative height exceeds `limit`. The
-    // header always stays with the section on page 1.
+    // Walk children: first child is the section header (title + separator),
+    // it always stays with the section on page 1. Find the highest index
+    // `g` such that:
+    //   - children[0..g-1] cumulative heights fit within `limit`
+    //   - g is a "valid" split point for this section's structure
+    //
+    // For LABELED-LIST sections (mix of group sub-headers + items —
+    // e.g. REGULATORY): valid split points are the group-sub-header
+    // indices (children without the row-path attr, after the header).
+    // This keeps each group intact: the label stays with its items.
+    //
+    // For PLAIN-LIST sections (all non-header children are items, or
+    // all are unlabelled rows): any index > 1 is valid (split between
+    // any two items).
     var children = Array.from(sectionEl.children);
     if (children.length <= 1) return null;
+
+    // Detect labeled-list pattern from index 1 onward.
+    var sawItem = false, sawNonItem = false;
+    for (var k = 1; k < children.length; k++) {
+      if (isItemChild(children[k])) sawItem = true;
+      else sawNonItem = true;
+    }
+    var labeledList = sawItem && sawNonItem;
+
+    function isValidSplitIndex(i) {
+      if (i <= 1) return false; // Need at least one body row beyond the header.
+      if (!labeledList) return true;
+      // Labeled-list: only group sub-headers (non-item children) are
+      // valid split points. Splitting BEFORE a sub-header means the
+      // previous group stayed intact on page 1 and the next group
+      // (label + its items) starts on page 2.
+      return !isItemChild(children[i]);
+    }
+
     var sum = childHeight(children[0]);
+    var bestSplit = -1;
     for (var i = 1; i < children.length; i++) {
+      // Mark bestSplit BEFORE adding children[i]'s height: if i is a
+      // valid split point, page 1 would contain children[0..i-1]
+      // which has already been verified to fit on prior iterations.
+      if (isValidSplitIndex(i)) bestSplit = i;
       var h = childHeight(children[i]);
       if (sum + h > limit) {
-        if (i === 1) return null; // Even first sub-block doesn't fit.
-        return { startIndex: i };
+        if (bestSplit > 1) return { startIndex: bestSplit };
+        return null; // Overflow before any valid split point.
       }
       sum += h;
     }

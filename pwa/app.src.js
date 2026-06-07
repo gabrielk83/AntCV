@@ -12674,6 +12674,21 @@
           try {
             if (sessionStorage.getItem("antcv_showcase_restore_attempted")) return;
           } catch (e) {}
+          // 1.50.233: ONLY a real unsolicited application is a kernel. If a
+          // TAILORED application is currently loaded (meta.company is set to a
+          // real company name, NOT "Unsolicited"), this is NOT the kernel —
+          // don't touch it with cloud-kernel-slot data, or we cross-contaminate
+          // the tailored app with kernel content.
+          try {
+            const mm = u.get("meta", null);
+            if (
+              mm &&
+              "object" == typeof mm &&
+              mm.company &&
+              "Unsolicited" !== String(mm.company).trim()
+            )
+              return;
+          } catch (e) {}
           const e = u.get("sections", null),
             // 1.50.232: don't just check "has items" — check whether the items
             // are the me() template placeholders (content starts with "["). The
@@ -34150,13 +34165,35 @@
                       $t("editor");
                       try {
                         const s = u.get("sections", null),
-                          // 1.50.232: detect the me() template (content starts
-                          // with "[" placeholder). Cs() resets sections to the
-                          // template before generation; if generation fails,
-                          // the autosave persists the template — so "has items"
-                          // is not enough. Template counts as no-real-content
-                          // so the cloud slot wins.
-                          isTemplate = (x) => {
+                          mPre = u.get("meta", null),
+                          // 1.50.233: ONLY a real unsolicited application is the
+                          // kernel. If a TAILORED app is loaded (meta.company set
+                          // to a real company name, not "Unsolicited"), this is
+                          // NOT the kernel — don't fetch/restore/backfill from
+                          // the cloud kernel slot. Bail before doing anything.
+                          isTailoredApp = !!(
+                            mPre &&
+                            "object" == typeof mPre &&
+                            mPre.company &&
+                            "Unsolicited" !== String(mPre.company).trim()
+                          );
+                        if (isTailoredApp) {
+                          try {
+                            console.log(
+                              "[KERNEL] Editor: tailored application loaded (" +
+                                mPre.company +
+                                ") — skipping kernel-slot hydrate",
+                            );
+                          } catch (e) {}
+                          return;
+                        }
+                        // 1.50.232: detect the me() template (content starts
+                        // with "[" placeholder). Cs() resets sections to the
+                        // template before generation; if generation fails,
+                        // the autosave persists the template — so "has items"
+                        // is not enough. Template counts as no-real-content
+                        // so the cloud slot wins.
+                        const isTemplate = (x) => {
                             if (!x || typeof x !== "object") return false;
                             const first =
                               (Array.isArray(x.cv) && x.cv[0] && x.cv[0].content) ||

@@ -20537,25 +20537,39 @@
                   "Unsolicited" !== D.company &&
                   console.warn(
                     `[v1.40.112 showcase] LLM hallucinated company="${D.company}" role="${D.role || ""}" — discarding and forcing Unsolicited. (No JD was provided; the LLM should not invent a company.)`,
-                  ),
-                  D &&
-                    D.subtitle &&
-                    D.subtitle.trim() &&
-                    console.warn(
-                      `[v1.40.120 showcase] LLM-returned subtitle="${D.subtitle}" — discarding in showcase mode, deriving from personalInfo instead.`,
-                    ));
+                  ));
+                // 1.50.258: subtitle preference flipped — owner clarified
+                // the X • Y • Z focus areas are the candidate's signature
+                // specialisation, NOT tied to the (absent) application.
+                // Prefer the LLM's emitted subtitle first; fall back to
+                // personalInfo.headline / first role title only when the
+                // LLM didn't produce one. (Was: always discard LLM
+                // subtitle, derive from personalInfo — which left the
+                // [Specialisation — 1–3 focus areas, separated by •]
+                // placeholder visible when neither headline nor role was
+                // populated. Reported 2026-06-07.)
                 let n = "";
                 ((n =
-                  e.headline && e.headline.trim()
-                    ? e.headline.trim()
-                    : t || "Open Application — Unsolicited"),
+                  D && D.subtitle && D.subtitle.trim()
+                    ? D.subtitle.trim()
+                    : e.headline && e.headline.trim()
+                      ? e.headline.trim()
+                      : t || "Open Application — Unsolicited"),
                   (W = {
                     ...D,
                     company: "Unsolicited",
                     role: t || "Open Application",
                     subtitle: n,
                     greeting: "Dear Hiring Manager,",
-                    opening: `I am writing to introduce myself for ${(t || "engineering").toLowerCase()} roles where the work spans architecture, requirements, and cross-discipline coordination. This letter is unsolicited — happy to tailor it once we identify a concrete role.`,
+                    // 1.50.258: opening rewritten per owner spec — no
+                    // longer references "engineering roles" or the
+                    // focus-area list (which used to bleed into the
+                    // opening sentence and corrupt the subtitle field).
+                    // Generic, role-agnostic, applicable to both
+                    // companies and institutes. Owner spec verbatim
+                    // adjusted only for natural-English phrasing.
+                    opening:
+                      "I am writing to introduce myself and express my interest in future opportunities at your organisation.",
                   }));
                 try {
                   const e = (D.company || "").trim();

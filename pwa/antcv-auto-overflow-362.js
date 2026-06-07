@@ -24,7 +24,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.211-auto-overflow-detect';
+  var VERSION = '1.50.214-auto-overflow-sticky';
   if (window.__antcvAutoOverflow362 === VERSION) return;
   window.__antcvAutoOverflow362 = VERSION;
 
@@ -85,26 +85,38 @@
   }
 
   function compute() {
-    if (activeDoc() !== 'cv') return {};            // CV page-box only for now
+    // Not CV → leave whatever's there untouched (CV page-box only for now).
+    if (activeDoc() !== 'cv') return readJson(AUTO_KEY, {});
     var p = paper();
-    if (!p) return {};
-    var sidebar = p.querySelector('.antcv-document-sidebar, [data-antcv-document-sidebar="true"]');
-    if (!sidebar || !visible(sidebar)) return {};
-    var colTop = sidebar.getBoundingClientRect().top;
+    if (!p) return readJson(AUTO_KEY, {});
+    // STICKY: carry forward existing auto breaks. Detection measures the CURRENT
+    // DOM, and once a break splits a column into page-boxes each box is short
+    // again — so re-measuring would CLEAR the break, re-merge, overflow, re-set …
+    // an oscillation that left no stable salmon. Keeping a break once set breaks
+    // that cycle; we only DETECT on sections that don't yet have an auto break.
+    var existing = readJson(AUTO_KEY, {});
     var map = {};
-    var secEls = sidebar.querySelectorAll('[data-sid]');
-    for (var s = 0; s < secEls.length; s++) {
-      var secEl = secEls[s];
-      var sid = secEl.getAttribute('data-sid');
-      if (!sid) continue;
-      var sec = sectionById(sid);
-      if (!sec) continue;
-      var idx = firstOverflowItem(secEl, colTop, USABLE);
-      if (idx < 1) continue;                         // fits, or first item — leave alone
-      var starts = groupStarts(sec);
-      var br = snapToGroup(starts, idx);
-      if (br >= 1) { map[sid] = {}; map[sid][String(br)] = 2; }
-      break;                                         // one auto break is enough to relieve page 1
+    for (var ek in existing) {
+      if (existing[ek] && typeof existing[ek] === 'object' && sectionById(ek)) map[ek] = existing[ek];
+    }
+    // Measure across whichever sidebar column the unbroken sections live in.
+    var sidebars = Array.prototype.slice.call(p.querySelectorAll('.antcv-document-sidebar, [data-antcv-document-sidebar="true"]')).filter(visible);
+    for (var sb = 0; sb < sidebars.length; sb++) {
+      var sidebar = sidebars[sb];
+      var colTop = sidebar.getBoundingClientRect().top;
+      var secEls = sidebar.querySelectorAll('[data-sid]');
+      for (var s = 0; s < secEls.length; s++) {
+        var secEl = secEls[s];
+        var sid = secEl.getAttribute('data-sid');
+        if (!sid || map[sid]) continue;               // sticky: skip already-broken
+        var sec = sectionById(sid);
+        if (!sec) continue;
+        var idx = firstOverflowItem(secEl, colTop, USABLE);
+        if (idx < 1) continue;                         // fits, or first item — leave alone
+        var starts = groupStarts(sec);
+        var br = snapToGroup(starts, idx);
+        if (br >= 1) { map[sid] = {}; map[sid][String(br)] = 2; }
+      }
     }
     return map;
   }

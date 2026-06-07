@@ -10,6 +10,24 @@ A companion **feature registry** (open vs shipped features) lives at
 
 ## OPEN — 2026-06-07 (page-break arc + kernel / application-history)
 
+### Wizard / languages
+- **WIZARD-LANG-SELECTOR-001** `[OPEN][feature]` — **Wizard language step + two-table language
+  selector** (owner spec 2026-06-07; also in `docs/FEATURES_REGISTRY.md`).
+  1. The wizard "language set" step must actually **show the languages selector** — it is
+     currently missing / not rendered on that step (note prior wizard work hid the language
+     slide on SKIP; here it must appear when the step is shown).
+  2. Render the selector as **two tables side by side**:
+     - **Left = all available languages** (the full supported set — en, da, sv, de, fr, es, …;
+       source of truth is the `writingSystems/registry.json` language partition).
+     - **Right = selected languages** (the user's chosen subset). Move entries left↔right to
+       add/remove.
+  3. The **right (selected) table is reorderable**, and its **order sets the default language —
+     the first entry in the selected list is the default**, which drives the generation /
+     `meta` default language. Persist the ordered selected-language list and the derived
+     default (and reflect it in Settings → Personal LanguageCard).
+  Relates to WIZARD-002 (default languages + settings hand-off). Not started — documented per
+  owner request as a feature to implement.
+
 ### Page breaks / pagination
 - **PB-OUTCOMES-WIPE-001** — `[FIXED→VERIFYING]` A page break on SELECTED OUTCOMES
   **deleted all outcomes** (and produced no break). Same class as the HIWC bullet wipe:

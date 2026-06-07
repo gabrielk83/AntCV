@@ -2216,6 +2216,109 @@ async function handleApiApplicationById(request, env, idStr) {
   return jsonResponse({ error: 'method_not_allowed' }, 405, request, env, refresh);
 }
 
+// ---- /api/kernel-showcase  (dedicated per-user generated-showcase slot) ----
+//
+// KERNEL-CLOUD-PERSIST-001: the generated kernel showcase (unsolicited CV)
+// used to live only in localStorage, so a new session/tab/device regenerated
+// it from scratch (only the boolean kernelShowcaseGenerated synced via prefs).
+// This dedicated slot persists the actual content (one row per user), kept out
+// of both the saved-applications list and the small KV prefs blob.
+//
+// GET  -> { ok, showcase: {sections,meta,rationale,jd_language,updated_at} | null }
+// PUT  -> upsert on user_hash; body {sections,meta,rationale,jd_language}
+async function handleApiKernelShowcase(request, env) {
+  const id = await identityFromRequest(request, env);
+  if (!id) return jsonResponse({ error: 'unauthenticated' }, 401, request, env);
+  if (!hasD1(env)) return jsonResponse({ error: 'd1_not_bound' }, 503, request, env);
+  const refresh = await maybeRefreshHeader(env, id);
+  const userHash = await userHashFromEmail(id.email);
+  const m = request.method;
+
+  if (m === 'GET') {
+    try {
+      const row = await env.DB.prepare(
+        'SELECT sections, meta, rationale, jd_language, updated_at ' +
+        'FROM kernel_showcase WHERE user_hash = ?'
+      ).bind(userHash).first();
+      const showcase = row ? {
+        sections:    parseJsonField(row.sections, null),
+        meta:        parseJsonField(row.meta, null),
+        rationale:   parseJsonField(row.rationale, null),
+        jd_language: row.jd_language || 'en',
+        updated_at:  row.updated_at,
+      } : null;
+      return jsonResponse({ ok: true, showcase }, 200, request, env, refresh);
+    } catch (e) {
+      // Missing table (pre-migration) or read error — degrade to "no slot yet"
+      // so the client simply regenerates rather than erroring.
+      return jsonResponse({ ok: true, showcase: null }, 200, request, env, refresh);
+    }
+  }
+
+  if (m === 'PUT') {
+    let body;
+    try { body = await request.json(); }
+    catch (_) { return jsonResponse({ error: 'invalid_json' }, 400, request, env, refresh); }
+    if (!body || typeof body !== 'object') {
+      return jsonResponse({ error: 'invalid_body' }, 400, request, env, refresh);
+    }
+    // Defense: ensure the user_kernel row exists before inserting (FK), mirroring
+    // the applications handler's auto-shell behaviour.
+    try {
+      const k = await env.DB.prepare(
+        'SELECT user_hash FROM user_kernel WHERE user_hash = ?'
+      ).bind(userHash).first();
+      if (!k) {
+        const mig = await migrateKvPrefsToD1IfEmpty(env, id);
+        if (!mig.migrated) {
+          const now = Date.now();
+          await env.DB.prepare(
+            'INSERT INTO user_kernel (user_hash, identity, history, preferences, photo_b64, created_at, updated_at) ' +
+            'VALUES (?, ?, ?, ?, NULL, ?, ?) ON CONFLICT(user_hash) DO NOTHING'
+          ).bind(
+            userHash,
+            JSON.stringify({ email: id.email }),
+            JSON.stringify({}),
+            JSON.stringify({}),
+            now, now
+          ).run();
+        }
+      }
+    } catch (_) { /* the upsert below surfaces any remaining issue */ }
+
+    const sections   = (body.sections  && typeof body.sections  === 'object') ? JSON.stringify(body.sections)  : null;
+    const meta       = (body.meta      && typeof body.meta      === 'object') ? JSON.stringify(body.meta)      : null;
+    const rationale  = (body.rationale && typeof body.rationale === 'object') ? JSON.stringify(body.rationale) : null;
+    const jdLanguage = typeof body.jd_language === 'string' && body.jd_language.trim()
+      ? body.jd_language.trim().slice(0, 5) : 'en';
+    const now = Date.now();
+
+    try {
+      await env.DB.prepare(
+        'INSERT INTO kernel_showcase ' +
+        '(user_hash, sections, meta, rationale, jd_language, created_at, updated_at) ' +
+        'VALUES (?, ?, ?, ?, ?, ?, ?) ' +
+        'ON CONFLICT(user_hash) DO UPDATE SET ' +
+        '  sections = excluded.sections, ' +
+        '  meta = excluded.meta, ' +
+        '  rationale = COALESCE(excluded.rationale, kernel_showcase.rationale), ' +
+        '  jd_language = excluded.jd_language, ' +
+        '  updated_at = excluded.updated_at'
+      ).bind(
+        userHash, sections, meta, rationale, jdLanguage, now, now
+      ).run();
+      return jsonResponse({ ok: true, updated_at: now }, 200, request, env, refresh);
+    } catch (e) {
+      return jsonResponse(
+        { error: 'd1_write_failed', message: String(e && e.message || e) },
+        500, request, env, refresh
+      );
+    }
+  }
+
+  return jsonResponse({ error: 'method_not_allowed' }, 405, request, env, refresh);
+}
+
 // ---- /api/active  (pointer to current application) ------------------
 
 async function handleApiActive(request, env) {
@@ -3099,6 +3202,9 @@ const method = request.method;
   }
   if (path === '/api/active') {
     return handleApiActive(request, env);
+  }
+  if (path === '/api/kernel-showcase') {
+    return handleApiKernelShowcase(request, env);
   }
 
   // --- /analytics : public, fire-and-forget, never blocking ---

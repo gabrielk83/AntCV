@@ -11905,7 +11905,9 @@
                 ? { ok: !0, applications: [], grouped: {}, total: 0 }
                 : "/api/active" === e
                   ? { ok: !0, application_id: null }
-                  : { ok: !0 };
+                  : "/api/kernel-showcase" === e
+                    ? { ok: !0, showcase: null }
+                    : { ok: !0 };
             }
             throw new Error(t);
           }
@@ -11939,6 +11941,15 @@
           return this._call("/api/active", {
             method: "PUT",
             body: JSON.stringify({ application_id: e }),
+          });
+        },
+        getShowcase() {
+          return this._call("/api/kernel-showcase");
+        },
+        putShowcase(e) {
+          return this._call("/api/kernel-showcase", {
+            method: "PUT",
+            body: JSON.stringify(e || {}),
           });
         },
       };
@@ -12625,6 +12636,69 @@
             e.showcaseBackup.sections &&
             Zn(e, "auto-restore useEffect", { setSentinel: !0 });
         }, [Y]),
+        React.useEffect(() => {
+          // KERNEL-CLOUD-PERSIST-001 restore: on a fresh session/tab/device the
+          // generated showcase content is gone from localStorage, so the user
+          // would have to regenerate it. Hydrate it from the dedicated cloud slot
+          // (/api/kernel-showcase) instead. Only runs when signed in, not already
+          // attempted this session, and there is no local showcase copy to clobber.
+          if (!Y || !Y.email) return;
+          try {
+            if (sessionStorage.getItem("antcv_showcase_restore_attempted")) return;
+          } catch (e) {}
+          const e = u.get("sections", null),
+            n =
+              e &&
+              ((Array.isArray(e.cv) && e.cv.length) ||
+                (Array.isArray(e.cl) && e.cl.length));
+          if (n) return;
+          let o = !1;
+          return (
+            (async () => {
+              try {
+                const e = await oo.getShowcase();
+                if (o || !e || !e.showcase) return;
+                const t = e.showcase;
+                if (t.sections && "object" == typeof t.sections) {
+                  try {
+                    u.set("sections", t.sections);
+                  } catch (e) {}
+                  try {
+                    ao({ cv: t.sections.cv || [], cl: t.sections.cl || [] });
+                  } catch (e) {}
+                }
+                if (t.meta && "object" == typeof t.meta) {
+                  try {
+                    u.set("meta", t.meta);
+                  } catch (e) {}
+                  try {
+                    lo(t.meta);
+                  } catch (e) {}
+                }
+                if (t.rationale) {
+                  try {
+                    u.set("rationale", t.rationale);
+                  } catch (e) {}
+                  try {
+                    bo(t.rationale);
+                  } catch (e) {}
+                }
+                try {
+                  sessionStorage.setItem(
+                    "antcv_showcase_restore_attempted",
+                    "1",
+                  );
+                } catch (e) {}
+                console.log(
+                  "[KERNEL-CLOUD-PERSIST-001] restored kernel showcase from cloud slot",
+                );
+              } catch (e) {}
+            })(),
+            () => {
+              o = !0;
+            }
+          );
+        }, [Y && Y.email]),
         React.useEffect(() => {
           Y &&
             Y.email &&
@@ -21211,6 +21285,25 @@
               try {
                 (u.set("kernelShowcaseGenerated", !0),
                   Qn({ kernelShowcaseGenerated: !0 }));
+              } catch (e) {}
+              try {
+                // KERNEL-CLOUD-PERSIST-001: persist the generated showcase to its
+                // dedicated cloud slot (/api/kernel-showcase) so a new session, tab
+                // or device restores it instead of regenerating from scratch.
+                // Delayed so the debounced sections/meta autosave has flushed to
+                // localStorage; read the canonical values from the store. The store
+                // keys are the same ones the autosave writes. Fire-and-forget,
+                // non-blocking — failure just means the next session regenerates.
+                setTimeout(() => {
+                  try {
+                    oo.putShowcase({
+                      sections: u.get("sections", null),
+                      meta: u.get("meta", null),
+                      rationale: u.get("rationale", null),
+                      jd_language: je,
+                    });
+                  } catch (e) {}
+                }, 1200);
               } catch (e) {}
               try {
                 Un.current = null;

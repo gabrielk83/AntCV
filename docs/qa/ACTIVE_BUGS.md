@@ -24,6 +24,18 @@ A companion **feature registry** (open vs shipped features) lives at
 - **PB-WORKER-SIDEBAR-FILL-001** — `[OPEN]` The navy sidebar does not fill to the page
   bottom on a continuation page **in the export** (Word table-cell full-height technique).
   Preview fill addressed in 1.50.216; export still open.
+- **PB-PREVIEW-SIDEBAR-FILL-001** — `[FIX SHIPPED 1.50.227 — owner visual verify]` In the
+  **preview**, the navy sidebar still didn't run to the page bottom — the 1.50.216 approach
+  relied on flex `align-items:stretch` + a fixed `min-height:1123px`, which caps it at one A4
+  page and doesn't track the real main-column height. New sidecar
+  `antcv-sidebar-fill-equalize-227.js` measures the main column in each `.antcv-page-row` and
+  sets the sidebar height to match (inline `!important` to beat the 216 rules), re-running on
+  every content mutation (line insert), section/page-break events, and resize. The DEMO
+  watermark is `position:absolute; inset:0` inside the row, so it covers the full page once the
+  sidebar matches main — no separate watermark move needed. **Owner to visually verify** the
+  navy field reaches the content bottom on single + multi-page kernels and after edits; then
+  re-check the watermark sits right (per owner's "watermark only after that"). Boot-verified
+  (sidecar registers, 0 console errors); functional height match needs a real rendered preview.
 - **PB-AUTO-OVERFLOW-001** — `[OPEN / stood down]` Auto-overflow was built (1.50.211–214)
   then **stood down** (1.50.215): didn't render on mobile and forwarding the sidebar
   auto-break into the 2-column worker scrambled the PDF (candidate header isolated → 3

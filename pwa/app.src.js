@@ -13000,6 +13000,51 @@
           }, 300);
           return () => clearTimeout(e);
         }, [io]),
+        // 1.50.260: catch contenteditable edits that wrote directly to
+        // localStorage.meta and pull them back into React state `io`.
+        // Owner regression 2026-06-07: edit the topbar specialisation
+        // line -> press App History button -> edit was lost. Cause:
+        // antcv-candidate-preview-editor-341.js writes localStorage.meta
+        // on blur but never updates React state. When the next render
+        // fires (panel open, focus shift, anything), React re-paints
+        // the topbar from the stale `io.subtitle`, and 300ms later the
+        // sibling useEffect above writes the stale `io` back to
+        // localStorage, double-wiping the edit. Listen for the
+        // synthetic 'storage' event the sidecar dispatches (see
+        // writeMeta in antcv-candidate-preview-editor-341.js ~line
+        // 103), pull the candidate-owned fields out, and merge into
+        // io via lo() if they differ. Loop-safe: the auto-write above
+        // only re-fires when io changes — and if we just set io from
+        // localStorage, writing it back is a no-op.
+        React.useEffect(() => {
+          function onStorage(e) {
+            try {
+              if (!e || e.key !== "meta") return;
+              const raw = e.newValue || localStorage.getItem("meta") || "{}";
+              const fresh = JSON.parse(raw) || {};
+              const FIELDS = ["subtitle", "role", "company", "applicationLabel"];
+              let needsUpdate = false;
+              const next = { ...(io || {}) };
+              for (const f of FIELDS) {
+                if (fresh[f] !== undefined && fresh[f] !== (io && io[f])) {
+                  next[f] = fresh[f];
+                  needsUpdate = true;
+                }
+              }
+              if (needsUpdate) {
+                try {
+                  console.log(
+                    "[v1.50.260 candidate-edit] merging localStorage.meta -> io:",
+                    FIELDS.filter((f) => next[f] !== (io && io[f])).join(", "),
+                  );
+                } catch (_) {}
+                lo(next);
+              }
+            } catch (_) {}
+          }
+          window.addEventListener("storage", onStorage);
+          return () => window.removeEventListener("storage", onStorage);
+        }, [io]),
         React.useEffect(() => {
           try {
             if (io && "Unsolicited" === io.company) {

@@ -54,7 +54,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.276';
+  var VERSION = '1.50.281';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -250,6 +250,30 @@
   // (previously) the measurer re-ran on the re-paginated DOM, measured
   // differently, wrote again, fired again … now it only recomputes when
   // the SOURCE actually changes (an edit, a language switch, a rotate).
+  // 1.50.281: cheap djb2 hash so the fingerprint reflects the WHOLE source,
+  // not just its ends.
+  function djb2(str) {
+    var h = 5381;
+    for (var i = 0; i < str.length; i++) h = (((h << 5) + h) ^ str.charCodeAt(i)) >>> 0;
+    return h.toString(16);
+  }
+  // 1.50.281: layout/style settings that change RENDERED height without
+  // changing section CONTENT — sidebar/main border ratio, table ratios, font
+  // sizes, the style package, and per-item + header alignment (justified vs
+  // left, etc.). A change in any of these can push text across the page edge,
+  // so they must re-trigger the measurer. They are user settings (not derived
+  // from pagination), so including them is loop-safe.
+  var STYLE_KEYS = [
+    'cvSidebarRatio', 'cvTableRatio', 'clTableRatio', 'fontSizes',
+    'styleConfig', 'headerItemAlign', 'antcvItemAlignment',
+  ];
+  function settingsFingerprint() {
+    var s = '';
+    for (var i = 0; i < STYLE_KEYS.length; i++) {
+      try { s += STYLE_KEYS[i] + '=' + (localStorage.getItem(STYLE_KEYS[i]) || '') + ';'; } catch (_) {}
+    }
+    return s;
+  }
   function sourceFingerprint() {
     try {
       var secs = localStorage.getItem(SECTIONS_KEY) || '';
@@ -257,8 +281,12 @@
       var scroll = document.querySelector('.antcv-preview-scroll');
       var ch = scroll ? scroll.clientHeight : 0;
       var cw = scroll ? scroll.clientWidth : 0;
+      // 1.50.281: hash the FULL sections (was first/last 400 chars only — that
+      // missed MIDDLE changes, e.g. experience roles filling in on regenerate
+      // or a mid-list hide/unhide, so the measurer never re-ran and the salmon
+      // never appeared) PLUS the layout/style settings above.
       return doc + '#' + ch + 'x' + cw + '#' + secs.length + '#'
-        + secs.slice(0, 400) + '¦' + secs.slice(-400);
+        + djb2(secs) + '#' + djb2(settingsFingerprint());
     } catch (_) { return String(nowMs()); }
   }
 
@@ -326,8 +354,13 @@
     // 1.50.269: do NOT listen to antcv:auto-pages-changed — that is the
     // event WE fire; listening to it was the direct self-trigger that
     // produced the React #185 loop.
+    // 1.50.281: also listen for alignment + style changes (they change
+    // rendered height without changing section content). 'antcv:style-changed'
+    // is harmless if never fired; the 3s poll + the settings fingerprint catch
+    // style changes regardless.
     ['antcv:sections-updated', 'antcv:item-pages-changed',
-     'antcv:preview-rescale'].forEach(function (ev) {
+     'antcv:preview-rescale', 'antcv:item-align-changed',
+     'antcv:style-changed'].forEach(function (ev) {
       try { window.addEventListener(ev, schedule); } catch (_) {}
     });
     try { window.addEventListener('resize', schedule, { passive: true }); } catch (_) {}

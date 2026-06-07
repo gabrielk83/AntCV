@@ -1,4 +1,4 @@
-/* AntCV auto page-break (block-level) sidecar — v1.50.262
+/* AntCV auto page-break (block-level) sidecar — v1.50.263
  * ============================================================
  * Owner feature AUTO-PAGEBREAK-BLOCK-001 (FEATURES_REGISTRY).
  *
@@ -9,11 +9,15 @@
  * after it, with a salmon-coloured visual splitter between them.
  *
  * Splits are block-level — a whole top-level section (data-sid="…")
- * moves to the next page, never split mid-section. EXPERIENCE is a
- * special case: it typically contains many role blocks with
- * `break-inside: avoid`, so this sidecar will split BETWEEN roles
- * inside the section if the section itself is taller than what
- * remains on the page.
+ * moves to the next page, never split mid-section. ANY section
+ * containing more than one child block (typically: header +
+ * items / roles / bullets / regulatory groups) is intra-section
+ * splittable — the header stays on page 1 with the children that
+ * fit, the rest move to page 2 wrapped in a clone of the section
+ * element. Sections that cannot meaningfully split inside (e.g.
+ * CORE COMPETENCIES = header + single table, work_style = single
+ * paragraph) fall back to whole-section move automatically because
+ * findIntraSectionSplit returns null on header-plus-one-unsplittable.
  *
  * Architecture
  * ------------
@@ -44,12 +48,16 @@
  * 2's main does the same. The two columns can end at different Y
  * positions on each page; that's OK on paper.
  *
- * Trade-offs (MVP)
- * ----------------
- * - Intra-section splitting only for `data-sid="experience"`.
- *   Sections like CORE COMPETENCIES (table) and OUTCOMES (bullet
- *   list) move as a whole. Future: add table-row split, bullet
- *   split.
+ * Trade-offs
+ * ----------
+ * - Intra-section splitting works for ANY section with multiple
+ *   children (header + items). Examples: EXPERIENCE roles, OUTCOMES
+ *   bullets, REGULATORY group + items, TOOLS rows, CERTIFICATIONS
+ *   list, EDUCATION list, PUBLICATIONS list, ADDITIONAL INFO rows.
+ * - Sections with only one splittable child fall back to whole-
+ *   section move: CORE COMPETENCIES (header + 1 table-wrap),
+ *   work_style (1 paragraph), PROFILE (header + 1 paragraph).
+ *   Follow-up: table-row split for CORE COMPETENCIES.
  * - Continuation pages have NO header for split sections (the
  *   header stays on page 1). Future: optional "(continued)" header.
  * - Continuation pages have EMPTY sidebars when only main
@@ -57,6 +65,10 @@
  *   column / blank white column).
  * - Photo (sidebar's first child without data-sid) is anchored to
  *   page 1 — never moved.
+ * - REGULATORY group-labels (sub-headers within the section)
+ *   could theoretically orphan if the split lands right after a
+ *   group-label. Future: detect group-label boundaries and bias
+ *   the split point to BEFORE the orphaned label.
  *
  * Interaction with manual page=2,3,4 markers
  * ------------------------------------------
@@ -72,13 +84,16 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.262';
+  var VERSION = '1.50.263';
   var PAGE_HEIGHT_PX = 1123; // A4 at 96dpi
   var SALMON = '#fa8072';
   var SPLITTER_CLASS = 'antcv-auto-page-splitter';
   var INJECTED_ATTR = 'data-antcv-auto-pagebreak-injected';
-  // Sections (by data-sid) that allow intra-section splitting between children.
-  var INTRA_SPLIT_SECTIONS = ['experience'];
+  // 1.50.263: removed INTRA_SPLIT_SECTIONS allowlist — any section
+  // (anything with data-sid) is intra-section splittable if it has
+  // more than one child block. Sections that can't actually split
+  // (header + 1 unsplittable child) fall through to whole-section
+  // move automatically via findIntraSectionSplit returning null.
 
   if (window.__antcvAutoPagebreakInstalled) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
@@ -202,9 +217,13 @@
       var c = children[i];
       var h = childHeight(c);
       if (sum + h > limit) {
-        // Try intra-section split on the overflowing child.
+        // 1.50.263: try intra-section split on ANY child that is a
+        // section (has data-sid). The split is only accepted if it
+        // actually moves at least one non-header child to the next
+        // page (intra.startIndex > 0), otherwise we fall back to
+        // whole-section move.
         var sid = c.getAttribute && c.getAttribute('data-sid');
-        if (sid && INTRA_SPLIT_SECTIONS.indexOf(sid) >= 0) {
+        if (sid) {
           var remaining = Math.max(0, limit - sum);
           var intra = findIntraSectionSplit(c, remaining);
           if (intra && intra.startIndex > 0) {

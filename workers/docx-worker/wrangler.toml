@@ -13,6 +13,14 @@ invocation_logs = true
 # docx-js needs nodejs_compat for Buffer / Stream polyfills.
 # Without this flag, Packer.toBuffer() throws on first call.
 
+# 1.50.248 DOCX-EXPORT-CORS-CPU-001 mitigation: smart placement.
+# Cloudflare can route the worker closer to its dependencies (and for
+# CPU-bound workers, can reduce cold-start jitter). The practical effect
+# for docx packing is less wall-clock spent on cross-region latency,
+# leaving more headroom under the per-request CPU cap.
+[placement]
+mode = "smart"
+
 [vars]
 # Only allow the AntCV Pages frontend origin. Override per environment if needed.
 ALLOWED_ORIGINS = "https://antcv.pages.dev"

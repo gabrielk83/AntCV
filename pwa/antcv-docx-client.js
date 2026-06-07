@@ -299,39 +299,68 @@ export async function exportDocxViaWorker({
   const secret = (typeof window !== 'undefined' && window.ANTCV_DOCX_SECRET) || '';
   if (secret) headers['X-AntCV-Secret'] = secret;
 
-  // 1.50.244 DOCX-EXPORT-CORS-CPU-001: wrap the fetch so a network-level
-  // failure (CORS-blocked, edge timeout, Cloudflare 1102 CPU-exceeded) does
-  // not throw the bare `TypeError: Failed to fetch` at the user. When the
-  // docx-worker is killed mid-request by the CF runtime (typical for very
-  // large CVs with photo + consensus content), the response that comes back
-  // has no CORS headers and the browser blocks it. The catch below translates
-  // that into a human-readable message with concrete next steps.
-  let res;
-  try {
-    res = await fetch(workerUrl.replace(/\/$/, '') + '/generate', {
+  // 1.50.244 / 1.50.248 DOCX-EXPORT-CORS-CPU-001:
+  //   * Wrap the fetch so a network-level failure (CORS-blocked, edge
+  //     timeout, Cloudflare 1102 CPU-exceeded) does not throw the bare
+  //     `TypeError: Failed to fetch` at the user.
+  //   * AUTO-RETRY once on a network error after a short delay. Cold-start
+  //     kills on Cloudflare Workers commonly succeed on the warm second
+  //     try (a single retry — we don't loop indefinitely).
+  //   * 1.50.248: also "warm up" the worker by hitting /health BEFORE the
+  //     real POST. A warm worker has its bundle cached + JIT warm, which
+  //     materially reduces the per-request CPU on Cloudflare's Bundled
+  //     tier. Best-effort, swallow any failure.
+  async function fetchGenerate() {
+    return fetch(workerUrl.replace(/\/$/, '') + '/generate', {
       method: 'POST',
       headers,
       body: JSON.stringify(payload),
     });
-  } catch (netErr) {
-    // Estimate the payload size so the user can see if it's a likely cause.
+  }
+  function describeNetworkFailure(netErr) {
     let payloadKb = 0;
     try { payloadKb = Math.round((JSON.stringify(payload) || '').length / 1024); } catch (_) {}
     const photoBytes = (payload && typeof payload.photo === 'string') ? payload.photo.length : 0;
     const photoKb = Math.round(photoBytes / 1024);
-    throw new Error(
+    return (
       'DOCX export failed before a response was received from the worker (' +
-      String((netErr && netErr.message) || netErr) + '). ' +
+      String((netErr && netErr.message) || netErr) + ', after 1 retry). ' +
       'This usually means the worker exhausted its CPU budget while ' +
       'packing the document — Cloudflare killed the request and the ' +
       'browser blocked the response (no CORS headers on the error page). ' +
       'Payload was ~' + payloadKb + ' KB' +
       (photoKb > 50 ? ' (photo alone ~' + photoKb + ' KB — try removing or downsizing the photo)' : '') +
       '. Try: (1) remove the profile photo or use a smaller one, ' +
-      '(2) trim long sections, or (3) export again — Cloudflare cold-starts ' +
-      'have less CPU than warm ones, so a retry after the worker is warm ' +
-      'often succeeds.'
+      '(2) trim long sections, or (3) wait ~30 s and export again — the ' +
+      'worker is more likely to succeed when warm. If it keeps failing on ' +
+      'normal-sized CVs, the docx-worker needs a Cloudflare Workers ' +
+      'Unbound upgrade for longer CPU budgets.'
     );
+  }
+  // Pre-flight: warm the worker. Cheap GET, ignored on failure.
+  try {
+    await fetch(workerUrl.replace(/\/$/, '') + '/health', {
+      method: 'GET',
+      cache: 'no-store',
+    }).catch(() => {});
+  } catch (_) {}
+  let res;
+  try {
+    res = await fetchGenerate();
+  } catch (netErr1) {
+    try {
+      console.warn(
+        '[docx-client] first /generate fetch failed (' +
+          String((netErr1 && netErr1.message) || netErr1) +
+          '); retrying once after 1500 ms',
+      );
+    } catch (_) {}
+    await new Promise(r => setTimeout(r, 1500));
+    try {
+      res = await fetchGenerate();
+    } catch (netErr2) {
+      throw new Error(describeNetworkFailure(netErr2));
+    }
   }
 
   // v1.18 — read body once into a Blob. Previously we did `.json()` in

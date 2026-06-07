@@ -278,7 +278,7 @@
   })();
 </script>
 <script type="module">
-  import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.50.244-docx-cpu-error-msg';
+  import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.50.248-docx-warmup-retry';
   window.exportDocxViaWorker = exportDocxViaWorker;
   window.ANTCV_VERSION = '1.50.9';
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
@@ -299,7 +299,7 @@
         auth.src = 'antcv-auth.js?v=1.40.202';
         auth.onload = function(){
           var app = document.createElement('script');
-          app.src = 'app.js?v=1.50.247-cold-start-clear-jd-cadaver';
+          app.src = 'app.js?v=1.50.248-docx-warmup-retry';
           app.onload = function(){
             var vo = document.createElement('script');
             vo.src = 'antcv-version-override.js?v=1.50.41';

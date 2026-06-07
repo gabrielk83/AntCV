@@ -12826,19 +12826,30 @@
           }
         );
       }, [ro, io]);
-      // 1.50.240: APPLICATION AUTO-SYNC. Push the current sections + meta to
-      // the ACTIVE application's row on a 3-second debounce so refresh /
-      // reload returns the user to their LATEST edits, not the prior saved
-      // snapshot. Pre-fix flow: user loads app → edits opening/sections →
-      // refresh → cloud-restore loads the saved (older) version → edits
-      // gone. With auto-sync, the cloud row is kept in step.
-      // Guards: only fires when (a) signed in, (b) a Fl active id exists,
-      // (c) kernel showcase isn't mid-generation, (d) sections aren't the
-      // me() template placeholder (so we don't overwrite a real saved app
-      // with a freshly-reset template during cloud-restore lag).
+      // 1.50.240 → 1.50.241 fix: APPLICATION AUTO-SYNC. Push the current
+      // sections + meta to the ACTIVE application's row on a 3-second
+      // debounce so refresh / reload returns the user to their LATEST edits,
+      // not the prior saved snapshot.
+      // Note: `Fl` (active application id) is declared LATER in this
+      // component (~line 23408). Referencing it in the deps array fires a
+      // TDZ ReferenceError on every render — the boot crash at 1.50.240.
+      // Fix: deps only include early-declared refs (ro, io, yo). Read Fl
+      // (and Y) lazily inside the callback via try/catch — closure binding
+      // resolves at callback time, which is AFTER Fl initialises.
       React.useEffect(() => {
-        if (!Y || !Y.email) return;
-        if (!Fl) return;
+        let __activeId = null,
+          __userEmail = null;
+        try {
+          __activeId = Fl;
+        } catch (e) {
+          return;
+        }
+        try {
+          __userEmail = Y && Y.email ? Y.email : null;
+        } catch (e) {
+          return;
+        }
+        if (!__userEmail || !__activeId) return;
         try {
           if (u.get("kernelShowcaseInProgress", !1)) return;
         } catch (e) {}
@@ -12849,7 +12860,7 @@
         } catch (e) {}
         const t = setTimeout(() => {
           try {
-            oo.update(Fl, {
+            oo.update(__activeId, {
               cv_sections: (ro && ro.cv) || [],
               cl_sections: (ro && ro.cl) || [],
               jd_company: (io && io.company) || "",
@@ -12862,7 +12873,7 @@
                 try {
                   console.log(
                     "[apps] auto-sync to active app",
-                    Fl,
+                    __activeId,
                     "ok",
                   );
                 } catch (e) {}
@@ -12878,7 +12889,7 @@
           } catch (e) {}
         }, 3000);
         return () => clearTimeout(t);
-      }, [ro, io, yo, Fl, Y && Y.email]);
+      }, [ro, io, yo]);
       const [Ro, So] = e(() => u.get("profileDoc", null)),
         [ko, Co] = e(() => u.get("skillsDoc", null)),
         [To, Ao] = e(() => u.get("wordsDoc", null)),

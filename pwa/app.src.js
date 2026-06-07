@@ -36125,9 +36125,66 @@
                       return p;
                     });
                   })(),
-                  p = [...o.map(a), ...d],
+                  oMain = (() => {
+                    // Flow NON-experience main sections (profile/outcomes/core-comp…)
+                    // across page-boxes by their antcv:itemPages breaks — the same
+                    // proven split the sidebar uses, extended to table ROWS so a
+                    // core-competencies row break actually moves rows to the next
+                    // page-box. Experience keeps its own role-page path (d/g). Fully
+                    // try/catch-guarded: any failure falls back to the whole section
+                    // on its section.page, so the preview can't crash.
+                    try {
+                      const ip = (() => {
+                        try { return JSON.parse(localStorage.getItem("antcv:itemPages") || "{}") || {}; } catch (_) { return {}; }
+                      })();
+                      return zi
+                        .filter((s) => s && s.on !== false && "experience" !== s.type)
+                        .flatMap((sec) => {
+                          try {
+                            const basePage = Math.max(1, parseInt(sec.page || 1, 10));
+                            const bucket = sec.id && ip[sec.id] && typeof ip[sec.id] === "object" ? ip[sec.id] : null;
+                            if ("table" === sec.type && Array.isArray(sec.rows) && sec.rows.length > 1) {
+                              const pbr = Array.isArray(sec.pageBreakRows) ? sec.pageBreakRows : [];
+                              let run = basePage; const groups = []; const idxByPage = {};
+                              for (let i = 1; i < sec.rows.length; i++) {
+                                let pv = bucket ? Number(bucket[String(i)]) : NaN;
+                                if (!(Number.isFinite(pv) && pv >= 1)) pv = (i >= 2 && pbr[i]) ? run + 1 : run;
+                                pv = Math.max(pv, basePage);
+                                if (pv > run) run = pv; else pv = run;
+                                if (idxByPage[pv] === undefined) { idxByPage[pv] = groups.length; groups.push({ page: pv, rows: [sec.rows[0]] }); }
+                                groups[idxByPage[pv]].rows.push(sec.rows[i]);
+                              }
+                              if (groups.length <= 1) return [{ ...sec, page: basePage }];
+                              groups.sort((a, b) => a.page - b.page);
+                              return groups.map((gp, gi) => ({ ...sec, rows: gp.rows, page: gp.page, _antcvSplitCont: gi > 0 }));
+                            }
+                            const items = Array.isArray(sec.items) ? sec.items : null;
+                            let hasBreak = false;
+                            if (items && bucket) for (const k in bucket) { if (Number(bucket[k]) >= 2) { hasBreak = true; break; } }
+                            if (items && hasBreak) {
+                              let run = basePage; const groups = []; const idxByPage = {};
+                              for (let i = 0; i < items.length; i++) {
+                                let pv = Number(bucket[String(i)]);
+                                pv = (Number.isFinite(pv) && pv >= 1) ? Math.max(pv, basePage) : run;
+                                if (pv > run) run = pv; else pv = run;
+                                if (idxByPage[pv] === undefined) { idxByPage[pv] = groups.length; groups.push({ page: pv, items: [] }); }
+                                groups[idxByPage[pv]].items.push(items[i]);
+                              }
+                              if (groups.length <= 1) return [{ ...sec, page: basePage }];
+                              groups.sort((a, b) => a.page - b.page);
+                              return groups.map((gp, gi) => ({ ...sec, items: gp.items, page: gp.page, _antcvSplitCont: gi > 0 }));
+                            }
+                            return [{ ...sec, page: basePage }];
+                          } catch (_) { return [{ ...sec, page: Math.max(1, parseInt(sec.page || 1, 10)) }]; }
+                        });
+                    } catch (_) {
+                      return zi.filter((s) => s && s.on !== false && "experience" !== s.type).map((s) => ({ ...s, page: 1 }));
+                    }
+                  })(),
+                  p = [...o.map(a), ...d, ...oMain.map(a)],
                   u = p.length ? Math.max(1, ...p) : 1,
                   m = (e) => o.filter((t) => a(t) === e),
+                  mMain = (e) => oMain.filter((t) => a(t) === e),
                   g = (e) =>
                     t.filter(
                       (n) =>
@@ -36365,11 +36422,11 @@
                             },
                           },
                           0 === n
-                            ? zi.map((e) => {
-                                if ("experience" !== e.type || !e.on)
-                                  return React.createElement(Ce, {
-                                    key: e.id,
-                                    s: e,
+                            ? [
+                                ...mMain(t.pageNum).map((sec) =>
+                                  React.createElement(Ce, {
+                                    key: (sec.id || "x") + "_p" + t.pageNum + (sec._antcvSplitCont ? "_c" : ""),
+                                    s: sec,
                                     navyColor: Ke,
                                     isCL: !1,
                                     language: je,
@@ -36378,11 +36435,15 @@
                                     onTableRatioChange: aa,
                                     fontSizes: Yr,
                                     styleConfig: ya,
-                                    onEdit: gi ? r(e.id) : null,
+                                    onEdit: gi && !sec._antcvSplitCont ? r(sec.id) : null,
                                     textEditMode: gi,
                                     onBeginTextEdit: () => fi(!0),
-                                    transitionState: kr[e.id],
-                                  });
+                                    transitionState: kr[sec.id],
+                                  }),
+                                ),
+                                ...zi.map((e) => {
+                                if ("experience" !== e.type || !e.on)
+                                  return null;
                                 const n = { ...e, roles: t.roles },
                                   o = new Map(
                                     (e.roles || []).map((e, t) => [
@@ -36426,8 +36487,27 @@
                                   onBeginTextEdit: () => fi(!0),
                                   transitionState: kr[n.id],
                                 });
-                              })
-                            : t.roles.length > 0 &&
+                              })]
+                            : [
+                                ...mMain(t.pageNum).map((sec) =>
+                                  React.createElement(Ce, {
+                                    key: (sec.id || "x") + "_p" + t.pageNum + (sec._antcvSplitCont ? "_c" : ""),
+                                    s: sec,
+                                    navyColor: Ke,
+                                    isCL: !1,
+                                    language: je,
+                                    cvTableRatio: Xr,
+                                    clTableRatio: Qr,
+                                    onTableRatioChange: aa,
+                                    fontSizes: Yr,
+                                    styleConfig: ya,
+                                    onEdit: gi && !sec._antcvSplitCont ? r(sec.id) : null,
+                                    textEditMode: gi,
+                                    onBeginTextEdit: () => fi(!0),
+                                    transitionState: kr[sec.id],
+                                  }),
+                                ),
+                                t.roles.length > 0 &&
                                 React.createElement(
                                   React.Fragment,
                                   null,
@@ -36505,7 +36585,7 @@
                                       })
                                     );
                                   }),
-                                ),
+                                )],
                         ),
                       ),
                     ),

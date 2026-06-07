@@ -37736,7 +37736,8 @@
                     }
                     return t;
                   },
-                  o = Di.flatMap((sec) => {
+                  o = (() => {
+                    const __arr = Di.flatMap((sec) => {
                     // Sidebar sub-section page-box split by per-item breaks
                     // (antcv:itemPages[sec.id][ORIGINAL itemIndex]). The hidden-item
                     // filter n() is applied AFTER the split (not before), so hiding a
@@ -37773,7 +37774,27 @@
                       }
                       return out.length ? out : [];
                     } catch (_) { return [sec]; }
-                  }).filter((e) => !e.items || e.items.length > 0),
+                  }).filter((e) => !e.items || e.items.length > 0);
+                    // 1.50.279 SIDEBAR-CASCADE-001: cascade sidebar parts
+                    // monotonically in DOCUMENT order — a part can never sit on
+                    // an earlier page than the content above it. Owner 2026-06-08:
+                    // "REGULATORY CONTEXT slid to page 2 but ADDITIONAL
+                    // INFORMATION (which is AFTER it) did not" — so ADDITIONAL
+                    // rendered on page 1 BETWEEN the two halves of REGULATORY.
+                    // The per-section split computed each section's page in
+                    // isolation; this floor pushes every following part to >= the
+                    // running max page, so once REGULATORY reaches page 2 every
+                    // later sidebar section follows it onto page 2 (after the
+                    // REGULATORY (CONT.) block), preserving reading order.
+                    let __run = 1;
+                    for (const __p of __arr) {
+                      let __pg = Math.max(1, parseInt(__p.page || 1, 10));
+                      if (__pg < __run) __pg = __run;
+                      else __run = __pg;
+                      __p.page = __pg;
+                    }
+                    return __arr;
+                  })(),
                   a = (e) => Math.max(1, parseInt(e.page || 1, 10)),
                   d = (() => {
                     // Role effective page = its own page, floored monotonically so a

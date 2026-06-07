@@ -7,7 +7,7 @@
  */
 (function(){
   'use strict';
-  var VERSION = '1.50.206-native-render-retired';
+  var VERSION = '1.50.216-sidebar-fill';
   if (window.__antcvSidebarSubsectionPagebreaks === VERSION) return;
   window.__antcvSidebarSubsectionPagebreaks = VERSION;
 
@@ -34,7 +34,11 @@
     var st=document.createElement('style');
     st.id='antcv-sidebar-subsection-pagebreaks-329-css';
     st.textContent = [
-      '.antcv-preview-paper .antcv-document-sidebar,.antcv-preview-paper [data-antcv-document-sidebar="true"]{background:#283556!important;min-height:1122px!important;align-self:stretch!important;}',
+      // 1.50.216: force every page-box row to a full A4 height and stretch its
+      // columns, so the navy sidebar fills to the page bottom even when the
+      // sidebar's own content is shorter than the main column / the page.
+      '.antcv-preview-paper .antcv-page-row{align-items:stretch!important;min-height:1123px!important;}',
+      '.antcv-preview-paper .antcv-document-sidebar,.antcv-preview-paper [data-antcv-document-sidebar="true"]{background:#283556!important;min-height:1123px!important;align-self:stretch!important;height:auto!important;}',
       '.antcv-sidebar-pagebreak-329{break-before:page;page-break-before:always;height:0;margin:0;padding:0;line-height:0;}',
       '.antcv-sidebar-pagebar-329{display:block;margin:8pt 0 6pt 0;padding:4pt 6pt;border:0;border-radius:2px;color:#fff;background:rgba(217,140,0,0.92);font-weight:700;font-size:8.5pt;letter-spacing:.02em;text-transform:uppercase;text-align:center;}',
       '.antcv-sidebar-cont-329{display:block;margin:4pt 0 8pt 0;padding:0 0 3pt 0;border-bottom:1pt solid #01B7BB;color:#01B7BB;font-weight:700;font-size:10pt;text-align:center;}',

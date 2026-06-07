@@ -1,4 +1,4 @@
-/* AntCV auto page-break (block-level) sidecar — v1.50.268
+/* AntCV auto page-break (block-level) sidecar — v1.50.269
  * ============================================================
  * Owner feature AUTO-PAGEBREAK-BLOCK-001 (FEATURES_REGISTRY).
  *
@@ -54,7 +54,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.268';
+  var VERSION = '1.50.269';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -207,6 +207,7 @@
   }
 
   var lastWritten = null;
+  var lastSourceFp = null;   // 1.50.269: source fingerprint of last compute
   var writeTimes = [];
   var brokenUntil = 0;
   function nowMs() {
@@ -214,20 +215,52 @@
       ? performance.now() : Date.now();
   }
 
+  // 1.50.269: SOURCE fingerprint — the candidate's section DATA + doc +
+  // viewport. Crucially this does NOT include the rendered DOM, so a
+  // scroll / pagination re-render (which changes the DOM but not the
+  // source content) produces the SAME fingerprint and run() no-ops.
+  // This is the definitive fix for the React #185 infinite-render loop:
+  // the measurer fired antcv:auto-pages-changed -> React re-render ->
+  // (previously) the measurer re-ran on the re-paginated DOM, measured
+  // differently, wrote again, fired again … now it only recomputes when
+  // the SOURCE actually changes (an edit, a language switch, a rotate).
+  function sourceFingerprint() {
+    try {
+      var secs = localStorage.getItem(SECTIONS_KEY) || '';
+      var doc = activeDoc();
+      var scroll = document.querySelector('.antcv-preview-scroll');
+      var ch = scroll ? scroll.clientHeight : 0;
+      var cw = scroll ? scroll.clientWidth : 0;
+      return doc + '#' + ch + 'x' + cw + '#' + secs.length + '#'
+        + secs.slice(0, 400) + '¦' + secs.slice(-400);
+    } catch (_) { return String(nowMs()); }
+  }
+
   function run() {
     try {
       var now = nowMs();
       if (now < brokenUntil) return;
+
+      // GATE: skip entirely when the source content + viewport are
+      // unchanged since the last compute. Breaks the self-feedback loop.
+      var fp = sourceFingerprint();
+      if (fp === lastSourceFp) return;
+
       var map = compute();
+      // Mark this source as processed BEFORE any write/fire, so the
+      // re-render our own write triggers (same source) early-returns.
+      lastSourceFp = fp;
+
       var next = JSON.stringify(map);
       var cur = localStorage.getItem(AUTO_KEY) || '{}';
       if (next === cur) { lastWritten = next; return; }
-      if (next === lastWritten) return; // we already wrote this; await re-render
+      if (next === lastWritten) return;
 
-      // Circuit breaker: > 10 distinct writes in 4s → back off 8s.
+      // Circuit breaker backstop: > 8 distinct writes in 4s → back off 8s
+      // AND freeze the fingerprint so we stop recomputing.
       writeTimes.push(now);
       writeTimes = writeTimes.filter(function (t) { return now - t < 4000; });
-      if (writeTimes.length > 10) {
+      if (writeTimes.length > 8) {
         brokenUntil = now + 8000;
         writeTimes = [];
         try {
@@ -260,14 +293,15 @@
 
   function start() {
     [400, 900, 1800, 3500].forEach(function (d) { setTimeout(schedule, d); });
-    try {
-      new MutationObserver(schedule).observe(
-        document.body || document.documentElement,
-        { childList: true, subtree: true, characterData: true }
-      );
-    } catch (_) {}
+    // 1.50.269: NO MutationObserver — it fired on our own pagination
+    // re-render and was a loop amplifier. Genuine content changes come
+    // through the app's explicit events below; the fingerprint gate
+    // makes any stray trigger a cheap no-op anyway.
+    // 1.50.269: do NOT listen to antcv:auto-pages-changed — that is the
+    // event WE fire; listening to it was the direct self-trigger that
+    // produced the React #185 loop.
     ['antcv:sections-updated', 'antcv:item-pages-changed',
-     'antcv:auto-pages-changed', 'antcv:preview-rescale'].forEach(function (ev) {
+     'antcv:preview-rescale'].forEach(function (ev) {
       try { window.addEventListener(ev, schedule); } catch (_) {}
     });
     try { window.addEventListener('resize', schedule, { passive: true }); } catch (_) {}
@@ -281,7 +315,7 @@
 
   window.AntcvAutoPagebreak = {
     version: VERSION,
-    run: function () { lastWritten = null; schedule(); },
+    run: function () { lastWritten = null; lastSourceFp = null; schedule(); },
     _compute: compute,
     // Manual reset of auto breaks (e.g. from console) if a stale break
     // ever sticks: AntcvAutoPagebreak.clear()
@@ -289,6 +323,7 @@
       try {
         localStorage.setItem(AUTO_KEY, '{}');
         lastWritten = '{}';
+        lastSourceFp = null;
         window.dispatchEvent(new CustomEvent('antcv:auto-pages-changed',
           { detail: { source: 'auto-pagebreak-001-clear' } }));
       } catch (_) {}

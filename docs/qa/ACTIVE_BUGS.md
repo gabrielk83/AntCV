@@ -8,6 +8,47 @@ A companion **feature registry** (open vs shipped features) lives at
 
 ---
 
+## OPEN — 2026-06-07 (page-break arc + kernel / application-history)
+
+### Page breaks / pagination
+- **PB-OUTCOMES-WIPE-001** — `[FIXED→VERIFYING]` A page break on SELECTED OUTCOMES
+  **deleted all outcomes** (and produced no break). Same class as the HIWC bullet wipe:
+  `selected-outcomes-row-controls-237` `setPage()` fired `antcv:sections-updated`, forcing
+  a re-render that read the momentarily-empty outcomes editor and wrote `items:[]`. Fixed
+  1.50.218 — `setPage` now fires the page-only `antcv:item-pages-changed`. Owner to confirm.
+- **PB-WORKER-CONT-HEADER-001** — `[OPEN]` In the **exported PDF/DOCX**, the EXPERIENCE
+  continuation heading on page 2 renders as **"SELECTED OUTCOMES"** instead of
+  "EXPERIENCE (CONT.)". Only visible in the export (not the preview) → produced by the
+  **docx-worker** (`generate.js` `(Cont.)` field-code / heading pairing), not the PWA.
+  Needs a worker fix + an export to verify (no PDF renderer in CI).
+- **PB-WORKER-SIDEBAR-FILL-001** — `[OPEN]` The navy sidebar does not fill to the page
+  bottom on a continuation page **in the export** (Word table-cell full-height technique).
+  Preview fill addressed in 1.50.216; export still open.
+- **PB-AUTO-OVERFLOW-001** — `[OPEN / stood down]` Auto-overflow was built (1.50.211–214)
+  then **stood down** (1.50.215): didn't render on mobile and forwarding the sidebar
+  auto-break into the 2-column worker scrambled the PDF (candidate header isolated → 3
+  pages, mid-sentence role break, wrong continuation header). Needs a proper rebuild:
+  unpaginated height measurement + worker-side group/role-aware 2-column pagination.
+- **PB-PREVIEW-GROUPNAME-EDIT-001** — `[OPEN]` A group-name edit made **from the preview**
+  (inline) does not persist; only edits **from the panel** stick. (Panel-edit race fixed
+  1.50.217; the preview-inline path is separate.)
+
+### Kernel / generation / application history (testing is painful because of these)
+- **KERNEL-CLOUD-PERSIST-001** — `[OPEN]` The generated kernel is **not saved to cloud
+  memory** — must be regenerated every session/tab-switch; makes page-length testing a
+  long regenerate cycle.
+- **KERNEL-SPECIALIZATION-LINE-001** — `[OPEN]` The kernel does **not write to the
+  specialization line**.
+- **APPHISTORY-SAME-LINE-001** — `[OPEN]` Saving to Application History writes to the **same
+  (specialization) line** rather than its own slot.
+- **APPHISTORY-RELOAD-001** — `[OPEN]` Pressing a saved Application-History item **does not
+  load** that saved application — forces a full regenerate.
+- **KERNEL-STUCK-LAST-CMD-001** — `[OPEN]` The kernel sometimes appears **stuck on the last
+  command**; a **browser refresh** surfaces the generated kernel — i.e. the result was ready
+  but the UI didn't update without a reload.
+
+---
+
 ## STATUS UPDATE — 2026-06-06 (owner live-confirmed)
 
 ### Closed ✓ (owner-confirmed on real devices)

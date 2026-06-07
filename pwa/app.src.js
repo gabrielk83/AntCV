@@ -12675,6 +12675,22 @@
                             bo(e.rationale);
                           } catch (e) {}
                         if ("string" == typeof e.jd_text && e.jd_text) {
+                          // 1.50.253: when the loaded row is the
+                          // UNSOLICITED kernel (category or jd_company
+                          // says so), there is no JD context — clear Vt
+                          // regardless of what jd_text contains. Reason:
+                          // a 1.50.240-era auto-sync overwrite may have
+                          // pumped a tailored JD's text into a kernel
+                          // row's jd_text column; without this clamp,
+                          // cold-restore keeps re-filling the signals
+                          // textarea with the stale tailored JD on every
+                          // hard refresh (the "cadaver" the owner kept
+                          // reporting).
+                          const __cat =
+                              String(e.category || "").trim().toLowerCase(),
+                            __co = String(e.jd_company || "").trim().toLowerCase();
+                          const __isUnsolicited =
+                            __cat === "unsolicited" || __co === "unsolicited";
                           const t =
                               e.jd_text.startsWith(
                                 "GENERAL CV — UNSOLICITED APPLICATION CONTEXT",
@@ -12686,7 +12702,16 @@
                                 "GENERAL CV - UNSOLICITED APPLICATION CONTEXT",
                               ),
                             n = e.jd_text.startsWith("Manual save");
-                          if (t) {
+                          if (__isUnsolicited) {
+                            try {
+                              Vt("");
+                            } catch (e) {}
+                            if (t) {
+                              try {
+                                Un.current = e.jd_text;
+                              } catch (e) {}
+                            }
+                          } else if (t) {
                             try {
                               Un.current = e.jd_text;
                             } catch (e) {}
@@ -12701,6 +12726,11 @@
                             try {
                               Vt(e.jd_text);
                             } catch (e) {}
+                        } else {
+                          // No jd_text at all — make sure the textarea
+                          // is empty (1.50.253: covers the case where a
+                          // kernel row's jd_text was nulled out).
+                          try { Vt(""); } catch (e) {}
                         }
                         console.log(
                           "[cloud-restore] active application restored:",
@@ -13114,15 +13144,28 @@
                   try {
                     const apps =
                       e && Array.isArray(e.applications) ? e.applications : [];
-                    const isUnsol = (a) =>
-                      a &&
-                      (a.category === "unsolicited" ||
-                        String(a.jd_company || "").trim().toLowerCase() ===
-                          "unsolicited");
+                    // 1.50.253 fix: do NOT match on category. The legacy
+                    // auto-create at ~12116 hardcodes category="unsolicited"
+                    // for EVERY row, including tailored generations. So a
+                    // Kvadrat row would match `category==="unsolicited"`
+                    // even though jd_company="Kvadrat" — and the
+                    // mount-hydrate would then pump the Kvadrat JD back
+                    // into the textarea. Filter ONLY by jd_company being
+                    // empty or "Unsolicited".
+                    const isUnsol = (a) => {
+                      if (!a) return false;
+                      const co = String(a.jd_company || "").trim().toLowerCase();
+                      return co === "" || co === "unsolicited";
+                    };
                     const unsol = apps.find(isUnsol);
                     if (unsol && unsol.id) __chosenId = unsol.id;
-                    else if (t && void 0 !== t.application_id && t.application_id)
-                      __chosenId = t.application_id;
+                    // 1.50.253: if no genuinely-unsolicited row exists,
+                    // leave __chosenId null so the user lands on a fresh
+                    // template state (no Ml, no setActive, no hydrate, no
+                    // JD textarea fill) instead of being dropped into a
+                    // tailored editor for an app they didn't ask to open.
+                    // They can regenerate the kernel to create a fresh
+                    // unsolicited row.
                   } catch (e) {}
                   if (__chosenId) {
                     try {
@@ -16944,6 +16987,17 @@
                     bo(e.rationale);
                   } catch (e) {}
                 if ("string" == typeof e.jd_text && e.jd_text) {
+                  // 1.50.253 (read-from-cloud path): same unsolicited-row
+                  // clamp as the cold-start cloud-restore. When the row is
+                  // the kernel (category / jd_company says "unsolicited"),
+                  // never pump its stored jd_text into Vt — a 1.50.240-era
+                  // auto-sync overwrite may have left a tailored JD pinned
+                  // in there. The kernel has no JD context by definition.
+                  const __cat =
+                      String(e.category || "").trim().toLowerCase(),
+                    __co = String(e.jd_company || "").trim().toLowerCase();
+                  const __isUnsolicited =
+                    __cat === "unsolicited" || __co === "unsolicited";
                   const t =
                       e.jd_text.startsWith(
                         "GENERAL CV — UNSOLICITED APPLICATION CONTEXT",
@@ -16959,7 +17013,19 @@
                       "Manual save — no JD text available." === e.jd_text ||
                       "Manual save - no JD text available." === e.jd_text ||
                       e.jd_text.startsWith("Manual save");
-                  if (t) {
+                  if (__isUnsolicited) {
+                    try {
+                      Vt("");
+                    } catch (e) {}
+                    if (t) {
+                      try {
+                        Un.current = e.jd_text;
+                      } catch (e) {}
+                    }
+                    console.log(
+                      "[Read from Cloud] unsolicited row — jd_text clamped, Vt cleared",
+                    );
+                  } else if (t) {
                     try {
                       Un.current = e.jd_text;
                     } catch (e) {}
@@ -16980,6 +17046,8 @@
                     try {
                       Vt(e.jd_text);
                     } catch (e) {}
+                } else {
+                  try { Vt(""); } catch (e) {}
                 }
                 a = !0;
               }

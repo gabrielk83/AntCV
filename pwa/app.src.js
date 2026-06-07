@@ -33161,12 +33161,11 @@
                                       "button",
                                       {
                                         onClick: async () => {
-                                          if (
-                                            !Hl &&
-                                            confirm(
-                                              "Switch to this application? Any unsaved edits to your current CV will be saved to its application row first.",
-                                            )
-                                          ) {
+                                          // 1.50.231: load immediately (no
+                                          // confirm). Unsaved edits to the
+                                          // current CV are still auto-saved to
+                                          // its row first below.
+                                          if (!Hl) {
                                             (Ul("switch:" + e.id), Gl(""));
                                             try {
                                               if (Fl && Fl !== e.id)
@@ -35939,11 +35938,15 @@
                   style: {
                     background: "rgba(200,40,40,0.2)",
                     border: "1px solid rgba(200,40,40,0.4)",
-                    color: "#ff8888",
+                    // 1.50.231: warning body text yellow (was light-red #ff8888)
+                    // — owner preference: everything after the ⚠️ reads yellow
+                    // for legibility against the dark-red warning bg.
+                    color: "#ffd166",
                     borderRadius: 8,
                     padding: "8px 10px",
                     fontSize: 12,
                     marginBottom: 10,
+                    whiteSpace: "pre-wrap",
                   },
                 },
                 wo,
@@ -37835,11 +37838,12 @@
                             onClick: async () => {
                               if (!Hl)
                                 if (e.id !== Fl) {
-                                  if (
-                                    confirm(
-                                      "Switch to this application? Any unsaved edits to your current CV will be saved to its application row first.",
-                                    )
-                                  ) {
+                                  // 1.50.231: pressing a saved application loads
+                                  // it IMMEDIATELY — no confirm dialog (the
+                                  // previous prompt added friction). The current
+                                  // CV's unsaved edits are still auto-saved to
+                                  // its application row first below.
+                                  if (true) {
                                     (Ul("switch:" + e.id), Gl(""));
                                     try {
                                       if (Fl && Fl !== e.id)

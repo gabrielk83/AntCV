@@ -10,6 +10,49 @@ A companion **feature registry** (open vs shipped features) lives at
 
 ## OPEN — 2026-06-07 (page-break arc + kernel / application-history)
 
+### Preview ↔ PDF parity (analysed 2026-06-07)
+- **PREVIEW-PDF-PARITY-001** `[PARTIAL][HIGH][export+preview]` — The CL preview
+  shows ONE page (no salmon) but the exported PDF overflows, orphaning the
+  signature name + AI watermark onto a near-empty extra page. Root causes,
+  from a line-by-line PDF-vs-preview comparison of the Unsolicited Open
+  Application CL (2026-06-07):
+  1. **Vertical mismatch.** DOCX inter-paragraph spacing (`before:240`=12pt on
+     section/signature bodies, `before:360`=18pt on the watermark) is far
+     larger than the preview's (~3–4px ≈ 2–3pt margins). Accumulated over
+     ~10 blocks the PDF is ~120px (~0.85in) TALLER than the preview — enough
+     to tip the closing block over the page-1 boundary while the preview
+     fits. **Fixed (increment 1, docx-worker 1.14.28 / app 1.50.269):**
+     watermark `before` 360→120 (linear only), signature `before` 240→150,
+     `keepNext`+`keepLines` on the closing block so it moves as a unit and
+     can't orphan a single line. Reconciles THIS one-page letter.
+  2. **Horizontal mismatch.** Same font/size (Carlito 10.5pt) but the PDF
+     text column is slightly WIDER than the preview's → PDF fits ~1 more word
+     per line. Examples: WHO-I-AM L2 PDF "…technical problem" vs preview
+     "…technical"; WHY L1 PDF "…scope aligns" vs preview "…scope"; HWIC intro
+     PDF "…I would focus" vs preview "…I would". So on-screen line breaks are
+     NOT the real ones. **Deferred to increment 2:** match the preview body
+     column width to the PDF column (A4 − margins − cell margins).
+  3. **Estimator targets a third geometry.** The line/tightening counter
+     `Vi(text, 590, 11, …)` (`app.src.js`) uses width 590px / 11pt — matches
+     neither the preview (10.5pt, wider) nor the PDF (10.5pt, widest). So
+     fit-it / enhance / tighten optimise against a box that doesn't exist.
+     **Deferred to increment 2:** re-point `Vi` to the real PDF column +
+     10.5pt so tightening targets the artifact (owner: "tightening rules must
+     follow the real PDF, not the theoretical").
+- **AUTO-PAGEBREAK-CV-MIDGROUP-001** `[OPEN][HIGH][preview→pdf]` — CONCLUSION
+  the owner asked for (2026-06-07): the CV mid-group cut is the SAME root
+  cause as PREVIEW-PDF-PARITY-001. `antcv-auto-pagebreak-block-001.js`
+  (1.50.268) measures overflow against the **preview** DOM heights and snaps
+  the autoPages break to a group boundary — but because the **PDF** has the
+  larger `before:240` spacing, the PDF's group positions sit lower than the
+  preview's, so the break the measurer chose (correct for the preview) lands
+  MID-GROUP in the PDF. **Fix (increment 2):** the measurer must compute
+  against PDF-equivalent heights (apply the docx spacing model when summing
+  item heights), OR increment 1's spacing reconciliation must extend to the
+  per-section bodies so preview height ≈ PDF height everywhere. Until then,
+  expect occasional CV group/role splits that look right in the preview but
+  cut mid-group in the PDF.
+
 ### Export
 - **DOCX-EXPORT-CORS-CPU-001** `[OPEN][HIGH][infra]` — DOCX export failed with
   *"Access to fetch at 'https://docx-worker.../generate' from origin

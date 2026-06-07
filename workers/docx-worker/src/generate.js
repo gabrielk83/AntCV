@@ -613,7 +613,16 @@ function buildAiDisclosureHangingTextbox(ctx, opts) {
   const textColor   = isSidebar ? 'C8D0DC' : '4D7976';
   const para = {
     alignment: isSidebar ? AlignmentType.CENTER : AlignmentType.RIGHT,
-    spacing: { before: 360, after: 0, line: 220, lineRule: 'auto' },
+    // v1.50.269: linear/CL watermark before-spacing cut 360 -> 120
+    // (18pt -> 6pt). The 18pt lead was pushing the watermark — and with
+    // it the signature name — onto a near-empty extra page when the
+    // letter ran close to one page (owner report 2026-06-07: PDF split
+    // on the last sentence, signature + watermark orphaned). The
+    // sidebar (CV) keeps its larger 360 lead since it sits in a tall
+    // navy cell with room below. keepLines so the single watermark line
+    // never splits.
+    spacing: { before: isSidebar ? 360 : 120, after: 0, line: 220, lineRule: 'auto' },
+    keepLines: true,
     children: [new TextRun({
       text: 'AI-assisted — author retains responsibility for content.',
       font: 'Calibri',
@@ -896,7 +905,16 @@ function buildLinearDocument(ctx) {
   // by the candidate's name in bold. Matches the preview's signHtml.
   const closeWord = (lang === 'da') ? 'Med venlig hilsen,' : 'Kind regards,';
   bodyChildren.push(new Paragraph({
-    spacing: { before: 240, after: 60, line: 276, lineRule: 'auto' },
+    // v1.50.269: before 240 -> 150 (12pt -> 7.5pt). keepNext binds
+    // "Kind regards," to the name, and the name (keepNext) to the
+    // watermark, so the closing block can never orphan a single line
+    // onto a new page — it moves as a unit, and the trimmed spacing
+    // keeps it on page 1 for a one-page letter. keepNext only bites at
+    // a page boundary (no effect mid-page), matching the owner's
+    // "keep together only if signature is at end of page".
+    spacing: { before: 150, after: 60, line: 276, lineRule: 'auto' },
+    keepNext: true,
+    keepLines: true,
     alignment: AlignmentType.LEFT,
     children: [new TextRun({
       text: closeWord,
@@ -907,6 +925,8 @@ function buildLinearDocument(ctx) {
   }));
   bodyChildren.push(new Paragraph({
     spacing: { before: 60, after: 0, line: 276, lineRule: 'auto' },
+    keepNext: true,
+    keepLines: true,
     alignment: AlignmentType.LEFT,
     children: [new TextRun({
       text: pi.name || ((lang === 'da') ? 'Dit navn' : 'Your Name'),

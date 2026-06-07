@@ -24423,7 +24423,10 @@ function buildAiDisclosureHangingTextbox(ctx, opts) {
   const textColor = isSidebar ? "C8D0DC" : "4D7976";
   const para = {
     alignment: isSidebar ? AlignmentType.CENTER : AlignmentType.RIGHT,
-    spacing: { before: 360, after: 0, line: 220, lineRule: "auto" },
+    // v1.50.269: linear/CL watermark before 360 -> 120 (was orphaning
+    // the signature+watermark onto an extra page). Sidebar keeps 360.
+    spacing: { before: isSidebar ? 360 : 120, after: 0, line: 220, lineRule: "auto" },
+    keepLines: true,
     children: [new TextRun({
       text: "AI-assisted \u2014 author retains responsibility for content.",
       font: "Calibri",
@@ -24658,7 +24661,12 @@ function buildLinearDocument(ctx) {
   }
   const closeWord = lang === "da" ? "Med venlig hilsen," : "Kind regards,";
   bodyChildren.push(new Paragraph({
-    spacing: { before: 240, after: 60, line: 276, lineRule: "auto" },
+    // v1.50.269: before 240 -> 150; keepNext binds the closing block
+    // (Kind regards -> name -> watermark) so it can't orphan a single
+    // line onto a new page. keepNext only bites at a page boundary.
+    spacing: { before: 150, after: 60, line: 276, lineRule: "auto" },
+    keepNext: true,
+    keepLines: true,
     alignment: AlignmentType.LEFT,
     children: [new TextRun({
       text: closeWord,
@@ -24669,6 +24677,8 @@ function buildLinearDocument(ctx) {
   }));
   bodyChildren.push(new Paragraph({
     spacing: { before: 60, after: 0, line: 276, lineRule: "auto" },
+    keepNext: true,
+    keepLines: true,
     alignment: AlignmentType.LEFT,
     children: [new TextRun({
       text: pi.name || (lang === "da" ? "Dit navn" : "Your Name"),

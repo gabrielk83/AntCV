@@ -16376,7 +16376,7 @@
           }
           return null;
         };
-      ((glDemo = ({ proxyUrl: t }) => {
+      ((window.glDemo = ({ proxyUrl: t }) => {
         const [n, o] = e(null),
           [r, a] = e(!1),
           [i, s] = e(""),
@@ -29186,7 +29186,7 @@
                     React.createElement(
                       "div",
                       null,
-                      React.createElement(glDemo, { proxyUrl: re }),
+                      React.createElement(window.glDemo, { proxyUrl: re }),
                       React.createElement(
                         ({ proxyUrl: t }) => {
                           const [n, o] = e(null),

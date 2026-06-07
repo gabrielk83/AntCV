@@ -13128,6 +13128,23 @@
                     try {
                       Ml(__chosenId);
                     } catch (e) {}
+                    // 1.50.252: stamp the chosen row's company NOW (before the
+                    // conditional hydrate later), so auto-sync's gate has
+                    // something to compare to even if the hydrate path is
+                    // skipped (e.g. local sections already look real).
+                    try {
+                      const apps =
+                        e && Array.isArray(e.applications)
+                          ? e.applications
+                          : [];
+                      const __row = apps.find(
+                        (a) => a && a.id === __chosenId,
+                      );
+                      localStorage.setItem(
+                        "antcv:activeAppCompany",
+                        String((__row && __row.jd_company) || ""),
+                      );
+                    } catch (e) {}
                     // Sync the server's active pointer too, so the next
                     // cold-start (and the auto-sync push) target the same id.
                     if (
@@ -13219,9 +13236,20 @@
                               bo(n.rationale);
                             } catch (e) {}
                           }
+                          try {
+                            // 1.50.252: stamp the loaded row's company so
+                            // auto-sync knows whether subsequent edits still
+                            // belong to this row.
+                            localStorage.setItem(
+                              "antcv:activeAppCompany",
+                              String(n.jd_company || ""),
+                            );
+                          } catch (e) {}
                           console.log(
                             "[apps] mount-hydrated active application",
                             __chosenId,
+                            "co=",
+                            n.jd_company || "",
                           );
                         }
                       }
@@ -13307,6 +13335,49 @@
             ro && Array.isArray(ro.cv) && ro.cv[0] && ro.cv[0].content;
           if ("string" == typeof f && /^\s*\[/.test(f.trim())) return;
         } catch (e) {}
+        // 1.50.252 CRITICAL: auto-sync MUST NOT push when io.company has
+        // drifted away from the loaded row's company. Pre-fix flow that
+        // destroyed data:
+        //   1. User loads the Unsolicited kernel row (Fl=233, io.company=
+        //      "Unsolicited").
+        //   2. User pastes a Kvadrat JD and clicks Generate → io.company
+        //      flips to "Kvadrat" and sections become Kvadrat-tailored.
+        //   3. 3s later, auto-sync pushes io+sections to Fl=233 → the
+        //      Unsolicited kernel ROW is OVERWRITTEN with Kvadrat content.
+        //      User sees the kernel "removed", and on next mount cloud-
+        //      restore reads the corrupted row's jd_text into the signals
+        //      textarea.
+        // Fix: when the load handlers commit a row, they stamp
+        // localStorage.activeAppCompany. Auto-sync compares io.company to
+        // it; if they differ, the user has started a different draft and
+        // we DO NOT auto-push (they need to "Save current as new
+        // application" to commit a new row). Treat empty string == empty
+        // string and "Unsolicited" == empty as the same context.
+        const __norm = (s) =>
+          String(s || "").trim().toLowerCase();
+        let __expectedCompany = null;
+        try {
+          __expectedCompany = localStorage.getItem("antcv:activeAppCompany");
+        } catch (e) {}
+        const __ioCo = __norm(io && io.company);
+        const __expCo = __norm(__expectedCompany);
+        // Normalise: empty and "unsolicited" are the same kernel context.
+        const __sameContext =
+          __ioCo === __expCo ||
+          (__ioCo === "unsolicited" && (__expCo === "" || __expCo === "unsolicited")) ||
+          (__expCo === "unsolicited" && (__ioCo === "" || __ioCo === "unsolicited"));
+        if (__expectedCompany !== null && !__sameContext) {
+          try {
+            console.log(
+              "[apps] auto-sync skipped — io.company drifted (",
+              __ioCo,
+              ") from active row's company (",
+              __expCo,
+              "). User needs to Save explicitly to commit a new row.",
+            );
+          } catch (e) {}
+          return;
+        }
         const t = setTimeout(() => {
           try {
             oo.update(__activeId, {
@@ -33519,7 +33590,18 @@
                                       meta:
                                         io && "object" == typeof io ? io : {},
                                     }),
-                                    Ml(t.application.id));
+                                    Ml(t.application.id),
+                                    (() => {
+                                      try {
+                                        // 1.50.252: stamp newly-saved row's
+                                        // company so auto-sync continues to
+                                        // push to it.
+                                        localStorage.setItem(
+                                          "antcv:activeAppCompany",
+                                          String((io && io.company) || ""),
+                                        );
+                                      } catch (e) {}
+                                    })());
                                   const n = await oo.list();
                                   n &&
                                     Array.isArray(n.applications) &&
@@ -33811,6 +33893,18 @@
                                                   // completed for X at Y"
                                                   // text.
                                                   bo(n.rationale || null),
+                                                  (() => {
+                                                    try {
+                                                      // 1.50.252: stamp the
+                                                      // loaded row's company
+                                                      // so auto-sync gates on
+                                                      // it.
+                                                      localStorage.setItem(
+                                                        "antcv:activeAppCompany",
+                                                        String(n.jd_company || ""),
+                                                      );
+                                                    } catch (e) {}
+                                                  })(),
                                                   await oo.setActive(e.id),
                                                   Ml(e.id),
                                                   $t("editor"),
@@ -34901,6 +34995,13 @@
                                 } catch (e) {}
                                 try {
                                   Ml(recent.id);
+                                } catch (e) {}
+                                try {
+                                  // 1.50.252: stamp loaded row's company.
+                                  localStorage.setItem(
+                                    "antcv:activeAppCompany",
+                                    String(n.jd_company || ""),
+                                  );
                                 } catch (e) {}
                                 console.log(
                                   "[KERNEL] Editor: cloud slot empty, hydrated from latest unsolicited application #" +
@@ -38573,7 +38674,19 @@
                                   cl_sections: (ro && ro.cl) || [],
                                   meta: io && "object" == typeof io ? io : {},
                                 }),
-                                Ml(t.application.id));
+                                Ml(t.application.id),
+                                (() => {
+                                  try {
+                                    // 1.50.252: stamp the newly-saved row's
+                                    // company so auto-sync continues to push
+                                    // to it (until the user changes io.company
+                                    // again).
+                                    localStorage.setItem(
+                                      "antcv:activeAppCompany",
+                                      String((io && io.company) || ""),
+                                    );
+                                  } catch (e) {}
+                                })());
                               const n = await oo.list();
                               n &&
                                 Array.isArray(n.applications) &&
@@ -38762,6 +38875,16 @@
                                       // Analysis panel doesn't keep stale
                                       // rationale from the previous app.
                                       bo(n.rationale || null),
+                                      (() => {
+                                        try {
+                                          // 1.50.252: stamp the loaded row's
+                                          // company so auto-sync gates on it.
+                                          localStorage.setItem(
+                                            "antcv:activeAppCompany",
+                                            String(n.jd_company || ""),
+                                          );
+                                        } catch (e) {}
+                                      })(),
                                       await oo.setActive(e.id),
                                       Ml(e.id),
                                       $t("editor"));

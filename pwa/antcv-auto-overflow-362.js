@@ -24,7 +24,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.214-auto-overflow-sticky';
+  var VERSION = '1.50.215-auto-overflow-standdown';
   if (window.__antcvAutoOverflow362 === VERSION) return;
   window.__antcvAutoOverflow362 = VERSION;
 
@@ -122,19 +122,23 @@
   }
 
   var last = null;
+  // 1.50.215: auto-overflow STOOD DOWN. As built it didn't render on mobile (no
+  // salmon, navy didn't fill) and — worse — forwarding the sidebar auto-break into
+  // the 2-column DOCX worker scrambled the PDF (isolated the candidate header onto
+  // its own page, split a role mid-sentence, mislabelled the continuation header).
+  // Net-negative + unverifiable here, so this sidecar now only CLEARS any auto
+  // break it previously wrote, restoring the stable 1.50.210 manual-break behaviour.
+  // Re-enabling needs (a) unpaginated height measurement and (b) worker-side
+  // group/role-aware 2-column pagination — a proper rebuild, not this heuristic.
   function run() {
     try {
-      var map = compute();
-      var snap = JSON.stringify(map);
-      if (snap === last) return;                     // idempotent — no churn, no loop
-      last = snap;
-      // Only persist when it actually changed vs storage too.
-      var existing = localStorage.getItem(AUTO_KEY) || '{}';
-      if (existing === snap) return;
-      localStorage.setItem(AUTO_KEY, snap);
-      try { window.dispatchEvent(new CustomEvent('antcv:auto-pages-changed', { detail: { source: 'auto-overflow-362' } })); } catch (_) {}
+      var cur = localStorage.getItem(AUTO_KEY) || '{}';
+      if (cur === '{}') return;
+      localStorage.setItem(AUTO_KEY, '{}');
+      try { window.dispatchEvent(new CustomEvent('antcv:auto-pages-changed', { detail: { source: 'auto-overflow-362-standdown' } })); } catch (_) {}
     } catch (e) { try { console.warn('[auto-overflow-362]', e && e.message); } catch (_) {} }
   }
+  void compute; void last;
 
   var pending = false;
   function schedule() {

@@ -820,15 +820,10 @@ function normalizeSections(raw) {
         }
       }
       // Auto-overflow breaks (antcv-auto-overflow-362) live in a separate map.
-      // The export must honour them too, or the PDF/DOCX breaks mid-group while
-      // the preview breaks at the group boundary. Effective = max(manual, auto).
-      const rawAuto = localStorage.getItem('antcv:autoPages');
-      if (rawAuto) {
-        const pa = JSON.parse(rawAuto);
-        if (pa && typeof pa === 'object' && !Array.isArray(pa)) {
-          autoPagesMap = pa;
-        }
-      }
+      // 1.50.215: auto-overflow stood down — do NOT forward autoPages to the
+      // worker. Forwarding the sidebar auto-break scrambled the 2-column PDF
+      // (isolated candidate header, mid-sentence role break, wrong continuation
+      // header). autoPagesMap stays empty so pageFor uses manual itemPages only.
     }
   } catch (_) {}
   function pageFor(sid, origIdx) {

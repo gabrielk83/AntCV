@@ -34,6 +34,17 @@ A companion **feature registry** (open vs shipped features) lives at
   1.50.217; the preview-inline path is separate.)
 
 ### Kernel / generation / application history (testing is painful because of these)
+- **KERNEL-REGEN-GUARD-001** — `[FIX SHIPPED 1.50.225 — owner verify]` Generating without a JD
+  used to **force a brand-new kernel** every time (`_antcvGenerateKernelShowcase({force:true})`),
+  silently replacing a saved kernel. `Cs()` already self-guards (it skips when a kernel exists
+  unless `{force:true}`), but the main Generate button always passed `force`. Fix
+  (`app.src.js`, the no-JD branch of the "Generate CV & Cover Letter" handler ~35900): if a
+  kernel already exists, **default is to KEEP it** — the prompt offers OK = generate a NEW
+  kernel (explicit, non-default) / Cancel = keep & open the existing one, and reminds the user
+  that Settings → "Regenerate showcase" also rebuilds it. A new kernel is auto-built only when
+  none exists. Verified: terser identity-safe, 0 `"use strict"`, 29/29 unit tests, boot 0
+  errors. PWA-only (no worker deploy). Owner verify: with a saved kernel, Generate-without-JD
+  should prompt to keep vs. rebuild rather than silently regenerating.
 - **KERNEL-CLOUD-PERSIST-001** — `[FIX SHIPPED 1.50.221 — needs relay deploy + owner live-verify]`
   The generated kernel is **not saved to cloud memory** — must be regenerated every
   session/tab-switch; makes page-length testing a long regenerate cycle.

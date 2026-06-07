@@ -35899,11 +35899,7 @@
                           ),
                           t = Array.isArray(Yt) && Yt.length > 0;
                         if (!e && !t) {
-                          if (
-                            confirm(
-                              "No job description attached.\n\n• OK → Run KERNEL SHOWCASE — produces a comprehensive unsolicited CV covering your full profile. Use this when sending to recruiters or contacts without a specific role.\n\n• Cancel → Go back and attach a JD (file, URL, or pasted text in Additional Signals). The result will be tailored to that role.\n\nPick OK to run kernel showcase now, or Cancel to attach a JD first.",
-                            )
-                          ) {
+                          const Gk = () => {
                             try {
                               "undefined" != typeof window &&
                               "function" ==
@@ -35919,6 +35915,30 @@
                               ),
                                 vl());
                             }
+                          };
+                          // KERNEL persist UX: if a kernel showcase already exists,
+                          // DON'T silently regenerate (default = keep it). A new
+                          // kernel is only built by default when none exists. Offer
+                          // "generate new" as the explicit, non-default choice — also
+                          // reachable from Settings → "Regenerate showcase".
+                          if (u.get("kernelShowcaseGenerated", !1)) {
+                            confirm(
+                              'You already have a kernel showcase saved.\n\n• OK → Generate a NEW kernel now (replaces your current one).\n• Cancel → Keep your existing kernel (default).\n\nBy default we keep your saved kernel — choose OK only to rebuild it from your latest profile/style. You can also regenerate anytime from Settings → "Regenerate showcase".',
+                            )
+                              ? Gk()
+                              : (() => {
+                                  try {
+                                    $t("editor");
+                                  } catch (e) {}
+                                })();
+                            return;
+                          }
+                          if (
+                            confirm(
+                              "No job description attached.\n\n• OK → Run KERNEL SHOWCASE — produces a comprehensive unsolicited CV covering your full profile. Use this when sending to recruiters or contacts without a specific role.\n\n• Cancel → Go back and attach a JD (file, URL, or pasted text in Additional Signals). The result will be tailored to that role.\n\nPick OK to run kernel showcase now, or Cancel to attach a JD first.",
+                            )
+                          ) {
+                            Gk();
                             return;
                           }
                           return;

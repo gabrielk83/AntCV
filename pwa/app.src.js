@@ -20632,6 +20632,54 @@
                 e && e.message,
               );
             }
+            // 1.50.257: rescue specialization that the LLM routed into
+            // the CL opening instead of the CV subtitle. Owner report:
+            // CV header rendered "[Specialisation — 1–3 focus areas,
+            // separated by •]" placeholder while the CL opening said
+            // "I am writing to introduce my background in systems
+            // architecture, change governance, and electro-optical
+            // engineering." The "X, Y, and Z" list IS the specialisation
+            // — the LLM emitted it in the wrong field. This salvage
+            // runs unconditionally (not gated on the showcase-in-
+            // progress flags, which were the path that previously let
+            // the empty subtitle slip through).
+            try {
+              const __subRaw = W && W.subtitle ? String(W.subtitle).trim() : "";
+              const __subEmpty =
+                !__subRaw ||
+                /^\[specialis(ation|ering)/i.test(__subRaw) ||
+                /^\[focus\s+area/i.test(__subRaw);
+              if (__subEmpty && W && W.opening) {
+                const __m = String(W.opening).match(
+                  /background in\s+([^.;\n]+?)(?:\s+(?:for|where|to)\b|[.;\n]|$)/i,
+                );
+                if (__m && __m[1]) {
+                  const __focus = __m[1]
+                    .replace(/\s+and\s+/i, ", ")
+                    .split(/\s*,\s*/)
+                    .map((s) => s.trim())
+                    .filter(Boolean)
+                    .slice(0, 3);
+                  if (__focus.length) {
+                    W.subtitle = __focus.join(" • ");
+                    try {
+                      console.warn(
+                        '[v1.50.257 showcase] specialisation rescued from CL opening -> "' +
+                          W.subtitle +
+                          '"',
+                      );
+                    } catch (_) {}
+                  }
+                }
+              }
+            } catch (e) {
+              try {
+                console.warn(
+                  "[v1.50.257 showcase] subtitle rescue failed:",
+                  e && e.message,
+                );
+              } catch (_) {}
+            }
             if (
               (lo({
                 company: W.company,

@@ -20768,7 +20768,9 @@
                 (!__jdNamedCompany && io && "Unsolicited" === io.company)
               ) {
                 const e = ie() || {},
-                  t = ((e.roles || [])[0] && (e.roles || [])[0].title) || "";
+                  __wh0 =
+                    (e.workHistory || e.experience || e.roles || [])[0] || {},
+                  t = __wh0.title || __wh0.role || "";
                 (D &&
                   D.company &&
                   "Unsolicited" !== D.company &&
@@ -21158,9 +21160,25 @@
                   d = ie(),
                   p =
                     !!u.get("kernelShowcaseInProgress", !1) ||
-                    !!(io && "Unsolicited" === io.company),
-                  m = (d && d.roles) || [],
-                  g = (m[0] && m[0].title) || "Engineer",
+                    !!(io && "Unsolicited" === io.company) ||
+                    // 1.50.280: harden kernel detection. Cs() resets io.company
+                    // to "" during generation, so p leaned entirely on the
+                    // in-progress flag; if that wasn't set on the run, p went
+                    // false and EVERY p-gated fallback (experience-from-history,
+                    // neutral contribute, profile/outcomes seeds) silently went
+                    // to blank/placeholder. Also accept the response meta company
+                    // and the showcase JD sentinel as kernel signals.
+                    !!(W && "Unsolicited" === W.company) ||
+                    Un.current === ks,
+                  // 1.50.280 KERNEL-EXPERIENCE-EMPTY-001: the kernel stores work
+                  // history under workHistory (items shaped {id, role, company,
+                  // years, bullets}) — NOT "roles", and the field is "role", not
+                  // "title". The old `d.roles` was always empty, so the showcase
+                  // experience fallback never fired and PROFESSIONAL EXPERIENCE
+                  // came back blank (and g/f fell to generic "Engineer"/15).
+                  // Read workHistory (experience/roles as legacy aliases).
+                  m = (d && (d.workHistory || d.experience || d.roles)) || [],
+                  g = (m[0] && (m[0].title || m[0].role)) || "Engineer",
                   f = (function () {
                     try {
                       const e = m
@@ -21386,20 +21404,20 @@
                           p && !aHas && m.length
                             ? m
                                 .filter(function (e) {
-                                  return e && e.title && e.company;
+                                  return e && (e.title || e.role) && e.company;
                                 })
                                 .map(function (e) {
                                   const t = (e.bullets || [])
                                     .filter(function (e) {
                                       return e && "string" == typeof e && !y(e);
                                     })
-                                    .slice(0, 3);
+                                    .slice(0, 5);
                                   return {
                                     id:
                                       e.id ||
                                       "r" +
                                         Math.random().toString(36).slice(2, 7),
-                                    title: e.title,
+                                    title: e.title || e.role,
                                     company: e.company,
                                     years: e.years || "",
                                     on: !0,
@@ -21603,6 +21621,45 @@
                                   ...t(
                                     (
                                       F.bring_rows ||
+                                      // 1.50.280: kernel safety net — if the LLM
+                                      // omits bring_rows, mirror the generated
+                                      // CORE COMPETENCIES (only when they are
+                                      // REAL, i.e. non-placeholder), so WHAT I
+                                      // BRING is never left as raw "[Strategic
+                                      // expertise]" placeholders.
+                                      (p
+                                        ? (() => {
+                                            try {
+                                              const c = (E || []).find(
+                                                (s) => s && "core_comp" === s.id,
+                                              );
+                                              const r =
+                                                c && Array.isArray(c.rows)
+                                                  ? c.rows
+                                                  : null;
+                                              return r &&
+                                                r.length > 1 &&
+                                                r
+                                                  .slice(1)
+                                                  .some(
+                                                    (row) =>
+                                                      Array.isArray(row) &&
+                                                      row.some(
+                                                        (cell) =>
+                                                          cell &&
+                                                          String(cell).trim() &&
+                                                          !/^\[/.test(
+                                                            String(cell).trim(),
+                                                          ),
+                                                      ),
+                                                  )
+                                                ? r
+                                                : null;
+                                            } catch (_) {
+                                              return null;
+                                            }
+                                          })()
+                                        : null) ||
                                       e.rows ||
                                       (o.bring ? o.bring.rows : [])
                                     ).slice(1),

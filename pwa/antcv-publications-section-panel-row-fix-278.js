@@ -261,6 +261,60 @@
       function (b) { return visible(b); }
     );
 
+    // 1.50.238 dedupe pass: when navigation triggers a remount of the
+    // section-header card, an earlier sidecar-injected clone can survive
+    // alongside the freshly-mounted native button (React's reconciliation
+    // doesn't own the clone). The original classify loop assigned only the
+    // FIRST button of each kind to byKind and dropped the rest into
+    // `unclassified`, where they kept `order:5` and stayed visible — so
+    // they multiplied on every navigation. Pre-pass: keep the FIRST
+    // button of each kind in the row, REMOVE every subsequent duplicate of
+    // the same kind. Excludes 273's per-item editor controls (their own
+    // scope). Cheap, idempotent, fixes back-and-forth multiplication.
+    try {
+      var seenKind = {};
+      var toRemove = [];
+      for (var di = 0; di < rowButtons.length; di++) {
+        var db = rowButtons[di];
+        if (db.hasAttribute('data-antcv-pub273-eye') ||
+            db.hasAttribute('data-antcv-pub273-delete') ||
+            db.hasAttribute('data-antcv-pub273-move') ||
+            db.hasAttribute('data-antcv-pub273-control') ||
+            (db.closest && db.closest('[data-antcv-pub273-row="1"]'))) {
+          continue;
+        }
+        var dk = classify(db);
+        if (!dk) continue;
+        // Native moves (▲ ▼) are NOT classified here (return '' from
+        // classify) — they pass through untouched.
+        if (seenKind[dk]) {
+          // Prefer to keep the NATIVE one over a sidecar-injected clone.
+          var keep = seenKind[dk];
+          var keptIsClone = keep.hasAttribute(ATTR_COMP_INJ);
+          var thisIsClone = db.hasAttribute(ATTR_COMP_INJ);
+          if (keptIsClone && !thisIsClone) {
+            toRemove.push(keep);
+            seenKind[dk] = db;
+          } else {
+            toRemove.push(db);
+          }
+        } else {
+          seenKind[dk] = db;
+        }
+      }
+      if (toRemove.length) {
+        for (var dr = 0; dr < toRemove.length; dr++) {
+          try { toRemove[dr].parentElement && toRemove[dr].parentElement.removeChild(toRemove[dr]); }
+          catch (_) {}
+        }
+        // Re-collect after removal so downstream classify uses the cleaned set.
+        rowButtons = Array.prototype.filter.call(
+          row.querySelectorAll('button'),
+          function (b) { return visible(b); }
+        );
+      }
+    } catch (_) {}
+
     // Classify each button.
     var byKind = { back: null, page: null, enr: null, comp: null, on: null, del: null };
     var unclassified = [];

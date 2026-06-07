@@ -25312,10 +25312,12 @@
               // legit restore-in-progress). Once the cloud restore has run (or
               // is not applicable — signed out) and there is still no content,
               // regeneration proceeds and Cs() rebuilds the skeleton.
-              const __hasContent =
-                s &&
-                ((Array.isArray(s.cv) && s.cv.length) ||
-                  (Array.isArray(s.cl) && s.cl.length));
+              // 1.50.278: use the template-aware check — the MINIMUM-SECTIONS
+              // floor restores the me() skeleton (placeholder content, cv.length
+              // > 0), and a plain length check would wrongly treat that skeleton
+              // as REAL content and re-block regeneration. __antcvHasRealSections
+              // returns true only for non-template content.
+              const __hasContent = __antcvHasRealSections(s);
               const __hasMeta =
                 m && "object" == typeof m && m.company;
               let __restoreSettled = true;

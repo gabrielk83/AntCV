@@ -2028,7 +2028,16 @@ async function handleApiApplications(request, env) {
     } catch (_) { /* the INSERT below will surface any remaining issue */ }
 
     const jdText = body.jd_text.trim();
-    const jdHash = await jdHashFromText(jdText);
+    // APPHISTORY-SAME-LINE-001 / "Save current as new application": an unsolicited
+    // save (kernel showcase, no real JD) reuses the same jd_text every time, so the
+    // (user_hash, jd_hash) UPSERT collapses every save onto one row — new saves
+    // overwrite the first entry instead of creating their own. When the client
+    // explicitly asks to save as a NEW application (save_as_new), salt the hash so
+    // the row is always distinct. Real-JD dedup (re-uploading the same JD updates
+    // the existing row) is preserved whenever the flag is off.
+    const jdHash = body.save_as_new
+      ? await jdHashFromText(jdText + '|new|' + Date.now() + '|' + Math.random())
+      : await jdHashFromText(jdText);
     const jdCompany        = typeof body.jd_company === 'string' ? body.jd_company.trim() : '';
     const jdRole           = typeof body.jd_role    === 'string' ? body.jd_role.trim()    : '';
     const jdLanguage       = typeof body.jd_language === 'string' && body.jd_language.trim() ? body.jd_language.trim().slice(0, 5) : 'en';

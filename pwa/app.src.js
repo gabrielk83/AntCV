@@ -32901,6 +32901,11 @@
                                       supporting_context:
                                         (yo && yo.supporting_context) || "",
                                       rationale: yo,
+                                      // APPHISTORY-SAME-LINE-001: this button is
+                                      // "Save current as new application" — force a
+                                      // distinct row each time so saves don't
+                                      // collapse onto the first list entry.
+                                      save_as_new: !0,
                                     });
                                   t &&
                                     t.application &&

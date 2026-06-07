@@ -58,8 +58,23 @@ A companion **feature registry** (open vs shipped features) lives at
   hard-refresh/new tab/2nd device → it restores instead of regenerating).
 - **KERNEL-SPECIALIZATION-LINE-001** — `[OPEN]` The kernel does **not write to the
   specialization line**.
-- **APPHISTORY-SAME-LINE-001** — `[OPEN]` Saving to Application History writes to the **same
-  (specialization) line** rather than its own slot.
+- **APPHISTORY-SAME-LINE-001** — `[FIX SHIPPED 1.50.223 — needs relay deploy + owner verify]`
+  Saving to Application History writes to the **same line** rather than its own slot — owner
+  confirmed 2026-06-07: "new applications are saved to the first in list — no new saves (no
+  save-as upon changes)".
+  **Root cause (read-only trace):** the "💾 Save current as new application" button
+  (`app.src.js:~32887`) always `oo.create` with `jd_text = (zt.text) || Ut || (showcase ? ks
+  : "")` and hardcoded `category:"unsolicited"`. The relay upserts on
+  `(user_hash, jd_hash=SHA256(jd_text))` (`access-relay/src/index.js:~2042`, `UNIQUE` at
+  `schema.sql:42`). On a kernel showcase / no-JD draft, `jd_text` is the same constant every
+  time → identical `jd_hash` → every save UPSERTs the **same first row**; no new entries.
+  **Fix (1.50.223):** the button now sends `save_as_new:true`; the relay, when that flag is set,
+  salts the hash (`jdHashFromText(jdText + '|new|' + Date.now() + '|' + Math.random())`) so each
+  save inserts a **distinct** row. Real-JD dedup (re-uploading the same JD updates its row) is
+  preserved whenever the flag is off. Verified: relay `node --check`, terser identity-safe
+  rebuild, 0 `"use strict"`, 29/29 unit tests, browser boot 0 errors.
+  **Needs:** access-relay worker deploy (same one 1.50.221 needs), then owner verify — save a
+  couple of drafts → each appears as its own entry in the list.
 - **APPHISTORY-RELOAD-001** — `[FIX SHIPPED 1.50.222 — owner live-verify]` Pressing a saved
   Application-History item **does not load** that saved application — forces a full regenerate.
   **Trace (read-only, owner-approved fix):** there are two load surfaces, both in `app.src.js` —

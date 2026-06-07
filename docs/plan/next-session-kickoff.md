@@ -14,11 +14,15 @@ You are continuing AntCV development. Work ONLY on branch
 #265 (draft) as the single PR. Current deployed version on that branch: 1.50.218.
 
 ## Start of session (do this FIRST, in order)
-1. Run `/remote-control` to attach remote control for this session.
-2. Check the relay/worker `/config` (via the Cloudflare MCP tools / a fetch) so demo
+1. Force login to authorize remote control (complete the login so remote is allowed —
+   remote control will not attach without it).
+2. Run `/remote-control` to attach remote control for this session.
+3. Load the AntCV Claude API (load the AntCV Claude API integration AFTER login/remote
+   is attached, so API-backed actions are available).
+4. Check the relay/worker `/config` (via the Cloudflare MCP tools / a fetch) so demo
    mode, proxy URLs and worker endpoints are known before you change anything.
-3. GitHub MCP scope is ONLY `gabrielk83/antcv` (use mcp__github__* tools; no gh CLI).
-4. Sync the checkout (see env note) before reading/editing.
+5. GitHub MCP scope is ONLY `gabrielk83/antcv` (use mcp__github__* tools; no gh CLI).
+6. Sync the checkout (see env note) before reading/editing.
 
 ## Environment & remote control
 - This is the Claude-Code-on-the-web remote env. The container REPEATEDLY reverts the

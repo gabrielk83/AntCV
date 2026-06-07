@@ -12785,6 +12785,81 @@
                         t._err &&
                         console.warn("[apps] active error:", t._err),
                     jl(!0));
+                  // 1.50.245: also HYDRATE the active application's content on
+                  // mount. Without this, hard-refresh shows the chrome (top bar
+                  // company/role, active app badge, Fl/io) correctly but the
+                  // editor body stays as the me() template because nothing
+                  // ever loaded the saved cv/cl_sections into `ro`. Skip when
+                  // local sections already look like real content (don't
+                  // clobber in-progress edits or the kernel cloud-restore).
+                  try {
+                    if (
+                      t &&
+                      void 0 !== t.application_id &&
+                      t.application_id
+                    ) {
+                      const s = u.get("sections", null),
+                        isTemplate =
+                          !s ||
+                          !(
+                            (Array.isArray(s.cv) && s.cv.length) ||
+                            (Array.isArray(s.cl) && s.cl.length)
+                          ) ||
+                          ("string" ==
+                            typeof (s.cv && s.cv[0] && s.cv[0].content) &&
+                            /^\s*\[/.test(
+                              String(s.cv[0].content).trim(),
+                            ));
+                      if (isTemplate) {
+                        const detail = await oo.get(t.application_id);
+                        if (detail && detail.application) {
+                          const n = detail.application;
+                          try {
+                            ao({
+                              cv: n.cv_sections || [],
+                              cl: n.cl_sections || [],
+                            });
+                          } catch (e) {}
+                          try {
+                            u.set("sections", {
+                              cv: n.cv_sections || [],
+                              cl: n.cl_sections || [],
+                            });
+                          } catch (e) {}
+                          try {
+                            const mm =
+                              n.meta && "object" == typeof n.meta
+                                ? n.meta
+                                : {
+                                    company: n.jd_company || "",
+                                    role: n.jd_role || "",
+                                    subtitle: n.subtitle || "",
+                                  };
+                            lo({ ...(io || {}), ...mm });
+                            try {
+                              u.set("meta", { ...(io || {}), ...mm });
+                            } catch (e) {}
+                          } catch (e) {}
+                          if (n.rationale) {
+                            try {
+                              bo(n.rationale);
+                            } catch (e) {}
+                          }
+                          console.log(
+                            "[apps] mount-hydrated active application",
+                            t.application_id,
+                          );
+                        }
+                      }
+                    }
+                  } catch (e) {
+                    try {
+                      console.warn(
+                        "[apps] mount-hydrate failed:",
+                        e && e.message,
+                      );
+                    } catch (_) {}
+                  }
                 } catch (e) {
                   (Gl((e && e.message) || String(e)),
                     console.warn("[apps] load failed:", e));

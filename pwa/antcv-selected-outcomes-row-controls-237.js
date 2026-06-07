@@ -5,7 +5,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.50.120-gen003-004';
+  const VERSION='1.50.218-outcomes-page-only';
   // v1.40.237-preview-guard: Preview is button-free. Reject seeds and
   // hosts inside .antcv-preview-paper.
   const isInPreviewPaper=el=>{if(!el)return false;const p=document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]');return !!(p&&p.contains(el));};
@@ -26,13 +26,19 @@
   function setAlign(i,v){const m=readAlign();m['row-'+i]=v;writeJson(ALIGN_KEY,m);}
   function readPages(){return readJson(PAGE_KEY,{});}
   function getPage(i){const all=readPages();const b=all[outcomeSid()]||all.selected_outcomes||{};const n=Number(b[String(i)]||b[i]||1);return Number.isFinite(n)&&n>=1?Math.min(4,Math.max(1,Math.round(n))):1;}
-  function setPage(i,n){const all=readPages();const sid=outcomeSid();if(!all[sid]||typeof all[sid]!=='object')all[sid]={};const nn=Math.min(4,Math.max(1,Math.round(Number(n)||1)));if(nn<=1)delete all[sid][String(i)];else all[sid][String(i)]=nn;writeJson(PAGE_KEY,all);pulse();}
+  function setPage(i,n){const all=readPages();const sid=outcomeSid();if(!all[sid]||typeof all[sid]!=='object')all[sid]={};const nn=Math.min(4,Math.max(1,Math.round(Number(n)||1)));if(nn<=1)delete all[sid][String(i)];else all[sid][String(i)]=nn;writeJson(PAGE_KEY,all);pulsePage();}
   function nextAlign(v){return ALIGN[(Math.max(0,ALIGN.indexOf(v))+1)%ALIGN.length];}
   function sectionsObj(){return readJson(SECTIONS_KEY,null);}
   function sections(){const s=sectionsObj();const a=s&&s[activeDoc()];return Array.isArray(a)?a:[];}
   function outcomeSection(){return sections().find(s=>s&&OUTCOME_RX.test(clean(s.title||s.name||s.id||'')))||null;}
   function outcomeSid(){const s=outcomeSection();return s&&s.id?String(s.id):'selected_outcomes';}
   function pulse(){try{window.dispatchEvent(new CustomEvent('antcv:sections-updated',{detail:{source:'selected-outcomes-row-controls',version:VERSION}}));}catch(_){} try{window.dispatchEvent(new CustomEvent('antcv:item-pages-changed',{detail:{source:'selected-outcomes-row-controls',version:VERSION}}));}catch(_){}}
+  // 1.50.218: a PAGE change is not a content change. Firing 'antcv:sections-updated'
+  // (as pulse() does) makes the app re-render + re-read the outcomes editor while it
+  // is momentarily empty, writing items:[] — i.e. setting a page break DELETED all
+  // outcomes. setPage now fires ONLY the page-only event; the native page-box engine
+  // reads itemPages on that re-render (which clones in-memory sections, not storage).
+  function pulsePage(){try{window.dispatchEvent(new CustomEvent('antcv:item-pages-changed',{detail:{source:'selected-outcomes-page',version:VERSION}}));}catch(_){}}
   function dispatchInput(el){try{el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));}catch(_){}}
 
   function editorRoot(){

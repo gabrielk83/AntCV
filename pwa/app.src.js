@@ -12826,6 +12826,59 @@
           }
         );
       }, [ro, io]);
+      // 1.50.240: APPLICATION AUTO-SYNC. Push the current sections + meta to
+      // the ACTIVE application's row on a 3-second debounce so refresh /
+      // reload returns the user to their LATEST edits, not the prior saved
+      // snapshot. Pre-fix flow: user loads app → edits opening/sections →
+      // refresh → cloud-restore loads the saved (older) version → edits
+      // gone. With auto-sync, the cloud row is kept in step.
+      // Guards: only fires when (a) signed in, (b) a Fl active id exists,
+      // (c) kernel showcase isn't mid-generation, (d) sections aren't the
+      // me() template placeholder (so we don't overwrite a real saved app
+      // with a freshly-reset template during cloud-restore lag).
+      React.useEffect(() => {
+        if (!Y || !Y.email) return;
+        if (!Fl) return;
+        try {
+          if (u.get("kernelShowcaseInProgress", !1)) return;
+        } catch (e) {}
+        try {
+          const f =
+            ro && Array.isArray(ro.cv) && ro.cv[0] && ro.cv[0].content;
+          if ("string" == typeof f && /^\s*\[/.test(f.trim())) return;
+        } catch (e) {}
+        const t = setTimeout(() => {
+          try {
+            oo.update(Fl, {
+              cv_sections: (ro && ro.cv) || [],
+              cl_sections: (ro && ro.cl) || [],
+              jd_company: (io && io.company) || "",
+              jd_role: (io && io.role) || "",
+              subtitle: (io && io.subtitle) || "",
+              meta: io && "object" == typeof io ? io : {},
+              rationale: yo,
+            })
+              .then(() => {
+                try {
+                  console.log(
+                    "[apps] auto-sync to active app",
+                    Fl,
+                    "ok",
+                  );
+                } catch (e) {}
+              })
+              .catch((e) => {
+                try {
+                  console.warn(
+                    "[apps] auto-sync failed:",
+                    e && e.message,
+                  );
+                } catch (_) {}
+              });
+          } catch (e) {}
+        }, 3000);
+        return () => clearTimeout(t);
+      }, [ro, io, yo, Fl, Y && Y.email]);
       const [Ro, So] = e(() => u.get("profileDoc", null)),
         [ko, Co] = e(() => u.get("skillsDoc", null)),
         [To, Ao] = e(() => u.get("wordsDoc", null)),

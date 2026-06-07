@@ -43,9 +43,27 @@ A companion **feature registry** (open vs shipped features) lives at
   (specialization) line** rather than its own slot.
 - **APPHISTORY-RELOAD-001** — `[OPEN]` Pressing a saved Application-History item **does not
   load** that saved application — forces a full regenerate.
-- **KERNEL-STUCK-LAST-CMD-001** — `[OPEN]` The kernel sometimes appears **stuck on the last
-  command**; a **browser refresh** surfaces the generated kernel — i.e. the result was ready
-  but the UI didn't update without a reload.
+- **KERNEL-STUCK-LAST-CMD-001** — `[FIX SHIPPED 1.50.220 — awaiting owner live-verify]`
+  The kernel sometimes appears **stuck on the last command**; a **browser refresh**
+  surfaces the generated kernel — i.e. the result was ready but the UI didn't update
+  without a reload.
+  **Trace (read-only):** the stuck UI (the fixed top "Generating kernel showcase…" banner,
+  effect at app.src.js ~23577 keyed `[Pl]`, plus the "Showcase…" pill ~36999) is driven
+  entirely by the React state `Pl` (`[Pl,Bl]=useState(!1)`, the reactive mirror of the
+  `kernelShowcaseInProgress` store flag). The generator `vl` is `async` and the completion
+  clears (`Bl(!1)`) live in `vl`'s success tail (~21204), `Cs`'s `.finally` backstop
+  (~24175), and the `io.company`-change effect (~12564, **Unsolicited case only, fires only
+  on change**). If a post-result step in `vl()` hangs, or `io.company` doesn't change, or an
+  error path is taken, `Pl` can stay true though the result is already in state — and only a
+  reload's mount-effect recovers it. This matches "result was ready, refresh fixes it."
+  **Fix (1.50.220):** added an **additive UI watchdog** effect keyed `[Pl]` (right after the
+  banner effect) — when `Pl` flips true it arms a 120s backstop (2× the ~60s max gen time)
+  that clears `kernelShowcaseInProgress` + `Bl(!1)` if still in progress, so recovery is
+  automatic with no reload. UI-only; touches **no** generation/cloud path. Verified: terser
+  rebuild (identity-safe), `node --check` OK, 0 `"use strict"`, 29/29 unit tests, real-browser
+  boot 0 errors. **Owner to live-verify:** trigger a kernel showcase, confirm the banner/pill
+  clear on completion normally, and (if you can reproduce a stuck run) that it self-clears
+  within ~2 min instead of needing a refresh. If 120s feels long, the value is a one-line tune.
 
 ---
 

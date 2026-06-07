@@ -38046,55 +38046,81 @@
                           {
                             key: e.id,
                             onClick: async () => {
-                              if (!Hl)
-                                if (e.id !== Fl) {
-                                  // 1.50.231: pressing a saved application loads
-                                  // it IMMEDIATELY — no confirm dialog (the
-                                  // previous prompt added friction). The current
-                                  // CV's unsaved edits are still auto-saved to
-                                  // its application row first below.
-                                  if (true) {
-                                    (Ul("switch:" + e.id), Gl(""));
+                              if (!Hl) {
+                                // 1.50.235: ALWAYS load on click — even if the
+                                // active id (Fl) already equals this row's id.
+                                // Previously the outer `if (e.id !== Fl)` short-
+                                // circuited to just closing the dropdown, so a
+                                // user with active=233 but stale/template local
+                                // state would press the row and see nothing
+                                // change. The "save prior" still guards against
+                                // saving into itself.
+                                (Ul("switch:" + e.id), Gl(""));
+                                try {
+                                  if (Fl && Fl !== e.id)
                                     try {
-                                      if (Fl && Fl !== e.id)
+                                      await oo.update(Fl, {
+                                        cv_sections: (ro && ro.cv) || [],
+                                        cl_sections: (ro && ro.cl) || [],
+                                        jd_company:
+                                          (io && io.company) || "",
+                                        jd_role: (io && io.role) || "",
+                                        subtitle: (io && io.subtitle) || "",
+                                        rationale: yo,
+                                      });
+                                    } catch (e) {
+                                      console.warn(
+                                        "[apps:topbar] failed to save prior:",
+                                        e,
+                                      );
+                                    }
+                                  const t = await oo.get(e.id);
+                                  if (t && t.application) {
+                                    const n = t.application;
+                                    try {
+                                      console.log(
+                                        "[APPHISTORY-RELOAD-001] topbar switch loaded app",
+                                        e.id,
+                                        {
+                                          cv: (n.cv_sections || []).length,
+                                          cl: (n.cl_sections || []).length,
+                                          company: n.jd_company || "",
+                                          subtitle: n.subtitle || "",
+                                        },
+                                      );
+                                    } catch (e) {}
+                                    // APPHISTORY-RELOAD-001 / 1.50.235:
+                                    // surface the loaded CV — switch to the
+                                    // editor view and hydrate sections + meta
+                                    // (incl. subtitle) from the saved record.
+                                    (ao({
+                                      cv: n.cv_sections || [],
+                                      cl: n.cl_sections || [],
+                                    }),
+                                      // Also write through to localStorage so
+                                      // a subsequent autosave doesn't roll back
+                                      // to the prior (template) sections from
+                                      // the React state's stale closure.
+                                      (() => {
                                         try {
-                                          await oo.update(Fl, {
-                                            cv_sections: (ro && ro.cv) || [],
-                                            cl_sections: (ro && ro.cl) || [],
-                                            jd_company:
-                                              (io && io.company) || "",
-                                            jd_role: (io && io.role) || "",
-                                            subtitle: (io && io.subtitle) || "",
-                                            rationale: yo,
+                                          u.set("sections", {
+                                            cv: n.cv_sections || [],
+                                            cl: n.cl_sections || [],
                                           });
-                                        } catch (e) {
-                                          console.warn(
-                                            "[apps:topbar] failed to save prior:",
-                                            e,
-                                          );
-                                        }
-                                      const t = await oo.get(e.id);
-                                      if (t && t.application) {
-                                        const n = t.application;
-                                        try {
-                                          console.log(
-                                            "[APPHISTORY-RELOAD-001] topbar switch loaded app",
-                                            e.id,
-                                            {
-                                              cv: (n.cv_sections || []).length,
-                                              cl: (n.cl_sections || []).length,
-                                              company: n.jd_company || "",
-                                            },
-                                          );
                                         } catch (e) {}
-                                        // APPHISTORY-RELOAD-001: surface the loaded
-                                        // CV — switch to the editor view (the dropdown
-                                        // is closed below via Jl(!1)).
-                                        (ao({
-                                          cv: n.cv_sections || [],
-                                          cl: n.cl_sections || [],
-                                        }),
-                                          lo({
+                                      })(),
+                                      lo({
+                                        ...(io || {}),
+                                        company: n.jd_company || "",
+                                        role: n.jd_role || "",
+                                        subtitle:
+                                          n.subtitle ||
+                                          (io && io.subtitle) ||
+                                          "",
+                                      }),
+                                      (() => {
+                                        try {
+                                          u.set("meta", {
                                             ...(io || {}),
                                             company: n.jd_company || "",
                                             role: n.jd_role || "",
@@ -38102,20 +38128,21 @@
                                               n.subtitle ||
                                               (io && io.subtitle) ||
                                               "",
-                                          }),
-                                          n.rationale && bo(n.rationale),
-                                          await oo.setActive(e.id),
-                                          Ml(e.id),
-                                          $t("editor"));
-                                      }
-                                      Jl(!1);
-                                    } catch (e) {
-                                      Gl((e && e.message) || String(e));
-                                    } finally {
-                                      Ul("");
-                                    }
+                                          });
+                                        } catch (e) {}
+                                      })(),
+                                      n.rationale && bo(n.rationale),
+                                      await oo.setActive(e.id),
+                                      Ml(e.id),
+                                      $t("editor"));
                                   }
-                                } else Jl(!1);
+                                  Jl(!1);
+                                } catch (e) {
+                                  Gl((e && e.message) || String(e));
+                                } finally {
+                                  Ul("");
+                                }
+                              }
                             },
                             style: {
                               display: "flex",

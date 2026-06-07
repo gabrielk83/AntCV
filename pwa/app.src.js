@@ -12675,10 +12675,25 @@
             if (sessionStorage.getItem("antcv_showcase_restore_attempted")) return;
           } catch (e) {}
           const e = u.get("sections", null),
+            // 1.50.232: don't just check "has items" — check whether the items
+            // are the me() template placeholders (content starts with "["). The
+            // template is what Cs() resets to BEFORE generation; if generation
+            // failed/was interrupted, the autosave persisted the template, and
+            // the old check ("has items") wrongly treated that as a real kernel
+            // and skipped the cloud hydrate. Now: template counts as "empty".
+            isTemplate = (s) => {
+              if (!s || typeof s !== "object") return false;
+              const first =
+                (Array.isArray(s.cv) && s.cv[0] && s.cv[0].content) || "";
+              return (
+                "string" == typeof first && /^\s*\[/.test(first.trim())
+              );
+            },
             n =
               e &&
               ((Array.isArray(e.cv) && e.cv.length) ||
-                (Array.isArray(e.cl) && e.cl.length));
+                (Array.isArray(e.cl) && e.cl.length)) &&
+              !isTemplate(e);
           if (n) return;
           let o = !1;
           return (
@@ -34135,25 +34150,48 @@
                       $t("editor");
                       try {
                         const s = u.get("sections", null),
+                          // 1.50.232: detect the me() template (content starts
+                          // with "[" placeholder). Cs() resets sections to the
+                          // template before generation; if generation fails,
+                          // the autosave persists the template — so "has items"
+                          // is not enough. Template counts as no-real-content
+                          // so the cloud slot wins.
+                          isTemplate = (x) => {
+                            if (!x || typeof x !== "object") return false;
+                            const first =
+                              (Array.isArray(x.cv) && x.cv[0] && x.cv[0].content) ||
+                              "";
+                            return (
+                              "string" == typeof first && /^\s*\[/.test(first.trim())
+                            );
+                          },
                           hasLocal =
                             s &&
                             ((Array.isArray(s.cv) && s.cv.length) ||
-                              (Array.isArray(s.cl) && s.cl.length)),
+                              (Array.isArray(s.cl) && s.cl.length)) &&
+                            !isTemplate(s),
                           m = u.get("meta", null),
                           hasSubtitle = !!(
                             m &&
                             "object" == typeof m &&
                             m.subtitle &&
-                            String(m.subtitle).trim()
+                            String(m.subtitle).trim() &&
+                            !/^\s*\[/.test(String(m.subtitle).trim())
                           ),
                           flag = !!u.get("kernelShowcaseGenerated", !1),
                           // Multi-signal kernel detection — any one means the user
-                          // has a kernel and we MUST NOT regenerate / overwrite it.
+                          // has a kernel SOMEWHERE (local or cloud) and we MUST
+                          // try to surface it (and NEVER regenerate it).
                           hasKernel =
                             flag ||
                             hasLocal ||
                             !!(m && "object" == typeof m && m.company);
-                        if (hasKernel && (!hasLocal || !hasSubtitle))
+                        // ALWAYS attempt a cloud fetch when the local copy is
+                        // template/empty OR the subtitle is missing/placeholder
+                        // — regardless of hasKernel. A user pressing Edit and
+                        // seeing the template should never be sticky: cloud
+                        // wins if it has content.
+                        if (!hasLocal || !hasSubtitle)
                           (async () => {
                             try {
                               const r = await oo.getShowcase();

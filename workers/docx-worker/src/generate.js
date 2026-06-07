@@ -1838,7 +1838,7 @@ function renderBullets(s, ctx, isSidebar) {
   });
 }
 
-function bulletParagraphRich(lead, body, ctx, isSidebar, align) {
+function bulletParagraphRich(lead, body, ctx, isSidebar, align, keepWithNext) {
   const { style, fs } = ctx;
   const baseRun = {
     color: isSidebar ? style.sidebarTextColor : style.mainTextColor,
@@ -1849,6 +1849,14 @@ function bulletParagraphRich(lead, body, ctx, isSidebar, align) {
     numbering: { reference: isSidebar ? 'antcv-sb-bullet' : 'antcv-bullet', level: 0 },
     spacing: { before: 20, after: 20, line: 276, lineRule: 'auto' },
     alignment: align || AlignmentType.JUSTIFIED,
+    // 1.50.270: keepLines so a single bullet never splits across pages;
+    // keepWithNext (set by the experience renderer for every bullet but
+    // the LAST in a role) chains the role's bullets so Word moves a whole
+    // role that doesn't fit to the next page instead of splitting it
+    // mid-role (owner 2026-06-07: SysA & Change Control role was cut in
+    // half across the page break, its last two bullets orphaned on p2).
+    keepLines: true,
+    keepNext: !!keepWithNext,
     children: [
       ...(lead ? [new TextRun({
         text: lead,
@@ -2053,13 +2061,19 @@ function renderExperience(s, ctx) {
     }
 
     if (Array.isArray(role.bullets)) {
-      role.bullets.filter(Boolean).forEach((b, bi) => {
+      const _bl = role.bullets.filter(Boolean);
+      _bl.forEach((b, bi) => {
         // CJLR v1.14.3 — per-bullet override path is
         // "roles.<i>.bullets.<j>" (matches the PWA's translation
         // enumerator). Falls back to group default otherwise.
         const bAlign = paraAlignPath(s, 'roles.' + ri + '.bullets.' + bi)
                     ?? paraAlign(s, null, undefined);
-        out.push(bulletParagraphRich('', String(b), ctx, /*isSidebar*/ false, bAlign));
+        // 1.50.270: every bullet but the LAST keeps with the next, so the
+        // title→b1→…→b(n) chain stays together and a role moves wholesale
+        // to the next page rather than splitting mid-role. The last bullet
+        // has no keepNext, so the page break can fall cleanly AFTER the role.
+        const _keepWithNext = bi < _bl.length - 1;
+        out.push(bulletParagraphRich('', String(b), ctx, /*isSidebar*/ false, bAlign, _keepWithNext));
       });
     }
   });

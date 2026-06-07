@@ -25321,7 +25321,7 @@ function renderBullets(s, ctx, isSidebar) {
   });
 }
 __name(renderBullets, "renderBullets");
-function bulletParagraphRich(lead, body, ctx, isSidebar, align) {
+function bulletParagraphRich(lead, body, ctx, isSidebar, align, keepWithNext) {
   const { style, fs } = ctx;
   const baseRun = {
     color: isSidebar ? style.sidebarTextColor : style.mainTextColor,
@@ -25332,6 +25332,11 @@ function bulletParagraphRich(lead, body, ctx, isSidebar, align) {
     numbering: { reference: isSidebar ? "antcv-sb-bullet" : "antcv-bullet", level: 0 },
     spacing: { before: 20, after: 20, line: 276, lineRule: "auto" },
     alignment: align || AlignmentType.JUSTIFIED,
+    // 1.50.270: keepLines so a bullet never splits; keepWithNext chains a
+    // role's bullets so Word moves a whole role to the next page instead
+    // of splitting it mid-role.
+    keepLines: true,
+    keepNext: !!keepWithNext,
     children: [
       ...lead ? [new TextRun({
         text: lead,
@@ -25505,15 +25510,20 @@ function renderExperience(s, ctx) {
       }));
     }
     if (Array.isArray(role.bullets)) {
-      role.bullets.filter(Boolean).forEach((b, bi) => {
+      const _bl = role.bullets.filter(Boolean);
+      _bl.forEach((b, bi) => {
         const bAlign = paraAlignPath(s, "roles." + ri + ".bullets." + bi) ?? paraAlign(s, null, void 0);
+        // 1.50.270: keep a role's bullets chained (all but the last) so a
+        // role moves wholesale to the next page instead of splitting.
+        const _keepWithNext = bi < _bl.length - 1;
         out.push(bulletParagraphRich(
           "",
           String(b),
           ctx,
           /*isSidebar*/
           false,
-          bAlign
+          bAlign,
+          _keepWithNext
         ));
       });
     }

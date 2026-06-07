@@ -1,4 +1,4 @@
-/* AntCV auto page-break (block-level) sidecar — v1.50.264
+/* AntCV auto page-break (block-level) sidecar — v1.50.265
  * ============================================================
  * Owner feature AUTO-PAGEBREAK-BLOCK-001 (FEATURES_REGISTRY).
  *
@@ -84,7 +84,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.264';
+  var VERSION = '1.50.265';
   var PAGE_HEIGHT_PX = 1123; // A4 at 96dpi
   var SALMON = '#fa8072';
   var SPLITTER_CLASS = 'antcv-auto-page-splitter';
@@ -165,8 +165,9 @@
   function mergeColumnTail(srcCol, dstCol) {
     // For each first-level child of srcCol, if its data-sid matches a
     // descendant section in dstCol, merge its children INTO that
-    // existing section (re-stitching an intra-split). Otherwise just
-    // append.
+    // existing section (re-stitching an intra-split). For a
+    // table-row split (1.50.265), re-stitch the tbody rows instead
+    // of appending a second table. Otherwise just append.
     while (srcCol.firstChild) {
       var node = srcCol.firstChild;
       if (node.nodeType === 1 && node.getAttribute) {
@@ -181,6 +182,22 @@
             }
           }
           if (existing) {
+            // 1.50.265: if both injected and existing sections contain
+            // a table, re-stitch tbody rows back into the original
+            // table (don't append a second table to the section).
+            var injTable = node.querySelector && node.querySelector('table');
+            var exTable = existing.querySelector && existing.querySelector('table');
+            if (injTable && exTable) {
+              var injTbody = injTable.querySelector('tbody');
+              var exTbody = exTable.querySelector('tbody');
+              if (injTbody && exTbody) {
+                while (injTbody.firstChild) {
+                  exTbody.appendChild(injTbody.firstChild);
+                }
+                srcCol.removeChild(node);
+                continue;
+              }
+            }
             // Move ALL children of node into existing (preserves order).
             while (node.firstChild) {
               existing.appendChild(node.firstChild);
@@ -198,7 +215,7 @@
     return !!(el && el.hasAttribute && el.hasAttribute(ITEM_PATH_ATTR));
   }
 
-  function findIntraSectionSplit(sectionEl, limit) {
+  function findChildrenLevelSplit(sectionEl, limit) {
     // Walk children: first child is the section header (title + separator),
     // it always stays with the section on page 1. Find the highest index
     // `g` such that:
@@ -212,11 +229,12 @@
     //
     // For PLAIN-LIST sections (all non-header children are items, or
     // all are unlabelled rows): any index > 1 is valid (split between
-    // any two items).
+    // any two items). i <= 1 is rejected so single-text/headers don't
+    // get an internal split — header always stays with at least one
+    // body child OR the whole section moves.
     var children = Array.from(sectionEl.children);
     if (children.length <= 1) return null;
 
-    // Detect labeled-list pattern from index 1 onward.
     var sawItem = false, sawNonItem = false;
     for (var k = 1; k < children.length; k++) {
       if (isItemChild(children[k])) sawItem = true;
@@ -225,30 +243,77 @@
     var labeledList = sawItem && sawNonItem;
 
     function isValidSplitIndex(i) {
-      if (i <= 1) return false; // Need at least one body row beyond the header.
+      if (i <= 1) return false;
       if (!labeledList) return true;
-      // Labeled-list: only group sub-headers (non-item children) are
-      // valid split points. Splitting BEFORE a sub-header means the
-      // previous group stayed intact on page 1 and the next group
-      // (label + its items) starts on page 2.
       return !isItemChild(children[i]);
     }
 
     var sum = childHeight(children[0]);
     var bestSplit = -1;
     for (var i = 1; i < children.length; i++) {
-      // Mark bestSplit BEFORE adding children[i]'s height: if i is a
-      // valid split point, page 1 would contain children[0..i-1]
-      // which has already been verified to fit on prior iterations.
       if (isValidSplitIndex(i)) bestSplit = i;
       var h = childHeight(children[i]);
       if (sum + h > limit) {
         if (bestSplit > 1) return { startIndex: bestSplit };
-        return null; // Overflow before any valid split point.
+        return null;
       }
       sum += h;
     }
     return null; // Whole section fits.
+  }
+
+  // 1.50.265: TABLE-ROW intra-split. Handles CV CORE COMPETENCIES and
+  // CL "What I bring". The header row(s) of the table (thead) stay on
+  // page 1 AND get cloned onto page 2 so the continuation table still
+  // reads cleanly. Body rows from startIndex onward move to page 2.
+  // Falls back to null when the section's overhead (section header +
+  // table chrome + thead) already exceeds the page space — in that
+  // case the column-level whole-section move fires.
+  function findTableRowSplit(sectionEl, limit) {
+    var table = sectionEl.querySelector && sectionEl.querySelector('table');
+    if (!table) return null;
+    var tbody = table.querySelector('tbody');
+    if (!tbody) return null;
+    var rows = Array.from(tbody.children);
+    if (rows.length <= 1) return null; // No useful split with 1 or 0 rows.
+
+    // sectionHeight: outer occupied space (offsetHeight + own margins).
+    var st = getComputedStyle(sectionEl);
+    var sectionHeight = sectionEl.offsetHeight
+      + (parseFloat(st.marginTop) || 0)
+      + (parseFloat(st.marginBottom) || 0);
+    var bodyHeight = 0;
+    for (var r = 0; r < rows.length; r++) bodyHeight += childHeight(rows[r]);
+    var overhead = sectionHeight - bodyHeight;
+    if (overhead < 0) overhead = 0;
+    if (overhead >= limit) return null;
+
+    var sum = overhead;
+    for (var i = 0; i < rows.length; i++) {
+      var h = childHeight(rows[i]);
+      if (sum + h > limit) {
+        if (i === 0) return null;
+        return { startIndex: i };
+      }
+      sum += h;
+    }
+    return null;
+  }
+
+  function findIntraSectionSplit(sectionEl, limit) {
+    // 1.50.265: dispatcher. Try children-level split first (covers
+    // EXPERIENCE roles, REGULATORY groups, OUTCOMES bullets, HWIC
+    // bullets/closing, Foundation hands_on/professionally, etc.).
+    // If no children-level split works, try table-row split.
+    var childrenSplit = findChildrenLevelSplit(sectionEl, limit);
+    if (childrenSplit) {
+      return { kind: 'children', startIndex: childrenSplit.startIndex };
+    }
+    var tableSplit = findTableRowSplit(sectionEl, limit);
+    if (tableSplit) {
+      return { kind: 'table-rows', startIndex: tableSplit.startIndex };
+    }
+    return null;
   }
 
   function findColumnSplit(column, limit) {
@@ -261,10 +326,9 @@
       var h = childHeight(c);
       if (sum + h > limit) {
         // 1.50.263: try intra-section split on ANY child that is a
-        // section (has data-sid). The split is only accepted if it
-        // actually moves at least one non-header child to the next
-        // page (intra.startIndex > 0), otherwise we fall back to
-        // whole-section move.
+        // section (has data-sid). 1.50.265: intra split may be
+        // children-level or table-row-level — passed through via
+        // intraKind so processOnce can dispatch the right applier.
         var sid = c.getAttribute && c.getAttribute('data-sid');
         if (sid) {
           var remaining = Math.max(0, limit - sum);
@@ -275,11 +339,18 @@
               beforeIndex: i,
               section: c,
               startIndex: intra.startIndex,
+              intraKind: intra.kind || 'children',
             };
           }
         }
         if (i > 0) return { kind: 'whole', index: i };
-        return null; // First child won't fit; can't help (would loop forever).
+        // 1.50.265: first column child overflows AND can't intra-split
+        // (typically a single-text section taller than one page —
+        // "no internal split of single text/headers" per owner spec).
+        // Accept the oversized child on page 1 and KEEP WALKING so the
+        // next section gets a chance to trigger a normal whole-section
+        // move. Without this fall-through we'd return null and the
+        // following section stays glued on the same oversized row.
       }
       sum += h;
     }
@@ -345,6 +416,32 @@
     dstCol.appendChild(sectionClone);
   }
 
+  // 1.50.265: table-row split applier. Clones the section element
+  // (shallow), creates a NEW table with a cloned thead + a fresh
+  // tbody containing the moved overflow rows. Skips the
+  // data-table-resize-wrap (continuation tables don't need a resize
+  // handle — that lives only on the page-1 original).
+  function applyTableRowSplit(sectionEl, startIndex, dstCol) {
+    var srcTable = sectionEl.querySelector && sectionEl.querySelector('table');
+    if (!srcTable) return;
+    var srcTbody = srcTable.querySelector('tbody');
+    if (!srcTbody) return;
+    var srcThead = srcTable.querySelector('thead');
+    var sectionClone = sectionEl.cloneNode(false);
+    sectionClone.setAttribute(INJECTED_ATTR, '1');
+    var tableClone = srcTable.cloneNode(false);
+    tableClone.setAttribute(INJECTED_ATTR, '1');
+    if (srcThead) tableClone.appendChild(srcThead.cloneNode(true));
+    var tbodyClone = srcTbody.cloneNode(false);
+    var rows = Array.from(srcTbody.children);
+    for (var i = startIndex; i < rows.length; i++) {
+      tbodyClone.appendChild(rows[i]); // appendChild moves
+    }
+    tableClone.appendChild(tbodyClone);
+    sectionClone.appendChild(tableClone);
+    dstCol.appendChild(sectionClone);
+  }
+
   function processOnce(row) {
     var sidebarCol = row.querySelector('.antcv-document-sidebar');
     var mainCol = row.querySelector('.antcv-document-main');
@@ -363,7 +460,11 @@
 
     if (sb && newSidebar) {
       if (sb.kind === 'intra') {
-        applyIntraSplit(sb.section, sb.startIndex, newSidebar);
+        if (sb.intraKind === 'table-rows') {
+          applyTableRowSplit(sb.section, sb.startIndex, newSidebar);
+        } else {
+          applyIntraSplit(sb.section, sb.startIndex, newSidebar);
+        }
         moveColumnTail(sidebarCol, newSidebar, sb.beforeIndex + 1);
       } else {
         moveColumnTail(sidebarCol, newSidebar, sb.index);
@@ -371,7 +472,11 @@
     }
     if (mn && newMain) {
       if (mn.kind === 'intra') {
-        applyIntraSplit(mn.section, mn.startIndex, newMain);
+        if (mn.intraKind === 'table-rows') {
+          applyTableRowSplit(mn.section, mn.startIndex, newMain);
+        } else {
+          applyIntraSplit(mn.section, mn.startIndex, newMain);
+        }
         moveColumnTail(mainCol, newMain, mn.beforeIndex + 1);
       } else {
         moveColumnTail(mainCol, newMain, mn.index);

@@ -12956,6 +12956,37 @@
         }, 500);
         return () => clearTimeout(e);
       }, [ro]),
+        // 1.50.277 MINIMUM-SECTIONS-FLOOR-001. Owner safety net: "we need to be
+        // able to recover minimum sections if you start to go wild and delete
+        // again." If the live sections ever become completely empty (both cv
+        // AND cl have zero items — the husk state), restore the me() skeleton so
+        // there is ALWAYS at least the core section set to edit / generate into.
+        // me() rebuilds the core sections from the stored kernel; its content is
+        // template placeholders, so this never blocks a cloud restore (which
+        // treats the template as "empty") and never fights real content (an
+        // empty array has nothing to fight). Idempotent: once restored, cv/cl
+        // are non-empty and this no-ops.
+        React.useEffect(() => {
+          try {
+            const cvEmpty = !(ro && Array.isArray(ro.cv) && ro.cv.length);
+            const clEmpty = !(ro && Array.isArray(ro.cl) && ro.cl.length);
+            if (cvEmpty && clEmpty) {
+              const sk = me();
+              if (sk && ((sk.cv && sk.cv.length) || (sk.cl && sk.cl.length))) {
+                ao(sk);
+                try {
+                  console.log(
+                    "[v1.50.277 MINIMUM-SECTIONS-FLOOR] sections were empty — restored me() skeleton (cv:" +
+                      (sk.cv || []).length +
+                      ", cl:" +
+                      (sk.cl || []).length +
+                      ")",
+                  );
+                } catch (_) {}
+              }
+            }
+          } catch (_) {}
+        }, [ro]),
         React.useEffect(() => {
           const e = (e) => {
             try {
@@ -13279,7 +13310,15 @@
             (async () => {
               try {
                 const e = await oo.getShowcase();
-                if (o || !e || !e.showcase) return;
+                if (o) return;
+                // 1.50.277: mark restore ATTEMPTED on every non-cancelled
+                // outcome (no slot / empty slot / real slot) so the Cs() regen
+                // guard knows the cloud has been consulted and a genuinely empty
+                // kernel can be regenerated instead of waiting forever.
+                try {
+                  sessionStorage.setItem("antcv_showcase_restore_attempted", "1");
+                } catch (_) {}
+                if (!e || !e.showcase) return;
                 // 1.50.274: ignore an empty/corrupted slot (empty sections +
                 // real meta) — restoring it produced the headline-only husk.
                 // Returning here lets the normal flow regenerate the showcase
@@ -25260,17 +25299,41 @@
               // must never wipe out content that is plainly present locally.
               const s = u.get("sections", null),
                 m = u.get("meta", null);
+              // 1.50.277 KERNEL-REGEN-DEADLOCK-001: the standalone
+              // kernelShowcaseGenerated flag must NOT block regeneration when
+              // the content is actually GONE. Owner 2026-06-08: "I am not able
+              // to generate new kernel — there are no sections to append data."
+              // Cause: the flag was true but sections were the empty husk, so
+              // this guard returned before Cs() could reset to the me() skeleton
+              // — a permanent deadlock. Now: block only when there is REAL
+              // content (non-empty sections OR a meta.company), or a generation
+              // is in flight, or the flag is set AND we are still waiting for a
+              // cloud restore to bring content back (so we don't clobber a
+              // legit restore-in-progress). Once the cloud restore has run (or
+              // is not applicable — signed out) and there is still no content,
+              // regeneration proceeds and Cs() rebuilds the skeleton.
+              const __hasContent =
+                s &&
+                ((Array.isArray(s.cv) && s.cv.length) ||
+                  (Array.isArray(s.cl) && s.cl.length));
+              const __hasMeta =
+                m && "object" == typeof m && m.company;
+              let __restoreSettled = true;
+              try {
+                const __signedIn = !!(Y && Y.email);
+                __restoreSettled =
+                  !__signedIn ||
+                  !!sessionStorage.getItem("antcv_showcase_restore_attempted");
+              } catch (_) {}
               if (
-                u.get("kernelShowcaseGenerated", !1) ||
                 u.get("kernelShowcaseInProgress", !1) ||
-                (s &&
-                  ((Array.isArray(s.cv) && s.cv.length) ||
-                    (Array.isArray(s.cl) && s.cl.length))) ||
-                (m && "object" == typeof m && m.company)
+                __hasContent ||
+                __hasMeta ||
+                (u.get("kernelShowcaseGenerated", !1) && !__restoreSettled)
               )
                 return (
                   console.log(
-                    "[showcase] skipping: kernel already present (flag/in-flight/sections/meta); pass {force:true} to regenerate",
+                    "[showcase] skipping: kernel present or cloud-restore pending (content/meta/in-flight/awaiting-restore); pass {force:true} to regenerate",
                   ),
                   !1
                 );

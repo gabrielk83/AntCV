@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS application (
   jd_company         TEXT,
   jd_role            TEXT,
   subtitle           TEXT,                       -- specialization line (meta.subtitle)
+  meta               TEXT,                       -- JSON: full meta {company,role,subtitle,greeting,opening,closure,...}
   category           TEXT NOT NULL,              -- one of the 12 category ids
   rationale          TEXT,                       -- JSON: LLM JD-analysis output
   cv_sections        TEXT,                       -- JSON, in jd_language

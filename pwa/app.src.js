@@ -32960,15 +32960,26 @@
                               if (!Hl) {
                                 (Ul("save"), Gl(""));
                                 try {
+                                  // 1.50.239: ensure jd_text always has SOMETHING
+                                  // so the relay's jd_text_required check passes
+                                  // for unsolicited saves (was failing when no
+                                  // JD attached AND io.showcase wasn't set).
                                   const e =
                                       (zt && zt.text) ||
                                       Ut ||
-                                      (io && io.showcase ? ks : ""),
+                                      (io && io.showcase
+                                        ? ks
+                                        : "Manual save — no JD text available."),
                                     t = await oo.create({
                                       jd_text: e,
                                       jd_company: (io && io.company) || "",
                                       jd_role: (io && io.role) || "",
                                       subtitle: (io && io.subtitle) || "",
+                                      // 1.50.239: persist full meta so inline
+                                      // edits to greeting/opening/closure stick
+                                      // through save → reload (was lost).
+                                      meta:
+                                        io && "object" == typeof io ? io : {},
                                       jd_language: je,
                                       category: "unsolicited",
                                       supporting_context:
@@ -32986,6 +32997,8 @@
                                     (await oo.update(t.application.id, {
                                       cv_sections: (ro && ro.cv) || [],
                                       cl_sections: (ro && ro.cl) || [],
+                                      meta:
+                                        io && "object" == typeof io ? io : {},
                                     }),
                                     Ml(t.application.id));
                                   const n = await oo.list();
@@ -33245,15 +33258,31 @@
                                                   cv: n.cv_sections || [],
                                                   cl: n.cl_sections || [],
                                                 }),
-                                                  lo({
-                                                    ...(io || {}),
-                                                    company: n.jd_company || "",
-                                                    role: n.jd_role || "",
-                                                    subtitle:
-                                                      n.subtitle ||
-                                                      (io && io.subtitle) ||
-                                                      "",
-                                                  }),
+                                                  lo(
+                                                    // 1.50.239: restore the FULL
+                                                    // saved meta (greeting,
+                                                    // opening, closure, etc.).
+                                                    // Falls back to the
+                                                    // per-column scalars when the
+                                                    // record predates the meta
+                                                    // column (1.50.239 migration).
+                                                    n.meta &&
+                                                      "object" == typeof n.meta
+                                                      ? {
+                                                          ...(io || {}),
+                                                          ...n.meta,
+                                                        }
+                                                      : {
+                                                          ...(io || {}),
+                                                          company:
+                                                            n.jd_company || "",
+                                                          role: n.jd_role || "",
+                                                          subtitle:
+                                                            n.subtitle ||
+                                                            (io && io.subtitle) ||
+                                                            "",
+                                                        },
+                                                  ),
                                                   n.rationale &&
                                                     bo(n.rationale),
                                                   await oo.setActive(e.id),
@@ -34314,12 +34343,24 @@
                                   });
                                 } catch (e) {}
                                 try {
-                                  lo({
-                                    ...(u.get("meta", null) || {}),
-                                    company: n.jd_company || "Unsolicited",
-                                    role: n.jd_role || "",
-                                    subtitle: n.subtitle || "",
-                                  });
+                                  // 1.50.239: prefer the FULL saved meta when
+                                  // available (includes greeting/opening/closure).
+                                  const __nm =
+                                    n.meta && "object" == typeof n.meta
+                                      ? {
+                                          ...(u.get("meta", null) || {}),
+                                          ...n.meta,
+                                        }
+                                      : {
+                                          ...(u.get("meta", null) || {}),
+                                          company: n.jd_company || "Unsolicited",
+                                          role: n.jd_role || "",
+                                          subtitle: n.subtitle || "",
+                                        };
+                                  lo(__nm);
+                                  try {
+                                    u.set("meta", __nm);
+                                  } catch (e) {}
                                 } catch (e) {}
                                 if (n.rationale) {
                                   try {
@@ -37976,15 +38017,21 @@
                           if (!Hl) {
                             (Ul("save"), Gl(""));
                             try {
+                              // 1.50.239: see Settings save — jd_text always
+                              // non-empty; persist full meta so opening/greeting/
+                              // closure inline edits survive reload.
                               const e =
                                   (zt && zt.text) ||
                                   Ut ||
-                                  (io && io.showcase ? ks : ""),
+                                  (io && io.showcase
+                                    ? ks
+                                    : "Manual save — no JD text available."),
                                 t = await oo.create({
                                   jd_text: e,
                                   jd_company: (io && io.company) || "",
                                   jd_role: (io && io.role) || "",
                                   subtitle: (io && io.subtitle) || "",
+                                  meta: io && "object" == typeof io ? io : {},
                                   jd_language: je,
                                   category: "unsolicited",
                                   supporting_context:
@@ -37998,6 +38045,7 @@
                                 (await oo.update(t.application.id, {
                                   cv_sections: (ro && ro.cv) || [],
                                   cl_sections: (ro && ro.cl) || [],
+                                  meta: io && "object" == typeof io ? io : {},
                                 }),
                                 Ml(t.application.id));
                               const n = await oo.list();
@@ -38149,26 +38197,39 @@
                                           });
                                         } catch (e) {}
                                       })(),
-                                      lo({
-                                        ...(io || {}),
-                                        company: n.jd_company || "",
-                                        role: n.jd_role || "",
-                                        subtitle:
-                                          n.subtitle ||
-                                          (io && io.subtitle) ||
-                                          "",
-                                      }),
+                                      lo(
+                                        // 1.50.239: restore the FULL saved meta
+                                        // (greeting, opening, closure, …) when
+                                        // present. Falls back to per-column
+                                        // scalars for pre-migration records.
+                                        n.meta && "object" == typeof n.meta
+                                          ? { ...(io || {}), ...n.meta }
+                                          : {
+                                              ...(io || {}),
+                                              company: n.jd_company || "",
+                                              role: n.jd_role || "",
+                                              subtitle:
+                                                n.subtitle ||
+                                                (io && io.subtitle) ||
+                                                "",
+                                            },
+                                      ),
                                       (() => {
                                         try {
-                                          u.set("meta", {
-                                            ...(io || {}),
-                                            company: n.jd_company || "",
-                                            role: n.jd_role || "",
-                                            subtitle:
-                                              n.subtitle ||
-                                              (io && io.subtitle) ||
-                                              "",
-                                          });
+                                          u.set(
+                                            "meta",
+                                            n.meta && "object" == typeof n.meta
+                                              ? { ...(io || {}), ...n.meta }
+                                              : {
+                                                  ...(io || {}),
+                                                  company: n.jd_company || "",
+                                                  role: n.jd_role || "",
+                                                  subtitle:
+                                                    n.subtitle ||
+                                                    (io && io.subtitle) ||
+                                                    "",
+                                                },
+                                          );
                                         } catch (e) {}
                                       })(),
                                       n.rationale && bo(n.rationale),

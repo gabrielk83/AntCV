@@ -8,6 +8,74 @@ A companion **feature registry** (open vs shipped features) lives at
 
 ---
 
+## EXPORT REVIEW 2026-06-09 — owner re-export feedback (1.50.321 / worker 1.14.41)
+
+Owner rendered the 1.50.321 CV (PDF + DOCX) + CL DOCX. **CV page-split is improved**
+(the salmon-push fix landed). Four remaining points, with **evidence-based root-cause
+analysis from inspecting the attached DOCX + the deployed worker (1.14.41-sidebar-ratio)**.
+
+**Shared root cause for #1–#3 (CV export).** The attached CV DOCX is **one outer
+two-column table with ~14 nested section-wrapper tables, only 1 `pageBreakBefore`** —
+i.e. the per-page two-column model (`buildTwoColumnDocument`, 1.14.39) computed
+`numPages = 1` and emitted a SINGLE two-column table, which Word then natural-flowed
+across 3 pages. `numPages` only exceeds 1 when `__antcvPB` page-break markers reach the
+worker (from forwarded role.page / row_pages / sidebar item breaks). For this CV none
+did at the column-split level (the SIDEBAR auto-break export is still stood down —
+SALMON-AUTO-EXPORT-001 — and the main-column breaks didn't surface as top-level
+`__antcvPB` segments), so the export fell back to Word natural flow. That single fact
+explains all three export symptoms:
+
+- **AI-NOTICE-WRONG-SIDE-001** `[OPEN][HIGH][export]` — owner: "AI notice is on the text
+  heavy side." CONFIRMED in `buildTwoColumnDocument` (index.js:24477,24519): `wmInSidebar
+  = ctx.aiWmSide ? ctx.aiWmSide === sidebarSide : false`; when `ai_wm_side` is ABSENT it
+  defaults to `false` → the disclosure is pushed onto `mainChildren` (the dense column).
+  Two contributing causes: (a) with `numPages=1` the notice lands at the bottom of the
+  single main cell on the last page = the text-heavy side; (b) `ai_wm_side` is computed
+  by `antcv-watermark-page-anchor-341` from the PREVIEW's last page, but the export's
+  last page ≠ the preview's last page (different page count — see #3), so even a
+  forwarded side can be for the wrong page. Real fix is coupled to engaging the per-page
+  model (below) so the last page's empty column is known to the worker. NOTE: the worker
+  honours a forwarded `ai_wm_side` correctly — the gap is that it's absent/stale.
+- **PB-WORKER-SIDEBAR-FILL-001** (re-confirmed) `[OPEN][HIGH][export]` — owner: "first
+  page sidebar color does not reach end of page." With `numPages=1` the navy sidebar is
+  ONE table cell whose row Word splits across pages; the cell shading only fills to the
+  row's content height on page 1, not the page bottom. The per-page model (one table per
+  page, sidebar cell navy on every page) is exactly what closes this — but it only
+  engages when `numPages>1`.
+- **PREVIEW-PDF-PARITY (length)** `[OPEN][HIGH][export+preview]` — owner: "the 2nd page
+  slid a bit to the 3rd page … still a minor difference in length." Because the export
+  natural-flows (numPages=1) instead of using the preview's MEASURED page-box pagination,
+  the page boundaries are Word's, not the measurer's → a small length divergence. NOTE:
+  WORD_INFLATE tuning does NOT help here — that factor only moves the measured break MAP,
+  which this export path isn't using. The fix is engaging the per-page model so the
+  export honours the same coordinated breaks the preview shows.
+
+**The unifying fix** (deferred, RISKY, needs an owner rendered-output visual loop):
+forward the EFFECTIVE coordinated breaks for BOTH columns (re-enable the sidebar
+auto-break export, SALMON-AUTO-EXPORT-001 sidebar half, with coordinated main+sidebar
+page boundaries) so `buildTwoColumnDocument` gets `numPages>1` and emits one two-column
+table per page. That single change closes AI-NOTICE-WRONG-SIDE-001 (last page's empty
+column is explicit), PB-WORKER-SIDEBAR-FILL-001 (navy per page), and the length parity
+(export uses the measured breaks). History (1.50.215) shows raw forwarding scrambled the
+2-column layout, so this must be done with the group/role-aware coordination + a Word
+visual check before deploy — cannot be verified headlessly (no PDF renderer in CI).
+
+- **CL-NO-SALMON-001** `[OPEN][preview]` — owner: "cover letter still has no salmon." The
+  attached CL DOCX is **4 pages** (`pageBreakBefore` at the WHY→HWIC boundary, mid-HWIC,
+  and HWIC→FOUNDATION; a "HOW I WOULD CONTRIBUTE (Cont.)" heading confirms a mid-list
+  split) — note its HWIC bullets include gibberish single-word test bullets that inflate
+  it. So the EXPORT paginated, but the PREVIEW shows no salmon. The CL salmon mechanism
+  works in isolation (`diag-cl-salmon.mjs` passes: measurer writes the break →
+  `__antcvSecStart`/`__antcvBreaks` draw `__antcvSalmon`). Could NOT reproduce the
+  no-salmon case headlessly this session — an owner-shaped synthetic CL did not render
+  faithfully (plain `text` sections were dropped by the harness; needs the real
+  kernel-generated section shapes), and the symptom likely depends on the owner's live
+  state (stale/empty `antcv:autoPagesPreview` for the CL, or the preview rendering
+  shorter than the export so it never trips the A4 line — PREVIEW-PDF-PARITY for CL).
+  NEXT: capture the owner's live `antcv:autoPages`/`autoPagesPreview`/`itemPages` for the
+  CL + the CL flow height while the preview shows no salmon; confirm whether the measurer
+  wrote a CL break and whether `[data-antcv-cl-flow]` height exceeds 1053px.
+
 ## EXPORT REVIEW 2026-06-08 (PM-2) — owner re-export feedback
 
 Iterating on real CV/CL exports (owner rendering .docx + PDF). Shipped + open:

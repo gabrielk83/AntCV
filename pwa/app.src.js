@@ -1302,9 +1302,17 @@
   // removing it (transient issues recover). Session-local; complements the
   // server-side D1 quality signals.
   const __antcvTaskDemote = new Map(); // "task|provider" -> expiry ms
-  const __ANTCV_DEMOTE_MS = 600000;    // 10 min
-  function __antcvDemoteProvider(task, prov) {
-    try { __antcvTaskDemote.set(String(task) + "|" + String(prov), Date.now() + __ANTCV_DEMOTE_MS); } catch (_) {}
+  const __ANTCV_DEMOTE_MS = 600000;    // 10 min (transient session failure)
+  // 1.50.294 LLM-QUALITY-PERSIST-001: optional ttlMs lets the cross-session D1
+  // seed mark a demotion for longer than a transient session failure, and we
+  // never SHORTEN an existing demotion (a fresh 10-min failure must not clobber
+  // a longer-lived seed expiry) — take the max of the existing and new expiry.
+  function __antcvDemoteProvider(task, prov, ttlMs) {
+    try {
+      const k = String(task) + "|" + String(prov);
+      const exp = Date.now() + (ttlMs || __ANTCV_DEMOTE_MS);
+      __antcvTaskDemote.set(k, Math.max(__antcvTaskDemote.get(k) || 0, exp));
+    } catch (_) {}
   }
   function __antcvIsDemoted(task, prov) {
     try {
@@ -1322,6 +1330,65 @@
       return good.length ? good.concat(demoted) : list; // never empty the list
     } catch (_) { return list; }
   }
+  // 1.50.294 LLM-QUALITY-PERSIST-001. Seed the per-(task→provider) demotion
+  // memory from the SERVER-SIDE D1 rolling-window health (relay GET
+  // /api/llm-health), so a provider that has been consistently DEGRADED/DOWN for
+  // a task starts the session already deprioritised — quality routing now
+  // survives across sessions, not just within one (the session-local signal
+  // above still applies on top, for fresh failures this session). Strictly off
+  // the hot path: one short-timeout GET, fired ~2.5s after load (and lazily on
+  // the first dispatch as a fallback if not signed in at load). Fully guarded —
+  // offline / no relay / 401 / abort is a SILENT no-op and never blocks or
+  // delays an LLM call. Conservative: only 'degraded' (<0.60) / 'down' rows are
+  // seeded; 'warning' (0.60–0.85) is left alone (too soft to reorder on). The
+  // seed TTL (30 min) outlives a transient session failure so it covers a
+  // typical session, and the health window itself refreshes server-side ~5-min.
+  let __antcvQualitySeeded = false;
+  const __ANTCV_SEED_TTL_MS = 1800000; // 30 min
+  async function __antcvSeedQualityFromD1() {
+    if (__antcvQualitySeeded) return;
+    try {
+      if (!(typeof window !== "undefined" && window.AntcvAuth &&
+            window.AntcvAuth.isSignedIn && window.AntcvAuth.isSignedIn())) return;
+      const base = (u.get("proxyUrl", "") || "").replace(/\/+$/, "");
+      if (!base) return;
+      __antcvQualitySeeded = true; // commit to a single attempt once we can actually try
+      const ctrl = (typeof AbortController !== "undefined") ? new AbortController() : null;
+      const tid = ctrl ? setTimeout(() => { try { ctrl.abort(); } catch (_) {} }, 4000) : null;
+      let res;
+      try {
+        res = await fetch(base + "/api/llm-health?window=60",
+          { credentials: "include", signal: ctrl ? ctrl.signal : void 0 });
+      } finally { if (tid) clearTimeout(tid); }
+      if (!res || !res.ok) return;
+      const data = await res.json().catch(() => null);
+      const rows = data && Array.isArray(data.rows) ? data.rows : [];
+      let seeded = 0;
+      for (const r of rows) {
+        if (!r || !r.provider || !r.task) continue;
+        const score = Number(r.health_score);
+        const status = String(r.status || "").toLowerCase();
+        if (status === "degraded" || status === "down" ||
+            (Number.isFinite(score) && score < 0.6)) {
+          __antcvDemoteProvider(r.task, r.provider, __ANTCV_SEED_TTL_MS);
+          seeded++;
+        }
+      }
+      if (seeded) {
+        try { console.debug("[v1.50.294 llm-quality-persist] seeded " + seeded + " demotion(s) from D1 provider health"); } catch (_) {}
+      }
+    } catch (_) { /* silent: this must never affect the dispatch hot path */ }
+  }
+  try {
+    if (typeof window !== "undefined") {
+      const __kick = () => { try { __antcvSeedQualityFromD1(); } catch (_) {} };
+      if (document.readyState === "complete" || document.readyState === "interactive") {
+        setTimeout(__kick, 2500);
+      } else {
+        window.addEventListener("DOMContentLoaded", () => setTimeout(__kick, 2500), { once: true });
+      }
+    }
+  } catch (_) {}
   // 1.50.291 #4 big-generation model upgrade. The default gemini-2.5-flash
   // returns near-empty output for the heavy parse_jd/generate_cv JSON; use a
   // stronger model for those tasks only (cost-quality: flash stays for the
@@ -1362,6 +1429,11 @@
   }
   async function ee(e, t, n = {}) {
     var o;
+    // 1.50.294 LLM-QUALITY-PERSIST-001 fallback: if the startup seed was skipped
+    // (e.g. not signed in at load), kick it now — fire-and-forget, NOT awaited,
+    // so it never adds latency to this call. The __antcvQualitySeeded guard keeps
+    // it to a single network request per session.
+    try { __antcvSeedQualityFromD1(); } catch (_) {}
     (p("LLM call"), await U());
     const { task: r = "default", preferGPT: a, forceProvider: i } = n;
     let l, s;

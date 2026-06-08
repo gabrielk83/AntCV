@@ -141,9 +141,25 @@ pushed to `main` + `claude/antcv-roadmap-bugs-L9Sqa` +
   boundary, never mid-group/mid-role), reusing the now-fixed section-table
   separator (1.14.30) and the role.page break path. Verify in BOTH a downloaded
   .docx (Word/Google Docs) and the PDF. Subsumes PB-AUTO-OVERFLOW-001.
-- **LLM-QUALITY-PERSIST-001** `[OPEN][enhancement]` — quality routing is
-  session-local; seed from D1 `llm_quality_signals`/`llm_provider_health` across
-  sessions (extra async hot-path read — careful).
+- **LLM-QUALITY-PERSIST-001** `[FIXED 1.50.294][enhancement — verified headless]` —
+  the per-(task→provider) demotion memory (`__antcvTaskDemote`) is now SEEDED at
+  session start from the server-side D1 rolling-window health via the existing
+  relay endpoint `GET /api/llm-health?window=60` (no worker change needed — that
+  endpoint's own docstring says "the autorotate logic can also call it to
+  deprioritise degraded providers"). Rows with status `degraded`/`down` (or
+  `health_score < 0.60`) seed `__antcvDemoteProvider(task, provider, 30min)`, so a
+  provider consistently bad for a task starts the session already pushed to the
+  BACK of the order for that task (the dispatcher already calls
+  `__antcvReorderByQuality` at app.src.js ~1497). Strictly OFF the hot path: one
+  short-timeout GET fired ~2.5s after load, plus a fire-and-forget fallback on the
+  first dispatch (single request per session via the `__antcvQualitySeeded`
+  guard); offline / no-relay / 401 / abort is a silent no-op that never blocks or
+  delays an LLM call. `__antcvDemoteProvider` now takes an optional TTL and never
+  SHORTENS an existing demotion (max of expiries) so a transient 10-min session
+  failure can't clobber the 30-min seed. Only `degraded`/`down` are seeded —
+  `warning` (0.60–0.85) is left alone (too soft to reorder on). VERIFIED in
+  headless Chromium (pwa/test/diag-llm-health-seed.mjs): startup hits
+  `/api/llm-health?window=60` on the relay base, 0 errors. Boot-smoke clean.
 - **ENHANCE-#185-RESIDUAL-001** `[OPEN / needs repro]` — owner hit React #185 on
   "Enhance core competencies" (cached 1.50.285). 1.50.287 loop-guard may fix it;
   if it recurs after hard-refresh capture `#antcv-debug` log (no speculative

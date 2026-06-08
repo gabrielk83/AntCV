@@ -1081,6 +1081,12 @@
         try {
           const o = JSON.parse(e);
           t = (null == (n = o.error) ? void 0 : n.message) || o.error || t;
+          // 1.50.285: surface the REAL upstream provider error. The proxy puts
+          // the actual Anthropic/OpenAI message in upstream_error — without it a
+          // 400 reads only "anthropic returned 400" and the true cause (bad
+          // image, bad field, prompt-too-long, etc.) is invisible.
+          if (o.upstream_error && String(o.upstream_error).trim())
+            t += " — upstream: " + String(o.upstream_error).slice(0, 300);
         } catch (e) {}
         throw new Error(t);
       }

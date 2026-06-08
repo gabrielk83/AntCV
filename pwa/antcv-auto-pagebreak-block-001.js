@@ -54,7 +54,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.286';
+  var VERSION = '1.50.287';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -246,6 +246,15 @@
   var lastSourceFp = null;   // 1.50.269: source fingerprint of last compute
   var writeTimes = [];
   var brokenUntil = 0;
+  // 1.50.287 SALMON-LOOP-GUARD: hard cooldown after EVERY write. Our write
+  // fires antcv:auto-pages-changed → React re-paginates → that re-render can
+  // perturb a watched setting (1.50.281 widened the fingerprint to include
+  // style settings), which would change the fingerprint and let run() measure
+  // the ALREADY-paginated DOM — the classic oscillation that produces React
+  // #185 and makes the salmon fl/ vanish. Refusing to recompute for a short
+  // window after our own write breaks that loop regardless of fingerprint, and
+  // is purely additive (it can only SKIP work, never trigger a render).
+  var cooldownUntil = 0;
   function nowMs() {
     return (typeof performance !== 'undefined' && performance.now)
       ? performance.now() : Date.now();
@@ -304,6 +313,11 @@
     try {
       var now = nowMs();
       if (now < brokenUntil) return;
+      // 1.50.287: hard cooldown after our own write — do not re-measure the
+      // pagination WE just triggered (breaks the #185 oscillation regardless
+      // of fingerprint sensitivity). A genuine user edit lands after this
+      // short window and still re-measures.
+      if (now < cooldownUntil) return;
 
       // GATE: skip entirely when the source content + viewport are
       // unchanged since the last compute. Breaks the self-feedback loop.
@@ -335,6 +349,7 @@
 
       localStorage.setItem(AUTO_KEY, next);
       lastWritten = next;
+      cooldownUntil = now + 1500;   // 1.50.287: don't re-measure our own pagination for 1.5s
       try {
         window.dispatchEvent(new CustomEvent('antcv:auto-pages-changed', {
           detail: { source: 'auto-pagebreak-001', version: VERSION },

@@ -196,7 +196,7 @@
       tableFirstColText: "#333333",
       tableOtherColText: "#333333",
     },
-    Ai = "1.50.302-login-request";
+    Ai = "1.50.303-byok-keys";
   try {
     console.log("[AntCV]", Ai);
   } catch (e) {}
@@ -2930,7 +2930,9 @@
                         style: {
                           padding: "9px 4px",
                           background: "transparent",
-                          color: l,
+                          // `l` here is the proxy URL, not a colour — use white so
+                          // the link is legible on the dark gate (was invisible/black).
+                          color: "rgba(255,255,255,0.85)",
                           border: 0,
                           fontSize: 12.5,
                           cursor: "pointer",
@@ -26637,7 +26639,10 @@
                 React.createElement(
                   "div",
                   { style: { display: "flex", gap: 8 } },
-                  c("Skip (use server keys)", t, { compact: !0 }),
+                  // 1.50.303: a BYOK user explicitly chose to bring their own LLM
+                  // keys, so they must NOT fall back to the shared server keys —
+                  // hide "Skip (use server keys)" for them. Demo/own-worker keep it.
+                  "byok" !== En && c("Skip (use server keys)", t, { compact: !0 }),
                   c("Next →", t, { primary: !0 }),
                 ),
               ),

@@ -299,7 +299,7 @@
         auth.src = 'antcv-auth.js?v=1.50.300-access-request';
         auth.onload = function(){
           var app = document.createElement('script');
-          app.src = 'app.js?v=1.50.302-login-request';
+          app.src = 'app.js?v=1.50.303-byok-keys';
           app.onload = function(){
             var vo = document.createElement('script');
             vo.src = 'antcv-version-override.js?v=1.50.41';
@@ -312,22 +312,33 @@
       document.head.appendChild(shapeGuard);
     }
 
-    fetch('relay-config.json', { cache: 'no-store' })
-      .then(function(r){ if (!r.ok) throw new Error('HTTP_'+r.status); return r.json(); })
-      .then(function(j){
-        var raw = (j && typeof j.relay === 'string') ? j.relay.trim().replace(/\/+$/, '') : '';
-        if (raw && raw.indexOf('https://') === 0 && raw.indexOf('REPLACE_WITH_YOUR') < 0) {
-          window.ANTCV_RELAY_URL = raw;
-        } else {
-          window.ANTCV_RELAY_CONFIG_ERROR = 'invalid_relay_in_config';
-          console.error('[AntCV admin] relay-config.json has no valid "relay" URL.');
-        }
-      })
-      .catch(function(e){
-        window.ANTCV_RELAY_CONFIG_ERROR = String((e && e.message) || e);
-        console.error('[AntCV admin] relay-config.json could not be loaded:', e);
-      })
-      .finally(loadAppScripts);
+    // relay-config.json is optional (provides a default relay URL). A transient
+    // "Failed to fetch" can happen on a hard reset while the service worker is
+    // being swapped, so retry once before giving up. Always non-fatal —
+    // .finally(loadAppScripts) boots the app regardless (it falls back to the
+    // stored proxy URL).
+    function fetchRelayConfig(attempt){
+      return fetch('relay-config.json', { cache: 'no-store' })
+        .then(function(r){ if (!r.ok) throw new Error('HTTP_'+r.status); return r.json(); })
+        .then(function(j){
+          var raw = (j && typeof j.relay === 'string') ? j.relay.trim().replace(/\/+$/, '') : '';
+          if (raw && raw.indexOf('https://') === 0 && raw.indexOf('REPLACE_WITH_YOUR') < 0) {
+            window.ANTCV_RELAY_URL = raw;
+          } else {
+            window.ANTCV_RELAY_CONFIG_ERROR = 'invalid_relay_in_config';
+            console.error('[AntCV admin] relay-config.json has no valid "relay" URL.');
+          }
+        })
+        .catch(function(e){
+          var msg = String((e && e.message) || e);
+          if (attempt < 2 && /Failed to fetch|NetworkError|HTTP_5/i.test(msg)) {
+            return new Promise(function(res){ setTimeout(res, 700); }).then(function(){ return fetchRelayConfig(attempt + 1); });
+          }
+          window.ANTCV_RELAY_CONFIG_ERROR = msg;
+          console.error('[AntCV admin] relay-config.json could not be loaded:', e);
+        });
+    }
+    fetchRelayConfig(1).finally(loadAppScripts);
   })();
 </script>
 <script>

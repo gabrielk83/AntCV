@@ -15,13 +15,25 @@
   // Auto-overflow breaks (antcv-auto-overflow-362) live in a SEPARATE map so they
   // never fight the user's manual breaks. Effective per-section bucket = the
   // per-key max of manual (itemPages) + auto (autoPages) — architecture §5.
-  // 1.50.316 PREVIEW-A4-FILL: the PREVIEW renderer reads the A4-line break map
+  // 1.50.316 PREVIEW-A4-FILL: the PREVIEW renderer prefers the A4-line break map
   // (antcv:autoPagesPreview) so each preview page FILLS to the true A4 boundary
   // (no dead space). The EXPORT keeps reading antcv:autoPages (Word-equivalent
-  // line, ~200px earlier) in antcv-docx-client.js — unchanged. The measurer
-  // writes both. Falls back to antcv:autoPages if the preview map is absent
-  // (older measurer / first paint before the measurer runs).
-  const __antcvAutoPB = (sid) => { try { const m = JSON.parse(localStorage.getItem("antcv:autoPagesPreview") || localStorage.getItem("antcv:autoPages") || "{}") || {}; return m[sid] || {}; } catch (_) { return {}; } };
+  // line, ~130px earlier) in antcv-docx-client.js — unchanged.
+  // 1.50.317 SALMON-PERMANENT: per-SECTION union, not a whole-map fallback. A
+  // section that overflows the export line (924px) but fits the A4 line (1053px)
+  // has NO entry in the preview map, yet the EXPORT still paginates it to page 2.
+  // A whole-map `||` fallback never fired (the preview map exists as "{...}"), so
+  // that section's salmon VANISHED while the export was 2 pages — violating the
+  // "salmon is permanent" rule. Fix: prefer the preview break for THIS section;
+  // if it has none, fall back to the export break so the salmon always shows when
+  // the section exports to page 2 (minor sub-A4 fill on that borderline page only).
+  const __antcvAutoPB = (sid) => {
+    try {
+      const prev = (JSON.parse(localStorage.getItem("antcv:autoPagesPreview") || "{}") || {})[sid];
+      if (prev && typeof prev === "object" && Object.keys(prev).length) return prev;
+      return (JSON.parse(localStorage.getItem("antcv:autoPages") || "{}") || {})[sid] || {};
+    } catch (_) { return {}; }
+  };
   const __antcvEffBucket = (sid) => {
     const out = {};
     try {
@@ -218,7 +230,7 @@
       tableFirstColText: "#333333",
       tableOtherColText: "#333333",
     },
-    Ai = "1.50.316-preview-a4";
+    Ai = "1.50.317-salmon-permanent";
   try {
     console.log("[AntCV]", Ai);
   } catch (e) {}

@@ -27,6 +27,36 @@ Iterating on real CV/CL exports (owner rendering .docx + PDF). Shipped + open:
   propagates correctly; factor 1.11 tunable.
 
 ### OPEN — owner re-export feedback
+- **PB-WORKER-TWOCOL-PAGED-001** `[OPEN][HIGH][export][NEXT]` — **per-page two-column
+  tables for Word** (owner spec 2026-06-08, supersedes PB-WORKER-SIDEBAR-CONT-001 +
+  PB-WORKER-SIDEBAR-PAGINATION-001; this is the deferred PB-007 two-column
+  pagination). Today `buildTwoColumnDocument` ([index.js:24449](../../workers/docx-worker/src/index.js)) builds
+  ONE table: row0 = header (colSpan 2), row1 = [sidebarCell(ALL sidebar), mainCell(ALL
+  main)]. When it overflows, Word splits that single tall row badly (the owner: "in
+  word the break is not rendered properly"). **Owner's prescribed fix:** generate a
+  SEPARATE table per page, each with the SAME sidebar+main column widths
+  (`[SIDEBAR_W, MAIN_W]`); page 1 keeps the header band; each page N>1 is a fresh
+  table preceded by a page break, holding the sidebar content from its "(Cont.)"
+  point to the end in the sidebar cell and the main content from its "(Cont.)" point
+  to the end in the main cell. **Plan:** (1) add `renderColumnPaged(secs, ctx,
+  isSidebar)` → `{1:[els],2:[els],…}` bucketing each column's rendered content by
+  page: walk sections, increment `curPage` at every break point (section
+  `pageBreakBefore`, item `_page≥2`, role `page≥2`, table `row_pages`, text_bullets
+  `bullet_N`), assign all content to `curPage` until the next break (NO inline
+  pageBreakBefore — the table boundary IS the break); continuation segments still get
+  their "TITLE (Cont.)" heading. (2) Rewrite `buildTwoColumnDocument` to compute
+  `sidebarByPage` + `mainByPage`, take `maxPage`, and emit one `Table` per page —
+  page 1 with the header row, pages >1 with a leading `pageBreakBefore` paragraph and
+  only the body row `[sidebarCell_pN, mainCell_pN]` (same `colWidths`, sidebar keeps
+  its navy `shading` so the bar fills every page — also closes
+  PB-WORKER-SIDEBAR-FILL-001). (3) Header repeat on page 2+ is GATED OFF by default
+  (see PAGEBREAK-STYLE-OPTIONS-001). **Risk/verification:** sweeping rewrite of the CV
+  builder; the live `index.js` bundle exports only the fetch handler (needs CF env),
+  so set up a node harness that POSTs to the handler with a stub env, unzip the
+  resulting `word/document.xml`, and assert: N tables = N pages, one page break
+  between each, header present once, and zero content loss/dup vs the section input.
+  Hold until that harness is green before deploy. NOTE: the **preview** already
+  paginates into page-boxes natively; this is the EXPORT (Word) half only.
 - **PB-WORKER-SIDEBAR-CONT-001** `[OPEN][HIGH][export]` — a SIDEBAR section
   (REGULATORY CONTEXT) that continues onto page 2 gets the bare title repeat, NOT
   "(Cont.)". Needs the same continuation-heading mechanism as experience: forward

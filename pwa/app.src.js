@@ -110,9 +110,13 @@
         : "bullet_0"
       : "0";
   // Page the section as a whole starts on (>=1). >1 => whole section moves.
+  // 1.50.310 CL-SALMON: read the EFFECTIVE bucket (manual itemPages ∪ auto
+  // autoPages), not manual-only, so an AUTO section break written by the
+  // measurer moves the CL section and draws the salmon. CL-only (the sole caller
+  // is gated on isCL), so the CV is unaffected.
   const __antcvSecStart = (e) => {
     if (!e || !e.id) return 1;
-    const pg = parseInt(__antcvPB(e.id)[__antcvFirstKey(e)], 10);
+    const pg = parseInt(__antcvEffBucket(e.id)[__antcvFirstKey(e)], 10);
     return pg >= 1 ? pg : 1;
   };
   // Sidebar grouped-section page break (docs/plan §3f). The CV preview paginates
@@ -196,7 +200,7 @@
       tableFirstColText: "#333333",
       tableOtherColText: "#333333",
     },
-    Ai = "1.50.309-cc-settings";
+    Ai = "1.50.310-cl-salmon";
   try {
     console.log("[AntCV]", Ai);
   } catch (e) {}
@@ -39054,7 +39058,10 @@
                 null,
                 React.createElement(
                   "div",
-                  { style: { padding: "6px 7px 14px" } },
+                  {
+                    style: { padding: "6px 7px 14px" },
+                    "data-antcv-cl-flow": "true",
+                  },
                   Pi.filter(
                     (e) =>
                       e.on && "closure" !== e.id && "jd_questions" !== e.id,

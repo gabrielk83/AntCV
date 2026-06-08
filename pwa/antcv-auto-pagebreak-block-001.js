@@ -252,6 +252,45 @@
         }
       } catch (_) {}
     }
+
+    // 1.50.310 CL-SALMON: the passes above measure the CV page-box columns
+    // (.antcv-document-sidebar / .antcv-document-main). The COVER LETTER is one
+    // linear flow with no such column, so it was never measured and the preview
+    // never showed a salmon. Measure the CL flow here: find the first section
+    // whose bottom crosses the A4 line and move it WHOLE to page 2 via a
+    // section-start break — __antcvSecStart reads the effective bucket and draws
+    // the salmon before it. Sticky + change-only like the CV passes.
+    if (doc === 'cl') {
+      try {
+        var clCols = Array.prototype.slice.call(
+          document.querySelectorAll('[data-antcv-cl-flow="true"]')
+        ).filter(visible);
+        for (var cc = 0; cc < clCols.length; cc++) {
+          var clCol = clCols[cc];
+          var clTop = clCol.getBoundingClientRect().top;
+          var clScale = clCol.offsetWidth
+            ? (clCol.getBoundingClientRect().width / clCol.offsetWidth) : 1;
+          if (!(clScale > 0.1 && clScale < 10)) clScale = 1;
+          var clLimit = USABLE_PDF * clScale;
+          var clSecs = clCol.querySelectorAll('[data-sid]');
+          for (var cs = 0; cs < clSecs.length; cs++) {
+            var clEl = clSecs[cs];
+            if (!visible(clEl)) continue;
+            var clSid = clEl.getAttribute('data-sid');
+            if (!clSid || map[clSid]) continue;   // sticky
+            if (clEl.getBoundingClientRect().bottom - clTop > clLimit) {
+              var clSec = sectionById(list, clSid);
+              // Mirror app.js __antcvFirstKey so __antcvSecStart picks the break up.
+              var fk = (clSec && clSec.type === 'text_bullets')
+                ? ((clSec.intro != null && String(clSec.intro).trim()) ? 'intro' : 'bullet_0')
+                : '0';
+              map[clSid] = {}; map[clSid][fk] = 2;
+              break;   // one salmon (page 2): the first section that overflows
+            }
+          }
+        }
+      } catch (_) {}
+    }
     return map;
   }
 

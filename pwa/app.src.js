@@ -196,7 +196,7 @@
       tableFirstColText: "#333333",
       tableOtherColText: "#333333",
     },
-    Ai = "1.50.303-byok-keys";
+    Ai = "1.50.304-byok-test";
   try {
     console.log("[AntCV]", Ai);
   } catch (e) {}
@@ -26730,13 +26730,22 @@
                     async () => {
                       kn({ status: "busy", msg: "Calling LLM…" });
                       try {
-                        const e = (u.get("proxyUrl", "") || "")
-                          .trim()
-                          .replace(/\/+$/, "");
+                        // 1.50.304: a BYOK user has their own KEYS but no own
+                        // worker — they use AntCV's shared relay. Resolve the same
+                        // fallback chain the LLM dispatch uses (proxyUrl →
+                        // ANTCV_RELAY_URL → demoProxyUrl) so "Test" doesn't wrongly
+                        // claim "no worker set" when they legitimately chose BYOK.
+                        const e = (
+                          (u.get("proxyUrl", "") || "").trim() ||
+                          ("undefined" != typeof window && window.ANTCV_RELAY_URL
+                            ? String(window.ANTCV_RELAY_URL)
+                            : "") ||
+                          (on && on.demoProxyUrl ? String(on.demoProxyUrl) : "")
+                        ).replace(/\/+$/, "");
                         if (!e)
                           return void kn({
                             status: "err",
-                            msg: "No worker URL set. Go back and add one.",
+                            msg: "No relay URL available. Go back to API Keys and set one.",
                           });
                         const t = V("anthropic")
                             ? "anthropic"

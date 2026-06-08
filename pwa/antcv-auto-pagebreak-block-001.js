@@ -74,7 +74,7 @@
   // breaks. Applied to the WHOLE page (sidebar + main) so the two columns stay in
   // step. TUNABLE: raise toward 1.15 if breaks still land one unit too LATE in the
   // PDF; lower toward 1.05 if page 1 ends up too empty (breaks too EARLY).
-  var WORD_INFLATE = 1.11;
+  var WORD_INFLATE = 1.14;
   var USABLE_PDF = USABLE / WORD_INFLATE;   // ~949px — the Word-equivalent A4 fill
   var ITEM_PATH_ATTR = 'data-antcv-row-path';
 

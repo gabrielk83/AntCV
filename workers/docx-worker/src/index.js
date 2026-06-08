@@ -25200,7 +25200,10 @@ function renderSection(s, ctx, isSidebar) {
           // page 2 ("PROFESSIONAL EXPERIENCE" + "PROFESSIONAL EXPERIENCE (Cont.)").
           // Suppress the tblHeader repeat for experience so only the "(Cont.)"
           // heading remains; every other section keeps the repeat.
-          tableHeader: s.type !== "experience",
+          // 1.14.36: a SPLIT segment must not repeat its own tblHeader — a tall
+          // page-2 continuation segment spanning page 2→3 repeated "TITLE (Cont.)"
+          // on page 3 (the owner-reported DUPLICATE "REGULATORY CONTEXT (Cont.)").
+          tableHeader: s.type !== "experience" && !s._antcvSegment,
           cantSplit: true,
           children: [headingCell]
         }),
@@ -26488,7 +26491,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.35-sidebar-cont";
+var VERSION = "1.14.36-segment-no-repeat";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

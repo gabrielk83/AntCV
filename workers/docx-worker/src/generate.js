@@ -1621,7 +1621,9 @@ function renderSection(s, ctx, isSidebar) {
           // 1.14.33: suppress the bare-title tblHeader repeat for EXPERIENCE (it
           // supplies its own "(Cont.)" heading via role.page) to kill the page-2
           // double heading; all other sections keep the repeat.
-          tableHeader: s.type !== "experience",
+          // 1.14.36: split segments must not repeat their own tblHeader (a tall
+          // continuation segment spanning a page repeated "TITLE (Cont.)").
+          tableHeader: s.type !== "experience" && !s._antcvSegment,
           cantSplit: true,
           children: [headingCell],
         }),

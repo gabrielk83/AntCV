@@ -247,7 +247,7 @@
       tableFirstColText: "#333333",
       tableOtherColText: "#333333",
     },
-    Ai = "1.50.318-salmon-scope";
+    Ai = "1.50.319-salmon-scope";
   try {
     console.log("[AntCV]", Ai);
   } catch (e) {}

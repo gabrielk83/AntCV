@@ -54,7 +54,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.323-cl-double-salmon';
+  var VERSION = '1.50.324-cl-onepass';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -355,7 +355,13 @@
                 : '0';
               map[clSid] = {}; map[clSid][fk] = __clPageNo;
             }
-            break;   // one salmon per compute; the next cycle catches further overflow
+            // CL-SALMON-SLOW-001 (owner 2026-06-09 "took a long time"): break EVERY
+            // spanning section in ONE pass — matching the CV passes above, which loop
+            // all sections. The old `break` wrote one salmon per compute and leaned on
+            // incidental re-triggers (a content-height change re-tripping the source
+            // fingerprint) to paginate the rest, which is slow and fragile. This is now
+            // a single write-cycle; the fingerprint gate + cooldown + 8-writes/4s
+            // circuit breaker still guard against churn.
           }
         }
       } catch (_) {}

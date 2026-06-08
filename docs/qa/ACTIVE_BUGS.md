@@ -64,11 +64,16 @@ visual check before deploy — cannot be verified headlessly (no PDF renderer in
   2026-06-09: "salmon appeared in CL eventually." The salmon DOES render; it was the
   owner's live-state lag (the measurer is sticky + one-break-per-compute, gated by a
   fingerprint + 1.5s cooldown, so a multi-page CL paginates over several slow cycles).
-  Residual **CL-SALMON-SLOW-001** `[OPEN][preview][low]`: paginating a 3-4 page CL takes
-  several seconds because each compute writes only one break. Future option: compute all
-  CL breaks in a single pass (the page-number math added for CL-DOUBLE-SALMON-001 already
-  supports cumulative pages) — deferred (bigger change to the loop-safe one-per-compute
-  contract).
+  **CL-SALMON-SLOW-001** `[FIXED 1.50.324 — verified headless]`: paginating a 3-4 page CL
+  took several seconds because the CL pass wrote only ONE break per compute and leaned on
+  incidental re-triggers (a content-height change re-tripping the source fingerprint) to
+  paginate the rest. FIX: break EVERY spanning section in one pass — matching the CV
+  passes above, which already loop all sections (so this removes a CL-only inconsistency,
+  not a safety mechanism; the source-fingerprint gate + 1.5s cooldown + 8-writes/4s
+  circuit breaker still guard against churn, and this is now ONE write-cycle not N).
+  Verified `pwa/test/diag-cl-onepass.mjs`: two spanning sections both break in a single
+  settle with correct cumulative pages (2 and 3), the page-2-internal section between
+  them is skipped; no regression across the CL/sidebar measurer tests + boot-smoke.
 - **CL-DOUBLE-SALMON-001** `[FIXED 1.50.323 — verified headless]` — owner 2026-06-09: the
   CL salmon "appeared twice for the same page" — two "▼ PAGE 2 ▼" bars (before HOW I
   WOULD CONTRIBUTE (Cont.) and before FOUNDATION). ROOT CAUSE in the measurer's CL pass

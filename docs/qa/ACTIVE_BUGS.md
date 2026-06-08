@@ -27,26 +27,29 @@ Iterating on real CV/CL exports (owner rendering .docx + PDF). Shipped + open:
   propagates correctly; factor 1.11 tunable.
 
 ### OPEN — owner re-export feedback
-- **PB-PREVIEW-SIDEBAR-SALMON-PUSH-001** `[OPEN][HIGH][preview][NEXT]` — in the CV
-  PAGE-BOX preview the long SIDEBAR (REGULATORY CONTEXT) does NOT break at the salmon
-  line — its content **pushes the salmon DOWN** instead of flowing THROUGH it (owner
+- **PB-PREVIEW-SIDEBAR-SALMON-PUSH-001** `[FIXED 1.50.320 — verified headless]` — in the
+  CV PAGE-BOX preview the long SIDEBAR (REGULATORY CONTEXT) did NOT break at the salmon
+  line — its content **pushed the salmon DOWN** instead of flowing THROUGH it (owner
   2026-06-08: "make sure the sidebar text is going through the salmon and not pushing
-  the salmon"). The main-column analog was fixed in 1.50.318 (scoped the export-break
-  fallback so the CV breaks at the A4 line); the SIDEBAR needs the same: the measurer's
-  preview map (`antcv:autoPagesPreview`, computed at `USABLE`≈1053px) must detect the
-  sidebar (labeled_list/list/education) overflow at a GROUP boundary and the page-box
-  flatMap (`o`, app.src.js ~38530) must split it there so the page-box height is bounded
-  by the salmon, not by the un-split sidebar. Check: (a) does the measurer's sidebar
-  pass run for the PREVIEW base (`compute(USABLE, PREVIEW_KEY)`), or only the export
-  base? (b) does `__antcvEffBucket`→`__antcvAutoPB` (now CV preview-only) return a
-  sidebar break so the flatMap splits? Likely the sidebar overflow is only written to
-  the export map (924) and the CV-preview-only read returns `{}` → no preview split →
-  the whole sidebar renders in one page-box and pushes the salmon. Fix: ensure the
-  sidebar overflow is also written to the preview map at the A4 line, snapped to a
-  group boundary, so the sidebar splits at the salmon. Verify headlessly with a
-  measurer-isolation harness like `diag-cl-midlist-measurer.mjs` (synthetic sidebar
-  column of known-height groups; assert `autoPagesPreview[sid]` carries a group-start
-  break). Related: [[PB-WORKER-TWOCOL-PAGED-001]], 1.50.316/318.
+  the salmon"). **ROOT CAUSE (narrower than the original hypothesis):** the measurer DOES
+  run its sidebar pass for the preview base (`compute(USABLE, PREVIEW_KEY)`) and DOES
+  write `antcv:autoPagesPreview[sid]` when the overflow falls in a LATER group — the read
+  path (`__antcvEffBucket`→`__antcvAutoPB`→flatMap `o`, app.src.js ~38547) then splits
+  correctly (confirmed: a synthetic sidebar with deep overflow group-snaps fine). The
+  failing case is when the sidebar's **FIRST group alone overflows the A4 line**: the
+  first overflow item snaps back to group-start `0` (`snapToGroup` has no earlier
+  boundary to fall to), so `br < 1` and the section pass wrote **NO break at all** (the
+  `if (br >= 1)` guard) in EITHER map. The whole sidebar then rendered in one page-box
+  (the sidebar column has only `minHeight`, no cap — app.src.js ~38808) and pushed the
+  salmon far below A4. **FIX (sidecar-only, no app.js rebuild):** in
+  `antcv-auto-pagebreak-block-001.js compute()`, when the group snap yields `br < 1`,
+  fall back to the RAW overflow item (`br = idx`) so the sidebar breaks AT the A4 line
+  and flows through the salmon — a single group taller than a page cannot be kept whole
+  anywhere, so a mid-group cut at the line is correct. Verified headlessly:
+  `pwa/test/diag-sidebar-fullapp.mjs` (huge first group → was one 1712px box with no
+  break, now two 1123px boxes, `autoPagesPreview={regctx:{15:2}}`) +
+  `diag-sidebar-salmon-push.mjs` (later-group overflow still group-snaps) + boot-smoke 0
+  errors + 38/38 unit tests. Related: [[PB-WORKER-TWOCOL-PAGED-001]], 1.50.316/318.
 - **PB-WORKER-TWOCOL-PAGED-001** `[VERIFYING docx-worker 1.14.39 — owner export]` —
   **per-page two-column tables for Word** (owner spec 2026-06-08, supersedes
   PB-WORKER-SIDEBAR-CONT-001 + PB-WORKER-SIDEBAR-PAGINATION-001 + PB-WORKER-SIDEBAR-FILL-001;

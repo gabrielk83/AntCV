@@ -54,7 +54,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.316-preview-a4';
+  var VERSION = '1.50.320-sidebar-push';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -231,7 +231,21 @@
           if (rowIdx >= 1) br = rowIdx;
         } else {
           var idx = firstOverflowItem(secEl, colTop, limit);
-          if (idx >= 1) br = snapToGroup(groupStarts(sec), idx);
+          if (idx >= 1) {
+            br = snapToGroup(groupStarts(sec), idx);
+            // PB-PREVIEW-SIDEBAR-SALMON-PUSH-001 (owner 2026-06-08): when the
+            // FIRST group itself overflows the page, snapToGroup falls back to
+            // group-start 0 (no earlier boundary to snap to), so br<1 and NO
+            // break would be written — the whole sidebar then renders in one
+            // page-box and PUSHES the salmon below A4 instead of flowing through
+            // it. Owner: "the sidebar text [must go] through the salmon and not
+            // push the salmon." So when the group snap yields no valid break
+            // point, break at the RAW overflow item (at the A4 line). A single
+            // group taller than a page cannot be kept whole anywhere, so a
+            // mid-group cut at the line is correct here — the page-box height
+            // stays bounded by A4 and the sidebar continues on page 2.
+            if (br < 1) br = idx;
+          }
         }
         if (br >= 1) { map[sid] = {}; map[sid][String(br)] = 2; }
       }

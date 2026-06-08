@@ -25099,7 +25099,15 @@ function renderSection(s, ctx, isSidebar) {
       const out2 = [];
       chunks.forEach((ch, ci) => {
         const seg = Object.assign({}, s, {
-          items: ch.items,
+          // 1.14.40 PB-WORKER-CONT-DOUBLE-002: CLEAR _page on the chunk items.
+          // The segment's "(Cont.)" heading comes from the wrapper title below.
+          // renderSimpleList / renderLabeledList ALSO emit their own makeContHeader
+          // ("TITLE (CONT.)") whenever an item carries _page>=2 — so leaving _page on
+          // the chunk items produced a DOUBLED "TITLE (CONT.) (CONT.)" on the page-2
+          // sidebar (owner 2026-06-08: the 2nd REGULATORY CONTEXT heading was wrong).
+          // Stripping _page makes the body renderer emit the items only; the single
+          // "(Cont.)" comes from the segment wrapper heading.
+          items: ch.items.map((it) => (it && typeof it === "object") ? (() => { const c = Object.assign({}, it); delete c._page; return c; })() : it),
           _antcvSegment: true,
           title: ci > 0 ? ((s.title || "") + " (Cont.)") : s.title,
           pageBreakBefore: ci > 0 ? true : s.pageBreakBefore,
@@ -26578,7 +26586,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.39-twocol-paged";
+var VERSION = "1.14.40-cont-no-double";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

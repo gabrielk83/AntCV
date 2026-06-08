@@ -27,10 +27,27 @@
   // "salmon is permanent" rule. Fix: prefer the preview break for THIS section;
   // if it has none, fall back to the export break so the salmon always shows when
   // the section exports to page 2 (minor sub-A4 fill on that borderline page only).
+  // 1.50.318 PREVIEW-A4-FILL-SCOPE: the export-break fallback below is CL-ONLY. The
+  // CL is one linear column — a section that overflows the export line (924) but fits
+  // the A4 line (1053) must still draw its salmon (the export IS 2 pages), so we fall
+  // back to the export break. The CV is a two-column PAGE-BOX preview: there, falling
+  // back makes a section that fits the A4 page break one role/item too EARLY, leaving
+  // a dead gap ABOVE the salmon in the shorter column (owner 2026-06-08: "the text
+  // moved the salmon down instead of going through it"). So for the CV, when the
+  // preview map exists but lacks this section, return {} (no early break) — the CV
+  // salmon still appears via whichever column genuinely overflows the A4 line. The
+  // whole-map first-paint fallback (preview map absent) still applies to both docs.
   const __antcvAutoPB = (sid) => {
     try {
-      const prev = (JSON.parse(localStorage.getItem("antcv:autoPagesPreview") || "{}") || {})[sid];
-      if (prev && typeof prev === "object" && Object.keys(prev).length) return prev;
+      const prevRaw = localStorage.getItem("antcv:autoPagesPreview");
+      const prevMap = prevRaw ? (JSON.parse(prevRaw) || {}) : null;
+      if (prevMap) {
+        const prev = prevMap[sid];
+        if (prev && typeof prev === "object" && Object.keys(prev).length) return prev;
+        let doc = "cv";
+        try { const d = JSON.parse(localStorage.getItem("doc") || '""'); doc = (typeof d === "string" ? d : "cv").toLowerCase(); } catch (_) {}
+        if (doc !== "cl") return {};   // CV: no export-break fallback (avoids early break + gap)
+      }
       return (JSON.parse(localStorage.getItem("antcv:autoPages") || "{}") || {})[sid] || {};
     } catch (_) { return {}; }
   };
@@ -230,7 +247,7 @@
       tableFirstColText: "#333333",
       tableOtherColText: "#333333",
     },
-    Ai = "1.50.317-salmon-permanent";
+    Ai = "1.50.318-salmon-scope";
   try {
     console.log("[AntCV]", Ai);
   } catch (e) {}

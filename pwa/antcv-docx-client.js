@@ -1056,25 +1056,28 @@ function normalizeSections(raw) {
       }
 
       case 'experience': {
-        // 1.50.297 SALMON-AUTO-EXPORT experience walk-back. 1.50.295 forwarded the
-        // EFFECTIVE role page (manual ∪ auto) as a hard pageBreakBefore. Owner
-        // export review (2026-06-08) showed that REGRESSED experience: the worker
-        // already binds every role together with keepNext-chained bullets
-        // (index.js renderExperience 1.50.270), so Word ALREADY moves a whole role
-        // to the next page when it doesn't fit — at WORD's real geometry. Forcing
-        // an extra break at the PREVIEW-measured (px) position then fought Word's
-        // natural overflow: Word overflowed one role earlier AND honoured the
-        // forced break, so it moved "one more role" and stranded the (Cont.)
-        // heading (PREVIEW-PDF-PARITY-001). Fix: do NOT forward the AUTO role
-        // break — let Word's keepNext flow paginate experience cleanly (it still
-        // auto-paginates, just at the correct geometry, and the section wrapper's
-        // repeated tblHeader supplies the page-2 heading). MANUAL role.page (the
-        // per-role 📄 button, an explicit user intent) is still forwarded, with the
-        // monotonic cascade, via the proven worker role.page path.
+        // 1.50.298 — RE-INSTATE the effective role-page forwarding (reverts the
+        // 1.50.297 walk-back). Owner 2026-06-08: removing the forced break also
+        // removed the "EXPERIENCE (CONT.)" heading on page 2 — the worker's
+        // repeated section tblHeader only repeats the bare title, it cannot append
+        // "(Cont.)" on the continuation. The role.page path (worker 1.50.286) is
+        // the ONLY mechanism that produces the "(Cont.)" heading, so it must stay.
+        // The real defect is PREVIEW LINE DRIFT: the preview measures fewer lines
+        // per paragraph than Word renders, so the auto break (and thus the
+        // "(Cont.)") lands one role too late. That is being fixed in the MEASURER
+        // (match preview heights to Word), NOT by dropping the export break.
+        // EFFECTIVE role page = max(manual role.page, auto autoPages[origIdx]) with
+        // a monotonic cascade; auto key is the ORIGINAL index in the unfiltered roles.
         const allRoles = Array.isArray(s.roles) ? s.roles : [];
+        const autoR = (s.id && autoPagesRaw && typeof autoPagesRaw[s.id] === 'object') ? autoPagesRaw[s.id] : null;
         let runPage = 1;
         const roles = allRoles.filter(r => r && r.on !== false).map(r => {
-          let pg = Math.max(1, parseInt((r && r.page) || 1, 10) || 1); // manual only
+          const oi = allRoles.indexOf(r);
+          let pg = Math.max(1, parseInt((r && r.page) || 1, 10) || 1);
+          if (autoR) {
+            const ap = parseInt(autoR[String(oi)], 10);
+            if (Number.isFinite(ap) && ap >= 1) pg = Math.max(pg, ap);
+          }
           if (pg < runPage) pg = runPage; else runPage = pg;
           return {
             id: r.id || '',

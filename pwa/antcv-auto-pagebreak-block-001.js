@@ -54,7 +54,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.287';
+  var VERSION = '1.50.298';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -63,6 +63,19 @@
   var PAGE_H = 1123;       // A4 preview page-box ≈ 1123px at 96dpi
   var SAFETY = 70;         // crowd margin: count near-edge units as overflow
   var USABLE = PAGE_H - SAFETY;
+  // 1.50.298 PREVIEW-PDF-PARITY-001: the exported Word/PDF renders the SAME
+  // content TALLER than the live preview (larger paragraph spacing + a wider text
+  // column → different line wrap). This measurer reads PREVIEW px, so a break that
+  // looks right in the preview lands one unit too LATE in the PDF (owner: roles
+  // overflow past the salmon, the "(Cont.)" heading sits one role too far). The
+  // owner's increment-1 PDF-vs-preview analysis measured ~120px of extra height
+  // accumulated over ~10 blocks on a ~1053px page ≈ 11% taller. Shrink the usable
+  // preview height by that factor so the measurer breaks where WORD actually
+  // breaks. Applied to the WHOLE page (sidebar + main) so the two columns stay in
+  // step. TUNABLE: raise toward 1.15 if breaks still land one unit too LATE in the
+  // PDF; lower toward 1.05 if page 1 ends up too empty (breaks too EARLY).
+  var WORD_INFLATE = 1.11;
+  var USABLE_PDF = USABLE / WORD_INFLATE;   // ~949px — the Word-equivalent A4 fill
   var ITEM_PATH_ATTR = 'data-antcv-row-path';
 
   function readJson(k, f) {
@@ -192,7 +205,7 @@
       // limit by it so the comparison is done in the SAME (scaled) space.
       var scale = col.offsetWidth ? (col.getBoundingClientRect().width / col.offsetWidth) : 1;
       if (!(scale > 0.1 && scale < 10)) scale = 1;
-      var limit = USABLE * scale;
+      var limit = USABLE_PDF * scale;   // 1.50.298 Word-equivalent fill (see WORD_INFLATE)
       var secEls = col.querySelectorAll('[data-sid]');
       for (var s = 0; s < secEls.length; s++) {
         var secEl = secEls[s];

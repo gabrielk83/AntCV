@@ -1559,6 +1559,11 @@ function renderSection(s, ctx, isSidebar) {
         }),
       ],
     }),
+    // 1.50.293 PB-WORKER-CONT-HEADER-001: separator paragraph so Word does not
+    // MERGE adjacent same-grid section-wrapper tables (which made the FIRST
+    // table's tblHeader, e.g. "CORE COMPETENCIES", repeat on page 2 above the
+    // EXPERIENCE continuation). Keeps each section's own heading repeating.
+    new Paragraph({ spacing: { before: 0, after: 0, line: 1, lineRule: "exact" }, children: [] }),
   ];
 }
 

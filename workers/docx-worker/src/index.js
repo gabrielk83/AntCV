@@ -25124,7 +25124,16 @@ function renderSection(s, ctx, isSidebar) {
           children: [bodyCell]
         })
       ]
-    })
+    }),
+    // 1.50.293 PB-WORKER-CONT-HEADER-001: separate adjacent section-wrapper
+    // tables with a minimal empty paragraph. Word MERGES contiguous tables that
+    // share a grid (every CV section wrapper is columnWidths:[MAIN_W-288]) when
+    // there is no paragraph between them — and a merged table repeats the FIRST
+    // table's tblHeader row. That made "CORE COMPETENCIES" (the section above
+    // EXPERIENCE) repeat on page 2 above the experience continuation. A
+    // near-zero-height separator keeps the tables distinct, so each section's
+    // OWN heading repeats (EXPERIENCE shows its own title when it spans).
+    new Paragraph({ spacing: { before: 0, after: 0, line: 1, lineRule: "exact" }, children: [] })
   ];
 }
 __name(renderSection, "renderSection");
@@ -26395,7 +26404,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.27-header-thin-2pt-name-pad";
+var VERSION = "1.14.30-section-table-separator";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

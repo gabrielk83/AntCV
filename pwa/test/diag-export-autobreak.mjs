@@ -36,9 +36,12 @@ await page.addInitScript((secs)=>{
   localStorage.setItem('antcv:auth:token','t');localStorage.setItem('antcv:auth:email','d@e.com');localStorage.setItem('antcv:auth:expires_at','4102444800');
   localStorage.setItem('session',JSON.stringify({email:'d@e.com',ts:1717000000000}));
   localStorage.setItem('step',JSON.stringify('editor'));localStorage.setItem('doc',JSON.stringify('cv'));
-  // auto breaks: experience role 2 -> page 2; core table row 26 -> page 2
-  // auto wants r1(idx0)->pg2; MUST be ignored for experience. core table auto kept.
-  localStorage.setItem('antcv:autoPages', JSON.stringify({ experience:{'0':2}, core:{'26':2} }));
+  // auto breaks: experience role idx1 -> page 2 (a realistic mid-experience
+  // overflow); core table row 26 -> page 2. 1.50.298: BOTH manual role.page AND
+  // auto autoPages are forwarded as the EFFECTIVE role.page (max) with a monotonic
+  // cascade — the role.page break is the only mechanism that yields the "(Cont.)"
+  // heading and keeps roles atomic (Word chops them mid-unit otherwise).
+  localStorage.setItem('antcv:autoPages', JSON.stringify({ experience:{'1':2}, core:{'26':2} }));
   localStorage.setItem('antcv:itemPages','{}');
   window.ANTCV_DOCX_WORKER='https://docx-worker.example.com';
   window.__DIAG_SECTIONS=secs;
@@ -65,11 +68,12 @@ const expPages = exp ? (exp.roles||[]).map(r=>r.page||1) : [];
 const coreRowPages = core ? (core.row_pages||null) : null;
 console.log('experience role pages:', JSON.stringify(expPages));
 console.log('core row_pages:', JSON.stringify(coreRowPages));
-// 1.50.297: AUTO experience break must NOT be forwarded (Word keepNext flows it),
-// but MANUAL role.page (r3 page:2 here) MUST be, with cascade to r4. autoPages
-// experience:{2:2} must be IGNORED for export.
-const A = exp && expPages.length===4 && expPages[0]===1 && expPages[1]===1 && expPages[2]===2 && expPages[3]===2; // r3 MANUAL pg2 + cascade r4; auto ignored
+// 1.50.298: effective role.page = max(manual role.page, auto autoPages[origIdx])
+// with a monotonic cascade (reverts the 1.50.297 "auto ignored" walk-back — see
+// the experience case in antcv-docx-client.js). Input here: auto idx1->2, manual
+// idx2(r3)->2 → role0 stays pg1, role1 auto->2, role2 manual->2, role3 cascades->2.
+const A = exp && expPages.length===4 && expPages[0]===1 && expPages[1]===2 && expPages[2]===2 && expPages[3]===2;
 const B = coreRowPages && Number(coreRowPages['26'])===2;                       // table auto row split still forwarded
-console.log('CHECK experience: manual role.page forwarded + cascade, auto ignored:', A?'PASS':'FAIL');
+console.log('CHECK experience: effective role.page (manual+auto) forwarded + cascade:', A?'PASS':'FAIL');
 console.log('CHECK table effective row_pages[26]=2:', B?'PASS':'FAIL');
 console.log(A&&B ? 'EXPORT-AUTOBREAK OK' : 'EXPORT-AUTOBREAK FAIL');

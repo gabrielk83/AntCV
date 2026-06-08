@@ -25073,6 +25073,40 @@ function base64ToUint8Array(b64) {
 }
 __name(base64ToUint8Array, "base64ToUint8Array");
 function renderSection(s, ctx, isSidebar) {
+  // 1.14.35 PB-WORKER-SIDEBAR-CONT-001: a SIDEBAR list section that continues onto
+  // page 2 previously just repeated its bare title (the wrapper's tblHeader). When
+  // the client forwards a per-item page break (item._page>=2), split the section
+  // into page-segments — each its own wrapper — and give the continuation
+  // segment(s) a "TITLE (Cont.)" heading + a pageBreakBefore. Mirrors the proven
+  // renderCompetencyTable chunking. Guarded by _antcvSegment so the recursive
+  // re-render of each segment doesn't split again.
+  if (
+    isSidebar && !s._antcvSegment && Array.isArray(s.items) && s.items.length > 1 &&
+    (s.type === "labeled_list" || s.type === "list" || s.type === "list_italic" || s.type === "education")
+  ) {
+    let run = 1; const chunks = []; const byPage = {};
+    for (let i = 0; i < s.items.length; i++) {
+      const it = s.items[i];
+      let p = Number(it && it._page);
+      p = (Number.isFinite(p) && p >= 2 && p <= 4) ? p : run;
+      if (p > run) run = p; else p = run;
+      if (byPage[p] === undefined) { byPage[p] = chunks.length; chunks.push({ page: p, items: [] }); }
+      chunks[byPage[p]].items.push(it);
+    }
+    if (chunks.length > 1) {
+      const out2 = [];
+      chunks.forEach((ch, ci) => {
+        const seg = Object.assign({}, s, {
+          items: ch.items,
+          _antcvSegment: true,
+          title: ci > 0 ? ((s.title || "") + " (Cont.)") : s.title,
+          pageBreakBefore: ci > 0 ? true : s.pageBreakBefore,
+        });
+        out2.push(...renderSection(seg, ctx, isSidebar));
+      });
+      return out2;
+    }
+  }
   const isCLBoilerplate = ["greeting", "opening", "closure"].includes(s.id);
   const inlineTitleType = !isCLBoilerplate && (s.type === "text_inline" || isWorkStyleSection(s));
   const skipHeading = inlineTitleType || isCLBoilerplate;
@@ -26454,7 +26488,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.34-byok-cloudconvert";
+var VERSION = "1.14.35-sidebar-cont";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

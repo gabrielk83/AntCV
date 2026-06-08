@@ -1421,6 +1421,37 @@ function base64ToUint8Array(b64) {
 // Section dispatch
 // ──────────────────────────────────────────────────────────────────
 function renderSection(s, ctx, isSidebar) {
+  // 1.14.35 PB-WORKER-SIDEBAR-CONT-001 (mirror of index.js): split a sidebar list
+  // section that continues onto page 2 into page-segments, the continuation
+  // getting "TITLE (Cont.)" + a pageBreakBefore, instead of repeating the bare
+  // title. Guarded by _antcvSegment against recursion.
+  if (
+    isSidebar && !s._antcvSegment && Array.isArray(s.items) && s.items.length > 1 &&
+    (s.type === 'labeled_list' || s.type === 'list' || s.type === 'list_italic' || s.type === 'education')
+  ) {
+    let run = 1; const chunks = []; const byPage = {};
+    for (let i = 0; i < s.items.length; i++) {
+      const it = s.items[i];
+      let p = Number(it && it._page);
+      p = (Number.isFinite(p) && p >= 2 && p <= 4) ? p : run;
+      if (p > run) run = p; else p = run;
+      if (byPage[p] === undefined) { byPage[p] = chunks.length; chunks.push({ page: p, items: [] }); }
+      chunks[byPage[p]].items.push(it);
+    }
+    if (chunks.length > 1) {
+      const out2 = [];
+      chunks.forEach((ch, ci) => {
+        const seg = Object.assign({}, s, {
+          items: ch.items,
+          _antcvSegment: true,
+          title: ci > 0 ? ((s.title || '') + ' (Cont.)') : s.title,
+          pageBreakBefore: ci > 0 ? true : s.pageBreakBefore,
+        });
+        out2.push(...renderSection(seg, ctx, isSidebar));
+      });
+      return out2;
+    }
+  }
   const isCLBoilerplate = ['greeting', 'opening', 'closure'].includes(s.id);
   const inlineTitleType = !isCLBoilerplate && ((s.type === 'text_inline') || isWorkStyleSection(s));
   // CL boilerplate sections (greeting, opening, closure) never show

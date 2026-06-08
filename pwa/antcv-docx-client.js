@@ -912,7 +912,13 @@ function normalizeSections(raw) {
       const n = Number(b[String(origIdx)]);
       if (Number.isFinite(n) && n >= 2 && n <= 4) best = Math.max(best, n | 0);
     }
-    const a = autoPagesMap[sid];
+    // 1.50.313 PB-WORKER-SIDEBAR-CONT-001: forward the AUTO break too (was the
+    // stood-down autoPagesMap, always empty). The worker only SPLITS sidebar list
+    // sections on this _page (renderSection is isSidebar-gated), so a sidebar
+    // section that auto-overflows now gets a clean "(Cont.)" continuation segment
+    // in the export — matching the preview salmon. Main-column lists are unaffected
+    // by the split; at most item-0 moves the section whole (benign).
+    const a = autoPagesRaw[sid];
     if (a && typeof a === 'object') {
       const n = Number(a[String(origIdx)]);
       if (Number.isFinite(n) && n >= 2 && n <= 4) best = Math.max(best, n | 0);

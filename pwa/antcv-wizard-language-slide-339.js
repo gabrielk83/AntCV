@@ -41,7 +41,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.39-react-lang';
+  var VERSION = '1.50.284-dom-lang-picker';
   if (window.__antcvWizardLanguageSlide339 === VERSION) return;
   window.__antcvWizardLanguageSlide339 = VERSION;
 
@@ -238,17 +238,115 @@
     // Continue handler reads the user's picks via
     // window.AntcvWizardLanguagePicker.getState() instead of walking
     // the DOM. State publish is owned by the React component itself.
-    var langAnchor = document.createElement('div');
-    langAnchor.setAttribute('data-antcv-wizard-language-picker', '1');
-    panel.appendChild(langAnchor);
-    try {
-      window.dispatchEvent(new CustomEvent('antcv:mount-wizard-language-picker'));
-    } catch (_) {}
-    try {
-      if (window.AntcvReactIslands && typeof window.AntcvReactIslands.mountAll === 'function') {
-        window.AntcvReactIslands.mountAll();
+    // --- v1.50.284: SELF-CONTAINED language picker --------------------------
+    // The React island (WizardLanguagePicker) never rendered any options, so
+    // the step showed an empty picker ("no languages options to select").
+    // Owner spec: select languages from the table of available languages;
+    // ticked ones are included; the FIRST in order is the DEFAULT (shown
+    // clearly); the order is changeable (reorder up/down). Built directly in
+    // the DOM here so it does not depend on the island booting.
+    var selected = defaults.slice();           // ordered; selected[0] = default
+    if (!selected.length) selected = [DEFAULT_PRIMARY];
+
+    var pickerLabel = document.createElement('div');
+    pickerLabel.textContent = 'AVAILABLE LANGUAGES';
+    pickerLabel.style.cssText = 'font-size:10.5px;font-weight:800;letter-spacing:.3px;color:rgba(255,255,255,0.6);margin:0 0 6px;';
+    panel.appendChild(pickerLabel);
+
+    var listEl = document.createElement('div');
+    listEl.setAttribute('data-antcv-wizard-language-picker', '1');
+    panel.appendChild(listEl);
+
+    function optByCode(code) {
+      for (var i = 0; i < LANG_OPTIONS.length; i++) {
+        if (LANG_OPTIONS[i].code === code) return LANG_OPTIONS[i];
       }
-    } catch (_) {}
+      return { code: code, label: code, native: code };
+    }
+    function moveSel(idx, delta) {
+      var j = idx + delta;
+      if (j < 0 || j >= selected.length) return;
+      var t = selected[idx]; selected[idx] = selected[j]; selected[j] = t;
+      renderPicker();
+    }
+    function toggleSel(code) {
+      var i = selected.indexOf(code);
+      if (i >= 0) { if (selected.length > 1) selected.splice(i, 1); } // keep >=1
+      else selected.push(code);
+      renderPicker();
+    }
+    function mkRow(isSel) {
+      var row = document.createElement('div');
+      row.style.cssText =
+        'display:flex;align-items:center;gap:10px;padding:9px 11px;margin-bottom:7px;border-radius:9px;border:2px solid ' +
+        (isSel ? 'rgba(1,183,187,0.55)' : 'rgba(255,255,255,0.12)') +
+        ';background:' + (isSel ? 'rgba(1,183,187,0.12)' : 'rgba(255,255,255,0.04)') + ';';
+      return row;
+    }
+    function renderPicker() {
+      listEl.innerHTML = '';
+      selected.forEach(function (code, idx) {
+        var o = optByCode(code);
+        var row = mkRow(true);
+        var cb = document.createElement('span');
+        cb.textContent = '☑';
+        cb.title = 'Remove from the top bar';
+        cb.style.cssText = 'cursor:pointer;font-size:17px;line-height:1;color:#01B7BB;';
+        cb.addEventListener('click', function (ev) { ev.stopPropagation(); toggleSel(code); });
+        row.appendChild(cb);
+        var lab = document.createElement('div');
+        lab.style.cssText = 'flex:1;font-size:13px;color:#fff;';
+        lab.innerHTML = '<strong>' + o.label + '</strong> <span style="color:rgba(255,255,255,0.55);font-size:11.5px;">' + o.native + '</span>';
+        row.appendChild(lab);
+        if (idx === 0) {
+          var badge = document.createElement('span');
+          badge.textContent = '★ DEFAULT';
+          badge.style.cssText = 'font-size:9.5px;font-weight:800;letter-spacing:.4px;color:#06243a;background:#01B7BB;padding:3px 7px;border-radius:5px;white-space:nowrap;';
+          row.appendChild(badge);
+        }
+        var up = document.createElement('button');
+        up.type = 'button'; up.textContent = '↑'; up.disabled = idx === 0;
+        up.style.cssText = 'background:transparent;border:1px solid rgba(255,255,255,0.25);color:#fff;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:13px;' + (idx === 0 ? 'opacity:.3;cursor:default;' : '');
+        up.style.setProperty('pointer-events', 'auto', 'important');
+        up.addEventListener('click', function (ev) { ev.stopPropagation(); moveSel(idx, -1); });
+        row.appendChild(up);
+        var dn = document.createElement('button');
+        dn.type = 'button'; dn.textContent = '↓'; dn.disabled = idx === selected.length - 1;
+        dn.style.cssText = 'background:transparent;border:1px solid rgba(255,255,255,0.25);color:#fff;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:13px;' + (idx === selected.length - 1 ? 'opacity:.3;cursor:default;' : '');
+        dn.style.setProperty('pointer-events', 'auto', 'important');
+        dn.addEventListener('click', function (ev) { ev.stopPropagation(); moveSel(idx, 1); });
+        row.appendChild(dn);
+        listEl.appendChild(row);
+      });
+      LANG_OPTIONS.forEach(function (o) {
+        if (selected.indexOf(o.code) >= 0) return;
+        var row = mkRow(false);
+        row.style.cursor = 'pointer';
+        row.addEventListener('click', function () { toggleSel(o.code); });
+        var cb = document.createElement('span');
+        cb.textContent = '☐';
+        cb.style.cssText = 'font-size:17px;line-height:1;color:rgba(255,255,255,0.5);';
+        row.appendChild(cb);
+        var lab = document.createElement('div');
+        lab.style.cssText = 'flex:1;font-size:13px;color:rgba(255,255,255,0.8);';
+        lab.innerHTML = '<strong>' + o.label + '</strong> <span style="color:rgba(255,255,255,0.45);font-size:11.5px;">' + o.native + '</span>';
+        row.appendChild(lab);
+        var add = document.createElement('span');
+        add.textContent = 'Add';
+        add.style.cssText = 'font-size:10.5px;font-weight:700;color:#01B7BB;';
+        row.appendChild(add);
+        listEl.appendChild(row);
+      });
+    }
+    renderPicker();
+
+    var orderHint = document.createElement('div');
+    orderHint.innerHTML = 'The top language (★ DEFAULT) is the one AntCV uses first. Tick a language to include it in the top bar; use ↑ ↓ to change the order.';
+    orderHint.style.cssText = 'font-size:11px;line-height:1.5;color:rgba(255,255,255,0.6);margin:2px 0 16px;';
+    panel.appendChild(orderHint);
+
+    // Exposed so the Save handler reads the ordered selection (and for debug).
+    var getSelectedLangs = function () { return selected.slice(); };
 
     // --- v339-j: section-format showcase ---------------------------------
     // Extracted from the retired antcv-onboarding.js Step 10 panel. Read-
@@ -342,28 +440,21 @@
     contBtn.addEventListener('click', function (ev) {
       ev.stopPropagation();
       try { console.info('[wizard-language-slide-339] save-and-continue clicked'); } catch (_) {}
-      // v1.50.39: read picks from the React island instead of the DOM.
-      // The legacy primaryRow.querySelector path no longer exists.
-      // If the island hasn't booted (e.g. service worker mid-update),
-      // fall back to DEFAULT_PRIMARY + DEFAULT_ADDITIONAL so the
-      // continue path never throws on a missing window global.
-      var picked = (window.AntcvWizardLanguagePicker &&
-                    typeof window.AntcvWizardLanguagePicker.getState === 'function')
-        ? window.AntcvWizardLanguagePicker.getState()
-        : { primary: DEFAULT_PRIMARY, additional: DEFAULT_ADDITIONAL.slice() };
-      var p = picked && picked.primary ? picked.primary : DEFAULT_PRIMARY;
-      var others = (picked && Array.isArray(picked.additional) ? picked.additional : [])
-        .filter(function (c) { return c !== p; });
+      // v1.50.284: read the ordered selection from the self-contained DOM
+      // picker above. selected[0] is the default/primary; the rest are the
+      // additional top-bar languages, in the user's chosen order.
+      var ordered = (typeof getSelectedLangs === 'function' ? getSelectedLangs() : null) || [];
       var seen = {};
-      var finalList = [p].concat(others).filter(function (c) {
+      var finalList = ordered.filter(function (c) {
         if (seen[c]) return false;
         seen[c] = true;
         return ALL_CODES.indexOf(c) >= 0;
       });
       if (finalList.length === 0) finalList = [DEFAULT_PRIMARY];
+      var p = finalList[0];
       try { writeLangsViaStabilityCore(finalList); } catch (_) {}
       try { writePrimaryLanguage(p); } catch (_) {}
-      try { console.info('[wizard-language-slide-339] saved primary=' + p + ' additional=' + others.join(',')); } catch (_) {}
+      try { console.info('[wizard-language-slide-339] saved order=' + finalList.join(',') + ' (default=' + p + ')'); } catch (_) {}
       markShown();
       try { backdrop.remove(); } catch (_) {}
       try { onContinue && onContinue(); } catch (_) {}

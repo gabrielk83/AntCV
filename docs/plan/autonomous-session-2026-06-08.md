@@ -62,13 +62,17 @@ Report a summary at the end.
    role continuation and nothing overflows the salmon. Whole roles only — never
    split a role mid-way. Owner gave exact DOM 2026-06-08.
 
-2. **SALMON-AUTO-EXPORT-001 [HIGH, export]** — Manual breaks export to PDF/Word;
-   AUTO (measurer) breaks do NOT (docx-client 1.50.215 stand-down — forwarding
-   the sidebar auto-break scrambled the 2-column PDF: isolated header, mid-role
-   cut, wrong continuation header). Re-enable auto-break export so the exported
-   PDF/Word matches the preview salmon, WITHOUT the 2-column scramble. Likely
-   needs worker-side group/role-aware 2-column pagination rather than raw
-   autoPages forwarding. Flag for owner export check.
+2. **SALMON-AUTO-EXPORT-001 [HIGH, export: PDF + DOCX]** — Manual breaks export;
+   AUTO (measurer `antcv:autoPages`) breaks do NOT (docx-client 1.50.215
+   stand-down — forwarding the sidebar auto-break scrambled the 2-column PDF:
+   isolated header, mid-role cut, wrong continuation header). Re-enable
+   auto-break export so BOTH the downloaded **.docx (Word/Google Docs)** AND the
+   **PDF** match the preview salmon, WITHOUT the 2-column scramble (owner
+   2026-06-08: "auto-break export needed also in docx"). Forward the EFFECTIVE
+   bucket (manual ∪ auto) AND do worker-side group/role-aware 2-column
+   pagination (pageBreakBefore at the snapped boundary, never mid-group/mid-role)
+   — reuse the 1.14.30 section-table separator + the role.page break path.
+   Verify in BOTH formats. Flag for owner export check.
 
 3. **PREVIEW-PDF-PARITY-001 / AUTO-PAGEBREAK-CV-MIDGROUP-001 [HIGH]** — the
    measurer measures PREVIEW heights; the PDF has larger paragraph spacing, so a

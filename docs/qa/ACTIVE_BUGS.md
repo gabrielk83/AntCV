@@ -80,10 +80,21 @@ pushed to `main` + `claude/antcv-roadmap-bugs-L9Sqa` +
   breaks the SIDEBAR but NOT the MAIN-column experience roles, so main overflows
   past the salmon. Experience role auto-pagination (measurer pass + `d`/`g` role
   render) must move a role to page 2. Owner observed 2026-06-08 w/ exact DOM.
-- **SALMON-AUTO-EXPORT-001** `[OPEN][export]` — only MANUAL breaks export; AUTO
-  (measurer) breaks not forwarded to the worker (1.50.215 stand-down scrambled
-  the 2-column PDF). Make auto breaks export in the 2-column layout. Subsumes
-  PB-AUTO-OVERFLOW-001.
+- **SALMON-AUTO-EXPORT-001** `[OPEN][HIGH][export: PDF + DOCX]` — only MANUAL
+  breaks (itemPages / role.page) export; the AUTO breaks the measurer creates
+  (`antcv:autoPages`) are NOT forwarded to the docx-worker, so the exported
+  document does NOT match the preview's salmon. **Applies to BOTH the DOCX and
+  the PDF** (owner 2026-06-08: "auto-break export needed also in docx") — both
+  are produced by the docx-worker from the same payload, so the auto breaks must
+  reach the worker and be rendered as Word page breaks (which the PDF inherits).
+  History: auto-break forwarding was stood down in docx-client 1.50.215 because
+  raw `autoPages` forwarding scrambled the 2-column layout (isolated candidate
+  header → 3 pages, mid-role cut, wrong continuation header). **Fix direction:**
+  forward the EFFECTIVE bucket (manual ∪ auto) to the worker AND have the worker
+  do group/role-aware 2-column pagination (insert pageBreakBefore at the snapped
+  boundary, never mid-group/mid-role), reusing the now-fixed section-table
+  separator (1.14.30) and the role.page break path. Verify in BOTH a downloaded
+  .docx (Word/Google Docs) and the PDF. Subsumes PB-AUTO-OVERFLOW-001.
 - **LLM-QUALITY-PERSIST-001** `[OPEN][enhancement]` — quality routing is
   session-local; seed from D1 `llm_quality_signals`/`llm_provider_health` across
   sessions (extra async hot-path read — careful).

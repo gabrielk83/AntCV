@@ -1286,6 +1286,35 @@
     );
   }
   const __antcvDeadProviders = new Set();
+  // 1.50.290 OUTPUT-ADEQUACY GATE. The dispatcher used to accept ANY non-null
+  // string as success — so a provider that "succeeded" but returned an empty /
+  // near-empty body (gemini-2.5-flash returned ~92 tokens for parse_jd) or a
+  // response truncated mid-JSON (a low max_tokens cut the trailing fields:
+  // experience_roles, bring_rows, contribute_items) was returned to the caller
+  // and silently produced blank sections. For the big JSON generations we now
+  // reject an inadequate body and fall through to the next provider. Scoped to
+  // parse_jd / generate_cv so small tasks (enrich, compress, tiny probes) are
+  // never affected. Two cheap, low-false-positive signals:
+  //   (a) too short  — a real CV+CL JSON is multiple KB; < 800 chars = empty.
+  //   (b) truncated  — unbalanced braces (more "{" than "}") ⇒ cut mid-object.
+  function __antcvOutputInadequate(task, text) {
+    try {
+      if (!/^(parse_jd|generate_cv)$/.test(String(task || ""))) return false;
+      const s = String(text || "").trim();
+      if (s.length < 800) return true;
+      let open = 0, close = 0;
+      for (let i = 0; i < s.length; i++) {
+        const ch = s.charCodeAt(i);
+        if (ch === 123) open++;        // {
+        else if (ch === 125) close++;  // }
+      }
+      if (open === 0) return true;      // no JSON object at all
+      if (open > close) return true;    // truncated mid-object
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
   async function ee(e, t, n = {}) {
     var o;
     (p("LLM call"), await U());
@@ -1395,6 +1424,35 @@
             throw e;
           }
         if (null == n) continue;
+        // 1.50.290: reject inadequate/truncated output for big generations and
+        // fall through to the next provider (records it as a bad_input failure
+        // so the fallback chain + final error aggregation behave normally).
+        if (__antcvOutputInadequate(r, n)) {
+          const __ms = Date.now() - i;
+          try {
+            $("llm_error", {
+              task: r,
+              provider: a,
+              duration_ms: __ms,
+              error: "inadequate_output:" + String(n || "").length,
+              classification: "bad_input",
+              status: "",
+              ab_group: _,
+            });
+          } catch (_) {}
+          console.warn(
+            `[callLLM] task=${r} provider=${a}: inadequate/truncated output (${String(n || "").length} chars) — treating as failure, falling through`,
+          );
+          c.push({
+            provider: a,
+            reason: "inadequate or truncated output (" + String(n || "").length + " chars) — likely token-capped or a too-weak model for this task",
+            classification: "bad_input",
+            status: "",
+            ms: __ms,
+          });
+          s = new Error(a + " returned inadequate output");
+          continue;
+        }
         const p = Date.now() - i,
           u = O || {},
           m =

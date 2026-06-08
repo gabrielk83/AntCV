@@ -958,9 +958,36 @@ function buildLinearDocument(ctx) {
   //   left:   100  (~5pt)   — matches preview IND=5
   //   right:  100  (~5pt)   — matches preview IND=5
   //   bottom: 280  (~14pt)  — matches preview td padding 14pt
+  // 1.14.32 CL-PAGINATE-001: full-bleed header band table + FLOWING body (direct
+  // section children). A single tall table row with the nested WHAT-I-BRING table
+  // does not split across pages in LibreOffice/CloudConvert, so a long CL was
+  // clipped to one page. See index.js mirror for the full rationale.
+  const CL_SIDE_MARGIN = 100;
+  const fullBleedIndent = { type: WidthType.DXA, size: -CL_SIDE_MARGIN };
+  const clHeaderBand = new Table({
+    width: { size: PAGE_W, type: WidthType.DXA },
+    columnWidths: [PAGE_W],
+    indent: fullBleedIndent,
+    borders: noBorders(),
+    rows: [
+      new TableRow({
+        children: [new TableCell({
+          width: { size: PAGE_W, type: WidthType.DXA },
+          shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: 'auto' },
+          borders: noBorders(),
+          margins: { top: 240, bottom: 200, left: 360, right: 360 },
+          children: headerCell,
+        })],
+      }),
+    ],
+  });
+  const clBodyTopGap = new Paragraph({ spacing: { before: 0, after: 0, line: 120, lineRule: 'exact' }, children: [] });
+  // Retained ONLY for the jd_questions 2-page path below; full-bleed indent so it
+  // still spans the page under the new section L/R margins.
   const bodyTable = new Table({
     width: { size: PAGE_W, type: WidthType.DXA },
     columnWidths: [PAGE_W],
+    indent: fullBleedIndent,
     borders: noBorders(),
     rows: [
       new TableRow({
@@ -999,7 +1026,9 @@ function buildLinearDocument(ctx) {
         properties: {
           page: {
             size: { width: PAGE_W, height: PAGE_H, orientation: PageOrientation.PORTRAIT },
-            margin: { top: 0, right: 0, bottom: 0, left: 0, header: 0, footer: 0, gutter: 0 },
+            // 1.14.32 CL-PAGINATE-001: L/R margins inset the flowing body; the
+            // full-bleed band cancels the left margin with a -100 table indent.
+            margin: { top: 0, right: CL_SIDE_MARGIN, bottom: 220, left: CL_SIDE_MARGIN, header: 0, footer: 0, gutter: 0 },
           },
         },
         children: jdqSec
@@ -1020,6 +1049,7 @@ function buildLinearDocument(ctx) {
               new Table({
                 width: { size: PAGE_W, type: WidthType.DXA },
                 columnWidths: [PAGE_W],
+                indent: fullBleedIndent,
                 borders: noBorders(),
                 rows: [
                   // Page-2 navy header band — duplicate of page 1
@@ -1070,7 +1100,7 @@ function buildLinearDocument(ctx) {
                 ],
               }),
             ]
-          : [bodyTable],
+          : [clHeaderBand, clBodyTopGap, ...(bodyChildren.length ? bodyChildren : [emptyParagraph()])],
       },
     ],
   });

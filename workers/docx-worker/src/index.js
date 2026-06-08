@@ -24691,9 +24691,43 @@ function buildLinearDocument(ctx) {
   if (!jdqSec) {
     bodyChildren.push(buildAiDisclosureHangingTextbox(ctx, { context: "linear" }));
   }
+  // 1.14.32 CL-PAGINATE-001: the candidate band stays a full-bleed table, but the
+  // BODY is no longer wrapped in a table cell — a single tall table row (with the
+  // nested WHAT-I-BRING table inside it) does NOT split across pages in
+  // LibreOffice/CloudConvert, so a long cover letter was CLIPPED to one page
+  // (owner 2026-06-08: "PDF only prints one page"). The section now carries L/R
+  // margins for the body inset; the band table is pulled full-bleed with a
+  // negative table indent (-100 cancels the 100 left margin so it spans edge to
+  // edge). Body content flows as DIRECT section children, so Word/LibreOffice
+  // paginate it naturally and the WHAT-I-BRING table (now top-level, centred at
+  // ~80%) splits by row across pages.
+  const CL_SIDE_MARGIN = 100; // DXA (0.07") L/R body inset; matches the old body-cell margins
+  const fullBleedIndent = { type: WidthType.DXA, size: -CL_SIDE_MARGIN };
+  const clHeaderBand = new Table({
+    width: { size: PAGE_W, type: WidthType.DXA },
+    columnWidths: [PAGE_W],
+    indent: fullBleedIndent,
+    borders: noBorders(),
+    rows: [
+      new TableRow({
+        children: [new TableCell({
+          width: { size: PAGE_W, type: WidthType.DXA },
+          shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
+          borders: noBorders(),
+          margins: { top: 240, bottom: 200, left: 360, right: 360 },
+          children: headerCell
+        })]
+      })
+    ]
+  });
+  // 6pt gap below the band before the first body paragraph (was the body cell's top:120).
+  const clBodyTopGap = new Paragraph({ spacing: { before: 0, after: 0, line: 120, lineRule: "exact" }, children: [] });
+  // bodyTable is retained ONLY for the jd_questions 2-page path below; it gets the
+  // same full-bleed indent so it still spans the page under the new section margins.
   const bodyTable = new Table({
     width: { size: PAGE_W, type: WidthType.DXA },
     columnWidths: [PAGE_W],
+    indent: fullBleedIndent,
     borders: noBorders(),
     rows: [
       new TableRow({
@@ -24731,7 +24765,10 @@ function buildLinearDocument(ctx) {
         properties: {
           page: {
             size: { width: PAGE_W, height: PAGE_H, orientation: PageOrientation.PORTRAIT },
-            margin: { top: 0, right: 0, bottom: 0, left: 0, header: 0, footer: 0, gutter: 0 }
+            // 1.14.32 CL-PAGINATE-001: L/R margins inset the flowing body; the
+            // full-bleed header band cancels the left margin with a -100 table
+            // indent. bottom margin gives the last line page-bottom breathing room.
+            margin: { top: 0, right: CL_SIDE_MARGIN, bottom: 220, left: CL_SIDE_MARGIN, header: 0, footer: 0, gutter: 0 }
           }
         },
         children: jdqSec ? [
@@ -24751,6 +24788,7 @@ function buildLinearDocument(ctx) {
           new Table({
             width: { size: PAGE_W, type: WidthType.DXA },
             columnWidths: [PAGE_W],
+            indent: fullBleedIndent,
             borders: noBorders(),
             rows: [
               // Page-2 navy header band — duplicate of page 1
@@ -24805,7 +24843,7 @@ function buildLinearDocument(ctx) {
               })
             ]
           })
-        ] : [bodyTable]
+        ] : [clHeaderBand, clBodyTopGap, ...(bodyChildren.length ? bodyChildren : [emptyParagraph()])]
       }
     ]
   });
@@ -26410,7 +26448,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.31-header-rule-color";
+var VERSION = "1.14.32-cl-paginate";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

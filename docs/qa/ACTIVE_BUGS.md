@@ -187,6 +187,59 @@ pushed to `main` + `claude/antcv-roadmap-bugs-L9Sqa` +
   if it recurs after hard-refresh capture `#antcv-debug` log (no speculative
   render patch).
 
+### Autonomous session 2026-06-08 (PM) — shipped summary
+
+Worked the prioritized list under full autonomy. Production moved
+**1.50.292 → 1.50.295** (PWA auto-deploys on push to main; all three branches —
+main, claude/antcv-roadmap-bugs-L9Sqa, plan/2026-06-06-analysis-followups — kept
+identical). NO worker deploy was needed this session (the export change is
+client-only; the workers already had the consuming code).
+
+**Shipped + verified (headless Chromium + 38/38 unit tests + boot-smoke each):**
+- **1.50.293 — SALMON-CV-MAINROLE-BREAK-001** `[FIXED]` and **SALMON-PARALLEL-COLUMNS-001**
+  `[FIXED preview]`. Root cause: page-1 experience roles lacked
+  `data-antcv-role-index`, so the measurer never detected a main-column break on
+  the first page → sidebar broke alone, main overflowed the salmon. One additive
+  attribute (resolved to the full-list role index) restored detection. Verified:
+  overflowing CV → 2 page-boxes, `autoPages={additional:{4:2},experience:{2:2}}`
+  (columns break in parallel); a 30-row table splits at row 26 with 30/30 rows, no
+  dup/loss.
+- **1.50.294 — LLM-QUALITY-PERSIST-001** `[FIXED]`. Cross-session provider
+  demotion seeded from D1 via the existing relay `/api/llm-health` endpoint, off
+  the hot path. Verified the startup GET fires.
+- **1.50.295 — SALMON-AUTO-EXPORT-001** `[PARTIAL — owner export check]`.
+  Client now forwards effective experience `role.page` (cascade) + table
+  `row_pages` to the worker (whole-unit main-column paths that can't scramble).
+  Verified the /generate payload carries `[1,1,2,2]` role pages + `row_pages={26:2}`.
+
+**Could not complete (need rendered-output verification I can't see, or owner input):**
+- **SALMON-AUTO-EXPORT-001 (sidebar half)** — sidebar item auto-break export left
+  stood down. It desyncs the worker's single-row 2-column table and its break
+  POSITION depends on PREVIEW-PDF-PARITY-001 (preview px ≠ Word geometry). Needs
+  the parity fix + coordinated 2-column worker pagination + an owner visual check.
+- **PREVIEW-PDF-PARITY-001 / AUTO-PAGEBREAK-CV-MIDGROUP-001** — concrete next step
+  is to re-point the `Vi` estimator (app.src.js, currently width 590/11pt) to the
+  real PDF column geometry (worker MAIN_W − margins, 10.5pt), but verifying it
+  requires comparing preview vs rendered-PDF line breaks (visual). Left for owner.
+- **PB-WORKER-CONT-HEADER-001 (item 5, "SELECTED OUTCOMES" wrong cont. heading)** —
+  confirmed by reading the worker that the 1.14.30 section-table separator is
+  UNIVERSAL (`renderSection` appends it to every section wrapper, not just CORE
+  COMPETENCIES), so this pre-1.14.30 table-merge symptom should already be
+  resolved by the deployed worker. Owner to confirm with a fresh export. (Possible
+  follow-up to watch during that check: the experience wrapper's `tblHeader`
+  ["PROFESSIONAL EXPERIENCE"] repeating on page 2 alongside renderExperience's own
+  "(Cont.)" heading — a potential double-heading, not verifiable without the render.)
+- **PB-WORKER-SIDEBAR-FILL-001 (item 6)** — navy sidebar not filling to the page
+  bottom on a continuation page. The full-height-cell technique is known, but a
+  blind worker change risks clipping content / forcing extra pages; needs visual
+  verification. Not shipped.
+
+New reusable test assets added under `pwa/test/`: `boot-smoke.mjs` (the
+blue-screen guard — serve pwa/, assert 0 console errors + `typeof glDemo`),
+`diag-mainrole-break.mjs`, `diag-table-split.mjs`, `diag-llm-health-seed.mjs`,
+`diag-export-autobreak.mjs` (standalone Playwright diagnostics; not part of the
+`node --test` unit suite).
+
 ---
 
 ## OPEN — 2026-06-07 (page-break arc + kernel / application-history)

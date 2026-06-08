@@ -111,12 +111,21 @@ Iterating on real CV/CL exports (owner rendering .docx + PDF). Shipped + open:
   pagination "still problematic… was better before." Sidebar export currently uses
   Word natural flow (no forwarded breaks) and can chop a sidebar item. Same fix as
   above (forward effective sidebar breaks + clean cut).
-- **PREVIEW-SUBTITLE-RACE-001** `[OPEN][bug]` — entering the preview for an
-  Unsolicited application shows the TEMPLATE specialisation placeholder
-  ("[Specialisation — 1-3 focus areas…]") until the user switches to another
-  application in history and back. The subtitle/`io` meta isn't populated on the
-  first preview render (header `h = io.subtitle || g` falls to the placeholder `g`).
-  Race in the application/meta load timing.
+- **PREVIEW-SUBTITLE-RACE-001** `[FIXED — antcv-subtitle-sequence-368.js, verified headless]`
+  — entering the preview for an Unsolicited application showed the TEMPLATE
+  specialisation placeholder ("[Specialisation — 1-3 focus areas…]") until the user
+  switched applications and back. The subtitle/`io` meta wasn't populated on the first
+  preview render (the late `[Read from Cloud]` row carried the real subtitle, but the
+  header had already painted). FIX (shipped by a concurrent session,
+  `antcv-subtitle-sequence-368.js`, wired at index.html:586): on boot + every
+  edit→preview transition it resolves the subtitle in priority order (live meta → active
+  application row [local cache, else relay GET] → kernel-showcase meta [local, else
+  relay]), commits the first non-placeholder value into `meta.subtitle`, and nudges the
+  editor — so the first paint is correct and the local value is captured for next time.
+  Only ever writes `meta.subtitle`; one-shot relay GETs, fully guarded. CONFIRMED wired +
+  working headlessly (`pwa/test/diag-subtitle-sequence.mjs`): with a placeholder
+  `meta.subtitle` + a local app-cache row carrying the real subtitle, the sidecar
+  installs, detects the placeholder, and commits the real value on boot (0 errors).
 - **CL-PDF-PRINT-PATH-001** `[OPEN][export]` — CL PDF export goes through a
   client print-preview (window.print) instead of the docx-worker CloudConvert path
   the CV uses; the print path also yields a generic "AntCV" filename. Either route

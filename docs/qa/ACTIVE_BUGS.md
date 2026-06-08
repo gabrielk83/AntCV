@@ -13,6 +13,15 @@ A companion **feature registry** (open vs shipped features) lives at
 Iterating on real CV/CL exports (owner rendering .docx + PDF). Shipped + open:
 
 ### Fixed this round
+- **PB-WORKER-SIDEBAR-RATIO-001 follow-up** `[FIXED 1.50.321 — verified headless]` — the
+  worker (1.14.41) already derives the two-column split from `payload.sidebar_ratio`
+  (clamped [0.2,0.55], default 0.33), but the docx-client never forwarded it, so a
+  user-ADJUSTED splitter still exported at the 0.33 default. The client now reads
+  `cvSidebarRatio` (localStorage, preview default 0.33) and forwards it as
+  `sidebar_ratio`, clamped to the worker's band; an UNSET ratio is omitted so both
+  sides keep the 0.33 default in step. PWA-only (no worker deploy). Verified
+  `pwa/test/diag-sidebar-ratio-forward.mjs`: adjusted 0.42 forwarded; 0.62 clamped to
+  0.55; unset omits the field. Boot-smoke 0 errors; export-autobreak regression OK.
 - **PB-WORKER-CONT-DOUBLE-001** `[FIXED docx-worker 1.14.33 — owner check]` — page-2
   main showed TWO headings: the section-wrapper `tableHeader` repeat
   ("PROFESSIONAL EXPERIENCE", bare) AND the role.page "(Cont.)" heading. Suppressed

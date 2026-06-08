@@ -588,9 +588,39 @@ export function buildPayload({
        so the two-column CV places the disclosure in the matching cell.
        Older workers ignore it; the linear CL ignores it too. */
     ...((() => { const s = readAiWmSide(); return s ? { ai_wm_side: s } : {}; })()),
+    /* PB-WORKER-SIDEBAR-RATIO-001 follow-up: forward the user's ADJUSTED CV
+       sidebar/main split so the worker's two-column widths match a manually
+       dragged splitter, not just the 0.33 default. The worker (index.js 1.14.41)
+       already honours payload.sidebar_ratio (clamped [0.2, 0.55], default 0.33);
+       it just never received it. We send it only when the user moved the
+       splitter away from the default — an unset ratio means both sides default
+       to 0.33, so omitting it keeps them in step. CV-only; the linear CL path
+       ignores the field. */
+    ...((() => { const r = readSidebarRatio(); return r != null ? { sidebar_ratio: r } : {}; })()),
   };
 
   return payload;
+}
+
+// PB-WORKER-SIDEBAR-RATIO-001 follow-up: the CV sidebar/main split lives in
+// localStorage 'cvSidebarRatio' (JSON-stringified number; preview default 0.33,
+// preview-clamped [0.18, 0.5]). Return it clamped to the worker's accepted band
+// [0.2, 0.55] so the value is always honoured (an out-of-band value would make
+// the worker fall back to 0.33). Returns null when unset/invalid so buildPayload
+// omits the field and the worker keeps its 0.33 default — matching the preview's
+// own default. The narrow [0.18, 0.2) preview range maps to the 0.2 floor, the
+// closest the worker can render without a band-widening worker deploy.
+function readSidebarRatio() {
+  try {
+    if (typeof localStorage === 'undefined') return null;
+    const raw = localStorage.getItem('cvSidebarRatio');
+    if (raw == null) return null;
+    let v;
+    try { v = JSON.parse(raw); } catch (_) { v = Number(raw); }
+    v = Number(v);
+    if (!Number.isFinite(v) || v <= 0) return null;
+    return Math.max(0.2, Math.min(0.55, v));
+  } catch (_) { return null; }
 }
 
 // Which page side the AI watermark should sit on, as measured by the

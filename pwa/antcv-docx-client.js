@@ -968,6 +968,25 @@ function normalizeSections(raw) {
         maxByLoc[loc] = pg;
       }
     }
+    // 1.50.311 CL parity: in the cover letter the page break the measurer chose
+    // (antcv:autoPages, section-level) must be forwarded so the exported PDF
+    // breaks at the SAME section as the preview salmon — Word's natural break
+    // otherwise lands a bit earlier. Set pageBreakBefore on the CL section the
+    // measurer moved. Scoped to the CL (via localStorage 'doc') so the CV's
+    // item-level autoPages aren't mistaken for section breaks.
+    try {
+      let _doc = (typeof localStorage !== 'undefined' && localStorage.getItem('doc')) || '';
+      try { const p = JSON.parse(_doc); if (typeof p === 'string') _doc = p; } catch (_) {}
+      if (String(_doc).toLowerCase() === 'cl') {
+        for (const s of raw) {
+          if (!s || s.on === false || !s.id) continue;
+          const b = autoPagesRaw && autoPagesRaw[s.id];
+          if (b && typeof b === 'object' && Object.keys(b).some(k => Number(b[k]) >= 2)) {
+            ids.add(s.id);
+          }
+        }
+      }
+    } catch (_) { /* best-effort */ }
     return ids;
   })();
 

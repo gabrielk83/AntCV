@@ -200,7 +200,7 @@
       tableFirstColText: "#333333",
       tableOtherColText: "#333333",
     },
-    Ai = "1.50.310-cl-salmon";
+    Ai = "1.50.311-login-crash-cl-parity";
   try {
     console.log("[AntCV]", Ai);
   } catch (e) {}
@@ -12751,6 +12751,22 @@
           } catch (e) {}
           if (!o.ok) {
             const t = (a && (a.error || a.message)) || "HTTP " + o.status;
+            // 1.50.311: a 401/unauthenticated on a BACKGROUND cloud call (e.g. the
+            // kernel-showcase re-save that fires after an edit) used to throw, and
+            // because that path isn't awaited with a catch it became an UNCAUGHT
+            // promise rejection — antcv-diag logged a CRASH and the console showed
+            // "Uncaught (in promise) Error: unauthenticated". Return the same benign
+            // per-endpoint shape we use when the backend is unavailable; genuine
+            // session-expiry is handled by the auth layer (the retention/expired
+            // banner + the AntcvAuth subscriber), not by crashing here.
+            if (401 === o.status || "unauthenticated" === t)
+              return "/api/applications" === e
+                ? { ok: !0, applications: [], grouped: {}, total: 0 }
+                : "/api/active" === e
+                  ? { ok: !0, application_id: null }
+                  : "/api/kernel-showcase" === e
+                    ? { ok: !0, showcase: null }
+                    : { ok: !0 };
             if ("d1_not_bound" === t || "d1_read_failed" === t) {
               try {
                 ((window._antcvD1Disabled = !0),

@@ -200,7 +200,7 @@
       tableFirstColText: "#333333",
       tableOtherColText: "#333333",
     },
-    Ai = "1.50.311-login-crash-cl-parity";
+    Ai = "1.50.312-auth-msg";
   try {
     console.log("[AntCV]", Ai);
   } catch (e) {}

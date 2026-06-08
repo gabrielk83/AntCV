@@ -56,6 +56,19 @@ Iterating on real CV/CL exports (owner rendering .docx + PDF). Shipped + open:
   CV/CL toggle in that mode) + let it use the app preview; (b) choose download
   directory; (c) page selector to preview page 1 / 2 / …; (d) a button previewing
   the modern-ATS vs legacy-ATS format difference.
+- **CL-GHOST-COMPANY-001** `[OPEN][content]` — an UNSOLICITED cover letter still
+  referenced a specific company ("…help **Terma** build…") in HOW I WOULD
+  CONTRIBUTE. The kernel showcase (unsolicited) carried company-specific text from
+  a prior tailored generation. Fix direction: the showcase generation/regeneration
+  must enforce company-neutrality (scrub/forbid named companies in unsolicited
+  mode), or regenerate the showcase when switching from a tailored JD to
+  unsolicited. Content-engine change, not a surgical code fix.
+- **AUTH-STATE-MISMATCH-001** `[SOFTENED 1.50.312]` — the Google OAuth redirect
+  occasionally returns with the CSRF state missing/mismatched (sessionStorage lost
+  between redirect-out and return). Still aborts safely (never signs in on an
+  unverified token); message changed from the alarming "possible CSRF" to a gentle
+  "Sign-in didn't complete — tap Sign in again." Root cause (sessionStorage loss)
+  not yet pinned — needs a repro.
 
 ---
 

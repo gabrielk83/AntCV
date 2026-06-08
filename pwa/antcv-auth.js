@@ -309,7 +309,14 @@
       try { sessionStorage.removeItem('antcv:google_oauth_state'); } catch (e) {}
       try { sessionStorage.removeItem('antcv:google_oauth_nonce'); } catch (e) {}
       if (!stateExpected || stateExpected !== stateBack) {
-        const e = new Error('Google sign-in state mismatch — possible CSRF, sign-in aborted.');
+        // The CSRF state we stored before redirecting to Google is missing or
+        // doesn't match (the token is NOT accepted — safe). This happens
+        // intermittently when sessionStorage is lost between the redirect out and
+        // the return (e.g. the tab was reloaded, or the loading-gate ran). We
+        // still abort (never sign in on an unverified token), but show a gentle,
+        // recoverable message instead of an alarming "possible CSRF" — the user
+        // just taps Sign in again and a fresh state is issued.
+        const e = new Error('Sign-in didn’t complete — please tap “Sign in with Google” again.');
         e.code = 'antcv_auth_state_mismatch';
         throw e;
       }

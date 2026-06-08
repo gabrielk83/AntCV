@@ -8,6 +8,85 @@ A companion **feature registry** (open vs shipped features) lives at
 
 ---
 
+## SESSION 2026-06-08 — kernel recovery, LLM cost-quality router, salmon, wizard language
+
+Production reached **PWA 1.50.292**; docx-worker + proxy redeployed. All items
+pushed to `main` + `claude/antcv-roadmap-bugs-L9Sqa` +
+`plan/2026-06-06-analysis-followups` (kept identical).
+
+### Fixed / shipped this session
+
+- **KERNEL-SHOWCASE-EMPTY-SLOT-001** `[FIXED 1.50.274]` — `/api/kernel-showcase`
+  slot held empty `{cv:[],cl:[]}` + real meta → restore produced a headline-only
+  husk and a re-save loop kept it empty. Guard `__antcvHasRealSections` on all
+  write/restore sites; corrupted slot ignored → regenerate (self-heal).
+- **KERNEL-CORE-EMPTY-001 / CORE-PROTECT-001** `[FIXED 1.50.275]` — empty arrays
+  are truthy so a husk left the editor BLANK instead of falling back to `me()`;
+  fixed both loaders. Cut on a CORE section now HIDES it (on:false) not deletes
+  (hide-over-delete).
+- **KERNEL-REGEN-DEADLOCK-001** `[FIXED 1.50.277/278]` — Cs() refused to
+  regenerate while the generated-flag was set though content was gone. Guard now
+  blocks only on REAL (template-aware) content / meta.company / in-flight /
+  pending cloud restore; + a MINIMUM-SECTIONS floor restores the me() skeleton
+  if sections ever go fully empty.
+- **KERNEL-EXPERIENCE-EMPTY-001** `[FIXED 1.50.280/282/283]` — experience/bring/
+  contribute blank. (a) showcase read `ie().roles` & mapped `e.title` but the
+  kernel stores `workHistory` with field `role` — fixed + build experience
+  deterministically from workHistory; (b) GABRIEL_BG never injected the work
+  history into the prompt — now it does; (c) bring mirrors generated CORE
+  COMPETENCIES; (d) hardened the showcase flag `p`.
+- **LLM-CREDIT-400-MISCLASS-001** `[FIXED 1.50.285/288 + proxy]` — Anthropic
+  returns "credit balance too low" as a **400** → was bad_input (no alert/
+  fallthrough). PWA surfaces upstream_error + classifies credit as **billing**
+  (banner + demote + fallthrough); proxy 400 hint detects it.
+- **LLM-MAXTOKENS-TRUNCATION-001** `[FIXED 1.50.289 + proxy]` — fallbacks
+  hardcoded `max_tokens:2500` (Claude 32768) → truncated the big CV JSON. D1
+  `llm_calls` proved it (Mistral completion = exactly 2500; Gemini ~92). Raised
+  fallbacks to 8192 + proxy gemini default 8192.
+- **LLM-SILENT-INADEQUATE-001** `[FIXED 1.50.290]` — dispatcher accepted any
+  non-null string as success. Added OUTPUT-ADEQUACY GATE (parse_jd/generate_cv):
+  reject <800 chars or unbalanced braces → fall through.
+- **LLM-COST-QUALITY-ROUTER-001** `[FIXED 1.50.291]` — (#4) gemini→gemini-2.5-pro
+  for big tasks only; (#5) quality-aware routing: per (task→provider) demotion
+  memory (10-min TTL) sends a provider that returned inadequate/bad_input output
+  to the BACK of the order for that task.
+- **SALMON-MOBILE-001** `[FIXED 1.50.286]` — measurer read post-transform rects;
+  on mobile (scale<1) overflow never tripped. Now divides the limit by column
+  scale.
+- **SALMON-EXPORT-EXPERIENCE-001** `[FIXED docx-worker, deployed]` —
+  renderExperience ignored role.page; now inserts pageBreakBefore (+"(Cont.)")
+  at each monotonic role-page increase.
+- **SALMON-#185-LOOP-GUARD** `[FIXED 1.50.287]` — measurer 1.5s post-write
+  cooldown so it never re-measures its own pagination (breaks #185 oscillation).
+- **SALMON-CV-DUPLICATE-001** `[FIXED 1.50.273→reverted 275→re-fixed 292]` — CV
+  showed TWO salmon bars + TWO (CONT.). Keep the page-box separator + editable
+  cyan cont; `__antcvSalmon` red bar + teal #00746E cont re-gated to CL-only.
+- **WIZARD-LANG-SELECTOR-001** `[PARTIAL 1.50.284]` — wizard language step was
+  blank (React island never rendered). Replaced with a self-contained DOM picker
+  (selectable table, ★ DEFAULT on first, ↑/↓ reorder, persists ordered list).
+  Single tick+reorder table, not the spec's two side-by-side tables — revisit if
+  owner wants the two-table UX.
+
+### OPEN — queued for autonomous session
+
+- **SALMON-CV-MAINROLE-BREAK-001** `[OPEN][HIGH][preview]` — page-box salmon
+  breaks the SIDEBAR but NOT the MAIN-column experience roles, so main overflows
+  past the salmon. Experience role auto-pagination (measurer pass + `d`/`g` role
+  render) must move a role to page 2. Owner observed 2026-06-08 w/ exact DOM.
+- **SALMON-AUTO-EXPORT-001** `[OPEN][export]` — only MANUAL breaks export; AUTO
+  (measurer) breaks not forwarded to the worker (1.50.215 stand-down scrambled
+  the 2-column PDF). Make auto breaks export in the 2-column layout. Subsumes
+  PB-AUTO-OVERFLOW-001.
+- **LLM-QUALITY-PERSIST-001** `[OPEN][enhancement]` — quality routing is
+  session-local; seed from D1 `llm_quality_signals`/`llm_provider_health` across
+  sessions (extra async hot-path read — careful).
+- **ENHANCE-#185-RESIDUAL-001** `[OPEN / needs repro]` — owner hit React #185 on
+  "Enhance core competencies" (cached 1.50.285). 1.50.287 loop-guard may fix it;
+  if it recurs after hard-refresh capture `#antcv-debug` log (no speculative
+  render patch).
+
+---
+
 ## OPEN — 2026-06-07 (page-break arc + kernel / application-history)
 
 ### Preview ↔ PDF parity (analysed 2026-06-07)

@@ -8,6 +8,57 @@ A companion **feature registry** (open vs shipped features) lives at
 
 ---
 
+## EXPORT REVIEW 2026-06-08 (PM-2) — owner re-export feedback
+
+Iterating on real CV/CL exports (owner rendering .docx + PDF). Shipped + open:
+
+### Fixed this round
+- **PB-WORKER-CONT-DOUBLE-001** `[FIXED docx-worker 1.14.33 — owner check]` — page-2
+  main showed TWO headings: the section-wrapper `tableHeader` repeat
+  ("PROFESSIONAL EXPERIENCE", bare) AND the role.page "(Cont.)" heading. Suppressed
+  the tblHeader repeat for `type==="experience"` (it owns its "(Cont.)" via the
+  role.page path); all other sections keep the repeat.
+- **PREVIEW-CONT-HEADING-LEGACY-001** `[FIXED 1.50.299]` — preview continuation
+  heading was a hardcoded legacy "EXPERIENCE (CONT.)"; now uses the experience
+  section's real title → "PROFESSIONAL EXPERIENCE (CONT.)" (matches the export).
+- **CL-PAGINATE-001** `[FIXED docx-worker 1.14.32 — owner check]` — CL flows to 2+
+  pages (was clipping to 1).
+- **WORD_INFLATE line-drift** `[1.50.298 — owner tuning]` — CV 2nd-page content now
+  propagates correctly; factor 1.11 tunable.
+
+### OPEN — owner re-export feedback
+- **PB-WORKER-SIDEBAR-CONT-001** `[OPEN][HIGH][export]` — a SIDEBAR section
+  (REGULATORY CONTEXT) that continues onto page 2 gets the bare title repeat, NOT
+  "(Cont.)". Needs the same continuation-heading mechanism as experience: forward
+  the sidebar's effective breaks and split the section into page-segments with a
+  "TITLE (Cont.)" heading on continuations (the "paste new table" approach the
+  owner described). This is the long-deferred SIDEBAR HALF of SALMON-AUTO-EXPORT
+  (stood down in 1.50.215 because raw autoPages forwarding scrambled the 2-column
+  layout). Owner: "force the corrected preview render, or implement paste-new-table
+  and paste the elements after the salmon."
+- **PB-WORKER-SIDEBAR-PAGINATION-001** `[OPEN][HIGH][export]` — owner: sidebar Word
+  pagination "still problematic… was better before." Sidebar export currently uses
+  Word natural flow (no forwarded breaks) and can chop a sidebar item. Same fix as
+  above (forward effective sidebar breaks + clean cut).
+- **PREVIEW-SUBTITLE-RACE-001** `[OPEN][bug]` — entering the preview for an
+  Unsolicited application shows the TEMPLATE specialisation placeholder
+  ("[Specialisation — 1-3 focus areas…]") until the user switches to another
+  application in history and back. The subtitle/`io` meta isn't populated on the
+  first preview render (header `h = io.subtitle || g` falls to the placeholder `g`).
+  Race in the application/meta load timing.
+- **CL-PDF-PRINT-PATH-001** `[OPEN][export]` — CL PDF export goes through a
+  client print-preview (window.print) instead of the docx-worker CloudConvert path
+  the CV uses; the print path also yields a generic "AntCV" filename. Either route
+  CL through /generate-pdf (CloudConvert) like the CV, or at minimum set a proper
+  specific download filename.
+- **EXPORT-PREVIEW-FEATURES-001** `[OPEN][enhancement]` — owner requests for the
+  export-preview UI: (a) add JD-analysis as a 3rd quick-export button (hide the
+  CV/CL toggle in that mode) + let it use the app preview; (b) choose download
+  directory; (c) page selector to preview page 1 / 2 / …; (d) a button previewing
+  the modern-ATS vs legacy-ATS format difference.
+
+---
+
 ## SESSION 2026-06-08 — kernel recovery, LLM cost-quality router, salmon, wizard language
 
 Production reached **PWA 1.50.292**; docx-worker + proxy redeployed. All items

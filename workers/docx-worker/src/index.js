@@ -25160,7 +25160,13 @@ function renderSection(s, ctx, isSidebar) {
       borders: noBorders(),
       rows: [
         new TableRow({
-          tableHeader: true,
+          // 1.14.33: EXPERIENCE supplies its OWN "(Cont.)" heading on each page
+          // via the role.page break path (renderExperience). Repeating the bare
+          // section title here too produced the owner-reported DOUBLE heading on
+          // page 2 ("PROFESSIONAL EXPERIENCE" + "PROFESSIONAL EXPERIENCE (Cont.)").
+          // Suppress the tblHeader repeat for experience so only the "(Cont.)"
+          // heading remains; every other section keeps the repeat.
+          tableHeader: s.type !== "experience",
           cantSplit: true,
           children: [headingCell]
         }),
@@ -26448,7 +26454,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.32-cl-paginate";
+var VERSION = "1.14.33-exp-cont-dedupe";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

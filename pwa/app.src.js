@@ -38237,7 +38237,10 @@
                             : Math.max(1, parseInt(e.page || 1, 10));
                         })(n) === e,
                     ),
-                  f = "da" === je ? "ERFARING (FORTS.)" : "EXPERIENCE (CONT.)",
+                  f =
+                    ((e && e.title) ||
+                      ("da" === je ? "ERFARING" : "EXPERIENCE")) +
+                    ("da" === je ? " (FORTS.)" : " (CONT.)"),
                   h = [];
                 for (let e = 1; e <= u; e++)
                   h.push({ pageNum: e, sb: m(e), roles: g(e) });

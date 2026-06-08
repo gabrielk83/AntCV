@@ -1587,7 +1587,10 @@ function renderSection(s, ctx, isSidebar) {
       borders: noBorders(),
       rows: [
         new TableRow({
-          tableHeader: true,
+          // 1.14.33: suppress the bare-title tblHeader repeat for EXPERIENCE (it
+          // supplies its own "(Cont.)" heading via role.page) to kill the page-2
+          // double heading; all other sections keep the repeat.
+          tableHeader: s.type !== "experience",
           cantSplit: true,
           children: [headingCell],
         }),

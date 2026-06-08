@@ -27,6 +27,26 @@ Iterating on real CV/CL exports (owner rendering .docx + PDF). Shipped + open:
   propagates correctly; factor 1.11 tunable.
 
 ### OPEN — owner re-export feedback
+- **PB-PREVIEW-SIDEBAR-SALMON-PUSH-001** `[OPEN][HIGH][preview][NEXT]` — in the CV
+  PAGE-BOX preview the long SIDEBAR (REGULATORY CONTEXT) does NOT break at the salmon
+  line — its content **pushes the salmon DOWN** instead of flowing THROUGH it (owner
+  2026-06-08: "make sure the sidebar text is going through the salmon and not pushing
+  the salmon"). The main-column analog was fixed in 1.50.318 (scoped the export-break
+  fallback so the CV breaks at the A4 line); the SIDEBAR needs the same: the measurer's
+  preview map (`antcv:autoPagesPreview`, computed at `USABLE`≈1053px) must detect the
+  sidebar (labeled_list/list/education) overflow at a GROUP boundary and the page-box
+  flatMap (`o`, app.src.js ~38530) must split it there so the page-box height is bounded
+  by the salmon, not by the un-split sidebar. Check: (a) does the measurer's sidebar
+  pass run for the PREVIEW base (`compute(USABLE, PREVIEW_KEY)`), or only the export
+  base? (b) does `__antcvEffBucket`→`__antcvAutoPB` (now CV preview-only) return a
+  sidebar break so the flatMap splits? Likely the sidebar overflow is only written to
+  the export map (924) and the CV-preview-only read returns `{}` → no preview split →
+  the whole sidebar renders in one page-box and pushes the salmon. Fix: ensure the
+  sidebar overflow is also written to the preview map at the A4 line, snapped to a
+  group boundary, so the sidebar splits at the salmon. Verify headlessly with a
+  measurer-isolation harness like `diag-cl-midlist-measurer.mjs` (synthetic sidebar
+  column of known-height groups; assert `autoPagesPreview[sid]` carries a group-start
+  break). Related: [[PB-WORKER-TWOCOL-PAGED-001]], 1.50.316/318.
 - **PB-WORKER-TWOCOL-PAGED-001** `[VERIFYING docx-worker 1.14.39 — owner export]` —
   **per-page two-column tables for Word** (owner spec 2026-06-08, supersedes
   PB-WORKER-SIDEBAR-CONT-001 + PB-WORKER-SIDEBAR-PAGINATION-001 + PB-WORKER-SIDEBAR-FILL-001;

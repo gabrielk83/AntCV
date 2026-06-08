@@ -62,6 +62,18 @@ Report a summary at the end.
    role continuation and nothing overflows the salmon. Whole roles only — never
    split a role mid-way. Owner gave exact DOM 2026-06-08.
 
+1b. **SALMON-PARALLEL-COLUMNS-001 [HIGH]** — sidebar and main must auto-paginate
+   IN PARALLEL at the SAME page boundary, and any block that slides to the next
+   page must be CUT from the source page (never stranded, never duplicated). In
+   particular the CV main TABLES (CORE COMPETENCIES / "What I bring") must split
+   by ROW — moved rows removed from the page-1 table and re-emitted in a page-2
+   continuation table with the header repeated. `app.src.js` ~4337 currently
+   DISABLES in-place CORE COMPETENCIES table split; the oMain table-row flatMap
+   split is ~37741 and the measurer's `firstOverflowRow` detects it. Owner
+   2026-06-08 (AntCVqq.pdf): "generate new table in new page and cut the old
+   items that are sliding." Verify columns stay in step + no row dup/loss in
+   preview AND export.
+
 2. **SALMON-AUTO-EXPORT-001 [HIGH, export: PDF + DOCX]** — Manual breaks export;
    AUTO (measurer `antcv:autoPages`) breaks do NOT (docx-client 1.50.215
    stand-down — forwarding the sidebar auto-break scrambled the 2-column PDF:

@@ -80,6 +80,26 @@ pushed to `main` + `claude/antcv-roadmap-bugs-L9Sqa` +
   breaks the SIDEBAR but NOT the MAIN-column experience roles, so main overflows
   past the salmon. Experience role auto-pagination (measurer pass + `d`/`g` role
   render) must move a role to page 2. Owner observed 2026-06-08 w/ exact DOM.
+- **SALMON-PARALLEL-COLUMNS-001** `[OPEN][HIGH][preview+export]` — the auto salmon
+  must paginate the SIDEBAR and the MAIN column **in parallel / coordinated**:
+  when content crosses the A4 line, the sidebar break and the main break happen
+  together at the SAME page boundary, and any block that SLIDES to the next page
+  must be **CUT from the source page** — never left behind (stranded) and never
+  shown on both pages (duplicated). Owner 2026-06-08 (AntCVqq.pdf): "auto salmon
+  in sidebar and in main need to work in parallel — e.g. generate new table in
+  new page and cut the old items that are sliding." Symptom seen: the CORE
+  COMPETENCIES table's rows desync / the moved rows are not cleanly cut when the
+  table reflows to the continuation page. **Scope:** (a) CV main NON-experience
+  sections — esp. the CORE COMPETENCIES / "What I bring" TABLES — must split by
+  ROW with the moved rows removed from the page-1 table and re-emitted in a
+  page-2 continuation table (header repeated), never duplicated/lost; (b) the
+  sidebar split (already working) and the main split must use a COORDINATED page
+  boundary so columns stay in step; (c) experience roles (see MAINROLE-BREAK
+  above). Note app.src.js ~4337 explicitly disables in-place CORE COMPETENCIES
+  table split today ("Real cross-page movement for CORE COMPETENCIES needs the
+  main-column page-box pagination") — that is exactly the gap. Relates to the
+  oMain table-row flatMap split (~37741) + the measurer's `firstOverflowRow`.
+  Must hold in BOTH preview and export (PDF + DOCX).
 - **SALMON-AUTO-EXPORT-001** `[OPEN][HIGH][export: PDF + DOCX]` — only MANUAL
   breaks (itemPages / role.page) export; the AUTO breaks the measurer creates
   (`antcv:autoPages`) are NOT forwarded to the docx-worker, so the exported

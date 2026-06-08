@@ -196,7 +196,7 @@
       tableFirstColText: "#333333",
       tableOtherColText: "#333333",
     },
-    Ai = "1.50.304-byok-test";
+    Ai = "1.50.305-byok-keys-only";
   try {
     console.log("[AntCV]", Ai);
   } catch (e) {}
@@ -1492,6 +1492,27 @@
       const _f = l.filter((e) => !__antcvDeadProviders.has(e));
       if (_f.length) l = _f;
     }
+    // 1.50.305 BYOK-NO-SERVER-FALLBACK: V()/Q() treat a provider as available when
+    // the user has their OWN key OR the deployment has a server key for it
+    // (B.server_keys). So a BYOK user with e.g. only Claude+OpenAI keys still had
+    // Mistral+Gemini in the list — those have no user key, fall to the demo/server
+    // path, and (when not signed in) FAIL the whole task with
+    // "demo_requires_sign_in". If the user has ANY of their own keys, restrict the
+    // list to providers they actually hold a key for — fewer keys may lower
+    // quality but must never hard-fail (owner 2026-06-08).
+    try {
+      const _ownKey = (e) =>
+        !!{
+          anthropic: u.get("apiKey", ""),
+          openai: u.get("openaiKey", ""),
+          mistral: u.get("mistralKey", ""),
+          gemini: u.get("geminiKey", ""),
+        }[j(e)];
+      if (["anthropic", "openai", "mistral", "gemini"].some(_ownKey)) {
+        const _own = l.filter(_ownKey);
+        if (_own.length) l = _own;
+      }
+    } catch (_) {}
     // 1.50.291 #5: deprioritise providers that recently gave inadequate output
     // for this task (kept in the list, just moved to the back).
     l = __antcvReorderByQuality(r, l);

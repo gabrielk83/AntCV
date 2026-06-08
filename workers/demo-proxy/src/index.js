@@ -698,6 +698,23 @@ async function handleRequest(request, env = {}) {
   try { bodyText = await request.text(); }
   catch(e) { return new Response('Body read failed', { status: 400, headers: CORS }); }
 
+  // BYOK-STRIP: the PWA merges internal hints (e.g. _antcv_writing_style) into the
+  // outgoing body. The full cv-proxy consumes + strips them, but this demo-proxy
+  // (which is ALSO the shared BYOK relay) did not — so on the BYOK client-key path
+  // they reached the providers and Anthropic/OpenAI returned 400 ("Extra inputs are
+  // not permitted" / "Unknown parameter '_antcv_writing_style'"). Strip every
+  // top-level _antcv_* key up front so no provider ever sees them.
+  try {
+    const _p = JSON.parse(bodyText);
+    if (_p && typeof _p === 'object' && !Array.isArray(_p)) {
+      let _stripped = false;
+      for (const k of Object.keys(_p)) {
+        if (k.indexOf('_antcv_') === 0) { delete _p[k]; _stripped = true; }
+      }
+      if (_stripped) bodyText = JSON.stringify(_p);
+    }
+  } catch (_) { /* non-JSON body — leave untouched */ }
+
   // In demo mode, force non-streaming so we can buffer the full
   // response and parse usage from it. Most clients (including the
   // PWA's wrappedFetch) handle both stream and non-stream responses.

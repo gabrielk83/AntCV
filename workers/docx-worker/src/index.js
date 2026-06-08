@@ -26691,7 +26691,13 @@ async function handleGeneratePdf(request, origin, env2) {
   const docxMs = Date.now() - t0;
   let pdfResult;
   try {
-    pdfResult = await convertDocxToPdf(docxBuffer, env2.CLOUDCONVERT_API_KEY, {
+    // BYOK CloudConvert: a per-request X-CloudConvert-Key (the user's own key,
+    // sent by the PWA for BYOK) takes precedence over the worker's shared
+    // CLOUDCONVERT_API_KEY, so a non-demo user converts on their own account.
+    const ccKey =
+      (request.headers.get("X-CloudConvert-Key") || "").trim() ||
+      env2.CLOUDCONVERT_API_KEY;
+    pdfResult = await convertDocxToPdf(docxBuffer, ccKey, {
       filename: payload.filename || "document"
     });
   } catch (e) {

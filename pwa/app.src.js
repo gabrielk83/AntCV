@@ -196,7 +196,7 @@
       tableFirstColText: "#333333",
       tableOtherColText: "#333333",
     },
-    Ai = "1.50.307-byok-not-demo";
+    Ai = "1.50.308-byok-cloudconvert";
   try {
     console.log("[AntCV]", Ai);
   } catch (e) {}
@@ -980,6 +980,28 @@
       return !!(B && B.demo_mode) && !__antcvHasOwnKey();
     } catch (_) {
       return false;
+    }
+  }
+  // 1.50.308: the user's own CloudConvert key (for server PDF on the BYOK path).
+  function __antcvHasOwnCC() {
+    try {
+      return !!String(u.get("cloudconvertKey", "") || "").trim();
+    } catch (_) {
+      return false;
+    }
+  }
+  // Whether to use the worker's CloudConvert /generate-pdf. A BYOK user on the
+  // SHARED demo deployment is no longer a demo user, so they must NOT consume the
+  // shared CloudConvert — they fall back to client print UNLESS they bring their
+  // own CloudConvert key. Demo users and own-worker deployments (demo_mode false)
+  // keep server PDF.
+  function __antcvUseServerPdf() {
+    try {
+      return (
+        !(B && B.demo_mode) || __antcvDemoActive() || __antcvHasOwnCC()
+      );
+    } catch (_) {
+      return true;
     }
   }
   function Y(e) {
@@ -26687,6 +26709,60 @@
                   ),
                 ),
               ),
+              "byok" === En &&
+                React.createElement(
+                  "div",
+                  { style: { marginTop: 14 } },
+                  React.createElement(
+                    "label",
+                    {
+                      style: {
+                        display: "block",
+                        color: "rgba(255,255,255,0.7)",
+                        fontSize: 11,
+                        fontWeight: 600,
+                        marginBottom: 4,
+                      },
+                    },
+                    "CloudConvert API key (optional — for server-rendered PDF)",
+                  ),
+                  React.createElement("input", {
+                    type: "password",
+                    placeholder: "Your CloudConvert API key",
+                    defaultValue: u.get("cloudconvertKey", "") || "",
+                    onChange: (e) => {
+                      try {
+                        u.set(
+                          "cloudconvertKey",
+                          String((e.target && e.target.value) || "").trim(),
+                        );
+                      } catch (_) {}
+                    },
+                    style: {
+                      width: "100%",
+                      padding: "8px 10px",
+                      background: "rgba(255,255,255,0.06)",
+                      border: "1px solid rgba(255,255,255,0.18)",
+                      borderRadius: 6,
+                      color: "#fff",
+                      fontSize: 11,
+                      fontFamily: "monospace",
+                      boxSizing: "border-box",
+                    },
+                  }),
+                  React.createElement(
+                    "div",
+                    {
+                      style: {
+                        color: "rgba(255,255,255,0.45)",
+                        fontSize: 10,
+                        lineHeight: 1.45,
+                        marginTop: 4,
+                      },
+                    },
+                    "With your own keys you’re not a demo user, so PDFs aren’t rendered on AntCV’s shared CloudConvert. Add your own CloudConvert key for crisp server PDF, or leave blank to use the built-in browser-print PDF (still ATS-readable). Get a key at cloudconvert.com → Dashboard → Authorization → API Keys.",
+                  ),
+                ),
               React.createElement(
                 "div",
                 {
@@ -42859,6 +42935,7 @@
                             "undefined" != typeof window &&
                             window.isPdfWorkerAvailable &&
                             window.exportPdfViaWorker &&
+                            __antcvUseServerPdf() &&
                             (await window.isPdfWorkerAvailable())
                           ) {
                             const e = Date.now(),

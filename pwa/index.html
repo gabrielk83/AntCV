@@ -278,7 +278,7 @@
   })();
 </script>
 <script type="module">
-  import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.50.298-cont-reinstate';
+  import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.50.308-cloudconvert-key';
   window.exportDocxViaWorker = exportDocxViaWorker;
   window.ANTCV_VERSION = '1.50.9';
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
@@ -299,7 +299,7 @@
         auth.src = 'antcv-auth.js?v=1.50.300-access-request';
         auth.onload = function(){
           var app = document.createElement('script');
-          app.src = 'app.js?v=1.50.307-byok-not-demo';
+          app.src = 'app.js?v=1.50.308-byok-cloudconvert';
           app.onload = function(){
             var vo = document.createElement('script');
             vo.src = 'antcv-version-override.js?v=1.50.41';

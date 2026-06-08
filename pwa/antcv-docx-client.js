@@ -1269,6 +1269,18 @@ export async function exportPdfViaWorker(opts) {
   const headers = { 'Content-Type': 'application/json', 'Accept': 'application/pdf' };
   const secret = (typeof window !== 'undefined' && window.ANTCV_DOCX_SECRET) || '';
   if (secret) headers['X-AntCV-Secret'] = secret;
+  // BYOK CloudConvert: forward the user's own CloudConvert key so the worker uses
+  // it instead of the shared/server key (the app only calls this path for BYOK
+  // when the user HAS a key; demo + own-worker use the worker's own key).
+  try {
+    let cc = '';
+    if (typeof localStorage !== 'undefined') {
+      cc = localStorage.getItem('cloudconvertKey') || '';
+      if (cc.startsWith('"') && cc.endsWith('"')) cc = cc.slice(1, -1);
+    }
+    cc = (cc || '').trim();
+    if (cc) headers['X-CloudConvert-Key'] = cc;
+  } catch (_) { /* localStorage may be disabled */ }
 
   const res = await fetch(workerUrl.replace(/\/$/, '') + '/generate-pdf', {
     method: 'POST',

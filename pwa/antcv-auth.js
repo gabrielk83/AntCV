@@ -210,7 +210,20 @@
         body: JSON.stringify({ id_token: idToken }),
       });
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body.message || body.error || `Google sign-in failed (${res.status})`);
+      if (!res.ok) {
+        // Not-allowlisted: the relay has already LOGGED an access request for this
+        // email (admin reviews it). Surface a structured error so the UI can show
+        // "request submitted" + a Cancel option instead of the raw code, and carry
+        // the id_token so Cancel can re-prove ownership.
+        if (body && body.error === 'email_not_allowed') {
+          const e = new Error('email_not_allowed');
+          e.code = 'email_not_allowed';
+          e.email = body.email || '';
+          e.idToken = idToken;
+          throw e;
+        }
+        throw new Error(body.message || body.error || `Google sign-in failed (${res.status})`);
+      }
       writeState({ token: body.token, email: body.email, expiresAt: body.expires_at || 0 });
       // v1.40.194: persist the relay origin so antcv-privacy-led.js
       // (and other sidecars that classify hosts) recognise it as
@@ -220,6 +233,22 @@
       try {
         if (proxy) localStorage.setItem('relayUrl', proxy);
       } catch (_) {}
+      return body;
+    },
+
+    // Withdraw the access request the relay logged for a denied (not-allowlisted)
+    // sign-in. Re-proves ownership with the same Google id_token. Best-effort.
+    async cancelAccessRequest(idToken) {
+      const proxy = getProxyUrl();
+      if (!proxy) throw new Error('Proxy URL not configured.');
+      if (!idToken) throw new Error('Sign in again to withdraw the request.');
+      const res = await originalFetch(proxy + '/auth/access-request/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id_token: idToken }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.message || body.error || `Could not withdraw request (${res.status})`);
       return body;
     },
 
@@ -465,6 +494,9 @@
     const [busy, setBusy] = useState(false);
     const [msg, setMsg] = useState('');
     const [err, setErr] = useState('');
+    // Access-request flow: set when a not-allowlisted Google sign-in is denied.
+    // Holds { email, idToken } so we can show "request submitted" + a Cancel button.
+    const [requestPending, setRequestPending] = useState(null);
     const googleBtnRef = useRef(null);
 
     useEffect(() => Auth.subscribe(setState), []);
@@ -492,9 +524,17 @@
       // state. Register it with the module-level handler so the single
       // global GIS init can route into the currently-mounted panel.
       const handler = async (resp) => {
-        setBusy(true); setErr(''); setMsg('');
+        setBusy(true); setErr(''); setMsg(''); setRequestPending(null);
         try { await Auth.signInWithGoogle(resp.credential); setMsg('Signed in.'); }
-        catch (e) { setErr(e.message || String(e)); }
+        catch (e) {
+          // Not-allowlisted: the relay already filed an access request. Show the
+          // request-submitted panel (with Cancel) instead of the raw error code.
+          if (e && e.code === 'email_not_allowed') {
+            setRequestPending({ email: e.email || '', idToken: e.idToken || resp.credential });
+          } else {
+            setErr(e.message || String(e));
+          }
+        }
         finally { setBusy(false); }
       };
       setGoogleSignInHandler(handler);
@@ -550,6 +590,17 @@
       finally { setBusy(false); }
     }, []);
 
+    const onCancelRequest = useCallback(async () => {
+      if (!requestPending) return;
+      setBusy(true); setErr(''); setMsg('');
+      try {
+        await Auth.cancelAccessRequest(requestPending.idToken);
+        setRequestPending(null);
+        setMsg('Access request withdrawn.');
+      } catch (e) { setErr(e.message || String(e)); }
+      finally { setBusy(false); }
+    }, [requestPending]);
+
     // ---------- shared styles ----------
     const card     = { border: P.cardBorder, borderRadius: 8, padding: P.cardPad, background: P.cardBg, marginBottom: 14, fontFamily: 'inherit', color: P.text };
     const heading  = { margin: '0 0 8px', fontSize: 11, fontWeight: 700, color: P.headingMuted, letterSpacing: 1, textTransform: 'uppercase' };
@@ -583,6 +634,29 @@
         msg && R.createElement('div', { style: okStyle }, msg),
         err && R.createElement('div', { style: errStyle }, err),
         R.createElement('button', { type: 'button', onClick: onSignOut, disabled: busy, style: btnAlt }, busy ? '…' : 'Sign out')
+      );
+    }
+
+    // ---------- access-request pending view ----------
+    // Shown after a not-allowlisted Google sign-in: make it explicit that the
+    // attempt FILED a request (the relay logged it for the admin), and offer a
+    // clear way to withdraw it. Replaces the raw "email_not_allowed" code.
+    if (requestPending) {
+      return R.createElement('div', { style: card },
+        R.createElement('div', { style: heading }, 'Access requested'),
+        R.createElement('div', { style: okStyle },
+          R.createElement('div', { style: { fontWeight: 600, marginBottom: 4 } }, 'Your access request has been submitted.'),
+          R.createElement('div', null,
+            (requestPending.email ? requestPending.email + ' ' : 'This email ') +
+            "isn't on the access list yet. An administrator has received your request and will review it — you'll be able to sign in once it's approved."
+          )
+        ),
+        msg && R.createElement('div', { style: okStyle }, msg),
+        err && R.createElement('div', { style: errStyle }, err),
+        R.createElement('div', { style: { display: 'flex', gap: 10, marginTop: 4, alignItems: 'center' } },
+          R.createElement('button', { type: 'button', onClick: onCancelRequest, disabled: busy, style: btnAlt }, busy ? '…' : 'Withdraw request'),
+          R.createElement('button', { type: 'button', onClick: () => { setRequestPending(null); setErr(''); setMsg(''); }, disabled: busy, style: btnLink }, 'Back to sign in')
+        )
       );
     }
 

@@ -2694,6 +2694,29 @@ async function probeUpstream(env) {
 //  Auth handlers
 // =====================================================================
 
+// Withdraw a pending access request. Authorised by re-verifying the caller's
+// Google id_token (the same proof /auth/google requires), so a user can only
+// cancel the request tied to their OWN verified email. Best-effort KV delete;
+// always returns ok so the UI can show "withdrawn" without leaking allowlist state.
+async function handleAuthAccessRequestCancel(request, env) {
+  if (request.method === 'OPTIONS') return jsonResponse({}, 204, request, env);
+  if (!env.GOOGLE_CLIENT_ID) return jsonResponse({ error: 'GOOGLE_CLIENT_ID not set on relay' }, 500, request, env);
+  let body;
+  try { body = await request.json(); }
+  catch (e) { return jsonResponse({ error: 'Invalid JSON' }, 400, request, env); }
+  const idToken = body && body.id_token;
+  if (!idToken) return jsonResponse({ error: 'Missing id_token in body' }, 400, request, env);
+  let claims;
+  try { claims = await verifyGoogleIdToken(idToken, env.GOOGLE_CLIENT_ID); }
+  catch (e) { return jsonResponse({ error: 'google_token_invalid', message: e.message }, 401, request, env); }
+  if (!claims || !claims.email) return jsonResponse({ error: 'google_token_invalid' }, 401, request, env);
+  try {
+    const kv = env.KV_BINDING || env.ANALYTICS || null;
+    if (kv) await kv.delete('access_req:' + String(claims.email).toLowerCase());
+  } catch (_) { /* best-effort */ }
+  return jsonResponse({ ok: true, cancelled: true, email: claims.email }, 200, request, env);
+}
+
 async function handleAuthGoogle(request, env) {
   if (!env.JWT_SECRET) return jsonResponse({ error: 'JWT_SECRET not set on relay' }, 500, request, env);
   if (!env.GOOGLE_CLIENT_ID) return jsonResponse({ error: 'GOOGLE_CLIENT_ID not set on relay' }, 500, request, env);
@@ -3063,6 +3086,13 @@ const method = request.method;
 
   if (path === '/auth/google' && method === 'POST') {
     return handleAuthGoogle(request, env);
+  }
+  // v2.x ACCESS-REQUEST-CANCEL: a denied (not-allowlisted) user can withdraw the
+  // access request that /auth/google logged for them. Authorised by re-verifying
+  // their Google id_token (same proof as sign-in) — so only the email owner can
+  // cancel their own request.
+  if (path === '/auth/access-request/cancel' && method === 'POST') {
+    return handleAuthAccessRequestCancel(request, env);
   }
   if (path === '/auth/email/request' && method === 'POST') {
     return handleAuthEmailRequest(request, env);

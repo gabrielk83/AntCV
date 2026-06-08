@@ -90,8 +90,23 @@
       .catch(function () { return false; });
   }
 
+  // 1.50.307: a BYOK user (their OWN key present) is NOT a demo user even on a
+  // demo-capable deployment — their generations run on their own key. So the DEMO
+  // preview watermark must be suppressed for them (matches the app's
+  // __antcvDemoActive gate for the badge / export watermark).
+  function hasOwnKey() {
+    try {
+      return !!(
+        unwrap(localStorage.getItem('apiKey')) ||
+        unwrap(localStorage.getItem('openaiKey')) ||
+        unwrap(localStorage.getItem('mistralKey')) ||
+        unwrap(localStorage.getItem('geminiKey'))
+      );
+    } catch (_) { return false; }
+  }
   function resolveDemo() {
     if (demoPromise) return demoPromise;
+    if (hasOwnKey()) { demoPromise = Promise.resolve(false); return demoPromise; }
     var origins = configOrigins();
     if (!origins.length) { demoPromise = Promise.resolve(false); return demoPromise; }
     // Query every origin; demo is ON if ANY reports demo_mode:true. Don't let

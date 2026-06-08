@@ -196,7 +196,7 @@
       tableFirstColText: "#333333",
       tableOtherColText: "#333333",
     },
-    Ai = "1.50.306-byok-warn";
+    Ai = "1.50.307-byok-not-demo";
   try {
     console.log("[AntCV]", Ai);
   } catch (e) {}
@@ -957,6 +957,29 @@
       return !1 !== (u.get("enabledProviders", {}) || {})[e];
     } catch (e) {
       return !0;
+    }
+  }
+  // 1.50.307: a BYOK user (their OWN key present) is NOT a demo user, even on a
+  // demo-capable deployment — their generations run on their own key, not the
+  // shared demo quota. So demo TREATMENT (the 🟡 DEMO badge, the "🟡 Use demo"
+  // button, and the DEMO watermark on preview/PDF/DOCX) must be suppressed for them.
+  function __antcvHasOwnKey() {
+    try {
+      return !!(
+        u.get("apiKey", "") ||
+        u.get("openaiKey", "") ||
+        u.get("mistralKey", "") ||
+        u.get("geminiKey", "")
+      );
+    } catch (_) {
+      return false;
+    }
+  }
+  function __antcvDemoActive() {
+    try {
+      return !!(B && B.demo_mode) && !__antcvHasOwnKey();
+    } catch (_) {
+      return false;
     }
   }
   function Y(e) {
@@ -28456,8 +28479,7 @@
                         },
                         Ai,
                       ),
-                      B &&
-                        B.demo_mode &&
+                      __antcvDemoActive() &&
                         React.createElement(
                           "span",
                           {
@@ -35795,6 +35817,7 @@
                 on &&
                   on.demoProxyUrl &&
                   M() &&
+                  !__antcvHasOwnKey() &&
                   React.createElement(
                     "button",
                     {
@@ -38536,8 +38559,7 @@
                           className: "antcv-page-row",
                           style: { display: "flex", position: "relative" },
                         },
-                        B &&
-                          B.demo_mode &&
+                        __antcvDemoActive() &&
                           React.createElement(
                             "div",
                             {
@@ -39438,8 +39460,7 @@
           }),
           Y &&
             Y.email &&
-            B &&
-            B.demo_mode &&
+            __antcvDemoActive() &&
             React.createElement(
               "span",
               {
@@ -42709,8 +42730,7 @@
                         : "CL FORHÅNDSVISNING"
                       : ("cv" === Lt ? "CV" : "CL") + " PREVIEW",
                   ),
-                  B &&
-                    B.demo_mode &&
+                  __antcvDemoActive() &&
                     React.createElement(
                       "span",
                       {
@@ -42854,7 +42874,7 @@
                                 navyColor: Po,
                                 headerItemAlign: br,
                                 headerItemLoc: gr,
-                                watermark: B && B.demo_mode ? "DEMO" : void 0,
+                                watermark: __antcvDemoActive() ? "DEMO" : void 0,
                               });
                             return (
                               console.log(
@@ -42933,7 +42953,7 @@
                                   headerItemAlign: br,
                                   headerItemLoc: gr,
                                   password: ls ? cs : "",
-                                  watermark: B && B.demo_mode ? "DEMO" : "",
+                                  watermark: __antcvDemoActive() ? "DEMO" : "",
                                 }),
                                 void (e = "worker")
                               );

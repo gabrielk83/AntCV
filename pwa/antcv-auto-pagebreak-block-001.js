@@ -54,7 +54,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.298';
+  var VERSION = '1.50.315-cl-midlist';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -278,15 +278,35 @@
             if (!visible(clEl)) continue;
             var clSid = clEl.getAttribute('data-sid');
             if (!clSid || map[clSid]) continue;   // sticky
-            if (clEl.getBoundingClientRect().bottom - clTop > clLimit) {
-              var clSec = sectionById(list, clSid);
+            if (clEl.getBoundingClientRect().bottom - clTop <= clLimit) continue; // fits whole
+            // This is the first section that overflows the page line. 1.50.315
+            // CL-MIDLIST: when it exposes per-item break keys (text_bullets bullets
+            // tagged data-antcv-cl-item-key by __antcvBreaks), refine to ITEM level —
+            // break BEFORE the first bullet whose bottom crosses the line, so the
+            // salmon lands BETWEEN bullets (mid-list) and the worker's renderTextBullets
+            // splits there with a "TITLE (Cont.)" heading. If the FIRST keyed item
+            // already crosses, that key is its first part → whole-section move (same as
+            // before). A non-keyed text section falls back to the whole-section move.
+            var clSec = sectionById(list, clSid);
+            var keyed = clEl.querySelectorAll('[data-antcv-cl-item-key]');
+            var brokeItem = false;
+            for (var ki = 0; ki < keyed.length; ki++) {
+              var kEl = keyed[ki];
+              if (!visible(kEl)) continue;
+              if (kEl.getBoundingClientRect().bottom - clTop > clLimit) {
+                var kKey = kEl.getAttribute('data-antcv-cl-item-key');
+                if (kKey) { map[clSid] = {}; map[clSid][kKey] = 2; brokeItem = true; }
+                break;
+              }
+            }
+            if (!brokeItem) {
               // Mirror app.js __antcvFirstKey so __antcvSecStart picks the break up.
               var fk = (clSec && clSec.type === 'text_bullets')
                 ? ((clSec.intro != null && String(clSec.intro).trim()) ? 'intro' : 'bullet_0')
                 : '0';
               map[clSid] = {}; map[clSid][fk] = 2;
-              break;   // one salmon (page 2): the first section that overflows
             }
+            break;   // one salmon per compute; the next cycle catches further overflow
           }
         }
       } catch (_) {}

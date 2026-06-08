@@ -97,7 +97,19 @@
       // advance the running page and never emit a mid-section splitter for i===0.
       if (i > 0 && pg > run) out.push(__antcvSalmon(pg, title));
       if (pg > run) run = pg;
-      out.push(node);
+      // 1.50.315 CL-MIDLIST: tag each item's DOM node with its break KEY so the
+      // auto-pagebreak measurer can map an overflowing CL item back to its key
+      // (intro / bullet_N / closing) and write an ITEM-level break — enabling a
+      // mid-list salmon instead of only a whole-section move. cloneElement adds
+      // the attribute to the node's root element (no wrapper, no layout change);
+      // Fragment nodes (the rare last-bullet split) silently ignore it.
+      let tagged = node;
+      try {
+        if (node && node.type !== React.Fragment) {
+          tagged = React.cloneElement(node, { "data-antcv-cl-item-key": key });
+        }
+      } catch (_) { tagged = node; }
+      out.push(tagged);
     });
     return out;
   };
@@ -200,7 +212,7 @@
       tableFirstColText: "#333333",
       tableOtherColText: "#333333",
     },
-    Ai = "1.50.314-cont-dupe-inflate";
+    Ai = "1.50.315-cl-midlist";
   try {
     console.log("[AntCV]", Ai);
   } catch (e) {}

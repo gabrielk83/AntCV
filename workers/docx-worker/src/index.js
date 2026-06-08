@@ -25333,10 +25333,20 @@ function renderTextBullets(s, ctx, isSidebar) {
   // don't ALSO break before the intro/first bullet (which would split the heading
   // from its content).
   let runMax = (Number(s._antcvFirstPartPage) >= 2 && Number(s._antcvFirstPartPage) <= 4) ? Number(s._antcvFirstPartPage) : 1;
+  // 1.14.37 CL-MIDLIST: a break that fires INSIDE the body (not the whole-section
+  // move handled by renderSection) is a CONTINUATION of this subsection. Repeat the
+  // heading as "TITLE (Cont.)" on the new page so the reader sees the bullets carry
+  // on — mirrors renderExperience's per-page heading. CL only; the CV text_bullets
+  // path moves the whole section via the table wrapper and never breaks mid-body.
+  const contTitle = String(s.title || "HOW I WOULD CONTRIBUTE") + " (Cont.)";
   const brk = (key) => {
     const n = Number(ip[key]);
     const pg = (Number.isFinite(n) && n >= 2 && n <= 4) ? n : 1;
-    if (pg > runMax) { runMax = pg; out.push(new Paragraph({ pageBreakBefore: true, spacing: { before: 0, after: 0 } })); }
+    if (pg > runMax) {
+      runMax = pg;
+      out.push(new Paragraph({ pageBreakBefore: true, spacing: { before: 0, after: 0 } }));
+      if (ctx && ctx.doc === "cl" && s.title) out.push(headingParagraph(contTitle, ctx, false));
+    }
   };
   if (s.intro) {
     brk("intro");
@@ -26491,7 +26501,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.36-segment-no-repeat";
+var VERSION = "1.14.37-cl-midlist-cont";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

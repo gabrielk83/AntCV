@@ -616,9 +616,40 @@ function readItemPages() {
   try {
     if (typeof localStorage === 'undefined') return {};
     const raw = localStorage.getItem('antcv:itemPages');
-    if (!raw) return {};
-    const v = JSON.parse(raw);
-    return (v && typeof v === 'object' && !Array.isArray(v)) ? v : {};
+    const parsed = raw ? JSON.parse(raw) : {};
+    const base = (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : {};
+    // 1.50.315 CL-MIDLIST: overlay AUTO breaks (antcv:autoPages) onto the manual
+    // map for text_bullets-shaped keys ONLY — `intro` | `bullet_<i>` | `closing`.
+    // The worker's renderTextBullets already splits a How-I-Would-Contribute
+    // subsection per-bullet on ctx.itemPages[sid][key]; it just never received the
+    // measurer's auto-overflow break (item_pages carried manual only). Numeric-keyed
+    // auto breaks (list / labeled_list / education / table / experience) are
+    // deliberately EXCLUDED here — those flow through pageFor()/sectionBreakIds and
+    // would double-apply if merged. Effective page = max(manual, auto) per key.
+    const merged = {};
+    for (const sid in base) {
+      if (base[sid] && typeof base[sid] === 'object') merged[sid] = Object.assign({}, base[sid]);
+    }
+    try {
+      const rawAuto = localStorage.getItem('antcv:autoPages');
+      const auto = rawAuto ? JSON.parse(rawAuto) : null;
+      const TB_KEY = /^(intro|closing|bullet_\d+)$/;
+      if (auto && typeof auto === 'object') {
+        for (const sid in auto) {
+          const a = auto[sid];
+          if (!a || typeof a !== 'object') continue;
+          for (const k in a) {
+            if (!TB_KEY.test(k)) continue;
+            const n = Number(a[k]);
+            if (!(Number.isFinite(n) && n >= 2 && n <= 4)) continue;
+            if (!merged[sid]) merged[sid] = {};
+            const cur = Number(merged[sid][k]) || 0;
+            if (n > cur) merged[sid][k] = n;
+          }
+        }
+      }
+    } catch (_) { /* autoPages optional */ }
+    return merged;
   } catch (_) { return {}; }
 }
 

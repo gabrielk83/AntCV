@@ -1812,10 +1812,17 @@ function renderTextBullets(s, ctx, isSidebar) {
   // First-part page (intro/bullet_0) moves the heading too — start runMax there
   // so we don't double-break and orphan the heading (set in renderSection).
   let runMax = (Number(s._antcvFirstPartPage) >= 2 && Number(s._antcvFirstPartPage) <= 4) ? Number(s._antcvFirstPartPage) : 1;
+  // 1.14.37 CL-MIDLIST: a break INSIDE the body is a continuation — repeat the
+  // heading as "TITLE (Cont.)" on the new page (CL only).
+  const contTitle = String(s.title || 'HOW I WOULD CONTRIBUTE') + ' (Cont.)';
   const brk = (key) => {
     const n = Number(ip[key]);
     const pg = (Number.isFinite(n) && n >= 2 && n <= 4) ? n : 1;
-    if (pg > runMax) { runMax = pg; out.push(new Paragraph({ pageBreakBefore: true, spacing: { before: 0, after: 0 } })); }
+    if (pg > runMax) {
+      runMax = pg;
+      out.push(new Paragraph({ pageBreakBefore: true, spacing: { before: 0, after: 0 } }));
+      if (ctx && ctx.doc === 'cl' && s.title) out.push(headingParagraph(contTitle, ctx, false));
+    }
   };
   if (s.intro) {
     brk('intro');

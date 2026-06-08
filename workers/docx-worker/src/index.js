@@ -24512,80 +24512,69 @@ function buildTwoColumnDocument(ctx) {
   }
   const sidebarOnRight = style && style.sidebarPosition === "right";
   const colWidths = sidebarOnRight ? [MAIN_W, SIDEBAR_W] : [SIDEBAR_W, MAIN_W];
-  const sidebarCell = new TableCell({
+  // 1.14.39 PB-WORKER-TWOCOL-PAGED-001: split each column's rendered children at the
+  // page-break markers (pbBreakPara → __antcvPB) and emit ONE two-column table PER
+  // PAGE, all with the SAME [SIDEBAR_W, MAIN_W] widths. Page 1 carries the candidate
+  // header band; each later page is a fresh table after a real page break, holding
+  // the sidebar's and main's continuation content (the "(Cont.)" segments). This is
+  // what Word needs to paginate two columns cleanly — a single tall two-cell row gets
+  // chopped badly (the owner's "in word the break is not rendered properly"). The
+  // sidebar cell keeps its navy shading on every page (also fills the bar to the
+  // bottom — closes PB-WORKER-SIDEBAR-FILL-001). All spanning section types
+  // (sidebar lists, tables, experience) already split into top-level segments above,
+  // so every break is a top-level marker here.
+  function splitChildrenByPage(children) {
+    const pages = [[]];
+    for (const el of children) {
+      if (el && el.__antcvPB) { pages.push([]); continue; }
+      pages[pages.length - 1].push(el);
+    }
+    return pages;
+  }
+  const sidebarPages = splitChildrenByPage(sidebarChildren);
+  const mainPages = splitChildrenByPage(mainChildren);
+  const numPages = Math.max(sidebarPages.length, mainPages.length, 1);
+  const makeSidebarCell = (els) => new TableCell({
     width: { size: SIDEBAR_W, type: WidthType.DXA },
     shading: { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" },
     borders: noBorders(),
-    // Sidebar text pad: 0.10" L/R (144 DXA) — gives content a touch
-    // more breathing room from the sidebar edges. Was 0.05" (72 DXA);
-    // user requested +0.05" more distance.
     margins: { top: 240, bottom: 240, left: 144, right: 144 },
-    children: sidebarChildren.length ? sidebarChildren : [emptyParagraph()]
+    children: els && els.length ? els : [emptyParagraph()]
   });
-  const mainCell = new TableCell({
+  const makeMainCell = (els) => new TableCell({
     width: { size: MAIN_W, type: WidthType.DXA },
     borders: noBorders(),
-    // Main column pad: 0.10" L/R (144 DXA) — slightly more breathing
-    // room for body prose and tables.
-    // v1.10.3: top reduced 240 → 120 (12pt → 6pt) so the first
-    // section heading (typically PROFILE) sits closer to the
-    // candidate header band — fixes "too much space above the
-    // profile". Combined with the 80-DXA header bottom this leaves
-    // ~10pt total between contact line and PROFILE, was 22pt.
     margins: { top: 120, bottom: 240, left: 144, right: 144 },
-    children: mainChildren.length ? mainChildren : [emptyParagraph()]
+    children: els && els.length ? els : [emptyParagraph()]
   });
-  const hasSidebarItemPageBreaks = sidebarSecs.some((sec) => {
-    const b = ctx.itemPages && sec && sec.id ? ctx.itemPages[sec.id] : null;
-    if (!b || typeof b !== "object") return false;
-    return Object.keys(b).some((k) => Number(b[k]) >= 2);
+  const makeBodyRow = (sbEls, mnEls) => new TableRow({
+    cantSplit: false,
+    children: sidebarOnRight ? [makeMainCell(mnEls), makeSidebarCell(sbEls)] : [makeSidebarCell(sbEls), makeMainCell(mnEls)]
   });
-  // Owner 2026-06-05: a manual section page break (s.pageBreakBefore, set by
-  // the PWA from section.page) only takes effect if the body row is allowed
-  // to split across pages. Disable cantSplit whenever any section — sidebar
-  // or main — carries a break, same as we already do for item breaks.
-  const hasSectionPageBreak = sections.some((s) => s && s.pageBreakBefore === true);
-  const allowRowSplit = hasSidebarItemPageBreaks || hasSectionPageBreak;
-  const bodyTable = new Table({
-    width: { size: PAGE_W, type: WidthType.DXA },
-    columnWidths: colWidths,
-    borders: noBorders(),
-    rows: [
-      new TableRow({
-        children: [
-          new TableCell({
-            columnSpan: 2,
-            width: { size: PAGE_W, type: WidthType.DXA },
-            shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
-            borders: noBorders(),
-            // Candidate header pad: 0.25" L/R (360 DXA), matches preview band.
-            // v1.10.3: bottom margin reduced from 200 → 80 (10pt → 4pt) to
-            // close the teal-band extension under the contact line that the
-            // user flagged as "too much space above the profile".
-            margins: { top: 240, bottom: 80, left: 360, right: 360 },
-            children: headerCell
-          })
-        ]
-      }),
-      new TableRow({
-        // v1.14.2 — cantSplit on the body row tells Word to keep the
-        // entire sidebar+main row on one page where possible. Without
-        // it, sidebar content slightly taller than the page generates
-        // a near-empty page 2 (just the sidebar tail) followed by a
-        // page 3 with only the CloudConvert footer. With it, Word
-        // either fits everything on page 1 or pushes the whole row
-        // to page 2 — no orphaned trailing pages.
-        //
-        // Caveat: if the body row is INHERENTLY taller than one page
-        // (very large sidebar OR very large main), Word ignores
-        // cantSplit and breaks as before. The user must then trim
-        // their sidebar content to fit. Future ships may add a
-        // density-based shrink-to-fit pass.
-        cantSplit: !allowRowSplit,
-        children: sidebarOnRight ? [mainCell, sidebarCell] : [sidebarCell, mainCell]
+  const headerRow = new TableRow({
+    children: [
+      new TableCell({
+        columnSpan: 2,
+        width: { size: PAGE_W, type: WidthType.DXA },
+        shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
+        borders: noBorders(),
+        // Candidate header pad: 0.25" L/R (360 DXA), matches preview band.
+        margins: { top: 240, bottom: 80, left: 360, right: 360 },
+        children: headerCell
       })
     ]
   });
+  const makePageTable = (sbEls, mnEls, withHeader) => new Table({
+    width: { size: PAGE_W, type: WidthType.DXA },
+    columnWidths: colWidths,
+    borders: noBorders(),
+    rows: withHeader ? [headerRow, makeBodyRow(sbEls, mnEls)] : [makeBodyRow(sbEls, mnEls)]
+  });
+  const docChildren = [];
+  for (let p = 0; p < numPages; p++) {
+    if (p > 0) docChildren.push(new Paragraph({ pageBreakBefore: true, spacing: { before: 0, after: 0, line: 1, lineRule: "exact" }, children: [] }));
+    docChildren.push(makePageTable(sidebarPages[p] || [], mainPages[p] || [], p === 0));
+  }
   return new File({
     creator: ctx.pi.name || "AntCV user",
     lastModifiedBy: ctx.pi.name || "AntCV user",
@@ -24604,7 +24593,7 @@ function buildTwoColumnDocument(ctx) {
             margin: { top: 0, right: 0, bottom: 0, left: 0, header: 0, footer: 0, gutter: 0 }
           }
         },
-        children: [bodyTable]
+        children: docChildren
       }
     ]
   });
@@ -25072,6 +25061,19 @@ function base64ToUint8Array(b64) {
   return bytes;
 }
 __name(base64ToUint8Array, "base64ToUint8Array");
+// 1.14.39 PB-WORKER-TWOCOL-PAGED-001: every page break is the SAME standalone
+// pageBreakBefore paragraph. Build it through this factory so it carries a JS-only
+// marker (__antcvPB). The marker does not affect the docx output — the LINEAR (CL)
+// path keeps using these as real page breaks. The TWO-COLUMN (CV) builder instead
+// SPLITS each column's rendered children on the marker and emits one table per page
+// (so Word paginates cleanly: separate sidebar+main tables instead of one giant row
+// it chops badly). See splitChildrenByPage + buildTwoColumnDocument.
+function pbBreakPara() {
+  const p = new Paragraph({ pageBreakBefore: true, spacing: { before: 0, after: 0 } });
+  p.__antcvPB = true;
+  return p;
+}
+__name(pbBreakPara, "pbBreakPara");
 function renderSection(s, ctx, isSidebar) {
   // 1.14.35 PB-WORKER-SIDEBAR-CONT-001: a SIDEBAR list section that continues onto
   // page 2 previously just repeated its bare title (the wrapper's tblHeader). When
@@ -25150,6 +25152,38 @@ function renderSection(s, ctx, isSidebar) {
       return out2;
     }
   }
+  // 1.14.39 PB-WORKER-TWOCOL-PAGED-001: an EXPERIENCE section that spans pages must
+  // split into top-level segments too. Its role breaks otherwise live INSIDE the
+  // section-wrapper body cell, invisible to the per-page column splitter (so the
+  // page-2 roles stay trapped in the page-1 table). Split roles by their forwarded
+  // effective page (the client already cascades role.page); each chunk becomes its
+  // own wrapper segment with a "TITLE (Cont.)" heading + a top-level page break. The
+  // chunk roles have `page` cleared so renderExperience doesn't ALSO emit an inline
+  // break/"(Cont.)" (which would double the heading).
+  if (!s._antcvSegment && s.type === "experience" && Array.isArray(s.roles) && s.roles.length > 1) {
+    let run = 1; const roleChunks = []; let cur = [];
+    for (let i = 0; i < s.roles.length; i++) {
+      const r = s.roles[i];
+      let pg = Number(r && r.page);
+      pg = (Number.isFinite(pg) && pg >= 2 && pg <= 4) ? Math.round(pg) : 1;
+      if (pg > run && cur.length) { roleChunks.push(cur); cur = []; run = pg; }
+      cur.push(r);
+    }
+    if (cur.length) roleChunks.push(cur);
+    if (roleChunks.length > 1) {
+      const out2 = [];
+      roleChunks.forEach((chunkRoles, ci) => {
+        const seg = Object.assign({}, s, {
+          roles: chunkRoles.map((r) => { const c = Object.assign({}, r); delete c.page; return c; }),
+          _antcvSegment: true,
+          title: ci > 0 ? (String(s.title || "") + " (Cont.)") : s.title,
+          pageBreakBefore: ci > 0 ? true : s.pageBreakBefore
+        });
+        out2.push(...renderSection(seg, ctx, isSidebar));
+      });
+      return out2;
+    }
+  }
   const isCLBoilerplate = ["greeting", "opening", "closure"].includes(s.id);
   const inlineTitleType = !isCLBoilerplate && (s.type === "text_inline" || isWorkStyleSection(s));
   const skipHeading = inlineTitleType || isCLBoilerplate;
@@ -25168,7 +25202,7 @@ function renderSection(s, ctx, isSidebar) {
     const fp = Math.max(Number.isFinite(introN) ? introN : 1, Number.isFinite(b0N) ? b0N : 1);
     if (fp >= 2 && fp <= 4) { _firstPartPage = fp; s._antcvFirstPartPage = fp; }
   }
-  const pageBreakPara = s.pageBreakBefore === true || _firstItemPageBreak || _firstPartPage >= 2 ? [new Paragraph({ pageBreakBefore: true, spacing: { before: 0, after: 0 } })] : [];
+  const pageBreakPara = s.pageBreakBefore === true || _firstItemPageBreak || _firstPartPage >= 2 ? [pbBreakPara()] : [];
   const body = [];
   switch (s.type) {
     case "text":
@@ -25387,7 +25421,7 @@ function renderTextBullets(s, ctx, isSidebar) {
     const pg = (Number.isFinite(n) && n >= 2 && n <= 4) ? n : 1;
     if (pg > runMax) {
       runMax = pg;
-      out.push(new Paragraph({ pageBreakBefore: true, spacing: { before: 0, after: 0 } }));
+      out.push(pbBreakPara());
       if (ctx && ctx.doc === "cl" && s.title) out.push(headingParagraph(contTitle, ctx, false));
     }
   };
@@ -25447,12 +25481,12 @@ function renderFoundation(s, ctx, isSidebar) {
   const handsOnAlign = ctlAlign("hands_on") ?? paraAlignPath(s, "hands_on") ?? groupCjlr ?? AlignmentType.JUSTIFIED;
   const professionallyAlign = ctlAlign("professionally") ?? paraAlignPath(s, "professionally") ?? groupCjlr ?? AlignmentType.JUSTIFIED;
   if (s.hands_on) {
-    if (ctlPage("hands_on") >= 2) out.push(new Paragraph({ pageBreakBefore: true, spacing: { before: 0, after: 0 } }));
+    if (ctlPage("hands_on") >= 2) out.push(pbBreakPara());
     out.push(make(handsOnLabel, s.hands_on, handsOnAlign));
   }
   if (s.professionally) {
     if (ctlPage("professionally") >= 2) {
-      out.push(new Paragraph({ pageBreakBefore: true, spacing: { before: 0, after: 0 } }));
+      out.push(pbBreakPara());
       out.push(headingParagraph(String(s.title || "FOUNDATION").toUpperCase() + " (Cont.)", ctx, false));
     }
     out.push(make(professionallyLabel, s.professionally, professionallyAlign));
@@ -25601,7 +25635,7 @@ function renderCompetencyTable(s, ctx) {
   const out = [];
   chunks.forEach((chunk, chunkIdx) => {
     if (chunkIdx > 0) {
-      out.push(new Paragraph({ pageBreakBefore: true, spacing: { before: 0, after: 0 } }));
+      out.push(pbBreakPara());
       if (s.title) out.push(headingParagraph(String(s.title || "").toUpperCase() + " (Cont.)", ctx, false));
     }
     out.push(makeTable(chunk.rows, chunk.start));
@@ -25628,7 +25662,7 @@ function renderExperience(s, ctx) {
     const __pg = (Number.isFinite(__rp) && __rp >= 2 && __rp <= 4) ? Math.round(__rp) : 1;
     if (__pg > __runMaxRolePage) {
       __runMaxRolePage = __pg;
-      out.push(new Paragraph({ pageBreakBefore: true, spacing: { before: 0, after: 0 } }));
+      out.push(pbBreakPara());
       if (s.title) out.push(headingParagraph(String(s.title || "").toUpperCase() + " (Cont.)", ctx, false));
     }
     const left = [];
@@ -26544,7 +26578,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.38-table-cont";
+var VERSION = "1.14.39-twocol-paged";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

@@ -27,10 +27,19 @@ Iterating on real CV/CL exports (owner rendering .docx + PDF). Shipped + open:
   propagates correctly; factor 1.11 tunable.
 
 ### OPEN — owner re-export feedback
-- **PB-WORKER-TWOCOL-PAGED-001** `[OPEN][HIGH][export][NEXT]` — **per-page two-column
-  tables for Word** (owner spec 2026-06-08, supersedes PB-WORKER-SIDEBAR-CONT-001 +
-  PB-WORKER-SIDEBAR-PAGINATION-001; this is the deferred PB-007 two-column
-  pagination). Today `buildTwoColumnDocument` ([index.js:24449](../../workers/docx-worker/src/index.js)) builds
+- **PB-WORKER-TWOCOL-PAGED-001** `[VERIFYING docx-worker 1.14.39 — owner export]` —
+  **per-page two-column tables for Word** (owner spec 2026-06-08, supersedes
+  PB-WORKER-SIDEBAR-CONT-001 + PB-WORKER-SIDEBAR-PAGINATION-001 + PB-WORKER-SIDEBAR-FILL-001;
+  this is the deferred PB-007 two-column pagination). SHIPPED 1.14.39: `pbBreakPara()`
+  tags every break paragraph (`__antcvPB`); renderSection now splits experience (by
+  role.page) + tables (by row_pages) + sidebar lists (by item._page) into TOP-LEVEL
+  segments; `buildTwoColumnDocument` splits each column on the markers and emits one
+  `[SIDEBAR_W, MAIN_W]` table per page (header band on page 1 only, sidebar navy on
+  every page). Structure-verified headlessly via `test/diag-twocol-paged.mjs` (drives
+  the live index.js handler, unzips document.xml): coordinated 2-page CV → exactly 2
+  top-level tables + 1 body-level break + cascade + zero content loss/dup; no-break CV
+  → 1 table; CL linear unaffected. AWAITING owner Word export confirm. Original spec
+  below: Today `buildTwoColumnDocument` ([index.js:24449](../../workers/docx-worker/src/index.js)) builds
   ONE table: row0 = header (colSpan 2), row1 = [sidebarCell(ALL sidebar), mainCell(ALL
   main)]. When it overflows, Word splits that single tall row badly (the owner: "in
   word the break is not rendered properly"). **Owner's prescribed fix:** generate a

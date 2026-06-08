@@ -50,20 +50,28 @@
     }
   };
   const __antcvSalmon = (pg, contTitle) => {
-    // 1.50.275: REVERT the 1.50.273 CL-only gate. That gate removed the
-    // salmon splitter + "(CONT.)" header from the CV entirely — owner
-    // 2026-06-08: "your fix killed my CV good salmon. no salmon now, just
-    // jumpy lower part. bring the cover-letter salmon back to the CV and
-    // fix it so it allows groups to pass safely through it." So the visible
-    // bar + cont header render in BOTH docs again (CV and CL), at every
-    // emitted break. Group-safe pass-through is owned by __antcvBreaks
-    // (monotonic running page, group-boundary snap) + the autoPages
-    // measurer — NOT by hiding the indicator.
+    // 1.50.292: the VISIBLE red bar + teal "(CONT.)" header render ONLY for the
+    // CL (a continuous flow where this IS the page indicator). The CV
+    // paginates into page-boxes that draw their OWN salmon separator
+    // (margin:0; align-items:center) AND an EDITABLE cyan section-header
+    // "(CONT.)" — so __antcvSalmon's copies are DUPLICATES in the CV: the
+    // owner (2026-06-08, with exact DOM) flagged the "bad red breaker"
+    // (margin:10px 0 5px) and "bad cont" (teal #00746E, 12pt) for removal,
+    // keeping the page-box salmon + the bright editable cont. (They only
+    // reappeared because 1.50.275 un-gated them while the kernel was empty, so
+    // no page-box salmon was visible then.) The invisible CSS page-break div
+    // stays in BOTH docs so print/export structure is unchanged.
+    let __isCL = false;
+    try {
+      var d = localStorage.getItem("doc") || "";
+      try { var p = JSON.parse(d); if ("string" == typeof p) d = p; } catch (_) {}
+      __isCL = "cl" === String(d).toLowerCase();
+    } catch (_) {}
     return React.createElement(React.Fragment, { key: "pb_" + pg + "_" + (contTitle || "x") },
-      React.createElement("div", { className: "no-print", "aria-hidden": "true", style: { borderTop: "3px solid rgba(200,40,40,0.6)", margin: "10px 0 5px", display: "flex", justifyContent: "center", background: "rgba(200,40,40,0.06)", padding: "2px 0" } },
-        React.createElement("span", { style: { background: "rgba(200,40,40,0.7)", color: "#fff", fontSize: 8, padding: "2px 10px", borderRadius: 2, fontFamily: "Arial,sans-serif", letterSpacing: 0.5, whiteSpace: "nowrap" } }, "▼ PAGE " + pg + " ▼")),
+      __isCL ? React.createElement("div", { className: "no-print", "aria-hidden": "true", style: { borderTop: "3px solid rgba(200,40,40,0.6)", margin: "10px 0 5px", display: "flex", justifyContent: "center", background: "rgba(200,40,40,0.06)", padding: "2px 0" } },
+        React.createElement("span", { style: { background: "rgba(200,40,40,0.7)", color: "#fff", fontSize: 8, padding: "2px 10px", borderRadius: 2, fontFamily: "Arial,sans-serif", letterSpacing: 0.5, whiteSpace: "nowrap" } }, "▼ PAGE " + pg + " ▼")) : null,
       React.createElement("div", { "aria-hidden": "true", style: { pageBreakBefore: "always", breakBefore: "page", height: 0, lineHeight: 0 } }),
-      contTitle ? React.createElement("div", { style: { color: "#00746E", fontWeight: 700, fontSize: "12pt", marginTop: "4pt", marginBottom: "8pt", borderBottom: "1pt solid #00746E", paddingBottom: "2pt", fontFamily: "Trebuchet MS, Calibri, sans-serif" } }, contTitle + " (CONT.)") : null
+      (__isCL && contTitle) ? React.createElement("div", { style: { color: "#00746E", fontWeight: 700, fontSize: "12pt", marginTop: "4pt", marginBottom: "8pt", borderBottom: "1pt solid #00746E", paddingBottom: "2pt", fontFamily: "Trebuchet MS, Calibri, sans-serif" } }, contTitle + " (CONT.)") : null
     );
   };
   // renderWithBreaks (docs/plan §2): walk ordered items in document order, keep a

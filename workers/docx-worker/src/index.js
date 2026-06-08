@@ -26454,7 +26454,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.33-exp-cont-dedupe";
+var VERSION = "1.14.34-byok-cloudconvert";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

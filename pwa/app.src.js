@@ -15,7 +15,13 @@
   // Auto-overflow breaks (antcv-auto-overflow-362) live in a SEPARATE map so they
   // never fight the user's manual breaks. Effective per-section bucket = the
   // per-key max of manual (itemPages) + auto (autoPages) — architecture §5.
-  const __antcvAutoPB = (sid) => { try { return (JSON.parse(localStorage.getItem("antcv:autoPages") || "{}") || {})[sid] || {}; } catch (_) { return {}; } };
+  // 1.50.316 PREVIEW-A4-FILL: the PREVIEW renderer reads the A4-line break map
+  // (antcv:autoPagesPreview) so each preview page FILLS to the true A4 boundary
+  // (no dead space). The EXPORT keeps reading antcv:autoPages (Word-equivalent
+  // line, ~200px earlier) in antcv-docx-client.js — unchanged. The measurer
+  // writes both. Falls back to antcv:autoPages if the preview map is absent
+  // (older measurer / first paint before the measurer runs).
+  const __antcvAutoPB = (sid) => { try { const m = JSON.parse(localStorage.getItem("antcv:autoPagesPreview") || localStorage.getItem("antcv:autoPages") || "{}") || {}; return m[sid] || {}; } catch (_) { return {}; } };
   const __antcvEffBucket = (sid) => {
     const out = {};
     try {
@@ -212,7 +218,7 @@
       tableFirstColText: "#333333",
       tableOtherColText: "#333333",
     },
-    Ai = "1.50.315-cl-midlist";
+    Ai = "1.50.316-preview-a4";
   try {
     console.log("[AntCV]", Ai);
   } catch (e) {}
@@ -13482,7 +13488,7 @@
             last = null;
           const __pbSnap = () => {
             try {
-              return (localStorage.getItem("antcv:itemPages") || "") + "|" + (localStorage.getItem("antcv:autoPages") || "");
+              return (localStorage.getItem("antcv:itemPages") || "") + "|" + (localStorage.getItem("antcv:autoPages") || "") + "|" + (localStorage.getItem("antcv:autoPagesPreview") || "");
             } catch (_) { return ""; }
           };
           last = __pbSnap();

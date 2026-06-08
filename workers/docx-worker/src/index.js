@@ -25107,6 +25107,49 @@ function renderSection(s, ctx, isSidebar) {
       return out2;
     }
   }
+  // 1.14.38 PB-WORKER-TABLE-CONT: a TABLE section (CORE COMPETENCIES / WHAT I
+  // BRING) that splits across pages must not keep its continuation inside the
+  // section-wrapper TableCell — Word IGNORES pageBreakBefore inside a table cell
+  // (LibreOffice/PDF honour it, which is why the PDF split but Word inserted a
+  // stray mid-page table). Split the table into row-chunks HERE and render each
+  // as its own top-level wrapper segment, so the pageBreakBefore + "(Cont.)"
+  // heading land at document level where Word honours them. Each segment carries
+  // its own header row (makeHeaderRow) — matching the owner's "new table on page
+  // 2 has a header + WHAT I BRING (Cont.)". Guarded by _antcvSegment.
+  if (
+    !s._antcvSegment && s.type === "table" && Array.isArray(s.rows) && s.rows.length > 2 &&
+    s.row_pages && typeof s.row_pages === "object"
+  ) {
+    const [hdr, ...data] = s.rows;
+    const rp = s.row_pages;
+    const pageForData = (di) => {
+      const wH = Number(rp[String(di + 1)]);
+      const wo = Number(rp[String(di)]);
+      const n = Number.isFinite(wH) ? wH : wo;
+      return Number.isFinite(n) && n >= 2 ? Math.round(n) : 1;
+    };
+    let run = 1; const rowChunks = []; let cur = [];
+    for (let i = 0; i < data.length; i++) {
+      let p = pageForData(i);
+      if (p > run && cur.length) { rowChunks.push(cur); cur = []; run = p; }
+      cur.push(data[i]);
+    }
+    if (cur.length) rowChunks.push(cur);
+    if (rowChunks.length > 1) {
+      const out2 = [];
+      rowChunks.forEach((rowsChunk, ci) => {
+        const seg = Object.assign({}, s, {
+          rows: [hdr, ...rowsChunk],
+          row_pages: {},
+          _antcvSegment: true,
+          title: ci > 0 ? (String(s.title || "") + " (Cont.)") : s.title,
+          pageBreakBefore: ci > 0 ? true : s.pageBreakBefore
+        });
+        out2.push(...renderSection(seg, ctx, isSidebar));
+      });
+      return out2;
+    }
+  }
   const isCLBoilerplate = ["greeting", "opening", "closure"].includes(s.id);
   const inlineTitleType = !isCLBoilerplate && (s.type === "text_inline" || isWorkStyleSection(s));
   const skipHeading = inlineTitleType || isCLBoilerplate;
@@ -26501,7 +26544,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.37-cl-midlist-cont";
+var VERSION = "1.14.38-table-cont";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

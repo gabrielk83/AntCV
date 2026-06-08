@@ -54,11 +54,21 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.315-cl-midlist';
+  var VERSION = '1.50.316-preview-a4';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
   var AUTO_KEY = 'antcv:autoPages';
+  // 1.50.316 PREVIEW-A4-FILL: the EXPORT (Word/PDF) renders content taller than
+  // the compact preview, so the export break is computed at the Word-equivalent
+  // line (USABLE_PDF, ~924px) and lands where Word fills A4 — no dead space. The
+  // PREVIEW, measured in the same compact px, would break at that same item and
+  // leave ~200px empty below it (the page stops short, "doesn't look like A4").
+  // Fix: compute a SECOND map at the TRUE A4 line (USABLE, ~1053px) so the preview
+  // page fills, and point the preview renderer (__antcvAutoPB → __antcvEffBucket)
+  // at it. The export client keeps reading antcv:autoPages unchanged. Owner-chosen
+  // decouple (2026-06-08): preview fills A4, export stays exactly as it was.
+  var PREVIEW_KEY = 'antcv:autoPagesPreview';
   var SECTIONS_KEY = 'sections';
   var PAGE_H = 1123;       // A4 preview page-box ≈ 1123px at 96dpi
   var SAFETY = 70;         // crowd margin: count near-edge units as overflow
@@ -168,14 +178,14 @@
     return -1;
   }
 
-  function compute() {
+  function compute(usableBase, autoKey) {
     var doc = activeDoc();
     var list = sectionsFor(doc);
-    if (!list.length) return readJson(AUTO_KEY, {});
+    if (!list.length) return readJson(autoKey, {});
 
     // STICKY: carry forward existing auto breaks for sections that
     // still exist. We only DETECT on sections without an auto break.
-    var existing = readJson(AUTO_KEY, {});
+    var existing = readJson(autoKey, {});
     var map = {};
     for (var ek in existing) {
       if (existing[ek] && typeof existing[ek] === 'object' && sectionById(list, ek)) {
@@ -205,7 +215,7 @@
       // limit by it so the comparison is done in the SAME (scaled) space.
       var scale = col.offsetWidth ? (col.getBoundingClientRect().width / col.offsetWidth) : 1;
       if (!(scale > 0.1 && scale < 10)) scale = 1;
-      var limit = USABLE_PDF * scale;   // 1.50.298 Word-equivalent fill (see WORD_INFLATE)
+      var limit = usableBase * scale;   // 1.50.298 Word-equivalent fill (see WORD_INFLATE); 1.50.316 per-target base
       var secEls = col.querySelectorAll('[data-sid]');
       for (var s = 0; s < secEls.length; s++) {
         var secEl = secEls[s];
@@ -271,7 +281,7 @@
           var clScale = clCol.offsetWidth
             ? (clCol.getBoundingClientRect().width / clCol.offsetWidth) : 1;
           if (!(clScale > 0.1 && clScale < 10)) clScale = 1;
-          var clLimit = USABLE_PDF * clScale;
+          var clLimit = usableBase * clScale;
           var clSecs = clCol.querySelectorAll('[data-sid]');
           for (var cs = 0; cs < clSecs.length; cs++) {
             var clEl = clSecs[cs];
@@ -299,7 +309,17 @@
                 break;
               }
             }
-            if (!brokeItem) {
+            // 1.50.316 CL-TABLE: a WHAT-I-BRING (type:"table") section that
+            // overflows splits by ROW — find the first table row whose bottom
+            // crosses the line and write its full-table row index, so the worker's
+            // renderCompetencyTable starts a fresh continuation table (own header +
+            // "(Cont.)") at that row instead of moving the whole table whole.
+            var brokeRow = false;
+            if (!brokeItem && clSec && (clSec.type === 'table' || clEl.querySelector('table'))) {
+              var rIdx = firstOverflowRow(clEl, clTop, clLimit);
+              if (rIdx >= 1) { map[clSid] = {}; map[clSid][String(rIdx)] = 2; brokeRow = true; }
+            }
+            if (!brokeItem && !brokeRow) {
               // Mirror app.js __antcvFirstKey so __antcvSecStart picks the break up.
               var fk = (clSec && clSec.type === 'text_bullets')
                 ? ((clSec.intro != null && String(clSec.intro).trim()) ? 'intro' : 'bullet_0')
@@ -315,6 +335,7 @@
   }
 
   var lastWritten = null;
+  var lastWrittenPreview = null;   // 1.50.316: separate change-guard for the preview map
   var lastSourceFp = null;   // 1.50.269: source fingerprint of last compute
   var writeTimes = [];
   var brokenUntil = 0;
@@ -396,17 +417,24 @@
       var fp = sourceFingerprint();
       if (fp === lastSourceFp) return;
 
-      var map = compute();
+      // 1.50.316: compute BOTH targets in one trigger — the export map at the
+      // Word-equivalent line (USABLE_PDF) and the preview map at the true A4 line
+      // (USABLE). Each carries its own sticky state via its own storage key.
+      var mapExport = compute(USABLE_PDF, AUTO_KEY);
+      var mapPreview = compute(USABLE, PREVIEW_KEY);
       // Mark this source as processed BEFORE any write/fire, so the
       // re-render our own write triggers (same source) early-returns.
       lastSourceFp = fp;
 
-      var next = JSON.stringify(map);
-      var cur = localStorage.getItem(AUTO_KEY) || '{}';
-      if (next === cur) { lastWritten = next; return; }
-      if (next === lastWritten) return;
+      var nextExport = JSON.stringify(mapExport);
+      var nextPreview = JSON.stringify(mapPreview);
+      var curExport = localStorage.getItem(AUTO_KEY) || '{}';
+      var curPreview = localStorage.getItem(PREVIEW_KEY) || '{}';
+      var exportChanged = nextExport !== curExport && nextExport !== lastWritten;
+      var previewChanged = nextPreview !== curPreview && nextPreview !== lastWrittenPreview;
+      if (!exportChanged && !previewChanged) { lastWritten = nextExport; lastWrittenPreview = nextPreview; return; }
 
-      // Circuit breaker backstop: > 8 distinct writes in 4s → back off 8s
+      // Circuit breaker backstop: > 8 distinct write-cycles in 4s → back off 8s
       // AND freeze the fingerprint so we stop recomputing.
       writeTimes.push(now);
       writeTimes = writeTimes.filter(function (t) { return now - t < 4000; });
@@ -419,8 +447,8 @@
         return;
       }
 
-      localStorage.setItem(AUTO_KEY, next);
-      lastWritten = next;
+      if (exportChanged) { localStorage.setItem(AUTO_KEY, nextExport); lastWritten = nextExport; }
+      if (previewChanged) { localStorage.setItem(PREVIEW_KEY, nextPreview); lastWrittenPreview = nextPreview; }
       cooldownUntil = now + 1500;   // 1.50.287: don't re-measure our own pagination for 1.5s
       try {
         window.dispatchEvent(new CustomEvent('antcv:auto-pages-changed', {

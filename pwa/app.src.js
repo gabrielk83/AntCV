@@ -15596,7 +15596,16 @@
         Gi = (e) => {
           const t = { align: "justify", padLeft: 0 },
             n = { align: "justify", padLeft: 10 },
-            o = [];
+            o = [],
+            // 1.50.296 PREVIEW-PDF-PARITY-001: tighten against the REAL docx-worker
+            // PDF main-column text width, not the phantom 590px/11px box that
+            // matched neither preview nor PDF. The worker geometry is FIXED (does
+            // not scale with the sidebar drag): main cell MAIN_W=7270 DXA − 288
+            // (L/R margins) = 6982 DXA = 465.5px for the CV two-column main;
+            // CL is full-width linear, PAGE_W=11906 − 200 (L/R) = 11706 DXA =
+            // 780px. px = DXA/15 (1440 DXA/in ÷ 96 px/in). Font below is 10.5pt =
+            // 14px (×96/72) — the worker's fs.mainBody default.
+            __pdfMainW = "cl" === Lt ? 780 : 466;
           return (
             e
               .filter((e) => "main" === e.loc && e.on)
@@ -15605,7 +15614,7 @@
                   ("text" === e.type || "text_inline" === e.type) &&
                   e.content
                 ) {
-                  const n = Vi(e.content, 590, 11, t);
+                  const n = Vi(e.content, __pdfMainW, 14, t);
                   n >= 1 &&
                     n <= 7 &&
                     o.push({
@@ -15617,7 +15626,7 @@
                 }
                 if ("foundation" === e.type) {
                   if (e.hands_on) {
-                    const n = Vi(e.hands_on, 590, 11, t);
+                    const n = Vi(e.hands_on, __pdfMainW, 14, t);
                     n >= 1 &&
                       n <= 7 &&
                       o.push({
@@ -15628,7 +15637,7 @@
                       });
                   }
                   if (e.professionally) {
-                    const n = Vi(e.professionally, 590, 11, t);
+                    const n = Vi(e.professionally, __pdfMainW, 14, t);
                     n >= 1 &&
                       n <= 7 &&
                       o.push({
@@ -15641,7 +15650,7 @@
                 }
                 if ("text_bullets" === e.type) {
                   if (e.intro) {
-                    const n = Vi(e.intro, 590, 11, t);
+                    const n = Vi(e.intro, __pdfMainW, 14, t);
                     n >= 1 &&
                       n <= 7 &&
                       o.push({
@@ -15652,7 +15661,7 @@
                       });
                   }
                   (e.items || []).forEach((t, r) => {
-                    const a = Vi(t, 590, 11, n);
+                    const a = Vi(t, __pdfMainW, 14, n);
                     a >= 1 &&
                       a <= 7 &&
                       o.push({
@@ -15721,7 +15730,7 @@
                   "bullets" === e.type &&
                     (e.items || []).forEach((t, r) => {
                       const a = t.b ? t.b + " " + t.t : t.t || String(t),
-                        i = Vi(a, 590, 11, n);
+                        i = Vi(a, __pdfMainW, 14, n);
                       i >= 1 &&
                         i <= 4 &&
                         o.push({
@@ -15739,7 +15748,7 @@
                       .filter((e) => !1 !== e.on)
                       .forEach((t) => {
                         (t.bullets || []).forEach((r, a) => {
-                          const i = Vi(r, 590, 11, n);
+                          const i = Vi(r, __pdfMainW, 14, n);
                           i >= 1 &&
                             i <= 4 &&
                             o.push({
@@ -16125,12 +16134,21 @@
                 ((Pi || [])
                   .filter((t) => t.loc === e && t.on)
                   .forEach((e) => {
+                    // 1.50.296 PREVIEW-PDF-PARITY-001: capture this section's loc
+                    // before the inner arrow shadows `e`, so the estimator targets
+                    // the REAL docx-worker PDF column for this loc (see Gi above).
+                    const __secLoc = e.loc;
                     const n = (e, n, o, r, a, i) => {
                       if (!o || "string" != typeof o) return;
                       let l = { align: "justify", padLeft: 0 };
                       ("item" !== n && "bullet" !== n && "exp" !== n) ||
                         (l = { align: "justify", padLeft: 10 });
-                      const s = Vi(o, 590, 11, l);
+                      const s = Vi(
+                        o,
+                        "sidebar" === __secLoc ? 290 : "cl" === Lt ? 780 : 466,
+                        "sidebar" === __secLoc ? 13 : 14,
+                        l,
+                      );
                       s >= 1 &&
                         s <= 10 &&
                         t.push({

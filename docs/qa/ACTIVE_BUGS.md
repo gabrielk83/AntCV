@@ -266,13 +266,24 @@ blue-screen guard — serve pwa/, assert 0 console errors + `typeof glDemo`),
      PDF "…I would focus" vs preview "…I would". So on-screen line breaks are
      NOT the real ones. **Deferred to increment 2:** match the preview body
      column width to the PDF column (A4 − margins − cell margins).
-  3. **Estimator targets a third geometry.** The line/tightening counter
-     `Vi(text, 590, 11, …)` (`app.src.js`) uses width 590px / 11pt — matches
-     neither the preview (10.5pt, wider) nor the PDF (10.5pt, widest). So
-     fit-it / enhance / tighten optimise against a box that doesn't exist.
-     **Deferred to increment 2:** re-point `Vi` to the real PDF column +
-     10.5pt so tightening targets the artifact (owner: "tightening rules must
-     follow the real PDF, not the theoretical").
+  3. **Estimator targets a third geometry.** `[FIXED 1.50.296 — owner visual check]`
+     The line/tightening counter `Vi(text, 590, 11, …)` (`app.src.js`) used width
+     590px / 11px — matched neither the preview nor the PDF. Now re-pointed to the
+     REAL docx-worker PDF text geometry, derived from the worker's FIXED DXA
+     constants (px = DXA/15 at 96dpi): CV two-column main = MAIN_W(7270) − 288
+     (L/R cell margins) = 6982 DXA = **466px**; CL full-width linear = PAGE_W(11906)
+     − 200 = 11706 DXA = **780px**; sidebar = SIDEBAR_W(4636) − 288 = 4348 DXA =
+     **290px**. Font is now **14px = 10.5pt** main (×96/72), 13px = 10pt sidebar.
+     Both the `Gi` candidate finder (7 main-prose calls, now doc-aware width) and
+     the second loc-aware tightening pass were updated; the sidebar branch of the
+     second pass went from a wildly-wrong 590px to the real 290px. So fit-it /
+     enhance / tighten now optimise against the actual exported artifact (owner:
+     "tightening rules must follow the real PDF, not the theoretical"). Tracks the
+     DEFAULT 10.5pt/10pt font sizes (the old code was likewise a constant). VERIFIED
+     mechanically (no `590,11` left, geometry present in the minified build,
+     boot-smoke clean, 38/38 unit tests). **OWNER VISUAL CHECK:** confirm that
+     after fit/enhance/tighten a main-column line that was overflowing in the PDF
+     now fits — I cannot compare rendered-PDF line breaks.
 - **AUTO-PAGEBREAK-CV-MIDGROUP-001** `[OPEN][HIGH][preview→pdf]` — CONCLUSION
   the owner asked for (2026-06-07): the CV mid-group cut is the SAME root
   cause as PREVIEW-PDF-PARITY-001. `antcv-auto-pagebreak-block-001.js`

@@ -1195,7 +1195,7 @@
       const n = new AbortController(),
         d = setTimeout(() => n.abort(), 3e5),
         p = /^(gpt-5|o[1-9])/i.test(g),
-        u = 2500,
+        u = 8192,
         f = { model: g, messages: [{ role: "system", content: t }, ...e] };
       p ? (f.max_completion_tokens = u) : (f.max_tokens = u);
       const h = { "Content-Type": "application/json", "x-provider": "openai" };
@@ -1581,7 +1581,7 @@
           headers: p,
           body: JSON.stringify({
             model: g,
-            max_tokens: 2500,
+            max_tokens: 8192,
             messages: [{ role: "system", content: t }, ...e],
           }),
           signal: n.signal,
@@ -1654,7 +1654,7 @@
           headers: p,
           body: JSON.stringify({
             model: g,
-            max_tokens: 2500,
+            max_tokens: 8192,
             messages: [{ role: "system", content: t }, ...e],
           }),
           signal: n.signal,

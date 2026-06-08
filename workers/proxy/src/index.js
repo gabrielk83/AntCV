@@ -1228,7 +1228,7 @@ async function handleRequest(request, env = {}) {
     const payload = {
       contents,
       generationConfig: {
-        maxOutputTokens: inBody.max_tokens || 2500,
+        maxOutputTokens: inBody.max_tokens || 8192,
         temperature: typeof inBody.temperature === 'number' ? inBody.temperature : 0.7,
       },
     };

@@ -263,6 +263,16 @@ function wrapUpstreamError(provider, upstreamStatus, upstreamBodyText, keySource
     // accept, and switching providers may help (different limits) or
     // shrinking the input definitely will.
     const lcMsg = (upstreamMsg || '').toLowerCase();
+    // Some providers (notably Anthropic) return BILLING/credit problems as a
+    // 400, not a 402 — e.g. "Your credit balance is too low to access the
+    // Anthropic API." Detect that first so we surface a clear top-up message
+    // instead of the generic "malformed request" hint.
+    const isCredit =
+      lcMsg.includes('credit balance is too low') ||
+      lcMsg.includes('credit balance too low') ||
+      lcMsg.includes('balance is too low') ||
+      (lcMsg.includes('credit') && lcMsg.includes('too low')) ||
+      /insufficient\s+(credit|funds?|balance)/.test(lcMsg);
     const isTokenLimit =
       lcMsg.includes('token count exceeds') ||
       lcMsg.includes('exceeds the maximum') ||
@@ -272,7 +282,12 @@ function wrapUpstreamError(provider, upstreamStatus, upstreamBodyText, keySource
       lcMsg.includes('maximum context length') ||
       lcMsg.includes('tokens limit') ||
       lcMsg.includes('input is too long');
-    if (isTokenLimit) {
+    if (isCredit) {
+      hint =
+        `${provider}'s account is OUT OF CREDIT — the API returned 400 "credit balance too low". ` +
+        `Top up the ${provider} account (or add billing), OR switch to another provider in the PWA's LLM dispatcher (Mistral / Gemini / OpenAI), OR paste a funded personal key in ⚙ Settings → API Keys. ` +
+        `This is a billing problem, not a problem with your CV content.`;
+    } else if (isTokenLimit) {
       // Provider-specific context window sizes for the actionable
       // suggestion. Numbers conservative — actual tier limits vary.
       const limits = {

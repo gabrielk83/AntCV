@@ -1529,7 +1529,7 @@
       t,
     )
       ? "auth"
-      : /\b402\b|insufficient.{0,5}(credit|fund|quota|balance)|payment.{0,5}required|billing.{0,5}(fail|issue|require)/i.test(
+      : /\b402\b|insufficient.{0,5}(credit|fund|quota|balance)|credit.{0,8}balance|balance.{0,12}too\s+low|too\s+low.{0,12}to\s+access|payment.{0,5}required|billing.{0,5}(fail|issue|require)/i.test(
             t,
           )
         ? "billing"

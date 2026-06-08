@@ -54,7 +54,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.281';
+  var VERSION = '1.50.286';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -183,6 +183,16 @@
     for (var c = 0; c < cols.length; c++) {
       var col = cols[c];
       var colTop = col.getBoundingClientRect().top;
+      // 1.50.286 SALMON-MOBILE-001: the preview content is CSS
+      // transform:scale(ui) — on mobile ui<1 to fit the screen.
+      // getBoundingClientRect() returns POST-transform (scaled) pixels, so a
+      // section that overflows A4 (USABLE px UNSCALED) measured smaller than
+      // USABLE and no break was detected → no salmon on mobile. Recover the
+      // scale from the column (rendered width / layout width) and scale the
+      // limit by it so the comparison is done in the SAME (scaled) space.
+      var scale = col.offsetWidth ? (col.getBoundingClientRect().width / col.offsetWidth) : 1;
+      if (!(scale > 0.1 && scale < 10)) scale = 1;
+      var limit = USABLE * scale;
       var secEls = col.querySelectorAll('[data-sid]');
       for (var s = 0; s < secEls.length; s++) {
         var secEl = secEls[s];
@@ -194,10 +204,10 @@
 
         var br = -1;
         if (sec.type === 'table' || secEl.querySelector('table')) {
-          var rowIdx = firstOverflowRow(secEl, colTop, USABLE);
+          var rowIdx = firstOverflowRow(secEl, colTop, limit);
           if (rowIdx >= 1) br = rowIdx;
         } else {
-          var idx = firstOverflowItem(secEl, colTop, USABLE);
+          var idx = firstOverflowItem(secEl, colTop, limit);
           if (idx >= 1) br = snapToGroup(groupStarts(sec), idx);
         }
         if (br >= 1) { map[sid] = {}; map[sid][String(br)] = 2; }
@@ -220,7 +230,7 @@
           var roleEls = col.querySelectorAll('[data-antcv-role-index]');
           for (var ri = 0; ri < roleEls.length; ri++) {
             if (!visible(roleEls[ri])) continue;
-            if (roleEls[ri].getBoundingClientRect().bottom - colTop > USABLE) {
+            if (roleEls[ri].getBoundingClientRect().bottom - colTop > limit) {
               var rmi = parseInt(roleEls[ri].getAttribute('data-antcv-role-index'), 10);
               if (rmi >= 1) { map[expSec.id] = {}; map[expSec.id][String(rmi)] = 2; }
               break;

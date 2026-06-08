@@ -2007,7 +2007,20 @@ function renderExperience(s, ctx) {
   // Right edge of the main column, in DXA, accounting for the cell margins.
   const rightTab = MAIN_W - 640 - 40;
 
+  // 1.50.286 SALMON-EXPORT-EXPERIENCE-001: honour MANUAL role page breaks
+  // (role.page, set by the per-role 📄 page button). renderExperience
+  // previously ignored role.page, so a manual salmon on a role produced NO
+  // page break in the exported PDF/Word. Insert ONE pageBreakBefore (+ a
+  // "(Cont.)" heading) at each point the role page increases, monotonically.
+  let __runMaxRolePage = 1;
   roles.forEach((role, ri) => {
+    const __rp = Number(role && role.page);
+    const __pg = (Number.isFinite(__rp) && __rp >= 2 && __rp <= 4) ? Math.round(__rp) : 1;
+    if (__pg > __runMaxRolePage) {
+      __runMaxRolePage = __pg;
+      out.push(new Paragraph({ pageBreakBefore: true, spacing: { before: 0, after: 0 } }));
+      if (s.title) out.push(headingParagraph(String(s.title || "").toUpperCase() + " (Cont.)", ctx, false));
+    }
     const left = [];
     if (role.title) {
       left.push(new TextRun({

@@ -196,7 +196,7 @@
       tableFirstColText: "#333333",
       tableOtherColText: "#333333",
     },
-    Ai = "1.40.334-language-topbar-accordion-fix";
+    Ai = "1.50.302-login-request";
   try {
     console.log("[AntCV]", Ai);
   } catch (e) {}
@@ -2677,7 +2677,11 @@
       },
       [l, s] = e(() => a() || r),
       [c, p] = e(!1),
-      [m, g] = e("");
+      [m, g] = e(""),
+      // 1.50.302: access-request state for the LOGIN GATE (the Google redirect
+      // flow lands here, not in the Settings panel). { email, idToken } when a
+      // not-allowlisted sign-in was denied — the relay already filed the request.
+      [Rq, Sq] = e(null);
     return (
       o(() => {
         if (!a() && r)
@@ -2689,6 +2693,12 @@
         !window.AntcvAuth ||
           !window.AntcvAuth.handleAuthRedirect ||
           window.AntcvAuth.handleAuthRedirect().catch((e) => {
+            // Not-allowlisted: the relay already filed an access request. Show the
+            // request-submitted card (with Withdraw) instead of the raw code.
+            if (e && e.code === "email_not_allowed") {
+              (Sq({ email: e.email || "", idToken: e.idToken || "" }), g(""));
+              return;
+            }
             g(e && e.message ? e.message : String(e));
           });
       }, []),
@@ -2842,26 +2852,115 @@
                     " in your Google Cloud Console OAuth client.",
                   ),
               ),
-            n
-              ? React.createElement(n, { proxyUrl: l, theme: "dark" })
-              : React.createElement(
+            Rq
+              ? React.createElement(
                   "div",
-                  {
-                    style: {
-                      color: "#ffb4b4",
-                      fontSize: 12,
-                      padding: 10,
-                      background: "rgba(255,120,120,0.10)",
-                      border: "1px solid rgba(255,120,120,0.30)",
-                      borderRadius: 6,
+                  null,
+                  React.createElement(
+                    "div",
+                    {
+                      style: {
+                        color: "#fff",
+                        fontWeight: 700,
+                        fontSize: 15,
+                        marginBottom: 8,
+                      },
                     },
-                  },
-                  "Auth module didn't load. Check that ",
-                  React.createElement("code", null, "antcv-auth.js"),
-                  " is deployed next to ",
-                  React.createElement("code", null, "index.html"),
-                  ".",
-                ),
+                    "Access request submitted",
+                  ),
+                  React.createElement(
+                    "div",
+                    {
+                      style: {
+                        color: "rgba(255,255,255,0.72)",
+                        fontSize: 12.5,
+                        lineHeight: 1.55,
+                        marginBottom: 14,
+                      },
+                    },
+                    (Rq.email ? Rq.email + " " : "This email ") +
+                      "isn't on the access list yet. An administrator has received your request and will review it — you'll be able to sign in once it's approved.",
+                  ),
+                  React.createElement(
+                    "div",
+                    {
+                      style: {
+                        display: "flex",
+                        gap: 12,
+                        alignItems: "center",
+                      },
+                    },
+                    React.createElement(
+                      "button",
+                      {
+                        disabled: c,
+                        onClick: async () => {
+                          (p(!0), g(""));
+                          try {
+                            (await window.AntcvAuth.cancelAccessRequest(
+                              Rq.idToken,
+                            ),
+                              Sq(null),
+                              g("Access request withdrawn."));
+                          } catch (e) {
+                            g(e && e.message ? e.message : String(e));
+                          } finally {
+                            p(!1);
+                          }
+                        },
+                        style: {
+                          padding: "9px 16px",
+                          background: "rgba(255,255,255,0.10)",
+                          color: "#fff",
+                          border: "1px solid rgba(255,255,255,0.25)",
+                          borderRadius: 8,
+                          fontSize: 13,
+                          fontWeight: 600,
+                          cursor: c ? "wait" : "pointer",
+                        },
+                      },
+                      c ? "…" : "Withdraw request",
+                    ),
+                    React.createElement(
+                      "button",
+                      {
+                        onClick: () => {
+                          (Sq(null), g(""));
+                        },
+                        style: {
+                          padding: "9px 4px",
+                          background: "transparent",
+                          color: l,
+                          border: 0,
+                          fontSize: 12.5,
+                          cursor: "pointer",
+                          textDecoration: "underline",
+                        },
+                      },
+                      "Back to sign in",
+                    ),
+                  ),
+                )
+              : n
+                ? React.createElement(n, { proxyUrl: l, theme: "dark" })
+                : React.createElement(
+                    "div",
+                    {
+                      style: {
+                        color: "#ffb4b4",
+                        fontSize: 12,
+                        padding: 10,
+                        background: "rgba(255,120,120,0.10)",
+                        border: "1px solid rgba(255,120,120,0.30)",
+                        borderRadius: 6,
+                      },
+                    },
+                    "Auth module didn't load. Check that ",
+                    React.createElement("code", null, "antcv-auth.js"),
+                    " is deployed next to ",
+                    React.createElement("code", null, "index.html"),
+                    ".",
+                  ),
           ),
         ),
       )

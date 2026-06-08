@@ -24866,16 +24866,22 @@ function buildHeaderCell(ctx) {
     }
   }
   if (contactBits.length) {
+    // 1.14.31 header-rule colour + PDF visibility: rules must match the SIDEBAR
+    // heading rule colour (style.sidebarHeadColor, #01B7BB), not style.accent
+    // (the palette's interactive blue #0B74DE). Both rules now sit on the NON-empty
+    // contact paragraph (top + bottom borders) so they survive the CloudConvert
+    // docx->PDF path — the empty-spacer paragraph's bottom border was dropped in
+    // the PDF (owner: "the line under the specialisation is not visible in the PDF").
+    const headerRule = { color: style.sidebarHeadColor, space: 4, style: BorderStyle.SINGLE, size: 6 };
     out.push(new Paragraph({
       shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
-      border: { bottom: { color: style.accent, space: 1, style: BorderStyle.SINGLE, size: 6 } },
       spacing: { before: 0, after: 60, line: 40, lineRule: "exact" },
       children: []
     }));
     out.push(new Paragraph({
       alignment: alignType(headerAlign.contact),
       shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
-      border: { bottom: { color: style.accent, space: 4, style: BorderStyle.SINGLE, size: 6 } },
+      border: { top: { ...headerRule }, bottom: { ...headerRule } },
       spacing: { before: 0, after: 60 },
       children: [
         new TextRun({
@@ -26404,7 +26410,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.30-section-table-separator";
+var VERSION = "1.14.31-header-rule-color";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

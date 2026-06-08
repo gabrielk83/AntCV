@@ -1146,20 +1146,27 @@ function buildHeaderCell(ctx) {
   }
 
   if (contactBits.length) {
-    // Top rule (above the contact line).
+    // 1.14.31 header-rule colour + PDF visibility: the two rules in the candidate
+    // band must match the SIDEBAR heading rule colour (style.sidebarHeadColor,
+    // #01B7BB) — style.accent maps to the palette's interactive blue (#0B74DE),
+    // which the owner flagged as "a colour different from all other rules". AND
+    // both rules now sit on the NON-empty contact paragraph (top + bottom
+    // borders): the previous empty-spacer paragraph's bottom border was dropped
+    // by the CloudConvert docx->PDF path (owner: "the line under the
+    // specialisation is not visible in the PDF"), whereas a border on a
+    // text-bearing paragraph survives both Word and the PDF.
+    const headerRule = { color: style.sidebarHeadColor, space: 4, style: BorderStyle.SINGLE, size: 6 };
+    // Spacer keeps the band rhythm between specialisation and contact; no border.
     out.push(new Paragraph({
       shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: 'auto' },
-      border: { bottom: { color: style.accent, space: 1, style: BorderStyle.SINGLE, size: 6 } },
       spacing: { before: 0, after: 60, line: 40, lineRule: 'exact' },
       children: [],
     }));
-    // The contact line itself, with its OWN bottom border so we get the
-    // matching rule under the contact text — preview has rules above
-    // AND below the contacts in the candidate header band.
+    // The contact line carries BOTH rules (above + below) as top/bottom borders.
     out.push(new Paragraph({
       alignment: alignType(headerAlign.contact),
       shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: 'auto' },
-      border: { bottom: { color: style.accent, space: 4, style: BorderStyle.SINGLE, size: 6 } },
+      border: { top: { ...headerRule }, bottom: { ...headerRule } },
       spacing: { before: 0, after: 60 },
       children: [
         new TextRun({

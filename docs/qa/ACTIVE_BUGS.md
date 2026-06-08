@@ -61,6 +61,13 @@ pushed to `main` + `claude/antcv-roadmap-bugs-L9Sqa` +
 - **SALMON-CV-DUPLICATE-001** `[FIXED 1.50.273→reverted 275→re-fixed 292]` — CV
   showed TWO salmon bars + TWO (CONT.). Keep the page-box separator + editable
   cyan cont; `__antcvSalmon` red bar + teal #00746E cont re-gated to CL-only.
+- **PB-WORKER-CONT-HEADER-001** `[FIXED docx-worker 1.14.30, deployed — owner export check]` —
+  exported page-2 main column showed a stray "CORE COMPETENCIES" heading above
+  the EXPERIENCE continuation (previously "SELECTED OUTCOMES"). Root cause: Word
+  MERGES contiguous same-grid section-wrapper tables (heading-repeat wrapper,
+  1.14.22) and repeats the FIRST table's tblHeader. Fix: a near-zero-height
+  separator paragraph after each section wrapper table keeps them distinct, so
+  each section's own heading repeats. Owner re-export to confirm.
 - **WIZARD-LANG-SELECTOR-001** `[PARTIAL 1.50.284]` — wizard language step was
   blank (React island never rendered). Replaced with a self-contained DOM picker
   (selectable table, ★ DEFAULT on first, ↑/↓ reorder, persists ordered list).

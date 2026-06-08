@@ -1286,6 +1286,43 @@
     );
   }
   const __antcvDeadProviders = new Set();
+  // 1.50.291 #5 QUALITY-AWARE ROUTING. Per (task→provider) demotion memory:
+  // when a provider returns inadequate output (adequacy gate) or a bad_input
+  // failure for a task, remember it for ~10 min and push it to the BACK of the
+  // provider order for THAT task on later calls — so the router stops LEADING
+  // with a model that just truncated/empty-returned, without permanently
+  // removing it (transient issues recover). Session-local; complements the
+  // server-side D1 quality signals.
+  const __antcvTaskDemote = new Map(); // "task|provider" -> expiry ms
+  const __ANTCV_DEMOTE_MS = 600000;    // 10 min
+  function __antcvDemoteProvider(task, prov) {
+    try { __antcvTaskDemote.set(String(task) + "|" + String(prov), Date.now() + __ANTCV_DEMOTE_MS); } catch (_) {}
+  }
+  function __antcvIsDemoted(task, prov) {
+    try {
+      const k = String(task) + "|" + String(prov);
+      const e = __antcvTaskDemote.get(k);
+      if (!e) return false;
+      if (Date.now() > e) { __antcvTaskDemote.delete(k); return false; }
+      return true;
+    } catch (_) { return false; }
+  }
+  function __antcvReorderByQuality(task, list) {
+    try {
+      const good = [], demoted = [];
+      for (const p of list) (__antcvIsDemoted(task, p) ? demoted : good).push(p);
+      return good.length ? good.concat(demoted) : list; // never empty the list
+    } catch (_) { return list; }
+  }
+  // 1.50.291 #4 big-generation model upgrade. The default gemini-2.5-flash
+  // returns near-empty output for the heavy parse_jd/generate_cv JSON; use a
+  // stronger model for those tasks only (cost-quality: flash stays for the
+  // cheap tasks). A user-set geminiModel still wins (handled inside re()).
+  function __antcvBigGen(task) { return /^(parse_jd|generate_cv)$/.test(String(task || "")); }
+  function __antcvModelFor(prov, task) {
+    try { if ("gemini" === prov && __antcvBigGen(task)) return "gemini-2.5-pro"; } catch (_) {}
+    return void 0;
+  }
   // 1.50.290 OUTPUT-ADEQUACY GATE. The dispatcher used to accept ANY non-null
   // string as success — so a provider that "succeeded" but returned an empty /
   // near-empty body (gemini-2.5-flash returned ~92 tokens for parse_jd) or a
@@ -1375,6 +1412,9 @@
       const _f = l.filter((e) => !__antcvDeadProviders.has(e));
       if (_f.length) l = _f;
     }
+    // 1.50.291 #5: deprioritise providers that recently gave inadequate output
+    // for this task (kept in the list, just moved to the back).
+    l = __antcvReorderByQuality(r, l);
     const c = [];
     for (let n = 0; n < l.length; n++) {
       const a = l[n],
@@ -1408,7 +1448,7 @@
                 n = null;
                 break;
               }
-              n = await re(e, t);
+              n = await re(e, t, __antcvModelFor("gemini", r));
             }
             break;
           } catch (e) {
@@ -1450,6 +1490,7 @@
             status: "",
             ms: __ms,
           });
+          __antcvDemoteProvider(r, a); // 1.50.291 #5: deprioritise next time
           s = new Error(a + " returned inadequate output");
           continue;
         }
@@ -1505,6 +1546,11 @@
           status: p,
           ab_group: _,
         }),
+          // 1.50.291 #5: a bad_input failure is a quality/compat problem with
+          // THIS provider for THIS task — deprioritise it next time (transient
+          // classes — network / rate_limit / server — are NOT demoted; they
+          // recover and demoting them would needlessly avoid a good provider).
+          "bad_input" === d && __antcvDemoteProvider(r, a),
           l.length);
         const u = l.length - n - 1;
         if (
@@ -1682,7 +1728,7 @@
       await w(f);
     }
   }
-  async function re(e, t) {
+  async function re(e, t, mo) {
     var n, o, r, a, i, l, s;
     (p("Gemini"), await U());
     const c = u.get("geminiKey", ""),
@@ -1695,6 +1741,11 @@
     if (!m)
       throw new Error("No proxy URL. Set Cloudflare Worker URL in ⚙ Settings.");
     const g =
+        // 1.50.291 #4: per-call model override (dispatcher upgrades the model
+        // for big generations — the default gemini-2.5-flash returns
+        // near-empty (~92 tokens) for parse_jd; a stronger model is used for
+        // those). A user-set geminiModel still wins over the auto default.
+        (mo && !u.get("geminiModel", "")) ? mo :
         u.get("geminiModel", "") ||
         (null == (n = S.gemini) ? void 0 : n.model) ||
         "gemini-2.5-flash",

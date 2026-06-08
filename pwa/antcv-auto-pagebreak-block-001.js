@@ -54,7 +54,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.320-sidebar-push';
+  var VERSION = '1.50.323-cl-double-salmon';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -302,7 +302,22 @@
             if (!visible(clEl)) continue;
             var clSid = clEl.getAttribute('data-sid');
             if (!clSid || map[clSid]) continue;   // sticky
-            if (clEl.getBoundingClientRect().bottom - clTop <= clLimit) continue; // fits whole
+            // CL-DOUBLE-SALMON-001 (owner 2026-06-09): the old gate flagged ANY
+            // section whose bottom sat past clLimit — but a section that lives
+            // ENTIRELY on page 2 also has bottom > clLimit, so every later section
+            // got its own hard-coded "page 2" break across successive cycles → two
+            // "▼ PAGE 2 ▼" bars for the same page. Only break a section that actually
+            // SPANS a page boundary (its top and bottom land on different pages), and
+            // label the salmon with the REAL cumulative page it moves onto, not a
+            // hard-coded 2. The CL preview is one continuous flow, so absolute
+            // position / clLimit gives the page directly.
+            var __clTopPx = clEl.getBoundingClientRect().top - clTop;
+            var __clBotPx = clEl.getBoundingClientRect().bottom - clTop;
+            var __clTopPg = Math.floor(__clTopPx / clLimit);
+            var __clBotPg = Math.floor((__clBotPx - 2) / clLimit); // -2px: ignore exact-edge jitter
+            if (__clBotPg <= __clTopPg) continue;        // sits within one page → no break
+            var __clPageNo = Math.min(4, __clTopPg + 2); // the page this section moves onto
+            var __clBoundary = (__clTopPg + 1) * clLimit; // the boundary it crosses
             // This is the first section that overflows the page line. 1.50.315
             // CL-MIDLIST: when it exposes per-item break keys (text_bullets bullets
             // tagged data-antcv-cl-item-key by __antcvBreaks), refine to ITEM level —
@@ -317,9 +332,9 @@
             for (var ki = 0; ki < keyed.length; ki++) {
               var kEl = keyed[ki];
               if (!visible(kEl)) continue;
-              if (kEl.getBoundingClientRect().bottom - clTop > clLimit) {
+              if (kEl.getBoundingClientRect().bottom - clTop > __clBoundary) {
                 var kKey = kEl.getAttribute('data-antcv-cl-item-key');
-                if (kKey) { map[clSid] = {}; map[clSid][kKey] = 2; brokeItem = true; }
+                if (kKey) { map[clSid] = {}; map[clSid][kKey] = __clPageNo; brokeItem = true; }
                 break;
               }
             }
@@ -330,15 +345,15 @@
             // "(Cont.)") at that row instead of moving the whole table whole.
             var brokeRow = false;
             if (!brokeItem && clSec && (clSec.type === 'table' || clEl.querySelector('table'))) {
-              var rIdx = firstOverflowRow(clEl, clTop, clLimit);
-              if (rIdx >= 1) { map[clSid] = {}; map[clSid][String(rIdx)] = 2; brokeRow = true; }
+              var rIdx = firstOverflowRow(clEl, clTop, __clBoundary);
+              if (rIdx >= 1) { map[clSid] = {}; map[clSid][String(rIdx)] = __clPageNo; brokeRow = true; }
             }
             if (!brokeItem && !brokeRow) {
               // Mirror app.js __antcvFirstKey so __antcvSecStart picks the break up.
               var fk = (clSec && clSec.type === 'text_bullets')
                 ? ((clSec.intro != null && String(clSec.intro).trim()) ? 'intro' : 'bullet_0')
                 : '0';
-              map[clSid] = {}; map[clSid][fk] = 2;
+              map[clSid] = {}; map[clSid][fk] = __clPageNo;
             }
             break;   // one salmon per compute; the next cycle catches further overflow
           }

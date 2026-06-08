@@ -60,21 +60,29 @@ column is explicit), PB-WORKER-SIDEBAR-FILL-001 (navy per page), and the length 
 2-column layout, so this must be done with the group/role-aware coordination + a Word
 visual check before deploy — cannot be verified headlessly (no PDF renderer in CI).
 
-- **CL-NO-SALMON-001** `[OPEN][preview]` — owner: "cover letter still has no salmon." The
-  attached CL DOCX is **4 pages** (`pageBreakBefore` at the WHY→HWIC boundary, mid-HWIC,
-  and HWIC→FOUNDATION; a "HOW I WOULD CONTRIBUTE (Cont.)" heading confirms a mid-list
-  split) — note its HWIC bullets include gibberish single-word test bullets that inflate
-  it. So the EXPORT paginated, but the PREVIEW shows no salmon. The CL salmon mechanism
-  works in isolation (`diag-cl-salmon.mjs` passes: measurer writes the break →
-  `__antcvSecStart`/`__antcvBreaks` draw `__antcvSalmon`). Could NOT reproduce the
-  no-salmon case headlessly this session — an owner-shaped synthetic CL did not render
-  faithfully (plain `text` sections were dropped by the harness; needs the real
-  kernel-generated section shapes), and the symptom likely depends on the owner's live
-  state (stale/empty `antcv:autoPagesPreview` for the CL, or the preview rendering
-  shorter than the export so it never trips the A4 line — PREVIEW-PDF-PARITY for CL).
-  NEXT: capture the owner's live `antcv:autoPages`/`autoPagesPreview`/`itemPages` for the
-  CL + the CL flow height while the preview shows no salmon; confirm whether the measurer
-  wrote a CL break and whether `[data-antcv-cl-flow]` height exceeds 1053px.
+- **CL-NO-SALMON-001** `[RESOLVED — owner confirms salmon now appears (slowly)]` — owner
+  2026-06-09: "salmon appeared in CL eventually." The salmon DOES render; it was the
+  owner's live-state lag (the measurer is sticky + one-break-per-compute, gated by a
+  fingerprint + 1.5s cooldown, so a multi-page CL paginates over several slow cycles).
+  Residual **CL-SALMON-SLOW-001** `[OPEN][preview][low]`: paginating a 3-4 page CL takes
+  several seconds because each compute writes only one break. Future option: compute all
+  CL breaks in a single pass (the page-number math added for CL-DOUBLE-SALMON-001 already
+  supports cumulative pages) — deferred (bigger change to the loop-safe one-per-compute
+  contract).
+- **CL-DOUBLE-SALMON-001** `[FIXED 1.50.323 — verified headless]` — owner 2026-06-09: the
+  CL salmon "appeared twice for the same page" — two "▼ PAGE 2 ▼" bars (before HOW I
+  WOULD CONTRIBUTE (Cont.) and before FOUNDATION). ROOT CAUSE in the measurer's CL pass
+  (`antcv-auto-pagebreak-block-001.js`): the gate `bottom - clTop <= clLimit ? skip` only
+  compared against the PAGE-1 line, so ANY section living entirely on page 2 (whose bottom
+  is naturally > clLimit) was flagged as overflowing and given its own **hard-coded** page-2
+  break across successive cycles → multiple "PAGE 2" salmons. FIX: only break a section
+  that actually SPANS a page boundary (`floor(top/clLimit) !== floor(bottom/clLimit)`), and
+  label the salmon with the REAL cumulative page (`floor(top/clLimit)+2`, capped at 4) — the
+  crossing item / table row / whole-section all use it. So a page-2-internal section draws
+  NO salmon, and a section that genuinely crosses into page 3 reads "▼ PAGE 3 ▼". Verified
+  `pwa/test/diag-cl-double-salmon.mjs` (pre-seed contribute broken: foundation on page 2 is
+  NOT broken; tail spanning into page 3 is labeled 3 in both maps) + no regression in
+  `diag-cl-salmon` / `diag-cl-midlist-measurer` / sidebar tests + boot-smoke 0 errors.
 
 ## EXPORT REVIEW 2026-06-08 (PM-2) — owner re-export feedback
 

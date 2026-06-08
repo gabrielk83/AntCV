@@ -1536,6 +1536,29 @@ async function handleApiAdminDemoHistory(request, env) {
 // the allowlist. KV entries have a 14-day TTL so the list rolls forward
 // naturally.  Query string ?hours=N filters to attempts where last_seen
 // is within the last N hours (default 48, max 14*24=336).
+// ADMIN: reject/remove a pending access request — deletes the access_req: KV
+// entry so it drops off the admin requests list. The email can request again by
+// re-attempting sign-in (this is a remove, not a permanent block).
+async function handleApiAdminAccessRequestReject(request, env) {
+  if (request.method === 'OPTIONS') return jsonResponse({}, 204, request, env);
+  if (request.method !== 'POST') return jsonResponse({ error: 'method_not_allowed' }, 405, request, env);
+  const id = await identityFromRequest(request, env);
+  if (!id) return jsonResponse({ error: 'unauthenticated' }, 401, request, env);
+  if (!isAdminEmail(id.email, env)) return jsonResponse({ error: 'forbidden' }, 403, request, env);
+  const kv = env.KV_BINDING || env.ANALYTICS || null;
+  if (!kv) return jsonResponse({ error: 'kv_not_bound' }, 503, request, env);
+  let body;
+  try { body = await request.json(); }
+  catch (e) { return jsonResponse({ error: 'invalid_json' }, 400, request, env); }
+  // Match the key exactly as /auth/google wrote it: lower-cased raw email.
+  const email = String((body && body.email) || '').trim().toLowerCase();
+  if (!email) return jsonResponse({ error: 'missing_email' }, 400, request, env);
+  const refresh = await maybeRefreshHeader(env, id);
+  try { await kv.delete('access_req:' + email); }
+  catch (e) { return jsonResponse({ error: 'delete_failed', message: e && e.message ? e.message : String(e) }, 500, request, env, refresh); }
+  return jsonResponse({ ok: true, rejected: email }, 200, request, env, refresh);
+}
+
 async function handleApiAdminAccessRequests(request, env) {
   if (request.method === 'OPTIONS') return jsonResponse({}, 204, request, env);
   if (request.method !== 'GET') {
@@ -3227,6 +3250,7 @@ const method = request.method;
   if (path === '/api/user/mode')      return handleApiUserMode(request, env);
   if (path === '/api/admin/demo')     return handleApiAdminDemo(request, env);
   if (path === '/api/admin/demo-usage-history') return handleApiAdminDemoHistory(request, env);
+  if (path === '/api/admin/access-requests/reject' && (method === 'POST' || method === 'OPTIONS')) return handleApiAdminAccessRequestReject(request, env);
   if (path === '/api/admin/access-requests') return handleApiAdminAccessRequests(request, env);
 
   // --- D1: /api/profile/kernel, /api/applications, /api/active ---

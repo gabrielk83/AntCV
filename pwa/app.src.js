@@ -18474,6 +18474,51 @@
             _ = async (e) => {
               const t = n.filter((t) => t !== e);
               await I(t);
+            },
+            J = async (e) => {
+              const em = String(e || "").trim().toLowerCase();
+              if (!em) return;
+              if (
+                !confirm(
+                  "Reject and remove " +
+                    em +
+                    " from the join-request list?\n\n(They can request again by attempting to sign in.)",
+                )
+              )
+                return;
+              (d(!0), m(""), f(""));
+              try {
+                const base = (t || u.get("proxyUrl", "") || "")
+                  .trim()
+                  .replace(/\/+$/, "");
+                if (!base) throw new Error("Set the relay URL in API Keys first.");
+                const res = await fetch(
+                    base + "/api/admin/access-requests/reject",
+                    {
+                      method: "POST",
+                      credentials: "include",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ email: em }),
+                    },
+                  ),
+                  txt = await res.text();
+                if (401 === res.status) throw new Error("Not signed in.");
+                if (403 === res.status) throw new Error("Not on admin list.");
+                if (!res.ok) throw new Error(txt || "HTTP " + res.status);
+                (y((cur) =>
+                  Array.isArray(cur)
+                    ? cur.filter(
+                        (x) => String(x.email || "").toLowerCase() !== em,
+                      )
+                    : cur,
+                ),
+                  f("Rejected " + em + "."),
+                  setTimeout(() => f(""), 3000));
+              } catch (e) {
+                m(e.message || String(e));
+              } finally {
+                d(!1);
+              }
             };
           return React.createElement(
             "div",
@@ -18955,38 +19000,73 @@
                             "✕ Remove",
                           )
                         : React.createElement(
-                            "button",
+                            "div",
                             {
-                              onClick: () =>
-                                (async (e) => {
-                                  const t = String(e || "")
-                                    .trim()
-                                    .toLowerCase();
-                                  if (t)
-                                    return n.indexOf(t) >= 0
-                                      ? (f(t + " is already on the list."),
-                                        void setTimeout(() => f(""), 2500))
-                                      : void (await I([...n, t]));
-                                })(e.email),
-                              disabled: c,
-                              title:
-                                "Add " +
-                                t +
-                                " to the allowlist so they can sign in",
                               style: {
-                                padding: "4px 9px",
-                                background: "rgba(1,183,187,0.12)",
-                                border: "1px solid " + l,
-                                color: l,
-                                borderRadius: 5,
-                                fontSize: 10,
-                                fontWeight: 700,
-                                cursor: c ? "wait" : "pointer",
-                                whiteSpace: "nowrap",
+                                display: "flex",
+                                gap: 6,
                                 flexShrink: 0,
+                                alignItems: "center",
                               },
                             },
-                            "+ Allow",
+                            React.createElement(
+                              "button",
+                              {
+                                onClick: () =>
+                                  (async (e) => {
+                                    const t = String(e || "")
+                                      .trim()
+                                      .toLowerCase();
+                                    if (t)
+                                      return n.indexOf(t) >= 0
+                                        ? (f(t + " is already on the list."),
+                                          void setTimeout(() => f(""), 2500))
+                                        : void (await I([...n, t]));
+                                  })(e.email),
+                                disabled: c,
+                                title:
+                                  "Add " +
+                                  t +
+                                  " to the allowlist so they can sign in",
+                                style: {
+                                  padding: "4px 9px",
+                                  background: "rgba(1,183,187,0.12)",
+                                  border: "1px solid " + l,
+                                  color: l,
+                                  borderRadius: 5,
+                                  fontSize: 10,
+                                  fontWeight: 700,
+                                  cursor: c ? "wait" : "pointer",
+                                  whiteSpace: "nowrap",
+                                  flexShrink: 0,
+                                },
+                              },
+                              "+ Allow",
+                            ),
+                            React.createElement(
+                              "button",
+                              {
+                                onClick: () => J(e.email),
+                                disabled: c,
+                                title:
+                                  "Reject and remove " +
+                                  t +
+                                  " from the join-request list",
+                                style: {
+                                  padding: "4px 9px",
+                                  background: "rgba(220,80,80,0.10)",
+                                  border: "1px solid rgba(220,80,80,0.4)",
+                                  color: "#ff9090",
+                                  borderRadius: 5,
+                                  fontSize: 10,
+                                  fontWeight: 600,
+                                  cursor: c ? "wait" : "pointer",
+                                  whiteSpace: "nowrap",
+                                  flexShrink: 0,
+                                },
+                              },
+                              "✕ Reject",
+                            ),
                           ),
                     );
                   }),

@@ -4516,18 +4516,33 @@
               }),
           );
         }
-        case "experience":
+        case "experience": {
+          // 1.50.293 SALMON-CV-MAINROLE-BREAK-001: emit data-antcv-role-index on
+          // every role wrapper so the auto-pagebreak measurer can detect which
+          // role overflows the A4 box on PAGE 1 too (previously this attribute
+          // only existed on the page-2+ explicit render path, so the measurer
+          // never saw a break point on the first page → main column overflowed
+          // past the salmon while the sidebar broke). The index MUST be the
+          // FULL-list index (autoPages keys are keyed by findIndex over the
+          // unfiltered e.roles in the `d` page computation), so we resolve it
+          // against the original roles list forwarded from the page-0 render
+          // (__antcvOrigRoles); fall back to the map index when absent.
+          const __origRoles = Array.isArray(e.__antcvOrigRoles)
+            ? e.__antcvOrigRoles
+            : e.roles || [];
           return React.createElement(
             React.Fragment,
             null,
             (e.roles || []).map((e, t) => {
               var n;
+              const __ri = __origRoles.indexOf(e);
               return !1 === e.on
                 ? null
                 : React.createElement(
                     "div",
                     {
                       key: t,
+                      "data-antcv-role-index": __ri >= 0 ? __ri : t,
                       style: { marginBottom: 7, pageBreakInside: "avoid" },
                     },
                     React.createElement(
@@ -4624,6 +4639,7 @@
                   );
             }),
           );
+        }
         case "labeled_list": {
           const t = e.items || [],
             n = (e) => {
@@ -38380,7 +38396,7 @@
                                 ...zi.map((e) => {
                                 if ("experience" !== e.type || !e.on)
                                   return null;
-                                const n = { ...e, roles: t.roles },
+                                const n = { ...e, roles: t.roles, __antcvOrigRoles: e.roles || [] },
                                   o = new Map(
                                     (e.roles || []).map((e, t) => [
                                       e && e.id,

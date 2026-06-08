@@ -76,11 +76,37 @@ pushed to `main` + `claude/antcv-roadmap-bugs-L9Sqa` +
 
 ### OPEN — queued for autonomous session
 
-- **SALMON-CV-MAINROLE-BREAK-001** `[OPEN][HIGH][preview]` — page-box salmon
-  breaks the SIDEBAR but NOT the MAIN-column experience roles, so main overflows
-  past the salmon. Experience role auto-pagination (measurer pass + `d`/`g` role
-  render) must move a role to page 2. Owner observed 2026-06-08 w/ exact DOM.
-- **SALMON-PARALLEL-COLUMNS-001** `[OPEN][HIGH][preview+export]` — the auto salmon
+- **SALMON-CV-MAINROLE-BREAK-001** `[FIXED 1.50.293][HIGH][preview — verified headless]` —
+  ROOT CAUSE: the measurer finds experience roles via `[data-antcv-role-index]`,
+  but that attribute existed ONLY on the page-2+ explicit per-role render path
+  (app.src.js ~38510). On PAGE 1 the experience section renders monolithically
+  through `Ce` (the `experience` case), which emitted NO `data-antcv-role-index`,
+  so the measurer could never see a role break point on the first page → it never
+  wrote `autoPages[experience][n]`, so the main column never broke while the
+  sidebar did (which keys off `data-antcv-row-path`, present on page 1). FIX
+  (additive): `Ce`'s experience case now emits `data-antcv-role-index` on every
+  role wrapper, resolved to the FULL-list index (autoPages keys come from
+  `findIndex` over the unfiltered `e.roles` in the `d` page computation) via a new
+  `__antcvOrigRoles` prop forwarded from the page-0 render. The render `d`/`g`
+  path already consumed `__antcvAutoPB`, so once the break is written the role
+  cascades to page 2. VERIFIED in headless Chromium (pwa/test/diag-mainrole-break.mjs):
+  overflowing CV → 2 page-boxes, page-1 roles tagged, `autoPages` =
+  `{additional:{4:2}, experience:{2:2}}` — sidebar + main break to page 2 IN
+  PARALLEL. Boot-smoke clean, 38/38 unit tests pass.
+- **SALMON-PARALLEL-COLUMNS-001** `[FIXED (preview) 1.50.293 / export still OPEN][HIGH][preview+export]` —
+  PREVIEW side resolved by the same fix as MAINROLE-BREAK-001. With page-1 role
+  detection restored, the measurer writes the sidebar break AND the main break at
+  the SAME page boundary (both measured against the same USABLE A4 limit from the
+  same column top), so the columns paginate in step. The CV main TABLE row-split
+  was ALREADY wired (oMain table-row flatMap, app.src.js ~38082, reads
+  `__antcvEffBucket`); verified clean in headless (pwa/test/diag-table-split.mjs):
+  a 30-row CORE COMPETENCIES table that overflows splits at row 26 → page 2 with
+  30/30 rows rendered, NO duplication, NO loss, header repeated on the
+  continuation table. The in-place split in `Ce` stays disabled (correct — the
+  page-box oMain split owns cross-page movement). **EXPORT (PDF + DOCX) still
+  OPEN** — see SALMON-AUTO-EXPORT-001 below (auto breaks not yet forwarded to the
+  docx-worker). Original OPEN note retained for export scope:
+- **SALMON-PARALLEL-COLUMNS-001 (export scope)** `[OPEN][HIGH][export]` — the auto salmon
   must paginate the SIDEBAR and the MAIN column **in parallel / coordinated**:
   when content crosses the A4 line, the sidebar break and the main break happen
   together at the SAME page boundary, and any block that SLIDES to the next page

@@ -204,13 +204,33 @@ Iterating on real CV/CL exports (owner rendering .docx + PDF). Shipped + open:
   CV/CL toggle in that mode) + let it use the app preview; (b) choose download
   directory; (c) page selector to preview page 1 / 2 / …; (d) a button previewing
   the modern-ATS vs legacy-ATS format difference.
-- **CL-GHOST-COMPANY-001** `[OPEN][content]` — an UNSOLICITED cover letter still
-  referenced a specific company ("…help **Terma** build…") in HOW I WOULD
-  CONTRIBUTE. The kernel showcase (unsolicited) carried company-specific text from
-  a prior tailored generation. Fix direction: the showcase generation/regeneration
-  must enforce company-neutrality (scrub/forbid named companies in unsolicited
-  mode), or regenerate the showcase when switching from a tailored JD to
-  unsolicited. Content-engine change, not a surgical code fix.
+- **CL-GHOST-COMPANY-001** `[FIXED (generation) 1.50.322 — regenerate to clear stale content]`
+  — an UNSOLICITED cover letter (no JD) referenced a specific company ("…help **Terma**
+  build…" in HOW I WOULD CONTRIBUTE, "Terma's focus…" in WHY THIS POSITION; owner
+  re-confirmed 2026-06-09). **ROOT CAUSE found in the generation prompt** (`app.src.js`
+  ~21229): the prompt UNCONDITIONALLY instructs the LLM to write company-specific
+  closings — `contribute_closing`: "My aim would be to help **[Company Name]** build…"
+  and `closure_content`: "support **[exact company name from JD]**…" — with NO
+  unsolicited branch. With no JD the LLM fills that slot from prior context / background
+  (a real company → "Terma"). The showcase neutral-override (the `p`-gated CL rewrite at
+  ~22157, which DOES produce company-neutral text) was bypassed for this run. Compounding
+  vector: the prompt also injected "PRIOR RUN CONTEXT (carry these JD-specific signals
+  forward…)" from `yo.supporting_context`, so a previous tailored (Terma) run's context
+  leaked into the open application. **FIX (1.50.322, app.src.js — terser rebuild, identity
+  gate passed):** when there is no JD (`c` empty ⇒ `__noJD`), (a) prepend a hard
+  company-neutrality clause to the generation prompt ("OPEN / UNSOLICITED APPLICATION — NO
+  TARGET COMPANY … Do NOT name ANY specific company ANYWHERE … 'your organisation' …
+  meta.company MUST be empty"), consistent with the existing "extract company ONLY from
+  the JD" rule; and (b) do NOT carry `yo.supporting_context` forward (`!__noJD` gate).
+  Verified: 5 new unit tests (`test/unit/unsolicited-company-neutral.test.mjs`, 43/43
+  pass), the neutrality string is present in the rebuilt `app.js`, boot-smoke 0 errors,
+  identity round-trip gate passed (terser rebuild of unedited source boots clean).
+  **NOTE — applies to FUTURE generations:** an already-contaminated unsolicited draft
+  still holds the old "Terma" text until the owner **regenerates** the unsolicited
+  showcase (Settings → "Regenerate showcase", or Generate without a JD). The fix prevents
+  re-contamination. Residual (not addressed): a deterministic render-time scrub of
+  existing stale content + hardening why the `p` showcase-override was bypassed — left as
+  follow-ups since both need the owner's live state / are higher-risk.
 - **AUTH-STATE-MISMATCH-001** `[SOFTENED 1.50.312]` — the Google OAuth redirect
   occasionally returns with the CSRF state missing/mismatched (sessionStorage lost
   between redirect-out and return). Still aborts safely (never signs in on an

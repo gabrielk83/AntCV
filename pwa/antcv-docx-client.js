@@ -868,6 +868,7 @@ function normalizeSections(raw) {
   // mapping.
   let itemPagesMap = {};
   let autoPagesMap = {};
+  let autoPagesRaw = {};   // 1.50.295: auto breaks, used ONLY for whole-unit main-column paths (experience roles + table rows)
   try {
     if (typeof localStorage !== 'undefined') {
       const raw = localStorage.getItem('antcv:itemPages');
@@ -877,11 +878,31 @@ function normalizeSections(raw) {
           itemPagesMap = parsed;
         }
       }
-      // Auto-overflow breaks (antcv-auto-overflow-362) live in a separate map.
-      // 1.50.215: auto-overflow stood down — do NOT forward autoPages to the
-      // worker. Forwarding the sidebar auto-break scrambled the 2-column PDF
-      // (isolated candidate header, mid-sentence role break, wrong continuation
-      // header). autoPagesMap stays empty so pageFor uses manual itemPages only.
+      // Auto-overflow breaks (the measurer antcv-auto-pagebreak-block-001) live
+      // in a SEPARATE map (antcv:autoPages). 1.50.215 stood ALL auto forwarding
+      // down because forwarding the SIDEBAR auto-break scrambled the 2-column PDF
+      // (isolated candidate header, mid-role cut, wrong continuation header) —
+      // the worker lays both columns out as ONE Word table row, so a break in
+      // only one column desyncs them, and the auto break POSITION is measured in
+      // preview px which differs from Word's geometry (PREVIEW-PDF-PARITY-001).
+      //
+      // 1.50.295 SALMON-AUTO-EXPORT-001 (partial): re-enable auto export ONLY for
+      // the WHOLE-UNIT, MAIN-column paths that already work identically for MANUAL
+      // breaks and cannot scramble — experience role.page (worker 1.50.286 break
+      // path) and table row_pages (worker whole-row split). These move a whole
+      // role / whole row to the next page exactly as a manual break does, so the
+      // worst case under a parity mismatch is a sub-optimal page assignment, never
+      // a mid-content cut. `autoPagesMap` stays EMPTY so pageFor / sidebar+list
+      // item breaks remain MANUAL-ONLY (the scramble-prone path stays stood down,
+      // pending the parity fix + an owner export check). We read auto into a
+      // separate `autoPagesRaw` consumed only by the experience + table cases.
+      const rawAuto = localStorage.getItem('antcv:autoPages');
+      if (rawAuto) {
+        const parsedAuto = JSON.parse(rawAuto);
+        if (parsedAuto && typeof parsedAuto === 'object' && !Array.isArray(parsedAuto)) {
+          autoPagesRaw = parsedAuto;
+        }
+      }
     }
   } catch (_) {}
   function pageFor(sid, origIdx) {
@@ -1011,9 +1032,21 @@ function normalizeSections(raw) {
         // Section-level s.hidden map controls which data rows are
         // hidden (row 0 is the header and is always shown).
         // v1.40.327: pass table row page assignments to worker.
-        const rowPages = itemPagesMap && itemPagesMap[s.id] && typeof itemPagesMap[s.id] === 'object'
-          ? itemPagesMap[s.id]
-          : null;
+        // 1.50.295 SALMON-AUTO-EXPORT-001: EFFECTIVE row pages = manual itemPages
+        // ∪ auto autoPages for this table (whole-row moves, main column only —
+        // CORE COMPETENCIES / "What I bring"). The worker splits the table by row
+        // at each row_pages increase, repeating the header (proven manual path),
+        // so a row that auto-overflows in the preview is cut to the next page in
+        // the export too, with no row duplication or loss.
+        const _manualRp = (s.id && itemPagesMap && typeof itemPagesMap[s.id] === 'object') ? itemPagesMap[s.id] : null;
+        const _autoRp = (s.id && autoPagesRaw && typeof autoPagesRaw[s.id] === 'object') ? autoPagesRaw[s.id] : null;
+        let rowPages = null;
+        if (_manualRp || _autoRp) {
+          rowPages = {};
+          if (_manualRp) for (const k in _manualRp) { const n = parseInt(_manualRp[k], 10); if (Number.isFinite(n) && n >= 2) rowPages[k] = Math.max(rowPages[k] || 0, n); }
+          if (_autoRp)   for (const k in _autoRp)   { const n = parseInt(_autoRp[k], 10);   if (Number.isFinite(n) && n >= 2) rowPages[k] = Math.max(rowPages[k] || 0, n); }
+          if (!Object.keys(rowPages).length) rowPages = null;
+        }
         return {
           ...base,
           rows: Array.isArray(s.rows) ? s.rows.map(r => Array.isArray(r) ? r.map(String) : []) : [],
@@ -1022,17 +1055,36 @@ function normalizeSections(raw) {
         };
       }
 
-      case 'experience':
-        return {
-          ...base,
-          roles: (s.roles || []).filter(r => r && r.on !== false).map(r => ({
+      case 'experience': {
+        // 1.50.295 SALMON-AUTO-EXPORT-001: forward the EFFECTIVE role page =
+        // max(manual role.page, auto autoPages[sid][origRoleIdx]) with a monotonic
+        // cascade (a role can't sit on an earlier page than the role above it),
+        // mirroring the preview's `d` computation. The worker (1.50.286)
+        // already inserts a pageBreakBefore + "(Cont.)" at each role-page increase,
+        // so this exports experience auto-breaks via the proven manual path. The
+        // auto key is the ORIGINAL index into the unfiltered roles array.
+        const allRoles = Array.isArray(s.roles) ? s.roles : [];
+        const autoR = (s.id && autoPagesRaw && typeof autoPagesRaw[s.id] === 'object') ? autoPagesRaw[s.id] : null;
+        let runPage = 1;
+        const roles = allRoles.filter(r => r && r.on !== false).map(r => {
+          const oi = allRoles.indexOf(r);
+          let pg = Math.max(1, parseInt((r && r.page) || 1, 10) || 1);
+          if (autoR) {
+            const ap = parseInt(autoR[String(oi)], 10);
+            if (Number.isFinite(ap) && ap >= 1) pg = Math.max(pg, ap);
+          }
+          if (pg < runPage) pg = runPage; else runPage = pg;
+          return {
             id: r.id || '',
             title: r.title || '',
             company: r.company || '',
             years: r.years || '',
             bullets: Array.isArray(r.bullets) ? r.bullets.map(String).filter(Boolean) : [],
-          })),
-        };
+            ...(pg >= 2 ? { page: pg } : {}),
+          };
+        });
+        return { ...base, roles };
+      }
 
       case 'list':
       case 'list_italic':

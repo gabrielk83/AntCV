@@ -126,8 +126,30 @@ pushed to `main` + `claude/antcv-roadmap-bugs-L9Sqa` +
   main-column page-box pagination") — that is exactly the gap. Relates to the
   oMain table-row flatMap split (~37741) + the measurer's `firstOverflowRow`.
   Must hold in BOTH preview and export (PDF + DOCX).
-- **SALMON-AUTO-EXPORT-001** `[OPEN][HIGH][export: PDF + DOCX]` — only MANUAL
-  breaks (itemPages / role.page) export; the AUTO breaks the measurer creates
+- **SALMON-AUTO-EXPORT-001** `[PARTIAL 1.50.295 — owner export check needed][HIGH][export: PDF + DOCX]` —
+  **DONE (client-only, no worker deploy):** the docx-export client
+  (`antcv-docx-client.js`) now forwards the EFFECTIVE bucket (manual ∪ auto) for
+  the two WHOLE-UNIT, MAIN-column paths that already render identically for manual
+  breaks and therefore cannot scramble: (a) EXPERIENCE — each role carries the
+  effective `page` = max(manual role.page, auto `autoPages[sid][origRoleIdx]`) with
+  a monotonic cascade; the worker (1.50.286) inserts pageBreakBefore + "(Cont.)"
+  at each role-page increase. (b) TABLES — `row_pages` = manual itemPages ∪ auto
+  autoPages per table; the worker (renderCompetencyTable) splits by row at each
+  increase, repeating the header. Both produced by the SAME docx-worker from the
+  same payload, so the PDF inherits them. Verified the PAYLOAD in headless
+  Chromium (pwa/test/diag-export-autobreak.mjs): with auto breaks
+  `{experience:{2:2}, core:{26:2}}`, the POSTed /generate payload carries
+  experience role pages `[1,1,2,2]` (cascade) and `core.row_pages={26:2}`.
+  **STILL OPEN (needs owner verification + parity):** (1) I cannot see the
+  rendered .docx/PDF — owner must confirm the experience + table auto-breaks land
+  correctly in BOTH formats. (2) The SIDEBAR item auto-break is deliberately STILL
+  stood down (`autoPagesMap` stays empty so pageFor / sidebar+list breaks remain
+  manual-only): the worker lays both columns as ONE Word table row, so a break in
+  only one column desyncs them, and the auto-break POSITION is measured in preview
+  px which differs from Word geometry — that coupling is PREVIEW-PDF-PARITY-001
+  below. Re-enabling the sidebar auto-break export needs the parity fix + coordinated
+  2-column worker pagination + an owner visual check. History below retained:
+  - only MANUAL breaks (itemPages / role.page) export; the AUTO breaks the measurer creates
   (`antcv:autoPages`) are NOT forwarded to the docx-worker, so the exported
   document does NOT match the preview's salmon. **Applies to BOTH the DOCX and
   the PDF** (owner 2026-06-08: "auto-break export needed also in docx") — both

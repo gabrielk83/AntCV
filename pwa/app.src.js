@@ -21441,7 +21441,14 @@
                               : n.roles) || [],
                         aHas = t.length > 0,
                         i =
-                          p && !aHas && m.length
+                          // 1.50.283: for the unsolicited KERNEL, ALWAYS build
+                          // experience from the stored work history (dropped the
+                          // !aHas gate). The no-JD kernel LLM repeatedly returned
+                          // blank/placeholder experience_roles, leaving roles
+                          // empty; the real history is the correct source for a
+                          // kernel CV anyway (nothing to tailor to). Tailored
+                          // apps (p false) still use the LLM roles.
+                          p && m.length
                             ? m
                                 .filter(function (e) {
                                   return e && (e.title || e.role) && e.company;
@@ -21667,8 +21674,11 @@
                                       // REAL, i.e. non-placeholder), so WHAT I
                                       // BRING is never left as raw "[Strategic
                                       // expertise]" placeholders.
-                                      (p
-                                        ? (() => {
+                                      // 1.50.283: mirror regardless of p — kernel
+                                      // detection can lag, and any doc can safely
+                                      // mirror CORE COMPETENCIES when bring_rows
+                                      // is empty.
+                                      (() => {
                                             try {
                                               const c = (E || []).find(
                                                 (s) => s && "core_comp" === s.id,
@@ -21698,8 +21708,7 @@
                                             } catch (_) {
                                               return null;
                                             }
-                                          })()
-                                        : null) ||
+                                          })() ||
                                       e.rows ||
                                       (o.bring ? o.bring.rows : [])
                                     ).slice(1),

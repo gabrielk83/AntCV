@@ -196,7 +196,7 @@
       tableFirstColText: "#333333",
       tableOtherColText: "#333333",
     },
-    Ai = "1.50.308-byok-cloudconvert";
+    Ai = "1.50.309-cc-settings";
   try {
     console.log("[AntCV]", Ai);
   } catch (e) {}
@@ -35763,6 +35763,66 @@
                           },
                           "🌟 Regenerate kernel showcase",
                         ),
+                      ),
+                    ),
+                  __antcvHasOwnKey() &&
+                    React.createElement(
+                      "div",
+                      {
+                        style: {
+                          marginTop: 16,
+                          paddingTop: 14,
+                          borderTop: "1px solid rgba(255,255,255,0.08)",
+                        },
+                      },
+                      React.createElement(
+                        "label",
+                        {
+                          style: {
+                            display: "block",
+                            color: "rgba(255,255,255,0.7)",
+                            fontSize: 11,
+                            fontWeight: 600,
+                            marginBottom: 4,
+                          },
+                        },
+                        "CloudConvert API key (for server-rendered PDF)",
+                      ),
+                      React.createElement("input", {
+                        type: "password",
+                        placeholder: "Your CloudConvert API key",
+                        defaultValue: u.get("cloudconvertKey", "") || "",
+                        onChange: (e) => {
+                          try {
+                            u.set(
+                              "cloudconvertKey",
+                              String((e.target && e.target.value) || "").trim(),
+                            );
+                          } catch (_) {}
+                        },
+                        style: {
+                          width: "100%",
+                          padding: "8px 10px",
+                          background: "rgba(255,255,255,0.06)",
+                          border: "1px solid rgba(255,255,255,0.18)",
+                          borderRadius: 6,
+                          color: "#fff",
+                          fontSize: 11,
+                          fontFamily: "monospace",
+                          boxSizing: "border-box",
+                        },
+                      }),
+                      React.createElement(
+                        "div",
+                        {
+                          style: {
+                            color: "rgba(255,255,255,0.45)",
+                            fontSize: 10,
+                            lineHeight: 1.45,
+                            marginTop: 4,
+                          },
+                        },
+                        "With your own keys you’re not a demo user, so server PDF runs on your own CloudConvert account. Leave blank to use the browser-print PDF fallback. Get a key at cloudconvert.com → Dashboard → Authorization → API Keys.",
                       ),
                     ),
                   React.createElement(

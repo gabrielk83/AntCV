@@ -791,6 +791,21 @@ async function handleRequest(request, env = {}) {
     writingStylePreamble = '';
   }
 
+  // BYOK hardening: strip ANY remaining internal _antcv_* hint (beyond
+  // _antcv_writing_style, consumed above) so it never reaches a provider on the
+  // client-key path — Anthropic/OpenAI return 400 on unknown top-level fields.
+  // Matches the demo-proxy strip; covers own-worker (cv-proxy) deployments too.
+  try {
+    const _p = JSON.parse(bodyText);
+    if (_p && typeof _p === 'object' && !Array.isArray(_p)) {
+      let _stripped = false;
+      for (const k of Object.keys(_p)) {
+        if (k.indexOf('_antcv_') === 0) { delete _p[k]; _stripped = true; }
+      }
+      if (_stripped) bodyText = JSON.stringify(_p);
+    }
+  } catch (_) { /* non-JSON body — leave untouched */ }
+
   // v1.50.1 — fire-and-forget writing-style selection telemetry. Plan §9.2:
   // "Log writing-style selection and per-category violation counts to
   // analytics KV." This event fires on selection (one per request); the

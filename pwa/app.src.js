@@ -196,7 +196,7 @@
       tableFirstColText: "#333333",
       tableOtherColText: "#333333",
     },
-    Ai = "1.50.305-byok-keys-only";
+    Ai = "1.50.306-byok-warn";
   try {
     console.log("[AntCV]", Ai);
   } catch (e) {}
@@ -26476,6 +26476,23 @@
               g(
                 "AntCV uses LLMs to write your CV. Badges next to each provider show what’s already configured: ✓ Server-side means the Worker already has that key set; ● Local means you’ve already entered one. Add any missing keys below, or skip if at least one provider shows a badge.",
               ),
+              "byok" === En &&
+                React.createElement(
+                  "div",
+                  {
+                    style: {
+                      padding: "10px 12px",
+                      background: "rgba(255,200,80,0.10)",
+                      border: "1px solid rgba(255,200,80,0.35)",
+                      borderRadius: 8,
+                      color: "rgba(255,224,150,0.95)",
+                      fontSize: 11.5,
+                      lineHeight: 1.5,
+                      marginBottom: 12,
+                    },
+                  },
+                  "Add as many of your own keys as you can. AntCV routes across providers for quality and resilience — a single key works fine, but more keys give better cross-checking and a fallback if one provider is rate-limited or down. Fewer keys won’t cause a failure, only potentially lower quality.",
+                ),
               React.createElement(
                 "div",
                 { style: { display: "grid", gap: 8 } },
@@ -28468,45 +28485,61 @@
                         {
                           onClick: async () => {
                             if (
-                              confirm(
+                              !confirm(
                                 "Hard Refresh will unregister the service worker, delete all caches, and reload the page. Your saved settings and CV data are NOT affected (those live in localStorage). Continue?",
                               )
-                            ) {
-                              // HARDREFRESH-001: guarantee the reload even if an
-                              // awaited cleanup step (SW unregister / caches.delete)
-                              // hangs and never resolves — otherwise location.reload()
-                              // below is never reached.
+                            )
+                              return;
+                            // HARDREFRESH-001 hardening: the reload must ALWAYS
+                            // happen, fast, even when SW unregister / caches.delete
+                            // hang (seen on mobile) AND even when a queued
+                            // location.reload() doesn't navigate because a
+                            // soon-to-be-unregistered SW still controls the page.
+                            // (1) Run cleanup FIRE-AND-FORGET (never awaited on the
+                            // reload path). (2) Force navigation on a short fixed
+                            // timer, guarded so it fires exactly once, with a
+                            // location.replace fallback if reload() didn't navigate.
+                            let __reloaded = false;
+                            const __forceReload = () => {
+                              if (__reloaded) return;
+                              __reloaded = true;
+                              try {
+                                location.reload();
+                              } catch (_) {}
                               setTimeout(() => {
                                 try {
-                                  location.reload();
+                                  location.replace(
+                                    location.pathname + location.search,
+                                  );
                                 } catch (_) {}
-                              }, 3000);
+                              }, 400);
+                            };
+                            setTimeout(__forceReload, 1200);
+                            try {
+                              if ("serviceWorker" in navigator)
+                                navigator.serviceWorker
+                                  .getRegistrations()
+                                  .then((e) =>
+                                    Promise.all(e.map((e) => e.unregister())),
+                                  )
+                                  .catch(() => {});
+                              if ("caches" in window)
+                                caches
+                                  .keys()
+                                  .then((e) =>
+                                    Promise.all(e.map((e) => caches.delete(e))),
+                                  )
+                                  .catch(() => {});
                               try {
-                                if ("serviceWorker" in navigator) {
-                                  const e =
-                                    await navigator.serviceWorker.getRegistrations();
-                                  await Promise.all(
-                                    e.map((e) => e.unregister()),
-                                  );
-                                }
-                                if ("caches" in window) {
-                                  const e = await caches.keys();
-                                  await Promise.all(
-                                    e.map((e) => caches.delete(e)),
-                                  );
-                                }
-                                try {
-                                  u.set("lastGeneratedJDFingerprint", "");
-                                } catch (e) {}
-                                try {
-                                  "undefined" != typeof window &&
-                                    window.__antcvPurgeGhosts &&
-                                    window.__antcvPurgeGhosts({ quiet: !0 });
-                                } catch (e) {}
-                              } catch (e) {
-                                console.warn("Hard refresh cleanup error:", e);
-                              }
-                              location.reload();
+                                u.set("lastGeneratedJDFingerprint", "");
+                              } catch (e) {}
+                              try {
+                                "undefined" != typeof window &&
+                                  window.__antcvPurgeGhosts &&
+                                  window.__antcvPurgeGhosts({ quiet: !0 });
+                              } catch (e) {}
+                            } catch (e) {
+                              console.warn("Hard refresh cleanup error:", e);
                             }
                           },
                           title:

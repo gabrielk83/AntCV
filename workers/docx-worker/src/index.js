@@ -24256,8 +24256,21 @@ async function generateDocx(payload) {
     specialisation: previewAlign(payload, "specialisation", previewAlign(payload, "subtitle", "center")),
     contact: previewAlign(payload, "contact", "center")
   };
+  // 1.14.41 PB-WORKER-SIDEBAR-RATIO-001: the two-column split must MATCH the preview's
+  // cvSidebarRatio (default 0.33). The worker hardcoded SIDEBAR_W=4636 (~0.389), making
+  // the MAIN column ~6% NARROWER than the preview — so justified body text overflowed
+  // the column edge in Word/PDF (owner 2026-06-08: "words slide; the PDF is slightly
+  // narrower than the preview"). Derive the column widths from the forwarded ratio,
+  // clamped sane, defaulting to the preview's 0.33. SIDEBAR_W/MAIN_W stay as the legacy
+  // fallback for any caller that doesn't go through ctx.
+  let __sbRatio = Number(payload.sidebar_ratio);
+  if (!(Number.isFinite(__sbRatio) && __sbRatio >= 0.2 && __sbRatio <= 0.55)) __sbRatio = 0.33;
+  const __sidebarW = Math.round(PAGE_W * __sbRatio);
+  const __mainW = PAGE_W - __sidebarW;
   const ctx = {
     style,
+    sidebarW: __sidebarW,
+    mainW: __mainW,
     fs: fontSizes,
     lang,
     contSuffix,
@@ -24484,7 +24497,7 @@ function buildTwoColumnDocument(ctx) {
       /*isSidebar*/
       false
     );
-    const innerW = MAIN_W - 320;
+    const innerW = ctx.mainW - 320;
     const photoTable = buildPhotoRowTable(ctx, photoInMain, firstSecParas, innerW);
     mainChildren = [
       photoTable,
@@ -24511,7 +24524,7 @@ function buildTwoColumnDocument(ctx) {
     headerCell.push(wrappedHeader);
   }
   const sidebarOnRight = style && style.sidebarPosition === "right";
-  const colWidths = sidebarOnRight ? [MAIN_W, SIDEBAR_W] : [SIDEBAR_W, MAIN_W];
+  const colWidths = sidebarOnRight ? [ctx.mainW, ctx.sidebarW] : [ctx.sidebarW, ctx.mainW];
   // 1.14.39 PB-WORKER-TWOCOL-PAGED-001: split each column's rendered children at the
   // page-break markers (pbBreakPara → __antcvPB) and emit ONE two-column table PER
   // PAGE, all with the SAME [SIDEBAR_W, MAIN_W] widths. Page 1 carries the candidate
@@ -24535,14 +24548,14 @@ function buildTwoColumnDocument(ctx) {
   const mainPages = splitChildrenByPage(mainChildren);
   const numPages = Math.max(sidebarPages.length, mainPages.length, 1);
   const makeSidebarCell = (els) => new TableCell({
-    width: { size: SIDEBAR_W, type: WidthType.DXA },
+    width: { size: ctx.sidebarW, type: WidthType.DXA },
     shading: { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" },
     borders: noBorders(),
     margins: { top: 240, bottom: 240, left: 144, right: 144 },
     children: els && els.length ? els : [emptyParagraph()]
   });
   const makeMainCell = (els) => new TableCell({
-    width: { size: MAIN_W, type: WidthType.DXA },
+    width: { size: ctx.mainW, type: WidthType.DXA },
     borders: noBorders(),
     margins: { top: 120, bottom: 240, left: 144, right: 144 },
     children: els && els.length ? els : [emptyParagraph()]
@@ -25275,7 +25288,7 @@ function renderSection(s, ctx, isSidebar) {
       // 1.14.24: CL is full-width linear (body cell content = PAGE_W-200=11706),
       // not the MAIN_W column — size CL section wrappers to the full body width
       // so titled CL sections aren't collapsed to ~60%.
-      columnWidths: [(ctx && ctx.doc === "cl") ? (PAGE_W - 200) : ((isSidebar ? SIDEBAR_W : MAIN_W) - 288)],
+      columnWidths: [(ctx && ctx.doc === "cl") ? (PAGE_W - 200) : ((isSidebar ? ctx.sidebarW : ctx.mainW) - 288)],
       borders: noBorders(),
       rows: [
         new TableRow({
@@ -25552,7 +25565,7 @@ function renderCompetencyTable(s, ctx) {
   if (rows.length === 0) return [];
   const [header, ...data] = rows;
   const isCl = ctx.doc === "cl";
-  const defaultCvW = MAIN_W - 640;
+  const defaultCvW = ctx.mainW - 640;
   // 1.14.26: CL is full-width linear. Body + text sections span the full body
   // cell (PAGE_W-200), but the WHAT-I-BRING table should be LARGE yet INSET and
   // CENTERED — 1.14.25's PAGE_W-560 (~97%) looked edge-to-edge. ~80% of the body
@@ -25656,7 +25669,7 @@ function renderExperience(s, ctx) {
   const { style, fs } = ctx;
   const out = [];
   const roles = Array.isArray(s.roles) ? s.roles.filter((r) => r && r.on !== false) : [];
-  const rightTab = MAIN_W - 640 - 40;
+  const rightTab = ctx.mainW - 640 - 40;
   // 1.50.286 SALMON-EXPORT-EXPERIENCE-001: honour MANUAL role page breaks
   // (role.page, set by the per-role 📄 page button). renderExperience
   // previously ignored role.page entirely, so a manual salmon on a role
@@ -26586,7 +26599,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.40-cont-no-double";
+var VERSION = "1.14.41-sidebar-ratio";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

@@ -1056,23 +1056,25 @@ function normalizeSections(raw) {
       }
 
       case 'experience': {
-        // 1.50.295 SALMON-AUTO-EXPORT-001: forward the EFFECTIVE role page =
-        // max(manual role.page, auto autoPages[sid][origRoleIdx]) with a monotonic
-        // cascade (a role can't sit on an earlier page than the role above it),
-        // mirroring the preview's `d` computation. The worker (1.50.286)
-        // already inserts a pageBreakBefore + "(Cont.)" at each role-page increase,
-        // so this exports experience auto-breaks via the proven manual path. The
-        // auto key is the ORIGINAL index into the unfiltered roles array.
+        // 1.50.297 SALMON-AUTO-EXPORT experience walk-back. 1.50.295 forwarded the
+        // EFFECTIVE role page (manual ∪ auto) as a hard pageBreakBefore. Owner
+        // export review (2026-06-08) showed that REGRESSED experience: the worker
+        // already binds every role together with keepNext-chained bullets
+        // (index.js renderExperience 1.50.270), so Word ALREADY moves a whole role
+        // to the next page when it doesn't fit — at WORD's real geometry. Forcing
+        // an extra break at the PREVIEW-measured (px) position then fought Word's
+        // natural overflow: Word overflowed one role earlier AND honoured the
+        // forced break, so it moved "one more role" and stranded the (Cont.)
+        // heading (PREVIEW-PDF-PARITY-001). Fix: do NOT forward the AUTO role
+        // break — let Word's keepNext flow paginate experience cleanly (it still
+        // auto-paginates, just at the correct geometry, and the section wrapper's
+        // repeated tblHeader supplies the page-2 heading). MANUAL role.page (the
+        // per-role 📄 button, an explicit user intent) is still forwarded, with the
+        // monotonic cascade, via the proven worker role.page path.
         const allRoles = Array.isArray(s.roles) ? s.roles : [];
-        const autoR = (s.id && autoPagesRaw && typeof autoPagesRaw[s.id] === 'object') ? autoPagesRaw[s.id] : null;
         let runPage = 1;
         const roles = allRoles.filter(r => r && r.on !== false).map(r => {
-          const oi = allRoles.indexOf(r);
-          let pg = Math.max(1, parseInt((r && r.page) || 1, 10) || 1);
-          if (autoR) {
-            const ap = parseInt(autoR[String(oi)], 10);
-            if (Number.isFinite(ap) && ap >= 1) pg = Math.max(pg, ap);
-          }
+          let pg = Math.max(1, parseInt((r && r.page) || 1, 10) || 1); // manual only
           if (pg < runPage) pg = runPage; else runPage = pg;
           return {
             id: r.id || '',

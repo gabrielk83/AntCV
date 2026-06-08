@@ -17,7 +17,7 @@ const sections={cv:[
   {id:'experience',title:'PROFESSIONAL EXPERIENCE',loc:'main',on:true,type:'experience',roles:[
     {id:'r1',title:'A',company:'C1',years:'2010',on:true,bullets:['b']},
     {id:'r2',title:'B',company:'C2',years:'2012',on:true,bullets:['b']},
-    {id:'r3',title:'C',company:'C3',years:'2014',on:true,bullets:['b']},
+    {id:'r3',title:'C',company:'C3',years:'2014',on:true,bullets:['b'],page:2}, // MANUAL break
     {id:'r4',title:'D',company:'C4',years:'2016',on:true,bullets:['b']},
   ]},
   {id:'skills',title:'KEY SKILLS',loc:'sidebar',on:true,type:'labeled_list',items:[{l:'X'},{l:'Y'}]},
@@ -37,7 +37,8 @@ await page.addInitScript((secs)=>{
   localStorage.setItem('session',JSON.stringify({email:'d@e.com',ts:1717000000000}));
   localStorage.setItem('step',JSON.stringify('editor'));localStorage.setItem('doc',JSON.stringify('cv'));
   // auto breaks: experience role 2 -> page 2; core table row 26 -> page 2
-  localStorage.setItem('antcv:autoPages', JSON.stringify({ experience:{'2':2}, core:{'26':2} }));
+  // auto wants r1(idx0)->pg2; MUST be ignored for experience. core table auto kept.
+  localStorage.setItem('antcv:autoPages', JSON.stringify({ experience:{'0':2}, core:{'26':2} }));
   localStorage.setItem('antcv:itemPages','{}');
   window.ANTCV_DOCX_WORKER='https://docx-worker.example.com';
   window.__DIAG_SECTIONS=secs;
@@ -64,8 +65,11 @@ const expPages = exp ? (exp.roles||[]).map(r=>r.page||1) : [];
 const coreRowPages = core ? (core.row_pages||null) : null;
 console.log('experience role pages:', JSON.stringify(expPages));
 console.log('core row_pages:', JSON.stringify(coreRowPages));
-const A = exp && expPages.length===4 && expPages[0]===1 && expPages[1]===1 && expPages[2]===2 && expPages[3]===2; // role 2 -> pg2 + cascade
-const B = coreRowPages && Number(coreRowPages['26'])===2;
-console.log('CHECK experience effective role.page (cascade from role idx2):', A?'PASS':'FAIL');
+// 1.50.297: AUTO experience break must NOT be forwarded (Word keepNext flows it),
+// but MANUAL role.page (r3 page:2 here) MUST be, with cascade to r4. autoPages
+// experience:{2:2} must be IGNORED for export.
+const A = exp && expPages.length===4 && expPages[0]===1 && expPages[1]===1 && expPages[2]===2 && expPages[3]===2; // r3 MANUAL pg2 + cascade r4; auto ignored
+const B = coreRowPages && Number(coreRowPages['26'])===2;                       // table auto row split still forwarded
+console.log('CHECK experience: manual role.page forwarded + cascade, auto ignored:', A?'PASS':'FAIL');
 console.log('CHECK table effective row_pages[26]=2:', B?'PASS':'FAIL');
 console.log(A&&B ? 'EXPORT-AUTOBREAK OK' : 'EXPORT-AUTOBREAK FAIL');

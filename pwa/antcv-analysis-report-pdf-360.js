@@ -36,11 +36,12 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.146';
+  var VERSION = '1.50.336-panel-order';
   if (window.__antcvAnalysisReportPdf360 === VERSION) return;
   window.__antcvAnalysisReportPdf360 = VERSION;
 
   var BLOCK_ID = 'antcv-analysis-report';
+  var TOP_BLOCK_ID = 'antcv-analysis-report-top';
   var STYLE_ID = 'antcv-analysis-report-css';
   var SLOGAN = 'Tailor a clean CV and cover letter to the job — fast, structured, honest.';
   var APP_URL = 'cv-generator-det.pages.dev';
@@ -519,42 +520,42 @@
     document.head.appendChild(s);
   }
 
+  // Shared builders for the two in-panel blocks.
+  function _group(wrap, title, color, build) {
+    var g = document.createElement('div'); g.className = 'arx-grp';
+    var gh = document.createElement('div'); gh.className = 'arx-h'; gh.style.color = color; gh.textContent = title;
+    g.appendChild(gh); build(g); wrap.appendChild(g);
+  }
+  function _list(items) {
+    var ul = document.createElement('ul');
+    items.forEach(function (x) { var li = document.createElement('li'); li.textContent = x; ul.appendChild(li); });
+    return ul;
+  }
+
+  // TOP block: Assumptions + Recommendations — owner 2026-06-09: these belong in
+  // the UPPER part of the panel, just below "Overall Fit" (the summary), not buried
+  // in the bottom EXPORT & DETAIL block. Returns null when neither is present.
+  function buildTopBlock() {
+    var t = T();
+    var m = model(readRationale(), readMeta(), readPersonalInfo());
+    if (!hasAnalysis(m) || (!m.assumptions.length && !m.recommendations.length)) return null;
+    var wrap = document.createElement('div');
+    wrap.id = TOP_BLOCK_ID;
+    if (m.assumptions.length) _group(wrap, t.assumptions, '#283556', function (g) { g.appendChild(_list(m.assumptions)); });
+    if (m.recommendations.length) _group(wrap, t.recommendations, '#00746E', function (g) { g.appendChild(_list(m.recommendations)); });
+    return wrap;
+  }
+
+  // BOTTOM block: Confidence review THEN the EXPORT & DETAIL row (heading +
+  // download). Owner 2026-06-09: Confidence Review sits ABOVE the download button.
   function buildBlock() {
     var t = T();
     var m = model(readRationale(), readMeta(), readPersonalInfo());
     var wrap = document.createElement('div');
     wrap.id = BLOCK_ID;
 
-    var row = document.createElement('div');
-    row.className = 'arx-row';
-    var h = document.createElement('div'); h.className = 'arx-heading'; h.textContent = t.heading;
-    var dl = document.createElement('button');
-    dl.className = 'arx-dl'; dl.type = 'button'; dl.textContent = t.download;
-    dl.addEventListener('click', function () { exportPdf(dl); });
-    row.appendChild(h); row.appendChild(dl);
-    wrap.appendChild(row);
-
-    if (!hasAnalysis(m)) {
-      var hint = document.createElement('div'); hint.className = 'arx-hint'; hint.textContent = t.noData;
-      wrap.appendChild(hint);
-      return wrap;
-    }
-
-    function group(title, color, build) {
-      var g = document.createElement('div'); g.className = 'arx-grp';
-      var gh = document.createElement('div'); gh.className = 'arx-h'; gh.style.color = color; gh.textContent = title;
-      g.appendChild(gh); build(g); wrap.appendChild(g);
-    }
-    function list(items) {
-      var ul = document.createElement('ul');
-      items.forEach(function (x) { var li = document.createElement('li'); li.textContent = x; ul.appendChild(li); });
-      return ul;
-    }
-
-    if (m.assumptions.length) group(t.assumptions, '#283556', function (g) { g.appendChild(list(m.assumptions)); });
-
-    if (m.confLow.length || m.confMedium.length) {
-      group(t.confidence, '#283556', function (g) {
+    if (hasAnalysis(m) && (m.confLow.length || m.confMedium.length)) {
+      _group(wrap, t.confidence, '#283556', function (g) {
         function band(items, cls, label) {
           if (!items.length) return;
           var box = document.createElement('div'); box.className = 'arx-conf ' + cls;
@@ -575,8 +576,20 @@
       });
     }
 
-    if (m.recommendations.length) group(t.recommendations, '#00746E', function (g) { g.appendChild(list(m.recommendations)); });
+    // EXPORT & DETAIL row (heading + download) — now BELOW Confidence Review.
+    var row = document.createElement('div');
+    row.className = 'arx-row';
+    var h = document.createElement('div'); h.className = 'arx-heading'; h.textContent = t.heading;
+    var dl = document.createElement('button');
+    dl.className = 'arx-dl'; dl.type = 'button'; dl.textContent = t.download;
+    dl.addEventListener('click', function () { exportPdf(dl); });
+    row.appendChild(h); row.appendChild(dl);
+    wrap.appendChild(row);
 
+    if (!hasAnalysis(m)) {
+      var hint = document.createElement('div'); hint.className = 'arx-hint'; hint.textContent = t.noData;
+      wrap.appendChild(hint);
+    }
     return wrap;
   }
 
@@ -596,26 +609,50 @@
     return null;
   }
 
+  function removeNode(n) { if (n && n.parentNode) n.parentNode.removeChild(n); }
+
+  // The app.js panel renders an "Overall Fit" heading inside a section <div>
+  // (heading + the fit-summary box). Return that SECTION wrapper so the
+  // Assumptions+Recommendations block can be inserted right after it.
+  function findOverallFitSection(panel) {
+    var divs = panel.querySelectorAll('div');
+    for (var i = 0; i < divs.length; i++) {
+      if ((divs[i].textContent || '').trim() === 'Overall Fit') return divs[i].parentNode || divs[i];
+    }
+    return null;
+  }
+
   function ensureBlock() {
     var panel = findPanel();
     if (!panel) {
-      var orphan = document.getElementById(BLOCK_ID);
-      if (orphan && orphan.parentNode) orphan.parentNode.removeChild(orphan);
+      removeNode(document.getElementById(BLOCK_ID));
+      removeNode(document.getElementById(TOP_BLOCK_ID));
       return;
     }
-    // Re-render when the analysis data changed (so new fields appear live).
-    var existing = panel.querySelector('#' + BLOCK_ID);
     var sig = signature();
-    if (existing) {
-      if (existing.getAttribute('data-sig') === sig) return;
-      existing.parentNode.removeChild(existing);
-    }
-    var stale = document.getElementById(BLOCK_ID);
-    if (stale && stale.parentNode) stale.parentNode.removeChild(stale);
     injectStyles();
+
+    // TOP block: Assumptions + Recommendations, just below "Overall Fit".
+    var existingTop = panel.querySelector('#' + TOP_BLOCK_ID);
+    if (!existingTop || existingTop.getAttribute('data-sig') !== sig) {
+      removeNode(existingTop);
+      removeNode(document.getElementById(TOP_BLOCK_ID)); // any stray copy
+      var top = buildTopBlock();
+      if (top) {
+        top.setAttribute('data-sig', sig);
+        var fitSec = findOverallFitSection(panel);
+        if (fitSec && fitSec.parentNode) fitSec.parentNode.insertBefore(top, fitSec.nextSibling);
+        else panel.insertBefore(top, panel.firstChild); // fallback: top of the panel
+      }
+    }
+
+    // BOTTOM block: Confidence review + the EXPORT & DETAIL download row.
+    var existing = panel.querySelector('#' + BLOCK_ID);
+    if (existing && existing.getAttribute('data-sig') === sig) return;
+    removeNode(existing);
+    removeNode(document.getElementById(BLOCK_ID));
     var block = buildBlock();
     block.setAttribute('data-sig', sig);
-    // Place AFTER the JD input block when present, else at panel end.
     panel.appendChild(block);
   }
 

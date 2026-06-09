@@ -10,6 +10,22 @@ A companion **feature registry** (open vs shipped features) lives at
 
 ## ANALYSIS PANEL 2026-06-09
 
+- **ANALYSIS-PANEL-ORDER-001** `[FIXED 1.50.336 — verified headless]` — owner 2026-06-09:
+  Assumptions + Recommendations were buried at the BOTTOM of the panel (inside the
+  EXPORT & DETAIL block, `antcv-analysis-report-pdf-360`). Owner wants them in the UPPER
+  part — **just below Overall Fit** — and **Confidence Review above the Download (and
+  Upload-JD) buttons**. FIX (360, sidecar-only): split the panel block — a TOP block
+  (`#antcv-analysis-report-top`, Assumptions + Recommendations) is inserted right after
+  the app.js "Overall Fit" section, and the BOTTOM block (`#antcv-analysis-report`) now
+  renders Confidence Review FIRST, then the EXPORT & DETAIL row (heading + Download). Both
+  re-position via the existing `ensureBlock` re-render loop (MutationObserver + events).
+  Verified `pwa/test/diag-analysis-panel-order.mjs` (synthetic panel): A+R land just below
+  Overall Fit, Confidence sits above Download, A+R removed from the bottom block, overall
+  order Overall Fit → A+R → … → Confidence/Download; 0 errors. NOTE: the Upload-JD / JD
+  input is rendered by a SEPARATE sidecar (`antcv-analysis-panel-jd-block-356`) at the top
+  of the panel; if the owner also wants that block moved below Confidence, it's a 356
+  follow-up (not done here). Owner to visually confirm placement.
+
 - **ANALYSIS-PANEL-MISSING-FIT-001** `[FIXED 1.50.335 — verified headless]` — owner 2026-06-09
   (screenshot): the in-app **📊 Application Analysis** panel shows only the JD input,
   **EXPORT & DETAIL**, **ASSUMPTIONS**, and **CONFIDENCE REVIEW**. The core of the

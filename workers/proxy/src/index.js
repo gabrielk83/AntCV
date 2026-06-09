@@ -38,6 +38,8 @@ import { handleFetchJdUrl } from './fetch-jd-url.js';
 import { handleSupervisorCheck } from './supervisor.js';
 import { buildExport as buildAnalyticsExport } from './analytics-export.js';
 import { identityFromBearer } from './jwt-verify.js';
+import { handleJobRoute } from './gen-job.js';
+import { runCoherenceReview } from './gen-coherence.js';
 import {
   isDemoMode,
   preflight as demoPreflight,
@@ -652,6 +654,21 @@ async function handleRequest(request, env = {}) {
   }
 
   const CORS = corsHeadersFor(request, env, 'x-api-key, x-provider, x-gemini-model');
+
+    // ---- GEN-BACKGROUND-001 Option A: resumable generation job routes ----
+    // /job/create, /job/step, /job/{id}, /job/cancel. Runs BEFORE the generic
+    // POST-only /v1/messages machinery (a /job/{id} read is a GET; job calls must
+    // skip demo-preflight/body-augmentation). Each section's real LLM call re-enters
+    // handleRequest via runSection on /v1/messages (full treatment); /v1/messages is
+    // not a /job path, so handleJobRoute returns null for it -> no recursion.
+    if (url.pathname.includes('/job/')) {
+      const jobResp = await handleJobRoute(request, env, CORS, {
+        runSection: handleRequest,
+        identityFn: identityFromRequestAsync,
+        coherenceFn: runCoherenceReview,
+      });
+      if (jobResp) return jobResp;
+    }
 
   if (request.method === 'OPTIONS') return new Response(null, { headers: CORS });
   if (request.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: CORS });

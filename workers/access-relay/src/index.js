@@ -2523,6 +2523,28 @@ async function rawForward(request, env, upstreamUrl, methodOverride, bodyBytes, 
   // Don't forward our session JWT to cv-proxy — it has no business with it.
   headers.delete('Authorization');
   headers.delete('Host');
+  // Never pass through caller-supplied CF Access identity headers — the
+  // upstreams trust them, and the relay is the one place that can verify
+  // who the caller actually is. Only the relay-verified identity below
+  // may set them.
+  headers.delete('Cf-Access-Authenticated-User-Email');
+  headers.delete('Cf-Access-Jwt-Assertion');
+  // DEMO-RELAY-IDENTITY-001: the demo upstream is different — its
+  // demo-enforcement preflight REQUIRES a caller identity for the
+  // per-user monthly cap. With the JWT stripped and no CF Access in
+  // front, every relay-forwarded LLM call died with
+  // demo_requires_sign_in even for a signed-in user. Re-verify the
+  // session JWT here and hand the demo proxy the identity it already
+  // trusts (Cf-Access-Authenticated-User-Email is the first identity
+  // source in its identityFromRequest). The Bearer is also restored so
+  // a demo proxy with JWT_SECRET configured can verify it end-to-end.
+  if (mode === 'demo') {
+    const id = await identityFromRequest(request, env);
+    if (id && id.email) {
+      headers.set('Cf-Access-Authenticated-User-Email', id.email);
+      if (id.token) headers.set('Authorization', 'Bearer ' + id.token);
+    }
+  }
 
   const method = methodOverride || request.method;
   const init = { method, headers, redirect: 'manual' };

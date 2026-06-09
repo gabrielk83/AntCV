@@ -8,6 +8,44 @@ A companion **feature registry** (open vs shipped features) lives at
 
 ---
 
+## OWNER REPORT 2026-06-09 (EVE) — demo Generate 401s + LinkedIn "…see more"
+
+- **DEMO-RELAY-IDENTITY-001** `[FIXED — relay; verified headless; needs worker deploy]` —
+  demo user pressed Generate and ALL providers failed 401 `demo_requires_sign_in`, then
+  the demo badge vanished; a retry tried only claude (router demotion after the auth
+  failures). ROOT CAUSE: the relay (auth-25) routes demo-pinned users' LLM calls to
+  `UPSTREAM_DEMO` (antcv-demo-proxy), but `rawForward` strips the `Authorization` header
+  (a cv-proxy-era rule) and injects NO identity — so the demo proxy's demo-enforcement
+  preflight saw an anonymous request and refused. The user's sign-in was VALID — the
+  relay itself verified the JWT one line earlier. FIX (relay `rawForward`): on
+  demo-mode forwards, re-verify the session JWT and inject
+  `Cf-Access-Authenticated-User-Email` (the demo proxy's first identity source) +
+  restore the Bearer; caller-supplied Cf-Access-* headers are now stripped on ALL
+  forwards (anti-spoof). Verified: `workers/access-relay/test/diag-demo-relay-identity.mjs`
+  5/5 (demo forward carries verified email + Bearer; paid forward still strips both;
+  live demo-enforcement preflight accepts the forwarded request). Badge + provider
+  demotion self-heal once calls succeed.
+  FOLLOW-UP (security, pre-existing): the demo proxy trusts
+  `Cf-Access-Authenticated-User-Email` from ANY direct caller — it is not behind CF
+  Access, so a direct request to antcv-demo-proxy.workers.dev with a forged header
+  bypasses sign-in and burns demo budget. Needs a shared-secret header or
+  Bearer-only identity on the demo proxy.
+- **LINKEDIN-JD-SLUG-MORE-001** `[FIXED — proxy+demo-proxy; verified headless; needs worker deploy]` —
+  URL-fetched LinkedIn JDs often came back with the description clamped behind
+  "…see more" (and company info collapsed). CAUSE: the guest-API rewrite only matched
+  NUMERIC paths `/jobs/view/4414211731`; the slug form the LinkedIn app's share sheet
+  produces (`/jobs/view/senior-engineer-at-acme-4414211731`) missed the rewrite,
+  fetched the consent-walled SPA page, and extraction returned the CSS-clamped text.
+  FIX (fetch-jd-url.js, both proxies): take the LAST ≥5-digit run in the /jobs/view/
+  path segment → guest jobPosting endpoint (full description, no clamp); also strip
+  stray "Show more"/"Show less"/"…see more" button-label lines from extracted text
+  (whole lines only — JD sentences containing the words are untouched). Verified:
+  `workers/demo-proxy/test/diag-linkedin-jd.mjs` 5/5 incl. live guest-endpoint probe.
+  Note: lnkd.in short links still skip the rewrite (resolve only after redirect) —
+  acceptable; the consent-strip path still applies.
+
+---
+
 ## OWNER REPORT 2026-06-09 (PM) — six issues
 
 - **SALMON-CHURN-DISAPPEAR-001** `[FIXED 1.50.337]` — salmon splitters DISAPPEARED from

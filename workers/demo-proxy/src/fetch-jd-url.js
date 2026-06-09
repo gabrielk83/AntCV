@@ -117,10 +117,22 @@ function rewriteJobUrl(u) {
   // are SPA + consent-walled server-side. The guest jobPosting API
   // returns the description fragment as plain HTML without auth.
   if (host === 'linkedin.com' || host.endsWith('.linkedin.com')) {
-    // Try path form first: /jobs/view/4414211731/
+    // Try path form first. Two shapes exist in the wild:
+    //   numeric:  /jobs/view/4414211731/
+    //   slug:     /jobs/view/senior-engineer-at-acme-4414211731
+    // (the slug form is what the LinkedIn app's share sheet produces).
+    // Take the LAST >=5-digit run in the /jobs/view/ path segment — the
+    // job id always trails the slug; earlier digit runs ("engineer-2024")
+    // are shorter or not last. Without this, slug URLs missed the guest
+    // rewrite, fetched the consent-walled SPA page, and the extracted
+    // description was the visually-clamped one ending in "…see more"
+    // (owner report 2026-06-09).
     let jobId = null;
-    const pathM = /\/jobs\/view\/(\d{5,})/.exec(u.pathname);
-    if (pathM) jobId = pathM[1];
+    const segM = /\/jobs\/view\/([^/?#]+)/.exec(u.pathname);
+    if (segM) {
+      const idM = /(\d{5,})(?=\D*$)/.exec(segM[1]);
+      if (idM) jobId = idM[1];
+    }
     // Fallback: ?currentJobId=4414211731 on a collections/search URL
     if (!jobId) {
       const q = u.searchParams.get('currentJobId');
@@ -442,6 +454,14 @@ function htmlToText(html) {
   s = s.replace(/[ \t]+\n/g, '\n');
   s = s.replace(/\n{3,}/g, '\n\n');
   s = s.trim();
+
+  // Drop expand/collapse button artifacts. The LinkedIn guest fragment
+  // (and most "read more" widgets) carries the FULL text in the HTML —
+  // the clamp is CSS — but the button label survives tag-stripping as a
+  // stray "Show more" / "…see more" line. Only whole lines are removed,
+  // so JD sentences that merely contain these words are untouched.
+  s = s.replace(/^[\s…·.]*(show|see|read)\s+(more|less)[\s…·.]*$/gim, '');
+  s = s.replace(/\n{3,}/g, '\n\n').trim();
 
   return s;
 }

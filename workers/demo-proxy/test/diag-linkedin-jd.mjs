@@ -15,6 +15,8 @@ const SAMPLE = `<!doctype html><html><head><title>Senior Systems Engineer — Ac
   <p>We are hiring a Senior Systems Engineer to lead electro-optical systems development, owning requirements traceability and ASPICE compliance.</p>
   <ul><li>5+ years in systems engineering</li><li>Hands-on with LiDAR, SPAD and optics</li><li>Supplier coordination and acceptance testing</li></ul>
 </section>
+<button class="show-more-less-html__button">Show more</button>
+<button class="show-more-less-html__button">Show less</button>
 <footer>© LinkedIn. Cookie Policy. User Agreement.</footer>
 </body></html>`;
 
@@ -45,8 +47,33 @@ const C = !/accept cookies|cookie policy|manage your preferences/i.test(text);
 log(`CHECK A (L2 rewrote to LinkedIn guest endpoint): ${A ? 'PASS' : 'FAIL'}`);
 log(`CHECK B (JD body extracted): ${B ? 'PASS' : 'FAIL'}`);
 log(`CHECK C (consent/footer noise stripped): ${C ? 'PASS' : 'FAIL'}`);
-const ok = A && B && C;
-log(ok ? 'LINKEDIN-JD-FETCH OK' : 'LINKEDIN-JD-FETCH FAIL');
+
+// ── D: SLUG URL form (LinkedIn app share sheet) also hits the guest rewrite ──
+// (owner 2026-06-09: slug URLs missed the rewrite, fetched the SPA page, and
+//  the description came back clamped behind "…see more")
+captured = null;
+globalThis.fetch = async (url) => {
+  captured = String(url);
+  return new Response(SAMPLE, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
+};
+const reqSlug = new Request('https://demo/api/fetch-jd-url', {
+  method: 'POST', headers: { 'content-type': 'application/json' },
+  body: JSON.stringify({ url: 'https://www.linkedin.com/jobs/view/senior-systems-engineer-2024-at-acme-optics-4414211731/?utm_source=share' }),
+});
+const resSlug = await handleFetchJdUrl(reqSlug, {}, () => ({}));
+const jSlug = await resSlug.json().catch(() => ({}));
+globalThis.fetch = realFetch;
+const slugText = String(jSlug.text || '');
+const D = /jobs-guest\/jobs\/api\/jobPosting\/4414211731/.test(captured || '');
+log('slug fetched URL:', captured);
+log(`CHECK D (slug /jobs/view/title-at-co-{id} rewritten to guest endpoint): ${D ? 'PASS' : 'FAIL'}`);
+
+// ── E: "Show more"/"Show less" button artifacts removed from the text ──
+const E = !/^\s*show (more|less)\s*$/im.test(slugText) && /ASPICE/i.test(slugText);
+log(`CHECK E (Show more/less button labels stripped, body intact): ${E ? 'PASS' : 'FAIL'}`);
+
+const ok = A && B && C && D && E;
+log(ok ? 'LINKEDIN-JD-FETCH OK (5/5)' : 'LINKEDIN-JD-FETCH FAIL');
 
 // ── best-effort LIVE reachability probe (does NOT gate the result) ──
 try {

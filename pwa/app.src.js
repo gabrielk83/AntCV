@@ -12316,7 +12316,7 @@
                 size: o.html_length || 0,
                 source: e,
               }),
-                Ft({ text: o.text || "", method: "url-fetch", pages: 1 }),
+                Ft({ text: o.text || "", method: "url-fetch", pages: 1, fileName: (o.title || r).slice(0, 120) }),
                 qt(""),
                 Zt({ busy: !1, error: null, hint: o.wall_hint || null }),
                 Gr &&

@@ -1,4 +1,16 @@
-# GEN-UI: mobile "Cancel & return to editor" button buried during generation [OPEN]
+# GEN-UI: mobile "Cancel & return to editor" button buried during generation [FIXED 1.50.334]
+
+**FIXED 1.50.334 (2026-06-09):** chose a variant of option 2 (sticky) — the
+cancel block now has `position:sticky; bottom:0; zIndex:5` + an opaque gradient
+strip in the overlay base colour, so it pins to the viewport bottom and is
+reachable throughout the generation-screen scroll on mobile. DOM order
+unchanged (no reorder); `onClick` handler unchanged; desktop unaffected (overlay
+fits → sticky no-ops). Applied in `app.src.js` + rebuilt `app.js`. terser
+identity-safe, boot 0 errors, 54/54 tests. Owner to confirm on a real mobile
+generation (preview long enough to scroll). Original analysis retained below.
+
+---
+
 
 **Reported:** 2026-06-09 (mobile, antcv.pages.dev). Confirmed in screenshot at ~57% zoom.
 

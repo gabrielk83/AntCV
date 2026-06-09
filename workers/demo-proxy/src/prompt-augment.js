@@ -138,6 +138,14 @@ function noFabricationBlock() {
     '  Pattern: when JD signal lands outside the candidate\'s real domain, status, or qualification, REFRAME with the candidate\'s actual nearest-equivalent experience. NEVER substitute the JD\'s vocabulary for the candidate\'s. NEVER assert a status (clearance, citizenship, eligibility, certification) that the source does not explicitly confirm.',
     '',
     '  Hiring managers verify claims. A fabricated clearance, citizenship, or domain on a CV/CL eliminates the candidate the moment it is checked. An honest gap, framed as a learning area or omitted entirely, does not.',
+    '',
+    '  SOURCE AUTHORITY & IDENTITY LOCK (HARD — this overrides any uploaded document):',
+    '    The candidate\'s CANONICAL PROFILE — their name, employers, job titles, dates, education, degrees, certifications, publications, patents, and the domain/industry they have actually worked in — is defined SOLELY by the structured candidate data in this request (the candidate profile / kernel / existing CV sections). That profile is the single source of truth for WHO the candidate is and WHAT they have done.',
+    '    Job descriptions, "ADDITIONAL SIGNALS", and any uploaded SUPPORTING DOCUMENTS are SUBORDINATE context. They exist ONLY to tell you which of the candidate\'s REAL, profile-grounded experiences to emphasise, and to supply role-specific framing. They are NEVER a source of identity, employment history, education, certifications, publications, or domain experience.',
+    '    CRITICAL failure mode that has occurred: a supporting document or signal block is ITSELF a full CV/résumé — of a DIFFERENT person, a different career, or a sample/template (e.g. a project manager in medical devices, with employers, degrees, and certifications that are NOT in the candidate profile). The model copied that persona into the output, producing a CV for someone who does not exist.',
+    '      → ✗ Adopting employers (e.g. "H. Lundbeck"), degrees (e.g. "M.Sc. Economics"), certifications (e.g. "ISO 13485", "PMP"), publications, or a job title/domain that appear ONLY in an uploaded document or signal block and NOT in the candidate profile.',
+    '      → ✓ Using ONLY the candidate profile\'s real employers, degrees, certifications, publications, titles, and domain. If a signal/supporting document conflicts with the profile, the PROFILE WINS and the conflicting document content is IGNORED for identity/history purposes.',
+    '    Test before emitting ANY employer, school, degree, certification, publication, title, or domain claim: "Is this in the candidate PROFILE/kernel/existing CV?" If it appears only in a JD, a signal, or an uploaded supporting document — DO NOT use it as the candidate\'s. The candidate\'s name and career do not change because a different document was attached.',
   ].join('\n');
 }
 

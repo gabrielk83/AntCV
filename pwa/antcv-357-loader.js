@@ -1,4 +1,4 @@
-/* AntCV 357 sidecar loader (v1.40.358-loader)
+/* AntCV 357 sidecar loader (v1.50.331-loader)
  * ============================================================
  *
  * Purpose
@@ -13,6 +13,7 @@
  *   2. antcv-help-text-wording-357.js             (PB-005 / TB-003)
  *   3. antcv-page-break-icon-357.js               (PB-005 / GEN-003)
  *   4. antcv-analysis-panel-jd-block-356.js       (analysis-panel fix)
+ *   5. antcv-proxyurl-relay-fallback-371.js       (home Fetch-JD demo fix)
  *
  * NOTE on versions: each entry's `v` is the cache-bust query string.
  * Bump it here when the target file changes so browsers refetch.
@@ -21,6 +22,25 @@
  * tag exists, ITS ?v= governs the loaded version — so to push a new
  * build, bump the direct tag in index.html too (or remove it and let
  * the loader own the version).
+ *
+ * v1.50.331-loader
+ * ----------------
+ * Version bump to force cache bust: browsers will refetch the loader
+ * script due to the changed ?v= query string in index.html's <script>
+ * tag. This ensures the relay-fallback sidecar registration (added in
+ * 330-loader) is loaded even if the PWA pages were cached before the
+ * fix landed.
+ *
+ * Adds antcv-proxyurl-relay-fallback-371.js. That sidecar existed in
+ * the repo but was never registered, so its fix never ran: on the home
+ * screen the "OR PASTE A JD URL → Fetch JD" control errored "Configure
+ * Worker URL in Settings → API Keys first." in demo mode (and after a
+ * BYOK→demo switch, which clears localStorage.proxyUrl). The sidecar
+ * seeds an empty proxyUrl from window.ANTCV_RELAY_URL so the home
+ * Fetch-JD gate passes and routes through the access-relay → demo-proxy,
+ * exactly like the Analyse-JD block, recheck-fit, and Generate. Loading
+ * it here (not via a direct index.html tag) keeps us off the fragile
+ * PHOTO_B64 whole-file rewrite path.
  *
  * Safety
  * ------
@@ -32,7 +52,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.40.358-loader';
+  var VERSION = '1.50.331-loader';
   if (window.__antcv357Loader === VERSION) return;
   window.__antcv357Loader = VERSION;
 
@@ -40,7 +60,8 @@
     { src: 'antcv-validation-severity-consumer-357.js', v: '1.40.357-val001c' },
     { src: 'antcv-help-text-wording-357.js', v: '1.40.357-p1b2' },
     { src: 'antcv-page-break-icon-357.js', v: '1.40.357-pb005b' },
-    { src: 'antcv-analysis-panel-jd-block-356.js', v: '1.40.358' }
+    { src: 'antcv-analysis-panel-jd-block-356.js', v: '1.40.358' },
+    { src: 'antcv-proxyurl-relay-fallback-371.js', v: '1.50.330-jdurl-demo' }
   ];
 
   function alreadyPresent(src) {

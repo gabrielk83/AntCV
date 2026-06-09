@@ -38,7 +38,16 @@ chain. VERIFIED end-to-end this session (no PDF renderer needed — structural):
 three symptoms below should be resolved; confirm on the rendered PDF/DOCX. Per-symptom
 status with the per-page model engaged:
 
-- **AI-NOTICE-WRONG-SIDE-001** `[FIXED via per-page 1.50.320 — owner re-export to confirm]`
+- **AI-NOTICE-WRONG-SIDE-001** `[FIXED via per-page 1.50.320 + dynamic re-position 1.50.328]`
+  — **1.50.328 (owner 2026-06-09 "move the AI notice when section length changes"):** the
+  preview anchor (`antcv-watermark-page-anchor-341`) computed the right corner but only
+  re-ran on sections-updated / item-pages-changed / resize — so when a section grew/shrank
+  (re-pagination) the notice went stale on the old column. Added `antcv:auto-pages-changed`
+  (the re-pagination signal), `antcv:item-align-changed`, `input`, and a 1.5s poll, so the
+  notice re-measures the last page and MOVES to whichever column now ends higher; the
+  recomputed `ai_wm_side` is re-stashed for the export. Verified
+  `pwa/test/diag-wm-move-on-length.mjs` (notice on the emptier column; after the column
+  heights swap + an auto-pages-changed pulse it MOVES to the other column; boot clean).
   — owner: "AI notice is on the text heavy side." CONFIRMED in `buildTwoColumnDocument` (index.js:24477,24519): `wmInSidebar
   = ctx.aiWmSide ? ctx.aiWmSide === sidebarSide : false`; when `ai_wm_side` is ABSENT it
   defaults to `false` → the disclosure is pushed onto `mainChildren` (the dense column).

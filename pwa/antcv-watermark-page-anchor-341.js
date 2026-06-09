@@ -56,7 +56,7 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.50.167-wm-mobile-scale';
+  var SCRIPT_VERSION = '1.50.328-move-on-length-change';
   if (window.__antcvWatermarkPageAnchor341 === SCRIPT_VERSION) return;
   window.__antcvWatermarkPageAnchor341 = SCRIPT_VERSION;
 
@@ -377,8 +377,20 @@
 
   window.addEventListener('antcv:sections-updated', schedule);
   window.addEventListener('antcv:item-pages-changed', schedule);
+  // 1.50.328 (owner 2026-06-09): MOVE the AI notice when section lengths change.
+  // antcv:auto-pages-changed fires whenever the measurer re-paginates — the
+  // primary "a column got taller/shorter" signal — so re-run chooseCorner and
+  // re-anchor (the notice belongs in whichever column now ends higher). Also
+  // re-run on alignment changes and live edits (typing reflows a paragraph's
+  // height without a sections event), plus a light poll as a backstop. schedule()
+  // is rAF-debounced and tick() skips its own anchored-watermark mutations, so
+  // these extra triggers can't loop; the CV last page is re-measured each time.
+  window.addEventListener('antcv:auto-pages-changed', schedule);
+  window.addEventListener('antcv:item-align-changed', schedule);
+  window.addEventListener('input', schedule, true);
   window.addEventListener('resize', schedule, { passive: true });
   window.addEventListener('beforeprint', function () { try { tick(); } catch (_) {} });
+  setInterval(schedule, 1500);
 
   window.AntcvWatermarkPageAnchor341 = {
     version: SCRIPT_VERSION,

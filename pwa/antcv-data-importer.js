@@ -258,6 +258,24 @@
   async function handleJSON(file) {
     const txt = await file.text();
     const obj = repairAndParseJSON(txt);
+    // CONSOLIDATION (1.50.332 DATA-IMPORT-001): a dropped .json that is an AntcvBackup
+    // envelope (plain or encrypted) is a full backup-RESTORE, not a field merge.
+    // Delegate to the backup-restore library (antcv-data-import-331), which decrypts
+    // if needed, confirms the overwrite, restores localStorage losslessly, and reloads.
+    // This makes the floating 📥 importer the single import entry point.
+    if (window.AntcvIsBackupEnvelope && window.AntcvIsBackupEnvelope(obj) && typeof window.AntcvDataImport === 'function') {
+      let pass;
+      if (obj._antcvBackupEncrypted === 1) {
+        try { pass = window.prompt('This backup is encrypted. Enter its passphrase:'); } catch (_) { pass = null; }
+        if (pass == null) return { proposed: {}, summary: 'Restore cancelled' };
+      }
+      const r = await window.AntcvDataImport(obj, { passphrase: pass, confirm: true, reload: true });
+      return {
+        proposed: {},
+        summary: r.ok ? ('✓ Backup restored (' + r.restored + ' items) — reloading…')
+          : (r.cancelled ? 'Restore cancelled' : ('✗ ' + (r.error || 'Restore failed'))),
+      };
+    }
     const isFullExport = !!(obj.personalInfo || obj.formatSettings || obj.appMeta);
     const proposed = {};
     if (isFullExport) {
@@ -629,7 +647,7 @@ ${text}`;
   document.head.appendChild(style);
 
   const EXPLANATION =
-    'Drop in JSON, PDF, DOCX, or image files containing facts about you — a LinkedIn profile, a CV, a banned-words list, a VIA character-strengths assessment, a profile photo, or a previous settings export — and AntCV will route each file to the right slot, propose the changes, and let you accept or reject each one before anything is written. Nothing is overwritten silently.';
+    'Drop in JSON, PDF, DOCX, or image files containing facts about you — a LinkedIn profile, a CV, a banned-words list, a VIA character-strengths assessment, a profile photo, or a previous settings export — and AntCV will route each file to the right slot, propose the changes, and let you accept or reject each one before anything is written. Nothing is overwritten silently. (Restoring a full AntCV backup file — incl. an encrypted one — does a complete restore after a confirmation.)';
 
   let modalState = null;
 

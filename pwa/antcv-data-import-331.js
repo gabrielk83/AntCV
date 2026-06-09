@@ -1,41 +1,30 @@
-/* AntCV data IMPORT / restore (v1.50.331) — DATA-IMPORT-001
+/* AntCV backup-restore LIBRARY (v1.50.332) — DATA-IMPORT-001
  * ============================================================
- * The counterpart to FT-DATA-EXPORT (antcv-data-export-360). Restores a backup
- * file produced by "⬇ Download my data" back into localStorage.
+ * The restore half of the backup feature (export: antcv-data-export-360).
+ * CONSOLIDATED (1.50.332): this no longer renders its own button. The single
+ * import entry point is the floating 📥 importer (antcv-data-importer.js); when a
+ * dropped .json is an AntcvBackup envelope it delegates here for a lossless
+ * (and, if needed, decrypted) full restore. This file is a pure library exposing
+ * window.AntcvDataImport.
  *
  * Backup envelope (antcv-data-export-360):
  *   plain:     { _antcvBackup:1, schema, data:{key:parsedJSON|string},
- *                dataRaw:{key:rawString} }   (dataRaw added schema 2 — lossless)
+ *                dataRaw:{key:rawString} }   (dataRaw = lossless, schema ≥ 2)
  *   encrypted: { _antcvBackupEncrypted:1, kdf:'PBKDF2', hash:'SHA-256',
- *                iterations:250000, cipher:'AES-GCM', salt, iv, ciphertext }
- *                (base64; decrypts to the plain envelope JSON)
+ *                iterations:250000, cipher:'AES-GCM', salt, iv, ciphertext } (b64)
  *
- * Restore strategy (lossless-first):
- *   - dataRaw present  → setItem(key, rawString) byte-for-byte (schema ≥ 2).
- *   - else `data`      → setItem(key, JSON.stringify(value)) — correct for every
- *                        key the app stores via its JSON localStorage wrapper
- *                        (the overwhelming majority); legacy plain backups.
+ * Restore: dataRaw (byte-for-byte) when present, else JSON.stringify(data[key]).
  *
- * Public API (also used by the headless round-trip test):
+ * API:
  *   window.AntcvDataImport(envelopeOrText, opts) -> Promise<{
  *       ok, restored, encrypted, cancelled, error }>
- *     opts = { passphrase?, confirm?:bool (default true for UI; pass false to
- *              skip the overwrite confirm), reload?:bool (default false) }
- *
- * Safety: never auto-runs; only a user file-pick (with an overwrite confirm) or
- * an explicit API call writes anything. Escape hatch:
- *   localStorage['antcv:disable-data-import'] = '1'  → no UI.
+ *     opts = { passphrase?, confirm?:bool (default true), reload?:bool }
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.331-data-import';
+  var VERSION = '1.50.332-data-import-lib';
   if (window.__antcvDataImport331 === VERSION) return;
   window.__antcvDataImport331 = VERSION;
-
-  var DISABLE_KEY = 'antcv:disable-data-import';
-  var UI_MARK = 'data-antcv-data-import-ui';
-
-  function disabled() { try { var v = localStorage.getItem(DISABLE_KEY); return v === '1' || v === 'true'; } catch (_) { return false; } }
 
   // ── decrypt (mirror of the export's PBKDF2 → AES-GCM) ──────────────────
   function b64ToBuf(b64) {
@@ -61,15 +50,13 @@
         return subtle.decrypt({ name: 'AES-GCM', iv: b64ToBuf(env.iv) }, key, b64ToBuf(env.ciphertext));
       })
       .then(function (buf) {
-        var text = new TextDecoder().decode(buf);
-        var inner = JSON.parse(text);
+        var inner = JSON.parse(new TextDecoder().decode(buf));
         if (!inner || inner._antcvBackup !== 1) throw new Error('Decrypted file is not an AntCV backup.');
         return inner;
       })
       .catch(function (e) {
-        // AES-GCM auth failure → wrong passphrase / corrupt file.
-        throw new Error(/operation|decrypt|auth|tag/i.test(String(e && e.message)) && !/not an AntCV/.test(String(e && e.message))
-          ? 'Wrong passphrase, or the backup file is corrupt.' : (e && e.message) || 'Decryption failed.');
+        throw new Error(/not an AntCV/.test(String(e && e.message))
+          ? e.message : 'Wrong passphrase, or the backup file is corrupt.');
       });
   }
 
@@ -87,8 +74,7 @@
     } else {
       for (k in data) {
         if (!Object.prototype.hasOwnProperty.call(data, k)) continue;
-        var v = data[k];
-        try { ls.setItem(k, typeof v === 'string' ? JSON.stringify(v) : JSON.stringify(v)); count++; } catch (_) {}
+        try { ls.setItem(k, JSON.stringify(data[k])); count++; } catch (_) {}
       }
     }
     return { ok: true, restored: count };
@@ -104,7 +90,6 @@
       if (!env || typeof env !== 'object') return resolve({ ok: false, error: 'Empty or invalid backup file.' });
 
       var afterEnvelope = function (plainEnv, wasEncrypted) {
-        // Overwrite confirm (UI path); programmatic callers pass confirm:false.
         if (opts.confirm !== false && typeof window.confirm === 'function') {
           var when = plainEnv.exportedAt ? (' from ' + String(plainEnv.exportedAt).slice(0, 10)) : '';
           if (!window.confirm('Restore this backup' + when + '?\n\nThis OVERWRITES your current AntCV data in this browser. There is no undo.')) {
@@ -129,82 +114,12 @@
       resolve({ ok: false, error: 'Not an AntCV backup file (missing _antcvBackup marker).' });
     });
   }
+
   window.AntcvDataImport = importData;
-
-  // ── UI: a "⬆ Restore my data" button next to "⬇ Download my data" ──────
-  function findDownloadButton() {
-    var btns = document.querySelectorAll('button');
-    for (var i = 0; i < btns.length; i++) {
-      if (/download my data/i.test(btns[i].textContent || '')) return btns[i];
-    }
-    return null;
-  }
-  function pickFileThenImport(btn) {
-    var input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json,application/json';
-    input.style.display = 'none';
-    input.addEventListener('change', function () {
-      var f = input.files && input.files[0];
-      if (!f) return;
-      var reader = new FileReader();
-      reader.onload = function () {
-        var text = String(reader.result || '');
-        var env;
-        try { env = JSON.parse(text); } catch (_) { setStatus(btn, '✗ Not a valid backup file', 3000); return; }
-        var pass;
-        if (env && env._antcvBackupEncrypted === 1) {
-          try { pass = window.prompt('This backup is encrypted. Enter its passphrase:'); } catch (_) { pass = null; }
-          if (pass == null) { setStatus(btn, 'Restore cancelled', 1800); return; }
-        }
-        setStatus(btn, '⬆ Restoring…', 0);
-        importData(env, { passphrase: pass, confirm: true, reload: true }).then(function (r) {
-          if (r.cancelled) { setStatus(btn, 'Restore cancelled', 1800); return; }
-          setStatus(btn, r.ok ? ('✓ Restored ' + r.restored + ' items — reloading…') : ('✗ ' + (r.error || 'Restore failed')), r.ok ? 0 : 4000);
-        });
-      };
-      reader.onerror = function () { setStatus(btn, '✗ Could not read the file', 3000); };
-      reader.readAsText(f);
-    });
-    (document.body || document.documentElement).appendChild(input);
-    input.click();
-    setTimeout(function () { try { input.remove(); } catch (_) {} }, 0);
-  }
-  var _label = '⬆ Restore from backup';
-  function setStatus(btn, msg, revertMs) {
-    if (!btn) return;
-    btn.textContent = msg;
-    if (revertMs) setTimeout(function () { btn.textContent = _label; btn.disabled = false; }, revertMs);
-  }
-  function buildButton() {
-    var b = document.createElement('button');
-    b.type = 'button';
-    b.setAttribute(UI_MARK, 'restore');
-    b.textContent = _label;
-    b.style.cssText = 'display:block;width:100%;margin:0 0 8px;padding:12px;' +
-      'background:rgba(120,200,140,0.12);border:1px solid rgba(120,200,140,0.5);' +
-      'color:#bfe9c8;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;';
-    b.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); pickFileThenImport(b); });
-    return b;
-  }
-  function injectUI() {
-    if (disabled()) return;
-    if (document.querySelector('[' + UI_MARK + '="restore"]')) return;
-    var dl = findDownloadButton();
-    if (!dl || !dl.parentNode) return;
-    var btn = buildButton();
-    dl.parentNode.insertBefore(btn, dl.nextSibling);
-  }
-
-  var pending = false;
-  function schedule() { if (pending) return; pending = true; requestAnimationFrame(function () { pending = false; try { injectUI(); } catch (_) {} }); }
-  function start() {
-    schedule(); [300, 800, 1800, 3500].forEach(function (ms) { setTimeout(schedule, ms); });
-    try { new MutationObserver(schedule).observe(document.body || document.documentElement, { childList: true, subtree: true }); } catch (_) {}
-    window.addEventListener('antcv:sections-updated', schedule);
-  }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true }); else start();
-
-  window.AntcvDataImport331 = { version: VERSION, _restorePlain: restorePlain, _decrypt: decryptEnvelope, run: schedule };
-  try { console.debug('[data-import-331] installed ' + VERSION); } catch (_) {}
+  // also expose a quick predicate so the floating importer can detect a backup
+  window.AntcvIsBackupEnvelope = function (obj) {
+    return !!(obj && (obj._antcvBackup === 1 || obj._antcvBackupEncrypted === 1));
+  };
+  window.AntcvDataImport331 = { version: VERSION, _restorePlain: restorePlain, _decrypt: decryptEnvelope, _import: importData };
+  try { console.debug('[data-import-331] installed ' + VERSION + ' (backup-restore library)'); } catch (_) {}
 })();

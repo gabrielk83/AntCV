@@ -940,23 +940,32 @@ function normalizeSections(raw) {
         }
       }
       // Auto-overflow breaks (the measurer antcv-auto-pagebreak-block-001) live
-      // in a SEPARATE map (antcv:autoPages). 1.50.215 stood ALL auto forwarding
-      // down because forwarding the SIDEBAR auto-break scrambled the 2-column PDF
-      // (isolated candidate header, mid-role cut, wrong continuation header) —
-      // the worker lays both columns out as ONE Word table row, so a break in
-      // only one column desyncs them, and the auto break POSITION is measured in
-      // preview px which differs from Word's geometry (PREVIEW-PDF-PARITY-001).
-      //
-      // 1.50.295 SALMON-AUTO-EXPORT-001 (partial): re-enable auto export ONLY for
-      // the WHOLE-UNIT, MAIN-column paths that already work identically for MANUAL
-      // breaks and cannot scramble — experience role.page (worker 1.50.286 break
-      // path) and table row_pages (worker whole-row split). These move a whole
-      // role / whole row to the next page exactly as a manual break does, so the
-      // worst case under a parity mismatch is a sub-optimal page assignment, never
-      // a mid-content cut. `autoPagesMap` stays EMPTY so pageFor / sidebar+list
-      // item breaks remain MANUAL-ONLY (the scramble-prone path stays stood down,
-      // pending the parity fix + an owner export check). We read auto into a
-      // separate `autoPagesRaw` consumed only by the experience + table cases.
+      // in a SEPARATE map (antcv:autoPages). HISTORY: 1.50.215 stood ALL auto
+      // forwarding down because, under the OLD single-table 2-column worker, a
+      // sidebar-only auto-break scrambled the PDF (isolated header, mid-role cut,
+      // wrong continuation). That model is gone — the PER-PAGE export is now live:
+      //   • worker 1.14.39 (PB-WORKER-TWOCOL-PAGED-001) renders ONE two-column
+      //     table PER PAGE, splitting each column at its forwarded breaks. The
+      //     page boundary IS the table boundary, so a break in one column no
+      //     longer desyncs the other, and the sidebar navy fills every page.
+      //   • 1.50.295 re-enabled the whole-unit MAIN paths (experience role.page +
+      //     table row_pages).
+      //   • 1.50.313 re-enabled the SIDEBAR list path: pageFor() below reads
+      //     autoPagesRaw, so an overflowing sidebar list (labeled_list / list /
+      //     education) forwards item._page → renderSection splits it into a
+      //     "(Cont.)" continuation segment → the per-page model engages.
+      //   • 1.50.320 (the salmon-push fix) made the MEASURER actually WRITE the
+      //     sidebar break even when the first group overflows the A4 line — before
+      //     that, autoPages[sidebar] was empty for such CVs, so nothing forwarded
+      //     and the export fell back to numPages=1 Word natural flow.
+      // So `autoPagesRaw` drives BOTH the experience/table cases AND the sidebar
+      // list _page (via pageFor); the legacy `autoPagesMap` is unused. Residual:
+      // the break POSITION is measured in preview px (≈ the Word line via the
+      // measurer's WORD_INFLATE), so a borderline page can land one unit off —
+      // bounded by the per-page model (never a mid-content cut). Verified end-to-end:
+      // pwa/test/diag-sidebar-export-page.mjs (client forwards coordinated _page +
+      // role.page) and workers/docx-worker/test/diag-twocol-ownerlike.mjs (worker
+      // → 2 page tables, navy per page, AI notice on the last page, no scramble).
       const rawAuto = localStorage.getItem('antcv:autoPages');
       if (rawAuto) {
         const parsedAuto = JSON.parse(rawAuto);

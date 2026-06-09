@@ -14,19 +14,32 @@ Owner rendered the 1.50.321 CV (PDF + DOCX) + CL DOCX. **CV page-split is improv
 (the salmon-push fix landed). Four remaining points, with **evidence-based root-cause
 analysis from inspecting the attached DOCX + the deployed worker (1.14.41-sidebar-ratio)**.
 
-**Shared root cause for #1–#3 (CV export).** The attached CV DOCX is **one outer
-two-column table with ~14 nested section-wrapper tables, only 1 `pageBreakBefore`** —
-i.e. the per-page two-column model (`buildTwoColumnDocument`, 1.14.39) computed
-`numPages = 1` and emitted a SINGLE two-column table, which Word then natural-flowed
-across 3 pages. `numPages` only exceeds 1 when `__antcvPB` page-break markers reach the
-worker (from forwarded role.page / row_pages / sidebar item breaks). For this CV none
-did at the column-split level (the SIDEBAR auto-break export is still stood down —
-SALMON-AUTO-EXPORT-001 — and the main-column breaks didn't surface as top-level
-`__antcvPB` segments), so the export fell back to Word natural flow. That single fact
-explains all three export symptoms:
+**Shared root cause for #1–#3 (CV export) — RESOLVED by 1.50.320, verified end-to-end
+2026-06-09.** The attached CV DOCX was **one outer two-column table with ~14 nested
+section-wrapper tables, only 1 `pageBreakBefore`** — i.e. the per-page two-column model
+(`buildTwoColumnDocument`, 1.14.39) computed `numPages = 1` and emitted a SINGLE
+two-column table, which Word natural-flowed across 3 pages. `numPages` exceeds 1 only
+when `__antcvPB` markers reach the worker (forwarded role.page / row_pages / sidebar
+item `_page`). **Why this CV had none:** its SIDEBAR (REGULATORY CONTEXT) overflowed in
+its FIRST group, which hit the salmon-push bug — `snapToGroup` returned 0, so the
+measurer wrote NO `autoPages[regctx]` break at all. With the sidebar map empty, the
+client's `pageFor()` (which HAS forwarded sidebar auto-breaks since 1.50.313) had nothing
+to stamp → no `_page` → no `__antcvPB` → natural-flow fallback. **1.50.320 fixed the
+measurer** to write the break even when the first group overflows, which closes the whole
+chain. VERIFIED end-to-end this session (no PDF renderer needed — structural):
+- `pwa/test/diag-sidebar-export-page.mjs` — the client forwards the sidebar `labeled_list`
+  break as `item._page=2`, COORDINATED with `experience role.page=2`.
+- `workers/docx-worker/test/diag-twocol-ownerlike.mjs` — owner-shaped payload → the worker
+  emits **2 top-level page tables** (per-page engaged), the `labeled_list` splits with a
+  "REGULATORY CONTEXT (Cont.)" heading, **navy sidebar shading on every page**, the **AI
+  disclosure appears once on the LAST page** in the `ai_wm_side` column, zero content
+  loss/dup.
+**OWNER ACTION: re-export the CV on ≥1.50.320** (the bad export was pre-1.50.320). The
+three symptoms below should be resolved; confirm on the rendered PDF/DOCX. Per-symptom
+status with the per-page model engaged:
 
-- **AI-NOTICE-WRONG-SIDE-001** `[OPEN][HIGH][export]` — owner: "AI notice is on the text
-  heavy side." CONFIRMED in `buildTwoColumnDocument` (index.js:24477,24519): `wmInSidebar
+- **AI-NOTICE-WRONG-SIDE-001** `[FIXED via per-page 1.50.320 — owner re-export to confirm]`
+  — owner: "AI notice is on the text heavy side." CONFIRMED in `buildTwoColumnDocument` (index.js:24477,24519): `wmInSidebar
   = ctx.aiWmSide ? ctx.aiWmSide === sidebarSide : false`; when `ai_wm_side` is ABSENT it
   defaults to `false` → the disclosure is pushed onto `mainChildren` (the dense column).
   Two contributing causes: (a) with `numPages=1` the notice lands at the bottom of the
@@ -36,29 +49,30 @@ explains all three export symptoms:
   forwarded side can be for the wrong page. Real fix is coupled to engaging the per-page
   model (below) so the last page's empty column is known to the worker. NOTE: the worker
   honours a forwarded `ai_wm_side` correctly — the gap is that it's absent/stale.
-- **PB-WORKER-SIDEBAR-FILL-001** (re-confirmed) `[OPEN][HIGH][export]` — owner: "first
-  page sidebar color does not reach end of page." With `numPages=1` the navy sidebar is
+- **PB-WORKER-SIDEBAR-FILL-001** `[FIXED via per-page 1.50.320 — owner re-export to confirm]`
+  — owner: "first page sidebar color does not reach end of page." With `numPages=1` the navy sidebar is
   ONE table cell whose row Word splits across pages; the cell shading only fills to the
   row's content height on page 1, not the page bottom. The per-page model (one table per
   page, sidebar cell navy on every page) is exactly what closes this — but it only
   engages when `numPages>1`.
-- **PREVIEW-PDF-PARITY (length)** `[OPEN][HIGH][export+preview]` — owner: "the 2nd page
-  slid a bit to the 3rd page … still a minor difference in length." Because the export
-  natural-flows (numPages=1) instead of using the preview's MEASURED page-box pagination,
-  the page boundaries are Word's, not the measurer's → a small length divergence. NOTE:
-  WORD_INFLATE tuning does NOT help here — that factor only moves the measured break MAP,
-  which this export path isn't using. The fix is engaging the per-page model so the
-  export honours the same coordinated breaks the preview shows.
+- **PREVIEW-PDF-PARITY (length)** `[LARGELY FIXED via per-page 1.50.320 — minor residual]`
+  — owner: "the 2nd page slid a bit to the 3rd page … still a minor difference in length."
+  With per-page engaged the export now honours the SAME coordinated breaks as the preview
+  (page boundary = table boundary), so the gross length mismatch is gone. Residual: the
+  break POSITIONS are still measured in preview px (≈ the Word line via WORD_INFLATE), so a
+  borderline page can land one unit off — bounded by the per-page model (never a
+  mid-content cut). Further parity tuning (WORD_INFLATE, the `Vi` estimator geometry) is
+  tracked under PREVIEW-PDF-PARITY-001 and needs a rendered-PDF visual loop.
 
-**The unifying fix** (deferred, RISKY, needs an owner rendered-output visual loop):
-forward the EFFECTIVE coordinated breaks for BOTH columns (re-enable the sidebar
-auto-break export, SALMON-AUTO-EXPORT-001 sidebar half, with coordinated main+sidebar
-page boundaries) so `buildTwoColumnDocument` gets `numPages>1` and emits one two-column
-table per page. That single change closes AI-NOTICE-WRONG-SIDE-001 (last page's empty
-column is explicit), PB-WORKER-SIDEBAR-FILL-001 (navy per page), and the length parity
-(export uses the measured breaks). History (1.50.215) shows raw forwarding scrambled the
-2-column layout, so this must be done with the group/role-aware coordination + a Word
-visual check before deploy — cannot be verified headlessly (no PDF renderer in CI).
+**The unifying fix is LIVE (1.50.320), not deferred.** Engaging the per-page two-column
+model required only that the measurer WRITE the sidebar break (1.50.320) — the client
+forwarding (`pageFor` → `item._page`, 1.50.313) and the worker per-page renderer (1.14.39)
+were already in place. The 1.50.215 scramble was a property of the OLD single-table model,
+which the per-page model replaces (page boundary = table boundary → columns can't desync;
+verified no header-isolation / mid-role-cut / dup in `diag-twocol-ownerlike.mjs`). So the
+whole cluster closes on an owner re-export at ≥1.50.320; no risky new forwarding was
+needed. (1.50.325 only corrected the now-stale "stood down" comment in the docx-client to
+document this.)
 
 - **CL-NO-SALMON-001** `[RESOLVED — owner confirms salmon now appears (slowly)]` — owner
   2026-06-09: "salmon appeared in CL eventually." The salmon DOES render; it was the

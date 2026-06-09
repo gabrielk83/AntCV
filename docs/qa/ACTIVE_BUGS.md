@@ -277,7 +277,22 @@ Iterating on real CV/CL exports (owner rendering .docx + PDF). Shipped + open:
   (`buildFilename`); `window.print` (`kl()`) is only the fallback when no server PDF is
   available (no CloudConvert key / worker down). The owner's recent CL PDFs were
   worker-rendered (CloudConvert-quality layout + correct filename), confirming this. The
-  entry predates the CV/CL unification of the PDF path.
+  entry predates the CV/CL unification of the PDF path. **Both halves verified headless
+  (2026-06-09):** the print HTML builder emits `<title>Cover Letter — <name></title>` and
+  `kl()` rewrites it to the download name. `pwa/test/diag-cl-print-filename.mjs` forces the
+  print fallback for a CL and confirms the print iframe's `<title>` =
+  `CoverLetter_<name>_<role>_<company>` (drives the Save-as-PDF filename) — no generic
+  "AntCV" name. So even the fallback names the file correctly; the worker path is primary.
+- **LINKEDIN-JD-FETCH (demo-proxy)** `[VERIFIED 2026-06-09]` — owner: "check that demo-proxy
+  can fetch LinkedIn JD." The concurrent session's L1/L2/L3 (`workers/demo-proxy/src/fetch-jd-url.js`)
+  is sound: L2 `rewriteJobUrl` turns a `/jobs/view/{id}` or `?currentJobId={id}` URL into the
+  public guest endpoint `linkedin.com/jobs-guest/jobs/api/jobPosting/{id}` (no consent wall),
+  the fetch sends a desktop-Chrome UA, and L1/L3 extract the JD + strip consent/footer noise.
+  Verified `workers/demo-proxy/test/diag-linkedin-jd.mjs`: driving `handleFetchJdUrl` with a
+  LinkedIn `/jobs/view/…` URL + a mocked guest fragment → rewrite fires, JD body extracted,
+  cookie/consent noise stripped; plus a LIVE probe that hit the real guest endpoint (HTTP 200,
+  HTML JD fragment) — so the path works end-to-end. (Code is the concurrent session's; needs a
+  demo-proxy deploy to be live in production.)
 - **EXPORT-PREVIEW-FEATURES-001** `[OPEN][enhancement]` — owner requests for the
   export-preview UI: (a) add JD-analysis as a 3rd quick-export button (hide the
   CV/CL toggle in that mode) + let it use the app preview; (b) choose download

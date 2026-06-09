@@ -8,6 +8,39 @@ A companion **feature registry** (open vs shipped features) lives at
 
 ---
 
+## ANALYSIS PANEL 2026-06-09
+
+- **ANALYSIS-PANEL-MISSING-FIT-001** `[OPEN][CRITICAL][analysis]` — owner 2026-06-09
+  (screenshot): the in-app **📊 Application Analysis** panel shows only the JD input,
+  **EXPORT & DETAIL**, **ASSUMPTIONS**, and **CONFIDENCE REVIEW**. The core of the
+  analysis — **OVERALL FIT, STRONGEST FIT POINTS, GAPS / HONEST ASSESSMENT,
+  RECOMMENDATIONS** — is MISSING from the panel but renders fully in the **export
+  preview** (the branded Analysis report PDF). So the user can't see the actual fit
+  assessment in-app, only after export.
+  **ROOT CAUSE (traced):** app.js renders Overall Fit / Strongest Fit Points / Gaps /
+  tailoring / CL-strategy in the panel from `yo` (the persisted `rationale` object) —
+  see `pwa/app.src.js` ~42508 ("📊 Application Analysis") → ~42565 "Overall Fit"
+  (`yo.fit_summary`), ~42614 "Strongest Fit Points" (`yo.top_fit_points`), gaps below.
+  When the user clicks **Analyse JD**, `antcv-analysis-merge-344.js` fetches
+  `/api/jd-analysis` and merges the result into `rationale` — but it copies ONLY
+  `recruiter / red_flags / questions_in_jd / assumptions / recommendations /
+  confidence_notes` (lines 175-183). It does **NOT** copy `fit_summary`,
+  `top_fit_points`, `gaps`, `tailoring_decisions`, or `cover_letter_strategy` from the
+  response. So when `rationale` doesn't already carry those (Analyse-JD run without a
+  prior full generation, or after a rationale reset / a showcase/kernel state), the
+  panel's Overall-Fit/Strongest-Fit/Gaps blocks render empty — while the **export
+  report** (`antcv-analysis-report-pdf-360.js`) renders the FULL fresh jd-analysis
+  response, so it shows everything. (The panel's EXPORT&DETAIL/ASSUMPTIONS/CONFIDENCE
+  blocks show because 344 *does* copy assumptions/confidence_notes.)
+  **FIX (small, ready):** in `antcv-analysis-merge-344.js`'s merge, also copy the fit
+  fields when present — `if (a.fit_summary !== undefined) merged.fit_summary =
+  a.fit_summary;` and likewise for `top_fit_points`, `gaps`, `tailoring_decisions`,
+  `cover_letter_strategy` — so the panel and the export read the same complete analysis.
+  Verify: run Analyse JD on a fresh/unsolicited state → the panel shows Overall Fit +
+  Strongest Fit Points + Gaps + Recommendations (matching the export). **NOTE:** must
+  preserve any fit fields already in `rationale` (only overwrite when the response
+  actually provides them — guard with `!== undefined`, same as the existing copies).
+
 ## EXPORT REVIEW 2026-06-09 — owner re-export feedback (1.50.321 / worker 1.14.41)
 
 Owner rendered the 1.50.321 CV (PDF + DOCX) + CL DOCX. **CV page-split is improved**

@@ -2529,6 +2529,7 @@ async function rawForward(request, env, upstreamUrl, methodOverride, bodyBytes, 
   // may set them.
   headers.delete('Cf-Access-Authenticated-User-Email');
   headers.delete('Cf-Access-Jwt-Assertion');
+  headers.delete('X-AntCV-Relay-Auth');
   // DEMO-RELAY-IDENTITY-001: the demo upstream is different — its
   // demo-enforcement preflight REQUIRES a caller identity for the
   // per-user monthly cap. With the JWT stripped and no CF Access in
@@ -2543,6 +2544,14 @@ async function rawForward(request, env, upstreamUrl, methodOverride, bodyBytes, 
     if (id && id.email) {
       headers.set('Cf-Access-Authenticated-User-Email', id.email);
       if (id.token) headers.set('Authorization', 'Bearer ' + id.token);
+    }
+    // DEMO-RELAY-IDENTITY-002: prove to the demo proxy that the identity
+    // header above was set by THIS relay (after JWT verification), not
+    // forged by a direct caller. The demo proxy only trusts Cf-Access-*
+    // headers accompanied by this shared secret once RELAY_FORWARD_SECRET
+    // is armed on both Workers.
+    if (typeof env.RELAY_FORWARD_SECRET === 'string' && env.RELAY_FORWARD_SECRET) {
+      headers.set('X-AntCV-Relay-Auth', env.RELAY_FORWARD_SECRET);
     }
   }
 

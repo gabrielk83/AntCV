@@ -55,8 +55,10 @@ const kvStub = { get: async () => null, put: async () => {}, delete: async () =>
 
 const demoCapture = {};
 const paidCapture = {};
+const RELAY_FORWARD_SECRET = 'diag-relay-forward-secret';
 const env = {
   JWT_SECRET: SECRET,
+  RELAY_FORWARD_SECRET,
   DEMO_EMAILS: 'demo@example.com',
   ALLOWED_ORIGINS: 'https://antcv.pages.dev',
   UPSTREAM_ORIGIN: 'https://cv-proxy.example.com',
@@ -83,7 +85,10 @@ async function llmPost(token, extraHeaders) {
 
 // ── Demo-pinned user, with a SPOOFED identity header on the inbound call ──
 const demoToken = await mint('demo@example.com');
-const resDemo = await llmPost(demoToken, { 'Cf-Access-Authenticated-User-Email': 'attacker@evil.example' });
+const resDemo = await llmPost(demoToken, {
+  'Cf-Access-Authenticated-User-Email': 'attacker@evil.example',
+  'X-AntCV-Relay-Auth': 'attacker-guess', // must be replaced, never passed through
+});
 log('demo POST / status:', resDemo.status, '| forwarded to:', demoCapture.url || '(none)');
 
 const fwdEmail = demoCapture.headers ? demoCapture.headers.get('Cf-Access-Authenticated-User-Email') : null;
@@ -93,14 +98,24 @@ const B = fwdAuth === 'Bearer ' + demoToken;
 log(`CHECK A (demo forward carries relay-verified email, spoof replaced): ${A ? 'PASS' : 'FAIL'} (got ${JSON.stringify(fwdEmail)})`);
 log(`CHECK B (demo forward restores the Bearer JWT): ${B ? 'PASS' : 'FAIL'}`);
 
+// ── F: demo forward carries the relay-forward secret (DEMO-RELAY-IDENTITY-002) ──
+const fwdRelayAuth = demoCapture.headers ? demoCapture.headers.get('X-AntCV-Relay-Auth') : null;
+const F = fwdRelayAuth === RELAY_FORWARD_SECRET;
+log(`CHECK F (demo forward carries RELAY_FORWARD_SECRET, caller guess replaced): ${F ? 'PASS' : 'FAIL'}`);
+
 // ── Paid user: JWT stripped, spoofed Cf-Access header stripped ──
 const paidToken = await mint('payer@example.com');
-const resPaid = await llmPost(paidToken, { 'Cf-Access-Authenticated-User-Email': 'attacker@evil.example' });
+const resPaid = await llmPost(paidToken, {
+  'Cf-Access-Authenticated-User-Email': 'attacker@evil.example',
+  'X-AntCV-Relay-Auth': 'attacker-guess',
+});
 log('paid POST / status:', resPaid.status, '| forwarded to:', paidCapture.url || '(none)');
 const C = paidCapture.headers && !paidCapture.headers.get('Authorization');
 const D = paidCapture.headers && !paidCapture.headers.get('Cf-Access-Authenticated-User-Email');
 log(`CHECK C (paid forward strips Authorization): ${C ? 'PASS' : 'FAIL'}`);
 log(`CHECK D (paid forward strips caller-spoofed Cf-Access email): ${D ? 'PASS' : 'FAIL'}`);
+const G = paidCapture.headers && !paidCapture.headers.get('X-AntCV-Relay-Auth');
+log(`CHECK G (paid forward carries NO relay-forward secret): ${G ? 'PASS' : 'FAIL'}`);
 
 // ── E: live demo-proxy preflight accepts the forwarded request ──
 // identityFn mirrors the demo proxy's FIRST trust path (identityFromRequest
@@ -115,6 +130,6 @@ const pre = await demoPreflight(forwarded, { DEMO_MODE: 'true', KV_BINDING: kvSt
 const E = pre && pre.ok === true && pre.email === 'demo@example.com' && pre.cap > 0;
 log(`CHECK E (demo-enforcement preflight passes with forwarded identity): ${E ? 'PASS' : 'FAIL'} (${JSON.stringify({ ok: pre && pre.ok, email: pre && pre.email, error: pre && pre.error })})`);
 
-const ok = A && B && C && D && E;
-log(ok ? 'DEMO-RELAY-IDENTITY OK (5/5)' : 'DEMO-RELAY-IDENTITY FAIL');
+const ok = A && B && C && D && E && F && G;
+log(ok ? 'DEMO-RELAY-IDENTITY OK (7/7)' : 'DEMO-RELAY-IDENTITY FAIL');
 process.exitCode = ok ? 0 : 1;

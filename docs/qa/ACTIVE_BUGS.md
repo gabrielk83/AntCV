@@ -25,11 +25,22 @@ A companion **feature registry** (open vs shipped features) lives at
   5/5 (demo forward carries verified email + Bearer; paid forward still strips both;
   live demo-enforcement preflight accepts the forwarded request). Badge + provider
   demotion self-heal once calls succeed.
-  FOLLOW-UP (security, pre-existing): the demo proxy trusts
+  FOLLOW-UP → **DEMO-RELAY-IDENTITY-002** `[FIXED — relay+demo-proxy; verified headless;
+  armed via RELAY_FORWARD_SECRET]` — (security, pre-existing) the demo proxy trusted
   `Cf-Access-Authenticated-User-Email` from ANY direct caller — it is not behind CF
   Access, so a direct request to antcv-demo-proxy.workers.dev with a forged header
-  bypasses sign-in and burns demo budget. Needs a shared-secret header or
-  Bearer-only identity on the demo proxy.
+  bypassed sign-in and burned demo budget. FIX (shared-secret header): the relay sends
+  `X-AntCV-Relay-Auth: <RELAY_FORWARD_SECRET>` on demo-mode forwards (after JWT
+  verification; caller-supplied values stripped on all forwards); the demo proxy's
+  `identityFromRequest` only trusts Cf-Access-* headers when that header matches
+  (constant-time compare). With the secret UNSET the legacy trust applies, so the code
+  deploys safely before arming; once armed on BOTH workers, forged direct requests get
+  401 demo_requires_sign_in. The HS256 Bearer path (JWT_SECRET) is independent and
+  unaffected. The paid proxy (cv-proxy) is untouched — it sits behind CF Access.
+  Verified: `workers/demo-proxy/test/diag-relay-auth-gate.mjs` 5/5 (forged direct 401,
+  wrong secret 401, relay-forwarded 200, Bearer 200, unarmed legacy 200) +
+  `workers/access-relay/test/diag-demo-relay-identity.mjs` extended to 7/7 (demo
+  forward carries the secret, caller guess replaced; paid forward carries none).
 - **LINKEDIN-JD-SLUG-MORE-001** `[FIXED — proxy+demo-proxy; verified headless; needs worker deploy]` —
   URL-fetched LinkedIn JDs often came back with the description clamped behind
   "…see more" (and company info collapsed). CAUSE: the guest-API rewrite only matched

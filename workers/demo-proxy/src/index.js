@@ -1584,8 +1584,8 @@ function numericValue(value, fallback = 0) {
   return Number.isFinite(n) ? n : fallback;
 }
 
-function analyticsIndexFor(request, event) {
-  const id = identityFromRequest(request);
+function analyticsIndexFor(request, env, event) {
+  const id = identityFromRequest(request, env);
   if (id && id.email) return id.email.toLowerCase();
   if (typeof event.session === 'string' && event.session) return event.session.slice(0, 128);
   return 'anonymous';
@@ -1618,14 +1618,45 @@ function writeAnalyticsEngineEvent(request, env, event) {
         numericValue(event.total_tokens),
         numericValue(event.status || event.status_code || 200),
       ],
-      indexes: [analyticsIndexFor(request, event)],
+      indexes: [analyticsIndexFor(request, env, event)],
     });
   } catch (e) {
     console.warn('[analytics-engine] writeDataPoint failed:', e && e.message ? e.message : e);
   }
 }
 
-function identityFromRequest(request) {
+// DEMO-RELAY-IDENTITY-002: this Worker is NOT behind Cloudflare Access, so
+// the Cf-Access-* identity headers are forgeable by any direct caller — a
+// forged Cf-Access-Authenticated-User-Email used to bypass the demo
+// sign-in requirement and burn shared demo budget. The access relay is the
+// only legitimate writer of these headers (it sets them AFTER verifying the
+// user's session JWT — see DEMO-RELAY-IDENTITY-001 in its rawForward).
+//
+// Lock: when the RELAY_FORWARD_SECRET secret is set on this Worker, the
+// Cf-Access-* headers are trusted ONLY if the request also carries a
+// matching X-AntCV-Relay-Auth header (the relay sends it on demo-mode
+// forwards when the same secret is set on the relay). When the secret is
+// NOT set, legacy trust applies — so deploying this code before the secret
+// exists changes nothing. Must be a plain string secret (wrangler secret
+// put), not a secrets-store binding: this check runs in sync paths.
+// The Bearer path (identityFromBearer, HS256-verified against JWT_SECRET)
+// is independent of this lock.
+function timingSafeEqualStr(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  if (a.length !== b.length || a.length === 0) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+function cfAccessHeadersTrusted(request, env) {
+  const expect = env && env.RELAY_FORWARD_SECRET;
+  if (typeof expect !== 'string' || !expect) return true; // lock not armed
+  return timingSafeEqualStr(request.headers.get('X-AntCV-Relay-Auth') || '', expect);
+}
+
+function identityFromRequest(request, env) {
+  if (!cfAccessHeadersTrusted(request, env)) return null;
   const email = request.headers.get('Cf-Access-Authenticated-User-Email') || '';
   if (email) return { email };
   const jwt = request.headers.get('Cf-Access-Jwt-Assertion') || '';
@@ -1655,7 +1686,7 @@ function identityFromRequest(request) {
 // already attaches the relay-issued token on its proxy URL, so the
 // Worker just needs to know how to verify it.
 async function identityFromRequestAsync(request, env) {
-  const sync = identityFromRequest(request);
+  const sync = identityFromRequest(request, env);
   if (sync) return sync;
   if (!env) return null;
   const secret = await getKey(env, ['JWT_SECRET', 'RELAY_JWT_SECRET']);
@@ -1663,8 +1694,8 @@ async function identityFromRequestAsync(request, env) {
   return await identityFromBearer(request, secret);
 }
 
-function userScopedKey(request, prefix) {
-  const id = identityFromRequest(request);
+function userScopedKey(request, env, prefix) {
+  const id = identityFromRequest(request, env);
   if (!id || !id.email) return null;
   return prefix + ':' + id.email.toLowerCase().replace(/[^a-z0-9@._-]/g,'_');
 }

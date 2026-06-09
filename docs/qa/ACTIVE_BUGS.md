@@ -269,11 +269,15 @@ Iterating on real CV/CL exports (owner rendering .docx + PDF). Shipped + open:
   working headlessly (`pwa/test/diag-subtitle-sequence.mjs`): with a placeholder
   `meta.subtitle` + a local app-cache row carrying the real subtitle, the sidecar
   installs, detects the placeholder, and commits the real value on boot (0 errors).
-- **CL-PDF-PRINT-PATH-001** `[OPEN][export]` — CL PDF export goes through a
-  client print-preview (window.print) instead of the docx-worker CloudConvert path
-  the CV uses; the print path also yields a generic "AntCV" filename. Either route
-  CL through /generate-pdf (CloudConvert) like the CV, or at minimum set a proper
-  specific download filename.
+- **CL-PDF-PRINT-PATH-001** `[RESOLVED — stale; verified 2026-06-09]` — re-audited: the
+  PDF export button calls `window.exportPdfViaWorker({ doc: Lt, … })` for BOTH CV and CL,
+  and `exportPdfViaWorker` builds the payload via `buildPayload` (which sets
+  `layout: 'linear'` for CL) and POSTs to `/generate-pdf` (CloudConvert). So the CL PDF
+  ALREADY uses the worker CloudConvert path with a proper `CoverLetter_<name>_…` filename
+  (`buildFilename`); `window.print` (`kl()`) is only the fallback when no server PDF is
+  available (no CloudConvert key / worker down). The owner's recent CL PDFs were
+  worker-rendered (CloudConvert-quality layout + correct filename), confirming this. The
+  entry predates the CV/CL unification of the PDF path.
 - **EXPORT-PREVIEW-FEATURES-001** `[OPEN][enhancement]` — owner requests for the
   export-preview UI: (a) add JD-analysis as a 3rd quick-export button (hide the
   CV/CL toggle in that mode) + let it use the app preview; (b) choose download

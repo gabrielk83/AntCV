@@ -49,7 +49,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.147';
+  var VERSION = '1.50.331-dataraw';
   if (window.__antcvDataExport360 === VERSION) return;
   window.__antcvDataExport360 = VERSION;
 
@@ -100,14 +100,37 @@
     return out;
   }
 
+  // 1.50.331 DATA-IMPORT-001: the parsed `data` map runs every value through
+  // JSON.parse, which is LOSSY — it can't tell a JSON-encoded string (e.g. doc
+  // stored as '"cv"') from a raw string. `dataRaw` carries the EXACT
+  // localStorage strings so the importer (antcv-data-import-331) can restore them
+  // byte-for-byte. `data` stays for human-readability + back-compat.
+  function collectDataRaw(includeSecrets) {
+    var out = {};
+    var ls;
+    try { ls = window.localStorage; } catch (_) { return out; }
+    for (var i = 0; i < ls.length; i++) {
+      var key;
+      try { key = ls.key(i); } catch (_) { continue; }
+      if (!key || TRANSIENT_KEYS[key]) continue;
+      if (!includeSecrets && isSecretKey(key)) continue;
+      var raw;
+      try { raw = ls.getItem(key); } catch (_) { continue; }
+      if (raw === null) continue;
+      out[key] = raw;
+    }
+    return out;
+  }
+
   function backupEnvelope(includeSecrets) {
     return {
       _antcvBackup: 1,
       version: (typeof window.ANTCV_VERSION === 'string' ? window.ANTCV_VERSION : VERSION),
       exportedAt: new Date().toISOString(),
-      schema: 1,
+      schema: 2,
       includedSecrets: !!includeSecrets,
-      data: collectData(includeSecrets)
+      data: collectData(includeSecrets),
+      dataRaw: collectDataRaw(includeSecrets)
     };
   }
 

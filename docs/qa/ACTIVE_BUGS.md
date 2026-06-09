@@ -8,6 +8,45 @@ A companion **feature registry** (open vs shipped features) lives at
 
 ---
 
+## OWNER REPORT 2026-06-09 (PM) — six issues
+
+- **SALMON-CHURN-DISAPPEAR-001** `[FIXED 1.50.337]` — salmon splitters DISAPPEARED from
+  both CV and CL. The salmon LOGIC is intact (all measurer diags pass), so this was a
+  live-state issue: the 1.50.326 "quicker salmon" cadence speed-up (poll 1200ms + 120ms
+  schedule + dense boot delays) raised measurer frequency enough that, under heavy editing
+  + the other sidecars' churn, the **8-writes/4s circuit breaker tripped and froze the
+  measurer before the breaks were written** → salmon gone (and it fed the #185 churn).
+  Reverted the cadence to the calm/stable values (poll 3000, schedule 250, boot
+  400/900/1800/3500); the 1.50.324 one-pass fix still makes the salmon appear in a single
+  compute, so it stays responsive without the churn. Verified: salmon diags + boot pass.
+- **REACT-185-EDIT-REGULATORY-001** `[OPEN][HIGH]` — React #185 (render-oscillation) crash
+  while editing REGULATORY (debug log 18:08, many `button(submit)` taps). Stack is in the
+  LIVE `app.js?v=1.50.334-jd-guard-cancel-mobile` (the other session's build). The 1.50.337
+  cadence revert reduces the contributing measurer churn, but the root may be in that app.js
+  edit path or a sidecar re-render storm — needs a repro (edit regulatory rapidly) to pin
+  the exact setState-in-render source. NOTE: the live app.js is the concurrent session's.
+- **DOCX-SIDEBAR-GREEN-001** `[OPEN][needs detail]` — sidebar HEADINGS + vertical LINES
+  render a darker GREEN in DOCX/PDF; owner wants `#283556` (navy). Worker-side: the active
+  style maps `sidebarHeadColor = palette.primary` / `mainHeadColor = palette.base`
+  (docx-worker index.js ~23997); a package whose primary/base is green produces green
+  headings. NEED to confirm: which visual package is active, and exactly which elements
+  (sidebar headings? main headings? the column divider?) should be navy — then set the
+  token. (`#283556` is also the sidebar BG, so navy headings ON the navy sidebar would be
+  invisible — likely this is the MAIN-column headings/divider, or the package base.)
+- **DEMO-FETCHJD-WORKERURL-001** `[OPEN]` — demo Fetch-JD still errors "Configure Worker
+  URL in Settings → API Keys first." The home Fetch-JD handler `Wn` (app.src.js) reads
+  `proxyUrl` directly with NO relay fallback; the recommended source-fix (`|| window.ANTCV_RELAY_URL`)
+  was not applied to the live app.js (which is the other session's 1.50.334). `371` seeds
+  proxyUrl from the relay but depends on `ANTCV_RELAY_URL` + timing. Robust fix = the Wn
+  relay fallback (needs an app.src.js edit + rebuild, on the live build the other session owns).
+- **REGULAR-MODE-STALE-SETUP-001** `[OPEN]` — in regular (BYOK) mode a "setup needed"
+  warning + the demo-coin icon appear and only clear after a manual refresh. Stale
+  demo/BYOK state on key-change; demo detection / the setup warning isn't re-evaluated live.
+- **ANALYSE-JD-BUTTON-POS-001** `[OPEN][small]` — owner: the **Analyse JD** button should
+  be at the same position as the **Download analysis** button (the panel reorder did the
+  Download side; the Analyse-JD button — in the JD-input block, `antcv-analysis-panel-jd-block-356`
+  — was not matched). Small sidecar tweak; confirm the exact intended placement.
+
 ## ANALYSIS PANEL 2026-06-09
 
 - **ANALYSIS-PANEL-ORDER-001** `[FIXED 1.50.336 — verified headless]` — owner 2026-06-09:

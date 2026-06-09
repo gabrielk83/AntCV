@@ -54,7 +54,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.326-faster-selfheal';
+  var VERSION = '1.50.337-salmon-churn-revert';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -501,18 +501,20 @@
     pending = true;
     requestAnimationFrame(function () {
       pending = false;
-      setTimeout(run, 120);   // 1.50.326: snappier (was 250) — owner "quicker salmon"
+      setTimeout(run, 250);
     });
   }
 
   function start() {
-    // 1.50.326 (owner 2026-06-09 "quicker salmon + self heal"): earlier first
-    // paint + a faster idle poll so the preview SELF-HEALS its pagination soon
-    // after any change without waiting ~3s. The source-fingerprint gate makes
-    // every extra tick a cheap no-op when nothing changed, and the 1.5s cooldown
-    // + circuit breaker still guard against the #185 oscillation, so this is pure
-    // responsiveness (it can only run the SAME idempotent compute sooner).
-    [150, 400, 800, 1500, 2600, 4200].forEach(function (d) { setTimeout(schedule, d); });
+    // 1.50.337 SALMON-CHURN-REVERT (owner 2026-06-09 "salmon disappeared from CV+CL"):
+    // the 1.50.326 "quicker salmon" speed-up (poll 1200ms + 120ms schedule + dense
+    // boot delays) raised measurer frequency enough that, under heavy editing + the
+    // other sidecars' re-render churn, the 8-writes/4s circuit breaker tripped and
+    // FROZE the measurer before the breaks were written → the salmon vanished (and
+    // fed the React #185 oscillation). Reverted to the calm, stable cadence; the
+    // one-pass CL fix (1.50.324) still makes the salmon appear in a single compute,
+    // so it stays responsive without the churn.
+    [400, 900, 1800, 3500].forEach(function (d) { setTimeout(schedule, d); });
     // 1.50.269: NO MutationObserver — it fired on our own pagination
     // re-render and was a loop amplifier. Genuine content changes come
     // through the app's explicit events below; the fingerprint gate
@@ -530,9 +532,7 @@
       try { window.addEventListener(ev, schedule); } catch (_) {}
     });
     try { window.addEventListener('resize', schedule, { passive: true }); } catch (_) {}
-    // 1.50.326: faster idle self-heal poll (was 3000). Cheap no-op via the
-    // fingerprint gate when the source is unchanged.
-    setInterval(schedule, 1200);
+    setInterval(schedule, 3000);   // 1.50.337: back to the calm poll (was 1200) — see start()
   }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', start, { once: true });

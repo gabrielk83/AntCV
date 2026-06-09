@@ -10,9 +10,8 @@
 //     pages where the downloaded PDF has subsetted fonts without
 //     ToUnicode CMaps (text extraction returns binary noise)
 //   - JDs that exist only as a posting page (no PDF link at all)
-//   - LinkedIn jobs (returns the public posting; sign-in-walled
-//     pages return a "please log in" body and the caller sees that
-//     and can fall back)
+//   - LinkedIn jobs (rewritten to the public guest jobPosting
+//     endpoint — see rewriteJobUrl below)
 //
 // SSRF protection: any URL whose hostname resolves to a private,
 // loopback, or link-local address is rejected up front (without a
@@ -22,19 +21,24 @@
 // External cloud-metadata endpoints (169.254.169.254, etc.) are
 // blocked at the hostname-string layer.
 //
-// Output text is extracted via a deliberately simple readability
-// heuristic: strip script/style/nav/header/footer/svg/iframe/noscript
-// blocks, decode common HTML entities, collapse whitespace. This
-// loses sidebar navigation, cookie banners, footer noise — exactly
-// the stuff we don't want feeding the JD analysis prompt anyway.
-// Robust enough for HR-on, Workday, Greenhouse, Lever. Pages with
-// heavy SPA hydration (LinkedIn jobs detail, some Indeed pages) may
-// return less useful text — those need a vision-LLM fallback in a
-// later round.
+// Content extraction is layered:
+//   L1  extractMainContent() — locate the real JD body (<main>,
+//       [role=main], the "skip to main content" anchor target, or
+//       a text-density fallback) instead of dumping the whole page.
+//   L2  rewriteJobUrl() — provider-specific URL rewrites (LinkedIn
+//       guest jobPosting endpoint) that sidestep the consent wall
+//       at the source.
+//   L3  stripConsentAndPopups() — remove cookie-consent banners and
+//       commercial/interstitial popups by selector + text fingerprint
+//       before extraction, so they never reach the JD prompt.
+// A content-quality gate (validateContentQuality) flags fetches that
+// still look like consent boilerplate or are too short, so the PWA
+// can prompt for manual paste instead of feeding noise to the LLM.
 
 const FETCH_TIMEOUT_MS = 10000;
 const MAX_HTML_BYTES = 2_000_000;     // 2 MB hard cap before reading body
 const MAX_TEXT_CHARS = 50000;         // truncate before returning
+const MIN_GOOD_TEXT_CHARS = 220;      // below this we treat as low-quality
 
 // Hostname blocklist. We can't do real DNS resolution from a Worker,
 // so we block on string patterns that obviously point to private /
@@ -96,6 +100,45 @@ function validateUrl(rawUrl) {
 }
 
 
+// ─── L2: provider-specific URL rewrite ──────────────────────────
+// Some providers gate the human-facing posting behind a consent
+// wall or login, but expose the same posting via a public,
+// bot-friendly endpoint. Rewriting the URL at the source is far
+// more reliable than trying to strip the wall out of HTML.
+//
+// Returns { url: <rewritten URL string>, note: <string|null> }.
+// `note` is surfaced in the response so we can see in logs/telemetry
+// which rewrite fired. Pass the already-validated URL object in.
+
+function rewriteJobUrl(u) {
+  const host = u.hostname.toLowerCase().replace(/^www\./, '');
+
+  // LinkedIn: /jobs/view/{id} (and variants carrying currentJobId)
+  // are SPA + consent-walled server-side. The guest jobPosting API
+  // returns the description fragment as plain HTML without auth.
+  if (host === 'linkedin.com' || host.endsWith('.linkedin.com')) {
+    // Try path form first: /jobs/view/4414211731/
+    let jobId = null;
+    const pathM = /\/jobs\/view\/(\d{5,})/.exec(u.pathname);
+    if (pathM) jobId = pathM[1];
+    // Fallback: ?currentJobId=4414211731 on a collections/search URL
+    if (!jobId) {
+      const q = u.searchParams.get('currentJobId');
+      if (q && /^\d{5,}$/.test(q)) jobId = q;
+    }
+    if (jobId) {
+      return {
+        url: `https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/${jobId}`,
+        note: `linkedin-guest-rewrite:${jobId}`,
+      };
+    }
+  }
+
+  // No rewrite — fetch the original.
+  return { url: u.toString(), note: null };
+}
+
+
 // ─── HTML → text ─────────────────────────────────────────────────
 
 const ENTITY_MAP = {
@@ -127,6 +170,244 @@ function extractTitle(html) {
   if (!m) return '';
   return decodeEntities(m[1].replace(/\s+/g, ' ').trim()).slice(0, 300);
 }
+
+
+// ─── L3: consent banner + commercial popup removal ──────────────
+// Cookie-consent blocks and commercial interstitials are usually
+// plain <div>s (not <form>s), so the old form-strip missed them.
+// We remove any element whose opening tag carries a consent/popup
+// attribute signature, plus any reasonably-sized block whose text
+// matches a consent fingerprint. This runs BEFORE main-content
+// extraction so a banner can't win the density contest.
+
+// Attribute-signature regexes. Each removes the matching element and
+// its contents. We match by id/class/role/aria/data-* hints that
+// consent + modal libraries overwhelmingly use.
+const POPUP_ATTR_PATTERNS = [
+  // cookie / consent
+  /\bid="[^"]*(cookie|consent|gdpr|onetrust|cmp|privacy-?banner)[^"]*"/i,
+  /\bclass="[^"]*(cookie|consent|gdpr|onetrust|cmp|privacy-?banner)[^"]*"/i,
+  /\bid="[^"]*(cookie|consent|gdpr|onetrust)[^"]*"/i,
+  // generic modals / interstitials / overlays
+  /\bclass="[^"]*(modal|popup|overlay|interstitial|lightbox|dialog-?backdrop|backdrop)[^"]*"/i,
+  /\brole="dialog"/i,
+  /\baria-modal="true"/i,
+  /\bdata-(testid|qa|tracking-control-name)="[^"]*(cookie|consent|modal|popup|dismiss|sign-?in-?modal)[^"]*"/i,
+];
+
+// Text fingerprints. If a stripped element's TEXT (after a quick
+// inner-text pass) matches enough of these, it's consent boilerplate.
+const CONSENT_TEXT_FINGERPRINTS = [
+  'respects your privacy',
+  'use essential and non-essential cookies',
+  'cookie policy',
+  'accept', 'reject',
+  'we use cookies',
+  'manage your choices',
+  'consent to',
+  'update your choices',
+];
+
+// Remove an element (open tag → matching close) given a regex that
+// matches its OPENING tag. Handles one level; consent blocks are
+// rarely nested in a way that breaks this. We scan for the opening
+// tag, then walk forward counting same-name open/close tags to find
+// the true closer (depth-aware), so nested children don't truncate
+// the removal early.
+function removeElementByOpenTag(html, openTagRegex) {
+  let out = html;
+  let guard = 0;
+  while (guard++ < 50) {
+    const m = openTagRegex.exec(out);
+    if (!m) break;
+    const start = m.index;
+    // Identify the tag name from the matched opening tag.
+    const nameM = /^<\s*([a-z0-9]+)/i.exec(out.slice(start, start + 40));
+    if (!nameM) { openTagRegex.lastIndex = start + 1; break; }
+    const tag = nameM[1].toLowerCase();
+    // Self-closing? then just drop the single tag.
+    const openEnd = out.indexOf('>', start);
+    if (openEnd === -1) break;
+    if (out[openEnd - 1] === '/' || tag === 'br' || tag === 'img' || tag === 'input') {
+      out = out.slice(0, start) + ' ' + out.slice(openEnd + 1);
+      continue;
+    }
+    // Depth-walk to the matching close tag.
+    const openRe = new RegExp(`<\\s*${tag}\\b`, 'gi');
+    const closeRe = new RegExp(`<\\s*/\\s*${tag}\\s*>`, 'gi');
+    let depth = 1;
+    let cursor = openEnd + 1;
+    let endIdx = -1;
+    while (cursor < out.length) {
+      openRe.lastIndex = cursor;
+      closeRe.lastIndex = cursor;
+      const nextOpen = openRe.exec(out);
+      const nextClose = closeRe.exec(out);
+      if (!nextClose) break;
+      if (nextOpen && nextOpen.index < nextClose.index) {
+        depth++;
+        cursor = nextOpen.index + 1;
+      } else {
+        depth--;
+        cursor = nextClose.index + nextClose[0].length;
+        if (depth === 0) { endIdx = cursor; break; }
+      }
+    }
+    if (endIdx === -1) {
+      // Unbalanced — drop just the opening tag to make progress.
+      out = out.slice(0, start) + ' ' + out.slice(openEnd + 1);
+      continue;
+    }
+    out = out.slice(0, start) + ' ' + out.slice(endIdx);
+    // reset regex state for next pass
+    openTagRegex.lastIndex = 0;
+  }
+  openTagRegex.lastIndex = 0;
+  return out;
+}
+
+function quickInnerText(htmlFragment) {
+  return decodeEntities(htmlFragment.replace(/<[^>]+>/g, ' '))
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function stripConsentAndPopups(html) {
+  let s = html;
+
+  // 1. Remove by attribute signature (depth-aware).
+  for (const re of POPUP_ATTR_PATTERNS) {
+    s = removeElementByOpenTag(s, new RegExp(re.source, 'i'));
+  }
+
+  // 2. Remove residual blocks whose text reads as consent boilerplate.
+  //    Scan top-level div/section/aside blocks; if the block is small
+  //    (< 1200 chars of inner text) and matches >= 2 fingerprints,
+  //    drop it. Size cap avoids nuking the real JD if a JD happens to
+  //    mention "cookie policy" in passing.
+  const blockRe = /<(div|section|aside)\b[^>]*>[\s\S]*?<\/\1>/gi;
+  s = s.replace(blockRe, (block) => {
+    const txt = quickInnerText(block);
+    if (txt.length > 1200) return block; // too big to be a banner
+    let hits = 0;
+    for (const fp of CONSENT_TEXT_FINGERPRINTS) {
+      if (txt.includes(fp)) hits++;
+      if (hits >= 2) return ' ';
+    }
+    return block;
+  });
+
+  return s;
+}
+
+
+// ─── L1: main-content extraction ────────────────────────────────
+// Instead of dumping the entire page, locate the element most likely
+// to hold the JD body, in priority order:
+//   1. <main> ... </main>            (semantic, most reliable)
+//   2. [role="main"] container
+//   3. the target of a "Skip to main content" anchor
+//      (<a href="#xyz">Skip to main content</a> → <... id="xyz">)
+//   4. <article> ... </article>
+//   5. density fallback: largest text-bearing block
+// Returns the inner HTML of the chosen region, or the original html
+// if nothing better is found.
+
+function sliceBalancedElement(html, tag, fromIndex = 0) {
+  const openRe = new RegExp(`<\\s*${tag}\\b[^>]*>`, 'gi');
+  openRe.lastIndex = fromIndex;
+  const open = openRe.exec(html);
+  if (!open) return null;
+  const start = open.index;
+  const contentStart = open.index + open[0].length;
+  const oRe = new RegExp(`<\\s*${tag}\\b`, 'gi');
+  const cRe = new RegExp(`<\\s*/\\s*${tag}\\s*>`, 'gi');
+  let depth = 1, cursor = contentStart;
+  while (cursor < html.length) {
+    oRe.lastIndex = cursor; cRe.lastIndex = cursor;
+    const no = oRe.exec(html), nc = cRe.exec(html);
+    if (!nc) break;
+    if (no && no.index < nc.index) { depth++; cursor = no.index + 1; }
+    else { depth--; cursor = nc.index + nc[0].length; if (depth === 0) {
+      return { html: html.slice(start, cursor), inner: html.slice(contentStart, nc.index) };
+    } }
+  }
+  return null;
+}
+
+function findByIdContainer(html, id) {
+  // Find the element carrying id="..." and slice it balanced.
+  const safeId = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const idRe = new RegExp(`<\\s*([a-z0-9]+)\\b[^>]*\\bid="${safeId}"`, 'i');
+  const m = idRe.exec(html);
+  if (!m) return null;
+  const tag = m[1].toLowerCase();
+  return sliceBalancedElement(html, tag, m.index);
+}
+
+function extractMainContent(html) {
+  // 1. <main>
+  let region = sliceBalancedElement(html, 'main');
+  if (region && quickInnerText(region.inner).length >= MIN_GOOD_TEXT_CHARS) {
+    return { html: region.inner, via: 'main-tag' };
+  }
+
+  // 2. [role="main"] — find the element with that attr, slice balanced.
+  const roleM = /<\s*([a-z0-9]+)\b[^>]*\brole="main"/i.exec(html);
+  if (roleM) {
+    const r = sliceBalancedElement(html, roleM[1].toLowerCase(), roleM.index);
+    if (r && quickInnerText(r.inner).length >= MIN_GOOD_TEXT_CHARS) {
+      return { html: r.inner, via: 'role-main' };
+    }
+  }
+
+  // 3. "Skip to main content" anchor → resolve its #target id.
+  const skipM = /<a\b[^>]*href="#([^"]+)"[^>]*>\s*skip to (main )?content\s*<\/a>/i.exec(html)
+            || /<a\b[^>]*href="#([^"]+)"[^>]*>[^<]*skip to (main )?content[^<]*<\/a>/i.exec(html);
+  if (skipM && skipM[1]) {
+    const target = findByIdContainer(html, skipM[1]);
+    if (target && quickInnerText(target.inner).length >= MIN_GOOD_TEXT_CHARS) {
+      return { html: target.inner, via: `skip-anchor:#${skipM[1]}` };
+    }
+  }
+
+  // 4. <article> — take the largest one if several.
+  {
+    let best = null, bestLen = 0, idx = 0;
+    while (idx < html.length) {
+      const a = sliceBalancedElement(html, 'article', idx);
+      if (!a) break;
+      const len = quickInnerText(a.inner).length;
+      if (len > bestLen) { bestLen = len; best = a; }
+      idx = html.indexOf(a.html, idx) + a.html.length;
+      if (idx <= 0) break;
+    }
+    if (best && bestLen >= MIN_GOOD_TEXT_CHARS) {
+      return { html: best.inner, via: 'article-tag' };
+    }
+  }
+
+  // 5. Density fallback: among top-level sections/divs, pick the one
+  //    with the most text. Cheap heuristic — good enough once the
+  //    chrome and consent blocks are already gone.
+  {
+    let best = '', bestLen = 0;
+    const re = /<(section|div)\b[^>]*>[\s\S]*?<\/\1>/gi;
+    let m;
+    while ((m = re.exec(html))) {
+      const len = quickInnerText(m[0]).length;
+      if (len > bestLen) { bestLen = len; best = m[0]; }
+    }
+    if (best && bestLen >= MIN_GOOD_TEXT_CHARS) {
+      return { html: best, via: 'density-fallback' };
+    }
+  }
+
+  // Nothing better — return whole document.
+  return { html, via: 'whole-document' };
+}
+
 
 function htmlToText(html) {
   let s = html;
@@ -166,6 +447,42 @@ function htmlToText(html) {
 }
 
 
+// ─── L1 gate: content-quality validation ────────────────────────
+// After extraction + text conversion, decide whether what we got
+// looks like a real JD or like leftover consent boilerplate / an
+// empty SPA shell. Returns a wall_hint string (problem) or null (ok).
+
+function validateContentQuality(text) {
+  if (text.length < MIN_GOOD_TEXT_CHARS) {
+    return 'Very little text was extracted. The page may render content via JavaScript that didn\'t execute, or sits behind a wall. Try pasting the visible JD text directly.';
+  }
+  const low = text.toLowerCase();
+
+  // Consent-fingerprint density check: if the extracted text is
+  // SHORT and dominated by consent phrases, we grabbed the banner.
+  let consentHits = 0;
+  for (const fp of CONSENT_TEXT_FINGERPRINTS) {
+    if (low.includes(fp)) consentHits++;
+  }
+  if (consentHits >= 3 && text.length < 1500) {
+    return 'The fetched content looks like a cookie-consent notice rather than the job description. The provider may require accepting cookies in a browser first. Open the URL in a tab, copy the visible JD, and paste it into Additional Signals.';
+  }
+
+  // Sign-in walls.
+  const wallSignals = [
+    'sign in to continue', 'log in to view', 'please sign in', 'please log in',
+    'access denied', 'unauthorized', 'this page isn\'t available',
+    'you must be signed in', 'create a free account to view',
+  ];
+  for (const w of wallSignals) {
+    if (low.includes(w)) {
+      return `Sign-in wall detected ("${w}"). Open the URL in a browser tab where you're logged in, copy the visible JD, and paste it into Additional Signals.`;
+    }
+  }
+  return null;
+}
+
+
 // ─── Main handler ────────────────────────────────────────────────
 
 export async function handleFetchJdUrl(request, env, getCORS) {
@@ -190,6 +507,9 @@ export async function handleFetchJdUrl(request, env, getCORS) {
   }
   const url = v.url;
 
+  // L2: provider URL rewrite (LinkedIn guest endpoint, etc.).
+  const { url: fetchUrl, note: rewriteNote } = rewriteJobUrl(url);
+
   // Race the fetch against a manual timeout. Workers' native fetch
   // has its own runtime cap but it's >10s and we want to fail fast
   // so the user can paste manually if a site is slow or hanging.
@@ -198,7 +518,7 @@ export async function handleFetchJdUrl(request, env, getCORS) {
   try {
     const ctl = new AbortController();
     const timer = setTimeout(() => ctl.abort(), FETCH_TIMEOUT_MS);
-    response = await fetch(url.toString(), {
+    response = await fetch(fetchUrl, {
       method: 'GET',
       redirect: 'follow',
       headers: {
@@ -221,7 +541,8 @@ export async function handleFetchJdUrl(request, env, getCORS) {
       error: isTimeout
         ? `Fetch timed out after ${FETCH_TIMEOUT_MS}ms. Try opening the URL in a tab and pasting the text manually.`
         : `Fetch failed: ${msg}`,
-      url: url.toString(),
+      url: fetchUrl,
+      rewrite: rewriteNote,
     }), { status: 502, headers: { 'Content-Type': 'application/json', ...CORS } });
   }
 
@@ -230,12 +551,15 @@ export async function handleFetchJdUrl(request, env, getCORS) {
 
   // Reject non-HTML responses. PDFs go through the existing PDF
   // upload path. Plain text we'd accept but rarely see for JDs.
+  // (The LinkedIn guest endpoint returns an HTML fragment, so it
+  //  passes this check.)
   if (!contentType.includes('html') && !contentType.includes('text/plain')) {
     return new Response(JSON.stringify({
       ok: false,
       error: `Server returned ${contentType || 'unknown content-type'}. The /api/fetch-jd-url endpoint only handles HTML pages. PDFs should go through the file upload.`,
       status,
-      url: url.toString(),
+      url: fetchUrl,
+      rewrite: rewriteNote,
     }), { status: 415, headers: { 'Content-Type': 'application/json', ...CORS } });
   }
 
@@ -255,7 +579,7 @@ export async function handleFetchJdUrl(request, env, getCORS) {
           return new Response(JSON.stringify({
             ok: false,
             error: `Page body exceeded ${MAX_HTML_BYTES} bytes — likely an SPA hydrating dynamic content. Try copy-pasting the visible JD text into Additional Signals.`,
-            status, url: url.toString(),
+            status, url: fetchUrl, rewrite: rewriteNote,
           }), { status: 413, headers: { 'Content-Type': 'application/json', ...CORS } });
         }
         chunks.push(value);
@@ -272,42 +596,45 @@ export async function handleFetchJdUrl(request, env, getCORS) {
     return new Response(JSON.stringify({
       ok: false,
       error: `Body read failed: ${err && err.message || err}`,
-      status, url: url.toString(),
+      status, url: fetchUrl, rewrite: rewriteNote,
     }), { status: 502, headers: { 'Content-Type': 'application/json', ...CORS } });
   }
 
   const htmlLen = html.length;
   const title = extractTitle(html);
-  let text = htmlToText(html);
+
+  // L3: strip consent banners + commercial popups before extraction.
+  const cleaned = stripConsentAndPopups(html);
+
+  // L1: locate the main JD content region.
+  const { html: mainHtml, via: extractedVia } = extractMainContent(cleaned);
+
+  // Convert to text.
+  let text = htmlToText(mainHtml);
+
+  // Safety net: if main-content extraction produced almost nothing
+  // (over-aggressive removal), fall back to the cleaned full document.
+  if (text.length < MIN_GOOD_TEXT_CHARS && extractedVia !== 'whole-document') {
+    text = htmlToText(cleaned);
+  }
+
   let truncated = false;
   if (text.length > MAX_TEXT_CHARS) {
     text = text.slice(0, MAX_TEXT_CHARS);
     truncated = true;
   }
 
-  // Surface obvious sign-in walls and empty bodies so the PWA can
-  // show a useful message instead of feeding noise to the LLM.
-  const lowText = text.toLowerCase();
-  const wallHint = (() => {
-    if (text.length < 200) {
-      return 'Very little text was extracted. The page may render content via JavaScript that didn\'t execute. Try pasting the visible JD text directly.';
-    }
-    const wallSignals = [
-      'sign in to continue', 'log in to view', 'please sign in', 'please log in',
-      'access denied', 'unauthorized', 'this page isn\'t available',
-      'you must be signed in', 'create a free account to view',
-    ];
-    for (const w of wallSignals) {
-      if (lowText.includes(w)) return `Sign-in wall detected ("${w}"). Open the URL in a browser tab where you're logged in, copy the visible JD, and paste it into Additional Signals.`;
-    }
-    return null;
-  })();
+  // L1 gate: flag low-quality / consent / wall content.
+  const wallHint = validateContentQuality(text);
 
   return new Response(JSON.stringify({
     ok: true,
     text,
     title,
     source: url.toString(),
+    fetched_url: fetchUrl,
+    rewrite: rewriteNote,
+    extracted_via: extractedVia,
     status,
     duration_ms: Date.now() - t0,
     html_length: htmlLen,

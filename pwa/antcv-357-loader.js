@@ -1,4 +1,4 @@
-/* AntCV 357 sidecar loader (v1.50.330-loader)
+/* AntCV 357 sidecar loader (v1.50.331-loader)
  * ============================================================
  *
  * Purpose
@@ -23,8 +23,14 @@
  * build, bump the direct tag in index.html too (or remove it and let
  * the loader own the version).
  *
- * v1.50.330-loader
+ * v1.50.331-loader
  * ----------------
+ * Version bump to force cache bust: browsers will refetch the loader
+ * script due to the changed ?v= query string in index.html's <script>
+ * tag. This ensures the relay-fallback sidecar registration (added in
+ * 330-loader) is loaded even if the PWA pages were cached before the
+ * fix landed.
+ *
  * Adds antcv-proxyurl-relay-fallback-371.js. That sidecar existed in
  * the repo but was never registered, so its fix never ran: on the home
  * screen the "OR PASTE A JD URL → Fetch JD" control errored "Configure
@@ -46,7 +52,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.330-loader';
+  var VERSION = '1.50.331-loader';
   if (window.__antcv357Loader === VERSION) return;
   window.__antcv357Loader = VERSION;
 

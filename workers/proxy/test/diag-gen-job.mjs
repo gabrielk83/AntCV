@@ -43,6 +43,25 @@ async function mockRunSection(req, env) {
 const CORS = {};
 const identityFn = null; // anon owner
 
+// mock coherence pass — returns one repetition finding and a rewrite for "outcomes".
+let coherenceMode = 'rewrites';
+async function mockCoherenceFn(env, payload) {
+  if (coherenceMode === 'fail') return { ok: false, error: 'cascade down' };
+  if (coherenceMode === 'throw') throw new Error('boom');
+  const findings = [{
+    kind: 'repetition',
+    sections: ['profile', 'outcomes'],
+    detail: 'Both PROFILE and OUTCOMES state the LiDAR change-control win in near-identical words.',
+    fix: 'Keep it in OUTCOMES; generalise the PROFILE sentence.',
+  }];
+  if (coherenceMode === 'rewrites') {
+    return { ok: true, findings, summary: '1 repetition reconciled', usage: { output_tokens: 20 },
+      rewrites: { outcomes: '<<OUTCOMES-REVISED>>' } };
+  }
+  // findings-only mode: gen-job will re-run flagged sections through runSection
+  return { ok: true, findings, summary: '1 repetition flagged', usage: { output_tokens: 12 } };
+}
+
 function makeReq(method, urlPath, jsonBody) {
   return new Request('https://cv-proxy.test' + urlPath, {
     method,
@@ -68,7 +87,7 @@ async function main() {
   const jobId = j.job_id;
 
   // 2) step section 1 (profile)
-  r = await stepJob(makeReq('POST', '/job/step', { job_id: jobId }), env, CORS, mockRunSection, identityFn, 'https://cv-proxy.test');
+  r = await stepJob(makeReq('POST', '/job/step', { job_id: jobId }), env, CORS, mockRunSection, identityFn, 'https://cv-proxy.test', mockCoherenceFn);
   j = await r.json();
   ok(j.status === 'running' && j.next === 1, 'after step1 next=1, running');
   ok(j.sections[0].state === 'done' && j.sections[0].result === '<<PROFILE>>', 'profile done with result');
@@ -79,23 +98,32 @@ async function main() {
   ok(j.sections[0].result === '<<PROFILE>>' && j.next === 1, 'resume: profile still done, next=1 (no work lost)');
 
   // 4) step section 2 (outcomes) — first attempt returns 503 (transient), must NOT advance
-  r = await stepJob(makeReq('POST', '/job/step', { job_id: jobId }), env, CORS, mockRunSection, identityFn, 'https://cv-proxy.test');
+  r = await stepJob(makeReq('POST', '/job/step', { job_id: jobId }), env, CORS, mockRunSection, identityFn, 'https://cv-proxy.test', mockCoherenceFn);
   j = await r.json();
   ok(j.next === 1 && j.sections[1].state === 'pending' && j.note && j.note.retrying === 'outcomes', '503 retries same section, next unchanged');
 
   // 5) step again — now outcomes succeeds
-  r = await stepJob(makeReq('POST', '/job/step', { job_id: jobId }), env, CORS, mockRunSection, identityFn, 'https://cv-proxy.test');
+  r = await stepJob(makeReq('POST', '/job/step', { job_id: jobId }), env, CORS, mockRunSection, identityFn, 'https://cv-proxy.test', mockCoherenceFn);
   j = await r.json();
   ok(j.next === 2 && j.sections[1].state === 'done' && j.sections[1].result === '<<OUTCOMES>>', 'outcomes done after retry, next=2');
 
-  // 6) step section 3 (experience) -> job done
-  r = await stepJob(makeReq('POST', '/job/step', { job_id: jobId }), env, CORS, mockRunSection, identityFn, 'https://cv-proxy.test');
+  // 6) step section 3 (experience) -> all sections done -> COHERENCE phase (not done yet)
+  r = await stepJob(makeReq('POST', '/job/step', { job_id: jobId }), env, CORS, mockRunSection, identityFn, 'https://cv-proxy.test', mockCoherenceFn);
   j = await r.json();
-  ok(j.status === 'done' && j.next === 3, 'job done after final section');
+  ok(j.status === 'coherence' && j.next === 3, 'after final section -> coherence phase (not done)');
   ok(j.sections[2].result === '<<EXPERIENCE>>', 'experience result present');
 
-  // 7) stepping a done job is idempotent
-  r = await stepJob(makeReq('POST', '/job/step', { job_id: jobId }), env, CORS, mockRunSection, identityFn, 'https://cv-proxy.test');
+  // 6b) next step runs the coherence pass (rewrites mode) -> done, outcomes revised
+  r = await stepJob(makeReq('POST', '/job/step', { job_id: jobId }), env, CORS, mockRunSection, identityFn, 'https://cv-proxy.test', mockCoherenceFn);
+  j = await r.json();
+  ok(j.status === 'done', 'coherence step finalises job -> done');
+  ok(j.coherence && j.coherence.state === 'done', 'coherence state done');
+  ok(j.coherence.findings.length === 1 && j.coherence.findings[0].kind === 'repetition', 'coherence surfaced repetition finding');
+  ok(j.coherence.repaired.includes('outcomes') && j.sections[1].result === '<<OUTCOMES-REVISED>>', 'coherence rewrote outcomes');
+  ok(j.sections[1].coherence_revised === true, 'revised section flagged');
+
+  // 7) stepping a done job is idempotent (coherence not re-run)
+  r = await stepJob(makeReq('POST', '/job/step', { job_id: jobId }), env, CORS, mockRunSection, identityFn, 'https://cv-proxy.test', mockCoherenceFn);
   j = await r.json();
   ok(j.status === 'done' && j.next === 3, 'stepping done job is idempotent');
 
@@ -113,9 +141,50 @@ async function main() {
   r = await cancelJob(makeReq('POST', '/job/cancel', { job_id: j2.job_id }), env, CORS, identityFn);
   const jc = await r.json();
   ok(jc.status === 'cancelled', 'cancel sets status cancelled');
-  r = await stepJob(makeReq('POST', '/job/step', { job_id: j2.job_id }), env, CORS, mockRunSection, identityFn, 'https://cv-proxy.test');
+  r = await stepJob(makeReq('POST', '/job/step', { job_id: j2.job_id }), env, CORS, mockRunSection, identityFn, 'https://cv-proxy.test', mockCoherenceFn);
   const jc2 = await r.json();
   ok(jc2.status === 'cancelled', 'stepping a cancelled job stays cancelled');
+
+  // 11) ui_state colour mapping mid-run: step 1 of a fresh 3-section job, then GET.
+  failOnce.count = 1; // disable the outcomes 503 for this run
+  let r3 = await createJob(makeReq('POST', '/job/create', { sections, provider: 'anthropic' }), env, CORS, identityFn);
+  const j3id = (await r3.json()).job_id;
+  await stepJob(makeReq('POST', '/job/step', { job_id: j3id }), env, CORS, mockRunSection, identityFn, 'https://cv-proxy.test', mockCoherenceFn);
+  r3 = await getJob(makeReq('GET', '/job/' + j3id), env, CORS, identityFn, j3id);
+  const j3 = await r3.json();
+  ok(j3.sections[0].ui_state === 'done', 'ui_state: completed section = done (no bg)');
+  ok(j3.sections[1].ui_state === 'queued' && j3.sections[2].ui_state === 'queued', 'ui_state: not-yet-run sections = queued (yellow)');
+
+  // 12) findings-only coherence mode -> gen-job re-runs the flagged section via runSection
+  coherenceMode = 'findings';
+  // finish remaining sections
+  await stepJob(makeReq('POST', '/job/step', { job_id: j3id }), env, CORS, mockRunSection, identityFn, 'https://cv-proxy.test', mockCoherenceFn); // outcomes
+  await stepJob(makeReq('POST', '/job/step', { job_id: j3id }), env, CORS, mockRunSection, identityFn, 'https://cv-proxy.test', mockCoherenceFn); // experience -> coherence
+  let rc = await stepJob(makeReq('POST', '/job/step', { job_id: j3id }), env, CORS, mockRunSection, identityFn, 'https://cv-proxy.test', mockCoherenceFn); // coherence pass
+  const jc3 = await rc.json();
+  ok(jc3.status === 'done' && jc3.coherence.state === 'done', 'findings-only: coherence finalises');
+  ok(jc3.coherence.repaired.includes('profile') || jc3.coherence.repaired.includes('outcomes'), 'findings-only: re-ran a flagged section via runSection');
+
+  // 13) coherence NEVER fails the job (cascade error) -> job still done, coherence error noted
+  coherenceMode = 'fail';
+  let r4 = await createJob(makeReq('POST', '/job/create', { sections, provider: 'anthropic' }), env, CORS, identityFn);
+  const j4id = (await r4.json()).job_id;
+  for (let i = 0; i < 3; i++) await stepJob(makeReq('POST', '/job/step', { job_id: j4id }), env, CORS, mockRunSection, identityFn, 'https://cv-proxy.test', mockCoherenceFn);
+  let r4c = await stepJob(makeReq('POST', '/job/step', { job_id: j4id }), env, CORS, mockRunSection, identityFn, 'https://cv-proxy.test', mockCoherenceFn);
+  const j4 = await r4c.json();
+  ok(j4.status === 'done', 'coherence cascade failure still completes the job');
+  ok(j4.coherence.state === 'error' && j4.coherence.error, 'coherence error recorded, run not lost');
+
+  // 14) coherence throw -> also safe
+  coherenceMode = 'throw';
+  let r5 = await createJob(makeReq('POST', '/job/create', { sections, provider: 'anthropic' }), env, CORS, identityFn);
+  const j5id = (await r5.json()).job_id;
+  for (let i = 0; i < 3; i++) await stepJob(makeReq('POST', '/job/step', { job_id: j5id }), env, CORS, mockRunSection, identityFn, 'https://cv-proxy.test', mockCoherenceFn);
+  let r5c = await stepJob(makeReq('POST', '/job/step', { job_id: j5id }), env, CORS, mockRunSection, identityFn, 'https://cv-proxy.test', mockCoherenceFn);
+  const j5 = await r5c.json();
+  ok(j5.status === 'done' && j5.coherence.state === 'error', 'coherence throw still completes the job');
+
+  coherenceMode = 'rewrites'; // reset
 
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

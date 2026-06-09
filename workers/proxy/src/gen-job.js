@@ -25,6 +25,22 @@
 // string. Output is therefore byte-identical to the legacy per-section path and inherits
 // prompt-augment, injection-defense, provider handling, and demo-budget accounting.
 //
+// CROSS-SECTION COHERENCE (the reason a job, not just parallel calls)
+// ------------------------------------------------------------------
+// The legacy per-section supervisor (supervisor.js) only ever saw ONE section at a time,
+// so it could catch fabrication/banned-words within a section but NEVER repetition or
+// contradictions ACROSS sections (the same achievement restated in PROFILE + OUTCOMES +
+// EXPERIENCE; a CV claim that contradicts the CL; a number stated two ways). A job is the
+// first place every section's text lives together, so after the last section the job
+// enters a COHERENCE phase: one cross-section LLM pass (reusing the multi-llm cascade)
+// sees all sections + the source CV and returns structured findings — repetition,
+// contradiction, redundancy — each naming the section(s) and a fix. The job then applies
+// targeted per-section repairs (same synthetic-request path) for the flagged sections,
+// re-checkpoints them, and finalises. Findings are returned to the client so the preview
+// can show what was reconciled and why. Injected via `coherenceFn` so gen-job stays free
+// of provider logic. If coherence is unavailable (no key / cascade fails), the job still
+// completes — coherence is a refinement, never a hard gate that could lose a good run.
+//
 // STORAGE
 // -------
 // KV namespace `CV_PROXY_DATA` (already bound). One key per job: `job:{job_id}`, JSON
@@ -131,6 +147,17 @@ export async function createJob(request, env, CORS, identityFn) {
     })),
     next: 0,
     totals: { input_tokens: 0, output_tokens: 0 },
+    // Cross-section coherence phase (runs once after the last section).
+    coherence: {
+      state: 'pending',          // 'pending' | 'done' | 'skipped' | 'error'
+      findings: [],              // [{ kind:'repetition'|'contradiction'|'redundancy', sections:[id], detail, fix }]
+      repaired: [],              // section ids that were rewritten by the coherence pass
+      summary: null,
+      error: null,
+    },
+    // source CV / JD kept so the coherence pass can ground its judgement. Optional.
+    source_cv: typeof body.source_cv === 'string' ? body.source_cv.slice(0, 40000) : null,
+    jd_text: typeof body.jd_text === 'string' ? body.jd_text.slice(0, 20000) : null,
   };
   await writeJob(env, job);
   return jsonResponse({ job_id: job.job_id, status: job.status, sections: job.sections.length }, 200, CORS);
@@ -216,8 +243,9 @@ function addUsage(totals, usage) {
 // Advances exactly one pending section. Short-lived. Idempotent on terminal jobs.
 // `runSection(syntheticRequest, env)` is the proxy's handleRequest, injected.
 // `selfOrigin` is the worker's own origin for the synthetic Request URL.
+// `coherenceFn(env, payload)` runs the cross-section pass (injected; optional).
 // ---------------------------------------------------------------------------
-export async function stepJob(request, env, CORS, runSection, identityFn, selfOrigin) {
+export async function stepJob(request, env, CORS, runSection, identityFn, selfOrigin, coherenceFn) {
   let body;
   try { body = await request.json(); } catch (_) {
     return jsonResponse({ error: 'bad_json' }, 400, CORS);
@@ -236,10 +264,19 @@ export async function stepJob(request, env, CORS, runSection, identityFn, selfOr
     return jsonResponse(publicView(job), 200, CORS);
   }
 
+  // Coherence phase -> all sections are done; run the cross-section pass once, then finalise.
+  if (job.status === 'coherence') {
+    return runCoherencePhase(request, env, CORS, job, runSection, selfOrigin, coherenceFn);
+  }
+
   // Find the next pending section.
   if (job.next >= job.sections.length) {
-    job.status = 'done';
+    // Sections done but status wasn't advanced (older envelope / coherence already handled).
+    job.status = (job.coherence && job.coherence.state === 'pending') ? 'coherence' : 'done';
     await writeJob(env, job);
+    if (job.status === 'coherence') {
+      return runCoherencePhase(request, env, CORS, job, runSection, selfOrigin, coherenceFn);
+    }
     return jsonResponse(publicView(job), 200, CORS);
   }
   const sec = job.sections[job.next];
@@ -320,7 +357,12 @@ export async function stepJob(request, env, CORS, runSection, identityFn, selfOr
   sec.error = null;
   addUsage(job.totals, drained.usage);
   job.next += 1;
-  job.status = (job.next >= job.sections.length) ? 'done' : 'running';
+  // All sections done -> enter the coherence phase (unless already handled).
+  if (job.next >= job.sections.length) {
+    job.status = (job.coherence && job.coherence.state === 'pending') ? 'coherence' : 'done';
+  } else {
+    job.status = 'running';
+  }
   await writeJob(env, job);
   return jsonResponse(publicView(job), 200, CORS);
 }
@@ -332,6 +374,151 @@ async function finishSectionError(env, job, sec, CORS, msg) {
   await writeJob(env, job);
   return jsonResponse(publicView(job), 200, CORS);
 }
+
+// ---------------------------------------------------------------------------
+// Cross-section coherence phase.
+// Runs ONCE after every section is done. `coherenceFn(env, payload)` is injected by the
+// proxy (wraps the multi-llm cascade) and returns:
+//   { ok, findings:[{kind,sections:[id],detail,fix}], rewrites:{ [sectionId]: "new text" },
+//     summary, usage }
+// gen-job applies any rewrites it returns (or, if coherenceFn only returns findings,
+// re-runs the flagged sections through runSection with a coherence-aware repair prompt),
+// re-checkpoints, then finalises. Coherence NEVER fails the job: on any error it marks
+// coherence 'skipped'/'error' and still completes, so a good multi-section run is never
+// lost to a refinement step.
+// ---------------------------------------------------------------------------
+async function runCoherencePhase(request, env, CORS, job, runSection, selfOrigin, coherenceFn) {
+  // Idempotent: if coherence already ran, just finalise.
+  if (!job.coherence || job.coherence.state !== 'pending') {
+    job.status = 'done';
+    await writeJob(env, job);
+    return jsonResponse(publicView(job), 200, CORS);
+  }
+
+  if (typeof coherenceFn !== 'function') {
+    job.coherence.state = 'skipped';
+    job.coherence.summary = 'coherence pass unavailable (no coherenceFn)';
+    job.status = 'done';
+    await writeJob(env, job);
+    return jsonResponse(publicView(job), 200, CORS);
+  }
+
+  // Build the cross-section payload: every done section's id/title/text + source CV + JD.
+  const sectionsForReview = job.sections
+    .filter(s => s.state === 'done' && typeof s.result === 'string')
+    .map(s => ({ id: s.id, title: s.title, text: s.result }));
+
+  let review;
+  try {
+    review = await coherenceFn(env, {
+      sections: sectionsForReview,
+      source_cv: job.source_cv || '',
+      jd_text: job.jd_text || '',
+      meta: job.meta || {},
+    });
+  } catch (e) {
+    job.coherence.state = 'error';
+    job.coherence.error = 'coherence_threw: ' + (e && e.message ? e.message : String(e));
+    job.status = 'done'; // never lose the run
+    await writeJob(env, job);
+    return jsonResponse(publicView(job), 200, CORS);
+  }
+
+  if (!review || !review.ok) {
+    job.coherence.state = 'error';
+    job.coherence.error = (review && review.error) || 'coherence cascade failed';
+    job.status = 'done';
+    await writeJob(env, job);
+    return jsonResponse(publicView(job), 200, CORS);
+  }
+
+  job.coherence.findings = Array.isArray(review.findings) ? review.findings : [];
+  job.coherence.summary = review.summary || null;
+  if (review.usage) addUsage(job.totals, review.usage);
+
+  // Apply rewrites. Two supported shapes:
+  //  (a) review.rewrites = { sectionId: "corrected text" }  -> apply directly.
+  //  (b) only findings    -> re-run each flagged section through runSection with a
+  //      coherence-aware repair prompt appended to its original prompt.
+  const repaired = [];
+  const rewrites = review.rewrites && typeof review.rewrites === 'object' ? review.rewrites : null;
+
+  if (rewrites) {
+    for (const s of job.sections) {
+      if (Object.prototype.hasOwnProperty.call(rewrites, s.id)) {
+        const nt = rewrites[s.id];
+        if (typeof nt === 'string' && nt.trim() && nt.trim() !== (s.result || '').trim()) {
+          s.result = nt;
+          s.coherence_revised = true;
+          repaired.push(s.id);
+        }
+      }
+    }
+  } else if (job.coherence.findings.length > 0) {
+    // Collect the unique section ids that any finding flags.
+    const flagged = new Set();
+    for (const f of job.coherence.findings) {
+      const ids = Array.isArray(f.sections) ? f.sections : [];
+      for (const id of ids) flagged.add(id);
+    }
+    for (const s of job.sections) {
+      if (!flagged.has(s.id)) continue;
+      const issuesForSection = job.coherence.findings
+        .filter(f => Array.isArray(f.sections) && f.sections.includes(s.id))
+        .map((f, i) => `${i + 1}. [${f.kind}] ${f.detail}\n   -> Fix: ${f.fix}`)
+        .join('\n');
+      const repairPrompt = {
+        // mirror the section's original prompt but append a coherence-repair instruction
+        // as a final user turn so augmentation/banned-words still apply.
+        model: (s.prompt && s.prompt.model) || job.model || undefined,
+        messages: ((s.prompt && Array.isArray(s.prompt.messages)) ? s.prompt.messages.slice() : []).concat([
+          { role: 'assistant', content: s.result || '' },
+          { role: 'user', content:
+            'A cross-section coherence review of the full CV/cover letter found these issues with THIS section relative to the others:\n\n' +
+            issuesForSection +
+            '\n\nProduce a corrected version of THIS section only that fixes the issues above (remove repetition with other sections, resolve contradictions, drop redundancy). Keep all facts; do not introduce new claims. Do not use banned words/phrases. Return only the corrected section text.' },
+        ]),
+        max_tokens: (s.prompt && s.prompt.max_tokens) || 1500,
+        stream: true,
+      };
+      const headers = new Headers();
+      headers.set('Content-Type', 'application/json');
+      headers.set('x-provider', job.provider);
+      const auth = request.headers.get('authorization');
+      if (auth) headers.set('authorization', auth);
+      const apiKey = request.headers.get('x-api-key');
+      if (apiKey) headers.set('x-api-key', apiKey);
+      const synthetic = new Request((selfOrigin || 'https://cv-proxy.internal') + '/v1/messages', {
+        method: 'POST', headers, body: JSON.stringify(repairPrompt),
+      });
+      // Mark this section as being re-processed (pink) and persist so a concurrent GET
+      // shows it; restore to 'done' after (success or not — its result text survives).
+      s.state = 'running';
+      await writeJob(env, job);
+      try {
+        const resp = await runSection(synthetic, env);
+        if (resp && resp.status < 400) {
+          const drained = await drainSectionResponse(resp, job.provider);
+          if (drained.text && drained.text.trim()) {
+            s.result = drained.text;
+            s.coherence_revised = true;
+            addUsage(job.totals, drained.usage);
+            repaired.push(s.id);
+          }
+        }
+      } catch (_) { /* leave the section as-is on repair failure; never lose it */ }
+      s.state = 'done';
+      await writeJob(env, job);
+    }
+  }
+
+  job.coherence.repaired = repaired;
+  job.coherence.state = 'done';
+  job.status = 'done';
+  await writeJob(env, job);
+  return jsonResponse(publicView(job), 200, CORS);
+}
+
 
 // ---------------------------------------------------------------------------
 // GET /job/{job_id}  (status / resume)
@@ -369,6 +556,44 @@ export async function cancelJob(request, env, CORS, identityFn) {
 // publicView — what the client gets back. Includes per-section state + result (so the
 // client can render done sections), but never the raw prompts (smaller payloads, and the
 // client already has them).
+//
+// ui_state — single field the preview + generation panel read to colour each section
+// (PROCESSING-QUEUE-INDICATOR-001):
+//   'processing' -> PINK   (being worked right now: this section is running, or it's the
+//                           one the coherence phase is currently rewriting)
+//   'queued'     -> YELLOW (scheduled, not yet started: pending sections after `next`,
+//                           and during coherence, sections still awaiting their repair)
+//   'done'       -> NO BACKGROUND (finished; coherence_revised marks ones it reconciled)
+//   'error'      -> error styling
+function sectionUiState(job, s, idx) {
+  if (s.state === 'error') return 'error';
+  if (s.state === 'running') return 'processing';
+  if (s.state === 'done') {
+    // During the coherence phase a done section may still be re-processed/queued for repair.
+    if (job.status === 'coherence' && job.coherence && job.coherence.state === 'pending') {
+      const flagged = coherenceFlaggedIds(job);
+      if (flagged.has(s.id)) return 'queued'; // awaiting its coherence repair
+    }
+    return 'done';
+  }
+  // pending: the very next section to run reads as processing-soon, but until a /step
+  // actually starts it, it's queued. Everything after `next` is queued.
+  return 'queued';
+}
+
+function coherenceFlaggedIds(job) {
+  const set = new Set();
+  const findings = (job.coherence && job.coherence.findings) || [];
+  for (const f of findings) {
+    const ids = Array.isArray(f.sections) ? f.sections : [];
+    for (const id of ids) set.add(id);
+  }
+  // already-repaired ones are no longer queued
+  const repaired = (job.coherence && job.coherence.repaired) || [];
+  for (const id of repaired) set.delete(id);
+  return set;
+}
+
 function publicView(job, extra) {
   const view = {
     job_id: job.job_id,
@@ -379,14 +604,23 @@ function publicView(job, extra) {
     provider: job.provider,
     model: job.model,
     totals: job.totals,
-    sections: job.sections.map(s => ({
+    sections: job.sections.map((s, idx) => ({
       id: s.id,
       title: s.title,
       state: s.state,
+      ui_state: sectionUiState(job, s, idx),
       result: s.result,
       error: s.error,
       attempts: s.attempts || 0,
+      coherence_revised: !!s.coherence_revised,
     })),
+    coherence: job.coherence ? {
+      state: job.coherence.state,
+      findings: job.coherence.findings || [],
+      repaired: job.coherence.repaired || [],
+      summary: job.coherence.summary || null,
+      error: job.coherence.error || null,
+    } : null,
   };
   if (extra && typeof extra === 'object') view.note = extra;
   return view;
@@ -394,7 +628,8 @@ function publicView(job, extra) {
 
 // Router helper: returns true if this path is a /job/* route, and dispatches.
 // Wire this into proxy/src/index.js near the other url.pathname checks, BEFORE the generic
-// /v1/messages handling. `deps` = { runSection: handleRequest, identityFn: identityFromBearer }.
+// /v1/messages handling. `deps` = { runSection: handleRequest, identityFn: identityFromBearer,
+// coherenceFn: <cross-section pass> }.
 export async function handleJobRoute(request, env, CORS, deps) {
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/+$/, '');
@@ -411,7 +646,7 @@ export async function handleJobRoute(request, env, CORS, deps) {
     return createJob(request, env, CORS, idFn);
   }
   if (request.method === 'POST' && /\/job\/step$/.test(path)) {
-    return stepJob(request, env, CORS, runSection, idFn, selfOrigin);
+    return stepJob(request, env, CORS, runSection, idFn, selfOrigin, deps && deps.coherenceFn);
   }
   if (request.method === 'POST' && /\/job\/cancel$/.test(path)) {
     return cancelJob(request, env, CORS, idFn);

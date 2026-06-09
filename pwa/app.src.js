@@ -11307,8 +11307,22 @@
           "div",
           {
             style: {
+              // 1.50.334 GEN-UI-CANCEL-MOBILE-001: pin the escape hatch to the
+              // viewport bottom so it stays reachable on mobile during
+              // generation. It used to render below the full live-preview track
+              // and was pushed off-screen (the user had to scroll the whole
+              // preview to reach it). position:sticky + bottom:0 pulls this
+              // (otherwise below-the-fold) block up to the viewport bottom while
+              // the preview scrolls underneath; the opaque gradient strip (in
+              // the overlay base colour `e`) keeps the button legible. On
+              // desktop the overlay fits in one screen, so sticky has no effect.
+              position: "sticky",
+              bottom: 0,
+              zIndex: 5,
+              background: `linear-gradient(180deg, rgba(0,0,0,0), ${e} 45%)`,
               borderTop: "1px solid rgba(255,255,255,0.08)",
               paddingTop: 14,
+              paddingBottom: 12,
               marginTop: 6,
             },
           },
@@ -21051,7 +21065,7 @@
                     void uo("")
                   );
                 }
-              } else {
+              } else if ("function" == typeof Bt.arrayBuffer) {
                 const e = await Bt.arrayBuffer(),
                   t = await (
                     await window.loadMammoth()
@@ -21061,6 +21075,20 @@
                     type: "text",
                     text: "JOB DESCRIPTION:\n" + t.value,
                   }));
+              } else {
+                // 1.50.334 JD-URLFETCH-ARRAYBUFFER-001 (defensive guard): JD
+                // source is not a Blob/File (no arrayBuffer) and didn't match the
+                // cached-text gate above. A url-fetch normally takes the cached
+                // branch (zt.text + matching fileName), but never crash on a
+                // non-Blob source — fail gracefully instead of calling
+                // Bt.arrayBuffer() ("…arrayBuffer is not a function" class).
+                return (
+                  $t("input"),
+                  vo(
+                    "Could not read the job-description source. If you fetched it from a URL, the page may not have returned readable text — paste the job description into Additional Signals and regenerate.",
+                  ),
+                  void uo("")
+                );
               }
             }
             if (Bt && (!c || c.length < 50))

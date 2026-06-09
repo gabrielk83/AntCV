@@ -50,7 +50,7 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.40.344';
+  var SCRIPT_VERSION = '1.50.335-panel-fit';
   if (window.__antcvAnalysisMerge344 === SCRIPT_VERSION) return;
   window.__antcvAnalysisMerge344 = SCRIPT_VERSION;
 
@@ -181,6 +181,19 @@
       if (a.assumptions !== undefined) merged.assumptions = a.assumptions;
       if (a.recommendations !== undefined) merged.recommendations = a.recommendations;
       if (a.confidence_notes !== undefined) merged.confidence_notes = a.confidence_notes;
+      // ANALYSIS-PANEL-MISSING-FIT-001 (owner 2026-06-09): also carry the CORE
+      // analysis fields. app.js renders Overall Fit / Strongest Fit Points / Gaps /
+      // tailoring / CL-strategy in the in-app "📊 Application Analysis" panel from the
+      // rationale object — without these the panel was blank for fit→recommendations
+      // when rationale lacked them (Analyse-JD on a fresh/unsolicited state), even
+      // though the export report (antcv-analysis-report-pdf-360) showed the full set.
+      // Guarded with !== undefined so an existing generation-time value is only
+      // replaced when this fresh jd-analysis actually provides one.
+      if (a.fit_summary !== undefined) merged.fit_summary = a.fit_summary;
+      if (a.top_fit_points !== undefined) merged.top_fit_points = a.top_fit_points;
+      if (a.gaps !== undefined) merged.gaps = a.gaps;
+      if (a.tailoring_decisions !== undefined) merged.tailoring_decisions = a.tailoring_decisions;
+      if (a.cover_letter_strategy !== undefined) merged.cover_letter_strategy = a.cover_letter_strategy;
       merged._jdAnalysisMergedAt = Date.now();
       if (writeRationale(merged)) fireMerge();
     } catch (_) {

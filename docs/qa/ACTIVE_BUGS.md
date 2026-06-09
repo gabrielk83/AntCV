@@ -10,7 +10,7 @@ A companion **feature registry** (open vs shipped features) lives at
 
 ## ANALYSIS PANEL 2026-06-09
 
-- **ANALYSIS-PANEL-MISSING-FIT-001** `[OPEN][CRITICAL][analysis]` — owner 2026-06-09
+- **ANALYSIS-PANEL-MISSING-FIT-001** `[FIXED 1.50.335 — verified headless]` — owner 2026-06-09
   (screenshot): the in-app **📊 Application Analysis** panel shows only the JD input,
   **EXPORT & DETAIL**, **ASSUMPTIONS**, and **CONFIDENCE REVIEW**. The core of the
   analysis — **OVERALL FIT, STRONGEST FIT POINTS, GAPS / HONEST ASSESSMENT,
@@ -40,6 +40,12 @@ A companion **feature registry** (open vs shipped features) lives at
   Strongest Fit Points + Gaps + Recommendations (matching the export). **NOTE:** must
   preserve any fit fields already in `rationale` (only overwrite when the response
   actually provides them — guard with `!== undefined`, same as the existing copies).
+  **SHIPPED 1.50.335:** `antcv-analysis-merge-344.js` now also copies `fit_summary`,
+  `top_fit_points`, `gaps`, `tailoring_decisions`, `cover_letter_strategy` (guarded by
+  `!== undefined`). Verified `pwa/test/diag-analysis-panel-fit.mjs`: `runMerge()` with a
+  stubbed `/api/jd-analysis` lands all five fit fields in `rationale` (so the panel renders
+  Overall Fit / Strongest Fit Points / Gaps / Recommendations), with assumptions +
+  confidence_notes still carried (no regression); 0 console errors.
 
 ## EXPORT REVIEW 2026-06-09 — owner re-export feedback (1.50.321 / worker 1.14.41)
 

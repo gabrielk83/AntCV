@@ -21114,7 +21114,7 @@
             // "extract company ONLY from the JOB DESCRIPTION" rule).
             const __noJD = !(c && String(c).trim());
             const __neutralCo = __noJD
-              ? 'OPEN / UNSOLICITED APPLICATION — NO TARGET COMPANY. There is no job description and no target employer for this draft. Do NOT name ANY specific company ANYWHERE in the cover letter or the CV body — not in WHY THIS POSITION, not in the HOW I WOULD CONTRIBUTE closing line, not in the CLOSURE line, nowhere. Use neutral references only: "your organisation", "your team", "the role". Do NOT infer, guess, or carry forward a company name from prior context, additional signals, or background documents. meta.company MUST be empty.\n\n'
+              ? 'OPEN / UNSOLICITED APPLICATION — NO TARGET COMPANY. There is no job description and no target employer for this draft. Do NOT name ANY specific company ANYWHERE in the cover letter or the CV body — not in WHY THIS POSITION, not in the HOW I WOULD CONTRIBUTE closing line, not in the CLOSURE line, nowhere. Use neutral references only: "your organisation", "your team", "the role". Do NOT infer, guess, or carry forward a company name from prior context, additional signals, or background documents. meta.company MUST be empty. You STILL must FULLY write who_content, why_content (frame WHY generally — why this KIND of role and work fits, with no specific employer named), and contribute_items (3-4 concrete bullets) from the candidate\'s real background. NEVER leave who_content, why_content, or contribute_items empty in an unsolicited draft.\n\n'
               : "";
             let p = "";
             if (Ye && se) {
@@ -21277,15 +21277,24 @@
                         /^FILL_[a-z_0-9]+_(here|HERE)/.test(t)
                       );
                     },
+                    cib = Array.isArray(e.contribute_items) && e.contribute_items.filter((x) => { const s = typeof x === "string" ? x : (x && x.t) || ""; return String(s).trim().length >= 10; }).length >= 2,
                     n =
                       (t(e.who_content) ? 1 : 0) +
                       (t(e.why_content) ? 1 : 0) +
                       (t(e.foundation_hands_on) ? 1 : 0) +
                       (t(e.foundation_professionally) ? 1 : 0) +
-                      (t(e.closure_content) ? 1 : 0);
-                  if (n < 3 && N < L) {
+                      (t(e.closure_content) ? 1 : 0) +
+                      (cib ? 1 : 0);
+                  // CL-EMPTY-BODY-FIELDS-001 (owner 2026-06-09): the WHO I AM / WHY /
+                  // HOW-I-WOULD-CONTRIBUTE bullets came back empty and the OLD gate
+                  // (n<3 of 5) accepted it — foundation×2 + closure alone hit 3, so an
+                  // empty who+why+bullets response passed. Now contribute_items is a
+                  // 6th critical field and the bar is ≥4 of 6, so an empty-body draft
+                  // is retried for REAL content (the placeholder/neutral fallback in
+                  // the post-processor is the final guarantee if every retry fails).
+                  if (n < 4 && N < L) {
                     console.warn(
-                      `[v1.40.100 generate] attempt ${N}/${L}${B ? " (" + B + ")" : ""}: only ${n}/5 critical CL fields filled — cycling to next provider`,
+                      `[v1.40.100 generate] attempt ${N}/${L}${B ? " (" + B + ")" : ""}: only ${n}/6 critical CL fields filled — cycling to next provider`,
                     );
                     const e = new Error("PARTIAL_CL_RESPONSE");
                     throw (
@@ -21295,7 +21304,7 @@
                     );
                   }
                   console.log(
-                    `[v1.40.100 generate] attempt ${N}${B ? " (" + B + ")" : ""}: ${n}/5 critical CL fields filled — accepting`,
+                    `[v1.40.100 generate] attempt ${N}${B ? " (" + B + ")" : ""}: ${n}/6 critical CL fields filled — accepting`,
                   );
                 } catch (e) {
                   if (e && "PartialResponse" === e.name) throw e;
@@ -22193,6 +22202,24 @@
                             "Happy to discuss how this background might fit a role on your team. I can adapt this letter to a specific posting on request.",
                         }
                       : {};
+                    // CL-EMPTY-BODY-FIELDS-001 (owner 2026-06-09): the LLM
+                    // sometimes returns empty who_content / why_content /
+                    // contribute_items. The fallback chains below then fell back to
+                    // a(e.content) — but e.content is the me() TEMPLATE PLACEHOLDER
+                    // ("[WHO I AM — …]"), which a() returns verbatim (truthy), so the
+                    // placeholder leaked into the exported CL instead of the real
+                    // neutral fallback. __clReal treats a bracketed placeholder as
+                    // empty so the chain falls through to the neutral text, and
+                    // __neutralContribItems guarantees the HOW-I-WOULD-CONTRIBUTE
+                    // bullets are never empty (even in a no-JD / non-showcase run).
+                    const __clReal = (c) => { const v = a(c) || ""; return /^\s*\[/.test(String(v).trim()) ? "" : v; };
+                    const __neutralContribItems = (Array.isArray(n.contribute_items) && n.contribute_items.length)
+                      ? n.contribute_items
+                      : [
+                          "Start by learning the current setup, tools, and main flows before proposing changes.",
+                          "Map the one or two highest-leverage gaps in the process and propose a small, reviewable fix for each.",
+                          "Make decisions and their trade-offs visible in a shared log so the team can follow what changed and why.",
+                        ];
                     return "greeting" === e.id
                       ? {
                           ...e,
@@ -22214,8 +22241,8 @@
                           ? {
                               ...e,
                               content:
-                                a(F.who_content) ||
-                                a(e.content) ||
+                                __clReal(F.who_content) ||
+                                __clReal(e.content) ||
                                 n.who ||
                                 `I am a ${String(g || "engineer").toLowerCase()} with ${f || "15"}+ years across the roles listed on my CV. I work at the seams between disciplines, keeping requirements, decisions, and trade-offs visible and traceable.` ||
                                 "",
@@ -22290,8 +22317,8 @@
                               ? {
                                   ...e,
                                   content:
-                                    a(F.why_content) ||
-                                    a(e.content) ||
+                                    __clReal(F.why_content) ||
+                                    __clReal(e.content) ||
                                     n.why ||
                                     "My background centres on the work set out in this profile. I would welcome the chance to discuss how it maps to this role's scope and priorities, and to tailor the detail to what matters most for the position." ||
                                     "",
@@ -22309,8 +22336,7 @@
                                       (o.contribute
                                         ? o.contribute.items
                                         : null) ||
-                                      n.contribute_items ||
-                                      [];
+                                      __neutralContribItems;
                                     const _cBase = {
                                       ...e,
                                       intro:

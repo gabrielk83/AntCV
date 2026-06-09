@@ -112,6 +112,25 @@ document this.)
   NOT broken; tail spanning into page 3 is labeled 3 in both maps) + no regression in
   `diag-cl-salmon` / `diag-cl-midlist-measurer` / sidebar tests + boot-smoke 0 errors.
 
+- **CL-EMPTY-BODY-FIELDS-001** `[FIXED 1.50.329 — verified headless]` — owner 2026-06-09:
+  an exported unsolicited CL showed the TEMPLATE placeholders for WHO I AM ("[WHO I AM —
+  …]") and WHY THIS POSITION, and NO bullets under HOW I WOULD CONTRIBUTE (intro + closing
+  present, items empty). The neutrality fix held (no company named). ROOT CAUSE (two):
+  (a) the post-processor fallback chain was `a(F.who_content) || a(e.content) || neutral`,
+  but `e.content` is the me() placeholder and `a()` returns it verbatim (truthy), so the
+  PLACEHOLDER leaked instead of the neutral fallback (same for WHY); (b) the partial-
+  response gate accepted `n ≥ 3 of 5` critical fields — foundation×2 + closure alone make
+  3, so an empty who+why+bullets response was ACCEPTED, and `contribute_items` wasn't
+  checked at all. FIX (app.src.js, terser rebuild): `__clReal()` treats a bracketed
+  placeholder as empty so who/why fall through to the neutral fallback; `__neutralContrib
+  Items` guarantees 3 HOW-I-WOULD-CONTRIBUTE bullets even in a no-JD/non-showcase run; the
+  gate now counts `contribute_items` (6th field) and requires `≥4 of 6` so an empty-body
+  draft is RETRIED for real content; and the no-JD prompt clause now explicitly tells the
+  LLM to fully write who/why/bullets. Verified: 5 new unit tests
+  (`test/unit/cl-empty-body-fallback.test.mjs`, 48/48 pass) — placeholder rejected →
+  neutral, real content kept, the owner's exact failing response (n=3) now retries; rebuild
+  identity-clean (head `(()=>{`, 0 "use strict", +910 chars), boot-smoke 0 errors.
+
 ## EXPORT REVIEW 2026-06-08 (PM-2) — owner re-export feedback
 
 Iterating on real CV/CL exports (owner rendering .docx + PDF). Shipped + open:

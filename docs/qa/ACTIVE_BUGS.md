@@ -33,12 +33,18 @@ A companion **feature registry** (open vs shipped features) lives at
   (sidebar headings? main headings? the column divider?) should be navy — then set the
   token. (`#283556` is also the sidebar BG, so navy headings ON the navy sidebar would be
   invisible — likely this is the MAIN-column headings/divider, or the package base.)
-- **DEMO-FETCHJD-WORKERURL-001** `[OPEN]` — demo Fetch-JD still errors "Configure Worker
-  URL in Settings → API Keys first." The home Fetch-JD handler `Wn` (app.src.js) reads
-  `proxyUrl` directly with NO relay fallback; the recommended source-fix (`|| window.ANTCV_RELAY_URL`)
-  was not applied to the live app.js (which is the other session's 1.50.334). `371` seeds
-  proxyUrl from the relay but depends on `ANTCV_RELAY_URL` + timing. Robust fix = the Wn
-  relay fallback (needs an app.src.js edit + rebuild, on the live build the other session owns).
+- **DEMO-FETCHJD-WORKERURL-001** `[FIXED 1.50.338 — verified headless]` — demo Fetch-JD
+  errored "Configure Worker URL in Settings → API Keys first." The home Fetch-JD handler
+  `Wn` (app.src.js) read `proxyUrl` directly with NO relay fallback; demo users have no
+  proxyUrl. FIX: when `proxyUrl` is empty, fall back to `window.ANTCV_RELAY_URL` (set from
+  relay-config.json → forwards `/api/fetch-jd-url` to the demo-proxy), with the same
+  http→https + trailing-slash normalisation — matching Generate / Analyse-JD / recheck-fit.
+  Robust even if the `371` proxyUrl seed hasn't run. app.src.js edit + terser rebuild
+  (identity-clean: head `(()=>{`, 0 "use strict", +135 chars, node-check OK). Verified:
+  5 unit tests (`pwa/test/unit/demo-fetchjd-relay.test.mjs`) — proxyUrl wins when set,
+  relay used when proxyUrl empty, error path preserved when both empty, http→https; the
+  fallback string is present in the rebuilt app.js; boot-smoke clean. (Live confirmation in
+  demo still depends on the access-relay routing `/api/fetch-jd-url` to the demo-proxy.)
 - **REGULAR-MODE-STALE-SETUP-001** `[OPEN]` — in regular (BYOK) mode a "setup needed"
   warning + the demo-coin icon appear and only clear after a manual refresh. Stale
   demo/BYOK state on key-change; demo detection / the setup warning isn't re-evaluated live.

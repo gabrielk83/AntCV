@@ -12293,11 +12293,25 @@
           if (e) {
             Zt({ busy: !0, error: null, hint: null });
             try {
-              const t = (u.get("proxyUrl", "") || "")
+              let t = (u.get("proxyUrl", "") || "")
                 .toString()
                 .trim()
                 .replace(/^http:\/\//i, "https://")
                 .replace(/\/+$/, "");
+              // DEMO-FETCHJD-WORKERURL-001 (owner 2026-06-09): demo users have no
+              // configured proxyUrl, so this gate errored ("Configure Worker URL …")
+              // while Generate / Analyse-JD / recheck-fit worked. Match those paths:
+              // when proxyUrl is empty, fall back to the access relay
+              // (window.ANTCV_RELAY_URL, set from relay-config.json), which forwards
+              // /api/fetch-jd-url to the demo-proxy. Robust even if the
+              // antcv-proxyurl-relay-fallback-371 seed hasn't run yet.
+              if (!t) {
+                try {
+                  const r = (window.ANTCV_RELAY_URL || "")
+                    .toString().trim().replace(/^http:\/\//i, "https://").replace(/\/+$/, "");
+                  if (r) t = r;
+                } catch (_) {}
+              }
               if (!t)
                 return void Zt({
                   busy: !1,

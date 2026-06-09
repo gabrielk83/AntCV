@@ -21374,6 +21374,15 @@
                 u.get("kernelShowcaseInProgress", !1) || (Un && Un.current);
               if (
                 __explicitShowcase ||
+                // CL-GHOST-COMPANY-001 hardening (owner 2026-06-09 "make sure the
+                // fetch still passes ghost hunt … otherwise we'll see Terma again"):
+                // when NO JD was provided, ANY company the LLM put in meta.company
+                // is a hallucination (there is no JD to extract it from). The old
+                // __jdNamedCompany heuristic treated that hallucinated name as "a JD
+                // named the employer" and KEPT it (meta + unscrubbed body) — the exact
+                // hole that let Terma back in. Force Unsolicited + run the body scrub
+                // for EVERY no-JD generation, regardless of __jdNamedCompany.
+                __noJD ||
                 (!__jdNamedCompany && io && "Unsolicited" === io.company)
               ) {
                 const e = ie() || {},
@@ -21425,22 +21434,26 @@
                     e &&
                     !/^(unsolicited|open\s+application|n\/?a)$/i.test(e)
                   ) {
+                    // 1.50.330: NEUTRALISE in place (was: drop the whole sentence +
+                    // replace bare mentions with the literal "[Company]"). Dropping
+                    // sentences lost good content, and "[Company]" is itself a
+                    // placeholder leak. Swap the ghost company (and its possessive)
+                    // for "your organisation" so the sentence is preserved, reads
+                    // naturally, and carries NO company name and NO bracket.
+                    const __esc = e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
                     const t = (t) =>
                       "string" != typeof t
                         ? t
                         : t
-                            .split(/(?<=[.!?])\s+/)
-                            .filter((t) => !t.includes(e))
-                            .join(" ")
                             .replace(
-                              new RegExp(
-                                "\\b" +
-                                  e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") +
-                                  "\\b",
-                                "gi",
-                              ),
-                              "[Company]",
+                              new RegExp("\\b" + __esc + "(['’]s)\\b", "gi"),
+                              "your organisation's",
                             )
+                            .replace(
+                              new RegExp("\\b" + __esc + "\\b", "gi"),
+                              "your organisation",
+                            )
+                            .replace(/\s{2,}/g, " ")
                             .trim();
                     (F.who_content && (F.who_content = t(F.who_content)),
                       F.why_content && (F.why_content = t(F.why_content)),
@@ -21452,6 +21465,13 @@
                         )),
                       F.closure_content &&
                         (F.closure_content = t(F.closure_content)),
+                      // 1.50.330: also scrub the HOW-I-WOULD-CONTRIBUTE intro +
+                      // closing — the original ghost lived in contribute_closing
+                      // ("My aim would be to help Terma build…") and was being missed.
+                      F.contribute_intro &&
+                        (F.contribute_intro = t(F.contribute_intro)),
+                      F.contribute_closing &&
+                        (F.contribute_closing = t(F.contribute_closing)),
                       Array.isArray(F.contribute_items) &&
                         (F.contribute_items = F.contribute_items
                           .map(t)

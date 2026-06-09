@@ -112,6 +112,26 @@ document this.)
   NOT broken; tail spanning into page 3 is labeled 3 in both maps) + no regression in
   `diag-cl-salmon` / `diag-cl-midlist-measurer` / sidebar tests + boot-smoke 0 errors.
 
+- **CL-GHOST-COMPANY-001 (ghost-hunt hardening)** `[FIXED 1.50.330 — verified headless]` —
+  owner 2026-06-09: "make sure the fetch still passes ghost hunt and prevents
+  hallucinations — otherwise we'll see Terma again." The 1.50.329 empty-field retry pushes
+  the LLM to fill WHO/WHY/bullets, which could surface a hallucinated company. Audited the
+  existing ghost hunt and found a real HOLE: the force-Unsolicited + body-scrub branch
+  only fired on `__explicitShowcase || (!__jdNamedCompany && io.company==='Unsolicited')`
+  — so when the LLM hallucinated a company with NO JD present, `__jdNamedCompany` went true,
+  the branch was SKIPPED, and the ghost was KEPT in meta AND the unscrubbed body. FIX:
+  (1) the branch now also fires for EVERY no-JD generation (`__noJD`), since with no JD any
+  meta.company is a hallucination → always force Unsolicited + scrub; (2) the scrub now
+  NEUTRALISES the ghost in place (→ "your organisation" / "your organisation's") instead of
+  deleting whole sentences and leaving the literal "[Company]" placeholder; (3) the scrub
+  now also covers `contribute_intro` + `contribute_closing` — where the original
+  "help **Terma** build…" ghost actually lived and was being missed. The 1.50.329 neutral
+  fallbacks are company-free, so the combined chain (prompt forbids naming a company →
+  scrub neutralises any slip → neutral fallback if a field ends empty) is ghost-free and
+  placeholder-free. Verified: 6 new unit tests (`test/unit/cl-ghost-hunt.test.mjs`, 54/54
+  pass) — no-JD+hallucinated-company forces Unsolicited, the contribute_closing ghost and
+  its possessive are neutralised, multi-word names handled, tailored path unaffected;
+  rebuild identity-clean (head `(()=>{`, 0 "use strict", +182 chars), boot-smoke 0 errors.
 - **CL-EMPTY-BODY-FIELDS-001** `[FIXED 1.50.329 — verified headless]` — owner 2026-06-09:
   an exported unsolicited CL showed the TEMPLATE placeholders for WHO I AM ("[WHO I AM —
   …]") and WHY THIS POSITION, and NO bullets under HOW I WOULD CONTRIBUTE (intro + closing

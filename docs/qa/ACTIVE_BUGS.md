@@ -1575,8 +1575,13 @@ items marked VERIFYING.
 
 ### Still OPEN after this session
 
-- **HARDREFRESH-001** `[OPEN]` — In-app Hard Refresh shows the "are you sure?" confirm
-  but does nothing after OK (no reload). Not yet diagnosed.
+- **HARDREFRESH-001** `[FIXED✓ verified headless 2026-06-11]` — In-app Hard Refresh
+  shows the confirm but did nothing after OK. The in-source hardening (fire-and-forget
+  cleanup + 1.2s forced reload + `location.replace` fallback, app.src.js ~28892)
+  verifies green: `pwa/test/diag-hardrefresh.mjs` clicks the button with a CONTROLLING
+  service worker and observes the reload. Likely explanation for the report: pre-1.50.355
+  the Settings modal did not mount in the editor route at all (SETTINGS-NAV-Z-001), so
+  the whole settings surface was unreachable/stale there. Owner to re-confirm on device.
 - **DEMO-PERSIST-001** `[OPEN][HIGH][console][worker]` — **A demo user is server-
   classified as "paid".** Confirmed live: `51pegasib@gmail.com` (who carries the demo
   "⚠ Setup needed" chip) reads relay `/config` → `user_mode:"paid"`, `demo_mode:false`.

@@ -52,7 +52,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.344-loader';
+  var VERSION = '1.50.347-loader';
   if (window.__antcv357Loader === VERSION) return;
   window.__antcv357Loader = VERSION;
 
@@ -71,7 +71,11 @@
     { src: 'antcv-ui-polish-373.js', v: '1.50.342-ui-polish' },
     // Keyboard shortcuts: Ctrl/Cmd+Enter = Generate, Esc = close panel.
     // Listener-only, no preview DOM mutation; one-time hint + disable hatch.
-    { src: 'antcv-keyboard-shortcuts-374.js', v: '1.50.344-shortcuts' }
+    { src: 'antcv-keyboard-shortcuts-374.js', v: '1.50.344-shortcuts' },
+    // Login clean-reload: sign-IN doesn't reload (only sign-out does), so the
+    // prior session's stale demo/setup notices + previous user's subtitle
+    // persist until a manual refresh. Do one guarded reload on login/switch.
+    { src: 'antcv-login-clean-reload-375.js', v: '1.50.346-login-clean-reload' }
   ];
 
   function alreadyPresent(src) {

@@ -25107,8 +25107,16 @@ function renderSection(s, ctx, isSidebar) {
   // segment(s) a "TITLE (Cont.)" heading + a pageBreakBefore. Mirrors the proven
   // renderCompetencyTable chunking. Guarded by _antcvSegment so the recursive
   // re-render of each segment doesn't split again.
+  // PB-WORKER-CL-LIST-CONT-001 (owner 2026-06-10): the split was gated to the
+  // SIDEBAR (CV) only, so a labeled_list / list in the LINEAR cover letter that
+  // the preview splits across a page stayed un-split in the export (no
+  // "(Cont.)", section not moved). The linear (CL) path honours pbBreakPara as a
+  // real Word page break, so the same segment chunking works there too. Fire
+  // for the sidebar OR the linear CL. Safe superset: only engages when an item
+  // carries _page>=2 (set by the measurer); CV main-column lists are excluded.
+  const _listSplitEligible = isSidebar || (ctx && ctx.doc === "cl");
   if (
-    isSidebar && !s._antcvSegment && Array.isArray(s.items) && s.items.length > 1 &&
+    _listSplitEligible && !s._antcvSegment && Array.isArray(s.items) && s.items.length > 1 &&
     (s.type === "labeled_list" || s.type === "list" || s.type === "list_italic" || s.type === "education")
   ) {
     let run = 1; const chunks = []; const byPage = {};
@@ -26622,7 +26630,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.43-cv-table-fullwidth";
+var VERSION = "1.14.44-cl-list-cont";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

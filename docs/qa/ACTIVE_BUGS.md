@@ -8,6 +8,28 @@ A companion **feature registry** (open vs shipped features) lives at
 
 ---
 
+## OWNER REPORT 2026-06-10 (EVE) — preview↔PDF (Cont.) gap
+
+- **PB-WORKER-CL-LIST-CONT-001** `[FIXED docx-worker 1.14.44 — needs owner visual]` — owner:
+  preview splits REGULATORY CONTEXT with "(Cont.)" but the exported PDF shows plain
+  "REGULATORY CONTEXT", not moved to page 2. INVESTIGATION: the CV (two-column) chain is
+  verified CORRECT end-to-end — the REAL measurer writes the export map
+  `antcv:autoPages={regctx:{N:2}}`, the docx-client forwards `items[N]._page=2`
+  (`pwa/test/diag-sidebar-cont-e2e.mjs`), and the worker splits the sidebar list with
+  "REGULATORY CONTEXT (CONT.)" on a 2nd page-table (`diag-twocol-ownerlike.mjs`). The GAP:
+  the worker's labeled_list / list / education (Cont.) split was gated to the CV SIDEBAR
+  only (`isSidebar`); a list in the LINEAR COVER LETTER that the preview splits stayed
+  un-split on export (no "(Cont.)", not moved). FIX (1.14.44): fire the split for the
+  sidebar OR the linear CL (`isSidebar || ctx.doc==='cl'`). The linear path honours
+  `pbBreakPara` as a real Word page break, so the segment chunking + "(Cont.)" heading now
+  work there too. Safe superset — only engages when an item carries `_page>=2` (measurer-set);
+  CV main-column lists are excluded. Verified: `workers/docx-worker/test/diag-cl-list-cont.mjs`
+  4/4 (Cont. heading + real pageBreakBefore + no content loss); CV regressions
+  (twocol-ownerlike, cv-table-width, palette 11/11) still pass.
+  IF the owner's section is the CV sidebar (not the CL): the chain is already correct in
+  code — re-export on a hard-refreshed app AFTER the preview shows the split, and confirm
+  the docx-worker version stamped in the file is >= 1.14.40 (when the sidebar split landed).
+
 ## OWNER REPORT 2026-06-10 (PM) — analysis print completeness + Nordic style
 
 - **ANALYSIS-PRINT-COMPLETE-001** `[FIXED 1.50.351 — verified headless]` — owner: now that

@@ -25,11 +25,16 @@ A companion **feature registry** (open vs shipped features) lives at
   and the export now share the same table width, so heights converge. Verified:
   `workers/docx-worker/test/diag-cv-table-width.mjs` 4/4 (CV left + full width 7689 DXA,
   CL centered + inset) + twocol-ownerlike + palette 11/11 still pass.
-  RESIDUAL (minor, inherent Word-vs-HTML): main bullet MARKER already matches (~20px from
-  the edge in both), but Word's hanging indent wraps continuation lines to ~33px while the
-  HTML preview wraps to ~20px. If the page slide persists after this, that bullet wrap and
-  per-section vertical spacing are the next contributors to chase — but the table width was
-  the dominant one. Needs the owner's visual pass on a CV with a competency table.
+  BULLET HANG (owner follow-up 2026-06-10, FIXED 1.50.348): the owner asked to make the
+  HTML preview bullets hang like Word. All 5 preview bullet render sites (text_bullets ×2 +
+  its closing-clause continuation, the bullets/labeled list, and experience role bullets)
+  changed from `paddingLeft:10` to a hanging indent `paddingLeft:24; textIndent:-14` — the
+  marker first-line outdents to ~20px abs (matching Word's marker) and the body +
+  continuation lines hang at ~34px abs (matching Word's ~33.6px text indent). Now the
+  preview wraps like the export, which ALSO tightens preview↔PDF height convergence (the
+  measurer measures the preview). terser rebuild identity-clean (head `(()=>{`, 0
+  use-strict, node-check + boot-smoke OK); salmon full-app diag still PASS. Needs the
+  owner's visual pass on a CV with a competency table + multi-line bullets.
 
 ## OWNER REPORT 2026-06-10 (AM) — CL preview watermark
 

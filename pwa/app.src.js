@@ -4297,7 +4297,7 @@
                           style: {
                             fontFamily: T,
                             fontSize: $.bullet,
-                            paddingLeft: 10,
+                            paddingLeft: 24, textIndent: -14,
                             marginBottom: 3,
                             color: O,
                             textAlign: "justify",
@@ -4317,7 +4317,7 @@
                           style: {
                             fontFamily: T,
                             fontSize: $.bullet,
-                            paddingLeft: 10,
+                            paddingLeft: 24, textIndent: -14,
                             marginBottom: 3,
                             color: O,
                             lineHeight: I,
@@ -4334,7 +4334,7 @@
                         style: {
                           fontFamily: T,
                           fontSize: $.bullet,
-                          paddingLeft: 10,
+                          paddingLeft: 24, textIndent: -14,
                           marginBottom: 3,
                           color: O,
                           textAlign: "justify",
@@ -4458,7 +4458,7 @@
                 style: {
                   fontFamily: T,
                   fontSize: $.bullet,
-                  paddingLeft: 10,
+                  paddingLeft: 24, textIndent: -14,
                   marginBottom: 3,
                   color: O,
                   textAlign: "justify",
@@ -4915,7 +4915,7 @@
                               key: n,
                               style: {
                                 fontSize: $.bullet,
-                                paddingLeft: 10,
+                                paddingLeft: 24, textIndent: -14,
                                 marginBottom: 1,
                                 color: "#000",
                                 fontFamily: T,

@@ -36,7 +36,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.336-panel-order';
+  var VERSION = '1.50.339-analyse-row';
   if (window.__antcvAnalysisReportPdf360 === VERSION) return;
   window.__antcvAnalysisReportPdf360 = VERSION;
 
@@ -83,6 +83,7 @@
   function T() {
     return isDanish() ? {
       download: '⬇ Hent analyse (PDF)',
+      analyse: 'Analysér JD',
       heading: 'Eksportér & uddyb',
       assumptions: 'Antagelser',
       confidence: 'Tillidsgennemgang',
@@ -98,6 +99,7 @@
       printHint: 'Vælg "Gem som PDF" i printdialogen.',
     } : {
       download: '⬇ Download analysis (PDF)',
+      analyse: 'Analyse JD',
       heading: 'Export & detail',
       assumptions: 'Assumptions',
       confidence: 'Confidence review',
@@ -506,6 +508,10 @@
       + '#' + BLOCK_ID + ' .arx-dl{padding:8px 14px;font-size:12px;font-weight:700;color:#fff;background:#283556;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;}'
       + '#' + BLOCK_ID + ' .arx-dl:hover{background:#00746E;}'
       + '#' + BLOCK_ID + ' .arx-dl:disabled{background:#999;cursor:wait;}'
+      + '#' + BLOCK_ID + ' .arx-btns{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}'
+      + '#' + BLOCK_ID + ' .arx-analyse{padding:8px 14px;font-size:12px;font-weight:700;color:#fff;background:#00746E;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;}'
+      + '#' + BLOCK_ID + ' .arx-analyse:hover{background:#01B7BB;}'
+      + '#' + BLOCK_ID + ' .arx-analyse:disabled{background:#999;cursor:wait;}'
       + '#' + BLOCK_ID + ' .arx-grp{margin-bottom:12px;}'
       + '#' + BLOCK_ID + ' .arx-h{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;margin-bottom:5px;}'
       + '#' + BLOCK_ID + ' ul{margin:0;padding-left:18px;font-size:12px;line-height:1.5;color:#333;}'
@@ -580,10 +586,34 @@
     var row = document.createElement('div');
     row.className = 'arx-row';
     var h = document.createElement('div'); h.className = 'arx-heading'; h.textContent = t.heading;
+    // ANALYSE-JD-BUTTON-POS-001 (owner 2026-06-10: "same row, side by side"):
+    // an Analyse-JD button lives HERE, next to Download. It delegates the
+    // click to the real run button inside the 356 JD block (which hides its
+    // own copy while this one exists), so the run logic stays in one place.
+    var an = document.createElement('button');
+    an.className = 'arx-analyse'; an.type = 'button';
+    an.textContent = t.analyse;
+    an.addEventListener('click', function () {
+      var real = document.querySelector('#antcv-analysis-panel-jd-block .apjb-run');
+      if (!real) return;
+      real.click();
+      // Mirror the real button's busy state (it disables itself while the
+      // analysis runs) without coupling to 356's internals.
+      an.disabled = true; var was = an.textContent; an.textContent = real.textContent;
+      var n = 0;
+      var iv = setInterval(function () {
+        if (!document.body.contains(real) || !real.disabled || ++n > 300) {
+          clearInterval(iv); an.disabled = false; an.textContent = was;
+        } else { an.textContent = real.textContent; }
+      }, 400);
+    });
     var dl = document.createElement('button');
     dl.className = 'arx-dl'; dl.type = 'button'; dl.textContent = t.download;
     dl.addEventListener('click', function () { exportPdf(dl); });
-    row.appendChild(h); row.appendChild(dl);
+    var btns = document.createElement('div');
+    btns.className = 'arx-btns';
+    btns.appendChild(an); btns.appendChild(dl);
+    row.appendChild(h); row.appendChild(btns);
     wrap.appendChild(row);
 
     if (!hasAnalysis(m)) {

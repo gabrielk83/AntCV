@@ -76,7 +76,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.153-upload-jd';
+  var VERSION = '1.50.339-analyse-row';
   if (window.__antcvAnalysisPanelJdBlock356 === VERSION) return;
   window.__antcvAnalysisPanelJdBlock356 = VERSION;
 
@@ -505,6 +505,24 @@
     return wrap;
   }
 
+  // ANALYSE-JD-BUTTON-POS-001 (owner 2026-06-10): the Analyse-JD action now
+  // ALSO renders side-by-side with "Download analysis" in the 360 EXPORT &
+  // DETAIL row (an .arx-analyse proxy that clicks our real .apjb-run). While
+  // that row button exists, hide our in-block copy so there is exactly one
+  // visible Analyse-JD control; if 360 is absent/fails, ours comes right back
+  // on the next scheduler pass. Also pin the order: JD inputs ABOVE the
+  // report/action block, so the flow reads input → actions.
+  function syncWithReportBlock(panel) {
+    var blk = panel.querySelector('#' + BLOCK_ID);
+    if (!blk) return;
+    var rb = blk.querySelector('.apjb-run');
+    if (rb) rb.style.display = document.querySelector('#antcv-analysis-report .arx-analyse') ? 'none' : '';
+    var rep = panel.querySelector('#antcv-analysis-report');
+    if (rep && rep.previousElementSibling !== blk && rep.parentNode === blk.parentNode) {
+      blk.parentNode.insertBefore(blk, rep);
+    }
+  }
+
   function ensureBlock() {
     var panel = findAnalysisPanel();
     if (!panel) {
@@ -515,13 +533,14 @@
       return;
     }
     var existing = panel.querySelector('#' + BLOCK_ID);
-    if (existing) { hideEmptyPlaceholder(panel); return; }
+    if (existing) { hideEmptyPlaceholder(panel); syncWithReportBlock(panel); return; }
     // Remove any stale copy elsewhere before injecting fresh.
     var stale = document.getElementById(BLOCK_ID);
     if (stale && stale.parentNode) stale.parentNode.removeChild(stale);
     injectStyles();
     panel.appendChild(buildBlock());
     hideEmptyPlaceholder(panel);
+    syncWithReportBlock(panel);
   }
 
   var pending = false;

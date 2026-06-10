@@ -97,10 +97,14 @@ A companion **feature registry** (open vs shipped features) lives at
 - **REGULAR-MODE-STALE-SETUP-001** `[OPEN]` — in regular (BYOK) mode a "setup needed"
   warning + the demo-coin icon appear and only clear after a manual refresh. Stale
   demo/BYOK state on key-change; demo detection / the setup warning isn't re-evaluated live.
-- **ANALYSE-JD-BUTTON-POS-001** `[OPEN][small]` — owner: the **Analyse JD** button should
-  be at the same position as the **Download analysis** button (the panel reorder did the
-  Download side; the Analyse-JD button — in the JD-input block, `antcv-analysis-panel-jd-block-356`
-  — was not matched). Small sidecar tweak; confirm the exact intended placement.
+- **ANALYSE-JD-BUTTON-POS-001** `[FIXED 1.50.339 — verified headless]` — owner confirmed
+  2026-06-10: "same row, side by side". The 360 EXPORT & DETAIL row now holds BOTH
+  buttons (`.arx-analyse` + `.arx-dl` in an `.arx-btns` flex group); the Analyse button
+  delegates its click to the real run button inside the 356 JD block (run logic stays in
+  one place) and mirrors its busy state. 356 hides its in-block copy while the row button
+  exists (restores itself if 360 is absent) and pins the order JD-inputs → action row.
+  Verified: `pwa/test/diag-analyse-jd-row.mjs` 4/4 (side-by-side, in-block hidden,
+  delegation works, JD block above) + panel-order diag still 4/4.
 
 ## ANALYSIS PANEL 2026-06-09
 

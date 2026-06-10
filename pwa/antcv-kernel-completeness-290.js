@@ -73,7 +73,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.40.290';
+  var VERSION = '1.50.358';
   if (window.__antcvKernelCompleteness290 === VERSION) return;
   window.__antcvKernelCompleteness290 = VERSION;
 
@@ -250,6 +250,62 @@
     return null;
   }
 
+  // GEN-UNSOL-002 (1.50.358): when the GENERATE REQUEST carried a real job
+  // description, the output's meta.company and meta.role MUST name the
+  // employer/role from that JD. An empty or unsolicited-flavoured meta on a
+  // JD-bearing run makes the application header fall back to "Open
+  // Application — Unsolicited" even though the JD names the company. The
+  // request side (fetch wrap below) records whether the last generation call
+  // contained a JD block; this checker enforces the contract on the output.
+  function isAnglePlaceholder(t) {
+    return t.length > 3 && t.charAt(0) === '<' && t.charAt(t.length - 1) === '>';
+  }
+  function checkMetaStrict(meta) {
+    var issues = [];
+    var m = (meta && typeof meta === 'object') ? meta : {};
+    var fields = [['company', 'meta.company'], ['role', 'meta.role']];
+    for (var i = 0; i < fields.length; i++) {
+      var v = m[fields[i][0]];
+      var label = fields[i][1];
+      var t = (typeof v === 'string') ? v.trim() : '';
+      if (t.length === 0) {
+        issues.push(label + ' (empty — a JOB DESCRIPTION was provided; fill it with the exact name from the JD)');
+        continue;
+      }
+      if (isPlaceholderString(t) || isAnglePlaceholder(t)) {
+        issues.push(label + ' (placeholder text — fill it with the exact name from the JD)');
+        continue;
+      }
+      if (/^(unsolicited|open\s+application.*|n\/?a)$/i.test(t)) {
+        issues.push(label + ' ("' + t + '" — a JOB DESCRIPTION was provided; never fall back to unsolicited wording)');
+      }
+    }
+    return issues;
+  }
+
+  // Request-side state: did the most recent generation request include a JD?
+  var lastGenReqTs = 0;
+  var lastGenReqHadJD = false;
+  var GEN_REQ_WINDOW_MS = 30 * 60 * 1000; // generation cycles run 3-6+ min with retries
+
+  function noteGenerationRequest(bodyStr) {
+    // Cheap string sniff — only generation calls carry both override keys.
+    if (typeof bodyStr !== 'string') return;
+    if (bodyStr.indexOf('cv_overrides') === -1 || bodyStr.indexOf('cl_overrides') === -1) return;
+    lastGenReqTs = Date.now();
+    // STRICT marker: the JD content block's VALUE starts with the header
+    // (':"JOB DESCRIPTION:' covers both "text":"…" and "content":"…"
+    // serialisations). A JD pasted into Additional Signals sits mid-value
+    // behind the "ADDITIONAL SIGNALS:" prefix and must NOT arm the check —
+    // on a no-JD run the prompt forces meta.company EMPTY, and a false arm
+    // here would fight that rule into a retry loop.
+    lastGenReqHadJD = bodyStr.indexOf(':"JOB DESCRIPTION:') !== -1;
+  }
+
+  function metaCheckArmed() {
+    return lastGenReqHadJD && lastGenReqTs !== 0 && (Date.now() - lastGenReqTs) < GEN_REQ_WINDOW_MS;
+  }
+
   function looksLikeGenerationOutput(obj) {
     if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return false;
     var hasCv = Object.prototype.hasOwnProperty.call(obj, 'cv_overrides');
@@ -399,6 +455,11 @@
     try {
       if (looksLikeGenerationOutput(result)) {
         var missing = checkCompleteness(result);
+        // GEN-UNSOL-002: only enforce the meta contract when the request side
+        // saw a JD-bearing generation call recently.
+        if (metaCheckArmed()) {
+          missing = missing.concat(checkMetaStrict(result.meta));
+        }
         if (missing.length > 0) {
           try {
             console.warn('[kernel-completeness-290] LLM output missing/placeholder critical sections — '
@@ -421,6 +482,10 @@
             lastFailureTs = 0;
             lastFailureMissing = null;
           }
+          // Accepted generation output — disarm the JD meta contract so an
+          // unrelated later parse can't trip on stale request state.
+          lastGenReqTs = 0;
+          lastGenReqHadJD = false;
           // Defensive Part C: still scrub any rogue placeholder strings
           // in unanticipated locations. If our check passes but a stray
           // placeholder exists in some field we did not validate, the
@@ -499,6 +564,11 @@
     parts.push('   - cl_overrides.closure_content (>=20 chars, last sentence of the letter)');
     parts.push('   - cl_overrides.contribute_intro and contribute_closing (>=10 chars each if you include them)');
     parts.push('');
+    parts.push('7. meta.company AND meta.role (when a JOB DESCRIPTION document is present)');
+    parts.push('   - meta.company = the EXACT employer name from the JOB DESCRIPTION.');
+    parts.push('   - meta.role = the EXACT role title from the JOB DESCRIPTION.');
+    parts.push('   - NEVER leave them empty and NEVER write "Unsolicited" / "Open Application" when the JD names the employer.');
+    parts.push('');
     parts.push('Reread your response BEFORE outputting. If ANY field contains bracketed placeholder text, REWRITE that field with real content from the memory digest before returning the JSON.');
     parts.push('==========================================================');
     return parts.join('\n');
@@ -576,6 +646,9 @@
   var augmentedFetch = function (url, init) {
     try {
       if (init && init.method === 'POST' && init.body && typeof init.body === 'string') {
+        // GEN-UNSOL-002: record whether this generation request carries a JD
+        // so the parse-side meta contract knows when to arm.
+        noteGenerationRequest(init.body);
         var elapsed = Date.now() - lastFailureTs;
         if (lastFailureTs !== 0 && elapsed < WINDOW_MS) {
           var parsed = null;
@@ -611,6 +684,9 @@
   window.AntcvKernelCompleteness290 = {
     version: VERSION,
     _checkCompleteness: checkCompleteness,
+    _checkMetaStrict: checkMetaStrict,
+    _noteGenerationRequest: noteGenerationRequest,
+    _metaCheckArmed: metaCheckArmed,
     _looksLikeGenerationOutput: looksLikeGenerationOutput,
     _bodyLooksLikeLlmCall: bodyLooksLikeLlmCall,
     _buildAddendum: buildAddendum,

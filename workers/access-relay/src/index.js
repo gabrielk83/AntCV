@@ -1073,14 +1073,53 @@ async function handleApiPrefs(request, env) {
           if (!(ck in _piNorm)) _piNorm[ck] = v;
         }
         const split = splitPersonalInfo(_piNorm);
-        // Replace identity + history entirely on each full-PI write.
-        for (const k of Object.keys(newIdentity)) delete newIdentity[k];
-        for (const k of Object.keys(newHistory))  delete newHistory[k];
-        Object.assign(newIdentity, split.identity);
-        Object.assign(newHistory,  split.history);
-        newIdentity.email = id.email; // server-authoritative
-        saved.push('personalInfo');
-        kernelDirty = true;
+        // DATA-LOSS GUARD (DEMO-RESET-EMPTY-OVERWRITE-001): a personalInfo PUT
+        // carrying ONLY auth/disclosure fields (email + AI-disclosure flags,
+        // no name/history) must NOT wipe a rich stored identity. This is what
+        // produced thin 132-byte identities: on a fresh post-hard-reset session
+        // the AI-disclosure is accepted (writing personalInfo={email,
+        // aiDisclosure,...}) BEFORE cloud-restore runs, and the old full-replace
+        // deleted the real name/history. The PWA shrink-guard (355) only watches
+        // PUTs and can be bypassed; the relay is the authoritative last line.
+        // When the incoming PI has zero substantive (non-auth) fields and the
+        // stored kernel is substantive, MERGE the auth fields and preserve the
+        // rich identity/history instead of replacing.
+        const AUTH_ONLY_KEYS = new Set(['email', 'aiDisclosure', 'aiDisclosureAccepted', 'disclosureAccepted', '_comments']);
+        const substantiveCount = (o) => {
+          if (!o || typeof o !== 'object') return 0;
+          let n = 0;
+          for (const k of Object.keys(o)) {
+            if (AUTH_ONLY_KEYS.has(k)) continue;
+            const v = o[k];
+            if (v === null || v === undefined || v === '') continue;
+            if (Array.isArray(v) && v.length === 0) continue;
+            if (typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length === 0) continue;
+            n++;
+          }
+          return n;
+        };
+        const incomingN = substantiveCount(split.identity) + substantiveCount(split.history);
+        const currentN = substantiveCount(curIdentity) + substantiveCount(curHistory);
+        if (incomingN === 0 && currentN >= 3) {
+          // Preserve the rich kernel; only refresh the auth/disclosure fields.
+          for (const k of AUTH_ONLY_KEYS) {
+            if (split.identity[k] !== undefined) newIdentity[k] = split.identity[k];
+          }
+          newIdentity.email = id.email; // server-authoritative
+          // newHistory left untouched (no delete) → history preserved.
+          saved.push('personalInfo(auth-only-merge:guarded)');
+          kernelDirty = true;
+          try { console.warn('[api/prefs] DATA-LOSS GUARD: auth-only personalInfo PUT (incoming 0 substantive) preserved rich kernel (' + currentN + ' fields) for ' + id.email); } catch (_) {}
+        } else {
+          // Normal full-PI write: replace identity + history entirely.
+          for (const k of Object.keys(newIdentity)) delete newIdentity[k];
+          for (const k of Object.keys(newHistory))  delete newHistory[k];
+          Object.assign(newIdentity, split.identity);
+          Object.assign(newHistory,  split.history);
+          newIdentity.email = id.email; // server-authoritative
+          saved.push('personalInfo');
+          kernelDirty = true;
+        }
       } else if ('personalInfo' in data) {
         dropped.push('personalInfo');
       }
@@ -1896,6 +1935,49 @@ async function handleApiProfileKernel(request, env) {
     }
     const now = Date.now();
     try {
+      // DATA-LOSS GUARD (DEMO-RESET-EMPTY-OVERWRITE-001): same protection as
+      // /api/prefs — an identity/history carrying only auth/disclosure fields
+      // must not replace a rich stored kernel (fresh-session disclosure write
+      // racing cloud-restore). Read current kernel; if the incoming payload has
+      // zero substantive (non-auth) fields and the stored kernel is
+      // substantive, merge auth fields and preserve the rich identity/history.
+      let identityToWrite = identityIn;
+      let historyToWrite = historyIn;
+      {
+        const AUTH_ONLY_KEYS = new Set(['email', 'aiDisclosure', 'aiDisclosureAccepted', 'disclosureAccepted', '_comments']);
+        const subN = (o) => {
+          if (!o || typeof o !== 'object') return 0;
+          let n = 0;
+          for (const k of Object.keys(o)) {
+            if (AUTH_ONLY_KEYS.has(k)) continue;
+            const v = o[k];
+            if (v === null || v === undefined || v === '') continue;
+            if (Array.isArray(v) && v.length === 0) continue;
+            if (typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length === 0) continue;
+            n++;
+          }
+          return n;
+        };
+        const incomingN = subN(identityIn) + subN(historyIn);
+        if (incomingN === 0) {
+          let cur = null;
+          try {
+            cur = await env.DB.prepare('SELECT identity, history FROM user_kernel WHERE user_hash = ? LIMIT 1').bind(userHash).first();
+          } catch (_) { cur = null; }
+          if (cur) {
+            const curIdentity = parseJsonField(cur.identity, {}) || {};
+            const curHistory = parseJsonField(cur.history, {}) || {};
+            if (subN(curIdentity) + subN(curHistory) >= 3) {
+              const merged = { ...curIdentity };
+              for (const k of AUTH_ONLY_KEYS) { if (identityIn[k] !== undefined) merged[k] = identityIn[k]; }
+              merged.email = id.email;
+              identityToWrite = merged;
+              historyToWrite = curHistory;
+              try { console.warn('[api/profile/kernel] DATA-LOSS GUARD: auth-only kernel PUT preserved rich kernel for ' + id.email); } catch (_) {}
+            }
+          }
+        }
+      }
       // Upsert. SQLite supports ON CONFLICT ... DO UPDATE; we hand-patch
       // photo_b64 only when explicitly provided (so PUT with no photo key
       // doesn't wipe an existing photo).
@@ -1912,8 +1994,8 @@ async function handleApiProfileKernel(request, env) {
         'ON CONFLICT(user_hash) DO UPDATE SET ' + sets.join(', ');
       await env.DB.prepare(sql).bind(
         userHash,
-        JSON.stringify(identityIn),
-        JSON.stringify(historyIn),
+        JSON.stringify(identityToWrite),
+        JSON.stringify(historyToWrite),
         JSON.stringify(preferencesIn),
         photoB64 === undefined ? null : photoB64,
         now,

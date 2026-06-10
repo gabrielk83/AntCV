@@ -1643,6 +1643,17 @@
     // 1.50.291 #5: deprioritise providers that recently gave inadequate output
     // for this task (kept in the list, just moved to the back).
     l = __antcvReorderByQuality(r, l);
+    // PERF-003 (1.50.359, owner-confirmed split): MECHANICAL tasks fail fast —
+    // cap the failover ladder at 2 providers. Quality-critical tasks
+    // (generate_cv, consensus_*, fuse, analyze_fit, long_context, enrich,
+    // apply_correction, all translation) keep their full width. forceProvider
+    // lists are length-1 and unaffected. parse_jd (the main generation call)
+    // keeps its OUTER retry ladder of forced providers, so a capped first
+    // attempt still recovers across the 4 outer attempts — this only stops one
+    // slow internal cascade from cycling 4 providers before that ladder turns.
+    if (/^(extract|extract_pdf|parse_jd|compress|fix_orphans)$/.test(r) && l.length > 2) {
+      l = l.slice(0, 2);
+    }
     const c = [];
     for (let n = 0; n < l.length; n++) {
       const a = l[n],
@@ -23208,8 +23219,41 @@
                     page: n <= t ? "first" : "continuation",
                     bullets: e.bullets || [],
                   })),
-                },
-                o = await ee(
+                };
+              // PERF-004 (1.50.359): skip the tightening LLM round-trip when the
+              // draft is ALREADY within the budgets the call would enforce
+              // (profile ≤400 chars, work style ≤200 chars, first-page bullets
+              // ≤130 chars, continuation bullets ≤90 chars — the prompt's own
+              // upper bounds). Empty profile/work-style never skips: those go
+              // through the pass unchanged (status quo). Saves one full LLM
+              // call per generate when the model wrote tight the first time.
+              const __tightSkip = (() => {
+                try {
+                  const pc = String(n.profile_content || "").trim();
+                  const wc = String(n.work_style_content || "").trim();
+                  if (!pc || !wc) return !1;
+                  if (pc.length > 400 || wc.length > 200) return !1;
+                  for (const role of n.roles) {
+                    const cap = "first" === role.page ? 130 : 90;
+                    for (const b of role.bullets || [])
+                      if (String(b || "").length > cap) return !1;
+                  }
+                  return !0;
+                } catch (_) {
+                  return !1;
+                }
+              })();
+              if (__tightSkip) {
+                (console.log(
+                  "[PERF-004] draft already within length budgets — skipping the tightening pass",
+                ),
+                  fo({
+                    profile: "done",
+                    work_style: "done",
+                    experience: "done",
+                  }));
+              } else {
+                const o = await ee(
                   [
                     {
                       role: "user",
@@ -23245,6 +23289,7 @@
                   work_style: "done",
                   experience: "done",
                 }));
+              }
             } catch (e) {
               (console.warn("Post-generate tightening skipped:", e.message),
                 fo({

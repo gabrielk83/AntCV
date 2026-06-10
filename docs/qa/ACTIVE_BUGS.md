@@ -1848,13 +1848,16 @@ Owner: "page break in general" still not right. The locked requirements:
   ~1/s writers (altcircle, watermark-corner, page-fit-applied) are far below problem
   level. If the owner's mobile console still floods, re-run the committed probe on
   that device's content set.
-- **APP-SENTENCE-STYLE-001 [OPEN]** — the candidate "Application: Role - Company"
-  sentence does not follow the chosen package style (e.g. Nordic = white). Code
-  located: `antcv-candidate-preview-editor-341.js:334–350` copies the Name leaf's
-  computed style onto the sentence host; falls back to default when that leaf
-  isn't found.
-- **SPECIALISATION-EDIT-001 [OPEN]** — the `[Specialisation — …]` line in the
-  preview header is React-rendered and not yet wrapped as editable.
+- **APP-SENTENCE-STYLE-001 [FIXED✓ verified headless 2026-06-11]** — the candidate
+  "Application: Role - Company" sentence follows the chosen package style: the
+  v1.50.105 fix prefers the hidden ORIGINAL sentence anchor's computed style (the
+  template's exact color/font for that slot). Verified: host color
+  rgba(255,255,255,0.9) === anchor color on the dark header, template font adopted,
+  all three spans contenteditable. Locked by `pwa/test/diag-candidate-header-edit.mjs`.
+- **SPECIALISATION-EDIT-001 [FIXED✓ verified headless 2026-06-11]** — the
+  `[Specialisation — …]` line IS wrapped contenteditable (v1.50.106
+  `wrapSpecialisation`); an edit persists to `meta.subtitle` and survives. Locked by
+  the same diag test.
 - **DOCX-EXPORT-REGRESSION-001 [OPEN]** — see batch triage below (export from the
   print-setup view doesn't call `exportDocxViaWorker`).
 

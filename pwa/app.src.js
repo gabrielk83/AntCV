@@ -39231,9 +39231,31 @@
                 React.createElement(
                   "div",
                   {
-                    style: { padding: "6px 7px 14px" },
+                    style: { padding: "6px 7px 14px", position: "relative" },
                     "data-antcv-cl-flow": "true",
                   },
+                  // CL-PREVIEW-WATERMARK-001 (owner 2026-06-10): the CV preview
+                  // renders a DEMO watermark per antcv-page-row, but the CL
+                  // preview is a single continuous flow and had NO in-app
+                  // watermark — it relied on the demo-watermark sidecar's
+                  // ::after, which does not reliably tag the CL paper. Render
+                  // the watermark HERE, in the same path, gated on the same
+                  // __antcvDemoActive() signal as CV. Absolute, tiled (covers
+                  // the full flow height), pointer-events:none, aria-hidden —
+                  // does not affect the page-break measurer or the salmon.
+                  __antcvDemoActive() &&
+                    React.createElement("div", {
+                      "aria-hidden": "true",
+                      style: {
+                        position: "absolute",
+                        inset: 0,
+                        pointerEvents: "none",
+                        zIndex: 2,
+                        backgroundRepeat: "repeat",
+                        backgroundImage:
+                          "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='200'><text x='150' y='110' font-family='Arial,sans-serif' font-size='44' font-weight='800' fill='rgba(220,50,50,0.10)' text-anchor='middle' transform='rotate(-30 150 100)'>DEMO</text></svg>\")",
+                      },
+                    }),
                   Pi.filter(
                     (e) =>
                       e.on && "closure" !== e.id && "jd_questions" !== e.id,

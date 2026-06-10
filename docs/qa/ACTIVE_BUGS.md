@@ -8,6 +8,26 @@ A companion **feature registry** (open vs shipped features) lives at
 
 ---
 
+## OWNER REPORT 2026-06-10 (AM) — CL preview watermark
+
+- **CL-PREVIEW-WATERMARK-001** `[FIXED 1.50.343 — structural; needs owner visual]` — owner
+  2026-06-10: the DEMO watermark shows on CV preview, CV export, and CL export, but is
+  MISSING on the CL preview (badges fine). CAUSE: the CV preview renders app.js's own
+  `__antcvDemoActive()` diagonal watermark inside each `antcv-page-row` (app.src.js ~38874),
+  but the CL preview is a separate continuous-flow branch (`data-antcv-cl-flow`, ~39231)
+  with NO in-app watermark — it relied solely on the `antcv-demo-watermark.js` sidecar
+  `::after`, which (per the headless probe) does not reliably tag the CL paper. FIX: render
+  the watermark in the CL flow's OWN React path, gated on the SAME `__antcvDemoActive()`
+  signal as CV — an absolute, tiled (full-flow-height), pointer-events:none, aria-hidden
+  DEMO overlay; the flow div is now `position:relative` to anchor it. Same render path as
+  everything else = no sidecar timing dependency. app.src.js edit + terser rebuild
+  (+469 bytes = the new element; head `(()=>{`, 0 use-strict, node-check + boot-smoke OK).
+  Verified: `pwa/test/diag-cl-preview-watermark.mjs` (CL flow renders + is position:relative
+  — the anchor); CL salmon regressions (double-salmon, one-pass) still PASS (the overlay is
+  absolute/pointer-events:none, so the measurer is unaffected). The watermark itself is
+  demo-gated (needs live `/config` demo state), so its visual presence needs the owner's
+  eye on a demo CL preview.
+
 ## OWNER REPORT 2026-06-09 (EVE) — demo Generate 401s + LinkedIn "…see more"
 
 - **DEMO-RELAY-IDENTITY-001** `[FIXED — relay; verified headless; needs worker deploy]` —
@@ -100,9 +120,9 @@ A companion **feature registry** (open vs shipped features) lives at
   924px budget; the header band owns the remaining ~2978), pages 2+ = PAGE_H−200 — so the
   sidebar cell stretches to the page bottom and can never overflow into a cascade split.
   Verified: diag-twocol-ownerlike.mjs extended (atLeast rows present, 13860 + 16638) +
-  palette tests 11/11. NOTE for owner: on page 1 the bar fills to the bottom of the
-  measurer's budget; if the header band renders shorter than its 2978-DXA budget a small
-  white strip can remain at the very bottom of page 1 — say so if you see it.
+  palette tests 11/11. OWNER CONFIRMED 2026-06-10: navy fill now reaches the bottom on
+  every page incl. page 1 ("fills fully now") — fill closed. (Color recolor still wants a
+  final visual nod, but the fill half is owner-confirmed.)
 - **DEMO-FETCHJD-WORKERURL-001** `[FIXED 1.50.338 — verified headless]` — demo Fetch-JD
   errored "Configure Worker URL in Settings → API Keys first." The home Fetch-JD handler
   `Wn` (app.src.js) read `proxyUrl` directly with NO relay fallback; demo users have no

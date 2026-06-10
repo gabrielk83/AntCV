@@ -8,6 +8,21 @@ A companion **feature registry** (open vs shipped features) lives at
 
 ---
 
+## INCIDENT 2026-06-10 (NIGHT) — production down: 7-byte app.js stub
+
+- **PROD-STUB-001** `[RESOLVED — bbde379]` — a concurrent session's commit 7e8c584
+  (EXP-HIDDEN-ROLES-001) committed pwa/app.js AND pwa/app.src.js as **7-byte stubs**
+  (a redaction artifact from that environment's git filter), pushed to main, and it
+  auto-deployed → live antcv.pages.dev/app.js served 7 bytes → **blank/broken PWA for all
+  users (~1h)**. Detected via `git cat-file -s` (7 bytes) + live curl (7 bytes). RESTORED:
+  committed the real 852KB bundle + real 1.98MB app.src.js from the last good commit 3268202
+  on top of 7e8c584 (fast-forward, no force) → bbde379; PWA redeployed; live app.js back to
+  852,577 bytes (verified). EXP-HIDDEN-ROLES-001's real source was never in git (stubbed),
+  so it must be re-applied by its author. PREVENTION: see the guardrails in
+  `docs/plan/NIGHT_RUN_2026-06-10.md` §1 — never commit app.js < 800KB / app.src.js < 1.9MB;
+  always curl the live bundle size after a PWA deploy.
+
+
 ## OWNER REPORT 2026-06-10 (LATE) — CV sidebar preview↔PDF geometry
 
 - **PREVIEW-PDF-SIDEBAR-GEOM-001** `[FIXED docx-worker 1.14.46 + 1.50.353 — needs owner visual]` —

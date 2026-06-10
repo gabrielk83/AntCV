@@ -8,6 +8,25 @@
 // Regenerated from pwa/app.js via prettier on 2026-06-05; kept from now on.
 // ============================================================================
 (() => {
+  // BRIDGE-SIDEBAR-PALETTE-001 (owner 2026-06-10): when the profile photo is in
+  // "bridge" mode (photoPosition === 'band-overlap', the medallion straddling
+  // the header/sidebar seam), shift the sidebar palette — background slightly
+  // BRIGHTER, headings/text/lines slightly DARKER — so the bridging photo reads
+  // against a subtly distinct sidebar. Pure preview tint; reversible. amt > 0
+  // lightens toward white, amt < 0 darkens toward black, by `amt` percent.
+  const __antcvShadeHex = (hex, amt) => {
+    try {
+      let h = String(hex || '').trim().replace(/^#/, '');
+      if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+      if (h.length !== 6) return hex;
+      const f = parseInt(h, 16);
+      const t = amt < 0 ? 0 : 255;
+      const p = Math.abs(amt) / 100;
+      const r = (f >> 16) & 255, g = (f >> 8) & 255, b = f & 255;
+      const ch = (c) => Math.round((t - c) * p) + c;
+      return '#' + (0x1000000 + (ch(r) << 16) + (ch(g) << 8) + ch(b)).toString(16).slice(1);
+    } catch (_) { return hex; }
+  };
   // 1.50.202: native (React-rendered) page breaks. The break MUST be a React
   // child of the section so reconciliation keeps it (sidecar-injected breaks get
   // removed/duplicated). See docs/plan/page-break-architecture.md.
@@ -38985,7 +39004,8 @@
                             style: {
                               width: `${Math.round(100 * ta)}%`,
                               flexShrink: 0,
-                              background: Ke,
+                              // BRIDGE-SIDEBAR-PALETTE-001: brighter sidebar bg in bridge mode.
+                              background: er === "band-overlap" ? __antcvShadeHex(Ke, 12) : Ke,
                               padding: "8px",
                               minHeight: 0 === n ? 400 : 300,
                             },
@@ -39067,7 +39087,17 @@
                               clTableRatio: Qr,
                               onTableRatioChange: aa,
                               fontSizes: Yr,
-                              styleConfig: ya,
+                              // BRIDGE-SIDEBAR-PALETTE-001: in bridge mode, darken the
+                              // sidebar headings/lines (deeper accent → more contrast on
+                              // the brighter bg) and nudge the body text slightly darker.
+                              styleConfig: er === "band-overlap"
+                                ? {
+                                    ...ya,
+                                    sidebarHeadColor: __antcvShadeHex(ya.sidebarHeadColor || "#01B7BB", -18),
+                                    sidebarLineColor: __antcvShadeHex(ya.sidebarLineColor || ya.sidebarHeadColor || "#01B7BB", -18),
+                                    sidebarTextColor: __antcvShadeHex(ya.sidebarTextColor || "#FFFFFF", -8),
+                                  }
+                                : ya,
                               onEdit: gi ? r(e.id) : null,
                               textEditMode: gi,
                               onBeginTextEdit: () => fi(!0),

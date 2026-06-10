@@ -52,7 +52,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.342-loader';
+  var VERSION = '1.50.344-loader';
   if (window.__antcv357Loader === VERSION) return;
   window.__antcv357Loader = VERSION;
 
@@ -68,7 +68,10 @@
     // UI polish: design-language consistency layer (focus rings, button/field
     // micro-feedback). Pure CSS, zero-specificity :where(), excludes the
     // rendered document so the page-break measurer is untouched.
-    { src: 'antcv-ui-polish-373.js', v: '1.50.342-ui-polish' }
+    { src: 'antcv-ui-polish-373.js', v: '1.50.342-ui-polish' },
+    // Keyboard shortcuts: Ctrl/Cmd+Enter = Generate, Esc = close panel.
+    // Listener-only, no preview DOM mutation; one-time hint + disable hatch.
+    { src: 'antcv-keyboard-shortcuts-374.js', v: '1.50.344-shortcuts' }
   ];
 
   function alreadyPresent(src) {

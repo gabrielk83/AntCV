@@ -28775,26 +28775,11 @@
             ),
           );
         })();
-      if ("upload" === Nt)
-        return React.createElement(
-          "div",
-          {
-            className: "fade",
-            style: {
-              minHeight: "100dvh",
-              background: `linear-gradient(160deg,${Ke} 0%,#1a2a45 100%)`,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: 20,
-              fontFamily: "Georgia,serif",
-            },
-          },
-          React.createElement(
-            "div",
-            { style: { width: "100%", maxWidth: 480 } },
-            K &&
+// SETTINGS-NAV-Z-001 (1.50.355): the Settings modal JSX lived inline in the
+      // upload route only, so opening Settings from the editor set K=true but
+      // mounted nothing. Hoisted into a render closure so both routes mount it.
+      const __antcvSettingsModal = () =>
+        K &&
               React.createElement(
                 "div",
                 {
@@ -36172,7 +36157,27 @@
                     ),
                   ),
                 ),
-              ),
+              );
+            if ("upload" === Nt)
+        return React.createElement(
+          "div",
+          {
+            className: "fade",
+            style: {
+              minHeight: "100dvh",
+              background: `linear-gradient(160deg,${Ke} 0%,#1a2a45 100%)`,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 20,
+              fontFamily: "Georgia,serif",
+            },
+          },
+          React.createElement(
+            "div",
+            { style: { width: "100%", maxWidth: 480 } },
+            __antcvSettingsModal(),
             React.createElement(
               "div",
               {
@@ -39640,6 +39645,9 @@
             overflow: "hidden",
           },
         },
+        // SETTINGS-NAV-Z-001: mount the Settings modal in the editor route too
+        // (fixed inset-0 z-10000 — above the preview chrome at 2490/2500).
+        __antcvSettingsModal(),
         Rr &&
           React.createElement(
             "div",

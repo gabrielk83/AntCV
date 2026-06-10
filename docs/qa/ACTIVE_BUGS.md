@@ -94,9 +94,21 @@ A companion **feature registry** (open vs shipped features) lives at
   relay used when proxyUrl empty, error path preserved when both empty, http→https; the
   fallback string is present in the rebuilt app.js; boot-smoke clean. (Live confirmation in
   demo still depends on the access-relay routing `/api/fetch-jd-url` to the demo-proxy.)
-- **REGULAR-MODE-STALE-SETUP-001** `[OPEN]` — in regular (BYOK) mode a "setup needed"
-  warning + the demo-coin icon appear and only clear after a manual refresh. Stale
-  demo/BYOK state on key-change; demo detection / the setup warning isn't re-evaluated live.
+- **REGULAR-MODE-STALE-SETUP-001** `[FIXED 1.50.340 — verified headless]` — in regular
+  (BYOK) mode the "⚠ Setup needed" warning + "🟡 Use demo" coin only cleared after a
+  manual refresh; the DEMO preview watermark did the same. CAUSE: both chips are
+  app.js-rendered gates (`M()` / `__antcvHasOwnKey()`) evaluated AT RENDER TIME; keys
+  arriving after mount (cloud restore on sign-in, pasted in Settings) trigger no
+  re-render — and same-tab localStorage writes fire NO 'storage' event. The watermark
+  sidecar additionally memoised its demo decision FOREVER (`demoPromise`) and never
+  removed the overlay. FIX (sidecars only, app.js untouched): new
+  `antcv-setup-chips-live-372.js` (via the 357-loader) polls key-presence (1.5s) +
+  storage/focus and live-hides/restores the two chips by exact leaf text, with a
+  MutationObserver re-applying after React re-renders; `antcv-demo-watermark.js`
+  1.50.340 keys its memo on key-presence, re-resolves on flip, and now REMOVES the
+  overlay when demo is off. Verified: `pwa/test/diag-setup-chips-live.mjs` 4/4
+  (boot-visible, same-tab key hides both + watermark, removal restores, re-render
+  re-hidden).
 - **ANALYSE-JD-BUTTON-POS-001** `[FIXED 1.50.339 — verified headless]` — owner confirmed
   2026-06-10: "same row, side by side". The 360 EXPORT & DETAIL row now holds BOTH
   buttons (`.arx-analyse` + `.arx-dl` in an `.arx-btns` flex group); the Analyse button

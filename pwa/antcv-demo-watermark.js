@@ -27,7 +27,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.184-no-docx-config';
+  var VERSION = '1.50.340-live-keystate';
   if (window.__antcvDemoWatermark === VERSION) return;
   window.__antcvDemoWatermark = VERSION;
 
@@ -104,9 +104,19 @@
       );
     } catch (_) { return false; }
   }
+  // 1.50.340 (REGULAR-MODE-STALE-SETUP-001): the memoised demoPromise made the
+  // demo decision PERMANENT for the page's lifetime — a user whose keys arrive
+  // after boot (cloud restore / pasted in Settings) kept the DEMO watermark
+  // until a manual refresh. Key the memo on key-presence: when it flips, drop
+  // the cached promise and re-resolve. The /config queries still run at most
+  // once per key-state, so there is no extra network chatter.
+  var demoKeyedState = null;
   function resolveDemo() {
+    var keyed = hasOwnKey();
+    if (demoKeyedState !== null && demoKeyedState !== keyed) demoPromise = null;
+    demoKeyedState = keyed;
     if (demoPromise) return demoPromise;
-    if (hasOwnKey()) { demoPromise = Promise.resolve(false); return demoPromise; }
+    if (keyed) { demoPromise = Promise.resolve(false); return demoPromise; }
     var origins = configOrigins();
     if (!origins.length) { demoPromise = Promise.resolve(false); return demoPromise; }
     // Query every origin; demo is ON if ANY reports demo_mode:true. Don't let
@@ -163,7 +173,9 @@
   }
 
   function applyIfDemo() {
-    resolveDemo().then(function (on) { if (on) { injectCss(); apply(true); } });
+    // 1.50.340: also REMOVE the overlay when demo resolves off (key-presence
+    // flip) — the old apply-only-when-on left a stale watermark until refresh.
+    resolveDemo().then(function (on) { if (on) { injectCss(); apply(true); } else { apply(false); } });
   }
 
   // Debounced via setTimeout (NOT requestAnimationFrame — rAF is paused in
@@ -177,6 +189,16 @@
 
   applyIfDemo();
   [200, 600, 1500, 3500].forEach(function (d) { setTimeout(applyIfDemo, d); });
+  // 1.50.340: same-tab localStorage writes fire no 'storage' event, so poll
+  // key-presence cheaply and re-resolve when it flips (BYOK↔demo transition).
+  var lastKeyed = hasOwnKey();
+  setInterval(function () {
+    var keyed = hasOwnKey();
+    if (keyed !== lastKeyed) { lastKeyed = keyed; applyIfDemo(); }
+  }, 1500);
+  window.addEventListener('storage', function (ev) {
+    if (!ev || ['apiKey', 'openaiKey', 'mistralKey', 'geminiKey', 'proxyUrl'].indexOf(ev.key) >= 0) applyIfDemo();
+  });
   try {
     new MutationObserver(function (recs) {
       for (var i = 0; i < recs.length; i++) {

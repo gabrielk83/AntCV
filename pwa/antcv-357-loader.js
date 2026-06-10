@@ -52,7 +52,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.331-loader';
+  var VERSION = '1.50.340-loader';
   if (window.__antcv357Loader === VERSION) return;
   window.__antcv357Loader = VERSION;
 
@@ -61,7 +61,10 @@
     { src: 'antcv-help-text-wording-357.js', v: '1.40.357-p1b2' },
     { src: 'antcv-page-break-icon-357.js', v: '1.40.357-pb005b' },
     { src: 'antcv-analysis-panel-jd-block-356.js', v: '1.40.358' },
-    { src: 'antcv-proxyurl-relay-fallback-371.js', v: '1.50.330-jdurl-demo' }
+    { src: 'antcv-proxyurl-relay-fallback-371.js', v: '1.50.330-jdurl-demo' },
+    // REGULAR-MODE-STALE-SETUP-001: live-toggle the "⚠ Setup needed" +
+    // "🟡 Use demo" header chips on key-presence change (no refresh needed).
+    { src: 'antcv-setup-chips-live-372.js', v: '1.50.340-setup-chips-live' }
   ];
 
   function alreadyPresent(src) {

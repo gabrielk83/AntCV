@@ -8,6 +8,26 @@ A companion **feature registry** (open vs shipped features) lives at
 
 ---
 
+## OWNER REPORT 2026-06-10 (PM) — kernel drops from history
+
+- **KERNEL-HISTORY-KEEP-001** `[FIXED 1.50.349 + relay — needs owner check]` — owner: the
+  unsolicited (kernel) showcase drops out of the application history once ~3 applications
+  exist; it should ALWAYS be kept unless the user renews it. TWO drop points, both fixed:
+  (1) CLIENT — the topbar history dropdown rendered only `Dl.slice(0,5)` (newest 5), so
+  the kernel fell off once enough tailored apps accumulated. Now the unsolicited/kernel row
+  (jd_company empty or "Unsolicited") is PINNED first, then up to 5 company-named apps.
+  (2) SERVER — the application sweep kept the newest 5 by updated_at and could evict the
+  kernel; now it caps only company-named apps to newest 5 and NEVER deletes the unsolicited
+  row (excluded from both the count and the delete). Renewing the kernel UPSERTs the same
+  row in place (same jd_hash), so "renew" still works. Verified: pwa unit test
+  `kernel-history-keep.test.mjs` 5/5 (pinned first, kept at 3 apps, empty-company = kernel,
+  no-kernel = newest 5, no duplication); the sweep SQL validated read-only against live D1
+  (returns nothing wrongly deletable). app.src.js + terser rebuild (identity-clean) + relay.
+- **ADV-INDENT-CONTROLS-001** `[OPEN→in progress]` — owner: add Advanced-settings controls
+  to (a) increase the main content indent from the edge and (b) set the bullet-list / emoji-
+  list indent. Registered in FEATURES_REGISTRY. (Bullet hang is currently the 1.50.348
+  fixed paddingLeft:24/textIndent:-14; this makes it user-tunable.)
+
 ## OWNER REPORT 2026-06-10 (PM) — preview↔PDF geometry (page slide)
 
 - **PREVIEW-PDF-GEOMETRY-001** `[FIXED docx-worker 1.14.43 — needs owner visual]` — owner:

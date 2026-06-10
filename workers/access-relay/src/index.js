@@ -2298,12 +2298,20 @@ async function handleApiApplicationById(request, env, idStr) {
       await env.DB.prepare(
         'UPDATE application SET ' + sets.join(', ') + ' WHERE id = ?'
       ).bind(...vals).run();
-      // 10-row sweep: keep the user's newest 10. Run AFTER the update so
-      // the just-touched row is freshest and survives.
+      // Sweep: keep the user's newest 5 REAL (company-named) applications.
+      // KERNEL-HISTORY-KEEP-001 (owner 2026-06-10): the unsolicited / kernel
+      // showcase row (jd_company empty or "Unsolicited") is PINNED — never
+      // swept — so it always stays in the history unless the user renews it
+      // (renew UPSERTs the same row in place). Only company-named apps are
+      // capped; the kernel is excluded from both the count and the delete.
+      // Run AFTER the update so the just-touched row is freshest and survives.
       try {
         await env.DB.prepare(
-          'DELETE FROM application WHERE user_hash = ? AND id NOT IN ' +
-          '(SELECT id FROM application WHERE user_hash = ? ORDER BY updated_at DESC LIMIT 5)'
+          'DELETE FROM application WHERE user_hash = ? ' +
+          "AND LOWER(TRIM(COALESCE(jd_company, ''))) NOT IN ('', 'unsolicited') " +
+          'AND id NOT IN (SELECT id FROM application WHERE user_hash = ? ' +
+          "AND LOWER(TRIM(COALESCE(jd_company, ''))) NOT IN ('', 'unsolicited') " +
+          'ORDER BY updated_at DESC LIMIT 5)'
         ).bind(userHash, userHash).run();
       } catch (_) { /* sweep is best-effort */ }
       const row = await env.DB.prepare(

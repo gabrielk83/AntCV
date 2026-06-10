@@ -40226,7 +40226,21 @@
                     ),
                   ),
                   Dl && Dl.length > 0
-                    ? Dl.slice(0, 5).map((e) =>
+                    ? (() => {
+                        // KERNEL-HISTORY-KEEP-001 (owner 2026-06-10): always
+                        // keep the unsolicited / kernel showcase row in the
+                        // list. Pin it FIRST, then up to 5 company-named apps —
+                        // so the kernel never drops off when tailored apps
+                        // accumulate. (Matches the cold-start preference for
+                        // the unsolicited kernel as the home row.)
+                        const __isUnsol = (a) => {
+                          const c = String((a && a.jd_company) || "").trim().toLowerCase();
+                          return c === "" || c === "unsolicited";
+                        };
+                        const __unsol = Dl.find(__isUnsol);
+                        const __others = Dl.filter((a) => a && a !== __unsol);
+                        return (__unsol ? [__unsol, ...__others.slice(0, 5)] : __others.slice(0, 5));
+                      })().map((e) =>
                         React.createElement(
                           "div",
                           {

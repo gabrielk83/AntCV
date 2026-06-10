@@ -216,16 +216,17 @@
     l = "#01B7BB",
     s = "#00746E",
     c = {
-      // DOCX-SIDEBAR-GREEN-001 (owner 2026-06-10): Copenhagen Modern main
-      // headings/lines + table-header bar render NAVY #283556 (was the dark
-      // green #00746E, which the owner flagged in DOCX/PDF). Bullets keep
-      // the green accent. Mirrored in the va.scandinavian package map.
+      // DOCX-SIDEBAR-GREEN-001 + MAIN-NAVY-001 (owner 2026-06-10): in the MAIN
+      // column EVERY accent — headings, sub-heads, vertical/rule lines, BULLETS,
+      // and the table-header bar — is NAVY #283556. Bright teal #01B7BB is
+      // reserved for OUT of the main: the sidebar (head + lines) and the
+      // candidate-bar line. Mirrored in the va.scandinavian package map.
       mainHeadColor: "#283556",
       mainSubHeadColor: "#283556",
       mainCompanyColor: "#333333",
       mainYearColor: "#595959",
       mainTextColor: "#333333",
-      mainBulletColor: "#00746E",
+      mainBulletColor: "#283556",
       mainLineColor: "#283556",
       mainHeadFont: "Trebuchet MS",
       mainBodyFont: "Calibri",
@@ -15179,7 +15180,7 @@
               sidebarFont: "Trebuchet MS",
               mainHeadColor: "#283556",
               mainTextColor: "#333333",
-              mainBulletColor: "#00746E",
+              mainBulletColor: "#283556",
               mainLineColor: "#283556",
               mainSubHeadColor: "#283556",
               mainCompanyColor: "#333333",

@@ -155,6 +155,23 @@ test('preamble: a style without guidance has no Style-guidance block', () => {
   assert.doesNotMatch(p, /Style guidance \(MUST follow\):/);
 });
 
+test('preamble: unsolicited flag composes the uopfordret craft onto ANY style', () => {
+  // nordic-minimal + unsolicited → both the nordic guidance AND the unsolicited block
+  const nordicUn = buildStyleSystemPreamble(parseWritingStyleRequest({ writingStyle: 'nordic-minimal', unsolicited: true }));
+  assert.match(nordicUn, /statement of intent/i);                 // nordic guidance present
+  assert.match(nordicUn, /Unsolicited application \(uopfordret\) — ALSO apply/);
+  assert.match(nordicUn, /opening of a DIALOGUE/i);               // composed unsolicited block
+  // a style without guidance still gets the composed unsolicited block
+  const achUn = buildStyleSystemPreamble(parseWritingStyleRequest({ writingStyle: 'achievement-driven', unsolicited: true }));
+  assert.match(achUn, /Unsolicited application \(uopfordret\) — ALSO apply/);
+  // off by default
+  assert.equal(parseWritingStyleRequest({}).unsolicited, false);
+  assert.doesNotMatch(buildStyleSystemPreamble(parseWritingStyleRequest({ writingStyle: 'nordic-minimal' })), /ALSO apply/);
+  // cold-outreach does NOT double up (it carries the guidance natively)
+  const coUn = buildStyleSystemPreamble(parseWritingStyleRequest({ writingStyle: 'cold-outreach', unsolicited: true }));
+  assert.doesNotMatch(coUn, /ALSO apply/);
+});
+
 // ─── evaluateSce (Semantic Constraint Engine filter) ─────────────────────
 
 test('sce: detects a shared banned word in English', () => {

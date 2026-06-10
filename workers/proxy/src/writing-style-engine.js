@@ -191,6 +191,11 @@ export function parseWritingStyleRequest(body) {
   const sectionLineLimits = normaliseNumberMap(b.sectionLineLimits);
   const pkg = typeof b.package === 'string' ? b.package : 'copenhagen-modern';
   const ats = b.ats === true;
+  // Unsolicited (uopfordret) context: a specific company with NO posted role.
+  // When set, the unsolicited/cold-outreach craft guidance is composed ON TOP
+  // of the chosen style (so nordic-minimal + unsolicited gets both). Off by
+  // default; the PWA sets it on the kernel/unsolicited generation path.
+  const unsolicited = b.unsolicited === true;
 
   return {
     writingStyle,
@@ -205,6 +210,7 @@ export function parseWritingStyleRequest(body) {
     sectionLineLimits,
     package: pkg,
     ats,
+    unsolicited,
   };
 }
 
@@ -250,6 +256,12 @@ export function buildStyleSystemPreamble(req) {
     // unsolicited/uopfordret dialogue framing). Owner-provided 2026-06-10.
     Array.isArray(s.guidance) && s.guidance.length
       ? 'Style guidance (MUST follow):\n' + s.guidance.map((g) => '  - ' + g).join('\n')
+      : '',
+    // Compose the unsolicited/uopfordret craft on top of the chosen style when
+    // the request is for a company with no posted role (skip if the style IS
+    // already cold-outreach — it carries this guidance natively).
+    req.unsolicited && req.writingStyle !== 'cold-outreach' && Array.isArray(STYLES['cold-outreach'].guidance)
+      ? 'Unsolicited application (uopfordret) — ALSO apply, overriding where they conflict:\n' + STYLES['cold-outreach'].guidance.map((g) => '  - ' + g).join('\n')
       : '',
     `Active tone chips: ${chips.join(', ')}`,
     `Target language: ${req.target_language}`,

@@ -76,6 +76,11 @@ const payload = {
   ai_wm_side: 'left',   // request the disclosure in the sidebar (left) column
   sections: [
     { id: 'profile', title: 'PROFILE', loc: 'main', on: true, type: 'text', content: 'Profile text.' },
+    // PB-WORKER-CONT-HEADER-001: outcomes precedes experience so the historic
+    // wrong-cont-heading symptom (page-2 main column showing "SELECTED
+    // OUTCOMES" above the EXPERIENCE continuation) has the section it used to
+    // steal the heading from.
+    { id: 'outcomes', title: 'SELECTED OUTCOMES', loc: 'main', on: true, type: 'bullets', items: [{ b: 'Cut', t: 'cycle time 95%' }] },
     { id: 'experience', title: 'PROFESSIONAL EXPERIENCE', loc: 'main', on: true, type: 'experience', roles: [
       { id: 'r1', title: 'Role One', company: 'C1', years: '2018', bullets: ['did alpha'] },
       { id: 'r2', title: 'Role Two', company: 'C2', years: '2020', bullets: ['did beta'], page: 2 },
@@ -112,16 +117,37 @@ const trHeights = [...xml.matchAll(/<w:trHeight[^/]*\/>/g)].map(m => m[0]);
 const atLeast = trHeights.filter(h => /w:hRule="atLeast"/.test(h));
 const has13860 = atLeast.some(h => /w:val="13860"/.test(h));
 const has16638 = atLeast.some(h => /w:val="16638"/.test(h));
+// PB-WORKER-CONT-HEADER-001: split into top-level page tables and assert
+// page 2's main column carries EXACTLY ONE experience heading — the
+// "PROFESSIONAL EXPERIENCE (Cont.)" continuation — never the historic stray
+// "SELECTED OUTCOMES" heading, and never a doubled plain heading.
+const tokens2 = [...body.matchAll(/<\/?w:(tbl|tc)\b/g)];
+let d2 = 0, s2 = -1; const spans = [];
+for (const m of tokens2) {
+  const t = m[0];
+  if (t === '<w:tbl') { if (d2 === 0) s2 = m.index; d2++; }
+  else if (t === '</w:tbl') { d2--; if (d2 === 0) spans.push([s2, m.index]); }
+  else if (t === '<w:tc') d2++;
+  else if (t === '</w:tc') d2--;
+}
+const pageTexts = spans.map(([s, e]) => (body.slice(s, e).match(/<w:t[ >][^<]*<\/w:t>/g) || []).map(x => x.replace(/<[^>]+>/g, '')).filter(Boolean));
+const p2 = pageTexts[1] || [];
+const p2ContCount = p2.filter(t => /^PROFESSIONAL EXPERIENCE \(Cont\.\)$/.test(t.trim())).length;
+const p2PlainHead = p2.filter(t => /^PROFESSIONAL EXPERIENCE$/.test(t.trim())).length;
+const p2StrayOutcomes = p2.filter(t => /^SELECTED OUTCOMES/.test(t.trim())).length;
+const contHeaderOk = p2ContCount === 1 && p2PlainHead === 0 && p2StrayOutcomes === 0;
 
 log('top-level tables (=pages):', tt);
 log('all regs present:', allRegs, '| all roles:', allRoles, '| no dup:', !dup, '| REG (Cont.):', hasCont);
 log('AI disclosure count:', discCount, '| on last page:', discOnLastPage);
 log('navy fill occurrences (>= pages):', navyFills);
 log('atLeast row heights:', atLeast.length, '| page1 13860:', has13860, '| cont 16638:', has16638);
+log('p2 EXPERIENCE (Cont.) x' + p2ContCount + ' | p2 plain heading x' + p2PlainHead + ' | p2 stray SELECTED OUTCOMES x' + p2StrayOutcomes + ' -> cont header', contHeaderOk ? 'OK' : 'FAIL');
 const ok =
   tt === 2 &&            // per-page engaged (coordinated 2 pages), not numPages=1 natural flow
   allRegs && allRoles && !dup && hasCont &&
   discCount === 1 && discOnLastPage &&   // AI notice once, on the last page (correct column via ai_wm_side)
   navyFills >= 2 &&      // sidebar navy on every page
-  atLeast.length >= 2 && has13860 && has16638; // FILL: rows stretch to the page bottom
+  atLeast.length >= 2 && has13860 && has16638 && // FILL: rows stretch to the page bottom
+  contHeaderOk;          // PB-WORKER-CONT-HEADER-001: one (Cont.) heading, no stray/double
 log(ok ? 'TWOCOL-OWNERLIKE OK' : 'TWOCOL-OWNERLIKE FAIL');

@@ -1026,11 +1026,16 @@ blue-screen guard — serve pwa/, assert 0 console errors + `typeof glDemo`),
   `selected-outcomes-row-controls-237` `setPage()` fired `antcv:sections-updated`, forcing
   a re-render that read the momentarily-empty outcomes editor and wrote `items:[]`. Fixed
   1.50.218 — `setPage` now fires the page-only `antcv:item-pages-changed`. Owner to confirm.
-- **PB-WORKER-CONT-HEADER-001** — `[OPEN]` In the **exported PDF/DOCX**, the EXPERIENCE
-  continuation heading on page 2 renders as **"SELECTED OUTCOMES"** instead of
-  "EXPERIENCE (CONT.)". Only visible in the export (not the preview) → produced by the
-  **docx-worker** (`generate.js` `(Cont.)` field-code / heading pairing), not the PWA.
-  Needs a worker fix + an export to verify (no PDF renderer in CI).
+- **PB-WORKER-CONT-HEADER-001** — `[RESOLVED in the per-page model — regression-tested
+  2026-06-11]` In the exported PDF/DOCX, the EXPERIENCE continuation heading on page 2
+  rendered as "SELECTED OUTCOMES" instead of "EXPERIENCE (CONT.)". The 1.14.39+
+  per-page two-column rework (one table per page) plus the 1.14.30 section separator
+  eliminated the table-merge that stole the heading: a live worker probe (deployed
+  src/index.js bundle driven in node) shows page 2's main column carrying exactly ONE
+  "PROFESSIONAL EXPERIENCE (Cont.)" heading — no stray SELECTED OUTCOMES, no doubled
+  plain heading. Locked by `diag-twocol-ownerlike.mjs` (payload now includes a
+  SELECTED OUTCOMES section before EXPERIENCE; asserts the page-2 heading set).
+  Owner export check remains a nice-to-have, no longer blocking.
 - **PB-WORKER-SIDEBAR-FILL-001** — `[OPEN]` The navy sidebar does not fill to the page
   bottom on a continuation page **in the export** (Word table-cell full-height technique).
   Preview fill addressed in 1.50.216; export still open.

@@ -203,7 +203,11 @@
       // 1.50.196: never rewrite bullets during a page-cycle (the click only
       // moves page markers; the re-render it triggers must not touch text).
       if(__pageCycling) return;
-      const vals=v.split(/\n+/).map(clean).filter(Boolean);const cur=Array.isArray(s.bullets)?s.bullets:(Array.isArray(s.items)?s.items:[]);
+      const vals=v.split(/\n+/).map(clean).filter(Boolean);
+      // 1.50.354: prefer NON-EMPTY bullets — shape-guard stamps bullets:[] on
+      // every section, which made `cur` always [] and disarmed the data-loss
+      // guard below (HOWCONTRIBUTE-001).
+      const cur=(Array.isArray(s.bullets)&&s.bullets.length)?s.bullets:(Array.isArray(s.items)?s.items:[]);
       // Owner 2026-06-05 data-loss guard: the native bullets textarea is empty
       // while the section still holds template/real bullets, so a stray sync —
       // e.g. the re-render a page-cycle click triggers — would write bullets:[]

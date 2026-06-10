@@ -72,7 +72,7 @@
   'use strict';
 
   if (window.__antcvShapeGuardInstalled) return;
-  window.__antcvShapeGuardInstalled = '1.50.150';
+  window.__antcvShapeGuardInstalled = '1.50.354';
 
   const SECTIONS_KEY = 'sections';
   const LANG_CACHE_KEY = 'languageCache';
@@ -165,8 +165,10 @@
         item.items = [];
         filled++;
       } else {
+        // Same string pass-through as normalizeSection: nested string items
+        // are content, not shape holes.
         item.items = item.items
-          .map(function (i) { return normalizeItem(i, ctx); })
+          .map(function (i) { return typeof i === 'string' ? i : normalizeItem(i, ctx); })
           .filter(function (i) { return i !== null; });
       }
     }
@@ -187,10 +189,14 @@
       sec.items = [];
       filled++;
     } else {
-      // Compact: drop nulls / undefined / non-objects.
+      // Compact: drop nulls / undefined. STRING items are legitimate content —
+      // text_bullets and list sections store items as plain strings, and
+      // normalizeItem() nulls every non-object, which silently WIPED those
+      // bullets on every sections write (HOWCONTRIBUTE-001). Pass strings
+      // through untouched; only objects get the item normalization.
       const before = sec.items.length;
       sec.items = sec.items
-        .map(function (i) { return normalizeItem(i, ctx); })
+        .map(function (i) { return typeof i === 'string' ? i : normalizeItem(i, ctx); })
         .filter(function (i) { return i !== null; });
       if (sec.items.length !== before) filled++;
     }

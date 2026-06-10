@@ -721,17 +721,21 @@ function mergeHowContributeFromLocalStorage(docSections, doc) {
     if (!stored) return docSections;
     const src = stored.find(s => s && rx.test(String(s.title || s.name || s.id || '')));
     if (!src) return docSections;
-    const bullets = (Array.isArray(src.bullets) ? src.bullets : Array.isArray(src.items) ? src.items : [])
+    // Prefer NON-EMPTY bullets over items: the shape-guard sidecar stamps
+    // bullets:[] onto every stored section, so an empty bullets array means
+    // "no sidecar edit", not "delete the bullets" (HOWCONTRIBUTE-001).
+    const bullets = (Array.isArray(src.bullets) && src.bullets.length ? src.bullets : Array.isArray(src.items) ? src.items : [])
       .map(x => String(x || '').trim()).filter(Boolean);
     return docSections.map(s => {
       if (!s || !rx.test(String(s.title || s.name || s.id || ''))) return s;
-      return {
+      const merged = {
         ...s,
         intro: src.intro != null ? src.intro : (src.introLine != null ? src.introLine : s.intro),
         closing: src.closing != null ? src.closing : (src.closingLine != null ? src.closingLine : s.closing),
-        bullets,
-        items: bullets,
       };
+      // Never let an empty stored list wipe live bullets (data-loss guard).
+      if (bullets.length) { merged.bullets = bullets; merged.items = bullets; }
+      return merged;
     });
   } catch (_) {
     return docSections;

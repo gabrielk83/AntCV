@@ -10,7 +10,7 @@ A companion **feature registry** (open vs shipped features) lives at
 
 ## OWNER REPORT 2026-06-10 (LATE) — CV sidebar preview↔PDF geometry
 
-- **PREVIEW-PDF-SIDEBAR-GEOM-001** `[PARTIAL docx-worker 1.14.45 — needs owner visual]` —
+- **PREVIEW-PDF-SIDEBAR-GEOM-001** `[FIXED docx-worker 1.14.46 + 1.50.353 — needs owner visual]` —
   owner (CONFIRMED the section is the CV, not the CL) reports three sidebar preview↔PDF
   mismatches: (1) bullets extend past the other rows' text and the bullet→text gap is too
   wide; preview vs PDF pull the bullet in two different directions; (2) the gap between a
@@ -20,10 +20,14 @@ A companion **feature registry** (open vs shipped features) lives at
   sidebar cell L/R margins 144→120 DXA (= the preview's 8px, widening the export text column
   ~3px/side so lines that fit in the preview fit in the PDF); sidebar heading tightened
   (spacing before 80→40, after 40→30; bottom-border text gap space 4→2 pt) — main headings
-  unchanged. (1) BULLETS held for owner confirmation — the main-bullet geometry already
-  matches numerically (preview marker ~10px / text 24px ≈ worker numbering left 360 /
-  hanging 200), so the "two directions" needs the owner's eye to pin the exact target
-  before a third iteration (asked). Verified: twocol-ownerlike + cl-list-cont + cv-table +
+  unchanged. (1) BULLETS — owner confirmed 2026-06-10: marker at the row's LEFT EDGE +
+  tight (~half) gap, matched preview/PDF. FIXED (1.50.353 + worker 1.14.46): preview bullet
+  sites now `paddingLeft:bulletIndent; textIndent:-bulletIndent` (first line at 0 → marker
+  at the column edge; text + wrapped lines hang at bulletIndent), default bulletIndent
+  24→14; BM marker margin 4→2 + dropped trailing space. Worker numbering antcv-bullet +
+  antcv-sb-bullet → `left:210, hanging:210` (left===hanging → marker at the cell edge, text
+  hangs ~14px), was main 360/200 + sidebar 280/160. Preview and export now share the
+  marker-at-edge + ~14px hang. Verified: twocol-ownerlike + cl-list-cont + cv-table +
   palette 11/11 all still pass. Pixel-exact match needs the owner's visual loop (can't
   render the PDF headlessly).
 

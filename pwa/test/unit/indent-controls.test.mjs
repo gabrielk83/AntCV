@@ -8,28 +8,30 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-// Bullet sites: paddingLeft = bulletIndent; textIndent = 10 - bulletIndent
-// (marker outdents to a fixed ~10px-relative position; body+continuation hang
-// at bulletIndent). Default 24 → paddingLeft 24, textIndent -14 (the 1.50.348
-// built-in look).
+// Bullet sites (BULLET-EDGE-001): paddingLeft = bulletIndent; textIndent =
+// -bulletIndent, so the marker sits at the row's LEFT EDGE (first line starts
+// at paddingLeft+textIndent = 0) and the text + wrapped lines hang at
+// bulletIndent. Default 14 (a tight half-gap; was 24 / marker-at-10px).
 function bulletStyle(k) {
-  const bi = k.bulletIndent || 24;
-  return { paddingLeft: bi, textIndent: 10 - bi };
+  const bi = k.bulletIndent || 14;
+  return { paddingLeft: bi, textIndent: -bi };
 }
 // Main column padding: "8px <edge>px", edge from mainEdgeIndent (default 10).
 function mainPadding(ya) {
   return '8px ' + ((ya && ya.mainEdgeIndent) || 10) + 'px';
 }
 
-test('default bullet indent reproduces the 1.50.348 built-in look', () => {
-  assert.deepEqual(bulletStyle({}), { paddingLeft: 24, textIndent: -14 });
+test('default bullet: marker at the edge (first line at 0), text hangs at 14px', () => {
+  assert.deepEqual(bulletStyle({}), { paddingLeft: 14, textIndent: -14 });
+  const s = bulletStyle({});
+  assert.equal(s.paddingLeft + s.textIndent, 0); // marker first-line at the row's left edge
 });
 
-test('increasing bullet indent moves body/continuation right, keeps the 14px hang', () => {
+test('increasing bullet indent moves the text-hang right, marker stays at the edge', () => {
   const s = bulletStyle({ bulletIndent: 34 });
   assert.equal(s.paddingLeft, 34);
-  assert.equal(s.textIndent, -24);          // marker still ~10px rel; hang preserved
-  assert.equal(s.paddingLeft - (s.paddingLeft + s.textIndent), 24); // marker→body gap grows with indent
+  assert.equal(s.textIndent, -34);
+  assert.equal(s.paddingLeft + s.textIndent, 0); // marker still at the edge for any indent
 });
 
 test('default main edge indent is 10px', () => {

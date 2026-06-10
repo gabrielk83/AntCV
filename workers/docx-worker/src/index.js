@@ -24405,7 +24405,11 @@ function numberingConfig(style) {
             alignment: AlignmentType.LEFT,
             style: {
               run: { color: style.mainBulletColor },
-              paragraph: { indent: { left: 360, hanging: 200 } }
+              // BULLET-EDGE-001 (owner 2026-06-10): marker at the cell's left
+              // edge (left === hanging \u2192 first-line marker at 0, aligned with
+              // headings/other rows), text hanging a tight ~14px (210 DXA) to
+              // the right. Was left 360 / hanging 200 (marker ~11px, text 24px).
+              paragraph: { indent: { left: 210, hanging: 210 } }
             }
           }
         ]
@@ -24420,7 +24424,8 @@ function numberingConfig(style) {
             alignment: AlignmentType.LEFT,
             style: {
               run: { color: style.sidebarHeadColor },
-              paragraph: { indent: { left: 280, hanging: 160 } }
+              // BULLET-EDGE-001: same marker-at-edge + tight hang in the sidebar.
+              paragraph: { indent: { left: 210, hanging: 210 } }
             }
           }
         ]
@@ -26640,7 +26645,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.45-sidebar-geom";
+var VERSION = "1.14.46-bullet-edge";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

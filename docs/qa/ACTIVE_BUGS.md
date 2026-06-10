@@ -68,12 +68,20 @@ A companion **feature registry** (open vs shipped features) lives at
   Reverted the cadence to the calm/stable values (poll 3000, schedule 250, boot
   400/900/1800/3500); the 1.50.324 one-pass fix still makes the salmon appear in a single
   compute, so it stays responsive without the churn. Verified: salmon diags + boot pass.
-- **REACT-185-EDIT-REGULATORY-001** `[OPEN][HIGH]` — React #185 (render-oscillation) crash
-  while editing REGULATORY (debug log 18:08, many `button(submit)` taps). Stack is in the
-  LIVE `app.js?v=1.50.334-jd-guard-cancel-mobile` (the other session's build). The 1.50.337
-  cadence revert reduces the contributing measurer churn, but the root may be in that app.js
-  edit path or a sidecar re-render storm — needs a repro (edit regulatory rapidly) to pin
-  the exact setState-in-render source. NOTE: the live app.js is the concurrent session's.
+- **REACT-185-EDIT-REGULATORY-001** `[NOT REPRODUCED on 1.50.341 — needs owner stack]` —
+  React #185 ("Maximum update depth exceeded" — a setState that loops a render) crashed the
+  app while the owner edited a REGULATORY section (debug log 18:08, many `button(submit)`
+  taps) on the LIVE `app.js?v=1.50.334` (the OTHER session's build). Built a full-app stress
+  repro `pwa/test/diag-react185-regulatory.mjs`: mounts the editor with a REGULATORY
+  EXPERIENCE section + grouped regulatory sidebar, opens the section, then hammers 25 rapid
+  field edits across 21 live inputs (input+Enter+change+blur) and 72 button clicks. On the
+  current rebuilt `app.js` (1.50.341, from the committed source) this produces ZERO #185 /
+  zero update-depth / zero DOM-mutation errors. Two things changed vs the crash build: main
+  now carries the 1.50.341 rebuild (supersedes 1.50.334), and 1.50.337 reverted the measurer
+  cadence speed-up that was a churn contributor. CANNOT pin the exact setState-in-render
+  source without the debug-log stack (it maps to 1.50.334 line/col). QUESTION FOR OWNER:
+  does #185 still reproduce after the 1.50.341 deploy? If yes, share the console stack
+  (`Minified React error #185 … app.js?v=…:LINE:COL`) so it can be mapped to app.src.js.
 - **DOCX-SIDEBAR-GREEN-001** `[FIXED 1.50.341 + docx-worker 1.14.42 — needs owner visual]`
   — owner confirmed 2026-06-10: navy fill stops mid-page; recolor Copenhagen Modern only.
   TWO root causes found. (1) COLORS: the PWA's Copenhagen Modern style map (app.src.js

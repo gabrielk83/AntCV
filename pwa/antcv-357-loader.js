@@ -52,7 +52,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.340-loader';
+  var VERSION = '1.50.342-loader';
   if (window.__antcv357Loader === VERSION) return;
   window.__antcv357Loader = VERSION;
 
@@ -64,7 +64,11 @@
     { src: 'antcv-proxyurl-relay-fallback-371.js', v: '1.50.330-jdurl-demo' },
     // REGULAR-MODE-STALE-SETUP-001: live-toggle the "⚠ Setup needed" +
     // "🟡 Use demo" header chips on key-presence change (no refresh needed).
-    { src: 'antcv-setup-chips-live-372.js', v: '1.50.340-setup-chips-live' }
+    { src: 'antcv-setup-chips-live-372.js', v: '1.50.340-setup-chips-live' },
+    // UI polish: design-language consistency layer (focus rings, button/field
+    // micro-feedback). Pure CSS, zero-specificity :where(), excludes the
+    // rendered document so the page-break measurer is untouched.
+    { src: 'antcv-ui-polish-373.js', v: '1.50.342-ui-polish' }
   ];
 
   function alreadyPresent(src) {

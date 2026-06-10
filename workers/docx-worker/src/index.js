@@ -24560,8 +24560,20 @@ function buildTwoColumnDocument(ctx) {
     margins: { top: 120, bottom: 240, left: 144, right: 144 },
     children: els && els.length ? els : [emptyParagraph()]
   });
-  const makeBodyRow = (sbEls, mnEls) => new TableRow({
+  // PB-WORKER-SIDEBAR-FILL-001 (owner-confirmed 2026-06-10: "navy fill stops
+  // mid-page"): a cell's shading only reaches as far as the row's content, so
+  // short sidebar pages left the bar hanging. Stretch every body row with an
+  // "atLeast" height so the sidebar cell (and its navy shading) reaches the
+  // page bottom. Heights stay INSIDE the PWA measurer's own page budget
+  // (USABLE_PDF 924px @96dpi = 13860 DXA of content per page on A4 16838), so
+  // a stretched row can never overflow and cascade-split onto the next page:
+  //   page 1   -> 13860 (header band owns the remaining ~2978 DXA)
+  //   pages 2+ -> PAGE_H - 200 (no header row; small slack for rounding)
+  const PAGE1_BODY_MIN = 13860;
+  const CONT_BODY_MIN = PAGE_H - 200;
+  const makeBodyRow = (sbEls, mnEls, withHeader) => new TableRow({
     cantSplit: false,
+    height: { value: withHeader ? PAGE1_BODY_MIN : CONT_BODY_MIN, rule: "atLeast" },
     children: sidebarOnRight ? [makeMainCell(mnEls), makeSidebarCell(sbEls)] : [makeSidebarCell(sbEls), makeMainCell(mnEls)]
   });
   const headerRow = new TableRow({
@@ -24581,7 +24593,7 @@ function buildTwoColumnDocument(ctx) {
     width: { size: PAGE_W, type: WidthType.DXA },
     columnWidths: colWidths,
     borders: noBorders(),
-    rows: withHeader ? [headerRow, makeBodyRow(sbEls, mnEls)] : [makeBodyRow(sbEls, mnEls)]
+    rows: withHeader ? [headerRow, makeBodyRow(sbEls, mnEls, true)] : [makeBodyRow(sbEls, mnEls, false)]
   });
   const docChildren = [];
   for (let p = 0; p < numPages; p++) {
@@ -26599,7 +26611,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.41-sidebar-ratio";
+var VERSION = "1.14.42-sidebar-fill";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

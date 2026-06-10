@@ -104,14 +104,24 @@ const discPos = body.indexOf('AI-assisted');
 const discOnLastPage = discPos > lastBreak;
 // sidebar navy shading: count cell shadings with the navy fill (one sidebar cell per page)
 const navyFills = (xml.match(new RegExp('w:fill="' + NAVY + '"', 'gi')) || []).length;
+// PB-WORKER-SIDEBAR-FILL-001 (1.14.42): every body row carries an atLeast
+// height so the sidebar shading reaches the page bottom — page 1 = 13860
+// (the measurer's usable budget; header band owns the rest), pages 2+ =
+// PAGE_H-200 = 16638. trHeight order of attrs can vary; match both.
+const trHeights = [...xml.matchAll(/<w:trHeight[^/]*\/>/g)].map(m => m[0]);
+const atLeast = trHeights.filter(h => /w:hRule="atLeast"/.test(h));
+const has13860 = atLeast.some(h => /w:val="13860"/.test(h));
+const has16638 = atLeast.some(h => /w:val="16638"/.test(h));
 
 log('top-level tables (=pages):', tt);
 log('all regs present:', allRegs, '| all roles:', allRoles, '| no dup:', !dup, '| REG (Cont.):', hasCont);
 log('AI disclosure count:', discCount, '| on last page:', discOnLastPage);
 log('navy fill occurrences (>= pages):', navyFills);
+log('atLeast row heights:', atLeast.length, '| page1 13860:', has13860, '| cont 16638:', has16638);
 const ok =
   tt === 2 &&            // per-page engaged (coordinated 2 pages), not numPages=1 natural flow
   allRegs && allRoles && !dup && hasCont &&
   discCount === 1 && discOnLastPage &&   // AI notice once, on the last page (correct column via ai_wm_side)
-  navyFills >= 2;        // sidebar navy on every page (fill fix)
+  navyFills >= 2 &&      // sidebar navy on every page
+  atLeast.length >= 2 && has13860 && has16638; // FILL: rows stretch to the page bottom
 log(ok ? 'TWOCOL-OWNERLIKE OK' : 'TWOCOL-OWNERLIKE FAIL');

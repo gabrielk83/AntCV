@@ -74,14 +74,27 @@ A companion **feature registry** (open vs shipped features) lives at
   cadence revert reduces the contributing measurer churn, but the root may be in that app.js
   edit path or a sidecar re-render storm — needs a repro (edit regulatory rapidly) to pin
   the exact setState-in-render source. NOTE: the live app.js is the concurrent session's.
-- **DOCX-SIDEBAR-GREEN-001** `[OPEN][needs detail]` — sidebar HEADINGS + vertical LINES
-  render a darker GREEN in DOCX/PDF; owner wants `#283556` (navy). Worker-side: the active
-  style maps `sidebarHeadColor = palette.primary` / `mainHeadColor = palette.base`
-  (docx-worker index.js ~23997); a package whose primary/base is green produces green
-  headings. NEED to confirm: which visual package is active, and exactly which elements
-  (sidebar headings? main headings? the column divider?) should be navy — then set the
-  token. (`#283556` is also the sidebar BG, so navy headings ON the navy sidebar would be
-  invisible — likely this is the MAIN-column headings/divider, or the package base.)
+- **DOCX-SIDEBAR-GREEN-001** `[FIXED 1.50.341 + docx-worker 1.14.42 — needs owner visual]`
+  — owner confirmed 2026-06-10: navy fill stops mid-page; recolor Copenhagen Modern only.
+  TWO root causes found. (1) COLORS: the PWA's Copenhagen Modern style map (app.src.js
+  default `c` + `va.scandinavian`) set `mainHeadColor`/`mainLineColor`/`mainSubHeadColor`/
+  `tableHeaderBg` to the dark green `#00746E`, and the export payload passes these tokens
+  to the docx-worker where `mergeStyle` lets them OVERRIDE the worker palette (whose own
+  copenhagen base is already navy). All four → `#283556`; `mainBulletColor` keeps the
+  green accent; sidebar inner colors (bright teal #01B7BB on navy) untouched. The
+  stylePackage drift-rederive effect propagates the change into persisted styleConfigs
+  automatically (it keys on mainHeadColor). app.src.js edit + terser rebuild (identity:
+  delta 0 bytes — same-length hex swaps; 8 tokens flipped 21→13 green / 21→29 navy; head
+  `(()=>{`, 0 use-strict, node-check + boot-smoke OK). (2) FILL (also closes
+  **PB-WORKER-SIDEBAR-FILL-001**): cell shading only reaches as far as row content, so
+  short pages left the navy bar hanging mid-page. docx-worker 1.14.42: every two-column
+  body row gets an `atLeast` height — page 1 = 13860 DXA (the measurer's USABLE_PDF
+  924px budget; the header band owns the remaining ~2978), pages 2+ = PAGE_H−200 — so the
+  sidebar cell stretches to the page bottom and can never overflow into a cascade split.
+  Verified: diag-twocol-ownerlike.mjs extended (atLeast rows present, 13860 + 16638) +
+  palette tests 11/11. NOTE for owner: on page 1 the bar fills to the bottom of the
+  measurer's budget; if the header band renders shorter than its 2978-DXA budget a small
+  white strip can remain at the very bottom of page 1 — say so if you see it.
 - **DEMO-FETCHJD-WORKERURL-001** `[FIXED 1.50.338 — verified headless]` — demo Fetch-JD
   errored "Configure Worker URL in Settings → API Keys first." The home Fetch-JD handler
   `Wn` (app.src.js) read `proxyUrl` directly with NO relay fallback; demo users have no

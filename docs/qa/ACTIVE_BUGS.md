@@ -1839,10 +1839,15 @@ Owner: "page break in general" still not right. The locked requirements:
 - **EXPORT-PAGE2-001** — export PREVIEW shows only page 1 / breaks not applied. Worker engine passes smoke tests; defect is the client `antcv-pdf-preview-gate.js` clone path. Read-only probe: `antcv-export-page2-probe.js`. RE-OPEN — drive with the probe.
 
 ### Still OPEN from earlier in the engagement (not addressed this session)
-- **RERENDER-STORM-001 [OPEN]** — the `requestAnimationFrame` violation flood is
-  still live (visible in the owner's mobile console). It is the root cause of the
-  HIWC input churn (worked around, not cured) and a general perf drain. Needs the
-  mutation-source probe to find the pump. HIGH value.
+- **RERENDER-STORM-001 [RESOLVED — probe-verified 2026-06-11, regression-locked]** —
+  the mutation-source probe now runs headlessly as `pwa/test/diag-rerender-storm.mjs`
+  (5s steady-state tally by source + rAF rate, thresholds total<30/s, worst<10/s).
+  Current build measures: desktop 3 mutations/s, 7.2 rAF/s; mobile-390px 8.2
+  mutations/s, 28.2 rAF/s; worst single source 1.8/s; 0 errors — versus the historic
+  150+/s storm. The 1.50.80–85 idempotency + central-damper rounds hold. Residual
+  ~1/s writers (altcircle, watermark-corner, page-fit-applied) are far below problem
+  level. If the owner's mobile console still floods, re-run the committed probe on
+  that device's content set.
 - **APP-SENTENCE-STYLE-001 [OPEN]** — the candidate "Application: Role - Company"
   sentence does not follow the chosen package style (e.g. Nordic = white). Code
   located: `antcv-candidate-preview-editor-341.js:334–350` copies the Name leaf's

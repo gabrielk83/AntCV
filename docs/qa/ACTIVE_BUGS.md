@@ -8,6 +8,24 @@ A companion **feature registry** (open vs shipped features) lives at
 
 ---
 
+## OWNER REPORT 2026-06-10 (PM) — analysis print completeness + Nordic style
+
+- **ANALYSIS-PRINT-COMPLETE-001** `[FIXED 1.50.351 — verified headless]` — owner: now that
+  the Analysis panel is unified, make sure ALL its sections are included when printing. The
+  report builder (`antcv-analysis-report-pdf-360.js` `reportHtml`) rendered Overall fit,
+  Strengths, Gaps, Recommendations, Assumptions, Confidence, Recruiter, Red flags, Questions
+  — but the model also held **Tailoring decisions** (`tailoring_decisions`) and
+  **Cover-letter strategy** (`cover_letter_strategy`) which were NEVER rendered. Added both
+  sections (string-or-array tolerant `richBlock`) + EN/DA labels. Verified
+  `pwa/test/diag-analysis-print-complete.mjs` 11/11 (every panel section appears in the
+  exported report HTML). Sidecar-only (no app.js rebuild).
+- **NORDIC-STYLE-GUIDANCE** — owner supplied detailed DA cover-letter / CV / unsolicited /
+  call-the-employer guidance; saved to assistant memory (nordic-cover-letter-style,
+  nordic-cv-style, nordic-unsolicited-application, analysis-questions-to-employer) to drive
+  the nordic-minimal writing style, the unsolicited writing style, and the Analysis →
+  Questions-to-employer recommendations. (Writing-engine wiring of these rules is a separate
+  follow-up; the guidance is now retained.)
+
 ## OWNER REPORT 2026-06-10 (PM) — kernel drops from history
 
 - **KERNEL-HISTORY-KEEP-001** `[FIXED 1.50.349 + relay — needs owner check]` — owner: the

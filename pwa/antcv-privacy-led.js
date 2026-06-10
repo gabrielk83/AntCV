@@ -65,7 +65,7 @@
 (function () {
   'use strict';
 
-  const SCRIPT_VERSION = '1.40.296';
+  const SCRIPT_VERSION = '1.50.356-anchor-fallback';
   const STORAGE_KEY = 'antcv:privacy:led';
   const FAB_MARKER = 'data-antcv-privacy-led-fab';
   const STYLE_ID = 'antcv-privacy-led-styles';
@@ -344,8 +344,18 @@
       fabEl = existing;
       return;
     }
-    const container = document.querySelector('.antcv-overlay-bottom-right');
-    if (!container) return; // overlay hasn't mounted yet; observer will retry
+    // PRIVACY-DEMO-001 / PRIVACY-FAB-FLICKER-MOBILE-001 (1.50.356): the
+    // overlay stack is not always mounted (demo mode, mobile states,
+    // Settings open). The pill's real home is the top bar anyway —
+    // topbar-tools-347 re-parents it there — and a top-bar React re-render
+    // destroys the foreign button. With only the overlay as a mount host
+    // the pill could then never come back until the overlay remounted
+    // ("disappears until toggling the editor"). Fall back to mounting
+    // straight into .antcv-top-tools so recreation works wherever the top
+    // bar exists; 347's sweep re-styles it for the top bar either way.
+    const container = document.querySelector('.antcv-overlay-bottom-right')
+      || document.querySelector('.antcv-top-tools');
+    if (!container) return; // neither host mounted yet; observer will retry
     fabEl = buildFab();
     container.appendChild(fabEl);
   }

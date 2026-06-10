@@ -47,7 +47,7 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.50.58-privacy-vis';
+  var SCRIPT_VERSION = '1.50.356-unhide';
   if (window.__antcvTopbarTools347 === SCRIPT_VERSION) return;
   window.__antcvTopbarTools347 = SCRIPT_VERSION;
 
@@ -72,6 +72,16 @@
   // Compact top-bar sizing for the privacy LED (small icon button).
   function stylePrivacyForTopbar(el) {
     neutralizeFixed(el);
+    // PRIVACY-FAB-FLICKER-MOBILE-001 (1.50.356): the islands PreviewToolbar
+    // hides the NOT-YET-MOVED privacy FAB with an inline !important triple
+    // (display/visibility/pointer-events) — its dedup for the corner copy.
+    // When it wins the race before our relocation, that inline hide sticks:
+    // inline !important beats the stylesheet visibility lock, and the islands
+    // never unhide a moved pill (it only EXEMPTS it). Clear the triple on
+    // every sweep; once data-antcv-topbar-moved=1 the islands leave it alone.
+    el.style.removeProperty('display');
+    el.style.removeProperty('visibility');
+    el.style.removeProperty('pointer-events');
     el.style.setProperty('height', '28px', 'important');
     el.style.setProperty('min-width', '28px', 'important');
     el.style.setProperty('padding', '0 6px', 'important');

@@ -23,10 +23,16 @@ A companion **feature registry** (open vs shipped features) lives at
   `kernel-history-keep.test.mjs` 5/5 (pinned first, kept at 3 apps, empty-company = kernel,
   no-kernel = newest 5, no duplication); the sweep SQL validated read-only against live D1
   (returns nothing wrongly deletable). app.src.js + terser rebuild (identity-clean) + relay.
-- **ADV-INDENT-CONTROLS-001** `[OPEN→in progress]` — owner: add Advanced-settings controls
-  to (a) increase the main content indent from the edge and (b) set the bullet-list / emoji-
-  list indent. Registered in FEATURES_REGISTRY. (Bullet hang is currently the 1.50.348
-  fixed paddingLeft:24/textIndent:-14; this makes it user-tunable.)
+- **ADV-INDENT-CONTROLS-001** `[PREVIEW LIVE 1.50.350 — export-parity pending]` — owner: add
+  Advanced-settings controls to (a) increase the main content indent from the edge and
+  (b) set the bullet-list / emoji-list indent. SHIPPED preview-side: an INDENTS group in the
+  Advanced styles panel with two range sliders (Indent from edge 4–40px; Bullet / emoji list
+  indent 10–60px), stored on the styleConfig (`mainEdgeIndent` 10, `bulletIndent` 24) so they
+  persist/sync/reset with the style. The 5 preview bullet sites + `.antcv-document-main`
+  padding read them; defaults reproduce the built-in look (no change unless a slider moves).
+  Verified `pwa/test/unit/indent-controls.test.mjs` 4/4 + boot-smoke + salmon. FULL detail +
+  the export-parity follow-up in FEATURES_REGISTRY (docx-worker still fixed; moving a slider
+  changes preview only until the worker honours the tokens).
 
 ## OWNER REPORT 2026-06-10 (PM) — preview↔PDF geometry (page slide)
 

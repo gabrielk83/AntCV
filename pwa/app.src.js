@@ -251,6 +251,13 @@
       tableFirstColBold: !0,
       tableFirstColText: "#333333",
       tableOtherColText: "#333333",
+      // ADV-INDENT-CONTROLS-001 (owner 2026-06-10): user-tunable layout indents
+      // (px), surfaced as range controls in Advanced styles. mainEdgeIndent =
+      // the main-column content padding in from the page edge; bulletIndent =
+      // the bullet / emoji list body+continuation hang. Defaults match the
+      // built-in look (10 / 24), so unset configs render exactly as before.
+      mainEdgeIndent: 10,
+      bulletIndent: 24,
     },
     Ai = "1.50.319-salmon-scope";
   try {
@@ -4297,7 +4304,7 @@
                           style: {
                             fontFamily: T,
                             fontSize: $.bullet,
-                            paddingLeft: 24, textIndent: -14,
+                            paddingLeft: (k.bulletIndent || 24), textIndent: 10 - (k.bulletIndent || 24),
                             marginBottom: 3,
                             color: O,
                             textAlign: "justify",
@@ -4317,7 +4324,7 @@
                           style: {
                             fontFamily: T,
                             fontSize: $.bullet,
-                            paddingLeft: 24, textIndent: -14,
+                            paddingLeft: (k.bulletIndent || 24), textIndent: 10 - (k.bulletIndent || 24),
                             marginBottom: 3,
                             color: O,
                             lineHeight: I,
@@ -4334,7 +4341,7 @@
                         style: {
                           fontFamily: T,
                           fontSize: $.bullet,
-                          paddingLeft: 24, textIndent: -14,
+                          paddingLeft: (k.bulletIndent || 24), textIndent: 10 - (k.bulletIndent || 24),
                           marginBottom: 3,
                           color: O,
                           textAlign: "justify",
@@ -4458,7 +4465,7 @@
                 style: {
                   fontFamily: T,
                   fontSize: $.bullet,
-                  paddingLeft: 24, textIndent: -14,
+                  paddingLeft: (k.bulletIndent || 24), textIndent: 10 - (k.bulletIndent || 24),
                   marginBottom: 3,
                   color: O,
                   textAlign: "justify",
@@ -4915,7 +4922,7 @@
                               key: n,
                               style: {
                                 fontSize: $.bullet,
-                                paddingLeft: 24, textIndent: -14,
+                                paddingLeft: (k.bulletIndent || 24), textIndent: 10 - (k.bulletIndent || 24),
                                 marginBottom: 1,
                                 color: "#000",
                                 fontFamily: T,
@@ -11901,6 +11908,71 @@
                 ),
               ),
             ),
+          ),
+          // ADV-INDENT-CONTROLS-001 (owner 2026-06-10): tune the main content
+          // indent from the edge and the bullet/emoji list indent. Mirrors the
+          // FONTS group: reads current value from `e` (styleConfig) with `c`
+          // defaults, writes via the partial-merge setter `t`.
+          React.createElement(
+            "div",
+            { style: { marginBottom: 8 } },
+            React.createElement(
+              "div",
+              {
+                style: {
+                  fontSize: 9,
+                  color: o,
+                  fontWeight: 700,
+                  letterSpacing: 0.8,
+                  textTransform: "uppercase",
+                  marginBottom: 6,
+                  paddingBottom: 3,
+                  borderBottom: "1px solid rgba(1,183,187,0.2)",
+                },
+              },
+              "INDENTS",
+            ),
+            [
+              ["mainEdgeIndent", "Indent from edge", 4, 40, 10],
+              ["bulletIndent", "Bullet / emoji list indent", 10, 60, 24],
+            ].map(([key, label, min, max, def]) => {
+              const val = Number(
+                e && e[key] != null ? e[key] : (c[key] != null ? c[key] : def),
+              );
+              return React.createElement(
+                "label",
+                {
+                  key: key,
+                  style: {
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    marginBottom: 4,
+                  },
+                },
+                React.createElement("input", {
+                  type: "range",
+                  min: min,
+                  max: max,
+                  step: 1,
+                  value: val,
+                  onChange: (ev) => t({ [key]: Number(ev.target.value) }),
+                  style: { flex: 1, cursor: "pointer" },
+                }),
+                React.createElement(
+                  "span",
+                  {
+                    style: {
+                      fontSize: 9,
+                      color: "rgba(255,255,255,0.45)",
+                      whiteSpace: "nowrap",
+                      minWidth: 150,
+                    },
+                  },
+                  label + " (" + val + "px)",
+                ),
+              );
+            }),
           ),
         ),
     );
@@ -39043,7 +39115,9 @@
                             "data-antcv-document-main": "true",
                             style: {
                               flex: 1,
-                              padding: "8px 10px",
+                              // ADV-INDENT-CONTROLS-001: main content indent from
+                              // the page edge is user-tunable (Advanced styles).
+                              padding: "8px " + ((ya && ya.mainEdgeIndent) || 10) + "px",
                               minWidth: 0,
                               background: "#fff",
                             },

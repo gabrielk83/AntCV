@@ -19,12 +19,25 @@ A companion **feature registry** (open vs shipped features) lives at
   sections (string-or-array tolerant `richBlock`) + EN/DA labels. Verified
   `pwa/test/diag-analysis-print-complete.mjs` 11/11 (every panel section appears in the
   exported report HTML). Sidecar-only (no app.js rebuild).
-- **NORDIC-STYLE-GUIDANCE** — owner supplied detailed DA cover-letter / CV / unsolicited /
-  call-the-employer guidance; saved to assistant memory (nordic-cover-letter-style,
-  nordic-cv-style, nordic-unsolicited-application, analysis-questions-to-employer) to drive
-  the nordic-minimal writing style, the unsolicited writing style, and the Analysis →
-  Questions-to-employer recommendations. (Writing-engine wiring of these rules is a separate
-  follow-up; the guidance is now retained.)
+- **NORDIC-STYLE-GUIDANCE** `[memory saved + ENGINE WIRED, workers]` — owner supplied
+  detailed DA cover-letter / CV / unsolicited / call-the-employer guidance; saved to
+  assistant memory (nordic-cover-letter-style, nordic-cv-style, nordic-unsolicited-application,
+  analysis-questions-to-employer). WIRED into the writing engine (proxy + demo-proxy,
+  mirrored): (1) `writing-style-engine.js` — `nordic-minimal` carries a `guidance` block
+  (CL = forward-looking statement of intent, not a CV recap; motivation in the employer's
+  words; concrete tasks + how/methods/effect; personal qualities; value-to-employer; 1 page.
+  CV = 5–7 line elevator pitch + bullet competencies + reverse-chron with results) and
+  `cold-outreach` (alias `unsolicited`) carries the uopfordret dialogue-opener block. The
+  guidance is emitted in `buildStyleSystemPreamble` ("Style guidance (MUST follow):") and is
+  already injected into the LLM system prompt (Anthropic/OpenAI/Mistral/Gemini shapes) by
+  both proxies' index.js. (2) `jd-analysis.js` — recommendations now also append 3–4
+  JD-grounded "Call the employer and ask: …" items (the 4 standard Nordic call questions,
+  adapted, no yes/no), which surface in the Analysis panel AND the exported report via the
+  existing recommendations rendering (no PWA change). Verified: proxy writing-style tests
+  35/35 (incl. new nordic + cold-outreach guidance + no-guidance cases); full proxy suite
+  45/45; both proxies node-check OK. NOTE: nordic+unsolicited COMBO (nordic style used for
+  an unsolicited app) still maps to the nordic CL guidance; the dedicated unsolicited
+  framing lives on `cold-outreach` — pass an unsolicited flag later if both should compose.
 
 ## OWNER REPORT 2026-06-10 (PM) — kernel drops from history
 

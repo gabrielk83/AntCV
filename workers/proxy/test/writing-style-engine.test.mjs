@@ -132,6 +132,29 @@ test('preamble: active tone chips fall back to the style defaults when none chos
   assert.match(chosen, /Active tone chips: terse, plain/);
 });
 
+test('preamble: nordic-minimal carries the Nordic craft guidance (cover-letter + CV)', () => {
+  const p = buildStyleSystemPreamble(parseWritingStyleRequest({ writingStyle: 'nordic-minimal' }));
+  assert.match(p, /Style guidance \(MUST follow\):/);
+  assert.match(p, /statement of intent/i);
+  assert.match(p, /elevator pitch/i);
+  assert.match(p, /value to the EMPLOYER/i);
+});
+
+test('preamble: cold-outreach (unsolicited) carries the uopfordret dialogue guidance', () => {
+  const p = buildStyleSystemPreamble(parseWritingStyleRequest({ writingStyle: 'cold-outreach' }));
+  assert.match(p, /Style guidance \(MUST follow\):/);
+  assert.match(p, /opening of a DIALOGUE/i);
+  assert.match(p, /uopfordret/i);
+  // the legacy alias "unsolicited" resolves to the same style + guidance
+  const viaAlias = buildStyleSystemPreamble(parseWritingStyleRequest({ writingStyle: 'unsolicited' }));
+  assert.match(viaAlias, /opening of a DIALOGUE/i);
+});
+
+test('preamble: a style without guidance has no Style-guidance block', () => {
+  const p = buildStyleSystemPreamble(parseWritingStyleRequest({ writingStyle: 'achievement-driven' }));
+  assert.doesNotMatch(p, /Style guidance \(MUST follow\):/);
+});
+
 // ─── evaluateSce (Semantic Constraint Engine filter) ─────────────────────
 
 test('sce: detects a shared banned word in English', () => {

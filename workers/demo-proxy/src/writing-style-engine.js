@@ -55,7 +55,11 @@ const SUPPORTED_LANGUAGES = ['en','da','es','zh'];
 // uses fields below; the full registry is loaded by the PWA.
 
 const STYLES = {
-  'nordic-minimal':        { active: true,  default: true,  density: 'low',          allowedLength:{min:1,max:3}, primaryConstraint:'restraint', contentRule:'Say less and say it clearly.', avoidRule:'Never add a qualifier where a fact will do.', defaultToneChips:['calm','restrained','factual'], glyphDensity:'sparse' },
+  'nordic-minimal':        { active: true,  default: true,  density: 'low',          allowedLength:{min:1,max:3}, primaryConstraint:'restraint', contentRule:'Say less and say it clearly.', avoidRule:'Never add a qualifier where a fact will do.', defaultToneChips:['calm','restrained','factual'], glyphDensity:'sparse', guidance:[
+    'Cover letter is a forward-looking statement of intent, NOT a CV recap. Open with motivation for THIS employer in their own words (why them specifically, not generic interest); then the concrete tasks you can solve, how you approach them, the methods and tools you bring, and the effect for the employer; close with the personal qualities that make you a good colleague in this team. Frame value to the EMPLOYER (how you help them reach their goals), never what you gain. Keep it to one page.',
+    'CV opens with a 5 to 7 line elevator pitch focused on what you offer the employer, targeted to this job; then core competencies as bullets, each tied to the job; then experience in reverse-chronological order with both responsibilities and results. Short, scannable, sub-headed.',
+    'Use section headings that carry the job\'s professional keywords so the reader can skim it in seconds.'
+  ] },
   'achievement-driven':    { active: true,  density: 'medium',         allowedLength:{min:1,max:3}, primaryConstraint:'outcome-first ordering', contentRule:'Lead with what changed because of you.', avoidRule:'Never name a duty without naming the outcome.', defaultToneChips:['outcome-led','quantified','scope-anchored'], glyphDensity:'medium' },
   'measured-professional': { active: true,  density: 'medium',         allowedLength:{min:1,max:3}, primaryConstraint:'balance of fact and outcome', contentRule:'Concrete actions described in plain language.', avoidRule:'Never claim more than the evidence supports.', defaultToneChips:['balanced','concrete','calm'], glyphDensity:'medium' },
   'structured-professional':{active: true,  density: 'medium',         allowedLength:{min:1,max:3}, primaryConstraint:'process-led framing', contentRule:'Name the method and the scope, then the result.', avoidRule:'Never describe the work without naming the process.', defaultToneChips:['disciplined','method-led','scope-defined'], glyphDensity:'secondary-to-structure' },
@@ -64,7 +68,11 @@ const STYLES = {
   'credential-forward':    { active: true,  density: 'medium',         allowedLength:{min:1,max:4}, primaryConstraint:'credentials surfaced early', contentRule:'Name the credential, then the work it enabled.', avoidRule:"Never imply a qualification you don't formally hold.", defaultToneChips:['credentialed','accredited','named-methodology'], glyphDensity:'secondary-to-structure' },
   'precision-formal':      { active: true,  density: 'medium-high',    allowedLength:{min:1,max:3}, primaryConstraint:'numerical precision', contentRule:'Quantify wherever a real number is available.', avoidRule:'Never use a magnitude word when a number is available.', defaultToneChips:['precise','quantified','technical'], glyphDensity:'sparse' },
   'context-rich':          { active: true,  density: 'high',           allowedLength:{min:1,max:5}, primaryConstraint:'narrative voice', contentRule:'Say why this work mattered, not just what was done.', avoidRule:'Never fragment a sentence to fit a bullet.', defaultToneChips:['narrative','reasoned','why-led'], glyphDensity:'medium' },
-  'cold-outreach':         { active: true,  density: 'low',            allowedLength:{min:1,max:2}, primaryConstraint:'possibility framing, brevity', contentRule:"Open a conversation, don't close a sale.", avoidRule:'Never write more than the recipient will read in 30 seconds.', defaultToneChips:['speculative','brief','conversational'], glyphDensity:'sparse' },
+  'cold-outreach':         { active: true,  density: 'low',            allowedLength:{min:1,max:2}, primaryConstraint:'possibility framing, brevity', contentRule:"Open a conversation, don't close a sale.", avoidRule:'Never write more than the recipient will read in 30 seconds.', defaultToneChips:['speculative','brief','conversational'], glyphDensity:'sparse', guidance:[
+    'Unsolicited / uopfordret (a specific company with NO posted role): this is the opening of a DIALOGUE, not a real application. Do NOT write as if applying to a current opening.',
+    'Shorter and sharper than a normal cover letter, under one page. Structure: which challenges you can help this company solve; why you are motivated to work there (specific to them, not generic); your most relevant competencies for the implied work; close by saying you will follow up in a couple of days.',
+    'Forward-looking and possibility-framed: open future possibilities rather than asking for a specific job now. The CV is targeted to the work you are offering to do.'
+  ] },
   'research-formal':       { active: true,  density: 'medium-high',    allowedLength:{min:2,max:5}, primaryConstraint:'academic register', contentRule:'Frame contributions as research outputs, not commercial wins.', avoidRule:'Never use commercial metrics where a research metric exists.', defaultToneChips:['academic','methodological','publication-anchored'], glyphDensity:'header-only' },
   'hybrid-balanced':       { active: true,  density: 'medium',         allowedLength:{min:1,max:3}, primaryConstraint:'bridging two registers', contentRule:'Carry both registers without picking one.', avoidRule:'Never write a bullet that only one of the two registers would accept.', defaultToneChips:['bridging','dual-register','jd-tuned'], glyphDensity:'inherit' },
 };
@@ -238,6 +246,11 @@ export function buildStyleSystemPreamble(req) {
     `Primary constraint: ${s.primaryConstraint}`,
     `Content rule: ${s.contentRule}`,
     `Avoid rule: ${s.avoidRule}`,
+    // Style-specific craft guidance (e.g. Nordic application structure,
+    // unsolicited/uopfordret dialogue framing). Owner-provided 2026-06-10.
+    Array.isArray(s.guidance) && s.guidance.length
+      ? 'Style guidance (MUST follow):\n' + s.guidance.map((g) => '  - ' + g).join('\n')
+      : '',
     `Active tone chips: ${chips.join(', ')}`,
     `Target language: ${req.target_language}`,
     `Target pages: ${req.targetPages}`,

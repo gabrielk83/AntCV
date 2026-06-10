@@ -1427,9 +1427,22 @@ items marked VERIFYING.
   failing, OR the account is pinned to "paid" by an admin/allowlist default. Decisive
   probe: the `SET-MODE` console snippet (POST status 401 vs 200+stale read), then check
   how the relay assigns the initial mode for this email.
-- **DEMO-BADGE-001** `[OPEN]` — The "🟡 DEMO" badge is hardcoded to a specific email
-  (`51pegasib@gmail.com`), not to `demo_mode`/`user_mode`. Badge can show while the demo
-  features are off (the "mix" the owner saw). Re-gate on the real signal.
+  UPDATE 2026-06-10: addressed by the relay `auth-25` deploy — `getUserMode` now PINS
+  `DEMO_EMAILS` (wrangler.toml: `51pegasib@gmail.com`) to `'demo'` regardless of any
+  stored/POSTed mode (DEMO-PERSIST-001 mechanism, index.js getUserMode), so that account
+  reaches `demo_mode:true` and every demo treatment (badge, watermark, export stamp) now
+  has a true signal to render from. Needs the owner to confirm live on `51pegasib@gmail.com`
+  (sign in → expect the 🟡 DEMO badge + DEMO watermark on preview AND export). If a NEW
+  demo account is needed that isn't in DEMO_EMAILS, the in-app toggle (DEMO-TOGGLE-001)
+  is the remaining gap.
+- **DEMO-BADGE-001** `[STALE — already fixed in source, verified 2026-06-10]` — the "🟡
+  DEMO" badge is NO LONGER hardcoded to an email. In the current source it renders via
+  `__antcvDemoActive()` (app.src.js:1033 = `!!(B && B.demo_mode) && !__antcvHasOwnKey()`),
+  the real signal, at app.src.js:39778/39801. Every other demo treatment (export-watermark
+  notice 28734/43048, preview band 38874) uses the same gate. No code change needed; the
+  "mix" the owner saw is explained by REGULAR-MODE-STALE-SETUP-001 (stale render until
+  refresh — fixed 1.50.340) + DEMO-PERSIST-001 (server mode, addressed by the relay
+  auth-25 DEMO_EMAILS pin). Closing as stale.
 - **PRIVACY-DEMO-001** `[OPEN]` — Privacy LED not visible in demo mode (desktop +
   mobile). Not investigated; may overlap the parallel `fix/label-mobile-privacy-audit`.
 - **SETTINGS-SUBTAB-001** `[OPEN]` — Pressing "EN"/applications-history doesn't open the

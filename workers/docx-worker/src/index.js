@@ -25577,7 +25577,16 @@ function renderCompetencyTable(s, ctx) {
   if (rows.length === 0) return [];
   const [header, ...data] = rows;
   const isCl = ctx.doc === "cl";
-  const defaultCvW = ctx.mainW - 640;
+  // PREVIEW-PDF-GEOMETRY-001 (owner 2026-06-10): the CV preview renders the
+  // competency table FULL main-column width, left-aligned and flush with the
+  // body text (app.src.js table case: CV wrapStyle = {marginTop:8}, no width
+  // cap). The worker used mainW-640 CENTERED, which made the table ~23px
+  // narrower and inset ~21px from the cell edge (vs the preview's ~10px). That
+  // narrower table wraps more → taller → shifts the page-1 break vs what the
+  // preview measurer computed → the "page slide". Match the preview: full
+  // content width = cell width minus the two 144-DXA cell margins, left-aligned
+  // (see makeTable). CL keeps its intentional 0.8-width centered look.
+  const defaultCvW = ctx.mainW - 288;
   // 1.14.26: CL is full-width linear. Body + text sections span the full body
   // cell (PAGE_W-200), but the WHAT-I-BRING table should be LARGE yet INSET and
   // CENTERED — 1.14.25's PAGE_W-560 (~97%) looked edge-to-edge. ~80% of the body
@@ -25639,7 +25648,9 @@ function renderCompetencyTable(s, ctx) {
       width: { size: tableW, type: WidthType.DXA },
       columnWidths: [col1, col2],
       borders: cellBorders,
-      alignment: AlignmentType.CENTER,
+      // PREVIEW-PDF-GEOMETRY-001: CV table is LEFT-aligned (flush with body
+      // text, like the preview); CL stays CENTERED (its 0.8-width inset look).
+      alignment: isCl ? AlignmentType.CENTER : AlignmentType.LEFT,
       rows: [makeHeaderRow(), ...dataRows.map((r, i) => makeDataRow(r, offset + i))]
     });
   }
@@ -26611,7 +26622,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.42-sidebar-fill";
+var VERSION = "1.14.43-cv-table-fullwidth";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

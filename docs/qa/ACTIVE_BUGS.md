@@ -8,6 +8,29 @@ A companion **feature registry** (open vs shipped features) lives at
 
 ---
 
+## OWNER REPORT 2026-06-10 (PM) — preview↔PDF geometry (page slide)
+
+- **PREVIEW-PDF-GEOMETRY-001** `[FIXED docx-worker 1.14.43 — needs owner visual]` — owner:
+  a slight CV line/spacing mismatch causes a page slide on page 1; suspected the
+  core-competency-table-to-cell-edge distance and bullet-to-border distance differ between
+  preview and PDF. MEASURED: the CV PREVIEW renders the competency table FULL main-column
+  width, left-aligned and flush with the body text (app.src.js table case: CV
+  wrapStyle = {marginTop:8}, no width cap). The WORKER rendered it `mainW-640` CENTERED —
+  ~23px narrower and inset ~21px from the cell edge (vs the preview's ~10px). A narrower
+  table wraps more → runs taller → shifts the page-1 break away from what the preview
+  measurer computed (the measurer measures the PREVIEW geometry) → the page slide. FIX
+  (docx-worker 1.14.43): CV competency table → `mainW-288` (full content width = cell
+  width minus the two 144-DXA margins), LEFT-aligned; flush with the body text like the
+  preview. CL keeps its intentional 0.8-width centered look. The page measurer (preview)
+  and the export now share the same table width, so heights converge. Verified:
+  `workers/docx-worker/test/diag-cv-table-width.mjs` 4/4 (CV left + full width 7689 DXA,
+  CL centered + inset) + twocol-ownerlike + palette 11/11 still pass.
+  RESIDUAL (minor, inherent Word-vs-HTML): main bullet MARKER already matches (~20px from
+  the edge in both), but Word's hanging indent wraps continuation lines to ~33px while the
+  HTML preview wraps to ~20px. If the page slide persists after this, that bullet wrap and
+  per-section vertical spacing are the next contributors to chase — but the table width was
+  the dominant one. Needs the owner's visual pass on a CV with a competency table.
+
 ## OWNER REPORT 2026-06-10 (AM) — CL preview watermark
 
 - **CL-PREVIEW-WATERMARK-001** `[FIXED 1.50.343 — structural; needs owner visual]` — owner

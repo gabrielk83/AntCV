@@ -24551,7 +24551,13 @@ function buildTwoColumnDocument(ctx) {
     width: { size: ctx.sidebarW, type: WidthType.DXA },
     shading: { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" },
     borders: noBorders(),
-    margins: { top: 240, bottom: 240, left: 144, right: 144 },
+    // PREVIEW-PDF-SIDEBAR-GEOM-001 (owner 2026-06-10): the preview sidebar uses
+    // 8px (=120 DXA) L/R padding; the worker used 144 (9.6px), so the export
+    // text column was ~3px narrower each side and wrapped more (e.g. a
+    // publication line breaking at "2009" in the PDF but not the preview). Match
+    // the preview's 120 DXA so the export text width lines up with the on-screen
+    // measurer. Top kept at 240 (the navy band's breathing room).
+    margins: { top: 240, bottom: 240, left: 120, right: 120 },
     children: els && els.length ? els : [emptyParagraph()]
   });
   const makeMainCell = (els) => new TableCell({
@@ -25356,7 +25362,11 @@ function headingParagraph(title2, ctx, isSidebar) {
     characterSpacing: 10
   };
   return new Paragraph({
-    spacing: { before: 80, after: 40 },
+    // PREVIEW-PDF-SIDEBAR-GEOM-001 (owner 2026-06-10): the sidebar heading-to-
+    // underline gap read much looser in the PDF than the preview. Tighten the
+    // sidebar heading: smaller before-space and a smaller text-to-rule border
+    // gap (space 2 vs 4 pt). Main headings keep the original spacing.
+    spacing: { before: isSidebar ? 40 : 80, after: isSidebar ? 30 : 40 },
     // keepNext: heading must stay glued to whatever follows it, so a
     // heading never appears alone at the bottom of a page with its
     // content pushed to the next page. keepLines: never split the
@@ -25368,7 +25378,7 @@ function headingParagraph(title2, ctx, isSidebar) {
     // column headings stay left-aligned so they line up with body prose.
     alignment: isSidebar ? AlignmentType.CENTER : void 0,
     shading: isSidebar ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" } : void 0,
-    border: { bottom: { color: isSidebar ? style.sidebarHeadColor : style.mainHeadColor, space: 4, style: BorderStyle.SINGLE, size: 8 } },
+    border: { bottom: { color: isSidebar ? style.sidebarHeadColor : style.mainHeadColor, space: isSidebar ? 2 : 4, style: BorderStyle.SINGLE, size: 8 } },
     children: [
       new BookmarkStart(bookmarkName, bookmarkNumericId),
       new TextRun({ text: title2, ...headingRunOpts }),
@@ -26630,7 +26640,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.44-cl-list-cont";
+var VERSION = "1.14.45-sidebar-geom";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

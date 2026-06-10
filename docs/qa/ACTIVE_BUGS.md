@@ -8,6 +8,25 @@ A companion **feature registry** (open vs shipped features) lives at
 
 ---
 
+## OWNER REPORT 2026-06-10 (LATE) — CV sidebar preview↔PDF geometry
+
+- **PREVIEW-PDF-SIDEBAR-GEOM-001** `[PARTIAL docx-worker 1.14.45 — needs owner visual]` —
+  owner (CONFIRMED the section is the CV, not the CL) reports three sidebar preview↔PDF
+  mismatches: (1) bullets extend past the other rows' text and the bullet→text gap is too
+  wide; preview vs PDF pull the bullet in two different directions; (2) the gap between a
+  sidebar heading and its underline rule is much larger in the PDF than the preview; (3) a
+  publications line ("…Microengineering, 2009") wraps/splits in the PDF but not the preview
+  → the sidebar text column is narrower in the export. FIXED (2) + (3) on the worker:
+  sidebar cell L/R margins 144→120 DXA (= the preview's 8px, widening the export text column
+  ~3px/side so lines that fit in the preview fit in the PDF); sidebar heading tightened
+  (spacing before 80→40, after 40→30; bottom-border text gap space 4→2 pt) — main headings
+  unchanged. (1) BULLETS held for owner confirmation — the main-bullet geometry already
+  matches numerically (preview marker ~10px / text 24px ≈ worker numbering left 360 /
+  hanging 200), so the "two directions" needs the owner's eye to pin the exact target
+  before a third iteration (asked). Verified: twocol-ownerlike + cl-list-cont + cv-table +
+  palette 11/11 all still pass. Pixel-exact match needs the owner's visual loop (can't
+  render the PDF headlessly).
+
 ## OWNER REPORT 2026-06-10 (EVE) — preview↔PDF (Cont.) gap
 
 - **PB-WORKER-CL-LIST-CONT-001** `[FIXED docx-worker 1.14.44 — needs owner visual]` — owner:

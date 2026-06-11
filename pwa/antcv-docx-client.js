@@ -172,11 +172,20 @@ export function readPhotoShape() {
 }
 
 export function readPhotoPosition() {
+  // EXPORT-PHOTO-POS-CLAMP-001 (1.50.373): this VALID set lagged the app's
+  // picker. 'band-overlap' was MISSING, so the bridge silently exported as
+  // sidebar-top (the owner's "in pdf bridge is not visible" — the worker was
+  // fine, the CLIENT clamped the position before it ever left the browser).
+  // 'none' (the picker's Hidden value) was missing too, so a HIDDEN photo
+  // still exported. Keep this list a superset of the picker's values.
   const VALID = new Set([
     'sidebar-top', 'sidebar-bottom',
     'header-left', 'header-right',
     'main-left', 'main-right',
-    'hidden',
+    'main-left-bottom', 'main-right-bottom',
+    'bridge-middle', 'bridge-bottom',
+    'band-overlap',
+    'none', 'hidden',
   ]);
   try {
     if (typeof localStorage === 'undefined') return 'sidebar-top';
@@ -186,6 +195,7 @@ export function readPhotoPosition() {
     try { const p = JSON.parse(raw); if (typeof p === 'string') v = p; }
     catch (_) {}
     v = String(v).trim();
+    if (v === 'none') v = 'hidden';
     return VALID.has(v) ? v : 'sidebar-top';
   } catch (_) { return 'sidebar-top'; }
 }
@@ -535,13 +545,18 @@ export function buildPayload({
       // 1.50.368 / worker 1.14.51 — bridge mode forwards the EFFECTIVE
       // medallion diameter (slider px × the native 1.3 bridge scale, same
       // formula as the preview) so the export straddle matches on-screen.
+      // 1.50.373 / worker 1.14.53 — EVERY visible position forwards the
+      // slider diameter now (the preview renders every mode at photoSize;
+      // only band-overlap applies the native 1.3 scale).
       ...((() => {
         try {
-          if (readPhotoPosition() !== 'band-overlap') return {};
+          const pos = readPhotoPosition();
+          if (pos === 'hidden') return {};
           let raw = localStorage.getItem('photoSize');
           let n = Number(typeof raw === 'string' ? raw.replace(/["']/g, '') : raw);
           if (!Number.isFinite(n) || n < 60 || n > 220) n = 120;
-          return { photoSizePx: Math.min(220, Math.round(1.3 * n)) };
+          if (pos === 'band-overlap') n = Math.min(220, Math.round(1.3 * n));
+          return { photoSizePx: n };
         } catch (_) { return {}; }
       })()),
     },

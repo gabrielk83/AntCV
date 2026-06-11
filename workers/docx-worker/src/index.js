@@ -24488,6 +24488,8 @@ function buildTwoColumnDocument(ctx) {
   const photoBottomOfSidebar = maybeBuildPhotoFor(ctx, "sidebar-bottom");
   const photoInHeader = maybeBuildPhotoFor(ctx, "header");
   const photoInMain = maybeBuildPhotoFor(ctx, "main");
+  const photoMainBottom = maybeBuildPhotoFor(ctx, "main-bottom");
+  const photoBridge = maybeBuildPhotoFor(ctx, "bridge");
   // Owner 2026-06-05: the AI disclosure goes to whichever COLUMN's text
   // ends higher (more empty space below it). The PWA forwards the page
   // side it measured (ctx.aiWmSide: 'left'|'right'); map it to the sidebar
@@ -24497,6 +24499,10 @@ function buildTwoColumnDocument(ctx) {
   const wmInSidebar = ctx.aiWmSide ? ctx.aiWmSide === sidebarSide : false;
   const aiDisclosurePara = buildAiDisclosureHangingTextbox(ctx, { context: wmInSidebar ? "sidebar" : "linear" });
   const sidebarChildren = [
+    // 1.14.53: the vertical-seam medallion anchors on a zero-height paragraph
+    // at the TOP of the page-1 sidebar (its floating position is page-relative,
+    // so the anchor only decides which page carries it).
+    ...photoBridge ? [buildPhotoParagraph(ctx, photoBridge)] : [],
     ...photoTopOfSidebar ? [photoTopOfSidebar] : [],
     ...sidebarSecs.flatMap((s) => renderSection(
       s,
@@ -24509,19 +24515,12 @@ function buildTwoColumnDocument(ctx) {
   ];
   let mainChildren;
   if (photoInMain && mainSecs.length > 0) {
-    const firstSec = mainSecs[0];
-    const restSecs = mainSecs.slice(1);
-    const firstSecParas = renderSection(
-      firstSec,
-      ctx,
-      /*isSidebar*/
-      false
-    );
-    const innerW = ctx.mainW - 320;
-    const photoTable = buildPhotoRowTable(ctx, photoInMain, firstSecParas, innerW);
+    // 1.14.53 PHOTO-POSITIONS-EXPORT-001: floating crescent-wrap photo
+    // (text reclaims the full column width below it) instead of the old
+    // photo-row table, matching the 1.50.372 preview.
     mainChildren = [
-      photoTable,
-      ...restSecs.flatMap((s) => renderSection(
+      buildMainFloatPhotoParagraph(ctx, photoInMain),
+      ...mainSecs.flatMap((s) => renderSection(
         s,
         ctx,
         /*isSidebar*/
@@ -24536,6 +24535,7 @@ function buildTwoColumnDocument(ctx) {
       false
     ));
   }
+  if (photoMainBottom) mainChildren.push(buildPhotoParagraph(ctx, photoMainBottom));
   if (!wmInSidebar) mainChildren.push(aiDisclosurePara);
   if (photoInHeader) {
     const headerInnerW = PAGE_W - 720;
@@ -25033,6 +25033,12 @@ var PHOTO_POSITIONS = /* @__PURE__ */ new Set([
   "header-right",
   "main-left",
   "main-right",
+  // 1.14.53 PHOTO-POSITIONS-EXPORT-001: the four positions added to the
+  // preview picker in 1.50.371 now have export halves too.
+  "main-left-bottom",
+  "main-right-bottom",
+  "bridge-middle",
+  "bridge-bottom",
   "band-overlap",
   "hidden"
 ]);
@@ -25040,7 +25046,10 @@ var PHOTO_CELL_W_MAIN = 1800;
 var PHOTO_CELL_W_HEADER = 1280;
 function normalisePhotoPosition(v) {
   if (typeof v !== "string") return "sidebar-top";
-  const s = v.trim().toLowerCase();
+  let s = v.trim().toLowerCase();
+  // The PWA picker stores "none" for Hidden; map it so a hidden photo can
+  // never fall through to the sidebar-top default.
+  if (s === "none") s = "hidden";
   return PHOTO_POSITIONS.has(s) ? s : "sidebar-top";
 }
 __name(normalisePhotoPosition, "normalisePhotoPosition");
@@ -25048,11 +25057,79 @@ function buildPhotoParagraph(ctx, position) {
   const { pi, style } = ctx;
   const data = base64ToUint8Array(pi.photo_b64);
   const pos = normalisePhotoPosition(position);
+  // 1.14.53: the client forwards the Diameter slider (photoSizePx) for every
+  // visible position. Preview parity per position: sidebar + bridge follow
+  // the slider (default 120); header is fixed 82px; main is fixed 115px.
+  const fwdPx = Number(pi.photoSizePx);
+  const fwdOk = Number.isFinite(fwdPx) && fwdPx >= 40 && fwdPx <= 260 ? Math.round(fwdPx) : null;
   let inches = 1.25;
   if (pos === "header-left" || pos === "header-right") inches = 0.85;
-  if (pos === "main-left" || pos === "main-right") inches = 1.2;
-  const sizePx = Math.round(inches * EMU_PER_INCH / 9525);
+  if (pos === "main-left" || pos === "main-right" || pos === "main-left-bottom" || pos === "main-right-bottom") inches = 1.2;
+  let sizePx = Math.round(inches * EMU_PER_INCH / 9525);
+  if ((pos === "sidebar-top" || pos === "sidebar-bottom") && fwdOk) sizePx = fwdOk;
   const outlineColor = (style && style.photoBorderColor || style && style.sidebarHeadColor || style && style.accent || "01B7BB").replace(/^#/, "");
+  if (pos === "bridge-middle" || pos === "bridge-bottom") {
+    // PHOTO-POSITIONS-EXPORT-001 (1.14.53): the medallion STRADDLES the
+    // VERTICAL sidebar/main seam — a floating image anchored on the first
+    // sidebar paragraph, positioned page-relative so its centre sits on the
+    // seam x (sidebarW), vertically page-centred (middle) or a 24px gap above
+    // the page bottom (bottom). wrapSquare BOTH_SIDES pushes the text in BOTH
+    // columns away from the medallion band — the export's version of the
+    // preview's dual crescents. layoutInCell stays false so Word positions it
+    // on the page, not clamped inside the sidebar cell.
+    const px = fwdOk || 120;
+    const pxDxa = px * 15;
+    const seamOffsetEmu = Math.round((ctx.sidebarW - pxDxa / 2) * 635);
+    const vert = pos === "bridge-middle"
+      ? { relative: VerticalPositionRelativeFrom.PAGE, align: "center" }
+      : { relative: VerticalPositionRelativeFrom.PAGE, offset: Math.round((PAGE_H - pxDxa - 360) * 635) };
+    return new Paragraph({
+      spacing: { before: 0, after: 0, line: 1, lineRule: "exact" },
+      children: [
+        new ImageRun({
+          data,
+          type: detectImageType(pi.photo_b64),
+          transformation: { width: px, height: px },
+          outline: { width: 12700, solidFillType: "rgb", value: outlineColor },
+          floating: {
+            horizontalPosition: { relative: HorizontalPositionRelativeFrom.PAGE, offset: seamOffsetEmu },
+            verticalPosition: vert,
+            wrap: { type: TextWrappingType.SQUARE, side: TextWrappingSide.BOTH_SIDES },
+            margins: { top: 76200, bottom: 76200, left: 95250, right: 95250 },
+            behindDocument: false,
+            allowOverlap: true,
+            zIndex: 10
+          },
+          altText: {
+            title: "Profile photo",
+            description: pi.name ? "Profile photo of " + pi.name : "Profile photo",
+            name: "profile-photo"
+          }
+        })
+      ]
+    });
+  }
+  if (pos === "main-left-bottom" || pos === "main-right-bottom") {
+    // Medallion after the main sections, pinned to that side (inline image —
+    // nothing flows after it, so no wrap machinery needed).
+    return new Paragraph({
+      alignment: pos === "main-left-bottom" ? AlignmentType.LEFT : AlignmentType.RIGHT,
+      spacing: { before: 150, after: 60 },
+      children: [
+        new ImageRun({
+          data,
+          type: detectImageType(pi.photo_b64),
+          transformation: { width: sizePx, height: sizePx },
+          outline: { width: 12700, solidFillType: "rgb", value: outlineColor },
+          altText: {
+            title: "Profile photo",
+            description: pi.name ? "Profile photo of " + pi.name : "Profile photo",
+            name: "profile-photo"
+          }
+        })
+      ]
+    });
+  }
   if (pos === "band-overlap") {
     // PHOTO-SIDEBAR-BRIDGE-001 (1.14.51): the medallion STRADDLES the seam
     // between the candidate band and the sidebar — same model as the preview.
@@ -25159,6 +25236,48 @@ function buildPhotoRowTable(ctx, position, contentParagraphs, containerWidth) {
   });
 }
 __name(buildPhotoRowTable, "buildPhotoRowTable");
+function buildMainFloatPhotoParagraph(ctx, position) {
+  // PHOTO-POSITIONS-EXPORT-001 (1.14.53): main top left/right switches from
+  // the photo-row TABLE (which reserved a full-height photo column — text
+  // never reclaimed the width below the photo) to a FLOATING image anchored
+  // on a zero-height paragraph before the first main section. wrapSquare
+  // BOTH_SIDES lets the text run beside the photo and reclaim the full
+  // column width below it — the export's version of the preview's crescent
+  // (1.50.372). layoutInCell keeps the float inside the main cell.
+  const { pi, style } = ctx;
+  const data = base64ToUint8Array(pi.photo_b64);
+  const px = 115;
+  const isLeft = position === "main-left";
+  const outlineColor = (style && style.photoBorderColor || style && style.sidebarHeadColor || style && style.accent || "01B7BB").replace(/^#/, "");
+  return new Paragraph({
+    spacing: { before: 0, after: 0, line: 1, lineRule: "exact" },
+    children: [
+      new ImageRun({
+        data,
+        type: detectImageType(pi.photo_b64),
+        transformation: { width: px, height: px },
+        outline: { width: 12700, solidFillType: "rgb", value: outlineColor },
+        floating: {
+          horizontalPosition: { relative: HorizontalPositionRelativeFrom.COLUMN, align: isLeft ? "left" : "right" },
+          verticalPosition: { relative: VerticalPositionRelativeFrom.PARAGRAPH, offset: 19050 },
+          wrap: { type: TextWrappingType.SQUARE, side: TextWrappingSide.BOTH_SIDES },
+          // preview margins: 2px top, 6px bottom, 10px on the text side
+          margins: { top: 19050, bottom: 57150, left: isLeft ? 0 : 95250, right: isLeft ? 95250 : 0 },
+          behindDocument: false,
+          allowOverlap: false,
+          layoutInCell: true,
+          zIndex: 10
+        },
+        altText: {
+          title: "Profile photo",
+          description: pi.name ? "Profile photo of " + pi.name : "Profile photo",
+          name: "profile-photo"
+        }
+      })
+    ]
+  });
+}
+__name(buildMainFloatPhotoParagraph, "buildMainFloatPhotoParagraph");
 function maybeBuildPhotoFor(ctx, target) {
   if (!ctx.pi || !ctx.pi.photo_b64) return null;
   const pos = normalisePhotoPosition(ctx.pi.photoPosition);
@@ -25172,6 +25291,10 @@ function maybeBuildPhotoFor(ctx, target) {
       return pos === "header-left" || pos === "header-right" ? pos : null;
     case "main":
       return pos === "main-left" || pos === "main-right" ? pos : null;
+    case "main-bottom":
+      return pos === "main-left-bottom" || pos === "main-right-bottom" ? pos : null;
+    case "bridge":
+      return pos === "bridge-middle" || pos === "bridge-bottom" ? pos : null;
     default:
       return null;
   }
@@ -26755,7 +26878,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.52-contact-squeeze";
+var VERSION = "1.14.53-photo-positions";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

@@ -24601,8 +24601,19 @@ function buildTwoColumnDocument(ctx) {
   // a stretched row can never overflow and cascade-split onto the next page:
   //   page 1   -> 13860 (header band owns the remaining ~2978 DXA)
   //   pages 2+ -> PAGE_H - 200 (no header row; small slack for rounding)
-  const PAGE1_BODY_MIN = 13860;
-  const CONT_BODY_MIN = PAGE_H - 200;
+  // PDF-BLANK-PAGE-001 (owner 2026-06-11, worker 1.14.54): these minimums
+  // previously filled the sheet EXACTLY (header budget + 13860 = 16838;
+  // PAGE_H - 200). Word tolerated that, but LibreOffice (the /generate-pdf
+  // path) computes the candidate band + row a hair TALLER, so every stretched
+  // body row overflowed its sheet by a sliver — the row split and its empty
+  // tail rendered as a BLANK PAGE after every content page, and on page 1 the
+  // split swallowed the last sidebar lines (REGULATORY CONTEXT heading + first
+  // group label in the owner's export). Reproduced live: a 2-page CV rendered
+  // as 5 pages with pages 2 and 4 empty. Real safety slack fixes it: the navy
+  // bar now stops ~0.5-1cm above the page edge instead of exactly on it —
+  // invisible next to a blank page + lost lines.
+  const PAGE1_BODY_MIN = 13260;
+  const CONT_BODY_MIN = PAGE_H - 600;
   const makeBodyRow = (sbEls, mnEls, withHeader) => new TableRow({
     cantSplit: false,
     height: { value: withHeader ? PAGE1_BODY_MIN : CONT_BODY_MIN, rule: "atLeast" },
@@ -26878,7 +26889,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.53-photo-positions";
+var VERSION = "1.14.54-pdf-blank-page";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

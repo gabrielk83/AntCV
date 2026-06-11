@@ -110,13 +110,16 @@ const discOnLastPage = discPos > lastBreak;
 // sidebar navy shading: count cell shadings with the navy fill (one sidebar cell per page)
 const navyFills = (xml.match(new RegExp('w:fill="' + NAVY + '"', 'gi')) || []).length;
 // PB-WORKER-SIDEBAR-FILL-001 (1.14.42): every body row carries an atLeast
-// height so the sidebar shading reaches the page bottom — page 1 = 13860
-// (the measurer's usable budget; header band owns the rest), pages 2+ =
-// PAGE_H-200 = 16638. trHeight order of attrs can vary; match both.
+// height so the sidebar shading reaches the page bottom.
+// PDF-BLANK-PAGE-001 (1.14.54): the minimums dropped to 13260 / PAGE_H-600 =
+// 16238 — the old exact-fill values overflowed every LibreOffice sheet by a
+// sliver, rendering a BLANK PAGE after each content page in the PDF and
+// swallowing the final sidebar lines on page 1. trHeight attr order varies;
+// match both.
 const trHeights = [...xml.matchAll(/<w:trHeight[^/]*\/>/g)].map(m => m[0]);
 const atLeast = trHeights.filter(h => /w:hRule="atLeast"/.test(h));
-const has13860 = atLeast.some(h => /w:val="13860"/.test(h));
-const has16638 = atLeast.some(h => /w:val="16638"/.test(h));
+const has13860 = atLeast.some(h => /w:val="13260"/.test(h));
+const has16638 = atLeast.some(h => /w:val="16238"/.test(h));
 // PB-WORKER-CONT-HEADER-001: split into top-level page tables and assert
 // page 2's main column carries EXACTLY ONE experience heading — the
 // "PROFESSIONAL EXPERIENCE (Cont.)" continuation — never the historic stray

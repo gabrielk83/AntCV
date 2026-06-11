@@ -106,7 +106,8 @@ const ATS_GLYPH_LABELS = {
 
 const INTEGRITY_RULES = [
   'metric-integrity: Never invent metrics. If a metric is missing, use scope, method, or outcome without numbers.',
-  'role-boundary-integrity: Do not imply account, people, or product ownership unless supported. Use "contributed", "supported", "partnered", "coordinated", or "led" only when the underlying scope supports the verb.',
+  'role-boundary-integrity: Do not imply account, people, or product ownership unless supported. Use "contributed", "supported", "partnered", or "coordinated" only when the underlying scope supports the verb.',
+  'team-management-verb: When describing managing or running a team, use "directed", "supervised", or "ran" — NEVER the bare verb "led" (e.g. write "directed a 7-person team", never "led a 7-person team" or "led a team"). This applies in PROFILE, CORE COMPETENCIES, and every experience bullet.',
   'research-evidence-integrity: Do not compress away publications, thesis, methods, or grants in Research Formal. Academic evidence outranks commercial brevity.',
 ];
 
@@ -299,12 +300,26 @@ function findBannedPhraseHits(text, phrases) {
   if (!phrases.length) return [];
   // case-insensitive, punctuation-tolerant — collapse runs of punctuation +
   // whitespace to a single space before matching, then map indices back.
-  const collapsed = text.replace(/[\s ]+/g, ' ').replace(/[.,;:!?'’"“”\-—]+/g, ' ').toLowerCase();
+  const collapsed = text.replace(/[\s ]+/g, ' ').replace(/[.,;:!?'’"“”\-—]+/g, ' ').toLowerCase();
   const hits = [];
   for (const p of phrases) {
-    const target = p.replace(/[\s ]+/g, ' ').replace(/[.,;:!?'’"“”\-—]+/g, ' ').toLowerCase().trim();
+    const target = p.replace(/[\s ]+/g, ' ').replace(/[.,;:!?'’"“”\-—]+/g, ' ').toLowerCase().trim();
     if (target && collapsed.includes(target)) hits.push(p);
   }
+  return hits;
+}
+
+// Team-management verb rule (owner standing rule): the bare verb "led" must
+// not be used for managing/running a team — use directed/supervised/ran. We do
+// NOT ban "led" outright ("led design reviews", "led prototype-to-production
+// transfer" are fine). We match only the team-management shape: "led" +
+// optional article + optional "N-person" + a team noun. English-only.
+function findTeamLedHits(text, lang) {
+  if (lang !== 'en') return [];
+  const re = /\bled\s+(?:a\s+|the\s+|an\s+)?\d+[-\s]?(?:person|engineer|member|man|people)\b[^.;,\n]{0,40}?\b(?:team|group|squad|crew|unit|department|division)\b|\bled\s+(?:a\s+|the\s+|an\s+)?(?:team|group|squad|crew|unit|department|division)\b/gi;
+  const hits = [];
+  let m;
+  while ((m = re.exec(text)) !== null) hits.push(m[0].trim());
   return hits;
 }
 
@@ -314,6 +329,10 @@ export function evaluateSce(text, req) {
   const phrases = (SHARED_BANNED_PHRASES[lang] ?? []).concat(req.extraBannedPhrases[lang] ?? []);
   const wordHits = findBannedWordHits(text, words);
   const phraseHits = findBannedPhraseHits(text, phrases);
+  // Team-management "led" pattern → surfaced as phrase hits so the existing
+  // retry fix-instruction names them and asks for directed/supervised/ran.
+  const teamLedHits = findTeamLedHits(text, lang);
+  if (teamLedHits.length) phraseHits.push(...teamLedHits);
 
   return {
     clean: wordHits.length === 0 && phraseHits.length === 0,

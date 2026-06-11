@@ -63,7 +63,7 @@ The JSON output uses these exact keys. Section keys are stable across styles and
 
 **Content rules.**
 - Focus area: 1–3 words, role-domain language (e.g. "Functional safety", "Change governance", "System architecture").
-- Strategic expertise: a phrase of 6–12 words describing the candidate's specific angle on that focus area (e.g. "ISO 26262 assessor, led two ASPICE re-certifications").
+- Strategic expertise: a phrase of **6–14 words**, **hard cap two lines per cell** (CV typography rule: table cells render at max 2 lines). The 4.94" table at the body font fits roughly **90 characters across two lines** in the expertise column — treat ~90 chars as the ceiling and cut to one tight clause, not two sentences. One angle per row, not a paragraph. Example (good, fits 2 lines): "ISO 26262 assessor; ran two ASPICE re-certifications." Example (TOO LONG, wraps to 4 lines — never do this): "Defined system-level requirements for automotive LiDAR, including optics, electronics, and embedded interfaces, and aligned architecture with ASPICE and ISO 26262 for traceability and reuse." If a row needs more than two lines to make its point, split it into two focus areas or drop the weaker half.
 - No banned words. No "demonstrated ability to" / "proven track record".
 
 ### `selected_outcomes`
@@ -76,8 +76,9 @@ The JSON output uses these exact keys. Section keys are stable across styles and
 
 **Content rules.**
 - Title: an outcome, not a task. "Cut review cycles 40%" not "Led review process". "Closed two customer change requests under deadline" not "Managed change requests".
-- Body: 1–2 sentences explaining context, action, and quantified result if available.
-- **Never invent metrics.** If no concrete metric is in `user_state.profile.experiences[*]` for this outcome, write the body without a number rather than fabricating one.
+- **Lead with the number when one exists.** The candidate has confirmed, canonical metrics — use them in the title or first clause rather than writing a metric-free outcome. The confirmed set (never exceed or invent beyond these): change cycle **~250 → ~10 days** via the Change Control Board at Innoviz; LiDAR **cost reduction ~90% (≈10×)** via trade-off analysis + supplier coordination; **directed a 7-engineer EO team** at Sirin (verb: directed/supervised, never "led"); **15+ years** sensor/EO/systems experience; cross-functional coordination across **5+ domains/OEMs**; **Patent No. 241997**. A Selected Outcomes section that has access to these and ships without any of them is a defect (the metric is the whole point of the section).
+- Body: 1–2 sentences explaining context, action, and the quantified result.
+- **Never invent metrics.** If no concrete metric is in `user_state.profile.experiences[*]` or the canonical set above for this outcome, write the body without a number rather than fabricating one — but do not omit a number that IS on record.
 - If `change_log_patterns` shows recurring `risk=invented` for this section under this role × style, prefer narrative outcomes over numeric ones until the pattern clears.
 
 ### `experience`
@@ -99,14 +100,23 @@ The JSON output uses these exact keys. Section keys are stable across styles and
 
 **Role count.** Show every role from `user_state.profile.experiences` unless `target_pages = 1`. For `target_pages = 1`, show the most recent 3–4 roles and add `truncated: true` to the section metadata so the worker can flag the omission to the user.
 
+**Overlapping-role resolution (GEN-ROLEFORM-001).** The kernel may deliberately hold the same employment in TWO forms: a single MERGED role and a SPLIT pair of distinct roles that cover the same employer and overlapping dates (e.g. Innoviz: a merged "System Architect & Change Control Lead, 2020–2025" vs. the split pair "System Architect & Change Control Lead, 2020–2025" + "Customer Change Requests Specialist, 2020–2025"). Both are valid source data. **Emit exactly ONE form per CV; never both.** For any set of kernel roles sharing the same `company` and an overlapping `years` span, choose before drafting bullets:
+- Use the SPLIT pair (detail two positions, hide the merged) when the distinction adds signal the JD rewards — e.g. a change-governance or requirements role where calling out the Customer Change Requests specialism separately strengthens the match.
+- Use the MERGED single role (hide the split pair) when brevity or seniority framing serves better — e.g. a senior PM/architecture role where one consolidated leadership entry reads stronger.
+- NEVER emit the merged role AND its split components at once (the symptom: three overlapping blocks, two sharing the same dates).
+Record the choice in the role's change_log entry (`reason: "roleform_merged"` or `"roleform_split"`).
+
+**Military / dated-service inclusion (GEN-IDF-001).** A military-service entry (e.g. "Computer Administrator | IDF 2001–2003") is ~20+ years old. Default to OMIT it. Include it ONLY when (a) the JD explicitly values the content (IT/infrastructure, security clearance context), or (b) chronology would otherwise show an unexplained early-career gap. When included, keep it to the single most relevant bullet and never lead the section with it. Record `reason: "military_included_relevant"` or omit silently.
+
+**Sub-role merging.** If `user_state.profile.experiences` shows two consecutive roles at the same company (e.g. an internal promotion), the skill may merge them into one entry with a date range and dual role line — but only if `style.sectionFormatDefaults.experience.mergePromotions === true`. By default styles keep them separate. (This is distinct from GEN-ROLEFORM-001 above: merging is for *consecutive promotions*; role-form resolution is for *pre-authored alternative representations of the same span*.)
+
 **Bullet rules.**
 - 3 bullets each, newest-first within the role.
 - Lead each bullet with a verb in past tense (or present for current role).
 - One bullet for scope (what was owned), one for action (what was done), one for outcome (what changed).
+- **Team-management verb (VERB-LED-001).** When a bullet describes managing or running a team, use **directed**, **supervised**, or **ran** — NEVER the bare verb "led" (write "directed a 7-person EO team", never "led a 7-person team" or "led a team"). "led" remains fine for non-team objects ("led design reviews", "led prototype-to-production transfer"). The worker SCE also enforces this and will retry, but produce it correctly on the first pass.
 - No banned words. No "responsible for".
 - Length target: 12–22 words per bullet for `target_pages ≤ 1.5`; up to 30 for longer formats.
-
-**Sub-role merging.** If `user_state.profile.experiences` shows two consecutive roles at the same company (e.g. an internal promotion), the skill may merge them into one entry with a date range and dual role line — but only if `style.sectionFormatDefaults.experience.mergePromotions === true`. By default styles keep them separate.
 
 ### `tools_methods`
 

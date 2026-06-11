@@ -58,7 +58,7 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.50.106-spec-edit';
+  var SCRIPT_VERSION = '1.50.107-ca006-header-anchor-guard';
   if (window.__antcvCandidatePreviewEditor341 === SCRIPT_VERSION) return;
   window.__antcvCandidatePreviewEditor341 = SCRIPT_VERSION;
 
@@ -295,9 +295,27 @@
       var anchor = null;
       var probes = block.querySelectorAll('div, p, span');
       var lcLabel = label.toLowerCase();
+      // CA-006: when findCandidateBlock() fell back to the whole preview
+      // paper (Path C, no candidate anchor in this build), `block` is the
+      // entire paper. The role and company strings ALSO appear in the
+      // PROFESSIONAL EXPERIENCE first role line, so a naive role/company
+      // text match here would pick the experience role node and overwrite
+      // it with "Application: <role> - <company>" — the Preview-only bleed
+      // reported as CA-006 (the clean DOCX/PDF never run this sidecar).
+      // Guard: never treat a node that lives inside a content section as
+      // the application-sentence anchor. The application sentence belongs
+      // to the candidate header only. We exclude any node inside a
+      // [data-sid] / [data-section-id] section other than the candidate /
+      // top-bar header.
+      var CONTENT_SECTION_SEL = '[data-sid]:not([data-sid="candidate"]):not([data-sid="topbar"]):not([data-sid="top_bar"]),'
+        + '[data-section-id]:not([data-section-id="candidate"]):not([data-section-id="topbar"]):not([data-section-id="top_bar"])';
+      var inContentSection = function (el) {
+        try { return !!(el.closest && el.closest(CONTENT_SECTION_SEL)); } catch (_) { return false; }
+      };
       for (var i = 0; i < probes.length; i++) {
         var el = probes[i];
         if (el.children.length > 0) continue;
+        if (inContentSection(el)) continue; // CA-006: skip experience/profile/etc.
         var t = clean(el.textContent || '');
         if (!t) continue;
         var lct = t.toLowerCase();
@@ -430,9 +448,15 @@
     // localised "[Specialisation — …]" / "[Specialisering — …]" placeholder.
     var probes = block.querySelectorAll('div, p, span');
     var target = null;
+    var subInContentSection = function (el) {
+      var sel = '[data-sid]:not([data-sid="candidate"]):not([data-sid="topbar"]):not([data-sid="top_bar"]),'
+        + '[data-section-id]:not([data-section-id="candidate"]):not([data-section-id="topbar"]):not([data-section-id="top_bar"])';
+      try { return !!(el.closest && el.closest(sel)); } catch (_) { return false; }
+    };
     for (var i = 0; i < probes.length; i++) {
       var el = probes[i];
       if (el.querySelector('[data-antcv-candidate-edit]')) continue; // skip name/application hosts
+      if (subInContentSection(el)) continue; // CA-006: header-only
       var t = clean(el.textContent || '');
       if (!t) continue;
       var isPlaceholder = /^\[\s*specialis/i.test(t) || /fokusomr[aå]der/i.test(t);

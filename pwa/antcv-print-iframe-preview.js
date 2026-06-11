@@ -28,6 +28,17 @@
  * Escape. Cancel does NOT re-throw to the caller (we treat the
  * original window.print invocation as a request, not a commitment).
  *
+ * JD-ANALYSIS-PRINT-001 (owner 2026-06-11)
+ * ----------------------------------------
+ * This wrapper used to ALWAYS clone `.antcv-preview-paper` (the CV).
+ * So when the user was viewing the JD Analysis and triggered a print
+ * (Ctrl+P, or any code path calling window.print()), they got the CV
+ * instead of the analysis — the reported bug. Fix: when the Analysis
+ * view is the foreground surface, divert the print to the analysis
+ * report exporter (antcv-analysis-report-pdf-360.js `_export`), which
+ * builds its own branded analysis PDF. The CV print path is unchanged
+ * whenever the CV preview is the active surface.
+ *
  * Compatibility
  * -------------
  * The PDF export normal path goes through the docx-worker. Only the
@@ -55,10 +66,75 @@
   'use strict';
 
   if (window.__antcvPrintIframePreviewInstalled) return;
-  window.__antcvPrintIframePreviewInstalled = '1.40.195';
+  window.__antcvPrintIframePreviewInstalled = '1.50.376-analysis-print-guard';
 
   const origPrint = window.print;
   if (typeof origPrint !== 'function') return;
+
+  // ─── JD-ANALYSIS-PRINT-001 — analysis-view detection ──────────────────
+  // Returns the analysis panel element when the Analysis view is the
+  // FOREGROUND surface (visible, non-trivial height, showing the
+  // "Application Analysis" report), else null. Strict so we never divert a
+  // genuine CV print: we require the panel to be on-screen AND that it is
+  // not collapsed behind the CV. Reuses the 356 finder when present.
+  function visibleRect(el) {
+    if (!el) return null;
+    try {
+      const r = el.getBoundingClientRect();
+      if (!r || (r.width < 2 && r.height < 2)) return null;
+      const cs = window.getComputedStyle(el);
+      if (cs && (cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0')) return null;
+      return r;
+    } catch (_) { return null; }
+  }
+
+  function findAnalysisPanel() {
+    try {
+      if (window.AntcvAnalysisPanelJdBlock356 &&
+          typeof window.AntcvAnalysisPanelJdBlock356._findPanel === 'function') {
+        const p = window.AntcvAnalysisPanelJdBlock356._findPanel();
+        if (p) return p;
+      }
+    } catch (_) {}
+    const nodes = document.querySelectorAll('.antcv-editor-side-panel, .antcv-mobile-bottom-panel, [data-antcv-app-panel]');
+    for (let i = 0; i < nodes.length; i++) {
+      if ((nodes[i].textContent || '').indexOf('Application Analysis') >= 0) return nodes[i];
+    }
+    return null;
+  }
+
+  // True only when the analysis report is the foreground surface a print
+  // should target. Conditions:
+  //   1. the analysis panel exists, is visible, and shows the report;
+  //   2. the analysis exporter is present (so we can divert to it);
+  //   3. the panel occupies meaningful viewport area (not a 28px stub).
+  function analysisViewIsForeground() {
+    if (!window.AntcvAnalysisReportPdf360 ||
+        typeof window.AntcvAnalysisReportPdf360._export !== 'function') return false;
+    const panel = findAnalysisPanel();
+    if (!panel) return false;
+    const rect = visibleRect(panel);
+    if (!rect) return false;
+    // Must actually be showing the analysis report content (the 360 block).
+    if (!panel.querySelector('#antcv-analysis-report, #antcv-analysis-report-top')) {
+      // panel exists but the report block hasn't rendered → not foreground.
+      if ((panel.textContent || '').indexOf('Application Analysis') < 0) return false;
+    }
+    // Guard against the collapsed/stub case (mobile sheet at ~28px).
+    if (rect.height < 80) return false;
+    // The analysis report must have data to export — otherwise let the normal
+    // CV print path run rather than popping an empty analysis alert.
+    try {
+      const m = window.AntcvAnalysisReportPdf360._model && window.AntcvAnalysisReportPdf360._model();
+      if (m && (m.summary || (m.strengths && m.strengths.length) || (m.gaps && m.gaps.length) ||
+                m.fitScore !== null || (m.assumptions && m.assumptions.length) ||
+                (m.recommendations && m.recommendations.length) ||
+                (m.confLow && m.confLow.length) || (m.confMedium && m.confMedium.length))) {
+        return true;
+      }
+    } catch (_) {}
+    return false;
+  }
 
   // Collect <link rel="stylesheet"> and <style> from the parent so
   // the iframe renders with the same fonts/colors/layout.
@@ -263,6 +339,18 @@
     if (window.__antcvPrintingViaModal) {
       return origPrint.call(window);
     }
+    // JD-ANALYSIS-PRINT-001: when the Analysis report is the foreground
+    // surface, divert to the analysis exporter instead of cloning the CV
+    // paper. The analysis exporter builds + prints its own branded PDF, so
+    // we do NOT fall through to the CV modal afterwards.
+    try {
+      if (analysisViewIsForeground()) {
+        window.AntcvAnalysisReportPdf360._export();
+        return;
+      }
+    } catch (e) {
+      try { console.warn('[print-iframe] analysis divert failed, falling back to CV print:', e && e.message); } catch (_) {}
+    }
     window.__antcvPrintingViaModal = true;
     showModal()
       .then(function (answer) {
@@ -279,10 +367,11 @@
   };
 
   window.AntcvPrintIframePreview = {
-    version: '1.40.195',
+    version: '1.50.376-analysis-print-guard',
     _origPrint: origPrint,
     _showModal: showModal,
+    _analysisViewIsForeground: analysisViewIsForeground,
   };
 
-  try { console.debug('[print-iframe-preview] installed v1.40.195'); } catch (_) {}
+  try { console.debug('[print-iframe-preview] installed v1.50.376-analysis-print-guard'); } catch (_) {}
 })();

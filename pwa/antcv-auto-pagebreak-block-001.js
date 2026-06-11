@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.349-clear-both-maps';
+  var VERSION = '1.50.350-exp-preview-gap';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -482,19 +482,23 @@
           if (list[li] && list[li].type === 'experience') { expSec = list[li]; break; }
         }
         if (expSec && expSec.id && !map[expSec.id]) {
-          // EXP-PREVIEW-CROWD-001 (owner 2026-06-11): experience roles are large
-          // ATOMIC blocks (role + 3-5 bullets). The A4-fill decouple measures the
-          // PREVIEW at the taller USABLE line and the EXPORT at the shorter
-          // USABLE_PDF line — fine for sidebar list items (squeeze one more small
-          // row), but for experience it let the PREVIEW keep a whole role on page
-          // 1 that the EXPORT (PDF) moved to page 2, so that role rendered crammed
-          // tight against the salmon (probe: autoPages exp={"3":2} but
-          // autoPagesPreview exp={"4":2} — preview packed role 3 / System
-          // Architect against the bar). Fix: measure experience roles against the
-          // EXPORT line (USABLE_PDF) in BOTH maps, so the preview breaks at the
-          // same role as the PDF. A role is never split, so there is no mid-role
-          // gap risk; this only ever pulls a crammed role down one page, never up.
-          var __expLimit = USABLE_PDF * scale;
+          // EXP-PREVIEW-GAP-001 (owner 2026-06-11, supersedes EXP-PREVIEW-CROWD-001):
+          // experience roles are large ATOMIC blocks (role + 3-5 bullets). The CV
+          // PREVIEW paginates into FIXED-HEIGHT page-boxes (1123px) and draws the
+          // "▼ PAGE 2 ▼" salmon at the BOX boundary, not at the role's bottom. The
+          // earlier crowd fix measured the role against the EXPORT line (USABLE_PDF
+          // ~949px) in BOTH maps. In the preview that broke the role ~104px BEFORE
+          // the box ends, so the last role on page 1 sat ~104px above the salmon —
+          // a big dead gap between the role and the bar (owner screenshot 2026-06-11
+          // "big gap between the role and salmon"). Fix: measure each map against
+          // ITS OWN line — the export map at USABLE_PDF, the PREVIEW map at the true
+          // A4 line (usableBase = USABLE ~1053px) — so the preview page-1 box FILLS
+          // to the boundary and the salmon sits immediately after the last role.
+          // `limit` is already usableBase*scale for this pass, so reuse it: a role
+          // is atomic (never split), so breaking at the box line moves the first
+          // role that crosses it wholly to page 2 and leaves the prior role flush
+          // against the salmon.
+          var __expLimit = limit;
           var roleEls = col.querySelectorAll('[data-antcv-role-index]');
           for (var ri = 0; ri < roleEls.length; ri++) {
             if (!visible(roleEls[ri])) continue;

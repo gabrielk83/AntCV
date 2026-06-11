@@ -30,6 +30,21 @@ Shipped 1.50.372→375 + docx-worker 1.14.53. Full narrative in
 - **EXPORT-PAGE2-001** `[FIXED 1.50.374]` — see the updated entry in the QA backlog section.
 - **SHARE-TARGET-JD-URL-001** `[SHIPPED 1.50.375 — owner device verify owed]` — manifest
   share_target + `antcv-share-target-jd-375.js`; see FEATURES_REGISTRY (CLOSED).
+- **PDF-BLANK-PAGE-001** `[FIXED docx-worker 1.14.54 — live-verified]` (owner 2026-06-11
+  evening: "in the pdf there also is a blank page in middle" + lost REGULATORY CONTEXT
+  heading/group label; = PDF-LAYOUT-002 in the QA index). The per-page body-row minimums
+  filled each sheet EXACTLY (header budget + 13860 = 16838; PAGE_H−200). Word tolerated
+  that; LibreOffice (/generate-pdf) renders the candidate band + row a sliver taller, so
+  EVERY stretched row overflowed its sheet — the row split, its empty tail rendered as a
+  blank page after each content page, and on page 1 the split swallowed the last sidebar
+  lines. Reproduced live (2-page CV → 5 PDF pages, 2/4 blank); fixed with real slack
+  (PAGE1_BODY_MIN 13260, CONT_BODY_MIN PAGE_H−600); re-probed live → 3 content pages, no
+  blanks, heading + group label intact on page 1. Navy bar now stops ~0.5–1cm above the
+  page edge — the cost of never overflowing LO. The owner's other observation (Customer
+  Change role + ASPICE jumping a page earlier in the PDF than the preview) is the export
+  break-map budget being more conservative than the preview's — EXP-PREVIEW-GAP-001
+  territory, addressed upstream in e50973f the same day; re-export on a fresh tab to pick
+  both halves up.
 
 ## INCIDENT 2026-06-10 (NIGHT) — production down: 7-byte app.js stub
 

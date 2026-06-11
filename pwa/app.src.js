@@ -38878,6 +38878,14 @@
                     background: Ke,
                     padding: "14px 16px 10px",
                     textAlign: "center",
+                    // PHOTO-SIDEBAR-BRIDGE-001: in bridge mode the candidate
+                    // header is SPLIT — the left cell (sidebar-width) is the
+                    // photo zone, and the name/spec/contact live in the right
+                    // cell. The medallion itself renders from the sidebar and
+                    // straddles up over this band (see the photo wrapper).
+                    ...(er === "band-overlap" && zn && "cv" === Lt
+                      ? { paddingLeft: `${Math.round(100 * ta)}%` }
+                      : {}),
                   },
                 },
                 w.map(v),
@@ -39180,7 +39188,24 @@
                             React.createElement(
                               "div",
                               {
-                                style: { textAlign: "center", marginBottom: 8 },
+                                style: {
+                                  textAlign: "center",
+                                  marginBottom: 8,
+                                  // PHOTO-SIDEBAR-BRIDGE-001: bridge mode
+                                  // hoists the medallion so its MIDLINE sits
+                                  // on the header/sidebar seam — top half on
+                                  // the navy band, bottom half on the
+                                  // brighter bridge sidebar. −(Zo/2 + 8)
+                                  // cancels the sidebar's 8px padding and
+                                  // lifts half the photo above the seam.
+                                  ...(er === "band-overlap"
+                                    ? {
+                                        marginTop: -(Math.round(Zo / 2) + 8),
+                                        position: "relative",
+                                        zIndex: 3,
+                                      }
+                                    : {}),
+                                },
                               },
                               React.createElement("img", {
                                 src: zn,

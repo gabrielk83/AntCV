@@ -28,7 +28,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.357';
+  var VERSION = '1.50.360-admin-only';
   if (window.__antcvDemoToggle357 === VERSION) return;
   window.__antcvDemoToggle357 = VERSION;
 
@@ -40,6 +40,20 @@
   function disabled() {
     try { return localStorage.getItem('antcv:disable-demo-toggle') === '1'; }
     catch (_) { return false; }
+  }
+
+  // DEMO-TOGGLE-ADMIN-001 (owner 2026-06-11): the toggle is ADMIN-ONLY. The
+  // app persists the server /config (incl. auth.user.is_admin) under
+  // 'serverConfig:v1'; non-admin accounts never see the ACCOUNT MODE row.
+  function isAdmin() {
+    try {
+      var raw = localStorage.getItem('serverConfig:v1');
+      if (!raw) return false;
+      var v = JSON.parse(raw);
+      // the app's store may wrap values once more in JSON
+      if (typeof v === 'string') v = JSON.parse(v);
+      return !!(v && v.is_admin);
+    } catch (_) { return false; }
   }
 
   function currentMode() {
@@ -143,6 +157,15 @@
 
   function sweep() {
     if (disabled()) return;
+    if (!isAdmin()) {
+      // Defensive: tear down a block injected before the admin signal
+      // resolved (or after an admin sign-out).
+      try {
+        var stale = document.querySelector('[' + BLOCK_ATTR + '="1"]');
+        if (stale && stale.parentNode) stale.parentNode.removeChild(stale);
+      } catch (_) {}
+      return;
+    }
     var anchor = findAnchor();
     if (!anchor || !anchor.parentElement) return;
     if (anchor.parentElement.querySelector('[' + BLOCK_ATTR + '="1"]')) return;

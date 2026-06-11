@@ -36,7 +36,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.351-print-complete';
+  var VERSION = '1.50.360-mobile-scroll';
   if (window.__antcvAnalysisReportPdf360 === VERSION) return;
   window.__antcvAnalysisReportPdf360 = VERSION;
 
@@ -540,7 +540,20 @@
       + '#' + BLOCK_ID + ' .arx-conf-low{background:rgba(200,40,40,.14);border-left:3px solid #c0392b;}'
       + '#' + BLOCK_ID + ' .arx-conf-medium{background:rgba(217,160,20,.16);border-left:3px solid #d9a014;}'
       + '#' + BLOCK_ID + ' .arx-conf small{color:#666;}'
-      + '#' + BLOCK_ID + ' .arx-hint{font-size:10.5px;color:#888;margin-top:2px;}';
+      + '#' + BLOCK_ID + ' .arx-hint{font-size:10.5px;color:#888;margin-top:2px;}'
+      // ANALYSIS-MOBILE-SCROLL-001 (owner 2026-06-11): on mobile the bottom
+      // panel is a FIXED ~280px sheet with overflow:hidden, and the injected
+      // analysis blocks are flex SIBLINGS of the app's flex:1 inner scroller —
+      // they ate the sheet's height (inner scroller collapsed to ~28px) and
+      // the export row overflowed the hidden sheet, so the report was neither
+      // readable nor exportable. When the sheet shows the analysis tab
+      // (class toggled in ensureBlock), the SHEET itself scrolls and every
+      // direct child takes natural height. Stylesheet !important beats the
+      // app's inline styles.
+      + '@media (max-width:900px){'
+      + '.antcv-mobile-bottom-panel.arx-mob-scroll{overflow-y:auto !important;-webkit-overflow-scrolling:touch;}'
+      + '.antcv-mobile-bottom-panel.arx-mob-scroll>div{flex:0 0 auto !important;overflow-y:visible !important;}'
+      + '}';
     var s = document.createElement('style');
     s.id = STYLE_ID; s.textContent = css;
     document.head.appendChild(s);
@@ -681,6 +694,18 @@
     }
     var sig = signature();
     injectStyles();
+
+    // ANALYSIS-MOBILE-SCROLL-001: arm the mobile sheet-scroll override only
+    // while the panel is actually showing the analysis tab; disarm on other
+    // tabs so Section editing keeps its own scroll model.
+    try {
+      if (panel.classList && panel.classList.contains('antcv-mobile-bottom-panel')) {
+        var showsAnalysis = (panel.textContent || '').indexOf('Application Analysis') >= 0;
+        if (showsAnalysis !== panel.classList.contains('arx-mob-scroll')) {
+          panel.classList.toggle('arx-mob-scroll', showsAnalysis);
+        }
+      }
+    } catch (_) {}
 
     // TOP block: Assumptions + Recommendations, just below "Overall Fit".
     var existingTop = panel.querySelector('#' + TOP_BLOCK_ID);

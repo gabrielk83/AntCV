@@ -41024,6 +41024,62 @@
                     ),
                   ),
               ),
+              // EDITOR-GEAR-UNDO-001 (1.50.360): the editor top bar had no
+              // visible Settings entry and no undo control — settings only had
+              // the hidden route hook and undo only had Ctrl+Z (which the
+              // global handler also ignores while focus is in an editable
+              // field). Both now have buttons in the top-tools row.
+              React.createElement(
+                "button",
+                {
+                  className: "antcv-top-undo",
+                  title:
+                    "Undo last change" +
+                    (dr.length ? ` (${dr.length})` : "") +
+                    " — Ctrl+Z",
+                  "aria-label": "Undo last change",
+                  onClick: xr,
+                  disabled: 0 === dr.length,
+                  style: {
+                    height: 24,
+                    minWidth: 26,
+                    padding: "0 6px",
+                    borderRadius: 6,
+                    border: "1px solid rgba(255,255,255,0.24)",
+                    background: "none",
+                    color:
+                      0 === dr.length ? "rgba(255,255,255,0.3)" : "#f59e0b",
+                    cursor: 0 === dr.length ? "not-allowed" : "pointer",
+                    fontSize: 13,
+                    lineHeight: 1,
+                    flexShrink: 0,
+                  },
+                },
+                "↶",
+              ),
+              React.createElement(
+                "button",
+                {
+                  className: "antcv-top-settings",
+                  title: "Settings",
+                  "aria-label": "Open Settings",
+                  onClick: () => _antcvOpenSettings(),
+                  style: {
+                    height: 24,
+                    minWidth: 26,
+                    padding: "0 6px",
+                    borderRadius: 6,
+                    border: "1px solid rgba(255,255,255,0.24)",
+                    background: "none",
+                    color: "rgba(255,255,255,0.72)",
+                    cursor: "pointer",
+                    fontSize: 13,
+                    lineHeight: 1,
+                    flexShrink: 0,
+                  },
+                },
+                "⚙",
+              ),
             ),
           ),
           !1,

@@ -4798,7 +4798,11 @@
                         lineHeight: 0,
                       },
                     }),
+                  // PAGEBREAK-STYLE-OPTIONS-001(a): table continuation
+                  // heading honours the same "Keep continuation headlines"
+                  // toggle (default ON).
                   idx > 0 &&
+                    !1 !== d.contHeadlines &&
                     React.createElement(
                       "div",
                       {
@@ -4818,6 +4822,7 @@
                       (L(e.title) || "WHAT I BRING") + " (Cont.)",
                     ),
                   idx > 0 &&
+                    !1 !== d.contHeadlines &&
                     React.createElement("div", {
                       style: {
                         borderBottom: `1px solid ${C}`,
@@ -5339,7 +5344,13 @@
       React.createElement(
         "div",
         { "data-sid": e.id, style: M },
-        React.createElement(
+        // PAGEBREAK-STYLE-OPTIONS-001(a): "Keep continuation headlines" is
+        // default ON; when the user turns it OFF, a continuation segment
+        // renders BARE (no "TITLE (CONT.)" heading, no underline) and the
+        // content just flows on.
+        e._antcvSplitCont && !1 === d.contHeadlines
+          ? null
+          : React.createElement(
           "div",
           {
             style: {
@@ -39387,12 +39398,104 @@
                             " ▼",
                           ),
                         ),
+                      // PAGEBREAK-STYLE-OPTIONS-001(b): repeat a SLIM
+                      // candidate strip (name + specialisation) at the top
+                      // of every page after page 1. Default OFF.
+                      t.pageNum > 1 &&
+                        ya &&
+                        !0 === ya.repeatHeader &&
+                        React.createElement(
+                          "div",
+                          {
+                            "data-antcv-repeat-header": t.pageNum,
+                            style: {
+                              background: Ke,
+                              color: "#fff",
+                              textAlign: "center",
+                              padding: "5px 16px 4px",
+                            },
+                          },
+                          (() => {
+                            try {
+                              const e = JSON.parse(
+                                localStorage.getItem("personalInfo") || "{}",
+                              );
+                              const n = (() => {
+                                try {
+                                  const t = JSON.parse(
+                                    localStorage.getItem("meta") || "{}",
+                                  );
+                                  return "string" == typeof t.subtitle
+                                    ? t.subtitle
+                                    : "";
+                                } catch (_) {
+                                  return "";
+                                }
+                              })();
+                              return [
+                                React.createElement(
+                                  "span",
+                                  {
+                                    key: "n",
+                                    style: {
+                                      fontWeight: 700,
+                                      fontSize: 11,
+                                      letterSpacing: 0.5,
+                                    },
+                                  },
+                                  e.name || "",
+                                ),
+                                n && !n.startsWith("[")
+                                  ? React.createElement(
+                                      "span",
+                                      {
+                                        key: "s",
+                                        style: {
+                                          fontSize: 8.5,
+                                          opacity: 0.8,
+                                          marginLeft: 10,
+                                        },
+                                      },
+                                      n,
+                                    )
+                                  : null,
+                              ];
+                            } catch (_) {
+                              return null;
+                            }
+                          })(),
+                        ),
                       React.createElement(
                         "div",
                         {
                           className: "antcv-page-row",
                           style: { display: "flex", position: "relative" },
                         },
+                        // PAGEBREAK-STYLE-OPTIONS-001(c): page number in the
+                        // chosen corner of every page-row, inside the margin
+                        // so it never overlaps body text.
+                        ya &&
+                          ("top-right" === ya.pageNumbers ||
+                            "bottom-right" === ya.pageNumbers) &&
+                          React.createElement(
+                            "div",
+                            {
+                              "data-antcv-page-number": t.pageNum,
+                              style: {
+                                position: "absolute",
+                                right: 6,
+                                ...("top-right" === ya.pageNumbers
+                                  ? { top: 4 }
+                                  : { bottom: 4 }),
+                                fontSize: 8.5,
+                                color: "#777",
+                                fontFamily: "Arial,sans-serif",
+                                zIndex: 4,
+                                pointerEvents: "none",
+                              },
+                            },
+                            String(t.pageNum),
+                          ),
                         __antcvDemoActive() &&
                           React.createElement(
                             "div",

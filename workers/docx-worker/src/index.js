@@ -24392,6 +24392,16 @@ function mergeStyle(input, packageId, legacyAtsTier) {
       if (Number.isFinite(n) && n >= 0 && n <= 60) s[k] = n;
       continue;
     }
+    // 1.14.55 PAGEBREAK-STYLE-OPTIONS-001: page-flow prefs from the PWA's
+    // PAGE FLOW group. Booleans + a small enum — never hex-coerced.
+    if (k === "contHeadlines" || k === "repeatHeader") {
+      s[k] = v === true || v === "true" ? true : v === false || v === "false" ? false : s[k];
+      continue;
+    }
+    if (k === "pageNumbers") {
+      if (v === "top-right" || v === "bottom-right") s[k] = v;
+      continue;
+    }
     if (typeof v === "string") {
       s[k] = PASSTHROUGH.has(k) ? v : hex(v);
     }
@@ -24616,7 +24626,9 @@ function buildTwoColumnDocument(ctx) {
   const CONT_BODY_MIN = PAGE_H - 600;
   const makeBodyRow = (sbEls, mnEls, withHeader) => new TableRow({
     cantSplit: false,
-    height: { value: withHeader ? PAGE1_BODY_MIN : CONT_BODY_MIN, rule: "atLeast" },
+    // 1.14.55: a repeated slim header strip on pages 2+ costs ~900 DXA;
+    // shrink those pages' body min so the total stays inside the sheet.
+    height: { value: withHeader ? PAGE1_BODY_MIN : style && style.repeatHeader === true ? CONT_BODY_MIN - 900 : CONT_BODY_MIN, rule: "atLeast" },
     children: sidebarOnRight ? [makeMainCell(mnEls), makeSidebarCell(sbEls)] : [makeSidebarCell(sbEls), makeMainCell(mnEls)]
   });
   // PHOTO-SIDEBAR-BRIDGE-001 (1.14.51): in bridge mode the candidate header
@@ -24656,17 +24668,76 @@ function buildTwoColumnDocument(ctx) {
       })
     ]
   });
+  // PAGEBREAK-STYLE-OPTIONS-001(b) (1.14.55): when style.repeatHeader is ON,
+  // pages 2+ open with a SLIM candidate strip (name + specialisation —
+  // mirrors the preview's repeated strip, not the full page-1 band). Fresh
+  // row per table (docx object instances must not be shared across trees).
+  const repeatHdr = style && style.repeatHeader === true;
+  const makeSlimHeaderRow = () => new TableRow({
+    children: [
+      new TableCell({
+        columnSpan: 2,
+        width: { size: PAGE_W, type: WidthType.DXA },
+        shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
+        borders: noBorders(),
+        margins: { top: 60, bottom: 50, left: 360, right: 360 },
+        children: [new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 0, after: 0, line: 220, lineRule: "auto" },
+          children: [
+            new TextRun({
+              text: ctx.pi.name || "",
+              bold: true,
+              color: style.headerNameColor,
+              size: pt2hp(11),
+              font: style.headerFont
+            }),
+            ...(ctx.meta && ctx.meta.subtitle && !String(ctx.meta.subtitle).startsWith("[") ? [new TextRun({
+              text: "   " + ctx.meta.subtitle,
+              color: style.headerSpecColor,
+              size: pt2hp(8.5),
+              font: style.headerFont
+            })] : [])
+          ]
+        })]
+      })
+    ]
+  });
   const makePageTable = (sbEls, mnEls, withHeader) => new Table({
     width: { size: PAGE_W, type: WidthType.DXA },
     columnWidths: colWidths,
     borders: noBorders(),
-    rows: withHeader ? [headerRow, makeBodyRow(sbEls, mnEls, true)] : [makeBodyRow(sbEls, mnEls, false)]
+    rows: withHeader
+      ? [headerRow, makeBodyRow(sbEls, mnEls, true)]
+      : repeatHdr
+        ? [makeSlimHeaderRow(), makeBodyRow(sbEls, mnEls, false)]
+        : [makeBodyRow(sbEls, mnEls, false)]
   });
   const docChildren = [];
   for (let p = 0; p < numPages; p++) {
     if (p > 0) docChildren.push(new Paragraph({ pageBreakBefore: true, spacing: { before: 0, after: 0, line: 1, lineRule: "exact" }, children: [] }));
     docChildren.push(makePageTable(sidebarPages[p] || [], mainPages[p] || [], p === 0));
   }
+  // PAGEBREAK-STYLE-OPTIONS-001(c) (1.14.55): page number in the chosen
+  // corner. Word headers/footers; the bundle's public Header/Footer wrapper
+  // classes are tree-shaken out, but File.addSection only reads
+  // `.options.children`, so a duck-typed object serves.
+  const pgNumPos = style && (style.pageNumbers === "top-right" || style.pageNumbers === "bottom-right") ? style.pageNumbers : null;
+  const pgNumBlock = pgNumPos ? {
+    options: {
+      children: [new Paragraph({
+        alignment: AlignmentType.RIGHT,
+        spacing: { before: 0, after: 0, line: 180, lineRule: "exact" },
+        indent: { right: 120 },
+        children: [new TextRun({
+          children: [PageNumber.CURRENT],
+          size: 14,
+          color: "777777",
+          font: "Arial"
+        })]
+      })]
+    }
+  } : null;
   return new File({
     creator: ctx.pi.name || "AntCV user",
     lastModifiedBy: ctx.pi.name || "AntCV user",
@@ -24682,9 +24753,14 @@ function buildTwoColumnDocument(ctx) {
         properties: {
           page: {
             size: { width: PAGE_W, height: PAGE_H, orientation: PageOrientation.PORTRAIT },
-            margin: { top: 0, right: 0, bottom: 0, left: 0, header: 0, footer: 0, gutter: 0 }
+            margin: { top: 0, right: 0, bottom: 0, left: 0, header: 0, footer: 60, gutter: 0 }
           }
         },
+        // Export limitation: Word header parts serialize empty through this
+        // tree-shaken bundle (and a top-of-page number would sit on the navy
+        // band of these margin-0 pages anyway), so BOTH corner choices render
+        // through the footer in the export; the preview shows the true corner.
+        ...(pgNumBlock ? { footers: { default: pgNumBlock } } : {}),
         children: docChildren
       }
     ]
@@ -25383,7 +25459,7 @@ function renderSection(s, ctx, isSidebar) {
           // "(Cont.)" comes from the segment wrapper heading.
           items: ch.items.map((it) => (it && typeof it === "object") ? (() => { const c = Object.assign({}, it); delete c._page; return c; })() : it),
           _antcvSegment: true,
-          title: ci > 0 ? ((s.title || "") + " (Cont.)") : s.title,
+          title: ci > 0 ? (ctx.style && ctx.style.contHeadlines === false ? "" : (s.title || "") + " (Cont.)") : s.title,
           pageBreakBefore: ci > 0 ? true : s.pageBreakBefore,
         });
         out2.push(...renderSection(seg, ctx, isSidebar));
@@ -25426,7 +25502,7 @@ function renderSection(s, ctx, isSidebar) {
           rows: [hdr, ...rowsChunk],
           row_pages: {},
           _antcvSegment: true,
-          title: ci > 0 ? (String(s.title || "") + " (Cont.)") : s.title,
+          title: ci > 0 ? (ctx.style && ctx.style.contHeadlines === false ? "" : String(s.title || "") + " (Cont.)") : s.title,
           pageBreakBefore: ci > 0 ? true : s.pageBreakBefore
         });
         out2.push(...renderSection(seg, ctx, isSidebar));
@@ -25458,7 +25534,7 @@ function renderSection(s, ctx, isSidebar) {
         const seg = Object.assign({}, s, {
           roles: chunkRoles.map((r) => { const c = Object.assign({}, r); delete c.page; return c; }),
           _antcvSegment: true,
-          title: ci > 0 ? (String(s.title || "") + " (Cont.)") : s.title,
+          title: ci > 0 ? (ctx.style && ctx.style.contHeadlines === false ? "" : String(s.title || "") + " (Cont.)") : s.title,
           pageBreakBefore: ci > 0 ? true : s.pageBreakBefore
         });
         out2.push(...renderSection(seg, ctx, isSidebar));
@@ -25708,7 +25784,7 @@ function renderTextBullets(s, ctx, isSidebar) {
     if (pg > runMax) {
       runMax = pg;
       out.push(pbBreakPara());
-      if (ctx && ctx.doc === "cl" && s.title) out.push(headingParagraph(contTitle, ctx, false));
+      if (ctx && ctx.doc === "cl" && s.title && !(ctx.style && ctx.style.contHeadlines === false)) out.push(headingParagraph(contTitle, ctx, false));
     }
   };
   if (s.intro) {
@@ -25773,7 +25849,7 @@ function renderFoundation(s, ctx, isSidebar) {
   if (s.professionally) {
     if (ctlPage("professionally") >= 2) {
       out.push(pbBreakPara());
-      out.push(headingParagraph(String(s.title || "FOUNDATION").toUpperCase() + " (Cont.)", ctx, false));
+      if (!(ctx.style && ctx.style.contHeadlines === false)) out.push(headingParagraph(String(s.title || "FOUNDATION").toUpperCase() + " (Cont.)", ctx, false));
     }
     out.push(make(professionallyLabel, s.professionally, professionallyAlign));
   }
@@ -25944,7 +26020,7 @@ function renderCompetencyTable(s, ctx) {
   chunks.forEach((chunk, chunkIdx) => {
     if (chunkIdx > 0) {
       out.push(pbBreakPara());
-      if (s.title) out.push(headingParagraph(String(s.title || "").toUpperCase() + " (Cont.)", ctx, false));
+      if (s.title && !(ctx.style && ctx.style.contHeadlines === false)) out.push(headingParagraph(String(s.title || "").toUpperCase() + " (Cont.)", ctx, false));
     }
     out.push(makeTable(chunk.rows, chunk.start));
     out.push(new Paragraph({ spacing: { before: 0, after: 40, line: 20, lineRule: "exact" }, children: [] }));
@@ -25971,7 +26047,7 @@ function renderExperience(s, ctx) {
     if (__pg > __runMaxRolePage) {
       __runMaxRolePage = __pg;
       out.push(pbBreakPara());
-      if (s.title) out.push(headingParagraph(String(s.title || "").toUpperCase() + " (Cont.)", ctx, false));
+      if (s.title && !(ctx.style && ctx.style.contHeadlines === false)) out.push(headingParagraph(String(s.title || "").toUpperCase() + " (Cont.)", ctx, false));
     }
     const left = [];
     if (role.title) {
@@ -26149,7 +26225,7 @@ function renderSimpleList(s, ctx, isSidebar, italic) {
         _simpleSkippedFirstSectionBreak = true;
       } else {
         outParas.push(makeBreakPara());
-        outParas.push(makeContHeader());
+        if (!(ctx.style && ctx.style.contHeadlines === false)) outParas.push(makeContHeader());
       }
     }
     const baseRun = {
@@ -26889,7 +26965,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.54-pdf-blank-page";
+var VERSION = "1.14.55-pageflow";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

@@ -875,6 +875,14 @@ function buildStyle(styleConfig, navyColor) {
   // right — owner 2026-06-11: "text can stay where it is".
   const bi = numTok(styleConfig.bulletIndent);
   if (bi !== undefined && bi !== 24) out.bulletIndent = bi;
+  // 1.50.378 PAGEBREAK-STYLE-OPTIONS-001: page-flow prefs. Booleans/enum, not
+  // colors — forwarded only when set off their defaults so older workers and
+  // untouched users see no change.
+  if (styleConfig.contHeadlines === false) out.contHeadlines = false;
+  if (styleConfig.repeatHeader === true) out.repeatHeader = true;
+  if (styleConfig.pageNumbers === 'top-right' || styleConfig.pageNumbers === 'bottom-right') {
+    out.pageNumbers = styleConfig.pageNumbers;
+  }
   // v1.50.139 — normalize every hex colour to a bare 6-digit value. The DOCX
   // worker's docx library rejects anything but 6 hex digits and returned a 500
   // ("Invalid hex value '"#283556"'"). The value arrives quoted AND #-prefixed

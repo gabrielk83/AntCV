@@ -39528,14 +39528,82 @@
                             // columns wraps it as crescents.
                             ref: (el) => {
                               if (!el) return;
+                              // BRIDGE-TABLE-001: the pagination sidecars
+                              // stretch the page-row AFTER React commits, so
+                              // a single commit-time measurement sees stale
+                              // geometry (the table-avoidance below never
+                              // fired). Run the geometry pass at commit and
+                              // again after layout settles.
+                              const __commitBridgeGeom = () => {
+                              if (!el.isConnected) return;
                               try {
                                 const row = el.closest(".antcv-page-row");
                                 if (!row) return;
                                 const R = Math.round(Zo / 2) + 10;
+                                // reset to the natural position before
+                                // measuring (a prior pass may have relocated)
+                                if ("bridge-middle" === er) {
+                                  el.style.top = "50%";
+                                  el.style.bottom = "auto";
+                                  el.style.transform =
+                                    "translate(-50%, -50%)";
+                                } else {
+                                  el.style.top = "auto";
+                                  el.style.bottom = "14px";
+                                  el.style.transform = "translateX(-50%)";
+                                }
                                 // measure AFTER layout so the medallion's
                                 // absolute position is final
                                 const ir = el.getBoundingClientRect();
-                                const midY = ir.top + ir.height / 2;
+                                let midY = ir.top + ir.height / 2;
+                                // BRIDGE-TABLE-001 (owner 2026-06-11: "bridge
+                                // middle is unable to handle core
+                                // competencies"): TABLES don't wrap
+                                // shape-outside floats, so a band over a
+                                // table paints straight across its cells.
+                                // Relocate the medallion to the nearest
+                                // table-free y in the row.
+                                const rowR = row.getBoundingClientRect();
+                                const tables = Array.from(
+                                  row.querySelectorAll("table"),
+                                );
+                                const pad = R + 6;
+                                const blocked = (y) =>
+                                  tables.some((t) => {
+                                    const tr = t.getBoundingClientRect();
+                                    return (
+                                      y + pad > tr.top && y - pad < tr.bottom
+                                    );
+                                  });
+                                if (blocked(midY)) {
+                                  const cands = [];
+                                  tables.forEach((t) => {
+                                    const tr = t.getBoundingClientRect();
+                                    cands.push(
+                                      tr.top - pad - 4,
+                                      tr.bottom + pad + 4,
+                                    );
+                                  });
+                                  const fit = cands.filter(
+                                    (y) =>
+                                      y - pad >= rowR.top + 4 &&
+                                      y + pad <= rowR.bottom - 4 &&
+                                      !blocked(y),
+                                  );
+                                  if (fit.length) {
+                                    const ny = fit.reduce((a, b) =>
+                                      Math.abs(b - midY) < Math.abs(a - midY)
+                                        ? b
+                                        : a,
+                                    );
+                                    el.style.top =
+                                      Math.round(ny - rowR.top) + "px";
+                                    el.style.bottom = "auto";
+                                    el.style.transform =
+                                      "translate(-50%, -50%)";
+                                    midY = ny;
+                                  }
+                                }
                                 row
                                   .querySelectorAll(
                                     "[data-antcv-bridge-spacer]",
@@ -39564,6 +39632,12 @@
                                     sp.style.shapeOutside = `circle(${R}px at ${"sb" === side ? "100%" : "0%"} ${cy}px)`;
                                   });
                               } catch (_) {}
+                              };
+                              __commitBridgeGeom();
+                              // layout settles late (fonts, the pagination
+                              // sidecars stretching the row) — re-pass twice
+                              setTimeout(__commitBridgeGeom, 450);
+                              setTimeout(__commitBridgeGeom, 1400);
                             },
                             style: {
                               ...__photoFrame(Zo),

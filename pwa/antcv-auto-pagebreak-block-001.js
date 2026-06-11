@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.341-drag-suspend';
+  var VERSION = '1.50.342-mainbar-flip-fix';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -141,6 +141,14 @@
   var RECHECK_MS  = 2500;  // delay before the tight routine recheck after things settle
   // width-change detection: remember the ratio we last computed against
   var __lastRatioFp = null;
+  // MAINBAR-FLIP-FIX-001: per-section "break created at" timestamps. A break
+  // younger than HOLD_MS is HELD (never re-measure-cleared) so a freshly created
+  // break at the page boundary can't be cleared by the very next pass before the
+  // layout has settled — that create→clear→re-create cycle was the dance (seen
+  // BOTH ways: rightward narrows main → main item drops; leftward narrows the
+  // sidebar → ADDITIONAL INFORMATION splits). Keyed by sid.
+  var __breakBornAt = {};
+  var HOLD_MS = 3000;   // hold a new break at least this long before it may clear
 
 
   function readJson(k, f) {
@@ -303,6 +311,18 @@
     // band is STABLE on the reactive pass and TIGHT on the delayed recheck.
     var existing = readJson(autoKey, {});
     var map = {};
+    // MAINBAR-FLIP-FIX-001: born-stamps are namespaced per storage key (export
+    // AUTO_KEY vs preview PREVIEW_KEY) because compute() runs once per key in the
+    // same tick against DIFFERENT usable lines — a shared sid-only registry would
+    // let the two maps stomp each other's holds.
+    var __ns = autoKey + '|';
+    function bornKey(id) { return __ns + id; }
+    // Prune born-stamps in THIS namespace for breaks that no longer exist.
+    for (var __bk in __breakBornAt) {
+      if (__bk.indexOf(__ns) !== 0) continue;            // other namespace, leave it
+      var __bkSid = __bk.slice(__ns.length);
+      if (!(existing[__bkSid] && sectionById(list, __bkSid))) delete __breakBornAt[__bk];
+    }
     // Detect a width change since our last compute. When the sidebar/table
     // ratio moved, the MAIN column may need a brand-new break this pass, so we
     // must NOT let a stale main break suppress detection — those are cleared
@@ -317,8 +337,18 @@
     // moves in two visible steps). One-pass mode re-detects in the same pass.
     var deferMainDetect = widthChanged && !ONE_PASS && !tight;
     if (deferMainDetect) { try { setTimeout(function(){ lastSourceFp=null; schedule(); }, 60); } catch(_){} }
-    // hysteresis for THIS pass
-    var hyst = tight ? HYST_TIGHT : HYST_STABLE;
+    // MAINBAR-FLIP-FIX-001 (owner 2026-06-11 "works until a mainbar item has to
+    // go down, then it dances again — ~every 2.5s"): the flip cadence matched
+    // RECHECK_MS, so the TIGHT recheck was clearing a break the stable pass
+    // needs. The tight (40px) band is LOOSER than the create line (`limit`), so
+    // for an item that JUST overflows, the tight pass found it "fits" and
+    // cleared it → re-overflow → re-create → dance. FIX: the CLEAR test ALWAYS
+    // uses the conservative stable band, regardless of pass. A break is removed
+    // only when the content clears `limit − HYST_STABLE`. The tight recheck no
+    // longer changes break EXISTENCE; it only re-measures (catching a stable
+    // pass that ran before the layout settled). HYST_TIGHT is retained only for
+    // potential future intra-section line reclaim, not for clearing.
+    var hyst = HYST_STABLE;
     for (var ek in existing) {
       if (!(existing[ek] && typeof existing[ek] === 'object' && sectionById(list, ek))) continue;
       var __sec = sectionById(list, ek);
@@ -337,9 +367,17 @@
       var __sc = (__cl && __cl.offsetWidth) ? (__cl.getBoundingClientRect().width / __cl.offsetWidth) : 1;
       if (!(__sc > 0.1 && __sc < 10)) __sc = 1;
       var __fitLine = (usableBase - hyst) * __sc;
-      if (__h > 0 && __h <= __fitLine) {
-        // Section now fits on one page with margin → CLEAR the break (omit
-        // from map). The (CONT.) tail flows back to page 1.
+      // MAINBAR-FLIP-FIX-001: do NOT clear a break that was just created — hold
+      // it for HOLD_MS so the layout settles. Without this, a break created at
+      // `limit` is re-measured on the next pass and cleared the instant the
+      // content reads even slightly under the line, then re-created → dance.
+      var __born = __breakBornAt[bornKey(ek)] || 0;
+      var __young = __born && (nowMs() - __born) < HOLD_MS;
+      if (__h > 0 && __h <= __fitLine && !__young) {
+        // Section now fits on one page with margin AND the break has had time to
+        // settle → CLEAR the break (omit from map). The (CONT.) tail flows back
+        // to page 1. Drop the born-stamp so a future re-break starts a fresh hold.
+        delete __breakBornAt[bornKey(ek)];
         continue;
       }
       // Still overflows (or unmeasurable) → keep the break. EXCEPTION: on a
@@ -351,13 +389,21 @@
       // membership at detection time, so here we simply free ALL non-sidebar
       // carried breaks on a width change when the section still overflows —
       // the detector will immediately re-break it if it still must.
-      if (widthChanged && !tight) {
+      if (widthChanged && !tight && !__young) {
         // RECLAIM_FREE_MAIN: drop and let the detector below re-decide. Safe
         // because the same pass re-detects; if it still overflows it is
         // re-broken at the correct (new-width) index, fixing the coupling where
-        // a widened sidebar narrows main past the line.
+        // a widened sidebar narrows main past the line. MAINBAR-FLIP-FIX-001:
+        // only free a MATURE break — a young one is held (re-freeing it would
+        // re-create + re-stamp and reintroduce the boundary flip).
+        delete __breakBornAt[bornKey(ek)];
         continue;
       }
+      // Keep the carried break; preserve its existing born-stamp so the
+      // creation hold runs out normally and a genuinely-fitting section can
+      // clear once the hold lapses. (We must NOT refresh here — refreshing on
+      // every keep would make the stamp permanently young and the break could
+      // never clear.)
       map[ek] = existing[ek];
     }
 
@@ -418,7 +464,8 @@
             if (br < 1) br = idx;
           }
         }
-        if (br >= 1) { map[sid] = {}; map[sid][String(br)] = 2; }
+        if (br >= 1) { map[sid] = {}; map[sid][String(br)] = 2;
+          if (!__breakBornAt[bornKey(sid)]) __breakBornAt[bornKey(sid)] = nowMs(); }   // MAINBAR-FLIP-FIX-001
       }
 
       // 1.50.276 EXPERIENCE role auto-pagination. Each role renders inside a
@@ -440,7 +487,8 @@
             if (!visible(roleEls[ri])) continue;
             if (roleEls[ri].getBoundingClientRect().bottom - colTop > limit) {
               var rmi = parseInt(roleEls[ri].getAttribute('data-antcv-role-index'), 10);
-              if (rmi >= 1) { map[expSec.id] = {}; map[expSec.id][String(rmi)] = 2; }
+              if (rmi >= 1) { map[expSec.id] = {}; map[expSec.id][String(rmi)] = 2;
+                if (!__breakBornAt[bornKey(expSec.id)]) __breakBornAt[bornKey(expSec.id)] = nowMs(); }   // MAINBAR-FLIP-FIX-001
               break;
             }
           }
@@ -505,7 +553,8 @@
               if (!visible(kEl)) continue;
               if (kEl.getBoundingClientRect().bottom - clTop > __clBoundary) {
                 var kKey = kEl.getAttribute('data-antcv-cl-item-key');
-                if (kKey) { map[clSid] = {}; map[clSid][kKey] = __clPageNo; brokeItem = true; }
+                if (kKey) { map[clSid] = {}; map[clSid][kKey] = __clPageNo; brokeItem = true;
+                  if (!__breakBornAt[bornKey(clSid)]) __breakBornAt[bornKey(clSid)] = nowMs(); }   // MAINBAR-FLIP-FIX-001
                 break;
               }
             }
@@ -517,7 +566,8 @@
             var brokeRow = false;
             if (!brokeItem && clSec && (clSec.type === 'table' || clEl.querySelector('table'))) {
               var rIdx = firstOverflowRow(clEl, clTop, __clBoundary);
-              if (rIdx >= 1) { map[clSid] = {}; map[clSid][String(rIdx)] = __clPageNo; brokeRow = true; }
+              if (rIdx >= 1) { map[clSid] = {}; map[clSid][String(rIdx)] = __clPageNo; brokeRow = true;
+                if (!__breakBornAt[bornKey(clSid)]) __breakBornAt[bornKey(clSid)] = nowMs(); }   // MAINBAR-FLIP-FIX-001
             }
             if (!brokeItem && !brokeRow) {
               // Mirror app.js __antcvFirstKey so __antcvSecStart picks the break up.
@@ -525,6 +575,7 @@
                 ? ((clSec.intro != null && String(clSec.intro).trim()) ? 'intro' : 'bullet_0')
                 : '0';
               map[clSid] = {}; map[clSid][fk] = __clPageNo;
+              if (!__breakBornAt[bornKey(clSid)]) __breakBornAt[bornKey(clSid)] = nowMs();   // MAINBAR-FLIP-FIX-001
             }
             // CL-SALMON-SLOW-001 (owner 2026-06-09 "took a long time"): break EVERY
             // spanning section in ONE pass — matching the CV passes above, which loop
@@ -828,6 +879,7 @@
         localStorage.setItem(AUTO_KEY, '{}');
         lastWritten = '{}';
         lastSourceFp = null;
+        __breakBornAt = {};   // MAINBAR-FLIP-FIX-001
         window.dispatchEvent(new CustomEvent('antcv:auto-pages-changed',
           { detail: { source: 'auto-pagebreak-001-clear' } }));
       } catch (_) {}

@@ -24907,6 +24907,24 @@ function buildLinearDocument(ctx) {
       })
     ]
   });
+  // PAGEBREAK-STYLE-OPTIONS-001(c) (1.14.56): the CL gets the same footer
+  // page number as the CV (both corner choices render via the footer \u2014 see
+  // the two-column builder's note).
+  const clPgNumBlock = style && (style.pageNumbers === "top-right" || style.pageNumbers === "bottom-right") ? {
+    options: {
+      children: [new Paragraph({
+        alignment: AlignmentType.RIGHT,
+        spacing: { before: 0, after: 0, line: 180, lineRule: "exact" },
+        indent: { right: 120 },
+        children: [new TextRun({
+          children: [PageNumber.CURRENT],
+          size: 14,
+          color: "777777",
+          font: "Arial"
+        })]
+      })]
+    }
+  } : null;
   return new File({
     creator: pi.name || "AntCV user",
     lastModifiedBy: pi.name || "AntCV user",
@@ -24925,9 +24943,10 @@ function buildLinearDocument(ctx) {
             // 1.14.32 CL-PAGINATE-001: L/R margins inset the flowing body; the
             // full-bleed header band cancels the left margin with a -100 table
             // indent. bottom margin gives the last line page-bottom breathing room.
-            margin: { top: 0, right: CL_SIDE_MARGIN, bottom: 220, left: CL_SIDE_MARGIN, header: 0, footer: 0, gutter: 0 }
+            margin: { top: 0, right: CL_SIDE_MARGIN, bottom: 220, left: CL_SIDE_MARGIN, header: 0, footer: 60, gutter: 0 }
           }
         },
+        ...(clPgNumBlock ? { footers: { default: clPgNumBlock } } : {}),
         children: jdqSec ? [
           bodyTable,
           // Hard page break paragraph between pages 1 and 2.
@@ -26965,7 +26984,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.55-pageflow";
+var VERSION = "1.14.56-cl-pagenum";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

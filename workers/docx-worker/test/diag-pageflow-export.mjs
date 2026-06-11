@@ -118,6 +118,24 @@ const check = (n, ok, d) => { checks.push(ok); log(`${n}: ${ok ? 'OK' : 'FAIL'}$
   check('top-right: sectPr references footer', /w:footerReference/.test(xml), '');
 }
 
+{
+  // 1.14.56: the CL (linear) gets the same footer page number
+  const payload = {
+    schema_version: '1.0', doc: 'cl', language: 'en', layout: 'linear', filename: 't',
+    personal_info: { name: 'Gabriel K', email: 'g@b.c' },
+    meta: { subtitle: 'S' },
+    style: { navy: '#283556', pageNumbers: 'bottom-right' }, font_sizes: { mainBody: 10.5 },
+    sections: [{ id: 'who', title: 'WHO I AM', loc: 'main', on: true, type: 'text', content: 'Text.' }],
+  };
+  const req = new Request('https://x/generate', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) });
+  const res = await mod.default.fetch(req, {}, { waitUntil() {}, passThroughOnException() {} });
+  const buf = Buffer.from(await res.arrayBuffer());
+  const xml = unzipEntry(buf, 'word/document.xml').toString('utf8');
+  const fEntry = listEntries(buf).find(e => /word\/footer\d*\.xml/.test(e));
+  const fXml = fEntry ? unzipEntry(buf, fEntry).toString('utf8') : '';
+  check('CL: footer page number', res.status === 200 && !!fEntry && /PAGE/.test(fXml) && /w:footerReference/.test(xml), 'status ' + res.status);
+}
+
 const ok = checks.every(Boolean);
 log(ok ? 'PAGEFLOW-EXPORT OK' : 'PAGEFLOW-EXPORT FAIL');
 process.exit(ok ? 0 : 1);

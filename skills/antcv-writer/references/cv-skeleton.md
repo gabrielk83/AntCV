@@ -63,7 +63,7 @@ The JSON output uses these exact keys. Section keys are stable across styles and
 
 **Content rules.**
 - Focus area: 1–3 words, role-domain language (e.g. "Functional safety", "Change governance", "System architecture").
-- Strategic expertise: a phrase of 6–12 words describing the candidate's specific angle on that focus area (e.g. "ISO 26262 assessor, led two ASPICE re-certifications").
+- Strategic expertise: a phrase of **6–14 words**, **hard cap two lines per cell** (CV typography rule: table cells render at max 2 lines). The 4.94" table at the body font fits roughly **90 characters across two lines** in the expertise column — treat ~90 chars as the ceiling and cut to one tight clause, not two sentences. One angle per row, not a paragraph. Example (good, fits 2 lines): "ISO 26262 assessor; ran two ASPICE re-certifications." Example (TOO LONG, wraps to 4 lines — never do this): "Defined system-level requirements for automotive LiDAR, including optics, electronics, and embedded interfaces, and aligned architecture with ASPICE and ISO 26262 for traceability and reuse." If a row needs more than two lines to make its point, split it into two focus areas or drop the weaker half.
 - No banned words. No "demonstrated ability to" / "proven track record".
 
 ### `selected_outcomes`
@@ -76,8 +76,9 @@ The JSON output uses these exact keys. Section keys are stable across styles and
 
 **Content rules.**
 - Title: an outcome, not a task. "Cut review cycles 40%" not "Led review process". "Closed two customer change requests under deadline" not "Managed change requests".
-- Body: 1–2 sentences explaining context, action, and quantified result if available.
-- **Never invent metrics.** If no concrete metric is in `user_state.profile.experiences[*]` for this outcome, write the body without a number rather than fabricating one.
+- **Lead with the number when one exists.** The candidate has confirmed, canonical metrics — use them in the title or first clause rather than writing a metric-free outcome. The confirmed set (never exceed or invent beyond these): change cycle **~250 → ~10 days** via the Change Control Board at Innoviz; LiDAR **cost reduction ~90% (≈10×)** via trade-off analysis + supplier coordination; **directed a 7-engineer EO team** at Sirin (verb: directed/supervised, never "led"); **15+ years** sensor/EO/systems experience; cross-functional coordination across **5+ domains/OEMs**; **Patent No. 241997**. A Selected Outcomes section that has access to these and ships without any of them is a defect (the metric is the whole point of the section).
+- Body: 1–2 sentences explaining context, action, and the quantified result.
+- **Never invent metrics.** If no concrete metric is in `user_state.profile.experiences[*]` or the canonical set above for this outcome, write the body without a number rather than fabricating one — but do not omit a number that IS on record.
 - If `change_log_patterns` shows recurring `risk=invented` for this section under this role × style, prefer narrative outcomes over numeric ones until the pattern clears.
 
 ### `experience`

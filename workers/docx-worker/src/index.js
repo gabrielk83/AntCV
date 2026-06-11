@@ -24993,12 +24993,24 @@ function buildHeaderCell(ctx) {
       spacing: { before: 0, after: 60 },
       children: [
         new TextRun({
-          text: contactBits.join("   \u2022   "),
+          // 1.14.51 bridge round 3 (owner): ONE space around the bullet
+          // separators in bridge mode, and a width-fit font estimate so the
+          // line stays single in the narrower split text cell. Word can't
+          // self-measure, so estimate: usable cell \u2248 (PAGE_W \u2212 sidebarW \u2212
+          // 480 margins)/20 pt; avg glyph \u2248 0.55 \u00d7 fontPt. Clamp to
+          // [7pt, 0.88\u00d7contactSize].
+          ...(() => {
+            const bridge = normalisePhotoPosition(pi.photoPosition) === "band-overlap" && pi.photo_b64 && ctx.doc !== "cl";
+            if (!bridge) {
+              return { text: contactBits.join("   \u2022   "), size: pt2hp(fs.contactSize) };
+            }
+            const text = contactBits.join(" \u2022 ");
+            const cellPt = (PAGE_W - (ctx.sidebarW || Math.round(PAGE_W * 0.33)) - 480) / 20;
+            const fitPt = cellPt / (0.55 * Math.max(1, text.length));
+            const pt = Math.max(7, Math.min(fs.contactSize * 0.88, fitPt));
+            return { text, size: pt2hp(pt) };
+          })(),
           color: style.headerContactColor,
-          // 1.14.51 bridge: the text cell is narrower (sidebar zone split
-          // off) \u2014 shrink the contact line ~12% so it stays on ONE line,
-          // matching the preview's bridge treatment.
-          size: pt2hp(normalisePhotoPosition(pi.photoPosition) === "band-overlap" && pi.photo_b64 ? fs.contactSize * 0.88 : fs.contactSize),
           font: style.headerFont
         })
       ]
@@ -26743,7 +26755,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.51-photo-bridge";
+var VERSION = "1.14.52-contact-squeeze";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

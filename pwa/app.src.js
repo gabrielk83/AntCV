@@ -38806,7 +38806,11 @@
         p && u.push(...pe(a, "da" === je, !1));
         const m =
             u.length > 0
-              ? u.map(([e, t]) => `${e} ${t}`).join("  •  ")
+              ? u
+                  .map(([e, t]) => `${e} ${t}`)
+                  // Bridge round 3 (owner): tighter separators — ONE space
+                  // around the bullet — so the contact line fits one line.
+                  .join(__bridgeOn ? " • " : "  •  ")
               : "da" === je
                 ? "[Kontakt — e-mail | telefon | LinkedIn | lokation]"
                 : "[Contact — email | phone | LinkedIn | location]",
@@ -38882,6 +38886,29 @@
                       React.createElement(
                         "div",
                         {
+                          // Bridge round 3 (owner: "more tricks to squeeze on
+                          // one line"): at commit, shrink the font until the
+                          // whole contact line FITS — exact measurement, no
+                          // guessing; ellipsis stays only as a last resort.
+                          ref: __bridgeOn
+                            ? (el) => {
+                                if (!el) return;
+                                try {
+                                  let fs = parseFloat(
+                                    el.style.fontSize || "12",
+                                  );
+                                  let guard = 0;
+                                  while (
+                                    el.scrollWidth > el.clientWidth + 1 &&
+                                    fs > 8.5 &&
+                                    guard++ < 24
+                                  ) {
+                                    fs -= 0.25;
+                                    el.style.fontSize = fs + "px";
+                                  }
+                                } catch (_) {}
+                              }
+                            : void 0,
                           style: {
                             fontFamily: e,
                             color: "#fff",
@@ -38898,7 +38925,11 @@
                             textAlign: y("contact"),
                             whiteSpace: __bridgeOn ? "nowrap" : "normal",
                             ...(__bridgeOn
-                              ? { overflow: "hidden", textOverflow: "ellipsis" }
+                              ? {
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  letterSpacing: "-0.1px",
+                                }
                               : {}),
                           },
                         },

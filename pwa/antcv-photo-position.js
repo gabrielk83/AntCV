@@ -443,7 +443,6 @@
     const { paper, original } = pickActivePaper();
     if (!paper) return;
 
-    const position = readPosition();
     // Always start from a clean slate. Sweep clones from BOTH papers
     // so a previously-mounted photo in the wrong paper (the bug this
     // fix addresses) is cleared even after the user switches setting.
@@ -451,23 +450,18 @@
       clearExistingClones(p);
     }
 
-    // Sidebar positions: original is correct; nothing to do (and the
-    // app.js render itself hides/shows for sidebar-bottom vs top).
-    if (position === 'sidebar-top' || position === 'sidebar-bottom') {
-      setOriginalVisible(original, true);
-      return;
-    }
-
-    // PHOTO-SIDEBAR-BRIDGE-001 (1.50.367): band-overlap is rendered NATIVELY
-    // by app.js since 1.50.366 (split header band + the medallion hoisted so
-    // its midline sits on the seam). This sidecar's clone path targeted the
-    // old TABLE-based preview (findSidebarTd) and never stuck on the current
-    // div layout (PHOTO-POSITION-196). Leave the original photo visible and
-    // let the native render own the straddle.
-    if (position === 'band-overlap') {
-      setOriginalVisible(original, true);
-      return;
-    }
+    // PHOTO-POSITIONS-NATIVE-001 (1.50.370): EVERY photo position is now
+    // rendered NATIVELY by app.js (sidebar-top/bottom, band-overlap,
+    // header-left/right, main-left/right, hidden). This sidecar's clone
+    // machinery targeted the retired TABLE-based preview (findSidebarTd /
+    // findMainTd / findHeaderTable) and never stuck on the current div
+    // layout (PHOTO-POSITION-196) — every position except sidebar-top
+    // looked dead. The sidecar is now a cleanup-only shim: it clears any
+    // stale clones from older sessions and never hides or moves the
+    // app-rendered photo again.
+    setOriginalVisible(original, true);
+    return;
+    /* eslint-disable no-unreachable */
 
     if (position === 'hidden') {
       setOriginalVisible(original, false);

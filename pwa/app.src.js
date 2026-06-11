@@ -38729,6 +38729,45 @@
           __bridgeOn = "band-overlap" === er && !!zn && "cv" === Lt,
           __zoEff = __bridgeOn ? Math.min(220, Math.round(1.3 * Zo)) : Zo,
           __bridgeGap = 14,
+          // PHOTO-POSITIONS-NATIVE-001 (owner 2026-06-11: "only sidebar top
+          // and bridge work in preview"): the other positions relied on the
+          // photo-position clone sidecar, which targets the retired TABLE
+          // preview and never stuck. All positions now render natively; this
+          // shared frame style mirrors the sidebar medallion's shape/contour/
+          // shadow prefs.
+          __photoFrame = (sz) => {
+            let radius = "50%",
+              border = `0.5pt solid ${l}`,
+              shadow = "none";
+            try {
+              const sp =
+                JSON.parse(localStorage.getItem("personalInfo") || "{}")
+                  .stylePrefs || {};
+              radius =
+                "square" === sp.photoShape
+                  ? 0
+                  : "rounded" === sp.photoShape
+                    ? "12px"
+                    : "50%";
+              const ct = sp.photoContour || "line";
+              border = "soft" === ct ? "none" : `0.5pt solid ${l}`;
+              shadow =
+                [
+                  "soft" === ct ? `0 0 5px ${l}` : null,
+                  sp.photoShadow ? "0 4px 12px rgba(0,0,0,0.35)" : null,
+                ]
+                  .filter(Boolean)
+                  .join(", ") || "none";
+            } catch (_) {}
+            return {
+              width: sz,
+              height: sz,
+              objectFit: "cover",
+              borderRadius: radius,
+              border,
+              boxShadow: shadow,
+            };
+          },
           o = (e, t, n) => {
             if (0 === t.length) return n;
             const r = t[0],
@@ -38974,6 +39013,19 @@
                       : {}),
                   },
                 },
+                // PHOTO-POSITIONS-NATIVE-001: header-left / header-right — a
+                // compact medallion floated in the band (82px ≈ the export's
+                // 0.85in); the centred text lines flow beside it.
+                zn &&
+                  ("header-left" === er || "header-right" === er) &&
+                  React.createElement("img", {
+                    src: zn,
+                    style: {
+                      ...__photoFrame(82),
+                      float: "header-left" === er ? "left" : "right",
+                      margin: "0 12px 4px 12px",
+                    },
+                  }),
                 w.map(v),
               )
             : React.createElement("div", {
@@ -39271,6 +39323,8 @@
                           },
                           0 === n &&
                             zn &&
+                            ("sidebar-top" === er ||
+                              "band-overlap" === er) &&
                             React.createElement(
                               "div",
                               {
@@ -39412,6 +39466,22 @@
                               transitionState: kr[e.id],
                             }),
                           ),
+                          // PHOTO-POSITIONS-NATIVE-001: sidebar-bottom — the
+                          // medallion after the page-1 sidebar sections.
+                          0 === n &&
+                            zn &&
+                            "sidebar-bottom" === er &&
+                            React.createElement(
+                              "div",
+                              { style: { textAlign: "center", marginTop: 10 } },
+                              React.createElement("img", {
+                                src: zn,
+                                style: {
+                                  ...__photoFrame(Zo),
+                                  display: "inline-block",
+                                },
+                              }),
+                            ),
                         ),
                         React.createElement("div", {
                           className: "antcv-col-splitter no-print",
@@ -39462,6 +39532,28 @@
                           },
                           0 === n
                             ? [
+                                // PHOTO-POSITIONS-NATIVE-001: main-left /
+                                // main-right — the photo floats at the top of
+                                // the main column (115px ≈ the export's
+                                // 1.2in) and the first paragraphs wrap it.
+                                zn &&
+                                ("main-left" === er || "main-right" === er)
+                                  ? React.createElement("img", {
+                                      key: "antcv-main-photo",
+                                      src: zn,
+                                      style: {
+                                        ...__photoFrame(115),
+                                        float:
+                                          "main-left" === er
+                                            ? "left"
+                                            : "right",
+                                        margin:
+                                          "main-left" === er
+                                            ? "0 12px 8px 0"
+                                            : "0 0 8px 12px",
+                                      },
+                                    })
+                                  : null,
                                 ...mMain(t.pageNum).map((sec) =>
                                   React.createElement(Ce, {
                                     key: (sec.id || "x") + "_p" + t.pageNum + (sec._antcvSplitCont ? "_c" : ""),

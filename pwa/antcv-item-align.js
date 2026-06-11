@@ -80,6 +80,12 @@
       case 'labeled_list': return 'items.' + i + '.v';
       case 'education':    return 'items.' + i + '.deg';
       case 'list':         return 'items.' + i;
+      // CJLR-EXPERIENCE-001 (1.50.381): per-ROLE cycler on the experience
+      // editor's role cards — aligns that role's bullet block. The worker
+      // already honours paraAlignPath(s, "roles."+i); the preview bullet
+      // rows carry data-antcv-role-path for the fallback in
+      // applyAllAlignments.
+      case 'experience':   return 'roles.' + i;
       default:             return 'items.' + i;
     }
   }
@@ -270,8 +276,16 @@
         });
         sidHost.querySelectorAll('[data-antcv-row-path]').forEach(function (rowEl) {
           const marker = rowEl.getAttribute('data-antcv-row-path');
-          const perItem = perRow[marker];
-          const align = isValidAlign(perItem) ? perItem : groupAlign;
+          // CJLR-EXPERIENCE-001: lookup order — exact per-bullet key
+          // (roles.N.bullets.M / items.N.field via perRow), then the exact
+          // marker itself, then the row's ROLE path (roles.N — written by
+          // the experience role cycler), then the section default.
+          const rolePath = rowEl.getAttribute('data-antcv-role-path');
+          const perItem = isValidAlign(perRow[marker]) ? perRow[marker]
+            : isValidAlign(bucket[marker]) ? bucket[marker]
+            : (rolePath && isValidAlign(bucket[rolePath])) ? bucket[rolePath]
+            : null;
+          const align = perItem || groupAlign;
           applyOne(rowEl, align);
         });
       });

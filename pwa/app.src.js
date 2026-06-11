@@ -4968,6 +4968,14 @@
                             "div",
                             {
                               key: n,
+                              // CJLR-EXPERIENCE-001: alignment markers so
+                              // the item-align sidecar can apply a stored
+                              // per-role ("roles.{t}") or per-bullet
+                              // ("roles.{t}.bullets.{n}") alignment to the
+                              // preview block. Export parity exists
+                              // (worker paraAlignPath honours both paths).
+                              "data-antcv-row-path": `roles.${t}.bullets.${n}`,
+                              "data-antcv-role-path": `roles.${t}`,
                               style: {
                                 fontSize: $.bullet,
                                 paddingLeft: (k.bulletIndent || 24), textIndent: 3 - (k.bulletIndent || 24),
@@ -7920,6 +7928,11 @@
           React.createElement(
             "div",
             {
+              // CJLR-EXPERIENCE-001: marker for the item-align sidecar's
+              // per-role alignment cycler (edit-path "roles.{idx}" — the
+              // worker already honours it via paraAlignPath).
+              "data-antcv-item-row": "experience",
+              "data-antcv-item-idx": t,
               style: {
                 border: "1px solid " + (!1 !== e.on ? "#ddd" : "#f0f0f0"),
                 borderRadius: 6,

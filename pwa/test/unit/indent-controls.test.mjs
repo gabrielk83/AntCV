@@ -8,30 +8,30 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-// Bullet sites (BULLET-EDGE-001): paddingLeft = bulletIndent; textIndent =
-// -bulletIndent, so the marker sits at the row's LEFT EDGE (first line starts
-// at paddingLeft+textIndent = 0) and the text + wrapped lines hang at
-// bulletIndent. Default 14 (a tight half-gap; was 24 / marker-at-10px).
+// Bullet sites (1.50.364, owner round 2): paddingLeft = bulletIndent
+// (default 24); textIndent = 3 - bulletIndent, so the MARKER first line sits
+// at paddingLeft + textIndent = 3px and the text + wrapped lines hang at
+// bulletIndent. Mirrors the worker's 45 DXA (3px) marker offset (1.14.49).
 function bulletStyle(k) {
-  const bi = k.bulletIndent || 14;
-  return { paddingLeft: bi, textIndent: -bi };
+  const bi = k.bulletIndent || 24;
+  return { paddingLeft: bi, textIndent: 3 - bi };
 }
 // Main column padding: "8px <edge>px", edge from mainEdgeIndent (default 10).
 function mainPadding(ya) {
   return '8px ' + ((ya && ya.mainEdgeIndent) || 10) + 'px';
 }
 
-test('default bullet: marker at the edge (first line at 0), text hangs at 14px', () => {
-  assert.deepEqual(bulletStyle({}), { paddingLeft: 14, textIndent: -14 });
+test('default bullet: marker at 3px, text hangs at 24px', () => {
+  assert.deepEqual(bulletStyle({}), { paddingLeft: 24, textIndent: -21 });
   const s = bulletStyle({});
-  assert.equal(s.paddingLeft + s.textIndent, 0); // marker first-line at the row's left edge
+  assert.equal(s.paddingLeft + s.textIndent, 3); // marker first-line at 3px
 });
 
-test('increasing bullet indent moves the text-hang right, marker stays at the edge', () => {
+test('increasing bullet indent moves the text-hang right, marker stays at 3px', () => {
   const s = bulletStyle({ bulletIndent: 34 });
   assert.equal(s.paddingLeft, 34);
-  assert.equal(s.textIndent, -34);
-  assert.equal(s.paddingLeft + s.textIndent, 0); // marker still at the edge for any indent
+  assert.equal(s.textIndent, -31);
+  assert.equal(s.paddingLeft + s.textIndent, 3); // marker pinned at 3px for any indent
 });
 
 test('default main edge indent is 10px', () => {

@@ -61,7 +61,7 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.40.341-p0e';
+  var SCRIPT_VERSION = '1.50.364-editor-only';
   if (window.__antcvPreviewShellSticky341 === SCRIPT_VERSION) return;
   window.__antcvPreviewShellSticky341 = SCRIPT_VERSION;
 
@@ -143,6 +143,15 @@
   function nowMs() { return (window.performance && performance.now) ? performance.now() : Date.now(); }
   function tick() {
     if (!isDesktop()) return;
+    // 1.50.364 (owner 2026-06-11: "endless sticky warnings in set menu"):
+    // the preview overlay belongs to the EDITOR route. On the set/upload
+    // screen antcv-overlay keeps it hidden BY DESIGN, so unhiding there
+    // created a permanent unhide<->hide ping-pong (console spam + rAF churn).
+    // Only act while the app is in the editor route.
+    try {
+      var st = localStorage.getItem('step') || '';
+      if (st.indexOf('editor') === -1) return;
+    } catch (_) {}
     var overlays = findOverlayRoots();
     if (!overlays.length) return;
     for (var i = 0; i < overlays.length; i++) {

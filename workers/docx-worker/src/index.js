@@ -25639,7 +25639,15 @@ function renderCompetencyTable(s, ctx) {
   const baseW = isCl ? defaultClW : defaultCvW;
   const tableW = typeof s.tableWidth === "number" && s.tableWidth > 0 ? Math.max(2880, Math.min(PAGE_W - 720, Math.round(s.tableWidth))) : baseW;
   const explicitRatio = typeof s.tableRatio === "number" && s.tableRatio > 0.05 && s.tableRatio < 0.95 ? s.tableRatio : null;
-  const col1 = Math.round(tableW * (explicitRatio !== null ? explicitRatio : 0.326));
+  // 1.14.49 TABLE-WRAP-PARITY-001 (owner 2026-06-11: "core competency still
+  // different — preview has fewer words in the 3rd line"): measured preview
+  // geometry at 100% A4 = table 512px, Focus Area col 153px (ratio 0.299),
+  // cell padding 6px, expertise text LEFT-aligned. The worker's 0.326 ratio +
+  // 8px (120 DXA) margins left the expertise text column ~5% narrower than
+  // the preview's, so the export wrapped earlier from line 3 on. Defaults now
+  // match the measured preview: ratio 0.30, margins 90 DXA (6px); a forwarded
+  // tableRatio/tableWidth still wins.
+  const col1 = Math.round(tableW * (explicitRatio !== null ? explicitRatio : 0.3));
   const col2 = tableW - col1;
   const tableHeaderBg = style && style.tableHeaderBg || style.mainHeadColor;
   const border = { style: BorderStyle.SINGLE, size: 4, color: tableHeaderBg };
@@ -25652,7 +25660,7 @@ function renderCompetencyTable(s, ctx) {
         width: { size: i === 0 ? col1 : col2, type: WidthType.DXA },
         shading: { type: ShadingType.CLEAR, fill: tableHeaderBg, color: "auto" },
         borders: cellBorders,
-        margins: { top: 80, bottom: 80, left: 120, right: 120 },
+        margins: { top: 80, bottom: 80, left: 90, right: 90 },
         verticalAlign: VerticalAlign.CENTER,
         children: [new Paragraph({
           alignment: headerAlignT,
@@ -25673,9 +25681,12 @@ function renderCompetencyTable(s, ctx) {
         width: { size: i === 0 ? col1 : col2, type: WidthType.DXA },
         shading: idx % 2 === 0 ? void 0 : { type: ShadingType.CLEAR, fill: "FAFAFA", color: "auto" },
         borders: cellBorders,
-        margins: { top: 80, bottom: 80, left: 120, right: 120 },
+        margins: { top: 80, bottom: 80, left: 90, right: 90 },
         children: [new Paragraph({
-          alignment: i === 0 ? AlignmentType.LEFT : AlignmentType.JUSTIFIED,
+          // TABLE-WRAP-PARITY-001: the preview renders the expertise cell
+          // LEFT-aligned; the export's JUSTIFIED stretched word gaps into
+          // visible rivers in narrow cells. Match the preview.
+          alignment: AlignmentType.LEFT,
           children: inlineRuns(cell, {
             bold: i === 0,
             color: style.mainTextColor,
@@ -26669,7 +26680,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.49-marker-3px";
+var VERSION = "1.14.50-table-wrap-parity";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

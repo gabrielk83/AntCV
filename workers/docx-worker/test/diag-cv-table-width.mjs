@@ -105,6 +105,22 @@ log(`CHECK A (CV competency table LEFT-aligned): ${A ? 'PASS' : 'FAIL'}`);
 log(`CHECK B (CL table stays CENTER): ${B ? 'PASS' : 'FAIL'}`);
 log(`CHECK C (CV table = full main-column width, not the old narrow inset): ${C ? 'PASS' : 'FAIL'}`);
 log(`CHECK D (CL table still inset 0.8-width, not edge-to-edge): ${D ? 'PASS' : 'FAIL'}`);
-const ok = A && B && C && D;
-log(ok ? 'CV-TABLE-WIDTH OK (4/4)' : 'CV-TABLE-WIDTH FAIL');
+// TABLE-WRAP-PARITY-001 (1.14.49, measured against the preview at 100% A4):
+// Focus Area ratio 0.30 of the table, cell margins 90 DXA (6px), and the
+// expertise DATA cells LEFT-aligned (no justified rivers; same wrap as the
+// preview).
+// several two-col grids exist (the page sidebar/main grid sums to PAGE_W);
+// the competency table's grid is the one summing to the inner table width.
+const grids = [...cvXml.matchAll(/<w:gridCol w:w="(\d+)"\/><w:gridCol w:w="(\d+)"\/>/g)]
+  .map((m) => [Number(m[1]), Number(m[2])]);
+const compGrid = grids.find(([a, b]) => Math.abs(a + b - cv.width) <= 2);
+const ratio = compGrid ? compGrid[0] / (compGrid[0] + compGrid[1]) : null;
+const E = ratio != null && Math.abs(ratio - 0.30) < 0.005;
+const F = /<w:left w:type="dxa" w:w="90"\/>/.test(cvXml);
+const G = !/<w:jc w:val="both"\/>/.test(cvXml.slice(cvXml.indexOf('Strategic Expertise')));
+log(`CHECK E (Focus Area ratio 0.30, got ${ratio == null ? 'n/a' : ratio.toFixed(3)}): ${E ? 'PASS' : 'FAIL'}`);
+log(`CHECK F (cell margins 90 DXA = preview 6px): ${F ? 'PASS' : 'FAIL'}`);
+log(`CHECK G (expertise cells not justified): ${G ? 'PASS' : 'FAIL'}`);
+const ok = A && B && C && D && E && F && G;
+log(ok ? 'CV-TABLE-WIDTH OK (7/7)' : 'CV-TABLE-WIDTH FAIL');
 process.exitCode = ok ? 0 : 1;

@@ -70,11 +70,18 @@
  * stops the "sidebar dances during drag, only settles when I click to edit"
  * symptom — the measurer no longer writes against a mid-drag, still-moving
  * layout. Covers both the native left drag and the reverse-drag sidecar.
+ *
+ * EXP-PREVIEW-CROWD-001 (1.50.348, owner 2026-06-11): experience roles are
+ * measured at the EXPORT line (USABLE_PDF) in BOTH the export and preview maps,
+ * so the preview breaks experience at the same role as the PDF instead of
+ * cramming one whole role tight against the salmon (the A4-fill decouple is
+ * kept for the sidebar/list sections, where squeezing one more small row is
+ * desirable; for atomic experience roles it only produced a crammed page).
  */
 (function () {
   'use strict';
 
-  var VERSION = '1.50.342-mainbar-flip-fix';
+  var VERSION = '1.50.348-exp-preview-crowd';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -482,10 +489,23 @@
           if (list[li] && list[li].type === 'experience') { expSec = list[li]; break; }
         }
         if (expSec && expSec.id && !map[expSec.id]) {
+          // EXP-PREVIEW-CROWD-001 (owner 2026-06-11): experience roles are large
+          // ATOMIC blocks (role + 3-5 bullets). The A4-fill decouple measures the
+          // PREVIEW at the taller USABLE line and the EXPORT at the shorter
+          // USABLE_PDF line — fine for sidebar list items (squeeze one more small
+          // row), but for experience it let the PREVIEW keep a whole role on page
+          // 1 that the EXPORT (PDF) moved to page 2, so that role rendered crammed
+          // tight against the salmon (probe: autoPages exp={"3":2} but
+          // autoPagesPreview exp={"4":2} — preview packed role 3 / System
+          // Architect against the bar). Fix: measure experience roles against the
+          // EXPORT line (USABLE_PDF) in BOTH maps, so the preview breaks at the
+          // same role as the PDF. A role is never split, so there is no mid-role
+          // gap risk; this only ever pulls a crammed role down one page, never up.
+          var __expLimit = USABLE_PDF * scale;
           var roleEls = col.querySelectorAll('[data-antcv-role-index]');
           for (var ri = 0; ri < roleEls.length; ri++) {
             if (!visible(roleEls[ri])) continue;
-            if (roleEls[ri].getBoundingClientRect().bottom - colTop > limit) {
+            if (roleEls[ri].getBoundingClientRect().bottom - colTop > __expLimit) {
               var rmi = parseInt(roleEls[ri].getAttribute('data-antcv-role-index'), 10);
               if (rmi >= 1) { map[expSec.id] = {}; map[expSec.id][String(rmi)] = 2;
                 if (!__breakBornAt[bornKey(expSec.id)]) __breakBornAt[bornKey(expSec.id)] = nowMs(); }   // MAINBAR-FLIP-FIX-001

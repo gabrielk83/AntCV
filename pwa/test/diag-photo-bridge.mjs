@@ -18,7 +18,10 @@ await new Promise(r=>server.listen(0,r));
 const port=server.address().port;
 // 1x1 red png
 const PHOTO='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
-const sections={cv:[{id:'profile',title:'PROFILE',loc:'main',on:true,type:'text',content:'Profile text. '.repeat(12)}],cl:[]};
+const sections={cv:[
+  {id:'profile',title:'PROFILE',loc:'main',on:true,type:'text',content:'Profile text. '.repeat(12)},
+  {id:'tools',title:'TOOLS & METHODS',loc:'sidebar',on:true,type:'labeled_list',items:[{l:'Engineering',v:'Python, MATLAB'}]},
+],cl:[]};
 
 async function boot(browser,photoPosition){
   const page=await browser.newPage({viewport:{width:1600,height:1100}});
@@ -48,9 +51,15 @@ async function boot(browser,photoPosition){
     const name=Array.from(paper.querySelectorAll('div')).find(d=>d.childElementCount===0&&(d.textContent||'').trim()==='Anita Tester');
     const band=name?name.parentElement:null;
     const bandCS=band?getComputedStyle(band):null;
+    const paperTop=paper.getBoundingClientRect().top;
+    // first sidebar headline = first non-photo content block in the sidebar
+    const firstSec=Array.from(sb.children).find(c=>!c.querySelector('img')&&(c.textContent||'').trim());
+    const headTop=firstSec?firstSec.getBoundingClientRect().top:null;
     return{ok:true,seamY:Math.round(seamY),photoTop:Math.round(ir.top),photoMid:Math.round(midY),
       photoH:Math.round(ir.height),
       midOnSeam:Math.abs(midY-seamY),
+      gapAbove:Math.round(ir.top-paperTop),
+      gapBelow:headTop!=null?Math.round(headTop-(ir.top+ir.height)):null,
       bandPadLeft:bandCS?bandCS.paddingLeft:null,
       sbWidth:Math.round(sb.getBoundingClientRect().width)};
   });
@@ -93,12 +102,17 @@ console.log('bridge:',JSON.stringify(bridge));
 console.log('normal:',JSON.stringify(normal));
 console.log('live switch:',JSON.stringify(live));
 console.log('app errors:',errs.length,errs.slice(0,2).join(' | '));
+// Round 2: text flows ~28px left over the seam; native size = base ×1.3;
+// equal air above (page top → photo) and below (photo → first headline).
 const bridgeOk=bridge.ok&&bridge.midOnSeam<=4
-  &&parseFloat(bridge.bandPadLeft)>=bridge.sbWidth*0.9; // text inset ≈ sidebar width
+  &&parseFloat(bridge.bandPadLeft)>=bridge.sbWidth-34
+  &&parseFloat(bridge.bandPadLeft)<=bridge.sbWidth-20;
+const sizeOk=bridge.photoH>=Math.round(normal.photoH*1.3)-2;
+const gapsOk=bridge.gapBelow!=null&&Math.abs(bridge.gapAbove-bridge.gapBelow)<=8;
 const normalOk=normal.ok&&normal.photoTop>=normal.seamY-1
   &&parseFloat(normal.bandPadLeft)<60; // default band padding, no split
 const liveOk=live.hook&&live.ok&&live.midOnSeam<=4;
-console.log('bridge midline-on-seam + split band:',bridgeOk?'OK':'FAIL','| normal mode untouched:',normalOk?'OK':'FAIL','| live switch (no reload):',liveOk?'OK':'FAIL');
-const ok=bridgeOk&&normalOk&&liveOk&&errs.length===0;
+console.log('bridge seam+leftflow:',bridgeOk?'OK':'FAIL','| native 1.3x size:',sizeOk?'OK':'FAIL',`(${normal.photoH}->${bridge.photoH})`,'| equal gaps:',gapsOk?'OK':'FAIL',`(${bridge.gapAbove}/${bridge.gapBelow})`,'| normal untouched:',normalOk?'OK':'FAIL','| live switch:',liveOk?'OK':'FAIL');
+const ok=bridgeOk&&sizeOk&&gapsOk&&normalOk&&liveOk&&errs.length===0;
 console.log(ok?'PHOTO-BRIDGE OK':'PHOTO-BRIDGE FAILED');
 process.exit(ok?0:1);

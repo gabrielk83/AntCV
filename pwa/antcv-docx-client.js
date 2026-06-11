@@ -532,6 +532,18 @@ export function buildPayload({
       ...(typeof readPhotoShape === 'function'
         ? { photoShape: readPhotoShape() }
         : {}),
+      // 1.50.368 / worker 1.14.51 — bridge mode forwards the EFFECTIVE
+      // medallion diameter (slider px × the native 1.3 bridge scale, same
+      // formula as the preview) so the export straddle matches on-screen.
+      ...((() => {
+        try {
+          if (readPhotoPosition() !== 'band-overlap') return {};
+          let raw = localStorage.getItem('photoSize');
+          let n = Number(typeof raw === 'string' ? raw.replace(/["']/g, '') : raw);
+          if (!Number.isFinite(n) || n < 60 || n > 220) n = 120;
+          return { photoSizePx: Math.min(220, Math.round(1.3 * n)) };
+        } catch (_) { return {}; }
+      })()),
     },
     meta: {
       subtitle,

@@ -14365,7 +14365,14 @@
         [Go, Yo] = e(null),
         [Jo, Ko] = e(!1),
         [qo, Xo] = e(11),
-        [Zo, Qo] = e(120),
+        [Zo, Qo] = e(() => {
+          // restore a user-chosen diameter; fall back to the legacy 120
+          try {
+            const v = Number(u.get("photoSize", null));
+            if (Number.isFinite(v) && v >= 60 && v <= 220) return v;
+          } catch (_) {}
+          return 120;
+        }),
         [er, tr] = e(() => u.get("photoPosition", "sidebar-top")),
         // PHOTO-SIDEBAR-BRIDGE-001 (1.50.367): live setter for sidecars. The
         // "◐ Sidebar bridge" button (antcv-photo-bridge-button.js) used to
@@ -15955,6 +15962,15 @@
       }, [io.subtitle, Yr.specialisation]),
         a(() => {
           if (!ci.current || "cv" !== Lt) return;
+          // PHOTO-SIZE-SLIDER-STUCK-001 (owner 2026-06-11): this auto-sizer
+          // recomputed the diameter from the layout on EVERY render, so the
+          // Diameter slider snapped straight back ("the picture size roller
+          // is stuck"). A user-set photoSize now wins, and bridge mode has
+          // its own native sizing — skip in both cases.
+          try {
+            if (null != u.get("photoSize", null)) return;
+          } catch (_) {}
+          if ("band-overlap" === er) return;
           const e = Array.from(ci.current.querySelectorAll("[data-sid]"));
           let t = 8;
           for (const n of e) {
@@ -38706,6 +38722,13 @@
         const e = `${("undefined" != typeof SC && SC.mainHeadFont) || "Trebuchet MS"},Arial,'Noto Sans CJK SC','Microsoft YaHei','PingFang SC','Hiragino Sans GB',SimSun,sans-serif`,
           t = `${("undefined" != typeof SC && SC.mainBodyFont) || "Calibri"},Arial,'Noto Sans CJK SC','Microsoft YaHei','PingFang SC','Hiragino Sans GB',SimSun,sans-serif`,
           n = "da" === je,
+          // PHOTO-SIDEBAR-BRIDGE-001 round 2 (owner 2026-06-11): bridge mode
+          // is natively LARGER (slider ×1.3, capped) and the medallion keeps
+          // an EQUAL gap above (to the page top) and below (to the first
+          // sidebar headline) — G is that gap.
+          __bridgeOn = "band-overlap" === er && !!zn && "cv" === Lt,
+          __zoEff = __bridgeOn ? Math.min(220, Math.round(1.3 * Zo)) : Zo,
+          __bridgeGap = 14,
           o = (e, t, n) => {
             if (0 === t.length) return n;
             const r = t[0],
@@ -38862,11 +38885,21 @@
                           style: {
                             fontFamily: e,
                             color: "#fff",
-                            fontSize: (Yr.contactSize || 10) * (96 / 72),
+                            // Bridge round 2 (owner): the contact line stays
+                            // ONE line — slightly smaller font + nowrap (the
+                            // band text also gains ~28px from the leftward
+                            // flow over the seam).
+                            fontSize:
+                              (Yr.contactSize || 10) *
+                              (96 / 72) *
+                              (__bridgeOn ? 0.88 : 1),
                             lineHeight: 1.2,
                             margin: "3px 0",
                             textAlign: y("contact"),
-                            whiteSpace: "normal",
+                            whiteSpace: __bridgeOn ? "nowrap" : "normal",
+                            ...(__bridgeOn
+                              ? { overflow: "hidden", textOverflow: "ellipsis" }
+                              : {}),
                           },
                         },
                         m,
@@ -38886,17 +38919,27 @@
             ? React.createElement(
                 "div",
                 {
+                  "data-antcv-candidate-band": "1",
                   style: {
                     background: Ke,
                     padding: "14px 16px 10px",
                     textAlign: "center",
                     // PHOTO-SIDEBAR-BRIDGE-001: in bridge mode the candidate
-                    // header is SPLIT — the left cell (sidebar-width) is the
-                    // photo zone, and the name/spec/contact live in the right
-                    // cell. The medallion itself renders from the sidebar and
-                    // straddles up over this band (see the photo wrapper).
-                    ...(er === "band-overlap" && zn && "cv" === Lt
-                      ? { paddingLeft: `${Math.round(100 * ta)}%` }
+                    // header is SPLIT — the left cell is the photo zone, the
+                    // name/spec/contact live in the right cell. Round 2: the
+                    // text flows ~28px back over the seam (owner: "start a
+                    // bit more leftwards"), and the band's min-height pins
+                    // the gap above the medallion to __bridgeGap so it equals
+                    // the gap below (content vertically centred).
+                    ...(__bridgeOn
+                      ? {
+                          paddingLeft: `calc(${Math.round(100 * ta)}% - 28px)`,
+                          minHeight:
+                            Math.round(__zoEff / 2) + __bridgeGap - 24,
+                          display: "flex",
+                          flexDirection: "column",
+                          justifyContent: "center",
+                        }
                       : {}),
                   },
                 },
@@ -39200,6 +39243,33 @@
                             React.createElement(
                               "div",
                               {
+                                // Equal-air rule (owner round 2): at commit,
+                                // measure the band and set the gap BELOW the
+                                // medallion equal to the gap ABOVE it
+                                // (bandHeight − size/2), whatever the band's
+                                // content height turns out to be.
+                                ref: (el) => {
+                                  if (!el || "band-overlap" !== er) return;
+                                  try {
+                                    const p = el.closest(
+                                        ".antcv-preview-paper",
+                                      ),
+                                      band =
+                                        p &&
+                                        p.querySelector(
+                                          '[data-antcv-candidate-band="1"]',
+                                        );
+                                    if (!band) return;
+                                    const g = Math.max(
+                                      6,
+                                      Math.round(
+                                        band.getBoundingClientRect().height -
+                                          __zoEff / 2,
+                                      ),
+                                    );
+                                    el.style.marginBottom = g + "px";
+                                  } catch (_) {}
+                                },
                                 style: {
                                   textAlign: "center",
                                   marginBottom: 8,
@@ -39207,12 +39277,17 @@
                                   // hoists the medallion so its MIDLINE sits
                                   // on the header/sidebar seam — top half on
                                   // the navy band, bottom half on the
-                                  // brighter bridge sidebar. −(Zo/2 + 8)
-                                  // cancels the sidebar's 8px padding and
-                                  // lifts half the photo above the seam.
+                                  // brighter bridge sidebar. −(size/2 + 8)
+                                  // cancels the sidebar's 8px padding; the
+                                  // bottom margin is the same __bridgeGap the
+                                  // band reserves above, so the medallion
+                                  // floats with EQUAL air on both sides.
                                   ...(er === "band-overlap"
                                     ? {
-                                        marginTop: -(Math.round(Zo / 2) + 8),
+                                        marginTop: -(
+                                          Math.round(__zoEff / 2) + 8
+                                        ),
+                                        marginBottom: __bridgeGap,
                                         position: "relative",
                                         zIndex: 3,
                                       }
@@ -39222,8 +39297,8 @@
                               React.createElement("img", {
                                 src: zn,
                                 style: {
-                                  width: Zo,
-                                  height: Zo,
+                                  width: __zoEff,
+                                  height: __zoEff,
                                   borderRadius: (() => {
                                     try {
                                       const e = (

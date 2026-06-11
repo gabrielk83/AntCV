@@ -24608,7 +24608,31 @@ function buildTwoColumnDocument(ctx) {
     height: { value: withHeader ? PAGE1_BODY_MIN : CONT_BODY_MIN, rule: "atLeast" },
     children: sidebarOnRight ? [makeMainCell(mnEls), makeSidebarCell(sbEls)] : [makeSidebarCell(sbEls), makeMainCell(mnEls)]
   });
-  const headerRow = new TableRow({
+  // PHOTO-SIDEBAR-BRIDGE-001 (1.14.51): in bridge mode the candidate header
+  // is SPLIT on the page grid — the left cell (sidebar width) is the photo
+  // zone the floating medallion rises into, the right cell carries the text.
+  // The text cell's small left margin (120 DXA = 8px) lets the candidate
+  // block start near the seam (the preview's leftward flow).
+  const bridgeOn = normalisePhotoPosition(ctx.pi && ctx.pi.photoPosition) === "band-overlap" && !!(ctx.pi && ctx.pi.photo_b64);
+  const headerRow = bridgeOn ? new TableRow({
+    children: [
+      new TableCell({
+        width: { size: ctx.sidebarW, type: WidthType.DXA },
+        shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
+        borders: noBorders(),
+        margins: { top: 240, bottom: 80, left: 80, right: 80 },
+        children: [emptyParagraph()]
+      }),
+      new TableCell({
+        width: { size: PAGE_W - ctx.sidebarW, type: WidthType.DXA },
+        shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
+        borders: noBorders(),
+        margins: { top: 240, bottom: 80, left: 120, right: 360 },
+        verticalAlign: VerticalAlign.CENTER,
+        children: headerCell
+      })
+    ]
+  }) : new TableRow({
     children: [
       new TableCell({
         columnSpan: 2,
@@ -24971,7 +24995,10 @@ function buildHeaderCell(ctx) {
         new TextRun({
           text: contactBits.join("   \u2022   "),
           color: style.headerContactColor,
-          size: pt2hp(fs.contactSize),
+          // 1.14.51 bridge: the text cell is narrower (sidebar zone split
+          // off) \u2014 shrink the contact line ~12% so it stays on ONE line,
+          // matching the preview's bridge treatment.
+          size: pt2hp(normalisePhotoPosition(pi.photoPosition) === "band-overlap" && pi.photo_b64 ? fs.contactSize * 0.88 : fs.contactSize),
           font: style.headerFont
         })
       ]
@@ -25014,10 +25041,46 @@ function buildPhotoParagraph(ctx, position) {
   if (pos === "main-left" || pos === "main-right") inches = 1.2;
   const sizePx = Math.round(inches * EMU_PER_INCH / 9525);
   const outlineColor = (style && style.photoBorderColor || style && style.sidebarHeadColor || style && style.accent || "01B7BB").replace(/^#/, "");
-  if (pos === "sidebar-top" || pos === "sidebar-bottom" || pos === "band-overlap") {
+  if (pos === "band-overlap") {
+    // PHOTO-SIDEBAR-BRIDGE-001 (1.14.51): the medallion STRADDLES the seam
+    // between the candidate band and the sidebar — same model as the preview.
+    // A FLOATING image anchored on the sidebar's first paragraph, lifted by
+    // half its diameter (+ the sidebar cell's 16px top margin) so its midline
+    // sits on the row boundary; the anchor paragraph reserves the bottom half
+    // plus a 14px gap in the flow so the first sidebar section clears it.
+    const fwdPx = Number(pi.photoSizePx);
+    const px = Number.isFinite(fwdPx) && fwdPx >= 40 && fwdPx <= 260 ? Math.round(fwdPx) : 156;
+    const offsetEmu = -Math.round((px / 2 + 16) * 9525);
     return new Paragraph({
       alignment: AlignmentType.CENTER,
-      spacing: { before: pos === "band-overlap" ? 0 : 120, after: 120 },
+      spacing: { before: 0, after: Math.round((px / 2 + 14) * 15) },
+      children: [
+        new ImageRun({
+          data,
+          type: detectImageType(pi.photo_b64),
+          transformation: { width: px, height: px },
+          outline: { width: 12700, solidFillType: "rgb", value: outlineColor },
+          floating: {
+            horizontalPosition: { relative: HorizontalPositionRelativeFrom.COLUMN, align: "center" },
+            verticalPosition: { relative: VerticalPositionRelativeFrom.PARAGRAPH, offset: offsetEmu },
+            wrap: { type: TextWrappingType.NONE },
+            behindDocument: false,
+            allowOverlap: true,
+            zIndex: 10
+          },
+          altText: {
+            title: "Profile photo",
+            description: pi.name ? "Profile photo of " + pi.name : "Profile photo",
+            name: "profile-photo"
+          }
+        })
+      ]
+    });
+  }
+  if (pos === "sidebar-top" || pos === "sidebar-bottom") {
+    return new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 120, after: 120 },
       children: [
         new ImageRun({
           data,
@@ -26680,7 +26743,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.50-table-wrap-parity";
+var VERSION = "1.14.51-photo-bridge";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

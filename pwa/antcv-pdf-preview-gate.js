@@ -44,7 +44,7 @@
   'use strict';
 
   if (window.__antcvPdfPreviewGateInstalled) return;
-  window.__antcvPdfPreviewGateInstalled = '1.50.145-fitwidth';
+  window.__antcvPdfPreviewGateInstalled = '1.50.374-page2-print';
 
   const FAB_ID = 'antcv-pdf-preview-fab';
   const MODAL_ID = 'antcv-pdf-preview-modal';
@@ -235,6 +235,21 @@
     return Array.from(document.querySelectorAll('.antcv-preview-paper'));
   }
 
+  // 1.50.374 EXPORT-PAGE2-001 — the PWA preview paginates NATIVELY now: ONE
+  // .antcv-preview-paper holding one .antcv-page-row PER A4 page. The page
+  // count is the page-row count (falling back to the paper count for the
+  // legacy single-box render).
+  function countPages(papers) {
+    var rows = 0;
+    for (var i = 0; i < papers.length; i++) {
+      try { rows += papers[i].querySelectorAll('.antcv-page-row').length; } catch (_) {}
+    }
+    return Math.max(papers.length, rows, 1);
+  }
+  function pagesTitle(n) {
+    return n > 1 ? 'Document export · ' + n + ' pages' : 'Document export';
+  }
+
   // ─── Build the modal ─────────────────────────────────────────────
   function buildModal({ errorText }) {
     injectStylesOnce();
@@ -260,12 +275,10 @@
     title.id = MODAL_ID + '-title';
     // v1.50.32 — page count in the title so the user sees at a glance
     // whether the preview captured all pages of their CV.
+    // 1.50.374 — count NATIVE page-rows, not papers (one paper now holds
+    // every page; the old count stuck at "1" for multi-page CVs).
     const previewPapers = findAllActivePapers();
-    if (previewPapers.length > 1) {
-      title.textContent = 'Document export · ' + previewPapers.length + ' pages';
-    } else {
-      title.textContent = 'Document export';
-    }
+    title.textContent = pagesTitle(countPages(previewPapers));
     // CV/CL toggle (1.50.229) — pill switch in the export-preview header so the
     // user can flip between CV and Cover Letter without closing the modal,
     // switching the live preview, and re-opening. Mirrors the editor's CV/CL
@@ -382,7 +395,12 @@
       //     the existing page-break sidecars so multi-page CVs split
       //     cleanly at the intended boundaries instead of mid-section.
       const paperHtml = papers.map(p => p.outerHTML).join('\n');
-      const pageCount = papers.length;
+      const pageCount = countPages(papers);
+      // 1.50.374 EXPORT-PAGE2-001: when the clone carries native page-rows,
+      // each row IS a full A4 sheet (its own padding included) — the print
+      // sheet must have NO extra margin or every row spills a sliver onto a
+      // blank page. The legacy single-box render keeps the 10mm margin.
+      const hasPageRows = papers.some(p => { try { return !!p.querySelector('.antcv-page-row'); } catch (_) { return false; } });
       const srcdoc = `<!doctype html>
 <html lang="en">
 <head>
@@ -415,9 +433,16 @@ ${inlineStyles}
   }
 
   /* Print pagination. */
-  @page { size: A4; margin: 10mm; }
+  @page { size: A4; margin: ${hasPageRows ? '0' : '10mm'}; }
   @media print {
     html, body { background: #fff; margin: 0; padding: 0; }
+    /* 1.50.374 EXPORT-PAGE2-001: the preview paginates NATIVELY into
+       .antcv-page-row boxes (one per A4 page). None of the legacy marker
+       attributes below exist on them, so the print engine re-paginated the
+       tall paper arbitrarily (mid-section cuts — "breaks not applied").
+       Each page-row starts its own sheet and is clamped to one sheet. */
+    .antcv-page-row + .antcv-page-row { page-break-before: always; break-before: page; }
+    .antcv-page-row { max-height: 297mm; overflow: hidden; page-break-inside: avoid; break-inside: avoid; }
     .antcv-preview-paper {
       box-shadow: none !important;
       margin: 0 !important;
@@ -466,6 +491,50 @@ ${inlineStyles}
       iframe.srcdoc = srcdoc;
       wrap.appendChild(iframe);
 
+      // 1.50.374 EXPORT-PREVIEW-FEATURES-001(c) — page selector. Numbered
+      // chips under the header jump the iframe to that page-row. Rebuilt
+      // whenever the iframe content changes (CV<->CL toggle).
+      var pager = document.createElement('div');
+      pager.id = MODAL_ID + '-pager';
+      pager.setAttribute('role', 'navigation');
+      pager.setAttribute('aria-label', 'Preview page selector');
+      pager.style.cssText = [
+        'display:none', 'gap:6px', 'padding:8px 16px 0 16px',
+        'background:#e8eef3', 'flex-wrap:wrap', 'align-items:center',
+      ].join(';');
+      function renderPager(count) {
+        pager.innerHTML = '';
+        if (!(count > 1)) { pager.style.display = 'none'; return; }
+        pager.style.display = 'flex';
+        var lab = document.createElement('span');
+        lab.textContent = 'Page:';
+        lab.style.cssText = 'font-size:12px;color:#445;font-weight:650';
+        pager.appendChild(lab);
+        for (var n = 1; n <= count; n++) {
+          (function (pn) {
+            var chip = document.createElement('button');
+            chip.type = 'button';
+            chip.textContent = String(pn);
+            chip.setAttribute('aria-label', 'Scroll to page ' + pn);
+            chip.style.cssText = [
+              'min-width:28px', 'height:26px', 'border-radius:6px',
+              'border:1px solid rgba(40,53,86,.35)', 'background:#fff',
+              'color:#283556', 'font-size:12px', 'font-weight:700', 'cursor:pointer',
+            ].join(';');
+            chip.addEventListener('click', function () {
+              try {
+                var d = iframe.contentDocument;
+                if (!d) return;
+                var rows = d.querySelectorAll('.antcv-page-row');
+                var target = rows.length ? rows[pn - 1] : d.querySelectorAll('.antcv-preview-paper')[pn - 1];
+                if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              } catch (_) {}
+            });
+            pager.appendChild(chip);
+          })(n);
+        }
+      }
+
       // Hook the doc-toggle to rebuild the iframe in place after the live
       // preview switches CV<->CL.
       function rebuildIframeFromLive() {
@@ -473,9 +542,9 @@ ${inlineStyles}
           var nextPapers = findAllActivePapers();
           if (!nextPapers || !nextPapers.length) return;
           var nextPaperHtml = nextPapers.map(function (p) { return p.outerHTML; }).join('\n');
-          var nextPageCount = nextPapers.length;
-          if (nextPageCount > 1) title.textContent = 'Document export · ' + nextPageCount + ' pages';
-          else title.textContent = 'Document export';
+          var nextPageCount = countPages(nextPapers);
+          title.textContent = pagesTitle(nextPageCount);
+          renderPager(nextPageCount);
           var nextSrcdoc = srcdoc.replace(
             /<body([^>]*)>[\s\S]*<\/body>/,
             '<body data-antcv-pages="' + nextPageCount + '">' + nextPaperHtml + '</body>'
@@ -485,6 +554,8 @@ ${inlineStyles}
           try { console.warn('[pdf-preview-gate] rebuild failed:', e && e.message); } catch (_) {}
         }
       }
+      renderPager(pageCount);
+      modal._antcvPager = pager;
       docToggle.addEventListener('click', function () {
         var next = currentDoc === 'cv' ? 'cl' : 'cv';
         paintDocToggle(next);
@@ -601,6 +672,7 @@ ${inlineStyles}
     // Assemble
     modal.appendChild(header);
     modal.appendChild(banner);
+    if (modal._antcvPager) modal.appendChild(modal._antcvPager);
     modal.appendChild(wrap);
     modal.appendChild(actions);
     backdrop.appendChild(modal);
@@ -849,7 +921,7 @@ ${inlineStyles}
 
   // Public API for diagnostics / power-users.
   window.AntcvPdfPreviewGate = {
-    version: '1.50.145-fitwidth',
+    version: '1.50.374-page2-print',
     open: openModal,
     close: closeModal,
   };

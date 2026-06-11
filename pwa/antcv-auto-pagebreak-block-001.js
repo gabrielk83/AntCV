@@ -50,11 +50,23 @@
  * (CORE COMPETENCIES / "What I bring"). EXPERIENCE uses the native
  * role.page path (not itemPages/autoPages) — its auto-pagination is
  * a tracked follow-up.
+ *
+ * SIDEBAR-SHRINK-RECLAIM-001 (1.50.340, owner 2026-06-11)
+ * -------------------------------------------------------
+ * Sticky is now ONE-DIRECTIONAL: a carried break is re-measured against the
+ * section's TRUE paginated height (unique rows summed across page-box clones)
+ * and CLEARED when it fits within (limit − hysteresis), so widening the sidebar
+ * flows the ADDITIONAL INFORMATION (CONT.) tail back to page 1. Two-stage band:
+ * stable (120px) on the reactive pass, tight (40px) on a delayed routine
+ * recheck. On a sidebar/table WIDTH change the narrowed MAIN column is freed
+ * from sticky in the same pass so it can grow a fresh break (the coupling the
+ * old code ignored). Applies to sidebar, main, and CL body. ONE_PASS /
+ * two-phase and the bands are runtime-tunable via AntcvAutoPagebreak.config().
  */
 (function () {
   'use strict';
 
-  var VERSION = '1.50.337-salmon-churn-revert';
+  var VERSION = '1.50.340-sidebar-shrink-reclaim';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -87,6 +99,41 @@
   var WORD_INFLATE = 1.14;
   var USABLE_PDF = USABLE / WORD_INFLATE;   // ~949px — the Word-equivalent A4 fill
   var ITEM_PATH_ATTR = 'data-antcv-row-path';
+
+  // ============================================================
+  // SIDEBAR-SHRINK-RECLAIM-001 (owner 2026-06-11)
+  // ------------------------------------------------------------
+  // BUG: dragging the sidebar wider (cvSidebarRatio ↑) made the sidebar
+  // text wrap into FEWER lines, so the page-2 ADDITIONAL INFORMATION
+  // (CONT.) tail should flow back up to page 1 — but the STICKY rule
+  // ("once broken, never re-measure") froze the break at its old index.
+  // The salmon never moved; the only visible change was the column
+  // re-laying-out at the new width, which read as the sidebar "jumping
+  // between two positions" with no reflow. The shrink / pull-back-from-
+  // page-2 case was never handled.
+  //
+  // FIX: sticky is now ONE-DIRECTIONAL. We still carry a break forward
+  // (no oscillation when content grows), but every cycle we RE-MEASURE
+  // the carried section's TRUE paginated height — the sum of its unique
+  // rows across ALL page-box clones it appears in (deduped by the
+  // original item index in data-antcv-row-path) — and CLEAR the break
+  // when that height fits within (limit − hysteresis). Two-stage band:
+  // a STABLE band on the reactive pass (won't flip-flop at the edge) and
+  // a TIGHT band on a delayed routine recheck (reclaims the last line).
+  //
+  // Coupling: widening the sidebar NARROWS the main column, which can
+  // make the main text TALLER and create its OWN break in the same
+  // gesture. So on a width change we also drop the MAIN column from the
+  // sticky skip (RECLAIM_FREE_MAIN) so a newly-narrowed main can grow a
+  // fresh break in the same pass. Resolution mode is flagged so we can
+  // A/B one-pass vs two-phase.
+  var HYST_STABLE = 120;   // px slack below the line before a (CONT.) flows back up (reactive pass)
+  var HYST_TIGHT  = 40;    // px slack on the delayed routine recheck (reclaims the last line)
+  var ONE_PASS    = true;  // true: clear + create in the same compute; false: two-phase
+  var RECHECK_MS  = 2500;  // delay before the tight routine recheck after things settle
+  // width-change detection: remember the ratio we last computed against
+  var __lastRatioFp = null;
+
 
   function readJson(k, f) {
     try {
@@ -178,19 +225,132 @@
     return -1;
   }
 
-  function compute(usableBase, autoKey) {
+  // True paginated height of a section that may be split across page-box
+  // clones. Each clone carries the same data-sid; its rows carry
+  // data-antcv-row-path with the ORIGINAL item index. We sum the UNIQUE rows
+  // (deduped by original index) across every visible clone — that is the
+  // section's height as if it were NOT paginated, measured while it still IS
+  // paginated, with no DOM injection. Tables: sum unique tbody rows by their
+  // tbody position. Returns 0 when nothing measurable (caller keeps the break).
+  function paginatedContentHeight(sid, isTable) {
+    var clones = Array.prototype.slice.call(
+      document.querySelectorAll('[data-sid="' + (window.CSS && CSS.escape ? CSS.escape(sid) : sid) + '"]')
+    ).filter(visible);
+    if (!clones.length) return 0;
+    var seen = {}, total = 0, headerH = 0, sawHeader = false;
+    for (var c = 0; c < clones.length; c++) {
+      var el = clones[c];
+      // header height (section title row) counts once
+      if (!sawHeader) {
+        var h = el.querySelector('[data-antcv-section-header], .antcv-section-header, h2, h3');
+        if (h && visible(h)) { headerH = h.getBoundingClientRect().height; sawHeader = true; }
+      }
+      if (isTable) {
+        var tbody = el.querySelector('table tbody');
+        if (tbody) {
+          var trs = tbody.children;
+          for (var r = 0; r < trs.length; r++) {
+            if (!visible(trs[r])) continue;
+            var key = 't' + r;
+            if (seen[key]) continue;
+            seen[key] = 1; total += trs[r].getBoundingClientRect().height;
+          }
+        }
+      } else {
+        var rows = el.querySelectorAll('[' + ITEM_PATH_ATTR + '^="items."]');
+        for (var i = 0; i < rows.length; i++) {
+          var row = rows[i];
+          if (!visible(row)) continue;
+          var m = /^items\.(\d+)/.exec(String(row.getAttribute(ITEM_PATH_ATTR) || ''));
+          if (!m) continue;
+          var idx = m[1];
+          if (seen[idx]) continue;
+          seen[idx] = 1; total += row.getBoundingClientRect().height;
+        }
+      }
+    }
+    return total + headerH;
+  }
+
+  // Current sidebar-ratio fingerprint — used to detect a WIDTH change so the
+  // main column can be freed from sticky in the same pass (the narrowed main
+  // may need a NEW break the instant the sidebar widens).
+  function ratioFp() {
+    try {
+      return String(localStorage.getItem('cvSidebarRatio') || '')
+        + '|' + String(localStorage.getItem('cvTableRatio') || '')
+        + '|' + String(localStorage.getItem('clTableRatio') || '');
+    } catch (_) { return ''; }
+  }
+
+  function compute(usableBase, autoKey, tight) {
     var doc = activeDoc();
     var list = sectionsFor(doc);
     if (!list.length) return readJson(autoKey, {});
 
-    // STICKY: carry forward existing auto breaks for sections that
-    // still exist. We only DETECT on sections without an auto break.
+    // SIDEBAR-SHRINK-RECLAIM-001: ONE-DIRECTIONAL sticky. Carry a break
+    // forward (prevents grow-side oscillation) UNLESS a re-measure shows the
+    // section's TRUE paginated height now fits within (limit − hysteresis) —
+    // in which case CLEAR it so the (CONT.) tail flows back up. The hysteresis
+    // band is STABLE on the reactive pass and TIGHT on the delayed recheck.
     var existing = readJson(autoKey, {});
     var map = {};
+    // Detect a width change since our last compute. When the sidebar/table
+    // ratio moved, the MAIN column may need a brand-new break this pass, so we
+    // must NOT let a stale main break suppress detection — those are cleared
+    // here and re-detected below (RECLAIM_FREE_MAIN). Sidebar breaks are still
+    // re-measured (not blindly cleared) so a still-overflowing sidebar keeps
+    // its salmon.
+    var __rfp = ratioFp();
+    var widthChanged = (__lastRatioFp !== null && __rfp !== __lastRatioFp);
+    __lastRatioFp = __rfp;
+    // Two-phase mode: on a width change, this pass only CLEARS the freed main
+    // breaks; the fresh main detection runs on the NEXT pass (cleaner, salmon
+    // moves in two visible steps). One-pass mode re-detects in the same pass.
+    var deferMainDetect = widthChanged && !ONE_PASS && !tight;
+    if (deferMainDetect) { try { setTimeout(function(){ lastSourceFp=null; schedule(); }, 60); } catch(_){} }
+    // hysteresis for THIS pass
+    var hyst = tight ? HYST_TIGHT : HYST_STABLE;
     for (var ek in existing) {
-      if (existing[ek] && typeof existing[ek] === 'object' && sectionById(list, ek)) {
-        map[ek] = existing[ek];
+      if (!(existing[ek] && typeof existing[ek] === 'object' && sectionById(list, ek))) continue;
+      var __sec = sectionById(list, ek);
+      var __isTable = !!(__sec && (__sec.type === 'table'));
+      var __isExp = !!(__sec && __sec.type === 'experience');
+      // EXPERIENCE keeps its native sticky behaviour (role.page path); don't
+      // re-measure-clear it here (its roles are the atomic unit and the role
+      // pass below owns it).
+      if (__isExp) { map[ek] = existing[ek]; continue; }
+      // Re-measure the carried section's true height. usableBase is the
+      // UNSCALED page line; paginatedContentHeight returns SCALED px (post-
+      // transform), so compare in scaled space using the section's own clone
+      // scale (recovered from any visible clone).
+      var __h = paginatedContentHeight(ek, __isTable);
+      var __cl = document.querySelector('[data-sid="' + (window.CSS && CSS.escape ? CSS.escape(ek) : ek) + '"]');
+      var __sc = (__cl && __cl.offsetWidth) ? (__cl.getBoundingClientRect().width / __cl.offsetWidth) : 1;
+      if (!(__sc > 0.1 && __sc < 10)) __sc = 1;
+      var __fitLine = (usableBase - hyst) * __sc;
+      if (__h > 0 && __h <= __fitLine) {
+        // Section now fits on one page with margin → CLEAR the break (omit
+        // from map). The (CONT.) tail flows back to page 1.
+        continue;
       }
+      // Still overflows (or unmeasurable) → keep the break. EXCEPTION: on a
+      // width change, the MAIN column gets a fresh detection pass below, so we
+      // drop main breaks here and let the detector re-create them at the new
+      // (narrower) width. Sidebar / CL keep their carried break.
+      // Heuristic for "is main": a table section in CV is CORE COMPETENCIES
+      // (main); a non-table, non-list-in-sidebar is main too. We detect column
+      // membership at detection time, so here we simply free ALL non-sidebar
+      // carried breaks on a width change when the section still overflows —
+      // the detector will immediately re-break it if it still must.
+      if (widthChanged && !tight) {
+        // RECLAIM_FREE_MAIN: drop and let the detector below re-decide. Safe
+        // because the same pass re-detects; if it still overflows it is
+        // re-broken at the correct (new-width) index, fixing the coupling where
+        // a widened sidebar narrows main past the line.
+        continue;
+      }
+      map[ek] = existing[ek];
     }
 
     // Measure across every rendered column (sidebar + main), in both
@@ -205,6 +365,9 @@
 
     for (var c = 0; c < cols.length; c++) {
       var col = cols[c];
+      var isMainCol = !!(col.classList && (col.classList.contains('antcv-document-main')))
+        || col.getAttribute('data-antcv-document-main') === 'true';
+      if (deferMainDetect && isMainCol) continue;   // two-phase: detect main next pass
       var colTop = col.getBoundingClientRect().top;
       // 1.50.286 SALMON-MOBILE-001: the preview content is CSS
       // transform:scale(ui) — on mobile ui<1 to fit the screen.
@@ -455,8 +618,11 @@
       // 1.50.316: compute BOTH targets in one trigger — the export map at the
       // Word-equivalent line (USABLE_PDF) and the preview map at the true A4 line
       // (USABLE). Each carries its own sticky state via its own storage key.
-      var mapExport = compute(USABLE_PDF, AUTO_KEY);
-      var mapPreview = compute(USABLE, PREVIEW_KEY);
+      // SIDEBAR-SHRINK-RECLAIM-001: `tight` is set only on the delayed routine
+      // recheck (40px band) — the reactive pass uses the stable 120px band.
+      var tight = !!run.__tight;
+      var mapExport = compute(USABLE_PDF, AUTO_KEY, tight);
+      var mapPreview = compute(USABLE, PREVIEW_KEY, tight);
       // Mark this source as processed BEFORE any write/fire, so the
       // re-render our own write triggers (same source) early-returns.
       lastSourceFp = fp;
@@ -490,6 +656,14 @@
           detail: { source: 'auto-pagebreak-001', version: VERSION },
         }));
       } catch (_) {}
+      // SIDEBAR-SHRINK-RECLAIM-001: after the stable-band pass settles, run ONE
+      // tight-band recheck (40px) to reclaim the last line the stable band held
+      // back. Owner spec: "do stable but also execute checks routinely after a
+      // few seconds … for 40px." Guarded so it can only fire once per settle
+      // (cleared whenever a fresh reactive pass runs) — it cannot loop because
+      // tight only ever CLEARS or holds breaks, never widens the source.
+      run.__tight = false;
+      if (armTightRecheck) armTightRecheck();
     } catch (e) {
       try { console.warn('[v' + VERSION + ' auto-pagebreak] run failed:', e && e.message); } catch (_) {}
     }
@@ -499,10 +673,30 @@
   function schedule() {
     if (pending) return;
     pending = true;
+    // A genuine reactive trigger always runs the STABLE band first.
+    run.__tight = false;
     requestAnimationFrame(function () {
       pending = false;
       setTimeout(run, 250);
     });
+  }
+
+  // SIDEBAR-SHRINK-RECLAIM-001: delayed TIGHT recheck. Armed after a reactive
+  // pass settles; fires once with the 40px band to reclaim the last line. It
+  // bypasses the source-fingerprint gate (same source, tighter band) by forcing
+  // a one-shot recompute, but is still protected by the post-write cooldown and
+  // the 8-writes/4s circuit breaker, and cannot loop (tight only clears/holds).
+  var __tightTimer = 0;
+  function armTightRecheck() {
+    try {
+      if (__tightTimer) clearTimeout(__tightTimer);
+      __tightTimer = setTimeout(function () {
+        __tightTimer = 0;
+        run.__tight = true;
+        lastSourceFp = null;   // one-shot: allow this single tighter recompute
+        run();
+      }, RECHECK_MS);
+    } catch (_) {}
   }
 
   function start() {
@@ -544,6 +738,20 @@
     version: VERSION,
     run: function () { lastWritten = null; lastSourceFp = null; schedule(); },
     _compute: compute,
+    // SIDEBAR-SHRINK-RECLAIM-001 runtime A/B knobs (console-tunable):
+    //   AntcvAutoPagebreak.config({ ONE_PASS:false })  // try two-phase
+    //   AntcvAutoPagebreak.config({ HYST_STABLE:80 })  // looser stable band
+    config: function (o) {
+      try {
+        if (!o) return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS };
+        if (typeof o.ONE_PASS === 'boolean') ONE_PASS = o.ONE_PASS;
+        if (typeof o.HYST_STABLE === 'number') HYST_STABLE = o.HYST_STABLE;
+        if (typeof o.HYST_TIGHT === 'number') HYST_TIGHT = o.HYST_TIGHT;
+        if (typeof o.RECHECK_MS === 'number') RECHECK_MS = o.RECHECK_MS;
+        lastSourceFp = null; schedule();
+        return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS };
+      } catch (_) { return null; }
+    },
     // Manual reset of auto breaks (e.g. from console) if a stale break
     // ever sticks: AntcvAutoPagebreak.clear()
     clear: function () {

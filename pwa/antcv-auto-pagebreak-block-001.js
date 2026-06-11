@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.350-exp-preview-gap';
+  var VERSION = '1.50.351-sidebar-snap-gap';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -107,6 +107,12 @@
   var WORD_INFLATE = 1.14;
   var USABLE_PDF = USABLE / WORD_INFLATE;   // ~949px — the Word-equivalent A4 fill
   var ITEM_PATH_ATTR = 'data-antcv-row-path';
+  // SIDEBAR-SNAP-GAP-001 (owner 2026-06-11): max page-1 space (UNSCALED px) a
+  // group-snap may waste before we abandon the snap and break at the raw overflow
+  // item to fill the page. ~90px ≈ a grouped sub-heading + 2 short rows; below
+  // that we keep the group whole, above it we fill to the A4 line. Console-tunable
+  // via AntcvAutoPagebreak.config({ SNAP_GAP_MAX: N }).
+  var SNAP_GAP_MAX = 90;
 
   // ============================================================
   // SIDEBAR-SHRINK-RECLAIM-001 (owner 2026-06-11)
@@ -462,6 +468,30 @@
             // mid-group cut at the line is correct here — the page-box height
             // stays bounded by A4 and the sidebar continues on page 2.
             if (br < 1) br = idx;
+            // SIDEBAR-SNAP-GAP-001 (owner 2026-06-11): snapping a list break UP
+            // to a group start keeps the group whole, but when the group start
+            // sits far above the A4 line it leaves a big DEAD GAP between the last
+            // page-1 item and the salmon (owner screenshot + diag: REGULATORY
+            // CONTEXT stub ended at ~933 on a 1051 line — 118px wasted — because
+            // the break snapped to the next sub-group start instead of filling to
+            // the line). The whole-group-tidiness is not worth >SNAP_GAP_MAX px of
+            // empty page. So: measure where the SNAPPED item actually sits; if the
+            // snap pulls the break more than SNAP_GAP_MAX above the line, fall back
+            // to the RAW overflow item (idx) and fill the page, accepting a
+            // mid-group cut — same trade-off the br<1 fallback above already makes,
+            // just extended from "no boundary exists" to "snapping wastes too much
+            // page." When the snap is close to the line (small gap), keep it (group
+            // stays whole). Threshold is generous (one short list row ≈ 26px, a
+            // grouped sub-heading + first row ≈ 60px) so we only override on a
+            // genuinely large waste, never on a 1-row tidy-up.
+            if (br >= 1 && br < idx) {
+              var __snapEl = secEl.querySelector('[' + ITEM_PATH_ATTR + '="items.' + br + '"]');
+              if (__snapEl && visible(__snapEl)) {
+                var __snapBottom = __snapEl.getBoundingClientRect().bottom - colTop;
+                // limit is the scaled A4 line; SNAP_GAP_MAX is unscaled px, scale it.
+                if ((limit - __snapBottom) > (SNAP_GAP_MAX * scale)) br = idx;
+              }
+            }
           }
         }
         if (br >= 1) { map[sid] = {}; map[sid][String(br)] = 2;
@@ -880,13 +910,14 @@
     //   AntcvAutoPagebreak.config({ HYST_STABLE:80 })  // looser stable band
     config: function (o) {
       try {
-        if (!o) return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS };
+        if (!o) return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX };
         if (typeof o.ONE_PASS === 'boolean') ONE_PASS = o.ONE_PASS;
         if (typeof o.HYST_STABLE === 'number') HYST_STABLE = o.HYST_STABLE;
         if (typeof o.HYST_TIGHT === 'number') HYST_TIGHT = o.HYST_TIGHT;
         if (typeof o.RECHECK_MS === 'number') RECHECK_MS = o.RECHECK_MS;
+        if (typeof o.SNAP_GAP_MAX === 'number') SNAP_GAP_MAX = o.SNAP_GAP_MAX;
         lastSourceFp = null; schedule();
-        return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS };
+        return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX };
       } catch (_) { return null; }
     },
     // Manual reset of auto breaks (e.g. from console) if a stale break

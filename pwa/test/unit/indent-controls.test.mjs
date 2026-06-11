@@ -43,3 +43,35 @@ test('main edge indent is configurable', () => {
   assert.equal(mainPadding({ mainEdgeIndent: 20 }), '8px 20px');
   assert.equal(mainPadding({ mainEdgeIndent: 4 }), '8px 4px');
 });
+
+// ─── Export parity (1.50.361 / worker 1.14.47) ──────────────────────
+// The sliders now drive the docx-worker too: buildPayload must forward
+// mainEdgeIndent + bulletIndent as NUMBERS in payload.style (the worker
+// converts px -> DXA at x15 and clamps 0..60).
+
+const store = new Map();
+globalThis.localStorage = {
+  getItem: (k) => (store.has(k) ? store.get(k) : null),
+  setItem: (k, v) => store.set(k, String(v)),
+  removeItem: (k) => store.delete(k),
+};
+const { buildPayload } = await import('../../antcv-docx-client.js');
+const payloadStyle = (styleConfig) => buildPayload({
+  sections: { cv: [{ id: 'profile', title: 'P', loc: 'main', on: true, type: 'text', content: 'x' }], cl: [] },
+  doc: 'cv', styleConfig,
+}).style;
+
+test('export payload forwards the indent sliders as numbers', () => {
+  const s = payloadStyle({ mainEdgeIndent: 20, bulletIndent: 24 });
+  assert.equal(s.mainEdgeIndent, 20);
+  assert.equal(s.bulletIndent, 24);
+});
+
+test('string slider values are coerced; out-of-range and absent are dropped', () => {
+  const s = payloadStyle({ mainEdgeIndent: '"18"', bulletIndent: 999 });
+  assert.equal(s.mainEdgeIndent, 18);
+  assert.equal(s.bulletIndent, undefined);
+  const d = payloadStyle({});
+  assert.equal(d.mainEdgeIndent, undefined);
+  assert.equal(d.bulletIndent, undefined);
+});

@@ -831,6 +831,18 @@ function buildStyle(styleConfig, navyColor) {
   // be color-only by convention).
   const sp = readSidebarPosition();
   if (sp === 'left' || sp === 'right') out.sidebarPosition = sp;
+  // 1.50.361 — indent-controls export parity (TIER B): the Advanced sliders'
+  // main-edge and bullet indents (px) now drive the worker too (>=1.14.47
+  // converts px -> DXA at x15). Numbers, not colors — special-cased like
+  // sidebarPosition so the color-only passthrough list stays color-only.
+  const numTok = (v) => {
+    const n = Number(typeof v === 'string' ? v.replace(/["']/g, '') : v);
+    return Number.isFinite(n) && n >= 0 && n <= 60 ? n : undefined;
+  };
+  const me = numTok(styleConfig.mainEdgeIndent);
+  if (me !== undefined) out.mainEdgeIndent = me;
+  const bi = numTok(styleConfig.bulletIndent);
+  if (bi !== undefined) out.bulletIndent = bi;
   // v1.50.139 — normalize every hex colour to a bare 6-digit value. The DOCX
   // worker's docx library rejects anything but 6 hex digits and returned a 500
   // ("Invalid hex value '"#283556"'"). The value arrives quoted AND #-prefixed

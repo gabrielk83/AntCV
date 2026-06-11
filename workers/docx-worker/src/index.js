@@ -24385,6 +24385,13 @@ function mergeStyle(input, packageId, legacyAtsTier) {
   }
   const s = { ...basePalette };
   for (const [k, v] of Object.entries(input || {})) {
+    // 1.14.47 — indent-controls export parity: numeric px tokens from the
+    // PWA's Advanced indent sliders. Clamped; converted to DXA at use sites.
+    if (k === "mainEdgeIndent" || k === "bulletIndent") {
+      const n = Number(v);
+      if (Number.isFinite(n) && n >= 0 && n <= 60) s[k] = n;
+      continue;
+    }
     if (typeof v === "string") {
       s[k] = PASSTHROUGH.has(k) ? v : hex(v);
     }
@@ -24393,6 +24400,13 @@ function mergeStyle(input, packageId, legacyAtsTier) {
 }
 __name(mergeStyle, "mergeStyle");
 function numberingConfig(style) {
+  // 1.14.47 \u2014 indent-controls export parity: the main bullet hang follows the
+  // PWA's bulletIndent slider (px -> DXA at x15; preview formula is
+  // paddingLeft=bulletIndent, textIndent=-bulletIndent, i.e. marker at the
+  // edge + text hanging at bulletIndent). Default 14px = 210 DXA, identical
+  // to the BULLET-EDGE-001 constant this replaces.
+  const biPx = Number(style && style.bulletIndent);
+  const bIndent = Number.isFinite(biPx) && biPx >= 0 && biPx <= 60 ? Math.round(biPx * 15) : 210;
   return {
     config: [
       {
@@ -24409,7 +24423,7 @@ function numberingConfig(style) {
               // edge (left === hanging \u2192 first-line marker at 0, aligned with
               // headings/other rows), text hanging a tight ~14px (210 DXA) to
               // the right. Was left 360 / hanging 200 (marker ~11px, text 24px).
-              paragraph: { indent: { left: 210, hanging: 210 } }
+              paragraph: { indent: { left: bIndent, hanging: bIndent } }
             }
           }
         ]
@@ -24565,10 +24579,16 @@ function buildTwoColumnDocument(ctx) {
     margins: { top: 240, bottom: 240, left: 120, right: 120 },
     children: els && els.length ? els : [emptyParagraph()]
   });
+  // 1.14.47 — indent-controls export parity: the main column's edge padding
+  // follows the PWA's mainEdgeIndent slider (px -> DXA at x15; preview pads
+  // the main column "8px <edge>px", default 10px = 150 DXA — the worker's old
+  // constant 144 was 9.6px, a 0.4px parity drift now removed).
+  const mePx = Number(style && style.mainEdgeIndent);
+  const mainEdge = Number.isFinite(mePx) && mePx >= 0 && mePx <= 60 ? Math.round(mePx * 15) : 150;
   const makeMainCell = (els) => new TableCell({
     width: { size: ctx.mainW, type: WidthType.DXA },
     borders: noBorders(),
-    margins: { top: 120, bottom: 240, left: 144, right: 144 },
+    margins: { top: 120, bottom: 240, left: mainEdge, right: mainEdge },
     children: els && els.length ? els : [emptyParagraph()]
   });
   // PB-WORKER-SIDEBAR-FILL-001 (owner-confirmed 2026-06-10: "navy fill stops
@@ -26645,7 +26665,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.46-bullet-edge";
+var VERSION = "1.14.47-indent-parity";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);
@@ -27158,7 +27178,9 @@ function getSchemaDoc() {
         "mainHeadFont",
         "mainBodyFont",
         "sidebarFont",
-        "headerFont"
+        "headerFont",
+        "mainEdgeIndent",
+        "bulletIndent"
       ]
     },
     font_sizes: {

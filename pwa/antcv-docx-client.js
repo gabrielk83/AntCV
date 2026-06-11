@@ -1346,6 +1346,36 @@ function buildFilename({ personalInfo, meta, doc, language }) {
 }
 
 function triggerDownload(blob, filename) {
+  // 1.50.380 EXPORT-PREVIEW-FEATURES-001(b) — choose the download location.
+  // Opt-in via localStorage 'antcv:askSaveLocation' = '1' (the export modal
+  // exposes the toggle): the File System Access save picker lets the user
+  // pick folder + name. Default stays the classic instant download; the
+  // picker also falls back to it on any error EXCEPT a user cancel (a
+  // cancelled save must not silently download anyway).
+  let ask = false;
+  try { ask = localStorage.getItem('antcv:askSaveLocation') === '1'; } catch (_) {}
+  if (ask && typeof window.showSaveFilePicker === 'function') {
+    const ext = (/\.[a-z0-9]+$/i.exec(filename) || ['.docx'])[0].toLowerCase();
+    const types = ext === '.pdf'
+      ? [{ description: 'PDF document', accept: { 'application/pdf': ['.pdf'] } }]
+      : [{ description: 'Word document', accept: { 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'] } }];
+    window.showSaveFilePicker({ suggestedName: filename, types })
+      .then(async (handle) => {
+        const w = await handle.createWritable();
+        await w.write(blob);
+        await w.close();
+      })
+      .catch((e) => {
+        if (e && e.name === 'AbortError') return; // user cancelled — done
+        try { console.warn('[docx-client] save picker failed, falling back:', e && e.message); } catch (_) {}
+        legacyDownload(blob, filename);
+      });
+    return;
+  }
+  legacyDownload(blob, filename);
+}
+
+function legacyDownload(blob, filename) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;

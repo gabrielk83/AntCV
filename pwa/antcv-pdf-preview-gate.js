@@ -689,6 +689,25 @@ ${inlineStyles}
       });
       actions.appendChild(analysisBtn);
     }
+    // 1.50.380 EXPORT-PREVIEW-FEATURES-001(b) — "Ask where to save". When ON,
+    // DOCX/PDF downloads go through the browser's save picker (folder + name)
+    // instead of the instant default-folder download. Chromium-only API; the
+    // toggle hides where unsupported.
+    if (typeof window.showSaveFilePicker === 'function') {
+      var saveLoc = document.createElement('label');
+      saveLoc.id = MODAL_ID + '-savewhere';
+      saveLoc.style.cssText = 'display:flex;align-items:center;gap:5px;margin-right:auto;font-size:11.5px;color:#445;cursor:pointer;';
+      var saveLocCb = document.createElement('input');
+      saveLocCb.type = 'checkbox';
+      saveLocCb.style.cursor = 'pointer';
+      try { saveLocCb.checked = localStorage.getItem('antcv:askSaveLocation') === '1'; } catch (_) {}
+      saveLocCb.addEventListener('change', function () {
+        try { localStorage.setItem('antcv:askSaveLocation', saveLocCb.checked ? '1' : '0'); } catch (_) {}
+      });
+      saveLoc.appendChild(saveLocCb);
+      saveLoc.appendChild(document.createTextNode('Ask where to save'));
+      actions.appendChild(saveLoc);
+    }
     actions.appendChild(cancel);
     actions.appendChild(docx);
     actions.appendChild(print);

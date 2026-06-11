@@ -4334,7 +4334,7 @@
                           style: {
                             fontFamily: T,
                             fontSize: $.bullet,
-                            paddingLeft: (k.bulletIndent || 24), textIndent: 10 - (k.bulletIndent || 24),
+                            paddingLeft: (k.bulletIndent || 24), textIndent: 3 - (k.bulletIndent || 24),
                             marginBottom: 3,
                             color: O,
                             textAlign: "justify",
@@ -4354,7 +4354,7 @@
                           style: {
                             fontFamily: T,
                             fontSize: $.bullet,
-                            paddingLeft: (k.bulletIndent || 24), textIndent: 10 - (k.bulletIndent || 24),
+                            paddingLeft: (k.bulletIndent || 24), textIndent: 3 - (k.bulletIndent || 24),
                             marginBottom: 3,
                             color: O,
                             lineHeight: I,
@@ -4371,7 +4371,7 @@
                         style: {
                           fontFamily: T,
                           fontSize: $.bullet,
-                          paddingLeft: (k.bulletIndent || 24), textIndent: 10 - (k.bulletIndent || 24),
+                          paddingLeft: (k.bulletIndent || 24), textIndent: 3 - (k.bulletIndent || 24),
                           marginBottom: 3,
                           color: O,
                           textAlign: "justify",
@@ -4495,7 +4495,7 @@
                 style: {
                   fontFamily: T,
                   fontSize: $.bullet,
-                  paddingLeft: (k.bulletIndent || 24), textIndent: 10 - (k.bulletIndent || 24),
+                  paddingLeft: (k.bulletIndent || 24), textIndent: 3 - (k.bulletIndent || 24),
                   marginBottom: 3,
                   color: O,
                   textAlign: "justify",
@@ -4952,7 +4952,7 @@
                               key: n,
                               style: {
                                 fontSize: $.bullet,
-                                paddingLeft: (k.bulletIndent || 24), textIndent: 10 - (k.bulletIndent || 24),
+                                paddingLeft: (k.bulletIndent || 24), textIndent: 3 - (k.bulletIndent || 24),
                                 marginBottom: 1,
                                 color: "#000",
                                 fontFamily: T,
@@ -5200,7 +5200,9 @@
                   { style: { color: S ? "#fff" : C } },
                   React.createElement(B, {
                     path: ["items", n, "deg"],
-                    value: L(t.deg),
+                    // The row is already bold — stray markdown markers
+                    // (**MBA**) from generation must not print literally.
+                    value: L(String(t.deg || "").replace(/\*\*/g, "")),
                     placeholder: "[Degree]",
                   }),
                 ),
@@ -5211,7 +5213,7 @@
                       " — ",
                       React.createElement(B, {
                         path: ["items", n, "sch"],
-                        value: P(t.sch || ""),
+                        value: P(String(t.sch || "").replace(/\*\*/g, "")),
                         placeholder: "[School]",
                       }),
                     )
@@ -21801,7 +21803,9 @@
                           /—|--/.test(t)) ||
                         /^FILL_[a-z_0-9]+_(here|HERE)/.test(t)
                         ? ""
-                        : e
+                        : // strip literal markdown bold markers (**MBA**) —
+                          // nothing downstream renders markdown.
+                          e.replace(/\*\*/g, "")
                       : "";
                   },
                   _scrubItem = (it) => {

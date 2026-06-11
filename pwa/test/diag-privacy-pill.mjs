@@ -77,6 +77,19 @@ await mpage.addInitScript((secs)=>{
 await mpage.goto(`http://127.0.0.1:${port}/index.html`,{waitUntil:'load',timeout:30000});
 await mpage.waitForTimeout(6000);
 const mobile=await mpage.evaluate(visibleCheck,SEL);
+// LED classification (owner 2026-06-11: PDF exports flipped the pill to
+// "Demo proxy"): document workers are NOT LLM traffic; unknown workers.dev
+// hosts still classify level 2.
+const classify=await mpage.evaluate(()=>{
+  const c=window.AntcvPrivacyLed&&window.AntcvPrivacyLed._classifyUrl;
+  if(!c)return null;
+  return{
+    docx:c('https://docx-worker.karp-gabriel-a.workers.dev/generate'),
+    c2pa:c('https://c2pa-worker.karp-gabriel-a.workers.dev/generate'),
+    demo:(c('https://antcv-demo-proxy.someone.workers.dev/api/generate')||{}).level??null,
+    anthropic:(c('https://api.anthropic.com/v1/messages')||{}).level??null,
+  };
+});
 await mpage.close();
 await browser.close();await new Promise(r2=>server.close(r2));
 console.log('phase1 mount:',JSON.stringify(phase1));
@@ -84,7 +97,9 @@ console.log('phase2 recreated after wipe:',phase2);
 console.log('phase3 recreated w/o overlay:',JSON.stringify(phase3));
 console.log('flicker probe missing ticks (of 30):',flicker);
 console.log('mobile (390px) mount:',JSON.stringify(mobile));
+console.log('LED classify (docx/c2pa null, demo 2, direct 3):',JSON.stringify(classify));
 console.log('app errors:',errs.length,errs.slice(0,2).join(' | '));
-const ok=phase1.present&&phase1.inTopTools&&phase1.visible&&phase2&&phase3.present&&phase3.inTopTools&&phase3.visible&&flicker===0&&mobile.present&&mobile.inTopTools&&mobile.visible&&errs.length===0;
+const classifyOk=!!classify&&classify.docx===null&&classify.c2pa===null&&classify.demo===2&&classify.anthropic===3;
+const ok=phase1.present&&phase1.inTopTools&&phase1.visible&&phase2&&phase3.present&&phase3.inTopTools&&phase3.visible&&flicker===0&&mobile.present&&mobile.inTopTools&&mobile.visible&&classifyOk&&errs.length===0;
 console.log(ok?'PRIVACY-PILL OK':'PRIVACY-PILL FAILED');
 process.exit(ok?0:1);

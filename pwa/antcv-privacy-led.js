@@ -65,7 +65,7 @@
 (function () {
   'use strict';
 
-  const SCRIPT_VERSION = '1.50.356-anchor-fallback';
+  const SCRIPT_VERSION = '1.50.364-doc-worker-exempt';
   const STORAGE_KEY = 'antcv:privacy:led';
   const FAB_MARKER = 'data-antcv-privacy-led-fab';
   const STYLE_ID = 'antcv-privacy-led-styles';
@@ -630,6 +630,23 @@
     return hosts.size ? hosts.values().next().value : null;
   }
 
+  // Document-rendering workers (DOCX/PDF export, C2PA signing) are NOT LLM
+  // traffic, but they live on *.workers.dev and their /generate path matches
+  // the LLM path allowlist — every export flipped the LED to amber
+  // "Demo proxy" (owner 2026-06-11: pill read "Demo proxy (3 calls)" after
+  // three PDF exports). Resolve the configured export/signing hosts and
+  // exclude them from classification entirely.
+  function readDocumentWorkerHosts() {
+    const hosts = new Set();
+    const push = (raw) => {
+      if (!raw || typeof raw !== 'string') return;
+      try { const h = new URL(raw).host.toLowerCase(); if (h) hosts.add(h); } catch (_) {}
+    };
+    try { push(window.ANTCV_DOCX_WORKER); } catch (_) {}
+    try { push(window.ANTCV_C2PA_WORKER); } catch (_) {}
+    return hosts;
+  }
+
   // Classify a URL into {level, provider} or null if not LLM-related.
   function classifyUrl(urlStr) {
     if (!urlStr) return null;
@@ -640,6 +657,14 @@
     // Direct LLM API call?
     if (THIRD_PARTY_HOSTS.indexOf(host) >= 0) {
       return { level: 3, provider: providerFromHost(host) };
+    }
+
+    // Document workers: rendering/signing, never an LLM call. Belt and
+    // braces: also match by the conventional worker-name prefix in case the
+    // globals aren't set yet at call time.
+    if (readDocumentWorkerHosts().has(host)
+        || /^(docx-worker|c2pa-worker)[.-]/.test(host)) {
+      return null;
     }
 
     // Match against every known own-proxy host. This covers the relay,

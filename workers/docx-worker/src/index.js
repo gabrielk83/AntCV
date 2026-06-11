@@ -24402,14 +24402,14 @@ __name(mergeStyle, "mergeStyle");
 function numberingConfig(style) {
   // 1.14.47 \u2014 indent-controls export parity: the main bullet hang follows the
   // PWA's bulletIndent slider (px -> DXA at x15). Default 14px = 210 DXA.
-  // 1.14.48 (owner 2026-06-11, export review): "bullets need to be a bit more
-  // to the right, text can stay where it is" \u2014 the BULLET-EDGE marker-at-0
-  // looked flush against the column edge in the PDF. The marker now gets a
-  // 90 DXA (6px) first-line offset (hanging = left - 90, floor 60 so the
-  // marker never collides with the text), while the text hang is unchanged.
+  // 1.14.48 moved the marker off the column edge to 6px; 1.14.49 (owner
+  // round 2: "6px was a bit too much \u2014 place markers at 3px, also for the
+  // cover letter"): marker first-line at 45 DXA (3px), text hang unchanged
+  // (hanging = left - 45, floor 60 so the marker never collides with text).
+  // The preview mirrors this exactly (textIndent: 3 - bulletIndent).
   const biPx = Number(style && style.bulletIndent);
   const bIndent = Number.isFinite(biPx) && biPx >= 0 && biPx <= 60 ? Math.round(biPx * 15) : 210;
-  const bHang = Math.max(60, bIndent - 90);
+  const bHang = Math.max(60, bIndent - 45);
   return {
     config: [
       {
@@ -24422,9 +24422,8 @@ function numberingConfig(style) {
             alignment: AlignmentType.LEFT,
             style: {
               run: { color: style.mainBulletColor },
-              // 1.14.48: marker at 6px (left - hanging = 90 DXA), text at
-              // bulletIndent (default 14px / 210 DXA). Supersedes the
-              // BULLET-EDGE-001 marker-at-0 the owner reviewed as too flush.
+              // 1.14.49: marker at 3px (left - hanging = 45 DXA), text at
+              // bulletIndent (default 14px / 210 DXA).
               paragraph: { indent: { left: bIndent, hanging: bHang } }
             }
           }
@@ -24440,8 +24439,8 @@ function numberingConfig(style) {
             alignment: AlignmentType.LEFT,
             style: {
               run: { color: style.sidebarHeadColor },
-              // 1.14.48: same 6px marker offset in the sidebar (was at-edge).
-              paragraph: { indent: { left: 210, hanging: 120 } }
+              // 1.14.49: same 3px marker offset in the sidebar.
+              paragraph: { indent: { left: 210, hanging: 165 } }
             }
           }
         ]
@@ -26220,8 +26219,11 @@ function renderEducation(s, ctx, isSidebar) {
       sch = deg.substring(nl + 1).trim();
       deg = deg.substring(0, nl).trim();
     }
-    deg = deg.replace(/\s*\n\s*/g, " ").trim();
-    sch = sch.replace(/\s*\n\s*/g, " ").trim();
+    // 1.14.49: the generation prompt says "degree label in bold", which some
+    // models emit as literal markdown (**MBA**). The run is already bold —
+    // strip stray markers instead of printing them.
+    deg = deg.replace(/\s*\n\s*/g, " ").replace(/\*\*/g, "").trim();
+    sch = sch.replace(/\s*\n\s*/g, " ").replace(/\*\*/g, "").trim();
     if (!deg && !sch) return;
     const runs = [];
     if (deg) {
@@ -26667,7 +26669,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.48-bullet-marker-offset";
+var VERSION = "1.14.49-marker-3px";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

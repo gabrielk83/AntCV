@@ -142,6 +142,14 @@
       -webkit-user-select: none !important;
     }
 
+    /* PHOTO-POSITIONS-NATIVE-001 round 2: with a main-column photo each
+       section forms its own block-formatting context, so heading rules STOP
+       before the floated medallion and the text edge is uniform beside it
+       (no crescent) — the same side-by-side look as the export. */
+    .antcv-document-main[data-antcv-main-photo] [data-sid] {
+      display: flow-root;
+    }
+
     body.antcv-banner-active {
       padding-top: 52px !important;
     }
@@ -299,7 +307,7 @@
         auth.src = 'antcv-auth.js?v=1.50.312-auth-msg';
         auth.onload = function(){
           var app = document.createElement('script');
-          app.src = 'app.js?v=1.50.370-photo-positions';
+          app.src = 'app.js?v=1.50.371-positions-r2';
           app.onload = function(){
             var vo = document.createElement('script');
             vo.src = 'antcv-version-override.js?v=1.50.41';

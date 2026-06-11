@@ -66,14 +66,50 @@ async function probe(pos){
       case 'band-overlap':return{pos,ok:inSb&&Math.abs(r.top+r.height/2-seam)<=4};
       case 'header-left':return{pos,ok:inBand&&leftHalf};
       case 'header-right':return{pos,ok:inBand&&!leftHalf};
-      case 'main-left':return{pos,ok:inMain&&((r.left+r.width/2)<(main.getBoundingClientRect().left+main.getBoundingClientRect().width/2))};
-      case 'main-right':return{pos,ok:inMain&&((r.left+r.width/2)>=(main.getBoundingClientRect().left+main.getBoundingClientRect().width/2))};
+      case 'main-left':case 'main-right':{
+        const mr=main.getBoundingClientRect();
+        const sideOk='main-left'===pos
+          ?(r.left+r.width/2)<(mr.left+mr.width/2)
+          :(r.left+r.width/2)>=(mr.left+mr.width/2);
+        // round 2: sections are flow-roots beside the photo — the FIRST
+        // section block must NOT extend under the figure (its rect must not
+        // overlap the photo horizontally), so heading rules stop before it
+        // and there is no text crescent.
+        const firstSec=main.querySelector('[data-sid]');
+        let bfcOk=false;
+        if(firstSec){
+          const fr=firstSec.getBoundingClientRect();
+          bfcOk='main-left'===pos?fr.left>=r.right-2:fr.right<=r.left+2;
+        }
+        return{pos,ok:inMain&&sideOk&&bfcOk,bfcOk};
+      }
+      case 'main-left-bottom':case 'main-right-bottom':{
+        const mr=main.getBoundingClientRect();
+        const sideOk='main-left-bottom'===pos
+          ?(r.left+r.width/2)<(mr.left+mr.width/2)
+          :(r.left+r.width/2)>=(mr.left+mr.width/2);
+        // below the last section block
+        const secs=Array.from(main.querySelectorAll('[data-sid]'));
+        const lastBottom=secs.length?Math.max(...secs.map(s=>s.getBoundingClientRect().bottom)):0;
+        return{pos,ok:inMain&&sideOk&&r.top>=lastBottom-2};
+      }
+      case 'bridge-middle':case 'bridge-bottom':{
+        // straddles the VERTICAL sidebar/main seam: photo centre ≈ seam x
+        const sr=sb.getBoundingClientRect();
+        const seamX=sr.right;
+        const centred=Math.abs((r.left+r.width/2)-seamX)<=4;
+        const row=sb.parentElement.getBoundingClientRect();
+        const vOk='bridge-middle'===pos
+          ?Math.abs((r.top+r.height/2)-(row.top+row.height/2))<=6
+          :(r.bottom<=row.bottom-4&&r.bottom>=row.bottom-60);
+        return{pos,ok:centred&&vOk};
+      }
     }
     return{pos,ok:false};
   },pos);
 }
 
-const order=['hidden','header-left','header-right','main-left','main-right','sidebar-bottom','band-overlap','sidebar-top'];
+const order=['hidden','header-left','header-right','main-left','main-right','main-left-bottom','main-right-bottom','bridge-middle','bridge-bottom','sidebar-bottom','band-overlap','sidebar-top'];
 const results=[];
 for(const p of order)results.push(await probe(p));
 await browser.close();await new Promise(r2=>server.close(r2));

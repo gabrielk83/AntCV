@@ -33693,8 +33693,15 @@
                             ["sidebar-bottom", "▣ Sidebar btm"],
                             ["header-left", "◈ header left"],
                             ["header-right", "◈ header right"],
-                            ["main-left", "◧ Main left"],
-                            ["main-right", "Main right ◨"],
+                            // PHOTO-POSITIONS-NATIVE-001 round 2 (owner):
+                            // main positions renamed top/bottom; two new
+                            // vertical-seam bridge spots (middle/bottom).
+                            ["main-left", "◧ Main top left"],
+                            ["main-right", "Main top right ◨"],
+                            ["main-left-bottom", "◧ Main btm left"],
+                            ["main-right-bottom", "Main btm right ◨"],
+                            ["bridge-middle", "◐ Bridge middle"],
+                            ["bridge-bottom", "◐ Bridge bottom"],
                             ["none", "✕ Hidden"],
                           ].map(([e, t]) =>
                             React.createElement(
@@ -39315,8 +39322,11 @@
                             style: {
                               width: `${Math.round(100 * ta)}%`,
                               flexShrink: 0,
-                              // BRIDGE-SIDEBAR-PALETTE-001: brighter sidebar bg in bridge mode.
-                              background: er === "band-overlap" ? __antcvShadeHex(Ke, 12) : Ke,
+                              // BRIDGE-SIDEBAR-PALETTE-001 retired (owner
+                              // 2026-06-11: "the font and color of sidebridge
+                              // need to fit the other positions") — the bridge
+                              // sidebar uses the standard palette again.
+                              background: Ke,
                               padding: "8px",
                               minHeight: 0 === n ? 400 : 300,
                             },
@@ -39449,17 +39459,9 @@
                               clTableRatio: Qr,
                               onTableRatioChange: aa,
                               fontSizes: Yr,
-                              // BRIDGE-SIDEBAR-PALETTE-001: in bridge mode, darken the
-                              // sidebar headings/lines (deeper accent → more contrast on
-                              // the brighter bg) and nudge the body text slightly darker.
-                              styleConfig: er === "band-overlap"
-                                ? {
-                                    ...ya,
-                                    sidebarHeadColor: __antcvShadeHex(ya.sidebarHeadColor || "#01B7BB", -18),
-                                    sidebarLineColor: __antcvShadeHex(ya.sidebarLineColor || ya.sidebarHeadColor || "#01B7BB", -18),
-                                    sidebarTextColor: __antcvShadeHex(ya.sidebarTextColor || "#FFFFFF", -8),
-                                  }
-                                : ya,
+                              // BRIDGE-SIDEBAR-PALETTE-001 retired — bridge
+                              // mode uses the standard sidebar fonts/colors.
+                              styleConfig: ya,
                               onEdit: gi ? r(e.id) : null,
                               textEditMode: gi,
                               onBeginTextEdit: () => fi(!0),
@@ -39483,6 +39485,33 @@
                               }),
                             ),
                         ),
+                        // PHOTO-POSITIONS-NATIVE-001 round 2: vertical-seam
+                        // bridges — the medallion straddles the sidebar/main
+                        // COLUMN boundary, centred on it, at mid-height
+                        // (bridge-middle) or near the bottom (bridge-bottom)
+                        // of page 1.
+                        0 === n &&
+                          zn &&
+                          ("bridge-middle" === er ||
+                            "bridge-bottom" === er) &&
+                          React.createElement("img", {
+                            src: zn,
+                            style: {
+                              ...__photoFrame(Zo),
+                              position: "absolute",
+                              left: `${Math.round(100 * ta)}%`,
+                              ...("bridge-middle" === er
+                                ? {
+                                    top: "50%",
+                                    transform: "translate(-50%, -50%)",
+                                  }
+                                : {
+                                    bottom: 14,
+                                    transform: "translateX(-50%)",
+                                  }),
+                              zIndex: 3,
+                            },
+                          }),
                         React.createElement("div", {
                           className: "antcv-col-splitter no-print",
                           onPointerDown: sa,
@@ -39521,6 +39550,18 @@
                             ref: 0 === n ? ci : void 0,
                             className: "antcv-document-main",
                             "data-antcv-document-main": "true",
+                            // PHOTO-POSITIONS-NATIVE-001 round 2: with a
+                            // main-column photo, every section becomes its
+                            // own block-formatting context (CSS in
+                            // index.html keys on this attribute) so heading
+                            // rules STOP before the figure and the text edge
+                            // is uniform beside it — no crescent, same
+                            // side-by-side look as the export's photo row.
+                            ...(0 === n &&
+                            zn &&
+                            ("main-left" === er || "main-right" === er)
+                              ? { "data-antcv-main-photo": er }
+                              : {}),
                             style: {
                               flex: 1,
                               // ADV-INDENT-CONTROLS-001: main content indent from
@@ -39618,7 +39659,35 @@
                                   onBeginTextEdit: () => fi(!0),
                                   transitionState: kr[n.id],
                                 });
-                              })]
+                              }),
+                              // PHOTO-POSITIONS-NATIVE-001 round 2: main
+                              // bottom left/right — the medallion after the
+                              // page-1 main sections, pinned to that side.
+                              zn &&
+                              ("main-left-bottom" === er ||
+                                "main-right-bottom" === er)
+                                ? React.createElement(
+                                    "div",
+                                    {
+                                      key: "antcv-main-photo-bottom",
+                                      style: {
+                                        textAlign:
+                                          "main-left-bottom" === er
+                                            ? "left"
+                                            : "right",
+                                        marginTop: 10,
+                                      },
+                                    },
+                                    React.createElement("img", {
+                                      src: zn,
+                                      style: {
+                                        ...__photoFrame(115),
+                                        display: "inline-block",
+                                      },
+                                    }),
+                                  )
+                                : null,
+                              ]
                             : [
                                 ...mMain(t.pageNum).map((sec) =>
                                   React.createElement(Ce, {

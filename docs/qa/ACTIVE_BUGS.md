@@ -682,11 +682,15 @@ Iterating on real CV/CL exports (owner rendering .docx + PDF). Shipped + open:
   cookie/consent noise stripped; plus a LIVE probe that hit the real guest endpoint (HTTP 200,
   HTML JD fragment) — so the path works end-to-end. (Code is the concurrent session's; needs a
   demo-proxy deploy to be live in production.)
-- **EXPORT-PREVIEW-FEATURES-001** `[OPEN][enhancement]` — owner requests for the
-  export-preview UI: (a) add JD-analysis as a 3rd quick-export button (hide the
-  CV/CL toggle in that mode) + let it use the app preview; (b) choose download
-  directory; (c) page selector to preview page 1 / 2 / …; (d) a button previewing
-  the modern-ATS vs legacy-ATS format difference.
+- **EXPORT-PREVIEW-FEATURES-001** `[3 of 4 SHIPPED — (d) remains][enhancement]` — owner
+  requests for the export-preview UI: (a) JD-analysis as a 3rd quick-export button —
+  SHIPPED 1.50.377 (renders only when a report exists, delegates to the 360 exporter
+  hook); (b) choose download directory — SHIPPED 1.50.380 ("Ask where to save" toggle
+  in the modal, Chromium File System Access save picker in the docx-client, cancel
+  aborts cleanly, fallback to the classic download); (c) page selector — SHIPPED
+  1.50.374 (numbered chips scroll the iframe to each page-row); (d) modern-ATS vs
+  legacy-ATS compare preview — STILL OPEN (needs a design: the legacy tier is an
+  export-palette flag, not preview-renderable without a re-render pass).
 - **CL-GHOST-COMPANY-001** `[FIXED (generation) 1.50.322 — regenerate to clear stale content]`
   — an UNSOLICITED cover letter (no JD) referenced a specific company ("…help **Terma**
   build…" in HOW I WOULD CONTRIBUTE, "Terma's focus…" in WHY THIS POSITION; owner

@@ -95,7 +95,7 @@ Two-column table. Focus area + strategic expertise. 4 – 6 rows. The same struc
 **Content rules.**
 
 - Focus areas are selected per the JD — match the JD's stated requirements first, then add the candidate's strongest adjacent areas.
-- Strategic expertise rows are 8 – 14 words (medium); 6 – 10 for low-density styles; up to 16 for high-density styles.
+- Strategic expertise rows are 6 – 14 words, **hard cap two lines per cell** (same typography rule as the CV's `core_competencies`: table cells render at max 2 lines, ~90 characters across two lines is the ceiling). One tight clause per row, not two sentences. If a row needs more than two lines, split it or cut the weaker half. Low-density styles stay at the short end (6 – 10 words); never exceed the 2-line cap even for high-density styles.
 - Tuned to the role, not generic. A `what_i_bring` row that would fit on any application is too generic.
 
 **Good (applying for PM role at Maersk):**

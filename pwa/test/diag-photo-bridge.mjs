@@ -61,15 +61,44 @@ const errs=[];
 const browser=await chromium.launch();
 const bridge=await boot(browser,'band-overlap');
 const normal=await boot(browser,'sidebar-top');
+// LIVE SWITCH (1.50.367): picking the bridge in-session must engage WITHOUT a
+// reload — the ◐ button calls window._antcvSetPhotoPosition.
+const livePage=await browser.newPage({viewport:{width:1600,height:1100}});
+await livePage.addInitScript(({secs,photo})=>{
+  localStorage.setItem('antcv:auth:token','t');localStorage.setItem('antcv:auth:email','d@e.com');localStorage.setItem('antcv:auth:expires_at','4102444800');
+  localStorage.setItem('session',JSON.stringify({email:'d@e.com',ts:1717000000000}));
+  localStorage.setItem('step',JSON.stringify('editor'));localStorage.setItem('doc',JSON.stringify('cv'));
+  localStorage.setItem('sections',JSON.stringify(secs));
+  localStorage.setItem('personalInfo',JSON.stringify({name:'Anita Tester'}));
+  localStorage.setItem('photo',JSON.stringify(photo));
+  localStorage.setItem('photoPosition',JSON.stringify('sidebar-top'));
+},{secs:sections,photo:PHOTO});
+await livePage.goto(`http://127.0.0.1:${port}/index.html`,{waitUntil:'load',timeout:30000});
+await livePage.waitForTimeout(6000);
+const live=await livePage.evaluate(async()=>{
+  if(typeof window._antcvSetPhotoPosition!=='function')return{hook:false};
+  window._antcvSetPhotoPosition('band-overlap');
+  await new Promise(r=>setTimeout(r,1500));
+  const sb=document.querySelector('.antcv-preview-paper .antcv-document-sidebar');
+  const img=sb&&sb.querySelector('img');
+  if(!sb||!img)return{hook:true,ok:false};
+  const seamY=sb.getBoundingClientRect().top;
+  const ir=img.getBoundingClientRect();
+  return{hook:true,ok:true,midOnSeam:Math.abs(ir.top+ir.height/2-seamY),
+    stored:localStorage.getItem('photoPosition')};
+});
+await livePage.close();
 await browser.close();await new Promise(r2=>server.close(r2));
 console.log('bridge:',JSON.stringify(bridge));
 console.log('normal:',JSON.stringify(normal));
+console.log('live switch:',JSON.stringify(live));
 console.log('app errors:',errs.length,errs.slice(0,2).join(' | '));
 const bridgeOk=bridge.ok&&bridge.midOnSeam<=4
   &&parseFloat(bridge.bandPadLeft)>=bridge.sbWidth*0.9; // text inset ≈ sidebar width
 const normalOk=normal.ok&&normal.photoTop>=normal.seamY-1
   &&parseFloat(normal.bandPadLeft)<60; // default band padding, no split
-console.log('bridge midline-on-seam + split band:',bridgeOk?'OK':'FAIL','| normal mode untouched:',normalOk?'OK':'FAIL');
-const ok=bridgeOk&&normalOk&&errs.length===0;
+const liveOk=live.hook&&live.ok&&live.midOnSeam<=4;
+console.log('bridge midline-on-seam + split band:',bridgeOk?'OK':'FAIL','| normal mode untouched:',normalOk?'OK':'FAIL','| live switch (no reload):',liveOk?'OK':'FAIL');
+const ok=bridgeOk&&normalOk&&liveOk&&errs.length===0;
 console.log(ok?'PHOTO-BRIDGE OK':'PHOTO-BRIDGE FAILED');
 process.exit(ok?0:1);

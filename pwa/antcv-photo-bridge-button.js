@@ -70,12 +70,27 @@
   }
 
   function writePosition(value) {
+    // 1.50.367: prefer the app's LIVE setter (updates React state `er`
+    // immediately — without it the native bridge render only engaged after a
+    // reload, so picking the bridge looked like a no-op). The setter also
+    // persists to localStorage; the direct write below stays as fallback for
+    // builds without the hook. Either way the synthetic storage event below
+    // still fires so other sidecars notice instantly.
+    var wroteViaHook = false;
+    try {
+      if (typeof window._antcvSetPhotoPosition === 'function') {
+        window._antcvSetPhotoPosition(value);
+        wroteViaHook = true;
+      }
+    } catch (_) {}
     // Match the storage shape app.js's `u.set` writes — JSON-encoded
     // string. antcv-photo-position.js tolerates BOTH JSON-encoded
     // and bare strings on read, so this is safe.
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
-    } catch (_) {}
+    if (!wroteViaHook) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
+      } catch (_) {}
+    }
     // Fire a synthetic storage event so other tabs / sidecars notice
     // the change instantly without waiting for their polling tick.
     try {

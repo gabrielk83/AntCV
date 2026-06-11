@@ -458,6 +458,17 @@
       return;
     }
 
+    // PHOTO-SIDEBAR-BRIDGE-001 (1.50.367): band-overlap is rendered NATIVELY
+    // by app.js since 1.50.366 (split header band + the medallion hoisted so
+    // its midline sits on the seam). This sidecar's clone path targeted the
+    // old TABLE-based preview (findSidebarTd) and never stuck on the current
+    // div layout (PHOTO-POSITION-196). Leave the original photo visible and
+    // let the native render own the straddle.
+    if (position === 'band-overlap') {
+      setOriginalVisible(original, true);
+      return;
+    }
+
     if (position === 'hidden') {
       setOriginalVisible(original, false);
       return;

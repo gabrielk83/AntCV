@@ -14367,6 +14367,18 @@
         [qo, Xo] = e(11),
         [Zo, Qo] = e(120),
         [er, tr] = e(() => u.get("photoPosition", "sidebar-top")),
+        // PHOTO-SIDEBAR-BRIDGE-001 (1.50.367): live setter for sidecars. The
+        // "◐ Sidebar bridge" button (antcv-photo-bridge-button.js) used to
+        // write localStorage only — React's er never updated until a reload,
+        // so picking the bridge appeared to do nothing.
+        __antcvSetPhotoPos = (window._antcvSetPhotoPosition = (v) => {
+          try {
+            tr(v);
+          } catch (_) {}
+          try {
+            u.set("photoPosition", v);
+          } catch (_) {}
+        }),
         [nr, or] = e(!1),
         [rr, ar] = e(!1),
         [ir, lr] = e(!1),

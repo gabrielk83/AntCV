@@ -70,18 +70,11 @@
  * stops the "sidebar dances during drag, only settles when I click to edit"
  * symptom — the measurer no longer writes against a mid-drag, still-moving
  * layout. Covers both the native left drag and the reverse-drag sidecar.
- *
- * EXP-PREVIEW-CROWD-001 (1.50.348, owner 2026-06-11): experience roles are
- * measured at the EXPORT line (USABLE_PDF) in BOTH the export and preview maps,
- * so the preview breaks experience at the same role as the PDF instead of
- * cramming one whole role tight against the salmon (the A4-fill decouple is
- * kept for the sidebar/list sections, where squeezing one more small row is
- * desirable; for atomic experience roles it only produced a crammed page).
  */
 (function () {
   'use strict';
 
-  var VERSION = '1.50.348-exp-preview-crowd';
+  var VERSION = '1.50.349-clear-both-maps';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -896,8 +889,18 @@
     // ever sticks: AntcvAutoPagebreak.clear()
     clear: function () {
       try {
+        // CLEAR-BOTH-MAPS-001 (owner 2026-06-11): clear() pre-dated the
+        // preview-map decouple (1.50.316) and only reset AUTO_KEY (the export
+        // map). The PREVIEW map (PREVIEW_KEY) was left intact, so a stale
+        // experience break — e.g. autoPagesPreview[exp]={"4":2} that the
+        // exp-crowd fix should replace with {"3":2} — survived clear() and,
+        // because experience is sticky, never flipped. Reset BOTH maps and BOTH
+        // change-guards so a single clear() genuinely drops every auto break and
+        // the next compute writes fresh in both targets.
         localStorage.setItem(AUTO_KEY, '{}');
+        localStorage.setItem(PREVIEW_KEY, '{}');
         lastWritten = '{}';
+        lastWrittenPreview = '{}';
         lastSourceFp = null;
         __breakBornAt = {};   // MAINBAR-FLIP-FIX-001
         window.dispatchEvent(new CustomEvent('antcv:auto-pages-changed',

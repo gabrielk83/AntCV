@@ -1425,13 +1425,17 @@ worker was deployed via `wrangler deploy`.
 
 ### Still OPEN (registered, not done this session)
 
-- **PHOTO-PREVIEW-ALT-PERSIST-001 — [OPEN]** owner reports the alt photo
-  positions still don't *stick* (image always lands at sidebar-top) even after
-  #196's finders resolve — needs a live clone-state probe (clone cleared/
-  re-overwritten). Distinct from #196 (which fixed the finders).
-- **PHOTO-SIDEBAR-BRIDGE-001 — [OPEN, design]** owner spec: implement `band-overlap`
-  by splitting the candidate-header cell so the photo hovers with its mid-line on
-  the header/sidebar seam — both preview and DOCX. A design build, not a sidecar.
+- **PHOTO-PREVIEW-ALT-PERSIST-001 — [RESOLVED by the 1.50.370–372 native rework;
+  headless-verified 2026-06-11]** — the clone/finder sidecar machinery this bug
+  lived in is GONE: positions render natively from app state (`er` ←
+  localStorage `photoPosition` at mount) and the cleanup shim only clears stale
+  clones. Cold-boot persistence locked by `pwa/test/diag-photo-position-persist.mjs`
+  (bridge-middle on the seam, main-right circular wrap, none → no image — all on
+  first paint, no live switch).
+- **PHOTO-SIDEBAR-BRIDGE-001 — [CLOSED 1.50.368–372 + worker 1.14.51–53]** —
+  shipped: split candidate header, floating medallion mid-line on the seam,
+  preview + DOCX/PDF, plus the full position family (main top/bottom L/R,
+  bridge-middle/bottom). See FEATURES_REGISTRY and the 2026-06-11 section at top.
 - **PRIVACY-FAB-FLICKER-MOBILE-001 — [OPEN]** the top-bar pill intermittently
   disappears (fixed by toggling the editor) — `topbar-tools-347` relocation timing.
 - **DEMO-WARN-NONDEMO-001 — [partly addressed]** privacy LED showed the demo-proxy

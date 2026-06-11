@@ -8,6 +8,29 @@ A companion **feature registry** (open vs shipped features) lives at
 
 ---
 
+## AUTONOMOUS RIDE 2026-06-11 (PM) — photo-position exports + export-preview print + share target
+
+Shipped 1.50.372→375 + docx-worker 1.14.53. Full narrative in
+`docs/plan/NIGHT_RUN_2026-06-10.md` rounds 4–7.
+
+- **EXPORT-PHOTO-POS-CLAMP-001** `[FIXED 1.50.373 — headless-verified]` — the REAL root
+  cause of "bridge not in PDF/DOCX": `antcv-docx-client.js readPhotoPosition`'s VALID set
+  lagged the app's picker. `band-overlap` was missing, so the client clamped every bridge
+  export to `sidebar-top` BEFORE the payload left the browser (live-worker probes bypassed
+  the client, which is why the worker always looked correct). `none` (the picker's Hidden
+  value) was missing too, so a HIDDEN photo still exported. VALID is now a picker superset;
+  `none`→`hidden`; photoSizePx forwards for every visible position. Locked by
+  `pwa/test/unit/photo-position-forward.test.mjs` (imports the real module).
+- **PHOTO-POSITIONS-EXPORT-001** `[SHIPPED worker 1.14.53 — needs owner Word/PDF look]` —
+  export halves for the 1.50.371 picker positions: main top L/R switch from the photo-row
+  table to a FLOATING wrapSquare image (text reclaims full width below — the preview
+  crescent); main bottom L/R inline after sections; bridge-middle/bottom floating medallion
+  page-anchored on the vertical seam (centre / 24px above bottom), wrap both sides.
+  `workers/docx-worker/test/diag-photo-positions-export.mjs` (9/9). Deployed + live-probed.
+- **EXPORT-PAGE2-001** `[FIXED 1.50.374]` — see the updated entry in the QA backlog section.
+- **SHARE-TARGET-JD-URL-001** `[SHIPPED 1.50.375 — owner device verify owed]` — manifest
+  share_target + `antcv-share-target-jd-375.js`; see FEATURES_REGISTRY (CLOSED).
+
 ## INCIDENT 2026-06-10 (NIGHT) — production down: 7-byte app.js stub
 
 - **PROD-STUB-001** `[RESOLVED — bbde379]` — a concurrent session's commit 7e8c584
@@ -1836,7 +1859,7 @@ Owner: "page break in general" still not right. The locked requirements:
 - **PB-004** — table rules: first row moves the table; a later row splits it and repeats headers. (TABLE-PAGEBREAK-001 is the per-row toggle, parked — see above.)
 - **PB-005** — replace the down-arrow icon + "Compress" text (semantic page glyph; "Fit"). (`page-break-icon-357` / `help-text-wording-357` — VERIFYING.)
 - **PB-006** — preserve the Professional Experience pattern (reference, VF-018).
-- **EXPORT-PAGE2-001** — export PREVIEW shows only page 1 / breaks not applied. Worker engine passes smoke tests; defect is the client `antcv-pdf-preview-gate.js` clone path. Read-only probe: `antcv-export-page2-probe.js`. RE-OPEN — drive with the probe.
+- **EXPORT-PAGE2-001** `[FIXED 1.50.374 — headless-verified]` — export PREVIEW shows only page 1 / breaks not applied. Driven with a headless variant of the probe: the iframe CLONE was never the problem (it carries every native `.antcv-page-row` + all page-2 content). The defect was the PRINT path — the srcdoc print CSS keyed breaks on legacy marker attributes (`data-antcv-page-break-284` etc.) that the native page-row pagination never sets, so the print engine re-paginated the tall paper arbitrarily; and the title counted PAPERS (always 1 now). FIX (`antcv-pdf-preview-gate.js` 1.50.374-page2-print): print CSS breaks on `.antcv-page-row + .antcv-page-row` + one-sheet clamp; `@page` margin 0 when native rows present (10mm spilled a sliver per row onto blank pages); title + CV/CL rebuild count page-rows. BONUS: page-selector chips (EXPORT-PREVIEW-FEATURES-001(c)). Locked by `pwa/test/diag-export-preview-pages.mjs` (8/8).
 
 ### Still OPEN from earlier in the engagement (not addressed this session)
 - **RERENDER-STORM-001 [RESOLVED — probe-verified 2026-06-11, regression-locked]** —

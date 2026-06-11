@@ -323,6 +323,111 @@ function findTeamLedHits(text, lang) {
   return hits;
 }
 
+// ─── Structure-aware checks (operate on the writer's JSON output) ─────────
+// The writer emits a JSON object per references/output-schema.md. When the
+// LLM text parses as that object we can inspect specific sections by key:
+//   - core_competencies / what_i_bring expertise cells (2-line cap)
+//   - selected_outcomes (numeric-metric presence)
+// When the text is NOT JSON (e.g. a single-section plain-text regen) these
+// checks no-op — they only fire when there is structure to inspect, so they
+// never false-positive on prose.
+
+const CELL_CHAR_CAP = 90; // ~2 rendered lines in the 4.94" expertise column.
+
+function tryParseSectionsJson(text) {
+  if (typeof text !== 'string') return null;
+  const t = text.trim();
+  if (!t || (t[0] !== '{' && t[0] !== '[')) return null;
+  try {
+    const o = JSON.parse(t);
+    return o && typeof o === 'object' ? o : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+// Collect expertise-cell strings from either a top-level object that has a
+// `sections` wrapper or a bare section object. Handles core_competencies
+// (CV) and cover_letter.what_i_bring (CL), in both `rows[{expertise}]` and
+// `items["focus — expertise"]` shapes.
+function collectExpertiseCells(root) {
+  const cells = [];
+  const pushFromRows = (node) => {
+    if (!node || typeof node !== 'object') return;
+    if (Array.isArray(node.rows)) {
+      for (const r of node.rows) {
+        if (r && typeof r.expertise === 'string') cells.push(r.expertise);
+      }
+    }
+    if (Array.isArray(node.items)) {
+      for (const it of node.items) {
+        if (typeof it === 'string') {
+          // "Focus area — expertise" flattened form: measure the part after
+          // the em/en dash, which is the expertise clause.
+          const parts = it.split(/\s[—–-]\s/);
+          cells.push(parts.length > 1 ? parts.slice(1).join(' - ') : it);
+        }
+      }
+    }
+  };
+  const sections = (root.sections && typeof root.sections === 'object') ? root.sections : root;
+  if (sections && typeof sections === 'object') {
+    pushFromRows(sections.core_competencies);
+    const cl = sections.cover_letter || root.cover_letter;
+    if (cl && typeof cl === 'object') pushFromRows(cl.what_i_bring);
+    // also support a bare what_i_bring / core_competencies regen
+    pushFromRows(root.what_i_bring);
+  }
+  return cells.filter((c) => typeof c === 'string' && c.trim());
+}
+
+// Over-long expertise cells (> ~2 lines). Returns short violation labels for
+// the retry fix-instruction. Language-agnostic (char length only).
+function findOverlongCellHits(text) {
+  const root = tryParseSectionsJson(text);
+  if (!root) return [];
+  const cells = collectExpertiseCells(root);
+  const hits = [];
+  for (const c of cells) {
+    const clean = c.replace(/\s+/g, ' ').trim();
+    if (clean.length > CELL_CHAR_CAP) {
+      const preview = clean.length > 40 ? clean.slice(0, 40) + '…' : clean;
+      hits.push(`expertise cell too long (${clean.length} chars, max ${CELL_CHAR_CAP}): "${preview}"`);
+    }
+  }
+  return hits;
+}
+
+// Selected Outcomes shipped without any numeric token. Only fires when a
+// selected_outcomes section is present AND non-trivial; we look for a digit
+// anywhere across its titles/bodies. The canonical metric set is on record
+// (250→10 day cycle, ~90% LiDAR cost, 7-engineer team, 15+ yrs, Patent
+// 241997), so a fully metric-free outcomes section is a defect. We do NOT
+// force a number into a specific bullet (that would risk fabrication) — we
+// flag the section as a whole so the retry re-introduces an on-record number.
+function findMissingMetricHits(text) {
+  const root = tryParseSectionsJson(text);
+  if (!root) return [];
+  const sections = (root.sections && typeof root.sections === 'object') ? root.sections : root;
+  const so = sections && sections.selected_outcomes;
+  if (!so || typeof so !== 'object') return [];
+  const items = Array.isArray(so.items) ? so.items : (Array.isArray(so) ? so : null);
+  if (!items || items.length === 0) return [];
+  let blob = '';
+  for (const it of items) {
+    if (typeof it === 'string') blob += ' ' + it;
+    else if (it && typeof it === 'object') {
+      if (typeof it.title === 'string') blob += ' ' + it.title;
+      if (typeof it.body === 'string') blob += ' ' + it.body;
+    }
+  }
+  blob = blob.trim();
+  if (!blob) return [];
+  // Any digit, percentage, or written multiplier counts as a metric.
+  if (/\d/.test(blob) || /\b(\d+x|tenfold|two-?fold|three-?fold)\b/i.test(blob)) return [];
+  return ['selected_outcomes has no numeric metric — lead at least one outcome with an on-record number (e.g. 250→10 day change cycle, ~90% LiDAR cost reduction, 7-engineer team, 15+ years). Never invent a number that is not on record.'];
+}
+
 export function evaluateSce(text, req) {
   const lang = req.target_language;
   const words = (SHARED_BANNED_WORDS[lang] ?? []).concat(req.extraBannedWords[lang] ?? []);
@@ -333,6 +438,14 @@ export function evaluateSce(text, req) {
   // retry fix-instruction names them and asks for directed/supervised/ran.
   const teamLedHits = findTeamLedHits(text, lang);
   if (teamLedHits.length) phraseHits.push(...teamLedHits);
+  // Structure-aware checks (no-op on non-JSON text):
+  //   - over-long Strategic Expertise cells (CORE COMPETENCIES / WHAT I BRING)
+  //   - metric-free SELECTED OUTCOMES
+  // Both surfaced as phrase hits so they feed the existing 3-attempt retry.
+  const overlongHits = findOverlongCellHits(text);
+  if (overlongHits.length) phraseHits.push(...overlongHits);
+  const missingMetricHits = findMissingMetricHits(text);
+  if (missingMetricHits.length) phraseHits.push(...missingMetricHits);
 
   return {
     clean: wordHits.length === 0 && phraseHits.length === 0,

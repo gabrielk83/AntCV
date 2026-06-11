@@ -99,14 +99,23 @@ The JSON output uses these exact keys. Section keys are stable across styles and
 
 **Role count.** Show every role from `user_state.profile.experiences` unless `target_pages = 1`. For `target_pages = 1`, show the most recent 3–4 roles and add `truncated: true` to the section metadata so the worker can flag the omission to the user.
 
+**Overlapping-role resolution (GEN-ROLEFORM-001).** The kernel may deliberately hold the same employment in TWO forms: a single MERGED role and a SPLIT pair of distinct roles that cover the same employer and overlapping dates (e.g. Innoviz: a merged "System Architect & Change Control Lead, 2020–2025" vs. the split pair "System Architect & Change Control Lead, 2020–2025" + "Customer Change Requests Specialist, 2020–2025"). Both are valid source data. **Emit exactly ONE form per CV; never both.** For any set of kernel roles sharing the same `company` and an overlapping `years` span, choose before drafting bullets:
+- Use the SPLIT pair (detail two positions, hide the merged) when the distinction adds signal the JD rewards — e.g. a change-governance or requirements role where calling out the Customer Change Requests specialism separately strengthens the match.
+- Use the MERGED single role (hide the split pair) when brevity or seniority framing serves better — e.g. a senior PM/architecture role where one consolidated leadership entry reads stronger.
+- NEVER emit the merged role AND its split components at once (the symptom: three overlapping blocks, two sharing the same dates).
+Record the choice in the role's change_log entry (`reason: "roleform_merged"` or `"roleform_split"`).
+
+**Military / dated-service inclusion (GEN-IDF-001).** A military-service entry (e.g. "Computer Administrator | IDF 2001–2003") is ~20+ years old. Default to OMIT it. Include it ONLY when (a) the JD explicitly values the content (IT/infrastructure, security clearance context), or (b) chronology would otherwise show an unexplained early-career gap. When included, keep it to the single most relevant bullet and never lead the section with it. Record `reason: "military_included_relevant"` or omit silently.
+
+**Sub-role merging.** If `user_state.profile.experiences` shows two consecutive roles at the same company (e.g. an internal promotion), the skill may merge them into one entry with a date range and dual role line — but only if `style.sectionFormatDefaults.experience.mergePromotions === true`. By default styles keep them separate. (This is distinct from GEN-ROLEFORM-001 above: merging is for *consecutive promotions*; role-form resolution is for *pre-authored alternative representations of the same span*.)
+
 **Bullet rules.**
 - 3 bullets each, newest-first within the role.
 - Lead each bullet with a verb in past tense (or present for current role).
 - One bullet for scope (what was owned), one for action (what was done), one for outcome (what changed).
+- **Team-management verb (VERB-LED-001).** When a bullet describes managing or running a team, use **directed**, **supervised**, or **ran** — NEVER the bare verb "led" (write "directed a 7-person EO team", never "led a 7-person team" or "led a team"). "led" remains fine for non-team objects ("led design reviews", "led prototype-to-production transfer"). The worker SCE also enforces this and will retry, but produce it correctly on the first pass.
 - No banned words. No "responsible for".
 - Length target: 12–22 words per bullet for `target_pages ≤ 1.5`; up to 30 for longer formats.
-
-**Sub-role merging.** If `user_state.profile.experiences` shows two consecutive roles at the same company (e.g. an internal promotion), the skill may merge them into one entry with a date range and dual role line — but only if `style.sectionFormatDefaults.experience.mergePromotions === true`. By default styles keep them separate.
 
 ### `tools_methods`
 

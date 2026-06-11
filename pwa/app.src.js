@@ -15974,7 +15974,39 @@
             // CL is full-width linear, PAGE_W=11906 − 200 (L/R) = 11706 DXA =
             // 780px. px = DXA/15 (1440 DXA/in ÷ 96 px/in). Font below is 10.5pt =
             // 14px (×96/72) — the worker's fs.mainBody default.
-            __pdfMainW = "cl" === Lt ? 780 : 466;
+            //
+            // 1.50.362 (TIER B, FLAGGED OFF by default): the 466 constant is
+            // itself stale on two counts — worker ≥1.14.41 derives the main
+            // column from the forwarded sidebar_ratio (default 0.33, follows
+            // the SB slider), and ≥1.14.47 the edge margins follow
+            // mainEdgeIndent (default 10px = 300 DXA both sides, not 288).
+            // Ratio-aware width = (11906×(1−ratio) − 2×edge×15)/15 px
+            // (≈512px at the 0.33 default). Owner must validate preview↔PDF
+            // line breaks visually before this becomes the default:
+            // localStorage['antcv:parity-estimator']='1' opts in.
+            __pdfMainW =
+              "cl" === Lt
+                ? 780
+                : (() => {
+                    try {
+                      if (
+                        localStorage.getItem("antcv:parity-estimator") === "1"
+                      ) {
+                        const r = Math.min(
+                            0.5,
+                            Math.max(0.18, Number(ta) || 0.33),
+                          ),
+                          edge =
+                            (ya && Number(ya.mainEdgeIndent)) > 0
+                              ? Number(ya.mainEdgeIndent)
+                              : 10;
+                        return Math.round(
+                          (11906 * (1 - r) - 2 * edge * 15) / 15,
+                        );
+                      }
+                    } catch (_) {}
+                    return 466;
+                  })();
           return (
             e
               .filter((e) => "main" === e.loc && e.on)

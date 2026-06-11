@@ -75,3 +75,24 @@ test('string slider values are coerced; out-of-range and absent are dropped', ()
   assert.equal(d.mainEdgeIndent, undefined);
   assert.equal(d.bulletIndent, undefined);
 });
+
+// ─── Flagged parity estimator width (1.50.362, default OFF) ─────────
+// Mirrors the antcv:parity-estimator formula in app.src.js Gi():
+// (PAGE_W×(1−ratio) − 2×edge×15)/15 px, ratio clamped 0.18..0.50.
+const parityWidth = (ratio, edge) => {
+  const r = Math.min(0.5, Math.max(0.18, Number(ratio) || 0.33));
+  const e = Number(edge) > 0 ? Number(edge) : 10;
+  return Math.round((11906 * (1 - r) - 2 * e * 15) / 15);
+};
+
+test('parity estimator: default ratio 0.33 / edge 10 ≈ 512px (was const 466)', () => {
+  assert.equal(parityWidth(0.33, 10), 512);
+  assert.equal(parityWidth(undefined, undefined), 512);
+});
+
+test('parity estimator follows the SB slider and edge indent, with clamps', () => {
+  assert.equal(parityWidth(0.5, 10), 377);  // widest sidebar -> narrowest main
+  assert.equal(parityWidth(0.9, 10), 377);  // clamped to 0.50
+  assert.equal(parityWidth(0.18, 10), 631); // narrowest sidebar
+  assert.equal(parityWidth(0.33, 20), 492); // bigger edge indent -> narrower text
+});

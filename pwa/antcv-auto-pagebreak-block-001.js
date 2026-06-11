@@ -70,18 +70,11 @@
  * stops the "sidebar dances during drag, only settles when I click to edit"
  * symptom — the measurer no longer writes against a mid-drag, still-moving
  * layout. Covers both the native left drag and the reverse-drag sidecar.
- *
- * EXP-PREVIEW-CROWD-001 (1.50.348, owner 2026-06-11): experience roles are
- * measured at the EXPORT line (USABLE_PDF) in BOTH the export and preview maps,
- * so the preview breaks experience at the same role as the PDF instead of
- * cramming one whole role tight against the salmon (the A4-fill decouple is
- * kept for the sidebar/list sections, where squeezing one more small row is
- * desirable; for atomic experience roles it only produced a crammed page).
  */
 (function () {
   'use strict';
 
-  var VERSION = '1.50.348-exp-preview-crowd';
+  var VERSION = '1.50.350-exp-preview-gap';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -489,19 +482,23 @@
           if (list[li] && list[li].type === 'experience') { expSec = list[li]; break; }
         }
         if (expSec && expSec.id && !map[expSec.id]) {
-          // EXP-PREVIEW-CROWD-001 (owner 2026-06-11): experience roles are large
-          // ATOMIC blocks (role + 3-5 bullets). The A4-fill decouple measures the
-          // PREVIEW at the taller USABLE line and the EXPORT at the shorter
-          // USABLE_PDF line — fine for sidebar list items (squeeze one more small
-          // row), but for experience it let the PREVIEW keep a whole role on page
-          // 1 that the EXPORT (PDF) moved to page 2, so that role rendered crammed
-          // tight against the salmon (probe: autoPages exp={"3":2} but
-          // autoPagesPreview exp={"4":2} — preview packed role 3 / System
-          // Architect against the bar). Fix: measure experience roles against the
-          // EXPORT line (USABLE_PDF) in BOTH maps, so the preview breaks at the
-          // same role as the PDF. A role is never split, so there is no mid-role
-          // gap risk; this only ever pulls a crammed role down one page, never up.
-          var __expLimit = USABLE_PDF * scale;
+          // EXP-PREVIEW-GAP-001 (owner 2026-06-11, supersedes EXP-PREVIEW-CROWD-001):
+          // experience roles are large ATOMIC blocks (role + 3-5 bullets). The CV
+          // PREVIEW paginates into FIXED-HEIGHT page-boxes (1123px) and draws the
+          // "▼ PAGE 2 ▼" salmon at the BOX boundary, not at the role's bottom. The
+          // earlier crowd fix measured the role against the EXPORT line (USABLE_PDF
+          // ~949px) in BOTH maps. In the preview that broke the role ~104px BEFORE
+          // the box ends, so the last role on page 1 sat ~104px above the salmon —
+          // a big dead gap between the role and the bar (owner screenshot 2026-06-11
+          // "big gap between the role and salmon"). Fix: measure each map against
+          // ITS OWN line — the export map at USABLE_PDF, the PREVIEW map at the true
+          // A4 line (usableBase = USABLE ~1053px) — so the preview page-1 box FILLS
+          // to the boundary and the salmon sits immediately after the last role.
+          // `limit` is already usableBase*scale for this pass, so reuse it: a role
+          // is atomic (never split), so breaking at the box line moves the first
+          // role that crosses it wholly to page 2 and leaves the prior role flush
+          // against the salmon.
+          var __expLimit = limit;
           var roleEls = col.querySelectorAll('[data-antcv-role-index]');
           for (var ri = 0; ri < roleEls.length; ri++) {
             if (!visible(roleEls[ri])) continue;
@@ -896,8 +893,18 @@
     // ever sticks: AntcvAutoPagebreak.clear()
     clear: function () {
       try {
+        // CLEAR-BOTH-MAPS-001 (owner 2026-06-11): clear() pre-dated the
+        // preview-map decouple (1.50.316) and only reset AUTO_KEY (the export
+        // map). The PREVIEW map (PREVIEW_KEY) was left intact, so a stale
+        // experience break — e.g. autoPagesPreview[exp]={"4":2} that the
+        // exp-crowd fix should replace with {"3":2} — survived clear() and,
+        // because experience is sticky, never flipped. Reset BOTH maps and BOTH
+        // change-guards so a single clear() genuinely drops every auto break and
+        // the next compute writes fresh in both targets.
         localStorage.setItem(AUTO_KEY, '{}');
+        localStorage.setItem(PREVIEW_KEY, '{}');
         lastWritten = '{}';
+        lastWrittenPreview = '{}';
         lastSourceFp = null;
         __breakBornAt = {};   // MAINBAR-FLIP-FIX-001
         window.dispatchEvent(new CustomEvent('antcv:auto-pages-changed',

@@ -36,7 +36,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.360-mobile-scroll';
+  var VERSION = '1.50.377-export-hook';
   if (window.__antcvAnalysisReportPdf360 === VERSION) return;
   window.__antcvAnalysisReportPdf360 = VERSION;
 
@@ -469,6 +469,15 @@
   }
 
   // ---- print via a hidden iframe (client-side "Save as PDF") -----------------
+  // 1.50.377 EXPORT-PREVIEW-FEATURES-001(a): exported as a window hook so the
+  // document-export modal (antcv-pdf-preview-gate.js) can offer the analysis
+  // report as a third quick-export. Reads everything from localStorage, so it
+  // works without the Analysis panel being open; alerts if no analysis exists.
+  window.AntcvAnalysisReportExport = function () { exportPdf(null); };
+  window.AntcvAnalysisReportAvailable = function () {
+    try { return hasAnalysis(model(readRationale(), readMeta(), readPersonalInfo())); }
+    catch (_) { return false; }
+  };
   function exportPdf(btn) {
     var t = T();
     var m = model(readRationale(), readMeta(), readPersonalInfo());

@@ -665,6 +665,30 @@ ${inlineStyles}
       setTimeout(() => { triggerDocxExport(); }, 60);
     });
 
+    // 1.50.377 EXPORT-PREVIEW-FEATURES-001(a) — JD-analysis as a third
+    // quick-export. Renders only when an analysis report exists; delegates to
+    // the analysis exporter's window hook (antcv-analysis-report-pdf-360.js).
+    var analysisAvailable = false;
+    try {
+      analysisAvailable = typeof window.AntcvAnalysisReportAvailable === 'function'
+        ? window.AntcvAnalysisReportAvailable()
+        : false;
+    } catch (_) {}
+    if (analysisAvailable && typeof window.AntcvAnalysisReportExport === 'function') {
+      var analysisBtn = document.createElement('button');
+      analysisBtn.id = MODAL_ID + '-analysis';
+      analysisBtn.type = 'button';
+      analysisBtn.textContent = 'Analysis (PDF)';
+      analysisBtn.title = 'Export the JD-analysis report as a branded PDF (same as Analysis → Download analysis).';
+      analysisBtn.style.cssText = 'background:#b45309;color:#fff;border:1px solid #b45309;';
+      analysisBtn.addEventListener('click', function () {
+        closeModal();
+        setTimeout(function () {
+          try { window.AntcvAnalysisReportExport(); } catch (_) {}
+        }, 60);
+      });
+      actions.appendChild(analysisBtn);
+    }
     actions.appendChild(cancel);
     actions.appendChild(docx);
     actions.appendChild(print);

@@ -62,9 +62,15 @@ const payloadStyle = (styleConfig) => buildPayload({
 }).style;
 
 test('export payload forwards the indent sliders as numbers', () => {
-  const s = payloadStyle({ mainEdgeIndent: 20, bulletIndent: 24 });
+  const s = payloadStyle({ mainEdgeIndent: 20, bulletIndent: 30 });
   assert.equal(s.mainEdgeIndent, 20);
-  assert.equal(s.bulletIndent, 24);
+  assert.equal(s.bulletIndent, 30);
+});
+
+test('the untouched bulletIndent default (24) is NOT forwarded — export keeps its reviewed 14px hang', () => {
+  const s = payloadStyle({ mainEdgeIndent: 10, bulletIndent: 24 });
+  assert.equal(s.bulletIndent, undefined);
+  assert.equal(s.mainEdgeIndent, 10);
 });
 
 test('string slider values are coerced; out-of-range and absent are dropped', () => {

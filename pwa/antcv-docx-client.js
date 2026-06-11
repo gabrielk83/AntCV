@@ -841,8 +841,13 @@ function buildStyle(styleConfig, navyColor) {
   };
   const me = numTok(styleConfig.mainEdgeIndent);
   if (me !== undefined) out.mainEdgeIndent = me;
+  // bulletIndent: forward ONLY when the user moved the slider off the PWA
+  // default (24). The preview and Word bullet scales are not 1:1 (preview
+  // text hangs at 24px where the export's reviewed look is 14px/210 DXA), so
+  // blindly forwarding the untouched default would shift the export text
+  // right — owner 2026-06-11: "text can stay where it is".
   const bi = numTok(styleConfig.bulletIndent);
-  if (bi !== undefined) out.bulletIndent = bi;
+  if (bi !== undefined && bi !== 24) out.bulletIndent = bi;
   // v1.50.139 — normalize every hex colour to a bare 6-digit value. The DOCX
   // worker's docx library rejects anything but 6 hex digits and returned a 500
   // ("Invalid hex value '"#283556"'"). The value arrives quoted AND #-prefixed

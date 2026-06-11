@@ -24401,12 +24401,15 @@ function mergeStyle(input, packageId, legacyAtsTier) {
 __name(mergeStyle, "mergeStyle");
 function numberingConfig(style) {
   // 1.14.47 \u2014 indent-controls export parity: the main bullet hang follows the
-  // PWA's bulletIndent slider (px -> DXA at x15; preview formula is
-  // paddingLeft=bulletIndent, textIndent=-bulletIndent, i.e. marker at the
-  // edge + text hanging at bulletIndent). Default 14px = 210 DXA, identical
-  // to the BULLET-EDGE-001 constant this replaces.
+  // PWA's bulletIndent slider (px -> DXA at x15). Default 14px = 210 DXA.
+  // 1.14.48 (owner 2026-06-11, export review): "bullets need to be a bit more
+  // to the right, text can stay where it is" \u2014 the BULLET-EDGE marker-at-0
+  // looked flush against the column edge in the PDF. The marker now gets a
+  // 90 DXA (6px) first-line offset (hanging = left - 90, floor 60 so the
+  // marker never collides with the text), while the text hang is unchanged.
   const biPx = Number(style && style.bulletIndent);
   const bIndent = Number.isFinite(biPx) && biPx >= 0 && biPx <= 60 ? Math.round(biPx * 15) : 210;
+  const bHang = Math.max(60, bIndent - 90);
   return {
     config: [
       {
@@ -24419,11 +24422,10 @@ function numberingConfig(style) {
             alignment: AlignmentType.LEFT,
             style: {
               run: { color: style.mainBulletColor },
-              // BULLET-EDGE-001 (owner 2026-06-10): marker at the cell's left
-              // edge (left === hanging \u2192 first-line marker at 0, aligned with
-              // headings/other rows), text hanging a tight ~14px (210 DXA) to
-              // the right. Was left 360 / hanging 200 (marker ~11px, text 24px).
-              paragraph: { indent: { left: bIndent, hanging: bIndent } }
+              // 1.14.48: marker at 6px (left - hanging = 90 DXA), text at
+              // bulletIndent (default 14px / 210 DXA). Supersedes the
+              // BULLET-EDGE-001 marker-at-0 the owner reviewed as too flush.
+              paragraph: { indent: { left: bIndent, hanging: bHang } }
             }
           }
         ]
@@ -24438,8 +24440,8 @@ function numberingConfig(style) {
             alignment: AlignmentType.LEFT,
             style: {
               run: { color: style.sidebarHeadColor },
-              // BULLET-EDGE-001: same marker-at-edge + tight hang in the sidebar.
-              paragraph: { indent: { left: 210, hanging: 210 } }
+              // 1.14.48: same 6px marker offset in the sidebar (was at-edge).
+              paragraph: { indent: { left: 210, hanging: 120 } }
             }
           }
         ]
@@ -26665,7 +26667,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.47-indent-parity";
+var VERSION = "1.14.48-bullet-marker-offset";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

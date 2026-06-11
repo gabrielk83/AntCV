@@ -71,10 +71,14 @@ const cus = probe(await gen({ bulletIndent: 24, mainEdgeIndent: 20 }));
 log('default numbering inds:', def.inds.join(','), '| tcMar lefts:', [...new Set(def.tcLefts)].join(','));
 log('custom  numbering inds:', cus.inds.join(','), '| tcMar lefts:', [...new Set(cus.tcLefts)].join(','));
 
-const defOk = def.inds.includes('210/210') && def.tcLefts.includes(150);
-const cusOk = cus.inds.includes('360/360') && cus.tcLefts.includes(300) && !cus.tcLefts.includes(150);
-const noLeak = !cus.inds.includes('210/210') || cus.inds.filter((x) => x === '210/210').length < cus.inds.length;
-log('default 210/210 + edge 150:', defOk, '| custom 360/360 + edge 300:', cusOk);
-const ok = defOk && cusOk && noLeak;
+// 1.14.48 bullet-marker offset: marker sits at left − hanging = 90 DXA (6px),
+// text at bulletIndent×15. Default 14px → 210/120; custom 24px → 360/270.
+const defOk = def.inds.includes('210/120') && def.tcLefts.includes(150);
+const cusOk = cus.inds.includes('360/270') && cus.tcLefts.includes(300) && !cus.tcLefts.includes(150);
+const markerAt90 = [...def.inds, ...cus.inds]
+  .filter((x) => x === '210/120' || x === '360/270')
+  .every((x) => { const [l, h] = x.split('/').map(Number); return l - h === 90; });
+log('default 210/120 + edge 150:', defOk, '| custom 360/270 + edge 300:', cusOk, '| marker at 90 DXA:', markerAt90);
+const ok = defOk && cusOk && markerAt90;
 log(ok ? 'INDENT-PARITY OK' : 'INDENT-PARITY FAIL');
 process.exit(ok ? 0 : 1);

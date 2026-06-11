@@ -450,16 +450,13 @@
       clearExistingClones(p);
     }
 
-    // PHOTO-POSITIONS-NATIVE-001 (1.50.370): EVERY photo position is now
-    // rendered NATIVELY by app.js (sidebar-top/bottom, band-overlap,
-    // header-left/right, main-left/right, hidden). This sidecar's clone
-    // machinery targeted the retired TABLE-based preview (findSidebarTd /
-    // findMainTd / findHeaderTable) and never stuck on the current div
-    // layout (PHOTO-POSITION-196) — every position except sidebar-top
-    // looked dead. The sidecar is now a cleanup-only shim: it clears any
-    // stale clones from older sessions and never hides or moves the
-    // app-rendered photo again.
-    setOriginalVisible(original, true);
+    // PHOTO-POSITIONS-NATIVE-001 (1.50.370/372): EVERY photo position is
+    // rendered NATIVELY by app.js. This sidecar is a cleanup-only shim that
+    // clears stale clones from older sessions. It must NOT touch the photo's
+    // display either: setOriginalVisible writes display:'' on the img's
+    // PARENT, and for the vertical-seam bridges the medallion's parent is
+    // the flex .antcv-page-row itself — clearing its display:flex stacked
+    // the columns (the bridge-middle "not behaving" bug).
     return;
     /* eslint-disable no-unreachable */
 

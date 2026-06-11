@@ -142,11 +142,12 @@
       -webkit-user-select: none !important;
     }
 
-    /* PHOTO-POSITIONS-NATIVE-001 round 2: with a main-column photo each
-       section forms its own block-formatting context, so heading rules STOP
-       before the floated medallion and the text edge is uniform beside it
-       (no crescent) — the same side-by-side look as the export. */
-    .antcv-document-main[data-antcv-main-photo] [data-sid] {
+    /* PHOTO-POSITIONS-NATIVE round 3 (owner red-mark): the text follows the
+       medallion's CIRCLE (a true snug crescent via shape-outside on the
+       float), while section HEADINGS stay block-formatting contexts so their
+       underline rules still STOP before the figure instead of running under
+       it. */
+    .antcv-document-main[data-antcv-main-photo] [data-sid] > div:first-child {
       display: flow-root;
     }
 
@@ -307,7 +308,7 @@
         auth.src = 'antcv-auth.js?v=1.50.312-auth-msg';
         auth.onload = function(){
           var app = document.createElement('script');
-          app.src = 'app.js?v=1.50.371-positions-r2';
+          app.src = 'app.js?v=1.50.372-crescents';
           app.onload = function(){
             var vo = document.createElement('script');
             vo.src = 'antcv-version-override.js?v=1.50.41';
@@ -570,7 +571,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-privacy-led.js?v=1.50.364-doc-worker-exempt" defer></script>
 <script src="antcv-demo-watermark.js?v=1.50.340-live-keystate" defer></script>
 <script src="antcv-bullet-targets.js?v=1.40.136" defer></script>
-<script src="antcv-photo-position.js?v=1.50.370-cleanup-shim" defer></script>
+<script src="antcv-photo-position.js?v=1.50.372-no-display-touch" defer></script>
 <script src="antcv-photo-pentagon-shape.js?v=1.50.57" defer></script>
 <script src="antcv-preview-header-tokens.js?v=1.50.41" defer></script>
 <!-- v1.50.159: sidebar-bg tokenization — recolours the preview sidebar per visual

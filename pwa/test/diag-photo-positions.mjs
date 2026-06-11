@@ -71,17 +71,19 @@ async function probe(pos){
         const sideOk='main-left'===pos
           ?(r.left+r.width/2)<(mr.left+mr.width/2)
           :(r.left+r.width/2)>=(mr.left+mr.width/2);
-        // round 2: sections are flow-roots beside the photo — the FIRST
-        // section block must NOT extend under the figure (its rect must not
-        // overlap the photo horizontally), so heading rules stop before it
-        // and there is no text crescent.
+        // round 3: the text hugs the CIRCLE (shape-outside on the float),
+        // while the section HEADING (first child) is a flow-root so its
+        // underline rule still stops before the figure.
+        const cs=getComputedStyle(img);
+        const shapeOk=/circle/.test(cs.shapeOutside||'');
         const firstSec=main.querySelector('[data-sid]');
-        let bfcOk=false;
-        if(firstSec){
-          const fr=firstSec.getBoundingClientRect();
-          bfcOk='main-left'===pos?fr.left>=r.right-2:fr.right<=r.left+2;
+        const heading=firstSec?firstSec.firstElementChild:null;
+        let headOk=false;
+        if(heading){
+          const hr=heading.getBoundingClientRect();
+          headOk='main-left'===pos?hr.left>=r.right-12:hr.right<=r.left+12;
         }
-        return{pos,ok:inMain&&sideOk&&bfcOk,bfcOk};
+        return{pos,ok:inMain&&sideOk&&shapeOk&&headOk,shapeOk,headOk};
       }
       case 'main-left-bottom':case 'main-right-bottom':{
         const mr=main.getBoundingClientRect();
@@ -102,7 +104,21 @@ async function probe(pos){
         const vOk='bridge-middle'===pos
           ?Math.abs((r.top+r.height/2)-(row.top+row.height/2))<=6
           :(r.bottom<=row.bottom-4&&r.bottom>=row.bottom-60);
-        return{pos,ok:centred&&vOk};
+        // round 3: dual-crescent spacers exist in BOTH columns and sit on
+        // the medallion's vertical band (text wraps them via shape-outside).
+        const sps=Array.from(sb.parentElement.querySelectorAll('[data-antcv-bridge-spacer]'));
+        const both=sps.length===2;
+        // each spacer's shape-outside CIRCLE must be centred on the
+        // medallion's midline (circle y is relative to the spacer box top)
+        const imgMid=r.top+r.height/2;
+        const centers=sps.map(sp=>{
+          const so=getComputedStyle(sp).shapeOutside||'';
+          const m=so.match(/circle\([\d.]+px at [\d.]+% ([\d.]+)px\)/);
+          if(!m)return 9999;
+          return Math.round(sp.getBoundingClientRect().top+parseFloat(m[1])-imgMid);
+        });
+        const aligned=both&&centers.every(c=>Math.abs(c)<=12);
+        return{pos,ok:centred&&vOk&&both&&aligned,spacers:sps.length,centers,centred,vOk,imgMid:Math.round(imgMid)};
       }
     }
     return{pos,ok:false};
@@ -113,7 +129,7 @@ const order=['hidden','header-left','header-right','main-left','main-right','mai
 const results=[];
 for(const p of order)results.push(await probe(p));
 await browser.close();await new Promise(r2=>server.close(r2));
-for(const r of results)console.log(`${r.pos}: ${r.ok?'OK':'FAIL'}${r.n!==undefined?' (imgs '+r.n+')':''}`);
+for(const r of results)console.log(`${r.pos}: ${r.ok?'OK':'FAIL'}${r.ok?'':' '+JSON.stringify(r)}`);
 console.log('app errors:',errs.length,errs.slice(0,2).join(' | '));
 const ok=results.every(r=>r.ok)&&errs.length===0;
 console.log(ok?'PHOTO-POSITIONS OK':'PHOTO-POSITIONS FAILED');

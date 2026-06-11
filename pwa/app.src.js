@@ -15970,7 +15970,7 @@
           try {
             if (null != u.get("photoSize", null)) return;
           } catch (_) {}
-          if ("band-overlap" === er) return;
+          if ("band-overlap" === er || "bridge-middle" === er || "bridge-bottom" === er) return;
           const e = Array.from(ci.current.querySelectorAll("[data-sid]"));
           let t = 8;
           for (const n of e) {
@@ -39331,6 +39331,32 @@
                               minHeight: 0 === n ? 400 : 300,
                             },
                           },
+                          // PHOTO-POSITIONS round 3: vertical-seam bridge —
+                          // an invisible float spacer shaped as the
+                          // medallion's LEFT half, so the sidebar text wraps
+                          // it as a crescent. Vertical position set by the
+                          // medallion's commit ref.
+                          0 === n &&
+                            zn &&
+                            ("bridge-middle" === er ||
+                              "bridge-bottom" === er) &&
+                            React.createElement("div", {
+                              "data-antcv-bridge-spacer": "sb",
+                              style: {
+                                float: "right",
+                                width: Math.round(Zo / 2) + 10,
+                                // height + circle-y are set by the
+                                // medallion's commit ref (a margin-pushed
+                                // float would GROW the flex column → row →
+                                // margin feedback loop; a fixed tall box
+                                // with the circle positioned inside it adds
+                                // no height as long as it stays within the
+                                // column's natural height).
+                                height: 0,
+                                marginRight: -8,
+                                pointerEvents: "none",
+                              },
+                            }),
                           0 === n &&
                             zn &&
                             ("sidebar-top" === er ||
@@ -39496,6 +39522,49 @@
                             "bridge-bottom" === er) &&
                           React.createElement("img", {
                             src: zn,
+                            // round 3: at commit, measure the page row and
+                            // pull the two half-circle float spacers to the
+                            // medallion's vertical band so the text in BOTH
+                            // columns wraps it as crescents.
+                            ref: (el) => {
+                              if (!el) return;
+                              try {
+                                const row = el.closest(".antcv-page-row");
+                                if (!row) return;
+                                const R = Math.round(Zo / 2) + 10;
+                                // measure AFTER layout so the medallion's
+                                // absolute position is final
+                                const ir = el.getBoundingClientRect();
+                                const midY = ir.top + ir.height / 2;
+                                row
+                                  .querySelectorAll(
+                                    "[data-antcv-bridge-spacer]",
+                                  )
+                                  .forEach((sp) => {
+                                    const side =
+                                      sp.getAttribute(
+                                        "data-antcv-bridge-spacer",
+                                      );
+                                    const spTop =
+                                      sp.getBoundingClientRect().top;
+                                    const cy = Math.max(
+                                      R,
+                                      Math.round(midY - spTop),
+                                    );
+                                    // cap at the flex-stretched column height
+                                    // so the float never adds height (no
+                                    // grow→reposition feedback)
+                                    const col = sp.parentElement;
+                                    const colH = col
+                                      ? col.getBoundingClientRect().height
+                                      : cy + R;
+                                    sp.style.height =
+                                      Math.min(cy + R, Math.floor(colH)) +
+                                      "px";
+                                    sp.style.shapeOutside = `circle(${R}px at ${"sb" === side ? "100%" : "0%"} ${cy}px)`;
+                                  });
+                              } catch (_) {}
+                            },
                             style: {
                               ...__photoFrame(Zo),
                               position: "absolute",
@@ -39573,6 +39642,32 @@
                           },
                           0 === n
                             ? [
+                                // round 3: vertical-seam bridge — invisible
+                                // float spacer shaped as the medallion's
+                                // RIGHT half so the main text wraps it as a
+                                // crescent (vertical position set by the
+                                // medallion's commit ref).
+                                zn &&
+                                ("bridge-middle" === er ||
+                                  "bridge-bottom" === er)
+                                  ? React.createElement("div", {
+                                      key: "antcv-bridge-spacer-main",
+                                      "data-antcv-bridge-spacer": "main",
+                                      style: {
+                                        float: "left",
+                                        width: Math.round(Zo / 2) + 10,
+                                        // sized + circle-positioned by the
+                                        // medallion's commit ref (see the
+                                        // sidebar spacer note).
+                                        height: 0,
+                                        marginLeft: -(
+                                          (ya && ya.mainEdgeIndent) ||
+                                          10
+                                        ),
+                                        pointerEvents: "none",
+                                      },
+                                    })
+                                  : null,
                                 // PHOTO-POSITIONS-NATIVE-001: main-left /
                                 // main-right — the photo floats at the top of
                                 // the main column (115px ≈ the export's
@@ -39588,10 +39683,16 @@
                                           "main-left" === er
                                             ? "left"
                                             : "right",
+                                        // round 3: the text hugs the CIRCLE
+                                        // (shape-outside), not the square
+                                        // bounding box — the snug crescent
+                                        // the owner red-marked.
+                                        shapeOutside: "circle(50%)",
+                                        shapeMargin: 8,
                                         margin:
                                           "main-left" === er
-                                            ? "0 12px 8px 0"
-                                            : "0 0 8px 12px",
+                                            ? "2px 10px 6px 0"
+                                            : "2px 0 6px 10px",
                                       },
                                     })
                                   : null,

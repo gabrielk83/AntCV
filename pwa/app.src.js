@@ -12019,6 +12019,118 @@
               );
             }),
           ),
+          // PAGEBREAK-STYLE-OPTIONS-001 (owner 2026-06-08): page-continuation
+          // options. Persisted on the styleConfig like the indent sliders, so
+          // they cloud-sync and reset with the rest of the style. The preview
+          // + docx-worker halves read these keys.
+          React.createElement(
+            "div",
+            { style: { marginBottom: 8 } },
+            React.createElement(
+              "div",
+              {
+                style: {
+                  fontSize: 9,
+                  color: o,
+                  fontWeight: 700,
+                  letterSpacing: 0.8,
+                  textTransform: "uppercase",
+                  marginBottom: 6,
+                  paddingBottom: 3,
+                  borderBottom: "1px solid rgba(1,183,187,0.2)",
+                },
+              },
+              "PAGE FLOW",
+            ),
+            [
+              ["contHeadlines", "Keep continuation headlines", !0],
+              ["repeatHeader", "Repeat candidate header on every page", !1],
+            ].map(([key, label, def]) => {
+              const val =
+                e && null != e[key] ? !!e[key] : def;
+              return React.createElement(
+                "label",
+                {
+                  key: key,
+                  style: {
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    marginBottom: 4,
+                    cursor: "pointer",
+                  },
+                },
+                React.createElement("input", {
+                  type: "checkbox",
+                  checked: val,
+                  onChange: (ev) => t({ [key]: !!ev.target.checked }),
+                  style: { cursor: "pointer" },
+                }),
+                React.createElement(
+                  "span",
+                  {
+                    style: {
+                      fontSize: 9,
+                      color: "rgba(255,255,255,0.45)",
+                    },
+                  },
+                  label,
+                ),
+              );
+            }),
+            React.createElement(
+              "label",
+              {
+                style: {
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  marginBottom: 4,
+                },
+              },
+              React.createElement(
+                "span",
+                {
+                  style: {
+                    fontSize: 9,
+                    color: "rgba(255,255,255,0.45)",
+                    whiteSpace: "nowrap",
+                  },
+                },
+                "Page numbers",
+              ),
+              React.createElement(
+                "select",
+                {
+                  value:
+                    e && "string" == typeof e.pageNumbers
+                      ? e.pageNumbers
+                      : "off",
+                  onChange: (ev) => t({ pageNumbers: ev.target.value }),
+                  style: {
+                    flex: 1,
+                    background: "rgba(255,255,255,0.07)",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    borderRadius: 6,
+                    color: "#fff",
+                    fontSize: 10,
+                    padding: "3px 6px",
+                  },
+                },
+                React.createElement("option", { value: "off" }, "Off"),
+                React.createElement(
+                  "option",
+                  { value: "top-right" },
+                  "Top right",
+                ),
+                React.createElement(
+                  "option",
+                  { value: "bottom-right" },
+                  "Bottom right",
+                ),
+              ),
+            ),
+          ),
         ),
     );
   }

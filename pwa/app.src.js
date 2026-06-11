@@ -3968,9 +3968,22 @@
           {
             style: {
               fontSize: sz,
-              marginRight: 4,
               display: "inline-block",
               lineHeight: 1,
+              // text-indent INHERITS into inline-blocks: the bullet row's
+              // negative indent re-applied inside this span, collapsing its
+              // box to 0 width and painting the glyph left of the row (the
+              // "markers missing / hugging the edge" reports). Neutralise it
+              // so the glyph renders inside its own box at the row's
+              // first-line position (3px).
+              textIndent: 0,
+              // The marker box spans from the 3px first-line position to the
+              // text hang, so the first line's TEXT starts exactly at
+              // bulletIndent and aligns with the wrapped lines — same model
+              // as the Word export (marker at 3px, all text lines flush at
+              // the hang).
+              width: Math.max(8, (k.bulletIndent || 24) - 3),
+              marginRight: 0,
             },
           },
           ch + " ",

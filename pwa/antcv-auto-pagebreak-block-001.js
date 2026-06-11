@@ -62,11 +62,19 @@
  * from sticky in the same pass so it can grow a fresh break (the coupling the
  * old code ignored). Applies to sidebar, main, and CL body. ONE_PASS /
  * two-phase and the bands are runtime-tunable via AntcvAutoPagebreak.config().
+ *
+ * SIDEBAR-DRAG-DANCE-001 (1.50.341, owner 2026-06-11): the measurer is now
+ * SUSPENDED while a splitter drag is in progress (capture-phase pointerdown on
+ * .antcv-col-splitter sets dragActive; window pointerup/cancel clears it and
+ * arms ONE settle pass ~350ms later, after React commits the final width). This
+ * stops the "sidebar dances during drag, only settles when I click to edit"
+ * symptom — the measurer no longer writes against a mid-drag, still-moving
+ * layout. Covers both the native left drag and the reverse-drag sidecar.
  */
 (function () {
   'use strict';
 
-  var VERSION = '1.50.340-sidebar-shrink-reclaim';
+  var VERSION = '1.50.341-drag-suspend';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -546,6 +554,19 @@
   // window after our own write breaks that loop regardless of fingerprint, and
   // is purely additive (it can only SKIP work, never trigger a render).
   var cooldownUntil = 0;
+  // SIDEBAR-DRAG-DANCE-001 (owner 2026-06-11 "sidebar still dancing; only stops
+  // when I click to edit text"): during a splitter drag the sidebar width
+  // changes on every pointer tick, so the live layout (and the viewport dims in
+  // sourceFingerprint) churns. The measurer fired repeatedly on a DOM React was
+  // still re-laying-out → write → re-render → measure → the salmon "danced."
+  // Clicking to edit settled the layout into one stable fingerprint, so the next
+  // pass converged and the dance stopped. FIX: suspend the measurer WHILE a drag
+  // is in progress and run ONE clean settle pass after pointer-up, once the
+  // layout has stabilised. Covers both the native left-sidebar drag and the
+  // reverse-drag sidecar — both go through the same .antcv-col-splitter element.
+  var dragActive = false;
+  var dragSettleTimer = 0;
+  var dragGuardTimer = 0;
   function nowMs() {
     return (typeof performance !== 'undefined' && performance.now)
       ? performance.now() : Date.now();
@@ -603,6 +624,10 @@
   function run() {
     try {
       var now = nowMs();
+      // SIDEBAR-DRAG-DANCE-001: never measure mid-drag — the layout is still
+      // moving and any write would feed the dance. The pointer-up handler runs
+      // one settle pass once things stop.
+      if (dragActive) return;
       if (now < brokenUntil) return;
       // 1.50.287: hard cooldown after our own write — do not re-measure the
       // pagination WE just triggered (breaks the #185 oscillation regardless
@@ -699,7 +724,51 @@
     } catch (_) {}
   }
 
+  // SIDEBAR-DRAG-DANCE-001: capture-phase pointerdown on a splitter starts a
+  // drag-suspend; window pointerup/cancel ends it and arms one settle pass.
+  // Capture phase so we see it even though the splitter handlers stopPropagation.
+  function installDragSuspend() {
+    function onDown(ev) {
+      try {
+        var t = ev && ev.target;
+        if (!t || !t.closest) return;
+        if (!t.closest('.antcv-col-splitter')) return;
+        dragActive = true;
+        if (dragSettleTimer) { clearTimeout(dragSettleTimer); dragSettleTimer = 0; }
+        // Safety: if pointerup is ever missed (released outside the window, lost
+        // capture), auto-clear so the measurer can't freeze permanently.
+        if (dragGuardTimer) clearTimeout(dragGuardTimer);
+        dragGuardTimer = setTimeout(function () {
+          dragGuardTimer = 0;
+          if (dragActive) { dragActive = false; cooldownUntil = 0; lastSourceFp = null; schedule(); }
+        }, 8000);
+      } catch (_) {}
+    }
+    function onUp() {
+      if (!dragActive) return;
+      dragActive = false;
+      if (dragGuardTimer) { clearTimeout(dragGuardTimer); dragGuardTimer = 0; }
+      // Let React commit the final width + re-paginate, THEN measure once. The
+      // ratio is persisted on pointer-up by the splitter, so the source has
+      // genuinely changed; clear the gate so this single settle pass runs even
+      // if the cooldown from a pre-drag write is still warm.
+      if (dragSettleTimer) clearTimeout(dragSettleTimer);
+      dragSettleTimer = setTimeout(function () {
+        dragSettleTimer = 0;
+        cooldownUntil = 0;
+        lastSourceFp = null;
+        schedule();
+      }, 350);
+    }
+    try {
+      window.addEventListener('pointerdown', onDown, { capture: true, passive: true });
+      window.addEventListener('pointerup', onUp, { capture: true, passive: true });
+      window.addEventListener('pointercancel', onUp, { capture: true, passive: true });
+    } catch (_) {}
+  }
+
   function start() {
+    installDragSuspend();
     // 1.50.337 SALMON-CHURN-REVERT (owner 2026-06-09 "salmon disappeared from CV+CL"):
     // the 1.50.326 "quicker salmon" speed-up (poll 1200ms + 120ms schedule + dense
     // boot delays) raised measurer frequency enough that, under heavy editing + the

@@ -60,6 +60,15 @@
     "productivity",
     "utilities"
   ],
+  "share_target": {
+    "action": "./",
+    "method": "GET",
+    "params": {
+      "url": "shared_url",
+      "text": "shared_text",
+      "title": "shared_title"
+    }
+  },
   "screenshots": [],
   "scope": "./",
   "id": "./"

@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.50.374';
+const CACHE = 'antcv-1.50.375';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',
@@ -23,6 +23,7 @@ const SHELL = [
   './antcv-pub-injected-reaper-352.js',
   './antcv-cloud-put-shrink-guard-355.js',
   './antcv-jd-watch.js',
+  './antcv-share-target-jd-375.js',
   './antcv-privacy-led.js',
   './antcv-demo-watermark.js',
   './antcv-bullet-targets.js',

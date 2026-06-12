@@ -99,7 +99,7 @@ const tx = texts(xml); const joined = tx.join(' | ');
 const allRegs = ['ISO 12233', 'ISO 15739', 'EMVA 1288', 'ISO 26262', 'ASPICE', 'SOTIF'].every(r => joined.includes(r));
 const allRoles = ['Role One', 'Role Two'].every(r => joined.includes(r));
 const dup = ['Role One', 'Role Two', 'ISO 26262'].some(r => tx.filter(t => t.includes(r)).length !== 1);
-const hasCont = /REGULATORY CONTEXT \(Cont\.\)/i.test(joined);
+const hasCont = /REGULATORY CONTEXT \(CONT\.\)/i.test(joined); // 1.14.57: ctx.contSuffix everywhere (en = "(CONT.)")
 // AI disclosure: present exactly once, and after the last body-level page break (last page)
 const discRe = /AI-assisted/g;
 const discCount = (joined.match(discRe) || []).length;
@@ -135,7 +135,7 @@ for (const m of tokens2) {
 }
 const pageTexts = spans.map(([s, e]) => (body.slice(s, e).match(/<w:t[ >][^<]*<\/w:t>/g) || []).map(x => x.replace(/<[^>]+>/g, '')).filter(Boolean));
 const p2 = pageTexts[1] || [];
-const p2ContCount = p2.filter(t => /^PROFESSIONAL EXPERIENCE \(Cont\.\)$/.test(t.trim())).length;
+const p2ContCount = p2.filter(t => /^PROFESSIONAL EXPERIENCE \(CONT\.\)$/i.test(t.trim())).length;
 const p2PlainHead = p2.filter(t => /^PROFESSIONAL EXPERIENCE$/.test(t.trim())).length;
 const p2StrayOutcomes = p2.filter(t => /^SELECTED OUTCOMES/.test(t.trim())).length;
 const contHeaderOk = p2ContCount === 1 && p2PlainHead === 0 && p2StrayOutcomes === 0;

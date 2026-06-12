@@ -24816,7 +24816,7 @@ function buildLinearDocument(ctx) {
     }));
     bodyChildren.push(...renderSection(closureSec, ctx, false));
   }
-  const closeWord = lang === "da" ? "Med venlig hilsen," : "Kind regards,";
+  const closeWord = { da: "Med venlig hilsen,", es: "Atentamente,", zh: "此致敬礼，" }[lang] || "Kind regards,";
   bodyChildren.push(new Paragraph({
     // v1.50.269: before 240 -> 150; keepNext binds the closing block
     // (Kind regards -> name -> watermark) so it can't orphan a single
@@ -24838,7 +24838,7 @@ function buildLinearDocument(ctx) {
     keepLines: true,
     alignment: AlignmentType.LEFT,
     children: [new TextRun({
-      text: pi.name || (lang === "da" ? "Dit navn" : "Your Name"),
+      text: pi.name || ({ da: "Dit navn", es: "Tu nombre", zh: "姓名" }[lang] || "Your Name"),
       bold: true,
       color: style.mainTextColor,
       size: pt2hp(fs.mainBody),
@@ -25004,7 +25004,7 @@ function buildLinearDocument(ctx) {
                       spacing: { before: 60, after: 0, line: 276, lineRule: "auto" },
                       alignment: AlignmentType.LEFT,
                       children: [new TextRun({
-                        text: pi.name || (lang === "da" ? "Dit navn" : "Your Name"),
+                        text: pi.name || ({ da: "Dit navn", es: "Tu nombre", zh: "姓名" }[lang] || "Your Name"),
                         bold: true,
                         color: style.mainTextColor,
                         size: pt2hp(fs.mainBody),
@@ -25478,7 +25478,7 @@ function renderSection(s, ctx, isSidebar) {
           // "(Cont.)" comes from the segment wrapper heading.
           items: ch.items.map((it) => (it && typeof it === "object") ? (() => { const c = Object.assign({}, it); delete c._page; return c; })() : it),
           _antcvSegment: true,
-          title: ci > 0 ? (ctx.style && ctx.style.contHeadlines === false ? "" : (s.title || "") + " (Cont.)") : s.title,
+          title: ci > 0 ? (ctx.style && ctx.style.contHeadlines === false ? "" : (s.title || "") + " " + (ctx.contSuffix || "(CONT.)")) : s.title,
           pageBreakBefore: ci > 0 ? true : s.pageBreakBefore,
         });
         out2.push(...renderSection(seg, ctx, isSidebar));
@@ -25521,7 +25521,7 @@ function renderSection(s, ctx, isSidebar) {
           rows: [hdr, ...rowsChunk],
           row_pages: {},
           _antcvSegment: true,
-          title: ci > 0 ? (ctx.style && ctx.style.contHeadlines === false ? "" : String(s.title || "") + " (Cont.)") : s.title,
+          title: ci > 0 ? (ctx.style && ctx.style.contHeadlines === false ? "" : String(s.title || "") + " " + (ctx.contSuffix || "(CONT.)")) : s.title,
           pageBreakBefore: ci > 0 ? true : s.pageBreakBefore
         });
         out2.push(...renderSection(seg, ctx, isSidebar));
@@ -25553,7 +25553,7 @@ function renderSection(s, ctx, isSidebar) {
         const seg = Object.assign({}, s, {
           roles: chunkRoles.map((r) => { const c = Object.assign({}, r); delete c.page; return c; }),
           _antcvSegment: true,
-          title: ci > 0 ? (ctx.style && ctx.style.contHeadlines === false ? "" : String(s.title || "") + " (Cont.)") : s.title,
+          title: ci > 0 ? (ctx.style && ctx.style.contHeadlines === false ? "" : String(s.title || "") + " " + (ctx.contSuffix || "(CONT.)")) : s.title,
           pageBreakBefore: ci > 0 ? true : s.pageBreakBefore
         });
         out2.push(...renderSection(seg, ctx, isSidebar));
@@ -25796,7 +25796,7 @@ function renderTextBullets(s, ctx, isSidebar) {
   // heading as "TITLE (Cont.)" on the new page so the reader sees the bullets carry
   // on — mirrors renderExperience's per-page heading. CL only; the CV text_bullets
   // path moves the whole section via the table wrapper and never breaks mid-body.
-  const contTitle = String(s.title || "HOW I WOULD CONTRIBUTE") + " (Cont.)";
+  const contTitle = String(s.title || "HOW I WOULD CONTRIBUTE") + " " + (ctx.contSuffix || "(CONT.)");
   const brk = (key) => {
     const n = Number(ip[key]);
     const pg = (Number.isFinite(n) && n >= 2 && n <= 4) ? n : 1;
@@ -25868,7 +25868,7 @@ function renderFoundation(s, ctx, isSidebar) {
   if (s.professionally) {
     if (ctlPage("professionally") >= 2) {
       out.push(pbBreakPara());
-      if (!(ctx.style && ctx.style.contHeadlines === false)) out.push(headingParagraph(String(s.title || "FOUNDATION").toUpperCase() + " (Cont.)", ctx, false));
+      if (!(ctx.style && ctx.style.contHeadlines === false)) out.push(headingParagraph(String(s.title || "FOUNDATION").toUpperCase() + " " + (ctx.contSuffix || "(CONT.)"), ctx, false));
     }
     out.push(make(professionallyLabel, s.professionally, professionallyAlign));
   }
@@ -26039,7 +26039,7 @@ function renderCompetencyTable(s, ctx) {
   chunks.forEach((chunk, chunkIdx) => {
     if (chunkIdx > 0) {
       out.push(pbBreakPara());
-      if (s.title && !(ctx.style && ctx.style.contHeadlines === false)) out.push(headingParagraph(String(s.title || "").toUpperCase() + " (Cont.)", ctx, false));
+      if (s.title && !(ctx.style && ctx.style.contHeadlines === false)) out.push(headingParagraph(String(s.title || "").toUpperCase() + " " + (ctx.contSuffix || "(CONT.)"), ctx, false));
     }
     out.push(makeTable(chunk.rows, chunk.start));
     out.push(new Paragraph({ spacing: { before: 0, after: 40, line: 20, lineRule: "exact" }, children: [] }));
@@ -26066,7 +26066,7 @@ function renderExperience(s, ctx) {
     if (__pg > __runMaxRolePage) {
       __runMaxRolePage = __pg;
       out.push(pbBreakPara());
-      if (s.title && !(ctx.style && ctx.style.contHeadlines === false)) out.push(headingParagraph(String(s.title || "").toUpperCase() + " (Cont.)", ctx, false));
+      if (s.title && !(ctx.style && ctx.style.contHeadlines === false)) out.push(headingParagraph(String(s.title || "").toUpperCase() + " " + (ctx.contSuffix || "(CONT.)"), ctx, false));
     }
     const left = [];
     if (role.title) {
@@ -26618,7 +26618,7 @@ var VALID_TYPES = /* @__PURE__ */ new Set([
 ]);
 var VALID_DOC = /* @__PURE__ */ new Set(["cv", "cl"]);
 var VALID_LOC = /* @__PURE__ */ new Set(["main", "sidebar"]);
-var VALID_LANG = /* @__PURE__ */ new Set(["en", "da"]);
+var VALID_LANG = /* @__PURE__ */ new Set(["en", "da", "es", "zh"]);
 var VALID_LAYOUT = /* @__PURE__ */ new Set(["two_column", "linear"]);
 function validatePayload(p) {
   const errs = [];
@@ -26632,7 +26632,7 @@ function validatePayload(p) {
     errs.push(`doc must be one of: cv, cl (got: ${JSON.stringify(p.doc)})`);
   }
   if (p.language && !VALID_LANG.has(p.language)) {
-    errs.push(`language must be one of: en, da`);
+    errs.push(`language must be one of: en, da, es, zh`);
   }
   if (p.layout && !VALID_LAYOUT.has(p.layout)) {
     errs.push(`layout must be one of: two_column, linear`);
@@ -26984,7 +26984,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.56-cl-pagenum";
+var VERSION = "1.14.57-es-zh";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);
@@ -27471,7 +27471,7 @@ function getSchemaDoc() {
     description: "AntCV DOCX generation request. Send a JSON body matching this schema to /generate. Response is a binary .docx file.",
     required_fields: ["schema_version", "doc", "personal_info", "sections"],
     doc: { enum: ["cv", "cl"], description: "CV or cover letter" },
-    language: { enum: ["en", "da"], default: "en" },
+    language: { enum: ["en", "da", "es", "zh"], default: "en" },
     layout: {
       enum: ["two_column", "linear"],
       default: "two_column",

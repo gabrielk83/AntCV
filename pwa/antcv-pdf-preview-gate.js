@@ -809,7 +809,14 @@ ${inlineStyles}
     // (e.g. es/zh while the UI is in those languages) makes the worker reject
     // the whole request with HTTP 422. Clamp to a supported value so export
     // never hard-fails; da when Danish, otherwise en.
-    function clampLang(l) { return /^da/i.test(String(l || '')) ? 'da' : 'en'; }
+    // LANG-ES-ZH-001 (1.50.382): worker 1.14.57 accepts en|da|es|zh.
+    function clampLang(l) {
+      var s = String(l || '').toLowerCase();
+      if (/^da/.test(s)) return 'da';
+      if (/^es/.test(s)) return 'es';
+      if (/^zh/.test(s)) return 'zh';
+      return 'en';
+    }
     // doc may be stored bare ('cl') OR JSON-encoded ('"cl"'); handle both so the
     // CL preview never exports the CV (the bare === 'cl' check missed '"cl"').
     var doc = (function () {

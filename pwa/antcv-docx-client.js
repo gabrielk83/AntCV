@@ -464,9 +464,17 @@ export function buildPayload({
   layout, filename,
   headerItemAlign, headerItemLoc, password, watermark,
 } = {}) {
-  // The worker schema only accepts language en|da; clamp so an es/zh UI never
-  // 422s the export. da when Danish, otherwise en.
-  language = /^da/i.test(String(language || '')) ? 'da' : 'en';
+  // LANG-ES-ZH-001 (1.50.382 / worker 1.14.57): the worker accepts
+  // en|da|es|zh now — forward all four (localized closing/continuation
+  // strings live worker-side). Anything else still clamps to en so an
+  // unknown UI language can never 422 the export.
+  language = (function (l) {
+    const s = String(l || '').toLowerCase();
+    if (/^da/.test(s)) return 'da';
+    if (/^es/.test(s)) return 'es';
+    if (/^zh/.test(s)) return 'zh';
+    return 'en';
+  })(language);
   // Normalize sections — the PWA stores these as { cv: [...], cl: [...] }
   // depending on doc type; the worker just wants the active list.
   const docSections = mergeHowContributeFromLocalStorage((sections && sections[doc]) || (Array.isArray(sections) ? sections : []), doc);

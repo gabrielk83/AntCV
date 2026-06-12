@@ -110,7 +110,7 @@ These are binding for every nordic-minimal output. They are not style suggestion
 4. **Patents keep their numbers.** Every patent entry in publications/patents carries its patent number verbatim. Dropping the number to save space is not a valid compression.
 5. **Work style ends with a people skill.** The final item or sentence of the work-style section is always a people skill (e.g. clear written follow-ups, calm under disagreement, direct one-to-one communication) — never a process or tooling point.
 6. **Punctuation: `-`, never `—`.** Applies to year ranges, compression dashes, and table separators (`parser_safe_separator: "hyphen"`).
-7. **Contact line, Danish local form.** Postcode + local city name, no country: `2300 København` — not "Copenhagen", not "Denmark". LinkedIn renders as a clickable link, never plain text.
+7. **Contact line, Danish local form.** Postcode + district, no country: `2300, København S` (owner correction 2026-06-12) — not "Copenhagen, Denmark", not bare "København". LinkedIn renders as a clickable link, never plain text.
 8. **No justified text where it gapes.** Sentences and bullets are set left-aligned when justification would produce visible rivers of white space between words (narrow columns justify worst). Restraint includes typography.
 9. **One line per bullet, one line per table row** (owner, 2026-06-12). Every SELECTED OUTCOMES and EXPERIENCE bullet fits ONE rendered line (max ~95 characters in the main column); every table row fits ONE line (Strategic Expertise cell max ~55 characters). Compress or split rather than wrap — the SCE enforces both caps for this style.
 

@@ -91,7 +91,7 @@
         "company": "Kanzen konsulenter i nord ApS",
         "role": "Especialista en Gestión de Programas",
         "years": "2022 - 2026",
-        "location": "2300 København",
+        "location": "2300, København S",
         "format": "bullets",
         "items": [
           "Dirigí la consultora en paralelo al rol de Innoviz; asesoré a tres empresas en gestión de programas y gobernanza del cambio en industrias reguladas.",
@@ -172,7 +172,7 @@
       "cl_header": {
         "name": "Gabriel Alexander Karp-Gershon",
         "application_line": "Candidatura: Senior Product Manager - Maersk",
-        "contacts": ["email@example.com", "linkedin.com/in/...", "2300 København"]
+        "contacts": ["email@example.com", "linkedin.com/in/...", "2300, København S"]
       },
       "cl_opener": {
         "salutation": "Estimado equipo de selección,",

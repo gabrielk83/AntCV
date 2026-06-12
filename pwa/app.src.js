@@ -2212,11 +2212,12 @@
     const o = [],
       r = [e.city, e.country].filter(Boolean).join(", "),
       a = e.location || r;
-    // CONTACT-LOCAL-FORM-001 (owner 2026-06-12, nordic-minimal hard rule):
-    // the contact line uses the Danish local form — no country word,
-    // "Copenhagen" becomes "København", and the bare city gains its
-    // postcode ("2300 København"). Only fires when the location is
-    // Copenhagen-based; other cities pass through untouched.
+    // CONTACT-LOCAL-FORM-001 (owner 2026-06-12, corrected same day): the
+    // contact line uses the Danish local form — "2300, København S"
+    // (postcode + district), no country word. A Copenhagen-based location
+    // WITHOUT its own postcode/district normalises to exactly that string;
+    // a location that already carries digits is left as the user wrote it;
+    // other cities pass through untouched.
     const __localForm = (v) => {
       let s = String(v || "").trim();
       if (!/copenhagen|københavn/i.test(s)) return s;
@@ -2226,7 +2227,9 @@
         .replace(/\s{2,}/g, " ")
         .replace(/[,\s]+$/g, "")
         .trim();
-      if (/^københavn\b/i.test(s) && !/\d/.test(s)) s = "2300 " + s;
+      // Only the bare city (or bare "København S") gains the postcode —
+      // an explicit other district (NV, Ø, …) is the user's own data.
+      if (/^københavn( s)?$/i.test(s)) s = "2300, København S";
       return s;
     };
     return (
@@ -21854,7 +21857,7 @@
             // "extract company ONLY from the JOB DESCRIPTION" rule).
             const __noJD = !(c && String(c).trim());
             const __neutralCo = __noJD
-              ? 'OPEN / UNSOLICITED APPLICATION — NO TARGET COMPANY. There is no job description and no target employer for this draft. Do NOT name ANY specific company ANYWHERE in the cover letter or the CV body — not in WHY THIS POSITION, not in the HOW I WOULD CONTRIBUTE closing line, not in the CLOSURE line, nowhere. Use neutral references only: "your organisation", "your team", "the role". Do NOT infer, guess, or carry forward a company name from prior context, additional signals, or background documents. meta.company MUST be empty. You STILL must FULLY write who_content, why_content (frame WHY generally — why this KIND of role and work fits, with no specific employer named), and contribute_items (3-4 concrete bullets) from the candidate\'s real background. NEVER leave who_content, why_content, or contribute_items empty in an unsolicited draft. meta.subtitle MUST be EXACTLY the candidate\'s standing specialization line from the SPECIALIZATION LINE rule (verbatim — for Gabriel: "Processes*Products*People").\n\n'
+              ? 'OPEN / UNSOLICITED APPLICATION — NO TARGET COMPANY. There is no job description and no target employer for this draft. Do NOT name ANY specific company ANYWHERE in the cover letter or the CV body — not in WHY THIS POSITION, not in the HOW I WOULD CONTRIBUTE closing line, not in the CLOSURE line, nowhere. Use neutral references only: "your organisation", "your team", "the role". Do NOT infer, guess, or carry forward a company name from prior context, additional signals, or background documents. meta.company MUST be empty. You STILL must FULLY write who_content, why_content (frame WHY generally — why this KIND of role and work fits, with no specific employer named), and contribute_items (3-4 concrete bullets) from the candidate\'s real background. NEVER leave who_content, why_content, or contribute_items empty in an unsolicited draft. meta.subtitle MUST be EXACTLY the candidate\'s standing specialization line from the SPECIALIZATION LINE rule (verbatim — for Gabriel: "Processes*Products*People"). PROFILE OPENER (GEN-PROFILE-001): in an UNSOLICITED draft the PROFILE\'s FIRST sentence is the BROAD professional identity — "IT professional with 15+ years in consumer and regulated markets" (or a close variant). NEVER open with "Electro-optics and LiDAR architect" or any narrow specialist identity; the optics/EO depth belongs in SELECTED OUTCOMES and the sidebar, not the headline. Sentences 2-3: hardware-software products concept-to-production (requirements, change control, validation, supplier coordination) and recent GenAI product work when current and relevant. JD-driven drafts keep the JD-matched specialist opener.\n\n'
               : "";
             // QUICK-GEN-001 (owner 2026-06-12): session-only "Quick
             // generation" checkbox (window.__antcvQuickGen — never

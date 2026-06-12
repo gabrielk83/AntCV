@@ -26,6 +26,14 @@ What the **user** controls (overrides):
 
 The JSON output uses these exact keys. Section keys are stable across styles and languages.
 
+### Candidate header — contact line
+
+Owner-locked rules (2026-06-12), applying to the CV header and the CL `cl_header.contacts`:
+
+- **Location reads "2300, København S"** (postcode + district) — NOT "Copenhagen, Denmark", not "København, Danmark", and no country word. The PWA render layer normalizes Copenhagen-based locations to this form; the skill emits it directly.
+- **LinkedIn renders as a clickable link**, never plain text (the export layer emits a real hyperlink).
+- Order: location, citizenship (if present), email, phone, LinkedIn, website.
+
 ### `profile`
 
 **Purpose.** Two to three sentences that answer "who is this person, what do they do, what do they care about — in the language of the role." Sets the frame for everything below.
@@ -42,7 +50,11 @@ The JSON output uses these exact keys. Section keys are stable across styles and
 - No banned words. No "work style" filler ("results-driven", "passionate about", "thrive in").
 - Mention concrete domain nouns the JD also uses, but do not parrot the JD's phrasing.
 
-**Examples of opener forms that work** (style-agnostic):
+**Opener-by-application-type (GEN-PROFILE-001, owner directive 2026-06-12).**
+- **UNSOLICITED applications:** sentence 1 is the BROAD professional identity — "IT professional with 15+ years in consumer and regulated markets" (or a close variant). NEVER open with "Electro-optics and LiDAR architect" or any narrow specialist identity: an unsolicited reader has no JD anchoring the niche, and the broad opener keeps the door open across PM/product/engineering roles. The optics/EO depth moves to Selected Outcomes and the sidebar, not the headline. Sentences 2–3: hardware-software products concept→production (requirements, change control, validation, supplier coordination); recent GenAI product work (AntCV) when current and relevant.
+- **JD-DRIVEN applications:** keep the JD-matched specialist opener (the forms below).
+
+**Examples of opener forms that work** (style-agnostic, JD-driven):
 
 - "Technical product manager with 15+ years across automotive LiDAR, electro-optical systems, and consulting."
 - "Functional safety specialist focused on ISO 26262 and ASPICE assessments in automotive perception stacks."

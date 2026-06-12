@@ -70,7 +70,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Sanity check repo layout
         run: |
           set -e
@@ -90,8 +90,8 @@ jobs:
   unit-tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
       - name: Proxy writing-style engine + registry-drift unit tests
@@ -113,7 +113,7 @@ jobs:
       group: deploy-pwa-main
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install wrangler
         run: npm install -g wrangler@4
       - name: Deploy PWA to Cloudflare Pages
@@ -138,7 +138,7 @@ jobs:
       group: deploy-worker-${{ inputs.target }}
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Validate confirm input matches target (real deploys only)
         if: inputs.mode == 'deploy'

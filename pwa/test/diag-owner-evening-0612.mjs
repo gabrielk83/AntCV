@@ -6,7 +6,7 @@
  *      insert;
  *   3. LINKEDIN-CLICK-001 + CONTACT-LOCAL-FORM-001: the header contact
  *      line renders the LinkedIn entry as an <a href> and the location in
- *      Danish local form ("2300 København", no "Denmark");
+ *      Danish local form ("2300, København S", no "Denmark");
  *   4. NO-JUSTIFY-GAPS-001: sidebar labeled_list rows compute
  *      text-align:left (not justify);
  *   5. ADV-SPACING-CONTROLS-001: seamGap/sidebarEdgePad/sectionGap values
@@ -88,9 +88,9 @@ const check=(n,ok,d)=>{checks.push(ok);console.log(`${n}: ${ok?'OK':'FAIL'}${ok?
     const a=Array.from(document.querySelectorAll('a')).find(x=>/linkedin\.com\/in\/gabriel-karp/.test(x.getAttribute('href')||''));
     const hdr=document.body.innerText||'';
     return {anchor: !!a, href: a?a.getAttribute('href'):null, target: a?a.getAttribute('target'):null,
-      local: hdr.includes('2300 København'), noDenmark: !/2300 København[^\n]*Denmark/.test(hdr)};
+      local: hdr.includes('2300, København S'), noDenmark: !/2300, København S[^\n]*Denmark/.test(hdr)};
   });
-  check('LinkedIn clickable + 2300 København local form',
+  check('LinkedIn clickable + "2300, København S" local form',
     r.anchor && /^https:\/\//.test(r.href||'') && r.target==='_blank' && r.local && r.noDenmark && errs.length===0,
     JSON.stringify(r));
   await page.close();

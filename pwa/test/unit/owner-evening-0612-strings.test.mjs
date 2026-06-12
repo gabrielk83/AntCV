@@ -64,7 +64,14 @@ test('ADV-SPACING-CONTROLS-001 — slider keys + helpers', () => {
 
 test('LINKEDIN-CLICK + CONTACT-LOCAL-FORM markers', () => {
   assert.ok(bundle.includes('noopener noreferrer'));
-  assert.ok(bundle.includes('2300 '));
+  // owner correction 2026-06-12: postcode + district, with the comma
+  assert.ok(bundle.includes('2300, København S'));
+});
+
+test('GEN-PROFILE-001 — unsolicited broad-identity opener rule', () => {
+  assert.ok(bundle.includes('PROFILE OPENER (GEN-PROFILE-001)'));
+  assert.ok(bundle.includes('IT professional with 15+ years in consumer and regulated markets'));
+  assert.ok(bundle.includes('Electro-optics and LiDAR architect'));
 });
 
 test('NO-JUSTIFY-GAPS — no sidebar justify ternaries remain in the source', () => {

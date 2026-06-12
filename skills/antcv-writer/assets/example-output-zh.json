@@ -91,7 +91,7 @@
         "company": "Kanzen konsulenter i nord ApS",
         "role": "项目管理专员",
         "years": "2022年 - 2026年",
-        "location": "2300 København",
+        "location": "2300, København S",
         "format": "bullets",
         "items": [
           "在Innoviz任职的同时运营本顾问公司;为三家企业提供项目管理与受监管行业变更治理咨询。",
@@ -172,7 +172,7 @@
       "cl_header": {
         "name": "Gabriel Alexander Karp-Gershon",
         "application_line": "申请:Senior Product Manager - Maersk",
-        "contacts": ["email@example.com", "linkedin.com/in/...", "2300 København"]
+        "contacts": ["email@example.com", "linkedin.com/in/...", "2300, København S"]
       },
       "cl_opener": {
         "salutation": "尊敬的招聘团队,",

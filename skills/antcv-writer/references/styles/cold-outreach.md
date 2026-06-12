@@ -63,7 +63,7 @@ Two sentences. 160 – 260 characters. Speculative or possibility-led opener.
 
 ### `experience`
 
-Most recent 2 roles. 2 bullets each (not 3). Each bullet 8 – 12 words.
+Most recent 2 roles. 2 bullets each (not 3). Each bullet 8 – 12 words. Past tense for past roles, present tense for the current role (the Auto tense default; Force present/past overrides it).
 
 **Good (System Architect, Innoviz, 2020 – 2025):**
 

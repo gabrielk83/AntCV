@@ -288,9 +288,12 @@
       sidebarSectionGap: 8, // vertical gap between sidebar subsections
       bodySectionGap: 8, // vertical gap between letter-body subsections (CL)
       candidateGap: 3, // vertical gap between candidate-header rows
-      // EXP-TENSE-001 (owner 2026-06-12): false = PRESENT tense (the
-      // owner's default), true = past tense for experience bullets.
-      expPastTense: !1,
+      // EXP-TENSE-001 / EXP-TENSE-002 (owner 2026-06-12): experience-bullet
+      // tense mode. "auto" (default) = LOGICAL per-role tense — present for the
+      // current/ongoing role, past for every earlier role. "present" / "past"
+      // BYPASS the logical rule and force a uniform tense across all roles.
+      // Legacy expPastTense:true persisted configs migrate to "past" on read.
+      expTense: "auto",
     },
     Ai = "1.50.319-salmon-scope";
   // ADV-SPACING-CONTROLS-001: numeric-or-default read for the spacing
@@ -12429,10 +12432,13 @@
               ),
             ),
           ),
-          // EXP-TENSE-001 (owner 2026-06-12): professional-experience tense
-          // toggle. Unchecked (default) = PRESENT tense; checked = past.
-          // Persisted on the styleConfig (cloud-syncs, resets with the
-          // rest); the generation prompt reads it at draft time.
+          // EXP-TENSE-002 (owner 2026-06-12): professional-experience tense
+          // mode — a 3-way segmented control. "Auto" (default) = LOGICAL
+          // per-role tense (present for the current role, past for earlier
+          // roles); "Present" / "Past" BYPASS that and force one tense across
+          // every role. Persisted on the styleConfig (cloud-syncs, resets with
+          // the rest); the generation prompt reads it at draft time. Legacy
+          // expPastTense:true reads as "past".
           React.createElement(
             "div",
             { style: { marginBottom: 8 } },
@@ -12450,31 +12456,70 @@
                   borderBottom: "1px solid rgba(1,183,187,0.2)",
                 },
               },
-              "EXPERIENCE",
+              "EXPERIENCE TENSE",
             ),
+            (() => {
+              const __tv =
+                (e && (e.expTense || (!0 === e.expPastTense ? "past" : "auto"))) ||
+                "auto";
+              const __opts = [
+                ["auto", "Auto", "Present for the current role, past for earlier roles"],
+                ["present", "Present", "Force present tense on every role"],
+                ["past", "Past", "Force past tense on every role"],
+              ];
+              return React.createElement(
+                "div",
+                {
+                  style: {
+                    display: "flex",
+                    gap: 4,
+                    marginBottom: 4,
+                  },
+                },
+                __opts.map(([val, label, tip]) =>
+                  React.createElement(
+                    "button",
+                    {
+                      key: val,
+                      type: "button",
+                      title: tip,
+                      "data-antcv-exp-tense": val,
+                      "aria-pressed": __tv === val,
+                      onClick: () => t({ expTense: val }),
+                      style: {
+                        flex: 1,
+                        fontSize: 9,
+                        padding: "4px 2px",
+                        cursor: "pointer",
+                        borderRadius: 4,
+                        border:
+                          __tv === val
+                            ? "1px solid #01B7BB"
+                            : "1px solid rgba(255,255,255,0.18)",
+                        background:
+                          __tv === val
+                            ? "rgba(1,183,187,0.25)"
+                            : "rgba(255,255,255,0.04)",
+                        color:
+                          __tv === val ? "#fff" : "rgba(255,255,255,0.55)",
+                        fontWeight: __tv === val ? 700 : 400,
+                      },
+                    },
+                    label,
+                  ),
+                ),
+              );
+            })(),
             React.createElement(
-              "label",
+              "div",
               {
                 style: {
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  marginBottom: 4,
-                  cursor: "pointer",
+                  fontSize: 8,
+                  color: "rgba(255,255,255,0.35)",
+                  lineHeight: 1.3,
                 },
               },
-              React.createElement("input", {
-                type: "checkbox",
-                "data-antcv-exp-tense": "1",
-                checked: !!(e && !0 === e.expPastTense),
-                onChange: (ev) => t({ expPastTense: !!ev.target.checked }),
-                style: { cursor: "pointer" },
-              }),
-              React.createElement(
-                "span",
-                { style: { fontSize: 9, color: "rgba(255,255,255,0.45)" } },
-                "Experience bullets in past tense (default: present)",
-              ),
+              "Auto = present for the current role, past for earlier roles.",
             ),
           ),
         ),
@@ -21904,19 +21949,24 @@
                   }
                 })()
               : "";
-            // EXP-TENSE-001 (owner 2026-06-12): experience-bullet tense
-            // follows the Advanced-styles checkbox. Default (unchecked) =
-            // PRESENT tense, checked = past.
-            const __expPast = (() => {
+            // EXP-TENSE-002 (owner 2026-06-12): experience-bullet tense mode
+            // from the Advanced-styles control. "auto" (default) = LOGICAL
+            // per-role tense; "present"/"past" force a uniform tense and
+            // BYPASS the logical rule. Legacy expPastTense:true reads as "past".
+            const __expTense = (() => {
               try {
-                return !0 === (u.get("styleConfig", {}) || {}).expPastTense;
+                const sc = u.get("styleConfig", {}) || {};
+                return sc.expTense || (!0 === sc.expPastTense ? "past" : "auto");
               } catch (_) {
-                return !1;
+                return "auto";
               }
             })();
-            const __tenseRule = __expPast
-              ? "\n- EXPERIENCE TENSE: write EVERY experience bullet in PAST tense (Owned, Built, Reduced, Directed) — including the current role. Verb-variety rules unchanged."
-              : "\n- EXPERIENCE TENSE: write EVERY experience bullet in PRESENT tense (Own, Build, Reduce, Direct) — including past roles; this is the default. Use the present-tense form of the approved verbs; verb-variety rules unchanged.";
+            const __tenseRule =
+              __expTense === "past"
+                ? "\n- EXPERIENCE TENSE (FORCED PAST): write EVERY experience bullet in PAST tense (Owned, Built, Reduced, Directed) — including the current role. Verb-variety rules unchanged."
+                : __expTense === "present"
+                  ? "\n- EXPERIENCE TENSE (FORCED PRESENT): write EVERY experience bullet in PRESENT tense (Own, Build, Reduce, Direct) — including past roles. Use the present-tense form of the approved verbs; verb-variety rules unchanged."
+                  : "\n- EXPERIENCE TENSE (AUTO — default): use LOGICAL per-role tense. Write the CURRENT / ongoing role's bullets in PRESENT tense (Own, Build, Direct) and EVERY earlier (past) role's bullets in PAST tense (Owned, Built, Directed). A role is current if its years end in 'Present', 'Now', 'Current', or have no end date; otherwise it is a past role. If two roles are both open-ended, treat only the newest as current. Verb-variety rules unchanged.";
             let p = "";
             if (Ye && se) {
               uo("🤖 ChatGPT drafting (2/3)…");

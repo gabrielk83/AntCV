@@ -8,6 +8,46 @@ A companion **feature registry** (open vs shipped features) lives at
 
 ---
 
+## RECONCILED 2026-06-12 (PM) — build:app fix + stale-tag sweep
+
+Code change this pass + a status sweep of buried `[OPEN]` tags that later commits
+resolved without re-tagging the old line. Where this block disagrees with an older
+buried tag, this block wins.
+
+**Code shipped (verified, no app.js change):**
+- **BUILD-APP-BROKEN-001 / APPJS-REBUILD-001 → FIXED.** `package.json` `build:app`
+  repointed from esbuild `--minify` (unsafe — prepends `"use strict"`, blue-screens the
+  sloppy-mode bundle) to `npx --yes terser pwa/app.src.js -c -m -o pwa/app.js`. Identity
+  round-trip gate PASSED: `npm run build:app` on the unedited source reproduces the
+  committed `pwa/app.js` **byte-for-byte** (871,787 B, `cmp` clean), `node --check` OK,
+  starts `(()=>{`, 0 `"use strict"`. `app.src.js` has no drift from `app.js`. `glDemo` is
+  already `window.glDemo` (explicit). Source edits can now use the standard rebuild.
+
+**Confirmed already-done (doc tag was stale / triage misread):**
+- **DOCX-EXPORT-CORS-CPU-001** — client side is done (1.50.244/248): `describeNetworkFailure`
+  readable message + `/health` warm-up + single retry + 413 special-case, surfaced via
+  `alert(e.message)` on all four export paths. Correctly `[MITIGATED]` below; only the
+  Workers-Unbound infra decision is residual (owner's).
+- **AUTO-PAGEBREAK-CV-MIDGROUP-001** — the "measure against PDF-equivalent heights" fix
+  landed as the **dual-map measurer** (e50973f / 1.50.350): preview map and export map each
+  use their own A4 line. Owner export-verify owed (see updated entry below).
+
+**Stale `OPEN` tags — ALREADY SHIPPED (don't chase the buried old lines):**
+- SETTINGS-NAV-Z-001 / SETTINGS-SUBTAB-001 / APP-HISTORY-001 → **1.50.355** (`5cc08f5`)
+- PRIVACY-DEMO-001 → **1.50.356** (`073de89`) · HOWCONTRIBUTE-001 → **1.50.354** (`bbf4d59`)
+- GEN-UNSOL-002 → **1.50.358** (`ea30b2f`) (+ GEN-UNSOL-003 @ 1.50.391)
+- PERF-003 / PERF-004 → **1.50.359** (`300cadc`) (PERF-002/005 deferred)
+- PB-WORKER-SIDEBAR-FILL-001 → **1.50.320** (per-page; recent strata already corrects it)
+
+**Still genuinely open (code):** PB-WORKER-SIDEBAR-CONT-001 / PB-WORKER-SIDEBAR-PAGINATION-001
+(sidebar Word flow can chop items — owner re-export to scope), PB-PREVIEW-GROUPNAME-EDIT-001
+(inline preview group-name edit doesn't persist), LOGIN-GATE-001 (boot-order; largely shipped
+via login-gate 302/303 + clean-reload 347 + the loading-gate loader — owner live-boot verify
+the residual; app-shell path, diagnostic-first, do NOT blind-edit). Open features:
+WIZARD-LANG-SELECTOR-001 (two-table upgrade), PROCESSING-QUEUE-INDICATOR-001.
+
+---
+
 ## AUTONOMOUS RIDE 2026-06-11 (PM) — photo-position exports + export-preview print + share target
 
 Shipped 1.50.372→375 + docx-worker 1.14.53. Full narrative in
@@ -1019,7 +1059,18 @@ blue-screen guard — serve pwa/, assert 0 console errors + `typeof glDemo`),
      boot-smoke clean, 38/38 unit tests). **OWNER VISUAL CHECK:** confirm that
      after fit/enhance/tighten a main-column line that was overflowing in the PDF
      now fits — I cannot compare rendered-PDF line breaks.
-- **AUTO-PAGEBREAK-CV-MIDGROUP-001** `[OPEN][HIGH][preview→pdf]` — CONCLUSION
+- **AUTO-PAGEBREAK-CV-MIDGROUP-001** `[LIKELY ADDRESSED by dual-map measurer e50973f/1.50.350 — owner export-verify]` —
+  the architectural fix this item called for ("the measurer must compute against
+  PDF-equivalent heights") landed as the **dual-map** measurer: `antcv-auto-pagebreak-
+  block-001.js` now keeps a PREVIEW map and an EXPORT map, and each measures against ITS
+  OWN A4 line — export at `USABLE_PDF` (~949px), preview at `USABLE` (~1053px) — instead
+  of one shared geometry (EXP-PREVIEW-GAP-001 `e50973f`, supersedes EXP-PREVIEW-CROWD-001;
+  experience roles are atomic so the first crossing role moves whole). This is exactly the
+  per-geometry height model the old "increment 2" note asked for, applied at the role/box
+  level. **Owner export-verify owed** to confirm group/sidebar cuts also land clean in the
+  PDF; if a mid-group cut still appears, it's a residual of the worker spacing model, not
+  the measurer. *(original conclusion retained below)*
+  CONCLUSION
   the owner asked for (2026-06-07): the CV mid-group cut is the SAME root
   cause as PREVIEW-PDF-PARITY-001. `antcv-auto-pagebreak-block-001.js`
   (1.50.268) measures overflow against the **preview** DOM heights and snaps
@@ -1354,7 +1405,17 @@ blue-screen guard — serve pwa/, assert 0 console errors + `typeof glDemo`),
 
 ### Infra + features (2026-06-06, session branch)
 
-- **BUILD-APP-BROKEN-001** `[OPEN][HIGH][infra]` — **`npm run build:app` produces a
+- **BUILD-APP-BROKEN-001** `[FIXED 2026-06-12 — build:app repointed to terser]` — both
+  root causes are now closed: (1) `app.src.js` already declares `window.glDemo`
+  (explicit global, line ~18604) so the implicit-global double-emit is gone; (2) the
+  `build:app` npm script was repointed from the unsafe esbuild `--minify` (which
+  prepends `"use strict"` and broke the sloppy-mode bundle) to the proven
+  `npx --yes terser pwa/app.src.js -c -m -o pwa/app.js`. **Identity round-trip gate
+  PASSED:** `npm run build:app` on the unedited source produces a bundle BYTE-IDENTICAL
+  to the committed `pwa/app.js` (871,787 bytes, `cmp` clean), `node --check` OK, starts
+  `(()=>{`, 0 `"use strict"`. So `app.src.js` has no drift from `app.js` and source
+  edits can now be rebuilt safely with the standard script. Closes APPJS-REBUILD-001.
+  *(superseded — original report retained below)* `[OPEN][HIGH][infra]` — **`npm run build:app` produces a
   broken bundle.** Rebuilding `pwa/app.js` from `pwa/app.src.js` with esbuild 0.21.5
   yields `Uncaught ReferenceError: glDemo is not defined` at render (verified via the
   browser-QA `boot` gate: committed bundle = 0 JS errors, rebuilt = throws). Root
@@ -1565,16 +1626,18 @@ repeat the mistake.
 
 ### Still OPEN after this session
 
-- **APPJS-REBUILD-001** `[OPEN][HIGH][build]` — **There is no verified behaviour-preserving
-  way to rebuild `app.js` from `app.src.js` yet.** `npm run build:app` (esbuild `--minify`)
-  fails the only test that matters (it blue-screens, see APPJS-BLUESCREEN-001), so it must
-  not be used to ship until it passes the **identity round-trip gate** below. This blocks
-  every edit that has to go through the de-minified source (ENGINE-PAGESPLIT-001 and any
-  future `app.src.js` change). The safe procedure is documented in
-  `docs/deployment/app-js-source-and-rebuild.md` and summarised in `CLAUDE.md`. Next action:
-  `[code]` find a minifier/config that passes the identity round-trip (terser semantics-
-  preserving, or esbuild with the strict-directive suppressed), OR do surgical in-place
-  edits on the minified `app.js` mirrored into `app.src.js` for traceability.
+- **APPJS-REBUILD-001** `[FIXED 2026-06-12 — terser is the verified rebuild]` — there is
+  now a verified behaviour-preserving rebuild. The identity round-trip gate was run:
+  `terser pwa/app.src.js -c -m -o /tmp/x` (and `npm run build:app`, now repointed to the
+  same terser command) reproduces the committed `pwa/app.js` **byte-for-byte** (871,787
+  bytes, `cmp` clean), `node --check` OK, output begins `(()=>{`, 0 `"use strict"`. Terser
+  is semantics-preserving for this sloppy-mode bundle (esbuild was not — it prepends the
+  strict directive, APPJS-BLUESCREEN-001). So `app.src.js` source edits can now be rebuilt
+  with the standard script and deployed after the usual cache-bust. Closes with
+  BUILD-APP-BROKEN-001 above. *(superseded — original below)* `[OPEN][HIGH][build]` — There was no verified behaviour-preserving
+  way to rebuild `app.js` from `app.src.js`; `npm run build:app` (esbuild `--minify`)
+  blue-screened (APPJS-BLUESCREEN-001). Procedure documented in
+  `docs/deployment/app-js-source-and-rebuild.md` and `CLAUDE.md`.
 - **ENGINE-PAGESPLIT-001** `[OPEN][PAUSED][feature]` — The real on-screen page-split
   engine — per-item pagination so a forced break actually moves content to the next page
   for all three split units: **(1) sidebar sub-subsections, (2) table rows, (3) "How I

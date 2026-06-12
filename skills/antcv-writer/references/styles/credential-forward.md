@@ -62,7 +62,7 @@ Two to three sentences. 260 – 340 characters. Lead with role and primary crede
 
 ### `experience`
 
-3 bullets per role. Each 12 – 18 words. Each role's bullets reference the credentials applied.
+3 bullets per role. Each 12 – 18 words. Each role's bullets reference the credentials applied. Past tense for past roles, present tense for the current role (the Auto tense default; Force present/past overrides it).
 
 **Good (Functional Safety Specialist, Innoviz, 2020 – 2025):**
 

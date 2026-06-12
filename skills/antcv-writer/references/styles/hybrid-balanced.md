@@ -65,7 +65,7 @@ Default format follows the dominant register: `table-grid` if commercial dominat
 
 ### `experience`
 
-3 bullets per role. Each 12 – 18 words. Bullet rhythm follows the dominant register of that specific role — bullet ordering can differ between an industrial role and a research role within the same CV.
+3 bullets per role. Each 12 – 18 words. Bullet rhythm follows the dominant register of that specific role — bullet ordering can differ between an industrial role and a research role within the same CV. Past tense for past roles, present tense for the current role (the Auto tense default; Force present/past overrides it).
 
 **Good (Industrial postdoc-equivalent role at Innoviz):**
 

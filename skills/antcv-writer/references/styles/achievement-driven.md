@@ -69,7 +69,7 @@ This is the centrepiece section in `achievement-driven`. 4 – 6 bullets. Each t
 
 ### `experience`
 
-3 bullets per role at `target_pages` ≤ 1.5; 4 – 5 at longer pages. Each bullet leads with outcome or scope.
+3 bullets per role at `target_pages` ≤ 1.5; 4 – 5 at longer pages. Each bullet leads with outcome or scope. Past tense for past roles, present tense for the current role (the Auto tense default; Force present/past overrides it).
 
 **Bullet structure for this style:**
 

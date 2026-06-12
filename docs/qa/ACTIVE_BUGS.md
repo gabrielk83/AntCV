@@ -630,19 +630,21 @@ Iterating on real CV/CL exports (owner rendering .docx + PDF). Shipped + open:
   between each, header present once, and zero content loss/dup vs the section input.
   Hold until that harness is green before deploy. NOTE: the **preview** already
   paginates into page-boxes natively; this is the EXPORT (Word) half only.
-- **PB-WORKER-SIDEBAR-CONT-001** `[OPEN][HIGH][export]` — a SIDEBAR section
-  (REGULATORY CONTEXT) that continues onto page 2 gets the bare title repeat, NOT
-  "(Cont.)". Needs the same continuation-heading mechanism as experience: forward
-  the sidebar's effective breaks and split the section into page-segments with a
-  "TITLE (Cont.)" heading on continuations (the "paste new table" approach the
-  owner described). This is the long-deferred SIDEBAR HALF of SALMON-AUTO-EXPORT
-  (stood down in 1.50.215 because raw autoPages forwarding scrambled the 2-column
-  layout). Owner: "force the corrected preview render, or implement paste-new-table
-  and paste the elements after the salmon."
-- **PB-WORKER-SIDEBAR-PAGINATION-001** `[OPEN][HIGH][export]` — owner: sidebar Word
-  pagination "still problematic… was better before." Sidebar export currently uses
-  Word natural flow (no forwarded breaks) and can chop a sidebar item. Same fix as
-  above (forward effective sidebar breaks + clean cut).
+- **PB-WORKER-SIDEBAR-CONT-001** `[FIXED — verified headless 2026-06-12]` — a SIDEBAR
+  section (REGULATORY CONTEXT) continuing onto page 2 got the bare title repeat, NOT
+  "(Cont.)". Closed by the per-page two-column rework (worker ≥1.14.39/40): the
+  docx-client forwards the measurer's EXPORT break map (`antcv:autoPages`) as
+  `item._page` on sidebar list items, the worker splits the column into top-level
+  page segments and emits "TITLE (CONT.)" headings (double-"(CONT.)" dedup in
+  1.14.40; localized suffix in 1.14.58). Verified: `pwa/test/diag-sidebar-cont-e2e.mjs`
+  (REAL measurer → client `_page` forwarding) + `workers/docx-worker/test/diag-twocol-ownerlike.mjs`
+  (worker (Cont.) segments) — both green 2026-06-12.
+- **PB-WORKER-SIDEBAR-PAGINATION-001** `[FIXED — same mechanism as SIDEBAR-CONT-001]`
+  — sidebar Word pagination "still problematic… was better before." The sidebar no
+  longer relies on Word natural flow: forwarded `item._page` breaks cut the column
+  cleanly at the measurer's line (no mid-item chop), coordinated with the main
+  column's role/table breaks (`pwa/test/diag-sidebar-export-page.mjs` green
+  2026-06-12: sidebar `_page` + experience `role.page` land on the same page).
 - **PREVIEW-SUBTITLE-RACE-001** `[FIXED — antcv-subtitle-sequence-368.js, verified headless]`
   — entering the preview for an Unsolicited application showed the TEMPLATE
   specialisation placeholder ("[Specialisation — 1-3 focus areas…]") until the user
@@ -822,10 +824,10 @@ pushed to `main` + `claude/antcv-roadmap-bugs-L9Sqa` +
   a 30-row CORE COMPETENCIES table that overflows splits at row 26 → page 2 with
   30/30 rows rendered, NO duplication, NO loss, header repeated on the
   continuation table. The in-place split in `Ce` stays disabled (correct — the
-  page-box oMain split owns cross-page movement). **EXPORT (PDF + DOCX) still
-  OPEN** — see SALMON-AUTO-EXPORT-001 below (auto breaks not yet forwarded to the
-  docx-worker). Original OPEN note retained for export scope:
-- **SALMON-PARALLEL-COLUMNS-001 (export scope)** `[OPEN][HIGH][export]` — the auto salmon
+  page-box oMain split owns cross-page movement). **EXPORT closed by the
+  per-page two-column rework** — see SALMON-AUTO-EXPORT-001 below (now lifted)
+  and the updated export-scope entry:
+- **SALMON-PARALLEL-COLUMNS-001 (export scope)** `[FIXED — client 1.50.295+ effective-bucket forwarding + worker ≥1.14.39–41 per-page tables; verified headless 2026-06-12]` — the auto salmon
   must paginate the SIDEBAR and the MAIN column **in parallel / coordinated**:
   when content crosses the A4 line, the sidebar break and the main break happen
   together at the SAME page boundary, and any block that SLIDES to the next page
@@ -834,7 +836,19 @@ pushed to `main` + `claude/antcv-roadmap-bugs-L9Sqa` +
   in sidebar and in main need to work in parallel — e.g. generate new table in
   new page and cut the old items that are sliding." Symptom seen: the CORE
   COMPETENCIES table's rows desync / the moved rows are not cleanly cut when the
-  table reflows to the continuation page. **Scope:** (a) CV main NON-experience
+  table reflows to the continuation page. **Resolution:** the worker now emits
+  ONE two-column table PER PAGE (1.14.39; `splitChildrenByPage` cuts both
+  columns on `__antcvPB` markers), so a break in one column can no longer
+  desync the other — the columns share the page boundary by construction.
+  Tables split by `row_pages` with the header repeated (1.14.38), experience
+  by `role.page` (1.14.39), sidebar lists by `item._page` (double-"(CONT.)"
+  dedup 1.14.40); column widths from forwarded `sidebar_ratio` (1.14.41).
+  Verified: `pwa/test/diag-sidebar-cont-e2e.mjs` + `pwa/test/diag-sidebar-export-page.mjs`
+  (coordinated sidebar `_page` + main `role.page`) + `workers/docx-worker/test/diag-twocol-paged.mjs`
+  / `diag-twocol-ownerlike.mjs` (N tables = N pages, clean cut, no dup/loss) —
+  all green 2026-06-12. Residual pixel-level preview↔export geometry drift is
+  tracked separately (PREVIEW-PDF-PARITY-001). Original scope retained:
+  (a) CV main NON-experience
   sections — esp. the CORE COMPETENCIES / "What I bring" TABLES — must split by
   ROW with the moved rows removed from the page-1 table and re-emitted in a
   page-2 continuation table (header repeated), never duplicated/lost; (b) the
@@ -845,7 +859,7 @@ pushed to `main` + `claude/antcv-roadmap-bugs-L9Sqa` +
   main-column page-box pagination") — that is exactly the gap. Relates to the
   oMain table-row flatMap split (~37741) + the measurer's `firstOverflowRow`.
   Must hold in BOTH preview and export (PDF + DOCX).
-- **SALMON-AUTO-EXPORT-001** `[PARTIAL 1.50.295 — owner export check needed][HIGH][export: PDF + DOCX]` —
+- **SALMON-AUTO-EXPORT-001** `[FIXED — stand-down lifted; sidebar auto-break forwards since the per-page two-column rework; verified headless 2026-06-12]` —
   **DONE (client-only, no worker deploy):** the docx-export client
   (`antcv-docx-client.js`) now forwards the EFFECTIVE bucket (manual ∪ auto) for
   the two WHOLE-UNIT, MAIN-column paths that already render identically for manual
@@ -859,15 +873,17 @@ pushed to `main` + `claude/antcv-roadmap-bugs-L9Sqa` +
   Chromium (pwa/test/diag-export-autobreak.mjs): with auto breaks
   `{experience:{2:2}, core:{26:2}}`, the POSTed /generate payload carries
   experience role pages `[1,1,2,2]` (cascade) and `core.row_pages={26:2}`.
-  **STILL OPEN (needs owner verification + parity):** (1) I cannot see the
-  rendered .docx/PDF — owner must confirm the experience + table auto-breaks land
-  correctly in BOTH formats. (2) The SIDEBAR item auto-break is deliberately STILL
-  stood down (`autoPagesMap` stays empty so pageFor / sidebar+list breaks remain
-  manual-only): the worker lays both columns as ONE Word table row, so a break in
-  only one column desyncs them, and the auto-break POSITION is measured in preview
-  px which differs from Word geometry — that coupling is PREVIEW-PDF-PARITY-001
-  below. Re-enabling the sidebar auto-break export needs the parity fix + coordinated
-  2-column worker pagination + an owner visual check. History below retained:
+  **STAND-DOWN LIFTED:** the blocker — "the worker lays both columns as ONE Word
+  table row, so a break in only one column desyncs them" — was removed by the
+  per-page two-column rework (worker ≥1.14.39: one table per page, both columns
+  cut on the same `__antcvPB` boundary). The client now forwards the EXPORT
+  break map (`antcv:autoPages`, measured against the Word-equivalent
+  USABLE_PDF line — the preview/export two-map decouple) for sidebar list
+  items too (`item._page` via pageFor), not just experience/table units.
+  Verified `pwa/test/diag-sidebar-cont-e2e.mjs` (real measurer → forwarded
+  `_page`) + `pwa/test/diag-sidebar-export-page.mjs` (sidebar + main
+  coordinated). Pixel-level geometry drift stays under
+  PREVIEW-PDF-PARITY-001. History below retained:
   - only MANUAL breaks (itemPages / role.page) export; the AUTO breaks the measurer creates
   (`antcv:autoPages`) are NOT forwarded to the docx-worker, so the exported
   document does NOT match the preview's salmon. **Applies to BOTH the DOCX and
@@ -1078,9 +1094,14 @@ blue-screen guard — serve pwa/, assert 0 console errors + `typeof glDemo`),
   plain heading. Locked by `diag-twocol-ownerlike.mjs` (payload now includes a
   SELECTED OUTCOMES section before EXPERIENCE; asserts the page-2 heading set).
   Owner export check remains a nice-to-have, no longer blocking.
-- **PB-WORKER-SIDEBAR-FILL-001** — `[OPEN]` The navy sidebar does not fill to the page
-  bottom on a continuation page **in the export** (Word table-cell full-height technique).
-  Preview fill addressed in 1.50.216; export still open.
+- **PB-WORKER-SIDEBAR-FILL-001** — `[FIXED — worker 1.14.54, owner-confirmed mechanism]`
+  The navy sidebar did not fill to the page bottom on continuation pages **in the
+  export**. Fixed in the worker: every two-column body row carries an "atLeast"
+  height (page 1: 13260 DXA under the header band; pages 2+: PAGE_H − 600) so the
+  sidebar cell's navy shading stretches to ~0.5–1cm above the page edge. The slack
+  is deliberate — exact-fill heights made LibreOffice (/generate-pdf) overflow each
+  sheet by a sliver and emit blank pages / swallow sidebar lines (PDF-BLANK-PAGE-001,
+  fixed 1.14.54). See `makeBodyRow` in workers/docx-worker/src/index.js.
 - **PB-PREVIEW-SIDEBAR-FILL-001** — `[FIX SHIPPED 1.50.227 — owner visual verify]` In the
   **preview**, the navy sidebar still didn't run to the page bottom — the 1.50.216 approach
   relied on flex `align-items:stretch` + a fixed `min-height:1123px`, which caps it at one A4
@@ -1093,11 +1114,13 @@ blue-screen guard — serve pwa/, assert 0 console errors + `typeof glDemo`),
   navy field reaches the content bottom on single + multi-page kernels and after edits; then
   re-check the watermark sits right (per owner's "watermark only after that"). Boot-verified
   (sidecar registers, 0 console errors); functional height match needs a real rendered preview.
-- **PB-AUTO-OVERFLOW-001** — `[OPEN / stood down]` Auto-overflow was built (1.50.211–214)
-  then **stood down** (1.50.215): didn't render on mobile and forwarding the sidebar
-  auto-break into the 2-column worker scrambled the PDF (candidate header isolated → 3
-  pages, mid-sentence role break, wrong continuation header). Needs a proper rebuild:
-  unpaginated height measurement + worker-side group/role-aware 2-column pagination.
+- **PB-AUTO-OVERFLOW-001** — `[FIXED — rebuilt; subsumed by SALMON-AUTO-EXPORT-001]`
+  Auto-overflow was built (1.50.211–214) then stood down (1.50.215: forwarding the
+  sidebar auto-break into the single-row 2-column worker scrambled the PDF). The
+  rebuild called for here exists: the measurer (`antcv-auto-pagebreak-block-001.js`)
+  writes the two break maps (preview + Word-equivalent export), the client forwards
+  the effective bucket, and the worker does group/role-aware per-page 2-column
+  pagination (≥1.14.39–41). See SALMON-AUTO-EXPORT-001 above for verification.
 - **PB-PREVIEW-GROUPNAME-EDIT-001** — `[OPEN]` A group-name edit made **from the preview**
   (inline) does not persist; only edits **from the panel** stick. (Panel-edit race fixed
   1.50.217; the preview-inline path is separate.)

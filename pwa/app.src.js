@@ -21765,6 +21765,19 @@
                   } catch (_) {}
                   v = "";
                 }
+                // GEN-UNSOL-003: with a JD present, a literal
+                // "Unsolicited"/"Open Application"/"n/a" echo from the LLM
+                // is not a company either — scrub it so a SPECIFIC
+                // application can never carry the Unsolicited label.
+                if (
+                  !__noJD &&
+                  /^(unsolicited|open\s+application|n\/?a)$/i.test(v)
+                ) {
+                  try {
+                    D.company = "";
+                  } catch (_) {}
+                  v = "";
+                }
                 try {
                   const r = ((D && D.role) || "").trim();
                   /^[<\[]/.test(r) && (D.role = "");
@@ -21787,7 +21800,20 @@
                 // hole that let Terma back in. Force Unsolicited + run the body scrub
                 // for EVERY no-JD generation, regardless of __jdNamedCompany.
                 __noJD ||
-                (!__jdNamedCompany && io && "Unsolicited" === io.company)
+                // GEN-UNSOL-003 (owner 2026-06-12: "when it is a specific
+                // application, Application is not unsolicited but for the
+                // company"): the stale-kernel fallback must NEVER fire when
+                // a JD is present. Generating from the Unsolicited-kernel
+                // context (io.company === "Unsolicited") WITH a JD attached,
+                // an LLM that failed to emit meta.company used to fall into
+                // this branch and the SPECIFIC application was relabelled
+                // "Open Application — Unsolicited". Gated on __noJD: with a
+                // JD, an empty company stays empty (header shows the role)
+                // and is never forced to Unsolicited.
+                (!__jdNamedCompany &&
+                  __noJD &&
+                  io &&
+                  "Unsolicited" === io.company)
               ) {
                 const e = ie() || {},
                   __wh0 =

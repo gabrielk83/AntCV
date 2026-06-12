@@ -25326,9 +25326,24 @@ function buildPhotoParagraph(ctx, position) {
     });
   }
   if (pos === "sidebar-top" || pos === "sidebar-bottom") {
+    // PHOTO-GAP-EQUAL-001 (owner 2026-06-13): for sidebar-top, the air BELOW
+    // the medallion (down to the first sidebar heading, e.g. TOOLS) equals
+    // the air ABOVE it. Above = sidebar cell top margin (240 + bodyEdgePad
+    // delta) + this paragraph's before (120). The first heading contributes
+    // its own before (40 + sidebarSectionGap delta), so:
+    //   after = cellTop + 120 - headingBefore   (floored at the old 120)
+    const __tok = (k) => {
+      const n = Number(style && style[k]);
+      return Number.isFinite(n) && n >= 0 && n <= 60 ? n : void 0;
+    };
+    const __bepT = __tok("bodyEdgePad");
+    const __cellTop = Math.max(0, 240 + (__bepT != null ? Math.round((__bepT - 8) * 15) : 0));
+    const __ssgT = __tok("sidebarSectionGap");
+    const __headBefore = Math.max(0, 40 + (__ssgT != null ? Math.round((__ssgT - 8) * 15) : 0));
+    const __afterDxa = pos === "sidebar-top" ? Math.max(120, __cellTop + 120 - __headBefore) : 120;
     return new Paragraph({
       alignment: AlignmentType.CENTER,
-      spacing: { before: 120, after: 120 },
+      spacing: { before: 120, after: __afterDxa },
       children: [
         new ImageRun({
           data,
@@ -27076,7 +27091,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.60-owner-evening";
+var VERSION = "1.14.61-photo-gap";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

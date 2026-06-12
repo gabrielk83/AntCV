@@ -37,7 +37,8 @@ test('SPEC-CATCHY-001 — standing specialization line + unsolicited append', ()
   assert.ok(bundle.includes('Processes • Products • People'));
   assert.ok(!bundle.includes('Processes*Products*People'));
   assert.ok(bundle.includes('SPECIALIZATION LINE (meta.subtitle)'));
-  assert.ok(bundle.includes('simple and catchy'));
+  // SPEC-SCOPE-001 reworded the rule: "simple, catchy and SMART"
+  assert.ok(bundle.includes('simple, catchy and SMART'));
 });
 
 test('SPEC-SEPARATOR-001 — stored "*" separators normalized on read + in stored subtitle', () => {
@@ -51,6 +52,23 @@ test('SPEC-SEPARATOR-001 — stored "*" separators normalized on read + in store
 test('RECOMMENDATIONS placement — anchored after the LAST of experience/expertise', () => {
   assert.ok(bundle.includes(String.raw`PROFESSIONAL EXPERTISE|\bEXPERTISE\b|EKSPERTISE`));
   assert.ok(bundle.includes('[RECOMMENDATIONS-SECTION-001] placed after'));
+});
+
+test('SPEC-SCOPE-001 — Gabriel-only default, tailored drafts get a fresh smart line', () => {
+  // name-guarded default (no Gabriel-line leak to other candidates)
+  assert.ok(bundle.includes(String.raw`/\bgabriel\b/i`));
+  // tailored drafts never reuse the standing line
+  assert.ok(bundle.includes('do NOT reuse the standing line'));
+  // no-standing-line candidates derive one
+  assert.ok(bundle.includes('DERIVE one from the candidate'));
+});
+
+test('ROLE-DUP-001 — duplicate role-title variants merged (prompt + stored dedupe)', () => {
+  // generation-side merge rule
+  assert.ok(bundle.includes('DUPLICATE-ROLE MERGE (ROLE-DUP-001)'));
+  assert.ok(bundle.includes('"System Architect" vs "System Architect & CRM"'));
+  // deterministic stored-sections dedupe effect
+  assert.ok(bundle.includes('[ROLE-DUP-001] merged'));
 });
 
 test('work-style people-skill close rule in the prompt', () => {

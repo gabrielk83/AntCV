@@ -2627,7 +2627,7 @@
                 .filter(Boolean);
               if (lines.length)
                 r.push(
-                  "STORED WORK HISTORY — these are the candidate's REAL roles, newest first (r1 = most recent). Fill cv_overrides.experience_roles from THESE: use the exact role title, company and years, and draft bullets from the listed responsibilities. INCLUDE EVERY stored role in experience_roles — roles irrelevant to this application must STILL be returned fully populated with on:false (hidden), NEVER dropped and NEVER returned as blank slots. NEVER invent roles/companies/dates not listed here, and NEVER return the schema placeholder markers (<...>) verbatim:\n" +
+                  "STORED WORK HISTORY — these are the candidate's REAL roles, newest first (r1 = most recent). Fill cv_overrides.experience_roles from THESE: use the exact role title, company and years, and draft bullets from the listed responsibilities. INCLUDE EVERY stored role in experience_roles — roles irrelevant to this application must STILL be returned fully populated with on:false (hidden), NEVER dropped and NEVER returned as blank slots. DUPLICATE-ROLE MERGE (ROLE-DUP-001): when two stored roles describe the SAME position — same company, same or overlapping years, one title contained in the other (e.g. \"System Architect\" vs \"System Architect & CRM\") — output ONE merged role carrying the fuller title; the two title variants must NEVER both be visible. NEVER invent roles/companies/dates not listed here, and NEVER return the schema placeholder markers (<...>) verbatim:\n" +
                     lines.join("\n"),
                 );
             }
@@ -2642,15 +2642,26 @@
           // SPEC-SEPARATOR-001 (owner 2026-06-13): bullets, not asterisks —
           // and a stored specialization that still carries the old "*"
           // separators is normalized on read (no migration needed).
+          // SPEC-SCOPE-001 (owner 2026-06-13): "Processes • Products •
+          // People" is GABRIEL'S UNSOLICITED line only. Other candidates
+          // never inherit it (name-guarded default), and TAILORED drafts —
+          // for everyone — get a fresh role-smart line instead of the
+          // standing one.
+          const __isGabriel = /\bgabriel\b/i.test(String(o.name || ""));
+          const __storedSpec = String(o.specialization || "")
+            .trim()
+            .replace(/\s*\*\s*/g, " • ");
           const spec =
-            String(o.specialization || "")
-              .trim()
-              .replace(/\s*\*\s*/g, " • ") ||
-            "Processes • Products • People";
+            __storedSpec ||
+            (__isGabriel ? "Processes • Products • People" : "");
           r.push(
-            'SPECIALIZATION LINE (meta.subtitle): the candidate\'s standing specialization line is "' +
-              spec +
-              '". Every subtitle MUST be simple and catchy — at most three short concepts, separated by " • " (bullet, never an asterisk). For an UNSOLICITED draft (no job description) meta.subtitle MUST be EXACTLY the standing specialization line above, verbatim. For tailored drafts you may adapt it to the role, but keep it simple and catchy — never a sentence.',
+            'SPECIALIZATION LINE (meta.subtitle): every subtitle MUST be simple, catchy and SMART — at most three short concepts, separated by " • " (bullet, never an asterisk), never a sentence. ' +
+              (spec
+                ? 'The candidate\'s STANDING specialization line is "' +
+                  spec +
+                  '". For an UNSOLICITED draft (no job description) meta.subtitle MUST be EXACTLY this standing line, verbatim. '
+                : "No standing specialization line is stored: for an UNSOLICITED draft, DERIVE one from the candidate's strongest background themes (max three concepts). ") +
+              "For a TAILORED draft (a job description is present) do NOT reuse the standing line: craft a fresh, role-smart subtitle by matching the JD's core themes to the candidate's real strengths — same format (max three concepts, \" • \" separated).",
           );
         } catch (_) {}
       })();
@@ -14579,6 +14590,73 @@
             }
           } catch (_) {}
         }, [io]),
+        // ROLE-DUP-001 (owner 2026-06-13: "System Architect & CRM is visible
+        // and so does System Architect — not a legal combination"): two
+        // VISIBLE experience roles describing the same position — same
+        // company, same or overlapping years, one title contained in the
+        // other — collapse to the role with the FULLER title. Conservative:
+        // only exact-containment titles at the same company are touched,
+        // and the survivor keeps the union of visibility + the richer
+        // bullet list.
+        React.useEffect(() => {
+          try {
+            if (!(ro && Array.isArray(ro.cv))) return;
+            const xi = ro.cv.findIndex(
+              (e) => e && "experience" === e.type && Array.isArray(e.roles),
+            );
+            if (xi < 0) return;
+            const norm = (s) =>
+              String(s || "")
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, " ")
+                .trim();
+            const yearsOf = (s) =>
+              (String(s || "").match(/\d{4}/g) || []).map(Number);
+            const overlap = (a, b) => {
+              const ya = yearsOf(a), yb = yearsOf(b);
+              if (!ya.length || !yb.length) return true; // unknown -> assume same era
+              const a0 = Math.min(...ya), a1 = Math.max(...ya);
+              const b0 = Math.min(...yb), b1 = Math.max(...yb);
+              return a0 <= b1 && b0 <= a1;
+            };
+            const roles = ro.cv[xi].roles.slice();
+            const drop = new Set();
+            for (let i = 0; i < roles.length; i++) {
+              for (let j = 0; j < roles.length; j++) {
+                if (i === j || drop.has(i) || drop.has(j)) continue;
+                const a = roles[i], b = roles[j];
+                if (!a || !b) continue;
+                const ta = norm(a.title), tb = norm(b.title);
+                // only pairs where a's title is contained in b's (covers
+                // identical titles too) — b is the fuller survivor
+                if (!ta || !tb || !tb.includes(ta)) continue;
+                if (norm(a.company) !== norm(b.company)) continue;
+                if (!overlap(a.years, b.years)) continue;
+                // b carries the fuller (or equal) title -> keep b, drop a
+                drop.add(i);
+                if (!1 !== a.on) b.on = !0;
+                if (
+                  (!Array.isArray(b.bullets) || !b.bullets.length) &&
+                  Array.isArray(a.bullets) &&
+                  a.bullets.length
+                )
+                  b.bullets = a.bullets;
+              }
+            }
+            if (!drop.size) return;
+            const kept = roles.filter((_, i) => !drop.has(i));
+            const cv = ro.cv.slice();
+            cv[xi] = { ...cv[xi], roles: kept };
+            ao({ ...ro, cv });
+            try {
+              console.log(
+                "[ROLE-DUP-001] merged",
+                drop.size,
+                "duplicate role title variant(s)",
+              );
+            } catch (_) {}
+          } catch (_) {}
+        }, [ro]),
         React.useEffect(() => {
           const e = (e) => {
             try {
@@ -22312,7 +22390,7 @@
             // "extract company ONLY from the JOB DESCRIPTION" rule).
             const __noJD = !(c && String(c).trim());
             const __neutralCo = __noJD
-              ? 'OPEN / UNSOLICITED APPLICATION — NO TARGET COMPANY. There is no job description and no target employer for this draft. Do NOT name ANY specific company ANYWHERE in the cover letter or the CV body — not in WHY THIS POSITION, not in the HOW I WOULD CONTRIBUTE closing line, not in the CLOSURE line, nowhere. Use neutral references only: "your organisation", "your team", "the role". Do NOT infer, guess, or carry forward a company name from prior context, additional signals, or background documents. meta.company MUST be empty. You STILL must FULLY write who_content, why_content (frame WHY generally — why this KIND of role and work fits, with no specific employer named), and contribute_items (3-4 concrete bullets) from the candidate\'s real background. NEVER leave who_content, why_content, or contribute_items empty in an unsolicited draft. meta.subtitle MUST be EXACTLY the candidate\'s standing specialization line from the SPECIALIZATION LINE rule (verbatim — for Gabriel: "Processes • Products • People"). PROFILE OPENER (GEN-PROFILE-001): in an UNSOLICITED draft the PROFILE\'s FIRST sentence is the BROAD professional identity — "IT professional with 15+ years in consumer and regulated markets" (or a close variant). NEVER open with "Electro-optics and LiDAR architect" or any narrow specialist identity; the optics/EO depth belongs in SELECTED OUTCOMES and the sidebar, not the headline. Sentences 2-3: hardware-software products concept-to-production (requirements, change control, validation, supplier coordination) and recent GenAI product work when current and relevant. JD-driven drafts keep the JD-matched specialist opener.\n\n'
+              ? 'OPEN / UNSOLICITED APPLICATION — NO TARGET COMPANY. There is no job description and no target employer for this draft. Do NOT name ANY specific company ANYWHERE in the cover letter or the CV body — not in WHY THIS POSITION, not in the HOW I WOULD CONTRIBUTE closing line, not in the CLOSURE line, nowhere. Use neutral references only: "your organisation", "your team", "the role". Do NOT infer, guess, or carry forward a company name from prior context, additional signals, or background documents. meta.company MUST be empty. You STILL must FULLY write who_content, why_content (frame WHY generally — why this KIND of role and work fits, with no specific employer named), and contribute_items (3-4 concrete bullets) from the candidate\'s real background. NEVER leave who_content, why_content, or contribute_items empty in an unsolicited draft. meta.subtitle MUST follow the SPECIALIZATION LINE rule: when a standing specialization line exists it is used VERBATIM (for Gabriel: "Processes • Products • People"); when none is stored, DERIVE a simple catchy line from the candidate\'s strongest background themes (max three concepts, " • " separated). PROFILE OPENER (GEN-PROFILE-001): in an UNSOLICITED draft the PROFILE\'s FIRST sentence is the BROAD professional identity — "IT professional with 15+ years in consumer and regulated markets" (or a close variant). NEVER open with "Electro-optics and LiDAR architect" or any narrow specialist identity; the optics/EO depth belongs in SELECTED OUTCOMES and the sidebar, not the headline. Sentences 2-3: hardware-software products concept-to-production (requirements, change control, validation, supplier coordination) and recent GenAI product work when current and relevant. JD-driven drafts keep the JD-matched specialist opener.\n\n'
               : "";
             // QUICK-GEN-001 (owner 2026-06-12): session-only "Quick
             // generation" checkbox (window.__antcvQuickGen — never
@@ -40914,7 +40992,13 @@
                                 },
                                 style: {
                                   textAlign: "center",
-                                  marginBottom: 8,
+                                  // PHOTO-GAP-EQUAL-001 (owner 2026-06-13):
+                                  // the air BELOW the medallion (to the first
+                                  // sidebar section, e.g. TOOLS) equals the
+                                  // air ABOVE it — the sidebar's top padding
+                                  // (bodyEdgePad). Band-overlap overrides
+                                  // with its own equal-air commit ref below.
+                                  marginBottom: __nzPx(ya && ya.bodyEdgePad, 12),
                                   // PHOTO-SIDEBAR-BRIDGE-001: bridge mode
                                   // hoists the medallion so its MIDLINE sits
                                   // on the header/sidebar seam — top half on

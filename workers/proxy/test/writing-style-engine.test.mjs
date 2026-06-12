@@ -238,13 +238,30 @@ test('sce: plain-text SELECTED OUTCOMES block without a metric is flagged', () =
   ].join('\n') + '\n';
   const r = evaluateSce(txt, req);
   assert.equal(r.clean, false);
-  assert.ok(r.bannedPhraseHits.some((h) => h.includes('selected_outcomes has no numeric metric')));
+  assert.ok(r.bannedPhraseHits.some((h) => h.includes('selected_outcomes item has no number')));
 });
 
 test('sce: plain-text SELECTED OUTCOMES with an on-record number passes', () => {
   const req = parseWritingStyleRequest({ target_language: 'en' });
   const txt = 'SELECTED OUTCOMES\n- Cut change-cycle time from 250 to 10 days via the Change Control Board\n';
   assert.equal(evaluateSce(txt, req).clean, true);
+});
+
+test('sce: per-item rule — a mixed block with one unnumbered outcome is flagged', () => {
+  const req = parseWritingStyleRequest({ target_language: 'en' });
+  const txt = [
+    'SELECTED OUTCOMES',
+    '- Cut change-cycle time from 250 to 10 days via the Change Control Board',
+    '- Coordinated supplier input for structured hardware development programmes',
+    '',
+    'CORE COMPETENCIES',
+    'Hardware PM — project ownership across optics.',
+  ].join('\n') + '\n';
+  const r = evaluateSce(txt, req);
+  assert.equal(r.clean, false);
+  const itemHits = r.bannedPhraseHits.filter((h) => h.includes('selected_outcomes item has no number'));
+  assert.equal(itemHits.length, 1);
+  assert.match(itemHits[0], /Coordinated supplier input/);
 });
 
 test('sce: prose without a SELECTED OUTCOMES heading is not metric-inspected', () => {
@@ -324,7 +341,7 @@ test('retry: a metric-free SELECTED OUTCOMES plain-text draft is retried with th
   });
   assert.equal(res.attempts, 2);
   assert.equal(res.flagged, false);
-  assert.match(seen[1], /no numeric metric/);
+  assert.match(seen[1], /has no number/);
 });
 
 test('retry: ATS conversion is applied to the final text', async () => {

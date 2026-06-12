@@ -54,6 +54,29 @@ Owner-locked rules (2026-06-12), applying to the CV header and the CL `cl_header
 - **UNSOLICITED applications:** sentence 1 is the BROAD professional identity — "IT professional with 15+ years in consumer and regulated markets" (or a close variant). NEVER open with "Electro-optics and LiDAR architect" or any narrow specialist identity: an unsolicited reader has no JD anchoring the niche, and the broad opener keeps the door open across PM/product/engineering roles. The optics/EO depth moves to Selected Outcomes and the sidebar, not the headline. Sentences 2–3: hardware-software products concept→production (requirements, change control, validation, supplier coordination); recent GenAI product work (AntCV) when current and relevant.
 - **JD-DRIVEN applications:** keep the JD-matched specialist opener (the forms below).
 
+**Three-part PROFILE structure (PERSONALITY-KERNEL-001, owner 2026-06-12 — canonical
+source `assets/gabriel-kernel-personality-v1.json`).** The profile renders three
+sub-parts, in this order:
+
+1. **Who I am** — 1–2 sentences. Unsolicited register: "IT professional/specialist
+   with 15+ years around commercial and regulated markets and products." JD-driven
+   register: the JD-matched specialist opener (per GEN-PROFILE-001 above).
+2. **Body–mind** — 1 sentence on what gives energy / makes him happy. The word
+   "passionate" stays BANNED even here; use "makes me happy" / "gives me energy".
+   Canonical content: rugby at Copenhagen Wolves RFC — operations manager and
+   assistant coach, with the Danish term **foreningsarbejde** kept in the English
+   text; and building AntCV (a GenAI product designed, built, and shipped solo).
+3. **Special capabilities** — carried by the Work style line. Underlying message,
+   always: technical expert WITH human-reading skills and understanding of people —
+   the combination is rare. Behaviour over adjectives; ONE personality-bearing
+   sentence maximum (render_constraints).
+
+**Personality render constraints** (apply wherever traits surface): traits feed
+PHRASING and EVIDENCE selection — never a raw adjective list. NEVER render raw:
+"people's person", "team player", "empathy", "moral", "reads the room". The
+canonical Work style line (en/da) and the cover-letter Who-I-Am fragment live in
+the personality JSON.
+
 **Examples of opener forms that work** (style-agnostic, JD-driven):
 
 - "Technical product manager with 15+ years across automotive LiDAR, electro-optical systems, and consulting."

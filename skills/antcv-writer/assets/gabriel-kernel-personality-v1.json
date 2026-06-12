@@ -1,0 +1,106 @@
+{
+  "kernel_extension": "personality",
+  "version": "1.1.0",
+  "date": "2026-06-12",
+  "owner": "Gabriel Alexander Karp-Gershon",
+  "usage_rule": "Traits feed PHRASING and EVIDENCE selection. Never render trait labels as a raw adjective list. Show each trait through a concrete behaviour or outcome. Respect all banned-word/phrase lists (no 'cross-functional', 'collaborative' filler, 'strong communicator', 'proactive', 'dynamic', 'passionate').",
+  "traits": [
+    {
+      "id": "calm",
+      "label": "Calm approach",
+      "evidence_phrasings": [
+        "Keeps decisions steady under production pressure",
+        "Ran change boards through escalations without raising the temperature",
+        "Steady point of contact when OEM requests stacked up"
+      ]
+    },
+    {
+      "id": "analytical-foresighted",
+      "label": "Analytical and foresighted; structured, systematic",
+      "evidence_phrasings": [
+        "Works from structured criteria: trade-off analysis, FMEA, DOE before commitment",
+        "Builds the decision framework before the decision",
+        "Maps downstream impact of a change before approving it"
+      ]
+    },
+    {
+      "id": "clear-communicator-action",
+      "label": "Clear communicator, action taker",
+      "evidence_phrasings": [
+        "Translates technical constraints into scope managers can act on",
+        "Short written decisions with owners and dates",
+        "Moves from analysis to commitment without circling"
+      ]
+    },
+    {
+      "id": "professional-pride",
+      "label": "Professional pride",
+      "evidence_phrasings": [
+        "Holds output to audit-ready standard whether or not anyone audits",
+        "Documentation complete before handover, every time",
+        "Owns the result, including when the fix is unglamorous"
+      ]
+    },
+    {
+      "id": "moral-empathic",
+      "label": "Moral compass, empathy, people's person",
+      "evidence_phrasings": [
+        "Gives credit where the work happened",
+        "Raises problems early and to the right person",
+        "Fair in supplier and team dealings; reputation carries between projects"
+      ]
+    },
+    {
+      "id": "people-oriented",
+      "label": "People oriented: accommodating, helpful, team-worker, relation builder, reads the room",
+      "evidence_phrasings": [
+        "Builds working relationships across optics, firmware, quality, and suppliers",
+        "Adapts the message to the listener: engineer, manager, or customer",
+        "First to help unblock a colleague; long-standing contacts at ODMs and OEMs",
+        "Reads the room and adjusts pace in negotiations and reviews"
+      ]
+    }
+  ],
+  "work_style_line": {
+    "en": "Calm, structured decisions from measured data; clear written outcomes; works through relationships across engineering, suppliers, and management.",
+    "da": "Rolige, strukturerede beslutninger på målte data; klare skriftlige konklusioner; arbejder gennem relationer på tværs af teknik, leverandører og ledelse."
+  },
+  "profile_structure": {
+    "order": ["who_i_am", "body_mind", "special_capabilities"],
+    "who_i_am": {
+      "rule": "1-2 sentences. Identity + scope, no specialist niche in unsolicited register.",
+      "unsolicited": [
+        "IT professional with 15+ years of experience around commercial and regulated markets and products.",
+        "IT specialist with 15+ years taking hardware-software products through commercial and regulated markets."
+      ],
+      "jd_driven": "JD-matched specialist opener per GEN-PROFILE-001."
+    },
+    "body_mind": {
+      "rule": "1 sentence on what gives energy / makes him happy. Word 'passionate' stays banned; use 'makes me happy' / 'gives me energy'.",
+      "sentences": [
+        "Rugby keeps me grounded: operations manager and assistant coach at Copenhagen Wolves RFC, foreningsarbejde that builds the club beyond the matchday squad.",
+        "Building things makes me happy: AntCV, a GenAI product I design, build, and ship solo."
+      ]
+    },
+    "special_capabilities": {
+      "rule": "Carried by the Work style line. One personality-bearing sentence maximum.",
+      "underlying_message": "Technical expert WITH human-reading skills and understanding of people. The combination is rare.",
+      "sentences": [
+        "Technical depth paired with reading people: hears what is not said in a review and brings everyone along.",
+        "Engineering judgment plus the ability to read a room: rare in one person, used daily across teams, suppliers, and management."
+      ]
+    }
+  },
+  "cover_letter_who_i_am_fragment": "Colleagues come to me when a decision needs a calm read of the data and a clear next step. I build the relationships that make hard changes land: with the engineer who owns the fix, the supplier who ships it, and the manager who answers for it.",
+  "kernel_fact_corrections": {
+    "volunteer_interests_line": "Operations manager & assistant coach, Copenhagen Wolves RFC (foreningsarbejde)",
+    "courses": "AI course (Copilot) — IDA Ingeniørforening. Distinct from AI-Practitioner (Teknologisk Institut); both stay.",
+    "contact_location": "2300, København S"
+  },
+  "render_constraints": {
+    "max_personality_sentences_in_profile": 1,
+    "never_render_raw": ["people's person", "team player", "empathy", "moral", "reads the room"],
+    "banned_lists_apply": true,
+    "rule": "One personality-bearing sentence in Profile maximum; the rest carried by Work style line and cover letter Who I Am. Behaviour over adjectives."
+  }
+}

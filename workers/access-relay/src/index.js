@@ -662,6 +662,13 @@ const PI_IDENTITY_KEYS = new Set([
   'location', 'citizenship', 'summary', 'notes', 'contactExtra',
   'photo', 'photoCircular', 'photoBorderColor', 'photoBorderWidth',
   'kw', 'st',
+  // Kernel extensions (owner 2026-06-12, handoff T8): the personality
+  // block (gabriel-kernel-personality-v1.json — traits, work_style_line,
+  // profile_structure, render_constraints) and the standing specialization
+  // line. Unknown keys already fall into identity via the catch-all below,
+  // so these round-tripped BEFORE this line — listed explicitly so the
+  // kernel schema documents them.
+  'personality', 'specialization',
 ]);
 const PI_HISTORY_KEYS = new Set([
   'workHistory', 'education', 'publications', 'certifications',

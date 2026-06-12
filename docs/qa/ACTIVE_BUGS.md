@@ -39,12 +39,14 @@ buried tag, this block wins.
 - PERF-003 / PERF-004 → **1.50.359** (`300cadc`) (PERF-002/005 deferred)
 - PB-WORKER-SIDEBAR-FILL-001 → **1.50.320** (per-page; recent strata already corrects it)
 
-**Still genuinely open (code):** PB-WORKER-SIDEBAR-CONT-001 / PB-WORKER-SIDEBAR-PAGINATION-001
-(sidebar Word flow can chop items — owner re-export to scope), PB-PREVIEW-GROUPNAME-EDIT-001
+**Still genuinely open (code):** PB-PREVIEW-GROUPNAME-EDIT-001
 (inline preview group-name edit doesn't persist), LOGIN-GATE-001 (boot-order; largely shipped
 via login-gate 302/303 + clean-reload 347 + the loading-gate loader — owner live-boot verify
 the residual; app-shell path, diagnostic-first, do NOT blind-edit). Open features:
 WIZARD-LANG-SELECTOR-001 (two-table upgrade), PROCESSING-QUEUE-INDICATOR-001.
+*(2026-06-12 same-day correction: PB-WORKER-SIDEBAR-CONT-001 / PB-WORKER-SIDEBAR-PAGINATION-001
+were re-verified FIXED this session — diag-sidebar-cont-e2e + diag-sidebar-export-page +
+diag-twocol-ownerlike all green; see their updated entries below.)*
 
 ---
 

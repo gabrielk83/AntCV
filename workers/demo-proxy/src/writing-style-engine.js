@@ -770,13 +770,27 @@ export async function executeSceWithRetry({
   let attempts = 1;
   let atsApplied = false;
 
+  // GEN-SCE-FLAG-001 (2026-06-12): the early-return paths used to skip
+  // SILENTLY (no telemetry), so a shape mismatch on the live path was
+  // indistinguishable from the SCE never running. Each skip now logs a
+  // reason-coded sce-skip event AND surfaces an X-AntCV-Sce-Skip header.
+  const skip = async (reason) => {
+    try {
+      await logWritingEngineEvent(env, {
+        kind: 'sce-skip', reason, shape: shape ?? null,
+        userId: userId ?? null, augTask: augTask ?? null,
+        writingStyle: writingStyleRequest.writingStyle,
+      });
+    } catch (e) { /* never block the response */ }
+    return { data, headers: { 'X-AntCV-Sce-Skip': reason }, sce: null, attempts: 1, flagged: false };
+  };
   try {
     lastParsed = JSON.parse(lastData);
     lastLlmText = extractLlmText(shape, lastParsed);
   } catch (e) {
-    return { data, headers: {}, sce: null, attempts: 1, flagged: false };
+    return skip('parse-fail');
   }
-  if (lastLlmText == null) return { data, headers: {}, sce: null, attempts: 1, flagged: false };
+  if (lastLlmText == null) return skip('no-llm-text');
 
   lastSce = evaluateSce(lastLlmText, writingStyleRequest);
 
@@ -820,10 +834,15 @@ export async function executeSceWithRetry({
 
   const flagged = !lastSce.clean;
 
-  // Fire-and-forget telemetry — one sce-eval per request, with attempts +
-  // flagged so analytics can compute (attempts > 1) and (flagged) rates.
+  // Telemetry — one sce-eval per request, with attempts + flagged so
+  // analytics can compute (attempts > 1) and (flagged) rates.
+  // GEN-SCE-FLAG-001 (2026-06-12): this was fire-and-forget (`void …`).
+  // On Cloudflare Workers an un-awaited promise dies with the isolate when
+  // the response returns — which is why ANALYTICS KV held ZERO sce-eval
+  // events over the full 90-day TTL window even though the path ran. The
+  // put is one small KV write; AWAIT it so it actually lands.
   try {
-    void logWritingEngineEvent(env, {
+    await logWritingEngineEvent(env, {
       kind: 'sce-eval',
       userId: userId ?? null,
       writingStyle: writingStyleRequest.writingStyle,

@@ -238,6 +238,9 @@ function corsHeadersFor(request, env, extraAllowHeaders = '') {
     'Access-Control-Allow-Origin': allowOrigin,
     'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
     'Access-Control-Allow-Headers': allowHeaders,
+    // GEN-SCE-FLAG-001 (2026-06-12): expose the SCE result headers so the
+    // PWA can read X-AntCV-Flagged and surface flagged drafts.
+    'Access-Control-Expose-Headers': 'X-AntCV-Flagged, X-AntCV-Sce-Clean, X-AntCV-Sce-Attempts, X-AntCV-Sce-Banned-Words, X-AntCV-Sce-Banned-Phrases, X-AntCV-Ats-Applied, X-AntCV-Task, X-AntCV-Sce-Skip',
     'Vary': 'Origin',
   };
   if (credentialed) {

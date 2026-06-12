@@ -333,6 +333,9 @@ async function runGroundingCheck(env, { task, candidate_output, source_cv, jd_te
   // no fallback. Now uses the full provider cascade.
   const cascade = await callAnyLLMForText(env, GROUNDING_SYSTEM, userPrompt, {
     models: { anthropic: 'claude-sonnet-4-20250514' },
+    // GEN-MODELROLE-001: grounding is a mechanical CHECK — when
+    // env.MODEL_ROLES names a supervisor provider, it leads the cascade.
+    role: 'supervisor',
   });
   if (!cascade.ok) {
     return {
@@ -454,8 +457,12 @@ ${(source_cv || '').slice(0, 20000)}
 Output ONLY the corrected text. No preamble, no explanation.`;
 
   // v3.3.0 round-robin coverage: was a direct fetch. Now cascades.
+  // GEN-MODELROLE-001: repair RE-WRITES prose, so it stays on the WRITER
+  // role (owner-design recommendation: rewrites never drop to the cheaper
+  // supervisor model — different blind spots are for checks, not prose).
   const cascade = await callAnyLLMForText(env, system, repairPrompt, {
     models: { anthropic: 'claude-sonnet-4-20250514' },
+    role: 'writer',
   });
   if (!cascade.ok) {
     return { ok: false, error: 'Repair LLM cascade failed (all providers)', attempts: cascade.attempts };

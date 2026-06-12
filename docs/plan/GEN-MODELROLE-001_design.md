@@ -1,7 +1,14 @@
 # GEN-MODELROLE-001 — role-specialized model map (design)
 
-Status: **DESIGN APPROVED-PENDING-OWNER** · 2026-06-12 · owner queue item
-("writer/supervisor/coherence model map — design-first").
+Status: **v1 IMPLEMENTED (fail-soft, inert until env set)** · 2026-06-12 ·
+owner queue item ("writer/supervisor/coherence model map — design-first").
+Code shipped: `parseModelRoles` + `roleHeadOrder` in multi-llm.js (mirrored
+to demo-proxy), `role:'supervisor'` on the grounding check,
+`role:'writer'` on auto-repair, `role:'coherence'` on the coherence
+review, writer-head reorder in both index.js provider-fallback wrappers.
+`MODEL_ROLES` env var NOT set — behaviour is byte-identical to before
+until the owner answers the decisions below and the var is deployed.
+Tests: workers/proxy/test/model-roles.test.mjs (7 incl. dual-sync lock).
 
 ## Problem
 

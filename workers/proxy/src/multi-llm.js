@@ -336,6 +336,43 @@ const PROVIDER_FNS = {
   gemini:    callGemini,
 };
 
+// ------------------------------------------------------------------
+// GEN-MODELROLE-001 v1 (2026-06-12, fail-soft).
+// env.MODEL_ROLES is an OPTIONAL JSON map of role -> provider id:
+//   {"writer":"anthropic","supervisor":"mistral","coherence":"anthropic"}
+// When a caller passes opts.role and the map names a known provider
+// for that role, the provider moves to the HEAD of the cascade order;
+// the rest of the failover ladder follows unchanged (the map REORDERS,
+// it never removes). Absent / malformed map, unknown role, or unknown
+// provider -> the order is returned untouched, so deployments without
+// the var behave byte-identically to before this change.
+// Design: docs/plan/GEN-MODELROLE-001_design.md
+// ------------------------------------------------------------------
+export function parseModelRoles(env) {
+  try {
+    const raw = env && env.MODEL_ROLES;
+    if (!raw) return null;
+    const map = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    if (!map || typeof map !== 'object' || Array.isArray(map)) return null;
+    const out = {};
+    for (const role of ['writer', 'supervisor', 'coherence']) {
+      const p = String(map[role] || '').toLowerCase().trim();
+      if (PROVIDER_FNS[p]) out[role] = p;
+    }
+    return Object.keys(out).length ? out : null;
+  } catch (_) { return null; }
+}
+
+export function roleHeadOrder(env, role, baseOrder) {
+  const order = Array.isArray(baseOrder) && baseOrder.length ? baseOrder : DEFAULT_ORDER;
+  try {
+    const roles = parseModelRoles(env);
+    const head = roles && role ? roles[role] : null;
+    if (!head || order[0] === head) return order;
+    return [head].concat(order.filter((p) => p !== head));
+  } catch (_) { return order; }
+}
+
 
 /**
  * Try each provider in order until one returns ok. Skips providers
@@ -361,7 +398,12 @@ const PROVIDER_FNS = {
  * @returns {Promise<object>}
  */
 export async function callAnyLLMForJSON(env, system, userPrompt, opts = {}) {
-  const order = Array.isArray(opts.order) && opts.order.length ? opts.order : DEFAULT_ORDER;
+  // GEN-MODELROLE-001: opts.role ('writer' | 'supervisor' | 'coherence')
+  // reorders the cascade head via env.MODEL_ROLES. No role / no map ->
+  // the order is exactly what it was before.
+  const role = typeof opts.role === 'string' && opts.role ? opts.role : null;
+  let order = Array.isArray(opts.order) && opts.order.length ? opts.order : DEFAULT_ORDER;
+  if (role) order = roleHeadOrder(env, role, order);
   const models = opts.models || {};
   const validate = typeof opts.validate === 'function' ? opts.validate : null;
   const attempts = [];
@@ -435,6 +477,7 @@ export async function callAnyLLMForJSON(env, system, userPrompt, opts = {}) {
           ok: true,
           provider,
           model: result.model || model,
+          role,
           text: result.text,
           usage: result.usage,
           duration_ms,

@@ -120,6 +120,9 @@ export async function runCoherenceReview(env, payload) {
   try {
     cascade = await callAnyLLMForJSON(env, COHERENCE_SYSTEM, userPrompt, {
       models: { anthropic: 'claude-sonnet-4-20250514' },
+      // GEN-MODELROLE-001: cross-section review needs the full doc in
+      // context — env.MODEL_ROLES.coherence leads the cascade when set.
+      role: 'coherence',
       validate: (text) => {
         const parsed = parseReview(text, validIds);
         return !!parsed; // reject providers that didn't return shape-valid JSON

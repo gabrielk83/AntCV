@@ -11471,6 +11471,25 @@
             "·",
           ),
           React.createElement("span", null, h),
+          // GEN-SPEED-001: surface the active speed preset during the run so
+          // a long wait is explainable (and changeable next time).
+          React.createElement(
+            "span",
+            { style: { margin: "0 8px", opacity: 0.4 } },
+            "·",
+          ),
+          React.createElement(
+            "span",
+            {
+              title:
+                "Generation speed preset — set with the Speed pills next to the Generate button.",
+            },
+            "fast" === __genSpeed()
+              ? "⚡ Fast"
+              : "thorough" === __genSpeed()
+                ? "🔬 Thorough"
+                : "⚖ Balanced",
+          ),
         ),
         React.createElement(
           "div",
@@ -11552,9 +11571,12 @@
                 lineHeight: 1.5,
               },
             },
-            "da" === i
+            ("da" === i
               ? "Long Danish generations can take 3-5 minutes. Keep this tab visible — switching tabs may break the connection on mobile."
-              : "This is taking longer than the usual ~90 seconds. Keep this tab visible — switching away may break the connection on mobile.",
+              : "This is taking longer than the usual ~90 seconds. Keep this tab visible — switching away may break the connection on mobile.") +
+              ("fast" !== __genSpeed()
+                ? " Tip: the ⚡ Fast speed preset next to Generate trades cross-checking for a much shorter wait."
+                : ""),
           ),
         (() => {
           var e, t;

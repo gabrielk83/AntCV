@@ -25,7 +25,8 @@ const VERSION='3.5.0-cross-provider-fallback';
 // Logs every check to ANALYTICS KV for later analytics download.
 // See ./supervisor.js.
 
-import { augmentBodyText } from './prompt-augment.js';
+import { augmentBodyText, detectCVTask } from './prompt-augment.js';
+import { parseModelRoles } from './multi-llm.js';
 import {
   parseWritingStyleRequest,
   buildStyleSystemPreamble,
@@ -106,7 +107,25 @@ async function handleWithProviderFallback(request, env) {
   try { bodyBuf = await request.arrayBuffer(); } catch (_) { bodyBuf = null; }
   if (bodyBuf === null) return handleRequest(request, env || {});
   const requested = (request.headers.get('x-provider') || 'anthropic').toLowerCase();
-  const order = [requested].concat(FALLBACK_PROVIDERS.filter(function (p) { return p !== requested; }));
+  let order = [requested].concat(FALLBACK_PROVIDERS.filter(function (p) { return p !== requested; }));
+  // GEN-MODELROLE-001 v1 (fail-soft): on this SERVER-KEY path,
+  // generation-shaped tasks (detectCVTask: cv_*/cl_* sections) prefer
+  // env.MODEL_ROLES.writer as the cascade head. The requested provider
+  // stays next in line, so failover semantics are unchanged — the map
+  // reorders, it never removes. No map / no detected task -> order
+  // untouched. BYOK requests never reach here (client-key early return
+  // above). Design: docs/plan/GEN-MODELROLE-001_design.md
+  try {
+    const roles = parseModelRoles(env);
+    const writer = roles && roles.writer;
+    if (writer && writer !== requested) {
+      const task = detectCVTask(JSON.parse(new TextDecoder().decode(bodyBuf)));
+      if (task) {
+        order = [writer].concat(order.filter(function (p) { return p !== writer; }));
+        console.log('[model-roles] writer-head reorder:', task, '->', writer);
+      }
+    }
+  } catch (_) { /* fail-soft: keep the requested order */ }
   let lastResp = null;
   for (let i = 0; i < order.length; i++) {
     const headers = new Headers(request.headers);

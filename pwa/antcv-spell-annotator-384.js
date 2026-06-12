@@ -337,6 +337,74 @@
     }
   });
 
+  // ─── Settings toggle UI (1.50.389 — the deferred half of the spec) ──
+  // A small SPELLING block injected after the Settings PRIVACY providers
+  // box (the same anchor the data-export button uses): master toggle +
+  // per-language checkboxes bound to antcv:spell:enabled /
+  // antcv:spell:langs. Idempotent; re-injects when Settings remounts.
+  var UI_ID = 'antcv-spell-settings';
+  function readLangsMap() {
+    try { return JSON.parse(localStorage.getItem('antcv:spell:langs') || '{}') || {}; } catch (_) { return {}; }
+  }
+  function injectSettings() {
+    if (document.getElementById(UI_ID)) return;
+    var anchor = null;
+    var els = document.querySelectorAll('div');
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i];
+      if (el.childNodes.length === 1 && el.firstChild && el.firstChild.nodeType === 3 &&
+          /zero-retention modes/i.test(el.textContent || '')) {
+        anchor = el.parentNode || el;
+        break;
+      }
+    }
+    if (!anchor || !anchor.parentNode) return;
+    var box = document.createElement('div');
+    box.id = UI_ID;
+    box.style.cssText = 'margin:10px 0;padding:10px 12px;border:1px solid rgba(1,183,187,0.35);border-radius:8px;font-size:12px;color:#cfe9ea;';
+    var head = document.createElement('div');
+    head.textContent = 'SPELLING';
+    head.style.cssText = 'font-size:10px;font-weight:700;letter-spacing:0.8px;color:#01B7BB;margin-bottom:6px;';
+    box.appendChild(head);
+    function row(label, checked, onChange) {
+      var lab = document.createElement('label');
+      lab.style.cssText = 'display:flex;align-items:center;gap:7px;margin:3px 0;cursor:pointer;';
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = checked;
+      cb.style.cursor = 'pointer';
+      cb.addEventListener('change', function () { onChange(cb.checked); });
+      lab.appendChild(cb);
+      lab.appendChild(document.createTextNode(label));
+      box.appendChild(lab);
+      return cb;
+    }
+    var masterOn = (function () { try { return localStorage.getItem('antcv:spell:enabled') !== '0'; } catch (_) { return true; } })();
+    row('Spelling underlines in the editor', masterOn, function (v) {
+      try { localStorage.setItem('antcv:spell:enabled', v ? '1' : '0'); } catch (_) {}
+    });
+    var per = readLangsMap();
+    [['en', 'English'], ['da', 'Dansk'], ['es', 'Español']].forEach(function (pair) {
+      row('· ' + pair[1], per[pair[0]] !== false, function (v) {
+        var m = readLangsMap();
+        m[pair[0]] = v;
+        try { localStorage.setItem('antcv:spell:langs', JSON.stringify(m)); } catch (_) {}
+      });
+    });
+    var note = document.createElement('div');
+    note.textContent = 'Chinese has no dictionary-based spellcheck (unsegmented script).';
+    note.style.cssText = 'font-size:10.5px;color:rgba(255,255,255,0.4);margin-top:4px;';
+    box.appendChild(note);
+    anchor.parentNode.insertBefore(box, anchor.nextSibling);
+  }
+  var settingsTimer = null;
+  var settingsMo = new MutationObserver(function () {
+    clearTimeout(settingsTimer);
+    settingsTimer = setTimeout(injectSettings, 600);
+  });
+  try { settingsMo.observe(document.body, { childList: true, subtree: true }); } catch (_) {}
+  setTimeout(injectSettings, 2500);
+
   // ─── public API ──────────────────────────────────────────────────
   window.AntcvSpell = {
     version: VERSION,

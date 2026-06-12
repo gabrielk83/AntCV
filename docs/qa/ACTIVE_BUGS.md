@@ -1178,9 +1178,18 @@ blue-screen guard — serve pwa/, assert 0 console errors + `typeof glDemo`),
   writes the two break maps (preview + Word-equivalent export), the client forwards
   the effective bucket, and the worker does group/role-aware per-page 2-column
   pagination (≥1.14.39–41). See SALMON-AUTO-EXPORT-001 above for verification.
-- **PB-PREVIEW-GROUPNAME-EDIT-001** — `[OPEN]` A group-name edit made **from the preview**
-  (inline) does not persist; only edits **from the panel** stick. (Panel-edit race fixed
-  1.50.217; the preview-inline path is separate.)
+- **PB-PREVIEW-GROUPNAME-EDIT-001** — `[FIXED 1.50.398 — superseded by PREVIEW-EDIT-PERSIST-001, verified headless]`
+  A group-name edit from the preview did not persist. ROOT CAUSE (owner directive
+  2026-06-12 "make sure ALL text edits in preview persist, not just groups"): preview
+  inline edits are NOT committed by app.js's React onBlur (text-edit mode is off by
+  default — the spans render the non-editable branch) but by
+  `antcv-preview-bullets-dedup-341.js`'s blur handler, whose text-match walker only
+  covered section-level strings, string arrays, and table rows. Object items
+  ({b,t} outcomes, {l,v}/{group} labeled lists, {deg,sch} education), EXPERIENCE
+  roles (title/company/years/bullets) and the section TITLE silently reverted on
+  the next re-render. The walker now covers every text-bearing shape.
+  Verified `pwa/test/diag-preview-edit-persist.mjs` — 9 edit types, each
+  located → committed → survives reload → re-renders: all green.
 
 ### Kernel / generation / application history (testing is painful because of these)
 - **KERNEL-REGEN-GUARD-001** — `[FIX SHIPPED 1.50.225 — owner verify]` Generating without a JD
@@ -1545,8 +1554,13 @@ worker was deployed via `wrangler deploy`.
   shipped: split candidate header, floating medallion mid-line on the seam,
   preview + DOCX/PDF, plus the full position family (main top/bottom L/R,
   bridge-middle/bottom). See FEATURES_REGISTRY and the 2026-06-11 section at top.
-- **PRIVACY-FAB-FLICKER-MOBILE-001 — [OPEN]** the top-bar pill intermittently
-  disappears (fixed by toggling the editor) — `topbar-tools-347` relocation timing.
+- **PRIVACY-FAB-FLICKER-MOBILE-001 — [RESOLVED — owner-confirmed 2026-06-12]** the
+  top-bar pill flicker is gone. Follow-up shipped the same day:
+  **PRIVACY-FAB-COLOR-001 `[FIXED 1.50.398]`** — on mobile the platform's COLOUR
+  emoji shield (white+red segments) screamed against the chip; the glyph now
+  renders as a single-colour silhouette on viewports ≤900px (transparent text +
+  fg-coloured text-shadow), desktop keeps the native glyph. Verified
+  `pwa/test/diag-privacy-mono.mjs` (mobile mono + desktop native) 2/2.
 - **DEMO-WARN-NONDEMO-001 — [partly addressed]** privacy LED showed the demo-proxy
   warning for a non-demo user (workaround: Reset). A `demo-watermark`/privacy-led
   state sidecar landed in parallel; verify it covers this.
@@ -1765,7 +1779,7 @@ items marked VERIFYING.
   company/role, so if the model omits `meta.company` for a JD the header still falls to
   Unsolicited. Prompt-side: have generate_cv extract+emit company/role grounded in the
   JD.
-- **DEMO-TOGGLE-001** `[OPEN][feature]` — No in-app Demo⇄Paid toggle (only the wizard).
+- **DEMO-TOGGLE-001** `[PARKED — owner declined 2026-06-12 ("not interested")]` — No in-app Demo⇄Paid toggle (only the wizard).
   Proposed: a Settings toggle calling `AntcvSetUserMode`.
 - **HOWCONTRIBUTE-001** `[OPEN]` — "How I would contribute" bullets are **missing in the
   template preview** (the section renders without its bullet list). Check the

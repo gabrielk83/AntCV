@@ -304,12 +304,28 @@
     // fill every tick — a needless repaint that read as a flicker/"bleep".
     // Skip all DOM writes when the visible appearance is unchanged. A fresh
     // element (no signature) always paints; real level/calls changes repaint.
-    const sig = state.worst + '|' + info.glyph + '|' + (state.calls || 0);
+    // PRIVACY-FAB-COLOR-001 (owner 2026-06-12): on MOBILE the platform's
+    // COLOUR emoji shield (white/red segments) screamed against the chip.
+    // Render the glyph as a single-colour silhouette there: transparent
+    // text + a text-shadow in the chip's fg colour (the portable
+    // monochrome-emoji technique). Desktop keeps the native glyph.
+    const mono = (function () {
+      try { return window.matchMedia && window.matchMedia('(max-width: 900px)').matches; } catch (_) { return false; }
+    })();
+    const sig = state.worst + '|' + info.glyph + '|' + (state.calls || 0) + '|' + (mono ? 'm' : 'd');
     if (target.getAttribute('data-antcv-pl-sig') === sig) return;
     target.setAttribute('data-antcv-pl-sig', sig);
     // Clear textContent but preserve the dot child.
     const dot = target.querySelector('.antcv-privacy-dot');
-    target.textContent = info.glyph;
+    target.textContent = '';
+    const glyphEl = document.createElement('span');
+    glyphEl.className = 'antcv-privacy-glyph';
+    glyphEl.textContent = info.glyph;
+    if (mono) {
+      glyphEl.style.color = 'transparent';
+      glyphEl.style.textShadow = '0 0 0 ' + (info.fg || '#ffffff');
+    }
+    target.appendChild(glyphEl);
     if (dot) target.appendChild(dot); // textContent wiped it; re-append
     else {
       const newDot = document.createElement('span');

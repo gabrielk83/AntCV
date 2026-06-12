@@ -51,7 +51,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.40.341-prv-bullets3';
+  var VERSION = '1.50.398-persist-all';
   if (window.__antcvPreviewBulletsDedup341 === VERSION) return;
   window.__antcvPreviewBulletsDedup341 = VERSION;
 
@@ -113,20 +113,31 @@
       var origClean = clean(original);
       var newClean = clean(newText);
       var changed = false;
-      // Walk every section's text-bearing arrays/strings and rewrite.
+      // PREVIEW-EDIT-PERSIST-001 (owner 2026-06-12: "make sure all text
+      // edits in preview do persist"). The walker previously covered ONLY
+      // section-level strings, arrays of strings, and table rows — so
+      // object items ({b,t} outcomes, {l,v}/{group} labeled lists,
+      // {deg,sch} education), EXPERIENCE roles (title/company/years/
+      // bullets) and the section TITLE never persisted: the edit looked
+      // applied until the next re-render, then silently reverted. Every
+      // text-bearing shape in the sections store is now covered.
+      var OBJ_KEYS = ['b', 't', 'l', 'v', 'group', 'text', 'label', 'value', 'deg', 'sch'];
+      function setMatch(obj, key) {
+        if (obj && typeof obj[key] === 'string' && clean(obj[key]) === origClean) {
+          obj[key] = newText;
+          changed = true;
+        }
+      }
       for (var i = 0; i < list.length; i++) {
         var sec = list[i];
         if (!sec || typeof sec !== 'object') continue;
-        // Common text-bearing fields.
-        var stringFields = ['intro', 'closing', 'introLine', 'closingLine', 'paragraph', 'text', 'body', 'value', 'detail', 'description', 'content'];
+        // Common text-bearing fields (incl. the section title and the
+        // CL Foundation's two paragraphs).
+        var stringFields = ['title', 'intro', 'closing', 'introLine', 'closingLine', 'paragraph', 'text', 'body', 'value', 'detail', 'description', 'content', 'hands_on', 'professionally'];
         for (var f = 0; f < stringFields.length; f++) {
-          var k = stringFields[f];
-          if (typeof sec[k] === 'string' && clean(sec[k]) === origClean) {
-            sec[k] = newText;
-            changed = true;
-          }
+          setMatch(sec, stringFields[f]);
         }
-        // Arrays of strings — bullets/items.
+        // Arrays — strings AND object items.
         var arrFields = ['bullets', 'items', 'lines', 'tags'];
         for (var af = 0; af < arrFields.length; af++) {
           var ak = arrFields[af];
@@ -136,6 +147,29 @@
               if (typeof arr[ai] === 'string' && clean(arr[ai]) === origClean) {
                 arr[ai] = newText;
                 changed = true;
+              } else if (arr[ai] && typeof arr[ai] === 'object') {
+                for (var ok = 0; ok < OBJ_KEYS.length; ok++) setMatch(arr[ai], OBJ_KEYS[ok]);
+              }
+            }
+          }
+        }
+        // EXPERIENCE roles — title/company/years + the role's bullets.
+        if (Array.isArray(sec.roles)) {
+          for (var rr = 0; rr < sec.roles.length; rr++) {
+            var role = sec.roles[rr];
+            if (!role || typeof role !== 'object') continue;
+            setMatch(role, 'title');
+            setMatch(role, 'company');
+            setMatch(role, 'years');
+            if (Array.isArray(role.bullets)) {
+              for (var rb = 0; rb < role.bullets.length; rb++) {
+                if (typeof role.bullets[rb] === 'string' && clean(role.bullets[rb]) === origClean) {
+                  role.bullets[rb] = newText;
+                  changed = true;
+                } else if (role.bullets[rb] && typeof role.bullets[rb] === 'object') {
+                  setMatch(role.bullets[rb], 'text');
+                  setMatch(role.bullets[rb], 't');
+                }
               }
             }
           }

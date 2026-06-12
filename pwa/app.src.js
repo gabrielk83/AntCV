@@ -275,19 +275,22 @@
       // the main-column content padding in from the page edge; bulletIndent =
       // the bullet / emoji list body+continuation hang. Defaults match the
       // built-in look (10 / 24), so unset configs render exactly as before.
-      mainEdgeIndent: 10,
+      // SPACING-COMFORT-DEFAULT-001 (owner 2026-06-12, after the simulated
+      // PDF comparison): the "comfort" recommendation is the shipped
+      // default — sections read as blocks instead of a wall. The OLD tight
+      // look (10/8/8/0/8/8/8/3) remains reachable via the sliders; the
+      // docx-client forwards any value that differs from the WORKER's
+      // reviewed constants, so preview and export stay in step for
+      // untouched users too.
+      mainEdgeIndent: 14,
       bulletIndent: 24,
-      // ADV-SPACING-CONTROLS-001 (owner 2026-06-12): page-edge / seam /
-      // subsection spacing controls (px), surfaced as range controls in
-      // Advanced styles next to the indent sliders. Defaults match the
-      // built-in look, so unset configs render exactly as before.
-      bodyEdgePad: 8, // page top/bottom padding of both columns
-      sidebarEdgePad: 8, // sidebar horizontal padding (page side <-> text)
-      seamGap: 0, // EXTRA gap at the sidebar <-> main seam
-      mainSectionGap: 8, // vertical gap between main-column subsections
-      sidebarSectionGap: 8, // vertical gap between sidebar subsections
-      bodySectionGap: 8, // vertical gap between letter-body subsections (CL)
-      candidateGap: 3, // vertical gap between candidate-header rows
+      bodyEdgePad: 12, // page top/bottom padding of both columns
+      sidebarEdgePad: 11, // sidebar horizontal padding (page side <-> text)
+      seamGap: 6, // EXTRA gap at the sidebar <-> main seam
+      mainSectionGap: 14, // vertical gap between main-column subsections
+      sidebarSectionGap: 12, // vertical gap between sidebar subsections
+      bodySectionGap: 16, // vertical gap between letter-body subsections (CL)
+      candidateGap: 5, // vertical gap between candidate-header rows
       // EXP-TENSE-001 / EXP-TENSE-002 (owner 2026-06-12): experience-bullet
       // tense mode. "auto" (default) = LOGICAL per-role tense — present for the
       // current/ongoing role, past for every earlier role. "present" / "past"
@@ -5519,6 +5522,9 @@
     // subsections is user-tunable per area — sidebar / letter body (CL) /
     // main column. 0 is valid; missing/garbage falls back to the built-in 8.
     const __secGap = (() => {
+      // SPACING-COMFORT-DEFAULT-001: per-area comfort fallbacks
+      // (sidebar 12 / letter body 16 / main 14).
+      const fb = S ? 12 : n ? 16 : 14;
       try {
         const k = S
           ? "sidebarSectionGap"
@@ -5527,9 +5533,9 @@
             : "mainSectionGap";
         const v = d && d[k];
         const num = Number(v);
-        return null != v && isFinite(num) ? num : 8;
+        return null != v && isFinite(num) ? num : fb;
       } catch (_) {
-        return 8;
+        return fb;
       }
     })();
     const z = S ? "center" : "left",
@@ -12270,17 +12276,17 @@
               "INDENTS",
             ),
             [
-              ["mainEdgeIndent", "Indent from edge", 4, 40, 10],
+              // SPACING-COMFORT-DEFAULT-001: defaults = the comfort
+              // recommendation (was 10/24/8/8/0/8/8/8/3).
+              ["mainEdgeIndent", "Indent from edge", 4, 40, 14],
               ["bulletIndent", "Bullet / emoji list indent", 10, 60, 24],
-              // ADV-SPACING-CONTROLS-001 (owner 2026-06-12): page-edge,
-              // seam, and subsection spacing.
-              ["bodyEdgePad", "Page top/bottom padding", 0, 30, 8],
-              ["sidebarEdgePad", "Sidebar edge padding", 0, 30, 8],
-              ["seamGap", "Sidebar ↔ main gap (extra)", 0, 40, 0],
-              ["mainSectionGap", "Main subsection gap", 0, 30, 8],
-              ["sidebarSectionGap", "Sidebar subsection gap", 0, 30, 8],
-              ["bodySectionGap", "Letter subsection gap", 0, 30, 8],
-              ["candidateGap", "Candidate header gap", 0, 16, 3],
+              ["bodyEdgePad", "Page top/bottom padding", 0, 30, 12],
+              ["sidebarEdgePad", "Sidebar edge padding", 0, 30, 11],
+              ["seamGap", "Sidebar ↔ main gap (extra)", 0, 40, 6],
+              ["mainSectionGap", "Main subsection gap", 0, 30, 14],
+              ["sidebarSectionGap", "Sidebar subsection gap", 0, 30, 12],
+              ["bodySectionGap", "Letter subsection gap", 0, 30, 16],
+              ["candidateGap", "Candidate header gap", 0, 16, 5],
             ].map(([key, label, min, max, def]) => {
               const val = Number(
                 e && e[key] != null ? e[key] : (c[key] != null ? c[key] : def),
@@ -39722,7 +39728,7 @@
                       fontWeight: 700,
                       marginTop: 12,
                       // ADV-SPACING-CONTROLS-001: candidate-header row gap.
-                      marginBottom: __nzPx(ya && ya.candidateGap, 3),
+                      marginBottom: __nzPx(ya && ya.candidateGap, 5),
                       lineHeight: 1.1,
                       textAlign: y("name"),
                     },
@@ -39738,7 +39744,7 @@
                         fontFamily: e,
                         color: "rgba(255,255,255,0.9)",
                         fontSize: (Yr.specialisation || qo || 11) * (96 / 72),
-                        marginBottom: __nzPx(ya && ya.candidateGap, 3),
+                        marginBottom: __nzPx(ya && ya.candidateGap, 5),
                         whiteSpace: "nowrap",
                         overflow: "hidden",
                         textOverflow: "ellipsis",
@@ -39756,7 +39762,7 @@
                         style: {
                           borderBottom: `1px solid ${l}`,
                           margin:
-                            "4px 0 " + __nzPx(ya && ya.candidateGap, 3) + "px",
+                            "4px 0 " + __nzPx(ya && ya.candidateGap, 5) + "px",
                         },
                       }),
                       React.createElement(
@@ -39798,7 +39804,7 @@
                               (__bridgeOn ? 0.88 : 1),
                             lineHeight: 1.2,
                             margin:
-                              __nzPx(ya && ya.candidateGap, 3) + "px 0",
+                              __nzPx(ya && ya.candidateGap, 5) + "px 0",
                             textAlign: y("contact"),
                             whiteSpace: __bridgeOn ? "nowrap" : "normal",
                             ...(__bridgeOn
@@ -40253,9 +40259,9 @@
                               // ADV-SPACING-CONTROLS-001: vertical pad =
                               // bodyEdgePad, horizontal = sidebarEdgePad.
                               padding:
-                                __nzPx(ya && ya.bodyEdgePad, 8) +
+                                __nzPx(ya && ya.bodyEdgePad, 12) +
                                 "px " +
-                                __nzPx(ya && ya.sidebarEdgePad, 8) +
+                                __nzPx(ya && ya.sidebarEdgePad, 11) +
                                 "px",
                               minHeight: 0 === n ? 400 : 300,
                             },
@@ -40284,7 +40290,7 @@
                                 height: 0,
                                 marginRight: -__nzPx(
                                   ya && ya.sidebarEdgePad,
-                                  8,
+                                  11,
                                 ),
                                 pointerEvents: "none",
                               },
@@ -40645,14 +40651,14 @@
                               // bodyEdgePad; the seam (left) side gains
                               // seamGap on top of the edge indent.
                               padding:
-                                __nzPx(ya && ya.bodyEdgePad, 8) +
+                                __nzPx(ya && ya.bodyEdgePad, 12) +
                                 "px " +
-                                ((ya && ya.mainEdgeIndent) || 10) +
+                                ((ya && ya.mainEdgeIndent) || 14) +
                                 "px " +
-                                __nzPx(ya && ya.bodyEdgePad, 8) +
+                                __nzPx(ya && ya.bodyEdgePad, 12) +
                                 "px " +
-                                (((ya && ya.mainEdgeIndent) || 10) +
-                                  __nzPx(ya && ya.seamGap, 0)) +
+                                (((ya && ya.mainEdgeIndent) || 14) +
+                                  __nzPx(ya && ya.seamGap, 6)) +
                                 "px",
                               minWidth: 0,
                               background: "#fff",
@@ -40679,8 +40685,8 @@
                                         // sidebar spacer note).
                                         height: 0,
                                         marginLeft: -(
-                                          ((ya && ya.mainEdgeIndent) || 10) +
-                                          __nzPx(ya && ya.seamGap, 0)
+                                          ((ya && ya.mainEdgeIndent) || 14) +
+                                          __nzPx(ya && ya.seamGap, 6)
                                         ),
                                         pointerEvents: "none",
                                       },

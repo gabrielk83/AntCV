@@ -877,8 +877,11 @@ function buildStyle(styleConfig, navyColor) {
     const n = Number(typeof v === 'string' ? v.replace(/["']/g, '') : v);
     return Number.isFinite(n) && n >= 0 && n <= 60 ? n : undefined;
   };
+  // SPACING-COMFORT-DEFAULT-001 (R36): the PWA default is now 14px; the
+  // worker constant is still 150 DXA (10px), so the effective value is
+  // forwarded even when the user never touched the slider.
   const me = numTok(styleConfig.mainEdgeIndent);
-  if (me !== undefined) out.mainEdgeIndent = me;
+  out.mainEdgeIndent = me !== undefined ? me : 14;
   // bulletIndent: forward ONLY when the user moved the slider off the PWA
   // default (24). The preview and Word bullet scales are not 1:1 (preview
   // text hangs at 24px where the export's reviewed look is 14px/210 DXA), so
@@ -886,18 +889,26 @@ function buildStyle(styleConfig, navyColor) {
   // right — owner 2026-06-11: "text can stay where it is".
   const bi = numTok(styleConfig.bulletIndent);
   if (bi !== undefined && bi !== 24) out.bulletIndent = bi;
-  // ADV-SPACING-CONTROLS-001 (1.50.394 / worker 1.14.60): the spacing
-  // sliders. Forwarded ONLY when moved off the PWA defaults — the
-  // preview/worker verticals are deliberately not 1:1, so the worker
-  // applies them as deltas from its own reviewed constants; an untouched
-  // default forwards nothing and the export is byte-identical.
-  for (const [key, def] of [
+  // ADV-SPACING-CONTROLS-001 (1.50.394 / worker 1.14.60) +
+  // SPACING-COMFORT-DEFAULT-001 (R36): the PWA defaults are now the
+  // COMFORT recommendation, while the worker's reviewed constants still
+  // describe the old tight look. Forward the EFFECTIVE value (stored,
+  // else the comfort default) whenever it differs from the worker's
+  // constant — untouched users export the same comfort look they
+  // preview; setting a slider back to the old value forwards nothing.
+  const COMFORT = {
+    bodyEdgePad: 12, sidebarEdgePad: 11, seamGap: 6,
+    mainSectionGap: 14, sidebarSectionGap: 12, bodySectionGap: 16,
+    candidateGap: 5,
+  };
+  for (const [key, workerDef] of [
     ['bodyEdgePad', 8], ['sidebarEdgePad', 8], ['seamGap', 0],
     ['mainSectionGap', 8], ['sidebarSectionGap', 8], ['bodySectionGap', 8],
     ['candidateGap', 3],
   ]) {
     const v = numTok(styleConfig[key]);
-    if (v !== undefined && v !== def) out[key] = v;
+    const eff = v !== undefined ? v : COMFORT[key];
+    if (eff !== workerDef) out[key] = eff;
   }
   // 1.50.378 PAGEBREAK-STYLE-OPTIONS-001: page-flow prefs. Booleans/enum, not
   // colors — forwarded only when set off their defaults so older workers and

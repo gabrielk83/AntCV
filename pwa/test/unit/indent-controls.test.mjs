@@ -73,12 +73,14 @@ test('the untouched bulletIndent default (24) is NOT forwarded — export keeps 
   assert.equal(s.mainEdgeIndent, 10);
 });
 
-test('string slider values are coerced; out-of-range and absent are dropped', () => {
+test('string slider values are coerced; out-of-range and absent handled', () => {
   const s = payloadStyle({ mainEdgeIndent: '"18"', bulletIndent: 999 });
   assert.equal(s.mainEdgeIndent, 18);
   assert.equal(s.bulletIndent, undefined);
+  // SPACING-COMFORT-DEFAULT-001: an untouched config forwards the comfort
+  // default 14 (the worker constant is still 10px), keeping parity.
   const d = payloadStyle({});
-  assert.equal(d.mainEdgeIndent, undefined);
+  assert.equal(d.mainEdgeIndent, 14);
   assert.equal(d.bulletIndent, undefined);
 });
 

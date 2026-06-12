@@ -119,8 +119,10 @@ const check=(n,ok,d)=>{checks.push(ok);console.log(`${n}: ${ok?'OK':'FAIL'}${ok?
       secGap: sec?getComputedStyle(sec).marginBottom:null,
     };
   });
-  check('spacing sliders drive the preview (seam 20 + edge 10 = 30px left pad; sidebar 14px/2px; section 24px)',
-    r.mainPadLeft==='30px' && r.sbPad==='14px 2px' && r.mainPadTop==='14px' && r.secGap==='24px',
+  // SPACING-COMFORT-DEFAULT-001: mainEdgeIndent is unseeded here, so the
+  // fallback is now the comfort 14px (was 10) — left pad = 14 + seam 20.
+  check('spacing sliders drive the preview (seam 20 + edge 14 = 34px left pad; sidebar 14px/2px; section 24px)',
+    r.mainPadLeft==='34px' && r.sbPad==='14px 2px' && r.mainPadTop==='14px' && r.secGap==='24px',
     JSON.stringify(r));
   await page.close();
 }

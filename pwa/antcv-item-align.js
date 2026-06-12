@@ -86,6 +86,12 @@
       // rows carry data-antcv-role-path for the fallback in
       // applyAllAlignments.
       case 'experience':   return 'roles.' + i;
+      // NOTE (CJLR-TABLE-001): the CORE COMPETENCIES table is deliberately
+      // NOT handled here — antcv-core-competencies-row-controls-234.js owns
+      // its per-row CJLR (storage antcv.coreCompetencies.rowAlignment.v1,
+      // applied by a sweep that would stomp anything this sidecar wrote).
+      // The docx-client forwards that storage to the worker as
+      // item_alignment["rows.N"] for export parity.
       default:             return 'items.' + i;
     }
   }

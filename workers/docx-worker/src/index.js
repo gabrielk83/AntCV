@@ -25990,7 +25990,11 @@ function renderCompetencyTable(s, ctx) {
           // TABLE-WRAP-PARITY-001: the preview renders the expertise cell
           // LEFT-aligned; the export's JUSTIFIED stretched word gaps into
           // visible rivers in narrow cells. Match the preview.
-          alignment: AlignmentType.LEFT,
+          // CJLR-TABLE-001 (1.14.58): a per-row override from the PWA's
+          // item-align cycler wins for the EXPERTISE cell. Wire key is the
+          // FULL-array row index (header = 0, first data row = 1) to match
+          // the preview's ["rows", rr, 1] edit paths.
+          alignment: i === 1 ? paraAlignPath(s, "rows." + (idx + 1)) ?? AlignmentType.LEFT : AlignmentType.LEFT,
           children: inlineRuns(cell, {
             bold: i === 0,
             color: style.mainTextColor,
@@ -26984,7 +26988,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.57-es-zh";
+var VERSION = "1.14.58-table-cjlr";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

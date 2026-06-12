@@ -968,18 +968,48 @@ function normalizeSections(raw) {
       }
     }
   } catch (_) {}
-  function alignFor(sid) {
-    const b = alignMap[sid];
-    if (!b || typeof b !== 'object') return null;
-    // Pass only the valid alignment entries through. Filter out
-    // anything that isn't one of the four canonical strings so
-    // the worker's validator doesn't trip on a stray value.
-    const out = {};
-    for (const k of Object.keys(b)) {
-      const v = b[k];
-      if (v === 'left' || v === 'center' || v === 'right' || v === 'justify') {
-        out[k] = v;
+  // CJLR-TABLE-001 (1.50.383 / worker 1.14.58): the CORE COMPETENCIES
+  // per-row CJLR (antcv-core-competencies-row-controls-234.js, storage
+  // antcv.coreCompetencies.rowAlignment.v1 = { "row-<i>": align }, i over
+  // the FULL rows array with the header at 0) was PREVIEW-ONLY — exports
+  // always rendered the table left-aligned. Forward the explicit entries to
+  // table sections as item_alignment["rows.<i>"]; the worker's
+  // renderCompetencyTable applies them to the EXPERTISE cell.
+  let tableRowAlign = {};
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const raw = localStorage.getItem('antcv.coreCompetencies.rowAlignment.v1');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          for (const k of Object.keys(parsed)) {
+            const m = /^row-(\d+)$/.exec(k);
+            const v = parsed[k];
+            if (m && Number(m[1]) > 0 &&
+                (v === 'left' || v === 'center' || v === 'right' || v === 'justify')) {
+              tableRowAlign['rows.' + m[1]] = v;
+            }
+          }
+        }
       }
+    }
+  } catch (_) {}
+  function alignFor(sid, sectionType) {
+    const b = alignMap[sid];
+    const out = {};
+    if (b && typeof b === 'object') {
+      // Pass only the valid alignment entries through. Filter out
+      // anything that isn't one of the four canonical strings so
+      // the worker's validator doesn't trip on a stray value.
+      for (const k of Object.keys(b)) {
+        const v = b[k];
+        if (v === 'left' || v === 'center' || v === 'right' || v === 'justify') {
+          out[k] = v;
+        }
+      }
+    }
+    if (sectionType === 'table') {
+      for (const k of Object.keys(tableRowAlign)) out[k] = tableRowAlign[k];
     }
     return Object.keys(out).length > 0 ? out : null;
   }
@@ -1131,7 +1161,7 @@ function normalizeSections(raw) {
   })();
 
   return raw.filter(s => s && s.on !== false).map(s => {
-    const itemAlign = alignFor(s.id);
+    const itemAlign = alignFor(s.id, s.type);
     const base = {
       id: s.id || '',
       title: s.title || '',

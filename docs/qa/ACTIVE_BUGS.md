@@ -1034,7 +1034,7 @@ blue-screen guard — serve pwa/, assert 0 console errors + `typeof glDemo`),
   cut mid-group in the PDF.
 
 ### Export
-- **DOCX-EXPORT-CORS-CPU-001** `[OPEN][HIGH][infra]` — DOCX export failed with
+- **DOCX-EXPORT-CORS-CPU-001** `[MITIGATED 1.50.244/248 — residual infra decision is the owner's]` — DOCX export failed with
   *"Access to fetch at 'https://docx-worker.../generate' from origin
   'https://antcv.pages.dev' has been blocked by CORS policy: No
   'Access-Control-Allow-Origin' header is present"* on a tailored Kvadrat
@@ -1054,11 +1054,15 @@ blue-screen guard — serve pwa/, assert 0 console errors + `typeof glDemo`),
   - Stream docx generation in chunks where possible.
   - Smaller payload defaults (drop the photo to a much-smaller thumb
     pre-export, skip optional sections by default).
-  Client-side todo: detect the `TypeError: Failed to fetch` after the
-  fetch and surface a user-readable message ("Document too large to render
-  on the current worker tier — try removing the photo or splitting the CV;
-  the worker exhausted its CPU budget on this request"), instead of letting
-  the raw CORS error reach the user.
+  Client-side todo **DONE (1.50.244 / 1.50.248, antcv-docx-client.js)**:
+  the /generate fetch is wrapped — a network-level failure (CORS-blocked
+  CPU kill, edge timeout) auto-retries once after 1.5 s, the worker is
+  warmed via a /health GET before the real POST, and a remaining failure
+  throws a user-readable message with the payload/photo size and concrete
+  next steps instead of the raw `TypeError: Failed to fetch`. Residual
+  (owner decision, not code): if it keeps failing on normal-sized CVs,
+  move the worker to a longer CPU budget (Workers paid tier /
+  `[limits] cpu_ms` in wrangler.toml).
 
 ### Wizard / languages
 - **WIZARD-LANG-SELECTOR-001** `[OPEN][feature]` — **Wizard language step + two-table language

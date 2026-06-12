@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.50.385';
+const CACHE = 'antcv-1.50.386';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',
@@ -25,6 +25,7 @@ const SHELL = [
   './antcv-jd-watch.js',
   './antcv-spell-annotator-384.js',
   './antcv-orphan-cloud-persist-385.js',
+  './antcv-confidence-overlay-386.js',
   './vendor/nspell.browser.js',
   './antcv-share-target-jd-375.js',
   './antcv-privacy-led.js',

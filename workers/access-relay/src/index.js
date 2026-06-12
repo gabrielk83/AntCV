@@ -977,11 +977,12 @@ async function handleApiPrefs(request, env) {
     // KV_ONLY_FIELDS / KERNEL_PREFS_* allowlists. The wire shape is unchanged;
     // routing is invisible above this line.
     let current = {};
+    let kvRawBefore = null;
     if (kv) {
       try {
-        const raw = await kv.get(key);
-        if (raw) current = JSON.parse(raw) || {};
-      } catch (_) { current = {}; }
+        kvRawBefore = await kv.get(key);
+        if (kvRawBefore) current = JSON.parse(kvRawBefore) || {};
+      } catch (_) { current = {}; kvRawBefore = null; }
     }
     const saved = [];
     // Retention bookkeeping in KV. created_at is set on FIRST write only.
@@ -1016,8 +1017,30 @@ async function handleApiPrefs(request, env) {
     }
     current.updated_at = nowIso;
     if (kv) {
-      try { await kv.put(key, JSON.stringify(current)); }
-      catch (eKv) { return jsonResponse({ ok: false, error: 'kv_write_failed', message: String(eKv && eKv.message || eKv) }, 500, request, env, refresh); }
+      // KV-QUOTA-001 (owner console 2026-06-12: "KV put() limit exceeded
+      // for the day" — every cloud save 500'd, including the admin
+      // demo-proxy URL). The blob was rewritten on EVERY PUT because
+      // updated_at always changes, so interval-driven client syncs
+      // (consent sync, orphan persist, the 14-key cloudWrite) burned the
+      // daily KV write quota on pure no-ops. Compare WITHOUT the
+      // timestamp and skip the put when nothing real changed — KV reads
+      // are two orders of magnitude cheaper than writes.
+      const stripTs = (o) => {
+        try { const c = { ...o }; delete c.updated_at; return JSON.stringify(c); }
+        catch (_) { return null; }
+      };
+      let unchanged = false;
+      if (kvRawBefore) {
+        try {
+          const prev = stripTs(JSON.parse(kvRawBefore));
+          const next = stripTs(current);
+          unchanged = prev !== null && prev === next;
+        } catch (_) { unchanged = false; }
+      }
+      if (!unchanged) {
+        try { await kv.put(key, JSON.stringify(current)); }
+        catch (eKv) { return jsonResponse({ ok: false, error: 'kv_write_failed', message: String(eKv && eKv.message || eKv) }, 500, request, env, refresh); }
+      }
     }
 
     // =====================================================================
@@ -1500,7 +1523,11 @@ async function handleApiAdminDemo(request, env) {
       updated_at: new Date().toISOString(),
       updated_by: id.email,
     };
-    await kv.put(key, JSON.stringify(payload));
+    // KV-QUOTA-001: a quota-exhausted put used to throw UNCAUGHT here — the
+    // admin saw a bare 500 and the demo URL silently "didn't save". Return
+    // the same readable envelope as /api/prefs.
+    try { await kv.put(key, JSON.stringify(payload)); }
+    catch (eKv) { return jsonResponse({ ok: false, error: 'kv_write_failed', message: String(eKv && eKv.message || eKv) }, 500, request, env, refresh); }
     return jsonResponse({ ok: true, demo: payload }, 200, request, env, refresh);
   }
   if (m === 'DELETE') {

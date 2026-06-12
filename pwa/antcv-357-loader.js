@@ -64,7 +64,7 @@
     { src: 'antcv-proxyurl-relay-fallback-371.js', v: '1.50.330-jdurl-demo' },
     // REGULAR-MODE-STALE-SETUP-001: live-toggle the "⚠ Setup needed" +
     // "🟡 Use demo" header chips on key-presence change (no refresh needed).
-    { src: 'antcv-setup-chips-live-372.js', v: '1.50.367-entitled-chips' },
+    { src: 'antcv-setup-chips-live-372.js', v: '1.50.400-quiet-log' },
     // UI polish: design-language consistency layer (focus rings, button/field
     // micro-feedback). Pure CSS, zero-specificity :where(), excludes the
     // rendered document so the page-break measurer is untouched.

@@ -171,10 +171,19 @@
   try {
     document.addEventListener('click', function (ev) {
       try {
-        var el = ev.target;
-        var hops = 0, txt = '';
-        while (el && hops < 4) { txt += ' ' + (el.textContent || ''); el = el.parentElement; hops++; }
-        if (!/Hard Refresh/i.test(txt)) return;
+        // Console hygiene (owner 2026-06-12): the old matcher collected 4
+        // ancestors' textContent, so ANY click inside a container that
+        // mentions "Hard Refresh" anywhere fired the probe (repeated
+        // "click detected" + bogus "NO reload" warnings). Match only the
+        // BUTTON whose own short label is the Hard Refresh action.
+        var el = ev.target, btn = null, hops = 0;
+        while (el && hops < 3) {
+          if (el.tagName === 'BUTTON' || (el.getAttribute && el.getAttribute('role') === 'button')) { btn = el; break; }
+          el = el.parentElement; hops++;
+        }
+        if (!btn) return;
+        var ownTxt = (btn.textContent || '').trim();
+        if (!/Hard Refresh/i.test(ownTxt) || ownTxt.length > 40) return;
         var t0 = performance.now();
         log('HARDREFRESH-001 click detected — timing reload path…');
         // Probe the two async steps the handler awaits.

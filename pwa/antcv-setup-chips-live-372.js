@@ -131,12 +131,18 @@
   // tab-return. The poll only does DOM work when set-up state CHANGED since
   // the last pass — track it to keep idle cost ~0.
   var lastSetUp = null;
+  var lastLogAt = 0;
   function tick() {
-    var setUp = isSetUp();
+    var setUp = !!isSetUp();
     if (setUp !== lastSetUp) {
       lastSetUp = setUp;
       try { applyState(); } catch (_) {}
-      try { console.debug(TAG, 'set-up changed →', setUp ? 'set up (chips hidden)' : 'not set up (chips restored)'); } catch (_) {}
+      // Console hygiene (owner 2026-06-12): the transition log repeated on
+      // every detection flap — rate-limit to one line per minute.
+      if (Date.now() - lastLogAt > 60000) {
+        lastLogAt = Date.now();
+        try { console.debug(TAG, 'set-up changed →', setUp ? 'set up (chips hidden)' : 'not set up (chips restored)'); } catch (_) {}
+      }
     }
   }
   tick();

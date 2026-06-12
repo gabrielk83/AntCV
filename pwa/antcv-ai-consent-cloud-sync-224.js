@@ -111,6 +111,12 @@
     } catch(_) { return false; }
   }
   var inFlight = false;
+  // KV-QUOTA-001 (owner console 2026-06-12): when the relay's KV daily write
+  // quota is exhausted, every PUT 500s — and this sidecar retried every ~60s
+  // forever, spamming the console AND burning more quota attempts. After 3
+  // consecutive failures, back off ~10 minutes (the throttle key is pushed
+  // into the future); any success resets the streak.
+  var failStreak = 0;
   async function syncConsent(reason){
     if (inFlight) return false;
     var meta = localConsentMeta();
@@ -131,11 +137,16 @@
         body: JSON.stringify(prefsPayload(meta))
       });
       if (res && res.ok) {
+        failStreak = 0;
         writeRaw(SYNCED_KEY, nowIso());
         try { window.dispatchEvent(new CustomEvent('antcv:ai-disclosure-cloud-synced', { detail:{ version:VERSION, reason:reason || 'sync' } })); } catch(_) {}
         return true;
       }
-      try { console.debug('[ai-consent-sync] cloud write failed', res && res.status); } catch(_) {}
+      failStreak += 1;
+      if (failStreak === 1 || failStreak === 3) {
+        try { console.debug('[ai-consent-sync] cloud write failed', res && res.status, failStreak >= 3 ? '(backing off ~10 min)' : ''); } catch(_) {}
+      }
+      if (failStreak >= 3) writeRaw(LAST_TRY_KEY, String(Date.now() + 9 * 60000));
       return false;
     } catch(e) {
       try { console.debug('[ai-consent-sync] cloud write error', e && e.message); } catch(_) {}

@@ -623,6 +623,25 @@ ${inlineStyles}
       'Save as PDF. Uses the app’s server-side ATS PDF export when available, ' +
       'falling back to the browser print dialog (choose "Save as PDF").';
     print.addEventListener('click', () => {
+      // JD-ANALYSIS-PRINT-001 follow-up (owner 2026-06-12: "the re-export of
+      // analysis is still reaching CV page setup panel"): the modal's
+      // Save-as-PDF cloned and printed the CV even while the ANALYSIS view
+      // was the foreground surface — the window.print divert (print-iframe-
+      // preview 1.50.376) never sees this path. Apply the SAME foreground
+      // check here and divert to the analysis exporter.
+      try {
+        if (window.AntcvPrintIframePreview &&
+            typeof window.AntcvPrintIframePreview._analysisViewIsForeground === 'function' &&
+            window.AntcvPrintIframePreview._analysisViewIsForeground() &&
+            window.AntcvAnalysisReportPdf360 &&
+            typeof window.AntcvAnalysisReportPdf360._export === 'function') {
+          closeModal();
+          setTimeout(function () {
+            try { window.AntcvAnalysisReportPdf360._export(); } catch (_) {}
+          }, 60);
+          return;
+        }
+      } catch (_) {}
       // Prefer the app's real PDF export (CloudConvert /generate-pdf when the
       // docx-worker has CLOUDCONVERT_API_KEY — proper Unicode-embedded ATS
       // PDF). Identify it by its stable title prefix. Fall back to printing

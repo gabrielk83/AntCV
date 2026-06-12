@@ -102,10 +102,11 @@ semantic page-change glyph, never a down arrow. No user-facing text may say "Com
 - **TB-002** — Core Competencies Page Break support (PB-004 rules)
 - **TB-003** — What I Bring and similar table help text (no "compress", no down arrow)
 
-## Selected Outcomes (SO-001..002)
+## Selected Outcomes (SO-001..003)
 
 - **SO-001** — Add per-item controls to each outcome row (Page Break, CJLR, Enhance, Fit before Delete)
 - **SO-002** — Outcome add behavior (new rows identical)
+- **SO-003** _(High, data loss, open)_ — Changing CORE COMPETENCIES row count from 3 to 4 in the advanced style menu wipes ALL Selected Outcomes content. Observed mobile, antcv.pages.dev, 2026-06-12 (Trackman application active): after applying the count change, the SELECTED OUTCOMES editor shows one empty placeholder row ("[Verb]" / "Outcome text") instead of the previously populated outcomes — content destroyed, not hidden. Cross-section blast radius: the trigger section (Core Competencies) and the destroyed section (Selected Outcomes) differ, so the prime suspect is the advanced-style apply handler round-tripping the whole `sections` payload through a template merge/normalize that re-keys or defaults unmatched sections to empty — same failure class as the post-delete `filterPayload` bug (missing-case wipe), NOT a per-section resize. **Triage (not started):** (1) reproduce on desktop; (2) trace the advanced-style apply path in `app.js`/`app.src.js` for a sections rebuild; (3) check whether the wipe also persists to cloud (cloudWrite of the emptied outcomes would make it unrecoverable) or whether cloud restore can recover the lost rows; (4) confirm whether other sections (Publications, Experience bullets) are also vulnerable to count changes in adjacent sections. **Repro:** populate Selected Outcomes -> advanced style menu -> Core Competencies rows 3->4 -> apply -> open Selected Outcomes editor.
 
 ## Publications & Patents (PP-001..003)
 

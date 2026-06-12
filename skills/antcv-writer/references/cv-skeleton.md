@@ -155,14 +155,14 @@ Record the choice in the role's change_log entry (`reason: "roleform_merged"` or
 
 ### `recommendations`
 
-**Purpose.** A one-line references statement directly after `experience` in the main column (owner addition, 2026-06-12). Not a list of named referees — a availability line.
+**Purpose.** A one-line references statement in the main column (owner addition, 2026-06-12). Not a list of named referees — a availability line.
 
 **Format.** `paragraph`, single sentence.
 
 **Content rules.**
 - Default content: "Danish and international recommenders on request." (localized: da "Danske og internationale anbefalere oplyses på forespørgsel.", es "Recomendantes daneses e internacionales disponibles a petición.", zh "丹麦及国际推荐人可应要求提供。").
 - Never name referees or their contact details in the CV itself.
-- Placement: main column, immediately after `experience`.
+- Placement (owner correction 2026-06-13): main column, immediately after the LAST of `experience` and any PROFESSIONAL EXPERTISE section — when an expertise block follows the work history, recommendations comes AFTER it, never between them.
 
 ### `tools_methods`
 

@@ -125,7 +125,7 @@ const INTEGRITY_RULES = [
   'patent-number-integrity: Every patent entry in publications/patents keeps its patent number verbatim. Never drop the number for brevity.',
   'work-style-people-close: The WORK STYLE section always ENDS with a people skill (e.g. clear written follow-ups, calm under disagreement, direct one-to-one communication) - never a process or tooling point.',
   'accessibility-explicit: If the candidate data carries an accessibility item, state explicitly that the request concerns a hearing-impaired person. Never an unspecified accommodation line.',
-  'specialization-catchy: A specialization/subtitle line is simple and catchy, at most three concepts (pattern: "Processes*Products*People"). Unsolicited applications always carry the candidate\'s stored specialization line.',
+  'specialization-catchy: A specialization/subtitle line is simple and catchy, at most three concepts (pattern: "Processes • Products • People"). Unsolicited applications always carry the candidate\'s stored specialization line.',
 ];
 
 const MAX_RETRIES = 2;

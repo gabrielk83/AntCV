@@ -264,6 +264,51 @@
   window.AntcvDiag.boot = probeBoot;
   window.AntcvDiag.hardrefresh = function () { log('HARDREFRESH-001: click the "↻ Hard Refresh" button to capture timing.'); };
 
+  // ---- RESET-PROBE-001 (owner 2026-06-13) -------------------------------
+  // "Scrolling the account menu to the end resets the app" keeps recurring.
+  // This probe makes the NEXT occurrence self-describing. Mechanics:
+  //  - every second, while the settings modal is open, its subtab guess +
+  //    scrollTop/atEnd are checkpointed into sessionStorage;
+  //  - pagehide stamps a GRACEFUL-unload marker (programmatic reload, link,
+  //    pull-to-refresh all fire it; a renderer CRASH does not — but
+  //    sessionStorage survives Chrome's crash-restore);
+  //  - on boot, the navigation type + the two markers are read back and a
+  //    loud verdict line is printed:
+  //      graceful=true  + type=reload  -> something CALLED reload / PTR
+  //      graceful=false + settings ctx -> the TAB CRASHED (memory/renderer)
+  (function resetProbe() {
+    try {
+      var K_UNLOAD = 'antcv:resetprobe:unload', K_CTX = 'antcv:resetprobe:ctx';
+      var nav = (performance.getEntriesByType && performance.getEntriesByType('navigation')[0]) || null;
+      var unload = null, ctx = null;
+      try { unload = JSON.parse(sessionStorage.getItem(K_UNLOAD) || 'null'); } catch (_) {}
+      try { ctx = JSON.parse(sessionStorage.getItem(K_CTX) || 'null'); } catch (_) {}
+      sessionStorage.removeItem(K_UNLOAD); sessionStorage.removeItem(K_CTX);
+      var graceful = !!(unload && Date.now() - unload.ts < 120000);
+      var inSettings = !!(ctx && Date.now() - ctx.ts < 120000 && ctx.settingsOpen);
+      if (nav && nav.type !== 'navigate') {
+        console.warn('[reset-probe] RESET-PROBE-001 verdict: navType=' + nav.type
+          + ' graceful=' + graceful
+          + (graceful ? ' (unload ' + Math.round((Date.now() - unload.ts) / 1000) + 's ago, vis=' + unload.vis + ')' : ' (NO unload marker — likely a TAB CRASH / memory kill)')
+          + (inSettings ? ' | settings WAS open: scrollTop=' + ctx.scrollTop + ' atEnd=' + ctx.atEnd : ' | settings not open at checkpoint'));
+      }
+      window.addEventListener('pagehide', function () {
+        try { sessionStorage.setItem(K_UNLOAD, JSON.stringify({ ts: Date.now(), vis: document.visibilityState })); } catch (_) {}
+      });
+      setInterval(function () {
+        try {
+          // the settings modal panel: fixed backdrop zIndex 10000 -> inner panel
+          var panel = null;
+          var els = document.querySelectorAll('div[style*="z-index: 10000"], div[style*="zIndex"]');
+          for (var i = 0; i < els.length; i++) { if (els[i].style.zIndex === '10000') { panel = els[i].firstElementChild; break; } }
+          if (!panel) { return; }
+          var atEnd = panel.scrollHeight - panel.scrollTop - panel.clientHeight < 24;
+          sessionStorage.setItem(K_CTX, JSON.stringify({ ts: Date.now(), settingsOpen: true, scrollTop: Math.round(panel.scrollTop), atEnd: atEnd }));
+        } catch (_) {}
+      }, 1000);
+    } catch (_) {}
+  })();
+
   setTimeout(dumpAll, 2500);
   try { console.warn('[antcv-diag] probes installed v' + V + ' — run AntcvDiag() any time.'); } catch (_) {}
 })();

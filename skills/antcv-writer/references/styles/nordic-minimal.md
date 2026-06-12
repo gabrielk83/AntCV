@@ -104,7 +104,7 @@ In addition to the global banned word/phrase lists, this style rejects:
 
 These are binding for every nordic-minimal output. They are not style suggestions.
 
-1. **Specialization line.** Simple and catchy, three concepts at most — the pattern is `Processes*Products*People`. Unsolicited applications ALWAYS carry the candidate's stored specialization line; never drop it for an uopfordret ansøgning.
+1. **Specialization line.** Simple and catchy, three concepts at most — the pattern is `Processes • Products • People`. Unsolicited applications ALWAYS carry the candidate's stored specialization line; never drop it for an uopfordret ansøgning.
 2. **Banned word: `discuss`** (and inflections: discusses, discussed, discussing). Use "talk through", "walk through", or name the concrete topic instead.
 3. **Accessibility.** When the candidate has an accessibility item, the text must state explicitly that the request concerns a hearing-impaired person. Never an unspecified "accommodations requested" — the reader must know the nature of the accommodation.
 4. **Patents keep their numbers.** Every patent entry in publications/patents carries its patent number verbatim. Dropping the number to save space is not a valid compression.

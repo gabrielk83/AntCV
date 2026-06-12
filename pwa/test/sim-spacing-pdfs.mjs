@@ -116,7 +116,7 @@ const base = (doc, style) => ({
   schema_version: '1.0', doc, language: 'en', layout: doc === 'cl' ? 'linear' : 'two_column',
   filename: 'spacing-sim',
   personal_info: { name: 'Gabriel Alexander Karp-Gershon', email: 'email@example.com', phone: '+45 00 00 00 00', linkedin: 'linkedin.com/in/gabriel-karp', location: '2300, København S' },
-  meta: { subtitle: 'Processes*Products*People', role: 'Senior Product Manager', company: 'Maersk' },
+  meta: { subtitle: 'Processes • Products • People', role: 'Senior Product Manager', company: 'Maersk' },
   style: { navy: '#283556', accent: '#01B7BB', teal: '#00746E', ...style },
   font_sizes: {},
   sections: doc === 'cl' ? clSections : cvSections,

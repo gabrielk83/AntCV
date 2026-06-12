@@ -2639,13 +2639,18 @@
       // education rules in the main prompt).
       (() => {
         try {
+          // SPEC-SEPARATOR-001 (owner 2026-06-13): bullets, not asterisks —
+          // and a stored specialization that still carries the old "*"
+          // separators is normalized on read (no migration needed).
           const spec =
-            String(o.specialization || "").trim() ||
-            "Processes*Products*People";
+            String(o.specialization || "")
+              .trim()
+              .replace(/\s*\*\s*/g, " • ") ||
+            "Processes • Products • People";
           r.push(
             'SPECIALIZATION LINE (meta.subtitle): the candidate\'s standing specialization line is "' +
               spec +
-              '". Every subtitle MUST be simple and catchy — at most three short concepts, separated by "•" or "*". For an UNSOLICITED draft (no job description) meta.subtitle MUST be EXACTLY the standing specialization line above, verbatim. For tailored drafts you may adapt it to the role, but keep it simple and catchy — never a sentence.',
+              '". Every subtitle MUST be simple and catchy — at most three short concepts, separated by " • " (bullet, never an asterisk). For an UNSOLICITED draft (no job description) meta.subtitle MUST be EXACTLY the standing specialization line above, verbatim. For tailored drafts you may adapt it to the role, but keep it simple and catchy — never a sentence.',
           );
         } catch (_) {}
       })();
@@ -14504,41 +14509,76 @@
             }
           } catch (_) {}
         }, [ro]),
-        // RECOMMENDATIONS-SECTION-001 backfill (owner 2026-06-12): existing
-        // stored sections predate the skeleton's recommendations one-liner —
-        // inject it once, directly after the experience section. Idempotent:
-        // no-ops when a recommendations-like section already exists.
+        // RECOMMENDATIONS-SECTION-001 backfill + placement (owner 2026-06-12,
+        // placement corrected 2026-06-13: "recommendations needs to be AFTER
+        // professional expertise"). The anchor is the LAST of: the experience
+        // section and any main-column PROFESSIONAL EXPERTISE / EXPERTISE /
+        // EKSPERTISE-titled section — recommendations sits directly after it.
+        // Inserts when missing; REPOSITIONS an existing one that landed
+        // before the expertise block (the 2026-06-12 backfill anchored on
+        // experience only). Idempotent: no-ops when already in place.
         React.useEffect(() => {
           try {
             if (!(ro && Array.isArray(ro.cv) && ro.cv.length)) return;
-            const has = ro.cv.some(
-              (e) =>
-                e &&
-                ("recommendations" === e.id ||
-                  /RECOMMENDATIONS|REFERENCER|ANBEFALINGER|RECOMENDACIONES|推荐人/i.test(
+            const isRec = (e) =>
+              e &&
+              ("recommendations" === e.id ||
+                /RECOMMENDATIONS|REFERENCER|ANBEFALINGER|RECOMENDACIONES|推荐人/i.test(
+                  String(e.title || ""),
+                ));
+            const isAnchor = (e) =>
+              e &&
+              !isRec(e) &&
+              ("experience" === e.type ||
+                ("main" === e.loc &&
+                  /PROFESSIONAL EXPERTISE|\bEXPERTISE\b|EKSPERTISE/i.test(
                     String(e.title || ""),
-                  )),
-            );
-            if (has) return;
-            const xi = ro.cv.findIndex((e) => e && "experience" === e.type);
-            if (xi < 0) return;
-            const cv = ro.cv.slice();
-            cv.splice(xi + 1, 0, {
-              id: "recommendations",
-              title: "RECOMMENDATIONS",
-              loc: "main",
-              on: !0,
-              type: "text",
-              content: "Danish and international recommenders on request.",
+                  )));
+            let anchor = -1;
+            ro.cv.forEach((e, i) => {
+              if (isAnchor(e)) anchor = i;
             });
+            if (anchor < 0) return;
+            const ri = ro.cv.findIndex(isRec);
+            if (ri === anchor + 1) return; // already in place
+            const cv = ro.cv.slice();
+            let rec;
+            if (ri >= 0) rec = cv.splice(ri, 1)[0];
+            else
+              rec = {
+                id: "recommendations",
+                title: "RECOMMENDATIONS",
+                loc: "main",
+                on: !0,
+                type: "text",
+                content: "Danish and international recommenders on request.",
+              };
+            // recompute the anchor on the spliced copy (removal may shift it)
+            let a2 = -1;
+            cv.forEach((e, i) => {
+              if (isAnchor(e)) a2 = i;
+            });
+            if (a2 < 0) return;
+            cv.splice(a2 + 1, 0, rec);
             ao({ ...ro, cv });
             try {
               console.log(
-                "[RECOMMENDATIONS-SECTION-001] backfilled after experience",
+                "[RECOMMENDATIONS-SECTION-001] placed after",
+                String((cv[a2] && cv[a2].title) || cv[a2].type),
               );
             } catch (_) {}
           } catch (_) {}
         }, [ro]),
+        // SPEC-SEPARATOR-001 (owner 2026-06-13): a stored subtitle that still
+        // uses "*" separators is rewritten to " • " once.
+        React.useEffect(() => {
+          try {
+            const s = io && io.subtitle;
+            if (s && /\S\s*\*\s*\S/.test(String(s))) {
+              lo({ ...io, subtitle: String(s).replace(/\s*\*\s*/g, " • ") });
+            }
+          } catch (_) {}
+        }, [io]),
         React.useEffect(() => {
           const e = (e) => {
             try {
@@ -22272,7 +22312,7 @@
             // "extract company ONLY from the JOB DESCRIPTION" rule).
             const __noJD = !(c && String(c).trim());
             const __neutralCo = __noJD
-              ? 'OPEN / UNSOLICITED APPLICATION — NO TARGET COMPANY. There is no job description and no target employer for this draft. Do NOT name ANY specific company ANYWHERE in the cover letter or the CV body — not in WHY THIS POSITION, not in the HOW I WOULD CONTRIBUTE closing line, not in the CLOSURE line, nowhere. Use neutral references only: "your organisation", "your team", "the role". Do NOT infer, guess, or carry forward a company name from prior context, additional signals, or background documents. meta.company MUST be empty. You STILL must FULLY write who_content, why_content (frame WHY generally — why this KIND of role and work fits, with no specific employer named), and contribute_items (3-4 concrete bullets) from the candidate\'s real background. NEVER leave who_content, why_content, or contribute_items empty in an unsolicited draft. meta.subtitle MUST be EXACTLY the candidate\'s standing specialization line from the SPECIALIZATION LINE rule (verbatim — for Gabriel: "Processes*Products*People"). PROFILE OPENER (GEN-PROFILE-001): in an UNSOLICITED draft the PROFILE\'s FIRST sentence is the BROAD professional identity — "IT professional with 15+ years in consumer and regulated markets" (or a close variant). NEVER open with "Electro-optics and LiDAR architect" or any narrow specialist identity; the optics/EO depth belongs in SELECTED OUTCOMES and the sidebar, not the headline. Sentences 2-3: hardware-software products concept-to-production (requirements, change control, validation, supplier coordination) and recent GenAI product work when current and relevant. JD-driven drafts keep the JD-matched specialist opener.\n\n'
+              ? 'OPEN / UNSOLICITED APPLICATION — NO TARGET COMPANY. There is no job description and no target employer for this draft. Do NOT name ANY specific company ANYWHERE in the cover letter or the CV body — not in WHY THIS POSITION, not in the HOW I WOULD CONTRIBUTE closing line, not in the CLOSURE line, nowhere. Use neutral references only: "your organisation", "your team", "the role". Do NOT infer, guess, or carry forward a company name from prior context, additional signals, or background documents. meta.company MUST be empty. You STILL must FULLY write who_content, why_content (frame WHY generally — why this KIND of role and work fits, with no specific employer named), and contribute_items (3-4 concrete bullets) from the candidate\'s real background. NEVER leave who_content, why_content, or contribute_items empty in an unsolicited draft. meta.subtitle MUST be EXACTLY the candidate\'s standing specialization line from the SPECIALIZATION LINE rule (verbatim — for Gabriel: "Processes • Products • People"). PROFILE OPENER (GEN-PROFILE-001): in an UNSOLICITED draft the PROFILE\'s FIRST sentence is the BROAD professional identity — "IT professional with 15+ years in consumer and regulated markets" (or a close variant). NEVER open with "Electro-optics and LiDAR architect" or any narrow specialist identity; the optics/EO depth belongs in SELECTED OUTCOMES and the sidebar, not the headline. Sentences 2-3: hardware-software products concept-to-production (requirements, change control, validation, supplier coordination) and recent GenAI product work when current and relevant. JD-driven drafts keep the JD-matched specialist opener.\n\n'
               : "";
             // QUICK-GEN-001 (owner 2026-06-12): session-only "Quick
             // generation" checkbox (window.__antcvQuickGen — never

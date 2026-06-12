@@ -309,7 +309,7 @@
         auth.src = 'antcv-auth.js?v=1.50.312-auth-msg';
         auth.onload = function(){
           var app = document.createElement('script');
-          app.src = 'app.js?v=1.50.409';
+          app.src = 'app.js?v=1.50.410';
           app.onload = function(){
             var vo = document.createElement('script');
             vo.src = 'antcv-version-override.js?v=1.50.41';
@@ -649,7 +649,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <!-- v1.50.171: READ-ONLY diagnostic probes (HOWCONTRIBUTE-001, SETTINGS-SUBTAB-001,
      HARDREFRESH-001, LOGIN-GATE-001). No behaviour change; logs [antcv-diag] lines.
      Run window.AntcvDiag() on demand. -->
-<script src="antcv-diag-probes-370.js?v=1.50.400-scoped" defer></script>
+<script src="antcv-diag-probes-370.js?v=1.50.410" defer></script>
 <!-- HARDREFRESH-001 fix: guarantees the Hard Refresh button reloads even when
      the deployed app.js handler awaits a hung SW-unregister/cache-delete.
      Capture-phase click → fire-and-forget cleanup → forced reload. Also exposes

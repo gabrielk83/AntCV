@@ -33,9 +33,24 @@ test('RECOMMENDATIONS-SECTION-001 — skeleton + backfill + translations', () =>
 });
 
 test('SPEC-CATCHY-001 — standing specialization line + unsolicited append', () => {
-  assert.ok(bundle.includes('Processes*Products*People'));
+  // SPEC-SEPARATOR-001 (owner 2026-06-13): bullets, never asterisks.
+  assert.ok(bundle.includes('Processes • Products • People'));
+  assert.ok(!bundle.includes('Processes*Products*People'));
   assert.ok(bundle.includes('SPECIALIZATION LINE (meta.subtitle)'));
   assert.ok(bundle.includes('simple and catchy'));
+});
+
+test('SPEC-SEPARATOR-001 — stored "*" separators normalized on read + in stored subtitle', () => {
+  // GABRIEL_BG read-side normalization (regex literal survives minification)
+  assert.ok(bundle.includes(String.raw`/\s*\*\s*/g`));
+  assert.ok(bundle.includes('" • "'));
+  // one-shot stored-subtitle rewrite effect trigger
+  assert.ok(bundle.includes(String.raw`/\S\s*\*\s*\S/`));
+});
+
+test('RECOMMENDATIONS placement — anchored after the LAST of experience/expertise', () => {
+  assert.ok(bundle.includes(String.raw`PROFESSIONAL EXPERTISE|\bEXPERTISE\b|EKSPERTISE`));
+  assert.ok(bundle.includes('[RECOMMENDATIONS-SECTION-001] placed after'));
 });
 
 test('work-style people-skill close rule in the prompt', () => {

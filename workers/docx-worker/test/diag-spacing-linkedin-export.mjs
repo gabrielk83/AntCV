@@ -30,7 +30,7 @@ const mod = await import('../src/index.js');
 const basePayload = (style) => ({
   schema_version: '1.0', doc: 'cv', language: 'en', layout: 'two_column', filename: 't',
   personal_info: { name: 'G K', email: 'g@b.c', linkedin: 'linkedin.com/in/gabriel-karp', location: '2300, København S' },
-  meta: { subtitle: 'Processes*Products*People' }, style: style || {}, font_sizes: {},
+  meta: { subtitle: 'Processes • Products • People' }, style: style || {}, font_sizes: {},
   sections: [
     { id: 'profile', title: 'PROFILE', loc: 'main', on: true, type: 'text', content: 'P.' },
     { id: 'tools', title: 'TOOLS', loc: 'sidebar', on: true, type: 'labeled_list', items: [{ l: 'Engineering', v: 'Python, MATLAB, LabVIEW and a long enough value to wrap lines' }] },

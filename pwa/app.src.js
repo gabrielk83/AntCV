@@ -381,6 +381,35 @@
   // quality-demotion memory treats that id like any other provider — that
   // is how an approved model earns (or loses) its place in the
   // cost-quality function.
+  // JD-URL-TRIM-001 (owner 2026-06-13: "why is the fetch url very long?"):
+  // job-board URLs carry filter/tracking query params that bloat the URL
+  // and the stored source without changing which posting is fetched.
+  // Workday keeps the job id in the PATH (.../job/<title>_<JR-id>), so its
+  // whole query string (locations, locationHierarchy1, ...) is dropped;
+  // everywhere else only known tracking params are removed. Fail-soft:
+  // anything unparseable passes through untouched.
+  const __normJdUrl = (raw) => {
+    try {
+      const u0 = new URL(String(raw || "").trim());
+      u0.hash = "";
+      if (/(^|\.)myworkdayjobs\.com$/i.test(u0.hostname)) u0.search = "";
+      else {
+        const kill =
+          /^(utm_\w+|gclid|fbclid|igshid|mc_cid|mc_eid|ref|refid|src|source|trk|trackingid|li_\w+|gh_src|lever-origin|vq_campaign|s_cid)$/i;
+        const keep = [];
+        u0.searchParams.forEach((v, k) => {
+          kill.test(k) || keep.push([k, v]);
+        });
+        const sp = new URLSearchParams();
+        keep.forEach(([k, v]) => sp.append(k, v));
+        const q = sp.toString();
+        u0.search = q ? "?" + q : "";
+      }
+      return u0.toString();
+    } catch (_) {
+      return String(raw || "").trim();
+    }
+  };
   const __customLlms = () => {
     try {
       const arr = JSON.parse(localStorage.getItem("antcv:customLlms") || "[]");
@@ -13261,7 +13290,10 @@
             Qn({ photo: R(e) ? null : e }));
         },
         Wn = async () => {
-          const e = (Kt || "").trim();
+          // JD-URL-TRIM-001: strip board filter/tracking params before the
+          // fetch — the worker gets the short canonical URL and the stored
+          // source/console stay readable.
+          const e = __normJdUrl((Kt || "").trim());
           if (e) {
             Zt({ busy: !0, error: null, hint: null });
             try {
@@ -30041,6 +30073,12 @@
                     justifyContent: "center",
                     padding: "20px",
                     overflowY: "auto",
+                    // SETTINGS-SCROLL-RESET-001 (owner 2026-06-13): when the
+                    // settings scroll hits its end, the gesture must NOT
+                    // chain to the viewport — chained overscroll triggers
+                    // the browser's pull-to-refresh on mobile, reloading
+                    // ("resetting") the app mid-scroll.
+                    overscrollBehavior: "contain",
                   },
                 },
                 React.createElement(
@@ -30056,6 +30094,7 @@
                       maxHeight: "90vh",
                       overflowY: "auto",
                       boxSizing: "border-box",
+                      overscrollBehavior: "contain",
                     },
                   },
                   React.createElement(

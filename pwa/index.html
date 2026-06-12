@@ -89,6 +89,7 @@
   <script src="antcv-sections-updated-dedupe.js?v=1.0.0"></script>
   <style>
     *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0;}
+    html{overscroll-behavior:none;}
     body{font-family:'Georgia',serif;background:#283556;overscroll-behavior:none;}
     #root{min-height:100dvh;}
     textarea,input,select,button{font-family:inherit;}
@@ -308,7 +309,7 @@
         auth.src = 'antcv-auth.js?v=1.50.312-auth-msg';
         auth.onload = function(){
           var app = document.createElement('script');
-          app.src = 'app.js?v=1.50.408';
+          app.src = 'app.js?v=1.50.409';
           app.onload = function(){
             var vo = document.createElement('script');
             vo.src = 'antcv-version-override.js?v=1.50.41';

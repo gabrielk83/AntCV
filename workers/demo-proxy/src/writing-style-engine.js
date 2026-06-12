@@ -67,7 +67,8 @@ const STYLES = {
   'nordic-minimal':        { active: true,  default: true,  density: 'low',          allowedLength:{min:1,max:3}, primaryConstraint:'restraint', contentRule:'Say less and say it clearly.', avoidRule:'Never add a qualifier where a fact will do.', defaultToneChips:['calm','restrained','factual'], glyphDensity:'sparse', guidance:[
     'Cover letter is a forward-looking statement of intent, NOT a CV recap. Open with motivation for THIS employer in their own words (why them specifically, not generic interest); then the concrete tasks you can solve, how you approach them, the methods and tools you bring, and the effect for the employer; close with the personal qualities that make you a good colleague in this team. Frame value to the EMPLOYER (how you help them reach their goals), never what you gain. Keep it to one page.',
     'CV opens with a 5 to 7 line elevator pitch focused on what you offer the employer, targeted to this job; then core competencies as bullets, each tied to the job; then experience in reverse-chronological order with both responsibilities and results. Short, scannable, sub-headed.',
-    'Use section headings that carry the job\'s professional keywords so the reader can skim it in seconds.'
+    'Use section headings that carry the job\'s professional keywords so the reader can skim it in seconds.',
+    'ONE-LINE RULE (hard cap): every SELECTED OUTCOMES and EXPERIENCE bullet fits ONE rendered line (max ~95 characters); every table row fits ONE line (Strategic Expertise cell max ~55 characters). Compress or split rather than wrap — restraint includes line count.'
   ] },
   'achievement-driven':    { active: true,  density: 'medium',         allowedLength:{min:1,max:3}, primaryConstraint:'outcome-first ordering', contentRule:'Lead with what changed because of you.', avoidRule:'Never name a duty without naming the outcome.', defaultToneChips:['outcome-led','quantified','scope-anchored'], glyphDensity:'medium' },
   'measured-professional': { active: true,  density: 'medium',         allowedLength:{min:1,max:3}, primaryConstraint:'balance of fact and outcome', contentRule:'Concrete actions described in plain language.', avoidRule:'Never claim more than the evidence supports.', defaultToneChips:['balanced','concrete','calm'], glyphDensity:'medium' },
@@ -367,6 +368,13 @@ function findTeamLedHits(text, lang) {
 // check provably never fired there and metric-free outcomes shipped clean.
 
 const CELL_CHAR_CAP = 90; // ~2 rendered lines in the 4.94" expertise column.
+// NORDIC-ONELINE-001 (owner 2026-06-12: "for nordic minimal allow up to one
+// line per bullet and one line per table"). nordic-minimal tightens the caps
+// to ONE rendered line: ~55 chars in the expertise column, ~95 chars for a
+// main-column bullet. Other styles keep the two-line cell cap and no bullet
+// cap.
+const NORDIC_CELL_CHAR_CAP = 55;
+const NORDIC_BULLET_CHAR_CAP = 95;
 
 function tryParseSectionsJson(text) {
   if (typeof text !== 'string') return null;
@@ -415,18 +423,65 @@ function collectExpertiseCells(root) {
   return cells.filter((c) => typeof c === 'string' && c.trim());
 }
 
-// Over-long expertise cells (> ~2 lines). Returns short violation labels for
-// the retry fix-instruction. Language-agnostic (char length only).
-function findOverlongCellHits(text) {
+// Over-long expertise cells (> ~2 lines; ONE line in nordic-minimal).
+// Returns short violation labels for the retry fix-instruction.
+// Language-agnostic (char length only).
+function findOverlongCellHits(text, cap = CELL_CHAR_CAP) {
   const root = tryParseSectionsJson(text);
   if (!root) return [];
   const cells = collectExpertiseCells(root);
   const hits = [];
   for (const c of cells) {
     const clean = c.replace(/\s+/g, ' ').trim();
-    if (clean.length > CELL_CHAR_CAP) {
+    if (clean.length > cap) {
       const preview = clean.length > 40 ? clean.slice(0, 40) + '…' : clean;
-      hits.push(`expertise cell too long (${clean.length} chars, max ${CELL_CHAR_CAP}): "${preview}"`);
+      hits.push(`expertise cell too long (${clean.length} chars, max ${cap}): "${preview}"`);
+    }
+  }
+  return hits;
+}
+
+// NORDIC-ONELINE-001: nordic-minimal bullets fit ONE rendered line. JSON
+// path covers selected_outcomes items + experience bullets; the plain-text
+// fallback is HEADING-SCOPED to SELECTED OUTCOMES / EXPERIENCE blocks so a
+// cover-letter prose bullet (HOW I WOULD CONTRIBUTE) is never flagged.
+function findNordicOverlongBullets(text) {
+  const hits = [];
+  const push = (s) => {
+    const clean = String(s).replace(/\s+/g, ' ').trim();
+    if (clean.length > NORDIC_BULLET_CHAR_CAP) {
+      const preview = clean.slice(0, 40) + '…';
+      hits.push(`nordic-minimal bullet exceeds one line (${clean.length} chars, max ${NORDIC_BULLET_CHAR_CAP}): "${preview}" — compress or split the bullet`);
+    }
+  };
+  const root = tryParseSectionsJson(text);
+  if (root) {
+    const sections = (root.sections && typeof root.sections === 'object') ? root.sections : root;
+    const so = sections && sections.selected_outcomes;
+    const soItems = so && Array.isArray(so.items) ? so.items : [];
+    for (const it of soItems) {
+      if (typeof it === 'string') push(it);
+      else if (it && typeof it === 'object') push([it.title, it.body].filter(Boolean).join(' '));
+    }
+    const exp = sections && sections.experience;
+    if (Array.isArray(exp)) {
+      for (const role of exp) {
+        const items = role && (Array.isArray(role.items) ? role.items : Array.isArray(role.bullets) ? role.bullets : []);
+        for (const b of items || []) if (typeof b === 'string') push(b);
+      }
+    }
+    return hits;
+  }
+  // plain-text fallback — bullets under an outcomes/experience heading only
+  const headRe = /(^|\n)[#*\s]{0,8}(selected outcomes|udvalgte resultater|professional experience|work experience|erhvervserfaring|erfaring)[^\n]*\n/gi;
+  let m;
+  while ((m = headRe.exec(text)) !== null) {
+    const rest = text.slice(m.index + m[0].length);
+    const nextHead = rest.search(/\n[#*\s]{0,8}[A-ZÆØÅ][A-ZÆØÅ &\/\-]{5,}[^\na-zæøå]*\n/);
+    const block = nextHead >= 0 ? rest.slice(0, nextHead) : rest;
+    for (const line of block.split('\n')) {
+      const lm = line.match(/^\s*[-–•◦▪*]\s+(.*)$/);
+      if (lm) push(lm[1]);
     }
   }
   return hits;
@@ -528,8 +583,15 @@ export function evaluateSce(text, req) {
   //   - over-long Strategic Expertise cells (CORE COMPETENCIES / WHAT I BRING)
   //   - metric-free SELECTED OUTCOMES items
   // Both surfaced as phrase hits so they feed the existing 3-attempt retry.
-  const overlongHits = findOverlongCellHits(text);
+  // NORDIC-ONELINE-001: nordic-minimal tightens the cell cap to ONE line and
+  // adds a one-line bullet check (outcomes + experience only).
+  const nordic = (req.writingStyle || DEFAULT_STYLE) === 'nordic-minimal';
+  const overlongHits = findOverlongCellHits(text, nordic ? NORDIC_CELL_CHAR_CAP : CELL_CHAR_CAP);
   if (overlongHits.length) phraseHits.push(...overlongHits);
+  if (nordic) {
+    const oneLineHits = findNordicOverlongBullets(text);
+    if (oneLineHits.length) phraseHits.push(...oneLineHits);
+  }
   const missingMetricHits = findMissingMetricHits(text);
   if (missingMetricHits.length) phraseHits.push(...missingMetricHits);
   // Plain-text fallback for the same rule (heading-scoped; no-ops on JSON).

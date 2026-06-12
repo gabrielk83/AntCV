@@ -234,6 +234,18 @@
     i = "#283556",
     l = "#01B7BB",
     s = "#00746E",
+    readableInk = (bg) => {
+      try {
+        const h = String(bg || "").replace("#", "");
+        if (h.length < 6) return "#fff";
+        const r = parseInt(h.slice(0, 2), 16),
+          g = parseInt(h.slice(2, 4), 16),
+          b = parseInt(h.slice(4, 6), 16);
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b > 140 ? "#283556" : "#fff";
+      } catch (_) {
+        return "#fff";
+      }
+    },
     c = {
       // DOCX-SIDEBAR-GREEN-001 + MAIN-NAVY-001 (owner 2026-06-10): in the MAIN
       // column EVERY accent — headings, sub-heads, vertical/rule lines, BULLETS,
@@ -249,21 +261,21 @@
       mainLineColor: "#283556",
       mainHeadFont: "Trebuchet MS",
       mainBodyFont: "Calibri",
-      headerBg: "#3E5C8C",
-      headerNameColor: "#FFFFFF",
-      headerSpecColor: "#FFFFFF",
-      headerContactColor: "#FFFFFF",
-      headerLineColor: "#01B7BB",
+      headerBg: "#DDE6F2",
+      headerNameColor: "#283556",
+      headerSpecColor: "#283556",
+      headerContactColor: "#283556",
+      headerLineColor: "#283556",
       headerFont: "Trebuchet MS",
-      sidebarBg: "#3E5C8C",
-      sidebarHeadColor: "#01B7BB",
-      sidebarTextColor: "#FFFFFF",
-      sidebarLineColor: "#01B7BB",
+      sidebarBg: "#DDE6F2",
+      sidebarHeadColor: "#00746E",
+      sidebarTextColor: "#283556",
+      sidebarLineColor: "#283556",
       sidebarFont: "Trebuchet MS",
       photoBorderColor: "#01B7BB",
       photoBorderWidth: 1,
-      tableHeaderBg: "#3E5C8C",
-      tableHeaderText: "#FFFFFF",
+      tableHeaderBg: "#DDE6F2",
+      tableHeaderText: "#283556",
       tableOddBg: "#FFFFFF",
       tableEvenBg: "#FAFAFA",
       tableBorderColor: "#D9D9D9",
@@ -4243,7 +4255,7 @@
                 style: {
                   fontFamily: A,
                   fontWeight: 700,
-                  color: S ? "#fff" : "#283556",
+                  color: S ? readableInk(k.sidebarBg) : "#283556",
                   fontSize: r(t),
                   lineHeight: 1.1,
                   textAlign: S
@@ -4279,7 +4291,7 @@
               {
                 style: {
                   fontFamily: A,
-                  color: S ? "#fff" : "#283556",
+                  color: S ? readableInk(k.sidebarBg) : "#283556",
                   fontSize: r(n),
                   lineHeight: 1.2,
                   textAlign: S
@@ -15910,16 +15922,16 @@
           "copenhagen-modern": {
             label: "Copenhagen Modern",
             style: {
-              headerBg: "#3E5C8C",
-              sidebarBg: "#3E5C8C",
-              headerNameColor: "#FFFFFF",
-              headerSpecColor: "#FFFFFF",
-              headerContactColor: "#FFFFFF",
-              headerLineColor: "#01B7BB",
+              headerBg: "#DDE6F2",
+              sidebarBg: "#DDE6F2",
+              headerNameColor: "#283556",
+              headerSpecColor: "#283556",
+              headerContactColor: "#283556",
+              headerLineColor: "#283556",
               headerFont: "Trebuchet MS",
-              sidebarHeadColor: "#01B7BB",
-              sidebarTextColor: "#FFFFFF",
-              sidebarLineColor: "#01B7BB",
+              sidebarHeadColor: "#00746E",
+              sidebarTextColor: "#283556",
+              sidebarLineColor: "#283556",
               sidebarFont: "Trebuchet MS",
               mainHeadColor: "#283556",
               mainTextColor: "#333333",
@@ -15930,8 +15942,8 @@
               mainYearColor: "#595959",
               mainHeadFont: "Trebuchet MS",
               mainBodyFont: "Calibri",
-              tableHeaderBg: "#3E5C8C",
-              tableHeaderText: "#FFFFFF",
+              tableHeaderBg: "#DDE6F2",
+              tableHeaderText: "#283556",
               tableOddBg: "#FFFFFF",
               tableEvenBg: "#FAFAFA",
               tableBorderColor: "#D9D9D9",
@@ -16084,7 +16096,7 @@
           },
         },
         xa = {
-          "copenhagen-modern": ["#3E5C8C", "#1F2937", "#0F4761"],
+          "copenhagen-modern": ["#283556", "#1F2937", "#0F4761"],
           "navy-executive": ["#1B2B4B", "#6BC5C9", "#2C3E50"],
           "warm-terracotta": ["#2E1B0E", "#1F1108", "#5C2E14"],
           "nordic-frost": ["#1A3A4F", "#0F2937", "#2F5670"],
@@ -24413,23 +24425,23 @@
               ) {
                 const n = t.sidebarHeadColor || "#01B7BB",
                   a = t.mainHeadColor || "#00746E",
-                  i = c ? "#ffffff" : "#333333";
+                  i = c ? readableInk(Ke || t.sidebarBg) : "#333333";
                 if ("name_block" === e.id) {
                   const t = r(e.content || ""),
                     o = c ? "center" : "left";
-                  return `<div style="margin:0 0 6pt;page-break-inside:avoid"><div style="font-family:'Cabin','Carlito',${s || d};font-weight:700;color:${c ? "#fff" : "#283556"};font-size:${u.nameSize}pt;line-height:1.1;text-align:${o};margin-top:2pt;margin-bottom:4pt">${t}</div>${f(n, 2, 4)}</div>`;
+                  return `<div style="margin:0 0 6pt;page-break-inside:avoid"><div style="font-family:'Cabin','Carlito',${s || d};font-weight:700;color:${c ? readableInk(Ke || t.sidebarBg) : "#283556"};font-size:${u.nameSize}pt;line-height:1.1;text-align:${o};margin-top:2pt;margin-bottom:4pt">${t}</div>${f(n, 2, 4)}</div>`;
                 }
                 if ("spec_block" === e.id) {
                   const t = r(e.content || ""),
                     n = c ? "center" : "left";
-                  return `<div style="margin:0 0 6pt;page-break-inside:avoid"><div style="font-family:'Cabin','Carlito',${s || d};color:${c ? "#fff" : "#283556"};font-size:${u.specialisation}pt;line-height:1.2;text-align:${n};margin-bottom:4pt">${t}</div></div>`;
+                  return `<div style="margin:0 0 6pt;page-break-inside:avoid"><div style="font-family:'Cabin','Carlito',${s || d};color:${c ? readableInk(Ke || t.sidebarBg) : "#283556"};font-size:${u.specialisation}pt;line-height:1.2;text-align:${n};margin-bottom:4pt">${t}</div></div>`;
                 }
                 if ("contact_line" === e.id) {
                   const t = (e.items || []).filter((e) => !e.hidden);
                   if (!t.length) return "";
                   const n = o(e.title || "CONTACT").toUpperCase(),
                     l = c ? "center" : "left",
-                    s = c ? "#fff" : a,
+                    s = c ? readableInk(Ke || t.sidebarBg) : a,
                     p = t
                       .map(
                         (e) =>

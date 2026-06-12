@@ -20,7 +20,7 @@ const check = (n, ok, d) => { checks.push(ok); log(`${n}: ${ok ? 'OK' : 'FAIL'}$
 
 {
   const r = eng.evaluateSce(doc([{ title: 'Requirements into scope', body: 'Translated requirements into executable scope.' }]), req);
-  check('metric-free outcomes flagged', !r.clean && r.bannedPhraseHits.some(h => /no numeric metric/.test(h)), JSON.stringify(r));
+  check('metric-free outcomes flagged', !r.clean && r.bannedPhraseHits.some(h => /no numeric metric|item has no number/.test(h)), JSON.stringify(r));
 }
 {
   const r = eng.evaluateSce(doc([{ title: 'Cycle time', body: 'Cut change cycle from 250 to 10 days.' }]), req);
@@ -36,7 +36,7 @@ const check = (n, ok, d) => { checks.push(ok); log(`${n}: ${ok ? 'OK' : 'FAIL'}$
     req,
     callLlm: async (fix) => { prompts.push(fix); return doc([{ title: 'Scope', body: 'Delivered scope without numbers.' }]); },
   });
-  const retried = prompts.length >= 2 && prompts.slice(1).every(p => /no numeric metric/.test(p));
+  const retried = prompts.length >= 2 && prompts.slice(1).every(p => /no numeric metric|item has no number/.test(p));
   check('retry carries the metric guidance + flags after retries', retried && r.flagged === true, JSON.stringify({ prompts: prompts.length, flagged: r.flagged }));
 }
 

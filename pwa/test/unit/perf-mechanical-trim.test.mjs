@@ -16,14 +16,45 @@ import { readFile } from 'node:fs/promises';
 
 const src = await readFile(new URL('../../app.src.js', import.meta.url), 'utf8');
 
-// ─── PERF-003 ────────────────────────────────────────────────────────
+// ─── PERF-003 (+ GEN-SPEED-001 preset interaction, 1.50.406) ─────────
+// Balanced (default): mechanical cap at 2. Thorough: cap lifted (full
+// ladder). Fast: every task sliced to 1 provider.
 const MECHANICAL = /^(extract|extract_pdf|parse_jd|compress|fix_orphans)$/;
-const cap = (task, list) => (MECHANICAL.test(task) && list.length > 2 ? list.slice(0, 2) : list);
+const cap = (task, list, speed = 'balanced') => {
+  let l = list;
+  if (MECHANICAL.test(task) && l.length > 2 && speed !== 'thorough') l = l.slice(0, 2);
+  if (speed === 'fast' && l.length > 1) l = l.slice(0, 1);
+  return l;
+};
 
 test('PERF-003: source carries the mechanical-task cap', () => {
   assert.match(src, /PERF-003 \(1\.50\.359/);
-  assert.match(src, /\^\(extract\|extract_pdf\|parse_jd\|compress\|fix_orphans\)\$\/\.test\(r\) && l\.length > 2/);
+  assert.match(src, /\^\(extract\|extract_pdf\|parse_jd\|compress\|fix_orphans\)\$\/\.test\(r\) &&\s*l\.length > 2 &&\s*"thorough" !== __genSpeed\(\)/);
   assert.match(src, /l = l\.slice\(0, 2\);/);
+});
+
+test('GEN-SPEED-001: source carries the speed preset wiring', () => {
+  // helper reads the persisted preset, defaulting balanced
+  assert.match(src, /antcv:genSpeed/);
+  assert.match(src, /const __genSpeed = \(\) =>/);
+  // fast slices the ladder to one provider
+  assert.match(src, /"fast" === __genSpeed\(\) && l\.length > 1/);
+  // fast skips the consensus waves
+  assert.match(src, /Wa && "fast" !== __genSpeed\(\)/);
+  // the three pills render with the data hook
+  assert.match(src, /data-antcv-genspeed/);
+});
+
+test('GEN-SPEED-001: preset semantics (mirrored predicate)', () => {
+  const four = ['mistral', 'openai', 'gemini', 'claude'];
+  // thorough lifts the mechanical cap
+  assert.deepEqual(cap('compress', four, 'thorough'), four);
+  // fast slices everything to one
+  assert.deepEqual(cap('compress', four, 'fast'), ['mistral']);
+  assert.deepEqual(cap('generate_cv', four, 'fast'), ['mistral']);
+  // balanced keeps PERF-003 behaviour
+  assert.deepEqual(cap('compress', four, 'balanced'), ['mistral', 'openai']);
+  assert.deepEqual(cap('generate_cv', four, 'balanced'), four);
 });
 
 test('PERF-003: mechanical tasks capped at 2, quality tasks untouched', () => {

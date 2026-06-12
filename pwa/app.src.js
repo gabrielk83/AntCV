@@ -317,6 +317,21 @@
     const n = Number(v);
     return null != v && isFinite(n) ? n : d;
   };
+  // GEN-SPEED-001 (owner 2026-06-12: "prevent long convergence time for
+  // the generation"): one persisted preset drives the convergence knobs.
+  //   fast     — single provider per task, consensus skipped this run;
+  //   balanced — current behaviour (quorum-2 consensus, PERF-003 caps);
+  //   thorough — full provider ladder (PERF-003 cap lifted), consensus on.
+  const __genSpeed = () => {
+    try {
+      const v = JSON.parse(
+        localStorage.getItem("antcv:genSpeed") || '"balanced"',
+      );
+      return "fast" === v || "thorough" === v ? v : "balanced";
+    } catch (_) {
+      return "balanced";
+    }
+  };
   // AUTO-PAGEBREAK-BLOCK-001 follow-up (owner queue 2026-06-12): the 📄
   // page buttons show the EFFECTIVE page — max(manual, the measurer's
   // preview auto map) — with an "ᵃ" suffix when the auto split moved the
@@ -1705,9 +1720,17 @@
     // keeps its OUTER retry ladder of forced providers, so a capped first
     // attempt still recovers across the 4 outer attempts — this only stops one
     // slow internal cascade from cycling 4 providers before that ladder turns.
-    if (/^(extract|extract_pdf|parse_jd|compress|fix_orphans)$/.test(r) && l.length > 2) {
+    if (
+      /^(extract|extract_pdf|parse_jd|compress|fix_orphans)$/.test(r) &&
+      l.length > 2 &&
+      "thorough" !== __genSpeed()
+    ) {
       l = l.slice(0, 2);
     }
+    // GEN-SPEED-001: FAST mode runs a single provider per task — failover
+    // is traded for convergence time (the outer parse_jd retry ladder
+    // still rotates forced providers across its attempts).
+    if ("fast" === __genSpeed() && l.length > 1) l = l.slice(0, 1);
     const c = [];
     for (let n = 0; n < l.length; n++) {
       const a = l[n],
@@ -23773,7 +23796,8 @@
                     tailoring_decisions: "",
                     cover_letter_strategy: "",
                   })),
-              Wa)
+              // GEN-SPEED-001: FAST mode skips the consensus waves entirely.
+              Wa && "fast" !== __genSpeed())
             ) {
               const r = ["claude", "openai", "mistral", "gemini"].filter(Q),
                 i = r.includes("claude") ? "claude" : r[0],
@@ -39541,6 +39565,80 @@
                     style: { cursor: "pointer" },
                   }),
                   "⚡ Quick generation (reuse current application — lower-priority role)",
+                ),
+                // GEN-SPEED-001 (owner 2026-06-12): persisted convergence
+                // preset — Fast / Balanced / Thorough pills under Generate.
+                // DOM-managed highlight (no new state plumbing); the
+                // dispatcher + consensus gate read localStorage live.
+                React.createElement(
+                  "div",
+                  {
+                    style: {
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      marginTop: 7,
+                      fontSize: 11.5,
+                      color: "rgba(255,255,255,0.75)",
+                    },
+                    title:
+                      "Generation speed. Fast: one model per task, no consensus — quickest convergence, least cross-checking. Balanced: quorum-based consensus and capped failover (the default). Thorough: full provider ladder and consensus — slowest, most cross-checked.",
+                  },
+                  "Speed:",
+                  ...["fast", "balanced", "thorough"].map((sp) =>
+                    React.createElement(
+                      "button",
+                      {
+                        key: sp,
+                        type: "button",
+                        "data-antcv-genspeed": sp,
+                        onClick: (ev) => {
+                          try {
+                            localStorage.setItem(
+                              "antcv:genSpeed",
+                              JSON.stringify(sp),
+                            );
+                            const wrap = ev.currentTarget.parentElement;
+                            wrap &&
+                              wrap
+                                .querySelectorAll("[data-antcv-genspeed]")
+                                .forEach((b) => {
+                                  const on =
+                                    b.getAttribute("data-antcv-genspeed") ===
+                                    sp;
+                                  b.style.background = on
+                                    ? "rgba(1,183,187,0.25)"
+                                    : "rgba(255,255,255,0.06)";
+                                  b.style.borderColor = on
+                                    ? "#01B7BB"
+                                    : "rgba(255,255,255,0.2)";
+                                });
+                          } catch (_) {}
+                        },
+                        style: {
+                          fontSize: 11,
+                          padding: "3px 10px",
+                          borderRadius: 12,
+                          cursor: "pointer",
+                          color: "#fff",
+                          border:
+                            "1px solid " +
+                            (__genSpeed() === sp
+                              ? "#01B7BB"
+                              : "rgba(255,255,255,0.2)"),
+                          background:
+                            __genSpeed() === sp
+                              ? "rgba(1,183,187,0.25)"
+                              : "rgba(255,255,255,0.06)",
+                        },
+                      },
+                      sp === "fast"
+                        ? "⚡ Fast"
+                        : sp === "balanced"
+                          ? "⚖ Balanced"
+                          : "🔬 Thorough",
+                    ),
+                  ),
                 ),
                 // COMPANY-BRAND-FIT-001 (owner 2026-06-12): session-only
                 // checkbox — adapt colours/fonts/style package to the chosen

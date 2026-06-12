@@ -305,6 +305,22 @@
     const n = Number(v);
     return null != v && isFinite(n) ? n : d;
   };
+  // AUTO-PAGEBREAK-BLOCK-001 follow-up (owner queue 2026-06-12): the 📄
+  // page buttons show the EFFECTIVE page — max(manual, the measurer's
+  // preview auto map) — with an "ᵃ" suffix when the auto split moved the
+  // row beyond the manual choice, so the label matches where the row
+  // actually renders instead of contradicting the visible salmon.
+  const __antcvEffPageLabel = (sid, idx, manual) => {
+    try {
+      const m = JSON.parse(
+        localStorage.getItem("antcv:autoPagesPreview") || "{}",
+      );
+      const b = m && m[sid];
+      const a = b && parseInt(b[String(idx)], 10);
+      if (Number.isFinite(a) && a > manual) return "📄" + a + "ᵃ";
+    } catch (_) {}
+    return "📄" + manual;
+  };
   try {
     console.log("[AntCV]", Ai);
   } catch (e) {}
@@ -6436,7 +6452,7 @@
                     minWidth: 30,
                   },
                 },
-                "📄" + __thisPage,
+                __antcvEffPageLabel(__sid, i, __thisPage),
               ),
               React.createElement(
                 "button",
@@ -6971,7 +6987,7 @@
                           fontWeight: 600,
                         },
                       },
-                      "📄" + pg,
+                      __antcvEffPageLabel(e.id, i, pg),
                     );
                   })(),
                 React.createElement(
@@ -23718,6 +23734,42 @@
               const r = ["claude", "openai", "mistral", "gemini"].filter(Q),
                 i = r.includes("claude") ? "claude" : r[0],
                 l = r.filter((e) => e !== i);
+              // PERF-002 (owner queue 2026-06-12): consensus QUORUM +
+              // TIMEOUT. Both consensus waves previously awaited ALL
+              // providers (Promise.allSettled), so one hung provider
+              // stalled the whole generation. Resolve as soon as QUORUM
+              // successes are in, or when the time budget elapses —
+              // stragglers are abandoned (ignored, never awaited again).
+              const __quorumSettle = (proms, quorum, ms) =>
+                new Promise((resolve) => {
+                  const out = [];
+                  let done = 0,
+                    ok = 0,
+                    fin = false;
+                  const finish = () => {
+                    if (!fin) {
+                      fin = true;
+                      resolve(out.slice());
+                    }
+                  };
+                  const timer = setTimeout(finish, ms);
+                  proms.forEach((p) =>
+                    Promise.resolve(p).then(
+                      (v) => {
+                        out.push({ status: "fulfilled", value: v });
+                        ok++;
+                        done++;
+                        (ok >= quorum || done >= proms.length) &&
+                          (clearTimeout(timer), finish());
+                      },
+                      () => {
+                        done++;
+                        done >= proms.length && (clearTimeout(timer), finish());
+                      },
+                    ),
+                  );
+                  proms.length || (clearTimeout(timer), finish());
+                });
               if (l.length >= 2)
                 try {
                   (ho("reviewing"),
@@ -23729,7 +23781,8 @@
                       'You are an analyst extracting the most important job description-relevant signals (skills, experience requirements, domain knowledge, certifications, soft requirements). You are NOT writing a CV. You are listing what THIS specific JD asks for. Return ONLY a valid JSON array of 5-8 short strings (each ≤ 12 words), each describing one signal the candidate must demonstrate. No prose, no markdown. Example: ["FMEA on safety-critical hardware","ASPICE process compliance","Experience with ISO 26262","Stakeholder coordination across automotive supply chain"].',
                     s = `JOB DESCRIPTION:\n\n${r}\n\nReturn 5-8 most important signals as a JSON array of strings. ONLY the array.`,
                     c = (
-                      await Promise.allSettled(
+                      // PERF-002: quorum 2 / 20s budget instead of all.
+                      await __quorumSettle(
                         l.map(async (e) => {
                           const t = await ee(
                               [{ role: "user", content: s }],
@@ -23746,6 +23799,8 @@
                               .slice(0, 8),
                           };
                         }),
+                        2,
+                        20000,
                       )
                     )
                       .filter((e) => "fulfilled" === e.status)
@@ -23810,7 +23865,9 @@
                             "You are participating in a multi-LLM consensus deliberation about which JD signals are most important for tailoring a CV. Other LLMs proposed signals you didn't, and vice versa. Your job: read all proposed signals, then return ONLY a JSON array of the signals that genuinely matter for THIS JD. You may keep your original picks, change your mind based on others' arguments, or add new ones. Be honest — if another LLM spotted a signal you missed and it's real, include it. If a signal looks like padding or generic resume-speak, exclude it.\nReturn ONLY a JSON array of 4-7 signals (each ≤ 12 words). No prose. No explanations. Just the array.",
                           o = `AGREED SIGNALS (multiple LLMs picked these — generally keep):\n${e}\n\nDISPUTED SIGNALS (only one LLM picked each — vote yes/no by including or excluding):\n${t}\n\nYour previous picks (you may revise):\n%PREV%\n\nReturn the final array of 4-7 most important signals for this JD.`,
                           r = (
-                            await Promise.allSettled(
+                            // PERF-002: deliberation wave under the same
+                            // quorum-2 / 20s budget.
+                            await __quorumSettle(
                               c.map(async (e) => {
                                 const t = o.replace(
                                     "%PREV%",
@@ -23836,6 +23893,8 @@
                                     .slice(0, 7),
                                 };
                               }),
+                              2,
+                              20000,
                             )
                           )
                             .filter((e) => "fulfilled" === e.status)

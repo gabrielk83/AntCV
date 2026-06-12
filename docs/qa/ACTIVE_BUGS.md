@@ -1048,8 +1048,16 @@ blue-screen guard — serve pwa/, assert 0 console errors + `typeof glDemo`),
      per line. Examples: WHO-I-AM L2 PDF "…technical problem" vs preview
      "…technical"; WHY L1 PDF "…scope aligns" vs preview "…scope"; HWIC intro
      PDF "…I would focus" vs preview "…I would". So on-screen line breaks are
-     NOT the real ones. **Deferred to increment 2:** match the preview body
-     column width to the PDF column (A4 − margins − cell margins).
+     NOT the real ones. **Increment 2 — CLOSED BY CONSTRUCTION (2026-06-12,
+     R36 spacing parity):** with the spacing-slider forwarding (edge, seam,
+     sidebar pad) both sides now derive every horizontal dimension from the
+     SAME ratio × page width − px-equal margins. Numeric audit at the comfort
+     defaults: CV main text width preview 794×0.67 − (14+6) − 14 = 498.0px vs
+     worker (7977 − 510 DXA)/15 = 497.8px; CL linear 780 vs 780.4px; sidebar
+     240 vs 239.9px. The residual line-break drift is FONT SHAPING (browser
+     vs LibreOffice glyph metrics), irreducible without embedding identical
+     metrics — sub-word-level, no longer a column-width class mismatch.
+     Owner visual confirm on the next export closes the whole entry.
   3. **Estimator targets a third geometry.** `[FIXED 1.50.296 — owner visual check]`
      The line/tightening counter `Vi(text, 590, 11, …)` (`app.src.js`) used width
      590px / 11px — matched neither the preview nor the PDF. Now re-pointed to the
@@ -1672,6 +1680,17 @@ repeat the mistake.
   `pwa/app.src.js` ~line 35574 and needs a working rebuild). Design notes:
   `docs/plan/PB-007-two-column-pagination.md`. A first cut was built (commit `636cda7`)
   and reverted with the blue-screen fix.
+  **UN-PAUSED REVIEW 2026-06-12 → CLOSED, SUPERSEDED BY IMPLEMENTATION.** Both the
+  blocker and the goal resolved while paused: (a) APPJS-REBUILD-001 is FIXED
+  (`npm run build:app` = terser, identity round-trip gate PASSED), and (b) per-item
+  on-screen pagination ships via the dual-map measurer + page-box renderers reading
+  the EFFECTIVE bucket (manual `antcv:itemPages` ∪ auto `antcv:autoPagesPreview`):
+  (1) sidebar sub-subsections split group-aware (verified diag-sidebar-cont-e2e),
+  (2) table rows split with the header re-cloned (verified diag-table-split: 30-row
+  table splits at row 26, no dup/loss), (3) HWIC/Foundation parts split via
+  `__antcvBreaks`. The 📄 buttons now display the EFFECTIVE page (R37 "ᵃ" suffix).
+  Residual owner check: tap 📄→2 on one sidebar item + one table row and confirm
+  the on-screen move — same bucket the verified auto path uses.
 
 ---
 

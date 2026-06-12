@@ -674,6 +674,28 @@
     showJDAnalysisLoading();
     try {
       const sourceCv = getSourceCV();
+      // PERF-005 (owner queue 2026-06-12): same-input analysis cache. The
+      // full fold-into-generate was tried (1.50.154) and reverted
+      // (GEN-EMPTY-001); the safe win is skipping the LLM cycle when the
+      // EXACT same JD + candidate summary was analyzed within 24h —
+      // re-opening the analysis after a generation no longer re-pays it.
+      const __jaHash = (s) => {
+        let h = 5381;
+        for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+        return String(h);
+      };
+      const __jaKey = 'antcv:jdAnalysisCache';
+      const __jaSig = __jaHash(String(jdText || '') + '' + sourceCv.slice(0, 8000));
+      try {
+        const c = JSON.parse(localStorage.getItem(__jaKey) || 'null');
+        if (c && c.sig === __jaSig && c.data && Date.now() - (c.ts || 0) < 86400000) {
+          jdAnalysisBusy = false;
+          setFabIdle(jdAnalyzeFab);
+          try { console.debug('[jd-analysis] served from same-input cache (PERF-005)'); } catch (_) {}
+          showJDAnalysisPanel(c.data);
+          return c.data;
+        }
+      } catch (_) {}
       const res = await fetch(CFG.cvProxyOrigin + '/api/jd-analysis', {
         method: 'POST',
         credentials: 'include',
@@ -705,6 +727,8 @@
         return null;
       }
       if (data.ok) {
+        // PERF-005: remember this input's result for 24h (one entry).
+        try { localStorage.setItem(__jaKey, JSON.stringify({ sig: __jaSig, ts: Date.now(), data })); } catch (_) {}
         showJDAnalysisPanel(data);
         return data;
       }

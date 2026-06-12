@@ -11643,7 +11643,7 @@
                         } catch (e) {}
                       }
                     } catch (e) {}
-                    n("scandinavian");
+                    n("copenhagen-modern");
                     try {
                       const t = e.target,
                         n = t.textContent;
@@ -12161,6 +12161,21 @@
   (ReactDOM.createRoot(document.getElementById("root")).render(
     React.createElement(function () {
       var r, p, y, b, w, x, C, O, N, P, j;
+      // APPJS-ID-SCHEME-UNIFY (1.50.387): app.js's legacy package ids unify
+      // with the registry's clean ids — the same self-migrating pattern the
+      // tone register has used since 1.50.x. Every read normalizes; the
+      // persisted value migrates in place; cloud-restore normalizes too, so
+      // a stale cloud snapshot can no longer re-orphan the id (the root of
+      // PACKAGE-PALETTE-MIX-001).
+      const __pkgMap = {
+        scandinavian: "copenhagen-modern",
+        copenhagen_executive: "navy-executive",
+        warm_terracotta: "warm-terracotta",
+        nordic_frost: "nordic-frost",
+        latam: "pampas-contemporary",
+      };
+      const __pkgNorm = (v) =>
+        "string" == typeof v && __pkgMap[v] ? __pkgMap[v] : v;
       React.useEffect(() => {
         try {
           const e = ie();
@@ -13371,8 +13386,8 @@
                       } catch (e) {}
                     if (o.stylePackage && "string" == typeof o.stylePackage)
                       try {
-                        (ka(o.stylePackage),
-                          u.set("stylePackage", o.stylePackage));
+                        (ka(__pkgNorm(o.stylePackage)),
+                          u.set("stylePackage", __pkgNorm(o.stylePackage)));
                       } catch (e) {}
                     if (o.lineTargets && "object" == typeof o.lineTargets)
                       try {
@@ -15436,7 +15451,7 @@
         } catch (e) {}
       }, [Ke, ya]);
       const va = {
-          scandinavian: {
+          "copenhagen-modern": {
             label: "Copenhagen Modern",
             style: {
               headerBg: "#283556",
@@ -15471,7 +15486,7 @@
               photoBorderWidth: 1,
             },
           },
-          copenhagen_executive: {
+          "navy-executive": {
             label: "Navy Executive",
             style: {
               headerBg: "#1B2B4B",
@@ -15506,7 +15521,7 @@
               photoBorderWidth: 1.5,
             },
           },
-          warm_terracotta: {
+          "warm-terracotta": {
             label: "Warm Terracotta",
             style: {
               headerBg: "#2E1B0E",
@@ -15541,7 +15556,7 @@
               photoBorderWidth: 1.5,
             },
           },
-          nordic_frost: {
+          "nordic-frost": {
             label: "Nordic Frost",
             style: {
               headerBg: "#1A3A4F",
@@ -15576,7 +15591,7 @@
               photoBorderWidth: 1,
             },
           },
-          latam: {
+          "pampas-contemporary": {
             label: "Pampas Contemporary",
             style: {
               headerBg: "#1B2D5E",
@@ -15613,14 +15628,24 @@
           },
         },
         xa = {
-          scandinavian: ["#283556", "#1F2937", "#0F4761"],
-          copenhagen_executive: ["#1B2B4B", "#6BC5C9", "#2C3E50"],
-          warm_terracotta: ["#2E1B0E", "#1F1108", "#5C2E14"],
-          nordic_frost: ["#1A3A4F", "#0F2937", "#2F5670"],
-          latam: ["#1B2D5E", "#142347", "#B8941E"],
+          "copenhagen-modern": ["#283556", "#1F2937", "#0F4761"],
+          "navy-executive": ["#1B2B4B", "#6BC5C9", "#2C3E50"],
+          "warm-terracotta": ["#2E1B0E", "#1F1108", "#5C2E14"],
+          "nordic-frost": ["#1A3A4F", "#0F2937", "#2F5670"],
+          "pampas-contemporary": ["#1B2D5E", "#142347", "#B8941E"],
           custom: ["#283556", "#1F2937", "#5C3D82"],
         },
-        [Sa, ka] = e(() => u.get("stylePackage", "scandinavian")),
+        [Sa, ka] = e(() => {
+          // APPJS-ID-SCHEME-UNIFY: migrate the persisted legacy id in place.
+          const v = u.get("stylePackage", "copenhagen-modern");
+          if (__pkgMap[v]) {
+            try {
+              u.set("stylePackage", __pkgMap[v]);
+            } catch (e) {}
+            return __pkgMap[v];
+          }
+          return v;
+        }),
         [Ca, za] = e(() => {
           const e = u.get("lineTargets", null);
           return e && "object" == typeof e
@@ -17965,7 +17990,8 @@
                     "object" == typeof e.styleConfig &&
                     wa(e.styleConfig),
                   e.stylePackage &&
-                    (ka(e.stylePackage), u.set("stylePackage", e.stylePackage)),
+                    (ka(__pkgNorm(e.stylePackage)),
+                    u.set("stylePackage", __pkgNorm(e.stylePackage))),
                   "number" == typeof e.cvTableRatio && aa(e.cvTableRatio),
                   "number" == typeof e.clTableRatio && ia(e.clTableRatio),
                   "number" == typeof e.cvSidebarRatio &&

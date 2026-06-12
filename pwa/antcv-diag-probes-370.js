@@ -309,6 +309,45 @@
     } catch (_) {}
   })();
 
+  // ---- ENHANCE-185-CAPTURE-001 (owner 2026-06-13) -----------------------
+  // React #185 ("Maximum update depth exceeded") hit once on "Enhance core
+  // competencies" (cached 1.50.285) and never reproduced synthetically. Trap
+  // it: when a #185-class error surfaces, store a context snapshot (last
+  // enhance click breadcrumb from app.js, stack, render context) in
+  // localStorage so the report survives the blue screen / reload.
+  (function trap185() {
+    function capture(msg, stack) {
+      try {
+        var snap = {
+          ts: new Date().toISOString(),
+          msg: String(msg || '').slice(0, 300),
+          stack: String(stack || '').slice(0, 1500),
+          lastEnhance: window.__antcvLastEnhance || null,
+          step: (function () { try { return JSON.parse(localStorage.getItem('step') || 'null'); } catch (_) { return null; } })(),
+          href: location.href.split('?')[0],
+        };
+        localStorage.setItem('antcv:185capture', JSON.stringify(snap));
+        console.warn('[185-capture] React #185 CAPTURED — snapshot at localStorage antcv:185capture', snap);
+      } catch (_) {}
+    }
+    var is185 = function (s) { return /Maximum update depth|react error #185|error%2Fdecoder%3F%2F185|invariant=185/i.test(String(s || '')); };
+    window.addEventListener('error', function (ev) {
+      var m = (ev && ev.message) || '';
+      var st = ev && ev.error && ev.error.stack;
+      if (is185(m) || is185(st)) capture(m, st);
+    });
+    window.addEventListener('unhandledrejection', function (ev) {
+      var r = ev && ev.reason;
+      var m = (r && r.message) || String(r || '');
+      if (is185(m) || is185(r && r.stack)) capture(m, r && r.stack);
+    });
+    // surface a prior capture loudly on boot, once
+    try {
+      var prior = localStorage.getItem('antcv:185capture');
+      if (prior) console.warn('[185-capture] PRIOR #185 snapshot exists — paste this to the maintainer, then localStorage.removeItem("antcv:185capture"):', prior);
+    } catch (_) {}
+  })();
+
   setTimeout(dumpAll, 2500);
   try { console.warn('[antcv-diag] probes installed v' + V + ' — run AntcvDiag() any time.'); } catch (_) {}
 })();

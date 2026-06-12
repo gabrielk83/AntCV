@@ -163,7 +163,11 @@
   }
   function writePrimaryLanguage(code) {
     if (!code) return;
-    try { localStorage.setItem('language', code); } catch (_) {}
+    // WIZARD-LANG-SELECTOR-001: app.js reads 'language' through its JSON
+    // wrapper (u.get) — a RAW code fails JSON.parse and silently falls
+    // back to 'en', so a non-English default never stuck. Store it
+    // JSON-stringified like every other u-managed key.
+    try { localStorage.setItem('language', JSON.stringify(code)); } catch (_) {}
     try { localStorage.setItem('uiLang', code); } catch (_) {}
     try {
       window.dispatchEvent(new StorageEvent('storage', { key: 'language', newValue: code }));
@@ -248,13 +252,13 @@
     var selected = defaults.slice();           // ordered; selected[0] = default
     if (!selected.length) selected = [DEFAULT_PRIMARY];
 
-    var pickerLabel = document.createElement('div');
-    pickerLabel.textContent = 'AVAILABLE LANGUAGES';
-    pickerLabel.style.cssText = 'font-size:10.5px;font-weight:800;letter-spacing:.3px;color:rgba(255,255,255,0.6);margin:0 0 6px;';
-    panel.appendChild(pickerLabel);
-
+    // WIZARD-LANG-SELECTOR-001 (owner spec 2026-06-07, built 2026-06-13):
+    // TWO tables side by side — LEFT = all available languages, RIGHT =
+    // the selected subset, reorderable; the FIRST entry on the right is
+    // the DEFAULT language.
     var listEl = document.createElement('div');
     listEl.setAttribute('data-antcv-wizard-language-picker', '1');
+    listEl.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 4px;';
     panel.appendChild(listEl);
 
     function optByCode(code) {
@@ -283,65 +287,71 @@
         ';background:' + (isSel ? 'rgba(1,183,187,0.12)' : 'rgba(255,255,255,0.04)') + ';';
       return row;
     }
+    function colBox(title) {
+      var wrap = document.createElement('div');
+      wrap.style.cssText = 'border:1px solid rgba(255,255,255,0.14);border-radius:10px;padding:8px;background:rgba(255,255,255,0.03);min-height:120px;';
+      var h = document.createElement('div');
+      h.textContent = title;
+      h.style.cssText = 'font-size:10px;font-weight:800;letter-spacing:.35px;color:rgba(255,255,255,0.6);margin:0 0 7px;';
+      wrap.appendChild(h);
+      return wrap;
+    }
+    function smallBtn(txt, title, fn, disabled) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.textContent = txt; b.title = title || ''; b.disabled = !!disabled;
+      b.style.cssText = 'background:transparent;border:1px solid rgba(255,255,255,0.25);color:#fff;border-radius:6px;width:26px;height:26px;cursor:pointer;font-size:12px;' + (disabled ? 'opacity:.3;cursor:default;' : '');
+      b.style.setProperty('pointer-events', 'auto', 'important');
+      b.addEventListener('click', function (ev) { ev.stopPropagation(); if (!disabled) fn(); });
+      return b;
+    }
     function renderPicker() {
       listEl.innerHTML = '';
+      // LEFT — all available (not yet selected)
+      var left = colBox('AVAILABLE LANGUAGES');
+      var any = false;
+      LANG_OPTIONS.forEach(function (o) {
+        if (selected.indexOf(o.code) >= 0) return;
+        any = true;
+        var row = mkRow(false);
+        row.style.cursor = 'pointer';
+        row.title = 'Add to your selected languages';
+        row.addEventListener('click', function () { toggleSel(o.code); });
+        var lab = document.createElement('div');
+        lab.style.cssText = 'flex:1;font-size:12.5px;color:rgba(255,255,255,0.85);';
+        lab.innerHTML = '<strong>' + o.label + '</strong> <span style="color:rgba(255,255,255,0.45);font-size:11px;">' + o.native + '</span>';
+        row.appendChild(lab);
+        row.appendChild(smallBtn('→', 'Add', function () { toggleSel(o.code); }));
+        left.appendChild(row);
+      });
+      if (!any) {
+        var none = document.createElement('div');
+        none.textContent = 'All languages selected.';
+        none.style.cssText = 'font-size:11px;color:rgba(255,255,255,0.4);padding:6px 2px;';
+        left.appendChild(none);
+      }
+      listEl.appendChild(left);
+      // RIGHT — selected, ordered; first = DEFAULT
+      var right = colBox('SELECTED — first is the DEFAULT');
       selected.forEach(function (code, idx) {
         var o = optByCode(code);
         var row = mkRow(true);
-        var cb = document.createElement('span');
-        cb.textContent = '☑';
-        cb.title = 'Remove from the top bar';
-        cb.style.cssText = 'cursor:pointer;font-size:17px;line-height:1;color:#01B7BB;';
-        cb.addEventListener('click', function (ev) { ev.stopPropagation(); toggleSel(code); });
-        row.appendChild(cb);
         var lab = document.createElement('div');
-        lab.style.cssText = 'flex:1;font-size:13px;color:#fff;';
-        lab.innerHTML = '<strong>' + o.label + '</strong> <span style="color:rgba(255,255,255,0.55);font-size:11.5px;">' + o.native + '</span>';
+        lab.style.cssText = 'flex:1;font-size:12.5px;color:#fff;min-width:0;';
+        lab.innerHTML = '<strong>' + o.label + '</strong>' + (idx === 0
+          ? ' <span style="font-size:9px;font-weight:800;letter-spacing:.4px;color:#06243a;background:#01B7BB;padding:2px 6px;border-radius:5px;white-space:nowrap;vertical-align:middle;">★ DEFAULT</span>'
+          : '');
         row.appendChild(lab);
-        if (idx === 0) {
-          var badge = document.createElement('span');
-          badge.textContent = '★ DEFAULT';
-          badge.style.cssText = 'font-size:9.5px;font-weight:800;letter-spacing:.4px;color:#06243a;background:#01B7BB;padding:3px 7px;border-radius:5px;white-space:nowrap;';
-          row.appendChild(badge);
-        }
-        var up = document.createElement('button');
-        up.type = 'button'; up.textContent = '↑'; up.disabled = idx === 0;
-        up.style.cssText = 'background:transparent;border:1px solid rgba(255,255,255,0.25);color:#fff;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:13px;' + (idx === 0 ? 'opacity:.3;cursor:default;' : '');
-        up.style.setProperty('pointer-events', 'auto', 'important');
-        up.addEventListener('click', function (ev) { ev.stopPropagation(); moveSel(idx, -1); });
-        row.appendChild(up);
-        var dn = document.createElement('button');
-        dn.type = 'button'; dn.textContent = '↓'; dn.disabled = idx === selected.length - 1;
-        dn.style.cssText = 'background:transparent;border:1px solid rgba(255,255,255,0.25);color:#fff;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:13px;' + (idx === selected.length - 1 ? 'opacity:.3;cursor:default;' : '');
-        dn.style.setProperty('pointer-events', 'auto', 'important');
-        dn.addEventListener('click', function (ev) { ev.stopPropagation(); moveSel(idx, 1); });
-        row.appendChild(dn);
-        listEl.appendChild(row);
+        row.appendChild(smallBtn('↑', 'Move up (first = default)', function () { moveSel(idx, -1); }, idx === 0));
+        row.appendChild(smallBtn('↓', 'Move down', function () { moveSel(idx, 1); }, idx === selected.length - 1));
+        row.appendChild(smallBtn('←', 'Remove (back to available)', function () { toggleSel(code); }, selected.length <= 1));
+        right.appendChild(row);
       });
-      LANG_OPTIONS.forEach(function (o) {
-        if (selected.indexOf(o.code) >= 0) return;
-        var row = mkRow(false);
-        row.style.cursor = 'pointer';
-        row.addEventListener('click', function () { toggleSel(o.code); });
-        var cb = document.createElement('span');
-        cb.textContent = '☐';
-        cb.style.cssText = 'font-size:17px;line-height:1;color:rgba(255,255,255,0.5);';
-        row.appendChild(cb);
-        var lab = document.createElement('div');
-        lab.style.cssText = 'flex:1;font-size:13px;color:rgba(255,255,255,0.8);';
-        lab.innerHTML = '<strong>' + o.label + '</strong> <span style="color:rgba(255,255,255,0.45);font-size:11.5px;">' + o.native + '</span>';
-        row.appendChild(lab);
-        var add = document.createElement('span');
-        add.textContent = 'Add';
-        add.style.cssText = 'font-size:10.5px;font-weight:700;color:#01B7BB;';
-        row.appendChild(add);
-        listEl.appendChild(row);
-      });
+      listEl.appendChild(right);
     }
     renderPicker();
 
     var orderHint = document.createElement('div');
-    orderHint.innerHTML = 'The top language (★ DEFAULT) is the one AntCV uses first. Tick a language to include it in the top bar; use ↑ ↓ to change the order.';
+    orderHint.innerHTML = 'Move languages right to include them; reorder the right table with ↑ ↓ — the FIRST one (★ DEFAULT) drives generation and the interface.';
     orderHint.style.cssText = 'font-size:11px;line-height:1.5;color:rgba(255,255,255,0.6);margin:2px 0 16px;';
     panel.appendChild(orderHint);
 

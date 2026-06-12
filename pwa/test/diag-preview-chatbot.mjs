@@ -19,7 +19,9 @@ const server = http.createServer(async (req,res)=>{
   if (req.method==='POST' && (req.url==='/' || req.url==='')) {
     let b=''; req.on('data',c=>b+=c); req.on('end',()=>{
       res.writeHead(200,{'content-type':'application/json','access-control-allow-origin':'http://127.0.0.1:'+server.address().port,'access-control-allow-credentials':'true'});
-      res.end(JSON.stringify({content:[{type:'text',text:'{"rewrite":"Cut cycle time 95% via the Change Control Board.","reason":"Shortened; kept the number per the keep-numbers rule."}'}]}));
+      let reply='{"rewrite":"Cut cycle time 95% via the Change Control Board.","reason":"Shortened; kept the number per the keep-numbers rule.","rules":[{"rule":"keep-numbers","detail":"95% retained"},{"rule":"one-line-budget","detail":"fits one line"}]}';
+      try{ const body=JSON.parse(b); const msgs=body.messages||[]; if(msgs.some(m=>m.role==='user'&&/^REFINE:/.test(m.content))) reply='{"rewrite":"Cut cycle time 95%.","reason":"Shorter still per the refinement.","rules":[{"rule":"one-line-budget","detail":"trimmed further"}]}'; }catch(_){}
+      res.end(JSON.stringify({content:[{type:'text',text:reply}]}));
     });
     return;
   }
@@ -143,6 +145,35 @@ const result = await page.evaluate(()=>{
 });
 check('3. rewrite + Why rendered from the LLM response', result.rewrite && result.why, JSON.stringify(result));
 
+// 9 — stage 2: rule chips rendered from the rules[] contract
+const chips = await page.evaluate(()=>{
+  const host=document.querySelector('[data-antcv-aibot-rules]');
+  return [...(host?host.children:[])].map(c=>c.textContent);
+});
+check('9. rule-citation chips rendered', chips.length===2 && /keep-numbers: 95% retained/.test(chips[0]), JSON.stringify(chips));
+
+// 10 — stage 2: multi-turn refinement appends a second proposal
+await page.evaluate(()=>{
+  const input=document.getElementById('antcv-aibot-input');
+  input.value='shorter still';
+  [...document.querySelectorAll('#antcv-aibot-panel button')].find(b=>b.textContent==='Ask').click();
+});
+await page.waitForTimeout(1500);
+const turn2 = await page.evaluate(()=>{
+  const log=document.querySelector('[data-antcv-aibot-log]');
+  const chips=[...(document.querySelector('[data-antcv-aibot-rules]')||{children:[]}).children].map(c=>c.textContent);
+  return {
+    hasRefineMarker: /↪ shorter still/.test(log.textContent||''),
+    hasSecond: /Cut cycle time 95%\./.test(log.textContent||''),
+    firstStillThere: /Change Control Board/.test(log.textContent||''),
+    applyCount: [...log.querySelectorAll('button')].filter(b=>b.textContent==='Apply').length,
+    chips,
+  };
+});
+check('10. multi-turn: second proposal appended, one live Apply, chips updated',
+  turn2.hasRefineMarker && turn2.hasSecond && turn2.firstStillThere && turn2.applyCount===1 && turn2.chips.length===1,
+  JSON.stringify(turn2));
+
 // 4 — Apply persists into the sections store + re-renders
 await page.evaluate(()=>{ [...document.querySelectorAll('[data-antcv-aibot-log] button')].find(b=>b.textContent==='Apply').click(); });
 await page.waitForTimeout(1200);
@@ -150,7 +181,8 @@ const applied = await page.evaluate(()=>({
   stored: JSON.parse(localStorage.getItem('sections')).cv[0].content,
   rendered: (document.querySelector('.antcv-preview-paper')||{}).textContent||'',
 }));
-check('4. Apply persists + re-renders', /Cut cycle time 95% via the Change Control Board\./.test(applied.stored) && /Cut cycle time 95%/.test(applied.rendered), JSON.stringify(applied.stored));
+// (stage 2: the live Apply belongs to the LATEST turn — "Cut cycle time 95%.")
+check('4. Apply persists + re-renders (latest turn wins)', /Cut cycle time 95%\./.test(applied.stored) && !/Change Control Board/.test(applied.stored) && /Cut cycle time 95%/.test(applied.rendered), JSON.stringify(applied.stored));
 
 // 5 — Undo restores
 await page.evaluate(()=>{ [...document.querySelectorAll('[data-antcv-aibot-log] button')].find(b=>/Undo/.test(b.textContent)).click(); });

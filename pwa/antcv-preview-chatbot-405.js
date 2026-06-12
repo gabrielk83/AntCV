@@ -13,14 +13,47 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.408';
+  var VERSION = '1.50.412';
   if (window.__antcvPreviewChatbot === VERSION) return;
   window.__antcvPreviewChatbot = VERSION;
 
   var PILL_ID = 'antcv-aibot-pill';
   var PANEL_ID = 'antcv-aibot-panel';
   var MODEL = 'claude-opus-4-7';
-  var state = { sel: '', rect: null, busy: false, undo: null, lastRewrite: null };
+  // stage 2: turns = [{instruction, rewrite, reason, rules[]}] — the multi-
+  // turn refinement chain over ONE selection; sid/stype = the owning
+  // section (drives the per-section budget in the prompt).
+  var state = { sel: '', rect: null, busy: false, undo: null, lastRewrite: null, turns: [], sid: null, stype: null };
+
+  // ─── stage 2: section-aware budgets ──────────────────────────────
+  function sectionOf(node) {
+    try {
+      var n = node;
+      for (var i = 0; n && i < 12; i++, n = n.parentElement) {
+        var sid = n.dataset && (n.dataset.sid || n.getAttribute('data-antcv-sid'));
+        if (sid) return sid;
+      }
+    } catch (_) {}
+    return null;
+  }
+  function sectionType(sid) {
+    try {
+      var b = JSON.parse(localStorage.getItem('sections') || '{}');
+      for (var d of ['cv', 'cl']) {
+        var s = (b[d] || []).find(function (x) { return x && x.id === sid; });
+        if (s) return s.type || null;
+      }
+    } catch (_) {}
+    return null;
+  }
+  function budgetLine(sid, stype) {
+    if (sid === 'profile') return 'SECTION BUDGET: this is the PROFILE — the rewrite must stay within ~400 characters total.';
+    if (sid === 'work_style') return 'SECTION BUDGET: this is the Work-style line — stay within ~200 characters and END with a people skill.';
+    if (stype === 'bullets' || stype === 'outcomes' || sid === 'outcomes') return 'SECTION BUDGET: this is a one-line bullet — the rewrite MUST fit ONE line (~95 characters max).';
+    if (stype === 'table') return 'SECTION BUDGET: this is a table cell — the rewrite MUST stay very short (~55 characters max).';
+    if (stype === 'experience') return 'SECTION BUDGET: this is an experience bullet/title — one line (~95 characters max for bullets).';
+    return 'SECTION BUDGET: keep roughly the same length as the selection unless the instruction says otherwise.';
+  }
 
   function clean(s) { return String(s == null ? '' : s).replace(/[\t\n\r ]+/g, ' ').trim(); }
   function paper() { return document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]'); }
@@ -92,6 +125,11 @@
         if (!node || !pp.contains(node)) { removePill(); return; }
         state.sel = txt;
         state.rect = sel.getRangeAt(0).getBoundingClientRect();
+        // stage 2: a new selection starts a fresh refinement chain on the
+        // owning section.
+        state.turns = [];
+        state.sid = sectionOf(node);
+        state.stype = sectionType(state.sid);
         showPill(state.rect);
       } catch (_) {}
     }, 10);
@@ -159,7 +197,7 @@
     panel.appendChild(el('div', 'min-height:14px;font-size:11px;color:#9fb3bf;', ''))
       .id = 'antcv-aibot-status';
     // step-2-ready containers
-    var log = el('div', ''); log.setAttribute('data-antcv-aibot-log', '1'); panel.appendChild(log);
+    var log = el('div', 'max-height:200px;overflow-y:auto;'); log.setAttribute('data-antcv-aibot-log', '1'); panel.appendChild(log);
     var rules = el('div', 'display:flex;gap:4px;flex-wrap:wrap;'); rules.setAttribute('data-antcv-aibot-rules', '1'); panel.appendChild(rules);
 
     document.body.appendChild(panel);
@@ -172,28 +210,34 @@
   }
 
   // ─── LLM call (through the cv-proxy root pipeline) ────────────────
+  // Stage 2: the conversation chain — each refinement sends the prior
+  // proposals as assistant turns, so "shorter still" / "keep the number"
+  // refine the LAST proposal instead of starting over.
   async function ask(instruction) {
     instruction = clean(instruction);
     if (!instruction || state.busy) return;
     var base = proxyBase();
     if (!base) { setStatus('No worker URL configured (Settings → Account).', true); return; }
     state.busy = true;
-    setStatus('thinking…');
+    setStatus(state.turns.length ? 'refining…' : 'thinking…');
     try {
-      var sys = 'You are AntCV\'s in-preview text editor. Rewrite ONLY the snippet the user selected, applying their instruction. '
+      var sys = 'You are AntCV\'s in-preview text editor. Rewrite ONLY the snippet the user selected, applying their instruction. When prior proposals exist in the conversation, refine the LATEST proposal, not the original. '
         + 'HARD RULES: never invent facts, numbers, tools or names; keep every number and proper noun that is in the snippet unless the instruction says otherwise; '
         + 'use "-" never an em dash; no banned resume-speak (spearhead, leverage, robust, passionate, cross-functional, proven track record, responsible for, discuss); '
-        + 'calm Scandinavian-professional register; roughly the same length unless asked to shorten. '
-        + 'Return ONLY valid JSON: {"rewrite":"<the new text>","reason":"<ONE short line: what you changed and which rule guided it>"} — no markdown, no prose.';
+        + 'calm Scandinavian-professional register. '
+        + budgetLine(state.sid, state.stype) + ' '
+        + 'Return ONLY valid JSON: {"rewrite":"<the new text>","reason":"<ONE short line: what you changed>","rules":[{"rule":"<rule id, e.g. banned-word | keep-numbers | one-line-budget | hyphen-not-emdash | register>","detail":"<5-10 words, e.g. spearhead→led>"}]} — rules lists WHICH writing rules guided the change (0-4 entries); no markdown, no prose.';
+      var msgs = [{ role: 'user', content: 'SECTION: ' + (state.sid || 'unknown') + (state.stype ? ' (' + state.stype + ')' : '') + '\n\nSELECTED TEXT:\n' + state.sel + '\n\nINSTRUCTION: ' + (state.turns.length ? state.turns[0].instruction : instruction) }];
+      for (var i = 0; i < state.turns.length; i++) {
+        msgs.push({ role: 'assistant', content: JSON.stringify({ rewrite: state.turns[i].rewrite, reason: state.turns[i].reason }) });
+        if (i + 1 < state.turns.length) msgs.push({ role: 'user', content: 'REFINE: ' + state.turns[i + 1].instruction });
+      }
+      if (state.turns.length) msgs.push({ role: 'user', content: 'REFINE: ' + instruction });
       var res = await window.fetch(base + '/', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json', 'x-provider': 'anthropic' },
-        body: JSON.stringify({
-          model: MODEL, max_tokens: 400, stream: false,
-          system: sys,
-          messages: [{ role: 'user', content: 'INSTRUCTION: ' + instruction + '\n\nSELECTED TEXT:\n' + state.sel }],
-        }),
+        body: JSON.stringify({ model: MODEL, max_tokens: 500, stream: false, system: sys, messages: msgs }),
       });
       var raw = await res.text();
       if (!res.ok) throw new Error('LLM call failed (' + res.status + ')');
@@ -202,31 +246,60 @@
       var m = txt.match(/\{[\s\S]*\}/);
       var out = m ? JSON.parse(m[0]) : null;
       if (!out || !clean(out.rewrite)) throw new Error('No rewrite in the response');
-      showResult(clean(out.rewrite), clean(out.reason || ''));
+      var turn = {
+        instruction: instruction,
+        rewrite: clean(out.rewrite),
+        reason: clean(out.reason || ''),
+        rules: Array.isArray(out.rules) ? out.rules.slice(0, 4) : [],
+      };
+      state.turns.push(turn);
+      appendTurn(turn);
       setStatus('');
     } catch (e) {
       setStatus(String((e && e.message) || e), true);
     } finally { state.busy = false; }
   }
 
-  // ─── result + apply / undo ────────────────────────────────────────
-  function showResult(rewrite, reason) {
+  // ─── stage 2: conversation column + rule chips ────────────────────
+  function renderRuleChips(rules) {
+    var host = document.querySelector('[data-antcv-aibot-rules]');
+    if (!host) return;
+    host.innerHTML = '';
+    (rules || []).forEach(function (r) {
+      if (!r || !r.rule) return;
+      var chip = el('span', 'font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;'
+        + 'border:1px solid rgba(252,211,77,0.55);color:#fcd34d;background:rgba(252,211,77,0.08);margin-top:4px;');
+      chip.textContent = String(r.rule) + (r.detail ? ': ' + String(r.detail) : '');
+      chip.title = 'Writing rule that guided this change.';
+      host.appendChild(chip);
+    });
+  }
+
+  function appendTurn(turn) {
     var log = document.querySelector('[data-antcv-aibot-log]');
     if (!log) return;
-    log.innerHTML = '';
-    state.lastRewrite = rewrite;
+    state.lastRewrite = turn.rewrite;
+    // collapse the previous turn's action row (one live Apply at a time)
+    log.querySelectorAll('[data-aibot-actions]').forEach(function (r) { r.remove(); });
+    if (state.turns.length > 1) {
+      var inst = el('div', 'font-size:11px;color:#9fb3bf;margin:6px 0 2px;', '↪ ' + turn.instruction);
+      log.appendChild(inst);
+    }
     var box = el('div', 'background:rgba(126,255,212,0.07);border:1px solid rgba(1,183,187,0.45);border-radius:8px;'
-      + 'padding:7px 9px;margin:6px 0 4px;font-size:12.5px;color:#eafff7;');
-    box.textContent = rewrite;
+      + 'padding:7px 9px;margin:4px 0 4px;font-size:12.5px;color:#eafff7;');
+    box.textContent = turn.rewrite;
     log.appendChild(box);
-    if (reason) log.appendChild(el('div', 'font-size:11px;color:#8fd4c8;margin-bottom:6px;', 'Why: ' + reason));
-    var row = el('div', 'display:flex;gap:6px;');
+    if (turn.reason) log.appendChild(el('div', 'font-size:11px;color:#8fd4c8;margin-bottom:4px;', 'Why: ' + turn.reason));
+    renderRuleChips(turn.rules);
+    var row = el('div', 'display:flex;gap:6px;margin-top:2px;');
+    row.setAttribute('data-aibot-actions', '1');
     var apply = el('button', 'font-size:12px;font-weight:700;padding:5px 12px;border-radius:8px;border:none;background:#01B7BB;color:#06262b;cursor:pointer;', 'Apply');
-    apply.onclick = function () { applyRewrite(rewrite, row); };
+    apply.onclick = function () { applyRewrite(turn.rewrite, row); };
     var discard = el('button', 'font-size:12px;padding:5px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.25);background:none;color:#cfdde4;cursor:pointer;', 'Discard');
-    discard.onclick = function () { log.innerHTML = ''; };
+    discard.onclick = function () { log.innerHTML = ''; renderRuleChips([]); state.turns = []; };
     row.appendChild(apply); row.appendChild(discard);
     log.appendChild(row);
+    try { log.scrollTop = log.scrollHeight; } catch (_) {}
   }
 
   function applyRewrite(rewrite, row) {

@@ -6764,7 +6764,18 @@
                 React.createElement(
                   "button",
                   {
-                    onClick: () => __onEnrich(`item:${i}`),
+                    onClick: () => {
+                      // ENHANCE-185-CAPTURE-001: breadcrumb for the #185
+                      // trap in antcv-diag-probes (live-occurrence capture).
+                      try {
+                        window.__antcvLastEnhance = {
+                          t: Date.now(),
+                          target: `item:${i}`,
+                          sid: __sid,
+                        };
+                      } catch (_) {}
+                      __onEnrich(`item:${i}`);
+                    },
                     disabled: __busyEnrich || __busyCompress,
                     title:
                       "Enhance this outcome — tighten verb / sharpen the result",
@@ -14465,6 +14476,27 @@
         [mo, go] = e({}),
         fo = (e) => {
           go((t) => ({ ...t, ...e }));
+          // PROCESSING-QUEUE-INDICATOR-001 (owner feature): mirror the
+          // per-section status into a window-level state for the preview
+          // badge sidecar. Queue semantics: when one batch marks SEVERAL
+          // sections 'working' at once, the FIRST stays 'processing'
+          // (pink) and the rest read 'queued' (yellow) until their own
+          // update arrives. React state (mo / the generating screen) is
+          // untouched — this is a parallel display channel.
+          try {
+            const st = (window.__antcvProcState = window.__antcvProcState || {});
+            const keys = Object.keys(e || {});
+            const working = keys.filter((k) => "working" === e[k]);
+            keys.forEach((k) => {
+              let v = e[k];
+              if ("working" === v && working.length > 1 && k !== working[0])
+                v = "queued";
+              st[k] = v;
+            });
+            window.dispatchEvent(
+              new CustomEvent("antcv:proc-state", { detail: { ...st } }),
+            );
+          } catch (_) {}
         },
         ho = (e) => {
           if ("done" === e || "idle" === e || !e) return (go({}), void Cr({}));

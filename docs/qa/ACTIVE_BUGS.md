@@ -856,7 +856,7 @@ pushed to `main` + `claude/antcv-roadmap-bugs-L9Sqa` +
   overflowing CV → 2 page-boxes, page-1 roles tagged, `autoPages` =
   `{additional:{4:2}, experience:{2:2}}` — sidebar + main break to page 2 IN
   PARALLEL. Boot-smoke clean, 38/38 unit tests pass.
-- **SALMON-PARALLEL-COLUMNS-001** `[FIXED (preview) 1.50.293 / export still OPEN][HIGH][preview+export]` —
+- **SALMON-PARALLEL-COLUMNS-001** `[FIXED — preview 1.50.293; export client 1.50.295 + worker 1.14.39–41; re-verified 2026-06-13 (diag-sidebar-cont-e2e, diag-sidebar-export-page, diag-twocol-paged all green)][preview+export]` —
   PREVIEW side resolved by the same fix as MAINROLE-BREAK-001. With page-1 role
   detection restored, the measurer writes the sidebar break AND the main break at
   the SAME page boundary (both measured against the same USABLE A4 limit from the
@@ -1504,7 +1504,7 @@ worker was deployed via `wrangler deploy`.
 
 ### Headline — package "colour mix" — partial mitigation shipped, ROOT still OPEN
 
-- **PACKAGE-PALETTE-MIX-001 — [OPEN]** (owner-confirmed 2026-06-06; partial
+- **PACKAGE-PALETTE-MIX-001 — [FIXED — root closed by APPJS-ID-SCHEME-UNIFY (1.50.387); re-verified 2026-06-13 with the owner's exact repro (pwa/test/diag-palette-orphan.mjs): seeded orphan "scandinavian" migrates in storage to "copenhagen-modern", body[data-package] agrees, sidebar renders navy not black, second reload stable]** (owner-confirmed 2026-06-06; partial
   mitigation [PR #226](https://github.com/gabrielk83/AntCV/pull/226), v1.50.166).
   **Owner directive (2026-06-06): keep this OPEN.** The default Copenhagen Modern
   palette must render on load — not the "undefined ugly mix with black". #226 is a

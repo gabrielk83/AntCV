@@ -43,10 +43,20 @@ Owner spec 2026-06-07; staged delivery directive 2026-06-12.
   step 2 passes the section id + type into the prompt for section-specific
   rules (PROFILE vs OUTCOMES budgets) and a diff-preview before apply.
 
-## Stage-2 backlog (the step after this)
+## Stage-2 backlog — items 1-3 SHIPPED 2026-06-13 (1.50.412)
 
-1. Rule-citation chips (`rules[]` in the response contract).
-2. Multi-turn refinement ("shorter still", "keep the number").
-3. Section-aware budgets in the system prompt (per-section char budgets).
+1. ~~Rule-citation chips~~ — `rules[]` in the JSON contract, rendered as
+   amber chips in `data-antcv-aibot-rules` (rule id + 5-10 word detail).
+2. ~~Multi-turn refinement~~ — the conversation column appends turns; each
+   refinement sends prior proposals as assistant messages so "shorter
+   still" refines the LATEST proposal; one live Apply at a time (the
+   latest turn's); Discard clears the chain.
+3. ~~Section-aware budgets~~ — the selection's owning section (data-sid
+   walk + section-type lookup) drives a SECTION BUDGET line in the system
+   prompt (PROFILE ~400 chars, work-style ~200 + people-skill close,
+   bullets one line ~95, table cells ~55).
+
+## Stage-3 backlog (the step after this)
+
 4. Move/relocate commands ("move this to the sidebar") via section ops.
 5. Colour/format commands routed to styleConfig instead of text.

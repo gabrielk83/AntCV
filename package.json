@@ -12,7 +12,7 @@
     "test": "node scripts/run-tests.mjs",
     "test:pwa": "node scripts/run-tests.mjs pwa",
     "test:workers": "node scripts/run-tests.mjs workers",
-    "test:smoke": "node workers/docx-worker/test/smoke.js",
+    "test:smoke": "node scripts/run-docx-diags.mjs",
     "qa:browser": "node scripts/browser-qa.mjs"
   },
   "devDependencies": {

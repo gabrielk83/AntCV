@@ -1,9 +1,12 @@
-/* DIAGNOSTIC — PREVIEW-CHATBOT-001 stage 1:
- *   1. selecting preview text raises the ✨ AI edit pill;
+/* DIAGNOSTIC — PREVIEW-CHATBOT-001 stage 1 (+ R42 guards):
+ *   1. selecting preview text raises the AI-edit pill;
  *   2. the panel opens with quote, quick actions, input, step-2 containers;
  *   3. a quick action calls the proxy (mocked) and renders rewrite + Why;
  *   4. Apply replaces the text in the sections store + re-renders;
- *   5. Undo restores the exact pre-edit state.
+ *   5. Undo restores the exact pre-edit state;
+ *   6. icon is 🤖 (distinct from the ✨ Enhance icon);
+ *   7. a mouseup on a resize affordance does NOT raise the pill;
+ *   8. a selection inside a focused contentEditable does NOT raise the pill.
  */
 import { chromium } from 'playwright';
 import http from 'node:http';
@@ -61,10 +64,61 @@ const pillUp = await page.evaluate(()=>{
   range.selectNodeContents(span.firstChild||span);
   const sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
   document.dispatchEvent(new MouseEvent('mouseup',{bubbles:true}));
-  return {found:true};
+  return {found:true,
+    debug:{ ae: document.activeElement && document.activeElement.tagName,
+      aeCE: !!(document.activeElement && document.activeElement.isContentEditable),
+      bodyCur: document.body.style.cursor, docCur: document.documentElement.style.cursor,
+      selTxt: String(sel.toString()).slice(0,40), ver: window.__antcvPreviewChatbot }};
 });
 await page.waitForTimeout(400);
 check('1. pill appears on selection', pillUp.found && await page.locator('#antcv-aibot-pill').count()===1, JSON.stringify(pillUp));
+
+// 6 — icon distinct from Enhance (🤖, never ✨)
+const icon = await page.evaluate(()=>{ const p=document.getElementById('antcv-aibot-pill'); return p? p.textContent:''; });
+check('6. pill icon is 🤖 (distinct from ✨ Enhance)', /🤖/.test(icon) && !/✨/.test(icon), JSON.stringify(icon));
+
+// 7 — resize-affordance mouseup must NOT raise the pill
+const resizeGuard = await page.evaluate(()=>{
+  document.getElementById('antcv-aibot-pill')?.remove();
+  const span=[...document.querySelectorAll('.antcv-preview-paper [data-antcv-editable-text]')].find(s=>/change cycle time/.test(s.textContent||''));
+  const range=document.createRange(); range.selectNodeContents(span.firstChild||span);
+  const sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+  const handle=document.createElement('div');
+  handle.style.cursor='col-resize'; handle.setAttribute('aria-label','Resize columns (long-press and drag)');
+  document.querySelector('.antcv-preview-paper').appendChild(handle);
+  handle.dispatchEvent(new MouseEvent('mouseup',{bubbles:true}));
+  return new Promise(r=>setTimeout(()=>{ const up=!!document.getElementById('antcv-aibot-pill'); handle.remove(); r({pillRaised:up}); },200));
+});
+check('7. resize-handle mouseup does not raise the pill', resizeGuard.pillRaised===false, JSON.stringify(resizeGuard));
+
+// 8 — typing (inline editing) dismisses the pill; caret clicks never raise it
+const editGuard = await page.evaluate(()=>{
+  const span=[...document.querySelectorAll('.antcv-preview-paper [data-antcv-editable-text]')].find(s=>/change cycle time/.test(s.textContent||''));
+  // raise the pill first
+  const range=document.createRange(); range.selectNodeContents(span.firstChild||span);
+  const sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+  document.dispatchEvent(new MouseEvent('mouseup',{bubbles:true}));
+  return new Promise(r=>setTimeout(()=>{
+    const raised=!!document.getElementById('antcv-aibot-pill');
+    // typing dismisses
+    document.dispatchEvent(new KeyboardEvent('keydown',{key:'a',bubbles:true}));
+    const afterType=!!document.getElementById('antcv-aibot-pill');
+    // caret (collapsed selection) never raises
+    sel.removeAllRanges(); const c=document.createRange(); c.setStart(span.firstChild||span,0); c.collapse(true); sel.addRange(c);
+    document.dispatchEvent(new MouseEvent('mouseup',{bubbles:true}));
+    setTimeout(()=>{ const afterCaret=!!document.getElementById('antcv-aibot-pill'); r({raised,afterType,afterCaret}); },200);
+  },200));
+});
+check('8. typing dismisses the pill, caret clicks never raise it', editGuard.raised===true && editGuard.afterType===false && editGuard.afterCaret===false, JSON.stringify(editGuard));
+
+// re-raise the selection pill for the panel steps below
+await page.evaluate(()=>{
+  const span=[...document.querySelectorAll('.antcv-preview-paper [data-antcv-editable-text]')].find(s=>/change cycle time/.test(s.textContent||''));
+  const range=document.createRange(); range.selectNodeContents(span.firstChild||span);
+  const sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+  document.dispatchEvent(new MouseEvent('mouseup',{bubbles:true}));
+});
+await page.waitForTimeout(300);
 
 // 2 — open the panel
 await page.click('#antcv-aibot-pill');

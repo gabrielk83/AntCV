@@ -13,7 +13,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.406';
+  var VERSION = '1.50.408';
   if (window.__antcvPreviewChatbot === VERSION) return;
   window.__antcvPreviewChatbot = VERSION;
 
@@ -38,7 +38,9 @@
     var pill = document.createElement('button');
     pill.id = PILL_ID;
     pill.type = 'button';
-    pill.textContent = '✨ AI edit';
+    // 🤖, NOT ✨ — the sparkle is the per-item Enhance icon (owner 2026-06-12:
+    // the AI-edit icon must be distinct from enhance).
+    pill.textContent = '🤖 AI edit';
     pill.style.cssText = 'position:fixed;z-index:99996;left:' + Math.round(rect.left + rect.width / 2 - 38) + 'px;top:' + Math.max(6, Math.round(rect.top - 34)) + 'px;'
       + 'font:600 12px Calibri,Arial,sans-serif;padding:4px 10px;border-radius:14px;border:1px solid #01B7BB;'
       + 'background:#0b3340;color:#7effd4;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.35);';
@@ -47,10 +49,41 @@
     document.body.appendChild(pill);
   }
 
-  document.addEventListener('mouseup', function () {
+  // Non-interference guards (owner 2026-06-12):
+  //  - resize affordances: the column scaler, the sidebar/main seam splitter
+  //    and the table external-border scaler all end their drags with a
+  //    mouseup; any selection left over must NOT raise the pill.
+  //  - inline click-to-edit: caret clicks (collapsed selections) never raise
+  //    the pill, the pill never steals focus from the span being edited
+  //    (mousedown is prevented), and ANY typing dismisses it — so editing
+  //    flows are untouched. (Suppressing on focused-contentEditable outright
+  //    would kill the feature: every preview span is contentEditable and
+  //    selecting text focuses it.)
+  function isResizeAffordance(t) {
+    try {
+      if (!t || t.nodeType !== 1) return false;
+      if (t.closest && t.closest('.antcv-col-splitter')) return true;
+      var n = t;
+      for (var i = 0; n && i < 5; i++, n = n.parentElement) {
+        var cur = (n.style && n.style.cursor) || '';
+        if (cur === 'col-resize' || cur === 'ew-resize' || cur === 'ns-resize' || cur === 'nwse-resize') return true;
+        var lbl = ((n.getAttribute && (n.getAttribute('aria-label') || n.getAttribute('title'))) || '');
+        if (/resize/i.test(lbl)) return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+  function dragInProgress() {
+    var c = (document.body && document.body.style.cursor) || '';
+    var d = (document.documentElement && document.documentElement.style.cursor) || '';
+    return c === 'ew-resize' || c === 'col-resize' || d === 'ew-resize' || d === 'col-resize';
+  }
+  document.addEventListener('mouseup', function (ev) {
+    var evTarget = ev && ev.target;
     setTimeout(function () {
       try {
         if (document.getElementById(PANEL_ID)) return;
+        if (dragInProgress() || isResizeAffordance(evTarget)) { removePill(); return; }
         var sel = window.getSelection();
         var txt = sel ? clean(sel.toString()) : '';
         var pp = paper();
@@ -88,7 +121,7 @@
       + 'box-shadow:0 10px 34px rgba(0,0,0,0.5);font:13px/1.45 Calibri,Arial,sans-serif;padding:12px 14px;';
 
     var head = el('div', 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;');
-    head.appendChild(el('div', 'font-weight:700;letter-spacing:0.04em;color:#7effd4;', '✨ AI edit'));
+    head.appendChild(el('div', 'font-weight:700;letter-spacing:0.04em;color:#7effd4;', '🤖 AI edit'));
     var x = el('button', 'background:none;border:none;color:#9fb3bf;font-size:14px;cursor:pointer;', '✕');
     x.onclick = closePanel;
     head.appendChild(x);
@@ -258,7 +291,10 @@
     if (p && !p.contains(ev.target)) closePanel();
   }, true);
   document.addEventListener('keydown', function (ev) {
-    if (ev.key === 'Escape') { removePill(); closePanel(); }
+    if (ev.key === 'Escape') { removePill(); closePanel(); return; }
+    // typing means the user is EDITING — the pill is stale, dismiss it
+    // (the panel is untouched: its own input needs keystrokes).
+    removePill();
   });
 
   window.AntcvPreviewChatbot = { version: VERSION, open: openPanel, ask: ask, _state: state };

@@ -308,7 +308,7 @@
         auth.src = 'antcv-auth.js?v=1.50.312-auth-msg';
         auth.onload = function(){
           var app = document.createElement('script');
-          app.src = 'app.js?v=1.50.407';
+          app.src = 'app.js?v=1.50.408';
           app.onload = function(){
             var vo = document.createElement('script');
             vo.src = 'antcv-version-override.js?v=1.50.41';
@@ -582,7 +582,11 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <!-- PREVIEW-CHATBOT-001 stage 1: select preview text -> AI edit pill ->
      instruction panel -> SCE-checked LLM rewrite -> apply/undo.
      Design: docs/plan/PREVIEW-CHATBOT-001_stage1.md -->
-<script src="antcv-preview-chatbot-405.js?v=1.50.406" defer></script>
+<script src="antcv-preview-chatbot-405.js?v=1.50.408" defer></script>
+<!-- LLM-ONBOARD-001: add a new LLM, audit it (instruction/JSON/banned/latency/
+     cost battery), approve it into the routing ladder. Anchors into the
+     Settings API-keys form. -->
+<script src="antcv-llm-lab-408.js?v=1.50.408" defer></script>
 <script src="antcv-demo-watermark.js?v=1.50.340-live-keystate" defer></script>
 <script src="antcv-bullet-targets.js?v=1.40.136" defer></script>
 <script src="antcv-photo-position.js?v=1.50.372-no-display-touch" defer></script>

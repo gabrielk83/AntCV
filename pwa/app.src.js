@@ -332,6 +332,71 @@
       return "balanced";
     }
   };
+  // GEN-COST-CEILING-001 (owner 2026-06-12, decision 3): per-generation
+  // cost ceiling in USD. 0 / unset = no ceiling. window.__antcvGenCost is
+  // reset when a generation starts and accumulated per LLM call; once a
+  // run crosses its ceiling the dispatcher finishes CHEAP (one provider
+  // per remaining task, consensus skipped) instead of aborting the run.
+  const __genCostCeil = () => {
+    try {
+      const v = parseFloat(
+        JSON.parse(localStorage.getItem("antcv:genCostCeiling") || "0"),
+      );
+      return Number.isFinite(v) && v > 0 ? v : 0;
+    } catch (_) {
+      return 0;
+    }
+  };
+  const __overCostCeil = () => {
+    const c = __genCostCeil();
+    return c > 0 && (window.__antcvGenCost || 0) >= c;
+  };
+  // GEN-THROTTLE-RESIST-001 (owner 2026-06-12): mobile browsers throttle
+  // timers and kill fetches in hidden tabs; retrying while still hidden
+  // just burns the retry ladder and the whole run dies. Resolve when the
+  // tab is visible again (2-minute safety timeout so a backgrounded
+  // desktop tab still progresses).
+  const __waitVisible = () =>
+    "hidden" !== document.visibilityState
+      ? Promise.resolve()
+      : new Promise((res) => {
+          const t = setTimeout(() => {
+            document.removeEventListener("visibilitychange", h);
+            res();
+          }, 12e4);
+          const h = () => {
+            if ("hidden" !== document.visibilityState) {
+              document.removeEventListener("visibilitychange", h);
+              clearTimeout(t);
+              res();
+            }
+          };
+          document.addEventListener("visibilitychange", h);
+        });
+  // LLM-ONBOARD-001 (owner 2026-06-12): user-added OpenAI-compatible LLMs.
+  // antcv:customLlms holds {id,label,baseUrl,model,key,pricing,status}.
+  // Only AUDIT-APPROVED entries (status 'approved', set by the LLM-lab
+  // sidecar once the audit battery passes) reach the router: they join the
+  // BACK of the failover ladder under the id 'custom:<id>', and the
+  // quality-demotion memory treats that id like any other provider — that
+  // is how an approved model earns (or loses) its place in the
+  // cost-quality function.
+  const __customLlms = () => {
+    try {
+      const arr = JSON.parse(localStorage.getItem("antcv:customLlms") || "[]");
+      return Array.isArray(arr)
+        ? arr.filter(
+            (e) => e && "approved" === e.status && e.baseUrl && e.model,
+          )
+        : [];
+    } catch (_) {
+      return [];
+    }
+  };
+  const __customLlmById = (pid) => {
+    const id = String(pid || "").replace(/^custom:/, "");
+    return __customLlms().find((e) => String(e.id) === id) || null;
+  };
   // AUTO-PAGEBREAK-BLOCK-001 follow-up (owner queue 2026-06-12): the 📄
   // page buttons show the EFFECTIVE page — max(manual, the measurer's
   // preview auto map) — with an "ᵃ" suffix when the auto split moved the
@@ -801,6 +866,61 @@
   let A = 0,
     I = 0,
     O = null;
+  // LLM-ONBOARD-001: call an audit-approved custom LLM (OpenAI-compatible
+  // /chat/completions). Same contract as X/q/oe/re: takes (messages,
+  // system), returns the text, records usage into O for cost telemetry.
+  const __callCustomLlm = async (pid, messages, system) => {
+    const rec = __customLlmById(pid);
+    if (!rec) throw new Error("custom LLM not found or not approved: " + pid);
+    const ctrl = new AbortController();
+    const tid = setTimeout(() => {
+      try {
+        ctrl.abort();
+      } catch (_) {}
+    }, 9e4);
+    let res;
+    try {
+      res = await fetch(
+        String(rec.baseUrl).replace(/\/+$/, "") + "/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(rec.key ? { Authorization: "Bearer " + rec.key } : {}),
+          },
+          body: JSON.stringify({
+            model: rec.model,
+            max_tokens: 8192,
+            messages: [
+              ...(system ? [{ role: "system", content: system }] : []),
+              ...messages.map((m) => ({ role: m.role, content: m.content })),
+            ],
+          }),
+          signal: ctrl.signal,
+        },
+      );
+    } finally {
+      clearTimeout(tid);
+    }
+    if (!res.ok)
+      throw new Error(
+        "custom LLM " + (rec.label || rec.id) + " HTTP " + res.status,
+      );
+    const data = await res.json();
+    const text =
+      data &&
+      data.choices &&
+      data.choices[0] &&
+      data.choices[0].message &&
+      data.choices[0].message.content;
+    if (!text) throw new Error("custom LLM returned empty content");
+    O = {
+      input_tokens: data.usage && data.usage.prompt_tokens,
+      output_tokens: data.usage && data.usage.completion_tokens,
+      model: rec.model,
+    };
+    return text;
+  };
   const _ = (() => {
       const e = u.get("abGroup", null);
       if ("A" === e || "B" === e) return e;
@@ -1711,6 +1831,16 @@
     } catch (_) {}
     // 1.50.291 #5: deprioritise providers that recently gave inadequate output
     // for this task (kept in the list, just moved to the back).
+    // LLM-ONBOARD-001: audit-approved custom LLMs join the BACK of the
+    // ladder; the quality reorder below then earns them a better slot (or
+    // demotes them) on real results — that is their entry into the
+    // cost-quality function.
+    try {
+      for (const __cl of __customLlms()) {
+        const __pid = "custom:" + __cl.id;
+        l.includes(__pid) || l.push(__pid);
+      }
+    } catch (_) {}
     l = __antcvReorderByQuality(r, l);
     // PERF-003 (1.50.359, owner-confirmed split): MECHANICAL tasks fail fast —
     // cap the failover ladder at 2 providers. Quality-critical tasks
@@ -1731,6 +1861,14 @@
     // is traded for convergence time (the outer parse_jd retry ladder
     // still rotates forced providers across its attempts).
     if ("fast" === __genSpeed() && l.length > 1) l = l.slice(0, 1);
+    // GEN-COST-CEILING-001: once the running generation crossed its cost
+    // ceiling, finish cheap — one provider per remaining task.
+    if (__overCostCeil() && l.length > 1) {
+      console.warn(
+        `[cost-ceiling] run cost $${(window.__antcvGenCost || 0).toFixed(3)} >= ceiling $${__genCostCeil().toFixed(2)} — single-provider mode for the rest of the run`,
+      );
+      l = l.slice(0, 1);
+    }
     const c = [];
     for (let n = 0; n < l.length; n++) {
       const a = l[n],
@@ -1753,10 +1891,17 @@
             );
           },
           s = [2e3, 5e3, 1e4];
-        let d = 0;
+        let d = 0,
+          __hv = 0;
         for (;;)
           try {
-            if ("openai" === a) n = await X(e, t);
+            // GEN-THROTTLE-RESIST-001: never FIRE a call while hidden — a
+            // throttled tab can't keep the fetch alive, so wait for
+            // visibility first (no-op when visible).
+            await __waitVisible();
+            if (0 === String(a).indexOf("custom:"))
+              n = await __callCustomLlm(a, e, t);
+            else if ("openai" === a) n = await X(e, t);
             else if ("claude" === a) n = await q(e, t);
             else if ("mistral" === a) n = await oe(e, t);
             else {
@@ -1768,6 +1913,19 @@
             }
             break;
           } catch (e) {
+            // GEN-THROTTLE-RESIST-001: a network-class failure while the tab
+            // is hidden is the BROWSER killing the request, not the provider
+            // failing. Wait for visibility and retry WITHOUT burning the
+            // transient-retry ladder (max 3 hidden-waits per provider).
+            if (l(e) && "hidden" === document.visibilityState && __hv < 3) {
+              __hv++;
+              console.warn(
+                `[throttle-resist] ${a} dropped while tab hidden — waiting for visibility (retry ${__hv}/3, ladder preserved)`,
+              );
+              await __waitVisible();
+              await new Promise((e) => setTimeout(e, 800));
+              continue;
+            }
             if (d < s.length && l(e)) {
               const t = s[d];
               (d++,
@@ -1817,12 +1975,20 @@
             (t || "").length,
           g = u.input_tokens || Math.round(m / 4),
           f = u.output_tokens || Math.round((n || "").length / 4),
-          h = C[a] || { inputPer1M: 10, outputPer1M: 30 },
+          h =
+            C[a] ||
+            (0 === String(a).indexOf("custom:") &&
+              (__customLlmById(a) || {}).pricing) || {
+              inputPer1M: 10,
+              outputPer1M: 30,
+            },
           y = parseFloat(
             ((g / 1e6) * h.inputPer1M + (f / 1e6) * h.outputPer1M).toFixed(6),
           );
         if (
           ((A += y),
+          // GEN-COST-CEILING-001: per-generation meter (reset on Generate).
+          (window.__antcvGenCost = (window.__antcvGenCost || 0) + y),
           I++,
           $("llm_call", {
             task: r,
@@ -11133,7 +11299,37 @@
           document.addEventListener("visibilitychange", e),
           () => document.removeEventListener("visibilitychange", e)
         );
-      }, [p]));
+      }, [p]),
+      React.useEffect(() => {
+        // GEN-THROTTLE-RESIST-001: hold a screen wake lock for the whole
+        // generation so mobile screens don't sleep mid-run (sleep -> tab
+        // throttle -> dropped fetches -> the run dies). Re-acquired when
+        // the tab becomes visible again; fail-soft where unsupported.
+        let e = null,
+          t = !1;
+        const n = async () => {
+            try {
+              !t &&
+                navigator.wakeLock &&
+                "hidden" !== document.visibilityState &&
+                (e = await navigator.wakeLock.request("screen"));
+            } catch (_) {}
+          },
+          o = () => {
+            "hidden" !== document.visibilityState && n();
+          };
+        return (
+          n(),
+          document.addEventListener("visibilitychange", o),
+          () => {
+            t = !0;
+            document.removeEventListener("visibilitychange", o);
+            try {
+              e && e.release();
+            } catch (_) {}
+          }
+        );
+      }, []));
     const g = Math.min(90, 100 * (1 - Math.exp(-l / 50))),
       f =
         l < 15
@@ -11490,6 +11686,31 @@
                 ? "🔬 Thorough"
                 : "⚖ Balanced",
           ),
+          // GEN-COST-CEILING-001: live run cost (re-renders on the 1s tick);
+          // ceiling shown when one is set.
+          (window.__antcvGenCost || 0) > 0.0005 &&
+            React.createElement(
+              "span",
+              { style: { margin: "0 8px", opacity: 0.4 } },
+              "·",
+            ),
+          (window.__antcvGenCost || 0) > 0.0005 &&
+            React.createElement(
+              "span",
+              {
+                title:
+                  "Estimated LLM cost of this run so far" +
+                  (__genCostCeil() > 0
+                    ? ` — ceiling $${__genCostCeil().toFixed(2)}: past it, the run finishes in single-provider mode.`
+                    : "."),
+                style: { fontVariantNumeric: "tabular-nums" },
+              },
+              "$" +
+                (window.__antcvGenCost || 0).toFixed(3) +
+                (__genCostCeil() > 0
+                  ? " / $" + __genCostCeil().toFixed(2)
+                  : ""),
+            ),
         ),
         React.createElement(
           "div",
@@ -21736,6 +21957,12 @@
                   : "job description extraction did not complete. Re-upload the file or paste the job description into Additional Signals.",
             );
           (vr("Generate"),
+            // GEN-COST-CEILING-001: new run -> reset the cost meter.
+            (() => {
+              try {
+                window.__antcvGenCost = 0;
+              } catch (e) {}
+            })(),
             vo(""),
             // 1.50.243: clear the previous generation's rationale so the
             // Analysis panel doesn't keep showing "Generation completed for
@@ -23819,7 +24046,8 @@
                     cover_letter_strategy: "",
                   })),
               // GEN-SPEED-001: FAST mode skips the consensus waves entirely.
-              Wa && "fast" !== __genSpeed())
+              // GEN-COST-CEILING-001: so does a run over its cost ceiling.
+              Wa && "fast" !== __genSpeed() && !__overCostCeil())
             ) {
               const r = ["claude", "openai", "mistral", "gemini"].filter(Q),
                 i = r.includes("claude") ? "claude" : r[0],
@@ -39660,6 +39888,59 @@
                           ? "⚖ Balanced"
                           : "🔬 Thorough",
                     ),
+                  ),
+                  // GEN-COST-CEILING-001 (owner decision 3): per-generation
+                  // cost ceiling. Empty/0 = no ceiling. Past the ceiling the
+                  // run finishes in single-provider mode, consensus skipped.
+                  React.createElement(
+                    "span",
+                    { style: { margin: "0 2px", opacity: 0.35 } },
+                    "·",
+                  ),
+                  React.createElement(
+                    "label",
+                    {
+                      style: {
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 4,
+                        cursor: "pointer",
+                      },
+                      title:
+                        "Cost ceiling per generation (USD). When a run's estimated LLM cost passes this, it finishes in single-provider mode with consensus skipped — cheaper, never aborted. Empty or 0 = no ceiling.",
+                    },
+                    "Cap $",
+                    React.createElement("input", {
+                      type: "number",
+                      min: 0,
+                      step: 0.05,
+                      defaultValue: (() => {
+                        const c = __genCostCeil();
+                        return c > 0 ? c : "";
+                      })(),
+                      placeholder: "off",
+                      "data-antcv-gencostceil": "1",
+                      onChange: (ev) => {
+                        try {
+                          const v = parseFloat(ev.target.value);
+                          localStorage.setItem(
+                            "antcv:genCostCeiling",
+                            JSON.stringify(
+                              Number.isFinite(v) && v > 0 ? v : 0,
+                            ),
+                          );
+                        } catch (_) {}
+                      },
+                      style: {
+                        width: 52,
+                        fontSize: 11,
+                        padding: "2px 5px",
+                        borderRadius: 6,
+                        border: "1px solid rgba(255,255,255,0.2)",
+                        background: "rgba(255,255,255,0.06)",
+                        color: "#fff",
+                      },
+                    }),
                   ),
                 ),
                 // COMPANY-BRAND-FIT-001 (owner 2026-06-12): session-only

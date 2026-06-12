@@ -58,14 +58,24 @@ same-model check).
   family from the writer)
 - coherence: `anthropic` (large context; revisit if cost says otherwise)
 
-## Decisions needed from the owner
+## Owner decisions (answered 2026-06-13)
 
-1. Approve the provider assignments above (or name alternatives).
-2. Whether the supervisor should ALSO take the SCE retry re-calls (cheaper,
-   but the retry then re-writes prose with the weaker model — recommendation:
-   NO for v1; retries stay on the writer).
-3. Cost ceiling per generation, if any, before we add per-role model SIZES
-   (e.g. haiku-class supervisor) rather than just per-role providers.
+1. **Assignment is always a result of cost-quality optimization.** The map
+   is not a taste choice: writer = strongest prose model, supervisor =
+   cheap structured-JSON model from a different family, coherence =
+   large-context model — and the assignment is revisited from the
+   llm_calls / writing-engine telemetry. Initial map (live):
+   `{"writer":"anthropic","supervisor":"mistral","coherence":"anthropic"}`
+   set as `MODEL_ROLES` in BOTH wrangler.toml [vars].
+2. **SCE retries stay on the writer** (re-writes are prose work).
+3. **Cost ceiling per generation: YES** — implemented client-side as
+   GEN-COST-CEILING-001 (antcv:genCostCeiling; over-ceiling runs finish in
+   single-provider mode with consensus skipped, never aborted).
+
+Related: LLM-ONBOARD-001 — new LLMs enter the cost-quality function only
+after the audit battery passes (instruction / JSON / banned words /
+latency / cost) and the owner approves; approved models join the BACK of
+the ladder and earn their slot through quality demotion memory.
 
 ## Non-goals (v1)
 

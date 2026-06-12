@@ -100,7 +100,7 @@ const LEGACY_STYLE_ALIAS = {
   hybrid: 'hybrid-balanced',
 };
 
-// ─── Glyph rules — plan §4.10 ────────────────────────────────────────────
+// ─── Glyph rules — plan §4.10 ──────────────────────────────────────────
 
 const ATS_GLYPH_LABELS = {
   '☎': 'Phone:',
@@ -116,7 +116,7 @@ const INTEGRITY_RULES = [
   'team-management-verb: When describing managing or running a team, use "directed", "supervised", or "ran" — NEVER the bare verb "led" (e.g. write "directed a 7-person team", never "led a 7-person team" or "led a team"). This applies in PROFILE, CORE COMPETENCIES, and every experience bullet.',
   'research-evidence-integrity: Do not compress away publications, thesis, methods, or grants in Research Formal. Academic evidence outranks commercial brevity.',
   'cell-two-line-cap: In CORE COMPETENCIES and the cover letter WHAT I BRING table, each Strategic Expertise cell renders at MAX TWO LINES. Keep each expertise value to one tight clause of 6 to 14 words, roughly 90 characters maximum. Never write a cell that wraps to three or four lines; split it into two focus areas or cut the weaker half instead.',
-  'selected-outcomes-metric: In SELECTED OUTCOMES, lead with the real number when one is on record (e.g. a cycle-time cut, a cost reduction, a team size, a year count). Do not ship a metric-free outcome when a confirmed number exists. Still never invent a number that is not supported.',
+  'selected-outcomes-metric: In SELECTED OUTCOMES, EVERY item must carry a real on-record number (cycle-time cut, cost reduction, team size, year count, patent number, domain count). If an outcome has no honest number, replace it with one that does or merge it away. Never invent a number that is not supported.',
 ];
 
 const MAX_RETRIES = 2;
@@ -409,19 +409,23 @@ function findOverlongCellHits(text) {
   return hits;
 }
 
-const MISSING_METRIC_MESSAGE = 'selected_outcomes has no numeric metric — lead at least one outcome with an on-record number (e.g. 250→10 day change cycle, ~90% LiDAR cost reduction, 7-engineer team, 15+ years). Never invent a number that is not on record.';
-
 function blobHasMetric(blob) {
   return /\d/.test(blob) || /\b(\d+x|tenfold|two-?fold|three-?fold)\b/i.test(blob);
 }
 
-// Selected Outcomes shipped without any numeric token. Only fires when a
-// selected_outcomes section is present AND non-trivial; we look for a digit
-// anywhere across its titles/bodies. The canonical metric set is on record
-// (250→10 day cycle, ~90% LiDAR cost, 7-engineer team, 15+ yrs, Patent
-// 241997), so a fully metric-free outcomes section is a defect. We do NOT
-// force a number into a specific bullet (that would risk fabrication) — we
-// flag the section as a whole so the retry re-introduces an on-record number.
+function missingMetricHit(blob) {
+  const clean = String(blob).replace(/\s+/g, ' ').trim();
+  const preview = clean.length > 48 ? clean.slice(0, 48) + '…' : clean;
+  return `selected_outcomes item has no number ("${preview}") — every outcome must carry an on-record metric (250→10 day cycle, ~90% cost reduction, 7-engineer team, 15+ years, Patent 241997, 5+ domains); merge or replace the item, never invent a number`;
+}
+
+// Selected Outcomes metric rule — PER ITEM (owner directive 2026-06-12: a
+// single numbered bullet is not enough; every outcome must carry a number or
+// be merged away). The canonical on-record set has six numbers, so a 3–5
+// bullet section can always be fully quantified honestly. We flag each
+// metric-free item with a preview so the retry instruction names exactly what
+// to fix; we never force a SPECIFIC number into a SPECIFIC bullet (the model
+// chooses from the on-record set — fabrication stays banned).
 function findMissingMetricHits(text) {
   const root = tryParseSectionsJson(text);
   if (!root) return [];
@@ -430,21 +434,23 @@ function findMissingMetricHits(text) {
   if (!so || typeof so !== 'object') return [];
   const items = Array.isArray(so.items) ? so.items : (Array.isArray(so) ? so : null);
   if (!items || items.length === 0) return [];
-  let blob = '';
+  const hits = [];
   for (const it of items) {
-    if (typeof it === 'string') blob += ' ' + it;
+    let blob = '';
+    if (typeof it === 'string') blob = it;
     else if (it && typeof it === 'object') {
       if (typeof it.title === 'string') blob += ' ' + it.title;
       if (typeof it.body === 'string') blob += ' ' + it.body;
     }
+    blob = blob.replace(/\s+/g, ' ').trim();
+    if (!blob) continue;
+    if (!blobHasMetric(blob)) hits.push(missingMetricHit(blob));
   }
-  blob = blob.trim();
-  if (!blob) return [];
-  if (blobHasMetric(blob)) return [];
-  return [MISSING_METRIC_MESSAGE];
+  return hits;
 }
 
-// PLAIN-TEXT fallback (GEN-SCE-FLAG-001 follow-up, 2026-06-12). The live
+// PLAIN-TEXT fallback (GEN-SCE-FLAG-001 follow-up, 2026-06-12; per-item
+// enforcement added the same day on owner directive). The live
 // per-section generation path returns prose, not JSON, so findMissingMetricHits
 // above never fires there. When the prose contains a SELECTED OUTCOMES heading
 // (any casing, optional markdown/heading decoration), inspect that block —
@@ -466,8 +472,19 @@ function findMissingMetricHitsPlainText(text) {
   const nextHead = rest.search(/\n[#*\s]{0,8}[A-ZÆØÅ][A-ZÆØÅ &\/\-]{5,}[^\na-zæøå]*\n/);
   const block = (nextHead >= 0 ? rest.slice(0, nextHead) : rest).trim();
   if (block.length < 40) return []; // empty/near-empty block: SO-003 territory, not a wording retry
-  if (blobHasMetric(block)) return [];
-  return [MISSING_METRIC_MESSAGE];
+  // PER ITEM: each bullet line of meaningful length must carry a number.
+  const lines = block
+    .split('\n')
+    .map((l) => l.replace(/^[\s\-–—•◦▪*]+/, '').replace(/\s+/g, ' ').trim())
+    .filter((l) => l.length >= 25);
+  if (lines.length === 0) {
+    return blobHasMetric(block) ? [] : [missingMetricHit(block)];
+  }
+  const hits = [];
+  for (const l of lines) {
+    if (!blobHasMetric(l)) hits.push(missingMetricHit(l));
+  }
+  return hits;
 }
 
 export function evaluateSce(text, req) {
@@ -482,7 +499,7 @@ export function evaluateSce(text, req) {
   if (teamLedHits.length) phraseHits.push(...teamLedHits);
   // Structure-aware checks (no-op on non-JSON text):
   //   - over-long Strategic Expertise cells (CORE COMPETENCIES / WHAT I BRING)
-  //   - metric-free SELECTED OUTCOMES
+  //   - metric-free SELECTED OUTCOMES items
   // Both surfaced as phrase hits so they feed the existing 3-attempt retry.
   const overlongHits = findOverlongCellHits(text);
   if (overlongHits.length) phraseHits.push(...overlongHits);

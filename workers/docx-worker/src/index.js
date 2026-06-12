@@ -25367,8 +25367,9 @@ function buildMainFloatPhotoParagraph(ctx, position) {
           horizontalPosition: { relative: HorizontalPositionRelativeFrom.COLUMN, align: isLeft ? "left" : "right" },
           verticalPosition: { relative: VerticalPositionRelativeFrom.PARAGRAPH, offset: 19050 },
           wrap: { type: TextWrappingType.SQUARE, side: TextWrappingSide.BOTH_SIDES },
-          // preview margins: 2px top, 6px bottom, 10px on the text side
-          margins: { top: 19050, bottom: 57150, left: isLeft ? 0 : 95250, right: isLeft ? 95250 : 0 },
+          // PHOTO-AIR-EQUAL-001 (owner 2026-06-12): equal blank space above
+          // and below the figure — 4px each (matches the preview).
+          margins: { top: 38100, bottom: 38100, left: isLeft ? 0 : 95250, right: isLeft ? 95250 : 0 },
           behindDocument: false,
           allowOverlap: false,
           layoutInCell: true,
@@ -26131,6 +26132,31 @@ function renderExperience(s, ctx) {
           _keepWithNext
         ));
       });
+    }
+    // OUTCOMES-MODE-001 export half (1.14.59): in 'Results per role' mode the
+    // client forwards a per-role `results` string (the outcomes matched to
+    // this role) instead of the SELECTED OUTCOMES section. Render it as a
+    // bold-italic "Results:" lead + the outcome text, right after the bullets.
+    if (typeof role.results === "string" && role.results.trim()) {
+      out.push(new Paragraph({
+        spacing: { before: 40, after: 60, line: 252, lineRule: "auto" },
+        children: [
+          new TextRun({
+            text: "Results: ",
+            bold: true,
+            italics: true,
+            color: style.mainTextColor,
+            size: pt2hp(fs.mainBody),
+            font: style.mainBodyFont
+          }),
+          new TextRun({
+            text: role.results.trim(),
+            color: style.mainTextColor,
+            size: pt2hp(fs.mainBody),
+            font: style.mainBodyFont
+          })
+        ]
+      }));
     }
   });
   return out;
@@ -26988,7 +27014,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.58-table-cjlr";
+var VERSION = "1.14.59-photo-air";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

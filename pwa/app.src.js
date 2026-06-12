@@ -40331,8 +40331,8 @@
                                         shapeMargin: 8,
                                         margin:
                                           "main-left" === er
-                                            ? "2px 10px 6px 0"
-                                            : "2px 0 6px 10px",
+                                            ? "4px 10px 4px 0"
+                                            : "4px 0 4px 10px",
                                       },
                                     })
                                   : null,
@@ -40412,11 +40412,14 @@
                                     {
                                       key: "antcv-main-photo-bottom",
                                       style: {
+                                        // PHOTO-AIR-EQUAL-001: equal air —
+                                        // the column's bottom padding is
+                                        // 8px; the gap above matches it.
                                         textAlign:
                                           "main-left-bottom" === er
                                             ? "left"
                                             : "right",
-                                        marginTop: 10,
+                                        marginTop: 8,
                                       },
                                     },
                                     React.createElement("img", {

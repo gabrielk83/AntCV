@@ -477,7 +477,10 @@ export function buildPayload({
   })(language);
   // Normalize sections — the PWA stores these as { cv: [...], cl: [...] }
   // depending on doc type; the worker just wants the active list.
-  const docSections = mergeHowContributeFromLocalStorage((sections && sections[doc]) || (Array.isArray(sections) ? sections : []), doc);
+  const docSections = applyOutcomesMode(
+    mergeHowContributeFromLocalStorage((sections && sections[doc]) || (Array.isArray(sections) ? sections : []), doc),
+    doc
+  );
 
   // Strip the data: prefix from photo dataURL if present.
   const photo_b64 = stripDataUrlPrefix(photo);
@@ -1275,6 +1278,11 @@ function normalizeSections(raw) {
             years: r.years || '',
             bullets: Array.isArray(r.bullets) ? r.bullets.map(String).filter(Boolean) : [],
             ...(pg >= 2 ? { page: pg } : {}),
+            // OUTCOMES-MODE-001: per-role results line (set by
+            // applyOutcomesMode when the display mode is 'results').
+            ...(typeof r.results === 'string' && r.results.trim()
+              ? { results: r.results.trim() }
+              : {}),
           };
         });
         return { ...base, roles };
@@ -1381,6 +1389,47 @@ function buildFilename({ personalInfo, meta, doc, language }) {
   const d = new Date();
   const date = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
   return `${doc === 'cv' ? 'CV' : 'CoverLetter'}_${name}${company}${role}${lang}_${date}`;
+}
+
+// OUTCOMES-MODE-001 export half (1.50.393 / worker 1.14.59): when the
+// display mode is 'results' (localStorage outcomesMode, set by the outcomes
+// editor selector), the export mirrors the preview — the SELECTED OUTCOMES
+// section is dropped from the payload and each visible experience role gets
+// a `results` string holding its matched outcomes (title/company token
+// overlap; unmatched outcomes attach to the first visible role). The worker
+// renders it as a "Results:" line after the role's bullets.
+function applyOutcomesMode(docSections, doc) {
+  try {
+    if (doc !== 'cv' || !Array.isArray(docSections)) return docSections;
+    let mode = localStorage.getItem('outcomesMode') || '"section"';
+    try { const p = JSON.parse(mode); if (typeof p === 'string') mode = p; } catch (_) {}
+    if (mode !== 'results') return docSections;
+    const isOutcomes = (s) => s &&
+      (/^(outcomes|selected_outcomes)$/.test(String(s.id || '')) ||
+       /SELECTED OUTCOMES/i.test(String(s.title || '')));
+    const so = docSections.find(isOutcomes);
+    const exp = docSections.find((s) => s && s.type === 'experience');
+    if (!so || !exp || !Array.isArray(so.items) || !so.items.length) return docSections;
+    const tok = (str) => String(str || '').toLowerCase().match(/[a-zà-ɏ]{4,}/g) || [];
+    const txtOf = (x) => typeof x === 'string' ? x : (((x && x.b) || '') + ' ' + ((x && x.t) || '')).trim();
+    const lineOf = (x) => typeof x === 'string' ? x : [x && x.b, x && x.t].filter(Boolean).join(' ').trim();
+    const visRoles = (exp.roles || []).filter((r) => r && r.on !== false);
+    if (!visRoles.length) return docSections;
+    const tokensFor = (r) => new Set(tok(r.title).concat(tok(r.company)));
+    const buckets = new Map();
+    for (const it of so.items.filter(Boolean)) {
+      const ts = tok(txtOf(it));
+      const target = visRoles.find((r) => ts.some((w) => tokensFor(r).has(w))) || visRoles[0];
+      if (!buckets.has(target)) buckets.set(target, []);
+      buckets.get(target).push(lineOf(it));
+    }
+    const expOut = {
+      ...exp,
+      roles: (exp.roles || []).map((r) =>
+        buckets.has(r) ? { ...r, results: buckets.get(r).join('; ') } : r),
+    };
+    return docSections.filter((s) => !isOutcomes(s)).map((s) => (s === exp ? expOut : s));
+  } catch (_) { return docSections; }
 }
 
 function triggerDownload(blob, filename) {

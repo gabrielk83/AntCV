@@ -202,6 +202,12 @@ test('sce: detects a banned phrase, tolerating hyphen punctuation', () => {
   assert.equal(evaluateSce('A proven-track-record of delivery.', req).clean, false);
 });
 
+test('sce: end-to-end is banned, hyphenated or spaced (GEN-SCE-FLAG-001 follow-up)', () => {
+  const req = parseWritingStyleRequest({ target_language: 'en' });
+  assert.equal(evaluateSce('End-to-end project ownership across optics.', req).clean, false);
+  assert.equal(evaluateSce('Owned the data path end to end.', req).clean, false);
+});
+
 test('sce: clean text reports no hits', () => {
   const req = parseWritingStyleRequest({ target_language: 'en' });
   const r = evaluateSce('Built the pipeline. Cut release time from a week to a day.', req);
@@ -215,6 +221,36 @@ test('sce: honours user-supplied extra banned words', () => {
   const r = evaluateSce('A synergy of teams.', req);
   assert.equal(r.clean, false);
   assert.deepEqual(r.bannedWordHits.map((w) => w.toLowerCase()), ['synergy']);
+});
+
+test('sce: plain-text SELECTED OUTCOMES block without a metric is flagged', () => {
+  const req = parseWritingStyleRequest({ target_language: 'en' });
+  const txt = [
+    'PROFILE',
+    'Hardware architect with sensing experience.',
+    '',
+    'SELECTED OUTCOMES',
+    '- Applied functional-safety certifications to engineering decisions and reviews',
+    '- Coordinated supplier input for structured hardware development',
+    '',
+    'CORE COMPETENCIES',
+    'Hardware PM — project ownership across optics.',
+  ].join('\n') + '\n';
+  const r = evaluateSce(txt, req);
+  assert.equal(r.clean, false);
+  assert.ok(r.bannedPhraseHits.some((h) => h.includes('selected_outcomes has no numeric metric')));
+});
+
+test('sce: plain-text SELECTED OUTCOMES with an on-record number passes', () => {
+  const req = parseWritingStyleRequest({ target_language: 'en' });
+  const txt = 'SELECTED OUTCOMES\n- Cut change-cycle time from 250 to 10 days via the Change Control Board\n';
+  assert.equal(evaluateSce(txt, req).clean, true);
+});
+
+test('sce: prose without a SELECTED OUTCOMES heading is not metric-inspected', () => {
+  const req = parseWritingStyleRequest({ target_language: 'en' });
+  const txt = 'Applied certifications to engineering decisions and reviews without any numbers in this body of text.';
+  assert.equal(evaluateSce(txt, req).clean, true);
 });
 
 // ─── applyAtsGlyphConversion ─────────────────────────────────────────────
@@ -239,7 +275,7 @@ test('retry: a clean first draft stops at one attempt', async () => {
   let calls = 0;
   const res = await runWithSceRetry({
     req,
-    callLlm: async () => { calls += 1; return 'Built the data path end to end.'; },
+    callLlm: async () => { calls += 1; return 'Built the data path from intake to release.'; },
   });
   assert.equal(calls, 1);
   assert.equal(res.attempts, 1);
@@ -272,6 +308,23 @@ test('retry: a persistently dirty draft returns flagged after the retry budget',
   assert.equal(calls, 3);
   assert.equal(res.attempts, 3);
   assert.equal(res.flagged, true);
+});
+
+test('retry: a metric-free SELECTED OUTCOMES plain-text draft is retried with the metric instruction', async () => {
+  const req = parseWritingStyleRequest({ target_language: 'en' });
+  const seen = [];
+  const drafts = [
+    'SELECTED OUTCOMES\n- Applied certifications to engineering decisions and structured supplier reviews across the programme\n',
+    'SELECTED OUTCOMES\n- Cut change-cycle time from 250 to 10 days via the Change Control Board\n',
+  ];
+  let i = 0;
+  const res = await runWithSceRetry({
+    req,
+    callLlm: async (fix) => { seen.push(fix); return drafts[i++]; },
+  });
+  assert.equal(res.attempts, 2);
+  assert.equal(res.flagged, false);
+  assert.match(seen[1], /no numeric metric/);
 });
 
 test('retry: ATS conversion is applied to the final text', async () => {

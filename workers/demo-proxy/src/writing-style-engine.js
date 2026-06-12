@@ -1,4 +1,4 @@
-// workers/demo-proxy/src/writing-style-engine.js
+// workers/proxy/src/writing-style-engine.js
 // Pass 3b — proxy-side implementation of the locked-source plan §4.7
 // seven-step pipeline. Wraps the existing multi-LLM proxy with:
 //
@@ -42,6 +42,12 @@ const SHARED_BANNED_PHRASES = {
     'drive change','deliver value','key role','pivotal role','proven track record',
     'strong communicator','strategic mindset','mission-driven','I am passionate about',
     'I look forward to hearing from you','responsible for',
+    // GEN-SCE-FLAG-001 follow-up 2026-06-12: 'end-to-end' is on the owner banned
+    // list (allowed only as a literal course title, which generated prose never
+    // is) but was missing from the worker base entirely — it leaked into a live
+    // CORE COMPETENCIES cell. Phrase matching is punctuation-tolerant, so this
+    // also catches 'end to end'.
+    'end-to-end',
   ],
   da: ['Stor erfaring i','Dyb forståelse af'],
   es: ['Apasionado/a por','Orientado/a a resultados','Liderazgo demostrado'],
@@ -109,6 +115,8 @@ const INTEGRITY_RULES = [
   'role-boundary-integrity: Do not imply account, people, or product ownership unless supported. Use "contributed", "supported", "partnered", or "coordinated" only when the underlying scope supports the verb.',
   'team-management-verb: When describing managing or running a team, use "directed", "supervised", or "ran" — NEVER the bare verb "led" (e.g. write "directed a 7-person team", never "led a 7-person team" or "led a team"). This applies in PROFILE, CORE COMPETENCIES, and every experience bullet.',
   'research-evidence-integrity: Do not compress away publications, thesis, methods, or grants in Research Formal. Academic evidence outranks commercial brevity.',
+  'cell-two-line-cap: In CORE COMPETENCIES and the cover letter WHAT I BRING table, each Strategic Expertise cell renders at MAX TWO LINES. Keep each expertise value to one tight clause of 6 to 14 words, roughly 90 characters maximum. Never write a cell that wraps to three or four lines; split it into two focus areas or cut the weaker half instead.',
+  'selected-outcomes-metric: In SELECTED OUTCOMES, lead with the real number when one is on record (e.g. a cycle-time cut, a cost reduction, a team size, a year count). Do not ship a metric-free outcome when a confirmed number exists. Still never invent a number that is not supported.',
 ];
 
 const MAX_RETRIES = 2;
@@ -330,7 +338,10 @@ function findTeamLedHits(text, lang) {
 //   - selected_outcomes (numeric-metric presence)
 // When the text is NOT JSON (e.g. a single-section plain-text regen) these
 // checks no-op — they only fire when there is structure to inspect, so they
-// never false-positive on prose.
+// never false-positive on prose. A heading-scoped PLAIN-TEXT fallback for the
+// selected-outcomes metric check was added 2026-06-12 (GEN-SCE-FLAG-001
+// family): the live per-section path returns plain text, so the JSON-only
+// check provably never fired there and metric-free outcomes shipped clean.
 
 const CELL_CHAR_CAP = 90; // ~2 rendered lines in the 4.94" expertise column.
 
@@ -398,6 +409,12 @@ function findOverlongCellHits(text) {
   return hits;
 }
 
+const MISSING_METRIC_MESSAGE = 'selected_outcomes has no numeric metric — lead at least one outcome with an on-record number (e.g. 250→10 day change cycle, ~90% LiDAR cost reduction, 7-engineer team, 15+ years). Never invent a number that is not on record.';
+
+function blobHasMetric(blob) {
+  return /\d/.test(blob) || /\b(\d+x|tenfold|two-?fold|three-?fold)\b/i.test(blob);
+}
+
 // Selected Outcomes shipped without any numeric token. Only fires when a
 // selected_outcomes section is present AND non-trivial; we look for a digit
 // anywhere across its titles/bodies. The canonical metric set is on record
@@ -423,9 +440,34 @@ function findMissingMetricHits(text) {
   }
   blob = blob.trim();
   if (!blob) return [];
-  // Any digit, percentage, or written multiplier counts as a metric.
-  if (/\d/.test(blob) || /\b(\d+x|tenfold|two-?fold|three-?fold)\b/i.test(blob)) return [];
-  return ['selected_outcomes has no numeric metric — lead at least one outcome with an on-record number (e.g. 250→10 day change cycle, ~90% LiDAR cost reduction, 7-engineer team, 15+ years). Never invent a number that is not on record.'];
+  if (blobHasMetric(blob)) return [];
+  return [MISSING_METRIC_MESSAGE];
+}
+
+// PLAIN-TEXT fallback (GEN-SCE-FLAG-001 follow-up, 2026-06-12). The live
+// per-section generation path returns prose, not JSON, so findMissingMetricHits
+// above never fires there. When the prose contains a SELECTED OUTCOMES heading
+// (any casing, optional markdown/heading decoration), inspect that block —
+// from the heading to the next ALL-CAPS-style heading line or end of text —
+// for any digit / written multiplier. Conservative by design: when the text
+// carries no recognisable heading we cannot know the section identity and we
+// no-op (full per-section enforcement needs the client to send the section id;
+// tracked in the QA index under GEN-SCE-FLAG-001 fix direction).
+function findMissingMetricHitsPlainText(text) {
+  if (typeof text !== 'string' || !text) return [];
+  if (tryParseSectionsJson(text)) return []; // JSON path owns this case
+  const headRe = /(^|\n)[#*\s]{0,8}selected outcomes[^\n]*\n/i;
+  const m = headRe.exec(text);
+  if (!m) return [];
+  const start = m.index + m[0].length;
+  const rest = text.slice(start);
+  // Next heading: a line that is predominantly uppercase letters / separators
+  // (e.g. "CORE COMPETENCIES", "PROFESSIONAL EXPERIENCE", "## EDUCATION").
+  const nextHead = rest.search(/\n[#*\s]{0,8}[A-ZÆØÅ][A-ZÆØÅ &\/\-]{5,}[^\na-zæøå]*\n/);
+  const block = (nextHead >= 0 ? rest.slice(0, nextHead) : rest).trim();
+  if (block.length < 40) return []; // empty/near-empty block: SO-003 territory, not a wording retry
+  if (blobHasMetric(block)) return [];
+  return [MISSING_METRIC_MESSAGE];
 }
 
 export function evaluateSce(text, req) {
@@ -446,6 +488,9 @@ export function evaluateSce(text, req) {
   if (overlongHits.length) phraseHits.push(...overlongHits);
   const missingMetricHits = findMissingMetricHits(text);
   if (missingMetricHits.length) phraseHits.push(...missingMetricHits);
+  // Plain-text fallback for the same rule (heading-scoped; no-ops on JSON).
+  const missingMetricPlainHits = findMissingMetricHitsPlainText(text);
+  if (missingMetricPlainHits.length) phraseHits.push(...missingMetricPlainHits);
 
   return {
     clean: wordHits.length === 0 && phraseHits.length === 0,

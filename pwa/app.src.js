@@ -277,8 +277,25 @@
       // built-in look (10 / 24), so unset configs render exactly as before.
       mainEdgeIndent: 10,
       bulletIndent: 24,
+      // ADV-SPACING-CONTROLS-001 (owner 2026-06-12): page-edge / seam /
+      // subsection spacing controls (px), surfaced as range controls in
+      // Advanced styles next to the indent sliders. Defaults match the
+      // built-in look, so unset configs render exactly as before.
+      bodyEdgePad: 8, // page top/bottom padding of both columns
+      sidebarEdgePad: 8, // sidebar horizontal padding (page side <-> text)
+      seamGap: 0, // EXTRA gap at the sidebar <-> main seam
+      mainSectionGap: 8, // vertical gap between main-column subsections
+      sidebarSectionGap: 8, // vertical gap between sidebar subsections
+      bodySectionGap: 8, // vertical gap between letter-body subsections (CL)
+      candidateGap: 3, // vertical gap between candidate-header rows
     },
     Ai = "1.50.319-salmon-scope";
+  // ADV-SPACING-CONTROLS-001: numeric-or-default read for the spacing
+  // sliders — 0 is a VALID value (unlike the `|| default` idiom).
+  const __nzPx = (v, d) => {
+    const n = Number(v);
+    return null != v && isFinite(n) ? n : d;
+  };
   try {
     console.log("[AntCV]", Ai);
   } catch (e) {}
@@ -2192,15 +2209,28 @@
     const o = [],
       r = [e.city, e.country].filter(Boolean).join(", "),
       a = e.location || r;
+    // CONTACT-LOCAL-FORM-001 (owner 2026-06-12, nordic-minimal hard rule):
+    // the contact line uses the Danish local form — no country word,
+    // "Copenhagen" becomes "København", and the bare city gains its
+    // postcode ("2300 København"). Only fires when the location is
+    // Copenhagen-based; other cities pass through untouched.
+    const __localForm = (v) => {
+      let s = String(v || "").trim();
+      if (!/copenhagen|københavn/i.test(s)) return s;
+      s = s
+        .replace(/copenhagen/gi, "København")
+        .replace(/\s*,?\s*(denmark|danmark)\b/gi, "")
+        .replace(/\s{2,}/g, " ")
+        .replace(/[,\s]+$/g, "")
+        .trim();
+      if (/^københavn\b/i.test(s) && !/\d/.test(s)) s = "2300 " + s;
+      return s;
+    };
     return (
       (a || n) &&
         o.push([
           "⌂",
-          t
-            ? (a || "København, Danmark")
-                .replace("Copenhagen", "København")
-                .replace("Denmark", "Danmark")
-            : a || "Copenhagen, Denmark",
+          __localForm(t ? a || "København, Danmark" : a || "Copenhagen, Denmark"),
         ]),
       e.citizenship && o.push(["★", e.citizenship]),
       e.email && o.push(["@", e.email]),
@@ -2345,6 +2375,22 @@
             }
           } catch (_) {}
         })());
+      // SPEC-CATCHY-001 (owner 2026-06-12): the standing specialization line.
+      // Stored personalInfo.specialization wins; Gabriel's default otherwise
+      // (this app carries his background constants already — see the
+      // education rules in the main prompt).
+      (() => {
+        try {
+          const spec =
+            String(o.specialization || "").trim() ||
+            "Processes*Products*People";
+          r.push(
+            'SPECIALIZATION LINE (meta.subtitle): the candidate\'s standing specialization line is "' +
+              spec +
+              '". Every subtitle MUST be simple and catchy — at most three short concepts, separated by "•" or "*". For an UNSOLICITED draft (no job description) meta.subtitle MUST be EXACTLY the standing specialization line above, verbatim. For tailored drafts you may adapt it to the role, but keep it simple and catchy — never a sentence.',
+          );
+        } catch (_) {}
+      })();
       try {
         var _g_bw, _g_bp, _g_pt;
         if (
@@ -2622,6 +2668,16 @@
                   bullets: ["[Bullet 1]"],
                 },
               ],
+            },
+            // RECOMMENDATIONS-SECTION-001 (owner 2026-06-12): one-line
+            // references statement, main column, directly after experience.
+            {
+              id: "recommendations",
+              title: "RECOMMENDATIONS",
+              loc: "main",
+              on: !0,
+              type: "text",
+              content: "Danish and international recommenders on request.",
             },
             {
               id: "tools",
@@ -3145,6 +3201,7 @@
       "REGULATORY CONTEXT": "STANDARDER OG COMPLIANCE",
       "ADDITIONAL INFORMATION": "SUPPLERENDE OPLYSNINGER",
       INTERESTS: "INTERESSER",
+      RECOMMENDATIONS: "REFERENCER",
       "WHO I AM": "HVEM ER JEG",
       "WHAT I BRING": "HVAD JEG BRINGER",
       "WHY THIS POSITION": "HVORFOR DENNE STILLING",
@@ -3344,6 +3401,7 @@
         CERTIFICATIONS: "CERTIFICACIONES",
       "CERTIFICATES & COURSES": "CERTIFICADOS Y CURSOS",
       INTERESTS: "INTERESES",
+      RECOMMENDATIONS: "RECOMENDACIONES",
         EDUCATION: "FORMACIÓN",
         "PUBLICATIONS & PATENT": "PUBLICACIONES Y PATENTE",
         "REGULATORY CONTEXT": "CONTEXTO REGULATORIO",
@@ -3388,6 +3446,7 @@
         CERTIFICATIONS: "认证",
       "CERTIFICATES & COURSES": "证书与课程",
       INTERESTS: "兴趣爱好",
+      RECOMMENDATIONS: "推荐人",
         EDUCATION: "教育背景",
         "PUBLICATIONS & PATENT": "出版物与专利",
         "REGULATORY CONTEXT": "合规背景",
@@ -3462,6 +3521,8 @@
           CERTIFICERINGER: "CERTIFICATIONS",
       "CERTIFIKATER & KURSER": "CERTIFICATES & COURSES",
       INTERESSER: "INTERESTS",
+      REFERENCER: "RECOMMENDATIONS",
+      ANBEFALINGER: "RECOMMENDATIONS",
           KERNEKOMPETENCER: "CORE COMPETENCIES",
           "REGULATORISK KONTEKST": "REGULATORY CONTEXT",
           ERHVERVSERFARING: "PROFESSIONAL EXPERIENCE",
@@ -4128,7 +4189,7 @@
                   textAlign: S
                     ? "certs" === e.id || /cert/i.test(e.title || "")
                       ? "center"
-                      : "justify"
+                      : "left"
                     : "left",
                   marginTop: 4,
                   marginBottom: 4,
@@ -4164,7 +4225,7 @@
                   textAlign: S
                     ? "certs" === e.id || /cert/i.test(e.title || "")
                       ? "center"
-                      : "justify"
+                      : "left"
                     : "left",
                   marginBottom: 6,
                 },
@@ -4199,7 +4260,7 @@
                   textAlign: S
                     ? "certs" === e.id || /cert/i.test(e.title || "")
                       ? "center"
-                      : "justify"
+                      : "left"
                     : "left",
                   lineHeight: 1,
                   marginBottom: 1,
@@ -4229,7 +4290,7 @@
                     textAlign: S
                       ? "certs" === e.id || /cert/i.test(e.title || "")
                         ? "center"
-                        : "justify"
+                        : "left"
                       : "left",
                   },
                 },
@@ -5201,7 +5262,7 @@
                     fontFamily: T,
                     marginBottom: 2,
                     color: S ? "#fff" : "#333",
-                    textAlign: S ? "justify" : "left",
+                    textAlign: "left",
                     lineHeight: I,
                     paddingLeft: row.indent ? 8 : 0,
                     overflowWrap: "break-word",
@@ -5259,7 +5320,7 @@
                     textAlign: S
                       ? "certs" === e.id || /cert/i.test(e.title || "")
                         ? "center"
-                        : "justify"
+                        : "left"
                       : "left",
                     lineHeight: I,
                     overflowWrap: "break-word",
@@ -5332,7 +5393,7 @@
                     fontFamily: T,
                     marginBottom: 4,
                     color: S ? "#fff" : "#333",
-                    textAlign: S ? "justify" : "left",
+                    textAlign: "left",
                     lineHeight: I,
                     overflowWrap: "break-word",
                     wordBreak: "break-word",
@@ -5445,17 +5506,34 @@
           ),
         ),
       );
+    // ADV-SPACING-CONTROLS-001 (owner 2026-06-12): the vertical gap between
+    // subsections is user-tunable per area — sidebar / letter body (CL) /
+    // main column. 0 is valid; missing/garbage falls back to the built-in 8.
+    const __secGap = (() => {
+      try {
+        const k = S
+          ? "sidebarSectionGap"
+          : n
+            ? "bodySectionGap"
+            : "mainSectionGap";
+        const v = d && d[k];
+        const num = Number(v);
+        return null != v && isFinite(num) ? num : 8;
+      } catch (_) {
+        return 8;
+      }
+    })();
     const z = S ? "center" : "left",
       F = (e.title || "").toUpperCase(),
       M =
         "experience" === e.type
           ? {
-              marginBottom: 8,
+              marginBottom: __secGap,
               pageBreakBefore: e.pageBreakBefore ? "always" : void 0,
               breakBefore: e.pageBreakBefore ? "page" : void 0,
             }
           : {
-              marginBottom: 8,
+              marginBottom: __secGap,
               pageBreakInside: "avoid",
               breakInside: "avoid",
               pageBreakBefore: e.pageBreakBefore ? "always" : void 0,
@@ -12185,6 +12263,15 @@
             [
               ["mainEdgeIndent", "Indent from edge", 4, 40, 10],
               ["bulletIndent", "Bullet / emoji list indent", 10, 60, 24],
+              // ADV-SPACING-CONTROLS-001 (owner 2026-06-12): page-edge,
+              // seam, and subsection spacing.
+              ["bodyEdgePad", "Page top/bottom padding", 0, 30, 8],
+              ["sidebarEdgePad", "Sidebar edge padding", 0, 30, 8],
+              ["seamGap", "Sidebar ↔ main gap (extra)", 0, 40, 0],
+              ["mainSectionGap", "Main subsection gap", 0, 30, 8],
+              ["sidebarSectionGap", "Sidebar subsection gap", 0, 30, 8],
+              ["bodySectionGap", "Letter subsection gap", 0, 30, 8],
+              ["candidateGap", "Candidate header gap", 0, 16, 3],
             ].map(([key, label, min, max, def]) => {
               const val = Number(
                 e && e[key] != null ? e[key] : (c[key] != null ? c[key] : def),
@@ -13952,6 +14039,41 @@
                 } catch (_) {}
               }
             }
+          } catch (_) {}
+        }, [ro]),
+        // RECOMMENDATIONS-SECTION-001 backfill (owner 2026-06-12): existing
+        // stored sections predate the skeleton's recommendations one-liner —
+        // inject it once, directly after the experience section. Idempotent:
+        // no-ops when a recommendations-like section already exists.
+        React.useEffect(() => {
+          try {
+            if (!(ro && Array.isArray(ro.cv) && ro.cv.length)) return;
+            const has = ro.cv.some(
+              (e) =>
+                e &&
+                ("recommendations" === e.id ||
+                  /RECOMMENDATIONS|REFERENCER|ANBEFALINGER|RECOMENDACIONES|推荐人/i.test(
+                    String(e.title || ""),
+                  )),
+            );
+            if (has) return;
+            const xi = ro.cv.findIndex((e) => e && "experience" === e.type);
+            if (xi < 0) return;
+            const cv = ro.cv.slice();
+            cv.splice(xi + 1, 0, {
+              id: "recommendations",
+              title: "RECOMMENDATIONS",
+              loc: "main",
+              on: !0,
+              type: "text",
+              content: "Danish and international recommenders on request.",
+            });
+            ao({ ...ro, cv });
+            try {
+              console.log(
+                "[RECOMMENDATIONS-SECTION-001] backfilled after experience",
+              );
+            } catch (_) {}
           } catch (_) {}
         }, [ro]),
         React.useEffect(() => {
@@ -21681,7 +21803,7 @@
             // "extract company ONLY from the JOB DESCRIPTION" rule).
             const __noJD = !(c && String(c).trim());
             const __neutralCo = __noJD
-              ? 'OPEN / UNSOLICITED APPLICATION — NO TARGET COMPANY. There is no job description and no target employer for this draft. Do NOT name ANY specific company ANYWHERE in the cover letter or the CV body — not in WHY THIS POSITION, not in the HOW I WOULD CONTRIBUTE closing line, not in the CLOSURE line, nowhere. Use neutral references only: "your organisation", "your team", "the role". Do NOT infer, guess, or carry forward a company name from prior context, additional signals, or background documents. meta.company MUST be empty. You STILL must FULLY write who_content, why_content (frame WHY generally — why this KIND of role and work fits, with no specific employer named), and contribute_items (3-4 concrete bullets) from the candidate\'s real background. NEVER leave who_content, why_content, or contribute_items empty in an unsolicited draft.\n\n'
+              ? 'OPEN / UNSOLICITED APPLICATION — NO TARGET COMPANY. There is no job description and no target employer for this draft. Do NOT name ANY specific company ANYWHERE in the cover letter or the CV body — not in WHY THIS POSITION, not in the HOW I WOULD CONTRIBUTE closing line, not in the CLOSURE line, nowhere. Use neutral references only: "your organisation", "your team", "the role". Do NOT infer, guess, or carry forward a company name from prior context, additional signals, or background documents. meta.company MUST be empty. You STILL must FULLY write who_content, why_content (frame WHY generally — why this KIND of role and work fits, with no specific employer named), and contribute_items (3-4 concrete bullets) from the candidate\'s real background. NEVER leave who_content, why_content, or contribute_items empty in an unsolicited draft. meta.subtitle MUST be EXACTLY the candidate\'s standing specialization line from the SPECIALIZATION LINE rule (verbatim — for Gabriel: "Processes*Products*People").\n\n'
               : "";
             // QUICK-GEN-001 (owner 2026-06-12): session-only "Quick
             // generation" checkbox (window.__antcvQuickGen — never
@@ -21856,8 +21978,8 @@
                 y +
                 __neutralCo +
                 __quickCtx +
-                `You are an expert CV and cover letter writer for ${ie().name || "the user"}.\n${GABRIEL_BG}\nINSTRUCTIONS:\n- ANTI-FABRICATION RULE (highest priority). The candidate's actual background, as captured above and in the source documents, is the ONLY truth. NEVER invent industry experience (pharma, automotive, fintech, medical-device, banking, etc.), years of tenure, certifications, languages, tools, role titles, scope of leadership, or specific named systems that aren't supported by the source.\n  When the JD asks for something the candidate has, but the draft does not yet highlight it: REFRAME the existing experience using vocabulary aligned with the JD. Pull forward the relevant project, decision, or method from the candidate's real history. That is the right move.\n  When the JD asks for something the candidate does NOT have: do not write around it in PROFILE / SELECTED OUTCOMES / WHO I AM / WHY THIS POSITION. Leave the signal unaddressed in those sections. Do not approximate ("exposure to", "familiarity with", "interest in") to cover a gap.\n  HOW I WOULD CONTRIBUTE is the legitimate place to name a real gap explicitly and describe a concrete plan to close it (focused study, hands-on use, applying related experience). Naming the gap there is honest; inventing experience anywhere else is not.\n- SECTION FORMAT PREFERENCES: the candidate may have chosen a preferred display format per section. Supported values are: paragraph, bullets, emoji_bullets, hybrid_1 (intro + plain bullets), hybrid_2 (intro + emoji bullets), hybrid_3 (intro + emoji bullets + closing line), or table (two-column key/value). When such preferences are present (passed in via the user data under stylePrefs.sectionFormats), honor them: emit the section in the chosen shape. For emoji formats (emoji_bullets, hybrid_2, hybrid_3), ALSO return an emojis array parallel to items, one short unicode emoji per item, chosen to fit the content of that line (e.g. 📊 for measurement bullets, 🛠️ for tooling bullets, 🎯 for outcomes, 🏗️ for build/foundation, 🚀 for launch/contribute, ⚖️ for compliance, 📜 for certifications, 🎓 for education). Pick at most one emoji per item; never more. Keep emojis short (1 grapheme cluster). If a section preference is absent, fall back to the section's default type.\n- Cover letter total word count: 450-750 words (count carefully).\n- VOICE & TONE — SCANDINAVIAN PROFESSIONAL (applies regardless of output language).\n Gabriel writes in a Scandinavian / Danish professional register at all times. This tone is about HOW he writes, not WHICH language he writes in. Whether the output is English or Danish, the voice stays the same:\n • Calm, factual, direct. Sentences state what was done — they don't perform.\n • Collaborative, not self-aggrandising. "I worked with the team to ship X" rather than "I single-handedly drove transformative change".\n • Understated confidence. The accomplishments speak for themselves; no need to flag them as impressive.\n • Concrete and specific. Numbers, scope, named systems. Not adjectives about the impact.\n • First-person without bombast. "I led the CCB" not "Led groundbreaking change governance initiatives".\n • Even in English, AVOID American resume-speak energy: no "transformative", "passionate", "dynamic", "cutting-edge", "results-driven", "thought leader", "spearheaded", "championed", "drove change", "took ownership of mission-critical initiatives", "rolled up my sleeves", "wore many hats", "moved the needle".\n • Aim for the energy of a senior Scandinavian engineer writing a memo to colleagues — clear, factual, slightly self-effacing, trusts the reader to recognise good work without it being announced.\n • If you find yourself writing a sentence that would feel out of place in a Danish professional context, rewrite it. Test: would this sound natural said aloud in a calm voice in a meeting in Copenhagen? If no, rewrite.${g}\n- After the bullets, write a closing line that names the specific concrete value the team would gain. Do NOT use the phrase "and that's good because" — that wording is banned. State the value directly.\n- COMPANY AND ROLE: Extract "company" and "role" ONLY from the JOB DESCRIPTION document. The additional signals and attached files may contain references to other companies (competitor CVs, recruiter notes, etc.) — ignore those for the meta.company and meta.role fields. The JD is always the authoritative source for who you are applying to. When a JOB DESCRIPTION is present, meta.company and meta.role MUST be filled with the real company name and role title taken from it — never leave them empty and never output "Unsolicited" when the JD names the employer. Leave meta.company empty ONLY when there is genuinely no JD (a true open/unsolicited application).\n- The CV PROFILE must echo 2-3 key signals from the cover letter.\n- If a hiring manager name appears in the job description or signals, tailor accordingly.\n- EDUCATION section: Render items as a sidebar list aligned LEFT (not centered). Use ONLY these exact entries — never invent, embellish, or add specialization tails not listed here: (1) "MBA: Technion. Strategy, Finance" + optionally ", Operations" and/or ", Entrepreneurship" and/or "; China Biz Plan, Honourable Mention" (2) "M.Sc. Electrical Engineering: Tel Aviv University" + optionally " — Optical physics" or " — Optics, nanotech." (3) "B.Sc., Physics & B.Sc., Electrical Engineering: Tel Aviv University" (no optional tail — render as-is). Include the degree label before the colon in bold. CRITICAL: do NOT add subjects, specializations, or research areas that are not in the list above, even if the job description mentions them. The candidate's actual coursework is fixed; tailoring happens through which optional tails you include from the list, not by inventing new ones.\n- EXPERIENCE ROLES — INCLUDE ALL, MARK IRRELEVANT ONES on:false. Same rule as the sidebar: do NOT drop any role from the candidate's work history based on JD relevance. Return EVERY role from personalInfo in experience_roles, newest-first. Set on:true for roles relevant to the job description and on:false for roles not relevant (very early-career or off-domain) — but every role MUST still be present with its real title, company, years, and bullets filled. A hidden role (on:false) keeps its content so the user can toggle it back on in the editor in one click; a DROPPED role forces the user to retype it from memory, which is much worse. NEVER emit an on:false role as an empty or placeholder slot — populate it from the candidate's actual history exactly as a visible role. Only the on flag differs.\n- SIDEBAR SECTIONS — INCLUDE ALL ITEMS, MARK IRRELEVANT ONES HIDDEN. NEW RULE (CRITICAL): Do NOT drop sidebar items based on JD relevance. Instead include EVERY item from the candidate's personalInfo (tools, certifications, education, publications, regulatory, additional) in the output, but mark each item with a "hidden" flag: hidden:false (or omit hidden) for items relevant to the job description, hidden:true for items not relevant. Order each list by descending JD relevance — most relevant first, less relevant last. The user will see all items in the editor and can toggle any back on if you marked them hidden. If you accidentally drop an item, the user has to retype it from memory. This is much worse than including it with hidden:true.\n Per-section guidance for hidden:true vs hidden:false:\n • tools_items — MINIMUM 4 categories REQUIRED, target 5-6 categories. Returning fewer than 4 is a failed generation; do NOT return a single-row tools section. Derive categories from the candidate's actual work history, education, and domain — examples for a candidate with hardware/optics/PM background: \"Engineering software\" (Python, MATLAB, LabVIEW, Docker), \"Optical & EO design\" (Zemax, OpticStudio, Code V, ray-trace), \"Project & lifecycle\" (Jira, Confluence, MS Project, Codebeamer), \"Process & methods\" (Six Sigma, BABOK, ASPICE, DOE), \"Lab & test\" (oscilloscope, spectrum analyser, signal generator, climate chamber), \"Documentation & reporting\" (Power BI, Excel, MS Office, Latex). Keep visible the categories whose tools appear in or are clearly implied by the job description; mark hidden:true the ones that are clearly off-topic for this role (but STILL include them — the user can toggle back on). Keep the same compressed values for visible items as before (2–4 most relevant tools per category). In a no-JD (unsolicited / kernel) showcase context, include 5-6 categories spanning the candidate's full range with hidden:false on all of them.\n • certifications_items — keep visible the certifications relevant to the job description (BABOK for BA roles, Six Sigma for process/quality, ASPICE for automotive/embedded, "Prøve i dansk 2" for Denmark-local roles). Mark hidden:true the others.\n • education_items — ALL degrees stay visible (hidden:false). Even for non-academic roles, the candidate's education is required content. Optional specialization tails follow the existing EDUCATION formatting rules.\n • publications_items — visible (hidden:false) for R&D, nanotechnology, sensors, hardware innovation, academic-publishing JDs. Otherwise mark them hidden:true (do NOT drop them — keep them in the array with hidden:true).\n • regulatory_items — keep visible the standards/frameworks relevant to the job description; mark hidden:true the others. GROUP SUBHEADINGS rule unchanged: items with {"group":"..."} render as teal subheadings followed by regular {"l":"...","v":"..."} rows. Groups available (use only those with 2+ visible items, otherwise list visible items flat without groups):\n  - "Systems, safety and cybersecurity"  (ASPICE, ISO 26262, ISO/PAS 21448 SOTIF, ISO/SAE 21434)\n  - "Electrical and EMC"  (DIN EN 61010, CISPR 25, ISO 11452)\n  - "Environmental, durability and materials compliance"  (MIL-STD-810G, ISO 16750, IEC 60068, IEC 60529, RoHS, REACH)\n  - "Sensing, imaging and optics"  (ISO 12233, ISO 15739, ISO 14524, EMVA 1288, IEC 60825-1, STANAG 4694, STANAG 4355)\n  Return shape: [{"group":"..."},{"l":"ASPICE","v":"Requirements, traceability","hidden":false},{"l":"OTHER","v":"...","hidden":true},...]. If JD is pure business/finance/HR with zero regulatory relevance, every item should be hidden:true (still all present in the array).\n • additional_items — keep visible the items relevant (Languages always visible, Accessibility always visible, others judged on relevance). Do NOT list hobbies here — they belong in interests_items.
- • interests_items — move the candidate's stored hobbies into the INTERESTS section as verb-led bullets in the SAME format as SELECTED OUTCOMES: [{"b":"<verb phrase>","t":"<what the interest involves — one short line>"}]. 2-4 items, drawn ONLY from the stored hobbies; never invent interests. Example: {"b":"Coaching","t":"junior rugby — weekly sessions as assistant coach"}.\n- ROLE MERGE-OR-SPLIT (when the candidate has multiple consecutive roles at the same company with overlapping/contiguous date ranges). Choose ONE structure that best fits the JD: (A) MERGE into a single role with the combined date span and a combined title (e.g. "System Architect & Change Control Lead | Innoviz Technologies | 2017 - 2025") and the merged bullets — use when the JD is broad/cross-functional; or (B) SPLIT into two roles with DISTINCT, NON-OVERLAPPING titles (e.g. "Change Control Lead | Innoviz | 2020 - 2025" then "System Architect | Innoviz | 2017 - 2020") — use when the JD values the role transition. HARD RULE: never output BOTH a merged title AND a separate copy of one of its components. Specifically FORBIDDEN: a role titled "System Architect & Change Control Lead" alongside a second role titled "System Architect" at the same company — that repeats "System Architect" twice and is the exact mistake to avoid. If you MERGE, there is ONE role and the earlier-period role is turned OFF (on:false). If you SPLIT, neither title may contain the other's distinguishing component. NEVER show overlapping copies — pick one structure and turn off the other.\n- VOLUNTEER EXPERIENCE AS ROLE (optional). If the candidate has documented volunteer/community work AND the job description values leadership, coaching, sports, community organising, or people operations — promote the volunteer activity to a full role slot. Otherwise keep it as a one-liner in additional_items. Title should include " (Volunteer)" in English or " (Frivilligt arbejde)" in Danish.\n- LANGUAGES (additional_items). Use the languages from the candidate\'s personalInfo. Optionally adjust proficiency phrasing for geographic context (e.g., escalate "professional" to "full professional" if the JD is in a country where that language is dominant).\n- HOBBIES IS ALWAYS RETAINED VERBATIM. The Hobbies entry from personalInfo.additional must ALWAYS appear in additional_items, copied exactly word-for-word. Do NOT paraphrase, tighten, or "improve" the Hobbies text. The user has chosen the exact wording. Hobbies humanizes the candidate and is appropriate for every role. Other items in Additional Information (Accessibility, Global, Volunteer) are JD-aware: include if relevant, drop if not (Volunteer is a special case — see EXPERIENCE rules above for promotion).\n- LENGTH BUDGETS — write tight from the start. These are HARD caps, not suggestions. Writing longer then compressing wastes tokens.\n  TARGET TOTAL LENGTH: aim for ${u.get("pageBudget", 1.5)} pages of CV content. Tune budgets below toward that target — 1pp uses the lower end of every range, 1.5pp mid, 2pp upper end, 2.5-3pp upper end + add a 2nd line where a sentence reads stronger as two.\n • PROFILE (profile_content): 2 short sentences, 40–50 words total, approximately 260–320 characters. Every word earns its place. No filler, no throat-clearing. Hit the signal hard: role + years + 2-3 JD-relevant anchors.\n • WORK STYLE (work_style_content): 1–2 sentences, 20–25 words total, approximately 120–160 characters. One crisp statement of how the candidate operates. No adjectives stacked up, one descriptor per axis.\n${v}\n   Note: First-page roles (typically r1-r5) use bullets at the upper end of the range. Continuation roles (r6 onward, including any volunteer or earlier-career slot) use bullets at the lower end — page 2 vertical space is usually tight. How to know which roles go to page 2: count active roles — roles 1 through ~3 are page 1, roles 4+ are page 2. Format: "Verb + concrete object + specific outcome with numbers/tools." Retain all numbers, proper nouns, tools, certifications.\n • PROFILE + WORK STYLE together should occupy about 1/4 of the top of the main column — tight, not sprawling.\n- DIFFERENTIATION RULES — each section answers ONE question. Do NOT let two sections cover the same content from slightly different angles. The reader should never feel they are reading the same idea twice.\n • PROFILE answers WHO I AM PROFESSIONALLY (role, years, the kinds of problems I solve). It is positioning, not evidence. NO numbers, NO named systems, NO specific outcomes — those belong in SELECTED OUTCOMES. Two sentences of identity. Test: if you remove the PROFILE and the rest of the CV still reads coherently, the PROFILE was doing its job (positioning, not duplicating).\n • SELECTED OUTCOMES answers WHAT I HAVE DELIVERED. Five proof points, each with a number, a named system, or a specific scope. This is where metrics live. Verb variety required (see VERB RULE below). Do NOT restate the PROFILE in bullet form.\n • CORE COMPETENCIES answers WHAT KIND OF WORK I CAN OWN. Six focus areas with 1-2 line descriptions. This is a capability taxonomy, not a list of past achievements. The Strategic Expertise column describes the practice ("Change Control Board, risk assessment, audit-ready documentation"), NOT the outcome ("Cut cycle time by 95%"). Outcomes belong in SELECTED OUTCOMES; capabilities belong here.\n • Anti-repetition test for the CV: if the same noun phrase ("change governance", "KPI reporting", "stakeholder alignment") appears in PROFILE, OUTCOMES, AND CORE COMPETENCIES, you have a repetition problem. Each of these three sections should pull from a slightly different vocabulary register. Use synonyms and varied framing across the three sections.\n • WHO I AM (cl who_content) answers WHO I AM AS A PERSON DOING THIS WORK. A paragraph of 3-5 sentences (not 2-3), about 60-100 words. Cover: years of experience and discipline; the kinds of environments you have come from and what was characteristic about them; how you operate (what problems you take on, what you keep at the centre of your work); and the orientation most relevant to this specific role. This is a NARRATIVE — write it the way you would introduce yourself to a hiring manager before showing them artefacts. NO skill list. NO technology list. NO outcome list. Those are What-I-Bring's job. WHO I AM is the human introduction; WHAT I BRING is the capability map. A WHO I AM that runs only one short sentence is too thin — Word readers expect at least four lines of body text in this section.\n • WHAT I BRING (cl bring_rows) answers WHAT CAPABILITIES THE EMPLOYER GETS. The 5-row Focus Area / Strategic Expertise table mapped to the JD. This is where skills, methods, and frameworks go. Do NOT prose-write what is already in the table inside WHO I AM.\n • Anti-repetition test for the cover letter: WHO I AM should never name a tool, framework, or methodology that also appears in WHAT I BRING. If you catch yourself listing capabilities in WHO I AM, move them to WHAT I BRING and rewrite WHO I AM as identity prose.\n- VERB RULE — SELECTED OUTCOMES.\n • Use varied, specific verbs in every outcomes_items bullet. Avoid generic "led/managed/oversaw" unless the candidate's memory digest indicates this verb is appropriate to their actual responsibility.\n • SELECTED OUTCOMES (outcomes_items) — HARD LIMIT 5 BULLETS. Not 6, not 10, not 14 — exactly 5 maximum. If you have more candidate outcomes than fit, RANK them by impact (concrete numbers > scope/scale > named systems > generic process), MERGE adjacent ones that share a theme, and KEEP only the strongest 5. The output JSON array MUST have at most 5 elements. Returning more than 5 will cause the post-processor to discard items based on signal density — so YOU pick the best 5 yourself.\n • SELECTED OUTCOMES (outcomes_items) — VERB VARIETY REQUIRED. Each bullet must start with a different leading verb than the one before it. Approved verbs (use a varied mix — never repeat the same verb on consecutive bullets, and never use one verb for more than 2 of the 5 bullets total): Owned, Built, Ran, Designed, Architected, Drove, Delivered, Implemented, Established, Shipped, Reduced, Cut, Scaled, Mapped, Translated, Coordinated, Negotiated, Resolved, Investigated, Validated, Qualified, Authored, Chaired, Guided, Mentored, Restructured, Initiated, Configured, Specified, Directed, Supervised. Pick the verb that most accurately describes the action — DO NOT default to "Directed" or "Supervised" for everything. The 5 bullets together should read with verb variety, not as a list of identical openings.\n${x}\n • If the original draft used "Led", rewrite the bullet to start with the most accurate verb from the approved list above, preserving every number, tool name, certification, and proper noun.\n- ORPHAN RULE: Every paragraph and bullet in the MAIN COLUMN must have >=4 words on its final rendered line (~480px Calibri 11px). Shorten orphans with shorter synonyms or removing filler — never remove numbers, proper nouns, technical terms.\n- Rationale: genuine assessment, real gaps honestly stated.\n- CORE COMPETENCIES table (core_comp_rows) — table is 4.8" wide; Focus Area column ≈ 1.44"; Strategic Expertise column ≈ 3.36".\n • **FOCUS AREA**: 1-3 words, 17 chars max. Examples: "Change governance", "EO system validation", "KPI reporting", "Requirements traceability". Forbidden: generic ("problem solving", "leadership", "communication").\n${E}\n • Forbidden: vague words, repeated buzzwords. Use ChatGPT draft as primary vocabulary source where available.\n- WHAT I BRING table (bring_rows) — CL table is 6.0" wide; Strategic Expertise column ≈ 4.2".\n • **FOCUS AREA**: 1-3 words, max 5. Same standard as core_comp.\n${S}\n- HOW I WOULD CONTRIBUTE structure (contribute_intro + contribute_items + contribute_closing): MANDATORY STRUCTURE:\n contribute_intro: "My immediate priority would be to close the specific gap in [gap name — be precise about the technical/domain gap in the candidate's background], through focused study and hands-on use. From there, I would focus on:"\n contribute_items: 4 bullets. Each bullet must describe a CONCRETE ACTION with a CLEAR MEASURABLE OUTCOME. Forbidden: vague wording, generic verbs (coordinate, support, assist), or bullets without a stated result. The 4 bullets together must follow this embedded approach — weave these principles in naturally, do NOT state them as a list:\n  • Start fast: learn the current setup, tools, and main flows before proposing anything. Real impact starts with understanding how the team and users experience the work today.\n  • Map before changing: identify the 1-2 highest-leverage gaps in the current process (not the most visible ones — the ones where a small fix removes a big drag).\n  • Turn insight into focused action: each bullet should describe a specific action tied to a specific outcome for the team or product, not a general ambition.\n  • Measure the change: where possible, each bullet should imply a metric or a before/after state the team can observe.\n${R}\n contribute_closing: ONE non-bulleted closing line that follows the bullets, in this shape: "My aim would be to help [Company Name] build [scope/system/process — specific] that is clear, reviewable, and practical — focused on what the team will gain." This is a SEPARATE field from contribute_items (NOT a bullet).\n- FOUNDATION (foundation_hands_on + foundation_professionally): Two paragraphs describing HOW the candidate works — their working style, discipline, and approach — NOT a list of tools, technologies, degrees, or certifications.\n • foundation_hands_on: 1–2 sentences about their hands-on practice and how they operate day-to-day. Example of good: "I start by framing the decision — writing down the question, the criteria, and what would count as a good-enough answer. Then I build the smallest prototype that exposes the real risk, not the imagined one." Example of BAD (do NOT write this way): "Python, MATLAB, LabVIEW, Jira, Confluence, Six Sigma Black Belt." That's a tool list, which belongs in TOOLS & METHODS, not here.\n • foundation_professionally: 1–2 sentences about how they operate in a professional/team setting — how they make decisions visible, how they bring others along, how they handle trade-offs. Example of good: "I keep decisions and their rationale in the open — in a shared doc or a short meeting note — so anyone joining later can see what was decided and why. When a trade-off needs to be made, I surface it early rather than smuggling it in." Example of BAD: "MBA from [Business School], M.Sc. from [University], 15+ years experience." That's a credential list, which belongs in EDUCATION/PROFILE, not here.\n Both paragraphs must use first-person ("I"), be specific, and describe BEHAVIOUR not CREDENTIALS. If you catch yourself listing nouns (tools, degrees, standards), stop and rewrite as a verb-driven sentence about the candidate's way of working.\n- CLOSURE LINE (closure_content): Write 1–2 confident, specific sentences. Use this structure: "I would welcome the opportunity to discuss how I could support [exact company name from JD] in [position/department] by contributing to [relevant scope of work — be specific about what that company does]." Avoid all formulaic phrases. In Danish: "Jeg vil meget gerne drøfte, hvordan jeg konkret kan bidrage til [company]s arbejde med [scope] — og jeg modtager gerne en invitation til samtale." MUST match output language exactly. Never mix languages.${a ? "\n\n🇩🇰 FINAL LANGUAGE CHECK BEFORE OUTPUTTING: Reread your draft. Every value that is not a proper noun MUST be in Danish. If you see English sentences, translate them now. The schema below shows English example values for clarity ONLY — your actual values must be Danish." : ""}\n\n⚠️ CRITICAL OUTPUT REQUIREMENT — EVERY cl_overrides FIELD MUST BE FILLED.\nThe schema below shows EXAMPLE shapes. Marker strings like "FILL_who_content_here", "FILL_why_content_here", "FILL_foundation_hands_on_here", "FILL_foundation_professionally_here", "FILL_closure_content_here" are placeholders you MUST REPLACE with real prose content following the instructions above. NEVER return an empty string ""  for any cl_overrides field. NEVER return a marker string verbatim. NEVER omit a field. If you are about to return an empty string or a marker, instead write real grounded content using the candidate's actual experience. An empty CL field is a failed generation.\n\nReturn ONLY valid JSON (no markdown):\n{"meta":{"company":"<EXACT employer name copied from the JOB DESCRIPTION — REQUIRED when a JD is present; empty string ONLY for a true no-JD unsolicited run>","role":"<EXACT role title copied from the JOB DESCRIPTION — REQUIRED when a JD is present; empty string ONLY for a true no-JD unsolicited run>","subtitle":"Role • Area • Area","greeting":"Dear X,","opening":"Opening."},"cv_overrides":{"profile_content":"","work_style_content":"","core_comp_rows":[["Focus","Exp"],["Focus","Exp"],["Focus","Exp"],["Focus","Exp"],["Focus","Exp"],["Focus","Exp"]],"outcomes_items":[{"b":"B","t":"t"},{"b":"B","t":"t"},{"b":"B","t":"t"},{"b":"B","t":"t"},{"b":"B","t":"t"}],"experience_roles":[{"id":"r1","title":"<USE CANDIDATE'S MOST RECENT ROLE TITLE>","company":"<USE CANDIDATE'S MOST RECENT COMPANY>","years":"YYYY - YYYY","on":true,"bullets":["<bullet from candidate's history>","<bullet>","<bullet>"]},{"id":"r2","title":"<NEXT ROLE TITLE>","company":"<NEXT COMPANY>","years":"YYYY - YYYY","on":true,"bullets":["<bullet>","<bullet>","<bullet>"]},{"id":"r3","title":"<ROLE TITLE>","company":"<COMPANY>","years":"YYYY - YYYY","on":true,"bullets":["<bullet>","<bullet>"]},{"id":"r4","title":"<ROLE TITLE>","company":"<COMPANY>","years":"YYYY - YYYY","on":true,"bullets":["<bullet>","<bullet>"]},{"id":"r5","title":"<ROLE TITLE>","company":"<COMPANY>","years":"YYYY - YYYY","on":true,"bullets":["<bullet>","<bullet>"]},{"id":"r6","title":"<OLDEST ROLE TO INCLUDE>","company":"<COMPANY>","years":"YYYY - YYYY","on":true,"bullets":["<bullet>","<bullet>"]},{"id":"r7","on":false,"bullets":["<unused slot>"]},{"id":"r8","on":false,"bullets":["<unused slot>"]},{"id":"r9","on":false,"bullets":["<unused slot>"]},{"id":"r10","on":false,"bullets":["<unused slot>"]}],"tools_items":[{"l":"Cat","v":"tools"},{"l":"Cat","v":"tools"},{"l":"Cat","v":"tools"},{"l":"Cat","v":"tools"},{"l":"Cat","v":"tools"}],"certifications_items":["cert1","cert2"],"education_items":[{"deg":"<HIGHEST DEGREE>","sch":"<INSTITUTION, brief detail>"}],"publications_items":["pub1 or empty array"],"regulatory_items":[{"group":"Group Name"},{"l":"CODE","v":"description"}],"additional_items":[{"l":"Languages","v":"<candidate's languages from memory digest, comma-separated, native/professional/B1 etc>"},{"l":"Accessibility","v":"<applicable note if any, else omit this row>"}]},"cl_overrides":{"who_content":"FILL_who_content_here_3_to_5_sentence_narrative_60_to_100_words","bring_rows":[["Focus Area","Strategic Expertise"],["f","e"],["f","e"],["f","e"],["f","e"]],"why_content":"FILL_why_content_here_1_to_2_sentences_about_role_fit","contribute_intro":"My immediate priority would be to close the specific gap in [gap], through focused study and hands-on use. From there, I would focus on:","contribute_items":["b1","b2","b3","b4"],"contribute_closing":"My aim would be to help [Company Name] build [scope/system/process — specific] that is clear, reviewable, and practical — focused on what the team will gain.","foundation_hands_on":"FILL_foundation_hands_on_here_1_to_2_sentences_about_daily_practice","foundation_professionally":"FILL_foundation_professionally_here_1_to_2_sentences_about_team_setting","closure_content":"FILL_closure_content_here_1_to_2_sentence_closing_per_instructions"},"rationale":{"fit_summary":"1-2 sentence honest overall fit.","top_fit_points":["fit 1","fit 2","fit 3"],"gaps":["gap 1","gap 2"],"tailoring_decisions":"Key tailoring choices made.","cover_letter_strategy":"Why this angle.","red_flags":["A JD-side risk/caveat worth flagging (vague comp, imminent or passed deadline, unrealistic skill mix, no recruiter contact). [] if none."],"questions_in_jd":[{"question":"A question the JD explicitly asks the candidate to answer (empty array if none).","suggested_answer":"A short answer grounded ONLY in the candidate data, else [needs candidate input on X].","grounded":true}],"assumptions":["An assumption made when claiming fit or proposing to close a gap — state it plainly; honest framing."],"confidence_notes":[{"text":"A specific drafted CV/CL sentence.","confidence":0.0,"issue":"Why it is weakly grounded in the candidate data; null when well-grounded."}],"recommendations":["A concrete, honest action to strengthen this application (cite adjacent experience as adjacent, never as held)."],"detected_language":"ISO 639-1 code of the JD (en, da, sv, de, fr, es, ...).","supporting_context":"Role-specific tips or signals from the JD page that apply ONLY to this role (e.g. hiring manager preferences, team migrations). Empty string if none. Not facts about the candidate."}}`;
+                `You are an expert CV and cover letter writer for ${ie().name || "the user"}.\n${GABRIEL_BG}\nINSTRUCTIONS:\n- ANTI-FABRICATION RULE (highest priority). The candidate's actual background, as captured above and in the source documents, is the ONLY truth. NEVER invent industry experience (pharma, automotive, fintech, medical-device, banking, etc.), years of tenure, certifications, languages, tools, role titles, scope of leadership, or specific named systems that aren't supported by the source.\n  When the JD asks for something the candidate has, but the draft does not yet highlight it: REFRAME the existing experience using vocabulary aligned with the JD. Pull forward the relevant project, decision, or method from the candidate's real history. That is the right move.\n  When the JD asks for something the candidate does NOT have: do not write around it in PROFILE / SELECTED OUTCOMES / WHO I AM / WHY THIS POSITION. Leave the signal unaddressed in those sections. Do not approximate ("exposure to", "familiarity with", "interest in") to cover a gap.\n  HOW I WOULD CONTRIBUTE is the legitimate place to name a real gap explicitly and describe a concrete plan to close it (focused study, hands-on use, applying related experience). Naming the gap there is honest; inventing experience anywhere else is not.\n- SECTION FORMAT PREFERENCES: the candidate may have chosen a preferred display format per section. Supported values are: paragraph, bullets, emoji_bullets, hybrid_1 (intro + plain bullets), hybrid_2 (intro + emoji bullets), hybrid_3 (intro + emoji bullets + closing line), or table (two-column key/value). When such preferences are present (passed in via the user data under stylePrefs.sectionFormats), honor them: emit the section in the chosen shape. For emoji formats (emoji_bullets, hybrid_2, hybrid_3), ALSO return an emojis array parallel to items, one short unicode emoji per item, chosen to fit the content of that line (e.g. 📊 for measurement bullets, 🛠️ for tooling bullets, 🎯 for outcomes, 🏗️ for build/foundation, 🚀 for launch/contribute, ⚖️ for compliance, 📜 for certifications, 🎓 for education). Pick at most one emoji per item; never more. Keep emojis short (1 grapheme cluster). If a section preference is absent, fall back to the section's default type.\n- Cover letter total word count: 450-750 words (count carefully).\n- VOICE & TONE — SCANDINAVIAN PROFESSIONAL (applies regardless of output language).\n Gabriel writes in a Scandinavian / Danish professional register at all times. This tone is about HOW he writes, not WHICH language he writes in. Whether the output is English or Danish, the voice stays the same:\n • Calm, factual, direct. Sentences state what was done — they don't perform.\n • Collaborative, not self-aggrandising. "I worked with the team to ship X" rather than "I single-handedly drove transformative change".\n • Understated confidence. The accomplishments speak for themselves; no need to flag them as impressive.\n • Concrete and specific. Numbers, scope, named systems. Not adjectives about the impact.\n • First-person without bombast. "I led the CCB" not "Led groundbreaking change governance initiatives".\n • Even in English, AVOID American resume-speak energy: no "transformative", "passionate", "dynamic", "cutting-edge", "results-driven", "thought leader", "spearheaded", "championed", "drove change", "took ownership of mission-critical initiatives", "rolled up my sleeves", "wore many hats", "moved the needle".\n • Aim for the energy of a senior Scandinavian engineer writing a memo to colleagues — clear, factual, slightly self-effacing, trusts the reader to recognise good work without it being announced.\n • If you find yourself writing a sentence that would feel out of place in a Danish professional context, rewrite it. Test: would this sound natural said aloud in a calm voice in a meeting in Copenhagen? If no, rewrite.${g}\n- After the bullets, write a closing line that names the specific concrete value the team would gain. Do NOT use the phrase "and that's good because" — that wording is banned. State the value directly.\n- COMPANY AND ROLE: Extract "company" and "role" ONLY from the JOB DESCRIPTION document. The additional signals and attached files may contain references to other companies (competitor CVs, recruiter notes, etc.) — ignore those for the meta.company and meta.role fields. The JD is always the authoritative source for who you are applying to. When a JOB DESCRIPTION is present, meta.company and meta.role MUST be filled with the real company name and role title taken from it — never leave them empty and never output "Unsolicited" when the JD names the employer. Leave meta.company empty ONLY when there is genuinely no JD (a true open/unsolicited application).\n- The CV PROFILE must echo 2-3 key signals from the cover letter.\n- If a hiring manager name appears in the job description or signals, tailor accordingly.\n- EDUCATION section: Render items as a sidebar list aligned LEFT (not centered). Use ONLY these exact entries — never invent, embellish, or add specialization tails not listed here: (1) "MBA: Technion. Strategy, Finance" + optionally ", Operations" and/or ", Entrepreneurship" and/or "; China Biz Plan, Honourable Mention" (2) "M.Sc. Electrical Engineering: Tel Aviv University" + optionally " — Optical physics" or " — Optics, nanotech." (3) "B.Sc., Physics & B.Sc., Electrical Engineering: Tel Aviv University" (no optional tail — render as-is). Include the degree label before the colon in bold. CRITICAL: do NOT add subjects, specializations, or research areas that are not in the list above, even if the job description mentions them. The candidate's actual coursework is fixed; tailoring happens through which optional tails you include from the list, not by inventing new ones.\n- EXPERIENCE ROLES — INCLUDE ALL, MARK IRRELEVANT ONES on:false. Same rule as the sidebar: do NOT drop any role from the candidate's work history based on JD relevance. Return EVERY role from personalInfo in experience_roles, newest-first. Set on:true for roles relevant to the job description and on:false for roles not relevant (very early-career or off-domain) — but every role MUST still be present with its real title, company, years, and bullets filled. A hidden role (on:false) keeps its content so the user can toggle it back on in the editor in one click; a DROPPED role forces the user to retype it from memory, which is much worse. NEVER emit an on:false role as an empty or placeholder slot — populate it from the candidate's actual history exactly as a visible role. Only the on flag differs.\n- SIDEBAR SECTIONS — INCLUDE ALL ITEMS, MARK IRRELEVANT ONES HIDDEN. NEW RULE (CRITICAL): Do NOT drop sidebar items based on JD relevance. Instead include EVERY item from the candidate's personalInfo (tools, certifications, education, publications, regulatory, additional) in the output, but mark each item with a "hidden" flag: hidden:false (or omit hidden) for items relevant to the job description, hidden:true for items not relevant. Order each list by descending JD relevance — most relevant first, less relevant last. The user will see all items in the editor and can toggle any back on if you marked them hidden. If you accidentally drop an item, the user has to retype it from memory. This is much worse than including it with hidden:true.\n Per-section guidance for hidden:true vs hidden:false:\n • tools_items — MINIMUM 4 categories REQUIRED, target 5-6 categories. Returning fewer than 4 is a failed generation; do NOT return a single-row tools section. Derive categories from the candidate's actual work history, education, and domain — examples for a candidate with hardware/optics/PM background: \"Engineering software\" (Python, MATLAB, LabVIEW, Docker), \"Optical & EO design\" (Zemax, OpticStudio, Code V, ray-trace), \"Project & lifecycle\" (Jira, Confluence, MS Project, Codebeamer), \"Process & methods\" (Six Sigma, BABOK, ASPICE, DOE), \"Lab & test\" (oscilloscope, spectrum analyser, signal generator, climate chamber), \"Documentation & reporting\" (Power BI, Excel, MS Office, Latex). Keep visible the categories whose tools appear in or are clearly implied by the job description; mark hidden:true the ones that are clearly off-topic for this role (but STILL include them — the user can toggle back on). Keep the same compressed values for visible items as before (2–4 most relevant tools per category). In a no-JD (unsolicited / kernel) showcase context, include 5-6 categories spanning the candidate's full range with hidden:false on all of them.\n • certifications_items — keep visible the certifications relevant to the job description (BABOK for BA roles, Six Sigma for process/quality, ASPICE for automotive/embedded, "Prøve i dansk 2" for Denmark-local roles). Mark hidden:true the others.\n • education_items — ALL degrees stay visible (hidden:false). Even for non-academic roles, the candidate's education is required content. Optional specialization tails follow the existing EDUCATION formatting rules.\n • publications_items — visible (hidden:false) for R&D, nanotechnology, sensors, hardware innovation, academic-publishing JDs. Otherwise mark them hidden:true (do NOT drop them — keep them in the array with hidden:true). PATENT NUMBERS ARE NEVER DROPPED: every patent entry keeps its patent number verbatim (e.g. "Patent No. 241997") — compressing a patent line trims wording, never the number.\n • regulatory_items — keep visible the standards/frameworks relevant to the job description; mark hidden:true the others. GROUP SUBHEADINGS rule unchanged: items with {"group":"..."} render as teal subheadings followed by regular {"l":"...","v":"..."} rows. Groups available (use only those with 2+ visible items, otherwise list visible items flat without groups):\n  - "Systems, safety and cybersecurity"  (ASPICE, ISO 26262, ISO/PAS 21448 SOTIF, ISO/SAE 21434)\n  - "Electrical and EMC"  (DIN EN 61010, CISPR 25, ISO 11452)\n  - "Environmental, durability and materials compliance"  (MIL-STD-810G, ISO 16750, IEC 60068, IEC 60529, RoHS, REACH)\n  - "Sensing, imaging and optics"  (ISO 12233, ISO 15739, ISO 14524, EMVA 1288, IEC 60825-1, STANAG 4694, STANAG 4355)\n  Return shape: [{"group":"..."},{"l":"ASPICE","v":"Requirements, traceability","hidden":false},{"l":"OTHER","v":"...","hidden":true},...]. If JD is pure business/finance/HR with zero regulatory relevance, every item should be hidden:true (still all present in the array).\n • additional_items — keep visible the items relevant (Languages always visible, Accessibility always visible, others judged on relevance). The Accessibility row MUST state explicitly that the request is as a HEARING-IMPAIRED person (e.g. "Hearing-impaired — appreciates clear visual contact and written follow-up"); never an unspecified accommodation note. Do NOT list hobbies here — they belong in interests_items.
+ • interests_items — move the candidate's stored hobbies into the INTERESTS section as verb-led bullets in the SAME format as SELECTED OUTCOMES: [{"b":"<verb phrase>","t":"<what the interest involves — one short line>"}]. 2-4 items, drawn ONLY from the stored hobbies; never invent interests. Example: {"b":"Coaching","t":"junior rugby — weekly sessions as assistant coach"}.\n- ROLE MERGE-OR-SPLIT (when the candidate has multiple consecutive roles at the same company with overlapping/contiguous date ranges). Choose ONE structure that best fits the JD: (A) MERGE into a single role with the combined date span and a combined title (e.g. "System Architect & Change Control Lead | Innoviz Technologies | 2017 - 2025") and the merged bullets — use when the JD is broad/cross-functional; or (B) SPLIT into two roles with DISTINCT, NON-OVERLAPPING titles (e.g. "Change Control Lead | Innoviz | 2020 - 2025" then "System Architect | Innoviz | 2017 - 2020") — use when the JD values the role transition. HARD RULE: never output BOTH a merged title AND a separate copy of one of its components. Specifically FORBIDDEN: a role titled "System Architect & Change Control Lead" alongside a second role titled "System Architect" at the same company — that repeats "System Architect" twice and is the exact mistake to avoid. If you MERGE, there is ONE role and the earlier-period role is turned OFF (on:false). If you SPLIT, neither title may contain the other's distinguishing component. NEVER show overlapping copies — pick one structure and turn off the other.\n- VOLUNTEER EXPERIENCE AS ROLE (optional). If the candidate has documented volunteer/community work AND the job description values leadership, coaching, sports, community organising, or people operations — promote the volunteer activity to a full role slot. Otherwise keep it as a one-liner in additional_items. Title should include " (Volunteer)" in English or " (Frivilligt arbejde)" in Danish.\n- LANGUAGES (additional_items). Use the languages from the candidate\'s personalInfo. Optionally adjust proficiency phrasing for geographic context (e.g., escalate "professional" to "full professional" if the JD is in a country where that language is dominant).\n- HOBBIES IS ALWAYS RETAINED VERBATIM. The Hobbies entry from personalInfo.additional must ALWAYS appear in additional_items, copied exactly word-for-word. Do NOT paraphrase, tighten, or "improve" the Hobbies text. The user has chosen the exact wording. Hobbies humanizes the candidate and is appropriate for every role. Other items in Additional Information (Accessibility, Global, Volunteer) are JD-aware: include if relevant, drop if not (Volunteer is a special case — see EXPERIENCE rules above for promotion).\n- LENGTH BUDGETS — write tight from the start. These are HARD caps, not suggestions. Writing longer then compressing wastes tokens.\n  TARGET TOTAL LENGTH: aim for ${u.get("pageBudget", 1.5)} pages of CV content. Tune budgets below toward that target — 1pp uses the lower end of every range, 1.5pp mid, 2pp upper end, 2.5-3pp upper end + add a 2nd line where a sentence reads stronger as two.\n • PROFILE (profile_content): 2 short sentences, 40–50 words total, approximately 260–320 characters. Every word earns its place. No filler, no throat-clearing. Hit the signal hard: role + years + 2-3 JD-relevant anchors.\n • WORK STYLE (work_style_content): 1–2 sentences, 20–25 words total, approximately 120–160 characters. One crisp statement of how the candidate operates. No adjectives stacked up, one descriptor per axis. The work-style text MUST END with a people skill — the final clause describes how the candidate works WITH PEOPLE (e.g. clear written follow-ups, calm under disagreement, direct one-to-one communication), never a process or tooling point.\n${v}\n   Note: First-page roles (typically r1-r5) use bullets at the upper end of the range. Continuation roles (r6 onward, including any volunteer or earlier-career slot) use bullets at the lower end — page 2 vertical space is usually tight. How to know which roles go to page 2: count active roles — roles 1 through ~3 are page 1, roles 4+ are page 2. Format: "Verb + concrete object + specific outcome with numbers/tools." Retain all numbers, proper nouns, tools, certifications.\n • PROFILE + WORK STYLE together should occupy about 1/4 of the top of the main column — tight, not sprawling.\n- DIFFERENTIATION RULES — each section answers ONE question. Do NOT let two sections cover the same content from slightly different angles. The reader should never feel they are reading the same idea twice.\n • PROFILE answers WHO I AM PROFESSIONALLY (role, years, the kinds of problems I solve). It is positioning, not evidence. NO numbers, NO named systems, NO specific outcomes — those belong in SELECTED OUTCOMES. Two sentences of identity. Test: if you remove the PROFILE and the rest of the CV still reads coherently, the PROFILE was doing its job (positioning, not duplicating).\n • SELECTED OUTCOMES answers WHAT I HAVE DELIVERED. Five proof points, each with a number, a named system, or a specific scope. This is where metrics live. Verb variety required (see VERB RULE below). Do NOT restate the PROFILE in bullet form.\n • CORE COMPETENCIES answers WHAT KIND OF WORK I CAN OWN. Six focus areas with 1-2 line descriptions. This is a capability taxonomy, not a list of past achievements. The Strategic Expertise column describes the practice ("Change Control Board, risk assessment, audit-ready documentation"), NOT the outcome ("Cut cycle time by 95%"). Outcomes belong in SELECTED OUTCOMES; capabilities belong here.\n • Anti-repetition test for the CV: if the same noun phrase ("change governance", "KPI reporting", "stakeholder alignment") appears in PROFILE, OUTCOMES, AND CORE COMPETENCIES, you have a repetition problem. Each of these three sections should pull from a slightly different vocabulary register. Use synonyms and varied framing across the three sections.\n • WHO I AM (cl who_content) answers WHO I AM AS A PERSON DOING THIS WORK. A paragraph of 3-5 sentences (not 2-3), about 60-100 words. Cover: years of experience and discipline; the kinds of environments you have come from and what was characteristic about them; how you operate (what problems you take on, what you keep at the centre of your work); and the orientation most relevant to this specific role. This is a NARRATIVE — write it the way you would introduce yourself to a hiring manager before showing them artefacts. NO skill list. NO technology list. NO outcome list. Those are What-I-Bring's job. WHO I AM is the human introduction; WHAT I BRING is the capability map. A WHO I AM that runs only one short sentence is too thin — Word readers expect at least four lines of body text in this section.\n • WHAT I BRING (cl bring_rows) answers WHAT CAPABILITIES THE EMPLOYER GETS. The 5-row Focus Area / Strategic Expertise table mapped to the JD. This is where skills, methods, and frameworks go. Do NOT prose-write what is already in the table inside WHO I AM.\n • Anti-repetition test for the cover letter: WHO I AM should never name a tool, framework, or methodology that also appears in WHAT I BRING. If you catch yourself listing capabilities in WHO I AM, move them to WHAT I BRING and rewrite WHO I AM as identity prose.\n- VERB RULE — SELECTED OUTCOMES.\n • Use varied, specific verbs in every outcomes_items bullet. Avoid generic "led/managed/oversaw" unless the candidate's memory digest indicates this verb is appropriate to their actual responsibility.\n • SELECTED OUTCOMES (outcomes_items) — HARD LIMIT 5 BULLETS. Not 6, not 10, not 14 — exactly 5 maximum. If you have more candidate outcomes than fit, RANK them by impact (concrete numbers > scope/scale > named systems > generic process), MERGE adjacent ones that share a theme, and KEEP only the strongest 5. The output JSON array MUST have at most 5 elements. Returning more than 5 will cause the post-processor to discard items based on signal density — so YOU pick the best 5 yourself.\n • SELECTED OUTCOMES (outcomes_items) — VERB VARIETY REQUIRED. Each bullet must start with a different leading verb than the one before it. Approved verbs (use a varied mix — never repeat the same verb on consecutive bullets, and never use one verb for more than 2 of the 5 bullets total): Owned, Built, Ran, Designed, Architected, Drove, Delivered, Implemented, Established, Shipped, Reduced, Cut, Scaled, Mapped, Translated, Coordinated, Negotiated, Resolved, Investigated, Validated, Qualified, Authored, Chaired, Guided, Mentored, Restructured, Initiated, Configured, Specified, Directed, Supervised. Pick the verb that most accurately describes the action — DO NOT default to "Directed" or "Supervised" for everything. The 5 bullets together should read with verb variety, not as a list of identical openings.\n${x}\n • If the original draft used "Led", rewrite the bullet to start with the most accurate verb from the approved list above, preserving every number, tool name, certification, and proper noun.\n- ORPHAN RULE: Every paragraph and bullet in the MAIN COLUMN must have >=4 words on its final rendered line (~480px Calibri 11px). Shorten orphans with shorter synonyms or removing filler — never remove numbers, proper nouns, technical terms.\n- PUNCTUATION DASH RULE: use the plain hyphen "-" everywhere — year ranges ("2020 - 2025"), two-part compressions, table separators. NEVER output an em dash ("—") in ANY generated value; it is a banned token and forces a rewrite.\n- Rationale: genuine assessment, real gaps honestly stated.\n- CORE COMPETENCIES table (core_comp_rows) — table is 4.8" wide; Focus Area column ≈ 1.44"; Strategic Expertise column ≈ 3.36".\n • **FOCUS AREA**: 1-3 words, 17 chars max. Examples: "Change governance", "EO system validation", "KPI reporting", "Requirements traceability". Forbidden: generic ("problem solving", "leadership", "communication").\n${E}\n • Forbidden: vague words, repeated buzzwords. Use ChatGPT draft as primary vocabulary source where available.\n- WHAT I BRING table (bring_rows) — CL table is 6.0" wide; Strategic Expertise column ≈ 4.2".\n • **FOCUS AREA**: 1-3 words, max 5. Same standard as core_comp.\n${S}\n- HOW I WOULD CONTRIBUTE structure (contribute_intro + contribute_items + contribute_closing): MANDATORY STRUCTURE:\n contribute_intro: "My immediate priority would be to close the specific gap in [gap name — be precise about the technical/domain gap in the candidate's background], through focused study and hands-on use. From there, I would focus on:"\n contribute_items: 4 bullets. Each bullet must describe a CONCRETE ACTION with a CLEAR MEASURABLE OUTCOME. Forbidden: vague wording, generic verbs (coordinate, support, assist), or bullets without a stated result. The 4 bullets together must follow this embedded approach — weave these principles in naturally, do NOT state them as a list:\n  • Start fast: learn the current setup, tools, and main flows before proposing anything. Real impact starts with understanding how the team and users experience the work today.\n  • Map before changing: identify the 1-2 highest-leverage gaps in the current process (not the most visible ones — the ones where a small fix removes a big drag).\n  • Turn insight into focused action: each bullet should describe a specific action tied to a specific outcome for the team or product, not a general ambition.\n  • Measure the change: where possible, each bullet should imply a metric or a before/after state the team can observe.\n${R}\n contribute_closing: ONE non-bulleted closing line that follows the bullets, in this shape: "My aim would be to help [Company Name] build [scope/system/process — specific] that is clear, reviewable, and practical — focused on what the team will gain." This is a SEPARATE field from contribute_items (NOT a bullet).\n- FOUNDATION (foundation_hands_on + foundation_professionally): Two paragraphs describing HOW the candidate works — their working style, discipline, and approach — NOT a list of tools, technologies, degrees, or certifications.\n • foundation_hands_on: 1–2 sentences about their hands-on practice and how they operate day-to-day. Example of good: "I start by framing the decision — writing down the question, the criteria, and what would count as a good-enough answer. Then I build the smallest prototype that exposes the real risk, not the imagined one." Example of BAD (do NOT write this way): "Python, MATLAB, LabVIEW, Jira, Confluence, Six Sigma Black Belt." That's a tool list, which belongs in TOOLS & METHODS, not here.\n • foundation_professionally: 1–2 sentences about how they operate in a professional/team setting — how they make decisions visible, how they bring others along, how they handle trade-offs. Example of good: "I keep decisions and their rationale in the open — in a shared doc or a short meeting note — so anyone joining later can see what was decided and why. When a trade-off needs to be made, I surface it early rather than smuggling it in." Example of BAD: "MBA from [Business School], M.Sc. from [University], 15+ years experience." That's a credential list, which belongs in EDUCATION/PROFILE, not here.\n Both paragraphs must use first-person ("I"), be specific, and describe BEHAVIOUR not CREDENTIALS. If you catch yourself listing nouns (tools, degrees, standards), stop and rewrite as a verb-driven sentence about the candidate's way of working.\n- CLOSURE LINE (closure_content): Write 1–2 confident, specific sentences. Use this structure: "I would welcome the opportunity to discuss how I could support [exact company name from JD] in [position/department] by contributing to [relevant scope of work — be specific about what that company does]." Avoid all formulaic phrases. In Danish: "Jeg vil meget gerne drøfte, hvordan jeg konkret kan bidrage til [company]s arbejde med [scope] — og jeg modtager gerne en invitation til samtale." MUST match output language exactly. Never mix languages.${a ? "\n\n🇩🇰 FINAL LANGUAGE CHECK BEFORE OUTPUTTING: Reread your draft. Every value that is not a proper noun MUST be in Danish. If you see English sentences, translate them now. The schema below shows English example values for clarity ONLY — your actual values must be Danish." : ""}\n\n⚠️ CRITICAL OUTPUT REQUIREMENT — EVERY cl_overrides FIELD MUST BE FILLED.\nThe schema below shows EXAMPLE shapes. Marker strings like "FILL_who_content_here", "FILL_why_content_here", "FILL_foundation_hands_on_here", "FILL_foundation_professionally_here", "FILL_closure_content_here" are placeholders you MUST REPLACE with real prose content following the instructions above. NEVER return an empty string ""  for any cl_overrides field. NEVER return a marker string verbatim. NEVER omit a field. If you are about to return an empty string or a marker, instead write real grounded content using the candidate's actual experience. An empty CL field is a failed generation.\n\nReturn ONLY valid JSON (no markdown):\n{"meta":{"company":"<EXACT employer name copied from the JOB DESCRIPTION — REQUIRED when a JD is present; empty string ONLY for a true no-JD unsolicited run>","role":"<EXACT role title copied from the JOB DESCRIPTION — REQUIRED when a JD is present; empty string ONLY for a true no-JD unsolicited run>","subtitle":"Role • Area • Area","greeting":"Dear X,","opening":"Opening."},"cv_overrides":{"profile_content":"","work_style_content":"","core_comp_rows":[["Focus","Exp"],["Focus","Exp"],["Focus","Exp"],["Focus","Exp"],["Focus","Exp"],["Focus","Exp"]],"outcomes_items":[{"b":"B","t":"t"},{"b":"B","t":"t"},{"b":"B","t":"t"},{"b":"B","t":"t"},{"b":"B","t":"t"}],"experience_roles":[{"id":"r1","title":"<USE CANDIDATE'S MOST RECENT ROLE TITLE>","company":"<USE CANDIDATE'S MOST RECENT COMPANY>","years":"YYYY - YYYY","on":true,"bullets":["<bullet from candidate's history>","<bullet>","<bullet>"]},{"id":"r2","title":"<NEXT ROLE TITLE>","company":"<NEXT COMPANY>","years":"YYYY - YYYY","on":true,"bullets":["<bullet>","<bullet>","<bullet>"]},{"id":"r3","title":"<ROLE TITLE>","company":"<COMPANY>","years":"YYYY - YYYY","on":true,"bullets":["<bullet>","<bullet>"]},{"id":"r4","title":"<ROLE TITLE>","company":"<COMPANY>","years":"YYYY - YYYY","on":true,"bullets":["<bullet>","<bullet>"]},{"id":"r5","title":"<ROLE TITLE>","company":"<COMPANY>","years":"YYYY - YYYY","on":true,"bullets":["<bullet>","<bullet>"]},{"id":"r6","title":"<OLDEST ROLE TO INCLUDE>","company":"<COMPANY>","years":"YYYY - YYYY","on":true,"bullets":["<bullet>","<bullet>"]},{"id":"r7","on":false,"bullets":["<unused slot>"]},{"id":"r8","on":false,"bullets":["<unused slot>"]},{"id":"r9","on":false,"bullets":["<unused slot>"]},{"id":"r10","on":false,"bullets":["<unused slot>"]}],"tools_items":[{"l":"Cat","v":"tools"},{"l":"Cat","v":"tools"},{"l":"Cat","v":"tools"},{"l":"Cat","v":"tools"},{"l":"Cat","v":"tools"}],"certifications_items":["cert1","cert2"],"education_items":[{"deg":"<HIGHEST DEGREE>","sch":"<INSTITUTION, brief detail>"}],"publications_items":["pub1 or empty array"],"regulatory_items":[{"group":"Group Name"},{"l":"CODE","v":"description"}],"additional_items":[{"l":"Languages","v":"<candidate's languages from memory digest, comma-separated, native/professional/B1 etc>"},{"l":"Accessibility","v":"<must say explicitly the request is as a hearing-impaired person; omit row only when there is no accessibility item>"}]},"cl_overrides":{"who_content":"FILL_who_content_here_3_to_5_sentence_narrative_60_to_100_words","bring_rows":[["Focus Area","Strategic Expertise"],["f","e"],["f","e"],["f","e"],["f","e"]],"why_content":"FILL_why_content_here_1_to_2_sentences_about_role_fit","contribute_intro":"My immediate priority would be to close the specific gap in [gap], through focused study and hands-on use. From there, I would focus on:","contribute_items":["b1","b2","b3","b4"],"contribute_closing":"My aim would be to help [Company Name] build [scope/system/process — specific] that is clear, reviewable, and practical — focused on what the team will gain.","foundation_hands_on":"FILL_foundation_hands_on_here_1_to_2_sentences_about_daily_practice","foundation_professionally":"FILL_foundation_professionally_here_1_to_2_sentences_about_team_setting","closure_content":"FILL_closure_content_here_1_to_2_sentence_closing_per_instructions"},"rationale":{"fit_summary":"1-2 sentence honest overall fit.","top_fit_points":["fit 1","fit 2","fit 3"],"gaps":["gap 1","gap 2"],"tailoring_decisions":"Key tailoring choices made.","cover_letter_strategy":"Why this angle.","red_flags":["A JD-side risk/caveat worth flagging (vague comp, imminent or passed deadline, unrealistic skill mix, no recruiter contact). [] if none."],"questions_in_jd":[{"question":"A question the JD explicitly asks the candidate to answer (empty array if none).","suggested_answer":"A short answer grounded ONLY in the candidate data, else [needs candidate input on X].","grounded":true}],"assumptions":["An assumption made when claiming fit or proposing to close a gap — state it plainly; honest framing."],"confidence_notes":[{"text":"A specific drafted CV/CL sentence.","confidence":0.0,"issue":"Why it is weakly grounded in the candidate data; null when well-grounded."}],"recommendations":["A concrete, honest action to strengthen this application (cite adjacent experience as adjacent, never as held)."],"detected_language":"ISO 639-1 code of the JD (en, da, sv, de, fr, es, ...).","supporting_context":"Role-specific tips or signals from the JD page that apply ONLY to this role (e.g. hiring manager preferences, team migrations). Empty string if none. Not facts about the candidate."}}`;
             let C, T;
             const O =
               '\n\nABSOLUTE OUTPUT RULE: Your response MUST start with the character "{" and contain ONLY a single valid JSON object. NO prose preamble. NO explanation. NO markdown fences. NO commentary. The very first character of your response must be "{". The very last character must be "}".';
@@ -24193,7 +24315,7 @@
                     f = c
                       ? "certs" === e.id || /cert/i.test(e.title || "")
                         ? "center"
-                        : "justify"
+                        : "left"
                       : "left",
                     h = (e) => {
                       for (let t = e + 1; t < a.length; t++) {
@@ -39326,11 +39448,35 @@
         p && u.push(...pe(a, "da" === je, !1));
         const m =
             u.length > 0
-              ? u
-                  .map(([e, t]) => `${e} ${t}`)
-                  // Bridge round 3 (owner): tighter separators — ONE space
-                  // around the bullet — so the contact line fits one line.
-                  .join(__bridgeOn ? " • " : "  •  ")
+              ? // LINKEDIN-CLICK-001 (owner 2026-06-12): the LinkedIn entry
+                // renders as a real <a> in the preview; everything else stays
+                // plain text. Separators unchanged (Bridge round 3: ONE space
+                // around the bullet when the bridge is on).
+                u.flatMap(([e, t], _i) => {
+                  const _sep = _i ? [__bridgeOn ? " • " : "  •  "] : [];
+                  if (/linkedin\.com/i.test(String(t))) {
+                    const _v = String(t).trim();
+                    return [
+                      ..._sep,
+                      React.createElement(
+                        "a",
+                        {
+                          key: "li" + _i,
+                          href: /^https?:/i.test(_v) ? _v : "https://" + _v,
+                          target: "_blank",
+                          rel: "noopener noreferrer",
+                          style: {
+                            color: "#fff",
+                            textDecoration: "underline",
+                            textUnderlineOffset: "2px",
+                          },
+                        },
+                        `${e} ${t}`,
+                      ),
+                    ];
+                  }
+                  return [..._sep, `${e} ${t}`];
+                })
               : "da" === je
                 ? "[Kontakt — e-mail | telefon | LinkedIn | lokation]"
                 : "[Contact — email | phone | LinkedIn | location]",
@@ -39367,7 +39513,8 @@
                       fontSize: (Yr.nameSize || 16) * (96 / 72),
                       fontWeight: 700,
                       marginTop: 12,
-                      marginBottom: 3,
+                      // ADV-SPACING-CONTROLS-001: candidate-header row gap.
+                      marginBottom: __nzPx(ya && ya.candidateGap, 3),
                       lineHeight: 1.1,
                       textAlign: y("name"),
                     },
@@ -39383,7 +39530,7 @@
                         fontFamily: e,
                         color: "rgba(255,255,255,0.9)",
                         fontSize: (Yr.specialisation || qo || 11) * (96 / 72),
-                        marginBottom: 3,
+                        marginBottom: __nzPx(ya && ya.candidateGap, 3),
                         whiteSpace: "nowrap",
                         overflow: "hidden",
                         textOverflow: "ellipsis",
@@ -39400,7 +39547,8 @@
                       React.createElement("div", {
                         style: {
                           borderBottom: `1px solid ${l}`,
-                          margin: "4px 0 3px",
+                          margin:
+                            "4px 0 " + __nzPx(ya && ya.candidateGap, 3) + "px",
                         },
                       }),
                       React.createElement(
@@ -39441,7 +39589,8 @@
                               (96 / 72) *
                               (__bridgeOn ? 0.88 : 1),
                             lineHeight: 1.2,
-                            margin: "3px 0",
+                            margin:
+                              __nzPx(ya && ya.candidateGap, 3) + "px 0",
                             textAlign: y("contact"),
                             whiteSpace: __bridgeOn ? "nowrap" : "normal",
                             ...(__bridgeOn
@@ -39893,7 +40042,13 @@
                               // need to fit the other positions") — the bridge
                               // sidebar uses the standard palette again.
                               background: Ke,
-                              padding: "8px",
+                              // ADV-SPACING-CONTROLS-001: vertical pad =
+                              // bodyEdgePad, horizontal = sidebarEdgePad.
+                              padding:
+                                __nzPx(ya && ya.bodyEdgePad, 8) +
+                                "px " +
+                                __nzPx(ya && ya.sidebarEdgePad, 8) +
+                                "px",
                               minHeight: 0 === n ? 400 : 300,
                             },
                           },
@@ -39919,7 +40074,10 @@
                                 // no height as long as it stays within the
                                 // column's natural height).
                                 height: 0,
-                                marginRight: -8,
+                                marginRight: -__nzPx(
+                                  ya && ya.sidebarEdgePad,
+                                  8,
+                                ),
                                 pointerEvents: "none",
                               },
                             }),
@@ -40275,7 +40433,19 @@
                               flex: 1,
                               // ADV-INDENT-CONTROLS-001: main content indent from
                               // the page edge is user-tunable (Advanced styles).
-                              padding: "8px " + ((ya && ya.mainEdgeIndent) || 10) + "px",
+                              // ADV-SPACING-CONTROLS-001: vertical pad =
+                              // bodyEdgePad; the seam (left) side gains
+                              // seamGap on top of the edge indent.
+                              padding:
+                                __nzPx(ya && ya.bodyEdgePad, 8) +
+                                "px " +
+                                ((ya && ya.mainEdgeIndent) || 10) +
+                                "px " +
+                                __nzPx(ya && ya.bodyEdgePad, 8) +
+                                "px " +
+                                (((ya && ya.mainEdgeIndent) || 10) +
+                                  __nzPx(ya && ya.seamGap, 0)) +
+                                "px",
                               minWidth: 0,
                               background: "#fff",
                             },
@@ -40301,8 +40471,8 @@
                                         // sidebar spacer note).
                                         height: 0,
                                         marginLeft: -(
-                                          (ya && ya.mainEdgeIndent) ||
-                                          10
+                                          ((ya && ya.mainEdgeIndent) || 10) +
+                                          __nzPx(ya && ya.seamGap, 0)
                                         ),
                                         pointerEvents: "none",
                                       },

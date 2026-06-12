@@ -3,7 +3,8 @@
   "generation_id": "gen_01H7XYZ123",
   "application_id": "app_01H7XYZ456",
   "role_slug": "product-manager",
-  "role_label_raw": "Senior Product Manager — Maersk",
+  "role_label_raw": "Senior Product Manager - Maersk",
+  "specialization": "Processes*Products*People",
   "writing_style": "measured-professional",
   "package": "copenhagen-modern",
   "target_language": "zh",
@@ -20,7 +21,7 @@
     },
     "core_competencies": {
       "format": "table-grid",
-      "parser_safe_separator": "em_dash",
+      "parser_safe_separator": "hyphen",
       "rows": [
         {"focus_area": "系统架构", "expertise": "硬件与软件接口、客户需求可追溯性"},
         {"focus_area": "变更治理", "expertise": "覆盖汽车一级供应商项目的多方变更评审"},
@@ -53,7 +54,7 @@
       {
         "company": "Innoviz Technologies",
         "role": "系统架构师与变更控制负责人",
-        "years": "2020年 — 2025年",
+        "years": "2020年 - 2025年",
         "location": "以色列 / 远程",
         "format": "bullets",
         "items": [
@@ -65,7 +66,7 @@
       {
         "company": "Innoviz Technologies",
         "role": "客户变更请求专员",
-        "years": "2017年 — 2020年",
+        "years": "2017年 - 2020年",
         "location": "以色列",
         "format": "bullets",
         "items": [
@@ -77,7 +78,7 @@
       {
         "company": "Sirin Labs",
         "role": "高级电光工程师",
-        "years": "2014年 — 2017年",
+        "years": "2014年 - 2017年",
         "location": "以色列",
         "format": "bullets",
         "items": [
@@ -88,17 +89,22 @@
       },
       {
         "company": "Kanzen konsulenter i nord ApS",
-        "role": "创始人,项目管理专员",
-        "years": "2022年 — 2025年",
-        "location": "丹麦哥本哈根",
+        "role": "项目管理专员",
+        "years": "2022年 - 2026年",
+        "location": "2300 København",
         "format": "bullets",
         "items": [
-          "在Innoviz任职的同时创办本顾问公司;为三家企业提供项目管理与受监管行业变更治理咨询。",
-          "撜写ASPICE采纳框架,目前为其中一家客户内部变更控制标准的基础。",
+          "在Innoviz任职的同时运营本顾问公司;为三家企业提供项目管理与受监管行业变更治理咨询。",
+          "撰写ASPICE采纳框架,目前为其中一家客户内部变更控制标准的基础。",
           "建立丹麦本地实体,完成增值税与税务登记,在三年期间管理顾问业务的运营事务。"
         ]
       }
     ],
+    "recommendations": {
+      "format": "paragraph",
+      "content": "丹麦及国际推荐人可应要求提供。",
+      "char_count": 14
+    },
     "tools_methods": {
       "format": "structured-grid",
       "groups": [
@@ -119,26 +125,26 @@
     "certifications": {
       "format": "bullets",
       "items": [
-        "BABOK — IIBA (2022年)",
-        "Certified AI Practitioner (CNX-CAIP) — CNX (2024年)",
-        "Six Sigma Black Belt — ASQ (2018年)",
-        "Automotive SPICE — intacs (2021年)",
-        "Prøve i Dansk 2 — 丹麦语等级考试 (2023年)"
+        "BABOK - IIBA (2022年)",
+        "Certified AI Practitioner (CNX-CAIP) - CNX (2024年)",
+        "Six Sigma Black Belt - ASQ (2018年)",
+        "Automotive SPICE - intacs (2021年)",
+        "Prøve i Dansk 2 - 丹麦语等级考试 (2023年)"
       ]
     },
     "education": {
       "format": "bullets",
       "items": [
-        "MBA — Technion, Israel Institute of Technology (2015年)",
-        "M.Sc., 电气工程 — Tel Aviv University (2010年)",
-        "B.Sc., 物理学与电气工程(双学位) — Tel Aviv University (2008年)"
+        "MBA - Technion, Israel Institute of Technology (2015年)",
+        "M.Sc., 电气工程 - Tel Aviv University (2010年)",
+        "B.Sc., 物理学与电气工程(双学位) - Tel Aviv University (2008年)"
       ]
     },
     "publications_patents": {
       "format": "bullets",
       "items": [
         "Karp-Gershon, G., et al. (2018). 光学材料表征. Optics Letters.",
-        "专利:光学传感器配置 (授权于2017年)。"
+        "专利 US 9,876,543:光学传感器配置 (授权于2017年)。"
       ]
     },
     "additional_information": {
@@ -155,14 +161,18 @@
         {
           "label": "可用性",
           "items": "可接受迁移;持有丹麦及欧盟工作许可"
+        },
+        {
+          "label": "无障碍",
+          "items": "听力障碍人士;会议中请保持清晰的视觉接触并提供书面跟进"
         }
       ]
     },
     "cover_letter": {
       "cl_header": {
         "name": "Gabriel Alexander Karp-Gershon",
-        "application_line": "申请:Senior Product Manager — Maersk",
-        "contacts": ["email@example.com", "linkedin.com/in/...", "丹麦哥本哈根"]
+        "application_line": "申请:Senior Product Manager - Maersk",
+        "contacts": ["email@example.com", "linkedin.com/in/...", "2300 København"]
       },
       "cl_opener": {
         "salutation": "尊敬的招聘团队,",
@@ -171,7 +181,7 @@
       "who_i_am": "本人为技术产品经理,在硬件项目与受监管行业的客户运营工作领域拥有十二年经验。最近五年任职于Innoviz,负责三个汽车一级供应商客户项目的变更治理与客户变更请求关闭工作。该工作位于硬件工程、客户集成与ASPICE对齐流程纪律的交叉地带。",
       "what_i_bring": {
         "format": "table-grid",
-        "parser_safe_separator": "em_dash",
+        "parser_safe_separator": "hyphen",
         "rows": [
           {"focus_area": "面向客户的产品负责", "expertise": "在三个汽车一级供应商项目中完成客户变更请求关闭"},
           {"focus_area": "大规模运营复杂性", "expertise": "多方变更治理,ASPICE对齐的工作流程"},
@@ -179,7 +189,7 @@
           {"focus_area": "流程纪律", "expertise": "Six Sigma Black Belt、ISO 26262评估员、ASPICE治理"}
         ]
       },
-      "why_this_position": "该职位位于面向客户的产品工作与运营复杂性的交叉地带——这正是本人在Innoviz最近五年所处的位置。从汽车一级供应商客户项目转向Maersk的物流科技客户群,意味着行业的转变,但底层的工作——通过变更周期管理产品与客户关系,并以运营纪律作支撑——在本质上是一致的。职位描述中关于工作方式部分提到的、与ASPICE等同的流程成熟度,是促使本人提交申请的因素之一。",
+      "why_this_position": "该职位位于面向客户的产品工作与运营复杂性的交叉地带 - 这正是本人在Innoviz最近五年所处的位置。从汽车一级供应商客户项目转向Maersk的物流科技客户群,意味着行业的转变,但底层的工作 - 通过变更周期管理产品与客户关系,并以运营纪律作支撑 - 在本质上是一致的。职位描述中关于工作方式部分提到的、与ASPICE等同的流程成熟度,是促使本人提交申请的因素之一。",
       "how_i_would_contribute": [
         "预计将以前三个月的时间梳理当前的客户变更请求工作流程,识别其中的摩擦点,正如本人加入Innoviz时所做的那样。",
         "短期内可贡献的成果将是面向高影响变更请求的结构化预审流程,以本人在Innoviz跨三个项目所构建与标准化的方法为蓝本。",
@@ -187,7 +197,7 @@
       ],
       "foundation": {
         "hands_on": "本人愿在最初的几周内阅读现有的变更工作流程文档,与运营团队共同工作,先将所见所闻记录下来,而后再提出修改建议。",
-        "professionally": "该职位将是本人当前工作的自然延续——从汽车硬件项目转向物流科技产品工作,但保留定义本人工作方式的运营性与面向客户的核心。"
+        "professionally": "该职位将是本人当前工作的自然延续 - 从汽车硬件项目转向物流科技产品工作,但保留定义本人工作方式的运营性与面向客户的核心。"
       },
       "cl_close": {
         "sign_off": "此致敬礼,",

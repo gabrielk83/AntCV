@@ -31,8 +31,11 @@ const SHARED_BANNED_WORDS = {
     'leading','impactful','rooted','grounded','committed','passionate','holistic',
     'cross-functional','collaborative','journey','dynamic','proactive','results-driven',
     'strategic','agile',
+    // Owner 2026-06-12: 'discuss' is forbidden (catchy-specialization batch).
+    // Word matching is exact-boundary, so inflections are listed explicitly.
+    'discuss','discusses','discussed','discussing',
   ],
-  da: ['resultatorienteret'],
+  da: ['resultatorienteret','diskutere','diskuterer','diskuteret'],
   es: ['apasionado','apasionada'],
   zh: [],
 };
@@ -117,6 +120,11 @@ const INTEGRITY_RULES = [
   'research-evidence-integrity: Do not compress away publications, thesis, methods, or grants in Research Formal. Academic evidence outranks commercial brevity.',
   'cell-two-line-cap: In CORE COMPETENCIES and the cover letter WHAT I BRING table, each Strategic Expertise cell renders at MAX TWO LINES. Keep each expertise value to one tight clause of 6 to 14 words, roughly 90 characters maximum. Never write a cell that wraps to three or four lines; split it into two focus areas or cut the weaker half instead.',
   'selected-outcomes-metric: In SELECTED OUTCOMES, EVERY item must carry a real on-record number (cycle-time cut, cost reduction, team size, year count, patent number, domain count). If an outcome has no honest number, replace it with one that does or merge it away. Never invent a number that is not supported.',
+  'punctuation-dash: Use the plain hyphen "-" for year ranges, compound pauses, and table separators. NEVER output an em dash ("—") anywhere - it is treated as a banned token and triggers a rewrite.',
+  'patent-number-integrity: Every patent entry in publications/patents keeps its patent number verbatim. Never drop the number for brevity.',
+  'work-style-people-close: The WORK STYLE section always ENDS with a people skill (e.g. clear written follow-ups, calm under disagreement, direct one-to-one communication) - never a process or tooling point.',
+  'accessibility-explicit: If the candidate data carries an accessibility item, state explicitly that the request concerns a hearing-impaired person. Never an unspecified accommodation line.',
+  'specialization-catchy: A specialization/subtitle line is simple and catchy, at most three concepts (pattern: "Processes*Products*People"). Unsolicited applications always carry the candidate\'s stored specialization line.',
 ];
 
 const MAX_RETRIES = 2;
@@ -317,6 +325,21 @@ function findBannedPhraseHits(text, phrases) {
   return hits;
 }
 
+// Punctuation-dash rule (owner 2026-06-12: use "-" instead of "—"). Any em
+// dash in a draft is a violation; the hit string feeds the retry
+// fix-instruction. Capped at 3 reported sites so a dash-heavy draft does not
+// flood the instruction. Applies in every language (zh double dash included).
+function findEmDashHits(text) {
+  if (typeof text !== 'string' || text.indexOf('—') === -1) return [];
+  const hits = [];
+  const re = /[^\n]{0,25}—+[^\n]{0,25}/g;
+  let m;
+  while ((m = re.exec(text)) !== null && hits.length < 3) {
+    hits.push(`em dash used ("${m[0].trim()}") - replace "—" with "-"`);
+  }
+  return hits;
+}
+
 // Team-management verb rule (owner standing rule): the bare verb "led" must
 // not be used for managing/running a team — use directed/supervised/ran. We do
 // NOT ban "led" outright ("led design reviews", "led prototype-to-production
@@ -497,6 +520,10 @@ export function evaluateSce(text, req) {
   // retry fix-instruction names them and asks for directed/supervised/ran.
   const teamLedHits = findTeamLedHits(text, lang);
   if (teamLedHits.length) phraseHits.push(...teamLedHits);
+  // Em dashes are violations in every language — the retry instruction asks
+  // for "-" instead (owner 2026-06-12).
+  const emDashHits = findEmDashHits(text);
+  if (emDashHits.length) phraseHits.push(...emDashHits);
   // Structure-aware checks (no-op on non-JSON text):
   //   - over-long Strategic Expertise cells (CORE COMPETENCIES / WHAT I BRING)
   //   - metric-free SELECTED OUTCOMES items

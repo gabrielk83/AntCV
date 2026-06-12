@@ -122,7 +122,7 @@ For `core_competencies`, `what_i_bring`, `tools_methods` (in some styles):
 {
   "core_competencies": {
     "format": "table-grid",
-    "parser_safe_separator": "em_dash",
+    "parser_safe_separator": "hyphen",
     "rows": [
       {"focus_area": "Change governance", "expertise": "Multi-vendor change boards across three tier-1 customer programmes"},
       {"focus_area": "System architecture", "expertise": "Hardware-software interface ownership; requirements traceability"}
@@ -134,7 +134,7 @@ For `core_competencies`, `what_i_bring`, `tools_methods` (in some styles):
 | Field | Notes |
 |---|---|
 | `format` | `"table-grid"` or `"structured-grid"` (denser, two or three columns). |
-| `parser_safe_separator` | `"em_dash"` for em dash. Always set on table-grid for ATS-Legacy flattening. |
+| `parser_safe_separator` | `"hyphen"` for `" - "` (the default; owner 2026-06-12: use `-`, never `—`). `"em_dash"` is the legacy value, still accepted. Always set on table-grid for ATS-Legacy flattening. |
 | `rows` | Array of objects with two or three columns (`focus_area` + `expertise` is the standard pair). |
 
 When `target_ats_tier === "legacy"`, the same content is emitted as `bullets`:

@@ -346,7 +346,8 @@ test('retry: a metric-free SELECTED OUTCOMES plain-text draft is retried with th
 
 test('retry: ATS conversion is applied to the final text', async () => {
   const req = parseWritingStyleRequest({ target_language: 'en', ats: true });
-  const res = await runWithSceRetry({ req, callLlm: async () => '☎ 123 — clean line' });
+  // hyphen, not em dash — '—' is a banned token since the 2026-06-12 batch
+  const res = await runWithSceRetry({ req, callLlm: async () => '☎ 123 - clean line' });
   assert.match(res.text, /^Phone: 123/);
   assert.equal(res.flagged, false);
 });

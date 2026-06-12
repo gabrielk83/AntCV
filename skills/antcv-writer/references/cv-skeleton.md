@@ -118,6 +118,17 @@ Record the choice in the role's change_log entry (`reason: "roleform_merged"` or
 - No banned words. No "responsible for".
 - Length target: 12–22 words per bullet for `target_pages ≤ 1.5`; up to 30 for longer formats.
 
+### `recommendations`
+
+**Purpose.** A one-line references statement directly after `experience` in the main column (owner addition, 2026-06-12). Not a list of named referees — a availability line.
+
+**Format.** `paragraph`, single sentence.
+
+**Content rules.**
+- Default content: "Danish and international recommenders on request." (localized: da "Danske og internationale anbefalere oplyses på forespørgsel.", es "Recomendantes daneses e internacionales disponibles a petición.", zh "丹麦及国际推荐人可应要求提供。").
+- Never name referees or their contact details in the CV itself.
+- Placement: main column, immediately after `experience`.
+
 ### `tools_methods`
 
 **Purpose.** Concrete tools, languages, frameworks, methodologies. Sidebar-placed in most styles.
@@ -166,6 +177,7 @@ Record the choice in the role's change_log entry (`reason: "roleform_merged"` or
 - Show all entries for `target_pages ≥ 2`.
 - Show top 3 most-relevant + a "+N more" tail for `target_pages ≤ 1.5`.
 - Omit entirely (section not rendered) when the user has none.
+- **Patent numbers are never dropped** (owner rule, 2026-06-12). Every patent entry carries its number verbatim (e.g. `Patent US 9,876,543: …`); compressing a patent line keeps the number and trims elsewhere.
 
 ### `additional_information`
 
@@ -177,6 +189,7 @@ Record the choice in the role's change_log entry (`reason: "roleform_merged"` or
 - Languages: list with proficiency markers (e.g. "Native, Bilingual, Professional, Conversational"). Match the user's actual proficiency.
 - Volunteer roles: title and organisation, no narrative.
 - Hobbies: include only when they signal a relevant trait (e.g. "Rugby — Operations Manager, Copenhagen Wolves RFC" signals operations experience). Omit purely-personal hobbies for senior commercial roles.
+- **Accessibility items state the impairment** (owner rule, 2026-06-12): when the user has an accessibility entry, the text says explicitly that the request concerns a hearing-impaired person — never an unspecified accommodation line.
 
 ---
 
@@ -190,6 +203,7 @@ This is the default placement of each section by style. Worker reads this from `
 | core_competencies | main 2 | main 3 | main 2 | main 2 | main 2 | main 2 | main 2 | main 2 | main 3 | omit | user |
 | selected_outcomes | main 3 | main 2 | main 3 | main 3 | main 3 | main 3 | main 3 | main 3 | main 2 | main 2 | user |
 | experience | main 4 | main 4 | main 4 | main 4 | main 4 | main 4 | main 4 | main 4 | main 4 | main 3 | user |
+| recommendations | main 5 | main 5 | main 5 | main 5 | main 5 | main 5 | main 5 | main 5 | main 5 | main 4 | user |
 | tools_methods | sidebar | sidebar | sidebar | sidebar | sidebar | sidebar | sidebar | sidebar | sidebar | omit | user |
 | certifications | sidebar | sidebar | sidebar | sidebar | sidebar | sidebar | sidebar | sidebar | sidebar | omit | user |
 | education | sidebar | sidebar | sidebar | sidebar | sidebar | sidebar | sidebar | sidebar | sidebar | sidebar | user |
@@ -206,7 +220,7 @@ AntCV output is **always ATS-safe**. The question is which generation of ATS the
 
 | Tier | Targets | What changes |
 |---|---|---|
-| **ATS-Modern** (default) | Greenhouse, Lever, Ashby, Workday, SmartRecruiters, BambooHR, Teamtailor | Native two-column allowed (real Word columns, not tables-for-layout); photo retained; system fonts only; standard section headers; parser-safe table separators (em dash) |
+| **ATS-Modern** (default) | Greenhouse, Lever, Ashby, Workday, SmartRecruiters, BambooHR, Teamtailor | Native two-column allowed (real Word columns, not tables-for-layout); photo retained; system fonts only; standard section headers; parser-safe table separators (hyphen: `" - "`) |
 | **ATS-Legacy** | Taleo, iCIMS, SuccessFactors, symplr, Jobvite, Bullhorn, older Workday configurations | Single column; no photo; Calibri only; canonical section names; tables → bullets; glyphs → text |
 
 There is no "Native, non-ATS" tier. Every AntCV export is at minimum ATS-Modern compatible — the design assumption is that even an email submission to a human reviewer should not fall apart if forwarded into an ATS downstream.
@@ -226,18 +240,18 @@ The worker selects a tier based on, in order of priority:
 #### ATS-Modern
 
 - **Native two-column layout permitted** when implemented as proper Word `<w:cols>` section properties — never as tables-for-layout or text boxes. This is enforced by the visual worker downstream.
-- **Tables remain parseable**: each row is a real Word table row (`<w:tr>`), with the first row marked as a header (`<w:tblHeader/>`). The parser-safe separator inside flattenable cells is the em dash: `Focus Area — Strategic Expertise`. Never glyph-only separators.
+- **Tables remain parseable**: each row is a real Word table row (`<w:tr>`), with the first row marked as a header (`<w:tblHeader/>`). The parser-safe separator inside flattenable cells is the hyphen: `Focus Area - Strategic Expertise` (owner 2026-06-12: use `-`, never `—`). Never glyph-only separators.
 - **Photo retained**: modern ATS parses around photos without breaking.
 - **System fonts only**: Body font is per-package (Segoe UI for Copenhagen Modern and Delhi Technical, Cambria for Navy Executive, Palatino Linotype for Warm Terracotta and Pampas Contemporary, Verdana for Nordic Frost, Tahoma for Tokyo Precision — all Windows/Mac system fonts with 98 – 99% ATS-Modern parser safety, see `design-packages.md` § Font choices). Heading font is the package's defined heading font. Calibri is the override fallback if a user explicitly chooses it.
 - **Standard section headers**: the style's per-section naming applies, but creative variants are normalised (e.g., "My Journey" → "Work Experience"). The style's `atsBehavior` field controls the mapping.
 - **No icons next to headings**: glyph fields in `tools_methods` and `additional_information` render with text labels rather than ☎ / ✉ / 🔗 / ⌂.
-- **Date formats consistent**: every section uses the same date format (e.g., "2020 — 2025"), avoiding mixed formats that lower the parser's timeline-confidence score.
+- **Date formats consistent**: every section uses the same date format (e.g., "2020 - 2025"), avoiding mixed formats that lower the parser's timeline-confidence score.
 
 #### ATS-Legacy
 
 - **Single column**: every section renders in the main column. Sidebar content (`tools_methods`, `certifications`, `education`, `publications_patents`, `additional_information`) is appended to the main column in the same logical order, after `experience`.
 - **No photo**: the `profile_photo` section is omitted entirely.
-- **No tables for layout**: `core_competencies` becomes a bulleted list of `Focus area — Expertise` lines. `what_i_bring` in cover letters becomes bullets. The skill emits `format: "bullets"` for what would otherwise be `table-grid`, `structured-grid`, or any `hybrid-*` variant.
+- **No tables for layout**: `core_competencies` becomes a bulleted list of `Focus area - Expertise` lines. `what_i_bring` in cover letters becomes bullets. The skill emits `format: "bullets"` for what would otherwise be `table-grid`, `structured-grid`, or any `hybrid-*` variant.
 - **Canonical section headers only**: per-style naming is overridden. The canonical set is `Summary` (from Profile), `Skills` (from Core Competencies), `Achievements` (from Selected Outcomes), `Work Experience` (from Experience), `Education`, `Certifications`, `Publications`, `Additional Information`.
 - **Calibri throughout**: no per-package heading font.
 - **Glyph-free**: unicode bullets, decorative dividers, icon labels become text equivalents (☎ → "Phone:", ✉ → "Email:", 🔗 → "LinkedIn:", ⌂ → "Location:").
@@ -251,7 +265,7 @@ Modern:
 ```json
 { "core_competencies": {
     "format": "table-grid",
-    "parser_safe_separator": "em_dash",
+    "parser_safe_separator": "hyphen",
     "rows": [
       { "focus_area": "Functional safety", "expertise": "ISO 26262 assessor, two re-certifications" },
       { "focus_area": "Change governance", "expertise": "Multi-vendor change boards, ASPICE" }

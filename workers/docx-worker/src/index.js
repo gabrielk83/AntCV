@@ -24387,7 +24387,14 @@ function mergeStyle(input, packageId, legacyAtsTier) {
   for (const [k, v] of Object.entries(input || {})) {
     // 1.14.47 — indent-controls export parity: numeric px tokens from the
     // PWA's Advanced indent sliders. Clamped; converted to DXA at use sites.
-    if (k === "mainEdgeIndent" || k === "bulletIndent") {
+    if (
+      k === "mainEdgeIndent" || k === "bulletIndent" ||
+      // ADV-SPACING-CONTROLS-001 (1.14.60): spacing sliders, same px-token
+      // treatment (clamped 0..60, converted to DXA at use sites).
+      k === "bodyEdgePad" || k === "sidebarEdgePad" || k === "seamGap" ||
+      k === "mainSectionGap" || k === "sidebarSectionGap" ||
+      k === "bodySectionGap" || k === "candidateGap"
+    ) {
       const n = Number(v);
       if (Number.isFinite(n) && n >= 0 && n <= 60) s[k] = n;
       continue;
@@ -24577,6 +24584,19 @@ function buildTwoColumnDocument(ctx) {
   const sidebarPages = splitChildrenByPage(sidebarChildren);
   const mainPages = splitChildrenByPage(mainChildren);
   const numPages = Math.max(sidebarPages.length, mainPages.length, 1);
+  // ADV-SPACING-CONTROLS-001 (1.14.60, owner 2026-06-12): the PWA's spacing
+  // sliders. Forwarded only when off their defaults; vertical pads apply as
+  // DELTAS from the reviewed worker constants (the preview/worker verticals
+  // are deliberately not 1:1 — the navy band keeps extra breathing room).
+  const __pxTok = (k) => {
+    const n = Number(style && style[k]);
+    return Number.isFinite(n) && n >= 0 && n <= 60 ? n : void 0;
+  };
+  const __bodyV = __pxTok("bodyEdgePad");
+  const __vDelta = __bodyV != null ? Math.round((__bodyV - 8) * 15) : 0;
+  const __sbEdge = __pxTok("sidebarEdgePad");
+  const sbLR = __sbEdge != null ? Math.round(__sbEdge * 15) : 120;
+  const seamDxa = Math.round((__pxTok("seamGap") || 0) * 15);
   const makeSidebarCell = (els) => new TableCell({
     width: { size: ctx.sidebarW, type: WidthType.DXA },
     shading: { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" },
@@ -24587,7 +24607,7 @@ function buildTwoColumnDocument(ctx) {
     // publication line breaking at "2009" in the PDF but not the preview). Match
     // the preview's 120 DXA so the export text width lines up with the on-screen
     // measurer. Top kept at 240 (the navy band's breathing room).
-    margins: { top: 240, bottom: 240, left: 120, right: 120 },
+    margins: { top: Math.max(0, 240 + __vDelta), bottom: Math.max(0, 240 + __vDelta), left: sbLR, right: sbLR },
     children: els && els.length ? els : [emptyParagraph()]
   });
   // 1.14.47 — indent-controls export parity: the main column's edge padding
@@ -24599,7 +24619,13 @@ function buildTwoColumnDocument(ctx) {
   const makeMainCell = (els) => new TableCell({
     width: { size: ctx.mainW, type: WidthType.DXA },
     borders: noBorders(),
-    margins: { top: 120, bottom: 240, left: mainEdge, right: mainEdge },
+    // ADV-SPACING-CONTROLS-001: seamGap widens the seam side only.
+    margins: {
+      top: Math.max(0, 120 + __vDelta),
+      bottom: Math.max(0, 240 + __vDelta),
+      left: mainEdge + (sidebarOnRight ? 0 : seamDxa),
+      right: mainEdge + (sidebarOnRight ? seamDxa : 0)
+    },
     children: els && els.length ? els : [emptyParagraph()]
   });
   // PB-WORKER-SIDEBAR-FILL-001 (owner-confirmed 2026-06-10: "navy fill stops
@@ -25028,13 +25054,19 @@ __name(buildLinearDocument, "buildLinearDocument");
 function buildHeaderCell(ctx) {
   const { style, fs, pi, meta, headerAlign } = ctx;
   const out = [];
+  // ADV-SPACING-CONTROLS-001 (1.14.60): the candidate-header gap slider
+  // shifts the row spacing as a DELTA from the reviewed defaults
+  // (preview default 3px; px -> DXA at x15, floored at 0).
+  const __cgPx = Number(style && style.candidateGap);
+  const __cgDelta = Number.isFinite(__cgPx) && __cgPx >= 0 && __cgPx <= 60 ? Math.round((__cgPx - 3) * 15) : 0;
+  const __cgAfter = (base) => Math.max(0, base + __cgDelta);
   if (pi.name) {
     out.push(new Paragraph({
       alignment: alignType(headerAlign.name),
       // 1.14.27: the running-header strip is now a thin 2pt line, so give the
       // name back 3pt (before:60) of top space inside the band so it isn't
       // clipped at the top edge of the candidate section.
-      spacing: { before: 60, after: 40, line: 240, lineRule: "exact" },
+      spacing: { before: 60, after: __cgAfter(40), line: 240, lineRule: "exact" },
       shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
       children: [
         new TextRun({
@@ -25051,7 +25083,7 @@ function buildHeaderCell(ctx) {
   if (subtitle) {
     out.push(new Paragraph({
       alignment: alignType(headerAlign.specialisation),
-      spacing: { before: 0, after: 60 },
+      spacing: { before: 0, after: __cgAfter(60) },
       shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
       children: [
         new TextRun({
@@ -25064,18 +25096,26 @@ function buildHeaderCell(ctx) {
     }));
   }
   const LINK_GLYPH = "\u{1F517}\uFE0E";
+  // LINKEDIN-CLICK-001 (owner 2026-06-12): bits are {text, link?} objects so
+  // the LinkedIn entry can render as a real hyperlink run below.
   const contactBits = [];
-  if (pi.location) contactBits.push(`\u2302\xA0${pi.location}`);
-  if (pi.citizenship) contactBits.push(`\u2605\xA0${pi.citizenship}`);
-  if (pi.email) contactBits.push(`@\xA0${pi.email}`);
-  if (pi.phone) contactBits.push(`\u260E\xA0${pi.phone}`);
-  if (pi.linkedin) contactBits.push(`${LINK_GLYPH}\xA0${pi.linkedin}`);
-  if (pi.website) contactBits.push(`${LINK_GLYPH}\xA0${pi.website}`);
+  if (pi.location) contactBits.push({ text: `\u2302\xA0${pi.location}` });
+  if (pi.citizenship) contactBits.push({ text: `\u2605\xA0${pi.citizenship}` });
+  if (pi.email) contactBits.push({ text: `@\xA0${pi.email}` });
+  if (pi.phone) contactBits.push({ text: `\u260E\xA0${pi.phone}` });
+  if (pi.linkedin) {
+    const v = String(pi.linkedin).trim();
+    contactBits.push({
+      text: `${LINK_GLYPH}\xA0${pi.linkedin}`,
+      link: /^https?:/i.test(v) ? v : "https://" + v
+    });
+  }
+  if (pi.website) contactBits.push({ text: `${LINK_GLYPH}\xA0${pi.website}` });
   if (Array.isArray(pi.contact_extra)) {
     for (const it of pi.contact_extra) {
       if (it && it.value) {
         const icon = it.icon || "\u2022";
-        contactBits.push(`${icon}\xA0${it.value}`);
+        contactBits.push({ text: `${icon}\xA0${it.value}` });
       }
     }
   }
@@ -25096,30 +25136,43 @@ function buildHeaderCell(ctx) {
       alignment: alignType(headerAlign.contact),
       shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
       border: { top: { ...headerRule }, bottom: { ...headerRule } },
-      spacing: { before: 0, after: 60 },
-      children: [
-        new TextRun({
-          // 1.14.51 bridge round 3 (owner): ONE space around the bullet
-          // separators in bridge mode, and a width-fit font estimate so the
-          // line stays single in the narrower split text cell. Word can't
-          // self-measure, so estimate: usable cell \u2248 (PAGE_W \u2212 sidebarW \u2212
-          // 480 margins)/20 pt; avg glyph \u2248 0.55 \u00d7 fontPt. Clamp to
-          // [7pt, 0.88\u00d7contactSize].
-          ...(() => {
-            const bridge = normalisePhotoPosition(pi.photoPosition) === "band-overlap" && pi.photo_b64 && ctx.doc !== "cl";
-            if (!bridge) {
-              return { text: contactBits.join("   \u2022   "), size: pt2hp(fs.contactSize) };
-            }
-            const text = contactBits.join(" \u2022 ");
-            const cellPt = (PAGE_W - (ctx.sidebarW || Math.round(PAGE_W * 0.33)) - 480) / 20;
-            const fitPt = cellPt / (0.55 * Math.max(1, text.length));
-            const pt = Math.max(7, Math.min(fs.contactSize * 0.88, fitPt));
-            return { text, size: pt2hp(pt) };
-          })(),
-          color: style.headerContactColor,
-          font: style.headerFont
-        })
-      ]
+      spacing: { before: 0, after: __cgAfter(60) },
+      children: (() => {
+        // 1.14.51 bridge round 3 (owner): ONE space around the bullet
+        // separators in bridge mode, and a width-fit font estimate so the
+        // line stays single in the narrower split text cell. Word can't
+        // self-measure, so estimate: usable cell \u2248 (PAGE_W \u2212 sidebarW \u2212
+        // 480 margins)/20 pt; avg glyph \u2248 0.55 \u00d7 fontPt. Clamp to
+        // [7pt, 0.88\u00d7contactSize].
+        // LINKEDIN-CLICK-001: the line is now a run SEQUENCE \u2014 plain bits
+        // as TextRuns, the LinkedIn bit as an ExternalHyperlink (underlined,
+        // header colours kept). Font sizing unchanged: estimated from the
+        // FULL joined text exactly as before.
+        const bridge = normalisePhotoPosition(pi.photoPosition) === "band-overlap" && pi.photo_b64 && ctx.doc !== "cl";
+        const sep = bridge ? " \u2022 " : "   \u2022   ";
+        const full = contactBits.map((b) => b.text).join(sep);
+        let pt = fs.contactSize;
+        if (bridge) {
+          const cellPt = (PAGE_W - (ctx.sidebarW || Math.round(PAGE_W * 0.33)) - 480) / 20;
+          const fitPt = cellPt / (0.55 * Math.max(1, full.length));
+          pt = Math.max(7, Math.min(fs.contactSize * 0.88, fitPt));
+        }
+        const base = { color: style.headerContactColor, size: pt2hp(pt), font: style.headerFont };
+        const kids = [];
+        contactBits.forEach((b, i) => {
+          const prefix = i ? sep : "";
+          if (b.link) {
+            if (prefix) kids.push(new TextRun({ text: prefix, ...base }));
+            kids.push(new ExternalHyperlink({
+              link: b.link,
+              children: [new TextRun({ text: b.text, ...base, underline: {} })]
+            }));
+          } else {
+            kids.push(new TextRun({ text: prefix + b.text, ...base }));
+          }
+        });
+        return kids;
+      })()
     }));
   }
   if (out.length === 0) {
@@ -25692,12 +25745,19 @@ function headingParagraph(title2, ctx, isSidebar) {
     font: isSidebar ? style.sidebarFont : style.mainHeadFont,
     characterSpacing: 10
   };
+  // ADV-SPACING-CONTROLS-001 (1.14.60): the subsection-gap sliders shift the
+  // heading's before-space as a DELTA from the reviewed defaults (sidebar 40 /
+  // main 80) — px -> DXA at x15, floored at 0. Sidebar gap, letter-body gap
+  // (CL), and main gap are independent keys.
+  const __gapKey = isSidebar ? "sidebarSectionGap" : ctx.doc === "cl" ? "bodySectionGap" : "mainSectionGap";
+  const __gapPx = Number(style && style[__gapKey]);
+  const __gapDelta = Number.isFinite(__gapPx) && __gapPx >= 0 && __gapPx <= 60 ? Math.round((__gapPx - 8) * 15) : 0;
   return new Paragraph({
     // PREVIEW-PDF-SIDEBAR-GEOM-001 (owner 2026-06-10): the sidebar heading-to-
     // underline gap read much looser in the PDF than the preview. Tighten the
     // sidebar heading: smaller before-space and a smaller text-to-rule border
     // gap (space 2 vs 4 pt). Main headings keep the original spacing.
-    spacing: { before: isSidebar ? 40 : 80, after: isSidebar ? 30 : 40 },
+    spacing: { before: Math.max(0, (isSidebar ? 40 : 80) + __gapDelta), after: isSidebar ? 30 : 40 },
     // keepNext: heading must stay glued to whatever follows it, so a
     // heading never appears alone at the bottom of a page with its
     // content pushed to the next page. keepLines: never split the
@@ -26470,9 +26530,10 @@ function renderLabeledList(s, ctx, isSidebar) {
     const labelColor = isSidebar ? style.sidebarLabelColor || style.sidebarTextColor : style.mainHeadColor;
     out.push(new Paragraph({
       spacing: { before: 40, after: 40, line: 252, lineRule: "auto" },
-      // CJLR group default overrides the sidebar-JUSTIFIED default
-      // when set; otherwise the existing per-loc rule applies.
-      alignment: groupCjlr != null ? groupCjlr : isSidebar ? AlignmentType.JUSTIFIED : void 0,
+      // CJLR group default wins when set. NO-JUSTIFY-GAPS-001 (owner
+      // 2026-06-12): the sidebar default is LEFT now — justified text in the
+      // narrow column stretched word gaps into rivers. Mirrors the preview.
+      alignment: groupCjlr != null ? groupCjlr : void 0,
       shading: isSidebar ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" } : void 0,
       children: [
         ...label ? [new TextRun({
@@ -26600,7 +26661,8 @@ function renderEducation(s, ctx, isSidebar) {
     }
     out.push(new Paragraph({
       spacing: { before: 40, after: 40 },
-      alignment: groupCjlr != null ? groupCjlr : isSidebar ? AlignmentType.JUSTIFIED : void 0,
+      // NO-JUSTIFY-GAPS-001 (owner 2026-06-12): sidebar default LEFT.
+      alignment: groupCjlr != null ? groupCjlr : void 0,
       shading: isSidebar ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" } : void 0,
       children: runs
     }));
@@ -27014,7 +27076,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.59-photo-air";
+var VERSION = "1.14.60-owner-evening";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

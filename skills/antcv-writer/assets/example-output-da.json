@@ -3,7 +3,8 @@
   "generation_id": "gen_01H7XYZ123",
   "application_id": "app_01H7XYZ456",
   "role_slug": "product-manager",
-  "role_label_raw": "Senior Product Manager — Maersk",
+  "role_label_raw": "Senior Product Manager - Maersk",
+  "specialization": "Processes*Products*People",
   "writing_style": "measured-professional",
   "package": "copenhagen-modern",
   "target_language": "da",
@@ -20,7 +21,7 @@
     },
     "core_competencies": {
       "format": "table-grid",
-      "parser_safe_separator": "em_dash",
+      "parser_safe_separator": "hyphen",
       "rows": [
         {"focus_area": "Systemarkitektur", "expertise": "Hardware-software-grænseflade, krav-traceabilitet"},
         {"focus_area": "Change governance", "expertise": "Multi-leverandør change boards i automotive tier-1-programmer"},
@@ -53,7 +54,7 @@
       {
         "company": "Innoviz Technologies",
         "role": "System Architect & Change Control Lead",
-        "years": "2020 — 2025",
+        "years": "2020 - 2025",
         "location": "Israel / Remote",
         "format": "bullets",
         "items": [
@@ -65,7 +66,7 @@
       {
         "company": "Innoviz Technologies",
         "role": "Customer Change Requests Specialist",
-        "years": "2017 — 2020",
+        "years": "2017 - 2020",
         "location": "Israel",
         "format": "bullets",
         "items": [
@@ -77,7 +78,7 @@
       {
         "company": "Sirin Labs",
         "role": "Senior Electro-Optical Engineer",
-        "years": "2014 — 2017",
+        "years": "2014 - 2017",
         "location": "Israel",
         "format": "bullets",
         "items": [
@@ -88,17 +89,22 @@
       },
       {
         "company": "Kanzen konsulenter i nord ApS",
-        "role": "Stifter, Programme Management Specialist",
-        "years": "2022 — 2025",
-        "location": "København, Danmark",
+        "role": "Programme Management Specialist",
+        "years": "2022 - 2026",
+        "location": "2300 København",
         "format": "bullets",
         "items": [
-          "Stiftede konsulentvirksomheden sideløbende med Innoviz-rollen; rådgav tre virksomheder om programledelse og change governance i regulerede industrier.",
+          "Drev konsulentvirksomheden sideløbende med Innoviz-rollen; rådgav tre virksomheder om programledelse og change governance i regulerede industrier.",
           "Forfattede det ASPICE-indførelsesrammeværk, som én klient nu bruger som grundlag for deres interne change-control-standard.",
           "Etablerede den danske enhed, registrerede moms og skat, og ledede den operationelle side af virksomheden over tre år."
         ]
       }
     ],
+    "recommendations": {
+      "format": "paragraph",
+      "content": "Danske og internationale anbefalere oplyses på forespørgsel.",
+      "char_count": 60
+    },
     "tools_methods": {
       "format": "structured-grid",
       "groups": [
@@ -119,26 +125,26 @@
     "certifications": {
       "format": "bullets",
       "items": [
-        "BABOK — IIBA (2022)",
-        "Certified AI Practitioner (CNX-CAIP) — CNX (2024)",
-        "Six Sigma Black Belt — ASQ (2018)",
-        "Automotive SPICE — intacs (2021)",
-        "Prøve i Dansk 2 — Danskprøve (2023)"
+        "BABOK - IIBA (2022)",
+        "Certified AI Practitioner (CNX-CAIP) - CNX (2024)",
+        "Six Sigma Black Belt - ASQ (2018)",
+        "Automotive SPICE - intacs (2021)",
+        "Prøve i Dansk 2 - Danskprøve (2023)"
       ]
     },
     "education": {
       "format": "bullets",
       "items": [
-        "MBA — Technion, Israel Institute of Technology (2015)",
-        "M.Sc., Electrical Engineering — Tel Aviv University (2010)",
-        "B.Sc., Physics and Electrical Engineering (dobbelt) — Tel Aviv University (2008)"
+        "MBA - Technion, Israel Institute of Technology (2015)",
+        "M.Sc., Electrical Engineering - Tel Aviv University (2010)",
+        "B.Sc., Physics and Electrical Engineering (dobbelt) - Tel Aviv University (2008)"
       ]
     },
     "publications_patents": {
       "format": "bullets",
       "items": [
         "Karp-Gershon, G., et al. (2018). Karakterisering af optiske materialer. Optics Letters.",
-        "Patent: Optisk sensoropstilling (tildelt, 2017)."
+        "Patent US 9.876.543: Optisk sensoropstilling (tildelt, 2017)."
       ]
     },
     "additional_information": {
@@ -153,16 +159,20 @@
           "items": "Operations Manager, Copenhagen Wolves RFC"
         },
         {
-          "label": "Tilgængelighed",
+          "label": "Mobilitet",
           "items": "Klar til relokering; arbejdstilladelse i Danmark og EU"
+        },
+        {
+          "label": "Tilgængelighed",
+          "items": "Hørehæmmet; sætter pris på tydelig visuel kontakt og skriftlig opfølgning"
         }
       ]
     },
     "cover_letter": {
       "cl_header": {
         "name": "Gabriel Alexander Karp-Gershon",
-        "application_line": "Ansøgning: Senior Product Manager — Maersk",
-        "contacts": ["email@example.com", "linkedin.com/in/...", "København, Danmark"]
+        "application_line": "Ansøgning: Senior Product Manager - Maersk",
+        "contacts": ["email@example.com", "linkedin.com/in/...", "2300 København"]
       },
       "cl_opener": {
         "salutation": "Kære ansættelsesudvalg,",
@@ -171,7 +181,7 @@
       "who_i_am": "Jeg er teknisk produktchef med tolv års erfaring inden for hardware-programmer og kundevendt operationelt arbejde i regulerede industrier. De seneste fem år har jeg været hos Innoviz, hvor jeg ledede change governance og customer change request-lukning på tværs af tre automotive tier-1-kundeprogrammer. Arbejdet har ligget i grænsefladen mellem hardware-udvikling, kundeintegration og ASPICE-baseret procesdisciplin.",
       "what_i_bring": {
         "format": "table-grid",
-        "parser_safe_separator": "em_dash",
+        "parser_safe_separator": "hyphen",
         "rows": [
           {"focus_area": "Kundevendt produktejerskab", "expertise": "Customer change request-lukning på tværs af tre automotive tier-1-programmer"},
           {"focus_area": "Operationel kompleksitet i skala", "expertise": "Multi-leverandør change governance, ASPICE-baserede workflows"},
@@ -179,7 +189,7 @@
           {"focus_area": "Procesdisciplin", "expertise": "Six Sigma Black Belt, ISO 26262-assessor, ASPICE governance"}
         ]
       },
-      "why_this_position": "Rollen ligger i krydsfeltet mellem kundevendt produktarbejde og operationel kompleksitet — det samme krydsfelt, mine seneste fem år hos Innoviz har befundet sig i. Skiftet fra automotive tier-1-kundeprogrammer til Maersks logistik-tech-kundebase betyder en ændring af branche, men det underliggende arbejde — at eje produktet og kundeforholdet gennem change-cyklusser med operationel disciplin bag sig — er genkendeligt det samme.",
+      "why_this_position": "Rollen ligger i krydsfeltet mellem kundevendt produktarbejde og operationel kompleksitet - det samme krydsfelt, mine seneste fem år hos Innoviz har befundet sig i. Skiftet fra automotive tier-1-kundeprogrammer til Maersks logistik-tech-kundebase betyder en ændring af branche, men det underliggende arbejde - at eje produktet og kundeforholdet gennem change-cyklusser med operationel disciplin bag sig - er genkendeligt det samme.",
       "how_i_would_contribute": [
         "Jeg vil forvente at bruge de første tre måneder på at kortlægge customer change request-workflowet, som det ser ud i dag, og identificere friktionspunkter på samme måde, som jeg gjorde ved tiltrædelse hos Innoviz.",
         "Et nært bidrag vil være en struktureret pre-board screening-proces for change requests med høj effekt, baseret på det, jeg byggede og standardiserede hos Innoviz på tværs af tre programmer.",
@@ -187,7 +197,7 @@
       ],
       "foundation": {
         "hands_on": "Jeg er klar til at bruge de første uger på at læse den eksisterende change workflow-dokumentation, sidde med det operationelle team og skrive ned, hvad jeg ser, før jeg foreslår ændringer.",
-        "professionally": "Rollen vil være en naturlig fortsættelse af det arbejde, jeg har lavet — fra automotive hardware-programmer til logistik-tech-produktarbejde, men med samme operationelle og kundevendte kerne, der definerer min måde at arbejde på."
+        "professionally": "Rollen vil være en naturlig fortsættelse af det arbejde, jeg har lavet - fra automotive hardware-programmer til logistik-tech-produktarbejde, men med samme operationelle og kundevendte kerne, der definerer min måde at arbejde på."
       },
       "cl_close": {
         "sign_off": "Med venlig hilsen,",

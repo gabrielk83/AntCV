@@ -886,6 +886,19 @@ function buildStyle(styleConfig, navyColor) {
   // right — owner 2026-06-11: "text can stay where it is".
   const bi = numTok(styleConfig.bulletIndent);
   if (bi !== undefined && bi !== 24) out.bulletIndent = bi;
+  // ADV-SPACING-CONTROLS-001 (1.50.394 / worker 1.14.60): the spacing
+  // sliders. Forwarded ONLY when moved off the PWA defaults — the
+  // preview/worker verticals are deliberately not 1:1, so the worker
+  // applies them as deltas from its own reviewed constants; an untouched
+  // default forwards nothing and the export is byte-identical.
+  for (const [key, def] of [
+    ['bodyEdgePad', 8], ['sidebarEdgePad', 8], ['seamGap', 0],
+    ['mainSectionGap', 8], ['sidebarSectionGap', 8], ['bodySectionGap', 8],
+    ['candidateGap', 3],
+  ]) {
+    const v = numTok(styleConfig[key]);
+    if (v !== undefined && v !== def) out[key] = v;
+  }
   // 1.50.378 PAGEBREAK-STYLE-OPTIONS-001: page-flow prefs. Booleans/enum, not
   // colors — forwarded only when set off their defaults so older workers and
   // untouched users see no change.

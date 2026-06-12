@@ -413,10 +413,12 @@
         "enable", "robust", "comprehensive", "cutting-edge",
         "state-of-the-art", "world-class", "leading", "impactful", "rooted", "grounded",
         "committed", "passionate", "holistic", "cross-functional", "collaborative", "journey",
-        "dynamic", "proactive", "results-driven", "strategic", "agile"
+        "dynamic", "proactive", "results-driven", "strategic", "agile",
+        "discuss", "discusses", "discussed", "discussing"
       ],
       "da": [
-        "resultatorienteret"
+        "resultatorienteret",
+        "diskutere", "diskuterer", "diskuteret"
       ],
       "es": [
         "apasionado",

@@ -100,11 +100,26 @@ In addition to the global banned word/phrase lists, this style rejects:
 
 ---
 
+## Hard rules (owner-locked, 2026-06-12)
+
+These are binding for every nordic-minimal output. They are not style suggestions.
+
+1. **Specialization line.** Simple and catchy, three concepts at most — the pattern is `Processes*Products*People`. Unsolicited applications ALWAYS carry the candidate's stored specialization line; never drop it for an uopfordret ansøgning.
+2. **Banned word: `discuss`** (and inflections: discusses, discussed, discussing). Use "talk through", "walk through", or name the concrete topic instead.
+3. **Accessibility.** When the candidate has an accessibility item, the text must state explicitly that the request concerns a hearing-impaired person. Never an unspecified "accommodations requested" — the reader must know the nature of the accommodation.
+4. **Patents keep their numbers.** Every patent entry in publications/patents carries its patent number verbatim. Dropping the number to save space is not a valid compression.
+5. **Work style ends with a people skill.** The final item or sentence of the work-style section is always a people skill (e.g. clear written follow-ups, calm under disagreement, direct one-to-one communication) — never a process or tooling point.
+6. **Punctuation: `-`, never `—`.** Applies to year ranges, compression dashes, and table separators (`parser_safe_separator: "hyphen"`).
+7. **Contact line, Danish local form.** Postcode + local city name, no country: `2300 København` — not "Copenhagen", not "Denmark". LinkedIn renders as a clickable link, never plain text.
+8. **No justified text where it gapes.** Sentences and bullets are set left-aligned when justification would produce visible rivers of white space between words (narrow columns justify worst). Restraint includes typography.
+
+---
+
 ## Preferred forms
 
 - **Fragment bullets ending with a noun phrase.** "Two ASPICE re-certifications. Owner-driven, no audit findings."
 - **Numbers without padding.** "Cut review cycles 40%" not "by approximately 40%".
-- **Em-dash compression** for two-part bullets. "Multi-vendor change boards — automotive perception, three tier-1 suppliers."
+- **Hyphen compression** for two-part bullets. "Multi-vendor change boards - automotive perception, three tier-1 suppliers." Always `-`, never `—` (owner rule, 2026-06-12).
 - **Verb-first openers.** Led, Built, Closed, Owned, Cut, Set up, Negotiated, Drafted, Shipped.
 - **Domain nouns over generic ones.** "ASPICE assessment" not "quality process". "Customer change requests" not "stakeholder requirements management".
 

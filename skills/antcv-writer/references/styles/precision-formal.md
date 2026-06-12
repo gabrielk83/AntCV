@@ -62,7 +62,7 @@ Two to three sentences. 280 – 400 characters. Lead with role and a precise tec
 
 ### `experience`
 
-3 bullets per role. Each 14 – 22 words. At least one precise number per bullet where the work supports it.
+3 bullets per role. Each 14 – 22 words. At least one precise number per bullet where the work supports it. Past tense for past roles, present tense for the current role (the Auto tense default; Force present/past overrides it).
 
 **Good (Senior Optical Systems Engineer, Innoviz, 2020 – 2025):**
 

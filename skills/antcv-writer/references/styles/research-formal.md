@@ -59,7 +59,7 @@ Verbatim from `user_state.profile.publications`. Grouped by type (journal, confe
 
 ### `selected_research_outcomes`
 
-3 – 5 bullets. Each title 4 – 8 words; body 14 – 22 words. Frame as research-meaningful outcomes, not commercial.
+3 – 5 bullets. Each title 4 – 8 words; body 14 – 22 words. Frame as research-meaningful outcomes, not commercial. Past tense for past roles, present tense for the current role (the Auto tense default; Force present/past overrides it).
 
 **Good:**
 

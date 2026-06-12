@@ -1,10 +1,12 @@
 // exp-tense-oneline.test.mjs
 // ============================================================
-// EXP-TENSE-001 + NORDIC-ONELINE-001 (owner 2026-06-12 late):
-//   1. Advanced-styles checkbox toggles experience tense; PRESENT is the
-//      default (styleConfig.expPastTense, false by default);
-//   2. both tense rule strings exist in the bundle (the prompt picks one
-//      at draft time);
+// EXP-TENSE-002 + NORDIC-ONELINE-001 (owner 2026-06-12):
+//   1. Advanced-styles 3-way control sets experience tense mode
+//      (styleConfig.expTense: "auto" default | "present" | "past"); legacy
+//      expPastTense still read for back-compat;
+//   2. all three prompt rule strings exist in the bundle — AUTO (logical
+//      per-role), FORCED PRESENT, FORCED PAST — the prompt picks one at
+//      draft time;
 //   3. nordic-minimal carries the one-line caps in the PWA style prompt;
 //   4. the worker engines carry the matching SCE caps (mirrored copies).
 
@@ -17,16 +19,23 @@ import path from 'node:path';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const bundle = readFileSync(path.join(ROOT, 'app.js'), 'utf8');
 
-test('EXP-TENSE-001 — checkbox key + default present', () => {
-  assert.ok(bundle.includes('expPastTense'));
+test('EXP-TENSE-002 — 3-way control key + auto default + legacy back-compat', () => {
+  assert.ok(bundle.includes('expTense'));
   assert.ok(bundle.includes('data-antcv-exp-tense'));
-  assert.ok(bundle.includes('Experience bullets in past tense (default: present)'));
+  // legacy key still read for migration of persisted/cloud configs
+  assert.ok(bundle.includes('expPastTense'));
+  // the three control labels render
+  assert.ok(bundle.includes('Auto'));
+  assert.ok(bundle.includes('Present'));
+  assert.ok(bundle.includes('Past'));
 });
 
-test('EXP-TENSE-001 — both prompt rules present (present default wording)', () => {
-  assert.ok(bundle.includes('EXPERIENCE TENSE: write EVERY experience bullet in PRESENT tense'));
-  assert.ok(bundle.includes('EXPERIENCE TENSE: write EVERY experience bullet in PAST tense'));
-  assert.ok(bundle.includes('this is the default'));
+test('EXP-TENSE-002 — all three prompt rules present (auto logical + forced)', () => {
+  assert.ok(bundle.includes('EXPERIENCE TENSE (AUTO'));
+  assert.ok(bundle.includes('EXPERIENCE TENSE (FORCED PRESENT'));
+  assert.ok(bundle.includes('EXPERIENCE TENSE (FORCED PAST'));
+  // auto rule states the per-role logic
+  assert.ok(bundle.includes('LOGICAL per-role tense'));
 });
 
 test('NORDIC-ONELINE-001 — one-line caps in the PWA style prompt', () => {

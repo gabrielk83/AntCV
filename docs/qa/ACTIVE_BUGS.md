@@ -959,7 +959,14 @@ pushed to `main` + `claude/antcv-roadmap-bugs-L9Sqa` +
   `warning` (0.60–0.85) is left alone (too soft to reorder on). VERIFIED in
   headless Chromium (pwa/test/diag-llm-health-seed.mjs): startup hits
   `/api/llm-health?window=60` on the relay base, 0 errors. Boot-smoke clean.
-- **ENHANCE-#185-RESIDUAL-001** `[OPEN / needs repro]` — owner hit React #185 on
+- **ENHANCE-#185-RESIDUAL-001** `[OPEN / needs repro — synthetic attempt NO-REPRO 2026-06-12]`
+  Repro attempt (`pwa/test/diag-so004-185-repro.mjs`): preview inline-edit bursts
+  across 8 spans × 3 rounds + section-row interactions produced NO #185, no
+  "Maximum update depth", no blue screen — the 1.50.287 loop-guard held. Caveat:
+  the editor side-panel FIELD hammering half could not be exercised headlessly
+  (panel textareas not reachable via row-click in this harness), so the
+  editor-commit path the owner hit is only partially covered. If it recurs after
+  a hard refresh, capture the `#antcv-debug` log. Original report: owner hit React #185 on
   "Enhance core competencies" (cached 1.50.285). 1.50.287 loop-guard may fix it;
   if it recurs after hard-refresh capture `#antcv-debug` log (no speculative
   render patch).

@@ -2665,6 +2665,13 @@
           );
         } catch (_) {}
       })();
+      // OUTCOMES-QUANT-001 (owner 2026-06-13: outcomes showed the patent
+      // number while the strong quantified results — e.g. cycle 250→10 days,
+      // 90% cost reduction — were missing). SELECTED OUTCOMES must be the
+      // candidate's most QUANTIFIED, highest-impact results.
+      r.push(
+        "SELECTED OUTCOMES SELECTION (OUTCOMES-QUANT-001): choose the candidate's MOST QUANTIFIED, highest-impact results — prefer bullets carrying a number, percentage, time/cost delta, scale or named scope (e.g. a cycle-time reduction like \"250 → 10 days\", a \"90% cost reduction\", counts of programmes/vendors). A patent or publication is NEVER a SELECTED OUTCOMES bullet — patents live in the patents/publications subsection only; do not spend an outcomes slot on a patent number. If several quantified results exist, lead with the largest measurable deltas.",
+      );
       // PERSONALITY-KERNEL-001 (owner 2026-06-12, handoff T8 — canonical
       // source: skills/antcv-writer/assets/gabriel-kernel-personality-v1.json).
       // A stored personalInfo.personality object overrides the embedded
@@ -13955,10 +13962,32 @@
       }, [En, Rn]),
         React.useEffect(() => {
           try {
+            // WIZARD-LOGIN-FLASH-001 (owner 2026-06-13): during login there is
+            // a microsecond where getSignedInUser() is still falsy AND
+            // wizardCompleted hasn't been cloud-restored, so the wizard opened
+            // and instantly closed (a visible flash). Gate ALSO on any
+            // synchronous sign of a returning user: a present (non-expired)
+            // auth token, a session blob, or existing sections/personalInfo.
+            // A genuinely fresh visitor has none of these, so the wizard still
+            // opens for them.
+            const __returning = (() => {
+              try {
+                const tok = localStorage.getItem("antcv:auth:token");
+                const exp = parseInt(localStorage.getItem("antcv:auth:expires_at") || "0", 10);
+                if (tok && (!exp || exp * (exp < 1e12 ? 1e3 : 1) > Date.now())) return true;
+                if (localStorage.getItem("session")) return true;
+                const sec = u.get("sections", null);
+                if (sec && ((sec.cv && sec.cv.length) || (sec.cl && sec.cl.length))) return true;
+                const pi = ie();
+                if (pi && (pi.name || pi.background || (pi.email && pi.email.length))) return true;
+              } catch (_) {}
+              return false;
+            })();
             (window.AntcvAuth &&
               window.AntcvAuth.getSignedInUser &&
               window.AntcvAuth.getSignedInUser()) ||
               u.get("wizardCompleted", !1) ||
+              __returning ||
               yn(!0);
           } catch (e) {}
         }, []),

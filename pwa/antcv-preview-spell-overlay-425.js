@@ -46,6 +46,12 @@
     return o;
   }
   function clearOverlay() { var o = document.getElementById(OVERLAY_ID); if (o) o.innerHTML = ''; }
+  // GRAMMAR-MARKER-SCROLL-LAG-001 (owner 2026-06-13): the marks are fixed to
+  // viewport coords, so during a scroll (esp. mobile) they lag behind the text
+  // until the debounced rescan catches up. Hide them the instant a scroll starts
+  // so a stale, misaligned underline is never shown; scan() shows them again once
+  // it has redrawn at the new positions.
+  function hideOverlayNow() { var o = document.getElementById(OVERLAY_ID); if (o) o.style.visibility = 'hidden'; }
 
   // collect text nodes inside the preview that carry real words
   function textNodes(root) {
@@ -114,6 +120,7 @@
     })).then(function (results) {
       if (myToken !== scanToken) return; // superseded by a newer scan
       clearOverlay();
+      overlay().style.visibility = ''; // re-show after a scroll-hide, now realigned
       var count = 0;
       results.forEach(function (res) {
         if (!res || !res.marks.length || !res.node.isConnected) return;
@@ -224,6 +231,9 @@
   // ─── scheduling ──────────────────────────────────────────────────
   var t = null;
   function schedule() { clearTimeout(t); t = setTimeout(scan, 500); }
+  // Faster realign specifically after a scroll (the marks are hidden meanwhile).
+  var st = null;
+  function scrollSchedule() { hideOverlayNow(); clearTimeout(st); st = setTimeout(scan, 200); }
   // Ignore mutations that are ONLY our own overlay writes — otherwise drawing
   // marks re-triggers the observer and the overlay clears itself in a loop.
   function onMutations(muts) {
@@ -238,8 +248,8 @@
     schedule();
     [800, 1800, 3500].forEach(function (ms) { setTimeout(scan, ms); });
     try { new MutationObserver(onMutations).observe(document.body, { childList: true, subtree: true, characterData: true }); } catch (_) {}
-    window.addEventListener('scroll', schedule, true);
-    window.addEventListener('resize', schedule);
+    window.addEventListener('scroll', scrollSchedule, true);
+    window.addEventListener('resize', scrollSchedule);
     window.addEventListener('antcv:sections-updated', schedule);
     try { window.addEventListener('antcv:language-changed', function () { setTimeout(scan, 300); }); } catch (_) {}
   }

@@ -21438,7 +21438,11 @@
             ),
             React.createElement(
               "details",
-              { style: { marginTop: 8 } },
+              // PERSONAL-ORDER-001 (owner 2026-06-13): CV Sidebar Content must
+              // sit ABOVE Background. The order-based Personal column had lost
+              // the explicit orders, so both defaulted to 0 and rendered in DOM
+              // order (Background first). Background = 20, CV Sidebar = 10.
+              { style: { marginTop: 8, order: 20 } },
               React.createElement(
                 "summary",
                 {
@@ -21571,10 +21575,12 @@
             React.createElement(
               "details",
               {
+                // PERSONAL-ORDER-001: CV Sidebar Content above Background (10 < 20).
                 style: {
                   marginTop: 8,
                   paddingTop: 8,
                   borderTop: "1px dashed rgba(255,255,255,0.12)",
+                  order: 10,
                 },
               },
               React.createElement(

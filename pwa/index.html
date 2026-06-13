@@ -261,6 +261,19 @@
         break-before:page!important;
       }
     }
+    /* PERSONAL-LANG-CARD-FONT-001 (owner 2026-06-13): the "Languages in the top
+       bar" island button must match the native Personal-subtab <summary>
+       headings (9px, rgba(255,255,255,0.5), 0.8px tracking, uppercase) instead
+       of its larger 11px/0.55 style. Loaded in <head> so it applies the instant
+       the island mounts — no late restyle flash. */
+    #antcv-react-personal-languages > section > button,
+    #antcv-react-personal-languages [data-antcv-react-island="language-card"] > button {
+      font-size:9px!important;
+      color:rgba(255,255,255,0.5)!important;
+      letter-spacing:0.8px!important;
+      text-transform:uppercase!important;
+      font-weight:600!important;
+    }
   </style>
 <link rel="stylesheet" href="./antcv-mobile-controls.css?v=1.50.151-cldoc">
 <script>
@@ -309,7 +322,7 @@
         auth.src = 'antcv-auth.js?v=1.50.312-auth-msg';
         auth.onload = function(){
           var app = document.createElement('script');
-          app.src = 'app.js?v=1.50.420';
+          app.src = 'app.js?v=1.50.421';
           app.onload = function(){
             var vo = document.createElement('script');
             vo.src = 'antcv-version-override.js?v=1.50.41';
@@ -762,7 +775,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <!-- v1.40.351: mobile-only FAB cleanup. Hides the redundant mobile JD-analysis
      and Fusion FABs (title-keyed; they lack the data-attrs topbar-tools-347
      uses) and relocates the mobile Privacy FAB into the top bar as a compact
-     desktop-style pill with higher-contrast fill. -->
+     desktop-style pill with higher-contrast fill. -->
 <script src="antcv-wizard-mode-bridge-337.js?v=1.40.339" defer></script>
 <!-- v1.40.340-a: Phase 2 of the wizard-mode bridge. Reads /api/user/mode at
      boot / sign-in / focus / cross-tab and publishes the cloud value via

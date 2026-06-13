@@ -5495,9 +5495,40 @@
                           if (!__vis.length) return null;
                           const __myIdx = __vis.indexOf(e);
                           if (__myIdx < 0) return null;
+                          // OUTCOMES-RESULTS-DEDUPE-001 (owner 2026-06-13: "make
+                          // sure the role CONTENT and role RESULTS are NOT repeating
+                          // the same content exactly"): drop any outcome whose token
+                          // set is mostly contained in one of the roles' OWN bullets.
+                          // Results must add value, not echo the role's bullets.
+                          const __bulletSigs = [];
+                          __vis.forEach((r2) =>
+                            (Array.isArray(r2 && r2.bullets) ? r2.bullets : []).forEach(
+                              (bl) => {
+                                const bt = tok(
+                                  "string" == typeof bl
+                                    ? bl
+                                    : (bl && (bl.b || bl.t)) || "",
+                                );
+                                if (bt.length) __bulletSigs.push(new Set(bt));
+                              },
+                            ),
+                          );
+                          const __echoes = (x) => {
+                            const ts = tok(txtOf(x));
+                            if (!ts.length) return false;
+                            return __bulletSigs.some((sig) => {
+                              let m = 0;
+                              ts.forEach((w) => {
+                                if (sig.has(w)) m++;
+                              });
+                              return m >= Math.max(3, Math.ceil(0.7 * ts.length));
+                            });
+                          };
+                          const __pool = all.filter((x) => !__echoes(x));
+                          if (!__pool.length) return null;
                           const __assign = __vis.map(() => []);
                           const __left = [];
-                          all.forEach((x) => {
+                          __pool.forEach((x) => {
                             const ts2 = tok(txtOf(x));
                             let bi = -1;
                             for (let i = 0; i < __vis.length; i++) {
@@ -5509,14 +5540,25 @@
                             if (bi >= 0) __assign[bi].push(x);
                             else __left.push(x);
                           });
-                          let __li = 0;
-                          for (let i = 0; i < __assign.length; i++) {
-                            if (!__assign[i].length && __li < __left.length)
-                              __assign[i].push(__left[__li++]);
-                          }
-                          while (__li < __left.length) {
-                            __assign[__li % __assign.length].push(__left[__li]);
-                            __li++;
+                          // OUTCOMES-RESULTS-CAP-001 (owner 2026-06-13: "result
+                          // should not be more than 1.5-2 lines" + "all other roles
+                          // got a big chunk of the same result" + "results is
+                          // missing for the first professional experience"): cap each
+                          // role at 2 outcomes, spill the overflow + unmatched into
+                          // the EMPTIEST roles first so no role hogs a big chunk and
+                          // the first role is never starved.
+                          const __CAP = 2;
+                          const __spill = [];
+                          __assign.forEach((a) => {
+                            while (a.length > __CAP) __spill.push(a.pop());
+                          });
+                          __left.forEach((x) => __spill.push(x));
+                          let __si = 0;
+                          for (let pass = 0; pass < __CAP && __si < __spill.length; pass++) {
+                            const want = pass + 1;
+                            for (let i = 0; i < __assign.length && __si < __spill.length; i++) {
+                              if (__assign[i].length < want) __assign[i].push(__spill[__si++]);
+                            }
                           }
                           const mine = __assign[__myIdx];
                           if (!mine.length) return null;
@@ -5524,20 +5566,15 @@
                             "div",
                             {
                               "data-antcv-role-results": t,
-                              // OUTCOMES-RESULTS-STYLE-001 (owner 2026-06-13):
-                              // the inline results read as a BOLD, style-colored
-                              // line attached DIRECTLY to the role content (no
-                              // gap). Colour follows the style (sub-heading /
-                              // bullet / main-head colour).
+                              // OUTCOMES-RESULTS-STYLE-001 (owner 2026-06-13: "only
+                              // the word result need to be in bold the rest is
+                              // normal text"): the line is NORMAL weight in the body
+                              // ink; only the "Results:" label is bold + styled.
                               style: {
                                 fontSize: $.bullet,
                                 marginTop: 0,
-                                fontWeight: 700,
-                                color:
-                                  d.mainSubHeadColor ||
-                                  d.mainBulletColor ||
-                                  d.mainHeadColor ||
-                                  "#283556",
+                                fontWeight: 400,
+                                color: d.mainTextColor || "#333",
                                 fontFamily: T,
                                 lineHeight: I,
                               },
@@ -5548,20 +5585,32 @@
                                 style: {
                                   fontWeight: 700,
                                   fontStyle: "italic",
+                                  color:
+                                    d.mainSubHeadColor ||
+                                    d.mainBulletColor ||
+                                    d.mainHeadColor ||
+                                    "#283556",
                                 },
                               },
                               "Results: ",
                             ),
-                            mine
-                              .map((x) =>
-                                "string" == typeof x
-                                  ? x
-                                  : [x.b, x.t]
-                                      .filter(Boolean)
-                                      .join(" ")
-                                      .trim(),
-                              )
-                              .join("; "),
+                            (() => {
+                              // OUTCOMES-RESULTS-CAP-001: hard char budget so the
+                              // line never exceeds ~2 lines, regardless of how long
+                              // the matched outcomes are.
+                              let __txt = mine
+                                .map((x) =>
+                                  "string" == typeof x
+                                    ? x
+                                    : [x.b, x.t].filter(Boolean).join(" ").trim(),
+                                )
+                                .join("; ");
+                              if (__txt.length > 180)
+                                __txt =
+                                  __txt.slice(0, 177).replace(/[;,\s]+\S*$/, "") +
+                                  "…";
+                              return __txt;
+                            })(),
                           );
                         } catch (_) {
                           return null;

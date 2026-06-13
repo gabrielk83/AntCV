@@ -28,10 +28,26 @@
   'use strict';
 
   if (window.__antcvSpellAnnotatorInstalled) return;
-  var VERSION = '1.50.384';
+  var VERSION = '1.50.434';
   window.__antcvSpellAnnotatorInstalled = VERSION;
 
-  var DICT_LANGS = { en: 'dictionary-en', da: 'dictionary-da', es: 'dictionary-es' };
+  // SPELL-EN-VARIANT-001 (owner 2026-06-13): English defaults to UK (en-GB);
+  // US (en-US) is selectable. zh has no Hunspell dictionary — a symbol-in-
+  // sentence-fit check is a separate context/LLM path (SPELL-ZH-CONTEXT-001).
+  var DICT_PKG = {
+    'en-gb': 'dictionary-en-gb',
+    'en-us': 'dictionary-en-us',
+    da: 'dictionary-da',
+    es: 'dictionary-es',
+  };
+  function enVariant() {
+    try { return localStorage.getItem('antcv:spell:enVariant') === 'us' ? 'us' : 'gb'; }
+    catch (_) { return 'gb'; }
+  }
+  // dictKey: the cache + engine identity. English resolves to en-gb / en-us so
+  // switching the variant reloads the correct dictionary.
+  function dictKey(l) { return l === 'en' ? 'en-' + enVariant() : l; }
+  function hasDict(l) { return l === 'en' || l === 'da' || l === 'es'; }
   var CDN = 'https://cdn.jsdelivr.net/npm/';
   var DEBOUNCE_MS = 600;
   var MAX_SUGGEST = 6;
@@ -52,7 +68,7 @@
     try {
       if (localStorage.getItem('antcv:spell:enabled') === '0') return false;
       var l = lang();
-      if (!DICT_LANGS[l]) return false; // zh / unknown — no dictionary
+      if (!hasDict(l)) return false; // zh / unknown — no Hunspell dictionary
       var per = JSON.parse(localStorage.getItem('antcv:spell:langs') || '{}');
       if (per && per[l] === false) return false;
       return true;
@@ -99,23 +115,25 @@
     });
   }
   function dictUrls(l) {
+    var k = dictKey(l);
     var base = window.__antcvSpellDictBase
-      ? String(window.__antcvSpellDictBase).replace('{lang}', l)
-      : CDN + DICT_LANGS[l] + '@latest/';
+      ? String(window.__antcvSpellDictBase).replace('{lang}', k)
+      : CDN + DICT_PKG[k] + '@latest/';
     return { aff: base + 'index.aff', dic: base + 'index.dic' };
   }
   async function loadDict(l) {
+    var key = dictKey(l);
     var db = null;
     try { db = await idb(); } catch (_) {}
     if (db) {
-      var cached = await idbGet(db, l);
+      var cached = await idbGet(db, key);
       if (cached && cached.aff && cached.dic) return cached;
     }
     var u = dictUrls(l);
     var aff = await (await fetch(u.aff)).text();
     var dic = await (await fetch(u.dic)).text();
     var rec = { aff: aff, dic: dic, ts: 0 };
-    if (db) await idbPut(db, l, rec);
+    if (db) await idbPut(db, key, rec);
     return rec;
   }
   function loadVendor() {
@@ -132,13 +150,14 @@
   var engine = null, engineLang = null, engineLoading = null;
   function getEngine() {
     var l = lang();
-    if (engine && engineLang === l) return Promise.resolve(engine);
+    var k = dictKey(l);
+    if (engine && engineLang === k) return Promise.resolve(engine);
     if (engineLoading) return engineLoading;
     engineLoading = (async function () {
       await loadVendor();
       var d = await loadDict(l);
       engine = window.nspell(d);
-      engineLang = l;
+      engineLang = k;
       engineLoading = null;
       return engine;
     })().catch(function (e) {
@@ -346,27 +365,34 @@
   function readLangsMap() {
     try { return JSON.parse(localStorage.getItem('antcv:spell:langs') || '{}') || {}; } catch (_) { return {}; }
   }
+  function removeSettings() { var e = document.getElementById(UI_ID); if (e) e.remove(); }
   function injectSettings() {
-    if (document.getElementById(UI_ID)) return;
-    var anchor = null;
-    var els = document.querySelectorAll('div');
-    for (var i = 0; i < els.length; i++) {
-      var el = els[i];
-      if (el.childNodes.length === 1 && el.firstChild && el.firstChild.nodeType === 3 &&
-          /zero-retention modes/i.test(el.textContent || '')) {
-        anchor = el.parentNode || el;
-        break;
-      }
+    // SPELL-RELOCATE-001 (owner 2026-06-13): the SPELLING block used to sit in
+    // the Account privacy zone. It now lives as a COLLAPSIBLE <details> directly
+    // under the "Languages in the top bar" card in Settings → Personal, because
+    // spelling is language-driven. Removed when that anchor is absent so it is
+    // NOT sticky across subtabs.
+    var langCard = document.getElementById('antcv-react-personal-languages');
+    if (!langCard || !langCard.parentElement) { removeSettings(); return; }
+    var col = langCard.parentElement;
+    var existing = document.getElementById(UI_ID);
+    if (existing) {
+      if (existing.parentElement !== col) existing.remove();
+      else return;
     }
-    if (!anchor || !anchor.parentNode) return;
-    var box = document.createElement('div');
+    var box = document.createElement('details');
     box.id = UI_ID;
-    box.style.cssText = 'margin:10px 0;padding:10px 12px;border:1px solid rgba(1,183,187,0.35);border-radius:8px;font-size:12px;color:#cfe9ea;';
-    var head = document.createElement('div');
-    head.textContent = 'SPELLING';
-    head.style.cssText = 'font-size:10px;font-weight:700;letter-spacing:0.8px;color:#01B7BB;margin-bottom:6px;';
-    box.appendChild(head);
-    function row(label, checked, onChange) {
+    // order:21 → directly under the Languages card (20), before Experience Tense (22).
+    box.style.cssText = 'order:21;margin:6px 0 0;padding:0;border:1px solid rgba(1,183,187,0.35);border-radius:8px;font-size:12px;color:#cfe9ea;';
+    var sum = document.createElement('summary');
+    sum.textContent = 'SPELLING';
+    sum.style.cssText = 'cursor:pointer;user-select:none;font-size:10px;font-weight:700;letter-spacing:0.8px;color:#01B7BB;padding:9px 12px;list-style:none;text-transform:uppercase;';
+    box.appendChild(sum);
+    var body = document.createElement('div');
+    body.style.cssText = 'padding:2px 12px 10px;';
+    box.appendChild(body);
+
+    function row(parent, label, checked, onChange) {
       var lab = document.createElement('label');
       lab.style.cssText = 'display:flex;align-items:center;gap:7px;margin:3px 0;cursor:pointer;';
       var cb = document.createElement('input');
@@ -376,26 +402,70 @@
       cb.addEventListener('change', function () { onChange(cb.checked); });
       lab.appendChild(cb);
       lab.appendChild(document.createTextNode(label));
-      box.appendChild(lab);
+      parent.appendChild(lab);
       return cb;
     }
+
     var masterOn = (function () { try { return localStorage.getItem('antcv:spell:enabled') !== '0'; } catch (_) { return true; } })();
-    row('Spelling underlines (editor + preview)', masterOn, function (v) {
+    row(body, 'Spelling underlines (editor + preview)', masterOn, function (v) {
       try { localStorage.setItem('antcv:spell:enabled', v ? '1' : '0'); } catch (_) {}
     });
+
     var per = readLangsMap();
-    [['en', 'English'], ['da', 'Dansk'], ['es', 'Español']].forEach(function (pair) {
-      row('· ' + pair[1], per[pair[0]] !== false, function (v) {
+
+    // English row + a UK / US variant selector (default UK).
+    var enWrap = document.createElement('div');
+    enWrap.style.cssText = 'display:flex;align-items:center;gap:8px;margin:3px 0;flex-wrap:wrap;';
+    var enLab = document.createElement('label');
+    enLab.style.cssText = 'display:flex;align-items:center;gap:7px;cursor:pointer;';
+    var enCb = document.createElement('input');
+    enCb.type = 'checkbox'; enCb.checked = per.en !== false; enCb.style.cursor = 'pointer';
+    enCb.addEventListener('change', function () {
+      var m = readLangsMap(); m.en = enCb.checked;
+      try { localStorage.setItem('antcv:spell:langs', JSON.stringify(m)); } catch (_) {}
+    });
+    enLab.appendChild(enCb); enLab.appendChild(document.createTextNode('· English'));
+    enWrap.appendChild(enLab);
+    function paintVariants() {
+      box.querySelectorAll('[data-antcv-en-variant]').forEach(function (x) {
+        var on = enVariant() === x.getAttribute('data-antcv-en-variant');
+        x.style.borderColor = on ? '#01B7BB' : 'rgba(255,255,255,0.18)';
+        x.style.background = on ? 'rgba(1,183,187,0.12)' : 'transparent';
+        x.style.color = on ? '#01B7BB' : 'rgba(255,255,255,0.7)';
+      });
+    }
+    function variantBtn(code, label) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.textContent = label;
+      b.setAttribute('data-antcv-en-variant', code);
+      b.style.cssText = 'padding:2px 9px;font-size:10px;font-weight:700;border-radius:5px;cursor:pointer;border:1px solid rgba(255,255,255,0.18);background:transparent;color:rgba(255,255,255,0.7);';
+      b.addEventListener('click', function () {
+        try { localStorage.setItem('antcv:spell:enVariant', code); } catch (_) {}
+        if (window.AntcvSpell && window.AntcvSpell._invalidate) window.AntcvSpell._invalidate();
+        paintVariants();
+        try { window.dispatchEvent(new CustomEvent('antcv:spell-variant-changed', { detail: { variant: code } })); } catch (_) {}
+      });
+      return b;
+    }
+    enWrap.appendChild(variantBtn('gb', 'UK'));
+    enWrap.appendChild(variantBtn('us', 'US'));
+    body.appendChild(enWrap);
+    paintVariants();
+
+    [['da', 'Dansk'], ['es', 'Español']].forEach(function (pair) {
+      row(body, '· ' + pair[1], per[pair[0]] !== false, function (v) {
         var m = readLangsMap();
         m[pair[0]] = v;
         try { localStorage.setItem('antcv:spell:langs', JSON.stringify(m)); } catch (_) {}
       });
     });
+
     var note = document.createElement('div');
-    note.textContent = 'Chinese has no dictionary-based spellcheck (unsegmented script).';
-    note.style.cssText = 'font-size:10.5px;color:rgba(255,255,255,0.4);margin-top:4px;';
-    box.appendChild(note);
-    anchor.parentNode.insertBefore(box, anchor.nextSibling);
+    note.innerHTML = 'Dictionaries follow the document language. English defaults to <strong>UK</strong>. Chinese spellcheck is a symbol-in-sentence-fit check (coming) — Hunspell can’t segment Chinese.';
+    note.style.cssText = 'font-size:10.5px;color:rgba(255,255,255,0.42);margin-top:6px;line-height:1.45;';
+    body.appendChild(note);
+
+    col.appendChild(box);
   }
   var settingsTimer = null;
   var settingsMo = new MutationObserver(function () {
@@ -428,5 +498,9 @@
     addToDict: function (word) { try { addToUserDict(lang(), String(word || '')); } catch (_) {} },
     lang: lang,
     enabled: enabled,
+    // SPELL-EN-VARIANT-001: drop the cached engine so the next check() reloads
+    // the dictionary for the current language + English variant (UK/US).
+    _invalidate: function () { engine = null; engineLang = null; engineLoading = null; },
+    _enVariant: enVariant,
   };
 })();

@@ -226,10 +226,41 @@
       var i = el('input', 'width:' + (width || '100%') + ';box-sizing:border-box;font-size:11px;padding:4px 7px;margin-bottom:5px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.06);color:#fff;');
       i.placeholder = ph; i.type = type || 'text'; form.appendChild(i); return i;
     };
-    var fLabel = inp('label, e.g. "Llama-3.3-70B (Groq)"');
+    var fLabel = inp('label, e.g. "Llama-3.3-70B (Groq)" — optional');
     var fBase = inp('base URL, e.g. https://api.groq.com/openai/v1');
-    var fModel = inp('model id, e.g. llama-3.3-70b-versatile');
-    var fKey = inp('API key (stored locally only)', 'password');
+    var fKey = inp('API key', 'password');
+    // LLM-ONBOARD-002 (owner 2026-06-13): "just add the api key and get the
+    // rest from interaction with the llm". Discover models via {base}/models.
+    var modelRow = el('div', 'display:flex;gap:6px;align-items:center;');
+    var fModel = el('input', 'flex:1;box-sizing:border-box;font-size:11px;padding:4px 7px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.06);color:#fff;');
+    fModel.placeholder = 'model id — or click Discover';
+    var discoverBtn = el('button', 'font-size:10.5px;padding:4px 9px;border-radius:6px;border:1px solid #01B7BB;background:rgba(1,183,187,0.12);color:#bfeff0;cursor:pointer;white-space:nowrap;', 'Discover');
+    discoverBtn.type = 'button';
+    discoverBtn.onclick = async function () {
+      var base = fBase.value.trim().replace(/\/+$/, '');
+      if (!base) { alert('Enter the base URL first.'); return; }
+      discoverBtn.textContent = '…'; discoverBtn.disabled = true;
+      try {
+        var res = await fetch(base + '/models', { headers: fKey.value.trim() ? { Authorization: 'Bearer ' + fKey.value.trim() } : {} });
+        var data = await res.json();
+        var ids = (data && (data.data || data.models || []) || []).map(function (m) { return typeof m === 'string' ? m : (m.id || m.name); }).filter(Boolean);
+        if (!ids.length) throw new Error('no models in the response');
+        // prefer a chat/instruct model; else the first
+        var pick = ids.find(function (i) { return /chat|instruct|turbo|sonnet|gpt|llama|mistral|gemini|qwen/i.test(i); }) || ids[0];
+        fModel.value = pick;
+        if (!fLabel.value.trim()) fLabel.value = pick;
+        discoverBtn.textContent = ids.length + ' found';
+        fModel.title = 'Discovered ' + ids.length + ' models. Top: ' + ids.slice(0, 8).join(', ');
+      } catch (e) {
+        // CORS or no /models — fall back to manual entry
+        discoverBtn.textContent = 'manual';
+        fModel.placeholder = 'auto-discover blocked — type the model id';
+        try { console.debug('[llm-lab] model discovery failed:', e && e.message); } catch (_) {}
+      }
+      discoverBtn.disabled = false;
+    };
+    modelRow.appendChild(fModel); modelRow.appendChild(discoverBtn);
+    form.appendChild(modelRow);
     var priceRow = el('div', 'display:flex;gap:6px;');
     var fIn = el('input', 'flex:1;font-size:11px;padding:4px 7px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.06);color:#fff;');
     fIn.placeholder = '$/1M input'; fIn.type = 'number'; fIn.step = '0.01';
@@ -237,19 +268,30 @@
     fOut.placeholder = '$/1M output'; fOut.type = 'number'; fOut.step = '0.01';
     priceRow.appendChild(fIn); priceRow.appendChild(fOut);
     form.appendChild(priceRow);
-    var add = el('button', 'margin-top:7px;font-size:11px;font-weight:700;padding:5px 14px;border-radius:7px;border:none;background:#01B7BB;color:#06262b;cursor:pointer;', 'Save (pending audit)');
+    var add = el('button', 'margin-top:7px;font-size:11px;font-weight:700;padding:5px 14px;border-radius:7px;border:none;background:#01B7BB;color:#06262b;cursor:pointer;', 'Save + audit now');
     add.type = 'button';
-    add.onclick = function () {
+    add.onclick = async function () {
       var label = fLabel.value.trim(), base = fBase.value.trim(), model = fModel.value.trim();
-      if (!base || !model) { alert('Base URL and model id are required.'); return; }
-      var all = llms();
-      all.push({
+      if (!base || !model) { alert('Base URL and model id are required (use Discover to fetch the model id).'); return; }
+      var rec = {
         id: 'llm' + Date.now().toString(36), label: label || model, baseUrl: base, model: model,
         key: fKey.value.trim(),
         pricing: { inputPer1M: parseFloat(fIn.value) || 0, outputPer1M: parseFloat(fOut.value) || 0 },
         status: 'pending', addedAt: new Date().toISOString(),
-      });
-      save('antcv:customLlms', all);
+      };
+      var all = llms(); all.push(rec); save('antcv:customLlms', all);
+      render(host);
+      // LLM-ONBOARD-002 (owner: "audit the llm as soon as it is provided"):
+      // run the battery immediately so the owner sees task-fit without a
+      // second click.
+      add.textContent = 'auditing…'; add.disabled = true;
+      try {
+        var res = await runAudit(rec);
+        var cur = llms(); var i = cur.findIndex(function (x) { return x.id === rec.id; });
+        if (i >= 0) { cur[i] = Object.assign({}, cur[i], { audit: res }); save('antcv:customLlms', cur); }
+        registryAppend({ kind: 'llm-audit', id: rec.id, label: rec.label, model: rec.model, baseUrl: rec.baseUrl, result: res });
+      } catch (e) { try { console.debug('[llm-lab] auto-audit failed:', e && e.message); } catch (_) {} }
+      add.textContent = 'Save + audit now'; add.disabled = false;
       render(host);
     };
     form.appendChild(add);

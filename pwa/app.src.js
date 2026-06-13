@@ -2627,7 +2627,7 @@
                 .filter(Boolean);
               if (lines.length)
                 r.push(
-                  "STORED WORK HISTORY — these are the candidate's REAL roles, newest first (r1 = most recent). Fill cv_overrides.experience_roles from THESE: use the exact role title, company and years, and draft bullets from the listed responsibilities. INCLUDE EVERY stored role in experience_roles — roles irrelevant to this application must STILL be returned fully populated with on:false (hidden), NEVER dropped and NEVER returned as blank slots. DUPLICATE-ROLE MERGE (ROLE-DUP-001): when two stored roles describe the SAME position — same company, same or overlapping years, one title contained in the other (e.g. \"System Architect\" vs \"System Architect & CRM\") — output ONE merged role carrying the fuller title; the two title variants must NEVER both be visible. NEVER invent roles/companies/dates not listed here, and NEVER return the schema placeholder markers (<...>) verbatim:\n" +
+                  "STORED WORK HISTORY — these are the candidate's REAL roles, newest first (r1 = most recent). Fill cv_overrides.experience_roles from THESE: use the exact role title, company and years, and draft bullets from the listed responsibilities. INCLUDE EVERY stored role in experience_roles — roles irrelevant to this application must STILL be returned fully populated with on:false (hidden), NEVER dropped and NEVER returned as blank slots. DUPLICATE-ROLE MERGE (ROLE-DUP-001): when two stored roles describe the SAME position — same company, same or overlapping years (e.g. \"System Architect\" vs \"System Architect & CRM\", or \"Customer Change Requests Specialist\" vs \"System Architect & Change Control Lead\" at the SAME company over the SAME period) — output ONE merged role carrying the fuller / most senior title; the two title variants must NEVER both be visible, even when neither title contains the other. NO-FOUNDER (ROLE-FOUNDER-001): never use the word \"Founder\" or \"Co-Founder\" in any role title or in prose; \"Independent\" is allowed ONLY when describing a genuine independent-consultancy engagement (e.g. Kanzen konsulenter), never as a generic self-label. NEVER invent roles/companies/dates not listed here, and NEVER return the schema placeholder markers (<...>) verbatim:\n" +
                     lines.join("\n"),
                 );
             }
@@ -14687,6 +14687,43 @@
                 "duplicate role title variant(s)",
               );
             } catch (_) {}
+          } catch (_) {}
+        }, [ro]),
+        // ROLE-FOUNDER-001 (owner 2026-06-13: "remove the word founder ...
+        // unless it is a consultancy/independent job"): strip "Founder" /
+        // "Co-Founder" from stored experience role TITLES. "Independent" is
+        // kept (legitimate for consultancy engagements like Kanzen
+        // konsulenter). Title-only + idempotent: re-runs no-op once clean.
+        React.useEffect(() => {
+          try {
+            if (!(ro && Array.isArray(ro.cv))) return;
+            let touched = false;
+            const cv = ro.cv.map((s) => {
+              if (!s || "experience" !== s.type || !Array.isArray(s.roles)) return s;
+              const roles = s.roles.map((r) => {
+                if (!r || !r.title || !/\bfounder\b/i.test(String(r.title)))
+                  return r;
+                // Founder present -> remove it, then tidy ONLY the separators
+                // left dangling by its removal (don't touch other "&"s).
+                const cleaned = String(r.title)
+                  .replace(/\bco[-\s]?founder\b/gi, "")
+                  .replace(/\bfounder\b/gi, "")
+                  .replace(/\s{2,}/g, " ")
+                  .replace(/^[\s&,/|-]+|[\s&,/|-]+$/g, "")
+                  .replace(/\s+[&,/|]\s*$/g, "")
+                  .trim();
+                if (cleaned && cleaned !== r.title) {
+                  touched = true;
+                  return { ...r, title: cleaned };
+                }
+                return r;
+              });
+              return touched ? { ...s, roles } : s;
+            });
+            if (touched) {
+              ao({ ...ro, cv });
+              try { console.log("[ROLE-FOUNDER-001] stripped 'Founder' from a role title"); } catch (_) {}
+            }
           } catch (_) {}
         }, [ro]),
         React.useEffect(() => {

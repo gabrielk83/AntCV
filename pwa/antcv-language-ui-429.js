@@ -278,7 +278,11 @@
       const kids=Array.from(root.children).filter(shown);return kids.length?kids[kids.length-1]:root;
     }
     function build(){
-      const wrap=document.createElement('details');wrap.dataset.antcvLanguagePrefs='1';wrap.setAttribute('data-antcv-language-prefs','1');wrap.open=false;wrap.style.cssText='margin:4px 0 12px 0;padding:0;border-radius:8px;';
+      // PERSONAL-CARDS-VERTICAL-001 (owner 2026-06-13): full-width so the
+      // "LANGUAGES IN THE TOP BAR" panel always takes its OWN row in the Personal
+      // flex column and never sits horizontally beside the Done / personality
+      // controls. Mirrors the personality-kernel + spell + tense cards.
+      const wrap=document.createElement('details');wrap.dataset.antcvLanguagePrefs='1';wrap.setAttribute('data-antcv-language-prefs','1');wrap.open=false;wrap.style.cssText='margin:4px 0 12px 0;padding:0;border-radius:8px;width:100%;flex:0 0 100%;box-sizing:border-box;';
       const sum=document.createElement('summary');sum.textContent='LANGUAGES IN THE TOP BAR';sum.style.cssText='cursor:pointer;user-select:none;font-size:11px;font-weight:800;color:rgba(255,255,255,.72);padding:9px 12px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.15);border-radius:8px;letter-spacing:.25px;list-style:none;text-transform:uppercase;';wrap.appendChild(sum);
       const body=document.createElement('div');body.style.cssText='padding:10px 12px 4px 12px;';const help=document.createElement('div');help.textContent='Choose which language buttons appear in the top bar. This does not translate or regenerate anything. At least one must stay enabled.';help.style.cssText='font-size:10px;color:rgba(255,255,255,.50);line-height:1.45;margin-bottom:10px;';body.appendChild(help);
       function repaint(){const on=new Set(read());body.querySelectorAll('input[data-code]').forEach(cb=>{cb.checked=on.has(cb.dataset.code)})}

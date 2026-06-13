@@ -68,7 +68,7 @@ const STYLES = {
     'Cover letter is a forward-looking statement of intent, NOT a CV recap. Open with motivation for THIS employer in their own words (why them specifically, not generic interest); then the concrete tasks you can solve, how you approach them, the methods and tools you bring, and the effect for the employer; close with the personal qualities that make you a good colleague in this team. Frame value to the EMPLOYER (how you help them reach their goals), never what you gain. Keep it to one page.',
     'CV opens with a 5 to 7 line elevator pitch focused on what you offer the employer, targeted to this job; then core competencies as bullets, each tied to the job; then experience in reverse-chronological order with both responsibilities and results. Short, scannable, sub-headed.',
     'Use section headings that carry the job\'s professional keywords so the reader can skim it in seconds.',
-    'ONE-LINE RULE (hard cap): every SELECTED OUTCOMES and EXPERIENCE bullet fits ONE rendered line (max ~95 characters); every table row fits ONE line (Strategic Expertise cell max ~55 characters). Compress or split rather than wrap — restraint includes line count.'
+    'ONE-LINE RULE (hard cap, tightened 2026-06-13): every SELECTED OUTCOMES and EXPERIENCE bullet fits ONE rendered line (max ~88 characters); every table row fits ONE line (Strategic Expertise cell max ~48 characters), leaving a few characters of headroom so the line never wraps by one word. Compress or split rather than wrap — restraint includes line count.'
   ] },
   'achievement-driven':    { active: true,  density: 'medium',         allowedLength:{min:1,max:3}, primaryConstraint:'outcome-first ordering', contentRule:'Lead with what changed because of you.', avoidRule:'Never name a duty without naming the outcome.', defaultToneChips:['outcome-led','quantified','scope-anchored'], glyphDensity:'medium' },
   'measured-professional': { active: true,  density: 'medium',         allowedLength:{min:1,max:3}, primaryConstraint:'balance of fact and outcome', contentRule:'Concrete actions described in plain language.', avoidRule:'Never claim more than the evidence supports.', defaultToneChips:['balanced','concrete','calm'], glyphDensity:'medium' },
@@ -373,8 +373,11 @@ const CELL_CHAR_CAP = 90; // ~2 rendered lines in the 4.94" expertise column.
 // to ONE rendered line: ~55 chars in the expertise column, ~95 chars for a
 // main-column bullet. Other styles keep the two-line cell cap and no bullet
 // cap.
-const NORDIC_CELL_CHAR_CAP = 55;
-const NORDIC_BULLET_CHAR_CAP = 95;
+// Tightened 2026-06-13 (owner: bullets/cells "miss by one word" in preview —
+// the caps were a hair too loose for the rendered column width). A few chars
+// of headroom now guarantee the line never wraps by one word.
+const NORDIC_CELL_CHAR_CAP = 48;
+const NORDIC_BULLET_CHAR_CAP = 88;
 
 function tryParseSectionsJson(text) {
   if (typeof text !== 'string') return null;

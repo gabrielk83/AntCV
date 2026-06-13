@@ -38,17 +38,22 @@ test('EXP-TENSE-002 — all three prompt rules present (auto logical + forced)',
   assert.ok(bundle.includes('LOGICAL per-role tense'));
 });
 
-test('NORDIC-ONELINE-001 — one-line caps in the PWA style prompt', () => {
+test('NORDIC-ONELINE-001 — one-line caps in the PWA style prompt (tightened 88/48)', () => {
   assert.ok(bundle.includes('ONE-LINE RULE'));
-  assert.ok(bundle.includes('max ~95 characters'));
-  assert.ok(bundle.includes('max ~55 characters'));
+  assert.ok(bundle.includes('max ~88 characters'));
+  assert.ok(bundle.includes('max ~48 characters'));
 });
 
-test('NORDIC-ONELINE-001 — worker engines carry the SCE caps, mirrored', () => {
+test('STYLE-LINE-FIT-001 — tight styles carry a proportionate LINE FIT note', () => {
+  // achievement-driven / structured / credential / precision get a one-line preference
+  assert.ok(bundle.includes('LINE FIT'));
+});
+
+test('NORDIC-ONELINE-001 — worker engines carry the SCE caps, mirrored (88/48)', () => {
   const proxy = readFileSync(path.join(ROOT, '..', 'workers', 'proxy', 'src', 'writing-style-engine.js'), 'utf8');
   const demo = readFileSync(path.join(ROOT, '..', 'workers', 'demo-proxy', 'src', 'writing-style-engine.js'), 'utf8');
   assert.equal(proxy, demo, 'proxy and demo-proxy engines must stay identical');
-  assert.ok(proxy.includes('NORDIC_CELL_CHAR_CAP = 55'));
-  assert.ok(proxy.includes('NORDIC_BULLET_CHAR_CAP = 95'));
+  assert.ok(proxy.includes('NORDIC_CELL_CHAR_CAP = 48'));
+  assert.ok(proxy.includes('NORDIC_BULLET_CHAR_CAP = 88'));
   assert.ok(proxy.includes('findNordicOverlongBullets'));
 });

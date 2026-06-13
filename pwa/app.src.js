@@ -2511,19 +2511,19 @@
               "measured-professional":
                 "Measured Professional — balance of fact and outcome; concrete actions in plain language with measurable examples when available; calm certainty without overclaiming. Chips bias: balanced, concrete, calm.",
               "nordic-minimal":
-                "Nordic Minimal — restraint; short factual sentences, no qualifiers, concrete nouns, results without preamble. Say less and say it clearly. ONE-LINE RULE (hard cap): every SELECTED OUTCOMES and EXPERIENCE bullet fits ONE rendered line (max ~95 characters); every table row fits ONE line (Strategic Expertise cell max ~55 characters) — compress or split rather than wrap. Chips bias: calm, restrained, factual.",
+                "Nordic Minimal — restraint; short factual sentences, no qualifiers, concrete nouns, results without preamble. Say less and say it clearly. ONE-LINE RULE (hard cap, tightened 2026-06-13): every SELECTED OUTCOMES and EXPERIENCE bullet fits ONE rendered line — max ~88 characters; every CORE COMPETENCIES / WHAT I BRING table row fits ONE line (Strategic Expertise cell max ~48 characters) — compress or split rather than wrap, and leave a few characters of headroom so the preview never wraps by one word. Chips bias: calm, restrained, factual.",
               "achievement-driven":
-                "Achievement-Driven — outcome-first ordering; lead with what changed because of the candidate; quantified results when honest; scope-anchored verbs; never name a duty without naming the outcome. Chips bias: outcome-led, quantified, scope-anchored.",
+                "Achievement-Driven — outcome-first ordering; lead with what changed because of the candidate; quantified results when honest; scope-anchored verbs; never name a duty without naming the outcome. LINE FIT: prefer ONE rendered line per bullet (~90 chars) and one line per table cell (~50 chars) — compress, don't wrap. Chips bias: outcome-led, quantified, scope-anchored.",
               "structured-professional":
-                "Structured Professional — process-led framing; name the method and the scope, then the result; method-named, framework-cited, scope-defined bullets. Chips bias: disciplined, method-led, scope-defined.",
+                "Structured Professional — process-led framing; name the method and the scope, then the result; method-named, framework-cited, scope-defined bullets. LINE FIT: prefer ONE rendered line per bullet (~90 chars) and one line per table cell (~50 chars). Chips bias: disciplined, method-led, scope-defined.",
               "mediterranean-formal":
                 "Mediterranean Formal — relational warmth within formality; longer sentences acknowledging context and people; formal vocabulary; never strip warmth to fit a length target. Chips bias: formal, warm, relational.",
               "prestige-structured":
                 "Prestige Structured — institutional weight; scope-heavy verbs (revenue, headcount, geographic remit); polished formal vocabulary; never use language that lowers the register. Chips bias: institutional, polished, scope-heavy.",
               "credential-forward":
-                "Credential Forward — credentials surfaced early; named certifications inline; accreditation levels stated; regulatory bodies named; never imply a qualification not formally held. Chips bias: credentialed, accredited, named-methodology.",
+                "Credential Forward — credentials surfaced early; named certifications inline; accreditation levels stated; regulatory bodies named; never imply a qualification not formally held. LINE FIT: prefer ONE rendered line per bullet (~90 chars) and one line per table cell (~50 chars). Chips bias: credentialed, accredited, named-methodology.",
               "precision-formal":
-                "Precision Formal — numerical precision; exact percentages, ranges, units; technical vocabulary used precisely; never use a magnitude word when a number is available. Chips bias: precise, quantified, technical.",
+                "Precision Formal — numerical precision; exact percentages, ranges, units; technical vocabulary used precisely; never use a magnitude word when a number is available. LINE FIT: prefer ONE rendered line per bullet (~88 chars) and one line per table cell (~48 chars) — precision reads best unwrapped. Chips bias: precise, quantified, technical.",
               "context-rich":
                 "Context-Rich — narrative voice; sentence-shaped bullets; longer profile paragraphs; reasoning clauses that say why each move mattered; never fragment a sentence to fit a bullet. Chips bias: narrative, reasoned, why-led.",
               "cold-outreach":
@@ -21575,7 +21575,17 @@
                     userSelect: "none",
                   },
                 },
-                "Optional details — patent, publications, background",
+                // OPTIONAL-ORDER-001 (owner 2026-06-13): background carries the
+                // work history, so it is NOT optional and leads; patent +
+                // publications are the optional pair and follow.
+                "Background (work history) — and optional patent, publications",
+              ),
+              f(
+                "Background — work history & career summary (used as AI context)",
+                s.background,
+                (e) => m({ background: e }),
+                "Full CV/career summary for AI prompts",
+                "textarea",
               ),
               f(
                 "Patent Number (optional)",
@@ -21602,7 +21612,7 @@
                       marginBottom: 3,
                     },
                   },
-                  "Publications (one per line; HTML allowed for <b> and <i>)",
+                  "Publications (optional — one per line; HTML allowed for <b> and <i>)",
                 ),
                 React.createElement("textarea", {
                   value: (s.publications || []).join("\n"),
@@ -21627,13 +21637,6 @@
                     fontFamily: "Georgia,serif",
                   },
                 }),
-              ),
-              f(
-                "Background (long-form — used as AI context)",
-                s.background,
-                (e) => m({ background: e }),
-                "Full CV/career summary for AI prompts",
-                "textarea",
               ),
             ),
             React.createElement(

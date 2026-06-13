@@ -62,14 +62,22 @@ When a supplier issues a **critical** update, or the audit returns exit 2:
 
 ### One-time setup to enable auto-send (repo → Settings → Secrets → Actions)
 
-- **Email (Resend):** `RESEND_API_KEY` (free tier). Optional
-  `SEC_FROM_EMAIL` (a verified sender; defaults to Resend's onboarding
-  address for testing).
-- **SMS (Twilio):** `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`,
-  `TWILIO_FROM` (a Twilio number). Sends to +45 31710072.
+**PREFERRED — reuse the relay's existing Resend key (login sequence).** The
+access-relay already holds `RESEND_API_KEY` + a verified `EMAIL_FROM` (used
+for sign-in OTP). It now exposes `POST /api/security-alert`, so no Resend key
+is needed in GitHub. Set two GitHub secrets:
+- `SECURITY_ALERT_URL` = `https://antcv-access-relay.karp-gabriel-a.workers.dev/api/security-alert`
+- `SECURITY_ALERT_TOKEN` = a random shared token
 
-Add either or both — the notifier uses whatever is present. Until then the
-failing GitHub run + this policy are the escalation signal.
+…and the SAME token on the relay:
+`npx wrangler secret put SECURITY_ALERT_TOKEN` (in `workers/access-relay`).
+The relay sends the alert email to the admin via the existing key + verified
+sender (better deliverability than a fresh Resend default).
+
+**Fallbacks (optional):** direct `RESEND_API_KEY` (+ `SEC_FROM_EMAIL`) for
+email, and `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` / `TWILIO_FROM` for SMS
+to +45 31710072. The notifier tries the relay first, then these. Until any
+are set, the failing GitHub run + this policy are the escalation signal.
 
 ## Log
 

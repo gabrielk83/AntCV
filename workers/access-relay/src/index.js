@@ -3199,6 +3199,42 @@ const method = request.method;
     );
   }
 
+  // SECURITY-WEEKLY-001 (owner 2026-06-13): security-alert relay. Reuses the
+  // relay's EXISTING Resend key + verified EMAIL_FROM (the login-OTP sender),
+  // so the weekly security workflow can email the admin a critical-update
+  // alert without a separate Resend key in GitHub. Gated by a shared
+  // SECURITY_ALERT_TOKEN (low-sensitivity, not the Resend key). Always emails
+  // the fixed admin address; the body is supplied by the caller.
+  if (path === '/api/security-alert' && method === 'POST') {
+    const tok = request.headers.get('x-antcv-security-token') || '';
+    if (!env.SECURITY_ALERT_TOKEN || tok !== env.SECURITY_ALERT_TOKEN) {
+      return jsonResponse({ error: 'unauthorized' }, 401, request, env);
+    }
+    if (!env.RESEND_API_KEY) {
+      return jsonResponse({ error: 'RESEND_API_KEY not set on relay' }, 500, request, env);
+    }
+    let body = {};
+    try { body = await request.json(); } catch (_) {}
+    const ADMIN = 'karp.gabriel.a@gmail.com';
+    const subject = String(body.subject || 'AntCV SECURITY — immediate approval needed').slice(0, 180);
+    const text = String(body.message || 'A production/critical security finding needs review + approval. See docs/security/SECURITY_UPDATE_POLICY.md').slice(0, 4000);
+    const from = env.EMAIL_FROM || 'AntCV <onboarding@resend.dev>';
+    try {
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from, to: ADMIN, subject, text }),
+      });
+      if (!res.ok) {
+        const b = await res.text().catch(() => '');
+        return jsonResponse({ error: `Resend ${res.status}: ${b.slice(0, 200)}` }, 502, request, env);
+      }
+      return jsonResponse({ ok: true, sent_to: ADMIN }, 200, request, env);
+    } catch (e) {
+      return jsonResponse({ error: String(e && e.message || e) }, 502, request, env);
+    }
+  }
+
   if (path === '/__diag' && method === 'GET') {
     const probe = await probeUpstream(env);
     const id = await identityFromRequest(request, env);

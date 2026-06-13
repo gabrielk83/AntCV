@@ -28,9 +28,29 @@ const body = `${subject}\n\n${msg}\n\nRun: ${process.env.GITHUB_SERVER_URL || 'h
 
 let sent = 0;
 
+// Preferred path (owner 2026-06-13): the access-relay already holds the
+// Resend key from the login sequence. POST the alert to its
+// /api/security-alert endpoint so we REUSE that key + verified sender —
+// no Resend key needed in GitHub. Falls back to direct Resend/Twilio below.
+async function sendViaRelay() {
+  const url = process.env.SECURITY_ALERT_URL; // e.g. https://antcv-access-relay.<sub>.workers.dev/api/security-alert
+  const tok = process.env.SECURITY_ALERT_TOKEN;
+  if (!url || !tok) { console.log('[notify] relay: SECURITY_ALERT_URL / SECURITY_ALERT_TOKEN not set — skipped'); return; }
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-AntCV-Security-Token': tok },
+      body: JSON.stringify({ subject, message: body }),
+    });
+    if (res.ok) { console.log('[notify] email sent via relay (reused login Resend key) to ' + ADMIN_EMAIL); sent++; }
+    else console.log('[notify] relay failed: HTTP ' + res.status + ' ' + (await res.text()).slice(0, 200));
+  } catch (e) { console.log('[notify] relay error: ' + (e && e.message)); }
+}
+
 async function sendEmail() {
+  if (sent) return; // relay already delivered the email
   const key = process.env.RESEND_API_KEY;
-  if (!key) { console.log('[notify] email: RESEND_API_KEY not set — skipped'); return; }
+  if (!key) { console.log('[notify] email: RESEND_API_KEY not set — skipped (relay path preferred)'); return; }
   const from = process.env.SEC_FROM_EMAIL || 'AntCV Security <onboarding@resend.dev>';
   try {
     const res = await fetch('https://api.resend.com/emails', {
@@ -58,6 +78,7 @@ async function sendSms() {
   } catch (e) { console.log('[notify] sms error: ' + (e && e.message)); }
 }
 
+await sendViaRelay();
 await sendEmail();
 await sendSms();
 

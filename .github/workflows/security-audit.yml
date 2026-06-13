@@ -31,10 +31,15 @@ jobs:
       - name: Notify admin (only on a production / critical finding)
         if: failure()
         env:
-          # Email (Resend) — set RESEND_API_KEY (+ optional SEC_FROM_EMAIL).
+          # PREFERRED: reuse the relay's existing Resend key (login sequence).
+          # Set SECURITY_ALERT_URL = https://<relay>/api/security-alert and a
+          # shared SECURITY_ALERT_TOKEN (also set on the relay). No Resend key
+          # needed in GitHub.
+          SECURITY_ALERT_URL: ${{ secrets.SECURITY_ALERT_URL }}
+          SECURITY_ALERT_TOKEN: ${{ secrets.SECURITY_ALERT_TOKEN }}
+          # Fallbacks (optional): direct Resend / Twilio.
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           SEC_FROM_EMAIL: ${{ secrets.SEC_FROM_EMAIL }}
-          # SMS (Twilio) — set TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / TWILIO_FROM.
           TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
           TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
           TWILIO_FROM: ${{ secrets.TWILIO_FROM }}

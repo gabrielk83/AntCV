@@ -37,7 +37,13 @@
     if(/work[_-]?style/.test(attrs)) return SECTIONS[1];
     if(/profile/.test(attrs)) return SECTIONS[0];
     const txt = low(el.textContent || '');
-    if(/^profile\b/.test(txt)) return SECTIONS[0];
+    // PW-CJLR-PHOTO-LEAK-001 (owner 2026-06-13): "PROFILE PHOTO" also starts
+    // with "profile" — without this guard the workstyle CJLR cycler injected
+    // into the PROFILE PHOTO card's Shape/Contour/Shadow rows (between the
+    // SHADOW Off/On buttons), and the photo-bridge sidecar stripped it right
+    // back → the button flickered ("blinking"). The photo card is NOT the
+    // profile TEXT section.
+    if(/^profile\b/.test(txt) && !/^profile\s*photo/.test(txt)) return SECTIONS[0];
     if(/^work style\b/.test(txt)) return SECTIONS[1];
     return null;
   }
@@ -46,6 +52,10 @@
     const out=[];
     document.querySelectorAll('button').forEach(btn=>{
       if(isInPreviewPaper(btn)) return;
+      // Never treat the PROFILE PHOTO card's Shape/Contour/Shadow rows as a
+      // workstyle section (PW-CJLR-PHOTO-LEAK-001).
+      if(btn.closest && btn.closest('.antcv-fp-shape-row')) return;
+      if(btn.classList && btn.classList.contains('antcv-fp-shape-btn')) return;
       let p=btn.parentElement;
       for(let d=0; p && d<7; d++,p=p.parentElement){
         if(isInPreviewPaper(p)) break;

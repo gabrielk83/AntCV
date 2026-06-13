@@ -52,10 +52,6 @@ export function ExportOptionsCard(): JSX.Element {
     });
   }, []);
 
-  // Count of active toggles, shown on the collapsed header so the user sees
-  // at a glance whether anything is on without expanding.
-  const activeCount = (prefs.ats ? 1 : 0) + (prefs.legacyAtsTier ? 1 : 0);
-
   return (
     <section
       data-antcv-react-island="export-options"
@@ -100,11 +96,9 @@ export function ExportOptionsCard(): JSX.Element {
           </span>
           Export options
         </span>
-        {!open && activeCount > 0 ? (
-          <span style={{ fontSize: 11, fontWeight: 700, opacity: 0.8 }}>
-            {activeCount} on
-          </span>
-        ) : null}
+        {/* LAYOUT-DEAD-COUNT-001 (owner 2026-06-13): the collapsed "{n} on"
+            count chip read as a dead button. Removed — the chevron + expanding
+            the section is the affordance; the count added nothing actionable. */}
       </button>
 
       {open ? (

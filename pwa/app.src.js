@@ -40964,6 +40964,10 @@
                             style: {
                               background: Ke,
                               color: "#fff",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: 8,
                               textAlign: "center",
                               padding: "5px 16px 4px",
                             },
@@ -40985,7 +40989,38 @@
                                   return "";
                                 }
                               })();
+                              // AUTO-PAGEBREAK-BLOCK-001 follow-up (b) (owner
+                              // 2026-06-13: "carry sidebar photo / contact strip
+                              // on page 2+ as a slim header"): prepend a small
+                              // shape-correct medallion when a photo exists and
+                              // the position isn't Hidden. er = photoPosition,
+                              // zn = the photo data URL (component state).
+                              const __ps = (e && e.stylePrefs) || {};
+                              const __pr =
+                                "square" === __ps.photoShape
+                                  ? 0
+                                  : "rounded" === __ps.photoShape
+                                    ? "5px"
+                                    : "50%";
+                              const __photoEl =
+                                zn && "hidden" !== er
+                                  ? React.createElement("img", {
+                                      key: "p",
+                                      src: zn,
+                                      alt: "",
+                                      "data-antcv-repeat-photo": "1",
+                                      style: {
+                                        width: 24,
+                                        height: 24,
+                                        objectFit: "cover",
+                                        borderRadius: __pr,
+                                        flex: "0 0 auto",
+                                        border: "0.5pt solid rgba(255,255,255,0.55)",
+                                      },
+                                    })
+                                  : null;
                               return [
+                                __photoEl,
                                 React.createElement(
                                   "span",
                                   {
@@ -41006,7 +41041,6 @@
                                         style: {
                                           fontSize: 8.5,
                                           opacity: 0.8,
-                                          marginLeft: 10,
                                         },
                                       },
                                       n,

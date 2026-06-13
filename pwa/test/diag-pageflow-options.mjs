@@ -29,10 +29,14 @@ const sections = { cv: [
   { id:'regctx', title:'REGULATORY CONTEXT', loc:'sidebar', on:true, type:'labeled_list', items: reg },
 ], cl: [] };
 
-async function boot(styleCfg) {
+// 1x1 PNG data URL — enough for the photo medallion to render.
+const PHOTO = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+
+async function boot(styleCfg, opts) {
+  opts = opts || {};
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport:{ width:1400, height:1000 } });
-  await page.addInitScript(({secs, cfg})=>{
+  await page.addInitScript(({secs, cfg, photo, photoPos})=>{
     localStorage.setItem('antcv:auth:token','t');localStorage.setItem('antcv:auth:email','d@e.com');localStorage.setItem('antcv:auth:expires_at','4102444800');
     localStorage.setItem('session', JSON.stringify({ email:'d@e.com', ts:1717000000000 }));
     localStorage.setItem('step', JSON.stringify('editor'));
@@ -41,7 +45,9 @@ async function boot(styleCfg) {
     localStorage.setItem('personalInfo', JSON.stringify({ name:'Anita Tester' }));
     localStorage.setItem('meta', JSON.stringify({ subtitle:'Regulatory Affairs Specialist' }));
     if (cfg) localStorage.setItem('styleConfig', JSON.stringify(cfg));
-  }, { secs: sections, cfg: styleCfg });
+    if (photo) localStorage.setItem('photo', JSON.stringify(photo));
+    if (photoPos) localStorage.setItem('photoPosition', JSON.stringify(photoPos));
+  }, { secs: sections, cfg: styleCfg, photo: opts.photo || null, photoPos: opts.photoPos || null });
   const errs = [];
   page.on('pageerror', e=>errs.push(String(e&&e.message)));
   await page.goto(`http://127.0.0.1:${port}/index.html`, { waitUntil:'load', timeout:30000 });
@@ -50,8 +56,9 @@ async function boot(styleCfg) {
     const rows = document.querySelectorAll('.antcv-page-row').length;
     const nums = Array.from(document.querySelectorAll('[data-antcv-page-number]')).map(e=>e.textContent);
     const strips = Array.from(document.querySelectorAll('[data-antcv-repeat-header]')).map(e=>(e.textContent||'').slice(0,50));
+    const stripPhotos = document.querySelectorAll('[data-antcv-repeat-header] [data-antcv-repeat-photo]').length;
     const contHead = (document.body.textContent||'').includes('(CONT.)');
-    return { rows, nums, strips, contHead };
+    return { rows, nums, strips, stripPhotos, contHead };
   });
   await browser.close();
   return { ...r, errs };
@@ -66,7 +73,18 @@ const b = await boot({ contHeadlines: false });
 const bOk = b.rows === 2 && b.nums.length === 0 && b.strips.length === 0 && !b.contHead && b.errs.length === 0;
 console.log(`B contHeadlines off => bare continuation, no extras: ${bOk?'OK':'FAIL'} ${bOk?'':JSON.stringify(b)}`);
 
+// AUTO-PAGEBREAK-BLOCK-001 follow-up (b): with a photo set + repeatHeader on, the
+// page-2 slim strip carries a medallion; with photoPosition hidden it does not.
+const c = await boot({ repeatHeader: true }, { photo: PHOTO, photoPos: 'sidebar-top' });
+const cOk = c.rows === 2 && c.strips.length === 1 && c.strips[0].includes('Anita Tester')
+  && c.stripPhotos === 1 && c.errs.length === 0;
+console.log(`C repeatHeader photo on page 2 strip: ${cOk?'OK':'FAIL'} ${cOk?'':JSON.stringify(c)}`);
+
+const d = await boot({ repeatHeader: true }, { photo: PHOTO, photoPos: 'hidden' });
+const dOk = d.rows === 2 && d.strips.length === 1 && d.stripPhotos === 0 && d.errs.length === 0;
+console.log(`D photoPosition hidden => no medallion in strip: ${dOk?'OK':'FAIL'} ${dOk?'':JSON.stringify(d)}`);
+
 await new Promise(r=>server.close(r));
-const ok = aOk && bOk;
+const ok = aOk && bOk && cOk && dOk;
 console.log(ok ? 'PAGEFLOW-OPTIONS OK' : 'PAGEFLOW-OPTIONS FAILED');
 process.exit(ok ? 0 : 1);

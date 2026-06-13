@@ -5452,10 +5452,20 @@
                             "div",
                             {
                               "data-antcv-role-results": t,
+                              // OUTCOMES-RESULTS-STYLE-001 (owner 2026-06-13):
+                              // the inline results read as a BOLD, style-colored
+                              // line attached DIRECTLY to the role content (no
+                              // gap). Colour follows the style (sub-heading /
+                              // bullet / main-head colour).
                               style: {
                                 fontSize: $.bullet,
-                                marginTop: 2,
-                                color: "#000",
+                                marginTop: 0,
+                                fontWeight: 700,
+                                color:
+                                  d.mainSubHeadColor ||
+                                  d.mainBulletColor ||
+                                  d.mainHeadColor ||
+                                  "#283556",
                                 fontFamily: T,
                                 lineHeight: I,
                               },
@@ -34864,6 +34874,109 @@
                               );
                             }),
                           ),
+                      ),
+                      // OUTCOMES-MODE-SELECTOR-001 (owner 2026-06-13): the Layout
+                      // panel was missing the SELECTED OUTCOMES display selector.
+                      // "Bullets section" keeps the standalone SELECTED OUTCOMES
+                      // section; "Inline results" hides that section and renders
+                      // each role's outcomes as a bold, style-coloured "Results:"
+                      // line attached directly under the role (no gap). The
+                      // preview reads localStorage "outcomesMode" live, so the
+                      // sections-updated dispatch forces the re-render.
+                      React.createElement(
+                        "div",
+                        {
+                          style: {
+                            marginBottom: 14,
+                            paddingBottom: 14,
+                            borderBottom: "1px solid rgba(255,255,255,0.08)",
+                          },
+                        },
+                        React.createElement(
+                          "div",
+                          {
+                            style: {
+                              color: "rgba(255,255,255,0.55)",
+                              fontSize: 11,
+                              fontWeight: 600,
+                              marginBottom: 6,
+                              letterSpacing: 0.4,
+                            },
+                          },
+                          "SELECTED OUTCOMES",
+                        ),
+                        React.createElement(
+                          "div",
+                          {
+                            style: {
+                              color: "rgba(255,255,255,0.4)",
+                              fontSize: 9,
+                              lineHeight: 1.4,
+                              marginBottom: 6,
+                            },
+                          },
+                          'Show outcomes as their own bullet section, or inline as a bold "Results:" line attached to each role.',
+                        ),
+                        (() => {
+                          const __om = (() => {
+                            try {
+                              return "results" ===
+                                JSON.parse(
+                                  localStorage.getItem("outcomesMode") ||
+                                    '"section"',
+                                )
+                                ? "results"
+                                : "section";
+                            } catch (_) {
+                              return "section";
+                            }
+                          })();
+                          return React.createElement(
+                            "div",
+                            { style: { display: "flex", gap: 8 } },
+                            [
+                              ["section", "▤ Bullets section"],
+                              ["results", "➜ Inline results"],
+                            ].map(([val, lbl]) =>
+                              React.createElement(
+                                "button",
+                                {
+                                  key: val,
+                                  onClick: () => {
+                                    try {
+                                      localStorage.setItem(
+                                        "outcomesMode",
+                                        JSON.stringify(val),
+                                      );
+                                      window.dispatchEvent(
+                                        new CustomEvent(
+                                          "antcv:sections-updated",
+                                          { detail: { source: "outcomes-mode" } },
+                                        ),
+                                      );
+                                    } catch (_) {}
+                                  },
+                                  style: {
+                                    flex: 1,
+                                    padding: "7px",
+                                    fontSize: 11,
+                                    borderRadius: 6,
+                                    fontWeight: __om === val ? 600 : 400,
+                                    border: `1px solid ${__om === val ? l : "rgba(255,255,255,0.15)"}`,
+                                    background:
+                                      __om === val
+                                        ? "rgba(1,183,187,0.12)"
+                                        : "rgba(255,255,255,0.04)",
+                                    color:
+                                      __om === val ? l : "rgba(255,255,255,0.5)",
+                                    cursor: "pointer",
+                                  },
+                                },
+                                lbl,
+                              ),
+                            ),
+                          );
+                        })(),
                       ),
                       React.createElement(
                         "div",

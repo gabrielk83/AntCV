@@ -88,12 +88,16 @@ generate-cloud-sync-277, fit-cv-cloud-sync, cloud-put-shrink-guard-289 (fetch).
 - Restore order + the fetch wrappers are load-bearing. **DEFER** (the two
   fetch-wrappers are LOCKED).
 
-### G5 — Mobile UI cleanup  ·  4 files  ·  CANDIDATE (safe, low payoff)
-mobile-topbar-cleanup-275, mobile-fab-cleanup-351, mobile-bottom-compact-352,
-mobile-alt-circles-dropdown-354.
-- Pure DOM, matchMedia-gated, no fetch. Independent. Mergeable into one
-  `antcv-mobile-ui.js` behind a mobile-viewport boot-smoke. Low risk, modest
-  payoff. Good second pilot.
+### G5 — Mobile UI cleanup  ·  **DONE (1.50.419, 2026-06-13)**
+mobile-topbar-cleanup-275 + mobile-fab-cleanup-351 + mobile-bottom-compact-352
++ mobile-alt-circles-dropdown-354 → `antcv-mobile-ui-418.js`.
+- Four independent concerns folded into ONE file behind a SINGLE shared rAF
+  scheduler + ONE MutationObserver (was 4 observers + 4 timeout fans). Each
+  module's logic + guards preserved verbatim; 354's stateful capture-phase
+  click handling kept exactly. Combined CSS into one `<style>`. Back-compat
+  globals re-exposed. Verified at a 380px mobile viewport (diag-mobile-ui-merge):
+  installs, combined CSS carries all three rule sets, 0 page errors. The old
+  4 files left on disk, unreferenced.
 
 ### G6 — Language  ·  ~7 files  ·  CANDIDATE (medium)
 i18n, language-prefs, language-prefs-defaults, lang-bar-filter,

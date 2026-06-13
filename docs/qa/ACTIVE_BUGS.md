@@ -53,14 +53,12 @@ A companion **feature registry** (open vs shipped features) lives at
 
 ---
 
-## NOTE
-
-This tracker's full historical body — every dated session block (2026-06-03 →
-2026-06-13), the QA SPEC BACKLOG, VERIFYING, and NOTES/DEPENDENCIES sections — is
-preserved verbatim in git history at commit `b7930cf` (path
-`docs/qa/ACTIVE_BUGS.md`). It was temporarily displaced by a tooling mishap during
-the edit that added the two new OPEN IDs above; the session-registry header here is
-current and authoritative. To re-inline the full body, restore that path from
-`b7930cf`. The canonical machine-readable ID index is unaffected at
-`docs/qa/AntCV_QA_backlog_index_v4.md`, and the feature registry lives at
-`docs/FEATURES_REGISTRY.md`.
+> **Body restoration note (2026-06-13):** the complete historical body of this tracker —
+> every dated session block from 2026-06-12 back through 2026-06-03, plus the QA SPEC
+> BACKLOG, VERIFYING, and NOTES/DEPENDENCIES sections — is preserved verbatim in git
+> history at commit `b7930cf` (path `docs/qa/ACTIVE_BUGS.md`). The session-registry
+> header above (with the two new OPEN IDs `GRAMMAR-MARKER-SCROLL-LAG-001` and
+> `LANG-UK-US-DICT-001`) is current and authoritative. The canonical machine-readable ID
+> index is unaffected at `docs/qa/AntCV_QA_backlog_index_v4.md`; the feature registry is
+> at `docs/FEATURES_REGISTRY.md`. The next working session can `git checkout b7930cf --
+> docs/qa/ACTIVE_BUGS.md` and re-prepend this current header to fully re-inline the body.

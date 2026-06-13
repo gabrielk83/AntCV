@@ -22379,11 +22379,21 @@
                 );
               }
             }
+            // JD-URLFETCH-GARBLED-MSG-001 (owner 2026-06-13): the short/garbled
+            // gates fire for ANY JD source, but the remediation was PDF-only —
+            // so a JS-rendered career page fetched by URL (NVIDIA / Workday /
+            // Greenhouse / Lever / LinkedIn) wrongly told the user to "open the
+            // PDF". When the JD came from a URL (Bt.kind === "url"), show
+            // URL-appropriate guidance that points at the PDF-upload path the
+            // owner suggested ("capturing the JD with PDF might be easier").
+            const __jdUrl = !!(Bt && "url" === Bt.kind);
             if (Bt && (!c || c.length < 50))
               return (
                 $t("input"),
                 vo(
-                  `Extracted JD text is suspiciously short (${c.length} chars). The PDF may be image-based or corrupted. Please paste the job description text into Additional Signals manually.`,
+                  __jdUrl
+                    ? `The fetched job page returned almost no readable text (${c.length} chars). Career sites like NVIDIA, Workday, Greenhouse, Lever and LinkedIn build the description with JavaScript, so a server-side fetch only sees a shell — there is no PDF here. Please either:\n• Open the posting, copy the description, and paste it into Additional Signals\n• Save or print the page to a PDF and upload it here\n• Paste the JD text directly into the JD box`
+                    : `Extracted JD text is suspiciously short (${c.length} chars). The PDF may be image-based or corrupted. Please paste the job description text into Additional Signals manually.`,
                 ),
                 void uo("")
               );
@@ -22391,7 +22401,9 @@
               return (
                 $t("input"),
                 vo(
-                  "Extracted JD text appears garbled — the PDF likely uses a corrupted or obfuscated font encoding that survived all extraction tiers. Generating now would produce a CV based on background data instead of the actual JD.\n\nPlease either:\n• Open the PDF, copy the text, and paste it into Additional Signals\n• Convert the PDF to .docx and re-upload\n• Try printing the PDF to a new PDF (which usually fixes font encoding issues)",
+                  __jdUrl
+                    ? "The fetched job page didn't return readable text — many career sites (NVIDIA, Workday, Greenhouse, Lever, LinkedIn) build the description with JavaScript, so the server only sees a shell (there is no PDF here). Generating now would use your background instead of the real JD.\n\nPlease either:\n• Open the posting, copy the description, and paste it into Additional Signals\n• Save or print the page to a PDF and upload it here\n• Paste the JD text directly into the JD box"
+                    : "Extracted JD text appears garbled — the PDF likely uses a corrupted or obfuscated font encoding that survived all extraction tiers. Generating now would produce a CV based on background data instead of the actual JD.\n\nPlease either:\n• Open the PDF, copy the text, and paste it into Additional Signals\n• Convert the PDF to .docx and re-upload\n• Try printing the PDF to a new PDF (which usually fixes font encoding issues)",
                 ),
                 void uo("")
               );

@@ -28,7 +28,7 @@
   'use strict';
 
   if (window.__antcvSpellAnnotatorInstalled) return;
-  var VERSION = '1.50.434';
+  var VERSION = '1.50.435';
   window.__antcvSpellAnnotatorInstalled = VERSION;
 
   // SPELL-EN-VARIANT-001 (owner 2026-06-13): English defaults to UK (en-GB);
@@ -68,7 +68,9 @@
     try {
       if (localStorage.getItem('antcv:spell:enabled') === '0') return false;
       var l = lang();
-      if (!hasDict(l)) return false; // zh / unknown — no Hunspell dictionary
+      // zh is allowed (LLM context check, SPELL-ZH-CONTEXT-001); only an unknown
+      // non-zh language with no Hunspell dictionary is disabled.
+      if (l !== 'zh' && !hasDict(l)) return false;
       var per = JSON.parse(localStorage.getItem('antcv:spell:langs') || '{}');
       if (per && per[l] === false) return false;
       return true;
@@ -168,6 +170,75 @@
     return engineLoading;
   }
 
+  // ─── SPELL-ZH-CONTEXT-001: Chinese symbol-in-sentence fit (LLM) ─────
+  // Hunspell can't segment Chinese, so zh uses a CONTEXT check instead of a
+  // dictionary: an LLM finds 错别字 (characters that don't fit the sentence —
+  // wrong homophone / mistyped / context-unfitting) and returns {wrong,correct}.
+  // Results are cached per text + debounced through the same schedule(); marks
+  // reuse the {word,start,end} shape so syncOverlay underlines them exactly like
+  // a Hunspell miss, and the popover offers the correction. Only fires when the
+  // document language is Chinese, so non-zh users never incur an LLM call.
+  var ZH_MODEL = 'claude-opus-4-7';
+  var ZH_SYS = 'You are a meticulous Simplified-Chinese proofreader. Find 错别字 — characters that are WRONG for the sentence (wrong homophone, mistyped, or context-unfitting character). Flag ONLY clear character errors; ignore wording, style, punctuation and grammar. Return STRICT JSON only, no markdown fences: {"errors":[{"wrong":"<exact wrong substring copied verbatim from the text>","correct":"<corrected substring>"}]}. Return {"errors":[]} if there are none.';
+  var zhCache = Object.create(null);    // text -> marks[]
+  var zhSuggest = Object.create(null);  // wrong substring -> [correct]
+  var zhInflight = Object.create(null); // text -> Promise<marks>
+  function hasHan(s) { return /[㐀-鿿]/.test(String(s || '')); }
+  function zhProxyBase() {
+    try {
+      var v = JSON.parse(localStorage.getItem('proxyUrl') || '""');
+      var b = String(v || '').replace(/\/+$/, '');
+      if (!b && typeof window.ANTCV_RELAY_URL === 'string') b = String(window.ANTCV_RELAY_URL).replace(/\/+$/, '');
+      return b;
+    } catch (_) { return ''; }
+  }
+  async function llmZhErrors(text) {
+    var base = zhProxyBase();
+    if (!base) return [];
+    var res = await fetch(base + '/', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json', 'x-provider': 'anthropic' },
+      body: JSON.stringify({ model: ZH_MODEL, max_tokens: 700, stream: false, system: ZH_SYS, messages: [{ role: 'user', content: String(text || '') }] }),
+    });
+    var j = await res.json().catch(function () { return null; });
+    var raw = (j && j.content && j.content[0] && j.content[0].text) || '';
+    try {
+      var parsed = JSON.parse(String(raw).replace(/```json|```/g, '').trim());
+      return Array.isArray(parsed && parsed.errors) ? parsed.errors : [];
+    } catch (_) { return []; }
+  }
+  function zhMarksFrom(text, errors) {
+    var out = [];
+    for (var i = 0; i < errors.length; i++) {
+      var w = String((errors[i] && errors[i].wrong) || '');
+      var c = String((errors[i] && errors[i].correct) || '');
+      if (!w || w.length > 20) continue;
+      if (c) zhSuggest[w] = [c];
+      var from = 0, idx;
+      while ((idx = text.indexOf(w, from)) >= 0) {
+        out.push({ word: w, start: idx, end: idx + w.length });
+        from = idx + w.length;
+        if (out.length > 200) return out;
+      }
+    }
+    return out;
+  }
+  function checkZh(text) {
+    text = String(text || '');
+    if (!text.trim() || !hasHan(text)) return Promise.resolve([]);
+    if (zhCache[text]) return Promise.resolve(zhCache[text]);
+    if (zhInflight[text]) return zhInflight[text];
+    zhInflight[text] = llmZhErrors(text).then(function (errors) {
+      var marks = zhMarksFrom(text, errors);
+      zhCache[text] = marks;
+      delete zhInflight[text];
+      var keys = Object.keys(zhCache);
+      if (keys.length > 40) delete zhCache[keys[0]];
+      return marks;
+    }).catch(function () { delete zhInflight[text]; return []; });
+    return zhInflight[text];
+  }
+
   // ─── word scan ───────────────────────────────────────────────────
   var WORD_RE = /[A-Za-zÀ-ɏ']{2,}/g;
   function misspellings(text, eng, l) {
@@ -252,10 +323,15 @@
   }
   function openPopover(field, word, anchorRect) {
     closePopover();
-    getEngine().then(function (eng) {
-      if (!eng) return;
-      var sugg = [];
-      try { sugg = (eng.suggest(word) || []).slice(0, MAX_SUGGEST); } catch (_) {}
+    // zh suggestions come from the LLM context check's cache; other languages
+    // from the Hunspell engine.
+    var suggP = (lang() === 'zh')
+      ? Promise.resolve((zhSuggest[word] || []).slice(0, MAX_SUGGEST))
+      : getEngine().then(function (eng) {
+          try { return eng ? (eng.suggest(word) || []).slice(0, MAX_SUGGEST) : []; }
+          catch (_) { return []; }
+        });
+    suggP.then(function (sugg) {
       pop = document.createElement('div');
       pop.className = 'antcv-spell-popover';
       pop.style.cssText = 'position:fixed;z-index:2147483500;background:#fff;border:1px solid rgba(40,53,86,0.3);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,0.25);padding:6px;min-width:140px;font-family:system-ui,sans-serif;font-size:12.5px;color:#1a2433;';
@@ -281,9 +357,16 @@
       sugg.forEach(function (s) {
         row(s, true, function () {
           var v = field.value || '';
-          // replace the FIRST whole-word occurrence of `word`
-          var re = new RegExp('(^|[^A-Za-zÀ-ɏ\'])(' + word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')(?![A-Za-zÀ-ɏ\'])');
-          var nv = v.replace(re, function (_, pre) { return pre + s; });
+          var nv;
+          if (lang() === 'zh') {
+            // Chinese has no word boundaries — replace the first literal occurrence.
+            var zi = v.indexOf(word);
+            nv = zi >= 0 ? v.slice(0, zi) + s + v.slice(zi + word.length) : v;
+          } else {
+            // replace the FIRST whole-word occurrence of `word`
+            var re = new RegExp('(^|[^A-Za-zÀ-ɏ\'])(' + word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')(?![A-Za-zÀ-ɏ\'])');
+            nv = v.replace(re, function (_, pre) { return pre + s; });
+          }
           setNativeValue(field, nv);
           closePopover();
           schedule(field);
@@ -326,6 +409,12 @@
   }
   function runCheck(field) {
     if (!field.isConnected || !enabled()) return;
+    if (lang() === 'zh') {
+      checkZh(field.value || '').then(function (marks) {
+        if (field.isConnected) syncOverlay(field, marks);
+      });
+      return;
+    }
     getEngine().then(function (eng) {
       if (!eng || !field.isConnected) return;
       var marks = misspellings(field.value || '', eng, lang());
@@ -461,7 +550,7 @@
     });
 
     var note = document.createElement('div');
-    note.innerHTML = 'Dictionaries follow the document language. English defaults to <strong>UK</strong>. Chinese spellcheck is a symbol-in-sentence-fit check (coming) — Hunspell can’t segment Chinese.';
+    note.innerHTML = 'Dictionaries follow the document language. English defaults to <strong>UK</strong>. Chinese uses a <strong>symbol-in-sentence-fit</strong> check (an AI proofreader for 错别字) since Hunspell can’t segment Chinese — it runs only when the document language is Chinese.';
     note.style.cssText = 'font-size:10.5px;color:rgba(255,255,255,0.42);margin-top:6px;line-height:1.45;';
     body.appendChild(note);
 
@@ -485,11 +574,13 @@
       try { localStorage.setItem('antcv:spell:enabled', on ? '1' : '0'); } catch (_) {}
     },
     check: function (text) {
+      if (lang() === 'zh') return checkZh(String(text || ''));
       return getEngine().then(function (eng) {
         return eng ? misspellings(String(text || ''), eng, lang()) : [];
       });
     },
     suggest: function (word) {
+      if (lang() === 'zh') return Promise.resolve((zhSuggest[String(word || '')] || []).slice(0, MAX_SUGGEST));
       return getEngine().then(function (eng) {
         try { return eng ? (eng.suggest(String(word || '')) || []).slice(0, MAX_SUGGEST) : []; }
         catch (_) { return []; }

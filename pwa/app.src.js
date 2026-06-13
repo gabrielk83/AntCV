@@ -16262,6 +16262,22 @@
             Qn({ styleConfig: t });
           } catch (e) {}
         };
+      // TENSE-RELOCATE-001 (owner 2026-06-13): live setter so the relocated
+      // EXPERIENCE TENSE control (now grouped with the languages + grammar
+      // controls in Settings → Personal, injected by
+      // antcv-tense-control-422.js) updates styleConfig.expTense immediately —
+      // persisted + cloud-synced — WITHOUT flipping the package to "custom"
+      // the way saveStyleConfig (wa) does.
+      window._antcvSetExpTense = (v) => {
+        try {
+          ba((p) => {
+            const t = { ...p, expTense: v };
+            try { u.set("styleConfig", t); } catch (_) {}
+            try { Qn({ styleConfig: t }); } catch (_) {}
+            return t;
+          });
+        } catch (_) {}
+      };
       React.useEffect(() => {
         Ke &&
           Ke !== ya.headerBg &&

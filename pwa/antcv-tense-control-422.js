@@ -1,0 +1,126 @@
+/* AntCV experience-tense control — relocated to Personal (v1.50.422)
+ * ============================================================================
+ * TENSE-RELOCATE-001 (owner 2026-06-13: "where the heck is the tense control?
+ * need to be part of the languages control and grammar checker"). The 3-way
+ * EXPERIENCE TENSE control existed only in Advanced → Style, which the owner
+ * couldn't find. This sidecar injects the SAME control into Settings →
+ * Personal, ordered right after the "Languages in the top bar" card (order 27)
+ * so it sits with the languages + grammar (spelling) controls.
+ *
+ * Source of truth: styleConfig.expTense (localStorage "styleConfig"). On click
+ * it calls window._antcvSetExpTense(v) — the app's live setter that updates
+ * React state + persists + cloud-syncs WITHOUT flipping the package to
+ * "custom" — with a direct localStorage merge as fallback. The generation
+ * prompt already reads styleConfig.expTense, so the choice is honoured.
+ *
+ * Order-based Personal column: the control gets style.order = 28 (languages 27,
+ * advanced tone 30), so it lands between them regardless of DOM insertion.
+ */
+(function () {
+  'use strict';
+  var VERSION = '1.50.422';
+  if (window.__antcvTenseControl422 === VERSION) return;
+  window.__antcvTenseControl422 = VERSION;
+
+  var HOST_ID = 'antcv-tense-control-422';
+  var OPTS = [
+    ['auto', 'Auto', 'Present for the current role, past for earlier roles'],
+    ['present', 'Present', 'Force present tense on every role'],
+    ['past', 'Past', 'Force past tense on every role'],
+  ];
+
+  function readTense() {
+    try {
+      var raw = localStorage.getItem('styleConfig');
+      if (!raw) return 'auto';
+      var sc = JSON.parse(raw);
+      if (sc && typeof sc === 'object') {
+        if (sc.expTense === 'present' || sc.expTense === 'past' || sc.expTense === 'auto') return sc.expTense;
+        if (sc.expPastTense === true) return 'past';
+      }
+    } catch (_) {}
+    return 'auto';
+  }
+  function writeTense(v) {
+    var done = false;
+    try { if (typeof window._antcvSetExpTense === 'function') { window._antcvSetExpTense(v); done = true; } } catch (_) {}
+    if (!done) {
+      // fallback: merge directly into styleConfig (JSON-encoded, like u.set)
+      try {
+        var raw = localStorage.getItem('styleConfig');
+        var sc = {};
+        try { sc = raw ? JSON.parse(raw) : {}; } catch (_) { sc = {}; }
+        if (!sc || typeof sc !== 'object') sc = {};
+        sc.expTense = v;
+        localStorage.setItem('styleConfig', JSON.stringify(sc));
+      } catch (_) {}
+    }
+    try { window.dispatchEvent(new CustomEvent('antcv:exp-tense-changed', { detail: { value: v } })); } catch (_) {}
+  }
+
+  function el(tag, css, text) { var n = document.createElement(tag); if (css) n.style.cssText = css; if (text != null) n.textContent = text; return n; }
+
+  function paintActive(host) {
+    var cur = readTense();
+    host.querySelectorAll('button[data-antcv-tense]').forEach(function (b) {
+      var on = b.getAttribute('data-antcv-tense') === cur;
+      b.style.background = on ? 'rgba(1,183,187,0.1)' : 'rgba(255,255,255,0.04)';
+      b.style.border = '1px solid ' + (on ? '#01B7BB' : 'rgba(255,255,255,0.15)');
+      b.style.color = on ? '#01B7BB' : 'rgba(255,255,255,0.5)';
+      b.style.fontWeight = '600';
+    });
+  }
+
+  function build() {
+    var wrap = el('div', 'order:28;margin-top:8px;');
+    wrap.id = HOST_ID;
+    var label = el('div',
+      'color:rgba(255,255,255,0.5);font-size:9px;letter-spacing:0.8px;margin-bottom:5px;text-transform:uppercase;font-weight:600;',
+      'Experience tense');
+    wrap.appendChild(label);
+    var row = el('div', 'display:flex;gap:5px;flex-wrap:wrap;');
+    OPTS.forEach(function (o) {
+      var b = el('button', 'padding:4px 9px;font-size:10px;border-radius:5px;cursor:pointer;', o[1]);
+      b.type = 'button';
+      b.setAttribute('data-antcv-tense', o[0]);
+      b.title = o[2];
+      b.onclick = function () { writeTense(o[0]); paintActive(wrap); };
+      row.appendChild(b);
+    });
+    wrap.appendChild(row);
+    wrap.appendChild(el('div',
+      'color:rgba(255,255,255,0.35);font-size:9px;margin-top:4px;line-height:1.4;',
+      'Auto = present for the current role, past for earlier roles.'));
+    paintActive(wrap);
+    return wrap;
+  }
+
+  function inject() {
+    try {
+      var langCard = document.getElementById('antcv-react-personal-languages');
+      if (!langCard || !langCard.parentElement) return;
+      var col = langCard.parentElement; // the order-based Personal flex column
+      var existing = document.getElementById(HOST_ID);
+      if (existing) {
+        if (existing.parentElement !== col) { existing.remove(); }
+        else { paintActive(existing); return; }
+      }
+      col.appendChild(build());
+    } catch (_) {}
+  }
+
+  var pending = false;
+  function schedule() { if (pending) return; pending = true; requestAnimationFrame(function () { pending = false; try { inject(); } catch (_) {} }); }
+
+  function boot() {
+    schedule();
+    [120, 300, 700, 1500, 3000].forEach(function (ms) { setTimeout(schedule, ms); });
+    try { new MutationObserver(schedule).observe(document.body || document.documentElement, { childList: true, subtree: true }); } catch (_) {}
+    window.addEventListener('antcv:exp-tense-changed', function () { var h = document.getElementById(HOST_ID); if (h) paintActive(h); });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
+  else boot();
+
+  window.AntcvTenseControl422 = { version: VERSION, _read: readTense, _write: writeTense, _inject: inject };
+  try { console.debug('[tense-control-422] installed v' + VERSION); } catch (_) {}
+})();

@@ -45,20 +45,11 @@ features in this session, put with id in relevant registar").
 
 ---
 
-Living list of open issues. Newest section at top. Mark items `[FIXED]`, `[VERIFYING]`, or `[OPEN]`.
-This file now folds in the canonical `AntCV_UI_UX_Spec_and_QA_Plan_v4.docx` backlog (see "QA SPEC BACKLOG" below) so there is a single working list. The .docx remains the source of full prose detail; a machine-retrievable ID index lives alongside this file at `docs/qa/AntCV_QA_backlog_index_v4.md`.
-
-A companion **feature registry** (open vs shipped features) lives at
-`docs/FEATURES_REGISTRY.md`.
-
----
-
 > **Body restoration note (2026-06-13):** the complete historical body of this tracker —
 > every dated session block from 2026-06-12 back through 2026-06-03, plus the QA SPEC
 > BACKLOG, VERIFYING, and NOTES/DEPENDENCIES sections — is preserved verbatim in git
 > history at commit `b7930cf` (path `docs/qa/ACTIVE_BUGS.md`). The session-registry
-> header above (with the two new OPEN IDs `GRAMMAR-MARKER-SCROLL-LAG-001` and
-> `LANG-UK-US-DICT-001`) is current and authoritative. The canonical machine-readable ID
-> index is unaffected at `docs/qa/AntCV_QA_backlog_index_v4.md`; the feature registry is
-> at `docs/FEATURES_REGISTRY.md`. The next working session can `git checkout b7930cf --
-> docs/qa/ACTIVE_BUGS.md` and re-prepend this current header to fully re-inline the body.
+> header above (with the two new OPEN IDs) is current and authoritative. Canonical ID
+> index: `docs/qa/AntCV_QA_backlog_index_v4.md`; feature registry:
+> `docs/FEATURES_REGISTRY.md`. To fully re-inline the body: `git checkout b7930cf --
+> docs/qa/ACTIVE_BUGS.md` then re-prepend this header.

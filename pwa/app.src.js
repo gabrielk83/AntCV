@@ -4598,7 +4598,7 @@
                     fontSize: r(o),
                     fontFamily: T,
                     marginBottom: 2,
-                    color: S ? "#fff" : "#333",
+                    color: S ? readableInk(k.sidebarBg) : "#333",
                     lineHeight: I,
                     textAlign: S
                       ? "certs" === e.id || /cert/i.test(e.title || "")
@@ -5625,7 +5625,7 @@
                     fontSize: S ? $.sb : $.text,
                     fontFamily: T,
                     marginBottom: 2,
-                    color: S ? "#fff" : "#333",
+                    color: S ? readableInk(k.sidebarBg) : "#333",
                     textAlign: "left",
                     lineHeight: I,
                     paddingLeft: row.indent ? 8 : 0,
@@ -5635,7 +5635,7 @@
                 },
                 React.createElement(
                   "b",
-                  { style: { color: S ? "#fff" : C } },
+                  { style: { color: S ? readableInk(k.sidebarBg) : C } },
                   React.createElement(B, {
                     path: ["items", t, "l"],
                     value: L(a),
@@ -5646,7 +5646,7 @@
                 " ",
                 React.createElement(
                   "span",
-                  { style: { fontWeight: 400, color: S ? "#fff" : "#333" } },
+                  { style: { fontWeight: 400, color: S ? readableInk(k.sidebarBg) : "#333" } },
                   React.createElement(B, {
                     path: ["items", t, "v"],
                     value: P(i),
@@ -5679,7 +5679,7 @@
                   style: {
                     fontSize: S ? $.sb : $.text,
                     fontFamily: T,
-                    color: S ? "#fff" : "#333",
+                    color: S ? readableInk(k.sidebarBg) : "#333",
                     marginBottom: 2,
                     textAlign: S
                       ? "certs" === e.id || /cert/i.test(e.title || "")
@@ -5719,7 +5719,7 @@
                   style: {
                     fontSize: S ? $.sb : $.text,
                     fontFamily: T,
-                    color: S ? "#fff" : "#333",
+                    color: S ? readableInk(k.sidebarBg) : "#333",
                     marginBottom: 3,
                     lineHeight: 1.3,
                     textAlign: "justify",
@@ -5756,7 +5756,7 @@
                     fontSize: S ? $.sb : $.text,
                     fontFamily: T,
                     marginBottom: 4,
-                    color: S ? "#fff" : "#333",
+                    color: S ? readableInk(k.sidebarBg) : "#333",
                     textAlign: "left",
                     lineHeight: I,
                     overflowWrap: "break-word",
@@ -5765,7 +5765,7 @@
                 },
                 React.createElement(
                   "b",
-                  { style: { color: S ? "#fff" : C } },
+                  { style: { color: S ? readableInk(k.sidebarBg) : C } },
                   React.createElement(B, {
                     path: ["items", n, "deg"],
                     // The row is already bold — stray markdown markers

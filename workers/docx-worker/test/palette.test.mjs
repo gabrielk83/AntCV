@@ -113,12 +113,22 @@ test('getPackageStyle: legacy-ATS tier forces a Calibri body font', () => {
   }
 });
 
-test('getPackageStyle: universal tokens are package-independent', () => {
+test('getPackageStyle: on-ground text is luminance-aware (dark on pale, white on dark)', () => {
+  // SANDBOX item B: the sidebar/header ground can be PALE (Copenhagen), so the
+  // on-ground text (sidebar text, candidate name, table header) inverts to dark
+  // ink rather than being forced white. mainTextColor (main column on white)
+  // stays dark for every package.
+  const lum = (h) => {
+    const x = String(h).replace('#', '');
+    return 0.2126 * parseInt(x.slice(0, 2), 16) + 0.7152 * parseInt(x.slice(2, 4), 16) + 0.0722 * parseInt(x.slice(4, 6), 16);
+  };
   for (const id of regIds) {
     const s = getPackageStyle(id, false);
     assert.equal(s.mainTextColor, '1F2937');
-    assert.equal(s.sidebarTextColor, 'FFFFFF');
-    assert.equal(s.headerNameColor, 'FFFFFF');
+    const expectInk = lum(s.sidebarBg) > 140 ? '283556' : 'FFFFFF';
+    assert.equal(s.sidebarTextColor, expectInk, `${id} sidebar ink vs ground ${s.sidebarBg}`);
+    assert.equal(s.headerNameColor, expectInk, `${id} name ink vs ground ${s.sidebarBg}`);
+    assert.equal(s.tableHeaderText, expectInk, `${id} table-header ink vs ground ${s.sidebarBg}`);
   }
 });
 

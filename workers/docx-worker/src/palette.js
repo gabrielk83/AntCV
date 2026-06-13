@@ -17,7 +17,12 @@
 
 const PACKAGES = {
   'copenhagen-modern': {
-    base: '283556', primary: '00746E', interactive: '0B74DE',
+    // SANDBOX item B (owner 2026-06-13): pale blue-grey sidebar/header/table
+    // GROUND with dark ink. `base` stays the dark brand navy (it still drives
+    // mainHeadColor on the white main column); `ground` is the new pale panel
+    // colour used only for the sidebar/header/table backgrounds, and the
+    // on-ground text colours invert to dark via readableInk() below.
+    base: '283556', ground: 'DDE6F2', primary: '00746E', interactive: '0B74DE',
     bullet: '00746E', glyph: '0B74DE',
     headingFont: 'Segoe UI', bodyFont: 'Calibri',
   },
@@ -77,6 +82,23 @@ const DEFAULT_PACKAGE = 'copenhagen-modern';
 // pwa/antcv-packages-registry.css's :root block.
 const UNIVERSAL_MAIN_TEXT = '1F2937';
 const UNIVERSAL_WHITE = 'FFFFFF';
+const UNIVERSAL_DARK_INK = '283556';
+
+// SANDBOX item B (owner 2026-06-13): the on-base text colours (sidebar text,
+// candidate name/spec/contact, table header) used to be forced white, which
+// goes invisible on a PALE package ground (Copenhagen). Pick the ink by the
+// luminance of the package base so it is dark on light grounds and white on
+// dark ones — same helper the PWA preview/export use. Hex is OOXML-style (no #).
+function readableInk(hex) {
+  try {
+    const h = String(hex || '').replace('#', '');
+    if (h.length < 6) return UNIVERSAL_WHITE;
+    const r = parseInt(h.slice(0, 2), 16),
+      g = parseInt(h.slice(2, 4), 16),
+      b = parseInt(h.slice(4, 6), 16);
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b > 140 ? UNIVERSAL_DARK_INK : UNIVERSAL_WHITE;
+  } catch (_) { return UNIVERSAL_WHITE; }
+}
 
 /**
  * Normalise an incoming package id to a canonical key. Accepts case-
@@ -105,6 +127,11 @@ export function getPackageStyle(packageId, legacyAtsTier = false) {
   const id = normalisePackageId(packageId);
   const p = PACKAGES[id];
   const bodyFont = legacyAtsTier ? 'Calibri' : p.bodyFont;
+  // SANDBOX item B: the sidebar/header/table GROUND is `ground` when a package
+  // defines a pale panel (Copenhagen), else the dark `base`. mainHeadColor and
+  // the dark-ink targets keep using `base`. On-ground text inverts via
+  // readableInk(ground) — dark on a pale ground, white on a dark one.
+  const ground = p.ground || p.base;
   return {
     // Legacy aliases that pre-v1.50.8 code may still read.
     navy: p.base,
@@ -115,16 +142,17 @@ export function getPackageStyle(packageId, legacyAtsTier = false) {
     mainHeadColor: p.base,
     mainTextColor: UNIVERSAL_MAIN_TEXT,
     mainBulletColor: p.bullet,
-    sidebarBg: p.base,
+    sidebarBg: ground,
     sidebarHeadColor: p.primary,
-    sidebarTextColor: UNIVERSAL_WHITE,
-    sidebarLabelColor: UNIVERSAL_WHITE,
-    headerBg: p.base,
-    headerNameColor: UNIVERSAL_WHITE,
-    headerSpecColor: UNIVERSAL_WHITE,
-    headerContactColor: UNIVERSAL_WHITE,
+    sidebarTextColor: readableInk(ground),
+    sidebarLabelColor: readableInk(ground),
+    headerBg: ground,
+    headerNameColor: readableInk(ground),
+    headerSpecColor: readableInk(ground),
+    headerContactColor: readableInk(ground),
     photoBorderColor: p.primary,
-    tableHeaderBg: p.base,
+    tableHeaderBg: ground,
+    tableHeaderText: readableInk(ground),
 
     // Fonts. The registry stores headingFont as e.g. "Segoe UI Bold";
     // OOXML treats the font name as a face name, and bold weight is

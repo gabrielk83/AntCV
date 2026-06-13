@@ -380,7 +380,7 @@
       return cb;
     }
     var masterOn = (function () { try { return localStorage.getItem('antcv:spell:enabled') !== '0'; } catch (_) { return true; } })();
-    row('Spelling underlines in the editor', masterOn, function (v) {
+    row('Spelling underlines (editor + preview)', masterOn, function (v) {
       try { localStorage.setItem('antcv:spell:enabled', v ? '1' : '0'); } catch (_) {}
     });
     var per = readLangsMap();
@@ -406,6 +406,9 @@
   setTimeout(injectSettings, 2500);
 
   // ─── public API ──────────────────────────────────────────────────
+  // PREVIEW-SPELL-001 (owner 2026-06-13): expose suggest / addToDict / lang /
+  // enabled so the preview spell overlay (antcv-preview-spell-overlay-425.js)
+  // can REUSE this engine + settings instead of loading a second copy.
   window.AntcvSpell = {
     version: VERSION,
     setEnabled: function (on) {
@@ -416,5 +419,14 @@
         return eng ? misspellings(String(text || ''), eng, lang()) : [];
       });
     },
+    suggest: function (word) {
+      return getEngine().then(function (eng) {
+        try { return eng ? (eng.suggest(String(word || '')) || []).slice(0, MAX_SUGGEST) : []; }
+        catch (_) { return []; }
+      });
+    },
+    addToDict: function (word) { try { addToUserDict(lang(), String(word || '')); } catch (_) {} },
+    lang: lang,
+    enabled: enabled,
   };
 })();

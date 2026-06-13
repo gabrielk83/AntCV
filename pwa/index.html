@@ -274,6 +274,10 @@
       text-transform:uppercase!important;
       font-weight:600!important;
     }
+    /* PERSONAL-ORDER-002 (owner 2026-06-13, figure 1-7): Languages card at
+       position 3 (Background 10, CV Sidebar 15, Languages 20, Tense 22). The
+       island sets inline order:27; override to 20. */
+    #antcv-react-personal-languages { order:20 !important; }
   </style>
 <link rel="stylesheet" href="./antcv-mobile-controls.css?v=1.50.151-cldoc">
 <script>
@@ -322,7 +326,7 @@
         auth.src = 'antcv-auth.js?v=1.50.312-auth-msg';
         auth.onload = function(){
           var app = document.createElement('script');
-          app.src = 'app.js?v=1.50.426';
+          app.src = 'app.js?v=1.50.427';
           app.onload = function(){
             var vo = document.createElement('script');
             vo.src = 'antcv-version-override.js?v=1.50.41';
@@ -643,7 +647,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-preview-spell-overlay-425.js?v=1.50.425" defer></script>
 <!-- TENSE-RELOCATE-001: EXPERIENCE TENSE control relocated into Settings ->
      Personal beside the languages + grammar controls (uses window._antcvSetExpTense). -->
-<script src="antcv-tense-control-422.js?v=1.50.422" defer></script>
+<script src="antcv-tense-control-422.js?v=1.50.427" defer></script>
 <!-- DATA-PORTABILITY-CLOUD (1.50.385): persist corrected stylePackage/toneRegister to the relay. -->
 <script src="antcv-orphan-cloud-persist-385.js?v=1.50.385-orphan-sync" defer></script>
 <!-- FEATURE-CONF-001 (1.50.386): confidence overlay toggle (grounding heuristic, pluggable). -->
@@ -781,7 +785,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <!-- v1.40.351: mobile-only FAB cleanup. Hides the redundant mobile JD-analysis
      and Fusion FABs (title-keyed; they lack the data-attrs topbar-tools-347
      uses) and relocates the mobile Privacy FAB into the top bar as a compact
-     desktop-style pill with higher-contrast fill. -->
+     desktop-style pill with higher-contrast fill. -->
 <script src="antcv-wizard-mode-bridge-337.js?v=1.40.339" defer></script>
 <!-- v1.40.340-a: Phase 2 of the wizard-mode bridge. Reads /api/user/mode at
      boot / sign-in / focus / cross-tab and publishes the cloud value via

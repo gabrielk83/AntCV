@@ -72,7 +72,8 @@
   }
 
   function build() {
-    var wrap = el('div', 'order:28;margin-top:8px;');
+    // order 22: Languages(20) -> Experience Tense(22) -> Advanced Tone(30).
+    var wrap = el('div', 'order:22;margin-top:8px;');
     wrap.id = HOST_ID;
     var label = el('div',
       'color:rgba(255,255,255,0.5);font-size:9px;letter-spacing:0.8px;margin-bottom:5px;text-transform:uppercase;font-weight:600;',
@@ -98,9 +99,16 @@
   function inject() {
     try {
       var langCard = document.getElementById('antcv-react-personal-languages');
-      if (!langCard || !langCard.parentElement) return;
-      var col = langCard.parentElement; // the order-based Personal flex column
       var existing = document.getElementById(HOST_ID);
+      // TENSE-STICKY-FIX-001 (owner 2026-06-13): the control belongs ONLY to
+      // the Personal subtab (it anchors on the languages card). If the
+      // languages card is gone (any other subtab — Layout, etc.), REMOVE the
+      // control so it is not sticky across tabs.
+      if (!langCard || !langCard.parentElement) {
+        if (existing) existing.remove();
+        return;
+      }
+      var col = langCard.parentElement; // the order-based Personal flex column
       if (existing) {
         if (existing.parentElement !== col) { existing.remove(); }
         else { paintActive(existing); return; }

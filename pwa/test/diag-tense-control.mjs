@@ -47,7 +47,7 @@ const placed = await page.evaluate(async ()=>{
   const t=document.getElementById('antcv-tense-control-422');
   return { present: !!t, sameCol: !!(t && t.parentElement===col), order: t&&t.style.order, buttons: t? [...t.querySelectorAll('button[data-antcv-tense]')].map(b=>b.getAttribute('data-antcv-tense')) : [] };
 });
-check('1. tense control placed beside languages (order 28)', placed.present && placed.sameCol && placed.order==='28' && placed.buttons.join(',')==='auto,present,past', JSON.stringify(placed));
+check('1. tense control placed beside languages (order 22)', placed.present && placed.sameCol && placed.order==='22' && placed.buttons.join(',')==='auto,present,past', JSON.stringify(placed));
 
 // click "Past" -> styleConfig.expTense persists, package NOT flipped to custom
 const after = await page.evaluate(async ()=>{
@@ -59,6 +59,16 @@ const after = await page.evaluate(async ()=>{
   return { expTense: sc.expTense, pkg };
 });
 check('2. clicking Past persists styleConfig.expTense=past, package unchanged', after.expTense==='past' && after.pkg==='copenhagen-modern', JSON.stringify(after));
+
+// TENSE-STICKY-FIX-001: remove the languages anchor (simulate switching to
+// another subtab) -> the tense control must be removed (not sticky).
+const sticky = await page.evaluate(async ()=>{
+  const lang=document.getElementById('antcv-react-personal-languages');
+  if(lang) lang.remove();
+  await new Promise(r=>setTimeout(r,700)); // let the sidecar observer re-run
+  return { stillThere: !!document.getElementById('antcv-tense-control-422') };
+});
+check('3. tense control removed when languages anchor gone (not sticky)', sticky.stillThere===false, JSON.stringify(sticky));
 check('no page errors', errs.length===0, errs.join('|').slice(0,200));
 
 await browser.close(); server.close();

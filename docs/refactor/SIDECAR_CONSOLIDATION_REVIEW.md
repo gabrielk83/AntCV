@@ -56,13 +56,19 @@ section-align (59 KB).
   (~16 → 1, removes the dedupe sidecar), but multi-session effort. NOT a
   one-shot.
 
-### G2 — Section editor panel fixes  ·  4 files  ·  PILOT (recommended first)
-section-panel-206, -207, -208, -211 (9.8–20.6 KB).
-- Versioned incremental patches to the SAME panel, layered over time — the
-  canonical "merge me" shape. No fetch wrap.
-- **Pilot:** fold 206/207/208 into 211 (the newest), preserving each guard,
-  behind boot-smoke + the section-panel behaviour. Smallest, clearest win;
-  good template for the staged G1 work.
+### G2 — Section editor panel fixes  ·  **DONE (1.50.418, 2026-06-13)**
+section-panel-206, -207, -208 RETIRED; -211 kept as the sole controller.
+- Finding on review: 211 (v1.40.351) is already a COMPLETE re-implementation
+  — it loads last, stamps every row/title/button with its own `-211` attrs,
+  owns the headline-CJLR feature (same `antcv.sectionHeadlineAlignment.v1`
+  key, newer defaults + user-touched + flicker-fix idempotent writers), and
+  its CSS replicates every 206/207/208 rule. Because it loads last it already
+  WON the cascade, so 206/207/208 were overridden dead weight.
+- Verified: every 206/207/208 CSS rule has a `-211` equivalent; only 211
+  reads their attrs (as graceful classify fallbacks); no external API
+  consumer. Removed the 3 `<script>` tags (−3 MutationObservers, −3
+  intervals, −3 timeout fans). Files left on disk (unreferenced). boot-smoke
+  clean. **Template for the staged G1 work.**
 
 ### G3 — Pagination / page-break  ·  ~15 files  ·  DEFER (high-risk)
 page-budget, page-fit, auto-pagebreak-block-001, item-pages-render,

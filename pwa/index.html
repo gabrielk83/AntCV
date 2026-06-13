@@ -309,7 +309,7 @@
         auth.src = 'antcv-auth.js?v=1.50.312-auth-msg';
         auth.onload = function(){
           var app = document.createElement('script');
-          app.src = 'app.js?v=1.50.417';
+          app.src = 'app.js?v=1.50.418';
           app.onload = function(){
             var vo = document.createElement('script');
             vo.src = 'antcv-version-override.js?v=1.50.41';
@@ -673,10 +673,15 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-panel-escape.js?v=1.40.203" defer></script>
 <script src="antcv-section-bar-freeze-fix.js?v=1.40.203" defer></script>
 <script src="antcv-section-main-panel-fix.js?v=1.40.205" defer></script>
-<script src="antcv-section-panel-206.js?v=1.50.83-idem" defer></script>
-<script src="antcv-section-panel-207.js?v=1.50.83-idem" defer></script>
-<script src="antcv-section-panel-208.js?v=1.50.83-idem" defer></script>
-<script src="antcv-section-panel-211.js?v=1.40.350" defer></script>
+<!-- SIDECAR-MERGE-G2 (2026-06-13): section-panel 206/207/208 RETIRED. 211
+     (v1.40.351) is a complete re-implementation that loads last, stamps every
+     row/title/button with its own -211 attrs, owns the headline-CJLR feature
+     (same storage key, newer defaults + user-touched + flicker-fix), and its
+     CSS already wins the cascade on every shared element — so the three
+     predecessors were overridden dead weight (3 redundant MutationObservers +
+     intervals). Verified: 211's CSS replicates each 206/207/208 rule; no
+     external consumer of their APIs/attrs. Review: docs/refactor/SIDECAR_CONSOLIDATION_REVIEW.md -->
+<script src="antcv-section-panel-211.js?v=1.50.418" defer></script>
 <script src="antcv-experience-role-cjlr-230.js?v=1.40.239-preview-guard" defer></script>
 <script src="antcv-core-competencies-row-controls-234.js?v=1.50.203-native-render" defer></script>
 <script src="antcv-selected-outcomes-row-controls-237.js?v=1.50.218-outcomes-page-only" defer></script>

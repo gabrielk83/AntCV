@@ -246,6 +246,27 @@
         return "#fff";
       }
     },
+    // OUTCOMES-MODE default (owner 2026-06-13): an explicit user choice wins; with
+    // none stored, Copenhagen Modern defaults to 'results' (inline "Results:" lines
+    // under each role) and every other package to 'section' (the OUTCOMES block).
+    __antcvOutcomesMode = () => {
+      try {
+        const raw = localStorage.getItem("outcomesMode");
+        if (null != raw) {
+          const v = JSON.parse(raw);
+          return "results" === v ? "results" : "section";
+        }
+        let pkg = "";
+        try {
+          const p = JSON.parse(localStorage.getItem("stylePackage") || '""');
+          pkg = ("string" == typeof p ? p : "").toLowerCase().trim();
+        } catch (_) {}
+        if ("scandinavian" === pkg || "" === pkg) pkg = "copenhagen-modern";
+        return "copenhagen-modern" === pkg ? "results" : "section";
+      } catch (_) {
+        return "section";
+      }
+    },
     c = {
       // DOCX-SIDEBAR-GREEN-001 + MAIN-NAVY-001 (owner 2026-06-10): in the MAIN
       // column EVERY accent — headings, sub-heads, vertical/rule lines, BULLETS,
@@ -2696,7 +2717,7 @@
               '- People oriented: builds working relationships across optics, firmware, quality, and suppliers; adapts the message to the listener; reads the room and adjusts pace.\n' +
               'WORK STYLE LINE (canonical base for work_style_content; use the DA version for Danish output): EN "Calm, structured decisions from measured data; clear written outcomes; works through relationships across engineering, suppliers, and management." DA "Rolige, strukturerede beslutninger på målte data; klare skriftlige konklusioner; arbejder gennem relationer på tværs af teknik, leverandører og ledelse."\n' +
               'PROFILE STRUCTURE — profile_content has THREE parts, in this order:\n' +
-              ' 1. WHO I AM (1-2 sentences): UNSOLICITED register = "IT professional with 15+ years of experience around commercial and regulated markets and products." (or the IT-specialist variant) — never a narrow specialist identity; JD-DRIVEN register = the JD-matched specialist opener.\n' +
+              ' 1. WHO I AM (1-2 sentences): UNSOLICITED register MUST open with the broad IT-professional identity — "IT professional with 15+ years of experience around commercial and regulated markets and products." (or the IT-specialist variant). NEVER open an unsolicited profile with a narrow technical specialty: do NOT start with "Electro-optics", "optics", "LiDAR", "hardware-software product engineer", or any single-domain title — those are niches the IT/product breadth contains, not the headline. Lead with the IT + product + regulated-market breadth; a specific domain may appear LATER in the sentence as one example, never as the opener. JD-DRIVEN register = the JD-matched specialist opener.\n' +
               ' 2. BODY-MIND (1 sentence on what gives energy / makes him happy — the word "passionate" stays BANNED even here; use "makes me happy" / "gives me energy"): rugby at Copenhagen Wolves RFC (operations manager and assistant coach — keep the Danish word "foreningsarbejde" in the English text) and/or building AntCV, a GenAI product designed, built and shipped solo.\n' +
               ' 3. SPECIAL CAPABILITIES (maximum ONE personality-bearing sentence; the rest is carried by the Work style line): the underlying message is always — technical expert WITH human-reading skills and understanding of people; the combination is rare. Example: "Technical depth paired with reading people: hears what is not said in a review and brings everyone along."\n' +
               'RENDER CONSTRAINTS: max ONE personality-bearing sentence in PROFILE; NEVER render raw: "people\'s person", "team player", "empathy", "moral", "reads the room". Behaviour over adjectives.\n' +
@@ -4219,14 +4240,7 @@
     // OUTCOMES — 'section' (default) renders the outcomes section and NO
     // per-role "Results:" lines; 'results' hides the outcomes section and
     // renders matched outcomes as a "Results:" line under each role.
-    const __outcomesMode = (() => {
-      try {
-        const v = JSON.parse(localStorage.getItem("outcomesMode") || '"section"');
-        return "results" === v ? "results" : "section";
-      } catch (_) {
-        return "section";
-      }
-    })();
+    const __outcomesMode = __antcvOutcomesMode();
     if (
       "results" === __outcomesMode &&
       !n &&
@@ -6934,16 +6948,7 @@
               ["section", "Outcomes section"],
               ["results", "Results per role"],
             ].map(([mv, ml]) => {
-              const cur = (() => {
-                try {
-                  const v = JSON.parse(
-                    localStorage.getItem("outcomesMode") || '"section"',
-                  );
-                  return "results" === v ? "results" : "section";
-                } catch (_) {
-                  return "section";
-                }
-              })();
+              const cur = __antcvOutcomesMode();
               const act = cur === mv;
               return React.createElement(
                 "button",

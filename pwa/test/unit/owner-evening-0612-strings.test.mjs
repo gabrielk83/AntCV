@@ -23,13 +23,12 @@ import path from 'node:path';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const bundle = readFileSync(path.join(ROOT, 'app.js'), 'utf8');
 
-test('RECOMMENDATIONS-SECTION-001 — skeleton + backfill + translations', () => {
+test('RECOMMENDATIONS-SECTION-001 — skeleton + translations (placement consolidated to sidecar)', () => {
   assert.ok(bundle.includes('Danish and international recommenders on request.'));
   assert.ok(bundle.includes('"RECOMMENDATIONS"') || /RECOMMENDATIONS:/.test(bundle));
   assert.ok(bundle.includes('REFERENCER'));
   assert.ok(bundle.includes('RECOMENDACIONES'));
   assert.ok(bundle.includes('推荐人'));
-  assert.ok(bundle.includes('RECOMMENDATIONS-SECTION-001'));
 });
 
 test('SPEC-CATCHY-001 — standing specialization line + unsolicited append', () => {
@@ -49,9 +48,11 @@ test('SPEC-SEPARATOR-001 — stored "*" separators normalized on read + in store
   assert.ok(bundle.includes(String.raw`/\S\s*\*\s*\S/`));
 });
 
-test('RECOMMENDATIONS placement — anchored after the LAST of experience/expertise', () => {
-  assert.ok(bundle.includes(String.raw`PROFESSIONAL EXPERTISE|\bEXPERTISE\b|EKSPERTISE`));
-  assert.ok(bundle.includes('[RECOMMENDATIONS-SECTION-001] placed after'));
+test('RECOMMENDATIONS placement — consolidated into the restore-proof sidecar', () => {
+  const sidecar = readFileSync(path.join(ROOT, 'antcv-sections-normalize-415.js'), 'utf8');
+  assert.ok(sidecar.includes(String.raw`PROFESSIONAL EXPERTISE|\bEXPERTISE\b|EKSPERTISE`));
+  assert.ok(sidecar.includes('placeRecs'));
+  assert.ok(sidecar.includes('antcv:sections-updated'));
 });
 
 test('SPEC-SCOPE-001 — Gabriel-only default, tailored drafts get a fresh smart line', () => {
@@ -63,12 +64,18 @@ test('SPEC-SCOPE-001 — Gabriel-only default, tailored drafts get a fresh smart
   assert.ok(bundle.includes('DERIVE one from the candidate'));
 });
 
-test('ROLE-DUP-001 — duplicate role-title variants merged (prompt + stored dedupe)', () => {
-  // generation-side merge rule
+test('ROLE-DUP-001 — duplicate role-title variants merged (prompt + consolidated sidecar)', () => {
+  // generation-side merge rule stays in the bundle prompt
   assert.ok(bundle.includes('DUPLICATE-ROLE MERGE (ROLE-DUP-001)'));
-  assert.ok(bundle.includes('"System Architect" vs "System Architect & CRM"'));
-  // deterministic stored-sections dedupe effect
-  assert.ok(bundle.includes('[ROLE-DUP-001] merged'));
+  // SECTIONS-CONSOLIDATE-001: the deterministic dedupe/founder/recs effects
+  // moved OUT of app.js into the restore-proof sidecar.
+  const sidecar = readFileSync(path.join(ROOT, 'antcv-sections-normalize-415.js'), 'utf8');
+  assert.ok(sidecar.includes('dedupeRoles'));
+  assert.ok(sidecar.includes('stripFounder'));
+  assert.ok(sidecar.includes('placeRecs'));
+  assert.ok(sidecar.includes('PROFESSIONAL EXPERTISE'));
+  // and app.js no longer carries the removed effect's runtime marker
+  assert.ok(!bundle.includes('[ROLE-DUP-001] merged'));
 });
 
 test('work-style people-skill close rule in the prompt', () => {

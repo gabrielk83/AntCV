@@ -14581,66 +14581,10 @@
             }
           } catch (_) {}
         }, [ro]),
-        // RECOMMENDATIONS-SECTION-001 backfill + placement (owner 2026-06-12,
-        // placement corrected 2026-06-13: "recommendations needs to be AFTER
-        // professional expertise"). The anchor is the LAST of: the experience
-        // section and any main-column PROFESSIONAL EXPERTISE / EXPERTISE /
-        // EKSPERTISE-titled section — recommendations sits directly after it.
-        // Inserts when missing; REPOSITIONS an existing one that landed
-        // before the expertise block (the 2026-06-12 backfill anchored on
-        // experience only). Idempotent: no-ops when already in place.
-        React.useEffect(() => {
-          try {
-            if (!(ro && Array.isArray(ro.cv) && ro.cv.length)) return;
-            const isRec = (e) =>
-              e &&
-              ("recommendations" === e.id ||
-                /RECOMMENDATIONS|REFERENCER|ANBEFALINGER|RECOMENDACIONES|推荐人/i.test(
-                  String(e.title || ""),
-                ));
-            const isAnchor = (e) =>
-              e &&
-              !isRec(e) &&
-              ("experience" === e.type ||
-                ("main" === e.loc &&
-                  /PROFESSIONAL EXPERTISE|\bEXPERTISE\b|EKSPERTISE/i.test(
-                    String(e.title || ""),
-                  )));
-            let anchor = -1;
-            ro.cv.forEach((e, i) => {
-              if (isAnchor(e)) anchor = i;
-            });
-            if (anchor < 0) return;
-            const ri = ro.cv.findIndex(isRec);
-            if (ri === anchor + 1) return; // already in place
-            const cv = ro.cv.slice();
-            let rec;
-            if (ri >= 0) rec = cv.splice(ri, 1)[0];
-            else
-              rec = {
-                id: "recommendations",
-                title: "RECOMMENDATIONS",
-                loc: "main",
-                on: !0,
-                type: "text",
-                content: "Danish and international recommenders on request.",
-              };
-            // recompute the anchor on the spliced copy (removal may shift it)
-            let a2 = -1;
-            cv.forEach((e, i) => {
-              if (isAnchor(e)) a2 = i;
-            });
-            if (a2 < 0) return;
-            cv.splice(a2 + 1, 0, rec);
-            ao({ ...ro, cv });
-            try {
-              console.log(
-                "[RECOMMENDATIONS-SECTION-001] placed after",
-                String((cv[a2] && cv[a2].title) || cv[a2].type),
-              );
-            } catch (_) {}
-          } catch (_) {}
-        }, [ro]),
+        // RECOMMENDATIONS placement (insert + reposition after the LAST of
+        // experience / PROFESSIONAL EXPERTISE) is CONSOLIDATED into
+        // antcv-sections-normalize-415.js (SECTIONS-CONSOLIDATE-001) so it
+        // survives the kernel cloud-restore that out-raced this React effect.
         // SPEC-SEPARATOR-001 (owner 2026-06-13): a stored subtitle that still
         // uses "*" separators is rewritten to " • " once.
         React.useEffect(() => {
@@ -14651,110 +14595,14 @@
             }
           } catch (_) {}
         }, [io]),
-        // ROLE-DUP-001 (owner 2026-06-13: "System Architect & CRM is visible
-        // and so does System Architect — not a legal combination"): two
-        // VISIBLE experience roles describing the same position — same
-        // company, same or overlapping years, one title contained in the
-        // other — collapse to the role with the FULLER title. Conservative:
-        // only exact-containment titles at the same company are touched,
-        // and the survivor keeps the union of visibility + the richer
-        // bullet list.
-        React.useEffect(() => {
-          try {
-            if (!(ro && Array.isArray(ro.cv))) return;
-            const xi = ro.cv.findIndex(
-              (e) => e && "experience" === e.type && Array.isArray(e.roles),
-            );
-            if (xi < 0) return;
-            const norm = (s) =>
-              String(s || "")
-                .toLowerCase()
-                .replace(/[^a-z0-9]+/g, " ")
-                .trim();
-            const yearsOf = (s) =>
-              (String(s || "").match(/\d{4}/g) || []).map(Number);
-            const overlap = (a, b) => {
-              const ya = yearsOf(a), yb = yearsOf(b);
-              if (!ya.length || !yb.length) return true; // unknown -> assume same era
-              const a0 = Math.min(...ya), a1 = Math.max(...ya);
-              const b0 = Math.min(...yb), b1 = Math.max(...yb);
-              return a0 <= b1 && b0 <= a1;
-            };
-            const roles = ro.cv[xi].roles.slice();
-            const drop = new Set();
-            for (let i = 0; i < roles.length; i++) {
-              for (let j = 0; j < roles.length; j++) {
-                if (i === j || drop.has(i) || drop.has(j)) continue;
-                const a = roles[i], b = roles[j];
-                if (!a || !b) continue;
-                const ta = norm(a.title), tb = norm(b.title);
-                // only pairs where a's title is contained in b's (covers
-                // identical titles too) — b is the fuller survivor
-                if (!ta || !tb || !tb.includes(ta)) continue;
-                if (norm(a.company) !== norm(b.company)) continue;
-                if (!overlap(a.years, b.years)) continue;
-                // b carries the fuller (or equal) title -> keep b, drop a
-                drop.add(i);
-                if (!1 !== a.on) b.on = !0;
-                if (
-                  (!Array.isArray(b.bullets) || !b.bullets.length) &&
-                  Array.isArray(a.bullets) &&
-                  a.bullets.length
-                )
-                  b.bullets = a.bullets;
-              }
-            }
-            if (!drop.size) return;
-            const kept = roles.filter((_, i) => !drop.has(i));
-            const cv = ro.cv.slice();
-            cv[xi] = { ...cv[xi], roles: kept };
-            ao({ ...ro, cv });
-            try {
-              console.log(
-                "[ROLE-DUP-001] merged",
-                drop.size,
-                "duplicate role title variant(s)",
-              );
-            } catch (_) {}
-          } catch (_) {}
-        }, [ro]),
-        // ROLE-FOUNDER-001 (owner 2026-06-13: "remove the word founder ...
-        // unless it is a consultancy/independent job"): strip "Founder" /
-        // "Co-Founder" from stored experience role TITLES. "Independent" is
-        // kept (legitimate for consultancy engagements like Kanzen
-        // konsulenter). Title-only + idempotent: re-runs no-op once clean.
-        React.useEffect(() => {
-          try {
-            if (!(ro && Array.isArray(ro.cv))) return;
-            let touched = false;
-            const cv = ro.cv.map((s) => {
-              if (!s || "experience" !== s.type || !Array.isArray(s.roles)) return s;
-              const roles = s.roles.map((r) => {
-                if (!r || !r.title || !/\bfounder\b/i.test(String(r.title)))
-                  return r;
-                // Founder present -> remove it, then tidy ONLY the separators
-                // left dangling by its removal (don't touch other "&"s).
-                const cleaned = String(r.title)
-                  .replace(/\bco[-\s]?founder\b/gi, "")
-                  .replace(/\bfounder\b/gi, "")
-                  .replace(/\s{2,}/g, " ")
-                  .replace(/^[\s&,/|-]+|[\s&,/|-]+$/g, "")
-                  .replace(/\s+[&,/|]\s*$/g, "")
-                  .trim();
-                if (cleaned && cleaned !== r.title) {
-                  touched = true;
-                  return { ...r, title: cleaned };
-                }
-                return r;
-              });
-              return touched ? { ...s, roles } : s;
-            });
-            if (touched) {
-              ao({ ...ro, cv });
-              try { console.log("[ROLE-FOUNDER-001] stripped 'Founder' from a role title"); } catch (_) {}
-            }
-          } catch (_) {}
-        }, [ro]),
+        // SECTIONS-CONSOLIDATE-001 (owner 2026-06-13: "consolidate sidecars
+        // that handle the same topic"): the ROLE-DUP-001 merge and
+        // ROLE-FOUNDER-001 title-strip React effects that used to live here
+        // were duplicated by — and out-raced by — the kernel cloud-restore.
+        // They now live ONCE in antcv-sections-normalize-415.js, which
+        // re-applies them (plus RECOMMENDATIONS placement) on every
+        // antcv:sections-updated AND a boot sweep, so they survive the
+        // restore. The React effects were redundant and are removed.
         React.useEffect(() => {
           const e = (e) => {
             try {

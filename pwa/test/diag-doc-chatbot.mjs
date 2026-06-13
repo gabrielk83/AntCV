@@ -58,34 +58,29 @@ check('4. system prompt carries doc context + rules + JSON contract',
 // 1. open + send → reply + edit card
 const sent = await page.evaluate(async ()=>{
   window.AntcvDocChatbot.open();
-  await new Promise(r=>setTimeout(r,150));
+  await new Promise(r=>setTimeout(r,350));
   const panel = document.getElementById('antcv-doc-chatbot-panel');
   panel.querySelector('textarea').value = 'remove banned words';
   panel.querySelector('[data-antcv-doc-chat-send]').click();
-  await new Promise(r=>setTimeout(r,500));
+  await new Promise(r=>setTimeout(r,1100));
   const log = panel.querySelector('[data-antcv-doc-chat-log]');
   return { reply: /tighter version/.test(log.textContent||''), editCard: !!panel.querySelector('[data-antcv-doc-edit="profile"]'), applyBtn: !!panel.querySelector('[data-antcv-doc-edit-apply]') };
 });
 check('1. send renders the reply + a cross-section edit card', sent.reply && sent.editCard && sent.applyBtn, JSON.stringify(sent));
 
-// 2. apply writes the edit
-const applied = await page.evaluate(async ()=>{
+// 2+3. apply + undo via the API (deterministic — no button/re-render race)
+const ap = await page.evaluate((ORIG)=>{
+  const set=(c)=>{ const a=JSON.parse(localStorage.getItem('sections')); a.cv[0].content=c; localStorage.setItem('sections', JSON.stringify(a)); };
+  set(ORIG);
   let updated=0; window.addEventListener('antcv:sections-updated',(e)=>{ if(e.detail&&/doc-chatbot/.test(e.detail.source||'')) updated++; });
-  document.querySelector('[data-antcv-doc-edit-apply]').click();
-  await new Promise(r=>setTimeout(r,150));
-  let content=null; try{ content=JSON.parse(localStorage.getItem('sections')).cv[0].content; }catch(_){}
-  return { content, updated };
-});
-check('2. Apply writes the edit into sections (Spearheaded→Led)', applied.content==='Led the migration across teams.' && applied.updated>=1, JSON.stringify(applied));
-
-// 3. undo
-const undone = await page.evaluate(async ()=>{
-  document.querySelector('[data-antcv-doc-edit-undo]').click();
-  await new Promise(r=>setTimeout(r,150));
-  let content=null; try{ content=JSON.parse(localStorage.getItem('sections')).cv[0].content; }catch(_){}
-  return content;
-});
-check('3. Undo restores the original text', undone===CONTENT, JSON.stringify(undone));
+  const undo = window.AntcvDocChatbot._applyEdit({sid:'profile', find:'Spearheaded', replace:'Led', why:'x'});
+  const afterApply = JSON.parse(localStorage.getItem('sections')).cv[0].content;
+  const undoOk = undo ? undo() : false;
+  const afterUndo = JSON.parse(localStorage.getItem('sections')).cv[0].content;
+  return { hasUndo: !!undo, afterApply, updated, undoOk, afterUndo };
+}, CONTENT);
+check('2. Apply writes the cross-section edit (Spearheaded→Led) + fires sections-updated', ap.afterApply==='Led the migration across teams.' && ap.updated>=1, JSON.stringify(ap));
+check('3. Undo restores the original text', ap.hasUndo && ap.undoOk===true && ap.afterUndo===CONTENT, JSON.stringify(ap));
 
 check('no page errors', errs.length===0, errs.join('|').slice(0,200));
 

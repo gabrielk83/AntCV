@@ -58,17 +58,21 @@
   function clean(s) { return String(s == null ? '' : s).replace(/[\t\n\r ]+/g, ' ').trim(); }
   function paper() { return document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]'); }
   function proxyBase() {
-    try {
-      var v = JSON.parse(localStorage.getItem('proxyUrl') || '""');
-      var b = String(v || '').replace(/\/+$/, '');
-      // DEMO support (owner 2026-06-13): demo users have no proxyUrl. Fall back
-      // to the access relay (window.ANTCV_RELAY_URL, from relay-config.json),
-      // which forwards the LLM call to the demo-proxy with the relay-auth secret
-      // — the same fallback generation + the JD-URL fetch use. credentials are
-      // already sent (the Cf-Access cookie), so demo auth is carried.
-      if (!b && typeof window.ANTCV_RELAY_URL === 'string') b = String(window.ANTCV_RELAY_URL).replace(/\/+$/, '');
-      return b;
-    } catch (_) { return ''; }
+    // DEMO / relay support (owner 2026-06-13): the relay URL lives in
+    // localStorage.relayUrl (written by antcv-auth) AND/OR window.ANTCV_RELAY_URL
+    // (relay-config.json). The earlier fallback only checked the window global,
+    // which isn't always a string when the bot runs -> "No worker URL" even
+    // though the relay was configured. Mirror the app's own resolver: proxyUrl,
+    // then relayUrl, then the window global.
+    function read(k) {
+      var v = '';
+      try { v = localStorage.getItem(k) || ''; } catch (_) {}
+      try { if (v && v.charAt(0) === '"') v = JSON.parse(v); } catch (_) {}
+      return String(v || '').replace(/\/+$/, '');
+    }
+    var b = read('proxyUrl') || read('relayUrl');
+    if (!b && typeof window.ANTCV_RELAY_URL === 'string') b = String(window.ANTCV_RELAY_URL).replace(/\/+$/, '');
+    return b;
   }
 
   // ─── selection pill ───────────────────────────────────────────────

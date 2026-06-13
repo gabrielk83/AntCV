@@ -28,13 +28,18 @@
   function readJSON(k) { try { var r = localStorage.getItem(k); return r ? JSON.parse(r) : null; } catch (_) { return null; } }
   function activeDoc() { var d = readJSON('doc'); return d === 'cl' ? 'cl' : 'cv'; }
   function proxyBase() {
-    try {
-      var v = JSON.parse(localStorage.getItem('proxyUrl') || '""');
-      var b = String(v || '').replace(/\/+$/, '');
-      // DEMO fallback: the access relay forwards to the demo-proxy.
-      if (!b && typeof window.ANTCV_RELAY_URL === 'string') b = String(window.ANTCV_RELAY_URL).replace(/\/+$/, '');
-      return b;
-    } catch (_) { return ''; }
+    // DEMO / relay: proxyUrl, then localStorage.relayUrl (antcv-auth), then the
+    // window global (relay-config.json) — same resolver the app + the per-element
+    // chatbot use, so demo/relay users reach the LLM.
+    function read(k) {
+      var v = '';
+      try { v = localStorage.getItem(k) || ''; } catch (_) {}
+      try { if (v && v.charAt(0) === '"') v = JSON.parse(v); } catch (_) {}
+      return String(v || '').replace(/\/+$/, '');
+    }
+    var b = read('proxyUrl') || read('relayUrl');
+    if (!b && typeof window.ANTCV_RELAY_URL === 'string') b = String(window.ANTCV_RELAY_URL).replace(/\/+$/, '');
+    return b;
   }
   function inEditor() {
     try { return readJSON('step') === 'editor' && !!document.querySelector('.antcv-preview-paper, [data-antcv-document-main]'); }
@@ -250,17 +255,55 @@
     if (!inEditor()) { if (existing) existing.remove(); return; }
     if (existing) return;
     var b = el('button', [
-      'position:fixed', 'z-index:2147483600', 'right:14px', 'bottom:14px',
+      'position:fixed', 'z-index:2147483600',
       'padding:10px 15px', 'border-radius:24px', 'border:0',
       'background:#01B7BB', 'color:#06243a', 'font-weight:800', 'font-size:13px',
-      'font-family:Calibri,Arial,sans-serif', 'cursor:pointer',
+      'font-family:Calibri,Arial,sans-serif', 'cursor:grab', 'touch-action:none',
       'box-shadow:0 6px 20px rgba(0,0,0,0.35)', 'display:flex', 'align-items:center', 'gap:6px',
     ].join(';'), '🤖 Ask AI');
     b.id = LAUNCH_ID;
     b.type = 'button';
-    b.title = 'Chat about or edit your whole document';
+    b.title = 'Chat about your document — drag to move';
     b.setAttribute('data-antcv-doc-chatbot-launch', '1');
-    b.onclick = function () { if (document.getElementById(PANEL_ID)) closePanel(); else openPanel(); };
+    // DOC-CHATBOT-DRAG-001 (owner 2026-06-13): the launcher hid the Fuse/CV/CL
+    // bottom toolbar. Default it ABOVE the toolbar (bottom:96px) and make it
+    // DRAGGABLE with a persisted position so the user can move it anywhere.
+    var saved = null;
+    try { saved = JSON.parse(localStorage.getItem('antcv:docChatbotPos') || 'null'); } catch (_) {}
+    if (saved && typeof saved.left === 'number') {
+      b.style.left = Math.max(4, Math.min(saved.left, (window.innerWidth || 800) - 60)) + 'px';
+      b.style.top = Math.max(4, Math.min(saved.top, (window.innerHeight || 600) - 50)) + 'px';
+    } else {
+      b.style.right = '14px';
+      b.style.bottom = '96px';
+    }
+    var dragging = false, moved = false, sx = 0, sy = 0, ox = 0, oy = 0;
+    b.addEventListener('pointerdown', function (ev) {
+      dragging = true; moved = false; sx = ev.clientX; sy = ev.clientY;
+      var r = b.getBoundingClientRect(); ox = r.left; oy = r.top;
+      b.style.cursor = 'grabbing';
+      try { b.setPointerCapture(ev.pointerId); } catch (_) {}
+    });
+    b.addEventListener('pointermove', function (ev) {
+      if (!dragging) return;
+      var dx = ev.clientX - sx, dy = ev.clientY - sy;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) moved = true;
+      if (moved) {
+        b.style.left = Math.max(4, Math.min(ox + dx, (window.innerWidth || 800) - 60)) + 'px';
+        b.style.top = Math.max(4, Math.min(oy + dy, (window.innerHeight || 600) - 50)) + 'px';
+        b.style.right = ''; b.style.bottom = '';
+      }
+    });
+    b.addEventListener('pointerup', function (ev) {
+      dragging = false; b.style.cursor = 'grab';
+      try { b.releasePointerCapture(ev.pointerId); } catch (_) {}
+      if (moved) {
+        var r = b.getBoundingClientRect();
+        try { localStorage.setItem('antcv:docChatbotPos', JSON.stringify({ left: r.left, top: r.top })); } catch (_) {}
+      } else {
+        if (document.getElementById(PANEL_ID)) closePanel(); else openPanel();
+      }
+    });
     (document.body || document.documentElement).appendChild(b);
   }
 

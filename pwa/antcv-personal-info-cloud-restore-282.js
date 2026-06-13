@@ -57,7 +57,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.40.282';
+  var VERSION = '1.50.432-no-merge';
   if (window.__antcvPersonalInfoCloudRestore282 === VERSION) return;
   window.__antcvPersonalInfoCloudRestore282 = VERSION;
 
@@ -231,7 +231,25 @@
         var raw = localStorage.getItem('personalInfo');
         if (raw) localPi = JSON.parse(raw) || {};
       } catch (_) {}
-      var result = fillMissing(localPi, cloudPi);
+      // LEAK-FIX (owner 2026-06-13, "restore but never merge"): the old
+      // field-by-field fillMissing let one persona's cloud fields bleed into
+      // the OTHER persona's empty slots (the Gabriel/Anita specialization
+      // leak) — you could end up with a half-Gabriel / half-Anita record.
+      // When the cloud holds a SUBSTANTIVE personalInfo, replace local
+      // WHOLESALE so the restored record is a single consistent persona — no
+      // cross-field mixing. Only fall back to the gentle fillMissing when the
+      // cloud copy is sparse, so a near-empty cloud can't wipe a fuller local.
+      var cloudKeys = (cloudPi && typeof cloudPi === 'object')
+        ? Object.keys(cloudPi).filter(function (k) { return !isEmpty(cloudPi[k]); })
+        : [];
+      var cloudSubstantive = !!(String((cloudPi && cloudPi.name) || '').trim()) || cloudKeys.length >= 3;
+      var result;
+      if (cloudSubstantive) {
+        var mergedClone = JSON.parse(JSON.stringify(cloudPi));
+        result = { merged: mergedClone, changed: JSON.stringify(mergedClone) !== JSON.stringify(localPi) };
+      } else {
+        result = fillMissing(localPi, cloudPi);
+      }
       if (!result.changed) {
         try { console.debug('[personal-info-cloud-restore-282] nothing to restore (local already complete)'); } catch (_) {}
         try { sessionStorage.setItem(SESSION_FLAG, '1'); } catch (_) {}

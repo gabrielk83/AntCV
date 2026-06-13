@@ -326,7 +326,7 @@
         auth.src = 'antcv-auth.js?v=1.50.312-auth-msg';
         auth.onload = function(){
           var app = document.createElement('script');
-          app.src = 'app.js?v=1.50.428';
+          app.src = 'app.js?v=1.50.429';
           app.onload = function(){
             var vo = document.createElement('script');
             vo.src = 'antcv-version-override.js?v=1.50.41';
@@ -582,7 +582,12 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-i18n.js?v=1.40.341-p0b" defer></script>
 <script src="antcv-format-prefs.js?v=1.40.178" defer></script>
 <script src="antcv-page-budget.js?v=1.40.349" defer></script>
-<script src="antcv-language-prefs.js?v=1.50.110-font-harmonize" defer></script>
+<!-- SIDECAR-CONSOLIDATE G6 (1.50.429): lang-bar-filter + language-prefs +
+     language-prefs-defaults merged into ONE file behind a single shared rAF
+     scheduler + ONE MutationObserver. The owner-touched wizard-language-slide,
+     i18n, translation-patch, and language-ui-fixes stay separate. The three old
+     files stay on disk, unreferenced. -->
+<script src="antcv-language-ui-429.js?v=1.50.429" defer></script>
 <script src="antcv-section-align.js?v=1.50.80-idem" defer></script>
 <script src="antcv-recheck-fit.js?v=1.50.161-proxy-relay" defer></script>
 <script src="antcv-jd-watch.js?v=1.50.23-brand" defer></script>
@@ -689,8 +694,6 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-cl-ai-notice-inline.js?v=1.50.142-no-unhide" defer></script>
 <script src="antcv-ai-consent-cloud-sync-224.js?v=1.50.400-backoff" defer></script>
 <script src="antcv-wizard-section-format-step10.js?v=1.40.239-throttle" defer></script>
-<script src="antcv-lang-bar-filter.js?v=1.50.81-quietlog" defer></script>
-<script src="antcv-language-prefs-defaults.js?v=1.40.339" defer></script>
 <script src="antcv-wizard-language-slide-339.js?v=1.50.412" defer></script>
 <script src="antcv-wizard-walkthrough-scroll.js?v=1.50.123-wizard-scroll" defer></script>
 <script src="antcv-upload-recount-339.js?v=1.50.143-multinode" defer></script>

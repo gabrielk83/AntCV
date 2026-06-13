@@ -99,11 +99,21 @@ mobile-topbar-cleanup-275 + mobile-fab-cleanup-351 + mobile-bottom-compact-352
   installs, combined CSS carries all three rule sets, 0 page errors. The old
   4 files left on disk, unreferenced.
 
-### G6 — Language  ·  ~7 files  ·  CANDIDATE (medium)
-i18n, language-prefs, language-prefs-defaults, lang-bar-filter,
+### G6 — Language  ·  **prefs/filter trio DONE (1.50.429, 2026-06-13)**
+i18n, ~~language-prefs~~, ~~language-prefs-defaults~~, ~~lang-bar-filter~~,
 language-ui-fixes-292, translation-patch, wizard-language-slide-339.
-- Same topic; wizard-language-slide is large + owner-touched (two-table).
-  Merge the prefs/filter trio first; keep the wizard slide separate.
+- Merged: lang-bar-filter-212 + language-prefs-110 + language-prefs-defaults-339
+  → `antcv-language-ui-429.js`, behind ONE shared rAF scheduler + ONE
+  MutationObserver (was 2 observers + a 1200ms interval + two click/timeout
+  fans). Module order inside the IIFE: Filter (defines AntcvLangBarFilter) →
+  Prefs → Defaults (calls AntcvLangBarFilter._applyAll). Logic, storage keys,
+  events, and the three debug globals preserved VERBATIM; none wrap fetch.
+  Verified: diag-language-ui-merge (globals + EN/DA seed + ES-hidden filter +
+  0 errors), boot-smoke. Old 3 files left on disk, unreferenced.
+- STILL SEPARATE (by design): wizard-language-slide-339 (large + owner-touched,
+  two-table selector WIP), i18n (translation engine — AntcvI18n consumed
+  elsewhere), translation-patch (471 L), language-ui-fixes-292 (392 L). Revisit
+  once WIZARD-LANG-SELECTOR-001 lands.
 
 ### G7 — Analysis  ·  ~7 files  ·  DEFER (medium-high)
 analysis-merge-344, analysis-panel-jd-block-356, analysis-report-pdf-360,

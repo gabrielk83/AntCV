@@ -267,7 +267,11 @@
     var col = langCard.parentElement;
     var existing = document.getElementById(CARD_ID);
     if (existing) { if (existing.parentElement !== col) existing.remove(); else return; }
-    var box = el('details', 'order:23;margin:6px 0 0;padding:0;border:1px solid rgba(1,183,187,0.35);border-radius:8px;font-size:12px;color:#cfe9ea;');
+    // PERSONAL-CARDS-VERTICAL-001 (owner 2026-06-13): full-width so it stacks
+    // vertically (never beside the other controls); order 45 places it after
+    // Banned Words (40), i.e. last before the Done button; margin-bottom is the
+    // BREAK the owner asked for so it never sits horizontally next to Done.
+    var box = el('details', 'order:45;margin:6px 0 16px;padding:0;width:100%;flex:0 0 100%;box-sizing:border-box;border:1px solid rgba(1,183,187,0.35);border-radius:8px;font-size:12px;color:#cfe9ea;');
     box.id = CARD_ID;
     var sum = el('summary', 'cursor:pointer;user-select:none;font-size:10px;font-weight:700;letter-spacing:0.8px;color:#01B7BB;padding:9px 12px;list-style:none;text-transform:uppercase;', 'Personality kernel');
     box.appendChild(sum);

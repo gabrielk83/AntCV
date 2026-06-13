@@ -277,7 +277,7 @@
     /* PERSONAL-ORDER-002 (owner 2026-06-13, figure 1-7): Languages card at
        position 3 (Background 10, CV Sidebar 15, Languages 20, Tense 22). The
        island sets inline order:27; override to 20. */
-    #antcv-react-personal-languages { order:20 !important; }
+    #antcv-react-personal-languages { order:20 !important; width:100% !important; flex:0 0 100% !important; box-sizing:border-box; }
   </style>
 <link rel="stylesheet" href="./antcv-mobile-controls.css?v=1.50.151-cldoc">
 <script>
@@ -326,7 +326,7 @@
         auth.src = 'antcv-auth.js?v=1.50.312-auth-msg';
         auth.onload = function(){
           var app = document.createElement('script');
-          app.src = 'app.js?v=1.50.443';
+          app.src = 'app.js?v=1.50.444';
           app.onload = function(){
             var vo = document.createElement('script');
             vo.src = 'antcv-version-override.js?v=1.50.41';
@@ -652,18 +652,18 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-dnd-insertion-point-341.js?v=1.40.341-p0d" defer></script>
 <script src="antcv-regression-sweep-341.js?v=1.40.341-gate" defer></script>
 <!-- SPELL-ANNOTATOR-001 (1.50.384): red-underline spellcheck for editor fields. -->
-<script src="antcv-spell-annotator-384.js?v=1.50.435" defer></script>
+<script src="antcv-spell-annotator-384.js?v=1.50.444" defer></script>
 <!-- PREVIEW-SPELL-001: spell underlines on the RENDERED preview (non-destructive
      rect overlay; reuses the annotator engine). Owner: grammar also on preview. -->
 <script src="antcv-preview-spell-overlay-425.js?v=1.50.443" defer></script>
 <!-- TENSE-RELOCATE-001: EXPERIENCE TENSE control relocated into Settings ->
      Personal beside the languages + grammar controls (uses window._antcvSetExpTense). -->
-<script src="antcv-tense-control-422.js?v=1.50.427" defer></script>
+<script src="antcv-tense-control-422.js?v=1.50.444" defer></script>
 <!-- PERSONALITY-KERNEL-001 quiz (1.50.439): an 8-question quiz (Settings → Personal
      "PERSONALITY KERNEL" + a wizard button) that builds personalInfo.personality
      from the user's answers as behaviour-evidence + a work-style line, and shows
      them a written response. Deterministic; the kernel already feeds generation. -->
-<script src="antcv-personality-quiz-439.js?v=1.50.439" defer></script>
+<script src="antcv-personality-quiz-439.js?v=1.50.444" defer></script>
 <!-- DATA-PORTABILITY-CLOUD (1.50.385): persist corrected stylePackage/toneRegister to the relay. -->
 <script src="antcv-orphan-cloud-persist-385.js?v=1.50.385-orphan-sync" defer></script>
 <!-- FEATURE-CONF-001 (1.50.386): confidence overlay toggle (grounding heuristic, pluggable). -->

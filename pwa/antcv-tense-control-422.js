@@ -73,7 +73,10 @@
 
   function build() {
     // order 22: Languages(20) -> Experience Tense(22) -> Advanced Tone(30).
-    var wrap = el('div', 'order:22;margin-top:8px;');
+    // PERSONAL-CARDS-VERTICAL-001 (owner 2026-06-13): width:100% so the card
+    // takes a full row and the Personal controls stack VERTICALLY, never side by
+    // side, regardless of the column's flex direction/wrap.
+    var wrap = el('div', 'order:22;margin-top:8px;width:100%;flex:0 0 100%;box-sizing:border-box;');
     wrap.id = HOST_ID;
     var label = el('div',
       'color:rgba(255,255,255,0.5);font-size:9px;letter-spacing:0.8px;margin-bottom:5px;text-transform:uppercase;font-weight:600;',

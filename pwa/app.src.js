@@ -267,6 +267,23 @@
         return "section";
       }
     },
+    // APP-CHROME-CONTRAST-001 (owner 2026-06-13): the app/setup/settings chrome
+    // background is a gradient from navyColor (Ke), and its TEXT is light. If
+    // navyColor is a pale value the text goes invisible. Clamp the chrome navy to
+    // the dark brand navy whenever the chosen colour is too light to carry light
+    // text, so the app shell stays readable regardless of navyColor.
+    __darkNavy = (bg) => {
+      try {
+        const h = String(bg || "").replace("#", "");
+        if (h.length < 6) return bg || "#283556";
+        const r = parseInt(h.slice(0, 2), 16),
+          g = parseInt(h.slice(2, 4), 16),
+          b = parseInt(h.slice(4, 6), 16);
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b > 120 ? "#283556" : bg;
+      } catch (_) {
+        return bg || "#283556";
+      }
+    },
     c = {
       // DOCX-SIDEBAR-GREEN-001 + MAIN-NAVY-001 (owner 2026-06-10): in the MAIN
       // column EVERY accent — headings, sub-heads, vertical/rule lines, BULLETS,
@@ -27314,7 +27331,7 @@
           {
             style: {
               minHeight: "100dvh",
-              background: `linear-gradient(160deg,${Ke} 0%,#1a2a45 100%)`,
+              background: `linear-gradient(160deg,${__darkNavy(Ke)} 0%,#1a2a45 100%)`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -27405,7 +27422,7 @@
             {
               style: {
                 minHeight: "100dvh",
-                background: `linear-gradient(160deg,${Ke} 0%,#1a2a45 100%)`,
+                background: `linear-gradient(160deg,${__darkNavy(Ke)} 0%,#1a2a45 100%)`,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -37765,7 +37782,7 @@
             className: "fade",
             style: {
               minHeight: "100dvh",
-              background: `linear-gradient(160deg,${Ke} 0%,#1a2a45 100%)`,
+              background: `linear-gradient(160deg,${__darkNavy(Ke)} 0%,#1a2a45 100%)`,
               display: "flex",
               flexDirection: "column",
               alignItems: "center",

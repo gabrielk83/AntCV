@@ -472,7 +472,7 @@
     var box = document.createElement('details');
     box.id = UI_ID;
     // order:21 → directly under the Languages card (20), before Experience Tense (22).
-    box.style.cssText = 'order:21;margin:6px 0 0;padding:0;border:1px solid rgba(1,183,187,0.35);border-radius:8px;font-size:12px;color:#cfe9ea;';
+    box.style.cssText = 'order:21;margin:6px 0 0;padding:0;width:100%;flex:0 0 100%;box-sizing:border-box;border:1px solid rgba(1,183,187,0.35);border-radius:8px;font-size:12px;color:#cfe9ea;';
     var sum = document.createElement('summary');
     sum.textContent = 'SPELLING';
     sum.style.cssText = 'cursor:pointer;user-select:none;font-size:10px;font-weight:700;letter-spacing:0.8px;color:#01B7BB;padding:9px 12px;list-style:none;text-transform:uppercase;';

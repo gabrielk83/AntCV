@@ -21,6 +21,7 @@
     "@vitejs/plugin-react": "4.3.4",
     "playwright": "^1.60.0",
     "typescript": "5.6.3",
-    "vite": "5.4.11"
-  }
+    "vite": "5.4.21"
+  },
+  "comment:security": "SECURITY-DEPS-001 (2026-06-13): npm audit reports 2 DEV-ONLY advisories (esbuild dev-server, via vite) — GHSA-67mh-4wv8-2f99 + GHSA-gv7w-rqvm-qjhr. `npm audit --omit=dev` = 0 PRODUCTION vulnerabilities; the shipped app.js is built with terser, not vite/esbuild, and the vite dev server is never run in CI/prod. The only complete fix is the breaking vite-6 major, deliberately NOT taken for a dev-server-only issue. Bumped vite 5.4.11 -> 5.4.21 (patch). Re-assessed weekly per docs/security/SECURITY_UPDATE_POLICY.md."
 }

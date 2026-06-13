@@ -1,0 +1,35 @@
+# SECURITY-WEEKLY-001 (owner 2026-06-13): weekly security audit.
+# Runs every Monday 08:07 UTC + on demand. scripts/security-audit.mjs exits
+# 0 when there are 0 PRODUCTION vulnerabilities (dev-only advisories are
+# reported, not failed) and exits 2 on a production vulnerability or any
+# CRITICAL advisory. A non-zero exit fails the run -> visible to the admin
+# on GitHub; the policy (docs/security/SECURITY_UPDATE_POLICY.md) then
+# requires immediate email + SMS (+45 31710072) escalation and approval.
+name: Weekly security audit
+
+on:
+  schedule:
+    - cron: "7 8 * * 1" # Monday 08:07 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install (no scripts)
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Run weekly security audit
+        run: node scripts/security-audit.mjs
+      - name: Escalation reminder (only on failure)
+        if: failure()
+        run: |
+          echo "::error::PRODUCTION vulnerability or CRITICAL advisory found."
+          echo "ESCALATE NOW per docs/security/SECURITY_UPDATE_POLICY.md:"
+          echo "  email karp.gabriel.a@gmail.com + SMS +45 31710072, request approval before patching."

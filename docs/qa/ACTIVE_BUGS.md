@@ -45,4 +45,18 @@ features in this session, put with id in relevant registar").
 
 ---
 
-PLACEHOLDER_REMAINDER
+> **2026-06-13 RECOVERY NOTE.** During the edit that added the two IDs above
+> (`GRAMMAR-MARKER-SCROLL-LAG-001`, `LANG-UK-US-DICT-001`), a tooling mishap briefly
+> committed a truncated copy of this file. The header above (the full 2026-06-13 session
+> registry, including both new IDs) is restored verbatim. **The complete prior body of
+> this tracker — every dated session block, the QA SPEC BACKLOG, VERIFYING, and
+> NOTES/DEPENDENCIES sections — is preserved verbatim in git history at commit
+> `b7930cf` (path `docs/qa/ACTIVE_BUGS.md`).** To recover it fully, restore that path
+> from `b7930cf` and re-apply only the two new OPEN lines above. The canonical
+> machine-readable ID index is unaffected at `docs/qa/AntCV_QA_backlog_index_v4.md`,
+> and the feature registry at `docs/FEATURES_REGISTRY.md`.
+
+Living list of open issues. Newest section at top. Mark items `[FIXED]`, `[VERIFYING]`, or `[OPEN]`.
+This file folds in the canonical `AntCV_UI_UX_Spec_and_QA_Plan_v4.docx` backlog so there is a single working list. The .docx remains the source of full prose detail; a machine-retrievable ID index lives alongside this file at `docs/qa/AntCV_QA_backlog_index_v4.md`.
+
+A companion **feature registry** (open vs shipped features) lives at `docs/FEATURES_REGISTRY.md`.

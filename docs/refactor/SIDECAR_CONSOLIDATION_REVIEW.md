@@ -125,9 +125,20 @@ pdf-page-mismatch, jd-pdf-to-docx-341, analysis-report-pdf-360,
 demo-watermark, watermark-page-anchor-341.
 - Tied to the open `PDF-EXPORT-AUDIT-001`; fix that first, then consolidate.
 
-### G10 — Photo  ·  3 files  ·  CANDIDATE (small)
-photo-position, photo-pentagon-shape, photo-bridge-button.
-- DOM-only, related. Small, safe merge candidate (after G2/G5 pilots).
+### G10 — Photo  ·  **DONE (1.50.428, 2026-06-13)**
+photo-position-153 + photo-pentagon-shape-57 + photo-bridge-button-422 →
+`antcv-photo-ui-427.js`.
+- Three DOM-only photo concerns (clone-sweep, Pentagon shape button + mask,
+  ◐ Sidebar bridge position button) folded into ONE file behind a SINGLE shared
+  rAF scheduler + ONE MutationObserver (was 3 observers + a 2000ms + a 400ms
+  interval). Each module's logic, idempotency guards, and debug API
+  (`AntcvPhotoPosition`, `AntcvPentagonShape`, `__antcvPhotoBridgeButtonInstalled`)
+  preserved VERBATIM — incl. photo-position's now-dead clone path (applyLayout
+  early-returns; every position renders natively, PHOTO-POSITIONS-NATIVE-001).
+  Combined into one IIFE; per-module storage/click/shape-changed listeners kept.
+- Verified: diag-photo-ui-merge (globals + Pentagon-after-Square + bridge-before-
+  Hidden + 0 errors), diag-photo-bridge (seam/size/gaps/live-switch), diag-photo-
+  positions (12 positions), boot-smoke. The 3 old files left on disk, unreferenced.
 
 ## Recommended order (one group per shippable round)
 

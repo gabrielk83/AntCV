@@ -326,7 +326,7 @@
         auth.src = 'antcv-auth.js?v=1.50.312-auth-msg';
         auth.onload = function(){
           var app = document.createElement('script');
-          app.src = 'app.js?v=1.50.427';
+          app.src = 'app.js?v=1.50.428';
           app.onload = function(){
             var vo = document.createElement('script');
             vo.src = 'antcv-version-override.js?v=1.50.41';
@@ -613,14 +613,16 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-sections-normalize-415.js?v=1.50.417" defer></script>
 <script src="antcv-demo-watermark.js?v=1.50.340-live-keystate" defer></script>
 <script src="antcv-bullet-targets.js?v=1.40.136" defer></script>
-<script src="antcv-photo-position.js?v=1.50.372-no-display-touch" defer></script>
-<script src="antcv-photo-pentagon-shape.js?v=1.50.57" defer></script>
+<!-- SIDECAR-CONSOLIDATE G10 (1.50.427): photo-position + photo-pentagon-shape +
+     photo-bridge-button merged into ONE file behind a single shared rAF
+     scheduler + ONE MutationObserver. The three old files stay on disk,
+     unreferenced. -->
+<script src="antcv-photo-ui-427.js?v=1.50.428" defer></script>
 <script src="antcv-preview-header-tokens.js?v=1.50.41" defer></script>
 <!-- v1.50.159: sidebar-bg tokenization — recolours the preview sidebar per visual
      style (var(--package-base) cascade), matching the DOCX. Companion to
      preview-header-tokens (which deliberately skips the sidebar). -->
 <script src="antcv-sidebar-bg-token.js?v=1.50.159" defer></script>
-<script src="antcv-photo-bridge-button.js?v=1.50.422" defer></script>
 <script src="antcv-pdf-preview-gate.js?v=1.50.392-analysis-divert" defer></script>
 <script src="antcv-tone-helper.js?v=1.50.23-brand" defer></script>
 <script src="antcv-banned-audit.js?v=1.40.341-p0a" defer></script>
@@ -785,7 +787,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <!-- v1.40.351: mobile-only FAB cleanup. Hides the redundant mobile JD-analysis
      and Fusion FABs (title-keyed; they lack the data-attrs topbar-tools-347
      uses) and relocates the mobile Privacy FAB into the top bar as a compact
-     desktop-style pill with higher-contrast fill. -->
+     desktop-style pill with higher-contrast fill. -->
 <script src="antcv-wizard-mode-bridge-337.js?v=1.40.339" defer></script>
 <!-- v1.40.340-a: Phase 2 of the wizard-mode bridge. Reads /api/user/mode at
      boot / sign-in / focus / cross-tab and publishes the cloud value via

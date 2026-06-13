@@ -27,7 +27,7 @@ const doc = (over) => JSON.stringify({ sections: {
 
 {
   const r = eng.evaluateSce(doc(true), req('nordic-minimal'));
-  check('1. nordic: 68-char cell flags (one-line cap 55)', !r.clean && r.bannedPhraseHits.some(h => /expertise cell too long .*max 55/.test(h)), JSON.stringify(r.bannedPhraseHits));
+  check('1. nordic: 68-char cell flags (one-line cap 48)', !r.clean && r.bannedPhraseHits.some(h => /expertise cell too long .*max 48/.test(h)), JSON.stringify(r.bannedPhraseHits));
 }
 {
   const r = eng.evaluateSce(doc(true), req('achievement-driven'));
@@ -62,7 +62,7 @@ const doc = (over) => JSON.stringify({ sections: {
     req: req('nordic-minimal'),
     callLlm: async (fix) => { prompts.push(fix); return doc(true); },
   });
-  const carried = prompts.length >= 2 && prompts.slice(1).every(p => /max 55/.test(p));
+  const carried = prompts.length >= 2 && prompts.slice(1).every(p => /max 48/.test(p));
   check('6. retry carries the one-line guidance + flags after retries', carried && r.flagged === true, JSON.stringify({ prompts: prompts.length, flagged: r.flagged }));
 }
 

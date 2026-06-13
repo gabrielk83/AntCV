@@ -26,10 +26,18 @@ jobs:
       - name: Install (no scripts)
         run: npm install --ignore-scripts --no-audit --no-fund
       - name: Run weekly security audit
-        run: node scripts/security-audit.mjs
-      - name: Escalation reminder (only on failure)
+        id: audit
+        run: node scripts/security-audit.mjs 2>&1 | tee audit.txt
+      - name: Notify admin (only on a production / critical finding)
         if: failure()
+        env:
+          # Email (Resend) — set RESEND_API_KEY (+ optional SEC_FROM_EMAIL).
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          SEC_FROM_EMAIL: ${{ secrets.SEC_FROM_EMAIL }}
+          # SMS (Twilio) — set TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / TWILIO_FROM.
+          TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
+          TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+          TWILIO_FROM: ${{ secrets.TWILIO_FROM }}
         run: |
-          echo "::error::PRODUCTION vulnerability or CRITICAL advisory found."
-          echo "ESCALATE NOW per docs/security/SECURITY_UPDATE_POLICY.md:"
-          echo "  email karp.gabriel.a@gmail.com + SMS +45 31710072, request approval before patching."
+          echo "::error::PRODUCTION vulnerability or CRITICAL advisory found — escalating to admin."
+          node scripts/security-notify.mjs "$(cat audit.txt | tail -n 20)"

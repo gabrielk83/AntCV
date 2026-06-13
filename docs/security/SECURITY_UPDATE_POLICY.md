@@ -52,9 +52,24 @@ When a supplier issues a **critical** update, or the audit returns exit 2:
 
 - `scripts/security-audit.mjs` — the weekly audit (exit 0 = report, exit 2
   = escalate).
-- Weekly scheduled routine (cron `0 8 * * 1`, Monday 08:00) runs the audit
-  and relays the verdict to the admin; a `2` triggers the escalation path
-  above. See the scheduled-task registry / `scripts/security-audit.mjs`.
+- `.github/workflows/security-audit.yml` — runs the audit every Monday
+  08:07 UTC (+ on demand). On exit 2 the run FAILS and the **Notify admin**
+  step runs `scripts/security-notify.mjs`, which sends the alert.
+- `scripts/security-notify.mjs` — sends EMAIL + SMS to the admin
+  (karp.gabriel.a@gmail.com / +45 31710072). It is **auto-send-ready** but
+  inert until the channel secrets are added (it logs "manual escalation
+  required" and exits 0 if none are set, so it never blocks).
+
+### One-time setup to enable auto-send (repo → Settings → Secrets → Actions)
+
+- **Email (Resend):** `RESEND_API_KEY` (free tier). Optional
+  `SEC_FROM_EMAIL` (a verified sender; defaults to Resend's onboarding
+  address for testing).
+- **SMS (Twilio):** `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`,
+  `TWILIO_FROM` (a Twilio number). Sends to +45 31710072.
+
+Add either or both — the notifier uses whatever is present. Until then the
+failing GitHub run + this policy are the escalation signal.
 
 ## Log
 

@@ -60,7 +60,14 @@
   function proxyBase() {
     try {
       var v = JSON.parse(localStorage.getItem('proxyUrl') || '""');
-      return String(v || '').replace(/\/+$/, '');
+      var b = String(v || '').replace(/\/+$/, '');
+      // DEMO support (owner 2026-06-13): demo users have no proxyUrl. Fall back
+      // to the access relay (window.ANTCV_RELAY_URL, from relay-config.json),
+      // which forwards the LLM call to the demo-proxy with the relay-auth secret
+      // — the same fallback generation + the JD-URL fetch use. credentials are
+      // already sent (the Cf-Access cookie), so demo auth is carried.
+      if (!b && typeof window.ANTCV_RELAY_URL === 'string') b = String(window.ANTCV_RELAY_URL).replace(/\/+$/, '');
+      return b;
     } catch (_) { return ''; }
   }
 

@@ -27,8 +27,8 @@ const SECTIONS = {
     { id:'profile', title:'PROFILE', loc:'main', on:true, type:'text', content:'IT expert with consumer and regulated-market experience. 15+ years across product, change governance and validation.' },
     { id:'competencies', title:'CORE COMPETENCIES', loc:'main', on:true, type:'table', rows:[['Change governance','Change Control Board ownership under Automotive SPICE and ISO 26262.'],['Supplier coordination','RFQ and RFI evaluation; scoring on quality, lead time, total landed cost.']] },
     { id:'experience', title:'PROFESSIONAL EXPERIENCE', loc:'main', on:true, type:'experience', items:['Founded a consultancy bridging hardware product development and technical-commercial evaluation.','Led RFQ and RFI evaluation programmes: structured supplier scoring.'] },
-    { id:'tools', title:'TOOLS & METHODS', loc:'sidebar', on:true, type:'text', content:'Jira, Confluence, Codebeamer. Power BI, Excel, SQL, Python.' },
-    { id:'certs', title:'CERTIFICATES & COURSES', loc:'sidebar', on:true, type:'text', content:'AI-Practitioner. Six Sigma Black Belt. Automotive SPICE.' },
+    { id:'tools', title:'TOOLS & METHODS', loc:'sidebar', on:true, type:'text_bullets', items:['Jira, Confluence, Codebeamer','Power BI, Excel, SQL, Python'] },
+    { id:'certs', title:'CERTIFICATES & COURSES', loc:'sidebar', on:true, type:'text_bullets', items:['AI-Practitioner','Six Sigma Black Belt','Automotive SPICE'] },
     { id:'education', title:'EDUCATION', loc:'sidebar', on:true, type:'text', content:'MBA — Technion. M.Sc. Electrical Engineering — Tel Aviv University.' },
   ],
   cl: []
@@ -89,6 +89,20 @@ async function render(label, pkg, navy, styleConfig){
   console.log(`  [band] inline=${vars.bandInline} computed=${vars.bandComputed} tokenized=${vars.bandTagged}`);
   console.log(`  [band] style="${vars.bandStyleAttr}"`);
   console.log(`  [tokenized els] ${JSON.stringify(vars.tokenized)}`);
+  // SIDEBAR-INK probe: find the pale sidebar column and report the colour of its
+  // text nodes — must be DARK (readable) on a pale ground.
+  const sbInk = await page.evaluate(()=>{
+    const paper=document.querySelector('.antcv-preview-paper')||document.body;
+    // sidebar column = the painted child that is NOT white and NOT the band
+    const cols=[...paper.querySelectorAll('div')].filter(d=>{const r=d.getBoundingClientRect();return r.height>300&&r.width>120&&r.width<360;});
+    const col=cols.find(d=>!d.hasAttribute('data-antcv-candidate-band'));
+    if(!col) return {err:'no sidebar col'};
+    const bg=getComputedStyle(col).backgroundColor;
+    const txt=[...col.querySelectorAll('*')].filter(e=>[...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim().length>2)&&e.getBoundingClientRect().height>0).slice(0,8)
+      .map(e=>({t:(e.textContent||'').replace(/\s+/g,' ').trim().slice(0,24),color:getComputedStyle(e).color}));
+    return {bg, txt};
+  });
+  console.log(`  [sidebar ink] bg=${sbInk.bg||sbInk.err} samples=${JSON.stringify(sbInk.txt||[])}`);
   // Find the preview band + sidebar by probing computed backgrounds.
   const probe = await page.evaluate(()=>{
     const out={};

@@ -4338,6 +4338,23 @@
           : t,
       S = "sidebar" === e.loc,
       k = { ...c, ...d },
+      // SIDEBAR-INK-MATCHES-PAINT-001 (owner 2026-06-13: "it is still very hard
+      // to see"): the sidebar is PAINTED with var(--sidebar-bg, navyColor) (pale
+      // for named packages) but the TEXT colour was __sbInk —
+      // and k.sidebarBg is still the styleConfig NAVY, so readableInk returned
+      // WHITE text on the pale sidebar (invisible). Key the ink on the SAME value
+      // that actually paints the sidebar: the resolved --sidebar-bg (fallback to
+      // the styleConfig value, which is what custom styles paint).
+      __sbInk = (() => {
+        try {
+          const v = getComputedStyle(document.body)
+            .getPropertyValue("--sidebar-bg")
+            .trim();
+          return readableInk(v || k.sidebarBg);
+        } catch (_) {
+          return __sbInk;
+        }
+      })(),
       C = S ? k.sidebarHeadColor : k.mainHeadColor,
       T =
         (t || k.headerBg,
@@ -4527,7 +4544,7 @@
                 style: {
                   fontFamily: A,
                   fontWeight: 700,
-                  color: S ? readableInk(k.sidebarBg) : "#283556",
+                  color: S ? __sbInk : "#283556",
                   fontSize: r(t),
                   lineHeight: 1.1,
                   textAlign: S
@@ -4563,7 +4580,7 @@
               {
                 style: {
                   fontFamily: A,
-                  color: S ? readableInk(k.sidebarBg) : "#283556",
+                  color: S ? __sbInk : "#283556",
                   fontSize: r(n),
                   lineHeight: 1.2,
                   textAlign: S
@@ -4629,7 +4646,7 @@
                     fontSize: r(o),
                     fontFamily: T,
                     marginBottom: 2,
-                    color: S ? readableInk(k.sidebarBg) : "#333",
+                    color: S ? __sbInk : "#333",
                     lineHeight: I,
                     textAlign: S
                       ? "certs" === e.id || /cert/i.test(e.title || "")
@@ -5705,7 +5722,7 @@
                     fontSize: S ? $.sb : $.text,
                     fontFamily: T,
                     marginBottom: 2,
-                    color: S ? readableInk(k.sidebarBg) : "#333",
+                    color: S ? __sbInk : "#333",
                     textAlign: "left",
                     lineHeight: I,
                     paddingLeft: row.indent ? 8 : 0,
@@ -5715,7 +5732,7 @@
                 },
                 React.createElement(
                   "b",
-                  { style: { color: S ? readableInk(k.sidebarBg) : C } },
+                  { style: { color: S ? __sbInk : C } },
                   React.createElement(B, {
                     path: ["items", t, "l"],
                     value: L(a),
@@ -5726,7 +5743,7 @@
                 " ",
                 React.createElement(
                   "span",
-                  { style: { fontWeight: 400, color: S ? readableInk(k.sidebarBg) : "#333" } },
+                  { style: { fontWeight: 400, color: S ? __sbInk : "#333" } },
                   React.createElement(B, {
                     path: ["items", t, "v"],
                     value: P(i),
@@ -5759,7 +5776,7 @@
                   style: {
                     fontSize: S ? $.sb : $.text,
                     fontFamily: T,
-                    color: S ? readableInk(k.sidebarBg) : "#333",
+                    color: S ? __sbInk : "#333",
                     marginBottom: 2,
                     textAlign: S
                       ? "certs" === e.id || /cert/i.test(e.title || "")
@@ -5799,7 +5816,7 @@
                   style: {
                     fontSize: S ? $.sb : $.text,
                     fontFamily: T,
-                    color: S ? readableInk(k.sidebarBg) : "#333",
+                    color: S ? __sbInk : "#333",
                     marginBottom: 3,
                     lineHeight: 1.3,
                     textAlign: "justify",
@@ -5836,7 +5853,7 @@
                     fontSize: S ? $.sb : $.text,
                     fontFamily: T,
                     marginBottom: 4,
-                    color: S ? readableInk(k.sidebarBg) : "#333",
+                    color: S ? __sbInk : "#333",
                     textAlign: "left",
                     lineHeight: I,
                     overflowWrap: "break-word",
@@ -5845,7 +5862,7 @@
                 },
                 React.createElement(
                   "b",
-                  { style: { color: S ? readableInk(k.sidebarBg) : C } },
+                  { style: { color: S ? __sbInk : C } },
                   React.createElement(B, {
                     path: ["items", n, "deg"],
                     // The row is already bold — stray markdown markers

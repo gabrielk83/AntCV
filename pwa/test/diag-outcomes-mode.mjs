@@ -17,9 +17,15 @@ await new Promise(r=>server.listen(0,r));
 const port = server.address().port;
 const SECTIONS = {cv:[
   {id:'profile',title:'PROFILE',loc:'main',on:true,type:'text',content:'P.'},
-  {id:'outcomes',title:'SELECTED OUTCOMES',loc:'main',on:true,type:'bullets',items:[{b:'Cut',t:'Innoviz cycle time 95%.'}]},
+  {id:'outcomes',title:'SELECTED OUTCOMES',loc:'main',on:true,type:'bullets',items:[
+    {b:'Cut',t:'Innoviz cycle time 95%.'},
+    {b:'Led',t:'Sirin optronics integration program.'},
+    {b:'Filed',t:'patent US1234567 for the optics module.'},
+    {b:'Reduced',t:'supplier defects 40% across programs.'},
+  ]},
   {id:'experience',title:'PROFESSIONAL EXPERIENCE',loc:'main',on:true,type:'experience',roles:[
     {id:'r1',title:'Architect',company:'Innoviz',years:'2020-2025',on:true,bullets:['Did work.']},
+    {id:'r2',title:'Engineer',company:'Sirin',years:'2016-2020',on:true,bullets:['Built.']},
   ]},
 ],cl:[]};
 const browser=await chromium.launch();
@@ -41,13 +47,18 @@ async function run(mode) {
   const r = await page.evaluate(()=>{
     const paper=document.querySelector('.antcv-preview-paper');
     const txt=paper?paper.textContent||'':'';
-    const res=document.querySelector('[data-antcv-role-results]');
+    const resAll=[...document.querySelectorAll('[data-antcv-role-results]')];
+    const res=resAll[0];
     let style=null;
     if(res){ const cs=getComputedStyle(res); style={fontWeight:cs.fontWeight, marginTop:cs.marginTop, color:cs.color}; }
+    // count visible experience roles in the preview
+    const roleRows=[...document.querySelectorAll('[data-antcv-role-results]')].length;
     return {
       hasOutcomesHeading: /SELECTED OUTCOMES/.test(txt),
       hasResultsLine: !!res,
-      resultsText: res?res.textContent:'',
+      resultsCount: resAll.length,
+      resultsText: resAll.map(x=>x.textContent).join(' || '),
+      patentInResults: /patent|US1234567/i.test(resAll.map(x=>x.textContent).join(' ')),
       style,
     };
   });
@@ -62,10 +73,12 @@ const res = await run('results');
 check('1. results: outcomes section hidden + bold no-gap Results line',
   !res.hasOutcomesHeading && res.hasResultsLine && res.style && res.style.fontWeight==='700' && res.style.marginTop==='0px' && res.errs.length===0,
   JSON.stringify({heading:res.hasOutcomesHeading, line:res.hasResultsLine, style:res.style}));
+check('1b. EVERY visible role (2) has a Results line', res.resultsCount===2, JSON.stringify({count:res.resultsCount, text:res.resultsText}));
+check('1c. patent number excluded from results (Sirin + all)', res.patentInResults===false, JSON.stringify({text:res.resultsText}));
 
 const sec = await run('section');
-check('2. section (default): outcomes section shows, no Results line',
-  sec.hasOutcomesHeading && !sec.hasResultsLine && sec.errs.length===0,
+check('2. section (default): outcomes section shows, NO Results line',
+  sec.hasOutcomesHeading && !sec.hasResultsLine && sec.resultsCount===0 && sec.errs.length===0,
   JSON.stringify({heading:sec.hasOutcomesHeading, line:sec.hasResultsLine}));
 
 await browser.close(); server.close();

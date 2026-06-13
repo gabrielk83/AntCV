@@ -5416,8 +5416,6 @@
                                   String(s2.title || ""),
                                 )),
                           );
-                          const all = ((so && so.items) || []).filter(Boolean);
-                          if (!all.length) return null;
                           const tok = (str) =>
                             String(str || "")
                               .toLowerCase()
@@ -5426,27 +5424,70 @@
                             "string" == typeof x
                               ? x
                               : ((x.b || "") + " " + (x.t || "")).trim();
+                          // OUTCOMES-RESULTS-NOPATENT-001 (owner 2026-06-13):
+                          // never surface the patent number as a result (in the
+                          // Sirin role or any other).
+                          let __pno = "";
+                          try {
+                            __pno = String(
+                              (JSON.parse(
+                                localStorage.getItem("personalInfo") || "{}",
+                              ) || {}).patentNumber || "",
+                            )
+                              .trim()
+                              .toLowerCase();
+                          } catch (_) {}
+                          const isPatent = (x) => {
+                            const s = txtOf(x).toLowerCase();
+                            return (
+                              /\bpatent\b/.test(s) ||
+                              (__pno && s.indexOf(__pno) >= 0)
+                            );
+                          };
+                          const all = ((so && so.items) || [])
+                            .filter(Boolean)
+                            .filter((x) => !isPatent(x));
+                          if (!all.length) return null;
                           const tokensFor = (r2) =>
                             new Set(
-                              tok(r2 && r2.title).concat(
-                                tok(r2 && r2.company),
-                              ),
+                              tok(r2 && r2.title).concat(tok(r2 && r2.company)),
                             );
-                          const myToks = tokensFor(e);
-                          const firstVisible = __origRoles.find(
+                          // OUTCOMES-RESULTS-EVERYROLE-001 (owner 2026-06-13):
+                          // a GLOBAL deterministic assignment so EVERY visible
+                          // role gets results — each outcome to its best-matching
+                          // role, then leftovers round-robined to fill the empty
+                          // roles first. Computed identically in each role's
+                          // render, so the slices never overlap.
+                          const __vis = __origRoles.filter(
                             (r2) => r2 && !1 !== r2.on,
                           );
-                          const mine = all.filter((x) => {
+                          if (!__vis.length) return null;
+                          const __myIdx = __vis.indexOf(e);
+                          if (__myIdx < 0) return null;
+                          const __assign = __vis.map(() => []);
+                          const __left = [];
+                          all.forEach((x) => {
                             const ts2 = tok(txtOf(x));
-                            if (ts2.some((w) => myToks.has(w))) return !0;
-                            const matchesAny = __origRoles.some(
-                              (r2) =>
-                                r2 &&
-                                !1 !== r2.on &&
-                                ts2.some((w) => tokensFor(r2).has(w)),
-                            );
-                            return !matchesAny && firstVisible === e;
+                            let bi = -1;
+                            for (let i = 0; i < __vis.length; i++) {
+                              if (ts2.some((w) => tokensFor(__vis[i]).has(w))) {
+                                bi = i;
+                                break;
+                              }
+                            }
+                            if (bi >= 0) __assign[bi].push(x);
+                            else __left.push(x);
                           });
+                          let __li = 0;
+                          for (let i = 0; i < __assign.length; i++) {
+                            if (!__assign[i].length && __li < __left.length)
+                              __assign[i].push(__left[__li++]);
+                          }
+                          while (__li < __left.length) {
+                            __assign[__li % __assign.length].push(__left[__li]);
+                            __li++;
+                          }
+                          const mine = __assign[__myIdx];
                           if (!mine.length) return null;
                           return React.createElement(
                             "div",

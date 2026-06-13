@@ -38,7 +38,14 @@
       // columns, so the navy sidebar fills to the page bottom even when the
       // sidebar's own content is shorter than the main column / the page.
       '.antcv-preview-paper .antcv-page-row{align-items:stretch!important;min-height:1123px!important;}',
-      '.antcv-preview-paper .antcv-document-sidebar,.antcv-preview-paper [data-antcv-document-sidebar="true"]{background:#283556!important;min-height:1123px!important;align-self:stretch!important;height:auto!important;}',
+      // PALETTE-REGION-TOKENS-001 (owner 2026-06-13): do NOT hard-code the sidebar
+      // navy here. app.js paints the column background:var(--sidebar-bg, navyColor)
+      // so named packages get their PALE ground (Copenhagen #DCE5EA) and custom
+      // falls back to navyColor. A hard '#283556!important' here forced every
+      // sidebar dark and, by leaving the real navy unmatched, caused the
+      // sidebar-bg-token sidecar to pale the candidate BAND instead. Keep only the
+      // page-fill geometry; the element's own background fills its full A4 height.
+      '.antcv-preview-paper .antcv-document-sidebar,.antcv-preview-paper [data-antcv-document-sidebar="true"]{min-height:1123px!important;align-self:stretch!important;height:auto!important;}',
       '.antcv-sidebar-pagebreak-329{break-before:page;page-break-before:always;height:0;margin:0;padding:0;line-height:0;}',
       '.antcv-sidebar-pagebar-329{display:block;margin:8pt 0 6pt 0;padding:4pt 6pt;border:0;border-radius:2px;color:#fff;background:rgba(217,140,0,0.92);font-weight:700;font-size:8.5pt;letter-spacing:.02em;text-transform:uppercase;text-align:center;}',
       '.antcv-sidebar-cont-329{display:block;margin:4pt 0 8pt 0;padding:0 0 3pt 0;border-bottom:1pt solid #01B7BB;color:#01B7BB;font-weight:700;font-size:10pt;text-align:center;}',

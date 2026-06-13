@@ -40713,7 +40713,14 @@
                 {
                   "data-antcv-candidate-band": "1",
                   style: {
-                    background: Ke,
+                    // PALETTE-REGION-TOKENS-001 (owner 2026-06-13): the candidate
+                    // BAND must be the package's DARK header colour. Painting it
+                    // with navyColor (Ke) made it the SAME navy as the sidebar, so
+                    // antcv-sidebar-bg-token (matches navy) grabbed the band and
+                    // paled it. Use --header-bg so named packages render a dark
+                    // band (#283556) that the token sidecar skips; custom falls
+                    // back to Ke. See diag-copenhagen-palette.mjs.
+                    background: `var(--header-bg, ${Ke})`,
                     padding: "14px 16px 10px",
                     textAlign: "center",
                     // PHOTO-SIDEBAR-BRIDGE-001: in bridge mode the candidate
@@ -40751,7 +40758,7 @@
                 w.map(v),
               )
             : React.createElement("div", {
-                style: { background: Ke, height: 8 },
+                style: { background: `var(--header-bg, ${Ke})`, height: 8 },
               }),
           "cv" === Lt
             ? (() => {
@@ -41001,7 +41008,9 @@
                           {
                             "data-antcv-repeat-header": t.pageNum,
                             style: {
-                              background: Ke,
+                              // PALETTE-REGION-TOKENS-001: the page-2+ repeat
+                              // strip mirrors the candidate band (dark header).
+                              background: `var(--header-bg, ${Ke})`,
                               color: "#fff",
                               display: "flex",
                               alignItems: "center",
@@ -41167,7 +41176,13 @@
                               // 2026-06-11: "the font and color of sidebridge
                               // need to fit the other positions") — the bridge
                               // sidebar uses the standard palette again.
-                              background: Ke,
+                              // PALETTE-REGION-TOKENS-001 (owner 2026-06-13): the
+                              // sidebar is the package's PALE ground (--sidebar-bg,
+                              // #DCE5EA for Copenhagen) so it reads BRIGHT with dark
+                              // ink. Custom styles (no --sidebar-bg) fall back to
+                              // navyColor (Ke). The 329 sidecar no longer hard-codes
+                              // navy over this.
+                              background: `var(--sidebar-bg, ${Ke})`,
                               // ADV-SPACING-CONTROLS-001: vertical pad =
                               // bodyEdgePad, horizontal = sidebarEdgePad.
                               padding:

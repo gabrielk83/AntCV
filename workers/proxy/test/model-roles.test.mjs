@@ -66,12 +66,14 @@ test('call sites carry the designed roles', async () => {
   assert.match(coh, /role: 'coherence'/);
 });
 
-test('writer-head reorder present in BOTH provider-fallback wrappers', async () => {
+test('writer-head reorder ABSENT from the raw-passthrough wrappers (404 regression backed out)', async () => {
+  // GEN-MODELROLE-001 v1.1: the raw passthrough must NOT reorder providers —
+  // it would send anthropic the body's mistral/gemini model id and 404. Role
+  // routing lives only in the model-aware cascades (callAnyLLMForJSON).
   for (const rel of ['../src/index.js', '../../demo-proxy/src/index.js']) {
     const src = await readFile(new URL(rel, import.meta.url), 'utf8');
-    assert.match(src, /parseModelRoles\(env\)/, rel);
-    assert.match(src, /detectCVTask\(JSON\.parse\(new TextDecoder\(\)\.decode\(bodyBuf\)\)\)/, rel);
-    assert.match(src, /order = \[writer\]\.concat\(order\.filter/, rel);
+    assert.doesNotMatch(src, /order = \[writer\]\.concat\(order\.filter/, rel);
+    assert.doesNotMatch(src, /detectCVTask\(JSON\.parse\(new TextDecoder/, rel);
   }
 });
 

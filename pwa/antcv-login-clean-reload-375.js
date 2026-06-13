@@ -51,20 +51,34 @@
 
   // Indirection so a headless test can spy on the reload without navigating.
   function doReload() {
+    try { window.__antcvReloadTag = 'login-clean-reload-375'; } catch (_) {}
     try { window.location.reload(); } catch (_) {}
   }
 
+  // RELOAD-SPURIOUS-GUARD-001 (owner 2026-06-13): the reset recurred on
+  // subtab-scroll-end and topbar-language clicks — interactions that fire
+  // cloud writes, which can re-emit the auth state. An A→B "user switch"
+  // without an intervening signed-out ('') state is therefore almost always
+  // a spurious re-emit, NOT a real user switch. Only reload on a genuine
+  // signed-out → signed-in transition (seen === ''). This keeps the one
+  // legitimate case (fresh login after load/sign-out) and removes the
+  // spurious-reload surface entirely.
   function handle(state) {
     var email = (state && state.email) || '';
     if (!primed) { primed = true; seen = email; return; } // baseline, never reload
     if (!email) { seen = ''; return; }                    // signed out → reset baseline
     if (email === seen) return;                           // no real change
+    if (seen !== '') {                                    // A→B without sign-out = spurious re-emit
+      try { console.debug('[login-clean-reload-375] ignoring email re-emit', seen, '→', email, '(no intervening sign-out) — not reloading'); } catch (_) {}
+      seen = email;
+      return;
+    }
     var done;
     try { done = sessionStorage.getItem(MARKER); } catch (_) { done = null; }
     if (done === email) { seen = email; return; }         // already reloaded for this login
     try { sessionStorage.setItem(MARKER, email); } catch (_) {}
     seen = email;
-    try { console.debug('[login-clean-reload-375] login/user-switch →', email, '— reloading once for a clean start'); } catch (_) {}
+    try { console.debug('[login-clean-reload-375] fresh login →', email, '— reloading once for a clean start'); } catch (_) {}
     window.AntcvLoginCleanReload._doReload();
   }
 

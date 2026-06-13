@@ -348,6 +348,47 @@
     } catch (_) {}
   })();
 
+  // ---- RELOAD-ATTRIBUTION-001 (owner 2026-06-13) ------------------------
+  // The subtab-scroll-end / topbar-language reload keeps recurring and the
+  // graceful-unload verdict can't name the caller. Wrap location.reload so
+  // the NEXT programmatic reload records its STACK + last interaction into
+  // sessionStorage; the boot probe prints it. User-gesture reloads (hard
+  // refresh button, login-clean-reload) are tagged so they're distinguishable
+  // from a spurious one.
+  (function reloadAttribution() {
+    try {
+      var KEY = 'antcv:reloadwho';
+      // surface a captured caller from the previous page life
+      var prev = sessionStorage.getItem(KEY);
+      if (prev) {
+        sessionStorage.removeItem(KEY);
+        console.warn('[reload-who] the previous reload was triggered by:', prev);
+      }
+      var orig = window.location.reload.bind(window.location);
+      // last meaningful user interaction (helps tell "I clicked X then it reloaded")
+      var lastClick = '';
+      document.addEventListener('click', function (e) {
+        try {
+          var t = e.target;
+          lastClick = (t && (t.id || t.getAttribute && (t.getAttribute('data-antcv-genspeed') || t.getAttribute('data-lang') || t.getAttribute('aria-label')) || (t.textContent || '').trim().slice(0, 30))) || t.tagName;
+        } catch (_) {}
+      }, true);
+      try {
+        window.location.reload = function () {
+          try {
+            sessionStorage.setItem(KEY, JSON.stringify({
+              ts: new Date().toISOString(),
+              lastClick: lastClick,
+              tag: window.__antcvReloadTag || '(untagged — investigate)',
+              stack: (new Error('reload-trace').stack || '').split('\n').slice(1, 8).join(' <- '),
+            }));
+          } catch (_) {}
+          return orig.apply(this, arguments);
+        };
+      } catch (_) { /* some browsers make reload read-only — non-fatal */ }
+    } catch (_) {}
+  })();
+
   setTimeout(dumpAll, 2500);
   try { console.warn('[antcv-diag] probes installed v' + V + ' — run AntcvDiag() any time.'); } catch (_) {}
 })();

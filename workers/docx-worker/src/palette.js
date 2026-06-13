@@ -22,7 +22,7 @@ const PACKAGES = {
     // mainHeadColor on the white main column); `ground` is the new pale panel
     // colour used only for the sidebar/header/table backgrounds, and the
     // on-ground text colours invert to dark via readableInk() below.
-    base: '283556', ground: 'DDE6F2', primary: '00746E', interactive: '0B74DE',
+    base: '283556', ground: 'C9D6EC', primary: '00746E', interactive: '0B74DE',
     bullet: '00746E', glyph: '0B74DE',
     headingFont: 'Segoe UI', bodyFont: 'Calibri',
   },
@@ -146,13 +146,15 @@ export function getPackageStyle(packageId, legacyAtsTier = false) {
     sidebarHeadColor: p.primary,
     sidebarTextColor: readableInk(ground),
     sidebarLabelColor: readableInk(ground),
-    headerBg: ground,
-    headerNameColor: readableInk(ground),
-    headerSpecColor: readableInk(ground),
-    headerContactColor: readableInk(ground),
+    // The candidate band + table header keep the dark brand `base` (navy) with
+    // white ink — only the SIDEBAR uses the pale `ground` (owner 2026-06-13).
+    headerBg: p.base,
+    headerNameColor: readableInk(p.base),
+    headerSpecColor: readableInk(p.base),
+    headerContactColor: readableInk(p.base),
     photoBorderColor: p.primary,
-    tableHeaderBg: ground,
-    tableHeaderText: readableInk(ground),
+    tableHeaderBg: p.base,
+    tableHeaderText: readableInk(p.base),
 
     // Fonts. The registry stores headingFont as e.g. "Segoe UI Bold";
     // OOXML treats the font name as a face name, and bold weight is

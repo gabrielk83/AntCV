@@ -23,7 +23,7 @@ body[data-package="copenhagen-modern"] {
   /* Copenhagen Modern — pale blue-grey sidebar + dark ink (owner 2026-06-13,
      SANDBOX item B). The sidebar/header/table ground is now light; the
      preview/export render dark ink on it via readableInk + sidebarTextColor. */
-  --package-base: #DDE6F2;
+  --package-base: #C9D6EC;
   --package-primary: #00746E;
   --package-interactive: #0B74DE;
   --package-bullet: #00746E;

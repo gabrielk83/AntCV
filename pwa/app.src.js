@@ -16330,8 +16330,12 @@
         } catch (_) {}
       };
       React.useEffect(() => {
-        Ke &&
-          Ke !== ya.headerBg &&
+        // STYLE-BG-FOLLOW-PKG-001 (owner 2026-06-13): only a CUSTOM style lets
+        // navyColor (Ke) drive the band/sidebar/table backgrounds. NAMED packages
+        // own their own per-region backgrounds (so Copenhagen renders a NAVY band
+        // + a PALE sidebar, and switching the Visual style actually updates the
+        // candidate band + table header). Sa is read inside the callback (TDZ-safe).
+        if (Ke && "custom" === Sa && Ke !== ya.headerBg)
           ba((e) => ({ ...e, headerBg: Ke, sidebarBg: Ke, tableHeaderBg: Ke }));
       }, [Ke]);
       // v1.50.166 — derive the document palette from the SELECTED package once on
@@ -16355,27 +16359,24 @@
           // only — Sa is declared later in the component, so it must NOT be in the
           // dependency array (TDZ); it is read inside the callback, which is safe.
           if (ps && ya.mainHeadColor !== ps.mainHeadColor)
-            ba(() => {
-              const t = { ...c, ...ps };
-              if (Ke) {
-                t.headerBg = Ke;
-                t.sidebarBg = Ke;
-                t.tableHeaderBg = Ke;
-              }
-              return t;
-            });
+            // STYLE-BG-FOLLOW-PKG-001: the named package owns ALL its colours,
+            // including the band / sidebar / table BACKGROUNDS (no longer clobbered
+            // by navyColor). This is what makes switching the Visual style update
+            // the candidate band + table header, and lets Copenhagen be a navy band
+            // + pale sidebar. (Custom keeps navyColor via the [Ke] effect above.)
+            ba(() => ({ ...c, ...ps }));
         } catch (e) {}
       }, [Ke, ya]);
       const va = {
           "copenhagen-modern": {
             label: "Copenhagen Modern",
             style: {
-              headerBg: "#DDE6F2",
-              sidebarBg: "#DDE6F2",
-              headerNameColor: "#283556",
-              headerSpecColor: "#283556",
-              headerContactColor: "#283556",
-              headerLineColor: "#283556",
+              headerBg: "#283556",
+              sidebarBg: "#C9D6EC",
+              headerNameColor: "#FFFFFF",
+              headerSpecColor: "#FFFFFF",
+              headerContactColor: "#FFFFFF",
+              headerLineColor: "#01B7BB",
               headerFont: "Trebuchet MS",
               sidebarHeadColor: "#00746E",
               sidebarTextColor: "#283556",
@@ -16390,8 +16391,8 @@
               mainYearColor: "#595959",
               mainHeadFont: "Trebuchet MS",
               mainBodyFont: "Calibri",
-              tableHeaderBg: "#DDE6F2",
-              tableHeaderText: "#283556",
+              tableHeaderBg: "#283556",
+              tableHeaderText: "#FFFFFF",
               tableOddBg: "#FFFFFF",
               tableEvenBg: "#FAFAFA",
               tableBorderColor: "#D9D9D9",
@@ -24892,6 +24893,10 @@
             b = (e) => {
               var n, a, i, l;
               const c = "sidebar" === e.loc,
+                // STYLE-BG-FOLLOW-PKG-001: capture the SIDEBAR bg before the
+                // name/spec/contact blocks shadow `t`, so the candidate ink reads
+                // against the real (possibly pale) sidebar, not navyColor (Ke).
+                __sbBg = t.sidebarBg || Ke,
                 b = c ? t.sidebarHeadColor : t.mainHeadColor;
               if (
                 (c && t.sidebarTextColor,
@@ -24901,23 +24906,23 @@
               ) {
                 const n = t.sidebarHeadColor || "#01B7BB",
                   a = t.mainHeadColor || "#00746E",
-                  i = c ? readableInk(Ke || t.sidebarBg) : "#333333";
+                  i = c ? readableInk(__sbBg) : "#333333";
                 if ("name_block" === e.id) {
                   const t = r(e.content || ""),
                     o = c ? "center" : "left";
-                  return `<div style="margin:0 0 6pt;page-break-inside:avoid"><div style="font-family:'Cabin','Carlito',${s || d};font-weight:700;color:${c ? readableInk(Ke || t.sidebarBg) : "#283556"};font-size:${u.nameSize}pt;line-height:1.1;text-align:${o};margin-top:2pt;margin-bottom:4pt">${t}</div>${f(n, 2, 4)}</div>`;
+                  return `<div style="margin:0 0 6pt;page-break-inside:avoid"><div style="font-family:'Cabin','Carlito',${s || d};font-weight:700;color:${c ? readableInk(__sbBg) : "#283556"};font-size:${u.nameSize}pt;line-height:1.1;text-align:${o};margin-top:2pt;margin-bottom:4pt">${t}</div>${f(n, 2, 4)}</div>`;
                 }
                 if ("spec_block" === e.id) {
                   const t = r(e.content || ""),
                     n = c ? "center" : "left";
-                  return `<div style="margin:0 0 6pt;page-break-inside:avoid"><div style="font-family:'Cabin','Carlito',${s || d};color:${c ? readableInk(Ke || t.sidebarBg) : "#283556"};font-size:${u.specialisation}pt;line-height:1.2;text-align:${n};margin-bottom:4pt">${t}</div></div>`;
+                  return `<div style="margin:0 0 6pt;page-break-inside:avoid"><div style="font-family:'Cabin','Carlito',${s || d};color:${c ? readableInk(__sbBg) : "#283556"};font-size:${u.specialisation}pt;line-height:1.2;text-align:${n};margin-bottom:4pt">${t}</div></div>`;
                 }
                 if ("contact_line" === e.id) {
                   const t = (e.items || []).filter((e) => !e.hidden);
                   if (!t.length) return "";
                   const n = o(e.title || "CONTACT").toUpperCase(),
                     l = c ? "center" : "left",
-                    s = c ? readableInk(Ke || t.sidebarBg) : a,
+                    s = c ? readableInk(__sbBg) : a,
                     p = t
                       .map(
                         (e) =>

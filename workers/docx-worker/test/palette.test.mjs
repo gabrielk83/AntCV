@@ -122,13 +122,15 @@ test('getPackageStyle: on-ground text is luminance-aware (dark on pale, white on
     const x = String(h).replace('#', '');
     return 0.2126 * parseInt(x.slice(0, 2), 16) + 0.7152 * parseInt(x.slice(2, 4), 16) + 0.0722 * parseInt(x.slice(4, 6), 16);
   };
+  const ink = (bg) => (lum(bg) > 140 ? '283556' : 'FFFFFF');
   for (const id of regIds) {
     const s = getPackageStyle(id, false);
     assert.equal(s.mainTextColor, '1F2937');
-    const expectInk = lum(s.sidebarBg) > 140 ? '283556' : 'FFFFFF';
-    assert.equal(s.sidebarTextColor, expectInk, `${id} sidebar ink vs ground ${s.sidebarBg}`);
-    assert.equal(s.headerNameColor, expectInk, `${id} name ink vs ground ${s.sidebarBg}`);
-    assert.equal(s.tableHeaderText, expectInk, `${id} table-header ink vs ground ${s.sidebarBg}`);
+    // Each region's ink follows ITS OWN background: the sidebar can be pale
+    // (Copenhagen) while the candidate band + table header stay dark navy.
+    assert.equal(s.sidebarTextColor, ink(s.sidebarBg), `${id} sidebar ink vs ${s.sidebarBg}`);
+    assert.equal(s.headerNameColor, ink(s.headerBg), `${id} name ink vs band ${s.headerBg}`);
+    assert.equal(s.tableHeaderText, ink(s.tableHeaderBg), `${id} table-header ink vs ${s.tableHeaderBg}`);
   }
 });
 

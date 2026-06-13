@@ -53,6 +53,19 @@ const t1 = await page.evaluate(()=>{
 });
 check('1. two tables render (available | selected, default starred)', t1.found && t1.cols===2 && /AVAILABLE/.test(t1.leftTitle) && /SELECTED/.test(t1.rightTitle) && t1.rightHasDefault, JSON.stringify(t1));
 
+// 1b — WIZARD-002 settings hand-off block on the final slide
+const t1b = await page.evaluate(()=>{
+  const h=document.querySelector('[data-antcv-wizard-handoff]');
+  if(!h) return {found:false};
+  const rows=[...h.querySelectorAll('[data-antcv-handoff-row]')].map(r=>(r.textContent||''));
+  const txt=h.textContent||'';
+  return { found:true, rows:rows.length,
+    personal:/Personal/.test(txt) && /tense/i.test(txt) && /banned/i.test(txt),
+    layout:/Layout/.test(txt) && /photo/i.test(txt),
+    advanced:/Advanced/.test(txt) && /tone/i.test(txt) && /page flow/i.test(txt) };
+});
+check('1b. WIZARD-002 hand-off: 3 rows (Personal/Layout/Advanced) with the right cues', t1b.found && t1b.rows===3 && t1b.personal && t1b.layout && t1b.advanced, JSON.stringify(t1b));
+
 // 2 — move Spanish right
 await page.evaluate(()=>{
   const picker=document.querySelector('[data-antcv-wizard-language-picker]');

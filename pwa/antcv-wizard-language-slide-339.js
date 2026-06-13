@@ -41,7 +41,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.284-dom-lang-picker';
+  var VERSION = '1.50.431-handoff';
   if (window.__antcvWizardLanguageSlide339 === VERSION) return;
   window.__antcvWizardLanguageSlide339 = VERSION;
 
@@ -399,10 +399,34 @@
       }
     } catch (_) {}
 
-    var hint = document.createElement('div');
-    hint.style.cssText = 'margin:4px 0 18px;padding:10px 12px;background:rgba(1,183,187,0.08);border:1px solid rgba(1,183,187,0.35);border-radius:8px;font-size:11.5px;line-height:1.55;color:rgba(255,255,255,0.85);';
-    hint.innerHTML = 'Above is just a preview \u2014 you choose the format per section in the editor. For deeper voice and visual-style control, see <strong>Settings \u2192 Advanced</strong> after the wizard closes.';
-    panel.appendChild(hint);
+    // WIZARD-002 (owner queue 2026-06-13): the "settings hand-off" \u2014 this is the
+    // final wizard slide, so before it closes, point the user at the three
+    // places they will customise everything else. Replaces the single generic
+    // "see Settings -> Advanced" hint with a structured map.
+    var handoff = document.createElement('div');
+    handoff.setAttribute('data-antcv-wizard-handoff', '1');
+    handoff.style.cssText = 'margin:4px 0 18px;padding:12px 14px;background:rgba(1,183,187,0.08);border:1px solid rgba(1,183,187,0.35);border-radius:8px;';
+    var hTitle = document.createElement('div');
+    hTitle.textContent = 'WHERE TO CUSTOMISE NEXT';
+    hTitle.style.cssText = 'font-size:10.5px;font-weight:800;letter-spacing:.3px;color:#01B7BB;margin:0 0 8px;';
+    handoff.appendChild(hTitle);
+    var HANDOFF_ROWS = [
+      ['Settings \u2192 Standard \u2192 Personal', 'Languages in the top bar, experience tense, and your banned-words list.'],
+      ['Settings \u2192 Standard \u2192 Layout', 'Profile-photo position & shape, and the visual style package.'],
+      ['Settings \u2192 Advanced', 'Writing tone, and page flow \u2014 continuation headings, the repeat header on page 2+, and page numbers.']
+    ];
+    HANDOFF_ROWS.forEach(function (r) {
+      var row = document.createElement('div');
+      row.setAttribute('data-antcv-handoff-row', '1');
+      row.style.cssText = 'margin:0 0 7px;font-size:11.5px;line-height:1.5;color:rgba(255,255,255,0.85);';
+      row.innerHTML = '<strong style="color:#fff">' + r[0] + '</strong> \u2014 ' + r[1];
+      handoff.appendChild(row);
+    });
+    var hNote = document.createElement('div');
+    hNote.innerHTML = 'You also choose each section\u2019s format (paragraph, bullets, table\u2026) per section in the editor.';
+    hNote.style.cssText = 'margin:8px 0 0;font-size:11px;line-height:1.5;color:rgba(255,255,255,0.6);';
+    handoff.appendChild(hNote);
+    panel.appendChild(handoff);
 
     var btnRow = document.createElement('div');
     btnRow.style.cssText = 'display:flex;gap:8px;justify-content:space-between;align-items:center;margin-top:6px;';

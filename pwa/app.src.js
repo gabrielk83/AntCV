@@ -37632,6 +37632,38 @@
                   resetPreviewToFit: _i,
                   onSelect: Pr,
                 }),
+                // DEMO-BADGE-SETUP-001 (owner 2026-06-13): the setup/landing
+                // header showed the demo badge nowhere — for an ACTIVE demo
+                // user M() is false (the demo proxy IS set), so the "Use demo"
+                // button is hidden AND there was no DEMO indicator here, even
+                // though the editor topbar, settings, and preview all show it.
+                // Add the same 🟡 DEMO badge as the editor topbar.
+                Y &&
+                  Y.email &&
+                  __antcvDemoActive() &&
+                  React.createElement(
+                    "span",
+                    {
+                      title:
+                        "Demo user — your account uses the shared demo worker with a per-user spending cap. Contact admin to extend access or switch to your own API keys.",
+                      style: {
+                        display: "inline-flex",
+                        alignItems: "center",
+                        padding: "4px 8px",
+                        background: "rgba(255,200,80,0.18)",
+                        border: "1px solid rgba(255,200,80,0.5)",
+                        color: "#ffe080",
+                        borderRadius: 6,
+                        fontSize: 10,
+                        fontWeight: 700,
+                        whiteSpace: "nowrap",
+                        flexShrink: 0,
+                        letterSpacing: 0.4,
+                        cursor: "help",
+                      },
+                    },
+                    "🟡 DEMO",
+                  ),
                 M() &&
                   !(B && B.demo_mode) &&
                   React.createElement(

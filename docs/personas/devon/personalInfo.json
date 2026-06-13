@@ -1,0 +1,163 @@
+{
+  "_comments": [
+    "Devon Hale — synthetic test persona #2 (career-changer into software).",
+    "Purpose: showcase AntCV solving the career-changer problem — reframing real",
+    "adjacent experience (data analysis) into software-engineering value WITHOUT",
+    "claiming a title not held, and naming the SWE-tenure gap honestly in HOW I",
+    "WOULD CONTRIBUTE. Deliberately NON-themed and in a DIFFERENT domain from",
+    "Anita (logistics) and from the owner Gabriel (process/products/people) so",
+    "there is zero specialization bleed between personas.",
+    "Spring 2026 is the current timeline reference."
+  ],
+  "name": "Devon Hale",
+  "firstName": "Devon",
+  "lastName": "Hale",
+  "headline": "Full-stack developer (career-changer) | ex-data analyst shipping production web apps",
+  "email": "devon.hale@buildmail.dev",
+  "phone": "+45 31 44 55 66",
+  "linkedin": "linkedin.com/in/devon-hale-dev",
+  "location": "Aarhus, Denmark",
+  "city": "Aarhus",
+  "country": "Denmark",
+  "citizenship": "EU Citizen",
+  "background": "Former financial data analyst who moved into software. Self-taught programming alongside three years of analyst work, then completed a full-stack bootcamp and shipped several web apps end to end. Brings SQL, Python automation, data modelling and stakeholder reporting from the analyst years, now applied to building and maintaining production web applications. Comfortable owning a feature from requirement to deploy.",
+  "tools": [
+    {
+      "l": "Frontend",
+      "v": "JavaScript, TypeScript, React, HTML, CSS, responsive layout"
+    },
+    {
+      "l": "Backend",
+      "v": "Node.js, Express, Python, REST APIs, authentication flows"
+    },
+    {
+      "l": "Data",
+      "v": "SQL, PostgreSQL, pandas, data modelling, Power BI"
+    },
+    {
+      "l": "Tooling & delivery",
+      "v": "Git, GitHub Actions, Docker (learning), Jest, Postman"
+    },
+    {
+      "l": "From the analyst years",
+      "v": "Financial modelling, Excel, stakeholder reporting, requirement gathering"
+    }
+  ],
+  "certifications": [
+    "Full-Stack Web Development — Copenhagen Coding Bootcamp (2025)",
+    "Google Data Analytics Professional Certificate (2023)",
+    "AWS Certified Cloud Practitioner — in progress",
+    "Prøve i dansk 3"
+  ],
+  "education": [
+    {
+      "deg": "BSc Economics and Business Administration",
+      "sch": "Aarhus University, 2018–2021"
+    },
+    {
+      "deg": "Full-Stack Web Development (16-week intensive)",
+      "sch": "Copenhagen Coding Bootcamp, 2025"
+    }
+  ],
+  "publications": [],
+  "experience": [
+    {
+      "title": "Freelance Web Developer (project work)",
+      "company": "Self-employed",
+      "years": "Autumn 2025 – Present",
+      "bullets": [
+        "Built and deployed a booking web app for a local studio in React, Node and PostgreSQL; the owner now manages availability without spreadsheets.",
+        "Shipped a small invoicing tool used daily by two freelancers; wrote the REST API, auth and the test suite.",
+        "Set up CI with GitHub Actions so each change runs tests before deploy."
+      ]
+    },
+    {
+      "title": "Data Analyst",
+      "company": "Meridian Retail Group",
+      "years": "2022 – 2025",
+      "bullets": [
+        "Replaced a manual weekly reporting routine with a Python pipeline, cutting the prep from a day to under an hour.",
+        "Wrote the SQL behind the sales dashboards the commercial team used to plan stock.",
+        "Worked directly with non-technical stakeholders to turn vague questions into defined data requirements."
+      ]
+    },
+    {
+      "title": "Junior Financial Analyst",
+      "company": "Nordbarrow Consulting",
+      "years": "2021 – 2022",
+      "bullets": [
+        "Built and maintained financial models in Excel for client forecasts.",
+        "Automated a recurring reconciliation step with a small Python script, removing a regular source of manual errors.",
+        "Produced written summaries that translated the numbers for client decision-makers."
+      ]
+    }
+  ],
+  "workStyle": {
+    "keywords": [
+      "analytical",
+      "self-directed learner",
+      "ships",
+      "bridges business and tech",
+      "test-minded",
+      "pragmatic"
+    ],
+    "strengths": [
+      "Translating requirements into working software",
+      "Learning a new stack quickly",
+      "Data and SQL fluency",
+      "Clear written communication",
+      "Finishing and deploying"
+    ],
+    "notes": "Learns by building and shipping rather than by collecting tutorials. Comfortable in the part of a project where business need meets code. Honest about what is still new — names the gap and the plan to close it rather than overstating depth.",
+    "summary": "Career-changer into software with a real analyst foundation and shipped projects. Strong at turning a requirement into a working, tested feature."
+  },
+  "stylePrefs": {
+    "banned_words": "passionate, dynamic, rockstar, ninja, visionary, disruptive, world-class, cutting-edge, fast-paced, synergy, leverage, empower, proactive, results-driven, innovative, expertly, robust solutions, go-getter, thought leader",
+    "banned_phrases": "think outside the box, hit the ground running, works well under pressure, team player with excellent communication skills, proven track record, detail-oriented professional, motivated self-starter, thrives in fast-paced environments, responsible for, references available upon request",
+    "preferred_tone": "Calm, factual and concrete. Lead with what was built and what it changed. Honest about the transition — analyst experience reframed in engineering terms, with the SWE-tenure gap named plainly, never papered over with adjectives."
+  },
+  "targetRoles": [
+    "Frontend Developer",
+    "Full-Stack Developer",
+    "Junior Software Engineer",
+    "Software Developer (data-adjacent)",
+    "Web Developer"
+  ],
+  "targetIndustries": [
+    "SaaS",
+    "Web applications",
+    "Fintech",
+    "Data products",
+    "Developer tooling",
+    "E-commerce"
+  ],
+  "proofPoints": [
+    "Built and deployed a full booking web app (React, Node, PostgreSQL) now in daily use",
+    "Replaced a day-long manual reporting routine with a Python pipeline that runs in under an hour",
+    "Shipped an invoicing tool with its own REST API, auth and test suite",
+    "Wrote the SQL behind sales dashboards used for stock planning",
+    "Set up CI so every change is tested before deploy",
+    "Completed a 16-week full-stack bootcamp while working full time"
+  ],
+  "positioning": {
+    "primary": "Analytical full-stack developer with a real data background and shipped, deployed projects. Best where business need meets code.",
+    "secondary": "Strong fit for data-adjacent or reporting-heavy product teams that value SQL fluency plus the ability to build the front end too.",
+    "avoid": "Senior or lead engineering titles, deep low-level systems work, or any framing that implies years of formal SWE tenure not yet held. The transition is a strength when named honestly, not when hidden."
+  },
+  "applicationPrefs": {
+    "location": "Aarhus or Copenhagen; Nordic-region remote/hybrid",
+    "workMode": "Hybrid or remote preferred; onsite acceptable",
+    "language": "English preferred; Danish acceptable",
+    "tone": "Calm, factual, concrete. Show the build and the outcome.",
+    "exportPreference": "PDF for submission; DOCX when further editing is expected"
+  },
+  "gapClosingPreferences": {
+    "namedGap": "Limited formal software-engineering tenure (under ~1 year in a titled SWE role).",
+    "closeWith": "Real shipped projects, the analyst-to-engineer reframe (SQL/automation/requirements), the bootcamp, and a concrete plan to deepen testing, code review and a chosen backend stack on the job.",
+    "neverDo": "Claim a senior/lead title, invent production experience, or approximate ('exposure to', 'familiarity with') to cover the gap in PROFILE or SELECTED OUTCOMES — the honest place to name it is HOW I WOULD CONTRIBUTE."
+  },
+  "fitAnalysisPreferences": {
+    "emphasize": "Coverage of JD requirements already met by real projects + the transferable analyst skills; flag genuine gaps clearly with a close-the-gap plan.",
+    "deprioritize": "Years-of-experience filters where shipped evidence is stronger than tenure."
+  }
+}

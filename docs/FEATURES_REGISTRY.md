@@ -4,6 +4,10 @@ A living registry of **features** (distinct from the bug tracker at
 `docs/qa/ACTIVE_BUGS.md`). Each feature is **CLOSED** (shipped + live), **OPEN**
 (planned or in progress), or **PARKED** (descoped / blocked).
 
+For product positioning / problem→solution framing (general statement, per-persona,
+and the v~1.50.300 engineering work as problems solved), see
+[docs/marketing/PROBLEM_STATEMENTS.md](marketing/PROBLEM_STATEMENTS.md).
+
 Last updated: **2026-06-11** — CLOSED: SHARE-TARGET-JD-URL-001 (1.50.375), PHOTO-SIDEBAR-BRIDGE-001 (preview 1.50.368–372 + worker 1.14.51–53), ADV-INDENT-CONTROLS-001 export-parity (worker 1.14.47/49), EXPORT-PAGE2-001 print path (1.50.374) + export-preview page selector. BRIDGE-SIDEBAR-PALETTE-001 retired by owner direction (bridge uses standard sidebar palette since 1.50.371).
 
 Status legend: ✅ CLOSED (shipped) · 🟡 OPEN (active/planned) · ⚪ PARKED.

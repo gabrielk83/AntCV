@@ -79,8 +79,9 @@
       "rule": "1 sentence on what gives energy / makes him happy. Word 'passionate' stays banned; use 'makes me happy' / 'gives me energy'.",
       "sentences": [
         "Rugby keeps me grounded: operations manager and assistant coach at Copenhagen Wolves RFC, foreningsarbejde that builds the club beyond the matchday squad.",
-        "Building things makes me happy: AntCV, a GenAI product I design, build, and ship solo."
-      ]
+        "Building and shipping things gives me energy: taking an idea through to something people actually use."
+      ],
+      "antcv_note": "AntCV is NOT named here in the Profile (owner 2026-06-13). It lives under the Kanzen consultancy EXPERIENCE entry as a shipped project, not in the profile/summary."
     },
     "special_capabilities": {
       "rule": "Carried by the Work style line. One personality-bearing sentence maximum.",
@@ -95,12 +96,16 @@
   "kernel_fact_corrections": {
     "volunteer_interests_line": "Operations manager & assistant coach, Copenhagen Wolves RFC (foreningsarbejde)",
     "courses": "AI course (Copilot) — IDA Ingeniørforening. Distinct from AI-Practitioner (Teknologisk Institut); both stay.",
-    "contact_location": "2300, København S"
+    "contact_location": "2300, København S",
+    "unsolicited_specialization": "Process · Products · People",
+    "antcv_placement": "AntCV is a shipped solo project listed UNDER the Kanzen consultancy EXPERIENCE entry — NOT in the Profile/summary. The profile leads with process/product/people judgment; AntCV is one proof point beneath the Kanzen role (owner 2026-06-13)."
   },
   "render_constraints": {
     "max_personality_sentences_in_profile": 1,
     "never_render_raw": ["people's person", "team player", "empathy", "moral", "reads the room"],
     "banned_lists_apply": true,
-    "rule": "One personality-bearing sentence in Profile maximum; the rest carried by Work style line and cover letter Who I Am. Behaviour over adjectives."
+    "antcv_not_in_profile": true,
+    "unsolicited_subtitle": "Process · Products · People — never a logistics / storage / seasonal framing (that is the Anita persona's domain; no cross-persona bleed). Owner 2026-06-13.",
+    "rule": "One personality-bearing sentence in Profile maximum; the rest carried by Work style line and cover letter Who I Am. Behaviour over adjectives. AntCV is never named in the Profile — it sits under the Kanzen experience entry."
   }
 }

@@ -15354,7 +15354,26 @@
           } catch (_) {}
           return 120;
         }),
-        [er, tr] = e(() => u.get("photoPosition", "sidebar-top")),
+        [er, tr] = e(() =>
+          // PHOTO-BRIDGE-DEFAULT-001 (owner 2026-06-13): Sidebar bridge
+          // (band-overlap) is the DEFAULT photo position for copenhagen-modern
+          // (the default package), so a user who never picks a position gets
+          // the bridge. An explicit stored choice always wins. The bridge
+          // sidecar mirrors this default so its button highlights correctly.
+          u.get(
+            "photoPosition",
+            (() => {
+              try {
+                return "copenhagen-modern" ===
+                  __pkgNorm(u.get("stylePackage", "copenhagen-modern"))
+                  ? "band-overlap"
+                  : "sidebar-top";
+              } catch (_) {
+                return "sidebar-top";
+              }
+            })(),
+          ),
+        ),
         // PHOTO-SIDEBAR-BRIDGE-001 (1.50.367): live setter for sidecars. The
         // "◐ Sidebar bridge" button (antcv-photo-bridge-button.js) used to
         // write localStorage only — React's er never updated until a reload,
@@ -34943,7 +34962,10 @@
                                   padding: "4px 8px",
                                   fontSize: 10,
                                   borderRadius: 5,
-                                  fontWeight: er === e ? 700 : 400,
+                                  // PHOTO-BRIDGE-DEFAULT-001 (owner 2026-06-13):
+                                  // un-bold the active photo-position button
+                                  // (was 700) so it matches the bridge button.
+                                  fontWeight: er === e ? 600 : 400,
                                   border: `1px solid ${er === e ? l : "rgba(255,255,255,0.15)"}`,
                                   background:
                                     er === e

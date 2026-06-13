@@ -48,16 +48,31 @@
   'use strict';
 
   if (window.__antcvPhotoBridgeButtonInstalled) return;
-  window.__antcvPhotoBridgeButtonInstalled = '1.50.36';
+  window.__antcvPhotoBridgeButtonInstalled = '1.50.422';
 
   const STORAGE_KEY = 'photoPosition';
   const BRIDGE_VALUE = 'band-overlap';
   const TAG_ATTR = 'data-antcv-bridge-button';
 
+  // PHOTO-BRIDGE-DEFAULT-001 (owner 2026-06-13): mirror app.js — when no
+  // photoPosition is stored, the default for the copenhagen-modern package is
+  // the bridge (band-overlap); otherwise sidebar-top. Keeps the bridge button's
+  // highlight in sync with the actual default render.
+  function defaultPosition() {
+    try {
+      var raw = localStorage.getItem('stylePackage');
+      var pkg = 'copenhagen-modern';
+      if (raw) { try { var p = JSON.parse(raw); pkg = (typeof p === 'string' ? p : raw); } catch (_) { pkg = raw; } }
+      pkg = String(pkg || '').trim();
+      // legacy orphan id maps to copenhagen-modern
+      if (pkg === 'scandinavian' || pkg === '') pkg = 'copenhagen-modern';
+      return pkg === 'copenhagen-modern' ? BRIDGE_VALUE : 'sidebar-top';
+    } catch (_) { return 'sidebar-top'; }
+  }
   function readPosition() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return 'sidebar-top';
+      if (!raw) return defaultPosition();
       let v = raw;
       try {
         const parsed = JSON.parse(raw);
@@ -65,7 +80,7 @@
       } catch (_) {}
       return String(v).trim();
     } catch (_) {
-      return 'sidebar-top';
+      return defaultPosition();
     }
   }
 
@@ -237,13 +252,18 @@
     var isActive = readPosition() === BRIDGE_VALUE;
     document.querySelectorAll('[' + TAG_ATTR + '="1"]').forEach(function (b) {
       if (isActive) {
-        b.style.background = 'rgba(1,183,187,.18)';
-        b.style.border = '1px solid rgba(1,183,187,.55)';
-        b.style.color = '#e6eef3';
+        // PHOTO-BRIDGE-DEFAULT-001 (owner 2026-06-13): match the native active
+        // photo-position button — teal text/border, faint teal fill, UNBOLD —
+        // instead of the old whitish active colour.
+        b.style.background = 'rgba(1,183,187,.1)';
+        b.style.border = '1px solid #01B7BB';
+        b.style.color = '#01B7BB';
+        b.style.fontWeight = '600';
       } else {
         b.style.background = 'rgba(255,255,255,.04)';
         b.style.border = '1px solid rgba(255,255,255,.18)';
         b.style.color = '#d7e6ee';
+        b.style.fontWeight = '600';
       }
       // Mark the parent row so the suppression stylesheet can swap
       // sibling buttons into the neutral pill state.

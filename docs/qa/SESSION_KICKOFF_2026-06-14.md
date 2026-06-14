@@ -40,6 +40,63 @@ Owner directive: implement the backlog in the order below, verify each, ship; re
 - `pwa/test/buildStyle-palette.test.mjs` — export payload panel colours.
 - `pwa/test/diag-analysis-salary.mjs`, `workers/proxy/test/jd-analysis-salary.test.mjs`.
 
+## 2A. Tools & MCP available this session (use the right one per task)
+
+Most backlog items are **export-parity** bugs — the fix only counts if confirmed in a real
+DOCX/PDF (QA core rule, §1.6). These are the tools to read those artifacts and the live app.
+
+**Reading / verifying exported documents (the QA core loop):**
+- **`Read` (native)** — first choice for a born-digital exported PDF (pass a `pages` range)
+  and for the owner's PNG bug screenshots. Reads the text layer + renders the page visually.
+- **`pdf` skill (`anthropic-skills:pdf`) — the PDF OCR reader.** Use when an exported PDF is
+  scanned/rasterised or its text layer is **garbled** (the known "garbled font encoding"
+  path) — it OCRs the page to recover text so you can assert on sidebar-label colour,
+  contact-line wording, banded rows, etc. Also merges/splits/watermarks/extracts images.
+  This is the tool to trust a real PDF when `Read`'s text layer is unreliable.
+- **`pdf-viewer` skill / `mcp__plugin_pdf-viewer_pdf__*`** — interactive page-by-page viewer
+  to open an exported PDF and inspect/annotate visually. Best for the *visual* export bugs
+  (sidebar labels white, photo sidebar-top-vs-bridge, missing zebra rows, CL edge inset).
+- **`docx` skill (`anthropic-skills:docx`) + `mcp__9ae16cca…__github_read_docx`** — inspect
+  the exported DOCX and the locked `docs/design/*.docx` source documents (document wins on
+  conflict, per CLAUDE.md).
+
+**Live-app inspection (data-merge item 11 + any live-tab bug):**
+- **`mcp__Claude_in_Chrome__*` / `mcp__Claude_Preview__*`** — drive
+  `cv-generator-det.pages.dev` to read localStorage `personalInfo`/`sections`, render the
+  editor for inspection, eval JS, capture console/network. **Rules (from memory):** do NOT
+  sign in as the owner; inject a render-only flag, then CLEAN UP every injected flag.
+
+**Headless render / unit harness (verify BEFORE deploy — boot-smoke is not enough, §1.2):**
+- `Bash` → `node pwa/test/diag-*.mjs` and `*.test.mjs` (the harnesses listed in §2);
+  worker tests under `workers/*/test/`. See the `headless-pwa-testing` memory for auth/section
+  injection to render past the sign-in gate.
+
+**Deploy / data (workers are manual; PWA auto-deploys on push to main):**
+- `Bash` → `gh workflow run deploy.yml -f target=<proxy|demo-proxy|docx-worker> -f mode=deploy
+  -f confirm=<same>` (the approved worker-deploy path, §1.5).
+- Cloudflare MCP `mcp__9ae16cca…__deploy_worker` / `deploy_pages` / `get_worker_code` /
+  `github_read_file` / `github_write_file`; **`mcp__e9cdb384…__d1_database_query`** for LLM-call
+  / history diagnostics on D1 (read-only first).
+
+**Edit / search / shell:** `Edit` (UTF-8-safe for `pwa/*` — never Get/Set-Content rewrite a
+sidecar, §1.7), `Grep`, `Glob`, `Bash`, `PowerShell` (5.1 — `[IO.File]`/node for UTF-8 files;
+`git commit -F`, not `-m` with quotes).
+
+**File deletion / cleanup** (removing a retired sidecar, a `/tmp` de-min artifact, or a
+cleaned-up injected-flag file — backlog item 11): there is **no dedicated MCP file-delete
+tool** in this session. Delete via, in order of preference:
+- `Bash` → `git rm <path>` for a tracked file (stages the removal in one step), or
+  `PowerShell` → `Remove-Item -LiteralPath <path>` (add `-Recurse -Force` only when intended)
+  for an untracked/local file.
+- `mcp__plugin_desktop-commander_desktop-commander__*` covers read/write/**move** but exposes
+  no delete; use `move_file` to relocate, not to remove. (The only MCP `*_delete` tools here
+  are Cloudflare **resource** deletes — `d1_database_delete`, `kv_namespace_delete`,
+  `r2_bucket_delete` — which destroy a whole database/namespace/bucket, NOT a file; do not use
+  them for cleanup.)
+- Per the safety rule, never hard-delete data you didn't create or can't restore — prefer
+  `git rm` (recoverable from history) and confirm the path is the retired one (grep
+  `pwa/index.html` first: an edit/delete to an unloaded sidecar is a no-op, per CLAUDE.md).
+
 ## 3. Prioritized backlog (owner's recommended order)
 
 **A. Export/PDF parity (highest user pain — re-verify each in a real PDF):**

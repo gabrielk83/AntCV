@@ -21,9 +21,10 @@ globalThis.localStorage = {
 
 const { buildPayload } = await import('../../antcv-docx-client.js');
 
-function payloadFor(mode) {
+function payloadFor(mode, stylePackage) {
   store.clear();
   if (mode) store.set('outcomesMode', JSON.stringify(mode));
+  if (stylePackage) store.set('stylePackage', JSON.stringify(stylePackage));
   return buildPayload({
     sections: { cv: [
       { id: 'profile', title: 'PROFILE', loc: 'main', on: true, type: 'text', content: 'P.' },
@@ -54,9 +55,19 @@ test("results mode: outcomes section dropped, results spread across roles (not p
   assert.ok(!/optical lab/.test(r0.results), 'r0 must not also carry the second outcome');
 });
 
-test('default mode: payload unchanged (outcomes section present, no results keys)', () => {
+test('OUTCOMES-MODE-PARITY-001: no explicit mode + Copenhagen default → results (matches preview)', () => {
+  // The PREVIEW (__antcvOutcomesMode) defaults Copenhagen Modern to 'results'
+  // when nothing is stored; the export now mirrors it. The default package
+  // (empty/scandinavian) resolves to copenhagen-modern → results.
   const p = payloadFor(null);
-  assert.ok(p.sections.find((s) => s.id === 'outcomes'));
+  assert.equal(p.sections.find((s) => s.id === 'outcomes'), undefined, 'export must hide SELECTED OUTCOMES on the Copenhagen default, matching the preview');
+  const exp = p.sections.find((s) => s.id === 'experience');
+  assert.ok(exp.roles.some((r) => typeof r.results === 'string' && r.results), 'roles carry results on the Copenhagen default');
+});
+
+test('non-Copenhagen package + no explicit mode → section (outcomes block kept)', () => {
+  const p = payloadFor(null, 'navy-executive');
+  assert.ok(p.sections.find((s) => s.id === 'outcomes'), 'non-Copenhagen defaults to the SELECTED OUTCOMES block');
   const exp = p.sections.find((s) => s.id === 'experience');
   assert.ok(exp.roles.every((r) => r.results === undefined));
 });

@@ -1492,8 +1492,28 @@ function buildFilename({ personalInfo, meta, doc, language }) {
 export function applyOutcomesMode(docSections, doc) {
   try {
     if (doc !== 'cv' || !Array.isArray(docSections)) return docSections;
-    let mode = localStorage.getItem('outcomesMode') || '"section"';
-    try { const p = JSON.parse(mode); if (typeof p === 'string') mode = p; } catch (_) {}
+    // OUTCOMES-MODE-PARITY-001 (owner 2026-06-14): mirror the PREVIEW default
+    // EXACTLY (app.src.js __antcvOutcomesMode). An explicit user choice wins;
+    // with NONE stored, Copenhagen Modern (incl. the 'scandinavian'/empty
+    // aliases) defaults to 'results' and every other package to 'section'. The
+    // export used to default to 'section' unconditionally, so on Copenhagen
+    // Modern with no explicit setting the preview hid SELECTED OUTCOMES (per-role
+    // Results) while the export still emitted the OUTCOMES block — a parity gap.
+    let mode;
+    const rawMode = localStorage.getItem('outcomesMode');
+    if (rawMode != null) {
+      let v = rawMode;
+      try { const p = JSON.parse(rawMode); if (typeof p === 'string') v = p; } catch (_) {}
+      mode = v === 'results' ? 'results' : 'section';
+    } else {
+      let pkg = '';
+      try {
+        const p = JSON.parse(localStorage.getItem('stylePackage') || '""');
+        pkg = (typeof p === 'string' ? p : '').toLowerCase().trim();
+      } catch (_) {}
+      if (pkg === 'scandinavian' || pkg === '') pkg = 'copenhagen-modern';
+      mode = pkg === 'copenhagen-modern' ? 'results' : 'section';
+    }
     if (mode !== 'results') return docSections;
     const isOutcomes = (s) => s &&
       (/^(outcomes|selected_outcomes)$/.test(String(s.id || '')) ||

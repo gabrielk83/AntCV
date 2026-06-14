@@ -16,6 +16,15 @@ branches each ship. Tests live under `pwa/test/` and `workers/proxy/test/`.
 - `OUTCOMES-RESULTS-EDIT-001` `[SHIPPED 1.50.454]` — the per-role Results line is now an editable `contentEditable` span; edits persist per role to `antcv:resultsOverride` and are preferred on render.
 - `SIDEBAR-LABEL-PDF-WHITE-001` `[FIXED 1.50.455]` — the bold sidebar field LABELS rendered white on the pale sidebar in the PDF (`sidebarLabelColor` defaulted white in the worker). `buildStyle` now sets `sidebarLabelColor` to the dark readable ink. buildStyle-palette 6/6. **Re-verify in a real PDF export, desktop + mobile.**
 
+- `OUTCOMES-MODE-PARITY-001` `[FIXED 1.50.459 — needs real-export verify]` — owner 2026-06-14
+  ("still exporting selected outcomes instead of results"): the EXPORT `applyOutcomesMode`
+  defaulted to `'section'` when no `outcomesMode` was stored, but the PREVIEW
+  (`__antcvOutcomesMode`, app.src.js ~252) defaults Copenhagen Modern (incl. the empty/
+  'scandinavian' aliases) to `'results'`. So on Copenhagen with no explicit setting the preview
+  hid SELECTED OUTCOMES (per-role Results) while the export still emitted the OUTCOMES block.
+  The export now mirrors the preview default exactly (reads `stylePackage`; copenhagen → results,
+  else section; an explicit `outcomesMode` still wins). `outcomes-mode-forward.test.mjs` updated
+  4/4 (copenhagen default → results; non-copenhagen → section; explicit modes unchanged).
 - `PLACEHOLDER-EXPORT-GUARD-001` `[FIXED 1.50.458 — needs real-export verify]` — owner 2026-06-14:
   an unsolicited CL exported with the literal skeleton placeholder "[WHY THIS POSITION — 1-2
   sentences …]" because the generation left `why_content` empty and the bracket placeholder

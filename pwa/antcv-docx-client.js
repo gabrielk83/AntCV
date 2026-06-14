@@ -1493,7 +1493,15 @@ function buildFilename({ personalInfo, meta, doc, language }) {
     .slice(0, max);
   const name = slug(personalInfo.name, 40);
   const company = meta.company ? '_' + slug(meta.company, 25) : '';
-  const role = meta.role ? '_' + slug(meta.role, 30) : '';
+  // ROLE-FOUNDER-001: keep "Founder"/"Co-Founder" out of the FILENAME too (a
+  // genuine independent-consultancy label is left intact).
+  const roleRaw = (() => {
+    const v = String(meta.role || '');
+    if (/\b(konsulent|consult|independent)\b/i.test(v)) return v;
+    return v.replace(/\bco[-\s]?founder\b/gi, '').replace(/\bfounder\b/gi, '')
+      .replace(/^[\s&/,|:–—-]+/, '').replace(/[\s&/,|:–—-]+$/, '').replace(/\s{2,}/g, ' ').trim();
+  })();
+  const role = roleRaw ? '_' + slug(roleRaw, 30) : '';
   const lang = language === 'da' ? '_Dansk' : '';
   const d = new Date();
   const date = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;

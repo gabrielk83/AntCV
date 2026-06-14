@@ -26084,7 +26084,13 @@ function renderCompetencyTable(s, ctx) {
     return new TableRow({
       children: (r || []).slice(0, 2).map((cell, i) => new TableCell({
         width: { size: i === 0 ? col1 : col2, type: WidthType.DXA },
-        shading: idx % 2 === 0 ? void 0 : { type: ShadingType.CLEAR, fill: "FAFAFA", color: "auto" },
+        // TABLE-BANDED-ROWS-001 (owner 2026-06-14): the export zebra was both
+        // INVERTED and effectively invisible vs the preview. The React preview
+        // (app.src.js ~5149) bands EVEN data rows (full-row index rr where
+        // (rr-1)%2===0, i.e. data idx 0,2,4…) with a VISIBLE pale teal #eaf7f7.
+        // The worker banded the ODD rows with near-white FAFAFA. Match the
+        // preview: even data rows → EAF7F7, odd → none.
+        shading: idx % 2 === 0 ? { type: ShadingType.CLEAR, fill: "EAF7F7", color: "auto" } : void 0,
         borders: cellBorders,
         margins: { top: 80, bottom: 80, left: 90, right: 90 },
         children: [new Paragraph({
@@ -27116,7 +27122,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.62-palette-fallback-sync";
+var VERSION = "1.14.63-banded-rows";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

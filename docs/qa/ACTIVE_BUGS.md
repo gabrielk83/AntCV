@@ -16,7 +16,14 @@ branches each ship. Tests live under `pwa/test/` and `workers/proxy/test/`.
 - `OUTCOMES-RESULTS-EDIT-001` `[SHIPPED 1.50.454]` — the per-role Results line is now an editable `contentEditable` span; edits persist per role to `antcv:resultsOverride` and are preferred on render.
 - `SIDEBAR-LABEL-PDF-WHITE-001` `[FIXED 1.50.455]` — the bold sidebar field LABELS rendered white on the pale sidebar in the PDF (`sidebarLabelColor` defaulted white in the worker). `buildStyle` now sets `sidebarLabelColor` to the dark readable ink. buildStyle-palette 6/6. **Re-verify in a real PDF export, desktop + mobile.**
 
-- `EXPORT-PALETTE-FALLBACK-001` `[FIXED docx-worker 1.14.62 — needs deploy + real-PDF verify]` —
+- `TABLE-BANDED-ROWS-001` `[FIXED docx-worker 1.14.63 — DEPLOYED; needs real-PDF verify]` — A3:
+  the exported table zebra was "missing the banded-row colours seen in preview". The worker
+  banded the WRONG rows (odd data rows) with a near-invisible `FAFAFA`, while the React preview
+  (`app.src.js` ~5149) bands EVEN data rows with a visible pale teal `#eaf7f7`. Worker
+  `makeDataRow` now matches: even data rows → `EAF7F7`, odd → none. Covers CV competencies + CL
+  What-I-Bring (shared `renderCompetencyTable`). `test/diag-banded-rows.mjs` (4 band fills, 0
+  FAFAFA) + cv-table-width regression green. Re-verify in a real PDF.
+- `EXPORT-PALETTE-FALLBACK-001` `[FIXED docx-worker 1.14.62 — DEPLOYED; needs real-PDF verify]` —
   the DEPLOYED worker bundle (`src/index.js`) inlines a COPY of `src/palette.js`, and that copy
   had drifted to the pre-fix Copenhagen palette: `getPackageStyle` returned `sidebarBg: base`
   with white sidebar text/labels and no `tableHeaderText`. The source `palette.js` was already

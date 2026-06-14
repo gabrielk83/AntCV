@@ -110,7 +110,46 @@
     return copy;
   }
 
+  // ROLE-FOUNDER-001 band fix (owner 2026-06-14): the candidate band renders the
+  // STORED meta.role / meta.subtitle ("Application: Founder & Product / Project
+  // Expert - Unsolicited"), which the export strip never touches and the JSON
+  // import never clears. Clean Founder/Co-Founder out of the stored meta here so
+  // every render path (preview, HTML export, worker) shows the clean line. A
+  // genuine independent-consultancy label is left intact.
+  function cleanFounderStr(s) {
+    var x = String(s || '');
+    if (!/\bfounder\b/i.test(x)) return x;
+    if (/\b(konsulent|consult|independent)\b/i.test(x)) return x;
+    return x
+      .replace(/\b(co[-\s]?)?founder\b\s*[&/,|]\s*/gi, '')
+      .replace(/\s*[&/,|]\s*(co[-\s]?)?founder\b/gi, '')
+      .replace(/\b(co[-\s]?)?founder\b/gi, '')
+      .replace(/\s{2,}/g, ' ')
+      .replace(/:\s*-\s*/, ': ')
+      .trim();
+  }
+  function normalizeMeta() {
+    try {
+      var raw = localStorage.getItem('meta');
+      if (!raw) return;
+      var m = JSON.parse(raw);
+      if (!m || typeof m !== 'object') return;
+      var changed = false;
+      ['role', 'subtitle', 'company'].forEach(function (k) {
+        if (typeof m[k] === 'string' && /\bfounder\b/i.test(m[k])) {
+          var c = cleanFounderStr(m[k]);
+          if (c !== m[k]) { m[k] = c; changed = true; }
+        }
+      });
+      if (!changed) return;
+      localStorage.setItem('meta', JSON.stringify(m));
+      try { window.dispatchEvent(new StorageEvent('storage', { key: 'meta', newValue: localStorage.getItem('meta') })); } catch (_) {}
+      try { console.log('[sections-normalize-415] stripped Founder from stored meta'); } catch (_) {}
+    } catch (_) {}
+  }
+
   function normalize() {
+    try { normalizeMeta(); } catch (_) {}
     try {
       var raw = localStorage.getItem('sections');
       if (!raw) return;

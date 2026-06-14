@@ -99,6 +99,13 @@
     'language', 'navyColor', 'fontSizes', 'lineTargets',
     'cvTableRatio', 'clTableRatio', 'consensusEnabled',
     'formatSettings', 'contactFieldDefinitions',
+    // DIRECT-JSON-IMPORT-001 (owner 2026-06-14): a dropped JSON that carries a
+    // full `sections` block (cv/cl) is imported VERBATIM - the cv/cl arrays
+    // REPLACE the stored ones (mergePath returns the source array when there is
+    // no dedup key for sections.cv/sections.cl), so merged roles, corrected
+    // dates, and new sidebar subsections (Languages, Interests) survive intact
+    // instead of being re-derived by the LLM parser.
+    'sections',
   ]);
 
   // ─── File-kind detection ────────────────────────────────────────
@@ -331,6 +338,7 @@ Schema (omit any field the source does not support; do not invent):
 
 Rules:
 - Treat the user's banned words and phrases below as HARD exclusions. Do not produce them.
+- Do NOT extract availability / notice-period / working-hours / internship-or-trial-period lines (e.g. "Availability: Available up to 20 hours per week. Open to internship or trial period"). These are job-specific and must never be imported into the profile.
 - Three bullets per role maximum. Concrete actions and outcomes.
 - LinkedIn canonical form: "linkedin.com/in/<slug>" (strip scheme and query).
 - If experience has more than 8 roles, keep the 8 most recent.
@@ -842,7 +850,11 @@ ${text}`;
     // appeared in the CV. We do this AFTER the personalInfo write so we
     // re-read the post-merge value (rather than guessing from filtered).
     try {
-      const piNow = Store.get('personalInfo', null);
+      // DIRECT-JSON-IMPORT-001 (owner 2026-06-14): if the import carried a full
+      // `sections` block, it already set the experience roles verbatim - do NOT
+      // re-plumb the (possibly stale) personalInfo.experience over the freshly
+      // imported sections, which would undo merged roles + corrected dates.
+      const piNow = filtered.sections ? null : Store.get('personalInfo', null);
       const expArr = piNow && Array.isArray(piNow.experience) ? piNow.experience : null;
       if (expArr && expArr.length) {
         const slug = (s, i) => 'r' + (i + 1);

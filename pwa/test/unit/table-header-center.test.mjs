@@ -34,6 +34,18 @@ test('applyAlignmentToSection skips <th> editables (header decoupled from body c
   assert.ok(guardIdx < writeIdx, 'th guard must precede the textAlign write');
 });
 
+test('core-competencies row-controls sidecar defaults the HEADER row (row 0) to center', () => {
+  // The REAL preview aligner is antcv-core-competencies-row-controls-234.js:
+  // applyPreview() forces getAlign(0) onto the <th> cells every sweep. getAlign
+  // used to default every row (incl. row 0) to 'left', so the header was
+  // force-left in the preview even though every export path centers it. Row 0
+  // now defaults to center; body rows stay left; an explicit CJLR choice wins.
+  const sc = readFileSync(path.join(ROOT, 'antcv-core-competencies-row-controls-234.js'), 'utf8');
+  assert.match(sc, /function getAlign\(i\)\{[^}]*i===0 \? 'center' : 'left'/);
+  // header row is aligned from getAlign(0)
+  assert.ok(sc.includes('headerRows.forEach(r=>applyAlign(r,getAlign(0)))'));
+});
+
 test('React preview <th> default is textAlign:center (both header cells)', () => {
   const src = readFileSync(path.join(ROOT, 'app.src.js'), 'utf8');
   const min = readFileSync(path.join(ROOT, 'app.js'), 'utf8');

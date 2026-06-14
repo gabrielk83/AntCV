@@ -38,7 +38,17 @@ branches each ship. Tests live under `pwa/test/` and `workers/proxy/test/`.
   export. **B7 follow-up:** the header-center code is present on ALL export paths (worker DOCX +
   HTML print both emit center) and the preview sidecar skip shipped 1.50.457 — owner's left headers
   are most likely a stale cache; hard-refresh to confirm.
-- `TABLE-HEADER-CENTER-001` `[FIXED 1.50.457 — preview; owner reports still left → likely cache]` — B7: table headers
+- `TABLE-HEADER-CENTER-001` `[RE-FIXED 1.50.460 — real root cause]` — owner re-confirmed 2026-06-14
+  "headers still LEFT in preview, centered in export". The 1.50.457 section-align skip was the WRONG
+  lever. The REAL preview aligner is `antcv-core-competencies-row-controls-234.js`: `applyPreview()`
+  forces `getAlign(row)` onto every `th/span` in the header row each sweep, and `getAlign` defaulted
+  ALL rows (incl. row 0, the header) to `'left'`. Fix: `getAlign(0)` now defaults to `'center'`
+  (body rows stay left; an explicit CJLR choice still wins). Export was already center on every path
+  (worker DOCX `<w:jc center>` + HTML `text-align:center` — both verified), which is why they
+  diverged. `table-header-center.test.mjs` extended 3/3. NOTE: the header CJLR being unable to
+  RE-position (B8) is a separate enhancement — row 0's own controls are intentionally stripped and
+  the app's section-level CJLR doesn't drive this sidecar's row-0 map yet.
+- (superseded) `TABLE-HEADER-CENTER-001` `[1.50.457 section-align skip — wrong lever, kept harmless]` — B7: table headers
   rendered LEFT instead of centered. The React `<th>` is `textAlign:center`, but the section-align
   sidecar's reapply pass forced EVERY editable target to the section alignment (default `'left'`),
   overriding the header center each MutationObserver pass. `applyAlignmentToSection` now SKIPS

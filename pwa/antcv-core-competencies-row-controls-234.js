@@ -26,7 +26,13 @@
 
   function readAlignMap(){ return readJson(ALIGN_KEY, {}); }
   function writeAlignMap(m){ writeJson(ALIGN_KEY, m||{}); }
-  function getAlign(i){ const v=readAlignMap()['row-'+i]; return ALIGN.includes(v)?v:'left'; }
+  // TABLE-HEADER-CENTER-001 (owner 2026-06-14): the table HEADER row (editor row
+  // 0) defaults to CENTER — matching the React <th> and the export (worker
+  // s.headerAlign||"center"). Body rows still default left. An explicit CJLR
+  // choice (stored in the align map) still wins for any row. Previously row 0
+  // also defaulted left, so this sidecar force-left the header cells in the
+  // preview even though every export path centers them.
+  function getAlign(i){ const v=readAlignMap()['row-'+i]; if(ALIGN.includes(v)) return v; return i===0 ? 'center' : 'left'; }
   function setAlign(i,v){ const m=readAlignMap(); m['row-'+i]=v; writeAlignMap(m); }
   function nextAlign(v){ return ALIGN[(Math.max(0, ALIGN.indexOf(v))+1)%ALIGN.length]; }
 

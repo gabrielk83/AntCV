@@ -2539,7 +2539,13 @@
         .trim();
       // Only the bare city (or bare "København S") gains the postcode —
       // an explicit other district (NV, Ø, …) is the user's own data.
-      if (/^københavn( s)?$/i.test(s)) s = "2300, København S";
+      if (/^københavn( s)?$/i.test(s)) return "2300, København S";
+      // CONTACT-LINE-DENMARK-001 (owner 2026-06-14): a stored location that
+      // already carries the postcode but no comma ("2300 København S") must
+      // get the comma — postcode + comma + district. Keeps an explicit
+      // district intact.
+      const m = s.match(/^(\d{4})\s+(københavn.*)$/i);
+      if (m) return `${m[1]}, ${m[2]}`;
       return s;
     };
     return (

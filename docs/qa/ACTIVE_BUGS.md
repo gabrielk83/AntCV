@@ -33,7 +33,19 @@ branches each ship. Tests live under `pwa/test/` and `workers/proxy/test/`.
 - **Fix direction:** force sidebar label spans to the dark sidebar-body colour in the PDF export stylesheet; confirm the rule is scoped to the light sidebar and does not regress labels that legitimately sit on the navy band. Then verify Preview + DOCX + PDF parity (QA core rule).
 
 ### CONTACT-LINE-DENMARK-001 — contact line shows "Denmark", spec requires district-only
-- **Status:** [ ] OPEN (Low) — reported by owner, same screenshot (header contact line).
+- **Status:** [x] FIXED 1.50.456 — export path now mirrors the preview's Danish local-form.
+  ROOT CAUSE: the preview (`app.src.js` `pe`/`__localForm`) normalised the contact location to
+  "2300, København S" but the EXPORT path (`antcv-docx-client.js buildPayload`) sent
+  `personalInfo.location` RAW to the worker, so the DOCX/PDF rendered the stored
+  "2300 København S, Denmark" verbatim. FIX: added a `localForm()` helper to the export payload
+  builder (strips denmark/danmark, København-izes, and — new — inserts the comma when a postcode
+  is already present: "2300 København S" → "2300, København S"); the same comma-insertion branch
+  was added to the preview `__localForm` (app.src.js + minified app.js mirror) so a stored
+  postcode form also normalises in Preview. Verified `pwa/test/unit/contact-line-denmark.test.mjs`
+  8/8 (raw, da spelling, bare city/country, non-default district keeps district + gains comma,
+  non-CPH untouched, no country-word leak, src↔minified parity) + boot-smoke. **Re-verify in a
+  real DOCX + PDF export, desktop + mobile** (worker renders the field as-is; no worker change).
+- **(orig) Status:** [ ] OPEN (Low) — reported by owner, same screenshot (header contact line).
 - **Symptom:** The header contact line reads "2300 København S, Denmark".
 - **Expected:** Per owner spec the location token must read "2300, København S" — postcode + comma + district, no country. Never "Copenhagen, Denmark" and not "København S, Denmark".
 - **Scope:** Header contact line. Verify Preview + DOCX + PDF parity, desktop + mobile. Check whether the literal string is stored in personalInfo/contact data (data fix) or assembled at render with a hardcoded ", Denmark" suffix (template fix). If the EU-Citizen / @-handle tokens are assembled in the same string builder, fix there so all CV/CL surfaces match.

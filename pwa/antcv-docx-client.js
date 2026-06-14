@@ -524,6 +524,26 @@ export function buildPayload({
     return `${prefix}${role}${sep}${company}`;
   })();
 
+  // CONTACT-LINE-DENMARK-001 (owner 2026-06-14): mirror the PWA preview's
+  // Danish local-form normalisation (app.src.js `pe`/`__localForm`) so the
+  // exported DOCX/PDF header contact line reads "2300, København S"
+  // (postcode + comma + district, NO country word) — not the raw stored
+  // "2300 København S, Denmark". Non-Copenhagen locations pass through.
+  const localForm = (v) => {
+    let s = String(v || '').trim();
+    if (!/copenhagen|københavn/i.test(s)) return s;
+    s = s
+      .replace(/copenhagen/gi, 'København')
+      .replace(/\s*,?\s*(denmark|danmark)\b/gi, '')
+      .replace(/\s{2,}/g, ' ')
+      .replace(/[,\s]+$/g, '')
+      .trim();
+    if (/^københavn( s)?$/i.test(s)) return '2300, København S';
+    const m = s.match(/^(\d{4})\s+(københavn.*)$/i);
+    if (m) return `${m[1]}, ${m[2]}`;
+    return s;
+  };
+
   const payload = {
     schema_version: '1.0',
     doc,
@@ -534,7 +554,7 @@ export function buildPayload({
       name:        personalInfo.name        || '',
       email:       personalInfo.email       || '',
       phone:       personalInfo.phone       || '',
-      location:    personalInfo.location    || '',
+      location:    localForm(personalInfo.location || ''),
       website:     personalInfo.website     || '',
       linkedin:    personalInfo.linkedin    || '',
       citizenship: personalInfo.citizenship || '',

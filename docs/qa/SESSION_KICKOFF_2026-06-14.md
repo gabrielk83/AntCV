@@ -25,8 +25,9 @@ Owner directive: implement the backlog in the order below, verify each, ship; re
 3. Cache-bust trio: bump the changed file's `?v=` in `index.html`, `sw.js` `CACHE`, and
    `antcv-version-override.js` `TARGET_VERSION` (+ add the PREVIOUS version to `STALE_VERSIONS`,
    NEVER the new one).
-4. Commit + push to `main` + both mirrors:
-   `git fetch origin; git rebase origin/main; git push origin main; git push --force-with-lease origin main:claude/antcv-roadmap-bugs-L9Sqa main:plan/2026-06-06-analysis-followups`
+4. Commit + push to `main` ONLY (mirror branches retired 2026-06-14 — do NOT push to
+   `claude/antcv-roadmap-bugs-L9Sqa` or `plan/2026-06-06-analysis-followups` anymore):
+   `git fetch origin; git rebase origin/main; git push origin main`
 5. Worker change → mirror proxy↔demo-proxy if a matching copy exists; deploy via
    `gh workflow run deploy.yml -f target=<proxy|demo-proxy|docx-worker> -f mode=deploy -f confirm=<same>`.
 6. QA core rule: a fix must hold in **Preview + DOCX + PDF, desktop + mobile** — never

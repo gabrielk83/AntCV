@@ -175,6 +175,14 @@
       // Each section owns its own alignment; the inner one wins.
       const owner = t.closest('[data-sid]');
       if (owner !== sectionEl) continue;
+      // TABLE-HEADER-CENTER-001 (owner 2026-06-14): table HEADER cells (<th>)
+      // are CENTER by default (React renders textAlign:center) and are owned by
+      // their own per-header control — NOT the section-level body cycler. The
+      // default 'left' here was overriding the React center on every reapply
+      // pass, so every table header looked left-aligned. Leave <th> editables
+      // alone; the body cells + text still follow the section alignment. The
+      // export already defaults the header to center (worker s.headerAlign).
+      if (t.closest('th')) continue;
       if (t.style.textAlign !== alignment) t.style.textAlign = alignment;
       if (t.getAttribute('data-antcv-aligned') !== alignment) t.setAttribute('data-antcv-aligned', alignment);
     }

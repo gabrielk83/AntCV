@@ -16,6 +16,15 @@ branches each ship. Tests live under `pwa/test/` and `workers/proxy/test/`.
 - `OUTCOMES-RESULTS-EDIT-001` `[SHIPPED 1.50.454]` — the per-role Results line is now an editable `contentEditable` span; edits persist per role to `antcv:resultsOverride` and are preferred on render.
 - `SIDEBAR-LABEL-PDF-WHITE-001` `[FIXED 1.50.455]` — the bold sidebar field LABELS rendered white on the pale sidebar in the PDF (`sidebarLabelColor` defaulted white in the worker). `buildStyle` now sets `sidebarLabelColor` to the dark readable ink. buildStyle-palette 6/6. **Re-verify in a real PDF export, desktop + mobile.**
 
+- `TABLE-HEADER-CENTER-001` `[FIXED 1.50.457 — preview; needs owner visual]` — B7: table headers
+  rendered LEFT instead of centered. The React `<th>` is `textAlign:center`, but the section-align
+  sidecar's reapply pass forced EVERY editable target to the section alignment (default `'left'`),
+  overriding the header center each MutationObserver pass. `applyAlignmentToSection` now SKIPS
+  `<th>`-contained editables — the header keeps its center and is owned by its own per-header
+  control; body cells/text still follow the section cycler. Export already centers
+  (worker `s.headerAlign || "center"`; client never sends a header override). PWA-only, sidecar
+  edit (no app.js mirror). `table-header-center.test.mjs` 2/2 + boot-smoke. No jsdom harness in the
+  repo, so the rendered result wants the owner's eye.
 - `TABLE-BANDED-ROWS-001` `[FIXED docx-worker 1.14.63 — DEPLOYED; needs real-PDF verify]` — A3:
   the exported table zebra was "missing the banded-row colours seen in preview". The worker
   banded the WRONG rows (odd data rows) with a near-invisible `FAFAFA`, while the React preview

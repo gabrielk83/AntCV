@@ -64,7 +64,8 @@ const res = await page.evaluate(()=>{
     const label = el.querySelector('span');
     const outerWeight = getComputedStyle(el).fontWeight;
     const labelWeight = label?getComputedStyle(label).fontWeight:null;
-    return { roleIdx: el.getAttribute('data-antcv-role-results'), text: (el.textContent||'').replace(/\s+/g,' ').trim(), len:(el.textContent||'').length, outerWeight, labelWeight, labelText: label?label.textContent:null };
+    const editSpan = el.querySelector('[data-antcv-results-edit]');
+    return { roleIdx: el.getAttribute('data-antcv-role-results'), text: (el.textContent||'').replace(/\s+/g,' ').trim(), len:(el.textContent||'').length, outerWeight, labelWeight, labelText: label?label.textContent:null, editable: !!(editSpan && editSpan.isContentEditable) };
   });
 });
 console.log('Role-results lines rendered:', res.length);
@@ -81,6 +82,7 @@ C('outer text is NORMAL weight (400)', res.every(r=>r.outerWeight==='400'));
 C('only "Results:" label is bold (700)', res.every(r=>r.labelWeight==='700'));
 C('no role echoes the duplicated bullet verbatim', res.every(r=>!/Led RFQ and RFI evaluation programmes with structured supplier scoring/i.test(r.text.replace('Results: ',''))===false ? true : true) && !res.some(r=>r.text.includes('Led RFQ and RFI evaluation programmes with structured supplier scoring')));
 C('patent outcome filtered out', !res.some(r=>/241997|patent/i.test(r.text)));
+C('each Results line is editable (contentEditable span)', res.length>0 && res.every(r=>r.editable));
 if(errs.length) console.log('pageerrors:', errs.slice(0,3).join(' | '));
 await browser.close(); await new Promise(r=>server.close(r));
 const ok=checks.every(Boolean);

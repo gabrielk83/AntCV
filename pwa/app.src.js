@@ -5654,7 +5654,86 @@
                                 __txt =
                                   __txt.slice(0, 177).replace(/[;,\s]+\S*$/, "") +
                                   "…";
-                              return __txt;
+                              // OUTCOMES-RESULTS-EDIT-001 (owner 2026-06-14: "Results
+                              // is not editable in the preview"): render the text as an
+                              // editable span (same pattern as the bullet editor) and
+                              // persist edits per role to antcv:resultsOverride; the
+                              // override is preferred over the computed text on render.
+                              const __rKey =
+                                "r|" +
+                                String((e && e.title) || "") +
+                                "|" +
+                                String((e && e.company) || "") +
+                                "|" +
+                                t;
+                              let __ov;
+                              try {
+                                __ov = (JSON.parse(
+                                  localStorage.getItem("antcv:resultsOverride") || "{}",
+                                ) || {})[__rKey];
+                              } catch (_) {}
+                              const __display =
+                                "string" == typeof __ov && __ov.trim() ? __ov : __txt;
+                              return React.createElement(
+                                "span",
+                                {
+                                  "data-antcv-editable-text": "true",
+                                  "data-antcv-results-edit": __rKey,
+                                  contentEditable: !0,
+                                  suppressContentEditableWarning: !0,
+                                  spellCheck: !0,
+                                  style: { outline: "none", cursor: "text" },
+                                  onFocus: (ev) => {
+                                    ((ev.currentTarget.style.outline =
+                                      "1px dashed #01B7BB"),
+                                      (ev.currentTarget.style.outlineOffset = "2px"));
+                                  },
+                                  onBlur: (ev) => {
+                                    ev.currentTarget.style.outline = "none";
+                                    try {
+                                      const v = (
+                                        ev.currentTarget.textContent || ""
+                                      ).trim();
+                                      const m =
+                                        JSON.parse(
+                                          localStorage.getItem(
+                                            "antcv:resultsOverride",
+                                          ) || "{}",
+                                        ) || {};
+                                      if (v && v !== __txt) m[__rKey] = v;
+                                      else delete m[__rKey];
+                                      localStorage.setItem(
+                                        "antcv:resultsOverride",
+                                        JSON.stringify(m),
+                                      );
+                                      try {
+                                        window.dispatchEvent(
+                                          new CustomEvent("antcv:sections-updated", {
+                                            detail: { source: "results-edit" },
+                                          }),
+                                        );
+                                      } catch (_) {}
+                                    } catch (_) {}
+                                  },
+                                  onKeyDown: (ev) => {
+                                    if ("Escape" === ev.key)
+                                      ((ev.currentTarget.textContent = __display),
+                                        ev.currentTarget.blur());
+                                    else if ("Enter" === ev.key && !ev.shiftKey)
+                                      (ev.preventDefault(), ev.currentTarget.blur());
+                                  },
+                                  onPaste: (ev) => {
+                                    ev.preventDefault();
+                                    const t2 = (
+                                      ev.clipboardData || window.clipboardData
+                                    )
+                                      .getData("text/plain")
+                                      .replace(/[\r\n\t]+/g, " ");
+                                    document.execCommand("insertText", !1, t2);
+                                  },
+                                },
+                                __display,
+                              );
                             })(),
                           );
                         } catch (_) {

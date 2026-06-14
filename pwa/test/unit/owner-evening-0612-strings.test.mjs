@@ -50,7 +50,10 @@ test('SPEC-SEPARATOR-001 — stored "*" separators normalized on read + in store
 
 test('RECOMMENDATIONS placement — consolidated into the restore-proof sidecar', () => {
   const sidecar = readFileSync(path.join(ROOT, 'antcv-sections-normalize-415.js'), 'utf8');
-  assert.ok(sidecar.includes(String.raw`PROFESSIONAL EXPERTISE|\bEXPERTISE\b|EKSPERTISE`));
+  // B9 (1.50.464): anchor now also matches the EXPERIENCE title (not just
+  // EXPERTISE / type==='experience') so a mis-typed imported roles section is
+  // still recognised and recs lands after the roles.
+  assert.ok(sidecar.includes(String.raw`PROFESSIONAL EXPER(TISE|IENCE)`));
   assert.ok(sidecar.includes('placeRecs'));
   assert.ok(sidecar.includes('antcv:sections-updated'));
 });
@@ -73,7 +76,7 @@ test('ROLE-DUP-001 — duplicate role-title variants merged (prompt + consolidat
   assert.ok(sidecar.includes('dedupeRoles'));
   assert.ok(sidecar.includes('stripFounder'));
   assert.ok(sidecar.includes('placeRecs'));
-  assert.ok(sidecar.includes('PROFESSIONAL EXPERTISE'));
+  assert.ok(sidecar.includes('PROFESSIONAL EXPER(TISE|IENCE)'));
   // and app.js no longer carries the removed effect's runtime marker
   assert.ok(!bundle.includes('[ROLE-DUP-001] merged'));
 });

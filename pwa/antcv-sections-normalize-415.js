@@ -25,9 +25,16 @@
     return e && (e.id === 'recommendations' ||
       /RECOMMENDATIONS|REFERENCER|ANBEFALINGER|RECOMENDACIONES|推荐人/i.test(String(e.title || '')));
   }
+  // B9 (owner 2026-06-14): RECOMMENDATIONS must sit after PROFESSIONAL
+  // EXPERIENCE. The anchor matched type==='experience' OR an EXPERTISE title,
+  // but an imported/parsed roles section can arrive mis-typed (not
+  // type==='experience'), so it was not recognised and recs landed after the
+  // competencies/EXPERTISE block instead of after the roles. Also match an
+  // EXPERIENCE / ERFARING title so the roles section is always an anchor; recs
+  // lands after the LAST anchor, which is the roles block in normal order.
   function isAnchor(e) {
     return e && !isRec(e) && (e.type === 'experience' ||
-      (e.loc === 'main' && /PROFESSIONAL EXPERTISE|\bEXPERTISE\b|EKSPERTISE/i.test(String(e.title || ''))));
+      (e.loc === 'main' && /PROFESSIONAL EXPER(TISE|IENCE)|\bEXPER(TISE|IENCE)\b|EKSPERTISE|ERFARING/i.test(String(e.title || ''))));
   }
 
   function stripFounder(cv) {

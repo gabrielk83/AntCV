@@ -16,6 +16,20 @@ branches each ship. Tests live under `pwa/test/` and `workers/proxy/test/`.
 - `OUTCOMES-RESULTS-EDIT-001` `[SHIPPED 1.50.454]` — the per-role Results line is now an editable `contentEditable` span; edits persist per role to `antcv:resultsOverride` and are preferred on render.
 - `SIDEBAR-LABEL-PDF-WHITE-001` `[FIXED 1.50.455]` — the bold sidebar field LABELS rendered white on the pale sidebar in the PDF (`sidebarLabelColor` defaulted white in the worker). `buildStyle` now sets `sidebarLabelColor` to the dark readable ink. buildStyle-palette 6/6. **Re-verify in a real PDF export, desktop + mobile.**
 
+- `EXPORT-PALETTE-FALLBACK-001` `[FIXED docx-worker 1.14.62 — needs deploy + real-PDF verify]` —
+  the DEPLOYED worker bundle (`src/index.js`) inlines a COPY of `src/palette.js`, and that copy
+  had drifted to the pre-fix Copenhagen palette: `getPackageStyle` returned `sidebarBg: base`
+  with white sidebar text/labels and no `tableHeaderText`. The source `palette.js` was already
+  corrected (1.50.438/SANDBOX-B) but the bundle was never resynced, so whenever an export payload
+  omitted an override token the candidate / sidebar text rendered WHITE-on-pale (invisible) — the
+  fallback half of the A2 PDF-text bug. FIX: synced the bundle's inlined palette to `palette.js`
+  (copenhagen `ground: C9D6EC`; added `readableInk` + `UNIVERSAL_DARK_INK`; `getPackageStyle` now
+  derives `ground`, uses `readableInk(ground)` for sidebar text+labels, keeps the candidate band +
+  table header on dark `base` with luminance-picked ink, adds `tableHeaderText`). New
+  `test/diag-bundle-palette-sync.mjs` 5/5 locks bundle≡source; palette drift 11/11 +
+  diag-twocol-ownerlike still render-green. Client payload overrides (453/455) still win when
+  present. **Deploy docx-worker + re-verify in a real DOCX/PDF.**
+
 **ACTIVE_BUGS recovery:** this file's historical body + the 2026-06-14 bug-intake block were restored from the desktop handoff's authoritative copy (verified superset of the local day-2 content; the prior remote clobber to `PLACEHOLDER` is moot — this is the full tracker).
 
 **Still OPEN — full prioritized list in the `antcv-open-backlog` memory:** `CONTACT-LINE-DENMARK-001` (contact must read "2300, København S", no country); PDF re-verify (candidate white text, banded rows, photo-bridge); What-I-Bring exports stale dimensions; CL text edge margins (match CV main inset); table headers center by default + movable CJLR buttons; Recommendations renders before Professional Experience in PREVIEW; HIWC word/char count off by 1–2; watermark → lower part of the lighter final column; the CV-data merge + generation-prompt hardening; Settings-UI cluster; `GRAMMAR-MARKER-SCROLL-LAG-001`; `DOC-WIDE-CHATBOT-001` (mobile); `TASK-CUSTOM-LLM-OVERHAUL-001`; `PDF-LAYOUT-001/002`.

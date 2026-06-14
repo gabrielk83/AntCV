@@ -23896,6 +23896,7 @@ __name(postProcessDocx, "postProcessDocx");
 var PACKAGES = {
   "copenhagen-modern": {
     base: "283556",
+    ground: "C9D6EC",
     primary: "00746E",
     interactive: "0B74DE",
     bullet: "00746E",
@@ -23976,6 +23977,20 @@ var LEGACY_ALIASES = {
 var DEFAULT_PACKAGE = "copenhagen-modern";
 var UNIVERSAL_MAIN_TEXT = "1F2937";
 var UNIVERSAL_WHITE = "FFFFFF";
+var UNIVERSAL_DARK_INK = "283556";
+function readableInk(hex) {
+  try {
+    const h = String(hex || "").replace("#", "");
+    if (h.length < 6) return UNIVERSAL_WHITE;
+    const r = parseInt(h.slice(0, 2), 16),
+      g = parseInt(h.slice(2, 4), 16),
+      b = parseInt(h.slice(4, 6), 16);
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b > 140 ? UNIVERSAL_DARK_INK : UNIVERSAL_WHITE;
+  } catch (_) {
+    return UNIVERSAL_WHITE;
+  }
+}
+__name(readableInk, "readableInk");
 function normalisePackageId(raw) {
   if (typeof raw !== "string") return DEFAULT_PACKAGE;
   const lower = raw.trim().toLowerCase();
@@ -23988,6 +24003,15 @@ function getPackageStyle(packageId, legacyAtsTier = false) {
   const id = normalisePackageId(packageId);
   const p = PACKAGES[id];
   const bodyFont = legacyAtsTier ? "Calibri" : p.bodyFont;
+  // SANDBOX item B / EXPORT-PALETTE fallback (synced to src/palette.js
+  // 2026-06-14): the sidebar/table GROUND is `ground` when a package defines a
+  // pale panel (Copenhagen), else the dark `base`. On-ground text inverts via
+  // readableInk(ground) — dark on a pale ground, white on a dark one. The
+  // candidate band + table header keep the dark brand `base`. Without this the
+  // stale bundle forced sidebarBg=base + white ink, which made the candidate /
+  // sidebar text invisible on the pale Copenhagen ground whenever the payload
+  // omitted the override tokens.
+  const ground = p.ground || p.base;
   return {
     // Legacy aliases that pre-v1.50.8 code may still read.
     navy: p.base,
@@ -23997,16 +24021,17 @@ function getPackageStyle(packageId, legacyAtsTier = false) {
     mainHeadColor: p.base,
     mainTextColor: UNIVERSAL_MAIN_TEXT,
     mainBulletColor: p.bullet,
-    sidebarBg: p.base,
+    sidebarBg: ground,
     sidebarHeadColor: p.primary,
-    sidebarTextColor: UNIVERSAL_WHITE,
-    sidebarLabelColor: UNIVERSAL_WHITE,
+    sidebarTextColor: readableInk(ground),
+    sidebarLabelColor: readableInk(ground),
     headerBg: p.base,
-    headerNameColor: UNIVERSAL_WHITE,
-    headerSpecColor: UNIVERSAL_WHITE,
-    headerContactColor: UNIVERSAL_WHITE,
+    headerNameColor: readableInk(p.base),
+    headerSpecColor: readableInk(p.base),
+    headerContactColor: readableInk(p.base),
     photoBorderColor: p.primary,
     tableHeaderBg: p.base,
+    tableHeaderText: readableInk(p.base),
     // Fonts. The registry stores headingFont as e.g. "Segoe UI Bold";
     // OOXML treats the font name as a face name, and bold weight is
     // applied as a separate attribute on text runs. Strip the trailing
@@ -27091,7 +27116,7 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.61-photo-gap";
+var VERSION = "1.14.62-palette-fallback-sync";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

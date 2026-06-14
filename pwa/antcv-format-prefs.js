@@ -1220,11 +1220,16 @@
   }
 
   function injectFormats() {
-    // Anchor on "LINE TARGETS" — unique to Advanced → Style. Walk up 1 level
-    // to the LINE TARGETS section wrapper, then sideways to its parent (the
-    // styles-tab outer div) and append. Result: Section Formats appears
-    // BELOW Line Targets, INSIDE the styles tab — and unmounts when the
-    // user leaves that tab.
+    // ADV-STYLES-MERGE-001 (owner 2026-06-14): the standalone SECTION FORMATS
+    // card is MERGED into SECTION LAYOUT (the LayoutPicker island already owns a
+    // per-section format picker + line-limit + the "how it looks" graphics +
+    // CV/CL badges). Stop injecting the duplicate card. app.src.js now provides
+    // the `[data-antcv-format-prefs]` anchor the LayoutPicker mounts after, so
+    // the merged control still appears. Kept as an early no-op (rather than
+    // deleting buildFormatsCard) so the format helpers below remain available to
+    // other callers (applySectionFormat etc.).
+    return false;
+    // eslint-disable-next-line no-unreachable
     const lineTargetsSection = findSectionByHeading(/^LINE TARGETS$/, 1);
     if (!lineTargetsSection) return false;
     const stylesPanel = lineTargetsSection.parentElement;

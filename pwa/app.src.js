@@ -35494,10 +35494,26 @@
                         customTopPal: as,
                         customTopPalSet: is,
                       }),
+                      // ADV-STYLES-MERGE-001 (owner 2026-06-14): LINE TARGETS +
+                      // SECTION FORMATS are MERGED into SECTION LAYOUT (which
+                      // already owns per-section format + length + the "how it
+                      // looks" graphics + CV/CL badges). This thin visible div
+                      // carries `data-antcv-format-prefs` — the anchor the
+                      // SECTION LAYOUT island (LayoutPicker) mounts after — so the
+                      // merged control still appears now that the two standalone
+                      // groups are removed from view. The LINE TARGETS block below
+                      // is kept in the DOM but display:none so its last-set line
+                      // budgets still feed generation; SECTION FORMATS injection is
+                      // a no-op (antcv-format-prefs.js).
+                      React.createElement("div", {
+                        "data-antcv-format-prefs": "1",
+                        style: { height: 6 },
+                      }),
                       React.createElement(
                         "details",
                         {
                           style: {
+                            display: "none",
                             marginBottom: 14,
                             paddingBottom: 14,
                             borderBottom: "1px solid rgba(255,255,255,0.08)",

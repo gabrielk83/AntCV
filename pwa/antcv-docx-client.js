@@ -955,6 +955,16 @@ export function buildStyle(styleConfig, navyColor) {
   // right — owner 2026-06-11: "text can stay where it is".
   const bi = numTok(styleConfig.bulletIndent);
   if (bi !== undefined && bi !== 24) out.bulletIndent = bi;
+  // ADV-SPACING-BULLETGAP-001 (owner 2026-06-14): the marker-to-text gap,
+  // decoupled from bulletIndent (= text from edge). Forward when it is moved
+  // off the comfort default (21) OR when bulletIndent itself is forwarded, so
+  // the worker uses the SAME decoupled model the preview now renders (marker
+  // sits bulletIndent - bulletMarkerGap from the edge). For untouched defaults
+  // (bi 24 / gap 21) nothing is forwarded and the worker's legacy bIndent-45
+  // path produces the identical 21px gap.
+  const bmg = numTok(styleConfig.bulletMarkerGap);
+  const __effBmg = bmg !== undefined ? bmg : 21;
+  if (__effBmg !== 21 || (bi !== undefined && bi !== 24)) out.bulletMarkerGap = __effBmg;
   // ADV-SPACING-CONTROLS-001 (1.50.394 / worker 1.14.60) +
   // SPACING-COMFORT-DEFAULT-001 (R36): the PWA defaults are now the
   // COMFORT recommendation, while the worker's reviewed constants still

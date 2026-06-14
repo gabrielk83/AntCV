@@ -354,6 +354,12 @@
       // untouched users too.
       mainEdgeIndent: 14,
       bulletIndent: 24,
+      // ADV-SPACING-BULLETGAP-001 (owner 2026-06-14): the gap between the bullet
+      // MARKER and the text, independent of bulletIndent (= text from edge).
+      // Default 21 reproduces the prior look (marker sat 3px from the edge with
+      // a 24px text indent => 21px marker-to-text gap). Preview + worker both
+      // read it: marker-from-edge becomes bulletIndent - bulletMarkerGap.
+      bulletMarkerGap: 21,
       bodyEdgePad: 12, // page top/bottom padding of both columns
       sidebarEdgePad: 11, // sidebar horizontal padding (page side <-> text)
       seamGap: 6, // EXTRA gap at the sidebar <-> main seam
@@ -4462,7 +4468,7 @@
               // bulletIndent and aligns with the wrapped lines — same model
               // as the Word export (marker at 3px, all text lines flush at
               // the hang).
-              width: Math.max(8, (k.bulletIndent || 24) - 3),
+              width: Math.max(8, k.bulletMarkerGap != null ? k.bulletMarkerGap : (k.bulletIndent || 24) - 3),
               marginRight: 0,
             },
           },
@@ -4827,7 +4833,7 @@
                           style: {
                             fontFamily: T,
                             fontSize: $.bullet,
-                            paddingLeft: (k.bulletIndent || 24), textIndent: 3 - (k.bulletIndent || 24),
+                            paddingLeft: (k.bulletIndent || 24), textIndent: -(k.bulletMarkerGap != null ? k.bulletMarkerGap : (k.bulletIndent || 24) - 3),
                             marginBottom: 3,
                             color: O,
                             textAlign: "justify",
@@ -4847,7 +4853,7 @@
                           style: {
                             fontFamily: T,
                             fontSize: $.bullet,
-                            paddingLeft: (k.bulletIndent || 24), textIndent: 3 - (k.bulletIndent || 24),
+                            paddingLeft: (k.bulletIndent || 24), textIndent: -(k.bulletMarkerGap != null ? k.bulletMarkerGap : (k.bulletIndent || 24) - 3),
                             marginBottom: 3,
                             color: O,
                             lineHeight: I,
@@ -4864,7 +4870,7 @@
                         style: {
                           fontFamily: T,
                           fontSize: $.bullet,
-                          paddingLeft: (k.bulletIndent || 24), textIndent: 3 - (k.bulletIndent || 24),
+                          paddingLeft: (k.bulletIndent || 24), textIndent: -(k.bulletMarkerGap != null ? k.bulletMarkerGap : (k.bulletIndent || 24) - 3),
                           marginBottom: 3,
                           color: O,
                           textAlign: "justify",
@@ -4988,7 +4994,7 @@
                 style: {
                   fontFamily: T,
                   fontSize: $.bullet,
-                  paddingLeft: (k.bulletIndent || 24), textIndent: 3 - (k.bulletIndent || 24),
+                  paddingLeft: (k.bulletIndent || 24), textIndent: -(k.bulletMarkerGap != null ? k.bulletMarkerGap : (k.bulletIndent || 24) - 3),
                   marginBottom: 3,
                   color: O,
                   textAlign: "justify",
@@ -5466,7 +5472,7 @@
                               "data-antcv-role-path": `roles.${t}`,
                               style: {
                                 fontSize: $.bullet,
-                                paddingLeft: (k.bulletIndent || 24), textIndent: 3 - (k.bulletIndent || 24),
+                                paddingLeft: (k.bulletIndent || 24), textIndent: -(k.bulletMarkerGap != null ? k.bulletMarkerGap : (k.bulletIndent || 24) - 3),
                                 marginBottom: 1,
                                 color: "#000",
                                 fontFamily: T,
@@ -12901,11 +12907,15 @@
           // indent from the edge and the bullet/emoji list indent. Mirrors the
           // FONTS group: reads current value from `e` (styleConfig) with `c`
           // defaults, writes via the partial-merge setter `t`.
+          // ADV-SPACING-PANEL-001 (owner 2026-06-14): the spacing/indent sliders
+          // live in a COLLAPSIBLE <details> group, organised by area (CV
+          // candidate / main / sidebar, CL body, and the bullet marker). Native
+          // details/summary = no extra React state; starts collapsed.
           React.createElement(
-            "div",
+            "details",
             { style: { marginBottom: 8 } },
             React.createElement(
-              "div",
+              "summary",
               {
                 style: {
                   fontSize: 9,
@@ -12915,23 +12925,28 @@
                   textTransform: "uppercase",
                   marginBottom: 6,
                   paddingBottom: 3,
+                  cursor: "pointer",
                   borderBottom: "1px solid rgba(1,183,187,0.2)",
                 },
               },
-              "INDENTS",
+              "SPACING & INDENTS",
             ),
             [
               // SPACING-COMFORT-DEFAULT-001: defaults = the comfort
-              // recommendation (was 10/24/8/8/0/8/8/8/3).
-              ["mainEdgeIndent", "Indent from edge", 4, 40, 14],
-              ["bulletIndent", "Bullet / emoji list indent", 10, 60, 24],
-              ["bodyEdgePad", "Page top/bottom padding", 0, 30, 12],
-              ["sidebarEdgePad", "Sidebar edge padding", 0, 30, 11],
-              ["seamGap", "Sidebar ↔ main gap (extra)", 0, 40, 6],
-              ["mainSectionGap", "Main subsection gap", 0, 30, 14],
-              ["sidebarSectionGap", "Sidebar subsection gap", 0, 30, 12],
-              ["bodySectionGap", "Letter subsection gap", 0, 30, 16],
-              ["candidateGap", "Candidate header gap", 0, 16, 5],
+              // recommendation. Grouped by area via the "·" label prefix.
+              // — Text from edge —
+              ["candidateGap", "CV candidate · header gap", 0, 16, 5],
+              ["mainEdgeIndent", "CV main · text from edge", 4, 40, 14],
+              ["sidebarEdgePad", "CV sidebar · text from edge", 0, 30, 11],
+              ["bodyEdgePad", "Page · top/bottom padding", 0, 30, 12],
+              ["seamGap", "CV sidebar ↔ main gap", 0, 40, 6],
+              // — Subsection separation —
+              ["mainSectionGap", "CV main · subsection gap", 0, 30, 14],
+              ["sidebarSectionGap", "CV sidebar · subsection gap", 0, 30, 12],
+              ["bodySectionGap", "CL body · subsection gap", 0, 30, 16],
+              // — Bullet marker —
+              ["bulletIndent", "Bullet text · from edge", 10, 60, 24],
+              ["bulletMarkerGap", "Bullet marker · gap to text", 4, 40, 21],
             ].map(([key, label, min, max, def]) => {
               const val = Number(
                 e && e[key] != null ? e[key] : (c[key] != null ? c[key] : def),

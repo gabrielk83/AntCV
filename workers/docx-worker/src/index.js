@@ -24414,6 +24414,8 @@ function mergeStyle(input, packageId, legacyAtsTier) {
     // PWA's Advanced indent sliders. Clamped; converted to DXA at use sites.
     if (
       k === "mainEdgeIndent" || k === "bulletIndent" ||
+      // ADV-SPACING-BULLETGAP-001 (1.14.65): marker-to-text gap, px token.
+      k === "bulletMarkerGap" ||
       // ADV-SPACING-CONTROLS-001 (1.14.60): spacing sliders, same px-token
       // treatment (clamped 0..60, converted to DXA at use sites).
       k === "bodyEdgePad" || k === "sidebarEdgePad" || k === "seamGap" ||
@@ -24451,7 +24453,14 @@ function numberingConfig(style) {
   // The preview mirrors this exactly (textIndent: 3 - bulletIndent).
   const biPx = Number(style && style.bulletIndent);
   const bIndent = Number.isFinite(biPx) && biPx >= 0 && biPx <= 60 ? Math.round(biPx * 15) : 210;
-  const bHang = Math.max(60, bIndent - 45);
+  // ADV-SPACING-BULLETGAP-001 (1.14.65, owner 2026-06-14): when the marker-to-
+  // text gap is forwarded, the hanging indent (= that gap) is set DIRECTLY and
+  // decoupled from bulletIndent, clamped so the marker stays within the column
+  // (>=15 DXA from the edge). Without it, the legacy bIndent-45 coupling holds.
+  const bmgPx = Number(style && style.bulletMarkerGap);
+  const bHang = Number.isFinite(bmgPx) && bmgPx >= 0 && bmgPx <= 60
+    ? Math.max(60, Math.min(bIndent - 15, Math.round(bmgPx * 15)))
+    : Math.max(60, bIndent - 45);
   return {
     config: [
       {
@@ -27155,7 +27164,12 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //     block (LANGUAGES, EDUCATION…) moves whole to the next page, no headerless
 //     orphan; guarded by body length so a tall section can still split.
 //   ITEM-5 experience-role bullets use tighter line spacing (252 vs 276).
-var VERSION = "1.14.64-cl-sig-sidebar-keep-tight-bullets";
+// 1.14.65 (owner 2026-06-14): ADV-SPACING-BULLETGAP-001 - new bulletMarkerGap
+//   px token (Advanced > Spacing). When forwarded, the bullet hanging indent
+//   (= marker-to-text gap) is set directly and decoupled from bulletIndent
+//   (text-from-edge), clamped so the marker stays in-column. Untouched users
+//   keep the legacy bIndent-45 coupling.
+var VERSION = "1.14.65-bullet-marker-gap";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

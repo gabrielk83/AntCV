@@ -5076,7 +5076,11 @@
                     style: {
                       width: (100 * u) / p + "%",
                       background: k.tableHeaderBg,
-                      color: k.tableHeaderText,
+                      // TABLE-HEADER-INK-001 (owner 2026-06-14: header text hidden):
+                      // the header bg can be navy (package/navyColor) while the
+                      // styleConfig tableHeaderText stays the default dark — navy on
+                      // navy = invisible. Key the ink on the ACTUAL header bg.
+                      color: readableInk(k.tableHeaderBg),
                       padding: "4px 6px",
                       textAlign: "center",
                       fontSize: $.tblH,
@@ -5093,7 +5097,11 @@
                     style: {
                       width: (100 * m) / p + "%",
                       background: k.tableHeaderBg,
-                      color: k.tableHeaderText,
+                      // TABLE-HEADER-INK-001 (owner 2026-06-14: header text hidden):
+                      // the header bg can be navy (package/navyColor) while the
+                      // styleConfig tableHeaderText stays the default dark — navy on
+                      // navy = invisible. Key the ink on the ACTUAL header bg.
+                      color: readableInk(k.tableHeaderBg),
                       padding: "4px 6px",
                       textAlign: "center",
                       fontSize: $.tblH,

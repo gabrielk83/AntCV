@@ -1422,7 +1422,7 @@ function buildFilename({ personalInfo, meta, doc, language }) {
 // a `results` string holding its matched outcomes (title/company token
 // overlap; unmatched outcomes attach to the first visible role). The worker
 // renders it as a "Results:" line after the role's bullets.
-function applyOutcomesMode(docSections, doc) {
+export function applyOutcomesMode(docSections, doc) {
   try {
     if (doc !== 'cv' || !Array.isArray(docSections)) return docSections;
     let mode = localStorage.getItem('outcomesMode') || '"section"';
@@ -1440,17 +1440,55 @@ function applyOutcomesMode(docSections, doc) {
     const visRoles = (exp.roles || []).filter((r) => r && r.on !== false);
     if (!visRoles.length) return docSections;
     const tokensFor = (r) => new Set(tok(r.title).concat(tok(r.company)));
-    const buckets = new Map();
-    for (const it of so.items.filter(Boolean)) {
-      const ts = tok(txtOf(it));
-      const target = visRoles.find((r) => ts.some((w) => tokensFor(r).has(w))) || visRoles[0];
-      if (!buckets.has(target)) buckets.set(target, []);
-      buckets.get(target).push(lineOf(it));
+    // OUTCOMES-RESULTS-EXPORT-PARITY-001 (owner 2026-06-14): the export half was
+    // still the OLD bucketing (no dedup, no cap, unmatched → first role), so the
+    // exported Results were long, repetitive, not role-specific, and starved the
+    // page-1 roles. Mirror the preview fix (1.50.447): dedup vs the role's own
+    // bullets, best-match, cap each role at 2, spill overflow + unmatched into the
+    // EMPTIEST roles first (so the first roles are never starved), and a length
+    // budget so each Results line stays ≤ ~2 lines.
+    let pno = '';
+    try { pno = String((JSON.parse(localStorage.getItem('personalInfo') || '{}') || {}).patentNumber || '').trim().toLowerCase(); } catch (_) {}
+    const isPatent = (x) => { const s = txtOf(x).toLowerCase(); return /\bpatent\b/.test(s) || (pno && s.indexOf(pno) >= 0); };
+    const bulletSigs = [];
+    visRoles.forEach((r) => (Array.isArray(r.bullets) ? r.bullets : []).forEach((bl) => {
+      const bt = tok(typeof bl === 'string' ? bl : ((bl && (bl.b || bl.t)) || ''));
+      if (bt.length) bulletSigs.push(new Set(bt));
+    }));
+    const echoes = (x) => {
+      const ts = tok(txtOf(x)); if (!ts.length) return false;
+      return bulletSigs.some((sig) => { let m = 0; ts.forEach((w) => { if (sig.has(w)) m++; }); return m >= Math.max(3, Math.ceil(0.7 * ts.length)); });
+    };
+    const pool = so.items.filter(Boolean).filter((x) => !isPatent(x) && !echoes(x));
+    if (!pool.length) return docSections.filter((s) => !isOutcomes(s));
+    const assign = visRoles.map(() => []);
+    const left = [];
+    pool.forEach((x) => {
+      const ts = tok(txtOf(x));
+      let bi = -1;
+      for (let i = 0; i < visRoles.length; i++) { if (ts.some((w) => tokensFor(visRoles[i]).has(w))) { bi = i; break; } }
+      if (bi >= 0) assign[bi].push(x); else left.push(x);
+    });
+    const CAP = 2;
+    const spill = [];
+    assign.forEach((a) => { while (a.length > CAP) spill.push(a.pop()); });
+    left.forEach((x) => spill.push(x));
+    let si = 0;
+    for (let pass = 0; pass < CAP && si < spill.length; pass++) {
+      const want = pass + 1;
+      for (let i = 0; i < assign.length && si < spill.length; i++) { if (assign[i].length < want) assign[i].push(spill[si++]); }
     }
+    const resultsByRole = new Map();
+    visRoles.forEach((r, i) => {
+      if (!assign[i].length) return;
+      let txt = assign[i].map(lineOf).join('; ');
+      if (txt.length > 180) txt = txt.slice(0, 177).replace(/[;,\s]+\S*$/, '') + '…';
+      resultsByRole.set(r, txt);
+    });
     const expOut = {
       ...exp,
       roles: (exp.roles || []).map((r) =>
-        buckets.has(r) ? { ...r, results: buckets.get(r).join('; ') } : r),
+        resultsByRole.has(r) ? { ...r, results: resultsByRole.get(r) } : r),
     };
     return docSections.filter((s) => !isOutcomes(s)).map((s) => (s === exp ? expOut : s));
   } catch (_) { return docSections; }

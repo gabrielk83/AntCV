@@ -25,7 +25,7 @@ await mkdir(OUT,{recursive:true});
 const SECTIONS = {
   cv: [
     { id:'profile', title:'PROFILE', loc:'main', on:true, type:'text', content:'IT expert with consumer and regulated-market experience. 15+ years across product, change governance and validation.' },
-    { id:'competencies', title:'CORE COMPETENCIES', loc:'main', on:true, type:'table', rows:[['Change governance','Change Control Board ownership under Automotive SPICE and ISO 26262.'],['Supplier coordination','RFQ and RFI evaluation; scoring on quality, lead time, total landed cost.']] },
+    { id:'competencies', title:'CORE COMPETENCIES', loc:'main', on:true, type:'table', rows:[['Focus Area','Strategic Expertise'],['Change governance','Change Control Board ownership under Automotive SPICE and ISO 26262.'],['Supplier coordination','RFQ and RFI evaluation; scoring on quality, lead time, total landed cost.']] },
     { id:'experience', title:'PROFESSIONAL EXPERIENCE', loc:'main', on:true, type:'experience', items:['Founded a consultancy bridging hardware product development and technical-commercial evaluation.','Led RFQ and RFI evaluation programmes: structured supplier scoring.'] },
     { id:'tools', title:'TOOLS & METHODS', loc:'sidebar', on:true, type:'text_bullets', items:['Jira, Confluence, Codebeamer','Power BI, Excel, SQL, Python'] },
     { id:'certs', title:'CERTIFICATES & COURSES', loc:'sidebar', on:true, type:'text_bullets', items:['AI-Practitioner','Six Sigma Black Belt','Automotive SPICE'] },
@@ -103,6 +103,13 @@ async function render(label, pkg, navy, styleConfig){
     return {bg, txt};
   });
   console.log(`  [sidebar ink] bg=${sbInk.bg||sbInk.err} samples=${JSON.stringify(sbInk.txt||[])}`);
+  const thInk = await page.evaluate(()=>{
+    const el=[...document.querySelectorAll('th,td,div,span')].find(t=>/^Focus Area$/.test((t.textContent||'').trim()) && t.getBoundingClientRect().height>0);
+    if(!el) return {err:'no Focus Area cell'};
+    const cs=getComputedStyle(el);
+    return {tag:el.tagName, bg:cs.backgroundColor, color:cs.color, text:(el.textContent||'').trim().slice(0,20)};
+  });
+  console.log(`  [table header] bg=${thInk.bg||thInk.err} color=${thInk.color} "${thInk.text||''}"`);
   // Find the preview band + sidebar by probing computed backgrounds.
   const probe = await page.evaluate(()=>{
     const out={};
@@ -131,7 +138,8 @@ async function render(label, pkg, navy, styleConfig){
   return probe;
 }
 
-await render('A-named', 'copenhagen-modern', null, null);
+// reproduce the owner's broken state: navy table-header bg + stale dark text
+await render('A-named', 'copenhagen-modern', null, { tableHeaderBg:'#283556', tableHeaderText:'#283556' });
 await render('B-custom-navy', 'custom', '#1B627F', { headerBg:'#1B627F', sidebarBg:'#1B627F' });
 await new Promise(r=>server.close(r));
 console.log('\nScreenshots in pwa/test/out/. Intended: band DARK, sidebar BRIGHT/pale.');

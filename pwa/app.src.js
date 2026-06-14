@@ -5656,9 +5656,9 @@
                                     : [x.b, x.t].filter(Boolean).join(" ").trim(),
                                 )
                                 .join("; ");
-                              if (__txt.length > 180)
+                              if (__txt.length > 260)
                                 __txt =
-                                  __txt.slice(0, 177).replace(/[;,\s]+\S*$/, "") +
+                                  __txt.slice(0, 257).replace(/[;,\s]+\S*$/, "") +
                                   "…";
                               // OUTCOMES-RESULTS-EDIT-001 (owner 2026-06-14: "Results
                               // is not editable in the preview"): render the text as an

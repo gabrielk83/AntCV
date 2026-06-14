@@ -1595,7 +1595,11 @@ export function applyOutcomesMode(docSections, doc) {
     visRoles.forEach((r, i) => {
       if (!assign[i].length) return;
       let txt = assign[i].map(lineOf).join('; ');
-      if (txt.length > 180) txt = txt.slice(0, 177).replace(/[;,\s]+\S*$/, '') + '…';
+      // RESULTS-CUT-001 (owner 2026-06-14): the 180-char cap was lopping the end
+      // of concrete results with a trailing "…". Raised to 260 so a single
+      // outcome or a typical 2-outcome pair survives whole; only a genuinely
+      // over-long line is trimmed (on a word boundary, no mid-word cut).
+      if (txt.length > 260) txt = txt.slice(0, 257).replace(/[;,\s]+\S*$/, '') + '…';
       resultsByRole.set(r, txt);
     });
     const expOut = {

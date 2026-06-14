@@ -72,7 +72,9 @@ test('matched outcomes land on the right role', () => {
   assert.match(by.r4, /Sirin Labs/, 'the Sirin/Meprolight outcome lands on the Sirin role');
 });
 
-test('each role results line stays within the ~180 char budget', () => {
+test('each role results line stays within the ~260 char budget (RESULTS-CUT-001)', () => {
+  // RESULTS-CUT-001 (owner 2026-06-14): cap raised 180 -> 260 so concrete
+  // results are not lopped with a trailing "…".
   const { by } = run();
-  Object.values(by).forEach((v) => assert.ok(v.length <= 181, `results too long: ${v.length}`));
+  Object.values(by).forEach((v) => assert.ok(v.length <= 261, `results too long: ${v.length}`));
 });

@@ -821,7 +821,7 @@ async function ensurePhotoDataUrl(photo) {
   }
 }
 
-function buildStyle(styleConfig, navyColor) {
+export function buildStyle(styleConfig, navyColor) {
   // Worker accepts these tokens. Pass through whatever the PWA has;
   // the worker fills in defaults for anything missing.
   const out = {};
@@ -861,6 +861,30 @@ function buildStyle(styleConfig, navyColor) {
     // tableHeaderBg explicitly.
     if (!out.tableHeaderBg) out.tableHeaderBg = navyColor;
   }
+  // EXPORT-PALETTE-PARITY-001 (owner 2026-06-14): the PREVIEW paints the panel
+  // backgrounds from the package CSS tokens (--sidebar-bg is PALE for Copenhagen,
+  // --header-bg is the dark band) — NOT from styleConfig, whose sidebarBg/header
+  // text colours are often the stale navy/dark. The export was sending those
+  // stale values, so the exported sidebar stayed DARK and the candidate-band text
+  // went INVISIBLE (dark ink on the navy band). Resolve the SAME tokens the
+  // preview uses and override the panel bg + readable ink so DOCX/PDF match the
+  // preview. Custom styles (no token defined) fall through to styleConfig/navy.
+  try {
+    if (typeof document !== 'undefined' && document.body && typeof getComputedStyle === 'function') {
+      const cs = getComputedStyle(document.body);
+      const tok = (n) => (cs.getPropertyValue(n) || '').trim();
+      const ink = (hex) => {
+        const h = String(hex || '').replace('#', '');
+        if (h.length < 6) return '#FFFFFF';
+        const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+        return (0.2126 * r + 0.7152 * g + 0.0722 * b > 140) ? '#283556' : '#FFFFFF';
+      };
+      const sb = tok('--sidebar-bg');
+      if (sb) { out.sidebarBg = sb; out.sidebarTextColor = ink(sb); }
+      const hb = tok('--header-bg');
+      if (hb) { out.headerBg = hb; out.headerNameColor = ink(hb); out.headerSpecColor = ink(hb); out.headerContactColor = ink(hb); }
+    }
+  } catch (_) {}
   // v1.40.146 — sidebarPosition pass-through. Worker (≥ v1.14.2)
   // accepts 'left' (default) or 'right' and swaps the body table's
   // sidebar and main cells accordingly. We special-case this

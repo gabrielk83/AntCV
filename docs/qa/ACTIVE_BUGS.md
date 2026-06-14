@@ -16,7 +16,20 @@ branches each ship. Tests live under `pwa/test/` and `workers/proxy/test/`.
 - `OUTCOMES-RESULTS-EDIT-001` `[SHIPPED 1.50.454]` — the per-role Results line is now an editable `contentEditable` span; edits persist per role to `antcv:resultsOverride` and are preferred on render.
 - `SIDEBAR-LABEL-PDF-WHITE-001` `[FIXED 1.50.455]` — the bold sidebar field LABELS rendered white on the pale sidebar in the PDF (`sidebarLabelColor` defaulted white in the worker). `buildStyle` now sets `sidebarLabelColor` to the dark readable ink. buildStyle-palette 6/6. **Re-verify in a real PDF export, desktop + mobile.**
 
-- `TABLE-HEADER-CENTER-001` `[FIXED 1.50.457 — preview; needs owner visual]` — B7: table headers
+- `PLACEHOLDER-EXPORT-GUARD-001` `[FIXED 1.50.458 — needs real-export verify]` — owner 2026-06-14:
+  an unsolicited CL exported with the literal skeleton placeholder "[WHY THIS POSITION — 1-2
+  sentences …]" because the generation left `why_content` empty and the bracket placeholder
+  leaked into the finished document. `normalizeSections` (export `buildPayload`) now treats a value
+  that is ENTIRELY one bracketed `[…]` placeholder as empty (text content, text_bullets
+  intro/items/closing, foundation hands_on/professionally) and DROPS a text section that is empty
+  after stripping — so neither the bracket text nor an orphan heading exports. Inline brackets in
+  real prose ("[change control board]") are untouched. `placeholder-export-guard.test.mjs` 4/4.
+  Covers the worker DOCX + /generate-pdf paths (the owner's exports go through the worker — banded
+  rows proved it). NOTE: still shown (greyed) in the live editor by design; only suppressed on
+  export. **B7 follow-up:** the header-center code is present on ALL export paths (worker DOCX +
+  HTML print both emit center) and the preview sidecar skip shipped 1.50.457 — owner's left headers
+  are most likely a stale cache; hard-refresh to confirm.
+- `TABLE-HEADER-CENTER-001` `[FIXED 1.50.457 — preview; owner reports still left → likely cache]` — B7: table headers
   rendered LEFT instead of centered. The React `<th>` is `textAlign:center`, but the section-align
   sidecar's reapply pass forced EVERY editable target to the section alignment (default `'left'`),
   overriding the header center each MutationObserver pass. `applyAlignmentToSection` now SKIPS

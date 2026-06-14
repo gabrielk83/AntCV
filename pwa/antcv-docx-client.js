@@ -1235,6 +1235,15 @@ function normalizeSections(raw) {
     return ids;
   })();
 
+  // PLACEHOLDER-EXPORT-GUARD-001 (owner 2026-06-14): the empty-CL/CV skeleton
+  // seeds sections with bracketed guidance placeholders (e.g. "[WHY THIS
+  // POSITION — 1-2 sentences …]", "[Focus area 1]"). The editor shows these so
+  // the user knows what to write, but a generated draft that leaves a field
+  // empty must NEVER export the bracket text into a finished document. Treat a
+  // value that is ENTIRELY one bracketed placeholder as empty; a text section
+  // that is empty after stripping is dropped so no orphan heading remains.
+  const PLACEHOLDER_RE = /^\s*\[[^\]]*\]\s*$/;
+  const clean = (v) => (typeof v === 'string' && PLACEHOLDER_RE.test(v) ? '' : v);
   return raw.filter(s => s && s.on !== false).map(s => {
     const itemAlign = alignFor(s.id, s.type);
     const base = {
@@ -1249,16 +1258,17 @@ function normalizeSections(raw) {
     switch (s.type) {
       case 'text':
       case 'text_inline':
-        return { ...base, content: s.content || '' };
+        return { ...base, content: clean(s.content) || '' };
 
       case 'text_bullets': {
         const bulletItems = Array.isArray(s.bullets) ? s.bullets : (Array.isArray(s.items) ? s.items : []);
+        const cleaned = bulletItems.map(String).map(x => clean(x.trim())).map(x => x.trim()).filter(Boolean);
         return {
           ...base,
-          intro: s.intro || '',
-          items: bulletItems.map(String).map(x => x.trim()).filter(Boolean),
-          bullets: bulletItems.map(String).map(x => x.trim()).filter(Boolean),
-          closing: s.closing || '',
+          intro: clean(s.intro) || '',
+          items: cleaned,
+          bullets: cleaned,
+          closing: clean(s.closing) || '',
         };
       }
 
@@ -1275,8 +1285,8 @@ function normalizeSections(raw) {
         } catch (_) {}
         return {
           ...base,
-          hands_on: s.hands_on || '',
-          professionally: s.professionally || '',
+          hands_on: clean(s.hands_on) || '',
+          professionally: clean(s.professionally) || '',
           ...(foundationControls && Object.keys(foundationControls).length ? { foundation_controls: foundationControls } : {}),
         };
       }
@@ -1444,6 +1454,15 @@ function normalizeSections(raw) {
       default:
         return base; // worker will skip unknown types silently
     }
+  }).filter(ps => {
+    // PLACEHOLDER-EXPORT-GUARD-001: drop a text/text_inline section that is
+    // empty after placeholder-stripping (e.g. an unfilled WHY THIS POSITION
+    // whose generated content came back empty) so the exported document shows
+    // neither the "[WHY THIS POSITION — …]" placeholder nor an orphan heading.
+    if (ps && (ps.type === 'text' || ps.type === 'text_inline')) {
+      return !!String(ps.content || '').trim();
+    }
+    return true;
   });
 }
 

@@ -24888,17 +24888,32 @@ function buildLinearDocument(ctx) {
     keepNext: true,
     keepLines: true,
     alignment: AlignmentType.LEFT,
-    children: [new TextRun({
-      text: pi.name || ({ da: "Dit navn", es: "Tu nombre", zh: "姓名" }[lang] || "Your Name"),
-      bold: true,
-      color: style.mainTextColor,
-      size: pt2hp(fs.mainBody),
-      font: style.mainBodyFont
-    })]
+    // ITEM-2 (owner 2026-06-14): the AI-assisted disclosure rides on the SAME
+    // line as the signature name — name left, disclosure pushed to the right
+    // body edge via a right tab — instead of orphaning onto its own line in the
+    // PDF. PAGE_W - 200 is the body content width (PAGE_W minus the two 100-DXA
+    // CL side margins; CL_SIDE_MARGIN is declared later in this function, so the
+    // literal 200 is used here to avoid the temporal-dead-zone reference).
+    // The page-2 (jd-questions) signature path keeps its own separate disclosure.
+    tabStops: !jdqSec ? [{ type: TabStopType.RIGHT, position: PAGE_W - 200 }] : void 0,
+    children: [
+      new TextRun({
+        text: pi.name || ({ da: "Dit navn", es: "Tu nombre", zh: "姓名" }[lang] || "Your Name"),
+        bold: true,
+        color: style.mainTextColor,
+        size: pt2hp(fs.mainBody),
+        font: style.mainBodyFont
+      }),
+      ...!jdqSec ? [new TextRun({
+        text: "	AI-assisted — author retains responsibility for content.",
+        italics: true,
+        size: 13,
+        // 6.5pt (half-points)
+        color: "4D7976",
+        font: "Calibri"
+      })] : []
+    ]
   }));
-  if (!jdqSec) {
-    bodyChildren.push(buildAiDisclosureHangingTextbox(ctx, { context: "linear" }));
-  }
   // 1.14.32 CL-PAGINATE-001: the candidate band stays a full-bleed table, but the
   // BODY is no longer wrapped in a table cell — a single tall table row (with the
   // nested WHAT-I-BRING table inside it) does NOT split across pages in
@@ -25756,6 +25771,13 @@ function renderSection(s, ctx, isSidebar) {
           children: [headingCell]
         }),
         new TableRow({
+          // ITEM-4 (owner 2026-06-14): keep a SIDEBAR section's body together so
+          // a short block (LANGUAGES, EDUCATION, INTERESTS…) moves WHOLE to the
+          // next page instead of splitting mid-list with a headerless orphan.
+          // Guarded by body length so a pathologically tall section can still
+          // split rather than overflow/clip. Main-column sections keep their
+          // natural split (EXPERIENCE is pre-segmented with its own (Cont.)).
+          ...(isSidebar && body.length <= 18 ? { cantSplit: true } : {}),
           children: [bodyCell]
         })
       ]
@@ -25986,7 +26008,7 @@ function renderBullets(s, ctx, isSidebar) {
   });
 }
 __name(renderBullets, "renderBullets");
-function bulletParagraphRich(lead, body, ctx, isSidebar, align, keepWithNext) {
+function bulletParagraphRich(lead, body, ctx, isSidebar, align, keepWithNext, lineTwips) {
   const { style, fs } = ctx;
   const baseRun = {
     color: isSidebar ? style.sidebarTextColor : style.mainTextColor,
@@ -25995,7 +26017,9 @@ function bulletParagraphRich(lead, body, ctx, isSidebar, align, keepWithNext) {
   };
   return new Paragraph({
     numbering: { reference: isSidebar ? "antcv-sb-bullet" : "antcv-bullet", level: 0 },
-    spacing: { before: 20, after: 20, line: 276, lineRule: "auto" },
+    // ITEM-5 (owner 2026-06-14): experience-role bullets pass a tighter `line`
+    // (252 = 1.05) so the role content reads denser; default stays 276 (1.15).
+    spacing: { before: 20, after: 20, line: lineTwips || 276, lineRule: "auto" },
     alignment: align || AlignmentType.JUSTIFIED,
     // 1.50.270: keepLines so a bullet never splits; keepWithNext chains a
     // role's bullets so Word moves a whole role to the next page instead
@@ -26235,7 +26259,9 @@ function renderExperience(s, ctx) {
           /*isSidebar*/
           false,
           bAlign,
-          _keepWithNext
+          _keepWithNext,
+          /*lineTwips*/
+          252
         ));
       });
     }
@@ -27122,7 +27148,14 @@ async function convertPdfToDocx(pdfBytes, apiKey, opts = {}) {
 __name(convertPdfToDocx, "convertPdfToDocx");
 
 // src/index.js
-var VERSION = "1.14.63-banded-rows";
+// 1.14.64 (owner 2026-06-14 layout batch):
+//   ITEM-2 CL signature + AI-assisted disclosure share ONE line (name left,
+//     disclosure right-tabbed) instead of orphaning the disclosure.
+//   ITEM-4 sidebar sections keep their body together (cantSplit) so a short
+//     block (LANGUAGES, EDUCATION…) moves whole to the next page, no headerless
+//     orphan; guarded by body length so a tall section can still split.
+//   ITEM-5 experience-role bullets use tighter line spacing (252 vs 276).
+var VERSION = "1.14.64-cl-sig-sidebar-keep-tight-bullets";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

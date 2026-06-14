@@ -880,7 +880,11 @@ export function buildStyle(styleConfig, navyColor) {
         return (0.2126 * r + 0.7152 * g + 0.0722 * b > 140) ? '#283556' : '#FFFFFF';
       };
       const sb = tok('--sidebar-bg');
-      if (sb) { out.sidebarBg = sb; out.sidebarTextColor = ink(sb); }
+      // SIDEBAR-LABEL-PDF-WHITE-001 (owner 2026-06-14): the bold sidebar field
+      // LABELS ("Project Workflow:", etc.) render via sidebarLabelColor, which the
+      // worker defaults to WHITE — invisible on the pale sidebar in the PDF. Set it
+      // (and sidebarTextColor) to the dark readable ink for the pale ground too.
+      if (sb) { out.sidebarBg = sb; out.sidebarTextColor = ink(sb); out.sidebarLabelColor = ink(sb); }
       const hb = tok('--header-bg');
       if (hb) { out.headerBg = hb; out.headerNameColor = ink(hb); out.headerSpecColor = ink(hb); out.headerContactColor = ink(hb); }
     }

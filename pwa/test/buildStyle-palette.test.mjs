@@ -26,6 +26,7 @@ const H = (v) => String(v || '').replace('#', '').toUpperCase(); // worker wants
 
 ok('sidebar bg resolved to the PALE token (--sidebar-bg)', H(out.sidebarBg) === 'DCE5EA');
 ok('sidebar text inverts to DARK on the pale ground', H(out.sidebarTextColor) === '283556');
+ok('sidebar LABELS invert to DARK on the pale ground (SIDEBAR-LABEL-PDF-WHITE-001)', H(out.sidebarLabelColor) === '283556');
 ok('candidate band bg resolved to --header-bg (navy)', H(out.headerBg) === '283556');
 ok('candidate name/spec/contact are WHITE on the navy band', H(out.headerNameColor) === 'FFFFFF' && H(out.headerSpecColor) === 'FFFFFF' && H(out.headerContactColor) === 'FFFFFF');
 

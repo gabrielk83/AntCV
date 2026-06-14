@@ -284,6 +284,26 @@
         return bg || "#283556";
       }
     },
+    // ANALYSIS-SALARY-001 (owner 2026-06-14): format the JD salary_estimate
+    // object into a short display string. Stated comp shows the JD's verbatim
+    // text; an estimate shows the currency range/point. Used by the Analysis
+    // panel + report PDF.
+    __fmtSalary = (se) => {
+      try {
+        if (!se) return "";
+        if (se.stated && se.stated_text) return String(se.stated_text);
+        const cur = se.currency ? se.currency + " " : "";
+        const per = se.period ? " / " + se.period : "";
+        const fmt = (n) =>
+          n == null ? null : Number(n).toLocaleString("en-US");
+        if (se.low != null && se.high != null)
+          return cur + fmt(se.low) + "–" + fmt(se.high) + per;
+        if (se.point != null) return cur + fmt(se.point) + per;
+        return se.stated_text ? String(se.stated_text) : "";
+      } catch (_) {
+        return (se && se.stated_text) || "";
+      }
+    },
     c = {
       // DOCX-SIDEBAR-GREEN-001 + MAIN-NAVY-001 (owner 2026-06-10): in the MAIN
       // column EVERY accent — headings, sub-heads, vertical/rule lines, BULLETS,
@@ -45581,6 +45601,74 @@
                                 ),
                             ),
                           ),
+                        yo.salary_estimate &&
+                          (yo.salary_estimate.point != null ||
+                            yo.salary_estimate.low != null ||
+                            yo.salary_estimate.stated_text) &&
+                          (() => {
+                            const se = yo.salary_estimate;
+                            const disp = __fmtSalary(se);
+                            if (!disp) return null;
+                            return React.createElement(
+                              "div",
+                              { style: { marginBottom: 14 } },
+                              React.createElement(
+                                "div",
+                                {
+                                  style: {
+                                    fontSize: 10,
+                                    fontWeight: 700,
+                                    color: s,
+                                    letterSpacing: 0.8,
+                                    marginBottom: 6,
+                                    textTransform: "uppercase",
+                                  },
+                                },
+                                se.stated ? "Salary" : "Salary (estimate)",
+                              ),
+                              React.createElement(
+                                "div",
+                                {
+                                  style: {
+                                    fontSize: 14,
+                                    fontWeight: 700,
+                                    color: "#283556",
+                                    marginBottom: 2,
+                                  },
+                                },
+                                disp,
+                              ),
+                              se.basis &&
+                                React.createElement(
+                                  "div",
+                                  {
+                                    style: {
+                                      fontSize: 11,
+                                      color: "#666",
+                                      lineHeight: 1.4,
+                                    },
+                                  },
+                                  se.basis,
+                                ),
+                              !se.stated &&
+                                React.createElement(
+                                  "div",
+                                  {
+                                    style: {
+                                      fontSize: 10,
+                                      color: "#999",
+                                      marginTop: 2,
+                                    },
+                                  },
+                                  "Market estimate — not stated in the posting" +
+                                    (Number.isFinite(se.confidence)
+                                      ? " (confidence " +
+                                        Math.round(se.confidence * 100) +
+                                        "%)"
+                                      : ""),
+                                ),
+                            );
+                          })(),
                         Array.isArray(yo.red_flags) &&
                           yo.red_flags.length > 0 &&
                           React.createElement(

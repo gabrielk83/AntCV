@@ -198,6 +198,25 @@ function normalize(analysis) {
         const issue = (typeof c.issue === 'string' && c.issue.trim()) ? c.issue.trim() : null;
         return { text: c.text.trim(), confidence: conf, issue };
       }),
+    salary_estimate: (() => {
+      const s = a.salary_estimate || {};
+      const num = (v) => { const x = Number(v); return Number.isFinite(x) ? x : null; };
+      const period = (s.period === 'year' || s.period === 'month' || s.period === 'hour') ? s.period : null;
+      let conf = Number(s.confidence);
+      if (!Number.isFinite(conf)) conf = s.stated === true ? 0.8 : 0.4;
+      conf = Math.max(0, Math.min(1, conf));
+      return {
+        stated: s.stated === true,
+        stated_text: str(s.stated_text),
+        currency: str(s.currency),
+        period,
+        low: num(s.low),
+        point: num(s.point),
+        high: num(s.high),
+        basis: str(s.basis),
+        confidence: conf,
+      };
+    })(),
     summary: str(a.summary) || '',
   };
 }
@@ -267,7 +286,7 @@ function findFooterRecruiter(text) {
 
 // Export helpers for unit testing — production callers go through
 // handleJDAnalysis.
-export { findEmails, findLinkedIn, findFooterRecruiter, looksGarbled, recruiterPostProcess };
+export { findEmails, findLinkedIn, findFooterRecruiter, looksGarbled, recruiterPostProcess, normalize };
 
 /**
  * Post-process the LLM's normalized output: fill in missing recruiter

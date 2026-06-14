@@ -51,6 +51,7 @@ Your output MUST be valid JSON matching this exact schema. No prose before or af
   "assumptions": string[],
   "recommendations": string[],
   "confidence_notes": [ { "text": string, "confidence": number, "issue": string|null } ],
+  "salary_estimate": { "stated": boolean, "stated_text": string|null, "currency": string|null, "period": "year"|"month"|"hour"|null, "low": number|null, "point": number|null, "high": number|null, "basis": string|null, "confidence": number },
   "summary": string
 }
 
@@ -102,6 +103,10 @@ HONESTY-FIRST OUTPUTS — assumptions, recommendations, confidence_notes:
 - "assumptions" — the working assumptions this briefing makes that are NOT directly stated in the JD or the candidate summary (e.g. an inferred seniority, an assumed domain transfer, an unstated tooling overlap). Each one short sentence phrased AS an assumption ("Assumes the candidate's X transfers to the role's Y"). [] when the analysis rests only on stated facts.
 - "recommendations" — concrete, honest next actions the candidate can take to strengthen fit: close a gap, reframe adjacent experience, attach proof, complete a short course. Adjacent experience MUST be described as adjacent — never claimed as already held. Order by impact. [] if none.
 - QUESTIONS TO THE EMPLOYER (Nordic application craft — calling about the posting gives a head start; the interview effectively starts on the phone): ALSO append 3–4 recommendations of the form "Call the employer and ask: <question>". Ground each question in THIS posting (turn an unclear/ambiguous task or competency into a concrete question; ask how the listed tasks are prioritised). Adapt these four standards to the JD's own wording and avoid yes/no phrasing: (1) of the tasks you list, which take the most time? (2) which professional qualifications are you especially looking for? (3) are any qualifications absolutely decisive — which? (4) I have done similar tasks before — could that be relevant here? Prefix each with "Call the employer and ask: " so it reads as an action. Never tell the candidate to call merely to "be remembered" — only to learn the employer's real priorities so the CV + cover letter can be targeted.
+- "salary_estimate" — a compensation read for THIS role:
+  * If the JD states pay, set "stated": true, copy the exact pay text verbatim into "stated_text", and parse it into currency / period / low / point / high (point = the midpoint when a range is given, or the single figure when only one is stated). confidence >= 0.8.
+  * If the JD does NOT state pay, set "stated": false and ESTIMATE a realistic market range from the role title, level, sector, and location. Set currency to the locale of the location (DKK for Denmark, SEK for Sweden, EUR for the euro-zone, GBP for the UK, USD for the US, etc.), period "year" unless the role is clearly hourly/contract, fill low / point / high, and write a one-sentence "basis" naming the factors used (role + level + location + market). confidence 0.3–0.5 — this is an inferred estimate, NOT a JD fact. The "stated": false flag and the basis sentence keep it honest; NEVER present an estimate as if the JD stated it.
+  * If you genuinely cannot estimate (no role or location signal), set every numeric field null, "stated": false, confidence 0.2, and a "basis" explaining why.
 - "confidence_notes" — score how well the KEY claims in THIS analysis are grounded in the JD + candidate summary. Each: { "text": the claim as a short sentence, "confidence": a number 0..1, "issue": a short reason when confidence < 0.7, else null }. Use the SAME standard as the ANTI-FABRICATION block and the "grounded" flag: an unsupported or overstated claim scores LOW (< 0.4) and carries an issue; a partially-supported / adjacent claim scores MEDIUM (0.4–0.7) with a short issue; a fully-grounded claim scores HIGH (>= 0.7) with issue null. Cover the 4–10 most decision-relevant claims. NEVER invent support to raise a score.
 
 Output ONLY the JSON object. Begin your response with { and end with }.`;
@@ -198,6 +203,25 @@ function normalize(analysis) {
         const issue = (typeof c.issue === 'string' && c.issue.trim()) ? c.issue.trim() : null;
         return { text: c.text.trim(), confidence: conf, issue };
       }),
+    salary_estimate: (() => {
+      const s = a.salary_estimate || {};
+      const num = (v) => { const x = Number(v); return Number.isFinite(x) ? x : null; };
+      const period = (s.period === 'year' || s.period === 'month' || s.period === 'hour') ? s.period : null;
+      let conf = Number(s.confidence);
+      if (!Number.isFinite(conf)) conf = s.stated === true ? 0.8 : 0.4;
+      conf = Math.max(0, Math.min(1, conf));
+      return {
+        stated: s.stated === true,
+        stated_text: str(s.stated_text),
+        currency: str(s.currency),
+        period,
+        low: num(s.low),
+        point: num(s.point),
+        high: num(s.high),
+        basis: str(s.basis),
+        confidence: conf,
+      };
+    })(),
     summary: str(a.summary) || '',
   };
 }
@@ -267,7 +291,7 @@ function findFooterRecruiter(text) {
 
 // Export helpers for unit testing — production callers go through
 // handleJDAnalysis.
-export { findEmails, findLinkedIn, findFooterRecruiter, looksGarbled, recruiterPostProcess };
+export { findEmails, findLinkedIn, findFooterRecruiter, looksGarbled, recruiterPostProcess, normalize };
 
 /**
  * Post-process the LLM's normalized output: fill in missing recruiter

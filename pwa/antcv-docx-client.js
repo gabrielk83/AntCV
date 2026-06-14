@@ -505,6 +505,24 @@ export function buildPayload({
     contact:        (headerItemAlign && headerItemAlign.contact)        || 'center',
   };
 
+  // ROLE-FOUNDER-001 export half (owner 2026-06-14): "Founder"/"Co-Founder" must
+  // not appear in the application role/subtitle band for unsolicited or
+  // non-consulting roles. A genuine independent-consultancy label
+  // (konsulent/consult/independent) is left intact; otherwise the word is
+  // stripped and leftover separators tidied so "Founder & Product / Project
+  // Expert" becomes "Product / Project Expert".
+  const stripFounder = (v) => {
+    let s = String(v || '');
+    if (/\b(konsulent|consult|independent)\b/i.test(s)) return s.trim();
+    return s
+      .replace(/\bco[-\s]?founder\b/gi, '')
+      .replace(/\bfounder\b/gi, '')
+      .replace(/^[\s&/,|:–—-]+/, '')
+      .replace(/[\s&/,|:–—-]+$/, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+  };
+
   // Cover letters use a synthesised "Application: <role> — <company>"
   // line in the candidate header band — it's the slot the CV uses for
   // its specialisation. The PWA preview generates this dynamically; the
@@ -512,8 +530,8 @@ export function buildPayload({
   // it here. Falls back to "Application: [role and company]" when both
   // role and company are empty so the band isn't blank.
   const subtitle = (() => {
-    if (doc !== 'cl') return meta.subtitle || '';
-    const role = (meta.role || '').trim();
+    if (doc !== 'cl') return stripFounder(meta.subtitle || '');
+    const role = stripFounder((meta.role || '').trim());
     const company = (meta.company || '').trim();
     const isDA = (language === 'da');
     const prefix = isDA ? 'Ansøgning: ' : 'Application: ';
@@ -593,7 +611,7 @@ export function buildPayload({
     },
     meta: {
       subtitle,
-      role:     meta.role     || '',
+      role:     stripFounder(meta.role || ''),
       company:  meta.company  || '',
     },
     header_align: align,

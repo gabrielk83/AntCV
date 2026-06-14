@@ -2,9 +2,12 @@
 // ============================================================
 // OUTCOMES-MODE-001 export half (1.50.393 / worker 1.14.59): in 'results'
 // mode buildPayload drops the SELECTED OUTCOMES section and attaches a
-// per-role `results` string to the experience roles (token-matched;
-// unmatched outcomes → first visible role). Default mode forwards the
-// payload unchanged.
+// per-role `results` string to the experience roles (token-matched).
+// CONTRACT UPDATE (OUTCOMES-RESULTS-EXPORT-PARITY-001, 1.50.447/451): an
+// outcome that doesn't token-match a role no longer piles onto the first
+// role — it spills into the emptiest remaining role so the first role is no
+// longer starved and the results spread across the experience. Default mode
+// forwards the payload unchanged.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -37,15 +40,18 @@ function payloadFor(mode) {
   });
 }
 
-test("results mode: outcomes section dropped, roles carry matched results", () => {
+test("results mode: outcomes section dropped, results spread across roles (not piled on r0)", () => {
   const p = payloadFor('results');
   assert.equal(p.sections.find((s) => s.id === 'outcomes'), undefined);
   const exp = p.sections.find((s) => s.id === 'experience');
   const r0 = exp.roles.find((r) => r.id === 'r0');
   const r1 = exp.roles.find((r) => r.id === 'r1');
+  // matched outcome lands on its role (Innoviz → r0)
   assert.ok(/Innoviz change cycle/.test(r0.results));
-  assert.ok(/optical lab/.test(r0.results), 'unmatched outcome attaches to the first visible role');
-  assert.equal(r1.results, undefined);
+  // the second outcome lands on r1 (the Optics role / emptiest role) — NOT
+  // piled onto r0 as well. This is the "first role no longer starved" fix.
+  assert.ok(/optical lab/.test(r1.results), 'second outcome spreads to r1, not piled on r0');
+  assert.ok(!/optical lab/.test(r0.results), 'r0 must not also carry the second outcome');
 });
 
 test('default mode: payload unchanged (outcomes section present, no results keys)', () => {

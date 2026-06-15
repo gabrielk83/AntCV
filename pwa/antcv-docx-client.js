@@ -1607,7 +1607,35 @@ export function applyOutcomesMode(docSections, doc) {
     // EMPTIEST roles first (so the first roles are never starved), and a length
     // budget so each Results line stays ≤ ~2 lines.
     let pno = '';
-    try { pno = String((JSON.parse(localStorage.getItem('personalInfo') || '{}') || {}).patentNumber || '').trim().toLowerCase(); } catch (_) {}
+    const _ppText = {};
+    try {
+      const _pi = JSON.parse(localStorage.getItem('personalInfo') || '{}') || {};
+      const _piRoot = _pi.personalInfo ? _pi.personalInfo : _pi;
+      pno = String(_piRoot.patentNumber || '').trim().toLowerCase();
+      // RESULTS-LAMINATION-001 (owner 2026-06-15): build a proof-point id -> text
+      // map from the master profile so a role's Results line can come from its OWN
+      // proofPointIds (deterministic), not the heuristic SELECTED-OUTCOMES spread.
+      [].concat(_piRoot.proofPointsByRole || [], _piRoot.proofPointsByPosition || [])
+        .forEach((p) => { if (p && p.id && typeof p.text === 'string') _ppText[p.id] = p.text; });
+    } catch (_) {}
+    // Per-role LAMINATED results: explicit role.results wins; else resolve the
+    // role's proofPointIds against the master-profile proof points. Roles with
+    // neither fall through to the token-match distribution below.
+    const _lam = new Map();
+    visRoles.forEach((r) => {
+      if (typeof r.results === 'string' && r.results.trim()) { _lam.set(r, r.results.trim()); return; }
+      const ids = Array.isArray(r.proofPointIds) ? r.proofPointIds : [];
+      const texts = ids.map((id) => _ppText[id]).filter(Boolean);
+      if (texts.length) {
+        let t = texts.slice(0, 2).join('; ');
+        if (t.length > 260) t = t.slice(0, 257).replace(/[;,\s]+\S*$/, '') + '…';
+        _lam.set(r, t);
+      }
+    });
+    // The heuristic SELECTED-OUTCOMES distribution runs ONLY for roles that are
+    // not already laminated, so the spill never gets wasted on a role that will
+    // show its own proof points (which would starve a genuinely unlaminated role).
+    const distRoles = visRoles.filter((r) => !_lam.has(r));
     const isPatent = (x) => { const s = txtOf(x).toLowerCase(); return /\bpatent\b/.test(s) || (pno && s.indexOf(pno) >= 0); };
     const bulletSigs = [];
     visRoles.forEach((r) => (Array.isArray(r.bullets) ? r.bullets : []).forEach((bl) => {
@@ -1620,7 +1648,7 @@ export function applyOutcomesMode(docSections, doc) {
     };
     const pool = so.items.filter(Boolean).filter((x) => !isPatent(x) && !echoes(x));
     if (!pool.length) return docSections.filter((s) => !isOutcomes(s));
-    const assign = visRoles.map(() => []);
+    const assign = distRoles.map(() => []);
     const left = [];
     // OUTCOMES-RESULTS-BESTMATCH-001 (owner 2026-06-14): best-match (most shared
     // tokens), not first-role-with-any-token, so an outcome lands on the role it
@@ -1628,7 +1656,7 @@ export function applyOutcomesMode(docSections, doc) {
     pool.forEach((x) => {
       const ts = tok(txtOf(x));
       let bi = -1, best = 0;
-      for (let i = 0; i < visRoles.length; i++) { const tf = tokensFor(visRoles[i]); let m = 0; ts.forEach((w) => { if (tf.has(w)) m++; }); if (m > best) { best = m; bi = i; } }
+      for (let i = 0; i < distRoles.length; i++) { const tf = tokensFor(distRoles[i]); let m = 0; ts.forEach((w) => { if (tf.has(w)) m++; }); if (m > best) { best = m; bi = i; } }
       if (bi >= 0) assign[bi].push(x); else left.push(x);
     });
     // OUTCOMES-RESULTS-COVERAGE-001 (owner 2026-06-15, mirror of preview):
@@ -1646,7 +1674,7 @@ export function applyOutcomesMode(docSections, doc) {
       for (let i = 0; i < assign.length && si < spill.length; i++) { if (assign[i].length < want) assign[i].push(spill[si++]); }
     }
     const resultsByRole = new Map();
-    visRoles.forEach((r, i) => {
+    distRoles.forEach((r, i) => {
       if (!assign[i].length) return;
       let txt = assign[i].map(lineOf).join('; ');
       // RESULTS-CUT-001 (owner 2026-06-14): the 180-char cap was lopping the end
@@ -1658,8 +1686,12 @@ export function applyOutcomesMode(docSections, doc) {
     });
     const expOut = {
       ...exp,
-      roles: (exp.roles || []).map((r) =>
-        resultsByRole.has(r) ? { ...r, results: resultsByRole.get(r) } : r),
+      roles: (exp.roles || []).map((r) => {
+        // LAMINATED per-role result wins over the heuristic distribution.
+        const lam = _lam.get(r);
+        if (lam) return { ...r, results: lam };
+        return resultsByRole.has(r) ? { ...r, results: resultsByRole.get(r) } : r;
+      }),
     };
     return docSections.filter((s) => !isOutcomes(s)).map((s) => (s === exp ? expOut : s));
   } catch (_) { return docSections; }

@@ -71,8 +71,9 @@ ok('r2 result is NOT a heuristic SELECTED-OUTCOMES item', !/optical resolution|b
 ok('r1 laminated from its OWN proofPointId (AntCV)', /AntCV/.test(byId.r1.results || ''));
 ok('explicit role.results wins verbatim', byId.r_explicit.results === 'Kept an incident-free record across shifts; standardised the handover log.');
 ok('role with a GENUINE token-matched SELECTED OUTCOME gets it', /backup-and-restore/.test(byId.r_none.results || ''));
-ok('RESULTS-LAMINATION-002: role with no real outcome is EMPTY, never a bullet copy', !byId.r_derive.results && !/35%|Cut order pick/.test(byId.r_derive.results || ''));
-ok('no role result is a verbatim copy of one of its own bullets', roles.every((r) => { const res = (r.results || '').trim(); if (!res) return true; const bls = (r.bullets || []).map((b) => String(typeof b === 'string' ? b : (b && (b.b || b.t)) || '').trim()); return !bls.some((b) => b && res.includes(b)); }));
+ok('RESULTS-LAMINATION-003: role with no real outcome DERIVES from its numeric bullet', /35%/.test(byId.r_derive.results || ''));
+ok('RESULTS-LAMINATION-003: the derived source bullet is HIDDEN (removed from bullets)', (byId.r_derive.bullets || []).length === 1 && !/(35%|Cut order pick)/.test((byId.r_derive.bullets || []).join(' ')));
+ok('no role result is a verbatim copy of one of its REMAINING bullets', roles.every((r) => { const res = (r.results || '').trim(); if (!res) return true; const bls = (r.bullets || []).map((b) => String(typeof b === 'string' ? b : (b && (b.b || b.t)) || '').trim()); return !bls.some((b) => b && res.includes(b)); }));
 ok('role.outcomes[]: default-visible item is used', /CVD protocols/.test(byId.r_oc.results || ''));
 ok('role.outcomes[]: defaultVisible:false item stays hidden', !/JD-gated detail/.test(byId.r_oc.results || ''));
 ok('JD-aware: hidden outcome SHOWS when the JD matches its showWhenJDContainsAny', /FMEA-based monitoring/.test(byId.r_jd.results || ''));

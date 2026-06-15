@@ -1730,18 +1730,45 @@ export function applyOutcomesMode(docSections, doc) {
       if (txt.length > 260) txt = txt.slice(0, 257).replace(/[;,\s]+\S*$/, '') + '…';
       resultsByRole.set(r, txt);
     });
-    // RESULTS-LAMINATION-002 (owner 2026-06-15): a role's Results line must be a
-    // REAL outcome — explicit role.results / role.outcomes[] / proofPointIds, or a
-    // GENUINE token-matched SELECTED OUTCOME. If a role has none, leave it EMPTY
-    // (hidden). NEVER copy a content bullet into Results (owner: "the result is
-    // just a copy of the first role content bullet — should not happen"; a verbatim
-    // bullet copy duplicates content already shown as a bullet).
+    // RESULTS-LAMINATION-003 (owner 2026-06-15): a role's Results line is a REAL
+    // outcome via tiers 1-4 (explicit role.results / role.outcomes[] /
+    // proofPointIds / a GENUINE token-matched SELECTED OUTCOME). Owner verified
+    // his master profile carries ≥1 real outcome per position, so tiers 1-4 cover
+    // every active role and the derive tier below is a rare last resort. When tiers
+    // 1-4 ALL find nothing, derive the result from the role's OWN strongest bullet
+    // (prefer a numeric/metric one, patent filtered) — but then REMOVE that bullet
+    // from the role so the same line is NOT shown twice (owner: "the bullet it came
+    // from has to be hidden"). deriveResultFromRole returns the chosen bullet INDEX
+    // so the source bullet can be dropped.
+    const deriveResultFromRole = (r) => {
+      const bl = Array.isArray(r.bullets) ? r.bullets : [];
+      const textOf = (b) => String(typeof b === 'string' ? b : (b && (b.b || b.t)) || '').trim();
+      let bestIdx = -1, bestScore = -1;
+      for (let i = 0; i < bl.length; i++) {
+        const t = textOf(bl[i]);
+        if (!t || t.length < 12) continue;
+        if (/\bpatent\b/i.test(t) || (pno && t.toLowerCase().indexOf(pno) >= 0)) continue;
+        // prefer a bullet carrying a concrete metric (number, %, x, count, range)
+        const hasNum = /\d|%|\bx\b|×/.test(t);
+        const score = (hasNum ? 1000 : 0) + Math.min(t.length, 240);
+        if (score > bestScore) { bestScore = score; bestIdx = i; }
+      }
+      if (bestIdx < 0) return null;
+      let txt = textOf(bl[bestIdx]);
+      if (txt.length > 260) txt = txt.slice(0, 257).replace(/[;,\s]+\S*$/, '') + '…';
+      return { text: txt, index: bestIdx };
+    };
     const expOut = {
       ...exp,
       roles: (exp.roles || []).map((r) => {
         const lam = _lam.get(r);
         if (lam) return { ...r, results: lam };
-        return resultsByRole.has(r) ? { ...r, results: resultsByRole.get(r) } : r;
+        if (resultsByRole.has(r)) return { ...r, results: resultsByRole.get(r) };
+        // tier-5 derive — only when tiers 1-4 are exhausted.
+        const d = deriveResultFromRole(r);
+        if (!d) return r;
+        const keptBullets = (Array.isArray(r.bullets) ? r.bullets : []).filter((_, i) => i !== d.index);
+        return { ...r, results: d.text, bullets: keptBullets };
       }),
     };
     return docSections.filter((s) => !isOutcomes(s)).map((s) => (s === exp ? expOut : s));

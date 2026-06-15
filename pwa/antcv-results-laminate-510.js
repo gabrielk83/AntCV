@@ -27,7 +27,7 @@
 (function () {
   'use strict';
   if (window.__antcvResultsLaminate510) return;
-  window.__antcvResultsLaminate510 = '1.50.495';
+  window.__antcvResultsLaminate510 = '1.50.498';
 
   function readJSON(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (_) { return d; } }
   function activeDoc() { try { const x = JSON.parse(localStorage.getItem('doc') || '"cv"'); return x === 'cl' ? 'cl' : 'cv'; } catch (_) { return 'cv'; } }
@@ -51,23 +51,38 @@
     return !!jd && tr.some((t) => t && jd.includes(String(t).toLowerCase()));
   }
 
+  // Returns { text, hideIdx }: text = the laminated Results line; hideIdx = the
+  // index of a bullet to HIDE (>=0 only for the tier-4 derive path, where the
+  // Results line IS one of the role's own bullets and must not also show as a
+  // bullet). Tiers 1-3 (real outcomes) never hide a bullet (hideIdx = -1).
+  function bulletText(b) { return String(typeof b === 'string' ? b : (b && (b.b || b.t)) || '').trim(); }
   function lamFor(role, pp, jd) {
-    if (!role) return '';
-    if (typeof role.results === 'string' && role.results.trim()) return cap(role.results);
+    if (!role) return { text: '', hideIdx: -1 };
+    if (typeof role.results === 'string' && role.results.trim()) return { text: cap(role.results), hideIdx: -1 };
     if (Array.isArray(role.outcomes) && role.outcomes.length) {
       const texts = role.outcomes.filter((o) => outcomeVisible(o, jd))
         .map((o) => (typeof o === 'string' ? o.trim() : [o.b, o.t].filter(Boolean).join(' ').trim()))
         .filter(Boolean);
-      if (texts.length) return cap(texts.slice(0, 2).join('; '));
+      if (texts.length) return { text: cap(texts.slice(0, 2).join('; ')), hideIdx: -1 };
     }
     const ids = Array.isArray(role.proofPointIds) ? role.proofPointIds : [];
     const fromPp = ids.map((id) => pp[id]).filter(Boolean);
-    if (fromPp.length) return cap(fromPp.slice(0, 2).join('; '));
-    // RESULTS-LAMINATION-002 (owner 2026-06-15): NO derive-from-bullets — a Results
-    // line must be a REAL outcome, never a verbatim copy of a content bullet. With
-    // no real source, return '' so the heuristic-rendered line is left as-is (the
-    // sidecar only OVERRIDES with a genuine laminated result).
-    return '';
+    if (fromPp.length) return { text: cap(fromPp.slice(0, 2).join('; ')), hideIdx: -1 };
+    // RESULTS-LAMINATION-003 (owner 2026-06-15): derive from the role's OWN
+    // strongest bullet (prefer numeric/metric, patent filtered) ONLY when tiers 1-3
+    // found nothing real — and then HIDE that bullet (apply() drops the matching
+    // [data-edit-path] element) so the same line is not shown twice. Owner verified
+    // his master profile has ≥1 real outcome per position, so this is a rare path.
+    const bl = Array.isArray(role.bullets) ? role.bullets : [];
+    let bi = -1, bs = -1;
+    for (let i = 0; i < bl.length; i++) {
+      const t = bulletText(bl[i]);
+      if (!t || t.length < 12 || /\bpatent\b/i.test(t)) continue;
+      const sc = (/\d|%|\bx\b|×/.test(t) ? 1000 : 0) + Math.min(t.length, 240);
+      if (sc > bs) { bs = sc; bi = i; }
+    }
+    if (bi >= 0) return { text: cap(bulletText(bl[bi])), hideIdx: bi };
+    return { text: '', hideIdx: -1 };
   }
 
   function apply() {
@@ -92,10 +107,24 @@
         if (overrides && typeof overrides[rKey] === 'string' && overrides[rKey].trim()) continue; // user edit wins
         if (document.activeElement === span) continue; // do not fight an active edit
         const lam = lamFor(role, pp, jd);
-        if (!lam) continue;
-        if (span.getAttribute('data-antcv-laminated') === lam && span.textContent === lam) continue;
-        span.textContent = lam;
-        span.setAttribute('data-antcv-laminated', lam);
+        if (!lam || !lam.text) continue;
+        // RESULTS-LAMINATION-003: when the result was DERIVED from a bullet, hide
+        // that bullet (by its data-edit-path) so it isn't shown twice. Idempotent +
+        // fully guarded; if the element can't be found the result still renders.
+        if (lam.hideIdx >= 0) {
+          try {
+            const sel = '[data-edit-path="roles.' + t + '.bullets.' + lam.hideIdx + '"]';
+            const be = document.querySelector(sel);
+            const li = be && (be.closest('li') || be.closest('[data-antcv-bullet], p, div'));
+            if (li && li.getAttribute('data-antcv-results-hid') !== '1') {
+              li.style.display = 'none';
+              li.setAttribute('data-antcv-results-hid', '1');
+            }
+          } catch (_) {}
+        }
+        if (span.getAttribute('data-antcv-laminated') === lam.text && span.textContent === lam.text) continue;
+        span.textContent = lam.text;
+        span.setAttribute('data-antcv-laminated', lam.text);
       }
     } catch (_) { /* self-disable on any error */ }
   }
@@ -114,5 +143,5 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
   else boot();
 
-  window.AntcvResultsLaminate = { version: '1.50.495', apply: apply };
+  window.AntcvResultsLaminate = { version: '1.50.498', apply: apply };
 })();

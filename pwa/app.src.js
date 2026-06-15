@@ -14695,11 +14695,18 @@
                             try {
                               Vt(e.jd_text);
                             } catch (e) {}
+                          // JD-CLOUD-VISIBILITY-001 (owner 2026-06-15): mirror the
+                          // restored JD into antcv:lastJdText so JD-aware per-role
+                          // outcome visibility works cross-machine WITHOUT a regen.
+                          // Unsolicited / general-context / manual-save rows carry no
+                          // real JD → clear the mirror.
+                          try { localStorage.setItem("antcv:lastJdText", (__isUnsolicited || t || n) ? "" : (e.jd_text || "")); } catch (e) {}
                         } else {
                           // No jd_text at all — make sure the textarea
                           // is empty (1.50.253: covers the case where a
                           // kernel row's jd_text was nulled out).
                           try { Vt(""); } catch (e) {}
+                          try { localStorage.setItem("antcv:lastJdText", ""); } catch (e) {}
                         }
                         console.log(
                           "[cloud-restore] active application restored:",
@@ -19359,8 +19366,12 @@
                     try {
                       Vt(e.jd_text);
                     } catch (e) {}
+                  // JD-CLOUD-VISIBILITY-001 (owner 2026-06-15): mirror the restored
+                  // JD into antcv:lastJdText (cross-machine JD-aware visibility).
+                  try { localStorage.setItem("antcv:lastJdText", (__isUnsolicited || t || n) ? "" : (e.jd_text || "")); } catch (e) {}
                 } else {
                   try { Vt(""); } catch (e) {}
+                  try { localStorage.setItem("antcv:lastJdText", ""); } catch (e) {}
                 }
                 a = !0;
               }

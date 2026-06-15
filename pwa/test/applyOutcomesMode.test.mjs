@@ -46,15 +46,16 @@ const withResults = roles.filter((r) => r.results);
 let pass = 0; const ok = (n, c) => { assert.ok(c, n); console.log('PASS ' + n); pass++; };
 
 ok('SELECTED OUTCOMES section dropped', !out.some((s) => /selected_outcomes/.test(s.id || '')));
-// RESULTS-LAMINATION-002 (owner 2026-06-15): only roles with a GENUINE token-matched
-// outcome get a Results line; the rest stay EMPTY (no random spill, no bullet copy).
-// Role 1 shares "change" with the LiDAR-rework outcome → matched. Roles 0 & 2 have no
-// genuine token overlap → empty (they are NOT padded from leftover outcomes).
-ok('only genuinely matched roles get Results (no random spill)', withResults.length === 1 && /LiDAR rework/.test(roles[1].results || ''));
-ok('unmatched roles stay EMPTY (no spill, no bullet copy)', !roles[0].results && !roles[2].results);
+// RESULTS-LAMINATION-003 (owner 2026-06-15): role 1 shares "change" with the
+// LiDAR-rework outcome → genuine token-match (tier-4). Roles 0 & 2 have no real
+// outcome → DERIVE from their OWN strongest bullet (tier-5), and that source bullet
+// is REMOVED so it isn't shown twice. Unmatched OUTCOMES are still NOT spilled.
+ok('genuine token-match lands on its role (role 1 = LiDAR rework, not derived)', /LiDAR rework/.test(roles[1].results || ''));
+ok('roles with no real outcome derive from their OWN bullet', !!roles[0].results && !!roles[2].results);
+ok('the derived source bullet is HIDDEN (role 2: only bullet moved to Results, none left)', /Designed optical systems/.test(roles[2].results || '') && (roles[2].bullets || []).length === 0);
+ok('role 0 derived result + source bullet removed', !!roles[0].results && (roles[0].bullets || []).length === 1 && !(roles[0].bullets || []).join(' ').includes(roles[0].results));
 ok('unmatched outcomes are dropped, not spilled onto unrelated roles', !roles.some((r) => /supplier consolidation|Six Sigma|optical resolution/i.test(r.results || '')));
-ok('no role echoes the duplicated bullet verbatim', !roles.some((r) => (r.results || '').includes('Led RFQ and RFI evaluation programmes with structured supplier scoring')));
-ok('no role result is a verbatim copy of one of its own bullets', roles.every((r) => { const res = (r.results || '').trim(); if (!res) return true; return !(r.bullets || []).map((b) => String(typeof b === 'string' ? b : (b && (b.b || b.t)) || '').trim()).some((b) => b && res.includes(b)); }));
+ok('no role result is a verbatim copy of one of its REMAINING bullets', roles.every((r) => { const res = (r.results || '').trim(); if (!res) return true; return !(r.bullets || []).map((b) => String(typeof b === 'string' ? b : (b && (b.b || b.t)) || '').trim()).some((b) => b && res.includes(b)); }));
 ok('no Results line exceeds ~2 lines (<=185 chars)', withResults.every((r) => r.results.length <= 185));
 ok('patent filtered from all Results', !roles.some((r) => /241997|patent/i.test(r.results || '')));
 

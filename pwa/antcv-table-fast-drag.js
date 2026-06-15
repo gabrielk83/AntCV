@@ -47,7 +47,7 @@
 (function () {
   'use strict';
 
-  const SCRIPT_VERSION = '1.40.147';
+  const SCRIPT_VERSION = '1.50.489';
   const HANDLE_SEL = '[aria-label="Resize columns (long-press and drag)"]';
   const PRESS_MS = 80;          // was 360 in React handler
   const MOVE_CANCEL_PX = 6;     // matches React handler's threshold
@@ -71,6 +71,41 @@
     } catch (_) {
       return 'cvTableRatio';
     }
+  }
+
+  // TABLE-RATIO-DRAG-PERSIST-001 (owner 2026-06-15): "change of the column
+  // border by MOUSE GRAB pulls back; changing on the ROLLER (slider) stays."
+  // Root cause: this sidecar wrote clTableRatio to localStorage + moved the
+  // <th> widths in the DOM, but NEVER updated React state (Qr/Xr). The roller
+  // <input type=range> persists because its onChange calls the React setter
+  // (ia/aa); a bare localStorage write does not, so the next React re-render
+  // reverts the columns to the stale state — the "pull back". Fix: on release,
+  // DRIVE the matching roller input via the native value setter + input/change
+  // events, so React's own setter runs and the ratio survives re-render exactly
+  // like the slider. Desktop top-tools rollers only; falls back to the plain
+  // localStorage write when the roller is not in the DOM (no regression).
+  function driveReactRoller(ratio) {
+    try {
+      const isCl = currentRatioKey() === 'clTableRatio';
+      const title = (isCl ? 'CL' : 'CV') + ' table: Focus Area column width';
+      let input = null;
+      const wraps = document.querySelectorAll('.antcv-top-sliders [title]');
+      for (let i = 0; i < wraps.length; i++) {
+        if ((wraps[i].getAttribute('title') || '').indexOf(title) === 0) {
+          input = wraps[i].querySelector('input[type="range"]');
+          if (input) break;
+        }
+      }
+      if (!input) return false;
+      const pct = String(Math.round(ratio * 100)); // the input clamps to its own min/max
+      const proto = window.HTMLInputElement && window.HTMLInputElement.prototype;
+      const desc = proto && Object.getOwnPropertyDescriptor(proto, 'value');
+      if (desc && typeof desc.set === 'function') desc.set.call(input, pct);
+      else input.value = pct;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      return true;
+    } catch (_) { return false; }
   }
 
   function attachHandler(handle) {
@@ -140,6 +175,11 @@
             const key = currentRatioKey();
             // Match the app's u.set() shape: JSON-encode numbers.
             localStorage.setItem(key, JSON.stringify(ratio));
+            // TABLE-RATIO-DRAG-PERSIST-001: drive the React roller so state
+            // (Qr/Xr) updates too — otherwise the next re-render reverts the
+            // columns ("pull back"). When the roller is in the DOM React's own
+            // ia/aa setter also re-persists clTableRatio, so the two agree.
+            driveReactRoller(ratio);
             // Dispatch a synthetic storage event so any listeners
             // (e.g. preview re-render watchers) pick up the change
             // in the same tab. `storage` only fires on OTHER tabs

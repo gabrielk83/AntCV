@@ -15,7 +15,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.499-loc-default';
+  var VERSION = '1.50.500-inline-workstyle';
   if (window.__antcvSectionsNormalize === VERSION) return;
   window.__antcvSectionsNormalize = VERSION;
 
@@ -274,6 +274,31 @@
     return changed ? out : null;
   }
 
+  // SECTION-TYPE-NORMALIZE-INLINE-001 (owner 2026-06-15: "new sections" inline
+  // label). The WORK STYLE section gets a bold inline label ("Work style:") in
+  // the EXPORT even when stored as type 'text' (worker `isWorkStyleSection` →
+  // renderTextInline), but the PREVIEW only renders that label for type
+  // 'text_inline' (app.src.js ~4740/4766). So an imported work_style stored as
+  // 'text' shows the label in DOCX/PDF but NOT in the preview. Generation emits
+  // 'text_inline' post-1.50.497; this covers the IMPORT path. Fix: promote a
+  // work_style section's type 'text' → 'text_inline' (same `content` shape, so
+  // it's render-safe in both paths) to restore preview↔export parity. Matches the
+  // preview's own work_style detection (id 'work_style' OR title work style).
+  function inlineifyWorkStyle(arr) {
+    if (!Array.isArray(arr)) return null;
+    var changed = false;
+    var out = arr.map(function (s) {
+      if (!s || typeof s !== 'object' || s.type !== 'text') return s;
+      var t = String(s.title || '').toLowerCase();
+      if (s.id === 'work_style' || t === 'work style' || t === 'workstyle') {
+        changed = true;
+        return Object.assign({}, s, { type: 'text_inline' });
+      }
+      return s;
+    });
+    return changed ? out : null;
+  }
+
   function normalize() {
     try { normalizeMeta(); } catch (_) {}
     try {
@@ -291,14 +316,17 @@
       var f = stripFounder(cv); if (f) { cv = f; changed = true; }
       var p = placeRecs(cv); if (p) { cv = p; changed = true; }
       var dl = defaultLoc(cv); if (dl) { cv = dl; changed = true; }
-      // SECTION-PREVIEW-LOC-001: also normalise the CL sections' loc so imported
-      // CL sections without a valid loc still render in the preview.
+      var wi = inlineifyWorkStyle(cv); if (wi) { cv = wi; changed = true; }
+      // SECTION-PREVIEW-LOC-001 / TYPE-NORMALIZE: also normalise the CL sections'
+      // loc + work_style type so imported CL sections render in the preview.
       var cl = Array.isArray(b.cl) ? b.cl : null;
-      var dlc = cl ? defaultLoc(cl) : null;
-      if (dlc) { cl = dlc; changed = true; }
+      var clChanged = false;
+      if (cl) { var dlc = defaultLoc(cl); if (dlc) { cl = dlc; clChanged = true; } }
+      if (cl) { var wic = inlineifyWorkStyle(cl); if (wic) { cl = wic; clChanged = true; } }
+      if (clChanged) changed = true;
       if (!changed) return;
       var next = Object.assign({}, b, { cv: cv });
-      if (dlc) next.cl = cl;
+      if (clChanged) next.cl = cl;
       localStorage.setItem('sections', JSON.stringify(next));
       try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { source: SRC } })); } catch (_) {}
       try { console.log('[sections-normalize-415] re-applied normalisers (recs/founder/loc-default) after restore'); } catch (_) {}

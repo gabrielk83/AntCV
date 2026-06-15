@@ -40,20 +40,24 @@ await page.goto(`http://127.0.0.1:${port}/index.html`,{waitUntil:'load',timeout:
 await page.waitForTimeout(5000);
 
 const r = await page.evaluate((marker)=>{
-  let locAfter = null;
-  try { const b = JSON.parse(localStorage.getItem('sections')||'{}'); const ws = (b.cv||[]).find(s=>s.id==='work_style'); locAfter = ws ? ws.loc : '(missing section)'; } catch(_) { locAfter='ERR'; }
+  let locAfter = null, typeAfter = null;
+  try { const b = JSON.parse(localStorage.getItem('sections')||'{}'); const ws = (b.cv||[]).find(s=>s.id==='work_style'); locAfter = ws ? ws.loc : '(missing section)'; typeAfter = ws ? ws.type : null; } catch(_) { locAfter='ERR'; }
   const rendered = document.body.innerText.includes('ZZLOCLESSMARKER');
-  return { locAfter, rendered };
+  // the text_inline render emits a bold "WORK STYLE:" / "Work style:" inline label
+  const labelRendered = /work style:/i.test(document.body.innerText);
+  return { locAfter, typeAfter, rendered, labelRendered };
 }, MARKER);
 await browser.close(); await new Promise(r2=>server.close(r2));
 
-console.log('--- SECTION-PREVIEW-LOC-001 ---');
-console.log('work_style loc after 415:', r.locAfter);
-console.log('loc-less section renders in preview:', r.rendered);
+console.log('--- SECTION-PREVIEW-LOC-001 + TYPE-NORMALIZE-INLINE-001 ---');
+console.log('work_style loc after 415:', r.locAfter, '| type after 415:', r.typeAfter);
+console.log('loc-less section renders in preview:', r.rendered, '| inline label rendered:', r.labelRendered);
 console.log('app errors:', errs.length, errs.slice(0,3).join(' | '));
 const checks = [
   ['415 stamped loc=main', r.locAfter === 'main'],
+  ['415 promoted work_style text→text_inline', r.typeAfter === 'text_inline'],
   ['loc-less section now renders in preview', r.rendered === true],
+  ['work_style inline label renders', r.labelRendered === true],
   ['no app errors', errs.length === 0],
 ];
 for (const [n,ok] of checks) console.log(`${n}: ${ok?'OK':'FAIL'}`);

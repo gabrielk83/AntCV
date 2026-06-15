@@ -52,7 +52,7 @@ const ROLES = [
     ] },
 ];
 const OUTCOMES = [
-  'Automated the backup-and-restore procedure, cutting recovery time from hours to minutes for the technical unit',
+  'Automated backup-and-restore as Computer Administrator at IDF, cutting recovery from hours to minutes',
   'Some unrelated outcome about optical resolution improvements',
 ];
 const sections = [
@@ -70,9 +70,9 @@ ok('r2 laminated from its OWN proofPointIds (cycle time)', /250 to 10 days/.test
 ok('r2 result is NOT a heuristic SELECTED-OUTCOMES item', !/optical resolution|backup-and-restore/.test(byId.r2.results || ''));
 ok('r1 laminated from its OWN proofPointId (AntCV)', /AntCV/.test(byId.r1.results || ''));
 ok('explicit role.results wins verbatim', byId.r_explicit.results === 'Kept an incident-free record across shifts; standardised the handover log.');
-ok('role with NEITHER still gets a heuristic result', !!(byId.r_none.results && byId.r_none.results.trim()));
-ok('tier-3: role with no result/proofPoint/match derives its NUMERIC own bullet', /35%/.test(byId.r_derive.results || ''));
-ok('tier-3 never leaves a role empty', roles.every((r) => r.results && r.results.trim()));
+ok('role with a GENUINE token-matched SELECTED OUTCOME gets it', /backup-and-restore/.test(byId.r_none.results || ''));
+ok('RESULTS-LAMINATION-002: role with no real outcome is EMPTY, never a bullet copy', !byId.r_derive.results && !/35%|Cut order pick/.test(byId.r_derive.results || ''));
+ok('no role result is a verbatim copy of one of its own bullets', roles.every((r) => { const res = (r.results || '').trim(); if (!res) return true; const bls = (r.bullets || []).map((b) => String(typeof b === 'string' ? b : (b && (b.b || b.t)) || '').trim()); return !bls.some((b) => b && res.includes(b)); }));
 ok('role.outcomes[]: default-visible item is used', /CVD protocols/.test(byId.r_oc.results || ''));
 ok('role.outcomes[]: defaultVisible:false item stays hidden', !/JD-gated detail/.test(byId.r_oc.results || ''));
 ok('JD-aware: hidden outcome SHOWS when the JD matches its showWhenJDContainsAny', /FMEA-based monitoring/.test(byId.r_jd.results || ''));

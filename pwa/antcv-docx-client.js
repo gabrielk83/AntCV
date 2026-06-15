@@ -1730,37 +1730,18 @@ export function applyOutcomesMode(docSections, doc) {
       if (txt.length > 260) txt = txt.slice(0, 257).replace(/[;,\s]+\S*$/, '') + '…';
       resultsByRole.set(r, txt);
     });
-    // RESULTS-LAMINATION-001 tier-3 (owner 2026-06-15): a role with no explicit
-    // result, no proofPointIds, and no matched SELECTED OUTCOME must NOT be left
-    // empty — derive its Results line from the role's OWN bullets. Prefer a bullet
-    // carrying a number/metric. Never invent: only reuse existing bullet text.
-    const deriveResultFromRole = (r) => {
-      const bl = (Array.isArray(r.bullets) ? r.bullets : [])
-        .map((b) => (typeof b === 'string' ? b : ((b && (b.b || b.t)) || '')))
-        .map((s) => String(s || '').trim()).filter(Boolean);
-      if (!bl.length) return '';
-      const strong = /\b\d[\d.,]*\s*(%|x\b|×|fold|days?|hours?|weeks?|months?|years?|k\b|m\b|bn\b)/i;
-      const anyNum = /\d/;
-      let best = '', bestScore = -1;
-      for (const s of bl) {
-        if (isPatent(s)) continue;
-        const score = (strong.test(s) ? 4 : 0) + (anyNum.test(s) ? 2 : 0) + Math.min(1, s.length / 140);
-        if (score > bestScore) { bestScore = score; best = s; }
-      }
-      if (!best) return '';
-      return best.length > 260 ? best.slice(0, 257).replace(/[;,\s]+\S*$/, '') + '…' : best;
-    };
+    // RESULTS-LAMINATION-002 (owner 2026-06-15): a role's Results line must be a
+    // REAL outcome — explicit role.results / role.outcomes[] / proofPointIds, or a
+    // GENUINE token-matched SELECTED OUTCOME. If a role has none, leave it EMPTY
+    // (hidden). NEVER copy a content bullet into Results (owner: "the result is
+    // just a copy of the first role content bullet — should not happen"; a verbatim
+    // bullet copy duplicates content already shown as a bullet).
     const expOut = {
       ...exp,
       roles: (exp.roles || []).map((r) => {
-        // 1) LAMINATED per-role result (explicit role.results or proofPointIds).
         const lam = _lam.get(r);
         if (lam) return { ...r, results: lam };
-        // 2) heuristic SELECTED-OUTCOMES match.
-        if (resultsByRole.has(r)) return { ...r, results: resultsByRole.get(r) };
-        // 3) fallback: derive from the role's OWN bullets so it is never empty.
-        const derived = deriveResultFromRole(r);
-        return derived ? { ...r, results: derived } : r;
+        return resultsByRole.has(r) ? { ...r, results: resultsByRole.get(r) } : r;
       }),
     };
     return docSections.filter((s) => !isOutcomes(s)).map((s) => (s === exp ? expOut : s));

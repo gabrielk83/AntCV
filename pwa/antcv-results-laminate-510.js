@@ -27,7 +27,7 @@
 (function () {
   'use strict';
   if (window.__antcvResultsLaminate510) return;
-  window.__antcvResultsLaminate510 = '1.50.492';
+  window.__antcvResultsLaminate510 = '1.50.495';
 
   function readJSON(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (_) { return d; } }
   function activeDoc() { try { const x = JSON.parse(localStorage.getItem('doc') || '"cv"'); return x === 'cl' ? 'cl' : 'cv'; } catch (_) { return 'cv'; } }
@@ -63,14 +63,11 @@
     const ids = Array.isArray(role.proofPointIds) ? role.proofPointIds : [];
     const fromPp = ids.map((id) => pp[id]).filter(Boolean);
     if (fromPp.length) return cap(fromPp.slice(0, 2).join('; '));
-    // derive from own bullets, prefer numeric/metric, never invent
-    const bl = (Array.isArray(role.bullets) ? role.bullets : [])
-      .map((b) => (typeof b === 'string' ? b : ((b && (b.b || b.t)) || '')))
-      .map((s) => String(s || '').trim()).filter(Boolean);
-    const strong = /\b\d[\d.,]*\s*(%|x\b|×|fold|days?|hours?|weeks?|months?|years?)/i;
-    let best = '', bs = -1;
-    for (const s of bl) { if (/\bpatent\b/i.test(s)) continue; const sc = (strong.test(s) ? 4 : 0) + (/\d/.test(s) ? 2 : 0) + Math.min(1, s.length / 140); if (sc > bs) { bs = sc; best = s; } }
-    return best ? cap(best) : '';
+    // RESULTS-LAMINATION-002 (owner 2026-06-15): NO derive-from-bullets — a Results
+    // line must be a REAL outcome, never a verbatim copy of a content bullet. With
+    // no real source, return '' so the heuristic-rendered line is left as-is (the
+    // sidecar only OVERRIDES with a genuine laminated result).
+    return '';
   }
 
   function apply() {
@@ -117,5 +114,5 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
   else boot();
 
-  window.AntcvResultsLaminate = { version: '1.50.492', apply: apply };
+  window.AntcvResultsLaminate = { version: '1.50.495', apply: apply };
 })();

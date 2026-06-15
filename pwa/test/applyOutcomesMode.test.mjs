@@ -46,11 +46,17 @@ const withResults = roles.filter((r) => r.results);
 let pass = 0; const ok = (n, c) => { assert.ok(c, n); console.log('PASS ' + n); pass++; };
 
 ok('SELECTED OUTCOMES section dropped', !out.some((s) => /selected_outcomes/.test(s.id || '')));
-ok('every role got a Results string (first role not starved)', withResults.length === 3 && !!roles[0].results);
+// RESULTS-LAMINATION-002 (owner 2026-06-15): only roles with a GENUINE token-matched
+// outcome get a Results line; the rest stay EMPTY (no random spill, no bullet copy).
+// Role 1 shares "change" with the LiDAR-rework outcome → matched. Roles 0 & 2 have no
+// genuine token overlap → empty (they are NOT padded from leftover outcomes).
+ok('only genuinely matched roles get Results (no random spill)', withResults.length === 1 && /LiDAR rework/.test(roles[1].results || ''));
+ok('unmatched roles stay EMPTY (no spill, no bullet copy)', !roles[0].results && !roles[2].results);
+ok('unmatched outcomes are dropped, not spilled onto unrelated roles', !roles.some((r) => /supplier consolidation|Six Sigma|optical resolution/i.test(r.results || '')));
 ok('no role echoes the duplicated bullet verbatim', !roles.some((r) => (r.results || '').includes('Led RFQ and RFI evaluation programmes with structured supplier scoring')));
+ok('no role result is a verbatim copy of one of its own bullets', roles.every((r) => { const res = (r.results || '').trim(); if (!res) return true; return !(r.bullets || []).map((b) => String(typeof b === 'string' ? b : (b && (b.b || b.t)) || '').trim()).some((b) => b && res.includes(b)); }));
 ok('no Results line exceeds ~2 lines (<=185 chars)', withResults.every((r) => r.results.length <= 185));
 ok('patent filtered from all Results', !roles.some((r) => /241997|patent/i.test(r.results || '')));
-ok('results are disjoint (no two roles identical)', new Set(withResults.map((r) => r.results)).size === withResults.length);
 
 for (const r of roles) console.log(`  [${r.title}] ${r.results || '(none)'}`);
 console.log(`\nEXPORT-OUTCOMES-PARITY OK (${pass} checks)`);

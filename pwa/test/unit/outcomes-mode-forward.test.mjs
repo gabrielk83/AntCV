@@ -41,7 +41,7 @@ function payloadFor(mode, stylePackage) {
   });
 }
 
-test("results mode: matched outcome → its role; unmatched is NOT random-spilled; every role still has a result (RESULTS-LAMINATION-001)", () => {
+test("results mode: matched outcome → its role; unmatched is NOT random-spilled; unmatched role stays EMPTY, never a bullet copy (RESULTS-LAMINATION-002)", () => {
   const p = payloadFor('results');
   assert.equal(p.sections.find((s) => s.id === 'outcomes'), undefined);
   const exp = p.sections.find((s) => s.id === 'experience');
@@ -51,11 +51,13 @@ test("results mode: matched outcome → its role; unmatched is NOT random-spille
   assert.ok(/Innoviz change cycle/.test(r0.results));
   // The other outcome does NOT pile onto r0.
   assert.ok(!/optical lab/.test(r0.results), 'r0 must not also carry the second outcome');
-  // RESULTS-LAMINATION-001 (owner 2026-06-15): a role with no GENUINE token-match
-  // is no longer fed a random/unmatched outcome — it derives from its OWN content
-  // (its bullet "Led stack.") instead, and is never left empty.
-  assert.ok(r1.results && r1.results.trim(), 'r1 still gets a result, derived from its own bullet');
-  assert.ok(/stack/i.test(r1.results), 'r1 result comes from its OWN bullet, not the unmatched flat outcome');
+  // RESULTS-LAMINATION-002 (owner 2026-06-15): a role with no GENUINE token-match
+  // is left EMPTY — it is NOT fed a random/unmatched outcome, and it is NOT padded
+  // by copying its own content bullet into Results (owner: "the result is just a
+  // copy of the first role content bullet — should not happen").
+  assert.ok(!r1.results, 'r1 has no genuine outcome → empty, not a random/unmatched spill');
+  assert.ok(!/optical lab/.test(r1.results || ''), 'r1 must not carry the unmatched flat outcome');
+  assert.ok(!/stack/i.test(r1.results || ''), 'r1 result must NOT be a copy of its own content bullet');
 });
 
 test('OUTCOMES-MODE-PARITY-001: no explicit mode + Copenhagen default → results (matches preview)', () => {

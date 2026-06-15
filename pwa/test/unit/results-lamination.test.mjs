@@ -19,6 +19,8 @@ const store = {
   outcomesMode: JSON.stringify('results'),
   personalInfo: JSON.stringify(personalInfo),
   stylePackage: JSON.stringify('copenhagen-modern'),
+  // JD-aware visibility source (raw string, not JSON): contains FMEA + SQL.
+  'antcv:lastJdText': 'This role needs FMEA risk analysis and SQL monitoring experience.',
 };
 globalThis.localStorage = { getItem: (k) => (k in store ? store[k] : null), setItem: () => {}, removeItem: () => {} };
 globalThis.window = {};
@@ -41,6 +43,12 @@ const ROLES = [
     outcomes: [
       { id: 'o1', b: 'Established', t: 'CVD protocols for self-assembling SWCNT-FET on a MEMS tension sensor.', defaultVisible: true },
       { id: 'o2', b: 'Hidden', t: 'JD-gated detail that must stay hidden by default.', defaultVisible: false },
+    ] },
+  { id: 'r_jd', title: 'Change Control', company: 'JD Match Co', on: true,
+    bullets: ['Ran the board.'],
+    outcomes: [
+      { id: 'jd1', b: 'Established', t: 'an FMEA-based monitoring and decision-support system in SQL.', defaultVisible: false,
+        visibilityRule: { showWhenJDContainsAny: ['FMEA', 'SQL', 'risk analysis'] } },
     ] },
 ];
 const OUTCOMES = [
@@ -67,6 +75,7 @@ ok('tier-3: role with no result/proofPoint/match derives its NUMERIC own bullet'
 ok('tier-3 never leaves a role empty', roles.every((r) => r.results && r.results.trim()));
 ok('role.outcomes[]: default-visible item is used', /CVD protocols/.test(byId.r_oc.results || ''));
 ok('role.outcomes[]: defaultVisible:false item stays hidden', !/JD-gated detail/.test(byId.r_oc.results || ''));
+ok('JD-aware: hidden outcome SHOWS when the JD matches its showWhenJDContainsAny', /FMEA-based monitoring/.test(byId.r_jd.results || ''));
 ok('laminated results never exceed ~2 lines (<=262 chars)', roles.every((r) => !r.results || r.results.length <= 262));
 
 for (const r of roles) console.log(`  [${r.title}] ${r.results || '(none)'}`);

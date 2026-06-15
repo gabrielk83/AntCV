@@ -14013,6 +14013,9 @@
               try {
                 n = String(e.jd_text || Un.current || Ut || "").trim();
               } catch (e) {}
+              // RESULTS-LAMINATION-001: mirror the active JD into localStorage so
+              // the export (applyOutcomesMode) + preview can JD-gate role.outcomes.
+              try { localStorage.setItem("antcv:lastJdText", n || ""); } catch (e) {}
               if (!n) {
                 try {
                   Object.assign(to.current, e);

@@ -22746,9 +22746,9 @@
             })();
             const __tenseRule =
               __expTense === "past"
-                ? "\n- EXPERIENCE TENSE (FORCED PAST): write EVERY experience bullet in PAST tense (Owned, Built, Reduced, Directed) — including the current role. Verb-variety rules unchanged."
+                ? "\n- EXPERIENCE TENSE (FORCED PAST): write EVERY experience bullet AND every SELECTED OUTCOMES (outcomes_items) leading verb in PAST tense (Owned, Built, Reduced, Directed, Cut, Secured) — including the current role, so the per-role Results read past too. Verb-variety rules unchanged."
                 : __expTense === "present"
-                  ? "\n- EXPERIENCE TENSE (FORCED PRESENT): write EVERY experience bullet in PRESENT tense (Own, Build, Reduce, Direct) — including past roles. Use the present-tense form of the approved verbs; verb-variety rules unchanged."
+                  ? "\n- EXPERIENCE TENSE (FORCED PRESENT): write EVERY experience bullet AND every SELECTED OUTCOMES (outcomes_items) leading verb in PRESENT tense (Own, Build, Reduce, Direct, Cut, Secure) — including past roles, so the per-role Results read present too. Use the present-tense form of the approved verbs; verb-variety rules unchanged."
                   : "\n- EXPERIENCE TENSE (AUTO — default): use LOGICAL per-role tense. Write the CURRENT / ongoing role's bullets in PRESENT tense (Own, Build, Direct) and EVERY earlier (past) role's bullets in PAST tense (Owned, Built, Directed). A role is current if its years end in 'Present', 'Now', 'Current', or have no end date; otherwise it is a past role. If two roles are both open-ended, treat only the newest as current. Verb-variety rules unchanged.";
             // COMPANY-BRAND-FIT-001 (owner 2026-06-12): session-only
             // checkbox next to Generate — with a JD present, the LLM also

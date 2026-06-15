@@ -54,6 +54,10 @@ Owner-set ordering (2026-06-15, revised): **work CONTENT & EXPORT issues first, 
 
 ---
 
+## SESSION REGISTRY — 2026-06-15 (nightly autonomous, parallelised) — 1.50.486
+
+- `TABLE-HEADER-MATCH-BAND-001` `[SHIPPED 1.50.486 — PWA-only]` — owner reply 2026-06-15: "match table header text and BG to candidate section text and header in both preview and export." The EXPORT already matched after COPENHAGEN-BLUE (worker `tableHeaderBg = band`, `tableHeaderText = readableInk(band)` = white = the candidate band). The PREVIEW did NOT: the two `<th>` cells (`app.src.js` ~5094/5115) read `k.tableHeaderBg`, but the resolved `k` style falls back to the pale `c` default (`#DDE6F2` + dark ink), so the preview table header was pale while the band was blue. Fix: drive both `<th>` from the band's own source — `background: "var(--header-bg)"`, `color: "var(--header-name-color, #fff)"` — so the table header BG+text equal the candidate band in every package (the band uses the same CSS var). Minified `app.js` mirrored (the inlined `readableInk` IIFE on `_.tableHeaderBg` replaced, 2 cells, count-guarded). Verified `diag-copenhagen-blue-preview` 7/7 (table header rgb(51,68,111) + white === band) and `diag-copenhagen-blue-cl` still 4/4 (export band+table = 33446F). No worker change.
+
 ## SESSION REGISTRY — 2026-06-15 (nightly autonomous, parallelised) — 1.50.485 + docx-worker 1.14.69
 
 - `CL-EXPORT-EDGE-MARGINS-001` `[SHIPPED docx-worker 1.14.69]` — owner reply 2026-06-15: "0.07"→0.14" is a meaningful change." (The backlog's "current = 1 inch" assumption was wrong — actual `CL_SIDE_MARGIN` was 100 DXA / 0.07".) Doubled `CL_SIDE_MARGIN` 100→200 (0.14") in `buildLinearDocument`; the full-bleed header band follows via `-CL_SIDE_MARGIN`; the three `PAGE_W-200` body-width literals (signature right-tab 24912, CL table column width 25781, WHAT-I-BRING `defaultClW` 26092) → `PAGE_W-400` so the table still fits the narrower body. Verified `diag-cl-margins` 4/4: pgMar L/R=200 top=0, band `-200` indent (still full-bleed), WHAT-I-BRING tblW 9205 ≤ body 11506. CV two-column path untouched.

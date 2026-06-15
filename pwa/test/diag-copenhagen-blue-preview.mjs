@@ -46,11 +46,14 @@ const probe = await page.evaluate(()=>{
   const band=document.querySelector('[data-antcv-candidate-band]');
   // the name span is the innermost band descendant whose OWN text is the name
   const nameEl=band?[...band.querySelectorAll('*')].filter(e=>[...e.childNodes].some(n=>n.nodeType===3&&/Karp-Gershon/.test(n.textContent))).pop():null;
+  // table header cell (Focus Area)
+  const th=[...document.querySelectorAll('th,td,div,span')].find(t=>/^Focus Area$/.test((t.textContent||'').trim())&&t.getBoundingClientRect().height>0);
   return {
     headerBgVar: g('--header-bg'), mainHeadVar: g('--main-head-color'),
     bandComputed: band?getComputedStyle(band).backgroundColor:null,
     bandText: nameEl?getComputedStyle(nameEl).color:null,
-    headerNameVar: g('--header-name-color'),
+    thBg: th?getComputedStyle(th).backgroundColor:null,
+    thColor: th?getComputedStyle(th).color:null,
   };
 });
 await browser.close();
@@ -59,6 +62,7 @@ await new Promise(r=>server.close(r));
 const RGB_BRIGHT='rgb(51, 68, 111)';   // #33446F
 const WHITE='rgb(255, 255, 255)';
 console.log('--header-bg var :', probe.headerBgVar, '| band computed:', probe.bandComputed, '| band text:', probe.bandText);
+console.log('table header    :', probe.thBg, '| text:', probe.thColor, '(must MATCH band)');
 console.log('--main-head-color (parity, must stay navy):', probe.mainHeadVar);
 if(errs.length) console.log('pageerrors:', errs.slice(0,3).join(' | '));
 
@@ -67,11 +71,15 @@ const B = probe.bandComputed===RGB_BRIGHT;     // the visible band actually pain
 const C = probe.bandText===WHITE;
 const D = probe.mainHeadVar.toUpperCase()==='#283556';   // headings stay navy
 const E = errs.length===0;
+const F = probe.thBg===probe.bandComputed && probe.thBg===RGB_BRIGHT;   // table header BG matches band
+const G = probe.thColor===WHITE;                                        // table header text white like band
 console.log(`CHECK A (--header-bg = #33446F): ${A?'PASS':'FAIL'}`);
 console.log(`CHECK B (candidate band paints rgb(51,68,111)): ${B?'PASS':'FAIL'}`);
 console.log(`CHECK C (band text stays white): ${C?'PASS':'FAIL'}`);
 console.log(`CHECK D (main heading var stays navy #283556): ${D?'PASS':'FAIL'}`);
 console.log(`CHECK E (no page errors — editor rendered clean): ${E?'PASS':'FAIL'}`);
-const ok=A&&B&&C&&D&&E;
-console.log(ok?'COPENHAGEN-BLUE-PREVIEW OK (5/5)':'COPENHAGEN-BLUE-PREVIEW FAIL');
+console.log(`CHECK F (table header BG matches candidate band): ${F?'PASS':'FAIL'}`);
+console.log(`CHECK G (table header text white like band): ${G?'PASS':'FAIL'}`);
+const ok=A&&B&&C&&D&&E&&F&&G;
+console.log(ok?'COPENHAGEN-BLUE-PREVIEW OK (7/7)':'COPENHAGEN-BLUE-PREVIEW FAIL');
 process.exitCode = ok?0:1;

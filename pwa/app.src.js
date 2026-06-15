@@ -5091,12 +5091,13 @@
                   {
                     style: {
                       width: (100 * u) / p + "%",
-                      background: k.tableHeaderBg,
-                      // TABLE-HEADER-INK-001 (owner 2026-06-14: header text hidden):
-                      // the header bg can be navy (package/navyColor) while the
-                      // styleConfig tableHeaderText stays the default dark — navy on
-                      // navy = invisible. Key the ink on the ACTUAL header bg.
-                      color: readableInk(k.tableHeaderBg),
+                      // TABLE-HEADER-MATCH-BAND-001 (owner 2026-06-15): the table
+                      // header must MATCH the candidate band — same BG + white text.
+                      // Preview reads the band CSS var (the SAME source the band uses;
+                      // the resolved `k` style falls back to the pale default here),
+                      // export mirrors it (worker tableHeaderBg = band, white ink).
+                      background: "var(--header-bg)",
+                      color: "var(--header-name-color, #fff)",
                       padding: "4px 6px",
                       textAlign: "center",
                       fontSize: $.tblH,
@@ -5112,12 +5113,13 @@
                   {
                     style: {
                       width: (100 * m) / p + "%",
-                      background: k.tableHeaderBg,
-                      // TABLE-HEADER-INK-001 (owner 2026-06-14: header text hidden):
-                      // the header bg can be navy (package/navyColor) while the
-                      // styleConfig tableHeaderText stays the default dark — navy on
-                      // navy = invisible. Key the ink on the ACTUAL header bg.
-                      color: readableInk(k.tableHeaderBg),
+                      // TABLE-HEADER-MATCH-BAND-001 (owner 2026-06-15): the table
+                      // header must MATCH the candidate band — same BG + white text.
+                      // Preview reads the band CSS var (the SAME source the band uses;
+                      // the resolved `k` style falls back to the pale default here),
+                      // export mirrors it (worker tableHeaderBg = band, white ink).
+                      background: "var(--header-bg)",
+                      color: "var(--header-name-color, #fff)",
                       padding: "4px 6px",
                       textAlign: "center",
                       fontSize: $.tblH,

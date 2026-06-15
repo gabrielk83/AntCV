@@ -41,18 +41,21 @@ function payloadFor(mode, stylePackage) {
   });
 }
 
-test("results mode: outcomes section dropped, results spread across roles (not piled on r0)", () => {
+test("results mode: matched outcome → its role; unmatched is NOT random-spilled; every role still has a result (RESULTS-LAMINATION-001)", () => {
   const p = payloadFor('results');
   assert.equal(p.sections.find((s) => s.id === 'outcomes'), undefined);
   const exp = p.sections.find((s) => s.id === 'experience');
   const r0 = exp.roles.find((r) => r.id === 'r0');
   const r1 = exp.roles.find((r) => r.id === 'r1');
-  // matched outcome lands on its role (Innoviz → r0)
+  // The genuinely best-matched outcome lands on its role (Innoviz → r0).
   assert.ok(/Innoviz change cycle/.test(r0.results));
-  // the second outcome lands on r1 (the Optics role / emptiest role) — NOT
-  // piled onto r0 as well. This is the "first role no longer starved" fix.
-  assert.ok(/optical lab/.test(r1.results), 'second outcome spreads to r1, not piled on r0');
+  // The other outcome does NOT pile onto r0.
   assert.ok(!/optical lab/.test(r0.results), 'r0 must not also carry the second outcome');
+  // RESULTS-LAMINATION-001 (owner 2026-06-15): a role with no GENUINE token-match
+  // is no longer fed a random/unmatched outcome — it derives from its OWN content
+  // (its bullet "Led stack.") instead, and is never left empty.
+  assert.ok(r1.results && r1.results.trim(), 'r1 still gets a result, derived from its own bullet');
+  assert.ok(/stack/i.test(r1.results), 'r1 result comes from its OWN bullet, not the unmatched flat outcome');
 });
 
 test('OUTCOMES-MODE-PARITY-001: no explicit mode + Copenhagen default → results (matches preview)', () => {

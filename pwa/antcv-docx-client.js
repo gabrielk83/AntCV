@@ -1622,15 +1622,28 @@ export function applyOutcomesMode(docSections, doc) {
     // role's proofPointIds against the master-profile proof points. Roles with
     // neither fall through to the token-match distribution below.
     const _lam = new Map();
+    const _capJoin = (texts) => {
+      let t = texts.slice(0, 2).join('; ');
+      if (t.length > 260) t = t.slice(0, 257).replace(/[;,\s]+\S*$/, '') + '…';
+      return t;
+    };
     visRoles.forEach((r) => {
+      // 1) explicit role.results string wins verbatim.
       if (typeof r.results === 'string' && r.results.trim()) { _lam.set(r, r.results.trim()); return; }
+      // 2) self-contained role.outcomes[] (owner's 'outcome_edits' lists): use the
+      //    DEFAULT-VISIBLE items only — JD-gated hidden ones (defaultVisible:false)
+      //    stay hidden in a non-JD export.
+      if (Array.isArray(r.outcomes) && r.outcomes.length) {
+        const texts = r.outcomes
+          .filter((o) => o && (typeof o === 'string' || o.defaultVisible !== false))
+          .map((o) => (typeof o === 'string' ? o.trim() : [o.b, o.t].filter(Boolean).join(' ').trim()))
+          .filter(Boolean);
+        if (texts.length) { _lam.set(r, _capJoin(texts)); return; }
+      }
+      // 3) role.proofPointIds resolved against the master-profile proof points.
       const ids = Array.isArray(r.proofPointIds) ? r.proofPointIds : [];
       const texts = ids.map((id) => _ppText[id]).filter(Boolean);
-      if (texts.length) {
-        let t = texts.slice(0, 2).join('; ');
-        if (t.length > 260) t = t.slice(0, 257).replace(/[;,\s]+\S*$/, '') + '…';
-        _lam.set(r, t);
-      }
+      if (texts.length) _lam.set(r, _capJoin(texts));
     });
     // The heuristic SELECTED-OUTCOMES distribution runs ONLY for roles that are
     // not already laminated, so the spill never gets wasted on a role that will
@@ -1663,16 +1676,13 @@ export function applyOutcomesMode(docSections, doc) {
     // coverage-first then double — retention cap 1 (each role keeps one before any
     // doubles), then pass 0 covers every still-empty role, pass 1 gives a 2nd to
     // strong roles. 1–2 results per role, every role first.
-    const CAP = 1;
+    // RESULTS-LAMINATION-001 (owner 2026-06-15): keep only GENUINE best-matches
+    // (capped), and do NOT random-spill unmatched outcomes onto unrelated roles —
+    // that was the "random distribution" the owner rejected. A role with no true
+    // match derives from its OWN bullets (tier-3, below) instead. `left` (the
+    // unmatched outcomes) is intentionally dropped here.
     const MAX = 2;
-    const spill = [];
-    assign.forEach((a) => { while (a.length > CAP) spill.push(a.pop()); });
-    left.forEach((x) => spill.push(x));
-    let si = 0;
-    for (let pass = 0; pass < MAX && si < spill.length; pass++) {
-      const want = pass + 1;
-      for (let i = 0; i < assign.length && si < spill.length; i++) { if (assign[i].length < want) assign[i].push(spill[si++]); }
-    }
+    assign.forEach((a) => { while (a.length > MAX) a.pop(); });
     const resultsByRole = new Map();
     distRoles.forEach((r, i) => {
       if (!assign[i].length) return;
@@ -1684,13 +1694,37 @@ export function applyOutcomesMode(docSections, doc) {
       if (txt.length > 260) txt = txt.slice(0, 257).replace(/[;,\s]+\S*$/, '') + '…';
       resultsByRole.set(r, txt);
     });
+    // RESULTS-LAMINATION-001 tier-3 (owner 2026-06-15): a role with no explicit
+    // result, no proofPointIds, and no matched SELECTED OUTCOME must NOT be left
+    // empty — derive its Results line from the role's OWN bullets. Prefer a bullet
+    // carrying a number/metric. Never invent: only reuse existing bullet text.
+    const deriveResultFromRole = (r) => {
+      const bl = (Array.isArray(r.bullets) ? r.bullets : [])
+        .map((b) => (typeof b === 'string' ? b : ((b && (b.b || b.t)) || '')))
+        .map((s) => String(s || '').trim()).filter(Boolean);
+      if (!bl.length) return '';
+      const strong = /\b\d[\d.,]*\s*(%|x\b|×|fold|days?|hours?|weeks?|months?|years?|k\b|m\b|bn\b)/i;
+      const anyNum = /\d/;
+      let best = '', bestScore = -1;
+      for (const s of bl) {
+        if (isPatent(s)) continue;
+        const score = (strong.test(s) ? 4 : 0) + (anyNum.test(s) ? 2 : 0) + Math.min(1, s.length / 140);
+        if (score > bestScore) { bestScore = score; best = s; }
+      }
+      if (!best) return '';
+      return best.length > 260 ? best.slice(0, 257).replace(/[;,\s]+\S*$/, '') + '…' : best;
+    };
     const expOut = {
       ...exp,
       roles: (exp.roles || []).map((r) => {
-        // LAMINATED per-role result wins over the heuristic distribution.
+        // 1) LAMINATED per-role result (explicit role.results or proofPointIds).
         const lam = _lam.get(r);
         if (lam) return { ...r, results: lam };
-        return resultsByRole.has(r) ? { ...r, results: resultsByRole.get(r) } : r;
+        // 2) heuristic SELECTED-OUTCOMES match.
+        if (resultsByRole.has(r)) return { ...r, results: resultsByRole.get(r) };
+        // 3) fallback: derive from the role's OWN bullets so it is never empty.
+        const derived = deriveResultFromRole(r);
+        return derived ? { ...r, results: derived } : r;
       }),
     };
     return docSections.filter((s) => !isOutcomes(s)).map((s) => (s === exp ? expOut : s));

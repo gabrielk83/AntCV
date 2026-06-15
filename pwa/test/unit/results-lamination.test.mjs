@@ -34,6 +34,14 @@ const ROLES = [
     results: 'Kept an incident-free record across shifts; standardised the handover log.', bullets: ['Access control and floor support.'] },
   { id: 'r_none', title: 'Computer Administrator', company: 'IDF', on: true,
     bullets: ['Administered classified IT infrastructure for a technical unit.'] },
+  { id: 'r_derive', title: 'Warehouse Lead', company: 'Acme Storage', on: true,
+    bullets: ['Organised the floor and shelving layout.', 'Cut order pick time by 35% across two shifts.'] },
+  { id: 'r_oc', title: 'R&D Assistant', company: 'Tel Aviv University', on: true,
+    bullets: ['Ran the lab.'],
+    outcomes: [
+      { id: 'o1', b: 'Established', t: 'CVD protocols for self-assembling SWCNT-FET on a MEMS tension sensor.', defaultVisible: true },
+      { id: 'o2', b: 'Hidden', t: 'JD-gated detail that must stay hidden by default.', defaultVisible: false },
+    ] },
 ];
 const OUTCOMES = [
   'Automated the backup-and-restore procedure, cutting recovery time from hours to minutes for the technical unit',
@@ -55,6 +63,10 @@ ok('r2 result is NOT a heuristic SELECTED-OUTCOMES item', !/optical resolution|b
 ok('r1 laminated from its OWN proofPointId (AntCV)', /AntCV/.test(byId.r1.results || ''));
 ok('explicit role.results wins verbatim', byId.r_explicit.results === 'Kept an incident-free record across shifts; standardised the handover log.');
 ok('role with NEITHER still gets a heuristic result', !!(byId.r_none.results && byId.r_none.results.trim()));
+ok('tier-3: role with no result/proofPoint/match derives its NUMERIC own bullet', /35%/.test(byId.r_derive.results || ''));
+ok('tier-3 never leaves a role empty', roles.every((r) => r.results && r.results.trim()));
+ok('role.outcomes[]: default-visible item is used', /CVD protocols/.test(byId.r_oc.results || ''));
+ok('role.outcomes[]: defaultVisible:false item stays hidden', !/JD-gated detail/.test(byId.r_oc.results || ''));
 ok('laminated results never exceed ~2 lines (<=262 chars)', roles.every((r) => !r.results || r.results.length <= 262));
 
 for (const r of roles) console.log(`  [${r.title}] ${r.results || '(none)'}`);

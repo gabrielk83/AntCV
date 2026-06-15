@@ -51,6 +51,7 @@ import {
   sanitizeUserContent,
   INJECTION_DEFENSE_PREAMBLE,
 } from './prompt-injection-defense.js';
+import { PROVIDER_MODELS } from './multi-llm.js';
 
 export default {
   async fetch(request, env, ctx) {
@@ -113,11 +114,28 @@ async function handleWithProviderFallback(request, env) {
   // first attempt and (404<500) returned immediately, hard-failing every JD
   // generation. MODEL_ROLES still drives supervisor/coherence/repair via
   // callAnyLLMForJSON, which builds correct per-provider model chains.
+  // FALLBACK-MODEL-001 (owner 2026-06-15): when falling back to a DIFFERENT
+  // provider than the client requested, the previous provider's body.model
+  // (e.g. gemini-2.5-flash) MUST be rewritten to the new provider's own model —
+  // otherwise anthropic/openai/mistral get an unknown model id and 404, turning
+  // a recoverable 5xx on the primary provider into a hard failure (the
+  // "anthropic returned 404, model: gemini-2.5-flash" the owner saw on a forced
+  // gemini consensus_poll). The PRIMARY attempt (i===0) is left byte-for-byte
+  // unchanged so normal generations are unaffected.
+  let parsedBody = null;
+  try { parsedBody = JSON.parse(new TextDecoder().decode(bodyBuf)); } catch (_) { parsedBody = null; }
   let lastResp = null;
   for (let i = 0; i < order.length; i++) {
     const headers = new Headers(request.headers);
     headers.set('x-provider', order[i]);
-    const attempt = new Request(request.url, { method: 'POST', headers: headers, body: bodyBuf });
+    let attemptBody = bodyBuf;
+    if (i > 0 && parsedBody && PROVIDER_MODELS[order[i]] && PROVIDER_MODELS[order[i]][0]) {
+      const rewritten = { ...parsedBody, model: PROVIDER_MODELS[order[i]][0] };
+      attemptBody = new TextEncoder().encode(JSON.stringify(rewritten));
+      headers.delete('content-length');   // body changed — let fetch recompute
+      headers.delete('x-gemini-model');    // stale per-provider model hint
+    }
+    const attempt = new Request(request.url, { method: 'POST', headers: headers, body: attemptBody });
     try {
       lastResp = await handleRequest(attempt, env || {});
     } catch (_) {

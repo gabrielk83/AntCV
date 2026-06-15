@@ -53,6 +53,7 @@ import {
   sanitizeUserContent,
   INJECTION_DEFENSE_PREAMBLE,
 } from './prompt-injection-defense.js';
+import { PROVIDER_MODELS } from './multi-llm.js';
 
 export default {
   async fetch(request, env, ctx) {
@@ -90,11 +91,25 @@ async function handleWithProviderFallback(request, env) {
   // callAnyLLMForJSON (multi-llm.js), which build their own per-provider
   // model chains and are unaffected. The requested provider leads here, as
   // before. (parseModelRoles/detectCVTask imports kept for those call sites.)
+  // FALLBACK-MODEL-001 (owner 2026-06-15): on fallback to a DIFFERENT provider,
+  // rewrite body.model to that provider's own model — otherwise the previous
+  // provider's model id (e.g. gemini-2.5-flash) is sent to anthropic and 404s,
+  // turning a recoverable 5xx into a hard failure. The PRIMARY attempt (i===0)
+  // is left byte-for-byte unchanged so normal generations are unaffected.
+  let parsedBody = null;
+  try { parsedBody = JSON.parse(new TextDecoder().decode(bodyBuf)); } catch (_) { parsedBody = null; }
   let lastResp = null;
   for (let i = 0; i < order.length; i++) {
     const headers = new Headers(request.headers);
     headers.set('x-provider', order[i]);
-    const attempt = new Request(request.url, { method: 'POST', headers: headers, body: bodyBuf });
+    let attemptBody = bodyBuf;
+    if (i > 0 && parsedBody && PROVIDER_MODELS[order[i]] && PROVIDER_MODELS[order[i]][0]) {
+      const rewritten = { ...parsedBody, model: PROVIDER_MODELS[order[i]][0] };
+      attemptBody = new TextEncoder().encode(JSON.stringify(rewritten));
+      headers.delete('content-length');
+      headers.delete('x-gemini-model');
+    }
+    const attempt = new Request(request.url, { method: 'POST', headers: headers, body: attemptBody });
     try {
       lastResp = await handleRequest(attempt, env || {});
     } catch (_) {

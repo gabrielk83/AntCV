@@ -71,26 +71,29 @@ function firstRow(xml) {
 }
 const bRow = firstRow(bridge);
 const nRow = firstRow(normal);
-// PHOTO-BRIDGE-NONFLOAT-001 (1.14.70): the band-overlap medallion is now a
-// NON-FLOAT inline image seated bottom-anchored in the candidate band's
-// sidebar-width cell (the float was dropped — LibreOffice/CloudConvert strip
-// floats on the PDF path, so it never bridged). Assertions updated accordingly.
+// PHOTO-BRIDGE-NONFLOAT-001 REVERTED (1.14.71): the band-overlap medallion is
+// back to a FLOATING straddle (floats DO render in the owner's CloudConvert PDF;
+// the earlier "no bridge" was the position-forwarding bug, fixed in 1.50.492).
+// The split band header keeps an EMPTY photo zone; the float anchors in the
+// sidebar's first paragraph, page-positioned, lifted half a diameter so its
+// centre sits on the band-sidebar seam.
 const bSplit = !/gridSpan/.test(bRow) && (bRow.match(/<w:tc>/g) || []).length === 2;
 const nSpan = /w:gridSpan w:val="2"/.test(nRow);
 
-// The medallion is INLINE (wp:inline) inside the FIRST row (the candidate band),
-// at the forwarded 156px size (156 × 9525 = 1485900 EMU), and the band's left
-// cell is BOTTOM-aligned so it rests on the seam.
-const bMedallionInBand = /<wp:inline/.test(bRow) && bRow.includes('cx="1485900" cy="1485900"');
-const bBottomAlign = /<w:vAlign w:val="bottom"\/>/.test(bRow);
-// The bridge medallion must NOT be a float (no anchor in the header row).
-const bNoFloatInBand = !/<wp:anchor/.test(bRow);
+// The medallion is a FLOAT (wp:anchor) at the forwarded 156px (156×9525=1485900),
+// with a NEGATIVE paragraph-relative vertical offset (lifted over the seam) and
+// layoutInCell="0" (escapes the sidebar cell). It is NOT inline in the band row.
+const bFloat = /<wp:anchor/.test(bridge);
+const bSized = bridge.includes('cx="1485900" cy="1485900"');
+const bNegV = /<wp:positionV relativeFrom="paragraph"><wp:posOffset>-\d+<\/wp:posOffset>/.test(bridge);
+const bEscapesCell = /layoutInCell="0"/.test(bridge);
+const bNotInBandRow = !/<wp:anchor/.test(bRow) && !/<wp:inline/.test(bRow); // band row is the empty photo zone
 // Control: default sidebar-top keeps the single gridSpan-2 band + an inline image.
 const nInline = /<wp:inline/.test(normal);
 
 log('bridge header split (2 cells, no gridSpan):', bSplit, '| normal gridSpan-2 kept:', nSpan);
-log('bridge medallion INLINE in band (156px):', bMedallionInBand, '| band cell bottom-aligned:', bBottomAlign, '| no float in band:', bNoFloatInBand);
+log('bridge medallion FLOAT (156px):', bFloat && bSized, '| negative V offset:', bNegV, '| escapes cell:', bEscapesCell, '| band row empty:', bNotInBandRow);
 log('normal sidebar-top photo stays inline:', nInline);
-const ok = bSplit && nSpan && bMedallionInBand && bBottomAlign && bNoFloatInBand && nInline;
+const ok = bSplit && nSpan && bFloat && bSized && bNegV && bEscapesCell && bNotInBandRow && nInline;
 log(ok ? 'PHOTO-BRIDGE-EXPORT OK' : 'PHOTO-BRIDGE-EXPORT FAIL');
 process.exit(ok ? 0 : 1);

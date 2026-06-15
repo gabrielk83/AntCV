@@ -26094,9 +26094,14 @@ function renderCompetencyTable(s, ctx) {
   // cell padding 6px, expertise text LEFT-aligned. The worker's 0.326 ratio +
   // 8px (120 DXA) margins left the expertise text column ~5% narrower than
   // the preview's, so the export wrapped earlier from line 3 on. Defaults now
-  // match the measured preview: ratio 0.30, margins 90 DXA (6px); a forwarded
+  // match the measured preview: margins 90 DXA (6px); a forwarded
   // tableRatio/tableWidth still wins.
-  const col1 = Math.round(tableW * (explicitRatio !== null ? explicitRatio : 0.3));
+  // TABLE-RATIO-PARITY-001 (owner 2026-06-15): the live preview table component
+  // defaults the Focus-Area ratio to 0.25 (app.src.js ~4281), but the worker
+  // still used 0.30 — so the EXPORT's first column was wider and the Strategic
+  // Expertise cells wrapped earlier ("smaller ratio for 1st row" / "one line").
+  // Match the preview default at 0.25 (a forwarded s.tableRatio still wins).
+  const col1 = Math.round(tableW * (explicitRatio !== null ? explicitRatio : 0.25));
   const col2 = tableW - col1;
   const tableHeaderBg = style && style.tableHeaderBg || style.mainHeadColor;
   const border = { style: BorderStyle.SINGLE, size: 4, color: tableHeaderBg };
@@ -27186,7 +27191,11 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   band seam. Freed the float (layoutInCell:false) + PAGE-relative horizontal
 //   to the sidebar-column centre. Needs an owner PDF check to fine-tune the
 //   vertical lift if LibreOffice positions it slightly off.
-var VERSION = "1.14.66-photo-bridge-export";
+// 1.14.67 (owner 2026-06-15): TABLE-RATIO-PARITY-001 - the competency/What-I-Bring
+//   table Focus-Area ratio default 0.30 -> 0.25 to match the live preview
+//   (app.src.js ~4281), so the export's first column is narrower and the
+//   Strategic Expertise cells fit one line. A forwarded s.tableRatio still wins.
+var VERSION = "1.14.67-table-ratio-parity";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

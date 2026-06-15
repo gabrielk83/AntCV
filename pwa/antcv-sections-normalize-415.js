@@ -162,6 +162,55 @@
     return changed ? out : null;
   }
 
+  // FOUNDED-ESTABLISHED-001 (owner 2026-06-15): the owner prefers "Established"
+  // over the Founder-family word "Founded" at the start of a role bullet (the
+  // Kanzen consultancy bullet kept coming back as "Founded a consultancy …").
+  function foundedToEstablished(cv) {
+    var changed = false;
+    var out = cv.map(function (s) {
+      if (!s || s.type !== 'experience' || !Array.isArray(s.roles)) return s;
+      var roles = s.roles.map(function (r) {
+        if (!r || !Array.isArray(r.bullets)) return r;
+        var roleChanged = false;
+        var bl = r.bullets.map(function (b) {
+          if (typeof b === 'string' && /^\s*founded\b/i.test(b)) {
+            roleChanged = true; changed = true;
+            return b.replace(/^(\s*)founded\b/i, '$1Established');
+          }
+          return b;
+        });
+        return roleChanged ? Object.assign({}, r, { bullets: bl }) : r;
+      });
+      return changed && roles.some(function (r, i) { return r !== s.roles[i]; })
+        ? Object.assign({}, s, { roles: roles }) : s;
+    });
+    return changed ? out : null;
+  }
+
+  // CUST-CHANGE-DUP-001 (owner 2026-06-15): the consensus appends a duplicate
+  // "Customer Change Requests Specialist" role overlapping the merged
+  // "… Change Control Lead" role at the same company. dedupeRoles can't catch it
+  // (neither title contains the other). Drop the duplicate when a Change-Control
+  // role exists — its content is already covered there.
+  function dropCustomerChangeDup(cv) {
+    var changed = false;
+    var out = cv.map(function (s) {
+      if (!s || s.type !== 'experience' || !Array.isArray(s.roles)) return s;
+      var hasChangeControl = s.roles.some(function (r) {
+        return r && /change\s*control/i.test(String(r.title || ''));
+      });
+      if (!hasChangeControl) return s;
+      var kept = s.roles.filter(function (r) {
+        var t = String((r && r.title) || '');
+        var isDup = /(customer\s*change|change\s*requests?)/i.test(t) && !/change\s*control/i.test(t);
+        return !isDup;
+      });
+      if (kept.length !== s.roles.length) { changed = true; return Object.assign({}, s, { roles: kept }); }
+      return s;
+    });
+    return changed ? out : null;
+  }
+
   // ROLE-FOUNDER-001 band fix (owner 2026-06-14): the candidate band renders the
   // STORED meta.role / meta.subtitle ("Application: Founder & Product / Project
   // Expert - Unsolicited"), which the export strip never touches and the JSON
@@ -210,6 +259,8 @@
       var cv = b.cv;
       var changed = false;
       var k = canonKanzen(cv); if (k) { cv = k; changed = true; }
+      var cc = dropCustomerChangeDup(cv); if (cc) { cv = cc; changed = true; }
+      var fe = foundedToEstablished(cv); if (fe) { cv = fe; changed = true; }
       var pt = stripPatentFromRoles(cv); if (pt) { cv = pt; changed = true; }
       var d = dedupeRoles(cv); if (d) { cv = d; changed = true; }
       var f = stripFounder(cv); if (f) { cv = f; changed = true; }

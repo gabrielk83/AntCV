@@ -115,10 +115,12 @@ const grids = [...cvXml.matchAll(/<w:gridCol w:w="(\d+)"\/><w:gridCol w:w="(\d+)
   .map((m) => [Number(m[1]), Number(m[2])]);
 const compGrid = grids.find(([a, b]) => Math.abs(a + b - cv.width) <= 2);
 const ratio = compGrid ? compGrid[0] / (compGrid[0] + compGrid[1]) : null;
-const E = ratio != null && Math.abs(ratio - 0.30) < 0.005;
+// TABLE-RATIO-PARITY-001 (1.14.67): worker default ratio now 0.25 to match the
+// live preview component default (app.src.js ~4281).
+const E = ratio != null && Math.abs(ratio - 0.25) < 0.005;
 const F = /<w:left w:type="dxa" w:w="90"\/>/.test(cvXml);
 const G = !/<w:jc w:val="both"\/>/.test(cvXml.slice(cvXml.indexOf('Strategic Expertise')));
-log(`CHECK E (Focus Area ratio 0.30, got ${ratio == null ? 'n/a' : ratio.toFixed(3)}): ${E ? 'PASS' : 'FAIL'}`);
+log(`CHECK E (Focus Area ratio 0.25, got ${ratio == null ? 'n/a' : ratio.toFixed(3)}): ${E ? 'PASS' : 'FAIL'}`);
 log(`CHECK F (cell margins 90 DXA = preview 6px): ${F ? 'PASS' : 'FAIL'}`);
 log(`CHECK G (expertise cells not justified): ${G ? 'PASS' : 'FAIL'}`);
 const ok = A && B && C && D && E && F && G;

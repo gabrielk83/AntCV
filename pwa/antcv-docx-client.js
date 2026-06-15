@@ -1349,11 +1349,40 @@ function normalizeSections(raw) {
           if (_autoRp)   for (const k in _autoRp)   { const n = parseInt(_autoRp[k], 10);   if (Number.isFinite(n) && n >= 2) rowPages[k] = Math.max(rowPages[k] || 0, n); }
           if (!Object.keys(rowPages).length) rowPages = null;
         }
+        // WIB-TABLE-DIMS-001 (owner 2026-06-14, backlog item 5): the WHAT I BRING
+        // table (and CV Core Competencies) exported at the worker's DEFAULT width
+        // / column split because the per-section dimensions the user dragged in
+        // the preview were NEVER forwarded. The worker reads s.tableWidth (DXA)
+        // and s.tableRatio per section (renderCompetencyTable) — attach them here.
+        // Width comes from stylePrefs.tableWidthPct[id] (non-default only, same
+        // default-DXA mapping as computeTableWidthDxa); ratio from the doc-level
+        // clTableRatio ("bring"/CL) or cvTableRatio (CV). An explicit value
+        // already on the section still wins.
+        let _twDxa, _tRatio;
+        try {
+          const _piRaw = (typeof localStorage !== 'undefined') ? localStorage.getItem('personalInfo') : null;
+          const _pi = _piRaw ? JSON.parse(_piRaw) : {};
+          const _pctMap = (_pi && _pi.stylePrefs && _pi.stylePrefs.tableWidthPct) || {};
+          const _isClTable = s.id === 'bring';
+          const _pct = _pctMap[s.id];
+          if (typeof _pct === 'number' && isFinite(_pct) && Math.abs(_pct - 100) >= 1) {
+            _twDxa = Math.round((_isClTable ? 9602 : 6630) * (_pct / 100));
+          }
+          const _rk = _isClTable ? 'clTableRatio' : 'cvTableRatio';
+          let _rRaw = (typeof localStorage !== 'undefined') ? localStorage.getItem(_rk) : null;
+          if (_rRaw != null) { try { const _p = JSON.parse(_rRaw); if (typeof _p === 'number') _rRaw = _p; } catch (_) {} }
+          const _rNum = Number(_rRaw);
+          if (isFinite(_rNum) && _rNum > 0.05 && _rNum < 0.95) _tRatio = _rNum;
+        } catch (_) {}
+        if (typeof s.tableWidth === 'number' && s.tableWidth > 0) _twDxa = s.tableWidth;
+        if (typeof s.tableRatio === 'number' && s.tableRatio > 0.05 && s.tableRatio < 0.95) _tRatio = s.tableRatio;
         return {
           ...base,
           rows: Array.isArray(s.rows) ? s.rows.map(r => Array.isArray(r) ? r.map(String) : []) : [],
           ...(s.hidden ? { hidden: s.hidden } : {}),
           ...(rowPages ? { row_pages: rowPages } : {}),
+          ...(_twDxa !== undefined ? { tableWidth: _twDxa } : {}),
+          ...(_tRatio !== undefined ? { tableRatio: _tRatio } : {}),
         };
       }
 

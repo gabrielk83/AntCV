@@ -24546,6 +24546,12 @@ function buildTwoColumnDocument(ctx) {
   const photoInMain = maybeBuildPhotoFor(ctx, "main");
   const photoMainBottom = maybeBuildPhotoFor(ctx, "main-bottom");
   const photoBridge = maybeBuildPhotoFor(ctx, "bridge");
+  // PHOTO-BRIDGE-NONFLOAT-001 (owner 2026-06-15): for band-overlap, build a
+  // NON-FLOAT inline medallion that sits at the bottom of the candidate band's
+  // sidebar-width cell (see buildBridgeMedallionInline). When present it REPLACES
+  // the old sidebar-top float (which PDF dropped) — see sidebarChildren below.
+  const __bandOverlap = normalisePhotoPosition(ctx.pi && ctx.pi.photoPosition) === "band-overlap" && !!(ctx.pi && ctx.pi.photo_b64);
+  const bridgeMedallion = __bandOverlap ? buildBridgeMedallionInline(ctx) : null;
   // Owner 2026-06-05: the AI disclosure goes to whichever COLUMN's text
   // ends higher (more empty space below it). The PWA forwards the page
   // side it measured (ctx.aiWmSide: 'left'|'right'); map it to the sidebar
@@ -24559,7 +24565,10 @@ function buildTwoColumnDocument(ctx) {
     // at the TOP of the page-1 sidebar (its floating position is page-relative,
     // so the anchor only decides which page carries it).
     ...photoBridge ? [buildPhotoParagraph(ctx, photoBridge)] : [],
-    ...photoTopOfSidebar ? [photoTopOfSidebar] : [],
+    // PHOTO-BRIDGE-NONFLOAT-001: in band-overlap mode the medallion now lives in
+    // the candidate band's left cell (non-float), so DROP the old sidebar-top
+    // float here. Genuine sidebar-top photos still render.
+    ...(photoTopOfSidebar && !bridgeMedallion) ? [photoTopOfSidebar] : [],
     ...sidebarSecs.flatMap((s) => renderSection(
       s,
       ctx,
@@ -24709,7 +24718,11 @@ function buildTwoColumnDocument(ctx) {
         shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
         borders: noBorders(),
         margins: { top: 240, bottom: 80, left: 80, right: 80 },
-        children: [emptyParagraph()]
+        // PHOTO-BRIDGE-NONFLOAT-001: the medallion sits BOTTOM-anchored in the
+        // band's sidebar-width cell so it rests on the band↔sidebar seam, over
+        // the sidebar column (non-float → survives PDF + DOCX).
+        verticalAlign: VerticalAlign.BOTTOM,
+        children: [bridgeMedallion || emptyParagraph()]
       }),
       new TableCell({
         width: { size: PAGE_W - ctx.sidebarW, type: WidthType.DXA },
@@ -25443,6 +25456,41 @@ function buildPhotoParagraph(ctx, position) {
   });
 }
 __name(buildPhotoParagraph, "buildPhotoParagraph");
+function buildBridgeMedallionInline(ctx) {
+  // PHOTO-BRIDGE-NONFLOAT-001 (owner 2026-06-15): the band-overlap medallion
+  // used a FLOATING image to straddle the band/sidebar seam, but
+  // LibreOffice/CloudConvert DROP floats on the PDF path (and the float wasn't
+  // straddling in DOCX either) — so no bridge in either output. Owner chose a
+  // NON-FLOAT bridge. Flow OOXML cannot make one element overlap two stacked
+  // cells (cells clip; only floats overlap), so the achievable non-float bridge
+  // is an INLINE medallion seated at the BOTTOM of the candidate band's
+  // sidebar-width cell, centred over the sidebar column — it reads as emerging
+  // from the band onto the seam and renders identically in DOCX and PDF.
+  const { pi, style } = ctx;
+  if (!pi || !pi.photo_b64) return null;
+  const data = base64ToUint8Array(pi.photo_b64);
+  const fwdPx = Number(pi.photoSizePx);
+  const px = Number.isFinite(fwdPx) && fwdPx >= 40 && fwdPx <= 260 ? Math.round(fwdPx) : 156;
+  const outlineColor = (style && style.photoBorderColor || style && style.sidebarHeadColor || style && style.accent || "01B7BB").replace(/^#/, "");
+  return new Paragraph({
+    alignment: AlignmentType.CENTER,
+    spacing: { before: 0, after: 0, line: 1, lineRule: "exact" },
+    children: [
+      new ImageRun({
+        data,
+        type: detectImageType(pi.photo_b64),
+        transformation: { width: px, height: px },
+        outline: { width: 12700, solidFillType: "rgb", value: outlineColor },
+        altText: {
+          title: "Profile photo",
+          description: pi.name ? "Profile photo of " + pi.name : "Profile photo",
+          name: "profile-photo"
+        }
+      })
+    ]
+  });
+}
+__name(buildBridgeMedallionInline, "buildBridgeMedallionInline");
 function buildPhotoRowTable(ctx, position, contentParagraphs, containerWidth) {
   const photoPara = buildPhotoParagraph(ctx, position);
   const isHeader = position === "header-left" || position === "header-right";
@@ -27215,7 +27263,18 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   PAGE_W-400 at the signature right-tab, the CL table column width, and the
 //   WHAT-I-BRING default width so the table still fits the narrower body.
 //   diag-cl-margins 4/4 (pgMar L/R=200, top=0, band -200 indent, table 9205<=11506).
-var VERSION = "1.14.69-cl-edge-margins";
+// 1.14.70 (owner 2026-06-15): PHOTO-BRIDGE-NONFLOAT-001 - the band-overlap
+//   medallion is no longer a FLOAT (LibreOffice/CloudConvert drop floats on the
+//   PDF path, so it never bridged in PDF, nor straddled in DOCX). Owner chose a
+//   NON-FLOAT bridge. The medallion is now an INLINE image seated BOTTOM-anchored
+//   in the candidate band's sidebar-width cell (buildBridgeMedallionInline),
+//   centred over the sidebar column, resting on the band-sidebar seam — renders
+//   identically in DOCX and PDF. The old sidebar-top float is dropped in
+//   band-overlap mode. NOTE: flow OOXML cannot half-straddle across stacked
+//   cells (cells clip; only floats overlap), so this seats the medallion at the
+//   band bottom rather than centring it on the seam. diag-photo-bridge-export
+//   updated to assert the inline-in-band structure. Needs an owner DOCX+PDF look.
+var VERSION = "1.14.70-bridge-nonfloat";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

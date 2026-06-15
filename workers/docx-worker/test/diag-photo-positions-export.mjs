@@ -124,9 +124,18 @@ function check(name, ok, detail) { checks.push({ name, ok, detail }); log(`${nam
   check('none (Hidden) exports NO photo', noImage, '');
 }
 {
+  // PHOTO-BRIDGE-NONFLOAT-001 (1.14.70): band-overlap is now a NON-FLOAT inline
+  // medallion seated bottom-anchored in the candidate band's first cell (floats
+  // were dropped by LibreOffice on the PDF path). It must be INLINE (no anchor)
+  // at the forwarded 156px, inside the first table row, on a bottom-aligned cell.
   const xml = await gen({ photoPosition: 'band-overlap', photoSizePx: 156 });
   const sized = xml.includes('cx="1485900" cy="1485900"');
-  check('band-overlap regression (anchor + 156px)', /<wp:anchor/.test(xml) && sized, '');
+  const firstRow = xml.slice(xml.indexOf('<w:tr'), xml.indexOf('</w:tr>'));
+  const inlineInBand = /<wp:inline/.test(firstRow) && firstRow.includes('cx="1485900" cy="1485900"');
+  const noFloatInBand = !/<wp:anchor/.test(firstRow);
+  const bottomAligned = /<w:vAlign w:val="bottom"\/>/.test(firstRow);
+  check('band-overlap non-float inline medallion in band (156px, bottom)', sized && inlineInBand && noFloatInBand && bottomAligned,
+    JSON.stringify({ sized, inlineInBand, noFloatInBand, bottomAligned }));
 }
 {
   // slider parity: sidebar-top follows the forwarded diameter now

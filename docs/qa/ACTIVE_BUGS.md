@@ -1,3 +1,22 @@
+## SESSION REGISTRY — 2026-06-14/15 — 1.50.468 → 1.50.474 + docx-worker 1.14.64 → 1.14.66
+
+Owner-driven batch + a nightly autonomous job set up. Every fix verified by a headless render
+PAST the sign-in gate (not boot-smoke) or a unit/worker diag before deploy; pushed to `main` only
+(mirror branches retired). The minified-mirror-shadow-hazard bit twice and was caught both times
+(see that memory — de-min names ≠ minified names; anchor on string literals, copy blocks verbatim).
+
+**Fixed + shipped this session:**
+- `LAYOUT-BATCH-1..5` `[SHIPPED 1.50.469 + worker 1.14.64]` — CL signature + AI-assisted on ONE line; sidebar sections keep-together (cantSplit) so a short block moves whole to the next page; experience bullets tighter line (252); WHY-YOUR-COMPANY heading for unsolicited; HIWC intro orphan trim.
+- `CL-PROMPT-WHO-WHY-001` `[SHIPPED 1.50.470]` — WHO I AM end-on-a-full-line orphan guard; WHY content must not narrow to "the work I do best: electro-optics" (frame the breadth).
+- `ADV-SPACING-PANEL-001 / BULLETGAP-001` `[SHIPPED 1.50.471 + worker 1.14.65]` — collapsible "SPACING & INDENTS" group (area-labelled) + new bullet marker-to-text gap, wired preview + worker.
+- `ADV-STYLES-MERGE-001` (backlog item 14) `[SHIPPED 1.50.472]` — Line Targets + Section Formats merged into Section Layout; the two standalones removed; LayoutPicker re-anchored on a thin `data-antcv-format-prefs` div, no island rebuild.
+- `RECS-ORDER-PREVIEW-001` (backlog item 8) `[SHIPPED 1.50.473]` — RECOMMENDATIONS rendered before PROFESSIONAL EXPERIENCE in the preview (state + export were correct). The main column composed [all non-exp sections]→[experience]; now splits oMain by document position relative to the experience anchor (before/after) in both layout branches. Verified headless.
+- `OUTCOMES-RESULTS-ORIGROLES-001 / BESTMATCH-001` (CV results) `[SHIPPED 1.50.474]` — same outcome on multiple roles (linear preview rendered per-role with roles:[t], no __antcvOrigRoles → each role distributed over itself) + wrong role (first-token-match). Forward the full role list; assign by MOST shared tokens (best-match). Preview + export. Verified headless: each outcome on its correct role, no cross-role dup.
+- `PHOTO-BRIDGE-EXPORT-001` (backlog item 4) `[SHIPPED docx-worker 1.14.66 — owner PDF verify owed]` — the band-overlap "Sidebar bridge" medallion exported flat at sidebar-top: layoutInCell defaults TRUE in the docx lib, clamping the float inside the sidebar cell so its negative lift couldn't rise into the band. Fixed: layoutInCell:false + PAGE-relative horizontal (sidebar-column centre). diag-photo-bridge-export extended (layoutInCell="0" + PAGE-relative H) + 69/69 worker tests. Vertical seam alignment needs an owner PDF check to fine-tune.
+- `NIGHTLY-001` `[SET UP]` — persistent scheduled task `antcv-nightly` (~02:46 local daily) runs the backlog autonomously with the full ship discipline + verify-before-ship safety valves. First run pauses on tool approvals → owner should "Run now" once to pre-approve.
+
+---
+
 ## SESSION REGISTRY — 2026-06-14 (continued) — 1.50.446 → 1.50.455
 
 Desktop session. Copenhagen palette + export + outcomes + crash-recovery work. Every fix

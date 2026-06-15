@@ -58,6 +58,10 @@ Shipped to `main`, version bumped, headless test green (the REAL component rende
 
 ## 5. The nightly — DISPATCHABLE, PARALLELISED, MOBILE-TRACKED
 A persistent scheduled task `antcv-nightly` runs this backlog autonomously with the same discipline.
+- **Session start (do FIRST, in order):**
+  1. `/login` — complete claude.ai auth (forced via `forceLoginMethod: "claudeai"`). Remote control will not attach without a completed login.
+  2. `/remote-control` — attach RC for the session. It already auto-attaches at startup via `remoteControlAtStartup: true`; run this only to confirm/re-attach if the bottom-right does NOT already show `/rc active`.
+  Both are interactive CLI built-ins (forward slash `/`, not a tool, not a shell command) — type them in the prompt of an attended desktop/CLI session. They cannot run in an unattended cron leg; for the cron dispatch, the `remoteControlAtStartup`/push toggles in `~/.claude/settings.json` cover attach + mobile tracking.
 - **Dispatch:** runs on its daily cron (~02:46 local) AND on demand — "Run now" from the Scheduled sidebar. Each run is a FRESH code session. (First "Run now" also pre-approves its tools so future runs don't pause on permission prompts.)
 - **Mobile track + control:** the three toggles in `~/.claude/settings.json` are ON — `agentPushNotifEnabled`, `inputNeededNotifEnabled`, `remoteControlAtStartup` — so the spawned session is push-notified and remote-controllable from the phone (see `claude-code-session-config` memory; `/config` is unavailable in this client, edit `settings.json` directly). The prompt actively pushes at: session start, each ship, any owner-decision point (then WAITS for a one-line mobile reply), and completion (`notifyOnCompletion` is also on). A mobile reply mid-run is treated as a higher-priority instruction.
 - **Parallelisation:** fan out concurrent diagnose/patch subagents for non-overlapping items; integrate + verify + deploy strictly serial (one deployer at a time; same-file edits never concurrent).

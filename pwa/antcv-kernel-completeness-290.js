@@ -329,7 +329,13 @@
     var r;
     r = checkRolesStrict(cv.experience_roles, 3);
     if (r) missing.push(r);
-    r = checkDataRowsStrict(cv.core_comp_rows, 4, 'cv_overrides.core_comp_rows');
+    // CORE-COMP-RETRY-HANG-001 (owner 2026-06-15): require >=3 data rows, not 4.
+    // 4 forced a full PartialResponse RETRY whenever the LLM returned exactly 3
+    // competency rows — burning all 4 generate attempts (multi-minute hang +
+    // the subtitle reverting to the [Specialisation …] placeholder), then ending
+    // with 3 rows anyway. 3 matches the CL equivalent (cl.bring_rows, below) and
+    // experience_roles — a 3-row Core Competencies table is acceptable.
+    r = checkDataRowsStrict(cv.core_comp_rows, 3, 'cv_overrides.core_comp_rows');
     if (r) missing.push(r);
     r = checkDataRowsStrict(cl.bring_rows, 3, 'cl_overrides.bring_rows');
     if (r) missing.push(r);

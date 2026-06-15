@@ -25362,13 +25362,20 @@ function buildPhotoParagraph(ctx, position) {
     // A FLOATING image anchored on the sidebar's first paragraph, lifted by
     // half its diameter (+ the sidebar cell's 16px top margin) so its midline
     // sits on the row boundary; the anchor paragraph reserves the bottom half
-    // plus a 14px gap in the flow so the first sidebar section clears it.
+    // so the first sidebar section clears it.
+    // PHOTO-SIDEBAR-GAP-001 (owner 2026-06-15: "photo too far from the text under
+    // it, ~0.6in up"): the reserve was (px/2+14) — ~0.3in of air below the
+    // medallion's bounding box. Tightened to (px/2-12) so the first sidebar
+    // section sits just under the medallion's lower edge (≈4px clearance), moving
+    // it up ~0.27in. The full 0.6in isn't safe at the default diameter — the
+    // medallion's lower half occupies that space and the text would overlap it;
+    // a smaller photo Diameter yields more clearance.
     const fwdPx = Number(pi.photoSizePx);
     const px = Number.isFinite(fwdPx) && fwdPx >= 40 && fwdPx <= 260 ? Math.round(fwdPx) : 156;
     const offsetEmu = -Math.round((px / 2 + 16) * 9525);
     return new Paragraph({
       alignment: AlignmentType.CENTER,
-      spacing: { before: 0, after: Math.round((px / 2 + 14) * 15) },
+      spacing: { before: 0, after: Math.max(60, Math.round((px / 2 - 12) * 15)) },
       children: [
         new ImageRun({
           data,
@@ -26317,10 +26324,14 @@ function renderExperience(s, ctx) {
         spacing: { before: 40, after: 60, line: 252, lineRule: "auto" },
         children: [
           new TextRun({
+            // RESULTS-PDF-INK-BLACK-001 (owner 2026-06-15): the per-role "Results:"
+            // LABEL is a main inline label, so it follows MAIN-HEADINGS-GREEN-001
+            // → mainHeadColor (teal #00746E), not the black body ink. The outcome
+            // text after it stays neutral body ink (content, like company/year).
             text: "Results: ",
             bold: true,
             italics: true,
-            color: style.mainTextColor,
+            color: style.mainHeadColor,
             size: pt2hp(fs.mainBody),
             font: style.mainBodyFont
           }),
@@ -27241,7 +27252,15 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   on the band-sidebar seam). The split band header keeps its empty photo zone.
 //   Removed buildBridgeMedallionInline. Needs an owner PDF look to confirm the
 //   straddle now that the position forwards correctly.
-var VERSION = "1.14.72-main-headings-green";
+// 1.14.73 (owner 2026-06-15): (a) RESULTS-PDF-INK-BLACK-001 — the per-role
+//   "Results:" inline LABEL now uses mainHeadColor (teal #00746E on Copenhagen,
+//   matching MAIN-HEADINGS-GREEN-001 role names/labels) instead of black body
+//   ink; the outcome text after it stays neutral. (b) PHOTO-SIDEBAR-GAP-001 —
+//   the band-overlap bridge reserved ~0.3in of air below the medallion; tightened
+//   the anchor's spacing-after from (px/2+14) to (px/2-12) so the first sidebar
+//   section sits just under the medallion (~0.27in higher; the full 0.6in would
+//   overlap the photo at the default diameter).
+var VERSION = "1.14.73-results-ink-photo-gap";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

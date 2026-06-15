@@ -22,7 +22,7 @@ const PACKAGES = {
     // mainHeadColor on the white main column); `ground` is the new pale panel
     // colour used only for the sidebar/header/table backgrounds, and the
     // on-ground text colours invert to dark via readableInk() below.
-    base: '283556', ground: 'C9D6EC', primary: '00746E', interactive: '0B74DE',
+    base: '283556', band: '33446F', ground: 'C9D6EC', primary: '00746E', interactive: '0B74DE',
     bullet: '00746E', glyph: '0B74DE',
     headingFont: 'Segoe UI', bodyFont: 'Calibri',
   },
@@ -132,6 +132,10 @@ export function getPackageStyle(packageId, legacyAtsTier = false) {
   // the dark-ink targets keep using `base`. On-ground text inverts via
   // readableInk(ground) — dark on a pale ground, white on a dark one.
   const ground = p.ground || p.base;
+  // COPENHAGEN-BLUE-BRIGHTER-001 (owner 2026-06-15): the candidate band + table
+  // header use a slightly brighter blue `band` when a package defines one, else
+  // the dark `base`. mainHeadColor (main-column section headings) keeps `base`.
+  const band = p.band || p.base;
   return {
     // Legacy aliases that pre-v1.50.8 code may still read.
     navy: p.base,
@@ -146,15 +150,15 @@ export function getPackageStyle(packageId, legacyAtsTier = false) {
     sidebarHeadColor: p.primary,
     sidebarTextColor: readableInk(ground),
     sidebarLabelColor: readableInk(ground),
-    // The candidate band + table header keep the dark brand `base` (navy) with
-    // white ink — only the SIDEBAR uses the pale `ground` (owner 2026-06-13).
-    headerBg: p.base,
-    headerNameColor: readableInk(p.base),
-    headerSpecColor: readableInk(p.base),
-    headerContactColor: readableInk(p.base),
+    // The candidate band + table header use the brighter `band` brand blue with
+    // white ink — only the SIDEBAR uses the pale `ground` (owner 2026-06-13/15).
+    headerBg: band,
+    headerNameColor: readableInk(band),
+    headerSpecColor: readableInk(band),
+    headerContactColor: readableInk(band),
     photoBorderColor: p.primary,
-    tableHeaderBg: p.base,
-    tableHeaderText: readableInk(p.base),
+    tableHeaderBg: band,
+    tableHeaderText: readableInk(band),
 
     // Fonts. The registry stores headingFont as e.g. "Segoe UI Bold";
     // OOXML treats the font name as a face name, and bold weight is

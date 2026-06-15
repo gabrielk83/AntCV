@@ -16613,7 +16613,7 @@
           "copenhagen-modern": {
             label: "Copenhagen Modern",
             style: {
-              headerBg: "#283556",
+              headerBg: "#33446F",
               sidebarBg: "#C9D6EC",
               headerNameColor: "#FFFFFF",
               headerSpecColor: "#FFFFFF",
@@ -16633,7 +16633,7 @@
               mainYearColor: "#595959",
               mainHeadFont: "Trebuchet MS",
               mainBodyFont: "Calibri",
-              tableHeaderBg: "#283556",
+              tableHeaderBg: "#33446F",
               tableHeaderText: "#FFFFFF",
               tableOddBg: "#FFFFFF",
               tableEvenBg: "#FAFAFA",
@@ -40788,7 +40788,7 @@
                 // plain text. Separators unchanged (Bridge round 3: ONE space
                 // around the bullet when the bridge is on).
                 u.flatMap(([e, t], _i) => {
-                  const _sep = _i ? [__bridgeOn ? " • " : "  •  "] : [];
+                  const _sep = _i ? [__bridgeOn ? " • " : " • "] : [];
                   if (/linkedin\.com/i.test(String(t))) {
                     const _v = String(t).trim();
                     return [

@@ -23896,6 +23896,7 @@ __name(postProcessDocx, "postProcessDocx");
 var PACKAGES = {
   "copenhagen-modern": {
     base: "283556",
+    band: "33446F",
     ground: "C9D6EC",
     primary: "00746E",
     interactive: "0B74DE",
@@ -24012,6 +24013,10 @@ function getPackageStyle(packageId, legacyAtsTier = false) {
   // sidebar text invisible on the pale Copenhagen ground whenever the payload
   // omitted the override tokens.
   const ground = p.ground || p.base;
+  // COPENHAGEN-BLUE-BRIGHTER-001 (owner 2026-06-15): candidate band + table
+  // header use a brighter `band` blue when defined, else dark `base`.
+  // mainHeadColor (main-column section headings) keeps `base`.
+  const band = p.band || p.base;
   return {
     // Legacy aliases that pre-v1.50.8 code may still read.
     navy: p.base,
@@ -24025,13 +24030,13 @@ function getPackageStyle(packageId, legacyAtsTier = false) {
     sidebarHeadColor: p.primary,
     sidebarTextColor: readableInk(ground),
     sidebarLabelColor: readableInk(ground),
-    headerBg: p.base,
-    headerNameColor: readableInk(p.base),
-    headerSpecColor: readableInk(p.base),
-    headerContactColor: readableInk(p.base),
+    headerBg: band,
+    headerNameColor: readableInk(band),
+    headerSpecColor: readableInk(band),
+    headerContactColor: readableInk(band),
     photoBorderColor: p.primary,
-    tableHeaderBg: p.base,
-    tableHeaderText: readableInk(p.base),
+    tableHeaderBg: band,
+    tableHeaderText: readableInk(band),
     // Fonts. The registry stores headingFont as e.g. "Segoe UI Bold";
     // OOXML treats the font name as a face name, and bold weight is
     // applied as a separate attribute on text runs. Strip the trailing
@@ -25198,7 +25203,7 @@ function buildHeaderCell(ctx) {
         // header colours kept). Font sizing unchanged: estimated from the
         // FULL joined text exactly as before.
         const bridge = normalisePhotoPosition(pi.photoPosition) === "band-overlap" && pi.photo_b64 && ctx.doc !== "cl";
-        const sep = bridge ? " \u2022 " : "   \u2022   ";
+        const sep = bridge ? " \u2022 " : " \u2022 ";
         const full = contactBits.map((b) => b.text).join(sep);
         let pt = fs.contactSize;
         if (bridge) {
@@ -27195,7 +27200,15 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   table Focus-Area ratio default 0.30 -> 0.25 to match the live preview
 //   (app.src.js ~4281), so the export's first column is narrower and the
 //   Strategic Expertise cells fit one line. A forwarded s.tableRatio still wins.
-var VERSION = "1.14.67-table-ratio-parity";
+// 1.14.68 (owner 2026-06-15): COPENHAGEN-BLUE-BRIGHTER-001 - the Copenhagen
+//   candidate band + table header move from dark navy 283556 to a brighter blue
+//   33446F via a new per-package `band` token (getPackageStyle headerBg/
+//   tableHeaderBg = p.band||p.base). mainHeadColor (main-column section headings)
+//   keeps base navy, preserving preview parity. White band/table text retained
+//   (readableInk(33446F) -> white, 9.56:1). CL-CONTACT-ONELINE-001 - the
+//   candidate contact-line separator tightened "   •   " -> " • " so the row
+//   stays one line. diag-copenhagen-blue-cl 4/4 + diag-bundle-palette-sync 5/5.
+var VERSION = "1.14.68-copenhagen-blue-cl-contact";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

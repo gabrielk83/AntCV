@@ -56,8 +56,12 @@ Full root-cause detail + fix file:lines are in the `ACTIVE_BUGS.md` OPEN ISSUES 
 ## 4. Definition of done per item
 Shipped to `main`, version bumped, headless test green (the REAL component rendered), worker deployed if touched, and the `OPEN ISSUES` / `SESSION REGISTRY` blocks in `docs/qa/ACTIVE_BUGS.md` updated with the ID + `[SHIPPED x.y.z]`. Re-verify export items in a real DOCX/PDF before marking closed.
 
-## 5. The nightly (now PARALLELISED)
-A persistent scheduled task `antcv-nightly` (~02:46 local daily) runs this backlog autonomously with the same discipline. The owner can "Run now" from the Scheduled sidebar to pre-approve its tools.
+## 5. The nightly — DISPATCHABLE, PARALLELISED, MOBILE-TRACKED
+A persistent scheduled task `antcv-nightly` runs this backlog autonomously with the same discipline.
+- **Dispatch:** runs on its daily cron (~02:46 local) AND on demand — "Run now" from the Scheduled sidebar. Each run is a FRESH code session. (First "Run now" also pre-approves its tools so future runs don't pause on permission prompts.)
+- **Mobile track + control:** the three toggles in `~/.claude/settings.json` are ON — `agentPushNotifEnabled`, `inputNeededNotifEnabled`, `remoteControlAtStartup` — so the spawned session is push-notified and remote-controllable from the phone (see `claude-code-session-config` memory; `/config` is unavailable in this client, edit `settings.json` directly). The prompt actively pushes at: session start, each ship, any owner-decision point (then WAITS for a one-line mobile reply), and completion (`notifyOnCompletion` is also on). A mobile reply mid-run is treated as a higher-priority instruction.
+- **Parallelisation:** fan out concurrent diagnose/patch subagents for non-overlapping items; integrate + verify + deploy strictly serial (one deployer at a time; same-file edits never concurrent).
+- **claude.ai routine (optional, mobile-native dispatch):** a claude.ai "code trigger" gives a phone-native Run button + live session view. The trigger API (`/v1/code/triggers`, `session_request.worker` discriminated union) wasn't reliably scriptable from this client — create it from the claude.ai app/web UI if you want that surface, pointing it at `gabrielk83/AntCV` with the same instructions as this task. The scheduled task above already covers dispatch + mobile tracking without it.
 
 **Parallelisation (owner 2026-06-15: "allow more task parallelization, especially for daily automated work").** The nightly now fans out **independent, non-overlapping** backlog items to concurrent `Agent` subagents in ONE message, then integrates serially:
 - Dispatch a separate Explore/general-purpose subagent per item whose files do NOT overlap (e.g. (a) SETTINGS-SCROLL-RESET-001, (j) PREVIEW-EXPORT-PAGEBREAK-PARITY-001, the buildHTMLDoc-dims half of CL-TABLE-DIMS, a worker-only diag) — each returns a unit-tested patch + the exact mirror block.

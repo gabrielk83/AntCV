@@ -15,7 +15,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.415';
+  var VERSION = '1.50.499-loc-default';
   if (window.__antcvSectionsNormalize === VERSION) return;
   window.__antcvSectionsNormalize = VERSION;
 
@@ -249,6 +249,31 @@
     } catch (_) {}
   }
 
+  // SECTION-PREVIEW-LOC-001 (owner 2026-06-15: "the new sections are visible in
+  // DOCX but NOT in preview"). Root cause: the PREVIEW renders main-column
+  // sections via `"main" === e.loc` (app.src.js ~17231) and sidebar via
+  // `"sidebar" === e.loc`, so a section whose `loc` is MISSING or invalid renders
+  // in NEITHER preview column — yet the EXPORT (antcv-docx-client.js ~1304) has
+  // NO loc filter and the worker defaults a non-"sidebar" section to the main
+  // column, so it appears in the DOCX/PDF. Imported sections (the owner's
+  // corrected JSON / the LLM parser omitting `loc`) hit this. Fix: stamp a valid
+  // default `loc:'main'` on any section whose loc is not 'main'/'sidebar' — this
+  // makes it visible in the preview's main column, matching where the export
+  // already puts it. Restore-proof (runs in the same poll as the other
+  // normalisers). Loop-safe: returns null when nothing needs changing.
+  function defaultLoc(arr) {
+    if (!Array.isArray(arr)) return null;
+    var changed = false;
+    var out = arr.map(function (s) {
+      if (s && typeof s === 'object' && s.loc !== 'main' && s.loc !== 'sidebar') {
+        changed = true;
+        return Object.assign({}, s, { loc: 'main' });
+      }
+      return s;
+    });
+    return changed ? out : null;
+  }
+
   function normalize() {
     try { normalizeMeta(); } catch (_) {}
     try {
@@ -265,10 +290,18 @@
       var d = dedupeRoles(cv); if (d) { cv = d; changed = true; }
       var f = stripFounder(cv); if (f) { cv = f; changed = true; }
       var p = placeRecs(cv); if (p) { cv = p; changed = true; }
+      var dl = defaultLoc(cv); if (dl) { cv = dl; changed = true; }
+      // SECTION-PREVIEW-LOC-001: also normalise the CL sections' loc so imported
+      // CL sections without a valid loc still render in the preview.
+      var cl = Array.isArray(b.cl) ? b.cl : null;
+      var dlc = cl ? defaultLoc(cl) : null;
+      if (dlc) { cl = dlc; changed = true; }
       if (!changed) return;
-      localStorage.setItem('sections', JSON.stringify(Object.assign({}, b, { cv: cv })));
+      var next = Object.assign({}, b, { cv: cv });
+      if (dlc) next.cl = cl;
+      localStorage.setItem('sections', JSON.stringify(next));
       try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { source: SRC } })); } catch (_) {}
-      try { console.log('[sections-normalize-415] re-applied recommendations placement / founder strip after restore'); } catch (_) {}
+      try { console.log('[sections-normalize-415] re-applied normalisers (recs/founder/loc-default) after restore'); } catch (_) {}
     } catch (_) {}
   }
 

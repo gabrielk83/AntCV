@@ -5451,7 +5451,7 @@
                     ),
                     React.createElement("div", {
                       style: {
-                        borderBottom: `1px solid ${s}`,
+                        borderBottom: `1px solid ${k.mainSubHeadColor || s}`,
                         margin: "2px 0 2px",
                       },
                     }),
@@ -25303,7 +25303,7 @@
                               `<div style="${g};font-family:'Carlito',${d};font-size:${u.mainExp}pt;padding-left:8pt;color:#000;text-align:justify">&#9642; ${r(e || "")}</div>`,
                           )
                           .join(""),
-                        c = `<div style="margin:3pt 0 5pt;mso-para-margin-top:3pt;mso-para-margin-bottom:5pt;page-break-inside:avoid"><table width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse"><tr><td style="vertical-align:bottom">${i}</td><td align="right" style="vertical-align:bottom;white-space:nowrap">${l}</td></tr></table>${f(t.mainLineColor, 1, 2)}<div>${s}</div></div>`;
+                        c = `<div style="margin:3pt 0 5pt;mso-para-margin-top:3pt;mso-para-margin-bottom:5pt;page-break-inside:avoid"><table width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse"><tr><td style="vertical-align:bottom">${i}</td><td align="right" style="vertical-align:bottom;white-space:nowrap">${l}</td></tr></table>${f(t.mainSubHeadColor, 1, 2)}<div>${s}</div></div>`;
                       return n === a && a > 0
                         ? `\x3c!--PG2_START--\x3e<div style="page-break-before:always;margin-top:12pt;margin-bottom:6pt;mso-para-margin-top:12pt;mso-para-margin-bottom:6pt">${h(o("EXPERIENCE (CONT.)"), "#00746E", "left", u.mainHead)}</div>` +
                             c

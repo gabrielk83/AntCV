@@ -24905,11 +24905,11 @@ function buildLinearDocument(ctx) {
     // ITEM-2 (owner 2026-06-14): the AI-assisted disclosure rides on the SAME
     // line as the signature name — name left, disclosure pushed to the right
     // body edge via a right tab — instead of orphaning onto its own line in the
-    // PDF. PAGE_W - 200 is the body content width (PAGE_W minus the two 100-DXA
+    // PDF. PAGE_W - 400 is the body content width (PAGE_W minus the two 200-DXA
     // CL side margins; CL_SIDE_MARGIN is declared later in this function, so the
-    // literal 200 is used here to avoid the temporal-dead-zone reference).
+    // literal 400 is used here to avoid the temporal-dead-zone reference).
     // The page-2 (jd-questions) signature path keeps its own separate disclosure.
-    tabStops: !jdqSec ? [{ type: TabStopType.RIGHT, position: PAGE_W - 200 }] : void 0,
+    tabStops: !jdqSec ? [{ type: TabStopType.RIGHT, position: PAGE_W - 400 }] : void 0,
     children: [
       new TextRun({
         text: pi.name || ({ da: "Dit navn", es: "Tu nombre", zh: "姓名" }[lang] || "Your Name"),
@@ -24938,7 +24938,7 @@ function buildLinearDocument(ctx) {
   // edge). Body content flows as DIRECT section children, so Word/LibreOffice
   // paginate it naturally and the WHAT-I-BRING table (now top-level, centred at
   // ~80%) splits by row across pages.
-  const CL_SIDE_MARGIN = 100; // DXA (0.07") L/R body inset; matches the old body-cell margins
+  const CL_SIDE_MARGIN = 200; // DXA (0.14") L/R body inset — CL-EXPORT-EDGE-MARGINS-001 (owner 2026-06-15: doubled 100->200 for more page-edge breathing room; lines stay tight). body content width = PAGE_W - 2*CL_SIDE_MARGIN = PAGE_W - 400.
   const fullBleedIndent = { type: WidthType.DXA, size: -CL_SIDE_MARGIN };
   const clHeaderBand = new Table({
     width: { size: PAGE_W, type: WidthType.DXA },
@@ -25778,7 +25778,7 @@ function renderSection(s, ctx, isSidebar) {
       // 1.14.24: CL is full-width linear (body cell content = PAGE_W-200=11706),
       // not the MAIN_W column — size CL section wrappers to the full body width
       // so titled CL sections aren't collapsed to ~60%.
-      columnWidths: [(ctx && ctx.doc === "cl") ? (PAGE_W - 200) : ((isSidebar ? ctx.sidebarW : ctx.mainW) - 288)],
+      columnWidths: [(ctx && ctx.doc === "cl") ? (PAGE_W - 400) : ((isSidebar ? ctx.sidebarW : ctx.mainW) - 288)],
       borders: noBorders(),
       rows: [
         new TableRow({
@@ -26089,7 +26089,7 @@ function renderCompetencyTable(s, ctx) {
   // cell (PAGE_W-200), but the WHAT-I-BRING table should be LARGE yet INSET and
   // CENTERED — 1.14.25's PAGE_W-560 (~97%) looked edge-to-edge. ~80% of the body
   // width, centered, leaves a balanced ~0.8" margin each side.
-  const defaultClW = Math.round((PAGE_W - 200) * 0.8);
+  const defaultClW = Math.round((PAGE_W - 400) * 0.8);
   const baseW = isCl ? defaultClW : defaultCvW;
   const tableW = typeof s.tableWidth === "number" && s.tableWidth > 0 ? Math.max(2880, Math.min(PAGE_W - 720, Math.round(s.tableWidth))) : baseW;
   const explicitRatio = typeof s.tableRatio === "number" && s.tableRatio > 0.05 && s.tableRatio < 0.95 ? s.tableRatio : null;
@@ -27208,7 +27208,14 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   (readableInk(33446F) -> white, 9.56:1). CL-CONTACT-ONELINE-001 - the
 //   candidate contact-line separator tightened "   •   " -> " • " so the row
 //   stays one line. diag-copenhagen-blue-cl 4/4 + diag-bundle-palette-sync 5/5.
-var VERSION = "1.14.68-copenhagen-blue-cl-contact";
+// 1.14.69 (owner 2026-06-15): CL-EXPORT-EDGE-MARGINS-001 - the cover-letter L/R
+//   page-edge margin doubled 100->200 DXA (0.07"->0.14") for more breathing room;
+//   lines stay tight within. CL_SIDE_MARGIN 100->200 (band full-bleed indent
+//   follows via -CL_SIDE_MARGIN); the body-content-width literals PAGE_W-200 ->
+//   PAGE_W-400 at the signature right-tab, the CL table column width, and the
+//   WHAT-I-BRING default width so the table still fits the narrower body.
+//   diag-cl-margins 4/4 (pgMar L/R=200, top=0, band -200 indent, table 9205<=11506).
+var VERSION = "1.14.69-cl-edge-margins";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

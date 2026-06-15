@@ -41162,6 +41162,19 @@
                   u = p.length ? Math.max(1, ...p) : 1,
                   m = (e) => o.filter((t) => a(t) === e),
                   mMain = (e) => oMain.filter((t) => a(t) === e),
+                  // RECS-ORDER-PREVIEW-001 (owner 2026-06-14): the main column
+                  // rendered ALL non-experience sections (oMain) BEFORE the
+                  // experience block, so a section that sits AFTER experience in
+                  // document order (RECOMMENDATIONS) wrongly rendered ABOVE it
+                  // (the export was already correct — it follows the array order).
+                  // Split oMain by each section's ORIGINAL position in zi relative
+                  // to the experience anchor: sections before experience render
+                  // before it; sections after (recommendations) render after the
+                  // experience block. __expZi < 0 (no experience) → all stay before.
+                  __expZi = zi.findIndex((s) => s && "experience" === s.type && s.on !== !1),
+                  __ziPos = (sec) => { const i = zi.findIndex((s) => s && s.id === (sec && sec.id)); return i < 0 ? 1e9 : i; },
+                  mMainBefore = (e) => oMain.filter((t) => a(t) === e && (__expZi < 0 || __ziPos(t) < __expZi)),
+                  mMainAfter = (e) => oMain.filter((t) => a(t) === e && __expZi >= 0 && __ziPos(t) > __expZi),
                   g = (e) =>
                     t.filter(
                       (n) =>
@@ -41874,7 +41887,7 @@
                                       },
                                     })
                                   : null,
-                                ...mMain(t.pageNum).map((sec) =>
+                                ...mMainBefore(t.pageNum).map((sec) =>
                                   React.createElement(Ce, {
                                     key: (sec.id || "x") + "_p" + t.pageNum + (sec._antcvSplitCont ? "_c" : ""),
                                     s: sec,
@@ -41939,6 +41952,27 @@
                                   transitionState: kr[n.id],
                                 });
                               }),
+                              // RECS-ORDER-PREVIEW-001: non-experience main
+                              // sections that sit AFTER experience (RECOMMENDATIONS)
+                              // render here, below the experience block.
+                              ...mMainAfter(t.pageNum).map((sec) =>
+                                React.createElement(Ce, {
+                                  key: (sec.id || "x") + "_pa" + t.pageNum + (sec._antcvSplitCont ? "_c" : ""),
+                                  s: sec,
+                                  navyColor: Ke,
+                                  isCL: !1,
+                                  language: je,
+                                  cvTableRatio: Xr,
+                                  clTableRatio: Qr,
+                                  onTableRatioChange: aa,
+                                  fontSizes: Yr,
+                                  styleConfig: ya,
+                                  onEdit: gi && !sec._antcvSplitCont ? r(sec.id) : null,
+                                  textEditMode: gi,
+                                  onBeginTextEdit: () => fi(!0),
+                                  transitionState: kr[sec.id],
+                                }),
+                              ),
                               // PHOTO-POSITIONS-NATIVE-001 round 2: main
                               // bottom left/right — the medallion after the
                               // page-1 main sections, pinned to that side.
@@ -41971,7 +42005,7 @@
                                 : null,
                               ]
                             : [
-                                ...mMain(t.pageNum).map((sec) =>
+                                ...mMainBefore(t.pageNum).map((sec) =>
                                   React.createElement(Ce, {
                                     key: (sec.id || "x") + "_p" + t.pageNum + (sec._antcvSplitCont ? "_c" : ""),
                                     s: sec,
@@ -42073,6 +42107,26 @@
                                         }),
                                       )
                                     );
+                                  }),
+                                ),
+                                // RECS-ORDER-PREVIEW-001: after-experience main
+                                // sections (RECOMMENDATIONS) render below experience.
+                                ...mMainAfter(t.pageNum).map((sec) =>
+                                  React.createElement(Ce, {
+                                    key: (sec.id || "x") + "_pa" + t.pageNum + (sec._antcvSplitCont ? "_c" : ""),
+                                    s: sec,
+                                    navyColor: Ke,
+                                    isCL: !1,
+                                    language: je,
+                                    cvTableRatio: Xr,
+                                    clTableRatio: Qr,
+                                    onTableRatioChange: aa,
+                                    fontSizes: Yr,
+                                    styleConfig: ya,
+                                    onEdit: gi && !sec._antcvSplitCont ? r(sec.id) : null,
+                                    textEditMode: gi,
+                                    onBeginTextEdit: () => fi(!0),
+                                    transitionState: kr[sec.id],
                                   }),
                                 )],
                         ),

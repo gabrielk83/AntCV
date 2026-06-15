@@ -1586,10 +1586,13 @@ export function applyOutcomesMode(docSections, doc) {
     if (!pool.length) return docSections.filter((s) => !isOutcomes(s));
     const assign = visRoles.map(() => []);
     const left = [];
+    // OUTCOMES-RESULTS-BESTMATCH-001 (owner 2026-06-14): best-match (most shared
+    // tokens), not first-role-with-any-token, so an outcome lands on the role it
+    // actually belongs to. Mirrors the preview. Tie → earliest role.
     pool.forEach((x) => {
       const ts = tok(txtOf(x));
-      let bi = -1;
-      for (let i = 0; i < visRoles.length; i++) { if (ts.some((w) => tokensFor(visRoles[i]).has(w))) { bi = i; break; } }
+      let bi = -1, best = 0;
+      for (let i = 0; i < visRoles.length; i++) { const tf = tokensFor(visRoles[i]); let m = 0; ts.forEach((w) => { if (tf.has(w)) m++; }); if (m > best) { best = m; bi = i; } }
       if (bi >= 0) assign[bi].push(x); else left.push(x);
     });
     const CAP = 2;

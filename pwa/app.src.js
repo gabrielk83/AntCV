@@ -5589,14 +5589,20 @@
                           if (!__pool.length) return null;
                           const __assign = __vis.map(() => []);
                           const __left = [];
+                          // OUTCOMES-RESULTS-BESTMATCH-001 (owner 2026-06-14):
+                          // assign each outcome to the role it shares the MOST
+                          // tokens with (best match), not the FIRST role sharing
+                          // ANY token — first-match put an outcome on the wrong
+                          // role whenever an earlier role happened to share one
+                          // generic word. Tie → earliest role.
                           __pool.forEach((x) => {
                             const ts2 = tok(txtOf(x));
-                            let bi = -1;
+                            let bi = -1, best = 0;
                             for (let i = 0; i < __vis.length; i++) {
-                              if (ts2.some((w) => tokensFor(__vis[i]).has(w))) {
-                                bi = i;
-                                break;
-                              }
+                              const tf = tokensFor(__vis[i]);
+                              let m = 0;
+                              ts2.forEach((w) => { if (tf.has(w)) m++; });
+                              if (m > best) { best = m; bi = i; }
                             }
                             if (bi >= 0) __assign[bi].push(x);
                             else __left.push(x);
@@ -42053,7 +42059,14 @@
                                     }),
                                   ),
                                   t.roles.map((t, n) => {
-                                    const o = { ...e, title: "", roles: [t] },
+                                    // OUTCOMES-RESULTS-ORIGROLES-001 (owner
+                                    // 2026-06-14): forward the FULL role list so
+                                    // the per-role "Results:" distribution is
+                                    // computed over ALL visible roles (not just
+                                    // this one). Without it each role distributed
+                                    // outcomes over [itself], so the SAME outcome
+                                    // landed on MULTIPLE roles (and mis-matched).
+                                    const o = { ...e, title: "", roles: [t], __antcvOrigRoles: e.roles || [] },
                                       a = (e.roles || []).findIndex(
                                         (e) => e && e.id === t.id,
                                       ),

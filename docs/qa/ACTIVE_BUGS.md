@@ -1,3 +1,12 @@
+## SESSION REGISTRY — 2026-06-15 (owner real-export feedback) — 1.50.476 → 1.50.477
+
+- `RECS-ORDER-MULTIPAGE-001` `[SHIPPED 1.50.476]` — the 1.50.473 recs-order fix stranded RECOMMENDATIONS at the foot of page 1 between the page-1 roles and the page-2 "(CONT.)". Now floors each after-experience section to the highest experience-role page → renders after the continuation on the last page. Verified headless (2-page experience: recs below the PAGE-2 marker + last page-2 role).
+- `KANZEN-CANON-001 / PATENT-IN-ROLE-001 / sidecar-poll` `[SHIPPED 1.50.476]` — the multi-LLM CONSENSUS stage reintroduced role regressions the boot-sweep normaliser missed (it finished before generation). antcv-sections-normalize-415.js now: canonicalises Kanzen company ("Kanzen Konsulenter ApS", no "i nord") + end year 2026 (which lets dedupeRoles drop the duplicate Kanzen row); strips patent-NUMBER bullets out of roles; AND POLLS (setInterval 2500) + listens to `storage` so it re-runs on the post-generation write. Verified headless end-to-end on the exact bad role list (Founder gone, no i-nord, single Kanzen→2026, patent removed, System Architect merged).
+- `PALETTE-PARITY-EXPORT-PREVIEW-001` `[SHIPPED 1.50.477]` — the export-preview modal renders in an iframe that copied the package CSS but not the `data-package` body attribute, so `body[data-package]{--sidebar-bg}` never matched and the sidebar fell back to navy (DARK). Now carries data-package(+dark-mode) onto the iframe body. Verified headless: iframe --sidebar-bg = #DCE5EA (pale), not navy.
+- OPEN (generation-side, not shipped): CV **Results** show on only ~2 roles, echo the role's own bullets, and lack real metric numbers — the SELECTED OUTCOMES the consensus stage produces are weak/bullet-like (the owner's metric outcomes were degraded). Needs prompt/consensus hardening (outcomes MUST carry a number + MUST NOT restate a bullet) + possibly a stronger metric gate; hard to verify headlessly. Also the semantic role dup "Customer Change Requests Specialist" vs "System Architect & Change Control Lead" (no title-containment → dedupeRoles can't merge) is prompt-side.
+
+---
+
 ## SESSION REGISTRY — 2026-06-14/15 — 1.50.468 → 1.50.475 + docx-worker 1.14.64 → 1.14.66
 
 Owner-driven batch + a nightly autonomous job set up. Every fix verified by a headless render

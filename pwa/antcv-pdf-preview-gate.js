@@ -401,6 +401,17 @@
       // sheet must have NO extra margin or every row spills a sliver onto a
       // blank page. The legacy single-box render keeps the 10mm margin.
       const hasPageRows = papers.some(p => { try { return !!p.querySelector('.antcv-page-row'); } catch (_) { return false; } });
+      // PALETTE-PARITY-EXPORT-PREVIEW-001 (owner 2026-06-15): the iframe copies
+      // the package stylesheet (antcv-packages-registry.css) but its <body> had
+      // NO data-package, so the body[data-package="…"]{--sidebar-bg:…} rules never
+      // matched — the sidebar fell back to navyColor and rendered DARK in the
+      // export preview. Carry the live document's data-package (+ dark-mode) onto
+      // the iframe body so the same palette resolves.
+      const __pkgAttr = (document.body && document.body.getAttribute('data-package')) || '';
+      const __darkAttr = (document.body && document.body.getAttribute('data-dark-mode')) || '';
+      const __bodyExtra =
+        (__pkgAttr ? ' data-package="' + __pkgAttr.replace(/"/g, '&quot;') + '"' : '') +
+        (__darkAttr ? ' data-dark-mode="' + __darkAttr.replace(/"/g, '&quot;') + '"' : '');
       const srcdoc = `<!doctype html>
 <html lang="en">
 <head>
@@ -486,7 +497,7 @@ ${inlineStyles}
   }
 </style>
 </head>
-<body data-antcv-pages="${pageCount}">${paperHtml}</body>
+<body data-antcv-pages="${pageCount}"${__bodyExtra}>${paperHtml}</body>
 </html>`;
       iframe.srcdoc = srcdoc;
       wrap.appendChild(iframe);

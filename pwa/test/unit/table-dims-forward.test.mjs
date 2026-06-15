@@ -89,3 +89,35 @@ test('non-table sections never receive table dimensions', () => {
   assert.equal(who.tableWidth, undefined);
   assert.equal(who.tableRatio, undefined);
 });
+
+// TABLE-WIDTH-CLOBBER-001 (owner 2026-06-15): the width moved to the standalone
+// `antcv:tableWidthPct` key so it survives the personalInfo cloud-restore
+// rewrites that wiped it on export. buildPayload must read the standalone key.
+function payloadCLStandalone(standaloneMap, nestedMap, clRatio) {
+  store.clear();
+  const pi = { name: 'T', stylePrefs: nestedMap ? { tableWidthPct: nestedMap } : {} };
+  store.set('personalInfo', JSON.stringify(pi));
+  if (standaloneMap) store.set('antcv:tableWidthPct', JSON.stringify(standaloneMap));
+  if (clRatio != null) store.set('clTableRatio', JSON.stringify(clRatio));
+  return buildPayload({
+    sections: { cv: [], cl: [
+      { id: 'bring', title: 'WHAT I BRING', loc: 'main', on: true, type: 'table',
+        rows: [['Focus Area', 'Strategic Expertise'], ['A', 'a']] },
+    ] },
+    doc: 'cl', personalInfo: pi,
+  });
+}
+
+test('standalone antcv:tableWidthPct is read (the clobber-proof source of truth)', () => {
+  // personalInfo nested value is GONE (simulates the cloud-restore wipe); the
+  // standalone key still carries the dragged width → export stays correct.
+  const p = payloadCLStandalone({ bring: 110 }, null, null);
+  const t = p.sections.find((s) => s.id === 'bring');
+  assert.equal(t.tableWidth, Math.round(9602 * 1.10)); // 10562
+});
+
+test('standalone key WINS over a stale nested personalInfo value', () => {
+  const p = payloadCLStandalone({ bring: 110 }, { bring: 75 }, null);
+  const t = p.sections.find((s) => s.id === 'bring');
+  assert.equal(t.tableWidth, Math.round(9602 * 1.10));
+});

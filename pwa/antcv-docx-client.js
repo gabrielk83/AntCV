@@ -136,6 +136,12 @@ export function readWritingStyle() {
 export function readTableWidthPctMap() {
   try {
     if (typeof localStorage === 'undefined') return {};
+    // TABLE-WIDTH-CLOBBER-001 (owner 2026-06-15): the table width moved to a
+    // STANDALONE key so it survives the personalInfo cloud-restore rewrites that
+    // were wiping it on export ("table resizes to original when I press PDF").
+    // Standalone wins; fall back to the legacy nested location for pre-fix data.
+    const sa = localStorage.getItem('antcv:tableWidthPct');
+    if (sa) { const m = JSON.parse(sa); if (m && typeof m === 'object') return m; }
     const raw = localStorage.getItem('personalInfo');
     if (!raw) return {};
     const pi = JSON.parse(raw);
@@ -1360,9 +1366,10 @@ function normalizeSections(raw) {
         // already on the section still wins.
         let _twDxa, _tRatio;
         try {
-          const _piRaw = (typeof localStorage !== 'undefined') ? localStorage.getItem('personalInfo') : null;
-          const _pi = _piRaw ? JSON.parse(_piRaw) : {};
-          const _pctMap = (_pi && _pi.stylePrefs && _pi.stylePrefs.tableWidthPct) || {};
+          // TABLE-WIDTH-CLOBBER-001: read the standalone width map (survives the
+          // personalInfo cloud-restore rewrites); fall back to the legacy nested
+          // location. Shared with computeTableWidthDxa via readTableWidthPctMap.
+          const _pctMap = readTableWidthPctMap();
           const _isClTable = s.id === 'bring';
           const _pct = _pctMap[s.id];
           if (typeof _pct === 'number' && isFinite(_pct) && Math.abs(_pct - 100) >= 1) {

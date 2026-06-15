@@ -451,9 +451,51 @@
   const HANDLE_HIT_WIDTH = 8;   // px — wide enough to click without zoom
   const HANDLE_OFFSET_RIGHT = -4; // px outside the wrap
 
+  // TABLE-WIDTH-CLOBBER-001 (owner 2026-06-15): "as soon as I press PDF the
+  // table resizes to its original size — which is what's exported." Root cause:
+  // the table width lived in personalInfo.stylePrefs.tableWidthPct, and the
+  // cloud-restore / personalInfo-sync machinery rewrites personalInfo from a
+  // copy that predates the drag, DROPPING tableWidthPct on export. The column
+  // RATIO never had this bug because it lives in a STANDALONE key
+  // (cl/cvTableRatio). Fix: move the width to its own standalone key too, so it
+  // is immune to every personalInfo rewrite. A pre-existing value still nested
+  // in personalInfo is read as a fallback and migrated on first read/write.
+  const TABLE_WIDTH_LS_KEY = 'antcv:tableWidthPct';
+
+  function readTableWidthMap() {
+    // Standalone key is the source of truth.
+    try {
+      const raw = localStorage.getItem(TABLE_WIDTH_LS_KEY);
+      if (raw) { const m = JSON.parse(raw); if (m && typeof m === 'object') return m; }
+    } catch (_) {}
+    // Back-compat: pre-fix value nested in personalInfo.stylePrefs.
+    try {
+      const pi = readPi();
+      const m = pi[PREFS_KEY] && pi[PREFS_KEY][TABLE_WIDTH_FIELD];
+      if (m && typeof m === 'object') return m;
+    } catch (_) {}
+    return {};
+  }
+
+  function writeTableWidthMap(map) {
+    try { localStorage.setItem(TABLE_WIDTH_LS_KEY, JSON.stringify(map || {})); }
+    catch (e) { console.error('[section-align] tableWidth write failed:', e); }
+  }
+
+  // One-time migration at init: lift any pre-fix nested value into the
+  // standalone key BEFORE the first export can clobber personalInfo.
+  function migrateTableWidthToStandalone() {
+    try {
+      if (localStorage.getItem(TABLE_WIDTH_LS_KEY)) return; // already standalone
+      const pi = readPi();
+      const m = pi[PREFS_KEY] && pi[PREFS_KEY][TABLE_WIDTH_FIELD];
+      if (m && typeof m === 'object' && Object.keys(m).length) writeTableWidthMap(m);
+    } catch (_) {}
+  }
+  migrateTableWidthToStandalone();
+
   function readTableWidth(sectionId) {
-    const pi = readPi();
-    const map = (pi[PREFS_KEY] && pi[PREFS_KEY][TABLE_WIDTH_FIELD]) || {};
+    const map = readTableWidthMap();
     const v = Number(map[sectionId]);
     if (!Number.isFinite(v)) return null;
     return Math.max(TABLE_WIDTH_MIN, Math.min(TABLE_WIDTH_MAX, v));
@@ -461,11 +503,9 @@
 
   function writeTableWidth(sectionId, pct) {
     const clamped = Math.max(TABLE_WIDTH_MIN, Math.min(TABLE_WIDTH_MAX, Number(pct) || TABLE_DEFAULT_PCT));
-    const pi = readPi();
-    if (!pi[PREFS_KEY]) pi[PREFS_KEY] = {};
-    if (!pi[PREFS_KEY][TABLE_WIDTH_FIELD]) pi[PREFS_KEY][TABLE_WIDTH_FIELD] = {};
-    pi[PREFS_KEY][TABLE_WIDTH_FIELD][sectionId] = clamped;
-    writePi(pi);
+    const map = readTableWidthMap();
+    map[sectionId] = clamped;
+    writeTableWidthMap(map);
     try {
       window.dispatchEvent(new CustomEvent('antcv:sections-updated', {
         detail: { source: 'section-align', sectionId, tableWidthPct: clamped },

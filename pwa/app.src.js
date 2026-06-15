@@ -13363,6 +13363,15 @@
               ? window.AntcvAuth.subscribe((e) => {
                   if (e && e.token && e.email) {
                     if (!Y || Y.email !== e.email) {
+                      // ACCOUNT-ISOLATION-001 (owner 2026-06-15): an IN-SESSION switch
+                      // to a DIFFERENT user — reload so the pre-app.js login gate wipes
+                      // the prior user's data BEFORE app.js re-inits (clearing here
+                      // races the autosave that writes the prior user's React state
+                      // back to storage). First login (Y null) is the normal path below.
+                      if (Y && Y.email && Y.email !== e.email) {
+                        try { location.reload(); } catch (e) {}
+                        return;
+                      }
                       (u.set("session", { email: e.email, ts: Date.now() }),
                         J({ email: e.email }));
                       const t = (u.get("proxyUrl", "") || "").trim();

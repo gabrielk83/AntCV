@@ -31,7 +31,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.165';
+  var VERSION = '1.50.494-account-isolation';
   if (window.__antcvLoginLoadingGate === VERSION) return;
   window.__antcvLoginLoadingGate = VERSION;
 
@@ -48,6 +48,33 @@
     if (v.charAt(0) === '"') { try { v = JSON.parse(v); } catch (_) {} }
     return String(v).trim();
   }
+
+  // ── 0. ACCOUNT ISOLATION (owner 2026-06-15) — runs BEFORE app.js so a second
+  //      user on the same machine never loads the previous user's data into state.
+  //      If the signed-in account (antcv:auth:email) differs from the last-active
+  //      session, wipe everything except auth + deployment proxy URLs, then point
+  //      the session at the new account. app.js then boots clean and restores the
+  //      new user's own data from their cloud slot. (The app.js auth-subscribe
+  //      reloads on an in-session switch, which re-enters this gate.)
+  function isolateAccounts() {
+    try {
+      var authEmail = unquote(lsRaw('antcv:auth:email'));
+      var sess = null; try { sess = JSON.parse(lsRaw('session') || 'null'); } catch (_) {}
+      var sessEmail = (sess && sess.email) ? String(sess.email).trim() : '';
+      if (!authEmail || !sessEmail) return;                         // nothing to compare (first login)
+      if (authEmail.toLowerCase() === sessEmail.toLowerCase()) return; // same user
+      var keep = {
+        'antcv:auth:token': 1, 'antcv:auth:email': 1, 'antcv:auth:expires_at': 1,
+        'proxyUrl': 1, 'openaiProxyUrl': 1, 'geminiProxyUrl': 1, 'antcv:disable-loading-gate': 1,
+      };
+      var ks = [];
+      for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k) ks.push(k); }
+      ks.forEach(function (k) { if (!keep[k]) { try { localStorage.removeItem(k); } catch (_) {} } });
+      try { localStorage.setItem('session', JSON.stringify({ email: authEmail, ts: Date.now() })); } catch (_) {}
+      try { console.info('[login-loading-gate] ACCOUNT-ISOLATION: ' + sessEmail + ' -> ' + authEmail + ' — wiped prior local data'); } catch (_) {}
+    } catch (_) {}
+  }
+  isolateAccounts();
 
   // ── 1. orphan data migration (writing tone) — run immediately ──
   function migrateToneOrphan() {

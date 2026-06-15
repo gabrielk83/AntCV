@@ -1362,7 +1362,7 @@
   function __antcvUseServerPdf() {
     try {
       return (
-        !(B && B.demo_mode) || __antcvDemoActive() || __antcvHasOwnCC()
+        !(B && B.demo_mode) || __antcvDemoActive() || __antcvHasOwnCC() || !!(B && B.is_admin)
       );
     } catch (_) {
       return true;

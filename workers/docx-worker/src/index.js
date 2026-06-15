@@ -25358,11 +25358,22 @@ function buildPhotoParagraph(ctx, position) {
           transformation: { width: px, height: px },
           outline: { width: 12700, solidFillType: "rgb", value: outlineColor },
           floating: {
-            horizontalPosition: { relative: HorizontalPositionRelativeFrom.COLUMN, align: "center" },
+            // PHOTO-BRIDGE-EXPORT-001 (owner 2026-06-14): the band-overlap
+            // medallion must RISE OUT of the sidebar cell to straddle the band
+            // seam. layoutInCell defaults TRUE in this docx library, which
+            // CLAMPED the float inside the sidebar cell — so the negative lift
+            // did nothing and it rendered FLAT at sidebar-top in the PDF (the
+            // owner's bug). layoutInCell:false frees it. Horizontal is now
+            // PAGE-relative to the sidebar-column centre (COLUMN-relative is
+            // ambiguous once the float leaves the cell); vertical stays
+            // PARAGRAPH-relative because the anchor IS the first sidebar
+            // paragraph — i.e. the band↔sidebar seam — lifted by half a diameter.
+            horizontalPosition: { relative: HorizontalPositionRelativeFrom.PAGE, offset: Math.round((ctx.sidebarW / 2 - px * 15 / 2) * 635) },
             verticalPosition: { relative: VerticalPositionRelativeFrom.PARAGRAPH, offset: offsetEmu },
             wrap: { type: TextWrappingType.NONE },
             behindDocument: false,
             allowOverlap: true,
+            layoutInCell: false,
             zIndex: 10
           },
           altText: {
@@ -27169,7 +27180,13 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   (= marker-to-text gap) is set directly and decoupled from bulletIndent
 //   (text-from-edge), clamped so the marker stays in-column. Untouched users
 //   keep the legacy bIndent-45 coupling.
-var VERSION = "1.14.65-bullet-marker-gap";
+// 1.14.66 (owner 2026-06-14): PHOTO-BRIDGE-EXPORT-001 - the band-overlap
+//   "side-bridge" medallion was clamped inside the sidebar cell (layoutInCell
+//   defaults true) so it exported FLAT at sidebar-top instead of straddling the
+//   band seam. Freed the float (layoutInCell:false) + PAGE-relative horizontal
+//   to the sidebar-column centre. Needs an owner PDF check to fine-tune the
+//   vertical lift if LibreOffice positions it slightly off.
+var VERSION = "1.14.66-photo-bridge-export";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

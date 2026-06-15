@@ -76,6 +76,11 @@ const nSpan = /w:gridSpan w:val="2"/.test(nRow);
 
 const bAnchor = /<wp:anchor/.test(bridge);
 const negOffset = /<wp:positionV relativeFrom="paragraph"><wp:posOffset>-\d+<\/wp:posOffset>/.test(bridge);
+// PHOTO-BRIDGE-EXPORT-001 (1.14.66): the medallion must escape the sidebar cell
+// (layoutInCell="0") and anchor horizontally PAGE-relative, else LibreOffice
+// clamps it inside the cell and it renders flat at sidebar-top.
+const escapesCell = /layoutInCell="0"/.test(bridge);
+const hPage = /<wp:positionH relativeFrom="page"><wp:posOffset>\d+<\/wp:posOffset>/.test(bridge);
 const extent156 = bridge.includes('cx="1485900" cy="1485900"'); // 156px × 9525
 const reserve = /<w:spacing[^/]*w:after="1380"/.test(bridge);   // (156/2+14)×15
 const nInline = /<wp:inline/.test(normal) && !/<wp:anchor/.test(normal);
@@ -87,6 +92,7 @@ const nSep = normal.includes('   •   ');
 log('bridge header split (2 cells, no gridSpan):', bSplit, '| normal gridSpan-2 kept:', nSpan);
 log('bridge floating anchor:', bAnchor, '| negative V offset:', negOffset, '| 156px extent:', extent156, '| flow reserve 1380:', reserve);
 log('normal photo stays inline:', nInline, '| bridge 1-space separators:', bSep, '| normal wide separators:', nSep);
-const ok = bSplit && nSpan && bAnchor && negOffset && extent156 && reserve && nInline && bSep && nSep;
+log('bridge escapes cell (layoutInCell=0):', escapesCell, '| horizontal PAGE-relative:', hPage);
+const ok = bSplit && nSpan && bAnchor && negOffset && extent156 && reserve && nInline && bSep && nSep && escapesCell && hPage;
 log(ok ? 'PHOTO-BRIDGE-EXPORT OK' : 'PHOTO-BRIDGE-EXPORT FAIL');
 process.exit(ok ? 0 : 1);

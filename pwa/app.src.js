@@ -5614,7 +5614,13 @@
                           // role at 2 outcomes, spill the overflow + unmatched into
                           // the EMPTIEST roles first so no role hogs a big chunk and
                           // the first role is never starved.
-                          const __CAP = 2;
+                          // OUTCOMES-RESULTS-PAGE2-001 (owner 2026-06-15: "page 2
+                          // results is critical", "missing from 2nd page"): CAP 2→1
+                          // so a page-1 role can't hold two outcomes while later
+                          // (page-2) roles get none — every extra outcome now spills
+                          // to the emptiest roles, covering page-2 roles too. Also
+                          // keeps each Results line to ~one line.
+                          const __CAP = 1;
                           const __spill = [];
                           __assign.forEach((a) => {
                             while (a.length > __CAP) __spill.push(a.pop());
@@ -12494,9 +12500,20 @@
               fontSize: 11,
               fontWeight: 600,
               letterSpacing: 0.4,
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
             },
           },
-          "ADVANCED STYLES",
+          // ADV-VISUAL-DISCLOSURE-001 (owner 2026-06-15): a clear LEFT
+          // disclosure triangle (▸ collapsed / ▾ expanded) so it reads as
+          // expandable; renamed to "ADVANCED VISUAL STYLES".
+          React.createElement(
+            "span",
+            { "aria-hidden": "true", style: { fontSize: 9, color: "rgba(255,255,255,0.45)", width: 8, display: "inline-block" } },
+            i ? "▾" : "▸",
+          ),
+          "ADVANCED VISUAL STYLES",
         ),
         React.createElement(
           "div",
@@ -12669,11 +12686,6 @@
               },
             },
             "Save as custom",
-          ),
-          React.createElement(
-            "span",
-            { style: { fontSize: 10, color: "rgba(255,255,255,0.3)" } },
-            i ? "u" : "v",
           ),
         ),
       ),

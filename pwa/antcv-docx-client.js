@@ -1624,7 +1624,10 @@ export function applyOutcomesMode(docSections, doc) {
       for (let i = 0; i < visRoles.length; i++) { const tf = tokensFor(visRoles[i]); let m = 0; ts.forEach((w) => { if (tf.has(w)) m++; }); if (m > best) { best = m; bi = i; } }
       if (bi >= 0) assign[bi].push(x); else left.push(x);
     });
-    const CAP = 2;
+    // OUTCOMES-RESULTS-PAGE2-001 (owner 2026-06-15): CAP 2→1 (mirror of preview)
+    // so outcomes spread to MORE roles — a page-1 role can't take two while a
+    // page-2 role gets none. Each Results line stays ~one line.
+    const CAP = 1;
     const spill = [];
     assign.forEach((a) => { while (a.length > CAP) spill.push(a.pop()); });
     left.forEach((x) => spill.push(x));

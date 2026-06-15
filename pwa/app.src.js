@@ -41179,8 +41179,15 @@
                   // experience block. __expZi < 0 (no experience) → all stay before.
                   __expZi = zi.findIndex((s) => s && "experience" === s.type && s.on !== !1),
                   __ziPos = (sec) => { const i = zi.findIndex((s) => s && s.id === (sec && sec.id)); return i < 0 ? 1e9 : i; },
+                  // RECS-ORDER-MULTIPAGE-001 (owner 2026-06-15): when experience
+                  // spans pages, an after-experience section (RECOMMENDATIONS) must
+                  // render AFTER the experience CONTINUATION on the LAST experience
+                  // page — not stranded at the foot of page 1 between the page-1
+                  // roles and the page-2 "(CONT.)". Floor each after-experience
+                  // section's effective page to the highest experience-role page.
+                  __lastExpPage = (Array.isArray(d) && d.length) ? Math.max.apply(null, d) : 1,
                   mMainBefore = (e) => oMain.filter((t) => a(t) === e && (__expZi < 0 || __ziPos(t) < __expZi)),
-                  mMainAfter = (e) => oMain.filter((t) => a(t) === e && __expZi >= 0 && __ziPos(t) > __expZi),
+                  mMainAfter = (e) => oMain.filter((t) => __expZi >= 0 && __ziPos(t) > __expZi && Math.max(a(t), __lastExpPage) === e),
                   g = (e) =>
                     t.filter(
                       (n) =>

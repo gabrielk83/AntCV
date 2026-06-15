@@ -110,6 +110,58 @@
     return copy;
   }
 
+  // KANZEN-CANON-001 (owner 2026-06-15): the consensus/generation stage keeps
+  // reintroducing "Kanzen konsulenter i nord ApS" / "...i nord" ending 2025.
+  // Gabriel's canonical company is "Kanzen Konsulenter ApS" (NO "i nord") and it
+  // runs to 2026. Normalising the company string ALSO lets dedupeRoles collapse
+  // the duplicate Kanzen role the consensus appends (it only merges roles with
+  // the SAME company). Scoped to Kanzen rows only.
+  function canonKanzen(cv) {
+    var changed = false;
+    var out = cv.map(function (s) {
+      if (!s || s.type !== 'experience' || !Array.isArray(s.roles)) return s;
+      var secChanged = false;
+      var roles = s.roles.map(function (r) {
+        if (!r || !/kanzen/i.test(String(r.company || ''))) return r;
+        var company = 'Kanzen Konsulenter ApS';
+        var years = typeof r.years === 'string'
+          ? r.years.replace(/(\d{4})\s*[-–—]\s*2025\b/, '$1 - 2026')
+          : r.years;
+        if (company !== r.company || years !== r.years) {
+          secChanged = true; changed = true;
+          return Object.assign({}, r, { company: company, years: years });
+        }
+        return r;
+      });
+      return secChanged ? Object.assign({}, s, { roles: roles }) : s;
+    });
+    return changed ? out : null;
+  }
+
+  // PATENT-IN-ROLE-001 (owner 2026-06-15): the patent number must live ONLY in
+  // PUBLICATIONS & PATENT, never inside a role's bullets. The generator keeps
+  // putting "Co-invented Patent No. 241997 …" in the Sirin role. Drop any role
+  // bullet that carries a patent NUMBER (publications already keeps it).
+  function stripPatentFromRoles(cv) {
+    var rx = /\bpatent\s*(?:no\.?|nr\.?|number)?\s*[:#]?\s*\d/i;
+    var changed = false;
+    var out = cv.map(function (s) {
+      if (!s || s.type !== 'experience' || !Array.isArray(s.roles)) return s;
+      var secChanged = false;
+      var roles = s.roles.map(function (r) {
+        if (!r || !Array.isArray(r.bullets)) return r;
+        var kept = r.bullets.filter(function (b) {
+          var t = typeof b === 'string' ? b : (b && (b.t || b.b)) || '';
+          return !rx.test(String(t));
+        });
+        if (kept.length !== r.bullets.length) { secChanged = true; changed = true; return Object.assign({}, r, { bullets: kept }); }
+        return r;
+      });
+      return secChanged ? Object.assign({}, s, { roles: roles }) : s;
+    });
+    return changed ? out : null;
+  }
+
   // ROLE-FOUNDER-001 band fix (owner 2026-06-14): the candidate band renders the
   // STORED meta.role / meta.subtitle ("Application: Founder & Product / Project
   // Expert - Unsolicited"), which the export strip never touches and the JSON
@@ -157,6 +209,8 @@
       if (!b || !Array.isArray(b.cv) || !b.cv.length) return;
       var cv = b.cv;
       var changed = false;
+      var k = canonKanzen(cv); if (k) { cv = k; changed = true; }
+      var pt = stripPatentFromRoles(cv); if (pt) { cv = pt; changed = true; }
       var d = dedupeRoles(cv); if (d) { cv = d; changed = true; }
       var f = stripFounder(cv); if (f) { cv = f; changed = true; }
       var p = placeRecs(cv); if (p) { cv = p; changed = true; }
@@ -173,8 +227,17 @@
     clearTimeout(t); t = setTimeout(normalize, 120);
   }
   window.addEventListener('antcv:sections-updated', schedule);
+  // also re-read on a cross-tab storage write of the sections key
+  window.addEventListener('storage', function (e) { if (!e || e.key === 'sections' || e.key === null) schedule(); });
   // boot sweep: catch the restore that fires before listeners attach
   [400, 1200, 3000].forEach(function (ms) { setTimeout(normalize, ms); });
+  // POST-GENERATION poll (owner 2026-06-15): a GENERATE / multi-LLM CONSENSUS
+  // write lands long after the boot sweep and does not always dispatch
+  // antcv:sections-updated, so the normalisers never re-ran on it (Founder,
+  // i-nord, Kanzen-2025, duplicate role, patent-in-role all survived). Poll so
+  // the restore-proof net always catches it. Loop-safe: normalize() reads +
+  // writes ONLY on a real change and tags its own event.
+  setInterval(normalize, 2500);
 
   window.AntcvSectionsNormalize = { version: VERSION, _normalize: normalize };
   try { console.debug('[sections-normalize-415] installed v' + VERSION); } catch (_) {}

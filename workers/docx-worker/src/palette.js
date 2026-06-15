@@ -23,7 +23,7 @@ const PACKAGES = {
     // colour used only for the sidebar/header/table backgrounds, and the
     // on-ground text colours invert to dark via readableInk() below.
     base: '283556', band: '33446F', ground: 'C9D6EC', primary: '00746E', interactive: '0B74DE',
-    bullet: '00746E', glyph: '0B74DE',
+    bullet: '00746E', glyph: '0B74DE', head: '00746E',
     headingFont: 'Segoe UI', bodyFont: 'Calibri',
   },
   'navy-executive': {
@@ -134,8 +134,13 @@ export function getPackageStyle(packageId, legacyAtsTier = false) {
   const ground = p.ground || p.base;
   // COPENHAGEN-BLUE-BRIGHTER-001 (owner 2026-06-15): the candidate band + table
   // header use a slightly brighter blue `band` when a package defines one, else
-  // the dark `base`. mainHeadColor (main-column section headings) keeps `base`.
+  // the dark `base`.
   const band = p.band || p.base;
+  // MAIN-HEADINGS-GREEN-001 (owner 2026-06-15): main-column headings/role
+  // names/rules/RESULTS+WORK STYLE labels (all routed through mainHeadColor) use
+  // a package's `head` accent when defined (greenish teal on Copenhagen), else
+  // dark `base`. Band + table header keep `band`; company/year stay neutral.
+  const headColor = p.head || p.base;
   return {
     // Legacy aliases that pre-v1.50.8 code may still read.
     navy: p.base,
@@ -143,7 +148,7 @@ export function getPackageStyle(packageId, legacyAtsTier = false) {
     teal: p.primary,
 
     // Active style tokens consumed throughout generate.js.
-    mainHeadColor: p.base,
+    mainHeadColor: headColor,
     mainTextColor: UNIVERSAL_MAIN_TEXT,
     mainBulletColor: p.bullet,
     sidebarBg: ground,

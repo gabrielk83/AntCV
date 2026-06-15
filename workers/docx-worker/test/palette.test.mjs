@@ -85,7 +85,10 @@ test('palette colours match the registry for every package (ignoring the "#" pre
   for (const id of regIds) {
     const r = reg.packages[id];
     const s = getPackageStyle(id, false);
-    assert.equal(s.mainHeadColor.toUpperCase(), ooxmlHex(r.base), `${id} base`);
+    // MAIN-HEADINGS-GREEN-001: a package may define a `head` accent for the
+    // main-column heading colour distinct from `base` (Copenhagen → greenish
+    // teal). Without `head`, mainHeadColor stays the dark `base`.
+    assert.equal(s.mainHeadColor.toUpperCase(), ooxmlHex(r.head || r.base), `${id} head`);
     assert.equal(s.sidebarHeadColor.toUpperCase(), ooxmlHex(r.primary), `${id} primary`);
     assert.equal(s.accent.toUpperCase(), ooxmlHex(r.interactive), `${id} interactive`);
     assert.equal(s.mainBulletColor.toUpperCase(), ooxmlHex(r.bullet), `${id} bullet`);

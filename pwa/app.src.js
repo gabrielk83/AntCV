@@ -305,18 +305,20 @@
       }
     },
     c = {
-      // DOCX-SIDEBAR-GREEN-001 + MAIN-NAVY-001 (owner 2026-06-10): in the MAIN
-      // column EVERY accent — headings, sub-heads, vertical/rule lines, BULLETS,
-      // and the table-header bar — is NAVY #283556. Bright teal #01B7BB is
-      // reserved for OUT of the main: the sidebar (head + lines) and the
-      // candidate-bar line. Mirrored in the va.scandinavian package map.
-      mainHeadColor: "#283556",
-      mainSubHeadColor: "#283556",
+      // MAIN-HEADINGS-GREEN-001 (owner 2026-06-15, supersedes MAIN-NAVY-001): in
+      // the MAIN column the heading accents — H1/H2 headings, sub-heads, ROLE NAME
+      // (mainSubHeadColor), vertical/rule lines, BULLETS, the RESULTS/WORK STYLE
+      // inline labels, and the profile-photo contour — are greenish teal #00746E.
+      // The candidate band + table-header bar keep their navy/blue (#33446F on
+      // Copenhagen), and role COMPANY (#333333) + YEAR (#595959) stay neutral.
+      // Mirrored in the va.copenhagen-modern package map.
+      mainHeadColor: "#00746E",
+      mainSubHeadColor: "#00746E",
       mainCompanyColor: "#333333",
       mainYearColor: "#595959",
       mainTextColor: "#333333",
-      mainBulletColor: "#283556",
-      mainLineColor: "#283556",
+      mainBulletColor: "#00746E",
+      mainLineColor: "#00746E",
       mainHeadFont: "Trebuchet MS",
       mainBodyFont: "Calibri",
       headerBg: "#DDE6F2",
@@ -330,7 +332,7 @@
       sidebarTextColor: "#283556",
       sidebarLineColor: "#283556",
       sidebarFont: "Trebuchet MS",
-      photoBorderColor: "#01B7BB",
+      photoBorderColor: "#00746E",
       photoBorderWidth: 1,
       tableHeaderBg: "#DDE6F2",
       tableHeaderText: "#283556",
@@ -16638,11 +16640,11 @@
               sidebarTextColor: "#283556",
               sidebarLineColor: "#283556",
               sidebarFont: "Trebuchet MS",
-              mainHeadColor: "#283556",
+              mainHeadColor: "#00746E",
               mainTextColor: "#333333",
-              mainBulletColor: "#283556",
-              mainLineColor: "#283556",
-              mainSubHeadColor: "#283556",
+              mainBulletColor: "#00746E",
+              mainLineColor: "#00746E",
+              mainSubHeadColor: "#00746E",
               mainCompanyColor: "#333333",
               mainYearColor: "#595959",
               mainHeadFont: "Trebuchet MS",
@@ -16655,7 +16657,7 @@
               tableFirstColText: "#333333",
               tableOtherColText: "#333333",
               tableFirstColBold: !0,
-              photoBorderColor: "#01B7BB",
+              photoBorderColor: "#00746E",
               photoBorderWidth: 1,
             },
           },

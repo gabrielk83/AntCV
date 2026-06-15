@@ -8,6 +8,8 @@
     "copenhagen-modern": {
       "displayName": "Copenhagen Modern",
       "base": "#283556",
+      "band": "#33446F",
+      "head": "#00746E",
       "primary": "#00746E",
       "interactive": "#0B74DE",
       "bullet": "#00746E",

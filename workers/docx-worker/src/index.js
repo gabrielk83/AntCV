@@ -23902,6 +23902,7 @@ var PACKAGES = {
     interactive: "0B74DE",
     bullet: "00746E",
     glyph: "0B74DE",
+    head: "00746E",
     headingFont: "Segoe UI",
     bodyFont: "Calibri"
   },
@@ -24015,15 +24016,20 @@ function getPackageStyle(packageId, legacyAtsTier = false) {
   const ground = p.ground || p.base;
   // COPENHAGEN-BLUE-BRIGHTER-001 (owner 2026-06-15): candidate band + table
   // header use a brighter `band` blue when defined, else dark `base`.
-  // mainHeadColor (main-column section headings) keeps `base`.
   const band = p.band || p.base;
+  // MAIN-HEADINGS-GREEN-001 (owner 2026-06-15): main-column headings, role
+  // names, rules, RESULTS/WORK STYLE labels — everything routed through
+  // mainHeadColor — use a package's `head` accent when defined (greenish teal
+  // on Copenhagen), else the dark `base`. The candidate band + table header
+  // keep `band`; role company (mainTextColor) + year (gray) stay neutral.
+  const headColor = p.head || p.base;
   return {
     // Legacy aliases that pre-v1.50.8 code may still read.
     navy: p.base,
     accent: p.interactive,
     teal: p.primary,
     // Active style tokens consumed throughout generate.js.
-    mainHeadColor: p.base,
+    mainHeadColor: headColor,
     mainTextColor: UNIVERSAL_MAIN_TEXT,
     mainBulletColor: p.bullet,
     sidebarBg: ground,
@@ -27235,7 +27241,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   on the band-sidebar seam). The split band header keeps its empty photo zone.
 //   Removed buildBridgeMedallionInline. Needs an owner PDF look to confirm the
 //   straddle now that the position forwards correctly.
-var VERSION = "1.14.71-bridge-float-restore";
+var VERSION = "1.14.72-main-headings-green";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

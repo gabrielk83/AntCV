@@ -58,10 +58,13 @@ test('candidate band uses the brighter `band` blue with luminance-picked ink (CO
   assert.ok(block.includes('headerNameColor: readableInk(band)'), 'header name not readableInk(band)');
   assert.ok(block.includes('tableHeaderBg: band'), 'tableHeaderBg not `band`');
   assert.ok(block.includes('tableHeaderText: readableInk(band)'), 'tableHeaderText missing');
-  // parity guard: main-column section headings keep the dark base navy
-  assert.ok(block.includes('mainHeadColor: p.base'), 'mainHeadColor must stay base');
-  // copenhagen carries the brighter band token
+  // parity guard (MAIN-HEADINGS-GREEN-001): main-column section headings use a
+  // package's `head` accent when defined, else the dark base.
+  assert.ok(block.includes('mainHeadColor: headColor'), 'mainHeadColor must use headColor (head||base)');
+  assert.ok(block.includes('const headColor = p.head || p.base'), 'headColor derivation missing');
+  // copenhagen carries the brighter band token AND the greenish head accent
   assert.match(block, /"copenhagen-modern":\s*{[^}]*band:\s*"33446F"/s);
+  assert.match(block, /"copenhagen-modern":\s*{[^}]*head:\s*"00746E"/s);
   // the old "band keeps base" form must be gone
   assert.ok(!block.includes('headerBg: p.base'), 'stale headerBg: p.base still present');
 });
@@ -76,7 +79,7 @@ test('bundle palette ≡ src/palette.js for copenhagen-modern', async () => {
   assert.equal(s.sidebarLabelColor, '283556', 'pale ground label must be dark');
   assert.equal(s.headerBg, '33446F', 'candidate band must be the brighter blue');
   assert.equal(s.tableHeaderBg, '33446F', 'table header must be the brighter blue');
-  assert.equal(s.mainHeadColor, '283556', 'main-column headings must stay the dark navy base');
+  assert.equal(s.mainHeadColor, '00746E', 'main-column headings use the greenish head accent (MAIN-HEADINGS-GREEN-001)');
   assert.equal(s.headerNameColor, 'FFFFFF', 'band name must stay white on the brighter blue');
   assert.equal(s.tableHeaderText, 'FFFFFF', 'table header text must stay white on the brighter blue');
 });

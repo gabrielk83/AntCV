@@ -42,11 +42,23 @@ test("the picker's Hidden value 'none' maps to hidden (photo must NOT export)", 
   assert.equal(readPhotoPosition(), 'hidden');
 });
 
-test('unknown / missing values still default to sidebar-top', () => {
+test('unknown / missing values fall to the PACKAGE-AWARE default (PHOTO-BRIDGE-DEFAULT-PARITY-001)', () => {
+  // The preview defaults an unset/invalid position package-aware (app.src.js
+  // ~15662): copenhagen-modern → band-overlap, else sidebar-top. The export now
+  // mirrors that (was a flat sidebar-top, which silently dropped the owner's
+  // bridge on the default package).
+  // Non-copenhagen package → sidebar-top.
+  store.set('stylePackage', JSON.stringify('navy-executive'));
   setPos('garbage-mode');
   assert.equal(readPhotoPosition(), 'sidebar-top');
   store.delete('photoPosition');
   assert.equal(readPhotoPosition(), 'sidebar-top');
+  // Default package (copenhagen-modern, incl. unset) → band-overlap.
+  store.set('stylePackage', JSON.stringify('copenhagen-modern'));
+  store.delete('photoPosition');
+  assert.equal(readPhotoPosition(), 'band-overlap');
+  store.delete('stylePackage'); // unset package defaults to copenhagen → bridge
+  assert.equal(readPhotoPosition(), 'band-overlap');
 });
 
 test('unwrapped (non-JSON) storage values are tolerated', () => {

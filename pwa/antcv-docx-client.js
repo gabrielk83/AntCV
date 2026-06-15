@@ -196,13 +196,36 @@ export function readPhotoPosition() {
   try {
     if (typeof localStorage === 'undefined') return 'sidebar-top';
     const raw = localStorage.getItem('photoPosition');
-    if (!raw) return 'sidebar-top';
+    // PHOTO-BRIDGE-DEFAULT-PARITY-001 (owner 2026-06-15): when the user never
+    // explicitly picks a position, the PREVIEW defaults it package-aware
+    // (app.src.js ~15662): copenhagen-modern → 'band-overlap' (the bridge),
+    // else 'sidebar-top'. The export used a flat 'sidebar-top' default, so an
+    // owner on the default package saw the bridge in preview but the DOCX/PDF
+    // exported sidebar-top ("non-float bridge not working differently"). Mirror
+    // the preview default here. An explicit stored choice still wins.
+    if (!raw) return packageDefaultPhotoPosition();
     let v = raw;
     try { const p = JSON.parse(raw); if (typeof p === 'string') v = p; }
     catch (_) {}
     v = String(v).trim();
     if (v === 'none') v = 'hidden';
-    return VALID.has(v) ? v : 'sidebar-top';
+    return VALID.has(v) ? v : packageDefaultPhotoPosition();
+  } catch (_) { return 'sidebar-top'; }
+}
+
+// Mirror the preview's package-aware photo-position default (app.src.js ~15662):
+// copenhagen-modern (incl. the 'scandinavian' alias, and the default package
+// when stylePackage is unset) → the band-overlap bridge; every other package →
+// sidebar-top. Used by readPhotoPosition when no explicit position is stored.
+function packageDefaultPhotoPosition() {
+  try {
+    if (typeof localStorage === 'undefined') return 'sidebar-top';
+    let pkg = localStorage.getItem('stylePackage');
+    if (pkg == null || pkg === '') pkg = 'copenhagen-modern';
+    try { const p = JSON.parse(pkg); if (typeof p === 'string') pkg = p; } catch (_) {}
+    pkg = String(pkg).trim().toLowerCase();
+    if (pkg === 'scandinavian') pkg = 'copenhagen-modern';
+    return pkg === 'copenhagen-modern' ? 'band-overlap' : 'sidebar-top';
   } catch (_) { return 'sidebar-top'; }
 }
 
@@ -1621,6 +1644,19 @@ export function applyOutcomesMode(docSections, doc) {
     // Per-role LAMINATED results: explicit role.results wins; else resolve the
     // role's proofPointIds against the master-profile proof points. Roles with
     // neither fall through to the token-match distribution below.
+    // JD-aware visibility: a role.outcomes item with defaultVisible:false is shown
+    // only when the current JD contains one of its visibilityRule.showWhenJDContainsAny
+    // terms. The app mirrors the active JD into localStorage 'antcv:lastJdText'.
+    let _jd = '';
+    try { _jd = String(localStorage.getItem('antcv:lastJdText') || '').toLowerCase(); } catch (_) {}
+    const _outcomeVisible = (o) => {
+      if (typeof o === 'string') return true;
+      if (!o) return false;
+      if (o.defaultVisible !== false) return true;
+      const terms = (o.visibilityRule && Array.isArray(o.visibilityRule.showWhenJDContainsAny))
+        ? o.visibilityRule.showWhenJDContainsAny : [];
+      return !!_jd && terms.some((t) => t && _jd.includes(String(t).toLowerCase()));
+    };
     const _lam = new Map();
     const _capJoin = (texts) => {
       let t = texts.slice(0, 2).join('; ');
@@ -1635,7 +1671,7 @@ export function applyOutcomesMode(docSections, doc) {
       //    stay hidden in a non-JD export.
       if (Array.isArray(r.outcomes) && r.outcomes.length) {
         const texts = r.outcomes
-          .filter((o) => o && (typeof o === 'string' || o.defaultVisible !== false))
+          .filter(_outcomeVisible)
           .map((o) => (typeof o === 'string' ? o.trim() : [o.b, o.t].filter(Boolean).join(' ').trim()))
           .filter(Boolean);
         if (texts.length) { _lam.set(r, _capJoin(texts)); return; }

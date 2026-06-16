@@ -99,9 +99,22 @@ copenhagen_wolves (sourced from v2 flags). Verified `diag-tense-render.mjs` (the
 flag from the **v1 `history`** bridge for now; migrating the reader to consume `kernel_v2`
 directly (with `tenseMode` present/past too) is part of the full v2 reader work.
 
-**Next:** §3 LANGUAGE (crossPolicy + langInvariantTokens + roleTitlePolicy in the single
-cross-lingual call), then §4 ingestion. The owner re-imports v2 cleanly via Settings →
-Personal once §4 JSON ingestion handles the v2 shape — `kernel_v2` is the staging copy.
+**§3 LANG-CROSS-001 DONE (1.50.516).** Added a self-gating `__langRule` to the main
+generation prompt (app.src.js, injected `${__tenseRule}${__langRule}${__brandFitRule}`;
+mirrored to app.js as `__lr` between `${y}${w}`). When the OUTPUT LANGUAGE is not English it
+translates prose (roleScope / outcomeResult / connectiveProse) directly in-target, keeps the
+invariant classes VERBATIM (company names, patent number, metrics/numerals, tool/standard/
+protocol names, publication titles), crosses role titles by default but in DANISH keeps the
+idiomatic English term (e.g. "Change Control Lead"), and honors a per-role `DO-NOT-TRANSLATE:`
+token list if present. Verified: rule text + injection present in src AND minified, boot-smoke,
+297/297. FOLLOW-UP (full v2 reader): surface per-role `langInvariantTokens[]` into the STORED
+WORK HISTORY line as the explicit `DO-NOT-TRANSLATE:` list (the generic invariant classes cover
+most today); expand target languages beyond the current EN/DA flag to es/zh + the lazy tier.
+
+**Next:** §4 ingestion (extraction → structural inference → gap flag → create/merge with
+conflict resolution; the biggest item), then §4f wizard UI. The owner re-imports v2 cleanly
+via Settings → Personal once §4 JSON ingestion handles the v2 shape — `kernel_v2` is the
+staging copy.
 
 SPEC ANCHORED. The interim v1 kernel fixes shipped this session (security guard,
 Copenhagen Wolves canon, Meprolight split, reverse-chron order, names, tools group names,

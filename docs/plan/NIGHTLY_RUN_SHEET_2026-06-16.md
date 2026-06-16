@@ -230,6 +230,92 @@ Lane 5 autonomy: 5.1, 5.2 (authorised both paths), 5.3, 5.4, 5.5 are autonomous-
 
 ---
 
+## LANE 6 — Language expansion (LANG-EXPAND-001 + 002 second wave)
+
+Full spec: `docs/plan/LANG-EXPAND-001.md` (first wave §1–§8 + second wave §9). Generation-pipeline
+only (the UI string layer is separate). This is a STAGED build behind a hard prerequisite — NOT a
+single autonomous sweep. Target set after both waves: 24 base languages + 1 variant (ar-EG).
+
+Standing rule for the whole lane: every language touches `workers/proxy/src/writing-style-engine.js`
+AND its byte-identical twin `workers/demo-proxy/src/writing-style-engine.js` (proxy first, separate
+CI deploys) + `writingSystems/registry.json` + `skills/antcv-writer/references/language-output.md`.
+Tier-2/3 also touch docx-worker + Preview CSS. registry-sync.test.mjs must stay green in BOTH workers.
+
+### 6.0 PREREQUISITE GATE — LANG-EXPAND-001-A (BCP-47 migration)  [BLOCKS everything below]
+One-time breaking-internal change (spec §2): `LangCode`→BCP-47 in `src/lib/writing-systems.ts`;
+`normaliseLangCode` accepts BCP-47 + maps legacy aliases (en→en-GB, pt→pt-BR, zh-CN/cn→zh,
+ar-*→ar, unknown→en-GB); registry.json + registry.schema.json key-pattern (^[a-z]{2}$ → BCP-47);
+engine SUPPORTED_LANGUAGES (both workers); language-output.md code refs; lang-bar-filter regex
+^[a-z]{2}$ → accept xx-XX. No data migration (normaliser is the read-side compat layer).
+**Gate:** registry-sync.test.mjs green in both workers; en/da/es/zh generations behaviour-identical
+(en resolves to en-GB). NOTHING in 6.1–6.5 starts until this lands. Autonomous-viable but
+high-blast-radius — land it alone, verify, then proceed.
+
+### 6.1 Tier 1 — registry-only, no fonts/layout  [autonomous-viable]
+Languages: it, pt-BR, en-US (first wave) + fr, de, id, sw, kl, fo, qu, and ru (Tier 1.5) (second
+wave). Per language: registry entry + sharedBannedBases + a language-output.md section (register,
+salutation/sign-off, banned items, density). en-US is a variant of en-GB (spelling transform table).
+ru "Tier 1.5" adds ONE extra check: Cyrillic glyph coverage in the DOCX heading font (Sans Serif
+Collection) — if absent, map heading→Noto Sans (Tier-2 remap pattern), else pure registry-only.
+**Per-language gate:** generate CV+CL headless in the language; banned-list enforced; salutation/
+sign-off correct; no engine error. **Owner/native-review gate:** sw, kl, fo, qu need native review
+before ACTIVATION (build + stage, do not flip live); fr/de/id/ru in-house-reviewable.
+Variant decisions to honour: qu → Southern Quechua default (tag `qu` vs `qu-PE` still open, §9.5.7).
+
+### 6.2 Tier 2 — fonts + complex/non-Latin script, LTR  [autonomous build, native-review gate]
+Languages: hi, am (first wave) + ko (Noto Sans KR), bn (Noto Sans Bengali), ja (Noto Sans JP)
+(second wave). Adds on top of Tier 1: on-demand Preview font load (only when active lang needs the
+script, never for Latin sessions); docx-worker complex-script run props (w:rFonts cs= + w:szCs
+mirroring w:sz); heading-font remap to the Noto face (Sans Serif Collection lacks these scripts);
+CloudConvert PDF font-embedding verification on first conversion. DENSITY: ja + zh are char-count
+not word-count; ko + kl need a density recalibration pass after first real generations. **Gate:**
+Preview/DOCX/PDF/desktop+mobile parity, NO tofu glyphs in any export. Native review before activating
+hi, am, ko, bn.
+
+### 6.3 Tier 3 — RTL  [partly owner-present]
+Languages: he, ar, ps (first wave) + ur (second wave). Full RTL mirroring (spec §5): Preview
+dir="rtl" + logical text-align (audit physical left/right CSS) + grid/column flip; docx-worker
+w:bidi + w:rtl + reversed table column order + sidebar/main cell swap + photo-placement mirror; PDF
+follows each path; Western numerals enforced; mixed-direction Latin tokens via Unicode bidi (QA must
+include bullets mixing RTL text with Latin acronyms + numbers). Implementation order he → ar → ps →
+ur. FONT CAVEATS: ps needs extended-glyph coverage (Noto Naskh/Sans Arabic — verify ټ ډ ړ ږ ښ ګ ڼ ۀ);
+**ur is NASTALIQ not Naskh → Noto Nastaliq Urdu, do NOT reuse the ar/ps Naskh face; verify Nastaliq
+vertical metrics don't break DOCX/PDF line height.** RTL layout mirroring is high-blast-radius +
+visual → **owner-present for first-language (he) bring-up**; ar/ps/ur follow the validated he path.
+ATS-Legacy stays LTR+warning until the §8.3 parser test. Native review before activating ar, ps, ur
+(he in-house).
+
+### 6.4 Variant — ar-EG (Egyptian Arabic) as a variant of ar  [autonomous-viable, after 6.3 ar]
+NOT a separate language (spec §9.2a) — the en-GB→en-US pattern. Inherits ar wholesale (script, RTL,
+fonts, numerals, all §5 machinery); differs ONLY as a spelling/register package (Egyptian vocabulary
++ phrasing where register allows, kept CV-appropriate). normaliseLangCode: ar→MSA, ar-EG (+ aliases
+"egyptian","masri")→variant, unknown ar-*→ar. registry: ar variant entry sharing ar's
+sharedBannedBases + a small delta; language-output.md ar-EG sub-section under ar. **Gate:** ar-EG
+generates with Egyptian register, inherits ar's RTL/font/numerals with zero new layout work; ar
+unaffected. Needs Egyptian-Arabic native review (lighter than a full language). Depends on 6.3 ar.
+
+### 6.5 Lang bar — selected-subset model  [code + island; MANDATORY at this scale]
+Spec §6 + §9.4. With ~25 entries the 6-button cluster cap is unworkable. Implement the
+selected-subset model: user picks default languages in the onboarding wizard AND Settings → Personal;
+the bar shows only the selected subset. `pwa/antcv-lang-bar-filter.js`: extend LABEL_TO_CODE for all
+new labels (italiano, português, français, deutsch, bahasa, kiswahili, kalaallisut, føroyskt, runa
+simi, русский, 한국어, বাংলা, اردو, 日本語, العربية (مصري)/egyptian→ar-EG, english (us), עברית, العربية,
+हिन्दी, پښتو, አማርኛ); raise/remove the cluster cap once the subset guarantees small visible counts.
+SHARES SURFACE with Lane 0.B LANGUAGES-CARD-PERSONAL-001 + Lane 5.4 (languages slide) — coordinate:
+the onboarding/Settings language picker is the same store the subset model reads. **Gate:** subset
+selection persists, bar renders only selected, after hard refresh, desktop + mobile.
+
+### Lane 6 autonomy summary
+- **Autonomous-viable:** 6.0 (alone, verify), 6.1 (build+stage; native-review gate before activating
+  sw/kl/fo/qu), 6.2 (build; native-review gate before activating), 6.4 (after 6.3 ar), 6.5.
+- **Owner-present:** 6.3 he bring-up (RTL layout, high blast radius); ar/ps/ur follow the he path.
+- **Open decisions (spec §9.5):** qu tag (`qu` vs `qu-PE`); density recalibration for ja/ko/kl after
+  first real generations; ATS-Legacy RTL parser test (§8.3).
+- **Sequence:** 6.0 → (6.1 ∥ 6.2 builds) → 6.3 (he first, owner-present) → 6.4 (ar-EG, after 6.3 ar)
+  → 6.5 (lang bar; can build in parallel but only ships value once languages exist).
+
+---
+
 ## Do NOT attempt autonomously (owner-present, probe-first)
 List-row controls (PP/SO/TB/move, 7 prior failed iterations, TC-028-gated); pagination remainder
 (PB-*, PAGEBREAK, PB-SIDEBAR, PDF-LAYOUT, + active item 7); Mobile (all 7); Candidate/application
@@ -239,6 +325,8 @@ VAL-001 (app-shell, blue-screen history); EXPORT-FALLBACK-ON-FIRST/CL-TABLE-DIMS
 items in Lane 0.A's owner-verify list.
 
 Lane 5: SETTINGS-SCROLL-RESET-001 stays owner-present (live probe). Lane 5.6 only escalates to app.src.js if a NATIVE second upload remains after 5.1. Lane 5.2 escalation beyond the two sidecars (to app.src.js/worker) is OUT of the granted authorisation — STOP + surface.
+
+Lane 6: the BCP-47 migration (6.0) is a hard prerequisite gate — nothing in 6.1–6.5 starts until it lands + verifies. RTL bring-up (6.3 he) is owner-present (layout-mirroring blast radius); ar/ps/ur follow the validated he path. Languages needing native review (sw/kl/fo/qu/hi/am/ko/bn/ar/ps/ur + ar-EG) are BUILD-then-STAGE — do not flip live without review.
 
 ## Dissolved / already shipped (disposition only)
 Generation/content (11 gates + 2 shipped + 2 relocated → GEN_DISPOSITION_2026-06-16.md);
@@ -267,6 +355,12 @@ APP-SENTENCE-STYLE-001 + the 2026-06-15 colour/lamination/JD-cloud set all FIXED
 7. **LANE 4** tests landed alongside each; author TC-028 + mirror-guard CI; add Lane 5 gates
    (one-button + 6-source-type routing for 5.2; quiz-relocation; showcase mount).
 8. **LANE 3** sidecar-merge only if time remains.
-9. **LANE 0.C** new features only if everything above is clean.
+9. **LANE 6 language expansion** (LANG-EXPAND-001/002): land 6.0 BCP-47 migration ALONE + verify
+   (registry-sync green both workers, en/da/es/zh behaviour-identical) → then Tier 1 (6.1) +
+   Tier 2 (6.2) builds (native-review gate before activating) → 6.3 RTL he bring-up OWNER-PRESENT,
+   ar/ps/ur follow → 6.4 ar-EG variant (after ar) → 6.5 selected-subset lang bar. Coordinate 6.5 +
+   Lane 0.B LANGUAGES-CARD-PERSONAL + Lane 5.4 (same language-picker store). A long multi-session
+   effort — 6.0 is the only thing that must precede the rest.
+10. **LANE 0.C** new features only if everything above is clean.
 Each task: spec → implement → headless gate → deploy → record. Leave regen/PDF/live-device eyeballs
 as a short owner punch-list (most of Lane 0.A's second list + 0.B SETTINGS-SCROLL + 0.C).

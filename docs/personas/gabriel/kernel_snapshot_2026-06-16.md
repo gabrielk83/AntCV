@@ -7,7 +7,7 @@
 > **2026-06-16 reconciliation (hand-mirrored to D1):** the D1 `user_kernel.workHistory` was
 > updated to match the owner's master profile (`AntCV_master_profile_gabriel_2026-06-15_outcome_edits.json`):
 > ADDED `Security Guard, Student Dormitories — Tel Aviv University (2010)` and
-> `Team Operations Manager & Assistant Coach (Volunteer) — Copenhagen Wolves RFC, Pan Idræt (2023 - present)`;
+> `Team Operations Manager & Assistant Coach (foreningsarbejde) — Pan Idræt Rugby - Copenhagen Wolves RFC (2023 - present)`;
 > CORRECTED Kanzen (`Founder & … i nord … 2025` → `Product / Project Expert — Kanzen Konsulenter ApS — 2022 - 2026`)
 > and IDF (`Computer Administrator — IDF` → `Computer Systems Administrator — Israel Defense Forces (Communication Corps)`).
 > This snapshot was hand-updated to reflect that write; re-run the script (with CF creds) for a canonical regen.
@@ -83,7 +83,7 @@ English (Native), Hebrew (Native), Spanish (Professional), Danish (B1)
 - Handled access control and monitored activity during shifts.
 - Responded calmly to incidents and interacted with residents.
 
-### Team Operations Manager & Assistant Coach (Volunteer) — Copenhagen Wolves RFC, Pan Idræt (2023 - present)
+### Team Operations Manager & Assistant Coach (foreningsarbejde) — Pan Idræt Rugby - Copenhagen Wolves RFC (2023 - present)
 - Co-organised annual sports and drag entertainment events.
 - Managed logistics for ~25 players and coaches across Denmark and abroad.
 - Practical team support including equipment handling, storage and setup.

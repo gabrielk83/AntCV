@@ -188,6 +188,30 @@ export function ingest(text, existingKernel, opts = {}) {
   return { kernel, mode, conflicts, added, gaps, sourceLang: incoming.language && incoming.language.sourceLang };
 }
 
+// ── reader bridge: project a v2 kernel → the v1 workHistory shape that the ───
+// generation prompt (GABRIEL_BG / STORED WORK HISTORY) reads. Carries the rich v2
+// fields (outcomes/proofPoints/langInvariantTokens) through so the lamination +
+// tense (isCurrent) + language readers use them. Pure → node-testable.
+export function projectV2ToWorkHistory(kernel) {
+  const exp = (kernel && Array.isArray(kernel.experience)) ? kernel.experience : [];
+  return exp.map((r) => {
+    const start = String(r.start || '').trim();
+    const endRaw = String(r.end || '').trim();
+    const isCurrent = r.isCurrent === true || PRESENT_RE.test(endRaw);
+    const years = String(r.years || '').trim() ||
+      (start ? start + (endRaw || isCurrent ? '–' + (isCurrent ? 'present' : endRaw) : '') : (isCurrent ? 'present' : ''));
+    const bullets = (Array.isArray(r.scope) ? r.scope : []).map((s) => String(s || '').trim()).filter(Boolean);
+    const out = {
+      id: r.id, role: r.title || r.role || '', company: r.company || '', years,
+      isCurrent, on: r.on !== false, bullets,
+    };
+    if (Array.isArray(r.outcomes) && r.outcomes.length) out.outcomes = r.outcomes;
+    if (Array.isArray(r.proofPoints) && r.proofPoints.length) out.proofPoints = r.proofPoints;
+    if (Array.isArray(r.langInvariantTokens) && r.langInvariantTokens.length) out.langInvariantTokens = r.langInvariantTokens;
+    return out;
+  });
+}
+
 // ── Slice 2: file → text (browser-only; reuses the app's PDF.js + mammoth) ───
 // Defined but never called at import time, so node tests of the PURE functions
 // above are unaffected. txt/json paths are node-testable with a File-like stub.
@@ -242,4 +266,4 @@ export async function ingestFile(file, existingKernel, opts = {}) {
 }
 
 // browser global (UI slices call window.AntcvKernelIngest); harmless in node.
-try { if (typeof window !== 'undefined') window.AntcvKernelIngest = { ingest, ingestFile, extractTextFromFile, detectImportKind, parseTextToDraft, inferStructural, detectGaps, mergeKernels, detectSourceLang }; } catch (_) {}
+try { if (typeof window !== 'undefined') window.AntcvKernelIngest = { ingest, ingestFile, extractTextFromFile, detectImportKind, parseTextToDraft, inferStructural, detectGaps, mergeKernels, detectSourceLang, projectV2ToWorkHistory }; } catch (_) {}

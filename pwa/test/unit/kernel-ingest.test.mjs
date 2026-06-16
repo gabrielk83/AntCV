@@ -3,7 +3,7 @@
  * create/merge with keep-both-and-flag. NO fabrication. No DOM/localStorage. */
 import test from 'node:test';
 import assert from 'node:assert';
-import { parseTextToDraft, inferStructural, detectGaps, mergeKernels, ingest, detectSourceLang, detectImportKind, extractTextFromFile, ingestFile } from '../../antcv-kernel-ingest.js';
+import { parseTextToDraft, inferStructural, detectGaps, mergeKernels, ingest, detectSourceLang, detectImportKind, extractTextFromFile, ingestFile, projectV2ToWorkHistory } from '../../antcv-kernel-ingest.js';
 
 // File-like stub (node): name/type + async text().
 const fileOf = (name, content, type = '') => ({ name, type, text: async () => content });
@@ -120,6 +120,26 @@ test('Slice2 a kernel .json bypasses the parser and create/merges directly', asy
   assert.equal(r.mode, 'create');
   assert.equal(r.kernel.experience.length, 1);
   assert.equal(r.kernel.experience[0].title, 'Engineer');
+});
+
+test('reader bridge: projectV2ToWorkHistory maps v2 → the v1 STORED-WORK-HISTORY shape', () => {
+  const kernel = { experience: [
+    { id: 'pm', title: 'Product Manager', company: 'Acme', start: '2022', end: 'present', isCurrent: true,
+      scope: ['Ran the roadmap.', 'Owned delivery.'],
+      outcomes: [{ title: 'cycle', result: 'Cut cycle 250→10 days.' }], proofPoints: ['250→10.'], langInvariantTokens: ['Acme', '250'] },
+    { id: 'sa', title: 'System Architect', company: 'Acme', start: '2017', end: '2020', isCurrent: false, scope: ['Defined the architecture.'] },
+  ] };
+  const wh = projectV2ToWorkHistory(kernel);
+  assert.equal(wh.length, 2);
+  assert.equal(wh[0].role, 'Product Manager');
+  assert.equal(wh[0].company, 'Acme');
+  assert.equal(wh[0].isCurrent, true);
+  assert.match(wh[0].years, /2022.*present/);
+  assert.deepEqual(wh[0].bullets, ['Ran the roadmap.', 'Owned delivery.']);   // scope → bullets
+  assert.ok(wh[0].outcomes && wh[0].outcomes[0].result, 'outcomes carried for the lamination');
+  assert.ok(wh[0].langInvariantTokens.includes('Acme'), 'invariant tokens carried for the language reader');
+  assert.equal(wh[1].isCurrent, false);
+  assert.match(wh[1].years, /2017.*2020/);
 });
 
 test('Slice2 unsupported / no-browser paths fail gracefully (no throw-at-import)', async () => {

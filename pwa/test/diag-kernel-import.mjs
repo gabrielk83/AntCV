@@ -87,7 +87,22 @@ const d = await page.evaluate(async ()=>{
   return { total: btns.length, nearSettings:!!nearSettings, nearWizard:!!nearWizard, opensPicker:clicked };
 });
 
+// E) applyToCV projects the kernel into personalInfo.workHistory (generation source) + GABRIEL_BG reflects it
+const e = await page.evaluate(async ()=>{
+  localStorage.setItem('personalInfo', JSON.stringify({ name:'G', workHistory:[{ role:'OLD ROLE', company:'Old', years:'1999' }] }));
+  const kernel = { tenseMode:'auto', experience:[
+    { id:'pm', title:'Imported PM', company:'NewCo', start:'2023', end:'present', isCurrent:true, scope:['Did new things.'] },
+  ] };
+  const ok = window.AntcvKernelImport.applyToCV(kernel);
+  const pi = JSON.parse(localStorage.getItem('personalInfo')||'{}');
+  const backup = JSON.parse(localStorage.getItem('antcv:workHistoryBackup')||'{}');
+  // GABRIEL_BG is a getter that reads personalInfo → STORED WORK HISTORY
+  let bg=''; try{ bg=String(window.GABRIEL_BG||''); }catch(_){}
+  return { ok, whRole: pi.workHistory && pi.workHistory[0] && pi.workHistory[0].role, whCurrent: pi.workHistory && pi.workHistory[0] && pi.workHistory[0].isCurrent, backupRole: backup.workHistory && backup.workHistory[0] && backup.workHistory[0].role, bgHasImported: /Imported PM/.test(bg) && /CURRENT ROLE/.test(bg) };
+});
+
 await browser.close(); await new Promise(r=>server.close(r));
+console.log('E apply :', JSON.stringify(e));
 console.log('--- kernel-import UI ---');
 console.log('A fresh:', JSON.stringify(a));
 console.log('B merge:', JSON.stringify(b));
@@ -103,6 +118,9 @@ const checks = [
   ['saveToAccount POSTs the kernel to /api/profile/kernel-v2 (credentials included)', !!c && /\/api\/profile\/kernel-v2$/.test(c.url) && c.method==='POST' && c.cred==='include' && /"experience"/.test(c.body||'')],
   ['button merges next to BOTH the Settings + wizard import anchors (no duplicates)', d.nearSettings && d.nearWizard && d.total===2],
   ['the merged button opens the import picker', d.opensPicker],
+  ['applyToCV writes the imported roles into personalInfo.workHistory', e.ok && e.whRole==='Imported PM' && e.whCurrent===true],
+  ['the prior workHistory is backed up (reversible)', e.backupRole==='OLD ROLE'],
+  ['GABRIEL_BG (generation source) now reflects the imported current role', e.bgHasImported],
   ['no app errors', errs.length===0],
 ];
 for (const [n,ok] of checks) console.log(`${n}: ${ok?'OK':'FAIL'}`);

@@ -56,14 +56,16 @@
       + '<h3 style="margin:10px 0 4px;font-size:13px;color:#283556">Roles</h3><ul style="margin:0 0 8px;padding-left:18px;font-size:13px">' + rolesHtml + '</ul>'
       + '<h3 style="margin:10px 0 4px;font-size:13px;color:#8a6d00">Conflicts — choose per field (existing is kept by default; metrics never auto-overwritten)</h3><ul style="margin:0;padding:0;font-size:13px">' + conflictsHtml + '</ul>'
       + '<h3 style="margin:10px 0 4px;font-size:13px;color:#b5651d">Gaps — fill later (never invented)</h3><ul style="margin:0 0 12px;padding-left:18px;font-size:13px">' + gapsHtml + '</ul>'
-      + '<div style="display:flex;gap:10px;justify-content:flex-end"><button id="antcv-kimport-cancel" style="padding:7px 14px;border:1px solid #ccc;background:#f4f4f4;border-radius:6px;cursor:pointer">Cancel</button><button id="antcv-kimport-apply" style="padding:7px 14px;border:1px solid #00746E;background:#fff;color:#00746E;border-radius:6px;cursor:pointer">Stage locally</button><button id="antcv-kimport-save" style="padding:7px 16px;border:none;background:#00746E;color:#fff;border-radius:6px;cursor:pointer;font-weight:700">Save to my account</button></div>'
+      + '<div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap"><button id="antcv-kimport-cancel" style="padding:7px 14px;border:1px solid #ccc;background:#f4f4f4;border-radius:6px;cursor:pointer">Cancel</button><button id="antcv-kimport-apply" style="padding:7px 14px;border:1px solid #00746E;background:#fff;color:#00746E;border-radius:6px;cursor:pointer">Apply to my CV</button><button id="antcv-kimport-save" style="padding:7px 16px;border:none;background:#00746E;color:#fff;border-radius:6px;cursor:pointer;font-weight:700">Apply + save to account</button></div>'
       + '</div>';
     document.body.appendChild(ov);
     ov.querySelector('#antcv-kimport-x').addEventListener('click', closeModal);
     ov.querySelector('#antcv-kimport-cancel').addEventListener('click', closeModal);
     ov.addEventListener('click', function (e) { if (e.target === ov) closeModal(); });
-    ov.querySelector('#antcv-kimport-apply').addEventListener('click', function () { var k = resolveKernel(result, ov); stageLocal(k); closeModal(); toast('Kernel staged locally (' + ((k.experience || []).length) + ' roles).'); });
-    ov.querySelector('#antcv-kimport-save').addEventListener('click', function () { var k = resolveKernel(result, ov); stageLocal(k); saveToAccount(k); });
+    // Apply: stage + project into personalInfo.workHistory (the generation source).
+    ov.querySelector('#antcv-kimport-apply').addEventListener('click', function () { var k = resolveKernel(result, ov); stageLocal(k); var ok = applyToCV(k); closeModal(); toast(ok ? 'Applied to your CV (' + ((k.experience || []).length) + ' roles). Regenerate to rebuild the document from it.' : 'Staged locally.'); });
+    // Apply + save: also persist to D1 user_kernel.kernel_v2.
+    ov.querySelector('#antcv-kimport-save').addEventListener('click', function () { var k = resolveKernel(result, ov); stageLocal(k); applyToCV(k); saveToAccount(k); });
   }
 
   // apply the per-field radio choices (default = keep existing) onto the kernel.
@@ -84,6 +86,25 @@
     return k;
   }
   function stageLocal(k) { try { localStorage.setItem(STAGE_KEY, JSON.stringify(k)); } catch (_) {} }
+
+  // project the v2 kernel into personalInfo.workHistory — the source the generation
+  // prompt (GABRIEL_BG / STORED WORK HISTORY) reads — so a REGENERATE rebuilds the CV
+  // from the imported kernel. Backs up the prior workHistory first (reversible).
+  function applyToCV(k) {
+    var e = eng(); if (!e || !e.projectV2ToWorkHistory) return false;
+    var wh = e.projectV2ToWorkHistory(k);
+    if (!wh.length) { toast('Nothing to apply — the kernel has no experience roles.'); return false; }
+    var pi = {}; try { pi = JSON.parse(localStorage.getItem('personalInfo') || '{}') || {}; } catch (_) {}
+    try { localStorage.setItem('antcv:workHistoryBackup', JSON.stringify({ at: Date.now(), workHistory: pi.workHistory || null })); } catch (_) {}
+    pi.workHistory = wh;
+    if (k && k.tenseMode) pi.tenseMode = k.tenseMode;
+    if (k && k.language) pi.language = k.language;
+    try { localStorage.setItem('personalInfo', JSON.stringify(pi)); } catch (_) { return false; }
+    try { if (typeof window._antcvCloudWrite === 'function') window._antcvCloudWrite({ personalInfo: pi }); } catch (_) {}
+    try { window.dispatchEvent(new StorageEvent('storage', { key: 'personalInfo' })); } catch (_) {}
+    try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { source: 'kernel-import' } })); } catch (_) {}
+    return true;
+  }
 
   // relay base URL (same resolution the cloud-sync sidecars use).
   function relayBase() {
@@ -188,5 +209,5 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
   else boot();
 
-  window.AntcvKernelImport = { version: VERSION, runImport: runImport, openPicker: openPicker, saveToAccount: saveToAccount, relayBase: relayBase, _inject: injectEntry, _stageKey: STAGE_KEY };
+  window.AntcvKernelImport = { version: VERSION, runImport: runImport, openPicker: openPicker, saveToAccount: saveToAccount, applyToCV: applyToCV, relayBase: relayBase, _inject: injectEntry, _stageKey: STAGE_KEY };
 })();

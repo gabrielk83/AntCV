@@ -152,8 +152,19 @@ most today); expand target languages beyond the current EN/DA flag to es/zh + th
   pdf+docx, not txt → not a JD input). Idempotent (per-anchor host marker + immediate-next-
   sibling guard), re-applied via MutationObserver. Clicking → `openPicker` → the preview modal.
   Verified diag-kernel-import.mjs (button next to BOTH Settings + wizard anchors, no duplicates,
-  opens picker). **REMAINING in Slice 3:** full structured apply of date/metric resolutions;
-  language-selection step; and migrating the live readers to consume `kernel_v2`
+  opens picker). **READER BRIDGE (1.50.520) — import now feeds GENERATION.** `projectV2ToWorkHistory(kernel)`
+  (engine, pure + node-tested) maps v2 `experience[]` → the v1 `workHistory` shape the
+  generation prompt (GABRIEL_BG / STORED WORK HISTORY) reads: title→role, start/end→years,
+  `isCurrent` (drives §2 tense), `scope`→`bullets`, and carries `outcomes`/`proofPoints`/
+  `langInvariantTokens` through (for lamination + §3 language). The modal's "Apply to my CV"
+  (and "Apply + save to account") calls `applyToCV(kernel)` → writes `personalInfo.workHistory`
+  (backing up the prior to `antcv:workHistoryBackup`, reversible) + carries `tenseMode`/`language`.
+  Verified `diag-kernel-import.mjs`: after Apply, `personalInfo.workHistory` holds the imported
+  roles AND `GABRIEL_BG` reflects the imported current role with its `CURRENT ROLE` tag — i.e.
+  a REGENERATE now rebuilds the CV from the imported kernel. **REMAINING in Slice 3:** auto-sync
+  `kernel_v2` from D1 → `personalInfo` on login/restore (today Apply is the manual bridge);
+  full structured apply of date/metric resolutions; language-selection step. The §2/§3 readers
+  already consume the v1 bridge that Apply now populates from v2 — so this closes the loop.
   so an import actually changes the generated CV (today it stages durably but generation still
   reads the v1 bridge).
 

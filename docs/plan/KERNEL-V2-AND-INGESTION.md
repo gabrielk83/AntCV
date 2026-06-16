@@ -111,10 +111,29 @@ token list if present. Verified: rule text + injection present in src AND minifi
 WORK HISTORY line as the explicit `DO-NOT-TRANSLATE:` list (the generic invariant classes cover
 most today); expand target languages beyond the current EN/DA flag to es/zh + the lazy tier.
 
-**Next:** §4 ingestion (extraction → structural inference → gap flag → create/merge with
-conflict resolution; the biggest item), then §4f wizard UI. The owner re-imports v2 cleanly
-via Settings → Personal once §4 JSON ingestion handles the v2 shape — `kernel_v2` is the
-staging copy.
+### §4 ingestion — sliced
+
+- **Slice 1 — ENGINE: DONE.** `pwa/antcv-kernel-ingest.js` — pure, UI-free, deterministic,
+  node-tested (`pwa/test/unit/kernel-ingest.test.mjs`, 6 checks; suite 297→303). Covers:
+  4a `parseTextToDraft` (already-extracted CV text → draft roles/dates/contact, conservative,
+  no guessing); 4b/4e `inferStructural` (isCurrent from the date flag, GEN-IDF-001 hidden-by-
+  default for military/security-guard/student/TA roles, same-company-overlap → merge
+  CANDIDATE not auto-merge, ONBOARD-LANG-001 new-user `activeDefaults=[detected sourceLang]`,
+  `tenseMode='auto'`, best-effort `langInvariantTokens`); 4c `detectGaps` (flag roles missing
+  scope/outcomes/proofPoints/dates — never auto-fill); 4d `mergeKernels` (CREATE if no
+  existing; else merge — new roles add, same role with a differing title/date/METRIC →
+  keep-both-and-FLAG, existing value preserved, metrics NEVER auto-overwritten; non-conflicting
+  scope merges additively); `ingest()` orchestrator → `{kernel, mode, conflicts, gaps,
+  sourceLang}`. NO fabrication anywhere. Not yet loaded in the browser (no consumer) — the UI
+  slice imports it.
+- **Slice 2 — file→text extraction:** docx via the bundled mammoth, pdf→text/OCR, txt as-is,
+  LinkedIn export. Feeds `ingest()`.
+- **Slice 3 — UI (§4f):** onboarding wizard step + Settings → Personal import; conflict
+  RESOLUTION modal (4d) showing existing vs incoming per field; gap-fill prompt (4c); language
+  selection (4e). Wires to the proxy/D1 write of `user_kernel`.
+
+The owner re-imports v2 cleanly via Settings → Personal once Slices 2–3 land — `kernel_v2` is
+the staging copy until then.
 
 SPEC ANCHORED. The interim v1 kernel fixes shipped this session (security guard,
 Copenhagen Wolves canon, Meprolight split, reverse-chron order, names, tools group names,

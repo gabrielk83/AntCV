@@ -10,6 +10,8 @@
 > `Team Operations Manager & Assistant Coach (foreningsarbejde) — Pan Idræt Rugby - Copenhagen Wolves RFC (2023 - present)`;
 > CORRECTED Kanzen (`Founder & … i nord … 2025` → `Product / Project Expert — Kanzen Konsulenter ApS — 2022 - 2026`)
 > and IDF (`Computer Administrator — IDF` → `Computer Systems Administrator — Israel Defense Forces (Communication Corps)`).
+> SPLIT Meprolight (`Electro-Optics Engineer & Team Leader` → `Electro-Optics Team Leader (2013–2014)`
+> + `R&D Electro-Optics Engineer (2010–2013)`) per the Raw CV — kernel is now **11 roles**.
 > This snapshot was hand-updated to reflect that write; re-run the script (with CF creds) for a canonical regen.
 
 ## Tools
@@ -63,10 +65,15 @@ English (Native), Hebrew (Native), Spanish (Professional), Danish (B1)
 - Co-invented Patent No. 241997 — cover window geometry reducing optical crosstalk between adjacent sensors.
 - Set up the optical characterisation lab; defined acceptance test procedures for incoming and outgoing optical assemblies.
 
-### Electro-Optics Engineer & Team Leader — Meprolight, IWI Group (2010–2014)
-- Designed and characterised low-light, thermal, SWIR, and free-space optical communication systems for defence-grade products, including NIR/SWIR/thermal multi-band image fusion.
+### Electro-Optics Team Leader — Meprolight, IWI Group (2013–2014)
 - Led prototype-to-production transfer; owned DV and PV test plans and supplier qualification for optical components.
 - Mentored junior engineers on optical metrology, stray-light analysis, and EO system trade-offs.
+- Guided workflow improvements that strengthened team output and collaboration.
+
+### R&D Electro-Optics Engineer — Meprolight, IWI Group (2010–2013)
+- Designed and characterised low-light, thermal, SWIR, and free-space optical communication systems for defence-grade products, including NIR/SWIR/thermal multi-band image fusion.
+- Established the laser lab and automated test benches, improving research capacity.
+- Conducted feasibility studies, simulations, and prototype validation.
 
 ### R&D and Teaching Assistant — Tel Aviv University (2006–2010)
 - Nanotechnology research on suspended carbon nanotube integration in MEMS/NEMS devices; co-authored peer-reviewed publications.

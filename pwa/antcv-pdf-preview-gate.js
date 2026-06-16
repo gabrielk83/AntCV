@@ -602,10 +602,21 @@ ${inlineStyles}
             // Measure at natural scale: clear any prior fit first.
             ibody.classList.remove('antcv-fit-width');
             ibody.style.removeProperty('--antcv-fit');
-            const avail = (iframe.clientWidth || ibody.clientWidth || 0) - 24; // body padding
+            const availW = (iframe.clientWidth || ibody.clientWidth || 0) - 24; // body padding
+            const availH = (iframe.clientHeight || 0) - 24;
             const pw = paper.getBoundingClientRect().width;
-            if (pw > 0 && avail > 0 && pw > avail) {
-              ibody.style.setProperty('--antcv-fit', String(Math.max(0.3, avail / pw)));
+            // EXPORT-PREVIEW-ZOOM-001 (owner 2026-06-15): ZOOM OUT so a WHOLE A4
+            // page fits the modal viewport — the previous fit was WIDTH-ONLY, so a
+            // page taller than the viewport was cropped/oversized. Fit by the
+            // smaller of width-scale and one-page-HEIGHT-scale. One A4 page = the
+            // first .antcv-page-row (else the paper itself). Only ever scales DOWN.
+            const pageEl = paper.querySelector('.antcv-page-row') || paper;
+            const ph = pageEl.getBoundingClientRect().height;
+            let scale = 1;
+            if (pw > 0 && availW > 0) scale = Math.min(scale, availW / pw);
+            if (ph > 0 && availH > 0) scale = Math.min(scale, availH / ph);
+            if (scale < 0.999) {
+              ibody.style.setProperty('--antcv-fit', String(Math.max(0.3, scale)));
               ibody.classList.add('antcv-fit-width');
             }
           } catch (_) {}

@@ -24,6 +24,12 @@ const STALE = {cv:[
   {id:'experience',title:'PROFESSIONAL EXPERIENCE',loc:'main',on:true,type:'experience',roles:[
     {id:'r1',title:'Founder & CEO',company:'Kanzen',years:'2018 - 2026',on:true,bullets:['Ran it.']},
   ]},
+  // SECTION-TYPE-NORMALIZE-INLINE-001: imported inline-label sections stored as
+  // type 'text' must be promoted to 'text_inline' (work_style + who_i_am here);
+  // the greeting boilerplate must STAY 'text'.
+  {id:'work_style',title:'WORK STYLE',loc:'main',on:true,type:'text',content:'Calm under pressure.'},
+  {id:'who_i_am',title:'WHO I AM',loc:'main',on:true,type:'text',content:'Engineer.'},
+  {id:'greeting',title:'GREETING',loc:'main',on:true,type:'text',content:'Dear team,'},
 ],cl:[]};
 await page.addInitScript((STALE)=>{
   if (localStorage.getItem('__antcvDiagSeeded')) return;
@@ -44,11 +50,15 @@ const check=(n,ok,d)=>{checks.push(ok);console.log(`${n}: ${ok?'OK':'FAIL'}${ok?
 const read = ()=>page.evaluate(()=>{
   const cv=(JSON.parse(localStorage.getItem('sections')||'{}').cv||[]);
   const exp=cv.find(s=>s.type==='experience');
-  return { order:cv.map(s=>s.id), title:(exp&&exp.roles[0]&&exp.roles[0].title)||'' };
+  const ty=(id)=>{const x=cv.find(s=>s.id===id);return x&&x.type;};
+  return { order:cv.map(s=>s.id), title:(exp&&exp.roles[0]&&exp.roles[0].title)||'',
+    workStyleType:ty('work_style'), whoType:ty('who_i_am'), greetingType:ty('greeting') };
 });
 let s = await read();
 check('1. boot: rec after experience + founder stripped',
   s.order.indexOf('recommendations')>s.order.indexOf('experience') && !/founder/i.test(s.title), JSON.stringify(s));
+check('1b. SECTION-TYPE-NORMALIZE: work_style + who_i_am → text_inline, greeting stays text',
+  s.workStyleType==='text_inline' && s.whoType==='text_inline' && s.greetingType==='text', JSON.stringify(s));
 
 // 2 — simulate the cloud-restore reapplying the stale slot AFTER load
 await page.evaluate((STALE)=>{

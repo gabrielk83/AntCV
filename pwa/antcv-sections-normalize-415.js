@@ -310,22 +310,29 @@
   }
 
   // SECTION-TYPE-NORMALIZE-INLINE-001 (owner 2026-06-15: "new sections" inline
-  // label). The WORK STYLE section gets a bold inline label ("Work style:") in
-  // the EXPORT even when stored as type 'text' (worker `isWorkStyleSection` →
-  // renderTextInline), but the PREVIEW only renders that label for type
-  // 'text_inline' (app.src.js ~4740/4766). So an imported work_style stored as
-  // 'text' shows the label in DOCX/PDF but NOT in the preview. Generation emits
-  // 'text_inline' post-1.50.497; this covers the IMPORT path. Fix: promote a
-  // work_style section's type 'text' → 'text_inline' (same `content` shape, so
-  // it's render-safe in both paths) to restore preview↔export parity. Matches the
-  // preview's own work_style detection (id 'work_style' OR title work style).
-  function inlineifyWorkStyle(arr) {
+  // label). The inline-label sections — WORK STYLE, WHO I AM, WHY THIS COMPANY/
+  // ROLE/POSITION — get a bold inline label ("Work style:", "Who I am:", "Why…:")
+  // in the EXPORT even when stored as type 'text' (the worker renders text_inline,
+  // and isWorkStyleSection forces it for work_style), but the PREVIEW only renders
+  // the label for type 'text_inline' (app.src.js ~4744/4765). So an imported
+  // section stored as 'text' shows the label in DOCX/PDF but NOT in the preview.
+  // Generation emits 'text_inline' post-1.50.497; this covers the IMPORT path.
+  // Fix: promote these sections' type 'text' → 'text_inline' (same `content`
+  // shape, render-safe in both paths) to restore preview↔export parity. NEVER
+  // promote the CL boilerplate (greeting/opening/closure) — both the worker and
+  // the preview deliberately render those as plain text even when text_inline.
+  var INLINE_LABEL_IDS = { work_style: 1, who_i_am: 1, why_company: 1, why_role: 1, why_position: 1 };
+  var INLINE_LABEL_TITLE = /^\s*(work\s*style|who\s+i\s+am|why\s+(this\s+)?(company|role|position))\b/i;
+  var INLINE_LABEL_SKIP = { greeting: 1, opening: 1, closure: 1, closing: 1 };
+  function inlineifyLabeledText(arr) {
     if (!Array.isArray(arr)) return null;
     var changed = false;
     var out = arr.map(function (s) {
       if (!s || typeof s !== 'object' || s.type !== 'text') return s;
-      var t = String(s.title || '').toLowerCase();
-      if (s.id === 'work_style' || t === 'work style' || t === 'workstyle') {
+      if (INLINE_LABEL_SKIP[s.id]) return s;
+      var t = String(s.title || '').toLowerCase().trim();
+      if (INLINE_LABEL_SKIP[t]) return s;
+      if (INLINE_LABEL_IDS[s.id] || INLINE_LABEL_TITLE.test(s.title || '')) {
         changed = true;
         return Object.assign({}, s, { type: 'text_inline' });
       }
@@ -386,14 +393,14 @@
       var f = stripFounder(cv); if (f) { cv = f; changed = true; }
       var p = placeRecs(cv); if (p) { cv = p; changed = true; }
       var dl = defaultLoc(cv); if (dl) { cv = dl; changed = true; }
-      var wi = inlineifyWorkStyle(cv); if (wi) { cv = wi; changed = true; }
+      var wi = inlineifyLabeledText(cv); if (wi) { cv = wi; changed = true; }
       var no = neutralizeUnsolicitedOpener(cv); if (no) { cv = no; changed = true; }
       // SECTION-PREVIEW-LOC-001 / TYPE-NORMALIZE: also normalise the CL sections'
       // loc + work_style type so imported CL sections render in the preview.
       var cl = Array.isArray(b.cl) ? b.cl : null;
       var clChanged = false;
       if (cl) { var dlc = defaultLoc(cl); if (dlc) { cl = dlc; clChanged = true; } }
-      if (cl) { var wic = inlineifyWorkStyle(cl); if (wic) { cl = wic; clChanged = true; } }
+      if (cl) { var wic = inlineifyLabeledText(cl); if (wic) { cl = wic; clChanged = true; } }
       if (clChanged) changed = true;
       if (!changed) return;
       var next = Object.assign({}, b, { cv: cv });

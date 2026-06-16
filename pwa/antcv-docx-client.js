@@ -1695,7 +1695,16 @@ export function applyOutcomesMode(docSections, doc) {
       const ts = tok(txtOf(x)); if (!ts.length) return false;
       return bulletSigs.some((sig) => { let m = 0; ts.forEach((w) => { if (sig.has(w)) m++; }); return m >= Math.max(3, Math.ceil(0.7 * ts.length)); });
     };
-    const pool = so.items.filter(Boolean).filter((x) => !isPatent(x) && !echoes(x));
+    // OUTCOME-SEED-UNION-001 (owner 2026-06-16): the `echoes` filter exists to drop
+    // a SELECTED OUTCOME that merely re-states a bullet. But the bullet FALLBACK
+    // intentionally seeds an outcome FROM a role's bullet (for a role with no proof
+    // points) and pins it via the map — that one must survive `echoes` and laminate
+    // (the dedup-hide below then removes the duplicate source bullet). So an outcome
+    // with an explicit map entry bypasses `echoes`.
+    let oroMapEarly = {};
+    try { oroMapEarly = JSON.parse(localStorage.getItem('antcv:outcomeRoleMap') || '{}') || {}; } catch (_) {}
+    const isMappedOutcome = (x) => x && x._oid != null && oroMapEarly[x._oid] != null;
+    const pool = so.items.filter(Boolean).filter((x) => !isPatent(x) && (isMappedOutcome(x) || !echoes(x)));
     if (!pool.length) return docSections.filter((s) => !isOutcomes(s));
     const assign = distRoles.map(() => []);
     const left = [];
@@ -1706,8 +1715,7 @@ export function applyOutcomesMode(docSections, doc) {
     // WINS over the token-match heuristic below — the user pins each outcome to a
     // specific position, eliminating the "random"/best-guess distribution. Inert
     // until the selector UI stamps _oid + writes the map.
-    let oroMap = {};
-    try { oroMap = JSON.parse(localStorage.getItem('antcv:outcomeRoleMap') || '{}') || {}; } catch (_) {}
+    const oroMap = oroMapEarly;
     const roleById = new Map(); visRoles.forEach((r) => { if (r && r.id != null) roleById.set(String(r.id), r); });
     // OUTCOMES-RESULTS-BESTMATCH-001 (owner 2026-06-14) + RESULTS-CROSSROLE-BLEED-001
     // (owner 2026-06-16: a "LiDAR" outcome attached to the Sirin role, which had no
@@ -1781,12 +1789,27 @@ export function applyOutcomesMode(docSections, doc) {
       if (txt.length > 260) txt = txt.slice(0, 257).replace(/[;,\s]+\S*$/, '') + '…';
       return { text: txt, index: bestIdx };
     };
+    // OUTCOME-SEED-UNION-001 (owner 2026-06-16) dedup-hide: a SELECTED OUTCOME may
+    // be seeded from a role's OWN bullet (bullet fallback, for roles with no proof
+    // points). When that outcome laminates onto the role's Results line, the source
+    // bullet would otherwise show twice. Drop any bullet whose text is subsumed by
+    // the role's Results line (owner, derive tier: "the bullet it came from has to
+    // be hidden") — applied to ALL tiers, not just derive.
+    const normLine = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    const hideSubsumed = (role, resultsText) => {
+      const nr = normLine(resultsText);
+      if (!nr) return Array.isArray(role.bullets) ? role.bullets : [];
+      return (Array.isArray(role.bullets) ? role.bullets : []).filter((b) => {
+        const nb = normLine(typeof b === 'string' ? b : (b && (b.b || b.t)) || '');
+        return !(nb.length >= 15 && nr.indexOf(nb) >= 0);
+      });
+    };
     const expOut = {
       ...exp,
       roles: (exp.roles || []).map((r) => {
         const lam = _lam.get(r);
-        if (lam) return { ...r, results: lam };
-        if (resultsByRole.has(r)) return { ...r, results: resultsByRole.get(r) };
+        if (lam) return { ...r, results: lam, bullets: hideSubsumed(r, lam) };
+        if (resultsByRole.has(r)) { const rt = resultsByRole.get(r); return { ...r, results: rt, bullets: hideSubsumed(r, rt) }; }
         // tier-5 derive — only when tiers 1-4 are exhausted.
         const d = deriveResultFromRole(r);
         if (!d) return r;

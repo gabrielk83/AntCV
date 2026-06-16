@@ -14,15 +14,20 @@ const server = http.createServer(async (req,res)=>{ try{ let rel=decodeURICompon
 await new Promise(r=>server.listen(0,r));
 const port = server.address().port;
 
-// 6 roles × 2 proof points = 12 role-keyed proof points (≥11 achievable).
+// 5 roles × 2 role-keyed proof points + 1 bullets-only role (IDF-like, no proof
+// points → must be covered by the bullet fallback) = OUTCOME-SEED-UNION-001.
 const ppByRole = [];
 const roles = [];
-for (let n = 1; n <= 6; n++) {
+for (let n = 1; n <= 5; n++) {
   roles.push({ id:'r'+n, title:'Role '+n, company:'Co'+n, years:'201'+n+'–202'+n, on:true,
     proofPointIds:['p'+n+'a','p'+n+'b'], bullets:['Bullet for role '+n+'.'] });
   ppByRole.push({ id:'p'+n+'a', roleId:'r'+n, text:'Outcome A for role '+n+' with a 3'+n+'% gain.' });
   ppByRole.push({ id:'p'+n+'b', roleId:'r'+n, text:'Outcome B for role '+n+' covering scope.' });
 }
+// r6 = bullets only, NO proofPointIds/outcomes — the IDF case that "stayed empty".
+roles.push({ id:'r6', title:'Computer Administrator', company:'IDF', years:'2001–2003', on:true,
+  bullets:['Built the first automated backup-and-restore, cut recovery from hours to minutes.',
+           'Administered classified IT infrastructure for a technical unit.'] });
 const sections = { cv: [
   { id:'profile', title:'PROFILE', loc:'main', on:true, type:'text', content:'P.' },
   { id:'experience', title:'PROFESSIONAL EXPERIENCE', loc:'main', on:true, type:'experience', roles },
@@ -58,7 +63,10 @@ const seed = await page.evaluate(()=>{
   const everyRoleCovered = roleIds.every(id=>mappedRoles.has(id));
   // each seeded outcome's _oid is in the map
   const seededMapped = real.every(it=> it._oid && map[it._oid] != null);
-  return { realCount: real.length, allHaveOid, mapSize: Object.keys(map).length, everyRoleCovered, seededMapped };
+  // the bullets-only role (r6/IDF) must now be covered by the bullet fallback
+  const idfItem = items.find(it=> it && it._oid && map[it._oid]==='r6');
+  const idfFromBullet = !!(idfItem && idfItem._fromBullet);
+  return { realCount: real.length, allHaveOid, mapSize: Object.keys(map).length, everyRoleCovered, seededMapped, idfCovered: !!idfItem, idfFromBullet };
 });
 
 // Dropdown injection — test against the REAL selectors via a simulated row.
@@ -91,7 +99,8 @@ console.log('app errors:', errs.length, errs.slice(0,3).join(' | '));
 const checks = [
   ['all outcome items have _oid', seed.allHaveOid],
   ['seeded >= 11 real outcomes', seed.realCount >= 11],
-  ['every role covered by >=1 mapped outcome', seed.everyRoleCovered],
+  ['every role covered by >=1 mapped outcome (incl. bullets-only IDF)', seed.everyRoleCovered],
+  ['bullets-only role (IDF) covered via bullet fallback', seed.idfCovered && seed.idfFromBullet],
   ['each seeded outcome is mapped to a role', seed.seededMapped],
   ['dropdown <select> injected with position options (>=7 = blank+6 roles)', drop.injected && drop.optCount >= 7],
   ['dropdown change persists to outcomeRoleMap', drop.persisted],

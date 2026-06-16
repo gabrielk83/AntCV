@@ -123,5 +123,31 @@ ok('laminated results never exceed ~2 lines (<=262 chars)', roles.every((r) => !
   delete store['antcv:outcomeRoleMap'];
 }
 
+// OUTCOME-SEED-UNION-001 (owner 2026-06-16): an outcome seeded from a role's OWN
+// bullet (bullet fallback, for a role with no proof points) and pinned via the
+// map must NOT then show twice — the source bullet is hidden (dedup-hide).
+{
+  store['antcv:outcomeRoleMap'] = JSON.stringify({ oc_b: 'idf2' });
+  const R = [
+    { id: 'idf2', title: 'Computer Administrator', company: 'IDF', on: true,
+      bullets: [
+        'Built the first automated backup-and-restore, cutting recovery from hours to minutes.',
+        'Administered classified IT infrastructure for a technical unit.',
+      ] },
+  ];
+  // the outcome text IS the first bullet (seeded from it) → result must show it,
+  // and that bullet must be removed so it is not duplicated.
+  const O = [ { b: '', t: 'Built the first automated backup-and-restore, cutting recovery from hours to minutes.', _oid: 'oc_b', _fromBullet: true } ];
+  const secs = [ { id: 'experience', type: 'experience', roles: R }, { id: 'outcomes', type: 'bullets', items: O } ];
+  const o4 = applyOutcomesMode(secs, 'cv');
+  const idf = o4.find((s) => s.type === 'experience').roles.find((r) => r.id === 'idf2');
+  const blText = (b) => String(typeof b === 'string' ? b : (b && (b.b || b.t)) || '');
+  ok('dedup-hide: bullet-seeded outcome shows in Results', /automated backup-and-restore/.test(idf.results || ''));
+  ok('dedup-hide: the source bullet is REMOVED from the role bullets (not shown twice)',
+    !(idf.bullets || []).some((b) => /automated backup-and-restore/.test(blText(b))));
+  ok('dedup-hide: the OTHER (non-duplicate) bullet is kept', (idf.bullets || []).some((b) => /classified IT infrastructure/.test(blText(b))));
+  delete store['antcv:outcomeRoleMap'];
+}
+
 for (const r of roles) console.log(`  [${r.title}] ${r.results || '(none)'}`);
 console.log(`\nRESULTS-LAMINATION OK (${pass} checks)`);

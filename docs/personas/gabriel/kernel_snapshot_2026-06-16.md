@@ -3,6 +3,14 @@
 > **GENERATED ARTIFACT — DO NOT HAND-EDIT.**
 > Source of truth: `ant_memory` D1 `user_kernel` (user_hash `GVdLYawOzO5SmG8ehBfy0Z6m43pb_5QC`).
 > Regenerate with `node scripts/gen_kernel_snapshot.mjs`. Any manual change here will be overwritten.
+>
+> **2026-06-16 reconciliation (hand-mirrored to D1):** the D1 `user_kernel.workHistory` was
+> updated to match the owner's master profile (`AntCV_master_profile_gabriel_2026-06-15_outcome_edits.json`):
+> ADDED `Security Guard, Student Dormitories — Tel Aviv University (2010)` and
+> `Team Operations Manager & Assistant Coach (Volunteer) — Copenhagen Wolves RFC, Pan Idræt (2023 - present)`;
+> CORRECTED Kanzen (`Founder & … i nord … 2025` → `Product / Project Expert — Kanzen Konsulenter ApS — 2022 - 2026`)
+> and IDF (`Computer Administrator — IDF` → `Computer Systems Administrator — Israel Defense Forces (Communication Corps)`).
+> This snapshot was hand-updated to reflect that write; re-run the script (with CF creds) for a canonical regen.
 
 ## Tools
 - **Project workflow:** Jira, Confluence, Codebeamer
@@ -27,7 +35,7 @@ English (Native), Hebrew (Native), Spanish (Professional), Danish (B1)
 - **Security-clearance eligibility:** Resident in MISWG / NATO / EU countries (incl. Israel, a MISWG participant); eligible for Danish DDIS clearance review
 
 ## Work history
-### Founder & Product / Project Expert — Kanzen konsulenter i nord ApS (2022–2025)
+### Product / Project Expert — Kanzen Konsulenter ApS (2022 - 2026)
 - Founded a consultancy bridging hardware product development and technical-commercial evaluation; clients in deep-tech, electro-optics, and automotive.
 - Led RFQ and RFI evaluation programmes: structured supplier scoring on quality, lead time, traceability, and total landed cost.
 - Translated measured system behaviour into product decisions, delivery implications, and executable engineering scope for stakeholders.
@@ -65,7 +73,18 @@ English (Native), Hebrew (Native), Spanish (Professional), Danish (B1)
 - NEMS cleanroom fabrication: photolithography, thin-film deposition, etching, plasma processing, PDMS nanoimprint.
 - Characterisation work using SEM, Raman, and confocal microscopy; trained graduate students on measurement protocols.
 
-### Computer Administrator — IDF (2001–2003)
+### Computer Systems Administrator — Israel Defense Forces (Communication Corps) (2001–2003)
 - Administered classified IT infrastructure for a technical unit; user provisioning, hardware procurement, and incident response.
 - Built the unit's first automated backup-and-restore procedure; cut recovery time from hours to minutes.
 - Wrote operational documentation that survived the unit's commander rotations.
+
+### Security Guard, Student Dormitories — Tel Aviv University (2010)
+- Maintained safety and order in a student-dormitory residential environment.
+- Handled access control and monitored activity during shifts.
+- Responded calmly to incidents and interacted with residents.
+
+### Team Operations Manager & Assistant Coach (Volunteer) — Copenhagen Wolves RFC, Pan Idræt (2023 - present)
+- Co-organised annual sports and drag entertainment events.
+- Managed logistics for ~25 players and coaches across Denmark and abroad.
+- Practical team support including equipment handling, storage and setup.
+- Helped prepare and maintain training and event environments.

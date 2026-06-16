@@ -126,8 +126,12 @@ most today); expand target languages beyond the current EN/DA flag to es/zh + th
   scope merges additively); `ingest()` orchestrator → `{kernel, mode, conflicts, gaps,
   sourceLang}`. NO fabrication anywhere. Not yet loaded in the browser (no consumer) — the UI
   slice imports it.
-- **Slice 2 — file→text extraction:** docx via the bundled mammoth, pdf→text/OCR, txt as-is,
-  LinkedIn export. Feeds `ingest()`.
+- **Slice 2 — file→text extraction: DONE.** Added `detectImportKind` + `extractTextFromFile`
+  + `ingestFile` to `antcv-kernel-ingest.js` (browser-gated; reuses the app's `window.pdfjsLib`
+  + `window.loadMammoth`, `file.text()` for txt/json, `window.AntcvOcrImage` for images). A raw
+  kernel `.json` bypasses the heuristic parser and goes straight to create/merge. Node-tested
+  (kind dispatch, txt CV end-to-end, json passthrough, graceful no-browser/unsupported errors;
+  suite 303→307). Still a pure library — the extraction fns only run when called in-browser.
 - **Slice 3 — UI (§4f):** onboarding wizard step + Settings → Personal import; conflict
   RESOLUTION modal (4d) showing existing vs incoming per field; gap-fill prompt (4c); language
   selection (4e). Wires to the proxy/D1 write of `user_kernel`.

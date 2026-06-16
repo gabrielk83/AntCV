@@ -3,7 +3,10 @@
  * create/merge with keep-both-and-flag. NO fabrication. No DOM/localStorage. */
 import test from 'node:test';
 import assert from 'node:assert';
-import { parseTextToDraft, inferStructural, detectGaps, mergeKernels, ingest, detectSourceLang } from '../../antcv-kernel-ingest.js';
+import { parseTextToDraft, inferStructural, detectGaps, mergeKernels, ingest, detectSourceLang, detectImportKind, extractTextFromFile, ingestFile } from '../../antcv-kernel-ingest.js';
+
+// File-like stub (node): name/type + async text().
+const fileOf = (name, content, type = '') => ({ name, type, text: async () => content });
 
 const CV = `Gabriel Karp
 karp@example.com
@@ -88,4 +91,39 @@ test('4d merge: same role with a DIFFERENT metric → keep both + FLAG, never ov
 test('detectSourceLang: English default; Danish detected on signal', () => {
   assert.equal(detectSourceLang('Product Manager with experience in development.'), 'en');
   assert.equal(detectSourceLang('Erfaring med udvikling og ansvar for projekt i en virksomhed, nuværende rolle.'), 'da');
+});
+
+// ── Slice 2: file → text ────────────────────────────────────────────────────
+test('Slice2 detectImportKind: dispatch by name/type', () => {
+  assert.equal(detectImportKind({ name: 'cv.docx' }), 'docx');
+  assert.equal(detectImportKind({ name: 'cv.pdf' }), 'pdf');
+  assert.equal(detectImportKind({ name: 'cv.txt' }), 'text');
+  assert.equal(detectImportKind({ name: 'kernel.json' }), 'json');
+  assert.equal(detectImportKind({ name: 'scan.png' }), 'image');
+  assert.equal(detectImportKind({ name: 'cv.docx', type: '' }), 'docx');
+  assert.equal(detectImportKind({ name: 'weird.bin' }), 'unknown');
+});
+
+test('Slice2 extract + ingest a .txt CV end-to-end', async () => {
+  const r = await ingestFile(fileOf('cv.txt', CV), null);
+  assert.equal(r.mode, 'create');
+  assert.equal(r.kernel.experience.length, 3);
+  assert.ok(r.gaps.length >= 1);
+});
+
+test('Slice2 a kernel .json bypasses the parser and create/merges directly', async () => {
+  const kernelJson = JSON.stringify({ experience: [
+    { id: 'r1', title: 'Engineer', company: 'Beta', start: '2019', end: '2021',
+      outcomes: [{ title: 't', result: 'Shipped X.' }], scope: ['Built X.'] },
+  ] });
+  const r = await ingestFile(fileOf('mykernel.json', kernelJson), null);
+  assert.equal(r.mode, 'create');
+  assert.equal(r.kernel.experience.length, 1);
+  assert.equal(r.kernel.experience[0].title, 'Engineer');
+});
+
+test('Slice2 unsupported / no-browser paths fail gracefully (no throw-at-import)', async () => {
+  await assert.rejects(() => extractTextFromFile(fileOf('x.bin', '')), /Unsupported file/);
+  // docx in node (no window.loadMammoth) → a helpful message, not a crash
+  await assert.rejects(() => extractTextFromFile(fileOf('cv.docx', '')), /DOCX support not ready|browser/i);
 });

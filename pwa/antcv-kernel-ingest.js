@@ -188,5 +188,58 @@ export function ingest(text, existingKernel, opts = {}) {
   return { kernel, mode, conflicts, added, gaps, sourceLang: incoming.language && incoming.language.sourceLang };
 }
 
+// ── Slice 2: file → text (browser-only; reuses the app's PDF.js + mammoth) ───
+// Defined but never called at import time, so node tests of the PURE functions
+// above are unaffected. txt/json paths are node-testable with a File-like stub.
+export function detectImportKind(file) {
+  const name = String((file && file.name) || '').toLowerCase();
+  const type = String((file && file.type) || '').toLowerCase();
+  if (/\.json$/.test(name) || /application\/json/.test(type)) return 'json';
+  if (/\.(txt|md|text)$/.test(name) || /text\/plain/.test(type)) return 'text';
+  if (/\.docx$/.test(name) || /wordprocessingml/.test(type)) return 'docx';
+  if (/\.pdf$/.test(name) || /pdf/.test(type)) return 'pdf';
+  if (/\.(png|jpe?g|webp)$/.test(name) || /^image\//.test(type)) return 'image';
+  return 'unknown';
+}
+export async function extractTextFromFile(file) {
+  const kind = detectImportKind(file);
+  if (kind === 'text' || kind === 'json') return await file.text();
+  if (kind === 'docx') {
+    if (typeof window === 'undefined' || !window.loadMammoth) throw new Error('DOCX support not ready — open a DOCX export in the app once to load mammoth, then retry.');
+    const mammoth = await window.loadMammoth();
+    const ab = await file.arrayBuffer();
+    return (await mammoth.extractRawText({ arrayBuffer: ab })).value || '';
+  }
+  if (kind === 'pdf') {
+    if (typeof window === 'undefined') throw new Error('PDF extraction requires the browser.');
+    if (!window.pdfjsLib && window.loadPdfjs) { try { await window.loadPdfjs(); } catch (_) {} }
+    if (!window.pdfjsLib) throw new Error('PDF support not ready — open a CV in the app once to load PDF.js, then retry.');
+    const data = new Uint8Array(await file.arrayBuffer());
+    const pdf = await window.pdfjsLib.getDocument({ data }).promise;
+    let out = ''; const lim = Math.min(pdf.numPages, 20);
+    for (let i = 1; i <= lim; i++) { const pg = await pdf.getPage(i); const tc = await pg.getTextContent(); out += tc.items.map((it) => it.str).join(' ') + '\n'; }
+    return out;
+  }
+  if (kind === 'image') {
+    // OCR path: the JD OCR sidecar exposes a recogniser when loaded.
+    if (typeof window !== 'undefined' && window.AntcvOcrImage) return await window.AntcvOcrImage(file);
+    throw new Error('Image OCR not ready — for now export your CV as .docx, .pdf, or .txt.');
+  }
+  throw new Error('Unsupported file for kernel import. Use .docx, .pdf, .txt, or a kernel .json.');
+}
+// extract → ingest. A raw kernel .json bypasses the heuristic parser (it is already
+// the schema) and goes straight to create/merge.
+export async function ingestFile(file, existingKernel, opts = {}) {
+  if (detectImportKind(file) === 'json') {
+    let obj = null; try { obj = JSON.parse(await file.text()); } catch (_) {}
+    if (obj && Array.isArray(obj.experience)) {
+      const incoming = inferStructural(obj, opts);
+      const { kernel, mode, conflicts, added } = mergeKernels(existingKernel, incoming);
+      return { kernel, mode, conflicts, added, gaps: detectGaps(kernel), sourceLang: incoming.language && incoming.language.sourceLang };
+    }
+  }
+  return ingest(await extractTextFromFile(file), existingKernel, opts);
+}
+
 // browser global (UI slices call window.AntcvKernelIngest); harmless in node.
-try { if (typeof window !== 'undefined') window.AntcvKernelIngest = { ingest, parseTextToDraft, inferStructural, detectGaps, mergeKernels, detectSourceLang }; } catch (_) {}
+try { if (typeof window !== 'undefined') window.AntcvKernelIngest = { ingest, ingestFile, extractTextFromFile, detectImportKind, parseTextToDraft, inferStructural, detectGaps, mergeKernels, detectSourceLang }; } catch (_) {}

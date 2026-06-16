@@ -48,7 +48,10 @@
 
   function itemText(it) { return (it && typeof it === 'object') ? String((it.t != null ? it.t : it.b) || '').trim() : String(it || '').trim(); }
   function isPlaceholder(it) { return /^\s*\[/.test(itemText(it)); }
-  function roleLabel(r, i) { var s = ((r.company || '') + ' — ' + (r.title || '')).replace(/^\s*—\s*|\s*—\s*$/g, '').trim(); return s || ('Position ' + (i + 1)); }
+  // Lead with the TITLE (the distinguishing part) so two roles at the same company
+  // — e.g. Meprolight Electro-Optics Team Leader vs R&D Electro-Optics Engineer —
+  // are tellable apart in the narrow dropdown (company truncates after the title).
+  function roleLabel(r, i) { var s = ((r.title || '') + (r.company ? ' — ' + r.company : '')).replace(/^\s*—\s*|\s*—\s*$/g, '').trim(); return s || ('Position ' + (i + 1)); }
 
   // ── Data: stamp _oid + seed from role-keyed proof points ──────────────────
   function ensureData() {
@@ -142,10 +145,10 @@
       var sel = document.createElement('select');
       sel.setAttribute('data-antcv-outcome-role', '1');
       sel.title = 'Which position this outcome covers';
-      sel.style.cssText = 'font-size:10px;padding:3px;border:1px solid #ddd;border-radius:3px;flex-shrink:0;max-width:118px;font-family:Georgia,serif;cursor:pointer;';
+      sel.style.cssText = 'font-size:10px;padding:3px;border:1px solid #ddd;border-radius:3px;flex-shrink:0;max-width:160px;font-family:Georgia,serif;cursor:pointer;';
       var def = document.createElement('option'); def.value = ''; def.textContent = '— position —'; sel.appendChild(def);
-      opts.forEach(function (o) { var op = document.createElement('option'); op.value = o.id; op.textContent = o.label; sel.appendChild(op); });
-      if (theOid && map[theOid] != null) sel.value = String(map[theOid]);
+      opts.forEach(function (o) { var op = document.createElement('option'); op.value = o.id; op.textContent = o.label; op.title = o.label; sel.appendChild(op); });
+      if (theOid && map[theOid] != null) { sel.value = String(map[theOid]); var cur = opts.filter(function (o) { return o.id === String(map[theOid]); })[0]; if (cur) sel.title = cur.label; }
       sel.addEventListener('change', function () {
         var m = rj(MAP_KEY, {}) || {};
         if (!theOid) return;

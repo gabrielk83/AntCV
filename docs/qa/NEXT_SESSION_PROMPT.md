@@ -44,6 +44,31 @@ Shipped to **1.50.521** + **access-relay** + **docx-worker 1.14.74**; suite **30
 
 ---
 
+## Queued from the 2026-06-16 session (ADDITIVE — work alongside the backlog below, do not drop)
+
+These were planned/deferred during the day-long 2026-06-16 session. They are in ADDITION to the Priority-1 + backlog items below — pick by value, none of this replaces them.
+
+**A. Kernel v2 follow-ups** (the brief is shipped; these are the remaining refinements — full context in `docs/plan/KERNEL-V2-AND-INGESTION.md`):
+- Surface each role's `langInvariantTokens[]` into the STORED WORK HISTORY as an explicit `DO-NOT-TRANSLATE:` list (the generic invariant classes cover most today). Builder = `GABRIEL_BG` (`pwa/app.src.js` ~2690) + minified mirror.
+- Expand target languages beyond the EN/DA boolean to **es/zh** + the LANG-EXPAND-001 **lazy tier** (cache in `language_view`); the §3 `__langRule` already self-gates on non-English.
+- Migrate the live readers to consume `user_kernel.kernel_v2` DIRECTLY (vs the v1-history bridge that `applyToCV`/auto-sync populate) and honor `tenseMode: present/past` from it.
+- §4 extraction: image-only-PDF OCR + LinkedIn-export-shaped parsing (`extractTextFromFile` dispatches; `window.AntcvOcrImage` hook exists).
+
+**B. Deferred content/export warm-ups** (deterministic-ish, owner-flagged):
+- **RESULTS-METRIC-SHARPNESS-001** surgical lever — stop `consensus_reinforce` (`pwa/app.src.js` ~24832) rewriting an outcome that ALREADY carries a metric (logic guard → minified mirror; regen-verified).
+- **Regulatory "(Cont.)" first-part-missing** — a continued section shows "(Cont.)" on page 2 with the page-1 part absent (needs a repro; pagination two-map).
+- **Photo-gap preview↔PDF parity** + the **main-left/right in-cell float-wrap** open half ([[photo-bridge-nonfloat]]).
+- **AI-watermark placement** — into the section whose last page has LESS text ([[design-rules-watermark-table]]).
+- **EXPORT-FALLBACK-ON-FIRST-001 / server-PDF retry-after-reset (#6)** — diagnostic-first; touches the export/fetch chain (blue-screen history).
+
+**C. New issue logged this session** — **SIDEBAR-NARROW-FIGURE-OVERLAP-001** (ACTIVE_BUGS item 26, NOT STARTED): when the sidebar is narrow, the candidate-band text + rule and the main + sidebar text run INTO the photo; keep them positioned relative to the figure (incl. sidebar-middle placement). Preview + export parity.
+
+**D. Larger, own-pass** — **CLUSTER-QUAL-001** proxy pipeline (`docs/plan/CLUSTER-QUAL-001.md` + `-IMPL.md`): cv-proxy/demo-proxy qualifications extraction → cluster recompute → fit scoring; D1 single-source-of-truth. Deferred to a dedicated session with dry-run deploys.
+
+**E. Owner-action / regen-verified** (don't chase without the owner): metric-sharpness + the dorm-guard (Tel-Aviv security-guard CONTENT) need a regen / owner data; the Settings bucket below (LANGUAGES-CARD, scroll-reset, disclosure).
+
+---
+
 ## Priority 1 (do first) — PB-PREVIEW-SIDEBAR-SALMON-PUSH-001
 In the CV page-box PREVIEW, the long sidebar (REGULATORY CONTEXT) does NOT break at the
 salmon line — it PUSHES the salmon down, leaving the page-box taller than A4. The owner:

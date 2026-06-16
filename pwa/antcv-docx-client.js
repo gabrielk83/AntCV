@@ -1699,14 +1699,24 @@ export function applyOutcomesMode(docSections, doc) {
     if (!pool.length) return docSections.filter((s) => !isOutcomes(s));
     const assign = distRoles.map(() => []);
     const left = [];
-    // OUTCOMES-RESULTS-BESTMATCH-001 (owner 2026-06-14): best-match (most shared
-    // tokens), not first-role-with-any-token, so an outcome lands on the role it
-    // actually belongs to. Mirrors the preview. Tie → earliest role.
+    const distIdx = new Map(); distRoles.forEach((r, i) => distIdx.set(r, i));
+    // OUTCOMES-RESULTS-BESTMATCH-001 (owner 2026-06-14) + RESULTS-CROSSROLE-BLEED-001
+    // (owner 2026-06-16: a "LiDAR" outcome attached to the Sirin role, which had no
+    // LiDAR). Compare each outcome against ALL visible roles — not just the
+    // still-unlaminated ones — and laminate it onto a role ONLY when that role is
+    // its GENUINE best home — the GLOBAL best match across ALL roles. An outcome
+    // whose true home is an already-laminated role no longer bleeds onto an
+    // unrelated available role: if its best match is a laminated (non-dist) role,
+    // it is dropped rather than forced onto the best AVAILABLE role. (tokensFor is
+    // title+company only, so the match is intentionally a low threshold — the
+    // global-best comparison, not a token count, is what prevents the bleed.)
+    // Tie → earliest role.
     pool.forEach((x) => {
       const ts = tok(txtOf(x));
-      let bi = -1, best = 0;
-      for (let i = 0; i < distRoles.length; i++) { const tf = tokensFor(distRoles[i]); let m = 0; ts.forEach((w) => { if (tf.has(w)) m++; }); if (m > best) { best = m; bi = i; } }
-      if (bi >= 0) assign[bi].push(x); else left.push(x);
+      let bestRole = null, best = 0;
+      for (const r of visRoles) { const tf = tokensFor(r); let m = 0; ts.forEach((w) => { if (tf.has(w)) m++; }); if (m > best) { best = m; bestRole = r; } }
+      if (bestRole && best > 0 && distIdx.has(bestRole)) assign[distIdx.get(bestRole)].push(x);
+      else left.push(x);
     });
     // OUTCOMES-RESULTS-COVERAGE-001 (owner 2026-06-15, mirror of preview):
     // coverage-first then double — retention cap 1 (each role keeps one before any
@@ -1718,7 +1728,12 @@ export function applyOutcomesMode(docSections, doc) {
     // match derives from its OWN bullets (tier-3, below) instead. `left` (the
     // unmatched outcomes) is intentionally dropped here.
     const MAX = 2;
-    assign.forEach((a) => { while (a.length > MAX) a.pop(); });
+    // RESULTS-NUMERIC-FAVOR-001 (owner 2026-06-16: "numeric results are
+    // favoured" — 250→10 days, 90% cost, 30% portfolio). Lead with + keep the
+    // outcomes carrying a concrete metric (number/%/×/count) so a quantified
+    // result survives the per-role cap and shows first.
+    const hasNum = (x) => /\d|%|×|\bx\b/i.test(txtOf(x));
+    assign.forEach((a) => { a.sort((p, q) => (hasNum(q) ? 1 : 0) - (hasNum(p) ? 1 : 0)); while (a.length > MAX) a.pop(); });
     const resultsByRole = new Map();
     distRoles.forEach((r, i) => {
       if (!assign[i].length) return;

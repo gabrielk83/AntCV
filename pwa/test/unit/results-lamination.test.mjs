@@ -79,5 +79,30 @@ ok('role.outcomes[]: defaultVisible:false item stays hidden', !/JD-gated detail/
 ok('JD-aware: hidden outcome SHOWS when the JD matches its showWhenJDContainsAny', /FMEA-based monitoring/.test(byId.r_jd.results || ''));
 ok('laminated results never exceed ~2 lines (<=262 chars)', roles.every((r) => !r.results || r.results.length <= 262));
 
+// RESULTS-CROSSROLE-BLEED-001 + RESULTS-NUMERIC-FAVOR-001 (owner 2026-06-16).
+{
+  const R = [
+    // laminated via its OWN proofPoint — the TRUE home of the LiDAR outcome.
+    { id: 'lr', title: 'LiDAR Systems Engineer', company: 'Innoviz Technologies', on: true,
+      proofPointIds: ['pp_innoviz_cycle'], bullets: ['Owned LiDAR validation.'] },
+    // unrelated role, no own outcome — must NOT receive the LiDAR outcome.
+    { id: 'sirin', title: 'Optics Engineer', company: 'Sirin', on: true,
+      bullets: ['Set up optical characterisation labs for smartphone optical stacks.'] },
+    // matches several outcomes incl. a numeric one.
+    { id: 'pm', title: 'Product Manager', company: 'Acme', on: true,
+      bullets: ['Ran the product backlog and roadmap for the platform.'] },
+  ];
+  const O = [
+    'Defined acceptance test procedures for LiDAR optical stacks at Innoviz',  // home=lr (laminated) → drop, not bleed to sirin
+    'Ran the product backlog and roadmap, shipping the platform on schedule',  // matches pm, no number
+    'Grew the product roadmap revenue by 30% across the platform backlog',     // matches pm, numeric → must survive + lead
+  ];
+  const secs = [ { id: 'experience', type: 'experience', roles: R }, { id: 'selected_outcomes', type: 'text_bullets', items: O } ];
+  const o2 = applyOutcomesMode(secs, 'cv');
+  const b2 = Object.fromEntries(o2.find((s) => s.type === 'experience').roles.map((r) => [r.id, r]));
+  ok('cross-role: a LiDAR outcome (home = laminated role) does NOT bleed onto the unrelated Sirin role', !/lidar/i.test(b2.sirin.results || ''));
+  ok('numeric-favor: the 30% outcome LEADS the PM role result', /30%/.test((b2.pm.results || '').split(';')[0] || ''));
+}
+
 for (const r of roles) console.log(`  [${r.title}] ${r.results || '(none)'}`);
 console.log(`\nRESULTS-LAMINATION OK (${pass} checks)`);

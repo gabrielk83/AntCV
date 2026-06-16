@@ -5873,17 +5873,24 @@
                     wordBreak: "break-word",
                   },
                 },
-                React.createElement(
-                  "b",
-                  { style: { color: S ? __sbInk : C } },
-                  React.createElement(B, {
-                    path: ["items", t, "l"],
-                    value: L(a),
-                    placeholder: "[Label]",
-                  }),
-                  ":",
-                ),
-                " ",
+                // GROUP-NAME-VISIBILITY-001 (owner 2026-06-16): a row flagged
+                // labelHidden renders its VALUE ONLY in the preview (the bold group
+                // name + its leading space are dropped; the items stay visible).
+                // Reversible — the editor panel still shows the label for editing,
+                // and clearing the flag restores it.
+                row.labelHidden
+                  ? null
+                  : React.createElement(
+                      "b",
+                      { style: { color: S ? __sbInk : C } },
+                      React.createElement(B, {
+                        path: ["items", t, "l"],
+                        value: L(a),
+                        placeholder: "[Label]",
+                      }),
+                      ":",
+                    ),
+                row.labelHidden ? null : " ",
                 React.createElement(
                   "span",
                   { style: { fontWeight: 400, color: S ? __sbInk : "#333" } },

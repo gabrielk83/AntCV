@@ -26662,7 +26662,10 @@ function renderLabeledList(s, ctx, isSidebar) {
       alignment: groupCjlr != null ? groupCjlr : void 0,
       shading: isSidebar ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" } : void 0,
       children: [
-        ...label ? [new TextRun({
+        // GROUP-NAME-VISIBILITY-001 (owner 2026-06-16): a row flagged labelHidden
+        // drops its bold group name in the export (value-only), matching the
+        // preview. The driving rules live in antcv-group-name-visibility.js.
+        ...(label && !it.labelHidden) ? [new TextRun({
           text: `${label}: `,
           bold: true,
           color: labelColor,
@@ -27260,7 +27263,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   the anchor's spacing-after from (px/2+14) to (px/2-12) so the first sidebar
 //   section sits just under the medallion (~0.27in higher; the full 0.6in would
 //   overlap the photo at the default diameter).
-var VERSION = "1.14.73-results-ink-photo-gap";
+var VERSION = "1.14.74-group-name-visibility";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

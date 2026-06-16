@@ -305,14 +305,61 @@ SHARES SURFACE with Lane 0.B LANGUAGES-CARD-PERSONAL-001 + Lane 5.4 (languages s
 the onboarding/Settings language picker is the same store the subset model reads. **Gate:** subset
 selection persists, bar renders only selected, after hard refresh, desktop + mobile.
 
+### 6.6 Dictionaries + language selectors EVERYWHERE  [cross-cutting; spans all surfaces]
+Per owner 2026-06-16: adding generation languages is only half the job — the **spellcheck/proofing
+dictionaries** and the **language selector UI** must roll out to EVERY surface that touches language,
+or the experience fractures (a language you can generate in but can't proof, or can pick in one place
+but not another, is worse than not having it). Two parallel coverage requirements:
+
+**A. Dictionaries (proofing/spellcheck) per language.**
+- The spell layer (`antcv-spell-annotator-384.js` + the spellchecker control surfaced in Lane 5.4 /
+  Lane 0.B) must have a dictionary for EACH activated language, or degrade GRACEFULLY (clearly
+  "no proofing for <lang> yet" — never silently mark every word wrong, never block the field).
+- Per language: confirm a dictionary source exists (browser-native `spellcheck`/`lang` attribute
+  coverage where the engine relies on it; or the bundled/host dictionary the annotator uses). RTL
+  (he/ar/ar-EG/ps/ur) + complex-script (hi/am/bn/ko/ja) + Cyrillic (ru) need explicit verification —
+  do NOT assume the Latin path covers them. Where no dictionary exists, ship the language with
+  proofing DISABLED for it + a one-line notice, rather than a broken red-underline-everything state.
+- ar-EG inherits ar's dictionary (variant, like en-US↔en-GB); qu/kl/fo likely have thin or no
+  dictionary support — flag, ship proofing-disabled if so.
+- **Gate:** for each activated language, the spell control either proofs correctly OR is cleanly
+  disabled with a notice; never a false-positive storm; verify on desktop + mobile.
+
+**B. Language selector parity across surfaces.**
+The selector must be present, consistent, and driven by ONE shared store on every surface:
+onboarding wizard language slide (Lane 5.4), Settings → Personal Languages card (Lane 0.B
+LANGUAGES-CARD-PERSONAL-001), the lang bar (6.5 selected-subset), AND any per-section / per-document
+language control. Same label set (6.5 LABEL_TO_CODE), same selected-subset, same persistence.
+- Single source of truth: the onboarding/Settings picker, the lang bar, and the spell/tense controls
+  all READ AND WRITE the same store (the one Lane 5.4 + 0.B already converge on) — a change in one
+  surface reflects in all others without a reload.
+- No surface may offer a language the others can't (selector parity) and no surface may offer a
+  language whose dictionary/font isn't ready (gate against half-rolled languages appearing pickable).
+- **Gate:** pick a language in the wizard → it shows selected in Settings + lang bar; toggle the
+  subset in Settings → lang bar updates live; spell/tense controls reflect the active language; all
+  after hard refresh, desktop + mobile. No surface shows a language the others don't.
+
+Autonomy: B (selector parity) is autonomous-viable and rides on 6.5 + Lane 0.B/5.4 — do it in the
+SAME Settings/lang pass so the shared store is wired once. A (dictionaries) is autonomous to wire the
+graceful-degrade + per-language check, but actual dictionary CONTENT for non-Latin/RTL/thin-support
+languages may need sourcing decisions — flag those, ship proofing-disabled-with-notice as the safe
+default. This sub-lane is the "rollable everywhere" guarantee: NO language is considered DONE (its
+6.1/6.2/6.3 close) until its selector appears on every surface AND its dictionary either works or is
+cleanly disabled.
+
 ### Lane 6 autonomy summary
 - **Autonomous-viable:** 6.0 (alone, verify), 6.1 (build+stage; native-review gate before activating
-  sw/kl/fo/qu), 6.2 (build; native-review gate before activating), 6.4 (after 6.3 ar), 6.5.
+  sw/kl/fo/qu), 6.2 (build; native-review gate before activating), 6.4 (after 6.3 ar), 6.5,
+  6.6-B (selector parity, rides 6.5 + Lane 0.B/5.4). 6.6-A dictionaries: wire graceful-degrade
+  autonomously; non-Latin/RTL dictionary CONTENT may need a sourcing decision (flag).
 - **Owner-present:** 6.3 he bring-up (RTL layout, high blast radius); ar/ps/ur follow the he path.
 - **Open decisions (spec §9.5):** qu tag (`qu` vs `qu-PE`); density recalibration for ja/ko/kl after
   first real generations; ATS-Legacy RTL parser test (§8.3).
 - **Sequence:** 6.0 → (6.1 ∥ 6.2 builds) → 6.3 (he first, owner-present) → 6.4 (ar-EG, after 6.3 ar)
-  → 6.5 (lang bar; can build in parallel but only ships value once languages exist).
+  → 6.5 (lang bar; can build in parallel but only ships value once languages exist)
+  → 6.6 runs ACROSS all of the above: a language isn't DONE until its selector is on every
+  surface (6.6-B) AND its dictionary works or is cleanly disabled (6.6-A). Wire 6.6-B in the
+  same Settings/lang pass as 6.5 + Lane 0.B/5.4.
 
 ---
 
@@ -326,7 +373,7 @@ items in Lane 0.A's owner-verify list.
 
 Lane 5: SETTINGS-SCROLL-RESET-001 stays owner-present (live probe). Lane 5.6 only escalates to app.src.js if a NATIVE second upload remains after 5.1. Lane 5.2 escalation beyond the two sidecars (to app.src.js/worker) is OUT of the granted authorisation — STOP + surface.
 
-Lane 6: the BCP-47 migration (6.0) is a hard prerequisite gate — nothing in 6.1–6.5 starts until it lands + verifies. RTL bring-up (6.3 he) is owner-present (layout-mirroring blast radius); ar/ps/ur follow the validated he path. Languages needing native review (sw/kl/fo/qu/hi/am/ko/bn/ar/ps/ur + ar-EG) are BUILD-then-STAGE — do not flip live without review.
+Lane 6: the BCP-47 migration (6.0) is a hard prerequisite gate — nothing in 6.1–6.5 starts until it lands + verifies. RTL bring-up (6.3 he) is owner-present (layout-mirroring blast radius); ar/ps/ur follow the validated he path. Languages needing native review (sw/kl/fo/qu/hi/am/ko/bn/ar/ps/ur + ar-EG) are BUILD-then-STAGE — do not flip live without review. A language is NOT done until its selector appears on EVERY surface (wizard, Settings, lang bar, per-section) reading one shared store AND its dictionary either proofs or is cleanly disabled with a notice — never a false-positive storm (6.6).
 
 ## Dissolved / already shipped (disposition only)
 Generation/content (11 gates + 2 shipped + 2 relocated → GEN_DISPOSITION_2026-06-16.md);
@@ -359,8 +406,9 @@ APP-SENTENCE-STYLE-001 + the 2026-06-15 colour/lamination/JD-cloud set all FIXED
    (registry-sync green both workers, en/da/es/zh behaviour-identical) → then Tier 1 (6.1) +
    Tier 2 (6.2) builds (native-review gate before activating) → 6.3 RTL he bring-up OWNER-PRESENT,
    ar/ps/ur follow → 6.4 ar-EG variant (after ar) → 6.5 selected-subset lang bar. Coordinate 6.5 +
-   Lane 0.B LANGUAGES-CARD-PERSONAL + Lane 5.4 (same language-picker store). A long multi-session
-   effort — 6.0 is the only thing that must precede the rest.
+   Lane 0.B LANGUAGES-CARD-PERSONAL + Lane 5.4 (same language-picker store). 6.6 rides this:
+   selector parity on every surface + per-language dictionary (works or cleanly disabled).
+   A long multi-session effort — 6.0 is the only thing that must precede the rest.
 10. **LANE 0.C** new features only if everything above is clean.
 Each task: spec → implement → headless gate → deploy → record. Leave regen/PDF/live-device eyeballs
 as a short owner punch-list (most of Lane 0.A's second list + 0.B SETTINGS-SCROLL + 0.C).

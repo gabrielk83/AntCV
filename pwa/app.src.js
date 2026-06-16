@@ -21326,7 +21326,15 @@
               );
           return React.createElement(
             "div",
-            null,
+            // LANGUAGES-CARD-PERSONAL-001 (owner regression): the Personal subtab
+            // must be an order-based flex COLUMN so the LanguageCard island
+            // (findSettingsFlexColumn anchors on a display:flex;flex-direction:column
+            // container holding WRITING STYLE/ADVANCED TONE/BANNED WORDS) mounts IN
+            // PLACE instead of falling below "Done". This also lets the
+            // antcv-tense-control-422 + spell controls anchor on the card. Native
+            // sections keep DOM order (all order:0); the island/tense set order
+            // 27/22. Was `null` (plain block) — that broke the anchor.
+            { style: { display: "flex", flexDirection: "column" } },
             React.createElement(
               "div",
               { style: { display: "flex", gap: 6, marginBottom: 10 } },

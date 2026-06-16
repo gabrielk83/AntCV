@@ -160,6 +160,76 @@ live-rendered perf are owner-present.
 
 ---
 
+## LANE 5 — Wizard + Settings/Personal UX (this session, owner screenshots 1.50.521)
+
+Full spec: `docs/qa/WIZARD_SETTINGS_UX_2026-06-16.md`. Seven issues, roots VERIFIED in source. Two
+wizard surfaces: app.js stepped wizard (STEP 2/6A/6C) vs the `antcv-wizard-language-slide-339.js`
+sidecar modal ("Set your languages"). #1/#2/#3 are a kernel-import + data-importer sidecar pileup,
+NOT app.src.js.
+
+### 5.1 Kernel-button dedup + scope  [antcv-kernel-import.js]  — covers #1 and #3
+`injectEntry()` inserts a kernel button after EVERY matched anchor (data-importer replacement + the
+pdf+docx file input + a broad text regex) → duplicated in Personal (#1) and sprayed across wizard
+steps via the documentElement observer (#3). FIX: panel-level dedup (one button per host container);
+drop the broad text-match anchor source #2; scope injection to Settings→Personal + the single 6A
+ingest step. **Gate:** exactly one kernel button in Personal; pill absent on STEP 2 / 6C / language
+slide; present on 6A + Personal. Sidecar-only, `?v` bump.
+
+### 5.2 ONE type-routed SUPERSET ingest button (A)  [antcv-kernel-import.js + antcv-data-importer.js]  — #2
+**OWNER DECISION: (A), AND OWNER-AUTHORISED to proceed on the direction the code-check dictates
+(see CODE-CHECK below).** One primary "Build / update kernel from CV" button, file input accepting
+the UNION `.docx,.pdf,.txt,.json,.png,.jpg,.jpeg,.webp`, routing by file type so NO capability
+regresses. The two engines are NOT interchangeable — only the data-importer does photo / VIA→workStyle
+/ banned-words→stylePrefs / AntcvBackup restore; only kernel-import does structured roles + conflict/
+gap review + save-to-account. Route: image→handleImage, VIA pdf→handleVIA, banned-words docx→
+words-docx, AntcvBackup json→restore, kernel json / plain CV→kernel runImport (keep its review
+governance). data-importer stops injecting its own visible button (keeps its modal+handlers as the
+library the router calls). **Gate:** one ingest button; one file of EACH of the 6 source types still
+reaches its correct handler; kernel conflict/gap review still appears. Do AFTER 5.1.
+
+  CODE-CHECK (at implementation time) + OWNER AUTHORISATION (granted 2026-06-16):
+  - Check whether `window.AntcvDataImporter` already exposes `classify()` + the per-type handlers
+    (`handleImage`, `handleVIA`, the words-docx + AntcvBackup-json routes).
+  - IF EXPOSED → the router in `antcv-kernel-import.js` calls them directly; this is the light path.
+  - IF NOT EXPOSED → add a minimal public API on `antcv-data-importer.js`
+    (e.g. `window.AntcvDataImporter = { classify, route(file) }`) that runs the existing internal
+    handlers, then have the kernel-import router call it. Keep the data-importer's modal/summary/
+    confirm + non-destructive write scheme intact; expose, do not duplicate, the logic.
+  - The owner authorises proceeding on EITHER path per the check result without a further sign-off,
+    PROVIDED the no-capability-regression gate above passes (test all 6 source types) and the change
+    stays inside these two sidecars (no app.src.js, no worker). If the check reveals the only safe
+    way needs an app.src.js or worker change, STOP and surface it (out of the authorised scope).
+
+### 5.3 Personality-quiz button → 6C  [antcv-wizard-language-slide-339.js + app.js]  — #6
+Remove `pqBtn` from the language sidecar's handoff block (`?v` bump); add the same button to the
+app.js STEP 6C tone slide (opens `window.AntcvPersonalityQuiz.open()` / `antcv:open-personality-quiz`
+— launcher already loaded, relocation only) + mirror app.js. **Gate:** absent on language slide,
+present + functional on 6C.
+
+### 5.4 Spellchecker + tense on the languages slide  [antcv-wizard-language-slide-339.js]  — #7
+Add a compact tense (Present/Past, via `window._antcvSetExpTense`) + spellchecker control (the
+`antcv-spell-annotator-384.js` toggle) under the language picker, writing the SAME stores the
+Personal controls use. `?v` bump. **Gate:** both present, persist, reflect in Settings→Personal +
+generation. Overlaps Lane 0.B LANGUAGES-CARD-PERSONAL-001 (one store, two surfaces).
+
+### 5.5 Section-format showcase: collapsible + Layout visuals + mount fix  [island + sidecar]  — #4
+`WizardSectionShowcase.tsx` is a static always-expanded tile grid and isn't mounting in the sidecar
+modal on mobile. Wrap in a collapsed-by-default `<details>`; reuse the Layout tab's
+`SectionFormatPicker` previews (read-only) so the surfaces match (also satisfies old-open
+SECTION-LAYOUT-GRAPHIC-001 / Lane 0.C item 17); fix the mount so the island attaches inside the
+`z-index:2147483647` backdrop. Vite build + `?v`. **Gate:** collapsed by default, expands on tap,
+Layout-style previews, on mobile.
+
+### 5.6 6A second CV upload  [sequence-dependent on 5.1]  — #5
+Likely the kernel pill landing on 6A; 5.1 should remove it. After 5.1, re-check 6A; if a NATIVE
+second upload remains, locate STEP 6A in app.src.js ("Drop a CV or LinkedIn export here") and remove
+the redundant control + mirror app.js. **Gate:** one upload control on 6A.
+
+Lane 5 autonomy: 5.1, 5.2 (authorised both paths), 5.3, 5.4, 5.5 are autonomous-viable
+(sidecar/island, build-verifiable). 5.6 is sequence-dependent (after 5.1).
+
+---
+
 ## Do NOT attempt autonomously (owner-present, probe-first)
 List-row controls (PP/SO/TB/move, 7 prior failed iterations, TC-028-gated); pagination remainder
 (PB-*, PAGEBREAK, PB-SIDEBAR, PDF-LAYOUT, + active item 7); Mobile (all 7); Candidate/application
@@ -167,6 +237,8 @@ List-row controls (PP/SO/TB/move, 7 prior failed iterations, TC-028-gated); pagi
 VAL-001 (app-shell, blue-screen history); EXPORT-FALLBACK-ON-FIRST/CL-TABLE-DIMS-FALLBACK
 (live probe); SETTINGS-SCROLL-RESET-001; SIDEBAR-NARROW-FIGURE-OVERLAP-001; all prompt-side/regen
 items in Lane 0.A's owner-verify list.
+
+Lane 5: SETTINGS-SCROLL-RESET-001 stays owner-present (live probe). Lane 5.6 only escalates to app.src.js if a NATIVE second upload remains after 5.1. Lane 5.2 escalation beyond the two sidecars (to app.src.js/worker) is OUT of the granted authorisation — STOP + surface.
 
 ## Dissolved / already shipped (disposition only)
 Generation/content (11 gates + 2 shipped + 2 relocated → GEN_DISPOSITION_2026-06-16.md);
@@ -186,8 +258,15 @@ APP-SENTENCE-STYLE-001 + the 2026-06-15 colour/lamination/JD-cloud set all FIXED
 4. **LANE 1.3 / CL-006** (proxy) + **CL-WIDTH-CAP** (worker+preview) → deploy.
 5. **LANE 0.B / LANE 1.2** Settings: LANGUAGES-CARD-PERSONAL + VISUAL-PKG-001 + MERGE-DUP-001/003 +
    DISCLOSURE-TRIANGLE (one island build + app.js mirror).
-6. **LANE 4** tests landed alongside each; author TC-028 + mirror-guard CI.
-7. **LANE 3** sidecar-merge only if time remains.
-8. **LANE 0.C** new features only if everything above is clean.
+6. **LANE 5 wizard/Settings UX** (this session): 5.1 kernel-button dedup+scope (covers #1/#3) →
+   re-check 5.6 (6A) → 5.2 ONE superset ingest button (owner-authorised: follow the code-check
+   result across both sidecars; STOP only if it would need app.src.js/worker) → 5.3 quiz→6C →
+   5.4 spell/tense on languages slide → 5.5 showcase collapsible+Layout previews+mount fix.
+   Note 5.2/5.4 share surfaces with Lane 0.B LANGUAGES-CARD-PERSONAL + Lane 1.2 — do the Settings
+   work in one pass so islands rebuild once.
+7. **LANE 4** tests landed alongside each; author TC-028 + mirror-guard CI; add Lane 5 gates
+   (one-button + 6-source-type routing for 5.2; quiz-relocation; showcase mount).
+8. **LANE 3** sidecar-merge only if time remains.
+9. **LANE 0.C** new features only if everything above is clean.
 Each task: spec → implement → headless gate → deploy → record. Leave regen/PDF/live-device eyeballs
 as a short owner punch-list (most of Lane 0.A's second list + 0.B SETTINGS-SCROLL + 0.C).

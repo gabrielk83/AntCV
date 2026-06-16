@@ -76,24 +76,28 @@
       var byText = {}; items.forEach(function (it) { byText[itemText(it).toLowerCase()] = it; });
       roles.forEach(function (r) {
         if (!r || r.id == null) return;
-        // OUTCOME-SEED-UNION-001 (owner 2026-06-16): "both directions cover all
-        // signals — seeding separately gives partial lists". Union EVERY signal a
-        // role carries: role-keyed proof points, role.outcomes[], AND the role's
-        // own bullets as a FALLBACK (lowest priority, ordered last). Proof points
-        // and outcomes are preferred (distinct from bullets → no dup); the bullet
-        // fallback guarantees a role with NEITHER (e.g. IDF Computer Administrator,
-        // bullets only) still gets >=1 seeded outcome instead of staying empty.
-        // A bullet-sourced outcome that duplicates its bullet is hidden at
-        // lamination (dedup-hide in antcv-docx-client + antcv-results-laminate).
-        var sources = [];
+        // OUTCOME-SEED-UNION-001 (owner 2026-06-16, refined): the kernel SHOULD carry
+        // enough REAL outcomes (proof points + role.outcomes[]) for every role —
+        // those are preferred. The role's own bullets are a GAP-FILLER used ONLY for
+        // a role that has ZERO real outcomes (e.g. IDF Computer Administrator), so a
+        // role that already has a real outcome is NOT padded with a lower-quality
+        // bullet-outcome. A bullet seeded into an outcome-less role is dup-hidden at
+        // lamination (the source bullet is HIDDEN, never deleted); if that role later
+        // gains a better/numeric real outcome, the real outcome wins and the bullet
+        // is EXPOSED (lamination tier precedence + bullet-derived-only dedup-hide).
+        var realSrc = [];
         var seenSrc = {};
-        function pushSrc(s) { var k = String(s.text || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); if (!k || seenSrc[k]) return; seenSrc[k] = true; sources.push(s); }
-        (Array.isArray(r.proofPointIds) ? r.proofPointIds : []).forEach(function (id) { if (pp[id]) pushSrc({ id: id, text: pp[id].text }); });
-        (Array.isArray(r.outcomes) ? r.outcomes : []).forEach(function (o, k) { var t = String((o && (o.t || o.text || o.b)) || '').trim(); if (t) pushSrc({ id: 'ro:' + r.id + ':' + k, text: t }); });
-        var bsrc = [];
-        (Array.isArray(r.bullets) ? r.bullets : []).forEach(function (bl, k) { var t = String((typeof bl === 'string' ? bl : (bl && (bl.b || bl.t))) || '').trim(); if (t && t.length >= 12 && !/\bpatent\b/i.test(t)) bsrc.push({ id: 'rb:' + r.id + ':' + k, text: t, fromBullet: true }); });
-        bsrc.sort(function (a, b) { return (/\d|%|×|\bx\b/i.test(b.text) ? 1 : 0) - (/\d|%|×|\bx\b/i.test(a.text) ? 1 : 0); });
-        bsrc.forEach(pushSrc);
+        function pushTo(arr, s) { var k = String(s.text || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); if (!k || seenSrc[k]) return; seenSrc[k] = true; arr.push(s); }
+        (Array.isArray(r.proofPointIds) ? r.proofPointIds : []).forEach(function (id) { if (pp[id]) pushTo(realSrc, { id: id, text: pp[id].text }); });
+        (Array.isArray(r.outcomes) ? r.outcomes : []).forEach(function (o, k) { var t = String((o && (o.t || o.text || o.b)) || '').trim(); if (t) pushTo(realSrc, { id: 'ro:' + r.id + ':' + k, text: t }); });
+        var sources = realSrc;
+        if (!realSrc.length) {
+          // gap-filler — only a role with NO real outcome falls back to bullets.
+          var bsrc = [];
+          (Array.isArray(r.bullets) ? r.bullets : []).forEach(function (bl, k) { var t = String((typeof bl === 'string' ? bl : (bl && (bl.b || bl.t))) || '').trim(); if (t && t.length >= 12 && !/\bpatent\b/i.test(t)) pushTo(bsrc, { id: 'rb:' + r.id + ':' + k, text: t, fromBullet: true }); });
+          bsrc.sort(function (a, b) { return (/\d|%|×|\bx\b/i.test(b.text) ? 1 : 0) - (/\d|%|×|\bx\b/i.test(a.text) ? 1 : 0); });
+          sources = bsrc;
+        }
         var added = 0;
         for (var i = 0; i < sources.length && added < MAX_PER_ROLE; i++) {
           var s = sources[i]; var key = String(s.text || '').trim(); if (!key) continue;

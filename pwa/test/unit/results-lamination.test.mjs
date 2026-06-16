@@ -149,5 +149,28 @@ ok('laminated results never exceed ~2 lines (<=262 chars)', roles.every((r) => !
   delete store['antcv:outcomeRoleMap'];
 }
 
+// OUTCOME-SEED-QUALITY-001 (owner 2026-06-16): when a role has a REAL outcome that
+// is better (numeric) AND a bullet-seeded outcome was pinned to it, the real
+// outcome wins as the Results line and the bullet is EXPOSED (never hidden) — the
+// bullet-derived candidate is simply not used. Nothing is deleted.
+{
+  store['antcv:outcomeRoleMap'] = JSON.stringify({ oc_q: 'rq' });
+  const R = [
+    { id: 'rq', title: 'Process Lead', company: 'Acme', on: true,
+      outcomes: [ { id: 'oq', b: '', t: 'Cut cycle time from 250 to 10 days across the OEM portfolio.', defaultVisible: true } ],
+      bullets: [ 'Ran cross-functional reviews and tracked rework KPIs every week.' ] },
+  ];
+  // a bullet-seeded outcome (non-numeric) pinned to rq — must lose to the numeric real outcome.
+  const O = [ { b: '', t: 'Ran cross-functional reviews and tracked rework KPIs every week.', _oid: 'oc_q', _fromBullet: true } ];
+  const secs = [ { id: 'experience', type: 'experience', roles: R }, { id: 'outcomes', type: 'bullets', items: O } ];
+  const oq = applyOutcomesMode(secs, 'cv');
+  const rq = oq.find((s) => s.type === 'experience').roles.find((r) => r.id === 'rq');
+  const blText = (b) => String(typeof b === 'string' ? b : (b && (b.b || b.t)) || '');
+  ok('quality: the numeric REAL outcome wins as the Results line', /250 to 10 days/.test(rq.results || ''));
+  ok('quality: the bullet-derived candidate is NOT used as the result', !/cross-functional reviews/.test(rq.results || ''));
+  ok('quality: the bullet is EXPOSED (kept) when a real outcome wins', (rq.bullets || []).some((b) => /cross-functional reviews/.test(blText(b))));
+  delete store['antcv:outcomeRoleMap'];
+}
+
 for (const r of roles) console.log(`  [${r.title}] ${r.results || '(none)'}`);
 console.log(`\nRESULTS-LAMINATION OK (${pass} checks)`);

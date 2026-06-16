@@ -67,13 +67,19 @@ test('SPEC-SCOPE-001 — Gabriel-only default, tailored drafts get a fresh smart
   assert.ok(bundle.includes('DERIVE one from the candidate'));
 });
 
-test('ROLE-DUP-001 — duplicate role-title variants merged (prompt + consolidated sidecar)', () => {
-  // generation-side merge rule stays in the bundle prompt
-  assert.ok(bundle.includes('DUPLICATE-ROLE MERGE (ROLE-DUP-001)'));
-  // SECTIONS-CONSOLIDATE-001: the deterministic dedupe/founder/recs effects
-  // moved OUT of app.js into the restore-proof sidecar.
+test('ROLE-DECOMP-001 — distinct roles decomposed, exact dups still collapsed (prompt + sidecar)', () => {
+  // ROLE-DECOMP-001 (owner 2026-06-16): the prompt now DECOMPOSES (no longer
+  // merges) — distinct same-company functions stay as separate positions, and a
+  // combined-function title is split. The old merge rule is gone.
+  assert.ok(bundle.includes('ROLE DECOMPOSITION (ROLE-DECOMP-001)'));
+  assert.ok(!bundle.includes('DUPLICATE-ROLE MERGE (ROLE-DUP-001)'));
+  // SECTIONS-CONSOLIDATE-001: the deterministic dedupe/founder/recs effects live
+  // in the restore-proof sidecar; dedupeRoles now merges EXACT-title dups only.
   const sidecar = readFileSync(path.join(ROOT, 'antcv-sections-normalize-415.js'), 'utf8');
   assert.ok(sidecar.includes('dedupeRoles'));
+  assert.ok(sidecar.includes('ROLE-DECOMP-001: exact-title dup only'));
+  // the Customer-Change dedupe is retained but NOT applied (kept as a distinct position)
+  assert.ok(sidecar.includes('// var cc = dropCustomerChangeDup'));
   assert.ok(sidecar.includes('stripFounder'));
   assert.ok(sidecar.includes('placeRecs'));
   assert.ok(sidecar.includes('PROFESSIONAL EXPER(TISE|IENCE)'));

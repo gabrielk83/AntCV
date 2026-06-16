@@ -75,9 +75,13 @@
     return copy;
   }
 
-  // ROLE-DUP-001 consolidated here (was a React effect that the restore
-  // out-raced): same company + overlapping years + one title contained in
-  // the other -> ONE merged role with the fuller title.
+  // ROLE-DECOMP-001 (owner 2026-06-16): "decompose the merged roles ... merging is
+  // later". The old ROLE-DUP-001 merged on title CONTAINMENT (folded "System
+  // Architect" into "System Architect & Change Control Lead"). The owner now wants
+  // DISTINCT functions kept as SEPARATE positions, so this merges ONLY when the two
+  // titles are IDENTICAL after normalisation — i.e. a genuine append-duplicate
+  // (e.g. the consensus re-appending the same Kanzen role), never two distinct
+  // functions at the same company. Containment-but-not-equal is left UN-merged.
   function dedupeRoles(cv) {
     var xi = cv.findIndex(function (e) { return e && e.type === 'experience' && Array.isArray(e.roles); });
     if (xi < 0) return null;
@@ -95,7 +99,7 @@
       var a = roles[i], b = roles[j];
       if (!a || !b) continue;
       var ta = norm(a.title), tb = norm(b.title);
-      if (!ta || !tb || tb.indexOf(ta) < 0) continue; // a contained in b
+      if (!ta || !tb || ta !== tb) continue; // ROLE-DECOMP-001: exact-title dup only (was containment)
       if (norm(a.company) !== norm(b.company)) continue;
       if (!overlap(a.years, b.years)) continue;
       drop[i] = true;
@@ -339,7 +343,11 @@
       var cv = b.cv;
       var changed = false;
       var k = canonKanzen(cv); if (k) { cv = k; changed = true; }
-      var cc = dropCustomerChangeDup(cv); if (cc) { cv = cc; changed = true; }
+      // ROLE-DECOMP-001 (owner 2026-06-16): the "Customer Change Requests Specialist"
+      // is a DISTINCT Innoviz position the owner wants kept (= "Change Request
+      // Manager"), no longer folded into the Change-Control role. dropCustomerChangeDup
+      // is retained for reference but NOT applied. Re-enable only if merging returns.
+      // var cc = dropCustomerChangeDup(cv); if (cc) { cv = cc; changed = true; }
       var fe = foundedToEstablished(cv); if (fe) { cv = fe; changed = true; }
       var pt = stripPatentFromRoles(cv); if (pt) { cv = pt; changed = true; }
       var d = dedupeRoles(cv); if (d) { cv = d; changed = true; }

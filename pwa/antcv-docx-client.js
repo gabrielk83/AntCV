@@ -1789,12 +1789,16 @@ export function applyOutcomesMode(docSections, doc) {
       if (txt.length > 260) txt = txt.slice(0, 257).replace(/[;,\s]+\S*$/, '') + '…';
       return { text: txt, index: bestIdx };
     };
-    // OUTCOME-SEED-UNION-001 (owner 2026-06-16) dedup-hide: a SELECTED OUTCOME may
-    // be seeded from a role's OWN bullet (bullet fallback, for roles with no proof
-    // points). When that outcome laminates onto the role's Results line, the source
-    // bullet would otherwise show twice. Drop any bullet whose text is subsumed by
-    // the role's Results line (owner, derive tier: "the bullet it came from has to
-    // be hidden") — applied to ALL tiers, not just derive.
+    // OUTCOME-SEED-UNION-001 (owner 2026-06-16, refined): dedup-hide is
+    // BULLET-DERIVED-ONLY and NON-DESTRUCTIVE. Rule (owner): if a role has no real
+    // outcome and a bullet is seeded into its Results, HIDE that source bullet (don't
+    // show it twice). But if the role has a REAL outcome (tiers 1-4 / _lam) — which
+    // is preferred and is usually the better/numeric one — the real outcome is the
+    // Results line and every bullet is EXPOSED (the bullet-derived candidate simply
+    // is not used). So we only hide a bullet when the WINNING result is itself
+    // bullet-derived (the pool/derive paths), never for a real-outcome result.
+    // "Hide" omits the bullet from the EXPORT render only; the stored sections in
+    // localStorage are never mutated, so nothing is deleted and it is reversible.
     const normLine = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
     const hideSubsumed = (role, resultsText) => {
       const nr = normLine(resultsText);
@@ -1807,10 +1811,14 @@ export function applyOutcomesMode(docSections, doc) {
     const expOut = {
       ...exp,
       roles: (exp.roles || []).map((r) => {
+        // tiers 1-4 — a REAL outcome wins and ALL bullets stay exposed.
         const lam = _lam.get(r);
-        if (lam) return { ...r, results: lam, bullets: hideSubsumed(r, lam) };
+        if (lam) return { ...r, results: lam };
+        // pool / explicit-map distribution — may be a bullet-seeded outcome, so hide
+        // a bullet only when the result text subsumes it (i.e. it IS that bullet).
         if (resultsByRole.has(r)) { const rt = resultsByRole.get(r); return { ...r, results: rt, bullets: hideSubsumed(r, rt) }; }
-        // tier-5 derive — only when tiers 1-4 are exhausted.
+        // tier-5 derive — the Results line IS one of the role's bullets; hide that
+        // one source bullet (export render only; stored data untouched).
         const d = deriveResultFromRole(r);
         if (!d) return r;
         const keptBullets = (Array.isArray(r.bullets) ? r.bullets : []).filter((_, i) => i !== d.index);

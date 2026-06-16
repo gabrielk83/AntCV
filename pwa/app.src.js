@@ -2693,6 +2693,10 @@
                     title +
                     (company ? " | " + company : "") +
                     (years ? " | " + years : "") +
+                    // TENSE-RENDER-001: surface the authoritative per-role isCurrent
+                    // flag so the writer chooses tense from the FLAG, never by parsing
+                    // the date string.
+                    (e.isCurrent === true ? " | CURRENT ROLE" : "") +
                     (bullets.length ? "\n    - " + bullets.join("\n    - ") : "")
                   );
                 })
@@ -22783,7 +22787,7 @@
                 ? "\n- EXPERIENCE TENSE (FORCED PAST): write EVERY experience bullet AND every SELECTED OUTCOMES (outcomes_items) leading verb in PAST tense (Owned, Built, Reduced, Directed, Cut, Secured) — including the current role, so the per-role Results read past too. Verb-variety rules unchanged."
                 : __expTense === "present"
                   ? "\n- EXPERIENCE TENSE (FORCED PRESENT): write EVERY experience bullet AND every SELECTED OUTCOMES (outcomes_items) leading verb in PRESENT tense (Own, Build, Reduce, Direct, Cut, Secure) — including past roles, so the per-role Results read present too. Use the present-tense form of the approved verbs; verb-variety rules unchanged."
-                  : "\n- EXPERIENCE TENSE (AUTO — default): use LOGICAL per-role tense. Write the CURRENT / ongoing role's bullets in PRESENT tense (Own, Build, Direct) and EVERY earlier (past) role's bullets in PAST tense (Owned, Built, Directed). A role is current if its years end in 'Present', 'Now', 'Current', or have no end date; otherwise it is a past role. If two roles are both open-ended, treat only the newest as current. Verb-variety rules unchanged.";
+                  : "\n- EXPERIENCE TENSE (AUTO — default; TENSE-RENDER-001): use LOGICAL per-role tense driven by the FLAG, NOT by parsing dates. A role is CURRENT if and only if it is tagged 'CURRENT ROLE' in the STORED WORK HISTORY (the authoritative isCurrent flag). Write each CURRENT role's bullets AND its SELECTED OUTCOMES leading verbs in PRESENT tense (Own, Build, Direct); write EVERY role NOT tagged 'CURRENT ROLE' in PAST tense (Owned, Built, Directed) — even if its dates look open-ended. NEVER infer currency from the year string ('Present', 'Now', no end date); read the tag only. Verb-variety rules unchanged.";
             // COMPANY-BRAND-FIT-001 (owner 2026-06-12): session-only
             // checkbox next to Generate — with a JD present, the LLM also
             // returns a brand_fit palette derived from the target company.

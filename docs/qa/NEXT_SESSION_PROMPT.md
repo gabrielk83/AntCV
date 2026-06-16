@@ -33,6 +33,17 @@ version string, bump yours so the SW cache-bust stays honest).
   only the handler, env `{}` skips auth, and the bundle replaces `globalThis.process`
   so write output via `fs.writeSync(1, …)`. See `workers/docx-worker/test/diag-twocol-paged.mjs`.
 
+## Current state — 2026-06-16 (read first)
+
+Shipped to **1.50.521** + **access-relay** + **docx-worker 1.14.74**; suite **308/308**, boot-smoke clean. Latest session registry is at the TOP of `docs/qa/ACTIVE_BUGS.md` (2026-06-16). Highlights:
+- **KERNEL V2 COMPLETE** — Task 1a (v2 in D1 `user_kernel.kernel_v2`) + §2 tense (isCurrent flag) + §3 language (cross-lingual policy) + §4 upload→kernel ingestion (engine, file→text, preview modal, D1 POST/GET, merged import button, reader bridge into generation, login auto-sync, structured apply, language step). Full plan + status: `docs/plan/KERNEL-V2-AND-INGESTION.md`. Upload-test fixtures: `pwa/test/fixtures/kernel-v2/`.
+- **Owner data reconciled** in D1 (11 reverse-chron roles incl. security guard + Copenhagen Wolves + split Meprolight; see [[gabriel-cv-facts]]).
+- **Many content/feature ships** (outcome dropdown+seeding, role-decompose, group-name visibility, exp-order, profile text). See the registry.
+
+**Top OPEN items** (`docs/qa/ACTIVE_BUGS.md` OPEN ISSUES): **SIDEBAR-NARROW-FIGURE-OVERLAP-001** (item 26, NOT STARTED — band/main/sidebar text overlaps the photo when the sidebar is narrow); the regen-dependent prompt items (metric sharpness, dorm-guard) — owner verifies on regen; **SETTINGS** bucket (LANGUAGES-CARD-PERSONAL-001 mount, SETTINGS-SCROLL-RESET-001, DISCLOSURE-TRIANGLE); and the older preview/export pagination items below. Kernel-v2 follow-ups are refinements only (not blockers) — see the plan doc.
+
+---
+
 ## Priority 1 (do first) — PB-PREVIEW-SIDEBAR-SALMON-PUSH-001
 In the CV page-box PREVIEW, the long sidebar (REGULATORY CONTEXT) does NOT break at the
 salmon line — it PUSHES the salmon down, leaving the page-box taller than A4. The owner:

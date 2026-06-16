@@ -98,6 +98,22 @@ Owner-set ordering (2026-06-15, revised): **work CONTENT & EXPORT issues first, 
 
 ---
 
+## SESSION REGISTRY — 2026-06-16 (owner-interactive, day-long) — 1.50.506 → 1.50.521 + access-relay + docx-worker 1.14.74
+
+Status snapshot for the nightly run. PWA auto-deploys on push; access-relay + docx-worker manually deployed (green). Suite **308/308**, boot-smoke clean throughout, every item below verified headlessly before ship.
+
+**KERNEL V2 — COMPLETE (the owner's `antcv-code-session-brief.md`).** Plan + full status: `docs/plan/KERNEL-V2-AND-INGESTION.md`.
+- **Task 1a** — owner's `gabriel-kernel-v2.json` (12 roles) staged in D1 `user_kernel.kernel_v2` (new non-destructive column; wrangler write, length-verified). Re-uploaded 1.50.521.
+- **§2 TENSE-RENDER-001** (1.50.515) — AUTO tense reads the per-role `isCurrent` FLAG (STORED WORK HISTORY tags `| CURRENT ROLE`), NEVER parses dates. D1 bridge sets `tenseMode`+`isCurrent` on the runtime kernel.
+- **§3 LANG-CROSS-001** (1.50.516) — `__langRule` in the generation prompt: translate prose in-target, keep invariant classes (company/patent/metrics/tools/standards/pub-titles) verbatim, DA keeps idiomatic English titles.
+- **§4 ingestion** (1.50.517 → 521 + access-relay) — `antcv-kernel-ingest.js` engine (extract→structural-infer→gap→merge, no fabrication, node-tested) + file→text (docx/pdf/txt/json) + `antcv-kernel-import.js` preview modal (roles/conflicts/gaps, keep-both-and-flag, metrics never overwritten) + **D1 persist** `POST/GET /api/profile/kernel-v2` + **merged entry button** (Settings + wizard import controls) + **reader bridge** `projectV2ToWorkHistory` → `personalInfo.workHistory` (import feeds GENERATION) + **auto-sync on login** (signature-guarded) + **structured date/metric apply** + **language-selection step**. Upload-test fixtures: `pwa/test/fixtures/kernel-v2/{gabriel,anita,devon}-kernel-v2.json` (`gen_test_kernels.mjs`).
+
+**OWNER-DATA RECONCILIATION (D1 `user_kernel`).** 11→ reverse-chron roles: ADDED Security Guard (Tel Aviv) + Copenhagen Wolves (`foreningsarbejde`, `Pan Idræt Rugby`, RFC in content); SPLIT Meprolight → Team Leader + R&D Engineer (Raw CV); CORRECTED Kanzen (`Product / Project Expert — Kanzen Konsulenter ApS — 2022-2026`) + IDF (`Computer Systems Administrator — Israel Defense Forces`); reverse-chron sort, volunteer pinned last; tools group names; isCurrent = kanzen+wolves. See [[gabriel-cv-facts]].
+
+**FEATURES / CONTENT shipped:** OUTCOME-ROLE-SELECT-001 (per-row position dropdown + ≥11 seeded outcomes, 1.50.506) → seed-union/gap-fill + dedup-hide bullet-derived-only + quality-toggle (507/508); ROLE-DECOMP-001 (un-merge in prompt+415; merge-order core-first; 508/510); CW-CANON-001 (merge the two Copenhagen Wolves variants, 415); PROFILE-END-COMMUNICATION-001 (509) + UNSOLICITED PROFILE text (514); GROUP-NAME-VISIBILITY-001 (1.50.512 + worker 1.14.74 — labeled_list `labelHidden`: single-group/tools-methods name-hide, preview + export, manual re-show); EXP-ORDER-ON-ADD-001 (new role auto reverse-chron, volunteer last, respects manual reorder, 513); SIDEBAR-NARROW-FIGURE-OVERLAP-001 logged (item 26, NOT STARTED). IDF-before-Kanzen DROPPED (owner: one-off).
+
+---
+
 ## SESSION REGISTRY — 2026-06-15 (nightly autonomous, parallelised) — 1.50.486
 
 - `TABLE-HEADER-MATCH-BAND-001` `[SHIPPED 1.50.486 — PWA-only]` — owner reply 2026-06-15: "match table header text and BG to candidate section text and header in both preview and export." The EXPORT already matched after COPENHAGEN-BLUE (worker `tableHeaderBg = band`, `tableHeaderText = readableInk(band)` = white = the candidate band). The PREVIEW did NOT: the two `<th>` cells (`app.src.js` ~5094/5115) read `k.tableHeaderBg`, but the resolved `k` style falls back to the pale `c` default (`#DDE6F2` + dark ink), so the preview table header was pale while the band was blue. Fix: drive both `<th>` from the band's own source — `background: "var(--header-bg)"`, `color: "var(--header-name-color, #fff)"` — so the table header BG+text equal the candidate band in every package (the band uses the same CSS var). Minified `app.js` mirrored (the inlined `readableInk` IIFE on `_.tableHeaderBg` replaced, 2 cells, count-guarded). Verified `diag-copenhagen-blue-preview` 7/7 (table header rgb(51,68,111) + white === band) and `diag-copenhagen-blue-cl` still 4/4 (export band+table = 33446F). No worker change.

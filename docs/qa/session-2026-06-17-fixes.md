@@ -67,6 +67,17 @@ one worker deployer, push to main only.
    head/`#00746E` palette tokens). Verified: `diag-visual-pkg-relabel.mjs` (heading
    reads "Visual package", no "STYLE PACKAGE" left, PackagePicker still anchors).
 
+7b. **1.50.526 — RESULTS-PREVIEW-LAMINATION-PARITY-001** `[auto-deploys]` (owner
+   2026-06-17: "results are seen in all roles in export — preview only in part and
+   with weird content"). The export laminates each role from its OWN data (role.results
+   → role.outcomes[] → proofPointIds vs personalInfo.proofPointsByRole) and only
+   token-spreads SELECTED OUTCOMES for leftover roles; the PREVIEW skipped tiers 1-3 and
+   went straight to the token spread — so it showed Results on only some roles, with
+   mismatched content. Fix: added the export's tiers 1-3 to the preview IIFE as `__lam`,
+   threaded into the existing editable render via guarded short-circuits; unlaminated
+   roles still fall through to the unchanged spread (no regression). app.js mirrored.
+   Verified: `diag-results-preview-lamination.mjs` (tiers 1/2/3 each render per role).
+
 7. **LANG-EXPAND-003 (plan, owner 2026-06-17)** `[docs]`. Added §10 to
    `docs/plan/LANG-EXPAND-001.md`: Polish (pl, Tier 1), Guaraní (gn, Tier 1 +
    native-review, thin dictionary → proofing-disabled-with-notice), and Spanish variants
@@ -119,7 +130,7 @@ one worker deployer, push to main only.
 3. The 1.50.522 inline-label fix shows "Who I am:" / "Why …:" labels in the PREVIEW for
    IMPORTED data (was export-only).
 
-State after run: PWA **1.50.525**, docx-worker **1.14.76**, suite **312/312**, 19 docx
+State after run: PWA **1.50.526**, docx-worker **1.14.76**, suite **312/312**, 19 docx
 diags green, mirror-guard green, tsc clean. Islands bundle rebuilt + un-staled.
 
 Owner punch-list (additions): (4) Settings → Personal — the Languages card is back in

@@ -15,7 +15,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.500-inline-workstyle';
+  var VERSION = '1.50.503-unsolicited-opener';
   if (window.__antcvSectionsNormalize === VERSION) return;
   window.__antcvSectionsNormalize = VERSION;
 
@@ -299,6 +299,36 @@
     return changed ? out : null;
   }
 
+  // PROFILE-UNSOLICITED-GENERIC-001 (owner — repeated): for an UNSOLICITED /
+  // general CV (no JD), the PROFILE must NOT open by LEADING with a niche
+  // deep-tech identity ("Electro-optics and …", LiDAR, automotive, nanotech,
+  // deep-tech). The generation prompt forbids it but the model ignores it / the
+  // uploaded-doc memory fusion reintroduces it, so enforce it DETERMINISTICALLY.
+  // Rewrite ONLY the leading subject phrase (everything before "with N+ years")
+  // to the broad product/project identity; the rest of the sentence (which may
+  // carry a domain example) is preserved — the owner allows a domain as an
+  // example LATER, never as the headline. Idempotent (the neutral subject has no
+  // banned term → never re-fires). Gated: only when there's NO JD (a TARGETED
+  // deep-tech application may legitimately lead with the niche).
+  var BANNED_OPENER = /(electro[\s-]?optics|opto[\s-]?electronic|\blidar\b|nanotech|deep[\s-]?tech|\bautomotive\b)/i;
+  function neutralizeUnsolicitedOpener(cv) {
+    var hasJd = false;
+    try { hasJd = String(localStorage.getItem('antcv:lastJdText') || '').trim().length > 0; } catch (_) {}
+    if (hasJd) return null;
+    var changed = false;
+    var out = cv.map(function (s) {
+      if (!s || s.id !== 'profile' || typeof s.content !== 'string') return s;
+      var c = s.content;
+      var m = c.match(/^(\s*)([\s\S]*?)(\bwith\s+\d+\+?\s+years\b)/i);
+      if (!m || !BANNED_OPENER.test(m[2])) return s;
+      var rewritten = m[1] + 'Product and project professional ' + m[3] + c.slice(m[0].length);
+      if (rewritten === c) return s;
+      changed = true;
+      return Object.assign({}, s, { content: rewritten });
+    });
+    return changed ? out : null;
+  }
+
   function normalize() {
     try { normalizeMeta(); } catch (_) {}
     try {
@@ -317,6 +347,7 @@
       var p = placeRecs(cv); if (p) { cv = p; changed = true; }
       var dl = defaultLoc(cv); if (dl) { cv = dl; changed = true; }
       var wi = inlineifyWorkStyle(cv); if (wi) { cv = wi; changed = true; }
+      var no = neutralizeUnsolicitedOpener(cv); if (no) { cv = no; changed = true; }
       // SECTION-PREVIEW-LOC-001 / TYPE-NORMALIZE: also normalise the CL sections'
       // loc + work_style type so imported CL sections render in the preview.
       var cl = Array.isArray(b.cl) ? b.cl : null;

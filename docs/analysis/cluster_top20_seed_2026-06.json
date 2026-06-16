@@ -1,0 +1,92 @@
+{
+  "source": "Analyst-reviewed June 2026 16-role sample (Gabriel)",
+  "generated": "2026-06-16",
+  "seed_weight": 0.4,
+  "share_legend": {
+    "ABC": "shared across all three clusters (highest visibility)",
+    "AB": "shared pm_process + photonics_eng",
+    "AC": "shared pm_process + research_phd",
+    "BC": "shared photonics_eng + research_phd",
+    "none": "unique to that cluster"
+  },
+  "clusters": {
+    "pm_process": {
+      "label": "PM / Product / Process Management",
+      "roles": [1, 8, 9, 10, 15],
+      "top20": [
+        {"r": 1,  "q": "Project management methodology (PMP / Agile / lifecycle)", "share": "none"},
+        {"r": 2,  "q": "Stakeholder management & cross-functional coordination", "share": "ABC"},
+        {"r": 3,  "q": "Requirements management & translating needs into specs", "share": "AB"},
+        {"r": 4,  "q": "Risk identification, assessment & mitigation (risk register)", "share": "AB"},
+        {"r": 5,  "q": "Process design, modelling & documentation (BPM)", "share": "none"},
+        {"r": 6,  "q": "Process / continuous improvement (Lean / Six Sigma)", "share": "AB"},
+        {"r": 7,  "q": "Change & governance control", "share": "none"},
+        {"r": 8,  "q": "Project planning, time plans & milestone tracking", "share": "none"},
+        {"r": 9,  "q": "Product lifecycle management (concept to field)", "share": "none"},
+        {"r": 10, "q": "Supplier / vendor collaboration & spec management", "share": "AB"},
+        {"r": 11, "q": "ERP / CRM or system-implementation experience", "share": "none"},
+        {"r": 12, "q": "Hardware product development (mechanics/electronics/RF)", "share": "AB"},
+        {"r": 13, "q": "Design verification & validation vs specifications", "share": "AB"},
+        {"r": 14, "q": "International product certification (CE / FCC / UL / EASA-145)", "share": "none"},
+        {"r": 15, "q": "Audit / compliance & CAPA handling", "share": "none"},
+        {"r": 16, "q": "Commercial & financial understanding", "share": "AB"},
+        {"r": 17, "q": "Status communication to senior management / board", "share": "ABC"},
+        {"r": 18, "q": "Matrix-organisation work with competing priorities", "share": "none"},
+        {"r": 19, "q": "Obsolescence management & cost optimisation", "share": "AB"},
+        {"r": 20, "q": "English fluency (Danish an advantage)", "share": "ABC"}
+      ]
+    },
+    "photonics_eng": {
+      "label": "Photonics / Optical / Test Engineering",
+      "roles": [2, 7, 12, 13, 16, 14],
+      "top20": [
+        {"r": 1,  "q": "Optical / photonics systems engineering (free-space & fiber)", "share": "BC"},
+        {"r": 2,  "q": "Photonic integrated circuit (PIC) design / sim / tape-out", "share": "none"},
+        {"r": 3,  "q": "Device & sensor / EO characterization", "share": "BC"},
+        {"r": 4,  "q": "Optical measurement setups, calibration & instrumentation", "share": "BC"},
+        {"r": 5,  "q": "Laser systems (seed lasers, amplifiers, stabilization)", "share": "none"},
+        {"r": 6,  "q": "Semiconductor / silicon-photonics test programs", "share": "none"},
+        {"r": 7,  "q": "Test concept development, yield & test-time improvement", "share": "none"},
+        {"r": 8,  "q": "Foundry PDKs & simulation tools (e.g. COMSOL)", "share": "BC"},
+        {"r": 9,  "q": "Data acquisition, automation & analysis (Python)", "share": "BC"},
+        {"r": 10, "q": "Quantum technology / QPU context awareness", "share": "BC"},
+        {"r": 11, "q": "Patent & IP generation (Patent No. 241997)", "share": "AB"},
+        {"r": 12, "q": "IP strategy, patent portfolio & licensing frameworks", "share": "none"},
+        {"r": 13, "q": "Multivariate analysis / spectrometer technology", "share": "none"},
+        {"r": 14, "q": "Requirements capture from customer applications", "share": "AB"},
+        {"r": 15, "q": "Manufacturability & production scalability", "share": "AB"},
+        {"r": 16, "q": "Technical leadership & mentoring engineers", "share": "ABC"},
+        {"r": 17, "q": "Cross-disciplinary R&D collaboration", "share": "ABC"},
+        {"r": 18, "q": "Supplier coordination & quality issues", "share": "AB"},
+        {"r": 19, "q": "Medtech / healthtech / deep-tech domain exposure", "share": "none"},
+        {"r": 20, "q": "English fluency; ~10% travel willingness", "share": "ABC"}
+      ]
+    },
+    "research_phd": {
+      "label": "PhD / Research positions",
+      "roles": [3, 4, 5, 6, 11],
+      "top20": [
+        {"r": 1,  "q": "Completed M.Sc. (physics / EE / engineering) eligibility", "share": "AC"},
+        {"r": 2,  "q": "Independent, structured research-project management", "share": "AC"},
+        {"r": 3,  "q": "Experimental design & lab work (optics / spectroscopy)", "share": "BC"},
+        {"r": 4,  "q": "Scientific computing (Python / MATLAB)", "share": "BC"},
+        {"r": 5,  "q": "Machine learning / chemometrics / data modelling", "share": "BC"},
+        {"r": 6,  "q": "Data acquisition, processing & visualisation (large sets)", "share": "BC"},
+        {"r": 7,  "q": "Hyperspectral / spectroscopic measurement techniques", "share": "BC"},
+        {"r": 8,  "q": "Peer-reviewed publication record (2 papers + poster)", "share": "none"},
+        {"r": 9,  "q": "Conference presentation & dissemination", "share": "ABC"},
+        {"r": 10, "q": "Quantum optics / light-source characterization", "share": "BC"},
+        {"r": 11, "q": "Innovation systems / STI policy & technology transfer", "share": "none"},
+        {"r": 12, "q": "Interdisciplinary collaboration with external partners", "share": "ABC"},
+        {"r": 13, "q": "Teaching / knowledge dissemination (2 TAU courses)", "share": "none"},
+        {"r": 14, "q": "International mobility (China / external research stay)", "share": "none"},
+        {"r": 15, "q": "Clear technical communication, clarity & precision", "share": "ABC"},
+        {"r": 16, "q": "Reproducible documentation (LaTeX / Jupyter)", "share": "none"},
+        {"r": 17, "q": "Curiosity, initiative & self-ownership of research", "share": "none"},
+        {"r": 18, "q": "Domain expertise in a specified subfield (depth)", "share": "none"},
+        {"r": 19, "q": "English fluency (+ language test if non-native)", "share": "ABC"},
+        {"r": 20, "q": "Methodological rigour & critical analysis", "share": "BC"}
+      ]
+    }
+  }
+}

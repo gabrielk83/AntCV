@@ -5508,6 +5508,33 @@
                     "results" === __outcomesMode &&
                       (() => {
                         try {
+                          // RESULTS-PREVIEW-LAMINATION-PARITY-001 (owner 2026-06-17):
+                          // mirror the EXPORT (antcv-docx-client applyOutcomesMode
+                          // tiers 1-3) so the preview shows the SAME per-role Results
+                          // as the DOCX/PDF. A role's OWN laminated results win over
+                          // the SELECTED-OUTCOMES token spread below: (1) explicit
+                          // role.results, then (2) role.outcomes[] (JD-gated visible),
+                          // then (3) proofPointIds resolved against
+                          // personalInfo.proofPointsByRole/byPosition. Before this the
+                          // preview skipped tiers 1-3 and token-spread the SELECTED
+                          // OUTCOMES, so it showed Results on only SOME roles and with
+                          // mismatched ("weird") content while the export was correct
+                          // on every role. __lam (when set) is threaded into __txt
+                          // below, reusing the same editable render.
+                          const __piRawL = (() => { try { return JSON.parse(localStorage.getItem("personalInfo") || "{}") || {}; } catch (_) { return {}; } })();
+                          const __piL = __piRawL.personalInfo ? __piRawL.personalInfo : __piRawL;
+                          const __ppTextL = {};
+                          [].concat(__piL.proofPointsByRole || [], __piL.proofPointsByPosition || []).forEach((p) => { if (p && p.id && "string" == typeof p.text) __ppTextL[p.id] = p.text; });
+                          let __jdL = ""; try { __jdL = String(localStorage.getItem("antcv:lastJdText") || "").toLowerCase(); } catch (_) {}
+                          const __ovisL = (o) => { if ("string" == typeof o) return !0; if (!o) return !1; if (!1 !== o.defaultVisible) return !0; const terms = o.visibilityRule && Array.isArray(o.visibilityRule.showWhenJDContainsAny) ? o.visibilityRule.showWhenJDContainsAny : []; return !!__jdL && terms.some((tt) => tt && __jdL.includes(String(tt).toLowerCase())); };
+                          const __capJoinL = (texts) => { let s2 = texts.slice(0, 2).join("; "); s2.length > 260 && (s2 = s2.slice(0, 257).replace(/[;,\s]+\S*$/, "") + "…"); return s2; };
+                          const __lamOfL = (role) => {
+                            if (role && "string" == typeof role.results && role.results.trim()) return role.results.trim();
+                            if (role && Array.isArray(role.outcomes) && role.outcomes.length) { const tx = role.outcomes.filter(__ovisL).map((o) => "string" == typeof o ? o.trim() : [o.b, o.t].filter(Boolean).join(" ").trim()).filter(Boolean); if (tx.length) return __capJoinL(tx); }
+                            const ids = role && Array.isArray(role.proofPointIds) ? role.proofPointIds : []; const tx = ids.map((id) => __ppTextL[id]).filter(Boolean); if (tx.length) return __capJoinL(tx);
+                            return "";
+                          };
+                          const __lam = __lamOfL(e);
                           const root = JSON.parse(
                             localStorage.getItem("sections") || "{}",
                           );
@@ -5552,7 +5579,7 @@
                           const all = ((so && so.items) || [])
                             .filter(Boolean)
                             .filter((x) => !isPatent(x));
-                          if (!all.length) return null;
+                          if (!__lam && !all.length) return null;
                           const tokensFor = (r2) =>
                             new Set(
                               tok(r2 && r2.title).concat(tok(r2 && r2.company)),
@@ -5599,7 +5626,7 @@
                             });
                           };
                           const __pool = all.filter((x) => !__echoes(x));
-                          if (!__pool.length) return null;
+                          if (!__lam && !__pool.length) return null;
                           const __assign = __vis.map(() => []);
                           const __left = [];
                           // OUTCOMES-RESULTS-BESTMATCH-001 (owner 2026-06-14):
@@ -5650,8 +5677,8 @@
                               if (__assign[i].length < want) __assign[i].push(__spill[__si++]);
                             }
                           }
-                          const mine = __assign[__myIdx];
-                          if (!mine.length) return null;
+                          const mine = __assign[__myIdx] || [];
+                          if (!__lam && !mine.length) return null;
                           return React.createElement(
                             "div",
                             {
@@ -5688,13 +5715,15 @@
                               // OUTCOMES-RESULTS-CAP-001: hard char budget so the
                               // line never exceeds ~2 lines, regardless of how long
                               // the matched outcomes are.
-                              let __txt = mine
-                                .map((x) =>
-                                  "string" == typeof x
-                                    ? x
-                                    : [x.b, x.t].filter(Boolean).join(" ").trim(),
-                                )
-                                .join("; ");
+                              let __txt = __lam
+                                ? __lam
+                                : mine
+                                    .map((x) =>
+                                      "string" == typeof x
+                                        ? x
+                                        : [x.b, x.t].filter(Boolean).join(" ").trim(),
+                                    )
+                                    .join("; ");
                               if (__txt.length > 260)
                                 __txt =
                                   __txt.slice(0, 257).replace(/[;,\s]+\S*$/, "") +

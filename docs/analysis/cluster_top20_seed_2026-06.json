@@ -18,7 +18,7 @@
         {"r": 2,  "q": "Stakeholder management & cross-functional coordination", "share": "ABC"},
         {"r": 3,  "q": "Requirements management & translating needs into specs", "share": "AB"},
         {"r": 4,  "q": "Risk identification, assessment & mitigation (risk register)", "share": "AB"},
-        {"r": 5,  "q": "Process design, modelling & documentation (BPM)", "share": "none"},
+        {"r": 5,  "q": "Process design, modelling & documentation (BPM / BABOK / BPMN)", "share": "none"},
         {"r": 6,  "q": "Process / continuous improvement (Lean / Six Sigma)", "share": "AB"},
         {"r": 7,  "q": "Change & governance control", "share": "none"},
         {"r": 8,  "q": "Project planning, time plans & milestone tracking", "share": "none"},
@@ -72,7 +72,7 @@
         {"r": 4,  "q": "Scientific computing (Python / MATLAB)", "share": "BC"},
         {"r": 5,  "q": "Machine learning / chemometrics / data modelling", "share": "BC"},
         {"r": 6,  "q": "Data acquisition, processing & visualisation (large sets)", "share": "BC"},
-        {"r": 7,  "q": "Hyperspectral / spectroscopic measurement techniques", "share": "BC"},
+        {"r": 7,  "q": "Hyperspectral / spectroscopic measurement techniques (covered via NIR/SWIR/thermal multi-band image fusion)", "share": "BC"},
         {"r": 8,  "q": "Peer-reviewed publication record (2 papers + poster)", "share": "none"},
         {"r": 9,  "q": "Conference presentation & dissemination", "share": "ABC"},
         {"r": 10, "q": "Quantum optics / light-source characterization", "share": "BC"},
@@ -88,5 +88,9 @@
         {"r": 20, "q": "Methodological rigour & critical analysis", "share": "BC"}
       ]
     }
-  }
+  },
+  "changelog": [
+    {"date": "2026-06-16", "note": "Initial seed from 16-role sample."},
+    {"date": "2026-06-16", "note": "Corrections after kernel review: research_phd #7 hyperspectral marked covered via Gabriel's NIR/SWIR/thermal image-fusion work (Meprolight); pm_process #5 annotated BABOK/BPMN to reflect U of Toronto Business Analysis cert. Kernel also updated with LaTeX/Jupyter tools and MISWG/DDIS clearance eligibility. Live D1 cluster_top_qualifications row research_phd#7 updated to match."}
+  ]
 }

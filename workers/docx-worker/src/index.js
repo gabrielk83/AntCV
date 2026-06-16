@@ -23798,6 +23798,25 @@ function makePhotosCircular(documentXml, shape) {
   return { xml: next, count: count3 };
 }
 __name(makePhotosCircular, "makePhotosCircular");
+function aiNoticeVmlRun(side) {
+  // AI-WATERMARK-EXPORT-LOCATION-001: a bottom-corner-anchored VML text frame
+  // (v:rect + textbox, no fill/stroke = WM-003). mso-position-vertical:bottom +
+  // -relative:margin pins it to the page-margin bottom; horizontal:left|right
+  // pins the corner. The textbox inset (~14pt sides, ~11pt bottom ≈ preview's
+  // 18px DEFAULT_INSET) is the WM-002 clearance. Injected ONLY at the last page's
+  // sentinel run, so it renders once (WM-005). Same raw-VML layer as the DEMO mark.
+  const horiz = side === "left" ? "left" : "right";
+  return '<w:r><w:rPr><w:noProof/></w:rPr><w:pict>' +
+    '<v:rect id="AntCVAiNotice" o:spid="_x0000_s4097" style="position:absolute;margin-left:0;margin-top:0;width:320pt;height:18pt;' +
+    'mso-position-horizontal:' + horiz + ';mso-position-horizontal-relative:margin;' +
+    'mso-position-vertical:bottom;mso-position-vertical-relative:margin;z-index:251658240" filled="f" stroked="f">' +
+    '<v:textbox inset="14pt,1pt,14pt,11pt"><w:txbxContent>' +
+    '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="220" w:lineRule="auto"/><w:jc w:val="' + horiz + '"/></w:pPr>' +
+    '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:i/><w:color w:val="4D7976"/><w:sz w:val="13"/></w:rPr>' +
+    '<w:t xml:space="preserve">AI-assisted — author retains responsibility for content.</w:t></w:r>' +
+    '</w:p></w:txbxContent></v:textbox></v:rect></w:pict></w:r>';
+}
+__name(aiNoticeVmlRun, "aiNoticeVmlRun");
 function postProcessDocx(input, opts = {}) {
   let bytes;
   if (input instanceof Uint8Array) {
@@ -23815,6 +23834,7 @@ function postProcessDocx(input, opts = {}) {
   let replacements = 0;
   let photosCircular = 0;
   let watermarked = false;
+  let aiNoticeInjected = false;
   if (files["word/document.xml"]) {
     let xml2 = strFromU8(files["word/document.xml"]);
     const placeholderResult = stripPlaceholderRuns(xml2);
@@ -23836,6 +23856,20 @@ function postProcessDocx(input, opts = {}) {
       (inner.indexOf('w:type="pct" w:w="100%"') >= 0 && inner.indexOf("<w:tblLayout") < 0)
         ? "<w:tblPr>" + inner + '<w:tblLayout w:type="autofit"/></w:tblPr>'
         : m);
+    // AI-WATERMARK-EXPORT-LOCATION-001 (spec 2026-06-16): swap the AI-notice
+    // SENTINEL run (emitted by buildAiDisclosureHangingTextbox at the end of the
+    // last page's content) for a bottom-corner-anchored VML text frame. This pins
+    // the notice to the actual bottom of the LAST page in both Word and the
+    // CloudConvert/LibreOffice PDF (same raw-VML layer the DEMO mark uses),
+    // closing WM-001/002/004/005. Side ('left'|'right') is encoded in the sentinel
+    // (CV: measured larger-gap corner; CL: right). The document root already
+    // declares the v/o/w10 namespaces, so the body VML is valid as-is.
+    const AIWM_RE = /<w:r\b[^>]*>(?:(?!<\/w:r>)[\s\S])*?__ANTCV_AIWM_(left|right)__(?:(?!<\/w:r>)[\s\S])*?<\/w:r>/;
+    const aiWmMatch = xml2.match(AIWM_RE);
+    if (aiWmMatch) {
+      xml2 = xml2.replace(AIWM_RE, aiNoticeVmlRun(aiWmMatch[1]));
+      aiNoticeInjected = true;
+    }
     const hasWm = !!(opts && opts.watermark && String(opts.watermark).trim());
     const headerBgHex = (opts && opts.headerBg ? String(opts.headerBg).trim().replace(/[^0-9A-Fa-f]/g, "") : "").slice(0, 6);
     if (hasWm || headerBgHex) {
@@ -23883,7 +23917,7 @@ function postProcessDocx(input, opts = {}) {
       }
       watermarked = true;
     }
-    if (placeholderResult.count > 0 || photoResult.count > 0 || watermarked) {
+    if (placeholderResult.count > 0 || photoResult.count > 0 || watermarked || aiNoticeInjected) {
       files["word/document.xml"] = strToU8(xml2);
     }
   }
@@ -24512,33 +24546,21 @@ function numberingConfig(style) {
 }
 __name(numberingConfig, "numberingConfig");
 function buildAiDisclosureHangingTextbox(ctx, opts) {
-  const context2 = opts && opts.context || "linear";
-  const isSidebar = context2 === "sidebar";
-  const borderColor = isSidebar ? "C8D0DC" : "95B0AE";
-  const textColor = isSidebar ? "C8D0DC" : "4D7976";
-  const para = {
-    alignment: isSidebar ? AlignmentType.CENTER : AlignmentType.RIGHT,
-    // v1.50.269: linear/CL watermark before 360 -> 120 (was orphaning
-    // the signature+watermark onto an extra page). Sidebar keeps 360.
-    spacing: { before: isSidebar ? 360 : 120, after: 0, line: 220, lineRule: "auto" },
-    keepLines: true,
-    children: [new TextRun({
-      text: "AI-assisted \u2014 author retains responsibility for content.",
-      font: "Calibri",
-      size: 13,
-      // 6.5pt (half-points)
-      italics: true,
-      color: textColor
-    })]
-  };
-  if (isSidebar) {
-    para.indent = { left: 120, right: 120 };
-  } else {
-    // Linear/CL: TEXT-ONLY, right-aligned, NO large indent (a heavy left
-    // indent rendered EMPTY in the LibreOffice/CloudConvert PDF path; pure
-    // right-alignment pins it to the right margin in both Word and PDF).
-  }
-  return new Paragraph(para);
+  // AI-WATERMARK-EXPORT-LOCATION-001 / WM-001..005 (spec 2026-06-16): the AI
+  // notice is no longer a FLOWED paragraph (it floated mid-page when content was
+  // short, and on a 2-page CV could land on a column that ends on page 1 \u2014
+  // WM-005). It is now a SENTINEL anchor paragraph whose run postProcessDocx
+  // swaps for a last-page bottom-corner-anchored VML text frame (the same raw-XML
+  // layer the DEMO mark proves survives CloudConvert/LibreOffice). The side
+  // ('left'|'right') chooses the horizontal corner (CV: the measured larger-gap
+  // side; CL: right) and is ENCODED in the sentinel so postProcessDocx needs no
+  // extra plumbing. The carrier paragraph is placed at the end of the last page's
+  // content by the callers, so the injected frame renders once, on the last page.
+  const side = opts && opts.side === "left" ? "left" : "right";
+  return new Paragraph({
+    spacing: { before: 0, after: 0, line: 1, lineRule: "exact" },
+    children: [new TextRun({ text: "__ANTCV_AIWM_" + side + "__", size: 2, color: "FFFFFF" })]
+  });
 }
 __name(buildAiDisclosureHangingTextbox, "buildAiDisclosureHangingTextbox");
 function buildTwoColumnDocument(ctx) {
@@ -24552,14 +24574,13 @@ function buildTwoColumnDocument(ctx) {
   const photoInMain = maybeBuildPhotoFor(ctx, "main");
   const photoMainBottom = maybeBuildPhotoFor(ctx, "main-bottom");
   const photoBridge = maybeBuildPhotoFor(ctx, "bridge");
-  // Owner 2026-06-05: the AI disclosure goes to whichever COLUMN's text
-  // ends higher (more empty space below it). The PWA forwards the page
-  // side it measured (ctx.aiWmSide: 'left'|'right'); map it to the sidebar
-  // or main cell. Default (no hint) → main, which is usually the taller,
-  // text-dense column's neighbour and matches the common case.
-  const sidebarSide = style && style.sidebarPosition === "right" ? "right" : "left";
-  const wmInSidebar = ctx.aiWmSide ? ctx.aiWmSide === sidebarSide : false;
-  const aiDisclosurePara = buildAiDisclosureHangingTextbox(ctx, { context: wmInSidebar ? "sidebar" : "linear" });
+  // AI-WATERMARK-EXPORT-LOCATION-001 (spec 2026-06-16): the AI notice is a
+  // last-page bottom-anchored VML frame injected in postProcessDocx — it no
+  // longer rides a column (a short sidebar could carry it to page 1; WM-005).
+  // ctx.aiWmSide ('left'|'right', the measured larger-gap side) picks the
+  // horizontal corner; default right. The anchor paragraph is pushed into the
+  // LAST page's main cell below, so it always renders on the final page only.
+  const aiWmCorner = ctx.aiWmSide === "left" || ctx.aiWmSide === "right" ? ctx.aiWmSide : "right";
   const sidebarChildren = [
     // 1.14.53: the vertical-seam medallion anchors on a zero-height paragraph
     // at the TOP of the page-1 sidebar (its floating position is page-relative,
@@ -24577,8 +24598,7 @@ function buildTwoColumnDocument(ctx) {
       /*isSidebar*/
       true
     )),
-    ...photoBottomOfSidebar ? [photoBottomOfSidebar] : [],
-    ...wmInSidebar ? [aiDisclosurePara] : []
+    ...photoBottomOfSidebar ? [photoBottomOfSidebar] : []
   ];
   let mainChildren;
   if (photoInMain && mainSecs.length > 0) {
@@ -24603,7 +24623,6 @@ function buildTwoColumnDocument(ctx) {
     ));
   }
   if (photoMainBottom) mainChildren.push(buildPhotoParagraph(ctx, photoMainBottom));
-  if (!wmInSidebar) mainChildren.push(aiDisclosurePara);
   if (photoInHeader) {
     const headerInnerW = PAGE_W - 720;
     const wrappedHeader = buildPhotoRowTable(ctx, photoInHeader, headerCell.slice(), headerInnerW);
@@ -24634,6 +24653,11 @@ function buildTwoColumnDocument(ctx) {
   const sidebarPages = splitChildrenByPage(sidebarChildren);
   const mainPages = splitChildrenByPage(mainChildren);
   const numPages = Math.max(sidebarPages.length, mainPages.length, 1);
+  // Last-page AI notice anchor (WM-005): land the sentinel in the FINAL page's
+  // main cell so the bottom-anchored VML frame postProcessDocx injects renders
+  // once, on the last page, regardless of which column's content ends first.
+  if (!mainPages[numPages - 1]) mainPages[numPages - 1] = [];
+  mainPages[numPages - 1].push(buildAiDisclosureHangingTextbox(ctx, { side: aiWmCorner }));
   // ADV-SPACING-CONTROLS-001 (1.14.60, owner 2026-06-12): the PWA's spacing
   // sliders. Forwarded only when off their defaults; vertical pads apply as
   // DELTAS from the reviewed worker constants (the preview/worker verticals
@@ -24915,14 +24939,10 @@ function buildLinearDocument(ctx) {
     keepNext: true,
     keepLines: true,
     alignment: AlignmentType.LEFT,
-    // ITEM-2 (owner 2026-06-14): the AI-assisted disclosure rides on the SAME
-    // line as the signature name — name left, disclosure pushed to the right
-    // body edge via a right tab — instead of orphaning onto its own line in the
-    // PDF. PAGE_W - 400 is the body content width (PAGE_W minus the two 200-DXA
-    // CL side margins; CL_SIDE_MARGIN is declared later in this function, so the
-    // literal 400 is used here to avoid the temporal-dead-zone reference).
-    // The page-2 (jd-questions) signature path keeps its own separate disclosure.
-    tabStops: !jdqSec ? [{ type: TabStopType.RIGHT, position: PAGE_W - 400 }] : void 0,
+    // AI-WATERMARK-EXPORT-LOCATION-001 (spec 2026-06-16): the AI notice no longer
+    // rides the signature line (owner: it goes to the page bottom). The 1-page CL
+    // appends a last-page anchor sentinel as the final section child below; the
+    // 2-page (jd_questions) path keeps its own anchor on the page-2 block.
     children: [
       new TextRun({
         text: pi.name || ({ da: "Dit navn", es: "Tu nombre", zh: "姓名" }[lang] || "Your Name"),
@@ -24930,15 +24950,7 @@ function buildLinearDocument(ctx) {
         color: style.mainTextColor,
         size: pt2hp(fs.mainBody),
         font: style.mainBodyFont
-      }),
-      ...!jdqSec ? [new TextRun({
-        text: "	AI-assisted — author retains responsibility for content.",
-        italics: true,
-        size: 13,
-        // 6.5pt (half-points)
-        color: "4D7976",
-        font: "Calibri"
-      })] : []
+      })
     ]
   }));
   // 1.14.32 CL-PAGINATE-001: the candidate band stays a full-bleed table, but the
@@ -25104,15 +25116,15 @@ function buildLinearDocument(ctx) {
                         font: style.mainBodyFont
                       })]
                     }),
-                    // v1.14.13 — AI-assisted disclosure on the
-                    // last page of a 2-page CL (jd_questions).
-                    buildAiDisclosureHangingTextbox(ctx, { context: "linear" })
+                    // AI-WATERMARK-EXPORT-LOCATION-001: last-page anchor sentinel
+                    // (already the final element of the page-2 cell → last page).
+                    buildAiDisclosureHangingTextbox(ctx, { side: "right" })
                   ]
                 })]
               })
             ]
           })
-        ] : [clHeaderBand, clBodyTopGap, ...(bodyChildren.length ? bodyChildren : [emptyParagraph()])]
+        ] : [clHeaderBand, clBodyTopGap, ...(bodyChildren.length ? bodyChildren : [emptyParagraph()]), buildAiDisclosureHangingTextbox(ctx, { side: "right" })]
       }
     ]
   });
@@ -27263,7 +27275,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   the anchor's spacing-after from (px/2+14) to (px/2-12) so the first sidebar
 //   section sits just under the medallion (~0.27in higher; the full 0.6in would
 //   overlap the photo at the default diameter).
-var VERSION = "1.14.74-group-name-visibility";
+var VERSION = "1.14.75-ai-notice-lastpage-anchor";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

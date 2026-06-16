@@ -348,7 +348,7 @@ function SavedTonesEditor({
       </button>
       {slots.length === 0 && (
         <span style={{ fontSize: 11, opacity: 0.6 }}>
-          No saved tones yet. Saving a slot snapshots the active style, chips, and banned-list buckets so you can switch back later.
+          No saved customs yet. Saving a slot snapshots the active style, chips, and banned-list buckets so you can switch back later.
         </span>
       )}
       {slots.map((s) => (
@@ -878,7 +878,7 @@ export function WritingStylePicker(): JSX.Element {
       )}
       <ToneChipsEditor styleId={prefs.style} chips={prefs.chips} onChange={onChipsChange} />
 
-      <SectionHeader>Saved tones</SectionHeader>
+      <SectionHeader>Saved customs</SectionHeader>
       <SavedTonesEditor
         slots={prefs.savedSlots}
         onSave={onSaveSlot}

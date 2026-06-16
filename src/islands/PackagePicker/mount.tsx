@@ -27,7 +27,10 @@ const DECO_ATTR = 'data-antcv-pkg-deco';
 // is block-flow (not the order-based flex column Personal uses), so we anchor
 // the card immediately after the STYLE PACKAGE section block — proven to be a
 // top-level section because SIDEBAR POSITION follows it.
-const STYLE_PACKAGE_RE = /^STYLE PACKAGE$/i;
+// VISUAL-PKG-001: the native heading was relabelled "STYLE PACKAGE" → "Visual
+// package" (app.src.js + app.js mirror). Accept BOTH spellings so the anchor
+// survives during/after rollout and across cached app.js bundles.
+const STYLE_PACKAGE_RE = /^(STYLE PACKAGE|Visual package)$/i;
 // Contains-match: the following section's full textContent is "SIDEBAR
 // POSITION" + its button labels, so this must not be anchored with $.
 const SIDEBAR_POSITION_RE = /SIDEBAR POSITION/i;

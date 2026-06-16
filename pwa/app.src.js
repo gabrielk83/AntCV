@@ -35070,7 +35070,11 @@
                               letterSpacing: 0.4,
                             },
                           },
-                          "STYLE PACKAGE",
+                          // VISUAL-PKG-001 (owner): relabel the native heading
+                          // "STYLE PACKAGE" → "Visual package". The PackagePicker
+                          // island anchors on this heading (STYLE_PACKAGE_RE,
+                          // widened to accept both spellings, same release).
+                          "Visual package",
                         ),
                         React.createElement(
                           "div",

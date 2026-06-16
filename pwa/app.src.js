@@ -5080,9 +5080,14 @@
             rows = e.rows || [],
             wrapStyle = c
               ? {
+                  // CL-WIDTH-CAP-001 (owner 2026-06-15): the WHAT-I-BRING table
+                  // left clearly-unused horizontal space on the right. Widen from
+                  // 72%/540 cap → 88% and raise the cap so it fills more of the
+                  // usable body width (still centred, balanced margins). Mirrors
+                  // the worker defaultClW raise (0.8 → 0.9).
                   position: "relative",
-                  width: "72%",
-                  maxWidth: 540,
+                  width: "88%",
+                  maxWidth: 720,
                   margin: "8px auto 0",
                 }
               : { position: "relative", marginTop: 8 },

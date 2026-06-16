@@ -26119,9 +26119,11 @@ function renderCompetencyTable(s, ctx) {
   const defaultCvW = ctx.mainW - 288;
   // 1.14.26: CL is full-width linear. Body + text sections span the full body
   // cell (PAGE_W-200), but the WHAT-I-BRING table should be LARGE yet INSET and
-  // CENTERED — 1.14.25's PAGE_W-560 (~97%) looked edge-to-edge. ~80% of the body
-  // width, centered, leaves a balanced ~0.8" margin each side.
-  const defaultClW = Math.round((PAGE_W - 400) * 0.8);
+  // CENTERED — 1.14.25's PAGE_W-560 (~97%) looked edge-to-edge.
+  // CL-WIDTH-CAP-001 (owner 2026-06-15): 0.8 left clearly-unused space on the
+  // right; raise to 0.9 of the body width (still centred, balanced margins).
+  // Mirrors the preview wrapStyle widen (72%/540 cap → 88%/720, app.src.js ~5081).
+  const defaultClW = Math.round((PAGE_W - 400) * 0.9);
   const baseW = isCl ? defaultClW : defaultCvW;
   const tableW = typeof s.tableWidth === "number" && s.tableWidth > 0 ? Math.max(2880, Math.min(PAGE_W - 720, Math.round(s.tableWidth))) : baseW;
   const explicitRatio = typeof s.tableRatio === "number" && s.tableRatio > 0.05 && s.tableRatio < 0.95 ? s.tableRatio : null;
@@ -27275,7 +27277,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   the anchor's spacing-after from (px/2+14) to (px/2-12) so the first sidebar
 //   section sits just under the medallion (~0.27in higher; the full 0.6in would
 //   overlap the photo at the default diameter).
-var VERSION = "1.14.75-ai-notice-lastpage-anchor";
+var VERSION = "1.14.76-cl-width-cap";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

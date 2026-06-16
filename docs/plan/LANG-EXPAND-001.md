@@ -1,6 +1,8 @@
 # LANG-EXPAND-001 — Language expansion spec
 
 Status: SPEC — approved direction, implementation not started. SECOND WAVE added 2026-06-16 (see §9).
+THIRD WAVE added 2026-06-17 (owner): Polish, Guaraní, + Spanish variants es-ES/es-MX (see §10);
+German + Russian already covered by §9.
 Owner: Gabriel
 Created: 2026-06-12
 Plan ref: docs/plan/AntCV_Plan_v2_LockedSources.md §4 (writing systems), roadmap item "Add Spanish + Mandarin to language bar"
@@ -227,3 +229,56 @@ Canonical+§1+§9 = en-GB, en-US, da, es, zh, it, pt-BR, hi, am, he, ar, ps  (fi
 = **24 base generation languages + 1 variant (ar-EG)**. Nigerian Pidgin dropped per owner. This
 makes the §6 selected-subset language-bar model mandatory, and the BCP-47 prerequisite (§2) gates
 the whole set as before.
+
+## 10. LANG-EXPAND-003 — third wave (owner 2026-06-17)
+
+Owner-named additions on top of §9. German (`de`) and Russian (`ru`) are ALREADY in the second
+wave (§9.2, Tier 1 / Tier 1.5) — no new work beyond what §9 specifies; listed here only to confirm
+they are covered. NEW this wave: **Polish, Guaraní, and two Spanish spelling/register variants
+(es-ES, es-MX)**. Same standing rule as Lane 6: every base language touches both
+`writing-style-engine.js` twins + `registry.json` + `language-output.md`; variants are a
+spelling/register delta only (the en-GB↔en-US / ar↔ar-EG pattern). Nothing starts before the §2
+BCP-47 gate.
+
+### 10.1 New languages — scope table
+
+| Code | Language | Script | Dir | Tier | Notes |
+|------|----------|--------|-----|------|-------|
+| pl | Polish | Latin (extended) | LTR | 1 | Registry-only. Diacritics ą ć ę ł ń ó ś ź ż — Calibri/Noto Sans cover them (verify ł + the ogonek glyphs render in the DOCX heading font; map heading→Noto Sans if the Sans Serif Collection clips, the §9 ru pattern). Formal salutation "Szanowni Państwo,"; sign-off "Z poważaniem,". Ban filler "zaangażowany"/"dynamiczny" as adjectives, "gracz zespołowy" (team player). In-house/low-risk reviewable. |
+| gn | Guaraní | Latin (extended) | LTR | 1 + native-review | Spoken in Paraguay (co-official). Latin + nasal-tilde vowels ã ẽ ĩ õ ũ ỹ and the glottal `'` (puso) — VERIFY the tilded-vowel glyphs (esp. ỹ) render in Preview + DOCX heading/body fonts; map to Noto Sans if absent. CV-register conventions are SPARSE (like qu/kl) → ship with a lighter register section + a note, and **native review required before activation** (build + stage, do not flip live). Dictionary support is thin → spell-proofing likely DISABLED-with-notice per Lane 6.6-A. |
+
+### 10.2 Spanish variants — es-ES + es-MX (variants of es, NOT separate languages)
+
+`es` already ships (canonical set). Add two variants the en-GB→en-US / ar→ar-EG way (§9.2a) — they
+inherit `es` wholesale (script, LTR, fonts, density) and differ ONLY as a spelling/vocabulary/
+register package:
+- **es-ES (España)** — Peninsular. `vosotros` register where natural; Peninsular vocabulary
+  (e.g. *ordenador*, *móvil*); formal "Estimados señores,"/"Estimada Sra. [Apellido],",
+  sign-off "Atentamente,"/"Un cordial saludo,".
+- **es-MX (México)** — Latin-American. `ustedes` (no `vosotros`); Mexican vocabulary
+  (e.g. *computadora*, *celular*); formal "Estimados señores,"/"A quien corresponda,",
+  sign-off "Atentamente,"/"Saludos cordiales,".
+- `normaliseLangCode`: `es` → neutral/default; `es-ES` (+ alias "espana"/"españa"/"peninsular")
+  and `es-MX` (+ alias "mexico"/"méxico"/"mx") → the matching variant; unknown `es-*` → `es`.
+- registry: `es` keeps its `sharedBannedBases`; each variant entry shares them + a small delta.
+  `language-output.md`: es-ES / es-MX sub-sections under `es`.
+- **Gate:** es-ES generates with Peninsular spelling/register, es-MX with Mexican, `es` unaffected;
+  zero new layout/font work (inherits es). Spell-proofing: es-ES/es-MX reuse es's dictionary
+  (variant, like en-US↔en-GB) — no new dictionary sourcing.
+
+### 10.3 Tier / autonomy
+
+- **Autonomous-viable:** pl (registry-only, in-house-reviewable, after the §2 gate); es-ES + es-MX
+  (variants, after es — no new tier, low risk). Build + stage.
+- **Native-review-gated before activation:** gn (sparse register + thin dictionary; build + stage,
+  do not flip live).
+- **Already covered (no extra work):** de + ru (§9.2). Russian still carries the §9 Cyrillic
+  heading-font glyph check.
+- 6.6 still applies: none of these is DONE until its selector is on every surface AND its dictionary
+  works or is cleanly disabled (gn likely proofing-disabled-with-notice).
+
+### 10.4 Updated total language set
+
+Post-003 = the §9.6 set **+ pl, gn (base)** and **+ es-ES, es-MX (variants of es)**
+= **26 base generation languages + 3 variants (ar-EG, es-ES, es-MX)**. Reinforces the §6
+selected-subset language-bar model; §2 BCP-47 still gates the whole set.

@@ -132,9 +132,19 @@ most today); expand target languages beyond the current EN/DA flag to es/zh + th
   kernel `.json` bypasses the heuristic parser and goes straight to create/merge. Node-tested
   (kind dispatch, txt CV end-to-end, json passthrough, graceful no-browser/unsupported errors;
   suite 303→307). Still a pure library — the extraction fns only run when called in-browser.
-- **Slice 3 — UI (§4f):** onboarding wizard step + Settings → Personal import; conflict
-  RESOLUTION modal (4d) showing existing vs incoming per field; gap-fill prompt (4c); language
-  selection (4e). Wires to the proxy/D1 write of `user_kernel`.
+- **Slice 3 — UI (§4f): STARTED (1.50.517).** `pwa/antcv-kernel-import.js` (IIFE sidecar) +
+  the engine loaded as a module (`<script type=module>` → window.AntcvKernelIngest). Exposes
+  `window.AntcvKernelImport.openPicker()` / `.runImport(file)`: drop a .docx/.pdf/.txt/.json →
+  engine ingests → a PREVIEW MODAL shows roles (with hidden/current tags), CONFLICTS (existing
+  vs incoming per field, radio defaulting to keep-existing — IMPORT-CONFLICT-001) and GAPS
+  (IMPORT-GAP-001). "Stage" writes the resolved kernel to the STANDALONE key
+  `antcv:ingestedKernel` — NON-DESTRUCTIVE (never touches live data). Verified
+  `diag-kernel-import.mjs` (fresh create shows 3 roles + gaps; re-import = merge with a date
+  conflict; existing metric preserved; 0 errors) + boot-smoke + suite 307. **REMAINING in
+  Slice 3:** wire a visible Settings → Personal button + onboarding wizard step to `openPicker`;
+  full structured apply of date/metric resolutions; language-selection step; and PERSIST the
+  staged kernel to D1 `user_kernel` (browser → proxy/relay, since the browser can't write D1
+  directly).
 
 The owner re-imports v2 cleanly via Settings → Personal once Slices 2–3 land — `kernel_v2` is
 the staging copy until then.

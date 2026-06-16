@@ -49,6 +49,9 @@
     var gapsHtml = gaps.length ? gaps.map(function (g) {
       return '<li style="margin:2px 0">' + esc(g.role) + ' <span style="color:#b5651d">— missing: ' + esc((g.missing || []).join(', ')) + '</span></li>';
     }).join('') : '<li style="color:#2a7">No gaps.</li>';
+    var LANGS = [['en', 'English'], ['da', 'Dansk'], ['es', 'Español'], ['zh', '中文'], ['de', 'Deutsch'], ['fr', 'Français'], ['he', 'עברית'], ['it', 'Italiano'], ['pt-BR', 'Português']];
+    var active = (k.language && Array.isArray(k.language.activeDefaults) && k.language.activeDefaults.length) ? k.language.activeDefaults : [result.sourceLang || 'en'];
+    var langsHtml = LANGS.map(function (l) { var on = active.indexOf(l[0]) >= 0; return '<label style="display:inline-flex;align-items:center;gap:3px;cursor:pointer"><input type="checkbox" data-antcv-lang="' + l[0] + '"' + (on ? ' checked' : '') + '> ' + esc(l[1]) + '</label>'; }).join('');
     ov.innerHTML =
       '<div role="dialog" aria-label="Import CV to kernel" style="background:#fff;max-width:680px;width:100%;max-height:86vh;overflow:auto;border-radius:10px;padding:18px 20px;box-shadow:0 10px 40px rgba(0,0,0,.3)">'
       + '<div style="display:flex;justify-content:space-between;align-items:baseline"><h2 style="margin:0;font-size:17px;color:#283556">Import CV → kernel (preview)</h2><button id="antcv-kimport-x" style="border:none;background:none;font-size:20px;cursor:pointer;color:#888">×</button></div>'
@@ -56,6 +59,7 @@
       + '<h3 style="margin:10px 0 4px;font-size:13px;color:#283556">Roles</h3><ul style="margin:0 0 8px;padding-left:18px;font-size:13px">' + rolesHtml + '</ul>'
       + '<h3 style="margin:10px 0 4px;font-size:13px;color:#8a6d00">Conflicts — choose per field (existing is kept by default; metrics never auto-overwritten)</h3><ul style="margin:0;padding:0;font-size:13px">' + conflictsHtml + '</ul>'
       + '<h3 style="margin:10px 0 4px;font-size:13px;color:#b5651d">Gaps — fill later (never invented)</h3><ul style="margin:0 0 12px;padding-left:18px;font-size:13px">' + gapsHtml + '</ul>'
+      + '<h3 style="margin:10px 0 4px;font-size:13px;color:#283556">Languages to generate in (ONBOARD-LANG-001)</h3><div id="antcv-kimport-langs" style="display:flex;flex-wrap:wrap;gap:10px;font-size:12px;margin-bottom:12px;color:#333">' + langsHtml + '</div>'
       + '<div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap"><button id="antcv-kimport-cancel" style="padding:7px 14px;border:1px solid #ccc;background:#f4f4f4;border-radius:6px;cursor:pointer">Cancel</button><button id="antcv-kimport-apply" style="padding:7px 14px;border:1px solid #00746E;background:#fff;color:#00746E;border-radius:6px;cursor:pointer">Apply to my CV</button><button id="antcv-kimport-save" style="padding:7px 16px;border:none;background:#00746E;color:#fff;border-radius:6px;cursor:pointer;font-weight:700">Apply + save to account</button></div>'
       + '</div>';
     document.body.appendChild(ov);
@@ -73,16 +77,22 @@
     var k = JSON.parse(JSON.stringify(result.kernel || {}));
     var byId = {}; (k.experience || []).forEach(function (r, i) { byId[r.id || i] = r; });
     (result.conflicts || []).forEach(function (c, ci) {
+      var inc = c._incoming || {};
       (c.fields || []).forEach(function (f, fi) {
         var sel = ov.querySelector('input[name="kc_' + ci + '_' + fi + '"]:checked');
         if (!sel || sel.value !== 'incoming') return; // keep existing (default)
         var r = byId[c.id]; if (!r) return;
-        if (f.field === 'title') r.title = f.incoming;
-        // dates/metrics chosen "incoming" are recorded as confirmed pending changes;
-        // full structured apply for dates/metrics is a follow-up.
+        // STRUCTURED apply of the chosen incoming value per field class.
+        if (f.field === 'title') { r.title = (inc.title != null ? inc.title : f.incoming); }
+        else if (f.field === 'dates') { if (inc.start != null) r.start = inc.start; if (inc.end != null) r.end = inc.end; if (inc.years != null) r.years = inc.years; r.isCurrent = inc.isCurrent === true; }
+        else if (f.field === 'metrics') { if (Array.isArray(inc.outcomes)) r.outcomes = inc.outcomes; if (Array.isArray(inc.proofPoints)) r.proofPoints = inc.proofPoints; }
         r._resolved = (r._resolved || []).concat([{ field: f.field, value: f.incoming }]);
       });
     });
+    // ONBOARD-LANG-001: the user's chosen languages become language.activeDefaults.
+    var langs = [];
+    Array.prototype.slice.call(ov.querySelectorAll('input[data-antcv-lang]:checked')).forEach(function (c) { langs.push(c.getAttribute('data-antcv-lang')); });
+    if (langs.length) { k.language = k.language || {}; k.language.activeDefaults = langs; if (!k.language.sourceLang) k.language.sourceLang = langs[0]; }
     return k;
   }
   function stageLocal(k) { try { localStorage.setItem(STAGE_KEY, JSON.stringify(k)); } catch (_) {} }
@@ -160,6 +170,29 @@
   }
   function openPicker() { ensureControl(); var i = document.getElementById('antcv-kimport-input'); if (i) i.click(); }
 
+  // ── auto-sync kernel_v2 from D1 → personalInfo on login ────────────────────
+  // GET the stored v2 kernel; if its signature differs from the last one applied,
+  // project it into personalInfo.workHistory ONCE (backed up). A matching signature
+  // means it's already applied → we leave local state alone (no fighting edits).
+  var APPLIED_SIG_KEY = 'antcv:kernelV2AppliedSig';
+  function kSig(k) { try { var s = JSON.stringify(k); var h = 0; for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return s.length + ':' + h; } catch (_) { return ''; } }
+  async function autoSync() {
+    var base = relayBase(); if (!base) return;
+    var authed = false; try { authed = !!localStorage.getItem('antcv:auth:token'); } catch (_) {}
+    if (!authed) return;
+    try {
+      var res = await fetch(base + '/api/profile/kernel-v2', { method: 'GET', credentials: 'include' });
+      if (!res.ok) return;
+      var j = null; try { j = await res.json(); } catch (_) {}
+      var k = j && j.kernel; if (!k || !Array.isArray(k.experience) || !k.experience.length) return;
+      var sig = kSig(k);
+      var applied = ''; try { applied = localStorage.getItem(APPLIED_SIG_KEY) || ''; } catch (_) {}
+      if (sig === applied) return;                       // already applied this version
+      try { localStorage.setItem(STAGE_KEY, JSON.stringify(k)); } catch (_) {}
+      if (applyToCV(k)) { try { localStorage.setItem(APPLIED_SIG_KEY, sig); } catch (_) {} toast('Synced your kernel from your account (' + k.experience.length + ' roles). Regenerate to rebuild.'); }
+    } catch (_) {}
+  }
+
   // ── merge the kernel-import trigger into the EXISTING import controls ───────
   // (Settings → Personal import + the onboarding wizard upload step), rather than
   // a separate floating button. Idempotent + re-applied on React re-render.
@@ -204,10 +237,10 @@
 
   var injPending = false;
   function scheduleInject() { if (injPending) return; injPending = true; (window.requestAnimationFrame || setTimeout)(function () { injPending = false; try { injectEntry(); } catch (_) {} }); }
-  function boot() { ensureControl(); scheduleInject(); try { new MutationObserver(scheduleInject).observe(document.documentElement, { childList: true, subtree: true }); } catch (_) {} }
+  function boot() { ensureControl(); scheduleInject(); setTimeout(function () { try { autoSync(); } catch (_) {} }, 2500); try { new MutationObserver(scheduleInject).observe(document.documentElement, { childList: true, subtree: true }); } catch (_) {} }
   [400, 1200, 2600].forEach(function (d) { setTimeout(scheduleInject, d); });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
   else boot();
 
-  window.AntcvKernelImport = { version: VERSION, runImport: runImport, openPicker: openPicker, saveToAccount: saveToAccount, applyToCV: applyToCV, relayBase: relayBase, _inject: injectEntry, _stageKey: STAGE_KEY };
+  window.AntcvKernelImport = { version: VERSION, runImport: runImport, openPicker: openPicker, saveToAccount: saveToAccount, applyToCV: applyToCV, autoSync: autoSync, relayBase: relayBase, _inject: injectEntry, _stageKey: STAGE_KEY };
 })();

@@ -161,10 +161,17 @@ most today); expand target languages beyond the current EN/DA flag to es/zh + th
   (backing up the prior to `antcv:workHistoryBackup`, reversible) + carries `tenseMode`/`language`.
   Verified `diag-kernel-import.mjs`: after Apply, `personalInfo.workHistory` holds the imported
   roles AND `GABRIEL_BG` reflects the imported current role with its `CURRENT ROLE` tag — i.e.
-  a REGENERATE now rebuilds the CV from the imported kernel. **REMAINING in Slice 3:** auto-sync
-  `kernel_v2` from D1 → `personalInfo` on login/restore (today Apply is the manual bridge);
-  full structured apply of date/metric resolutions; language-selection step. The §2/§3 readers
-  already consume the v1 bridge that Apply now populates from v2 — so this closes the loop.
+  a REGENERATE now rebuilds the CV from the imported kernel. **REFINEMENTS DONE (1.50.521 + access-relay):** (a) AUTO-SYNC — `GET /api/profile/kernel-v2`
+  (worker) returns the stored kernel; the sidecar `autoSync()` runs on login (authed), and if the
+  kernel's signature differs from the last applied, projects it into `personalInfo.workHistory`
+  ONCE (backed up; matching signature → leaves local state alone). (b) STRUCTURED APPLY — the
+  merge carries the raw incoming role (`_incoming`); choosing "incoming" in the modal now applies
+  the date (start/end/isCurrent) and metric (outcomes/proofPoints) structurally, not just the
+  title. (c) LANGUAGE STEP — the modal has an ONBOARD-LANG-001 language picker (seeded from the
+  kernel / detected sourceLang); ticked languages become `language.activeDefaults`. Verified:
+  worker `diag-kernel-v2-write.mjs` 5/5 (incl. GET) + browser `diag-kernel-import.mjs` 15 checks
+  (structured date apply, language → activeDefaults, auto-sync applies on login). The full Gabriel
+  v2 (12 roles) re-uploaded to D1 `kernel_v2`. **§4 / kernel v2 COMPLETE.**
   so an import actually changes the generated CV (today it stages durably but generation still
   reads the v1 bridge).
 

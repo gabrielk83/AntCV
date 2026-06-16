@@ -101,8 +101,44 @@ const e = await page.evaluate(async ()=>{
   return { ok, whRole: pi.workHistory && pi.workHistory[0] && pi.workHistory[0].role, whCurrent: pi.workHistory && pi.workHistory[0] && pi.workHistory[0].isCurrent, backupRole: backup.workHistory && backup.workHistory[0] && backup.workHistory[0].role, bgHasImported: /Imported PM/.test(bg) && /CURRENT ROLE/.test(bg) };
 });
 
+// F) structured apply (choose incoming dates) + language selection
+const f = await page.evaluate(async (cv)=>{
+  localStorage.setItem('antcv:ingestedKernel', JSON.stringify({ experience:[ { id:'pm', title:'Product Manager', company:'Acme Corp', start:'2021', end:'present', outcomes:[{title:'x',result:'old'}], scope:['s'] } ] }));
+  const file = new File([cv], 'cv.txt', { type:'text/plain' });
+  await window.AntcvKernelImport.runImport(file);
+  const ov = document.getElementById('antcv-kimport-modal');
+  // choose the INCOMING radio for the date conflict
+  var inc = ov.querySelector('input[value="incoming"]'); if (inc) inc.checked = true;
+  // tick a second language (Danish)
+  var da = ov.querySelector('input[data-antcv-lang="da"]'); if (da) da.checked = true;
+  ov.querySelector('#antcv-kimport-apply').click();
+  const staged = JSON.parse(localStorage.getItem('antcv:ingestedKernel')||'{}');
+  const pm = (staged.experience||[]).find(r=>r.id==='pm');
+  return { dateApplied: pm && pm.start, langs: staged.language && staged.language.activeDefaults };
+}, CV);
+
+// G) auto-sync from D1: GET kernel → applies once; second call no-ops (sig guard)
+const g = await page.evaluate(async ()=>{
+  localStorage.removeItem('antcv:kernelV2AppliedSig');
+  localStorage.setItem('antcv:auth:token','tok');
+  window.ANTCV_RELAY_URL = 'https://relay.example.com';
+  localStorage.setItem('personalInfo', JSON.stringify({ name:'G', workHistory:[{role:'OLD',company:'O',years:'1990'}] }));
+  let calls=0; const orig=window.fetch;
+  window.fetch = async (url,opts)=>{ calls++; return { ok:true, status:200, json: async ()=>({ ok:true, kernel:{ tenseMode:'auto', experience:[{id:'s1',title:'Synced Role',company:'Cloud',start:'2024',end:'present',isCurrent:true,scope:['Synced.']}] } }) }; };
+  await window.AntcvKernelImport.autoSync();
+  const pi1 = JSON.parse(localStorage.getItem('personalInfo')||'{}');
+  const sig = localStorage.getItem('antcv:kernelV2AppliedSig');
+  const applied1 = pi1.workHistory && pi1.workHistory[0] && pi1.workHistory[0].role;
+  // 2nd call: same kernel/sig → must NOT re-apply (still fetches, but no overwrite churn)
+  await window.AntcvKernelImport.autoSync();
+  window.fetch = orig;
+  return { applied1, hasSig: !!sig, fetches: calls };
+});
+
 await browser.close(); await new Promise(r=>server.close(r));
 console.log('E apply :', JSON.stringify(e));
+console.log('F struct:', JSON.stringify(f));
+console.log('G sync  :', JSON.stringify(g));
 console.log('--- kernel-import UI ---');
 console.log('A fresh:', JSON.stringify(a));
 console.log('B merge:', JSON.stringify(b));
@@ -121,6 +157,9 @@ const checks = [
   ['applyToCV writes the imported roles into personalInfo.workHistory', e.ok && e.whRole==='Imported PM' && e.whCurrent===true],
   ['the prior workHistory is backed up (reversible)', e.backupRole==='OLD ROLE'],
   ['GABRIEL_BG (generation source) now reflects the imported current role', e.bgHasImported],
+  ['structured apply: choosing INCOMING dates sets the role start (2022)', f.dateApplied==='2022'],
+  ['language selection: ticked languages become activeDefaults (incl. da)', Array.isArray(f.langs) && f.langs.indexOf('da')>=0],
+  ['auto-sync: GET kernel from D1 applies to personalInfo.workHistory on login', g.applied1==='Synced Role' && g.hasSig],
   ['no app errors', errs.length===0],
 ];
 for (const [n,ok] of checks) console.log(`${n}: ${ok?'OK':'FAIL'}`);

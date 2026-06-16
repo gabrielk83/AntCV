@@ -69,6 +69,23 @@ const C = c.status === 200 && c.body && c.body.ok && savedExp === 1 && idC.name 
 log('C: status', c.status, '| kernel_v2 roles', savedExp, '| identity preserved:', idC.name === 'Gabriel');
 log(`CHECK C (token + kernel → 200, kernel_v2 written, identity untouched): ${C ? 'PASS' : 'FAIL'}`);
 
-const ok = A && B && C;
-log(ok ? 'KERNEL-V2-WRITE OK (3/3)' : 'KERNEL-V2-WRITE FAIL');
+// D. GET returns the stored kernel_v2 (for login auto-sync)
+async function get(token, db) {
+  const env = { JWT_SECRET: SECRET, DB: db, KV_BINDING: kvMock(), ALLOWED_ORIGINS: 'https://antcv.pages.dev' };
+  const headers = { 'Origin': 'https://antcv.pages.dev' };
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  const res = await relay.fetch(new Request('https://relay.example.com/api/profile/kernel-v2', { method: 'GET', headers }), env, { waitUntil: () => {} });
+  let body = null; try { body = await res.json(); } catch (_) {}
+  return { status: res.status, body };
+}
+const dbD = mockDB(); await call(token, { kernel: KERNEL }, dbD);  // first write a kernel
+const d = await get(token, dbD);
+const D = d.status === 200 && d.body && d.body.ok && d.body.kernel && d.body.kernel.experience.length === 1;
+log(`CHECK D (GET returns the stored kernel_v2): ${D ? 'PASS' : 'FAIL'} (roles ${d.body && d.body.kernel ? d.body.kernel.experience.length : 'none'})`);
+const dN = await get(null, mockDB());
+const E = dN.status === 401;
+log(`CHECK E (GET without token → 401): ${E ? 'PASS' : 'FAIL'}`);
+
+const ok = A && B && C && D && E;
+log(ok ? 'KERNEL-V2-WRITE OK (5/5)' : 'KERNEL-V2-WRITE FAIL');
 process.exitCode = ok ? 0 : 1;

@@ -837,15 +837,22 @@ const INFORMATIONAL_FIELDS = new Set([
 // reading them) until the full v2 reader migration. Auth: same session identity as
 // /api/prefs. Body: the kernel object, or { kernel: {...} }.
 async function handleApiKernelV2(request, env) {
-  if (request.method !== 'POST' && request.method !== 'PUT') {
-    return jsonResponse({ error: 'method-not-allowed' }, 405, request, env);
-  }
   const id = await identityFromRequest(request, env);
   if (!id) {
     return jsonResponse({ error: 'unauthenticated', hint: 'Sign in first.' }, 401, request, env);
   }
   if (!hasD1(env)) {
     return jsonResponse({ error: 'no-d1' }, 503, request, env);
+  }
+  const userHash0 = await userHashFromEmail(id.email);
+  // GET — return the staged v2 kernel (for login auto-sync) + its updated_at.
+  if (request.method === 'GET') {
+    const row = await env.DB.prepare('SELECT kernel_v2, updated_at FROM user_kernel WHERE user_hash = ? LIMIT 1').bind(userHash0).first();
+    let kernel = null; try { kernel = (row && row.kernel_v2) ? JSON.parse(row.kernel_v2) : null; } catch (_) { kernel = null; }
+    return jsonResponse({ ok: true, kernel, updated_at: row ? row.updated_at : null }, 200, request, env);
+  }
+  if (request.method !== 'POST' && request.method !== 'PUT') {
+    return jsonResponse({ error: 'method-not-allowed' }, 405, request, env);
   }
   let body;
   try { body = await request.json(); } catch (_) {

@@ -171,7 +171,9 @@ export function mergeKernels(existing, incoming) {
     const exMetric = (ex.outcomes || []).map((o) => o && o.result).filter(hasMetric).join(' | ');
     const incMetric = (inc.outcomes || []).map((o) => o && o.result).filter(hasMetric).join(' | ');
     if (exMetric !== incMetric && incMetric) fields.push({ field: 'metrics', existing: exMetric, incoming: incMetric });
-    if (fields.length) conflicts.push({ id: ex.id || inc.id || inc.title, role: ex.title, company: ex.company, fields });
+    // _incoming carries the raw incoming role so the UI can APPLY a chosen
+    // date/metric/title structurally (not just record the display string).
+    if (fields.length) conflicts.push({ id: ex.id || inc.id || inc.title, role: ex.title, company: ex.company, fields, _incoming: inc });
     // non-conflicting NEW prose/scope merges in (additive, no overwrite).
     const exScope = new Set((ex.scope || []).map(norm));
     (inc.scope || []).forEach((s) => { if (s && !exScope.has(norm(s))) (ex.scope = ex.scope || []).push(s); });

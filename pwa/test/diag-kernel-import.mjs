@@ -62,11 +62,37 @@ const c = await page.evaluate(async ()=>{
   return captured;
 });
 
+// D) the kernel-import button merges next to existing import anchors (Settings + wizard)
+const d = await page.evaluate(async ()=>{
+  // simulate a Settings import (data-importer replacement) + a wizard CV file input
+  const host = document.createElement('div');
+  const rep = document.createElement('button'); rep.setAttribute('data-antcv-import-replacement','1'); rep.textContent='📥 Import profile from Word, PDF…';
+  const wiz = document.createElement('div');
+  const inp = document.createElement('input'); inp.type='file'; inp.setAttribute('accept','.pdf,.doc,.docx'); wiz.appendChild(inp);
+  host.appendChild(rep); document.body.appendChild(host); document.body.appendChild(wiz);
+  // run the injector twice → must not duplicate
+  await new Promise(r=>setTimeout(r, 50));
+  // trigger via the sidecar's own scheduler by dispatching a mutation + calling boot path indirectly:
+  if (window.AntcvKernelImport && window.AntcvKernelImport._inject) window.AntcvKernelImport._inject();
+  if (window.AntcvKernelImport && window.AntcvKernelImport._inject) window.AntcvKernelImport._inject();
+  await new Promise(r=>setTimeout(r, 50));
+  var btns = document.querySelectorAll('[data-antcv-kimport-btn]');
+  var hasBtn = (el)=> !!(el && el.getAttribute && el.getAttribute('data-antcv-kimport-btn')==='1');
+  var nearSettings = !!host.querySelector('[data-antcv-kimport-btn]') || hasBtn(rep.nextElementSibling);
+  var nearWizard = hasBtn(wiz.nextElementSibling) || !!wiz.querySelector('[data-antcv-kimport-btn]');
+  // clicking opens the hidden picker input
+  var clicked=false; var fi=document.getElementById('antcv-kimport-input'); if(fi){ fi.click = ()=>{clicked=true}; }
+  var sBtn = host.querySelector('[data-antcv-kimport-btn]') || (hasBtn(rep.nextElementSibling) ? rep.nextElementSibling : null);
+  if (sBtn) sBtn.click();
+  return { total: btns.length, nearSettings:!!nearSettings, nearWizard:!!nearWizard, opensPicker:clicked };
+});
+
 await browser.close(); await new Promise(r=>server.close(r));
 console.log('--- kernel-import UI ---');
 console.log('A fresh:', JSON.stringify(a));
 console.log('B merge:', JSON.stringify(b));
 console.log('C save :', JSON.stringify(c));
+console.log('D inject:', JSON.stringify(d));
 console.log('app errors:', errs.length, errs.slice(0,3).join(' | '));
 const checks = [
   ['engine + UI loaded and ran', a.ok && a.mode==='create'],
@@ -75,6 +101,8 @@ const checks = [
   ['re-import against staged kernel = merge with a conflict', b.mode==='merge' && b.conflicts>=1 && b.hasConflictText],
   ['existing metric preserved (keep-both, not overwritten)', b.metricPreserved],
   ['saveToAccount POSTs the kernel to /api/profile/kernel-v2 (credentials included)', !!c && /\/api\/profile\/kernel-v2$/.test(c.url) && c.method==='POST' && c.cred==='include' && /"experience"/.test(c.body||'')],
+  ['button merges next to BOTH the Settings + wizard import anchors (no duplicates)', d.nearSettings && d.nearWizard && d.total===2],
+  ['the merged button opens the import picker', d.opensPicker],
   ['no app errors', errs.length===0],
 ];
 for (const [n,ok] of checks) console.log(`${n}: ${ok?'OK':'FAIL'}`);

@@ -146,9 +146,14 @@ most today); expand target languages beyond the current EN/DA flag to es/zh + th
   "Save to my account" → `saveToAccount(kernel)` POSTs `{kernel}` to `<relay>/api/profile/
   kernel-v2` (credentials:include). `kernel_v2` added to schema.sql (live table already has the
   column from Task 1a). Verified: worker `diag-kernel-v2-write.mjs` (401/422/write + identity
-  preserved) + browser `diag-kernel-import.mjs` (correct POST). **REMAINING in Slice 3:** a
-  visible Settings/onboarding ENTRY button → `openPicker`; full structured apply of date/metric
-  resolutions; language-selection step; and migrating the live readers to consume `kernel_v2`
+  preserved) + browser `diag-kernel-import.mjs` (correct POST). **ENTRY BUTTON MERGED (1.50.519):** `injectEntry()` co-locates a "🧬 Build / update kernel from
+  CV" button next to the EXISTING import controls — the data-importer's Settings replacement
+  button, any import button/label (wizard upload step), and profile/CV file inputs (accept
+  pdf+docx, not txt → not a JD input). Idempotent (per-anchor host marker + immediate-next-
+  sibling guard), re-applied via MutationObserver. Clicking → `openPicker` → the preview modal.
+  Verified diag-kernel-import.mjs (button next to BOTH Settings + wizard anchors, no duplicates,
+  opens picker). **REMAINING in Slice 3:** full structured apply of date/metric resolutions;
+  language-selection step; and migrating the live readers to consume `kernel_v2`
   so an import actually changes the generated CV (today it stages durably but generation still
   reads the v1 bridge).
 

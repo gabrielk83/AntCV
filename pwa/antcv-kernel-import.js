@@ -139,8 +139,54 @@
   }
   function openPicker() { ensureControl(); var i = document.getElementById('antcv-kimport-input'); if (i) i.click(); }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ensureControl, { once: true });
-  else ensureControl();
+  // ── merge the kernel-import trigger into the EXISTING import controls ───────
+  // (Settings → Personal import + the onboarding wizard upload step), rather than
+  // a separate floating button. Idempotent + re-applied on React re-render.
+  function makeBtn() {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.setAttribute('data-antcv-kimport-btn', '1');
+    b.textContent = '🧬 Build / update kernel from CV';
+    b.title = 'Extract a structured kernel from a CV (.docx/.pdf/.txt) — review roles, conflicts and gaps before saving.';
+    b.style.cssText = 'display:block;width:100%;padding:8px 12px;margin:6px 0;background:rgba(0,116,110,.12);border:1px solid rgba(0,116,110,.5);border-radius:6px;color:#00746E;font-size:11px;font-weight:700;cursor:pointer;text-align:center;font-family:inherit;';
+    b.addEventListener('mouseenter', function () { b.style.background = 'rgba(0,116,110,.2)'; });
+    b.addEventListener('mouseleave', function () { b.style.background = 'rgba(0,116,110,.12)'; });
+    b.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); openPicker(); });
+    return b;
+  }
+  function injectEntry() {
+    var anchors = [];
+    // 1. the data-importer's Settings replacement button.
+    var rep = document.querySelector('[data-antcv-import-replacement]');
+    if (rep) anchors.push(rep);
+    // 2. any import button/label (covers the wizard + the raw Settings button).
+    Array.prototype.slice.call(document.querySelectorAll('button, label')).forEach(function (el) {
+      var t = (el.textContent || '').trim();
+      if (t.length < 80 && /import profile from word|\.docx or \.pdf CV|upload (your )?cv|import (your )?cv/i.test(t)) anchors.push(el.closest('label,button,div') || el);
+    });
+    // 3. profile/CV file inputs (accept pdf+doc(x) but NOT txt → not a JD input).
+    Array.prototype.slice.call(document.querySelectorAll('input[type="file"]')).forEach(function (inp) {
+      var a = String(inp.getAttribute('accept') || '').toLowerCase();
+      if (/pdf/.test(a) && /docx?/.test(a) && a.indexOf('txt') < 0) anchors.push(inp.closest('label,div') || inp.parentElement || inp);
+    });
+    anchors.forEach(function (anchor) {
+      if (!anchor || (anchor.getAttribute && anchor.getAttribute('data-antcv-kimport-host') === '1')) return;
+      var parent = anchor.parentNode; if (!parent || !parent.insertBefore) return;
+      // idempotency: skip only if THIS anchor's immediate next sibling is already a
+      // kernel button (precise — does not skip a sibling anchor elsewhere in parent).
+      var nx = anchor.nextSibling;
+      if (nx && nx.getAttribute && nx.getAttribute('data-antcv-kimport-btn') === '1') { try { anchor.setAttribute('data-antcv-kimport-host', '1'); } catch (_) {} return; }
+      try { anchor.setAttribute('data-antcv-kimport-host', '1'); } catch (_) {}
+      parent.insertBefore(makeBtn(), anchor.nextSibling);
+    });
+  }
 
-  window.AntcvKernelImport = { version: VERSION, runImport: runImport, openPicker: openPicker, saveToAccount: saveToAccount, relayBase: relayBase, _stageKey: STAGE_KEY };
+  var injPending = false;
+  function scheduleInject() { if (injPending) return; injPending = true; (window.requestAnimationFrame || setTimeout)(function () { injPending = false; try { injectEntry(); } catch (_) {} }); }
+  function boot() { ensureControl(); scheduleInject(); try { new MutationObserver(scheduleInject).observe(document.documentElement, { childList: true, subtree: true }); } catch (_) {} }
+  [400, 1200, 2600].forEach(function (d) { setTimeout(scheduleInject, d); });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
+  else boot();
+
+  window.AntcvKernelImport = { version: VERSION, runImport: runImport, openPicker: openPicker, saveToAccount: saveToAccount, relayBase: relayBase, _inject: injectEntry, _stageKey: STAGE_KEY };
 })();

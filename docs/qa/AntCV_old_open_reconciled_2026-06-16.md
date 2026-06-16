@@ -5,6 +5,11 @@ against the closure ledger in `docs/qa/ACTIVE_BUGS.md` (sha 3e457aa) and deploye
 (docx-worker 1.14.74, Pages deploy 69aec3a1). This is a derived roll-up, not a source of truth —
 `ACTIVE_BUGS.md` top block still wins for execution.
 
+Updated 2026-06-16 (cluster inspections 4 + 5): Generation/content dissolved (HOWCONTRIBUTE-001,
+GEN-UNSOL-002 confirmed shipped via the ACTIVE_BUGS "stale OPEN tags — already shipped" block;
+GEN-002b folded into CL-006); Settings closures applied (PRIVACY-DEMO-001 shipped 1.50.356,
+PRIVACY-SETTINGS-001 fixed 1.50.81).
+
 ## Headline counts
 
 | Stage | Count |
@@ -13,10 +18,11 @@ against the closure ledger in `docs/qa/ACTIVE_BUGS.md` (sha 3e457aa) and deploye
 | Unique IDs after removing exact dupes | 173 |
 | After collapsing VF-* + nav-z aliases | 152 |
 | After removing closures (verified in ACTIVE_BUGS / code) | 134 |
-| After removing 2026-06-15 ACTIVE-queue items | **107 true live old-open** |
+| After removing 2026-06-15 ACTIVE-queue items | 107 |
+| After cluster-4/5 inspection closures | **102 true live old-open** |
 | — of which Definition-of-Done meta gates (not discrete bugs) | 11 |
-| — of which VERIFYING (code shipped, only owner closes) | 14 |
-| **— genuinely actionable old bug/feature rows** | **82** |
+| — of which VERIFYING (code shipped, only owner closes) | 13 |
+| **— genuinely actionable old bug/feature rows** | **78** |
 | — of those, PROBE-FIRST (run probe before any code) | 5 |
 
 ## Legacy / staleness verdict
@@ -35,27 +41,34 @@ Three structural inflations were confirmed:
 3. **Meta gates** — GEN-001..011 are §3 Definition-of-Done parity rules, enforced per-fix,
    not discrete tickets.
 
-Residual staleness risk: the 14 VERIFYING items are code-shipped and likely already correct —
-they only need an owner live check (Preview+DOCX/PDF, desktop+mobile). Expect a further fraction
-of the 82 actionable rows to fall out as stale on live repro, the way the demo cluster did.
+Residual staleness risk: the 13 VERIFYING items are code-shipped and likely already correct —
+they only need an owner live check (Preview+DOCX/PDF, desktop+mobile). Cluster-4 inspection showed
+"stale OPEN tags" are a real category — buried OPEN lines that a later ACTIVE_BUGS block already
+closed — so expect a further fraction of the 78 actionable rows to fall out on contact.
 
-## Closed since the handoff — DO NOT WORK (106 IDs, verified in ACTIVE_BUGS / code)
+## Closed since the handoff — DO NOT WORK (verified in ACTIVE_BUGS / code)
 
-`AI-NOTICE-WRONG-SIDE-001`, `ANALYSE-JD-BUTTON-POS-001`, `ANALYSIS-PANEL-MISSING-FIT-001`, `ANALYSIS-PANEL-ORDER-001`, `ANALYSIS-PRINT-COMPLETE-001`, `APPHISTORY-RELOAD-001`, `APPHISTORY-SAME-LINE-001`, `APPJS-REBUILD-001`, `BUILD-APP-BROKEN-001`, `CL-CONTACT-ONELINE-001`, `CL-DOUBLE-SALMON-001`, `CL-EMPTY-BODY-FIELDS-001`, `CL-EXPORT-EDGE-MARGINS-001`, `CL-GHOST-COMPANY-001`, `CL-NO-SALMON-001`, `CL-PAGINATE-001`, `CL-PDF-PRINT-PATH-001`, `CL-PREVIEW-WATERMARK-001`, `CL-SALMON-SLOW-001`, `COPENHAGEN-BLUE-BRIGHTER-001`, `CORE-COMP-RETRY-HANG-001`, `DEMO-BADGE-001`, `DEMO-FETCHJD-WORKERURL-001`, `DEMO-PERSIST-001`, `DEMO-RELAY-IDENTITY-001`, `DEMO-RELAY-IDENTITY-002`, `DEMO-TOGGLE-001`, `DOCX-CL-SECTION-WIDTH-001`, `DOCX-EXPORT-REGRESSION-001`, `DOCX-HEADER-BAND-001`, `DOCX-SIDEBAR-GREEN-001`, `ENGINE-PAGESPLIT-001`, `EXPORT-FALLBACK-ON-FIRST-001`, `EXPORT-PAGE2-001`, `EXPORT-PHOTO-POS-CLAMP-001`, `EXPORT-PREVIEW-FEATURES-001`, `FALLBACK-MODEL-001`, `GEN-BACKGROUND-001`, `GEN-UI-CANCEL-BUTTON-MOBILE`, `HARDREFRESH-001`, `HIWC-EDIT-001`, `HIWC-EDIT-002`, `HIWC-EDIT-003`, `JD-CLOUD-VISIBILITY-001`, `JD-URL-DEMO-001`, `JD-URL-GEN-001`, `KERNEL-CLOUD-PERSIST-001`, `KERNEL-EXPERIENCE-EMPTY-001`, `KERNEL-HISTORY-KEEP-001`, `KERNEL-REGEN-DEADLOCK-001`, `KERNEL-REGEN-GUARD-001`, `KERNEL-SHOWCASE-EMPTY-SLOT-001`, `KERNEL-SPECIALIZATION-LINE-001`, `KERNEL-STUCK-LAST-CMD-001`, `LABEL-HISTORY-001`, `LINKEDIN-JD-SLUG-MORE-001`, `LLM-COST-QUALITY-ROUTER-001`, `LLM-CREDIT-400-MISCLASS-001`, `LLM-FALLBACK-MODEL-404-001`, `LLM-MAXTOKENS-TRUNCATION-001`, `LLM-QUALITY-PERSIST-001`, `LLM-SILENT-INADEQUATE-001`, `MAIN-HEADINGS-GREEN-001`, `NAME-ALIGN-001`, `PACKAGE-PALETTE-MIX-001`, `PB-007`, `PB-AUTO-OVERFLOW-001`, `PB-OUTCOMES-WIPE-001`, `PB-PREVIEW-GROUPNAME-EDIT-001`, `PB-PREVIEW-SIDEBAR-FILL-001`, `PB-PREVIEW-SIDEBAR-SALMON-PUSH-001`, `PB-WORKER-CL-LIST-CONT-001`, `PB-WORKER-CONT-DOUBLE-001`, `PB-WORKER-CONT-HEADER-001`, `PB-WORKER-SIDEBAR-CONT-001`, `PB-WORKER-SIDEBAR-FILL-001`, `PB-WORKER-SIDEBAR-PAGINATION-001`, `PDF-BLANK-PAGE-001`, `PERSONAL-EDIT-CRASH-001`, `PHOTO-001`, `PHOTO-002`, `PHOTO-004`, `PHOTO-005`, `PHOTO-POSITIONS-EXPORT-001`, `PREVIEW-CONT-HEADING-LEGACY-001`, `PREVIEW-PDF-GEOMETRY-001`, `PREVIEW-PDF-SIDEBAR-GEOM-001`, `PREVIEW-SUBTITLE-RACE-001`, `PRIVACY-FAB-FLICKER-001`, `PROD-STUB-001`, `PROFILE-END-COMMUNICATION-001`, `REGULAR-MODE-STALE-SETUP-001`, `RESULTS-LAMINATION-001`, `RESULTS-PDF-INK-BLACK-001`, `ROLE-DECOMP-001`, `SALMON-AUTO-EXPORT-001`, `SALMON-CHURN-DISAPPEAR-001`, `SALMON-CV-DUPLICATE-001`, `SALMON-CV-MAINROLE-BREAK-001`, `SALMON-EXPORT-EXPERIENCE-001`, `SALMON-MOBILE-001`, `SALMON-PARALLEL-COLUMNS-001`, `SECTION-RULE-INK-MATCH-001`, `SHARE-TARGET-JD-URL-001`, `SPECIALISATION-EDIT-001`, `TABLE-HEADER-MATCH-BAND-001`
+Includes cluster-4/5 inspection additions: `HOWCONTRIBUTE-001` (1.50.354), `GEN-UNSOL-002`
+(1.50.358), `PRIVACY-DEMO-001` (1.50.356), `PRIVACY-SETTINGS-001` (1.50.81). `GEN-002b` folded into
+`CL-006`.
 
-## True live old-open backlog — 107 IDs by bucket
+`AI-NOTICE-WRONG-SIDE-001`, `ANALYSE-JD-BUTTON-POS-001`, `ANALYSIS-PANEL-MISSING-FIT-001`, `ANALYSIS-PANEL-ORDER-001`, `ANALYSIS-PRINT-COMPLETE-001`, `APPHISTORY-RELOAD-001`, `APPHISTORY-SAME-LINE-001`, `APPJS-REBUILD-001`, `BUILD-APP-BROKEN-001`, `CL-CONTACT-ONELINE-001`, `CL-DOUBLE-SALMON-001`, `CL-EMPTY-BODY-FIELDS-001`, `CL-EXPORT-EDGE-MARGINS-001`, `CL-GHOST-COMPANY-001`, `CL-NO-SALMON-001`, `CL-PAGINATE-001`, `CL-PDF-PRINT-PATH-001`, `CL-PREVIEW-WATERMARK-001`, `CL-SALMON-SLOW-001`, `COPENHAGEN-BLUE-BRIGHTER-001`, `CORE-COMP-RETRY-HANG-001`, `DEMO-BADGE-001`, `DEMO-FETCHJD-WORKERURL-001`, `DEMO-PERSIST-001`, `DEMO-RELAY-IDENTITY-001`, `DEMO-RELAY-IDENTITY-002`, `DEMO-TOGGLE-001`, `DOCX-CL-SECTION-WIDTH-001`, `DOCX-EXPORT-REGRESSION-001`, `DOCX-HEADER-BAND-001`, `DOCX-SIDEBAR-GREEN-001`, `ENGINE-PAGESPLIT-001`, `EXPORT-FALLBACK-ON-FIRST-001`, `EXPORT-PAGE2-001`, `EXPORT-PHOTO-POS-CLAMP-001`, `EXPORT-PREVIEW-FEATURES-001`, `FALLBACK-MODEL-001`, `GEN-BACKGROUND-001`, `GEN-UNSOL-002`, `GEN-UI-CANCEL-BUTTON-MOBILE`, `HARDREFRESH-001`, `HIWC-EDIT-001`, `HIWC-EDIT-002`, `HIWC-EDIT-003`, `HOWCONTRIBUTE-001`, `JD-CLOUD-VISIBILITY-001`, `JD-URL-DEMO-001`, `JD-URL-GEN-001`, `KERNEL-CLOUD-PERSIST-001`, `KERNEL-EXPERIENCE-EMPTY-001`, `KERNEL-HISTORY-KEEP-001`, `KERNEL-REGEN-DEADLOCK-001`, `KERNEL-REGEN-GUARD-001`, `KERNEL-SHOWCASE-EMPTY-SLOT-001`, `KERNEL-SPECIALIZATION-LINE-001`, `KERNEL-STUCK-LAST-CMD-001`, `LABEL-HISTORY-001`, `LINKEDIN-JD-SLUG-MORE-001`, `LLM-COST-QUALITY-ROUTER-001`, `LLM-CREDIT-400-MISCLASS-001`, `LLM-FALLBACK-MODEL-404-001`, `LLM-MAXTOKENS-TRUNCATION-001`, `LLM-QUALITY-PERSIST-001`, `LLM-SILENT-INADEQUATE-001`, `MAIN-HEADINGS-GREEN-001`, `NAME-ALIGN-001`, `PACKAGE-PALETTE-MIX-001`, `PB-007`, `PB-AUTO-OVERFLOW-001`, `PB-OUTCOMES-WIPE-001`, `PB-PREVIEW-GROUPNAME-EDIT-001`, `PB-PREVIEW-SIDEBAR-FILL-001`, `PB-PREVIEW-SIDEBAR-SALMON-PUSH-001`, `PB-WORKER-CL-LIST-CONT-001`, `PB-WORKER-CONT-DOUBLE-001`, `PB-WORKER-CONT-HEADER-001`, `PB-WORKER-SIDEBAR-CONT-001`, `PB-WORKER-SIDEBAR-FILL-001`, `PB-WORKER-SIDEBAR-PAGINATION-001`, `PDF-BLANK-PAGE-001`, `PERSONAL-EDIT-CRASH-001`, `PHOTO-001`, `PHOTO-002`, `PHOTO-004`, `PHOTO-005`, `PHOTO-POSITIONS-EXPORT-001`, `PREVIEW-CONT-HEADING-LEGACY-001`, `PREVIEW-PDF-GEOMETRY-001`, `PREVIEW-PDF-SIDEBAR-GEOM-001`, `PREVIEW-SUBTITLE-RACE-001`, `PRIVACY-DEMO-001`, `PRIVACY-FAB-FLICKER-001`, `PRIVACY-SETTINGS-001`, `PROD-STUB-001`, `PROFILE-END-COMMUNICATION-001`, `REGULAR-MODE-STALE-SETUP-001`, `RESULTS-LAMINATION-001`, `RESULTS-PDF-INK-BLACK-001`, `ROLE-DECOMP-001`, `SALMON-AUTO-EXPORT-001`, `SALMON-CHURN-DISAPPEAR-001`, `SALMON-CV-DUPLICATE-001`, `SALMON-CV-MAINROLE-BREAK-001`, `SALMON-EXPORT-EXPERIENCE-001`, `SALMON-MOBILE-001`, `SALMON-PARALLEL-COLUMNS-001`, `SECTION-RULE-INK-MATCH-001`, `SHARE-TARGET-JD-URL-001`, `SPECIALISATION-EDIT-001`, `TABLE-HEADER-MATCH-BAND-001`
+
+## True live old-open backlog — 102 IDs by bucket
 
 Tier key: **ACTIONABLE** = open, needs live repro then code · **PROBE-FIRST** = diagnostic probe
 before any edit · **VERIFYING** = shipped, owner live-acceptance owed · **META** = DoD gate, not a ticket.
 
-### Generation / content (15)
+### Generation / content (13) — cluster DISSOLVED on inspection
 
-| ID | Tier | Aliases |
+11 meta DoD gates + 1 actionable worker item. HOWCONTRIBUTE-001 and GEN-UNSOL-002 closed (shipped);
+GEN-002b folded into CL-006. GEN-001b is a worker-side kernel-generation item, not a UI ticket.
+
+| ID | Tier | Aliases / note |
 |---|---|---|
 | GEN-001 | META | — |
-| GEN-001b | ACTIONABLE | — |
+| GEN-001b | ACTIONABLE | worker-side kernel generation (underfills CV sections) |
 | GEN-002 | META | — |
-| GEN-002b | ACTIONABLE | — |
 | GEN-003 | META | — |
 | GEN-004 | META | — |
 | GEN-005 | META | — |
@@ -65,25 +78,22 @@ before any edit · **VERIFYING** = shipped, owner live-acceptance owed · **META
 | GEN-009 | META | — |
 | GEN-010 | META | — |
 | GEN-011 | META | — |
-| GEN-UNSOL-002 | ACTIONABLE | — |
-| HOWCONTRIBUTE-001 | ACTIONABLE | — |
+| GEN-UI-001..003 | ACTIONABLE | (counted under Generation UI bucket) |
 
-### Settings / visual package (12)
+### Settings / visual package (10) — FIRST AUTONOMOUS-VIABLE CLUSTER
 
-| ID | Tier | Aliases |
+| ID | Tier | Aliases / note |
 |---|---|---|
-| DEMO-WARN-001 | ACTIONABLE | — |
-| LOCATION-001 | ACTIONABLE | — |
-| MERGE-DUP-001 | ACTIONABLE | — |
-| MERGE-DUP-002 | ACTIONABLE | — |
-| MERGE-DUP-003 | ACTIONABLE | — |
-| PRIVACY-DEMO-001 | ACTIONABLE | — |
-| PRIVACY-SETTINGS-001 | VERIFYING | — |
-| SECTION-LAYOUT-001 | ACTIONABLE | — |
-| SETTINGS-HEAD-001 | VERIFYING | — |
-| VISUAL-PKG-001 | ACTIONABLE | — |
-| VISUAL-PKG-002 | ACTIONABLE | — |
-| VISUAL-PKG-003 | ACTIONABLE | — |
+| VISUAL-PKG-001 | ACTIONABLE | `[code]` relabel STYLE PACKAGE → Visual package (safest unit after WM) |
+| VISUAL-PKG-002 | ACTIONABLE | `[islands]` enrich package buttons with icons |
+| VISUAL-PKG-003 | ACTIONABLE | `[islands]` relocate descriptor next to Alt circles |
+| MERGE-DUP-001 | ACTIONABLE | `[islands]` hide legacy select, bridge legacy buttons to WritingStylePicker |
+| MERGE-DUP-002 | ACTIONABLE | `[console]` confirm dedup-341 split, merge tone-chip sections |
+| MERGE-DUP-003 | ACTIONABLE | `[islands]` unify save tones into save customs |
+| SECTION-LAYOUT-001 | ACTIONABLE | `[islands]` collapsible/collapsed; refresh on style change |
+| LOCATION-001 | ACTIONABLE | `[code]` split Location into Location + City |
+| DEMO-WARN-001 | ACTIONABLE | `[console]` gate "Setup needed" on demo-valid signal |
+| SETTINGS-HEAD-001 | VERIFYING | `[console]` unify headline style; Languages placement (partial) |
 
 ### Cover letter (10)
 
@@ -94,7 +104,7 @@ before any edit · **VERIFYING** = shipped, owner live-acceptance owed · **META
 | CL-003 | ACTIONABLE | VF-002 |
 | CL-004 | ACTIONABLE | VF-003 |
 | CL-005 | ACTIONABLE | — |
-| CL-006 | ACTIONABLE | VF-017 |
+| CL-006 | ACTIONABLE | VF-017; absorbs GEN-002b (capture WIB table signals in CL generation) |
 | CL-007 | VERIFYING | — |
 | CL-BODY-CONTROLS-001 | ACTIONABLE | — |
 | CL-HEADER-001 | PROBE-FIRST | — |
@@ -187,13 +197,13 @@ before any edit · **VERIFYING** = shipped, owner live-acceptance owed · **META
 | PRV-005 | VERIFYING | — |
 | SETTINGS-NAV-Z-001 | PROBE-FIRST | VF-014, APP-HISTORY-001, SETTINGS-SUBTAB-001, SETTINGS-AHZ-001, AH-001, APPHIST-ZIDX-001 |
 
-### Watermark (5)
+### Watermark (5) — SPEC COMPLETE (docs/qa/WM_AI_NOTICE_ANCHOR_SPEC_2026-06-16.md)
 
 | ID | Tier | Aliases |
 |---|---|---|
 | WM-001 | ACTIONABLE | VF-004 |
 | WM-002 | ACTIONABLE | — |
-| WM-003 | ACTIONABLE | — |
+| WM-003 | (closed — owner-confirmed) | — |
 | WM-004 | ACTIONABLE | — |
 | WM-005 | ACTIONABLE | — |
 
@@ -242,6 +252,16 @@ before any edit · **VERIFYING** = shipped, owner live-acceptance owed · **META
 - **PP-001** — Publications controls historically clipped (273 grid→flex); needs prod/relay DOM.
 - **PP-003** — HIGH-RISK shared row-control model; confirm `pub-injected-reaper-352` before any edit.
 - **SETTINGS-NAV-Z-001** — `antcv-apphist-zindex-probe.js`; settings/app-history renders behind the preview (z-index trap).
+
+## Cluster inspection status (2026-06-16)
+
+| Cluster | Verdict |
+|---|---|
+| Watermark (5) | SPEC COMPLETE; autonomous-viable. |
+| Settings / visual package (10) | First autonomous-viable cluster; safe subset = VISUAL-PKG-001/002/003 + MERGE-DUP-001/003. |
+| List-row controls (9) | NOT autonomous — owner-present, probe-first (7 prior failed iterations; SectionControlBar migration). |
+| Pagination (10) | Engine shipped; remainder live-rendered, owner-present. |
+| Generation / content (13) | Dissolved — 11 meta, 2 shipped, GEN-002b→CL-006, GEN-001b worker-side. |
 
 ## 2026-06-15 ACTIVE-queue items removed from this list (tracked in ACTIVE_BUGS top block)
 

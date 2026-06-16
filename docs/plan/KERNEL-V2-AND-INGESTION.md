@@ -87,10 +87,21 @@ untouched so generation keeps running). Written transcription-free via a Node-bu
 file run through `wrangler d1 execute ant_memory --remote --config
 workers/access-relay/wrangler.toml`. Verified: `length(kernel_v2)`=19972 (exact),
 `json_valid`=1, schemaVersion `2.0-kernel`, 12 experience entries, tenseMode `auto`,
-experience[0]=`Product / Project Expert isCurrent=1`. **Next:** §2 TENSE-RENDER-001 reads
-from `kernel_v2` (tenseMode + per-role isCurrent), then §3 language, then §4 ingestion. The
-owner will re-import v2 cleanly via Settings → Personal once §4 JSON ingestion handles the
-v2 shape — `kernel_v2` is the staging copy until then.
+experience[0]=`Product / Project Expert isCurrent=1`.
+
+**§2 TENSE-RENDER-001 DONE (1.50.515).** The AUTO experience-tense rule is now FLAG-driven,
+not date-parsed: the STORED WORK HISTORY builder (GABRIEL_BG, app.src.js + minified app.js)
+tags ` | CURRENT ROLE` from each role's `isCurrent`; the AUTO rule writes tagged roles in
+present, untagged in past (even if dates look open-ended), never inferring from the year
+string. D1 bridge: v1 `history` gets `tenseMode='auto'` + `isCurrent=true` on kanzen +
+copenhagen_wolves (sourced from v2 flags). Verified `diag-tense-render.mjs` (the non-flagged
+`2010 - present` role is NOT tagged; the flagged closed-date role IS). NOTE: this reads the
+flag from the **v1 `history`** bridge for now; migrating the reader to consume `kernel_v2`
+directly (with `tenseMode` present/past too) is part of the full v2 reader work.
+
+**Next:** §3 LANGUAGE (crossPolicy + langInvariantTokens + roleTitlePolicy in the single
+cross-lingual call), then §4 ingestion. The owner re-imports v2 cleanly via Settings →
+Personal once §4 JSON ingestion handles the v2 shape — `kernel_v2` is the staging copy.
 
 SPEC ANCHORED. The interim v1 kernel fixes shipped this session (security guard,
 Copenhagen Wolves canon, Meprolight split, reverse-chron order, names, tools group names,

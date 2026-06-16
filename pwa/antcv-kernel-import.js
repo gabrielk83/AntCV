@@ -56,35 +56,56 @@
       + '<h3 style="margin:10px 0 4px;font-size:13px;color:#283556">Roles</h3><ul style="margin:0 0 8px;padding-left:18px;font-size:13px">' + rolesHtml + '</ul>'
       + '<h3 style="margin:10px 0 4px;font-size:13px;color:#8a6d00">Conflicts — choose per field (existing is kept by default; metrics never auto-overwritten)</h3><ul style="margin:0;padding:0;font-size:13px">' + conflictsHtml + '</ul>'
       + '<h3 style="margin:10px 0 4px;font-size:13px;color:#b5651d">Gaps — fill later (never invented)</h3><ul style="margin:0 0 12px;padding-left:18px;font-size:13px">' + gapsHtml + '</ul>'
-      + '<div style="display:flex;gap:10px;justify-content:flex-end"><button id="antcv-kimport-cancel" style="padding:7px 14px;border:1px solid #ccc;background:#f4f4f4;border-radius:6px;cursor:pointer">Cancel</button><button id="antcv-kimport-apply" style="padding:7px 16px;border:none;background:#00746E;color:#fff;border-radius:6px;cursor:pointer;font-weight:700">Stage kernel</button></div>'
+      + '<div style="display:flex;gap:10px;justify-content:flex-end"><button id="antcv-kimport-cancel" style="padding:7px 14px;border:1px solid #ccc;background:#f4f4f4;border-radius:6px;cursor:pointer">Cancel</button><button id="antcv-kimport-apply" style="padding:7px 14px;border:1px solid #00746E;background:#fff;color:#00746E;border-radius:6px;cursor:pointer">Stage locally</button><button id="antcv-kimport-save" style="padding:7px 16px;border:none;background:#00746E;color:#fff;border-radius:6px;cursor:pointer;font-weight:700">Save to my account</button></div>'
       + '</div>';
     document.body.appendChild(ov);
     ov.querySelector('#antcv-kimport-x').addEventListener('click', closeModal);
     ov.querySelector('#antcv-kimport-cancel').addEventListener('click', closeModal);
     ov.addEventListener('click', function (e) { if (e.target === ov) closeModal(); });
-    ov.querySelector('#antcv-kimport-apply').addEventListener('click', function () { applyResolutions(result, ov); });
+    ov.querySelector('#antcv-kimport-apply').addEventListener('click', function () { var k = resolveKernel(result, ov); stageLocal(k); closeModal(); toast('Kernel staged locally (' + ((k.experience || []).length) + ' roles).'); });
+    ov.querySelector('#antcv-kimport-save').addEventListener('click', function () { var k = resolveKernel(result, ov); stageLocal(k); saveToAccount(k); });
   }
 
-  // apply the per-field radio choices (default = keep existing) onto the kernel,
-  // then STAGE it (non-destructive) into the standalone key.
-  function applyResolutions(result, ov) {
+  // apply the per-field radio choices (default = keep existing) onto the kernel.
+  function resolveKernel(result, ov) {
     var k = JSON.parse(JSON.stringify(result.kernel || {}));
     var byId = {}; (k.experience || []).forEach(function (r, i) { byId[r.id || i] = r; });
-    (result.conflicts || []).forEach(function (c) {
+    (result.conflicts || []).forEach(function (c, ci) {
       (c.fields || []).forEach(function (f, fi) {
-        var ci = (result.conflicts || []).indexOf(c);
         var sel = ov.querySelector('input[name="kc_' + ci + '_' + fi + '"]:checked');
         if (!sel || sel.value !== 'incoming') return; // keep existing (default)
         var r = byId[c.id]; if (!r) return;
         if (f.field === 'title') r.title = f.incoming;
-        // dates/metrics chosen "incoming" are recorded as a pending change the user
-        // confirmed; full structured apply for dates/metrics is the persistence slice.
+        // dates/metrics chosen "incoming" are recorded as confirmed pending changes;
+        // full structured apply for dates/metrics is a follow-up.
         r._resolved = (r._resolved || []).concat([{ field: f.field, value: f.incoming }]);
       });
     });
-    try { localStorage.setItem(STAGE_KEY, JSON.stringify(k)); } catch (_) {}
-    closeModal();
-    toast('Kernel staged (' + ((k.experience || []).length) + ' roles). Persisting to your account is the next step.');
+    return k;
+  }
+  function stageLocal(k) { try { localStorage.setItem(STAGE_KEY, JSON.stringify(k)); } catch (_) {} }
+
+  // relay base URL (same resolution the cloud-sync sidecars use).
+  function relayBase() {
+    var u = (typeof window.ANTCV_RELAY_URL === 'string' ? window.ANTCV_RELAY_URL : '') ||
+      (function () { try { return localStorage.getItem('proxyUrl') || localStorage.getItem('relayUrl') || ''; } catch (_) { return ''; } })();
+    return String(u || '').trim().replace(/\/+$/, '');
+  }
+  // persist the resolved kernel to D1 user_kernel.kernel_v2 (non-destructive staging).
+  async function saveToAccount(k) {
+    var base = relayBase();
+    if (!base) { toast('No account relay configured (Settings → API). Staged locally instead.'); return; }
+    try {
+      var res = await fetch(base + '/api/profile/kernel-v2', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kernel: k }),
+      });
+      var j = null; try { j = await res.json(); } catch (_) {}
+      if (res.ok && j && j.ok) { closeModal(); toast('Saved to your account (' + (j.roles || (k.experience || []).length) + ' roles).'); }
+      else if (res.status === 401) { toast('Sign in first to save to your account — staged locally.'); }
+      else { toast('Save failed (' + res.status + ((j && j.error) ? ': ' + j.error : '') + ') — staged locally.'); }
+    } catch (err) { toast('Save failed (' + (err && err.message || err) + ') — staged locally.'); }
   }
 
   function toast(msg) {
@@ -121,5 +142,5 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ensureControl, { once: true });
   else ensureControl();
 
-  window.AntcvKernelImport = { version: VERSION, runImport: runImport, openPicker: openPicker, _stageKey: STAGE_KEY };
+  window.AntcvKernelImport = { version: VERSION, runImport: runImport, openPicker: openPicker, saveToAccount: saveToAccount, relayBase: relayBase, _stageKey: STAGE_KEY };
 })();

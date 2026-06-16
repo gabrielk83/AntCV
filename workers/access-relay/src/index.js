@@ -831,6 +831,42 @@ const INFORMATIONAL_FIELDS = new Set([
   'proxyUrl_lastCloud',
 ]);
 
+// kernel v2 §4: POST/PUT /api/profile/kernel-v2 — persist the ingested v2 kernel
+// into the STAGING column user_kernel.kernel_v2. NON-DESTRUCTIVE: the v1
+// identity/history/preferences are left untouched (the live generation path keeps
+// reading them) until the full v2 reader migration. Auth: same session identity as
+// /api/prefs. Body: the kernel object, or { kernel: {...} }.
+async function handleApiKernelV2(request, env) {
+  if (request.method !== 'POST' && request.method !== 'PUT') {
+    return jsonResponse({ error: 'method-not-allowed' }, 405, request, env);
+  }
+  const id = await identityFromRequest(request, env);
+  if (!id) {
+    return jsonResponse({ error: 'unauthenticated', hint: 'Sign in first.' }, 401, request, env);
+  }
+  if (!hasD1(env)) {
+    return jsonResponse({ error: 'no-d1' }, 503, request, env);
+  }
+  let body;
+  try { body = await request.json(); } catch (_) {
+    return jsonResponse({ error: 'bad-json' }, 400, request, env);
+  }
+  const kernel = (body && body.kernel) ? body.kernel : body;
+  if (!kernel || !Array.isArray(kernel.experience)) {
+    return jsonResponse({ error: 'not-a-kernel', hint: 'expects { experience: [...] }' }, 422, request, env);
+  }
+  const userHash = await userHashFromEmail(id.email);
+  const json = JSON.stringify(kernel);
+  const now = Date.now();
+  // create the row if absent (empty v1 slots), else update ONLY kernel_v2 + clock.
+  await env.DB.prepare(
+    'INSERT INTO user_kernel (user_hash, identity, history, preferences, kernel_v2, created_at, updated_at) ' +
+    "VALUES (?, '{}', '{}', '{}', ?, ?, ?) " +
+    'ON CONFLICT(user_hash) DO UPDATE SET kernel_v2 = excluded.kernel_v2, updated_at = excluded.updated_at'
+  ).bind(userHash, json, now, now).run();
+  return jsonResponse({ ok: true, roles: kernel.experience.length, bytes: json.length }, 200, request, env);
+}
+
 // v2.5: GET/PUT /api/prefs — user prefs (proxyUrl/photo/apiKeys) + adminDemo
 async function handleApiPrefs(request, env) {
   const kv = env.KV_BINDING || env.ANALYTICS || null;
@@ -3451,6 +3487,9 @@ const method = request.method;
   // for fields that aren't part of the kernel contract (proxyUrl, etc).
   if (path === '/api/profile/kernel') {
     return handleApiProfileKernel(request, env);
+  }
+  if (path === '/api/profile/kernel-v2') {
+    return handleApiKernelV2(request, env);
   }
   if (path === '/api/profile/extract-kernel') {
     return handleApiProfileExtractKernel(request, env);

@@ -19,9 +19,11 @@ CREATE TABLE IF NOT EXISTS user_kernel (
   history           TEXT NOT NULL,               -- JSON: work_history (raw_bullets), education, publications, certifications, language_skills
   preferences       TEXT NOT NULL,               -- JSON: style_package, tone_register, banned_words, banned_phrases, canonical_language
   photo_b64         TEXT,                        -- separate column — biggest blob
+  kernel_v2         TEXT,                        -- JSON: v2 schema (tenseMode/isCurrent/language/experience[]); staging until the v2 reader migration (kernel v2 §4)
   created_at        INTEGER NOT NULL,
   updated_at        INTEGER NOT NULL
 );
+-- existing tables: kernel_v2 added live via `ALTER TABLE user_kernel ADD COLUMN kernel_v2 TEXT;`
 
 CREATE TABLE IF NOT EXISTS application (
   id                 INTEGER PRIMARY KEY AUTOINCREMENT,

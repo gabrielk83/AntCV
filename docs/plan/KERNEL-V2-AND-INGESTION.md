@@ -140,11 +140,17 @@ most today); expand target languages beyond the current EN/DA flag to es/zh + th
   (IMPORT-GAP-001). "Stage" writes the resolved kernel to the STANDALONE key
   `antcv:ingestedKernel` — NON-DESTRUCTIVE (never touches live data). Verified
   `diag-kernel-import.mjs` (fresh create shows 3 roles + gaps; re-import = merge with a date
-  conflict; existing metric preserved; 0 errors) + boot-smoke + suite 307. **REMAINING in
-  Slice 3:** wire a visible Settings → Personal button + onboarding wizard step to `openPicker`;
-  full structured apply of date/metric resolutions; language-selection step; and PERSIST the
-  staged kernel to D1 `user_kernel` (browser → proxy/relay, since the browser can't write D1
-  directly).
+  conflict; existing metric preserved; 0 errors) + boot-smoke + suite 307. **D1 PERSISTENCE DONE (1.50.518 + access-relay):** added `POST /api/profile/kernel-v2` to
+  access-relay (auth via the session identity; UPSERTs `user_kernel.kernel_v2` ONLY —
+  identity/history/preferences untouched; 401 unauth / 422 not-a-kernel). The modal now has
+  "Save to my account" → `saveToAccount(kernel)` POSTs `{kernel}` to `<relay>/api/profile/
+  kernel-v2` (credentials:include). `kernel_v2` added to schema.sql (live table already has the
+  column from Task 1a). Verified: worker `diag-kernel-v2-write.mjs` (401/422/write + identity
+  preserved) + browser `diag-kernel-import.mjs` (correct POST). **REMAINING in Slice 3:** a
+  visible Settings/onboarding ENTRY button → `openPicker`; full structured apply of date/metric
+  resolutions; language-selection step; and migrating the live readers to consume `kernel_v2`
+  so an import actually changes the generated CV (today it stages durably but generation still
+  reads the v1 bridge).
 
 The owner re-imports v2 cleanly via Settings → Personal once Slices 2–3 land — `kernel_v2` is
 the staging copy until then.

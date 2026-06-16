@@ -51,10 +51,22 @@ const b = await page.evaluate(async (cv)=>{
   return { mode:res&&res.mode, conflicts:res&&res.conflicts.length, hasConflictText:/Conflicts/.test(m&&m.textContent||''), metricPreserved:/999 to 99/.test(JSON.stringify(res&&res.kernel)) };
 }, CV);
 
+// C) saveToAccount POSTs the kernel to the relay /api/profile/kernel-v2
+const c = await page.evaluate(async ()=>{
+  window.ANTCV_RELAY_URL = 'https://relay.example.com';
+  let captured = null;
+  const orig = window.fetch;
+  window.fetch = async (url, opts)=>{ captured = { url:String(url), method:opts&&opts.method, cred:opts&&opts.credentials, body:opts&&opts.body }; return { ok:true, status:200, json: async ()=>({ ok:true, roles:2 }) }; };
+  await window.AntcvKernelImport.saveToAccount({ experience:[{id:'a'},{id:'b'}] });
+  window.fetch = orig;
+  return captured;
+});
+
 await browser.close(); await new Promise(r=>server.close(r));
 console.log('--- kernel-import UI ---');
 console.log('A fresh:', JSON.stringify(a));
 console.log('B merge:', JSON.stringify(b));
+console.log('C save :', JSON.stringify(c));
 console.log('app errors:', errs.length, errs.slice(0,3).join(' | '));
 const checks = [
   ['engine + UI loaded and ran', a.ok && a.mode==='create'],
@@ -62,6 +74,7 @@ const checks = [
   ['modal shows gaps (missing outcomes/proofPoints)', a.gaps>=1 && /Gaps/.test(a.text)],
   ['re-import against staged kernel = merge with a conflict', b.mode==='merge' && b.conflicts>=1 && b.hasConflictText],
   ['existing metric preserved (keep-both, not overwritten)', b.metricPreserved],
+  ['saveToAccount POSTs the kernel to /api/profile/kernel-v2 (credentials included)', !!c && /\/api\/profile\/kernel-v2$/.test(c.url) && c.method==='POST' && c.cred==='include' && /"experience"/.test(c.body||'')],
   ['no app errors', errs.length===0],
 ];
 for (const [n,ok] of checks) console.log(`${n}: ${ok?'OK':'FAIL'}`);

@@ -104,5 +104,24 @@ ok('laminated results never exceed ~2 lines (<=262 chars)', roles.every((r) => !
   ok('numeric-favor: the 30% outcome LEADS the PM role result', /30%/.test((b2.pm.results || '').split(';')[0] || ''));
 }
 
+// OUTCOME-ROLE-SELECT-001 (owner 2026-06-16): an explicit outcome→role map
+// (antcv:outcomeRoleMap) pins an outcome to the chosen position, overriding the
+// token-match heuristic.
+{
+  store['antcv:outcomeRoleMap'] = JSON.stringify({ oc_x: 'pm2' });
+  const R = [
+    { id: 'pm2', title: 'Product Manager', company: 'Acme', on: true, bullets: ['Ran the roadmap.'] },
+    { id: 'opt2', title: 'Optics Engineer', company: 'Beta', on: true, bullets: ['Built optical benches.'] },
+  ];
+  // token-match alone would send this optics outcome to opt2; the map pins it to pm2.
+  const O = [ { b: 'Built', t: 'optical characterisation benches and acceptance tests', _oid: 'oc_x' } ];
+  const secs = [ { id: 'experience', type: 'experience', roles: R }, { id: 'outcomes', type: 'bullets', items: O } ];
+  const o3 = applyOutcomesMode(secs, 'cv');
+  const b3 = Object.fromEntries(o3.find((s) => s.type === 'experience').roles.map((r) => [r.id, r]));
+  ok('explicit outcome→role map pins the outcome to the chosen position (overrides token-match)',
+    /optical characterisation benches/.test(b3.pm2.results || '') && !/optical characterisation benches/.test(b3.opt2.results || ''));
+  delete store['antcv:outcomeRoleMap'];
+}
+
 for (const r of roles) console.log(`  [${r.title}] ${r.results || '(none)'}`);
 console.log(`\nRESULTS-LAMINATION OK (${pass} checks)`);

@@ -1700,18 +1700,26 @@ export function applyOutcomesMode(docSections, doc) {
     const assign = distRoles.map(() => []);
     const left = [];
     const distIdx = new Map(); distRoles.forEach((r, i) => distIdx.set(r, i));
+    // OUTCOME-ROLE-SELECT-001 (owner 2026-06-16): the SELECTED OUTCOMES editor's
+    // per-row role selector writes an EXPLICIT outcome→role map
+    // (antcv:outcomeRoleMap = { [outcome _oid]: roleId }). An explicit assignment
+    // WINS over the token-match heuristic below — the user pins each outcome to a
+    // specific position, eliminating the "random"/best-guess distribution. Inert
+    // until the selector UI stamps _oid + writes the map.
+    let oroMap = {};
+    try { oroMap = JSON.parse(localStorage.getItem('antcv:outcomeRoleMap') || '{}') || {}; } catch (_) {}
+    const roleById = new Map(); visRoles.forEach((r) => { if (r && r.id != null) roleById.set(String(r.id), r); });
     // OUTCOMES-RESULTS-BESTMATCH-001 (owner 2026-06-14) + RESULTS-CROSSROLE-BLEED-001
     // (owner 2026-06-16: a "LiDAR" outcome attached to the Sirin role, which had no
-    // LiDAR). Compare each outcome against ALL visible roles — not just the
-    // still-unlaminated ones — and laminate it onto a role ONLY when that role is
-    // its GENUINE best home — the GLOBAL best match across ALL roles. An outcome
-    // whose true home is an already-laminated role no longer bleeds onto an
-    // unrelated available role: if its best match is a laminated (non-dist) role,
-    // it is dropped rather than forced onto the best AVAILABLE role. (tokensFor is
-    // title+company only, so the match is intentionally a low threshold — the
-    // global-best comparison, not a token count, is what prevents the bleed.)
-    // Tie → earliest role.
+    // LiDAR). For an UNMAPPED outcome, compare against ALL visible roles — not just
+    // the still-unlaminated ones — and laminate it onto a role ONLY when that role
+    // is its GLOBAL best home. An outcome whose true home is an already-laminated
+    // role no longer bleeds onto an unrelated available role (it's dropped, not
+    // forced onto the best AVAILABLE role). Tie → earliest role.
     pool.forEach((x) => {
+      const oid = x && x._oid;
+      const mapped = (oid != null && oroMap[oid] != null) ? roleById.get(String(oroMap[oid])) : null;
+      if (mapped && distIdx.has(mapped)) { assign[distIdx.get(mapped)].push(x); return; }
       const ts = tok(txtOf(x));
       let bestRole = null, best = 0;
       for (const r of visRoles) { const tf = tokensFor(r); let m = 0; ts.forEach((w) => { if (tf.has(w)) m++; }); if (m > best) { best = m; bestRole = r; } }

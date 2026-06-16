@@ -1,0 +1,170 @@
+{
+  "schemaVersion": "2.0-kernel",
+  "_fixture": "TEST persona (synthetic) — Anita Myre-Kornfeldt",
+  "tenseMode": "auto",
+  "language": {
+    "sourceLang": "en",
+    "activeDefaults": [
+      "en",
+      "da"
+    ],
+    "crossPolicy": {
+      "roleScope": "crosses",
+      "outcomeResult": "crosses",
+      "connectiveProse": "crosses",
+      "companyName": "invariant",
+      "patentNumber": "invariant",
+      "metricsNumerals": "invariant",
+      "toolStandardNames": "invariant",
+      "publicationTitle": "invariant"
+    },
+    "roleTitlePolicy": {
+      "default": "crosses",
+      "perLangOverride": {
+        "da": "keepSourceWhereIdiomatic"
+      }
+    }
+  },
+  "personalInfo": {
+    "name": "Anita Myre-Kornfeldt",
+    "headline": "Operations & Winter Preparedness Specialist — colony logistics, granary planning & seasonal risk",
+    "email": "anita.kornfeldt@winterready.eu",
+    "location": "Copenhagen, Denmark",
+    "languages": [
+      {
+        "lang": "English",
+        "level": "full professional"
+      },
+      {
+        "lang": "Danish",
+        "level": "native"
+      }
+    ]
+  },
+  "generationRules": {
+    "GEN-IDF-001": {
+      "rule": "Hidden by default; surface on JD relevance.",
+      "hiddenByDefault": [
+        "forager-intern"
+      ]
+    },
+    "VERB-RULE": "Team context: directed/supervised/ran; never bare \"led a team\".",
+    "outcomePolicy": "Each surfaced role shows >=1 outcome; numeric results favored."
+  },
+  "experience": [
+    {
+      "id": "northfield",
+      "title": "Senior Grain Storage Coordinator",
+      "company": "Northfield Cooperative",
+      "start": "2026",
+      "end": "present",
+      "isCurrent": true,
+      "on": true,
+      "scope": [
+        "Seasonal food-storage planning for large colonies in Copenhagen.",
+        "Inventory tracking and contingency planning."
+      ],
+      "outcomes": [
+        {
+          "title": "shortage reduction",
+          "result": "Cut winter shortages by 35% across 12 granaries through tracking and contingency plans.",
+          "numeric": true
+        }
+      ],
+      "proofPoints": [
+        "35% fewer winter shortages; 12 granaries."
+      ],
+      "langInvariantTokens": [
+        "Northfield Cooperative",
+        "35%",
+        "12"
+      ]
+    },
+    {
+      "id": "hillcolony",
+      "title": "Operations Planner",
+      "company": "Hill & Colony Logistics",
+      "start": "2026",
+      "end": "2026",
+      "isCurrent": false,
+      "on": true,
+      "scope": [
+        "Coordinated grain-transport routes and weather-response plans across the Aarhus region.",
+        "Owned documentation handover between seasonal teams."
+      ],
+      "outcomes": [
+        {
+          "title": "routes",
+          "result": "Maintained colour-coded tracking across 8 transport routes through repeated rainy-season cycles.",
+          "numeric": true
+        }
+      ],
+      "proofPoints": [
+        "8 transport routes; colour-coded tracking."
+      ],
+      "langInvariantTokens": [
+        "Hill & Colony Logistics",
+        "Aarhus",
+        "8"
+      ]
+    },
+    {
+      "id": "stockpile",
+      "title": "Junior Harvest Analyst",
+      "company": "Summer Stockpile Group",
+      "start": "2026",
+      "end": "2026",
+      "isCurrent": false,
+      "on": true,
+      "scope": [
+        "Tracked harvest efficiency and optimised carrying routes between field sectors in Odense."
+      ],
+      "outcomes": [
+        {
+          "title": "reporting",
+          "result": "Produced weekly reports informing the next seasonal cycle.",
+          "numeric": false
+        }
+      ],
+      "proofPoints": [
+        "Weekly harvest-efficiency reports."
+      ],
+      "langInvariantTokens": [
+        "Summer Stockpile Group",
+        "Odense"
+      ]
+    },
+    {
+      "id": "forager-intern",
+      "title": "Junior Forager (Intern)",
+      "company": "Ant Hill Collective",
+      "start": "2025",
+      "end": "2026",
+      "isCurrent": false,
+      "on": false,
+      "scope": [
+        "Walked assigned sectors twice daily; logged seed-yield by grid square."
+      ],
+      "outcomes": [
+        {
+          "title": "protocol",
+          "result": "Wrote the first draft of the colony foul-weather protocol; earned the Reliable Returner badge (6 weeks, zero misplaced carries).",
+          "numeric": true
+        }
+      ],
+      "proofPoints": [
+        "Reliable Returner badge; 6 weeks, 0 misplaced carries."
+      ],
+      "langInvariantTokens": [
+        "Ant Hill Collective",
+        "6"
+      ]
+    }
+  ],
+  "selectedOutcomes": [
+    {
+      "title": "35% fewer winter shortages",
+      "result": "Across 12 granaries via inventory tracking + contingency planning."
+    }
+  ]
+}

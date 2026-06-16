@@ -1,0 +1,147 @@
+{
+  "schemaVersion": "2.0-kernel",
+  "_fixture": "TEST persona (synthetic) — Devon Hale, career-changer into software",
+  "tenseMode": "auto",
+  "language": {
+    "sourceLang": "en",
+    "activeDefaults": [
+      "en"
+    ],
+    "crossPolicy": {
+      "roleScope": "crosses",
+      "outcomeResult": "crosses",
+      "connectiveProse": "crosses",
+      "companyName": "invariant",
+      "patentNumber": "invariant",
+      "metricsNumerals": "invariant",
+      "toolStandardNames": "invariant",
+      "publicationTitle": "invariant"
+    },
+    "roleTitlePolicy": {
+      "default": "crosses",
+      "perLangOverride": {
+        "da": "keepSourceWhereIdiomatic"
+      }
+    }
+  },
+  "personalInfo": {
+    "name": "Devon Hale",
+    "headline": "Full-stack developer (career-changer) — ex-data analyst shipping production web apps",
+    "email": "devon.hale@example.com",
+    "location": "Manchester, UK",
+    "languages": [
+      {
+        "lang": "English",
+        "level": "native"
+      }
+    ]
+  },
+  "generationRules": {
+    "GEN-IDF-001": {
+      "rule": "Hidden by default; surface on JD relevance.",
+      "hiddenByDefault": []
+    },
+    "VERB-RULE": "Team context: directed/supervised/ran; never bare \"led a team\".",
+    "outcomePolicy": "Each surfaced role shows >=1 outcome; numeric results favored."
+  },
+  "experience": [
+    {
+      "id": "freelance",
+      "title": "Freelance Web Developer",
+      "company": "Self-employed",
+      "start": "2025",
+      "end": "present",
+      "isCurrent": true,
+      "on": true,
+      "scope": [
+        "Build and ship production web apps for small businesses (React, Node, Postgres).",
+        "Own scope, delivery and client communication end-to-end."
+      ],
+      "outcomes": [
+        {
+          "title": "apps shipped",
+          "result": "Shipped 6 production web apps; cut one client booking-flow load time by 40%.",
+          "numeric": true
+        }
+      ],
+      "proofPoints": [
+        "6 production apps; 40% faster booking flow.",
+        "React, Node, Postgres, CI/CD."
+      ],
+      "langInvariantTokens": [
+        "React",
+        "Node",
+        "Postgres",
+        "CI/CD",
+        "6",
+        "40%"
+      ]
+    },
+    {
+      "id": "meridian",
+      "title": "Data Analyst",
+      "company": "Meridian Retail Group",
+      "start": "2022",
+      "end": "2025",
+      "isCurrent": false,
+      "on": true,
+      "scope": [
+        "Built SQL + Python reporting pipelines and dashboards for retail operations.",
+        "Automated weekly reporting that had been manual."
+      ],
+      "outcomes": [
+        {
+          "title": "automation",
+          "result": "Automated reporting that saved ~10 analyst-hours per week across 4 teams.",
+          "numeric": true
+        }
+      ],
+      "proofPoints": [
+        "~10 hours/week saved; 4 teams.",
+        "SQL, Python, Power BI, dbt."
+      ],
+      "langInvariantTokens": [
+        "Meridian Retail Group",
+        "SQL",
+        "Python",
+        "Power BI",
+        "dbt",
+        "10",
+        "4"
+      ]
+    },
+    {
+      "id": "nordbarrow",
+      "title": "Junior Financial Analyst",
+      "company": "Nordbarrow Consulting",
+      "start": "2021",
+      "end": "2022",
+      "isCurrent": false,
+      "on": true,
+      "scope": [
+        "Financial modelling and Excel analysis for client engagements."
+      ],
+      "outcomes": [
+        {
+          "title": "models",
+          "result": "Built models supporting 5 client engagements.",
+          "numeric": true
+        }
+      ],
+      "proofPoints": [
+        "5 client engagements."
+      ],
+      "langInvariantTokens": [
+        "Nordbarrow Consulting",
+        "Excel",
+        "5"
+      ]
+    }
+  ],
+  "selectedOutcomes": [
+    {
+      "title": "Shipped 6 production web apps",
+      "result": "React/Node/Postgres, solo, scope-to-delivery."
+    }
+  ]
+}

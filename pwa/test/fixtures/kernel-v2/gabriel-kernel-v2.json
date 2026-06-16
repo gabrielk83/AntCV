@@ -1,0 +1,192 @@
+{
+  "schemaVersion": "2.0-kernel",
+  "_fixture": "TEST fixture for upload testing — compact, not the full canonical kernel",
+  "tenseMode": "auto",
+  "language": {
+    "sourceLang": "en",
+    "activeDefaults": [
+      "en",
+      "da",
+      "es"
+    ],
+    "crossPolicy": {
+      "roleScope": "crosses",
+      "outcomeResult": "crosses",
+      "connectiveProse": "crosses",
+      "companyName": "invariant",
+      "patentNumber": "invariant",
+      "metricsNumerals": "invariant",
+      "toolStandardNames": "invariant",
+      "publicationTitle": "invariant"
+    },
+    "roleTitlePolicy": {
+      "default": "crosses",
+      "perLangOverride": {
+        "da": "keepSourceWhereIdiomatic"
+      }
+    }
+  },
+  "personalInfo": {
+    "name": "Gabriel Alexander Karp-Gershon",
+    "headline": "Product & project — processes, products, people",
+    "email": "karp.gabriel.a@gmail.com",
+    "location": "2300, København S",
+    "languages": [
+      {
+        "lang": "English",
+        "level": "native"
+      },
+      {
+        "lang": "Hebrew",
+        "level": "native"
+      },
+      {
+        "lang": "Spanish",
+        "level": "full professional"
+      },
+      {
+        "lang": "Danish",
+        "level": "B1"
+      }
+    ]
+  },
+  "generationRules": {
+    "GEN-IDF-001": {
+      "rule": "Hidden by default; surface on JD relevance.",
+      "hiddenByDefault": [
+        "idf",
+        "tau-security"
+      ]
+    },
+    "VERB-RULE": "Team context: directed/supervised/ran; never bare \"led a team\".",
+    "outcomePolicy": "Each surfaced role shows >=1 outcome; numeric results favored."
+  },
+  "experience": [
+    {
+      "id": "kanzen",
+      "title": "Product / Project Expert",
+      "company": "Kanzen Konsulenter ApS",
+      "start": "2022",
+      "end": "present",
+      "isCurrent": true,
+      "on": true,
+      "scope": [
+        "Systems-engineering, change-governance and GenAI product work for OEMs.",
+        "RFQ/RFI evaluation and technical-commercial advisory."
+      ],
+      "outcomes": [
+        {
+          "title": "AntCV",
+          "result": "Built and shipped AntCV, an LLM-orchestrated job-application product, solo.",
+          "numeric": false
+        }
+      ],
+      "proofPoints": [
+        "AntCV live PWA + multi-worker Cloudflare backend."
+      ],
+      "langInvariantTokens": [
+        "Kanzen Konsulenter ApS",
+        "AntCV",
+        "RFQ",
+        "RFI",
+        "Cloudflare"
+      ]
+    },
+    {
+      "id": "innoviz-ccl",
+      "title": "Change Control Lead",
+      "company": "Innoviz Technologies",
+      "start": "2020",
+      "end": "2025",
+      "isCurrent": false,
+      "on": true,
+      "scope": [
+        "Owned change governance across the automotive LiDAR programme.",
+        "Chaired a cross-functional Change Control Board."
+      ],
+      "outcomes": [
+        {
+          "title": "cycle",
+          "result": "Cut the change cycle from ~250 to ~10 days; the process generated 30% of FY2025 earnings ($8M NRE).",
+          "numeric": true
+        }
+      ],
+      "proofPoints": [
+        "~250 → ~10 day change cycle.",
+        "$8M NRE, ~30% of FY2025 earnings."
+      ],
+      "langInvariantTokens": [
+        "Innoviz Technologies",
+        "LiDAR",
+        "ASPICE",
+        "250",
+        "10",
+        "30%",
+        "$8M"
+      ]
+    },
+    {
+      "id": "sirin",
+      "title": "Senior EO Engineer",
+      "company": "Sirin Labs",
+      "start": "2014",
+      "end": "2017",
+      "isCurrent": false,
+      "on": true,
+      "scope": [
+        "Senior electro-optics for advanced consumer devices; camera + display stack."
+      ],
+      "outcomes": [
+        {
+          "title": "team + patent",
+          "result": "Directed a 7-engineer EO team and co-invented Patent No. 241997.",
+          "numeric": true
+        }
+      ],
+      "proofPoints": [
+        "Patent No. 241997.",
+        "7-engineer EO team."
+      ],
+      "langInvariantTokens": [
+        "Sirin Labs",
+        "Patent No. 241997",
+        "EO",
+        "7"
+      ]
+    },
+    {
+      "id": "idf",
+      "title": "Computer Systems Administrator",
+      "company": "Israel Defense Forces (Communication Corps)",
+      "start": "2001",
+      "end": "2003",
+      "isCurrent": false,
+      "on": false,
+      "scope": [
+        "Administered classified IT for a technical unit; 100 users, 150 machines."
+      ],
+      "outcomes": [
+        {
+          "title": "helpdesk",
+          "result": "Kept 100 users and 150 machines operational; built the first automated backup-restore.",
+          "numeric": true
+        }
+      ],
+      "proofPoints": [
+        "100 users, 150 machines."
+      ],
+      "langInvariantTokens": [
+        "IDF",
+        "LAN",
+        "100",
+        "150"
+      ]
+    }
+  ],
+  "selectedOutcomes": [
+    {
+      "title": "Change cycle ~250 → ~10 days",
+      "result": "Via a Change Control Board on the OEM LiDAR programme."
+    }
+  ]
+}

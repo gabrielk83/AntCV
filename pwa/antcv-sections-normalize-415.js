@@ -142,6 +142,37 @@
     return changed ? out : null;
   }
 
+  // CW-CANON-001 (owner 2026-06-16): the volunteer rugby role appears as duplicate
+  // variants — "Team Operations Manager & Assistant Coach (foreningsarbejde)" and
+  // "… (Volunteer)" — the SAME job. Merge to ONE, canonicalise the (compressed)
+  // title + company "Pan Idræt Rugby", and keep "Copenhagen Wolves RFC" in the
+  // CONTENT (a bullet), not the company line.
+  function canonCopenhagenWolves(cv) {
+    var xi = cv.findIndex(function (s) { return s && s.type === 'experience' && Array.isArray(s.roles); });
+    if (xi < 0) return null;
+    var isCW = function (r) { var s = (((r && r.company) || '') + ' ' + ((r && r.title) || '')); return /copenhagen wolves|foreningsarbejde|pan idr|wolves rfc/i.test(s); };
+    var roles = cv[xi].roles;
+    var cwIdx = []; roles.forEach(function (r, i) { if (isCW(r)) cwIdx.push(i); });
+    if (!cwIdx.length) return null;
+    var TITLE = 'Team Operations Manager & Assi. Coach (foreningsarbejde)';
+    var COMPANY = 'Pan Idræt Rugby';
+    var CW_BULLET = 'Operations and assistant-coaching for Copenhagen Wolves RFC, an inclusive amateur rugby club under Pan Idræt.';
+    var keep = cwIdx[0];
+    var base = Object.assign({}, roles[keep]);
+    var bullets = Array.isArray(base.bullets) ? base.bullets.slice() : [];
+    for (var k = 1; k < cwIdx.length; k++) { (Array.isArray(roles[cwIdx[k]].bullets) ? roles[cwIdx[k]].bullets : []).forEach(function (b) { if (bullets.indexOf(b) < 0) bullets.push(b); }); }
+    if (!bullets.some(function (b) { return /copenhagen wolves rfc/i.test(String(typeof b === 'string' ? b : (b && (b.b || b.t)) || '')); })) bullets.unshift(CW_BULLET);
+    var changed = false;
+    if (base.title !== TITLE) { base.title = TITLE; changed = true; }
+    if (base.company !== COMPANY) { base.company = COMPANY; changed = true; }
+    if (cwIdx.length > 1 || (Array.isArray(roles[keep].bullets) ? roles[keep].bullets.length : 0) !== bullets.length) { base.bullets = bullets; changed = true; }
+    if (!changed) return null;
+    var nextRoles = roles.map(function (r, i) { return i === keep ? base : r; });
+    if (cwIdx.length > 1) { var drop = {}; for (var k2 = 1; k2 < cwIdx.length; k2++) drop[cwIdx[k2]] = true; nextRoles = nextRoles.filter(function (_, i) { return !drop[i]; }); }
+    var copy = cv.slice(); copy[xi] = Object.assign({}, copy[xi], { roles: nextRoles });
+    return copy;
+  }
+
   // PATENT-IN-ROLE-001 (owner 2026-06-15): the patent number must live ONLY in
   // PUBLICATIONS & PATENT, never inside a role's bullets. The generator keeps
   // putting "Co-invented Patent No. 241997 …" in the Sirin role. Drop any role
@@ -343,6 +374,7 @@
       var cv = b.cv;
       var changed = false;
       var k = canonKanzen(cv); if (k) { cv = k; changed = true; }
+      var cw = canonCopenhagenWolves(cv); if (cw) { cv = cw; changed = true; }
       // ROLE-DECOMP-001 (owner 2026-06-16): the "Customer Change Requests Specialist"
       // is a DISTINCT Innoviz position the owner wants kept (= "Change Request
       // Manager"), no longer folded into the Change-Control role. dropCustomerChangeDup

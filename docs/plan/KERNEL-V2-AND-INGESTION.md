@@ -81,6 +81,17 @@ outcomes/tense/language readers are added.
 
 ## Status (2026-06-16)
 
+**Task 1a DONE** — the owner's `gabriel-kernel-v2.json` is staged in D1
+`user_kernel.kernel_v2` (a NEW, non-destructive TEXT column; the v1 `history` is
+untouched so generation keeps running). Written transcription-free via a Node-built SQL
+file run through `wrangler d1 execute ant_memory --remote --config
+workers/access-relay/wrangler.toml`. Verified: `length(kernel_v2)`=19972 (exact),
+`json_valid`=1, schemaVersion `2.0-kernel`, 12 experience entries, tenseMode `auto`,
+experience[0]=`Product / Project Expert isCurrent=1`. **Next:** §2 TENSE-RENDER-001 reads
+from `kernel_v2` (tenseMode + per-role isCurrent), then §3 language, then §4 ingestion. The
+owner will re-import v2 cleanly via Settings → Personal once §4 JSON ingestion handles the
+v2 shape — `kernel_v2` is the staging copy until then.
+
 SPEC ANCHORED. The interim v1 kernel fixes shipped this session (security guard,
 Copenhagen Wolves canon, Meprolight split, reverse-chron order, names, tools group names,
 unsolicited profile) are SUPERSEDED by this v2 kernel once loaded — v2 is the canonical

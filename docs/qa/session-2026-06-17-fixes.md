@@ -47,6 +47,33 @@ one worker deployer, push to main only.
    appear in BOTH files (terser preserves string contents) + structural invariants
    (head `(()=>{`, zero `"use strict"` = APPJS-BLUESCREEN-001 guard). 312/312 suite.
 
+5. **1.50.524 — LANGUAGES-CARD-PERSONAL-001** `[auto-deploys]`. Settings → Personal
+   lost its order-based flex-column wrapper, so the LanguageCard island couldn't anchor
+   (`findSettingsFlexColumn`) and fell below "Done" with its spelling/tense controls.
+   The section `order` values were still authored (Background 10, CV Sidebar 15,
+   Languages 20, Experience-Tense 22, Advanced Tone 30, Banned Words 40, Personality 45)
+   but inert under block layout. Fix: the Personal subtab container (app.src.js `yl` +
+   app.js mirror) is now `display:flex; flex-direction:column` — that single change
+   ACTIVATES the whole pre-authored order layout; the island mounts at order 20 and the
+   tense/spell sidecars re-anchor on it. Unblocks the Personal half of EXP-TENSE.
+   Verified: `diag-languages-card-personal.mjs` (5 checks).
+
+6. **1.50.525 — VISUAL-PKG-001 + MERGE-DUP-003** `[auto-deploys]`. VISUAL-PKG-001:
+   native Layout heading "STYLE PACKAGE" → "Visual package" (app.src.js + app.js mirror)
+   AND PackagePicker `STYLE_PACKAGE_RE` widened to `/^(STYLE PACKAGE|Visual package)$/i`
+   (same release, so the card never orphans). MERGE-DUP-003: WritingStylePicker copy
+   "Saved tones"→"Saved customs" (storage/load/save unchanged). Islands rebuilt via vite
+   (reproducible; also corrected a STALE committed bundle missing the band/`#33446F` +
+   head/`#00746E` palette tokens). Verified: `diag-visual-pkg-relabel.mjs` (heading
+   reads "Visual package", no "STYLE PACKAGE" left, PackagePicker still anchors).
+
+7. **LANG-EXPAND-003 (plan, owner 2026-06-17)** `[docs]`. Added §10 to
+   `docs/plan/LANG-EXPAND-001.md`: Polish (pl, Tier 1), Guaraní (gn, Tier 1 +
+   native-review, thin dictionary → proofing-disabled-with-notice), and Spanish variants
+   es-ES (España) + es-MX (México) as variants of `es` (en-GB↔en-US pattern). German (de)
+   + Russian (ru) confirmed already covered by §9. Post-003: 26 base + 3 variants; §2
+   BCP-47 gate + 6.6 selector/dictionary rule still apply.
+
 ## Findings — stale-open / not-a-bug (recommend closing in ACTIVE_BUGS)
 
 - **RESULTS-PDF-INK-BLACK-001** — ALREADY SHIPPED in docx-worker 1.14.73 (commit
@@ -64,13 +91,22 @@ one worker deployer, push to main only.
   fabricate) and the gate needs his live data. Owner-present / needs a data fixture.
 - **CL-006 (capture table data in CL generation)** — proxy prompt/schema; the effect
   is only judgeable on an owner REGEN (prompt-side, not headless-closeable).
-- **DISCLOSURE-TRIANGLE-CONSISTENCY-001** — lives in app.src.js (not a sidecar);
-  multi-site minified-mirror change + live-Settings-DOM verification for cosmetic
-  value. Best done in an owner-present Settings pass alongside LANGUAGES-CARD.
-- **Lane 0.B LANGUAGES-CARD-PERSONAL-001 / VISUAL-PKG-001 / MERGE-DUP / Lane 5 wizard**
-  — app.src.js `yl` wrap + island rebuilds + wizard-DOM anchoring; longer-cycle work
-  needing live Playwright verification of Settings/wizard mounts. Queued for a focused
-  Settings/islands pass.
+- **DISCLOSURE-TRIANGLE-CONSISTENCY-001** — the other Advanced collapsibles are native
+  `<details>/<summary>`; a consistent ▸/▾ needs carefully-scoped global CSS (risk of
+  hitting other `<details>` like the wizard showcase) for cosmetic value. Quick
+  owner-present tweak.
+- **MERGE-DUP-001** (hide legacy writing-style `<select>`) — needs a live select-node
+  probe before shipping the selector (overshoot risk). Owner-present.
+- **Lane 5.1/5.2 kernel-button dedup + superset ingest** — `antcv-kernel-import.js`
+  injects via a documentElement-wide observer + a BROAD text-match anchor. The existing
+  `diag-kernel-import.mjs` already asserts no-duplicates for the basic case, so the
+  owner's duplication (#1/#3) is in specific wizard/Personal DOM scenarios the diag
+  doesn't reproduce. Dropping the text-match / scoping blind risks the button
+  DISAPPEARING from a step where it's needed. Probe-first, owner-present (5.2 also has a
+  STOP condition in its authorisation).
+- **Lane 5.3 (quiz→6C) / 5.5 (showcase collapsible+mount)** — app.js/island changes
+  whose verification needs the live multi-step wizard / mobile sidecar modal rendered.
+  Queued for a focused wizard pass.
 - **Lane 2 relay** — the "stranded" fixes (1.50.220–223) are long superseded; the PWA
   auto-deployed past them and access-relay is current (per ACTIVE_BUGS session
   registry). No pending relay deploy identified.
@@ -83,5 +119,10 @@ one worker deployer, push to main only.
 3. The 1.50.522 inline-label fix shows "Who I am:" / "Why …:" labels in the PREVIEW for
    IMPORTED data (was export-only).
 
-State after run: PWA **1.50.523**, docx-worker **1.14.76**, suite **312/312**, 19 docx
-diags green, mirror-guard green.
+State after run: PWA **1.50.525**, docx-worker **1.14.76**, suite **312/312**, 19 docx
+diags green, mirror-guard green, tsc clean. Islands bundle rebuilt + un-staled.
+
+Owner punch-list (additions): (4) Settings → Personal — the Languages card is back in
+place (order 20, between CV Sidebar and the tense control) with its spelling/tense
+controls; (5) Settings → Layout — the package heading now reads "Visual package" and
+the "Saved customs" wording; confirm both read right and the package picker still works.

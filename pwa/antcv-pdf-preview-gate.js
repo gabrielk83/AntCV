@@ -645,25 +645,15 @@ ${inlineStyles}
       'Save as PDF. Uses the app’s server-side ATS PDF export when available, ' +
       'falling back to the browser print dialog (choose "Save as PDF").';
     print.addEventListener('click', () => {
-      // JD-ANALYSIS-PRINT-001 follow-up (owner 2026-06-12: "the re-export of
-      // analysis is still reaching CV page setup panel"): the modal's
-      // Save-as-PDF cloned and printed the CV even while the ANALYSIS view
-      // was the foreground surface — the window.print divert (print-iframe-
-      // preview 1.50.376) never sees this path. Apply the SAME foreground
-      // check here and divert to the analysis exporter.
-      try {
-        if (window.AntcvPrintIframePreview &&
-            typeof window.AntcvPrintIframePreview._analysisViewIsForeground === 'function' &&
-            window.AntcvPrintIframePreview._analysisViewIsForeground() &&
-            window.AntcvAnalysisReportPdf360 &&
-            typeof window.AntcvAnalysisReportPdf360._export === 'function') {
-          closeModal();
-          setTimeout(function () {
-            try { window.AntcvAnalysisReportPdf360._export(); } catch (_) {}
-          }, 60);
-          return;
-        }
-      } catch (_) {}
+      // EXPORT-PDF-WRONG-DOC-001 (owner 2026-06-16: "the document output for CV
+      // is the Analysis"). The modal's "Save as PDF" used to DIVERT to the
+      // analysis exporter whenever the analysis panel happened to be the
+      // foreground surface BEHIND the modal — but this modal is explicitly
+      // previewing the CV/CL (the CV/CL toggle picks which), so Save-as-PDF must
+      // export the PREVIEWED document, never the analysis. The analysis has its
+      // OWN dedicated "Analysis (PDF)" button in this modal (added 1.50.377), so
+      // the divert is both redundant and the cause of the wrong-doc export.
+      // Removed — Save-as-PDF now always exports the previewed CV/CL.
       // Prefer the app's real PDF export (CloudConvert /generate-pdf when the
       // docx-worker has CLOUDCONVERT_API_KEY — proper Unicode-embedded ATS
       // PDF). Identify it by its stable title prefix. Fall back to printing

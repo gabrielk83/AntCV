@@ -48,24 +48,60 @@ FIX (sidecar-only, `antcv-kernel-import.js` `injectEntry`):
 **Gate:** exactly one `🧬 Build / update kernel from CV` button in Settings → Personal, after a hard
 refresh; still present once (not zero).
 
-## 2. Personal settings — kernel-build vs import button overlap  [antcv-kernel-import.js + antcv-data-importer.js]
+## 2. Personal settings — consolidate to ONE ingest button (A), superset of both engines  [antcv-kernel-import.js + antcv-data-importer.js]
 
-Image 1 shows BOTH `📥 Import profile from Word, PDF, JSON, or image` (data-importer replacement)
-AND `🧬 Build / update kernel from CV` (kernel-import). Owner: a separate import button "makes no
-sense" — both ingest a CV. They are genuinely different engines though: import → fills personalInfo
-fields; kernel-build → extracts a structured kernel (roles/conflicts/gaps) for generation. So this
-is a CONSOLIDATION decision, not a pure delete.
+OWNER DECISION: **(A) — ONE primary button, BUT it must be a TRUE SUPERSET; the lessons/capabilities
+of BOTH engines integrate into the new button, none dropped.**
 
-OWNER DECISION NEEDED (two viable shapes):
-- (A) ONE primary button "🧬 Build / update kernel from CV" (accepts .docx/.pdf/.txt/.json/image —
-  the kernel picker already accepts `.docx,.pdf,.txt,.json`, add image), and demote the field-import
-  to a small secondary link under it ("just fill the basic fields instead").
-- (B) Keep both but make the hierarchy explicit: kernel-build primary, import secondary, never two
-  peer buttons + never duplicated.
-RECOMMEND (A): the kernel is the richer path and already feeds generation; field-only import becomes
-the fallback. Implement after #1 (dedup) since both touch the same inject path.
-**Gate:** one clear primary ingest path; the secondary still works (Word/PDF/JSON/image); no peers,
-no duplicates. CONFIRM A vs B with the owner before editing.
+CRITICAL — the two engines are NOT interchangeable. Capability audit (verified in source):
+
+| | kernel-import (antcv-kernel-import.js) | data-importer (antcv-data-importer.js) |
+|---|---|---|
+| Formats | .docx .pdf .txt .json | .json .pdf .docx .png .jpg .jpeg .webp (SUPERSET) |
+| Plain CV (pdf/docx) | structured roles + conflict/gap review + save-to-account | fills personalInfo fields |
+| Kernel .json | yes (structured kernel) | — |
+| AntcvBackup .json | — | full restore (DIRECT-JSON-IMPORT-001) |
+| VIA assessment PDF | — | workStyle + stylePrefs |
+| Banned-words DOCX | — | wordsDoc + stylePrefs.banned_words/phrases/patterns |
+| Image (png/jpg/webp) | — | profile photo (resized) |
+| Conflict/gap review | yes (metrics never auto-overwritten; gaps never invented) | — |
+| Save to account | yes (relay /api/profile/kernel-v2) | — |
+
+A naive "kernel button only" would SILENTLY LOSE photo import, VIA->workStyle, banned-words->
+stylePrefs, and AntcvBackup restore — the data-importer is the ONLY path for those four. That is the
+regression to avoid (the owner's explicit "integrate lessons from both").
+
+REQUIRED DESIGN — one entry point, type-routed, preserves every capability:
+- ONE primary button "Build / update kernel from CV" whose file input accepts the UNION:
+  .docx,.pdf,.txt,.json,.png,.jpg,.jpeg,.webp
+- On file pick, ROUTE by type/content BEFORE picking an engine — reuse the data-importer's existing
+  classify() (it already detects via-pdf / words-docx / image / AntcvBackup-json / plain-cv):
+  - image -> data-importer handleImage (photo)
+  - VIA pdf -> data-importer handleVIA (workStyle + stylePrefs)
+  - banned-words docx -> data-importer words-docx route (stylePrefs.banned_*)
+  - AntcvBackup json -> data-importer backup restore
+  - kernel json OR plain CV (pdf/docx/txt) -> kernel-import runImport (structured roles + the
+    conflict/gap review modal + Apply / Apply+save-to-account)
+- KEEP the kernel review modal governance (conflicts: existing kept by default, metrics never
+  auto-overwritten; gaps never invented; language-to-generate-in picker) — the kernel engine's
+  lessons, must survive.
+- KEEP the data-importer's non-destructive write scheme + per-route summary/confirm (empty fields
+  keep current values; photo resize; banned-words parsing) — its lessons, must survive.
+- No second visible button, but NO route lost — the single button dispatches to the right engine.
+  Add small helper text: "CV, kernel JSON, LinkedIn export, VIA report, banned-words doc, or a photo".
+
+IMPLEMENTATION: cleanest seam is antcv-kernel-import.js — after the #1 dedup leaves ONE button,
+change its click handler from openPicker() (kernel-only) to a router that opens one input with the
+union accept, classifies the file (call into window.AntcvDataImporter classify + per-type handlers;
+expose them if not already public), and dispatches. Then antcv-data-importer.js STOPS injecting its
+own visible replacement button (keeps its modal + handlers as the library the router calls) so only
+the single kernel-labelled button remains. Verify AntcvDataImporter exposes classify + handlers; if
+not, that small public-API wiring is the main work here.
+
+Gate: ONE ingest button in Settings -> Personal. Each of the 6 source types still reaches its
+correct handler (test one file of each: plain CV, kernel json, AntcvBackup json, VIA pdf,
+banned-words docx, image) — NO capability lost vs today. Conflict/gap review still appears for
+CVs/kernels. Implement AFTER #1 (dedup).
 
 ## 3. Wizard — "Build / update kernel from CV" pill sticky across every stage  [antcv-kernel-import.js]
 
@@ -144,7 +180,9 @@ present, persist, reflect in Settings → Personal + generation. Overlaps LANGUA
 - **Autonomous-viable, code-located:** #1 (kernel-import panel-level dedup), #3 (scope the
   injection / drop the broad text anchor), #6 (quiz relocation), #7 (add tense/spell to slide), #4
   (collapsible + SectionFormatPicker reuse + mount fix). All sidecar/island, build-verifiable.
-- **Owner-decision then code:** #2 (consolidation shape A vs B — recommend A).
+- **Owner-decided (A), code-located:** #2 — one type-routed superset button; integrate BOTH engines'
+  capabilities (kernel review governance + data-importer photo/VIA/banned-words/backup routes). No
+  capability may regress.
 - **Sequence-dependent:** #5 — ship #3 first, then re-check 6A for a residual native second upload.
 
 ## Suggested implementation order
@@ -153,4 +191,5 @@ present, persist, reflect in Settings → Personal + generation. Overlaps LANGUA
 2. #6 (quiz: remove from language sidecar, add to app.js 6C).
 3. #7 (tense + spell on the language slide).
 4. #4 (showcase collapsible + Layout-style previews + mount fix).
-5. #2 once the owner confirms A vs B.
+5. #2 (A): after #1 dedup, route the single button by file type across both engines; verify all 6
+   source types still work + the kernel conflict/gap review survives.

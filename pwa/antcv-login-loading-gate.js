@@ -31,7 +31,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.595-login-warmup';
+  var VERSION = '1.50.596-login-warmup';
   if (window.__antcvLoginLoadingGate === VERSION) return;
   window.__antcvLoginLoadingGate = VERSION;
 
@@ -157,7 +157,7 @@
     var ver = document.createElement('span');
     // Match the pre-login screen's "X.XX.XXX-babel-fish" version chip. Numeric part
     // tracks this gate's VERSION (bumped every release); codename mirrors app.js `Ai`.
-    ver.textContent = (VERSION.match(/^\d+\.\d+\.\d+/) || ['1.50.595'])[0] + '-babel-fish';
+    ver.textContent = (VERSION.match(/^\d+\.\d+\.\d+/) || ['1.50.596'])[0] + '-babel-fish';
     ver.style.cssText = 'font-size:10px;font-weight:600;color:rgba(255,255,255,0.52);';
     brand.appendChild(h1); brand.appendChild(ver);
 
@@ -237,7 +237,11 @@
       }
       var origTab = lsRaw('settingsTab');
       var origSub = lsRaw('settingsSubTab');
-      var subtabs = ['personal', 'layout', 'account', 'keys'];   // the panels that re-layout on first open
+      // owner 2026-06-17: warm ONLY the jumpy island panels (Personal + Layout).
+      // The 'account' subtab mounts the AntcvAuthPanel (ACCOUNT MODE Demo/Paid +
+      // SIGN IN) — cycling to it surfaced that card "stuck into the loading", and
+      // it isn't a jumpy-layout panel anyway. 'keys' is likewise static.
+      var subtabs = ['personal', 'layout'];
       var i = 0;
       function step() {
         try {
@@ -293,7 +297,13 @@
     var el = overlay || document.getElementById('antcv-login-loading-overlay');
     if (!el) { ticking = false; return; }
     var elapsed = Date.now() - startedAt;
-    if (editorReady() && !readyAt) { readyAt = Date.now(); warmUp(); }   // editor exists → warm Settings behind the cover
+    if (editorReady() && !readyAt) {
+      readyAt = Date.now();
+      // Only warm when the REAL editor is up (the CV preview paper). editorReady()
+      // also matches the topbar, which can exist on the login screen — warming
+      // there would open Settings→account over the sign-in UI.
+      if (document.querySelector('.antcv-preview-paper')) warmUp();
+    }
     var settled = readyAt && (Date.now() - readyAt) >= SETTLE_BUFFER;
     // lift once the editor has settled AND the warm-up cycle finished; MAX_MS is the backstop.
     if ((settled && elapsed >= MIN_MS && warmupDone) || elapsed >= MAX_MS) { hideOverlay(); ticking = false; return; }

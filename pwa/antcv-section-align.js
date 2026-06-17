@@ -544,11 +544,13 @@
     // the persisted percentage demands it. Computed against the parent
     // (section) width so it stays bounded.
     const parent = wrapEl.parentElement;
-    if (parent) {
-      const parentW = parent.getBoundingClientRect().width;
-      if (parentW > 0 && parentW * pct / 100 > 540) {
-        wrapEl.style.maxWidth = 'none';
-      }
+    const parentW = parent ? parent.getBoundingClientRect().width : 0;
+    // MOBILE-TABLE-ENLARGE-001 (owner 2026-06-17): release the React-inlined
+    // maxWidth cap whenever the table is enlarged BEYOND its default rest width —
+    // not only past an absolute 540px (which a narrow mobile column never
+    // reaches, so the table couldn't grow past its original size on phones).
+    if (pct > TABLE_DEFAULT_PCT || (parentW > 0 && parentW * pct / 100 > 540)) {
+      wrapEl.style.maxWidth = 'none';
     }
     // v1.40.135 — Force-centre the wrap regardless of inherited styles.
     // For pct ≤ 100, use `margin: auto` so the table sits in the
@@ -688,7 +690,10 @@
         const pct = (newWidthPx / ctx.sectionW) * 100;
         const clamped = Math.max(TABLE_WIDTH_MIN, Math.min(TABLE_WIDTH_MAX, pct));
         wrapEl.style.width = clamped + '%';
-        if (ctx.sectionW * clamped / 100 > 540) {
+        // MOBILE-TABLE-ENLARGE-001: release the maxWidth cap as soon as the table
+        // is enlarged past its default, so it can grow beyond the original on a
+        // narrow (mobile) column, not only past an absolute 540px.
+        if (clamped > TABLE_DEFAULT_PCT || ctx.sectionW * clamped / 100 > 540) {
           wrapEl.style.maxWidth = 'none';
         }
         // v1.40.134 — live bleed-out treatment during drag, so the

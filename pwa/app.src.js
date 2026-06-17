@@ -5549,18 +5549,26 @@
                             if (!__ermAvail) return null;
                             try {
                               const raw = localStorage.getItem("sections") || "{}";
-                              const key = "rr:" + raw.length + ":" + (localStorage.getItem("outcomesMode") || "") + ":" + String(localStorage.getItem("antcv:lastJdText") || "").length + ":" + String(localStorage.getItem("antcv:outcomeRoleMap") || "").length;
+                              // CONTENT-EXACT memo key (the full sections string + the
+                              // other inputs applyOutcomesMode reads). A length-based key
+                              // collided across pipeline states and served a STALE map to
+                              // page-2 roles (they showed page-1's result). Keying on the
+                              // exact content guarantees the map matches what is rendered.
+                              const key = raw + "|" + (localStorage.getItem("outcomesMode") || "") + "|" + (localStorage.getItem("antcv:lastJdText") || "") + "|" + (localStorage.getItem("antcv:outcomeRoleMap") || "");
                               if (window.__antcvRRkey === key && window.__antcvRR) return window.__antcvRR;
                               const cv = (JSON.parse(raw).cv) || [];
                               const out = window.AntcvApplyOutcomesMode(JSON.parse(JSON.stringify(cv)), "cv");
                               const ex = (out || []).find((s2) => s2 && "experience" === s2.type);
                               const m = {};
-                              ((ex && ex.roles) || []).forEach((r2, ri2) => { if (r2 && "string" == typeof r2.results && r2.results.trim()) { m["id:" + (r2.id != null ? r2.id : "")] = r2.results.trim(); m["ix:" + ri2] = r2.results.trim(); } });
+                              // Key STRICTLY by role id — an index fallback grabbed the
+                              // wrong role on the page-2 continuation render (all showed
+                              // role-1). Roles carry stable ids from generation/import.
+                              ((ex && ex.roles) || []).forEach((r2) => { if (r2 && r2.id != null && "string" == typeof r2.results && r2.results.trim()) m["id:" + r2.id] = r2.results.trim(); });
                               window.__antcvRR = m; window.__antcvRRkey = key; return m;
                             } catch (_) { return {}; }
                           })();
-                          // export-truth lookup by role id (fallback to visible index)
-                          const __ermText = __ermAvail ? (((e && e.id != null && __erm["id:" + e.id]) || "") || (function () { try { const vi = __origRoles.filter((r2) => r2 && !1 !== r2.on).indexOf(e); return vi >= 0 ? (__erm["ix:" + vi] || "") : ""; } catch (_) { return ""; } })()) : "";
+                          // export-truth lookup by STABLE role id only (no index guess).
+                          const __ermText = __ermAvail && e && e.id != null ? (__erm["id:" + e.id] || "") : "";
                           const __lam = __ermAvail ? __ermText : __lamOfL(e);
                           // When the export function is available it is the single source
                           // of truth: a role with no export Results shows none in preview

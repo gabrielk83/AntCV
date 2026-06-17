@@ -29,6 +29,7 @@ import {
   type WritingPrefs,
   type LayoutPrefs,
 } from '../../lib/writing-prefs';
+import { readEnabledLangs } from '../../lib/lang-prefs';
 
 // Sub-section header used inside the picker. Same visual register as the
 // LanguageCard header in src/islands/LanguageCard/LanguageCard.tsx.
@@ -748,7 +749,6 @@ function BannedListEditor({
 // injected by the fetch-wrap). Plus a curated BANK ported from the app.js control.
 export type BannedScope = 'all' | LangCode;
 const SCOPE_LABELS: Record<BannedScope, string> = { all: 'All languages', en: 'EN', da: 'DA', es: 'ES', zh: 'ZH' };
-const SCOPES: BannedScope[] = ['all', 'en', 'da', 'es', 'zh'];
 
 // Curated bank, ported verbatim from the app.js control (ml / hl seed lists).
 const BANNED_WORD_BANK: readonly string[] = [
@@ -864,14 +864,16 @@ function SemanticConstraintsEditor(): JSX.Element {
 
 function ScopeSelector({
   value,
+  scopes,
   onChange,
 }: {
   value: BannedScope;
+  scopes: BannedScope[];
   onChange: (scope: BannedScope) => void;
 }): JSX.Element {
   return (
     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-      {SCOPES.map((scope) => (
+      {scopes.map((scope) => (
         <button
           key={scope}
           type="button"
@@ -911,6 +913,9 @@ export function WritingStylePicker(): JSX.Element {
   // Collapsed-by-default sections (owner 2026-06-17).
   const [wordsOpen, setWordsOpen] = useState(false);
   const [phrasesOpen, setPhrasesOpen] = useState(false);
+  // v1.50.553 — the banned per-language scope tabs reflect the ENABLED languages
+  // (owner: changing languages changes the banned per-language selector).
+  const [enabledLangs, setEnabledLangs] = useState<LangCode[]>(() => readEnabledLangs());
 
   useEffect(() => {
     const refreshPrefs = () => setPrefs(readWritingPrefs());
@@ -919,13 +924,18 @@ export function WritingStylePicker(): JSX.Element {
       const detail = (ev as CustomEvent).detail as { lang?: LangCode } | undefined;
       setEditorLang(detail?.lang ?? readEditorLanguage());
     };
+    const refreshLangs = () => setEnabledLangs(readEnabledLangs());
     window.addEventListener('antcv:writing-prefs-changed', refreshPrefs);
     window.addEventListener('antcv:layout-prefs-changed', refreshLayout);
     window.addEventListener('antcv:editor-language-changed', refreshLang as EventListener);
+    window.addEventListener('antcv:enabled-languages-changed', refreshLangs);
+    window.addEventListener('antcv:language-prefs-changed', refreshLangs);
     return () => {
       window.removeEventListener('antcv:writing-prefs-changed', refreshPrefs);
       window.removeEventListener('antcv:layout-prefs-changed', refreshLayout);
       window.removeEventListener('antcv:editor-language-changed', refreshLang as EventListener);
+      window.removeEventListener('antcv:enabled-languages-changed', refreshLangs);
+      window.removeEventListener('antcv:language-prefs-changed', refreshLangs);
     };
   }, []);
 
@@ -1118,7 +1128,7 @@ export function WritingStylePicker(): JSX.Element {
       {wordsOpen && (
         <>
           <div style={{ margin: '0 0 6px' }}>
-            <ScopeSelector value={bannedScope} onChange={onScopeChange} />
+            <ScopeSelector value={bannedScope} scopes={['all', ...enabledLangs]} onChange={onScopeChange} />
           </div>
           <div style={{ fontSize: 10.5, opacity: 0.55, margin: '0 0 6px' }}>
             {bannedScope === 'all'

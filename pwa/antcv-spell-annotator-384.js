@@ -28,7 +28,7 @@
   'use strict';
 
   if (window.__antcvSpellAnnotatorInstalled) return;
-  var VERSION = '1.50.570';
+  var VERSION = '1.50.571';
   window.__antcvSpellAnnotatorInstalled = VERSION;
 
   // SPELLERS-MATRIX-001 (owner 2026-06-17): full language matrix. Each language
@@ -43,13 +43,16 @@
   var SPELL = {
     en: { def: 'gb', variants: { gb: 'dictionary-en-gb', us: 'dictionary-en-us', in: 'dictionary-en-in', ca: 'dictionary-en-ca', au: 'dictionary-en-au', za: 'dictionary-en-za' } },
     es: { def: 'uy', variants: { uy: 'dictionary-es-uy', es: 'dictionary-es-es', mx: 'dictionary-es-mx', ar: 'dictionary-es-ar', co: 'dictionary-es-co', cl: 'dictionary-es-cl', gq: 'dictionary-es-gq' } },
-    da: { def: 'ost', variants: { ost: 'dictionary-da', jysk: 'dictionary-da' } },   // Østdansk (default) / Jysk dialects → same Hunspell base
+    da: { single: 'dictionary-da' },   // one written standard (Rigsdansk) — no dialect dictionaries exist, so no selector
+    sv: { def: 'se', variants: { se: 'dictionary-sv', fi: 'dictionary-sv-fi' } },   // Sverige (default) / Finland (finlandssvenska)
+    no: { def: 'nb', variants: { nb: 'dictionary-nb', nn: 'dictionary-nn' } },      // Bokmål (default) / Nynorsk
     fr: { def: 'fr', variants: { fr: 'dictionary-fr', ca: 'dictionary-fr', be: 'dictionary-fr', ch: 'dictionary-fr' } },
     de: { def: 'de', variants: { de: 'dictionary-de', at: 'dictionary-de-at', ch: 'dictionary-de-ch' } },
     it: { def: 'it', variants: { it: 'dictionary-it', ch: 'dictionary-it' } },
     ar: { def: 'ar', variants: { ar: 'dictionary-ar', eg: 'dictionary-ar', ma: 'dictionary-ar', sa: 'dictionary-ar' } },
     fa: { def: 'ir', variants: { ir: 'dictionary-fa', af: 'dictionary-fa' } },        // Iranian (default) / Afghani Dari → same base
     he: { single: 'dictionary-he' },
+    fi: { single: 'dictionary-fi' },   // Finnish — no published Hunspell dict (404) → graceful no-op + AI context check
     ru: { single: 'dictionary-ru' },
     tr: { single: 'dictionary-tr' },
     ku: { single: 'dictionary-ku' },
@@ -253,7 +256,7 @@
   // the dictionary pass, and gated so single words / short fragments never incur
   // an LLM call. Toggle: antcv:spell:context ('0' disables; default on).
   var CTX_MODEL = 'claude-opus-4-7';
-  var LANG_NAME = { en: 'English', da: 'Danish', es: 'Spanish', zh: 'Simplified Chinese', fr: 'French', de: 'German', it: 'Italian', ar: 'Arabic', fa: 'Persian (Farsi)', he: 'Hebrew', ru: 'Russian', tr: 'Turkish', ku: 'Kurdish', sw: 'Swahili', am: 'Amharic', fo: 'Faroese', kl: 'Greenlandic (Kalaallisut)', vi: 'Vietnamese', th: 'Thai', zu: 'Zulu' };
+  var LANG_NAME = { en: 'English', da: 'Danish', sv: 'Swedish', no: 'Norwegian', fi: 'Finnish', es: 'Spanish', zh: 'Simplified Chinese', fr: 'French', de: 'German', it: 'Italian', ar: 'Arabic', fa: 'Persian (Farsi)', he: 'Hebrew', ru: 'Russian', tr: 'Turkish', ku: 'Kurdish', sw: 'Swahili', am: 'Amharic', fo: 'Faroese', kl: 'Greenlandic (Kalaallisut)', vi: 'Vietnamese', th: 'Thai', zu: 'Zulu' };
   function ctxSys(l) {
     if (l === 'zh') return 'You are a meticulous Simplified-Chinese proofreader. Find 错别字 — characters that are WRONG for the sentence (wrong homophone, mistyped, or context-unfitting character). Flag ONLY clear character errors; ignore wording, style, punctuation and grammar. Return STRICT JSON only, no markdown fences: {"errors":[{"wrong":"<exact wrong substring copied verbatim from the text>","correct":"<corrected substring>"}]}. Return {"errors":[]} if there are none.';
     var name = LANG_NAME[l] || "the text's language";

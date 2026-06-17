@@ -86,13 +86,17 @@ interface SpellCfg { def?: string; variants?: [string, string][]; single?: boole
 const SPELL_UI: Record<string, SpellCfg> = {
   en: { def: 'gb', variants: [['gb', 'UK (British)'], ['us', 'US (American)'], ['in', 'India'], ['ca', 'Canada'], ['au', 'Australia'], ['za', 'South Africa']] },
   es: { def: 'uy', variants: [['uy', 'Uruguay'], ['es', 'España'], ['mx', 'México'], ['ar', 'Argentina'], ['co', 'Colombia'], ['cl', 'Chile'], ['gq', 'Guinea Ecuatorial']] },
-  da: { def: 'ost', variants: [['ost', 'Østdansk'], ['jysk', 'Jysk']] },
+  da: { single: true, dict: true },   // one written standard — no variant selector
+  sv: { def: 'se', variants: [['se', 'Sverige'], ['fi', 'Finland (finlandssvenska)']] },
+  no: { def: 'nb', variants: [['nb', 'Bokmål'], ['nn', 'Nynorsk']] },
   fr: { def: 'fr', variants: [['fr', 'France'], ['ca', 'Canada'], ['be', 'Belgique'], ['ch', 'Suisse']] },
   de: { def: 'de', variants: [['de', 'Deutschland'], ['at', 'Österreich'], ['ch', 'Schweiz']] },
   it: { def: 'it', variants: [['it', 'Italia'], ['ch', 'Svizzera']] },
   ar: { def: 'ar', variants: [['ar', 'الفصحى (MSA)'], ['eg', 'مصر'], ['ma', 'المغرب'], ['sa', 'السعودية']] },
   fa: { def: 'ir', variants: [['ir', 'ایران (Iranian)'], ['af', 'افغانستان (Dari)']] },
   he: { single: true, dict: true }, ru: { single: true, dict: true }, tr: { single: true, dict: true },
+  fi: { single: true, dict: false },  // Finnish — no published Hunspell dictionary
+
   ku: { single: true, dict: false }, sw: { single: true, dict: false }, am: { single: true, dict: false },
   fo: { single: true, dict: true },   // Faroese — real dictionary
   vi: { single: true, dict: true },   // Vietnamese — real dictionary
@@ -130,6 +134,7 @@ const NATIVE: Record<string, string> = {
   fr: 'Français', de: 'Deutsch', it: 'Italiano', ar: 'العربية', fa: 'فارسی',
   he: 'עברית', ru: 'Русский', tr: 'Türkçe', ku: 'Kurdî', sw: 'Kiswahili', am: 'አማርኛ',
   fo: 'Føroyskt', kl: 'Kalaallisut', vi: 'Tiếng Việt', th: 'ไทย', zu: 'isiZulu',
+  sv: 'Svenska', no: 'Norsk', fi: 'Suomi',
 };
 // First language = the DEFAULT; it drives generation + the interface. Mirror the
 // wizard's writePrimaryLanguage (JSON-encoded 'language', like the app's u.set).

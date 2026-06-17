@@ -14,7 +14,8 @@ export type LangCode =
   | 'en' | 'da' | 'es' | 'zh'
   | 'fr' | 'de' | 'it' | 'ar' | 'fa' | 'he'
   | 'ru' | 'tr' | 'ku' | 'sw' | 'am'
-  | 'fo' | 'kl' | 'vi' | 'th' | 'zu';
+  | 'fo' | 'kl' | 'vi' | 'th' | 'zu'
+  | 'sv' | 'no' | 'fi';
 
 export interface LangOption {
   code: LangCode;
@@ -24,6 +25,9 @@ export interface LangOption {
 export const LANGS: readonly LangOption[] = [
   { code: 'en', label: 'English' },
   { code: 'da', label: 'Danish' },
+  { code: 'sv', label: 'Swedish' },
+  { code: 'no', label: 'Norwegian' },
+  { code: 'fi', label: 'Finnish' },
   { code: 'es', label: 'Spanish' },
   { code: 'zh', label: 'Chinese' },
   { code: 'fr', label: 'French' },

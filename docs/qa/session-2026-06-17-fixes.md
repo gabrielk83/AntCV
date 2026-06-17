@@ -85,6 +85,31 @@ one worker deployer, push to main only.
    + Russian (ru) confirmed already covered by §9. Post-003: 26 base + 3 variants; §2
    BCP-47 gate + 6.6 selector/dictionary rule still apply.
 
+## Backlog dig (after owner "look in older bugs and features")
+
+Swept the full reconciled old-open backlog (`AntCV_old_open_reconciled_2026-06-16.md`,
+102 IDs) + `FEATURES_REGISTRY.md`. The Settings-route + preview headless harnesses built
+this session unlocked items previously marked "owner-present":
+
+- **8. MERGE-DUP-001** `[SHIPPED 1.50.527]` — probed the live Personal subtab (3 selects:
+  legacy writing-style dup, custom-slots, island), then the WritingStylePicker island
+  hides ONLY the legacy writing-style `<select>` (scoped to the element, never its
+  container — the two legacy buttons stay). Verified `diag-merge-dup-writing-style.mjs`
+  (4/4): legacy select display:none+tagged, island + custom-slots untouched.
+- **SECTION-LAYOUT-GRAPHIC-001 (#17)** — implemented a per-row format-shape thumbnail
+  (`FormatPreview`) but **REVERTED, not shipped**: the SectionFormatPicker only renders
+  inside the Advanced → Style "ADVANCED VISUAL STYLES" React-state collapsible, which I
+  could not drive open headlessly, so I could not verify the thumbnail actually shows.
+  Sound + additive (builds, tsc-clean) but unverifiable here — needs an owner look or a
+  harness that opens that collapsible. The `results`-option half (#18) is deferred
+  separately: it changes the GLOBAL `outcomesMode` semantics from a per-section control
+  (design intent needed).
+- **Rest of the 102 confirmed honestly out-of-scope for unattended work:** most features
+  are stale-CLOSED (registry not pruned); list-row controls (9, 7 prior failed
+  iterations), mobile (7), pagination remainder, candidate/application (6), preview-shell
+  (mostly shipped) are owner-present/probe-first; LOCATION-001 touches the persisted
+  personalInfo shape (data-risk). VISUAL-PKG-002/003 already shipped (decorateNativePackageButtons).
+
 ## Findings — stale-open / not-a-bug (recommend closing in ACTIVE_BUGS)
 
 - **RESULTS-PDF-INK-BLACK-001** — ALREADY SHIPPED in docx-worker 1.14.73 (commit
@@ -130,7 +155,7 @@ one worker deployer, push to main only.
 3. The 1.50.522 inline-label fix shows "Who I am:" / "Why …:" labels in the PREVIEW for
    IMPORTED data (was export-only).
 
-State after run: PWA **1.50.526**, docx-worker **1.14.76**, suite **312/312**, 19 docx
+State after run: PWA **1.50.527**, docx-worker **1.14.76**, suite **312/312**, 19 docx
 diags green, mirror-guard green, tsc clean. Islands bundle rebuilt + un-staled.
 
 Owner punch-list (additions): (4) Settings → Personal — the Languages card is back in

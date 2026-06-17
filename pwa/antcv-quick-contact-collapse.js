@@ -18,7 +18,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.577-quick-contact';
+  var VERSION = '1.50.579-quick-contact';
   if (window.__antcvQuickContact === VERSION) return;
   window.__antcvQuickContact = VERSION;
 
@@ -123,23 +123,34 @@
     return null;
   }
 
-  // IDENTITY-ABOVE-STYLE (owner 2026-06-17): the app.js WRITING STYLE control +
-  // description render ABOVE the Full Name field, and the writing-style island
-  // anchors above that — so identity sat below writing style. The Personal panel
-  // is an order-based flex column, so float the identity block (Full Name +
-  // Headline + the Quick-contact header + contact rows) to the top with a
-  // negative CSS order. Re-applied each pass (React resets inline styles).
-  function liftIdentity(col, hdr, rows) {
-    var ids = [];
-    var fn = topRowByPlaceholder(col, 'Jane Doe');           // Full Name
-    var hl = topRowByPlaceholder(col, 'Senior Project Manager'); // Headline
-    if (fn) ids.push(fn);
-    if (hl) ids.push(hl);
-    if (hdr) ids.push(hdr);
-    for (var i = 0; i < rows.length; i++) ids.push(rows[i]);
-    for (var j = 0; j < ids.length; j++) {
-      if (ids[j].style.order !== '-1') ids[j].style.order = '-1';
+  // The direct child of `col` that contains an element whose (short) text matches
+  // `re` — used to locate the injected Import / Apply / Undo buttons.
+  function topChildByText(col, re) {
+    var all = col.querySelectorAll('button, a, summary, div, span, label');
+    for (var i = 0; i < all.length; i++) {
+      var t = (all[i].textContent || '').trim();
+      if (t && t.length < 90 && re.test(t)) {
+        var n = all[i];
+        while (n && n.parentElement && n.parentElement !== col) n = n.parentElement;
+        if (n && n.parentElement === col) return n;
+      }
     }
+    return null;
+  }
+
+  // ORDER (owner 2026-06-17): in the order-based Personal flex column, lay the
+  // top block as: Import → Apply/Undo → Full Name → Headline → Quick contact →
+  // (then Writing Style at default order 0). Negative orders float them above the
+  // writing-style block. Re-applied each pass (React resets inline styles).
+  function setOrder(el, val) { if (el && el.style.order !== val) el.style.order = val; }
+  function liftIdentity(col, hdr, rows) {
+    setOrder(topChildByText(col, /Import profile/i), '-6');                 // Import …
+    setOrder(topChildByText(col, /Apply to user profile|Apply to my|↺\s*Apply/i), '-5'); // Apply (+ Undo share the row)
+    setOrder(topChildByText(col, /Undo last/i), '-5');                      // Undo (if separate row)
+    setOrder(topRowByPlaceholder(col, 'Jane Doe'), '-4');                   // Full Name
+    setOrder(topRowByPlaceholder(col, 'Senior Project Manager'), '-3');     // Headline
+    setOrder(hdr, '-2');                                                    // Quick contact header
+    for (var i = 0; i < rows.length; i++) setOrder(rows[i], '-2');          // contact rows
   }
 
   function apply() {

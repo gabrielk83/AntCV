@@ -41,7 +41,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.431-handoff';
+  var VERSION = '1.50.532-handoff';
   if (window.__antcvWizardLanguageSlide339 === VERSION) return;
   window.__antcvWizardLanguageSlide339 = VERSION;
 
@@ -191,6 +191,111 @@
   }
   function clearShown() {
     try { sessionStorage.removeItem(SHOWN_FLAG_KEY); } catch (_) {}
+  }
+
+  // --- v1.50.531: experience-tense + spelling block (WIZARD-TENSE-SPELL-001) ---
+  function tenseRead() {
+    try { if (window.AntcvTenseControl422 && window.AntcvTenseControl422._read) return window.AntcvTenseControl422._read(); } catch (_) {}
+    try { var sc = JSON.parse(localStorage.getItem('styleConfig') || '{}'); if (sc && (sc.expTense === 'present' || sc.expTense === 'past' || sc.expTense === 'auto')) return sc.expTense; } catch (_) {}
+    return 'auto';
+  }
+  function tenseWrite(v) {
+    try { if (window.AntcvTenseControl422 && window.AntcvTenseControl422._write) { window.AntcvTenseControl422._write(v); return; } } catch (_) {}
+    try {
+      if (typeof window._antcvSetExpTense === 'function') window._antcvSetExpTense(v);
+      else { var sc = {}; try { sc = JSON.parse(localStorage.getItem('styleConfig') || '{}') || {}; } catch (_) { sc = {}; } sc.expTense = v; localStorage.setItem('styleConfig', JSON.stringify(sc)); }
+    } catch (_) {}
+    try { window.dispatchEvent(new CustomEvent('antcv:exp-tense-changed', { detail: { value: v } })); } catch (_) {}
+  }
+  function spellEnabled() { try { return localStorage.getItem('antcv:spell:enabled') !== '0'; } catch (_) { return true; } }
+  function spellSetEnabled(on) { try { if (window.AntcvSpell && window.AntcvSpell.setEnabled) window.AntcvSpell.setEnabled(on); else localStorage.setItem('antcv:spell:enabled', on ? '1' : '0'); } catch (_) {} }
+  function enVariantRead() { try { return localStorage.getItem('antcv:spell:enVariant') === 'us' ? 'us' : 'gb'; } catch (_) { return 'gb'; } }
+  function enVariantWrite(code) {
+    try { localStorage.setItem('antcv:spell:enVariant', code); } catch (_) {}
+    try { if (window.AntcvSpell && window.AntcvSpell._invalidate) window.AntcvSpell._invalidate(); } catch (_) {}
+    try { window.dispatchEvent(new CustomEvent('antcv:spell-variant-changed', { detail: { variant: code } })); } catch (_) {}
+  }
+
+  function buildWritingGrammarBlock() {
+    var wrap = document.createElement('div');
+    wrap.setAttribute('data-antcv-wizard-writing-grammar', '1');
+    wrap.style.cssText = 'margin:0 0 16px;padding:12px 14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.12);border-radius:8px;';
+
+    // Experience tense ----------------------------------------------------
+    var tLabel = document.createElement('div');
+    tLabel.textContent = 'EXPERIENCE TENSE';
+    tLabel.style.cssText = 'font-size:10px;font-weight:800;letter-spacing:.3px;color:rgba(255,255,255,0.6);margin:0 0 6px;';
+    wrap.appendChild(tLabel);
+    var tRow = document.createElement('div');
+    tRow.style.cssText = 'display:flex;gap:5px;flex-wrap:wrap;';
+    var TENSE = [['auto', 'Auto', 'Present for the current role, past for earlier roles'], ['present', 'Present', 'Force present tense on every role'], ['past', 'Past', 'Force past tense on every role']];
+    function paintTense() {
+      var cur = tenseRead();
+      tRow.querySelectorAll('button[data-antcv-tense]').forEach(function (b) {
+        var on = b.getAttribute('data-antcv-tense') === cur;
+        b.style.background = on ? 'rgba(1,183,187,0.18)' : 'rgba(255,255,255,0.04)';
+        b.style.border = '1px solid ' + (on ? '#01B7BB' : 'rgba(255,255,255,0.18)');
+        b.style.color = on ? '#01B7BB' : 'rgba(255,255,255,0.6)';
+      });
+    }
+    TENSE.forEach(function (o) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.textContent = o[1]; b.title = o[2];
+      b.setAttribute('data-antcv-tense', o[0]);
+      b.style.cssText = 'padding:5px 11px;font-size:11px;font-weight:700;border-radius:5px;cursor:pointer;';
+      b.style.setProperty('pointer-events', 'auto', 'important');
+      b.addEventListener('click', function (ev) { ev.stopPropagation(); tenseWrite(o[0]); paintTense(); });
+      tRow.appendChild(b);
+    });
+    wrap.appendChild(tRow);
+    paintTense();
+    var tNote = document.createElement('div');
+    tNote.textContent = 'Auto = present for the current role, past for earlier roles.';
+    tNote.style.cssText = 'font-size:9px;color:rgba(255,255,255,0.35);margin:4px 0 0;line-height:1.4;';
+    wrap.appendChild(tNote);
+
+    // Spelling ------------------------------------------------------------
+    var sLabel = document.createElement('div');
+    sLabel.textContent = 'SPELLING';
+    sLabel.style.cssText = 'font-size:10px;font-weight:800;letter-spacing:.3px;color:rgba(255,255,255,0.6);margin:12px 0 6px;';
+    wrap.appendChild(sLabel);
+    var sToggle = document.createElement('label');
+    sToggle.style.cssText = 'display:flex;align-items:center;gap:7px;cursor:pointer;font-size:11.5px;color:rgba(255,255,255,0.85);';
+    var sCb = document.createElement('input');
+    sCb.type = 'checkbox'; sCb.checked = spellEnabled(); sCb.style.cursor = 'pointer';
+    sCb.style.setProperty('pointer-events', 'auto', 'important');
+    sCb.addEventListener('change', function () { spellSetEnabled(sCb.checked); });
+    sToggle.appendChild(sCb);
+    sToggle.appendChild(document.createTextNode('Spelling underlines (editor + preview)'));
+    wrap.appendChild(sToggle);
+    var vRow = document.createElement('div');
+    vRow.style.cssText = 'display:flex;align-items:center;gap:8px;margin:7px 0 0;flex-wrap:wrap;font-size:11px;color:rgba(255,255,255,0.6);';
+    vRow.appendChild(document.createTextNode('English:'));
+    function paintVariant() {
+      vRow.querySelectorAll('button[data-antcv-en-variant]').forEach(function (b) {
+        var on = enVariantRead() === b.getAttribute('data-antcv-en-variant');
+        b.style.borderColor = on ? '#01B7BB' : 'rgba(255,255,255,0.18)';
+        b.style.background = on ? 'rgba(1,183,187,0.12)' : 'transparent';
+        b.style.color = on ? '#01B7BB' : 'rgba(255,255,255,0.7)';
+      });
+    }
+    [['gb', 'UK'], ['us', 'US']].forEach(function (pair) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.textContent = pair[1];
+      b.setAttribute('data-antcv-en-variant', pair[0]);
+      b.style.cssText = 'padding:3px 11px;font-size:10px;font-weight:700;border-radius:5px;cursor:pointer;border:1px solid rgba(255,255,255,0.18);background:transparent;color:rgba(255,255,255,0.7);';
+      b.style.setProperty('pointer-events', 'auto', 'important');
+      b.addEventListener('click', function (ev) { ev.stopPropagation(); enVariantWrite(pair[0]); paintVariant(); });
+      vRow.appendChild(b);
+    });
+    wrap.appendChild(vRow);
+    paintVariant();
+    var sNote = document.createElement('div');
+    sNote.textContent = 'Dictionaries follow your default language. English defaults to UK. Change any of this later in Settings → Personal.';
+    sNote.style.cssText = 'font-size:9.5px;color:rgba(255,255,255,0.4);margin:6px 0 0;line-height:1.45;';
+    wrap.appendChild(sNote);
+
+    return wrap;
   }
 
   // --- Modal renderer ------------------------------------------------------
@@ -354,6 +459,14 @@
     orderHint.innerHTML = 'Move languages right to include them; reorder the right table with ↑ ↓ — the FIRST one (★ DEFAULT) drives generation and the interface.';
     orderHint.style.cssText = 'font-size:11px;line-height:1.5;color:rgba(255,255,255,0.6);margin:2px 0 16px;';
     panel.appendChild(orderHint);
+
+    // --- v1.50.531 WIZARD-TENSE-SPELL-001 (owner 2026-06-17): the language
+    // slide must also host the experience-TENSE + SPELLING selectors so they
+    // are set during onboarding, writing the SAME stores the Settings →
+    // Personal controls use (antcv-tense-control-422 styleConfig.expTense;
+    // antcv-spell-annotator-384 antcv:spell:enabled / :enVariant). Built in
+    // the DOM here so it does not depend on those sidecars' Settings injection.
+    panel.appendChild(buildWritingGrammarBlock());
 
     // Exposed so the Save handler reads the ordered selection (and for debug).
     var getSelectedLangs = function () { return selected.slice(); };

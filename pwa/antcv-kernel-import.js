@@ -11,7 +11,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.531-kernel-import';
+  var VERSION = '1.50.532-kernel-import';
   if (window.__antcvKernelImport === VERSION) return;
   window.__antcvKernelImport = VERSION;
 
@@ -60,15 +60,15 @@
       + '<h3 style="margin:10px 0 4px;font-size:13px;color:#8a6d00">Conflicts — choose per field (existing is kept by default; metrics never auto-overwritten)</h3><ul style="margin:0;padding:0;font-size:13px">' + conflictsHtml + '</ul>'
       + '<h3 style="margin:10px 0 4px;font-size:13px;color:#b5651d">Gaps — fill later (never invented)</h3><ul style="margin:0 0 12px;padding-left:18px;font-size:13px">' + gapsHtml + '</ul>'
       + '<h3 style="margin:10px 0 4px;font-size:13px;color:#283556">Languages to generate in (ONBOARD-LANG-001)</h3><div id="antcv-kimport-langs" style="display:flex;flex-wrap:wrap;gap:10px;font-size:12px;margin-bottom:12px;color:#333">' + langsHtml + '</div>'
-      + '<div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap"><button id="antcv-kimport-cancel" style="padding:7px 14px;border:1px solid #ccc;background:#f4f4f4;border-radius:6px;cursor:pointer">Cancel</button><button id="antcv-kimport-apply" title="Apply on THIS device only — updates the CV you are editing here. Nothing is uploaded. Use \'Apply + save to account\' to keep it across your devices." style="padding:7px 14px;border:1px solid #00746E;background:#fff;color:#00746E;border-radius:6px;cursor:pointer">Apply to this device</button><button id="antcv-kimport-save" title="Apply here AND save the kernel to your account so it syncs to your other devices." style="padding:7px 16px;border:none;background:#00746E;color:#fff;border-radius:6px;cursor:pointer;font-weight:700">Apply + save to account</button></div>'
+      + '<div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap"><button id="antcv-kimport-cancel" style="padding:7px 14px;border:1px solid #ccc;background:#f4f4f4;border-radius:6px;cursor:pointer">Cancel</button><button id="antcv-kimport-save" title="Apply to your CV and save it to your account (syncs to all your devices)." style="padding:7px 18px;border:none;background:#00746E;color:#fff;border-radius:6px;cursor:pointer;font-weight:700">Apply</button></div>'
       + '</div>';
     document.body.appendChild(ov);
     ov.querySelector('#antcv-kimport-x').addEventListener('click', closeModal);
     ov.querySelector('#antcv-kimport-cancel').addEventListener('click', closeModal);
     ov.addEventListener('click', function (e) { if (e.target === ov) closeModal(); });
-    // Apply: stage + project into personalInfo.workHistory (the generation source).
-    ov.querySelector('#antcv-kimport-apply').addEventListener('click', function () { var k = resolveKernel(result, ov); stageLocal(k); var ok = applyToCV(k); closeModal(); toast(ok ? 'Applied to your CV (' + ((k.experience || []).length) + ' roles). Regenerate to rebuild the document from it.' : 'Staged locally.'); });
-    // Apply + save: also persist to D1 user_kernel.kernel_v2.
+    // Apply (single action — the owner does not want a device-vs-account choice):
+    // stage locally + project into personalInfo.workHistory AND persist to the
+    // account (D1 user_kernel.kernel_v2) every time, so it always syncs.
     ov.querySelector('#antcv-kimport-save').addEventListener('click', function () { var k = resolveKernel(result, ov); stageLocal(k); applyToCV(k); saveToAccount(k); });
   }
 

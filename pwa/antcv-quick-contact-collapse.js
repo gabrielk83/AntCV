@@ -18,7 +18,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.579-quick-contact';
+  var VERSION = '1.50.584-quick-contact';
   if (window.__antcvQuickContact === VERSION) return;
   window.__antcvQuickContact = VERSION;
 
@@ -144,9 +144,18 @@
   // writing-style block. Re-applied each pass (React resets inline styles).
   function setOrder(el, val) { if (el && el.style.order !== val) el.style.order = val; }
   function liftIdentity(col, hdr, rows) {
-    setOrder(topChildByText(col, /Import profile/i), '-6');                 // Import …
-    setOrder(topChildByText(col, /Apply to user profile|Apply to my|↺\s*Apply/i), '-5'); // Apply (+ Undo share the row)
-    setOrder(topChildByText(col, /Undo last/i), '-5');                      // Undo (if separate row)
+    // The Import button is injected OUTSIDE the fields column (marker
+    // data-antcv-import-replacement), so CSS order can't reach it. Move it into
+    // the column as the first item, then order Apply/Undo AFTER it (owner 2026-06-17:
+    // "place apply user profile and undo AFTER import"). Re-applied each pass.
+    var imp = document.querySelector('[data-antcv-import-replacement]')
+      || topChildByText(col, /Import profile/i);
+    if (imp) {
+      if (imp.parentElement !== col) { try { col.insertBefore(imp, col.firstChild); } catch (_) {} }
+      setOrder(imp, '-7');
+    }
+    setOrder(topChildByText(col, /Apply to user profile|Apply to my|↺\s*Apply/i), '-6'); // Apply (+ Undo share the row)
+    setOrder(topChildByText(col, /Undo last/i), '-6');                      // Undo (if separate row)
     setOrder(topRowByPlaceholder(col, 'Jane Doe'), '-4');                   // Full Name
     setOrder(topRowByPlaceholder(col, 'Senior Project Manager'), '-3');     // Headline
     setOrder(hdr, '-2');                                                    // Quick contact header

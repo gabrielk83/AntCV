@@ -875,6 +875,66 @@ async function handleApiKernelV2(request, env) {
 }
 
 // v2.5: GET/PUT /api/prefs — user prefs (proxyUrl/photo/apiKeys) + adminDemo
+// =====================================================================
+//  SETTINGS-EXPORT-001 (owner 2026-06-17): per-account export key.
+//  GET/POST /api/export-key returns an AES-256 key DERIVED (HKDF-SHA256)
+//  from JWT_SECRET + the caller's email, so the user-bound ("account-
+//  locked") encrypted settings export (antcv-data-export-360) can be
+//  opened ONLY by the same signed-in account — a different account
+//  derives a different key, so AES-GCM authentication fails. No
+//  passphrase to lose. Admins (ADMIN_EMAILS) may pass ?email=<target>
+//  to derive another account's key and open their export.
+// =====================================================================
+function _exportB64FromBuf(buf) {
+  const b = new Uint8Array(buf); let s = '';
+  for (let i = 0; i < b.length; i++) s += String.fromCharCode(b[i]);
+  return btoa(s);
+}
+function _exportHexFromBuf(buf) {
+  const b = new Uint8Array(buf); let s = '';
+  for (let i = 0; i < b.length; i++) s += b[i].toString(16).padStart(2, '0');
+  return s;
+}
+async function deriveAccountExportKey(secret, emailLower) {
+  const enc = new TextEncoder();
+  const km = await crypto.subtle.importKey('raw', enc.encode(secret), 'HKDF', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'HKDF', hash: 'SHA-256', salt: enc.encode('antcv-settings-export-v1'), info: enc.encode('export-key:' + emailLower) },
+    km, 256);
+  return _exportB64FromBuf(bits);
+}
+async function accountOwnerHash(emailLower) {
+  const enc = new TextEncoder();
+  const h = await crypto.subtle.digest('SHA-256', enc.encode(emailLower));
+  return _exportHexFromBuf(h).slice(0, 32);
+}
+async function handleApiExportKey(request, env) {
+  if (request.method !== 'GET' && request.method !== 'POST') {
+    return jsonResponse({ error: 'method_not_allowed' }, 405, request, env);
+  }
+  if (!env.JWT_SECRET) {
+    return jsonResponse({ error: 'no_key_material', hint: 'JWT_SECRET not configured on the relay.' }, 503, request, env);
+  }
+  const id = await identityFromRequest(request, env);
+  if (!id || !id.email) {
+    return jsonResponse({ error: 'unauthenticated', hint: 'Sign in to export or open an account-locked settings file.' }, 401, request, env);
+  }
+  const url = new URL(request.url);
+  const target = (url.searchParams.get('email') || '').trim().toLowerCase();
+  let emailLower = id.email.toLowerCase();
+  if (target && target !== emailLower) {
+    if (!isAdmin(env, id)) {
+      return jsonResponse({ error: 'forbidden', hint: "Only an admin can open another account's export." }, 403, request, env);
+    }
+    emailLower = target;
+  }
+  const [key, owner] = await Promise.all([
+    deriveAccountExportKey(env.JWT_SECRET, emailLower),
+    accountOwnerHash(emailLower),
+  ]);
+  return jsonResponse({ ok: true, owner, key, alg: 'AES-GCM', bits: 256, v: 1 }, 200, request, env, { 'Cache-Control': 'private, no-store' });
+}
+
 async function handleApiPrefs(request, env) {
   const kv = env.KV_BINDING || env.ANALYTICS || null;
   const id = await identityFromRequest(request, env);
@@ -3481,6 +3541,7 @@ const method = request.method;
     return handleApiPrefsRenew(request, env);
   }
   if (path === '/api/prefs')          return handleApiPrefs(request, env);
+  if (path === '/api/export-key')     return handleApiExportKey(request, env);
   if (path === '/api/user/mode')      return handleApiUserMode(request, env);
   if (path === '/api/admin/demo')     return handleApiAdminDemo(request, env);
   if (path === '/api/admin/demo-usage-history') return handleApiAdminDemoHistory(request, env);

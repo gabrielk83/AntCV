@@ -49,7 +49,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.331-dataraw';
+  var VERSION = '1.50.566-userbound';
   if (window.__antcvDataExport360 === VERSION) return;
   window.__antcvDataExport360 = VERSION;
 
@@ -229,6 +229,69 @@
   }
   window.AntcvDataExport = exportData;
 
+  // ── SETTINGS-EXPORT-001 (owner 2026-06-17): account-locked export ──────
+  // A server-held-key, USER-BOUND encrypted export — no passphrase. The AES-256
+  // key is derived server-side (HKDF) from the relay JWT_SECRET + the signed-in
+  // email (GET /api/export-key), so the file opens ONLY for the same account
+  // (or an admin). Includes ALL settings + the unsolicited baseline (it is the
+  // same full localStorage dump as the plain backup, just account-encrypted).
+  function proxyBase() {
+    try {
+      var v = JSON.parse(localStorage.getItem('proxyUrl') || '""') || '';
+      if (!v) v = JSON.parse(localStorage.getItem('relayUrl') || '""') || '';
+      v = String(v || '').replace(/\/+$/, '');
+      if (!v && typeof window.ANTCV_RELAY_URL === 'string') v = String(window.ANTCV_RELAY_URL).replace(/\/+$/, '');
+      return v;
+    } catch (_) { return ''; }
+  }
+  function b64ToBuf(b64) {
+    var bin = atob(String(b64 || '')); var u = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    return u;
+  }
+  function fetchExportKey() {
+    var base = proxyBase();
+    if (!base) return Promise.reject(new Error('Not connected — sign in so AntCV can fetch your account key.'));
+    return fetch(base + '/api/export-key', { method: 'GET', credentials: 'include' })
+      .then(function (r) {
+        if (r.status === 401) throw new Error('Sign in first — an account-locked export needs your account.');
+        if (!r.ok) throw new Error('Could not fetch the account key (HTTP ' + r.status + ').');
+        return r.json();
+      })
+      .then(function (j) {
+        if (!j || !j.ok || !j.key) throw new Error('Account key unavailable.');
+        return j; // { owner, key, alg, bits }
+      });
+  }
+  function exportUserBound() {
+    var subtle = window.crypto && window.crypto.subtle;
+    if (!subtle) return Promise.reject(new Error('WebCrypto unavailable (needs a secure context).'));
+    var envelope = backupEnvelope(true); // includeSecrets — file is account-encrypted at rest
+    var plaintext = JSON.stringify(envelope);
+    var enc = new TextEncoder();
+    var iv = window.crypto.getRandomValues(new Uint8Array(12));
+    var keyInfo;
+    return fetchExportKey()
+      .then(function (info) {
+        keyInfo = info;
+        return subtle.importKey('raw', b64ToBuf(info.key), { name: 'AES-GCM' }, false, ['encrypt']);
+      })
+      .then(function (key) { return subtle.encrypt({ name: 'AES-GCM', iv: iv }, key, enc.encode(plaintext)); })
+      .then(function (ct) {
+        var env = {
+          _antcvBackupUserBound: 1,
+          owner: keyInfo.owner,
+          version: (typeof window.ANTCV_VERSION === 'string' ? window.ANTCV_VERSION : VERSION),
+          exportedAt: new Date().toISOString(),
+          cipher: 'AES-GCM', iv: bufToB64(iv), ciphertext: bufToB64(ct)
+        };
+        var fname = 'antcv-settings-' + fileStamp() + '.locked.json';
+        var bytes = downloadBlob(JSON.stringify(env, null, 2), fname);
+        return { ok: true, filename: fname, bytes: bytes, encrypted: true, userBound: true };
+      });
+  }
+  window.AntcvDataExportUserBound = exportUserBound;
+
   // ── delete-save flag (set by the injected checkbox) ────────────────────
   var saveFirst = SAVE_FIRST_DEFAULT;
   function quickExport() {
@@ -317,6 +380,31 @@
     return b;
   }
 
+  function buildLockedButton() {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.setAttribute(UI_MARK, 'locked');
+    b.textContent = '🔒 Export (account-locked)';
+    b.title = 'Encrypted and locked to your account — no passphrase. Only you (signed in) can import it back.';
+    b.style.cssText = 'display:block;width:100%;margin:0 0 8px;padding:12px;' +
+      'background:rgba(1,183,187,0.12);border:1px solid rgba(1,183,187,0.5);' +
+      'color:#bdf0f1;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;';
+    b.addEventListener('click', function (e) {
+      e.preventDefault(); e.stopPropagation();
+      b.disabled = true;
+      var prev = b.textContent;
+      b.textContent = '🔒 Encrypting to your account…';
+      exportUserBound().then(function (r) {
+        b.textContent = (r && r.ok) ? '✓ Saved ' + (r.filename || 'file') : prev;
+        setTimeout(function () { b.textContent = prev; b.disabled = false; }, 2600);
+      }).catch(function (err) {
+        b.textContent = '⚠ ' + ((err && err.message) || 'Export failed');
+        setTimeout(function () { b.textContent = prev; b.disabled = false; }, 3600);
+      });
+    });
+    return b;
+  }
+
   function buildCheckRow() {
     var wrap = document.createElement('label');
     wrap.setAttribute(UI_MARK, 'savefirst');
@@ -355,8 +443,15 @@
     if (!zone) return;
     if (zone.querySelector('[' + UI_MARK + '="download"]')) return;
     try {
-      if (box.nextSibling) zone.insertBefore(buildButton(), box.nextSibling);
-      else zone.appendChild(buildButton());
+      var dl = buildButton();
+      var locked = buildLockedButton();
+      if (box.nextSibling) {
+        zone.insertBefore(dl, box.nextSibling);
+        zone.insertBefore(locked, dl.nextSibling);
+      } else {
+        zone.appendChild(dl);
+        zone.appendChild(locked);
+      }
     } catch (_) {}
   }
 

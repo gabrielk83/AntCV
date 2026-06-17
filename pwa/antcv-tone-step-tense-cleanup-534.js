@@ -16,11 +16,22 @@
  *       tone fits you?"), where tone + personality belong together. The button
  *       was removed from the wizard language slide (antcv-wizard-language-
  *       slide-339.js) in the same release. Opens via AntcvPersonalityQuiz.open.
+ *
+ *  #8/#4 (1.50.535) De-duplicate Banned WORDS + Banned PHRASES. They appeared in
+ *       TWO places: the Writing-Style section island (Settings → Personal,
+ *       per-language store extraBannedWords, injected into generation by
+ *       src/lib/install-fetch-wrap.ts) AND the app.js Advanced "Tone & banned
+ *       terms" controls (stylePrefs.banned_words/phrases string, read by the
+ *       prompt). The island is the keeper (it has the per-language en/da/es/zh
+ *       selector). We HIDE the two app.js Advanced banned fields. This is
+ *       NON-DESTRUCTIVE: any existing stylePrefs.banned_words/phrases is still
+ *       read by the prompt; the island's words still reach the worker via the
+ *       fetch-wrap. (The Advanced "Preferred tone" field is left untouched.)
  * ============================================================================
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.534-tone-tense-cleanup';
+  var VERSION = '1.50.535-tone-tense-cleanup';
   if (window.__antcvToneTenseCleanup534 === VERSION) return;
   window.__antcvToneTenseCleanup534 = VERSION;
 
@@ -72,8 +83,41 @@
     } catch (_) {}
   }
 
+  // #8/#4 — hide the app.js Advanced "Banned words" + "Banned phrases" fields.
+  // Matched by their UNIQUE helper strings, then we walk up to the field's root
+  // (the React `vi` wrapper, a div with marginBottom:14px) and hide it.
+  var BANNED_HELPERS = [
+    'Words you want excluded from generated',
+    'Multi-word patterns to avoid',
+  ];
+  function deepestContaining(marker) {
+    var all = document.getElementsByTagName('*');
+    var best = null, bestLen = Infinity;
+    for (var i = 0; i < all.length; i++) {
+      var t = all[i].textContent || '';
+      if (t.indexOf(marker) >= 0 && t.length < bestLen) { best = all[i]; bestLen = t.length; }
+    }
+    return best;
+  }
+  function hideAppBannedFields() {
+    try {
+      for (var i = 0; i < BANNED_HELPERS.length; i++) {
+        var leaf = deepestContaining(BANNED_HELPERS[i]);
+        if (!leaf) continue;
+        var n = leaf;
+        // climb to the vi root (marginBottom:14px); stop after a sane depth.
+        var hops = 0;
+        while (n && hops < 8 && !(n.style && n.style.marginBottom === '14px')) { n = n.parentElement; hops++; }
+        if (n && n.style && n.style.marginBottom === '14px' && n.getAttribute('data-antcv-banned-dedup-hidden') !== '1') {
+          n.style.setProperty('display', 'none', 'important');
+          n.setAttribute('data-antcv-banned-dedup-hidden', '1');
+        }
+      }
+    } catch (_) {}
+  }
+
   var pending = false;
-  function run() { hideAdvancedTense(); injectQuizOnTone(); }
+  function run() { hideAdvancedTense(); injectQuizOnTone(); hideAppBannedFields(); }
   function schedule() { if (pending) return; pending = true; (window.requestAnimationFrame || setTimeout)(function () { pending = false; try { run(); } catch (_) {} }); }
   function boot() {
     schedule();

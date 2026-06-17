@@ -23,10 +23,13 @@ lamination + generation bugs surfaced. This is the full status for the nightly.
 - Commit messages end with the Co-Authored-By trailer. PWA auto-deploys on push to
   main; one deployer at a time.
 
-## Kernel verification still pending (owner to confirm; do NOT fabricate further)
-- FVU institution + year (left blank — KVUC/VUC likely).
-- Regulatory standards: only ASPICE attested; the other ~19 inferred — owner to prune.
-- Students Council years/body inferred.
+## Kernel data — CONFIRMED by owner 2026-06-18
+- FVU: entered fine. ✅ CONFIRMED — keep as-is.
+- Regulatory: all 19 inferred standards are REAL. ✅ CONFIRMED — do NOT prune; keep
+  the full set (the render bug G-GROUPS-002 hides them, that's the only problem).
+- Students Council years/body: minor, inferred — leave unless owner flags.
+The kernel DATA is now fully validated. Every remaining issue below is render /
+lamination / generation — NOT data. Do not re-fabricate or trim kernel content.
 
 ---
 

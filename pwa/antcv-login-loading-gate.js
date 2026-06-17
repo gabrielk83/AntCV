@@ -31,7 +31,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.597-login-warmup';
+  var VERSION = '1.50.603-login-warmup';
   if (window.__antcvLoginLoadingGate === VERSION) return;
   window.__antcvLoginLoadingGate = VERSION;
 
@@ -121,6 +121,23 @@
     return !!document.querySelector('.antcv-preview-paper');
   }
 
+  // owner 2026-06-18: even with the editor up, app.js's post-login MODE settle can
+  // still be on screen — the "ACCOUNT MODE" Demo/Paid card flashes before the user
+  // mode resolves. Hold the cover until that card is GONE (or MAX_MS). Cheap text
+  // probe, only runs during the boot cover window.
+  function modeCardVisible() {
+    try {
+      var nodes = document.querySelectorAll('h1,h2,h3,h4,div,section,p,span');
+      for (var i = 0; i < nodes.length; i++) {
+        var t = nodes[i].textContent;
+        if (!t || t.length > 60) continue;            // the heading is short ("ACCOUNT MODE")
+        if (t.indexOf('ACCOUNT MODE') < 0) continue;
+        if (nodes[i].offsetWidth || nodes[i].offsetHeight || nodes[i].getClientRects().length) return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
   var overlay = null;
   var dotsTimer = null;
   function showOverlay() {
@@ -160,7 +177,7 @@
     var ver = document.createElement('span');
     // Match the pre-login screen's "X.XX.XXX-babel-fish" version chip. Numeric part
     // tracks this gate's VERSION (bumped every release); codename mirrors app.js `Ai`.
-    ver.textContent = (VERSION.match(/^\d+\.\d+\.\d+/) || ['1.50.597'])[0] + '-babel-fish';
+    ver.textContent = (VERSION.match(/^\d+\.\d+\.\d+/) || ['1.50.603'])[0] + '-babel-fish';
     ver.style.cssText = 'font-size:10px;font-weight:600;color:rgba(255,255,255,0.52);';
     brand.appendChild(h1); brand.appendChild(ver);
 
@@ -270,7 +287,9 @@
     if (editorReady() && !readyAt) { readyAt = Date.now(); warmUp(); }   // real editor up → warm the preview behind the cover
     var settled = readyAt && (Date.now() - readyAt) >= SETTLE_BUFFER;
     // lift once the editor has settled AND the warm-up cycle finished; MAX_MS is the backstop.
-    if ((settled && elapsed >= MIN_MS && warmupDone) || elapsed >= MAX_MS) { hideOverlay(); ticking = false; return; }
+    // Lift only when settled, past the floor, warm-up done, AND the post-login
+    // ACCOUNT MODE card is no longer on screen. MAX_MS is the hard backstop.
+    if ((settled && elapsed >= MIN_MS && warmupDone && !modeCardVisible()) || elapsed >= MAX_MS) { hideOverlay(); ticking = false; return; }
     setTimeout(poll, 120);
   }
 

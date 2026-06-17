@@ -35,15 +35,47 @@ function hideLegacyWritingStyleSelect(settingsRoot: HTMLElement): void {
 let root: Root | null = null;
 let container: HTMLElement | null = null;
 
+// v1.50.548 (owner 2026-06-17): the app.js "WRITING STYLE" control (label +
+// the now-hidden legacy <select> + a description) sits near the TOP of the
+// Personal panel, while the island lived lower (above PackagePicker) — so the
+// orphaned description showed "very much above" the real selector. Anchor the
+// island just ABOVE that app.js control so the selector moves up to it. Returns
+// the control wrapper (the div whose text starts with "WRITING STYLE").
+function findWritingStyleControl(settingsRoot: HTMLElement): HTMLElement | null {
+  const selects = Array.from(settingsRoot.querySelectorAll<HTMLSelectElement>('select'));
+  for (const sel of selects) {
+    if (sel.closest(`#${MOUNT_ID}`)) continue;
+    const opts = Array.from(sel.options).map((o) => o.textContent || '').join(' | ');
+    if (!(WS_SIG_A.test(opts) && WS_SIG_B.test(opts))) continue;
+    let n: HTMLElement | null = sel.parentElement;
+    for (let hops = 0; n && hops < 4; hops++, n = n.parentElement) {
+      if (/^\s*WRITING STYLE/i.test((n.textContent || '').slice(0, 80))) return n;
+    }
+    return sel.parentElement as HTMLElement | null;
+  }
+  return null;
+}
+
 function ensureMountContainer(settingsRoot: HTMLElement): HTMLElement {
+  const ws = findWritingStyleControl(settingsRoot);
   let c = document.getElementById(MOUNT_ID) as HTMLElement | null;
-  if (c) return c;
+  if (c) {
+    // Re-anchor above the WRITING STYLE control if a re-render moved things.
+    if (ws && ws.parentElement && c.nextSibling !== ws) {
+      try { ws.parentElement.insertBefore(c, ws); } catch { /* */ }
+    }
+    return c;
+  }
   c = document.createElement('div');
   c.id = MOUNT_ID;
   c.setAttribute('data-antcv-react-mount', 'writing-style-picker');
 
-  // Prefer inserting just above the PackagePicker so order is:
-  // WritingStylePicker → PackagePicker → LanguageCard.
+  // Prefer anchoring just ABOVE the app.js WRITING STYLE control (top of
+  // Personal). Fall back to above the PackagePicker, then the Done button.
+  if (ws && ws.parentElement) {
+    ws.parentElement.insertBefore(c, ws);
+    return c;
+  }
   const pkg = document.getElementById(PACKAGE_PICKER_ID);
   if (pkg && pkg.parentElement) {
     pkg.parentElement.insertBefore(c, pkg);

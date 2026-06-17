@@ -18,7 +18,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.586-quick-contact';
+  var VERSION = '1.50.587-quick-contact';
   if (window.__antcvQuickContact === VERSION) return;
   window.__antcvQuickContact = VERSION;
 
@@ -144,19 +144,14 @@
   // writing-style block. Re-applied each pass (React resets inline styles).
   function setOrder(el, val) { if (el && el.style.order !== val) el.style.order = val; }
   function liftIdentity(col, hdr, rows) {
-    // IMPORT-DUP-FIX (owner 2026-06-17): an earlier version MOVED the Import
-    // button into the column, which fought the data-importer (React re-rendered
-    // the original → the importer re-hooked it → a DUPLICATE under Quick Contact).
-    // Do NOT move it. Dedupe any extras (keep the one inside the column), then
-    // order it FIRST via CSS only (it lives in the column, so order reaches it).
-    var imps = Array.prototype.slice.call(document.querySelectorAll('[data-antcv-import-replacement]'));
-    if (imps.length > 1) {
-      var keep = null;
-      for (var a = 0; a < imps.length; a++) { if (col.contains(imps[a])) { keep = imps[a]; break; } }
-      keep = keep || imps[0];
-      for (var b = 0; b < imps.length; b++) { if (imps[b] !== keep) { try { imps[b].remove(); } catch (_) {} } }
-    }
-    setOrder(topChildByText(col, /Import profile/i), '-7');                  // Import … (first)
+    // IMPORT BUTTON — HANDS OFF (owner 2026-06-17). The data-importer fully owns
+    // it. Touching it backfired twice: 1.50.584 MOVED it → React re-rendered the
+    // original → the importer re-hooked it → a DUPLICATE; 1.50.586's dedupe then
+    // removed BOTH. We no longer move, dedupe, or remove it. We only set a CSS
+    // order IF it already sits as a direct child of the column (pure styling, no
+    // DOM mutation) — otherwise leave it exactly where the importer placed it.
+    var impTop = topChildByText(col, /Import profile/i);
+    if (impTop) setOrder(impTop, '-7');                                     // Import … (first) — CSS only
     setOrder(topChildByText(col, /Apply to user profile|Apply to my|↺\s*Apply/i), '-6'); // Apply (+ Undo share the row)
     setOrder(topChildByText(col, /Undo last/i), '-6');                      // Undo (if separate row)
     setOrder(topRowByPlaceholder(col, 'Jane Doe'), '-4');                   // Full Name

@@ -31,13 +31,19 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.494-account-isolation';
+  var VERSION = '1.50.588-login-settle';
   if (window.__antcvLoginLoadingGate === VERSION) return;
   window.__antcvLoginLoadingGate = VERSION;
 
   var DISABLE = 'antcv:disable-loading-gate';
-  var MIN_MS = 1100;   // keep the cover up long enough to mask the flash + settle
-  var MAX_MS = 4500;   // hard cap — always lift by here
+  // owner 2026-06-17: after sign-in the cover lifted too early, so the user saw
+  // the post-login SETTLE flicker — set-menu with the ant placeholder, then a
+  // demo button, then the real photo + no demo button. The photo + user-mode
+  // settle in the first ~2s, so hold the cover longer (bounded) to mask it.
+  // A generic "DOM quiet" check is unsafe here (constant sidecar churn never
+  // quiets), so this is a simple time floor + a settle signal in editorReady().
+  var MIN_MS = 2200;   // hold the cover this long so the photo/mode settle is masked
+  var MAX_MS = 6500;   // hard cap — always lift by here
 
   function lsRaw(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
   function disabled() { var v = lsRaw(DISABLE); return v === '1' || v === 'true'; }

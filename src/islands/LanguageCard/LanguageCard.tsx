@@ -72,6 +72,9 @@ function writeTense(v: Tense): void {
 }
 function readSpellEnabled(): boolean { try { return localStorage.getItem('antcv:spell:enabled') !== '0'; } catch { return true; } }
 function writeSpellEnabled(on: boolean): void { try { localStorage.setItem('antcv:spell:enabled', on ? '1' : '0'); } catch { /* */ } }
+// SPELL-CONTEXT-001 — the LLM word-choice proofread (all languages). Default on.
+function readSpellContext(): boolean { try { return localStorage.getItem('antcv:spell:context') !== '0'; } catch { return true; } }
+function writeSpellContext(on: boolean): void { try { localStorage.setItem('antcv:spell:context', on ? '1' : '0'); } catch { /* */ } }
 
 // SPELLERS-MATRIX-001 (owner 2026-06-17): per-language spelling config, kept in
 // sync with the SPELL map in antcv-spell-annotator-384.js. VARIANT languages
@@ -142,6 +145,7 @@ export function LanguageCard(): JSX.Element {
   const [enabled, setEnabled] = useState<LangCode[]>(() => readEnabledLangs());
   const [tense, setTense] = useState<Tense>(() => readTense());
   const [spellOn, setSpellOn] = useState<boolean>(() => readSpellEnabled());
+  const [contextOn, setContextOn] = useState<boolean>(() => readSpellContext());
   const [variants, setVariants] = useState<Record<string, string>>(() => {
     const m: Record<string, string> = {};
     for (const code of Object.keys(SPELL_UI)) if (SPELL_UI[code].variants) m[code] = readVariant(code);
@@ -151,6 +155,7 @@ export function LanguageCard(): JSX.Element {
 
   const onTense = useCallback((v: Tense) => { writeTense(v); setTense(v); }, []);
   const onSpellOn = useCallback((on: boolean) => { writeSpellEnabled(on); setSpellOn(on); }, []);
+  const onContextOn = useCallback((on: boolean) => { writeSpellContext(on); setContextOn(on); }, []);
   const onVariant = useCallback((lang: string, c: string) => { writeVariant(lang, c); setVariants((p) => ({ ...p, [lang]: c })); }, []);
   const onSpellLang = useCallback((code: string, on: boolean) => { writeSpellLang(code, on); setSpellLangs((p) => ({ ...p, [code]: on })); }, []);
 
@@ -299,6 +304,10 @@ export function LanguageCard(): JSX.Element {
           <label style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', fontSize: 12, color: 'rgba(255,255,255,.85)' }}>
             <input type="checkbox" checked={spellOn} onChange={(e) => onSpellOn(e.currentTarget.checked)} style={{ accentColor: '#01B7BB', cursor: 'pointer' }} />
             Spelling underlines (editor + preview)
+          </label>
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: 7, cursor: 'pointer', fontSize: 12, color: 'rgba(255,255,255,.85)', margin: '6px 0 0' }}>
+            <input type="checkbox" checked={contextOn} onChange={(e) => onContextOn(e.currentTarget.checked)} style={{ accentColor: '#d97706', cursor: 'pointer', marginTop: 2 }} />
+            <span>AI context proofread <span style={{ color: 'rgba(255,255,255,.5)' }}>— catches a correctly-spelled word used wrongly (&quot;I <span style={{ color: '#d97706' }}>seat</span> banana&quot; → eat). Works in every language (it&apos;s the spell-check for Chinese &amp; Thai). Amber underline; uses your AI credits.</span></span>
           </label>
           {/* SPELLERS-MATRIX-001 — one row per SELECTED language that has a
               spelling config: a regional <select> for variant languages, an

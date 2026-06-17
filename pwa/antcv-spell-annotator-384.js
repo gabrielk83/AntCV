@@ -28,7 +28,7 @@
   'use strict';
 
   if (window.__antcvSpellAnnotatorInstalled) return;
-  var VERSION = '1.50.569';
+  var VERSION = '1.50.570';
   window.__antcvSpellAnnotatorInstalled = VERSION;
 
   // SPELLERS-MATRIX-001 (owner 2026-06-17): full language matrix. Each language
@@ -94,6 +94,7 @@
   function hasDict(l) { var c = SPELL[l]; return !!(c && (c.single || c.variants)); }
   var CDN = 'https://cdn.jsdelivr.net/npm/';
   var DEBOUNCE_MS = 600;
+  var CTX_DEBOUNCE_MS = 1600;  // LLM context proofread fires only after a longer pause (cost control)
   var MAX_SUGGEST = 6;
 
   // ─── settings ────────────────────────────────────────────────────
@@ -114,12 +115,16 @@
     try {
       if (localStorage.getItem('antcv:spell:enabled') === '0') return false;
       var l = lang();
-      // zh is allowed (LLM context check, SPELL-ZH-CONTEXT-001); only an unknown
-      // non-zh language with no Hunspell dictionary is disabled.
-      if (l !== 'zh' && !hasDict(l)) return false;
       var per = JSON.parse(localStorage.getItem('antcv:spell:langs') || '{}');
       if (per && per[l] === false) return false;
-      return true;
+      // Active when we can do EITHER dictionary spelling OR the LLM context
+      // proofread. The context check works for ANY language (SPELL-CONTEXT-001),
+      // so a language without a Hunspell dictionary (zh, th, kl, zu, …) is still
+      // active as long as the context check is on.
+      if (hasDict(l)) return true;
+      if (l === 'zh') return true;
+      if (contextEnabled()) return true;
+      return false;
     } catch (_) { return true; }
   }
   function userDict(l) {
@@ -237,21 +242,29 @@
     return engineLoading;
   }
 
-  // ─── SPELL-ZH-CONTEXT-001: Chinese symbol-in-sentence fit (LLM) ─────
-  // Hunspell can't segment Chinese, so zh uses a CONTEXT check instead of a
-  // dictionary: an LLM finds 错别字 (characters that don't fit the sentence —
-  // wrong homophone / mistyped / context-unfitting) and returns {wrong,correct}.
-  // Results are cached per text + debounced through the same schedule(); marks
-  // reuse the {word,start,end} shape so syncOverlay underlines them exactly like
-  // a Hunspell miss, and the popover offers the correction. Only fires when the
-  // document language is Chinese, so non-zh users never incur an LLM call.
-  var ZH_MODEL = 'claude-opus-4-7';
-  var ZH_SYS = 'You are a meticulous Simplified-Chinese proofreader. Find 错别字 — characters that are WRONG for the sentence (wrong homophone, mistyped, or context-unfitting character). Flag ONLY clear character errors; ignore wording, style, punctuation and grammar. Return STRICT JSON only, no markdown fences: {"errors":[{"wrong":"<exact wrong substring copied verbatim from the text>","correct":"<corrected substring>"}]}. Return {"errors":[]} if there are none.';
-  var zhCache = Object.create(null);    // text -> marks[]
-  var zhSuggest = Object.create(null);  // wrong substring -> [correct]
-  var zhInflight = Object.create(null); // text -> Promise<marks>
+  // ─── SPELL-CONTEXT-001 (owner 2026-06-17): LLM context proofread, ALL langs ─
+  // Dictionaries (Hunspell) only catch NON-WORDS. They miss REAL-WORD errors — a
+  // correctly-spelled word that is WRONG for the sentence ("I seat banana" →
+  // "seat" should be "eat"), wrong homophones, agreement slips. An LLM
+  // proofreader catches those, in ANY language. For Chinese (no word boundaries)
+  // it IS the only viable spell check (错别字); for every other language it
+  // LAYERS ON TOP of Hunspell (kind:'context', a distinct underline colour).
+  // Cached per (lang+text) + inflight-deduped + fired on a LONGER debounce than
+  // the dictionary pass, and gated so single words / short fragments never incur
+  // an LLM call. Toggle: antcv:spell:context ('0' disables; default on).
+  var CTX_MODEL = 'claude-opus-4-7';
+  var LANG_NAME = { en: 'English', da: 'Danish', es: 'Spanish', zh: 'Simplified Chinese', fr: 'French', de: 'German', it: 'Italian', ar: 'Arabic', fa: 'Persian (Farsi)', he: 'Hebrew', ru: 'Russian', tr: 'Turkish', ku: 'Kurdish', sw: 'Swahili', am: 'Amharic', fo: 'Faroese', kl: 'Greenlandic (Kalaallisut)', vi: 'Vietnamese', th: 'Thai', zu: 'Zulu' };
+  function ctxSys(l) {
+    if (l === 'zh') return 'You are a meticulous Simplified-Chinese proofreader. Find 错别字 — characters that are WRONG for the sentence (wrong homophone, mistyped, or context-unfitting character). Flag ONLY clear character errors; ignore wording, style, punctuation and grammar. Return STRICT JSON only, no markdown fences: {"errors":[{"wrong":"<exact wrong substring copied verbatim from the text>","correct":"<corrected substring>"}]}. Return {"errors":[]} if there are none.';
+    var name = LANG_NAME[l] || "the text's language";
+    return 'You are a meticulous proofreader for ' + name + '. Find words that are WRONG FOR THE CONTEXT even though each word is itself spelled correctly: a real word standing in for the intended one (e.g. "I seat banana" -> "seat" should be "eat"), a wrong homophone, or a clear grammatical agreement / inflection error that yields the wrong word. Do NOT flag non-word misspellings (a dictionary handles those), and do NOT flag style, tone, register, or punctuation. Only flag a word when you are confident it is the wrong word for the sentence. Copy the wrong word VERBATIM as it appears. Return STRICT JSON only, no markdown fences: {"errors":[{"wrong":"<exact word copied verbatim from the text>","correct":"<the word it should be>"}]}. Return {"errors":[]} if there are none.';
+  }
+  var ctxCache = Object.create(null);    // (lang+"\n"+text) -> marks[]
+  var ctxSuggest = Object.create(null);  // wrong substring -> [correct]
+  var ctxInflight = Object.create(null);
+  var ctxTimers = new WeakMap();
   function hasHan(s) { return /[㐀-鿿]/.test(String(s || '')); }
-  function zhProxyBase() {
+  function ctxProxyBase() {
     try {
       var v = JSON.parse(localStorage.getItem('proxyUrl') || '""');
       var b = String(v || '').replace(/\/+$/, '');
@@ -259,13 +272,26 @@
       return b;
     } catch (_) { return ''; }
   }
-  async function llmZhErrors(text) {
-    var base = zhProxyBase();
+  function contextEnabled() {
+    try { return localStorage.getItem('antcv:spell:context') !== '0'; } catch (_) { return true; }
+  }
+  function wordCount(s) { var m = String(s || '').match(/[\p{L}’']{2,}/gu); return m ? m.length : 0; }
+  // Only call the LLM when there is enough text to judge CONTEXT (a real
+  // sentence). zh/th are gated by their script instead of word count.
+  function ctxEligible(text, l) {
+    text = String(text || '');
+    if (!text.trim()) return false;
+    if (l === 'zh') return hasHan(text);
+    if (l === 'th') return /[฀-๿]/.test(text) && text.length >= 8;
+    return wordCount(text) >= 4 && text.length >= 15;
+  }
+  async function llmCtxErrors(text, l) {
+    var base = ctxProxyBase();
     if (!base) return [];
     var res = await fetch(base + '/', {
       method: 'POST', credentials: 'include',
       headers: { 'Content-Type': 'application/json', 'x-provider': 'anthropic' },
-      body: JSON.stringify({ model: ZH_MODEL, max_tokens: 700, stream: false, system: ZH_SYS, messages: [{ role: 'user', content: String(text || '') }] }),
+      body: JSON.stringify({ model: CTX_MODEL, max_tokens: 700, stream: false, system: ctxSys(l), messages: [{ role: 'user', content: String(text || '') }] }),
     });
     var j = await res.json().catch(function () { return null; });
     var raw = (j && j.content && j.content[0] && j.content[0].text) || '';
@@ -274,37 +300,47 @@
       return Array.isArray(parsed && parsed.errors) ? parsed.errors : [];
     } catch (_) { return []; }
   }
-  function zhMarksFrom(text, errors) {
-    var out = [];
+  function isLetterChar(ch) { return /[\p{L}]/u.test(ch || ''); }
+  function ctxMarksFrom(text, errors, l) {
+    var out = [], ud = userDict(l);
     for (var i = 0; i < errors.length; i++) {
       var w = String((errors[i] && errors[i].wrong) || '');
       var c = String((errors[i] && errors[i].correct) || '');
-      if (!w || w.length > 20) continue;
-      if (c) zhSuggest[w] = [c];
+      if (!w || w.length > 40 || w === c) continue;
+      if (ud.has(w) || ud.has(w.toLowerCase())) continue;   // user already accepted it
+      if (c) ctxSuggest[w] = [c];
       var from = 0, idx;
       while ((idx = text.indexOf(w, from)) >= 0) {
-        out.push({ word: w, start: idx, end: idx + w.length });
+        // alphabetic langs: require word boundaries so we don't underline inside a word
+        if (l !== 'zh' && l !== 'th') {
+          var before = idx > 0 ? text[idx - 1] : ' ';
+          var after = idx + w.length < text.length ? text[idx + w.length] : ' ';
+          if (isLetterChar(before) || isLetterChar(after)) { from = idx + w.length; continue; }
+        }
+        out.push({ word: w, start: idx, end: idx + w.length, kind: 'context' });
         from = idx + w.length;
-        if (out.length > 200) return out;
+        if (out.length > 100) return out;
       }
     }
     return out;
   }
-  function checkZh(text) {
+  function checkContext(text, l) {
     text = String(text || '');
-    if (!text.trim() || !hasHan(text)) return Promise.resolve([]);
-    if (zhCache[text]) return Promise.resolve(zhCache[text]);
-    if (zhInflight[text]) return zhInflight[text];
-    zhInflight[text] = llmZhErrors(text).then(function (errors) {
-      var marks = zhMarksFrom(text, errors);
-      zhCache[text] = marks;
-      delete zhInflight[text];
-      var keys = Object.keys(zhCache);
-      if (keys.length > 40) delete zhCache[keys[0]];
+    if (!contextEnabled() || !ctxEligible(text, l)) return Promise.resolve([]);
+    var key = l + '\n' + text;
+    if (ctxCache[key]) return Promise.resolve(ctxCache[key]);
+    if (ctxInflight[key]) return ctxInflight[key];
+    ctxInflight[key] = llmCtxErrors(text, l).then(function (errors) {
+      var marks = ctxMarksFrom(text, errors, l);
+      ctxCache[key] = marks;
+      delete ctxInflight[key];
+      var keys = Object.keys(ctxCache);
+      if (keys.length > 40) delete ctxCache[keys[0]];
       return marks;
-    }).catch(function () { delete zhInflight[text]; return []; });
-    return zhInflight[text];
+    }).catch(function () { delete ctxInflight[key]; return []; });
+    return ctxInflight[key];
   }
+  function checkZh(text) { return checkContext(text, 'zh'); }  // back-compat alias
 
   // ─── word scan ───────────────────────────────────────────────────
   // Unicode letters so non-Latin scripts (Cyrillic ru, Arabic ar/fa, Hebrew he,
@@ -367,8 +403,11 @@
     var text = field.value || '';
     var html = '', pos = 0;
     marks.forEach(function (mk) {
+      if (mk.start < pos) return; // safety: skip an overlapping mark (keep slicing valid)
       html += esc(text.slice(pos, mk.start));
-      html += '<span class="antcv-spell-mark" data-antcv-spell-word="' + esc(mk.word) + '" style="pointer-events:auto;color:transparent;border-bottom:2px solid rgba(220,38,38,0.85);border-bottom-style:dotted;cursor:pointer;">' + esc(text.slice(mk.start, mk.end)) + '</span>';
+      // spelling (non-word) = red; context (wrong-word-for-the-sentence) = amber.
+      var col = mk.kind === 'context' ? 'rgba(217,119,6,0.95)' : 'rgba(220,38,38,0.85)';
+      html += '<span class="antcv-spell-mark" data-antcv-spell-word="' + esc(mk.word) + '" data-antcv-spell-kind="' + (mk.kind || 'spell') + '" style="pointer-events:auto;color:transparent;border-bottom:2px solid ' + col + ';border-bottom-style:dotted;cursor:pointer;">' + esc(text.slice(mk.start, mk.end)) + '</span>';
       pos = mk.end;
     });
     html += esc(text.slice(pos));
@@ -392,14 +431,16 @@
   }
   function openPopover(field, word, anchorRect) {
     closePopover();
-    // zh suggestions come from the LLM context check's cache; other languages
-    // from the Hunspell engine.
-    var suggP = (lang() === 'zh')
-      ? Promise.resolve((zhSuggest[word] || []).slice(0, MAX_SUGGEST))
-      : getEngine().then(function (eng) {
-          try { return eng ? (eng.suggest(word) || []).slice(0, MAX_SUGGEST) : []; }
-          catch (_) { return []; }
-        });
+    // A context mark (any language) carries its suggestion in the LLM cache; a
+    // dictionary miss gets suggestions from the Hunspell engine.
+    var suggP = (ctxSuggest[word] && ctxSuggest[word].length)
+      ? Promise.resolve(ctxSuggest[word].slice(0, MAX_SUGGEST))
+      : (hasDict(lang())
+          ? getEngine().then(function (eng) {
+              try { return eng ? (eng.suggest(word) || []).slice(0, MAX_SUGGEST) : []; }
+              catch (_) { return []; }
+            })
+          : Promise.resolve([]));
     suggP.then(function (sugg) {
       pop = document.createElement('div');
       pop.className = 'antcv-spell-popover';
@@ -476,19 +517,50 @@
     clearTimeout(timers.get(field));
     timers.set(field, setTimeout(function () { runCheck(field); }, DEBOUNCE_MS));
   }
-  function runCheck(field) {
-    if (!field.isConnected || !enabled()) return;
-    if (lang() === 'zh') {
-      checkZh(field.value || '').then(function (marks) {
-        if (field.isConnected) syncOverlay(field, marks);
-      });
-      return;
-    }
-    getEngine().then(function (eng) {
-      if (!eng || !field.isConnected) return;
-      var marks = misspellings(field.value || '', eng, lang());
-      syncOverlay(field, marks);
+  // Merge dictionary (spell) + context marks into a sorted, non-overlapping list;
+  // a spelling mark wins when the two overlap.
+  function mergeMarks(spell, ctx) {
+    var marks = spell.slice();
+    (ctx || []).forEach(function (cm) {
+      var clash = spell.some(function (sm) { return cm.start < sm.end && sm.start < cm.end; });
+      if (!clash) marks.push(cm);
     });
+    marks.sort(function (a, b) { return a.start - b.start || a.end - b.end; });
+    return marks;
+  }
+  // Render-only pass: Hunspell (when the language has a dictionary) merged with
+  // any CACHED context marks. Does NOT trigger an LLM call (that is the scan's
+  // job) — so it is safe to call from the scan's completion without looping.
+  function renderMarks(field) {
+    if (!field.isConnected || !enabled()) return;
+    var l = lang(), text = field.value || '';
+    var key = l + '\n' + text;
+    var ctx = (contextEnabled() && ctxCache[key]) ? ctxCache[key] : [];
+    var hunspell = (l !== 'zh' && l !== 'th' && hasDict(l));
+    if (!hunspell) { syncOverlay(field, mergeMarks([], ctx)); return; }
+    getEngine().then(function (eng) {
+      if (!field.isConnected) return;
+      var spell = eng ? misspellings(text, eng, l) : [];
+      spell.forEach(function (m) { m.kind = 'spell'; });
+      syncOverlay(field, mergeMarks(spell, ctx));
+    });
+  }
+  // Context scan: fire the LLM proofread on a longer debounce, then re-render.
+  function scheduleContextScan(field) {
+    if (!contextEnabled()) return;
+    clearTimeout(ctxTimers.get(field));
+    ctxTimers.set(field, setTimeout(function () {
+      if (!field.isConnected || !enabled()) return;
+      var l = lang(), text = field.value || '';
+      if (!ctxEligible(text, l)) return;
+      var key = l + '\n' + text;
+      if (ctxCache[key]) { renderMarks(field); return; }
+      checkContext(text, l).then(function () { if (field.isConnected) renderMarks(field); });
+    }, CTX_DEBOUNCE_MS));
+  }
+  function runCheck(field) {
+    renderMarks(field);          // immediate: dictionary + cached context
+    scheduleContextScan(field);  // deferred: LLM context proofread
   }
   document.addEventListener('focusin', function (ev) {
     var f = ev.target;
@@ -653,12 +725,17 @@
       });
     },
     suggest: function (word) {
-      if (lang() === 'zh') return Promise.resolve((zhSuggest[String(word || '')] || []).slice(0, MAX_SUGGEST));
+      var w = String(word || '');
+      if (ctxSuggest[w] && ctxSuggest[w].length) return Promise.resolve(ctxSuggest[w].slice(0, MAX_SUGGEST));
+      if (!hasDict(lang())) return Promise.resolve([]);
       return getEngine().then(function (eng) {
-        try { return eng ? (eng.suggest(String(word || '')) || []).slice(0, MAX_SUGGEST) : []; }
+        try { return eng ? (eng.suggest(w) || []).slice(0, MAX_SUGGEST) : []; }
         catch (_) { return []; }
       });
     },
+    checkContext: function (text) { return checkContext(String(text || ''), lang()); },
+    setContext: function (on) { try { localStorage.setItem('antcv:spell:context', on ? '1' : '0'); } catch (_) {} },
+    contextEnabled: contextEnabled,
     addToDict: function (word) { try { addToUserDict(lang(), String(word || '')); } catch (_) {} },
     lang: lang,
     enabled: enabled,

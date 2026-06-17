@@ -44,6 +44,7 @@ interface AntcvWritingStylePayload {
   sectionFormats: Record<string, string>;
   /** v1.50.14 — per-section line-limit hints from the LayoutPicker. */
   sectionLineLimits: Record<string, number>;
+  sectionLineMins: Record<string, number>;
   target_language: string;
   package: string;
   ats: boolean;
@@ -102,6 +103,7 @@ function buildWritingStylePayload(): AntcvWritingStylePayload {
     sectionFormat: 'default',
     sectionFormats: { ...(lp.sectionFormats ?? {}) },
     sectionLineLimits: { ...(lp.lineLimits ?? {}) },
+    sectionLineMins: { ...(lp.lineMins ?? {}) },
     target_language: readActiveLanguage(),
     package: readActivePackageId(),
     ats: ep.ats,

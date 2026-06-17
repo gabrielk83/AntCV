@@ -6,12 +6,15 @@ import {
   clearSectionFormat,
   clearSectionLineLimit,
   defaultLineLimitFor,
+  defaultLineMinFor,
   readLayoutPrefs,
   readSectionFormat,
   readSectionLineLimit,
+  readSectionLineMin,
   readWritingPrefs,
   writeSectionFormat,
   writeSectionLineLimit,
+  writeSectionLineMin,
   type LayoutPrefs,
 } from '../../lib/writing-prefs';
 import { STYLES, type StyleId } from '../../lib/writing-systems';
@@ -74,6 +77,7 @@ export function SectionFormatPicker({
   // Research Outcomes support the inline "Results (per role/experience)" mode.
   const isOutcomes = sectionId === 'selected_outcomes' || sectionId === 'selected_research_outcomes';
   const [lineLimit, setLineLimit] = useState<number>(() => readSectionLineLimit(sectionId));
+  const [lineMin, setLineMin] = useState<number>(() => readSectionLineMin(sectionId));
   const [format, setFormat] = useState<string>(() => readSectionFormat(sectionId));
   const [outcomesMode, setOutcomesModeState] = useState<'results' | 'section'>(() => readOutcomesMode());
 
@@ -81,6 +85,7 @@ export function SectionFormatPicker({
   useEffect(() => {
     const refresh = () => {
       setLineLimit(readSectionLineLimit(sectionId));
+      setLineMin(readSectionLineMin(sectionId));
       setFormat(readSectionFormat(sectionId));
       if (isOutcomes) setOutcomesModeState(readOutcomesMode());
     };
@@ -94,10 +99,18 @@ export function SectionFormatPicker({
     };
   }, [sectionId, isOutcomes]);
 
+  // D — dual range. The MAX (upper thumb) never drops below the MIN, and the
+  // MIN (lower thumb) never rises above the MAX; each push the other if needed.
   const onLineChange = useCallback((v: number) => {
     setLineLimit(v);
     writeSectionLineLimit(sectionId, v);
-  }, [sectionId]);
+    if (v < lineMin) { setLineMin(v); writeSectionLineMin(sectionId, v); }
+  }, [sectionId, lineMin]);
+  const onMinChange = useCallback((v: number) => {
+    const clamped = Math.min(v, lineLimit);
+    setLineMin(clamped);
+    writeSectionLineMin(sectionId, clamped);
+  }, [sectionId, lineLimit]);
 
   const onFormatChange = useCallback((v: string) => {
     // Selected Outcomes: the special "results" value drives the outcomesMode
@@ -123,9 +136,10 @@ export function SectionFormatPicker({
   const selectValue = isOutcomes && outcomesMode === 'results' ? 'results' : format;
 
   const onReset = useCallback(() => {
-    clearSectionLineLimit(sectionId);
+    clearSectionLineLimit(sectionId);   // clears both min + max overrides
     clearSectionFormat(sectionId);
     setLineLimit(defaultLineLimitFor(styleId, targetPages));
+    setLineMin(defaultLineMinFor(styleId, targetPages));
     setFormat(readSectionFormat(sectionId));
   }, [sectionId, styleId, targetPages]);
 
@@ -201,19 +215,37 @@ export function SectionFormatPicker({
               <option key={o.value} value={o.value} style={DARK_OPTION_STYLE}>{o.label}</option>
             ))}
           </select>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
-            <input
-              type="range"
-              min={LINE_LIMIT_MIN}
-              max={LINE_LIMIT_MAX}
-              step={1}
-              value={lineLimit}
-              onChange={(e) => onLineChange(Number(e.currentTarget.value))}
-              aria-label={`${label} line limit`}
-              style={{ flex: 1, minWidth: 80, accentColor: '#01B7BB' }}
-            />
-            <span style={{ fontSize: 11, opacity: 0.75, minWidth: isOutcomes && outcomesMode === 'results' ? 44 : 24, textAlign: 'right' }}>
-              {lineLimit}{isOutcomes && outcomesMode === 'results' ? '/role' : ''}
+          {/* D — dual min/max range. The lower (min) thumb sets the floor, the
+              upper (max) the cap; defaults fit the active writing style. */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 9.5, opacity: 0.55, width: 24, flex: '0 0 auto' }}>min</span>
+              <input
+                type="range"
+                min={LINE_LIMIT_MIN}
+                max={LINE_LIMIT_MAX}
+                step={1}
+                value={lineMin}
+                onChange={(e) => onMinChange(Number(e.currentTarget.value))}
+                aria-label={`${label} minimum lines`}
+                style={{ flex: 1, minWidth: 70, accentColor: '#8aa0c8' }}
+              />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 9.5, opacity: 0.55, width: 24, flex: '0 0 auto' }}>max</span>
+              <input
+                type="range"
+                min={LINE_LIMIT_MIN}
+                max={LINE_LIMIT_MAX}
+                step={1}
+                value={lineLimit}
+                onChange={(e) => onLineChange(Number(e.currentTarget.value))}
+                aria-label={`${label} maximum lines`}
+                style={{ flex: 1, minWidth: 70, accentColor: '#01B7BB' }}
+              />
+            </div>
+            <span style={{ fontSize: 11, opacity: 0.75, textAlign: 'right' }}>
+              {lineMin}–{lineLimit}{isOutcomes && outcomesMode === 'results' ? '/role' : ''}
             </span>
           </div>
         </div>

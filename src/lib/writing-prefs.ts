@@ -65,6 +65,10 @@ export interface WritingPrefs {
 export interface LayoutPrefs {
   targetPages: number;
   lineLimits: Record<string, number>;
+  // D (owner): the per-section MIN line count (the lower thumb of the dual
+  // range slider). lineLimits is the MAX (upper thumb). Optional + back-compat —
+  // absent means "use the style default min". Defaults fit the writing style.
+  lineMins?: Record<string, number>;
   sectionFormats: Record<string, string>;
 }
 
@@ -182,6 +186,9 @@ export function readLayoutPrefs(): LayoutPrefs {
     targetPages: target,
     lineLimits: (lp.lineLimits && typeof lp.lineLimits === 'object')
       ? (lp.lineLimits as Record<string, number>)
+      : {},
+    lineMins: (lp.lineMins && typeof lp.lineMins === 'object')
+      ? (lp.lineMins as Record<string, number>)
       : {},
     sectionFormats: (lp.sectionFormats && typeof lp.sectionFormats === 'object')
       ? (lp.sectionFormats as Record<string, string>)
@@ -467,10 +474,43 @@ export function writeSectionLineLimit(sectionId: string, value: number): LayoutP
 
 export function clearSectionLineLimit(sectionId: string): LayoutPrefs {
   const lp = readLayoutPrefs();
-  if (!(sectionId in (lp.lineLimits ?? {}))) return lp;
-  const next = { ...lp.lineLimits };
-  delete next[sectionId];
-  return writeLayoutPrefs({ lineLimits: next });
+  const hasMax = sectionId in (lp.lineLimits ?? {});
+  const hasMin = sectionId in (lp.lineMins ?? {});
+  if (!hasMax && !hasMin) return lp;
+  const next = { ...lp.lineLimits }; delete next[sectionId];
+  const nextMin = { ...(lp.lineMins ?? {}) }; delete nextMin[sectionId];
+  return writeLayoutPrefs({ lineLimits: next, lineMins: nextMin });
+}
+
+// D (owner 2026-06-17): the per-section MIN line count default, derived from the
+// writing style so the dual range FITS the style — a tight style (low density)
+// has a narrow min..max band near its small max; an expansive style (high
+// density) has a wider band. The MAX default is defaultLineLimitFor(); the MIN
+// sits a density-sized "spread" below it.
+export function defaultLineMinFor(styleId: StyleId, targetPages: number): number {
+  const max = defaultLineLimitFor(styleId, targetPages);
+  const tier = STYLES[styleId]?.lineDensity ?? 'medium';
+  const spread = tier === 'low' ? 1 : tier === 'high' || tier === 'medium-high' ? 3 : 2;
+  return Math.max(LINE_LIMIT_MIN, Math.min(max, max - spread));
+}
+
+export function readSectionLineMin(sectionId: string): number {
+  const lp = readLayoutPrefs();
+  const max = readSectionLineLimit(sectionId);
+  const v = lp.lineMins?.[sectionId];
+  if (typeof v === 'number' && Number.isFinite(v)) {
+    return Math.max(LINE_LIMIT_MIN, Math.min(max, Math.round(v)));
+  }
+  const wp = readWritingPrefs();
+  return Math.min(max, defaultLineMinFor(wp.style, lp.targetPages));
+}
+
+export function writeSectionLineMin(sectionId: string, value: number): LayoutPrefs {
+  const lp = readLayoutPrefs();
+  const max = readSectionLineLimit(sectionId);
+  const clamped = Math.max(LINE_LIMIT_MIN, Math.min(max, Math.round(value)));
+  const next = { ...(lp.lineMins ?? {}), [sectionId]: clamped };
+  return writeLayoutPrefs({ lineMins: next });
 }
 
 /**
@@ -509,12 +549,14 @@ export function clearSectionFormat(sectionId: string): LayoutPrefs {
 export function resetSectionLayout(sectionId: string): LayoutPrefs {
   const lp = readLayoutPrefs();
   const nextLines = { ...lp.lineLimits };
+  const nextMins = { ...(lp.lineMins ?? {}) };
   const nextFormats = { ...lp.sectionFormats };
   let changed = false;
   if (sectionId in nextLines) { delete nextLines[sectionId]; changed = true; }
+  if (sectionId in nextMins) { delete nextMins[sectionId]; changed = true; }
   if (sectionId in nextFormats) { delete nextFormats[sectionId]; changed = true; }
   if (!changed) return lp;
-  return writeLayoutPrefs({ lineLimits: nextLines, sectionFormats: nextFormats });
+  return writeLayoutPrefs({ lineLimits: nextLines, lineMins: nextMins, sectionFormats: nextFormats });
 }
 
 export function defaultStyleId(): StyleId {

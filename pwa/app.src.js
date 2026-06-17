@@ -2758,7 +2758,8 @@
           if (o.personality && "object" == typeof o.personality) {
             r.push(
               "PERSONALITY KERNEL (from the stored kernel — apply per its usage_rule and render_constraints; traits feed PHRASING and EVIDENCE selection, NEVER rendered as raw adjectives):\n" +
-                JSON.stringify(o.personality).slice(0, 4500),
+                JSON.stringify(o.personality).slice(0, 4500) +
+                "\nKERNEL BOUNDS STYLE & TONE (KERNEL-STYLE-GUARD-001): the active writing style and tone settings apply ONLY WITHIN this kernel's register — vary within it, but NEVER adopt a tone, register, or phrasing that CONTRADICTS the kernel (e.g. do not write hype/assertive prose for a calm/measured kernel). When a style or tone setting conflicts with the kernel, the kernel wins.",
             );
             return;
           }

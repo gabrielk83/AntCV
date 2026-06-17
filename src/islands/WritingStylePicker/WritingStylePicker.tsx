@@ -1248,6 +1248,28 @@ export function WritingStylePicker(): JSX.Element {
               onDismiss={onDismissAutoShift}
             />
           )}
+          {/* #4 step 2 (owner) — editing tone OUTSIDE a base style's scope should
+              prompt a custom-slot save, so the base style isn't silently diverged. */}
+          {prefs.overrides && prefs.overrides.chips && (
+            <div
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px',
+                background: 'rgba(1,183,187,.10)', border: '1px solid rgba(1,183,187,.45)',
+                borderRadius: 8, fontSize: 11, lineHeight: 1.4, color: '#cfeff0',
+              }}
+            >
+              <span style={{ flex: 1 }}>
+                You've tuned the tone away from <strong>{style.displayName}</strong>'s default. Save it as a custom slot to keep it without changing the base style.
+              </span>
+              <button
+                type="button"
+                onClick={onSaveSlot}
+                style={{ background: 'rgba(1,183,187,.22)', border: '1px solid rgba(1,183,187,.6)', color: '#e6eef3', borderRadius: 6, fontWeight: 700, fontSize: 11, padding: '5px 10px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+              >
+                Save slot
+              </button>
+            </div>
+          )}
           <div>
             <div style={{ fontSize: 10.5, opacity: 0.6, margin: '0 0 4px' }}>Tone chips</div>
             <ToneChipsEditor styleId={prefs.style} chips={prefs.chips} onChange={onChipsChange} />

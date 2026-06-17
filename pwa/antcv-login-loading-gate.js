@@ -31,7 +31,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.594-login-warmup';
+  var VERSION = '1.50.595-login-warmup';
   if (window.__antcvLoginLoadingGate === VERSION) return;
   window.__antcvLoginLoadingGate = VERSION;
 
@@ -157,7 +157,7 @@
     var ver = document.createElement('span');
     // Match the pre-login screen's "X.XX.XXX-babel-fish" version chip. Numeric part
     // tracks this gate's VERSION (bumped every release); codename mirrors app.js `Ai`.
-    ver.textContent = (VERSION.match(/^\d+\.\d+\.\d+/) || ['1.50.594'])[0] + '-babel-fish';
+    ver.textContent = (VERSION.match(/^\d+\.\d+\.\d+/) || ['1.50.595'])[0] + '-babel-fish';
     ver.style.cssText = 'font-size:10px;font-weight:600;color:rgba(255,255,255,0.52);';
     brand.appendChild(h1); brand.appendChild(ver);
 
@@ -226,15 +226,14 @@
   var warmupStarted = false, warmupDone = false;
   var WARM_DISABLE = 'antcv:disable-login-warmup';
   function warmupDisabled() { var v = lsRaw(WARM_DISABLE); return v === '1' || v === 'true'; }
-  function warmUp() {
-    if (warmupStarted) return;
-    warmupStarted = true;
-    if (warmupDisabled()) { warmupDone = true; return; }
+
+  // Phase 1 — Settings: open and cycle the subtabs so their islands/sidecars mount.
+  function warmSettings(next) {
     var tries = 0;
     (function go() {
       if (typeof window._antcvOpenSettingsRoute !== 'function') {
         if (tries++ < 25) { setTimeout(go, 120); return; }
-        warmupDone = true; return;                 // route never appeared — give up gracefully
+        next(); return;                            // route never appeared — skip to preview
       }
       var origTab = lsRaw('settingsTab');
       var origSub = lsRaw('settingsSubTab');
@@ -256,12 +255,38 @@
               if (origTab != null) localStorage.setItem('settingsTab', origTab);
               if (origSub != null) localStorage.setItem('settingsSubTab', origSub);
             } catch (_) {}
-            warmupDone = true;
+            next();
           }, 260);
-        } catch (_) { warmupDone = true; }
+        } catch (_) { next(); }
       }
       step();
     })();
+  }
+
+  // Phase 2 — Preview: toggle the CV/CL switch TWICE so BOTH documents paginate +
+  // fit once (the toggle's onClick also calls resetPreviewToFit), ending on the
+  // document it started on. Then a resize settles the fit-to-width scale. This pays
+  // the preview panel's jumpy first-layout cost behind the cover.
+  function warmPreview(next) {
+    var btn = document.querySelector('[aria-label="Switch CV or CL"]');
+    if (!btn) { try { window.dispatchEvent(new Event('resize')); } catch (_) {} next(); return; }
+    try { btn.click(); } catch (_) {}              // → other document (renders/paginates it)
+    setTimeout(function () {
+      try { btn.click(); } catch (_) {}            // → back to the original document
+      setTimeout(function () {
+        try { window.dispatchEvent(new Event('resize')); } catch (_) {}   // settle fit-to-width
+        next();
+      }, 380);
+    }, 420);
+  }
+
+  function warmUp() {
+    if (warmupStarted) return;
+    warmupStarted = true;
+    if (warmupDisabled()) { warmupDone = true; return; }
+    try {
+      warmSettings(function () { warmPreview(function () { warmupDone = true; }); });
+    } catch (_) { warmupDone = true; }
   }
 
   function poll() {

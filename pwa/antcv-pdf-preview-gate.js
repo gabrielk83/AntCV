@@ -651,7 +651,11 @@ ${inlineStyles}
             const ph = pageEl.getBoundingClientRect().height;
             let scale = 1;
             if (pw > 0 && availW > 0) scale = Math.min(scale, availW / pw);
-            if (ph > 0 && availH > 0) scale = Math.min(scale, availH / ph);
+            // EXPORT-PREVIEW-SHRINK-001 (owner 2026-06-18): fit by WIDTH ONLY and let
+            // the modal body scroll. The one-page-HEIGHT term (EXPORT-PREVIEW-ZOOM-001)
+            // collapsed the whole document into a tiny region after the 1.50.600 screen
+            // un-clamp made the cloned paper its FULL multi-page height (no per-sheet
+            // clamp on screen), so `ph` was the entire doc, not one A4 page.
             if (scale < 0.999) {
               ibody.style.setProperty('--antcv-fit', String(Math.max(0.3, scale)));
               ibody.classList.add('antcv-fit-width');
@@ -1040,7 +1044,7 @@ ${inlineStyles}
 
   // Public API for diagnostics / power-users.
   window.AntcvPdfPreviewGate = {
-    version: '1.50.600-screen-unclamp',
+    version: '1.50.604-width-fit',
     open: openModal,
     close: closeModal,
   };

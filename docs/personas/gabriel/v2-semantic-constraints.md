@@ -88,6 +88,17 @@ note / optional `when`). Add these to `personalInfo.stylePrefs.bannedContextual`
 Constraint #3 needs no `bannedContextual` entry — GEN-PROFILE-001 owns the
 "unsolicited PROFILE opener → IT professional" rule end-to-end.
 
+## Banned words (English)
+
+- **"discuss"** (English output only) — owner 2026-06-17: to Danish / Scandinavian
+  readers "discuss" reads as *urging / pressuring*. Use "talk through", "explore",
+  "go through", or "a conversation about" instead. **Engine-enforced** (1.50.565):
+  the CL closure structure, the placeholder template, and the hardcoded fallback
+  closure were reworded off "discuss", and the closure instruction now carries an
+  explicit English-only ban. Danish output may use "drøfte" / "tale om" normally.
+  Add `discuss` to `stylePrefs.banned_words` in the kernel to also cover any
+  non-closure prose.
+
 ## Integration notes
 
 - The current `bannedContextual` reader supports `avoid`/`pattern`,

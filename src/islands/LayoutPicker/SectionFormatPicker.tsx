@@ -49,6 +49,20 @@ const DARK_OPTION_STYLE: React.CSSProperties = {
   color: '#e6eef3',
 };
 
+// v1.50.541 — Selected Outcomes "Results" mode. The app.js Layout toggle that
+// used to control this (Bullets section / Inline results) is now hidden; its
+// store (`outcomesMode`: 'section' | 'results') is driven from THIS dropdown
+// instead, with a "Results (inline, per role)" option. 'results' renders each
+// role's outcomes as a bold "Results:" line; the line-limit then means results
+// PER ROLE (default 2, vs the section's total of 3).
+function readOutcomesMode(): 'results' | 'section' {
+  try { return JSON.parse(localStorage.getItem('outcomesMode') || '"section"') === 'results' ? 'results' : 'section'; } catch { return 'section'; }
+}
+function writeOutcomesMode(m: 'results' | 'section'): void {
+  try { localStorage.setItem('outcomesMode', JSON.stringify(m)); } catch { /* */ }
+  try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { source: 'outcomes-mode' } })); } catch { /* */ }
+}
+
 export function SectionFormatPicker({
   sectionId,
   label,
@@ -56,22 +70,27 @@ export function SectionFormatPicker({
   targetPages,
   compact = false,
 }: SectionFormatPickerProps): JSX.Element {
+  const isOutcomes = sectionId === 'selected_outcomes';
   const [lineLimit, setLineLimit] = useState<number>(() => readSectionLineLimit(sectionId));
   const [format, setFormat] = useState<string>(() => readSectionFormat(sectionId));
+  const [outcomesMode, setOutcomesModeState] = useState<'results' | 'section'>(() => readOutcomesMode());
 
   // Refresh on external mutation (other tabs, programmatic resets).
   useEffect(() => {
     const refresh = () => {
       setLineLimit(readSectionLineLimit(sectionId));
       setFormat(readSectionFormat(sectionId));
+      if (isOutcomes) setOutcomesModeState(readOutcomesMode());
     };
     window.addEventListener('antcv:layout-prefs-changed', refresh);
     window.addEventListener('antcv:writing-prefs-changed', refresh); // style change → default recompute
+    if (isOutcomes) window.addEventListener('antcv:sections-updated', refresh);
     return () => {
       window.removeEventListener('antcv:layout-prefs-changed', refresh);
       window.removeEventListener('antcv:writing-prefs-changed', refresh);
+      if (isOutcomes) window.removeEventListener('antcv:sections-updated', refresh);
     };
-  }, [sectionId]);
+  }, [sectionId, isOutcomes]);
 
   const onLineChange = useCallback((v: number) => {
     setLineLimit(v);
@@ -79,9 +98,27 @@ export function SectionFormatPicker({
   }, [sectionId]);
 
   const onFormatChange = useCallback((v: string) => {
+    // Selected Outcomes: the special "results" value drives the outcomesMode
+    // store (inline per-role "Results:" line) rather than a section format.
+    if (isOutcomes) {
+      if (v === 'results') {
+        writeOutcomesMode('results');
+        setOutcomesModeState('results');
+        // default the per-role count to 2 (vs the section's 3) if not overridden.
+        if (typeof readLayoutPrefs().lineLimits?.[sectionId] !== 'number') {
+          writeSectionLineLimit(sectionId, 2);
+          setLineLimit(2);
+        }
+        return;
+      }
+      if (outcomesMode === 'results') { writeOutcomesMode('section'); setOutcomesModeState('section'); }
+    }
     setFormat(v);
     writeSectionFormat(sectionId, v);
-  }, [sectionId]);
+  }, [sectionId, isOutcomes, outcomesMode]);
+
+  // What the dropdown shows: 'results' wins for Selected Outcomes in results mode.
+  const selectValue = isOutcomes && outcomesMode === 'results' ? 'results' : format;
 
   const onReset = useCallback(() => {
     clearSectionLineLimit(sectionId);
@@ -140,7 +177,7 @@ export function SectionFormatPicker({
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <select
-            value={format}
+            value={selectValue}
             onChange={(e) => onFormatChange(e.currentTarget.value)}
             aria-label={`${label} format`}
             style={{
@@ -155,6 +192,9 @@ export function SectionFormatPicker({
               fontSize: 11,
             }}
           >
+            {isOutcomes && (
+              <option value="results" style={DARK_OPTION_STYLE}>Results (inline, per role)</option>
+            )}
             {SECTION_FORMAT_OPTIONS.map((o) => (
               <option key={o.value} value={o.value} style={DARK_OPTION_STYLE}>{o.label}</option>
             ))}
@@ -170,8 +210,8 @@ export function SectionFormatPicker({
               aria-label={`${label} line limit`}
               style={{ flex: 1, minWidth: 80, accentColor: '#01B7BB' }}
             />
-            <span style={{ fontSize: 11, opacity: 0.75, minWidth: 24, textAlign: 'right' }}>
-              {lineLimit}
+            <span style={{ fontSize: 11, opacity: 0.75, minWidth: isOutcomes && outcomesMode === 'results' ? 44 : 24, textAlign: 'right' }}>
+              {lineLimit}{isOutcomes && outcomesMode === 'results' ? '/role' : ''}
             </span>
           </div>
         </div>

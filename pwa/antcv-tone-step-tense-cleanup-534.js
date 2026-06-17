@@ -31,7 +31,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.536-tone-tense-cleanup';
+  var VERSION = '1.50.541-tone-tense-cleanup';
   if (window.__antcvToneTenseCleanup534 === VERSION) return;
   window.__antcvToneTenseCleanup534 = VERSION;
 
@@ -129,10 +129,39 @@
     } catch (_) {}
   }
 
+  // A (1.50.541) — hide the Layout "SELECTED OUTCOMES" Bullets/Inline toggle.
+  // Its function is now covered by the Selected-Outcomes format dropdown in the
+  // Layout picker ("Results" option). Matched by its unique helper sentence.
+  function hideOutcomesModeToggle() {
+    try {
+      var leaf = deepestContaining('Show outcomes as their own bullet section');
+      if (!leaf) return;
+      var n = leaf, hops = 0;
+      while (n && hops < 8 && !(n.style && n.style.marginBottom === '14px')) { n = n.parentElement; hops++; }
+      if (n && n.style && n.style.marginBottom === '14px' && n.getAttribute('data-antcv-outcomes-toggle-hidden') !== '1') {
+        n.style.setProperty('display', 'none', 'important');
+        n.setAttribute('data-antcv-outcomes-toggle-hidden', '1');
+      }
+    } catch (_) {}
+  }
+
+  // B/C default — Results is now the DEFAULT outcomes rendering (owner). If the
+  // store was never set, seed it to 'results' once (the dropdown can switch back
+  // to 'section'). Runs once at boot.
+  function defaultOutcomesResults() {
+    try {
+      if (localStorage.getItem('outcomesMode') == null) {
+        localStorage.setItem('outcomesMode', JSON.stringify('results'));
+        window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { source: 'outcomes-default-results' } }));
+      }
+    } catch (_) {}
+  }
+
   var pending = false;
-  function run() { hideAdvancedTense(); injectQuizOnTone(); hideAppBannedFields(); }
+  function run() { hideAdvancedTense(); injectQuizOnTone(); hideAppBannedFields(); hideOutcomesModeToggle(); }
   function schedule() { if (pending) return; pending = true; (window.requestAnimationFrame || setTimeout)(function () { pending = false; try { run(); } catch (_) {} }); }
   function boot() {
+    defaultOutcomesResults();
     schedule();
     [200, 600, 1500, 3000].forEach(function (d) { setTimeout(schedule, d); });
     try { new MutationObserver(schedule).observe(document.documentElement, { childList: true, subtree: true }); } catch (_) {}

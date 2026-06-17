@@ -11,7 +11,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.532-kernel-import';
+  var VERSION = '1.50.540-kernel-import';
   if (window.__antcvKernelImport === VERSION) return;
   window.__antcvKernelImport = VERSION;
 
@@ -209,6 +209,19 @@
     return b;
   }
   function injectEntry() {
+    // v1.50.540 (owner 2026-06-17): REMOVE the standalone "🧬 Build / update
+    // kernel from CV" pill from the Settings menu (and everywhere) — it is the
+    // "extra CV upload button". The kernel build folds into the existing upload
+    // control via the #9-12 unified loader; until then we keep the engine
+    // (runImport / review modal / autoSync) but inject NO separate button.
+    // Also sweep up any pill a prior build already injected.
+    try {
+      var stale = document.querySelectorAll('[data-antcv-kimport-btn="1"]');
+      for (var i = 0; i < stale.length; i++) { try { stale[i].remove(); } catch (_) {} }
+    } catch (_) {}
+    return;
+    // eslint-disable-next-line no-unreachable
+    // ---- legacy injection (disabled) ----------------------------------------
     // v1.50.531 — KERNEL-PILL-STICKY/DEDUP fix (WIZARD_SETTINGS_UX #1/#3):
     // The old anchor source #2 (broad import/upload TEXT regex) matched upload
     // affordances on multiple wizard steps (STEP 2 / 6C / language slide), so the

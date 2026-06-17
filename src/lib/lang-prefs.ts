@@ -5,7 +5,15 @@
 // listens for changes — antcv-language-prefs.js, antcv-lang-bar-filter.js,
 // antcv-i18n.js — keeps working without modification.
 
-export type LangCode = 'en' | 'da' | 'es' | 'zh';
+// SPELLERS-MATRIX-001 (owner 2026-06-17): the full available-language set for
+// the selector. The first four (en/da/es/zh) are the original set; the rest
+// were added so every language the owner listed is selectable AND gets the
+// matching spelling dictionary (see LanguageCard SPELL_UI + the spell engine's
+// SPELL map). Generation output language follows the DEFAULT (first) language.
+export type LangCode =
+  | 'en' | 'da' | 'es' | 'zh'
+  | 'fr' | 'de' | 'it' | 'ar' | 'fa' | 'he'
+  | 'ru' | 'tr' | 'ku' | 'sw' | 'am';
 
 export interface LangOption {
   code: LangCode;
@@ -17,6 +25,17 @@ export const LANGS: readonly LangOption[] = [
   { code: 'da', label: 'Danish' },
   { code: 'es', label: 'Spanish' },
   { code: 'zh', label: 'Chinese' },
+  { code: 'fr', label: 'French' },
+  { code: 'de', label: 'German' },
+  { code: 'it', label: 'Italian' },
+  { code: 'ar', label: 'Arabic' },
+  { code: 'fa', label: 'Farsi' },
+  { code: 'he', label: 'Hebrew' },
+  { code: 'ru', label: 'Russian' },
+  { code: 'tr', label: 'Turkish' },
+  { code: 'ku', label: 'Kurdish' },
+  { code: 'sw', label: 'Swahili' },
+  { code: 'am', label: 'Amharic' },
 ];
 
 // Matches DEFAULT_LANGS in antcv-stability-core-334.js v1.40.339.

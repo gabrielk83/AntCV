@@ -28,49 +28,65 @@
   'use strict';
 
   if (window.__antcvSpellAnnotatorInstalled) return;
-  var VERSION = '1.50.547';
+  var VERSION = '1.50.561';
   window.__antcvSpellAnnotatorInstalled = VERSION;
 
-  // SPELL-EN-VARIANT-001 (owner 2026-06-13): English defaults to UK (en-GB);
-  // US (en-US) is selectable. zh has no Hunspell dictionary — a symbol-in-
-  // sentence-fit check is a separate context/LLM path (SPELL-ZH-CONTEXT-001).
-  var DICT_PKG = {
-    'en-gb': 'dictionary-en-gb',
-    'en-us': 'dictionary-en-us',
-    // SPELL-EN-VARIANT-002 (owner 2026-06-17): more large English markets whose
-    // spelling differs. India follows British conventions (en-in pkg may be
-    // absent → falls back to en-gb in loadDict, the right base). Canada/
-    // Australia/South Africa have their own Hunspell dictionaries.
-    'en-in': 'dictionary-en-in',  // India
-    'en-ca': 'dictionary-en-ca',  // Canada
-    'en-au': 'dictionary-en-au',  // Australia
-    'en-za': 'dictionary-en-za',  // South Africa
-    da: 'dictionary-da',
-    es: 'dictionary-es',
-    // SPELL-ES-VARIANT-001 (owner 2026-06-17): regional Spanish, mirroring the
-    // en-gb/en-us split. Uruguay is the DEFAULT. Any regional package that 404s
-    // on the CDN falls back to the generic `dictionary-es` (see loadDict) so
-    // Spanish spelling never breaks as the variant list grows.
-    'es-uy': 'dictionary-es-uy',  // Uruguay (default)
-    'es-es': 'dictionary-es-es',  // España
-    'es-mx': 'dictionary-es-mx',  // México
-    'es-ar': 'dictionary-es-ar',  // Argentina
-    'es-co': 'dictionary-es-co',  // Colombia
-    'es-cl': 'dictionary-es-cl',  // Chile
-    'es-gq': 'dictionary-es-gq',  // Guinea Ecuatorial
+  // SPELLERS-MATRIX-001 (owner 2026-06-17): full language matrix. Each language
+  // is VARIANT-based (a default + selectable regional spellings), SINGLE (one
+  // dictionary, no variants), or CONTEXT (zh — an LLM check, no Hunspell;
+  // SPELL-ZH-CONTEXT-001). Variants WITHOUT a distinct Hunspell package map to
+  // the language base dictionary (e.g. Danish Østdansk/Jysk dialects; Farsi
+  // Iranian/Afghani; French regional) — the variant CHOICE is still recorded
+  // (it informs the generation locale/register), spelling just falls back to
+  // the base dictionary so it never breaks as the matrix grows.
+  // Predecessors: SPELL-EN-VARIANT-001/002, SPELL-ES-VARIANT-001.
+  var SPELL = {
+    en: { def: 'gb', variants: { gb: 'dictionary-en-gb', us: 'dictionary-en-us', in: 'dictionary-en-in', ca: 'dictionary-en-ca', au: 'dictionary-en-au', za: 'dictionary-en-za' } },
+    es: { def: 'uy', variants: { uy: 'dictionary-es-uy', es: 'dictionary-es-es', mx: 'dictionary-es-mx', ar: 'dictionary-es-ar', co: 'dictionary-es-co', cl: 'dictionary-es-cl', gq: 'dictionary-es-gq' } },
+    da: { def: 'ost', variants: { ost: 'dictionary-da', jysk: 'dictionary-da' } },   // Østdansk (default) / Jysk dialects → same Hunspell base
+    fr: { def: 'fr', variants: { fr: 'dictionary-fr', ca: 'dictionary-fr', be: 'dictionary-fr', ch: 'dictionary-fr' } },
+    de: { def: 'de', variants: { de: 'dictionary-de', at: 'dictionary-de-at', ch: 'dictionary-de-ch' } },
+    it: { def: 'it', variants: { it: 'dictionary-it', ch: 'dictionary-it' } },
+    ar: { def: 'ar', variants: { ar: 'dictionary-ar', eg: 'dictionary-ar', ma: 'dictionary-ar', sa: 'dictionary-ar' } },
+    fa: { def: 'ir', variants: { ir: 'dictionary-fa', af: 'dictionary-fa' } },        // Iranian (default) / Afghani Dari → same base
+    he: { single: 'dictionary-he' },
+    ru: { single: 'dictionary-ru' },
+    tr: { single: 'dictionary-tr' },
+    ku: { single: 'dictionary-ku' },
+    sw: { single: 'dictionary-sw' },
+    am: { single: 'dictionary-am' },
+    zh: { context: true },
   };
-  function enVariant() {
-    try { var v = localStorage.getItem('antcv:spell:enVariant'); return (v && DICT_PKG['en-' + v]) ? v : 'gb'; }
-    catch (_) { return 'gb'; }
+  // Flatten to key → npm package for the loader. Key is the dictKey identity:
+  // 'en-gb', 'da-ost', 'fr-fr', or a bare 'he'/'ru' for single-dictionary langs.
+  var DICT_PKG = {};
+  (function () {
+    for (var l in SPELL) {
+      var c = SPELL[l];
+      if (c.single) DICT_PKG[l] = c.single;
+      else if (c.variants) for (var v in c.variants) DICT_PKG[l + '-' + v] = c.variants[v];
+    }
+  })();
+  // The selected variant for a language. Reads the generic store
+  // 'antcv:spell:variant:{lang}', honouring the legacy en/es-specific keys for
+  // back-compat, and falls back to the language's default variant.
+  function variantOf(l) {
+    var c = SPELL[l];
+    if (!c || !c.variants) return '';
+    var stored = '';
+    try {
+      if (l === 'en') stored = localStorage.getItem('antcv:spell:enVariant') || '';
+      else if (l === 'es') stored = localStorage.getItem('antcv:spell:esVariant') || '';
+      if (!stored) stored = localStorage.getItem('antcv:spell:variant:' + l) || '';
+    } catch (_) {}
+    return (stored && c.variants[stored]) ? stored : c.def;
   }
-  function esVariant() {
-    try { var v = localStorage.getItem('antcv:spell:esVariant'); return (v && DICT_PKG['es-' + v]) ? v : 'uy'; }
-    catch (_) { return 'uy'; }
-  }
-  // dictKey: the cache + engine identity. English resolves to en-gb / en-us and
-  // Spanish to es-uy/es-es/… so switching the variant reloads the right dict.
-  function dictKey(l) { return l === 'en' ? 'en-' + enVariant() : (l === 'es' ? 'es-' + esVariant() : l); }
-  function hasDict(l) { return l === 'en' || l === 'da' || l === 'es'; }
+  function enVariant() { return variantOf('en'); }   // kept for the public API + legacy settings card
+  function esVariant() { return variantOf('es'); }
+  // dictKey: cache + engine identity. Variant langs resolve to '{l}-{variant}';
+  // single/context langs are the bare code.
+  function dictKey(l) { var c = SPELL[l]; return (c && c.variants) ? l + '-' + variantOf(l) : l; }
+  function hasDict(l) { var c = SPELL[l]; return !!(c && (c.single || c.variants)); }
   var CDN = 'https://cdn.jsdelivr.net/npm/';
   var DEBOUNCE_MS = 600;
   var MAX_SUGGEST = 6;
@@ -81,9 +97,11 @@
       var raw = localStorage.getItem('language') || 'en';
       try { var p = JSON.parse(raw); if (typeof p === 'string') raw = p; } catch (_) {}
       var s = String(raw).toLowerCase();
-      if (/^da/.test(s)) return 'da';
-      if (/^es/.test(s)) return 'es';
-      if (/^zh/.test(s)) return 'zh';
+      if (/^iw/.test(s)) return 'he';   // legacy ISO code for Hebrew
+      // match the leading ISO 639-1 code against the configured matrix
+      for (var code in SPELL) {
+        if (s === code || s.indexOf(code + '-') === 0 || s.indexOf(code + '_') === 0) return code;
+      }
       return 'en';
     } catch (_) { return 'en'; }
   }
@@ -168,10 +186,16 @@
       if (cached && cached.aff && cached.dic) return cached;
     }
     var rec = await fetchDictPkg(key);
-    // Regional package missing on the CDN → fall back to the language base so
-    // spelling still works. es-* → generic es; en-* → en-gb (British base).
-    if (!rec && /^es-/.test(key)) rec = await fetchDictPkg('es');
-    if (!rec && /^en-/.test(key) && key !== 'en-gb') rec = await fetchDictPkg('en-gb');
+    // Regional/dialect package missing on the CDN → fall back to the language's
+    // DEFAULT variant package so spelling still works (e.g. de-at → de-de).
+    if (!rec && key.indexOf('-') > 0) {
+      var base = key.split('-')[0];
+      var c = SPELL[base];
+      if (c && c.variants) {
+        var defKey = base + '-' + c.def;
+        if (defKey !== key) rec = await fetchDictPkg(defKey);
+      }
+    }
     if (!rec) throw new Error('dictionary fetch failed for ' + key);
     if (db) await idbPut(db, key, rec);
     return rec;
@@ -278,7 +302,9 @@
   }
 
   // ─── word scan ───────────────────────────────────────────────────
-  var WORD_RE = /[A-Za-zÀ-ɏ']{2,}/g;
+  // Unicode letters so non-Latin scripts (Cyrillic ru, Arabic ar/fa, Hebrew he,
+  // Ge'ez am) are scanned too, not just Latin. Apostrophes stay in-word.
+  var WORD_RE = /[\p{L}’']{2,}/gu;
   function misspellings(text, eng, l) {
     var out = [], m, ud = userDict(l);
     WORD_RE.lastIndex = 0;

@@ -6,6 +6,7 @@ import {
   TONE_CHIPS_CATALOGUE,
   detectChipConflicts,
   isChipCompatible,
+  SUPPORTED_LANGUAGES,
   type StyleId,
   type LangCode,
 } from '../../lib/writing-systems';
@@ -31,6 +32,15 @@ import {
 } from '../../lib/writing-prefs';
 import { readEnabledLangs } from '../../lib/lang-prefs';
 import { LanguageCard } from '../LanguageCard/LanguageCard';
+
+// SPELLERS-MATRIX-001 widened the available-language list (lang-prefs LangCode),
+// but the banned per-language buckets only exist for the registry's shared-base
+// languages (en/da/es/zh — writing-systems LangCode). Narrow the enabled list to
+// those before using it for the banned scope tabs.
+const BANNED_BUCKET_LANGS = new Set<string>(SUPPORTED_LANGUAGES as readonly string[]);
+function bannedScopeLangs(): LangCode[] {
+  return readEnabledLangs().filter((c): c is LangCode => BANNED_BUCKET_LANGS.has(c));
+}
 
 // Sub-section header used inside the picker. Same visual register as the
 // LanguageCard header in src/islands/LanguageCard/LanguageCard.tsx.
@@ -957,7 +967,7 @@ export function WritingStylePicker(): JSX.Element {
   const [phrasesOpen, setPhrasesOpen] = useState(false);
   // v1.50.553 — the banned per-language scope tabs reflect the ENABLED languages
   // (owner: changing languages changes the banned per-language selector).
-  const [enabledLangs, setEnabledLangs] = useState<LangCode[]>(() => readEnabledLangs());
+  const [enabledLangs, setEnabledLangs] = useState<LangCode[]>(() => bannedScopeLangs());
   // KERNEL-STYLE-GUARD-001 — personality traits bound the style/tone (warn on clash).
   const [personaTraits, setPersonaTraits] = useState<string[]>(() => readPersonalityTraits());
   // #4 step 2 — Advanced Tone group (chips + preferred tone + saved customs), last + collapsed.
@@ -978,7 +988,7 @@ export function WritingStylePicker(): JSX.Element {
       const detail = (ev as CustomEvent).detail as { lang?: LangCode } | undefined;
       setEditorLang(detail?.lang ?? readEditorLanguage());
     };
-    const refreshLangs = () => setEnabledLangs(readEnabledLangs());
+    const refreshLangs = () => setEnabledLangs(bannedScopeLangs());
     window.addEventListener('antcv:writing-prefs-changed', refreshPrefs);
     window.addEventListener('antcv:layout-prefs-changed', refreshLayout);
     window.addEventListener('antcv:editor-language-changed', refreshLang as EventListener);

@@ -72,36 +72,56 @@ function writeTense(v: Tense): void {
 }
 function readSpellEnabled(): boolean { try { return localStorage.getItem('antcv:spell:enabled') !== '0'; } catch { return true; } }
 function writeSpellEnabled(on: boolean): void { try { localStorage.setItem('antcv:spell:enabled', on ? '1' : '0'); } catch { /* */ } }
-// SPELL-EN-VARIANT-002 — English markets with distinct spelling. UK default.
-const EN_VARIANTS: [string, string][] = [
-  ['gb', 'UK (British)'], ['us', 'US (American)'], ['in', 'India'],
-  ['ca', 'Canada'], ['au', 'Australia'], ['za', 'South Africa'],
-];
-function readEnVariant(): string { try { return localStorage.getItem('antcv:spell:enVariant') || 'gb'; } catch { return 'gb'; } }
-function writeEnVariant(code: string): void {
-  try { localStorage.setItem('antcv:spell:enVariant', code); } catch { /* */ }
-  try { (window as unknown as { AntcvSpell?: { _invalidate?: () => void } }).AntcvSpell?._invalidate?.(); } catch { /* */ }
-  try { window.dispatchEvent(new CustomEvent('antcv:spell-variant-changed', { detail: { variant: code } })); } catch { /* */ }
+
+// SPELLERS-MATRIX-001 (owner 2026-06-17): per-language spelling config, kept in
+// sync with the SPELL map in antcv-spell-annotator-384.js. VARIANT languages
+// show a regional <select> (first = default); SINGLE languages a plain enable
+// row; CONTEXT (zh) an enable row noting the AI character check. Variants with
+// no distinct Hunspell package (Danish dialects, Farsi/French regions) still
+// record the choice and fall back to the base dictionary in the engine.
+interface SpellCfg { def?: string; variants?: [string, string][]; single?: boolean; context?: boolean }
+const SPELL_UI: Record<string, SpellCfg> = {
+  en: { def: 'gb', variants: [['gb', 'UK (British)'], ['us', 'US (American)'], ['in', 'India'], ['ca', 'Canada'], ['au', 'Australia'], ['za', 'South Africa']] },
+  es: { def: 'uy', variants: [['uy', 'Uruguay'], ['es', 'España'], ['mx', 'México'], ['ar', 'Argentina'], ['co', 'Colombia'], ['cl', 'Chile'], ['gq', 'Guinea Ecuatorial']] },
+  da: { def: 'ost', variants: [['ost', 'Østdansk'], ['jysk', 'Jysk']] },
+  fr: { def: 'fr', variants: [['fr', 'France'], ['ca', 'Canada'], ['be', 'Belgique'], ['ch', 'Suisse']] },
+  de: { def: 'de', variants: [['de', 'Deutschland'], ['at', 'Österreich'], ['ch', 'Schweiz']] },
+  it: { def: 'it', variants: [['it', 'Italia'], ['ch', 'Svizzera']] },
+  ar: { def: 'ar', variants: [['ar', 'الفصحى (MSA)'], ['eg', 'مصر'], ['ma', 'المغرب'], ['sa', 'السعودية']] },
+  fa: { def: 'ir', variants: [['ir', 'ایران (Iranian)'], ['af', 'افغانستان (Dari)']] },
+  he: { single: true }, ru: { single: true }, tr: { single: true },
+  ku: { single: true }, sw: { single: true }, am: { single: true },
+  zh: { context: true },
+};
+function variantDefault(lang: string): string { return SPELL_UI[lang]?.def ?? ''; }
+function readVariant(lang: string): string {
+  try {
+    if (lang === 'en') { const v = localStorage.getItem('antcv:spell:enVariant'); if (v) return v; }
+    if (lang === 'es') { const v = localStorage.getItem('antcv:spell:esVariant'); if (v) return v; }
+    const g = localStorage.getItem('antcv:spell:variant:' + lang); if (g) return g;
+  } catch { /* */ }
+  return variantDefault(lang);
 }
-function readEsVariant(): string { try { return localStorage.getItem('antcv:spell:esVariant') || 'uy'; } catch { return 'uy'; } }
-function writeEsVariant(code: string): void {
-  try { localStorage.setItem('antcv:spell:esVariant', code); } catch { /* */ }
+function writeVariant(lang: string, code: string): void {
+  try {
+    localStorage.setItem('antcv:spell:variant:' + lang, code);
+    if (lang === 'en') localStorage.setItem('antcv:spell:enVariant', code);  // mirror legacy keys
+    if (lang === 'es') localStorage.setItem('antcv:spell:esVariant', code);
+  } catch { /* */ }
   try { (window as unknown as { AntcvSpell?: { _invalidate?: () => void } }).AntcvSpell?._invalidate?.(); } catch { /* */ }
-  try { window.dispatchEvent(new CustomEvent('antcv:spell-variant-changed', { detail: { variant: code, lang: 'es' } })); } catch { /* */ }
+  try { window.dispatchEvent(new CustomEvent('antcv:spell-variant-changed', { detail: { variant: code, lang } })); } catch { /* */ }
 }
-// SPELL-ES-VARIANT-001 — regional Spanish, Uruguay default. Grows over time, so
-// the control is a scrollable <select> (native dropdowns overflow-scroll).
-const ES_VARIANTS: [string, string][] = [
-  ['uy', 'Uruguay'], ['es', 'España'], ['mx', 'México'], ['ar', 'Argentina'],
-  ['co', 'Colombia'], ['cl', 'Chile'], ['gq', 'Guinea Ecuatorial'],
-];
 function readSpellLangs(): Record<string, boolean> { try { return JSON.parse(localStorage.getItem('antcv:spell:langs') || '{}') || {}; } catch { return {}; } }
 function writeSpellLang(code: string, on: boolean): void {
   try { const m = readSpellLangs(); m[code] = on; localStorage.setItem('antcv:spell:langs', JSON.stringify(m)); } catch { /* */ }
 }
 
 // U3 — native names for the two-table picker (parity with the wizard slide).
-const NATIVE: Record<string, string> = { en: 'English', da: 'Dansk', es: 'Español', zh: '中文' };
+const NATIVE: Record<string, string> = {
+  en: 'English', da: 'Dansk', es: 'Español', zh: '中文',
+  fr: 'Français', de: 'Deutsch', it: 'Italiano', ar: 'العربية', fa: 'فارسی',
+  he: 'עברית', ru: 'Русский', tr: 'Türkçe', ku: 'Kurdî', sw: 'Kiswahili', am: 'አማርኛ',
+};
 // First language = the DEFAULT; it drives generation + the interface. Mirror the
 // wizard's writePrimaryLanguage (JSON-encoded 'language', like the app's u.set).
 function writePrimaryLanguage(code: string): void {
@@ -116,14 +136,16 @@ export function LanguageCard(): JSX.Element {
   const [enabled, setEnabled] = useState<LangCode[]>(() => readEnabledLangs());
   const [tense, setTense] = useState<Tense>(() => readTense());
   const [spellOn, setSpellOn] = useState<boolean>(() => readSpellEnabled());
-  const [enVariant, setEnVariant] = useState<string>(() => readEnVariant());
-  const [esVariant, setEsVariant] = useState<string>(() => readEsVariant());
+  const [variants, setVariants] = useState<Record<string, string>>(() => {
+    const m: Record<string, string> = {};
+    for (const code of Object.keys(SPELL_UI)) if (SPELL_UI[code].variants) m[code] = readVariant(code);
+    return m;
+  });
   const [spellLangs, setSpellLangs] = useState<Record<string, boolean>>(() => readSpellLangs());
 
   const onTense = useCallback((v: Tense) => { writeTense(v); setTense(v); }, []);
   const onSpellOn = useCallback((on: boolean) => { writeSpellEnabled(on); setSpellOn(on); }, []);
-  const onEnVariant = useCallback((c: string) => { writeEnVariant(c); setEnVariant(c); }, []);
-  const onEsVariant = useCallback((c: string) => { writeEsVariant(c); setEsVariant(c); }, []);
+  const onVariant = useCallback((lang: string, c: string) => { writeVariant(lang, c); setVariants((p) => ({ ...p, [lang]: c })); }, []);
   const onSpellLang = useCallback((code: string, on: boolean) => { writeSpellLang(code, on); setSpellLangs((p) => ({ ...p, [code]: on })); }, []);
 
   // Cross-tab sync — if another tab toggles a language, mirror the change.
@@ -272,44 +294,44 @@ export function LanguageCard(): JSX.Element {
             <input type="checkbox" checked={spellOn} onChange={(e) => onSpellOn(e.currentTarget.checked)} style={{ accentColor: '#01B7BB', cursor: 'pointer' }} />
             Spelling underlines (editor + preview)
           </label>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '7px 0 0', flexWrap: 'wrap', fontSize: 11, color: 'rgba(255,255,255,.7)' }}>
-            <span>English:</span>
-            <select
-              value={enVariant}
-              onChange={(e) => onEnVariant(e.currentTarget.value)}
-              style={{ padding: '4px 8px', fontSize: 11, borderRadius: 6, border: '1px solid rgba(255,255,255,.18)', background: 'rgba(255,255,255,.06)', color: '#fff', cursor: 'pointer', maxWidth: '100%' }}
-            >
-              {EN_VARIANTS.map(([code, label]) => (
-                <option key={code} value={code} style={{ background: '#283556', color: '#e6eef3' }}>{label}</option>
-              ))}
-            </select>
+          {/* SPELLERS-MATRIX-001 — one row per SELECTED language that has a
+              spelling config: a regional <select> for variant languages, an
+              enable checkbox for single/context languages. The list tracks the
+              languages chosen in the picker above. */}
+          <div style={{ margin: '8px 0 0', display: 'flex', flexDirection: 'column', gap: 7 }}>
+            {enabled.filter((code) => SPELL_UI[code]).map((code) => {
+              const cfg = SPELL_UI[code];
+              const name = LANGS.find((l) => l.code === code)?.label ?? code;
+              const on = spellLangs[code] !== false;
+              return (
+                <div key={code} style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 11, color: 'rgba(255,255,255,.78)' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', minWidth: 96 }}>
+                    <input
+                      type="checkbox"
+                      checked={on}
+                      onChange={(e) => onSpellLang(code, e.currentTarget.checked)}
+                      style={{ accentColor: '#01B7BB', cursor: 'pointer' }}
+                    />
+                    <strong style={{ color: '#fff' }}>{name}</strong>
+                    {cfg.context && <span style={{ color: 'rgba(255,255,255,.45)' }}>(AI check)</span>}
+                  </label>
+                  {cfg.variants && (
+                    <select
+                      value={variants[code] ?? cfg.def}
+                      disabled={!on}
+                      onChange={(e) => onVariant(code, e.currentTarget.value)}
+                      style={{ padding: '4px 8px', fontSize: 11, borderRadius: 6, border: '1px solid rgba(255,255,255,.18)', background: 'rgba(255,255,255,.06)', color: '#fff', cursor: on ? 'pointer' : 'default', opacity: on ? 1 : 0.4, maxWidth: '100%' }}
+                    >
+                      {cfg.variants.map(([vc, vl]) => (
+                        <option key={vc} value={vc} style={{ background: '#283556', color: '#e6eef3' }}>{vl}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              );
+            })}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '7px 0 0', flexWrap: 'wrap', fontSize: 11, color: 'rgba(255,255,255,.7)' }}>
-            <span>Spanish:</span>
-            <select
-              value={esVariant}
-              onChange={(e) => onEsVariant(e.currentTarget.value)}
-              style={{ padding: '4px 8px', fontSize: 11, borderRadius: 6, border: '1px solid rgba(255,255,255,.18)', background: 'rgba(255,255,255,.06)', color: '#fff', cursor: 'pointer', maxWidth: '100%' }}
-            >
-              {ES_VARIANTS.map(([code, label]) => (
-                <option key={code} value={code} style={{ background: '#283556', color: '#e6eef3' }}>{label}</option>
-              ))}
-            </select>
-          </div>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', margin: '7px 0 0', fontSize: 11, color: 'rgba(255,255,255,.7)' }}>
-            {([['da', 'Dansk'], ['zh', '中文 (context)']] as [string, string][]).map(([code, label]) => (
-              <label key={code} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={spellLangs[code] !== false}
-                  onChange={(e) => onSpellLang(code, e.currentTarget.checked)}
-                  style={{ accentColor: '#01B7BB', cursor: 'pointer' }}
-                />
-                {label}
-              </label>
-            ))}
-          </div>
-          <div style={HINT}>Dictionaries follow the document language. Chinese uses a context-based check (no Hunspell). Change English UK/US above.</div>
+          <div style={HINT}>One row per selected language. Variant dialects without their own dictionary (Danish Østdansk/Jysk, Farsi, French regions) fall back to the base dictionary. Chinese uses an AI character check (no Hunspell). Languages with no published dictionary simply skip underlining.</div>
         </div>
       )}
     </section>

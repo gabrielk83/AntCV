@@ -70,7 +70,9 @@ export function SectionFormatPicker({
   targetPages,
   compact = false,
 }: SectionFormatPickerProps): JSX.Element {
-  const isOutcomes = sectionId === 'selected_outcomes';
+  // v1.50.544 — both the commercial Selected Outcomes AND the academic Selected
+  // Research Outcomes support the inline "Results (per role/experience)" mode.
+  const isOutcomes = sectionId === 'selected_outcomes' || sectionId === 'selected_research_outcomes';
   const [lineLimit, setLineLimit] = useState<number>(() => readSectionLineLimit(sectionId));
   const [format, setFormat] = useState<string>(() => readSectionFormat(sectionId));
   const [outcomesMode, setOutcomesModeState] = useState<'results' | 'section'>(() => readOutcomesMode());

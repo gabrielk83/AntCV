@@ -123,6 +123,12 @@ export function findAdvancedStyleButton(root: Element): Element | null {
 export function isLayoutSubtab(root: Element): boolean {
   const st = getTabState(root);
   if (st.sub === 'layout') return true;
+  // v1.50.544 — the button-presence fallback used to make the ExportOptions
+  // card STICKY on other subtabs (e.g. Application history), because that
+  // hand-off button can linger in the DOM. Only use the fallback when the
+  // active subtab is genuinely AMBIGUOUS (st.sub empty); if another subtab is
+  // explicitly active, this is NOT Layout.
+  if (st.sub && st.sub !== 'layout') return false;
   return findAdvancedStyleButton(root) != null;
 }
 

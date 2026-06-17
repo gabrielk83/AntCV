@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { ACADEMIC_SECTIONS, KNOWN_SECTIONS, type LayoutPrefs } from '../../lib/writing-prefs';
 import { NATIVE_SECTION_HEADER_STYLE } from '../../lib/settings-dom';
 import { SectionFormatPicker, useLayoutPrefsSnapshot } from './SectionFormatPicker';
+import { SectionFormatLegend } from '../shared/SectionFormatLegend';
 
 // v1.50.26 — count how many sections in `ids` carry either a line-
 // limit or section-format override. Used to surface the "n tuned"
@@ -109,6 +110,10 @@ export function LayoutPicker(): JSX.Element {
       <p style={{ fontSize: 11, opacity: 0.65, margin: '0 0 8px' }}>
         Per-section overrides &mdash; pick a layout and set a length hint, or reset (↺) to use the style default.
       </p>
+
+      {/* v1.50.533 — visual legend, mirrors the wizard's "How each section can
+          look" showcase so both surfaces match (collapsed by default). */}
+      <SectionFormatLegend collapsible defaultOpen={false} title="What each format looks like" />
 
       <button
         type="button"

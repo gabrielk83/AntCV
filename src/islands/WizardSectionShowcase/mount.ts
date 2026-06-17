@@ -39,9 +39,18 @@ function findAnchor(): HTMLElement | null {
 }
 
 function attach(): void {
-  if (activeRoot) return; // already mounted
   const anchor = findAnchor();
   if (!anchor) return;
+  // v1.50.533 — bug fix: the old guard `if (activeRoot) return` left a STALE
+  // root pinned after a prior wizard open (if detachIfGone missed the removal),
+  // so a fresh anchor on the next open never got mounted → the showcase stayed
+  // empty. Re-mount whenever the live anchor isn't the one we're rooted on.
+  if (activeRoot && activeAnchor === anchor && document.body.contains(anchor)) return;
+  if (activeRoot) {
+    try { activeRoot.unmount(); } catch { /* */ }
+    activeRoot = null;
+    activeAnchor = null;
+  }
   activeAnchor = anchor;
   activeRoot = createRoot(anchor);
   activeRoot.render(createElement(WizardSectionShowcase));
@@ -66,6 +75,14 @@ export function mountWizardSectionShowcaseIsland(): void {
   // be null if no anchor was present at the initial attempt.
   window.addEventListener(MOUNT_EVENT, () => {
     attach();
+    // Retry briefly: on slow first paints the anchor or the React bundle may
+    // not be ready in the same tick the sidecar dispatches the event.
+    let tries = 0;
+    const iv = setInterval(() => {
+      attach();
+      const mounted = !!(activeRoot && activeAnchor && document.body.contains(activeAnchor));
+      if (mounted || ++tries > 12) clearInterval(iv);
+    }, 150);
   });
 
   // Belt-and-braces clean-up: when the modal closes, the anchor

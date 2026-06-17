@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { ACADEMIC_SECTIONS, KNOWN_SECTIONS, type LayoutPrefs } from '../../lib/writing-prefs';
+import { ACADEMIC_SECTIONS, CL_SECTIONS, KNOWN_SECTIONS, type LayoutPrefs } from '../../lib/writing-prefs';
 import { NATIVE_SECTION_HEADER_STYLE } from '../../lib/settings-dom';
 import { SectionFormatPicker, useLayoutPrefsSnapshot } from './SectionFormatPicker';
 import { SectionFormatLegend } from '../shared/SectionFormatLegend';
@@ -68,6 +68,8 @@ export function LayoutPicker(): JSX.Element {
   // "N tuned" badge stays visible on the closed header so the user still
   // sees at a glance whether any overrides are set.
   const [commercialOpen, setCommercialOpen] = useState<boolean>(false);
+  // v1.50.539 — cover-letter section group (collapsed by default like the others).
+  const [clOpen, setClOpen] = useState<boolean>(false);
 
   // v1.50.26 — override counts per group. Drives the "N tuned" badges
   // in each group header. Re-computed when layout state changes (the
@@ -78,6 +80,10 @@ export function LayoutPicker(): JSX.Element {
   );
   const academicOverrides = useMemo(
     () => countOverrides(layout, ACADEMIC_SECTIONS.map((s) => s.id)),
+    [layout],
+  );
+  const clOverrides = useMemo(
+    () => countOverrides(layout, CL_SECTIONS.map((s) => s.id)),
     [layout],
   );
 
@@ -149,6 +155,43 @@ export function LayoutPicker(): JSX.Element {
       {commercialOpen && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {KNOWN_SECTIONS.map((s) => (
+            <SectionFormatPicker
+              key={s.id}
+              sectionId={s.id}
+              label={s.label}
+              styleId={styleId}
+              targetPages={layout.targetPages}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* v1.50.539 — Cover letter sections group (owner: Layout was missing CL
+          control). Per-section format + length hints flow to the worker via the
+          same fetch-wrap maps as the CV sections. */}
+      <button
+        type="button"
+        onClick={() => setClOpen((v) => !v)}
+        aria-expanded={clOpen ? 'true' : 'false'}
+        style={{
+          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '8px 0 4px', margin: '12px 0 4px', background: 'transparent', border: 0,
+          color: '#d7e6ee', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '.06em',
+          fontWeight: 700, fontSize: 11, opacity: 0.85,
+        }}
+      >
+        <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+          <span aria-hidden="true">{clOpen ? '▾' : '▸'}</span>
+          <span style={{ marginLeft: 6 }}>Cover letter sections</span>
+          <OverrideBadge count={clOverrides} total={CL_SECTIONS.length} />
+        </span>
+        <span style={{ fontSize: 10, opacity: 0.55, fontWeight: 500, textTransform: 'none', letterSpacing: 0 }}>
+          {CL_SECTIONS.length} sections
+        </span>
+      </button>
+      {clOpen && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {CL_SECTIONS.map((s) => (
             <SectionFormatPicker
               key={s.id}
               sectionId={s.id}

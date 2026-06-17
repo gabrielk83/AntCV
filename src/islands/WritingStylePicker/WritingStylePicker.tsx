@@ -778,6 +778,23 @@ function readAllScopeBanned(kind: 'words' | 'phrases'): string[] {
   const raw = String((kind === 'words' ? sp.banned_words : sp.banned_phrases) || '');
   return raw.split(',').map((s) => s.trim()).filter(Boolean);
 }
+// Preferred tone — the free-text register store the generation prompt reads
+// (app.src.js ~2806 "PREFERRED TONE:"). Part of the Advanced-Tone group (#4).
+function readPreferredTone(): string {
+  const pi = readPersonalInfo();
+  const sp = (pi.stylePrefs as Record<string, unknown>) || {};
+  return String(sp.preferred_tone || '');
+}
+function writePreferredTone(v: string): void {
+  const pi = readPersonalInfo();
+  const sp = ((pi.stylePrefs as Record<string, unknown>) || {});
+  sp.preferred_tone = v;
+  pi.stylePrefs = sp;
+  try { localStorage.setItem('personalInfo', JSON.stringify(pi)); } catch { /* */ }
+  try { (window as unknown as { _antcvCloudWrite?: (p: unknown) => void })._antcvCloudWrite?.({ personalInfo: pi }); } catch { /* */ }
+  try { window.dispatchEvent(new StorageEvent('storage', { key: 'personalInfo' })); } catch { /* */ }
+  try { window.dispatchEvent(new CustomEvent('antcv:writing-prefs-changed')); } catch { /* */ }
+}
 function writeAllScopeBanned(kind: 'words' | 'phrases', arr: string[]): void {
   const pi = readPersonalInfo();
   const sp = ((pi.stylePrefs as Record<string, unknown>) || {});
@@ -943,9 +960,19 @@ export function WritingStylePicker(): JSX.Element {
   const [enabledLangs, setEnabledLangs] = useState<LangCode[]>(() => readEnabledLangs());
   // KERNEL-STYLE-GUARD-001 — personality traits bound the style/tone (warn on clash).
   const [personaTraits, setPersonaTraits] = useState<string[]>(() => readPersonalityTraits());
+  // #4 step 2 — Advanced Tone group (chips + preferred tone + saved customs), last + collapsed.
+  const [advToneOpen, setAdvToneOpen] = useState(false);
+  const [preferredTone, setPreferredTone] = useState<string>(() => readPreferredTone());
+  const onPreferredTone = useCallback((v: string) => { setPreferredTone(v); writePreferredTone(v); }, []);
 
   useEffect(() => {
-    const refreshPrefs = () => setPrefs(readWritingPrefs());
+    const refreshPrefs = () => {
+      setPrefs(readWritingPrefs());
+      // stylePrefs-derived state (so an import / cloud-restore reflects live).
+      setAllWords(readAllScopeBanned('words'));
+      setAllPhrases(readAllScopeBanned('phrases'));
+      setPreferredTone(readPreferredTone());
+    };
     const refreshLayout = () => setLayout(readLayoutPrefs());
     const refreshLang = (ev: Event) => {
       const detail = (ev as CustomEvent).detail as { lang?: LangCode } | undefined;
@@ -1143,29 +1170,9 @@ export function WritingStylePicker(): JSX.Element {
         </div>
       )}
 
-      <SectionHeader>Tone chips</SectionHeader>
-      {autoShifted && (
-        <AutoShiftBanner
-          fromStyleLabel={STYLES[autoShifted.fromStyle]?.displayName ?? autoShifted.fromStyle}
-          onUndo={onUndoAutoShift}
-          onDismiss={onDismissAutoShift}
-        />
-      )}
-      <ToneChipsEditor styleId={prefs.style} chips={prefs.chips} onChange={onChipsChange} />
-
-      <SectionHeader>Saved customs</SectionHeader>
-      <SavedTonesEditor
-        slots={prefs.savedSlots}
-        onSave={onSaveSlot}
-        onLoad={onLoadSlot}
-        onRename={onRenameSlot}
-        onDelete={onDeleteSlot}
-      />
-
-      {/* v1.50.x — "Target CV length" removed from here. It now lives only in
-          Advanced Styles (added by antcv-page-budget.js). Keeping a second
-          copy in the Personal-tab picker was a confusing duplicate writing the
-          same layout.targetPages. */}
+      {/* #4 step 2 (owner) — Tone chips + Saved customs MOVED to the bottom into
+          the "Advanced Tone" group (after Banned). Advanced Tone extends the
+          writing style. */}
 
       {/* #4 (owner) — Languages merged INTO the island, ABOVE Banned, so the
           enabled languages drive the banned per-language scope tabs. The
@@ -1221,6 +1228,49 @@ export function WritingStylePicker(): JSX.Element {
           <SemanticConstraintsEditor />
           <div style={{ opacity: 0.5, fontSize: 10.5, lineHeight: 1.4 }}>
             Active style defaults — <strong>{style.primaryConstraint}</strong>; prefer {style.constraintPrefer}; avoid {style.constraintAvoid}.
+          </div>
+        </div>
+      )}
+
+      {/* #4 step 2 (owner) — Advanced Tone LAST (after all banned): an extension
+          of the writing style. Tone chips (style-scoped), a free-text Preferred
+          tone (prompt-read), and Saved customs (the custom-slot mechanism — edit
+          tone outside a base style, then snapshot it as a slot). Collapsed by
+          default. Kernel-bounded: chips conflicting with the style auto-shift to
+          hybrid-balanced; the style/kernel warning sits above. */}
+      <CollapsibleHeader open={advToneOpen} onToggle={() => setAdvToneOpen((v) => !v)}>Advanced tone</CollapsibleHeader>
+      {advToneOpen && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 2 }}>
+          {autoShifted && (
+            <AutoShiftBanner
+              fromStyleLabel={STYLES[autoShifted.fromStyle]?.displayName ?? autoShifted.fromStyle}
+              onUndo={onUndoAutoShift}
+              onDismiss={onDismissAutoShift}
+            />
+          )}
+          <div>
+            <div style={{ fontSize: 10.5, opacity: 0.6, margin: '0 0 4px' }}>Tone chips</div>
+            <ToneChipsEditor styleId={prefs.style} chips={prefs.chips} onChange={onChipsChange} />
+          </div>
+          <div>
+            <div style={{ fontSize: 10.5, opacity: 0.6, margin: '0 0 4px' }}>Preferred tone (free text — applies to all generated prose)</div>
+            <textarea
+              value={preferredTone}
+              onChange={(e) => onPreferredTone(e.currentTarget.value)}
+              placeholder="e.g. Direct, factual, compressed. Short sentences. Show traits through concrete behaviour, not adjective lists."
+              rows={3}
+              style={{ width: '100%', padding: '6px 8px', background: 'rgba(255,255,255,.05)', color: '#e6eef3', border: '1px solid rgba(255,255,255,.18)', borderRadius: 6, fontFamily: 'inherit', fontSize: 12, resize: 'vertical' }}
+            />
+          </div>
+          <div>
+            <div style={{ fontSize: 10.5, opacity: 0.6, margin: '0 0 4px' }}>Saved customs — snapshot the style + chips + banned + tone to switch back later</div>
+            <SavedTonesEditor
+              slots={prefs.savedSlots}
+              onSave={onSaveSlot}
+              onLoad={onLoadSlot}
+              onRename={onRenameSlot}
+              onDelete={onDeleteSlot}
+            />
           </div>
         </div>
       )}

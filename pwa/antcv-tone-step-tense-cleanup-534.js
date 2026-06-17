@@ -31,7 +31,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.549-tone-tense-cleanup';
+  var VERSION = '1.50.556-tone-tense-cleanup';
   if (window.__antcvToneTenseCleanup534 === VERSION) return;
   window.__antcvToneTenseCleanup534 = VERSION;
 
@@ -112,18 +112,35 @@
   // but ONLY while the island is present (else keep them as a fallback). This is
   // the careful version of 1.50.535 (which hid them with no superset → reverted).
   var BANNED_HELPERS = ['Words you want excluded from generated', 'Multi-word patterns to avoid'];
+  function markHidden(el) {
+    if (el && el.getAttribute('data-antcv-banned-dedup-hidden') !== '1') {
+      el.style.setProperty('display', 'none', 'important');
+      el.setAttribute('data-antcv-banned-dedup-hidden', '1');
+    }
+  }
   function hideAppBannedFields() {
     try {
+      // 1. The banned word/phrase vi fields (marginBottom:14 wrappers).
       for (var i = 0; i < BANNED_HELPERS.length; i++) {
         var leaf = deepestContaining(BANNED_HELPERS[i]);
         if (!leaf) continue;
         var n = leaf, hops = 0;
         while (n && hops < 8 && !(n.style && n.style.marginBottom === '14px')) { n = n.parentElement; hops++; }
-        if (n && n.style && n.style.marginBottom === '14px' && n.getAttribute('data-antcv-banned-dedup-hidden') !== '1') {
-          n.style.setProperty('display', 'none', 'important');
-          n.setAttribute('data-antcv-banned-dedup-hidden', '1');
-        }
+        if (n && n.style && n.style.marginBottom === '14px') markHidden(n);
       }
+      // 2. (#4 step 2) The whole app.js "Advanced Tone" + "Banned Words" <details>
+      //    — now fully covered by the island (tone chips + preferred tone + banned
+      //    + semantic). display:none keeps textContent so getTabState's personal
+      //    heuristic (ADVANCED TONE / BANNED WORDS) still detects the subtab.
+      var dets = document.querySelectorAll('details');
+      for (var d = 0; d < dets.length; d++) {
+        var sum = dets[d].querySelector('summary');
+        if (sum && /^(Advanced Tone|Banned Words)$/i.test((sum.textContent || '').trim())) markHidden(dets[d]);
+      }
+      // 3. The app.js "WRITING STYLE" control (label + hidden select + description)
+      //    — the island owns the writing-style header/dropdown now.
+      var wsLeaf = deepestContaining('WRITING STYLE');
+      if (wsLeaf && wsLeaf.parentElement && wsLeaf.parentElement.querySelector('select')) markHidden(wsLeaf.parentElement);
     } catch (_) {}
   }
   function unhideAppBannedFields() {

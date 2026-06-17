@@ -5534,7 +5534,38 @@
                             const ids = role && Array.isArray(role.proofPointIds) ? role.proofPointIds : []; const tx = ids.map((id) => __ppTextL[id]).filter(Boolean); if (tx.length) return __capJoinL(tx);
                             return "";
                           };
-                          const __lam = __lamOfL(e);
+                          // RESULTS-PREVIEW-EXPORT-SINGLE-SOURCE-001 (owner 2026-06-17):
+                          // when the EXPORT's applyOutcomesMode is available, compute
+                          // this role's Results by running the EXACT export code (deep-
+                          // copy sections → applyOutcomesMode → read role.results), so
+                          // the preview matches the export on every role — explicit
+                          // role-map, drop-unmatched, numeric-favour and derive-from-
+                          // bullet all included. Memoised on window (keyed by a cheap
+                          // sections/mode/jd signature) so it runs once per render pass,
+                          // not once per role. __lamOfL (tiers 1-3) is only the fallback
+                          // when the docx-client module isn't loaded.
+                          const __ermAvail = !!(window.AntcvApplyOutcomesMode);
+                          const __erm = (() => {
+                            if (!__ermAvail) return null;
+                            try {
+                              const raw = localStorage.getItem("sections") || "{}";
+                              const key = "rr:" + raw.length + ":" + (localStorage.getItem("outcomesMode") || "") + ":" + String(localStorage.getItem("antcv:lastJdText") || "").length + ":" + String(localStorage.getItem("antcv:outcomeRoleMap") || "").length;
+                              if (window.__antcvRRkey === key && window.__antcvRR) return window.__antcvRR;
+                              const cv = (JSON.parse(raw).cv) || [];
+                              const out = window.AntcvApplyOutcomesMode(JSON.parse(JSON.stringify(cv)), "cv");
+                              const ex = (out || []).find((s2) => s2 && "experience" === s2.type);
+                              const m = {};
+                              ((ex && ex.roles) || []).forEach((r2, ri2) => { if (r2 && "string" == typeof r2.results && r2.results.trim()) { m["id:" + (r2.id != null ? r2.id : "")] = r2.results.trim(); m["ix:" + ri2] = r2.results.trim(); } });
+                              window.__antcvRR = m; window.__antcvRRkey = key; return m;
+                            } catch (_) { return {}; }
+                          })();
+                          // export-truth lookup by role id (fallback to visible index)
+                          const __ermText = __ermAvail ? (((e && e.id != null && __erm["id:" + e.id]) || "") || (function () { try { const vi = __origRoles.filter((r2) => r2 && !1 !== r2.on).indexOf(e); return vi >= 0 ? (__erm["ix:" + vi] || "") : ""; } catch (_) { return ""; } })()) : "";
+                          const __lam = __ermAvail ? __ermText : __lamOfL(e);
+                          // When the export function is available it is the single source
+                          // of truth: a role with no export Results shows none in preview
+                          // too (do NOT fall through to the legacy token-spread).
+                          if (__ermAvail && !__lam) return null;
                           const root = JSON.parse(
                             localStorage.getItem("sections") || "{}",
                           );

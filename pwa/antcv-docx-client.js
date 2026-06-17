@@ -1828,6 +1828,14 @@ export function applyOutcomesMode(docSections, doc) {
     return docSections.filter((s) => !isOutcomes(s)).map((s) => (s === exp ? expOut : s));
   } catch (_) { return docSections; }
 }
+// RESULTS-PREVIEW-EXPORT-SINGLE-SOURCE-001 (owner 2026-06-17): the preview Results
+// must equal the export Results on EVERY role. Two copies of the distribution
+// (preview token-spread vs this one) drifted — explicit role-map, drop-unmatched,
+// numeric-favour and the derive-from-bullet tier landed here but not in the preview.
+// Expose THIS function so the preview computes its per-role Results by running the
+// exact same code (it deep-copies its sections, calls this, reads role.results) —
+// single source of truth, no second algorithm to keep in sync.
+try { if (typeof window !== 'undefined') window.AntcvApplyOutcomesMode = applyOutcomesMode; } catch (_) {}
 
 function triggerDownload(blob, filename) {
   // 1.50.380 EXPORT-PREVIEW-FEATURES-001(b) — choose the download location.

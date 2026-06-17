@@ -28,7 +28,7 @@
   'use strict';
 
   if (window.__antcvSpellAnnotatorInstalled) return;
-  var VERSION = '1.50.435';
+  var VERSION = '1.50.537';
   window.__antcvSpellAnnotatorInstalled = VERSION;
 
   // SPELL-EN-VARIANT-001 (owner 2026-06-13): English defaults to UK (en-GB);
@@ -461,6 +461,10 @@
     // under the "Languages in the top bar" card in Settings → Personal, because
     // spelling is language-driven. Removed when that anchor is absent so it is
     // NOT sticky across subtabs.
+    // LANGUAGES-CARD-CONSOLIDATE-001 (1.50.537): the Spelling controls now live
+    // INSIDE the LanguageCard island's expand/collapse (fixes the intermittent
+    // "fade"). When that island is present, remove this standalone card + skip.
+    if (document.querySelector('[data-antcv-react-island="language-card"]')) { removeSettings(); return; }
     var langCard = document.getElementById('antcv-react-personal-languages');
     if (!langCard || !langCard.parentElement) { removeSettings(); return; }
     var col = langCard.parentElement;

@@ -18,7 +18,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.422';
+  var VERSION = '1.50.537';
   if (window.__antcvTenseControl422 === VERSION) return;
   window.__antcvTenseControl422 = VERSION;
 
@@ -101,6 +101,13 @@
 
   function inject() {
     try {
+      // LANGUAGES-CARD-CONSOLIDATE-001 (1.50.537): the LanguageCard island now
+      // hosts the Experience-tense control INSIDE its expand/collapse. When the
+      // island is present, remove our standalone card + skip (no duplicate).
+      if (document.querySelector('[data-antcv-react-island="language-card"]')) {
+        var exTC = document.getElementById(HOST_ID); if (exTC) exTC.remove();
+        return;
+      }
       var langCard = document.getElementById('antcv-react-personal-languages');
       var existing = document.getElementById(HOST_ID);
       // TENSE-STICKY-FIX-001 (owner 2026-06-13): the control belongs ONLY to

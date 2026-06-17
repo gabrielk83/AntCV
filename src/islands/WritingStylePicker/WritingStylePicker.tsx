@@ -788,6 +788,30 @@ function writeAllScopeBanned(kind: 'words' | 'phrases', arr: string[]): void {
   try { window.dispatchEvent(new CustomEvent('antcv:writing-prefs-changed')); } catch { /* */ }
 }
 
+// KERNEL-STYLE-GUARD-001 (owner 2026-06-17): the personality kernel
+// (personalInfo.personality.traits — calm/analytical/communicator/pride/moral/
+// people) bounds the writing style/tone. WARN (don't block) when the chosen style
+// reads against the kernel. Conservative — only CLEAR clashes, to avoid noise.
+function readPersonalityTraits(): string[] {
+  try {
+    const pi = JSON.parse(localStorage.getItem('personalInfo') || '{}') || {};
+    const traits = pi.personality && Array.isArray(pi.personality.traits) ? pi.personality.traits : [];
+    return traits.map((t: unknown) => (typeof t === 'string' ? t : (t as { name?: string; key?: string }).name || (t as { key?: string }).key || '')).filter(Boolean);
+  } catch { return []; }
+}
+function styleConflictsKernel(styleId: string, traits: string[]): string | null {
+  if (!traits.length) return null;
+  const top = traits.slice(0, 2);
+  const restrained = top.some((t) => t === 'calm' || t === 'analytical' || t === 'pride');
+  if (restrained && styleId === 'achievement-driven') {
+    return 'Your personality kernel leans calm/measured, but Achievement-Driven is a more assertive, outcome-forward register — it can read against your kernel. Keep the tone restrained or pick a measured style.';
+  }
+  if (top.includes('people') && styleId === 'cold-outreach') {
+    return 'Your kernel is people-oriented, but Cold Outreach is a terse, impersonal register — it may read against your relationship-building strengths.';
+  }
+  return null;
+}
+
 // SEMANTIC-CONSTRAINTS-001 — the editor reads/writes stylePrefs.bannedContextual,
 // the array the generation prompt ALREADY consumes (app.src.js ~2810): per-rule
 // avoid + use_instead ("bank"/allowlist) + an optional WHEN condition (role title
@@ -916,6 +940,8 @@ export function WritingStylePicker(): JSX.Element {
   // v1.50.553 — the banned per-language scope tabs reflect the ENABLED languages
   // (owner: changing languages changes the banned per-language selector).
   const [enabledLangs, setEnabledLangs] = useState<LangCode[]>(() => readEnabledLangs());
+  // KERNEL-STYLE-GUARD-001 — personality traits bound the style/tone (warn on clash).
+  const [personaTraits, setPersonaTraits] = useState<string[]>(() => readPersonalityTraits());
 
   useEffect(() => {
     const refreshPrefs = () => setPrefs(readWritingPrefs());
@@ -928,14 +954,17 @@ export function WritingStylePicker(): JSX.Element {
     window.addEventListener('antcv:writing-prefs-changed', refreshPrefs);
     window.addEventListener('antcv:layout-prefs-changed', refreshLayout);
     window.addEventListener('antcv:editor-language-changed', refreshLang as EventListener);
+    const refreshPersona = () => setPersonaTraits(readPersonalityTraits());
     window.addEventListener('antcv:enabled-languages-changed', refreshLangs);
     window.addEventListener('antcv:language-prefs-changed', refreshLangs);
+    window.addEventListener('antcv:personality-kernel-saved', refreshPersona);
     return () => {
       window.removeEventListener('antcv:writing-prefs-changed', refreshPrefs);
       window.removeEventListener('antcv:layout-prefs-changed', refreshLayout);
       window.removeEventListener('antcv:editor-language-changed', refreshLang as EventListener);
       window.removeEventListener('antcv:enabled-languages-changed', refreshLangs);
       window.removeEventListener('antcv:language-prefs-changed', refreshLangs);
+      window.removeEventListener('antcv:personality-kernel-saved', refreshPersona);
     };
   }, []);
 
@@ -1099,6 +1128,19 @@ export function WritingStylePicker(): JSX.Element {
       <div style={{ fontSize: 11, opacity: 0.65, marginTop: 4 }}>
         {style.contentRule}
       </div>
+      {styleConflictsKernel(prefs.style, personaTraits) && (
+        <div
+          role="alert"
+          style={{
+            display: 'flex', alignItems: 'flex-start', gap: 6, marginTop: 6, padding: '6px 9px',
+            background: 'rgba(217,164,65,.12)', border: '1px solid rgba(217,164,65,.5)',
+            borderRadius: 8, fontSize: 11, lineHeight: 1.45, color: '#f0dca6',
+          }}
+        >
+          <span aria-hidden="true">⚠</span>
+          <span>{styleConflictsKernel(prefs.style, personaTraits)}</span>
+        </div>
+      )}
 
       <SectionHeader>Tone chips</SectionHeader>
       {autoShifted && (

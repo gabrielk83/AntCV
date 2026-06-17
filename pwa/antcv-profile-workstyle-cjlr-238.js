@@ -5,7 +5,7 @@
  */
 (function(){
   'use strict';
-  const VERSION = '1.40.238-preview-guard';
+  const VERSION = '1.50.592-photo-shadow-leak-guard';
   // v1.40.238-preview-guard: Preview is button-free. Profile/Work-style
   // CJLR controls must not attach to rows inside .antcv-preview-paper.
   const isInPreviewPaper = el => { if(!el) return false; const p=document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]'); return !!(p && p.contains(el)); };
@@ -28,6 +28,12 @@
 
   function sectionFromText(txt){
     const t = low(txt).replace(/\(main\)/g,'').trim();
+    // PW-CJLR-PHOTO-LEAK-001 (owner 2026-06-17): "PROFILE PHOTO" text-matches
+    // "profile" (t.startsWith('profile ')), so the photo card was treated as the
+    // profile TEXT section and the cycler leaked between the SHADOW Off/On
+    // buttons. The sister guard in sectionFromElement had this; the panel-row
+    // path (which uses THIS fn) did not.
+    if(/^profile\s*photo\b/.test(t)) return null;
     return SECTIONS.find(s => s.names.some(n => t === n || t.startsWith(n+' ')));
   }
 
@@ -59,6 +65,11 @@
       let p=btn.parentElement;
       for(let d=0; p && d<7; d++,p=p.parentElement){
         if(isInPreviewPaper(p)) break;
+        // PW-CJLR-PHOTO-LEAK-001: never climb INTO the PROFILE PHOTO card. Its
+        // Shape/Contour/Shadow rows carry the shadow Off/On buttons, and the
+        // cycler was landing before that "On". Reject any ancestor that holds a
+        // shape button / shadow toggle.
+        if(p.querySelector && p.querySelector('.antcv-fp-shape-btn, .antcv-fp-shape-row, [data-shadow]')) continue;
         const text = clean(p.textContent);
         const sec = sectionFromText(text);
         if(sec && p.querySelectorAll && p.querySelectorAll('button').length>=3){
@@ -182,6 +193,13 @@
     requestAnimationFrame(()=>{
       pending=false;
       try{
+        // PW-CJLR-PHOTO-LEAK-001: strip any cycler that already leaked into the
+        // PROFILE PHOTO card (between the SHADOW Off/On buttons) before re-placing.
+        document.querySelectorAll('button[data-antcv-profile-workstyle-cjlr="1"]').forEach(b=>{
+          if(b.closest && (b.closest('.antcv-fp-shape-row') || b.closest('.antcv-fp-shape-btn'))){ b.remove(); return; }
+          const sib = b.parentElement;
+          if(sib && sib.querySelector && sib.querySelector('.antcv-fp-shape-btn, [data-shadow]')) b.remove();
+        });
         panelRows().forEach(({row,sec})=>ensurePanelButton(row,sec));
         applyEditors();
         applyPreview();

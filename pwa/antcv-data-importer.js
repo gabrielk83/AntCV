@@ -300,16 +300,23 @@
     }
 
     const isFullExport = !!(obj.personalInfo || obj.formatSettings || obj.appMeta);
+    // EXPANDED-KERNEL-IMPORT-001: the expanded AntCV kernel is a top-level
+    // personalInfo fragment carrying the rich annex (mergeGroups,
+    // semanticConstraintsV2, personalFigure, headlines, positioning, …).
+    const isExpanded = !isFullExport && !!(obj.mergeGroups || obj.semanticConstraintsV2 || obj._expandedAt || obj._fusedFrom || obj.personalFigure);
     const proposed = {};
     if (isFullExport) {
       for (const k of Object.keys(obj)) {
         if (ALLOWED_TOP_KEYS.has(k)) proposed[k] = obj[k];
       }
     } else {
-      // Fragment shape — assume personalInfo
-      proposed.personalInfo = obj;
+      // Fragment shape — assume personalInfo. Strip build-metadata (_*) top-level
+      // keys so they never clutter personalInfo or the diff.
+      const clean = {};
+      for (const k of Object.keys(obj)) if (k.charAt(0) !== '_') clean[k] = obj[k];
+      proposed.personalInfo = clean;
     }
-    return { proposed, summary: isFullExport ? 'Full settings export' : 'Personal fragment' };
+    return { proposed, summary: isFullExport ? 'Full settings export' : (isExpanded ? 'AntCV expanded kernel → personalInfo' : 'Personal fragment') };
   }
 
   async function handleImage(file) {
@@ -508,6 +515,24 @@ ${text}`;
     'unsupported':       'Unsupported',
   };
 
+  // EXPANDED-KERNEL-IMPORT-001 (owner 2026-06-17): friendlier labels for fields
+  // whose raw flattened key is misleading (e.g. `background` is the professional
+  // summary / AI context, NOT contact).
+  const FIELD_LABELS = {
+    'personalInfo.background': 'Professional summary (AI context — not contact)',
+    'personalInfo.stylePrefs.banned_phrases': 'Banned phrases (never write these about me)',
+    'personalInfo.stylePrefs.banned_words': 'Banned words (never write these)',
+    'personalInfo.stylePrefs.bannedContextual': 'Semantic constraints (avoid → prefer)',
+    'personalInfo.semanticConstraintsV2': 'Semantic constraints (V2)',
+    'personalInfo.headlines': 'Headline variants (subtitle options)',
+    'personalInfo.headline': 'Headline / specialization line',
+    'personalInfo.mergeGroups': 'Role merge groups (app merges at generation)',
+    'personalInfo.personalFigure': 'Profile-photo controls',
+    'personalInfo.positioning': 'Positioning guidance',
+    'personalInfo.skillsInventory': 'Skills inventory (retrieval keywords)',
+  };
+  function fieldLabel(k) { return FIELD_LABELS[k] || k; }
+
   // ─── Deep merge with policy ──────────────────────────────────────
   const DEDUP_KEYS = {
     'personalInfo.education':              e => `${e.deg}|${e.sch}`,
@@ -547,7 +572,8 @@ ${text}`;
     if (obj == null) return out;
     if (Array.isArray(obj)) { out[prefix] = `[${obj.length} item${obj.length === 1 ? '' : 's'}]`; return out; }
     if (typeof obj === 'object') {
-      for (const k of Object.keys(obj)) flatten(obj[k], prefix ? `${prefix}.${k}` : k, out);
+      // Skip build-metadata (_*) keys so they never show in the diff.
+      for (const k of Object.keys(obj)) { if (k.charAt(0) === '_') continue; flatten(obj[k], prefix ? `${prefix}.${k}` : k, out); }
       return out;
     }
     const s = typeof obj === 'string' ? obj : String(obj);
@@ -803,7 +829,7 @@ ${text}`;
             ${rows.map(r => `
               <tr class="${r.kind}" data-key="${r.key.replace(/"/g, '&quot;')}">
                 <td><input type="checkbox" checked data-toggle="${r.key.replace(/"/g, '&quot;')}"></td>
-                <td><code>${r.key}</code></td>
+                <td><code title="${r.key.replace(/"/g, '&quot;')}">${escapeHtml(fieldLabel(r.key))}</code></td>
                 <td style="color:${BRAND.mutedSoft}">${r.before === undefined ? '—' : escapeHtml(String(r.before))}</td>
                 <td>${escapeHtml(String(r.after))}</td>
               </tr>`).join('')}

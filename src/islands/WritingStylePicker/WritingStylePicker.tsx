@@ -484,16 +484,18 @@ function SavedToneRow({
 
 function BannedListEditor({
   kind,
-  language,
+  scopeLabel,
   items,
+  bank,
   onAdd,
   onAddBulk,
   onRemove,
   onClearAll,
 }: {
   kind: 'words' | 'phrases';
-  language: LangCode;
+  scopeLabel: string;
   items: string[];
+  bank?: readonly string[];
   onAdd: (value: string) => void;
   onAddBulk: (raw: string) => { added: number; skipped: number };
   onRemove: (value: string) => void;
@@ -503,13 +505,10 @@ function BannedListEditor({
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkDraft, setBulkDraft] = useState('');
   const [bulkStatus, setBulkStatus] = useState<string>('');
-  const langLabels: Record<LangCode, string> = {
-    en: 'English',
-    da: 'Danish',
-    es: 'Spanish',
-    zh: 'Mandarin',
-  };
-  const placeholder = kind === 'words' ? `Add a banned word in ${langLabels[language]}` : `Add a banned phrase in ${langLabels[language]}`;
+  const [bankOpen, setBankOpen] = useState(false);
+  const lowerSet = useMemo(() => new Set(items.map((i) => i.toLowerCase())), [items]);
+  const bankUnused = useMemo(() => (bank || []).filter((b) => !lowerSet.has(b.toLowerCase())), [bank, lowerSet]);
+  const placeholder = kind === 'words' ? `Add a banned word (${scopeLabel})` : `Add a banned phrase (${scopeLabel})`;
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const v = draft.trim();
@@ -536,7 +535,7 @@ function BannedListEditor({
   };
   const onClearConfirm = () => {
     if (items.length === 0) return;
-    const ok = window.confirm(`Remove all ${items.length} ${kind} from ${langLabels[language]}?`);
+    const ok = window.confirm(`Remove all ${items.length} ${kind} from ${scopeLabel}?`);
     if (ok) onClearAll();
   };
   return (
@@ -590,7 +589,7 @@ function BannedListEditor({
           <button
             type="button"
             onClick={onClearConfirm}
-            title={`Remove all ${items.length} ${kind} from ${langLabels[language]}`}
+            title={`Remove all ${items.length} ${kind} from ${scopeLabel}`}
             style={{
               background: 'transparent', border: 0, color: '#e6eef3',
               cursor: 'pointer', textDecoration: 'underline', fontSize: 11, padding: 0,
@@ -641,10 +640,44 @@ function BannedListEditor({
           </button>
         </form>
       )}
+      {bank && bank.length > 0 && (
+        <div style={{ marginTop: 6 }}>
+          <button
+            type="button"
+            onClick={() => setBankOpen((v) => !v)}
+            aria-expanded={bankOpen ? 'true' : 'false'}
+            style={{ background: 'transparent', border: 0, color: '#a9c3cf', cursor: 'pointer', textDecoration: 'underline', fontSize: 11, padding: 0 }}
+          >
+            {bankOpen ? 'Hide bank' : `+ Pick from the bank (${bankUnused.length})`}
+          </button>
+          {bankOpen && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 6 }}>
+              {bankUnused.length === 0 && (
+                <span style={{ fontSize: 11, opacity: 0.6 }}>All bank items already added.</span>
+              )}
+              {bankUnused.map((b) => (
+                <button
+                  key={b}
+                  type="button"
+                  onClick={() => onAdd(b)}
+                  title={`Add "${b}"`}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px',
+                    fontSize: 12, borderRadius: 999, background: 'rgba(1,183,187,.08)',
+                    border: '1px dashed rgba(1,183,187,.45)', color: '#cfeff0', cursor: 'pointer',
+                  }}
+                >
+                  + {b}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 6 }}>
         {items.length === 0 && (
           <span style={{ fontSize: 11, opacity: 0.6 }}>
-            No items in {langLabels[language]} yet.
+            No items in {scopeLabel} yet.
           </span>
         )}
         {items.map((item) => (
@@ -685,34 +718,83 @@ function BannedListEditor({
   );
 }
 
-function LanguageSwitcher({
+// v1.50.549 — BANNED-FUSION-001. The banned section is now the single superset
+// control (owner's plan). A SCOPE selector adds "All languages" alongside the
+// per-language tabs. "All" edits stylePrefs.banned_words/banned_phrases (the
+// comma-string the generation prompt reads + applies to EVERY output language —
+// cross-language); a specific language edits extraBannedWords[lang] (per-language,
+// injected by the fetch-wrap). Plus a curated BANK ported from the app.js control.
+export type BannedScope = 'all' | LangCode;
+const SCOPE_LABELS: Record<BannedScope, string> = { all: 'All languages', en: 'EN', da: 'DA', es: 'ES', zh: 'ZH' };
+const SCOPES: BannedScope[] = ['all', 'en', 'da', 'es', 'zh'];
+
+// Curated bank, ported verbatim from the app.js control (ml / hl seed lists).
+const BANNED_WORD_BANK: readonly string[] = [
+  'spearhead', 'ensure', 'foster', 'streamline', 'strengthen', 'empower', 'leverage', 'drive',
+  'deliver', 'enable', 'robust', 'comprehensive', 'cutting-edge', 'state-of-the-art', 'world-class',
+  'leading', 'impactful', 'rooted', 'grounded', 'committed', 'passionate', 'holistic', 'multi-faceted',
+  'cross-functional', 'tværgående', 'tværfunktionel', 'collaborative', 'central', 'journey', 'dynamic',
+  'proactive', 'agile',
+];
+const BANNED_PHRASE_BANK: readonly string[] = [
+  'key role', 'pivotal role', 'end-to-end', 'proven track record', 'strong communicator', 'strong leader',
+  'results-driven', 'strategic mindset', 'client-focused', 'customer-centric', 'mission-driven',
+  'My expertise lies in', 'I am known for', 'At the heart of my work', 'My approach is',
+  'I am passionate about', 'I thrive in', 'I bring a wealth of experience', 'Proven ability to',
+  'I am committed to', 'Passionate about driving', 'Known for fostering',
+];
+
+// Cross-language ("All") store = personalInfo.stylePrefs.banned_words / banned_phrases
+// (a comma-string read by the generation prompt). Round-trips to an array here.
+function readPersonalInfo(): Record<string, unknown> {
+  try { return (JSON.parse(localStorage.getItem('personalInfo') || '{}') as Record<string, unknown>) || {}; } catch { return {}; }
+}
+function readAllScopeBanned(kind: 'words' | 'phrases'): string[] {
+  const pi = readPersonalInfo();
+  const sp = (pi.stylePrefs as Record<string, unknown>) || {};
+  const raw = String((kind === 'words' ? sp.banned_words : sp.banned_phrases) || '');
+  return raw.split(',').map((s) => s.trim()).filter(Boolean);
+}
+function writeAllScopeBanned(kind: 'words' | 'phrases', arr: string[]): void {
+  const pi = readPersonalInfo();
+  const sp = ((pi.stylePrefs as Record<string, unknown>) || {});
+  sp[kind === 'words' ? 'banned_words' : 'banned_phrases'] = arr.join(', ');
+  pi.stylePrefs = sp;
+  try { localStorage.setItem('personalInfo', JSON.stringify(pi)); } catch { /* */ }
+  try { (window as unknown as { _antcvCloudWrite?: (p: unknown) => void })._antcvCloudWrite?.({ personalInfo: pi }); } catch { /* */ }
+  try { window.dispatchEvent(new StorageEvent('storage', { key: 'personalInfo' })); } catch { /* */ }
+  try { window.dispatchEvent(new CustomEvent('antcv:writing-prefs-changed')); } catch { /* */ }
+}
+
+function ScopeSelector({
   value,
   onChange,
 }: {
-  value: LangCode;
-  onChange: (lang: LangCode) => void;
+  value: BannedScope;
+  onChange: (scope: BannedScope) => void;
 }): JSX.Element {
   return (
-    <div style={{ display: 'flex', gap: 4 }}>
-      {(['en', 'da', 'es', 'zh'] as const).map((lang) => (
+    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+      {SCOPES.map((scope) => (
         <button
-          key={lang}
+          key={scope}
           type="button"
-          onClick={() => onChange(lang)}
-          aria-pressed={value === lang}
+          onClick={() => onChange(scope)}
+          aria-pressed={value === scope}
+          title={scope === 'all' ? 'Applies to every output language (after translation)' : `Only when generating in ${SCOPE_LABELS[scope]}`}
           style={{
             padding: '3px 8px',
             fontSize: 11,
             fontWeight: 700,
-            textTransform: 'uppercase',
+            textTransform: scope === 'all' ? 'none' : 'uppercase',
             borderRadius: 4,
-            background: value === lang ? 'rgba(1,183,187,.18)' : 'transparent',
-            border: '1px solid ' + (value === lang ? 'rgba(1,183,187,.55)' : 'rgba(255,255,255,.14)'),
+            background: value === scope ? 'rgba(1,183,187,.18)' : 'transparent',
+            border: '1px solid ' + (value === scope ? 'rgba(1,183,187,.55)' : 'rgba(255,255,255,.14)'),
             color: '#e6eef3',
             cursor: 'pointer',
           }}
         >
-          {lang}
+          {SCOPE_LABELS[scope]}
         </button>
       ))}
     </div>
@@ -724,6 +806,12 @@ export function WritingStylePicker(): JSX.Element {
   const [, setLayout] = useState<LayoutPrefs>(() => readLayoutPrefs());
   const [editorLang, setEditorLang] = useState<LangCode>(() => readEditorLanguage());
   const [advanced, setAdvanced] = useState(false);
+  // BANNED-FUSION-001 — scope: 'all' (cross-language, stylePrefs.banned_*) or a
+  // per-language bucket (extraBanned*). Default 'all'. allWords/allPhrases mirror
+  // the stylePrefs comma-string so edits re-render.
+  const [bannedScope, setBannedScope] = useState<BannedScope>('all');
+  const [allWords, setAllWords] = useState<string[]>(() => readAllScopeBanned('words'));
+  const [allPhrases, setAllPhrases] = useState<string[]>(() => readAllScopeBanned('phrases'));
 
   useEffect(() => {
     const refreshPrefs = () => setPrefs(readWritingPrefs());
@@ -802,27 +890,61 @@ export function WritingStylePicker(): JSX.Element {
     setAutoShifted(null);
   }, []);
 
+  // BANNED-FUSION-001 — scope-aware read/write. 'all' → stylePrefs.banned_*
+  // (cross-language); a LangCode → extraBanned* bucket (per-language). The
+  // 'all' lists also re-seed editorLang for the per-language helpers below.
+  const setAll = useCallback((kind: 'words' | 'phrases', next: string[]) => {
+    writeAllScopeBanned(kind, next);
+    if (kind === 'words') setAllWords(next); else setAllPhrases(next);
+  }, []);
+
   const onAddBanned = useCallback((kind: 'words' | 'phrases', value: string) => {
-    setPrefs(addBannedItem(kind, editorLang, value));
-  }, [editorLang]);
+    const v = value.trim();
+    if (!v) return;
+    if (bannedScope === 'all') {
+      const cur = kind === 'words' ? allWords : allPhrases;
+      if (cur.some((x) => x.toLowerCase() === v.toLowerCase())) return;
+      setAll(kind, [...cur, v]);
+    } else {
+      setPrefs(addBannedItem(kind, bannedScope, v));
+    }
+  }, [bannedScope, allWords, allPhrases, setAll]);
 
   const onAddBannedBulk = useCallback((kind: 'words' | 'phrases', raw: string): { added: number; skipped: number } => {
-    const { prefs: next, added, skipped } = addBannedItems(kind, editorLang, raw);
-    setPrefs(next);
+    if (bannedScope === 'all') {
+      const cur = kind === 'words' ? allWords : allPhrases;
+      const seen = new Set(cur.map((x) => x.toLowerCase()));
+      let added = 0, skipped = 0;
+      const next = cur.slice();
+      raw.split(/[\n,;]+/).map((s) => s.trim()).filter(Boolean).forEach((tok) => {
+        if (seen.has(tok.toLowerCase())) { skipped++; return; }
+        seen.add(tok.toLowerCase()); next.push(tok); added++;
+      });
+      if (added) setAll(kind, next);
+      return { added, skipped };
+    }
+    const { prefs: nextP, added, skipped } = addBannedItems(kind, bannedScope, raw);
+    setPrefs(nextP);
     return { added, skipped };
-  }, [editorLang]);
+  }, [bannedScope, allWords, allPhrases, setAll]);
 
   const onRemoveBanned = useCallback((kind: 'words' | 'phrases', value: string) => {
-    setPrefs(removeBannedItem(kind, editorLang, value));
-  }, [editorLang]);
+    if (bannedScope === 'all') {
+      const cur = kind === 'words' ? allWords : allPhrases;
+      setAll(kind, cur.filter((x) => x !== value));
+    } else {
+      setPrefs(removeBannedItem(kind, bannedScope, value));
+    }
+  }, [bannedScope, allWords, allPhrases, setAll]);
 
   const onClearBanned = useCallback((kind: 'words' | 'phrases') => {
-    setPrefs(clearBannedBucket(kind, editorLang));
-  }, [editorLang]);
+    if (bannedScope === 'all') setAll(kind, []);
+    else setPrefs(clearBannedBucket(kind, bannedScope));
+  }, [bannedScope, setAll]);
 
-  const onLangChange = useCallback((lang: LangCode) => {
-    writeEditorLanguage(lang);
-    setEditorLang(lang);
+  const onScopeChange = useCallback((scope: BannedScope) => {
+    setBannedScope(scope);
+    if (scope !== 'all') { writeEditorLanguage(scope); setEditorLang(scope); }
   }, []);
 
   const onSaveSlot = useCallback(() => {
@@ -891,28 +1013,33 @@ export function WritingStylePicker(): JSX.Element {
           same layout.targetPages. */}
 
       <SectionHeader>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-          Banned words ({editorLang === 'en' ? 'English' : editorLang === 'da' ? 'Danish' : editorLang === 'es' ? 'Spanish' : 'Mandarin'})
-          <LanguageSwitcher value={editorLang} onChange={onLangChange} />
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          Banned words
+          <ScopeSelector value={bannedScope} onChange={onScopeChange} />
         </span>
       </SectionHeader>
+      <div style={{ fontSize: 10.5, opacity: 0.55, margin: '0 0 6px' }}>
+        {bannedScope === 'all'
+          ? 'Applies to every output language (also after translation).'
+          : `Only when generating in ${SCOPE_LABELS[bannedScope]}.`}
+      </div>
       <BannedListEditor
         kind="words"
-        language={editorLang}
-        items={prefs.extraBannedWords[editorLang] ?? []}
+        scopeLabel={SCOPE_LABELS[bannedScope]}
+        items={bannedScope === 'all' ? allWords : (prefs.extraBannedWords[bannedScope] ?? [])}
+        bank={BANNED_WORD_BANK}
         onAdd={(v) => onAddBanned('words', v)}
         onAddBulk={(raw) => onAddBannedBulk('words', raw)}
         onRemove={(v) => onRemoveBanned('words', v)}
         onClearAll={() => onClearBanned('words')}
       />
 
-      <SectionHeader>
-        Banned phrases ({editorLang === 'en' ? 'English' : editorLang === 'da' ? 'Danish' : editorLang === 'es' ? 'Spanish' : 'Mandarin'})
-      </SectionHeader>
+      <SectionHeader>Banned phrases ({SCOPE_LABELS[bannedScope]})</SectionHeader>
       <BannedListEditor
         kind="phrases"
-        language={editorLang}
-        items={prefs.extraBannedPhrases[editorLang] ?? []}
+        scopeLabel={SCOPE_LABELS[bannedScope]}
+        items={bannedScope === 'all' ? allPhrases : (prefs.extraBannedPhrases[bannedScope] ?? [])}
+        bank={BANNED_PHRASE_BANK}
         onAdd={(v) => onAddBanned('phrases', v)}
         onAddBulk={(raw) => onAddBannedBulk('phrases', raw)}
         onRemove={(v) => onRemoveBanned('phrases', v)}

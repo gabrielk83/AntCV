@@ -438,6 +438,21 @@ ${inlineStyles}
      var. SCREEN ONLY — print keeps full A4 (@page below) so the PDF is not
      shrunk. */
   @media screen { body.antcv-fit-width { zoom: var(--antcv-fit, 1); } }
+  /* EXPORT-PREVIEW-CHOP-001 (owner 2026-06-18): the cloned paper inherits the live
+     editor's per-sheet clamp (the editor shows ONE A4 page at a time via
+     max-height/overflow on .antcv-page-row / the paper). In the export PREVIEW that
+     clamp CHOPPED the document — content past the first sheet vanished (cut mid
+     FOUNDATION, grey below). On SCREEN, let the cloned paper + page-rows grow to
+     their full content so the WHOLE document shows (the modal body scrolls). Print
+     keeps the per-sheet clamp in the @media print block below, so the PDF still
+     paginates correctly. */
+  @media screen {
+    .antcv-preview-paper, .antcv-page-row {
+      max-height: none !important;
+      height: auto !important;
+      overflow: visible !important;
+    }
+  }
   /* Hide any sidecar overlays / FABs that may have been cloned. */
   .antcv-fab, [class*="antcv-fab"], .antcv-overlay, [class*="antcv-overlay"] {
     display: none !important;
@@ -1025,7 +1040,7 @@ ${inlineStyles}
 
   // Public API for diagnostics / power-users.
   window.AntcvPdfPreviewGate = {
-    version: '1.50.374-page2-print',
+    version: '1.50.600-screen-unclamp',
     open: openModal,
     close: closeModal,
   };

@@ -266,8 +266,12 @@
     b.title = 'Chat about your document — drag to move';
     b.setAttribute('data-antcv-doc-chatbot-launch', '1');
     // DOC-CHATBOT-DRAG-001 (owner 2026-06-13): the launcher hid the Fuse/CV/CL
-    // bottom toolbar. Default it ABOVE the toolbar (bottom:96px) and make it
-    // DRAGGABLE with a persisted position so the user can move it anywhere.
+    // bottom toolbar. Default it ABOVE the toolbar and make it DRAGGABLE with a
+    // persisted position so the user can move it anywhere.
+    // MOBILE-ASKAI-EXPORT-OVERLAP-001 (owner 2026-06-17): at bottom:96px the
+    // launcher still covered the DOCX export button sitting just above the Fuse
+    // toolbar on mobile. Raise the default to 150px so it clears the export row;
+    // a dragged/saved position still wins.
     var saved = null;
     try { saved = JSON.parse(localStorage.getItem('antcv:docChatbotPos') || 'null'); } catch (_) {}
     if (saved && typeof saved.left === 'number') {
@@ -275,7 +279,7 @@
       b.style.top = Math.max(4, Math.min(saved.top, (window.innerHeight || 600) - 50)) + 'px';
     } else {
       b.style.right = '14px';
-      b.style.bottom = '96px';
+      b.style.bottom = '150px';
     }
     var dragging = false, moved = false, sx = 0, sy = 0, ox = 0, oy = 0;
     b.addEventListener('pointerdown', function (ev) {

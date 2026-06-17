@@ -31,7 +31,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.535-tone-tense-cleanup';
+  var VERSION = '1.50.536-tone-tense-cleanup';
   if (window.__antcvToneTenseCleanup534 === VERSION) return;
   window.__antcvToneTenseCleanup534 = VERSION;
 
@@ -51,13 +51,26 @@
     } catch (_) {}
   }
 
-  // #10 — inject the quiz button on the 6C tone step.
+  // #10 — show the quiz button ONLY on the visible 6C tone step.
+  // v1.50.536 fix: the old version appended once and never removed it, and it
+  // didn't gate on visibility — so the button stuck to every wizard step. Now
+  // we find the VISIBLE "What tone fits you?" card each pass, remove any quiz
+  // button that isn't inside it, and inject only when that card is on screen.
+  function isVisible(el) {
+    try { return !!(el && el.getClientRects && el.getClientRects().length > 0); } catch (_) { return false; }
+  }
   function injectQuizOnTone() {
     try {
       var heads = document.querySelectorAll('h1, h2, h3');
       var card = null;
       for (var i = 0; i < heads.length; i++) {
-        if (/what tone fits you/i.test(heads[i].textContent || '')) { card = heads[i].closest('div'); break; }
+        if (/what tone fits you/i.test(heads[i].textContent || '') && isVisible(heads[i])) { card = heads[i].closest('div'); break; }
+      }
+      // Remove stray quiz buttons that are NOT in the current visible tone card
+      // (covers every other wizard step + the tone step being navigated away).
+      var strays = document.querySelectorAll('[data-antcv-tone-quiz-btn]');
+      for (var s = 0; s < strays.length; s++) {
+        if (!card || !card.contains(strays[s])) { try { strays[s].remove(); } catch (_) {} }
       }
       if (!card || card.querySelector('[data-antcv-tone-quiz-btn]')) return;
       var b = document.createElement('button');

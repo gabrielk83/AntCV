@@ -41,7 +41,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.534-handoff';
+  var VERSION = '1.50.536-handoff';
   if (window.__antcvWizardLanguageSlide339 === VERSION) return;
   window.__antcvWizardLanguageSlide339 = VERSION;
 
@@ -268,30 +268,30 @@
     sToggle.appendChild(sCb);
     sToggle.appendChild(document.createTextNode('Spelling underlines (editor + preview)'));
     wrap.appendChild(sToggle);
+    // v1.50.536 — the variant control is now a <select> (not UK/US buttons):
+    // the language-bar filter (antcv-lang-bar-filter.js) was hiding any
+    // <=12-char button whose text looked like a lang code ("UK"/"US"), so the
+    // buttons rendered display:none. A <select> is immune + gives the
+    // scroll-down the owner asked for, with US + a Chinese note.
     var vRow = document.createElement('div');
-    vRow.style.cssText = 'display:flex;align-items:center;gap:8px;margin:7px 0 0;flex-wrap:wrap;font-size:11px;color:rgba(255,255,255,0.6);';
-    vRow.appendChild(document.createTextNode('English:'));
-    function paintVariant() {
-      vRow.querySelectorAll('button[data-antcv-en-variant]').forEach(function (b) {
-        var on = enVariantRead() === b.getAttribute('data-antcv-en-variant');
-        b.style.borderColor = on ? '#01B7BB' : 'rgba(255,255,255,0.18)';
-        b.style.background = on ? 'rgba(1,183,187,0.12)' : 'transparent';
-        b.style.color = on ? '#01B7BB' : 'rgba(255,255,255,0.7)';
-      });
-    }
-    [['gb', 'UK'], ['us', 'US']].forEach(function (pair) {
-      var b = document.createElement('button');
-      b.type = 'button'; b.textContent = pair[1];
-      b.setAttribute('data-antcv-en-variant', pair[0]);
-      b.style.cssText = 'padding:3px 11px;font-size:10px;font-weight:700;border-radius:5px;cursor:pointer;border:1px solid rgba(255,255,255,0.18);background:transparent;color:rgba(255,255,255,0.7);';
-      b.style.setProperty('pointer-events', 'auto', 'important');
-      b.addEventListener('click', function (ev) { ev.stopPropagation(); enVariantWrite(pair[0]); paintVariant(); });
-      vRow.appendChild(b);
+    vRow.style.cssText = 'display:flex;align-items:center;gap:8px;margin:7px 0 0;flex-wrap:wrap;font-size:11px;color:rgba(255,255,255,0.7);';
+    var vLab = document.createElement('span'); vLab.textContent = 'English spelling:';
+    vRow.appendChild(vLab);
+    var vSel = document.createElement('select');
+    vSel.style.cssText = 'padding:4px 8px;font-size:11px;border-radius:6px;border:1px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.06);color:#fff;cursor:pointer;';
+    vSel.style.setProperty('pointer-events', 'auto', 'important');
+    [['gb', 'UK (British)'], ['us', 'US (American)']].forEach(function (pair) {
+      var o = document.createElement('option');
+      o.value = pair[0]; o.textContent = pair[1];
+      o.style.cssText = 'background:#1a1a2a;color:#fff;';
+      if (enVariantRead() === pair[0]) o.selected = true;
+      vSel.appendChild(o);
     });
+    vSel.addEventListener('change', function () { enVariantWrite(vSel.value); });
+    vRow.appendChild(vSel);
     wrap.appendChild(vRow);
-    paintVariant();
     var sNote = document.createElement('div');
-    sNote.textContent = 'Dictionaries follow your default language. English defaults to UK. Change any of this later in Settings → Personal.';
+    sNote.textContent = 'Spelling follows your default language. Danish, Spanish and Chinese (context-based) dictionaries apply automatically when that is your document language. Change any of this later in Settings → Personal.';
     sNote.style.cssText = 'font-size:9.5px;color:rgba(255,255,255,0.4);margin:6px 0 0;line-height:1.45;';
     wrap.appendChild(sNote);
 
@@ -474,15 +474,30 @@
     // --- v339-j: section-format showcase ---------------------------------
     // Extracted from the retired antcv-onboarding.js Step 10 panel. Read-
     // only preview — the actual per-section choice happens in the editor.
-    var fmtLabel = document.createElement('div');
-    fmtLabel.textContent = 'HOW EACH SECTION CAN LOOK';
-    fmtLabel.style.cssText = 'font-size:10.5px;font-weight:800;letter-spacing:.3px;color:rgba(255,255,255,0.6);margin:4px 0 6px;';
+    // v1.50.536 \u2014 collapsible (collapsed by DEFAULT) with a \u25b8/\u25be triangle on the
+    // "HOW EACH SECTION CAN LOOK" heading. The tile grid (island anchor below)
+    // + intro are toggled together.
+    var fmtOpen = false;
+    var fmtLabel = document.createElement('button');
+    fmtLabel.type = 'button';
+    fmtLabel.style.cssText = 'display:flex;align-items:center;gap:6px;width:100%;background:transparent;border:0;cursor:pointer;font-size:10.5px;font-weight:800;letter-spacing:.3px;color:rgba(255,255,255,0.6);margin:4px 0 6px;padding:0;text-align:left;';
+    fmtLabel.style.setProperty('pointer-events', 'auto', 'important');
+    var fmtTri = document.createElement('span'); fmtTri.setAttribute('aria-hidden', 'true'); fmtTri.textContent = '\u25b8';
+    var fmtTxt = document.createElement('span'); fmtTxt.textContent = 'HOW EACH SECTION CAN LOOK';
+    fmtLabel.appendChild(fmtTri); fmtLabel.appendChild(fmtTxt);
     panel.appendChild(fmtLabel);
 
     var fmtIntro = document.createElement('p');
     fmtIntro.textContent = 'Each CV and cover-letter section can be rendered in one of seven formats. You pick per section in the editor \u2014 these are just previews so you know what\u2019s available.';
-    fmtIntro.style.cssText = 'margin:0 0 10px;font-size:11.5px;line-height:1.5;color:rgba(255,255,255,0.7);';
+    fmtIntro.style.cssText = 'margin:0 0 10px;font-size:11.5px;line-height:1.5;color:rgba(255,255,255,0.7);display:none;';
     panel.appendChild(fmtIntro);
+    fmtLabel.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      fmtOpen = !fmtOpen;
+      fmtTri.textContent = fmtOpen ? '\u25be' : '\u25b8';
+      fmtIntro.style.display = fmtOpen ? '' : 'none';
+      if (fmtAnchor) fmtAnchor.style.display = fmtOpen ? '' : 'none';
+    });
 
     // v1.50.38 — section-format showcase is now a React island
     // (src/islands/WizardSectionShowcase/). Phase A of the wizard
@@ -497,7 +512,8 @@
     // Phase B (v1.50.39).
     var fmtAnchor = document.createElement('div');
     fmtAnchor.setAttribute('data-antcv-wizard-section-showcase', '1');
-    fmtAnchor.style.cssText = 'min-height:60px;margin-bottom:16px;';
+    // collapsed by default (R3) — the heading toggle above flips this.
+    fmtAnchor.style.cssText = 'min-height:60px;margin-bottom:16px;display:none;';
     panel.appendChild(fmtAnchor);
     try {
       window.dispatchEvent(new CustomEvent('antcv:mount-wizard-showcase'));

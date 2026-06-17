@@ -193,3 +193,52 @@ present, persist, reflect in Settings → Personal + generation. Overlaps LANGUA
 4. #4 (showcase collapsible + Layout-style previews + mount fix).
 5. #2 (A): after #1 dedup, route the single button by file type across both engines; verify all 6
    source types still work + the kernel conflict/gap review survives.
+
+---
+
+## 2026-06-17 — owner's expanded list (live 1.50.530) — SHIPPED + REMAINING
+
+Owner re-reviewed the live build and gave directives on Tier-1/2/3. Shipped in four
+sidecar/island bundles (NO app.js edits — the gated-app.js rule held throughout):
+
+- **1.50.531** — kernel-pill PANEL-LEVEL dedup + dropped the broad import/upload TEXT
+  anchor in `antcv-kernel-import.js injectEntry` (kills the sticky pill across wizard
+  steps + the double pill in Personal); removed the writing-style `— was Scandinavian/…`
+  legacy suffix (`WritingStylePicker.tsx`); `LanguageCard` header "Languages in the top
+  bar" → "Languages".
+- **1.50.532** — kernel review modal collapsed to ONE **Apply** button (always applies
+  locally AND saves to the account — owner: no device-vs-account choice); the wizard
+  "Set your languages" slide now hosts Experience-tense + Spelling (UK/US) selectors
+  writing the SAME stores as Settings → Personal (`antcv-wizard-language-slide-339.js`).
+- **1.50.533** — SECTION-FORMAT-LEGEND-001: new shared `src/islands/shared/
+  SectionFormatLegend.tsx` renders the format visual in BOTH the wizard showcase AND
+  Settings → Layout (was visible in NEITHER); added the **"Outcomes: bullets vs results"**
+  tile; fixed the wizard `mount.ts` stale-root bug that left the showcase empty.
+- **1.50.534** — new `antcv-tone-step-tense-cleanup-534.js`: personality-quiz button moved
+  OFF the language slide ONTO the 6C "What tone fits you?" step (#10); REDUNDANT
+  Advanced-menu Experience-tense (`data-antcv-exp-tense`) hidden, Personal control
+  (`data-antcv-tense`) kept (#7b) — tense functionality intact (prompt reads
+  styleConfig.expTense).
+
+### REMAINING (owner directives, NOT yet shipped — need diagnosis + on-device verify)
+
+- **#4 merge the two writing-style `<select>`s** — owner: "I'm not sure, I think they race;
+  merge them at the location of the upper one." The island (`WritingStylePicker`) already
+  hides the legacy app.js select (`mount.tsx hideLegacyWritingStyleSelect`). NEEDS owner to
+  point at the two controls that actually race on-device (island in Personal vs the Advanced
+  "WRITING STYLE" optgroup select?), then collapse to one at the upper position.
+- **#8 merge standalone Banned-words INTO the Writing-Style section** — **DATA-STORE
+  DIVERGENCE (correctness risk):** the app.js standalone control (app.src.js ~21989, "add
+  from the bank") writes `stylePrefs.banned_words` (a STRING) which is what the generation
+  prompt reads (app.src.js:2787/2894); the island's banned-words writes `extraBannedWords`
+  (per-language, writing-prefs.ts). Hiding the app.js control would SILENTLY DROP banned
+  words from generation unless the island is first made to write `stylePrefs.banned_words`
+  (or the prompt is made to read both) AND the "bank" picker is ported. Reconcile the stores
+  FIRST, then hide the app.js control. Keep the island's per-language en/da/es/zh selector.
+- **#9–12 unified upload loader (engine merge)** — one upload control that routes by file
+  type across both engines with NO capability lost (photo / VIA / banned-words-docx /
+  AntcvBackup via data-importer; kernel review governance via kernel-import). Owner rules:
+  (a) integrate the kernel review GOVERNANCE into the upload flow **including prompts for
+  missing MANDATORY data**; (b) **uploading an AntCV kernel .json = OVERWRITE the kernel
+  from scratch; any other file = MERGE into the current kernel**; (c) add an **Undo last
+  upload** button. Largest remaining piece; build + verify incrementally.

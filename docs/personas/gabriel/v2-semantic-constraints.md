@@ -99,6 +99,45 @@ Constraint #3 needs no `bannedContextual` entry — GEN-PROFILE-001 owns the
   Add `discuss` to `stylePrefs.banned_words` in the kernel to also cover any
   non-closure prose.
 
+## Danish-market English word choice (DK-ENGLISH-001)
+
+Owner 2026-06-17 (from the "Danish CV Word Alternatives" tables): English words
+that read as aggressive, self-promotional, inflated, or ambiguous to **Danish
+recruiters**. **Engine-enforced** (1.50.572) as a generation-prompt rule applied
+to **English output only** (Danish output uses natural Danish). "dynamic" is
+removed entirely; the rest map avoid → prefer:
+
+| Avoid | Prefer |
+|---|---|
+| dynamic | (remove — empty filler) |
+| discussed | reviewed / clarified / agreed / presented |
+| challenged | tested assumptions / questioned gaps / identified risks |
+| argued | made the case for / recommended |
+| defended | explained / justified / supported with data |
+| pushed | moved forward / followed up |
+| demanded | requested / specified / set requirements |
+| enforced | applied / checked / followed up on |
+| controlled | monitored / tracked / checked |
+| owned | was responsible for / handled / coordinated |
+| managed | coordinated / planned / supervised technically |
+| led | coordinated / guided / took technical lead on |
+| supervised | "supervised technical work" / "coordinated engineering activities" (never bare — implies line management) |
+| influenced | contributed to / shaped / recommended |
+| evangelized | introduced / explained / promoted internally |
+| sold | presented the case for / gained agreement |
+| promoted | introduced / supported adoption of |
+| aggressive | ambitious / fast / demanding |
+| ambitious | "tight timeline" / "clear target" / "high technical bar" |
+| passionate | interested in / motivated by / focused on |
+| impactful | state the actual result |
+| strategic | name the decision, roadmap or trade-off |
+| stakeholder | the concrete party (customer, supplier, QA, production, management, hiring manager) |
+| robust | "stable under X" / "passed Y" / "reduced failure risk" |
+| negotiated | agreed terms / clarified scope / balanced constraints |
+| compromised | balanced / traded off / agreed a middle option (NEVER — reads as "damaged") |
+| eventually | finally / later / in the end (Danes hear "eventuelt" = possibly) |
+| actual | real / current / specific (Danes hear "aktuel" = current) |
+
 ## Integration notes
 
 - The current `bannedContextual` reader supports `avoid`/`pattern`,

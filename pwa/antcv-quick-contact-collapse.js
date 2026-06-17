@@ -18,7 +18,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.584-quick-contact';
+  var VERSION = '1.50.586-quick-contact';
   if (window.__antcvQuickContact === VERSION) return;
   window.__antcvQuickContact = VERSION;
 
@@ -144,16 +144,19 @@
   // writing-style block. Re-applied each pass (React resets inline styles).
   function setOrder(el, val) { if (el && el.style.order !== val) el.style.order = val; }
   function liftIdentity(col, hdr, rows) {
-    // The Import button is injected OUTSIDE the fields column (marker
-    // data-antcv-import-replacement), so CSS order can't reach it. Move it into
-    // the column as the first item, then order Apply/Undo AFTER it (owner 2026-06-17:
-    // "place apply user profile and undo AFTER import"). Re-applied each pass.
-    var imp = document.querySelector('[data-antcv-import-replacement]')
-      || topChildByText(col, /Import profile/i);
-    if (imp) {
-      if (imp.parentElement !== col) { try { col.insertBefore(imp, col.firstChild); } catch (_) {} }
-      setOrder(imp, '-7');
+    // IMPORT-DUP-FIX (owner 2026-06-17): an earlier version MOVED the Import
+    // button into the column, which fought the data-importer (React re-rendered
+    // the original → the importer re-hooked it → a DUPLICATE under Quick Contact).
+    // Do NOT move it. Dedupe any extras (keep the one inside the column), then
+    // order it FIRST via CSS only (it lives in the column, so order reaches it).
+    var imps = Array.prototype.slice.call(document.querySelectorAll('[data-antcv-import-replacement]'));
+    if (imps.length > 1) {
+      var keep = null;
+      for (var a = 0; a < imps.length; a++) { if (col.contains(imps[a])) { keep = imps[a]; break; } }
+      keep = keep || imps[0];
+      for (var b = 0; b < imps.length; b++) { if (imps[b] !== keep) { try { imps[b].remove(); } catch (_) {} } }
     }
+    setOrder(topChildByText(col, /Import profile/i), '-7');                  // Import … (first)
     setOrder(topChildByText(col, /Apply to user profile|Apply to my|↺\s*Apply/i), '-6'); // Apply (+ Undo share the row)
     setOrder(topChildByText(col, /Undo last/i), '-6');                      // Undo (if separate row)
     setOrder(topRowByPlaceholder(col, 'Jane Doe'), '-4');                   // Full Name

@@ -82,7 +82,7 @@ function writeSpellContext(on: boolean): void { try { localStorage.setItem('antc
 // row; CONTEXT (zh) an enable row noting the AI character check. Variants with
 // no distinct Hunspell package (Danish dialects, Farsi/French regions) still
 // record the choice and fall back to the base dictionary in the engine.
-interface SpellCfg { def?: string; variants?: [string, string][]; single?: boolean; context?: boolean; dict?: boolean }
+interface SpellCfg { def?: string; variants?: [string, string][]; single?: boolean; context?: boolean; dict?: boolean; soon?: string }
 const SPELL_UI: Record<string, SpellCfg> = {
   en: { def: 'gb', variants: [['gb', 'UK (British)'], ['us', 'US (American)'], ['in', 'India'], ['ca', 'Canada'], ['au', 'Australia'], ['za', 'South Africa']] },
   es: { def: 'uy', variants: [['uy', 'Uruguay'], ['es', 'España'], ['mx', 'México'], ['ar', 'Argentina'], ['co', 'Colombia'], ['cl', 'Chile'], ['gq', 'Guinea Ecuatorial']] },
@@ -95,7 +95,7 @@ const SPELL_UI: Record<string, SpellCfg> = {
   ar: { def: 'ar', variants: [['ar', 'الفصحى (MSA)'], ['eg', 'مصر'], ['ma', 'المغرب'], ['sa', 'السعودية']] },
   fa: { def: 'ir', variants: [['ir', 'ایران (Iranian)'], ['af', 'افغانستان (Dari)']] },
   he: { single: true, dict: true }, ru: { single: true, dict: true }, tr: { single: true, dict: true },
-  fi: { single: true, dict: false },  // Finnish — no published Hunspell dictionary
+  fi: { single: true, dict: false, soon: 'Voikko' },  // Finnish — Voikko spell-check integration queued (nightly)
 
   ku: { single: true, dict: false }, sw: { single: true, dict: false }, am: { single: true, dict: false },
   fo: { single: true, dict: true },   // Faroese — real dictionary
@@ -334,7 +334,12 @@ export function LanguageCard(): JSX.Element {
                     />
                     <strong style={{ color: '#fff' }}>{name}</strong>
                     {cfg.context && <span style={{ color: 'rgba(255,255,255,.45)' }}>(AI check)</span>}
-                    {cfg.dict === false && <span style={{ color: 'rgba(255,255,255,.4)' }}>(generation only — no spell-check)</span>}
+                    {cfg.soon && (
+                      <span style={{ color: '#d97706', fontWeight: 700 }}>
+                        {cfg.soon} <span style={{ background: 'rgba(217,119,6,.18)', border: '1px solid rgba(217,119,6,.5)', borderRadius: 4, padding: '0 5px', fontSize: 9, fontWeight: 800, letterSpacing: '.4px', textTransform: 'uppercase' }}>soon</span>
+                      </span>
+                    )}
+                    {cfg.dict === false && !cfg.soon && <span style={{ color: 'rgba(255,255,255,.4)' }}>(generation only — no spell-check)</span>}
                   </label>
                   {cfg.variants && (
                     <select

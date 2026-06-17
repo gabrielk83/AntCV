@@ -31,7 +31,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.593-login-unify';
+  var VERSION = '1.50.594-login-warmup';
   if (window.__antcvLoginLoadingGate === VERSION) return;
   window.__antcvLoginLoadingGate = VERSION;
 
@@ -45,7 +45,7 @@
   // owner 2026-06-17: the cover still lifted ~1s too early (the settle wasn't done),
   // so the hold floor is raised by 1s.
   var MIN_MS = 3200;   // hold the cover this long so the photo/mode settle is masked
-  var MAX_MS = 7500;   // hard cap — always lift by here
+  var MAX_MS = 9000;   // hard cap — always lift by here (room for the Settings warm-up cycle)
 
   function lsRaw(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
   function disabled() { var v = lsRaw(DISABLE); return v === '1' || v === 'true'; }
@@ -157,7 +157,7 @@
     var ver = document.createElement('span');
     // Match the pre-login screen's "X.XX.XXX-babel-fish" version chip. Numeric part
     // tracks this gate's VERSION (bumped every release); codename mirrors app.js `Ai`.
-    ver.textContent = (VERSION.match(/^\d+\.\d+\.\d+/) || ['1.50.593'])[0] + '-babel-fish';
+    ver.textContent = (VERSION.match(/^\d+\.\d+\.\d+/) || ['1.50.594'])[0] + '-babel-fish';
     ver.style.cssText = 'font-size:10px;font-weight:600;color:rgba(255,255,255,0.52);';
     brand.appendChild(h1); brand.appendChild(ver);
 
@@ -214,13 +214,64 @@
   var SETTLE_BUFFER = 500;  // hold this long AFTER the editor first appears, so the
                             // brief post-appear flash ("lamp for a microsecond") is masked
   var ticking = false;
+
+  // ── WARM-UP (owner 2026-06-17) ──────────────────────────────────────────────
+  // Use the cover time to OPEN Settings and cycle its subtabs so the jumpy panels
+  // (Personal: LanguageCard + the contact/quick-contact/CJLR sidecars; Layout:
+  // PackagePicker / LayoutPicker / SectionFormatPicker) mount and run their first
+  // passes — island mounts, spell-dictionary fetches → IndexedDB, cloud-pref reads,
+  // sidecar injection reflow — entirely BEHIND the opaque cover. Then close the
+  // drawer (Escape → q(!1)) and restore the user's last tab, so the cover lifts on
+  // a settled editor. All driven through app.js globals; fully guarded.
+  var warmupStarted = false, warmupDone = false;
+  var WARM_DISABLE = 'antcv:disable-login-warmup';
+  function warmupDisabled() { var v = lsRaw(WARM_DISABLE); return v === '1' || v === 'true'; }
+  function warmUp() {
+    if (warmupStarted) return;
+    warmupStarted = true;
+    if (warmupDisabled()) { warmupDone = true; return; }
+    var tries = 0;
+    (function go() {
+      if (typeof window._antcvOpenSettingsRoute !== 'function') {
+        if (tries++ < 25) { setTimeout(go, 120); return; }
+        warmupDone = true; return;                 // route never appeared — give up gracefully
+      }
+      var origTab = lsRaw('settingsTab');
+      var origSub = lsRaw('settingsSubTab');
+      var subtabs = ['personal', 'layout', 'account', 'keys'];   // the panels that re-layout on first open
+      var i = 0;
+      function step() {
+        try {
+          if (i < subtabs.length) {
+            window._antcvOpenSettingsRoute({ tier: 'standard', subtab: subtabs[i] });
+            i++; setTimeout(step, 340); return;
+          }
+          // land on the user's prior subtab (or Personal) so nothing surprises them
+          var sub = (origSub ? unquote(origSub) : 'personal') || 'personal';
+          window._antcvOpenSettingsRoute({ tier: 'standard', subtab: sub });
+          setTimeout(function () {
+            try { window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); } catch (_) {}
+            // restore the exact stored tab keys (the cycling overwrote them)
+            try {
+              if (origTab != null) localStorage.setItem('settingsTab', origTab);
+              if (origSub != null) localStorage.setItem('settingsSubTab', origSub);
+            } catch (_) {}
+            warmupDone = true;
+          }, 260);
+        } catch (_) { warmupDone = true; }
+      }
+      step();
+    })();
+  }
+
   function poll() {
     var el = overlay || document.getElementById('antcv-login-loading-overlay');
     if (!el) { ticking = false; return; }
     var elapsed = Date.now() - startedAt;
-    if (editorReady() && !readyAt) readyAt = Date.now();
+    if (editorReady() && !readyAt) { readyAt = Date.now(); warmUp(); }   // editor exists → warm Settings behind the cover
     var settled = readyAt && (Date.now() - readyAt) >= SETTLE_BUFFER;
-    if ((settled && elapsed >= MIN_MS) || elapsed >= MAX_MS) { hideOverlay(); ticking = false; return; }
+    // lift once the editor has settled AND the warm-up cycle finished; MAX_MS is the backstop.
+    if ((settled && elapsed >= MIN_MS && warmupDone) || elapsed >= MAX_MS) { hideOverlay(); ticking = false; return; }
     setTimeout(poll, 120);
   }
 

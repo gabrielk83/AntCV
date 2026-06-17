@@ -26,7 +26,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.506-outcome-role-select';
+  var VERSION = '1.50.567-outcome-role-sync';
   if (window.__antcvOutcomeRoleSelect === VERSION) return;
   window.__antcvOutcomeRoleSelect = VERSION;
 
@@ -71,6 +71,24 @@
       if (it && typeof it === 'object') { if (!it._oid) { changed = true; return Object.assign({}, it, { _oid: newOid() }); } return it; }
       // normalise a bare string into {b,t,_oid}
       changed = true; return { b: '', t: String(it || ''), _oid: newOid() };
+    });
+
+    // 1b. OUTCOME-ROLE-SYNC-001 (owner 2026-06-17): the position assignment must
+    // travel with the CLOUD-SYNCED `sections`, not the standalone MAP_KEY (which
+    // is NOT part of the cloud payload — so "Load from cloud" on another machine
+    // lost every assignment). Reconcile the map <-> an inline `_role` on each
+    // item both ways: persist map→item (so it syncs) and rehydrate item→map (so a
+    // freshly-cloud-loaded machine recovers the assignments the readers expect).
+    items = items.map(function (it) {
+      if (!it || typeof it !== 'object' || !it._oid) return it;
+      var inMap = map[it._oid];
+      if (inMap != null && inMap !== '' && it._role !== inMap) {
+        changed = true; return Object.assign({}, it, { _role: inMap });   // map → inline (for sync)
+      }
+      if ((inMap == null || inMap === '') && it._role != null && it._role !== '') {
+        map[it._oid] = it._role; mapChanged = true;                       // inline → map (rehydrate)
+      }
+      return it;
     });
 
     // 2. seed from role-keyed proof points while under the floor
@@ -154,6 +172,26 @@
         if (!theOid) return;
         if (sel.value) m[theOid] = sel.value; else delete m[theOid];
         wj(MAP_KEY, m);
+        // OUTCOME-ROLE-SYNC-001: also persist the choice INLINE on the outcome
+        // item so it rides with the cloud-synced `sections` to other machines.
+        try {
+          var bb = rj('sections', null);
+          if (bb) {
+            var ll = docList(bb), oss = ll && outcomesSec(ll);
+            if (oss) {
+              var its = oss.items.map(function (x) {
+                if (x && typeof x === 'object' && x._oid === theOid) {
+                  var y = Object.assign({}, x);
+                  if (sel.value) y._role = sel.value; else delete y._role;
+                  return y;
+                }
+                return x;
+              });
+              var nl = ll.map(function (s) { return s === oss ? Object.assign({}, oss, { items: its }) : s; });
+              var nb = Object.assign({}, bb); nb[activeDoc()] = nl; wj('sections', nb);
+            }
+          }
+        } catch (_) {}
         try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { source: SRC } })); } catch (_) {}
       });
       row.insertBefore(sel, verb);

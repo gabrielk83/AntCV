@@ -41,7 +41,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.532-handoff';
+  var VERSION = '1.50.534-handoff';
   if (window.__antcvWizardLanguageSlide339 === VERSION) return;
   window.__antcvWizardLanguageSlide339 = VERSION;
 
@@ -539,21 +539,10 @@
     hNote.innerHTML = 'You also choose each section\u2019s format (paragraph, bullets, table\u2026) per section in the editor.';
     hNote.style.cssText = 'margin:8px 0 0;font-size:11px;line-height:1.5;color:rgba(255,255,255,0.6);';
     handoff.appendChild(hNote);
-    // PERSONALITY-KERNEL-001 quiz (owner 2026-06-13): an optional button on the
-    // final wizard slide that opens the 8-question personality quiz, so a new
-    // user can teach AntCV how to write them before they reach the editor.
-    var pqBtn = document.createElement('button');
-    pqBtn.type = 'button';
-    pqBtn.textContent = '✨ Build your personality kernel (8-question quiz)';
-    pqBtn.style.cssText = 'margin:10px 0 0;width:100%;padding:9px 12px;border-radius:8px;border:1px solid rgba(1,183,187,0.45);background:rgba(1,183,187,0.10);color:#cfeff0;cursor:pointer;font-size:12px;font-weight:700;font-family:inherit;';
-    pqBtn.addEventListener('click', function (ev) {
-      ev.stopPropagation();
-      try {
-        if (window.AntcvPersonalityQuiz && window.AntcvPersonalityQuiz.open) window.AntcvPersonalityQuiz.open();
-        else window.dispatchEvent(new CustomEvent('antcv:open-personality-quiz'));
-      } catch (_) {}
-    });
-    handoff.appendChild(pqBtn);
+    // v1.50.534 (owner 2026-06-17): the personality-kernel quiz button was
+    // MOVED OFF this language slide onto the 6C "What tone fits you?" tone step
+    // (tone + personality belong together) — see
+    // antcv-tone-step-tense-cleanup-534.js. Intentionally no quiz button here.
     panel.appendChild(handoff);
 
     var btnRow = document.createElement('div');

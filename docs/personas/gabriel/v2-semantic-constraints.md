@@ -23,9 +23,11 @@ GEN-PROFILE-001 (strengthened in 1.50.562 to also catch "Deep Tech" / "Photonic"
       "coordinated engineering work",
       "directed technical activities",
       "guided implementation",
-      "owned technical direction"
+      "owned technical direction",
+      "coordinated the Sigma-Connectivity ODM engineering team (Sweden)"
     ],
-    "reason": "Avoid overstating formal people-management responsibility. Gabriel coordinated technical work and guided implementation without holding formal line-management (HR) authority over reports."
+    "reason": "Avoid overstating formal people-management responsibility. Gabriel coordinated technical work and guided implementation without holding formal line-management (HR) authority over reports. CANONICAL CASE — Sirin Labs: the 7-person task force he 'led' was the Sigma-Connectivity ODM (Original Design Manufacturer) engineering team at the SWEDEN site, coordinated across an ODM / partner relationship — an external manufacturing-partner team, NOT internal direct reports — so 'led/managed a team' materially overstates the relationship.",
+    "scope": { "role_company": "Sirin Labs", "site": "Sweden", "partner": "Sigma-Connectivity (ODM)" }
   },
   {
     "id": "agile-out-of-pm-context",
@@ -71,7 +73,9 @@ note / optional `when`). Add these to `personalInfo.stylePrefs.bannedContextual`
   {
     "avoid": "led a team, managed a team, people manager",
     "use_instead": "supervised technically, coordinated engineering work, directed technical activities, guided implementation, owned technical direction",
-    "note": "team coordination without direct line management — do not overstate formal people-management authority"
+    "note": "team coordination without direct line management — do not overstate formal people-management authority",
+    "when": { "role_company": "sirin" },
+    "context_note": "At Sirin Labs the 7-person task force was the Sigma-Connectivity ODM engineering team at the Sweden site (an external partner team, not direct reports). Engine-enforced by SIRIN-SEMANTICS-001; this bannedContextual entry is the kernel mirror."
   },
   {
     "avoid": "agile",

@@ -1,0 +1,84 @@
+# Gabriel — semantic context constraints (V2 format)
+
+Owner 2026-06-17: three semantic context constraints adapted to the **V2
+constraints format** (`{ trigger, avoid[], prefer[], reason }`, with an optional
+`scope` for conditionals). Paste the V2 array into Gabriel's kernel JSON
+(`constraints`/`semanticConstraints`); the runtime reader is being widened to
+accept this shape (see "Integration", below).
+
+The third constraint is **already enforced in the generation engine** by
+GEN-PROFILE-001 (strengthened in 1.50.562 to also catch "Deep Tech" / "Photonic"
+/ "Electro-optics Engineer") — its V2 object is recorded here for completeness.
+
+## V2 constraints
+
+```json
+[
+  {
+    "id": "team-coordination",
+    "trigger": "team coordination without direct line management",
+    "avoid": ["led a team", "managed a team", "people manager"],
+    "prefer": [
+      "supervised technically",
+      "coordinated engineering work",
+      "directed technical activities",
+      "guided implementation",
+      "owned technical direction"
+    ],
+    "reason": "Avoid overstating formal people-management responsibility. Gabriel coordinated technical work and guided implementation without holding formal line-management (HR) authority over reports."
+  },
+  {
+    "id": "agile-out-of-pm-context",
+    "trigger": "the word 'agile' used OUTSIDE a project-management workflow/tools context (i.e. as a general personal quality rather than the methodology)",
+    "avoid": ["agile"],
+    "prefer": ["flexible", "resourceful", "adaptable"],
+    "reason": "Keep 'agile' ONLY when naming the PM methodology, framework, ceremony, or tooling (Scrum, Kanban, sprints, backlog). When the word would describe a personal trait or general way of working, use a plain synonym instead."
+  },
+  {
+    "id": "unsolicited-profile-opener",
+    "trigger": "the PROFILE subsection OPENING in an unsolicited application (empty / no posted position)",
+    "avoid": ["Electro-optics Engineer", "Deep Tech", "Photonic"],
+    "prefer": ["IT professional"],
+    "reason": "An unsolicited / general application leads with the broad IT-professional identity, not a narrow specialty. Already enforced in-engine by GEN-PROFILE-001 (retry gate + instruction).",
+    "scope": { "section": "profile", "position": "opening", "application_type": "unsolicited" }
+  }
+]
+```
+
+## Functional today — `stylePrefs.bannedContextual`
+
+Constraints #1 and #2 also work **right now** without the V2 reader, in the
+shape the live prompt already reads (`app.src.js` ~2811: avoid / use_instead /
+note / optional `when`). Add these to `personalInfo.stylePrefs.bannedContextual`
+(global — no `when`, so they apply across all prose):
+
+```json
+[
+  {
+    "avoid": "led a team, managed a team, people manager",
+    "use_instead": "supervised technically, coordinated engineering work, directed technical activities, guided implementation, owned technical direction",
+    "note": "team coordination without direct line management — do not overstate formal people-management authority"
+  },
+  {
+    "avoid": "agile",
+    "use_instead": "flexible, resourceful, adaptable",
+    "note": "ONLY when 'agile' is used outside a project-management workflow/tools context; keep 'agile' when naming the PM methodology, framework, ceremony, or tooling"
+  }
+]
+```
+
+Constraint #3 needs no `bannedContextual` entry — GEN-PROFILE-001 owns the
+"unsolicited PROFILE opener → IT professional" rule end-to-end.
+
+## Integration notes
+
+- The current `bannedContextual` reader supports `avoid`/`pattern`,
+  `use_instead`/`replacement`, `note`, and `when.{role_company|role_title}`.
+  The V2 fields (`trigger`, `avoid[]` array, `prefer[]` array, `reason`) are a
+  **superset**; widening the reader to normalise them (`avoid[]→join`,
+  `prefer[]→use_instead`, `reason→note`, `trigger→context phrase`) is the next
+  step so V2 constraints become functional through the same channel. Until then,
+  use the `bannedContextual` shapes above for #1/#2.
+- `scope` (section/position/application_type) — as in #3 — is beyond the current
+  role-match `when`; it is honoured today only for the profile-opener case via
+  GEN-PROFILE-001. General `scope` support is part of the Kernel-v2 build.

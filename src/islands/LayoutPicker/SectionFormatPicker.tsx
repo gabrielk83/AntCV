@@ -19,6 +19,31 @@ import {
 } from '../../lib/writing-prefs';
 import { STYLES, type StyleId } from '../../lib/writing-systems';
 
+// D — one-time stylesheet for the single-rail dual-thumb range ("one ruler").
+// Two overlaid range inputs with transparent tracks; only the thumbs take
+// pointer events, so each is draggable on the shared rail. Min thumb muted-blue,
+// max thumb teal, with a teal fill between them.
+(function injectDualRangeStyle() {
+  if (typeof document === 'undefined') return;
+  if (document.getElementById('antcv-dualrange-style')) return;
+  const s = document.createElement('style');
+  s.id = 'antcv-dualrange-style';
+  s.textContent =
+    '.antcv-dr{position:relative;height:22px;display:flex;align-items:center;}' +
+    '.antcv-dr-rail{position:absolute;left:0;right:0;height:4px;border-radius:3px;background:rgba(255,255,255,.18);}' +
+    '.antcv-dr-fill{position:absolute;height:4px;border-radius:3px;background:#01B7BB;}' +
+    '.antcv-dr input[type=range]{position:absolute;left:0;top:0;width:100%;height:22px;margin:0;background:none;-webkit-appearance:none;appearance:none;pointer-events:none;}' +
+    '.antcv-dr input[type=range]:focus{outline:none;}' +
+    '.antcv-dr input[type=range]::-webkit-slider-runnable-track{background:none;border:none;}' +
+    '.antcv-dr input[type=range]::-moz-range-track{background:none;border:none;}' +
+    '.antcv-dr input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;pointer-events:auto;height:14px;width:14px;border-radius:50%;border:2px solid #0c1a30;cursor:pointer;margin-top:-5px;box-shadow:0 1px 3px rgba(0,0,0,.4);}' +
+    '.antcv-dr input[type=range]::-moz-range-thumb{pointer-events:auto;height:14px;width:14px;border-radius:50%;border:2px solid #0c1a30;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.4);}' +
+    '.antcv-dr-min{z-index:5;}.antcv-dr-max{z-index:4;}' +
+    '.antcv-dr-min::-webkit-slider-thumb{background:#8aa0c8;}.antcv-dr-min::-moz-range-thumb{background:#8aa0c8;}' +
+    '.antcv-dr-max::-webkit-slider-thumb{background:#01B7BB;}.antcv-dr-max::-moz-range-thumb{background:#01B7BB;}';
+  (document.head || document.documentElement).appendChild(s);
+})();
+
 // v1.50.14 — reusable per-section picker. One row per section, used by
 // the LayoutPicker island (Settings → Personal) and (in a future cut)
 // the per-section inline controls inside the editor. Plan §7 Pass 4
@@ -215,39 +240,39 @@ export function SectionFormatPicker({
               <option key={o.value} value={o.value} style={DARK_OPTION_STYLE}>{o.label}</option>
             ))}
           </select>
-          {/* D — dual min/max range. The lower (min) thumb sets the floor, the
-              upper (max) the cap; defaults fit the active writing style. */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 9.5, opacity: 0.55, width: 24, flex: '0 0 auto' }}>min</span>
-              <input
-                type="range"
-                min={LINE_LIMIT_MIN}
-                max={LINE_LIMIT_MAX}
-                step={1}
-                value={lineMin}
-                onChange={(e) => onMinChange(Number(e.currentTarget.value))}
-                aria-label={`${label} minimum lines`}
-                style={{ flex: 1, minWidth: 70, accentColor: '#8aa0c8' }}
-              />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 9.5, opacity: 0.55, width: 24, flex: '0 0 auto' }}>max</span>
-              <input
-                type="range"
-                min={LINE_LIMIT_MIN}
-                max={LINE_LIMIT_MAX}
-                step={1}
-                value={lineLimit}
-                onChange={(e) => onLineChange(Number(e.currentTarget.value))}
-                aria-label={`${label} maximum lines`}
-                style={{ flex: 1, minWidth: 70, accentColor: '#01B7BB' }}
-              />
-            </div>
-            <span style={{ fontSize: 11, opacity: 0.75, textAlign: 'right' }}>
-              {lineMin}–{lineLimit}{isOutcomes && outcomesMode === 'results' ? '/role' : ''}
-            </span>
-          </div>
+          {/* D — ONE ruler, two thumbs (owner: "why cannot they be a single
+              ruler"). Two overlaid range inputs share a single rail with a teal
+              fill between the min and max thumbs; defaults fit the writing style. */}
+          {(() => {
+            const span = (LINE_LIMIT_MAX - LINE_LIMIT_MIN) || 1;
+            const minPct = ((lineMin - LINE_LIMIT_MIN) / span) * 100;
+            const maxPct = ((lineLimit - LINE_LIMIT_MIN) / span) * 100;
+            return (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+                <div className="antcv-dr" style={{ flex: 1, minWidth: 90 }}>
+                  <div className="antcv-dr-rail" />
+                  <div className="antcv-dr-fill" style={{ left: minPct + '%', right: (100 - maxPct) + '%' }} />
+                  <input
+                    type="range" className="antcv-dr-min"
+                    min={LINE_LIMIT_MIN} max={LINE_LIMIT_MAX} step={1}
+                    value={lineMin}
+                    onChange={(e) => onMinChange(Number(e.currentTarget.value))}
+                    aria-label={`${label} minimum lines`}
+                  />
+                  <input
+                    type="range" className="antcv-dr-max"
+                    min={LINE_LIMIT_MIN} max={LINE_LIMIT_MAX} step={1}
+                    value={lineLimit}
+                    onChange={(e) => onLineChange(Number(e.currentTarget.value))}
+                    aria-label={`${label} maximum lines`}
+                  />
+                </div>
+                <span style={{ fontSize: 11, opacity: 0.75, minWidth: 30, textAlign: 'right', flex: '0 0 auto' }}>
+                  {lineMin}–{lineLimit}{isOutcomes && outcomesMode === 'results' ? '/role' : ''}
+                </span>
+              </div>
+            );
+          })()}
         </div>
       </div>
       <button

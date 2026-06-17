@@ -125,7 +125,7 @@ Drove an iPhone-13 viewport (390px) headlessly; owner confirmed on their real de
   launcher** (not the kernel/extraction button). It defaulted to `bottom:96px` (above the
   Fuse toolbar) but still covered the DOCX export row; raised the default to `bottom:150px`
   (draggable saved position still wins). Verified the launcher moved y 531→477 at 390px.
-  **OWNER ON-DEVICE:** confirm 150px clears the DOCX export (can bump further / move left).
+  **OWNER ON-DEVICE: CONFIRMED** "ask ai is above now and is good." Mobile cluster (7) CLOSED.
 
 ## Findings — stale-open / not-a-bug (recommend closing in ACTIVE_BUGS)
 

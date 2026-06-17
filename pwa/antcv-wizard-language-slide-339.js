@@ -41,7 +41,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.538-handoff';
+  var VERSION = '1.50.546-handoff';
   if (window.__antcvWizardLanguageSlide339 === VERSION) return;
   window.__antcvWizardLanguageSlide339 = VERSION;
 
@@ -215,6 +215,14 @@
     try { if (window.AntcvSpell && window.AntcvSpell._invalidate) window.AntcvSpell._invalidate(); } catch (_) {}
     try { window.dispatchEvent(new CustomEvent('antcv:spell-variant-changed', { detail: { variant: code } })); } catch (_) {}
   }
+  // SPELL-ES-VARIANT-001 — regional Spanish, Uruguay default (mirrors English).
+  var ES_VARIANTS = [['uy', 'Uruguay'], ['es', 'España'], ['mx', 'México'], ['ar', 'Argentina'], ['co', 'Colombia'], ['cl', 'Chile'], ['gq', 'Guinea Ecuatorial']];
+  function esVariantRead() { try { return localStorage.getItem('antcv:spell:esVariant') || 'uy'; } catch (_) { return 'uy'; } }
+  function esVariantWrite(code) {
+    try { localStorage.setItem('antcv:spell:esVariant', code); } catch (_) {}
+    try { if (window.AntcvSpell && window.AntcvSpell._invalidate) window.AntcvSpell._invalidate(); } catch (_) {}
+    try { window.dispatchEvent(new CustomEvent('antcv:spell-variant-changed', { detail: { variant: code, lang: 'es' } })); } catch (_) {}
+  }
 
   function buildWritingGrammarBlock() {
     var wrap = document.createElement('div');
@@ -290,6 +298,24 @@
     vSel.addEventListener('change', function () { enVariantWrite(vSel.value); });
     vRow.appendChild(vSel);
     wrap.appendChild(vRow);
+    // Spanish variant — mirrors English; the <select> scroll-handles a growing list.
+    var esRow = document.createElement('div');
+    esRow.style.cssText = 'display:flex;align-items:center;gap:8px;margin:7px 0 0;flex-wrap:wrap;font-size:11px;color:rgba(255,255,255,0.7);';
+    var esLab = document.createElement('span'); esLab.textContent = 'Spanish spelling:';
+    esRow.appendChild(esLab);
+    var esSel = document.createElement('select');
+    esSel.style.cssText = 'padding:4px 8px;font-size:11px;border-radius:6px;border:1px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.06);color:#fff;cursor:pointer;max-width:100%;';
+    esSel.style.setProperty('pointer-events', 'auto', 'important');
+    ES_VARIANTS.forEach(function (pair) {
+      var o = document.createElement('option');
+      o.value = pair[0]; o.textContent = pair[1];
+      o.style.cssText = 'background:#1a1a2a;color:#fff;';
+      if (esVariantRead() === pair[0]) o.selected = true;
+      esSel.appendChild(o);
+    });
+    esSel.addEventListener('change', function () { esVariantWrite(esSel.value); });
+    esRow.appendChild(esSel);
+    wrap.appendChild(esRow);
     var sNote = document.createElement('div');
     sNote.textContent = 'Spelling follows your default language. Danish, Spanish and Chinese (context-based) dictionaries apply automatically when that is your document language. Change any of this later in Settings → Personal.';
     sNote.style.cssText = 'font-size:9.5px;color:rgba(255,255,255,0.4);margin:6px 0 0;line-height:1.45;';

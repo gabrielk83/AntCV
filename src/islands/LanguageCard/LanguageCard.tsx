@@ -78,6 +78,18 @@ function writeEnVariant(code: 'gb' | 'us'): void {
   try { (window as unknown as { AntcvSpell?: { _invalidate?: () => void } }).AntcvSpell?._invalidate?.(); } catch { /* */ }
   try { window.dispatchEvent(new CustomEvent('antcv:spell-variant-changed', { detail: { variant: code } })); } catch { /* */ }
 }
+function readEsVariant(): string { try { return localStorage.getItem('antcv:spell:esVariant') || 'uy'; } catch { return 'uy'; } }
+function writeEsVariant(code: string): void {
+  try { localStorage.setItem('antcv:spell:esVariant', code); } catch { /* */ }
+  try { (window as unknown as { AntcvSpell?: { _invalidate?: () => void } }).AntcvSpell?._invalidate?.(); } catch { /* */ }
+  try { window.dispatchEvent(new CustomEvent('antcv:spell-variant-changed', { detail: { variant: code, lang: 'es' } })); } catch { /* */ }
+}
+// SPELL-ES-VARIANT-001 — regional Spanish, Uruguay default. Grows over time, so
+// the control is a scrollable <select> (native dropdowns overflow-scroll).
+const ES_VARIANTS: [string, string][] = [
+  ['uy', 'Uruguay'], ['es', 'España'], ['mx', 'México'], ['ar', 'Argentina'],
+  ['co', 'Colombia'], ['cl', 'Chile'], ['gq', 'Guinea Ecuatorial'],
+];
 function readSpellLangs(): Record<string, boolean> { try { return JSON.parse(localStorage.getItem('antcv:spell:langs') || '{}') || {}; } catch { return {}; } }
 function writeSpellLang(code: string, on: boolean): void {
   try { const m = readSpellLangs(); m[code] = on; localStorage.setItem('antcv:spell:langs', JSON.stringify(m)); } catch { /* */ }
@@ -100,11 +112,13 @@ export function LanguageCard(): JSX.Element {
   const [tense, setTense] = useState<Tense>(() => readTense());
   const [spellOn, setSpellOn] = useState<boolean>(() => readSpellEnabled());
   const [enVariant, setEnVariant] = useState<'gb' | 'us'>(() => readEnVariant());
+  const [esVariant, setEsVariant] = useState<string>(() => readEsVariant());
   const [spellLangs, setSpellLangs] = useState<Record<string, boolean>>(() => readSpellLangs());
 
   const onTense = useCallback((v: Tense) => { writeTense(v); setTense(v); }, []);
   const onSpellOn = useCallback((on: boolean) => { writeSpellEnabled(on); setSpellOn(on); }, []);
   const onEnVariant = useCallback((c: 'gb' | 'us') => { writeEnVariant(c); setEnVariant(c); }, []);
+  const onEsVariant = useCallback((c: string) => { writeEsVariant(c); setEsVariant(c); }, []);
   const onSpellLang = useCallback((code: string, on: boolean) => { writeSpellLang(code, on); setSpellLangs((p) => ({ ...p, [code]: on })); }, []);
 
   // Cross-tab sync — if another tab toggles a language, mirror the change.
@@ -264,8 +278,20 @@ export function LanguageCard(): JSX.Element {
               <option value="us" style={{ background: '#283556', color: '#e6eef3' }}>US (American)</option>
             </select>
           </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '7px 0 0', flexWrap: 'wrap', fontSize: 11, color: 'rgba(255,255,255,.7)' }}>
+            <span>Spanish:</span>
+            <select
+              value={esVariant}
+              onChange={(e) => onEsVariant(e.currentTarget.value)}
+              style={{ padding: '4px 8px', fontSize: 11, borderRadius: 6, border: '1px solid rgba(255,255,255,.18)', background: 'rgba(255,255,255,.06)', color: '#fff', cursor: 'pointer', maxWidth: '100%' }}
+            >
+              {ES_VARIANTS.map(([code, label]) => (
+                <option key={code} value={code} style={{ background: '#283556', color: '#e6eef3' }}>{label}</option>
+              ))}
+            </select>
+          </div>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', margin: '7px 0 0', fontSize: 11, color: 'rgba(255,255,255,.7)' }}>
-            {([['da', 'Dansk'], ['es', 'Español'], ['zh', '中文 (context)']] as [string, string][]).map(([code, label]) => (
+            {([['da', 'Dansk'], ['zh', '中文 (context)']] as [string, string][]).map(([code, label]) => (
               <label key={code} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
                 <input
                   type="checkbox"

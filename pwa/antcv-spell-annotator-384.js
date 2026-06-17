@@ -28,7 +28,7 @@
   'use strict';
 
   if (window.__antcvSpellAnnotatorInstalled) return;
-  var VERSION = '1.50.537';
+  var VERSION = '1.50.546';
   window.__antcvSpellAnnotatorInstalled = VERSION;
 
   // SPELL-EN-VARIANT-001 (owner 2026-06-13): English defaults to UK (en-GB);
@@ -39,14 +39,29 @@
     'en-us': 'dictionary-en-us',
     da: 'dictionary-da',
     es: 'dictionary-es',
+    // SPELL-ES-VARIANT-001 (owner 2026-06-17): regional Spanish, mirroring the
+    // en-gb/en-us split. Uruguay is the DEFAULT. Any regional package that 404s
+    // on the CDN falls back to the generic `dictionary-es` (see loadDict) so
+    // Spanish spelling never breaks as the variant list grows.
+    'es-uy': 'dictionary-es-uy',  // Uruguay (default)
+    'es-es': 'dictionary-es-es',  // España
+    'es-mx': 'dictionary-es-mx',  // México
+    'es-ar': 'dictionary-es-ar',  // Argentina
+    'es-co': 'dictionary-es-co',  // Colombia
+    'es-cl': 'dictionary-es-cl',  // Chile
+    'es-gq': 'dictionary-es-gq',  // Guinea Ecuatorial
   };
   function enVariant() {
     try { return localStorage.getItem('antcv:spell:enVariant') === 'us' ? 'us' : 'gb'; }
     catch (_) { return 'gb'; }
   }
-  // dictKey: the cache + engine identity. English resolves to en-gb / en-us so
-  // switching the variant reloads the correct dictionary.
-  function dictKey(l) { return l === 'en' ? 'en-' + enVariant() : l; }
+  function esVariant() {
+    try { var v = localStorage.getItem('antcv:spell:esVariant'); return (v && DICT_PKG['es-' + v]) ? v : 'uy'; }
+    catch (_) { return 'uy'; }
+  }
+  // dictKey: the cache + engine identity. English resolves to en-gb / en-us and
+  // Spanish to es-uy/es-es/… so switching the variant reloads the right dict.
+  function dictKey(l) { return l === 'en' ? 'en-' + enVariant() : (l === 'es' ? 'es-' + esVariant() : l); }
   function hasDict(l) { return l === 'en' || l === 'da' || l === 'es'; }
   var CDN = 'https://cdn.jsdelivr.net/npm/';
   var DEBOUNCE_MS = 600;
@@ -116,12 +131,25 @@
       } catch (_) { res(); }
     });
   }
-  function dictUrls(l) {
-    var k = dictKey(l);
+  function dictUrlsFor(key) {
     var base = window.__antcvSpellDictBase
-      ? String(window.__antcvSpellDictBase).replace('{lang}', k)
-      : CDN + DICT_PKG[k] + '@latest/';
+      ? String(window.__antcvSpellDictBase).replace('{lang}', key)
+      : CDN + DICT_PKG[key] + '@latest/';
     return { aff: base + 'index.aff', dic: base + 'index.dic' };
+  }
+  // Fetch one dictionary package; returns null (not a broken record) on any
+  // 404 / network error so callers can fall back. (fetch() does NOT reject on
+  // 404, so res.ok must be checked or nspell gets the 404 HTML as a dictionary.)
+  async function fetchDictPkg(key) {
+    if (!DICT_PKG[key]) return null;
+    try {
+      var u = dictUrlsFor(key);
+      var ra = await fetch(u.aff); if (!ra.ok) return null;
+      var rd = await fetch(u.dic); if (!rd.ok) return null;
+      var aff = await ra.text(); var dic = await rd.text();
+      if (!aff || !dic) return null;
+      return { aff: aff, dic: dic, ts: 0 };
+    } catch (_) { return null; }
   }
   async function loadDict(l) {
     var key = dictKey(l);
@@ -131,10 +159,11 @@
       var cached = await idbGet(db, key);
       if (cached && cached.aff && cached.dic) return cached;
     }
-    var u = dictUrls(l);
-    var aff = await (await fetch(u.aff)).text();
-    var dic = await (await fetch(u.dic)).text();
-    var rec = { aff: aff, dic: dic, ts: 0 };
+    var rec = await fetchDictPkg(key);
+    // SPELL-ES-VARIANT-001: a regional Spanish package that isn't on the CDN
+    // falls back to the generic `dictionary-es` so spelling still works.
+    if (!rec && /^es-/.test(key)) rec = await fetchDictPkg('es');
+    if (!rec) throw new Error('dictionary fetch failed for ' + key);
     if (db) await idbPut(db, key, rec);
     return rec;
   }
@@ -597,5 +626,6 @@
     // the dictionary for the current language + English variant (UK/US).
     _invalidate: function () { engine = null; engineLang = null; engineLoading = null; },
     _enVariant: enVariant,
+    _esVariant: esVariant,
   };
 })();

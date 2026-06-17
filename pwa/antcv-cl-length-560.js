@@ -12,14 +12,17 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.560-cl-length';
+  var VERSION = '1.50.568-cl-length';
   if (window.__antcvClLength560 === VERSION) return;
   window.__antcvClLength560 = VERSION;
 
   var STORAGE_KEY = 'pageBudgetCl';
   var OPTIONS = [
+    { v: 0.5, label: '½ page', hint: 'Half a page — a short note. Good for a brief speculative / cold-outreach opener.' },
     { v: 1.0, label: '1 page', hint: 'One page — tight. Default for Nordic Minimal and Cold Outreach.' },
     { v: 1.5, label: '1.5 pages', hint: 'Up to 1.5 pages — for the more expansive styles (Mediterranean, Context-Rich, Prestige).' },
+    { v: 2.0, label: '2 pages', hint: 'Two pages — a fuller letter when the role warrants more detail.' },
+    { v: 2.5, label: '2.5 pages', hint: 'Up to 2.5 pages — the maximum, for senior / heavily-tailored applications.' },
   ];
 
   function activeStyle() {
@@ -39,7 +42,7 @@
       var raw = localStorage.getItem(STORAGE_KEY);
       if (raw == null || raw === '') return styleDefault();
       var v = JSON.parse(raw);
-      return (typeof v === 'number' && v > 0 && v <= 1.5) ? v : styleDefault();
+      return (typeof v === 'number' && v >= 0.5 && v <= 2.5) ? v : styleDefault();
     } catch (_) { return styleDefault(); }
   }
   function write(v) {

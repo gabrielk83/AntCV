@@ -49,7 +49,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.566-userbound';
+  var VERSION = '1.50.568-export-fab';
   if (window.__antcvDataExport360 === VERSION) return;
   window.__antcvDataExport360 = VERSION;
 
@@ -455,10 +455,41 @@
     } catch (_) {}
   }
 
+  // Account-locked export FAB, mounted LITERALLY beside the floating 📥 importer
+  // chip (antcv-data-importer.js .antcv-import-fab) so export + import sit
+  // together (owner 2026-06-17). Mirrors the importer FAB's fixed position and
+  // offsets it 52px to the right.
+  function mountExportFab() {
+    if (disabled()) return;
+    if (document.querySelector('.antcv-export-fab')) return;
+    var imp = document.querySelector('.antcv-import-fab');
+    if (!imp) return; // wait for the importer FAB to exist
+    var cs = getComputedStyle(imp);
+    var b = document.createElement('button');
+    b.className = 'antcv-export-fab';
+    b.type = 'button';
+    b.textContent = '🔒';
+    b.title = 'Export my settings, locked to my account (no passphrase — only I can import it back)';
+    var leftPx = parseFloat(cs.left); if (isNaN(leftPx)) leftPx = 16;
+    b.style.cssText = 'position:fixed;z-index:99998;bottom:' + cs.bottom + ';left:' + (leftPx + 52) + 'px;' +
+      'width:44px;height:44px;border-radius:50%;background:#283556;color:#fff;border:none;cursor:pointer;' +
+      'font-size:17px;box-shadow:0 2px 8px rgba(0,0,0,0.18);display:flex;align-items:center;justify-content:center;transition:background .15s;';
+    b.addEventListener('mouseenter', function () { b.style.background = '#01B7BB'; });
+    b.addEventListener('mouseleave', function () { b.style.background = '#283556'; });
+    b.addEventListener('click', function (e) {
+      e.preventDefault(); e.stopPropagation();
+      var prev = b.textContent; b.disabled = true; b.textContent = '⏳';
+      exportUserBound().then(function () { b.textContent = '✓'; setTimeout(function () { b.textContent = prev; b.disabled = false; }, 1800); })
+        .catch(function (err) { b.textContent = '⚠'; b.title = (err && err.message) || 'Export failed'; setTimeout(function () { b.textContent = prev; b.disabled = false; }, 2600); });
+    });
+    document.body.appendChild(b);
+  }
+
   function injectUi() {
     if (disabled()) return;
     injectDownload();
     injectCheckbox();
+    mountExportFab();
   }
 
   // Throttled, idempotent sweep. Once the nodes exist the sweep is a no-op, so

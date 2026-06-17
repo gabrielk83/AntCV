@@ -22,7 +22,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.566-userbound-append';
+  var VERSION = '1.50.568-admin-decrypt';
   if (window.__antcvDataImport331 === VERSION) return;
   window.__antcvDataImport331 = VERSION;
 
@@ -74,35 +74,63 @@
       return v;
     } catch (_) { return ''; }
   }
-  function fetchExportKey() {
+  function fetchExportKey(email) {
     var base = proxyBase();
     if (!base) return Promise.reject(new Error('Not connected — sign in so AntCV can fetch your account key.'));
-    return fetch(base + '/api/export-key', { method: 'GET', credentials: 'include' })
+    var url = base + '/api/export-key' + (email ? ('?email=' + encodeURIComponent(email)) : '');
+    return fetch(url, { method: 'GET', credentials: 'include' })
       .then(function (r) {
         if (r.status === 401) throw new Error('Sign in first — an account-locked file opens only for its owner account.');
+        if (r.status === 403) throw new Error('Admin only — this account is not allowed to unlock another user\'s export.');
         if (!r.ok) throw new Error('Could not fetch the account key (HTTP ' + r.status + ').');
         return r.json();
       })
       .then(function (j) { if (!j || !j.ok || !j.key) throw new Error('Account key unavailable.'); return j; });
   }
-  function decryptUserBound(env) {
+  function decryptWithInfo(env, info) {
+    var subtle = window.crypto.subtle;
+    return subtle.importKey('raw', b64ToBuf(info.key), { name: 'AES-GCM' }, false, ['decrypt'])
+      .then(function (key) { return subtle.decrypt({ name: 'AES-GCM', iv: b64ToBuf(env.iv) }, key, b64ToBuf(env.ciphertext)); })
+      .then(function (buf) {
+        var inner = JSON.parse(new TextDecoder().decode(buf));
+        if (!inner || inner._antcvBackup !== 1) throw new Error('Decrypted file is not an AntCV backup.');
+        return inner;
+      });
+  }
+  function decryptUserBound(env, opts) {
+    opts = opts || {};
     var subtle = window.crypto && window.crypto.subtle;
     if (!subtle) return Promise.reject(new Error('WebCrypto unavailable — cannot open an account-locked file here.'));
     return fetchExportKey().then(function (info) {
-      if (env.owner && info.owner && String(env.owner) !== String(info.owner)) {
-        throw new Error('This file is locked to a different AntCV account. Sign in as that account (or ask an admin) to open it.');
+      // Owner match → decrypt directly.
+      if (!(env.owner && info.owner) || String(env.owner) === String(info.owner)) {
+        return decryptWithInfo(env, info);
       }
-      return subtle.importKey('raw', b64ToBuf(info.key), { name: 'AES-GCM' }, false, ['decrypt'])
-        .then(function (key) { return subtle.decrypt({ name: 'AES-GCM', iv: b64ToBuf(env.iv) }, key, b64ToBuf(env.ciphertext)); })
-        .then(function (buf) {
-          var inner = JSON.parse(new TextDecoder().decode(buf));
-          if (!inner || inner._antcvBackup !== 1) throw new Error('Decrypted file is not an AntCV backup.');
-          return inner;
-        })
-        .catch(function (e) {
-          if (/different AntCV account|not an AntCV/.test(String(e && e.message))) throw e;
-          throw new Error('Could not open this account-locked file — it may belong to another account or be corrupt.');
-        });
+      // ADMIN-DECRYPT-001: not the owner. Offer an admin override — the relay
+      // grants another account's key ONLY to an admin (else 403). The admin
+      // supplies the owner's email; we verify the returned owner hash matches
+      // this file before decrypting.
+      var email = opts.adminEmail;
+      if (email == null) {
+        try {
+          email = window.prompt(
+            'This settings file is locked to a different AntCV account.\n\n' +
+            'If you are an ADMIN, enter the owner\'s email to unlock it.\nOtherwise press Cancel.');
+        } catch (_) { email = null; }
+      }
+      if (!email || !String(email).trim()) {
+        throw new Error('This file is locked to a different AntCV account. Sign in as that account, or unlock it as an admin.');
+      }
+      return fetchExportKey(String(email).trim()).then(function (ainfo) {
+        if (ainfo.owner && env.owner && String(ainfo.owner) !== String(env.owner)) {
+          throw new Error('That email does not match this file\'s owner — check the address and try again.');
+        }
+        return decryptWithInfo(env, ainfo);
+      });
+    }).catch(function (e) {
+      var msg = String(e && e.message || '');
+      if (/different AntCV account|not an AntCV|Admin only|does not match|Sign in first/.test(msg)) throw e;
+      throw new Error('Could not open this account-locked file — it may belong to another account or be corrupt.');
     });
   }
 

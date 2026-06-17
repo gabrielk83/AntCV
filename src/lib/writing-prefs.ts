@@ -395,11 +395,13 @@ export const ACADEMIC_SECTIONS: readonly KnownSection[] = [
 // exposed (cl_header / cl_opener / cl_close are fixed chrome). The per-section
 // overrides flow to the worker via the same fetch-wrap maps as the CV sections.
 export const CL_SECTIONS: readonly KnownSection[] = [
+  { id: 'cl_opener',               label: 'Greeting & Opening' },
   { id: 'who_i_am',                label: 'Who I Am' },
   { id: 'what_i_bring',            label: 'What I Bring' },
   { id: 'why_this_position',       label: 'Why This Position' },
   { id: 'how_i_would_contribute',  label: 'How I Would Contribute' },
   { id: 'foundation',              label: 'Foundation' },
+  { id: 'cl_close',                label: 'Closing' },
 ];
 
 // 9-format taxonomy per plan §4.4 + writingSystems/registry.json

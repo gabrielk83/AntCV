@@ -49,6 +49,28 @@ function SectionHeader({ children }: { children: React.ReactNode }): JSX.Element
   );
 }
 
+// Collapsible sub-section header (same register as SectionHeader) with a ▸/▾
+// triangle. Collapsed by default (owner 2026-06-17 — banned words / phrases /
+// semantic constraints all open on demand).
+function CollapsibleHeader({ open, onToggle, children }: { open: boolean; onToggle: () => void; children: React.ReactNode }): JSX.Element {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={open}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 6, width: '100%', textAlign: 'left',
+        background: 'transparent', border: 0, cursor: 'pointer', color: 'inherit',
+        textTransform: 'uppercase', letterSpacing: '.08em', fontWeight: 800, fontSize: 11,
+        opacity: 0.85, margin: '12px 0 6px', padding: 0,
+      }}
+    >
+      <span aria-hidden="true">{open ? '▾' : '▸'}</span>
+      <span>{children}</span>
+    </button>
+  );
+}
+
 // v1.50.17 — native <option> elements on Windows/Chrome don't inherit
 // their parent <select>'s color / background. Without explicit styling
 // the dropdown reads near-invisible against the OS-default light menu.
@@ -812,6 +834,9 @@ export function WritingStylePicker(): JSX.Element {
   const [bannedScope, setBannedScope] = useState<BannedScope>('all');
   const [allWords, setAllWords] = useState<string[]>(() => readAllScopeBanned('words'));
   const [allPhrases, setAllPhrases] = useState<string[]>(() => readAllScopeBanned('phrases'));
+  // Collapsed-by-default sections (owner 2026-06-17).
+  const [wordsOpen, setWordsOpen] = useState(false);
+  const [phrasesOpen, setPhrasesOpen] = useState(false);
 
   useEffect(() => {
     const refreshPrefs = () => setPrefs(readWritingPrefs());
@@ -1012,39 +1037,43 @@ export function WritingStylePicker(): JSX.Element {
           copy in the Personal-tab picker was a confusing duplicate writing the
           same layout.targetPages. */}
 
-      <SectionHeader>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          Banned words
-          <ScopeSelector value={bannedScope} onChange={onScopeChange} />
-        </span>
-      </SectionHeader>
-      <div style={{ fontSize: 10.5, opacity: 0.55, margin: '0 0 6px' }}>
-        {bannedScope === 'all'
-          ? 'Applies to every output language (also after translation).'
-          : `Only when generating in ${SCOPE_LABELS[bannedScope]}.`}
-      </div>
-      <BannedListEditor
-        kind="words"
-        scopeLabel={SCOPE_LABELS[bannedScope]}
-        items={bannedScope === 'all' ? allWords : (prefs.extraBannedWords[bannedScope] ?? [])}
-        bank={BANNED_WORD_BANK}
-        onAdd={(v) => onAddBanned('words', v)}
-        onAddBulk={(raw) => onAddBannedBulk('words', raw)}
-        onRemove={(v) => onRemoveBanned('words', v)}
-        onClearAll={() => onClearBanned('words')}
-      />
+      <CollapsibleHeader open={wordsOpen} onToggle={() => setWordsOpen((v) => !v)}>Banned words</CollapsibleHeader>
+      {wordsOpen && (
+        <>
+          <div style={{ margin: '0 0 6px' }}>
+            <ScopeSelector value={bannedScope} onChange={onScopeChange} />
+          </div>
+          <div style={{ fontSize: 10.5, opacity: 0.55, margin: '0 0 6px' }}>
+            {bannedScope === 'all'
+              ? 'Applies to every output language (also after translation).'
+              : `Only when generating in ${SCOPE_LABELS[bannedScope]}.`}
+          </div>
+          <BannedListEditor
+            kind="words"
+            scopeLabel={SCOPE_LABELS[bannedScope]}
+            items={bannedScope === 'all' ? allWords : (prefs.extraBannedWords[bannedScope] ?? [])}
+            bank={BANNED_WORD_BANK}
+            onAdd={(v) => onAddBanned('words', v)}
+            onAddBulk={(raw) => onAddBannedBulk('words', raw)}
+            onRemove={(v) => onRemoveBanned('words', v)}
+            onClearAll={() => onClearBanned('words')}
+          />
+        </>
+      )}
 
-      <SectionHeader>Banned phrases ({SCOPE_LABELS[bannedScope]})</SectionHeader>
-      <BannedListEditor
-        kind="phrases"
-        scopeLabel={SCOPE_LABELS[bannedScope]}
-        items={bannedScope === 'all' ? allPhrases : (prefs.extraBannedPhrases[bannedScope] ?? [])}
-        bank={BANNED_PHRASE_BANK}
-        onAdd={(v) => onAddBanned('phrases', v)}
-        onAddBulk={(raw) => onAddBannedBulk('phrases', raw)}
-        onRemove={(v) => onRemoveBanned('phrases', v)}
-        onClearAll={() => onClearBanned('phrases')}
-      />
+      <CollapsibleHeader open={phrasesOpen} onToggle={() => setPhrasesOpen((v) => !v)}>Banned phrases ({SCOPE_LABELS[bannedScope]})</CollapsibleHeader>
+      {phrasesOpen && (
+        <BannedListEditor
+          kind="phrases"
+          scopeLabel={SCOPE_LABELS[bannedScope]}
+          items={bannedScope === 'all' ? allPhrases : (prefs.extraBannedPhrases[bannedScope] ?? [])}
+          bank={BANNED_PHRASE_BANK}
+          onAdd={(v) => onAddBanned('phrases', v)}
+          onAddBulk={(raw) => onAddBannedBulk('phrases', raw)}
+          onRemove={(v) => onRemoveBanned('phrases', v)}
+          onClearAll={() => onClearBanned('phrases')}
+        />
+      )}
 
       <button
         type="button"
@@ -1062,7 +1091,7 @@ export function WritingStylePicker(): JSX.Element {
         }}
         aria-expanded={advanced}
       >
-        {advanced ? '▾' : '▸'} Advanced
+        {advanced ? '▾' : '▸'} Semantic constraints
       </button>
       {advanced && (
         <div

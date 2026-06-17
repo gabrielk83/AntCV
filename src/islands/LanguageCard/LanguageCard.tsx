@@ -106,7 +106,7 @@ export function LanguageCard(): JSX.Element {
         style={SUMMARY_STYLE}
       >
         <span>
-          <span aria-hidden="true">{expanded ? '▾' : '▸'}</span> Languages in the top bar
+          <span aria-hidden="true">{expanded ? '▾' : '▸'}</span> Languages
         </span>
       </button>
       {expanded && (

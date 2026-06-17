@@ -11,7 +11,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.517-kernel-import';
+  var VERSION = '1.50.531-kernel-import';
   if (window.__antcvKernelImport === VERSION) return;
   window.__antcvKernelImport = VERSION;
 
@@ -60,7 +60,7 @@
       + '<h3 style="margin:10px 0 4px;font-size:13px;color:#8a6d00">Conflicts — choose per field (existing is kept by default; metrics never auto-overwritten)</h3><ul style="margin:0;padding:0;font-size:13px">' + conflictsHtml + '</ul>'
       + '<h3 style="margin:10px 0 4px;font-size:13px;color:#b5651d">Gaps — fill later (never invented)</h3><ul style="margin:0 0 12px;padding-left:18px;font-size:13px">' + gapsHtml + '</ul>'
       + '<h3 style="margin:10px 0 4px;font-size:13px;color:#283556">Languages to generate in (ONBOARD-LANG-001)</h3><div id="antcv-kimport-langs" style="display:flex;flex-wrap:wrap;gap:10px;font-size:12px;margin-bottom:12px;color:#333">' + langsHtml + '</div>'
-      + '<div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap"><button id="antcv-kimport-cancel" style="padding:7px 14px;border:1px solid #ccc;background:#f4f4f4;border-radius:6px;cursor:pointer">Cancel</button><button id="antcv-kimport-apply" style="padding:7px 14px;border:1px solid #00746E;background:#fff;color:#00746E;border-radius:6px;cursor:pointer">Apply to my CV</button><button id="antcv-kimport-save" style="padding:7px 16px;border:none;background:#00746E;color:#fff;border-radius:6px;cursor:pointer;font-weight:700">Apply + save to account</button></div>'
+      + '<div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap"><button id="antcv-kimport-cancel" style="padding:7px 14px;border:1px solid #ccc;background:#f4f4f4;border-radius:6px;cursor:pointer">Cancel</button><button id="antcv-kimport-apply" title="Apply on THIS device only — updates the CV you are editing here. Nothing is uploaded. Use \'Apply + save to account\' to keep it across your devices." style="padding:7px 14px;border:1px solid #00746E;background:#fff;color:#00746E;border-radius:6px;cursor:pointer">Apply to this device</button><button id="antcv-kimport-save" title="Apply here AND save the kernel to your account so it syncs to your other devices." style="padding:7px 16px;border:none;background:#00746E;color:#fff;border-radius:6px;cursor:pointer;font-weight:700">Apply + save to account</button></div>'
       + '</div>';
     document.body.appendChild(ov);
     ov.querySelector('#antcv-kimport-x').addEventListener('click', closeModal);
@@ -209,27 +209,34 @@
     return b;
   }
   function injectEntry() {
+    // v1.50.531 — KERNEL-PILL-STICKY/DEDUP fix (WIZARD_SETTINGS_UX #1/#3):
+    // The old anchor source #2 (broad import/upload TEXT regex) matched upload
+    // affordances on multiple wizard steps (STEP 2 / 6C / language slide), so the
+    // pill stuck to every stage; and two different anchors in the same Personal
+    // panel each got their own button (double pill). Fix: drop the text anchor
+    // entirely and de-dup at the PANEL (parent) level — at most one pill per host.
     var anchors = [];
-    // 1. the data-importer's Settings replacement button.
+    // 1. the data-importer's Settings replacement button (the canonical ingest btn).
     var rep = document.querySelector('[data-antcv-import-replacement]');
     if (rep) anchors.push(rep);
-    // 2. any import button/label (covers the wizard + the raw Settings button).
-    Array.prototype.slice.call(document.querySelectorAll('button, label')).forEach(function (el) {
-      var t = (el.textContent || '').trim();
-      if (t.length < 80 && /import profile from word|\.docx or \.pdf CV|upload (your )?cv|import (your )?cv/i.test(t)) anchors.push(el.closest('label,button,div') || el);
-    });
-    // 3. profile/CV file inputs (accept pdf+doc(x) but NOT txt → not a JD input).
+    // 2. profile/CV file inputs (accept pdf+doc(x) but NOT txt → not a JD input) —
+    //    BUT skip the raw input when the data-importer replacement already owns the
+    //    same container (else Personal gets two pills for one logical control).
     Array.prototype.slice.call(document.querySelectorAll('input[type="file"]')).forEach(function (inp) {
       var a = String(inp.getAttribute('accept') || '').toLowerCase();
-      if (/pdf/.test(a) && /docx?/.test(a) && a.indexOf('txt') < 0) anchors.push(inp.closest('label,div') || inp.parentElement || inp);
+      if (!(/pdf/.test(a) && /docx?/.test(a) && a.indexOf('txt') < 0)) return;
+      var host = inp.closest('div');
+      if (host && host.querySelector('[data-antcv-import-replacement]')) return;
+      anchors.push(inp.closest('label,div') || inp.parentElement || inp);
     });
+    var seenParents = (typeof Set === 'function') ? new Set() : null;
     anchors.forEach(function (anchor) {
       if (!anchor || (anchor.getAttribute && anchor.getAttribute('data-antcv-kimport-host') === '1')) return;
       var parent = anchor.parentNode; if (!parent || !parent.insertBefore) return;
-      // idempotency: skip only if THIS anchor's immediate next sibling is already a
-      // kernel button (precise — does not skip a sibling anchor elsewhere in parent).
-      var nx = anchor.nextSibling;
-      if (nx && nx.getAttribute && nx.getAttribute('data-antcv-kimport-btn') === '1') { try { anchor.setAttribute('data-antcv-kimport-host', '1'); } catch (_) {} return; }
+      // panel-level dedup: never inject a second pill into a parent that already
+      // has one (covers two anchors resolving to the same container).
+      if (parent.querySelector && parent.querySelector('[data-antcv-kimport-btn="1"]')) { try { anchor.setAttribute('data-antcv-kimport-host', '1'); } catch (_) {} return; }
+      if (seenParents) { if (seenParents.has(parent)) return; seenParents.add(parent); }
       try { anchor.setAttribute('data-antcv-kimport-host', '1'); } catch (_) {}
       parent.insertBefore(makeBtn(), anchor.nextSibling);
     });

@@ -83,14 +83,12 @@ function StyleDropdown({
       {STYLE_IDS.map((id) => {
         const s = STYLES[id];
         const disabled = !s.active;
-        const legacy = s.legacyAliases.length
-          ? ' — was ' + s.legacyAliases[0].replace(/\b\w/g, (c) => c.toUpperCase())
-          : '';
+        // v1.50.531 — dropped the "— was Scandinavian/Latam/…" legacy-alias
+        // suffix (owner: the old register names are noise, not orientation).
         const suffix = disabled ? `  (Coming ${s.comingInRelease ?? 'soon'})` : '';
         return (
           <option key={id} value={id} disabled={disabled} style={DARK_OPTION_STYLE}>
             {s.displayName}
-            {legacy}
             {suffix}
           </option>
         );

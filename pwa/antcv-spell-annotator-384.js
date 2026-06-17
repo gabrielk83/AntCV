@@ -28,7 +28,7 @@
   'use strict';
 
   if (window.__antcvSpellAnnotatorInstalled) return;
-  var VERSION = '1.50.561';
+  var VERSION = '1.50.569';
   window.__antcvSpellAnnotatorInstalled = VERSION;
 
   // SPELLERS-MATRIX-001 (owner 2026-06-17): full language matrix. Each language
@@ -55,7 +55,12 @@
     ku: { single: 'dictionary-ku' },
     sw: { single: 'dictionary-sw' },
     am: { single: 'dictionary-am' },
-    zh: { context: true },
+    fo: { single: 'dictionary-fo' },   // Faroese — real Hunspell dictionary
+    vi: { single: 'dictionary-vi' },   // Vietnamese — real Hunspell dictionary
+    kl: { single: 'dictionary-kl' },   // Greenlandic — no published dict yet → graceful no-op (loadDict 404s, no underline)
+    zu: { single: 'dictionary-zu' },   // Zulu — no published dict yet → graceful no-op
+    zh: { context: true },             // Chinese — NO Hunspell possible (no word boundaries) → AI 错别字 check
+    th: { noHunspell: true },          // Thai — NO word boundaries either → no Hunspell; spelling cleanly disabled (avoids flagging a whole run)
   };
   // Flatten to key → npm package for the loader. Key is the dictKey identity:
   // 'en-gb', 'da-ost', 'fr-fr', or a bare 'he'/'ru' for single-dictionary langs.

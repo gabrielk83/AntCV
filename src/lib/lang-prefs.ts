@@ -13,7 +13,8 @@
 export type LangCode =
   | 'en' | 'da' | 'es' | 'zh'
   | 'fr' | 'de' | 'it' | 'ar' | 'fa' | 'he'
-  | 'ru' | 'tr' | 'ku' | 'sw' | 'am';
+  | 'ru' | 'tr' | 'ku' | 'sw' | 'am'
+  | 'fo' | 'kl' | 'vi' | 'th' | 'zu';
 
 export interface LangOption {
   code: LangCode;
@@ -35,7 +36,12 @@ export const LANGS: readonly LangOption[] = [
   { code: 'tr', label: 'Turkish' },
   { code: 'ku', label: 'Kurdish' },
   { code: 'sw', label: 'Swahili' },
+  { code: 'zu', label: 'Zulu' },
   { code: 'am', label: 'Amharic' },
+  { code: 'fo', label: 'Faroese' },
+  { code: 'kl', label: 'Greenlandic' },
+  { code: 'vi', label: 'Vietnamese' },
+  { code: 'th', label: 'Thai' },
 ];
 
 // Matches DEFAULT_LANGS in antcv-stability-core-334.js v1.40.339.

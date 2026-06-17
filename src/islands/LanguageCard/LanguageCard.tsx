@@ -79,7 +79,7 @@ function writeSpellEnabled(on: boolean): void { try { localStorage.setItem('antc
 // row; CONTEXT (zh) an enable row noting the AI character check. Variants with
 // no distinct Hunspell package (Danish dialects, Farsi/French regions) still
 // record the choice and fall back to the base dictionary in the engine.
-interface SpellCfg { def?: string; variants?: [string, string][]; single?: boolean; context?: boolean }
+interface SpellCfg { def?: string; variants?: [string, string][]; single?: boolean; context?: boolean; dict?: boolean }
 const SPELL_UI: Record<string, SpellCfg> = {
   en: { def: 'gb', variants: [['gb', 'UK (British)'], ['us', 'US (American)'], ['in', 'India'], ['ca', 'Canada'], ['au', 'Australia'], ['za', 'South Africa']] },
   es: { def: 'uy', variants: [['uy', 'Uruguay'], ['es', 'España'], ['mx', 'México'], ['ar', 'Argentina'], ['co', 'Colombia'], ['cl', 'Chile'], ['gq', 'Guinea Ecuatorial']] },
@@ -89,9 +89,14 @@ const SPELL_UI: Record<string, SpellCfg> = {
   it: { def: 'it', variants: [['it', 'Italia'], ['ch', 'Svizzera']] },
   ar: { def: 'ar', variants: [['ar', 'الفصحى (MSA)'], ['eg', 'مصر'], ['ma', 'المغرب'], ['sa', 'السعودية']] },
   fa: { def: 'ir', variants: [['ir', 'ایران (Iranian)'], ['af', 'افغانستان (Dari)']] },
-  he: { single: true }, ru: { single: true }, tr: { single: true },
-  ku: { single: true }, sw: { single: true }, am: { single: true },
-  zh: { context: true },
+  he: { single: true, dict: true }, ru: { single: true, dict: true }, tr: { single: true, dict: true },
+  ku: { single: true, dict: false }, sw: { single: true, dict: false }, am: { single: true, dict: false },
+  fo: { single: true, dict: true },   // Faroese — real dictionary
+  vi: { single: true, dict: true },   // Vietnamese — real dictionary
+  kl: { single: true, dict: false },  // Greenlandic — no published dictionary yet
+  zu: { single: true, dict: false },  // Zulu — no published dictionary yet
+  th: { single: true, dict: false },  // Thai — no word boundaries; spelling can't run
+  zh: { context: true },              // Chinese — no Hunspell possible; AI character check
 };
 function variantDefault(lang: string): string { return SPELL_UI[lang]?.def ?? ''; }
 function readVariant(lang: string): string {
@@ -121,6 +126,7 @@ const NATIVE: Record<string, string> = {
   en: 'English', da: 'Dansk', es: 'Español', zh: '中文',
   fr: 'Français', de: 'Deutsch', it: 'Italiano', ar: 'العربية', fa: 'فارسی',
   he: 'עברית', ru: 'Русский', tr: 'Türkçe', ku: 'Kurdî', sw: 'Kiswahili', am: 'አማርኛ',
+  fo: 'Føroyskt', kl: 'Kalaallisut', vi: 'Tiếng Việt', th: 'ไทย', zu: 'isiZulu',
 };
 // First language = the DEFAULT; it drives generation + the interface. Mirror the
 // wizard's writePrimaryLanguage (JSON-encoded 'language', like the app's u.set).
@@ -314,6 +320,7 @@ export function LanguageCard(): JSX.Element {
                     />
                     <strong style={{ color: '#fff' }}>{name}</strong>
                     {cfg.context && <span style={{ color: 'rgba(255,255,255,.45)' }}>(AI check)</span>}
+                    {cfg.dict === false && <span style={{ color: 'rgba(255,255,255,.4)' }}>(generation only — no spell-check)</span>}
                   </label>
                   {cfg.variants && (
                     <select
@@ -331,7 +338,7 @@ export function LanguageCard(): JSX.Element {
               );
             })}
           </div>
-          <div style={HINT}>One row per selected language. Variant dialects without their own dictionary (Danish Østdansk/Jysk, Farsi, French regions) fall back to the base dictionary. Chinese uses an AI character check (no Hunspell). Languages with no published dictionary simply skip underlining.</div>
+          <div style={HINT}>One row per selected language. Faroese, Vietnamese, the European variants and Hebrew/Russian/Turkish have real dictionaries. Chinese &amp; Thai have no word boundaries, so Hunspell can&apos;t check them — Chinese uses an AI character check, Thai is generation-only. Danish has one written standard (the Østdansk/Jysk choice flavours register; both use it). &quot;Generation only&quot; languages have no published dictionary yet — fully usable for generating a CV, spelling just isn&apos;t underlined.</div>
         </div>
       )}
     </section>

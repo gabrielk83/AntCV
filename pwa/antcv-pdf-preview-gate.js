@@ -593,6 +593,28 @@ ${inlineStyles}
         // fits the iframe viewport — no right-edge clipping on mobile. We
         // set a CSS var consumed by a SCREEN-ONLY zoom rule, so the print
         // path stays full A4. Re-fit on resize/orientation change.
+        // EXPORT-PREVIEW-DEBUG (owner 2026-06-17): run `AntcvPreviewDebug(true)`
+        // in the console then re-open the export preview to see a live readout of
+        // the viewport / iframe / paper / fit-scale / scrollHeight numbers, to
+        // diagnose the "bottom clipped to ~70%" report on-device. AntcvPreviewDebug(false) hides it.
+        function _previewDbg(ifr, m) {
+          var on = false; try { on = localStorage.getItem('antcv:previewDebug') === '1'; } catch (_) {}
+          var el = document.getElementById('antcv-preview-dbg');
+          if (!on) { if (el) el.remove(); return; }
+          if (!el) { el = document.createElement('div'); el.id = 'antcv-preview-dbg'; el.style.cssText = 'position:fixed;left:6px;bottom:6px;z-index:2147483647;background:rgba(0,0,0,.85);color:#3f6;font:10px/1.4 monospace;padding:6px 8px;border-radius:6px;max-width:64vw;white-space:pre;pointer-events:none;'; document.body.appendChild(el); }
+          var idoc = ifr.contentDocument, ib = idoc && idoc.body, sc = idoc && idoc.scrollingElement;
+          el.textContent = [
+            'EXPORT PREVIEW DEBUG',
+            'win ' + window.innerWidth + '×' + window.innerHeight + ' dpr ' + (window.devicePixelRatio || 1),
+            'iframe client ' + ifr.clientWidth + '×' + ifr.clientHeight,
+            'avail ' + Math.round(m.availW) + '×' + Math.round(m.availH),
+            'paper w ' + Math.round(m.pw) + ' / pageH ' + Math.round(m.ph),
+            'fit scale ' + (m.scale != null ? Number(m.scale).toFixed(3) : '1'),
+            'ibody scrollH ' + (ib ? ib.scrollHeight : '?') + ' clientH ' + (ib ? ib.clientHeight : '?'),
+            'iscroll ' + (sc ? sc.scrollHeight : '?') + ' / ' + (sc ? sc.clientHeight : '?'),
+          ].join('\n');
+        }
+        try { window.AntcvPreviewDebug = function (v) { try { localStorage.setItem('antcv:previewDebug', v === false ? '0' : '1'); } catch (_) {} return 'export-preview debug ' + (v === false ? 'OFF' : 'ON — reopen the export preview'); }; } catch (_) {}
         const fitWidth = () => {
           try {
             const idoc = iframe.contentDocument;
@@ -619,6 +641,7 @@ ${inlineStyles}
               ibody.style.setProperty('--antcv-fit', String(Math.max(0.3, scale)));
               ibody.classList.add('antcv-fit-width');
             }
+            try { _previewDbg(iframe, { availW: availW, availH: availH, pw: pw, ph: ph, scale: scale }); } catch (_) {}
           } catch (_) {}
         };
         fitWidth();

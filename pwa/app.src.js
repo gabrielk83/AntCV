@@ -5088,7 +5088,13 @@
                   // the worker defaultClW raise (0.8 → 0.9).
                   position: "relative",
                   width: "88%",
-                  maxWidth: 720,
+                  // MOBILE-TABLE-ENLARGE-002 (owner 2026-06-17): the WHAT-I-BRING
+                  // (CL bring_rows) wrap re-inlined maxWidth:720 on every React
+                  // commit, re-clamping the section-align drag so the table could
+                  // not enlarge beyond original on a narrow (mobile) column.
+                  // Raised so the sidecar's enlarge (≤115% of the column) is never
+                  // re-clamped; the 88% rest width is unchanged on desktop.
+                  maxWidth: 1100,
                   margin: "8px auto 0",
                 }
               : { position: "relative", marginTop: 8 },

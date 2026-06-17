@@ -31,7 +31,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.590-login-unify';
+  var VERSION = '1.50.593-login-unify';
   if (window.__antcvLoginLoadingGate === VERSION) return;
   window.__antcvLoginLoadingGate = VERSION;
 
@@ -42,8 +42,10 @@
   // settle in the first ~2s, so hold the cover longer (bounded) to mask it.
   // A generic "DOM quiet" check is unsafe here (constant sidecar churn never
   // quiets), so this is a simple time floor + a settle signal in editorReady().
-  var MIN_MS = 2200;   // hold the cover this long so the photo/mode settle is masked
-  var MAX_MS = 6500;   // hard cap — always lift by here
+  // owner 2026-06-17: the cover still lifted ~1s too early (the settle wasn't done),
+  // so the hold floor is raised by 1s.
+  var MIN_MS = 3200;   // hold the cover this long so the photo/mode settle is masked
+  var MAX_MS = 7500;   // hard cap — always lift by here
 
   function lsRaw(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
   function disabled() { var v = lsRaw(DISABLE); return v === '1' || v === 'true'; }
@@ -117,6 +119,7 @@
   }
 
   var overlay = null;
+  var dotsTimer = null;
   function showOverlay() {
     if (overlay || document.getElementById('antcv-login-loading-overlay')) return;
     var host = document.body || document.documentElement;
@@ -151,7 +154,12 @@
     var h1 = document.createElement('h1');
     h1.textContent = 'AntCV';
     h1.style.cssText = 'color:#fff;font-size:22px;font-weight:700;margin:0;';
-    brand.appendChild(h1);
+    var ver = document.createElement('span');
+    // Match the pre-login screen's "X.XX.XXX-babel-fish" version chip. Numeric part
+    // tracks this gate's VERSION (bumped every release); codename mirrors app.js `Ai`.
+    ver.textContent = (VERSION.match(/^\d+\.\d+\.\d+/) || ['1.50.593'])[0] + '-babel-fish';
+    ver.style.cssText = 'font-size:10px;font-weight:600;color:rgba(255,255,255,0.52);';
+    brand.appendChild(h1); brand.appendChild(ver);
 
     var tag = document.createElement('p');
     tag.style.cssText = 'color:rgba(255,255,255,0.66);font-size:12px;line-height:1.35;' +
@@ -160,23 +168,36 @@
     tag.appendChild(document.createElement('br'));
     tag.appendChild(document.createTextNode('Build a clean CV and cover letter'));
 
-    var style = document.createElement('style');
-    style.textContent = '@keyframes antcv-lg-spin{to{transform:rotate(360deg)}}';
-    var card = document.createElement('div');
-    card.style.cssText = 'margin-top:26px;display:flex;flex-direction:column;align-items:center;gap:13px;';
-    var spin = document.createElement('div');
-    spin.style.cssText = 'width:30px;height:30px;border:3px solid rgba(1,183,187,0.25);' +
-      'border-top-color:#01B7BB;border-radius:50%;animation:antcv-lg-spin .8s linear infinite;';
+    // Outer panel + inner SIGN IN card — identical to the pre-login screen
+    // (app.src.js ~3413 panel + AntcvAuthPanel `!config` loading card). The owner
+    // prefers this card with the growing "Loading …" dots over the spinner wheel.
+    var panel = document.createElement('div');
+    panel.style.cssText = 'width:100%;max-width:380px;margin:24px auto 0;text-align:left;' +
+      'background:rgba(255,255,255,0.06);border-radius:14px;padding:24px;backdrop-filter:blur(8px);';
+    var authCard = document.createElement('div');
+    authCard.style.cssText = 'border:1px solid rgba(255,255,255,0.10);border-radius:8px;' +
+      'padding:16px;background:transparent;';
+    var heading = document.createElement('div');
+    heading.textContent = 'SIGN IN';
+    heading.style.cssText = 'margin:0 0 8px;font-size:11px;font-weight:700;' +
+      'color:rgba(255,255,255,0.50);letter-spacing:1px;text-transform:uppercase;';
     var label = document.createElement('div');
-    label.textContent = 'Loading…';
-    label.style.cssText = 'font-size:13px;letter-spacing:.4px;color:rgba(255,255,255,0.7);';
-    card.appendChild(spin); card.appendChild(label);
+    label.style.cssText = 'font-size:12px;color:rgba(255,255,255,0.55);line-height:1.5;';
+    authCard.appendChild(heading); authCard.appendChild(label);
+    panel.appendChild(authCard);
 
-    col.appendChild(img); col.appendChild(brand); col.appendChild(tag); col.appendChild(card);
-    overlay.appendChild(style); overlay.appendChild(col);
+    col.appendChild(img); col.appendChild(brand); col.appendChild(tag);
+    overlay.appendChild(col); overlay.appendChild(panel);
     host.appendChild(overlay);
+
+    // Growing dots: Loading → Loading . → .. → … (matches the screen the owner likes).
+    var n = 0;
+    function paint() { try { label.textContent = 'Loading ' + new Array((n % 3) + 2).join('.'); } catch (_) {} n++; }
+    paint();
+    dotsTimer = setInterval(paint, 420);
   }
   function hideOverlay() {
+    if (dotsTimer) { clearInterval(dotsTimer); dotsTimer = null; }
     var el = overlay || document.getElementById('antcv-login-loading-overlay');
     overlay = null;
     if (!el) return;

@@ -83,6 +83,17 @@ function writeSpellLang(code: string, on: boolean): void {
   try { const m = readSpellLangs(); m[code] = on; localStorage.setItem('antcv:spell:langs', JSON.stringify(m)); } catch { /* */ }
 }
 
+// U3 — native names for the two-table picker (parity with the wizard slide).
+const NATIVE: Record<string, string> = { en: 'English', da: 'Dansk', es: 'Español', zh: '中文' };
+// First language = the DEFAULT; it drives generation + the interface. Mirror the
+// wizard's writePrimaryLanguage (JSON-encoded 'language', like the app's u.set).
+function writePrimaryLanguage(code: string): void {
+  try { localStorage.setItem('language', JSON.stringify(code)); } catch { /* */ }
+  try { localStorage.setItem('uiLang', code); } catch { /* */ }
+  try { window.dispatchEvent(new StorageEvent('storage', { key: 'language', newValue: code })); } catch { /* */ }
+  try { window.dispatchEvent(new CustomEvent('antcv:language-changed', { detail: { language: code } })); } catch { /* */ }
+}
+
 export function LanguageCard(): JSX.Element {
   const [expanded, setExpanded] = useState<boolean>(() => readLangExpanded());
   const [enabled, setEnabled] = useState<LangCode[]>(() => readEnabledLangs());
@@ -129,21 +140,16 @@ export function LanguageCard(): JSX.Element {
     });
   }, []);
 
-  const onToggleLang = useCallback((code: LangCode, checked: boolean) => {
-    setEnabled((prev) => {
-      const has = prev.indexOf(code) >= 0;
-      let next: LangCode[];
-      if (checked && !has) next = [...prev, code];
-      else if (!checked && has) next = prev.filter((c) => c !== code);
-      else next = prev;
-
-      // Refuse to leave the user with zero languages — mirror writeLangs's
-      // empty-array fallback (DEFAULT_LANGS).
-      if (next.length === 0) next = DEFAULT_LANGS.slice();
-
-      return writeEnabledLangs(next);
-    });
+  // U3 — ordered two-table picker. `enabled` is ordered; enabled[0] = DEFAULT.
+  const commit = useCallback((next: LangCode[]) => {
+    const w = writeEnabledLangs(next.length ? next : DEFAULT_LANGS.slice());
+    setEnabled(w);
+    try { writePrimaryLanguage(w[0]); } catch { /* */ }
   }, []);
+  const addLang = useCallback((c: LangCode) => { setEnabled((prev) => { if (prev.indexOf(c) >= 0) return prev; const next = [...prev, c]; const w = writeEnabledLangs(next); try { writePrimaryLanguage(w[0]); } catch { /* */ } return w; }); }, []);
+  const removeLang = useCallback((c: LangCode) => { setEnabled((prev) => { if (prev.length <= 1) return prev; const w = writeEnabledLangs(prev.filter((x) => x !== c)); try { writePrimaryLanguage(w[0]); } catch { /* */ } return w; }); }, []);
+  const moveLang = useCallback((idx: number, delta: number) => { setEnabled((prev) => { const j = idx + delta; if (j < 0 || j >= prev.length) return prev; const next = prev.slice(); const t = next[idx]; next[idx] = next[j]; next[j] = t; const w = writeEnabledLangs(next); try { writePrimaryLanguage(w[0]); } catch { /* */ } return w; }); }, []);
+  void commit;
 
   return (
     <section
@@ -168,39 +174,47 @@ export function LanguageCard(): JSX.Element {
       {expanded && (
         <div>
           <div style={{ fontSize: 12, opacity: 0.78, margin: '6px 0 10px' }}>
-            Choose which language buttons are available in the top bar. This does not start translation.
+            Move a language right to include it in the top bar; reorder with ↑ ↓ — the FIRST (★ DEFAULT) drives generation and the interface.
           </div>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(2,minmax(120px,1fr))',
-              gap: 8,
-            }}
-          >
-            {LANGS.map((l) => (
-              <label
-                key={l.code}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '7px 9px',
-                  border: '1px solid rgba(1,183,187,.35)',
-                  borderRadius: 8,
-                  background: 'rgba(1,183,187,.06)',
-                  cursor: 'pointer',
-                }}
-              >
-                <input
-                  type="checkbox"
-                  data-lang={l.code}
-                  checked={enabled.indexOf(l.code) >= 0}
-                  onChange={(e) => onToggleLang(l.code, e.currentTarget.checked)}
-                  style={{ accentColor: '#01B7BB' }}
-                />
-                <span style={{ fontWeight: 650 }}>{l.label}</span>
-              </label>
-            ))}
+          {/* U3 — wizard-style two-table picker (available / selected, default-first,
+              reorder) replacing the old checkbox grid. Each column scrolls so it
+              never gets crowded. */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div style={{ border: '1px solid rgba(255,255,255,.14)', borderRadius: 10, padding: 8, background: 'rgba(255,255,255,.03)', maxHeight: 168, overflow: 'auto' }}>
+              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.35px', color: 'rgba(255,255,255,.6)', margin: '0 0 7px' }}>AVAILABLE</div>
+              {LANGS.filter((l) => enabled.indexOf(l.code) < 0).map((l) => (
+                <div key={l.code} title="Add to your selected languages" onClick={() => addLang(l.code)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 11px', marginBottom: 7, borderRadius: 9, border: '2px solid rgba(255,255,255,.12)', background: 'rgba(255,255,255,.04)', cursor: 'pointer' }}>
+                  <div style={{ flex: 1, fontSize: 12.5, color: 'rgba(255,255,255,.85)' }}>
+                    <strong>{l.label}</strong> <span style={{ color: 'rgba(255,255,255,.45)', fontSize: 11 }}>{NATIVE[l.code]}</span>
+                  </div>
+                  <button type="button" title="Add" onClick={(e) => { e.stopPropagation(); addLang(l.code); }}
+                    style={{ background: 'transparent', border: '1px solid rgba(255,255,255,.25)', color: '#fff', borderRadius: 6, width: 26, height: 26, cursor: 'pointer', fontSize: 12 }}>→</button>
+                </div>
+              ))}
+              {enabled.length >= LANGS.length && (
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', padding: '6px 2px' }}>All languages selected.</div>
+              )}
+            </div>
+            <div style={{ border: '1px solid rgba(255,255,255,.14)', borderRadius: 10, padding: 8, background: 'rgba(255,255,255,.03)', maxHeight: 168, overflow: 'auto' }}>
+              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.35px', color: 'rgba(255,255,255,.6)', margin: '0 0 7px' }}>SELECTED — first is DEFAULT</div>
+              {enabled.map((code, idx) => (
+                <div key={code} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 11px', marginBottom: 7, borderRadius: 9, border: '2px solid rgba(1,183,187,.55)', background: 'rgba(1,183,187,.12)' }}>
+                  <div style={{ flex: 1, fontSize: 12.5, color: '#fff', minWidth: 0 }}>
+                    <strong>{LANGS.find((l) => l.code === code)?.label ?? code}</strong>
+                    {idx === 0 && (
+                      <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '.4px', color: '#06243a', background: '#01B7BB', padding: '2px 6px', borderRadius: 5, whiteSpace: 'nowrap', verticalAlign: 'middle', marginLeft: 6 }}>★ DEFAULT</span>
+                    )}
+                  </div>
+                  <button type="button" title="Move up (first = default)" disabled={idx === 0} onClick={() => moveLang(idx, -1)}
+                    style={{ background: 'transparent', border: '1px solid rgba(255,255,255,.25)', color: '#fff', borderRadius: 6, width: 26, height: 26, cursor: idx === 0 ? 'default' : 'pointer', fontSize: 12, opacity: idx === 0 ? 0.3 : 1 }}>↑</button>
+                  <button type="button" title="Move down" disabled={idx === enabled.length - 1} onClick={() => moveLang(idx, 1)}
+                    style={{ background: 'transparent', border: '1px solid rgba(255,255,255,.25)', color: '#fff', borderRadius: 6, width: 26, height: 26, cursor: idx === enabled.length - 1 ? 'default' : 'pointer', fontSize: 12, opacity: idx === enabled.length - 1 ? 0.3 : 1 }}>↓</button>
+                  <button type="button" title="Remove (back to available)" disabled={enabled.length <= 1} onClick={() => removeLang(code)}
+                    style={{ background: 'transparent', border: '1px solid rgba(255,255,255,.25)', color: '#fff', borderRadius: 6, width: 26, height: 26, cursor: enabled.length <= 1 ? 'default' : 'pointer', fontSize: 12, opacity: enabled.length <= 1 ? 0.3 : 1 }}>←</button>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Experience tense — moved here so it lives inside the Languages

@@ -41,7 +41,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.536-handoff';
+  var VERSION = '1.50.538-handoff';
   if (window.__antcvWizardLanguageSlide339 === VERSION) return;
   window.__antcvWizardLanguageSlide339 = VERSION;
 
@@ -394,7 +394,7 @@
     }
     function colBox(title) {
       var wrap = document.createElement('div');
-      wrap.style.cssText = 'border:1px solid rgba(255,255,255,0.14);border-radius:10px;padding:8px;background:rgba(255,255,255,0.03);min-height:120px;';
+      wrap.style.cssText = 'border:1px solid rgba(255,255,255,0.14);border-radius:10px;padding:8px;background:rgba(255,255,255,0.03);min-height:120px;max-height:230px;overflow:auto;';
       var h = document.createElement('div');
       h.textContent = title;
       h.style.cssText = 'font-size:10px;font-weight:800;letter-spacing:.35px;color:rgba(255,255,255,0.6);margin:0 0 7px;';

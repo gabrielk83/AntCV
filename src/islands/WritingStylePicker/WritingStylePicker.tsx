@@ -788,6 +788,80 @@ function writeAllScopeBanned(kind: 'words' | 'phrases', arr: string[]): void {
   try { window.dispatchEvent(new CustomEvent('antcv:writing-prefs-changed')); } catch { /* */ }
 }
 
+// SEMANTIC-CONSTRAINTS-001 — the editor reads/writes stylePrefs.bannedContextual,
+// the array the generation prompt ALREADY consumes (app.src.js ~2810): per-rule
+// avoid + use_instead ("bank"/allowlist) + an optional WHEN condition (role title
+// / company contains) = the owner's "conditions mix + per-role allowlist".
+interface SemRule { avoid: string; use_instead: string; note: string; whenTitle: string; whenCompany: string }
+function readSemRules(): SemRule[] {
+  const pi = readPersonalInfo();
+  const sp = (pi.stylePrefs as Record<string, unknown>) || {};
+  const arr = Array.isArray(sp.bannedContextual) ? (sp.bannedContextual as Record<string, unknown>[]) : [];
+  return arr.map((r) => {
+    const when = (r.when as Record<string, unknown>) || {};
+    return {
+      avoid: String(r.avoid || r.pattern || ''),
+      use_instead: String(r.use_instead || r.replacement || ''),
+      note: String(r.note || ''),
+      whenTitle: String(when.role_title || when.titleContains || ''),
+      whenCompany: String(when.role_company || when.companyContains || ''),
+    };
+  });
+}
+function writeSemRules(rules: SemRule[]): void {
+  const pi = readPersonalInfo();
+  const sp = ((pi.stylePrefs as Record<string, unknown>) || {});
+  sp.bannedContextual = rules
+    .filter((r) => r.avoid.trim())
+    .map((r) => ({
+      avoid: r.avoid.trim(),
+      use_instead: r.use_instead.trim(),
+      note: r.note.trim(),
+      when: { role_title: r.whenTitle.trim(), role_company: r.whenCompany.trim() },
+    }));
+  pi.stylePrefs = sp;
+  try { localStorage.setItem('personalInfo', JSON.stringify(pi)); } catch { /* */ }
+  try { (window as unknown as { _antcvCloudWrite?: (p: unknown) => void })._antcvCloudWrite?.({ personalInfo: pi }); } catch { /* */ }
+  try { window.dispatchEvent(new StorageEvent('storage', { key: 'personalInfo' })); } catch { /* */ }
+  try { window.dispatchEvent(new CustomEvent('antcv:writing-prefs-changed')); } catch { /* */ }
+}
+
+function SemanticConstraintsEditor(): JSX.Element {
+  const [rules, setRules] = useState<SemRule[]>(() => readSemRules());
+  const commit = useCallback((next: SemRule[]) => { setRules(next); writeSemRules(next); }, []);
+  const update = useCallback((i: number, patch: Partial<SemRule>) => {
+    setRules((prev) => { const next = prev.map((r, j) => (j === i ? { ...r, ...patch } : r)); writeSemRules(next); return next; });
+  }, []);
+  const addRule = useCallback(() => commit([...rules, { avoid: '', use_instead: '', note: '', whenTitle: '', whenCompany: '' }]), [rules, commit]);
+  const removeRule = useCallback((i: number) => commit(rules.filter((_, j) => j !== i)), [rules, commit]);
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%', padding: '5px 7px', background: 'rgba(255,255,255,.05)', color: '#e6eef3',
+    border: '1px solid rgba(255,255,255,.18)', borderRadius: 5, fontFamily: 'inherit', fontSize: 12,
+  };
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ fontSize: 11, opacity: 0.7, lineHeight: 1.45 }}>
+        Ban by <strong>meaning</strong>, not just exact words: each rule avoids a pattern and (optionally) suggests what to use instead. Add a <em>When</em> condition to scope a rule to roles whose title/company matches — the per-role allowlist. These feed the generation prompt directly.
+      </div>
+      {rules.map((r, i) => (
+        <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 5, padding: '8px 9px', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.12)', borderRadius: 8 }}>
+          <input style={inputStyle} placeholder="Avoid (word, phrase, or meaning)" value={r.avoid} onChange={(e) => update(i, { avoid: e.currentTarget.value })} />
+          <input style={inputStyle} placeholder="Use instead (optional)" value={r.use_instead} onChange={(e) => update(i, { use_instead: e.currentTarget.value })} />
+          <div style={{ display: 'flex', gap: 5 }}>
+            <input style={inputStyle} placeholder="When role title contains… (optional)" value={r.whenTitle} onChange={(e) => update(i, { whenTitle: e.currentTarget.value })} />
+            <input style={inputStyle} placeholder="…or company contains…" value={r.whenCompany} onChange={(e) => update(i, { whenCompany: e.currentTarget.value })} />
+          </div>
+          <input style={inputStyle} placeholder="Why / note (optional)" value={r.note} onChange={(e) => update(i, { note: e.currentTarget.value })} />
+          <button type="button" onClick={() => removeRule(i)} style={{ alignSelf: 'flex-end', background: 'transparent', border: '1px solid rgba(255,255,255,.18)', color: '#e6eef3', borderRadius: 5, fontSize: 11, padding: '3px 8px', cursor: 'pointer' }}>Remove rule</button>
+        </div>
+      ))}
+      {rules.length === 0 && <span style={{ fontSize: 11, opacity: 0.6 }}>No semantic rules yet. Add one to ban by meaning (e.g. avoid "led a team" → use "supervised technically" when the role isn't line-management).</span>}
+      <button type="button" onClick={addRule} style={{ alignSelf: 'flex-start', background: 'rgba(1,183,187,.18)', border: '1px solid rgba(1,183,187,.55)', color: '#e6eef3', borderRadius: 6, fontWeight: 700, fontSize: 12, padding: '6px 12px', cursor: 'pointer' }}>+ Add semantic constraint</button>
+    </div>
+  );
+}
+
 function ScopeSelector({
   value,
   onChange,
@@ -1104,21 +1178,12 @@ export function WritingStylePicker(): JSX.Element {
             marginTop: 8,
             display: 'flex',
             flexDirection: 'column',
-            gap: 6,
+            gap: 8,
           }}
         >
-          <div>
-            <strong>Primary constraint:</strong> {style.primaryConstraint}
-          </div>
-          <div>
-            <strong>Prefer:</strong> {style.constraintPrefer}
-          </div>
-          <div>
-            <strong>Avoid:</strong> {style.constraintAvoid}
-          </div>
-          <div style={{ opacity: 0.6 }}>
-            Editing semantic constraints, custom tone slots, and per-section line sliders ships in v1.51 (Pass 4). The
-            settings above already feed the proxy worker's semantic-constraint engine.
+          <SemanticConstraintsEditor />
+          <div style={{ opacity: 0.55, fontSize: 10.5, lineHeight: 1.4, borderTop: '1px solid rgba(255,255,255,.08)', paddingTop: 6 }}>
+            Active style defaults — <strong>{style.primaryConstraint}</strong>; prefer {style.constraintPrefer}; avoid {style.constraintAvoid}.
           </div>
         </div>
       )}

@@ -41,9 +41,23 @@ GEN-PROFILE-001 (strengthened in 1.50.562 to also catch "Deep Tech" / "Photonic"
     "prefer": ["IT professional"],
     "reason": "An unsolicited / general application leads with the broad IT-professional identity, not a narrow specialty. Already enforced in-engine by GEN-PROFILE-001 (retry gate + instruction).",
     "scope": { "section": "profile", "position": "opening", "application_type": "unsolicited" }
+  },
+  {
+    "id": "kanzen-no-independent-flight-risk",
+    "trigger": "describing the Kanzen Konsulenter ApS engagement when the TARGET job in the JD is NOT a consultancy / independent / contractor position",
+    "avoid": ["Independent", "Founder", "Co-Founder", "Establisher", "self-employed"],
+    "prefer": ["advisory and project engagements", "delivered consulting projects for clients", "client advisory work"],
+    "reason": "For a regular employee position, an 'Independent / Founder / Establisher' self-label on the Kanzen role signals a FLIGHT RISK — it reads as someone too independent who will leave quickly. Keep this framing ONLY when the target role is itself a consultancy / independent / contractor position.",
+    "scope": { "role_company": "Kanzen Konsulenter ApS", "jd_excludes": ["consultancy", "independent", "contractor"] }
   }
 ]
 ```
+
+Constraint #4 is **engine-enforced** (no kernel edit needed): ROLE-FOUNDER-001 in
+the generation prompt was strengthened (1.50.563) to ban "Founder/Co-Founder/
+Establisher" outright and to allow the "Independent" framing for Kanzen ONLY when
+the JD itself names a consultancy/independent/contractor role — otherwise it
+describes the actual advisory/client work without the self-label.
 
 ## Functional today — `stylePrefs.bannedContextual`
 

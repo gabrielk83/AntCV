@@ -110,6 +110,23 @@ this session unlocked items previously marked "owner-present":
   (mostly shipped) are owner-present/probe-first; LOCATION-001 touches the persisted
   personalInfo shape (data-risk). VISUAL-PKG-002/003 already shipped (decorateNativePackageButtons).
 
+## RESULTS preview/export — single source of truth (owner-present, 2026-06-17)
+
+After 1.50.526 (tiers 1-3 mirror) the owner still saw the preview Results wrong vs export
+("all of the above"). Root cause: TWO copies of the distribution — the export's
+`applyOutcomesMode` had the improvements (explicit outcome→role map, drop-unmatched,
+numeric-favour, derive-from-bullet) but the preview kept the OLD token-spread that spilled
+the (owner-confirmed STALE) SELECTED OUTCOMES onto roles. **Fix 1.50.529
+(RESULTS-PREVIEW-EXPORT-SINGLE-SOURCE-001):** expose the export's `applyOutcomesMode` on
+`window.AntcvApplyOutcomesMode`; the preview runs that exact function on a deep copy of its
+sections and renders each role's `role.results` (memoised per render pass). When present it
+is authoritative (a role with no export result shows none in preview). Verified
+byte-identical preview-vs-export per role across tier-1/tier-3/token-spread/derive
+(`diag-results-preview-export-parity.mjs`). **OWNER: hard-refresh to 1.50.529 and confirm
+the preview Results now match the export.** Separate latent note (owner observation): the
+SELECTED OUTCOMES *panel* can show stale outcomes after a regen — a panel-refresh concern,
+independent of the results render; flag if it persists.
+
 ## Mobile session (owner-present, 2026-06-17) — emulated iPhone 13 + owner on-device
 
 Drove an iPhone-13 viewport (390px) headlessly; owner confirmed on their real device.
@@ -172,7 +189,7 @@ Drove an iPhone-13 viewport (390px) headlessly; owner confirmed on their real de
 3. The 1.50.522 inline-label fix shows "Who I am:" / "Why …:" labels in the PREVIEW for
    IMPORTED data (was export-only).
 
-State after run: PWA **1.50.528**, docx-worker **1.14.76**, suite **312/312**, 19 docx
+State after run: PWA **1.50.529**, docx-worker **1.14.76**, suite **312/312**, 19 docx
 diags green, mirror-guard green, tsc clean. Islands bundle rebuilt + un-staled.
 
 Owner punch-list (additions): (4) Settings → Personal — the Languages card is back in

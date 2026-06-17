@@ -31,7 +31,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.588-login-settle';
+  var VERSION = '1.50.589-login-settle';
   if (window.__antcvLoginLoadingGate === VERSION) return;
   window.__antcvLoginLoadingGate = VERSION;
 
@@ -97,6 +97,14 @@
   // ── 2. loading overlay (returning users) ──
   function returningUser() {
     try {
+      // owner 2026-06-17: a SIGNED-IN user is returning by definition — their data
+      // restores from the cloud right after app.js boots, which is the settle we
+      // want to mask. At this <head> time personalInfo may not be restored yet, so
+      // requiring wizardCompleted made the gate skip the cover after a fresh
+      // sign-in (the "failed conceal" — blue/flicker shown). Show for any
+      // signed-in user; only a truly anonymous first-timer (no token) sees the
+      // wizard uncovered.
+      if (lsRaw('antcv:auth:token')) return true;
       var pi = JSON.parse(lsRaw('personalInfo') || '{}');
       return !!(pi && pi.wizardCompleted);
     } catch (_) { return false; }
@@ -160,9 +168,16 @@
     if (!ticking) { ticking = true; poll(); }
   }
 
-  if (document.body) boot();
-  else if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
-  else boot();
+  // owner 2026-06-17: show the cover IMMEDIATELY. Previously boot() waited for
+  // DOMContentLoaded, so between this <head> script running and the body being
+  // parsed the user saw a BARE BLUE page (the body background, no spinner) — a
+  // "failed conceal". showOverlay() falls back to documentElement when body is
+  // missing, so the Loading screen (spinner + label) can paint right away.
+  boot();
+  // Re-assert once the body exists, in case the very-early append was skipped.
+  if (!document.body && document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot, { once: true });
+  }
 
   window.AntcvLoginLoadingGate = {
     version: VERSION,

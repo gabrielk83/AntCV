@@ -2,6 +2,10 @@
 
 Owner-set ordering (2026-06-15, revised): **work CONTENT & EXPORT issues first, then SETTINGS MODIFICATION, then NEW FEATURES.** Within each bucket the items are roughly priority-ordered. Each item has the verified root cause + fix location. Discipline: edit `pwa/app.src.js` → mirror minified `pwa/app.js` (names DIFFER — anchor on string literals, copy minified blocks verbatim; see [[minified-mirror-shadow-hazard]]); verify PAST the sign-in gate headlessly (boot-smoke is NOT enough); a fix counts only if it holds in Preview + DOCX/PDF, desktop + mobile; cache-bust trio; push to `main` only; worker = manual deploy (one deployer at a time).
 
+### QUEUED FOR NIGHTLY — owner 2026-06-17
+
+- **SPELL-FI-VOIKKO-001** `[QUEUED — nightly]` — add real Finnish spell-check via **Voikko** (Giellatekno/Voikko; Finnish is agglutinative so Hunspell can't do it, and there is no `dictionary-fi` on jsDelivr — confirmed 404). Ship a WASM build of libvoikko (or a Voikko-backed service endpoint) and wire it into `pwa/antcv-spell-annotator-384.js` as a per-language engine alternative to nspell for `fi`. UNTIL then: Finnish is selectable (generation + the AI context proofread work) and the Languages → Spelling row shows a **"Voikko soon"** badge (shipped 1.50.573; `SPELL_UI.fi.soon='Voikko'` in `src/islands/LanguageCard/LanguageCard.tsx`). On completion, drop the `soon` flag and set `fi` to a real dict/engine path. Investigate: libvoikko-wasm size/perf, IndexedDB caching like the Hunspell dicts, and whether a worker endpoint is cleaner than client WASM.
+
 ### A0-NIGHTLY. SHIPPED + NEW — nightly session 2026-06-15 (late: colour, lamination, JD-cloud, prompt)
 
 **SHIPPED / CLOSED this session** (PWA auto-deploys on push; worker = manual deploy, done):

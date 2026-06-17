@@ -2877,7 +2877,7 @@
         }
       } catch (_) {}
       const i = r.length ? "\n\n" + r.join("\n\n") : "";
-      if (o.background && o.background.trim()) return o.background.trim() + i;
+      if (o.background && o.background.trim()) return o.background.trim().slice(0, 2000) + i;
       const l = [];
       return (
         o.name && l.push("NAME: " + o.name),

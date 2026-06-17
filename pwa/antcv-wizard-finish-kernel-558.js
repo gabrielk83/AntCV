@@ -17,7 +17,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.558-finish-kernel';
+  var VERSION = '1.50.559-finish-kernel';
   if (window.__antcvWizardFinishKernel558 === VERSION) return;
   window.__antcvWizardFinishKernel558 = VERSION;
 
@@ -62,16 +62,27 @@
     return null;                            // unchanged + fits → skip
   }
 
+  function isVis(el) { try { return !!(el && el.getClientRects && el.getClientRects().length > 0); } catch (_) { return false; } }
   function findReadyCard() {
     var heads = document.querySelectorAll('h1');
     for (var i = 0; i < heads.length; i++) {
-      if (/you.?re ready/i.test(heads[i].textContent || '')) return heads[i].closest('div');
+      // v1.50.559 — must be VISIBLE; the closed wizard card lingers hidden in the
+      // DOM, and matching it there made the note STICKY into the set-menu.
+      if (/you.?re ready/i.test(heads[i].textContent || '') && isVis(heads[i])) return heads[i].closest('div');
     }
     return null;
+  }
+  // Remove any note that isn't inside the current visible finish card.
+  function removeStrayNotes(card) {
+    var notes = document.querySelectorAll('[data-antcv-finish-kernel-note]');
+    for (var i = 0; i < notes.length; i++) {
+      if (!card || !card.contains(notes[i])) { try { notes[i].remove(); } catch (_) {} }
+    }
   }
 
   function injectFinishText() {
     var card = findReadyCard();
+    removeStrayNotes(card);
     if (!card || card.querySelector('[data-antcv-finish-kernel-note]')) {
       if (card) hookFinish(card);
       return;

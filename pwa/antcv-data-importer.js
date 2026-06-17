@@ -833,6 +833,16 @@ ${text}`;
       if (v !== undefined) setByPath(filtered, key, v);
     }
 
+    // UNDO-UPLOAD (1.50.542, owner #9-12): snapshot the PRE-write raw values of
+    // every key this import will touch (+ sections), so "Undo last upload" can
+    // restore them verbatim. Capture before any Store.set.
+    try {
+      const snapKeys = Object.keys(filtered).filter((k) => ALLOWED_TOP_KEYS.has(k)).concat(['sections']);
+      const undoSnap = { at: Date.now(), keys: {} };
+      for (const k of snapKeys) { try { undoSnap.keys[k] = localStorage.getItem(k); } catch (_) {} }
+      localStorage.setItem('antcv:lastUploadBackup', JSON.stringify(undoSnap));
+    } catch (_) {}
+
     // Merge per top-level key into the current value, then write back.
     const writes = [];
     for (const k of Object.keys(filtered)) {
@@ -899,8 +909,57 @@ ${text}`;
       try { window.dispatchEvent(new StorageEvent('storage', { key: k, newValue: localStorage.getItem(k) })); } catch (_) {}
     }
     setTimeout(() => {
-      alert(`Imported ${writes.length} settings group${writes.length === 1 ? '' : 's'}: ${writes.join(', ')}.\n\nIf any panel still shows the old values, reload the page.`);
+      showUploadToast(`Imported ${writes.length} group${writes.length === 1 ? '' : 's'}: ${writes.join(', ')}.`);
     }, 50);
+  }
+
+  // ─── Undo last upload (owner #9-12) ──────────────────────────────
+  function restoreSnapshot(snap) {
+    if (!snap || !snap.keys) return 0;
+    let n = 0;
+    for (const k of Object.keys(snap.keys)) {
+      try {
+        const v = snap.keys[k];
+        if (v == null) localStorage.removeItem(k);
+        else localStorage.setItem(k, v);
+        n++;
+      } catch (_) {}
+    }
+    return n;
+  }
+  function undoLastUpload() {
+    let snap = null;
+    try { const raw = localStorage.getItem('antcv:lastUploadBackup'); if (raw) snap = JSON.parse(raw); } catch (_) {}
+    if (!snap) { showUploadToast('Nothing to undo — no recent upload found.'); return; }
+    restoreSnapshot(snap);
+    try { localStorage.removeItem('antcv:lastUploadBackup'); } catch (_) {}
+    try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { source: 'undo-upload' } })); } catch (_) {}
+    // A reload guarantees every React panel re-reads the restored state.
+    setTimeout(() => { try { location.reload(); } catch (_) {} }, 250);
+  }
+  function showUploadToast(msg) {
+    try {
+      const old = document.getElementById('antcv-upload-toast'); if (old) old.remove();
+      const hasUndo = (() => { try { return !!localStorage.getItem('antcv:lastUploadBackup'); } catch (_) { return false; } })();
+      const t = document.createElement('div');
+      t.id = 'antcv-upload-toast';
+      t.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:2147483600;background:#283556;color:#fff;padding:11px 14px;border-radius:9px;font-family:Calibri,Arial,sans-serif;font-size:13px;box-shadow:0 8px 30px rgba(0,0,0,.35);display:flex;align-items:center;gap:12px;max-width:90vw;';
+      const span = document.createElement('span'); span.textContent = msg; t.appendChild(span);
+      if (hasUndo) {
+        const u = document.createElement('button');
+        u.textContent = '↶ Undo last upload';
+        u.style.cssText = 'background:rgba(1,183,187,.2);border:1px solid rgba(1,183,187,.6);color:#cfeff0;border-radius:6px;padding:5px 10px;cursor:pointer;font-weight:700;font-size:12px;white-space:nowrap;';
+        u.addEventListener('click', () => { t.remove(); undoLastUpload(); });
+        t.appendChild(u);
+      }
+      const x = document.createElement('button');
+      x.textContent = '✕';
+      x.style.cssText = 'background:transparent;border:0;color:rgba(255,255,255,.6);cursor:pointer;font-size:14px;';
+      x.addEventListener('click', () => t.remove());
+      t.appendChild(x);
+      document.body.appendChild(t);
+      setTimeout(() => { try { t.remove(); } catch (_) {} }, 12000);
+    } catch (_) {}
   }
 
   // ─── Mount ───────────────────────────────────────────────────────
@@ -1020,5 +1079,5 @@ ${text}`;
   }
 
   // Expose for debugging / programmatic invocation
-  window.AntCVImporter = { open: openModal, close: closeModal };
+  window.AntCVImporter = { open: openModal, close: closeModal, undoLastUpload: undoLastUpload };
 })();

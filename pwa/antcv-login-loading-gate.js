@@ -31,7 +31,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.596-login-warmup';
+  var VERSION = '1.50.597-login-warmup';
   if (window.__antcvLoginLoadingGate === VERSION) return;
   window.__antcvLoginLoadingGate = VERSION;
 
@@ -113,9 +113,12 @@
   }
 
   function editorReady() {
-    return !!(document.querySelector('.antcv-preview-paper') ||
-              document.querySelector('.antcv-topbar') ||
-              document.querySelector('.antcv-top-tools'));
+    // owner 2026-06-18: require the REAL editor (the CV preview paper). The topbar
+    // / top-tools also exist on the post-login "set-menu" (Account/ACCOUNT MODE)
+    // screen, so matching them let the cover lift over the demo/account card —
+    // that's the "demo select stuck on loading". The preview paper only exists in
+    // the actual editor, so the cover now holds until the editor is truly up.
+    return !!document.querySelector('.antcv-preview-paper');
   }
 
   var overlay = null;
@@ -157,7 +160,7 @@
     var ver = document.createElement('span');
     // Match the pre-login screen's "X.XX.XXX-babel-fish" version chip. Numeric part
     // tracks this gate's VERSION (bumped every release); codename mirrors app.js `Ai`.
-    ver.textContent = (VERSION.match(/^\d+\.\d+\.\d+/) || ['1.50.596'])[0] + '-babel-fish';
+    ver.textContent = (VERSION.match(/^\d+\.\d+\.\d+/) || ['1.50.597'])[0] + '-babel-fish';
     ver.style.cssText = 'font-size:10px;font-weight:600;color:rgba(255,255,255,0.52);';
     brand.appendChild(h1); brand.appendChild(ver);
 
@@ -227,47 +230,15 @@
   var WARM_DISABLE = 'antcv:disable-login-warmup';
   function warmupDisabled() { var v = lsRaw(WARM_DISABLE); return v === '1' || v === 'true'; }
 
-  // Phase 1 — Settings: open and cycle the subtabs so their islands/sidecars mount.
-  function warmSettings(next) {
-    var tries = 0;
-    (function go() {
-      if (typeof window._antcvOpenSettingsRoute !== 'function') {
-        if (tries++ < 25) { setTimeout(go, 120); return; }
-        next(); return;                            // route never appeared — skip to preview
-      }
-      var origTab = lsRaw('settingsTab');
-      var origSub = lsRaw('settingsSubTab');
-      // owner 2026-06-17: warm ONLY the jumpy island panels (Personal + Layout).
-      // The 'account' subtab mounts the AntcvAuthPanel (ACCOUNT MODE Demo/Paid +
-      // SIGN IN) — cycling to it surfaced that card "stuck into the loading", and
-      // it isn't a jumpy-layout panel anyway. 'keys' is likewise static.
-      var subtabs = ['personal', 'layout'];
-      var i = 0;
-      function step() {
-        try {
-          if (i < subtabs.length) {
-            window._antcvOpenSettingsRoute({ tier: 'standard', subtab: subtabs[i] });
-            i++; setTimeout(step, 340); return;
-          }
-          // land on the user's prior subtab (or Personal) so nothing surprises them
-          var sub = (origSub ? unquote(origSub) : 'personal') || 'personal';
-          window._antcvOpenSettingsRoute({ tier: 'standard', subtab: sub });
-          setTimeout(function () {
-            try { window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); } catch (_) {}
-            // restore the exact stored tab keys (the cycling overwrote them)
-            try {
-              if (origTab != null) localStorage.setItem('settingsTab', origTab);
-              if (origSub != null) localStorage.setItem('settingsSubTab', origSub);
-            } catch (_) {}
-            next();
-          }, 260);
-        } catch (_) { next(); }
-      }
-      step();
-    })();
-  }
+  // NOTE (owner 2026-06-18): the Settings warm-up was REMOVED. Opening Settings
+  // during boot (q(!0)) raced app.js's own post-login navigation and could leave
+  // the Account/ACCOUNT MODE set-menu visible ("demo select stuck on loading"),
+  // and it did not stop the per-open jump anyway — the WritingStyle/Language island
+  // UNMOUNTS when Settings closes and re-mounts (native → island flash) on every
+  // reopen, which a one-time boot warm-up cannot fix. That needs an island-mount
+  // stabilisation, tracked separately. Only the preview warm-up remains.
 
-  // Phase 2 — Preview: toggle the CV/CL switch TWICE so BOTH documents paginate +
+  // Preview: toggle the CV/CL switch TWICE so BOTH documents paginate +
   // fit once (the toggle's onClick also calls resetPreviewToFit), ending on the
   // document it started on. Then a resize settles the fit-to-width scale. This pays
   // the preview panel's jumpy first-layout cost behind the cover.
@@ -288,22 +259,15 @@
     if (warmupStarted) return;
     warmupStarted = true;
     if (warmupDisabled()) { warmupDone = true; return; }
-    try {
-      warmSettings(function () { warmPreview(function () { warmupDone = true; }); });
-    } catch (_) { warmupDone = true; }
+    try { warmPreview(function () { warmupDone = true; }); }
+    catch (_) { warmupDone = true; }
   }
 
   function poll() {
     var el = overlay || document.getElementById('antcv-login-loading-overlay');
     if (!el) { ticking = false; return; }
     var elapsed = Date.now() - startedAt;
-    if (editorReady() && !readyAt) {
-      readyAt = Date.now();
-      // Only warm when the REAL editor is up (the CV preview paper). editorReady()
-      // also matches the topbar, which can exist on the login screen — warming
-      // there would open Settings→account over the sign-in UI.
-      if (document.querySelector('.antcv-preview-paper')) warmUp();
-    }
+    if (editorReady() && !readyAt) { readyAt = Date.now(); warmUp(); }   // real editor up → warm the preview behind the cover
     var settled = readyAt && (Date.now() - readyAt) >= SETTLE_BUFFER;
     // lift once the editor has settled AND the warm-up cycle finished; MAX_MS is the backstop.
     if ((settled && elapsed >= MIN_MS && warmupDone) || elapsed >= MAX_MS) { hideOverlay(); ticking = false; return; }

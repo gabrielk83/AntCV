@@ -31,7 +31,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.541-tone-tense-cleanup';
+  var VERSION = '1.50.545-tone-tense-cleanup';
   if (window.__antcvToneTenseCleanup534 === VERSION) return;
   window.__antcvToneTenseCleanup534 = VERSION;
 
@@ -96,13 +96,6 @@
     } catch (_) {}
   }
 
-  // #8/#4 — hide the app.js Advanced "Banned words" + "Banned phrases" fields.
-  // Matched by their UNIQUE helper strings, then we walk up to the field's root
-  // (the React `vi` wrapper, a div with marginBottom:14px) and hide it.
-  var BANNED_HELPERS = [
-    'Words you want excluded from generated',
-    'Multi-word patterns to avoid',
-  ];
   function deepestContaining(marker) {
     var all = document.getElementsByTagName('*');
     var best = null, bestLen = Infinity;
@@ -112,19 +105,16 @@
     }
     return best;
   }
-  function hideAppBannedFields() {
+  // v1.50.545 REVERT of 1.50.535: that release HID the app.js Advanced banned
+  // word/phrase fields ("Banned Words" panel) thinking they duplicated the
+  // Personal island — but they were the FULLY-FUNCTIONAL control (bubbles + the
+  // bank + cross-language flow). Owner: do NOT remove; FUSE the two. This now
+  // actively UN-hides anything 1.50.535 hid, in-session, so the control is back.
+  function unhideAppBannedFields() {
     try {
-      for (var i = 0; i < BANNED_HELPERS.length; i++) {
-        var leaf = deepestContaining(BANNED_HELPERS[i]);
-        if (!leaf) continue;
-        var n = leaf;
-        // climb to the vi root (marginBottom:14px); stop after a sane depth.
-        var hops = 0;
-        while (n && hops < 8 && !(n.style && n.style.marginBottom === '14px')) { n = n.parentElement; hops++; }
-        if (n && n.style && n.style.marginBottom === '14px' && n.getAttribute('data-antcv-banned-dedup-hidden') !== '1') {
-          n.style.setProperty('display', 'none', 'important');
-          n.setAttribute('data-antcv-banned-dedup-hidden', '1');
-        }
+      var hidden = document.querySelectorAll('[data-antcv-banned-dedup-hidden="1"]');
+      for (var i = 0; i < hidden.length; i++) {
+        try { hidden[i].style.removeProperty('display'); hidden[i].removeAttribute('data-antcv-banned-dedup-hidden'); } catch (_) {}
       }
     } catch (_) {}
   }
@@ -158,7 +148,7 @@
   }
 
   var pending = false;
-  function run() { hideAdvancedTense(); injectQuizOnTone(); hideAppBannedFields(); hideOutcomesModeToggle(); }
+  function run() { hideAdvancedTense(); injectQuizOnTone(); unhideAppBannedFields(); hideOutcomesModeToggle(); }
   function schedule() { if (pending) return; pending = true; (window.requestAnimationFrame || setTimeout)(function () { pending = false; try { run(); } catch (_) {} }); }
   function boot() {
     defaultOutcomesResults();

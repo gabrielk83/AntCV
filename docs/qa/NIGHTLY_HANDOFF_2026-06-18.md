@@ -54,6 +54,25 @@ needed once render is fixed, but a re-ingest/re-apply of the kernel may be.
 Same root as G-GROUPS-001, in the REGULATORY section. 4 group headers + 20 items
 ingested; most items eye-off. Fix together with G-GROUPS-001.
 
+### REG-DEDUP-001 — Regulatory standards DUPLICATED in the live editor (ASPICE×2, ISO 26262×2, MIL-STD-810G×3)
+Owner 2026-06-18: regulatory shows duplicates — two near-identical group taxonomies
+("Systems, Safety and Cybersecurity" + "Systems, safety & cybersec", two
+"Environmental" groups), each carrying overlapping standards.
+CRITICAL: the kernel FILE on disk is CLEAN — each standard appears exactly once (a
+subagent verified + wrote a normalized `...-2026-06-18-fixed.json`). The duplication
+is LIVE only (localStorage / D1). => This is an INGESTION MERGE bug: uploading the
+kernel APPENDS the new grouped regulatory on top of the pre-existing regulatory
+items instead of REPLACING the section, producing parallel duplicate group sets.
+Fix direction: in `pwa/antcv-kernel-ingest.js` / `pwa/antcv-data-importer.js`, when a
+kernel provides a GROUPED section (regulatory, tools, additional), REPLACE that
+section's items wholesale (or de-dup by `l` code, case/space-insensitive, after
+merge) — do NOT append. Re-uploading the clean file will NOT fix it until ingestion
+de-dups, because it merges again. Same append-merge bug likely explains the flat
+duplicates in G-GROUPS-001/003. CLASSIFY: ingestion. HIGH PRIORITY — pairs with the
+G-GROUPS render fix.
+Owner workaround until fixed: clear the regulatory section in the editor, then
+re-upload the clean kernel (single clean set).
+
 ### G-GROUPS-003 — Additional Information not split into sub-subsections
 Owner wants Languages / Accessibility / Interests as independent sub-subsections.
 Kernel provides the grouped `additional` structure, but the export renders one flat

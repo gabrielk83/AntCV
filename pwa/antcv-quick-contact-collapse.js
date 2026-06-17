@@ -18,7 +18,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.587-quick-contact';
+  var VERSION = '1.50.591-quick-contact';
   if (window.__antcvQuickContact === VERSION) return;
   window.__antcvQuickContact = VERSION;
 
@@ -138,26 +138,71 @@
     return null;
   }
 
-  // ORDER (owner 2026-06-17): in the order-based Personal flex column, lay the
-  // top block as: Import → Apply/Undo → Full Name → Headline → Quick contact →
-  // (then Writing Style at default order 0). Negative orders float them above the
-  // writing-style block. Re-applied each pass (React resets inline styles).
+  // ORDER (owner 2026-06-17): the Personal panel is an order-based flex column
+  // (app.js `yl`, style display:flex;flex-direction:column). Lay the top block as
+  //   Import → Apply/Undo → "Name, contact…" caption → Full Name → Headline →
+  //   Quick contact → (Writing Style at default order 0).
+  // All moves are CSS `order` only (NO DOM mutation) so the import button can NOT
+  // duplicate — that was the 1.50.584/586 trap (physically moving it made the
+  // data-importer re-hook a second copy). The one exception is the caption, which
+  // React renders in the column's PARENT (above the whole column); CSS order can't
+  // pull it between siblings of a different container, so we hide React's original
+  // and inject a sidecar-owned copy into the column just above Name.
   function setOrder(el, val) { if (el && el.style.order !== val) el.style.order = val; }
+
+  // Walk `node` up to the element that is a DIRECT child of `col` (the orderable
+  // flex item), or null if `node` is not inside `col`.
+  function flexItem(col, node) {
+    while (node && node.parentElement && node.parentElement !== col) node = node.parentElement;
+    return (node && node.parentElement === col) ? node : null;
+  }
+  // First element anywhere whose trimmed text matches `re` (short text only).
+  function elByText(re, max) {
+    var all = document.querySelectorAll('button, a, div, span, label, p');
+    for (var i = 0; i < all.length; i++) {
+      var t = (all[i].textContent || '').trim();
+      if (t && t.length < (max || 120) && re.test(t)) return all[i];
+    }
+    return null;
+  }
+
+  var CAP_RE = /Name, contact, work history/i;
+  var CAP = 'data-antcv-name-caption';
+  // Hide React's original caption (it sits in the column's parent, above everything)
+  // and return a sidecar-owned copy placed as a direct child of `col` right before
+  // the Name row, so `order` can seat it between Undo and Name.
+  function placeCaption(col, nameItem) {
+    if (!nameItem) return null;
+    var orig = elByText(CAP_RE, 160);
+    // don't treat our own copy as the original
+    if (orig && orig.hasAttribute && orig.hasAttribute(CAP)) orig = null;
+    if (orig && (!flexItem(col, orig))) {            // original lives outside the column → hide it
+      if (orig.style.display !== 'none') orig.style.display = 'none';
+    }
+    var copy = col.querySelector('[' + CAP + ']');
+    if (!copy) {
+      copy = document.createElement('div');
+      copy.setAttribute(CAP, '1');
+      copy.textContent = 'Name, contact, work history, education, skills. Used in CV header, CL sign-off, AI prompts.';
+      copy.style.cssText = 'color:rgba(255,255,255,0.3);font-size:10px;line-height:1.5;margin-bottom:10px;';
+    }
+    if (copy.parentElement !== col) { try { col.insertBefore(copy, nameItem); } catch (_) {} }
+    return copy;
+  }
+
   function liftIdentity(col, hdr, rows) {
-    // IMPORT BUTTON — HANDS OFF (owner 2026-06-17). The data-importer fully owns
-    // it. Touching it backfired twice: 1.50.584 MOVED it → React re-rendered the
-    // original → the importer re-hooked it → a DUPLICATE; 1.50.586's dedupe then
-    // removed BOTH. We no longer move, dedupe, or remove it. We only set a CSS
-    // order IF it already sits as a direct child of the column (pure styling, no
-    // DOM mutation) — otherwise leave it exactly where the importer placed it.
-    var impTop = topChildByText(col, /Import profile/i);
-    if (impTop) setOrder(impTop, '-7');                                     // Import … (first) — CSS only
-    setOrder(topChildByText(col, /Apply to user profile|Apply to my|↺\s*Apply/i), '-6'); // Apply (+ Undo share the row)
-    setOrder(topChildByText(col, /Undo last/i), '-6');                      // Undo (if separate row)
-    setOrder(topRowByPlaceholder(col, 'Jane Doe'), '-4');                   // Full Name
-    setOrder(topRowByPlaceholder(col, 'Senior Project Manager'), '-3');     // Headline
-    setOrder(hdr, '-2');                                                    // Quick contact header
-    for (var i = 0; i < rows.length; i++) setOrder(rows[i], '-2');          // contact rows
+    // Import box — CSS order only (never moved): seat it FIRST.
+    var imp = document.querySelector('[data-antcv-import-replacement]') || elByText(/Import profile/i, 90);
+    setOrder(flexItem(col, imp), '-7');
+    // Apply + Undo share one flex row → ordering the row covers both.
+    setOrder(flexItem(col, elByText(/Apply to user profile|↻\s*Apply|↺\s*Apply/i, 60)), '-6');
+    setOrder(flexItem(col, elByText(/Undo last/i, 40)), '-6');
+    var nameItem = topRowByPlaceholder(col, 'Jane Doe');
+    setOrder(placeCaption(col, nameItem), '-5');                            // "Name, contact…" caption
+    setOrder(nameItem, '-4');                                              // Full Name
+    setOrder(topRowByPlaceholder(col, 'Senior Project Manager'), '-3');    // Headline
+    setOrder(hdr, '-2');                                                   // Quick contact header
+    for (var i = 0; i < rows.length; i++) setOrder(rows[i], '-2');         // contact rows
   }
 
   function apply() {

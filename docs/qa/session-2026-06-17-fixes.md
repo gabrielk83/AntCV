@@ -110,6 +110,23 @@ this session unlocked items previously marked "owner-present":
   (mostly shipped) are owner-present/probe-first; LOCATION-001 touches the persisted
   personalInfo shape (data-risk). VISUAL-PKG-002/003 already shipped (decorateNativePackageButtons).
 
+## Mobile session (owner-present, 2026-06-17) — emulated iPhone 13 + owner on-device
+
+Drove an iPhone-13 viewport (390px) headlessly; owner confirmed on their real device.
+- **5 items CONFIRMED CLOSED on-device** (owner: "all good — close them"):
+  MOB-TOPBAR-001 (Ant icon + stray table control hidden), MOB-TOPBAR-002 (privacy pill
+  visible, single-row topbar), MOB-ALT-001 (palette → one tap-to-open dot), MOB-BOTTOMNAV-001
+  (bottom nav fits), MOBILE-TABLEWIDTH-001 (table-width sliders hidden < 900px).
+- **MOBILE-FUSE-001 — verified resolved, not open:** the 🔀 FAB is hidden on mobile
+  (correct, redundant) but the "Fuse" button IS live in the bottom nav
+  (`antcv-bottom-fusion-343.js`) — `¶ Section · 🎯 Analysis · 👁 Preview · −/47%/+ · CV/CL · Fuse`.
+- **MOBILE-EXTRACTION-001 → MOBILE-ASKAI-EXPORT-OVERLAP-001 [SHIPPED 1.50.528]:** the
+  button overlapping the DOCX export turned out to be the **"🤖 Ask AI" doc-chatbot
+  launcher** (not the kernel/extraction button). It defaulted to `bottom:96px` (above the
+  Fuse toolbar) but still covered the DOCX export row; raised the default to `bottom:150px`
+  (draggable saved position still wins). Verified the launcher moved y 531→477 at 390px.
+  **OWNER ON-DEVICE:** confirm 150px clears the DOCX export (can bump further / move left).
+
 ## Findings — stale-open / not-a-bug (recommend closing in ACTIVE_BUGS)
 
 - **RESULTS-PDF-INK-BLACK-001** — ALREADY SHIPPED in docx-worker 1.14.73 (commit
@@ -155,7 +172,7 @@ this session unlocked items previously marked "owner-present":
 3. The 1.50.522 inline-label fix shows "Who I am:" / "Why …:" labels in the PREVIEW for
    IMPORTED data (was export-only).
 
-State after run: PWA **1.50.527**, docx-worker **1.14.76**, suite **312/312**, 19 docx
+State after run: PWA **1.50.528**, docx-worker **1.14.76**, suite **312/312**, 19 docx
 diags green, mirror-guard green, tsc clean. Islands bundle rebuilt + un-staled.
 
 Owner punch-list (additions): (4) Settings → Personal — the Languages card is back in

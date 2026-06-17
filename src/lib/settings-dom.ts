@@ -109,9 +109,15 @@ export function isPersonalSubtab(root: Element): boolean {
 // Locate the "Open Advanced -> Style ..." hand-off button shown in the Layout
 // subtab. Matches on a stable visible-text fragment (case-insensitive),
 // tolerant of the arrow glyphs and the exact wording tail.
+function isVisibleEl(el: Element): boolean {
+  try { return (el as HTMLElement).getClientRects().length > 0; } catch { return true; }
+}
 export function findAdvancedStyleButton(root: Element): Element | null {
+  // v1.50.552 — must be VISIBLE. app.js leaves this hand-off button in the DOM
+  // (hidden) on other subtabs; matching it there made isLayoutSubtab's fallback
+  // fire → ExportOptions + PackagePicker went sticky on non-Layout subtabs.
   const re = /open advanced.*style|advanced.*style for/i;
-  const hit = buttonsIn(root).filter((b) => re.test(norm(b.textContent)));
+  const hit = buttonsIn(root).filter((b) => re.test(norm(b.textContent)) && isVisibleEl(b));
   return hit[0] ?? null;
 }
 

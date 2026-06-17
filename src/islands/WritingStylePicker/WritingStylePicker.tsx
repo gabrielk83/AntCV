@@ -1070,18 +1070,21 @@ export function WritingStylePicker(): JSX.Element {
         color: '#d7e6ee',
       }}
     >
+      {/* v1.50.552 (owner): single header in the app.js "WRITING STYLE" font
+          register; the redundant "Style" sub-header is removed. The dropdown's
+          own description carries the style note. */}
       <div
         style={{
+          color: 'rgba(255,255,255,0.55)',
+          fontSize: 11,
+          fontWeight: 600,
+          marginBottom: 4,
+          letterSpacing: 0.4,
           textTransform: 'uppercase',
-          letterSpacing: '.08em',
-          fontWeight: 800,
-          marginBottom: 8,
         }}
       >
         Writing style
       </div>
-
-      <SectionHeader>Style</SectionHeader>
       <StyleDropdown value={prefs.style} onChange={onStyleChange} />
       <div style={{ fontSize: 11, opacity: 0.65, marginTop: 4 }}>
         {style.contentRule}
@@ -1149,40 +1152,13 @@ export function WritingStylePicker(): JSX.Element {
         />
       )}
 
-      <button
-        type="button"
-        onClick={() => setAdvanced((v) => !v)}
-        style={{
-          marginTop: 14,
-          padding: '6px 10px',
-          background: 'transparent',
-          color: '#a9c3cf',
-          border: '1px solid rgba(255,255,255,.18)',
-          borderRadius: 6,
-          cursor: 'pointer',
-          fontSize: 12,
-          fontWeight: 650,
-        }}
-        aria-expanded={advanced}
-      >
-        {advanced ? '▾' : '▸'} Semantic constraints
-      </button>
+      {/* v1.50.552 — frameless header, same register + horizontal position as the
+          Banned headers (owner). No bordered box around the editor. */}
+      <CollapsibleHeader open={advanced} onToggle={() => setAdvanced((v) => !v)}>Semantic constraints</CollapsibleHeader>
       {advanced && (
-        <div
-          style={{
-            fontSize: 12,
-            background: 'rgba(255,255,255,.03)',
-            border: '1px solid rgba(255,255,255,.10)',
-            borderRadius: 8,
-            padding: '8px 10px',
-            marginTop: 8,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 8,
-          }}
-        >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 2 }}>
           <SemanticConstraintsEditor />
-          <div style={{ opacity: 0.55, fontSize: 10.5, lineHeight: 1.4, borderTop: '1px solid rgba(255,255,255,.08)', paddingTop: 6 }}>
+          <div style={{ opacity: 0.5, fontSize: 10.5, lineHeight: 1.4 }}>
             Active style defaults — <strong>{style.primaryConstraint}</strong>; prefer {style.constraintPrefer}; avoid {style.constraintAvoid}.
           </div>
         </div>

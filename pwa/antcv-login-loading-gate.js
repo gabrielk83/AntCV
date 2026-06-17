@@ -31,7 +31,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.589-login-settle';
+  var VERSION = '1.50.590-login-unify';
   if (window.__antcvLoginLoadingGate === VERSION) return;
   window.__antcvLoginLoadingGate = VERSION;
 
@@ -121,22 +121,59 @@
     if (overlay || document.getElementById('antcv-login-loading-overlay')) return;
     var host = document.body || document.documentElement;
     if (!host) return;
+    // owner 2026-06-17: UNIFY the two loading screens. The pre-login screen
+    // (app.js, src ~3320) shows the ant icon + "AntCV" wordmark + the italic
+    // tagline on a dark gradient. This cover was a bare spinner wheel on flat
+    // blue, so it read as a SECOND, different login screen. Mirror the pre-login
+    // layout exactly (gradient, 76px rounded ant icon, wordmark, tagline) with a
+    // spinner where the sign-in card sits — so login → cover → editor looks like
+    // ONE continuous surface.
     overlay = document.createElement('div');
     overlay.id = 'antcv-login-loading-overlay';
+    overlay.className = 'fade';
     overlay.setAttribute('role', 'status');
     overlay.setAttribute('aria-live', 'polite');
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:2147483646;background:#283556;' +
-      'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;' +
-      'font-family:Georgia,serif;color:#cdd6e0;';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:2147483646;' +
+      'background:linear-gradient(160deg,#283556 0%,#1a2a45 100%);' +
+      'display:flex;flex-direction:column;align-items:center;justify-content:center;' +
+      'padding:20px;font-family:Georgia,serif;color:#cdd6e0;';
+
+    var col = document.createElement('div');
+    col.style.cssText = 'width:100%;max-width:380px;text-align:center;';
+
+    var img = document.createElement('img');
+    img.src = 'icons/icon-192.png';
+    img.alt = 'AntCV';
+    img.style.cssText = 'width:76px;height:76px;display:block;margin:0 auto 12px;border-radius:18px;';
+
+    var brand = document.createElement('div');
+    brand.style.cssText = 'display:inline-flex;align-items:baseline;gap:8px;justify-content:center;';
+    var h1 = document.createElement('h1');
+    h1.textContent = 'AntCV';
+    h1.style.cssText = 'color:#fff;font-size:22px;font-weight:700;margin:0;';
+    brand.appendChild(h1);
+
+    var tag = document.createElement('p');
+    tag.style.cssText = 'color:rgba(255,255,255,0.66);font-size:12px;line-height:1.35;' +
+      'margin:8px auto 0;max-width:300px;font-style:italic;';
+    tag.appendChild(document.createTextNode('Supporting hard-working ants everywhere'));
+    tag.appendChild(document.createElement('br'));
+    tag.appendChild(document.createTextNode('Build a clean CV and cover letter'));
+
     var style = document.createElement('style');
     style.textContent = '@keyframes antcv-lg-spin{to{transform:rotate(360deg)}}';
+    var card = document.createElement('div');
+    card.style.cssText = 'margin-top:26px;display:flex;flex-direction:column;align-items:center;gap:13px;';
     var spin = document.createElement('div');
-    spin.style.cssText = 'width:34px;height:34px;border:3px solid rgba(1,183,187,0.25);' +
+    spin.style.cssText = 'width:30px;height:30px;border:3px solid rgba(1,183,187,0.25);' +
       'border-top-color:#01B7BB;border-radius:50%;animation:antcv-lg-spin .8s linear infinite;';
     var label = document.createElement('div');
     label.textContent = 'Loading…';
-    label.style.cssText = 'font-size:14px;letter-spacing:.4px;opacity:.85;';
-    overlay.appendChild(style); overlay.appendChild(spin); overlay.appendChild(label);
+    label.style.cssText = 'font-size:13px;letter-spacing:.4px;color:rgba(255,255,255,0.7);';
+    card.appendChild(spin); card.appendChild(label);
+
+    col.appendChild(img); col.appendChild(brand); col.appendChild(tag); col.appendChild(card);
+    overlay.appendChild(style); overlay.appendChild(col);
     host.appendChild(overlay);
   }
   function hideOverlay() {
@@ -152,12 +189,17 @@
   }
 
   var startedAt = Date.now();
+  var readyAt = 0;          // when editorReady() first went true
+  var SETTLE_BUFFER = 500;  // hold this long AFTER the editor first appears, so the
+                            // brief post-appear flash ("lamp for a microsecond") is masked
   var ticking = false;
   function poll() {
     var el = overlay || document.getElementById('antcv-login-loading-overlay');
     if (!el) { ticking = false; return; }
     var elapsed = Date.now() - startedAt;
-    if ((editorReady() && elapsed >= MIN_MS) || elapsed >= MAX_MS) { hideOverlay(); ticking = false; return; }
+    if (editorReady() && !readyAt) readyAt = Date.now();
+    var settled = readyAt && (Date.now() - readyAt) >= SETTLE_BUFFER;
+    if ((settled && elapsed >= MIN_MS) || elapsed >= MAX_MS) { hideOverlay(); ticking = false; return; }
     setTimeout(poll, 120);
   }
 

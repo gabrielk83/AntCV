@@ -11,7 +11,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.540-kernel-import';
+  var VERSION = '1.50.543-kernel-import';
   if (window.__antcvKernelImport === VERSION) return;
   window.__antcvKernelImport = VERSION;
 
@@ -170,6 +170,25 @@
   }
   function openPicker() { ensureControl(); var i = document.getElementById('antcv-kimport-input'); if (i) i.click(); }
 
+  // Export the current/staged kernel as a SIGNED envelope (owner 2026-06-17):
+  // re-uploading a signed kernel triggers a wipe + overwrite-from-scratch; an
+  // unsigned JSON only merges. The marker `_antcvKernel:1` is what the upload
+  // detector (antcv-data-importer.js handleJSON) gates the overwrite on.
+  function exportKernel() {
+    var k = existingKernel();
+    if (!k || !Array.isArray(k.experience) || !k.experience.length) { toast('No kernel to export yet — build or import one first.'); return; }
+    var env = { _antcvKernel: 1, version: VERSION, kernel: k };
+    try {
+      var blob = new Blob([JSON.stringify(env, null, 2)], { type: 'application/json' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'antcv-kernel.json';
+      document.body.appendChild(a); a.click();
+      setTimeout(function () { try { URL.revokeObjectURL(a.href); a.remove(); } catch (_) {} }, 1000);
+      toast('Exported a signed AntCV kernel (' + k.experience.length + ' roles). Re-uploading it overwrites from scratch.');
+    } catch (e) { toast('Export failed: ' + (e && e.message || e)); }
+  }
+
   // ── auto-sync kernel_v2 from D1 → personalInfo on login ────────────────────
   // GET the stored v2 kernel; if its signature differs from the last one applied,
   // project it into personalInfo.workHistory ONCE (backed up). A matching signature
@@ -262,5 +281,5 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
   else boot();
 
-  window.AntcvKernelImport = { version: VERSION, runImport: runImport, openPicker: openPicker, saveToAccount: saveToAccount, applyToCV: applyToCV, autoSync: autoSync, relayBase: relayBase, _inject: injectEntry, _stageKey: STAGE_KEY };
+  window.AntcvKernelImport = { version: VERSION, runImport: runImport, openPicker: openPicker, saveToAccount: saveToAccount, applyToCV: applyToCV, autoSync: autoSync, exportKernel: exportKernel, relayBase: relayBase, _inject: injectEntry, _stageKey: STAGE_KEY };
 })();

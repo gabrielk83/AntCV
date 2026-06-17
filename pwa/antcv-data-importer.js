@@ -283,6 +283,22 @@
           : (r.cancelled ? 'Restore cancelled' : ('✗ ' + (r.error || 'Restore failed'))),
       };
     }
+    // SIGNED KERNEL (owner 2026-06-17, #9-12): ONLY a signed AntCV kernel
+    // envelope ({_antcvKernel:1, kernel:{experience…}}) triggers a wipe +
+    // OVERWRITE-from-scratch. An UNSIGNED kernel-shaped JSON falls through to the
+    // safe MERGE path below — so a random fragment can never silently wipe data.
+    if (obj && obj._antcvKernel === 1 && obj.kernel && typeof obj.kernel === 'object' && window.AntcvKernelImport) {
+      let go = true;
+      try { go = window.confirm('This is a signed AntCV kernel. Overwrite your current kernel from scratch? You can Undo afterwards.'); } catch (_) {}
+      if (!go) return { proposed: {}, summary: 'Kernel overwrite cancelled' };
+      try { snapshotForUndo(['personalInfo', 'sections']); } catch (_) {}
+      try { if (window.AntcvKernelImport.applyToCV) window.AntcvKernelImport.applyToCV(obj.kernel); } catch (_) {}
+      try { if (window.AntcvKernelImport.saveToAccount) window.AntcvKernelImport.saveToAccount(obj.kernel); } catch (_) {}
+      try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { source: 'kernel-overwrite' } })); } catch (_) {}
+      setTimeout(() => { try { showUploadToast('AntCV kernel overwritten from scratch.'); } catch (_) {} }, 50);
+      return { proposed: {}, summary: '✓ Signed kernel — overwritten from scratch' };
+    }
+
     const isFullExport = !!(obj.personalInfo || obj.formatSettings || obj.appMeta);
     const proposed = {};
     if (isFullExport) {
@@ -836,12 +852,7 @@ ${text}`;
     // UNDO-UPLOAD (1.50.542, owner #9-12): snapshot the PRE-write raw values of
     // every key this import will touch (+ sections), so "Undo last upload" can
     // restore them verbatim. Capture before any Store.set.
-    try {
-      const snapKeys = Object.keys(filtered).filter((k) => ALLOWED_TOP_KEYS.has(k)).concat(['sections']);
-      const undoSnap = { at: Date.now(), keys: {} };
-      for (const k of snapKeys) { try { undoSnap.keys[k] = localStorage.getItem(k); } catch (_) {} }
-      localStorage.setItem('antcv:lastUploadBackup', JSON.stringify(undoSnap));
-    } catch (_) {}
+    snapshotForUndo(Object.keys(filtered).filter((k) => ALLOWED_TOP_KEYS.has(k)).concat(['sections']));
 
     // Merge per top-level key into the current value, then write back.
     const writes = [];
@@ -914,6 +925,13 @@ ${text}`;
   }
 
   // ─── Undo last upload (owner #9-12) ──────────────────────────────
+  function snapshotForUndo(keys) {
+    try {
+      const undoSnap = { at: Date.now(), keys: {} };
+      for (const k of keys) { try { undoSnap.keys[k] = localStorage.getItem(k); } catch (_) {} }
+      localStorage.setItem('antcv:lastUploadBackup', JSON.stringify(undoSnap));
+    } catch (_) {}
+  }
   function restoreSnapshot(snap) {
     if (!snap || !snap.keys) return 0;
     let n = 0;

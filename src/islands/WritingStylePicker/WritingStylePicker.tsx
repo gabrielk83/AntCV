@@ -30,6 +30,7 @@ import {
   type LayoutPrefs,
 } from '../../lib/writing-prefs';
 import { readEnabledLangs } from '../../lib/lang-prefs';
+import { LanguageCard } from '../LanguageCard/LanguageCard';
 
 // Sub-section header used inside the picker. Same visual register as the
 // LanguageCard header in src/islands/LanguageCard/LanguageCard.tsx.
@@ -1165,6 +1166,14 @@ export function WritingStylePicker(): JSX.Element {
           Advanced Styles (added by antcv-page-budget.js). Keeping a second
           copy in the Personal-tab picker was a confusing duplicate writing the
           same layout.targetPages. */}
+
+      {/* #4 (owner) — Languages merged INTO the island, ABOVE Banned, so the
+          enabled languages drive the banned per-language scope tabs. The
+          standalone LanguageCard mount skips itself when this embedded one
+          exists (see LanguageCard/mount.tsx). */}
+      <div style={{ marginTop: 4 }}>
+        <LanguageCard />
+      </div>
 
       <CollapsibleHeader open={wordsOpen} onToggle={() => setWordsOpen((v) => !v)}>Banned words</CollapsibleHeader>
       {wordsOpen && (

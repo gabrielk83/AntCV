@@ -125,6 +125,16 @@ function applyOnce(): void {
     return;
   }
 
+  // #4 (1.50.555, owner): the Writing-Style island now hosts the LanguageCard
+  // INLINE (above Banned). When that embedded card is present, the standalone
+  // stands down to avoid a duplicate. The embedded card is nested inside the
+  // writing-style island; the standalone lives in its own #REACT_CARD_ID, so
+  // this selector matches only the embedded one.
+  if (document.querySelector('[data-antcv-react-island="writing-style-picker"] [data-antcv-react-island="language-card"]')) {
+    unmountIfMounted();
+    return;
+  }
+
   const settingsRoot = findSettingsRoot();
   if (!settingsRoot) {
     unmountIfMounted();

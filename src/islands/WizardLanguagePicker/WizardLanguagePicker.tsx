@@ -23,11 +23,34 @@ import React, { useCallback, useEffect, useState } from 'react';
 // writeLangsViaStabilityCore + writePrimaryLanguage). React owns the
 // VIEW; the sidecar owns the COMMIT.
 
+// Full catalogue — parity with Settings (src/lib/lang-prefs.ts LANGS +
+// LanguageCard's NATIVE map). The wizard previously listed only en/da/es/zh, so
+// AVAILABLE LANGUAGES showed just Spanish/Chinese; it now offers the same set
+// the Settings language card does.
 const LANG_OPTIONS = [
-  { code: 'en', label: 'English',  native: 'English' },
-  { code: 'da', label: 'Danish',   native: 'Dansk' },
-  { code: 'es', label: 'Spanish',  native: 'Espanol' },
-  { code: 'zh', label: 'Chinese',  native: '中文' },
+  { code: 'en', label: 'English',     native: 'English' },
+  { code: 'da', label: 'Danish',      native: 'Dansk' },
+  { code: 'sv', label: 'Swedish',     native: 'Svenska' },
+  { code: 'no', label: 'Norwegian',   native: 'Norsk' },
+  { code: 'fi', label: 'Finnish',     native: 'Suomi' },
+  { code: 'es', label: 'Spanish',     native: 'Español' },
+  { code: 'zh', label: 'Chinese',     native: '中文' },
+  { code: 'fr', label: 'French',      native: 'Français' },
+  { code: 'de', label: 'German',      native: 'Deutsch' },
+  { code: 'it', label: 'Italian',     native: 'Italiano' },
+  { code: 'ar', label: 'Arabic',      native: 'العربية' },
+  { code: 'fa', label: 'Farsi',       native: 'فارسی' },
+  { code: 'he', label: 'Hebrew',      native: 'עברית' },
+  { code: 'ru', label: 'Russian',     native: 'Русский' },
+  { code: 'tr', label: 'Turkish',     native: 'Türkçe' },
+  { code: 'ku', label: 'Kurdish',     native: 'Kurdî' },
+  { code: 'sw', label: 'Swahili',     native: 'Kiswahili' },
+  { code: 'zu', label: 'Zulu',        native: 'isiZulu' },
+  { code: 'am', label: 'Amharic',     native: 'አማርኛ' },
+  { code: 'fo', label: 'Faroese',     native: 'Føroyskt' },
+  { code: 'kl', label: 'Greenlandic', native: 'Kalaallisut' },
+  { code: 'vi', label: 'Vietnamese',  native: 'Tiếng Việt' },
+  { code: 'th', label: 'Thai',        native: 'ไทย' },
 ] as const;
 
 type LangCode = (typeof LANG_OPTIONS)[number]['code'];

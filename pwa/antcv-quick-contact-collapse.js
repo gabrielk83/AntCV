@@ -18,7 +18,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.591-quick-contact';
+  var VERSION = '1.50.598-quick-contact';
   if (window.__antcvQuickContact === VERSION) return;
   window.__antcvQuickContact = VERSION;
 
@@ -156,6 +156,20 @@
     while (node && node.parentElement && node.parentElement !== col) node = node.parentElement;
     return (node && node.parentElement === col) ? node : null;
   }
+  // Fallback when `col` (from findColumn) isn't `node`'s container — e.g. the
+  // WritingStyle island re-parents the field rows, so the import box ends up a
+  // sibling in the OUTER flex column while findColumn lands on an inner one.
+  // Climb to the first ancestor whose parent is a flex COLUMN, and return that
+  // ancestor (the orderable flex child of that column).
+  function flexColumnItem(node) {
+    for (var i = 0; node && node.parentElement && i < 12; i++, node = node.parentElement) {
+      try {
+        var cs = getComputedStyle(node.parentElement);
+        if (cs.display === 'flex' && /column/.test(cs.flexDirection)) return node;
+      } catch (_) {}
+    }
+    return null;
+  }
   // First element anywhere whose trimmed text matches `re` (short text only).
   function elByText(re, max) {
     var all = document.querySelectorAll('button, a, div, span, label, p');
@@ -191,9 +205,12 @@
   }
 
   function liftIdentity(col, hdr, rows) {
-    // Import box — CSS order only (never moved): seat it FIRST.
+    // Import box — CSS order only (never moved): seat it FIRST (-8, ahead of
+    // Apply/Undo at -6). flexItem(col, …) failed because the import box isn't a
+    // child of the col findColumn lands on after the WritingStyle island re-parents
+    // the fields; flexColumnItem finds the box in its OWN flex column instead.
     var imp = document.querySelector('[data-antcv-import-replacement]') || elByText(/Import profile/i, 90);
-    setOrder(flexItem(col, imp), '-7');
+    setOrder(flexItem(col, imp) || flexColumnItem(imp), '-8');
     // Apply + Undo share one flex row → ordering the row covers both.
     setOrder(flexItem(col, elByText(/Apply to user profile|↻\s*Apply|↺\s*Apply/i, 60)), '-6');
     setOrder(flexItem(col, elByText(/Undo last/i, 40)), '-6');

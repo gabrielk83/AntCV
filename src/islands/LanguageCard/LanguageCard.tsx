@@ -72,8 +72,13 @@ function writeTense(v: Tense): void {
 }
 function readSpellEnabled(): boolean { try { return localStorage.getItem('antcv:spell:enabled') !== '0'; } catch { return true; } }
 function writeSpellEnabled(on: boolean): void { try { localStorage.setItem('antcv:spell:enabled', on ? '1' : '0'); } catch { /* */ } }
-function readEnVariant(): 'gb' | 'us' { try { return localStorage.getItem('antcv:spell:enVariant') === 'us' ? 'us' : 'gb'; } catch { return 'gb'; } }
-function writeEnVariant(code: 'gb' | 'us'): void {
+// SPELL-EN-VARIANT-002 — English markets with distinct spelling. UK default.
+const EN_VARIANTS: [string, string][] = [
+  ['gb', 'UK (British)'], ['us', 'US (American)'], ['in', 'India'],
+  ['ca', 'Canada'], ['au', 'Australia'], ['za', 'South Africa'],
+];
+function readEnVariant(): string { try { return localStorage.getItem('antcv:spell:enVariant') || 'gb'; } catch { return 'gb'; } }
+function writeEnVariant(code: string): void {
   try { localStorage.setItem('antcv:spell:enVariant', code); } catch { /* */ }
   try { (window as unknown as { AntcvSpell?: { _invalidate?: () => void } }).AntcvSpell?._invalidate?.(); } catch { /* */ }
   try { window.dispatchEvent(new CustomEvent('antcv:spell-variant-changed', { detail: { variant: code } })); } catch { /* */ }
@@ -111,13 +116,13 @@ export function LanguageCard(): JSX.Element {
   const [enabled, setEnabled] = useState<LangCode[]>(() => readEnabledLangs());
   const [tense, setTense] = useState<Tense>(() => readTense());
   const [spellOn, setSpellOn] = useState<boolean>(() => readSpellEnabled());
-  const [enVariant, setEnVariant] = useState<'gb' | 'us'>(() => readEnVariant());
+  const [enVariant, setEnVariant] = useState<string>(() => readEnVariant());
   const [esVariant, setEsVariant] = useState<string>(() => readEsVariant());
   const [spellLangs, setSpellLangs] = useState<Record<string, boolean>>(() => readSpellLangs());
 
   const onTense = useCallback((v: Tense) => { writeTense(v); setTense(v); }, []);
   const onSpellOn = useCallback((on: boolean) => { writeSpellEnabled(on); setSpellOn(on); }, []);
-  const onEnVariant = useCallback((c: 'gb' | 'us') => { writeEnVariant(c); setEnVariant(c); }, []);
+  const onEnVariant = useCallback((c: string) => { writeEnVariant(c); setEnVariant(c); }, []);
   const onEsVariant = useCallback((c: string) => { writeEsVariant(c); setEsVariant(c); }, []);
   const onSpellLang = useCallback((code: string, on: boolean) => { writeSpellLang(code, on); setSpellLangs((p) => ({ ...p, [code]: on })); }, []);
 
@@ -271,11 +276,12 @@ export function LanguageCard(): JSX.Element {
             <span>English:</span>
             <select
               value={enVariant}
-              onChange={(e) => onEnVariant(e.currentTarget.value as 'gb' | 'us')}
-              style={{ padding: '4px 8px', fontSize: 11, borderRadius: 6, border: '1px solid rgba(255,255,255,.18)', background: 'rgba(255,255,255,.06)', color: '#fff', cursor: 'pointer' }}
+              onChange={(e) => onEnVariant(e.currentTarget.value)}
+              style={{ padding: '4px 8px', fontSize: 11, borderRadius: 6, border: '1px solid rgba(255,255,255,.18)', background: 'rgba(255,255,255,.06)', color: '#fff', cursor: 'pointer', maxWidth: '100%' }}
             >
-              <option value="gb" style={{ background: '#283556', color: '#e6eef3' }}>UK (British)</option>
-              <option value="us" style={{ background: '#283556', color: '#e6eef3' }}>US (American)</option>
+              {EN_VARIANTS.map(([code, label]) => (
+                <option key={code} value={code} style={{ background: '#283556', color: '#e6eef3' }}>{label}</option>
+              ))}
             </select>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '7px 0 0', flexWrap: 'wrap', fontSize: 11, color: 'rgba(255,255,255,.7)' }}>

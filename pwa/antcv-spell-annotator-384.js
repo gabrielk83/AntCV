@@ -28,7 +28,7 @@
   'use strict';
 
   if (window.__antcvSpellAnnotatorInstalled) return;
-  var VERSION = '1.50.546';
+  var VERSION = '1.50.547';
   window.__antcvSpellAnnotatorInstalled = VERSION;
 
   // SPELL-EN-VARIANT-001 (owner 2026-06-13): English defaults to UK (en-GB);
@@ -37,6 +37,14 @@
   var DICT_PKG = {
     'en-gb': 'dictionary-en-gb',
     'en-us': 'dictionary-en-us',
+    // SPELL-EN-VARIANT-002 (owner 2026-06-17): more large English markets whose
+    // spelling differs. India follows British conventions (en-in pkg may be
+    // absent → falls back to en-gb in loadDict, the right base). Canada/
+    // Australia/South Africa have their own Hunspell dictionaries.
+    'en-in': 'dictionary-en-in',  // India
+    'en-ca': 'dictionary-en-ca',  // Canada
+    'en-au': 'dictionary-en-au',  // Australia
+    'en-za': 'dictionary-en-za',  // South Africa
     da: 'dictionary-da',
     es: 'dictionary-es',
     // SPELL-ES-VARIANT-001 (owner 2026-06-17): regional Spanish, mirroring the
@@ -52,7 +60,7 @@
     'es-gq': 'dictionary-es-gq',  // Guinea Ecuatorial
   };
   function enVariant() {
-    try { return localStorage.getItem('antcv:spell:enVariant') === 'us' ? 'us' : 'gb'; }
+    try { var v = localStorage.getItem('antcv:spell:enVariant'); return (v && DICT_PKG['en-' + v]) ? v : 'gb'; }
     catch (_) { return 'gb'; }
   }
   function esVariant() {
@@ -160,9 +168,10 @@
       if (cached && cached.aff && cached.dic) return cached;
     }
     var rec = await fetchDictPkg(key);
-    // SPELL-ES-VARIANT-001: a regional Spanish package that isn't on the CDN
-    // falls back to the generic `dictionary-es` so spelling still works.
+    // Regional package missing on the CDN → fall back to the language base so
+    // spelling still works. es-* → generic es; en-* → en-gb (British base).
     if (!rec && /^es-/.test(key)) rec = await fetchDictPkg('es');
+    if (!rec && /^en-/.test(key) && key !== 'en-gb') rec = await fetchDictPkg('en-gb');
     if (!rec) throw new Error('dictionary fetch failed for ' + key);
     if (db) await idbPut(db, key, rec);
     return rec;

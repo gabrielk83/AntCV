@@ -41,7 +41,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.546-handoff';
+  var VERSION = '1.50.547-handoff';
   if (window.__antcvWizardLanguageSlide339 === VERSION) return;
   window.__antcvWizardLanguageSlide339 = VERSION;
 
@@ -209,7 +209,8 @@
   }
   function spellEnabled() { try { return localStorage.getItem('antcv:spell:enabled') !== '0'; } catch (_) { return true; } }
   function spellSetEnabled(on) { try { if (window.AntcvSpell && window.AntcvSpell.setEnabled) window.AntcvSpell.setEnabled(on); else localStorage.setItem('antcv:spell:enabled', on ? '1' : '0'); } catch (_) {} }
-  function enVariantRead() { try { return localStorage.getItem('antcv:spell:enVariant') === 'us' ? 'us' : 'gb'; } catch (_) { return 'gb'; } }
+  var EN_VARIANTS = [['gb', 'UK (British)'], ['us', 'US (American)'], ['in', 'India'], ['ca', 'Canada'], ['au', 'Australia'], ['za', 'South Africa']];
+  function enVariantRead() { try { return localStorage.getItem('antcv:spell:enVariant') || 'gb'; } catch (_) { return 'gb'; } }
   function enVariantWrite(code) {
     try { localStorage.setItem('antcv:spell:enVariant', code); } catch (_) {}
     try { if (window.AntcvSpell && window.AntcvSpell._invalidate) window.AntcvSpell._invalidate(); } catch (_) {}
@@ -288,7 +289,7 @@
     var vSel = document.createElement('select');
     vSel.style.cssText = 'padding:4px 8px;font-size:11px;border-radius:6px;border:1px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.06);color:#fff;cursor:pointer;';
     vSel.style.setProperty('pointer-events', 'auto', 'important');
-    [['gb', 'UK (British)'], ['us', 'US (American)']].forEach(function (pair) {
+    EN_VARIANTS.forEach(function (pair) {
       var o = document.createElement('option');
       o.value = pair[0]; o.textContent = pair[1];
       o.style.cssText = 'background:#1a1a2a;color:#fff;';

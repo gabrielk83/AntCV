@@ -32,6 +32,22 @@ function hideLegacyWritingStyleSelect(settingsRoot: HTMLElement): void {
   }
 }
 
+// SETTINGS-JUMP-001 (owner 2026-06-18): the app.js native WRITING STYLE block
+// (label + the now-hidden select + the long "Restraint…" description) paints
+// BEFORE this island mounts, so every time Personal opens the user sees the native
+// layout flash and then jump to the island layout. The island renders its OWN
+// complete WRITING STYLE header + dropdown + description (see WritingStylePicker
+// ~1150), so the native block is pure duplication — hide the WHOLE wrapper (not
+// just the select) the instant we find it, so the native version never shows.
+function hideNativeWritingStyleBlock(settingsRoot: HTMLElement): void {
+  const ws = findWritingStyleControl(settingsRoot);
+  if (!ws || ws.id === MOUNT_ID || ws.closest(`#${MOUNT_ID}`)) return;
+  if (ws.style.display !== 'none') {
+    ws.setAttribute('data-antcv-native-ws-hidden', '1');
+    ws.style.setProperty('display', 'none', 'important');
+  }
+}
+
 let root: Root | null = null;
 let container: HTMLElement | null = null;
 
@@ -69,6 +85,10 @@ function ensureMountContainer(settingsRoot: HTMLElement): HTMLElement {
   c = document.createElement('div');
   c.id = MOUNT_ID;
   c.setAttribute('data-antcv-react-mount', 'writing-style-picker');
+  // Reserve the island's vertical space from creation so the section list below
+  // (BACKGROUND / CV SIDEBAR / …) doesn't jump down when the island paints. Cleared
+  // to natural height in applyOnce once the island has rendered children.
+  c.style.minHeight = '220px';
 
   // Prefer anchoring just ABOVE the app.js WRITING STYLE control (top of
   // Personal). Fall back to above the PackagePicker, then the Done button.
@@ -113,9 +133,17 @@ function applyOnce(): void {
     root = createRoot(container);
     root.render(createElement(WritingStylePicker));
   }
-  // Hide the duplicate legacy writing-style <select> (re-run each pass — app.js
-  // re-renders the Personal column on state churn, re-adding the select).
+  // Hide the duplicate legacy writing-style <select> AND the whole native WRITING
+  // STYLE block (re-run each pass — app.js re-renders the Personal column on state
+  // churn, re-adding them), so the native layout never flashes before the island.
   try { hideLegacyWritingStyleSelect(settingsRoot); } catch { /* */ }
+  try { hideNativeWritingStyleBlock(settingsRoot); } catch { /* */ }
+  // Release the reserved height once the island has actually painted, so its real
+  // (possibly taller/shorter) content isn't clipped or over-padded.
+  if (container) {
+    if (container.firstElementChild) container.style.minHeight = '';
+    else if (!container.style.minHeight) container.style.minHeight = '220px';
+  }
 }
 
 let booted = false;

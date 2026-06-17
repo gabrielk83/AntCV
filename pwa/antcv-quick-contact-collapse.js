@@ -18,7 +18,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.575-quick-contact';
+  var VERSION = '1.50.577-quick-contact';
   if (window.__antcvQuickContact === VERSION) return;
   window.__antcvQuickContact = VERSION;
 
@@ -109,6 +109,39 @@
     h.setAttribute('aria-expanded', open ? 'true' : 'false');
   }
 
+  // The direct child of `col` that contains the input whose placeholder includes
+  // `ph` (used to find the Full Name + Headline rows so the whole identity block
+  // can be ordered above the writing-style block).
+  function topRowByPlaceholder(col, ph) {
+    var inputs = col.querySelectorAll('input');
+    for (var i = 0; i < inputs.length; i++) {
+      if (String(inputs[i].placeholder || '').indexOf(ph) < 0) continue;
+      var n = inputs[i];
+      while (n && n.parentElement && n.parentElement !== col) n = n.parentElement;
+      if (n && n.parentElement === col) return n;
+    }
+    return null;
+  }
+
+  // IDENTITY-ABOVE-STYLE (owner 2026-06-17): the app.js WRITING STYLE control +
+  // description render ABOVE the Full Name field, and the writing-style island
+  // anchors above that — so identity sat below writing style. The Personal panel
+  // is an order-based flex column, so float the identity block (Full Name +
+  // Headline + the Quick-contact header + contact rows) to the top with a
+  // negative CSS order. Re-applied each pass (React resets inline styles).
+  function liftIdentity(col, hdr, rows) {
+    var ids = [];
+    var fn = topRowByPlaceholder(col, 'Jane Doe');           // Full Name
+    var hl = topRowByPlaceholder(col, 'Senior Project Manager'); // Headline
+    if (fn) ids.push(fn);
+    if (hl) ids.push(hl);
+    if (hdr) ids.push(hdr);
+    for (var i = 0; i < rows.length; i++) ids.push(rows[i]);
+    for (var j = 0; j < ids.length; j++) {
+      if (ids[j].style.order !== '-1') ids[j].style.order = '-1';
+    }
+  }
+
   function apply() {
     var found = findColumn();
     if (!found) return;
@@ -131,6 +164,10 @@
       var want = open ? '' : 'none';
       if (rows[i].style.display !== want) rows[i].style.display = want;
     }
+
+    // Float the identity block (Full Name + Headline + this header + contact
+    // rows) above the writing-style block in the order-based flex column.
+    try { liftIdentity(col, hdr, rows); } catch (_) {}
   }
 
   var scheduled = false;

@@ -98,6 +98,13 @@
        renders as a black box on Windows OS dark mode. Scoped to controls — the
        dark-themed islands set explicit colors and are unaffected. */
     textarea,input,select,option{color-scheme:light;}
+    /* ORPHAN-PRETTY-001 (owner 2026-06-18: "much tighter orphan treatment - see
+       how many there are"): text-wrap:pretty makes the browser avoid leaving a
+       single short word alone on the last line of a bullet/cell/paragraph. It is
+       inherited, so setting it on the preview paper cascades to all CV text;
+       engines that don't support it ignore it (no layout change). Preview only -
+       the worker/CloudConvert export is a separate path. */
+    .antcv-preview-paper{text-wrap:pretty;}
     ::-webkit-scrollbar{width:4px;}
     ::-webkit-scrollbar-thumb{background:#01B7BB55;border-radius:2px;}
     @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}

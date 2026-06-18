@@ -190,6 +190,37 @@ export function PackagePicker({ initialMode, context = 'personal' }: Props): JSX
 
   const pkg = PACKAGES[state.packageId];
 
+  // QUICK-ALT-LAYOUT-001 (owner 2026-06-18): the interactive default/alt1/alt2
+  // selector, shared by the Layout card and the Personal "Quick alt." tab. Both
+  // call selectQuickAlt → writePackageState → the SAME package state + the
+  // antcv:package-changed event, so the Layout card stays in sync with the native
+  // STYLE PACKAGE card automatically.
+  const quickAltButtons = (['default', 'alt1', 'alt2'] as QuickAlt[]).map((alt) => {
+    const isActive = state.quickAlt === alt && !state.isCustom;
+    const head = alt === 'default' ? pkg.primary : alt === 'alt1' ? pkg.alt1.head : pkg.alt2.head;
+    const sidebar = alt === 'default' ? pkg.base : alt === 'alt1' ? pkg.alt1.sidebar : pkg.alt2.sidebar;
+    const label = alt === 'default' ? 'Default' : alt === 'alt1' ? 'Alt 1' : 'Alt 2';
+    return (
+      <button
+        key={alt}
+        type="button"
+        onClick={() => selectQuickAlt(alt)}
+        aria-pressed={isActive}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8,
+          background: isActive ? 'rgba(1,183,187,.14)' : 'rgba(255,255,255,.04)',
+          border: '1px solid ' + (isActive ? 'rgba(1,183,187,.55)' : 'rgba(255,255,255,.14)'),
+          color: '#e6eef3', cursor: 'pointer', textAlign: 'left',
+        }}
+      >
+        <Swatch color={head} ring={isActive} />
+        <Swatch color={sidebar} />
+        <span style={{ fontWeight: 650 }}>{label}</span>
+        <span style={{ marginLeft: 'auto', fontSize: 11, opacity: 0.65 }}>{head} / {sidebar}</span>
+      </button>
+    );
+  });
+
   return (
     <section
       data-antcv-react-island="package-picker"
@@ -230,11 +261,15 @@ export function PackagePicker({ initialMode, context = 'personal' }: Props): JSX
       </div>
 
       {isLayout ? (
-        // The native STYLE PACKAGE buttons above already own package
-        // selection AND expose the ready-made quick-alternatives (the colour
-        // pairs shown on each button). This card must NOT re-implement that
-        // selector — it only explains the two within-package behaviours.
-        <LayoutNotes packageName={pkg.displayName} isCustom={state.isCustom} />
+        // QUICK-ALT-LAYOUT-001 (owner 2026-06-18): show the interactive alt1/alt2
+        // selector here too (was notes-only). Synced with the STYLE PACKAGE card
+        // via the shared writePackageState + antcv:package-changed event.
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <span style={{ fontSize: 12, opacity: 0.7 }}>
+            Within <strong>{pkg.displayName}</strong> — two ready-made head/sidebar pairs that are part of the package (picking one stays on the package, not Custom). Synced with the STYLE PACKAGE buttons above.
+          </span>
+          {quickAltButtons}
+        </div>
       ) : (
         <>
           <div role="tablist" style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
@@ -283,39 +318,7 @@ export function PackagePicker({ initialMode, context = 'personal' }: Props): JSX
               <span style={{ fontSize: 12, opacity: 0.7 }}>
                 Within the selected visual style (<strong>{pkg.displayName}</strong>). Two ready-made head/sidebar pairs are part of the package — picking one does not switch to Custom.
               </span>
-              {(['default', 'alt1', 'alt2'] as QuickAlt[]).map((alt) => {
-                const isActive = state.quickAlt === alt && !state.isCustom;
-                const head = alt === 'default' ? pkg.primary : alt === 'alt1' ? pkg.alt1.head : pkg.alt2.head;
-                const sidebar = alt === 'default' ? pkg.base : alt === 'alt1' ? pkg.alt1.sidebar : pkg.alt2.sidebar;
-                const label = alt === 'default' ? 'Default' : alt === 'alt1' ? 'Alt 1' : 'Alt 2';
-                return (
-                  <button
-                    key={alt}
-                    type="button"
-                    onClick={() => selectQuickAlt(alt)}
-                    aria-pressed={isActive}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                      padding: '8px 10px',
-                      borderRadius: 8,
-                      background: isActive ? 'rgba(1,183,187,.14)' : 'rgba(255,255,255,.04)',
-                      border: '1px solid ' + (isActive ? 'rgba(1,183,187,.55)' : 'rgba(255,255,255,.14)'),
-                      color: '#e6eef3',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                    }}
-                  >
-                    <Swatch color={head} ring={isActive} />
-                    <Swatch color={sidebar} />
-                    <span style={{ fontWeight: 650 }}>{label}</span>
-                    <span style={{ marginLeft: 'auto', fontSize: 11, opacity: 0.65 }}>
-                      {head} / {sidebar}
-                    </span>
-                  </button>
-                );
-              })}
+              {quickAltButtons}
             </div>
           )}
 

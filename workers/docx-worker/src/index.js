@@ -24580,7 +24580,7 @@ function buildTwoColumnDocument(ctx) {
   // ctx.aiWmSide ('left'|'right', the measured larger-gap side) picks the
   // horizontal corner; default right. The anchor paragraph is pushed into the
   // LAST page's main cell below, so it always renders on the final page only.
-  const aiWmCorner = ctx.aiWmSide === "left" || ctx.aiWmSide === "right" ? ctx.aiWmSide : "right";
+  const aiWmHint = ctx.aiWmSide === "left" || ctx.aiWmSide === "right" ? ctx.aiWmSide : null;
   const sidebarChildren = [
     // 1.14.53: the vertical-seam medallion anchors on a zero-height paragraph
     // at the TOP of the page-1 sidebar (its floating position is page-relative,
@@ -24657,6 +24657,21 @@ function buildTwoColumnDocument(ctx) {
   // main cell so the bottom-anchored VML frame postProcessDocx injects renders
   // once, on the last page, regardless of which column's content ends first.
   if (!mainPages[numPages - 1]) mainPages[numPages - 1] = [];
+  // WATERMARK-SIDE-001 (owner 2026-06-18): the AI notice goes in the column whose
+  // LAST page has LESS text. The worker paginates independently of the preview, so
+  // its OWN last-page split is authoritative for the export: the column with fewer
+  // last-page paragraphs is the lighter side, mapped to its physical corner. The
+  // preview's measured hint is only a tiebreaker when the last pages tie; default
+  // right. (Was: blindly trust the hint, else default right — which landed on the
+  // dense side when the hint was stale/unset.)
+  const __lastMainN = (mainPages[numPages - 1] || []).length;
+  const __lastSideN = (sidebarPages[numPages - 1] || []).length;
+  const __sbPhys = sidebarOnRight ? "right" : "left";
+  const __mnPhys = sidebarOnRight ? "left" : "right";
+  let aiWmCorner;
+  if (__lastSideN < __lastMainN) aiWmCorner = __sbPhys;
+  else if (__lastMainN < __lastSideN) aiWmCorner = __mnPhys;
+  else aiWmCorner = aiWmHint || "right";
   mainPages[numPages - 1].push(buildAiDisclosureHangingTextbox(ctx, { side: aiWmCorner }));
   // ADV-SPACING-CONTROLS-001 (1.14.60, owner 2026-06-12): the PWA's spacing
   // sliders. Forwarded only when off their defaults; vertical pads apply as
@@ -26493,7 +26508,15 @@ function renderSimpleList(s, ctx, isSidebar, italic) {
         new TextRun({ ...baseRun, text: stripHtml(name), bold: true, italics: true })
       ];
       if (rest) {
-        children.push(new TextRun({ ...baseRun, text: " \u2014 " + stripHtml(rest) }));
+        // PUB-CHAIN-001 (owner 2026-06-18): a NON-ACADEMIC CV shows the publication
+        // TITLE + YEAR only \u2014 drop the journal/volume/publisher/pages chain. The
+        // academic (research-formal) register keeps the full citation.
+        if (isAcademic) {
+          children.push(new TextRun({ ...baseRun, text: " \u2014 " + stripHtml(rest) }));
+        } else {
+          const __ym = String(rest).match(/\b(1[89]\d\d|20\d\d)\b/);
+          if (__ym) children.push(new TextRun({ ...baseRun, text: " \u2014 " + __ym[1] }));
+        }
       }
     } else {
       children = inlineRuns(item, { ...baseRun, italics: italic });
@@ -27277,7 +27300,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   the anchor's spacing-after from (px/2+14) to (px/2-12) so the first sidebar
 //   section sits just under the medallion (~0.27in higher; the full 0.6in would
 //   overlap the photo at the default diameter).
-var VERSION = "1.14.76-cl-width-cap";
+var VERSION = "1.14.77-watermark-side-pubchain";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

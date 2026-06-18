@@ -1,3 +1,12 @@
+## Owner batch 2026-06-18 (PM3, 1.50.649 → 652) — generation-quality + UX
+
+- **ADDITIONAL-EXPLODE-001** `[CLOSED 1.50.649]` — owner: "have these sidebar subsections in commercial CV by default." `antcv-sections-normalize-415.js` new `explodeAdditionalToSections` splits ADDITIONAL INFORMATION into separate LANGUAGES / INTERESTS / ACCESSIBILITY sidebar sections (each its own ON toggle), placed where ADDITIONAL was. Idempotent (skips a bucket whose section exists → owner's current split preserved); Other items stay in a trimmed ADDITIONAL. Runs before the {group} partitioner. Unit-tested.
+- **BANNER-ENDS-EARLY-002** `[CLOSED 1.50.650]` — owner "heart attack": the purple status ended at the kernel commit but content generation continued (semi-empty template, work resumed 30s later). `antcv-showcase-banner-persist.js genActive()` now also treats `step="generating"` as in-progress, so the banner spans the whole generation; quiesce 2.5s→6s, cap 60s→180s.
+- **TABLES-DISTINCT-001 strengthened** `[1.50.651 — regen-gated]` — owner: CORE COMPETENCIES still repeats WHAT I BRING Focus Areas + Nordic cells wrap 2-3 lines. Hardened the prompt: explicit side-by-side ZERO-overlap check w/ example; hard cell caps (WHAT I BRING ~48 chars/1 line, CORE ~28 chars/half line, Nordic never wraps). **Needs regen.** Note: a deterministic removal of overlapping CORE rows was rejected (leaves CORE too sparse) — the LLM must produce distinct rows.
+- **ORPHAN-PRETTY-001** `[1.50.652 — preview]` — owner: "much tighter orphan treatment." `text-wrap:pretty` on `.antcv-preview-paper` (inherited) so the browser avoids single-word last lines. PREVIEW only. **OPEN follow-up:** export/CloudConvert orphans need an NBSP-binding pass on the content sent to the worker (LibreOffice ignores `text-wrap:pretty`); only the manual `fix_orphans` LLM task exists today.
+
+---
+
 ## OPEN — owner batch 2026-06-18 (PM, after 1.50.642) — full detail in `docs/qa/OWNER-BATCH-2026-06-18-PM2.md`
 
 High-level-generation + structure bugs the owner reported after the 640-642 run.

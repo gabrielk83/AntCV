@@ -19,15 +19,23 @@
 (function () {
   'use strict';
   if (window.__antcvShowcaseBannerPersist) return;
-  window.__antcvShowcaseBannerPersist = '1.50.632';
+  window.__antcvShowcaseBannerPersist = '1.50.650';
   if (typeof document === 'undefined') return;
   try { var d = localStorage.getItem('antcv:disable-showcase-banner-persist'); if (d === '1' || d === 'true') return; } catch (_) {}
 
   var NATIVE_ID = 'antcv-showcase-progress-banner';
   var CLONE_ID = 'antcv-showcase-progress-banner-persist';
   var BODY_CLASS = 'antcv-banner-active';
-  var QUIESCE_MS = 2500;   // editor counts as settled after this much DOM-quiet
-  var MAX_MS = 60000;      // hard cap so the continuation can never get stuck
+  // BANNER-ENDS-EARLY-002 (owner 2026-06-18: "the purple status is done even
+  // though there was a lot of work still - I had a heart attack at a semi-empty
+  // template, and 30s later the work resumed"). The kernel showcase commits and
+  // clears its flag, but the CONTENT generation (step "generating") keeps running
+  // with DOM-quiet lulls while it waits on the LLM. genActive() now ALSO treats
+  // step="generating" as in-progress, so the banner spans the whole generation,
+  // not just the kernel commit. Longer quiesce + cap match the owner's stated
+  // preference (keep it up too long over ending too early).
+  var QUIESCE_MS = 6000;   // editor counts as settled after this much DOM-quiet
+  var MAX_MS = 180000;     // hard cap (3 min) so the continuation can't get stuck
   var TICK_MS = 500;
 
   var savedHTML = '', savedStyle = '';
@@ -39,7 +47,14 @@
   function native() { return document.getElementById(NATIVE_ID); }
   function cloneEl() { return document.getElementById(CLONE_ID); }
   function genActive() {
-    try { var v = localStorage.getItem('kernelShowcaseInProgress'); return v === 'true' || v === '1'; } catch (_) { return false; }
+    try {
+      var v = localStorage.getItem('kernelShowcaseInProgress');
+      if (v === 'true' || v === '1') return true;
+      // The main generate flow stores u.set('step','generating') -> '"generating"'.
+      var step = localStorage.getItem('step');
+      if (step && /generating/i.test(step)) return true;
+    } catch (_) {}
+    return false;
   }
 
   // Heavy subtree observer runs ONLY while the continuation clone is up — bumps
@@ -108,7 +123,7 @@
   try { if (native()) onBody(); } catch (_) {}
 
   window.AntcvShowcaseBannerPersist = {
-    version: '1.50.632',
+    version: '1.50.650',
     _active: function () { return !!cloneEl(); },
     _stop: removeContinuation
   };

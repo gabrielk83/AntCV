@@ -34,11 +34,17 @@ sort, same dedup) and kill the preview repetition. See [[two-tables-mirror-and-r
 [[v2-kernel-lamination-shape]], [[domain-and-outcomes-parity]]. Verify by rendering GABRIEL_BG
 (permission #6) — Preview Results must match the PDF Results exactly.
 
-### 2. Page-break (autobrake) misplaced
-The auto page-break landed AFTER "System Architect, Innoviz" instead of BEFORE it, splitting the
-role across the page boundary. The break should fall BEFORE a role, not mid-role. autoPages /
-[[salmon-splitter-permanent]] / [[pagination-two-map-and-worker-test]]. Verify the salmon split +
-the worker export both break before the role.
+### 2. Page-break (autobrake) misplaced + manual break is row-scoped, not section-scoped
+(a) The auto page-break landed AFTER "System Architect, Innoviz" instead of BEFORE it, splitting the
+role across the page boundary. The break should fall BEFORE a role, not mid-role.
+(b) OWNER 2026-06-19: the MANUAL page-break button (↧ "Move this row and all following rows to next
+page", `data-antcv-pb-icon-fixed`; glyph from antcv-page-break-icon-357.js, behaviour from the
+row-level `antcv:itemPages` model) only splits the CURRENT section's table — "nothing under the
+table (Professional Experience) moves to page 2." The itemPages model is per-section-per-row, so a
+core_comp row set to page 2 splits that table but does NOT push subsequent SECTIONS. Needed: a
+section-level "everything from here down → next page" break that the salmon split + worker export
+both honour. autoPages / [[salmon-splitter-permanent]] / [[pagination-two-map-and-worker-test]].
+Verify the salmon split AND the worker export both break before the role / push following sections.
 
 ### 3. AI-Notice overlap
 The AI watermark/notice rams into the END of the longer (main) column in the CV. Rule
@@ -51,6 +57,12 @@ REGEN, but the LAMINATED Results (`applyOutcomesMode`) + role bullets render in 
 Either confirm a present regen fixes it (permission #6), or add a render-time leading-verb tense
 pass (Owned→Own, Built→Build, Reduced→Reduce, Directed→Direct, Cut→Cut, Secured→Secure) applied to
 laminated Results + role bullets when `expTense` is 'present'|'past'. Keep preview ↔ export parity.
+
+### 5. Core-competencies CJLR export parity (shipped preview side 1.50.692)
+Preview now honours the native CJLR (`section.rowAlign[]`) with header=center / body=justify
+defaults (234 sidecar `getAlign` reads rowAlign; it was overriding it before). REMAINING: the
+docx-worker rowAlign default must MATCH (header center, body justify) so export = preview; today the
+worker likely defaults left → a preview≠PDF gap (ties into item 1). Verify by rendering GABRIEL_BG.
 
 ## OWNER-VERIFY / NEEDS-A-CLICK (don't blind-fix)
 - **Core Competencies duplicate controls** (3 page-breaks + 2 CJLR per row): owner must identify

@@ -6,7 +6,7 @@
  */
 (function(){
   'use strict';
-  const VERSION = '1.50.691-core-controls';
+  const VERSION = '1.50.692-cjlr-native';
   // v1.40.242-preview-guard: Preview is button-free. Reject seeds and
   // hosts inside .antcv-preview-paper.
   const isInPreviewPaper = el => { if(!el) return false; const p=document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]'); return !!(p && p.contains(el)); };
@@ -32,9 +32,17 @@
   // choice (stored in the align map) still wins for any row. Previously row 0
   // also defaulted left, so this sidecar force-left the header cells in the
   // preview even though every export path centers them.
-  // CJLR-DEFAULT-CENTER-001 (owner 2026-06-19: "Default - centered"): header (row 0)
-  // AND body rows now default to CENTER. An explicit CJLR choice still wins per row.
-  function getAlign(i){ const v=readAlignMap()['row-'+i]; if(ALIGN.includes(v)) return v; return 'center'; }
+  // CJLR-RESPECT-NATIVE-001 (owner 2026-06-19: "CJLR seems not to work … locked to
+  // center"): this sidecar's applyPreview was OVERRIDING the native CJLR every sweep.
+  // The native table CJLR writes the section's own `rowAlign[]` (app.js, since
+  // 1.50.250). Read THAT here so the native control actually drives the preview.
+  // Precedence: legacy ALIGN_KEY override -> native section.rowAlign[i] -> default
+  // (header row 0 = CENTER, body = JUSTIFIED, per owner 2026-06-19).
+  function getAlign(i){
+    const v=readAlignMap()['row-'+i]; if(ALIGN.includes(v)) return v;
+    try { const sec=coreSection(); const ra=sec && Array.isArray(sec.rowAlign) ? sec.rowAlign[i] : null; if(ALIGN.includes(ra)) return ra; } catch(_){}
+    return i===0 ? 'center' : 'justify';
+  }
   function setAlign(i,v){ const m=readAlignMap(); m['row-'+i]=v; writeAlignMap(m); }
   function nextAlign(v){ return ALIGN[(Math.max(0, ALIGN.indexOf(v))+1)%ALIGN.length]; }
 

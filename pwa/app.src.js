@@ -2748,6 +2748,13 @@
       r.push(
         "SELECTED OUTCOMES SELECTION (OUTCOMES-QUANT-001): choose the candidate's MOST QUANTIFIED, highest-impact results — prefer bullets carrying a number, percentage, time/cost delta, scale or named scope (e.g. a cycle-time reduction like \"250 → 10 days\", a \"90% cost reduction\", counts of programmes/vendors). A patent or publication is NEVER a SELECTED OUTCOMES bullet — patents live in the patents/publications subsection only; do not spend an outcomes slot on a patent number. If several quantified results exist, lead with the largest measurable deltas.",
       );
+      // DASH-HYPHEN-001 (owner 2026-06-18): the generation OUTPUT must use the
+      // plain hyphen only. The em-dash sidecar mops the stored blob, but the
+      // model should never emit a long dash in the first place — this also
+      // covers prose the sidecar's content walk does not re-read.
+      r.push(
+        "PUNCTUATION - DASHES (DASH-HYPHEN-001): use ONLY the plain hyphen '-' in ALL generated text - sentences, titles, role/company separators, labels, and number or date ranges. NEVER output an em dash (the long '—') or an en dash ('–') anywhere. Write ranges with a hyphen: '2017-2025', not '2017–2025'; '250 to 10 days' or '250-10 days', not '250 — 10 days'. Where you would normally write a dash between clauses, use a hyphen ' - ' or recast the sentence with a comma or period. This rule overrides any stylistic instinct for typographic dashes.",
+      );
       // PERSONALITY-KERNEL-001 (owner 2026-06-12, handoff T8 — canonical
       // source: skills/antcv-writer/assets/gabriel-kernel-personality-v1.json).
       // A stored personalInfo.personality object overrides the embedded

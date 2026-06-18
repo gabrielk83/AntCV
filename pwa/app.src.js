@@ -16761,7 +16761,7 @@
           "context-rich":
             "Context-Rich — Narrative voice. Sentence-shaped bullets explaining why each move mattered, not just what was done. Best for humanities, education, NGO, communications, LATAM commercial. Legacy alias: LATAM. Chips bias: narrative, reasoned, why-led.",
           "cold-outreach":
-            "Cold Outreach — Possibility framing; brevity; speculative openers; shorter bullets; conversational tone. For approaching companies with no posted role — opens a conversation, doesn't close a sale. Legacy alias: Unsolicited. Chips bias: speculative, brief, conversational.",
+            "Cold Outreach — Possibility framing; brevity; speculative openers; shorter bullets; conversational tone. For approaching companies with no posted role - opens a conversation, doesn't close a sale. Legacy alias: Unsolicited. Chips bias: speculative, brief, conversational.",
           "research-formal":
             "Research Formal — Academic register. Frame contributions as research outputs, not commercial wins; research questions, methodological contributions, publications, citations, grants. Best for PhD, postdoc, faculty, research scientist. Legacy alias: Academic / Research. Chips bias: academic, methodological, publication-anchored.",
           "hybrid-balanced":
@@ -30023,7 +30023,7 @@
                 i(
                   "cold-outreach",
                   "Cold Outreach",
-                  "Brief, conversational. For approaching companies with no posted role — opens a conversation, doesn't close a sale.",
+                  "Brief, conversational. For approaching companies with no posted role - opens a conversation, doesn't close a sale.",
                   null,
                 ),
                 i(

@@ -6097,7 +6097,7 @@
                       React.createElement("i", null, o.title),
                     )
                   : null,
-                o.title && __det ? " — " : "",
+                o.title && __det ? " - " : "",
                 __det,
               );
             }),
@@ -29471,7 +29471,7 @@
                             ((t = JSON.parse(n)),
                               t && t.error
                                 ? ((e = t.error),
-                                  t.hint && (e += " — " + t.hint))
+                                  t.hint && (e += " - " + t.hint))
                                 : n && (e += ": " + n.slice(0, 200)));
                           } catch (t) {
                             n && (e += ": " + n.slice(0, 200));
@@ -37409,7 +37409,7 @@
                                         )
                                       : null,
                                     (e.jd_company || "") +
-                                      (e.jd_company && e.jd_role ? " — " : "") +
+                                      (e.jd_company && e.jd_role ? " - " : "") +
                                       (e.jd_role || "") ||
                                       "Application #" + e.id,
                                   ),
@@ -40119,7 +40119,7 @@
                                                   (a && t.push(String(a)),
                                                     (n = t
                                                       .filter(Boolean)
-                                                      .join(" — ")));
+                                                      .join(" - ")));
                                                 }
                                                 return t || n
                                                   ? { deg: t, sch: n }
@@ -43721,7 +43721,7 @@
                                 },
                               },
                               (e.jd_company || "") +
-                                (e.jd_company && e.jd_role ? " — " : "") +
+                                (e.jd_company && e.jd_role ? " - " : "") +
                                 (e.jd_role || "") || "Application #" + e.id,
                             ),
                             React.createElement(
@@ -43752,7 +43752,7 @@
                                 } catch (e) {}
                                 if (
                                   confirm(
-                                    `Delete saved application "${(e.jd_company || "") + (e.jd_role ? " — " + e.jd_role : "")}"?\n\nThis only removes the saved entry. Your current CV/CL in the editor is not affected.`,
+                                    `Delete saved application "${(e.jd_company || "") + (e.jd_role ? " - " + e.jd_role : "")}"?\n\nThis only removes the saved entry. Your current CV/CL in the editor is not affected.`,
                                   )
                                 )
                                   try {

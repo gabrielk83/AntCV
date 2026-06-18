@@ -17451,7 +17451,13 @@
           }
           if (t > 40) {
             const e = Math.max(80, Math.min(155, Math.round(t - 12)));
-            Qo((t) => (t === e ? t : e));
+            // PHOTO-AUTOSIZE-185-001 (owner 2026-06-18, captured React #185 crash =
+            // the "random reset"): this no-deps useLayoutEffect re-measures + setStates
+            // photoSize on EVERY commit. Because the medallion's own height feeds the
+            // measured [data-sid] sum, a 1-2px reflow makes the target oscillate, so
+            // the exact-equality guard kept committing → "Maximum update depth" → crash.
+            // A dead-band guarantees a fixed point: only commit when the change is real.
+            Qo((p) => (Math.abs(p - e) <= 4 ? p : e));
           }
         }));
       const Vi = (e, t, n, o = {}) => {

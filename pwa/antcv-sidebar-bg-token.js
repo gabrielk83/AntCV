@@ -85,6 +85,16 @@
     for (var i = 0; i < els.length; i++) {
       var el = els[i];
       if (el.getAttribute(TAG) === '1') continue;
+      // PALETTE-RESET-BAND-001 Option C (owner 2026-06-18): NEVER pale the candidate
+      // band or the table-header cells. They momentarily compute to navyColor (their
+      // var(--header-bg) fallback) before body[data-package] is set; this sidecar would
+      // then PERMANENTLY grab + tag them (inline bg + the skip-forever TAG), leaving
+      // Copenhagen's band/header pale on reset. They are NOT the sidebar.
+      if (el.tagName === 'TH') continue;
+      try {
+        if (el.getAttribute('data-antcv-candidate-band') != null) continue;
+        if (el.closest && el.closest('[data-antcv-candidate-band]')) continue;
+      } catch (_) {}
       // Only act on elements whose CURRENT fill is the sidebar navy.
       if (computedBg(el) !== navyRgb) continue;
       try {

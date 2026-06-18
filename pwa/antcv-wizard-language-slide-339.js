@@ -41,16 +41,39 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.547-handoff';
+  var VERSION = '1.50.631-langmatrix';
   if (window.__antcvWizardLanguageSlide339 === VERSION) return;
   window.__antcvWizardLanguageSlide339 = VERSION;
 
   var SHOWN_FLAG_KEY = 'antcv:wizard-lang-slide-shown';
+  // WIZARD-LANG-MATRIX-001 (owner 2026-06-18): full catalogue \u2014 parity with the
+  // Settings language card (src/lib/lang-prefs.ts LANGS / antcv-react-islands Ee).
+  // The wizard previously listed only en/da/es/zh, so AVAILABLE LANGUAGES showed
+  // just Spanish/Chinese with no scroll/alpha order. Now the same 23-language set.
   var LANG_OPTIONS = [
-    { code: 'en', label: 'English',  native: 'English' },
-    { code: 'da', label: 'Danish',   native: 'Dansk' },
-    { code: 'es', label: 'Spanish',  native: 'Espanol' },
-    { code: 'zh', label: 'Chinese',  native: '\u4e2d\u6587' }
+    { code: 'en', label: 'English',     native: 'English' },
+    { code: 'da', label: 'Danish',      native: 'Dansk' },
+    { code: 'sv', label: 'Swedish',     native: 'Svenska' },
+    { code: 'no', label: 'Norwegian',   native: 'Norsk' },
+    { code: 'fi', label: 'Finnish',     native: 'Suomi' },
+    { code: 'es', label: 'Spanish',     native: 'Espa\u00f1ol' },
+    { code: 'zh', label: 'Chinese',     native: '\u4e2d\u6587' },
+    { code: 'fr', label: 'French',      native: 'Fran\u00e7ais' },
+    { code: 'de', label: 'German',      native: 'Deutsch' },
+    { code: 'it', label: 'Italian',     native: 'Italiano' },
+    { code: 'ar', label: 'Arabic',      native: '\u0627\u0644\u0639\u0631\u0628\u064a\u0629' },
+    { code: 'fa', label: 'Farsi',       native: '\u0641\u0627\u0631\u0633\u06cc' },
+    { code: 'he', label: 'Hebrew',      native: '\u05e2\u05d1\u05e8\u05d9\u05ea' },
+    { code: 'ru', label: 'Russian',     native: '\u0420\u0443\u0441\u0441\u043a\u0438\u0439' },
+    { code: 'tr', label: 'Turkish',     native: 'T\u00fcrk\u00e7e' },
+    { code: 'ku', label: 'Kurdish',     native: 'Kurd\u00ee' },
+    { code: 'sw', label: 'Swahili',     native: 'Kiswahili' },
+    { code: 'zu', label: 'Zulu',        native: 'isiZulu' },
+    { code: 'am', label: 'Amharic',     native: '\u12a0\u121b\u122d\u129b' },
+    { code: 'fo', label: 'Faroese',     native: 'F\u00f8royskt' },
+    { code: 'kl', label: 'Greenlandic', native: 'Kalaallisut' },
+    { code: 'vi', label: 'Vietnamese',  native: 'Ti\u1ebfng Vi\u1ec7t' },
+    { code: 'th', label: 'Thai',        native: '\u0e44\u0e17\u0e22' }
   ];
   var ALL_CODES = LANG_OPTIONS.map(function (o) { return o.code; });
   var DEFAULT_PRIMARY = 'en';
@@ -225,7 +248,7 @@
     try { window.dispatchEvent(new CustomEvent('antcv:spell-variant-changed', { detail: { variant: code, lang: 'es' } })); } catch (_) {}
   }
 
-  function buildWritingGrammarBlock() {
+  function buildWritingGrammarBlock(getSelected) {
     var wrap = document.createElement('div');
     wrap.setAttribute('data-antcv-wizard-writing-grammar', '1');
     wrap.style.cssText = 'margin:0 0 16px;padding:12px 14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.12);border-radius:8px;';
@@ -282,41 +305,39 @@
     // <=12-char button whose text looked like a lang code ("UK"/"US"), so the
     // buttons rendered display:none. A <select> is immune + gives the
     // scroll-down the owner asked for, with US + a Chinese note.
-    var vRow = document.createElement('div');
-    vRow.style.cssText = 'display:flex;align-items:center;gap:8px;margin:7px 0 0;flex-wrap:wrap;font-size:11px;color:rgba(255,255,255,0.7);';
-    var vLab = document.createElement('span'); vLab.textContent = 'English spelling:';
-    vRow.appendChild(vLab);
-    var vSel = document.createElement('select');
-    vSel.style.cssText = 'padding:4px 8px;font-size:11px;border-radius:6px;border:1px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.06);color:#fff;cursor:pointer;';
-    vSel.style.setProperty('pointer-events', 'auto', 'important');
-    EN_VARIANTS.forEach(function (pair) {
-      var o = document.createElement('option');
-      o.value = pair[0]; o.textContent = pair[1];
-      o.style.cssText = 'background:#1a1a2a;color:#fff;';
-      if (enVariantRead() === pair[0]) o.selected = true;
-      vSel.appendChild(o);
-    });
-    vSel.addEventListener('change', function () { enVariantWrite(vSel.value); });
-    vRow.appendChild(vSel);
-    wrap.appendChild(vRow);
-    // Spanish variant — mirrors English; the <select> scroll-handles a growing list.
-    var esRow = document.createElement('div');
-    esRow.style.cssText = 'display:flex;align-items:center;gap:8px;margin:7px 0 0;flex-wrap:wrap;font-size:11px;color:rgba(255,255,255,0.7);';
-    var esLab = document.createElement('span'); esLab.textContent = 'Spanish spelling:';
-    esRow.appendChild(esLab);
-    var esSel = document.createElement('select');
-    esSel.style.cssText = 'padding:4px 8px;font-size:11px;border-radius:6px;border:1px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.06);color:#fff;cursor:pointer;max-width:100%;';
-    esSel.style.setProperty('pointer-events', 'auto', 'important');
-    ES_VARIANTS.forEach(function (pair) {
-      var o = document.createElement('option');
-      o.value = pair[0]; o.textContent = pair[1];
-      o.style.cssText = 'background:#1a1a2a;color:#fff;';
-      if (esVariantRead() === pair[0]) o.selected = true;
-      esSel.appendChild(o);
-    });
-    esSel.addEventListener('change', function () { esVariantWrite(esSel.value); });
-    esRow.appendChild(esSel);
-    wrap.appendChild(esRow);
+    // WIZARD-SPELL-FOLLOW-SELECTED-001 (owner 2026-06-18): per-language spelling
+    // VARIANT rows (English / Spanish) show ONLY for languages that are SELECTED
+    // and have regional variants. Removing a language from SELECTED hides its
+    // variant row. Re-rendered from renderPicker on every selection change.
+    function mkVariantRow(labelText, variants, readFn, writeFn) {
+      var row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:8px;margin:7px 0 0;flex-wrap:wrap;font-size:11px;color:rgba(255,255,255,0.7);';
+      var lab = document.createElement('span'); lab.textContent = labelText;
+      row.appendChild(lab);
+      var sel = document.createElement('select');
+      sel.style.cssText = 'padding:4px 8px;font-size:11px;border-radius:6px;border:1px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.06);color:#fff;cursor:pointer;max-width:100%;';
+      sel.style.setProperty('pointer-events', 'auto', 'important');
+      variants.forEach(function (pair) {
+        var o = document.createElement('option');
+        o.value = pair[0]; o.textContent = pair[1];
+        o.style.cssText = 'background:#1a1a2a;color:#fff;';
+        if (readFn() === pair[0]) o.selected = true;
+        sel.appendChild(o);
+      });
+      sel.addEventListener('change', function () { writeFn(sel.value); });
+      row.appendChild(sel);
+      return row;
+    }
+    var variantsHost = document.createElement('div');
+    wrap.appendChild(variantsHost);
+    function renderVariants() {
+      variantsHost.innerHTML = '';
+      var sel = (typeof getSelected === 'function') ? (getSelected() || []) : ['en'];
+      if (sel.indexOf('en') >= 0) variantsHost.appendChild(mkVariantRow('English spelling:', EN_VARIANTS, enVariantRead, enVariantWrite));
+      if (sel.indexOf('es') >= 0) variantsHost.appendChild(mkVariantRow('Spanish spelling:', ES_VARIANTS, esVariantRead, esVariantWrite));
+    }
+    renderVariants();
+    wrap._renderVariants = renderVariants;
     var sNote = document.createElement('div');
     sNote.textContent = 'Spelling follows your default language. Danish, Spanish and Chinese (context-based) dictionaries apply automatically when that is your document language. Change any of this later in Settings → Personal.';
     sNote.style.cssText = 'font-size:9.5px;color:rgba(255,255,255,0.4);margin:6px 0 0;line-height:1.45;';
@@ -382,6 +403,7 @@
     // clearly); the order is changeable (reorder up/down). Built directly in
     // the DOM here so it does not depend on the island booting.
     var selected = defaults.slice();           // ordered; selected[0] = default
+    var grammarBlock = null;                    // set when the writing/grammar block is built; carries _renderVariants
     if (!selected.length) selected = [DEFAULT_PRIMARY];
 
     // WIZARD-LANG-SELECTOR-001 (owner spec 2026-06-07, built 2026-06-13):
@@ -441,7 +463,9 @@
       // LEFT — all available (not yet selected)
       var left = colBox('AVAILABLE LANGUAGES');
       var any = false;
-      LANG_OPTIONS.forEach(function (o) {
+      // Available list is alphabetical by name (the SELECTED list stays in the
+      // user's chosen order — first = default).
+      LANG_OPTIONS.slice().sort(function (a, b) { return a.label.localeCompare(b.label); }).forEach(function (o) {
         if (selected.indexOf(o.code) >= 0) return;
         any = true;
         var row = mkRow(false);
@@ -479,6 +503,8 @@
         right.appendChild(row);
       });
       listEl.appendChild(right);
+      // Spelling variant rows follow the SELECTED languages (remove a language → its row goes).
+      if (grammarBlock && grammarBlock._renderVariants) grammarBlock._renderVariants();
     }
     renderPicker();
 
@@ -493,7 +519,8 @@
     // Personal controls use (antcv-tense-control-422 styleConfig.expTense;
     // antcv-spell-annotator-384 antcv:spell:enabled / :enVariant). Built in
     // the DOM here so it does not depend on those sidecars' Settings injection.
-    panel.appendChild(buildWritingGrammarBlock());
+    grammarBlock = buildWritingGrammarBlock(function () { return selected; });
+    panel.appendChild(grammarBlock);
 
     // Exposed so the Save handler reads the ordered selection (and for debug).
     var getSelectedLangs = function () { return selected.slice(); };

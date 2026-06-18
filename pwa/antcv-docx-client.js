@@ -2195,19 +2195,25 @@ export async function isPdfWorkerAvailable() {
       } catch (_e) { /* ignore */ }
     }
     if (!workerUrl) {
-      _pdfWorkerCache = null;
+      // EXPORT-PDF-RACE-001 (owner 2026-06-18): the worker URL is configured
+      // asynchronously (from the /config fetch). If the FIRST export click probes
+      // before it is set, caching null here stuck the whole session on browser-print
+      // PDF until a manual refresh. Return null TRANSIENTLY (no cache) so a later
+      // click re-probes once the URL is available.
       return null;
     }
     const res = await fetch(workerUrl.replace(/\/$/, '') + '/health');
     if (!res.ok) {
-      _pdfWorkerCache = null;
+      // Transient (cold start / outdated worker) — do not cache, retry next time.
       return null;
     }
     const j = await res.json();
+    // Definitive answer from a reachable worker — safe to cache (positive OR a
+    // genuine "reachable but no PDF" null).
     _pdfWorkerCache = j && j.pdf_via ? j.pdf_via : null;
     return _pdfWorkerCache;
   } catch (_e) {
-    _pdfWorkerCache = null;
+    // Network error — transient, do not cache so a later click can succeed.
     return null;
   }
 }

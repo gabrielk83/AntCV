@@ -6447,8 +6447,8 @@
       if ("cl" === i) {
         const t = String(e.content || "").split(/\s+—\s+|\s+-\s+/),
           n = t[0] || "",
-          o = t.slice(1).join(" — ") || "",
-          r = (e, t) => d({ content: [e, t].filter(Boolean).join(" — ") });
+          o = t.slice(1).join(" - ") || "",
+          r = (e, t) => d({ content: [e, t].filter(Boolean).join(" - ") });
         return React.createElement(
           "div",
           null,
@@ -11148,7 +11148,7 @@
               const o = "main" === n.specialisation ? "main" : "sidebar",
                 r = "cl" === e,
                 i = r
-                  ? [t.role, t.company].filter(Boolean).join(" — ")
+                  ? [t.role, t.company].filter(Boolean).join(" - ")
                   : t.subtitle || (ie() || {}).specialization || "",
                 l = {
                   id: "spec_block",
@@ -11234,10 +11234,10 @@
         key: "specialisation",
         label: k ? "Application" : "Specialisation",
         value: k
-          ? [t.role, t.company].filter(Boolean).join(" — ")
+          ? [t.role, t.company].filter(Boolean).join(" - ")
           : t.subtitle || (ie() || {}).specialization || "",
         previewValue: k
-          ? [t.role, t.company].filter(Boolean).join(" — ")
+          ? [t.role, t.company].filter(Boolean).join(" - ")
           : t.subtitle || (ie() || {}).specialization || "",
         loc: i.specialisation || "topbar",
         allowsLocs: T,
@@ -11993,7 +11993,7 @@
                                 .map(
                                   (e) =>
                                     (e.title || "") +
-                                    (e.company ? " — " + e.company : "") +
+                                    (e.company ? " - " + e.company : "") +
                                     ": " +
                                     ((e.bullets || [])[0] || "").slice(0, 60),
                                 )
@@ -25794,7 +25794,7 @@
             O = "topbar" === (T.contact || "topbar"),
             _ = I
               ? y
-                ? `<div style="font-family:'Cabin',${s};font-size:${qo}pt;color:#fff;text-align:${E("specialisation")};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2pt;line-height:1.1">${io.role || io.company ? `${o("Application:")} ${io.role || ""}${io.role && io.company ? " — " : ""}${io.company || ""}` : e ? "Ansøgning: [rolle og virksomhed]" : "Application: [role and company]"}</div>`
+                ? `<div style="font-family:'Cabin',${s};font-size:${qo}pt;color:#fff;text-align:${E("specialisation")};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2pt;line-height:1.1">${io.role || io.company ? `${o("Application:")} ${io.role || ""}${io.role && io.company ? " - " : ""}${io.company || ""}` : e ? "Ansøgning: [rolle og virksomhed]" : "Application: [role and company]"}</div>`
                 : `<div style="font-family:'Cabin',${s};font-size:${qo}pt;color:#fff;text-align:${E("specialisation")};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2pt;line-height:1.1">${(io.subtitle || (e ? "[Specialisering — 1–3 fokusområder, adskilt med •]" : "[Specialisation — 1–3 focus areas, separated by •]")).replace(/\s*\|\s*/g, " • ")}</div>`
               : "",
             N = A
@@ -27031,7 +27031,7 @@
                 ? ye("Application:", je) +
                   " " +
                   (a.role || "") +
-                  (a.role && a.company ? " — " : "") +
+                  (a.role && a.company ? " - " : "") +
                   (a.company || "")
                 : (a.subtitle || "").replace(/\s*\|\s*/g, " • ");
             e && x.push(u(e, "CV_Subtitle"));
@@ -41177,7 +41177,7 @@
           h = d
             ? "cl" === Lt
               ? io.role || io.company
-                ? `${ye("Application:", je)} ${io.role || ""}${io.role && io.company ? " — " : ""}${io.company || ""}`
+                ? `${ye("Application:", je)} ${io.role || ""}${io.role && io.company ? " - " : ""}${io.company || ""}`
                 : f
               : io.subtitle || g
             : "",

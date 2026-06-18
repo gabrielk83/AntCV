@@ -661,7 +661,7 @@ export function buildPayload({
       : {}),
     style: buildStyle(styleConfig, navyColor),
     font_sizes: buildFontSizes(fontSizes),
-    sections: normalizeSections(docSections),
+    sections: bindOrphansInSections(normalizeSections(docSections)),
     meta_signature: {
       generator: 'AntCV',
       generator_version: (typeof window !== 'undefined' && window.ANTCV_VERSION) || '',
@@ -1072,6 +1072,93 @@ function buildFontSizes(fs) {
  * Convert the PWA's section format to the worker's section format.
  * Most types pass through unchanged; a few have small shape differences.
  */
+// ORPHAN-NBSP-EXPORT-001 (owner 2026-06-18): the CloudConvert/LibreOffice PDF
+// ignores the preview's `text-wrap: pretty` (1.50.652), so a single short word
+// can still drop to a line of its own at the end of a bullet, paragraph, or
+// table cell. Bind the LAST short word to the word before it with a non-breaking
+// space (U+00A0) so a lone word can never orphan. Conservative + idempotent:
+//   - only the final gap is bound (one NBSP per text run);
+//   - skip if the run already contains an NBSP (so a re-export never double-binds);
+//   - skip when the last word is long (>14 chars — it wraps as a unit anyway, not
+//     an ugly one-word orphan) or when there is only one word.
+// Trailing whitespace is preserved. HTML-bearing runs are safe (NBSP is opaque).
+const ORPHAN_NBSP = ' ';
+function bindOrphan(s) {
+  if (typeof s !== 'string' || !s) return s;
+  if (s.indexOf(ORPHAN_NBSP) !== -1) return s;        // already bound — idempotent
+  const right = s.replace(/\s+$/, '');                // ignore any trailing whitespace
+  const trail = s.slice(right.length);                // preserve it verbatim
+  const i = right.lastIndexOf(' ');
+  if (i <= 0) return s;                               // 0 or 1 word
+  const last = right.slice(i + 1);
+  if (!last || last.length > 14) return s;            // long last word won't orphan badly
+  if (!right.slice(0, i).trim()) return s;            // nothing before the gap
+  return right.slice(0, i) + ORPHAN_NBSP + last + trail;
+}
+// Apply bindOrphan to the body-text fields of an already-normalized section
+// list. Mutates the FRESH payload objects normalizeSections built (never the
+// live React state). Titles, labels, ids, years, companies, focus-area cells
+// and structured education fields are left untouched.
+function bindOrphansInSections(sections) {
+  if (!Array.isArray(sections)) return sections;
+  const bindArr = (a) => Array.isArray(a) ? a.map(x => (typeof x === 'string' ? bindOrphan(x) : x)) : a;
+  for (const s of sections) {
+    if (!s || typeof s !== 'object') continue;
+    switch (s.type) {
+      case 'text':
+      case 'text_inline':
+        if (typeof s.content === 'string') s.content = bindOrphan(s.content);
+        break;
+      case 'text_bullets':
+        s.intro = bindOrphan(s.intro);
+        s.closing = bindOrphan(s.closing);
+        s.items = bindArr(s.items);
+        s.bullets = bindArr(s.bullets);
+        break;
+      case 'foundation':
+        s.hands_on = bindOrphan(s.hands_on);
+        s.professionally = bindOrphan(s.professionally);
+        break;
+      case 'bullets':
+        if (Array.isArray(s.items)) s.items = s.items.map(it => {
+          if (typeof it === 'string') return bindOrphan(it);
+          if (it && typeof it === 'object' && typeof it.t === 'string') return { ...it, t: bindOrphan(it.t) };
+          return it;
+        });
+        break;
+      case 'table':
+        if (Array.isArray(s.rows)) s.rows = s.rows.map((r, i) => {
+          if (i === 0 || !Array.isArray(r)) return r;       // keep the header row as-is
+          return r.map((cell, ci) => (ci === 1 && typeof cell === 'string') ? bindOrphan(cell) : cell);
+        });
+        break;
+      case 'experience':
+        if (Array.isArray(s.roles)) s.roles.forEach(role => {
+          if (role && typeof role === 'object') {
+            role.bullets = bindArr(role.bullets);
+            if (typeof role.results === 'string') role.results = bindOrphan(role.results);
+          }
+        });
+        break;
+      case 'list':
+      case 'list_italic':
+        if (Array.isArray(s.items)) s.items = s.items.map(it => {
+          if (typeof it === 'string') return bindOrphan(it);
+          if (it && typeof it === 'object' && typeof it.text === 'string') return { ...it, text: bindOrphan(it.text) };
+          return it;
+        });
+        break;
+      case 'labeled_list':
+        if (Array.isArray(s.items)) s.items = s.items.map(it => {
+          if (it && typeof it === 'object' && typeof it.v === 'string') return { ...it, v: bindOrphan(it.v) };
+          return it;
+        });
+        break;
+    }
+  }
+  return sections;
+}
+
 function normalizeSections(raw) {
   if (!Array.isArray(raw)) return [];
   // v1.40.160 — read per-section alignment from the

@@ -243,15 +243,22 @@ export function computeTableWidthDxa(docSections, docType) {
     if (!id) continue;
     const v = pctMap[id];
     if (typeof v !== 'number' || !isFinite(v)) continue;
-    // Skip default (no user adjustment). Treat anything within ±1 of
-    // 100 as default to avoid sending micro-adjustments triggered by
-    // floating-point round-trips through localStorage.
-    if (Math.abs(v - 100) < 1) continue;
+    // Skip the REST width (no real user adjustment) so the worker applies its
+    // own default. The rest pct differs by doc: CL rests at 90% of the body
+    // column (worker defaultClW = (PAGE_W-400)*0.9), CV rests at 100% of the
+    // main column. Anything within ±1 of the rest pct is treated as default.
+    if (Math.abs(v - (docType === 'cl' ? 90 : 100)) < 1) continue;
     if (maxPct === null || v > maxPct) maxPct = v;
   }
   if (maxPct === null) return null;
-  // Default widths must match the worker's constants in src/generate.js.
-  const defaultDxa = (docType === 'cl') ? 9602 : 6630;
+  // CL-TABLE-WIDTH-PAGE-REF-001 (owner 2026-06-18): the CL base is the USABLE
+  // body width (PAGE_W - 400 = 11506 dxa), the SAME reference the preview wrap
+  // (`width: pct%` of the body column) and the worker defaultClW ((PAGE_W-400)*0.9)
+  // measure against - so a width set/decreased in the preview exports at the SAME
+  // proportion. The old 9602 (PAGE_W - 2304, ~80% of page) made every dragged
+  // width export much narrower than the preview showed. CV keeps its 6630 main-col
+  // reference.
+  const defaultDxa = (docType === 'cl') ? 11506 : 6630;
   return Math.round(defaultDxa * (maxPct / 100));
 }
 
@@ -1489,8 +1496,8 @@ function normalizeSections(raw) {
           const _pctMap = readTableWidthPctMap();
           const _isClTable = s.id === 'bring';
           const _pct = _pctMap[s.id];
-          if (typeof _pct === 'number' && isFinite(_pct) && Math.abs(_pct - 100) >= 1) {
-            _twDxa = Math.round((_isClTable ? 9602 : 6630) * (_pct / 100));
+          if (typeof _pct === 'number' && isFinite(_pct) && Math.abs(_pct - (_isClTable ? 90 : 100)) >= 1) {
+            _twDxa = Math.round((_isClTable ? 11506 : 6630) * (_pct / 100)); // CL ref = usable body width (PAGE_W-400), matches preview + worker defaultClW
           }
           const _rk = _isClTable ? 'clTableRatio' : 'cvTableRatio';
           let _rRaw = (typeof localStorage !== 'undefined') ? localStorage.getItem(_rk) : null;

@@ -447,7 +447,7 @@
   // negative-margin treatment. Any value <= 100 stays inside its
   // parent section, centred via margin:auto.
   const TABLE_BLEED_THRESHOLD = 100;
-  const TABLE_DEFAULT_PCT = 72;
+  const TABLE_DEFAULT_PCT = 90;  // CL/CV table rest width = 90% of the body column (matches the React wrap default + worker defaultClW). Owner 2026-06-18.
   const HANDLE_HIT_WIDTH = 8;   // px — wide enough to click without zoom
   const HANDLE_OFFSET_RIGHT = -4; // px outside the wrap
 

@@ -49,7 +49,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.628-review';
+  var VERSION = '1.50.635-robust-anchor';
   if (window.__antcvDataExport360 === VERSION) return;
   window.__antcvDataExport360 = VERSION;
 
@@ -343,16 +343,27 @@
   // the Download button can be appended after it, ending the privacy zone.
   function findPrivacyProvidersBox() {
     var els = document.querySelectorAll('div');
+    // 1) strict: the provider-text leaf is a single text node mentioning
+    //    zero-retention. el.parent = the bordered "What LLM providers see" box.
     for (var i = 0; i < els.length; i++) {
       var el = els[i];
-      // The provider-text leaf is a single text node mentioning zero-retention.
-      if (el.childNodes.length === 1 && el.firstChild && el.firstChild.nodeType === 3) {
-        if (/zero-retention modes/i.test(el.textContent || '')) {
-          // el = the text leaf; its parent = the bordered "What LLM providers
-          // see" box. Return the box so we insert after it.
-          return el.parentNode || el;
-        }
+      if (el.childNodes.length === 1 && el.firstChild && el.firstChild.nodeType === 3 &&
+          /zero-retention modes/i.test(el.textContent || '')) {
+        return el.parentNode || el;
       }
+    }
+    // ROBUST-ANCHOR-001 (owner 2026-06-18, "the buttons disappeared"): if the
+    // text leaf got wrapped (a nested span, a line split), fall back to the
+    // smallest leaf-ish div whose OWN text mentions zero-retention, then to the
+    // "What LLM providers see" header box. Keeps the buttons anchored even when
+    // the privacy block's DOM shape shifts.
+    for (var j = 0; j < els.length; j++) {
+      var e = els[j];
+      if (/zero-retention modes/i.test(e.textContent || '') && !e.querySelector('div')) return e.parentNode || e;
+    }
+    for (var k = 0; k < els.length; k++) {
+      var h = els[k];
+      if (/what llm providers see/i.test(h.textContent || '') && !h.querySelector('div')) return h.parentNode || h;
     }
     return null;
   }
@@ -847,8 +858,17 @@
   // single export option is the account-locked one.
   function injectDownload() {
     var box = findPrivacyProvidersBox();
-    if (!box) return;
-    var zone = box.parentNode;
+    var zone = null, after = null;
+    if (box && box.parentNode) { zone = box.parentNode; after = box.nextSibling; }
+    else {
+      // ROBUST-ANCHOR-001 fallback: privacy box not found — anchor above the
+      // Account danger-zone "Delete my account" card so the buttons never vanish.
+      try {
+        var eb = findEraseButton();
+        var card = eb ? (eb.closest ? (eb.closest('div') || eb.parentNode) : eb.parentNode) : null;
+        if (card && card.parentNode) { zone = card.parentNode; after = card; }
+      } catch (_) {}
+    }
     if (!zone) return;
     // Clean up the retired plain-download button if a stale build left one.
     try { var old = zone.querySelector('[' + UI_MARK + '="download"]'); if (old) old.remove(); } catch (_) {}
@@ -856,8 +876,8 @@
     try {
       var review = buildReviewButton();
       var locked = buildLockedButton();
-      if (box.nextSibling) {
-        zone.insertBefore(review, box.nextSibling);
+      if (after) {
+        zone.insertBefore(review, after);
         zone.insertBefore(locked, review.nextSibling);
       } else {
         zone.appendChild(review);

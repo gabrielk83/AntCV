@@ -23,7 +23,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.512-group-name-visibility';
+  var VERSION = '1.50.633-tools-labels-show';
   if (window.__antcvGroupNameVis === VERSION) return;
   window.__antcvGroupNameVis = VERSION;
 
@@ -44,6 +44,13 @@
   function hiddenSet(sec, showMap) {
     var items = Array.isArray(sec.items) ? sec.items : [];
     var hide = {};
+    // TOOLS-METHODS-LABELS-SHOW-001 (owner 2026-06-18): tools/methods sections
+    // now show EVERY row's bold "Label:" opener in the preview — the owner asked
+    // for it back on all of them ("for many of the Tools and method the opening
+    // (Part in Bold and :) is not showing"). This reverses RULE 2's up-to-4 trim
+    // AND skips RULE 1 for these sections; other labeled_list sections keep RULE 1.
+    // (apply() then STRIPS any labelHidden flag already on these rows → labels show.)
+    if (isToolsMethods(sec)) return hide;
     // RULE 1 — partition into subsubsections by {group} markers, hide lone rows.
     var cur = [];
     var subs = [];

@@ -840,37 +840,97 @@ function styleConflictsKernel(styleId: string, traits: string[]): string | null 
   return null;
 }
 
-// SEMANTIC-CONSTRAINTS-001 — the editor reads/writes stylePrefs.bannedContextual,
-// the array the generation prompt ALREADY consumes (app.src.js ~2810): per-rule
-// avoid + use_instead ("bank"/allowlist) + an optional WHEN condition (role title
-// / company contains) = the owner's "conditions mix + per-role allowlist".
-interface SemRule { avoid: string; use_instead: string; note: string; whenTitle: string; whenCompany: string }
+// SEMANTIC-CONSTRAINTS-002 (2026-06-18) — the editor speaks the KERNEL shape:
+// each rule = a human trigger (the meaning/condition), avoid[] + prefer[] chip
+// lists, a reason, and a scope (role company/title). The canonical copy lives in
+// stylePrefs.semanticConstraintsV2 (survives re-export). On every write we ALSO
+// regenerate stylePrefs.bannedContextual as FLAT-EXPANDED rules (one per avoid
+// term: {avoid, use_instead, note, when}) — the exact shape the generation prompt
+// already consumes (app.src.js ~2819). Reading both shapes is loss-free: prior
+// kernels (avoid:[]/prefer:[]/reason/scope) and the old flat {avoid,use_instead,
+// note,when} both normalise in. Fixes the array→comma-blob garble + the lossy
+// flatten that dropped prefer/reason/scope on save.
+interface SemRule { id: string; trigger: string; avoid: string[]; prefer: string[]; reason: string; scopeCompany: string; scopeTitle: string }
+function toStrArr(v: unknown): string[] {
+  if (Array.isArray(v)) return v.map((x) => String(x).trim()).filter(Boolean);
+  if (v == null) return [];
+  const s = String(v).trim();
+  return s ? [s] : [];
+}
+function normSemRule(raw: Record<string, unknown>): SemRule {
+  const scope = (raw.scope as Record<string, unknown>) || (raw.when as Record<string, unknown>) || (raw.context as Record<string, unknown>) || {};
+  return {
+    id: String(raw.id || ''),
+    trigger: String(raw.trigger || ''),
+    avoid: toStrArr(raw.avoid ?? raw.pattern),
+    prefer: toStrArr(raw.prefer ?? raw.use_instead ?? raw.replacement),
+    reason: String(raw.reason || raw.note || ''),
+    scopeCompany: String(scope.role_company || scope.companyContains || ''),
+    scopeTitle: String(scope.role_title || scope.titleContains || ''),
+  };
+}
+function semRuleKey(r: SemRule): string {
+  return (r.id || `${r.trigger}|${r.avoid.join(',')}`).toLowerCase().trim();
+}
 function readSemRules(): SemRule[] {
   const pi = readPersonalInfo();
   const sp = (pi.stylePrefs as Record<string, unknown>) || {};
-  const arr = Array.isArray(sp.bannedContextual) ? (sp.bannedContextual as Record<string, unknown>[]) : [];
-  return arr.map((r) => {
-    const when = (r.when as Record<string, unknown>) || {};
-    return {
-      avoid: String(r.avoid || r.pattern || ''),
-      use_instead: String(r.use_instead || r.replacement || ''),
-      note: String(r.note || ''),
-      whenTitle: String(when.role_title || when.titleContains || ''),
-      whenCompany: String(when.role_company || when.companyContains || ''),
-    };
-  });
+  const v2 = Array.isArray(sp.semanticConstraintsV2) ? (sp.semanticConstraintsV2 as Record<string, unknown>[]) : [];
+  const bc = Array.isArray(sp.bannedContextual) ? (sp.bannedContextual as Record<string, unknown>[]) : [];
+  // Prefer the canonical V2 list; fall back to (and absorb any V2-absent rules
+  // from) bannedContextual so a legacy flat-only kernel still loads.
+  const src = v2.length ? v2 : bc;
+  const out: SemRule[] = [];
+  const seen = new Set<string>();
+  for (const raw of src) {
+    if (!raw || typeof raw !== 'object') continue;
+    const r = normSemRule(raw as Record<string, unknown>);
+    if (!r.avoid.length && !r.trigger.trim()) continue;
+    const k = semRuleKey(r);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(r);
+  }
+  return out;
 }
 function writeSemRules(rules: SemRule[]): void {
   const pi = readPersonalInfo();
   const sp = ((pi.stylePrefs as Record<string, unknown>) || {});
-  sp.bannedContextual = rules
-    .filter((r) => r.avoid.trim())
+  const clean = rules
     .map((r) => ({
-      avoid: r.avoid.trim(),
-      use_instead: r.use_instead.trim(),
-      note: r.note.trim(),
-      when: { role_title: r.whenTitle.trim(), role_company: r.whenCompany.trim() },
-    }));
+      id: r.id,
+      trigger: r.trigger.trim(),
+      avoid: r.avoid.map((s) => s.trim()).filter(Boolean),
+      prefer: r.prefer.map((s) => s.trim()).filter(Boolean),
+      reason: r.reason.trim(),
+      scopeCompany: r.scopeCompany.trim(),
+      scopeTitle: r.scopeTitle.trim(),
+    }))
+    .filter((r) => r.avoid.length || r.trigger);
+  // Canonical kernel shape — source of truth, survives Export/round-trip.
+  sp.semanticConstraintsV2 = clean.map((r) => {
+    const scope: Record<string, string> = {};
+    if (r.scopeCompany) scope.role_company = r.scopeCompany;
+    if (r.scopeTitle) scope.role_title = r.scopeTitle;
+    const o: Record<string, unknown> = { avoid: r.avoid, prefer: r.prefer };
+    if (r.id) o.id = r.id;
+    if (r.trigger) o.trigger = r.trigger;
+    if (r.reason) o.reason = r.reason;
+    if (Object.keys(scope).length) o.scope = scope;
+    return o;
+  });
+  // Flat-expanded for the generation prompt (app.src.js ~2819): one entry per
+  // avoid term, prefer[] joined into use_instead, reason→note, scope→when.
+  const flat: Record<string, unknown>[] = [];
+  clean.forEach((r) => {
+    if (!r.avoid.length) return;
+    const when: Record<string, string> = {};
+    if (r.scopeCompany) when.role_company = r.scopeCompany;
+    if (r.scopeTitle) when.role_title = r.scopeTitle;
+    const useInstead = r.prefer.join(', ');
+    r.avoid.forEach((a) => { flat.push({ avoid: a, use_instead: useInstead, note: r.reason, when }); });
+  });
+  sp.bannedContextual = flat;
   pi.stylePrefs = sp;
   try { localStorage.setItem('personalInfo', JSON.stringify(pi)); } catch { /* */ }
   try { (window as unknown as { _antcvCloudWrite?: (p: unknown) => void })._antcvCloudWrite?.({ personalInfo: pi }); } catch { /* */ }
@@ -878,37 +938,74 @@ function writeSemRules(rules: SemRule[]): void {
   try { window.dispatchEvent(new CustomEvent('antcv:writing-prefs-changed')); } catch { /* */ }
 }
 
+function SemChipField({ label, accentBg, accentText, chips, placeholder, onChange }: {
+  label: string; accentBg: string; accentText: string; chips: string[]; placeholder: string; onChange: (next: string[]) => void;
+}): JSX.Element {
+  const [draft, setDraft] = useState('');
+  const add = useCallback((raw: string) => {
+    const parts = raw.split(',').map((s) => s.trim()).filter(Boolean);
+    if (!parts.length) return;
+    const next = chips.slice();
+    parts.forEach((p) => { if (!next.some((c) => c.toLowerCase() === p.toLowerCase())) next.push(p); });
+    onChange(next);
+    setDraft('');
+  }, [chips, onChange]);
+  const remove = useCallback((i: number) => onChange(chips.filter((_, j) => j !== i)), [chips, onChange]);
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <div style={{ fontSize: 10, opacity: 0.6, textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
+        {chips.map((c, i) => (
+          <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11.5, padding: '2px 4px 2px 8px', borderRadius: 12, background: accentBg, color: accentText }}>
+            {c}
+            <button type="button" aria-label={`Remove ${c}`} onClick={() => remove(i)} style={{ background: 'transparent', border: 'none', color: accentText, cursor: 'pointer', fontSize: 13, lineHeight: 1, padding: '0 2px', opacity: 0.85 }}>×</button>
+          </span>
+        ))}
+        <input
+          value={draft}
+          placeholder={chips.length ? 'add…' : placeholder}
+          onChange={(e) => setDraft(e.currentTarget.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); add(draft); } else if (e.key === 'Backspace' && !draft && chips.length) { remove(chips.length - 1); } }}
+          onBlur={() => add(draft)}
+          style={{ flex: '1 1 90px', minWidth: 90, padding: '3px 6px', background: 'rgba(255,255,255,.05)', color: '#e6eef3', border: '1px solid rgba(255,255,255,.16)', borderRadius: 5, fontFamily: 'inherit', fontSize: 11.5 }}
+        />
+      </div>
+    </div>
+  );
+}
+
 function SemanticConstraintsEditor(): JSX.Element {
   const [rules, setRules] = useState<SemRule[]>(() => readSemRules());
-  const commit = useCallback((next: SemRule[]) => { setRules(next); writeSemRules(next); }, []);
+  const persist = useCallback((next: SemRule[]) => { setRules(next); writeSemRules(next); }, []);
   const update = useCallback((i: number, patch: Partial<SemRule>) => {
     setRules((prev) => { const next = prev.map((r, j) => (j === i ? { ...r, ...patch } : r)); writeSemRules(next); return next; });
   }, []);
-  const addRule = useCallback(() => commit([...rules, { avoid: '', use_instead: '', note: '', whenTitle: '', whenCompany: '' }]), [rules, commit]);
-  const removeRule = useCallback((i: number) => commit(rules.filter((_, j) => j !== i)), [rules, commit]);
+  const addRule = useCallback(() => persist([...rules, { id: '', trigger: '', avoid: [], prefer: [], reason: '', scopeCompany: '', scopeTitle: '' }]), [rules, persist]);
+  const removeRule = useCallback((i: number) => persist(rules.filter((_, j) => j !== i)), [rules, persist]);
 
   const inputStyle: React.CSSProperties = {
     width: '100%', padding: '5px 7px', background: 'rgba(255,255,255,.05)', color: '#e6eef3',
-    border: '1px solid rgba(255,255,255,.18)', borderRadius: 5, fontFamily: 'inherit', fontSize: 12,
+    border: '1px solid rgba(255,255,255,.18)', borderRadius: 5, fontFamily: 'inherit', fontSize: 12, boxSizing: 'border-box',
   };
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div style={{ fontSize: 11, opacity: 0.7, lineHeight: 1.45 }}>
-        Ban by <strong>meaning</strong>, not just exact words: each rule avoids a pattern and (optionally) suggests what to use instead. Add a <em>When</em> condition to scope a rule to roles whose title/company matches — the per-role allowlist. These feed the generation prompt directly.
+        Ban by <strong>meaning</strong>, not just exact words. Each rule lists terms to <strong>avoid</strong> and what to <strong>prefer</strong> instead, an optional <em>when</em> meaning, a <em>scope</em> (role company/title it applies to), and a reason. These feed the generation prompt directly.
       </div>
       {rules.map((r, i) => (
-        <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 5, padding: '8px 9px', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.12)', borderRadius: 8 }}>
-          <input style={inputStyle} placeholder="Avoid (word, phrase, or meaning)" value={r.avoid} onChange={(e) => update(i, { avoid: e.currentTarget.value })} />
-          <input style={inputStyle} placeholder="Use instead (optional)" value={r.use_instead} onChange={(e) => update(i, { use_instead: e.currentTarget.value })} />
+        <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 7, padding: '9px 10px', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.12)', borderRadius: 8 }}>
+          <input style={inputStyle} placeholder="When… (the meaning/condition this rule targets)" value={r.trigger} onChange={(e) => update(i, { trigger: e.currentTarget.value })} />
+          <SemChipField label="avoid" accentBg="rgba(229,75,74,.16)" accentText="#f3b4b3" chips={r.avoid} placeholder="led a team, managed a team…" onChange={(avoid) => update(i, { avoid })} />
+          <SemChipField label="prefer" accentBg="rgba(1,183,187,.16)" accentText="#bdf0f1" chips={r.prefer} placeholder="supervised technically…" onChange={(prefer) => update(i, { prefer })} />
           <div style={{ display: 'flex', gap: 5 }}>
-            <input style={inputStyle} placeholder="When role title contains… (optional)" value={r.whenTitle} onChange={(e) => update(i, { whenTitle: e.currentTarget.value })} />
-            <input style={inputStyle} placeholder="…or company contains…" value={r.whenCompany} onChange={(e) => update(i, { whenCompany: e.currentTarget.value })} />
+            <input style={inputStyle} placeholder="Scope: company contains… (optional)" value={r.scopeCompany} onChange={(e) => update(i, { scopeCompany: e.currentTarget.value })} />
+            <input style={inputStyle} placeholder="…or title contains… (optional)" value={r.scopeTitle} onChange={(e) => update(i, { scopeTitle: e.currentTarget.value })} />
           </div>
-          <input style={inputStyle} placeholder="Why / note (optional)" value={r.note} onChange={(e) => update(i, { note: e.currentTarget.value })} />
+          <input style={inputStyle} placeholder="Why / reason (optional)" value={r.reason} onChange={(e) => update(i, { reason: e.currentTarget.value })} />
           <button type="button" onClick={() => removeRule(i)} style={{ alignSelf: 'flex-end', background: 'transparent', border: '1px solid rgba(255,255,255,.18)', color: '#e6eef3', borderRadius: 5, fontSize: 11, padding: '3px 8px', cursor: 'pointer' }}>Remove rule</button>
         </div>
       ))}
-      {rules.length === 0 && <span style={{ fontSize: 11, opacity: 0.6 }}>No semantic rules yet. Add one to ban by meaning (e.g. avoid "led a team" → use "supervised technically" when the role isn't line-management).</span>}
+      {rules.length === 0 && <span style={{ fontSize: 11, opacity: 0.6 }}>No semantic rules yet. Add one to ban by meaning (e.g. avoid "led a team" → prefer "supervised technically" scoped to roles that aren't line-management).</span>}
       <button type="button" onClick={addRule} style={{ alignSelf: 'flex-start', background: 'rgba(1,183,187,.18)', border: '1px solid rgba(1,183,187,.55)', color: '#e6eef3', borderRadius: 6, fontWeight: 700, fontSize: 12, padding: '6px 12px', cursor: 'pointer' }}>+ Add semantic constraint</button>
     </div>
   );

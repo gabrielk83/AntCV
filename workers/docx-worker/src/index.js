@@ -24204,6 +24204,14 @@ function paraAlignPath(s, path) {
   return v === "left" || v === "center" || v === "right" || v === "justify" ? alignType(v) : null;
 }
 __name(paraAlignPath, "paraAlignPath");
+function rowAlignAt(s, idx) {
+  // CJLR-EXPORT-PARITY-001 (owner 2026-06-19): the native table CJLR writes the
+  // section's own rowAlign[] (preview reads it since 1.50.692). Honour it on export
+  // so the PDF/DOCX matches the preview. idx = full-array row index (0 = header).
+  const ra = s && Array.isArray(s.rowAlign) ? s.rowAlign[idx] : null;
+  return ra === "left" || ra === "center" || ra === "right" || ra === "justify" ? alignType(ra) : null;
+}
+__name(rowAlignAt, "rowAlignAt");
 function firstNonEmpty(...vals) {
   for (const v of vals) {
     if (v !== void 0 && v !== null && String(v).trim() !== "") return v;
@@ -26160,7 +26168,7 @@ function renderCompetencyTable(s, ctx) {
   const tableHeaderBg = style && style.tableHeaderBg || style.mainHeadColor;
   const border = { style: BorderStyle.SINGLE, size: 4, color: tableHeaderBg };
   const cellBorders = { top: border, bottom: border, left: border, right: border };
-  const headerAlignT = alignType(s.headerAlign || "center");
+  const headerAlignT = rowAlignAt(s, 0) ?? alignType(s.headerAlign || "center");
   function makeHeaderRow() {
     return new TableRow({
       tableHeader: true,
@@ -26204,7 +26212,10 @@ function renderCompetencyTable(s, ctx) {
           // item-align cycler wins for the EXPERTISE cell. Wire key is the
           // FULL-array row index (header = 0, first data row = 1) to match
           // the preview's ["rows", rr, 1] edit paths.
-          alignment: i === 1 ? paraAlignPath(s, "rows." + (idx + 1)) ?? AlignmentType.LEFT : AlignmentType.LEFT,
+          // CJLR-EXPORT-PARITY-001 / body-justify default (owner 2026-06-19): native
+          // rowAlign wins, then the item-align cycler path, else the body default is
+          // JUSTIFIED (header stays center) — matching the preview (234 getAlign).
+          alignment: i === 1 ? (rowAlignAt(s, idx + 1) ?? paraAlignPath(s, "rows." + (idx + 1)) ?? AlignmentType.JUSTIFIED) : AlignmentType.LEFT,
           children: inlineRuns(cell, {
             bold: i === 0,
             color: style.mainTextColor,

@@ -6133,35 +6133,6 @@
                     placeholder: "[Degree]",
                   }),
                 ),
-                // GPA-CHIP-001 (owner 2026-06-18): GPA renders as its OWN small
-                // chip after the degree, editable in place; per-row showGpa
-                // (default show) gates it — its own field, not baked into the
-                // degree string.
-                String(t.gpa || "").trim() && t.showGpa !== !1
-                  ? React.createElement(
-                      "span",
-                      {
-                        style: {
-                          display: "inline-block",
-                          fontSize: "0.82em",
-                          fontWeight: 600,
-                          padding: "0 5px",
-                          marginLeft: 5,
-                          borderRadius: 3,
-                          border: "1px solid " + (S ? __sbInk : "#bbb"),
-                          color: S ? __sbInk : "#555",
-                          verticalAlign: "baseline",
-                          whiteSpace: "nowrap",
-                        },
-                      },
-                      "GPA ",
-                      React.createElement(B, {
-                        path: ["items", n, "gpa"],
-                        value: L(String(t.gpa).replace(/\*\*/g, "")),
-                        placeholder: "[GPA]",
-                      }),
-                    )
-                  : null,
                 t.sch || p
                   ? React.createElement(
                       React.Fragment,
@@ -6174,6 +6145,38 @@
                       }),
                     )
                   : "",
+                // GPA-CHIP-001 (owner 2026-06-18, repositioned): GPA renders on
+                // its OWN line AFTER the degree content line (deg — school), as
+                // the LAST item — editable in place; per-row showGpa (default
+                // show) gates it. Its own field, not baked into the degree string.
+                String(t.gpa || "").trim() && t.showGpa !== !1
+                  ? React.createElement(
+                      "div",
+                      { style: { marginTop: 2 } },
+                      React.createElement(
+                        "span",
+                        {
+                          style: {
+                            display: "inline-block",
+                            fontSize: "0.82em",
+                            fontWeight: 600,
+                            padding: "0 5px",
+                            borderRadius: 3,
+                            border: "1px solid " + (S ? __sbInk : "#bbb"),
+                            color: S ? __sbInk : "#555",
+                            verticalAlign: "baseline",
+                            whiteSpace: "nowrap",
+                          },
+                        },
+                        "GPA ",
+                        React.createElement(B, {
+                          path: ["items", n, "gpa"],
+                          value: L(String(t.gpa).replace(/\*\*/g, "")),
+                          placeholder: "[GPA]",
+                        }),
+                      ),
+                    )
+                  : null,
               ),
             });
           });

@@ -1,6 +1,68 @@
 # Nightly handoff — 2026-06-18 (post kernel-v2 upload + regen)
 
-**Current deployed head:** 1.50.603 (login gate mode-card hold).
+## NIGHTLY RUN 2026-06-18 (autonomous) — SHIPPED 1.50.605 → 1.50.607
+
+- **LAM-RESULTS-001** `[SHIPPED 1.50.605 — export + outcomes-panel; preview follow-up below]`
+  Root cause: the v2 kernel changed the role shape — outcomes are `{title,result,numeric}`
+  (not `{b,t}`) and evidence is a flat `role.proofPoints[]` of strings (not `proofPointIds`).
+  Three readers still expected v1, so v2 roles fell through to token-match → wrong-role
+  outcome. Fixed: `antcv-docx-client.js applyOutcomesMode` tier 2 reads `o.result`, tier 3
+  resolves flat `role.proofPoints[]`; `antcv-outcome-role-select.js` seeder reads `o.result`
+  (so it no longer gap-fills SELECTED OUTCOMES from the role's bullets — that was the
+  `[Verb]`/wrong-tag panel symptom); `app.src.js`/`app.js` `__lamOfL` fallback mirrored.
+  EXPORT (DOCX/PDF) verified correct (results-lamination.test.mjs +5 v2 checks = 26 green;
+  in-browser `AntcvApplyOutcomesMode` returns each role's OWN result).
+  **OPEN follow-up — PREVIEW-RESULTS-EDITABLE-REFRESH-001:** the preview per-role Results
+  `contentEditable` span (`app.src.js` ~5799, `data-antcv-results-edit`) does NOT refresh its
+  DOM text after the computed value changes — the memo `window.__antcvRR` is CORRECT
+  (`id:<role> → right outcome`), `antcv:resultsOverride` is null, yet the span keeps the
+  text from its first paint (React doesn't reconcile contentEditable children). So the
+  preview may still show the role's bullet while the PDF is correct. Owner: does a reload
+  make the preview match the PDF? Fix direction: key the editable span on the computed
+  `__txt` (NOT `__display`, to avoid remount-on-keystroke) so it remounts when the data
+  changes — targeted app.js edit, verify it doesn't disrupt active editing.
+
+- **COPENHAGEN-OVERLAY-001** `[SHIPPED 1.50.606]` (owner 2026-06-18: "Copenhagen Modern now
+  overlays over other visual styles"). The native Visual-package picker recoloured the main
+  column (styleConfig) but never dispatched `antcv:package-changed`, so the body-package
+  island left `body[data-package]` on its prior value → fell back to the `copenhagen-modern`
+  default, leaving the candidate band + sidebar Copenhagen over every other style. Preview-only
+  (export resolves colour from the package id, was correct). Fix: the picker onClick now
+  dispatches `antcv:package-changed` with a complete detail `{packageId, quickAlt:null,
+  isCustom}` (the island already listens). app.js mirrored (count-guarded). Verified headless:
+  a navy-executive pick moves `body[data-package]` off copenhagen, no `data-package-quick-alt
+  ="undefined"`, clean boot.
+
+- **CLOUD-LOAD-ITEMS-001** `[SHIPPED 1.50.607 — save-side sync; owner cross-device verify owed]`
+  (owner 2026-06-18, new device: Load-from-cloud returned very limited semantic constraints).
+  Worker split/merge round-trip is lossless (verified). The loss is SAVE-side — two writers
+  wrote localStorage but never cloud-synced: `src/lib/writing-prefs.ts writeWritingPrefs()`
+  (per-language banned buckets/chips/saved slots — its siblings DID sync; now mirrors them)
+  and `antcv-data-importer.js applyChanges()` (an IMPORT of a profile/kernel JSON stayed local;
+  now pushes merged personalInfo to cloud). Both null-guarded copies of the existing
+  `_antcvCloudWrite` hook. islands rebuilt (vite). **OWNER DECISION NEEDED:** confirm HOW you
+  entered the semantic constraints that came back limited — typed in the Semantic-constraints
+  editor (that path `writeSemRules` ALREADY synced — if so the real cause is likely a KV 429
+  silent-local write at app.src.js ~13939, or the import-side REPLACE in `DEDUP_KEYS`), or
+  imported via a JSON file (now fixed by the importer cloud-write). Also: a fresh-device
+  Load-from-cloud after editing prefs on the first device — do the buckets now persist?
+
+- **Suite health:** 312 tests, 311 pass, **1 pre-existing failure (NOT introduced this run):**
+  `owner-evening-0612-strings.test.mjs` → ROLE-DECOMP-001 asserts `app.js` contains the literal
+  `ROLE DECOMPOSITION (ROLE-DECOMP-001)`, but a later session reworded the prompt header to
+  `ROLE FORM — MERGE-OR-SPLIT (ROLE-DECOMP-001)` (app.src.js ~2706) — the FEATURE is intact,
+  the test string is stale. NOTE the reworded rule says "MERGING … is the LIKELY default —
+  most positions should merge", which INVERTS the original ROLE-DECOMP-001 "keep separate"
+  intent — owner should confirm the merge-default is wanted, then the test string can be
+  updated to match.
+
+**Other 2026-06-18 handoff items below (G-GROUPS / REG-DEDUP / WATERMARK / SALMON / etc.) were
+NOT addressed this run — diagnosed but deferred; REG-DEDUP-001 + G-GROUPS render are the next
+clean cluster (sidecar `antcv-data-importer.js` DEDUP_KEYS + the `{group}` render in app.src.js).**
+
+---
+
+**Current deployed head:** 1.50.607 (was 1.50.603 at handoff time; LAM-RESULTS / COPENHAGEN-OVERLAY / CLOUD-LOAD shipped this run).
 **Context:** Gabriel uploaded `gabriel-kernel-expanded-2026-06-18.json` (50 keys) and
 regenerated an Unsolicited "Product / Project Expert" CV+CL. The kernel ingested
 (groups, regulatory, security-guard, FVU all present in DATA) but several render +

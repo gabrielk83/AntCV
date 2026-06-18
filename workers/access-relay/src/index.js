@@ -741,6 +741,9 @@ const KERNEL_PREFS_STR_FIELDS = new Set([
   'memoryDigest', 'memoryDigestHash',
   'profileDoc', 'skillsDoc', 'danishDoc', 'wordsDoc',
   '_erasedAt',
+  // SETTINGS-SYNC-EXTRA-001 (owner 2026-06-18): photo placement string
+  // (e.g. "sidebar_top"). Pushed by antcv-settings-sync-extra.js.
+  'photoPosition',
 ]);
 const KERNEL_PREFS_BOOL_FIELDS = new Set([
   'consensusEnabled', 'kernelShowcaseGenerated', 'useChatGPT', 'wizardCompleted',
@@ -757,9 +760,13 @@ const KERNEL_PREFS_BOOL_FIELDS = new Set([
   //     the canonical flag the wizard contract reads from.
   'wizardSkipped',
   'aiNoticeAccepted',
+  // SETTINGS-SYNC-EXTRA-001: export-passphrase toggle.
+  'exportPwEnabled',
 ]);
 const KERNEL_PREFS_NUM_FIELDS = new Set([
   'cvTableRatio', 'clTableRatio', 'cvSidebarRatio',
+  // SETTINGS-SYNC-EXTRA-001: photo diameter in px (60–220).
+  'photoSize',
 ]);
 const KERNEL_PREFS_OBJ_FIELDS = new Set([
   'headerItemLoc', 'headerItemAlign',
@@ -781,6 +788,12 @@ const KERNEL_PREFS_OBJ_FIELDS = new Set([
   // antcv-language-prefs.js. Arrays satisfy typeof === 'object' so the
   // existing OBJ_FIELDS validator passes them through correctly.
   'enabledLanguages',
+  // SETTINGS-SYNC-EXTRA-001 (owner 2026-06-18): enabledProviders (map of
+  // provider -> on/off), customTopbarPalette (colour overrides), topbarOrder
+  // (array of header item ids). Objects/arrays satisfy typeof === 'object'.
+  'enabledProviders',
+  'customTopbarPalette',
+  'topbarOrder',
 ]);
 
 function isInKernelAllowlist(field) {

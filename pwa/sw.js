@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.50.644';
+const CACHE = 'antcv-1.50.645';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',
@@ -30,6 +30,7 @@ const SHELL = [
   './antcv-outcomes-metric-guard-390.js',
   './antcv-outcome-role-select.js',
   './antcv-group-name-visibility.js',
+  './antcv-heading-label-dedup.js',
   './antcv-experience-order.js',
   './antcv-kernel-ingest.js',
   './antcv-kernel-import.js',

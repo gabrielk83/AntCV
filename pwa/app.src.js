@@ -6038,13 +6038,31 @@
             n ? __antcvBreaks(__sid, __items, __title) : __items.map((it) => it.node),
           );
         }
-        case "list_italic":
+        case "list_italic": {
+          // PUB-CHAIN-001 (owner 2026-06-18): a NON-ACADEMIC CV shows publication
+          // TITLE + YEAR only (drop the journal/volume/publisher/pages chain) so the
+          // preview matches the export (docx-worker renderSimpleList). Academic
+          // (research-formal) register keeps the full citation.
+          const __isPubs = "publications" === e.id || /PUBLICATION/i.test(String(e.title || ""));
+          let __pubNonAcad = false;
+          if (__isPubs) {
+            try {
+              const __pi = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {};
+              const __r = __pi.personalInfo ? __pi.personalInfo : __pi;
+              __pubNonAcad = ((__r.stylePrefs && __r.stylePrefs.style) || "") !== "research-formal";
+            } catch (_) {}
+          }
           return React.createElement(
             React.Fragment,
             null,
             (e.items || []).map((t, n) => {
               if (e.hidden && e.hidden[n]) return null;
               const o = xe(P(t || ""));
+              let __det = o.details;
+              if (__isPubs && __pubNonAcad && __det) {
+                const __ym = String(__det).match(/(1[89][0-9][0-9]|20[0-9][0-9])/);
+                __det = __ym ? __ym[1] : "";
+              }
               return React.createElement(
                 "div",
                 {
@@ -6067,11 +6085,12 @@
                       React.createElement("i", null, o.title),
                     )
                   : null,
-                o.title && o.details ? " — " : "",
-                o.details,
+                o.title && __det ? " — " : "",
+                __det,
               );
             }),
           );
+        }
         case "education": {
           const __sid = e.id;
           const __title = (e.title || "").toUpperCase();
@@ -30915,8 +30934,8 @@
                       },
                     },
                     [
-                      { k: "account", l: "Account", tier: "standard" },
                       { k: "personal", l: "Personal", tier: "standard" },
+                      { k: "account", l: "Account", tier: "standard" },
                       { k: "layout", l: "Layout", tier: "standard" },
                       { k: "apps", l: "Application history", tier: "standard" },
                       { k: "sync", l: "Sync", tier: "advanced" },

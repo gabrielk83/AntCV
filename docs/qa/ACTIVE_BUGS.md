@@ -1,3 +1,29 @@
+## CLOSED — nightly 2026-06-18 (autonomous run; 1.50.605 → 1.50.608)
+
+Authoritative current backlog is `docs/qa/NIGHTLY_HANDOFF_2026-06-18.md`. This run:
+
+- **LAM-RESULTS-001** `[EXPORT + OUTCOMES-PANEL CLOSED 1.50.605]` — v2 kernel role shape
+  (outcomes `{title,result}`, flat `proofPoints[]`) wasn't read by the lamination
+  (`antcv-docx-client.js applyOutcomesMode`), the preview fallback (`__lamOfL`), or the
+  seeder (`antcv-outcome-role-select.js`) → wrong-role outcomes. All three now read v2.
+  DOCX/PDF verified. **Open follow-up:** preview Results `contentEditable` span doesn't
+  refresh after the (correct) computed value changes — `PREVIEW-RESULTS-EDITABLE-REFRESH-001`.
+- **COPENHAGEN-OVERLAY-001** `[CLOSED 1.50.606]` (owner 2026-06-18) — native package picker
+  now dispatches `antcv:package-changed` so `body[data-package]` follows the pick instead of
+  defaulting to copenhagen-modern (band/sidebar were stuck Copenhagen over other styles).
+- **CLOUD-LOAD-ITEMS-001** `[SAVE-SIDE CLOSED 1.50.607 — owner cross-device verify owed]`
+  (owner 2026-06-18) — `writeWritingPrefs` + the data-importer now cloud-sync (were local-only).
+  Worker round-trip was already lossless. If the lost field was typed in the semantic-rules
+  editor (already synced), the residual cause is a KV-429 local-only write or import-side
+  REPLACE — pending owner confirmation of the entry path.
+- **ROLE-DECOMP-001** `[CORRECTED 1.50.608]` (owner clarified 2026-06-18) — SEPARATE is the
+  DEFAULT (decompose); merge is a CONSIDERED, JD-driven conclusion reached FROM the separate
+  roles, never an auto space-saver. Prompt had drifted to "most positions should merge" — fixed
+  + test updated. Suite 312/312. Regen-gated for output.
+- **EXPORT-PREVIEW-SHRINK-001** `[was already SHIPPED 1.50.604 — width-only fit]`.
+
+---
+
 ## OPEN ISSUES — owner review 2026-06-15 (PRIORITISED BACKLOG for the next session)
 
 Owner-set ordering (2026-06-15, revised): **work CONTENT & EXPORT issues first, then SETTINGS MODIFICATION, then NEW FEATURES.** Within each bucket the items are roughly priority-ordered. Each item has the verified root cause + fix location. Discipline: edit `pwa/app.src.js` → mirror minified `pwa/app.js` (names DIFFER — anchor on string literals, copy minified blocks verbatim; see [[minified-mirror-shadow-hazard]]); verify PAST the sign-in gate headlessly (boot-smoke is NOT enough); a fix counts only if it holds in Preview + DOCX/PDF, desktop + mobile; cache-bust trio; push to `main` only; worker = manual deploy (one deployer at a time).

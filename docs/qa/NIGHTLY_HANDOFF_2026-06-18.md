@@ -141,7 +141,7 @@ Kernel provides the grouped `additional` structure, but the export renders one f
 block. Same group-render family. CLASSIFY: render (+ worker export must honour the
 sub-group headers in ADDITIONAL INFORMATION).
 
-### LAM-RESULTS-001 — Per-role "Results:" lines show the WRONG role's outcome ("funny")
+### LAM-RESULTS-001 — Per-role "Results:" lines show the WRONG role's outcome ("funny") `[EXPORT + PANEL SHIPPED 1.50.605 — preview contentEditable-refresh follow-up open; see NIGHTLY RUN block at top]`
 Symptom (CV screenshot): under "Product / Project Expert" the Results line reads
 "Security Guard, Student Dormitories — Tel Aviv University, 2010."; under "Change
 Control Lead" it reads "Students Council Representative — …, 2005-2007." The Results
@@ -155,7 +155,7 @@ by the wrong field or order after the v2 kernel changed role ids/shape. Sites:
 mapping (~23022). CLASSIFY: lamination/generation. Likely needs a prompt/lamination
 fix THEN regen. HIGH PRIORITY — this is the most visible content bug.
 
-### EXPORT-PREVIEW-SHRINK-001 — Export preview shows a tiny page in a big gray area
+### EXPORT-PREVIEW-SHRINK-001 — Export preview shows a tiny page in a big gray area `[SHIPPED 1.50.604 — width-only fit]`
 Symptom: the Document-export modal renders the page shrunk into a small region with
 large gray margins (regression after 1.50.600 un-clamp). Cause: `fitWidth` in
 `pwa/antcv-pdf-preview-gate.js` (~618) scales by `min(width-scale, ONE-page-HEIGHT

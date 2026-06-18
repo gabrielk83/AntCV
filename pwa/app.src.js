@@ -9851,11 +9851,15 @@
       return { ...e, roles: n };
     }
     if ("labeled_list_item" === t.type && "number" == typeof l) {
+      // FIXIT-LOOP-001 (owner 2026-06-18): this applier referenced an UNDEFINED
+      // `items` instead of the local copy `n`, so the compressed value was never
+      // written and the section returned UNCHANGED — the orphan-retry pass then
+      // spun forever. Write to `n`; keep the label `l` frozen, tighten only `v`.
       const n = [...(e.items || [])];
       return (
         n[l] &&
-          !items[l].group &&
-          (items[l] = { ...items[l], v: t.v || items[l].v || "" }),
+          !n[l].group &&
+          (n[l] = { ...n[l], v: t.v || n[l].v || "" }),
         { ...e, items: n }
       );
     }
@@ -9863,12 +9867,14 @@
       const n = [...(e.items || [])];
       return (void 0 !== n[l] && (n[l] = t.value || n[l]), { ...e, items: n });
     }
-    if ("education_item" === t.type && "number" == typeof l)
+    if ("education_item" === t.type && "number" == typeof l) {
+      // FIXIT-LOOP-001: same undefined-`items` bug as labeled_list_item above.
+      const n = [...(e.items || [])];
       return (
-        [...(e.items || [])][l] &&
-          (items[l] = { ...items[l], sch: t.sch || items[l].sch || "" }),
-        { ...e, items: items }
+        n[l] && (n[l] = { ...n[l], sch: t.sch || n[l].sch || "" }),
+        { ...e, items: n }
       );
+    }
     if ("text" === t.type || "text_inline" === t.type)
       return { ...e, content: t.content || e.content };
     if ("text_bullets" === t.type)
@@ -9906,7 +9912,12 @@
       const n = e.items || [];
       let o = 0;
       const r = n.map((e) => {
-        if (e && e.group) return e;
+        // FIXIT-DESYNC-001 (owner 2026-06-18): the compress SOURCE builder
+        // excludes BOTH group AND hidden items, so the apply must skip BOTH to
+        // keep the value→row mapping aligned. Skipping only groups let a hidden
+        // item consume a result meant for a later VISIBLE row, shifting every
+        // value after it ("compressed the headlines/content in a funny way").
+        if (e && (e.group || e.hidden)) return e;
         const n = (t.items || [])[o++];
         return n ? { l: e.l, v: n.v || e.v || "" } : e;
       });

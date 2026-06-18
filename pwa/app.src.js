@@ -3078,8 +3078,17 @@
               title: "RECOMMENDATIONS",
               loc: "main",
               on: !0,
-              type: "text",
-              content: "Danish and international recommenders on request.",
+              // RECS-AS-LIST-001 (owner 2026-06-18): RECOMMENDATIONS is a
+              // structured list like EDUCATION - each recommender is its own row
+              // (Name + who it was for / contact), rendered "Name - detail". Reuses
+              // the education render + (relabelled) editor.
+              type: "education",
+              items: [
+                {
+                  deg: "References",
+                  sch: "Danish and international recommenders available on request",
+                },
+              ],
             },
             {
               id: "tools",
@@ -8597,7 +8606,10 @@
           (e.items || []).map((t, i) => {
             const l = !(!e.hidden || !e.hidden[i]),
               c = o === `item:${i}`,
-              p = a === `item:${i}`;
+              p = a === `item:${i}`,
+              // RECS-AS-LIST-001: the same education editor backs the
+              // RECOMMENDATIONS section; relabel the two fields + drop the GPA row.
+              __isRec = e.id === "recommendations";
             return React.createElement(
               "div",
               {
@@ -8645,7 +8657,7 @@
                     ((n[i] = { ...n[i], deg: t.target.value }),
                       d({ items: n }));
                   },
-                  placeholder: "Degree",
+                  placeholder: __isRec ? "Recommender name" : "Degree",
                   style: {
                     flex: 1,
                     fontSize: 11,
@@ -8663,7 +8675,7 @@
                     ((n[i] = { ...n[i], sch: t.target.value }),
                       d({ items: n }));
                   },
-                  placeholder: "School / details",
+                  placeholder: __isRec ? "Who it was for, contact" : "School / details",
                   style: {
                     flex: 2,
                     fontSize: 11,
@@ -8696,6 +8708,7 @@
                   "✕",
                 ),
               ),
+              !__isRec &&
               React.createElement(
                 "div",
                 {

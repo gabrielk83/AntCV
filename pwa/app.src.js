@@ -31349,8 +31349,14 @@
                               {
                                 l: "Cover-letter drafts",
                                 b: "✓",
-                                c: "✘",
-                                note: "localStorage only, not synced",
+                                c: "✓",
+                                note: "Synced with your CV sections",
+                              },
+                              {
+                                l: "Writing style, banned words & semantic constraints",
+                                b: "✓",
+                                c: "✓",
+                                note: "Per-language banned buckets included; synced with your profile",
                               },
                               {
                                 l: "Layout, theme, font sizes",

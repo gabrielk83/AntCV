@@ -550,6 +550,13 @@ ${text}`;
     'personalInfo.publicationsStructured': p => (p.name || '').toLowerCase().slice(0, 80),
     'personalInfo.contactItems':           c => c.key,
     'personalInfo.additional':             a => `l:${_ndk(a.l)}`,
+    // CLOUD-LOAD-ITEMS-001 (owner 2026-06-18): semantic constraints + the
+    // contextual banned list were NOT in DEDUP_KEYS, so an import REPLACED them
+    // (a small/empty imported set wiped a large stored set, which then synced the
+    // shrunk set to cloud — "the limited were imported from cloud"). Key them so an
+    // import UNIONS (merges) like every other list, identity = the avoid/prefer pair.
+    'personalInfo.semanticConstraintsV2':        c => [c && c.trigger, c && c.avoid, c && c.prefer, c && c.pattern].map((x) => _ndk(x)).join('|'),
+    'personalInfo.stylePrefs.bannedContextual':  c => [c && c.trigger, c && c.avoid, c && c.prefer, c && c.pattern].map((x) => _ndk(x)).join('|'),
   };
   // Grouped sidebar sections whose freshly-ingested items must default VISIBLE —
   // the dedupe below removes the legacy flat duplicates, so a stale hidden flag on

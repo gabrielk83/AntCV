@@ -53,7 +53,17 @@ const r = await page.evaluate(()=>{
   items.forEach(it=>{ const k=String(it.l).toLowerCase().replace(/[^a-z0-9]+/g,' ').trim(); codeCount[k]=(codeCount[k]||0)+1; });
   return { codeCount, anyHidden: items.some(it=>it.hidden===true||it.on===false), items: items.map(it=>it.l) };
 });
+// CLOUD-LOAD-ITEMS-001: importing a small bannedContextual set must UNION, not replace.
+const r2 = await page.evaluate(()=>{
+  const M = window.AntCVImporter.mergePath;
+  const existing = [ { avoid:'utilize', prefer:'use' }, { avoid:'leverage', prefer:'use' }, { avoid:'synergy', prefer:'teamwork' } ];
+  const smallImport = [ { avoid:'utilize', prefer:'use' } ]; // subset — must NOT wipe the rest
+  const merged = M(existing, smallImport, 'personalInfo.stylePrefs.bannedContextual');
+  return { len: merged.length, avoids: merged.map(c=>c.avoid).sort() };
+});
 const checks=[]; const check=(n,ok,d)=>{checks.push(ok);console.log(`${n}: ${ok?'OK':'FAIL'}${ok?'':' '+(d||'')}`)};
+check('bannedContextual import UNIONS (small import does not shrink the set)', r2.len===3, JSON.stringify(r2));
+check('bannedContextual keeps all originals (leverage+synergy survive)', r2.avoids.join(',')==='leverage,synergy,utilize', JSON.stringify(r2.avoids));
 check('ASPICE appears exactly once', r.codeCount['aspice']===1, JSON.stringify(r.codeCount));
 check('ISO 26262 appears exactly once', r.codeCount['iso 26262']===1, JSON.stringify(r.codeCount));
 check('MIL-STD-810G appears exactly once', r.codeCount['mil std 810g']===1, JSON.stringify(r.codeCount));

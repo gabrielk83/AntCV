@@ -6,7 +6,7 @@
  */
 (function(){
   'use strict';
-  const VERSION = '1.50.203-native-render';
+  const VERSION = '1.50.691-core-controls';
   // v1.40.242-preview-guard: Preview is button-free. Reject seeds and
   // hosts inside .antcv-preview-paper.
   const isInPreviewPaper = el => { if(!el) return false; const p=document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]'); return !!(p && p.contains(el)); };
@@ -32,7 +32,9 @@
   // choice (stored in the align map) still wins for any row. Previously row 0
   // also defaulted left, so this sidecar force-left the header cells in the
   // preview even though every export path centers them.
-  function getAlign(i){ const v=readAlignMap()['row-'+i]; if(ALIGN.includes(v)) return v; return i===0 ? 'center' : 'left'; }
+  // CJLR-DEFAULT-CENTER-001 (owner 2026-06-19: "Default - centered"): header (row 0)
+  // AND body rows now default to CENTER. An explicit CJLR choice still wins per row.
+  function getAlign(i){ const v=readAlignMap()['row-'+i]; if(ALIGN.includes(v)) return v; return 'center'; }
   function setAlign(i,v){ const m=readAlignMap(); m['row-'+i]=v; writeAlignMap(m); }
   function nextAlign(v){ return ALIGN[(Math.max(0, ALIGN.indexOf(v))+1)%ALIGN.length]; }
 
@@ -244,7 +246,10 @@
   function pulse(){ try{ window.dispatchEvent(new CustomEvent('antcv:sections-updated',{detail:{source:'core-competencies-row-controls', version:VERSION}})); }catch(_){} }
   let pending=false; function runSoon(){ if(pending) return; pending=true; requestAnimationFrame(()=>{ pending=false; run(); }); }
   function run(){ try{ const rows=findRows(); rows.forEach(ensureControls); applyPreview(); } catch(e){ try{ console.warn('[core-competencies-row-controls-242] failed:', e && e.message); }catch(_){} } }
-  function start(){ run(); [100,300,800,1600,3000].forEach(ms=>setTimeout(run,ms)); try{ new MutationObserver(runSoon).observe(document.body||document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style','value']}); }catch(_){} window.addEventListener('input',runSoon,true); window.addEventListener('click',()=>setTimeout(run,0),true); window.addEventListener('antcv:sections-updated',()=>setTimeout(run,0)); setInterval(run,2000); }
+  // CORE-COMP-INPUTS-SMALLER-001 (owner 2026-06-19: "make text[areas] for focus area
+  // and strategic expertise smaller"): shrink the row inputs so the controls have room.
+  function injectCss(){ if(document.getElementById('antcv-core-comp-inputs-css')) return; var s=document.createElement('style'); s.id='antcv-core-comp-inputs-css'; s.textContent='[data-antcv-core-row="1"] input,[data-antcv-core-row="1"] textarea{font-size:11px !important;padding:3px 4px !important;line-height:1.25 !important;}'; (document.head||document.documentElement).appendChild(s); }
+  function start(){ injectCss(); run(); [100,300,800,1600,3000].forEach(ms=>setTimeout(run,ms)); try{ new MutationObserver(runSoon).observe(document.body||document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style','value']}); }catch(_){} window.addEventListener('input',runSoon,true); window.addEventListener('click',()=>setTimeout(run,0),true); window.addEventListener('antcv:sections-updated',()=>setTimeout(run,0)); setInterval(run,2000); }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', start); else start();
   window.AntcvCoreCompetenciesRowControls242 = { version:VERSION, run, _findRows:findRows, _applyPreview:applyPreview };
 })();

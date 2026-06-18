@@ -1,5 +1,42 @@
 # Nightly handoff — 2026-06-18 (post kernel-v2 upload + regen)
 
+## OWNER-DIRECTED BATCH 2026-06-18 (after the nightly) — SHIPPED 1.50.605 → 1.50.612 + docx-worker 1.14.77
+
+Full session: LAM-RESULTS-001 (export+seeder 1.50.605, preview sidecar 1.50.610),
+COPENHAGEN-OVERLAY-001 (1.50.606), CLOUD-LOAD-ITEMS-001 (sync 1.50.607 + import-union
+1.50.611), ROLE-DECOMP-001 (1.50.608, separate-by-default per owner), REG-DEDUP-001
+(1.50.609, +G-GROUPS-001/002 via re-upload), SIDEBAR-BREATHING-001 (1.50.612,
+idempotent equalize), WATERMARK-SIDE-001 + PUB-CHAIN-001 (docx-worker 1.14.77,
+deployed). Suite 312/312 throughout.
+
+- **PREVIEW-RESULTS-EDITABLE-REFRESH-001** `[CLOSED 1.50.610]` — owner: preview still
+  wrong after refresh. Root = a 4TH v2-shape reader, the preview override sidecar
+  `antcv-results-laminate-510.js` (lamFor read [o.b,o.t]/proofPointIds → v2 roles
+  derived from the bullet, tier 4, overwriting React's correct value). Now reads
+  o.result + flat proofPoints. Preview matches export.
+- **WATERMARK-SIDE-001** `[SHIPPED docx-worker 1.14.77 — owner PDF check]` — the AI
+  notice now picks the column whose LAST page has fewer paragraphs (lighter side) from
+  the WORKER's own pagination, not the stale preview hint. Owner verifies on a real PDF.
+- **PUB-CHAIN-001** `[EXPORT SHIPPED docx-worker 1.14.77 — owner regen/PDF check]` —
+  non-academic CV shows publication title+year only; academic keeps the full chain
+  (renderSimpleList gated on isAcademic). **OPEN: preview parity** — the preview renders
+  the stored publications string with no splitter, so it still shows the full chain;
+  add a non-academic title+year strip to the app.src.js publications render to match.
+- **SIDEBAR-BREATHING-001** `[CLOSED 1.50.612]` — idempotent equalize guard breaks the
+  measure→write→ResizeObserver→scroll→re-render→equalize loop. Verified 0 style writes
+  across 12 scrolls.
+- **OPEN — 2 live UI issues (owner 2026-06-18, awaiting screenshot):** (1) after login the
+  "sticky mode select" (ACCOUNT MODE card) still shows — login-gate `antcv-login-loading-gate.js`
+  cover should hold until it's gone; (2) the quick-alts selector is "not in the right
+  place with its text" — PackagePicker island (`src/islands/PackagePicker/PackagePicker.tsx`)
+  layout; CONFIRMED not caused by the COPENHAGEN-OVERLAY fix (the island reads
+  localStorage on the event, ignores the detail). Both are visual-positional — need a
+  screenshot to fix the exact spot without churn.
+- **OPEN — G-GROUPS-003** (additional info sub-subsections): render + worker already
+  honour {group} markers; the gap is ingestion shape (additional ingested flat, not
+  {group}-partitioned). Owner-data / ingestion-shape dependent — needs the kernel to
+  carry grouped additional, or an ingest-time partitioner.
+
 ## NIGHTLY RUN 2026-06-18 (autonomous) — SHIPPED 1.50.605 → 1.50.607
 
 - **LAM-RESULTS-001** `[SHIPPED 1.50.605 — export + outcomes-panel; preview follow-up below]`

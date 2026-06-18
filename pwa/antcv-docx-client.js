@@ -1671,6 +1671,10 @@ function buildFilename({ personalInfo, meta, doc, language }) {
 // a `results` string holding its matched outcomes (title/company token
 // overlap; unmatched outcomes attach to the first visible role). The worker
 // renders it as a "Results:" line after the role's bullets.
+// RESULTS-NUMERIC-LEAD-001: a result text carries a metric (digit / % / × / a
+// standalone "x" multiplier). Used to lead the Results line with quantified
+// outcomes across every lamination tier.
+const _hasNumLam = (t) => /\d|%|×|\bx\b/i.test(String(t == null ? '' : t));
 export function applyOutcomesMode(docSections, doc) {
   try {
     if (doc !== 'cv' || !Array.isArray(docSections)) return docSections;
@@ -1764,6 +1768,11 @@ export function applyOutcomesMode(docSections, doc) {
           .map((o) => (typeof o === 'string' ? o.trim()
             : (o.result ? String(o.result).trim() : [o.b, o.t].filter(Boolean).join(' ').trim())))
           .filter(Boolean);
+        // RESULTS-NUMERIC-LEAD-001 (owner 2026-06-18: "you keep avoiding numerical
+        // results"). tier-2/3 joined outcomes in STORED order, so a numeric result
+        // could sit behind prose and get cut by the cap. Lead with the quantified
+        // ones (digits / % / × / "x") so the number always survives + reads first.
+        texts.sort((p, q) => (_hasNumLam(q) ? 1 : 0) - (_hasNumLam(p) ? 1 : 0));
         if (texts.length) { _lam.set(r, _capJoin(texts)); return; }
       }
       // 3) role.proofPointIds resolved against the master-profile proof points,
@@ -1774,6 +1783,7 @@ export function applyOutcomesMode(docSections, doc) {
       let texts = ids.map((id) => _ppText[id]).filter(Boolean);
       if (!texts.length && Array.isArray(r.proofPoints) && r.proofPoints.length)
         texts = r.proofPoints.map((p) => (typeof p === 'string' ? p.trim() : String((p && (p.text || p.result)) || '').trim())).filter(Boolean);
+      texts.sort((p, q) => (_hasNumLam(q) ? 1 : 0) - (_hasNumLam(p) ? 1 : 0)); // RESULTS-NUMERIC-LEAD-001
       if (texts.length) _lam.set(r, _capJoin(texts));
     });
     // The heuristic SELECTED-OUTCOMES distribution runs ONLY for roles that are

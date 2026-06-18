@@ -544,7 +544,13 @@ ${text}`;
   const DEDUP_KEYS = {
     'personalInfo.education':              e => `${e.deg}|${e.sch}`,
     'personalInfo.certifications':         s => String(s).toLowerCase().trim(),
-    'personalInfo.tools':                  s => _ndk(s),
+    // TOOLS-DEDUP-COLLAPSE-001 (owner 2026-06-18: "Tools and methods is already
+    // truncated"). Tools items are OBJECTS ({group} subhead or {l,v} row), but the
+    // key stringified the whole object -> "[object Object]" -> "object object" for
+    // EVERY item, so the dedup map collapsed all rows to ONE key and kept only the
+    // LAST (the live editor showed a single "AI-assisted" row; toolsItems[13]
+    // survived because it has no dedup key). Key by group / label like regulatory.
+    'personalInfo.tools':                  t => (t && t.group) ? `g:${_ndk(t.group)}` : `l:${_ndk(t && t.l)}`,
     'personalInfo.regulatory':             r => r.group ? `g:${_ndk(r.group)}` : `l:${_ndk(r.l)}`,
     'personalInfo.publications':           s => String(s).replace(/<[^>]+>/g, '').toLowerCase().slice(0, 80),
     'personalInfo.publicationsStructured': p => (p.name || '').toLowerCase().slice(0, 80),

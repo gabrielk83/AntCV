@@ -23,7 +23,7 @@
 (function () {
   'use strict';
   if (window.__antcvWhyContextTitle) return;
-  window.__antcvWhyContextTitle = '1.50.678';
+  window.__antcvWhyContextTitle = '1.50.679';
 
   var SRC = 'why-context-title';
   function disabled() { try { var v = localStorage.getItem('antcv:disable-why-context-title'); return v === '1' || v === 'true'; } catch (_) { return false; } }
@@ -35,23 +35,32 @@
     catch (_) { return false; }
   }
 
-  // EN + DA title pairs. Keyed by language; [specific, unsolicited].
-  var PAIRS = {
-    en: { specific: 'WHY THIS POSITION', unsolicited: 'WHY YOUR COMPANY' },
-    da: { specific: 'HVORFOR DENNE STILLING', unsolicited: 'HVORFOR JERES VIRKSOMHED' }
+  // Specific (JD) heading + the GENERIC unsolicited fallback, per language.
+  var SPECIFIC = { en: 'WHY THIS POSITION', da: 'HVORFOR DENNE STILLING' };
+  var UNSOL_DEFAULT = { en: 'WHY YOUR COMPANY', da: 'HVORFOR JERES VIRKSOMHED' };
+  // Unsolicited entity variants we RECOGNISE as already-correct (per case the
+  // target may be a company / institute / organisation — owner: "do not forget
+  // why your institute / organization, if unsolicited, per case"). When the title
+  // is already one of these, leave it — the generation chose the right entity.
+  var UNSOL_VARIANTS = {
+    en: ['WHY YOUR COMPANY', 'WHY YOUR INSTITUTE', 'WHY YOUR INSTITUTION', 'WHY YOUR ORGANIZATION', 'WHY YOUR ORGANISATION', 'WHY YOUR TEAM'],
+    da: ['HVORFOR JERES VIRKSOMHED', 'HVORFOR JERES ORGANISATION', 'HVORFOR JERES INSTITUTION', 'HVORFOR JERES INSTITUT', 'HVORFOR JERES TEAM']
   };
-  // Recognise the current title's language from its WHY-variant.
-  function langOfTitle(title) {
+  // Classify the current title -> {lang, kind} where kind is 'specific' |
+  // 'unsolicited' | null (unrecognised language -> leave the title alone).
+  function classify(title) {
     var t = String(title || '').trim().toUpperCase();
-    if (t === 'WHY THIS POSITION' || t === 'WHY YOUR COMPANY') return 'en';
-    if (t === 'HVORFOR DENNE STILLING' || t === 'HVORFOR JERES VIRKSOMHED') return 'da';
-    return null;
+    for (var lang in SPECIFIC) {
+      if (t === SPECIFIC[lang].toUpperCase()) return { lang: lang, kind: 'specific' };
+      if (UNSOL_VARIANTS[lang].indexOf(t) !== -1) return { lang: lang, kind: 'unsolicited' };
+    }
+    return { lang: null, kind: null };
   }
 
   function isWhySection(sec) {
     if (!sec) return false;
     if (sec.id === 'why') return true;
-    return langOfTitle(sec.title) != null;
+    return classify(sec.title).kind != null;
   }
 
   // Strip a leading bold/markdown/plain "WHY …:" / "HVORFOR …:" (+ ES/DE/FR) label.
@@ -74,11 +83,18 @@
   function fix(sec, specific) {
     if (!isWhySection(sec)) return false;
     var changed = false;
-    // 1. context title (EN/DA only; leave unknown languages alone)
-    var lang = langOfTitle(sec.title);
-    if (lang) {
-      var want = specific ? PAIRS[lang].specific : PAIRS[lang].unsolicited;
-      if (sec.title !== want) { sec.title = want; changed = true; }
+    // 1. context title (EN/DA only; leave unknown languages alone). Only CORRECT a
+    // title that contradicts the context: a JD present but an unsolicited heading
+    // -> "WHY THIS POSITION"; no JD but a specific heading -> the generic
+    // "WHY YOUR COMPANY". An already-unsolicited entity title (institute /
+    // organisation / team) under no-JD is left as-is — the generation picked it.
+    var c = classify(sec.title);
+    if (c.lang) {
+      if (specific && c.kind === 'unsolicited') {
+        if (sec.title !== SPECIFIC[c.lang]) { sec.title = SPECIFIC[c.lang]; changed = true; }
+      } else if (!specific && c.kind === 'specific') {
+        if (sec.title !== UNSOL_DEFAULT[c.lang]) { sec.title = UNSOL_DEFAULT[c.lang]; changed = true; }
+      }
     }
     // 2. strip the duplicate inline label from the paragraph
     if (typeof sec.content === 'string') {
@@ -116,5 +132,5 @@
   try { window.addEventListener('storage', function (e) { if (!e || e.key === 'sections' || e.key === 'antcv:lastJdText' || e.key === null) tick(); }); } catch (_) {}
   setInterval(tick, 4000);
 
-  window.AntcvWhyContextTitle = { version: '1.50.678', _apply: apply, _fix: fix, _strip: stripLabel };
+  window.AntcvWhyContextTitle = { version: '1.50.679', _apply: apply, _fix: fix, _strip: stripLabel };
 })();

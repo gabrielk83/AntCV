@@ -22,7 +22,7 @@
 (function () {
   'use strict';
   if (window.__antcvHeadingLabelDedup) return;
-  window.__antcvHeadingLabelDedup = '1.50.645';
+  window.__antcvHeadingLabelDedup = '1.50.676';
 
   var SRC = 'heading-label-dedup';
   function disabled() { try { var v = localStorage.getItem('antcv:disable-heading-label-dedup'); return v === '1' || v === 'true'; } catch (_) { return false; } }
@@ -38,12 +38,24 @@
     // Optional leading markdown (** ), the title (case-insensitive), optional
     // closing markdown, then a colon and any following space.
     var esc = title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    // Handle bold either side of the colon: "LABEL:", "**LABEL:**", "**LABEL**:".
-    var re = new RegExp('^\\s*\\*{0,2}\\s*' + esc + '\\s*\\*{0,2}\\s*:\\s*\\*{0,2}\\s*', 'i');
-    if (re.test(content)) {
-      var next = content.replace(re, '');
-      // Don't blank the paragraph — only strip when real prose follows.
-      if (next.trim()) { sec.content = next; return true; }
+    // HTML-BOLD-LABEL-002 (owner 2026-06-18): generation also wraps the duplicate
+    // label in HTML bold, e.g. `<b style="color:rgb(0,116,110)">WHO I AM:</b> …`,
+    // which the markdown-only regex missed. Try, in order:
+    //  (a) markdown / plain     "LABEL:", "**LABEL:**", "**LABEL**:"
+    //  (b) HTML bold, colon IN  "<b ...>LABEL:</b>" / "<strong ...>LABEL:</strong>"
+    //  (c) HTML bold, colon OUT "<b ...>LABEL</b>:"
+    var res = [
+      new RegExp('^\\s*\\*{0,2}\\s*' + esc + '\\s*\\*{0,2}\\s*:\\s*\\*{0,2}\\s*', 'i'),
+      new RegExp('^\\s*<(?:b|strong)\\b[^>]*>\\s*' + esc + '\\s*:\\s*<\\/(?:b|strong)>\\s*', 'i'),
+      new RegExp('^\\s*<(?:b|strong)\\b[^>]*>\\s*' + esc + '\\s*<\\/(?:b|strong)>\\s*:\\s*', 'i')
+    ];
+    for (var k = 0; k < res.length; k++) {
+      if (res[k].test(content)) {
+        var next = content.replace(res[k], '');
+        // Don't blank the paragraph — only strip when real prose follows.
+        if (next.trim()) { sec.content = next; return true; }
+        break;
+      }
     }
     return false;
   }
@@ -76,5 +88,5 @@
   try { window.addEventListener('storage', function (e) { if (!e || e.key === 'sections' || e.key === null) tick(); }); } catch (_) {}
   setInterval(tick, 4000);
 
-  window.AntcvHeadingLabelDedup = { version: '1.50.645', _apply: apply, _strip: stripLabel };
+  window.AntcvHeadingLabelDedup = { version: '1.50.676', _apply: apply, _strip: stripLabel };
 })();

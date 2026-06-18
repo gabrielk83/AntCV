@@ -25568,7 +25568,7 @@
                         ? void 0
                         : l[1]) || "",
                     ),
-                    f = `<tr><th width="${s}" style="width:${s}pt;background:${t.tableHeaderBg};color:${t.tableHeaderText};padding:3pt 5pt;text-align:center;font-family:'Carlito',${d};font-size:${u.mainTblH}pt;font-weight:700;line-height:${p};border:0.5pt solid ${t.tableBorderColor}">${m}</th><th width="${c}" style="width:${c}pt;background:${t.tableHeaderBg};color:${t.tableHeaderText};padding:3pt 5pt;text-align:center;font-family:'Carlito',${d};font-size:${u.mainTblH}pt;font-weight:700;line-height:${p};border:0.5pt solid ${t.tableBorderColor}">${g}</th></tr>`,
+                    f = `<tr><th width="${s}" style="width:${s}pt;background:${Ke || t.headerBg};color:#fff;padding:3pt 5pt;text-align:center;font-family:'Carlito',${d};font-size:${u.mainTblH}pt;font-weight:700;line-height:${p};border:0.5pt solid ${t.tableBorderColor}">${m}</th><th width="${c}" style="width:${c}pt;background:${Ke || t.headerBg};color:#fff;padding:3pt 5pt;text-align:center;font-family:'Carlito',${d};font-size:${u.mainTblH}pt;font-weight:700;line-height:${p};border:0.5pt solid ${t.tableBorderColor}">${g}</th></tr>`,
                     h = `display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;max-height:${(1.15 * u.mainTblCell * 2).toFixed(1)}pt;overflow-wrap:break-word;word-break:break-word`,
                     rows = e.rows || [],
                     bb = e.pageBreakRows || [],

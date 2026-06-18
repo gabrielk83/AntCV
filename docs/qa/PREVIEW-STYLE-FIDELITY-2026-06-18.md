@@ -133,7 +133,19 @@ disappears after the tab stabilises. should be inside advanced tones collapsable
   orphan in the Personal column). Mirror the TENSE-POPIN-002 discipline: never build a card in a
   location that the React tree owns and will wipe.
 
-## G. Figure POSITION selector loses its mark on style switch (no per-package default position)
+## G. Figure POSITION selector loses its mark on style switch (no per-package default position) — `[SHIPPED 1.50.630, owner-approved]`
+
+**SHIPPED 1.50.630 (FIGURE-ON-SWITCH-001):** `PackagePicker.selectPackage()` →
+`applyPackageFigureDefaults(id)` now sets the package's default figure POSITION (via
+`window._antcvSetPhotoPosition`) AND SHAPE (`PACKAGES[id].shape` → both `personalInfo.photoShape`
+and `stylePrefs.photoShape` + storage/`antcv:photo-shape-changed`/`antcv:sections-updated`
+events). Selector now marks the default + moves shape on switch. **REMAINING (still item B):** the
+PREVIEW reader `__photoFrame` (~40918) + inline (~41799) only handle square/rounded/circle — so
+`rounded-square` (pampas) / `hexagon` (delhi) are SET correctly but the preview still renders them
+as circle until B adds the radii + hexagon clip. The shape SELECTOR buttons for rounded-square/
+hexagon may also be absent (only circle/rounded/square + pentagon sidecar) — part of B.
+
+
 
 **Owner 2026-06-18:** "moving from copenhagen modern to other style does not have a default
 figure position (the blue sidebar bridge is now white while no other marked in blue). And the

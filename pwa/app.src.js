@@ -6170,13 +6170,14 @@
                       React.createElement(
                         "span",
                         {
+                          // GPA-CHIP-PLAIN-001 (owner 2026-06-18): the GPA / contact
+                          // value must NOT always be bold or framed — it follows the
+                          // section's own writing + visual style. Plain inline text,
+                          // slightly smaller and using the palette ink; no border, no
+                          // forced weight.
                           style: {
                             display: "inline-block",
                             fontSize: "0.82em",
-                            fontWeight: 600,
-                            padding: "0 5px",
-                            borderRadius: 3,
-                            border: "1px solid " + (S ? __sbInk : "#bbb"),
                             color: S ? __sbInk : "#555",
                             verticalAlign: "baseline",
                             whiteSpace: __sid === "recommendations" ? "normal" : "nowrap",

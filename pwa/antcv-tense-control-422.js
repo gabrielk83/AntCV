@@ -18,7 +18,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.537';
+  var VERSION = '1.50.626';
   if (window.__antcvTenseControl422 === VERSION) return;
   window.__antcvTenseControl422 = VERSION;
 
@@ -123,14 +123,16 @@
         if (existing.parentElement !== col) { existing.remove(); }
         else { paintActive(existing); return; }
       }
-      // PERSONAL-TAB-JANK-001 (owner 2026-06-18): EXPERIENCE TENSE now lives INSIDE
-      // the LanguageCard island. When the islands bundle is loaded the island WILL
-      // mount and host the control — so do NOT eagerly build a standalone card on
-      // the early ticks (before the island paints) that then flashes and gets
-      // removed (line ~108) when the island appears. That flash was part of the
-      // Personal-subtab progressive-render cascade. Only build as a FALLBACK after
-      // a grace period, if the island genuinely never mounted (islands disabled).
-      if (!graceElapsed && document.querySelector('script[src*="antcv-react-islands"]')) return;
+      // PERSONAL-TAB-JANK-001 / TENSE-POPIN-002 (owner 2026-06-18): EXPERIENCE TENSE
+      // now lives INSIDE the LanguageCard island, and ONLY renders when the Languages
+      // menu is expanded (LanguageCard.tsx — the control is gated behind `expanded`).
+      // The owner's instruction is unambiguous: "keep it hidden until languages is
+      // open and expanded." So when the islands bundle is present we NEVER build the
+      // standalone card — not even as a grace-period fallback. A standalone card has
+      // no expand/collapse gate, so building it (then having the island remove it on
+      // mount) is exactly the "pops in and out during the personal tab opening" jank.
+      // Defer entirely to the island; the grace timer is now a no-op.
+      if (document.querySelector('script[src*="antcv-react-islands"]')) return;
       col.appendChild(build());
     } catch (_) {}
   }

@@ -8,7 +8,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.50.682-pub-host-shrink';
+  const VERSION='1.50.683-pub-move-proxy';
   if(window.__antcvPublicationsStrictRowLayout273===VERSION) return;
   window.__antcvPublicationsStrictRowLayout273=VERSION;
   // v1.40.273-preview-guard: Preview is button-free. panelRoot() must
@@ -112,7 +112,7 @@
   function host(row){let h=row.querySelector(':scope > [data-antcv-pub273-host="1"]');if(!h){h=document.createElement('span');h.setAttribute('data-antcv-pub273-host','1');Object.assign(h.style,{display:'inline-flex',alignItems:'center',gap:'2px',whiteSpace:'nowrap',flex:'0 0 auto',order:'30',position:'static',float:'none',marginLeft:'2px'});row.appendChild(h);}return h;}
 
   function purge(root){
-    root.querySelectorAll('[data-antcv-pub273-host="1"],[data-antcv-pub271-host="1"],[data-antcv-pub269-host="1"],[data-antcv-pub267-host="1"],[data-antcv-pub-controls-host="1"]').forEach(n=>n.remove());
+    root.querySelectorAll('[data-antcv-pub273-host="1"],[data-antcv-pub273-move-host="1"],[data-antcv-pub271-host="1"],[data-antcv-pub269-host="1"],[data-antcv-pub267-host="1"],[data-antcv-pub-controls-host="1"]').forEach(n=>n.remove());
     Array.from(root.querySelectorAll('button')).forEach(b=>{
       if(isOurOrphan(b)) b.remove();
       else if(/📄|⇥⇤|✨|↔|☰|⇤|⇥/.test(b.textContent||'')&&!b.closest('[data-antcv-pub273-row="1"]')&&!isNativeMove(b)) b.remove();
@@ -128,8 +128,10 @@
       Object.assign(b.style,{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'23px',minWidth:'23px',maxWidth:'23px',height:'22px',minHeight:'22px',padding:'0',margin:'0',flex:'0 0 auto',position:'static',float:'none',boxSizing:'border-box'});
       if(isNativeEye(b)){b.setAttribute('data-antcv-pub273-eye','1');b.style.order='40';b.style.display='inline-flex';}
       else if(isNativeDelete(b)){b.setAttribute('data-antcv-pub273-delete','1');b.style.order='50';b.style.display='inline-flex';}
-      // Move ▲▼ relocate to the LEFT (compact) — owner wants them off the right edge.
-      else if(isNativeMove(b)){b.setAttribute('data-antcv-pub273-move','1');b.style.order='5';b.style.display='inline-flex';}
+      // Move ▲▼: keep the NATIVE React buttons in the DOM (never reparent them) but
+      // HIDE them; a compact proxy Up/Down on the LEFT forwards clicks to them. The
+      // direction is precomputed onto a data attr for a reliable later lookup.
+      else if(isNativeMove(b)){b.setAttribute('data-antcv-pub273-native-move','1');b.setAttribute('data-antcv-pub273-move-dir',/▲|move up|↑/i.test(btext(b))?'up':'down');b.style.display='none';}
       // PUB-CONTROL-DEDUP-001 (owner 2026-06-18): the remaining NATIVE glyph
       // controls on a publication row (page / CJLR / ✨ Enhance / ⇥⇤ compress,
       // app.src.js ~6902) DUPLICATE the pub273 host's own — that is the "endless
@@ -139,6 +141,30 @@
       // compress/enhance once.
       else { b.style.display='none'; b.setAttribute('data-antcv-pub273-native-dup','1'); }
     });
+  }
+  // PUB-MOVE-PROXY-001 (owner 2026-06-18): a SAFE compact Up/Down. We do not touch
+  // (reparent / merge) the native React move buttons — they stay in the DOM, hidden.
+  // This builds our own stacked ▲/▼ control on the left that forwards a real .click()
+  // to the matching native button (React's delegated onClick still fires), and mirrors
+  // the native disabled state (e.g. the first row cannot move up).
+  function buildMoveProxy(row){
+    const ups=row.querySelector('[data-antcv-pub273-native-move="1"][data-antcv-pub273-move-dir="up"]');
+    const downs=row.querySelector('[data-antcv-pub273-native-move="1"][data-antcv-pub273-move-dir="down"]');
+    if(!ups&&!downs) return;
+    const hostm=document.createElement('span');
+    hostm.setAttribute('data-antcv-pub273-move-host','1');
+    Object.assign(hostm.style,{display:'inline-flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'1px',width:'16px',minWidth:'16px',maxWidth:'16px',height:'22px',flex:'0 0 auto',order:'5',position:'static',float:'none',boxSizing:'border-box',marginRight:'3px'});
+    function half(glyph,native,label){
+      const x=document.createElement('button');x.type='button';x.setAttribute('data-antcv-pub273-control','move');
+      x.textContent=glyph;x.title=label;x.setAttribute('aria-label',label);
+      const dis=!native||native.disabled;
+      Object.assign(x.style,{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'16px',minWidth:'16px',maxWidth:'16px',height:'10px',minHeight:'10px',padding:'0',margin:'0',border:'1px solid '+(dis?'#ddd':'#888'),color:dis?'#ddd':'#666',background:'none',borderRadius:'3px',fontSize:'8px',lineHeight:'1',cursor:dis?'not-allowed':'pointer',boxSizing:'border-box',flex:'0 0 auto'});
+      if(!dis) x.onclick=ev=>{ev.preventDefault();ev.stopPropagation();if(ev.stopImmediatePropagation)ev.stopImmediatePropagation();try{native.click();}catch(_){}setTimeout(()=>{try{run();}catch(_){}},0);};
+      return x;
+    }
+    hostm.appendChild(half('▲',ups,'Move up'));
+    hostm.appendChild(half('▼',downs,'Move down'));
+    row.appendChild(hostm);
   }
   function wire(pair,sid,i){
     const {row,name,detail}=pair;
@@ -161,6 +187,7 @@
     comp.onclick=ev=>{ev.preventDefault();ev.stopPropagation();if(ev.stopImmediatePropagation)ev.stopImmediatePropagation();setValue(detail,compressText(value(detail)));fire('publications-compress',{sid,index:i});};
     enh.onclick=ev=>{ev.preventDefault();ev.stopPropagation();if(ev.stopImmediatePropagation)ev.stopImmediatePropagation();setValue(detail,enhanceText(value(detail)));fire('publications-enhance',{sid,index:i});};
     compact(row);
+    buildMoveProxy(row);
   }
   function injectCss(){if(document.getElementById('antcv-publications-strict-row-layout-273-css'))return;const s=document.createElement('style');s.id='antcv-publications-strict-row-layout-273-css';s.textContent=`
     [data-antcv-pub273-row="1"]{display:flex!important;align-items:center!important;gap:3px!important;flex-wrap:nowrap!important;max-width:calc(100% - 54px)!important;width:calc(100% - 54px)!important;overflow:visible!important;box-sizing:border-box!important;white-space:nowrap!important;}
@@ -176,7 +203,12 @@
     [data-antcv-pub273-eye="1"]{order:40!important;}
     [data-antcv-pub273-cjlr="1"]{order:45!important;}
     [data-antcv-pub273-delete="1"]{order:50!important;}
-    [data-antcv-pub273-move="1"]{order:5!important;}
+    /* PUB-MOVE-PROXY-001: native ▲▼ stay in the DOM but hidden; our compact proxy
+       sits on the far left (order 5). Its half-buttons are smaller than the row's
+       23px buttons, so override the generic button rule with a more specific one. */
+    [data-antcv-pub273-native-move="1"]{display:none!important;}
+    [data-antcv-pub273-move-host="1"]{order:5!important;display:inline-flex!important;flex-direction:column!important;width:16px!important;min-width:16px!important;max-width:16px!important;height:22px!important;flex:0 0 auto!important;}
+    [data-antcv-pub273-row="1"] [data-antcv-pub273-move-host="1"] button{width:16px!important;min-width:16px!important;max-width:16px!important;height:10px!important;min-height:10px!important;}
   `;(document.head||document.documentElement).appendChild(s);}
   let pending=false;
   function run(){const root=panelRoot();if(!root)return;injectCss();const sid=(pubSection()||{}).id||'publications';purge(root);rows(root).forEach((p,i)=>wire(p,sid,i));}

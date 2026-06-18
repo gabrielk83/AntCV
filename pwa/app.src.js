@@ -5539,8 +5539,8 @@
                           const __capJoinL = (texts) => { let s2 = texts.slice(0, 2).join("; "); s2.length > 260 && (s2 = s2.slice(0, 257).replace(/[;,\s]+\S*$/, "") + "…"); return s2; };
                           const __lamOfL = (role) => {
                             if (role && "string" == typeof role.results && role.results.trim()) return role.results.trim();
-                            if (role && Array.isArray(role.outcomes) && role.outcomes.length) { const tx = role.outcomes.filter(__ovisL).map((o) => "string" == typeof o ? o.trim() : [o.b, o.t].filter(Boolean).join(" ").trim()).filter(Boolean); if (tx.length) return __capJoinL(tx); }
-                            const ids = role && Array.isArray(role.proofPointIds) ? role.proofPointIds : []; const tx = ids.map((id) => __ppTextL[id]).filter(Boolean); if (tx.length) return __capJoinL(tx);
+                            if (role && Array.isArray(role.outcomes) && role.outcomes.length) { const tx = role.outcomes.filter(__ovisL).map((o) => "string" == typeof o ? o.trim() : o.result ? String(o.result).trim() : [o.b, o.t].filter(Boolean).join(" ").trim()).filter(Boolean); if (tx.length) return __capJoinL(tx); }
+                            const ids = role && Array.isArray(role.proofPointIds) ? role.proofPointIds : []; let tx = ids.map((id) => __ppTextL[id]).filter(Boolean); if (!tx.length && role && Array.isArray(role.proofPoints) && role.proofPoints.length) tx = role.proofPoints.map((p) => "string" == typeof p ? p.trim() : String(p && (p.text || p.result) || "").trim()).filter(Boolean); if (tx.length) return __capJoinL(tx);
                             return "";
                           };
                           // RESULTS-PREVIEW-EXPORT-SINGLE-SOURCE-001 (owner 2026-06-17):

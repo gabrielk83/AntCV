@@ -172,5 +172,48 @@ ok('laminated results never exceed ~2 lines (<=262 chars)', roles.every((r) => !
   delete store['antcv:outcomeRoleMap'];
 }
 
+// LAM-RESULTS-001 (owner 2026-06-18): the v2 kernel changed the role shape —
+// outcomes are {title,result,numeric} (NOT {b,t}) and evidence is a FLAT
+// role.proofPoints[] of strings (NOT proofPointIds resolved against a map). Before
+// the fix, tier 2 read [o.b,o.t] (empty on v2) and tier 3 read proofPointIds (absent
+// on v2), so EVERY v2 role fell through to the token-match distribution and showed
+// the WRONG role's outcome. Each role must now laminate from its OWN outcome.result.
+{
+  const R = [
+    { id: 'kanzen', title: 'Product / Project Expert', company: 'Kanzen Konsulenter ApS', on: true,
+      outcomes: [{ title: 'AntCV', result: 'Built and shipped AntCV, an LLM-orchestrated job-application product, solo.', numeric: false }],
+      proofPoints: ['AntCV live PWA + multi-worker Cloudflare backend.'],
+      bullets: ['Bridged hardware product development and technical-commercial evaluation.'] },
+    { id: 'innoviz', title: 'Change Control Lead', company: 'Innoviz Technologies', on: true,
+      outcomes: [{ title: 'Cycle time', result: 'Cut the OEM LiDAR change-request cycle from 250 to 10 days.', numeric: true }],
+      bullets: ['Owned change governance for the LiDAR product line.'] },
+    { id: 'guard', title: 'Security Guard', company: 'Tel Aviv University', on: true,
+      outcomes: [{ title: 'Coverage', result: 'Held an incident-free record across student-dormitory shifts in 2010.', numeric: false }],
+      bullets: ['Access control and floor support at the student dormitories.'] },
+    // outcome-less v2 role with ONLY flat proofPoints → tier-3 flat fallback.
+    { id: 'council', title: 'Students Council Representative', company: 'University', on: true,
+      proofPoints: ['Represented the student body in faculty governance, 2005-2007.'],
+      bullets: ['Sat on the faculty board.'] },
+  ];
+  // SELECTED OUTCOMES pool whose token-match (the OLD wrong path) would scatter
+  // these onto the wrong roles — the v2 lamination must ignore it per-role.
+  const O = [
+    'Security Guard, Student Dormitories — Tel Aviv University, 2010.',
+    'Students Council Representative — University, 2005-2007.',
+  ];
+  const secs = [ { id: 'experience', type: 'experience', roles: R }, { id: 'selected_outcomes', type: 'text_bullets', items: O } ];
+  const ov = applyOutcomesMode(secs, 'cv');
+  const bv = Object.fromEntries(ov.find((s) => s.type === 'experience').roles.map((r) => [r.id, r]));
+  ok('v2: Product/Project Expert laminates its OWN outcome (AntCV), NOT the Security Guard outcome',
+    /AntCV/.test(bv.kanzen.results || '') && !/Security Guard|dormitor/i.test(bv.kanzen.results || ''));
+  ok('v2: Change Control Lead laminates its OWN outcome (250 to 10 days), NOT the Students Council outcome',
+    /250 to 10 days/.test(bv.innoviz.results || '') && !/Students Council/i.test(bv.innoviz.results || ''));
+  ok('v2: Security Guard laminates its OWN outcome (incident-free)', /incident-free/.test(bv.guard.results || ''));
+  ok('v2: outcome-less role with flat proofPoints[] laminates from its OWN proofPoint',
+    /faculty governance/.test(bv.council.results || ''));
+  ok('v2: no role shows another role\'s outcome (no cross-role bleed)',
+    !/Security Guard|Students Council/i.test([bv.kanzen, bv.innoviz, bv.guard, bv.council].map((r) => r.results || '').join(' | ')));
+}
+
 for (const r of roles) console.log(`  [${r.title}] ${r.results || '(none)'}`);
 console.log(`\nRESULTS-LAMINATION OK (${pass} checks)`);

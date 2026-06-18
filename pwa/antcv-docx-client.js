@@ -1672,13 +1672,21 @@ export function applyOutcomesMode(docSections, doc) {
       if (Array.isArray(r.outcomes) && r.outcomes.length) {
         const texts = r.outcomes
           .filter(_outcomeVisible)
-          .map((o) => (typeof o === 'string' ? o.trim() : [o.b, o.t].filter(Boolean).join(' ').trim()))
+          // LAM-RESULTS-001 (2026-06-18): the v2 kernel outcome shape is
+          // {title,result,numeric} — read o.result; keep the v1 {b,t} path.
+          .map((o) => (typeof o === 'string' ? o.trim()
+            : (o.result ? String(o.result).trim() : [o.b, o.t].filter(Boolean).join(' ').trim())))
           .filter(Boolean);
         if (texts.length) { _lam.set(r, _capJoin(texts)); return; }
       }
-      // 3) role.proofPointIds resolved against the master-profile proof points.
+      // 3) role.proofPointIds resolved against the master-profile proof points,
+      //    OR the v2 kernel's flat role.proofPoints[] (strings) — so an
+      //    outcome-less v2 role laminates from its OWN evidence instead of a
+      //    token-matched (wrong-role) SELECTED OUTCOME (LAM-RESULTS-001).
       const ids = Array.isArray(r.proofPointIds) ? r.proofPointIds : [];
-      const texts = ids.map((id) => _ppText[id]).filter(Boolean);
+      let texts = ids.map((id) => _ppText[id]).filter(Boolean);
+      if (!texts.length && Array.isArray(r.proofPoints) && r.proofPoints.length)
+        texts = r.proofPoints.map((p) => (typeof p === 'string' ? p.trim() : String((p && (p.text || p.result)) || '').trim())).filter(Boolean);
       if (texts.length) _lam.set(r, _capJoin(texts));
     });
     // The heuristic SELECTED-OUTCOMES distribution runs ONLY for roles that are

@@ -110,7 +110,10 @@
         var seenSrc = {};
         function pushTo(arr, s) { var k = String(s.text || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); if (!k || seenSrc[k]) return; seenSrc[k] = true; arr.push(s); }
         (Array.isArray(r.proofPointIds) ? r.proofPointIds : []).forEach(function (id) { if (pp[id]) pushTo(realSrc, { id: id, text: pp[id].text }); });
-        (Array.isArray(r.outcomes) ? r.outcomes : []).forEach(function (o, k) { var t = String((o && (o.t || o.text || o.b)) || '').trim(); if (t) pushTo(realSrc, { id: 'ro:' + r.id + ':' + k, text: t }); });
+        // LAM-RESULTS-001 (2026-06-18): v2 kernel outcomes are {title,result} — read
+        // o.result so a v2 role's REAL outcome is recognised and the seeder does NOT
+        // gap-fill from the role's bullets (which then showed as the role's Results).
+        (Array.isArray(r.outcomes) ? r.outcomes : []).forEach(function (o, k) { var t = String((o && (o.result || o.t || o.text || o.b)) || '').trim(); if (t) pushTo(realSrc, { id: 'ro:' + r.id + ':' + k, text: t }); });
         var sources = realSrc;
         if (!realSrc.length) {
           // gap-filler — only a role with NO real outcome falls back to bullets.

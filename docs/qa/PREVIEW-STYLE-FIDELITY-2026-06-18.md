@@ -133,11 +133,43 @@ disappears after the tab stabilises. should be inside advanced tones collapsable
   orphan in the Personal column). Mirror the TENSE-POPIN-002 discipline: never build a card in a
   location that the React tree owns and will wipe.
 
+## G. Figure POSITION selector loses its mark on style switch (no per-package default position)
+
+**Owner 2026-06-18:** "moving from copenhagen modern to other style does not have a default
+figure position (the blue sidebar bridge is now white while no other marked in blue). And the
+figure shape select is not moving to other if relevant (stays circle)." [shape half = bug B.]
+
+- The figure POSITION is React state `er` in `pwa/app.src.js` (~15802, PHOTO-BRIDGE-DEFAULT-001):
+  `u.get("photoPosition", copenhagen-modern ? "band-overlap" : "sidebar-top")`. The package-aware
+  default is evaluated **once at mount** and only when `photoPosition` is UNSET; an explicit stored
+  choice wins. `band-overlap` = the "◐ Sidebar bridge" — a copenhagen-modern-specific position.
+- On a style switch, `selectPackage()` in `src/islands/PackagePicker/PackagePicker.tsx` (~197)
+  does `writePackageState` + `applyPackageToBody` only — it **never updates `photoPosition` nor the
+  app.src.js `er` state**. So a user who never picked a position sat on copenhagen's `band-overlap`
+  default (bridge marked blue); switching to a non-copenhagen package leaves `er`/`photoPosition`
+  stale at `band-overlap`, which is NOT a valid/shown position for that package → the bridge
+  un-marks and the package default (`sidebar-top`) is never written, so **nothing is marked**.
+- The lever already exists: `window._antcvSetPhotoPosition(v)` (`pwa/app.src.js` ~15826,
+  PHOTO-SIDEBAR-BRIDGE-001) updates BOTH the React `er` state AND localStorage. The shape side has
+  no equivalent — shape lives in `personalInfo.photoShape` (top-level; read by the sidecar
+  `antcv-photo-ui-427.js` ~411) AND `stylePrefs.photoShape` (read by the app.src.js preview ~40927/
+  ~41553) — the two-location split called out in bug B.
+- **Fix direction (later, couples with B):** in `selectPackage()`, on a real package CHANGE (not a
+  quick-alt), set the new package's figure defaults — position via `window._antcvSetPhotoPosition(
+  id === 'copenhagen-modern' ? 'band-overlap' : 'sidebar-top')`, and shape to `PACKAGES[id].shape`
+  (registry: copenhagen circle / navy-exec rounded / terracotta rounded / nordic-frost circle /
+  pampas rounded-square / tokyo square / delhi hexagon+square) written to BOTH photoShape keys with
+  a `storage` + `antcv:photo-shape-changed` dispatch so the selector AND preview re-read. Decide the
+  override policy: switching style should adopt that style's figure defaults (the owner's
+  expectation), but a later explicit user choice persists until the next style switch.
+
 ---
 
 ## Status
 DOCUMENT ONLY — owner-gated. A, B, C, D likely share the `body[data-package]` / `stylePrefs.*`
 preview-read root and should be diagnosed together (one headless repro: switch styles + toggle
 shape, assert `body.dataset.package`, the band computed colour, and the medallion radius all
-track the selection). F is an independent sidecar relocation (same family as the resolved
-TENSE-POPIN-002).
+track the selection). **B + G are the figure-on-style-switch pair** — both fixed in
+`selectPackage()` by setting the package's default figure position (via `_antcvSetPhotoPosition`)
++ shape (`PACKAGES[id].shape`); G adds the POSITION half (selector un-marks) to B's SHAPE half.
+F is an independent sidecar relocation (same family as the resolved TENSE-POPIN-002).

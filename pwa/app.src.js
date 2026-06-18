@@ -13188,9 +13188,9 @@
               ["bodyEdgePad", "Page · top/bottom padding", 0, 30, 12],
               ["seamGap", "CV sidebar ↔ main gap", 0, 40, 6],
               // — Subsection separation —
-              ["mainSectionGap", "CV main · subsection gap", 0, 30, 14],
-              ["sidebarSectionGap", "CV sidebar · subsection gap", 0, 30, 12],
-              ["bodySectionGap", "CL body · subsection gap", 0, 30, 16],
+              ["mainSectionGap", "CV main · subsection gap", 0, 60, 14],
+              ["sidebarSectionGap", "CV sidebar · subsection gap", 0, 60, 12],
+              ["bodySectionGap", "CL body · subsection gap", 0, 60, 16],
               // — Bullet marker —
               ["bulletIndent", "Bullet text · from edge", 10, 60, 24],
               ["bulletMarkerGap", "Bullet marker · gap to text", 4, 40, 21],

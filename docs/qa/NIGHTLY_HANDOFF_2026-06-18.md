@@ -1,5 +1,30 @@
 # Nightly handoff — 2026-06-18 (post kernel-v2 upload + regen)
 
+## OWNER-DIRECTED BATCH 2 2026-06-18 — SHIPPED 1.50.613 → 1.50.616
+
+- **SUBTAB-ORDER** `[1.50.613]` — Settings STANDARD tabs: Personal before Account.
+- **PUB-CHAIN-001 preview parity** `[1.50.613]` — preview publications now title+year only
+  for non-academic (matches the 1.14.77 export); academic keeps the chain. Verified headless.
+- **G-GROUPS-003 partitioner** `[1.50.614]` — antcv-sections-normalize-415.js splits a flat
+  ADDITIONAL INFORMATION into Languages/Accessibility/Interests {group} blocks (idempotent,
+  restore-proof). Verified: flat 5-item → 3 grouped subheads in preview.
+- **PERSONAL-TAB-JANK-001 (PARTIAL)** `[1.50.615]` — neutralized the tense sidecar's
+  120-3000ms setTimeout flood (defer to the LanguageCard island; grace fallback only).
+  **REMAINING:** the "large blue region → WRITING STYLE fills" cascade is the
+  WritingStylePicker island's empty 220px mount placeholder + native→island swap +
+  unmount-on-leave/re-createRoot-on-entry — needs an islands rebuild (real skeleton +
+  keep-mounted across tab switches). Diagnosed (agent), NOT yet done.
+- **PRIVACY-TABLE** `[1.50.616]` — corrected Cover-letter drafts Cloud ✘→✓; added "Writing
+  style, banned words & semantic constraints" ✓/✓ row (the data the owner saw come back
+  limited, now correctly shown synced).
+- **OPEN — 2 live UI issues** (owner sending screenshots): (1) sticky ACCOUNT MODE select in
+  loading; (2) quick-alts selector "not in the right place with its text" (Layout shows only
+  the LayoutNotes text, not an interactive selector — the native package cards own quick-alts).
+  CONFIRMED not caused by the COPENHAGEN-OVERLAY fix.
+- **NOTE:** a PARALLEL session committed `SEMANTIC-CONSTRAINTS-002` (e3430b0) at 10:32 with
+  version 1.50.613, colliding with this batch's 1.50.613 bump (resolved; versions monotonic to
+  616). Watch "one deployer at a time".
+
 ## OWNER-DIRECTED BATCH 2026-06-18 (after the nightly) — SHIPPED 1.50.605 → 1.50.612 + docx-worker 1.14.77
 
 Full session: LAM-RESULTS-001 (export+seeder 1.50.605, preview sidecar 1.50.610),

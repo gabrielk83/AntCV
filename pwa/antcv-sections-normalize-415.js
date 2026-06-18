@@ -15,7 +15,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.649-additional-explode';
+  var VERSION = '1.50.657-explode-keep-groups';
   if (window.__antcvSectionsNormalize === VERSION) return;
   window.__antcvSectionsNormalize = VERSION;
 
@@ -403,7 +403,14 @@
     if (xi < 0) return null;
     var has = function (id) { return cv.some(function (s) { return s && s.id === id; }); };
     var hasLang = has('languages'), hasInt = has('interests'), hasAcc = has('accessibility');
-    // skip the {group} marker rows; bucket the real items
+    // HIDE-NOT-DELETE (owner 2026-06-18): preserve any CUSTOM {group} markers
+    // (anything other than the three we promote to their own sections) so the
+    // explode never silently deletes the owner's groups - they ride along in the
+    // trimmed ADDITIONAL. The Languages/Interests/Accessibility markers become
+    // section titles, so dropping just those is not data loss.
+    var KNOWN_GROUP = /^\s*(languages?|interests?|accessibility)\s*$/i;
+    var keptGroups = cv[xi].items.filter(function (it) { return it && it.group !== undefined && !KNOWN_GROUP.test(String(it.group)); });
+    // bucket the real items
     var items = cv[xi].items.filter(function (it) { return it && it.group === undefined; });
     if (!items.length) return null;
     var buckets = { Languages: [], Interests: [], Accessibility: [], Other: [] };
@@ -419,9 +426,10 @@
     if (!newSecs.length) return null;   // nothing new to create -> leave as-is
     var copy = cv.slice();
     var replacement = newSecs;
-    // keep any leftover Other items (or the buckets that already have their own
-    // section) in a trimmed ADDITIONAL; drop ADDITIONAL entirely if nothing left.
-    var leftover = buckets.Other.slice();
+    // keep any leftover Other items + preserved custom group markers (or the
+    // buckets that already have their own section) in a trimmed ADDITIONAL; drop
+    // ADDITIONAL only if there is genuinely nothing left.
+    var leftover = keptGroups.concat(buckets.Other);
     if (hasLang) buckets.Languages.forEach(function (it) { leftover.push(it); });
     if (hasInt) buckets.Interests.forEach(function (it) { leftover.push(it); });
     if (hasAcc) buckets.Accessibility.forEach(function (it) { leftover.push(it); });

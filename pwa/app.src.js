@@ -2748,7 +2748,7 @@
         try {
           if (/\bgabriel\b/i.test(String(o.name || "")))
             r.push(
-              "AI-ASSISTED WORKFLOWS (APPROVED REAL CAPABILITY — owner-confirmed, NOT fabrication): the candidate routinely uses AI / LLM tooling for engineering work — experiment setup, log triage, measurement analysis, protocol templating, documentation retrieval, and prompt / evaluation workflows. You MAY surface these (the anti-fabrication rule does NOT apply; they are grounded) in an 'AI-Assisted Workflows' tools category, a WHAT I BRING row, or INTERESTS — phrased concretely and without overclaiming.",
+              "AI-ASSISTED WORKFLOWS (APPROVED REAL CAPABILITY — owner-confirmed, NOT fabrication): the candidate routinely uses AI / LLM tooling for engineering work — experiment setup, log triage, measurement analysis, protocol templating, documentation retrieval, and prompt / evaluation workflows. You MAY surface these (the anti-fabrication rule does NOT apply; they are grounded) In TOOLS & METHODS they go as a row UNDER the 'Methods' group (label 'AI-assisted') — NOT a separate top-level category and NOT floating above the groups; they may also appear in a WHAT I BRING row or INTERESTS — phrased concretely and without overclaiming.",
             );
         } catch (_) {}
       })();

@@ -22,7 +22,7 @@
 (function () {
   'use strict';
 
-  var SUITE_VERSION = '1.50.427';
+  var SUITE_VERSION = '1.50.647';
   if (window.__antcvPhotoUI427 === SUITE_VERSION) return;
   window.__antcvPhotoUI427 = SUITE_VERSION;
 
@@ -400,16 +400,43 @@
     function writePhotoShape(shape) {
       try {
         var pi = readPI();
-        if (shape) pi.photoShape = shape; else delete pi.photoShape;
+        // PHOTO-SHAPE-SQUARE-001 (owner 2026-06-18): the React preview render
+        // reads `personalInfo.stylePrefs.photoShape` (square -> radius 0,
+        // rounded -> 12px, else 50%), but this selector only wrote the TOP-LEVEL
+        // `pi.photoShape` (which Pentagon's own direct-DOM clip reads) — so a
+        // square/rounded pick never reached the preview and the photo stayed a
+        // circle. Write BOTH: top-level for Pentagon, stylePrefs for the render.
+        if (shape) {
+          pi.photoShape = shape;
+          if (!pi.stylePrefs || typeof pi.stylePrefs !== 'object') pi.stylePrefs = {};
+          pi.stylePrefs.photoShape = shape;
+        } else {
+          delete pi.photoShape;
+          if (pi.stylePrefs && typeof pi.stylePrefs === 'object') delete pi.stylePrefs.photoShape;
+        }
         localStorage.setItem('personalInfo', JSON.stringify(pi));
       } catch (_) {}
       try {
         window.dispatchEvent(new CustomEvent('antcv:photo-shape-changed',
           { detail: { shape: shape || '' } }));
       } catch (_) {}
+      // PHOTO-SHAPE-SQUARE-001: the native shape button does NOT trigger a React
+      // re-render, so the React photo render (which owns the square/rounded/
+      // circle border-radius via stylePrefs.photoShape) would not repaint until
+      // some other state change. Nudge the app's sections-updated handler, which
+      // reloads sections + setState -> the preview re-renders and the photo
+      // re-reads the new shape immediately. (Content sidecars fast-bail on this.)
+      try {
+        window.dispatchEvent(new CustomEvent('antcv:sections-updated',
+          { detail: { source: 'photo-shape' } }));
+      } catch (_) {}
     }
     function currentPhotoShape() {
       var pi = readPI();
+      // Prefer the canonical stylePrefs location the render reads; fall back to
+      // the legacy top-level value.
+      var sp = (pi && pi.stylePrefs && typeof pi.stylePrefs === 'object') ? pi.stylePrefs : null;
+      if (sp && typeof sp.photoShape === 'string' && sp.photoShape) return sp.photoShape;
       return (pi && typeof pi.photoShape === 'string') ? pi.photoShape : '';
     }
 

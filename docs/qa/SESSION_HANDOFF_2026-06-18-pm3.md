@@ -44,7 +44,11 @@ surgical-in-place, mirrored to `app.src.js`; `npm run build:app` is BANNED
 
 5. **Nordic tight cells — verify after regen** (folded into 651). If cells still wrap, the lever beyond the prompt is the per-cell compress ("Fit") or a deterministic char-cap (risky — can truncate; prefer compress).
 
-6. **Carried from PM2 (still open):** see `docs/qa/OWNER-BATCH-2026-06-18-PM2.md`. Older docs: PREVIEW-STYLE-FIDELITY cluster (A/C/D/F + B hexagon/rounded-square preview reader), WIZARD-NO-SHOW-AFTER-DELETE-001 (needs live repro), LOADING-LAMP-ICON-001 (document-only), tools build-default (3-most-relevant per group, unsolicited=all).
+6. **SUBSECTION-GAP-60 + FIGURE-GAP-DECOUPLE-001** (owner 2026-06-18) — two parts:
+   - **Allow up to 60pt subsection gap.** The three subsection-gap sliders are capped at max 30 (app.src.js ~13191-13193: `["mainSectionGap", "CV main · subsection gap", 0, 30, 14]`, `["sidebarSectionGap", …, 0, 30, 12]`, `["bodySectionGap", …, 0, 30, 16]`; the tuple is `[key, label, min, max, default]`). Raise max 30 → 60 on all three (keep min 0 + defaults). app.src.js + app.js mirror (the same `[…].map(([key,label,min,max,def]) => …)` array in app.js).
+   - **Decouple the figure distance from the subsection gap.** `__secGap` (app.src.js ~6272, resolved from `sidebarSectionGap`/`bodySectionGap`/`mainSectionGap`, sidebar fallback 12) is applied between EVERY subsection, INCLUDING the first sidebar section directly under the photo — so raising the gap also pushes the figure away. Owner: the photo→first-subsection distance must be governed ONLY by figure placement (`photoPosition`/`photoSize`), not by the subsection-gap slider. Fix: suppress `__secGap` above the FIRST sidebar subsection (give the photo its own fixed gap), so the slider spaces subsections from each other without moving the figure. Verify in preview AND export (worker uses its own spacing — check `antcv-docx-client.js` / the docx-worker sidebar gap).
+
+7. **Carried from PM2 (still open):** see `docs/qa/OWNER-BATCH-2026-06-18-PM2.md`. Older docs: PREVIEW-STYLE-FIDELITY cluster (A/C/D/F + B hexagon/rounded-square preview reader), WIZARD-NO-SHOW-AFTER-DELETE-001 (needs live repro), LOADING-LAMP-ICON-001 (document-only), tools build-default (3-most-relevant per group, unsolicited=all).
 
 ---
 

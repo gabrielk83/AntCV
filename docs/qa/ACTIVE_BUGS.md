@@ -2,6 +2,9 @@
 
 ## Owner batch 2026-06-18 (PM3, 1.50.649 → 652) — generation-quality + UX
 
+- **SUBSECTION-GAP-60 + FIGURE-GAP-DECOUPLE-001** `[OPEN — owner 2026-06-18]` — (1) raise the subsection-gap slider max 30→60 (app.src.js ~13191-13193, the `mainSectionGap`/`sidebarSectionGap`/`bodySectionGap` tuples `[key,label,min,max,def]`); (2) decouple the figure distance from `__secGap` (~6272) — the gap applies above the first sidebar section under the photo, so raising it pushes the figure away; the photo→first-subsection distance must depend on figure placement only. Full anchors in the PM3 handoff OPEN #6.
+
+
 - **ADDITIONAL-EXPLODE-001** `[CLOSED 1.50.649]` — owner: "have these sidebar subsections in commercial CV by default." `antcv-sections-normalize-415.js` new `explodeAdditionalToSections` splits ADDITIONAL INFORMATION into separate LANGUAGES / INTERESTS / ACCESSIBILITY sidebar sections (each its own ON toggle), placed where ADDITIONAL was. Idempotent (skips a bucket whose section exists → owner's current split preserved); Other items stay in a trimmed ADDITIONAL. Runs before the {group} partitioner. Unit-tested.
 - **BANNER-ENDS-EARLY-002** `[CLOSED 1.50.650]` — owner "heart attack": the purple status ended at the kernel commit but content generation continued (semi-empty template, work resumed 30s later). `antcv-showcase-banner-persist.js genActive()` now also treats `step="generating"` as in-progress, so the banner spans the whole generation; quiesce 2.5s→6s, cap 60s→180s.
 - **TABLES-DISTINCT-001 strengthened** `[1.50.651 — regen-gated]` — owner: CORE COMPETENCIES still repeats WHAT I BRING Focus Areas + Nordic cells wrap 2-3 lines. Hardened the prompt: explicit side-by-side ZERO-overlap check w/ example; hard cell caps (WHAT I BRING ~48 chars/1 line, CORE ~28 chars/half line, Nordic never wraps). **Needs regen.** Note: a deterministic removal of overlapping CORE rows was rejected (leaves CORE too sparse) — the LLM must produce distinct rows.

@@ -24398,47 +24398,15 @@
                                   ...t(
                                     (
                                       F.bring_rows ||
-                                      // 1.50.280: kernel safety net — if the LLM
-                                      // omits bring_rows, mirror the generated
-                                      // CORE COMPETENCIES (only when they are
-                                      // REAL, i.e. non-placeholder), so WHAT I
-                                      // BRING is never left as raw "[Strategic
-                                      // expertise]" placeholders.
-                                      // 1.50.283: mirror regardless of p — kernel
-                                      // detection can lag, and any doc can safely
-                                      // mirror CORE COMPETENCIES when bring_rows
-                                      // is empty.
-                                      (() => {
-                                            try {
-                                              const c = (E || []).find(
-                                                (s) => s && "core_comp" === s.id,
-                                              );
-                                              const r =
-                                                c && Array.isArray(c.rows)
-                                                  ? c.rows
-                                                  : null;
-                                              return r &&
-                                                r.length > 1 &&
-                                                r
-                                                  .slice(1)
-                                                  .some(
-                                                    (row) =>
-                                                      Array.isArray(row) &&
-                                                      row.some(
-                                                        (cell) =>
-                                                          cell &&
-                                                          String(cell).trim() &&
-                                                          !/^\[/.test(
-                                                            String(cell).trim(),
-                                                          ),
-                                                      ),
-                                                  )
-                                                ? r
-                                                : null;
-                                            } catch (_) {
-                                              return null;
-                                            }
-                                          })() ||
+                                      // TABLES-NO-MIRROR-001 (owner 2026-06-18):
+                                      // WHAT I BRING must NOT mirror CORE
+                                      // COMPETENCIES — copying core_comp here made
+                                      // the two tables identical (the owner's
+                                      // "same focus areas" complaint). When the LLM
+                                      // omits bring_rows, fall back to the section's
+                                      // OWN rows / the kernel default, NEVER
+                                      // core_comp. TABLES-DISTINCT-001 forces a
+                                      // distinct bring_rows on generation.
                                       e.rows ||
                                       (o.bring ? o.bring.rows : [])
                                     ).slice(1),

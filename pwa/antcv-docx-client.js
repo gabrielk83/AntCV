@@ -953,7 +953,14 @@ export function buildStyle(styleConfig, navyColor) {
       // (and sidebarTextColor) to the dark readable ink for the pale ground too.
       if (sb) { out.sidebarBg = sb; out.sidebarTextColor = ink(sb); out.sidebarLabelColor = ink(sb); }
       const hb = tok('--header-bg');
-      if (hb) { out.headerBg = hb; out.headerNameColor = ink(hb); out.headerSpecColor = ink(hb); out.headerContactColor = ink(hb); }
+      if (hb) { out.headerBg = hb; out.headerNameColor = ink(hb); out.headerSpecColor = ink(hb); out.headerContactColor = ink(hb);
+        // TABLE-HEADER-MATCH-BAND-EXPORT-001 (owner 2026-06-18): the table header
+        // must use the SAME dark band colour (#33446F on Copenhagen) as the
+        // candidate band - in DOCX + PDF, NOT the pale #DDE6F2 default. The band
+        // was already resolved from --header-bg; the table header had NO token
+        // resolution, so it kept styleConfig.tableHeaderBg (#DDE6F2) and rendered
+        // pale. Resolve it from the same token + readable (white) ink.
+        out.tableHeaderBg = hb; out.tableHeaderText = ink(hb); }
     }
   } catch (_) {}
   // v1.40.146 — sidebarPosition pass-through. Worker (≥ v1.14.2)

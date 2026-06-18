@@ -49,7 +49,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.618-review';
+  var VERSION = '1.50.627-review';
   if (window.__antcvDataExport360 === VERSION) return;
   window.__antcvDataExport360 = VERSION;
 
@@ -466,6 +466,94 @@
       (ok ? 'background:rgba(93,202,165,.16);color:#9fe1cb;' : 'background:rgba(255,255,255,.08);color:#aab4c2;'), text);
   }
 
+  // SIDEBAR-STRUCTURED-001 (owner 2026-06-18): structured row editors for the
+  // CV-sidebar lists, replacing the pipe-delimited "Label | value" textareas —
+  // but inside the stable Review modal (NOT live-injected into the React Personal
+  // tab), writing personalInfo via the same clean-read/clean-write + events path
+  // the semantic island uses. Serialises to the EXACT native shapes so a later
+  // re-apply / generation reads them identically.
+  var RD_ROW_INPUT = 'flex:1;min-width:54px;padding:5px 7px;background:rgba(255,255,255,.05);color:#e6eef3;' +
+    'border:1px solid rgba(255,255,255,.16);border-radius:5px;font-family:inherit;font-size:12px;box-sizing:border-box;';
+  function rdMiniBtn(label, title) {
+    var b = rdEl('button', 'background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.18);color:#e6eef3;' +
+      'border-radius:5px;font-size:11px;padding:4px 9px;cursor:pointer;', label);
+    b.type = 'button'; if (title) b.title = title; return b;
+  }
+  // cfg: { emoji, title, help, key, kind:'lv'|'str'|'degsch'|'reg', cols:[..] }
+  function rdSidebarSection(cfg, initialArr) {
+    var arr = (Array.isArray(initialArr) ? initialArr : []).map(function (r) {
+      if (cfg.kind === 'str') return { t: String(r == null ? '' : r) };
+      if (cfg.kind === 'degsch') return { deg: String((r && r.deg) || ''), sch: String((r && r.sch) || '') };
+      if (cfg.grouped && r && r.group != null) return { group: String(r.group || '') };
+      return { l: String((r && r.l) || ''), v: String((r && r.v) || '') };
+    });
+    function toNative() {
+      return arr.map(function (r) {
+        if (cfg.kind === 'str') return r.t.trim();
+        if (cfg.kind === 'degsch') return { deg: r.deg.trim(), sch: r.sch.trim() };
+        if ('group' in r) return { group: r.group.trim() };
+        return { l: r.l.trim(), v: r.v.trim() };
+      }).filter(function (r) {
+        if (cfg.kind === 'str') return !!r;
+        if ('group' in (r || {})) return !!r.group;
+        if (cfg.kind === 'degsch') return r.deg || r.sch;
+        return r.l || r.v;
+      });
+    }
+    function commit() { var cur = rdReadPI(); cur[cfg.key] = toNative(); rdSavePI(cur); }
+    var sec = rdSection(cfg.emoji, cfg.title, cfg.help);
+    var list = rdEl('div', 'display:flex;flex-direction:column;gap:5px;');
+    sec.body.appendChild(list);
+    function render() {
+      while (list.firstChild) list.removeChild(list.firstChild);
+      arr.forEach(function (r, i) { list.appendChild(rowEl(r, i)); });
+    }
+    function delBtn(i) {
+      var x = rdEl('button', 'flex:0 0 auto;background:transparent;border:none;color:#f3b4b3;font-size:15px;line-height:1;cursor:pointer;padding:0 4px;', '×');
+      x.type = 'button'; x.title = 'Remove'; x.setAttribute('aria-label', 'Remove row');
+      x.addEventListener('click', function () { arr.splice(i, 1); commit(); render(); });
+      return x;
+    }
+    function inp(val, ph, onIn) {
+      var e = rdEl('input', RD_ROW_INPUT); e.value = val; e.placeholder = ph || '';
+      e.addEventListener('input', function () { onIn(e.value); });
+      e.addEventListener('blur', commit);
+      return e;
+    }
+    function rowEl(r, i) {
+      var row = rdEl('div', 'display:flex;gap:5px;align-items:center;');
+      if ('group' in r) {
+        row.appendChild(rdEl('span', 'flex:0 0 auto;font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:#9fe1cb;padding:2px 6px;background:rgba(93,202,165,.14);border-radius:4px;', 'group'));
+        row.appendChild(inp(r.group, 'Group heading…', function (v) { r.group = v; }));
+      } else if (cfg.kind === 'str') {
+        row.appendChild(inp(r.t, cfg.cols[0] + '…', function (v) { r.t = v; }));
+      } else if (cfg.kind === 'degsch') {
+        row.appendChild(inp(r.deg, cfg.cols[0], function (v) { r.deg = v; }));
+        row.appendChild(inp(r.sch, cfg.cols[1], function (v) { r.sch = v; }));
+      } else {
+        row.appendChild(inp(r.l, cfg.cols[0], function (v) { r.l = v; }));
+        row.appendChild(inp(r.v, cfg.cols[1], function (v) { r.v = v; }));
+      }
+      row.appendChild(delBtn(i));
+      return row;
+    }
+    var addRow = rdEl('div', 'display:flex;gap:6px;margin-top:7px;');
+    var addItem = rdMiniBtn('+ ' + (cfg.kind === 'str' ? cfg.cols[0] : 'row'));
+    addItem.addEventListener('click', function () {
+      arr.push(cfg.kind === 'str' ? { t: '' } : cfg.kind === 'degsch' ? { deg: '', sch: '' } : { l: '', v: '' });
+      render();
+    });
+    addRow.appendChild(addItem);
+    if (cfg.grouped) {
+      var addGrp = rdMiniBtn('+ group heading');
+      addGrp.addEventListener('click', function () { arr.push({ group: '' }); render(); });
+      addRow.appendChild(addGrp);
+    }
+    sec.body.appendChild(addRow);
+    render();
+    return sec.sec;
+  }
+
   function openReview() {
     if (document.querySelector('[data-antcv-review-modal]')) return;
     var pi = rdReadPI();
@@ -510,6 +598,19 @@
     grid.appendChild(rdField('Citizenship', pi.citizenship, function (v) { patch({ citizenship: v }); }));
     s1.body.appendChild(grid);
     s1.body.appendChild(rdField('LinkedIn', pi.linkedin, function (v) { patch({ linkedin: v }); }));
+    // Headline variants — the positioning lines AntCV picks from per application type.
+    var HV = (pi.headlines && typeof pi.headlines === 'object') ? pi.headlines : {};
+    var HV_LABELS = { unsolicited: 'Unsolicited / general', photonicsEO: 'Photonics / electro-optics', commercialProduct: 'Commercial / product', broad: 'Broad IT / business analysis' };
+    var HV_KEYS = ['unsolicited', 'photonicsEO', 'commercialProduct', 'broad'];
+    Object.keys(HV).forEach(function (k) { if (HV_KEYS.indexOf(k) < 0) HV_KEYS.push(k); });
+    var hvWrap = rdEl('div', 'margin:9px 0 2px;padding-top:9px;border-top:1px solid rgba(255,255,255,.08);');
+    hvWrap.appendChild(rdEl('div', 'font-size:10px;text-transform:uppercase;letter-spacing:.5px;opacity:.55;margin-bottom:5px;', 'Headline variants — picked per application type'));
+    HV_KEYS.forEach(function (k) {
+      hvWrap.appendChild(rdField(HV_LABELS[k] || k, HV[k] || '', function (v) {
+        var cur = rdReadPI(); var h = (cur.headlines && typeof cur.headlines === 'object') ? cur.headlines : {}; h[k] = v; cur.headlines = h; rdSavePI(cur);
+      }));
+    });
+    s1.body.appendChild(hvWrap);
     s1.body.appendChild(rdTip('Phone is hidden on the CV by default — toggle visibility in the “What’s shown” section below.'));
     body.appendChild(s1.sec);
 
@@ -600,24 +701,14 @@
     } else { s6.body.appendChild(rdEl('div', 'font-size:11px;opacity:.45;', 'No languages stored.')); }
     body.appendChild(s6.sec);
 
-    // 7 — CV sidebar content (read summary)
-    function grpCount(a) { a = Array.isArray(a) ? a : []; var items = 0, groups = 0; a.forEach(function (x) { if (x && x.group) groups++; else items++; }); return { items: items, groups: groups }; }
-    var s7 = rdSection('📎', 'CV sidebar content', 'The structured side column — tools, certifications, education, standards, extras.');
-    var tc = grpCount(pi.tools);
-    [
-      ['Tools & methods', tc.items + ' items' + (tc.groups ? ' · ' + tc.groups + ' groups' : '')],
-      ['Certifications', (Array.isArray(pi.certifications) ? pi.certifications.length : 0) + ' items'],
-      ['Education', (Array.isArray(pi.education) ? pi.education.length : 0) + ' entries'],
-      ['Regulatory / standards', (function () { var r = grpCount(pi.regulatory); return r.items + ' standards · ' + r.groups + ' groups'; })()],
-      ['Additional info', (function () { var a = grpCount(pi.additional); return a.items + ' items'; })()]
-    ].forEach(function (pair) {
-      var row = rdEl('div', 'display:flex;gap:8px;align-items:baseline;padding:3px 0;border-top:1px solid rgba(255,255,255,.06);');
-      row.appendChild(rdEl('span', 'font-size:12px;font-weight:600;flex:1;', pair[0]));
-      row.appendChild(rdEl('span', 'font-size:11px;opacity:.6;', pair[1]));
-      s7.body.appendChild(row);
-    });
-    s7.body.appendChild(rdTip('Edit these in Settings → Personal → CV Sidebar Content.'));
-    body.appendChild(s7.sec);
+    // 7 — CV sidebar content (structured row editors — replaces the pipe textareas)
+    body.appendChild(rdEl('div', 'font-size:13px;font-weight:700;margin:6px 0 0;', '📎  CV sidebar content'));
+    body.appendChild(rdEl('div', 'font-size:11px;opacity:.6;line-height:1.45;margin:0 0 2px;', 'The structured side column. Edits save instantly and flow into new CVs (existing drafts keep theirs until re-applied). Group headings are preserved.'));
+    body.appendChild(rdSidebarSection({ emoji: '🔧', title: 'Tools & methods', help: 'Label + value per row; add group headings to organise.', key: 'tools', kind: 'lv', grouped: true, cols: ['Label', 'Value'] }, pi.tools));
+    body.appendChild(rdSidebarSection({ emoji: '🎓', title: 'Education', help: 'Degree + school / details per row.', key: 'education', kind: 'degsch', cols: ['Degree', 'School / details'] }, pi.education));
+    body.appendChild(rdSidebarSection({ emoji: '📜', title: 'Certifications', help: 'One per row.', key: 'certifications', kind: 'str', cols: ['Certification'] }, pi.certifications));
+    body.appendChild(rdSidebarSection({ emoji: '📐', title: 'Regulatory / standards', help: 'Code + description per row; add group headings to organise.', key: 'regulatory', kind: 'lv', grouped: true, cols: ['Code', 'Description'] }, pi.regulatory));
+    body.appendChild(rdSidebarSection({ emoji: '➕', title: 'Additional info', help: 'Label + value per row.', key: 'additional', kind: 'lv', cols: ['Label', 'Value'] }, pi.additional));
 
     // 8 — What's shown vs hidden (editable toggles)
     var vc = pi.visibilityControls || {};

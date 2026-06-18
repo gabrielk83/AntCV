@@ -78,6 +78,11 @@
     const i = String(idx);
     switch (rowType) {
       case 'labeled_list': return 'items.' + i + '.v';
+      // CJLR-GROUP-001 (owner 2026-06-18): the group subheading row in a
+      // labeled_list (REGULATORY etc.) gets its own cycler. rowMarkerFor() strips
+      // the trailing .group, so the preview group block (data-antcv-row-path
+      // "items.N") still matches.
+      case 'labeled_list_group': return 'items.' + i + '.group';
       case 'education':    return 'items.' + i + '.deg';
       case 'list':         return 'items.' + i;
       // CJLR-EXPERIENCE-001 (1.50.381): per-ROLE cycler on the experience

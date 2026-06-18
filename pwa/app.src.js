@@ -5912,6 +5912,9 @@
                       "div",
                       {
                         key: t,
+                        // CJLR-GROUP-001 (owner 2026-06-18): mark the group
+                        // subheading row so the item-align CJLR cycler can target it.
+                        "data-antcv-row-path": "items." + t,
                         style: {
                           fontSize: S ? 0.96 * $.sb : $.exp,
                           fontFamily: T,
@@ -7642,6 +7645,10 @@
                 "div",
                 {
                   key: i,
+                  // CJLR-GROUP-001: tag the group editor row so item-align injects a
+                  // CJLR cycler for the group subheading (path items.{i}.group).
+                  "data-antcv-item-row": "labeled_list_group",
+                  "data-antcv-item-idx": i,
                   style: {
                     display: "flex",
                     gap: 3,

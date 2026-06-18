@@ -1678,10 +1678,28 @@ function buildFilename({ personalInfo, meta, doc, language }) {
 // a `results` string holding its matched outcomes (title/company token
 // overlap; unmatched outcomes attach to the first visible role). The worker
 // renders it as a "Results:" line after the role's bullets.
-// RESULTS-NUMERIC-LEAD-001: a result text carries a metric (digit / % / × / a
-// standalone "x" multiplier). Used to lead the Results line with quantified
-// outcomes across every lamination tier.
-const _hasNumLam = (t) => /\d|%|×|\bx\b/i.test(String(t == null ? '' : t));
+// RESULTS-METRIC-RANK-001 (owner 2026-06-18: "sort by SIZE - 250 to 10 is more
+// impressive than 3400 out of 3600"). Score a result by the IMPRESSIVENESS of its
+// metric, not just "has a number", so the strongest outcome leads the Results line:
+//   - "A to B" reduction/range -> the ratio max/min ("250 to 10" = 25)
+//   - "Nx" / "N×" / "N-fold" multiplier -> N
+//   - "N%" in a reduce/cut/increase context -> a delta multiplier 100/(100-N) (90% = 10)
+//   - "X of Y" / "X out of Y" / "X/Y" -> the FRACTION (completeness, <=1, low: 3400/3600 = 0.94)
+//   - a bare number -> a small log baseline (beats no-number)
+const _metricScore = (text) => {
+  const t = String(text == null ? '' : text); let best = 0, m;
+  // allow up to 2 short words in the gap ("250 days to about 10")
+  const re1 = /([\d][\d,.]*)\s*(?:[a-z%]+\s+){0,2}(?:to|->|→|–|—)\s+(?:[a-z]+\s+){0,2}([\d][\d,.]*)/gi;
+  while ((m = re1.exec(t))) { const a = parseFloat(m[1].replace(/,/g, '')), b = parseFloat(m[2].replace(/,/g, '')); if (a > 0 && b > 0) { const r = Math.max(a, b) / Math.min(a, b); if (r > best) best = r; } }
+  const re2 = /([\d][\d,.]*)\s*(?:×|x\b|-fold|fold)/gi;
+  while ((m = re2.exec(t))) { const n = parseFloat(m[1].replace(/,/g, '')); if (n > best) best = n; }
+  const re3 = /([\d.]+)\s*%/g;
+  while ((m = re3.exec(t))) { const p = parseFloat(m[1]); if (/reduc|cut|sav|less|few|down|short|increas|faster|improv|gain|grow|boost/i.test(t)) { const mult = (p > 0 && p < 100) ? 100 / (100 - p) : 1; if (mult > best) best = mult; } else if (p / 20 > best) best = p / 20; }
+  const re4 = /([\d][\d,.]*)\s*(?:of|out of|\/)\s*([\d][\d,.]*)/gi;
+  while ((m = re4.exec(t))) { const x = parseFloat(m[1].replace(/,/g, '')), y = parseFloat(m[2].replace(/,/g, '')); if (x > 0 && y > 0) { const f = x / y; if (f <= 1.0001 && f > best) best = f; } }
+  if (best === 0) { const nums = (t.match(/[\d][\d,.]*/g) || []).map((s) => parseFloat(s.replace(/,/g, ''))).filter((n) => n > 0); if (nums.length) best = Math.min(1.5, Math.log10(Math.max.apply(null, nums) + 1)); }
+  return best;
+};
 export function applyOutcomesMode(docSections, doc) {
   try {
     if (doc !== 'cv' || !Array.isArray(docSections)) return docSections;
@@ -1779,7 +1797,7 @@ export function applyOutcomesMode(docSections, doc) {
         // results"). tier-2/3 joined outcomes in STORED order, so a numeric result
         // could sit behind prose and get cut by the cap. Lead with the quantified
         // ones (digits / % / × / "x") so the number always survives + reads first.
-        texts.sort((p, q) => (_hasNumLam(q) ? 1 : 0) - (_hasNumLam(p) ? 1 : 0));
+        texts.sort((p, q) => _metricScore(q) - _metricScore(p));
         if (texts.length) { _lam.set(r, _capJoin(texts)); return; }
       }
       // 3) role.proofPointIds resolved against the master-profile proof points,
@@ -1790,7 +1808,7 @@ export function applyOutcomesMode(docSections, doc) {
       let texts = ids.map((id) => _ppText[id]).filter(Boolean);
       if (!texts.length && Array.isArray(r.proofPoints) && r.proofPoints.length)
         texts = r.proofPoints.map((p) => (typeof p === 'string' ? p.trim() : String((p && (p.text || p.result)) || '').trim())).filter(Boolean);
-      texts.sort((p, q) => (_hasNumLam(q) ? 1 : 0) - (_hasNumLam(p) ? 1 : 0)); // RESULTS-NUMERIC-LEAD-001
+      texts.sort((p, q) => _metricScore(q) - _metricScore(p)); // RESULTS-NUMERIC-LEAD-001
       if (texts.length) _lam.set(r, _capJoin(texts));
     });
     // The heuristic SELECTED-OUTCOMES distribution runs ONLY for roles that are
@@ -1860,8 +1878,8 @@ export function applyOutcomesMode(docSections, doc) {
     // favoured" — 250→10 days, 90% cost, 30% portfolio). Lead with + keep the
     // outcomes carrying a concrete metric (number/%/×/count) so a quantified
     // result survives the per-role cap and shows first.
-    const hasNum = (x) => /\d|%|×|\bx\b/i.test(txtOf(x));
-    assign.forEach((a) => { a.sort((p, q) => (hasNum(q) ? 1 : 0) - (hasNum(p) ? 1 : 0)); while (a.length > MAX) a.pop(); });
+    // RESULTS-METRIC-RANK-001: rank by metric IMPRESSIVENESS, not just has-a-number.
+    assign.forEach((a) => { a.sort((p, q) => _metricScore(txtOf(q)) - _metricScore(txtOf(p))); while (a.length > MAX) a.pop(); });
     const resultsByRole = new Map();
     distRoles.forEach((r, i) => {
       if (!assign[i].length) return;

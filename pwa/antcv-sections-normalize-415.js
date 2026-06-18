@@ -15,7 +15,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.503-unsolicited-opener';
+  var VERSION = '1.50.614-additional-partition';
   if (window.__antcvSectionsNormalize === VERSION) return;
   window.__antcvSectionsNormalize = VERSION;
 
@@ -371,6 +371,44 @@
     return changed ? out : null;
   }
 
+  // G-GROUPS-003 / ADDITIONAL-INFO-SPLIT-001 (owner 2026-06-18): split a FLAT
+  // ADDITIONAL INFORMATION sidebar section into Languages / Accessibility /
+  // Interests sub-subsections by inserting {group} marker rows. Both the preview
+  // (labeled_list) and the worker export already render a {group} marker as a bold
+  // subhead, so this is a content-only regroup (no fabrication). Idempotent: skips
+  // once any {group} marker is present. Restore-proof via the 415 poll/listeners.
+  function classifyAdditional(it) {
+    var s = String((it && it.l) || '') + ' ' + String((it && it.v) || '');
+    if (/(accessib|accommodat|hearing|deaf|hard of hearing|disab|sign language|assistive)/i.test(s)) return 'Accessibility';
+    if (/(language|languages|sprog|fluent|fluency|proficien|mother tongue|native speaker|bilingual|\b[ABC][12]\b|english|danish|spanish|hebrew|german|french|norwegian|swedish|finnish|arabic|mandarin|chinese|portuguese|italian|russian|dutch|japanese|korean|polish|turkish)/i.test(s)) return 'Languages';
+    if (/(interest|hobb|fritid|leisure|pastime|rugby|hiking|hike|tai.?chi|reading|sport|volunteer|frivillig|foreningsarbejde|coach|\bcat\b|feline)/i.test(s)) return 'Interests';
+    return 'Other';
+  }
+  function partitionAdditional(cv) {
+    var xi = -1;
+    for (var i = 0; i < cv.length; i++) {
+      var s = cv[i];
+      if (s && s.id === 'additional' && s.type === 'labeled_list' && Array.isArray(s.items)) { xi = i; break; }
+    }
+    if (xi < 0) return null;
+    var items = cv[xi].items;
+    if (!items.length) return null;
+    // GUARD 1: already partitioned (a {group} marker exists) — never re-fire.
+    for (var j = 0; j < items.length; j++) { if (items[j] && items[j].group !== undefined) return null; }
+    var buckets = { Languages: [], Accessibility: [], Interests: [], Other: [] };
+    items.forEach(function (it) { if (it == null) return; buckets[classifyAdditional(it)].push(it); });
+    // GUARD 2: only partition when >=2 named groups have content (else leave flat).
+    var named = ['Languages', 'Accessibility', 'Interests'].filter(function (g) { return buckets[g].length; });
+    if (named.length < 2) return null;
+    var out = [];
+    ['Languages', 'Accessibility', 'Interests'].forEach(function (g) {
+      if (buckets[g].length) { out.push({ group: g }); buckets[g].forEach(function (it) { out.push(it); }); }
+    });
+    buckets.Other.forEach(function (it) { out.push(it); }); // ungrouped leftovers last
+    var next = cv.slice(); next[xi] = Object.assign({}, cv[xi], { items: out });
+    return next;
+  }
+
   function normalize() {
     try { normalizeMeta(); } catch (_) {}
     try {
@@ -395,6 +433,7 @@
       var dl = defaultLoc(cv); if (dl) { cv = dl; changed = true; }
       var wi = inlineifyLabeledText(cv); if (wi) { cv = wi; changed = true; }
       var no = neutralizeUnsolicitedOpener(cv); if (no) { cv = no; changed = true; }
+      var pa = partitionAdditional(cv); if (pa) { cv = pa; changed = true; }
       // SECTION-PREVIEW-LOC-001 / TYPE-NORMALIZE: also normalise the CL sections'
       // loc + work_style type so imported CL sections render in the preview.
       var cl = Array.isArray(b.cl) ? b.cl : null;

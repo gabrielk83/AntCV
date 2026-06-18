@@ -81,6 +81,24 @@ worker likely defaults left → a preview≠PDF gap (ties into item 1). Verify b
 (Test-drift my OWN changes caused was already fixed: CJLR justify default, edit-guard order,
 recs string, howcontribute NBSP — committed 129908c.)
 
+### 7. Analysis-ready but CV/CL still placeholders (owner 2026-06-19) — RENDER-TO-DIAGNOSE
+Owner: the completeness panel ("6 key sections need content … PROFILE, CORE COMPETENCIES row 1,
+PROFESSIONAL EXPERIENCE role 0, Opening, WHO I AM, WHY THIS POSITION") shows AFTER "analysis is
+ready" — "makes no sense if the analysis is done on the FINAL CV/CL."
+Diagnosis (confirmed in code): the panel checker (app.src ~24595 `o()`) flags ONLY entirely-
+bracketed template values, so the placeholders are REAL — the `me()` skeleton was never filled for
+those sections. In the generation-complete handler (~24784-24821) the analysis/rationale (`bo(M)`,
+a SEPARATE top-level response field) commits independently of `cv_overrides`/`cl_overrides`, so the
+model can return a good rationale while the CV/CL overrides are placeholder/empty (or fail to
+merge) — hence "analysis ready" yet CV/CL incomplete. The panel then pops ~5s later (setTimeout),
+reading as "work after analysis ready".
+NEEDS (permission #6 render GABRIEL_BG): capture a real generation response and determine whether
+the 6 sections are (a) placeholder/empty in the LLM's cv/cl_overrides, or (b) present in the
+response but lost in the merge. THEN: gate "done"/analysis-ready (and the banner end, 1.50.696) on
+the placeholder scan passing — i.e. do NOT commit the analysis / mark done while critical sections
+are still templates; auto-retry or hold "generating". kernel-completeness-290 (the fetch-wrapper
+retry) should already cover this — verify it actually fires for these and isn't exhausting silently.
+
 ## OWNER-VERIFY / NEEDS-A-CLICK (don't blind-fix)
 - **Core Competencies duplicate controls** (3 page-breaks + 2 CJLR per row): owner must identify
   WHICH page-break + WHICH CJLR actually drive the preview before any are hidden

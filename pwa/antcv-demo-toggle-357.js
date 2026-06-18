@@ -147,9 +147,20 @@
       var n = nodes[i];
       if (n.childElementCount !== 0) continue;
       if ((n.textContent || '').trim() !== 'SIGN IN') continue;
-      // sanity: inside something that also mentions the settings tier strip
-      var p = n.parentElement;
-      if (!p) continue;
+      if (!n.parentElement) continue;
+      // LOGIN-MODE-SCOPE-001 (owner 2026-06-18): there are MULTIPLE "SIGN IN" labels
+      // — the full-screen LOGIN GATE, the login LOADING-overlay, and the Settings →
+      // Account subtab. The ACCOUNT MODE card belongs ONLY in Settings; anchoring it
+      // to the login surfaces made it "sticky" during sign-in/loading. Only accept a
+      // "SIGN IN" whose ancestor ALSO carries the Settings tier strip (Standard +
+      // Advanced), which the login gate and loading overlay never have.
+      var anc = n, hops = 0, inSettings = false;
+      while (anc && hops < 12) {
+        var tc = (anc.textContent || '').toLowerCase();
+        if (tc.indexOf('standard') >= 0 && tc.indexOf('advanced') >= 0) { inSettings = true; break; }
+        anc = anc.parentElement; hops++;
+      }
+      if (!inSettings) continue;
       return n;
     }
     return null;

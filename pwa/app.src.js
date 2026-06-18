@@ -13487,7 +13487,16 @@
                         return;
                       }
                       (u.set("session", { email: e.email, ts: Date.now() }),
-                        J({ email: e.email }));
+                        J({ email: e.email }),
+                        // LOGIN-ROUTE-SETMENU-001 (owner 2026-06-18): a FRESH sign-in
+                        // (Y was null — the user-switch case reloads above, a same-user
+                        // reload skips this whole block) lands on the set-menu (the
+                        // "upload"/landing screen), NOT straight on the editor preview.
+                        // The full-screen login gate's onAuth already does this, but
+                        // when sign-in completes via the AntcvAuth subscribe instead,
+                        // the step stayed at the persisted "editor". Mid-session reloads
+                        // are unaffected (Y already matches → block skipped).
+                        $t("upload"));
                       const t = (u.get("proxyUrl", "") || "").trim();
                       t &&
                         z(t)

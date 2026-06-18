@@ -89,6 +89,17 @@ function ensureMountContainer(settingsRoot: HTMLElement): HTMLElement {
   // (BACKGROUND / CV SIDEBAR / …) doesn't jump down when the island paints. Cleared
   // to natural height in applyOnce once the island has rendered children.
   c.style.minHeight = '220px';
+  // PERSONAL-TAB-JANK-001 (owner 2026-06-18): fill the reserved box with a
+  // writing-style-shaped SKELETON instead of an empty blue gap, so entering Personal
+  // shows a loading placeholder (not the "large blue region" then a pop-in). React
+  // clears these children when createRoot renders the real island a tick later.
+  c.innerHTML =
+    '<div data-antcv-ws-skeleton="1" style="padding:2px 0;animation:pulse 1.2s ease-in-out infinite">' +
+    '<div style="height:11px;width:96px;border-radius:4px;background:rgba(255,255,255,.12);margin:0 0 10px"></div>' +
+    '<div style="height:34px;border-radius:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);margin:0 0 10px"></div>' +
+    '<div style="height:9px;width:72%;border-radius:4px;background:rgba(255,255,255,.06);margin:0 0 6px"></div>' +
+    '<div style="height:9px;width:54%;border-radius:4px;background:rgba(255,255,255,.06)"></div>' +
+    '</div>';
 
   // Prefer anchoring just ABOVE the app.js WRITING STYLE control (top of
   // Personal). Fall back to above the PackagePicker, then the Done button.

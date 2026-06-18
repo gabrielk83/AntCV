@@ -67,6 +67,20 @@ defaults (234 sidecar `getAlign` reads rowAlign; it was overriding it before). R
 docx-worker rowAlign default must MATCH (header center, body justify) so export = preview; today the
 worker likely defaults left → a preview≠PDF gap (ties into item 1). Verify by rendering GABRIEL_BG.
 
+### 6. Pre-existing CI unit-test failures (predate this session — NOT regressions)
+`node --test pwa/test/unit/*.test.mjs` has 7 failures unrelated to this session's work
+(confirmed: in buildPayload / table-dims paths untouched here):
+- `placeholder-export-guard` (×2): the export NBSP-binds orphans (ORPHAN-NBSP-EXPORT-001,
+  656) and the placeholder-strip regex then fails to match the NBSP'd placeholder, so an
+  unfilled "[WHY THIS POSITION …]" placeholder survives export. Likely a REAL ordering bug
+  (strip placeholders BEFORE NBSP-binding), not just a stale test — verify with a render.
+- `table-dims-forward` / table-width (×5): the CL table export width reference changed in
+  1.50.671 (CL-TABLE-WIDTH-PAGE-REF-001) from 9602 → ~11506; the tests still expect
+  9602×1.10=10562 (actual 12657=11506×1.10). Confirm 12657 is the intended new value, then
+  update the expectations (or fix the code if 671 over-shot).
+(Test-drift my OWN changes caused was already fixed: CJLR justify default, edit-guard order,
+recs string, howcontribute NBSP — committed 129908c.)
+
 ## OWNER-VERIFY / NEEDS-A-CLICK (don't blind-fix)
 - **Core Competencies duplicate controls** (3 page-breaks + 2 CJLR per row): owner must identify
   WHICH page-break + WHICH CJLR actually drive the preview before any are hidden

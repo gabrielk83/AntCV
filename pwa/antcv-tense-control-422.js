@@ -123,16 +123,27 @@
         if (existing.parentElement !== col) { existing.remove(); }
         else { paintActive(existing); return; }
       }
+      // PERSONAL-TAB-JANK-001 (owner 2026-06-18): EXPERIENCE TENSE now lives INSIDE
+      // the LanguageCard island. When the islands bundle is loaded the island WILL
+      // mount and host the control — so do NOT eagerly build a standalone card on
+      // the early ticks (before the island paints) that then flashes and gets
+      // removed (line ~108) when the island appears. That flash was part of the
+      // Personal-subtab progressive-render cascade. Only build as a FALLBACK after
+      // a grace period, if the island genuinely never mounted (islands disabled).
+      if (!graceElapsed && document.querySelector('script[src*="antcv-react-islands"]')) return;
       col.appendChild(build());
     } catch (_) {}
   }
 
   var pending = false;
+  var graceElapsed = false;
   function schedule() { if (pending) return; pending = true; requestAnimationFrame(function () { pending = false; try { inject(); } catch (_) {} }); }
 
   function boot() {
     schedule();
-    [120, 300, 700, 1500, 3000].forEach(function (ms) { setTimeout(schedule, ms); });
+    // Single grace-period fallback (was a 120/300/700/1500/3000ms flood that each
+    // tried to inject the standalone card before the island mounted).
+    setTimeout(function () { graceElapsed = true; schedule(); }, 2800);
     try { new MutationObserver(schedule).observe(document.body || document.documentElement, { childList: true, subtree: true }); } catch (_) {}
     window.addEventListener('antcv:exp-tense-changed', function () { var h = document.getElementById(HOST_ID); if (h) paintActive(h); });
   }

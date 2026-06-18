@@ -11149,7 +11149,7 @@
                 r = "cl" === e,
                 i = r
                   ? [t.role, t.company].filter(Boolean).join(" — ")
-                  : t.subtitle || "",
+                  : t.subtitle || (ie() || {}).specialization || "",
                 l = {
                   id: "spec_block",
                   title: r ? "APPLICATION" : "SPECIALISATION",
@@ -11235,10 +11235,10 @@
         label: k ? "Application" : "Specialisation",
         value: k
           ? [t.role, t.company].filter(Boolean).join(" — ")
-          : t.subtitle || "",
+          : t.subtitle || (ie() || {}).specialization || "",
         previewValue: k
           ? [t.role, t.company].filter(Boolean).join(" — ")
-          : t.subtitle || "",
+          : t.subtitle || (ie() || {}).specialization || "",
         loc: i.specialisation || "topbar",
         allowsLocs: T,
         canHide: !1,

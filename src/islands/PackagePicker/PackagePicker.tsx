@@ -153,6 +153,40 @@ function PackageCard({
   );
 }
 
+// FIGURE-ON-SWITCH-001 (owner 2026-06-18): adopt the package's figure defaults
+// on a real style switch — so the figure-POSITION selector marks a default (the
+// "sidebar bridge" / band-overlap is copenhagen-modern-specific; other packages
+// default to sidebar-top) and the SHAPE selector moves to the package's shape
+// (PACKAGES[id].shape). Position uses the app.js React-synced setter
+// window._antcvSetPhotoPosition (updates the `er` state + localStorage). Shape
+// is written to BOTH photoShape locations — top-level personalInfo.photoShape
+// (read by the selector sidecar antcv-photo-ui-427.js) and stylePrefs.photoShape
+// (read by the app.src.js preview) — plus events so both re-read. Preview
+// fidelity for rounded-square/hexagon still depends on the preview-reader fix
+// (PREVIEW-STYLE-FIDELITY item B); the DATA is set correctly here.
+function applyPackageFigureDefaults(id: PackageId): void {
+  try {
+    const pos = id === 'copenhagen-modern' ? 'band-overlap' : 'sidebar-top';
+    const w = window as unknown as { _antcvSetPhotoPosition?: (v: string) => void };
+    if (typeof w._antcvSetPhotoPosition === 'function') w._antcvSetPhotoPosition(pos);
+    else localStorage.setItem('photoPosition', JSON.stringify(pos));
+  } catch { /* */ }
+  try {
+    const shape = PACKAGES[id] && PACKAGES[id].shape;
+    if (!shape) return;
+    const pi = (JSON.parse(localStorage.getItem('personalInfo') || '{}') || {}) as Record<string, unknown>;
+    pi.photoShape = shape;
+    const sp = (pi.stylePrefs && typeof pi.stylePrefs === 'object' ? pi.stylePrefs : {}) as Record<string, unknown>;
+    sp.photoShape = shape;
+    pi.stylePrefs = sp;
+    localStorage.setItem('personalInfo', JSON.stringify(pi));
+    try { (window as unknown as { _antcvCloudWrite?: (p: unknown) => void })._antcvCloudWrite?.({ personalInfo: pi }); } catch { /* */ }
+    window.dispatchEvent(new StorageEvent('storage', { key: 'personalInfo' }));
+    window.dispatchEvent(new CustomEvent('antcv:photo-shape-changed'));
+    window.dispatchEvent(new CustomEvent('antcv:sections-updated'));
+  } catch { /* */ }
+}
+
 // ─── main component ──────────────────────────────────────────────────────
 
 export function PackagePicker({ initialMode, context = 'personal' }: Props): JSX.Element {
@@ -198,6 +232,7 @@ export function PackagePicker({ initialMode, context = 'personal' }: Props): JSX
     const next = writePackageState({ packageId: id, quickAlt: 'default', isCustom: false });
     setState(next);
     applyPackageToBody(next);
+    applyPackageFigureDefaults(id);
   }, []);
 
   const selectQuickAlt = useCallback((alt: QuickAlt) => {

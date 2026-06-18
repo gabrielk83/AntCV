@@ -15,7 +15,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.675-recs-manual-order';
+  var VERSION = '1.50.685-accessibility-dup';
   if (window.__antcvSectionsNormalize === VERSION) return;
   window.__antcvSectionsNormalize = VERSION;
 
@@ -436,9 +436,21 @@
     // buckets that already have their own section) in a trimmed ADDITIONAL; drop
     // ADDITIONAL only if there is genuinely nothing left.
     var leftover = keptGroups.concat(buckets.Other);
-    if (hasLang) buckets.Languages.forEach(function (it) { leftover.push(it); });
-    if (hasInt) buckets.Interests.forEach(function (it) { leftover.push(it); });
-    if (hasAcc) buckets.Accessibility.forEach(function (it) { leftover.push(it); });
+    // ACCESSIBILITY-DUP-001 (owner 2026-06-18: "accessibility is generated twice"):
+    // only push a category's items back into ADDITIONAL when its dedicated section
+    // does NOT already hold content. If the dedicated section exists AND is non-empty
+    // it is the single home for that category — keeping the items in ADDITIONAL too
+    // renders them twice. An empty/just-created dedicated section keeps the items so
+    // nothing is lost.
+    var pushBack = function (id, exists, bucket) {
+      if (!exists) return;
+      var sec = cv.filter(function (s) { return s && s.id === id; })[0];
+      var nonEmpty = sec && Array.isArray(sec.items) && sec.items.length;
+      if (!nonEmpty) bucket.forEach(function (it) { leftover.push(it); });
+    };
+    pushBack('languages', hasLang, buckets.Languages);
+    pushBack('interests', hasInt, buckets.Interests);
+    pushBack('accessibility', hasAcc, buckets.Accessibility);
     if (leftover.length) replacement = newSecs.concat([Object.assign({}, cv[xi], { items: leftover })]);
     copy.splice.apply(copy, [xi, 1].concat(replacement));
     return copy;

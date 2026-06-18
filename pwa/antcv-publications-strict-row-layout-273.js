@@ -8,7 +8,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.50.683-pub-move-proxy';
+  const VERSION='1.50.685-pub-move-left';
   if(window.__antcvPublicationsStrictRowLayout273===VERSION) return;
   window.__antcvPublicationsStrictRowLayout273=VERSION;
   // v1.40.273-preview-guard: Preview is button-free. panelRoot() must
@@ -164,7 +164,10 @@
     }
     hostm.appendChild(half('▲',ups,'Move up'));
     hostm.appendChild(half('▼',downs,'Move down'));
-    row.appendChild(hostm);
+    // PUB-MOVE-LEFT-001 (owner: "the new Up/Down is in the corner, not by order"):
+    // make it the FIRST child so it is leftmost by DOM order too, not relying on
+    // flex order alone (order:5 still applies as a belt-and-suspenders).
+    if(row.firstChild) row.insertBefore(hostm,row.firstChild); else row.appendChild(hostm);
   }
   function wire(pair,sid,i){
     const {row,name,detail}=pair;

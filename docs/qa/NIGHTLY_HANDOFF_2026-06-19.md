@@ -74,10 +74,12 @@ worker likely defaults left → a preview≠PDF gap (ties into item 1). Verify b
   656) and the placeholder-strip regex then fails to match the NBSP'd placeholder, so an
   unfilled "[WHY THIS POSITION …]" placeholder survives export. Likely a REAL ordering bug
   (strip placeholders BEFORE NBSP-binding), not just a stale test — verify with a render.
-- `table-dims-forward` / table-width (×5): the CL table export width reference changed in
-  1.50.671 (CL-TABLE-WIDTH-PAGE-REF-001) from 9602 → ~11506; the tests still expect
-  9602×1.10=10562 (actual 12657=11506×1.10). Confirm 12657 is the intended new value, then
-  update the expectations (or fix the code if 671 over-shot).
+- `table-dims-forward` / table-width (×5): `[FIXED 1.50.697 — tests updated]` the CL table export
+  width reference changed in 1.50.671 (CL-TABLE-WIDTH-PAGE-REF-001) from 9602 → 11506
+  (= PAGE_W-400, matching the deployed worker `defaultClW`); the tests still expected the old base.
+  CONFIRMED 11506/12657 intentional (not an over-shoot — verified against the worker bundle), updated
+  the 5 stale assertions; the "100% default" case became the "90% rest width" invariant (CL rest pct
+  moved 100→90 in 671). Suite now 2 failures (only the placeholder-export-guard pair remains).
 (Test-drift my OWN changes caused was already fixed: CJLR justify default, edit-guard order,
 recs string, howcontribute NBSP — committed 129908c.)
 
@@ -111,7 +113,7 @@ A. **ANTI-FABRICATION — NYX at Kanzen (CRITICAL).** Generation wrote for Kanze
    software advisory and project engagements for deep-tech and automotive clients" is the Kanzen
    line (fine for Kanzen) but it BLED onto System Architect (see C).
 
-B. **ISO 26262 picked as a "numeric result."** The Results metric scorer (`_metricScore` in
+B. `[SHIPPED 1.50.697 — STD-CODE-NOT-METRIC-001]` **ISO 26262 picked as a "numeric result."** The Results metric scorer (`_metricScore` in
    antcv-docx-client.js + the copy in antcv-outcomes-metric-order.js) counts the digits in a STANDARD
    number ("ISO 26262", "ISO/SAE 21434", "ISO 9001", "MIL-STD-810", "STANAG 4694") as a metric, so a
    compliance-standard line wins the numeric sort even though it is NOT a result. FIX: in
@@ -150,10 +152,14 @@ G. **INTERESTS placeholder + Regulatory/Methods wrong for unsolicited.** INTERES
    wrong/over-shrunk for an unsolicited showcase (UNSOLICITED-BREADTH-001 needs regen-verify, and the
    AI-assisted-into-Methods placement, 1.50.689).
 
-H. **ACCESSIBILITY comment still visible.** "It has not limited his career" still renders.
+H. `[SHIPPED 1.50.697 — ACCESS-NO-COMMENT-001 data-strip]` **ACCESSIBILITY comment still visible.** "It has not limited his career" still renders.
    ACCESS-NO-COMMENT-001 (1.50.691) is PROMPT-only (needs a regen). Existing data isn't stripped —
    a small sidecar could strip the trailing "it has not limited his/their career" sentence from the
    accessibility section content (owner: that 3rd-person comment belongs only in a cover letter).
+   DONE: new restore-proof sidecar `antcv-accessibility-comment-strip.js` strips the trailing
+   "(it/this/that/which) has not limited his/their/her career" sentence from the CV accessibility
+   labeled_list `item.v` (CL preserved, never blanks, idempotent). Unit-tested + verified in a real
+   headless browser (CV stripped, CL kept, no console errors).
 
 I. **PDF export STILL needs a refresh.** EXPORT-PDF-RACE-001 (1.50.687) did not fully fix it — the
    first export still falls back to browser-print until a refresh. Re-investigate: the worker URL /

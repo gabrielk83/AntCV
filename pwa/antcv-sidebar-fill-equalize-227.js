@@ -43,18 +43,28 @@
     var rows = paper.querySelectorAll(ROW_SEL);
     if (!rows.length) return;
     applying = true;
+    var changed = false;
     try {
       Array.prototype.forEach.call(rows, function (row) {
         var side = row.querySelector(SIDE_SEL);
         var main = row.querySelector(MAIN_SEL);
         if (!side || !main) return;
+        var mainH = Math.ceil(main.getBoundingClientRect().height);
+        if (!(mainH > 0)) return;
+        // SIDEBAR-BREATHING-001 (owner 2026-06-18): idempotent guard. If this row
+        // is already equalized to the SAME main height, do NOTHING — no remove,
+        // no re-set, no scroll nudge. The blind remove-then-set EVERY cycle was the
+        // visible "breathe", and its height write fed a ResizeObserver → synthetic
+        // scroll → React re-render → MutationObserver → equalize loop (re-armed by
+        // every real scroll). Skipping the write when the main height is unchanged
+        // (the case while merely scrolling) breaks the loop and the jitter.
+        if (side.getAttribute('data-antcv-eq-h') === String(mainH) && side.style.height) return;
         // Clear any prior write FIRST so we measure the natural intrinsic
         // height of the sidebar (not the height we last set on it).
         side.style.removeProperty('height');
         side.style.removeProperty('min-height');
-        var mainH = Math.ceil(main.getBoundingClientRect().height);
         var sideH = Math.ceil(side.getBoundingClientRect().height);
-        if (!(mainH > 0) || !(sideH > 0)) return;
+        if (!(sideH > 0)) return;
         // EXTEND only — when the sidebar is shorter than main, give it the
         // main height so the navy bg reaches the page bottom. When the
         // sidebar is taller, do NOTHING — its natural height wins, the
@@ -63,8 +73,13 @@
           side.style.setProperty('height', mainH + 'px', 'important');
           side.style.setProperty('min-height', mainH + 'px', 'important');
           side.style.setProperty('align-self', 'stretch', 'important');
+          changed = true;
         }
+        // Record the main height we reconciled against either way, so a pure
+        // scroll (main height unchanged) is skipped next cycle.
+        side.setAttribute('data-antcv-eq-h', String(mainH));
       });
+      if (!changed) { applying = false; return; }
       // 1.50.242: after writing sidebar styles, scrollHeight of the preview
       // scroll container may have changed. The vertical-roller slider's value
       // (`bi` in app.src.js, updated by `Ni` on scroll events) doesn't

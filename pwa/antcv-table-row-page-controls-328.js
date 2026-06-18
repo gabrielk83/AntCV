@@ -6,7 +6,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.50.96-retired';
+  const VERSION='1.50.637-page-auto';
   // v1.50.96 — RETIRED. Table page breaks are unified on the app-native
   // section.pageBreakRows field (toggled by the app's own per-row ↧ button) and
   // rendered by antcv-table-page-splits-327. This sidecar's redundant 📄 button
@@ -42,7 +42,29 @@
   function targetForPanel(root){let p=root;for(let d=0;p&&p!==document.body&&d<8;d++,p=p.parentElement){const t=clean(p.textContent).slice(0,1200);const m=targetFromText(t);if(m)return m;}return null;}
   function targetSid(target){const found=sections().find(s=>s&&target.rx.test(clean([s.title,s.name,s.id].join(' '))));return found&&found.id?String(found.id):target.sid;}
   function pageMap(){return read(PAGE_KEY,{});} 
-  function getPage(sid,i){const all=pageMap();const b=all[sid]||{};const n=Number(b[String(i)]||1);return Number.isFinite(n)&&n>=1?Math.min(4,Math.max(1,Math.round(n))):1;}
+  // PAGE-BUTTON-AUTO-001 (owner 2026-06-18): when a row has NO manual page
+  // override, show the page it ACTUALLY lands on after auto/salmon pagination
+  // (antcv:autoPagesPreview, then the export antcv:autoPages) instead of a
+  // hardcoded 1 — so a row salmon moved to page 2/3 reads "📄 2"/"📄 3", not 1.
+  function autoPageFor(sid,i){
+    try{
+      var maps=['antcv:autoPagesPreview','antcv:autoPages'];
+      for(var m=0;m<maps.length;m++){
+        var all=JSON.parse(localStorage.getItem(maps[m])||'{}')||{};
+        var sec=all&&all[sid]; if(!sec||typeof sec!=='object')continue;
+        var raw=sec[String(i)]; if(raw===undefined||raw===null)raw=sec['items.'+i];
+        var n=parseInt(raw,10); if(n>=1)return Math.min(4,n);
+      }
+    }catch(_){}
+    return 0;
+  }
+  function getPage(sid,i){
+    const all=pageMap();const b=all[sid]||{};
+    const manual=Number(b[String(i)]);                 // explicit user override (only stored when >1)
+    if(Number.isFinite(manual)&&manual>=1)return Math.min(4,Math.max(1,Math.round(manual)));
+    const auto=autoPageFor(sid,i);
+    return auto>=1?Math.min(4,auto):1;
+  }
   function setPage(sid,i,n){const all=pageMap();if(!all[sid]||typeof all[sid]!=='object')all[sid]={};const p=Math.min(4,Math.max(1,Math.round(Number(n)||1)));if(p<=1)delete all[sid][String(i)];else all[sid][String(i)]=p;write(PAGE_KEY,all);try{window.dispatchEvent(new CustomEvent('antcv:sections-updated',{detail:{source:'table-row-page-controls-328',sid,index:i,page:p}}));}catch(_){} }
   function fields(row){return Array.from(row.querySelectorAll('input,textarea,[contenteditable="true"]')).filter(visible);}
   function rowForField(f,root){let p=f.parentElement,best=null;for(let d=0;p&&p!==root.parentElement&&d<7;d++,p=p.parentElement){const fs=fields(p);if(fs.length>=2&&fs.length<=8)best=p;if(/focus area/i.test(clean(p.textContent))&&/strategic expertise/i.test(clean(p.textContent))&&fs.length>=2){best=p;break;}}return best;}

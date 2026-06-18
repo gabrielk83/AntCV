@@ -3,19 +3,20 @@
 High-level-generation + structure bugs the owner reported after the 640-642 run.
 Next-session prompt + per-item fix direction live in that doc. Summary:
 
-- **TOOLS-METHODS-FIXIT-LOOP-001** `[OPEN — VERIFIED root cause]` — Fix-It/compress on the Tools & Methods grouped `labeled_list` spins endlessly and mangles content. `Pe()` references an undefined `items` instead of the local `n` at app.src.js **9850-9858** (labeled_list_item) and **9863-9868** (education_item), so the compress result is a no-op → the orphan-retry pass loops. Whole-section handler (9902-9910) is correct. Surgical fix mapped.
-- **PUBLICATIONS-DUP-001** `[OPEN — owner's "core problem"]` — duplicate publication/patent rows. Sidecars dedup only CONTROLS, not DATA; the stored↔generated merge `l()` (~23758) keys on `trim().toLowerCase()` only, so a `<b>`-wrapped patent vs a plain copy (or whitespace drift) both survive. Fix = strip HTML + collapse whitespace in the dedup key for both sides.
-- **WHO-I-AM-LABEL-DUP-001** `[OPEN]` — WHO I AM / WHY YOUR COMPANY render the label as the heading AND repeat it as a `LABEL:` prefix inside the paragraph. Keep one headline; strip the inline label (prompt rule + defensive render strip; NOT for `text_inline` working-style).
-- **PHOTO-SHAPE-SQUARE-001** `[OPEN]` — a square upload renders as a circle; preview default radius `"50%"` (app.src.js ~41016) crops corners. The "square" selection (`stylePrefs.photoShape`, ~12849) isn't persisting/applying in preview. Related to PREVIEW-STYLE-FIDELITY (A)/(B).
-- **SPEC-LINE-GONE-001** `[OPEN — regression to investigate]` — the unsolicited specialization line ("Processes • Products • People") is missing. NOT touched by 640-642 (subtitle path untouched). Likely empty stored `personalInfo.specialization` or empty generated `meta.subtitle`; pin the standing line + confirm render gate.
-- **PROFILE-REWRITE-001** `[OPEN — owner-provided text, regen-gated]` — replace the canonical unsolicited PROFILE (app.src.js ~2783) with the owner's ChatGPT-refined text (in the batch doc).
-- **TABLES-SAME-FOCUS-001** `[OPEN — prompt]` — CORE COMPETENCIES and WHAT I BRING must have DISJOINT Focus Area columns; add a no-overlap rule.
-- **EMDASH render-separator half** `[OPEN — mapped]` — writer↔reader separator pairs (see `emdash-hyphen-three-layers` memory). Prompt (642) + content-sidecar (636) halves shipped.
+- **TOOLS-METHODS-FIXIT-LOOP-001 + FIXIT-DESYNC-001** `[CLOSED 1.50.644]` — TWO bugs. (1) `Pe()` referenced an undefined `items` instead of the local `n` for labeled_list_item (app.src.js ~9853) + education_item (~9866) → compress no-op → orphan-retry spun. (2) the whole-section `labeled_list` compress SOURCE excludes group+hidden but the apply skipped only groups → a hidden item shifted every value after it (the "funny way" mangling). Both fixed; apply now skips group OR hidden.
+- **PUBLICATIONS-DUP-001** `[CLOSED 1.50.646]` — new sidecar `antcv-publications-dedup.js` removes textually-identical entries from `personalInfo.publications`/`publicationsStructured` + the sections publications items (normalised key: strip HTML, collapse whitespace, lowercase → `<b>`-wrapped vs plain collapse; distinct year/title survives). Restore-proof.
+- **WHO-I-AM-LABEL-DUP-001** `[CLOSED 1.50.645]` — new sidecar `antcv-heading-label-dedup.js` strips a leading `<TITLE>:` from `type:"text"` sections (own-title match → language-agnostic; bold either side of the colon; skips `text_inline`; never blanks). Restore-proof.
+- **PHOTO-SHAPE-SQUARE-001** `[CLOSED 1.50.647]` — selector wrote only top-level `photoShape` (Pentagon's direct-DOM read) but the React render reads `stylePrefs.photoShape`. `writePhotoShape` now writes BOTH + dispatches `antcv:sections-updated` for an immediate repaint; `currentPhotoShape` reads stylePrefs-first.
+- **PROFILE-REWRITE-001** `[CLOSED 1.50.648 — regen-gated]` — swapped the canonical unsolicited PROFILE (~2783) for the owner's text. Parity 1:1.
+- **TABLES-SAME-FOCUS-001** `[CLOSED 1.50.648 — regen-gated]` — TABLES-DISTINCT-001 prompt rule: WHAT I BRING vs CORE COMPETENCIES Focus Area columns must be DISJOINT.
+- **SPEC-LINE-GONE-001** `[NO CODE — regen-gated]` — the prompt ALREADY pins Gabriel's "Processes • Products • People" for unsolicited (~2732, name-guarded). Resolves on regen; if it persists, the subtitle render (`t.subtitle||""` ~11147/11233/11236) has no fallback to `personalInfo.specialization` — that's the render gate to add.
+- **EMDASH render-separator half** `[OPEN — interconnected]` — the only remaining item. Pure-display separators (education deg—sch, role—company) are safe one-way swaps, but the saved-application label pair (writers 37410/43722/43753/40120 ↔ readers 21943/21963/21984/22824 split on `" — "`), the CL header editor (6448/6449), and the deg—sch enrichment strip (17835↔18120/44560) READ BACK on `" — "` — converting in isolation breaks stored saved-applications. Each writer↔reader group must move atomically with a round-trip test. Generated CONTENT already hyphenated (642 + 636).
 
-### Shipped this run (1.50.640 → 642)
+### Shipped this run (1.50.640 → 648)
 - **SELECT-DARK-DROPDOWN-001** `[640]` — `color-scheme:light` on form controls; native `<select>` dropdown no longer a black box on Windows dark mode.
-- **GPA-EDITOR-001** `[641]` — education editor GPA input + 👁/🙈 `showGpa` toggle (completes the GPA-CHIP preview half from 638).
+- **GPA-EDITOR-001** `[641]` + **GPA-CHIP-LINE-001** `[643]` — education editor GPA input + 👁/🙈 `showGpa` toggle; GPA renders on its OWN line after the degree content (owner-corrected position).
 - **DASH-HYPHEN-001 (prompt half)** `[642]` — global PUNCTUATION-DASHES rule so the model emits only `-`, never `—`/`–`.
+- Plus the 5 owner-batch closures above (644-648).
 
 ---
 

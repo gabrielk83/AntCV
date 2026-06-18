@@ -8,7 +8,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.50.681-pub-row-controls';
+  const VERSION='1.50.682-pub-host-shrink';
   if(window.__antcvPublicationsStrictRowLayout273===VERSION) return;
   window.__antcvPublicationsStrictRowLayout273=VERSION;
   // v1.40.273-preview-guard: Preview is button-free. panelRoot() must
@@ -165,9 +165,14 @@
   function injectCss(){if(document.getElementById('antcv-publications-strict-row-layout-273-css'))return;const s=document.createElement('style');s.id='antcv-publications-strict-row-layout-273-css';s.textContent=`
     [data-antcv-pub273-row="1"]{display:flex!important;align-items:center!important;gap:3px!important;flex-wrap:nowrap!important;max-width:calc(100% - 54px)!important;width:calc(100% - 54px)!important;overflow:visible!important;box-sizing:border-box!important;white-space:nowrap!important;}
     [data-antcv-pub273-row="1"] input,[data-antcv-pub273-row="1"] textarea,[data-antcv-pub273-row="1"] [contenteditable="true"]{min-width:0!important;box-sizing:border-box!important;flex-shrink:1!important;}
-    [data-antcv-pub273-row="1"] [data-antcv-pub273-host="1"]{display:inline-flex!important;align-items:center!important;gap:2px!important;white-space:nowrap!important;flex:0 0 auto!important;order:30!important;position:static!important;float:none!important;margin-left:2px!important;}
+    [data-antcv-pub273-row="1"] [data-antcv-pub273-host="1"]{display:inline-flex!important;align-items:center!important;gap:1px!important;white-space:nowrap!important;flex:0 0 auto!important;order:30!important;position:static!important;float:none!important;margin-left:1px!important;margin-right:1px!important;}
     [data-antcv-pub273-row="1"] button{width:23px!important;min-width:23px!important;max-width:23px!important;height:22px!important;min-height:22px!important;padding:0!important;margin:0!important;flex:0 0 auto!important;position:static!important;float:none!important;box-sizing:border-box!important;}
     [data-antcv-pub273-row="1"] button[data-antcv-pub273-control="page"]{width:30px!important;min-width:30px!important;max-width:30px!important;font-size:10px!important;}
+    /* PUB-HOST-SHRINK-001 (owner 2026-06-18): the page / compress / enhance group
+       overflowed under the neighbouring controls — make ITS buttons narrower from
+       both sides (the row's other buttons keep 23px). */
+    [data-antcv-pub273-row="1"] [data-antcv-pub273-host="1"] button{width:19px!important;min-width:19px!important;max-width:19px!important;font-size:11px!important;}
+    [data-antcv-pub273-row="1"] [data-antcv-pub273-host="1"] button[data-antcv-pub273-control="page"]{width:25px!important;min-width:25px!important;max-width:25px!important;font-size:9px!important;}
     [data-antcv-pub273-eye="1"]{order:40!important;}
     [data-antcv-pub273-cjlr="1"]{order:45!important;}
     [data-antcv-pub273-delete="1"]{order:50!important;}

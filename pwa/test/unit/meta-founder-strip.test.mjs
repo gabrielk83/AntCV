@@ -18,8 +18,11 @@ const sidecar = readFileSync(path.join(ROOT, 'antcv-sections-normalize-415.js'),
 test('sidecar defines + calls normalizeMeta on every normalize pass', () => {
   assert.ok(sidecar.includes('function normalizeMeta()'), 'missing normalizeMeta');
   assert.ok(sidecar.includes('function cleanFounderStr'), 'missing cleanFounderStr');
-  assert.ok(/function normalize\(\)\s*\{\s*try\s*\{\s*normalizeMeta\(\)/.test(sidecar),
-    'normalize() does not call normalizeMeta first');
+  // EDIT-GUARD-001 (1.50.690): normalize() now defers while the user is editing, so
+  // an edit-guard try/catch precedes the normalizeMeta() call. Assert normalizeMeta
+  // is still invoked early in normalize(), tolerant of that guard.
+  assert.ok(/function normalize\(\)\s*\{[\s\S]{0,700}?normalizeMeta\(\)/.test(sidecar),
+    'normalize() does not call normalizeMeta near the top');
   assert.ok(sidecar.includes("localStorage.getItem('meta')"), 'does not read stored meta');
   assert.ok(sidecar.includes("StorageEvent('storage', { key: 'meta'"), 'does not notify the app of the meta change');
 });

@@ -39,9 +39,13 @@ test('core-competencies row-controls sidecar defaults the HEADER row (row 0) to 
   // applyPreview() forces getAlign(0) onto the <th> cells every sweep. getAlign
   // used to default every row (incl. row 0) to 'left', so the header was
   // force-left in the preview even though every export path centers it. Row 0
-  // now defaults to center; body rows stay left; an explicit CJLR choice wins.
+  // now defaults to CENTER; body rows default to JUSTIFIED (owner 2026-06-19,
+  // CJLR-RESPECT-NATIVE-001); the native section.rowAlign + an explicit CJLR choice
+  // still win.
   const sc = readFileSync(path.join(ROOT, 'antcv-core-competencies-row-controls-234.js'), 'utf8');
-  assert.match(sc, /function getAlign\(i\)\{[^}]*i===0 \? 'center' : 'left'/);
+  assert.match(sc, /i===0 \? 'center' : 'justify'/);
+  // getAlign reads the native rowAlign so the native CJLR drives the preview
+  assert.ok(sc.includes('sec.rowAlign'));
   // header row is aligned from getAlign(0)
   assert.ok(sc.includes('headerRows.forEach(r=>applyAlign(r,getAlign(0)))'));
 });

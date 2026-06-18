@@ -26,11 +26,16 @@ const contribute = (over) => ({
   ...over,
 });
 const liveSections = (over) => ({ cv: [], cl: [contribute(over)] });
+// ORPHAN-NBSP-EXPORT-001 (1.50.656): the export binds orphan words with a
+// non-breaking space. This test verifies the shape-guard MERGE (which field wins),
+// not the whitespace binding, so normalise NBSP -> space before asserting.
+const _dn = (v) => (typeof v === 'string' ? v.replace(/ /g, ' ') : (Array.isArray(v) ? v.map(_dn) : v));
+const _denbsp = (o) => { if (!o || typeof o !== 'object') return o; const r = {}; for (const k of Object.keys(o)) r[k] = _dn(o[k]); return r; };
 const payloadFor = (live, stored) => {
   store.clear();
   if (stored) store.set('sections', JSON.stringify({ cv: [], cl: [stored] }));
   const p = buildPayload({ sections: live, doc: 'cl' });
-  return p.sections.find((s) => s.id === 'contribute');
+  return _denbsp(p.sections.find((s) => s.id === 'contribute'));
 };
 
 beforeEach(() => store.clear());

@@ -24,7 +24,9 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '.
 const bundle = readFileSync(path.join(ROOT, 'app.js'), 'utf8');
 
 test('RECOMMENDATIONS-SECTION-001 — skeleton + translations (placement consolidated to sidecar)', () => {
-  assert.ok(bundle.includes('Danish and international recommenders on request.'));
+  // RECS-AS-LIST-001 (1.50.677): the recommendations skeleton is now an education-
+  // type list; the default detail string changed to "… available on request".
+  assert.ok(bundle.includes('Danish and international recommenders available on request'));
   assert.ok(bundle.includes('"RECOMMENDATIONS"') || /RECOMMENDATIONS:/.test(bundle));
   assert.ok(bundle.includes('REFERENCER'));
   assert.ok(bundle.includes('RECOMENDACIONES'));

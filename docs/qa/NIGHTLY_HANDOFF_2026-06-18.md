@@ -1,5 +1,38 @@
 # Nightly handoff — 2026-06-18 (post kernel-v2 upload + regen)
 
+## OWNER-DIRECTED BATCH 3 2026-06-18 — SHIPPED 1.50.617 → 1.50.619 + access-relay auth-26
+
+- **VERSION-OVERRIDE-CACHE-001** `[1.50.617]` — the ROOT CAUSE of "Hard Refresh doesn't
+  reset / versions stuck": `antcv-version-override.js?v=` (the file that paints the version
+  label) was FROZEN at `?v=1.50.41` since v1.40.339, so the SW/browser served a stale copy
+  → label stuck at 585 while `app.js` was already 616 (HAR proved `app.js?v=1.50.616` + `/config`
+  200). **The cache-bust routine is now a QUARTET: bump `antcv-version-override.js?v=` EVERY
+  release** (its TARGET changes every release). The sign-in "stuck Loading" screenshot was this
+  stale label, not a real hang.
+- **ERROR-PERSIST-001** `[1.50.618]` — the auto-reset/reload clears the console, hiding the
+  trigger. `antcv-diag-probes-370.js` now persists every captured error (window.error /
+  rejection / React) to a capped `localStorage` ring `antcv:errorLog` (+ `window.AntcvErrorLog()`
+  console.table, + a boot announcement). Inspect the reset cause after it fires.
+- **#D PER-STYLE UNSOLICITED KERNELS** (owner-approved: Substrate B, copy-to-chosen-style,
+  auto-load):
+  - **Phase A `[access-relay auth-26, DEPLOYED]`** — `/api/kernel-showcase?style=<slug>` →
+    new composite-keyed table `kernel_showcase_styled` (PK user_hash,style_key); `?list=1`
+    enumerate; DELETE; empty `?style` keeps the legacy single slot byte-for-byte.
+  - **Phase B `[1.50.619]`** — `oo.getShowcase(style)/putShowcase(e,style)` + `listShowcases()`
+    + `deleteShowcase(style)`; the generation save (~25162), re-save (~15190) stamp the ACTIVE
+    `personalInfo.stylePrefs.style`; the sign-in restore (~15364) loads the current style's slot.
+    So **styles no longer overwrite each other.** Verified boot + 312/312.
+  - **REMAINING — Phase C (NOT done):** (1) **auto-load on style switch** — when
+    `personalInfo.stylePrefs.style` changes, `oo.getShowcase(newStyle)` and if it has sections
+    load via the existing `ao/lo/bo` path (the App-History "Switch" load body, app.src.js
+    ~37334-37438). Hook the WritingStylePicker island's style change OR an app.js effect; guard
+    against loading during active edit. (2) **App-History selector** — new sub-section in the
+    `"apps"===lt` panel (~37039+) listing `oo.listShowcases()` rows, each with Load-to-preview
+    (reuse Switch load), Copy-to-CHOSEN-style (dropdown → `oo.getShowcase(src)` then
+    `oo.putShowcase(sections, chosenStyle)`), Delete (`oo.deleteShowcase(style)`). New React
+    state + effect + handlers in app.src.js + app.js mirror. Architecture map captured in this
+    session's transcript (agent ae8f944b).
+
 ## OWNER-DIRECTED BATCH 2 2026-06-18 — SHIPPED 1.50.613 → 1.50.616
 
 - **SUBTAB-ORDER** `[1.50.613]` — Settings STANDARD tabs: Personal before Account.

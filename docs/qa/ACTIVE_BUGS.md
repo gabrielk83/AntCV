@@ -20,6 +20,15 @@ Authoritative current backlog is `docs/qa/NIGHTLY_HANDOFF_2026-06-18.md`. This r
   DEFAULT (decompose); merge is a CONSIDERED, JD-driven conclusion reached FROM the separate
   roles, never an auto space-saver. Prompt had drifted to "most positions should merge" — fixed
   + test updated. Suite 312/312. Regen-gated for output.
+- **REG-DEDUP-001** `[CLOSED 1.50.609]` (owner 2026-06-18) — `antcv-data-importer.js`
+  `DEDUP_KEYS` now keys regulatory/tools/additional on the normalized CODE/group (not
+  code+description), so a re-upload dedupes ASPICE×2 / ISO 26262×2 / MIL-STD-810G×3 to one
+  each and strips stale hidden flags (grouped items default visible). Drives `mergePath` via
+  `window.AntCVImporter`; `diag-reg-dedup.mjs` green. Residual: divergent-label group headers
+  aren't auto-fused (clear+reupload). **Also resolves G-GROUPS-001/002** (ingestion, not render).
+- **G-GROUPS-001/002** `[RESOLVED VIA REG-DEDUP-001 / 1.50.609 — re-upload]` — grouped items
+  hidden + flat duplicates was an ingestion append-merge + stale-hidden problem, fixed at the
+  source. A render-side dedup was rejected (would empty the section — see handoff).
 - **EXPORT-PREVIEW-SHRINK-001** `[was already SHIPPED 1.50.604 — width-only fit]`.
 
 ---

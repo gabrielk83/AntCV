@@ -97,7 +97,15 @@ lamination / generation — NOT data. Do not re-fabricate or trim kernel content
 
 ## OPEN ISSUES (this batch)
 
-### G-GROUPS-001 — Tools & Methods groups render but are HIDDEN; flat items duplicate them
+### G-GROUPS-001 — Tools & Methods groups render but are HIDDEN; flat items duplicate them `[RESOLVED VIA REG-DEDUP-001 / 1.50.609 — re-upload the clean kernel]`
+> Resolution: this is ingestion, not render. REG-DEDUP-001 (1.50.609) now (a) dedupes
+> grouped sections by code so flat duplicates sharing a code collapse into the grouped
+> item, and (b) strips stale `hidden`/`on:false` off incoming grouped rows so they default
+> VISIBLE. Re-uploading the clean kernel therefore shows the grouped items and drops the
+> flat dupes. A render-side dedup was rejected: flat + grouped `{l,v}` share one render
+> branch and grouped items arrive hidden, so nulling flat dupes by value would EMPTY the
+> section. (Residual: two group HEADERS whose labels diverge beyond casing aren't auto-fused
+> — clear+reupload for a single taxonomy.)
 Symptom: TOOLS & METHODS shows the OLD flat items (Project Workflow / Engineering
 Software / …) as visible, while the new `{group}` headers (Expertise / Tools /
 Methods) and their items are toggled OFF (eye-off in the section editor). The exposed

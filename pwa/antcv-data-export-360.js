@@ -49,7 +49,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.627-review';
+  var VERSION = '1.50.628-review';
   if (window.__antcvDataExport360 === VERSION) return;
   window.__antcvDataExport360 = VERSION;
 
@@ -554,6 +554,65 @@
     return sec.sec;
   }
 
+  // WORK-HISTORY-EDIT-001 (owner 2026-06-18): edit existing roles inline in the
+  // modal — title / company / years / visibility + bullets & outcomes (one per
+  // line). Edits in place on a deep clone so id / altTitles / mergeGroup /
+  // _visibilityNote / category survive; writes the whole experience[] back.
+  // Add/remove a ROLE still lives in the app's Experience section (avoids
+  // accidental loss here).
+  function rdInpCommit(val, ph, setModel, commit, bold) {
+    var e = rdEl('input', RD_ROW_INPUT + (bold ? 'font-weight:600;' : ''));
+    e.value = val == null ? '' : String(val); e.placeholder = ph || '';
+    e.addEventListener('input', function () { setModel(e.value); });
+    e.addEventListener('blur', commit);
+    return e;
+  }
+  function rdLineArea(label, arr, setModel, commit) {
+    var w = rdEl('div', 'display:flex;flex-direction:column;gap:3px;');
+    w.appendChild(rdEl('div', 'font-size:10px;opacity:.5;text-transform:uppercase;letter-spacing:.5px;', label));
+    var ta = rdEl('textarea', 'width:100%;box-sizing:border-box;padding:6px 8px;background:rgba(255,255,255,.05);color:#e6eef3;' +
+      'border:1px solid rgba(255,255,255,.16);border-radius:5px;font-family:inherit;font-size:12px;line-height:1.45;resize:vertical;');
+    ta.rows = Math.min(7, Math.max(2, (Array.isArray(arr) ? arr.length : 0) || 2));
+    ta.value = (Array.isArray(arr) ? arr : []).join('\n');
+    ta.addEventListener('input', function () { setModel(ta.value.split('\n')); });
+    ta.addEventListener('blur', commit);
+    w.appendChild(ta);
+    return w;
+  }
+  function rdWorkHistory(initial) {
+    var roles = (Array.isArray(initial) ? initial : []).map(function (r) { try { return JSON.parse(JSON.stringify(r || {})); } catch (_) { return {}; } });
+    function commit() {
+      var clean = roles.map(function (r) {
+        var c = {}; for (var k in r) if (Object.prototype.hasOwnProperty.call(r, k)) c[k] = r[k];
+        if (Array.isArray(c.bullets)) c.bullets = c.bullets.map(function (s) { return String(s).trim(); }).filter(Boolean);
+        if (Array.isArray(c.outcomes)) c.outcomes = c.outcomes.map(function (s) { return String(s).trim(); }).filter(Boolean);
+        return c;
+      });
+      var cur = rdReadPI(); cur.experience = clean; rdSavePI(cur);
+    }
+    var s = rdSection('💼', 'Work history (' + roles.length + ' roles)', 'Edit titles, dates, visibility, bullets and outcomes. Add or remove a role in the editor’s Experience section.');
+    roles.forEach(function (r) {
+      var card = rdEl('div', 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:9px 10px;margin-bottom:7px;display:flex;flex-direction:column;gap:6px;');
+      var h = rdEl('div', 'display:flex;gap:6px;align-items:center;');
+      h.appendChild(rdInpCommit(r.title, 'Job title', function (v) { r.title = v; }, commit, true));
+      var visLbl = rdEl('label', 'display:flex;align-items:center;gap:5px;font-size:11px;opacity:.8;cursor:pointer;flex:0 0 auto;');
+      var vis = document.createElement('input'); vis.type = 'checkbox'; vis.checked = r.on !== false; vis.style.cssText = 'accent-color:#01B7BB;';
+      vis.addEventListener('change', function () { r.on = vis.checked; commit(); });
+      visLbl.appendChild(vis); visLbl.appendChild(rdEl('span', null, 'shown'));
+      h.appendChild(visLbl);
+      card.appendChild(h);
+      var cy = rdEl('div', 'display:flex;gap:6px;');
+      cy.appendChild(rdInpCommit(r.company, 'Company', function (v) { r.company = v; }, commit));
+      cy.appendChild(rdInpCommit(r.years, 'Years', function (v) { r.years = v; }, commit));
+      card.appendChild(cy);
+      card.appendChild(rdLineArea('Bullets', r.bullets, function (a) { r.bullets = a; }, commit));
+      card.appendChild(rdLineArea('Outcomes', r.outcomes, function (a) { r.outcomes = a; }, commit));
+      s.body.appendChild(card);
+    });
+    if (!roles.length) s.body.appendChild(rdEl('div', 'font-size:11px;opacity:.45;', 'No work history stored yet.'));
+    return s.sec;
+  }
+
   function openReview() {
     if (document.querySelector('[data-antcv-review-modal]')) return;
     var pi = rdReadPI();
@@ -620,21 +679,8 @@
     s2.body.appendChild(rdTip('Keep it factual and 2–4 sentences. This is not a contact field — it is the “about you” the writer reads first.'));
     body.appendChild(s2.sec);
 
-    // 3 — Work history (read-friendly)
-    var roles = Array.isArray(pi.experience) ? pi.experience : [];
-    var s3 = rdSection('💼', 'Work history (' + roles.length + ' roles)', 'Each role carries its own bullets and outcomes, written per job. Edit roles in the editor’s Experience section.');
-    roles.forEach(function (r) {
-      var row = rdEl('div', 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 0;border-top:1px solid rgba(255,255,255,.06);');
-      row.appendChild(rdEl('span', 'font-size:12.5px;font-weight:600;', r.title || '(untitled role)'));
-      row.appendChild(rdEl('span', 'font-size:11px;opacity:.6;', [r.company, r.years].filter(Boolean).join(' · ')));
-      var meta = rdEl('span', 'margin-left:auto;display:flex;gap:6px;align-items:center;');
-      meta.appendChild(rdEl('span', 'font-size:10.5px;opacity:.55;', (rdArr(r.bullets).length) + ' bullets · ' + (rdArr(r.outcomes).length) + ' outcomes'));
-      meta.appendChild(rdPill(r.on === false ? 'hidden' : 'visible', r.on !== false));
-      row.appendChild(meta);
-      s3.body.appendChild(row);
-    });
-    if (!roles.length) s3.body.appendChild(rdEl('div', 'font-size:11px;opacity:.45;', 'No work history stored yet.'));
-    body.appendChild(s3.sec);
+    // 3 — Work history (editable role cards)
+    body.appendChild(rdWorkHistory(pi.experience));
 
     // 4 — Semantic constraints (read-friendly)
     var rules = (function () {

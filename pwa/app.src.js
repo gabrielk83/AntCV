@@ -8688,6 +8688,60 @@
                     display: "flex",
                     gap: 3,
                     marginTop: 3,
+                    alignItems: "center",
+                  },
+                },
+                React.createElement("input", {
+                  value: t.gpa || "",
+                  onChange: (ev) => {
+                    const n = [...e.items];
+                    ((n[i] = { ...n[i], gpa: ev.target.value }),
+                      d({ items: n }));
+                  },
+                  placeholder: "GPA (optional)",
+                  style: {
+                    flex: 1,
+                    fontSize: 11,
+                    padding: 3,
+                    border: "1px solid #ddd",
+                    borderRadius: 3,
+                    minWidth: 0,
+                  },
+                }),
+                React.createElement(
+                  "button",
+                  {
+                    onClick: () => {
+                      const n = [...e.items];
+                      ((n[i] = { ...n[i], showGpa: n[i].showGpa === !1 }),
+                        d({ items: n }));
+                    },
+                    title:
+                      t.showGpa !== !1
+                        ? "GPA shown on slide - tap to hide"
+                        : "GPA hidden on slide - tap to show",
+                    style: {
+                      fontSize: 10,
+                      background: "none",
+                      border: "1px solid " + (t.showGpa !== !1 ? s : "#999"),
+                      color: t.showGpa !== !1 ? s : "#999",
+                      borderRadius: 3,
+                      cursor: "pointer",
+                      padding: "2px 6px",
+                      flexShrink: 0,
+                      whiteSpace: "nowrap",
+                    },
+                  },
+                  t.showGpa !== !1 ? "👁 GPA" : "🙈 GPA",
+                ),
+              ),
+              React.createElement(
+                "div",
+                {
+                  style: {
+                    display: "flex",
+                    gap: 3,
+                    marginTop: 3,
                     justifyContent: "flex-end",
                   },
                 },

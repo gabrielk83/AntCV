@@ -165,13 +165,32 @@ export function PackagePicker({ initialMode, context = 'personal' }: Props): JSX
 
   // Cross-tab + external sync.
   useEffect(() => {
-    const refresh = () => setState(readPackageState());
-    window.addEventListener('antcv:package-changed', refresh);
-    window.addEventListener('storage', (ev: StorageEvent) => {
-      if (ev.key === 'personalInfo') refresh();
-    });
+    // QUICK-ALT-LAG-001 (owner 2026-06-18): the native STYLE PACKAGE picker dispatches
+    // antcv:package-changed BEFORE it writes localStorage.stylePackage, so re-reading
+    // state here lagged ONE selection behind (the alt card showed the PREVIOUS package
+    // — "click twice for the alt to update"). Use the event DETAIL (the new packageId)
+    // when present; a base-package pick sends quickAlt:null → reset the alt to 'default'.
+    const onPkg = (ev: Event) => {
+      const d = (ev as CustomEvent<Partial<PackageState>>).detail;
+      if (d && d.packageId) {
+        setState((prev) => ({
+          ...prev,
+          packageId: d.packageId as PackageId,
+          quickAlt: (d.quickAlt as QuickAlt) || 'default',
+          isCustom: !!d.isCustom,
+        }));
+      } else {
+        setState(readPackageState());
+      }
+    };
+    window.addEventListener('antcv:package-changed', onPkg);
+    const onStorage = (ev: StorageEvent) => {
+      if (ev.key === 'personalInfo' || ev.key === 'stylePackage') setState(readPackageState());
+    };
+    window.addEventListener('storage', onStorage);
     return () => {
-      window.removeEventListener('antcv:package-changed', refresh);
+      window.removeEventListener('antcv:package-changed', onPkg);
+      window.removeEventListener('storage', onStorage);
     };
   }, []);
 

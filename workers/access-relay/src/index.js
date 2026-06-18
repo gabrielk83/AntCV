@@ -35,7 +35,7 @@ const VERSION='1.3.0';
 // Required binding (declare in wrangler.toml):
 //   KV_BINDING        KV namespace (stores OTPs, rate counters, prefs, signals)
 
-const RELAY_VERSION = 'auth-25-demo-emails-pinned';
+const RELAY_VERSION = 'auth-26-per-style-kernels';
 const SESSION_TTL_SECONDS    = 7 * 24 * 60 * 60;       // 7 days
 const SESSION_REFRESH_WINDOW = 1 * 24 * 60 * 60;       // refresh in last day
 const OTP_TTL_SECONDS        = 10 * 60;                // 10 min
@@ -2503,6 +2503,96 @@ async function handleApiKernelShowcase(request, env) {
   const refresh = await maybeRefreshHeader(env, id);
   const userHash = await userHashFromEmail(id.email);
   const m = request.method;
+
+  // #D PER-STYLE UNSOLICITED KERNELS (Substrate B, owner 2026-06-18): a per-writing-
+  // style kernel is stored in a SEPARATE composite-keyed table. A non-empty ?style=
+  // (or ?list=1, or DELETE) uses it; an EMPTY/absent ?style keeps the legacy single-
+  // slot path below BYTE-FOR-BYTE (old clients unaffected). Idempotent table create.
+  const __ksUrl = new URL(request.url);
+  const __style = String(__ksUrl.searchParams.get('style') || '').trim().slice(0, 40);
+  const __ksList = __ksUrl.searchParams.get('list') === '1';
+  if (__style || __ksList || m === 'DELETE') {
+    try {
+      await env.DB.prepare(
+        'CREATE TABLE IF NOT EXISTS kernel_showcase_styled (' +
+        'user_hash TEXT NOT NULL, style_key TEXT NOT NULL DEFAULT \'\', ' +
+        'sections TEXT, meta TEXT, rationale TEXT, jd_language TEXT, ' +
+        'created_at INTEGER, updated_at INTEGER, PRIMARY KEY (user_hash, style_key))'
+      ).run();
+    } catch (_) {}
+
+    if (m === 'GET' && __ksList) {
+      try {
+        const { results } = await env.DB.prepare(
+          'SELECT style_key, meta, jd_language, updated_at FROM kernel_showcase_styled WHERE user_hash = ? ORDER BY updated_at DESC'
+        ).bind(userHash).all();
+        const kernels = (results || []).map((r) => ({
+          style_key: r.style_key, meta: parseJsonField(r.meta, null),
+          jd_language: r.jd_language || 'en', updated_at: r.updated_at,
+        }));
+        return jsonResponse({ ok: true, kernels }, 200, request, env, refresh);
+      } catch (e) {
+        return jsonResponse({ ok: true, kernels: [] }, 200, request, env, refresh);
+      }
+    }
+    if (m === 'GET') {
+      try {
+        const srow = await env.DB.prepare(
+          'SELECT sections, meta, rationale, jd_language, updated_at FROM kernel_showcase_styled WHERE user_hash = ? AND style_key = ?'
+        ).bind(userHash, __style).first();
+        const showcase = srow ? {
+          sections: parseJsonField(srow.sections, null), meta: parseJsonField(srow.meta, null),
+          rationale: parseJsonField(srow.rationale, null), jd_language: srow.jd_language || 'en',
+          updated_at: srow.updated_at,
+        } : null;
+        return jsonResponse({ ok: true, showcase, style_key: __style }, 200, request, env, refresh);
+      } catch (e) {
+        return jsonResponse({ ok: true, showcase: null }, 200, request, env, refresh);
+      }
+    }
+    if (m === 'DELETE') {
+      try {
+        await env.DB.prepare('DELETE FROM kernel_showcase_styled WHERE user_hash = ? AND style_key = ?').bind(userHash, __style).run();
+        return jsonResponse({ ok: true, deleted: __style }, 200, request, env, refresh);
+      } catch (e) {
+        return jsonResponse({ error: 'd1_delete_failed', message: String(e && e.message || e) }, 500, request, env, refresh);
+      }
+    }
+    if (m === 'PUT') {
+      let sbody;
+      try { sbody = await request.json(); }
+      catch (_) { return jsonResponse({ error: 'invalid_json' }, 400, request, env, refresh); }
+      if (!sbody || typeof sbody !== 'object') return jsonResponse({ error: 'invalid_body' }, 400, request, env, refresh);
+      try {
+        const k = await env.DB.prepare('SELECT user_hash FROM user_kernel WHERE user_hash = ?').bind(userHash).first();
+        if (!k) {
+          const mig = await migrateKvPrefsToD1IfEmpty(env, id);
+          if (!mig.migrated) {
+            const now0 = Date.now();
+            await env.DB.prepare('INSERT INTO user_kernel (user_hash, identity, history, preferences, photo_b64, created_at, updated_at) VALUES (?, ?, ?, ?, NULL, ?, ?) ON CONFLICT(user_hash) DO NOTHING')
+              .bind(userHash, JSON.stringify({ email: id.email }), JSON.stringify({}), JSON.stringify({}), now0, now0).run();
+          }
+        }
+      } catch (_) {}
+      const sSections = (sbody.sections && typeof sbody.sections === 'object') ? JSON.stringify(sbody.sections) : null;
+      const sMeta = (sbody.meta && typeof sbody.meta === 'object') ? JSON.stringify(sbody.meta) : null;
+      const sRationale = (sbody.rationale && typeof sbody.rationale === 'object') ? JSON.stringify(sbody.rationale) : null;
+      const sJdLang = typeof sbody.jd_language === 'string' && sbody.jd_language.trim() ? sbody.jd_language.trim().slice(0, 5) : 'en';
+      const sNow = Date.now();
+      try {
+        await env.DB.prepare(
+          'INSERT INTO kernel_showcase_styled (user_hash, style_key, sections, meta, rationale, jd_language, created_at, updated_at) ' +
+          'VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(user_hash, style_key) DO UPDATE SET ' +
+          'sections = excluded.sections, meta = excluded.meta, ' +
+          'rationale = COALESCE(excluded.rationale, kernel_showcase_styled.rationale), ' +
+          'jd_language = excluded.jd_language, updated_at = excluded.updated_at'
+        ).bind(userHash, __style, sSections, sMeta, sRationale, sJdLang, sNow, sNow).run();
+        return jsonResponse({ ok: true, updated_at: sNow, style_key: __style }, 200, request, env, refresh);
+      } catch (e) {
+        return jsonResponse({ error: 'd1_write_failed', message: String(e && e.message || e) }, 500, request, env, refresh);
+      }
+    }
+  }
 
   if (m === 'GET') {
     try {

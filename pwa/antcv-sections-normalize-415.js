@@ -15,7 +15,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.657-explode-keep-groups';
+  var VERSION = '1.50.675-recs-manual-order';
   if (window.__antcvSectionsNormalize === VERSION) return;
   window.__antcvSectionsNormalize = VERSION;
 
@@ -63,7 +63,13 @@
     cv.forEach(function (e, i) { if (isAnchor(e)) anchor = i; });
     if (anchor < 0) return null;
     var ri = cv.findIndex(isRec);
-    if (ri === anchor + 1) return null; // already in place
+    // RECS-RESPECT-MANUAL-ORDER-001 (owner 2026-06-18: "I move PUBLICATIONS before
+    // RECOMMENDATIONS, it holds 5s then flips back"). Only relocate RECOMMENDATIONS
+    // when it is MISSING or sits BEFORE the experience anchor (the original bug).
+    // If it is ALREADY after experience - even with another section (PUBLICATIONS &
+    // PATENT, etc.) the user moved between them - respect that manual order and do
+    // nothing. (Was: forced recs to anchor+1, which reverted any manual move.)
+    if (ri > anchor) return null;
     var copy = cv.slice();
     var rec;
     if (ri >= 0) rec = copy.splice(ri, 1)[0];

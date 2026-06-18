@@ -17834,7 +17834,7 @@
                     (e.items || []).forEach((t, n) => {
                       if (e.hidden && e.hidden[n]) return;
                       const r =
-                          ((t && t.deg) || "") + " — " + ((t && t.sch) || ""),
+                          ((t && t.deg) || "") + " - " + ((t && t.sch) || ""),
                         a = Vi(r, 220, 10, { align: "justify", padLeft: 0 });
                       a >= 1 &&
                         a <= 5 &&
@@ -18119,7 +18119,7 @@
                       (n[t] &&
                         (n[t] = {
                           ...n[t],
-                          sch: e.fixed.replace((n[t].deg || "") + " — ", ""),
+                          sch: e.fixed.replace((n[t].deg || "") + " - ", ""),
                         }),
                         (s.items = n));
                     } else if ("exp" === r) {
@@ -44559,7 +44559,7 @@
                                           (n[i] = {
                                             ...n[i],
                                             sch: e.fixed.replace(
-                                              (n[i].deg || "") + " — ",
+                                              (n[i].deg || "") + " - ",
                                               "",
                                             ),
                                           }),

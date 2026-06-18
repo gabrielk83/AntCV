@@ -1,3 +1,39 @@
+## CLOSED — 2026-06-18 session (autonomous nightly + owner-directed batches; 1.50.605 → 1.50.619 + docx-worker 1.14.77 + access-relay auth-26)
+
+Authoritative current backlog is `docs/qa/NIGHTLY_HANDOFF_2026-06-18.md` (full detail per batch). Summary below. **OPEN ITEMS carried out of this session are listed at the very bottom of this CLOSED block.**
+
+### Closed 1.50.610 → 1.50.619 + workers (owner-directed batches 2 & 3)
+
+- **PREVIEW-RESULTS-EDITABLE-REFRESH-001** `[CLOSED 1.50.610]` — a 4th v2-shape reader, the preview override sidecar `antcv-results-laminate-510.js` (`lamFor`), derived Results from the bullet for v2 roles and overwrote React's correct value. Now reads `o.result` + flat `proofPoints`. Preview matches export.
+- **CLOUD-LOAD-ITEMS-001 (deeper)** `[CLOSED 1.50.611]` — importer `DEDUP_KEYS` now UNIONS `semanticConstraintsV2` + `stylePrefs.bannedContextual` (were REPLACED → a small import shrank a large set → synced shrunk to cloud). Residual: KV-429 silent-local (needs live check).
+- **SIDEBAR-BREATHING-001** `[CLOSED 1.50.612]` — idempotent equalize guard in `antcv-sidebar-fill-equalize-227.js` breaks the measure→write→ResizeObserver→scroll→re-render→equalize loop. Verified 0 style writes across 12 scrolls.
+- **SUBTAB-ORDER** `[CLOSED 1.50.613]` — Settings STANDARD: Personal before Account.
+- **PUB-CHAIN-001** `[EXPORT docx-worker 1.14.77 + PREVIEW 1.50.613]` — non-academic CV shows publication title+year only (drop journal/publisher chain); academic keeps full citation. Export (renderSimpleList) + preview (list_italic) gated on `writing_style !== research-formal`. Owner PDF/regen verify owed.
+- **WATERMARK-SIDE-001** `[docx-worker 1.14.77 — owner PDF verify owed]` — AI notice picks the column whose LAST page has fewer paragraphs (lighter side) from the worker's own pagination, not the stale preview hint.
+- **G-GROUPS-003** `[CLOSED 1.50.614]` — `antcv-sections-normalize-415.js` partitions a flat ADDITIONAL INFORMATION into Languages/Accessibility/Interests `{group}` blocks (idempotent, restore-proof). Verified flat→3 subheads.
+- **PERSONAL-TAB-JANK-001 (PARTIAL)** `[1.50.615]` — neutralized the tense sidecar's 120-3000ms setTimeout flood. **OPEN remainder below.**
+- **PRIVACY-TABLE** `[CLOSED 1.50.616]` — cover-letter Cloud ✘→✓; added "Writing style, banned words & semantic constraints" ✓/✓ row.
+- **VERSION-OVERRIDE-CACHE-001** `[CLOSED 1.50.617]` — `antcv-version-override.js?v=` was FROZEN at 1.50.41 since v1.40.339 → the version LABEL stuck (HAR proved app.js was already 616). Bumped + the cache-bust routine is now a QUARTET (bump the version-label file's `?v=` every release).
+- **ERROR-PERSIST-001** `[CLOSED 1.50.618]` — `antcv-diag-probes-370.js` persists captured errors to `localStorage` ring `antcv:errorLog` (survives the reset's console clear); `window.AntcvErrorLog()` to table.
+- **#D PER-STYLE UNSOLICITED KERNELS** `[Phase A access-relay auth-26 DEPLOYED + Phase B 1.50.619]` — per-writing-style kernel slots (Substrate B): `/api/kernel-showcase?style=<slug>` → `kernel_showcase_styled` table; app save/restore stamp the active `stylePrefs.style`. **Styles no longer overwrite each other.** Phase C OPEN below.
+
+### Resolved/clarified (no code or already-shipped)
+
+- **#1 sign-in "stuck Loading" / sticky ACCOUNT MODE** `[RESOLVED — stale label, not a hang]` — HAR showed app.js@616 + `/config` 200; the frozen version-override label made it look stale. Fixed by VERSION-OVERRIDE-CACHE-001.
+- **HARD-REFRESH "doesn't reset"** `[RESOLVED via 1.50.617]` — same root cause (unchanged `?v=` survived the browser HTTP cache).
+
+### OPEN — carried out of the 2026-06-18 session (for the next run)
+
+1. **#D Phase C** (NOT done) — auto-load the current style's kernel on writing-style switch (choice c) + an App-History selector (list / load-to-preview / copy-to-CHOSEN-style / delete). New stateful panel in app.src.js + app.js mirror + reuse the Switch load path (~37334). Architecture mapped (handoff). **Held back deliberately — large app.js UI, not for the tail of a long session.**
+2. **PERSONAL-TAB-JANK-001 (remainder)** — the "large blue region → WRITING STYLE fills" cascade is the WritingStylePicker island's empty 220px placeholder + native→island swap + unmount-on-leave/re-createRoot-on-entry. Needs an islands rebuild (real skeleton + keep-Personal-mounted). Diagnosed.
+3. **QUICK-ALTS SELECTOR PLACEMENT (#1b)** — owner: the quick-alts selector "not in the right place with its text" in Layout. Today the Layout card renders only `LayoutNotes` text (the native package cards own quick-alts). Awaiting owner confirm: add interactive alt1/alt2 buttons to that card, or leave as notes.
+4. **SETTINGS-SCROLL-RESET trigger** — owner reports an auto-reset during settings scrolldown; now instrumented (`antcv:errorLog`) — needs the owner to run `window.AntcvErrorLog()` after it fires to pin the trigger.
+5. **Owner verifies owed:** WATERMARK-SIDE (real PDF), PUB-CHAIN (regen + PDF), CLOUD-LOAD cross-device (does the full constraint set now round-trip?), KV-429 silent-local check.
+6. **Pre-existing from earlier handoff (not addressed this session):** SALMON-3PAGE-001, CL-WIB-002 (worker parity), RESULTS-NUMERIC-001/RESULTS-ORPHAN-001/LAM-RESULTS prompt half (regen-gated), PUB-CHAIN academic-detection edge, SIDEBAR-NARROW-FIGURE-OVERLAP-001.
+7. **PROCESS:** a PARALLEL session committed during this run (`SEMANTIC-CONSTRAINTS-002` + `REVIEW-DATA-001`, both colliding on version numbers). Keep ONE session/deployer at a time.
+
+---
+
 ## CLOSED — nightly 2026-06-18 (autonomous run; 1.50.605 → 1.50.608)
 
 Authoritative current backlog is `docs/qa/NIGHTLY_HANDOFF_2026-06-18.md`. This run:

@@ -49,7 +49,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.635-robust-anchor';
+  var VERSION = '1.50.639-review-resilient';
   if (window.__antcvDataExport360 === VERSION) return;
   window.__antcvDataExport360 = VERSION;
 
@@ -625,7 +625,9 @@
   }
 
   function openReview() {
-    if (document.querySelector('[data-antcv-review-modal]')) return;
+    // REVIEW-MODAL-RESILIENT-001 (owner 2026-06-18, "nothing happens"): never let
+    // a stale/hidden modal block reopening — remove it and open fresh.
+    try { var __ex = document.querySelector('[data-antcv-review-modal]'); if (__ex) __ex.remove(); } catch (_) {}
     var pi = rdReadPI();
     var sp = pi.stylePrefs || {};
     function patch(o) { var cur = rdReadPI(); for (var k in o) { if (Object.prototype.hasOwnProperty.call(o, k)) cur[k] = o[k]; } rdSavePI(cur); }
@@ -652,6 +654,13 @@
     // Scrollable body
     var body = rdEl('div', 'overflow:auto;padding:14px 18px 18px;display:flex;flex-direction:column;gap:11px;');
     card.appendChild(body);
+
+    // Show the modal NOW (header + empty body) so a later section error can't
+    // make the whole thing silently fail to appear; sections build into the live
+    // DOM below, guarded so one bad section degrades gracefully.
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+    try {
 
     body.appendChild(rdEl('div', 'font-size:12px;line-height:1.5;opacity:.8;',
       'This is everything AntCV has stored about you — the ground truth behind every CV and cover letter it writes. ' +
@@ -805,8 +814,12 @@
     foot.appendChild(done);
     card.appendChild(foot);
 
-    overlay.appendChild(card);
-    document.body.appendChild(overlay);
+    } catch (__e) {
+      try {
+        console.error('[review-modal] section build failed:', __e);
+        if (body) body.appendChild(rdEl('div', 'color:#f3b4b3;font-size:12px;padding:8px 0;', '⚠ Some sections failed to load: ' + ((__e && __e.message) || __e)));
+      } catch (_) {}
+    }
   }
   window.AntcvReviewData = openReview;
 
@@ -819,7 +832,11 @@
     b.style.cssText = 'display:block;width:100%;margin:0 0 8px;padding:12px;' +
       'background:rgba(90,150,230,0.12);border:1px solid rgba(90,150,230,0.5);' +
       'color:#bcd6ff;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;';
-    b.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); openReview(); });
+    b.addEventListener('click', function (e) {
+      e.preventDefault(); e.stopPropagation();
+      try { openReview(); }
+      catch (err) { try { console.error('[review-modal] open failed:', err); alert('Review my data could not open: ' + ((err && err.message) || err)); } catch (_) {} }
+    });
     return b;
   }
 

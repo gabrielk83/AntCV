@@ -21,7 +21,7 @@
 (function () {
   'use strict';
   if (window.__antcvOutcomesMetricOrder) return;
-  window.__antcvOutcomesMetricOrder = '1.50.673';
+  window.__antcvOutcomesMetricOrder = '1.50.697';
 
   var SRC = 'outcomes-metric-order';
   function disabled() { try { var v = localStorage.getItem('antcv:disable-outcomes-metric-order'); return v === '1' || v === 'true'; } catch (_) { return false; } }
@@ -29,7 +29,13 @@
   // EXACT copy of the lamination scorer (antcv-docx-client.js _metricScore) so the
   // stored order matches the rendered Results.
   var _metricScore = function (text) {
-    var t = String(text == null ? '' : text); var best = 0, m;
+    // STD-CODE-NOT-METRIC-001 (owner 2026-06-19): strip standard/compliance codes +
+    // digits (ISO 26262, ISO/SAE 21434, IEC 61508, EN 50128, MIL-STD-810G, STANAG
+    // 4694, SAE J3016, ASPICE) before scoring — a standard code is not a result
+    // metric (kept in sync with antcv-docx-client.js _metricScore).
+    var t = String(text == null ? '' : text)
+      .replace(/\b(?:ISO|IEC|EN|DIN|MIL[-\s]?STD|STANAG|ASPICE|SAE)(?:\s*\/\s*(?:ISO|IEC|SAE|EN))*[\s\/-]*[A-Z]?\d[\d.\-:]*[A-Z]?\b/gi, ' ');
+    var best = 0, m;
     var re1 = /([\d][\d,.]*)\s*(?:[a-z%]+\s+){0,2}(?:to|->|→|–|—)\s+(?:[a-z]+\s+){0,2}([\d][\d,.]*)/gi;
     while ((m = re1.exec(t))) { var a = parseFloat(m[1].replace(/,/g, '')), b = parseFloat(m[2].replace(/,/g, '')); if (a > 0 && b > 0) { var r = Math.max(a, b) / Math.min(a, b); if (r > best) best = r; } }
     var re2 = /([\d][\d,.]*)\s*(?:×|x\b|-fold|fold)/gi;
@@ -110,5 +116,5 @@
   try { window.addEventListener('storage', function (e) { if (!e || e.key === 'sections' || e.key === 'personalInfo' || e.key === null) tick(); }); } catch (_) {}
   setInterval(tick, 4000);
 
-  window.AntcvOutcomesMetricOrder = { version: '1.50.673', _apply: apply, _score: _metricScore };
+  window.AntcvOutcomesMetricOrder = { version: '1.50.697', _apply: apply, _score: _metricScore };
 })();

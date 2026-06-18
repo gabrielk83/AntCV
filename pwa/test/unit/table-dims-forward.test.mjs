@@ -53,12 +53,14 @@ function payloadCV(pctMap, cvRatio) {
 test('WHAT I BRING forwards the user width (pct → DXA) + clTableRatio', () => {
   const p = payloadCL({ bring: 75 }, 0.4);
   const t = p.sections.find((s) => s.id === 'bring');
-  assert.equal(t.tableWidth, Math.round(9602 * 0.75)); // 7202
+  assert.equal(t.tableWidth, Math.round(11506 * 0.75)); // 8630 (CL base = PAGE_W-400, 1.50.671)
   assert.equal(t.tableRatio, 0.4);
 });
 
-test('default width (100%) forwards NO tableWidth (worker keeps its default)', () => {
-  const p = payloadCL({ bring: 100 }, null);
+test('rest width (90%) forwards NO tableWidth (worker keeps its default)', () => {
+  // CL-TABLE-WIDTH-PAGE-REF-001 (1.50.671): the CL table rests at 90% of the body
+  // column (worker defaultClW = (PAGE_W-400)*0.9); ±1 of the rest pct = no forward.
+  const p = payloadCL({ bring: 90 }, null);
   const t = p.sections.find((s) => s.id === 'bring');
   assert.equal(t.tableWidth, undefined);
 });
@@ -72,7 +74,7 @@ test('no stored width map → no tableWidth on the table', () => {
 test('an out-of-range ratio is dropped (not forwarded)', () => {
   const p = payloadCL({ bring: 60 }, 0.98);
   const t = p.sections.find((s) => s.id === 'bring');
-  assert.equal(t.tableWidth, Math.round(9602 * 0.6));
+  assert.equal(t.tableWidth, Math.round(11506 * 0.6));
   assert.equal(t.tableRatio, undefined);
 });
 
@@ -113,11 +115,11 @@ test('standalone antcv:tableWidthPct is read (the clobber-proof source of truth)
   // standalone key still carries the dragged width → export stays correct.
   const p = payloadCLStandalone({ bring: 110 }, null, null);
   const t = p.sections.find((s) => s.id === 'bring');
-  assert.equal(t.tableWidth, Math.round(9602 * 1.10)); // 10562
+  assert.equal(t.tableWidth, Math.round(11506 * 1.10)); // 12657 (CL base = PAGE_W-400, 1.50.671)
 });
 
 test('standalone key WINS over a stale nested personalInfo value', () => {
   const p = payloadCLStandalone({ bring: 110 }, { bring: 75 }, null);
   const t = p.sections.find((s) => s.id === 'bring');
-  assert.equal(t.tableWidth, Math.round(9602 * 1.10));
+  assert.equal(t.tableWidth, Math.round(11506 * 1.10));
 });

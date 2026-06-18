@@ -1693,8 +1693,14 @@ function buildFilename({ personalInfo, meta, doc, language }) {
 //   - "N%" in a reduce/cut/increase context -> a delta multiplier 100/(100-N) (90% = 10)
 //   - "X of Y" / "X out of Y" / "X/Y" -> the FRACTION (completeness, <=1, low: 3400/3600 = 0.94)
 //   - a bare number -> a small log baseline (beats no-number)
-const _metricScore = (text) => {
-  const t = String(text == null ? '' : text); let best = 0, m;
+export const _metricScore = (text) => {
+  // STD-CODE-NOT-METRIC-001 (owner 2026-06-19): a compliance/standard CODE number
+  // (ISO 26262, ISO/SAE 21434, ISO 9001, IEC 61508, EN 50128, MIL-STD-810G,
+  // STANAG 4694, SAE J3016, ASPICE) is NOT a result metric — strip the code + its
+  // digits before scoring so a standard line never wins the numeric Results sort.
+  const t = String(text == null ? '' : text)
+    .replace(/\b(?:ISO|IEC|EN|DIN|MIL[-\s]?STD|STANAG|ASPICE|SAE)(?:\s*\/\s*(?:ISO|IEC|SAE|EN))*[\s\/-]*[A-Z]?\d[\d.\-:]*[A-Z]?\b/gi, ' ');
+  let best = 0, m;
   // allow up to 2 short words in the gap ("250 days to about 10")
   const re1 = /([\d][\d,.]*)\s*(?:[a-z%]+\s+){0,2}(?:to|->|→|–|—)\s+(?:[a-z]+\s+){0,2}([\d][\d,.]*)/gi;
   while ((m = re1.exec(t))) { const a = parseFloat(m[1].replace(/,/g, '')), b = parseFloat(m[2].replace(/,/g, '')); if (a > 0 && b > 0) { const r = Math.max(a, b) / Math.min(a, b); if (r > best) best = r; } }

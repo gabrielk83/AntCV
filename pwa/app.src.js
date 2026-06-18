@@ -16601,8 +16601,8 @@
             return o;
           });
         },
-        [Xr, Zr] = e(() => u.get("cvTableRatio", 0.3)),
-        [Qr, ea] = e(() => u.get("clTableRatio", 0.3)),
+        [Xr, Zr] = e(() => u.get("cvTableRatio", 0.25)),
+        [Qr, ea] = e(() => u.get("clTableRatio", 0.25)),
         [ta, na] = e(() => {
           const e = u.get("cvSidebarRatio", 0.33);
           return Math.max(0.18, Math.min(0.5, "number" == typeof e ? e : 0.33));

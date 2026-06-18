@@ -1218,6 +1218,21 @@ async function handleApiPrefs(request, env) {
           const ck = (k in PI_SNAKE_TO_CAMEL) ? PI_SNAKE_TO_CAMEL[k] : k;
           if (!(ck in _piNorm)) _piNorm[ck] = v;
         }
+        // PHOTO-BINARY-NOT-IN-KERNEL-001 (owner 2026-06-18): the kernel-v2
+        // personalFigure rule is store_binary_in_kernel:false / store_pointer_in
+        // _kernel:true — the photo BINARY belongs in the photo_b64 column, only a
+        // pointer/controls (personalFigure, photoCircular/photoBorderColor/Width)
+        // belong in the kernel. 'photo' is in PI_IDENTITY_KEYS, so a stray
+        // personalInfo.photo binary would otherwise land in the identity blob
+        // (bloat + rule violation). Route any photo binary to the photo_b64 path
+        // and strip it from the kernel split.
+        if (typeof _piNorm.photo === 'string' && _piNorm.photo) {
+          const looksBinary = /^data:image\//i.test(_piNorm.photo) || _piNorm.photo.length > 512;
+          if (looksBinary) {
+            if (data.photo === undefined) data.photo = _piNorm.photo; // -> photo_b64 column below
+            delete _piNorm.photo;                                     // keep the binary OUT of identity
+          }
+        }
         const split = splitPersonalInfo(_piNorm);
         // DATA-LOSS GUARD (DEMO-RESET-EMPTY-OVERWRITE-001): a personalInfo PUT
         // carrying ONLY auth/disclosure fields (email + AI-disclosure flags,

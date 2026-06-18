@@ -14353,14 +14353,22 @@
             body: JSON.stringify({ application_id: e }),
           });
         },
-        getShowcase() {
-          return this._call("/api/kernel-showcase");
+        getShowcase(style) {
+          return this._call("/api/kernel-showcase" + (style ? "?style=" + encodeURIComponent(style) : ""));
         },
-        putShowcase(e) {
-          return this._call("/api/kernel-showcase", {
+        putShowcase(e, style) {
+          return this._call("/api/kernel-showcase" + (style ? "?style=" + encodeURIComponent(style) : ""), {
             method: "PUT",
             body: JSON.stringify(e || {}),
           });
+        },
+        // #D per-style kernels (owner 2026-06-18): enumerate + delete per-writing-style
+        // unsolicited kernels (Substrate B). style '' keeps the legacy single slot.
+        listShowcases() {
+          return this._call("/api/kernel-showcase?list=1");
+        },
+        deleteShowcase(style) {
+          return this._call("/api/kernel-showcase?style=" + encodeURIComponent(style || ""), { method: "DELETE" });
         },
       };
       (React.useEffect(() => {
@@ -15184,7 +15192,7 @@
                 meta: u.get("meta", null),
                 rationale: u.get("rationale", null),
                 jd_language: je,
-              });
+              }, (() => { try { var p = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {}; p = p.personalInfo || p; return String((p.stylePrefs || {}).style || "").trim(); } catch (_) { return ""; } })());
               try {
                 console.log(
                   "[v1.50.267 KERNEL-CLOUD-PERSIST] re-saved kernel showcase after edit (subtitle/meta/sections)",
@@ -15353,7 +15361,7 @@
           return (
             (async () => {
               try {
-                const e = await oo.getShowcase();
+                const e = await oo.getShowcase((() => { try { var p = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {}; p = p.personalInfo || p; return String((p.stylePrefs || {}).style || "").trim(); } catch (_) { return ""; } })());
                 if (o) return;
                 // 1.50.277: mark restore ATTEMPTED on every non-cancelled
                 // outcome (no slot / empty slot / real slot) so the Cs() regen
@@ -25156,7 +25164,7 @@
                       meta: u.get("meta", null),
                       rationale: u.get("rationale", null),
                       jd_language: je,
-                    });
+                    }, (() => { try { var p = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {}; p = p.personalInfo || p; return String((p.stylePrefs || {}).style || "").trim(); } catch (_) { return ""; } })());
                   } catch (e) {}
                 }, 1200);
               } catch (e) {}

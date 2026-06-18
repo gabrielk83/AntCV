@@ -542,7 +542,10 @@ ${text}`;
   // two near-identical group taxonomies in the live editor.
   const _ndk = (s) => String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
   const DEDUP_KEYS = {
-    'personalInfo.education':              e => `${e.deg}|${e.sch}`,
+    // DEDUP-KEY-COLLAPSE-002 (owner 2026-06-18, follow-up to the tools bug):
+    // robust against a legacy string entry / empty fields. A bare string item or
+    // two blank {deg,sch} would otherwise collapse to one key.
+    'personalInfo.education':              e => (e && typeof e === 'object') ? `${_ndk(e.deg)}|${_ndk(e.sch)}` : _ndk(e),
     'personalInfo.certifications':         s => String(s).toLowerCase().trim(),
     // TOOLS-DEDUP-COLLAPSE-001 (owner 2026-06-18: "Tools and methods is already
     // truncated"). Tools items are OBJECTS ({group} subhead or {l,v} row), but the
@@ -553,9 +556,15 @@ ${text}`;
     'personalInfo.tools':                  t => (t && t.group) ? `g:${_ndk(t.group)}` : `l:${_ndk(t && t.l)}`,
     'personalInfo.regulatory':             r => r.group ? `g:${_ndk(r.group)}` : `l:${_ndk(r.l)}`,
     'personalInfo.publications':           s => String(s).replace(/<[^>]+>/g, '').toLowerCase().slice(0, 80),
-    'personalInfo.publicationsStructured': p => (p.name || '').toLowerCase().slice(0, 80),
-    'personalInfo.contactItems':           c => c.key,
-    'personalInfo.additional':             a => `l:${_ndk(a.l)}`,
+    'personalInfo.publicationsStructured': p => ((p && (p.name || p.details)) || '').toLowerCase().slice(0, 80),
+    // DEDUP-KEY-COLLAPSE-002: a contactItem with no `key` would collapse all
+    // keyless items to `undefined`; fall back to label/value.
+    'personalInfo.contactItems':           c => c && (c.key != null && c.key !== '' ? c.key : `${_ndk(c.label)}|${_ndk(c.value)}`),
+    // DEDUP-KEY-COLLAPSE-002: SAME class as the tools bug. additional items can be
+    // {group} subhead markers (no `l`) — they all keyed to "l:" and collapsed to
+    // ONE, dropping the owner's group subheadings. Key by group / label like
+    // regulatory + tools.
+    'personalInfo.additional':             a => (a && a.group) ? `g:${_ndk(a.group)}` : `l:${_ndk(a && a.l)}`,
     // CLOUD-LOAD-ITEMS-001 (owner 2026-06-18): semantic constraints + the
     // contextual banned list were NOT in DEDUP_KEYS, so an import REPLACED them
     // (a small/empty imported set wiped a large stored set, which then synced the

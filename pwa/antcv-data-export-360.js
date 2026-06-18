@@ -49,7 +49,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.568-export-fab';
+  var VERSION = '1.50.618-review';
   if (window.__antcvDataExport360 === VERSION) return;
   window.__antcvDataExport360 = VERSION;
 
@@ -405,6 +405,276 @@
     return b;
   }
 
+  // ── REVIEW-DATA-001 (owner 2026-06-18): friendly "Review my data" modal ──
+  // Replaces the plain "Download my data" button. Shows everything AntCV holds
+  // as the GROUND TRUTH for generation, in a readable sectioned view with
+  // explanations + tips, and inline editing for the core identity / summary /
+  // visibility fields. The structured editors (experience, semantic constraints,
+  // CV sidebar) render read-friendly here and point to their home in Settings →
+  // Personal (where the SEMANTIC-CONSTRAINTS-002 card editor now lives).
+  function rdReadPI() {
+    try { var pi = JSON.parse(localStorage.getItem('personalInfo') || '{}') || {}; return (pi && pi.personalInfo) ? pi.personalInfo : (pi || {}); }
+    catch (_) { return {}; }
+  }
+  function rdSavePI(pi) {
+    try { localStorage.setItem('personalInfo', JSON.stringify(pi)); } catch (_) {}
+    try { window._antcvCloudWrite && window._antcvCloudWrite({ personalInfo: pi }); } catch (_) {}
+    try { window.dispatchEvent(new StorageEvent('storage', { key: 'personalInfo' })); } catch (_) {}
+    try { window.dispatchEvent(new CustomEvent('antcv:personalinfo-changed')); } catch (_) {}
+  }
+  function rdEl(tag, css, text) { var e = document.createElement(tag); if (css) e.style.cssText = css; if (text != null) e.textContent = text; return e; }
+  function rdArr(v) { return Array.isArray(v) ? v.filter(Boolean) : (v ? [String(v)] : []); }
+  function rdChips(list, bg, fg, empty) {
+    var box = rdEl('div', 'display:flex;flex-wrap:wrap;gap:4px;align-items:center;');
+    if (!list.length) { box.appendChild(rdEl('span', 'font-size:11px;opacity:.45;', empty || 'none set')); return box; }
+    list.forEach(function (c) { box.appendChild(rdEl('span', 'font-size:11px;padding:2px 8px;border-radius:11px;background:' + bg + ';color:' + fg + ';', String(c).trim())); });
+    return box;
+  }
+  function rdField(label, value, onSave, multiline) {
+    var wrap = rdEl('div', 'display:flex;flex-direction:column;gap:3px;margin:0 0 7px;');
+    var top = rdEl('div', 'display:flex;align-items:center;gap:8px;');
+    top.appendChild(rdEl('div', 'font-size:10px;text-transform:uppercase;letter-spacing:.5px;opacity:.55;', label));
+    var saved = rdEl('span', 'font-size:10px;color:#5dcaa5;opacity:0;transition:opacity .2s;', '✓ saved');
+    top.appendChild(saved);
+    wrap.appendChild(top);
+    var inp = document.createElement(multiline ? 'textarea' : 'input');
+    if (multiline) inp.rows = 3;
+    inp.value = value == null ? '' : String(value);
+    inp.style.cssText = 'width:100%;box-sizing:border-box;padding:7px 9px;background:rgba(255,255,255,.05);' +
+      'color:#e6eef3;border:1px solid rgba(255,255,255,.16);border-radius:6px;font-family:inherit;font-size:12.5px;' +
+      (multiline ? 'resize:vertical;line-height:1.45;' : '');
+    function commit() { onSave(inp.value); saved.style.opacity = '1'; setTimeout(function () { saved.style.opacity = '0'; }, 1400); }
+    inp.addEventListener('blur', commit);
+    inp.addEventListener('keydown', function (e) { if (!multiline && e.key === 'Enter') { e.preventDefault(); inp.blur(); } });
+    wrap.appendChild(inp);
+    return wrap;
+  }
+  function rdSection(emoji, title, explanation) {
+    var sec = rdEl('div', 'background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.10);border-radius:10px;padding:12px 13px;');
+    sec.appendChild(rdEl('div', 'font-size:13px;font-weight:700;color:#e6eef3;margin:0 0 2px;', emoji + '  ' + title));
+    if (explanation) sec.appendChild(rdEl('div', 'font-size:11px;opacity:.6;line-height:1.45;margin:0 0 9px;', explanation));
+    var body = rdEl('div', 'display:flex;flex-direction:column;gap:6px;');
+    sec.appendChild(body);
+    return { sec: sec, body: body };
+  }
+  function rdTip(text) {
+    return rdEl('div', 'font-size:11px;line-height:1.45;color:#bdf0f1;background:rgba(1,183,187,.10);' +
+      'border-left:3px solid #01B7BB;border-radius:0 6px 6px 0;padding:7px 10px;margin:2px 0 0;', '💡  ' + text);
+  }
+  function rdPill(text, ok) {
+    return rdEl('span', 'font-size:10px;padding:2px 8px;border-radius:10px;white-space:nowrap;' +
+      (ok ? 'background:rgba(93,202,165,.16);color:#9fe1cb;' : 'background:rgba(255,255,255,.08);color:#aab4c2;'), text);
+  }
+
+  function openReview() {
+    if (document.querySelector('[data-antcv-review-modal]')) return;
+    var pi = rdReadPI();
+    var sp = pi.stylePrefs || {};
+    function patch(o) { var cur = rdReadPI(); for (var k in o) { if (Object.prototype.hasOwnProperty.call(o, k)) cur[k] = o[k]; } rdSavePI(cur); }
+    function patchVis(key, val) { var cur = rdReadPI(); var vc = cur.visibilityControls || {}; vc[key] = val; cur.visibilityControls = vc; rdSavePI(cur); }
+
+    var overlay = rdEl('div', 'position:fixed;inset:0;z-index:100000;background:rgba(10,15,30,.74);' +
+      'display:flex;align-items:flex-start;justify-content:center;padding:24px 14px;overflow:auto;');
+    overlay.setAttribute('data-antcv-review-modal', '1');
+    var card = rdEl('div', 'width:100%;max-width:720px;background:#1d2740;border:1px solid rgba(255,255,255,.13);' +
+      'border-radius:14px;color:#e6eef3;display:flex;flex-direction:column;max-height:92vh;box-shadow:0 12px 48px rgba(0,0,0,.4);font-family:inherit;');
+    function close() { try { document.body.removeChild(overlay); } catch (_) {} document.removeEventListener('keydown', onKey); }
+    function onKey(e) { if (e.key === 'Escape') close(); }
+    overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
+    document.addEventListener('keydown', onKey);
+
+    // Header
+    var head = rdEl('div', 'display:flex;align-items:center;gap:10px;padding:15px 18px;border-bottom:1px solid rgba(255,255,255,.10);');
+    head.appendChild(rdEl('div', 'font-size:16px;font-weight:700;flex:1;', '📋  Review my data'));
+    var x = rdEl('button', 'background:transparent;border:none;color:#e6eef3;font-size:22px;line-height:1;cursor:pointer;opacity:.7;padding:2px 6px;', '×');
+    x.type = 'button'; x.title = 'Close'; x.addEventListener('click', close);
+    head.appendChild(x);
+    card.appendChild(head);
+
+    // Scrollable body
+    var body = rdEl('div', 'overflow:auto;padding:14px 18px 18px;display:flex;flex-direction:column;gap:11px;');
+    card.appendChild(body);
+
+    body.appendChild(rdEl('div', 'font-size:12px;line-height:1.5;opacity:.8;',
+      'This is everything AntCV has stored about you — the ground truth behind every CV and cover letter it writes. ' +
+      'Review it, fix anything wrong, and it is used as-is. Nothing here leaves your device until you export or generate.'));
+
+    // 1 — Identity & contact (editable)
+    var s1 = rdSection('👤', 'Identity & contact', 'Your name and contact block. Edits save instantly.');
+    s1.body.appendChild(rdField('Full name', pi.name, function (v) { patch({ name: v }); }));
+    s1.body.appendChild(rdField('Headline / specialization line', pi.headline, function (v) { patch({ headline: v }); }));
+    var grid = rdEl('div', 'display:grid;grid-template-columns:1fr 1fr;gap:0 10px;');
+    grid.appendChild(rdField('Email', pi.email, function (v) { patch({ email: v }); }));
+    grid.appendChild(rdField('Phone', pi.phone, function (v) { patch({ phone: v }); }));
+    grid.appendChild(rdField('Location', pi.location, function (v) { patch({ location: v }); }));
+    grid.appendChild(rdField('Citizenship', pi.citizenship, function (v) { patch({ citizenship: v }); }));
+    s1.body.appendChild(grid);
+    s1.body.appendChild(rdField('LinkedIn', pi.linkedin, function (v) { patch({ linkedin: v }); }));
+    s1.body.appendChild(rdTip('Phone is hidden on the CV by default — toggle visibility in the “What’s shown” section below.'));
+    body.appendChild(s1.sec);
+
+    // 2 — Professional summary (editable)
+    var s2 = rdSection('📝', 'Professional summary', 'The main context the AI uses for who you are.');
+    s2.body.appendChild(rdField('Background', pi.background, function (v) { patch({ background: v }); }, true));
+    s2.body.appendChild(rdTip('Keep it factual and 2–4 sentences. This is not a contact field — it is the “about you” the writer reads first.'));
+    body.appendChild(s2.sec);
+
+    // 3 — Work history (read-friendly)
+    var roles = Array.isArray(pi.experience) ? pi.experience : [];
+    var s3 = rdSection('💼', 'Work history (' + roles.length + ' roles)', 'Each role carries its own bullets and outcomes, written per job. Edit roles in the editor’s Experience section.');
+    roles.forEach(function (r) {
+      var row = rdEl('div', 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 0;border-top:1px solid rgba(255,255,255,.06);');
+      row.appendChild(rdEl('span', 'font-size:12.5px;font-weight:600;', r.title || '(untitled role)'));
+      row.appendChild(rdEl('span', 'font-size:11px;opacity:.6;', [r.company, r.years].filter(Boolean).join(' · ')));
+      var meta = rdEl('span', 'margin-left:auto;display:flex;gap:6px;align-items:center;');
+      meta.appendChild(rdEl('span', 'font-size:10.5px;opacity:.55;', (rdArr(r.bullets).length) + ' bullets · ' + (rdArr(r.outcomes).length) + ' outcomes'));
+      meta.appendChild(rdPill(r.on === false ? 'hidden' : 'visible', r.on !== false));
+      row.appendChild(meta);
+      s3.body.appendChild(row);
+    });
+    if (!roles.length) s3.body.appendChild(rdEl('div', 'font-size:11px;opacity:.45;', 'No work history stored yet.'));
+    body.appendChild(s3.sec);
+
+    // 4 — Semantic constraints (read-friendly)
+    var rules = (function () {
+      var v2 = Array.isArray(sp.semanticConstraintsV2) ? sp.semanticConstraintsV2 : [];
+      var bc = Array.isArray(sp.bannedContextual) ? sp.bannedContextual : [];
+      var src = v2.length ? v2 : bc;
+      return src.map(function (r) {
+        var sc = r.scope || r.when || r.context || {};
+        return {
+          trigger: String(r.trigger || ''),
+          avoid: rdArr(r.avoid != null ? r.avoid : r.pattern),
+          prefer: rdArr(r.prefer != null ? r.prefer : (r.use_instead != null ? r.use_instead : r.replacement)),
+          scope: String(sc.role_company || sc.companyContains || sc.role_title || sc.titleContains || '')
+        };
+      }).filter(function (r) { return r.avoid.length || r.trigger; });
+    })();
+    var s4 = rdSection('🎯', 'Semantic constraints (' + rules.length + ')', 'Rules that steer wording by meaning — avoid X, prefer Y, optionally only for certain roles.');
+    rules.forEach(function (r) {
+      var rc = rdEl('div', 'padding:7px 0;border-top:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column;gap:5px;');
+      var th = rdEl('div', 'display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;');
+      th.appendChild(rdEl('span', 'font-size:12px;', r.trigger || 'general rule'));
+      if (r.scope) th.appendChild(rdPill('scope: ' + r.scope, false));
+      rc.appendChild(th);
+      var ap = rdEl('div', 'display:flex;gap:6px;align-items:center;flex-wrap:wrap;');
+      ap.appendChild(rdEl('span', 'font-size:10px;color:#f3b4b3;', 'avoid'));
+      ap.appendChild(rdChips(r.avoid, 'rgba(229,75,74,.16)', '#f3b4b3'));
+      ap.appendChild(rdEl('span', 'font-size:12px;opacity:.5;', '→'));
+      ap.appendChild(rdEl('span', 'font-size:10px;color:#bdf0f1;', 'prefer'));
+      ap.appendChild(rdChips(r.prefer, 'rgba(1,183,187,.16)', '#bdf0f1'));
+      rc.appendChild(ap);
+      s4.body.appendChild(rc);
+    });
+    if (!rules.length) s4.body.appendChild(rdEl('div', 'font-size:11px;opacity:.45;', 'No semantic constraints set.'));
+    s4.body.appendChild(rdTip('Edit these in Settings → Personal → Tone & banned terms → Semantic constraints.'));
+    body.appendChild(s4.sec);
+
+    // 5 — Banned terms & tone (read)
+    function splitList(v) { return String(v || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean); }
+    var s5 = rdSection('🚫', 'Banned words, phrases & tone', 'Terms the writer must never use, and the tone it should keep.');
+    var bw = rdEl('div', 'display:flex;flex-direction:column;gap:3px;');
+    bw.appendChild(rdEl('div', 'font-size:10px;text-transform:uppercase;letter-spacing:.5px;opacity:.55;', 'banned words'));
+    bw.appendChild(rdChips(splitList(sp.banned_words), 'rgba(229,75,74,.14)', '#f3b4b3'));
+    s5.body.appendChild(bw);
+    var bph = rdEl('div', 'display:flex;flex-direction:column;gap:3px;');
+    bph.appendChild(rdEl('div', 'font-size:10px;text-transform:uppercase;letter-spacing:.5px;opacity:.55;', 'banned phrases'));
+    bph.appendChild(rdChips(splitList(sp.banned_phrases), 'rgba(229,75,74,.14)', '#f3b4b3'));
+    s5.body.appendChild(bph);
+    var bt = rdEl('div', 'display:flex;flex-direction:column;gap:3px;');
+    bt.appendChild(rdEl('div', 'font-size:10px;text-transform:uppercase;letter-spacing:.5px;opacity:.55;', 'preferred tone'));
+    bt.appendChild(rdChips(splitList(sp.preferred_tone), 'rgba(1,183,187,.14)', '#bdf0f1'));
+    s5.body.appendChild(bt);
+    body.appendChild(s5.sec);
+
+    // 6 — Languages (read)
+    var langs = Array.isArray(pi.languages) ? pi.languages : [];
+    var s6 = rdSection('🗣️', 'Languages', 'Languages and levels — used for both writing language and CV content.');
+    if (langs.length) {
+      langs.forEach(function (l) {
+        var row = rdEl('div', 'display:flex;gap:8px;align-items:baseline;padding:3px 0;');
+        row.appendChild(rdEl('span', 'font-size:12.5px;font-weight:600;min-width:90px;', l.lang || ''));
+        row.appendChild(rdEl('span', 'font-size:11.5px;opacity:.7;', [l.level, l.note].filter(Boolean).join(' — ')));
+        s6.body.appendChild(row);
+      });
+    } else { s6.body.appendChild(rdEl('div', 'font-size:11px;opacity:.45;', 'No languages stored.')); }
+    body.appendChild(s6.sec);
+
+    // 7 — CV sidebar content (read summary)
+    function grpCount(a) { a = Array.isArray(a) ? a : []; var items = 0, groups = 0; a.forEach(function (x) { if (x && x.group) groups++; else items++; }); return { items: items, groups: groups }; }
+    var s7 = rdSection('📎', 'CV sidebar content', 'The structured side column — tools, certifications, education, standards, extras.');
+    var tc = grpCount(pi.tools);
+    [
+      ['Tools & methods', tc.items + ' items' + (tc.groups ? ' · ' + tc.groups + ' groups' : '')],
+      ['Certifications', (Array.isArray(pi.certifications) ? pi.certifications.length : 0) + ' items'],
+      ['Education', (Array.isArray(pi.education) ? pi.education.length : 0) + ' entries'],
+      ['Regulatory / standards', (function () { var r = grpCount(pi.regulatory); return r.items + ' standards · ' + r.groups + ' groups'; })()],
+      ['Additional info', (function () { var a = grpCount(pi.additional); return a.items + ' items'; })()]
+    ].forEach(function (pair) {
+      var row = rdEl('div', 'display:flex;gap:8px;align-items:baseline;padding:3px 0;border-top:1px solid rgba(255,255,255,.06);');
+      row.appendChild(rdEl('span', 'font-size:12px;font-weight:600;flex:1;', pair[0]));
+      row.appendChild(rdEl('span', 'font-size:11px;opacity:.6;', pair[1]));
+      s7.body.appendChild(row);
+    });
+    s7.body.appendChild(rdTip('Edit these in Settings → Personal → CV Sidebar Content.'));
+    body.appendChild(s7.sec);
+
+    // 8 — What's shown vs hidden (editable toggles)
+    var vc = pi.visibilityControls || {};
+    var s8 = rdSection('👁️', 'What’s shown on the CV', 'Quick toggles for the optional blocks. These apply as defaults.');
+    [
+      ['Phone number', 'showPhoneByDefault', false],
+      ['Citizenship', 'showCitizenshipByDefault', true],
+      ['Accessibility note', 'showAccessibilityByDefault', false],
+      ['Patent', 'showPatentByDefault', true],
+      ['Publications', 'showPublicationsByDefault', true],
+      ['Photo', 'showPhotoByDefault', false]
+    ].forEach(function (t) {
+      var has = Object.prototype.hasOwnProperty.call(vc, t[1]);
+      var row = rdEl('label', 'display:flex;align-items:center;gap:9px;padding:4px 0;cursor:pointer;font-size:12.5px;');
+      var cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = has ? !!vc[t[1]] : !!t[2];
+      cb.style.cssText = 'flex:0 0 auto;width:15px;height:15px;accent-color:#01B7BB;';
+      cb.addEventListener('change', function () { patchVis(t[1], cb.checked); });
+      row.appendChild(cb); row.appendChild(rdEl('span', null, t[0]));
+      s8.body.appendChild(row);
+    });
+    body.appendChild(s8.sec);
+
+    // Footer
+    var foot = rdEl('div', 'border-top:1px solid rgba(255,255,255,.10);padding:13px 18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;');
+    var exp = rdEl('button', 'flex:1;min-width:200px;padding:11px;background:rgba(1,183,187,0.14);border:1px solid rgba(1,183,187,0.5);' +
+      'color:#bdf0f1;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;', '🔒 Export (account-locked)');
+    exp.type = 'button';
+    exp.title = 'Encrypted and locked to your account — only you (signed in) can import it back.';
+    exp.addEventListener('click', function () {
+      exp.disabled = true; var p = exp.textContent; exp.textContent = '🔒 Encrypting…';
+      exportUserBound().then(function (r) { exp.textContent = (r && r.ok) ? '✓ Saved ' + (r.filename || 'file') : p; setTimeout(function () { exp.textContent = p; exp.disabled = false; }, 2600); })
+        .catch(function (err) { exp.textContent = '⚠ ' + ((err && err.message) || 'Failed'); setTimeout(function () { exp.textContent = p; exp.disabled = false; }, 3600); });
+    });
+    foot.appendChild(exp);
+    var done = rdEl('button', 'padding:11px 18px;background:transparent;border:1px solid rgba(255,255,255,.2);color:#e6eef3;border-radius:8px;font-size:13px;cursor:pointer;', 'Done');
+    done.type = 'button'; done.addEventListener('click', close);
+    foot.appendChild(done);
+    card.appendChild(foot);
+
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+  }
+  window.AntcvReviewData = openReview;
+
+  function buildReviewButton() {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.setAttribute(UI_MARK, 'review');
+    b.textContent = '📋 Review my data';
+    b.title = 'See everything AntCV has stored about you — read it, fix it, and it is used as-is.';
+    b.style.cssText = 'display:block;width:100%;margin:0 0 8px;padding:12px;' +
+      'background:rgba(90,150,230,0.12);border:1px solid rgba(90,150,230,0.5);' +
+      'color:#bcd6ff;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;';
+    b.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); openReview(); });
+    return b;
+  }
+
   function buildCheckRow() {
     var wrap = document.createElement('label');
     wrap.setAttribute(UI_MARK, 'savefirst');
@@ -434,22 +704,26 @@
     try { card.insertBefore(buildCheckRow(), row); } catch (_) {}
   }
 
-  // Download button -> end of the PRIVACY zone, just after the "What LLM
-  // providers see" box.
+  // REVIEW-DATA-001 (owner 2026-06-18): the data buttons -> end of the PRIVACY
+  // zone, after the "What LLM providers see" box. The plain "Download my data"
+  // button is replaced by "Review my data" (a friendly read/edit modal); the
+  // single export option is the account-locked one.
   function injectDownload() {
     var box = findPrivacyProvidersBox();
     if (!box) return;
     var zone = box.parentNode;
     if (!zone) return;
-    if (zone.querySelector('[' + UI_MARK + '="download"]')) return;
+    // Clean up the retired plain-download button if a stale build left one.
+    try { var old = zone.querySelector('[' + UI_MARK + '="download"]'); if (old) old.remove(); } catch (_) {}
+    if (zone.querySelector('[' + UI_MARK + '="review"]')) return;
     try {
-      var dl = buildButton();
+      var review = buildReviewButton();
       var locked = buildLockedButton();
       if (box.nextSibling) {
-        zone.insertBefore(dl, box.nextSibling);
-        zone.insertBefore(locked, dl.nextSibling);
+        zone.insertBefore(review, box.nextSibling);
+        zone.insertBefore(locked, review.nextSibling);
       } else {
-        zone.appendChild(dl);
+        zone.appendChild(review);
         zone.appendChild(locked);
       }
     } catch (_) {}
@@ -526,6 +800,7 @@
     version: VERSION,
     exportData: exportData,
     collectData: collectData,
+    openReview: openReview,
     _injectUi: injectUi,
     _findEraseButton: findEraseButton,
     _findPrivacyProvidersBox: findPrivacyProvidersBox,

@@ -8,7 +8,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.50.634-pub-dedup';
+  const VERSION='1.50.681-pub-row-controls';
   if(window.__antcvPublicationsStrictRowLayout273===VERSION) return;
   window.__antcvPublicationsStrictRowLayout273=VERSION;
   // v1.40.273-preview-guard: Preview is button-free. panelRoot() must
@@ -121,10 +121,15 @@
   function compact(row){
     Array.from(row.querySelectorAll('button')).forEach(b=>{
       if(b.closest('[data-antcv-pub273-host="1"]')) return;
+      // PUB-ROW-CONTROLS-002 (owner 2026-06-18): our own row-level controls (the
+      // CJLR alignment button now lives next to delete, not in the host) must not
+      // be swept into the native-dup hide branch below.
+      if(b.matches('[data-antcv-pub273-control]')) return;
       Object.assign(b.style,{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'23px',minWidth:'23px',maxWidth:'23px',height:'22px',minHeight:'22px',padding:'0',margin:'0',flex:'0 0 auto',position:'static',float:'none',boxSizing:'border-box'});
       if(isNativeEye(b)){b.setAttribute('data-antcv-pub273-eye','1');b.style.order='40';b.style.display='inline-flex';}
       else if(isNativeDelete(b)){b.setAttribute('data-antcv-pub273-delete','1');b.style.order='50';b.style.display='inline-flex';}
-      else if(isNativeMove(b)){b.setAttribute('data-antcv-pub273-move','1');b.style.order='60';b.style.display='inline-flex';}
+      // Move ▲▼ relocate to the LEFT (compact) — owner wants them off the right edge.
+      else if(isNativeMove(b)){b.setAttribute('data-antcv-pub273-move','1');b.style.order='5';b.style.display='inline-flex';}
       // PUB-CONTROL-DEDUP-001 (owner 2026-06-18): the remaining NATIVE glyph
       // controls on a publication row (page / CJLR / ✨ Enhance / ⇥⇤ compress,
       // app.src.js ~6902) DUPLICATE the pub273 host's own — that is the "endless
@@ -146,7 +151,11 @@
     comp.textContent='⇥⇤';comp.title='Fit only the Journal / patent no. / year / details field.';comp.setAttribute('aria-label',comp.title);
     enh.textContent='✨';enh.title='Enhance only the Journal / patent no. / year / details field.';enh.setAttribute('aria-label',enh.title);
     paintPage(page,sid,i);paintAlign(cjlr,sid,i);
-    [page,cjlr,comp,enh].forEach(x=>h.appendChild(x));
+    // CJLR-NEXT-DELETE-001 (owner 2026-06-18): page / compress / enhance stay in the
+    // host group; the CJLR (Center/Justify/Left/Right) alignment button moves OUT to
+    // sit directly left of the delete button (row-level flex order 45, delete is 50).
+    [page,comp,enh].forEach(x=>h.appendChild(x));
+    cjlr.setAttribute('data-antcv-pub273-cjlr','1');cjlr.style.order='45';row.appendChild(cjlr);
     page.onclick=ev=>{ev.preventDefault();ev.stopPropagation();if(ev.stopImmediatePropagation)ev.stopImmediatePropagation();const n=getPage(sid,i)%4+1;setPage(sid,i,n);paintPage(page,sid,i);};
     cjlr.onclick=ev=>{ev.preventDefault();ev.stopPropagation();if(ev.stopImmediatePropagation)ev.stopImmediatePropagation();const n=ALIGNS[(ALIGNS.indexOf(getAlign(sid,i))+1)%ALIGNS.length]||'center';setAlign(sid,i,n);paintAlign(cjlr,sid,i);detail.style.textAlign=n;};
     comp.onclick=ev=>{ev.preventDefault();ev.stopPropagation();if(ev.stopImmediatePropagation)ev.stopImmediatePropagation();setValue(detail,compressText(value(detail)));fire('publications-compress',{sid,index:i});};
@@ -160,8 +169,9 @@
     [data-antcv-pub273-row="1"] button{width:23px!important;min-width:23px!important;max-width:23px!important;height:22px!important;min-height:22px!important;padding:0!important;margin:0!important;flex:0 0 auto!important;position:static!important;float:none!important;box-sizing:border-box!important;}
     [data-antcv-pub273-row="1"] button[data-antcv-pub273-control="page"]{width:30px!important;min-width:30px!important;max-width:30px!important;font-size:10px!important;}
     [data-antcv-pub273-eye="1"]{order:40!important;}
+    [data-antcv-pub273-cjlr="1"]{order:45!important;}
     [data-antcv-pub273-delete="1"]{order:50!important;}
-    [data-antcv-pub273-move="1"]{order:60!important;}
+    [data-antcv-pub273-move="1"]{order:5!important;}
   `;(document.head||document.documentElement).appendChild(s);}
   let pending=false;
   function run(){const root=panelRoot();if(!root)return;injectCss();const sid=(pubSection()||{}).id||'publications';purge(root);rows(root).forEach((p,i)=>wire(p,sid,i));}

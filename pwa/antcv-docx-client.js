@@ -1707,9 +1707,33 @@ const _metricScore = (text) => {
   if (best === 0) { const nums = (t.match(/[\d][\d,.]*/g) || []).map((s) => parseFloat(s.replace(/,/g, ''))).filter((n) => n > 0); if (nums.length) best = Math.min(1.5, Math.log10(Math.max.apply(null, nums) + 1)); }
   return best;
 };
+// TENSE-AT-LAMINATION-001 (owner 2026-06-19: "I want the tense the user chose to be
+// the generated tense — the app already takes too much work time"). Generation already
+// writes bullets/outcomes in the chosen tense via the prompt's __tenseRule; but a
+// role's laminated RESULTS come from the KERNEL outcomes/proof-points, which keep the
+// kernel's tense. Re-tensing them HERE — inside the lamination pass that already runs
+// for preview + export — keeps the chosen tense without a separate runtime sidecar.
+const _T_B2P = { own: 'owned', build: 'built', run: 'ran', design: 'designed', drive: 'drove', deliver: 'delivered', implement: 'implemented', establish: 'established', ship: 'shipped', reduce: 'reduced', cut: 'cut', scale: 'scaled', map: 'mapped', translate: 'translated', coordinate: 'coordinated', negotiate: 'negotiated', resolve: 'resolved', investigate: 'investigated', validate: 'validated', qualify: 'qualified', author: 'authored', chair: 'chaired', guide: 'guided', mentor: 'mentored', restructure: 'restructured', initiate: 'initiated', configure: 'configured', specify: 'specified', direct: 'directed', supervise: 'supervised', architect: 'architected', lead: 'led', manage: 'managed', develop: 'developed', create: 'created', launch: 'launched', improve: 'improved', increase: 'increased', secure: 'secured', oversee: 'oversaw', define: 'defined', support: 'supported', maintain: 'maintained', test: 'tested', present: 'presented', review: 'reviewed', plan: 'planned', set: 'set', put: 'put', hit: 'hit', optimize: 'optimized', optimise: 'optimised', streamline: 'streamlined', head: 'headed', handle: 'handled', perform: 'performed', conduct: 'conducted', execute: 'executed', introduce: 'introduced', migrate: 'migrated', automate: 'automated' };
+const _T_P2B = {}; for (const k in _T_B2P) _T_P2B[_T_B2P[k]] = k;
+function _tenseLead(text, mode) {
+  if ((mode !== 'present' && mode !== 'past') || typeof text !== 'string' || !text) return text;
+  const m = text.match(/^(\s*(?:<[^>]+>\s*|\*{1,2}\s*)*)([A-Za-z]+)/);
+  if (!m) return text;
+  const prefix = m[1], word = m[2], lw = word.toLowerCase();
+  let repl = mode === 'past' ? _T_B2P[lw] : _T_P2B[lw];
+  if (!repl || repl === lw) return text;
+  if (word[0] === word[0].toUpperCase()) repl = repl.charAt(0).toUpperCase() + repl.slice(1);
+  return prefix + repl + text.slice(prefix.length + word.length);
+}
+function _expTenseMode() {
+  try { const sc = JSON.parse(localStorage.getItem('styleConfig') || '{}') || {}; return sc.expTense || (sc.expPastTense === true ? 'past' : 'auto'); }
+  catch (_) { return 'auto'; }
+}
 export function applyOutcomesMode(docSections, doc) {
   try {
     if (doc !== 'cv' || !Array.isArray(docSections)) return docSections;
+    const _tmode = _expTenseMode();
+    const _tx = (s) => _tenseLead(s, _tmode);
     // OUTCOMES-MODE-PARITY-001 (owner 2026-06-14): mirror the PREVIEW default
     // EXACTLY (app.src.js __antcvOutcomesMode). An explicit user choice wins;
     // with NONE stored, Copenhagen Modern (incl. the 'scandinavian'/empty
@@ -1949,17 +1973,18 @@ export function applyOutcomesMode(docSections, doc) {
       ...exp,
       roles: (exp.roles || []).map((r) => {
         // tiers 1-4 — a REAL outcome wins and ALL bullets stay exposed.
+        // _tx() re-tenses the leading verb to the user's chosen tense (no-op for 'auto').
         const lam = _lam.get(r);
-        if (lam) return { ...r, results: lam };
+        if (lam) return { ...r, results: _tx(lam) };
         // pool / explicit-map distribution — may be a bullet-seeded outcome, so hide
         // a bullet only when the result text subsumes it (i.e. it IS that bullet).
-        if (resultsByRole.has(r)) { const rt = resultsByRole.get(r); return { ...r, results: rt, bullets: hideSubsumed(r, rt) }; }
+        if (resultsByRole.has(r)) { const rt = resultsByRole.get(r); return { ...r, results: _tx(rt), bullets: hideSubsumed(r, rt) }; }
         // tier-5 derive — the Results line IS one of the role's bullets; hide that
         // one source bullet (export render only; stored data untouched).
         const d = deriveResultFromRole(r);
         if (!d) return r;
         const keptBullets = (Array.isArray(r.bullets) ? r.bullets : []).filter((_, i) => i !== d.index);
-        return { ...r, results: d.text, bullets: keptBullets };
+        return { ...r, results: _tx(d.text), bullets: keptBullets };
       }),
     };
     return docSections.filter((s) => !isOutcomes(s)).map((s) => (s === exp ? expOut : s));

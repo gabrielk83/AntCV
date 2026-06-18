@@ -1,3 +1,5 @@
+> **AUTHORITATIVE current state + next-session prompt: `docs/qa/SESSION_HANDOFF_2026-06-18-pm3.md`.** It supersedes the scattered PM/PM2 docs for what shipped (640-652) and what's open. The blocks below are the per-batch detail.
+
 ## Owner batch 2026-06-18 (PM3, 1.50.649 → 652) — generation-quality + UX
 
 - **ADDITIONAL-EXPLODE-001** `[CLOSED 1.50.649]` — owner: "have these sidebar subsections in commercial CV by default." `antcv-sections-normalize-415.js` new `explodeAdditionalToSections` splits ADDITIONAL INFORMATION into separate LANGUAGES / INTERESTS / ACCESSIBILITY sidebar sections (each its own ON toggle), placed where ADDITIONAL was. Idempotent (skips a bucket whose section exists → owner's current split preserved); Other items stay in a trimmed ADDITIONAL. Runs before the {group} partitioner. Unit-tested.

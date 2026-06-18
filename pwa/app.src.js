@@ -2741,6 +2741,17 @@
           );
         } catch (_) {}
       })();
+      // AI-WORKFLOWS-GROUND-001 (owner 2026-06-19: "YOU HAVE PERMISSION"): the
+      // candidate genuinely uses AI-assisted engineering workflows — REAL, owner-
+      // approved background, NOT fabrication. Generation may surface it.
+      (() => {
+        try {
+          if (/\bgabriel\b/i.test(String(o.name || "")))
+            r.push(
+              "AI-ASSISTED WORKFLOWS (APPROVED REAL CAPABILITY — owner-confirmed, NOT fabrication): the candidate routinely uses AI / LLM tooling for engineering work — experiment setup, log triage, measurement analysis, protocol templating, documentation retrieval, and prompt / evaluation workflows. You MAY surface these (the anti-fabrication rule does NOT apply; they are grounded) in an 'AI-Assisted Workflows' tools category, a WHAT I BRING row, or INTERESTS — phrased concretely and without overclaiming.",
+            );
+        } catch (_) {}
+      })();
       // OUTCOMES-QUANT-001 (owner 2026-06-13: outcomes showed the patent
       // number while the strong quantified results — e.g. cycle 250→10 days,
       // 90% cost reduction — were missing). SELECTED OUTCOMES must be the

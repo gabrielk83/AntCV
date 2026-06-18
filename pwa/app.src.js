@@ -35176,6 +35176,24 @@
                                     try {
                                       Qn({ stylePackage: e });
                                     } catch (e) {}
+                                    // COPENHAGEN-OVERLAY-001 (owner 2026-06-18): the
+                                    // native picker recolours the main column (ya) but
+                                    // never told the body-package island, so
+                                    // body[data-package] stayed on its prior value and
+                                    // defaulted to copenhagen-modern — leaving the band +
+                                    // sidebar Copenhagen over every other style. Fire the
+                                    // event the island already listens for.
+                                    try {
+                                      window.dispatchEvent(
+                                        new CustomEvent("antcv:package-changed", {
+                                          detail: {
+                                            packageId: e,
+                                            quickAlt: null,
+                                            isCustom: "custom" === e,
+                                          },
+                                        }),
+                                      );
+                                    } catch (_) {}
                                     if (
                                       (ka(e),
                                       u.set("stylePackage", e),

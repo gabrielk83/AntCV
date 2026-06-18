@@ -482,6 +482,11 @@
   }
 
   function normalize() {
+    // EDIT-GUARD-001 (owner 2026-06-19): defer all normalisation while the user is
+    // actively editing — rewriting sections mid-edit re-renders the preview and
+    // steals the caret ("the sidebar dances, editing stops"). The interval catches
+    // up once focus leaves.
+    try { var __ae = document.activeElement; if (__ae && (__ae.isContentEditable || /^(?:input|textarea|select)$/i.test(__ae.tagName || ''))) return; } catch (_) {}
     try { normalizeMeta(); } catch (_) {}
     try {
       var raw = localStorage.getItem('sections');

@@ -69,6 +69,7 @@
   var lastSec = null, lastPi = null;
   function apply() {
     if (disabled()) return;
+    try { var __ae = document.activeElement; if (__ae && (__ae.isContentEditable || /^(?:input|textarea|select)$/i.test(__ae.tagName || ""))) return; } catch (_) {}
 
     // sections: every experience section's roles
     try {

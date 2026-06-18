@@ -52,6 +52,7 @@
   var lastRaw = null;
   function apply() {
     if (disabled()) return;
+    try { var __ae = document.activeElement; if (__ae && (__ae.isContentEditable || /^(?:input|textarea|select)$/i.test(__ae.tagName || ""))) return; } catch (_) {}
     var raw; try { raw = localStorage.getItem('sections'); } catch (_) { return; }
     if (!raw || raw === lastRaw) return;
     var b; try { b = JSON.parse(raw); } catch (_) { lastRaw = raw; return; }

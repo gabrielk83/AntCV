@@ -525,6 +525,12 @@
 
   function tick() {
     try {
+      // EDIT-GUARD-001 (owner 2026-06-19): while the user is editing preview text
+      // (contentEditable) or an editor field, skip the inject/apply pass — it
+      // mutates the DOM near the caret and makes the sidebar "dance". The 1.5s
+      // interval re-runs once focus leaves.
+      var __ae = document.activeElement;
+      if (__ae && (__ae.isContentEditable || /^(?:input|textarea|select)$/i.test(__ae.tagName || ''))) return;
       purgeV157Leftovers();
       injectIntoEditorRows();
       injectIntoEditorItems();

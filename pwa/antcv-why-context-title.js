@@ -23,10 +23,15 @@
 (function () {
   'use strict';
   if (window.__antcvWhyContextTitle) return;
-  window.__antcvWhyContextTitle = '1.50.679';
+  window.__antcvWhyContextTitle = '1.50.690';
 
   var SRC = 'why-context-title';
   function disabled() { try { var v = localStorage.getItem('antcv:disable-why-context-title'); return v === '1' || v === 'true'; } catch (_) { return false; } }
+  // EDIT-GUARD-001 (owner 2026-06-19: "the sidebar dances … editing stops"): never
+  // rewrite the sections blob while the user is actively editing (focus in a
+  // contentEditable/input) — that re-render steals the caret. The interval below
+  // catches up once focus leaves.
+  function isEditing() { try { var a = document.activeElement; if (!a) return false; if (a.isContentEditable) return true; var t = (a.tagName || '').toLowerCase(); return t === 'input' || t === 'textarea' || t === 'select'; } catch (_) { return false; } }
 
   // A specific job means a real JD is in play. The JD mirror is antcv:lastJdText
   // (cloud-aware). A short/empty value is treated as unsolicited.
@@ -80,6 +85,32 @@
     return content;
   }
 
+  // WHO-LABEL-DEDUP-001 (owner 2026-06-19: "who I am dup still not [fixed]"): the
+  // WHO I AM section duplicates its heading as a leading inline label
+  // ("<b>WHO I AM:</b> I am …"). heading-label-dedup only strips type:"text"
+  // sections; the CL who section is text_inline, so it slips past. Strip it here
+  // regardless of type — same machinery as the WHY label above.
+  var WHO_WORD = '(?:WHO\\s+I\\s+AM|HVEM\\s+ER\\s+JEG|QUI[ÉE]N\\s+SOY|WER\\s+ICH\\s+BIN|QUI\\s+JE\\s+SUIS)';
+  var WHO_RES = [
+    new RegExp('^\\s*<(?:b|strong)\\b[^>]*>\\s*' + WHO_WORD + '[^<:]*:?\\s*<\\/(?:b|strong)>\\s*:?\\s*', 'i'),
+    new RegExp('^\\s*\\*{0,2}\\s*' + WHO_WORD + '[^*:\\n]*:\\s*\\*{0,2}\\s*', 'i')
+  ];
+  function isWhoSection(sec) {
+    if (!sec) return false;
+    if (sec.id === 'who') return true;
+    return /^\s*(who i am|hvem er jeg)\s*$/i.test(String(sec.title || ''));
+  }
+  function stripWhoLabel(sec) {
+    if (!isWhoSection(sec) || typeof sec.content !== 'string' || !sec.content) return false;
+    for (var k = 0; k < WHO_RES.length; k++) {
+      if (WHO_RES[k].test(sec.content)) {
+        var next = sec.content.replace(WHO_RES[k], '');
+        if (next.trim() && next !== sec.content) { sec.content = next; return true; }
+      }
+    }
+    return false;
+  }
+
   function fix(sec, specific) {
     if (!isWhySection(sec)) return false;
     var changed = false;
@@ -106,7 +137,7 @@
 
   var lastRaw = null;
   function apply() {
-    if (disabled()) return;
+    if (disabled() || isEditing()) return;
     var raw; try { raw = localStorage.getItem('sections'); } catch (_) { return; }
     if (!raw || raw === lastRaw) return;
     var b; try { b = JSON.parse(raw); } catch (_) { lastRaw = raw; return; }
@@ -114,7 +145,7 @@
     ['cv', 'cl'].forEach(function (doc) {
       var list = b[doc];
       if (!Array.isArray(list)) return;
-      list.forEach(function (sec) { if (fix(sec, specific)) changed = true; });
+      list.forEach(function (sec) { if (fix(sec, specific)) changed = true; if (stripWhoLabel(sec)) changed = true; });
     });
     if (!changed) { lastRaw = raw; return; }
     var out;
@@ -132,5 +163,5 @@
   try { window.addEventListener('storage', function (e) { if (!e || e.key === 'sections' || e.key === 'antcv:lastJdText' || e.key === null) tick(); }); } catch (_) {}
   setInterval(tick, 4000);
 
-  window.AntcvWhyContextTitle = { version: '1.50.679', _apply: apply, _fix: fix, _strip: stripLabel };
+  window.AntcvWhyContextTitle = { version: '1.50.690', _apply: apply, _fix: fix, _strip: stripLabel };
 })();

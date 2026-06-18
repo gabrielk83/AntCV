@@ -239,7 +239,7 @@ export function LanguageCard(): JSX.Element {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <div style={{ border: '1px solid rgba(255,255,255,.14)', borderRadius: 10, padding: 8, background: 'rgba(255,255,255,.03)', maxHeight: 168, overflow: 'auto' }}>
               <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.35px', color: 'rgba(255,255,255,.6)', margin: '0 0 7px' }}>AVAILABLE</div>
-              {LANGS.filter((l) => enabled.indexOf(l.code) < 0).map((l) => (
+              {LANGS.filter((l) => enabled.indexOf(l.code) < 0).slice().sort((a, b) => a.label.localeCompare(b.label)).map((l) => (
                 <div key={l.code} title="Add to your selected languages" onClick={() => addLang(l.code)}
                   style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 11px', marginBottom: 7, borderRadius: 9, border: '2px solid rgba(255,255,255,.12)', background: 'rgba(255,255,255,.04)', cursor: 'pointer' }}>
                   <div style={{ flex: 1, fontSize: 12.5, color: 'rgba(255,255,255,.85)' }}>

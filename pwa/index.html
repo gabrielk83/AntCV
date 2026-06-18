@@ -316,6 +316,26 @@
      wipe (<=2 fields over a >=6-field local); disengages afterward so it never
      touches generation or editing writes. -->
 <script src="antcv-personal-info-anti-thinning-353.js?v=1.40.354"></script>
+<!-- PALETTE-RESET-BAND-001 (owner 2026-06-18): set body[data-package] BEFORE app.js
+     paints the preview, so the candidate band + table header read the correct
+     --header-bg on FIRST paint after a reset. Without this the band briefly renders
+     navyColor (no data-package yet → var(--header-bg) falls back), the
+     antcv-sidebar-bg-token sidecar mistakes it for the sidebar and PALES it to
+     --package-base (the "legacy bright band on reset" the owner saw, preview only). -->
+<script>
+  (function presetPackageBand() {
+    try {
+      var raw = null; try { raw = localStorage.getItem('stylePackage'); } catch (_) {}
+      var id = '';
+      try { var p = JSON.parse(raw); id = (typeof p === 'string' ? p : '') || ''; } catch (_) { id = raw || ''; }
+      id = String(id || '').trim();
+      if (!id || id === 'scandinavian' || id === 'default') id = 'copenhagen-modern';
+      var apply = function () { try { if (document.body && !document.body.getAttribute('data-package')) document.body.setAttribute('data-package', id); } catch (_) {} };
+      if (document.body) apply();
+      document.addEventListener('DOMContentLoaded', apply, { once: true });
+    } catch (_) {}
+  })();
+</script>
 <script>
   (function bootAntCV() {
     function loadAppScripts(){
@@ -329,7 +349,7 @@
           app.src = 'app.js?v=1.50.619';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.50.619';
+            vo.src = 'antcv-version-override.js?v=1.50.620';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -841,7 +861,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      SettingsRouter, wizardState). See docs/plan/AntCV_Plan_v2_LockedSources.md
      §7 Pass 1. -->
       <script src="antcv-357-loader.js?v=1.50.367-entitled-chips" defer></script>
-      <script src="antcv-react-islands.js?v=1.50.613" defer></script>
+      <script src="antcv-react-islands.js?v=1.50.620" defer></script>
       <!-- v1.50.164: auto-apply the correct palette when the stored package is the
            legacy orphan default ("scandinavian"), by pressing the Copenhagen Modern
            button — fixes the permanent palette mix on load without a manual click. -->

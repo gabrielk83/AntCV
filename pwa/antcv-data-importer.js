@@ -534,25 +534,43 @@ ${text}`;
   function fieldLabel(k) { return FIELD_LABELS[k] || k; }
 
   // ─── Deep merge with policy ──────────────────────────────────────
+  // REG-DEDUP-001 (owner 2026-06-18): grouped sidebar taxonomies (regulatory,
+  // tools, additional) must dedupe on the CODE/GROUP, not on code+description.
+  // The identity of a standard is its code (l); a reworded description (v) or a
+  // different casing/spacing of a group label must NOT spawn a second row — that
+  // append-merge is what produced ASPICE×2 / ISO 26262×2 / MIL-STD-810G×3 and the
+  // two near-identical group taxonomies in the live editor.
+  const _ndk = (s) => String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
   const DEDUP_KEYS = {
     'personalInfo.education':              e => `${e.deg}|${e.sch}`,
     'personalInfo.certifications':         s => String(s).toLowerCase().trim(),
-    'personalInfo.tools':                  s => String(s).toLowerCase().trim(),
-    'personalInfo.regulatory':             r => r.group ? `g:${r.group}` : `${r.l}|${r.v}`,
+    'personalInfo.tools':                  s => _ndk(s),
+    'personalInfo.regulatory':             r => r.group ? `g:${_ndk(r.group)}` : `l:${_ndk(r.l)}`,
     'personalInfo.publications':           s => String(s).replace(/<[^>]+>/g, '').toLowerCase().slice(0, 80),
     'personalInfo.publicationsStructured': p => (p.name || '').toLowerCase().slice(0, 80),
     'personalInfo.contactItems':           c => c.key,
-    'personalInfo.additional':             a => `${a.l}|${a.v}`,
+    'personalInfo.additional':             a => `l:${_ndk(a.l)}`,
   };
+  // Grouped sidebar sections whose freshly-ingested items must default VISIBLE —
+  // the dedupe below removes the legacy flat duplicates, so a stale hidden flag on
+  // the canonical grouped item must not keep it eye-off (G-GROUPS-001/002).
+  const _GROUPED_VIS = new Set(['personalInfo.regulatory', 'personalInfo.tools', 'personalInfo.additional']);
 
   function mergePath(target, source, path) {
     if (source === undefined || source === null) return target;
     if (Array.isArray(source)) {
       const dedup = DEDUP_KEYS[path];
       if (!dedup) return source;
+      const vis = _GROUPED_VIS.has(path);
       const seen = new Map();
       for (const item of (target || [])) if (item != null) seen.set(dedup(item), item);
-      for (const item of source) if (item != null) seen.set(dedup(item), item);
+      for (let item of source) {
+        if (item == null) continue;
+        if (vis && typeof item === 'object' && (item.hidden || item.on === false)) {
+          item = Object.assign({}, item); delete item.hidden; if ('on' in item) item.on = true;
+        }
+        seen.set(dedup(item), item);
+      }
       return Array.from(seen.values());
     }
     if (typeof source === 'object') {
@@ -1129,6 +1147,7 @@ ${text}`;
     startHookObserver();
   }
 
-  // Expose for debugging / programmatic invocation
-  window.AntCVImporter = { open: openModal, close: closeModal, undoLastUpload: undoLastUpload };
+  // Expose for debugging / programmatic invocation (mergePath + DEDUP_KEYS exposed
+  // for the REG-DEDUP-001 dedupe test — pure data transform, drives the real code).
+  window.AntCVImporter = { open: openModal, close: closeModal, undoLastUpload: undoLastUpload, mergePath: mergePath, DEDUP_KEYS: DEDUP_KEYS };
 })();

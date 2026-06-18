@@ -8,7 +8,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.50.121-gen004';
+  const VERSION='1.50.634-pub-dedup';
   if(window.__antcvPublicationsStrictRowLayout273===VERSION) return;
   window.__antcvPublicationsStrictRowLayout273=VERSION;
   // v1.40.273-preview-guard: Preview is button-free. panelRoot() must
@@ -122,10 +122,17 @@
     Array.from(row.querySelectorAll('button')).forEach(b=>{
       if(b.closest('[data-antcv-pub273-host="1"]')) return;
       Object.assign(b.style,{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'23px',minWidth:'23px',maxWidth:'23px',height:'22px',minHeight:'22px',padding:'0',margin:'0',flex:'0 0 auto',position:'static',float:'none',boxSizing:'border-box'});
-      if(isNativeEye(b)){b.setAttribute('data-antcv-pub273-eye','1');b.style.order='40';}
-      else if(isNativeDelete(b)){b.setAttribute('data-antcv-pub273-delete','1');b.style.order='50';}
-      else if(isNativeMove(b)){b.setAttribute('data-antcv-pub273-move','1');b.style.order='60';}
-      else b.style.order='55';
+      if(isNativeEye(b)){b.setAttribute('data-antcv-pub273-eye','1');b.style.order='40';b.style.display='inline-flex';}
+      else if(isNativeDelete(b)){b.setAttribute('data-antcv-pub273-delete','1');b.style.order='50';b.style.display='inline-flex';}
+      else if(isNativeMove(b)){b.setAttribute('data-antcv-pub273-move','1');b.style.order='60';b.style.display='inline-flex';}
+      // PUB-CONTROL-DEDUP-001 (owner 2026-06-18): the remaining NATIVE glyph
+      // controls on a publication row (page / CJLR / ✨ Enhance / ⇥⇤ compress,
+      // app.src.js ~6902) DUPLICATE the pub273 host's own — that is the "endless
+      // CJLR / Enhance" the owner sees. Keep one set: HIDE the native glyph
+      // buttons (display:none, not removed → no React removeChild churn). Native
+      // eye/delete/move are kept above; the pub273 host provides page/cjlr/
+      // compress/enhance once.
+      else { b.style.display='none'; b.setAttribute('data-antcv-pub273-native-dup','1'); }
     });
   }
   function wire(pair,sid,i){

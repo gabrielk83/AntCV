@@ -141,25 +141,60 @@
   // via console.error. Capture uncaught errors, promise rejections, AND error-like
   // console.error args, re-logged loudly as [antcv-diag] CRASH so the owner can find
   // and paste the message + stack after reproducing the blue screen.
+  // ERROR-PERSIST-001 (owner 2026-06-18): an auto-reset / reload (and a blue screen)
+  // CLEARS the console, so the error that triggered it can't be inspected afterwards.
+  // Persist every captured error to a CAPPED localStorage ring (antcv:errorLog) so it
+  // survives the reload. Read after a reset with:
+  //   JSON.parse(localStorage.getItem('antcv:errorLog'))
+  // or call window.AntcvErrorLog() for a console table.
+  function persistErr(type, msg, stack) {
+    try {
+      var arr = [];
+      try { arr = JSON.parse(localStorage.getItem('antcv:errorLog') || '[]') || []; } catch (_) {}
+      if (!Array.isArray(arr)) arr = [];
+      arr.push({
+        ts: new Date().toISOString(),
+        type: type,
+        msg: String(msg == null ? '' : (msg.message || msg)).slice(0, 400),
+        stack: String(stack || '').slice(0, 1200),
+        href: (location.href || '').split('?')[0],
+        step: (function () { try { return JSON.parse(localStorage.getItem('step') || 'null'); } catch (_) { return null; } })(),
+        settingsOpen: (function () { try { return !!document.querySelector('div[style*="z-index: 10000"]'); } catch (_) { return null; } })(),
+      });
+      while (arr.length > 30) arr.shift();
+      localStorage.setItem('antcv:errorLog', JSON.stringify(arr));
+    } catch (_) {}
+  }
+  try { window.AntcvErrorLog = function () { try { var a = JSON.parse(localStorage.getItem('antcv:errorLog') || '[]'); console.table(a); return a; } catch (e) { return []; } }; } catch (_) {}
   try {
     window.addEventListener('error', function (e) {
-      log('CRASH (window.error):', (e && e.message) || e, '@', (e && e.filename) || '', (e && e.lineno) || '',
-        (e && e.error && e.error.stack) ? String(e.error.stack).slice(0, 500) : '');
+      var st = (e && e.error && e.error.stack) ? String(e.error.stack).slice(0, 500) : '';
+      log('CRASH (window.error):', (e && e.message) || e, '@', (e && e.filename) || '', (e && e.lineno) || '', st);
+      persistErr('window.error', (e && e.message) || e, (e && e.error && e.error.stack) || (((e && e.filename) || '') + ':' + ((e && e.lineno) || '')));
     }, true);
     window.addEventListener('unhandledrejection', function (e) {
       var r = e && e.reason;
       log('CRASH (rejection):', (r && r.message) || r, (r && r.stack) ? String(r.stack).slice(0, 500) : '');
+      persistErr('rejection', (r && r.message) || r, r && r.stack);
     });
     var _ce = console.error;
     console.error = function () {
       try {
         for (var i = 0; i < arguments.length; i++) {
           var a = arguments[i];
-          if (a && a.stack && a.message) { log('CRASH (react):', a.message, String(a.stack).slice(0, 500)); break; }
+          if (a && a.stack && a.message) { log('CRASH (react):', a.message, String(a.stack).slice(0, 500)); persistErr('react', a.message, a.stack); break; }
         }
       } catch (_) {}
       return _ce.apply(console, arguments);
     };
+  } catch (_) {}
+  // At boot, if a prior session left errors, say so loudly (they survived the reset).
+  try {
+    var __pastErr = JSON.parse(localStorage.getItem('antcv:errorLog') || '[]');
+    if (Array.isArray(__pastErr) && __pastErr.length) {
+      var __last = __pastErr[__pastErr.length - 1];
+      log('ERROR-PERSIST-001: ' + __pastErr.length + ' past error(s) survived a reset — last: [' + __last.type + '] ' + __last.msg + ' (settingsOpen=' + __last.settingsOpen + '). Run window.AntcvErrorLog() to table them.');
+    }
   } catch (_) {}
 
   // ---- HARDREFRESH-001 ---------------------------------------------------

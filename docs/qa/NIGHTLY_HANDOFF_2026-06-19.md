@@ -99,6 +99,71 @@ the placeholder scan passing — i.e. do NOT commit the analysis / mark done whi
 are still templates; auto-retry or hold "generating". kernel-completeness-290 (the fetch-wrapper
 retry) should already cover this — verify it actually fires for these and isn't exhausting silently.
 
+## OWNER QA BATCH — 2026-06-19 PM (PDF review of CV_..._20260619.pdf) — ALL FOR THE NIGHTLY
+Owner reviewed the unsolicited PDF and said "document all to nightly." Render GABRIEL_BG
+(permission #6) to reproduce + verify each.
+
+A. **ANTI-FABRICATION — NYX at Kanzen (CRITICAL).** Generation wrote for Kanzen: "Worked in
+   product contexts represented by NYX-100 / NYX-200 and MOR PRO evidence artifacts." Owner: "at
+   Kanzen I NEVER worked on NYX." NYX-100/NYX-200/MOR PRO appear as *evidence artifacts* in his data
+   but are NOT work he did. The generator must never turn an evidence-artifact reference into a
+   "worked on X" claim. Add to [[gabriel-cv-facts]] + a prompt guard. Also "Delivered hardware-
+   software advisory and project engagements for deep-tech and automotive clients" is the Kanzen
+   line (fine for Kanzen) but it BLED onto System Architect (see C).
+
+B. **ISO 26262 picked as a "numeric result."** The Results metric scorer (`_metricScore` in
+   antcv-docx-client.js + the copy in antcv-outcomes-metric-order.js) counts the digits in a STANDARD
+   number ("ISO 26262", "ISO/SAE 21434", "ISO 9001", "MIL-STD-810", "STANAG 4694") as a metric, so a
+   compliance-standard line wins the numeric sort even though it is NOT a result. FIX: in
+   `_metricScore`, strip/ignore standard-code numbers (ISO|IEC|EN|DIN|MIL-STD|STANAG|ASPICE|SAE +
+   their digits, patent numbers already filtered) before scoring. Keep both copies in sync.
+
+C. **Cross-role bleed (RESULTS-CROSSROLE-BLEED-001 regressed).** A KANZEN result ("Delivered
+   hardware-software advisory…") laminated onto **System Architect** (Innoviz). A MEPROLIGHT-type
+   result ("Design and characterised low-light, thermal, SWIR … defence-grade products, incl.
+   NIR/SWIR/thermal multi-band image fusion") laminated onto **IDF Computer Systems Administrator**.
+   The lamination/distribution (applyOutcomesMode token-match + outcomeRoleMap) is mis-attributing
+   outcomes across unrelated roles. Verify the "global best home, else drop" rule still holds; an
+   outcome whose true home is another role must NOT bleed.
+
+D. **TENSE — "ALL IS IN PAST!!! apart from 2 results (2026 + 2025)."** Despite TENSE-AT-LAMINATION-001
+   (1.50.695), nearly everything renders PAST; only the current-dated roles read present. Means the
+   stored expTense is effectively 'auto' (current→present, past→past) OR the fold isn't applying the
+   owner's chosen tense. The 695 fold tenses RESULTS only; ROLE BULLETS are LLM-generated and stay in
+   the generated tense. CONFIRM: (1) where the user's beginning tense choice is stored and that it
+   reaches styleConfig.expTense; (2) that a 'present' choice forces present on EVERY role+result, not
+   just current ones; (3) bullets follow too (prompt __tenseRule on regen). Owner wants the chosen
+   tense uniformly. [[tense-results-roles-past]]
+
+E. **Role ORDER — reverse-chron broken.** "Meprolight 2010-2013 is AFTER Security Guard 2010, not
+   before." Roles must sort by END date desc (Meprolight 2013 > Security Guard 2010 → Meprolight
+   first). The TAU Security Guard (2010, sequential) must sit after Meprolight. Check the role
+   ordering in generation + 415 + any lamination re-order.
+
+F. **Fabrication in the IDF result (with C).** "free-space optical communication systems" + "NIR/SWIR
+   multi-band image fusion" on the IDF Computer Systems Administrator role is both wrong-role AND
+   likely fabricated detail — verify against [[gabriel-cv-facts]] (IDF = Communication Corps sys-admin,
+   NOT optics).
+
+G. **INTERESTS placeholder + Regulatory/Methods wrong for unsolicited.** INTERESTS shows
+   "[Label]: [Value]" (unfilled — ties to item 7 placeholder/completeness). Regulatory + Methods are
+   wrong/over-shrunk for an unsolicited showcase (UNSOLICITED-BREADTH-001 needs regen-verify, and the
+   AI-assisted-into-Methods placement, 1.50.689).
+
+H. **ACCESSIBILITY comment still visible.** "It has not limited his career" still renders.
+   ACCESS-NO-COMMENT-001 (1.50.691) is PROMPT-only (needs a regen). Existing data isn't stripped —
+   a small sidecar could strip the trailing "it has not limited his/their career" sentence from the
+   accessibility section content (owner: that 3rd-person comment belongs only in a cover letter).
+
+I. **PDF export STILL needs a refresh.** EXPORT-PDF-RACE-001 (1.50.687) did not fully fix it — the
+   first export still falls back to browser-print until a refresh. Re-investigate: the worker URL /
+   `B` (demo_mode/is_admin) hydration may still be incomplete at first click despite the isPdfWorker
+   cache fix. Possibly await config/B before the export decision.
+
+J. **CV CORE COMPETENCIES Focus == CL WHAT I BRING Focus.** Still the same focus areas in both
+   tables. BRING-DISTINCT-001 (1.50.684) is prompt-only (needs regen) — verify on a fresh render; if
+   it still duplicates after regen, strengthen / add a post-gen dedup of bring-vs-core focus labels.
+
 ## OWNER-VERIFY / NEEDS-A-CLICK (don't blind-fix)
 - **Core Competencies duplicate controls** (3 page-breaks + 2 CJLR per row): owner must identify
   WHICH page-break + WHICH CJLR actually drive the preview before any are hidden

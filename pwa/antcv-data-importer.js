@@ -945,6 +945,13 @@ ${text}`;
     for (const k of writes) {
       try { window.dispatchEvent(new StorageEvent('storage', { key: k, newValue: localStorage.getItem(k) })); } catch (_) {}
     }
+    // CLOUD-LOAD-ITEMS-001 (owner 2026-06-18): push the merged personalInfo to the
+    // cloud so an IMPORT (semantic constraints, banned words, etc.) survives a
+    // fresh-device "Load from cloud". Without this, imported items stayed local
+    // (the importer wrote localStorage but never cloud-synced) and came back empty.
+    if (writes.indexOf('personalInfo') >= 0) {
+      try { var __pi = Store.get('personalInfo', null); if (__pi && window._antcvCloudWrite) window._antcvCloudWrite({ personalInfo: __pi }); } catch (_) {}
+    }
     setTimeout(() => {
       showUploadToast(`Imported ${writes.length} group${writes.length === 1 ? '' : 's'}: ${writes.join(', ')}.`);
     }, 50);

@@ -168,6 +168,11 @@ export function writeWritingPrefs(patch: Partial<WritingPrefs>): WritingPrefs {
   const merged: WritingPrefs = { ...prev, ...patch };
   pi.writingPrefs = merged;
   writeJSON('personalInfo', pi);
+  // CLOUD-LOAD-ITEMS-001 (owner 2026-06-18): mirror the sibling writers
+  // (writeSemRules / writeAllScopeBanned) and push to cloud, so the per-language
+  // banned buckets, tone chips and saved slots survive a fresh-device "Load from
+  // cloud". Without this they were local-only and came back empty on a new device.
+  try { (window as unknown as { _antcvCloudWrite?: (p: unknown) => void })._antcvCloudWrite?.({ personalInfo: pi }); } catch { /* */ }
   try {
     window.dispatchEvent(new CustomEvent('antcv:writing-prefs-changed', { detail: merged }));
   } catch { /* */ }

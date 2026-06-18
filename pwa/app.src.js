@@ -2634,7 +2634,7 @@
                 ? e.l && e.v
                   ? e.l + ": " + e.v
                   : e.deg && e.sch
-                    ? e.deg + " — " + e.sch
+                    ? e.deg + " - " + e.sch
                     : e.l || e.v || e.deg || e.description || e.title || ""
                 : "",
           )
@@ -6142,7 +6142,7 @@
                   ? React.createElement(
                       React.Fragment,
                       null,
-                      " — ",
+                      " - ",
                       React.createElement(B, {
                         path: ["items", n, "sch"],
                         value: P(String(t.sch || "").replace(/\*\*/g, "")),
@@ -12039,7 +12039,7 @@
                                                 .slice(0, 60)
                                             : e.deg
                                               ? (e.deg || "") +
-                                                (e.sch ? " — " + e.sch : "")
+                                                (e.sch ? " - " + e.sch : "")
                                               : ""
                                           : "",
                                       )
@@ -12054,7 +12054,7 @@
                                             ? "string" == typeof e
                                               ? e.slice(0, 60)
                                               : (e.deg || "") +
-                                                (e.sch ? " — " + e.sch : "")
+                                                (e.sch ? " - " + e.sch : "")
                                             : "",
                                         )
                                         .filter(Boolean)
@@ -25725,7 +25725,7 @@
                     .map((n, a) =>
                       e.hidden && e.hidden[a]
                         ? ""
-                        : `<div style="${g};font-family:'Carlito',${d};font-size:${c ? u.sbBody : u.mainBody}pt;color:${c ? "#fff" : "#333333"};text-align:${c ? "justify" : "left"};overflow-wrap:break-word;word-break:break-word"><b style="color:${c ? "#fff" : t.mainHeadColor}">${o(n.deg)}</b>${n.sch ? " — " + r(n.sch) : ""}</div>`,
+                        : `<div style="${g};font-family:'Carlito',${d};font-size:${c ? u.sbBody : u.mainBody}pt;color:${c ? "#fff" : "#333333"};text-align:${c ? "justify" : "left"};overflow-wrap:break-word;word-break:break-word"><b style="color:${c ? "#fff" : t.mainHeadColor}">${o(n.deg)}</b>${n.sch ? " - " + r(n.sch) : ""}</div>`,
                     )
                     .join("");
                   break;

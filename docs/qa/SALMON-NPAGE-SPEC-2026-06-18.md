@@ -119,5 +119,46 @@ That converges in ≤6 passes for a 7-page CV without an unbounded re-measure lo
 7. **#185 guard:** scroll + edit repeatedly; confirm no runaway re-measure (the circuit breaker
    logs, write count stays bounded) and no blue screen.
 
+## ADDENDUM 2026-06-18 — the EXPORT-PREVIEW pager is a THIRD reader of the page count
+
+Owner: "do not forget to also test that the preview exporter is showing xN pages
+(`<button … aria-label='Scroll to page 2' …>2</button>`)."
+
+Those numbered chips live in the **export-preview modal** (the "Document export" dialog),
+not the live editor preview. They are emitted by `pwa/antcv-pdf-preview-gate.js`:
+
+- `countPages(papers)` (~line 242) = `Math.max(papers.length, Σ .antcv-page-row, 1)`.
+  It counts the SAME `.antcv-page-row` elements the salmon render emits. So the page count,
+  the title (`pagesTitle` → "Document export · N pages", ~249), and the pager chips all
+  derive from one source.
+- `renderPager(count)` (~531) draws a `Page:` label + one `<button aria-label="Scroll to page n">`
+  per page when `count > 1` (chip click → `rows[pn-1].scrollIntoView`, ~550-557).
+- `rebuildIframeFromLive()` (~566) re-runs `countPages` + `renderPager` on the CV↔CL toggle.
+
+**Consequence:** this pager is a passive consumer — it has NO independent 2-page cap. The
+moment the measurer stops hard-coding `2` and emits `.antcv-page-row` 3..7 (Design §1), the
+export-preview title, chip count, and the salmon bars ALL go to N together. **No change to
+`antcv-pdf-preview-gate.js` is needed** — but it MUST be covered by the test so a future
+measurer regression that drops a page-row is caught here too.
+
+So there are **three readers** of `.antcv-page-row`, all fed by the one measurer fix:
+1. the live-preview salmon bars (`app.src.js` ~41458),
+2. the export-preview **title** (`pagesTitle(countPages(...))`),
+3. the export-preview **pager chips** (`renderPager` — the owner's `aria-label='Scroll to page N'`).
+
+### Test addendum (extends the Verification plan above)
+Add to step 3, after asserting the live-preview page-row count == worker numPages:
+8. Open the export-preview modal (`window.AntcvPdfPreviewGate?.open` or trigger the export
+   button). Assert:
+   - `document.querySelectorAll('#<MODAL_ID>-pager button[aria-label^="Scroll to page"]').length === workerNumPages`
+     (one chip per page, including `Scroll to page 3`+ for a 3+-page CV).
+   - the modal title text matches `Document export · N pages` with `N === workerNumPages`.
+   - clicking the `Scroll to page 3` chip scrolls the iframe to the 3rd `.antcv-page-row`
+     (the chip's `rows[pn-1]` resolves — not undefined).
+9. Toggle CV↔CL inside the modal; assert `rebuildIframeFromLive()` re-renders the pager with
+   the correct count for the other document (CL is capped at 4 pages by its own path — see
+   `__clTopPg`, ~580-585 — so a long CL shows up to 4 chips).
+
 ## Status
-DESIGN ONLY — queued. Pairs with WATERMARK-PREVIEW-SIDE (resolved for free by the page-count fix).
+DESIGN ONLY — queued. Pairs with WATERMARK-PREVIEW-SIDE (resolved for free by the page-count
+fix) and the EXPORT-PREVIEW pager (resolved for free; test-only obligation per the addendum).

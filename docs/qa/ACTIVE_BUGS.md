@@ -22,6 +22,15 @@ Authoritative current backlog is `docs/qa/NIGHTLY_HANDOFF_2026-06-18.md` (full d
 - **#1 sign-in "stuck Loading" / sticky ACCOUNT MODE** `[RESOLVED — stale label, not a hang]` — HAR showed app.js@616 + `/config` 200; the frozen version-override label made it look stale. Fixed by VERSION-OVERRIDE-CACHE-001.
 - **HARD-REFRESH "doesn't reset"** `[RESOLVED via 1.50.617]` — same root cause (unchanged `?v=` survived the browser HTTP cache).
 
+### Closed 1.50.626 (owner-directed, tail of session)
+
+- **TENSE-POPIN-002** `[CLOSED 1.50.626]` — owner: "the experience tense is loading before the languages and it just pops in and out during the personal tab opening — and it is anyway supposed to be under the languages menu — keep it hidden until languages is open and expanded." The LanguageCard island ALREADY hosts the EXPERIENCE TENSE control inside its expand/collapse (renders only when Languages is expanded). The standalone sidecar's 2800ms grace FALLBACK (1.50.615) still built a standalone card before the island mounted, which the island then removed = the pop-in/out. Fix: `antcv-tense-control-422.js` now NEVER builds the standalone card when the islands bundle script is present (grace timer is a no-op) — defers entirely to the island, so tense only shows under the expanded Languages menu.
+
+### DOCUMENTED — design-only, owner said "do not code yet"
+
+- **SALMON-NPAGE-001** (addendum 2026-06-18) — `docs/qa/SALMON-NPAGE-SPEC-2026-06-18.md` now records that the EXPORT-PREVIEW pager (`antcv-pdf-preview-gate.js` `countPages` + `renderPager`, the owner's `aria-label='Scroll to page N'` chips) is a THIRD passive reader of `.antcv-page-row` count — fed for free by the measurer fix, but must be covered by the page-count test (assert chip count + title == worker numPages).
+- **LOADING-GAP-001** — `docs/qa/LOADING-GAP-SPEC-2026-06-18.md` (NEW). The boot "Loading…" cover lifts one beat too early during the app.js post-login render cascade: a single-frame `!modeCardVisible()` gap (ACCOUNT MODE card mid un-/re-mount) trips the lift, so the set-menu flashes then loading returns. Fix direction = debounce the card-gone check + gate on a stable "editor route active" signal (NOT coded — owner-gated, cover timing is #185/flash-sensitive).
+
 ### OPEN — carried out of the 2026-06-18 session (for the next run)
 
 1. **#D Phase C** (NOT done) — auto-load the current style's kernel on writing-style switch (choice c) + an App-History selector (list / load-to-preview / copy-to-CHOSEN-style / delete). New stateful panel in app.src.js + app.js mirror + reuse the Switch load path (~37334). Architecture mapped (handoff). **Held back deliberately — large app.js UI, not for the tail of a long session.**

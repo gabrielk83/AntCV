@@ -26,13 +26,16 @@ The nightly runs with FULL autonomy. Do NOT pause for per-action approval. Speci
 
 ## QUEUE (owner-ordered 2026-06-19 — do in THIS order)
 
-### 1. preview ≠ PDF Results (and preview repetitive)
-Preview Results differ from the exported PDF Results, and the preview repeats. The two paths
-compute outcomes differently: preview reads `window.AntcvApplyOutcomesMode` (`__ermAvail?__ermText`);
-export = docx-client `applyOutcomesMode`. Bring them to PARITY (same lamination tiers, same metric
-sort, same dedup) and kill the preview repetition. See [[two-tables-mirror-and-results-numeric]],
-[[v2-kernel-lamination-shape]], [[domain-and-outcomes-parity]]. Verify by rendering GABRIEL_BG
-(permission #6) — Preview Results must match the PDF Results exactly.
+### 1. preview ≠ PDF Results (and preview repetitive) — FIRST FIX shipped 1.50.693, RENDER-VERIFY
+The preview already runs the export's applyOutcomesMode and maps results by role `id`; the PDF
+renders role.results directly. Confirmed failure mode: DUPLICATE / MISSING role ids collapse the
+preview map → one result repeats under several roles + others mismatch, PDF correct.
+**Shipped:** `antcv-role-id-stabilize.js` (1.50.693) gives every role a unique non-empty id.
+**STILL VERIFY (permission #6, render GABRIEL_BG):** confirm Preview Results == PDF on every role.
+If a mismatch REMAINS after ids are unique, the next hypotheses are (a) the `window.__antcvRR` memo
+keyed on the raw sections string serving stale across a render, and (b) React-state roles vs
+localStorage-sections roles out of sync (preview iterates React `e`, map built from localStorage).
+See [[two-tables-mirror-and-results-numeric]], [[v2-kernel-lamination-shape]], [[domain-and-outcomes-parity]].
 
 ### 2. Page-break (autobrake) misplaced + manual break is row-scoped, not section-scoped
 (a) The auto page-break landed AFTER "System Architect, Innoviz" instead of BEFORE it, splitting the

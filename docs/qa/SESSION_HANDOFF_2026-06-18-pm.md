@@ -43,6 +43,49 @@ committed during the run.
 
 ---
 
+## ADDENDUM — 2026-06-18 (PM continuation, bundles 640-642)
+
+- **SELECT-DARK-DROPDOWN-001** `[1.50.640]` — pinned `color-scheme:light` on
+  `textarea/input/select/option` in `index.html` so the native `<select>`
+  dropdown popup (sidebar section "type" picker) no longer renders as a black
+  box on Windows OS dark mode. Scoped to controls; dark islands set explicit
+  colors and are unaffected.
+- **GPA-EDITOR-001** `[1.50.641 — app.src.js + app.js mirror]` — education
+  section EDITOR now has a per-entry "GPA (optional)" input + a 👁/🙈 GPA toggle
+  that sets `item.showGpa`. The preview chip (638) already gates on
+  `showGpa !== false`, so the toggle hides/shows GPA on the slide. node --check
+  clean, parity 1:1. Completes GPA item #1.
+- **DASH-HYPHEN-001 (prompt half)** `[1.50.642 — app.src.js + app.js mirror]` —
+  added a global `PUNCTUATION - DASHES` rule to the generation prompt: model
+  emits only `-`, never `—`/`–`, in prose/titles/separators/ranges. Root-cause
+  fix for generated content; complements the em-dash sidecar (which only cleans
+  the stored `sections` blob) and covers the worker export path too.
+
+### #5-app render-separator half — STILL OPEN, needs a traced pass (do NOT guess)
+The remaining em dashes are the JSX render-literal separators between data
+fields (the sidecar can't reach these; they're not in `sections`). app.js has
+100+ em dashes but only ~15 are separators — the rest are error messages,
+prompt prose, and comments that must NOT be touched. The separators form
+writer↔reader PAIRS that must be converted ATOMICALLY or round-trips break:
+- **CV deg—sch** (display, deg/sch are separate fields joined at render, not
+  split back): app.src `2637`, `12023`, `12038` (preview), `25709` (export HTML).
+- **deg—sch enrichment PAIR**: writer `17818` (`deg + " — " + sch`) ↔ readers
+  `18103` / `44543` (`.replace(deg + " — ", "")`). Convert all three together.
+- **CV role—company headers** (display, not split back): `11132`, `11218`,
+  `11221`, `11977` (company append), `27015`, plus the "Application: role —
+  company" line at `25778` (export) / `41161` (preview).
+- **combined-header editor PAIR**: reader `6442` (`.join(" — ")`) ↔ writer
+  `6443`. Stored in `sections`, so the sidecar ALREADY normalized the content to
+  `" - "` — these splits are already desynced; converting to `" - "` FIXES them.
+- **saved-application label PAIR (SELF-CONTAINED, separate from CV render)**:
+  writers `37393` / `43705` / `43736` (`jd_company — jd_role`) ↔ readers `21967`
+  / `22807` (`.split(" — ").slice(1).join(" — ")`). NOT touched by the sidecar.
+  Convert all five together or leave all five.
+- title separator `6095`, hint append `29455`: lower priority UI chrome.
+Each writer↔reader group must move together; verify with a boot-smoke +
+round-trip (save app, reload, re-parse label) before shipping. Mirror app.src ↔
+app.js, node --check both.
+
 ## OPEN (next session)
 
 1. **VERIFY LIVE (owner):** Review-my-data modal opens now (639); tools labels (633); pub dedup (634); page buttons (637); em-dash (636); GPA chip after re-importing v2 kernel (638).

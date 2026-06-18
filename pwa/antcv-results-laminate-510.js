@@ -61,12 +61,20 @@
     if (typeof role.results === 'string' && role.results.trim()) return { text: cap(role.results), hideIdx: -1 };
     if (Array.isArray(role.outcomes) && role.outcomes.length) {
       const texts = role.outcomes.filter((o) => outcomeVisible(o, jd))
-        .map((o) => (typeof o === 'string' ? o.trim() : [o.b, o.t].filter(Boolean).join(' ').trim()))
+        // LAM-RESULTS-001 (2026-06-18): v2 kernel outcomes are {title,result} —
+        // read o.result; keep the v1 {b,t} path. Without this, v2 roles skipped
+        // tiers 2-3 and DERIVED the Results from the role's own bullet (tier 4),
+        // so the preview showed the bullet while the export showed the outcome.
+        .map((o) => (typeof o === 'string' ? o.trim()
+          : (o.result ? String(o.result).trim() : [o.b, o.t].filter(Boolean).join(' ').trim())))
         .filter(Boolean);
       if (texts.length) return { text: cap(texts.slice(0, 2).join('; ')), hideIdx: -1 };
     }
     const ids = Array.isArray(role.proofPointIds) ? role.proofPointIds : [];
-    const fromPp = ids.map((id) => pp[id]).filter(Boolean);
+    let fromPp = ids.map((id) => pp[id]).filter(Boolean);
+    // v2 kernel roles carry a flat role.proofPoints[] (strings) instead of ids.
+    if (!fromPp.length && Array.isArray(role.proofPoints) && role.proofPoints.length)
+      fromPp = role.proofPoints.map((p) => (typeof p === 'string' ? p.trim() : String((p && (p.text || p.result)) || '').trim())).filter(Boolean);
     if (fromPp.length) return { text: cap(fromPp.slice(0, 2).join('; ')), hideIdx: -1 };
     // RESULTS-LAMINATION-003 (owner 2026-06-15): derive from the role's OWN
     // strongest bullet (prefer numeric/metric, patent filtered) ONLY when tiers 1-3

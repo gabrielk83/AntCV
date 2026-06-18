@@ -93,6 +93,11 @@
     body{font-family:'Georgia',serif;background:#283556;overscroll-behavior:none;}
     #root{min-height:100dvh;}
     textarea,input,select,button{font-family:inherit;}
+    /* SELECT-DARK-DROPDOWN-001: pin light color-scheme on form controls so the
+       native <select> dropdown popup (sidebar section "type" picker etc.) never
+       renders as a black box on Windows OS dark mode. Scoped to controls — the
+       dark-themed islands set explicit colors and are unaffected. */
+    textarea,input,select,option{color-scheme:light;}
     ::-webkit-scrollbar{width:4px;}
     ::-webkit-scrollbar-thumb{background:#01B7BB55;border-radius:2px;}
     @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}

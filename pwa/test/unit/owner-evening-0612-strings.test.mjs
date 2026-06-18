@@ -68,10 +68,14 @@ test('SPEC-SCOPE-001 — Gabriel-only default, tailored drafts get a fresh smart
 });
 
 test('ROLE-DECOMP-001 — distinct roles decomposed, exact dups still collapsed (prompt + sidecar)', () => {
-  // ROLE-DECOMP-001 (owner 2026-06-16): the prompt now DECOMPOSES (no longer
-  // merges) — distinct same-company functions stay as separate positions, and a
-  // combined-function title is split. The old merge rule is gone.
-  assert.ok(bundle.includes('ROLE DECOMPOSITION (ROLE-DECOMP-001)'));
+  // ROLE-DECOMP-001 (owner 2026-06-16, clarified 2026-06-18): SEPARATE is the
+  // DEFAULT — the stored history stays decomposed as the analysis basis, and
+  // merging same-company groups is a CONSIDERED, JD-driven conclusion (most JDs
+  // end up merging some, but reached FROM the separate roles, never auto-merged
+  // to save space). The old "most positions should merge" default is gone.
+  assert.ok(bundle.includes('(ROLE-DECOMP-001)'));
+  assert.ok(bundle.includes('SEPARATE is the DEFAULT'));
+  assert.ok(!bundle.includes('most positions should merge'));
   assert.ok(!bundle.includes('DUPLICATE-ROLE MERGE (ROLE-DUP-001)'));
   // SECTIONS-CONSOLIDATE-001: the deterministic dedupe/founder/recs effects live
   // in the restore-proof sidecar; dedupeRoles now merges EXACT-title dups only.

@@ -1,3 +1,24 @@
+## OPEN — owner batch 2026-06-18 (PM, after 1.50.642) — full detail in `docs/qa/OWNER-BATCH-2026-06-18-PM2.md`
+
+High-level-generation + structure bugs the owner reported after the 640-642 run.
+Next-session prompt + per-item fix direction live in that doc. Summary:
+
+- **TOOLS-METHODS-FIXIT-LOOP-001** `[OPEN — VERIFIED root cause]` — Fix-It/compress on the Tools & Methods grouped `labeled_list` spins endlessly and mangles content. `Pe()` references an undefined `items` instead of the local `n` at app.src.js **9850-9858** (labeled_list_item) and **9863-9868** (education_item), so the compress result is a no-op → the orphan-retry pass loops. Whole-section handler (9902-9910) is correct. Surgical fix mapped.
+- **PUBLICATIONS-DUP-001** `[OPEN — owner's "core problem"]` — duplicate publication/patent rows. Sidecars dedup only CONTROLS, not DATA; the stored↔generated merge `l()` (~23758) keys on `trim().toLowerCase()` only, so a `<b>`-wrapped patent vs a plain copy (or whitespace drift) both survive. Fix = strip HTML + collapse whitespace in the dedup key for both sides.
+- **WHO-I-AM-LABEL-DUP-001** `[OPEN]` — WHO I AM / WHY YOUR COMPANY render the label as the heading AND repeat it as a `LABEL:` prefix inside the paragraph. Keep one headline; strip the inline label (prompt rule + defensive render strip; NOT for `text_inline` working-style).
+- **PHOTO-SHAPE-SQUARE-001** `[OPEN]` — a square upload renders as a circle; preview default radius `"50%"` (app.src.js ~41016) crops corners. The "square" selection (`stylePrefs.photoShape`, ~12849) isn't persisting/applying in preview. Related to PREVIEW-STYLE-FIDELITY (A)/(B).
+- **SPEC-LINE-GONE-001** `[OPEN — regression to investigate]` — the unsolicited specialization line ("Processes • Products • People") is missing. NOT touched by 640-642 (subtitle path untouched). Likely empty stored `personalInfo.specialization` or empty generated `meta.subtitle`; pin the standing line + confirm render gate.
+- **PROFILE-REWRITE-001** `[OPEN — owner-provided text, regen-gated]` — replace the canonical unsolicited PROFILE (app.src.js ~2783) with the owner's ChatGPT-refined text (in the batch doc).
+- **TABLES-SAME-FOCUS-001** `[OPEN — prompt]` — CORE COMPETENCIES and WHAT I BRING must have DISJOINT Focus Area columns; add a no-overlap rule.
+- **EMDASH render-separator half** `[OPEN — mapped]` — writer↔reader separator pairs (see `emdash-hyphen-three-layers` memory). Prompt (642) + content-sidecar (636) halves shipped.
+
+### Shipped this run (1.50.640 → 642)
+- **SELECT-DARK-DROPDOWN-001** `[640]` — `color-scheme:light` on form controls; native `<select>` dropdown no longer a black box on Windows dark mode.
+- **GPA-EDITOR-001** `[641]` — education editor GPA input + 👁/🙈 `showGpa` toggle (completes the GPA-CHIP preview half from 638).
+- **DASH-HYPHEN-001 (prompt half)** `[642]` — global PUNCTUATION-DASHES rule so the model emits only `-`, never `—`/`–`.
+
+---
+
 ## CLOSED — 2026-06-18 session (autonomous nightly + owner-directed batches; 1.50.605 → 1.50.619 + docx-worker 1.14.77 + access-relay auth-26)
 
 Authoritative current backlog is `docs/qa/NIGHTLY_HANDOFF_2026-06-18.md` (full detail per batch). Summary below. **OPEN ITEMS carried out of this session are listed at the very bottom of this CLOSED block.**

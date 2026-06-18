@@ -15,7 +15,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.614-additional-partition';
+  var VERSION = '1.50.649-additional-explode';
   if (window.__antcvSectionsNormalize === VERSION) return;
   window.__antcvSectionsNormalize = VERSION;
 
@@ -384,6 +384,52 @@
     if (/(interest|hobb|fritid|leisure|pastime|rugby|hiking|hike|tai.?chi|reading|sport|volunteer|frivillig|foreningsarbejde|coach|\bcat\b|feline)/i.test(s)) return 'Interests';
     return 'Other';
   }
+  // ADDITIONAL-EXPLODE-001 (owner 2026-06-18: "have these sidebar subsections in
+  // commercial CV by default" — LANGUAGES / INTERESTS / ACCESSIBILITY shown as
+  // SEPARATE sidebar sections, each with its own ON toggle, not bundled inside
+  // ADDITIONAL INFORMATION). Splits the flat (or already-{group}-partitioned)
+  // ADDITIONAL section into separate top-level sidebar sections, placed where
+  // ADDITIONAL was (after REGULATORY CONTEXT). Idempotent + non-destructive:
+  // - skips a bucket whose section (id languages/interests/accessibility) already
+  //   exists, so the owner's current split is preserved and never duplicated;
+  // - any unclassified "Other" items stay in a trimmed ADDITIONAL section.
+  // Runs BEFORE partitionAdditional so the grouping step finds nothing to do.
+  function explodeAdditionalToSections(cv) {
+    var xi = -1;
+    for (var i = 0; i < cv.length; i++) {
+      var s = cv[i];
+      if (s && s.id === 'additional' && s.type === 'labeled_list' && Array.isArray(s.items)) { xi = i; break; }
+    }
+    if (xi < 0) return null;
+    var has = function (id) { return cv.some(function (s) { return s && s.id === id; }); };
+    var hasLang = has('languages'), hasInt = has('interests'), hasAcc = has('accessibility');
+    // skip the {group} marker rows; bucket the real items
+    var items = cv[xi].items.filter(function (it) { return it && it.group === undefined; });
+    if (!items.length) return null;
+    var buckets = { Languages: [], Interests: [], Accessibility: [], Other: [] };
+    items.forEach(function (it) { if (it == null) return; buckets[classifyAdditional(it)].push(it); });
+    var newSecs = [];
+    function mk(id, title, bucket, exists) {
+      if (!bucket.length || exists) return;
+      newSecs.push({ id: id, title: title, loc: 'sidebar', on: true, type: 'labeled_list', items: bucket });
+    }
+    mk('languages', 'LANGUAGES', buckets.Languages, hasLang);
+    mk('interests', 'INTERESTS', buckets.Interests, hasInt);
+    mk('accessibility', 'ACCESSIBILITY', buckets.Accessibility, hasAcc);
+    if (!newSecs.length) return null;   // nothing new to create -> leave as-is
+    var copy = cv.slice();
+    var replacement = newSecs;
+    // keep any leftover Other items (or the buckets that already have their own
+    // section) in a trimmed ADDITIONAL; drop ADDITIONAL entirely if nothing left.
+    var leftover = buckets.Other.slice();
+    if (hasLang) buckets.Languages.forEach(function (it) { leftover.push(it); });
+    if (hasInt) buckets.Interests.forEach(function (it) { leftover.push(it); });
+    if (hasAcc) buckets.Accessibility.forEach(function (it) { leftover.push(it); });
+    if (leftover.length) replacement = newSecs.concat([Object.assign({}, cv[xi], { items: leftover })]);
+    copy.splice.apply(copy, [xi, 1].concat(replacement));
+    return copy;
+  }
+
   function partitionAdditional(cv) {
     var xi = -1;
     for (var i = 0; i < cv.length; i++) {
@@ -433,6 +479,7 @@
       var dl = defaultLoc(cv); if (dl) { cv = dl; changed = true; }
       var wi = inlineifyLabeledText(cv); if (wi) { cv = wi; changed = true; }
       var no = neutralizeUnsolicitedOpener(cv); if (no) { cv = no; changed = true; }
+      var ex = explodeAdditionalToSections(cv); if (ex) { cv = ex; changed = true; }
       var pa = partitionAdditional(cv); if (pa) { cv = pa; changed = true; }
       // SECTION-PREVIEW-LOC-001 / TYPE-NORMALIZE: also normalise the CL sections'
       // loc + work_style type so imported CL sections render in the preview.

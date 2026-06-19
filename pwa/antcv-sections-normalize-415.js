@@ -15,7 +15,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.723-sirin-team';
+  var VERSION = '1.50.730-strip-snowflake';
   if (window.__antcvSectionsNormalize === VERSION) return;
   window.__antcvSectionsNormalize = VERSION;
 
@@ -819,6 +819,27 @@
     return changed ? out : null;
   }
 
+  // TOOLS-FABRICATION-001 (owner 2026-06-19: "you hallucinated Snowflake into my tools").
+  // The JD-tailoring keeps injecting a JD-required tool the candidate does NOT have
+  // (Nordea analytics -> Snowflake) into TOOLS & METHODS. Strip known-fabricated tools
+  // from any tools comma-list. Gabriel does NOT use Snowflake. (Generalise via a kernel
+  // allowlist later; the prompt TOOLS-NO-FABRICATION rule is the generation-side guard.)
+  var FABRICATED_TOOLS = /snowflake/i;
+  function stripFabricatedTools(cv) {
+    var changed = false;
+    var out = cv.map(function (s) {
+      if (!s || s.id !== 'tools' || !Array.isArray(s.items)) return s;
+      var items = s.items.map(function (it) {
+        if (!it || typeof it !== 'object' || typeof it.v !== 'string' || !FABRICATED_TOOLS.test(it.v)) return it;
+        var v = it.v.split(/s*,s*/).filter(function (part) { return part && !FABRICATED_TOOLS.test(part); }).join(', ');
+        if (v !== it.v) { changed = true; return Object.assign({}, it, { v: v }); }
+        return it;
+      });
+      return Object.assign({}, s, { items: items });
+    });
+    return changed ? out : null;
+  }
+
   function normalize() {
     // EDIT-GUARD-001 (owner 2026-06-19): defer all normalisation while the user is
     // actively editing — rewriting sections mid-edit re-renders the preview and
@@ -836,6 +857,7 @@
       var k = canonKanzen(cv); if (k) { cv = k; changed = true; }
       var cw = canonCopenhagenWolves(cv); if (cw) { cv = cw; changed = true; }
       var tf = renameTaskForce(cv); if (tf) { cv = tf; changed = true; }
+      var sft = stripFabricatedTools(cv); if (sft) { cv = sft; changed = true; }
       var idf = canonIDF(cv); if (idf) { cv = idf; changed = true; }
       var tau = canonTAU(cv); if (tau) { cv = tau; changed = true; }
       // ROLE-DECOMP-001 (owner 2026-06-16): the "Customer Change Requests Specialist"

@@ -19641,17 +19641,35 @@
                       "Manual save - no JD text available." === e.jd_text ||
                       e.jd_text.startsWith("Manual save");
                   if (__isUnsolicited) {
-                    try {
-                      Vt("");
-                    } catch (e) {}
-                    if (t) {
+                    // CLAMP-GUARD-001 (owner 2026-06-19): do NOT wipe a JD the user JUST
+                    // attached (e.g. a URL fetch) when an auto-sync re-reads the still-
+                    // "unsolicited" active row. zt is the fresh JD source for THIS session
+                    // (method url-fetch / paste / file); when it carries a real JD, keep
+                    // it so a SPECIFIC application is not relabelled Unsolicited and the
+                    // company gate sees the JD. A merely STALE pinned jd_text (no zt
+                    // source) is still clamped exactly as before.
+                    var __freshJd = "";
+                    try { __freshJd = (zt && "string" == typeof zt.text) ? zt.text.trim() : ""; } catch (e) {}
+                    var __freshReal = __freshJd &&
+                      !/^GENERAL CV [—–-] UNSOLICITED APPLICATION CONTEXT/i.test(__freshJd) &&
+                      !/^Manual save/i.test(__freshJd);
+                    if (__freshReal) {
+                      console.log(
+                        "[Read from Cloud] unsolicited row — fresh attached JD present; clamp SKIPPED (targeted)",
+                      );
+                    } else {
                       try {
-                        Un.current = e.jd_text;
+                        Vt("");
                       } catch (e) {}
+                      if (t) {
+                        try {
+                          Un.current = e.jd_text;
+                        } catch (e) {}
+                      }
+                      console.log(
+                        "[Read from Cloud] unsolicited row — jd_text clamped, Vt cleared",
+                      );
                     }
-                    console.log(
-                      "[Read from Cloud] unsolicited row — jd_text clamped, Vt cleared",
-                    );
                   } else if (t) {
                     try {
                       Un.current = e.jd_text;

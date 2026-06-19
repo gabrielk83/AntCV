@@ -14337,7 +14337,13 @@
                     (o && o.role) || (r ? "General CV" : ""),
                   ).trim(),
                   jd_language: "da" === u.get("language", "en") ? "da" : "en",
-                  category: "unsolicited",
+                  // CATEGORIZE-ON-ATTACH-001 (owner 2026-06-19): category was HARDCODED
+                  // "unsolicited" for EVERY save, so a row with a real JD company
+                  // (jd_company="Nordea…") was still __isUnsolicited (cat check) → its JD
+                  // got clamped and its application stayed labelled Unsolicited. `r` is
+                  // true only when genuinely unsolicited (stub JD / company "Unsolicited"),
+                  // so categorise targeted rows as "targeted".
+                  category: r ? "unsolicited" : "targeted",
                 },
                 i =
                   e.sections && "object" == typeof e.sections ? e.sections : ro;

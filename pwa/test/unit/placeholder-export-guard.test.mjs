@@ -20,6 +20,12 @@ globalThis.localStorage = {
 
 const { buildPayload } = await import('../../antcv-docx-client.js');
 
+// ORPHAN-NBSP-EXPORT-001 (1.50.656): buildPayload binds orphans (last space ->
+// U+00A0) on SURVIVING real content AFTER placeholder stripping. These tests cover
+// placeholder stripping, not spacing — normalise NBSP back to a space so the
+// content assertions stay robust to the orphan-bind.
+const noNbsp = (s) => String(s).replace(/ /g, ' ');
+
 function payloadWith(clSections) {
   return buildPayload({
     sections: { cv: [], cl: clSections },
@@ -39,7 +45,7 @@ test('unfilled WHY THIS POSITION placeholder is dropped from the export', () => 
   assert.equal(why, undefined, 'placeholder WHY section must not export');
   // a real text section survives untouched
   const who = p.sections.find((s) => s.id === 'who');
-  assert.ok(who && /Real intro/.test(who.content));
+  assert.ok(who && /Real intro/.test(noNbsp(who.content)));
 });
 
 test('a filled WHY THIS POSITION is kept', () => {
@@ -58,10 +64,10 @@ test('placeholder bullets + foundation fields are stripped', () => {
       hands_on: '[FILL hands-on]', professionally: 'I keep decisions visible.' },
   ]);
   const contribute = p.sections.find((s) => s.id === 'contribute');
-  assert.deepEqual(contribute.items, ['Real bullet.'], 'placeholder bullet must be dropped');
+  assert.deepEqual(contribute.items.map(noNbsp), ['Real bullet.'], 'placeholder bullet must be dropped');
   const foundation = p.sections.find((s) => s.id === 'foundation');
   assert.equal(foundation.hands_on, '', 'placeholder hands_on must be blanked');
-  assert.equal(foundation.professionally, 'I keep decisions visible.');
+  assert.equal(noNbsp(foundation.professionally), 'I keep decisions visible.');
 });
 
 test('a bracket inside real prose is NOT treated as a placeholder', () => {

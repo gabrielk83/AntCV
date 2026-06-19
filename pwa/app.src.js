@@ -2793,6 +2793,12 @@
       r.push(
         "CV vs CL MUST DIFFER (DOC-DISTINCT-001): the CL WHAT I BRING and the CV CORE COMPETENCIES must differ in BOTH the Focus Area labels AND the 'Strategic Expertise' CONTENT - never reuse the same expertise phrasing across the two documents. WHAT I BRING (CL) = the 3-4 application-specific strengths, phrased as an offer to the target; CORE COMPETENCIES (CV) = the broader standing competencies, phrased differently and covering DIFFERENT ground. Likewise the CV PROFILE and the CL WHO I AM must NOT be the same paragraph - say complementary things. And give the CV and the CL slightly DIFFERENT headline/subtitle wording (e.g. a product/delivery emphasis on one, a people/collaboration emphasis on the other) so the two never read as identical copies.",
       );
+      // EXPERIENCE-TAILOR-001 (owner 2026-06-19): for a JD-TARGETED application, tighten the
+      // experience to what matters for THAT role — consolidate related roles and drop the
+      // irrelevant ones.
+      r.push(
+        "TARGETED EXPERIENCE - CONSOLIDATE & PRUNE (EXPERIENCE-TAILOR-001): when a JD is present (a SPECIFIC application, not the unsolicited kernel), tailor PROFESSIONAL EXPERIENCE to the role: (1) CONSOLIDATE closely-related roles at the SAME company into one entry when it tightens the CV without losing a distinct, JD-relevant function - e.g. merge an engineer + team-lead at the same company, or a researcher + teaching-assistant - using a combined title and a de-duplicated bullet union. (2) HIDE roles that are clearly IRRELEVANT to this JD and add no signal - e.g. a Students Council Representative or a student Security Guard for a senior analytics/engineering role - so the reader sees only relevant, substantial experience. Never fabricate; only hide or merge what the kernel already contains. Keep the most recent and most JD-relevant roles in full. For the UNSOLICITED kernel (no JD) keep the FULL breadth instead (do NOT prune).",
+      );
       // PERSONALITY-KERNEL-001 (owner 2026-06-12, handoff T8 — canonical
       // source: skills/antcv-writer/assets/gabriel-kernel-personality-v1.json).
       // A stored personalInfo.personality object overrides the embedded

@@ -2280,6 +2280,23 @@ export function applyOutcomesMode(docSections, doc) {
 // single source of truth, no second algorithm to keep in sync.
 try { if (typeof window !== 'undefined') window.AntcvApplyOutcomesMode = applyOutcomesMode; } catch (_) {}
 
+// TENSE-PREVIEW-PARITY-001 (owner 2026-06-20: "the tense is preview shows x, export y").
+// In RESULTS mode the export re-tenses each bullet's leading verb to the chosen tense (the
+// _tx full-clause pass inside applyOutcomesMode), but the editable preview rendered the raw
+// stored bullet, so preview showed past while the export showed the chosen tense. Expose the
+// SAME clause-tense pass so the preview can display the matching tense — bullet TEXT only,
+// no role-list change, so the index-based edit paths stay intact. No-op for 'auto'.
+function tenseClause(s) {
+  try {
+    const m = _expTenseMode();
+    if (!m || m === 'auto' || typeof s !== 'string' || !s) return s;
+    return /;| and /.test(s)
+      ? s.split(/(;|\s+and\s+)/).map((p) => /^(?:;|\s+and\s+)$/.test(p) ? p : _tenseLead(p, m)).join('')
+      : _tenseLead(s, m);
+  } catch (_) { return s; }
+}
+try { if (typeof window !== 'undefined') window.AntcvTenseClause = tenseClause; } catch (_) {}
+
 function triggerDownload(blob, filename) {
   // 1.50.380 EXPORT-PREVIEW-FEATURES-001(b) — choose the download location.
   // Opt-in via localStorage 'antcv:askSaveLocation' = '1' (the export modal

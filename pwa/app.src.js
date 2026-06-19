@@ -2799,6 +2799,12 @@
       r.push(
         "TARGETED EXPERIENCE - CONSOLIDATE & PRUNE (EXPERIENCE-TAILOR-001): when a JD is present (a SPECIFIC application, not the unsolicited kernel), tailor PROFESSIONAL EXPERIENCE to the role: (1) CONSOLIDATE closely-related roles at the SAME company into one entry when it tightens the CV without losing a distinct, JD-relevant function - e.g. merge an engineer + team-lead at the same company, or a researcher + teaching-assistant - using a combined title and a de-duplicated bullet union. (2) HIDE roles that are clearly IRRELEVANT to this JD and add no signal - e.g. a Students Council Representative or a student Security Guard for a senior analytics/engineering role - so the reader sees only relevant, substantial experience. Never fabricate; only hide or merge what the kernel already contains. Keep the most recent and most JD-relevant roles in full. For the UNSOLICITED kernel (no JD) keep the FULL breadth instead (do NOT prune).",
       );
+      // TWO TABLES, TWO DIRECTIONS (TABLE-DIRECTION-001, owner 2026-06-20): the CV CORE
+      // COMPETENCIES and CL WHAT I BRING tables kept coming out as near-twins (same focus-
+      // area seeds, overlapping Strategic Expertise). Build them from DIFFERENT signals.
+      r.push(
+        "TWO TABLES, TWO DIRECTIONS (TABLE-DIRECTION-001): the CV 'CORE COMPETENCIES' table and the CL 'WHAT I BRING' table must be built from DIFFERENT seeds and pointed in DIFFERENT directions - never near-duplicates. (1) DISTINCT SEEDS: pick the Focus Areas for each table from a DIFFERENT slice of the candidate's signal - no Focus Area label may appear in BOTH tables. (2) OWN DIRECTION: CORE COMPETENCIES (CV) = the candidate's BROAD, STANDING competencies and the proof behind them, written as durable fact ('what I am'); WHAT I BRING (CL) = the 3-4 APPLICATION-SPECIFIC strengths aimed at THIS employer and role, written as a forward offer ('what I will do for you'). The Strategic Expertise column must read differently in each - tools/methods/standing depth on the CV side, applied value-to-employer on the CL side. (3) DOCUMENT PARITY: each table must cohere with the REST OF ITS OWN document - the CV CORE COMPETENCIES echo the CV's experience and profile; the CL WHAT I BRING echo the CL's narrative and the JD - so neither table reads as a transplant from the other document.",
+      );
       // PERSONALITY-KERNEL-001 (owner 2026-06-12, handoff T8 — canonical
       // source: skills/antcv-writer/assets/gabriel-kernel-personality-v1.json).
       // A stored personalInfo.personality object overrides the embedded
@@ -5565,7 +5571,11 @@
                             BM(n),
                             React.createElement(B, {
                               path: ["roles", t, "bullets", n],
-                              value: P(e || ""),
+                              // TENSE-PREVIEW-PARITY-001 (owner 2026-06-20): in results mode
+                              // the export re-tenses each bullet's leading verb; mirror it in
+                              // the preview so the on-screen tense matches the PDF. Text only —
+                              // the edit path (roles.t.bullets.n) is unchanged.
+                              value: P((("results" === __outcomesMode && window.AntcvTenseClause) ? window.AntcvTenseClause(e) : e) || ""),
                               placeholder: "(click to add)",
                             }),
                           ),

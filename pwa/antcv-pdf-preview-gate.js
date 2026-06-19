@@ -642,20 +642,18 @@ ${inlineStyles}
             const availW = (iframe.clientWidth || ibody.clientWidth || 0) - 24; // body padding
             const availH = (iframe.clientHeight || 0) - 24;
             const pw = paper.getBoundingClientRect().width;
-            // EXPORT-PREVIEW-ZOOM-001 (owner 2026-06-15): ZOOM OUT so a WHOLE A4
-            // page fits the modal viewport — the previous fit was WIDTH-ONLY, so a
-            // page taller than the viewport was cropped/oversized. Fit by the
-            // smaller of width-scale and one-page-HEIGHT-scale. One A4 page = the
-            // first .antcv-page-row (else the paper itself). Only ever scales DOWN.
-            const pageEl = paper.querySelector('.antcv-page-row') || paper;
-            const ph = pageEl.getBoundingClientRect().height;
+            // EXPORT-PREVIEW-ZOOM-002 (owner 2026-06-19, re-requested feature): ZOOM
+            // OUT so a WHOLE A4 page (width AND height) fits the modal viewport.
+            // SHRINK-001 (2026-06-18) had disabled the height term because it measured
+            // the ELEMENT height, which after the 1.50.600 screen un-clamp is the FULL
+            // multi-page doc height — so the page-HEIGHT scale collapsed the doc to a
+            // sliver. FIX: derive ONE A4 page height from the measured page WIDTH via
+            // the fixed A4 ratio (297/210 mm), so `ph` is always exactly one sheet no
+            // matter how many pages the clone holds. Only ever scales DOWN (floor 0.3).
             let scale = 1;
             if (pw > 0 && availW > 0) scale = Math.min(scale, availW / pw);
-            // EXPORT-PREVIEW-SHRINK-001 (owner 2026-06-18): fit by WIDTH ONLY and let
-            // the modal body scroll. The one-page-HEIGHT term (EXPORT-PREVIEW-ZOOM-001)
-            // collapsed the whole document into a tiny region after the 1.50.600 screen
-            // un-clamp made the cloned paper its FULL multi-page height (no per-sheet
-            // clamp on screen), so `ph` was the entire doc, not one A4 page.
+            const ph = pw > 0 ? pw * (297 / 210) : 0;   // one A4 page tall, in px
+            if (ph > 0 && availH > 0) scale = Math.min(scale, availH / ph);
             if (scale < 0.999) {
               ibody.style.setProperty('--antcv-fit', String(Math.max(0.3, scale)));
               ibody.classList.add('antcv-fit-width');

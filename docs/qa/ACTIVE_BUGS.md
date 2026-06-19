@@ -220,7 +220,7 @@ Owner-set ordering (2026-06-15, revised): **work CONTENT & EXPORT issues first, 
 
 19. **CL-FORMAT-CONTROL-001** — a cover-letter format control (academic + commercial).
 
-20. **SUBSECTION-RENAME-REORDER-001** — rename + reorder subsubsections, controlled by writing style.
+20. **SUBSECTION-RENAME-REORDER-001** `[SHIPPED 1.50.702]` — rename + reorder subsubsections. RENAME already worked (inline-editable {group} subheadings); REORDER added via `antcv-subsection-reorder.js` (▲/▼ on each subheading move the whole {group} block; storage-driven, editor-only chrome, export unaffected). NOTE: the "controlled by writing style" aspect (style-driven default subsection order) is NOT implemented — this is the user-driven manual rename+reorder.
 
 21. **EXPORT-PREVIEW-ZOOM-001** `[SHIPPED 1.50.701 as EXPORT-PREVIEW-ZOOM-002]` (owner 2026-06-15/re-requested 2026-06-19) — DONE: the modal now fits a whole A4 page (width AND height). The 2026-06-15 attempt collapsed because it measured the element height (= full multi-page doc after the 1.50.600 un-clamp); fixed by deriving one-page height from page WIDTH × A4 ratio (297/210). Screen-only; PDF unaffected. — the export-preview modal should ZOOM OUT more so the full A4 page fits in view (it currently shows the page too large / cropped). Tune the iframe fit-to-width (`antcv-pdf-preview-gate.js` `--antcv-fit` ~597) to fit the whole page height, not just width.
 

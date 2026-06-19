@@ -1895,14 +1895,29 @@ const _T_B2P = { own: 'owned', build: 'built', run: 'ran', design: 'designed', d
   // TENSE-VERBMAP-EXPAND-001 (owner 2026-06-19, item D): the fold left many real
   // result/outcome leading verbs PAST because they were absent from the map
   // (Administered, Represented, Taught, Worked…). Add the common CV action verbs.
-  administer: 'administered', represent: 'represented', teach: 'taught', work: 'worked', respond: 'responded', monitor: 'monitored', provision: 'provisioned', convert: 'converted', customize: 'customized', customise: 'customised', characterize: 'characterized', characterise: 'characterised', deploy: 'deployed', enable: 'enabled', track: 'tracked', ensure: 'ensured', facilitate: 'facilitated', organize: 'organized', organise: 'organised', standardize: 'standardized', standardise: 'standardised', assess: 'assessed', analyze: 'analyzed', analyse: 'analysed', evaluate: 'evaluated', prepare: 'prepared', generate: 'generated', integrate: 'integrated', produce: 'produced', achieve: 'achieved', complete: 'completed', contribute: 'contributed', demonstrate: 'demonstrated', identify: 'identified', measure: 'measured', operate: 'operated', process: 'processed', provide: 'provided', report: 'reported', research: 'researched', select: 'selected', simplify: 'simplified', solve: 'solved', train: 'trained', upgrade: 'upgraded', verify: 'verified', win: 'won', grow: 'grew', save: 'saved', spearhead: 'spearheaded', champion: 'championed', overhaul: 'overhauled', consolidate: 'consolidated', modernize: 'modernized', modernise: 'modernised', refactor: 'refactored', benchmark: 'benchmarked', forecast: 'forecast', write: 'wrote' };
+  administer: 'administered', represent: 'represented', teach: 'taught', work: 'worked', respond: 'responded', monitor: 'monitored', provision: 'provisioned', convert: 'converted', customize: 'customized', customise: 'customised', characterize: 'characterized', characterise: 'characterised', deploy: 'deployed', enable: 'enabled', track: 'tracked', ensure: 'ensured', facilitate: 'facilitated', organize: 'organized', organise: 'organised', standardize: 'standardized', standardise: 'standardised', assess: 'assessed', analyze: 'analyzed', analyse: 'analysed', evaluate: 'evaluated', prepare: 'prepared', generate: 'generated', integrate: 'integrated', produce: 'produced', achieve: 'achieved', complete: 'completed', contribute: 'contributed', demonstrate: 'demonstrated', identify: 'identified', measure: 'measured', operate: 'operated', process: 'processed', provide: 'provided', report: 'reported', research: 'researched', select: 'selected', simplify: 'simplified', solve: 'solved', train: 'trained', upgrade: 'upgraded', verify: 'verified', win: 'won', grow: 'grew', save: 'saved', spearhead: 'spearheaded', champion: 'championed', overhaul: 'overhauled', consolidate: 'consolidated', modernize: 'modernized', modernise: 'modernised', refactor: 'refactored', benchmark: 'benchmarked', forecast: 'forecast', write: 'wrote',
+  // TENSE-VERBMAP-EXPAND-002 (owner 2026-06-20): "align"/"co-organised" stayed PAST in the
+  // Results — "align" was absent and the hyphen broke the match (now fixed in _tenseLead).
+  // Add more common CV action verbs with unambiguous past forms.
+  align: 'aligned', liaise: 'liaised', leverage: 'leveraged', prioritize: 'prioritized', prioritise: 'prioritised', synthesize: 'synthesized', synthesise: 'synthesised', visualize: 'visualized', visualise: 'visualised', advise: 'advised', devise: 'devised', revise: 'revised', partner: 'partnered', position: 'positioned', pioneer: 'pioneered', accelerate: 'accelerated', double: 'doubled', triple: 'tripled', undertake: 'undertook', enhance: 'enhanced', expand: 'expanded', unify: 'unified', bridge: 'bridged', foster: 'fostered', cultivate: 'cultivated', orchestrate: 'orchestrated', transform: 'transformed', calibrate: 'calibrated', fabricate: 'fabricated', prototype: 'prototyped', simulate: 'simulated', audit: 'audited', mitigate: 'mitigated', remediate: 'remediated', document: 'documented', draft: 'drafted', compile: 'compiled', curate: 'curated', aggregate: 'aggregated', normalize: 'normalized', normalise: 'normalised', classify: 'classified', predict: 'predicted', recommend: 'recommended', coach: 'coached', recruit: 'recruited', onboard: 'onboarded', redesign: 'redesigned', rebuild: 'rebuilt', reorganize: 'reorganized', reorganise: 'reorganised' };
 const _T_P2B = {}; for (const k in _T_B2P) _T_P2B[_T_B2P[k]] = k;
 function _tenseLead(text, mode) {
   if ((mode !== 'present' && mode !== 'past') || typeof text !== 'string' || !text) return text;
-  const m = text.match(/^(\s*(?:<[^>]+>\s*|\*{1,2}\s*)*)([A-Za-z]+)/);
+  // TENSE-HYPHEN-001 (owner 2026-06-20): capture HYPHENATED leading verbs too
+  // (co-organised, re-architected). The old [A-Za-z]+ stopped at the hyphen, read
+  // "co", missed the map, and left "co-organised" in past tense.
+  const m = text.match(/^(\s*(?:<[^>]+>\s*|\*{1,2}\s*)*)([A-Za-z][A-Za-z-]*)/);
   if (!m) return text;
   const prefix = m[1], word = m[2], lw = word.toLowerCase();
-  let repl = mode === 'past' ? _T_B2P[lw] : _T_P2B[lw];
+  const map = mode === 'past' ? _T_B2P : _T_P2B;
+  let repl = map[lw];
+  // Hyphenated verb not in the map: tense the LAST segment (co-organised -> co-organise).
+  if (!repl && lw.indexOf('-') > 0) {
+    const segs = lw.split('-');
+    const last = segs[segs.length - 1];
+    const r2 = map[last];
+    if (r2 && r2 !== last) { segs[segs.length - 1] = r2; repl = segs.join('-'); }
+  }
   if (!repl || repl === lw) return text;
   if (word[0] === word[0].toUpperCase()) repl = repl.charAt(0).toUpperCase() + repl.slice(1);
   return prefix + repl + text.slice(prefix.length + word.length);

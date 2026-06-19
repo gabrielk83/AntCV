@@ -22,7 +22,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.710';
+  var VERSION = '1.50.711';
   if (window.AntcvClusterDemand && window.AntcvClusterDemand.version === VERSION) return;
 
   // Embedded seed (verbatim ranks/share from the analyst-reviewed JSON). Keeping it
@@ -118,6 +118,33 @@
 
   function jdText() { try { return String(localStorage.getItem('antcv:lastJdText') || '').toLowerCase(); } catch (_) { return ''; } }
 
+  // CLUSTER-QUAL-001 job-search targeting (owner 2026-06-19): WHERE (region) / WHICH
+  // model (employed|consultant) / WHICH format (onsite|hybrid|remote), set in the
+  // wizard + Personal/kernel settings (src/lib/job-search-prefs.ts), persisted under
+  // personalInfo.jobSearchPrefs. These parameterize the demand top-20s: a future
+  // keyed bucket (cluster × region × model × format), produced by the nightly
+  // recruitment-site research, is preferred when present; until then scoring uses the
+  // analyst seed and the prefs are simply exposed (so the nightly + pipeline can use
+  // them, and contextKey() names the bucket to look up).
+  function readPrefs() {
+    try {
+      var pi = JSON.parse(localStorage.getItem('personalInfo') || '{}') || {};
+      var jp = pi.jobSearchPrefs || {};
+      return {
+        regions: Array.isArray(jp.regions) ? jp.regions : [],
+        employment: Array.isArray(jp.employment) ? jp.employment : [],
+        formats: Array.isArray(jp.formats) ? jp.formats : []
+      };
+    } catch (_) { return { regions: [], employment: [], formats: [] }; }
+  }
+  // Stable bucket key for a cluster under the current targeting (sorted so it is
+  // order-independent). The nightly writes keyed top-20s under keys of this shape.
+  function contextKey(clusterId) {
+    var p = readPrefs();
+    var part = function (a) { return (a || []).slice().sort().join('+') || 'any'; };
+    return clusterId + '|r=' + part(p.regions) + '|m=' + part(p.employment) + '|f=' + part(p.formats);
+  }
+
   // Best-cluster classification from the JD: the cluster whose top-20 keywords the JD
   // text overlaps most. Returns null when there is no JD or no clear winner.
   function classifyJD() {
@@ -198,7 +225,11 @@
     classifyJD: classifyJD,
     score: score,
     scoreNorm: scoreNorm,
+    prefs: readPrefs,
+    contextKey: contextKey,
     _scoreFor: scoreFor
   };
+  // a prefs change should drop the active-cluster memo so the next score() re-reads
+  try { window.addEventListener('antcv:job-search-prefs-changed', function () { _cache.key = ''; }); } catch (_) {}
   try { console.debug('[cluster-demand] installed v' + VERSION + ' (' + Object.keys(SEED).length + ' clusters)'); } catch (_) {}
 })();

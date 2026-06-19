@@ -241,6 +241,18 @@ from **live recruitment-site research**, two tracks:
 2. **Tighten the 3 seeded clusters.** Re-derive their top-20s from fresh postings so
    ranks track the current market, not just the June-2026 16-JD sample.
 
+**Targeting parameters (owner 2026-06-19, SHIPPED capture 1.50.711).** The research —
+and the top-20 buckets it produces — are keyed by the user's **job-search targeting**:
+WHERE (region/country), WHICH model (employed vs independent consultant), WHICH format
+(onsite/hybrid/remote). Captured in the wizard + Personal/kernel settings via the
+`JobSearchTargeting` island, persisted under `personalInfo.jobSearchPrefs`, exposed
+client-side by `window.AntcvClusterDemand.prefs()` / `.contextKey(clusterId)` (the
+bucket name the nightly writes). The nightly should query postings filtered by these
+params and store keyed top-20s (`cluster × region × model × format`); the client then
+prefers the matching keyed bucket over the un-keyed seed for a more targeted ranking.
+Consultant vs employed especially shifts the qualification mix (delivery/commercial/
+independence vs role-fit/team), so it is a first-class key, not a display-only field.
+
 Output merges into `application_qualification` (`source='research'`, dated) and the
 `cluster_top_qualifications` rollup so real user-JD signals still overtake it over
 time; the client `SEED` map becomes a cold-start fallback. Must respect robots/ToS of

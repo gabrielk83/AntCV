@@ -17,6 +17,7 @@ import { mountLayoutPickerIsland } from './islands/LayoutPicker/mount';
 import { mountBreadcrumbsIsland } from './islands/Breadcrumbs/mount';
 import { mountWizardSectionShowcaseIsland } from './islands/WizardSectionShowcase/mount';
 import { mountWizardLanguagePickerIsland } from './islands/WizardLanguagePicker/mount';
+import { mountJobSearchTargetingIsland } from './islands/JobSearchTargeting/mount';
 import { exposeDebugApi, installWizardStateGuard } from './lib/wizard-state';
 import { installPackageBodyBinding, exposePackageDebugApi } from './lib/body-package';
 import { installCustomModeApi } from './lib/custom-mode';
@@ -24,7 +25,7 @@ import { exposeMigrationDebugApi, runGabrielMigration } from './lib/gabriel-migr
 import { installWritingStyleFetchWrap } from './lib/install-fetch-wrap';
 import { exposeObservabilityApi } from './lib/observability';
 
-const VERSION = '1.50.41';
+const VERSION = '1.50.711';
 
 declare global {
   interface Window {
@@ -76,6 +77,7 @@ const api: AntcvReactIslandsAPI = {
     try { mountBreadcrumbsIsland(); } catch (e) { console.warn('[react-islands] Breadcrumbs mount failed', e); }
     try { mountWizardSectionShowcaseIsland(); } catch (e) { console.warn('[react-islands] WizardSectionShowcase mount failed', e); }
     try { mountWizardLanguagePickerIsland(); } catch (e) { console.warn('[react-islands] WizardLanguagePicker mount failed', e); }
+    try { mountJobSearchTargetingIsland(); } catch (e) { console.warn('[react-islands] JobSearchTargeting mount failed', e); }
   },
 };
 

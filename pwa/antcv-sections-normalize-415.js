@@ -15,7 +15,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.685-accessibility-dup';
+  var VERSION = '1.50.708-role-canon';
   if (window.__antcvSectionsNormalize === VERSION) return;
   window.__antcvSectionsNormalize = VERSION;
 
@@ -151,8 +151,12 @@
   // CW-CANON-001 (owner 2026-06-16): the volunteer rugby role appears as duplicate
   // variants — "Team Operations Manager & Assistant Coach (foreningsarbejde)" and
   // "… (Volunteer)" — the SAME job. Merge to ONE, canonicalise the (compressed)
-  // title + company "Pan Idræt Rugby", and keep "Copenhagen Wolves RFC" in the
-  // CONTENT (a bullet), not the company line.
+  // title + company "Pan Idræt", and keep "Copenhagen Wolves RFC" in the CONTENT
+  // (a bullet), not the company line.
+  // CW-CANON-002 (owner 2026-06-19): (a) company is "Pan Idræt", NOT "Pan Idræt
+  // Rugby"; (b) the assistant-coach role does NOT belong in the role HEADLINE — drop
+  // "& Assi. Coach" from the title (kept as the CW bullet's "assistant-coaching"),
+  // so the title is just "Team Operations Manager (foreningsarbejde)".
   function canonCopenhagenWolves(cv) {
     var xi = cv.findIndex(function (s) { return s && s.type === 'experience' && Array.isArray(s.roles); });
     if (xi < 0) return null;
@@ -160,8 +164,8 @@
     var roles = cv[xi].roles;
     var cwIdx = []; roles.forEach(function (r, i) { if (isCW(r)) cwIdx.push(i); });
     if (!cwIdx.length) return null;
-    var TITLE = 'Team Operations Manager & Assi. Coach (foreningsarbejde)';
-    var COMPANY = 'Pan Idræt Rugby';
+    var TITLE = 'Team Operations Manager (foreningsarbejde)';
+    var COMPANY = 'Pan Idræt';
     var CW_BULLET = 'Operations and assistant-coaching for Copenhagen Wolves RFC, an inclusive amateur rugby club under Pan Idræt.';
     var keep = cwIdx[0];
     var base = Object.assign({}, roles[keep]);
@@ -176,6 +180,87 @@
     var nextRoles = roles.map(function (r, i) { return i === keep ? base : r; });
     if (cwIdx.length > 1) { var drop = {}; for (var k2 = 1; k2 < cwIdx.length; k2++) drop[cwIdx[k2]] = true; nextRoles = nextRoles.filter(function (_, i) { return !drop[i]; }); }
     var copy = cv.slice(); copy[xi] = Object.assign({}, copy[xi], { roles: nextRoles });
+    return copy;
+  }
+
+  // IDF-ABBREV-001 (owner 2026-06-19): "in many cases show IDF instead of Israeli
+  // defence force — less space". Replace the long form "Israel(i) Defen[sc]e
+  // Force(s)" with "IDF" in role companies AND bullet text (e.g. the Computer
+  // Systems Administrator company "Israel Defense Forces, Communication Corps" →
+  // "IDF, Communication Corps"). Idempotent: "IDF" no longer matches the long-form
+  // regex, so it never re-fires.
+  var IDF_RX = /\bisraeli?\s+defen[sc]e\s+forces?\b/gi;
+  function canonIDF(cv) {
+    var changed = false;
+    var fixStr = function (s) { var x = String(s == null ? '' : s); return IDF_RX.test(x) ? x.replace(IDF_RX, 'IDF') : x; };
+    var fixBullet = function (b) {
+      if (typeof b === 'string') { var n = fixStr(b); if (n !== b) { changed = true; return n; } return b; }
+      if (b && typeof b === 'object') {
+        var o = b, bb = b.b != null ? fixStr(b.b) : b.b, tt = b.t != null ? fixStr(b.t) : b.t;
+        if (bb !== b.b || tt !== b.t) { changed = true; o = Object.assign({}, b); if (b.b != null) o.b = bb; if (b.t != null) o.t = tt; }
+        return o;
+      }
+      return b;
+    };
+    var out = cv.map(function (s) {
+      if (!s || s.type !== 'experience' || !Array.isArray(s.roles)) return s;
+      var roles = s.roles.map(function (r) {
+        if (!r) return r;
+        var company = fixStr(r.company);
+        var bullets = Array.isArray(r.bullets) ? r.bullets.map(fixBullet) : r.bullets;
+        if (company !== r.company || bullets !== r.bullets) {
+          var nr = Object.assign({}, r);
+          if (company !== r.company) { nr.company = company; changed = true; }
+          if (bullets !== r.bullets) nr.bullets = bullets;
+          return nr;
+        }
+        return r;
+      });
+      return Object.assign({}, s, { roles: roles });
+    });
+    return changed ? out : null;
+  }
+
+  // TAU-UNIFY-001 (owner 2026-06-19): "8,7 … it is also Tel Aviv University –
+  // Electrical Engineering, so you could just call all of those Tel Aviv
+  // University". Collapse every Tel-Aviv-University company variant (with or without
+  // a "– Electrical Engineering" / department suffix) to the single canonical
+  // "Tel Aviv University". The TAU roles have distinct titles, so dedupeRoles
+  // (exact-title-only) never merges them. Idempotent.
+  var TAU_RX = /tel[\s-]?aviv\s+university/i;
+  function canonTAU(cv) {
+    var changed = false;
+    var out = cv.map(function (s) {
+      if (!s || s.type !== 'experience' || !Array.isArray(s.roles)) return s;
+      var roles = s.roles.map(function (r) {
+        if (!r || !TAU_RX.test(String(r.company || ''))) return r;
+        if (r.company === 'Tel Aviv University') return r;
+        changed = true;
+        return Object.assign({}, r, { company: 'Tel Aviv University' });
+      });
+      return changed ? Object.assign({}, s, { roles: roles }) : s;
+    });
+    return changed ? out : null;
+  }
+
+  // VOLUNTEER-GROUP-001 (owner 2026-06-19): "Students Council Representative is also
+  // (foreningsarbejde), so maybe place [it] after Pan/Team Operations". Group the two
+  // volunteer (foreningsarbejde) roles together: move the Students Council role to sit
+  // immediately AFTER the Team Operations / Pan Idræt role. Idempotent — returns null
+  // once they are already adjacent in that order.
+  function groupVolunteerRoles(cv) {
+    var xi = cv.findIndex(function (s) { return s && s.type === 'experience' && Array.isArray(s.roles); });
+    if (xi < 0) return null;
+    var roles = cv[xi].roles;
+    var teamIdx = roles.findIndex(function (r) { return r && (/pan idr/i.test(String(r.company || '')) || /team operations manager/i.test(String(r.title || ''))); });
+    var scIdx = roles.findIndex(function (r) { return r && /students?\s+council/i.test(String(r.title || '')); });
+    if (teamIdx < 0 || scIdx < 0) return null;
+    if (scIdx === teamIdx + 1) return null; // already grouped
+    var next = roles.slice();
+    var sc = next.splice(scIdx, 1)[0];
+    var insertAt = next.findIndex(function (r) { return r && (/pan idr/i.test(String(r.company || '')) || /team operations manager/i.test(String(r.title || ''))); }) + 1;
+    next.splice(insertAt, 0, sc);
+    var copy = cv.slice(); copy[xi] = Object.assign({}, copy[xi], { roles: next });
     return copy;
   }
 
@@ -497,6 +582,8 @@
       var changed = false;
       var k = canonKanzen(cv); if (k) { cv = k; changed = true; }
       var cw = canonCopenhagenWolves(cv); if (cw) { cv = cw; changed = true; }
+      var idf = canonIDF(cv); if (idf) { cv = idf; changed = true; }
+      var tau = canonTAU(cv); if (tau) { cv = tau; changed = true; }
       // ROLE-DECOMP-001 (owner 2026-06-16): the "Customer Change Requests Specialist"
       // is a DISTINCT Innoviz position the owner wants kept (= "Change Request
       // Manager"), no longer folded into the Change-Control role. dropCustomerChangeDup
@@ -505,6 +592,7 @@
       var fe = foundedToEstablished(cv); if (fe) { cv = fe; changed = true; }
       var pt = stripPatentFromRoles(cv); if (pt) { cv = pt; changed = true; }
       var d = dedupeRoles(cv); if (d) { cv = d; changed = true; }
+      var gv = groupVolunteerRoles(cv); if (gv) { cv = gv; changed = true; }
       var f = stripFounder(cv); if (f) { cv = f; changed = true; }
       var p = placeRecs(cv); if (p) { cv = p; changed = true; }
       var dl = defaultLoc(cv); if (dl) { cv = dl; changed = true; }

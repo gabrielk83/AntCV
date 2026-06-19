@@ -136,7 +136,13 @@ C. `[SHIPPED 1.50.699 — RESULTS-CROSSROLE-BLEED-002]` **Cross-role bleed.** RO
    outcomes across unrelated roles. Verify the "global best home, else drop" rule still holds; an
    outcome whose true home is another role must NOT bleed.
 
-D. **TENSE — "ALL IS IN PAST!!! apart from 2 results (2026 + 2025)."** Despite TENSE-AT-LAMINATION-001
+D. `[Results half SHIPPED 1.50.700 — TENSE-VERBMAP-EXPAND-001; bullets = regen]` **TENSE — "ALL IS IN PAST!!!"**
+   DIAGNOSED: the 695 fold DOES re-tense laminated Results to expTense, but only for verbs in the map
+   — it was missing Administered/Represented/Taught/Worked/Provisioned/etc., so those stayed past.
+   Expanded the verb map (~55 verbs incl. irregulars). Results come from the kernel so a regen does
+   NOT fix them — this fold does (preview+export). Role BULLETS are still re-tensed by the prompt
+   __tenseRule on regen (verified wired + strong). So for EXISTING data: Results now follow expTense
+   on hard-refresh; bullets follow on the next regen. Despite TENSE-AT-LAMINATION-001
    (1.50.695), nearly everything renders PAST; only the current-dated roles read present. Means the
    stored expTense is effectively 'auto' (current→present, past→past) OR the fold isn't applying the
    owner's chosen tense. The 695 fold tenses RESULTS only; ROLE BULLETS are LLM-generated and stay in

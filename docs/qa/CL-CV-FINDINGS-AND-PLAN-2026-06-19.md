@@ -33,8 +33,18 @@ reproducible; deprioritise.
   longer). Wired into `antcv-docx-client.js` `_capJoin` (tiers 2/3) + the distribution
   join, AND mirrored in `antcv-results-laminate-510.js lamFor` (preview parity; sidecar
   uses an ndScore numeric-favour proxy since it has no `_metricScore`). Tests 339/339.
-  Standalone verified: Sirin pair → 1; distinct outcomes → both kept; numeric variant
-  wins. LIVE-VERIFY: regen/hard-refresh, confirm Sirin Results is no longer doubled.
+- `1.50.707` **RESULTS-NEAR-DUP-001 anchor clause** — LIVE-verified on antcv.pages.dev
+  that 706's token-overlap alone did NOT collapse the REAL Sirin pair: both lines are
+  long and share only 0.44 of tokens (each carries distinct tail detail — "ODM
+  engineering" vs "camera/display/biometric stack") even though both open "Direct(ed)
+  a 7-person … smartphone optics team". Added an OR clause: near-dup also when two
+  texts share ≥3 tokens AND open on the SAME verb+object headline (identical first two
+  meaningful stems, e.g. both → "direct,person"). Re-verified live (AntcvApplyOutcomesMode
+  on the real 12-role kernel): Sirin now ONE line; distinct outcomes ("Reduce cost" vs
+  "Reduce cycle", "Cut" vs "Owned") stay separate. NOTE: this kernel stores NO per-role
+  outcomes, so Results come from the SELECTED-OUTCOMES distribution path — the dedup at
+  the `assign[i]` join (not just `_capJoin`) is what fires. C5 numeric-surfacing already
+  partly visible: System Architect now leads "Reduce product cost by 90%".
 
 **NEW live findings (next):**
 - **E1 broken mixed tense in joined clause** — "Manage … ; owned …" (leading verb

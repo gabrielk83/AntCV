@@ -19591,30 +19591,46 @@
             try {
               const e = n && n.active_application;
               if (e && "object" == typeof e) {
-                if (e.jd_company || e.jd_role)
-                  try {
-                    lo({
-                      company: e.jd_company || "",
-                      role: e.jd_role || "",
-                      subtitle: (io && io.subtitle) || "",
-                      greeting: (io && io.greeting) || "",
-                      opening: (io && io.opening) || "",
-                    });
-                  } catch (e) {}
-                if (
-                  Array.isArray(e.cv_sections) ||
-                  Array.isArray(e.cl_sections)
-                )
-                  try {
-                    ao({
-                      cv: Array.isArray(e.cv_sections)
-                        ? e.cv_sections
-                        : (ro && ro.cv) || [],
-                      cl: Array.isArray(e.cl_sections)
-                        ? e.cl_sections
-                        : (ro && ro.cl) || [],
-                    });
-                  } catch (e) {}
+                // META-DRIFT-GUARD-001 (owner 2026-06-19): the cloud's active row is the
+                // UNSOLICITED kernel, but the user has a TAILORED draft in memory (a real,
+                // non-unsolicited company in io after a targeted generate). Restoring the
+                // kernel's meta + sections over it is what kept the Nordea CL flipping back
+                // to Unsolicited mid-session. So when the in-memory draft is a real company
+                // and the cloud row is unsolicited/empty, KEEP the draft (commit it via
+                // "Save current as new"). Analogous to CLAMP-GUARD-001 for the JD. On a TRUE
+                // cold-start io.company is empty → guard is inert → the kernel loads as designed.
+                var __mN = function (s) { return String(s || "").trim().toLowerCase(); };
+                var __curCo = __mN(io && io.company);
+                var __rowCo = __mN(e.jd_company);
+                var __draftDrift = __curCo && "unsolicited" !== __curCo && ("" === __rowCo || "unsolicited" === __rowCo);
+                if (__draftDrift) {
+                  try { console.log("[Read from Cloud] META-DRIFT-GUARD: keeping tailored draft (" + __curCo + ") over the unsolicited row"); } catch (e) {}
+                } else {
+                  if (e.jd_company || e.jd_role)
+                    try {
+                      lo({
+                        company: e.jd_company || "",
+                        role: e.jd_role || "",
+                        subtitle: (io && io.subtitle) || "",
+                        greeting: (io && io.greeting) || "",
+                        opening: (io && io.opening) || "",
+                      });
+                    } catch (e) {}
+                  if (
+                    Array.isArray(e.cv_sections) ||
+                    Array.isArray(e.cl_sections)
+                  )
+                    try {
+                      ao({
+                        cv: Array.isArray(e.cv_sections)
+                          ? e.cv_sections
+                          : (ro && ro.cv) || [],
+                        cl: Array.isArray(e.cl_sections)
+                          ? e.cl_sections
+                          : (ro && ro.cl) || [],
+                      });
+                    } catch (e) {}
+                }
                 if (e.rationale && "object" == typeof e.rationale)
                   try {
                     bo(e.rationale);

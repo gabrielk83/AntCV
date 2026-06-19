@@ -15,7 +15,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.712-interests-shape';
+  var VERSION = '1.50.714-sidebar-dedupe';
   if (window.__antcvSectionsNormalize === VERSION) return;
   window.__antcvSectionsNormalize = VERSION;
 
@@ -680,6 +680,100 @@
     return changed ? out : null;
   }
 
+  // INTERESTS-BT-REMNANT-001 (owner 2026-06-19): after he rewrote an interest, item-0
+  // carries BOTH the correct {l,v} ("Rugby & inclusive sport" / "Team operations, coach
+  // assist…") AND the OLD fabricated {b,t} ("Coaching junior rugby" / "Weekly sessions
+  // as assistant coach…"). The renderer reads l/v so the preview is right, but the dead
+  // {b,t} fabrication lingers in the data. Strip b/t from any interests item that
+  // already has l/v. (NO junior rugby — see [[gabriel-cv-facts]].)
+  function stripInterestsBtRemnant(cv) {
+    var changed = false;
+    var out = cv.map(function (s) {
+      if (!s || s.id !== 'interests' || !Array.isArray(s.items)) return s;
+      var items = s.items.map(function (it) {
+        if (!it || typeof it !== 'object') return it;
+        if ((it.l != null || it.v != null) && (it.b !== undefined || it.t !== undefined)) {
+          changed = true;
+          var clean = Object.assign({}, it); delete clean.b; delete clean.t; return clean;
+        }
+        return it;
+      });
+      return Object.assign({}, s, { items: items });
+    });
+    return changed ? out : null;
+  }
+
+  // SIDEBAR-DEDUPE-001 (owner 2026-06-19, from his curated language/education snapshots):
+  // the kernel keeps regenerating DUPLICATE sidebar entries that he hides by hand (a
+  // verbose "Spanish - full professional, Uruguayan variant" beside the concise
+  // "Spanish: professional"; GPA-split degrees beside the combined no-GPA one). He wants
+  // these AUTO-deduped. Restore-proof + idempotent.
+  // (a) labeled_list: drop a HIDDEN item whose label duplicates a VISIBLE item's label
+  //     (case-insensitive). NEVER drops a uniquely-hidden item, so hide-over-delete still
+  //     holds for genuine hides. Scoped to languages + tools (the dup-prone lists).
+  var DEDUPE_BYNAME_IDS = { languages: 1, tools: 1 };
+  function dedupeHiddenDupByName(cv) {
+    var changed = false;
+    var out = cv.map(function (s) {
+      if (!s || !DEDUPE_BYNAME_IDS[s.id] || !Array.isArray(s.items)) return s;
+      var visible = {};
+      s.items.forEach(function (it) {
+        if (it && it.l != null && it.hidden !== true && it.on !== false) visible[String(it.l).toLowerCase().trim()] = 1;
+      });
+      var kept = s.items.filter(function (it) {
+        if (it && it.hidden === true && it.l != null && visible[String(it.l).toLowerCase().trim()]) { changed = true; return false; }
+        return true;
+      });
+      return kept.length !== s.items.length ? Object.assign({}, s, { items: kept }) : s;
+    });
+    return changed ? out : null;
+  }
+
+  // (b) education: drop a GPA-bearing degree when a no-GPA entry of the SAME base degree
+  //     exists (owner shows GPA hidden), and drop a standalone B.Sc when the combined
+  //     "B.Sc … & B.Sc …" entry covers it. Verified on his real 8-item set → the desired
+  //     4 (MBA, M.Sc. Electrical, B.Sc. Physics & Electrical [combined], FVU Dansk).
+  function dedupeEducation(cv) {
+    var xi = cv.findIndex(function (s) { return s && s.id === 'education' && Array.isArray(s.items); });
+    if (xi < 0) return null;
+    var items = cv[xi].items;
+    if (items.length < 2) return null;
+    var norm = function (d) { return String(d == null ? '' : d).toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim(); };
+    var hasGpa = function (it) { return it && it.gpa != null && String(it.gpa).trim() !== ''; };
+    var drop = {};
+    var combIdx = -1;
+    items.forEach(function (it, i) { if (it && /&/.test(String(it.deg || '')) && /b\.?sc/i.test(String(it.deg || ''))) combIdx = i; });
+    if (combIdx >= 0) {
+      var comb = norm(items[combIdx].deg);
+      items.forEach(function (it, i) {
+        if (i === combIdx || !it) return;
+        var d = norm(it.deg);
+        if (/^b ?sc\b/.test(d)) {
+          var subj = (d.replace(/^b ?sc/, '').replace(/and electronic|engineering/g, '').trim().split(' ')[0]) || '';
+          if (subj && comb.indexOf(subj) >= 0) drop[i] = 1;
+        }
+      });
+    }
+    var groups = {};
+    items.forEach(function (it, i) {
+      if (drop[i] || !it) return;
+      var key = norm(it.deg).split(' ').slice(0, 2).join(' ');
+      (groups[key] = groups[key] || []).push(i);
+    });
+    Object.keys(groups).forEach(function (k) {
+      var idxs = groups[k];
+      if (idxs.length < 2) return;
+      var keepI = -1;
+      for (var j = 0; j < idxs.length; j++) { if (!hasGpa(items[idxs[j]])) { keepI = idxs[j]; break; } }
+      if (keepI < 0) keepI = idxs[0];
+      idxs.forEach(function (i) { if (i !== keepI) drop[i] = 1; });
+    });
+    if (!Object.keys(drop).length) return null;
+    var kept = items.filter(function (_, i) { return !drop[i]; });
+    var copy = cv.slice(); copy[xi] = Object.assign({}, copy[xi], { items: kept });
+    return copy;
+  }
+
   function normalize() {
     // EDIT-GUARD-001 (owner 2026-06-19): defer all normalisation while the user is
     // actively editing — rewriting sections mid-edit re-renders the preview and
@@ -716,6 +810,9 @@
       var ex = explodeAdditionalToSections(cv); if (ex) { cv = ex; changed = true; }
       var pa = partitionAdditional(cv); if (pa) { cv = pa; changed = true; }
       var ish = normalizeInterestsShape(cv); if (ish) { cv = ish; changed = true; }
+      var ibt = stripInterestsBtRemnant(cv); if (ibt) { cv = ibt; changed = true; }
+      var dhn = dedupeHiddenDupByName(cv); if (dhn) { cv = dhn; changed = true; }
+      var dedu = dedupeEducation(cv); if (dedu) { cv = dedu; changed = true; }
       // SECTION-PREVIEW-LOC-001 / TYPE-NORMALIZE: also normalise the CL sections'
       // loc + work_style type so imported CL sections render in the preview.
       var cl = Array.isArray(b.cl) ? b.cl : null;

@@ -209,7 +209,44 @@ Both are applied via the migration in 6.
 6. PWA: add a fit panel (score + matched/gaps) on each application; show "based on N jobs" confidence.
 7. Both proxies get separate CI deploys. Verify Preview/DOCX/PDF parity on a regenerated document.
 
-## 7. Acceptance
+## 7.5 Client demand model — SHIPPED 1.50.710 (read half)
+
+Ahead of the proxy pipeline (3.1–3.4), the **read half** ships client-side so the
+canonical-ordering layer can already weight by demand:
+
+- `pwa/antcv-cluster-demand.js` embeds the analyst-reviewed seed top-20 for the **3
+  seeded clusters** (pm_process / photonics_eng / research_phd — ~3 of the 12
+  categories). It classifies the active JD to one cluster (keyword overlap vs each
+  top-20; margin-gated) or, when there is no JD, treats the CV as **unsolicited =
+  union of all 3** so cross-cluster (shared/ABC) skills are pumped.
+- `score()` / `scoreNorm()`: `scoreNorm` divides the raw cross-cluster sum by
+  (active-cluster count × per-cluster ref) so a single-JD and an unsolicited CV land
+  on the same `[0,1]` scale — skill-relevance counts under a JD too.
+- **Ordering is blended, not numeric-first** (owner: "numeric + skill-relevant =
+  higher score"): `score = numNorm + demNorm`. Wired into bullet order
+  (`antcv-sections-normalize-415.js _bulletScore`) and outcome/result order
+  (`antcv-docx-client.js _rankScore`, all three `applyOutcomesMode` sort sites).
+  Guarded: `demNorm = 0` when the model is absent → degrades to pure numeric.
+
+## 7.6 Nightly refresh — PLANNED (owner 2026-06-19)
+
+A nightly job (antcv-nightly dispatch surface) should keep the demand model current
+from **live recruitment-site research**, two tracks:
+
+1. **Sharpen the remaining 9 categories.** Only 3 of the 12 `category` ids have seed
+   top-20s. For each of the other 9, web-research current postings (job boards /
+   recruiters in the user's regions), extract the recurring required/preferred
+   qualifications, and produce a ranked top-20 (+ long tail) in the same shape as the
+   seed clusters.
+2. **Tighten the 3 seeded clusters.** Re-derive their top-20s from fresh postings so
+   ranks track the current market, not just the June-2026 16-JD sample.
+
+Output merges into `application_qualification` (`source='research'`, dated) and the
+`cluster_top_qualifications` rollup so real user-JD signals still overtake it over
+time; the client `SEED` map becomes a cold-start fallback. Must respect robots/ToS of
+any site queried and never fabricate a qualification not actually seen in postings.
+
+## 8. Acceptance
 
 - Uploading a JD writes `application_qualification` rows and updates `cluster_top_qualifications`.
 - A second distinguishable JD in the same cluster changes the top-20 ranking.

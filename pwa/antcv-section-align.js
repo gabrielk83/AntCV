@@ -457,6 +457,25 @@
     } catch (_) {}
   }
 
+  // SECTION-CYCLER-001 (owner 2026-06-19): the MANUAL per-section CJLR control. The
+  // PANEL injection was disabled in 1.40.203 (it stuck the section panel), so re-surface
+  // it as the original FLOATING preview cycler (top-right of each preview section)
+  // instead - that path never touched the React panel. DEFAULT OFF behind a flag until
+  // live-confirmed safe: enable with localStorage['antcv:section-cyclers']='1'.
+  var SECTION_CYCLERS_ON = (function () { try { return localStorage.getItem('antcv:section-cyclers') === '1'; } catch (_) { return false; } })();
+  function ensureSectionCyclers(root) {
+    if (!SECTION_CYCLERS_ON) return;
+    var secs = (root || document).querySelectorAll('[data-sid]');
+    for (var i = 0; i < secs.length; i++) {
+      var s = secs[i];
+      var sid = s.getAttribute('data-sid');
+      if (!sid || SKIP_SECTION_IDS.has(sid)) continue;
+      if (s.querySelector(':scope > button.antcv-align-cycler')) continue;
+      try { if (getComputedStyle(s).position === 'static') s.style.position = 'relative'; } catch (_) {}
+      try { s.appendChild(makeCyclerButton(sid, s)); } catch (_) {}
+    }
+  }
+
   // ─── Table-edge width drag ────────────────────────────────────────
   //
   // The existing column splitter inside [data-table-resize-wrap] is a
@@ -1143,6 +1162,7 @@
         }
         reapplyAlignmentEverywhere(root);
         dejustifyNarrowSidebar(root);
+        ensureSectionCyclers(root);
         ensureAllTableEdgeHandles(root);
         ensureAllSidebarOverrides(root);
       } catch (e) {

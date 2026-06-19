@@ -45,6 +45,11 @@ reproducible; deprioritise.
   outcomes, so Results come from the SELECTED-OUTCOMES distribution path — the dedup at
   the `assign[i]` join (not just `_capJoin`) is what fires. C5 numeric-surfacing already
   partly visible: System Architect now leads "Reduce product cost by 90%".
+  **LIVE-VERIFIED** on antcv.pages.dev (707 loaded, AntcvApplyOutcomesMode on the real
+  kernel): Sirin Results collapsed from two headline-equal outcomes to one ("Direct a
+  7-person EO and optics team for a high-security smartphone product; owned camera,
+  display, and biometric optical stack." — the "task force … ODM engineering" twin is
+  gone). RESULTS-NEAR-DUP-001 DONE.
 
 **NEW live findings (next):**
 - **E1 broken mixed tense in joined clause** — "Manage … ; owned …" (leading verb

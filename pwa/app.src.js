@@ -2771,6 +2771,18 @@
           "(A) DISJOINT FOCUS AREAS - the WHAT I BRING table and the CORE COMPETENCIES table MUST NOT share any Focus Area. NEVER repeat the same OR a near-synonymous Focus Area across the two tables (e.g. if WHAT I BRING has 'Requirements Traceability', CORE COMPETENCIES must NOT also have 'Requirements Traceability' or 'Requirements'). WHAT I BRING = the 3-4 strengths most specific to THIS application (for an UNSOLICITED draft, the candidate's highest-leverage offerings for the target company). CORE COMPETENCIES = the candidate's BROADER standing competency areas that are NOT named in WHAT I BRING. Before returning, list the WHAT I BRING Focus Areas and the CORE COMPETENCIES Focus Areas side by side and confirm ZERO overlap; if any would repeat, KEEP it in WHAT I BRING and swap the CORE COMPETENCIES row for a different complementary competency. " +
           "(B) TIGHT CELLS - each Strategic Expertise cell must fit on as FEW lines as possible and NEVER wrap awkwardly. WHAT I BRING expertise: ONE line, max ~48 characters. CORE COMPETENCIES expertise: even shorter - HALF a line, max ~28 characters, a compact comma-separated phrase, NOT a sentence. Cut filler, drop articles ('the','a'), and prefer noun phrases over clauses. For Nordic Minimal these caps are HARD: never let a cell wrap to a second line.",
       );
+      // IDENTITY-NO-REPEAT-001 (owner 2026-06-19): the identity phrase-cluster
+      // (automotive/defence/deep-tech, concept-to-production, requirements/validation/
+      // supplier-coordination) was repeating ~4x across PROFILE, WHO I AM, FOUNDATION
+      // and the CL. State it ONCE; everywhere else use a fresh angle or omit it.
+      r.push(
+        "IDENTITY - STATE IT ONCE (IDENTITY-NO-REPEAT-001): the candidate's core identity phrase-cluster - the markets (automotive / defence / deep-tech), the arc (concept to production), and the method (requirements, validation, change control, supplier coordination) - must appear in FULL exactly ONCE across the whole document, in the CV PROFILE. Do NOT restate that same cluster in WHO I AM, the CL opening, FOUNDATION, WHAT I BRING, or a role line. Where those sections would repeat it, pick a DIFFERENT, non-overlapping angle (a specific result, a domain example, a way of working) or drop the sentence. Before returning, scan for the cluster and confirm it is stated once; collapse any duplicate.",
+      );
+      // DEMANDED-FIRST-001 (owner 2026-06-19): surface the skills the target role most
+      // demands that the candidate actually HAS, up top, for the recruiter 6-second scan.
+      r.push(
+        "DEMANDED SKILLS FIRST (DEMANDED-FIRST-001): for the target role (or, when unsolicited, the candidate's strongest cross-cluster skills), put the qualifications the role most asks for AND the candidate genuinely has in the FIRST THIRD of each section - the opening Focus Areas, the first competency rows, the lead bullet of each role - so a recruiter's 6-second scan and an ATS both hit them first. Never fabricate a skill to surface it; only promote ones evidenced in the kernel. A buried genuine match must be moved up, not invented.",
+      );
       // PERSONALITY-KERNEL-001 (owner 2026-06-12, handoff T8 — canonical
       // source: skills/antcv-writer/assets/gabriel-kernel-personality-v1.json).
       // A stored personalInfo.personality object overrides the embedded

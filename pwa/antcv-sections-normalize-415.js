@@ -15,7 +15,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.715-interests-pin';
+  var VERSION = '1.50.723-sirin-team';
   if (window.__antcvSectionsNormalize === VERSION) return;
   window.__antcvSectionsNormalize = VERSION;
 
@@ -802,6 +802,23 @@
     return copy;
   }
 
+  // SIRIN-TEAM-001 (owner 2026-06-19): the Sirin role is NOT a 'task force' - it is the
+  // Sigma-Connectivity ODM engineering team (Sweden) that Gabriel DIRECTED for ~2 years.
+  // Rename every 'task force' -> 'team' across the CV (role bullets, the selected
+  // outcomes that laminate the Results line, anywhere). Deep, idempotent (returns null
+  // once none remain). See [[gabriel-cv-facts]] SIRIN-SEMANTICS / SIRIN-TEAM.
+  function renameTaskForce(cv) {
+    var changed = false;
+    function walk(o) {
+      if (typeof o === 'string') { if (/tasks+force/i.test(o)) { changed = true; return o.replace(/tasks+force/gi, 'team'); } return o; }
+      if (Array.isArray(o)) return o.map(walk);
+      if (o && typeof o === 'object') { var n = {}; for (var k in o) n[k] = walk(o[k]); return n; }
+      return o;
+    }
+    var out = walk(cv);
+    return changed ? out : null;
+  }
+
   function normalize() {
     // EDIT-GUARD-001 (owner 2026-06-19): defer all normalisation while the user is
     // actively editing — rewriting sections mid-edit re-renders the preview and
@@ -818,6 +835,7 @@
       var changed = false;
       var k = canonKanzen(cv); if (k) { cv = k; changed = true; }
       var cw = canonCopenhagenWolves(cv); if (cw) { cv = cw; changed = true; }
+      var tf = renameTaskForce(cv); if (tf) { cv = tf; changed = true; }
       var idf = canonIDF(cv); if (idf) { cv = idf; changed = true; }
       var tau = canonTAU(cv); if (tau) { cv = tau; changed = true; }
       // ROLE-DECOMP-001 (owner 2026-06-16): the "Customer Change Requests Specialist"

@@ -2092,23 +2092,37 @@ export function applyOutcomesMode(docSections, doc) {
         return true;
       });
     };
+    // KEEP-MIN-BULLETS-001 (owner 2026-06-19: "keep 2-3 visible role content lines; if
+    // you hide one line for the result, propagate the next role line into view"). A hide
+    // pass (subsumed / metric-reuse / derive) must NOT leave a role with too few bullets.
+    // If hiding would drop below 2 visible (and the role HAD ≥2), keep them all instead —
+    // a short 2-bullet role shows both rather than collapsing to one.
+    const KEEP_MIN = 2;
+    const keepMin = (original, kept) => {
+      const o = Array.isArray(original) ? original : [];
+      const k = Array.isArray(kept) ? kept : o;
+      return (k.length >= Math.min(KEEP_MIN, o.length)) ? k : o;
+    };
     const expOut = {
       ...exp,
       roles: (exp.roles || []).map((r) => {
         // tiers 1-4 — a REAL outcome wins; bullets stay exposed EXCEPT one that reuses
         // the Result's number (RESULT-NUMBER-NO-REUSE-001).
         // _tx() re-tenses the leading verb to the user's chosen tense (no-op for 'auto').
+        // keepMin protects ONLY against the metric-reuse over-hide — the intentional
+        // hides (subsumed bullet / derived source bullet that IS the Result) stay hidden,
+        // so keepMin's "original" is the post-intentional-hide set, never r.bullets.
         const lam = _lam.get(r);
-        if (lam) return { ...r, results: _tx(lam), bullets: hideMetricReused(r.bullets, lam) };
+        if (lam) return { ...r, results: _tx(lam), bullets: keepMin(r.bullets, hideMetricReused(r.bullets, lam)) };
         // pool / explicit-map distribution — may be a bullet-seeded outcome, so hide
         // a bullet when the result text subsumes it OR reuses its number.
-        if (resultsByRole.has(r)) { const rt = resultsByRole.get(r); return { ...r, results: _tx(rt), bullets: hideMetricReused(hideSubsumed(r, rt), rt) }; }
+        if (resultsByRole.has(r)) { const rt = resultsByRole.get(r); const sub = hideSubsumed(r, rt); return { ...r, results: _tx(rt), bullets: keepMin(sub, hideMetricReused(sub, rt)) }; }
         // tier-5 derive — the Results line IS one of the role's bullets; hide that
         // one source bullet (export render only; stored data untouched).
         const d = deriveResultFromRole(r);
         if (!d) return r;
         const keptBullets = (Array.isArray(r.bullets) ? r.bullets : []).filter((_, i) => i !== d.index);
-        return { ...r, results: _tx(d.text), bullets: hideMetricReused(keptBullets, d.text) };
+        return { ...r, results: _tx(d.text), bullets: keepMin(keptBullets, hideMetricReused(keptBullets, d.text)) };
       }),
     };
     return docSections.filter((s) => !isOutcomes(s)).map((s) => (s === exp ? expOut : s));

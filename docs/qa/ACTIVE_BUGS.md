@@ -222,7 +222,7 @@ Owner-set ordering (2026-06-15, revised): **work CONTENT & EXPORT issues first, 
 
 20. **SUBSECTION-RENAME-REORDER-001** — rename + reorder subsubsections, controlled by writing style.
 
-21. **EXPORT-PREVIEW-ZOOM-001** (owner 2026-06-15) — the export-preview modal should ZOOM OUT more so the full A4 page fits in view (it currently shows the page too large / cropped). Tune the iframe fit-to-width (`antcv-pdf-preview-gate.js` `--antcv-fit` ~597) to fit the whole page height, not just width.
+21. **EXPORT-PREVIEW-ZOOM-001** `[SHIPPED 1.50.701 as EXPORT-PREVIEW-ZOOM-002]` (owner 2026-06-15/re-requested 2026-06-19) — DONE: the modal now fits a whole A4 page (width AND height). The 2026-06-15 attempt collapsed because it measured the element height (= full multi-page doc after the 1.50.600 un-clamp); fixed by deriving one-page height from page WIDTH × A4 ratio (297/210). Screen-only; PDF unaffected. — the export-preview modal should ZOOM OUT more so the full A4 page fits in view (it currently shows the page too large / cropped). Tune the iframe fit-to-width (`antcv-pdf-preview-gate.js` `--antcv-fit` ~597) to fit the whole page height, not just width.
 
 ---
 

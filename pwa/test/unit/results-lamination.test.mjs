@@ -215,5 +215,42 @@ ok('laminated results never exceed ~2 lines (<=262 chars)', roles.every((r) => !
     !/Security Guard|Students Council/i.test([bv.kanzen, bv.innoviz, bv.guard, bv.council].map((r) => r.results || '').join(' | ')));
 }
 
+// RESULTS-CROSSROLE-BLEED-002 (owner 2026-06-19): the lamination scored a candidate
+// outcome only on a role's title/company tokens, so a generated outcome that
+// PARAPHRASES another role's KERNEL outcome (the real bug: Sirin's 7-person /
+// Sigma-Connectivity ODM / Sweden work) could token-match an unrelated available
+// role (Meprolight Team Leader) and bleed onto it. With the role's own kernel
+// outcomes (personalInfo.workHistory[].outcomes) added to the scoring, the candidate
+// resolves to its TRUE home (Sirin) — which, already laminated, drops it (not bleed).
+{
+  const _origPI = store.personalInfo;
+  store.personalInfo = JSON.stringify({
+    workHistory: [
+      { id: 'sirin', title: 'Senior Optics & Electro-Optics Engineer', company: 'Sirin Labs',
+        outcomes: ['Directed a 7-person EO and optics team — the Sigma-Connectivity ODM engineering team at the Sweden site — and co-invented the stray-light optical window.'] },
+      { id: 'mepro-tl', title: 'Electro-Optics Team Leader', company: 'Meprolight, IWI Group',
+        outcomes: ['Supervised the team through characterisation and qualification for a fully operating SWIR sight demonstrator.', 'Managed microdisplay end-of-life and qualified a substitute at lower cost.'] },
+    ],
+  });
+  const R = [
+    // Sirin: laminates from its OWN outcome (tier-2) → already-home, excluded from distribution.
+    { id: 'sirin', title: 'Senior Optics & Electro-Optics Engineer', company: 'Sirin Labs', on: true,
+      outcomes: [{ title: '', result: 'Directed a 7-person EO and optics team — the Sigma-Connectivity ODM engineering team at the Sweden site — and co-invented the stray-light optical window.' }],
+      bullets: ['Architected smartphone optical subsystems.'] },
+    // Meprolight Team Leader: no own outcome on the generated role → a distribution target.
+    { id: 'mepro-tl', title: 'Electro-Optics Team Leader', company: 'Meprolight, IWI Group', on: true,
+      bullets: ['Managed prototype-to-production transfer and supplier qualification.'] },
+  ];
+  // The SELECTED OUTCOME is a paraphrase of Sirin's kernel outcome — its TRUE home.
+  const O = ['Supervised 7-person task force for high-security smartphone optics - coordinated ODM team in Sweden.'];
+  const secs = [ { id: 'experience', type: 'experience', roles: R }, { id: 'selected_outcomes', type: 'text_bullets', items: O } ];
+  const ob = applyOutcomesMode(secs, 'cv');
+  const bb = Object.fromEntries(ob.find((s) => s.type === 'experience').roles.map((r) => [r.id, r]));
+  ok('BLEED-002: the Sirin-paraphrase outcome does NOT bleed onto the Meprolight Team Leader role',
+    !/smartphone|sweden|ODM|task force/i.test(bb['mepro-tl'].results || ''));
+  ok('BLEED-002: Sirin still laminates its own ODM/Sweden outcome', /Sweden|ODM/i.test(bb.sirin.results || ''));
+  store.personalInfo = _origPI;
+}
+
 for (const r of roles) console.log(`  [${r.title}] ${r.results || '(none)'}`);
 console.log(`\nRESULTS-LAMINATION OK (${pass} checks)`);

@@ -1774,7 +1774,23 @@ export function applyOutcomesMode(docSections, doc) {
     const lineOf = (x) => typeof x === 'string' ? x : [x && x.b, x && x.t].filter(Boolean).join(' ').trim();
     const visRoles = (exp.roles || []).filter((r) => r && r.on !== false);
     if (!visRoles.length) return docSections;
-    const tokensFor = (r) => new Set(tok(r.title).concat(tok(r.company)));
+    // RESULTS-CROSSROLE-BLEED-002 (owner 2026-06-19): score a candidate outcome not
+    // only against a role's title/company but against that role's OWN KERNEL outcomes
+    // (personalInfo.workHistory[].outcomes), populated below. The kernel is the ground
+    // truth for "true home": a generated outcome that paraphrases another role's kernel
+    // outcome (e.g. the Sirin 7-person / Sigma-Connectivity ODM / Sweden work) then
+    // scores highest on THAT role, so the global-best-home rule below resolves it to its
+    // real home — which, being already laminated, DROPS it instead of bleeding it onto
+    // an unrelated available role (the Meprolight Team Leader bleed). Keyed by role id
+    // AND a title|company signature so it works whether or not generated ids match.
+    const _koById = {}, _koByName = {};
+    const _nameKey = (r) => r ? (tok(r.title).join(' ') + '|' + tok(r.company).join(' ')) : '';
+    const tokensFor = (r) => {
+      const base = new Set(tok(r.title).concat(tok(r.company)));
+      const ko = (r && r.id != null && _koById[String(r.id)]) || _koByName[_nameKey(r)];
+      if (ko) ko.forEach((w) => base.add(w));
+      return base;
+    };
     // OUTCOMES-RESULTS-EXPORT-PARITY-001 (owner 2026-06-14): the export half was
     // still the OLD bucketing (no dedup, no cap, unmatched → first role), so the
     // exported Results were long, repetitive, not role-specific, and starved the
@@ -1793,6 +1809,20 @@ export function applyOutcomesMode(docSections, doc) {
       // proofPointIds (deterministic), not the heuristic SELECTED-OUTCOMES spread.
       [].concat(_piRoot.proofPointsByRole || [], _piRoot.proofPointsByPosition || [])
         .forEach((p) => { if (p && p.id && typeof p.text === 'string') _ppText[p.id] = p.text; });
+      // RESULTS-CROSSROLE-BLEED-002: per-role kernel-outcome token sets, keyed by
+      // role id AND title|company signature (workHistory/experience/roles aliases;
+      // an outcome may be a string or {title,result}/{b,t}).
+      const _koText = (o) => typeof o === 'string' ? o : (o ? String((o.result || o.title || '') + ' ' + (o.b || '') + ' ' + (o.t || '')).trim() : '');
+      [].concat(_piRoot.workHistory || [], _piRoot.experience || [], _piRoot.roles || [])
+        .forEach((r) => {
+          if (!r || !Array.isArray(r.outcomes) || !r.outcomes.length) return;
+          const set = new Set();
+          r.outcomes.forEach((o) => tok(_koText(o)).forEach((w) => set.add(w)));
+          if (!set.size) return;
+          if (r.id != null) { const k = String(r.id); if (!_koById[k]) _koById[k] = new Set(); set.forEach((w) => _koById[k].add(w)); }
+          const nk = tok(r.title).join(' ') + '|' + tok(r.company).join(' ');
+          if (nk !== '|') { if (!_koByName[nk]) _koByName[nk] = new Set(); set.forEach((w) => _koByName[nk].add(w)); }
+        });
     } catch (_) {}
     // Per-role LAMINATED results: explicit role.results wins; else resolve the
     // role's proofPointIds against the master-profile proof points. Roles with

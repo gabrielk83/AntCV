@@ -317,7 +317,7 @@
   })();
 </script>
 <script type="module">
-  import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.50.697';
+  import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.50.699';
   window.exportDocxViaWorker = exportDocxViaWorker;
   window.ANTCV_VERSION = '1.50.9';
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
@@ -361,7 +361,7 @@
           app.src = 'app.js?v=1.50.691';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.50.698';
+            vo.src = 'antcv-version-override.js?v=1.50.699';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);

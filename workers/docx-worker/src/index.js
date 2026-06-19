@@ -24686,7 +24686,7 @@ function buildTwoColumnDocument(ctx) {
   // LibreOffice/CloudConvert scattered the textbox text inline across pages (owner's
   // 5-page PDF: p1 mid, p2 into References, p5 top). The carrier is appended at BODY
   // level after the last page table (see docChildren), where the frame anchors to page.
-  ctx.__aiWmCorner = aiWmCorner;
+  ctx.__aiWmCorner = aiWmCorner; // consumed after empty-page guard (EMPTY-PAGE-GUARD-001)
   // ADV-SPACING-CONTROLS-001 (1.14.60, owner 2026-06-12): the PWA's spacing
   // sliders. Forwarded only when off their defaults; vertical pads apply as
   // DELTAS from the reviewed worker constants (the preview/worker verticals
@@ -24845,15 +24845,36 @@ function buildTwoColumnDocument(ctx) {
         : [makeBodyRow(sbEls, mnEls, false)]
   });
   const docChildren = [];
+  // EMPTY-PAGE-GUARD-001 (1.14.79): splitChildrenByPage can emit a slot with NO
+  // content in EITHER column (stray double page-break, or sidebar overflow past the
+  // main column's last slot). makePageTable rendered that as a BLANK page (owner:
+  // blank page 4 in a 6-page export). Compute the non-empty slots first; only those
+  // render, and pageBreakBefore is inserted BETWEEN rendered pages.
+  const __renderSlots = [];
   for (let p = 0; p < numPages; p++) {
-    if (p > 0) docChildren.push(new Paragraph({ pageBreakBefore: true, spacing: { before: 0, after: 0, line: 1, lineRule: "exact" }, children: [] }));
-    docChildren.push(makePageTable(sidebarPages[p] || [], mainPages[p] || [], p === 0));
+    const __sb = sidebarPages[p] || [];
+    const __mn = mainPages[p] || [];
+    if (p === 0 || __sb.length > 0 || __mn.length > 0) __renderSlots.push(p);
   }
+  // AI-WATERMARK-EXPORT-LOCATION-001 (1.14.79): push the floating sentinel into the
+  // LAST RENDERED slot's main column BEFORE that slot is rendered, so it ships inside
+  // the last real page. The VML frame is absolutely positioned (vertical/horizontal-
+  // relative:page, set in aiNoticeVmlRun), zero layout footprint, so it floats to the
+  // page-bottom corner without adding a page (the 1.14.78 body-level placement added
+  // a 6th page; cell placement + page anchor does not).
+  {
+    const __lastRendered = __renderSlots.length ? __renderSlots[__renderSlots.length - 1] : 0;
+    if (!mainPages[__lastRendered]) mainPages[__lastRendered] = [];
+    mainPages[__lastRendered].push(buildAiDisclosureHangingTextbox(ctx, { side: ctx.__aiWmCorner || "right" }));
+  }
+  __renderSlots.forEach((p, __i) => {
+    if (__i > 0) docChildren.push(new Paragraph({ pageBreakBefore: true, spacing: { before: 0, after: 0, line: 1, lineRule: "exact" }, children: [] }));
+    docChildren.push(makePageTable(sidebarPages[p] || [], mainPages[p] || [], p === 0));
+  });
   // AI-WATERMARK-EXPORT-LOCATION-001 fix (1.14.78): body-level sentinel carrier,
   // appended AFTER the final page table (not inside a cell). postProcessDocx swaps its
   // run for the page-anchored VML frame; at body level on the last page it renders
   // once at the true page bottom.
-  docChildren.push(buildAiDisclosureHangingTextbox(ctx, { side: ctx.__aiWmCorner || "right" }));
   // PAGEBREAK-STYLE-OPTIONS-001(c) (1.14.55): page number in the chosen
   // corner. Word headers/footers; the bundle's public Header/Footer wrapper
   // classes are tree-shaken out, but File.addSection only reads
@@ -27322,7 +27343,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   the anchor's spacing-after from (px/2+14) to (px/2-12) so the first sidebar
 //   section sits just under the medallion (~0.27in higher; the full 0.6in would
 //   overlap the photo at the default diameter).
-var VERSION = "1.14.78-aiwm-bodylevel-pageanchor";
+var VERSION = "1.14.79-aiwm-cell-pageanchor-emptyguard";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

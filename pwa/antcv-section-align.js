@@ -437,6 +437,26 @@
     }
   }
 
+  // AUTO-ALIGN-001 (owner 2026-06-19): app.src.js hardcodes textAlign:justify at many
+  // render sites, so a NARROW sidebar block (PUBLICATIONS) over-stretches into giant
+  // inter-word gaps regardless of the stored alignment. Flip any sidebar element
+  // computed-justified to left (or right for RTL). Idempotent; re-runs each pass.
+  function dejustifyNarrowSidebar(root) {
+    try {
+      const sidebars = (root || document).querySelectorAll('[data-antcv-document-sidebar], .antcv-document-sidebar');
+      for (const sb of sidebars) {
+        const els = sb.querySelectorAll('p, div, span, li, td, [data-edit-path]');
+        for (const el of els) {
+          let cs = null;
+          try { cs = getComputedStyle(el); } catch (_) { continue; }
+          if (!cs || cs.textAlign !== 'justify') continue;
+          const want = isRtlText(el.textContent) ? 'right' : 'left';
+          if (el.style.textAlign !== want) el.style.textAlign = want;
+        }
+      }
+    } catch (_) {}
+  }
+
   // ─── Table-edge width drag ────────────────────────────────────────
   //
   // The existing column splitter inside [data-table-resize-wrap] is a
@@ -1122,6 +1142,7 @@
           refreshPanelCyclerGlyphs();
         }
         reapplyAlignmentEverywhere(root);
+        dejustifyNarrowSidebar(root);
         ensureAllTableEdgeHandles(root);
         ensureAllSidebarOverrides(root);
       } catch (e) {

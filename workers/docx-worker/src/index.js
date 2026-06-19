@@ -23808,8 +23808,8 @@ function aiNoticeVmlRun(side) {
   const horiz = side === "left" ? "left" : "right";
   return '<w:r><w:rPr><w:noProof/></w:rPr><w:pict>' +
     '<v:rect id="AntCVAiNotice" o:spid="_x0000_s4097" style="position:absolute;margin-left:0;margin-top:0;width:320pt;height:18pt;' +
-    'mso-position-horizontal:' + horiz + ';mso-position-horizontal-relative:margin;' +
-    'mso-position-vertical:bottom;mso-position-vertical-relative:margin;z-index:251658240" filled="f" stroked="f">' +
+    'mso-position-horizontal:' + horiz + ';mso-position-horizontal-relative:page;' +
+    'mso-position-vertical:bottom;mso-position-vertical-relative:page;z-index:251658240;mso-wrap-style:square" filled="f" stroked="f">' +
     '<v:textbox inset="14pt,1pt,14pt,11pt"><w:txbxContent>' +
     '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="220" w:lineRule="auto"/><w:jc w:val="' + horiz + '"/></w:pPr>' +
     '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:i/><w:color w:val="4D7976"/><w:sz w:val="13"/></w:rPr>' +
@@ -24680,7 +24680,13 @@ function buildTwoColumnDocument(ctx) {
   if (__lastSideN < __lastMainN) aiWmCorner = __sbPhys;
   else if (__lastMainN < __lastSideN) aiWmCorner = __mnPhys;
   else aiWmCorner = aiWmHint || "right";
-  mainPages[numPages - 1].push(buildAiDisclosureHangingTextbox(ctx, { side: aiWmCorner }));
+  // AI-WATERMARK-EXPORT-LOCATION-001 fix (1.14.78): sentinel NO LONGER pushed into
+  // the last page's table CELL. A floating v:rect anchored vertical-relative:margin
+  // cannot resolve "page-margin bottom" from inside a <w:tc> on a margin-0 page, so
+  // LibreOffice/CloudConvert scattered the textbox text inline across pages (owner's
+  // 5-page PDF: p1 mid, p2 into References, p5 top). The carrier is appended at BODY
+  // level after the last page table (see docChildren), where the frame anchors to page.
+  ctx.__aiWmCorner = aiWmCorner;
   // ADV-SPACING-CONTROLS-001 (1.14.60, owner 2026-06-12): the PWA's spacing
   // sliders. Forwarded only when off their defaults; vertical pads apply as
   // DELTAS from the reviewed worker constants (the preview/worker verticals
@@ -24843,6 +24849,11 @@ function buildTwoColumnDocument(ctx) {
     if (p > 0) docChildren.push(new Paragraph({ pageBreakBefore: true, spacing: { before: 0, after: 0, line: 1, lineRule: "exact" }, children: [] }));
     docChildren.push(makePageTable(sidebarPages[p] || [], mainPages[p] || [], p === 0));
   }
+  // AI-WATERMARK-EXPORT-LOCATION-001 fix (1.14.78): body-level sentinel carrier,
+  // appended AFTER the final page table (not inside a cell). postProcessDocx swaps its
+  // run for the page-anchored VML frame; at body level on the last page it renders
+  // once at the true page bottom.
+  docChildren.push(buildAiDisclosureHangingTextbox(ctx, { side: ctx.__aiWmCorner || "right" }));
   // PAGEBREAK-STYLE-OPTIONS-001(c) (1.14.55): page number in the chosen
   // corner. Word headers/footers; the bundle's public Header/Footer wrapper
   // classes are tree-shaken out, but File.addSection only reads
@@ -27311,7 +27322,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   the anchor's spacing-after from (px/2+14) to (px/2-12) so the first sidebar
 //   section sits just under the medallion (~0.27in higher; the full 0.6in would
 //   overlap the photo at the default diameter).
-var VERSION = "1.14.77-watermark-side-pubchain";
+var VERSION = "1.14.78-aiwm-bodylevel-pageanchor";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

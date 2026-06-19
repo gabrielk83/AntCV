@@ -120,7 +120,15 @@ B. `[SHIPPED 1.50.697 — STD-CODE-NOT-METRIC-001]` **ISO 26262 picked as a "num
    `_metricScore`, strip/ignore standard-code numbers (ISO|IEC|EN|DIN|MIL-STD|STANAG|ASPICE|SAE +
    their digits, patent numbers already filtered) before scoring. Keep both copies in sync.
 
-C. **Cross-role bleed (RESULTS-CROSSROLE-BLEED-001 regressed).** A KANZEN result ("Delivered
+C. `[SHIPPED 1.50.699 — RESULTS-CROSSROLE-BLEED-002]` **Cross-role bleed.** ROOT CAUSE
+   (from the kernel backup): the kernel is CLEAN (Sirin's 7-person/ODM/Sweden outcome is on
+   Sirin; Meprolight's own are SWIR-sight/microdisplay) — the bleed was a lamination
+   mis-attribution. `applyOutcomesMode` scored a SELECTED OUTCOME only on title/company tokens,
+   so a paraphrase of another role's work token-matched an unrelated available role. FIX:
+   tokensFor now ALSO scores against each role's OWN kernel outcomes (workHistory[].outcomes,
+   keyed by id + title|company), so the candidate resolves to its true (already-laminated) home
+   and is DROPPED, not bled. Unit-tested with the real Sirin/Meprolight data; proved the bleed
+   reproduces without the fix. ES module — no app.js mirror, preview == export. A KANZEN result ("Delivered
    hardware-software advisory…") laminated onto **System Architect** (Innoviz). A MEPROLIGHT-type
    result ("Design and characterised low-light, thermal, SWIR … defence-grade products, incl.
    NIR/SWIR/thermal multi-band image fusion") laminated onto **IDF Computer Systems Administrator**.

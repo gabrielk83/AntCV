@@ -2,6 +2,26 @@
 
 ## NIGHTLY FEATURE REQUESTS (owner 2026-06-19)
 
+- **SIGNIN-GATE-HARDREFRESH-001** `[OPEN — REGRESSION, nightly to diagnose]` — owner
+  2026-06-19: "I get a sign-in [gate] that does NOT complete on every hard refresh. I need
+  to refresh the browser AGAIN to get good output for PDF. I think it is a regression."
+  REPRO: hard-refresh (the in-app ↻) → a sign-in / "Loading…" gate appears and hangs (does
+  not lift to the editor) → a manual BROWSER reload is needed → only THEN is the PDF export
+  good (first export after the hung gate is from a half-loaded state). SUSPECTS to bisect:
+  (1) `antcv-login-loading-gate.js` cover timing — `editorReady()` waits for
+  `.antcv-preview-paper`, MIN_MS 3200 / MAX_MS 9000; the cover may lift before sections
+  fully restore, or the sign-in (`antcv:auth:token`) re-validation hangs the gate. (2) The
+  cold-load → PDF-export race: the export (antcv-docx-client.js applyOutcomesMode) runs
+  before the cloud-restore finishes hydrating sections, so the FIRST export is stale.
+  (3) RECENT app.js changes this run (CLAMP-GUARD 728 / META-DRIFT-GUARD 731 / AUTO-COMMIT
+  732) touch the cloud-restore + active-app flow — bisect against 1.50.727 (pre-728) to
+  confirm/deny a regression there. (4) The ~20 SW CACHE bumps this session mean every
+  hard-refresh re-activated the SW (skipWaiting + clients.claim) — a SW re-activation race
+  could leave the first post-refresh load serving a mixed asset set. NIGHTLY: reproduce on
+  antcv.pages.dev (owner signed in), capture the gate-hang console (login-loading-gate logs
+  + auth), and either fix the cover-lift/sign-in completion or gate the PDF export on a
+  "sections restored" signal so the FIRST export is correct without a second refresh.
+
 - **JD-FETCH-CHIP-LABEL-001** `[OPEN — nightly feature]` — owner: "when you fetch a JD, add
   the Job and company name as the first lines in" the green JD-ready chip (currently
   `✓ 4449 chars · url-fetch · 1 page`). The chip is at `app.src.js ~39349-39362`:

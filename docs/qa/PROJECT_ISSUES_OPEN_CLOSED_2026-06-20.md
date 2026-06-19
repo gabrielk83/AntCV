@@ -163,3 +163,34 @@ These are the deeper follow-ups the export-only fixes (734–736) deliberately d
 2. **Salmon-splitter pagination for preview pages 2/3** — the preview page-split (salmon splitter, PERMANENT — never remove `__antcvSalmon`) must place page breaks to match the worker export's pagination, including a section-scoped "everything from here down → next page" break (ties to OPEN item 2). Verify the salmon split AND the worker export break before a role / push following sections together.
 
 3. **Twin-tables-at-generation** — the real fix for the CV CORE vs CL WHAT-I-BRING overlap (item J). A deterministic pass can rename/drop but cannot write distinct expertise. Needed: collect **distinct data signals** for WHAT-I-BRING vs CORE-COMPETENCIES at generation, give each table its **own seed + focus directions**, and enforce parity with each document (CV core ≠ CL bring), so the two tables are genuinely different content rather than post-hoc de-duped.
+
+---
+
+## UPDATE — 2026-06-20 PM (1.50.737–739)
+
+### ⚠️ ROOT-CAUSE FOUND: stale service worker (the day's biggest issue)
+For most of 2026-06-20 the owner's tab ran **`app.js?v=1.50.724`** while the network served the latest. Every "your fix didn't work" report (twin tables, preview tense, Results tense) was tested on **724**, not the shipped code. Two compounding bugs:
+- The service worker pinned the tab to a stale `app.js`; the in-app **Hard Refresh** (and `antcv-hardrefresh-force-349.js`) did NOT pull the new version.
+- `antcv-version-override.js` **rewrites the visible version chip to `TARGET_VERSION`**, so a stale tab still *displays* the latest number — masking the staleness completely.
+- **Mitigation applied:** cleared the SW + caches on the live tab (localStorage data preserved); tab is now genuinely on the latest. Verified `AntcvTenseClause` present, preview bullets present-tense, sanitize active.
+- **OPEN P1 = `SIGNIN-GATE-HARDREFRESH-001`** (already in OPEN ISSUES) is now confirmed as this stale-SW failure. NIGHTLY MUST FIX: make Hard Refresh truly update (skipWaiting + clients.claim + navigation reload), and STOP the version-override from masking a stale actual version — show the REAL loaded `app.js?v` so staleness is visible. This is the highest-leverage fix: while it's broken, no other client-side fix reaches the owner.
+
+### CLOSED today (PM)
+| Item | Version | What |
+|---|---|---|
+| TENSE-PREVIEW-PARITY-001 | 737 | preview bullets show export tense (results mode) via `window.AntcvTenseClause`; text-only, edit paths intact |
+| TABLE-DIRECTION-001 | 737 | prompt: distinct seeds + own direction per table (regen-gated; UNVERIFIED — owner was on 724) |
+| TENSE-VERBMAP-EXPAND-002 / TENSE-HYPHEN-001 | 738 | Results stuck past: `_tenseLead` missed "align" + the regex broke on hyphen ("co-organised"→read "co"). Fixed both; +~50 verbs. Covers export AND preview Results (shared bridge) |
+| EXPORT-HIDE-EXPAND | 739 | hide foreningsarbejde (always), IDF sysadmin (unless JD=IT/ops), PUBLICATIONS & PATENT section (unless JD=research). Export-only + ephemeral |
+
+### Updated DO-NOT-REGRESS additions (737–739)
+- `window.AntcvTenseClause` (docx-client) + the preview bullet wrapping (`app.src.js` bullet render, minified `value:W(("results"===E&&window.AntcvTenseClause?...)`). Probe: results-mode preview bullet leading verb matches the PDF.
+- `_tenseLead` hyphen regex `[A-Za-z][A-Za-z-]*` + the expanded `_T_B2P`. Probe: `AntcvTenseClause('Specify x; aligned y; co-organised z')` → all present.
+- `sanitizeForExport` hide set: IRRELEVANT_ROLE (+foreningsarbejde), CLUSTER_ROLE (sysadmin) gated on `_jdIsTechOps`, Publications/Patents gated on `_jdIsResearch`. Probe: targeted analyst export drops those, IT/research JD keeps them, kernel keeps all.
+
+### STILL OPEN after today
+1. **`SIGNIN-GATE-HARDREFRESH-001` (P1)** — stale-SW / masking version-override (above). Fix first.
+2. **Twin tables still share** — owner reports overlap, but tested on 724. Re-verify TABLE-DIRECTION-001 on a fresh regen at ≥738. If still overlapping, the tables are likely **seeded from a shared source** (investigate the generation seed, not just the prompt); a deterministic no-shared-LABEL backstop in `sanitizeForExport` is the fallback.
+3. **Preview parity for merges/hides** — needs a read-only "export preview" mode (editable preview can't show them: index-based edit paths).
+4. **Salmon-splitter pages 2/3** — preview pagination to match export.
+5. `antcv:lastJdText` was EMPTY on the live targeted app (jdLen=0) — the JD text isn't persisted with the targeted application, so the cluster gates (sysadmin/publications keep-for-IT/research) can't read it. Wire the JD text into the active application so cluster-aware logic works.

@@ -38,7 +38,7 @@
        shows a "Loading…" cover for returning users until the editor is ready, so
        the wizard flash + palette/tone settling are masked. New users see the
        real wizard. Escape: localStorage['antcv:disable-loading-gate']='1'. -->
-  <script src="antcv-login-loading-gate.js?v=1.50.603"></script>
+  <script src="antcv-login-loading-gate.js?v=1.50.722"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script>window.loadMammoth=()=>new Promise((res,rej)=>{if(window.mammoth)return res(window.mammoth);const s=document.createElement('script');s.src='https://unpkg.com/mammoth/mammoth.browser.min.js';s.onload=()=>res(window.mammoth);s.onerror=()=>rej(new Error('Failed to load Mammoth (.docx parser)'));document.head.appendChild(s);});</script>
@@ -361,7 +361,7 @@
           app.src = 'app.js?v=1.50.720';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.50.713';
+            vo.src = 'antcv-version-override.js?v=1.50.722';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);

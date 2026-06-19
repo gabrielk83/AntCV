@@ -31,7 +31,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.603-login-warmup';
+  var VERSION = '1.50.722-login-warmup';
   if (window.__antcvLoginLoadingGate === VERSION) return;
   window.__antcvLoginLoadingGate = VERSION;
 
@@ -175,9 +175,21 @@
     h1.textContent = 'AntCV';
     h1.style.cssText = 'color:#fff;font-size:22px;font-weight:700;margin:0;';
     var ver = document.createElement('span');
-    // Match the pre-login screen's "X.XX.XXX-babel-fish" version chip. Numeric part
-    // tracks this gate's VERSION (bumped every release); codename mirrors app.js `Ai`.
-    ver.textContent = (VERSION.match(/^\d+\.\d+\.\d+/) || ['1.50.603'])[0] + '-babel-fish';
+    // LOGIN-VERSION-LIVE-001 (owner 2026-06-19): this chip was frozen at the gate's own
+    // hardcoded VERSION (a stale "1.50.603-babel-fish" that alarmed users). Track the
+    // LIVE current version instead: window.ANTCV_VERSION is pinned by version-override.js
+    // to the current TARGET_VERSION (bumped every release). Read it at paint time, fall
+    // back to this gate's VERSION, and re-apply on a few delays so it updates once
+    // version-override runs (the chip can paint before that sidecar executes).
+    function applyVer() {
+      try {
+        var live = (window.ANTCV_VERSION && String(window.ANTCV_VERSION).match(/^\d+\.\d+\.\d+/)) || null;
+        var num = live ? live[0] : (VERSION.match(/^\d+\.\d+\.\d+/) || ['1.50.722'])[0];
+        ver.textContent = num + '-babel-fish';
+      } catch (_) {}
+    }
+    applyVer();
+    [300, 1000, 2500].forEach(function (ms) { try { setTimeout(applyVer, ms); } catch (_) {} });
     ver.style.cssText = 'font-size:10px;font-weight:600;color:rgba(255,255,255,0.52);';
     brand.appendChild(h1); brand.appendChild(ver);
 

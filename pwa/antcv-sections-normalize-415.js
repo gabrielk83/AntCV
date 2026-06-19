@@ -15,7 +15,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.708-role-canon';
+  var VERSION = '1.50.709-role-bullet-order';
   if (window.__antcvSectionsNormalize === VERSION) return;
   window.__antcvSectionsNormalize = VERSION;
 
@@ -243,25 +243,79 @@
     return changed ? out : null;
   }
 
-  // VOLUNTEER-GROUP-001 (owner 2026-06-19): "Students Council Representative is also
-  // (foreningsarbejde), so maybe place [it] after Pan/Team Operations". Group the two
-  // volunteer (foreningsarbejde) roles together: move the Students Council role to sit
-  // immediately AFTER the Team Operations / Pan Idræt role. Idempotent — returns null
-  // once they are already adjacent in that order.
-  function groupVolunteerRoles(cv) {
+  // ROLE-ORDER-CANON-001 (owner 2026-06-19): "make canonical ordering of roles …
+  // reverse chronological apart from foreningsarbejde that goes to the end (and has to
+  // be reverse-chron between themselves)". So: sort all professional roles
+  // reverse-chronologically (most-recent END year first; tie → later START first; tie
+  // → original order), then append the foreningsarbejde (volunteer) roles, themselves
+  // reverse-chron. The early-career-compression branch (drop foreningsarbejde + unhide
+  // the ops-management interests line) belongs to the DEFERRED merge/page-budget work.
+  // Idempotent: returns null when the roles are already in canonical order.
+  function _roleYears(s) {
+    var x = String(s == null ? '' : s).toLowerCase();
+    var present = /present|current|nu(?:værende|tid)?|today|pågår|løbende|ongoing/.test(x);
+    var nums = (x.match(/\d{4}/g) || []).map(Number);
+    var start = nums.length ? nums[0] : 0;
+    var end = present ? 9999 : (nums.length ? nums[nums.length - 1] : start);
+    return { start: start, end: end };
+  }
+  function _isForeningsarbejde(r) {
+    var s = (((r && r.title) || '') + ' ' + ((r && r.company) || ''));
+    return /foreningsarbejde|pan idr|students?\s+council|volunteer|frivillig/i.test(s);
+  }
+  function canonicalRoleOrder(cv) {
     var xi = cv.findIndex(function (s) { return s && s.type === 'experience' && Array.isArray(s.roles); });
     if (xi < 0) return null;
     var roles = cv[xi].roles;
-    var teamIdx = roles.findIndex(function (r) { return r && (/pan idr/i.test(String(r.company || '')) || /team operations manager/i.test(String(r.title || ''))); });
-    var scIdx = roles.findIndex(function (r) { return r && /students?\s+council/i.test(String(r.title || '')); });
-    if (teamIdx < 0 || scIdx < 0) return null;
-    if (scIdx === teamIdx + 1) return null; // already grouped
-    var next = roles.slice();
-    var sc = next.splice(scIdx, 1)[0];
-    var insertAt = next.findIndex(function (r) { return r && (/pan idr/i.test(String(r.company || '')) || /team operations manager/i.test(String(r.title || ''))); }) + 1;
-    next.splice(insertAt, 0, sc);
+    if (roles.length < 2) return null;
+    var idx = roles.map(function (_, i) { return i; });
+    var cmp = function (a, b) {
+      var ya = _roleYears(roles[a].years), yb = _roleYears(roles[b].years);
+      if (yb.end !== ya.end) return yb.end - ya.end;     // most-recent end first
+      if (yb.start !== ya.start) return yb.start - ya.start; // then later start first
+      return a - b;                                       // stable
+    };
+    var prof = idx.filter(function (i) { return !_isForeningsarbejde(roles[i]); }).sort(cmp);
+    var vol = idx.filter(function (i) { return _isForeningsarbejde(roles[i]); }).sort(cmp);
+    var order = prof.concat(vol);
+    if (order.every(function (v, k) { return v === k; })) return null; // already canonical
+    var next = order.map(function (i) { return roles[i]; });
     var copy = cv.slice(); copy[xi] = Object.assign({}, copy[xi], { roles: next });
     return copy;
+  }
+
+  // BULLET-ORDER-CANON-001 (owner 2026-06-19): "make canonical ordering of … bullets …
+  // you keep the numeric higher". Within each role, stable-sort bullets so the
+  // quantified ones lead: a strong metric (range "X to Y" / "X→Y", "N×"/"N-fold",
+  // a percent, or "M of N") scores highest, a bare number next, prose last; ties keep
+  // their original relative order. A compliance/standard CODE (ISO 26262, ASPICE, …)
+  // is NOT a metric, so it does not get promoted. Idempotent: returns null when each
+  // role's bullets are already in canonical order.
+  var _STD_CODE_RX = /\b(?:ISO|IEC|EN|DIN|MIL[-\s]?STD|STANAG|ASPICE|SAE)(?:\s*\/\s*(?:ISO|IEC|SAE|EN))*[\s\/-]*[A-Z]?\d[\d.\-:]*[A-Z]?\b/gi;
+  function _bulletMetric(b) {
+    var t = String(typeof b === 'string' ? b : (b && (b.b || b.t)) || '').replace(_STD_CODE_RX, ' ');
+    if (/\d[\d,.]*\s*(?:[a-z%]+\s+){0,2}(?:to|->|→|–|—)\s+(?:[a-z]+\s+){0,2}\d/i.test(t)) return 4; // range
+    if (/\d[\d,.]*\s*(?:×|x\b|-fold|fold)/i.test(t)) return 4;                                       // multiplier
+    if (/\d[\d.]*\s*%/.test(t)) return 3;                                                             // percent
+    if (/\d[\d,.]*\s*(?:of|out of|\/)\s*\d/i.test(t)) return 3;                                       // M of N
+    if (/\d/.test(t)) return 2;                                                                       // bare number
+    return 0;
+  }
+  function canonicalBulletOrder(cv) {
+    var changed = false;
+    var out = cv.map(function (s) {
+      if (!s || s.type !== 'experience' || !Array.isArray(s.roles)) return s;
+      var roles = s.roles.map(function (r) {
+        if (!r || !Array.isArray(r.bullets) || r.bullets.length < 2) return r;
+        var dec = r.bullets.map(function (b, i) { return { b: b, i: i, m: _bulletMetric(b) }; });
+        var sorted = dec.slice().sort(function (a, b) { return (b.m - a.m) || (a.i - b.i); });
+        if (sorted.every(function (d, k) { return d.i === dec[k].i; })) return r; // already canonical
+        changed = true;
+        return Object.assign({}, r, { bullets: sorted.map(function (d) { return d.b; }) });
+      });
+      return changed ? Object.assign({}, s, { roles: roles }) : s;
+    });
+    return changed ? out : null;
   }
 
   // PATENT-IN-ROLE-001 (owner 2026-06-15): the patent number must live ONLY in
@@ -592,7 +646,8 @@
       var fe = foundedToEstablished(cv); if (fe) { cv = fe; changed = true; }
       var pt = stripPatentFromRoles(cv); if (pt) { cv = pt; changed = true; }
       var d = dedupeRoles(cv); if (d) { cv = d; changed = true; }
-      var gv = groupVolunteerRoles(cv); if (gv) { cv = gv; changed = true; }
+      var ro = canonicalRoleOrder(cv); if (ro) { cv = ro; changed = true; }
+      var bo = canonicalBulletOrder(cv); if (bo) { cv = bo; changed = true; }
       var f = stripFounder(cv); if (f) { cv = f; changed = true; }
       var p = placeRecs(cv); if (p) { cv = p; changed = true; }
       var dl = defaultLoc(cv); if (dl) { cv = dl; changed = true; }

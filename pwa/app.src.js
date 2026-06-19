@@ -2783,6 +2783,11 @@
       r.push(
         "DEMANDED SKILLS FIRST (DEMANDED-FIRST-001): for the target role (or, when unsolicited, the candidate's strongest cross-cluster skills), put the qualifications the role most asks for AND the candidate genuinely has in the FIRST THIRD of each section - the opening Focus Areas, the first competency rows, the lead bullet of each role - so a recruiter's 6-second scan and an ATS both hit them first. Never fabricate a skill to surface it; only promote ones evidenced in the kernel. A buried genuine match must be moved up, not invented.",
       );
+      // FOCUS-LABELS-001 (owner 2026-06-19): compact, owner-preferred Focus Area labels
+      // in the two tables; short enough to stay on one line. Pairs with TABLES-DISTINCT-001.
+      r.push(
+        "FOCUS AREA LABELS (FOCUS-LABELS-001): in the WHAT I BRING and CORE COMPETENCIES 'Focus Area' column, use the COMPACT owner-preferred labels: 'Sourcing & Feasibility' (NOT 'Technical-Commercial Evaluation'), and 'Technical team coordination' (NOT 'Cross-Functional Coordination' or 'Cross-Disciplinary Coordination'). Keep every Focus Area label short enough to fit on ONE line. This does NOT relax TABLES-DISTINCT-001: the two tables must still have DISJOINT Focus Areas - if applying these labels would make a row repeat across the tables, keep it in WHAT I BRING and swap the CORE COMPETENCIES row for a different competency.",
+      );
       // PERSONALITY-KERNEL-001 (owner 2026-06-12, handoff T8 — canonical
       // source: skills/antcv-writer/assets/gabriel-kernel-personality-v1.json).
       // A stored personalInfo.personality object overrides the embedded

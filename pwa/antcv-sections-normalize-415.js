@@ -15,7 +15,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.709-role-bullet-order';
+  var VERSION = '1.50.710-blended-demand-order';
   if (window.__antcvSectionsNormalize === VERSION) return;
   window.__antcvSectionsNormalize = VERSION;
 
@@ -301,14 +301,32 @@
     if (/\d/.test(t)) return 2;                                                                       // bare number
     return 0;
   }
+  // CLUSTER-QUAL-001 (owner 2026-06-19): rank bullets by a BLENDED score, not numeric
+  // alone — "numeric + skill-relevant = higher score". A line that is BOTH quantified
+  // and hits a demanded skill ranks top; a strongly-demanded non-numeric line can
+  // outrank a trivially-numeric one. numNorm = metric tier / 4 (range/×→1.0, %/MofN→
+  // 0.75, bare number→0.5, prose→0); demNorm = scoreNorm from the 20-most-demanded
+  // model (antcv-cluster-demand.js, already normalized ~[0,1] per active-cluster
+  // count). score = numNorm + demNorm (0..2), ties keep original order. Read-only +
+  // guarded: demNorm is 0 when the model is absent, so it degrades to pure numeric.
+  function _demandNorm(b) {
+    try {
+      var d = window.AntcvClusterDemand;
+      if (!d || typeof d.scoreNorm !== 'function') return 0;
+      return d.scoreNorm(String(typeof b === 'string' ? b : (b && (b.b || b.t)) || ''));
+    } catch (_) { return 0; }
+  }
+  function _bulletScore(b) {
+    return (_bulletMetric(b) / 4) + _demandNorm(b);
+  }
   function canonicalBulletOrder(cv) {
     var changed = false;
     var out = cv.map(function (s) {
       if (!s || s.type !== 'experience' || !Array.isArray(s.roles)) return s;
       var roles = s.roles.map(function (r) {
         if (!r || !Array.isArray(r.bullets) || r.bullets.length < 2) return r;
-        var dec = r.bullets.map(function (b, i) { return { b: b, i: i, m: _bulletMetric(b) }; });
-        var sorted = dec.slice().sort(function (a, b) { return (b.m - a.m) || (a.i - b.i); });
+        var dec = r.bullets.map(function (b, i) { return { b: b, i: i, s: _bulletScore(b) }; });
+        var sorted = dec.slice().sort(function (a, b) { return (b.s - a.s) || (a.i - b.i); });
         if (sorted.every(function (d, k) { return d.i === dec[k].i; })) return r; // already canonical
         changed = true;
         return Object.assign({}, r, { bullets: sorted.map(function (d) { return d.b; }) });

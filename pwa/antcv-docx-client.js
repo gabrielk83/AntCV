@@ -1713,6 +1713,20 @@ export const _metricScore = (text) => {
   if (best === 0) { const nums = (t.match(/[\d][\d,.]*/g) || []).map((s) => parseFloat(s.replace(/,/g, ''))).filter((n) => n > 0); if (nums.length) best = Math.min(1.5, Math.log10(Math.max.apply(null, nums) + 1)); }
   return best;
 };
+// CLUSTER-QUAL-001 (owner 2026-06-19): rank outcomes/results by a BLENDED score —
+// "numeric + skill-relevant = higher score" — not numeric alone. numNorm =
+// min(1, _metricScore/10) (a 90% cut / 10× / 250→10 saturates to 1); demNorm =
+// min(1, demand/25) from the 20-most-demanded model (window.AntcvClusterDemand,
+// antcv-cluster-demand.js, loaded as a sidecar). score = numNorm + demNorm (0..2).
+// Read-only + guarded: demNorm is 0 when the model is absent, so this degrades to the
+// prior pure-numeric ordering (RESULTS-NUMERIC-LEAD-001). Used wherever outcomes sort.
+const _demandNorm = (text) => {
+  try {
+    const d = (typeof window !== 'undefined') && window.AntcvClusterDemand;
+    return (d && typeof d.scoreNorm === 'function') ? d.scoreNorm(String(text || '')) : 0;
+  } catch (_) { return 0; }
+};
+const _rankScore = (text) => Math.min(1, _metricScore(text) / 10) + _demandNorm(text);
 // RESULTS-NEAR-DUP-001 (owner 2026-06-19): the lamination joins a role's top-2
 // outcomes, but those two are often the SAME fact phrased twice (Sirin: "Direct a
 // 7-person task force…" + "Directed a 7-person EO and optics team…"). Collapse
@@ -1899,11 +1913,10 @@ export function applyOutcomesMode(docSections, doc) {
           .map((o) => (typeof o === 'string' ? o.trim()
             : (o.result ? String(o.result).trim() : [o.b, o.t].filter(Boolean).join(' ').trim())))
           .filter(Boolean);
-        // RESULTS-NUMERIC-LEAD-001 (owner 2026-06-18: "you keep avoiding numerical
-        // results"). tier-2/3 joined outcomes in STORED order, so a numeric result
-        // could sit behind prose and get cut by the cap. Lead with the quantified
-        // ones (digits / % / × / "x") so the number always survives + reads first.
-        texts.sort((p, q) => _metricScore(q) - _metricScore(p));
+        // RESULTS-NUMERIC-LEAD-001 + CLUSTER-QUAL-001: order by the blended numeric +
+        // skill-demand score so a quantified AND demanded outcome leads (and survives
+        // the cap), not stored order.
+        texts.sort((p, q) => _rankScore(q) - _rankScore(p));
         if (texts.length) { _lam.set(r, _capJoin(texts)); return; }
       }
       // 3) role.proofPointIds resolved against the master-profile proof points,
@@ -1914,7 +1927,7 @@ export function applyOutcomesMode(docSections, doc) {
       let texts = ids.map((id) => _ppText[id]).filter(Boolean);
       if (!texts.length && Array.isArray(r.proofPoints) && r.proofPoints.length)
         texts = r.proofPoints.map((p) => (typeof p === 'string' ? p.trim() : String((p && (p.text || p.result)) || '').trim())).filter(Boolean);
-      texts.sort((p, q) => _metricScore(q) - _metricScore(p)); // RESULTS-NUMERIC-LEAD-001
+      texts.sort((p, q) => _rankScore(q) - _rankScore(p)); // RESULTS-NUMERIC-LEAD-001 + CLUSTER-QUAL-001
       if (texts.length) _lam.set(r, _capJoin(texts));
     });
     // The heuristic SELECTED-OUTCOMES distribution runs ONLY for roles that are
@@ -1985,7 +1998,7 @@ export function applyOutcomesMode(docSections, doc) {
     // outcomes carrying a concrete metric (number/%/×/count) so a quantified
     // result survives the per-role cap and shows first.
     // RESULTS-METRIC-RANK-001: rank by metric IMPRESSIVENESS, not just has-a-number.
-    assign.forEach((a) => { a.sort((p, q) => _metricScore(txtOf(q)) - _metricScore(txtOf(p))); while (a.length > MAX) a.pop(); });
+    assign.forEach((a) => { a.sort((p, q) => _rankScore(txtOf(q)) - _rankScore(txtOf(p))); while (a.length > MAX) a.pop(); });
     const resultsByRole = new Map();
     distRoles.forEach((r, i) => {
       if (!assign[i].length) return;

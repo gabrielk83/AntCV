@@ -513,10 +513,10 @@ export function buildPayload({
   })(language);
   // Normalize sections — the PWA stores these as { cv: [...], cl: [...] }
   // depending on doc type; the worker just wants the active list.
-  const docSections = applyOutcomesMode(
+  const docSections = sanitizeForExport(applyOutcomesMode(
     mergeHowContributeFromLocalStorage((sections && sections[doc]) || (Array.isArray(sections) ? sections : []), doc),
     doc
-  );
+  ), doc);
 
   // Strip the data: prefix from photo dataURL if present.
   const photo_b64 = stripDataUrlPrefix(photo);
@@ -852,6 +852,59 @@ function mergeHowContributeFromLocalStorage(docSections, doc) {
   } catch (_) {
     return docSections;
   }
+}
+
+// EXPORT-SANITIZE-001 (owner 2026-06-20): the export builds from React's in-memory
+// sections, NOT the localStorage copy the 415 normaliser cleans — so fabricated tools
+// (Snowflake/DBT) and clearly-irrelevant student roles survived into the PDF even after
+// the normaliser stripped/hid them in localStorage (the known React-vs-localStorage drift).
+// Sanitise the EXPORT payload itself so the generated document is always clean regardless
+// of normalise timing. Mirror these in antcv-sections-normalize-415.js so the preview
+// converges too.
+const FAB_TOOLS = /\b(?:snowflake|dbt)\b/i;
+const IRRELEVANT_ROLE = /students?\s+council|security\s+guard/i;
+function _isTargetedExport() {
+  try {
+    const m = JSON.parse(localStorage.getItem('meta') || '{}');
+    const co = String((m && m.company) || '').trim().toLowerCase();
+    return !!co && co !== 'unsolicited';
+  } catch (_) { return false; }
+}
+function sanitizeForExport(docSections, doc) {
+  try {
+    if (!Array.isArray(docSections)) return docSections;
+    const targeted = _isTargetedExport();
+    return docSections.map((s) => {
+      if (!s || typeof s !== 'object') return s;
+      // (1) strip fabricated tools from any tools comma-list (Nordea analytics -> Snowflake/
+      // DBT, which the candidate does not use). Always, regardless of targeted/unsolicited.
+      if (s.id === 'tools' && Array.isArray(s.items)) {
+        let hit = false;
+        const items = s.items.map((it) => {
+          if (!it || typeof it.v !== 'string' || !FAB_TOOLS.test(it.v)) return it;
+          const v = it.v.split(/\s*,\s*/).filter((p) => p && !FAB_TOOLS.test(p)).join(', ');
+          if (v !== it.v) { hit = true; return { ...it, v }; }
+          return it;
+        });
+        return hit ? { ...s, items } : s;
+      }
+      // (2) for a JD-TARGETED application, hide the clearly-irrelevant student roles
+      // (student council, dormitory security guard) — no signal for a senior professional
+      // application. Set on:false (the worker's existing hide flag), don't drop the row.
+      // Unsolicited keeps the full breadth.
+      if (targeted && s.type === 'experience' && Array.isArray(s.roles)) {
+        let hit = false;
+        const roles = s.roles.map((r) => {
+          if (r && r.on !== false && IRRELEVANT_ROLE.test(String(r.title || '') + ' ' + String(r.company || ''))) {
+            hit = true; return { ...r, on: false };
+          }
+          return r;
+        });
+        return hit ? { ...s, roles } : s;
+      }
+      return s;
+    });
+  } catch (_) { return docSections; }
 }
 
 // ──────────────────────────────────────────────────────────────────

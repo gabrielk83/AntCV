@@ -824,7 +824,7 @@
   // (Nordea analytics -> Snowflake) into TOOLS & METHODS. Strip known-fabricated tools
   // from any tools comma-list. Gabriel does NOT use Snowflake. (Generalise via a kernel
   // allowlist later; the prompt TOOLS-NO-FABRICATION rule is the generation-side guard.)
-  var FABRICATED_TOOLS = /snowflake/i;
+  var FABRICATED_TOOLS = /snowflake|dbt/i;
   function stripFabricatedTools(cv) {
     var changed = false;
     var out = cv.map(function (s) {

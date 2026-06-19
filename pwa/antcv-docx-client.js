@@ -870,6 +870,61 @@ function _isTargetedExport() {
     return !!co && co !== 'unsolicited';
   } catch (_) { return false; }
 }
+// EXPORT-MERGE-001 (owner 2026-06-20): for a JD-TARGETED application, CONSOLIDATE the
+// multiple roles a candidate held at the SAME company into ONE entry (Innoviz Change
+// Control + System Architect; Meprolight EO Team Leader + R&D EO Engineer; TAU Research +
+// Teaching Assistant). Runs AFTER the irrelevant-role hide, so only VISIBLE roles merge
+// (the TAU security-guard / students-council rows are already on:false and pass through
+// untouched). The merged entry keeps the company, unions + de-dups the bullets, orders
+// them by analyst/JD relevance (so Innoviz leads with change-request bullets and TAU leads
+// with analyst-relevant ones), caps at 6, widens the year range, and joins the distinct
+// titles. Export-only + ephemeral: switching back to the unsolicited kernel restores the
+// full separate roles (no persistence).
+const _ANALYST_RX = /\b(?:data|analys|model|sql|python|pipeline|stakeholder|requirement|trace|document|metric|report|dashboard|change|request|process|insight|forecast|statist|research|experiment|quality|validation|impact|scope)\w*/gi;
+function _bulletText(b) { return String(typeof b === 'string' ? b : (b && (b.b || b.t)) || ''); }
+function _relevanceScore(b) { const m = _bulletText(b).match(_ANALYST_RX); return m ? m.length : 0; }
+function mergeSameCompanyRoles(roles) {
+  try {
+    if (!Array.isArray(roles)) return null;
+    const groups = {}; const order = [];
+    roles.forEach((r) => {
+      if (!r || r.on === false) return;
+      const key = String(r.company || '').trim().toLowerCase();
+      if (!key) return;
+      if (!groups[key]) { groups[key] = []; order.push(key); }
+      groups[key].push(r);
+    });
+    if (!order.some((k) => groups[k].length >= 2)) return null;
+    const emitted = {};
+    const out = [];
+    roles.forEach((r) => {
+      if (!r || r.on === false) { out.push(r); return; }
+      const key = String(r.company || '').trim().toLowerCase();
+      const grp = key && groups[key];
+      if (!grp || grp.length < 2) { out.push(r); return; }
+      if (emitted[key]) return;            // merged entry already emitted at first position
+      emitted[key] = true;
+      const titles = [];
+      grp.forEach((g) => { if (g.title && titles.indexOf(g.title) < 0) titles.push(g.title); });
+      const seen = {}; let bullets = [];
+      grp.forEach((g) => (g.bullets || []).forEach((b) => {
+        const t = _bulletText(b).trim();
+        const k = t.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().slice(0, 64);
+        if (t && !seen[k]) { seen[k] = 1; bullets.push(b); }
+      }));
+      bullets = bullets
+        .map((b, i) => ({ b, i, s: _relevanceScore(b) }))
+        .sort((a, c) => c.s - a.s || a.i - c.i)
+        .map((x) => x.b);
+      if (bullets.length > 6) bullets = bullets.slice(0, 6);
+      const ys = [];
+      grp.forEach((g) => (String(g.years || '').match(/\d{4}/g) || []).forEach((y) => ys.push(parseInt(y, 10))));
+      const years = ys.length ? (Math.min(...ys) + ' - ' + Math.max(...ys)) : (grp[0].years || '');
+      out.push({ ...grp[0], title: titles.join(' / '), bullets, years });
+    });
+    return out;
+  } catch (_) { return null; }
+}
 function sanitizeForExport(docSections, doc) {
   try {
     if (!Array.isArray(docSections)) return docSections;
@@ -893,14 +948,14 @@ function sanitizeForExport(docSections, doc) {
       // application. Set on:false (the worker's existing hide flag), don't drop the row.
       // Unsolicited keeps the full breadth.
       if (targeted && s.type === 'experience' && Array.isArray(s.roles)) {
-        let hit = false;
-        const roles = s.roles.map((r) => {
-          if (r && r.on !== false && IRRELEVANT_ROLE.test(String(r.title || '') + ' ' + String(r.company || ''))) {
-            hit = true; return { ...r, on: false };
-          }
-          return r;
-        });
-        return hit ? { ...s, roles } : s;
+        // hide the irrelevant student roles FIRST...
+        let roles = s.roles.map((r) =>
+          (r && r.on !== false && IRRELEVANT_ROLE.test(String(r.title || '') + ' ' + String(r.company || '')))
+            ? { ...r, on: false } : r);
+        // ...then consolidate same-company roles among what remains visible.
+        const merged = mergeSameCompanyRoles(roles);
+        if (merged) roles = merged;
+        return { ...s, roles };
       }
       return s;
     });

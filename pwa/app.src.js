@@ -2788,6 +2788,11 @@
       r.push(
         "FOCUS AREA LABELS (FOCUS-LABELS-001): in the WHAT I BRING and CORE COMPETENCIES 'Focus Area' column, use the COMPACT owner-preferred labels: 'Sourcing & Feasibility' (NOT 'Technical-Commercial Evaluation'), and 'Technical team coordination' (NOT 'Cross-Functional Coordination' or 'Cross-Disciplinary Coordination'). Keep every Focus Area label short enough to fit on ONE line. This does NOT relax TABLES-DISTINCT-001: the two tables must still have DISJOINT Focus Areas - if applying these labels would make a row repeat across the tables, keep it in WHAT I BRING and swap the CORE COMPETENCIES row for a different competency.",
       );
+      // DOC-DISTINCT-001 (owner 2026-06-19): the CV and the CL must read as DISTINCT,
+      // complementary documents, not copies — content level, not just labels.
+      r.push(
+        "CV vs CL MUST DIFFER (DOC-DISTINCT-001): the CL WHAT I BRING and the CV CORE COMPETENCIES must differ in BOTH the Focus Area labels AND the 'Strategic Expertise' CONTENT - never reuse the same expertise phrasing across the two documents. WHAT I BRING (CL) = the 3-4 application-specific strengths, phrased as an offer to the target; CORE COMPETENCIES (CV) = the broader standing competencies, phrased differently and covering DIFFERENT ground. Likewise the CV PROFILE and the CL WHO I AM must NOT be the same paragraph - say complementary things. And give the CV and the CL slightly DIFFERENT headline/subtitle wording (e.g. a product/delivery emphasis on one, a people/collaboration emphasis on the other) so the two never read as identical copies.",
+      );
       // PERSONALITY-KERNEL-001 (owner 2026-06-12, handoff T8 — canonical
       // source: skills/antcv-writer/assets/gabriel-kernel-personality-v1.json).
       // A stored personalInfo.personality object overrides the embedded

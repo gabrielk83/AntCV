@@ -862,7 +862,15 @@ function mergeHowContributeFromLocalStorage(docSections, doc) {
 // of normalise timing. Mirror these in antcv-sections-normalize-415.js so the preview
 // converges too.
 const FAB_TOOLS = /\b(?:snowflake|dbt)\b/i;
-const IRRELEVANT_ROLE = /students?\s+council|security\s+guard/i;
+// Always low-signal for a senior professional targeted application (any cluster):
+// student council, dormitory security guard, volunteer-sport foreningsarbejde.
+const IRRELEVANT_ROLE = /students?\s+council|security\s+guard|foreningsarbejde/i;
+// CLUSTER-dependent: hide ONLY when the JD does NOT call for them (owner 2026-06-20, analyst
+// app: hide the old IDF sysadmin role + the Publications & Patents section).
+const CLUSTER_ROLE = /computer\s+systems?\s+administrator/i;
+function _jdText() { try { return String(localStorage.getItem('antcv:lastJdText') || '').toLowerCase(); } catch (_) { return ''; } }
+function _jdIsTechOps() { return /\b(?:it support|sysadmin|system[s]? admin|infrastructure|devops|networking|on-?prem|server administration|helpdesk|service desk)\b/.test(_jdText()); }
+function _jdIsResearch() { return /\b(?:research|patent|publication|r&d|phd|ph\.d|scientist|academ|postdoc|peer[- ]review)\b/.test(_jdText()); }
 function _isTargetedExport() {
   try {
     const m = JSON.parse(localStorage.getItem('meta') || '{}');
@@ -962,11 +970,22 @@ function sanitizeForExport(docSections, doc) {
       // (student council, dormitory security guard) — no signal for a senior professional
       // application. Set on:false (the worker's existing hide flag), don't drop the row.
       // Unsolicited keeps the full breadth.
+      // (2b) hide the Publications & Patents section for a targeted application UNLESS the JD
+      // is research/technical (owner: irrelevant for an analyst role). Set on:false; the
+      // unsolicited kernel and research JDs keep it.
+      if (targeted && !_jdIsResearch() && /publication|patent/i.test(String(s.title || s.id || ''))) {
+        return { ...s, on: false };
+      }
       if (targeted && s.type === 'experience' && Array.isArray(s.roles)) {
-        // hide the irrelevant student roles FIRST...
-        let roles = s.roles.map((r) =>
-          (r && r.on !== false && IRRELEVANT_ROLE.test(String(r.title || '') + ' ' + String(r.company || '')))
-            ? { ...r, on: false } : r);
+        // hide the irrelevant roles FIRST: always-low-signal ones, plus the cluster-dependent
+        // sysadmin role when the JD is not an IT/ops role.
+        const hideTech = !_jdIsTechOps();
+        let roles = s.roles.map((r) => {
+          if (!r || r.on === false) return r;
+          const hay = String(r.title || '') + ' ' + String(r.company || '');
+          if (IRRELEVANT_ROLE.test(hay) || (hideTech && CLUSTER_ROLE.test(hay))) return { ...r, on: false };
+          return r;
+        });
         // ...then consolidate same-company roles among what remains visible.
         const merged = mergeSameCompanyRoles(roles);
         if (merged) roles = merged;

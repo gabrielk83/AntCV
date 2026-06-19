@@ -56,6 +56,34 @@
   // Results line IS one of the role's own bullets and must not also show as a
   // bullet). Tiers 1-3 (real outcomes) never hide a bullet (hideIdx = -1).
   function bulletText(b) { return String(typeof b === 'string' ? b : (b && (b.b || b.t)) || '').trim(); }
+  // RESULTS-NEAR-DUP-001 (owner 2026-06-19): the join below takes a role's top-2
+  // outcomes, but they are often the SAME fact phrased twice (Sirin: "Direct a
+  // 7-person task force…" + "Directed a 7-person EO and optics team…"). Collapse
+  // near-duplicate texts (≥3 shared stemmed tokens AND ≥0.6 overlap of the smaller
+  // set) before joining, keeping the stronger (numeric > prose; tie → longer).
+  // PARITY: same logic as antcv-docx-client.js _dedupNear (the export); the sidecar
+  // has no _metricScore, so ndScore is a lightweight numeric-favour proxy.
+  function ndStem(s) { return (String(s == null ? '' : s).toLowerCase().match(/[a-zà-ɏ]{3,}/g) || []).map((w) => w.replace(/(?:ied|ed|ing|s)$/, '')); }
+  function ndScore(t) { return /\d|%|×|\bx\b/.test(String(t)) ? 1 : 0; }
+  function dedupNear(texts) {
+    const kept = [];
+    (texts || []).forEach((t) => {
+      if (typeof t !== 'string' || !t.trim()) return;
+      const toks = new Set(ndStem(t));
+      const sc = ndScore(t);
+      if (!toks.size) { kept.push({ text: t, toks, sc }); return; }
+      let dup = -1;
+      for (let i = 0; i < kept.length; i++) {
+        const k = kept[i]; if (!k.toks.size) continue;
+        let shared = 0; toks.forEach((w) => { if (k.toks.has(w)) shared++; });
+        if (shared >= 3 && shared / Math.min(toks.size, k.toks.size) >= 0.6) { dup = i; break; }
+      }
+      if (dup < 0) { kept.push({ text: t, toks, sc }); return; }
+      const cur = kept[dup];
+      if (sc > cur.sc || (sc === cur.sc && t.length > cur.text.length)) kept[dup] = { text: t, toks, sc };
+    });
+    return kept.map((k) => k.text);
+  }
   function lamFor(role, pp, jd) {
     if (!role) return { text: '', hideIdx: -1 };
     if (typeof role.results === 'string' && role.results.trim()) return { text: cap(role.results), hideIdx: -1 };
@@ -68,14 +96,14 @@
         .map((o) => (typeof o === 'string' ? o.trim()
           : (o.result ? String(o.result).trim() : [o.b, o.t].filter(Boolean).join(' ').trim())))
         .filter(Boolean);
-      if (texts.length) return { text: cap(texts.slice(0, 2).join('; ')), hideIdx: -1 };
+      if (texts.length) return { text: cap(dedupNear(texts).slice(0, 2).join('; ')), hideIdx: -1 };
     }
     const ids = Array.isArray(role.proofPointIds) ? role.proofPointIds : [];
     let fromPp = ids.map((id) => pp[id]).filter(Boolean);
     // v2 kernel roles carry a flat role.proofPoints[] (strings) instead of ids.
     if (!fromPp.length && Array.isArray(role.proofPoints) && role.proofPoints.length)
       fromPp = role.proofPoints.map((p) => (typeof p === 'string' ? p.trim() : String((p && (p.text || p.result)) || '').trim())).filter(Boolean);
-    if (fromPp.length) return { text: cap(fromPp.slice(0, 2).join('; ')), hideIdx: -1 };
+    if (fromPp.length) return { text: cap(dedupNear(fromPp).slice(0, 2).join('; ')), hideIdx: -1 };
     // RESULTS-LAMINATION-003 (owner 2026-06-15): derive from the role's OWN
     // strongest bullet (prefer numeric/metric, patent filtered) ONLY when tiers 1-3
     // found nothing real — and then HIDE that bullet (apply() drops the matching

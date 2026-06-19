@@ -24,18 +24,24 @@ Chrome on that URL. Memory [[domain-and-outcomes-parity]] corrected.
 **Metadata leak (C7):** GONE in live data (data changed since the export) — not
 reproducible; deprioritise.
 
-**NEW live findings (next, both deterministic):**
-- **Within-result redundancy** — the lamination `_capJoin(texts.slice(0,2))` joins the
-  top-2 outcomes, which are often NEAR-DUPLICATES: Sirin = "Direct a 7-person task
-  force…; Directed a 7-person EO and optics team…" (same fact twice). Fix: dedup
-  near-duplicate texts (high token overlap → keep the stronger/numeric one) before
-  joining, in BOTH `antcv-docx-client.js applyOutcomesMode` AND
-  `antcv-results-laminate-510.js lamFor` (keep in parity). Live-verify on antcv.pages.dev.
+**Shipped this session (code landed, needs live-verify on antcv.pages.dev):**
+- `1.50.706` **RESULTS-NEAR-DUP-001 within-result redundancy** — the lamination joined
+  the top-2 outcomes, which are often NEAR-DUPLICATES (Sirin: "Direct a 7-person task
+  force…; Directed a 7-person EO and optics team…" = same fact twice). Added
+  `_dedupNear()` that collapses texts with ≥3 shared stemmed tokens AND ≥0.6 overlap of
+  the smaller set, keeping the stronger/numeric one (higher `_metricScore`; tie →
+  longer). Wired into `antcv-docx-client.js` `_capJoin` (tiers 2/3) + the distribution
+  join, AND mirrored in `antcv-results-laminate-510.js lamFor` (preview parity; sidecar
+  uses an ndScore numeric-favour proxy since it has no `_metricScore`). Tests 339/339.
+  Standalone verified: Sirin pair → 1; distinct outcomes → both kept; numeric variant
+  wins. LIVE-VERIFY: regen/hard-refresh, confirm Sirin Results is no longer doubled.
+
+**NEW live findings (next):**
 - **E1 broken mixed tense in joined clause** — "Manage … ; owned …" (leading verb
   re-tensed, rest not). Needs full-clause tensing, not leading-verb-only.
 
-**Next item to execute:** the near-duplicate dedup (#1 above). Then C5 numeric-
-surfacing, INTERESTS-missing seeding, CL heading consistency (INLINE_LABEL_IDS).
+**Next item to execute:** E1 full-clause tense. Then C5 numeric-surfacing,
+INTERESTS-missing seeding, CL heading consistency (INLINE_LABEL_IDS).
 
 ---
 

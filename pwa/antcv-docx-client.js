@@ -1713,6 +1713,33 @@ export const _metricScore = (text) => {
   if (best === 0) { const nums = (t.match(/[\d][\d,.]*/g) || []).map((s) => parseFloat(s.replace(/,/g, ''))).filter((n) => n > 0); if (nums.length) best = Math.min(1.5, Math.log10(Math.max.apply(null, nums) + 1)); }
   return best;
 };
+// RESULTS-NEAR-DUP-001 (owner 2026-06-19): the lamination joins a role's top-2
+// outcomes, but those two are often the SAME fact phrased twice (Sirin: "Direct a
+// 7-person task force…" + "Directed a 7-person EO and optics team…"). Collapse
+// near-duplicate texts (≥3 shared stemmed tokens AND ≥0.6 overlap of the smaller
+// set) BEFORE the join, keeping the stronger/numeric one (higher _metricScore; tie
+// → longer). Light stem (strip ied/ed/ing/s) so "Direct"/"Directed", "optic"/
+// "optics" match. Mirrored in antcv-results-laminate-510.js lamFor (preview parity).
+const _ndStem = (s) => (String(s == null ? '' : s).toLowerCase().match(/[a-zà-ɏ]{3,}/g) || []).map((w) => w.replace(/(?:ied|ed|ing|s)$/, ''));
+function _dedupNear(texts) {
+  const kept = [];
+  (texts || []).forEach((t) => {
+    if (typeof t !== 'string' || !t.trim()) return;
+    const toks = new Set(_ndStem(t));
+    const sc = _metricScore(t);
+    if (!toks.size) { kept.push({ text: t, toks, sc }); return; }
+    let dup = -1;
+    for (let i = 0; i < kept.length; i++) {
+      const k = kept[i]; if (!k.toks.size) continue;
+      let shared = 0; toks.forEach((w) => { if (k.toks.has(w)) shared++; });
+      if (shared >= 3 && shared / Math.min(toks.size, k.toks.size) >= 0.6) { dup = i; break; }
+    }
+    if (dup < 0) { kept.push({ text: t, toks, sc }); return; }
+    const cur = kept[dup];
+    if (sc > cur.sc || (sc === cur.sc && t.length > cur.text.length)) kept[dup] = { text: t, toks, sc };
+  });
+  return kept.map((k) => k.text);
+}
 // TENSE-AT-LAMINATION-001 (owner 2026-06-19: "I want the tense the user chose to be
 // the generated tense — the app already takes too much work time"). Generation already
 // writes bullets/outcomes in the chosen tense via the prompt's __tenseRule; but a
@@ -1846,7 +1873,7 @@ export function applyOutcomesMode(docSections, doc) {
     };
     const _lam = new Map();
     const _capJoin = (texts) => {
-      let t = texts.slice(0, 2).join('; ');
+      let t = _dedupNear(texts).slice(0, 2).join('; ');
       if (t.length > 260) t = t.slice(0, 257).replace(/[;,\s]+\S*$/, '') + '…';
       return t;
     };
@@ -1954,7 +1981,9 @@ export function applyOutcomesMode(docSections, doc) {
     const resultsByRole = new Map();
     distRoles.forEach((r, i) => {
       if (!assign[i].length) return;
-      let txt = assign[i].map(lineOf).join('; ');
+      // RESULTS-NEAR-DUP-001: drop near-duplicate lines before joining the
+      // distributed outcomes too (same fact phrased twice → keep the stronger one).
+      let txt = _dedupNear(assign[i].map(lineOf)).slice(0, 2).join('; ');
       // RESULTS-CUT-001 (owner 2026-06-14): the 180-char cap was lopping the end
       // of concrete results with a trailing "…". Raised to 260 so a single
       // outcome or a typical 2-outcome pair survives whole; only a genuinely

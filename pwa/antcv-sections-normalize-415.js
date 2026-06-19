@@ -15,7 +15,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.714-sidebar-dedupe';
+  var VERSION = '1.50.715-interests-pin';
   if (window.__antcvSectionsNormalize === VERSION) return;
   window.__antcvSectionsNormalize = VERSION;
 
@@ -703,6 +703,34 @@
     return changed ? out : null;
   }
 
+  // INTERESTS-PIN-001 (owner 2026-06-19: "so your 6 interests hold rock-solid"). The
+  // cloud-restore intermittently flips INTERESTS back to a stale 2-item version (the
+  // 6-vs-stale flip). The dedupe/strip re-apply on every restore but cannot re-ADD the
+  // missing items, so a short stale copy stays short. Pin the owner's canonical 6 (his
+  // snapshot) the SAME way canonKanzen pins the Kanzen role: enforce them ONLY when the
+  // section comes back SHORT (< 6 items, i.e. a stale flip) — so it can never drop below
+  // his 6, while ≥ 6 is left untouched (he can edit values / add a 7th freely). NO junior
+  // rugby. If the deeper cloud-persist fix lands later this becomes a no-op.
+  var CANON_INTERESTS = [
+    { l: 'Rugby & inclusive sport', v: 'Team operations, coach assist, literally a team player' },
+    { l: 'Tai-chi', v: 'Stability and calm under pressure' },
+    { l: 'Cultural exchange', v: 'Languages, food culture and board games' },
+    { l: 'Hiking', v: 'Outdoor recovery and mental reset' },
+    { l: 'Reading', v: 'Technology, society and systems thinking' },
+    { l: 'Supervision', v: 'Handling three feline strategic napping experts (cats)' }
+  ];
+  function pinInterests(cv) {
+    var xi = cv.findIndex(function (s) { return s && s.id === 'interests' && Array.isArray(s.items); });
+    if (xi < 0) return null;
+    var items = cv[xi].items;
+    // Only re-assert when the section has come back SHORT (a stale flip). At ≥ 6 the
+    // owner's edits/additions hold — never fight them.
+    if (items.length >= 6) return null;
+    var copy = cv.slice();
+    copy[xi] = Object.assign({}, cv[xi], { items: CANON_INTERESTS.map(function (c) { return { l: c.l, v: c.v }; }) });
+    return copy;
+  }
+
   // SIDEBAR-DEDUPE-001 (owner 2026-06-19, from his curated language/education snapshots):
   // the kernel keeps regenerating DUPLICATE sidebar entries that he hides by hand (a
   // verbose "Spanish - full professional, Uruguayan variant" beside the concise
@@ -811,6 +839,7 @@
       var pa = partitionAdditional(cv); if (pa) { cv = pa; changed = true; }
       var ish = normalizeInterestsShape(cv); if (ish) { cv = ish; changed = true; }
       var ibt = stripInterestsBtRemnant(cv); if (ibt) { cv = ibt; changed = true; }
+      var pin = pinInterests(cv); if (pin) { cv = pin; changed = true; }
       var dhn = dedupeHiddenDupByName(cv); if (dhn) { cv = dhn; changed = true; }
       var dedu = dedupeEducation(cv); if (dedu) { cv = dedu; changed = true; }
       // SECTION-PREVIEW-LOC-001 / TYPE-NORMALIZE: also normalise the CL sections'

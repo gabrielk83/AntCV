@@ -2059,22 +2059,47 @@ export function applyOutcomesMode(docSections, doc) {
         return !(nb.length >= 15 && nr.indexOf(nb) >= 0);
       });
     };
+    // RESULT-NUMBER-NO-REUSE-001 (owner 2026-06-19: "if the number is used for the
+    // result, do not use it for the role content"). Extract the SALIENT metric tokens
+    // from the Results line (a % / ×-fold / a count ≥ 100 that is not a year), and drop
+    // any bullet that reuses the SAME metric — the number shows once, in Results, not
+    // doubled in a bullet. A standard CODE (ISO 26262, ASPICE…) is NOT a metric. Applies
+    // on every result path (real outcome, distributed, derived).
+    const _STD_RX2 = /\b(?:ISO|IEC|EN|DIN|MIL[-\s]?STD|STANAG|ASPICE|SAE)(?:\s*\/\s*(?:ISO|IEC|SAE|EN))*[\s\/-]*[A-Z]?\d[\d.\-:]*[A-Z]?\b/gi;
+    const salientMetrics = (txt) => {
+      const s = String(txt == null ? '' : txt).replace(_STD_RX2, ' ');
+      const out = new Set();
+      (s.match(/\d[\d,.]*\s*%/g) || []).forEach((m) => out.add(m.replace(/[\s,]/g, '')));
+      (s.match(/\d[\d,.]*\s*(?:×|x\b|-?fold)/gi) || []).forEach((m) => out.add(m.toLowerCase().replace(/[\s,]/g, '').replace(/-?fold/, 'x').replace('×', 'x')));
+      (s.match(/\b\d[\d,.]*\b/g) || []).forEach((m) => { const n = parseFloat(m.replace(/,/g, '')); if (n >= 100 && !(n >= 1900 && n <= 2100)) out.add(String(n)); });
+      return out;
+    };
+    const hideMetricReused = (bullets, resultsText) => {
+      const metrics = salientMetrics(resultsText);
+      if (!metrics.size || !Array.isArray(bullets)) return bullets;
+      return bullets.filter((b) => {
+        const bm = salientMetrics(typeof b === 'string' ? b : (b && (b.b || b.t)) || '');
+        for (const m of bm) { if (metrics.has(m)) return false; }
+        return true;
+      });
+    };
     const expOut = {
       ...exp,
       roles: (exp.roles || []).map((r) => {
-        // tiers 1-4 — a REAL outcome wins and ALL bullets stay exposed.
+        // tiers 1-4 — a REAL outcome wins; bullets stay exposed EXCEPT one that reuses
+        // the Result's number (RESULT-NUMBER-NO-REUSE-001).
         // _tx() re-tenses the leading verb to the user's chosen tense (no-op for 'auto').
         const lam = _lam.get(r);
-        if (lam) return { ...r, results: _tx(lam) };
+        if (lam) return { ...r, results: _tx(lam), bullets: hideMetricReused(r.bullets, lam) };
         // pool / explicit-map distribution — may be a bullet-seeded outcome, so hide
-        // a bullet only when the result text subsumes it (i.e. it IS that bullet).
-        if (resultsByRole.has(r)) { const rt = resultsByRole.get(r); return { ...r, results: _tx(rt), bullets: hideSubsumed(r, rt) }; }
+        // a bullet when the result text subsumes it OR reuses its number.
+        if (resultsByRole.has(r)) { const rt = resultsByRole.get(r); return { ...r, results: _tx(rt), bullets: hideMetricReused(hideSubsumed(r, rt), rt) }; }
         // tier-5 derive — the Results line IS one of the role's bullets; hide that
         // one source bullet (export render only; stored data untouched).
         const d = deriveResultFromRole(r);
         if (!d) return r;
         const keptBullets = (Array.isArray(r.bullets) ? r.bullets : []).filter((_, i) => i !== d.index);
-        return { ...r, results: _tx(d.text), bullets: keptBullets };
+        return { ...r, results: _tx(d.text), bullets: hideMetricReused(keptBullets, d.text) };
       }),
     };
     return docSections.filter((s) => !isOutcomes(s)).map((s) => (s === exp ? expOut : s));

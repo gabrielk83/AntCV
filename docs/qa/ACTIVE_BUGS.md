@@ -22,9 +22,16 @@
   + auth), and either fix the cover-lift/sign-in completion or gate the PDF export on a
   "sections restored" signal so the FIRST export is correct without a second refresh.
 
-- **JD-FETCH-CHIP-LABEL-001** `[OPEN — nightly feature]` — owner: "when you fetch a JD, add
+- **JD-FETCH-CHIP-LABEL-001** `[SHIPPED 1.50.740 — nightly 2026-06-20]` — owner: "when you fetch a JD, add
   the Job and company name as the first lines in" the green JD-ready chip (currently
-  `✓ 4449 chars · url-fetch · 1 page`). The chip is at `app.src.js ~39349-39362`:
+  `✓ 4449 chars · url-fetch · 1 page`). DONE: the JD-ready chip (app.src.js ~39426 / app.js
+  `tn`) is now a `flexDirection:"column"` div — line 1 = `zt.fileName` (the fetched page
+  title carrying the role/company, set at app.src.js:14000; bold, ellipsized w/ `title`
+  tooltip, `whiteSpace:nowrap` + `maxWidth:100%`), line 2 = the existing
+  `✓ N chars · method · pages` line (opacity .85). Graceful fallback: no fileName → only the
+  stats line (e.g. paste path). Verified headless: full-app boot past sign-in gate (bundle
+  intact, 0 fatals) + isolated faithful subtree render (2 lines + tooltip when fileName set,
+  1 line when not). Suite 339/339. Mirror guarded (1 occurrence). Original detail below: The chip is at `app.src.js ~39349-39362`:
   `!jt && zt?.text && React.createElement("span",{style:{fontSize:11,color:"#10b981",flex:1}},
   "✓ ",zt.text.length," chars · ",zt.method," · ",zt.pages," page",...)`. Data already
   available at fetch time: **`zt.fileName`** = the fetched page **title** (set at

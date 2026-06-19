@@ -39426,16 +39426,47 @@
                   !jt &&
                     (null == zt ? void 0 : zt.text) &&
                     React.createElement(
-                      "span",
-                      { style: { fontSize: 11, color: "#10b981", flex: 1 } },
-                      "✓ ",
-                      zt.text.length,
-                      " chars · ",
-                      zt.method,
-                      " · ",
-                      zt.pages,
-                      " page",
-                      1 !== zt.pages ? "s" : "",
+                      "div",
+                      {
+                        style: {
+                          display: "flex",
+                          flexDirection: "column",
+                          flex: 1,
+                          minWidth: 0,
+                          gap: 1,
+                        },
+                      },
+                      (null == zt ? void 0 : zt.fileName) &&
+                        React.createElement(
+                          "span",
+                          {
+                            title: zt.fileName,
+                            style: {
+                              fontSize: 11,
+                              fontWeight: 600,
+                              color: "#10b981",
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              maxWidth: "100%",
+                            },
+                          },
+                          zt.fileName,
+                        ),
+                      React.createElement(
+                        "span",
+                        {
+                          style: { fontSize: 11, color: "#10b981", opacity: 0.85 },
+                        },
+                        "✓ ",
+                        zt.text.length,
+                        " chars · ",
+                        zt.method,
+                        " · ",
+                        zt.pages,
+                        " page",
+                        1 !== zt.pages ? "s" : "",
+                      ),
                     ),
                   !jt &&
                     (null == zt ? void 0 : zt.error) &&

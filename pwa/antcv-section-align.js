@@ -162,8 +162,38 @@
   // and re-apply. We do not remove the marker on revert because
   // text-align: left is the natural default and React's empty style
   // matches it.
-  function applyAlignmentToSection(sectionEl, alignment) {
+  // AUTO-ALIGN-001 (owner 2026-06-19): "do a center-left when justified starts to have
+  // giant spacing … and auto right if the rest of the document is mostly to the right
+  // (Arabic/Hebrew)". Compute the EFFECTIVE alignment from the stored one:
+  //   - RTL-dominant text (≥ ~35% Hebrew/Arabic letters) → 'right' (overrides any L/C/J);
+  //   - 'justify' in a NARROW column (sidebar / < 300px content) over-stretches into
+  //     giant inter-word gaps → fall back to 'left'.
+  // Pure function of the element; never persists — the user's stored choice is kept, we
+  // only render a smarter result. Idempotent.
+  var RTL_RX = /[֐-׿؀-ۿݐ-ݿࢠ-ࣿיִ-ﭏﭐ-﷿ﹰ-﻿]/g;
+  var LTR_LETTER_RX = /[A-Za-zÀ-ɏ]/g;
+  function isRtlText(s) {
+    var str = String(s || '');
+    var rtl = (str.match(RTL_RX) || []).length;
+    if (!rtl) return false;
+    var ltr = (str.match(LTR_LETTER_RX) || []).length;
+    return rtl >= 4 && rtl >= 0.35 * (rtl + ltr);
+  }
+  function effectiveAlignment(sectionEl, alignment) {
+    try {
+      if (isRtlText(sectionEl.textContent)) return 'right';
+      if (alignment === 'justify') {
+        var w = sectionEl.getBoundingClientRect ? sectionEl.getBoundingClientRect().width : 0;
+        var inSidebar = !!(sectionEl.closest && sectionEl.closest('[data-antcv-document-sidebar], .antcv-document-sidebar'));
+        if (inSidebar || (w > 0 && w < 300)) return 'left';
+      }
+    } catch (_) {}
+    return alignment;
+  }
+
+  function applyAlignmentToSection(sectionEl, alignmentRaw) {
     if (!sectionEl) return;
+    var alignment = effectiveAlignment(sectionEl, alignmentRaw);
     // v1.50.80 — idempotency: only write when the value differs. These ran
     // unconditionally every reapply pass; combined with the woken-by-everything
     // observer that was ~33 attribute mutations/sec (data-antcv-aligned), a

@@ -2103,26 +2103,46 @@ export function applyOutcomesMode(docSections, doc) {
       const k = Array.isArray(kept) ? kept : o;
       return (k.length >= Math.min(KEEP_MIN, o.length)) ? k : o;
     };
+    // BULLET-TENSE-001 (owner 2026-06-19: "only Kanzen bullets are present tense, all
+    // others past, including the current Pan Idræt role"). The chosen tense is GENERATED
+    // into bullets, but generation drifts to past, so re-tense each BULLET's leading verb
+    // to the chosen tense (full-clause, like the Result) so role content matches the
+    // Result tense. No-op for 'auto'; only flips recognised verbs (a noun opener like
+    // "Operations and assistant-coaching" is left alone).
+    const _txBullet = (b) => {
+      if (_tmode !== 'present' && _tmode !== 'past') return b;
+      if (typeof b === 'string') return _tx(b);
+      if (b && typeof b === 'object') {
+        if (b.b != null && String(b.b).trim()) return { ...b, b: _tx(b.b) };
+        if (b.t != null && String(b.t).trim()) return { ...b, t: _tx(b.t) };
+      }
+      return b;
+    };
+    const _txBl = (arr) => (Array.isArray(arr) ? arr.map(_txBullet) : arr);
     const expOut = {
       ...exp,
       roles: (exp.roles || []).map((r) => {
         // tiers 1-4 — a REAL outcome wins; bullets stay exposed EXCEPT one that reuses
-        // the Result's number (RESULT-NUMBER-NO-REUSE-001).
-        // _tx() re-tenses the leading verb to the user's chosen tense (no-op for 'auto').
+        // the Result's number (RESULT-NUMBER-NO-REUSE-001). _tx re-tenses to the chosen
+        // tense (no-op for 'auto'); _txBl re-tenses the kept bullets to match.
         // keepMin protects ONLY against the metric-reuse over-hide — the intentional
         // hides (subsumed bullet / derived source bullet that IS the Result) stay hidden,
         // so keepMin's "original" is the post-intentional-hide set, never r.bullets.
         const lam = _lam.get(r);
-        if (lam) return { ...r, results: _tx(lam), bullets: keepMin(r.bullets, hideMetricReused(r.bullets, lam)) };
+        if (lam) return { ...r, results: _tx(lam), bullets: _txBl(keepMin(r.bullets, hideMetricReused(r.bullets, lam))) };
         // pool / explicit-map distribution — may be a bullet-seeded outcome, so hide
         // a bullet when the result text subsumes it OR reuses its number.
-        if (resultsByRole.has(r)) { const rt = resultsByRole.get(r); const sub = hideSubsumed(r, rt); return { ...r, results: _tx(rt), bullets: keepMin(sub, hideMetricReused(sub, rt)) }; }
+        if (resultsByRole.has(r)) { const rt = resultsByRole.get(r); const sub = hideSubsumed(r, rt); return { ...r, results: _tx(rt), bullets: _txBl(keepMin(sub, hideMetricReused(sub, rt))) }; }
         // tier-5 derive — the Results line IS one of the role's bullets; hide that
-        // one source bullet (export render only; stored data untouched).
+        // one source bullet. TA-TORN-OFF-001 (owner 2026-06-19: "Teaching Assistant was
+        // torn off, only the result stayed"): NEVER consume a role's only content into a
+        // Result — if deriving would leave ZERO bullets, skip the derive and keep the
+        // bullet as content (no Results line) instead.
         const d = deriveResultFromRole(r);
-        if (!d) return r;
+        if (!d) return { ...r, bullets: _txBl(r.bullets) };
         const keptBullets = (Array.isArray(r.bullets) ? r.bullets : []).filter((_, i) => i !== d.index);
-        return { ...r, results: _tx(d.text), bullets: keepMin(keptBullets, hideMetricReused(keptBullets, d.text)) };
+        if (!keptBullets.length) return { ...r, bullets: _txBl(r.bullets) };
+        return { ...r, results: _tx(d.text), bullets: _txBl(keepMin(keptBullets, hideMetricReused(keptBullets, d.text))) };
       }),
     };
     return docSections.filter((s) => !isOutcomes(s)).map((s) => (s === exp ? expOut : s));

@@ -51,8 +51,11 @@ ok('SELECTED OUTCOMES section dropped', !out.some((s) => /selected_outcomes/.tes
 // outcome → DERIVE from their OWN strongest bullet (tier-5), and that source bullet
 // is REMOVED so it isn't shown twice. Unmatched OUTCOMES are still NOT spilled.
 ok('genuine token-match lands on its role (role 1 = LiDAR rework, not derived)', /LiDAR rework/.test(roles[1].results || ''));
-ok('roles with no real outcome derive from their OWN bullet', !!roles[0].results && !!roles[2].results);
-ok('the derived source bullet is HIDDEN (role 2: only bullet moved to Results, none left)', /Designed optical systems/.test(roles[2].results || '') && (roles[2].bullets || []).length === 0);
+ok('a role with ≥2 bullets and no real outcome derives from its OWN strongest bullet', !!roles[0].results);
+// TA-TORN-OFF-001 (owner 2026-06-19): a role whose ONLY content is a single bullet must
+// NOT be torn off (bullet consumed into Results, nothing left). It keeps the bullet as
+// content and gets NO derived Results line.
+ok('a 1-bullet role keeps its bullet as content and is NOT torn off', (roles[2].bullets || []).length === 1 && /Designed optical systems/.test((roles[2].bullets || []).join(' ')) && !roles[2].results);
 ok('role 0 derived result + source bullet removed', !!roles[0].results && (roles[0].bullets || []).length === 1 && !(roles[0].bullets || []).join(' ').includes(roles[0].results));
 ok('unmatched outcomes are dropped, not spilled onto unrelated roles', !roles.some((r) => /supplier consolidation|Six Sigma|optical resolution/i.test(r.results || '')));
 ok('no role result is a verbatim copy of one of its REMAINING bullets', roles.every((r) => { const res = (r.results || '').trim(); if (!res) return true; return !(r.bullets || []).map((b) => String(typeof b === 'string' ? b : (b && (b.b || b.t)) || '').trim()).some((b) => b && res.includes(b)); }));

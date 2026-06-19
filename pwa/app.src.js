@@ -15912,6 +15912,51 @@
           (__ioCo === "unsolicited" && (__expCo === "" || __expCo === "unsolicited")) ||
           (__expCo === "unsolicited" && (__ioCo === "" || __ioCo === "unsolicited"));
         if (__expectedCompany !== null && !__sameContext) {
+          // AUTO-COMMIT-001 (owner 2026-06-19): a targeted generation produced a REAL
+          // company (io.company) that drifted from the active UNSOLICITED kernel row.
+          // Skipping left the draft transient (label stayed "Unsolicited"; showcase +
+          // kernel-restore kept reverting the meta). Instead, commit it as a FIRST-CLASS
+          // application: reuse an existing row for this company or create a new one
+          // (save_as_new), set it ACTIVE, and stamp activeAppCompany. Once the active app
+          // IS the targeted company, the showcase + kernel-restore never revert it.
+          // Dedup: a per-company in-flight flag + the stamp stop it re-firing each tick.
+          const __realCo = __ioCo && __ioCo !== "unsolicited";
+          if (__realCo) {
+            try {
+              const __k = "__antcvAutoCommit:" + __ioCo;
+              if (!window[__k]) {
+                window[__k] = 1;
+                (async () => {
+                  try {
+                    const __l = await oo.list();
+                    const __apps = (__l && __l.applications) || [];
+                    const __ex = __apps.find((a) => a && __norm(a.jd_company) === __ioCo);
+                    let __id = __ex && __ex.id;
+                    if (!__id) {
+                      const __c = await oo.create({ save_as_new: !0 });
+                      __id = __c && __c.application && __c.application.id;
+                    }
+                    if (__id) {
+                      await oo.update(__id, {
+                        cv_sections: (ro && ro.cv) || [],
+                        cl_sections: (ro && ro.cl) || [],
+                        jd_company: (io && io.company) || "",
+                        jd_role: (io && io.role) || "",
+                        subtitle: (io && io.subtitle) || "",
+                        meta: io && "object" == typeof io ? io : {},
+                        rationale: yo,
+                      });
+                      try { Ml(__id); } catch (e) {}
+                      try { localStorage.setItem("antcv:activeAppCompany", (io && io.company) || ""); } catch (e) {}
+                      try { console.log("[apps] AUTO-COMMIT: targeted application '" + __ioCo + "' committed + activated (was drifting from the unsolicited kernel)"); } catch (e) {}
+                    }
+                  } catch (e) { try { console.warn("[apps] auto-commit failed:", e && e.message); } catch (_) {} }
+                  finally { setTimeout(() => { try { delete window[__k]; } catch (_) {} }, 4000); }
+                })();
+              }
+            } catch (e) {}
+            return;
+          }
           try {
             console.log(
               "[apps] auto-sync skipped — io.company drifted (",

@@ -15,7 +15,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.710-blended-demand-order';
+  var VERSION = '1.50.712-interests-shape';
   if (window.__antcvSectionsNormalize === VERSION) return;
   window.__antcvSectionsNormalize = VERSION;
 
@@ -638,6 +638,33 @@
     return next;
   }
 
+  // INTERESTS-SHAPE-001 (owner 2026-06-19: "interests is unpopulated"). The INTERESTS
+  // section is type 'labeled_list' (renders {l,v}: bold label + value, like LANGUAGES),
+  // but its items are stored as {b,t} (bullet/text) — so the renderer finds no l/v and
+  // shows the header with NOTHING under it, in BOTH preview and export. The data is
+  // there ("Coaching junior rugby" / "Weekly sessions as assistant coach…"); only the
+  // shape is wrong. Map {b,t} -> {l,v} so the labeled_list renders. Idempotent (skips
+  // an item that already carries l/v); preserves on/bullets; scoped to the interests
+  // section so it never touches a genuine {b,t} list elsewhere.
+  function normalizeInterestsShape(cv) {
+    var changed = false;
+    var out = cv.map(function (s) {
+      if (!s || s.id !== 'interests' || !Array.isArray(s.items)) return s;
+      var items = s.items.map(function (it) {
+        if (!it || typeof it !== 'object') return it;
+        if (it.l != null || it.v != null) return it;            // already labeled_list shape
+        if (it.b == null && it.t == null) return it;            // nothing to map
+        changed = true;
+        var n = { l: String(it.b == null ? '' : it.b), v: String(it.t == null ? '' : it.t) };
+        if (it.on !== undefined) n.on = it.on;
+        if (it.bullets !== undefined) n.bullets = it.bullets;
+        return n;
+      });
+      return Object.assign({}, s, { items: items });
+    });
+    return changed ? out : null;
+  }
+
   function normalize() {
     // EDIT-GUARD-001 (owner 2026-06-19): defer all normalisation while the user is
     // actively editing — rewriting sections mid-edit re-renders the preview and
@@ -673,6 +700,7 @@
       var no = neutralizeUnsolicitedOpener(cv); if (no) { cv = no; changed = true; }
       var ex = explodeAdditionalToSections(cv); if (ex) { cv = ex; changed = true; }
       var pa = partitionAdditional(cv); if (pa) { cv = pa; changed = true; }
+      var ish = normalizeInterestsShape(cv); if (ish) { cv = ish; changed = true; }
       // SECTION-PREVIEW-LOC-001 / TYPE-NORMALIZE: also normalise the CL sections'
       // loc + work_style type so imported CL sections render in the preview.
       var cl = Array.isArray(b.cl) ? b.cl : null;

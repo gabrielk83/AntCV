@@ -105,7 +105,7 @@ retry) should already cover this — verify it actually fires for these and isn'
 Owner reviewed the unsolicited PDF and said "document all to nightly." Render GABRIEL_BG
 (permission #6) to reproduce + verify each.
 
-A. **ANTI-FABRICATION — NYX at Kanzen (CRITICAL).** Generation wrote for Kanzen: "Worked in
+A. `[SHIPPED 1.50.698 — data-strip; prompt-guard follow-up open]` **ANTI-FABRICATION — NYX at Kanzen (CRITICAL).** New restore-proof sidecar `antcv-evidence-artifact-strip.js` drops any clause/sentence mentioning "evidence artifact(s)" from experience role results+bullets + SELECTED OUTCOMES (cv+cl), never blanking. Confirmed against the real DOCX (it was on the Meprolight Team Leader role, not Kanzen) + unit + headless verified. The cross-role BLEED part (the Sirin 7-person work also landing on Meprolight) is item C below, still open. Generation wrote for Kanzen: "Worked in
    product contexts represented by NYX-100 / NYX-200 and MOR PRO evidence artifacts." Owner: "at
    Kanzen I NEVER worked on NYX." NYX-100/NYX-200/MOR PRO appear as *evidence artifacts* in his data
    but are NOT work he did. The generator must never turn an evidence-artifact reference into a

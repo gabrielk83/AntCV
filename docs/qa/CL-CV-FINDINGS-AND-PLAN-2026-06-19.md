@@ -1,5 +1,45 @@
 # CL + CV findings and treatment plan — 2026-06-19 (owner live review)
 
+## PROGRESS / HANDOFF (live session 2026-06-19, shipped through 1.50.705)
+
+**KEY UNLOCK — live domain:** the app is **`https://antcv.pages.dev`** (NOT
+cv-generator-det, which is dead ~2 months). The owner's signed-in session
+(karp.gabriel.a@gmail.com, real kernel, 12 roles) is there. Drive it via Claude-in-
+Chrome on that URL. Memory [[domain-and-outcomes-parity]] corrected.
+
+**Shipped + LIVE-VERIFIED this session:**
+- `1.50.704` **F5 preview Results repetition** — ROOT CAUSE was NOT role-ids
+  (unique, fine) nor the `__antcvRR` memo (distinct, fine): the app.js render emits
+  `data-antcv-role-results` as **0 for ~all roles** ([0,1,0,0,…]), so
+  `antcv-results-laminate-510.js` did `exp.roles[0]`=Kanzen everywhere. Fixed the
+  sidecar to map i-th div → i-th VISIBLE role (document order). Verified live: 2→12
+  distinct results.
+- `1.50.705` **NYX evidence-artifact in the LAMINATED result** — 698 cleaned bullets
+  but the NYX line survived in (a) a SELECTED OUTCOMES `{b,t}` item entirely-
+  fabrication (stripArtifact returns null → item wasn't removed) and (b)
+  `personalInfo.experience/workHistory[].bullets`. Fixed both in the strip sidecar.
+  Verified live: mepro-tl now laminates "Manage prototype-to-production transfer; …"
+  (no NYX). NOTE: strip self-heals on a 4s interval after cloud-restore re-hydrates.
+
+**Metadata leak (C7):** GONE in live data (data changed since the export) — not
+reproducible; deprioritise.
+
+**NEW live findings (next, both deterministic):**
+- **Within-result redundancy** — the lamination `_capJoin(texts.slice(0,2))` joins the
+  top-2 outcomes, which are often NEAR-DUPLICATES: Sirin = "Direct a 7-person task
+  force…; Directed a 7-person EO and optics team…" (same fact twice). Fix: dedup
+  near-duplicate texts (high token overlap → keep the stronger/numeric one) before
+  joining, in BOTH `antcv-docx-client.js applyOutcomesMode` AND
+  `antcv-results-laminate-510.js lamFor` (keep in parity). Live-verify on antcv.pages.dev.
+- **E1 broken mixed tense in joined clause** — "Manage … ; owned …" (leading verb
+  re-tensed, rest not). Needs full-clause tensing, not leading-verb-only.
+
+**Next item to execute:** the near-duplicate dedup (#1 above). Then C5 numeric-
+surfacing, INTERESTS-missing seeding, CL heading consistency (INLINE_LABEL_IDS).
+
+---
+
+
 Source: owner review of the real exports `CV_…_20260619.pdf` (4pp) +
 `CoverLetter_…_20260619.pdf`, plus owner observations. This is the authoritative
 issue inventory + ordered treatment plan. Status tags: **[SHIPPED]** (fix landed,

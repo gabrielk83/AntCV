@@ -828,14 +828,29 @@
   function stripFabricatedTools(cv) {
     var changed = false;
     var out = cv.map(function (s) {
-      if (!s || s.id !== 'tools' || !Array.isArray(s.items)) return s;
-      var items = s.items.map(function (it) {
-        if (!it || typeof it !== 'object' || typeof it.v !== 'string' || !FABRICATED_TOOLS.test(it.v)) return it;
-        var v = it.v.split(/s*,s*/).filter(function (part) { return part && !FABRICATED_TOOLS.test(part); }).join(', ');
-        if (v !== it.v) { changed = true; return Object.assign({}, it, { v: v }); }
-        return it;
-      });
-      return Object.assign({}, s, { items: items });
+      if (!s) return s;
+      if (s.id === 'tools' && Array.isArray(s.items)) {
+        var items = s.items.map(function (it) {
+          if (!it || typeof it !== 'object' || typeof it.v !== 'string' || !FABRICATED_TOOLS.test(it.v)) return it;
+          var v = it.v.split(/s*,s*/).filter(function (part) { return part && !FABRICATED_TOOLS.test(part); }).join(', ');
+          if (v !== it.v) { changed = true; return Object.assign({}, it, { v: v }); }
+          return it;
+        });
+        return Object.assign({}, s, { items: items });
+      }
+      if ((s.type === 'table' || Array.isArray(s.rows)) && Array.isArray(s.rows)) {
+        var rows = s.rows.map(function (row) {
+          if (!Array.isArray(row)) return row;
+          return row.map(function (cell) {
+            if (typeof cell !== 'string' || !FABRICATED_TOOLS.test(cell)) return cell;
+            var cv2 = cell.split(/s*,s*/).filter(function (p) { return p && !FABRICATED_TOOLS.test(p); }).join(', ');
+            if (cv2 !== cell) { changed = true; return cv2; }
+            return cell;
+          });
+        });
+        return Object.assign({}, s, { rows: rows });
+      }
+      return s;
     });
     return changed ? out : null;
   }

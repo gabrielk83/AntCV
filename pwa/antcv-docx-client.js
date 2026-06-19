@@ -943,6 +943,21 @@ function sanitizeForExport(docSections, doc) {
         });
         return hit ? { ...s, items } : s;
       }
+      // (1b) strip fabricated tools from TABLE cells too (e.g. CORE COMPETENCIES expertise
+      // "SQL, Snowflake, data transformation jobs" — the same fabrication, second location).
+      if ((s.type === 'table' || Array.isArray(s.rows)) && Array.isArray(s.rows)) {
+        let hit = false;
+        const rows = s.rows.map((row) => {
+          if (!Array.isArray(row)) return row;
+          return row.map((cell) => {
+            if (typeof cell !== 'string' || !FAB_TOOLS.test(cell)) return cell;
+            const v = cell.split(/\s*,\s*/).filter((p) => p && !FAB_TOOLS.test(p)).join(', ');
+            if (v !== cell) { hit = true; return v; }
+            return cell;
+          });
+        });
+        return hit ? { ...s, rows } : s;
+      }
       // (2) for a JD-TARGETED application, hide the clearly-irrelevant student roles
       // (student council, dormitory security guard) — no signal for a senior professional
       // application. Set on:false (the worker's existing hide flag), don't drop the row.

@@ -447,11 +447,16 @@
       for (const sb of sidebars) {
         const els = sb.querySelectorAll('p, div, span, li, td, [data-edit-path]');
         for (const el of els) {
+          // BREATHING-001 (owner 2026-06-19): skip getComputedStyle (a reflow) for an
+          // element we already de-justified and that React has not reset - cuts the
+          // per-pass reflow that made the sidebar 'breathe' on scroll / ratio change.
+          if (el.getAttribute('data-antcv-dejust') === '1' && el.style.textAlign && el.style.textAlign !== 'justify') continue;
           let cs = null;
           try { cs = getComputedStyle(el); } catch (_) { continue; }
           if (!cs || cs.textAlign !== 'justify') continue;
           const want = isRtlText(el.textContent) ? 'right' : 'left';
           if (el.style.textAlign !== want) el.style.textAlign = want;
+          try { el.setAttribute('data-antcv-dejust', '1'); } catch (_) {}
         }
       }
     } catch (_) {}

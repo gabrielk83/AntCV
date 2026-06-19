@@ -83,3 +83,29 @@ test('_apply cleans role.results in the experience section', () => {
   API._apply();
   assert.equal(store.sections, before, 'second apply is a no-op');
 });
+
+test('_apply removes an all-fabrication {b,t} SELECTED OUTCOMES item + cleans personalInfo bullets', () => {
+  store = {
+    sections: JSON.stringify({
+      cv: [
+        { id: 'selected_outcomes', title: 'SELECTED OUTCOMES', type: 'text_bullets', items: [
+          { b: '', t: 'Worked in product contexts represented by NYX-100 / NYX-200 and MOR PRO evidence artifacts.' },
+          { b: 'Cut', t: 'change-request cycle time from 250 to 10 days.' },
+        ] },
+      ],
+      cl: [],
+    }),
+    personalInfo: JSON.stringify({
+      experience: [
+        { id: 'mepro-tl', role: 'Electro-Optics Team Leader', company: 'Meprolight',
+          bullets: ['Managed prototype-to-production transfer.', 'Worked in product contexts represented by NYX-100 / NYX-200 and MOR PRO evidence artifacts.'] },
+      ],
+    }),
+  };
+  API._apply();
+  const so = JSON.parse(store.sections).cv[0].items;
+  assert.equal(so.length, 1, 'the all-fabrication {b,t} outcome item is removed');
+  assert.match(so[0].t, /250 to 10 days/, 'the real outcome survives');
+  const piBullets = JSON.parse(store.personalInfo).experience[0].bullets;
+  assert.deepEqual(piBullets, ['Managed prototype-to-production transfer.'], 'personalInfo fabrication bullet dropped');
+});

@@ -21,7 +21,7 @@
 (function () {
   'use strict';
   if (window.__antcvEvidenceArtifactStrip) return;
-  window.__antcvEvidenceArtifactStrip = '1.50.698';
+  window.__antcvEvidenceArtifactStrip = '1.50.705';
 
   var SRC = 'evidence-artifact-strip';
   function disabled() { try { var v = localStorage.getItem('antcv:disable-evidence-artifact-strip'); return v === '1' || v === 'true'; } catch (_) { return false; } }
@@ -81,6 +81,12 @@
         else if (ARTIFACT.test(it)) { items.splice(i, 1); changed = true; }
       } else if (it && typeof it === 'object') {
         ['b', 't', 'title', 'result'].forEach(function (k) { if (typeof it[k] === 'string') { var nv = stripArtifact(it[k]); if (nv != null) { it[k] = nv; changed = true; } } });
+        // If an OBJECT outcome ({b,t}/{title,result}) is ENTIRELY the fabrication,
+        // stripArtifact returned null for every field (it won't blank a field), so
+        // the item would survive and tier-4 distribution could still laminate it onto
+        // a role. Remove the whole item when it still carries the tell after stripping.
+        var blob = ['b', 't', 'title', 'result'].map(function (k) { return it[k] || ''; }).join(' ');
+        if (ARTIFACT.test(blob)) { items.splice(i, 1); changed = true; }
       }
     }
     return changed;
@@ -99,23 +105,37 @@
     return changed;
   }
 
-  var lastRaw = null;
+  var lastRaw = null, lastPi = null;
   function apply() {
     if (disabled()) return;
     try { var __ae = document.activeElement; if (__ae && (__ae.isContentEditable || /^(?:input|textarea|select)$/i.test(__ae.tagName || ""))) return; } catch (_) {}
-    var raw; try { raw = localStorage.getItem('sections'); } catch (_) { return; }
-    if (!raw || raw === lastRaw) return;
-    if (!ARTIFACT.test(raw)) { lastRaw = raw; return; }   // fast bail — nothing to strip
-    var b; try { b = JSON.parse(raw); } catch (_) { lastRaw = raw; return; }
-    var changed = false;
-    if (stripList(b.cv)) changed = true;
-    if (stripList(b.cl)) changed = true;
-    if (!changed) { lastRaw = raw; return; }
-    var out;
-    try { out = JSON.stringify(b); localStorage.setItem('sections', out); } catch (_) { return; }
-    lastRaw = out;
-    try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { source: SRC } })); } catch (_) {}
-    try { console.info('[evidence-artifact-strip] removed evidence-artifact fabrication from results/bullets/outcomes'); } catch (_) {}
+    // sections (display + the SELECTED OUTCOMES pool tier-4 distributes from)
+    try {
+      var raw = localStorage.getItem('sections');
+      if (raw && raw !== lastRaw && ARTIFACT.test(raw)) {
+        var b = JSON.parse(raw); var changed = false;
+        if (stripList(b.cv)) changed = true;
+        if (stripList(b.cl)) changed = true;
+        if (changed) {
+          var out = JSON.stringify(b); localStorage.setItem('sections', out); lastRaw = out;
+          try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { source: SRC } })); } catch (_) {}
+          try { console.info('[evidence-artifact-strip] cleaned sections'); } catch (_) {}
+        } else lastRaw = raw;
+      } else if (raw) lastRaw = raw;
+    } catch (_) {}
+    // personalInfo (the kernel) — strip the fabrication bullet at the SOURCE so it is
+    // not derived into a Results line at lamination and not re-emitted into GABRIEL_BG
+    // on the next generation. (workEvidenceArtifacts datasheets don't contain the
+    // "evidence artifact" phrase, so legit evidence references are left intact.)
+    try {
+      var rawPi = localStorage.getItem('personalInfo');
+      if (rawPi && rawPi !== lastPi && ARTIFACT.test(rawPi)) {
+        var pi = JSON.parse(rawPi); var root = pi.personalInfo ? pi.personalInfo : pi; var ch = false;
+        [root.experience, root.workHistory, root.roles].forEach(function (arr) { if (stripRoles(arr)) ch = true; });
+        if (ch) { var op = JSON.stringify(pi); localStorage.setItem('personalInfo', op); lastPi = op; try { console.info('[evidence-artifact-strip] cleaned personalInfo'); } catch (_) {} }
+        else lastPi = rawPi;
+      } else if (rawPi) lastPi = rawPi;
+    } catch (_) {}
   }
 
   var pending = false;
@@ -126,5 +146,5 @@
   try { window.addEventListener('storage', function (e) { if (!e || e.key === 'sections' || e.key === null) tick(); }); } catch (_) {}
   setInterval(tick, 4000);
 
-  window.AntcvEvidenceArtifactStrip = { version: '1.50.698', _apply: apply, _strip: stripArtifact, _stripRoles: stripRoles };
+  window.AntcvEvidenceArtifactStrip = { version: '1.50.705', _apply: apply, _strip: stripArtifact, _stripRoles: stripRoles };
 })();

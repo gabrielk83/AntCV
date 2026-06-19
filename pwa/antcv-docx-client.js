@@ -1792,7 +1792,16 @@ export function applyOutcomesMode(docSections, doc) {
   try {
     if (doc !== 'cv' || !Array.isArray(docSections)) return docSections;
     const _tmode = _expTenseMode();
-    const _tx = (s) => _tenseLead(s, _tmode);
+    // TENSE-FULL-CLAUSE-001 (owner 2026-06-19: "make sure role and role-result are in the
+    // same tense" + fixes E1 broken mixed tense). The Result laminates two outcomes joined
+    // by "; " — _tenseLead only re-tensed the FIRST clause's leading verb, leaving
+    // "Manage …; owned …" mixed. Re-tense EACH clause's leading verb (split on ';' /
+    // ' and ', keeping the delimiters) so the whole Result is in the chosen tense — which
+    // is the tense generation already wrote the bullets in, so role + result now match.
+    // No-op for 'auto'; _tenseLead leaves a non-verb clause opener unchanged.
+    const _tx = (s) => (typeof s === 'string' && /;| and /.test(s))
+      ? s.split(/(;|\s+and\s+)/).map((p) => /^(?:;|\s+and\s+)$/.test(p) ? p : _tenseLead(p, _tmode)).join('')
+      : _tenseLead(s, _tmode);
     // OUTCOMES-MODE-PARITY-001 (owner 2026-06-14): mirror the PREVIEW default
     // EXACTLY (app.src.js __antcvOutcomesMode). An explicit user choice wins;
     // with NONE stored, Copenhagen Modern (incl. the 'scandinavian'/empty

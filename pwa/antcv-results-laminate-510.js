@@ -104,13 +104,23 @@
       const jd = jdText();
       const overrides = readJSON('antcv:resultsOverride', {}) || {};
       const divs = document.querySelectorAll('[data-antcv-role-results]');
+      // RESULTS-PREVIEW-REPEAT-001 (owner 2026-06-19): the app.js render emits
+      // data-antcv-role-results as 0 for nearly every role (only the 2nd was "1"),
+      // so the old `exp.roles[t]` resolved to roles[0] (Kanzen) for ~all roles and
+      // its result was painted onto every role — the "repetitive preview Results"
+      // the owner saw (role-id-stabilize did NOT help: the bug is this index, not
+      // the ids). The Results divs render in DOCUMENT ORDER = the VISIBLE-role order,
+      // so map the i-th div to the i-th VISIBLE role. Fall back to the (broken) index
+      // only if the order-count disagrees with the visible-role count.
+      const visRoles = exp.roles.filter((r) => r && r.on !== false);
+      const orderOk = visRoles.length === divs.length;
       for (let i = 0; i < divs.length; i++) {
         const div = divs[i];
         const t = parseInt(div.getAttribute('data-antcv-role-results'), 10);
-        if (!(t >= 0)) continue;
-        const role = exp.roles[t];
+        const role = orderOk ? visRoles[i] : (t >= 0 ? exp.roles[t] : null);
         const span = div.querySelector('[data-antcv-results-edit]');
         if (!role || !span) continue;
+        const ti = exp.roles.indexOf(role);   // real index for the bullet-hide selector
         const rKey = span.getAttribute('data-antcv-results-edit') || '';
         if (overrides && typeof overrides[rKey] === 'string' && overrides[rKey].trim()) continue; // user edit wins
         if (document.activeElement === span) continue; // do not fight an active edit
@@ -121,7 +131,7 @@
         // fully guarded; if the element can't be found the result still renders.
         if (lam.hideIdx >= 0) {
           try {
-            const sel = '[data-edit-path="roles.' + t + '.bullets.' + lam.hideIdx + '"]';
+            const sel = '[data-edit-path="roles.' + ti + '.bullets.' + lam.hideIdx + '"]';
             const be = document.querySelector(sel);
             const li = be && (be.closest('li') || be.closest('[data-antcv-bullet], p, div'));
             if (li && li.getAttribute('data-antcv-results-hid') !== '1') {

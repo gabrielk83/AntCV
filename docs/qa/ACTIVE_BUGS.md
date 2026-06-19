@@ -1,5 +1,20 @@
 > **AUTHORITATIVE current state + next-session prompt: `docs/qa/SESSION_HANDOFF_2026-06-18-pm3.md`.** It supersedes the scattered PM/PM2 docs for what shipped (640-652) and what's open. The blocks below are the per-batch detail.
 
+## NIGHTLY FEATURE REQUESTS (owner 2026-06-19)
+
+- **JD-FETCH-CHIP-LABEL-001** `[OPEN — nightly feature]` — owner: "when you fetch a JD, add
+  the Job and company name as the first lines in" the green JD-ready chip (currently
+  `✓ 4449 chars · url-fetch · 1 page`). The chip is at `app.src.js ~39349-39362`:
+  `!jt && zt?.text && React.createElement("span",{style:{fontSize:11,color:"#10b981",flex:1}},
+  "✓ ",zt.text.length," chars · ",zt.method," · ",zt.pages," page",...)`. Data already
+  available at fetch time: **`zt.fileName`** = the fetched page **title** (set at
+  `app.src.js:13984` `fileName:(o.title||r).slice(0,120)`) which carries the job role (and
+  often the company). IMPLEMENTATION: wrap the chip in a `flexDirection:"column"` div; line 1
+  = the job/company (zt.fileName, ellipsized + `title` tooltip), line 2 = the existing
+  `✓ N chars · method · pages` line. Mirror to `app.js`. For a clean "Role — Company",
+  enrich from the source URL domain or a light parse of zt.fileName/the JD head. Cosmetic,
+  low-risk; deferred from the 712-729 run as the owner tagged it "for nightly".
+
 ## Owner batch 2026-06-18 (PM3, 1.50.649 → 652) — generation-quality + UX
 
 - **SUBSECTION-GAP-60** `[CLOSED 1.50.653]` — subsection-gap sliders (mainSectionGap/sidebarSectionGap/bodySectionGap, app.src.js ~13191-13193) now go 0-60 (was 0-30).

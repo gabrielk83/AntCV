@@ -47,5 +47,46 @@ const r = await page.evaluate(()=>{
   const salmon = document.querySelector('[class*="salmon" i], [data-antcv-salmon]');
   return { count:rows.length, rows:out, salmonFound: !!salmon };
 });
-await browser.close(); await new Promise(r=>server.close(r));
+console.log('=== snapshot ===');
 console.log(JSON.stringify(r,null,2));
+
+// SALMON-EMPTY-REGION-001 Option A stability check:
+// Re-measure row heights 5 times at 500ms intervals and assert:
+//   (a) the NON-LAST row settles to < 1100px (content-height regime, NOT the 1123 A4 lock)
+//   (b) the measurement is STABLE across cycles (max - min < 20px per row)
+// SIDEBAR-BREATHING-001 risk: if the sidebar-fill-equalize loop is oscillating,
+// successive measurements differ > 20px — that is the failure signal.
+const measurements = [];
+for (let i = 0; i < 5; i++) {
+  await page.waitForTimeout(500);
+  const snap = await page.evaluate(() => {
+    const rows = [...document.querySelectorAll('.antcv-page-row')];
+    return rows.map((row, i) => ({ i, h: Math.round(row.getBoundingClientRect().height) }));
+  });
+  measurements.push(snap);
+}
+
+console.log('\n=== stability measurements (500ms intervals) ===');
+measurements.forEach((snap, t) => console.log('t=' + t + ':', JSON.stringify(snap)));
+
+// Assert per row
+let failures = 0;
+if (r.count >= 2) {
+  for (let rowIdx = 0; rowIdx < r.count; rowIdx++) {
+    const hs = measurements.map(m => m[rowIdx] && m[rowIdx].h).filter(h => h > 0);
+    const mn = Math.min(...hs), mx = Math.max(...hs);
+    const stable = mx - mn < 20;
+    const isLast = rowIdx === r.count - 1;
+    const contentRegime = isLast ? true : mx < 1100; // non-last must not be stuck at 1123
+    console.log('row[' + rowIdx + '] isLast=' + isLast + ' min=' + mn + ' max=' + mx +
+      ' stable=' + stable + ' contentRegime=' + contentRegime);
+    if (!stable) { console.log('  FAIL: oscillating (max-min=' + (mx-mn) + ' >= 20)'); failures++; }
+    if (!contentRegime) { console.log('  FAIL: non-last row still at A4 height (max=' + mx + ' >= 1100, expected < 1100 in content-height mode)'); failures++; }
+  }
+} else {
+  console.log('Only ' + r.count + ' row(s) — single-page CV, last-row check only (no non-last assertion).');
+}
+
+await browser.close(); await new Promise(r=>server.close(r));
+if (failures > 0) { console.log('\nDIAG FAILED: ' + failures + ' assertion(s)'); process.exit(1); }
+console.log('\nDIAG OK: all stability assertions passed');

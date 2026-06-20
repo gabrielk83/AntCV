@@ -17,7 +17,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.227-sidebar-equalize';
+  var VERSION = '1.50.753-sidebar-equalize';
   if (window.__antcvSidebarEqualize === VERSION) return;
   window.__antcvSidebarEqualize = VERSION;
 
@@ -27,6 +27,22 @@
   var MAIN_SEL = '[data-antcv-document-main="true"],.antcv-document-main';
 
   var applying = false; // guards our own style writes from re-triggering work
+
+  // SALMON-EMPTY-REGION-001 Option A: sum direct children heights to get the
+  // CONTENT height of the main column. getBCR().height on a flex-stretch child
+  // returns the ROW height (1123px when antcv-page-fit's min-height is in
+  // effect), not the actual content. Summing children gives the true content
+  // height (~931px for a typical 2-page CV) and breaks the circular lock:
+  // page-fit(0 on non-last) → main unstretched → contentH ~931 → sidebar set
+  // to 931 → row collapses to 931 → salmon sits flush. Falls back to getBCR
+  // when there are no children (empty page-box edge-case).
+  function mainContentH(main) {
+    var total = 0;
+    for (var i = 0; i < main.children.length; i++) {
+      total += Math.ceil(main.children[i].getBoundingClientRect().height);
+    }
+    return total || Math.ceil(main.getBoundingClientRect().height);
+  }
 
   // 1.50.237: EXTEND-ONLY. The 1.50.227 logic wrote
   // `side.style.height = mainH + 'px'` unconditionally, which TRUNCATES the
@@ -44,12 +60,22 @@
     if (!rows.length) return;
     applying = true;
     var changed = false;
+    var lastIdx = rows.length - 1;
     try {
-      Array.prototype.forEach.call(rows, function (row) {
+      Array.prototype.forEach.call(rows, function (row, idx) {
+        var isLastRow = (idx === lastIdx);
         var side = row.querySelector(SIDE_SEL);
         var main = row.querySelector(MAIN_SEL);
         if (!side || !main) return;
-        var mainH = Math.ceil(main.getBoundingClientRect().height);
+        // SALMON-EMPTY-REGION-001 Option A: for NON-LAST rows use the main
+        // column's CONTENT height (sum of children, see mainContentH above)
+        // instead of getBCR().height, which returns the STRETCHED row height
+        // (1123px) — the circular lock. Content height ~931px breaks the lock
+        // so the box collapses and the salmon sits flush. LAST row keeps the
+        // standard getBCR behaviour so the final page fills to A4 height.
+        var mainH = isLastRow
+          ? Math.ceil(main.getBoundingClientRect().height)
+          : mainContentH(main);
         if (!(mainH > 0)) return;
         // SIDEBAR-BREATHING-001 (owner 2026-06-18): idempotent guard. If this row
         // is already equalized to the SAME main height, do NOTHING — no remove,

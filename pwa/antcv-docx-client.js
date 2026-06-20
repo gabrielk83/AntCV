@@ -2359,6 +2359,27 @@ try {
         return text.split(/\s*,\s*/).filter(function (p) { return p && !FAB_TOOLS.test(p); }).join(', ');
       } catch (_) { return text; }
     };
+    // PREVIEW-MERGE-001 (owner 2026-06-20, Option A): the DATA-level hide+merge for a targeted
+    // application's experience roles — the SAME order as sanitizeForExport (set on:false on the
+    // export-hidden roles FIRST, then consolidate same-company VISIBLE roles). Returns the new
+    // roles array, or null if not targeted / not an array. app.js applies this ONCE to the
+    // targeted app's React state so the merged roles are genuine single roles (editable, and
+    // preview == export). The unsolicited kernel is a separate row and is never touched.
+    window.AntcvMergeExperienceRoles = function (roles) {
+      try {
+        if (!_isTargetedExport() || !Array.isArray(roles)) return null;
+        var hideTech = !_jdIsTechOps();
+        var out = roles.map(function (r) {
+          if (!r || r.on === false) return r;
+          var hay = String(r.title || '') + ' ' + String(r.company || '');
+          if (IRRELEVANT_ROLE.test(hay) || (hideTech && CLUSTER_ROLE.test(hay))) return Object.assign({}, r, { on: false });
+          return r;
+        });
+        var merged = mergeSameCompanyRoles(out);
+        if (merged) out = merged;
+        return out;
+      } catch (_) { return null; }
+    };
   }
 } catch (_) {}
 

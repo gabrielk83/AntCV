@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.50.741';
+const CACHE = 'antcv-1.50.742';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

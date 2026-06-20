@@ -16019,6 +16019,35 @@
         }, 3000);
         return () => clearTimeout(t);
       }, [ro, io, yo]);
+      // PREVIEW-MERGE-001 (owner 2026-06-20, Option A): for a TARGETED application, apply the
+      // export's hide+merge to the DATA once, so the consolidated roles (Innoviz, Meprolight,
+      // TAU) are genuine single roles — preview == export, edits work, and the salmon page
+      // breaks line up. Guarded by __antcvMerged so it runs ONCE and never fights edits or
+      // re-merges. The unsolicited kernel is a separate row and is never touched.
+      React.useEffect(() => {
+        try {
+          const __co = io && io.company ? String(io.company).trim().toLowerCase() : "";
+          if (!__co || "unsolicited" === __co || !window.AntcvMergeExperienceRoles) return;
+          const __cv = (ro && ro.cv) || [];
+          const __exp = __cv.find((s) => s && "experience" === s.type);
+          if (!__exp || __exp.__antcvMerged || !Array.isArray(__exp.roles)) return;
+          ao((prev) => {
+            try {
+              if (!prev || !Array.isArray(prev.cv)) return prev;
+              let __changed = false;
+              const __next = prev.cv.map((s) => {
+                if (s && "experience" === s.type && !s.__antcvMerged && Array.isArray(s.roles)) {
+                  const __mr = window.AntcvMergeExperienceRoles(s.roles);
+                  __changed = true;
+                  return Object.assign({}, s, __mr ? { roles: __mr, __antcvMerged: !0 } : { __antcvMerged: !0 });
+                }
+                return s;
+              });
+              return __changed ? Object.assign({}, prev, { cv: __next }) : prev;
+            } catch (e) { return prev; }
+          });
+        } catch (e) {}
+      }, [ro, io]);
       const [Ro, So] = e(() => u.get("profileDoc", null)),
         [ko, Co] = e(() => u.get("skillsDoc", null)),
         [To, Ao] = e(() => u.get("wordsDoc", null)),

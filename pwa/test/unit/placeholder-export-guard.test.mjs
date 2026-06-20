@@ -70,6 +70,22 @@ test('placeholder bullets + foundation fields are stripped', () => {
   assert.equal(noNbsp(foundation.professionally), 'I keep decisions visible.');
 });
 
+test('a placeholder that ALREADY contains an NBSP is still stripped (strip-before-bind)', () => {
+  // Regression for the "strip misses the NBSP'd placeholder" hypothesis
+  // (placeholder-export-guard, PROJECT_ISSUES 2026-06-20). PLACEHOLDER_RE uses
+  // \s (matches U+00A0) at the ends and [^\]] (matches U+00A0) inside, and the
+  // pipeline strips BEFORE bindOrphan — so even a placeholder whose internal/edge
+  // spaces are already non-breaking must be treated as empty, not exported.
+  const NBSP = ' ';
+  const why = '[WHY THIS POSITION' + NBSP + '—' + NBSP + '1-2 sentences explaining fit.]';
+  const p = payloadWith([
+    { id: 'who', title: 'WHO I AM', loc: 'main', on: true, type: 'text', content: 'Real intro.' },
+    { id: 'why', title: 'WHY THIS POSITION', loc: 'main', on: true, type: 'text', content: NBSP + why + NBSP },
+  ]);
+  assert.equal(p.sections.find((s) => s.id === 'why'), undefined, 'NBSP-laden placeholder must not export');
+  assert.ok(p.sections.find((s) => s.id === 'who'), 'real content still survives');
+});
+
 test('a bracket inside real prose is NOT treated as a placeholder', () => {
   // only a string that is ENTIRELY one [bracket] counts as a placeholder
   const p = payloadWith([

@@ -273,7 +273,15 @@ area and need the rendered preview to verify — do NOT blind-hack.
   separator at ~37810 + antcv-page-fit `min-height`) — let the page-1 box end at content when a
   break pushed the tail away, OR draw the salmon at the content end. Needs a live screenshot to see
   which column has the gap + verify the A4-look isn't broken.
-- **SALMON-PAGE3-MISSING-001** — owner: "page 3 salmon is missing." CONFIRMED in code: the measurer
+- **SALMON-EMPTY-REGION confirmation (owner screenshots 2026-06-22):** on page 1 the SIDEBAR column
+  (TOOLS & METHODS) ends well above the full-width salmon, leaving a visible empty band; the MAIN
+  column fills lower. So it's the shorter-column (sidebar) dead-gap — worsened by the 749/750 FORCE
+  (which moves sidebar items to page 2, shortening the page-1 sidebar). The A4 page-box `min-height`
+  holds the box tall so the gap shows. Tension: force-items-to-page-2 (owner wants) vs no-gap — only
+  reconcilable by ending the page-1 box at content / drawing the salmon at the taller-column content
+  end, not the A4 line. Needs the render change + visual verify.
+- **SALMON-PAGE3-MISSING-001** — owner: "page 3 salmon is missing — page 3 break should have been
+  around the SECURITY GUARD role." CONFIRMED in code: the measurer
   `antcv-auto-pagebreak-block-001.js` only ever writes `=2` (lines 536/576) — it is **2-page scope**
   (line 547), so a 3-page CV gets the page1→2 salmon but NO page2→3 break. Fix = extend the measurer
   to N pages: loop the overflow detection across successive A4 lines and write `=2, =3, …` at each

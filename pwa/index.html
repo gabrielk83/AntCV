@@ -796,13 +796,16 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <!-- RICH-BLOCK-001 (2026-06-22): editor surface for the universal composite section
      type:"rich_block" (headline/rule toggles + section CJLR + {lead-in, body} rows with
      per-row CJLR/Page/Enhance/Fit/Delete). app.js delegates to window.AntcvRichBlockEditor. -->
-<script src="antcv-rich-block-editor.js?v=1.50.758" defer></script>
+<script src="antcv-rich-block-editor.js?v=1.50.760" defer></script>
 <!-- RICH-BLOCK-001 Phase B: convert legacy `foundation` sections into `rich_block` so they
      gain the full rich-block controls. Idempotent; runs on CV + CL. -->
 <script src="antcv-foundation-to-rich-block-758.js?v=1.50.758" defer></script>
 <!-- RICH-BLOCK-001 Phase C: convert the six named single-paragraph sections (opening, who, why,
      closure, profile, work_style) into rich_block so they gain the full controls. Idempotent. -->
 <script src="antcv-text-sections-to-rich-block-759.js?v=1.50.759b" defer></script>
+<!-- RICH-BLOCK-001 / HWIC: convert HOW I WOULD CONTRIBUTE (text_bullets) into rich_block —
+     intro/closing as paragraphs, bullets as marker rows (mk:true). Idempotent. -->
+<script src="antcv-hwic-to-rich-block-760.js?v=1.50.760" defer></script>
 <script src="antcv-core-wib-strict-row-layout-274.js?v=1.50.93-wider-cells" defer></script>
 <script src="antcv-row-controls-wording-341.js?v=1.40.357-p1b3" defer></script>
 <script src="antcv-help-text-wording-357.js?v=1.40.357-p1b2" defer></script>

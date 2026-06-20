@@ -1639,7 +1639,7 @@ function normalizeSections(raw) {
           const b = row.bOff ? '' : (clean(row.b) || '');
           const t = row.tOff ? '' : (clean(row.t) || '');
           if (!b && !t) return null;
-          return { b, t };
+          return row.mk ? { b, t, mk: true } : { b, t };
         }).filter(Boolean);
         const _rp = (s.id && itemPagesMap && typeof itemPagesMap[s.id] === 'object') ? itemPagesMap[s.id] : null;
         let rowPages = null;

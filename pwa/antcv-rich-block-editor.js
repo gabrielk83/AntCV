@@ -68,6 +68,7 @@
         var hiddenRow = !!(e.hidden && e.hidden[i]);
         var bOff = !!ev.bOff, tOff = !!ev.tOff;
         var thisPage = getPage(i), thisAlign = getAlign(i);
+        var mk = !!ev.mk;
         var busyEnrich = enrichingId === "item:" + i, busyCompress = compressingId === "item:" + i;
         return h("div", { key: i, style: { border: "1px solid #eee", borderRadius: 4, padding: 5, marginBottom: 6, background: hiddenRow ? "#fafafa" : "#fff", opacity: hiddenRow ? 0.5 : 1 } },
           // line 1: move · hide-row · lead toggle · lead input · page · CJLR · enhance · fit · delete
@@ -77,6 +78,7 @@
               h("button", { onClick: function () { moveRow(i, 1); }, disabled: i === rows.length - 1, title: "Move down", style: { fontSize: 10, border: "none", background: "none", color: i === rows.length - 1 ? "#ccc" : "#666", padding: 0, cursor: i === rows.length - 1 ? "default" : "pointer" } }, "▼")
             ),
             h("button", { onClick: function () { toggleRowHidden(i); }, title: hiddenRow ? "Row hidden — show" : "Row shown — hide", style: btn({ border: "1px solid " + (hiddenRow ? "#999" : accent), color: hiddenRow ? "#999" : accent, fontSize: 11, minWidth: 22 }) }, hiddenRow ? "🙈" : "👁"),
+            h("button", { onClick: function () { updateRow(i, { mk: !mk }); }, title: mk ? "Bullet marker ON — click to remove" : "No marker — click to add a bullet marker", style: btn({ border: "1px solid " + (mk ? "#0a8" : "#bbb"), color: mk ? "#0a8" : "#bbb", minWidth: 22 }) }, mk ? "•" : "◦"),
             h("button", { onClick: function () { updateRow(i, { bOff: !bOff }); }, title: bOff ? "Lead-in hidden — show it" : "Lead-in shown — hide it", style: btn({ border: "1px solid " + (bOff ? "#999" : "#0a8"), color: bOff ? "#999" : "#0a8", fontWeight: 700, minWidth: 24 }) }, bOff ? "a̶" : "Aa"),
             h("input", { value: ev.b || "", onChange: function (x) { updateRow(i, { b: x.target.value }); }, placeholder: "Lead-in (e.g. Hands-on)", style: { fontSize: 11, padding: 4, border: "1px solid #ddd", borderRadius: 3, minWidth: 60, flex: "0 1 150px", fontWeight: 700, fontFamily: "Georgia,serif", opacity: bOff ? 0.5 : 1 } }),
             h("button", { onClick: function () { setPage(i, thisPage >= 4 ? 1 : thisPage + 1); }, title: "Row page: " + thisPage + ". Click to cycle 1→2→3→4.", style: btn({ border: "1px solid #01B7BB", color: "#00746E", background: thisPage === 1 ? "rgba(1,183,187,.08)" : "rgba(255,255,255,.10)", fontSize: 9, minWidth: 28 }) }, "P" + thisPage),

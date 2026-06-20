@@ -47,22 +47,31 @@ async function inspect(sec) {
     bodyA: /built and operated/.test(joined),
     bodyB: /disciplined product ownership/.test(joined),
     pBdr: (xml.match(/<w:pBdr>/g) || []).length,
+    numPr: (xml.match(/<w:numPr>/g) || []).length,
   };
 }
 
 const normal = await inspect(richSection());
 const noHead = await inspect(richSection({ headlineOff:true }));
 const noRule = await inspect(richSection({ ruleOff:true }));
+// marker rows: bullets with mk:true must export with list numbering (<w:numPr>).
+const markered = await inspect({ id:'profile2', title:'PROFILE', loc:'main', on:true, type:'rich_block', items:[
+  { b:'', t:'built and operated rigs', mk:true },
+  { b:'', t:'disciplined product ownership', mk:true },
+] });
 
 log('normal   :', JSON.stringify(normal));
 log('headlineOff:', JSON.stringify(noHead));
 log('ruleOff  :', JSON.stringify(noRule));
+log('markered :', JSON.stringify(markered));
 
 const checks = [];
 checks.push(['rows export (leads + bodies)', normal.handsOn && normal.professionally && normal.bodyA && normal.bodyB]);
 checks.push(['heading + rule by default', normal.title && normal.pBdr >= 1]);
 checks.push(['headlineOff hides heading, keeps body', !noHead.title && noHead.handsOn && noHead.bodyA]);
 checks.push(['ruleOff keeps heading, drops the rule', noRule.title && noRule.pBdr === normal.pBdr - 1 && noRule.handsOn]);
+checks.push(['plain rows have no list numbering', normal.numPr === 0]);
+checks.push(['marker rows export as a numbered list', markered.numPr >= 2 && markered.bodyA]);
 
 let pass = true;
 for (const [name, ok] of checks) { log((ok ? 'PASS' : 'FAIL') + ' — ' + name); if (!ok) pass = false; }

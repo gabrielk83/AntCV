@@ -26153,7 +26153,8 @@ function renderRichBlock(s, ctx, isSidebar) {
       out.push(pbBreakPara());
       if (!s.headlineOff && s.title && !(ctx.style && ctx.style.contHeadlines === false)) out.push(headingParagraph(String(s.title || "").toUpperCase() + " " + (ctx.contSuffix || "(CONT.)"), ctx, isSidebar, s.ruleOff));
     }
-    out.push(make(lead, body, align));
+    if (row.mk) out.push(bulletParagraphRich(lead, body, ctx, isSidebar, align));
+    else out.push(make(lead, body, align));
   });
   return out;
 }

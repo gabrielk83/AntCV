@@ -16,9 +16,12 @@ merged to `main` in one coherent piece.
 { id, title, loc, on, type:"rich_block",
   headlineOff?:bool,          // hide the section headline (title) + its rule
   ruleOff?:bool,              // hide ONLY the horizontal rule under the headline
-  items:[ {b, t, bOff?, tOff?} ],   // b = bold lead-in, t = body; bOff/tOff hide each independently
+  items:[ {b, t, bOff?, tOff?, mk?} ],  // b=bold lead-in, t=body; bOff/tOff hide each; mk=bullet marker
   hidden?:[bool] }            // per-row hide (whole row)
 ```
+`mk:true` renders the row as a bulleted list item (preview = `BM(i)` marker + bullet indent; export =
+`bulletParagraphRich` numbering). Default (no `mk`) = a paragraph. This lets one rich_block mix
+paragraphs and bullets (used by HWIC: intro/closure paragraphs + bullet rows).
 Per-row alignment rides `antcvItemAlignment[sid]["items."+i]` (+ `.__group__` = section CJLR);
 per-row page rides `antcv:itemPages[sid][i]` — the SAME stores foundation/bullets use, so preview
 and the docx-worker honour them with no extra plumbing. `items[]` stays plain `{b,t}` objects.
@@ -68,8 +71,16 @@ already has its own inline editor (`antcv-cl-closure-editable-341.js`, which als
 teach those 3–4 closure-content readers to read `items[0].t` when `type==="rich_block"` (and stop
 the closure-editable sidecar from coercing `items[0]` to a string), OR keep closure as-is.
 
-Remaining branch work after this: Publications Phase 3 (controls) + HWIC; later, make the generation
-prompt emit `rich_block` directly so the migrations become no-ops; closure dedicated handling.
+### HWIC — DONE & verified on branch
+Per-row **marker toggle** added to rich_block (`mk` field) across all four layers (editor button •/◦,
+preview `BM(i)`, docx-client passthrough, worker `bulletParagraphRich`). `antcv-hwic-to-rich-block-760.js`
+converts the CL `contribute` (text_bullets) → rich_block: intro/closing as plain rows, each bullet as
+a marker row (`mk:true`), the HOW I WOULD CONTRIBUTE headline kept. Verified:
+`pwa/test/diag-hwic-to-rich-block.mjs` (conversion shape + preview) and the worker export test (marker
+rows export with `<w:numPr>` numbering; plain rows do not).
+
+Remaining branch work: Publications Phase 3 (controls on the richPub 5-field editor); later, make the
+generation prompt emit `rich_block` directly so the migrations become no-ops; closure dedicated handling.
 
 ## Discipline
 Edit app.src.js, mirror to minified app.js (section render fn: section `t`, accent `h`, pkg `_`,

@@ -5095,21 +5095,27 @@
               const bShow = row.b && !row.bOff;
               const tShow = !row.tOff;
               if (!bShow && !tShow) return null;
+              const mk = !!row.mk;
+              const __pStyle = {
+                margin: "4px 0 3px",
+                fontFamily: T,
+                fontSize: $.text,
+                color: O,
+                textAlign: __rowAlign(i),
+                lineHeight: I,
+              };
+              if (mk) {
+                __pStyle.paddingLeft = k.bulletIndent || 24;
+                __pStyle.textIndent = -(k.bulletMarkerGap != null
+                  ? k.bulletMarkerGap
+                  : (k.bulletIndent || 24) - 3);
+              }
               return {
                 key: String(i),
                 node: React.createElement(
                   "p",
-                  {
-                    key: i,
-                    style: {
-                      margin: "4px 0 3px",
-                      fontFamily: T,
-                      fontSize: $.text,
-                      color: O,
-                      textAlign: __rowAlign(i),
-                      lineHeight: I,
-                    },
-                  },
+                  { key: i, style: __pStyle },
+                  mk ? BM(i) : null,
                   bShow
                     ? React.createElement(
                         "b",

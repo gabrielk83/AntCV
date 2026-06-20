@@ -46,19 +46,25 @@ and the docx-worker honour them with no extra plumbing. `items[]` stays plain `{
   Hands-on / Professionally), CV + CL, idempotent + self-converging, carries per-part align/page.
 - Verified: `pwa/test/diag-foundation-to-rich-block.mjs`.
 
-### Phase C — REPLACE the other six (OPEN)
-Convert Opening · Who I Am · Why This Company · CL Closure · CV Profile · CV Work Style to
-`rich_block`. These are mostly `type:"text"` / `type:"text_inline"` (single `content`) → one row
-`{b:"", t:content}` (no lead-in). Nuances to settle PER section:
-- Headless ones (opening/closure/work_style are in the preview no-title list + greeting) → set
-  `headlineOff:true` on conversion so they keep their current title-less look.
-- `work_style` is `text_inline` (title rendered as a bold inline prefix) → decide whether to keep
-  the label as a row lead-in (`b:title`) instead of a headline.
-- These types are GENERATION-COUPLED (the generator emits text/text_inline/foundation), so a
-  migration re-upgrades them each regen — same accepted pattern as Phase B. Phase C also wants the
-  generation prompt to emit `rich_block` directly (later) so the round-trip is clean.
-- Each conversion verified headlessly (convert + preview + export) like Phase B. RECOMMEND the owner
-  eyeballs a live rich_block first — Phase C changes how core CV/CL sections behave.
+### Phase C — REPLACE the named sections (FIVE DONE & verified; closure DEFERRED)
+`pwa/antcv-text-sections-to-rich-block-759.js` converts **opening · who · why · profile · work_style**
+to `rich_block` (one row `{b:lead, t:content}`). opening/work_style → `headlineOff:true` (they have
+no section title today); who/why/profile keep their headline; work_style carries its inline label as
+the row lead-in (`b:"Work style"`). `title` is PRESERVED so the WHY/WHO heading-flip-by-JD still
+mutates it (verified — `why` title flips to "WHY YOUR COMPANY" on the converted rich_block).
+Idempotent + self-converging; the generator re-emits text → re-upgraded each regen.
+Verified: `pwa/test/diag-text-sections-to-rich-block.mjs` (CV + CL, zero app errors).
+
+**`closure` DEFERRED (intentionally excluded):** the CL `closure` is NOT a generic body section —
+it is rendered as the **sign-off paragraph** by a special path that reads `closure.content` directly
+(preview app.src.js:43176; export src/index.js:26378 + 27608), outside the section loop, and it
+already has its own inline editor (`antcv-cl-closure-editable-341.js`, which also writes
+`items[0]=string`). Converting it to `rich_block` blanks the sign-off. To include closure later:
+teach those 3–4 closure-content readers to read `items[0].t` when `type==="rich_block"` (and stop
+the closure-editable sidecar from coercing `items[0]` to a string), OR keep closure as-is.
+
+Remaining branch work after this: Publications Phase 3 (controls) + HWIC; later, make the generation
+prompt emit `rich_block` directly so the migrations become no-ops; closure dedicated handling.
 
 ## Discipline
 Edit app.src.js, mirror to minified app.js (section render fn: section `t`, accent `h`, pkg `_`,

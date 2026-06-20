@@ -40,6 +40,32 @@
 ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
 CHECK="$ROOT/scripts/check-cache-bust.mjs"
 
+# ── Anti-regression guard: never push when origin/main is ahead of HEAD ───────
+# A cloud/mobile Routine (or another machine) may have pushed to main. If this
+# clone hasn't pulled, pushing here would be rejected by git anyway — but worse,
+# it tempts a --force that would REGRESS the cloud's work. Block early with a
+# clear "pull --rebase first" so the DESKTOP always incorporates the mobile
+# session's commits and can never push backwards over them. Best-effort: any
+# fetch / infra problem ALLOWS the push (warn, never spuriously block). Only
+# checks `main` (this repo pushes to main only).
+if git fetch --quiet origin main 2>/dev/null; then
+    _HEAD=$(git rev-parse --verify --quiet HEAD 2>/dev/null)
+    _ORIGIN=$(git rev-parse --verify --quiet FETCH_HEAD 2>/dev/null)
+    if [ -n "$_HEAD" ] && [ -n "$_ORIGIN" ] && [ "$_HEAD" != "$_ORIGIN" ]; then
+        _BASE=$(git merge-base "$_HEAD" "$_ORIGIN" 2>/dev/null)
+        # merge-base != origin/main  ⇒  origin/main has commit(s) HEAD lacks
+        # (behind or diverged) ⇒ pushing risks regressing them ⇒ block.
+        if [ -n "$_BASE" ] && [ "$_BASE" != "$_ORIGIN" ]; then
+            printf '\n\033[31mpre-push: local main is BEHIND/diverged from origin/main — refusing to push.\033[0m\n' >&2
+            printf 'A cloud/mobile Routine or another machine pushed commits this clone does not have.\n' >&2
+            printf 'Rebase onto them first so the desktop does not regress that work:\n\n' >&2
+            printf '  git pull --rebase origin main\n\n' >&2
+            printf 'Then re-run the push. NEVER force-push main. Bypass only if certain: git push --no-verify\n\n' >&2
+            exit 1
+        fi
+    fi
+fi
+
 # If the checker or node is unavailable, do not block.
 [ -f "$CHECK" ] || exit 0
 command -v node >/dev/null 2>&1 || exit 0

@@ -59,3 +59,12 @@ There is an idempotency guard in `rewriteTextNodes` that skips nodes already con
 ## Deployment
 
 `docs/deployment/cloudflare-setup.md` is the source of truth for how PWA and workers reach production. Read it before suggesting any deployment-related change.
+
+## Sync discipline — never regress `main` (desktop ⇄ cloud/mobile)
+
+AntCV is now worked from TWO places that both push to `origin/main`: this **desktop** clone and a **claude.ai cloud Routine** (dispatchable from mobile — see `docs/qa/CLOUD_ROUTINE_PROMPT.md`). To guarantee neither overwrites the other (owner: "after the mobile session the desktop must not regress from it"):
+
+1. **SYNC FIRST.** At the START of every session/run, before any edit, run `git fetch origin && git pull --rebase origin main`. The cloud may have pushed since you last synced; rebasing onto it means your work BUILDS ON it, never reverts it.
+2. **NEVER force.** Never `git push --force`/`--force-with-lease` to `main`, never `git reset --hard origin/main` to discard remote commits, never `git push` after a non-fast-forward without a `pull --rebase` first. If a push is rejected non-ff, `git pull --rebase origin main` then push — do NOT force.
+3. **Enforcement:** `scripts/git-hooks/pre-push` (install once: `cp scripts/git-hooks/pre-push .git/hooks/pre-push`) best-effort fetches origin/main and BLOCKS the push if local `main` is behind/diverged — telling you to `pull --rebase` first. It also runs the cache-bust `?v` gate. Bypass only when certain: `git push --no-verify`.
+4. The cloud Routine follows the same rule (its prompt says sync-before-push). PWA auto-deploys from `main`, so a regression there is also a production regression — this discipline protects both.

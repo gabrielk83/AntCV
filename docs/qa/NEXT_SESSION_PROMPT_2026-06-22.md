@@ -83,6 +83,7 @@ changes. #3 (undo for sidebar width) is a separate feature.
   tables distinct seeds (after P1).
 
 ## STEP 2 — Discipline
+- **SYNC FIRST (anti-regression):** before any edit run `git fetch origin && git pull --rebase origin main` — a claude.ai cloud/mobile Routine also pushes to main, so rebase onto it so your work never regresses it. NEVER force-push/reset main; on a non-ff rejection, `pull --rebase` then push. The `scripts/git-hooks/pre-push` hook enforces this (blocks a push when local main is behind origin). See CLAUDE.md "Sync discipline".
 - One deployer at a time; never parallel deploy.yml. PWA auto-deploys on push to main; workers
   (`docx-worker`/`proxy`/`demo-proxy`) deploy via `gh workflow run deploy.yml -f target=<w> -f
   mode=deploy -f confirm=<w>` then `gh run watch <id> --exit-status`.

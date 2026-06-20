@@ -260,7 +260,20 @@ CL CONTENT (preview+export):
 - **SETTINGS-WRITINGSTYLE-STICKY-001** `[OPEN]` — the **Writing Styles (full) section is STICKY / bleeds onto OTHER settings subtabs.** The WritingStylePicker is a React island (built from `src/islands/*.tsx` → `pwa/antcv-react-islands.js` via `npm run build` — NOT app.js surgery; edit the .tsx). Symptom = the island (or its mount container) does not UNMOUNT when leaving Personal, or has a `position:sticky`/fixed container, so it stays visible over Account/Layout/etc. Same family as PERSONAL-TAB-JANK-001 (WritingStylePicker remount cascade) + `settings-subtab-placement`. FIX direction: unmount the island on subtab leave (or gate its render to the active subtab) + drop any sticky/fixed positioning on its wrapper. Verify headless: switch Settings subtabs and assert the writing-style DOM is gone off-Personal.
 - **REVIEW-DATA-DEAD-001** `[OPEN]` — **"Review my data" button does nothing** (was REVIEW-DATA-001, the user-friendly reviewer modal, shipped 1.50.618). Lives in `pwa/antcv-data-export-360.js` (button + handler at ~419/648/830-874). The click no longer opens the reviewer. Likely: the modal-open handler isn't bound (DOM rebuilt after a render and the listener was lost), or an exception in the open path, or the button is a duplicate/dead node. FIX: reproduce, console-probe the click handler, re-bind via delegation (capture-phase on a stable ancestor) so it survives re-renders; confirm the reviewer modal opens with the user's data. Sidecar-only (no app.js mirror).
 
-### SALMON-SIDEBAR-BREAK-EARLY-001 (owner 2026-06-21) — `[SHIPPED 1.50.745 — only-adjust, preview-only]`
+### SALMON-SIDEBAR-BREAK-EARLY-001 (owner 2026-06-21) — `[SHIPPED 1.50.749 — FORCE variant, preview-only]`
+**FORCE variant SHIPPED 1.50.749 (the owner's actual case).** The preview OVER-fills page 1 (packs
+more sidebar items than the taller-rendered PDF page holds), so the sidebar fits the 1123px page-box
+and gets NO break (page-2 sidebar empty) while the PDF continues it to page 2. `antcv-auto-pagebreak-block-001.js`
+now FORCES a preview sidebar break at the tightened line `usableBase/SIDEBAR_PREVIEW_INFLATE` (default
+**1.32**, console-tunable `AntcvAutoPagebreak.config({SIDEBAR_PREVIEW_INFLATE:N})`) EVEN WHEN it fits
+the normal A4 line. SAFE: PREVIEW MAP ONLY (the export/DOCX `autoPages` sidebar break is untouched —
+the create + clear paths both gate on `autoKey===PREVIEW_KEY`); the matching TIGHTENED clear-line
+prevents the attempt-1 oscillation. Verified `pwa/test/diag-sidebar-preview-break.mjs` (real 2-page CV,
+main-breaks + sidebar-fits case): force OFF (1.0) → no preview sidebar break; force ON (1.32) →
+preview break created (content to page 2), EXPORT break UNCHANGED, STABLE across repeats, 0 errors,
+boot-smoke clean, suite green. Owner tunes the height live. Prior `[1.50.745 only-adjust]` note below.
+
+`[1.50.745 — only-adjust, preview-only — superseded by the FORCE variant above]`
 **SHIPPED (2nd attempt, safe):** `antcv-auto-pagebreak-block-001.js` now pulls an ALREADY-EXISTING
 preview sidebar break UP by `SIDEBAR_PREVIEW_INFLATE` (1.16, console-tunable) so the preview salmon
 matches the higher DOCX break. SAFE by construction: (1) PREVIEW MAP ONLY — the export/DOCX

@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.745-sidebar-preview-break-early';
+  var VERSION = '1.50.749-sidebar-preview-force-break';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -119,7 +119,12 @@
   //     column's pagination) we create NOTHING. Forcing a break where none was needed is
   //     what made the maps oscillate + leak a spurious export break last time.
   // Console-tunable: AntcvAutoPagebreak.config({ SIDEBAR_PREVIEW_INFLATE: N }) (1..2).
-  var SIDEBAR_PREVIEW_INFLATE = 1.16;
+  // 1.50.749 FORCE variant: this now FORCES a preview sidebar break at usableBase/this
+  // even when the sidebar fits the normal A4 line (the preview over-fills page 1 vs the
+  // taller PDF). 1.32 ≈ pulls the break up ~2-3 subsubsections so Languages→page 2 like
+  // the PDF. Owner-tune live: AntcvAutoPagebreak.config({ SIDEBAR_PREVIEW_INFLATE: N }) —
+  // higher = breaks earlier (more sidebar to page 2); 1.0 disables the force entirely.
+  var SIDEBAR_PREVIEW_INFLATE = 1.32;
   var ITEM_PATH_ATTR = 'data-antcv-row-path';
   // SIDEBAR-SNAP-GAP-001 (owner 2026-06-11): max page-1 space (UNSCALED px) a
   // group-snap may waste before we abandon the snap and break at the raw overflow
@@ -386,7 +391,13 @@
       var __cl = document.querySelector('[data-sid="' + (window.CSS && CSS.escape ? CSS.escape(ek) : ek) + '"]');
       var __sc = (__cl && __cl.offsetWidth) ? (__cl.getBoundingClientRect().width / __cl.offsetWidth) : 1;
       if (!(__sc > 0.1 && __sc < 10)) __sc = 1;
-      var __fitLine = (usableBase - hyst) * __sc;
+      // SIDEBAR-PREVIEW-BREAK-EARLY-001 (force variant): a FORCED preview sidebar
+      // break is created against the TIGHTENED line, so it must be CLEARED against
+      // the same tightened line — else it would clear the instant its height fits
+      // the un-tightened line and re-create next cycle (the section-flip dance).
+      var __ubBase = (autoKey === PREVIEW_KEY && __sec && __sec.loc === 'sidebar')
+        ? (usableBase / SIDEBAR_PREVIEW_INFLATE) : usableBase;
+      var __fitLine = (__ubBase - hyst) * __sc;
       // MAINBAR-FLIP-FIX-001: do NOT clear a break that was just created — hold
       // it for HOLD_MS so the layout settles. Without this, a break created at
       // `limit` is re-measured on the next pass and cleared the instant the
@@ -467,19 +478,18 @@
           var rowIdx = firstOverflowRow(secEl, colTop, limit);
           if (rowIdx >= 1) br = rowIdx;
         } else {
-          // SIDEBAR-PREVIEW-BREAK-EARLY-001 (owner 2026-06-21): in the PREVIEW pass pull an
-          // ALREADY-EXISTING sidebar break UP to the tightened line (≈ the DOCX line) so the
-          // preview salmon matches the PDF. ONLY-ADJUST, NEVER-FORCE: if the sidebar fits the
-          // normal line (e.g. it rides the main column's pagination) we create nothing — that
-          // is what kept the 1st attempt from oscillating / leaking a spurious export break.
-          // The EXPORT pass (autoKey !== PREVIEW_KEY) is untouched → the DOCX break stays.
+          // SIDEBAR-PREVIEW-BREAK-EARLY-001 (owner 2026-06-21, FORCE variant): the PREVIEW
+          // OVER-fills page 1 — it packs MORE sidebar items onto page 1 than the (taller-
+          // rendered) PDF page holds, so the sidebar fits the 1123px preview page-box and gets
+          // NO break, leaving page-2's sidebar empty while the PDF correctly continues it to
+          // page 2. So FORCE a break at the tightened (PDF-equivalent) line even when it fits
+          // the normal A4 line, so Languages→page 2 matches the PDF. PREVIEW MAP ONLY: the
+          // EXPORT pass (autoKey !== PREVIEW_KEY) is UNTOUCHED → the DOCX keeps its own sidebar
+          // break (owner: removing it breaks the DOCX) and we never feed the worker a forwarded
+          // sidebar break. Oscillation is prevented by the matching tightened CLEAR line above.
           var idx;
           if (!isMainCol && autoKey === PREVIEW_KEY && SIDEBAR_PREVIEW_INFLATE > 1) {
-            if (firstOverflowItem(secEl, colTop, limit) < 1) idx = -1;   // fits normal line → leave alone
-            else {
-              var __idxT = firstOverflowItem(secEl, colTop, limit / SIDEBAR_PREVIEW_INFLATE);
-              idx = __idxT >= 1 ? __idxT : firstOverflowItem(secEl, colTop, limit);
-            }
+            idx = firstOverflowItem(secEl, colTop, limit / SIDEBAR_PREVIEW_INFLATE);
           } else {
             idx = firstOverflowItem(secEl, colTop, limit);
           }

@@ -8,7 +8,7 @@ Current shipped: **1.50.748** (PWA, auto-deploys on push) + docx-worker **1.14.7
 **Cloud-routine 2026-06-22 shipped:** P5 #7 (Uruguayan variant strip, 1.50.746), P4 #10/#11/#14
 (CL inline label + sentence case + WHAT-I-BRING spacing, 1.50.747), P2 COPENHAGEN-TENSE-DEFAULT-001
 (`_expTenseMode` always 'present' for Copenhagen/Scandinavian/default, 1.50.748, 359/359 tests).
-P1 (targeting persistence) and P3 (salmon FORCE break, needs Playwright) deferred.
+P3 (salmon FORCE break) SHIPPED 1.50.749 (desktop, Playwright-verified). P1 (targeting persistence) still deferred.
 
 ## STEP 0 — Orient (read first)
 1. `docs/qa/PROJECT_ISSUES_OPEN_CLOSED_2026-06-20.md` — the live register. Read the **"OWNER BATCH —

@@ -1,0 +1,78 @@
+#!/usr/bin/env sh
+# AntCV pre-push guard — cache-bust hygiene gate
+#
+# WHY THIS EXISTS
+# ---------------
+# AntCV's only cache-invalidation lever for a pwa asset is the `?v=` query
+# string on its <script>/<link> in pwa/index.html (the cache-bust "quartet":
+# the file's ?v=, sw.js CACHE, antcv-version-override.js TARGET_VERSION +
+# STALE_VERSIONS). When a file's CONTENT changes but its `?v=` is NOT bumped,
+# the service worker / browser HTTP cache keeps serving the OLD bytes while
+# antcv-version-override.js rewrites the visible version chip to the latest
+# number — so a STALE tab LOOKS current. That masking wasted most of the
+# 2026-06-20 session (SIGNIN-GATE-HARDREFRESH-001 / stale-sw-version-mask-hazard)
+# and is the deterministic root cause behind the P1 stale-SW bug.
+#
+# This hook makes that drift a hard, mechanical failure BEFORE it can be pushed
+# (and before Cloudflare Pages auto-deploys the stale-tokened bytes). It runs
+# `scripts/check-cache-bust.mjs --range <upstream>..HEAD`: for every pwa asset
+# changed in the commits being pushed, it asserts that asset's `?v=` line in
+# index.html also moved.
+#
+# SAFETY: this hook ONLY blocks on a genuine detected offender (the check
+# exits 1). Any infrastructure problem — no upstream ref, node missing, the
+# check erroring for any other reason — is treated as "couldn't verify" and
+# ALLOWS the push (warn, never spuriously block). Dormant historical drift on
+# unchanged files is NOT flagged (the --range mode only inspects the pushed
+# commits, not the whole tree). Bypass a false alarm with: git push --no-verify
+#
+# Install into THIS clone:
+#
+#   POSIX (macOS / Linux / Git Bash):
+#     cp scripts/git-hooks/pre-push .git/hooks/pre-push
+#     chmod +x .git/hooks/pre-push
+#
+#   Windows PowerShell:
+#     cp scripts/git-hooks/pre-push .git/hooks/pre-push
+#     # No chmod — Git for Windows runs hooks via its bundled sh.exe.
+
+# Repo root (this hook lives in .git/hooks/, but resolve via git to be safe).
+ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+CHECK="$ROOT/scripts/check-cache-bust.mjs"
+
+# If the checker or node is unavailable, do not block.
+[ -f "$CHECK" ] || exit 0
+command -v node >/dev/null 2>&1 || exit 0
+
+# Determine the base to diff HEAD against: the branch's upstream (what the
+# remote already has), falling back to origin/main. If neither resolves,
+# skip — we cannot compute a meaningful range.
+BASE=$(git rev-parse --verify --quiet '@{u}' 2>/dev/null)
+if [ -z "$BASE" ]; then
+    BASE=$(git rev-parse --verify --quiet 'origin/main' 2>/dev/null)
+fi
+[ -z "$BASE" ] && exit 0
+
+RANGE="$BASE..HEAD"
+
+# Run the gate. Capture output so we can show it on failure.
+OUT=$(node "$CHECK" --range "$RANGE" 2>&1)
+CODE=$?
+
+if [ "$CODE" -eq 1 ]; then
+    # Genuine offender: an asset changed without a ?v bump.
+    printf '\n\033[31mpre-push: cache-bust drift — refusing to push.\033[0m\n' >&2
+    printf '%s\n\n' "$OUT" >&2
+    printf 'A pwa asset changed but its ?v= in pwa/index.html did not move, so\n' >&2
+    printf 'the service worker / HTTP cache would serve STALE bytes for it.\n' >&2
+    printf 'Complete the cache-bust quartet for each file listed above:\n' >&2
+    printf '  1. bump that file'"'"'s ?v= in pwa/index.html\n' >&2
+    printf '  2. bump sw.js CACHE\n' >&2
+    printf '  3. bump antcv-version-override.js TARGET_VERSION\n' >&2
+    printf '  4. add the PREVIOUS TARGET_VERSION to STALE_VERSIONS (never the new one)\n\n' >&2
+    printf 'To bypass a false alarm: git push --no-verify\n\n' >&2
+    exit 1
+fi
+
+# CODE 0 (clean) or any other code (usage/infra error) → allow the push.
+exit 0

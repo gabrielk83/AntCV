@@ -249,3 +249,19 @@ LATE vs the PDF (P4 in NIGHTLY_PROMPT_2026-06-21).
   cycles. The factor is the right lever once correctly GATED; it is console-tunable via
   `AntcvAutoPagebreak.config({ SIDEBAR_PREVIEW_INFLATE: N })` in the attempted patch. Diag harness
   `pwa/test/diag-sidebar-preview-break.mjs` is committed for the next attempt.
+
+---
+
+## UPDATE — 2026-06-21 nightly (pre-push cache-bust gate; no version bump — tooling only)
+
+### CLOSED
+| Item | What |
+|---|---|
+| CACHE-BUST-HYGIENE-002 (pre-push gate) | **The other half of P1's deterministic root cause.** 744 shipped the `check-cache-bust.mjs` checker + recommended wiring `--range` into pre-push so the ?v drift can never recur. Done: new committed hook `scripts/git-hooks/pre-push` runs `node scripts/check-cache-bust.mjs --range <upstream>..HEAD` and BLOCKS a push when a pwa asset changed in the pushed commits without its `?v=` moving in `index.html`. Installed into this clone's `.git/hooks/pre-push`. SAFETY: blocks ONLY on a genuine detected offender (check exit 1); any infra problem (no upstream ref / node missing / other exit code) ALLOWS the push (warn, never spuriously block); dormant historical drift on unchanged files is NOT flagged (range mode inspects only the pushed commits). Bypass a false alarm with `git push --no-verify`. Install in other clones: `cp scripts/git-hooks/pre-push .git/hooks/pre-push` (Git for Windows runs it via bundled sh.exe; no chmod needed). VERIFIED: the 8 `cache-bust-hygiene.test.mjs` unit tests pass; the gate flags the real 743 drift range (`5a085b6~1..5a085b6` → ✗ antcv-docx-client.js + antcv-version-override.js, exit 1) and passes the 743b-fix + docs-only ranges (exit 0); an end-to-end probe (temp branch, pwa asset changed without ?v bump, upstream=main) blocks with exit 1; cleanup restored `main`. |
+
+### NOTE — held WIP found in the working tree (NOT touched)
+`pwa/antcv-auto-pagebreak-block-001.js` carries an **uncommitted** SIDEBAR-PREVIEW-BREAK-EARLY-001
+attempt (the P4 salmon factor — ~33 lines, the "ONLY-ADJUST/NEVER-FORCE, PREVIEW-MAP-ONLY" gated
+re-attempt). HEAD's committed copy is the safe reverted version (the factor is working-tree-only).
+This nightly **left it exactly as found** — it is the owner's held P4 work, not this run's change,
+and was not staged. If it is stale, `git checkout -- pwa/antcv-auto-pagebreak-block-001.js` discards it.

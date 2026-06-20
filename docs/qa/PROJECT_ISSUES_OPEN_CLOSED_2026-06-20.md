@@ -4,6 +4,23 @@ Full-project view for the nightly run, not just today's batch. AntCV ships throu
 
 ---
 
+## OWNER LIVE REVIEW — Unsolicited (Product/Project Expert) app (2026-06-22, Chrome MCP on antcv.pages.dev)
+
+Owner walked the live unsolicited app. Six items; #4 FIXED+VERIFIED in prod, the rest triaged below.
+
+| # | Item | Class | Status / root cause |
+|---|---|---|---|
+| 4 | Preview Results in PAST tense | **render — FIXED** | `[SHIPPED 1.50.754 — RESULTS-FIRSTPAINT-REFRESH-001 + SINGLE-SOURCE-OF-TRUTH-001]` The app's experience render uses the export lamination (`applyOutcomesMode`) as the single source of truth for Results, keyed by role id. On first paint that async module isn't loaded → render falls back to a raw, **un-tensed, role-0-repeated** heuristic and never refreshes once the module loads. AND `antcv-results-laminate-510.js` then clobbered the eventually-correct value with its own legacy `lamFor` (un-tensed + broken-index). Fix (both in the sidecar): (a) watch for `window.AntcvApplyOutcomesMode`, then fire ONE `antcv:sections-updated` so the app re-renders with the export truth; (b) once the export is available, `apply()` DEFERS. **Verified on a real cold reload of the unsolicited app**: all 9 roles' Results now render present-tense + distinct ("Build KPI reporting…", "Cut change cycle time…", "Reduce product cost…", "Direct a 7-person…", "Manage prototype-to-production…") — previously "Ran RFQ/RFI…" past + repeated on 5 roles. boot-smoke + 366/366. |
+| 1 | Sidebar cut mis-estimated → blank spaces | render | On the unsolicited CV the MAIN column ends short while the SIDEBAR (TOOLS 16 + REGULATORY **30** + certs + langs + interests) runs much longer; the white gap below the last main role is the shorter-column gap. Owner reported this on 1.50.752, BEFORE the 1.50.753 flush-salmon fix — **needs an owner hard-reload to re-check on ≥753** before any further change. If still off, the remaining work is the sidebar-driven page break (sidebar longer than main) landing late — `antcv-auto-pagebreak-block-001.js` sidebar pass + [[salmon-splitter-permanent]]. NOT blind-hack; verify with the preview-break diag. |
+| 3 | Not all TOOLS & METHODS groups displayed | render/data | Likely the same long-sidebar pagination as #1 (groups pushed past the page box and cut), OR a generation grouping gap. Confirm after the #1 reload; if groups truly missing from the render, check the sidebar group pagination. |
+| 2 | "Enterprise Architect" should stay in Software | **data/gen** | In the unsolicited app's TOOLS & METHODS, `Enterprise Architect` is DUPLICATED across two groups — "Product & systems" AND "Engineering software". Owner wants it in software only. Kernel/data categorization (or prompt) fix — regen-gated; deterministic render can't re-categorize. (Note: the separate "Current file"/#335 app already has it correctly under Tools→Software.) |
+| 5 | CL "WHO I AM" / "WHY YOUR COMPANY" show the bracketed TEMPLATE, not content | **gen** | The CL renders the literal placeholders `[WHO I AM - 3-5 sentences…]` and `[WHY THIS POSITION - 1-2 sentences…]` under their headings. The generation did not produce who/why body text for the unsolicited CL (the placeholder IS the section text; appears in other apps too). Needs generation to fill these (prompt/regen), OR a render rule to hide a section whose only content is the bracketed placeholder. Owner wants CONTENT → generation-gated. |
+| 6 | 3 of 4 CV CORE COMPETENCIES rows mirror the CL WHAT-I-BRING table | **gen** | CV CORE COMPETENCIES rows 1-3 ("Sourcing & Feasibility", "Technical team coordination", "Change governance") duplicate the CL WHAT I BRING rows (relabeled); only "Validation & compliance" is CV-unique. The twin tables need DISTINCT seeds — register P5 #9 ("twin tables distinct seeds"). Generation/prompt — regen-gated. |
+
+**Net:** #4 shipped+verified. #1/#3 gated on an owner hard-reload to re-check against 1.50.753. #2/#5/#6 are generation/data-gated (need a regen with prompt/categorization fixes — cannot be deterministically verified in an autonomous run without driving a live generation).
+
+---
+
 ## CLOSED / SHIPPED (recent, 1.50.700–736)
 
 ### Targeting persistence (the 4-layer Nordea fix + export sanitize)

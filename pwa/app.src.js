@@ -4845,12 +4845,17 @@
                     color: O,
                   },
                 },
-                React.createElement(
+                // CL-HEADING-DEDUP-001 (2026-06-22): text_inline sections already have a section
+                // H2 heading ("WHO I AM", "WHY THIS POSITION"). Only emit the inline bold label
+                // for work_style sections (which may appear inside an experience block without an
+                // H2 above). All other text_inline sections skip the inline label to avoid the
+                // duplicate "WHO I AM: WHO I AM:" pattern reported in item #10.
+                ("work style" === t || "workstyle" === t || "work_style" === e.id) && React.createElement(
                   "b",
                   { style: { color: C } },
                   L(e.title ? e.title.replace(/:$/, "") + ":" : "Work style:"),
                 ),
-                " ",
+                ("work style" === t || "workstyle" === t || "work_style" === e.id) && " ",
                 React.createElement(B, {
                   path: ["content"],
                   value: P(e.content || ""),
@@ -5163,7 +5168,7 @@
                   // (≤115% of the column) is still never re-clamped.
                   width: "90%",
                   maxWidth: "115%",
-                  margin: "8px auto 0",
+                  margin: e.id === "bring" ? "12px auto 4px" : "8px auto 0",
                 }
               : { position: "relative", marginTop: 8 },
             head = React.createElement(
@@ -15964,9 +15969,14 @@
                         subtitle: (io && io.subtitle) || "",
                         meta: io && "object" == typeof io ? io : {},
                         rationale: yo,
+                        // JD-PERSIST-001 (2026-06-22): persist the JD text on the targeted row so
+                        // antcv:lastJdText is populated on reload (gates WHY-heading flip + cluster logic).
+                        jd_text: String(Un.current || Ut || "").trim(),
                       });
                       try { Ml(__id); } catch (e) {}
                       try { localStorage.setItem("antcv:activeAppCompany", (io && io.company) || ""); } catch (e) {}
+                      // JD-PERSIST-001: also mirror to lastJdText immediately so gates fire in this session.
+                      try { const __jdT = String(Un.current || Ut || "").trim(); if (__jdT.length >= 30) localStorage.setItem("antcv:lastJdText", __jdT); } catch (e) {}
                       try { console.log("[apps] AUTO-COMMIT: targeted application '" + __ioCo + "' committed + activated (was drifting from the unsolicited kernel)"); } catch (e) {}
                     }
                   } catch (e) { try { console.warn("[apps] auto-commit failed:", e && e.message); } catch (_) {} }
@@ -25759,7 +25769,7 @@
                     (e) => e > 0 && e < rows.length,
                   );
                   w =
-                    `<div style="margin:2pt 0 0 0">` +
+                    `<div style="margin:${"bring" === e.id ? "5pt 0 3pt 0" : "2pt 0 0 0"}">` +
                     (y && "bring" === e.id && starts.length > 1
                       ? starts
                           .map((n, o) => {

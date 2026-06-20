@@ -945,12 +945,36 @@ function mergeSameCompanyRoles(roles) {
     return out;
   } catch (_) { return null; }
 }
+// URUGUAYAN-VARIANT-STRIP-001 (2026-06-22): strip ", Uruguayan variant" qualifier from
+// Spanish language items at export. Owner: keep EN/HE native; only drop the regional
+// qualifier for Spanish. Applied to labeled_list items where the label is Spanish-like.
+// Matches: ", Uruguayan variant", " (Uruguayan...)", " - Uruguayan variant" etc.
+const _URUGUAYAN_RE = /[,\s(–\-]+uruguayan\s+variant[)\s]*/i;
+function _stripUruguayan(items) {
+  if (!Array.isArray(items)) return items;
+  let hit = false;
+  const out = items.map((it) => {
+    if (!it || typeof it !== 'object') return it;
+    const lbl = String(it.l || '').toLowerCase();
+    if (!lbl.startsWith('spanish') && !lbl.startsWith('español')) return it;
+    if (!it.v || !_URUGUAYAN_RE.test(it.v)) return it;
+    hit = true;
+    return { ...it, v: it.v.replace(_URUGUAYAN_RE, '').trim().replace(/[,]\s*$/, '').trim() };
+  });
+  return hit ? out : items;
+}
+
 function sanitizeForExport(docSections, doc) {
   try {
     if (!Array.isArray(docSections)) return docSections;
     const targeted = _isTargetedExport();
     return docSections.map((s) => {
       if (!s || typeof s !== 'object') return s;
+      // (0) URUGUAYAN-VARIANT-STRIP-001: strip regional qualifier from Spanish language line.
+      if ((s.id === 'languages' || /^languages?$/i.test(String(s.title || s.id || ''))) && Array.isArray(s.items)) {
+        const items = _stripUruguayan(s.items);
+        if (items !== s.items) return { ...s, items };
+      }
       // (1) strip fabricated tools from any tools comma-list (Nordea analytics -> Snowflake/
       // DBT, which the candidate does not use). Always, regardless of targeted/unsolicited.
       if (s.id === 'tools' && Array.isArray(s.items)) {

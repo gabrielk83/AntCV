@@ -70,6 +70,7 @@ Full-project view for the nightly run, not just today's batch. AntCV ships throu
 | ID | Sev | One-line | Where it lives | Gating |
 |---|---|---|---|---|
 | SIGNIN-GATE-HARDREFRESH-001 | P1 | Sign-in/Loading gate hangs on hard-refresh; need a 2nd browser reload before PDF export is good. Suspected regression. | `antcv-login-loading-gate.js`; cloud-restore (728/731/732); SW cache churn | Deterministic — needs live repro signed-in on antcv.pages.dev |
+| JD-FETCH-EIGHTFOLD-GARBLED-001 | P2 | JD-URL fetch of NVIDIA careers (eightfold.ai SPA) returns 50000 chars of theme/config JSON (`{"themeOptions":{"customTheme":{"varTheme":{"primary-color-100"…}}}}`) instead of the job description; the "⚠ Text may be garbled" warning fires but the garbage still loads. Title parses fine. | `workers/{proxy,demo-proxy}/src/fetch-jd-url.js` — `extractMainContent` (L1), `rewriteJobUrl` (L2), `validateContentQuality` | Worker fix + live fetch verify |
 | EXPORT-PDF-RACE-001 (item I) | P1 | First PDF export still falls back to browser-print until a refresh; worker URL / `B` (demo_mode/is_admin) hydration incomplete at first click. | `app.src.js` export gate; `antcv-docx-client.js` | Deterministic — await config/B before export decision |
 | PROFILE/CL placeholders after "analysis ready" (item 7) | P1 | Completeness panel flags 6 sections (PROFILE, CORE row 1, EXPERIENCE role 0, Opening, WHO I AM, WHY) AFTER analysis-ready; analysis commits independently of cv/cl overrides. | `app.src.js ~24595 o()`, ~24784 complete handler; `antcv-kernel-completeness-290.js` | Regen-gated (render GABRIEL_BG to capture response) |
 | Page-break misplaced + section-scoped break (item 2) | P2 | Auto page-break landed AFTER a role not BEFORE; manual break is row-scoped, doesn't push following SECTIONS. | autoPages; salmon split; docx-worker | Regen + worker verify |
@@ -92,7 +93,13 @@ Full-project view for the nightly run, not just today's batch. AntCV ships throu
 
 ## NIGHTLY FEATURE REQUESTS
 
-- **JD-FETCH-CHIP-LABEL-001** — add Job + company name as first lines in the green JD-ready chip (`app.src.js ~39349-39362`; data is `zt.fileName` set at `app.src.js:13984`). Cosmetic, low-risk; wrap chip in `flexDirection:"column"`, mirror to app.js.
+- **JD-FETCH-EIGHTFOLD-GARBLED-001** (owner 2026-06-20, screenshot) — "allow proper reading of the NVIDIA position."
+  Repro URL: `https://jobs.nvidia.com/careers/job/893395051166?domain=nvidia.com&hl=da` ("Test Engineer - Photonic | NVIDIA Corporation").
+  SYMPTOM: the JD-ready chip got the correct title (JD-FETCH-CHIP-LABEL-001 working) but the fetched BODY is ~50000 chars of the page's **theme/config JSON** (`{"themeOptions":{"name":"PCS Default","customTheme":{"varTheme":{"primary-color-100":"#000000", … "button-primary-background-color":"#76b900" …}}}}`), not the job text. The `⚠ Text may be garbled` warning (`app.src.js:39545`) fired, but the garbage still loaded into the JD field.
+  ROOT: `jobs.nvidia.com` is an **eightfold.ai SPA** — the JD is rendered client-side from an API; the server HTML carries only the bootstrap config/theme blob. `extractMainContent` (L1, `workers/{proxy,demo-proxy}/src/fetch-jd-url.js`) found no real JD body and fell back to a text-density dump of that config blob; it overran `MAX_TEXT_CHARS` (50000) and `validateContentQuality` didn't recognise a CSS-token/JSON soup as low-quality.
+  FIX DIRECTION (worker, both proxy + demo-proxy + the inlined bundle): (1) **L2 `rewriteJobUrl`** — add an eightfold provider rewrite: `jobs.nvidia.com/careers/job/<ID>` → the public eightfold position API (e.g. `https://nvidia.eightfold.ai/api/apply/v2/jobs/<ID>` / the `positions` JSON endpoint) and extract the JD field from JSON — mirrors the existing LinkedIn guest-endpoint rewrite. (2) **Backstop in `validateContentQuality`** — detect a config/theme blob (high ratio of `"…-color…":"#hex"` / JSON-key density, or a leading `{"themeOptions"`) and FAIL to the manual-paste prompt instead of returning the garbage as JD text. Verify with `workers/demo-proxy/test/diag-linkedin-jd.mjs` as the pattern (add a NVIDIA/eightfold diag). Worker change → manual deploy, live fetch verify.
+
+- **JD-FETCH-CHIP-LABEL-001** — add Job + company name as first lines in the green JD-ready chip (`app.src.js ~39349-39362`; data is `zt.fileName` set at `app.src.js:13984`). Cosmetic, low-risk; wrap chip in `flexDirection:"column"`, mirror to app.js. **[SHIPPED 1.50.740]**
 - **Cluster-demand worker pipeline** (CLUSTER-QUAL-001 §3) — D1 tables + 60 seed rows exist; need proxy JD-qualification extraction → `cluster_top_qualifications` recompute → `application_fit` scoring → generation-prompt visibility. cv-proxy + demo-proxy deploys + regen.
 - **Cluster-demand nightly refresh** (§7.6) — antcv-nightly job to sharpen the remaining 9 categories + tighten the 3 seeded from live recruitment-site research; merge as `source='research'`, real user-JD signal overtakes it. Respect robots/ToS; never fabricate.
 - **Cluster-demand Bundle B** — surface JobSearchTargeting card on the wizard + a kernel-settings anchor.
@@ -194,3 +201,18 @@ For most of 2026-06-20 the owner's tab ran **`app.js?v=1.50.724`** while the net
 3. **Preview parity for merges/hides** — needs a read-only "export preview" mode (editable preview can't show them: index-based edit paths).
 4. **Salmon-splitter pages 2/3** — preview pagination to match export.
 5. `antcv:lastJdText` was EMPTY on the live targeted app (jdLen=0) — the JD text isn't persisted with the targeted application, so the cluster gates (sysadmin/publications keep-for-IT/research) can't read it. Wire the JD text into the active application so cluster-aware logic works.
+
+---
+
+## UPDATE — 2026-06-21 nightly (1.50.744)
+
+### CLOSED
+| Item | Version | What |
+|---|---|---|
+| CACHE-BUST-HYGIENE-001 | 744 | **Root-cause tooling for P1 SIGNIN-GATE-HARDREFRESH-001 / [[stale-sw-version-mask-hazard]].** New `scripts/check-cache-bust.mjs`: (a) `--range A..B` is a hard gate — for every cache-bustable asset (referenced with `?v=` in index.html) changed in the range, asserts its `?v=` line also moved (exit 1 otherwise); excludes the never-loaded source `app.src.js`. (b) default AUDIT mode (report-only; `--strict` to fail) reports numeric `?v` drift in index.html. Caught and FIXED the live drift: `antcv-version-override.js` was stuck at `?v=722` while its content advanced to 743 (6 releases) — the exact masking mechanism (un-bumped `?v` → SW/HTTP cache serves stale bytes while TARGET_VERSION advances → stale tab shows latest number). Quartet applied (index.html ?v 722→744, sw.js CACHE→744, TARGET_VERSION→744, STALE += 743/743b). 8 new unit tests (pure core, no git). Suite 347/347, boot-smoke clean. **Recommend wiring `node scripts/check-cache-bust.mjs --range origin/main..HEAD` into pre-push so this drift can never recur.** |
+
+### Carried open (P1 remaining halves)
+The DETERMINISTIC root cause of the stale-SW masking (un-bumped `?v`) now has a guard. STILL OPEN, needs live signed-in repro: (a) make in-app Hard Refresh GUARANTEE a fresh document (the SW skipWaiting/clients.claim + unregister path); (b) the de-masking half — stop `antcv-version-override.js` rewriting the chip when the actually-loaded `app.js` is stale. NOTE for the implementer: comparing `TARGET_VERSION` to the script-tag `app.js?v` is NOT a valid staleness signal — app.js legitimately stays at its last-change version (e.g. 742) across releases where it didn't change, so they differ by design. The true signal is app.js's BAKED version stamp (`console.log("[AntCV]", v)`; Layer A currently locks `window.ANTCV_VERSION` before app.js can set it) vs the requested `?v`. Needs a live repro to verify the stale path actually triggers before shipping (false-positive "stale" flagging would be worse than the current behaviour).
+
+### Register additions (owner 2026-06-20/21)
+- **JD-FETCH-EIGHTFOLD-GARBLED-001** (owner) — NVIDIA careers JD-URL fetch returns theme/config JSON, not the JD (eightfold.ai SPA). Full detail + fix direction under NIGHTLY FEATURE REQUESTS.

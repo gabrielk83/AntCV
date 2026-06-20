@@ -60,15 +60,34 @@
 
   function applyCap() {
     const rows = document.querySelectorAll(PAGE_ROW_SEL);
-    rows.forEach(function (row) {
+    const lastIdx = rows.length - 1;
+    rows.forEach(function (row, idx) {
       // 1.50.261: keep min-height (empty pages still look A4) but
       // STRIP the max-height cap and the overflow:auto trap. If a
       // stale max-height or overflow:auto/hidden is found, clear
       // them. Re-apply on every pass — the React render reassigns
       // inline styles on every meta change, so a one-shot fix would
       // regress instantly.
-      if (row.style.minHeight !== PAGE_HEIGHT_PX + 'px') {
-        row.style.minHeight = PAGE_HEIGHT_PX + 'px';
+      //
+      // SALMON-EMPTY-REGION-001 (1.50.753): only the LAST page-row keeps
+      // the full A4 min-height (the final sheet still looks like a page).
+      // A NON-LAST row drops to min-height:0 so it can size to its CONTENT.
+      // The salmon separator is drawn at the TOP of the next page-box, so a
+      // non-last row padded to 1123 by min-height pushed the salmon ~190px
+      // below the last item (the owner's "empty region where the salmon
+      // should be"). The matching antcv-sidebar-fill-equalize change
+      // collapses the navy sidebar to the same content height so the
+      // circular lock at 1123 (sidebar !important min-height) can't
+      // re-impose the pad. Single-page CV (rows.length===1) is unchanged:
+      // idx 0 === lastIdx keeps 1123.
+      // Must be `!important`: antcv-sidebar-subsection-pagebreaks-329 injects a
+      // stylesheet rule `.antcv-page-row{min-height:1123px!important}` that would
+      // otherwise pin every row at A4 and defeat the non-last collapse. An inline
+      // `!important` beats a stylesheet `!important`.
+      var wantMin = (idx === lastIdx) ? (PAGE_HEIGHT_PX + 'px') : '0px';
+      if (row.style.minHeight !== wantMin ||
+          row.style.getPropertyPriority('min-height') !== 'important') {
+        row.style.setProperty('min-height', wantMin, 'important');
       }
       if (row.style.maxHeight !== '') {
         row.style.maxHeight = '';

@@ -28,6 +28,24 @@
 
   var applying = false; // guards our own style writes from re-triggering work
 
+  // SALMON-EMPTY-REGION-001 (1.50.753): measure the main column's true CONTENT
+  // height = the lowest bottom edge of its direct children minus the column top.
+  // The main column is flex-stretched to the page-row height (1123 via
+  // page-fit), so getBoundingClientRect().height reports the STRETCHED box, not
+  // the content. For a NON-LAST row we must equalize the sidebar to the content
+  // (~931) so the box collapses and the salmon sits flush — measuring the
+  // stretched box instead is the circular lock that pins the row at 1123.
+  function mainContentH(main) {
+    var top = main.getBoundingClientRect().top;
+    var maxB = top;
+    var kids = main.children;
+    for (var i = 0; i < kids.length; i++) {
+      var rc = kids[i].getBoundingClientRect();
+      if (rc.height > 0 && rc.bottom > maxB) maxB = rc.bottom;
+    }
+    return Math.ceil(maxB - top);
+  }
+
   // 1.50.237: EXTEND-ONLY. The 1.50.227 logic wrote
   // `side.style.height = mainH + 'px'` unconditionally, which TRUNCATES the
   // sidebar to the main column's height. When the user has a tall sidebar
@@ -42,13 +60,43 @@
     if (!paper) return;
     var rows = paper.querySelectorAll(ROW_SEL);
     if (!rows.length) return;
+    var lastIdx = rows.length - 1;
     applying = true;
     var changed = false;
     try {
-      Array.prototype.forEach.call(rows, function (row) {
+      Array.prototype.forEach.call(rows, function (row, idx) {
         var side = row.querySelector(SIDE_SEL);
         var main = row.querySelector(MAIN_SEL);
         if (!side || !main) return;
+        if (idx !== lastIdx) {
+          // SALMON-EMPTY-REGION-001 (1.50.753): NON-LAST page-row. Size the box
+          // to the TALLER column's CONTENT so the salmon (top of the next
+          // page-box) sits flush under the last page-1 item — no ~190px dead
+          // gap. Measure BOTH columns by CONTENT (children-sum), NEVER by
+          // getBoundingClientRect: the 329 sidecar's
+          // `.antcv-page-row,.antcv-document-sidebar{min-height:1123px!important}`
+          // pins a measured box to the A4 line, so a remove-then-measure reads
+          // 1123 and the navy never collapses (the circular lock). We instead
+          // FORCE the navy sidebar to the content target with inline
+          // `!important` — inline `!important` beats the stylesheet `!important`,
+          // so the navy fills exactly to the salmon, no gap, no overrun.
+          var mc = mainContentH(main);
+          var sc = mainContentH(side);
+          var target = Math.max(mc, sc);
+          if (!(target > 0)) return;
+          // Idempotent guard (prefix 'n' so it never collides with the last-row
+          // numeric tag). Stable: content heights don't change once the box has
+          // collapsed, so subsequent cycles skip — no breathe (SIDEBAR-BREATHING-001).
+          if (side.getAttribute('data-antcv-eq-h') === 'n' + target && side.style.height) return;
+          side.style.setProperty('height', target + 'px', 'important');
+          side.style.setProperty('min-height', target + 'px', 'important');
+          side.style.setProperty('align-self', 'stretch', 'important');
+          changed = true;
+          side.setAttribute('data-antcv-eq-h', 'n' + target);
+          return;
+        }
+        // LAST page-row: fill the navy sidebar to the stretched A4 box height
+        // (the final sheet still looks like a full page). EXTEND-only behaviour.
         var mainH = Math.ceil(main.getBoundingClientRect().height);
         if (!(mainH > 0)) return;
         // SIDEBAR-BREATHING-001 (owner 2026-06-18): idempotent guard. If this row

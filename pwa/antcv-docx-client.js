@@ -1639,7 +1639,8 @@ function normalizeSections(raw) {
           const b = row.bOff ? '' : (clean(row.b) || '');
           const t = row.tOff ? '' : (clean(row.t) || '');
           if (!b && !t) return null;
-          return row.mk ? { b, t, mk: true } : { b, t };
+          // mk: true (default bullet) or a custom emoji string — pass through as-is.
+          return row.mk ? { b, t, mk: (typeof row.mk === 'string' ? row.mk : true) } : { b, t };
         }).filter(Boolean);
         const _rp = (s.id && itemPagesMap && typeof itemPagesMap[s.id] === 'object') ? itemPagesMap[s.id] : null;
         let rowPages = null;

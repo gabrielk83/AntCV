@@ -59,11 +59,18 @@ const markered = await inspect({ id:'profile2', title:'PROFILE', loc:'main', on:
   { b:'', t:'built and operated rigs', mk:true },
   { b:'', t:'disciplined product ownership', mk:true },
 ] });
+// custom per-row emoji markers: rendered as a literal prefix run, NOT list numbering.
+const emojiXml = unzipEntry(await gen(payload({ id:'profile2', title:'PROFILE', loc:'main', on:true, type:'rich_block', items:[
+  { b:'', t:'built and operated rigs', mk:'🚀' },
+  { b:'', t:'disciplined product ownership', mk:'✅' },
+] })), 'word/document.xml').toString('utf8');
+const emojiMk = { rocket: emojiXml.includes('🚀'), check: emojiXml.includes('✅'), numPr: (emojiXml.match(/<w:numPr>/g) || []).length };
 
 log('normal   :', JSON.stringify(normal));
 log('headlineOff:', JSON.stringify(noHead));
 log('ruleOff  :', JSON.stringify(noRule));
 log('markered :', JSON.stringify(markered));
+log('emojiMk  :', JSON.stringify(emojiMk));
 
 const checks = [];
 checks.push(['rows export (leads + bodies)', normal.handsOn && normal.professionally && normal.bodyA && normal.bodyB]);
@@ -72,6 +79,7 @@ checks.push(['headlineOff hides heading, keeps body', !noHead.title && noHead.ha
 checks.push(['ruleOff keeps heading, drops the rule', noRule.title && noRule.pBdr === normal.pBdr - 1 && noRule.handsOn]);
 checks.push(['plain rows have no list numbering', normal.numPr === 0]);
 checks.push(['marker rows export as a numbered list', markered.numPr >= 2 && markered.bodyA]);
+checks.push(['per-row emoji markers export as literal glyphs (no numbering)', emojiMk.rocket && emojiMk.check && emojiMk.numPr === 0]);
 
 let pass = true;
 for (const [name, ok] of checks) { log((ok ? 'PASS' : 'FAIL') + ' — ' + name); if (!ok) pass = false; }

@@ -26124,11 +26124,17 @@ function renderRichBlock(s, ctx, isSidebar) {
     const n = Number(rp[String(i)] != null ? rp[String(i)] : rp["items." + i]);
     return Number.isFinite(n) && n >= 2 ? Math.round(n) : 1;
   }, "rowPage");
-  const make = /* @__PURE__ */ __name((lead, body, align) => new Paragraph({
+  const make = /* @__PURE__ */ __name((lead, body, align, emoji) => new Paragraph({
     spacing: { before: 60, after: 60, line: 276, lineRule: "auto" },
     alignment: align,
     shading: isSidebar ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" } : void 0,
     children: [
+      ...emoji ? [new TextRun({
+        text: emoji + " ",
+        color: isSidebar ? style.sidebarTextColor : style.mainTextColor,
+        size: pt2hp(isSidebar ? fs.sbBody : fs.mainBody),
+        font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont
+      })] : [],
       ...lead ? [new TextRun({
         text: lead,
         bold: true,
@@ -26153,7 +26159,8 @@ function renderRichBlock(s, ctx, isSidebar) {
       out.push(pbBreakPara());
       if (!s.headlineOff && s.title && !(ctx.style && ctx.style.contHeadlines === false)) out.push(headingParagraph(String(s.title || "").toUpperCase() + " " + (ctx.contSuffix || "(CONT.)"), ctx, isSidebar, s.ruleOff));
     }
-    if (row.mk) out.push(bulletParagraphRich(lead, body, ctx, isSidebar, align));
+    if (row.mk === true) out.push(bulletParagraphRich(lead, body, ctx, isSidebar, align));
+    else if (typeof row.mk === "string" && row.mk) out.push(make(lead, body, align, row.mk));
     else out.push(make(lead, body, align));
   });
   return out;

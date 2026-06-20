@@ -5096,6 +5096,8 @@
               const tShow = !row.tOff;
               if (!bShow && !tShow) return null;
               const mk = !!row.mk;
+              const __mkStr =
+                "string" == typeof row.mk && row.mk ? row.mk : null;
               const __pStyle = {
                 margin: "4px 0 3px",
                 fontFamily: T,
@@ -5115,7 +5117,15 @@
                 node: React.createElement(
                   "p",
                   { key: i, style: __pStyle },
-                  mk ? BM(i) : null,
+                  mk
+                    ? __mkStr
+                      ? React.createElement(
+                          "span",
+                          { style: { marginRight: 6 } },
+                          __mkStr + " ",
+                        )
+                      : BM(i)
+                    : null,
                   bShow
                     ? React.createElement(
                         "b",

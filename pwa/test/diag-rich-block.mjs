@@ -17,7 +17,7 @@ await new Promise(r=>server.listen(0,r)); const port = server.address().port;
 
 function mk(headlineOff, ruleOff){ return { cv:[
   { id:'profile2', title:'PROFILE', loc:'main', on:true, type:'rich_block', headlineOff:!!headlineOff, ruleOff:!!ruleOff, items:[
-    { b:'Hands-on', t:'I have built and operated MEMS test rigs end to end.' },
+    { b:'Hands-on', t:'I have built and operated MEMS test rigs end to end.', mk:'🚀' },
     { b:'Professionally', t:'That translates into disciplined product ownership.' },
   ] },
 ], cl:[] }; }
@@ -45,7 +45,7 @@ const a = await boot(mk(false,false));
 const prevA = await a.page.evaluate(()=>{
   const txt = [...document.querySelectorAll('.antcv-preview-paper')].map(p=>p.textContent).join('\n');
   const bolds = [...document.querySelectorAll('.antcv-preview-paper b')].map(b=>(b.textContent||'').trim());
-  return { hasTitle:/PROFILE/.test(txt), hasHandsOn:/Hands-on/.test(txt), hasBody:/built and operated/.test(txt), bolds: bolds.filter(x=>/Hands-on|Professionally/.test(x)) };
+  return { hasTitle:/PROFILE/.test(txt), hasHandsOn:/Hands-on/.test(txt), hasBody:/built and operated/.test(txt), bolds: bolds.filter(x=>/Hands-on|Professionally/.test(x)), emojiMarker:/🚀/.test(txt) };
 });
 await a.page.close();
 
@@ -101,6 +101,7 @@ if (errsC.length) { pass=false; fails.push('app errors: '+errsC.slice(0,2).join(
 if (!prevA.hasTitle) { pass=false; fails.push('preview missing PROFILE title'); }
 if (!prevA.hasHandsOn || !prevA.hasBody) { pass=false; fails.push('preview missing lead-in/body'); }
 if (prevA.bolds.length < 2) { pass=false; fails.push('lead-ins not bold (got '+JSON.stringify(prevA.bolds)+')'); }
+if (!prevA.emojiMarker) { pass=false; fails.push('per-row emoji marker (🚀) not rendered in preview'); }
 if (!prevB.stillHasBody) { pass=false; fails.push('headlineOff dropped the body too'); }
 if (prevB.titleHeadingCount !== 0) { pass=false; fails.push('headlineOff did NOT hide the PROFILE title ('+prevB.titleHeadingCount+')'); }
 if (!edit.hasHeadlineBtn || !edit.hasRuleBtn || !edit.hasSectionBtn) { pass=false; fails.push('editor section bar incomplete: '+JSON.stringify(edit)); }

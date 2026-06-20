@@ -655,8 +655,28 @@ ${inlineStyles}
             const ph = pw > 0 ? pw * (297 / 210) : 0;   // one A4 page tall, in px
             if (ph > 0 && availH > 0) scale = Math.min(scale, availH / ph);
             if (scale < 0.999) {
-              ibody.style.setProperty('--antcv-fit', String(Math.max(0.3, scale)));
+              const eff = Math.max(0.3, scale);
+              ibody.style.setProperty('--antcv-fit', String(eff));
               ibody.classList.add('antcv-fit-width');
+              // EXPORT-PREVIEW-HUG-001 (owner 2026-06-22: "kill the dead space").
+              // Fitting a WHOLE A4 page by HEIGHT makes the portrait page much
+              // narrower than the modal, leaving a big grey band on either side.
+              // Keep the whole-page view but HUG the iframe to the displayed page
+              // width (+ body padding + shadow) and centre it, so only a thin
+              // symmetric margin remains. Internal body width (hug/zoom) stays
+              // wider than the paper so it never clips or left-aligns.
+              const hug = Math.ceil((pw + 24) * eff) + 24;
+              iframe.style.width = hug + 'px';
+              iframe.style.maxWidth = '100%';
+              iframe.style.marginLeft = 'auto';
+              iframe.style.marginRight = 'auto';
+              iframe.style.display = 'block';
+            } else {
+              // Page fits at natural size — clear any prior hug so it fills normally.
+              iframe.style.removeProperty('width');
+              iframe.style.removeProperty('max-width');
+              iframe.style.removeProperty('margin-left');
+              iframe.style.removeProperty('margin-right');
             }
             try { _previewDbg(iframe, { availW: availW, availH: availH, pw: pw, ph: ph, scale: scale }); } catch (_) {}
           } catch (_) {}

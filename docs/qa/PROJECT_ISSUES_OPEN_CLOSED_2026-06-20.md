@@ -296,6 +296,24 @@ area and need the rendered preview to verify — do NOT blind-hack.
   general siblings). Reverted. NEXT: identify the REAL height source (inspect the page-row's children
   / the React render at `app.src.js:~9729` that sets the page-box height) and make the NON-LAST box
   size to content there — a structural render change, not a page-fit tweak. Diagnostic probe committed.
+  **FULL CASCADE MAPPED (2026-06-22, probes `diag-pagebox-structure.mjs` + `diag-empty-region-probe.mjs`):**
+  the two `.antcv-page-row`s are in DIFFERENT parents (so a CSS `:has(~)` sibling rule can't match —
+  that's why the CSS attempt failed). Each row's TALLEST child is `.antcv-document-sidebar` at 1123.
+  CHAIN: `antcv-page-fit.js` forces row `min-height:1123` → the main column flex-stretches to 1123 →
+  `antcv-sidebar-fill-equalize-227.js` reads `mainH = main.getBoundingClientRect().height` (= 1123,
+  the STRETCHED height, NOT the 931 content) and sets the sidebar `height/min-height:1123 !important`
+  to fill the navy bg → the sidebar's own `!important` min-height holds the row at 1123, and equalize's
+  idempotent guard (`data-antcv-eq-h===mainH`) then SKIPS re-evaluation → **CIRCULAR LOCK at 1123**.
+  So relaxing the page-row min-height ALONE cannot shrink the box (the sidebar's !important min-height
+  wins). REQUIRED COORDINATED FIX (last-aware, both sidecars): (1) `page-fit` → NON-LAST row
+  `min-height:0` (LAST row keeps 1123 for the A4 look); (2) `sidebar-fill-equalize` → for a NON-LAST
+  row, equalize to the main's CONTENT height (sum of children bottoms, ~931) not the stretched
+  getBoundingClientRect, so the lock breaks and the box collapses to content; LAST row keeps fill-to-page.
+  ⚠️ `sidebar-fill-equalize` is LOOP-PRONE (SIDEBAR-BREATHING-001: its measure→write→ResizeObserver→
+  re-render loop caused the sidebar "breathe"); any change MUST be verified for ZERO oscillation across
+  many cycles (extend `diag-pagebox-structure.mjs` to re-measure + assert stable) before shipping —
+  do NOT land it untested (main auto-deploys). NOT done in the 2026-06-22 session (loop-prone +
+  needs visual verify + fresh context). Probes committed.
 - **SALMON-PAGE3-MISSING-001** `[SHIPPED 1.50.751]` — the experience pass in
   `antcv-auto-pagebreak-block-001.js` was 2-page scope (broke the first overflowing role to page 2,
   then `break`). Now a GREEDY N-PAGE fill: walks the roles on the unpaginated column, and whenever a

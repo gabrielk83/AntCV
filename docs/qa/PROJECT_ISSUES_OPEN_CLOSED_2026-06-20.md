@@ -423,3 +423,18 @@ Owner NVIDIA CV/CL batch items worked in order (P4→P5→P2); P1 and P3 deferre
 |---|---|
 | P1 Targeting persistence / JD-persist | Architectural — needs live repro + `app.src.js:15914/19596/19643/14340` surgery + owner verification of the targeting chain. Not cloud-routine safe without headless auth. |
 | P3 Salmon sidebar FORCE break (#2) | `[SHIPPED 1.50.749]` |
+
+---
+
+## UPDATE — 2026-06-22 cloud routine #2 (1.50.752)
+
+### CLOSED
+| Item | Version | What |
+|---|---|---|
+| JD-SYNC-001 — jd_text on every auto-sync tick | 1.50.752 | **P1 partial fix (code path).** Adds `jd_text` to the regular auto-sync payload (`oo.update` at `app.src.js:~16002`) so targeted rows created before JD-PERSIST-001 get their `jd_text` backfilled without a new drift/AUTO-COMMIT cycle. Guard: only includes `jd_text` when `Un.current\|Ut ≥ 30 chars`, not the `GENERAL CV` unsolicited stub, not a `Manual save` sentinel — never clears a server-side `jd_text` when no JD is in memory. Also mirrors `antcv:lastJdText` on each tick so WHY-heading flip, sysadmin/publications cluster gates, and CL framing fire in the same session. Mirror applied to `pwa/app.js` (surgical in-place replace, 1 occurrence, syntax verified, no `"use strict"`). 7 new unit tests (`test/unit/jd-sync-001.test.mjs`). Suite 366/366. |
+
+### Deferred
+| Item | Why |
+|---|---|
+| P0 SALMON-EMPTY-REGION-001 | Loop-prone (`sidebar-fill-equalize` circular lock). Needs desktop Playwright verify + visual screenshot before merge. See full cascade map in salmon section above. Branch `salmon-fixes` only — never push to main. |
+| P1 live verification of JD-SYNC-001 | JD-SYNC-001 code is in place (1.50.752). Live verify still needed: sign in, load NVIDIA targeted app, confirm `antcv:lastJdText` populates within ~2s auto-sync tick, WHY heading flips to "WHY THIS POSITION". Needs signed-in browser session. |

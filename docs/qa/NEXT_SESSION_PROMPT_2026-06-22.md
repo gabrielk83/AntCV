@@ -2,13 +2,15 @@
 
 Self-contained boot prompt for a FRESH AntCV session (no memory of prior chats — everything is in
 the repo). Repo root: `C:\Users\karpg\GitHub\AntCV` (React PWA + Cloudflare Workers, owner Gabriel).
-Current shipped: **1.50.748** (PWA, auto-deploys on push) + docx-worker **1.14.79** + proxy/demo-proxy
+Current shipped: **1.50.752** (PWA, auto-deploys on push) + docx-worker **1.14.79** + proxy/demo-proxy
 **3.6.0** (manual deploy). Owner style: direct, factual, compressed, no corporate filler.
 
 **Cloud-routine 2026-06-22 shipped:** P5 #7 (Uruguayan variant strip, 1.50.746), P4 #10/#11/#14
 (CL inline label + sentence case + WHAT-I-BRING spacing, 1.50.747), P2 COPENHAGEN-TENSE-DEFAULT-001
 (`_expTenseMode` always 'present' for Copenhagen/Scandinavian/default, 1.50.748, 359/359 tests).
-P3 (salmon FORCE break) SHIPPED 1.50.749 (desktop, Playwright-verified). P1 (targeting persistence) still deferred.
+P3 (salmon FORCE break) SHIPPED 1.50.749 (desktop, Playwright-verified).
+P3 salmon page-3 fix SHIPPED 1.50.751. P1 code path SHIPPED 1.50.752 (JD-SYNC-001 — `jd_text` now
+persisted on every auto-sync tick; live verify still needed). Suite: 366/366.
 
 ## STEP 0 — Orient (read first)
 1. `docs/qa/PROJECT_ISSUES_OPEN_CLOSED_2026-06-20.md` — the live register. Read the **"OWNER BATCH —
@@ -33,15 +35,14 @@ P3 (salmon FORCE break) SHIPPED 1.50.749 (desktop, Playwright-verified). P1 (tar
 ## STEP 1 — Priority order (highest leverage first)
 
 ### P1 — Targeting persistence + PERSIST THE JD (the big unlock)
-The NVIDIA app rendered as **"Unsolicited"** with `antcv:lastJdText` EMPTY, which gates several owner
-items at once: #13 (the "WHY THIS POSITION" heading flip never fires), much of #9 (CL generates
-unsolicited-style twin tables), and the wrong CL framing. Fix the root: when a JD-targeted app is
-active, the company must categorize as `targeted` AND the JD text must be PERSISTED with the
-application (so `antcv:lastJdText`≥30 and the cluster/why gates can read it). See the 728-732
-persistence chain (AUTO-COMMIT-001 etc., `app.src.js:15914/19596/19643/14340`) + [[targeted-app-persistence]].
-VERIFY: regenerate/attach the NVIDIA JD → chip reads NVIDIA (not Unsolicited), `antcv:lastJdText`
-is non-empty, `antcv-why-context-title.js` flips the heading to "WHY THIS POSITION", CL stops
-reading unsolicited.
+**JD-SYNC-001 SHIPPED (1.50.752 — code path only).** The regular auto-sync (`oo.update`) now includes
+`jd_text` on every tick when `Un.current|Ut ≥ 30 chars` and is not the GENERAL CV stub or Manual save
+sentinel. Also mirrors to `antcv:lastJdText` each tick. 7 unit tests (jd-sync-001.test.mjs, 366/366).
+**STILL NEEDED — live verify:** sign in, load the NVIDIA targeted app, wait one auto-sync tick (~2s),
+confirm `localStorage.getItem('antcv:lastJdText')` is the NVIDIA JD (≥30 chars), and that
+`antcv-why-context-title.js` flips the heading to "WHY THIS POSITION". If the app was created before
+JD-PERSIST-001 (1.50.746) and the server row has `jd_text=null`, the sync tick will now write it.
+Needs a signed-in browser session — can't verify headlessly.
 
 ### P2 — #1 Results past tense `[SHIPPED 1.50.748 — COPENHAGEN-TENSE-DEFAULT-001]`
 `_expTenseMode()` in `antcv-docx-client.js` now always returns `'present'` for Copenhagen Modern,

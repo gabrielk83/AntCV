@@ -5168,7 +5168,7 @@
                   // (≤115% of the column) is still never re-clamped.
                   width: "90%",
                   maxWidth: "115%",
-                  margin: "8px auto 0",
+                  margin: e.id === "bring" ? "12px auto 4px" : "8px auto 0",
                 }
               : { position: "relative", marginTop: 8 },
             head = React.createElement(
@@ -25769,7 +25769,7 @@
                     (e) => e > 0 && e < rows.length,
                   );
                   w =
-                    `<div style="margin:2pt 0 0 0">` +
+                    `<div style="margin:${"bring" === e.id ? "5pt 0 3pt 0" : "2pt 0 0 0"}">` +
                     (y && "bring" === e.id && starts.length > 1
                       ? starts
                           .map((n, o) => {

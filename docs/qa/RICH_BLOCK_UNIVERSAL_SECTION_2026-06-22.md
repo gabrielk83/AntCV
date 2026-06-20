@@ -48,12 +48,17 @@ and the docx-worker honour them with no extra plumbing. `items[]` stays plain `{
 
 ### Phase C — REPLACE the named sections (FIVE DONE & verified; closure DEFERRED)
 `pwa/antcv-text-sections-to-rich-block-759.js` converts **opening · who · why · profile · work_style**
-to `rich_block` (one row `{b:lead, t:content}`). opening/work_style → `headlineOff:true` (they have
-no section title today); who/why/profile keep their headline; work_style carries its inline label as
-the row lead-in (`b:"Work style"`). `title` is PRESERVED so the WHY/WHO heading-flip-by-JD still
-mutates it (verified — `why` title flips to "WHY YOUR COMPANY" on the converted rich_block).
-Idempotent + self-converging; the generator re-emits text → re-upgraded each regen.
-Verified: `pwa/test/diag-text-sections-to-rich-block.mjs` (CV + CL, zero app errors).
+to `rich_block` (one row `{b:lead, t:content}`). Headline handling (owner correction 2026-06-22):
+- **opening** → `headlineOff:true`, no lead-in (it's the first paragraph).
+- **who / why / work_style** → `headlineOff:true` with the LABEL as the row's bold lead-in:
+  `b:"Who I am"`, `b:"Work style"`, and `why` is DYNAMIC — `b:"Why this position"` when a JD is loaded
+  (`antcv:lastJdText` ≥ 30) else `b:"Why this company"`. The why lead is re-synced on each pass while
+  it is still one of those two canonical values, so it flips with the JD but never clobbers a manual
+  edit (WHY_CANON guard).
+- **profile** → keeps its real PROFILE section headline (`headlineOff:false`).
+`title` is preserved on every converted section (the heading-flip sidecar still mutates `why.title`,
+now hidden). Idempotent + self-converging; the generator re-emits text → re-upgraded each regen.
+Verified: `pwa/test/diag-text-sections-to-rich-block.mjs` (CV + CL, bold lead-ins render, zero errors).
 
 **`closure` DEFERRED (intentionally excluded):** the CL `closure` is NOT a generic body section —
 it is rendered as the **sign-off paragraph** by a special path that reads `closure.content` directly

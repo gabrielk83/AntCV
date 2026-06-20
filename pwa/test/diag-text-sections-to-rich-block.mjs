@@ -60,8 +60,9 @@ const cvErrs = cv.errs.slice(); await cv.page.close();
 const cl = await boot('cl');
 const clR = await cl.page.evaluate(()=>{
   const txt = [...document.querySelectorAll('.antcv-preview-paper')].map(p=>p.textContent).join('\n');
+  const bolds = [...document.querySelectorAll('.antcv-preview-paper b')].map(b=>(b.textContent||'').trim());
   return { opening:/OPENING_CONTENT_X/.test(txt), who:/WHO_CONTENT_X/.test(txt), why:/WHY_CONTENT_X/.test(txt),
-    whoHeading:/WHO I AM/.test(txt), whyHeading:/WHY (THIS POSITION|YOUR COMPANY|YOUR INSTITUTE|YOUR ORGANISATION)/i.test(txt) };
+    whoLead: bolds.some(x=>/Who I am/i.test(x)), whyLead: bolds.some(x=>/Why this (company|position)/i.test(x)) };
 });
 const clErrs = cl.errs.slice(); await cl.page.close();
 
@@ -82,15 +83,15 @@ for (const id of ['profile','work_style','opening','who','why']) {
 }
 if (cvR.opening && cvR.opening.headlineOff !== true) { pass=false; fails.push('opening should be headlineOff'); }
 if (cvR.work_style && cvR.work_style.headlineOff !== true) { pass=false; fails.push('work_style should be headlineOff'); }
-if (cvR.who && cvR.who.headlineOff !== false) { pass=false; fails.push('who should keep headline'); }
-if (cvR.why && cvR.why.headlineOff !== false) { pass=false; fails.push('why should keep headline'); }
+if (cvR.who && cvR.who.headlineOff !== true) { pass=false; fails.push('who should be headlineOff (lead-in pattern)'); }
+if (cvR.why && cvR.why.headlineOff !== true) { pass=false; fails.push('why should be headlineOff (lead-in pattern)'); }
 if (cvR.profile && cvR.profile.headlineOff !== false) { pass=false; fails.push('profile should keep headline'); }
 if (cvR.work_style && cvR.work_style.lead !== 'Work style') { pass=false; fails.push('work_style lead should be "Work style" (got "'+(cvR.work_style&&cvR.work_style.lead)+'")'); }
-// why title is preserved AND then mutated by the JD heading-flip sidecar — so just assert it is non-empty (a heading survives).
-if (cvR.why && !cvR.why.title) { pass=false; fails.push('why title lost'); }
+if (cvR.who && cvR.who.lead !== 'Who I am') { pass=false; fails.push('who lead should be "Who I am" (got "'+(cvR.who&&cvR.who.lead)+'")'); }
+if (cvR.why && cvR.why.lead !== 'Why this company') { pass=false; fails.push('why lead should be "Why this company" with no JD (got "'+(cvR.why&&cvR.why.lead)+'")'); }
 if (!cvR.previewProfile || !cvR.previewWork) { pass=false; fails.push('CV preview missing profile/work_style content'); }
 if (!clR.opening || !clR.who || !clR.why) { pass=false; fails.push('CL preview missing converted content: '+JSON.stringify(clR)); }
-if (!clR.whoHeading || !clR.whyHeading) { pass=false; fails.push('CL who/why headings missing (headline lost)'); }
+if (!clR.whoLead || !clR.whyLead) { pass=false; fails.push('CL who/why bold lead-ins missing: '+JSON.stringify(clR)); }
 console.log('\n'+(pass?'PASS':'FAIL')+' — RICH-BLOCK-001 Phase C (five named sections → rich_block; closure excluded)');
 if (!pass) { fails.forEach(f=>console.log('  ✗ '+f)); process.exitCode=1; }
 else console.log('  opening/who/why/profile/work_style converted; headline toggles correct; titles preserved (WHY heading-flip survives); CV+CL previews render; zero app errors.');

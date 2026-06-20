@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.750-sidebar-force-softer';
+  var VERSION = '1.50.751-salmon-npage';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -569,15 +569,32 @@
           // against the salmon.
           var __expLimit = limit;
           var roleEls = col.querySelectorAll('[data-antcv-role-index]');
+          // SALMON-PAGE3-MISSING-001 (owner 2026-06-22): N-PAGE atomic role pagination.
+          // Was 2-page scope — it broke the FIRST role crossing the line to page 2 and
+          // stopped, so a 3-page CV had NO page2→3 salmon (owner: "page 3 break should
+          // have been around the Security Guard role"). Now GREEDILY fill page-boxes: a
+          // role whose bottom crosses the CURRENT page's A4 line moves WHOLE to the next
+          // page, and that page then starts at the role's top; record the FIRST role of
+          // each new page (2,3,…) — the render's monotonic role-page floor cascades the
+          // rest. This pass only runs on the UNPAGINATED column (sticky-skips once a
+          // break exists), so the cumulative role positions are measured in one flow.
+          var __pageTop = colTop;   // viewport-top of the current page being filled
+          var __curPage = 1;
+          var __expMap = null;
           for (var ri = 0; ri < roleEls.length; ri++) {
             if (!visible(roleEls[ri])) continue;
-            if (roleEls[ri].getBoundingClientRect().bottom - colTop > __expLimit) {
+            var __rr = roleEls[ri].getBoundingClientRect();
+            // Role overflows the current page AND isn't the very first block on it (a role
+            // taller than a whole page can't move — leave it to avoid an infinite push).
+            if ((__rr.bottom - __pageTop) > __expLimit && (__rr.top - __pageTop) > 1) {
+              __curPage++;
+              __pageTop = __rr.top;   // the next page begins at this role's top
               var rmi = parseInt(roleEls[ri].getAttribute('data-antcv-role-index'), 10);
-              if (rmi >= 1) { map[expSec.id] = {}; map[expSec.id][String(rmi)] = 2;
-                if (!__breakBornAt[bornKey(expSec.id)]) __breakBornAt[bornKey(expSec.id)] = nowMs(); }   // MAINBAR-FLIP-FIX-001
-              break;
+              if (rmi >= 1) (__expMap = __expMap || {})[String(rmi)] = __curPage;
             }
           }
+          if (__expMap) { map[expSec.id] = __expMap;
+            if (!__breakBornAt[bornKey(expSec.id)]) __breakBornAt[bornKey(expSec.id)] = nowMs(); }   // MAINBAR-FLIP-FIX-001
         }
       } catch (_) {}
     }

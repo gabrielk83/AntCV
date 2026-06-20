@@ -285,8 +285,15 @@ area and need the rendered preview to verify — do NOT blind-hack.
   the salmon will fit the actual PDF." The A4-look change is ACCEPTED. Fix = the CV page-box sizes to
   content (relax/drop `antcv-page-fit min-height:1123` for a box whose tail was paginated away) so the
   salmon sits flush under the last item, matching the PDF's natural break.
-- **SALMON-PAGE3-MISSING-001** — owner: "page 3 salmon is missing — page 3 break should have been
-  around the SECURITY GUARD role." CONFIRMED in code: the measurer
+- **SALMON-PAGE3-MISSING-001** `[SHIPPED 1.50.751]` — the experience pass in
+  `antcv-auto-pagebreak-block-001.js` was 2-page scope (broke the first overflowing role to page 2,
+  then `break`). Now a GREEDY N-PAGE fill: walks the roles on the unpaginated column, and whenever a
+  role's bottom crosses the CURRENT page's A4 line it moves WHOLE to the next page (which then starts
+  at that role's top), recording the first role of each new page (2,3,4,…). The render's monotonic
+  role-page floor + page-box creation already support it. Verified `pwa/test/diag-experience-npage.mjs`
+  (16-role CV): experience map `{4:2,8:3,12:4}` → 4 page-boxes + 3 salmons, stable, 0 errors. So a
+  3-page CV now gets the page 2→3 salmon (at the Security Guard role). Original note: owner "page 3
+  salmon is missing." CONFIRMED in code: the measurer
   `antcv-auto-pagebreak-block-001.js` only ever writes `=2` (lines 536/576) — it is **2-page scope**
   (line 547), so a 3-page CV gets the page1→2 salmon but NO page2→3 break. Fix = extend the measurer
   to N pages: loop the overflow detection across successive A4 lines and write `=2, =3, …` at each

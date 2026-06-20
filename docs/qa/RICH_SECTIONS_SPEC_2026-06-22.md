@@ -11,8 +11,11 @@ coherent (no production regression). Reuse near-zero gated app.js render surgery
   show/hide (marker look + spacing identical to the document's other bullet markers) · CJLR ·
   Page (page-break / page assignment) · ✨ Enhance · Fit-it · ✕ Delete. **+ Add** button after the
   last row.
-- **Paragraph / section-level controls**: CJLR · Enhance · Fit-it · Page-break (Publications also:
-  ◹ move main↔sidebar via the existing section-move control).
+- **Paragraph-level controls** (on each intro/closure/standalone paragraph): CJLR · Enhance · Fit-it ·
+  Page-break.
+- **Whole-section (high-level) bar** in the subsection panel: place before/after · ◹ move (Publications:
+  main↔sidebar; HWIC: between subsections) · CJLR-all · Enhance-all · Fit-it-all · on/off (`section.on`)
+  · ✕ delete-section. A whole-section CJLR/Enhance/Fit fans out to every row + paragraph in the section.
 - CJLR = the existing alignment cycle control (see `antcv-experience-role-cjlr-230.js`).
 - Enhance / Fit-it = the existing AI text actions (see `antcv-section-control-bar.js` capabilities).
 - Page = per-item page assignment (`antcv:itemPages[sid][i]`, see `antcv-sidebar-item-page-controls-359.js`).
@@ -48,6 +51,19 @@ closure) into a fully-controlled composite:
    Page-break · ✕ Delete. **+ Add** after the last row. (The verb/content split lets the tense engine
    target the leading verb — same idea as the Results tense lamination.)
 3. **Closure paragraph** — one textarea, with paragraph controls: CJLR · Enhance · Fit-it · Page-break.
+
+**High-level (whole-section) controls — in the SUBSECTION PANEL** (owner 2026-06-22): the HWIC
+section gets its own section-level bar, distinct from the per-row and per-paragraph controls:
+- **Place before / after** — reorder the subsection relative to its siblings.
+- **◹ Triangle move between subsections** — move HWIC up/down among the CL subsections.
+- **CJLR for the entire HWIC** — align the whole section (intro + all bullets + closure) at once.
+- **Enhance for the entire HWIC** — AI-enhance the whole section.
+- **Fit-it for the entire HWIC** — fit/compress the whole section.
+- **On/off for the entire HWIC** — visibility toggle for the whole section (`section.on`).
+- **✕ Delete the entire HWIC** — remove the whole section.
+These mirror the standard section-control-bar capabilities (move/align/enhance/fit/toggle/delete)
+applied at the HWIC section root; the per-row and per-paragraph CJLR/Enhance/Fit/Page are separate
+and finer-grained (a whole-section action fans out to every row + paragraph).
 
 - Existing pieces to build on: `antcv-how-contribute-controls-245.js` (per-row controls precedent),
   the CL section render + `__antcvBreaks` salmon paginator, the section-control-bar (enhance/fit/page).

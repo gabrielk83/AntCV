@@ -27,7 +27,7 @@
 (function () {
   'use strict';
   if (window.__antcvResultsLaminate510) return;
-  window.__antcvResultsLaminate510 = '1.50.498';
+  window.__antcvResultsLaminate510 = '1.50.754';
 
   function readJSON(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (_) { return d; } }
   function activeDoc() { try { const x = JSON.parse(localStorage.getItem('doc') || '"cv"'); return x === 'cl' ? 'cl' : 'cv'; } catch (_) { return 'cv'; } }
@@ -129,6 +129,20 @@
 
   function apply() {
     try {
+      // SINGLE-SOURCE-OF-TRUTH-001 (owner 2026-06-22): once the EXPORT lamination
+      // (antcv-docx-client applyOutcomesMode) is loaded, the app's experience render
+      // computes each role's Results from it BY STABLE ROLE ID — the authoritative,
+      // already-tensed, distinct-per-role value (RESULTS-PREVIEW-EXPORT-SINGLE-
+      // SOURCE-001, newer than this sidecar). This sidecar's legacy lamFor then
+      // CLOBBERED that correct value with a divergent result: it is UN-TENSED (so
+      // "Ran/Owned/Managed" stayed PAST while the export showed present) AND, when
+      // the rendered roles don't match localStorage 1:1 (orderOk false — React
+      // state vs localStorage drift), it fell back to a broken index that painted
+      // role-0's bullet-derived line onto many roles (the repeated "Ran RFQ/RFI…").
+      // So once the export is available, DEFER entirely — the app render is the
+      // single source. The legacy tiers below remain ONLY as the pre-module-load
+      // fallback (now tensed via window.AntcvTenseClause).
+      if (typeof window.AntcvApplyOutcomesMode === 'function') return;
       const sections = readJSON('sections', {}) || {};
       const list = sections[activeDoc()] || sections.cv || [];
       if (!Array.isArray(list)) return;
@@ -181,9 +195,35 @@
     } catch (_) { /* self-disable on any error */ }
   }
 
+  // RESULTS-FIRSTPAINT-REFRESH-001 (owner 2026-06-22): the app's experience render
+  // uses the export lamination (applyOutcomesMode) as the single source of truth for
+  // Results, but on the FIRST paint that module (antcv-docx-client.js, an async
+  // import) may not be loaded yet — so the render falls back to a raw, un-tensed,
+  // role-0-repeated heuristic and NEVER refreshes once the module finishes loading
+  // (there is no re-render trigger). Watch for the module to appear, then fire ONE
+  // 'antcv:sections-updated' so the app re-renders with the correct export-truth
+  // Results. One-shot + bounded (~20s ceiling); no localStorage write, so it cannot
+  // loop. Mirrors the manual fix verified live on the unsolicited NVIDIA app.
+  function watchLaminatorReady() {
+    if (watchLaminatorReady._done) return;
+    var tries = 0;
+    var iv = setInterval(function () {
+      tries++;
+      if (typeof window.AntcvApplyOutcomesMode === 'function') {
+        watchLaminatorReady._done = true;
+        try { clearInterval(iv); } catch (_) {}
+        try { window.__antcvRR = null; window.__antcvRRkey = null; } catch (_) {}
+        try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { reason: 'results-laminator-ready' } })); } catch (_) {}
+      } else if (tries > 40) {
+        try { clearInterval(iv); } catch (_) {}
+      }
+    }, 500);
+  }
+
   let pending = null;
   function schedule() { if (pending != null) return; pending = requestAnimationFrame(() => { pending = null; try { apply(); } catch (_) {} }); }
   function boot() {
+    watchLaminatorReady();
     schedule();
     try {
       const obs = new MutationObserver(schedule);
@@ -195,5 +235,5 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
   else boot();
 
-  window.AntcvResultsLaminate = { version: '1.50.498', apply: apply };
+  window.AntcvResultsLaminate = { version: '1.50.754', apply: apply };
 })();

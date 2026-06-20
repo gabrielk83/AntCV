@@ -875,7 +875,19 @@ function _isTargetedExport() {
   try {
     const m = JSON.parse(localStorage.getItem('meta') || '{}');
     const co = String((m && m.company) || '').trim().toLowerCase();
-    return !!co && co !== 'unsolicited';
+    if (co && co !== 'unsolicited') return true;
+    // STABLE fallback (PUBLICATIONS-HIDE-STABLE-001): the volatile meta.company /
+    // activeAppCompany can drift to empty mid-session, which would silently switch the
+    // display-time hides back off. An app whose experience was already MERGED is a targeted
+    // application — treat it as such regardless of the drifted meta.
+    try {
+      const ac = String(localStorage.getItem('antcv:activeAppCompany') || '').replace(/"/g, '').trim().toLowerCase();
+      if (ac && ac !== 'unsolicited') return true;
+    } catch (_) {}
+    const s = JSON.parse(localStorage.getItem('sections') || '{}');
+    const exp = (s && Array.isArray(s.cv) ? s.cv : []).find((x) => x && x.type === 'experience');
+    if (exp && exp.__antcvMerged) return true;
+    return false;
   } catch (_) { return false; }
 }
 // EXPORT-MERGE-001 (owner 2026-06-20): for a JD-TARGETED application, CONSOLIDATE the
@@ -992,7 +1004,7 @@ function sanitizeForExport(docSections, doc) {
         return { ...s, roles };
       }
       return s;
-    });
+    }).filter((s) => !(targeted && s && !_jdIsResearch() && /publication|patent/i.test(String(s.title || s.id || ''))));
   } catch (_) { return docSections; }
 }
 

@@ -101,26 +101,32 @@ account — no login step is needed. AntCV needs no install for the core work (z
 
 ## PRIORITY ORDER
 
-### P0 — SALMON follow-ups (owner-assigned to the cloud, 2026-06-22) — DO FIRST
-Two salmon RENDER/MEASURER fixes (full detail + owner screenshots in the register's "Salmon
-follow-ups" block). THE MOST blue-screen-prone code in the repo, and **main auto-deploys**, so:
-> ⚠️ **SAFETY GATE (mandatory):** the salmon fixes MUST be verified by rendering a real multi-page CV
-> with Playwright — run `pwa/test/diag-sidebar-preview-break.mjs` and a 3-page variant. If this
-> cloud environment can run Playwright, install it (`npm i -D playwright && npx playwright install
-> chromium`) and verify. **If Playwright CANNOT run here, do NOT push the salmon changes to `main`**
-> (it auto-deploys and a bad page-box change blue-screens the live app). Instead commit them to a
-> branch `salmon-fixes` and open a PR for desktop visual verification. boot-smoke is the FLOOR, never
-> sufficient for salmon. `__antcvSalmon` is PERMANENT — never remove it.
-- **SALMON-EMPTY-REGION-001 — OPTION A (owner decided).** End each preview page-box at the TALLER
-  column's CONTENT end and draw the salmon there (NOT at the fixed A4 line), so the preview matches
-  the PDF (which has no gap). Relax/drop `antcv-page-fit` `min-height:1123` for a box whose tail was
-  paginated away. Verify: the salmon sits flush under the last page-1 item, no dead gap, main-column
-  break not regressed.
-- **SALMON-PAGE3-MISSING-001.** The measurer `antcv-auto-pagebreak-block-001.js` is 2-page scope
-  (only ever writes `=2`, lines ~536/576). Extend it to N pages: detect overflow across successive
-  A4 lines and write `=2, =3, …` (the render's monotonic page floor cascades). Owner case: the
-  page 2→3 break should land at the SECURITY GUARD role. Verify: a real 3-page CV → 3 page-boxes + 2
-  salmons; export map (`antcv:autoPages`) untouched; stable across cycles.
+### P0 — SALMON-EMPTY-REGION-001 (Option A) — owner-assigned to the cloud as a `salmon-fixes` PR (2026-06-22)
+> 🔒 **HARD RULE — BRANCH + PR ONLY, NEVER push to `main`.** Owner directive: deliver this as a PR.
+> Create/checkout a branch `salmon-fixes`, commit there, and `gh pr create` (base `main`, title
+> "SALMON-EMPTY-REGION-001 Option A — page-box sizes to content"). **Do NOT push to `main`** — it
+> auto-deploys, this touches the LOOP-PRONE `sidebar-fill-equalize` sidecar, and the cloud cannot
+> visually verify a render loop. The PR is for **desktop Playwright no-oscillation verification**
+> before merge. `__antcvSalmon` is PERMANENT — never remove it.
+
+**SALMON-PAGE3-MISSING-001 is DONE — `[SHIPPED 1.50.751]`. Do NOT redo it** (the measurer experience
+pass is now a greedy N-page fill).
+
+**THE TASK — SALMON-EMPTY-REGION-001, OPTION A.** Make a NON-LAST preview page-box size to its CONTENT
+so the salmon sits flush under the last item (matches the PDF; no dead A4 gap). The LAST/only box keeps
+the full A4 look. **Read the register's "Salmon follow-ups" block FIRST — it has the full diagnosed
+cascade.** Summary: `antcv-page-fit.js` forces row `min-height:1123` → the main column flex-stretches to
+1123 → `antcv-sidebar-fill-equalize-227.js` reads that STRETCHED 1123 (not the ~931 content) and pins
+the sidebar `min-height:1123 !important` → CIRCULAR LOCK. Coordinated, LAST-AWARE fix in BOTH sidecars:
+1. `antcv-page-fit.js`: for a NON-LAST `.antcv-page-row` set `min-height:0` (keep 1123 on the last row).
+2. `antcv-sidebar-fill-equalize-227.js`: for a NON-LAST row, equalize to the main's CONTENT height (sum
+   of the main column's children bottoms, ~931) NOT `getBoundingClientRect().height` (the stretched 1123)
+   — this breaks the lock so the box collapses to content. LAST row keeps fill-to-page (1123).
+**VERIFY (in the PR description, with whatever you can run):** boot-smoke clean + `node scripts/run-tests.mjs`
+green. Extend `pwa/test/diag-pagebox-structure.mjs` to re-measure the rows across several cycles and
+assert the NON-LAST row settles to ~content height AND is STABLE (no oscillation — `sidebar-fill-equalize`
+has a breathe/loop history, SIDEBAR-BREATHING-001). State explicitly in the PR that DESKTOP Playwright
+no-oscillation + visual verify is still owed before merge.
 
 ### P1 — Targeting persistence + persist the JD (the unlock: fixes the "Unsolicited" mislabel,
   makes the WHY-heading flip fire = item #13, helps the twin tables = item #9).

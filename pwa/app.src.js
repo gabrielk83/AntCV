@@ -17598,8 +17598,8 @@
         }, []));
       const Pi = ro[Lt],
         Bi = (e) => ao((t) => ({ ...t, [Lt]: e(t[Lt]) })),
-        Di = Pi.filter((e) => "sidebar" === e.loc),
-        zi = Pi.filter((e) => "main" === e.loc),
+        Di = Pi.filter((e) => "sidebar" === e.loc && !(window.AntcvExportHiddenSection && window.AntcvExportHiddenSection(e))),
+        zi = Pi.filter((e) => "main" === e.loc && !(window.AntcvExportHiddenSection && window.AntcvExportHiddenSection(e))),
         Fi = Pi.find((e) => e.id === so),
         Mi = Ii && Ci < 980,
         Wi = Ii ? (Ci < 980 ? "0 0 306px" : "0 0 380px") : 1,

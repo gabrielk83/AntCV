@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.351-sidebar-snap-gap';
+  var VERSION = '1.50.745-sidebar-preview-break-early';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -106,6 +106,20 @@
   // PDF; lower toward 1.05 if page 1 ends up too empty (breaks too EARLY).
   var WORD_INFLATE = 1.14;
   var USABLE_PDF = USABLE / WORD_INFLATE;   // ~949px — the Word-equivalent A4 fill
+  // SIDEBAR-PREVIEW-BREAK-EARLY-001 (owner 2026-06-21): the PREVIEW sidebar salmon sat
+  // too LOW — it broke at the full A4 line (USABLE ~1053px) while the DOCX/worker breaks
+  // the sidebar higher (~924px), so the preview showed 2-3 subsubsections MORE on page 1
+  // than the PDF (owner screenshot: REGULATORY CONTEXT split late). Pull the PREVIEW
+  // sidebar break line up by this factor so it lands at/just past the DOCX line.
+  // CRITICAL SAFETY (learnt from the 1st attempt + auto-overflow-362 standdown):
+  //   - PREVIEW MAP ONLY. The EXPORT map (antcv:autoPages) sidebar break is LEFT EXACTLY
+  //     as-is — the worker needs it for DOCX; removing/moving it breaks the DOCX (owner).
+  //   - ONLY-ADJUST, NEVER-FORCE. We only pull up a sidebar break that ALREADY exists at
+  //     the normal line; if the sidebar fits the normal line (e.g. it rides the main
+  //     column's pagination) we create NOTHING. Forcing a break where none was needed is
+  //     what made the maps oscillate + leak a spurious export break last time.
+  // Console-tunable: AntcvAutoPagebreak.config({ SIDEBAR_PREVIEW_INFLATE: N }) (1..2).
+  var SIDEBAR_PREVIEW_INFLATE = 1.16;
   var ITEM_PATH_ATTR = 'data-antcv-row-path';
   // SIDEBAR-SNAP-GAP-001 (owner 2026-06-11): max page-1 space (UNSCALED px) a
   // group-snap may waste before we abandon the snap and break at the raw overflow
@@ -453,7 +467,22 @@
           var rowIdx = firstOverflowRow(secEl, colTop, limit);
           if (rowIdx >= 1) br = rowIdx;
         } else {
-          var idx = firstOverflowItem(secEl, colTop, limit);
+          // SIDEBAR-PREVIEW-BREAK-EARLY-001 (owner 2026-06-21): in the PREVIEW pass pull an
+          // ALREADY-EXISTING sidebar break UP to the tightened line (≈ the DOCX line) so the
+          // preview salmon matches the PDF. ONLY-ADJUST, NEVER-FORCE: if the sidebar fits the
+          // normal line (e.g. it rides the main column's pagination) we create nothing — that
+          // is what kept the 1st attempt from oscillating / leaking a spurious export break.
+          // The EXPORT pass (autoKey !== PREVIEW_KEY) is untouched → the DOCX break stays.
+          var idx;
+          if (!isMainCol && autoKey === PREVIEW_KEY && SIDEBAR_PREVIEW_INFLATE > 1) {
+            if (firstOverflowItem(secEl, colTop, limit) < 1) idx = -1;   // fits normal line → leave alone
+            else {
+              var __idxT = firstOverflowItem(secEl, colTop, limit / SIDEBAR_PREVIEW_INFLATE);
+              idx = __idxT >= 1 ? __idxT : firstOverflowItem(secEl, colTop, limit);
+            }
+          } else {
+            idx = firstOverflowItem(secEl, colTop, limit);
+          }
           if (idx >= 1) {
             br = snapToGroup(groupStarts(sec), idx);
             // PB-PREVIEW-SIDEBAR-SALMON-PUSH-001 (owner 2026-06-08): when the
@@ -910,14 +939,15 @@
     //   AntcvAutoPagebreak.config({ HYST_STABLE:80 })  // looser stable band
     config: function (o) {
       try {
-        if (!o) return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX };
+        if (!o) return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE };
         if (typeof o.ONE_PASS === 'boolean') ONE_PASS = o.ONE_PASS;
         if (typeof o.HYST_STABLE === 'number') HYST_STABLE = o.HYST_STABLE;
         if (typeof o.HYST_TIGHT === 'number') HYST_TIGHT = o.HYST_TIGHT;
         if (typeof o.RECHECK_MS === 'number') RECHECK_MS = o.RECHECK_MS;
         if (typeof o.SNAP_GAP_MAX === 'number') SNAP_GAP_MAX = o.SNAP_GAP_MAX;
+        if (typeof o.SIDEBAR_PREVIEW_INFLATE === 'number' && o.SIDEBAR_PREVIEW_INFLATE >= 1 && o.SIDEBAR_PREVIEW_INFLATE <= 2) SIDEBAR_PREVIEW_INFLATE = o.SIDEBAR_PREVIEW_INFLATE;
         lastSourceFp = null; schedule();
-        return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX };
+        return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE };
       } catch (_) { return null; }
     },
     // Manual reset of auto breaks (e.g. from console) if a stale break

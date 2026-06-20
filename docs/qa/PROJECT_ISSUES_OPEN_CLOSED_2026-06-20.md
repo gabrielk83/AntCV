@@ -218,7 +218,20 @@ The DETERMINISTIC root cause of the stale-SW masking (un-bumped `?v`) now has a 
 ### Register additions (owner 2026-06-20/21)
 - **JD-FETCH-EIGHTFOLD-GARBLED-001** (owner) — NVIDIA careers JD-URL fetch returns theme/config JSON, not the JD (eightfold.ai SPA). Full detail + fix direction under NIGHTLY FEATURE REQUESTS.
 
-### SALMON-SIDEBAR-BREAK-EARLY-001 (owner 2026-06-21) — `[ATTEMPTED, REVERTED — needs a safe gate]`
+### SALMON-SIDEBAR-BREAK-EARLY-001 (owner 2026-06-21) — `[SHIPPED 1.50.745 — only-adjust, preview-only]`
+**SHIPPED (2nd attempt, safe):** `antcv-auto-pagebreak-block-001.js` now pulls an ALREADY-EXISTING
+preview sidebar break UP by `SIDEBAR_PREVIEW_INFLATE` (1.16, console-tunable) so the preview salmon
+matches the higher DOCX break. SAFE by construction: (1) PREVIEW MAP ONLY — the export/DOCX
+`autoPages` sidebar break is untouched (owner: removing it breaks the DOCX); (2) ONLY-ADJUST,
+NEVER-FORCE — if the sidebar fits the normal A4 line (rides the main column's pagination) it creates
+nothing, so no spurious break, no oscillation, no export coupling (the failure modes of the 1st
+attempt). Verified by `pwa/test/diag-sidebar-preview-break.mjs` (real 2-page CV, sidebar-overflows
+case): baseline preview break idx 4 → with factor idx 1 (= the DOCX break, salmon now matches the
+PDF); export break unchanged; stable across repeats (no oscillation); 0 errors; boot-smoke clean;
+suite 348/348. The owner can dial the height live: `AntcvAutoPagebreak.config({SIDEBAR_PREVIEW_INFLATE:N})`.
+Original investigation (1st attempt reverted) kept below for context.
+
+`[1st attempt — ATTEMPTED, REVERTED — superseded by the safe version above]`
 Owner: "set position of a new salmon splitter much closer to the estimated end of main's
 first page and move more sidebar elements to page 2 (the miss for the sidebar is not by one
 item, more 2-3 subsubsections)." i.e. the PREVIEW sidebar salmon breaks 2-3 subsubsections too

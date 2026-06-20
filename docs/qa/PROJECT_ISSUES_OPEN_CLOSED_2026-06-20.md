@@ -218,6 +218,37 @@ The DETERMINISTIC root cause of the stale-SW masking (un-bumped `?v`) now has a 
 ### Register additions (owner 2026-06-20/21)
 - **JD-FETCH-EIGHTFOLD-GARBLED-001** (owner) — NVIDIA careers JD-URL fetch returns theme/config JSON, not the JD (eightfold.ai SPA). Full detail + fix direction under NIGHTLY FEATURE REQUESTS.
 
+### OWNER BATCH — NVIDIA CV/CL exports + preview (2026-06-21, 14 items)
+Grounded against the real NVIDIA PDFs + preview screenshots. **The chip read "Unsolicited" for the
+NVIDIA targeted app and `antcv:lastJdText` was empty — so several items below are DOWNSTREAM of the
+targeting-persistence / JD-not-persisted bug (P2), not independent render bugs.**
+
+CV PREVIEW:
+1. **Results still PAST tense (preview).** `[OPEN — verify on ≥745 first; likely stale-SW]` `window.AntcvTenseClause` re-tenses preview Results; if still past, check the tab is actually on ≥738 (stale-SW), else the preview lamination path isn't calling the clause for this role shape. Regen-independent if the clause runs.
+2. **Salmon sidebar break MUCH higher — Languages→page 2 (preview≠PDF).** `[OPEN — 745 only-adjust does NOT cover this case]` Screenshot: ALL sidebar (REGULATORY/LANGUAGES/INTERESTS/ACCESSIBILITY) on page 1 with dead space; page-2 sidebar EMPTY; the PDF fills page 1 + continues. So there's NO baseline preview sidebar break to "adjust" — the main column drives the page-box split and the (compact-px) sidebar fits page-box 1. FIX needs the FORCE variant: when the sidebar is SHORTER than main's page-1 box but the PDF (taller render) overflows, FORCE a preview sidebar break so the salmon matches the PDF. 745's only-adjust guard blocks exactly this. Must verify no oscillation in the both-columns case (the diag must cover sidebar-fits-but-PDF-overflows). The worker paginates the sidebar itself, so the PDF is already correct — preview-only fix.
+3. **Undo for sidebar-width change.** `[OPEN — feature]` add an undo stack for `cvSidebarRatio`.
+4. **Sidebar size + add/remove text must re-estimate salmons for ALL pages.** `[OPEN]` the measurer fingerprint (STYLE_KEYS) must include the width + content hash so a resize/edit re-triggers a full re-measure; verify cvSidebarRatio + sections hash are in the fingerprint and that it recomputes ALL page breaks, not just page 1.
+
+CV CONTENT (preview+export, REGEN-GATED unless noted):
+5. **Certifications: trim to job context** (rugby-coach cert irrelevant for a photonic-test job). Prompt: include only JD-relevant certs; OR a deterministic export hide of off-topic certs for a targeted app (like sanitizeForExport role-hide).
+6. **Standards: ADD laser safety** (relevant to photonic testing) — kernel/data gap + prompt.
+7. **Languages: drop "Uruguayan variant"** for this register — deterministic text strip (`Spanish: full professional, Uruguayan variant` → `…full professional`). Cleanest as a content normalizer/sanitize, but it's also just editable data.
+8. **Accessibility: trim 30-40%** for this job — needs a shorter rewrite (regen/prompt; not a pure strip).
+
+CV↔CL:
+9. **Twin tables still duplicate** (CV CORE vs CL WHAT I BRING). `[OPEN — likely downstream of #targeting: tables seeded from a shared source; regen-gated]` See STILL-TODO #3 (distinct seeds per table at generation).
+
+CL PREVIEW:
+10. **WHO I AM / WHY: heading AND colored inline label BOTH show.** `[OPEN]` `antcv-why-context-title.js` strips a leading `<b>WHO I AM:</b>`/`<b>WHY …:</b>` from `sec.content`, but the duplicate here is the section H2 heading + the text_inline render's OWN title-derived colored label (not an in-content label) — so the strip can't see it. FIX = the text_inline render in app.src.js must NOT also emit the H2 heading when it renders the inline label (or vice-versa). app.js render + mirror.
+
+CL CONTENT (preview+export):
+11. **Opening label "WHO I AM:" → "Who I am:"** (sentence case, not all-caps). app.src.js text_inline label render lowercases after first letter — OR resolved automatically if #10 removes the inline label entirely. Tie to #10.
+12. **CL "Strategic Expertise" cells too long for nordic-minimal** — shorten (regen/prompt cell-cap; the existing TABLES-DISTINCT cell-cap rule should tighten the CL bring cells).
+13. **"WHY YOUR COMPANY" → "WHY THIS ROLE" for a specific position.** `[render already correct — DATA-GATED]` `antcv-why-context-title.js` flips to "WHY THIS POSITION" when `antcv:lastJdText`≥30; it's empty for this app (the targeting-persistence bug), so the flip never fires. ROOT = persist the JD with the targeted app (P2). No render change needed once the JD is present. (Owner wants the wording "WHY THIS ROLE" — currently the specific title is "WHY THIS POSITION"; confirm exact wording.)
+14. **CL paragraph needs ~3px more spacing from the table.** `[OPEN — render]` app.src.js: the WHAT-I-BRING table's `marginBottom` (or the following paragraph's `marginTop`) +3px, preview + export parity. app.js render + mirror + worker.
+
+**Triage:** #13 + (much of) #9 are downstream of the targeting-persistence/JD-empty bug (fix that first). #5,6,8,12 are regen-gated content/prompt. #2,3,4,10,11,14 are app.js/measurer render work — do in a FRESH session (app.js surgery at the tail of a long context risks the minified-mirror blue-screen). #7 is a near-trivial deterministic strip. #1 verify on ≥745 first (stale-SW suspect).
+
 ### SALMON-SIDEBAR-BREAK-EARLY-001 (owner 2026-06-21) — `[SHIPPED 1.50.745 — only-adjust, preview-only]`
 **SHIPPED (2nd attempt, safe):** `antcv-auto-pagebreak-block-001.js` now pulls an ALREADY-EXISTING
 preview sidebar break UP by `SIDEBAR_PREVIEW_INFLATE` (1.16, console-tunable) so the preview salmon

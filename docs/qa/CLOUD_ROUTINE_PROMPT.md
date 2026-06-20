@@ -100,7 +100,29 @@ account — no login step is needed. AntCV needs no install for the core work (z
   `Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>`.
 
 ## PRIORITY ORDER
-- **P1 — Targeting persistence + persist the JD** (the unlock: fixes the "Unsolicited" mislabel,
+
+### P0 — SALMON follow-ups (owner-assigned to the cloud, 2026-06-22) — DO FIRST
+Two salmon RENDER/MEASURER fixes (full detail + owner screenshots in the register's "Salmon
+follow-ups" block). THE MOST blue-screen-prone code in the repo, and **main auto-deploys**, so:
+> ⚠️ **SAFETY GATE (mandatory):** the salmon fixes MUST be verified by rendering a real multi-page CV
+> with Playwright — run `pwa/test/diag-sidebar-preview-break.mjs` and a 3-page variant. If this
+> cloud environment can run Playwright, install it (`npm i -D playwright && npx playwright install
+> chromium`) and verify. **If Playwright CANNOT run here, do NOT push the salmon changes to `main`**
+> (it auto-deploys and a bad page-box change blue-screens the live app). Instead commit them to a
+> branch `salmon-fixes` and open a PR for desktop visual verification. boot-smoke is the FLOOR, never
+> sufficient for salmon. `__antcvSalmon` is PERMANENT — never remove it.
+- **SALMON-EMPTY-REGION-001 — OPTION A (owner decided).** End each preview page-box at the TALLER
+  column's CONTENT end and draw the salmon there (NOT at the fixed A4 line), so the preview matches
+  the PDF (which has no gap). Relax/drop `antcv-page-fit` `min-height:1123` for a box whose tail was
+  paginated away. Verify: the salmon sits flush under the last page-1 item, no dead gap, main-column
+  break not regressed.
+- **SALMON-PAGE3-MISSING-001.** The measurer `antcv-auto-pagebreak-block-001.js` is 2-page scope
+  (only ever writes `=2`, lines ~536/576). Extend it to N pages: detect overflow across successive
+  A4 lines and write `=2, =3, …` (the render's monotonic page floor cascades). Owner case: the
+  page 2→3 break should land at the SECURITY GUARD role. Verify: a real 3-page CV → 3 page-boxes + 2
+  salmons; export map (`antcv:autoPages`) untouched; stable across cycles.
+
+### P1 — Targeting persistence + persist the JD (the unlock: fixes the "Unsolicited" mislabel,
   makes the WHY-heading flip fire = item #13, helps the twin tables = item #9).
 - **P2 — #1 Results tense.** OWNER DECISION FIRST: ask the owner (one line, then wait) —
   "Results/bullets ALWAYS present for Copenhagen/Nordic, or PER-ROLE (present for current, past for

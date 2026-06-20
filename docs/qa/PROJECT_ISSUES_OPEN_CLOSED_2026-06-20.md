@@ -280,6 +280,11 @@ area and need the rendered preview to verify — do NOT blind-hack.
   holds the box tall so the gap shows. Tension: force-items-to-page-2 (owner wants) vs no-gap — only
   reconcilable by ending the page-1 box at content / drawing the salmon at the taller-column content
   end, not the A4 line. Needs the render change + visual verify.
+  **DECISION — OPTION A (owner 2026-06-22):** end each page-box at the TALLER column's CONTENT end and
+  draw the salmon there — NOT at the fixed A4 line. Rationale (owner): "in the PDF there is no gap, so
+  the salmon will fit the actual PDF." The A4-look change is ACCEPTED. Fix = the CV page-box sizes to
+  content (relax/drop `antcv-page-fit min-height:1123` for a box whose tail was paginated away) so the
+  salmon sits flush under the last item, matching the PDF's natural break.
 - **SALMON-PAGE3-MISSING-001** — owner: "page 3 salmon is missing — page 3 break should have been
   around the SECURITY GUARD role." CONFIRMED in code: the measurer
   `antcv-auto-pagebreak-block-001.js` only ever writes `=2` (lines 536/576) — it is **2-page scope**

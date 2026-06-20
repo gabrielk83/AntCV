@@ -217,3 +217,35 @@ The DETERMINISTIC root cause of the stale-SW masking (un-bumped `?v`) now has a 
 
 ### Register additions (owner 2026-06-20/21)
 - **JD-FETCH-EIGHTFOLD-GARBLED-001** (owner) — NVIDIA careers JD-URL fetch returns theme/config JSON, not the JD (eightfold.ai SPA). Full detail + fix direction under NIGHTLY FEATURE REQUESTS.
+
+### SALMON-SIDEBAR-BREAK-EARLY-001 (owner 2026-06-21) — `[ATTEMPTED, REVERTED — needs a safe gate]`
+Owner: "set position of a new salmon splitter much closer to the estimated end of main's
+first page and move more sidebar elements to page 2 (the miss for the sidebar is not by one
+item, more 2-3 subsubsections)." i.e. the PREVIEW sidebar salmon breaks 2-3 subsubsections too
+LATE vs the PDF (P4 in NIGHTLY_PROMPT_2026-06-21).
+- **Measurer location (CORRECTED):** `pwa/antcv-auto-pagebreak-block-001.js` (a SIDECAR — NO app.js
+  mirror), function `compute(usableBase, autoKey, tight)`. Preview map = `antcv:autoPagesPreview`
+  at `USABLE`≈1053px; export map = `antcv:autoPages` at `USABLE_PDF`≈924px. The per-column create
+  limit is `usableBase*scale` (~line 441); the clear/fit-line is `(usableBase-hyst)*scale` (~375).
+  (The brief's "app.src.js ~17752" pointer is WRONG — that's the orphan-word estimator `Gi`/`Vi`.)
+- **Attempt:** added a `SIDEBAR_PREVIEW_INFLATE` (1.20) that shrank ONLY the preview-pass sidebar
+  limit (gated `!isMainCol && autoKey===PREVIEW_KEY`), applied to both the create AND clear lines.
+- **Why REVERTED (caught by `pwa/test/diag-sidebar-preview-break.mjs`, a real 2-page-CV Playwright
+  A/B):** unconditionally tightening the sidebar line is UNSAFE. When the MAIN column drives
+  pagination (e.g. an experience break splits the page into 2 boxes) the sidebar simply FLOWS
+  alongside and needs no break of its own. The factor FORCES a spurious sidebar break on top of
+  the main break → the maps OSCILLATE across the measurer's own timer cycles (break flips
+  skills↔additional) AND the EXPORT map gains a sidebar break (`autoPages.additional`) — which the
+  worker would try to honour and SCRAMBLE THE PDF (the exact auto-overflow-362 standdown failure).
+  A/B proof: with the factor neutralized to 1.0 the same CV is STABLE with a clean export map; at
+  1.20 it oscillates + couples. boot-smoke stayed clean (no crash) — the risk is PDF/jank, not a
+  blue-screen, but it still violates "an end result, not a brickable mid product," so HELD.
+- **Refined SAFE direction (for next run):** only pull the sidebar break up when the SIDEBAR is
+  genuinely the longest/overflowing column (sidebar-DRIVEN pagination — sidebar content height >
+  main content height for page 1), NOT when the main column already drives the break. AND hard-
+  guarantee the EXPORT map never receives a sidebar break from this path (the worker owns sidebar
+  pagination). Needs a diag that reproduces the SIDEBAR-LONGER-THAN-MAIN case (the owner's actual
+  layout), then verify export stays `{experience}`-only and the preview break is stable across
+  cycles. The factor is the right lever once correctly GATED; it is console-tunable via
+  `AntcvAutoPagebreak.config({ SIDEBAR_PREVIEW_INFLATE: N })` in the attempted patch. Diag harness
+  `pwa/test/diag-sidebar-preview-break.mjs` is committed for the next attempt.

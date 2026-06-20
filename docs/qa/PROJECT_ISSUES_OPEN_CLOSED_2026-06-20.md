@@ -285,6 +285,17 @@ area and need the rendered preview to verify — do NOT blind-hack.
   the salmon will fit the actual PDF." The A4-look change is ACCEPTED. Fix = the CV page-box sizes to
   content (relax/drop `antcv-page-fit min-height:1123` for a box whose tail was paginated away) so the
   salmon sits flush under the last item, matching the PDF's natural break.
+  **ATTEMPT 2026-06-22 (REVERTED — not a clean sidecar fix):** probe `pwa/test/diag-empty-region-probe.mjs`
+  confirmed the cause — page-row[0] box = **1123** while the taller column (main) content = **931**, so
+  ~192px of dead `min-height` pad sits above the salmon (the sidebar's extra gap, 230 vs 931, is a
+  separate intrinsic shorter-column gap). BUT `antcv-page-fit.js` actively RE-IMPOSES
+  `min-height:1123` on every row via a 750ms `setInterval` + the MutationObserver, so a per-row JS
+  override doesn't stick; and a `<style> .antcv-page-row:has(~ .antcv-page-row){min-height:0!important}`
+  did NOT collapse the row either (computed min-height stayed 1123) — so the A4 height is NOT simply
+  the row's own `min-height` (likely an inner content wrapper holds it, or the rows aren't plain
+  general siblings). Reverted. NEXT: identify the REAL height source (inspect the page-row's children
+  / the React render at `app.src.js:~9729` that sets the page-box height) and make the NON-LAST box
+  size to content there — a structural render change, not a page-fit tweak. Diagnostic probe committed.
 - **SALMON-PAGE3-MISSING-001** `[SHIPPED 1.50.751]` — the experience pass in
   `antcv-auto-pagebreak-block-001.js` was 2-page scope (broke the first overflowing role to page 2,
   then `break`). Now a GREEDY N-PAGE fill: walks the roles on the unpaginated column, and whenever a

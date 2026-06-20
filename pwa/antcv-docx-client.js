@@ -1978,7 +1978,20 @@ function _tenseLead(text, mode) {
   return prefix + repl + text.slice(prefix.length + word.length);
 }
 function _expTenseMode() {
-  try { const sc = JSON.parse(localStorage.getItem('styleConfig') || '{}') || {}; return sc.expTense || (sc.expPastTense === true ? 'past' : 'auto'); }
+  try {
+    // COPENHAGEN-TENSE-DEFAULT-001 (2026-06-22): Copenhagen Modern / Scandinavian
+    // is ALWAYS present tense — it is a property of the package, not a user setting.
+    // To use Auto or Past tense the owner must switch to a different package.
+    // Other packages honour the explicit expTense control; legacy expPastTense:true
+    // migrates to 'past'.
+    try {
+      const pkg = JSON.parse(localStorage.getItem('stylePackage') || '""') || '';
+      const p = (typeof pkg === 'string' ? pkg : '').toLowerCase().trim();
+      if (!p || p === 'copenhagen-modern' || p === 'scandinavian' || p === 'default') return 'present';
+    } catch (_) {}
+    const sc = JSON.parse(localStorage.getItem('styleConfig') || '{}') || {};
+    return sc.expTense || (sc.expPastTense === true ? 'past' : 'auto');
+  }
   catch (_) { return 'auto'; }
 }
 export function applyOutcomesMode(docSections, doc) {

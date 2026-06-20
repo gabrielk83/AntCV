@@ -9,10 +9,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-function makeStore(tense) {
+// COPENHAGEN-TENSE-DEFAULT-001: Copenhagen is always present regardless of expTense.
+// Use a non-Copenhagen package so 'past' and 'auto' tense tests exercise the expTense path.
+function makeStore(tense, pkg = 'nordic-minimal') {
   return {
     outcomesMode: JSON.stringify('results'),
-    stylePackage: JSON.stringify('copenhagen-modern'),
+    stylePackage: JSON.stringify(pkg),
     'antcv:lastJdText': '',
     styleConfig: JSON.stringify({ expTense: tense }),
     personalInfo: JSON.stringify({}),

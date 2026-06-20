@@ -3116,6 +3116,28 @@
                 },
               ],
             },
+            // PUBLICATIONS-MAIN-001 (owner 2026-06-22): a NEW rich publications &
+            // patents section in the MAIN column, BETWEEN experience and
+            // recommendations, movable to sidebar. Reuses the list_italic render
+            // (title bold-italic + plain details) but is flagged `richPub` so the
+            // preview skips the legacy non-academic year-only stripping (PUB-CHAIN-001)
+            // and shows the full optional citation. Each item is a composed display
+            // string "Name — Authors, Journal, Year, Pages" (empty fields dropped);
+            // the per-row 5-field editor stores the structured fields in the
+            // `antcv:pubFields` side-store and recomposes this string. The OLD buggy
+            // sidebar `publications` (list_italic) section is RETIRED — antcv-
+            // publications-main-757.js migrates its items here and drops it.
+            {
+              id: "pubs",
+              title: "PUBLICATIONS & PATENTS",
+              loc: "main",
+              on: !0,
+              type: "list_italic",
+              richPub: !0,
+              items: [
+                "[Publication, patent, or conference paper]",
+              ],
+            },
             // RECOMMENDATIONS-SECTION-001 (owner 2026-06-12): one-line
             // references statement, main column, directly after experience.
             {
@@ -3185,19 +3207,9 @@
                       },
                     ],
             },
-            {
-              id: "publications",
-              title: "PUBLICATIONS & PATENT",
-              loc: "sidebar",
-              on: !0,
-              type: "list_italic",
-              items:
-                n && n.length
-                  ? n
-                  : [
-                      "[Publication, patent, conference paper, poster, or “Available on request”]",
-                    ],
-            },
+            // PUBLICATIONS-MAIN-001 (2026-06-22): the old sidebar `publications`
+            // (list_italic) section is RETIRED — replaced by the new main `pubs`
+            // section above. Its data migrates via antcv-publications-main-757.js.
             {
               id: "regulatory",
               title: "REGULATORY CONTEXT",
@@ -6140,7 +6152,7 @@
               if (e.hidden && e.hidden[n]) return null;
               const o = xe(P(t || ""));
               let __det = o.details;
-              if (__isPubs && __pubNonAcad && __det) {
+              if (__isPubs && !e.richPub && __pubNonAcad && __det) {
                 const __ym = String(__det).match(/(1[89][0-9][0-9]|20[0-9][0-9])/);
                 __det = __ym ? __ym[1] : "";
               }

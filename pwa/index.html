@@ -788,7 +788,11 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-add-cjlr-order-swap-241.js?v=1.40.243" defer></script>
 <script src="antcv-embedded-controls-248.js?v=1.40.248" defer></script>
 <script src="antcv-what-i-bring-header-cjlr-249.js?v=1.40.249-fix-cjlr-isolate-preview-guard" defer></script>
-<script src="antcv-publications-strict-row-layout-273.js?v=1.50.685" defer></script>
+<!-- PUBLICATIONS-MAIN-001 (2026-06-22): the old sidebar publications section is RETIRED.
+     antcv-publications-strict-row-layout-273.js + antcv-publications-section-panel-row-fix-278.js
+     are unloaded; the new main `pubs` section is migrated/placed by antcv-publications-main-757.js
+     (+ rich editor/controls sidecars). -->
+<script src="antcv-publications-main-757.js?v=1.50.757" defer></script>
 <script src="antcv-core-wib-strict-row-layout-274.js?v=1.50.93-wider-cells" defer></script>
 <script src="antcv-row-controls-wording-341.js?v=1.40.357-p1b3" defer></script>
 <script src="antcv-help-text-wording-357.js?v=1.40.357-p1b2" defer></script>
@@ -797,7 +801,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <!-- SIDECAR-MERGE-G5 (2026-06-13): mobile-topbar-cleanup-275 + mobile-fab-cleanup-351 + mobile-bottom-compact-352 + mobile-alt-circles-dropdown-354 consolidated into one file with a single shared rAF scheduler + one MutationObserver (was 4). Behaviour preserved verbatim. -->
 <script src="antcv-mobile-ui-418.js?v=1.50.418" defer></script>
 <script src="antcv-generate-cloud-sync-277.js?v=1.40.277" defer></script>
-<script src="antcv-publications-section-panel-row-fix-278.js?v=1.50.238-dedupe-on-navigation" defer></script>
+<!-- RETIRED (PUBLICATIONS-MAIN-001 2026-06-22): antcv-publications-section-panel-row-fix-278.js -->
 <script src="antcv-sidebar-section-row-hide-page-279.js?v=1.40.281" defer></script>
 <script src="antcv-personal-info-cloud-restore-282.js?v=1.50.432" defer></script>
 <!-- v1.40.339-n: promotes nested personalInfo.aiDisclosureAccepted to the

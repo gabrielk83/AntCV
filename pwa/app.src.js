@@ -15999,6 +15999,20 @@
         }
         const t = setTimeout(() => {
           try {
+            // JD-SYNC-001 (2026-06-22): persist jd_text on every auto-sync tick so
+            // targeted rows that pre-date JD-PERSIST-001 get backfilled without needing
+            // a new drift/AUTO-COMMIT cycle. Guard: only include when JD is real (≥30
+            // chars, not the unsolicited GENERAL CV stub, not a Manual save sentinel).
+            const __jdSyncField = {};
+            try {
+              const __jT = String(Un.current || Ut || "").trim();
+              if (__jT.length >= 30 &&
+                  !__jT.startsWith("GENERAL CV") &&
+                  !__jT.startsWith("Manual save")) {
+                __jdSyncField.jd_text = __jT;
+                localStorage.setItem("antcv:lastJdText", __jT);
+              }
+            } catch (_) {}
             oo.update(__activeId, {
               cv_sections: (ro && ro.cv) || [],
               cl_sections: (ro && ro.cl) || [],
@@ -16007,6 +16021,7 @@
               subtitle: (io && io.subtitle) || "",
               meta: io && "object" == typeof io ? io : {},
               rationale: yo,
+              ...__jdSyncField,
             })
               .then(() => {
                 try {

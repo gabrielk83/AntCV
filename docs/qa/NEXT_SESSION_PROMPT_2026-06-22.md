@@ -2,8 +2,13 @@
 
 Self-contained boot prompt for a FRESH AntCV session (no memory of prior chats — everything is in
 the repo). Repo root: `C:\Users\karpg\GitHub\AntCV` (React PWA + Cloudflare Workers, owner Gabriel).
-Current shipped: **1.50.745** (PWA, auto-deploys on push) + docx-worker **1.14.79** + proxy/demo-proxy
+Current shipped: **1.50.748** (PWA, auto-deploys on push) + docx-worker **1.14.79** + proxy/demo-proxy
 **3.6.0** (manual deploy). Owner style: direct, factual, compressed, no corporate filler.
+
+**Cloud-routine 2026-06-22 shipped:** P5 #7 (Uruguayan variant strip, 1.50.746), P4 #10/#11/#14
+(CL inline label + sentence case + WHAT-I-BRING spacing, 1.50.747), P2 COPENHAGEN-TENSE-DEFAULT-001
+(`_expTenseMode` always 'present' for Copenhagen/Scandinavian/default, 1.50.748, 359/359 tests).
+P1 (targeting persistence) and P3 (salmon FORCE break, needs Playwright) deferred.
 
 ## STEP 0 — Orient (read first)
 1. `docs/qa/PROJECT_ISSUES_OPEN_CLOSED_2026-06-20.md` — the live register. Read the **"OWNER BATCH —
@@ -38,15 +43,11 @@ VERIFY: regenerate/attach the NVIDIA JD → chip reads NVIDIA (not Unsolicited),
 is non-empty, `antcv-why-context-title.js` flips the heading to "WHY THIS POSITION", CL stops
 reading unsolicited.
 
-### P2 — #1 Results past tense (CONFIRMED real on 745)
-Root cause: `antcv-docx-client.js` `_expTenseMode()` (~:1956) returns `'auto'` unless
-`styleConfig.expTense==='present'`, and `_tenseLead` is a NO-OP in `'auto'` (:1936). The verb map is
-complete. The owner's BULLETS are already present but the Results stay past = mixed tense. Do NOT
-hard-force Results→present blindly (TENSE-FULL-CLAUSE-001 keeps role+result the SAME tense).
-**OWNER DECISION NEEDED FIRST (ask + wait):** "Results/bullets ALWAYS present for Copenhagen/Nordic,
-or PER-ROLE (present for current, past for ended)?" Then either (a) make the Present control persist
-+ be read (the LANGUAGES-card tense control), or (b) default Copenhagen `_expTenseMode` to 'present'.
-Pure function → unit-testable on the owner's strings ("Owned…"→"Own…", "Directed…"→"Direct…").
+### P2 — #1 Results past tense `[SHIPPED 1.50.748 — COPENHAGEN-TENSE-DEFAULT-001]`
+`_expTenseMode()` in `antcv-docx-client.js` now always returns `'present'` for Copenhagen Modern,
+Scandinavian, and the empty/default package — regardless of `expTense` setting. Owner confirmed:
+"It is always default present for copenhagen. If the user select auto or past copenhagen will need
+to change." 7 unit tests pass; 359/359 total. No regen needed — takes effect on next export/preview.
 
 ### P3 — #2 Salmon: FORCE an earlier preview sidebar break (owner's top visual issue)
 CORRECTED model (owner 2026-06-21): the preview does NOT "fit" — it puts MORE items on page 1 than a
@@ -64,19 +65,13 @@ is the tuning knob (console: `AntcvAutoPagebreak.config({SIDEBAR_PREVIEW_INFLATE
 Also #4: confirm the measurer fingerprint re-triggers a FULL re-measure on sidebar-width + content
 changes. #3 (undo for sidebar width) is a separate feature.
 
-### P4 — CL render cluster (#10 / #11 / #14) — app.js render, do together
-- #10: the CL section shows BOTH the H2 heading AND the text_inline colored label (duplicate).
-  `antcv-why-context-title.js` strips an in-CONTENT label but this duplicate is the H2 + the
-  text_inline render's own title-derived label. Fix the text_inline render (app.src.js) to emit ONE,
-  not both.
-- #11: the inline label should be sentence case — "Who I am:" not "WHO I AM:" (resolves with #10 if
-  the inline label is removed and only the H2 stays, OR lowercase the inline label).
-- #14: the CL WHAT-I-BRING table needs ~3px more spacing before the following paragraph
-  (table marginBottom or paragraph marginTop +3px), preview + worker parity.
+### P4 — CL render cluster (#10 / #11 / #14) `[SHIPPED 1.50.747]`
+- #10: text_inline render no longer emits the colored `<b>` label for non-work_style sections.
+- #11: auto-resolved by #10 (label removed; H2 heading already sentence-case).
+- #14: WHAT-I-BRING table `e.id==='bring'` gets 3pt before + 3pt after in preview and DOCX HTML.
 
 ### P5 — #7 deterministic + regen-gated content
-- #7 (deterministic): drop the "Uruguayan variant" qualifier from the Spanish language line; KEEP
-  English + Hebrew as native/fluent (never touch them). Small content normalizer/strip + unit test.
+- #7 (deterministic): `[SHIPPED 1.50.746]` `_stripUruguayan()` strips `, Uruguayan variant` from Spanish; English + Hebrew untouched. 4 unit tests.
 - REGEN-GATED (need an owner regen to verify): #5 trim certs to JD context (rugby-coach cert out),
   #6 add laser-safety standard (kernel/data gap + prompt), #8 accessibility −30-40% (terser rewrite),
   #12 CL Strategic-Expertise cells too DETAILED (not too long) → prompt for terser cells, #9 twin

@@ -5072,6 +5072,73 @@
             n ? __antcvBreaks(__sid, __items, __title) : __items.map((it) => it.node),
           );
         }
+        case "rich_block": {
+          const __sid = e.id;
+          const __title = (e.title || "").toUpperCase();
+          const __lead = k.mainHeadColor || s;
+          let __al = {};
+          try {
+            __al =
+              (JSON.parse(localStorage.getItem("antcvItemAlignment") || "{}") ||
+                {})[__sid] || {};
+          } catch (_) {}
+          const __rowAlign = (i) => {
+            const v = __al["items." + i] || __al[String(i)] || __al.__group__;
+            return ["left", "center", "right", "justify"].includes(v)
+              ? v
+              : "justify";
+          };
+          const __items = (e.items || [])
+            .map((it, i) => {
+              if (e.hidden && e.hidden[i]) return null;
+              const row = it && "object" == typeof it ? it : { t: String(it || "") };
+              const bShow = row.b && !row.bOff;
+              const tShow = !row.tOff;
+              if (!bShow && !tShow) return null;
+              return {
+                key: String(i),
+                node: React.createElement(
+                  "p",
+                  {
+                    key: i,
+                    style: {
+                      margin: "4px 0 3px",
+                      fontFamily: T,
+                      fontSize: $.text,
+                      color: O,
+                      textAlign: __rowAlign(i),
+                      lineHeight: I,
+                    },
+                  },
+                  bShow
+                    ? React.createElement(
+                        "b",
+                        { style: { color: __lead } },
+                        React.createElement(B, {
+                          path: ["items", i, "b"],
+                          value: P(row.b),
+                          placeholder: "[Lead]",
+                        }),
+                        " ",
+                      )
+                    : null,
+                  tShow
+                    ? React.createElement(B, {
+                        path: ["items", i, "t"],
+                        value: P(row.t || ""),
+                        placeholder: "(click to add)",
+                      })
+                    : null,
+                ),
+              };
+            })
+            .filter(Boolean);
+          return React.createElement(
+            React.Fragment,
+            null,
+            n ? __antcvBreaks(__sid, __items, __title) : __items.map((it) => it.node),
+          );
+        }
         case "bullets": {
           const __sid = e.id;
           const __title = (e.title || "").toUpperCase();
@@ -6304,7 +6371,8 @@
             0 === t.length &&
             !(e.closing || "").trim()
           );
-        if ("bullets" === e.type) return 0 === t.length;
+        if ("bullets" === e.type || "rich_block" === e.type)
+          return 0 === t.length;
         if ("table" === e.type) {
           const t = e.rows || [],
             n = t.slice(1).filter((t, n) => !(e.hidden && e.hidden[n + 1]));
@@ -6400,6 +6468,8 @@
         // content just flows on.
         e._antcvSplitCont && !1 === d.contHeadlines
           ? null
+          : e.headlineOff
+          ? null
           : React.createElement(
           "div",
           {
@@ -6432,9 +6502,11 @@
               placeholder: "[Title]",
             }),
           ),
-          React.createElement("div", {
-            style: { borderBottom: `1px solid ${C}`, marginBottom: 4 },
-          }),
+          e.ruleOff
+            ? null
+            : React.createElement("div", {
+                style: { borderBottom: `1px solid ${C}`, marginBottom: 4 },
+              }),
         ),
         D,
       ),
@@ -7024,6 +7096,22 @@
             2,
           ),
         );
+      case "rich_block":
+        return "undefined" != typeof window && window.AntcvRichBlockEditor
+          ? React.createElement(window.AntcvRichBlockEditor, {
+              section: e,
+              update: d,
+              accent: s,
+              onEnrich: r,
+              onCompress: n,
+              enrichingId: a,
+              compressingId: o,
+            })
+          : React.createElement(
+              "div",
+              { style: { fontSize: 11, color: "#999", padding: 8 } },
+              "Rich section editor is loading…",
+            );
       case "bullets": {
         // 1.50.250: SELECTED OUTCOMES subpanel — add the per-item buttons the
         // owner expects in every list-shaped editor: eye / visibility,
@@ -27150,7 +27238,8 @@
                       0 === t.length &&
                       !(e.closing || "").trim()
                     );
-                  if ("bullets" === e.type) return 0 === t.length;
+                  if ("bullets" === e.type || "rich_block" === e.type)
+                    return 0 === t.length;
                   if ("table" === e.type) {
                     const t = e.rows || [],
                       n = t

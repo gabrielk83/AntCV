@@ -25817,6 +25817,9 @@ function renderSection(s, ctx, isSidebar) {
     case "foundation":
       body.push(...renderFoundation(s, ctx, isSidebar));
       break;
+    case "rich_block":
+      body.push(...renderRichBlock(s, ctx, isSidebar));
+      break;
     case "bullets":
       body.push(...renderBullets(s, ctx, isSidebar));
       break;
@@ -25839,18 +25842,18 @@ function renderSection(s, ctx, isSidebar) {
     default:
       break;
   }
-  if (skipHeading || !s.title) return [...pageBreakPara, ...body];
+  if (skipHeading || s.headlineOff || !s.title) return [...pageBreakPara, ...body];
   if (body.length === 0) return [];
   // 1.14.25: CL is full-width linear — emit heading + body directly (no
   // heading-repetition wrapper) so titled sections aren't triple-nested and
   // shrunk to ~80% by Word/Google Docs. CV keeps the wrapper for its columns.
   if (ctx && ctx.doc === "cl") {
-    return [...pageBreakPara, headingParagraph(s.title, ctx, false), ...body];
+    return [...pageBreakPara, headingParagraph(s.title, ctx, false, s.ruleOff), ...body];
   }
   const headingCell = new TableCell({
     borders: noBorders(),
     margins: { top: 0, bottom: 0, left: 0, right: 0 },
-    children: [headingParagraph(s.title, ctx, isSidebar)]
+    children: [headingParagraph(s.title, ctx, isSidebar, s.ruleOff)]
   });
   const bodyCell = new TableCell({
     borders: noBorders(),
@@ -25906,7 +25909,7 @@ function renderSection(s, ctx, isSidebar) {
   ];
 }
 __name(renderSection, "renderSection");
-function headingParagraph(title2, ctx, isSidebar) {
+function headingParagraph(title2, ctx, isSidebar, noRule) {
   const { style, fs } = ctx;
   if (typeof ctx.contCounter !== "number") ctx.contCounter = 0;
   const contId = ctx.contCounter++;
@@ -25943,7 +25946,7 @@ function headingParagraph(title2, ctx, isSidebar) {
     // column headings stay left-aligned so they line up with body prose.
     alignment: isSidebar ? AlignmentType.CENTER : void 0,
     shading: isSidebar ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" } : void 0,
-    border: { bottom: { color: isSidebar ? style.sidebarHeadColor : style.mainHeadColor, space: isSidebar ? 2 : 4, style: BorderStyle.SINGLE, size: 8 } },
+    border: noRule ? void 0 : { bottom: { color: isSidebar ? style.sidebarHeadColor : style.mainHeadColor, space: isSidebar ? 2 : 4, style: BorderStyle.SINGLE, size: 8 } },
     children: [
       new BookmarkStart(bookmarkName, bookmarkNumericId),
       new TextRun({ text: title2, ...headingRunOpts }),
@@ -26110,6 +26113,51 @@ function renderFoundation(s, ctx, isSidebar) {
   return out;
 }
 __name(renderFoundation, "renderFoundation");
+function renderRichBlock(s, ctx, isSidebar) {
+  const out = [];
+  const { style, fs } = ctx;
+  const items = Array.isArray(s.items) ? s.items : [];
+  const groupCjlr = paraAlign(s, null, void 0);
+  const rp = s.row_pages && typeof s.row_pages === "object" ? s.row_pages : null;
+  const rowPage = /* @__PURE__ */ __name((i) => {
+    if (!rp) return 1;
+    const n = Number(rp[String(i)] != null ? rp[String(i)] : rp["items." + i]);
+    return Number.isFinite(n) && n >= 2 ? Math.round(n) : 1;
+  }, "rowPage");
+  const make = /* @__PURE__ */ __name((lead, body, align) => new Paragraph({
+    spacing: { before: 60, after: 60, line: 276, lineRule: "auto" },
+    alignment: align,
+    shading: isSidebar ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" } : void 0,
+    children: [
+      ...lead ? [new TextRun({
+        text: lead,
+        bold: true,
+        color: isSidebar ? style.sidebarHeadColor : style.mainHeadColor,
+        size: pt2hp(isSidebar ? fs.sbBody : fs.mainBody),
+        font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont
+      })] : [],
+      ...inlineRuns(body || "", {
+        color: isSidebar ? style.sidebarTextColor : style.mainTextColor,
+        size: pt2hp(isSidebar ? fs.sbBody : fs.mainBody),
+        font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont
+      })
+    ]
+  }), "make");
+  items.forEach((it, i) => {
+    const row = it && typeof it === "object" ? it : { t: String(it || "") };
+    const lead = row.b ? row.b + " " : "";
+    const body = row.t || "";
+    if (!lead && !body) return;
+    const align = paraAlignPath(s, "items." + i + ".t") ?? paraAlignPath(s, "items." + i) ?? groupCjlr ?? AlignmentType.JUSTIFIED;
+    if (rowPage(i) >= 2) {
+      out.push(pbBreakPara());
+      if (!s.headlineOff && s.title && !(ctx.style && ctx.style.contHeadlines === false)) out.push(headingParagraph(String(s.title || "").toUpperCase() + " " + (ctx.contSuffix || "(CONT.)"), ctx, isSidebar, s.ruleOff));
+    }
+    out.push(make(lead, body, align));
+  });
+  return out;
+}
+__name(renderRichBlock, "renderRichBlock");
 function renderBullets(s, ctx, isSidebar) {
   if (!Array.isArray(s.items)) return [];
   return s.items.filter((it) => it && (it.t || typeof it === "string")).map((it, i) => {
@@ -26909,6 +26957,7 @@ var VALID_TYPES = /* @__PURE__ */ new Set([
   "text_inline",
   "text_bullets",
   "foundation",
+  "rich_block",
   "bullets",
   "table",
   "experience",
@@ -27903,6 +27952,7 @@ function getSchemaDoc() {
           "text_inline",
           "text_bullets",
           "foundation",
+          "rich_block",
           "bullets",
           "table",
           "experience",

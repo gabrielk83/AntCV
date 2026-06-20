@@ -1627,6 +1627,36 @@ function normalizeSections(raw) {
         };
       }
 
+      case 'rich_block': {
+        // RICH-BLOCK-001: universal composite section — N rows of {b: bold lead-in,
+        // t: body}, plus headline/rule visibility toggles. Per-row + section CJLR ride
+        // base.item_alignment (alignFor: "items.<i>" + "__group__"). Per-row page from
+        // itemPagesMap (>=2). bOff/tOff drop the lead-in / body; a fully-empty or hidden
+        // row is dropped so no orphan paragraph exports.
+        const items = (s.items || []).map((it, i) => {
+          if (s.hidden && s.hidden[i]) return null;
+          const row = it && typeof it === 'object' ? it : { t: String(it || '') };
+          const b = row.bOff ? '' : (clean(row.b) || '');
+          const t = row.tOff ? '' : (clean(row.t) || '');
+          if (!b && !t) return null;
+          return { b, t };
+        }).filter(Boolean);
+        const _rp = (s.id && itemPagesMap && typeof itemPagesMap[s.id] === 'object') ? itemPagesMap[s.id] : null;
+        let rowPages = null;
+        if (_rp) {
+          rowPages = {};
+          for (const k in _rp) { const n = parseInt(_rp[k], 10); if (Number.isFinite(n) && n >= 2) rowPages[k] = n; }
+          if (!Object.keys(rowPages).length) rowPages = null;
+        }
+        return {
+          ...base,
+          items,
+          ...(s.headlineOff ? { headlineOff: true } : {}),
+          ...(s.ruleOff ? { ruleOff: true } : {}),
+          ...(rowPages ? { row_pages: rowPages } : {}),
+        };
+      }
+
       case 'bullets':
         return {
           ...base,

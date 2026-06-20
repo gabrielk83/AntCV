@@ -18,7 +18,9 @@ const personalInfo = {
 const store = {
   outcomesMode: JSON.stringify('results'),
   personalInfo: JSON.stringify(personalInfo),
-  stylePackage: JSON.stringify('copenhagen-modern'),
+  // COPENHAGEN-TENSE-DEFAULT-001: use a non-Copenhagen package so this lamination test
+  // is not affected by automatic tense re-tensing (tested separately).
+  stylePackage: JSON.stringify('nordic-minimal'),
   // JD-aware visibility source (raw string, not JSON): contains FMEA + SQL.
   'antcv:lastJdText': 'This role needs FMEA risk analysis and SQL monitoring experience.',
 };

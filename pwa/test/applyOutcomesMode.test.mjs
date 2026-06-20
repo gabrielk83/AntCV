@@ -6,9 +6,12 @@
 import assert from 'node:assert';
 
 // minimal localStorage mock (module reads outcomesMode + personalInfo)
+// COPENHAGEN-TENSE-DEFAULT-001: use a non-Copenhagen package so this outcomes-distribution
+// test is not affected by the automatic tense re-tensing (which is tested separately).
 const store = {
   outcomesMode: JSON.stringify('results'),
   personalInfo: JSON.stringify({ patentNumber: '241997' }),
+  stylePackage: JSON.stringify('nordic-minimal'),
 };
 globalThis.localStorage = { getItem: (k) => (k in store ? store[k] : null), setItem: () => {}, removeItem: () => {} };
 globalThis.window = {};

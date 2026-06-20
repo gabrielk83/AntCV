@@ -260,6 +260,26 @@ CL CONTENT (preview+export):
 - **SETTINGS-WRITINGSTYLE-STICKY-001** `[OPEN]` — the **Writing Styles (full) section is STICKY / bleeds onto OTHER settings subtabs.** The WritingStylePicker is a React island (built from `src/islands/*.tsx` → `pwa/antcv-react-islands.js` via `npm run build` — NOT app.js surgery; edit the .tsx). Symptom = the island (or its mount container) does not UNMOUNT when leaving Personal, or has a `position:sticky`/fixed container, so it stays visible over Account/Layout/etc. Same family as PERSONAL-TAB-JANK-001 (WritingStylePicker remount cascade) + `settings-subtab-placement`. FIX direction: unmount the island on subtab leave (or gate its render to the active subtab) + drop any sticky/fixed positioning on its wrapper. Verify headless: switch Settings subtabs and assert the writing-style DOM is gone off-Personal.
 - **REVIEW-DATA-DEAD-001** `[OPEN]` — **"Review my data" button does nothing** (was REVIEW-DATA-001, the user-friendly reviewer modal, shipped 1.50.618). Lives in `pwa/antcv-data-export-360.js` (button + handler at ~419/648/830-874). The click no longer opens the reviewer. Likely: the modal-open handler isn't bound (DOM rebuilt after a render and the listener was lost), or an exception in the open path, or the button is a duplicate/dead node. FIX: reproduce, console-probe the click handler, re-bind via delegation (capture-phase on a stable ancestor) so it survives re-renders; confirm the reviewer modal opens with the user's data. Sidecar-only (no app.js mirror).
 
+### Salmon follow-ups (owner 2026-06-22, after 1.50.749/750 force-break) — `[OPEN — need a live preview screenshot + visual verify]`
+The FORCE break (1.50.749→750, factor now 1.20) correctly moves the right items to page 2, but two
+salmon RENDER/MEASURER issues remain (NOT the force factor). Both are in the most blue-screen-prone
+area and need the rendered preview to verify — do NOT blind-hack.
+- **SALMON-EMPTY-REGION-001** — owner: "the empty region in preview is where the salmon between page 1
+  and page 2 should actually be; the items' location is correct — just no empty space under them."
+  i.e. after the forced break the page-1 column ends early and there's an empty region before the
+  salmon (the page-box `min-height:1123` / the dead-gap-above-salmon in the shorter column, see
+  [[salmon-splitter-permanent]] "dead gap ABOVE the salmon"). The salmon should sit right AFTER the
+  last page-1 item (no gap). Fix = the CV page-box render (app.src.js, the full-width page-box
+  separator at ~37810 + antcv-page-fit `min-height`) — let the page-1 box end at content when a
+  break pushed the tail away, OR draw the salmon at the content end. Needs a live screenshot to see
+  which column has the gap + verify the A4-look isn't broken.
+- **SALMON-PAGE3-MISSING-001** — owner: "page 3 salmon is missing." CONFIRMED in code: the measurer
+  `antcv-auto-pagebreak-block-001.js` only ever writes `=2` (lines 536/576) — it is **2-page scope**
+  (line 547), so a 3-page CV gets the page1→2 salmon but NO page2→3 break. Fix = extend the measurer
+  to N pages: loop the overflow detection across successive A4 lines and write `=2, =3, …` at each
+  crossing (+ the render's monotonic page floor already cascades). Fragile measurer change — verify
+  on a real 3-page CV (before/after) + boot-smoke + export-map untouched.
+
 ### SALMON-SIDEBAR-BREAK-EARLY-001 (owner 2026-06-21) — `[SHIPPED 1.50.749 — FORCE variant, preview-only]`
 **FORCE variant SHIPPED 1.50.749 (the owner's actual case).** The preview OVER-fills page 1 (packs
 more sidebar items than the taller-rendered PDF page holds), so the sidebar fits the 1123px page-box

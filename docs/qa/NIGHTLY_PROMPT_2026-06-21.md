@@ -39,3 +39,25 @@ JD-FETCH-CHIP-LABEL-001, cluster-demand worker pipeline + nightly recruitment re
 - Cache-bust quartet on every change: bump the changed file's `?v` in `index.html`, `sw.js` CACHE, `antcv-version-override.js` TARGET_VERSION (+ add the PREVIOUS target to STALE_VERSIONS, never the current).
 - Mirror `app.src.js` edits into `app.js` (minified); verify `node --check`.
 - Verify the DO-NOT-REGRESS probes for 728–739 still pass before finishing.
+
+---
+
+## P4 UPDATE — salmon sidebar pagination (precise finding, 2026-06-20 PM)
+
+Content parity is now DONE (merges/hides/tense/sections/Snowflake all match — 737–743). The
+remaining gap is PAGINATION parity in the two-column CV:
+- `antcv:autoPages` (export break map) = `{experience: ...}` only — the WORKER flows the sidebar
+  itself; it does NOT record sidebar section breaks.
+- `antcv:autoPagesPreview` = `{experience, interests}` — the PREVIEW measurer breaks the sidebar
+  at INTERESTS (page 2), i.e. AFTER Languages, so Languages stays on preview page 1.
+- The PDF breaks the sidebar BEFORE Languages (page-1 sidebar = Education only). So the preview
+  measures the sidebar ~1 section SHORTER than the worker renders it → break lands one section
+  too late.
+ROOT: the preview's per-section A4-boundary measurement for the SIDEBAR column underestimates
+the rendered height vs the worker (font metrics / line-height / section spacing differ). FIX
+DIRECTION: tighten the preview sidebar measurement to the worker's metrics (or add a
+conservative sidebar-height factor), so the preview salmon breaks the sidebar where the PDF
+does. The measurer lives in app.src.js ~17752–17925 (CV two-column page-box). FRAGILE — verify
+with boot-smoke + a real two-page CV; do not regress the main-column break which is correct.
+NOTE: role on:false state is correct in the data (hidden roles show OFF in panels); merged-away
+roles are dropped from the array. No work needed there.

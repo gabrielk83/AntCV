@@ -2331,6 +2331,37 @@ function tenseClause(s) {
 }
 try { if (typeof window !== 'undefined') window.AntcvTenseClause = tenseClause; } catch (_) {}
 
+// PREVIEW-PARITY-001 (owner 2026-06-20: "fit the preview entirely to export"). Expose the
+// export's HIDE + STRIP decisions so the editable preview can drop the SAME roles/sections and
+// strip the SAME fabricated tools — making the preview match the PDF (which also makes the
+// salmon page-breaks line up). These are pure predicates / text transforms: the preview hides
+// a role by rendering null IN-PLACE (indices preserved, edits intact) and strips text at
+// display time, so no edit path is touched. Merges are NOT here — they need the data-level
+// merge (a merged role has no single edit path). All gated on a TARGETED application.
+try {
+  if (typeof window !== 'undefined') {
+    window.AntcvExportHiddenRole = function (role) {
+      try {
+        if (!_isTargetedExport() || !role || role.on === false) return false;
+        var hay = String(role.title || '') + ' ' + String(role.company || '');
+        return IRRELEVANT_ROLE.test(hay) || (!_jdIsTechOps() && CLUSTER_ROLE.test(hay));
+      } catch (_) { return false; }
+    };
+    window.AntcvExportHiddenSection = function (sec) {
+      try {
+        if (!_isTargetedExport() || !sec) return false;
+        return !_jdIsResearch() && /publication|patent/i.test(String(sec.title || sec.id || ''));
+      } catch (_) { return false; }
+    };
+    window.AntcvStripFab = function (text) {
+      try {
+        if (typeof text !== 'string' || !FAB_TOOLS.test(text)) return text;
+        return text.split(/\s*,\s*/).filter(function (p) { return p && !FAB_TOOLS.test(p); }).join(', ');
+      } catch (_) { return text; }
+    };
+  }
+} catch (_) {}
+
 function triggerDownload(blob, filename) {
   // 1.50.380 EXPORT-PREVIEW-FEATURES-001(b) — choose the download location.
   // Opt-in via localStorage 'antcv:askSaveLocation' = '1' (the export modal

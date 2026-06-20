@@ -5468,7 +5468,10 @@
             (e.roles || []).map((e, t) => {
               var n;
               const __ri = __origRoles.indexOf(e);
-              return !1 === e.on
+              // PREVIEW-PARITY-001: also drop roles the EXPORT hides (targeted app), so the
+              // preview matches the PDF + the salmon breaks line up. Rendered null IN-PLACE,
+              // so the index t (and the bullet edit paths) stay correct.
+              return !1 === e.on || (window.AntcvExportHiddenRole && window.AntcvExportHiddenRole(e))
                 ? null
                 : React.createElement(
                     "div",

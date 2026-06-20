@@ -1,6 +1,12 @@
-const VERSION='3.5.0-cross-provider-fallback';
+const VERSION='3.6.0-eightfold-jd';
 // Cloudflare Worker — multi-provider LLM proxy with streaming for Anthropic
 // Includes /preferences route for AntCV cloud save.
+//
+// v3.6.0: JD-FETCH-EIGHTFOLD-GARBLED-001 — /api/fetch-jd-url now reads
+// eightfold.ai career SPAs (NVIDIA etc.) via the /api/apply/v2/jobs/<id>
+// position API (rewriteJobUrl) instead of the theme/config blob the server
+// HTML returns; graceful fallback to the HTML pipeline on any API miss; plus
+// a config/theme-blob backstop in validateContentQuality. See ./fetch-jd-url.js.
 //
 // v1.5.0: prompt-augmentation middleware that detects CV/CL generation
 // tasks (cv_profile, cv_core_competencies, cv_outcomes, cl_what_i_bring,

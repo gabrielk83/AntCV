@@ -146,6 +146,37 @@ function rewriteJobUrl(u) {
     }
   }
 
+  // Eightfold.ai (NVIDIA careers, and many enterprise career sites):
+  // jobs.<company>.com/careers/job/<id> and <tenant>.eightfold.ai/careers/job/<id>
+  // are JS SPAs whose SERVER HTML carries only the theme/config bootstrap blob
+  // ({"themeOptions":{"customTheme":{"varTheme":{"primary-color-100":…}}}}), not
+  // the JD — so a normal fetch returns garbage (owner report 2026-06-20, NVIDIA
+  // "Test Engineer - Photonic", JD-FETCH-EIGHTFOLD-GARBLED-001). The public
+  // position API on the SAME origin returns the posting as JSON without auth:
+  //   <origin>/api/apply/v2/jobs/<id>?domain=<brand-domain>
+  // Signature = a /careers/job/<digits> path AND an eightfold marker (the
+  // ?domain= query param that eightfold links always carry, or a *.eightfold.ai
+  // host). High-precision; the handler also falls back to the HTML pipeline if
+  // the API doesn't yield a usable description, so a false positive is harmless.
+  {
+    const m = /\/careers\/job\/(\d{4,})/.exec(u.pathname);
+    const domainParam = u.searchParams.get('domain');
+    const isEightfold = !!m && (!!domainParam || host.endsWith('eightfold.ai'));
+    if (isEightfold) {
+      const id = m[1];
+      let domain = domainParam;
+      if (!domain) {
+        const parts = host.split('.');
+        domain = parts.length >= 2 ? parts.slice(-2).join('.') : host;
+      }
+      return {
+        url: `${u.origin}/api/apply/v2/jobs/${id}?domain=${encodeURIComponent(domain)}`,
+        note: `eightfold-json:${id}`,
+        json: 'eightfold',
+      };
+    }
+  }
+
   // No rewrite — fetch the original.
   return { url: u.toString(), note: null };
 }
@@ -478,6 +509,23 @@ function validateContentQuality(text) {
   }
   const low = text.toLowerCase();
 
+  // SPA config/theme blob check: a JS-rendered career site (eightfold, some
+  // Workday tenants) can leak its bootstrap config/theme JSON instead of the
+  // JD — e.g. {"themeOptions":{"customTheme":{"varTheme":{"primary-color-100":
+  // "#000000", … "button-primary-background-color":"#76b900"}}}} (owner report
+  // 2026-06-20, NVIDIA). It is dominated by CSS-variable keys and hex colours,
+  // not prose. Flag it so the PWA prompts for a manual paste rather than feeding
+  // colour soup to the LLM. (For eightfold specifically the L2 rewrite already
+  // sidesteps this via the position API; this is the catch-all backstop.)
+  {
+    const hexColors = (text.match(/"#[0-9a-fA-F]{3,8}"/g) || []).length;
+    const cssVarKeys = (text.match(/"[a-z][a-z-]*-color[a-z0-9-]*"\s*:/gi) || []).length;
+    if (low.includes('"themeoptions"') || low.includes('"customtheme"') ||
+        cssVarKeys >= 8 || hexColors >= 20) {
+      return 'The fetched content looks like the page\'s theme/config data, not the job description — this site renders the JD with JavaScript. Open the URL in a tab, copy the visible JD, and paste it into Additional Signals.';
+    }
+  }
+
   // Consent-fingerprint density check: if the extracted text is
   // SHORT and dominated by consent phrases, we grabbed the banner.
   let consentHits = 0;
@@ -500,6 +548,65 @@ function validateContentQuality(text) {
     }
   }
   return null;
+}
+
+
+// ─── Eightfold position-API path ─────────────────────────────────
+// Fetch the rewritten /api/apply/v2/jobs/<id> endpoint and build the JD
+// response from its JSON. Returns a finished Response on success, or null to
+// signal "fall back to the normal HTML pipeline against the original URL"
+// (non-200, not JSON, or no usable description — so an over-broad rewrite can
+// never make a fetchable page worse).
+async function tryEightfoldJson(apiUrl, originalUrl, getCORS, request, env, t0, rewriteNote) {
+  const CORS = getCORS(request, env);
+  let resp;
+  try {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), FETCH_TIMEOUT_MS);
+    resp = await fetch(apiUrl, {
+      method: 'GET',
+      redirect: 'follow',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+        'Accept': 'application/json,text/plain,*/*',
+        'Accept-Language': 'en-US,en;q=0.9,da;q=0.8',
+        'Cache-Control': 'no-cache',
+      },
+      signal: ctl.signal,
+    });
+    clearTimeout(timer);
+  } catch { return null; }
+  if (!resp.ok) return null;
+  let data;
+  try { data = await resp.json(); } catch { return null; }
+  if (!data || typeof data !== 'object') return null;
+  const jd = data.job_description || data.jobDescription || data.description || '';
+  let text = htmlToText(String(jd));
+  if (text.length < MIN_GOOD_TEXT_CHARS) return null;
+  const name = String(data.name || data.posting_name || '').trim();
+  const dept = String(data.department || data.business_unit || '').trim();
+  const loc = String(data.location || (Array.isArray(data.locations) && data.locations[0]) || '').trim();
+  // Prepend a compact header so the role/dept/location survive into the JD text
+  // (the model uses them for targeting); skip any field that's already echoed.
+  const header = [name, dept, loc].filter(Boolean).join(' — ');
+  if (header && !text.slice(0, 200).includes(name)) text = header + '\n\n' + text;
+  let truncated = false;
+  if (text.length > MAX_TEXT_CHARS) { text = text.slice(0, MAX_TEXT_CHARS); truncated = true; }
+  return new Response(JSON.stringify({
+    ok: true,
+    text,
+    title: name || extractTitle(''),
+    source: originalUrl.toString(),
+    fetched_url: apiUrl,
+    rewrite: rewriteNote,
+    extracted_via: 'eightfold-json',
+    status: resp.status,
+    duration_ms: Date.now() - t0,
+    html_length: 0,
+    extracted_chars: text.length,
+    truncated,
+    wall_hint: validateContentQuality(text),
+  }), { status: 200, headers: { 'Content-Type': 'application/json', ...CORS } });
 }
 
 
@@ -527,14 +634,24 @@ export async function handleFetchJdUrl(request, env, getCORS) {
   }
   const url = v.url;
 
-  // L2: provider URL rewrite (LinkedIn guest endpoint, etc.).
-  const { url: fetchUrl, note: rewriteNote } = rewriteJobUrl(url);
+  // L2: provider URL rewrite (LinkedIn guest endpoint, eightfold position API).
+  let { url: fetchUrl, note: rewriteNote, json: jsonProvider } = rewriteJobUrl(url);
+  const t0 = Date.now();
+
+  // Eightfold career sites (NVIDIA etc.): try the JSON position API first; on
+  // any miss (non-200 / not JSON / no usable description) fall back to fetching
+  // the original page through the HTML pipeline below.
+  if (jsonProvider === 'eightfold') {
+    const jres = await tryEightfoldJson(fetchUrl, url, getCORS, request, env, t0, rewriteNote);
+    if (jres) return jres;
+    fetchUrl = url.toString();
+    rewriteNote = (rewriteNote || '') + '→html-fallback';
+  }
 
   // Race the fetch against a manual timeout. Workers' native fetch
   // has its own runtime cap but it's >10s and we want to fail fast
   // so the user can paste manually if a site is slow or hanging.
   let response;
-  const t0 = Date.now();
   try {
     const ctl = new AbortController();
     const timer = setTimeout(() => ctl.abort(), FETCH_TIMEOUT_MS);

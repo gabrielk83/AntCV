@@ -49,7 +49,7 @@ Scandinavian, and the empty/default package — regardless of `expTense` setting
 "It is always default present for copenhagen. If the user select auto or past copenhagen will need
 to change." 7 unit tests pass; 359/359 total. No regen needed — takes effect on next export/preview.
 
-### P3 — #2 Salmon: FORCE an earlier preview sidebar break (owner's top visual issue)
+### P3 — #2 Salmon: FORCE an earlier preview sidebar break `[SHIPPED 1.50.749]`
 CORRECTED model (owner 2026-06-21): the preview does NOT "fit" — it puts MORE items on page 1 than a
 real PDF page holds, so it OVER-fills page 1 and shows NO sidebar break (page-2 sidebar empty); the
 PDF correctly continues the sidebar to page 2. 1.50.745's "only-adjust" does NOTHING here (no

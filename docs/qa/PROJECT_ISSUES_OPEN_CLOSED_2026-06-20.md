@@ -353,4 +353,4 @@ Owner NVIDIA CV/CL batch items worked in order (P4→P5→P2); P1 and P3 deferre
 | Item | Why |
 |---|---|
 | P1 Targeting persistence / JD-persist | Architectural — needs live repro + `app.src.js:15914/19596/19643/14340` surgery + owner verification of the targeting chain. Not cloud-routine safe without headless auth. |
-| P3 Salmon sidebar FORCE break (#2) | Needs Playwright headless A/B (`pwa/test/diag-sidebar-preview-break.mjs`) — unavailable in cloud. The most oscillation-prone area; do NOT attempt without the diag. |
+| P3 Salmon sidebar FORCE break (#2) | `[SHIPPED 1.50.749]` |

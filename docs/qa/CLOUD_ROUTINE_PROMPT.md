@@ -13,6 +13,15 @@ to `main`), docx-worker **1.14.79**, proxy/demo-proxy **3.6.0**. Work the priori
 ship VERIFIED fixes only. Hard rule: **an end result, not a brickable mid-product** — one solid
 verified fix beats several half-verified ones.
 
+## ENVIRONMENT SETUP SCRIPT (claude.ai routine config — NOT the prompt)
+Leave the routine's environment **setup script EMPTY** (or at most `node --version`). It must be
+**pure shell**. Do NOT put `/login`, `/remote-control`, or any `/slash` command in it — those are
+interactive Claude Code CLI commands, not shell, and the cloud sandbox runs the setup script with
+`sh`, so a `/login` line fails with `exit code 127: /login: No such file or directory` and the whole
+session aborts (observed 2026-06-21). The cloud session is already authenticated under the owner's
+account — no login step is needed. AntCV needs no install for the core work (zero-dependency
+`node --test`; git push is all that's required) — only add `npm install` if a run actually complains.
+
 ## CLOUD CAVEATS (read first)
 - **No local auto-memory** — rely on this prompt + the repo docs. Do NOT reference any `C:\Users\…`
   path; everything is repo-relative.

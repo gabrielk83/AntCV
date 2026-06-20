@@ -37,12 +37,21 @@ coherent (no production regression). Reuse near-zero gated app.js render surgery
   place before/after · **◹ move main↔sidebar** · CJLR for the entire section · Enhance for the entire
   section · Fit-it for the entire section · **on/off** for the entire section (`section.on`) · **✕ delete**
   the entire section. A whole-section CJLR/Enhance/Fit fans out to every publication row. **[Phase 3.]**
-- Status: Phase 1 (foundation: new section + migrate/retire + full-citation render + native
-  Name/Details editing) done & verified on branch (`diag-publications-main-migrate.mjs`). Native
-  list_italic editor (`Te`, app.src.js:8489) already gives visibility/name/details/delete/reorder/add;
-  Phase 2 splits the single Details field into the 4 detail fields (extend `Te`, gated `richPub`, +
-  `antcv:pubFields` side-store for a lossless 5-field round-trip). Phase 3 adds marker + per-row
-  CJLR/Page/Enhance/Fit + section-bar.
+- Status: **Phase 1 + Phase 2 done & verified on branch** (NOT merged). Phase 1 foundation
+  (new section + migrate/retire + full-citation render + native editing) via
+  `diag-publications-main-migrate.mjs`. **Phase 2 (5-field rich editor) SHIPPED to branch**
+  (commit `f58c437`): the `Te` list_italic case now branches on `e.richPub` to render 5 labelled
+  fields (Name · Authors · Journal/Publisher/Patent no. · Year/date · Pages). The 4 detail fields
+  persist as a **parallel `section.pubFields[]` array on the section object** (rides the normal
+  section store + cloud sync — chosen over a separate `antcv:pubFields` localStorage key so it can't
+  desync on reorder/delete/cloud-restore); `items[]` stays a composed citation STRING
+  (`Name — Authors, Journal, Year, pp. Pages` via `Ee`/`nt`) so every downstream reader is
+  unaffected. Reorder/delete/add keep `pubFields` in lockstep. Migrated data with no `pubFields`
+  seeds losslessly from `xe(items[n])` (whole legacy detail blob → journal field; user re-splits).
+  Verified end-to-end through the REAL editor past the sign-in gate by
+  `diag-publications-5field-editor.mjs` (5 fields render; Year+Pages edits recompose `items[0]` +
+  persist `pubFields[0]`; zero app errors). **Phase 3 TODO:** marker show/hide + per-row
+  CJLR/Page/Enhance/Fit + whole-section bar.
 
 ## Feature 2 — HOW I WOULD CONTRIBUTE (CL) — composite "text · bullet-list · text"
 

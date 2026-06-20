@@ -32,7 +32,11 @@ coherent (no production regression). Reuse near-zero gated app.js render surgery
 - **5 fields per row (all optional):** Name · Authors · Journal/Publisher · Year/Date · Pages.
   Display: "**_Name_** — Authors, Journal/Publisher, Year, pp. Pages" (empty fields dropped). Patent
   fits the same shape (Name = patent title, Journal = "US Patent No. …"). **[Phase 2 — editor.]**
-- Per-row + section controls per the shared vocabulary above. **[Phase 3.]**
+- Per-row controls + per-paragraph controls per the shared vocabulary above. **[Phase 3.]**
+- **High-level (whole-section) bar — in the section panel** (owner 2026-06-22, same set as HWIC):
+  place before/after · **◹ move main↔sidebar** · CJLR for the entire section · Enhance for the entire
+  section · Fit-it for the entire section · **on/off** for the entire section (`section.on`) · **✕ delete**
+  the entire section. A whole-section CJLR/Enhance/Fit fans out to every publication row. **[Phase 3.]**
 - Status: Phase 1 (foundation: new section + migrate/retire + full-citation render + native
   Name/Details editing) done & verified on branch (`diag-publications-main-migrate.mjs`). Native
   list_italic editor (`Te`, app.src.js:8489) already gives visibility/name/details/delete/reorder/add;

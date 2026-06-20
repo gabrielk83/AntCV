@@ -103,15 +103,15 @@ async function measure(factor) {
 }
 
 const off  = await measure(1.0);    // force disabled (baseline / old behaviour)
-const on1  = await measure(1.32);   // the shipped FORCE factor
-const on2  = await measure(1.32);   // repeat → stability
+const on1  = await measure(1.20);   // the shipped FORCE factor
+const on2  = await measure(1.20);   // repeat → stability
 
 await browser.close();
 await new Promise(r=>server.close(r));
 
 console.log('force OFF (1.0) :', JSON.stringify(off));
-console.log('force ON  (1.32):', JSON.stringify(on1));
-console.log('repeat    (1.32):', JSON.stringify(on2));
+console.log('force ON  (1.20):', JSON.stringify(on1));
+console.log('repeat    (1.20):', JSON.stringify(on2));
 console.log('app errors:', errs.length, errs.slice(0,4).join(' | '));
 
 // "page-2 weight" of a sidebar break: a break means content moved to page 2; null = none.

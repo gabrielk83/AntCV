@@ -26291,7 +26291,7 @@ function renderCompetencyTable(s, ctx) {
         width: { size: i === 0 ? col1 : col2, type: WidthType.DXA },
         shading: { type: ShadingType.CLEAR, fill: tableHeaderBg, color: "auto" },
         borders: cellBorders,
-        margins: { top: 80, bottom: 80, left: 90, right: 90 },
+        margins: { top: 130, bottom: 130, left: 90, right: 90 },
         verticalAlign: VerticalAlign.CENTER,
         children: [new Paragraph({
           alignment: headerAlignT,
@@ -26318,7 +26318,7 @@ function renderCompetencyTable(s, ctx) {
         // preview: even data rows → EAF7F7, odd → none.
         shading: idx % 2 === 0 ? { type: ShadingType.CLEAR, fill: "EAF7F7", color: "auto" } : void 0,
         borders: cellBorders,
-        margins: { top: 80, bottom: 80, left: 90, right: 90 },
+        margins: { top: 130, bottom: 130, left: 90, right: 90 },
         children: [new Paragraph({
           // TABLE-WRAP-PARITY-001: the preview renders the expertise cell
           // LEFT-aligned; the export's JUSTIFIED stretched word gaps into
@@ -26476,7 +26476,7 @@ function renderExperience(s, ctx) {
     // bold-italic "Results:" lead + the outcome text, right after the bullets.
     if (typeof role.results === "string" && role.results.trim()) {
       out.push(new Paragraph({
-        spacing: { before: 40, after: 60, line: 252, lineRule: "auto" },
+        spacing: { before: 140, after: 60, line: 252, lineRule: "auto" },
         children: [
           new TextRun({
             // RESULTS-PDF-INK-BLACK-001 (owner 2026-06-15): the per-role "Results:"
@@ -27427,7 +27427,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   the anchor's spacing-after from (px/2+14) to (px/2-12) so the first sidebar
 //   section sits just under the medallion (~0.27in higher; the full 0.6in would
 //   overlap the photo at the default diameter).
-var VERSION = "1.14.79-aiwm-cell-pageanchor-emptyguard";
+var VERSION = "1.14.80-export-results-table-spacing";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

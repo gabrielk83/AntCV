@@ -28514,18 +28514,16 @@
                         )
                       ) {
                         fn(!0);
-                        try {
-                          if (window.AntcvFullErase)
-                            await window.AntcvFullErase();
-                          else {
-                            try {
-                              localStorage.clear();
-                            } catch (e) {}
-                            location.reload();
-                          }
-                        } catch (e) {
-                          location.reload();
-                        }
+                        // ACCOUNT-DELETE-WIPE-001 (owner 2026-06-22): wipe at DELETE, IN app.js — do NOT
+                        // rely on the AntcvFullErase sidecar chain (it preserved relay/docx/proxy URLs, so a
+                        // same-email re-login still showed the deleted user's data + skipped the wizard: a
+                        // security breach). Delete the cloud slot, then COMPLETELY clear local (EVERY key,
+                        // incl. auth/proxy/relay/docx-worker) + session, so the next login is a clean fresh
+                        // user (and gets the wizard).
+                        try { if (window.AntcvCloudDelete) await window.AntcvCloudDelete(); } catch (e) {}
+                        try { localStorage.clear(); } catch (e) {}
+                        try { sessionStorage.clear(); } catch (e) {}
+                        location.reload();
                       }
                     },
                     disabled: gn,
@@ -32092,14 +32090,12 @@
                                                 quiet: !0,
                                               });
                                           } catch (e) {}
-                                          if (window.AntcvFullErase)
-                                            await window.AntcvFullErase();
-                                          else {
-                                            try {
-                                              localStorage.clear();
-                                            } catch (e) {}
-                                            location.reload();
-                                          }
+                                          // ACCOUNT-DELETE-WIPE-001 (owner 2026-06-22): complete local
+                                          // wipe in app.js, not via the AntcvFullErase keep-list chain.
+                                          try { if (window.AntcvCloudDelete) await window.AntcvCloudDelete(); } catch (e) {}
+                                          try { localStorage.clear(); } catch (e) {}
+                                          try { sessionStorage.clear(); } catch (e) {}
+                                          location.reload();
                                         } catch (e) {
                                           console.warn("erase failed:", e);
                                           try {
@@ -47807,21 +47803,10 @@
           String(Date.now()),
         );
       } catch (_) {}
-      try {
-        if (typeof window.AntcvFullErase === "function") {
-          window.AntcvFullErase();
-          return;
-        }
-      } catch (_) {}
-      try {
-        if (
-          window.AntcvAuth &&
-          typeof window.AntcvAuth.signOut === "function"
-        ) {
-          window.AntcvAuth.signOut();
-          return;
-        }
-      } catch (_) {}
+      // ACCOUNT-DELETE-WIPE-001 (owner 2026-06-22): disclosure declined → COMPLETE wipe in app.js
+      // (cloud slot + EVERY local key incl. auth/proxy/relay/docx) — never the AntcvFullErase keep-list
+      // chain, which left a trace that a re-login could surface.
+      try { if (window.AntcvCloudDelete) window.AntcvCloudDelete(); } catch (_) {}
       try {
         localStorage.clear();
         sessionStorage.clear();

@@ -3150,12 +3150,18 @@
               // (Name + who it was for / contact), rendered "Name - detail". Reuses
               // the education render + (relabelled) editor.
               type: "education",
-              items: [
-                {
-                  deg: "[References]",
-                  sch: "[available on request - or list your referees here]",
-                },
-              ],
+              // RECS-FROM-KERNEL-001 (owner 2026-06-23): source the RECOMMENDATIONS
+              // rows from personalInfo.recommendations ([{deg,sch}]) when present, so a
+              // kernel/JSON that carries them (v9+) drives the section; else the template.
+              items:
+                t.recommendations && t.recommendations.length
+                  ? t.recommendations
+                  : [
+                      {
+                        deg: "[References]",
+                        sch: "[available on request - or list your referees here]",
+                      },
+                    ],
             },
             {
               id: "tools",

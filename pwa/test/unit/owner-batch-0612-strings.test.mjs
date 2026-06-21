@@ -47,7 +47,10 @@ test('CERTIFICATES & COURSES rename with legacy keys retained', () => {
 });
 
 test('methods visible-group preference strengthened', () => {
-  assert.ok(bundle.includes('STRONGLY PREFER VISIBLE group labels'));
+  // 1.50.777 reworded the tools-grouping rule (forbid ungrouped/floating rows):
+  // the old "STRONGLY PREFER VISIBLE group labels" became a hard no-float rule.
+  assert.ok(bundle.includes('every single item belongs to exactly one group'));
+  assert.ok(bundle.includes('never leave a row ungrouped at the top'));
 });
 
 test('OUTCOMES-MODE-001 — mode key + Results renderer present', () => {

@@ -2089,6 +2089,10 @@ export function applyOutcomesMode(docSections, doc) {
     // an unrelated available role (the Meprolight Team Leader bleed). Keyed by role id
     // AND a title|company signature so it works whether or not generated ids match.
     const _koById = {}, _koByName = {};
+    // RESULTS-KERNEL-ROLE-MATCH-001 (owner 2026-06-23): the ACTUAL outcome TEXTS keyed by
+    // role id + title|company, so a generated doc role (which carries no outcomes) can adopt
+    // its KERNEL role's real numeric outcomes as the Results line.
+    const _koTextById = {}, _koTextByName = {};
     const _nameKey = (r) => r ? (tok(r.title).join(' ') + '|' + tok(r.company).join(' ')) : '';
     const tokensFor = (r) => {
       const base = new Set(tok(r.title).concat(tok(r.company)));
@@ -2121,12 +2125,24 @@ export function applyOutcomesMode(docSections, doc) {
       [].concat(_piRoot.workHistory || [], _piRoot.experience || [], _piRoot.roles || [])
         .forEach((r) => {
           if (!r || !Array.isArray(r.outcomes) || !r.outcomes.length) return;
-          const set = new Set();
-          r.outcomes.forEach((o) => tok(_koText(o)).forEach((w) => set.add(w)));
+          const set = new Set(); const _texts = [];
+          r.outcomes.forEach((o) => {
+            const t = _koText(o); if (!t) return;
+            tok(t).forEach((w) => set.add(w));
+            // collect default-visible outcome texts (strings are always visible)
+            if (typeof o === 'string' || !o || o.defaultVisible !== false) _texts.push(t);
+          });
           if (!set.size) return;
-          if (r.id != null) { const k = String(r.id); if (!_koById[k]) _koById[k] = new Set(); set.forEach((w) => _koById[k].add(w)); }
+          if (r.id != null) {
+            const k = String(r.id);
+            if (!_koById[k]) _koById[k] = new Set(); set.forEach((w) => _koById[k].add(w));
+            if (_texts.length) { if (!_koTextById[k]) _koTextById[k] = []; _texts.forEach((t) => _koTextById[k].push(t)); }
+          }
           const nk = tok(r.title).join(' ') + '|' + tok(r.company).join(' ');
-          if (nk !== '|') { if (!_koByName[nk]) _koByName[nk] = new Set(); set.forEach((w) => _koByName[nk].add(w)); }
+          if (nk !== '|') {
+            if (!_koByName[nk]) _koByName[nk] = new Set(); set.forEach((w) => _koByName[nk].add(w));
+            if (_texts.length) { if (!_koTextByName[nk]) _koTextByName[nk] = []; _texts.forEach((t) => _koTextByName[nk].push(t)); }
+          }
         });
     } catch (_) {}
     // Per-role LAMINATED results: explicit role.results wins; else resolve the
@@ -2180,7 +2196,16 @@ export function applyOutcomesMode(docSections, doc) {
       if (!texts.length && Array.isArray(r.proofPoints) && r.proofPoints.length)
         texts = r.proofPoints.map((p) => (typeof p === 'string' ? p.trim() : String((p && (p.text || p.result)) || '').trim())).filter(Boolean);
       texts.sort((p, q) => _rankScore(q) - _rankScore(p)); // RESULTS-NUMERIC-LEAD-001 + CLUSTER-QUAL-001
-      if (texts.length) _lam.set(r, _capJoin(texts));
+      if (texts.length) { _lam.set(r, _capJoin(texts)); return; }
+      // 3b) RESULTS-KERNEL-ROLE-MATCH-001 (owner 2026-06-23): the generated doc role carries
+      //     NO outcomes/proofPointIds, so match it to the KERNEL role by id / title|company
+      //     and adopt ITS real (numeric) outcomes. Without this a role rich in numeric
+      //     outcomes laminated from a token-matched wrong outcome or a derived bullet.
+      let _kt = (r.id != null && _koTextById[String(r.id)]) || _koTextByName[_nameKey(r)] || null;
+      if (_kt && _kt.length) {
+        const _tx2 = _kt.slice().sort((p, q) => _rankScore(q) - _rankScore(p));
+        _lam.set(r, _capJoin(_tx2));
+      }
     });
     // The heuristic SELECTED-OUTCOMES distribution runs ONLY for roles that are
     // not already laminated, so the spill never gets wasted on a role that will
@@ -2298,8 +2323,18 @@ export function applyOutcomesMode(docSections, doc) {
         if (score > bestScore) { bestScore = score; bestIdx = i; }
       }
       if (bestIdx < 0) return null;
+      // RESULTS-DERIVE-NUMERIC-ONLY-001 (owner 2026-06-23: "why such shitty results?"):
+      // tier-5 must NOT restate a plain duty bullet as a "Results:" line. score >= 1000
+      // ONLY when the chosen bullet carries a concrete metric (number/%/x). If the best
+      // bullet has NO metric, derive NOTHING — the role shows its bullets and no Results
+      // line, which is far better than a non-numeric bullet echoed as a fake result.
+      if (bestScore < 1000) return null;
       let txt = textOf(bl[bestIdx]);
-      if (txt.length > 260) txt = txt.slice(0, 257).replace(/[;,\s]+\S*$/, '') + '…';
+      if (txt.length > 260) {
+        var cut = txt.slice(0, 260);
+        var b = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('; '), cut.lastIndexOf(', '));
+        txt = (b > 60 ? cut.slice(0, b) : cut.replace(/\s+\S*$/, '')).replace(/[;,.\s]+$/, '');
+      }
       return { text: txt, index: bestIdx };
     };
     // OUTCOME-SEED-UNION-001 (owner 2026-06-16, refined): dedup-hide is

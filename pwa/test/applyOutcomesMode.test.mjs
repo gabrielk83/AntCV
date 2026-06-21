@@ -21,7 +21,7 @@ const { applyOutcomesMode } = await import('../antcv-docx-client.js');
 const ROLES = [
   { title: 'Product / Project Expert', company: 'Konzen konsulenter i nord ApS', on: true, bullets: [
     'Founded a consultancy bridging hardware product development and technical-commercial evaluation.',
-    'Led RFQ and RFI evaluation programmes with structured supplier scoring.'] },
+    'Led RFQ and RFI evaluation programmes with structured supplier scoring across 12 suppliers.'] },
   { title: 'System Architect & Change Control Lead', company: 'Innoviz Technologies', on: true, bullets: [
     'Owned change governance for the LiDAR product line under Automotive SPICE.',
     'Coordinated cross-team change requests from OEM customers.'] },
@@ -50,11 +50,12 @@ let pass = 0; const ok = (n, c) => { assert.ok(c, n); console.log('PASS ' + n); 
 
 ok('SELECTED OUTCOMES section dropped', !out.some((s) => /selected_outcomes/.test(s.id || '')));
 // RESULTS-LAMINATION-003 (owner 2026-06-15): role 1 shares "change" with the
-// LiDAR-rework outcome → genuine token-match (tier-4). Roles 0 & 2 have no real
-// outcome → DERIVE from their OWN strongest bullet (tier-5), and that source bullet
-// is REMOVED so it isn't shown twice. Unmatched OUTCOMES are still NOT spilled.
+// LiDAR-rework outcome → genuine token-match (tier-4). Role 0 has no real outcome
+// but DOES have a NUMERIC bullet → tier-5 derives THAT (RESULTS-DERIVE-NUMERIC-ONLY-001,
+// owner 2026-06-23: never restate a non-numeric duty bullet as a fake "Results:" line),
+// and the source bullet is REMOVED so it isn't shown twice. Unmatched OUTCOMES not spilled.
 ok('genuine token-match lands on its role (role 1 = LiDAR rework, not derived)', /LiDAR rework/.test(roles[1].results || ''));
-ok('a role with ≥2 bullets and no real outcome derives from its OWN strongest bullet', !!roles[0].results);
+ok('a role with no real outcome derives from its OWN strongest NUMERIC bullet', !!roles[0].results && /12 suppliers/.test(roles[0].results));
 // TA-TORN-OFF-001 (owner 2026-06-19): a role whose ONLY content is a single bullet must
 // NOT be torn off (bullet consumed into Results, nothing left). It keeps the bullet as
 // content and gets NO derived Results line.

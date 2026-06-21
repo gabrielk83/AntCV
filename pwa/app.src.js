@@ -35069,6 +35069,8 @@
                               "div",
                               { style: { display: "flex", gap: 6 } },
                               React.createElement("input", {
+                                // remount when set↔empty so ✕ Clear visibly empties the (uncontrolled) field
+                                key: cur ? "relay-set" : "relay-empty",
                                 type: "text",
                                 inputMode: "url",
                                 autoCapitalize: "none",

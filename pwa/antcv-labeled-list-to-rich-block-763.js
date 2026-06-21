@@ -18,7 +18,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.763';
+  var VERSION = '1.50.763b';
   if (window.__antcvLabeledListToRichBlock763 === VERSION) return;
   window.__antcvLabeledListToRichBlock763 = VERSION;
 
@@ -62,11 +62,36 @@
     centerIds.push(s.id);
     return ns;
   }
+  // 415-managed sidebar sections — antcv-sections-normalize-415.js owns these: it splits `additional`
+  // (a labeled_list) into Interests/Languages/Accessibility and normalises the interests item shape
+  // (strips b/t). Converting them to rich_block BREAKS that split (interests goes empty), so NEVER
+  // convert them — and RESTORE any that a prior 763 pass mis-converted, back to their expected type.
+  var MANAGED = { additional: 'labeled_list', interests: 'bullets', languages: 'labeled_list', accessibility: 'labeled_list' };
+  function unconvert(s, targetType) {
+    if (s.type !== 'rich_block') return s;
+    var items;
+    if (targetType === 'bullets') {
+      items = (Array.isArray(s.items) ? s.items : []).filter(function (r) { return r && !r.grp; }).map(function (r) { return { b: r.b || '', t: r.t || '' }; });
+    } else {
+      items = (Array.isArray(s.items) ? s.items : []).map(function (r) {
+        if (r && r.grp) return { group: r.t || '' };
+        var o = { l: (r && r.b) || '', v: (r && r.t) || '' }; if (r && r.bOff) o.labelHidden = true; return o;
+      });
+    }
+    var ns = { id: s.id, title: s.title, loc: s.loc, on: s.on, type: targetType, items: items };
+    if (s.hidden) ns.hidden = s.hidden;
+    if (s.pageBreakBefore) ns.pageBreakBefore = s.pageBreakBefore;
+    return ns;
+  }
   function mapList(list, centerIds) {
     if (!Array.isArray(list)) return { changed: false, list: list };
     var changed = false;
     var out = list.map(function (s) {
       if (!s) return s;
+      if (MANAGED[s.id]) {
+        if (s.type === 'rich_block') { changed = true; return unconvert(s, MANAGED[s.id]); }
+        return s;
+      }
       if (s.type === 'labeled_list') { changed = true; return convertLabeled(s); }
       if (s.type === 'list') { changed = true; return convertList(s, centerIds); }
       return s;

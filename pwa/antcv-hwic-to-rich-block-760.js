@@ -14,7 +14,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.760b';
+  var VERSION = '1.50.760c';
   if (window.__antcvHwicToRichBlock760 === VERSION) return;
   window.__antcvHwicToRichBlock760 = VERSION;
 
@@ -73,15 +73,40 @@
     if (!Array.isArray(list)) return { changed: false, list: list };
     var changed = false;
     var out = list.map(function (s) {
-      if (!s || s.id !== 'contribute' || s.type !== 'text_bullets') return s;
+      if (!s || s.id !== 'contribute') return s;
+      // (A) REPAIR an already-converted rich_block whose intro/closing became markered bullets
+      //     (the earlier 760 only handled the {intro,items,closing} skeleton shape; generated data
+      //     keeps intro = items[0] and closing = items[last] inside items[], so they got mk:true).
+      //     intro + closing must be MARKERLESS paragraphs; the rows between them keep their markers.
+      if (s.type === 'rich_block') {
+        if (Array.isArray(s.items) && s.items.length >= 2) {
+          var first = s.items[0], last = s.items[s.items.length - 1];
+          if ((first && first.mk) || (last && last.mk)) {
+            changed = true;
+            var fixed = s.items.map(function (r, i) {
+              if ((i === 0 || i === s.items.length - 1) && r && r.mk) { var c2 = Object.assign({}, r); delete c2.mk; return c2; }
+              return r;
+            });
+            return Object.assign({}, s, { items: fixed });
+          }
+        }
+        return s;
+      }
+      if (s.type !== 'text_bullets') return s;
+      // (B) CONVERT text_bullets -> rich_block. Handle BOTH shapes:
+      //   skeleton  : { intro, items:[bullets], closing }
+      //   generated : { items:[intro, bullet..., closing] }  (no separate intro/closing fields)
       changed = true;
+      var items = Array.isArray(s.items) ? s.items.slice() : [];
+      var intro = s.intro != null && String(s.intro).trim() ? String(s.intro) : '';
+      var closing = s.closing != null && String(s.closing).trim() ? String(s.closing) : '';
+      if (!intro && items.length) intro = bulletText(items.shift());
+      if (!closing && items.length) closing = bulletText(items.pop());
       var rows = [];
-      var intro = s.intro != null ? String(s.intro) : '';
-      var closing = s.closing != null ? String(s.closing) : '';
       var introPresent = !!intro.trim();
       if (introPresent) rows.push({ b: '', t: intro });
       var bulletCount = 0;
-      (Array.isArray(s.items) ? s.items : []).forEach(function (it) {
+      items.forEach(function (it) {
         var bt = bulletText(it);
         if (bt.trim() || bt === '') { rows.push({ b: '', t: bt, mk: true }); bulletCount++; }
       });

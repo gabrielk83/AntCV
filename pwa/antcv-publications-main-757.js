@@ -21,7 +21,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.757d';
+  var VERSION = '1.50.757e';
   if (window.__antcvPublicationsMain757 === VERSION) return;
   window.__antcvPublicationsMain757 = VERSION;
 
@@ -197,6 +197,9 @@
   // Re-check after external writes (cloud-restore re-dispatches sections-updated, which can
   // bring the old section back; the idempotent guard makes re-migration converge in one pass).
   window.addEventListener('antcv:sections-updated', run);
-  [0, 300, 900, 2000].forEach(function (ms) { setTimeout(run, ms); });
+  // Later passes (3500/6000) catch a cloud-restore that lands AFTER the early window and re-introduces
+  // a stale duplicate/placeholder — the on-event handler can lose a race with the React re-render, so
+  // a couple of settle-time re-runs make the heal self-converge without a manual nudge. Idempotent.
+  [0, 300, 900, 2000, 3500, 6000].forEach(function (ms) { setTimeout(run, ms); });
   window.AntcvPublicationsMain = { version: VERSION, run: run, isOldPub: isOldPub, isNewPub: isNewPub };
 })();

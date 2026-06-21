@@ -2257,11 +2257,21 @@ export function applyOutcomesMode(docSections, doc) {
       // RESULTS-NEAR-DUP-001: drop near-duplicate lines before joining the
       // distributed outcomes too (same fact phrased twice → keep the stronger one).
       let txt = _dedupNear(assign[i].map(lineOf)).slice(0, 2).join('; ');
-      // RESULTS-CUT-001 (owner 2026-06-14): the 180-char cap was lopping the end
-      // of concrete results with a trailing "…". Raised to 260 so a single
-      // outcome or a typical 2-outcome pair survives whole; only a genuinely
-      // over-long line is trimmed (on a word boundary, no mid-word cut).
-      if (txt.length > 260) txt = txt.slice(0, 257).replace(/[;,\s]+\S*$/, '') + '…';
+      // RESULTS-CUT-002 (owner 2026-06-23): NO jarring trailing "…". If the joined
+      // outcomes are over-long, drop the WHOLE second clause (keep the first complete
+      // outcome) rather than mid-sentence-cutting with an ellipsis. If a single first
+      // clause is itself over the cap, trim to its last sentence/clause boundary — still
+      // no "…". A complete line always beats a truncated one.
+      if (txt.length > 260) {
+        const parts = txt.split('; ');
+        if (parts.length > 1 && parts[0].length <= 260) {
+          txt = parts[0];
+        } else {
+          const cut = txt.slice(0, 260);
+          const b = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('; '), cut.lastIndexOf(', '));
+          txt = (b > 60 ? cut.slice(0, b) : cut.replace(/\s+\S*$/, '')).replace(/[;,.\s]+$/, '');
+        }
+      }
       resultsByRole.set(r, txt);
     });
     // RESULTS-LAMINATION-003 (owner 2026-06-15): a role's Results line is a REAL

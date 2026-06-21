@@ -5402,7 +5402,7 @@
                         "td",
                         {
                           style: {
-                            padding: "4px 6px",
+                            padding: "7px 7px",
                             border: `0.5px solid ${k.tableBorderColor}`,
                             fontSize: $.tbl,
                             fontWeight: 700,
@@ -5425,7 +5425,7 @@
                         "td",
                         {
                           style: {
-                            padding: "4px 6px",
+                            padding: "7px 7px",
                             border: `0.5px solid ${k.tableBorderColor}`,
                             fontSize: $.tbl,
                             color: k.tableOtherColText,
@@ -5961,7 +5961,9 @@
                               // ink; only the "Results:" label is bold + styled.
                               style: {
                                 fontSize: $.bullet,
-                                marginTop: 0,
+                                // RESULTS-SPACING-001 (owner 2026-06-23): the Results line
+                                // sat flush against the last bullet — add a small gap above.
+                                marginTop: 5,
                                 fontWeight: 400,
                                 color: d.mainTextColor || "#333",
                                 fontFamily: T,

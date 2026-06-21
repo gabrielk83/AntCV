@@ -13916,6 +13916,9 @@
         [Qe, et] = e(""),
         [tt, nt] = e(() => u.get("cloudIncludeKeys", !0));
       React.useEffect(() => {
+        // FRESH-START-DELETE-001: do NOT re-default the relay URL after a delete —
+        // the wizard re-asks it (and auto-maps docx + secrets). Leave the field empty.
+        if (window.AntcvIsFreshStart && window.AntcvIsFreshStart()) { ae(""); return; }
         let e = u.get("proxyUrl", "") || d;
         ((e = String(e).trim().replace(/\/+$/, "")),
           u.get("proxyUrl", "") || u.set("proxyUrl", e),
@@ -14794,6 +14797,9 @@
       }, [En, Rn]),
         React.useEffect(() => {
           try {
+            // FRESH-START-DELETE-001: a just-deleted user ALWAYS gets the wizard,
+            // regardless of any floor-restored skeleton or stale returning-user signal.
+            if (window.AntcvIsFreshStart && window.AntcvIsFreshStart()) { yn(!0); return; }
             // WIZARD-LOGIN-FLASH-001 (owner 2026-06-13): during login there is
             // a microsecond where getSignedInUser() is still falsy AND
             // wizardCompleted hasn't been cloud-restored, so the wizard opened
@@ -15403,7 +15409,10 @@
           try {
             const cvEmpty = !(ro && Array.isArray(ro.cv) && ro.cv.length);
             const clEmpty = !(ro && Array.isArray(ro.cl) && ro.cl.length);
-            if (cvEmpty && clEmpty) {
+            // FRESH-START-DELETE-001: a just-deleted user must land on the WIZARD, not
+            // an editor with the restored me() skeleton — so suppress the floor while
+            // fresh-start is armed (wizard completion clears the cookie).
+            if (cvEmpty && clEmpty && !(window.AntcvIsFreshStart && window.AntcvIsFreshStart())) {
               const sk = me();
               if (sk && ((sk.cv && sk.cv.length) || (sk.cl && sk.cl.length))) {
                 ao(sk);
@@ -28525,8 +28534,8 @@
                         // incl. auth/proxy/relay/docx-worker) + session, so the next login is a clean fresh
                         // user (and gets the wizard).
                         try { if (window.AntcvCloudDelete) await window.AntcvCloudDelete(); } catch (e) {}
-                        try { localStorage.clear(); } catch (e) {}
-                        try { sessionStorage.clear(); } catch (e) {}
+                        // FRESH-START-DELETE-001: keep secrets, clear relay URL, arm fresh-start → wizard.
+                        try { if (window.AntcvFreshErase) window.AntcvFreshErase(); else { localStorage.clear(); sessionStorage.clear(); } } catch (e) { try { localStorage.clear(); sessionStorage.clear(); } catch (_) {} }
                         location.reload();
                       }
                     },
@@ -28760,6 +28769,8 @@
           const e = () => {
               u.set("wizardCompleted", !0);
               u.set("wizardSkipped", !1);
+              // FRESH-START-DELETE-001: onboarding done → disarm fresh-start mode.
+              try { window.AntcvClearFreshStart && window.AntcvClearFreshStart(); } catch (e) {}
               try {
                 Qn({ wizardCompleted: !0, wizardSkipped: !1 });
               } catch (e) {}
@@ -28825,6 +28836,8 @@
                   try {
                     Qn({ wizardSkipped: !0 });
                   } catch (e) {}
+                  // FRESH-START-DELETE-001: onboarding skipped → disarm fresh-start mode.
+                  try { window.AntcvClearFreshStart && window.AntcvClearFreshStart(); } catch (e) {}
                 })(),
                 window.AntcvShowAiNotice
                   ? window.AntcvShowAiNotice({
@@ -32097,8 +32110,8 @@
                                           // ACCOUNT-DELETE-WIPE-001 (owner 2026-06-22): complete local
                                           // wipe in app.js, not via the AntcvFullErase keep-list chain.
                                           try { if (window.AntcvCloudDelete) await window.AntcvCloudDelete(); } catch (e) {}
-                                          try { localStorage.clear(); } catch (e) {}
-                                          try { sessionStorage.clear(); } catch (e) {}
+                                          // FRESH-START-DELETE-001: keep secrets, clear relay URL, arm fresh-start → wizard.
+                                          try { if (window.AntcvFreshErase) window.AntcvFreshErase(); else { localStorage.clear(); sessionStorage.clear(); } } catch (e) { try { localStorage.clear(); sessionStorage.clear(); } catch (_) {} }
                                           location.reload();
                                         } catch (e) {
                                           console.warn("erase failed:", e);
@@ -47811,11 +47824,11 @@
       // (cloud slot + EVERY local key incl. auth/proxy/relay/docx) — never the AntcvFullErase keep-list
       // chain, which left a trace that a re-login could surface.
       try { if (window.AntcvCloudDelete) window.AntcvCloudDelete(); } catch (_) {}
+      // FRESH-START-DELETE-001: keep secrets, clear relay URL, arm fresh-start → wizard.
       try {
-        localStorage.clear();
-        sessionStorage.clear();
+        if (window.AntcvFreshErase) window.AntcvFreshErase(); else { localStorage.clear(); sessionStorage.clear(); }
         location.reload();
-      } catch (_) {}
+      } catch (_) { try { localStorage.clear(); sessionStorage.clear(); location.reload(); } catch (e) {} }
     });
     try {
       check.focus();

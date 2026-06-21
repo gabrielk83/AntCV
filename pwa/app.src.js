@@ -2650,7 +2650,7 @@
         Array.isArray(o.tools) &&
           o.tools.length &&
           r.push(
-            "STORED TOOLS & METHODS — the output MUST include ALL of these VERBATIM in the TOOLS & METHODS sidebar section, grouped sensibly by domain. STRONGLY PREFER VISIBLE group labels: emit a named group header (e.g. 'Project workflow', 'Engineering', 'Methods') for every cluster of related items rather than one flat list — only skip grouping when there are fewer than 4 items total. Do not drop any:\n  - " +
+            "STORED TOOLS & METHODS — the output MUST include ALL of these VERBATIM in the TOOLS & METHODS sidebar section, grouped sensibly by domain. EVERY item MUST sit UNDER a VISIBLE named group header (e.g. 'Project workflow', 'Engineering', 'Methods', 'Tools', 'Expertise'). When there are 4+ items total, NO item may FLOAT above or between groups: the FIRST line of the section MUST be a group header, and every single item belongs to exactly one group — never leave a row ungrouped at the top. (Only skip grouping entirely when there are fewer than 4 items.) Do not drop any:\n  - " +
               a(o.tools).join("\n  - "),
           ),
         Array.isArray(o.education) &&

@@ -9541,10 +9541,12 @@
         "text_bullets",
         "bullets",
         "foundation",
+        "rich_block",
         "experience",
         "table",
         "labeled_list",
         "list",
+        "list_italic",
         "education",
       ].includes(e.type),
       R = E,
@@ -42966,7 +42968,21 @@
                             fontSize: 14,
                             color: "#000",
                             margin: "3px 0",
-                            textAlign: "justify",
+                            // CLOSURE-CJLR-001: honour the closure section CJLR (antcvItemAlignment.closure)
+                            textAlign: (() => {
+                              try {
+                                var a =
+                                  (JSON.parse(
+                                    localStorage.getItem("antcvItemAlignment") || "{}",
+                                  ) || {}).closure || {};
+                                var v = a.__group__ || a["items.0"] || a["0"];
+                                return ["left", "center", "right", "justify"].includes(v)
+                                  ? v
+                                  : "justify";
+                              } catch (_) {
+                                return "justify";
+                              }
+                            })(),
                             lineHeight: 1.15,
                           },
                         },

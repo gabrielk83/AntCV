@@ -5287,6 +5287,9 @@
                 },
             bb = e.pageBreakRows || [],
             rows = e.rows || [],
+            // TABLE-HEADER-EDIT-CJLR-001 (owner 2026-06-23): header row honors the
+            // headerAlign CJLR (default CENTER) instead of a hardcoded center.
+            __headAlign = ["left", "center", "right", "justify"].includes(e.headerAlign) ? e.headerAlign : "center",
             wrapStyle = c
               ? {
                   // CL-WIDTH-CAP-001 (owner 2026-06-15): the WHAT-I-BRING table
@@ -5327,14 +5330,14 @@
                       background: "var(--header-bg)",
                       color: "var(--header-name-color, #fff)",
                       padding: "4px 6px",
-                      textAlign: "center",
+                      textAlign: __headAlign,
                       fontSize: $.tblH,
                       fontWeight: 700,
                       border: `0.5px solid ${k.tableBorderColor}`,
                       lineHeight: I,
                     },
                   },
-                  g,
+                  React.createElement(B, { path: ["rows", 0, 0], value: g, placeholder: "[Header]" }),
                 ),
                 React.createElement(
                   "th",
@@ -5349,14 +5352,14 @@
                       background: "var(--header-bg)",
                       color: "var(--header-name-color, #fff)",
                       padding: "4px 6px",
-                      textAlign: "center",
+                      textAlign: __headAlign,
                       fontSize: $.tblH,
                       fontWeight: 700,
                       border: `0.5px solid ${k.tableBorderColor}`,
                       lineHeight: I,
                     },
                   },
-                  h,
+                  React.createElement(B, { path: ["rows", 0, 1], value: h, placeholder: "[Header]" }),
                 ),
               ),
             ),

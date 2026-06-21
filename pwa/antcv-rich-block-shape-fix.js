@@ -22,7 +22,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.800';
+  var VERSION = '1.50.801';
   if (window.__antcvRichBlockShapeFix === VERSION) return;
   window.__antcvRichBlockShapeFix = VERSION;
 
@@ -66,6 +66,26 @@
     return true;
   }
 
+  // RICH-BLOCK-CONTENT-BRIDGE-001: the CL text sections (opening/who/why/foundation/
+  // closure) are rich_block, but the generation hydration writes the LEGACY `content`
+  // string (+ its hardcoded fallbacks) — which the rich_block render (reads `items`)
+  // never shows. If a rich_block section has a non-empty `content` but blank items,
+  // surface the content as items:[{b:"",t:content}]. Idempotent (once items carry t,
+  // it won't re-fire). Never clobbers populated items.
+  function bridgeContent(sec) {
+    if (!sec || sec.type !== 'rich_block') return false;
+    var content = (typeof sec.content === 'string') ? sec.content.trim() : '';
+    if (!content) return false;
+    if (/^\s*\[[^\]]*\]\s*$/.test(content)) return false; // a [placeholder] is not real content
+    var its = Array.isArray(sec.items) ? sec.items : [];
+    var hasContent = its.some(function (it) {
+      return it && ((typeof it === 'string' && it.trim()) || (it.t != null && String(it.t).trim()) || (it.b != null && String(it.b).trim()));
+    });
+    if (hasContent) return false;
+    sec.items = [{ b: '', t: content }];
+    return true;
+  }
+
   function run() {
     try {
       var secs = readJSON('sections');
@@ -81,6 +101,7 @@
             s.items = s.items.map(function (it) { var f = fixItem(it); if (f) { any = true; return f; } return it; });
             if (any) changed = true;
           }
+          if (bridgeContent(s)) changed = true;
           if (fixWorkStyle(s, pi)) changed = true;
         });
       });

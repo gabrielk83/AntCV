@@ -23,6 +23,10 @@
        top-right corner, or window.AntcvDebug.open(). Disable: localStorage
        ['antcv:debug:disable']='1'. Does NOT touch window.fetch. -->
   <script src="antcv-debug-logger.js?v=1.50.187"></script>
+  <!-- BOOT-STORM-DAMP-001: coalesce bursts of antcv:sections-updated so the boot storm
+       doesn't peg the main thread (the "gate hangs / refresh twice" freeze). Loaded FIRST
+       so its listener registers before any other; kill switch antcv:disable-storm-damp. -->
+  <script src="antcv-sections-updated-damper.js?v=1.50.772"></script>
   <!-- v1.50.149: console quieter — wraps console.{log,info,debug,warn} FIRST so
        it swallows the ~70 sidecar "installed" banners + repeated app.js status
        chatter. Errors always pass through. Full logs: localStorage.antcvVerboseConsole=1. -->
@@ -361,7 +365,7 @@
           app.src = 'app.js?v=1.50.763';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.50.771';
+            vo.src = 'antcv-version-override.js?v=1.50.772';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);

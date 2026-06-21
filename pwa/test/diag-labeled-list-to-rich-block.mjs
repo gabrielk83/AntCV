@@ -66,8 +66,9 @@ if (!r.tools || r.tools.type!=='rich_block') { pass=false; fails.push('tools not
 if (r.tools && !r.tools.leadColon) { pass=false; fails.push('tools should have leadColon'); }
 if (r.tools && r.tools.rows[0] !== 'G:Engineering') { pass=false; fails.push('tools group row wrong: '+JSON.stringify(r.tools.rows)); }
 if (r.tools && r.tools.rows[1] !== 'CAD|SolidWorks, CATIA') { pass=false; fails.push('tools l/v row wrong: '+JSON.stringify(r.tools.rows)); }
-// regulatory is now EXCLUDED (kept as labeled_list — legacy control sidecars corrupt a rich_block one)
-if (!r.regulatory || r.regulatory.type !== 'labeled_list') { pass=false; fails.push('regulatory should stay labeled_list (excluded), got '+(r.regulatory&&r.regulatory.type)); }
+// regulatory converts to rich_block again (un-excluded); its label-only "Automotive" becomes a group.
+if (!r.regulatory || r.regulatory.type !== 'rich_block') { pass=false; fails.push('regulatory should convert to rich_block, got '+(r.regulatory&&r.regulatory.type)); }
+if (r.regulatory && r.regulatory.rows[0] !== 'G:Automotive') { pass=false; fails.push('regulatory label-only should become a group: '+JSON.stringify(r.regulatory&&r.regulatory.rows)); }
 if (!r.certs || r.certs.type!=='rich_block') { pass=false; fails.push('certs not rich_block'); }
 if (r.certs && r.certs.rows[0] !== '|Six Sigma Black Belt') { pass=false; fails.push('certs row wrong: '+JSON.stringify(r.certs.rows)); }
 if (r.certsCenter !== 'center') { pass=false; fails.push('certs not default-centered (got '+r.certsCenter+')'); }

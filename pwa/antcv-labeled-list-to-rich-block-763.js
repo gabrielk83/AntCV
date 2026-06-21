@@ -18,7 +18,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.763c';
+  var VERSION = '1.50.763e';
   if (window.__antcvLabeledListToRichBlock763 === VERSION) return;
   window.__antcvLabeledListToRichBlock763 = VERSION;
 
@@ -62,15 +62,12 @@
     centerIds.push(s.id);
     return ns;
   }
-  // 415-managed sidebar sections — antcv-sections-normalize-415.js owns these: it splits `additional`
-  // (a labeled_list) into Interests/Languages/Accessibility and normalises the interests item shape
-  // (strips b/t). Converting them to rich_block BREAKS that split (interests goes empty), so NEVER
-  // convert them — and RESTORE any that a prior 763 pass mis-converted, back to their expected type.
-  // regulatory: legacy labeled_list control sidecars (group-name-visibility / additional-info-row-
-  // controls / sidebar subsection pagebreaks) corrupt a rich_block regulatory (stray bOff, blanked
-  // rows) — owner reported "regulatory context came empty". Keep it labeled_list (its render + those
-  // sidecars are battle-tested) and restore any mis-converted one. Tools & certs stay converted.
-  var MANAGED = { additional: 'labeled_list', interests: 'bullets', languages: 'labeled_list', accessibility: 'labeled_list', regulatory: 'labeled_list' };
+  // Only the 415-DERIVED sidebar sections stay un-converted: antcv-sections-normalize-415.js splits a
+  // labeled_list `additional` into Interests/Languages/Accessibility and owns the interests item
+  // shape — converting those breaks the split. Tools & Methods + Regulatory + Certs DO convert to
+  // rich_block; the empties the owner saw were BLANKED data, now restored by
+  // antcv-sidebar-repopulate-758.js (per owner: fix the data push, do NOT exclude the section).
+  var MANAGED = { additional: 'labeled_list', interests: 'bullets', languages: 'labeled_list', accessibility: 'labeled_list' };
   function unconvert(s, targetType) {
     if (s.type !== 'rich_block') return s;
     var items;

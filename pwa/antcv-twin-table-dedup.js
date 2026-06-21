@@ -16,11 +16,32 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.764';
+  var VERSION = '1.50.767';
   if (window.__antcvTwinTableDedup === VERSION) return;
   window.__antcvTwinTableDedup = VERSION;
 
-  function off() { try { return localStorage.getItem('antcv:twin-dedup:off') === '1'; } catch (_) { return false; } }
+  // OPT-IN (owner 2026-06-22: "some rows hidden in panel"): hiding CORE COMPETENCIES rows surprised
+  // the owner — a hidden row in the editor panel reads as a bug. Default OFF; the generation prompt
+  // (TABLES-DISTINCT-001) + a regenerate produce distinct tables. Enable: localStorage['antcv:twin-dedup:on']='1'.
+  function off() { try { return localStorage.getItem('antcv:twin-dedup:on') !== '1'; } catch (_) { return true; } }
+  // UN-HIDE any rows the prior (default-ON) pass hid, ONCE, so existing users get their CORE rows
+  // back. Guarded so a later MANUAL hide isn't re-shown on every load.
+  function unhidePrior() {
+    try {
+      if (localStorage.getItem('antcv:twin-unhid') === '1') return;
+      localStorage.setItem('antcv:twin-unhid', '1');
+      var secs = JSON.parse(localStorage.getItem('sections') || '{}'); if (!secs || !Array.isArray(secs.cv)) return;
+      var changed = false;
+      var cv = secs.cv.map(function (s) {
+        if (!s || s.id !== 'core_comp' || !s.hidden || typeof s.hidden !== 'object') return s;
+        var h = Object.assign({}, s.hidden), touched = false;
+        Object.keys(h).forEach(function (k) { if (h[k]) { delete h[k]; touched = true; } });
+        if (touched) { changed = true; return Object.assign({}, s, { hidden: h }); }
+        return s;
+      });
+      if (changed) { secs.cv = cv; localStorage.setItem('sections', JSON.stringify(secs)); try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { reason: 'twin-dedup-unhide' } })); } catch (_) {} }
+    } catch (_) {}
+  }
   function readSections() {
     try { var v = JSON.parse(localStorage.getItem('sections') || '{}'); return (v && typeof v === 'object') ? v : {}; }
     catch (_) { return {}; }
@@ -63,5 +84,6 @@
   }
   window.addEventListener('antcv:sections-updated', run);
   [0, 500, 1400, 2800].forEach(function (ms) { setTimeout(run, ms); });
-  window.AntcvTwinTableDedup = { version: VERSION, run: run };
+  [0, 700].forEach(function (ms) { setTimeout(unhidePrior, ms); });
+  window.AntcvTwinTableDedup = { version: VERSION, run: run, unhidePrior: unhidePrior };
 })();

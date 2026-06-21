@@ -39,6 +39,8 @@ await page.addInitScript(([secs, pi])=>{
   localStorage.setItem('session', JSON.stringify({email:'d@e.com',ts:1717000000000}));
   localStorage.setItem('step', JSON.stringify('editor')); localStorage.setItem('doc', JSON.stringify('cv'));
   localStorage.setItem('sections', JSON.stringify(secs)); localStorage.setItem('personalInfo', JSON.stringify(pi));
+  localStorage.setItem('antcv:twin-dedup:on', '1'); // dedup is opt-in (default off); enable to test it
+  localStorage.setItem('antcv:twin-unhid', '1');     // skip the one-time unhide so the test's hides stand
 }, [sections, personalInfo]);
 await page.goto(`http://127.0.0.1:${port}/index.html`, { waitUntil:'domcontentloaded', timeout:60000 });
 await page.waitForTimeout(9000);

@@ -6233,6 +6233,22 @@
               __pubNonAcad = ((__r.stylePrefs && __r.stylePrefs.style) || "") !== "research-formal";
             } catch (_) {}
           }
+          // RICHPUB-CJLR-001: richPub honours per-row alignment (antcvItemAlignment[sid]) +
+          // the whole-section __group__; non-rich list_italic stays justified as before.
+          let __pubAl = {};
+          if (e.richPub) {
+            try {
+              __pubAl =
+                (JSON.parse(localStorage.getItem("antcvItemAlignment") || "{}") ||
+                  {})[e.id] || {};
+            } catch (_) {}
+          }
+          const __pubRowAlign = (n) => {
+            const v = __pubAl["items." + n] || __pubAl[String(n)] || __pubAl.__group__;
+            return ["left", "center", "right", "justify"].includes(v)
+              ? v
+              : "justify";
+          };
           return React.createElement(
             React.Fragment,
             null,
@@ -6254,7 +6270,7 @@
                     color: S ? __sbInk : "#333",
                     marginBottom: 3,
                     lineHeight: 1.3,
-                    textAlign: "justify",
+                    textAlign: e.richPub ? __pubRowAlign(n) : "justify",
                     overflowWrap: "break-word",
                     wordBreak: "break-word",
                   },

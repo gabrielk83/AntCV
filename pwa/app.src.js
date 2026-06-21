@@ -3152,7 +3152,7 @@
               type: "education",
               items: [
                 {
-                  deg: "References",
+                  deg: "[References]",
                   sch: "[available on request - or list your referees here]",
                 },
               ],
@@ -3174,6 +3174,10 @@
                       {
                         l: "Methods",
                         v: "[How you work: requirements, validation, stakeholder mapping, design reviews, etc.]",
+                      },
+                      {
+                        l: "Expertise",
+                        v: "[Domain expertise / specialisations relevant to the role]",
                       },
                     ],
             },

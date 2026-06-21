@@ -21,7 +21,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.757c';
+  var VERSION = '1.50.757d';
   if (window.__antcvPublicationsMain757 === VERSION) return;
   window.__antcvPublicationsMain757 = VERSION;
 
@@ -133,12 +133,30 @@
     });
     // fallback to the flat (markup-bearing) publications array only if structured gave nothing
     if (!out.length && Array.isArray(pi.publications)) pi.publications.forEach(push);
-    // append the patent (separate top-level fields), if present and not already represented
+    // append the patent (separate top-level fields) ONLY if its number is not already represented
+    // in a structured citation (publicationsStructured can ALSO carry the patent → would duplicate).
     if (pi.patentNumber) {
-      var pd = stripMarkup(pi.patentDescription || '');
-      push((pd || 'Patent') + ' — Patent no. ' + String(pi.patentNumber).trim());
+      var pnum = String(pi.patentNumber).trim();
+      if (pnum && !out.some(function (it) { return it.indexOf(pnum) > -1; })) {
+        var pd = stripMarkup(pi.patentDescription || '');
+        push((pd || 'Patent') + ' — Patent no. ' + pnum);
+      }
     }
     return out;
+  }
+  // PUB-PATENT-DEDUP-001: a bare appended patent item ("… — Patent no. <num>", lowercase "no.") is
+  // dropped when ANOTHER item already cites <num> — heals data where the structured citation and the
+  // top-level patent both rendered. Only the appended form matches the regex, so this never touches a
+  // normal citation. Idempotent; runs on every pass, including already-populated sections.
+  function dedupPatentItems(items) {
+    if (!Array.isArray(items) || items.length < 2) return items;
+    return items.filter(function (it, idx) {
+      var m = /Patent no\. (\d+)/.exec(String(it));
+      if (!m) return true;
+      var num = m[1];
+      for (var k = 0; k < items.length; k++) { if (k !== idx && String(items[k]).indexOf(num) > -1) return false; }
+      return true;
+    });
   }
 
   function run() {
@@ -163,6 +181,11 @@
         if (ps && (ps.id === 'pubs' || ps.richPub) && sectionIsEmpty(ps.items)) {
           var cites = citationsFromPI(pi);
           if (cites.length) { ps.items = cites; if ('pubFields' in ps) delete ps.pubFields; changed = true; }
+        }
+        // heal a duplicated patent on EVERY pubs section (even already-populated ones).
+        if (ps && (ps.id === 'pubs' || ps.richPub) && Array.isArray(ps.items)) {
+          var dd = dedupPatentItems(ps.items);
+          if (dd.length !== ps.items.length) { ps.items = dd; if ('pubFields' in ps) delete ps.pubFields; changed = true; }
         }
       }
       if (!changed) return;

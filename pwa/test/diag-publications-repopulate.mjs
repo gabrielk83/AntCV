@@ -24,6 +24,8 @@ const personalInfo = {
     { name:'Integration of Suspended Carbon Nanotubes into Micro-Fabricated Devices', details:'Gabriel A. Karp et al., J. Micromechanics & Microengineering, 2009', visible:true },
     { name:'Carbon Nanotube Integration Procedures into NEMS Devices', details:'Gabriel A. Karp et al., Eurosensors Conference Proceedings (poster), 2008', visible:true },
     { name:'A Hidden One', details:'should not appear', visible:false },
+    // the patent ALSO lives in publicationsStructured (owner's real shape) — must NOT be re-appended
+    { name:'Patent No. 241997 / U.S. Patent Application No. 20190072836', details:'Co-inventor, cover-window geometry', visible:true },
   ],
   publications:['<b>“Integration of Suspended Carbon Nanotubes…”</b> - …'],
   patentNumber:'241997', patentDescription:'Co-inventor - cover-window geometry reducing optical crosstalk',
@@ -46,7 +48,7 @@ const r = await page.evaluate(()=>{
   const pubs = (secs.cv||[]).find(s=>s.id==='pubs')||{};
   const txt = [...document.querySelectorAll('.antcv-preview-paper')].map(p=>p.textContent).join('\n');
   return { items: pubs.items||[], hasPubFields: 'pubFields' in pubs,
-    pvPub:/Integration of Suspended Carbon Nanotubes/.test(txt), pvPatent:/Patent no\. 241997/.test(txt) };
+    pvPub:/Integration of Suspended Carbon Nanotubes/.test(txt), pvPatent:/241997/.test(txt) };
 });
 await browser.close(); await new Promise(rr=>server.close(rr));
 
@@ -55,11 +57,13 @@ console.log('app errors:', errs.length, errs.slice(0,2).join(' | '));
 
 let pass=true; const fails=[];
 if (errs.length) { pass=false; fails.push('app errors: '+errs.slice(0,2).join(' | ')); }
-if (r.items.length !== 3) { pass=false; fails.push('expected 3 items (2 visible pubs + patent), got '+r.items.length); }
+// 2 visible pubs + 1 structured patent; the top-level patent must NOT be re-appended (dedup by number)
+if (r.items.length !== 3) { pass=false; fails.push('expected 3 items (2 visible pubs + 1 structured patent, no dup), got '+r.items.length); }
+if (r.items.filter(i=>/241997/.test(i)).length !== 1) { pass=false; fails.push('patent 241997 should appear exactly once, got '+r.items.filter(i=>/241997/.test(i)).length); }
 // separator may be em-dash OR hyphen (the owner's em-dash→hyphen ban sidecar hyphenates it — both correct)
 if (!r.items.some(i=>/^Integration of Suspended Carbon Nanotubes.* [—-] Gabriel A\. Karp et al\., J\. Micromechanics/.test(i))) { pass=false; fails.push('pub 1 not composed Name — details: '+JSON.stringify(r.items)); }
 if (r.items.some(i=>/Hidden One/.test(i))) { pass=false; fails.push('hidden (visible:false) pub should be excluded'); }
-if (!r.items.some(i=>/Patent no\. 241997/.test(i))) { pass=false; fails.push('patent not appended'); }
+if (!r.items.some(i=>/241997/.test(i))) { pass=false; fails.push('patent 241997 missing entirely'); }
 if (r.items.some(i=>/^\[.*\]$/.test(i))) { pass=false; fails.push('placeholder still present'); }
 if (r.hasPubFields) { pass=false; fails.push('stale pubFields not cleared'); }
 if (!r.pvPub || !r.pvPatent) { pass=false; fails.push('preview missing pub/patent: '+JSON.stringify({pvPub:r.pvPub,pvPatent:r.pvPatent})); }

@@ -42,6 +42,7 @@ When applying a patch:
 5. Bump the `?v=` query string on the changed file in `index.html` so the service worker invalidates.
 6. Bump `sw.js` `CACHE` constant.
 7. Update `pwa/antcv-version-override.js` `TARGET_VERSION` and extend `STALE_VERSIONS`.
+8. Bump the `window.ANTCV_VERSION = '1.50.x'` seed in `index.html` (the deferred module ~line 326) to the new version — the login gate reads it BEFORE version-override pins TARGET; a stale seed flashes the wrong version on boot (the "1.50.9-babel-fish" bug, fixed 1.50.775).
 
 ## STALE_VERSIONS invariant (do not violate)
 

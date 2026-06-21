@@ -22,7 +22,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.801';
+  var VERSION = '1.50.802';
   if (window.__antcvRichBlockShapeFix === VERSION) return;
   window.__antcvRichBlockShapeFix = VERSION;
 
@@ -50,19 +50,38 @@
     return null;                                          // unknown / already {t:""} → leave it
   }
 
+  function sectionEmpty(sec) {
+    var its = Array.isArray(sec.items) ? sec.items : [];
+    var contentReal = typeof sec.content === 'string' && sec.content.trim() && !/^\s*\[[^\]]*\]\s*$/.test(sec.content);
+    if (contentReal) return false;
+    return !its.some(function (it) {
+      return it && ((typeof it === 'string' && it.trim()) || (it.t != null && String(it.t).trim()) || (it.b != null && String(it.b).trim()));
+    });
+  }
+
   function fixWorkStyle(sec, pi) {
     if (!sec || sec.id !== 'work_style' || sec.type !== 'rich_block') return false;
-    var its = Array.isArray(sec.items) ? sec.items : [];
-    var hasContent = its.some(function (it) {
-      return it && ((typeof it === 'string' && it.trim()) || (it.t != null && String(it.t).trim()));
-    });
-    if (hasContent) return false;
+    if (!sectionEmpty(sec)) return false;
     var ws = (pi && pi.workStyle) || {};
     var line = (activeLang() === 'da' ? ws.work_style_line_da : ws.work_style_line_en) ||
       ws.summary || (Array.isArray(ws.keywords) ? ws.keywords.join(', ') : '');
     line = String(line || '').trim();
     if (!line) return false;
-    sec.items = [{ b: '', t: line }];
+    // WORK-STYLE-LEADIN-001 (owner 2026-06-23): show a bold greenish "Working style"
+    // lead-in (the rich_block `b` renders bold + accent) before the line.
+    sec.items = [{ b: activeLang() === 'da' ? 'Arbejdsstil' : 'Working style', t: line }];
+    return true;
+  }
+
+  // PROFILE-FALLBACK-001 (owner 2026-06-23): the CV PROFILE came out empty (the gen
+  // produced no profile_content and nothing fell back). The kernel `background` IS the
+  // candidate's profile text — use it when PROFILE is empty so it is never blank.
+  function fillProfile(sec, pi) {
+    if (!sec || sec.id !== 'profile' || sec.type !== 'rich_block') return false;
+    if (!sectionEmpty(sec)) return false;
+    var bg = String((pi && pi.background) || '').trim();
+    if (!bg) return false;
+    sec.items = [{ b: '', t: bg }];
     return true;
   }
 
@@ -103,6 +122,7 @@
           }
           if (bridgeContent(s)) changed = true;
           if (fixWorkStyle(s, pi)) changed = true;
+          if (fillProfile(s, pi)) changed = true;
         });
       });
       if (!changed) return;

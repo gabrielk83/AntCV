@@ -239,8 +239,12 @@
       if(r.getAttribute('data-antcv-core-row-preview-align')!==a) r.setAttribute('data-antcv-core-row-preview-align',a);
       Array.from(r.querySelectorAll('td,th,span,div,p')).forEach(x=>{ if(x.style.textAlign!==a) x.style.textAlign=a; });
     };
-    // Editor row 0 is the table heading row, so its CJLR controls preview table headings only.
-    headerRows.forEach(r=>applyAlign(r,getAlign(0)));
+    // HEADER-ALIGN-UNIFY-001 (owner 2026-06-23: header "dancing" between center/left): the
+    // React render owns the header alignment via section.headerAlign (default center, 1.50.795).
+    // This sweep used getAlign(0) (= rowAlign[0]) — a DIFFERENT source — so the two fought every
+    // sweep and the header flickered. Read the SAME section.headerAlign so they agree.
+    var __hAlign = (function(){ try { var s=coreSection(); var v=s&&s.headerAlign; return ALIGN.includes(v)?v:'center'; } catch(_){ return 'center'; } })();
+    headerRows.forEach(r=>applyAlign(r,__hAlign));
     bodyRows.forEach((r,i)=>applyAlign(r,getAlign(i+1)));
     // 1.50.203: the page split is now rendered NATIVELY in app.js (React) — the
     // table renderer reads the SAME antcv:itemPages model (key = full-table row

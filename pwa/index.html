@@ -42,7 +42,7 @@
        shows a "Loading…" cover for returning users until the editor is ready, so
        the wizard flash + palette/tone settling are masked. New users see the
        real wizard. Escape: localStorage['antcv:disable-loading-gate']='1'. -->
-  <script src="antcv-login-loading-gate.js?v=1.50.722"></script>
+  <script src="antcv-login-loading-gate.js?v=1.50.775"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script>window.loadMammoth=()=>new Promise((res,rej)=>{if(window.mammoth)return res(window.mammoth);const s=document.createElement('script');s.src='https://unpkg.com/mammoth/mammoth.browser.min.js';s.onload=()=>res(window.mammoth);s.onerror=()=>rej(new Error('Failed to load Mammoth (.docx parser)'));document.head.appendChild(s);});</script>
@@ -323,7 +323,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.50.763';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.50.9';
+  window.ANTCV_VERSION = '1.50.775';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -365,7 +365,7 @@
           app.src = 'app.js?v=1.50.763';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.50.774';
+            vo.src = 'antcv-version-override.js?v=1.50.775';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);

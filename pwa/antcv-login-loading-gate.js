@@ -189,7 +189,10 @@
       } catch (_) {}
     }
     applyVer();
-    [300, 1000, 2500].forEach(function (ms) { try { setTimeout(applyVer, ms); } catch (_) {} });
+    // Re-apply on a spread of delays so the chip lands on the CURRENT version even if
+    // version-override.js pins window.ANTCV_VERSION late (it loads dynamically) — without the
+    // later ticks the chip could freeze on the early seed (the stale "1.50.9-babel-fish" report).
+    [300, 1000, 2500, 4500, 7000].forEach(function (ms) { try { setTimeout(applyVer, ms); } catch (_) {} });
     ver.style.cssText = 'font-size:10px;font-weight:600;color:rgba(255,255,255,0.52);';
     brand.appendChild(h1); brand.appendChild(ver);
 

@@ -18,7 +18,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.763b';
+  var VERSION = '1.50.763c';
   if (window.__antcvLabeledListToRichBlock763 === VERSION) return;
   window.__antcvLabeledListToRichBlock763 = VERSION;
 
@@ -66,7 +66,11 @@
   // (a labeled_list) into Interests/Languages/Accessibility and normalises the interests item shape
   // (strips b/t). Converting them to rich_block BREAKS that split (interests goes empty), so NEVER
   // convert them — and RESTORE any that a prior 763 pass mis-converted, back to their expected type.
-  var MANAGED = { additional: 'labeled_list', interests: 'bullets', languages: 'labeled_list', accessibility: 'labeled_list' };
+  // regulatory: legacy labeled_list control sidecars (group-name-visibility / additional-info-row-
+  // controls / sidebar subsection pagebreaks) corrupt a rich_block regulatory (stray bOff, blanked
+  // rows) — owner reported "regulatory context came empty". Keep it labeled_list (its render + those
+  // sidecars are battle-tested) and restore any mis-converted one. Tools & certs stay converted.
+  var MANAGED = { additional: 'labeled_list', interests: 'bullets', languages: 'labeled_list', accessibility: 'labeled_list', regulatory: 'labeled_list' };
   function unconvert(s, targetType) {
     if (s.type !== 'rich_block') return s;
     var items;

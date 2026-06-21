@@ -796,7 +796,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <!-- RICH-BLOCK-001 (2026-06-22): editor surface for the universal composite section
      type:"rich_block" (headline/rule toggles + section CJLR + {lead-in, body} rows with
      per-row CJLR/Page/Enhance/Fit/Delete). app.js delegates to window.AntcvRichBlockEditor. -->
-<script src="antcv-rich-block-editor.js?v=1.50.762" defer></script>
+<script src="antcv-rich-block-editor.js?v=1.50.763" defer></script>
 <!-- PUBLICATIONS-MAIN-001 Phase 2+3: the rich Publications & Patents editor (5 fields/row +
      per-row CJLR/Page/Enhance/Fit + whole-section bar). app.js delegates to window.AntcvPublicationsEditor. -->
 <script src="antcv-publications-editor.js?v=1.50.761" defer></script>
@@ -806,6 +806,8 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <!-- RICH-BLOCK-001 Phase C: convert the six named single-paragraph sections (opening, who, why,
      closure, profile, work_style) into rich_block so they gain the full controls. Idempotent. -->
 <script src="antcv-text-sections-to-rich-block-759.js?v=1.50.759c" defer></script>
+<!-- RICH-BLOCK-GROUP-001: fold labeled_list (Tools/Regulatory/Additional) + list (Certifications) into rich_block with group rows. -->
+<script src="antcv-labeled-list-to-rich-block-763.js?v=1.50.763" defer></script>
 <!-- RICH-BLOCK-001 / HWIC: convert HOW I WOULD CONTRIBUTE (text_bullets) into rich_block —
      intro/closing as paragraphs, bullets as marker rows (mk:true). Idempotent. -->
 <script src="antcv-hwic-to-rich-block-760.js?v=1.50.760b" defer></script>

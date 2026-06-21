@@ -1636,6 +1636,8 @@ function normalizeSections(raw) {
         const items = (s.items || []).map((it, i) => {
           if (s.hidden && s.hidden[i]) return null;
           const row = it && typeof it === 'object' ? it : { t: String(it || '') };
+          // grp row = bold sub-heading (no lead/body); drop if empty.
+          if (row.grp) { const gt = clean(row.t) || ''; return gt ? { grp: true, t: gt } : null; }
           const b = row.bOff ? '' : (clean(row.b) || '');
           const t = row.tOff ? '' : (clean(row.t) || '');
           if (!b && !t) return null;
@@ -1658,6 +1660,7 @@ function normalizeSections(raw) {
           ...(s.leadBold === false ? { leadBold: false } : {}),
           ...(s.leadItalic ? { leadItalic: true } : {}),
           ...(s.leadColor ? { leadColor: s.leadColor } : {}),
+          ...(s.leadColon ? { leadColon: true } : {}),
         };
       }
 

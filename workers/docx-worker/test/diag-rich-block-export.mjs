@@ -65,6 +65,13 @@ const emojiXml = unzipEntry(await gen(payload({ id:'profile2', title:'PROFILE', 
   { b:'', t:'disciplined product ownership', mk:'✅' },
 ] })), 'word/document.xml').toString('utf8');
 const emojiMk = { rocket: emojiXml.includes('🚀'), check: emojiXml.includes('✅'), numPr: (emojiXml.match(/<w:numPr>/g) || []).length };
+// group rows + leadColon: a grp row exports a bold sub-heading; leadColon makes the lead "Label: ".
+const grpXml = unzipEntry(await gen(payload({ id:'tools', title:'TOOLS & METHODS', loc:'main', on:true, type:'rich_block', leadColon:true, items:[
+  { grp:true, t:'Engineering' },
+  { b:'CAD', t:'SolidWorks' },
+] })), 'word/document.xml').toString('utf8');
+const grpTexts = (grpXml.match(/<w:t[ >][^<]*<\/w:t>/g) || []).map(s => s.replace(/<[^>]+>/g, ''));
+const grp = { heading: grpTexts.includes('Engineering'), colonLead: grpTexts.some(t => t === 'CAD: '), body: grpTexts.includes('SolidWorks') };
 // whole-section lead style: bold off + italic on + custom colour applied to the lead run.
 const leadXml = unzipEntry(await gen(payload({ id:'profile2', title:'PROFILE', loc:'main', on:true, type:'rich_block',
   leadBold:false, leadItalic:true, leadColor:'#FF0000', items:[ { b:'Hands-on', t:'built and operated rigs' } ] })), 'word/document.xml').toString('utf8');
@@ -87,6 +94,7 @@ checks.push(['ruleOff keeps heading, drops the rule', noRule.title && noRule.pBd
 checks.push(['plain rows have no list numbering', normal.numPr === 0]);
 checks.push(['marker rows export as a numbered list', markered.numPr >= 2 && markered.bodyA]);
 checks.push(['per-row emoji markers export as literal glyphs (no numbering)', emojiMk.rocket && emojiMk.check && emojiMk.numPr === 0]);
+checks.push(['group row exports a sub-heading + leadColon makes "Label: "', grp.heading && grp.colonLead && grp.body]);
 checks.push(['whole-section lead style (bold-off + italic + colour) applies to the lead run', leadStyle.color && leadStyle.italic && leadStyle.notBold]);
 
 let pass = true;

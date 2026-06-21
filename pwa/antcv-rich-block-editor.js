@@ -50,6 +50,8 @@
       function moveRow(i, delta) { var o = rows.slice(); var r2 = i + delta; if (r2 < 0 || r2 >= o.length) return; var tmp = o[i]; o[i] = o[r2]; o[r2] = tmp; d({ items: o }); }
       function deleteRow(i) { d({ items: rows.filter(function (x, j) { return j !== i; }), hidden: (e.hidden || []).filter(function (x, j) { return j !== i; }) }); }
       function addRow() { d({ items: rows.concat([{ b: "", t: "" }]) }); }
+      function addGroup() { d({ items: rows.concat([{ grp: true, t: "" }]) }); }
+      function toggleGrp(i) { var o = rows.map(function (x, j) { return j === i ? (x.grp ? { b: x.b || "", t: x.t || "" } : { grp: true, t: x.t || "" }) : x; }); d({ items: o }); }
       function toggleRowHidden(i) { var hd = (e.hidden || []).slice(); hd[i] = !hd[i]; d({ hidden: hd }); }
 
       var btn = function (extra) { return Object.assign({ fontSize: 10, padding: "2px 6px", borderRadius: 3, cursor: "pointer", background: "none", whiteSpace: "nowrap", flexShrink: 0 }, extra || {}); };
@@ -57,8 +59,8 @@
       // ---- whole-section bar: headline toggle · rule toggle · section CJLR ----
       var groupAlign = getGroup();
       var headOff = !!e.headlineOff, ruleOff = !!e.ruleOff;
-      // Whole-section lead-in ("Verb"/starter) style — bold / italic / colour (NOT per row).
-      var leadBold = e.leadBold !== false, leadItalic = !!e.leadItalic, leadColor = e.leadColor || accent;
+      // Whole-section lead-in ("Verb"/starter) style — bold / italic / colour / colon (NOT per row).
+      var leadBold = e.leadBold !== false, leadItalic = !!e.leadItalic, leadColor = e.leadColor || accent, leadColon = !!e.leadColon;
       var bar = h("div", { style: { display: "flex", gap: 6, alignItems: "center", marginBottom: 8, flexWrap: "wrap", paddingBottom: 6, borderBottom: "1px dashed #e3e3e3" } },
         h("button", { onClick: function () { d({ headlineOff: !headOff }); }, title: headOff ? "Headline hidden — show it" : "Headline shown — hide it", style: btn({ border: "1px solid " + (headOff ? "#999" : accent), color: headOff ? "#999" : accent }) }, (headOff ? "🙈" : "👁") + " Headline"),
         h("button", { onClick: function () { if (!headOff) d({ ruleOff: !ruleOff }); }, disabled: headOff, title: headOff ? "No rule without a headline" : (ruleOff ? "Rule hidden — show it" : "Rule shown — hide it"), style: btn({ border: "1px solid " + (headOff ? "#ddd" : ruleOff ? "#999" : accent), color: headOff ? "#ddd" : ruleOff ? "#999" : accent, cursor: headOff ? "not-allowed" : "pointer" }) }, (ruleOff ? "🚫" : "—") + " Rule"),
@@ -66,12 +68,26 @@
         h("span", { style: { fontSize: 10, color: "#888", marginLeft: 4 } }, "Lead:"),
         h("button", { onClick: function () { d({ leadBold: !leadBold }); }, title: "Lead-in bold (whole section)", style: btn({ border: "1px solid " + (leadBold ? accent : "#bbb"), color: leadBold ? accent : "#bbb", fontWeight: 800, minWidth: 22 }) }, "B"),
         h("button", { onClick: function () { d({ leadItalic: !leadItalic }); }, title: "Lead-in italic (whole section)", style: btn({ border: "1px solid " + (leadItalic ? accent : "#bbb"), color: leadItalic ? accent : "#bbb", fontStyle: "italic", fontWeight: 700, minWidth: 22 }) }, "I"),
-        h("input", { type: "color", value: leadColor, onChange: function (x) { d({ leadColor: x.target.value }); }, title: "Lead-in colour (whole section)", style: { width: 26, height: 22, padding: 0, border: "1px solid #ccc", borderRadius: 3, cursor: "pointer", flexShrink: 0 } })
+        h("input", { type: "color", value: leadColor, onChange: function (x) { d({ leadColor: x.target.value }); }, title: "Lead-in colour (whole section)", style: { width: 26, height: 22, padding: 0, border: "1px solid #ccc", borderRadius: 3, cursor: "pointer", flexShrink: 0 } }),
+        h("button", { onClick: function () { d({ leadColon: !leadColon }); }, title: leadColon ? "Lead-in followed by a colon (Label: value) — click to remove" : "No colon after the lead-in — click to add (Label: value)", style: btn({ border: "1px solid " + (leadColon ? accent : "#bbb"), color: leadColon ? accent : "#bbb", fontWeight: 700, minWidth: 22 }) }, "L:")
       );
 
       // ---- rows ----
       var rowEls = rows.map(function (ev, i) {
         var hiddenRow = !!(e.hidden && e.hidden[i]);
+        // group sub-heading row — a single heading input + reorder/un-group/delete.
+        if (ev.grp) {
+          return h("div", { key: i, style: { border: "1px solid #d8e8e6", borderRadius: 4, padding: 5, marginBottom: 6, background: hiddenRow ? "#fafafa" : "#f1faf9", opacity: hiddenRow ? 0.5 : 1, display: "flex", gap: 4, alignItems: "center" } },
+            h("div", { style: { display: "grid", gap: 0, justifyItems: "center", width: 20, flexShrink: 0 } },
+              h("button", { onClick: function () { moveRow(i, -1); }, disabled: i === 0, title: "Move up", style: { fontSize: 10, border: "none", background: "none", color: i === 0 ? "#ccc" : "#666", padding: 0, cursor: i === 0 ? "default" : "pointer" } }, "▲"),
+              h("button", { onClick: function () { moveRow(i, 1); }, disabled: i === rows.length - 1, title: "Move down", style: { fontSize: 10, border: "none", background: "none", color: i === rows.length - 1 ? "#ccc" : "#666", padding: 0, cursor: i === rows.length - 1 ? "default" : "pointer" } }, "▼")
+            ),
+            h("span", { style: { fontSize: 10, color: "#0a8", fontWeight: 700, flexShrink: 0 } }, "▾ Group"),
+            h("input", { value: ev.t || "", onChange: function (x) { updateRow(i, { t: x.target.value }); }, placeholder: "Sub-group heading (e.g. Engineering)", style: { flex: "1 1 auto", fontSize: 11, padding: 4, border: "1px solid #cfe6e3", borderRadius: 3, minWidth: 0, fontWeight: 700, color: "#0a8" } }),
+            h("button", { onClick: function () { toggleGrp(i); }, title: "Convert to a normal row", style: btn({ border: "1px solid #888", color: "#888", minWidth: 22 }) }, "↩"),
+            h("button", { onClick: function () { deleteRow(i); }, title: "Delete group", style: btn({ border: "1px solid #e55", color: "#e55", fontSize: 10 }) }, "✕")
+          );
+        }
         var bOff = !!ev.bOff, tOff = !!ev.tOff;
         var thisPage = getPage(i), thisAlign = getAlign(i);
         var mk = ev.mk, mkOn = !!mk, mkEmoji = typeof mk === "string" ? mk : "";
@@ -92,6 +108,7 @@
             h("button", { onClick: function () { setAlign(i, ALIGNS[(ALIGNS.indexOf(thisAlign) + 1) % ALIGNS.length] || "justify"); }, title: "Alignment: " + (ALABEL[thisAlign] || thisAlign) + ". Click to cycle.", style: btn({ border: "1px solid #7b2ff2", color: "#7b2ff2", background: "rgba(123,47,242,.06)", fontSize: 11, minWidth: 22 }) }, AICON[thisAlign] || AICON.justify),
             onEnrich ? h("button", { onClick: function () { onEnrich("item:" + i); }, disabled: busyEnrich || busyCompress, title: "Enhance this row", style: btn({ border: "1px solid " + (busyEnrich ? "#ccc" : "#10b981"), color: busyEnrich ? "#ccc" : "#10b981", fontSize: 9, cursor: busyEnrich || busyCompress ? "wait" : "pointer" }) }, busyEnrich ? "⏳" : "✨") : null,
             onCompress ? h("button", { onClick: function () { onCompress("item:" + i); }, disabled: busyCompress || busyEnrich, title: "Fit this row — tighten to one line", style: btn({ border: "1px solid " + (busyCompress ? "#ccc" : "#7c3aed"), color: busyCompress ? "#ccc" : "#7c3aed", fontSize: 9, cursor: busyCompress || busyEnrich ? "wait" : "pointer" }) }, busyCompress ? "⏳" : "⇥") : null,
+            h("button", { onClick: function () { toggleGrp(i); }, title: "Make this a group sub-heading", style: btn({ border: "1px solid #888", color: "#888", minWidth: 22 }) }, "▾"),
             h("button", { onClick: function () { deleteRow(i); }, title: "Delete row", style: btn({ border: "1px solid #e55", color: "#e55", fontSize: 10 }) }, "✕")
           ),
           // line 2: body toggle + body textarea
@@ -102,9 +119,12 @@
         );
       });
 
-      var addBtn = h("button", { onClick: addRow, style: { fontSize: 11, background: "none", border: "1px solid " + accent, color: accent, borderRadius: 4, padding: "4px 10px", cursor: "pointer", marginTop: 2 } }, "+ Row");
+      var addBtns = h("div", { style: { display: "flex", gap: 6, marginTop: 2 } },
+        h("button", { onClick: addRow, style: { fontSize: 11, background: "none", border: "1px solid " + accent, color: accent, borderRadius: 4, padding: "4px 10px", cursor: "pointer" } }, "+ Row"),
+        h("button", { onClick: addGroup, style: { fontSize: 11, background: "none", border: "1px solid #0a8", color: "#0a8", borderRadius: 4, padding: "4px 10px", cursor: "pointer" } }, "+ Group")
+      );
 
-      return h(R.Fragment, null, bar, rowEls, addBtn);
+      return h(R.Fragment, null, bar, rowEls, addBtns);
     }
 
     window.AntcvRichBlockEditor = RichBlockEditor;

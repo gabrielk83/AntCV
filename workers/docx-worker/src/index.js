@@ -26154,12 +26154,34 @@ function renderRichBlock(s, ctx, isSidebar) {
       })
     ]
   }), "make");
+  const sep = s.leadColon ? ": " : " ";
   items.forEach((it, i) => {
     const row = it && typeof it === "object" ? it : { t: String(it || "") };
-    const lead = row.b ? row.b + " " : "";
+    const align = paraAlignPath(s, "items." + i + ".t") ?? paraAlignPath(s, "items." + i) ?? groupCjlr ?? AlignmentType.JUSTIFIED;
+    // RICH-BLOCK-GROUP-001: a grp row is a bold sub-heading (like labeled_list).
+    if (row.grp) {
+      const txt = String(row.t || "").trim();
+      if (!txt) return;
+      if (rowPage(i) >= 2) out.push(pbBreakPara());
+      out.push(new Paragraph({
+        spacing: { before: 120, after: 40 },
+        keepNext: true,
+        keepLines: true,
+        alignment: align,
+        shading: isSidebar ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" } : void 0,
+        children: [new TextRun({
+          text: txt,
+          bold: true,
+          color: isSidebar ? style.sidebarHeadColor : style.mainHeadColor,
+          size: pt2hp(isSidebar ? fs.sbBody : fs.mainBody),
+          font: isSidebar ? style.sidebarFont : style.mainHeadFont
+        })]
+      }));
+      return;
+    }
+    const lead = row.b ? row.b + sep : "";
     const body = row.t || "";
     if (!lead && !body) return;
-    const align = paraAlignPath(s, "items." + i + ".t") ?? paraAlignPath(s, "items." + i) ?? groupCjlr ?? AlignmentType.JUSTIFIED;
     if (rowPage(i) >= 2) {
       out.push(pbBreakPara());
       if (!s.headlineOff && s.title && !(ctx.style && ctx.style.contHeadlines === false)) out.push(headingParagraph(String(s.title || "").toUpperCase() + " " + (ctx.contSuffix || "(CONT.)"), ctx, isSidebar, s.ruleOff));

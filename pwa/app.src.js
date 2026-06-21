@@ -5075,11 +5075,14 @@
         case "rich_block": {
           const __sid = e.id;
           const __title = (e.title || "").toUpperCase();
-          const __lead = e.leadColor || k.mainHeadColor || s;
+          const __headColor = e.leadColor || (S ? C : k.mainHeadColor || s);
+          const __txtColor = S ? __sbInk : O;
+          const __fs = S ? $.sb : $.text;
+          const __leadSep = e.leadColon ? ": " : " ";
           const __leadStyle = {
             fontWeight: e.leadBold === false ? 400 : 700,
             fontStyle: e.leadItalic ? "italic" : "normal",
-            color: __lead,
+            color: __headColor,
           };
           let __al = {};
           try {
@@ -5097,6 +5100,36 @@
             .map((it, i) => {
               if (e.hidden && e.hidden[i]) return null;
               const row = it && "object" == typeof it ? it : { t: String(it || "") };
+              // RICH-BLOCK-GROUP-001: a row flagged grp is a bold sub-heading (like labeled_list).
+              if (row.grp) {
+                return {
+                  key: String(i),
+                  node: React.createElement(
+                    "div",
+                    {
+                      key: i,
+                      "data-antcv-row-path": "items." + i,
+                      style: {
+                        fontSize: S ? 0.96 * $.sb : $.exp,
+                        fontFamily: T,
+                        color: C,
+                        fontWeight: 700,
+                        marginTop: 0 === i ? 0 : 6,
+                        marginBottom: 2,
+                        textAlign: __rowAlign(i),
+                        letterSpacing: 0.3,
+                        overflowWrap: "break-word",
+                        wordBreak: "break-word",
+                      },
+                    },
+                    React.createElement(B, {
+                      path: ["items", i, "t"],
+                      value: P(row.t || ""),
+                      placeholder: "[Sub-group]",
+                    }),
+                  ),
+                };
+              }
               const bShow = row.b && !row.bOff;
               const tShow = !row.tOff;
               if (!bShow && !tShow) return null;
@@ -5106,8 +5139,8 @@
               const __pStyle = {
                 margin: "4px 0 3px",
                 fontFamily: T,
-                fontSize: $.text,
-                color: O,
+                fontSize: __fs,
+                color: __txtColor,
                 textAlign: __rowAlign(i),
                 lineHeight: I,
               };
@@ -5140,7 +5173,7 @@
                           value: P(row.b),
                           placeholder: "[Lead]",
                         }),
-                        " ",
+                        __leadSep,
                       )
                     : null,
                   tShow

@@ -633,7 +633,10 @@
     function patch(o) { var cur = rdReadPI(); for (var k in o) { if (Object.prototype.hasOwnProperty.call(o, k)) cur[k] = o[k]; } rdSavePI(cur); }
     function patchVis(key, val) { var cur = rdReadPI(); var vc = cur.visibilityControls || {}; vc[key] = val; cur.visibilityControls = vc; rdSavePI(cur); }
 
-    var overlay = rdEl('div', 'position:fixed;inset:0;z-index:100000;background:rgba(10,15,30,.74);' +
+    // REVIEW-DATA-ZINDEX-001 (owner 2026-06-22: "loading but hidden behind set-menu"). The Settings
+    // drawer / set-menu sits in the 2147483xxx top layer, so a z-index:100000 overlay rendered behind
+    // it. Lift the modal into that same top band (above the drawer + mobile bottom-nav 2147483600).
+    var overlay = rdEl('div', 'position:fixed;inset:0;z-index:2147483646;background:rgba(10,15,30,.74);' +
       'display:flex;align-items:flex-start;justify-content:center;padding:24px 14px;overflow:auto;');
     overlay.setAttribute('data-antcv-review-modal', '1');
     var card = rdEl('div', 'width:100%;max-width:720px;background:#1d2740;border:1px solid rgba(255,255,255,.13);' +

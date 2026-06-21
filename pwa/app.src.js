@@ -7613,6 +7613,19 @@
         );
       }
       case "table":
+        // TABLE-TYPE-001: delegate to the universal table editor sidecar
+        // (antcv-table-editor.js). The inline editor below is kept as a
+        // safety fallback if the sidecar hasn't loaded.
+        if (typeof window !== "undefined" && window.AntcvTableEditor)
+          return React.createElement(window.AntcvTableEditor, {
+            section: e,
+            update: d,
+            accent: s,
+            onEnrich: r,
+            onCompress: n,
+            enrichingId: a,
+            compressingId: o,
+          });
         return React.createElement(
           React.Fragment,
           null,

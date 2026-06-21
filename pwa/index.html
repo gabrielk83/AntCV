@@ -330,7 +330,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.50.763';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.50.792';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.50.793';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -369,10 +369,10 @@
         auth.src = 'antcv-auth.js?v=1.50.312-auth-msg';
         auth.onload = function(){
           var app = document.createElement('script');
-          app.src = 'app.js?v=1.50.792';
+          app.src = 'app.js?v=1.50.793';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.50.792';
+            vo.src = 'antcv-version-override.js?v=1.50.793';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -813,6 +813,12 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      type:"rich_block" (headline/rule toggles + section CJLR + {lead-in, body} rows with
      per-row CJLR/Page/Enhance/Fit/Delete). app.js delegates to window.AntcvRichBlockEditor. -->
 <script src="antcv-rich-block-editor.js?v=1.50.763" defer></script>
+<!-- TABLE-TYPE-001 (2026-06-23): editor surface for the universal `table` type (CORE COMPETENCIES /
+     WHAT I BRING + any 2-col table): whole-table CJLR/enhance/fit, heading/rule toggles, header-row
+     CJLR (fixes the missing-header-CJLR + alignment-drift report) + header B/I, column-ratio,
+     space-after, per-row hide/page/CJLR/enhance/fit/up-down/delete + Add. app.js delegates to
+     window.AntcvTableEditor. -->
+<script src="antcv-table-editor.js?v=1.50.791" defer></script>
 <!-- PUBLICATIONS-MAIN-001 Phase 2+3: the rich Publications & Patents editor (5 fields/row +
      per-row CJLR/Page/Enhance/Fit + whole-section bar). app.js delegates to window.AntcvPublicationsEditor. -->
 <script src="antcv-publications-editor.js?v=1.50.765" defer></script>

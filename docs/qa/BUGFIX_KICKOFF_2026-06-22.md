@@ -3,6 +3,18 @@
 Owner brain-dump for a fresh bugfix pass. Grouped by area, with status. Priority order set by owner:
 **salmon first.**
 
+## SHIPPED 2026-06-23 (session continuation)
+- **1.50.789 — STALE-SW de-masking + guaranteed-fresh hard refresh** (the #1 systemic blocker). In
+  `antcv-hardrefresh-force-349.js`: bounded-await SW unregister+caches.delete before reload; on boot a
+  `no-store` network probe of index.html compares the deployed release to the loaded one and surfaces an
+  honest "Update" banner + auto-recovers once (loop-guarded). Live-verified (auto-recovered a tab 789→790).
+  Diag: `pwa/test/diag-freshness-guard.mjs`. See memory [[stale-sw-version-mask-hazard]].
+- **1.50.790 — FRESH-START-DELETE-001** (clean delete → wizard, keep secrets). New `antcv-fresh-delete.js`
+  (AntcvFreshErase/IsFreshStart/ClearFreshStart) + app.src/app.js: all 3 delete paths keep API secrets &
+  clear the relay URL & arm the fresh-start cookie; floor suppressed, wizard forced, relay re-default
+  suppressed under fresh-start; cleared on wizard completion/skip. The wizard's existing "Paste your
+  Worker URL" step (app.src ~29151) re-maps docx+secrets — NOT a new step. Diag: `pwa/test/diag-fresh-delete.mjs`.
+
 ## Fixed already this session (live, 1.50.768–779)
 - Export-settled gate (first export waits for settle) · interests → rich_block · version-display unify
   (killed `1.50.9-babel-fish`) · languages keep CEFR ("intermediate (B1)") · **junior-rugby scrub**
@@ -79,6 +91,29 @@ contamination. Needs a role-scoped scrub or a generation fix.
 The account-delete SECURITY fix is verified working on 1.50.782 (cloud `DELETE /api/prefs` wipes KV+D1;
 local `localStorage.clear()`; result = blank me() skeleton + wizard). The earlier "data still there"
 was the STALE SW serving old app.js — see [[stale-sw-version-mask-hazard]]. Remaining work:
+
+- **GEN-CONTAMINATION — technical scoping (2026-06-23, NOT yet shipped — needs an owner decision +
+  a real regen to verify the contract):** The D1 tables live in `workers/access-relay/src/index.js`:
+  `user_kernel`, `application` (keyed `(user_hash, jd_hash)` — ONE ROW PER JD, with `cv_sections` /
+  `cl_sections` columns), `active_application` (pointer), `language_view` (per-app per-language),
+  `kernel_showcase` (unsolicited). The save endpoint upserts `application` at ~2326 + sets
+  `active_application` at ~2351; `cv_sections`/`cl_sections` update at ~2464; account-delete already
+  wipes all three at ~1447-1452. **TWO blockers before implementing:** (1) there is NO "full vs quick"
+  signal anywhere in the worker — the client must send one (e.g. `body.full_regen=true` on the save/gen
+  call). (2) "wipe application/active_application/language_view" is AMBIGUOUS against this model: wiping
+  ALL `application` rows would delete the user's saved application HISTORY. Most likely the intent is to
+  clear the CURRENT (active) application's GENERATED CONTENT (`cv_sections`/`cl_sections` = NULL +
+  its `language_view` rows) before a full regen, NOT drop the row/history. Confirm with owner which:
+  (a) clear active app's generated content only, (b) drop the active app row, or (c) wipe all gen output.
+  Then add a guarded pre-generation wipe. Regen-gated.
+- **TABLE-TYPE / row-editor regression — diagnosis (2026-06-23):** the CORE COMPETENCIES per-row
+  controls come from the DOM-scanning sidecar `antcv-core-competencies-row-controls-234.js` (v1.50.692,
+  CORE_RX-targeted — CV only; WHAT I BRING controls come from the native app.js table editor). The
+  char-caps (CORE-COMP-COMPRESS, 783) + some Focus-Area abbreviations already shipped. The full
+  redesign (`docs/plan/TABLE_TYPE_REDESIGN_2026-06-22.md`) is a large native rebuild — do it as ONE
+  unit WITH the owner's live UI to pin down exactly what "regressed" (header-row CJLR missing +
+  alignment drift are the concrete reported symptoms). Memory [[dont-hide-controls-as-duplicates]]:
+  do NOT ship speculative partial table edits — they have regressed hard-won controls before.
 
 - **GEN-CONTAMINATION (owner's root-cause insight):** "new generations are so many times contaminated
   by old ones — kernel generation must WIPE the D1 data for the panel/preview/export as STAGE 1 (full

@@ -67,7 +67,11 @@
   // shape — converting those breaks the split. Tools & Methods + Regulatory + Certs DO convert to
   // rich_block; the empties the owner saw were BLANKED data, now restored by
   // antcv-sidebar-repopulate-758.js (per owner: fix the data push, do NOT exclude the section).
-  var MANAGED = { additional: 'labeled_list', interests: 'bullets', languages: 'labeled_list', accessibility: 'labeled_list' };
+  // `interests` UN-managed (owner 2026-06-22: modernize it to rich_block) — it converts like
+  // Tools/Regulatory ({l,v}→{b,t}+leadColon). 415's interests shape-coercers are now rich_block-aware
+  // so they no longer fight it. additional stays managed (415 must split it); languages/accessibility
+  // stay labeled_list for now.
+  var MANAGED = { additional: 'labeled_list', languages: 'labeled_list', accessibility: 'labeled_list' };
   function unconvert(s, targetType) {
     if (s.type !== 'rich_block') return s;
     var items;

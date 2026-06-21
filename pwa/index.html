@@ -323,7 +323,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.50.763';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.50.775';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.50.776';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -365,7 +365,7 @@
           app.src = 'app.js?v=1.50.763';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.50.775';
+            vo.src = 'antcv-version-override.js?v=1.50.776';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -662,7 +662,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      normalizer + docx-client so its window.AntcvClusterDemand is available to the
      blended numeric+demand ordering. -->
 <script src="antcv-cluster-demand.js?v=1.50.711" defer></script>
-<script src="antcv-sections-normalize-415.js?v=1.50.736" defer></script>
+<script src="antcv-sections-normalize-415.js?v=1.50.776" defer></script>
 <script src="antcv-demo-watermark.js?v=1.50.340-live-keystate" defer></script>
 <script src="antcv-bullet-targets.js?v=1.40.136" defer></script>
 <!-- SIDECAR-CONSOLIDATE G10 (1.50.427): photo-position + photo-pentagon-shape +
@@ -816,7 +816,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      closure, profile, work_style) into rich_block so they gain the full controls. Idempotent. -->
 <script src="antcv-text-sections-to-rich-block-759.js?v=1.50.759c" defer></script>
 <!-- RICH-BLOCK-GROUP-001: fold labeled_list (Tools/Regulatory/Additional) + list (Certifications) into rich_block with group rows. -->
-<script src="antcv-labeled-list-to-rich-block-763.js?v=1.50.763e" defer></script>
+<script src="antcv-labeled-list-to-rich-block-763.js?v=1.50.776" defer></script>
 <!-- LANGUAGES-CONCISE-001: trim language proficiency to its concise core (CEFR→word, drop qualifiers). -->
 <script src="antcv-languages-concise.js?v=1.50.771" defer></script>
 <!-- SKELETON-LEAK-001: strip leaked me() authoring instructions ("[PROFILE - 2-3 sentences…]") that

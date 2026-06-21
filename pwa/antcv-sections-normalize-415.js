@@ -664,7 +664,7 @@
   function normalizeInterestsShape(cv) {
     var changed = false;
     var out = cv.map(function (s) {
-      if (!s || s.id !== 'interests' || !Array.isArray(s.items)) return s;
+      if (!s || s.id !== 'interests' || s.type === 'rich_block' || !Array.isArray(s.items)) return s;  // rich_block legitimately uses {b,t}
       var items = s.items.map(function (it) {
         if (!it || typeof it !== 'object') return it;
         if (it.l != null || it.v != null) return it;            // already labeled_list shape
@@ -689,7 +689,7 @@
   function stripInterestsBtRemnant(cv) {
     var changed = false;
     var out = cv.map(function (s) {
-      if (!s || s.id !== 'interests' || !Array.isArray(s.items)) return s;
+      if (!s || s.id !== 'interests' || s.type === 'rich_block' || !Array.isArray(s.items)) return s;  // rich_block legitimately uses {b,t}
       var items = s.items.map(function (it) {
         if (!it || typeof it !== 'object') return it;
         if ((it.l != null || it.v != null) && (it.b !== undefined || it.t !== undefined)) {
@@ -727,7 +727,9 @@
     // owner's edits/additions hold — never fight them.
     if (items.length >= 6) return null;
     var copy = cv.slice();
-    copy[xi] = Object.assign({}, cv[xi], { items: CANON_INTERESTS.map(function (c) { return { l: c.l, v: c.v }; }) });
+    // pin in the section's OWN shape — rich_block uses {b,t}, labeled_list uses {l,v}.
+    var asRich = cv[xi].type === 'rich_block';
+    copy[xi] = Object.assign({}, cv[xi], { items: CANON_INTERESTS.map(function (c) { return asRich ? { b: c.l, t: c.v } : { l: c.l, v: c.v }; }) });
     return copy;
   }
 

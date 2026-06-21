@@ -52,12 +52,12 @@ with `unregister SWs + caches.delete all + reload`.
 2. **Preserved relay/docx config after delete — DECIDED (owner 2026-06-22).** Finding: the DELETE DID
    wipe the user KV (`prefs2:<hash>` + D1 confirmed in the response). The relay/docx URLs the owner
    still sees are in localStorage (`proxyUrl`/`relayUrl`/`docxWorkerUrl`) and are currently RE-DEFAULTED
-   on boot from app config — that auto-re-appearance is **NOT approved**. OWNER DECISION: the delete
-   sequence must WIPE the relay + docx URLs + API secrets, and the **WIZARD re-establishes them** — the
-   user re-inserts the **relay URL** first, then the **docx-worker URL**, then **API secrets**, and the
-   rest can be **mapped automatically** from those. So: (a) stop the boot-time re-default of
-   relay/docx/secrets, (b) add a wizard backend-config step (relay → docx → secrets, auto-map). This
-   folds into the fresh-start-mode work (#3).
+   on boot from app config — that auto-re-appearance is **NOT approved**. OWNER DECISION (revised 2026-06-22): the delete sequence
+   removes **ONLY the relay URL** — **do NOT delete the API secrets** (keep them), nor necessarily the
+   docx URL. The **WIZARD re-asks the relay URL**, and from it the **docx-worker URL + API secrets are
+   mapped automatically** (they're retained/derived, not re-entered). So: (a) stop the boot-time
+   re-default of the relay URL (clear it on delete), (b) the wizard has the user re-insert the relay
+   URL → docx + secrets auto-map. This folds into the fresh-start-mode work (#3).
 3. **Clean-delete → WIZARD** — the floor restores a skeleton that wizard-detection reads as "has data"
    → editor instead of wizard. Build a "fresh-start mode" flag (set on delete) that suppresses
    floor/canon/relay restores and forces the wizard, cleared on wizard completion. See the kickoff doc.

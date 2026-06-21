@@ -90,6 +90,17 @@ was the STALE SW serving old app.js — see [[stale-sw-version-mask-hazard]]. Re
   full-vs-quick. Regen-gated — verify on a real regen. Ties to
   `docs/plan/GENERATION_OPTIMIZATION_2026-06-22.md` (the hydrateContract pass should run AFTER a clean
   slate).
+- **CLEAN-DELETE → WIZARD (owner 2026-06-22, partially fixed):** after a delete the floor restores an
+  empty me() skeleton and sidecars re-plant data, so a "deleted" account doesn't land on the wizard.
+  Progress: OWNER-PRESENT-GATE-001 (1.50.786) stops 415 from re-planting Gabriel's interests +
+  recommendations for a fresh user (gated on personalInfo carrying real owner data). STILL OPEN:
+  (a) **wizard not starting** — the floor-restored skeleton sections read as "has data", so the
+  wizard-detection routes to the editor instead of the wizard; the detection must treat a bare
+  skeleton (or absent real personalInfo) as FRESH and show the wizard. (b) **relay/docx/proxy URLs
+  persist** — these are DEPLOYMENT config the app needs (same for every user, not private data), but a
+  fresh state shouldn't surface the previous setup; decide whether the wizard re-establishes them. (c)
+  the me() skeleton may not define template placeholders for interests/recommendations/accessibility/
+  languages — confirm + add so a fresh user sees a template, not blank.
 - **WIZARD DELETE:** if the user chooses "start fresh" / clear-and-restart inside the WIZARD, it must
   trigger the SAME full delete flow (window.AntcvCloudDelete + localStorage/sessionStorage.clear) — not
   a partial local-only reset. Find/confirm the wizard's start-fresh control and wire it to the 782 flow.

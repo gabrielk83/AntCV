@@ -733,6 +733,37 @@
     return copy;
   }
 
+  // INTERESTS-JUNIOR-RUGBY-SCRUB-001 (owner 2026-06-22: "how the fuck interest was leaking junior
+  // rugby coach again??"). The fabrication "Coaching junior rugby / assistant coach" used to be killed
+  // by stripInterestsBtRemnant, but that only handled a {b,t} REMNANT beside {l,v} and now SKIPS
+  // rich_block (1.50.776) — so in a rich_block interests the fabricated row survives. This SHAPE-
+  // AGNOSTIC scrub removes ANY interests row whose lead OR body matches the fabrication (NO junior
+  // rugby — see [[gabriel-cv-facts]]): drop it when a canonical "Rugby & inclusive sport" row already
+  // exists, else REPLACE it with the canonical rugby entry in the section's own shape. Idempotent.
+  var JUNIOR_RUGBY = /junior rugby|coaching junior|assistant coach/i;
+  function scrubJuniorRugby(cv) {
+    var changed = false;
+    var out = cv.map(function (s) {
+      if (!s || s.id !== 'interests' || !Array.isArray(s.items)) return s;
+      var rich = s.type === 'rich_block';
+      var hasCanon = s.items.some(function (it) { return it && /rugby & inclusive sport/i.test(String((it.b || it.l || '') + ' ' + (it.t || it.v || ''))); });
+      var canon = rich ? { b: 'Rugby & inclusive sport', t: 'Team operations, coach assist, literally a team player' }
+        : { l: 'Rugby & inclusive sport', v: 'Team operations, coach assist, literally a team player' };
+      var items = [];
+      s.items.forEach(function (it) {
+        var txt = String((it && (it.b || it.l) || '') + ' ' + (it && (it.t || it.v) || ''));
+        if (it && !it.grp && JUNIOR_RUGBY.test(txt)) {
+          changed = true;
+          if (!hasCanon) { items.push(canon); hasCanon = true; }   // replace the first; drop further dups
+          return;
+        }
+        items.push(it);
+      });
+      return changed ? Object.assign({}, s, { items: items }) : s;
+    });
+    return changed ? out : null;
+  }
+
   // SIDEBAR-DEDUPE-001 (owner 2026-06-19, from his curated language/education snapshots):
   // the kernel keeps regenerating DUPLICATE sidebar entries that he hides by hand (a
   // verbose "Spanish - full professional, Uruguayan variant" beside the concise
@@ -894,6 +925,7 @@
       var no = neutralizeUnsolicitedOpener(cv); if (no) { cv = no; changed = true; }
       var ex = explodeAdditionalToSections(cv); if (ex) { cv = ex; changed = true; }
       var pa = partitionAdditional(cv); if (pa) { cv = pa; changed = true; }
+      var jr = scrubJuniorRugby(cv); if (jr) { cv = jr; changed = true; }
       var ish = normalizeInterestsShape(cv); if (ish) { cv = ish; changed = true; }
       var ibt = stripInterestsBtRemnant(cv); if (ibt) { cv = ibt; changed = true; }
       var pin = pinInterests(cv); if (pin) { cv = pin; changed = true; }

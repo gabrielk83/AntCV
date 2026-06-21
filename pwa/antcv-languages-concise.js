@@ -18,7 +18,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.771';
+  var VERSION = '1.50.779';
   if (window.__antcvLanguagesConcise === VERSION) return;
   window.__antcvLanguagesConcise = VERSION;
 
@@ -33,20 +33,44 @@
   function concise(v) {
     var s = String(v == null ? '' : v).trim();
     if (!s) return s;
+    if (/\b(basic|intermediate|fluent) \([ABC][12]\)$/i.test(s)) return s;   // already "word (CEFR)" → idempotent
     var core = s.split(',')[0].trim();           // drop ", Uruguayan variant" / ", Prøve i dansk 2"
-    if (/^a[12]\b/i.test(core)) return 'basic';
-    if (/^b[12]\b/i.test(core)) return 'intermediate';
-    if (/^c[12]\b/i.test(core)) return 'fluent';
+    // owner 2026-06-22 (revised): KEEP the CEFR code alongside the word — Danish must read
+    // "intermediate (B1)", not just "intermediate". EN/HE native stay native (no further cropping).
+    var m = core.match(/^([abc][12])\b/i);
+    if (m) { var lvl = m[1].toUpperCase(); return (lvl[0] === 'A' ? 'basic' : lvl[0] === 'B' ? 'intermediate' : 'fluent') + ' (' + lvl + ')'; }
     if (/full professional|professional working|professional proficiency/i.test(core)) return 'professional';
     if (/native|mother ?tongue/i.test(core)) return 'native';
-    return core;                                  // already concise (professional / fluent / …) or unknown → keep core
+    return core;                                  // already concise (professional / native / …) or unknown → keep core
+  }
+  function readPI() { try { var v = JSON.parse(localStorage.getItem('personalInfo') || '{}'); return (v && typeof v === 'object') ? v : {}; } catch (_) { return {}; } }
+  // A value already over-cropped to a BARE word ("intermediate") lost its CEFR code. Re-source the
+  // ORIGINAL ("B1, …") from personalInfo.additional so it becomes "intermediate (B1)". Only fires on a
+  // bare word WITH a CEFR-bearing source — never clobbers a value the owner enriched.
+  function sourceCEFR(label) {
+    var add = readPI().additional;
+    if (!Array.isArray(add)) return null;
+    var lab = String(label || '').toLowerCase().trim();
+    for (var i = 0; i < add.length; i++) {
+      var a = add[i];
+      if (a && String(a.l || '').toLowerCase().trim() === lab) { var v = String(a.v || ''); if (/^[abc][12]\b/i.test(v.trim())) return v; }
+    }
+    return null;
   }
   // Apply to whichever value field the row uses (v for labeled_list, t for rich_block).
   function fixRow(row) {
     if (!row || typeof row !== 'object') return false;
     var changed = false;
-    if (typeof row.v === 'string') { var nv = concise(row.v); if (nv !== row.v) { row.v = nv; changed = true; } }
-    if (typeof row.t === 'string' && !row.grp) { var nt = concise(row.t); if (nt !== row.t) { row.t = nt; changed = true; } }
+    function apply(valField, labelField) {
+      if (typeof row[valField] !== 'string') return;
+      var cur = row[valField];
+      var nv = concise(cur);
+      // restore a CEFR code that an earlier over-crop dropped (bare "intermediate" → "intermediate (B1)")
+      if (/^(basic|intermediate|fluent)$/i.test(nv)) { var src = sourceCEFR(row[labelField]); if (src) nv = concise(src); }
+      if (nv !== cur) { row[valField] = nv; changed = true; }
+    }
+    apply('v', 'l');                 // labeled_list shape
+    if (!row.grp) apply('t', 'b');   // rich_block shape
     return changed;
   }
 

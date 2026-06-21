@@ -13918,7 +13918,10 @@
       React.useEffect(() => {
         // FRESH-START-DELETE-001: do NOT re-default the relay URL after a delete —
         // the wizard re-asks it (and auto-maps docx + secrets). Leave the field empty.
-        if (window.AntcvIsFreshStart && window.AntcvIsFreshStart()) { ae(""); return; }
+        // RELAY-URL-NULLIFY-001: also skip the re-default when the user explicitly
+        // cleared the relay (antcv:relay-cleared) so the nullify STICKS across reload.
+        const __relayCleared = (() => { try { return localStorage.getItem("antcv:relay-cleared") === "1"; } catch (e) { return false; } })();
+        if ((window.AntcvIsFreshStart && window.AntcvIsFreshStart()) || __relayCleared) { ae(""); return; }
         let e = u.get("proxyUrl", "") || d;
         ((e = String(e).trim().replace(/\/+$/, "")),
           u.get("proxyUrl", "") || u.set("proxyUrl", e),
@@ -14814,8 +14817,11 @@
                 const exp = parseInt(localStorage.getItem("antcv:auth:expires_at") || "0", 10);
                 if (tok && (!exp || exp * (exp < 1e12 ? 1e3 : 1) > Date.now())) return true;
                 if (localStorage.getItem("session")) return true;
-                const sec = u.get("sections", null);
-                if (sec && ((sec.cv && sec.cv.length) || (sec.cl && sec.cl.length))) return true;
+                // WIZARD-AUTOLOAD-001 (owner 2026-06-23: "wizard still not loading"): a floor-restored
+                // me() skeleton is NOT a sign of a returning user — a deleted/fresh user has skeleton
+                // sections but no auth + no real personalInfo. Treating skeleton sections alone as
+                // "returning" routed them to the editor instead of the wizard. Rely on auth/session
+                // (above) + real personalInfo (below) only.
                 const pi = ie();
                 if (pi && (pi.name || pi.background || (pi.email && pi.email.length))) return true;
               } catch (_) {}
@@ -29228,6 +29234,35 @@
                   },
                   "📋 Paste",
                 ),
+                React.createElement(
+                  "button",
+                  {
+                    onClick: () => {
+                      // RELAY-URL-NULLIFY-001: empty the relay URL from the wizard too.
+                      try { xt(""); } catch (e) {}
+                      try {
+                        localStorage.removeItem("proxyUrl");
+                        localStorage.removeItem("relayUrl");
+                        localStorage.setItem("antcv:relay-cleared", "1");
+                        if ("undefined" != typeof window) window.ANTCV_RELAY_URL = "";
+                      } catch (e) {}
+                    },
+                    title: "Empty the relay URL",
+                    style: {
+                      padding: "10px 12px",
+                      background: "rgba(220,80,80,0.12)",
+                      border: "1px solid rgba(220,80,80,0.5)",
+                      borderRadius: 8,
+                      color: "#ffb4b4",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                      flexShrink: 0,
+                    },
+                  },
+                  "✕ Clear",
+                ),
               ),
               g(
                 "Tip: after entering, the URL syncs to cloud automatically. Next time you sign in from any browser, it's restored.",
@@ -34964,6 +34999,123 @@
                           },
                           "Tab out to save.",
                         ),
+                      ),
+                      // RELAY-URL-NULLIFY-001 (owner 2026-06-23): masked ACCESS RELAY URL card.
+                      // Empty when no relay; shows •••••• when set. Write/paste a new one (xt auto-maps
+                      // docx + secrets); ✕ Clear empties it and sets antcv:relay-cleared so the boot
+                      // re-default does NOT re-add it (nullify sticks).
+                      React.createElement(
+                        "div",
+                        {
+                          style: {
+                            background: "rgba(126,180,255,0.06)",
+                            border: "1px solid rgba(126,180,255,0.25)",
+                            borderRadius: 7,
+                            padding: "10px 12px",
+                            marginBottom: 14,
+                          },
+                        },
+                        React.createElement(
+                          "div",
+                          { style: { color: "#9ec8ff", fontSize: 11, fontWeight: 700, letterSpacing: 0.4, marginBottom: 4 } },
+                          "🔗 ACCESS RELAY URL",
+                        ),
+                        React.createElement(
+                          "div",
+                          { style: { color: "rgba(255,255,255,0.45)", fontSize: 10, lineHeight: 1.45, marginBottom: 8 } },
+                          "Your Cloudflare access-relay worker (LLM + cloud sync). Masked when set — type or paste to replace; ✕ Clear to empty.",
+                        ),
+                        (() => {
+                          const cur = String(
+                            (u.get("proxyUrl", "") || u.get("relayUrl", "") ||
+                              ("undefined" != typeof window && window.ANTCV_RELAY_URL) || "")
+                          ).trim();
+                          const MASK = "••••••••••••";
+                          const masked = cur ? MASK : "";
+                          const saveRelay = (val) => {
+                            const t = String(val || "").trim().replace(/\/+$/, "");
+                            if (!t) return;
+                            try { localStorage.removeItem("antcv:relay-cleared"); } catch (e) {}
+                            try { xt(t); } catch (e) {}
+                            alert("✓ Relay URL saved. The docx worker + server-side keys are mapped from it.");
+                          };
+                          const clearRelay = () => {
+                            try { xt(""); } catch (e) {}
+                            try {
+                              localStorage.removeItem("proxyUrl");
+                              localStorage.removeItem("relayUrl");
+                              localStorage.setItem("antcv:relay-cleared", "1");
+                              if ("undefined" != typeof window) window.ANTCV_RELAY_URL = "";
+                            } catch (e) {}
+                            alert("✓ Relay URL emptied. It won't re-appear on reload until you set a new one.");
+                          };
+                          return React.createElement(
+                            React.Fragment,
+                            null,
+                            React.createElement(
+                              "div",
+                              { style: { display: "flex", gap: 6 } },
+                              React.createElement("input", {
+                                type: "text",
+                                inputMode: "url",
+                                autoCapitalize: "none",
+                                autoCorrect: "off",
+                                spellCheck: !1,
+                                defaultValue: masked,
+                                placeholder: "https://your-relay.workers.dev",
+                                onFocus: (e) => { if (masked && e.target.value === masked) e.target.value = ""; },
+                                onBlur: (e) => {
+                                  const v = String(e.target.value || "").trim();
+                                  if (!v) { e.target.value = masked; return; }
+                                  if (v === masked) return;
+                                  saveRelay(v);
+                                  e.target.value = MASK;
+                                },
+                                style: {
+                                  flex: "1 1 0%",
+                                  minWidth: 0,
+                                  padding: "8px 10px",
+                                  background: "rgba(255,255,255,0.06)",
+                                  border: "1px solid rgba(255,255,255,0.18)",
+                                  borderRadius: 6,
+                                  color: "#fff",
+                                  fontSize: 11,
+                                  fontFamily: "monospace",
+                                  boxSizing: "border-box",
+                                },
+                              }),
+                              React.createElement(
+                                "button",
+                                {
+                                  onClick: async () => {
+                                    try {
+                                      if (navigator.clipboard && navigator.clipboard.readText) {
+                                        const x = await navigator.clipboard.readText();
+                                        if (x && x.trim()) saveRelay(x.trim());
+                                      } else alert("Clipboard paste unsupported — type the URL instead.");
+                                    } catch (e) { alert("Could not read clipboard: " + ((e && e.message) || e)); }
+                                  },
+                                  style: { padding: "8px 10px", background: "rgba(1,183,187,0.15)", border: "1px solid #01B7BB", borderRadius: 6, color: "#01B7BB", fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 },
+                                },
+                                "📋 Paste",
+                              ),
+                              React.createElement(
+                                "button",
+                                {
+                                  onClick: () => { clearRelay(); },
+                                  title: "Empty the relay URL",
+                                  style: { padding: "8px 10px", background: "rgba(220,80,80,0.12)", border: "1px solid rgba(220,80,80,0.5)", borderRadius: 6, color: "#ffb4b4", fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 },
+                                },
+                                "✕ Clear",
+                              ),
+                            ),
+                            React.createElement(
+                              "div",
+                              { style: { color: "rgba(255,255,255,0.3)", fontSize: 9, marginTop: 6, lineHeight: 1.4 } },
+                              cur ? "A relay URL is set (masked). Type/paste to replace, or ✕ Clear to empty." : "No relay URL set.",
+                            ),
+                          );
+                        })(),
                       ),
                       React.createElement(
                         "div",

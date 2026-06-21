@@ -21,7 +21,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.757';
+  var VERSION = '1.50.757b';
   if (window.__antcvPublicationsMain757 === VERSION) return;
   window.__antcvPublicationsMain757 = VERSION;
 
@@ -86,13 +86,37 @@
     return out;
   }
 
+  // PUB-CLEAN-001 (owner 2026-06-22): migrated citations carried HTML bold/italic tags + smart
+  // quotes around the title (<b>"Integration…"</b> — …), which leaked into the Name field and the
+  // preview. Strip the markup + the quotes around the title (keep the details). Idempotent.
+  var CITE_SEP = [' — ', ' – ', ' - ', ': '];
+  function cleanItem(it) {
+    var v = String(it == null ? '' : it).replace(/<\/?[a-z][^>]*>/gi, '');
+    for (var i = 0; i < CITE_SEP.length; i++) {
+      var k = v.indexOf(CITE_SEP[i]);
+      if (k > 0) {
+        var title = v.slice(0, k).replace(/^[\s"'“”‘’«»]+|[\s"'“”‘’«»]+$/g, '').trim();
+        return title + CITE_SEP[i] + v.slice(k + CITE_SEP[i].length);
+      }
+    }
+    return v.replace(/^[\s"'“”‘’«»]+|[\s"'“”‘’«»]+$/g, '').trim();
+  }
   function run() {
     try {
       var secs = readSections();
       if (!Array.isArray(secs.cv)) return;
+      var changed = false;
       var next = migrate(secs.cv);
-      if (!next) return; // nothing to do (already migrated / no old section)
-      secs.cv = next;
+      if (next) { secs.cv = next; changed = true; }
+      // strip HTML/quote markup from the pubs section's item strings (every pass, idempotent).
+      for (var i = 0; i < secs.cv.length; i++) {
+        var s = secs.cv[i];
+        if (s && (s.id === 'pubs' || s.richPub) && Array.isArray(s.items)) {
+          var cleaned = s.items.map(cleanItem);
+          for (var j = 0; j < cleaned.length; j++) { if (cleaned[j] !== s.items[j]) { s.items = cleaned; changed = true; break; } }
+        }
+      }
+      if (!changed) return;
       localStorage.setItem('sections', JSON.stringify(secs));
       try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { reason: 'publications-main-757' } })); } catch (_) {}
     } catch (_) { /* self-disable on any error */ }

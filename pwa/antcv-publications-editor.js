@@ -23,8 +23,31 @@
     function emit(n, d) { try { window.dispatchEvent(new CustomEvent(n, { detail: d })); } catch (_) {} }
     // Citation split/compose (mirrors the app's xe/Ee — em-dash separator, lossless round-trip).
     var SEP = [" — ", " – ", " - ", ": "];
-    function splitCite(v) { v = String(v || "").trim(); if (!v) return { title: "", details: "" }; for (var i = 0; i < SEP.length; i++) { var k = v.indexOf(SEP[i]); if (k > 0) return { title: v.slice(0, k).trim(), details: v.slice(k + SEP[i].length).trim() }; } return { title: v, details: "" }; }
-    function joinCite(n, o) { n = String(n || "").trim(); o = String(o || "").trim(); return n && o ? n + " — " + o : (n || o); }
+    // Migrated citations carried HTML bold/italic tags + smart quotes around the title (<b>"Title"</b>) —
+    // strip them so the Name field shows clean text, not "<b>"Integration…".
+    function clean(v) {
+      return String(v == null ? "" : v)
+        .replace(/<\/?[a-z][^>]*>/gi, "")        // drop <b>, </b>, <i>, etc.
+        .replace(/^[\s"'“”‘’«»]+|[\s"'“”‘’«»]+$/g, "")  // strip surrounding quotes/space
+        .trim();
+    }
+    function splitCite(v) { v = clean(v); if (!v) return { title: "", details: "" }; for (var i = 0; i < SEP.length; i++) { var k = v.indexOf(SEP[i]); if (k > 0) return { title: clean(v.slice(0, k)), details: v.slice(k + SEP[i].length).trim() }; } return { title: v, details: "" }; }
+    function joinCite(n, o) { n = clean(n); o = String(o || "").trim(); return n && o ? n + " — " + o : (n || o); }
+    // Parse a legacy detail blob into authors / journal / year / pages (best-effort).
+    function parseDetails(details) {
+      details = String(details || "");
+      var year = "", pages = "", authors = "", journal = "";
+      var ym = details.match(/\b(?:19|20)\d\d\b/g); if (ym) year = ym[ym.length - 1];
+      var pm = details.match(/pp?\.?\s*(\d+\s*[-–—]\s*\d+|\d+)\b/i); if (pm) pages = pm[1];
+      var rest = details;
+      if (pm) rest = rest.replace(pm[0], "");
+      if (year) rest = rest.replace(year, "");
+      rest = rest.replace(/\s*,\s*,\s*/g, ", ").replace(/^[\s,]+|[\s,]+$/g, "").trim();
+      var parts = rest.split(/\s*,\s*/).filter(Boolean);
+      if (parts.length >= 2) { journal = parts[parts.length - 1]; authors = parts.slice(0, -1).join(", "); }
+      else { journal = rest; }
+      return { authors: authors, journal: journal, year: year, pages: pages };
+    }
 
     function PublicationsEditor(props) {
       var e = props.section || {};
@@ -43,7 +66,7 @@
       function getGroup() { try { var b = readJSON("antcvItemAlignment")[sid] || {}; var v = b.__group__; return ALIGNS.indexOf(v) >= 0 ? v : "justify"; } catch (_) { return "justify"; } }
       function setGroup(v) { var m = readJSON("antcvItemAlignment"); if (!m[sid] || typeof m[sid] !== "object") m[sid] = {}; m[sid].__group__ = v; writeJSON("antcvItemAlignment", m); emit("antcv:item-align-changed", { sid: sid, index: -1, alignment: v }); rerender(); }
 
-      function seedPF(it) { var r = splitCite(it); return { authors: "", journal: r.details || "", year: "", pages: "" }; }
+      function seedPF(it) { var r = splitCite(it); return parseDetails(r.details || ""); }
       function getPF(n) { return e.pubFields && e.pubFields[n] ? e.pubFields[n] : seedPF((e.items || [])[n]); }
       function composeRow(nm, pf) { return joinCite(nm, [pf.authors, pf.journal, pf.year, pf.pages ? "pp. " + pf.pages : ""].filter(Boolean).join(", ")); }
       function writeRow(n, nm, pf) { var items = (e.items || []).slice(); items[n] = composeRow(nm, pf); var pubFields = (e.items || []).map(function (x, i) { return i === n ? pf : getPF(i); }); d({ items: items, pubFields: pubFields }); }

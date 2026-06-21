@@ -1608,6 +1608,38 @@ async function handleApiPrefsRenew(request, env) {
   }
 }
 
+// GEN-CONTAMINATION-001 (owner 2026-06-23): POST /api/prefs/wipe-generated.
+// Clears the user's GENERATED D1 output so a FULL regen starts from a clean slate
+// (the kernel only) and never merges with / seeds from the prior application:
+//   - application.cv_sections / cl_sections → NULL (keep the JD rows + metadata)
+//   - language_view rows → deleted
+//   - kernel_showcase (the unsolicited generated CV/CL) → deleted
+// The kernel (user_kernel) and the saved-application list are preserved.
+async function handleApiPrefsWipeGenerated(request, env) {
+  const id = await identityFromRequest(request, env);
+  if (!id) return jsonResponse({ error: 'unauthenticated' }, 401, request, env);
+  if (request.method !== 'POST') return jsonResponse({ error: 'method_not_allowed' }, 405, request, env);
+  const refresh = await maybeRefreshHeader(env, id);
+  if (!hasD1(env)) return jsonResponse({ ok: true, d1: false, wiped: {} }, 200, request, env, refresh);
+  const userHash = await userHashFromEmail(id.email);
+  try {
+    const batch = await env.DB.batch([
+      env.DB.prepare(
+        'DELETE FROM language_view WHERE application_id IN (SELECT id FROM application WHERE user_hash = ?)'
+      ).bind(userHash),
+      env.DB.prepare('UPDATE application SET cv_sections = NULL, cl_sections = NULL WHERE user_hash = ?').bind(userHash),
+      env.DB.prepare('DELETE FROM kernel_showcase WHERE user_hash = ?').bind(userHash),
+    ]);
+    const ch = (i) => (batch[i] && batch[i].meta && batch[i].meta.changes) || 0;
+    return jsonResponse(
+      { ok: true, d1: true, wiped: { language_view: ch(0), application_content: ch(1), kernel_showcase: ch(2) } },
+      200, request, env, refresh
+    );
+  } catch (e) {
+    return jsonResponse({ error: 'wipe_failed', message: String(e && e.message || e) }, 500, request, env, refresh);
+  }
+}
+
 // v2.5: admin-only — set / clear the shared demo worker config
 async function handleApiAdminDemo(request, env) {
   const kv = env.KV_BINDING || env.ANALYTICS || null;
@@ -3657,6 +3689,13 @@ const method = request.method;
   // email-sent marker so future T-30 reminders can fire again next year.
   if (path === '/api/prefs/renew') {
     return handleApiPrefsRenew(request, env);
+  }
+  // GEN-CONTAMINATION-001 (owner 2026-06-23): a FULL regen wipes the prior
+  // GENERATED D1 output (application cv/cl_sections, language_view, kernel_showcase)
+  // as STAGE 1, so the new generation never seeds from / merges with the old one.
+  // Keeps the kernel + the saved-application rows. Quick gen does NOT call this.
+  if (path === '/api/prefs/wipe-generated') {
+    return handleApiPrefsWipeGenerated(request, env);
   }
   if (path === '/api/prefs')          return handleApiPrefs(request, env);
   if (path === '/api/export-key')     return handleApiExportKey(request, env);

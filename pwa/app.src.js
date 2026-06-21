@@ -23461,6 +23461,26 @@
                   }
                 })()
               : "";
+            // GEN-CONTAMINATION-001 (owner 2026-06-23, approved): a FULL generation
+            // (not quick) WIPES the prior GENERATED D1 output as STAGE 1 — so the new
+            // application never seeds from / merges with the stale one (the root of old
+            // content bleeding into a fresh gen). Best-effort; never blocks generation.
+            if (!__quickGen) {
+              try {
+                const __rb = String(
+                  u.get("proxyUrl", "") ||
+                    ("undefined" != typeof window && window.ANTCV_RELAY_URL) ||
+                    "",
+                )
+                  .trim()
+                  .replace(/\/+$/, "");
+                if (__rb)
+                  await fetch(__rb + "/api/prefs/wipe-generated", {
+                    method: "POST",
+                    credentials: "include",
+                  }).catch(() => {});
+              } catch (_) {}
+            }
             // EXP-TENSE-002 (owner 2026-06-12): experience-bullet tense mode
             // from the Advanced-styles control. "auto" (default) = LOGICAL
             // per-role tense; "present"/"past" force a uniform tense and

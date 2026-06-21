@@ -326,7 +326,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.50.763';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.50.788';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.50.789';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -368,7 +368,7 @@
           app.src = 'app.js?v=1.50.788';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.50.788';
+            vo.src = 'antcv-version-override.js?v=1.50.789';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -765,7 +765,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      the deployed app.js handler awaits a hung SW-unregister/cache-delete.
      Capture-phase click → fire-and-forget cleanup → forced reload. Also exposes
      window.AntcvForceReload(). -->
-<script src="antcv-hardrefresh-force-349.js?v=1.50.349" defer></script>
+<script src="antcv-hardrefresh-force-349.js?v=1.50.789" defer></script>
 <script src="antcv-cl-ai-notice-inline.js?v=1.50.142-no-unhide" defer></script>
 <script src="antcv-ai-consent-cloud-sync-224.js?v=1.50.400-backoff" defer></script>
 <script src="antcv-wizard-section-format-step10.js?v=1.40.239-throttle" defer></script>

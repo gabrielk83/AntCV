@@ -12,15 +12,34 @@ Owner brain-dump for a fresh bugfix pass. Grouped by area, with status. Priority
 
 ## OPEN — priority order
 
-### 1. SALMON page splitter (owner's #1)
-- **Jumping**: the salmon ("▼ PAGE n ▼") oscillates between the CORRECT spot (just below the last
-  subsection text) and an INCORRECT one (floating over empty space). Measurement instability in the
-  two-map autoPages (`autoPages` vs `autoPagesPreview`).
-- **Missing page-3**: the unsolicited CV is long (3+ pages) but only the page-2 salmon draws — no
-  page-3 salmon. Page-count/break computation stops at 2.
-- Salmon render: `app.src.js` `__antcvSalmon` (~106), overflow loop (~133), segment splitter
-  (~5476/5509). See memory [[salmon-splitter-permanent]] (never delete it; only tune) +
-  [[pagination-two-map-and-worker-test]].
+### 1. SALMON page splitter (owner's #1) — ROOT CAUSE = two-column desync (PDF evidence)
+The owner's unsolicited-CV export PDF (`CV_…_Nordea_…_20260621.pdf`) shows the real problem, of which
+the salmon is only a symptom:
+- **The export is 6 pages and badly desynced.** Page 1: header + sidebar(Tools&Methods…) + main
+  (Profile→CoreComp→Experience Kanzen/Innoviz). Pages 2–4: SIDEBAR keeps going (Instruments, Methods,
+  AI-assisted, Certificates, Education, Regulatory, Languages, Accessibility) while the **MAIN COLUMN
+  IS EMPTY**. **Page 5 is BLANK.** Page 6: PROFESSIONAL EXPERIENCE (CONT.) (Sirin/Meprolight/TAU) +
+  Recommendations. So the two columns are wildly out of balance.
+- **Why the sidebar is 4 pages: DUPLICATED tool groups.** TOOLS & METHODS emits a concise top
+  (Data&analytics / Project workflow / Methods / Documentation) AND THEN verbose groups that REPEAT it
+  — a "Tools" group (Software = the same Jira/Confluence/SQL/Python… again) and a "Methods" group
+  (Quality&process = the same Six Sigma/FMEA… again). That ~2× bloat is what pushes the sidebar across
+  4 pages and strands the main column. Fixing the duplication ≈ halves the sidebar → the desync + the
+  salmon resolve. (Generation-level; owner's "keep focus area compressed" + tools-grouping prompt
+  relate.)
+- **Jumping / over-sidebar / missing page-3 (preview)** are downstream of this: with the columns this
+  mismatched, the preview salmon can't place a stable break.
+- Salmon render: `app.src.js` `__antcvSalmon` (~106, CV draws nothing — page-box draws it), overflow
+  loop (~133), segment splitter (~5476/5509). See [[salmon-splitter-permanent]] +
+  [[pagination-two-map-and-worker-test]] + [[photo-bridge-non-float]].
+- **DECISION NEEDED (owner):** for the duplicated TOOLS & METHODS — keep the CONCISE top list, or the
+  DETAILED groups? (Can't auto-pick without losing content the owner may want.)
+
+### 1b. Rugby content leaking into optics-role RESULTS (PDF p6)
+Sirin Labs (smartphone optics) Results reads "…own camera, display, biometric optical stack.; **Manage
+logistics for 25 players and coaches across Denmark and abroad**" — that's Copenhagen Wolves rugby-ops
+content merged into the wrong role's results. Same class as junior-rugby; a proofPointsByRole / merge
+contamination. Needs a role-scoped scrub or a generation fix.
 
 ### 2. Sidebar photo bridge spacing
 - Uneven vertical gaps: photo-top↔page-top vs photo-bottom↔first sidebar headline (TOOLS & METHODS).

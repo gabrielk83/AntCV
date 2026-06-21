@@ -37,6 +37,21 @@
       (e.loc === 'main' && /PROFESSIONAL EXPER(TISE|IENCE)|\bEXPER(TISE|IENCE)\b|EKSPERTISE|ERFARING/i.test(String(e.title || ''))));
   }
 
+  // OWNER-PRESENT-GATE-001 (owner 2026-06-22): after a DELETE, personalInfo is cleared but the
+  // floor restores an empty me() skeleton — and the Gabriel-specific INJECTORS below (pinInterests'
+  // CANON_INTERESTS, placeRecs' "Danish and international recommenders…") then re-plant his data into
+  // the blank sections, so a deleted/fresh user sees his interests + recommendations instead of a
+  // template (a contamination/privacy gap + it stops the wizard). Gate those injectors: only inject
+  // when REAL owner data is present in personalInfo. (The role-correctors — canonKanzen etc. — are
+  // already no-ops on a fresh skeleton since there are no matching roles to correct.)
+  function ownerPresent() {
+    try {
+      var pi = JSON.parse(localStorage.getItem('personalInfo') || '{}') || {};
+      return !!(String(pi.name || '').trim() || String(pi.email || '').trim() ||
+        (Array.isArray(pi.interests) && pi.interests.length) || (Array.isArray(pi.experience) && pi.experience.length));
+    } catch (_) { return true; }   // on a genuine parse error, don't disrupt the owner
+  }
+
   function stripFounder(cv) {
     var touched = false;
     var out = cv.map(function (s) {
@@ -70,6 +85,8 @@
     // PATENT, etc.) the user moved between them - respect that manual order and do
     // nothing. (Was: forced recs to anchor+1, which reverted any manual move.)
     if (ri > anchor) return null;
+    // Don't CREATE Gabriel's recommendations for a fresh/deleted user — only relocate an existing one.
+    if (ri < 0 && !ownerPresent()) return null;
     var copy = cv.slice();
     var rec;
     if (ri >= 0) rec = copy.splice(ri, 1)[0];
@@ -720,6 +737,7 @@
     { l: 'Supervision', v: 'Handling three feline strategic napping experts (cats)' }
   ];
   function pinInterests(cv) {
+    if (!ownerPresent()) return null;   // don't inject Gabriel's CANON_INTERESTS for a fresh/deleted user
     var xi = cv.findIndex(function (s) { return s && s.id === 'interests' && Array.isArray(s.items); });
     if (xi < 0) return null;
     var items = cv[xi].items;

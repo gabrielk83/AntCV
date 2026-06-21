@@ -326,7 +326,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.50.763';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.50.786';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.50.787';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -365,10 +365,10 @@
         auth.src = 'antcv-auth.js?v=1.50.312-auth-msg';
         auth.onload = function(){
           var app = document.createElement('script');
-          app.src = 'app.js?v=1.50.782';
+          app.src = 'app.js?v=1.50.787';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.50.786';
+            vo.src = 'antcv-version-override.js?v=1.50.787';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -731,7 +731,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-accessibility-comment-strip.js?v=1.50.697" defer></script>
 <script src="antcv-evidence-artifact-strip.js?v=1.50.705" defer></script>
 <script src="antcv-role-id-stabilize.js?v=1.50.693" defer></script>
-<script src="antcv-recs-as-list.js?v=1.50.690" defer></script>
+<script src="antcv-recs-as-list.js?v=1.50.787" defer></script>
 <script src="antcv-why-context-title.js?v=1.50.690" defer></script>
 <script src="antcv-ai-assisted-to-methods.js?v=1.50.690" defer></script>
 <script src="antcv-tables-core-dedup.js?v=1.50.654" defer></script>

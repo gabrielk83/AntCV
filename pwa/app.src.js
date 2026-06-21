@@ -3153,7 +3153,7 @@
               items: [
                 {
                   deg: "References",
-                  sch: "Danish and international recommenders available on request",
+                  sch: "[available on request - or list your referees here]",
                 },
               ],
             },

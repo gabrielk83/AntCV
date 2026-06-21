@@ -42,7 +42,7 @@
     var content = typeof sec.content === 'string' ? sec.content.trim() : '';
     // Strip a leading "RECOMMENDATIONS:" / "References:" label if generation added one.
     content = content.replace(/^\s*(?:references|recommendations)\s*:\s*/i, '').trim();
-    var detail = content || 'Danish and international recommenders available on request';
+    var detail = content || '[available on request - or list your referees here]';
     sec.type = 'education';
     sec.items = [{ deg: 'References', sch: detail }];
     delete sec.content;

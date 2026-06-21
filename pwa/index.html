@@ -330,7 +330,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.50.763';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.50.795';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.50.796';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -372,7 +372,7 @@
           app.src = 'app.js?v=1.50.795';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.50.795';
+            vo.src = 'antcv-version-override.js?v=1.50.796';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -840,7 +840,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <!-- CORE-COMP-COMPRESS-001: cap Strategic Expertise cells at 105 chars + abbreviate Focus Area labels. -->
 <script src="antcv-core-comp-compress.js?v=1.50.783" defer></script>
 <!-- LANGUAGES-CONCISE-001: trim language proficiency to its concise core (CEFR→word, drop qualifiers). -->
-<script src="antcv-languages-concise.js?v=1.50.779" defer></script>
+<script src="antcv-languages-concise.js?v=1.50.796" defer></script>
 <!-- SKELETON-LEAK-001: strip leaked me() authoring instructions ("[PROFILE - 2-3 sentences…]") that
      got appended to real profile/work_style/opening/who/why/foundation content. -->
 <script src="antcv-strip-skeleton-placeholders.js?v=1.50.773" defer></script>

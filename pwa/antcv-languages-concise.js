@@ -40,7 +40,9 @@
     var m = core.match(/^([abc][12])\b/i);
     if (m) { var lvl = m[1].toUpperCase(); return (lvl[0] === 'A' ? 'basic' : lvl[0] === 'B' ? 'intermediate' : 'fluent') + ' (' + lvl + ')'; }
     if (/full professional|professional working|professional proficiency/i.test(core)) return 'professional';
-    if (/native|mother ?tongue/i.test(core)) return 'native';
+    // LANG-NATIVE-FLUENT-001 (owner 2026-06-23): a native language reads "native / fluent"
+    // (native implies fluent). Idempotent — re-matching "native / fluent" returns it unchanged.
+    if (/native|mother ?tongue/i.test(core)) return 'native / fluent';
     return core;                                  // already concise (professional / native / …) or unknown → keep core
   }
   function readPI() { try { var v = JSON.parse(localStorage.getItem('personalInfo') || '{}'); return (v && typeof v === 'object') ? v : {}; } catch (_) { return {}; } }

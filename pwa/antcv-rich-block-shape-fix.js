@@ -22,7 +22,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.802';
+  var VERSION = '1.50.803';
   if (window.__antcvRichBlockShapeFix === VERSION) return;
   window.__antcvRichBlockShapeFix = VERSION;
 
@@ -97,11 +97,40 @@
     if (!content) return false;
     if (/^\s*\[[^\]]*\]\s*$/.test(content)) return false; // a [placeholder] is not real content
     var its = Array.isArray(sec.items) ? sec.items : [];
-    var hasContent = its.some(function (it) {
-      return it && ((typeof it === 'string' && it.trim()) || (it.t != null && String(it.t).trim()) || (it.b != null && String(it.b).trim()));
+    // RICH-BLOCK-CONTENT-BRIDGE-002 (owner 2026-06-23): check the BODY (t / string), NOT the
+    // label (b). who/why came in as {b:"Who I am", t:""} — a label with an EMPTY body — so the
+    // old b-check wrongly thought the section had content and skipped it. Surface section.content
+    // as the body (drop the redundant label; the section heading already shows it).
+    var hasBody = its.some(function (it) {
+      return it && ((typeof it === 'string' && it.trim()) || (it.t != null && String(it.t).trim()));
     });
-    if (hasContent) return false;
+    if (hasBody) return false;
     sec.items = [{ b: '', t: content }];
+    return true;
+  }
+
+  // TOOLS-LABEL-DEDUP-001 (owner 2026-06-23): "AI-assisted" appeared TWICE in TOOLS & METHODS.
+  // Collapse duplicate non-group rows that share a label (b), keeping the one with the LONGEST
+  // body (the fuller version) at its position; drop the rest. Group (grp) rows are untouched.
+  function dedupeLabels(sec) {
+    if (!sec || sec.type !== 'rich_block' || !Array.isArray(sec.items)) return false;
+    var best = {};
+    sec.items.forEach(function (it, idx) {
+      if (!it || typeof it !== 'object' || it.grp) return;
+      var b = it.b != null ? String(it.b).trim() : '';
+      if (!b) return;
+      var k = b.toLowerCase();
+      var len = String(it.t || '').length;
+      if (best[k] == null || len > String(sec.items[best[k]].t || '').length) best[k] = idx;
+    });
+    var out = sec.items.filter(function (it, idx) {
+      if (!it || typeof it !== 'object' || it.grp) return true;
+      var b = it.b != null ? String(it.b).trim() : '';
+      if (!b) return true;
+      return best[b.toLowerCase()] === idx;
+    });
+    if (out.length === sec.items.length) return false;
+    sec.items = out;
     return true;
   }
 
@@ -123,6 +152,7 @@
           if (bridgeContent(s)) changed = true;
           if (fixWorkStyle(s, pi)) changed = true;
           if (fillProfile(s, pi)) changed = true;
+          if (dedupeLabels(s)) changed = true;
         });
       });
       if (!changed) return;

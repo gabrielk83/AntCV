@@ -46,8 +46,11 @@ test('core-competencies row-controls sidecar defaults the HEADER row (row 0) to 
   assert.match(sc, /i===0 \? 'center' : 'justify'/);
   // getAlign reads the native rowAlign so the native CJLR drives the preview
   assert.ok(sc.includes('sec.rowAlign'));
-  // header row is aligned from getAlign(0)
-  assert.ok(sc.includes('headerRows.forEach(r=>applyAlign(r,getAlign(0)))'));
+  // HEADER-ALIGN-UNIFY-001 (1.50.802, owner "header dancing"): the header is aligned from
+  // section.headerAlign — the SAME source the React render uses (1.50.795), default center —
+  // so the sweep and React no longer fight. (Was getAlign(0) = rowAlign[0], a different source.)
+  assert.ok(sc.includes('s.headerAlign'), 'header must read section.headerAlign');
+  assert.ok(sc.includes('headerRows.forEach(r=>applyAlign(r,__hAlign))'), 'header aligned from __hAlign (headerAlign), not getAlign(0)');
 });
 
 test('React preview <th> default is textAlign:center (both header cells)', () => {

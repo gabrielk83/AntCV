@@ -49,14 +49,15 @@ with `unregister SWs + caches.delete all + reload`.
 ## OPEN for the NEXT session (priority)
 1. **SW staleness** — the #1 systemic issue; fixes don't load. Needs a real fix (de-masking +
    guaranteed-fresh hard-refresh).
-2. **Preserved relay/docx config after delete** (owner's hypothesis: "maybe KV not removed?"). NOTE:
-   the relay URL the owner sees in Settings (`antcv-access-relay.workers.dev`) is in localStorage
-   (`proxyUrl`/`relayUrl`) and is the SAME deployment backend for every user — after `localStorage.clear()`
-   it is RE-DEFAULTED on boot (from `window.ANTCV_RELAY_URL` / serverConfig), not restored from the
-   user's KV (the DELETE response confirmed `prefs2:<hash>` WAS deleted). So it is deployment config,
-   not private user data — but a fresh state shouldn't surface the prior setup. Decide: does the wizard
-   re-establish it, or do we suppress it under a fresh-start flag? Verify whether ANY relay/docx field
-   also rides in the user KV/D1 that the DELETE misses.
+2. **Preserved relay/docx config after delete — DECIDED (owner 2026-06-22).** Finding: the DELETE DID
+   wipe the user KV (`prefs2:<hash>` + D1 confirmed in the response). The relay/docx URLs the owner
+   still sees are in localStorage (`proxyUrl`/`relayUrl`/`docxWorkerUrl`) and are currently RE-DEFAULTED
+   on boot from app config — that auto-re-appearance is **NOT approved**. OWNER DECISION: the delete
+   sequence must WIPE the relay + docx URLs + API secrets, and the **WIZARD re-establishes them** — the
+   user re-inserts the **relay URL** first, then the **docx-worker URL**, then **API secrets**, and the
+   rest can be **mapped automatically** from those. So: (a) stop the boot-time re-default of
+   relay/docx/secrets, (b) add a wizard backend-config step (relay → docx → secrets, auto-map). This
+   folds into the fresh-start-mode work (#3).
 3. **Clean-delete → WIZARD** — the floor restores a skeleton that wizard-detection reads as "has data"
    → editor instead of wizard. Build a "fresh-start mode" flag (set on delete) that suppresses
    floor/canon/relay restores and forces the wizard, cleared on wizard completion. See the kickoff doc.
@@ -65,5 +66,10 @@ with `unregister SWs + caches.delete all + reload`.
 5. **Salmon/pagination** — the tools-dedup (780) attacks the sidebar bloat; verify the export is no
    longer 6 pages, then the two-column balancing if still off.
 6. **Focus-area CV/CL naming** — needs the app.src↔app.js Focus-area drift sorted first (788 note).
-7. Remaining kickoff items: table-header CJLR + alignment drift; rugby-in-Sirin-results scrub (may be
-   moot after the JSON re-upload); sidebar photo spacing; Nordea CL lock; certs-missing-unsolicited.
+7. **Universal table-type redesign** (owner 2026-06-22) — the CORE COMPETENCIES / WHAT I BRING row
+   editor is REGRESSED for both tables; rebuild as a full-control table type (heading/rule toggles,
+   header+table CJLR, bold/italic, column-ratio + table-size drag, per-row hide/page/CJLR/enhance/fit/
+   up-down/delete/+Add, settings-only gap/heading/2-col/heading-color/banded/char-caps, preview-editable).
+   Spec: `docs/plan/TABLE_TYPE_REDESIGN_2026-06-22.md`.
+8. Remaining kickoff items: rugby-in-Sirin-results scrub (may be moot after the JSON re-upload); sidebar
+   photo spacing; Nordea CL lock; certs-missing-unsolicited.

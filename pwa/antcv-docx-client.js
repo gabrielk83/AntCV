@@ -2407,6 +2407,21 @@ export function applyOutcomesMode(docSections, doc) {
       return b;
     };
     const _txBl = (arr) => (Array.isArray(arr) ? arr.map(_txBullet) : arr);
+    // RESULTS-RUGBY-CROSSROLE-SCRUB-001 (owner 2026-06-23, bug #1b): a Copenhagen
+    // Wolves / Pan Idraet rugby-ops clause ("logistics for N players and coaches",
+    // "players and coaches") bled into a NON-rugby role's Results (e.g. Sirin Labs
+    // optics). Whatever produced it (gen/D1 merge or pool best-AVAILABLE-home bleed),
+    // drop the offending ';'-joined clause(s) from any role that is not the rugby role.
+    // Same class as the INTERESTS junior-rugby scrub (antcv-sections-normalize-415).
+    const _RUGBY_CLAUSE = /(?:players?\s+and\s+coaches|logistics\s+for\s+\d+\s+players|coaching\s+junior|junior\s+rugby|assistant\s+coach)/i;
+    const _isRugbyRole = (r) => /copenhagen wolves|foreningsarbejde|pan idr|wolves rfc|rugby/i.test(String((r && r.title) || '') + ' ' + String((r && r.company) || ''));
+    const _scrubRoleRugby = (r) => {
+      if (!r || !r.results || _isRugbyRole(r) || !_RUGBY_CLAUSE.test(String(r.results))) return r;
+      const kept = String(r.results).split(/\s*;\s*/).filter((c) => c && !_RUGBY_CLAUSE.test(c));
+      const out = kept.join('; ').replace(/[;,.\s]+$/, '');
+      if (out) return { ...r, results: out };
+      const c = { ...r }; delete c.results; return c;
+    };
     const expOut = {
       ...exp,
       roles: (exp.roles || []).map((r) => {
@@ -2431,7 +2446,7 @@ export function applyOutcomesMode(docSections, doc) {
         const keptBullets = (Array.isArray(r.bullets) ? r.bullets : []).filter((_, i) => i !== d.index);
         if (!keptBullets.length) return { ...r, bullets: _txBl(r.bullets) };
         return { ...r, results: _tx(d.text), bullets: _txBl(keepMin(keptBullets, hideMetricReused(keptBullets, d.text))) };
-      }),
+      }).map(_scrubRoleRugby),
     };
     return docSections.filter((s) => !isOutcomes(s)).map((s) => (s === exp ? expOut : s));
   } catch (_) { return docSections; }

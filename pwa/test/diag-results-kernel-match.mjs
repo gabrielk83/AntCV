@@ -54,3 +54,30 @@ ok('no-outcome non-numeric role gets NO Results (no duty restatement)', !roles[2
 ok('non-numeric role keeps its bullets as content', (roles[2].bullets || []).length >= 1);
 
 console.log(`\nRESULTS-KERNEL-MATCH OK (${pass} checks)`);
+
+// RESULTS-RUGBY-CROSSROLE-SCRUB-001 (owner 2026-06-23, bug #1b): a Copenhagen Wolves
+// rugby-ops clause ("logistics for 25 players and coaches") bled into the Sirin Labs
+// (optics) role's Results. The scrub must drop the rugby clause from a NON-rugby role
+// while keeping its optics clause, and must LEAVE a real rugby role's results intact.
+const rugbySections = [{
+  id: 'experience', title: 'PROFESSIONAL EXPERIENCE', type: 'experience', roles: [
+    { id: 's1', title: 'Product Manager', company: 'Sirin Labs', on: true,
+      results: 'Owned the camera, display, biometric optical stack.; Manage logistics for 25 players and coaches across Denmark and abroad',
+      bullets: ['Drove the smartphone optics roadmap.'] },
+    { id: 's2', title: 'Foreningsarbejde / Rugby Ops', company: 'Copenhagen Wolves', on: true,
+      results: 'Manage logistics for 25 players and coaches across Denmark and abroad',
+      bullets: ['Coordinated match-day operations.'] },
+  ],
+},
+{ id: 'selected_outcomes', title: 'SELECTED OUTCOMES', type: 'text_bullets',
+  items: ['Mentored a cohort of graduate interns in laboratory methods.'] }];
+
+const rOut = applyOutcomesMode(rugbySections, 'cv');
+const rRoles = rOut.find((s) => s.type === 'experience').roles;
+const sirin = rRoles.find((r) => r.id === 's1');
+const wolves = rRoles.find((r) => r.id === 's2');
+ok('Sirin Labs result keeps its optics clause', /optical stack/.test(sirin.results || ''));
+ok('Sirin Labs result has NO rugby-ops clause', !/players and coaches|logistics for \d+ players/i.test(sirin.results || ''));
+ok('real rugby role keeps its rugby-ops result', /players and coaches/i.test(wolves.results || ''));
+
+console.log(`\nRUGBY-CROSSROLE-SCRUB OK`);

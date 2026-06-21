@@ -47,11 +47,19 @@ the salmon is only a symptom:
 - **DECISION NEEDED (owner):** for the duplicated TOOLS & METHODS — keep the CONCISE top list, or the
   DETAILED groups? (Can't auto-pick without losing content the owner may want.)
 
-### 1b. Rugby content leaking into optics-role RESULTS (PDF p6)
+### 1b. Rugby content leaking into optics-role RESULTS (PDF p6) `[SHIPPED 1.50.807 — nightly 2026-06-23]`
 Sirin Labs (smartphone optics) Results reads "…own camera, display, biometric optical stack.; **Manage
 logistics for 25 players and coaches across Denmark and abroad**" — that's Copenhagen Wolves rugby-ops
 content merged into the wrong role's results. Same class as junior-rugby; a proofPointsByRole / merge
-contamination. Needs a role-scoped scrub or a generation fix.
+contamination.
+**FIX (RESULTS-RUGBY-CROSSROLE-SCRUB-001, 1.50.807):** role-scoped output scrub in
+`antcv-docx-client.js applyOutcomesMode` — a `.map(_scrubRoleRugby)` on the laminated role array drops any
+`;`-joined rugby-ops clause (`players and coaches`, `logistics for N players`, `junior rugby`, etc.) from
+a role whose title/company is NOT a rugby role; a real rugby role keeps it. Runs at the single
+preview+export source (no app.js mirror). If scrubbing empties the line, the role gets NO Results (no fake
+restatement). Sidecar-only; verified `pwa/test/diag-results-kernel-match.mjs` (3 new cases). This kills the
+runtime symptom regardless of tier (gen/D1 merge OR pool best-available-home bleed); the deep gen/D1
+pre-wipe root cause remains regen-gated.
 
 ### 2. Sidebar photo bridge spacing
 - Uneven vertical gaps: photo-top↔page-top vs photo-bottom↔first sidebar headline (TOOLS & METHODS).
@@ -75,9 +83,14 @@ contamination. Needs a role-scoped scrub or a generation fix.
 - During the loading cover an unnecessary "sign in" element shows; it also appears outside the
   sign-in process. Remove it from the loading cover. (`antcv-login-loading-gate.js`.)
 
-### 6. Review-my-data behind set-menu
+### 6. Review-my-data behind set-menu `[ALREADY SHIPPED 1.50.781 — verified by nightly 2026-06-23]`
 - The modal loads but renders BEHIND the Settings set-menu (z-index). Raise it above the set-menu.
   (`antcv-data-export-360.js`.)
+- RESOLVED at 1.50.781 (commit 2a75697): overlay pinned to `z-index:2147483646` and appended to
+  `document.body` (a sibling of the Settings tree). The set-menu front sidecar
+  (`antcv-settings-front-327.js`) ramps the Settings root to `2147483600 !important` — the modal beats it
+  decisively. Cache-busted at 781. No further code needed; the bugfix item simply hadn't been marked
+  closed.
 
 ### 7. Certs missing from unsolicited
 - Some certificates are dropped on unsolicited applications (owner screenshot: CERTIFICATES &

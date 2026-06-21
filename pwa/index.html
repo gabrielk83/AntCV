@@ -43,6 +43,9 @@
        the wizard flash + palette/tone settling are masked. New users see the
        real wizard. Escape: localStorage['antcv:disable-loading-gate']='1'. -->
   <script src="antcv-login-loading-gate.js?v=1.50.784"></script>
+  <!-- MULTITAB-SIGNOUT-001: when one tab signs out / deletes, all other tabs sign out too (so no tab
+       re-syncs a deleted/signed-out account's data). Loads early. -->
+  <script src="antcv-multitab-signout-sync.js?v=1.50.785"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script>window.loadMammoth=()=>new Promise((res,rej)=>{if(window.mammoth)return res(window.mammoth);const s=document.createElement('script');s.src='https://unpkg.com/mammoth/mammoth.browser.min.js';s.onload=()=>res(window.mammoth);s.onerror=()=>rej(new Error('Failed to load Mammoth (.docx parser)'));document.head.appendChild(s);});</script>
@@ -323,7 +326,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.50.763';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.50.784';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.50.785';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -365,7 +368,7 @@
           app.src = 'app.js?v=1.50.782';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.50.784';
+            vo.src = 'antcv-version-override.js?v=1.50.785';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);

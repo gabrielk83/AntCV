@@ -75,6 +75,31 @@ contamination. Needs a role-scoped scrub or a generation fix.
 - Export a clean, modernized `personalInfo` JSON (rich_block-ready, concise languages w/ CEFR,
   no junior-rugby, grouped tools) for re-upload. Needs the live `personalInfo`.
 
+## Account-delete + generation contamination (owner insight 2026-06-22)
+The account-delete SECURITY fix is verified working on 1.50.782 (cloud `DELETE /api/prefs` wipes KV+D1;
+local `localStorage.clear()`; result = blank me() skeleton + wizard). The earlier "data still there"
+was the STALE SW serving old app.js — see [[stale-sw-version-mask-hazard]]. Remaining work:
+
+- **GEN-CONTAMINATION (owner's root-cause insight):** "new generations are so many times contaminated
+  by old ones — kernel generation must WIPE the D1 data for the panel/preview/export as STAGE 1 (full
+  generation); NOT for quick generation (keep current)." I.e. a FULL regen must first clear the prior
+  GENERATED output in D1 (`application` / `active_application` / `language_view` for this user) so the
+  new application isn't merged with / seeded from the old one (this is why e.g. rugby-ops bled into the
+  Sirin Labs results). A QUICK/incremental generation keeps the current data. Implementation: a
+  pre-generation D1 wipe step in the generation worker (access-relay/gen pipeline), gated on
+  full-vs-quick. Regen-gated — verify on a real regen. Ties to
+  `docs/plan/GENERATION_OPTIMIZATION_2026-06-22.md` (the hydrateContract pass should run AFTER a clean
+  slate).
+- **WIZARD DELETE:** if the user chooses "start fresh" / clear-and-restart inside the WIZARD, it must
+  trigger the SAME full delete flow (window.AntcvCloudDelete + localStorage/sessionStorage.clear) — not
+  a partial local-only reset. Find/confirm the wizard's start-fresh control and wire it to the 782 flow.
+- **MULTI-TAB delete gap:** localStorage is shared across tabs; another authed AntCV tab re-writes +
+  re-syncs the data within ~5s, defeating a delete. A robust delete should sign out / invalidate ALL
+  tabs (e.g. broadcast a `antcv:account-deleted` signal other tabs react to). Workaround: close other
+  tabs before deleting.
+- **LOADING "SIGN IN" flash (low priority, owner OK):** the "SIGN IN" heading was removed (1.50.784)
+  but the app's own sign-in card still flashes ~2-5s during LOADING (not on refresh). Not critical.
+
 ## Deferred / larger
 - CL Application Q&A **P2** (JD-question detection) + **P3** (grounded answers) — see
   `docs/plan/CL_APPLICATION_QA_2026-06-22.md`.

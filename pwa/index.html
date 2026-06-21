@@ -365,7 +365,7 @@
           app.src = 'app.js?v=1.50.763';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.50.772';
+            vo.src = 'antcv-version-override.js?v=1.50.773';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -816,6 +816,9 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-labeled-list-to-rich-block-763.js?v=1.50.763e" defer></script>
 <!-- LANGUAGES-CONCISE-001: trim language proficiency to its concise core (CEFR→word, drop qualifiers). -->
 <script src="antcv-languages-concise.js?v=1.50.771" defer></script>
+<!-- SKELETON-LEAK-001: strip leaked me() authoring instructions ("[PROFILE - 2-3 sentences…]") that
+     got appended to real profile/work_style/opening/who/why/foundation content. -->
+<script src="antcv-strip-skeleton-placeholders.js?v=1.50.773" defer></script>
 <!-- TWIN-TABLE-DEDUP-001: hide CORE COMPETENCIES rows that exactly duplicate WHAT I BRING (reversible). -->
 <script src="antcv-twin-table-dedup.js?v=1.50.767" defer></script>
 <!-- RICH-BLOCK-001 / HWIC: convert HOW I WOULD CONTRIBUTE (text_bullets) into rich_block —

@@ -212,13 +212,11 @@
     var authCard = document.createElement('div');
     authCard.style.cssText = 'border:1px solid rgba(255,255,255,0.10);border-radius:8px;' +
       'padding:16px;background:transparent;';
-    var heading = document.createElement('div');
-    heading.textContent = 'SIGN IN';
-    heading.style.cssText = 'margin:0 0 8px;font-size:11px;font-weight:700;' +
-      'color:rgba(255,255,255,0.50);letter-spacing:1px;text-transform:uppercase;';
+    // LOADING-NO-SIGNIN-001 (owner 2026-06-22): drop the "SIGN IN" heading from the loading cover —
+    // this is a LOADING state, not a sign-in prompt; the label below shows "Loading …" on its own.
     var label = document.createElement('div');
     label.style.cssText = 'font-size:12px;color:rgba(255,255,255,0.55);line-height:1.5;';
-    authCard.appendChild(heading); authCard.appendChild(label);
+    authCard.appendChild(label);
     panel.appendChild(authCard);
 
     col.appendChild(img); col.appendChild(brand); col.appendChild(tag);

@@ -21,12 +21,16 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.757b';
+  var VERSION = '1.50.757c';
   if (window.__antcvPublicationsMain757 === VERSION) return;
   window.__antcvPublicationsMain757 = VERSION;
 
   function readSections() {
     try { var v = JSON.parse(localStorage.getItem('sections') || '{}'); return (v && typeof v === 'object') ? v : {}; }
+    catch (_) { return {}; }
+  }
+  function readPI() {
+    try { var v = JSON.parse(localStorage.getItem('personalInfo') || '{}'); return (v && typeof v === 'object') ? v : {}; }
     catch (_) { return {}; }
   }
   // OLD = the retired section: id "publications", OR a non-rich sidebar list_italic
@@ -101,6 +105,42 @@
     }
     return v.replace(/^[\s"'“”‘’«»]+|[\s"'“”‘’«»]+$/g, '').trim();
   }
+
+  // PUB-REPOPULATE-001 (owner data 2026-06-22): a pubs section can hold ONLY the placeholder
+  // ("[Publication, patent, or conference paper]") while personalInfo.publicationsStructured holds
+  // the REAL publications — the migration carries an OLD section across but never seeds from the
+  // source of truth, so a user whose pubs was reset to the skeleton shows a blank Publications.
+  // Per [[dont-exclude-fix-the-data-push]]: when the section is empty/placeholder, re-derive its
+  // citation items from personalInfo (NEVER overwrite real items). Composed "Name — details" so the
+  // list_italic render + the 5-field editor (which re-seeds pubFields from items) round-trip cleanly.
+  function isPlaceholderItem(it) {
+    var s = String(it == null ? '' : it).trim();
+    return !s || /^\[.*\]$/.test(s);
+  }
+  function sectionIsEmpty(items) {
+    if (!Array.isArray(items) || !items.length) return true;
+    return items.every(isPlaceholderItem);
+  }
+  function stripMarkup(s) { return String(s == null ? '' : s).replace(/<\/?[a-z][^>]*>/gi, '').trim(); }
+  function citationsFromPI(pi) {
+    var out = [], seen = {};
+    function push(v) { v = cleanItem(v); if (v && !seen[v]) { seen[v] = 1; out.push(v); } }
+    var ps = Array.isArray(pi.publicationsStructured) ? pi.publicationsStructured : [];
+    ps.forEach(function (p) {
+      if (!p || p.visible === false) return;
+      var nm = stripMarkup(p.name || ''); var det = stripMarkup(p.details || '');
+      if (nm) push(det ? (nm + ' — ' + det) : nm);
+    });
+    // fallback to the flat (markup-bearing) publications array only if structured gave nothing
+    if (!out.length && Array.isArray(pi.publications)) pi.publications.forEach(push);
+    // append the patent (separate top-level fields), if present and not already represented
+    if (pi.patentNumber) {
+      var pd = stripMarkup(pi.patentDescription || '');
+      push((pd || 'Patent') + ' — Patent no. ' + String(pi.patentNumber).trim());
+    }
+    return out;
+  }
+
   function run() {
     try {
       var secs = readSections();
@@ -114,6 +154,15 @@
         if (s && (s.id === 'pubs' || s.richPub) && Array.isArray(s.items)) {
           var cleaned = s.items.map(cleanItem);
           for (var j = 0; j < cleaned.length; j++) { if (cleaned[j] !== s.items[j]) { s.items = cleaned; changed = true; break; } }
+        }
+      }
+      // PUB-REPOPULATE-001: fill an empty/placeholder pubs section from personalInfo (source of truth).
+      var pi = readPI();
+      for (var p = 0; p < secs.cv.length; p++) {
+        var ps = secs.cv[p];
+        if (ps && (ps.id === 'pubs' || ps.richPub) && sectionIsEmpty(ps.items)) {
+          var cites = citationsFromPI(pi);
+          if (cites.length) { ps.items = cites; if ('pubFields' in ps) delete ps.pubFields; changed = true; }
         }
       }
       if (!changed) return;

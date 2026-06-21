@@ -26,7 +26,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.759b';
+  var VERSION = '1.50.759c';
   if (window.__antcvTextSectionsToRichBlock759 === VERSION) return;
   window.__antcvTextSectionsToRichBlock759 = VERSION;
 
@@ -86,15 +86,36 @@
     });
     return { changed: changed, list: out };
   }
+  // SETTINGS PARITY: the old profile/work_style CJLR (antcv-profile-workstyle-cjlr-238.js) stored a
+  // single paragraph alignment per section in antcv.profileWorkstyleParagraphAlignment.v1. rich_block
+  // reads antcvItemAlignment instead, so carry any saved value over to the section group + row 0.
+  function migrateControls() {
+    try {
+      var pw = JSON.parse(localStorage.getItem('antcv.profileWorkstyleParagraphAlignment.v1') || '{}') || {};
+      if (!pw || (!pw.profile && !pw.work_style)) return;
+      var ok = ['left', 'center', 'right', 'justify'];
+      var al = JSON.parse(localStorage.getItem('antcvItemAlignment') || '{}') || {};
+      var touched = false;
+      ['profile', 'work_style'].forEach(function (id) {
+        var v = pw[id];
+        if (!v || ok.indexOf(v) < 0) return;
+        if (!al[id] || typeof al[id] !== 'object') al[id] = {};
+        if (!al[id].__group__) { al[id].__group__ = v; touched = true; }
+        if (!al[id]['items.0']) { al[id]['items.0'] = v; al[id]['0'] = v; touched = true; }
+      });
+      if (touched) localStorage.setItem('antcvItemAlignment', JSON.stringify(al));
+    } catch (_) {}
+  }
   function run() {
     try {
       var secs = readSections();
       var cv = convertList(secs.cv || []);
       var cl = convertList(secs.cl || []);
-      if (!cv.changed && !cl.changed) return;
+      if (!cv.changed && !cl.changed) { migrateControls(); return; }
       if (cv.changed) secs.cv = cv.list;
       if (cl.changed) secs.cl = cl.list;
       localStorage.setItem('sections', JSON.stringify(secs));
+      migrateControls();
       try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { reason: 'text-sections-to-rich-block-759' } })); } catch (_) {}
     } catch (_) { /* self-disable on any error */ }
   }

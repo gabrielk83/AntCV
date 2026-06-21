@@ -65,6 +65,13 @@ const emojiXml = unzipEntry(await gen(payload({ id:'profile2', title:'PROFILE', 
   { b:'', t:'disciplined product ownership', mk:'✅' },
 ] })), 'word/document.xml').toString('utf8');
 const emojiMk = { rocket: emojiXml.includes('🚀'), check: emojiXml.includes('✅'), numPr: (emojiXml.match(/<w:numPr>/g) || []).length };
+// whole-section lead style: bold off + italic on + custom colour applied to the lead run.
+const leadXml = unzipEntry(await gen(payload({ id:'profile2', title:'PROFILE', loc:'main', on:true, type:'rich_block',
+  leadBold:false, leadItalic:true, leadColor:'#FF0000', items:[ { b:'Hands-on', t:'built and operated rigs' } ] })), 'word/document.xml').toString('utf8');
+// isolate the run that carries the lead text "Hands-on"
+const leadRunM = leadXml.match(/<w:r>(?:(?!<w:r>).)*?Hands-on/s);
+const leadRun = leadRunM ? leadRunM[0] : '';
+const leadStyle = { color: /w:color w:val="FF0000"/i.test(leadRun), italic: /<w:i\/>/.test(leadRun), notBold: !/<w:b\/>/.test(leadRun) };
 
 log('normal   :', JSON.stringify(normal));
 log('headlineOff:', JSON.stringify(noHead));
@@ -80,6 +87,7 @@ checks.push(['ruleOff keeps heading, drops the rule', noRule.title && noRule.pBd
 checks.push(['plain rows have no list numbering', normal.numPr === 0]);
 checks.push(['marker rows export as a numbered list', markered.numPr >= 2 && markered.bodyA]);
 checks.push(['per-row emoji markers export as literal glyphs (no numbering)', emojiMk.rocket && emojiMk.check && emojiMk.numPr === 0]);
+checks.push(['whole-section lead style (bold-off + italic + colour) applies to the lead run', leadStyle.color && leadStyle.italic && leadStyle.notBold]);
 
 let pass = true;
 for (const [name, ok] of checks) { log((ok ? 'PASS' : 'FAIL') + ' — ' + name); if (!ok) pass = false; }

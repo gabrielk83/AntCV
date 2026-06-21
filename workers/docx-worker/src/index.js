@@ -26118,6 +26118,10 @@ function renderRichBlock(s, ctx, isSidebar) {
   const { style, fs } = ctx;
   const items = Array.isArray(s.items) ? s.items : [];
   const groupCjlr = paraAlign(s, null, void 0);
+  // Whole-section lead-in ("Verb"/starter) style — bold / italic / colour.
+  const leadBold = s.leadBold !== false;
+  const leadItalic = !!s.leadItalic;
+  const leadHex = s.leadColor ? String(s.leadColor).replace(/^#/, "") : (isSidebar ? style.sidebarHeadColor : style.mainHeadColor);
   const rp = s.row_pages && typeof s.row_pages === "object" ? s.row_pages : null;
   const rowPage = /* @__PURE__ */ __name((i) => {
     if (!rp) return 1;
@@ -26137,8 +26141,9 @@ function renderRichBlock(s, ctx, isSidebar) {
       })] : [],
       ...lead ? [new TextRun({
         text: lead,
-        bold: true,
-        color: isSidebar ? style.sidebarHeadColor : style.mainHeadColor,
+        bold: leadBold,
+        italics: leadItalic,
+        color: leadHex,
         size: pt2hp(isSidebar ? fs.sbBody : fs.mainBody),
         font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont
       })] : [],

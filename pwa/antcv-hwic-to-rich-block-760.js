@@ -14,7 +14,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.760';
+  var VERSION = '1.50.760b';
   if (window.__antcvHwicToRichBlock760 === VERSION) return;
   window.__antcvHwicToRichBlock760 = VERSION;
 
@@ -28,6 +28,47 @@
     if (typeof it === 'object') return String(it.content || it.t || it.v || '');
     return String(it);
   }
+  // SETTINGS PARITY: the old HWIC controls (antcv-how-contribute-controls-245.js) stored per-line
+  // alignment in antcv.hiwc.alignment.v1 and per-line pages in antcv:itemPages[sid] under keys
+  // intro / bullet_<k> / closing. rich_block reads antcvItemAlignment / antcv:itemPages under
+  // items.<rowIndex>. Map the old keys onto the new row indices so saved settings carry over.
+  function migrateHwicStores(sid, introPresent, bulletCount, closingPresent, rowCount) {
+    try {
+      var ok = ['left', 'center', 'right', 'justify'];
+      var idxOf = function (key) {
+        if (key === 'intro') return introPresent ? 0 : -1;
+        var m = /^bullet_(\d+)$/.exec(key);
+        if (m) { var k = +m[1]; return k < bulletCount ? (introPresent ? 1 : 0) + k : -1; }
+        if (key === 'closing') return closingPresent ? rowCount - 1 : -1;
+        return -1;
+      };
+      // alignment
+      var hiwc = JSON.parse(localStorage.getItem('antcv.hiwc.alignment.v1') || '{}') || {};
+      var al = JSON.parse(localStorage.getItem('antcvItemAlignment') || '{}') || {};
+      var aT = false;
+      Object.keys(hiwc).forEach(function (key) {
+        var v = hiwc[key]; if (ok.indexOf(v) < 0) return;
+        var i = idxOf(key); if (i < 0) return;
+        if (!al[sid] || typeof al[sid] !== 'object') al[sid] = {};
+        if (!al[sid]['items.' + i]) { al[sid]['items.' + i] = v; al[sid][String(i)] = v; aT = true; }
+      });
+      if (aT) localStorage.setItem('antcvItemAlignment', JSON.stringify(al));
+      // pages
+      var pg = JSON.parse(localStorage.getItem('antcv:itemPages') || '{}') || {};
+      var src = pg[sid] || pg.how_i_would_contribute || null;
+      if (src && typeof src === 'object') {
+        var pT = false;
+        Object.keys(src).forEach(function (key) {
+          if (/^items\.|^\d+$/.test(key)) return; // already-new key
+          var n = Number(src[key]); if (!(n >= 2)) return;
+          var i = idxOf(key); if (i < 0) return;
+          if (!pg[sid] || typeof pg[sid] !== 'object') pg[sid] = {};
+          if (!pg[sid]['items.' + i]) { pg[sid]['items.' + i] = Math.round(n); pg[sid][String(i)] = Math.round(n); pT = true; }
+        });
+        if (pT) localStorage.setItem('antcv:itemPages', JSON.stringify(pg));
+      }
+    } catch (_) {}
+  }
   function convertList(list) {
     if (!Array.isArray(list)) return { changed: false, list: list };
     var changed = false;
@@ -37,13 +78,17 @@
       var rows = [];
       var intro = s.intro != null ? String(s.intro) : '';
       var closing = s.closing != null ? String(s.closing) : '';
-      if (intro.trim()) rows.push({ b: '', t: intro });
+      var introPresent = !!intro.trim();
+      if (introPresent) rows.push({ b: '', t: intro });
+      var bulletCount = 0;
       (Array.isArray(s.items) ? s.items : []).forEach(function (it) {
         var bt = bulletText(it);
-        if (bt.trim() || bt === '') rows.push({ b: '', t: bt, mk: true });
+        if (bt.trim() || bt === '') { rows.push({ b: '', t: bt, mk: true }); bulletCount++; }
       });
-      if (closing.trim()) rows.push({ b: '', t: closing });
+      var closingPresent = !!closing.trim();
+      if (closingPresent) rows.push({ b: '', t: closing });
       if (!rows.length) rows.push({ b: '', t: '', mk: true });
+      migrateHwicStores(s.id, introPresent, bulletCount, closingPresent, rows.length);
       var ns = {
         id: s.id, title: s.title, loc: s.loc, on: s.on, type: 'rich_block', items: rows
       };

@@ -60,7 +60,8 @@ const cvErrs = cv.errs.slice(); await cv.page.close();
 const cl = await boot('cl');
 const clR = await cl.page.evaluate(()=>{
   const txt = [...document.querySelectorAll('.antcv-preview-paper')].map(p=>p.textContent).join('\n');
-  const bolds = [...document.querySelectorAll('.antcv-preview-paper b')].map(b=>(b.textContent||'').trim());
+  // lead-ins are <span> (carry the section lead style), not <b>.
+  const bolds = [...document.querySelectorAll('.antcv-preview-paper p > span, .antcv-preview-paper p > b')].map(b=>(b.textContent||'').trim());
   return { opening:/OPENING_CONTENT_X/.test(txt), who:/WHO_CONTENT_X/.test(txt), why:/WHY_CONTENT_X/.test(txt),
     whoLead: bolds.some(x=>/Who I am/i.test(x)), whyLead: bolds.some(x=>/Why this (company|position)/i.test(x)) };
 });

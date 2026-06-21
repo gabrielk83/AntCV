@@ -57,10 +57,16 @@
       // ---- whole-section bar: headline toggle · rule toggle · section CJLR ----
       var groupAlign = getGroup();
       var headOff = !!e.headlineOff, ruleOff = !!e.ruleOff;
+      // Whole-section lead-in ("Verb"/starter) style — bold / italic / colour (NOT per row).
+      var leadBold = e.leadBold !== false, leadItalic = !!e.leadItalic, leadColor = e.leadColor || accent;
       var bar = h("div", { style: { display: "flex", gap: 6, alignItems: "center", marginBottom: 8, flexWrap: "wrap", paddingBottom: 6, borderBottom: "1px dashed #e3e3e3" } },
         h("button", { onClick: function () { d({ headlineOff: !headOff }); }, title: headOff ? "Headline hidden — show it" : "Headline shown — hide it", style: btn({ border: "1px solid " + (headOff ? "#999" : accent), color: headOff ? "#999" : accent }) }, (headOff ? "🙈" : "👁") + " Headline"),
         h("button", { onClick: function () { if (!headOff) d({ ruleOff: !ruleOff }); }, disabled: headOff, title: headOff ? "No rule without a headline" : (ruleOff ? "Rule hidden — show it" : "Rule shown — hide it"), style: btn({ border: "1px solid " + (headOff ? "#ddd" : ruleOff ? "#999" : accent), color: headOff ? "#ddd" : ruleOff ? "#999" : accent, cursor: headOff ? "not-allowed" : "pointer" }) }, (ruleOff ? "🚫" : "—") + " Rule"),
-        h("button", { onClick: function () { setGroup(ALIGNS[(ALIGNS.indexOf(groupAlign) + 1) % ALIGNS.length] || "justify"); }, title: "Whole-section alignment: " + (ALABEL[groupAlign] || groupAlign) + ". Click to cycle.", style: btn({ border: "1px solid #7b2ff2", color: "#7b2ff2", background: "rgba(123,47,242,.06)", fontSize: 11 }) }, (AICON[groupAlign] || AICON.justify) + " Section")
+        h("button", { onClick: function () { setGroup(ALIGNS[(ALIGNS.indexOf(groupAlign) + 1) % ALIGNS.length] || "justify"); }, title: "Whole-section alignment: " + (ALABEL[groupAlign] || groupAlign) + ". Click to cycle.", style: btn({ border: "1px solid #7b2ff2", color: "#7b2ff2", background: "rgba(123,47,242,.06)", fontSize: 11 }) }, (AICON[groupAlign] || AICON.justify) + " Section"),
+        h("span", { style: { fontSize: 10, color: "#888", marginLeft: 4 } }, "Lead:"),
+        h("button", { onClick: function () { d({ leadBold: !leadBold }); }, title: "Lead-in bold (whole section)", style: btn({ border: "1px solid " + (leadBold ? accent : "#bbb"), color: leadBold ? accent : "#bbb", fontWeight: 800, minWidth: 22 }) }, "B"),
+        h("button", { onClick: function () { d({ leadItalic: !leadItalic }); }, title: "Lead-in italic (whole section)", style: btn({ border: "1px solid " + (leadItalic ? accent : "#bbb"), color: leadItalic ? accent : "#bbb", fontStyle: "italic", fontWeight: 700, minWidth: 22 }) }, "I"),
+        h("input", { type: "color", value: leadColor, onChange: function (x) { d({ leadColor: x.target.value }); }, title: "Lead-in colour (whole section)", style: { width: 26, height: 22, padding: 0, border: "1px solid #ccc", borderRadius: 3, cursor: "pointer", flexShrink: 0 } })
       );
 
       // ---- rows ----

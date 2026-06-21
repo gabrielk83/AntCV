@@ -5075,7 +5075,12 @@
         case "rich_block": {
           const __sid = e.id;
           const __title = (e.title || "").toUpperCase();
-          const __lead = k.mainHeadColor || s;
+          const __lead = e.leadColor || k.mainHeadColor || s;
+          const __leadStyle = {
+            fontWeight: e.leadBold === false ? 400 : 700,
+            fontStyle: e.leadItalic ? "italic" : "normal",
+            color: __lead,
+          };
           let __al = {};
           try {
             __al =
@@ -5128,8 +5133,8 @@
                     : null,
                   bShow
                     ? React.createElement(
-                        "b",
-                        { style: { color: __lead } },
+                        "span",
+                        { style: __leadStyle },
                         React.createElement(B, {
                           path: ["items", i, "b"],
                           value: P(row.b),

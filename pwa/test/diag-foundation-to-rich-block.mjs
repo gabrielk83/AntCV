@@ -37,7 +37,8 @@ const r = await page.evaluate(()=>{
   const secs = JSON.parse(localStorage.getItem('sections')||'{}');
   const f = (secs.cv||[]).find(s=>s.id==='foundation');
   const txt = [...document.querySelectorAll('.antcv-preview-paper')].map(p=>p.textContent).join('\n');
-  const bolds = [...document.querySelectorAll('.antcv-preview-paper b')].map(b=>(b.textContent||'').trim());
+  // lead-ins are <span> (carry the section lead style) — find them by text + bold weight.
+  const bolds = [...document.querySelectorAll('.antcv-preview-paper p > span, .antcv-preview-paper p > b')].filter(el=>{const w=getComputedStyle(el).fontWeight; return w==='700'||w==='bold'||Number(w)>=600;}).map(el=>(el.textContent||'').trim());
   return {
     type: f && f.type,
     rowCount: f && Array.isArray(f.items) ? f.items.length : -1,

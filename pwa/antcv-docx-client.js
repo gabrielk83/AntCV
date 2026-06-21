@@ -1655,6 +1655,9 @@ function normalizeSections(raw) {
           ...(s.headlineOff ? { headlineOff: true } : {}),
           ...(s.ruleOff ? { ruleOff: true } : {}),
           ...(rowPages ? { row_pages: rowPages } : {}),
+          ...(s.leadBold === false ? { leadBold: false } : {}),
+          ...(s.leadItalic ? { leadItalic: true } : {}),
+          ...(s.leadColor ? { leadColor: s.leadColor } : {}),
         };
       }
 

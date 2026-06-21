@@ -44,8 +44,10 @@ const browser = await chromium.launch();
 const a = await boot(mk(false,false));
 const prevA = await a.page.evaluate(()=>{
   const txt = [...document.querySelectorAll('.antcv-preview-paper')].map(p=>p.textContent).join('\n');
-  const bolds = [...document.querySelectorAll('.antcv-preview-paper b')].map(b=>(b.textContent||'').trim());
-  return { hasTitle:/PROFILE/.test(txt), hasHandsOn:/Hands-on/.test(txt), hasBody:/built and operated/.test(txt), bolds: bolds.filter(x=>/Hands-on|Professionally/.test(x)), emojiMarker:/🚀/.test(txt) };
+  // lead-ins are now <span> (was <b>) carrying the section lead style — find them by text + check weight.
+  const leadEls = [...document.querySelectorAll('.antcv-preview-paper p > span')].filter(el=>/^(Hands-on|Professionally)/.test((el.textContent||'').trim()));
+  const bolds = leadEls.filter(el=>{const w=getComputedStyle(el).fontWeight; return w==='700'||w==='bold'||Number(w)>=600;}).map(el=>(el.textContent||'').trim());
+  return { hasTitle:/PROFILE/.test(txt), hasHandsOn:/Hands-on/.test(txt), hasBody:/built and operated/.test(txt), bolds, emojiMarker:/🚀/.test(txt) };
 });
 await a.page.close();
 

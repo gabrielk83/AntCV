@@ -86,6 +86,41 @@ test('a placeholder that ALREADY contains an NBSP is still stripped (strip-befor
   assert.ok(p.sections.find((s) => s.id === 'who'), 'real content still survives');
 });
 
+test('CERTS-PLACEHOLDER-LEAK-001: bracketed placeholders are stripped from list sections', () => {
+  // Owner bug #7 (2026-06-23): CERTIFICATES & COURSES exported the seed placeholder
+  // "[Certification name - issuer, year if useful]" because the list mapper never ran
+  // clean(). A real cert survives; the placeholder drops.
+  const p = buildPayload({
+    sections: { cl: [], cv: [
+      { id: 'certs', title: 'CERTIFICATES & COURSES', loc: 'sidebar', on: true, type: 'list',
+        items: ['ISTQB Foundation', '[Certification name - issuer, year if useful]', '[Course, licence, or formal training relevant to the role]'] },
+    ] },
+    doc: 'cv', personalInfo: { name: 'T' }, meta: {},
+  });
+  const certs = p.sections.find((s) => s.id === 'certs');
+  const vals = (certs.items || []).map((it) => noNbsp(typeof it === 'string' ? it : (it.text || `${it.l || ''}: ${it.v || ''}`)));
+  assert.deepEqual(vals, ['ISTQB Foundation'], 'only the real cert survives; placeholders dropped');
+});
+
+test('CERTS-PLACEHOLDER-LEAK-001: bracketed placeholders are stripped from labeled_list sections', () => {
+  const p = buildPayload({
+    sections: { cl: [], cv: [
+      { id: 'reg', title: 'REGULATORY CONTEXT', loc: 'sidebar', on: true, type: 'labeled_list',
+        items: [
+          { group: 'EU & UK' },
+          { l: 'ISO 26262', v: 'Functional safety' },
+          { l: '[Standard]', v: '[what it governs]' },
+        ] },
+    ] },
+    doc: 'cv', personalInfo: { name: 'T' }, meta: {},
+  });
+  const reg = p.sections.find((s) => s.id === 'reg');
+  // group header + the real ISO row survive; the all-placeholder row drops
+  assert.equal(reg.items.length, 2, 'placeholder labeled row dropped, group + real row kept');
+  assert.ok(reg.items.some((it) => it.group === 'EU & UK'), 'group header preserved');
+  assert.ok(reg.items.some((it) => /ISO 26262/.test(it.l || '')), 'real labeled row preserved');
+});
+
 test('a bracket inside real prose is NOT treated as a placeholder', () => {
   // only a string that is ENTIRELY one [bracket] counts as a placeholder
   const p = payloadWith([

@@ -1790,19 +1790,24 @@ function normalizeSections(raw) {
         return {
           ...base,
           items: mapItemsWithPage(s.id, s.items, function (it) {
+            // CERTS-PLACEHOLDER-LEAK-001 (owner bug #7, 2026-06-23): bracketed
+            // template placeholders ("[Certification name - issuer, year]") leaked
+            // into exported list sections (CERTIFICATES & COURSES) because the list
+            // mapper never ran clean() — unlike text/text_bullets. Strip a value that
+            // is ENTIRELY one bracketed placeholder to '' so it drops, never exports.
             if (it == null) return null;
-            if (typeof it === 'string') return it.trim() || null;
-            if (typeof it !== 'object') return String(it).trim() || null;
+            if (typeof it === 'string') return clean(it.trim()) || null;
+            if (typeof it !== 'object') return clean(String(it).trim()) || null;
             // Object — try {l, v} (labeled-list shape sneaking in)
-            const l = (it.l || it.label || '').toString().trim();
-            const v = (it.v || it.value || '').toString().trim();
+            const l = clean((it.l || it.label || '').toString().trim());
+            const v = clean((it.v || it.value || '').toString().trim());
             if (l && v) return `${l}: ${v}`;
             if (l) return l;
             if (v) return v;
             // Try common single-string fields
             for (const k of ['text', 'title', 'name', 'body', 'content', 'citation']) {
               const val = it[k];
-              if (typeof val === 'string' && val.trim()) return val.trim();
+              if (typeof val === 'string' && val.trim()) { const t = clean(val.trim()); if (t) return t; }
             }
             return null;
           }),
@@ -1820,11 +1825,15 @@ function normalizeSections(raw) {
             // value — previously these were silently stripped to
             // `{l: '', v: ''}` and lost. Now the worker can render them
             // as section breaks inside the labeled list.
-            const out = { l: it.l || '', v: it.v || '' };
+            // CERTS-PLACEHOLDER-LEAK-001: strip bracketed placeholders from l/v
+            // (same leak as the 'list' case); a row that ends up fully empty with
+            // no group/subhead/header/category marker is dropped (orphan placeholder).
+            const out = { l: clean(String(it.l || '').trim()), v: clean(String(it.v || '').trim()) };
             if (it.group)    out.group    = String(it.group);
             if (it.subhead)  out.subhead  = String(it.subhead);
             if (it.header)   out.header   = String(it.header);
             if (it.category) out.category = String(it.category);
+            if (!out.l && !out.v && !out.group && !out.subhead && !out.header && !out.category) return null;
             // Preserve per-item hidden flag. The PWA's eye-toggle
             // button sets it.hidden = true on individual items in
             // labeled_list sections (REGULATORY CONTEXT, ADDITIONAL

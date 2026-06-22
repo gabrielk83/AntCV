@@ -92,9 +92,20 @@ pre-wipe root cause remains regen-gated.
   decisively. Cache-busted at 781. No further code needed; the bugfix item simply hadn't been marked
   closed.
 
-### 7. Certs missing from unsolicited
+### 7. Certs missing from unsolicited `[PLACEHOLDER-LEAK HALF SHIPPED 1.50.808 — nightly 2026-06-23]`
 - Some certificates are dropped on unsolicited applications (owner screenshot: CERTIFICATES &
   COURSES shows 5 + placeholders; expected more). Investigate the unsolicited cert filter.
+- **DIAGNOSED:** there is NO unsolicited-specific cert cap/filter (unsolicited keeps MORE breadth, not
+  less). The "+ placeholders" symptom was a real deterministic bug: the export `list`/`list_italic`/
+  `labeled_list` mappers in `antcv-docx-client.js` never ran `clean()`, so seed bracket placeholders
+  ("[Certification name - issuer, year if useful]", "[Course, licence...]") leaked into the exported
+  CERTIFICATES & COURSES (and any list section) — unlike `text`/`text_bullets` which already stripped them.
+- **FIX (CERTS-PLACEHOLDER-LEAK-001, 1.50.808):** apply `clean()` in the list + labeled_list export
+  mappers; a value that is entirely one bracketed placeholder drops; an all-placeholder labeled row with no
+  group/subhead marker drops. Unit-tested (`pwa/test/unit/placeholder-export-guard.test.mjs` +2 cases).
+- **OPEN (needs live regen):** if real certs are still SHORT after placeholders are gone, that is governed
+  by what the LLM emits in `certifications_items` (generation merge keeps stored-but-unreturned certs as
+  `hidden:true`, never drops them) — verify on a real unsolicited regen with Gabriel's live personalInfo.
 
 ### 8. Deliverable — modernized Gabriel JSON
 - Export a clean, modernized `personalInfo` JSON (rich_block-ready, concise languages w/ CEFR,

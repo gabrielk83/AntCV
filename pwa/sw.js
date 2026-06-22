@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.50.810';
+const CACHE = 'antcv-1.50.811';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',
@@ -50,6 +50,7 @@ const SHELL = [
   './antcv-panel-bottom-pad.js',
   './antcv-sidebar-position.js',
   './antcv-page-fit.js',
+  './antcv-main-overflow-detect-364.js',
   './antcv-auto-pagebreak-block-001.js',
   './antcv-table-fast-drag.js',
   './antcv-auth.js',

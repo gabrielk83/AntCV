@@ -464,3 +464,46 @@ Owner NVIDIA CV/CL batch items worked in order (P4→P5→P2); P1 and P3 deferre
 | Item | Version | What |
 |---|---|---|
 | P0 SALMON-EMPTY-REGION-001 — flush salmon (no dead gap) | 1.50.753 | The empty band between page-1 content and the salmon separator is GONE. **The circular-lock cascade map had a THIRD actor it missed:** beyond `antcv-page-fit.js` (forces row `min-height:1123`) and `antcv-sidebar-fill-equalize-227.js` (extends navy to the stretched main height), `antcv-sidebar-subsection-pagebreaks-329.js` injects a stylesheet rule `.antcv-preview-paper .antcv-page-row,.antcv-document-sidebar{min-height:1123px!important}`. That `!important` pinned every row AND the navy sidebar to the A4 line, so a non-`!important` inline relax (and an equalize remove-then-measure) both read 1123 — the box never collapsed. **Coordinated fix, last-aware, all preview-only:** (1) `page-fit` sets a NON-LAST row `min-height:0!important` (inline `!important` beats the stylesheet `!important`); the LAST row keeps `1123px!important` so the final sheet still looks like a full page. (2) `sidebar-fill-equalize` for a NON-LAST row measures BOTH columns by CONTENT (children-bottom sum, never `getBoundingClientRect` which the stylesheet pins to 1123) and FORCES the navy to the taller column's content with inline `!important`, so the navy fills exactly to the salmon — no gap, no overrun. The salmon (drawn at the top of the next page-box) then sits flush under the last page-1 item. **EXPORT/DOCX untouched** (these are preview sidecars; no `autoPages`/`autoPagesPreview` map writes). Verified `pwa/test/diag-salmon-empty-region.mjs`: row0 box 1123→957 (= content 931 + salmon strip), salmon gap 192→26px (flush), last row stays 1123 (A4), **stable across 6 re-measure cycles (zero oscillation — the SIDEBAR-BREATHING-001 hazard)**; `diag-sidebar-stable`/`diag-sidebar-preview-break`/`diag-empty-region-probe` all green; suite 366/366; boot-smoke clean. Probes `diag-main-children-probe.mjs` + `diag-salmon-empty-region.mjs` committed. |
+
+---
+
+## UPDATE — 2026-06-22/23 cloud routine audit (1.50.754–1.50.811)
+
+Cloud routine ran against the CLOUD_ROUTINE_PROMPT priority order (targeting-persistence → Results tense → salmon → CL render cluster → content). The prompt was written against 1.50.745; head is now **1.50.811**. All non-regen-gated NVIDIA CV/CL batch items are shipped.
+
+### SHIPPED (1.50.754 → 1.50.811, desktop + cloud, since last update)
+| Item | Version | What |
+|---|---|---|
+| RESULTS-FIRSTPAINT-REFRESH-001 + SINGLE-SOURCE-OF-TRUTH-001 | 1.50.754 | Preview Results on first paint: async module now fires one `antcv:sections-updated` refresh + `antcv-results-laminate-510.js` defers to the export lamination rather than clobbering it. Verified on real cold reload (9 roles distinct, present-tense). |
+| PRV-004/VF-015 stale-status pill | 1.50.810 | Real in-flight signal for the status pill: `antcv-stale-status.js` now reads a phase-map written by the generation flow; `isBusy()` is no longer permanently false. `prv004-procbusy.test.mjs` (4/4). |
+| PB-MAIN-OVERFLOW-001 step 1 | 1.50.811 | Read-only main-column overflow detector `antcv-main-overflow-detect-364.js`: measures total main content height across all page-rows, divides by live A4 usable height, writes `antcv:mainOverflow` verdict ('fits'/'squeeze'/'too-much') + overshootLines. Prereq for step 2 (auto-squeeze). Detection-only — cannot blue-screen. |
+| Content/lamination batch (789–808) | 1.50.789–808 | STALE-SW de-mask + guaranteed-fresh hard refresh; FRESH-START-DELETE-001; universal table editor (`antcv-table-editor.js`); editable header row; native language "native / fluent"; RECOMMENDATIONS from personalInfo; rich-block shape fix (TOOLS & METHODS reshape); CL content/who/why bridges + profile kernel fill; Results cleanup + table spacing; generation: FOUNDATION required + two-table distinct seeds; docx-worker 1.14.80 (export Results + table-row spacing). |
+
+### NVIDIA BATCH STATUS (14 items)
+| # | Item | Status |
+|---|---|---|
+| 1 | Results tense (preview) | `[SHIPPED 1.50.748 + 1.50.754]` Copenhagen always present; first-paint refresh fixed. |
+| 2 | Salmon sidebar break | `[SHIPPED 1.50.749/751/753]` FORCE break + N-page + flush salmon. |
+| 3 | Undo for sidebar-width | `[OPEN — feature]` |
+| 4 | Sidebar size fingerprint re-trigger | `[OPEN — feature]` |
+| 5 | Certs: trim to JD context | `[OPEN — regen-gated]` JD-SPECIFIC-CV-COMPRESSION-SPEC committed (2026-06-22). Needs prompt change + regen. |
+| 6 | Standards: add laser safety | `[OPEN — kernel/data gap + regen]` |
+| 7 | Languages: drop Uruguayan variant | `[SHIPPED 1.50.746]` |
+| 8 | Accessibility: trim 30-40% | `[OPEN — regen-gated]` Spec says: "Hearing impaired: Cochlear implant user. Captions & written follow-up work well." |
+| 9 | Twin tables distinct | `[SHIPPED 1.50.806 — generation decoupled]` Needs owner regen to verify. |
+| 10 | WHO I AM / WHY: dual heading | `[SHIPPED 1.50.747]` |
+| 11 | Opening sentence case | `[SHIPPED 1.50.747 — auto-resolved]` |
+| 12 | CL Strategic-Expertise cells too detailed | `[OPEN — regen-gated]` Prompt for terser cells. |
+| 13 | WHY YOUR COMPANY wording | `[RENDER CORRECT]` Flips to "WHY THIS POSITION" once JD present (JD-SYNC-001 1.50.752 ships the code). |
+| 14 | CL paragraph 3px spacing | `[SHIPPED 1.50.747]` |
+
+### STILL OPEN (NVIDIA batch, non-regen)
+| Item | Status |
+|---|---|
+| JD-SYNC-001 live verify | Code in place (1.50.752). Needs signed-in browser: load NVIDIA app, confirm `antcv:lastJdText` populates within 2s auto-sync, WHY heading flips to "WHY THIS POSITION". |
+| Salmon no-oscillation desktop Playwright verify | Owed: desktop Playwright on `diag-pagebox-structure.mjs` before claiming stable across many cycles. |
+
+### CLOUD CANNOT VERIFY
+- Playwright unavailable in cloud sandbox: boot-smoke, diag-pagebox-structure, diag-sidebar-preview-break all need it.
+- Signed-in browser unavailable: JD-SYNC-001 live verify, any regen-gated item.
+- Worker deploy: `gh` CLI unavailable in cloud.

@@ -24,10 +24,20 @@
  *   overshootLines <= 0          → 'fits'    (if the export still split it, the
  *                                              fault is pagination desync, not
  *                                              overflow → 'desync-suspected')
- *   0 < overshootLines <= 3      → 'squeeze' (auto-eligible later)
+ *   0 < overshootLines <= 3      → 'squeeze' (auto-eligible)
  *   overshootLines > 3           → 'too-much' (flag for trim; do NOT squeeze)
+ *   pagesNeeded > 3.0 (policy+1) → 'way-over' (CONTENT problem, not a fit
+ *                                              problem — a 6-pager. Takes
+ *                                              precedence; never squeezable.)
  * "Lines" is measured from a real body line height in the DOM, not hardcoded,
  * so it tracks the active font / line-spacing.
+ *
+ * STEP 2 — the squeeze is now LIVE in a SEPARATE sidecar
+ * (antcv-main-overflow-squeeze-365.js) that listens for the
+ * 'antcv:main-overflow-changed' event this file pulses and applies a bounded,
+ * fully-reversible density nudge ONLY when verdict==='squeeze'. This file stays
+ * detection-only; keeping measure and mutate in different files means a
+ * measurement change can never accidentally mutate the page.
  *
  * LOOP-SAFETY (same discipline as 362)
  * (a) Pure measurement — we never write a style, never add a node, so our work
@@ -39,7 +49,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.811-main-overflow-detect';
+  var VERSION = '1.50.812-main-overflow-detect';
   if (window.__antcvMainOverflow364 === VERSION) return;
   window.__antcvMainOverflow364 = VERSION;
 
@@ -58,6 +68,21 @@
   // Squeeze band, in body lines (owner: ~2-3). Kept as a line count, converted
   // to px at measure-time via a real measured line height.
   var SQUEEZE_MAX_LINES = 3;
+
+  // Policy page ceiling for the CV main column. The skeleton targets ~1.5pp.
+  // A main column that needs MORE THAN ONE WHOLE PAGE past this ceiling is not
+  // a fit problem a density nudge can solve — it is a CONTENT problem (sidebar/
+  // tools bloat, stale page-break flags, over-generation). We surface that
+  // distinctly as 'way-over' so a 6-pager never masquerades as a squeeze or fit
+  // candidate. The squeeze pass keys off verdict==='squeeze' only, so it can
+  // NEVER fire here.
+  //
+  // The comparison is against this FIXED ceiling, not the content's own derived
+  // pageTarget (which tracks pagesNeeded too closely to ever flag bloat). The
+  // CV is a 2-page document; needing a 3rd page is tolerable growth, but a 4th+
+  // page of MAIN content means something upstream is wrong.
+  var POLICY_MAX_PAGES = 2;       // intended main-column page count for the CV
+  var WAY_OVER_EXTRA_PAGES = 1;   // pagesNeeded > POLICY_MAX_PAGES + this → 'way-over' (i.e. ≥ ~3 full pages over budget? no — > 3.0)
 
   function activeDoc() {
     try {
@@ -198,7 +223,14 @@
     snapshot.overshootPages = Math.round(overshootPages * 1000) / 1000;
     snapshot.overshootLines = Math.round(overshootLines * 100) / 100;
 
-    if (overshootLines <= 0.001) {
+    // 'way-over' takes precedence: when the main column needs more than one
+    // whole page beyond the POLICY ceiling, no density nudge can recover it —
+    // it is a content/desync problem to review, not a fit candidate. Flag it
+    // first so it can never be mislabelled 'squeeze'/'too-much'/'fits'.
+    if (pagesNeeded > POLICY_MAX_PAGES + WAY_OVER_EXTRA_PAGES + 1e-6) {
+      snapshot.verdict = 'way-over';
+      snapshot.squeezeEligible = false;
+    } else if (overshootLines <= 0.001) {
       // Content fits the target. If the live preview is nonetheless split into
       // MORE rows than the target needs, the fault is pagination desync, not
       // overflow — flag it distinctly so a squeeze pass never fires here.

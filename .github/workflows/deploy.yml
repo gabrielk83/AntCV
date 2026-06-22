@@ -99,7 +99,7 @@ jobs:
           cd workers/proxy
           node --test
       - name: PWA import/normalise unit tests + sidecar drift guard
-        run: node --test pwa/test/unit/*.test.mjs
+        run: node --test --test-force-exit pwa/test/unit/*.test.mjs
       - name: DOCX worker palette + registry-drift unit tests
         run: node --test workers/docx-worker/test/palette.test.mjs workers/docx-worker/test/diag-bundle-palette-sync.mjs workers/docx-worker/test/diag-banded-rows.mjs
 

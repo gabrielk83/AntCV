@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.751-salmon-npage';
+  var VERSION = '1.50.814-salmon-sidebar-npage';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -132,6 +132,16 @@
   // that we keep the group whole, above it we fill to the A4 line. Console-tunable
   // via AntcvAutoPagebreak.config({ SNAP_GAP_MAX: N }).
   var SNAP_GAP_MAX = 90;
+
+  // SALMON-UNIFIED-001 Phase B (1.50.814): make the SIDEBAR pass N-PAGE. The
+  // legacy sidebar break hard-codes page 2 (map[sid][br]=2) — a sidebar long
+  // enough to need a 3rd page gets NO page-2→3 salmon. When this flag is on, we
+  // greedily continue past the first break and assign page 3, 4, … to the first
+  // item of each subsequent overflowing page, snapped to a group boundary — the
+  // same greedy fill the EXPERIENCE roles already use. Gated so the proven
+  // 2-page path stays the default until the Phase C coordinator ships.
+  // Console-tunable: AntcvAutoPagebreak.config({ SIDEBAR_NPAGE: true }).
+  var SIDEBAR_NPAGE = true;
 
   // ============================================================
   // SIDEBAR-SHRINK-RECLAIM-001 (owner 2026-06-11)
@@ -247,6 +257,56 @@
     }
     return -1;
   }
+
+  // SALMON-UNIFIED-001 Phase B: greedy N-page item pagination for a sidebar
+  // section. Walks the section's item rows in order and fills page-boxes of
+  // height `limit`: an item whose BOTTOM crosses the current page line moves
+  // WHOLE to the next page, and that page then starts at the item's TOP. Returns
+  // a { itemIndex: page } map for the FIRST item of each page >= 2, snapping each
+  // boundary UP to a group start (snapToGroup) the same way the single-break path
+  // does, with the same raw-item fallback when the snap is invalid or wastes too
+  // much page. `firstPage`/`firstBr` seed the result with the already-computed
+  // page-2 break so we never recompute or contradict it. Atomic items (never
+  // split). Mirrors the EXPERIENCE role greedy loop.
+  function allOverflowPages(sectionEl, sec, columnTop, limit, scale, firstBr) {
+    var out = {};
+    if (firstBr >= 1) out[String(firstBr)] = 2;   // seed with the proven page-2 break
+    var rows = sectionEl.querySelectorAll('[' + ITEM_PATH_ATTR + '^="items."]');
+    if (!rows.length) return out;
+    var starts = groupStarts(sec);
+    var pageTop = columnTop;     // viewport-top of the current page being filled
+    var curPage = 1;
+    for (var i = 0; i < rows.length; i++) {
+      var el = rows[i];
+      if (!visible(el)) continue;
+      var m = /^items\.(\d+)/.exec(String(el.getAttribute(ITEM_PATH_ATTR) || ''));
+      if (!m) continue;
+      var rawIdx = Number(m[1]);
+      var rc = el.getBoundingClientRect();
+      // Overflow if this item's bottom crosses the current page line AND it is
+      // not the first block on the page (an item taller than a page can't move).
+      if ((rc.bottom - pageTop) > limit && (rc.top - pageTop) > 1) {
+        curPage++;
+        pageTop = rc.top;        // the new page begins at this item's top
+        // Snap the break UP to a group start (keep groups whole), with the same
+        // fallbacks the single-break path uses.
+        var snapped = snapToGroup(starts, rawIdx);
+        if (snapped < 1) snapped = rawIdx;
+        if (snapped >= 1 && snapped < rawIdx) {
+          var snapEl = sectionEl.querySelector('[' + ITEM_PATH_ATTR + '="items.' + snapped + '"]');
+          if (snapEl && visible(snapEl)) {
+            var snapBottom = snapEl.getBoundingClientRect().bottom - columnTop;
+            if ((limit - snapBottom) > (SNAP_GAP_MAX * scale)) snapped = rawIdx;
+          }
+        }
+        // Record the FIRST item of this page only (don't overwrite page 2's
+        // already-snapped seed if the greedy walk lands on the same boundary).
+        if (!out[String(snapped)]) out[String(snapped)] = curPage;
+      }
+    }
+    return out;
+  }
+
 
   // First table-row index (tbody) whose bottom crosses `limit`. The
   // native oMain table path keys autoPages by FULL-TABLE row index
@@ -533,7 +593,20 @@
             }
           }
         }
-        if (br >= 1) { map[sid] = {}; map[sid][String(br)] = 2;
+        if (br >= 1) {
+          map[sid] = {};
+          // SALMON-UNIFIED-001 Phase B: when the flag is on, expand the sidebar
+          // ITEM/LIST branch to N pages (page 3, 4, …) by greedily continuing
+          // past the first break. Tables keep the single-break path (their row
+          // pagination is handled separately), and the EXPERIENCE main column is
+          // untouched here. The greedy map already includes the page-2 seed.
+          var __isTable = (sec && sec.type === 'table') || !!secEl.querySelector('table');
+          if (SIDEBAR_NPAGE && !isMainCol && !__isTable) {
+            var __nmap = allOverflowPages(secEl, sec, colTop, limit, scale, br);
+            map[sid] = __nmap && Object.keys(__nmap).length ? __nmap : (function () { var o = {}; o[String(br)] = 2; return o; })();
+          } else {
+            map[sid][String(br)] = 2;
+          }
           if (!__breakBornAt[bornKey(sid)]) __breakBornAt[bornKey(sid)] = nowMs(); }   // MAINBAR-FLIP-FIX-001
       }
 
@@ -966,15 +1039,16 @@
     //   AntcvAutoPagebreak.config({ HYST_STABLE:80 })  // looser stable band
     config: function (o) {
       try {
-        if (!o) return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE };
+        if (!o) return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE };
         if (typeof o.ONE_PASS === 'boolean') ONE_PASS = o.ONE_PASS;
         if (typeof o.HYST_STABLE === 'number') HYST_STABLE = o.HYST_STABLE;
         if (typeof o.HYST_TIGHT === 'number') HYST_TIGHT = o.HYST_TIGHT;
         if (typeof o.RECHECK_MS === 'number') RECHECK_MS = o.RECHECK_MS;
         if (typeof o.SNAP_GAP_MAX === 'number') SNAP_GAP_MAX = o.SNAP_GAP_MAX;
         if (typeof o.SIDEBAR_PREVIEW_INFLATE === 'number' && o.SIDEBAR_PREVIEW_INFLATE >= 1 && o.SIDEBAR_PREVIEW_INFLATE <= 2) SIDEBAR_PREVIEW_INFLATE = o.SIDEBAR_PREVIEW_INFLATE;
+        if (typeof o.SIDEBAR_NPAGE === 'boolean') SIDEBAR_NPAGE = o.SIDEBAR_NPAGE;
         lastSourceFp = null; schedule();
-        return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE };
+        return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE };
       } catch (_) { return null; }
     },
     // Manual reset of auto breaks (e.g. from console) if a stale break

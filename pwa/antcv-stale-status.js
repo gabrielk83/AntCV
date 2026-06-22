@@ -20,9 +20,28 @@
  * the 60-second stale auto-hide: long-running operations would have
  * their pill auto-hidden mid-flight.
  *
+ * PRV-004 / VF-015 (1.50.810)
+ * ---------------------------
+ * The four busy flags below (_antcvKernelBusy / _antcvConsensusBusy /
+ * AntcvKernel.busy / _antcvGenerating) are NEVER assigned by the gated
+ * app.js, so isBusy() was permanently false: a click dismissed the pill
+ * even mid-generation, and the 60s stale-hide fired mid-run — exactly the
+ * Bug-8 protection failing silently. The real in-flight signal already on
+ * the window is the PROCESSING-QUEUE phase map app.js writes from `fo`:
+ *   window.__antcvProcState  = { [sectionId]: 'working'|'queued'|'done'|… }
+ *   event 'antcv:proc-state' = fires on every phase change
+ * A run has ≥1 section in an ACTIVE phase (working/queued/processing); on
+ * completion every section reads 'done'. We derive busy from that, with a
+ * WATCHDOG so a phase that errors without a 'done' can never wedge the pill
+ * busy forever (the original Bug-8 symptom): busy clears once no proc
+ * activity has been seen for WATCHDOG_MS. Mirroring the visible `po` status
+ * text was rejected — it stays truthy for both running AND stale, which
+ * would break the stale-dismiss feature.
+ *
  * Fix
  * ---
  * Both dismissal paths now consult a busy() check that reads:
+ *   window.__antcvProcState  (real in-flight phase map — PRV-004)
  *   window._antcvKernelBusy
  *   window._antcvConsensusBusy
  *   window.AntcvKernel.busy   (defensive — newer code may set this)
@@ -49,10 +68,17 @@
 (function () {
   'use strict';
 
-  const SCRIPT_VERSION = '1.40.341-p0e';
+  const SCRIPT_VERSION = '1.50.810-prv004';
   const PILL_SELECTOR = '[title^="Live status from the current operation"]';
   const STALE_MS_DEFAULT = 60 * 1000;
   const POLL_MS = 1000;
+  // PRV-004: a phase value in this set means a generation is actively running.
+  // 'done' / 'idle' / '' are inactive. Watchdog: busy is force-cleared once no
+  // proc activity has been observed for this long, so an error path that left a
+  // section 'working' can never wedge the pill busy forever (Bug-8 regression).
+  const PROC_ACTIVE_RE = /^(working|queued|processing|pending|running|busy)$/i;
+  const PROC_WATCHDOG_MS = 10 * 60 * 1000;
+  let _procLastActive = 0;
 
   if (window.__antcvStaleStatusInstalled === SCRIPT_VERSION) return;
   window.__antcvStaleStatusInstalled = SCRIPT_VERSION;
@@ -76,6 +102,29 @@
     } catch (_) { return false; }
   }
 
+  // PRV-004: is any section in an ACTIVE generation phase right now?
+  function procActive() {
+    try {
+      const st = window.__antcvProcState;
+      if (!st || typeof st !== 'object') return false;
+      for (const k in st) {
+        if (Object.prototype.hasOwnProperty.call(st, k) && PROC_ACTIVE_RE.test(String(st[k]))) return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  // PRV-004: the real in-flight signal, watchdog-guarded so it can never stick.
+  // While a section is active we keep busy; if activity has gone silent for
+  // longer than the watchdog (an error path that never wrote 'done'), we let the
+  // pill become dismissible again rather than wedge it busy forever.
+  function procBusy() {
+    if (!procActive()) { _procLastActive = 0; return false; }
+    const now = Date.now();
+    if (!_procLastActive) _procLastActive = now;
+    return (now - _procLastActive) <= PROC_WATCHDOG_MS;
+  }
+
   // Bug-8 core: is the app currently running an LLM operation whose
   // progress the pill is reporting? Be permissive about how the busy
   // signal is exposed — any of these channels counts.
@@ -87,7 +136,7 @@
       if (window.AntcvKernel && window.AntcvKernel.busy) return true;
       if (window._antcvGenerating) return true;
     } catch (_) {}
-    return false;
+    return procBusy();   // PRV-004: derived in-flight signal from the phase map
   }
 
   // Inject the flash style once (used as visual click-rejection feedback).
@@ -199,6 +248,15 @@
     pill.dataset.antcvStaleDismissAttached = '1';
   }
 
+  // PRV-004: every phase change is fresh proc activity — refresh the watchdog
+  // clock so a legitimately long run (minutes between phase updates) stays busy,
+  // while a truly silent/stuck state still ages out after PROC_WATCHDOG_MS.
+  try {
+    window.addEventListener('antcv:proc-state', function () {
+      if (procActive()) _procLastActive = Date.now();
+    });
+  } catch (_) {}
+
   // Poll every POLL_MS — cheap, no MutationObserver needed since
   // the pill's text is what we watch (and we don't care about
   // remount because the WeakMap handles freshly-rendered pills).
@@ -212,6 +270,8 @@
     _check: check,
     _staleMs: staleMs,
     _isBusy: isBusy,
+    _procActive: procActive,
+    _procBusy: procBusy,
     _seen: seen,
     PILL_SELECTOR: PILL_SELECTOR,
   };

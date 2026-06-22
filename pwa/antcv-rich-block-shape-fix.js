@@ -22,7 +22,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.803';
+  var VERSION = '1.50.807';
   if (window.__antcvRichBlockShapeFix === VERSION) return;
   window.__antcvRichBlockShapeFix = VERSION;
 
@@ -83,6 +83,34 @@
     if (!bg) return false;
     sec.items = [{ b: '', t: bg }];
     return true;
+  }
+
+  // FOUNDATION-FILL-001 (owner 2026-06-23): the CL FOUNDATION (Hands-on / Professionally rows)
+  // came out empty / with a leftover [placeholder] — the gen produced no foundation content and
+  // nothing fell back. Fill each row's body from personalInfo.foundation.{hands_on,professionally}
+  // (da: _da variants) when present, matched by the row's Hands-on/Professionally label; and ALWAYS
+  // strip a leftover [bracketed instruction] so it never prints. Never clobbers real content.
+  function fillFoundation(sec, pi) {
+    if (!sec || sec.id !== 'foundation' || sec.type !== 'rich_block' || !Array.isArray(sec.items)) return false;
+    var f = (pi && pi.foundation) || {};
+    var da = activeLang() === 'da';
+    var src = {
+      hands_on: String((da && (f.hands_on_da || f.handsOn_da)) || f.hands_on || f.handsOn || '').trim(),
+      professionally: String((da && f.professionally_da) || f.professionally || '').trim(),
+    };
+    var changed = false;
+    sec.items = sec.items.map(function (it) {
+      if (!it || typeof it !== 'object') return it;
+      var cur = it.t != null ? String(it.t) : '';
+      var emptyOrPh = !cur.trim() || /^\s*\[[^\]]*\]\s*$/.test(cur);
+      if (!emptyOrPh) return it;
+      var lab = String(it.b || '').toLowerCase();
+      var key = /hands/.test(lab) ? 'hands_on' : (/profession/.test(lab) ? 'professionally' : null);
+      if (key && src[key]) { changed = true; return Object.assign({}, it, { t: src[key] }); }
+      if (/^\s*\[[^\]]*\]\s*$/.test(cur)) { changed = true; return Object.assign({}, it, { t: '' }); } // strip leftover placeholder
+      return it;
+    });
+    return changed;
   }
 
   // RICH-BLOCK-CONTENT-BRIDGE-001: the CL text sections (opening/who/why/foundation/
@@ -152,6 +180,7 @@
           if (bridgeContent(s)) changed = true;
           if (fixWorkStyle(s, pi)) changed = true;
           if (fillProfile(s, pi)) changed = true;
+          if (fillFoundation(s, pi)) changed = true;
           if (dedupeLabels(s)) changed = true;
         });
       });

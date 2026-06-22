@@ -1,1 +1,323 @@
-PLACEHOLDER_VO
+/* AntCV version-override sidecar (v1.40.198)
+ * ============================================================
+ *
+ * Purpose
+ * -------
+ * app.js is built externally and bakes its own version constant
+ * into the minified bundle. On load it logs:
+ *
+ *   [AntCV] 1.40.172
+ *
+ * and sets `window.ANTCV_VERSION = '1.40.172'` (overwriting the
+ * value our boot script set earlier). Any UI element that reads
+ * the version then renders 1.40.172 even though the sidecars and
+ * index.html are at a newer release.
+ *
+ * Gabriel reported on 2026-05-19: "version stayed 1.40.172 please
+ * fix."
+ *
+ * Strategy
+ * --------
+ * Three layers:
+ *
+ *   (a) Override `window.ANTCV_VERSION` to the current release.
+ *       We Object.defineProperty it as non-writable so app.js's
+ *       later assignment is silently rejected. Doing this BEFORE
+ *       app.js loads is impossible without changing app.js — we
+ *       can only do it just after. So we set up a polling timer
+ *       that re-asserts the value until the next paint cycle
+ *       after we see it stabilize.
+ *
+ *   (b) Wrap `console.log` so that `[AntCV] 1.40.172` becomes
+ *       `[AntCV] 1.40.198`. We only rewrite the exact pattern
+ *       `[AntCV] X.Y.Z` to avoid touching anything else.
+ *
+ *   (c) DOM text-replacer that walks the page (plus a
+ *       MutationObserver) and rewrites any text node whose
+ *       content matches the OLD version exactly. We use a
+ *       conservative pattern that only matches stale version
+ *       tokens, not arbitrary "1.40.x" numbers in user content.
+ *
+ * Configuration
+ * -------------
+ * The display version is held in TARGET_VERSION below. Bumped
+ * with every release. The list of "stale" patterns to rewrite
+ * (STALE_PATTERNS) is open-ended — add new patterns as we
+ * discover them in the wild.
+ *
+ * Idempotency
+ * -----------
+ * - Each rewritten text node gets its parent tagged with
+ *   `data-antcv-version-rewritten="1"` so we don't loop.
+ * - The console.log wrap detects an already-rewritten string and
+ *   passes it through unchanged.
+ */
+(function () {
+  'use strict';
+
+  if (window.__antcvVersionOverrideInstalled) return;
+  window.__antcvVersionOverrideInstalled = '1.40.288';
+
+  const TARGET_VERSION = '1.50.815';
+
+  // The set of stale version tokens we'll rewrite in DOM text and
+  // console output. Add older versions here as needed.
+  const STALE_VERSIONS = [
+    '1.40.172', '1.40.173', '1.40.174', '1.40.175', '1.40.176', '1.40.177',
+    '1.40.178', '1.40.179', '1.40.180', '1.40.181', '1.40.182', '1.40.183',
+    '1.40.184', '1.40.185', '1.40.186', '1.40.187', '1.40.188', '1.40.189',
+    '1.40.190', '1.40.191', '1.40.192', '1.40.193', '1.40.194', '1.40.195',
+    '1.40.196', '1.40.197', '1.40.198', '1.40.199', '1.40.200', '1.40.201', '1.40.202', '1.40.203', '1.40.204', '1.40.205', '1.40.206', '1.40.207', '1.40.208', '1.40.209', '1.40.210', '1.40.211', '1.40.212', '1.40.213', '1.40.214', '1.40.215', '1.40.216', '1.40.217', '1.40.218', '1.40.219', '1.40.220', '1.40.221', '1.40.222', '1.40.223', '1.40.224', '1.40.225', '1.40.226', '1.40.227', '1.40.228', '1.40.229', '1.40.230', '1.40.231', '1.40.232',
+    '1.40.233', '1.40.234', '1.40.235', '1.40.236', '1.40.237', '1.40.238', '1.40.239', '1.40.240', '1.40.241', '1.40.242', '1.40.243', '1.40.244', '1.40.245', '1.40.246', '1.40.247', '1.40.248', '1.40.249', '1.40.250', '1.40.251', '1.40.252', '1.40.253', '1.40.254', '1.40.255', '1.40.256', '1.40.257', '1.40.258', '1.40.259', '1.40.260', '1.40.261', '1.40.262', '1.40.263', '1.40.264', '1.40.265', '1.40.266', '1.40.267', '1.40.268', '1.40.269', '1.40.270', '1.40.271', '1.40.272', '1.40.273', '1.40.274', '1.40.275', '1.40.276', '1.40.277', '1.40.278', '1.40.279', '1.40.280', '1.40.281', '1.40.282', '1.40.283', '1.40.284', '1.40.285', '1.40.286', '1.40.287', '1.40.288', '1.40.289',
+    '1.40.290', '1.40.291', '1.40.292', '1.40.293', '1.40.294', '1.40.295', '1.40.296', '1.40.297', '1.40.298', '1.40.299', '1.40.300', '1.40.301', '1.40.302', '1.40.303', '1.40.304', '1.40.305', '1.40.306', '1.40.307', '1.40.308', '1.40.309', '1.40.310', '1.40.311', '1.40.312', '1.40.313', '1.40.314', '1.40.315', '1.40.316', '1.40.317', '1.40.318', '1.40.319', '1.40.320', '1.40.321', '1.40.322', '1.40.323', '1.40.324', '1.40.325', '1.40.326', '1.40.327', '1.40.328', '1.40.329', '1.40.330', '1.40.331', '1.40.332', '1.40.333', '1.40.334',
+    '1.40.336-version-grow-fix',
+    '1.40.335', '1.40.336', '1.40.337', '1.40.338', '1.40.339',
+    '1.40.337-ai-notice-fix',
+    '1.40.339-a', '1.40.339-b', '1.40.339-c', '1.40.339-d', '1.40.339-e',
+    '1.40.339-f', '1.40.339-g', '1.40.339-h', '1.40.339-i', '1.40.339-j',
+    '1.40.339-k', '1.40.339-l',
+    '1.40.340-watermark',
+    '1.50.0-pass1',
+    '1.50.0-pass2',
+    '1.50.0-pass3',
+    '1.50.1',
+    '1.50.2',
+    '1.50.3',
+    '1.50.4',
+    '1.50.5',
+    '1.50.6',
+    '1.50.7',
+    '1.50.8',
+    '1.50.9',
+    '1.50.10',
+    '1.50.11',
+    '1.50.12',
+    '1.50.13',
+    '1.50.14',
+    '1.50.15',
+    '1.50.15-p0c-fix2',
+    '1.50.16',
+    '1.50.17',
+    '1.50.18',
+    '1.50.19',
+    '1.50.20',
+    '1.50.21',
+    '1.50.22',
+    '1.50.23',
+    '1.50.24',
+    '1.50.25',
+    '1.50.26',
+    '1.50.27',
+    '1.50.28',
+    '1.50.29',
+    '1.50.30',
+    '1.50.31',
+    '1.50.32',
+    '1.50.33',
+    '1.50.34',
+    '1.50.34a',
+    '1.50.35',
+    '1.50.36',
+    '1.50.37',
+    '1.50.38',
+    '1.50.39',
+    '1.50.40',
+    '1.50.41',
+    '1.50.42', '1.50.43', '1.50.44', '1.50.45', '1.50.46', '1.50.47',
+    '1.50.48', '1.50.49', '1.50.50', '1.50.51', '1.50.52', '1.50.53',
+    '1.50.54', '1.50.55', '1.50.56', '1.50.57', '1.50.58', '1.50.59',
+    '1.50.60', '1.50.61', '1.50.62', '1.50.63', '1.50.64', '1.50.65',
+    '1.50.66', '1.50.67', '1.50.68', '1.50.69', '1.50.70', '1.50.71', '1.50.72', '1.50.73', '1.50.74', '1.50.75', '1.50.76', '1.50.77', '1.50.78', '1.50.79', '1.50.80', '1.50.81', '1.50.82', '1.50.83', '1.50.84', '1.50.85', '1.50.86', '1.50.87', '1.50.88', '1.50.89', '1.50.90', '1.50.91', '1.50.92', '1.50.93', '1.50.94', '1.50.95', '1.50.96', '1.50.97', '1.50.98', '1.50.99', '1.50.100', '1.50.101', '1.50.102', '1.50.103', '1.50.104', '1.50.105', '1.50.106', '1.50.107', '1.50.108', '1.50.109', '1.50.110', '1.50.111', '1.50.112', '1.50.113', '1.50.114', '1.50.115', '1.50.116', '1.50.117', '1.50.118', '1.50.119', '1.50.120', '1.50.121', '1.50.122', '1.50.123', '1.50.124', '1.50.125', '1.50.126', '1.50.127', '1.50.128', '1.50.129', '1.50.130', '1.50.131', '1.50.132', '1.50.133', '1.50.134', '1.50.135', '1.50.136', '1.50.137', '1.50.138', '1.50.139', '1.50.140', '1.50.141', '1.50.142', '1.50.143', '1.50.144', '1.50.145', '1.50.146', '1.50.147', '1.50.148', '1.50.149', '1.50.150', '1.50.151', '1.50.152', '1.50.153', '1.50.154', '1.50.155', '1.50.156', '1.50.157', '1.50.158', '1.50.159', '1.50.160', '1.50.161', '1.50.162', '1.50.163', '1.50.164', '1.50.165', '1.50.166', '1.50.167', '1.50.168', '1.50.169', '1.50.170', '1.50.171', '1.50.172', '1.50.173', '1.50.174', '1.50.175', '1.50.176', '1.50.177', '1.50.178', '1.50.179', '1.50.180', '1.50.181', '1.50.182', '1.50.183', '1.50.184', '1.50.185', '1.50.186', '1.50.187', '1.50.188', '1.50.189', '1.50.190', '1.50.191', '1.50.192', '1.50.193', '1.50.194', '1.50.195', '1.50.196', '1.50.197', '1.50.198', '1.50.199', '1.50.200', '1.50.201', '1.50.202', '1.50.203', '1.50.204', '1.50.205', '1.50.206', '1.50.207', '1.50.208', '1.50.209', '1.50.210', '1.50.211', '1.50.212', '1.50.213', '1.50.214', '1.50.215', '1.50.216', '1.50.217', '1.50.218', '1.50.219', '1.50.220', '1.50.221', '1.50.222', '1.50.223', '1.50.224', '1.50.225', '1.50.226', '1.50.227', '1.50.228', '1.50.229', '1.50.230', '1.50.231', '1.50.232', '1.50.233', '1.50.234', '1.50.235', '1.50.236', '1.50.237', '1.50.238', '1.50.239', '1.50.240', '1.50.241', '1.50.242', '1.50.243', '1.50.244', '1.50.245', '1.50.246', '1.50.247', '1.50.248', '1.50.249', '1.50.250', '1.50.251', '1.50.252', '1.50.253', '1.50.254', '1.50.255', '1.50.256', '1.50.257', '1.50.258', '1.50.259', '1.50.260', '1.50.261', '1.50.262', '1.50.263', '1.50.264', '1.50.265', '1.50.266', '1.50.267', '1.50.268', '1.50.269', '1.50.270', '1.50.271', '1.50.272', '1.50.273', '1.50.274', '1.50.275', '1.50.276', '1.50.277', '1.50.278', '1.50.279', '1.50.280', '1.50.281', '1.50.282', '1.50.283', '1.50.284', '1.50.285', '1.50.286', '1.50.287', '1.50.288', '1.50.289', '1.50.290', '1.50.291', '1.50.292', '1.50.293', '1.50.294', '1.50.295', '1.50.296', '1.50.297', '1.50.298', '1.50.299', '1.50.300', '1.50.301', '1.50.302', '1.50.303', '1.50.304', '1.50.305', '1.50.306', '1.50.307', '1.50.308', '1.50.309', '1.50.310', '1.50.311', '1.50.312', '1.50.313', '1.50.314', '1.50.315', '1.50.316', '1.50.317', '1.50.318', '1.50.319', '1.50.320', '1.50.321', '1.50.322', '1.50.323', '1.50.324', '1.50.325', '1.50.326', '1.50.327', '1.50.328', '1.50.329', '1.50.330', '1.50.331', '1.50.332', '1.50.333', '1.50.334', '1.50.335', '1.50.336', '1.50.337', '1.50.338', '1.50.339', '1.50.340', '1.50.341', '1.50.342', '1.50.343', '1.50.344', '1.50.345', '1.50.346', '1.50.347', '1.50.348', '1.50.349', '1.50.350', '1.50.351', '1.50.352', '1.50.353', '1.50.354', '1.50.355', '1.50.356', '1.50.357', '1.50.358', '1.50.359', '1.50.360', '1.50.361', '1.50.362', '1.50.363', '1.50.364', '1.50.365', '1.50.366', '1.50.367', '1.50.368', '1.50.369', '1.50.370', '1.50.371', '1.50.372', '1.50.373', '1.50.374', '1.50.375', '1.50.376', '1.50.377', '1.50.378', '1.50.379', '1.50.380', '1.50.381', '1.50.382', '1.50.383', '1.50.384', '1.50.385', '1.50.386', '1.50.387', '1.50.388', '1.50.389', '1.50.390', '1.50.391', '1.50.392', '1.50.393', '1.50.394', '1.50.395', '1.50.396', '1.50.397', '1.50.398', '1.50.399', '1.50.400', '1.50.401', '1.50.402', '1.50.403', '1.50.404', '1.50.405', '1.50.406', '1.50.407', '1.50.408', '1.50.409', '1.50.410', '1.50.411', '1.50.412', '1.50.413', '1.50.414', '1.50.415', '1.50.416', '1.50.417', '1.50.418', '1.50.419', '1.50.420', '1.50.421', '1.50.422', '1.50.423', '1.50.424', '1.50.425', '1.50.426', '1.50.427', '1.50.428', '1.50.429', '1.50.430', '1.50.431', '1.50.432', '1.50.433', '1.50.434', '1.50.435', '1.50.436', '1.50.437', '1.50.438', '1.50.439', '1.50.440', '1.50.441', '1.50.442', '1.50.443', '1.50.444', '1.50.445', '1.50.446', '1.50.447', '1.50.448', '1.50.449', '1.50.450', '1.50.451', '1.50.452', '1.50.453', '1.50.454', '1.50.455', '1.50.456', '1.50.457', '1.50.458', '1.50.459', '1.50.460', '1.50.461', '1.50.462', '1.50.463', '1.50.464', '1.50.465', '1.50.466', '1.50.467', '1.50.468', '1.50.469', '1.50.470', '1.50.471', '1.50.472', '1.50.473', '1.50.474', '1.50.475', '1.50.476', '1.50.477', '1.50.478', '1.50.479', '1.50.480', '1.50.481', '1.50.482', '1.50.483', '1.50.484', '1.50.485', '1.50.486', '1.50.487', '1.50.488', '1.50.489', '1.50.490', '1.50.491', '1.50.492', '1.50.493', '1.50.494', '1.50.495', '1.50.496', '1.50.497', '1.50.498', '1.50.499', '1.50.500', '1.50.501', '1.50.502', '1.50.503', '1.50.504', '1.50.505', '1.50.506', '1.50.507', '1.50.508', '1.50.509', '1.50.510', '1.50.511', '1.50.512', '1.50.513', '1.50.514', '1.50.515', '1.50.516', '1.50.517', '1.50.518', '1.50.519', '1.50.520', '1.50.521', '1.50.522', '1.50.523', '1.50.524', '1.50.525', '1.50.526', '1.50.527', '1.50.528', '1.50.529', '1.50.530', '1.50.531', '1.50.532', '1.50.533', '1.50.534', '1.50.535', '1.50.536', '1.50.537', '1.50.538', '1.50.539', '1.50.540', '1.50.541', '1.50.542', '1.50.543', '1.50.544', '1.50.545', '1.50.546', '1.50.547', '1.50.548', '1.50.549', '1.50.550', '1.50.551', '1.50.552', '1.50.553', '1.50.554', '1.50.555', '1.50.556', '1.50.557', '1.50.558', '1.50.559', '1.50.560', '1.50.561', '1.50.562', '1.50.563', '1.50.564', '1.50.565', '1.50.566', '1.50.567', '1.50.568', '1.50.569', '1.50.570', '1.50.571', '1.50.572', '1.50.573', '1.50.574', '1.50.575', '1.50.576', '1.50.577', '1.50.578', '1.50.579', '1.50.580', '1.50.581', '1.50.582', '1.50.583', '1.50.584', '1.50.585', '1.50.586', '1.50.587', '1.50.588', '1.50.589', '1.50.590', '1.50.591', '1.50.592', '1.50.593', '1.50.594', '1.50.595', '1.50.596', '1.50.597', '1.50.598', '1.50.599', '1.50.600', '1.50.601', '1.50.602', '1.50.603', '1.50.604', '1.50.605', '1.50.606', '1.50.607', '1.50.608', '1.50.609', '1.50.610', '1.50.611', '1.50.612', '1.50.613', '1.50.614', '1.50.615', '1.50.616', '1.50.617', '1.50.618', '1.50.619', '1.50.620', '1.50.621', '1.50.622', '1.50.623', '1.50.624', '1.50.625', '1.50.626', '1.50.627', '1.50.628', '1.50.629', '1.50.630', '1.50.631', '1.50.632', '1.50.633', '1.50.634', '1.50.635', '1.50.636', '1.50.637', '1.50.638', '1.50.639', '1.50.640', '1.50.641', '1.50.642', '1.50.643', '1.50.644', '1.50.645', '1.50.646', '1.50.647', '1.50.648', '1.50.649', '1.50.650', '1.50.651', '1.50.652', '1.50.653', '1.50.654', '1.50.655', '1.50.656', '1.50.657', '1.50.658', '1.50.659', '1.50.660', '1.50.661', '1.50.662', '1.50.663', '1.50.664', '1.50.665', '1.50.666', '1.50.667', '1.50.668', '1.50.669', '1.50.670', '1.50.671', '1.50.672', '1.50.673', '1.50.674', '1.50.675', '1.50.676', '1.50.677', '1.50.678', '1.50.679', '1.50.680', '1.50.681', '1.50.682', '1.50.683', '1.50.684', '1.50.685', '1.50.686', '1.50.687', '1.50.688', '1.50.689', '1.50.690', '1.50.691', '1.50.692', '1.50.693', '1.50.694', '1.50.695', '1.50.696', '1.50.697', '1.50.698', '1.50.699', '1.50.700', '1.50.701', '1.50.702', '1.50.703', '1.50.704', '1.50.705', '1.50.706', '1.50.707', '1.50.708', '1.50.709', '1.50.710', '1.50.711', '1.50.712', '1.50.713', '1.50.714', '1.50.715', '1.50.716', '1.50.717', '1.50.718', '1.50.719', '1.50.720', '1.50.721', '1.50.722', '1.50.723', '1.50.724', '1.50.725', '1.50.726', '1.50.727', '1.50.728', '1.50.729', '1.50.730', '1.50.731', '1.50.732', '1.50.733', '1.50.734', '1.50.735', '1.50.736', '1.50.737', '1.50.738', '1.50.739', '1.50.740', '1.50.741', '1.50.742', '1.50.743', '1.50.743b', '1.50.744', '1.50.745', '1.50.746', '1.50.747', '1.50.748', '1.50.749', '1.50.750', '1.50.751', '1.50.752', '1.50.753', '1.50.754', '1.50.755', '1.50.756', '1.50.757', '1.50.758', '1.50.759', '1.50.760', '1.50.761', '1.50.762', '1.50.763', '1.50.764', '1.50.765', '1.50.766', '1.50.767', '1.50.768', '1.50.769', '1.50.770', '1.50.771', '1.50.772', '1.50.773', '1.50.774', '1.50.775', '1.50.776', '1.50.777', '1.50.778', '1.50.779', '1.50.780', '1.50.781', '1.50.782', '1.50.783', '1.50.784', '1.50.785', '1.50.786', '1.50.787', '1.50.788', '1.50.789', '1.50.790', '1.50.791', '1.50.792', '1.50.793', '1.50.794', '1.50.795', '1.50.796', '1.50.797', '1.50.798', '1.50.799', '1.50.800', '1.50.801', '1.50.802', '1.50.803', '1.50.804', '1.50.805', '1.50.806', '1.50.807', '1.50.808', '1.50.809', '1.50.810', '1.50.811', '1.50.812', '1.50.813', '1.50.814',
+    // INVARIANT: never add the current TARGET_VERSION to this list.
+    // Doing so causes the rewrite loop to match its own output and
+    // append the suffix on every MutationObserver cycle. See the
+    // idempotency guard in rewriteTextNodes below.
+  ];
+  const STALE_SET = new Set(STALE_VERSIONS);
+
+  // ─── Layer A: window.ANTCV_VERSION lock ──────────────────────────
+  function lockAntcvVersion() {
+    try {
+      // First try Object.defineProperty so app.js's later
+      // assignment is silently rejected (and doesn't throw).
+      Object.defineProperty(window, 'ANTCV_VERSION', {
+        configurable: false,
+        writable: false,
+        value: TARGET_VERSION,
+      });
+      return true;
+    } catch (e) {
+      // Property already defined (read-only or accessor). Try to
+      // overwrite via descriptor mutation.
+      try {
+        const desc = Object.getOwnPropertyDescriptor(window, 'ANTCV_VERSION');
+        if (desc && desc.configurable) {
+          Object.defineProperty(window, 'ANTCV_VERSION', {
+            configurable: false,
+            writable: false,
+            value: TARGET_VERSION,
+          });
+          return true;
+        }
+      } catch (_) {}
+      // Last resort: assign — may not stick if locked, but try anyway.
+      try { window.ANTCV_VERSION = TARGET_VERSION; } catch (_) {}
+      return false;
+    }
+  }
+
+  // Set immediately, then re-assert until 6 s post-boot (covers
+  // late initialization in app.js).
+  lockAntcvVersion();
+  let assertCount = 0;
+  const assertTimer = setInterval(function () {
+    if (window.ANTCV_VERSION !== TARGET_VERSION) {
+      lockAntcvVersion();
+    }
+    assertCount++;
+    if (assertCount > 30) clearInterval(assertTimer); // ~6 s at 200 ms cadence
+  }, 200);
+
+  // ─── Layer B: console.log wrap ──────────────────────────────────
+  (function wrapConsole() {
+    const orig = console.log.bind(console);
+    if (console.log.__antcvVersionWrapped) return;
+    function rewrite(arg) {
+      if (typeof arg !== 'string') return arg;
+      // Only rewrite the exact "[AntCV] X.Y.Z" pattern.
+      const m = /^\[AntCV\]\s+(\d+\.\d+\.\d+)\s*$/.exec(arg);
+      if (m && STALE_SET.has(m[1])) {
+        return '[AntCV] ' + TARGET_VERSION + ' (sidecars; bundle stamp: ' + m[1] + ')';
+      }
+      return arg;
+    }
+    console.log = function () {
+      const args = new Array(arguments.length);
+      for (let i = 0; i < arguments.length; i++) args[i] = rewrite(arguments[i]);
+      return orig.apply(console, args);
+    };
+    console.log.__antcvVersionWrapped = true;
+  })();
+
+  // ─── Layer C: DOM text rewrite ──────────────────────────────────
+  // We rewrite text nodes whose textContent contains a stale
+  // version string. To avoid touching arbitrary user content
+  // ("we shipped version 1.40.172 in production…"), we gate on
+  // visible context: the node must sit inside an element whose
+  // ancestry includes a tag/class hinting at version display
+  // (e.g. About, Settings drawer header, login screen).
+  const VERSION_CONTAINER_HINTS = /antcv|about|settings|version|drawer|footer|login|sign[\s-]?in|app[\s-]?info/i;
+
+  function isInVersionContainer(node) {
+    let p = node && node.parentNode;
+    let depth = 0;
+    while (p && p !== document.body && depth < 10) {
+      depth++;
+      if (p.nodeType === 1) {
+        const id = p.id || '';
+        const cls = (typeof p.className === 'string') ? p.className : '';
+        const aria = (p.getAttribute && (p.getAttribute('aria-label') || p.getAttribute('data-antcv')) ) || '';
+        if (VERSION_CONTAINER_HINTS.test(id) ||
+            VERSION_CONTAINER_HINTS.test(cls) ||
+            VERSION_CONTAINER_HINTS.test(aria)) return true;
+      }
+      p = p.parentNode;
+    }
+    return false;
+  }
+
+  // Build a regex of stale versions for fast scanning.
+  const STALE_RE = new RegExp(
+    '\\b(' + STALE_VERSIONS.map(function (v) {
+      return v.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+    }).join('|') + ')\\b',
+    'g'
+  );
+
+  function rewriteTextNodes(root) {
+    if (!root) return 0;
+    let n = 0;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    const dirty = [];
+    let node;
+    while ((node = walker.nextNode())) {
+      if (!node.nodeValue) continue;
+      // INVARIANT: idempotency guard. If the text already contains
+      // TARGET_VERSION (either because we wrote it on a prior pass or
+      // because the bundle's own stamp matches), do not rewrite. Without
+      // this guard, the MutationObserver feedback loop (which watches
+      // characterData) re-fires on every rewrite, and any STALE_VERSIONS
+      // entry whose digits appear as a substring of TARGET_VERSION would
+      // cause the suffix to be concatenated on every cycle.
+      if (node.nodeValue.indexOf(TARGET_VERSION) !== -1) continue;
+      if (!STALE_RE.test(node.nodeValue)) { STALE_RE.lastIndex = 0; continue; }
+      STALE_RE.lastIndex = 0;
+      // Skip editable contexts.
+      let p = node.parentNode, editable = false;
+      while (p && p !== document.body) {
+        if (p.nodeType === 1) {
+          const tag = (p.tagName || '').toLowerCase();
+          if (tag === 'input' || tag === 'textarea' || tag === 'script' || tag === 'style') { editable = true; break; }
+          if (p.isContentEditable) { editable = true; break; }
+        }
+        p = p.parentNode;
+      }
+      if (editable) continue;
+      // Gate on container hint.
+      if (!isInVersionContainer(node)) continue;
+      // Rewrite.
+      const next = node.nodeValue.replace(STALE_RE, TARGET_VERSION);
+      if (next !== node.nodeValue) {
+        dirty.push([node, next]);
+      }
+    }
+    for (const [nd, txt] of dirty) {
+      try {
+        nd.nodeValue = txt;
+        if (nd.parentNode && nd.parentNode.nodeType === 1) {
+          nd.parentNode.setAttribute('data-antcv-version-rewritten', '1');
+        }
+        n++;
+      } catch (_) {}
+    }
+    if (n > 0) {
+      try { console.debug('[version-override] rewrote', n, 'stale version string(s) → ' + TARGET_VERSION); } catch (_) {}
+    }
+    return n;
+  }
+
+  let pending = false;
+  function schedule() {
+    if (pending) return;
+    pending = true;
+    requestAnimationFrame(function () {
+      pending = false;
+      try { rewriteTextNodes(document.body); } catch (_) {}
+    });
+  }
+
+  // First passes — many version displays appear after auth/cloud-restore.
+  schedule();
+  [200, 600, 1500, 3500, 8000].forEach(function (d) { setTimeout(schedule, d); });
+
+  try {
+    const mo = new MutationObserver(function (records) {
+      for (const r of records) {
+        if (r.addedNodes && r.addedNodes.length) { schedule(); return; }
+        if (r.type === 'characterData') { schedule(); return; }
+      }
+    });
+    mo.observe(document.body, { childList: true, subtree: true, characterData: true });
+  } catch (_) {}
+
+  // Public API.
+  window.AntcvVersionOverride = {
+    version: TARGET_VERSION,
+    targetVersion: TARGET_VERSION,
+    staleVersions: STALE_VERSIONS,
+    _lockAntcvVersion: lockAntcvVersion,
+    _rewriteTextNodes: rewriteTextNodes,
+  };
+
+  try { console.debug('[version-override] installed v1.40.288 — pinning window.ANTCV_VERSION =', TARGET_VERSION); } catch (_) {}
+})();

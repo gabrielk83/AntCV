@@ -34,13 +34,19 @@ This spec governs generation/trim ONLY when a specific JD is present
    - Order WITHIN a group so the most JD-relevant item leads: `Test and validation`
      first in Methods; AI-assisted leads with `Measurement analysis` (JD: "data analysis").
 
-5. **Section placement is SPACE-driven, not relevance-driven (owner correction).**
-   Where a section sits (which column, which page) is a function of available space:
-   pack sections to use the space efficiently, and **pull content into the MAIN column
-   when it fits there** rather than leaving the main column short. Education landing on
-   page 2 was a FIT decision, not "low relevance". This is a layout/pagination concern
-   (overlaps the app's existing autoPages + sidebar-fill), NOT a relevance ranking of
-   sections.
+5. **Section placement is SPACE-driven and serves a DESIRED-VISUAL target (owner
+   corrections).** Where a section sits (which column, which page) is a function of
+   available space: pack sections to use the space efficiently, and **pull content into
+   the MAIN column when it fits there** rather than leaving the main column short.
+   Education landing on page 2 was a FIT decision, not "low relevance". This is a
+   layout/pagination concern (overlaps the app's existing autoPages + sidebar-fill), NOT
+   a relevance ranking of sections.
+   - **The packing target is the owner's desired visual density: crowded vs. a clean
+     N-page (e.g. 2-page) spread.** Compression aggressiveness AND placement both serve
+     that target — compress harder + pack denser to hit "crowded"/fewer pages; ease off
+     + spread to land a clean 2-page layout. So the same content can legitimately trim to
+     different depths depending on the density goal; the goal is an input, not fixed.
+     (Ties to the existing Fit / page-target controls — reuse, don't reinvent.)
 
 6. **Flatten list sub-headers ONLY when the list is VERY short (owner correction).**
    A short Regulatory list dropped its "Optical and Photonic Standards" /

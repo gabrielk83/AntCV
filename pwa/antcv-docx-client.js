@@ -2173,7 +2173,21 @@ export function applyOutcomesMode(docSections, doc) {
     const _lam = new Map();
     const _capJoin = (texts) => {
       let t = _dedupNear(texts).slice(0, 2).join('; ');
-      if (t.length > 260) t = t.slice(0, 257).replace(/[;,\s]+\S*$/, '') + '…';
+      // RESULTS-CUT-003 (owner 2026-06-22): NO jarring trailing "…". RESULTS-CUT-002
+      // fixed the heuristic-distribution path but this tier-1/2/3 join still mid-word
+      // cut + ellipsised (the "(Supervisor…" the owner saw). Same clean rule: drop the
+      // WHOLE second clause if the first is complete, else trim to a sentence/clause
+      // boundary — a complete line always beats a truncated one.
+      if (t.length > 260) {
+        const parts = t.split('; ');
+        if (parts.length > 1 && parts[0].length <= 260) {
+          t = parts[0];
+        } else {
+          const cut = t.slice(0, 260);
+          const b = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('; '), cut.lastIndexOf(', '));
+          t = (b > 60 ? cut.slice(0, b) : cut.replace(/\s+\S*$/, '')).replace(/[;,.\s]+$/, '');
+        }
+      }
       return t;
     };
     visRoles.forEach((r) => {

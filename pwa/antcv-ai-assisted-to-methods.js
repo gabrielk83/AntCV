@@ -14,21 +14,30 @@
 (function () {
   'use strict';
   if (window.__antcvAiToMethods) return;
-  window.__antcvAiToMethods = '1.50.689';
+  window.__antcvAiToMethods = '1.50.809';
 
   var SRC = 'ai-assisted-to-methods';
   function disabled() { try { var v = localStorage.getItem('antcv:disable-ai-to-methods'); return v === '1' || v === 'true'; } catch (_) { return false; } }
 
+  // AI-ASSISTED-EMPTY-GROUP-001 (owner 2026-06-22: the row was still floating above
+  // the groups in a fresh generation): generation emits the AI-assisted row either
+  // with no group field OR with group:"" (empty/whitespace) — both mean "not in a
+  // group". The original guard only matched `group === undefined`, so an empty-string
+  // group slipped past and the relocate never fired. Treat both as ungrouped.
+  function noGroup(it) { return it && (it.group === undefined || it.group === null || /^\s*$/.test(String(it.group))); }
   function isAiItem(it) {
-    return it && it.group === undefined && /\bai[\s\-]?assist/i.test(String(it.l || ''));
+    return noGroup(it) && /\bai[\s\-]?assist/i.test(String(it.l || ''));
   }
   function isMethodsGroup(it) {
     return it && it.group !== undefined && /^\s*methods\s*$/i.test(String(it.group));
   }
+  // A real group marker carries a NON-EMPTY group name (an empty-string group is an
+  // ungrouped item, e.g. the floating AI-assisted row — not a boundary).
+  function isGroupMarker(it) { return it && typeof it.group === 'string' && it.group.trim() !== ''; }
   // Index of the next group marker strictly after `from` (or items.length).
   function nextGroupAfter(items, from) {
     for (var j = from + 1; j < items.length; j++) {
-      if (items[j] && items[j].group !== undefined) return j;
+      if (isGroupMarker(items[j])) return j;
     }
     return items.length;
   }
@@ -85,5 +94,5 @@
   try { window.addEventListener('storage', function (e) { if (!e || e.key === 'sections' || e.key === null) tick(); }); } catch (_) {}
   setInterval(tick, 4000);
 
-  window.AntcvAiToMethods = { version: '1.50.689', _apply: apply, _relocate: relocate };
+  window.AntcvAiToMethods = { version: '1.50.809', _apply: apply, _relocate: relocate };
 })();

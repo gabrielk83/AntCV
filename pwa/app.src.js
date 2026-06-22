@@ -5760,7 +5760,9 @@
                           [].concat(__piL.proofPointsByRole || [], __piL.proofPointsByPosition || []).forEach((p) => { if (p && p.id && "string" == typeof p.text) __ppTextL[p.id] = p.text; });
                           let __jdL = ""; try { __jdL = String(localStorage.getItem("antcv:lastJdText") || "").toLowerCase(); } catch (_) {}
                           const __ovisL = (o) => { if ("string" == typeof o) return !0; if (!o) return !1; if (!1 !== o.defaultVisible) return !0; const terms = o.visibilityRule && Array.isArray(o.visibilityRule.showWhenJDContainsAny) ? o.visibilityRule.showWhenJDContainsAny : []; return !!__jdL && terms.some((tt) => tt && __jdL.includes(String(tt).toLowerCase())); };
-                          const __capJoinL = (texts) => { let s2 = texts.slice(0, 2).join("; "); s2.length > 260 && (s2 = s2.slice(0, 257).replace(/[;,\s]+\S*$/, "") + "…"); return s2; };
+                          // RESULTS-CUT-003 (owner 2026-06-22): clean cut, no trailing "…"
+                          // (preview parity with docx-client _capJoin / applyOutcomesMode).
+                          const __capJoinL = (texts) => { let s2 = texts.slice(0, 2).join("; "); if (s2.length > 260) { const ps = s2.split("; "); if (ps.length > 1 && ps[0].length <= 260) s2 = ps[0]; else { const c = s2.slice(0, 260), b = Math.max(c.lastIndexOf(". "), c.lastIndexOf("; "), c.lastIndexOf(", ")); s2 = (b > 60 ? c.slice(0, b) : c.replace(/\s+\S*$/, "")).replace(/[;,.\s]+$/, ""); } } return s2; };
                           const __lamOfL = (role) => {
                             if (role && "string" == typeof role.results && role.results.trim()) return role.results.trim();
                             if (role && Array.isArray(role.outcomes) && role.outcomes.length) { const tx = role.outcomes.filter(__ovisL).map((o) => "string" == typeof o ? o.trim() : o.result ? String(o.result).trim() : [o.b, o.t].filter(Boolean).join(" ").trim()).filter(Boolean); if (tx.length) return __capJoinL(tx); }
@@ -5998,10 +6000,12 @@
                                         : [x.b, x.t].filter(Boolean).join(" ").trim(),
                                     )
                                     .join("; ");
-                              if (__txt.length > 260)
-                                __txt =
-                                  __txt.slice(0, 257).replace(/[;,\s]+\S*$/, "") +
-                                  "…";
+                              // RESULTS-CUT-003 (owner 2026-06-22): clean cut, no "…".
+                              if (__txt.length > 260) {
+                                const __ps = __txt.split("; ");
+                                if (__ps.length > 1 && __ps[0].length <= 260) __txt = __ps[0];
+                                else { const __c = __txt.slice(0, 260), __b = Math.max(__c.lastIndexOf(". "), __c.lastIndexOf("; "), __c.lastIndexOf(", ")); __txt = (__b > 60 ? __c.slice(0, __b) : __c.replace(/\s+\S*$/, "")).replace(/[;,.\s]+$/, ""); }
+                              }
                               // OUTCOMES-RESULTS-EDIT-001 (owner 2026-06-14: "Results
                               // is not editable in the preview"): render the text as an
                               // editable span (same pattern as the bullet editor) and

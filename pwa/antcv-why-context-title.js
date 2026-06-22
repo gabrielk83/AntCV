@@ -23,7 +23,7 @@
 (function () {
   'use strict';
   if (window.__antcvWhyContextTitle) return;
-  window.__antcvWhyContextTitle = '1.50.690';
+  window.__antcvWhyContextTitle = '1.50.809';
 
   var SRC = 'why-context-title';
   function disabled() { try { var v = localStorage.getItem('antcv:disable-why-context-title'); return v === '1' || v === 'true'; } catch (_) { return false; } }
@@ -47,9 +47,15 @@
   // target may be a company / institute / organisation — owner: "do not forget
   // why your institute / organization, if unsolicited, per case"). When the title
   // is already one of these, leave it — the generation chose the right entity.
+  // WHY-THIS-COMPANY-VARIANT-001 (owner 2026-06-22: a specific NVIDIA role still
+  // headed "Why this company"): generation also emits the "WHY THIS COMPANY" /
+  // "HVORFOR DENNE VIRKSOMHED" phrasing (not just "WHY YOUR …"). Without it in the
+  // recognised set, classify() returned {lang:null} and the JD-present flip to
+  // "WHY THIS POSITION" never fired. Treat it as an unsolicited-kind variant so a
+  // present JD flips it to the specific heading, and no-JD leaves it as-is.
   var UNSOL_VARIANTS = {
-    en: ['WHY YOUR COMPANY', 'WHY YOUR INSTITUTE', 'WHY YOUR INSTITUTION', 'WHY YOUR ORGANIZATION', 'WHY YOUR ORGANISATION', 'WHY YOUR TEAM'],
-    da: ['HVORFOR JERES VIRKSOMHED', 'HVORFOR JERES ORGANISATION', 'HVORFOR JERES INSTITUTION', 'HVORFOR JERES INSTITUT', 'HVORFOR JERES TEAM']
+    en: ['WHY YOUR COMPANY', 'WHY THIS COMPANY', 'WHY THE COMPANY', 'WHY YOUR INSTITUTE', 'WHY YOUR INSTITUTION', 'WHY YOUR ORGANIZATION', 'WHY YOUR ORGANISATION', 'WHY YOUR TEAM'],
+    da: ['HVORFOR JERES VIRKSOMHED', 'HVORFOR DENNE VIRKSOMHED', 'HVORFOR VIRKSOMHEDEN', 'HVORFOR JERES ORGANISATION', 'HVORFOR JERES INSTITUTION', 'HVORFOR JERES INSTITUT', 'HVORFOR JERES TEAM']
   };
   // Classify the current title -> {lang, kind} where kind is 'specific' |
   // 'unsolicited' | null (unrecognised language -> leave the title alone).
@@ -163,5 +169,5 @@
   try { window.addEventListener('storage', function (e) { if (!e || e.key === 'sections' || e.key === 'antcv:lastJdText' || e.key === null) tick(); }); } catch (_) {}
   setInterval(tick, 4000);
 
-  window.AntcvWhyContextTitle = { version: '1.50.690', _apply: apply, _fix: fix, _strip: stripLabel };
+  window.AntcvWhyContextTitle = { version: '1.50.809', _apply: apply, _fix: fix, _strip: stripLabel };
 })();

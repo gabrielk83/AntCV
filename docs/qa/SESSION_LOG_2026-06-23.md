@@ -96,3 +96,75 @@ workers deployed via `deploy.yml`). Read the **REGRESSION GUARD** section before
   remaining systemic perf issue.
 - Fuse CL→CV + "I cover this" gap-closure — wired; need a live end-to-end run to confirm.
 - `hydrateContract()` generation refactor to retire ~15 patch sidecars (GENERATION_OPTIMIZATION doc).
+
+---
+
+# Nightly autonomous run (continuation) - head 1.50.807, NO ship
+
+Fresh unattended session against the 2026-06-23 run sheet (LANE A/B/C). Prime directive honoured:
+ship verified bugfixes with ZERO regressions; when in doubt, do NOT ship. **Outcome: nothing shipped
+to main code** - no autonomous-safe item could be verified green end-to-end tonight (signed-in browser
+unavailable; Chrome-MCP opens anonymous). Baseline confirmed fully green; 2 false-opens verified
+already-correct; 1 new latent finding surfaced; 4 items precisely root-caused with the exact blocker.
+
+## Baseline confirmed GREEN (no regressions present)
+- `node pwa/test/boot-smoke.mjs` -> OK. `app.js` startsWith `(()=>{`, no `"use strict"`.
+- `node --test pwa/test/unit/*.test.mjs` -> **297/297** (run sheet said 295; grown to 297).
+- diag-freshness-guard, diag-fresh-delete, diag-table-editor, diag-results-kernel-match, applyOutcomesMode.test -> all OK.
+- docx-worker gated set: palette.test, diag-bundle-palette-sync, diag-banded-rows -> all OK.
+
+## VERIFIED already-correct (no code change needed)
+- **B2 GEN-SCE-FLAG-001 follow-through** - CONFIRMED correct. `workers/proxy/test/diag-sce-telemetry-await.mjs`
+  passes (5/5): `sce-eval` put is `await`ed (engine line 848 -> KV put 961), skip-path awaited (782).
+  `Access-Control-Expose-Headers` lists all `X-AntCV-*` SCE headers in BOTH proxy (index.js:248) and
+  demo-proxy (index.js:273); the two engine files are byte-identical. No drift, no deploy. -> can close.
+- **VAL-001 / VF-016** (warning vs error colour) - CODE-VERIFIED already correct. Set-menu validation
+  routes critical->red `#ff8888` and warning->yellow `#ffd166` in source (`app.src.js` 41193-41209),
+  mirrored in minified `app.js`, AND a token sidecar (`antcv-validation-severity-341.js`: error `#dc2626`
+  / warning `#d97706`). Severity is already in the data (markers built at `app.src.js` 25175/25183).
+  Needs only a 30s owner live glance to formally close (no headless validation-state injection done).
+
+## NEW FINDING (not gated, surface to owner)
+- **diag-ai-notice-anchor.mjs has been RED since docx-worker 1.14.75.** One assertion fails:
+  "CV: anchored to page-margin bottom". The notice shape emits
+  `mso-position-vertical-relative:page` (`src/index.js:23812`) but the diag asserts `:margin`. Both the
+  code and the test were introduced in the SAME commit (`1c3cc31`) - this is an internal inconsistency
+  from the original commit, NOT a later regression. The harness only verifies the XML attribute, not the
+  visual Word position, and `page` (paper edge) vs `margin` (bottom text margin) is a real visual choice.
+  Changing the deployed worker blind would move the AI notice on EVERY export with no way to verify the
+  render headlessly. **Owner decision needed:** is the bottom-corner AI notice meant to sit at the page
+  edge (`page`, current) or at the bottom margin (`margin`, like the big diagonal watermark at 23877)?
+  Then EITHER fix the worker (page->margin) OR correct the over-strict test. This diag is NOT in the
+  gated regression set, so it blocked nothing - but the AI-notice diag can't be trusted until resolved.
+
+## ROOT-CAUSED, DEFERRED (each needs the owner / a signed-in browser)
+- **PRV-004 / VF-015** (loading-status dismissible while job in flight) - ROOT CAUSE FOUND:
+  `antcv-stale-status.js` `isBusy()` (lines 82-91) reads four window flags
+  (`_antcvKernelBusy`, `_antcvConsensusBusy`, `AntcvKernel.busy`, `_antcvGenerating`) that **nothing
+  assigns anywhere** (confirmed: zero `= ` assignments in source/sidecars; `app.src.js` only READS the
+  first two at 25197-25198). So `isBusy()` is permanently false -> the click always dismisses, even
+  mid-job. The clean fix needs a REAL in-flight boolean. CAUTION: the pill is rendered whenever the live
+  status string `po` is truthy, which covers BOTH genuinely-running AND the stale-stuck case the sidecar
+  exists to dismiss - so mirroring `po` (one earlier suggestion) would block dismissing a stale pill, a
+  regression of the Bug-8 feature. Correct fix = wire a true generation/op in-flight flag (set at op
+  start, cleared in `finally`) through the gated `app.js` mirror, then verify against a real multi-minute
+  generation signed-in. Not safe to ship/verify unattended. WIP.
+- **JD-ANALYSIS-PRINT-001** (analysis print produces the CV) - sidecar-confined fix designed
+  (intent flag on analysis export controls + tighten the `analysisViewIsForeground` gate in
+  `antcv-print-iframe-preview.js`), BUT: the dedicated analysis buttons already call `exportPdf`
+  directly (bypassing the wrapped `window.print`), and the real failing flow (generic print / Ctrl+P
+  while the Analysis tab is foreground) relies on the geometry gate, which cannot be reproduced
+  headlessly (`window.print` is a no-op under Playwright). The proposed intent flag is likely inert for
+  the actual complaint. Needs a signed-in repro of exactly which control the owner pressed. WIP.
+- **PDF-LAYOUT-001** (stray "Selected Outcomes" heading on PDF page 2) - DEFERRED per the run sheet's
+  own rule. The heading text is data-driven (not a literal in the worker; only comments at 26228/26475);
+  there is no failing fixture, and reproducing it requires the owner's exact section/pagination doc.
+  Cannot reproduce deterministically -> do not guess against live PDF.
+- **WM-006** (AI notice should land in the emptier column on the last page) - DEFERRED. Needs a per-column
+  residual-whitespace pagination model on the last page plus a visual verify; the current notice is a
+  page-corner anchor driven by `ai_wm_side`, not a per-column placement. Larger than a nightly fix.
+
+## Parallelised vs serial
+- PARALLEL: 4 diagnosis subagents (VAL-001/VF-016, PRV-004/VF-015, JD-ANALYSIS-PRINT-001, B2 SCE) in one
+  batch - disjoint files, read-only.
+- SERIAL (would have been): integrate/verify/deploy - never reached, nothing passed the verify gate.

@@ -21,25 +21,31 @@ This spec governs generation/trim ONLY when a specific JD is present
      `Electro-optic conversion function` → `EO conversion function`.
    - Flatten `;`-grouped lists into plain comma runs.
 
-3. **Cross-section de-duplication.** Never state the same fact twice across sections:
-   - `Six Sigma Black Belt` is in Methods→Quality → drop it from Certificates.
-   - `hearing impaired…` lives in ACCESSIBILITY → remove it from PROFILE.
-   - Sirin Results dropped the "7-person team / ODM site" detail → that's already the
-     bullet above; Results keeps only the patent. Results must not echo a bullet.
-   - Trim redundant clauses (`and failure analysis` dropped where implied).
+3. **(NOT A RULE — owner correction 2026-06-22.)** Cross-section de-duplication is
+   NOT a generation rule. Keeping a fact in its primary/most-relevant section is fine;
+   do NOT systematically strip it from a second section. The Six Sigma (certs) and
+   "hearing impaired" (profile) removals in his edit were incidental, not a principle.
+   The ONE de-dup that DOES hold is the existing RESULTS rule: a Results line must not
+   merely restate one of the role's own bullets (RESULTS-CUT-003 / derive-numeric-only).
 
-4. **JD-echo renaming + relevance ordering.**
+4. **JD-echo renaming + within-group relevance ordering.**
    - Rename to mirror the JD: `Validation` → `Test and validation` (JD title = "Test
      Engineer"); `Regulatory Context` → `Regulatory Certificates`.
-   - Reorder within a group so the most JD-relevant item leads: `Test and validation`
+   - Order WITHIN a group so the most JD-relevant item leads: `Test and validation`
      first in Methods; AI-assisted leads with `Measurement analysis` (JD: "data analysis").
 
-5. **Section reordering by JD relevance.** Most relevant sidebar sections rise:
-   Certificates moved up under Tools; **Education demoted to page 2**.
+5. **Section placement is SPACE-driven, not relevance-driven (owner correction).**
+   Where a section sits (which column, which page) is a function of available space:
+   pack sections to use the space efficiently, and **pull content into the MAIN column
+   when it fits there** rather than leaving the main column short. Education landing on
+   page 2 was a FIT decision, not "low relevance". This is a layout/pagination concern
+   (overlaps the app's existing autoPages + sidebar-fill), NOT a relevance ranking of
+   sections.
 
-6. **Flatten list sub-headers when short.** Regulatory dropped its
-   "Optical and Photonic Standards" / "Imaging & Electro-Optical" sub-headers → one
-   flat list, each line terse (`ISO 12233: Resolution & spatial frequency`).
+6. **Flatten list sub-headers ONLY when the list is VERY short (owner correction).**
+   A short Regulatory list dropped its "Optical and Photonic Standards" /
+   "Imaging & Electro-Optical" sub-headers → one flat terse list. Keep sub-headers when
+   the list is long enough to benefit from grouping.
 
 7. **Results = the single most JD-relevant fact**, complete, never truncated, never a
    restated bullet. (Builds on RESULTS-CUT-003.)
@@ -53,18 +59,22 @@ This spec governs generation/trim ONLY when a specific JD is present
 
 ## Contrast with the first (naive) trim
 The first pass only removed clearly-irrelevant lines and de-truncated Results. The
-gold standard additionally: abbreviates everything, de-duplicates across sections,
-renames+reorders by JD relevance, flattens sub-headers, and demotes low-relevance
-sections. The difference is editorial compression + relevance modelling, not just
-deletion.
+gold standard additionally: force-keeps JD-named tools, abbreviates everything,
+renames + orders within groups to mirror the JD, flattens sub-headers on very short
+lists, and packs content by available space (main-column first). The difference is
+editorial compression + JD-echo + space-aware layout — NOT cross-section de-dup and
+NOT relevance-ranked section reordering (both explicitly rejected by the owner).
 
 ## Implementation notes (for the build step)
 - Gate on JD presence (reuse `antcv:lastJdText` ≥ 30, as `antcv-why-context-title.js` does).
 - Force-keep set = tokens extracted from the JD (tools/langs/standards) intersected
   with the user's real data — never invent. See [[ordering-jd-cluster-top-skills]] and
   [[cluster-demand-model]] for JD-token extraction already in the codebase.
-- De-dup + abbreviate is content-destructive → owner-gated by [[dont-hide-controls-as-duplicates]];
-  this spec IS that owner approval, scoped to JD-targeted CVs only. Keep the fuller
-  version recoverable (no-JD path unchanged).
-- Likely a generation-prompt change (worker) + a client trim/order sidecar; needs an
+- Abbreviation/compression is content-altering → owner-gated by
+  [[dont-hide-controls-as-duplicates]]; this spec IS that owner approval, scoped to
+  JD-targeted CVs only. Keep the fuller version recoverable (no-JD path unchanged).
+- Do NOT build cross-section de-dup or relevance-ranked section reordering (rule 3 + the
+  old rule 5 — both rejected). Section PLACEMENT is space/fit-driven and belongs with the
+  existing autoPages + sidebar-fill pagination, not a content rule.
+- Likely a generation-prompt change (worker) + a client trim sidecar; needs an
   owner regen to verify. Parity: preview + export ([[export-sanitize-and-preview-parity]]).

@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.814-salmon-sidebar-npage';
+  var VERSION = '1.50.815-salmon-unified';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -142,6 +142,15 @@
   // 2-page path stays the default until the Phase C coordinator ships.
   // Console-tunable: AntcvAutoPagebreak.config({ SIDEBAR_NPAGE: true }).
   var SIDEBAR_NPAGE = true;
+
+  // SALMON-UNIFIED-001 Phase C (1.50.815): the UNIFIED SHEET COORDINATOR. After
+  // both columns paginate independently, align them to ONE shared page boundary
+  // per page — the EARLIER column drives each line, the shorter column shows an
+  // intentional gap so page N starts straight across the sheet. Tracks the DOCX
+  // export line (owner choice #2). Separate flag from SIDEBAR_NPAGE so the proven
+  // per-column N-page path (Phase B) can ship even if the coordinator is disabled.
+  // Console-tunable: AntcvAutoPagebreak.config({ SIDEBAR_UNIFIED: false }).
+  var SIDEBAR_UNIFIED = true;
 
   // ============================================================
   // SIDEBAR-SHRINK-RECLAIM-001 (owner 2026-06-11)
@@ -508,12 +517,21 @@
       )
     ).filter(visible);
 
+    // SALMON-UNIFIED-001 Phase C: per-column block geometry collected DURING the
+    // detection loop (no extra DOM pass), consumed by the coordinator after the
+    // loop to align both columns to one shared sheet boundary per page. Each
+    // entry: { sid, kind, key, top, bottom } in UNSCALED px from the SHEET top
+    // (the column top, which for both columns is the same page-box top). Keyed by
+    // column role so the coordinator can tell sidebar from main.
+    var __uniBlocks = { sidebar: [], main: [] };
+
     for (var c = 0; c < cols.length; c++) {
       var col = cols[c];
       var isMainCol = !!(col.classList && (col.classList.contains('antcv-document-main')))
         || col.getAttribute('data-antcv-document-main') === 'true';
       if (deferMainDetect && isMainCol) continue;   // two-phase: detect main next pass
       var colTop = col.getBoundingClientRect().top;
+      var __uniBucket = isMainCol ? __uniBlocks.main : __uniBlocks.sidebar;
       // 1.50.286 SALMON-MOBILE-001: the preview content is CSS
       // transform:scale(ui) — on mobile ui<1 to fit the screen.
       // getBoundingClientRect() returns POST-transform (scaled) pixels, so a
@@ -610,6 +628,45 @@
           if (!__breakBornAt[bornKey(sid)]) __breakBornAt[bornKey(sid)] = nowMs(); }   // MAINBAR-FLIP-FIX-001
       }
 
+      // SALMON-UNIFIED-001 Phase C: record this column's atomic blocks (item rows
+      // + experience role wrappers) in UNSCALED px from the column top, for the
+      // coordinator below. Only the EXPORT pass feeds the coordinator (the unified
+      // sheet line tracks the DOCX line, owner's choice #2); the PREVIEW pass keeps
+      // its own per-column fill. CV only. Tables are recorded by tbody row so a
+      // row-split section still contributes a boundary.
+      if (SIDEBAR_UNIFIED && doc === 'cv' && autoKey === AUTO_KEY) {
+        try {
+          var __rowEls = col.querySelectorAll('[' + ITEM_PATH_ATTR + '^="items."]');
+          for (var __ri = 0; __ri < __rowEls.length; __ri++) {
+            var __rEl = __rowEls[__ri];
+            if (!visible(__rEl)) continue;
+            var __rm = /^items\.(\d+)/.exec(String(__rEl.getAttribute(ITEM_PATH_ATTR) || ''));
+            if (!__rm) continue;
+            var __rSidEl = __rEl.closest ? __rEl.closest('[data-sid]') : null;
+            var __rc = __rEl.getBoundingClientRect();
+            __uniBucket.push({
+              sid: __rSidEl ? __rSidEl.getAttribute('data-sid') : null,
+              kind: 'item', key: __rm[1],
+              top: (__rc.top - colTop) / scale,
+              bottom: (__rc.bottom - colTop) / scale,
+            });
+          }
+          var __roleEls2 = col.querySelectorAll('[data-antcv-role-index]');
+          for (var __qi = 0; __qi < __roleEls2.length; __qi++) {
+            var __qEl = __roleEls2[__qi];
+            if (!visible(__qEl)) continue;
+            var __qSidEl = __qEl.closest ? __qEl.closest('[data-sid]') : null;
+            var __qc = __qEl.getBoundingClientRect();
+            __uniBucket.push({
+              sid: __qSidEl ? __qSidEl.getAttribute('data-sid') : null,
+              kind: 'role', key: __qEl.getAttribute('data-antcv-role-index'),
+              top: (__qc.top - colTop) / scale,
+              bottom: (__qc.bottom - colTop) / scale,
+            });
+          }
+        } catch (_) {}
+      }
+
       // 1.50.276 EXPERIENCE role auto-pagination. Each role renders inside a
       // wrapper carrying data-antcv-role-index (its ORIGINAL index in
       // e.roles). Within THIS page-box column, find the first role whose
@@ -668,6 +725,155 @@
           }
           if (__expMap) { map[expSec.id] = __expMap;
             if (!__breakBornAt[bornKey(expSec.id)]) __breakBornAt[bornKey(expSec.id)] = nowMs(); }   // MAINBAR-FLIP-FIX-001
+        }
+      } catch (_) {}
+    }
+
+    // SALMON-UNIFIED-001 Phase C — UNIFIED SHEET COORDINATOR.
+    // ------------------------------------------------------------------
+    // The two per-column passes above each paginate INDEPENDENTLY: the sidebar
+    // and the main column can place their page-N break at different heights, so a
+    // 3-page CV can show the page-2→3 salmon in one column at a different line
+    // than the other (or only in one column). The owner chose UNIFIED sheet
+    // pagination tracking the DOCX EXPORT line:
+    //   - one boundary per page across the whole sheet;
+    //   - the EARLIER of the two columns drives each boundary (neither column
+    //     ever overflows past the shared line);
+    //   - the shorter column gets an intentional gap so page N starts on a
+    //     straight line across both columns.
+    // This runs ONLY on the EXPORT pass (autoKey === AUTO_KEY, usableBase ===
+    // USABLE_PDF — the Word-equivalent line), CV only, behind SIDEBAR_NPAGE. The
+    // PREVIEW map keeps its own per-column fill (it already pulls the sidebar up
+    // via SIDEBAR_PREVIEW_INFLATE). It REWRITES the per-sid entries in `map` so
+    // both columns break at the same sheet lines; the change-only write-guard and
+    // the born-stamps from the per-column passes are preserved.
+    if (SIDEBAR_UNIFIED && doc === 'cv' && autoKey === AUTO_KEY
+        && (__uniBlocks.sidebar.length || __uniBlocks.main.length)) {
+      try {
+        var __uniLimit = usableBase;   // USABLE_PDF on this pass (the export line)
+
+        // Greedy fill one column's atomic blocks into pages of height __uniLimit;
+        // returns each block tagged with its page (1-based). A block whose BOTTOM
+        // crosses the running page line moves WHOLE to the next page, which then
+        // starts at the block's TOP. Mirrors allOverflowPages / the role loop.
+        function __uniPaginate(blocks) {
+          var sorted = blocks.slice().sort(function (a, b) { return a.top - b.top; });
+          var pageTop = 0, page = 1, out = [];
+          for (var i = 0; i < sorted.length; i++) {
+            var b = sorted[i];
+            if ((b.bottom - pageTop) > __uniLimit && (b.top - pageTop) > 1) {
+              page++; pageTop = b.top;
+            }
+            out.push({ sid: b.sid, kind: b.kind, key: b.key, top: b.top, page: page });
+          }
+          return out;
+        }
+        // First (smallest) top per page in a paginated column.
+        function __uniFirstTop(paged) {
+          var m = {};
+          for (var i = 0; i < paged.length; i++) {
+            var p = paged[i].page;
+            if (m[p] === undefined || paged[i].top < m[p]) m[p] = paged[i].top;
+          }
+          return m;
+        }
+
+        var __sPaged = __uniPaginate(__uniBlocks.sidebar);
+        var __mPaged = __uniPaginate(__uniBlocks.main);
+        var __sTop = __uniFirstTop(__sPaged);
+        var __mTop = __uniFirstTop(__mPaged);
+
+        // Unified sheet boundary for page N = the EARLIER (smaller top) of the two
+        // columns' page-N starts, so neither column overflows past it.
+        var __maxPage = 1;
+        Object.keys(__sTop).concat(Object.keys(__mTop)).forEach(function (k) {
+          var n = parseInt(k, 10); if (n > __maxPage) __maxPage = n;
+        });
+        var __sheet = [];   // [{ page, y }] sorted by y
+        for (var __n = 2; __n <= __maxPage; __n++) {
+          var __a = __sTop[__n], __bb = __mTop[__n];
+          if (__a === undefined && __bb === undefined) continue;
+          var __y = (__a === undefined) ? __bb : (__bb === undefined) ? __a : Math.min(__a, __bb);
+          __sheet.push({ page: __n, y: __y });
+        }
+        __sheet.sort(function (a, b) { return a.y - b.y; });
+
+        if (__sheet.length) {
+          // Re-snap a column's blocks to the shared sheet lines: each block lands
+          // on the highest page whose boundary its TOP has crossed. Build a per-sid
+          // { firstKeyOfPageN: N } map for the FIRST block of each page > 1 — the
+          // render's monotonic floor cascades the rest. Whole blocks only.
+          function __uniResnap(blocks, isExperience) {
+            var sorted = blocks.slice().sort(function (a, b) { return a.top - b.top; });
+            var perSid = {}, seen = {};
+            for (var i = 0; i < sorted.length; i++) {
+              var b = sorted[i];
+              if (!b.sid) continue;
+              if (isExperience && b.kind !== 'role') continue;
+              if (!isExperience && b.kind !== 'item') continue;
+              var pg = 1;
+              for (var j = 0; j < __sheet.length; j++) {
+                if (b.top >= __sheet[j].y - 1) pg = __sheet[j].page;
+              }
+              if (pg > 1) {
+                var sk = b.sid + '@' + pg;
+                if (!seen[sk]) {
+                  seen[sk] = 1;
+                  (perSid[b.sid] = perSid[b.sid] || {})[String(b.key)] = pg;
+                }
+              }
+            }
+            return perSid;
+          }
+
+          // Sidebar item sections + main item sections re-snapped together (both
+          // are 'item' blocks); experience roles re-snapped on their own ('role').
+          var __reItem = __uniResnap(__uniBlocks.sidebar.concat(__uniBlocks.main), false);
+          var __reRole = __uniResnap(__uniBlocks.main, true);
+
+          // Apply: overwrite each affected sid's export entry with the unified map.
+          // Group-snap is intentionally NOT re-applied here — the per-column passes
+          // already snapped their first break to a group start, and the unified
+          // boundary is at/above that line, so the first item past the shared line
+          // is the correct continuation point. Preserve born-stamps.
+          function __applyUnified(reMap) {
+            for (var sid in reMap) {
+              if (!reMap.hasOwnProperty(sid)) continue;
+              var keys = Object.keys(reMap[sid]);
+              if (!keys.length) continue;
+              // Skip a table section (its row-split entry is keyed differently and
+              // handled by the single-break/table path; don't clobber it).
+              var __sec2 = sectionById(list, sid);
+              if (__sec2 && __sec2.type === 'table') continue;
+              map[sid] = reMap[sid];
+              if (!__breakBornAt[bornKey(sid)]) __breakBornAt[bornKey(sid)] = nowMs();
+            }
+          }
+          __applyUnified(__reItem);
+          __applyUnified(__reRole);
+
+          // RECONCILE: a non-table CV section that the per-column (Phase B) pass
+          // broke but the unified re-snap did NOT re-affirm now fits within page 1
+          // under the shared sheet line (the OTHER column drove an earlier boundary
+          // that this section sits above). Leaving its Phase-B break would draw a
+          // salmon the unified sheet says shouldn't exist. Clear those so `map`
+          // matches the shared boundaries exactly. Only sids the coordinator
+          // actually measured (had collected blocks) are eligible — experience,
+          // tables, and any section without blocks are left untouched.
+          var __uniSids = {};
+          __uniBlocks.sidebar.concat(__uniBlocks.main).forEach(function (b) {
+            if (b.sid && b.kind === 'item') __uniSids[b.sid] = 1;
+          });
+          for (var __ms in map) {
+            if (!map.hasOwnProperty(__ms)) continue;
+            if (!__uniSids[__ms]) continue;                 // not an item-section the coordinator measured
+            if (__reItem[__ms]) continue;                   // re-affirmed → keep
+            var __mSec = sectionById(list, __ms);
+            if (__mSec && __mSec.type === 'table') continue; // tables keep their row-split
+            if (__mSec && __mSec.type === 'experience') continue;
+            delete map[__ms];
+            delete __breakBornAt[bornKey(__ms)];
+          }
         }
       } catch (_) {}
     }
@@ -1039,7 +1245,7 @@
     //   AntcvAutoPagebreak.config({ HYST_STABLE:80 })  // looser stable band
     config: function (o) {
       try {
-        if (!o) return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE };
+        if (!o) return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE, SIDEBAR_UNIFIED: SIDEBAR_UNIFIED };
         if (typeof o.ONE_PASS === 'boolean') ONE_PASS = o.ONE_PASS;
         if (typeof o.HYST_STABLE === 'number') HYST_STABLE = o.HYST_STABLE;
         if (typeof o.HYST_TIGHT === 'number') HYST_TIGHT = o.HYST_TIGHT;
@@ -1047,8 +1253,9 @@
         if (typeof o.SNAP_GAP_MAX === 'number') SNAP_GAP_MAX = o.SNAP_GAP_MAX;
         if (typeof o.SIDEBAR_PREVIEW_INFLATE === 'number' && o.SIDEBAR_PREVIEW_INFLATE >= 1 && o.SIDEBAR_PREVIEW_INFLATE <= 2) SIDEBAR_PREVIEW_INFLATE = o.SIDEBAR_PREVIEW_INFLATE;
         if (typeof o.SIDEBAR_NPAGE === 'boolean') SIDEBAR_NPAGE = o.SIDEBAR_NPAGE;
+        if (typeof o.SIDEBAR_UNIFIED === 'boolean') SIDEBAR_UNIFIED = o.SIDEBAR_UNIFIED;
         lastSourceFp = null; schedule();
-        return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE };
+        return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE, SIDEBAR_UNIFIED: SIDEBAR_UNIFIED };
       } catch (_) { return null; }
     },
     // Manual reset of auto breaks (e.g. from console) if a stale break

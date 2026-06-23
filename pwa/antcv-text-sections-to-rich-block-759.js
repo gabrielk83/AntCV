@@ -26,7 +26,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.817';
+  var VERSION = '1.50.821';
   if (window.__antcvTextSectionsToRichBlock759 === VERSION) return;
   window.__antcvTextSectionsToRichBlock759 = VERSION;
 
@@ -45,16 +45,20 @@
   // these (i.e. the user has not customised it), so the flip never clobbers a manual edit.
   var WHY_CANON = { 'Why this position': 1, 'Why this company': 1 };
   var WHO_CANON = { 'Who I am': 1, 'Hvem er jeg': 1 };
+  var WORKSTYLE_CANON = { 'Work style': 1, 'Arbejdsstil': 1 };
   function jdPresent() { try { return String(localStorage.getItem('antcv:lastJdText') || '').trim().length >= 30; } catch (_) { return false; } }
   function whyLead() { return jdPresent() ? 'Why this position' : 'Why this company'; }
   // CL-LEADIN-KEEP-001 (owner 2026-06-23: "keep the who i am and why this company/position
-  // in the lead-ins"): when GENERATION emits who/why directly as a rich_block (not text), the
-  // text->rich_block branch never runs, so the lead-in `b` is whatever the LLM put there —
-  // often empty. Inject the canonical lead-in whenever `b` is empty/missing (and re-sync the
-  // why position<->company flip while canonical). Applies to every application on every load,
-  // and the result autosaves, so it is not limited to the current document.
-  function leadFor(id) { return id === 'who' ? 'Who I am' : whyLead(); }
-  function canonFor(id) { return id === 'who' ? WHO_CANON : WHY_CANON; }
+  // in the lead-ins") + WORKSTYLE-LEADIN-001 (owner 2026-06-23: "the line lead-in of work
+  // style is empty, by default it needs the words Work style"): when GENERATION emits who /
+  // why / work_style DIRECTLY as a rich_block (not text), the text->rich_block branch never
+  // runs, so the lead-in `b` is whatever the LLM put there — often empty. Inject the canonical
+  // lead-in whenever `b` is empty/missing (and re-sync the why position<->company flip while
+  // canonical). Applies to every application on every load, and the result autosaves, so it is
+  // not limited to the current document.
+  function leadFor(id) { return id === 'who' ? 'Who I am' : id === 'work_style' ? 'Work style' : whyLead(); }
+  function canonFor(id) { return id === 'who' ? WHO_CANON : id === 'work_style' ? WORKSTYLE_CANON : WHY_CANON; }
+  function isLeadInId(id) { return id === 'who' || id === 'why' || id === 'work_style'; }
 
   function readSections() {
     try { var v = JSON.parse(localStorage.getItem('sections') || '{}'); return (v && typeof v === 'object') ? v : {}; }
@@ -76,18 +80,19 @@
           items: [{ b: lead, t: s.content != null ? String(s.content) : '' }]
         };
         if (cfg.headlineOff) ns.headlineOff = true;
-        // who/why render the lead-in as "Who I am: ..." / "Why this position: ..."
-        if (s.id === 'who' || s.id === 'why') ns.leadColon = true;
+        // who/why/work_style render the lead-in as "Who I am: ..." / "Why this position: ..."
+        // / "Work style: ..."
+        if (isLeadInId(s.id)) ns.leadColon = true;
         if (s.hidden) ns.hidden = s.hidden;
         if (s.pageBreakBefore) ns.pageBreakBefore = s.pageBreakBefore;
         if (s.ruleOff) ns.ruleOff = s.ruleOff;
         return ns;
       }
-      // (2) ongoing lead-in maintenance for who/why already in rich_block form:
+      // (2) ongoing lead-in maintenance for who/why/work_style already in rich_block form:
       //     INJECT the canonical lead when `b` is empty/missing (the generated-rich_block
       //     case), and re-sync the why position<->company flip while still canonical. Never
       //     clobber a user-customised lead. Also ensure the lead-in colon separator.
-      if ((s.id === 'who' || s.id === 'why') && s.type === 'rich_block' && Array.isArray(s.items) && s.items[0]) {
+      if (isLeadInId(s.id) && s.type === 'rich_block' && Array.isArray(s.items) && s.items[0]) {
         var cur = String(s.items[0].b || '').trim();
         var want = leadFor(s.id);
         var next = s, mutated = false;

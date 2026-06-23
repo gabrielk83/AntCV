@@ -1,5 +1,52 @@
 > **AUTHORITATIVE current state + next-session prompt: `docs/qa/SESSION_HANDOFF_2026-06-18-pm3.md`.** It supersedes the scattered PM/PM2 docs for what shipped (640-652) and what's open. The blocks below are the per-batch detail.
 
+## Owner session 2026-06-23 (PM5) — profile leak hard-strip + interests leak + JD-fetch bot wall (1.50.833)
+
+Continuation of PM4 (the session 500'd mid-run; resumed from the screenshot triage). PM4 shipped the
+profile leak as PROMPT-ONLY (PROFILE-NO-DISABILITY-001 / PROFILE-NO-FILLER-001, 1.50.830) — owner still
+saw the disclosure persist ("why did you keep this BS in the unsolicited in profile???"), because a
+prompt fix never strips prose already STORED from earlier generations. PM5 ships the restore-proof strip.
+
+### CLOSED
+- **PROFILE-CLEAN-STRIP-001** `[SHIPPED 1.50.833]` — owner: the PROFILE kept an UNSOLICITED accessibility
+  disclosure + banal filler, e.g. *"Has worked with people from many backgrounds; hearing impaired, which
+  has not limited his career."* The 1.50.830 prompt ban is generation-only. New restore-proof SIDECAR
+  `pwa/antcv-profile-clean-strip.js` (mirrors `antcv-accessibility-comment-strip.js`): strips, from the
+  STORED CV profile section (handles BOTH `content` string and the rich_block `items[].t` form left by
+  `antcv-text-sections-to-rich-block-759.js`), any sentence naming a disability / hearing impairment /
+  accessibility need, the "has not limited … career" 3rd-person framing, and the generic-filler claims
+  (worked-with-many-backgrounds / team player / works-well-with-others). Sentence-level: salvages a clean
+  leading clause where one exists, drops the offending remainder, removes an embedded filler phrase
+  in-place — and NEVER blanks the field (bails if nothing meaningful would remain). CV ONLY (the comment
+  is allowed in the CL). Loop-safe (same-blob bail + write-only-on-change + own-event ignore). Kill switch
+  `localStorage['antcv:disable-profile-clean-strip']='1'`. Node-verified against the owner's exact string
+  + 6 variants incl. idempotency. Sidecar-only — no `app.js` surgery. Cache-bust quintet → 1.50.833.
+- **INTERESTS-LEAK-001** `[SHIPPED — commit b78bddf, on main]` — Gabriel's generated INTERESTS ("three
+  feline strategic napping experts (cats)", "literally a team player") lingered in Anita's / Devon's
+  preview because their kernels had `interests: undefined`, so the embedded default kernel filled INTERESTS
+  with Gabriel's content. Fix (PM4 tail): gave Anita (Aesop's-ant ops / winter-preparedness / logistics
+  planner) and Devon (career-changer full-stack dev, ex-data-analyst) their own kernel INTERESTS as
+  `labeled_list` of `{t,v}`; regenerated the Downloads exports. Both persona JSONs re-added at 2-space
+  (clean 23-line diff each). This was the original PM5 trigger item; confirmed landed on main this session.
+
+### REGISTERED / OPEN
+- **JD-FETCH-BOT-CHALLENGE-001** `[REGISTERED — owner workaround accepted]` — fetching a JD by URL from a
+  bot-walled career site returns the **bot-challenge page**, not the JD. Repro URL (owner):
+  `https://careers.thalesgroup.com/global/en/job/TGPTGWGLOBALR03291909EXTERNALENGLOBAL/Project-Manager?utm_source=linkedin&utm_medium=phenom-feeds`
+  (phenom-feeds / Thales). Unlike the JS-shell case (handled by JD-URLFETCH-GARBLED-MSG-001 at
+  `app.src.js` ~23609, which catches <50-char / garbled returns), a bot wall returns PLENTY of readable
+  challenge text ("verify you are human", questions), so the short/garbled gates do NOT fire — generation
+  would run against the challenge text. Owner: *"you can just X it down"* — i.e. the manual fallback
+  (dismiss the URL import, paste the JD into the JD box / Additional Signals) is acceptable; no auto-solve
+  owed. Possible later hardening: detect a bot-challenge signature (h-captcha / "are you human" / phenom
+  bot markers) and surface the existing URL-fallback guidance instead of accepting the text. Low priority.
+
+### Handoff
+- **Pagination + salmon** — owner asked for a fresh next-session prompt to "handle pagination issues
+  completion and good salmon solution." Written to `docs/qa/PAGINATION_SALMON_HANDOFF_2026-06-23.md`
+  (covers BOOT-FREEZE-LIVE core pagination storm, PREVIEW-EXPORT-PAGEBREAK-PARITY-001, salmon
+  single-compute/one-bar-per-boundary completion, and the PB-007 per-item residual owner check).
+
 ## Owner session 2026-06-23 (eve) — generation-cycle optimization (1.50.819 → 829)
 
 Independent pass over the generation cycle (owner brief: cut the ~7-min run, reduce "sidecars patching

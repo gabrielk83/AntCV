@@ -376,7 +376,7 @@
       // Legacy expPastTense:true persisted configs migrate to "past" on read.
       expTense: "auto",
     },
-    Ai = "1.50.585-babel-fish";
+    Ai = "1.50.586-template-derive";
   // ADV-SPACING-CONTROLS-001: numeric-or-default read for the spacing
   // sliders — 0 is a VALID value (unlike the `|| default` idiom).
   const __nzPx = (v, d) => {
@@ -3460,6 +3460,84 @@
         }
       );
     };
+  const _antcvTemplatePlaceholder = (s) => "[" + s + "]";
+  const _antcvBlankTemplateSection = (sec) => {
+    const ph = _antcvTemplatePlaceholder;
+    const keepOrPh = (v, label) => {
+      const s = v == null ? "" : String(v);
+      return /^\s*\[/.test(s) ? s : ph(label);
+    };
+    const out = {};
+    for (const k in sec) if (Object.prototype.hasOwnProperty.call(sec, k)) out[k] = sec[k];
+    switch (sec.type) {
+      case "text":
+      case "text_inline":
+        out.content = keepOrPh(sec.content, sec.title || "Content");
+        break;
+      case "text_bullets":
+        out.intro = keepOrPh(sec.intro, "Intro - one sentence");
+        out.items = (Array.isArray(sec.items) ? sec.items : []).map(
+          (_, i) => ph("Specific thing you would do " + (i + 1)));
+        if ("closing" in sec) out.closing = ph("Closing - one sentence");
+        break;
+      case "bullets":
+        out.items = (Array.isArray(sec.items) ? sec.items : []).map(
+          (_, i) => ({ b: ph("Verb"), t: ph("concrete outcome " + (i + 1)) }));
+        break;
+      case "table":
+        out.rows = (Array.isArray(sec.rows) ? sec.rows : []).map(
+          (row, ri) => ri === 0 ? row.slice()
+            : [ph("Focus area " + ri), ph("Strategic expertise - 1 or 2 lines")]);
+        break;
+      case "experience":
+        out.roles = (Array.isArray(sec.roles) ? sec.roles : []).map((r) => {
+          const rr = {};
+          for (const k in r) if (Object.prototype.hasOwnProperty.call(r, k)) rr[k] = r[k];
+          rr.title = ph("Role title");
+          rr.company = ph("Company name");
+          rr.years = ph("YYYY - YYYY");
+          rr.bullets = (Array.isArray(r.bullets) ? r.bullets : [""]).map(
+            (_, i) => ph("Bullet " + (i + 1) + " - scope and measurable result"));
+          return rr;
+        });
+        break;
+      case "education":
+        out.items = (Array.isArray(sec.items) ? sec.items : []).map(
+          () => ({ deg: ph("Title / name"), sch: ph("Details") }));
+        break;
+      case "labeled_list":
+        out.items = (Array.isArray(sec.items) ? sec.items : []).map((it) =>
+          it && Object.prototype.hasOwnProperty.call(it, "group")
+            ? { group: ph("Group heading") }
+            : { l: ph("Label"), v: ph("Value") });
+        break;
+      case "list":
+        out.items = (Array.isArray(sec.items) ? sec.items : []).map(
+          (_, i) => ph("Item " + (i + 1)));
+        break;
+      case "list_italic":
+        out.items = (Array.isArray(sec.items) ? sec.items : []).map(
+          () => ph("Publication, patent, or conference paper"));
+        break;
+      case "foundation":
+        out.hands_on = ph("Hands-on - what you have built or operated yourself");
+        out.professionally = ph("Professionally - how it translates to this role");
+        break;
+      default:
+        if (typeof out.content === "string")
+          out.content = keepOrPh(out.content, sec.title || "Content");
+        break;
+    }
+    return out;
+  };
+  window._antcvBuildTemplateSkeleton = function () {
+    let skel;
+    try { skel = me(); } catch (e) { skel = { cv: [], cl: [] }; }
+    return {
+      cv: (Array.isArray(skel && skel.cv) ? skel.cv : []).map(_antcvBlankTemplateSection),
+      cl: (Array.isArray(skel && skel.cl) ? skel.cl : []).map(_antcvBlankTemplateSection)
+    };
+  };
   function ge({ onAuth: t }) {
     const n = "undefined" != typeof window ? window.AntcvAuthPanel : null,
       r =
@@ -37238,299 +37316,7 @@
                                       ("undefined" != typeof window &&
                                         window._antcvTemplateAnt) ||
                                       v,
-                                    t = {
-                                      cv: [
-                                        {
-                                          id: "profile",
-                                          title: "PROFILE",
-                                          loc: "main",
-                                          on: !0,
-                                          type: "text",
-                                          content:
-                                            "[Profile slot — 2-3 sentences describing who you are professionally, your years of experience, and 2-3 most-relevant anchors for the role you are targeting.]",
-                                        },
-                                        {
-                                          id: "work_style",
-                                          title: "WORK STYLE",
-                                          loc: "main",
-                                          on: !0,
-                                          type: "text",
-                                          content:
-                                            "[Work style slot — 1-2 sentences describing how you operate (e.g., methodical, hands-on, collaborative — choose what fits your style).]",
-                                        },
-                                        {
-                                          id: "outcomes",
-                                          title: "SELECTED OUTCOMES",
-                                          loc: "main",
-                                          on: !0,
-                                          type: "bullets",
-                                          items: [
-                                            {
-                                              b: "[Verb]",
-                                              t: "[concrete outcome with a number/scope].",
-                                            },
-                                            {
-                                              b: "[Verb]",
-                                              t: "[concrete outcome with a number/scope].",
-                                            },
-                                            {
-                                              b: "[Verb]",
-                                              t: "[concrete outcome with a number/scope].",
-                                            },
-                                            {
-                                              b: "[Verb]",
-                                              t: "[concrete outcome with a number/scope].",
-                                            },
-                                            {
-                                              b: "[Verb]",
-                                              t: "[concrete outcome with a number/scope].",
-                                            },
-                                          ],
-                                        },
-                                        {
-                                          id: "core_comp",
-                                          title: "CORE COMPETENCIES",
-                                          loc: "main",
-                                          on: !0,
-                                          type: "table",
-                                          rows: [
-                                            [
-                                              "Focus Area",
-                                              "Strategic Expertise",
-                                            ],
-                                            [
-                                              "[Focus area 1]",
-                                              "[Strategic expertise 1 — 1 or 2 lines describing what you bring]",
-                                            ],
-                                            [
-                                              "[Focus area 2]",
-                                              "[Strategic expertise 2 — 1 or 2 lines describing what you bring]",
-                                            ],
-                                            [
-                                              "[Focus area 3]",
-                                              "[Strategic expertise 3 — 1 or 2 lines describing what you bring]",
-                                            ],
-                                            [
-                                              "[Focus area 4]",
-                                              "[Strategic expertise 4 — 1 or 2 lines describing what you bring]",
-                                            ],
-                                            [
-                                              "[Focus area 5]",
-                                              "[Strategic expertise 5 — 1 or 2 lines describing what you bring]",
-                                            ],
-                                            [
-                                              "[Focus area 6]",
-                                              "[Strategic expertise 6 — 1 or 2 lines describing what you bring]",
-                                            ],
-                                          ],
-                                        },
-                                        {
-                                          id: "experience",
-                                          title: "PROFESSIONAL EXPERIENCE",
-                                          loc: "main",
-                                          on: !0,
-                                          type: "experience",
-                                          roles: [
-                                            {
-                                              id: "r1",
-                                              title: "[Role title]",
-                                              company: "[Company name]",
-                                              years: "[YYYY – YYYY]",
-                                              on: !0,
-                                              bullets: [
-                                                "[Bullet 1 — describe scope and measurable outcome.]",
-                                                "[Bullet 2 — measurable result with a number.]",
-                                                "[Bullet 3 — tools, methods, or scope.]",
-                                              ],
-                                            },
-                                            {
-                                              id: "r2",
-                                              title: "[Role title]",
-                                              company: "[Company name]",
-                                              years: "[YYYY – YYYY]",
-                                              on: !0,
-                                              bullets: [
-                                                "[Bullet 1 — describe scope and outcome.]",
-                                                "[Bullet 2 — measurable result.]",
-                                              ],
-                                            },
-                                            {
-                                              id: "r3",
-                                              title: "[Role title]",
-                                              company: "[Company name]",
-                                              years: "[YYYY – YYYY]",
-                                              on: !0,
-                                              bullets: [
-                                                "[Bullet 1 — describe scope and outcome.]",
-                                                "[Bullet 2 — measurable result.]",
-                                              ],
-                                            },
-                                            {
-                                              id: "r4",
-                                              title: "[Role title]",
-                                              company: "[Company name]",
-                                              years: "[YYYY – YYYY]",
-                                              on: !0,
-                                              bullets: [
-                                                "[Bullet 1 — describe scope and outcome.]",
-                                              ],
-                                            },
-                                            {
-                                              id: "r5",
-                                              title: "[Role title]",
-                                              company: "[Company name]",
-                                              years: "[YYYY – YYYY]",
-                                              on: !0,
-                                              bullets: [
-                                                "[Bullet 1 — describe scope and outcome.]",
-                                              ],
-                                            },
-                                          ],
-                                        },
-                                        {
-                                          id: "tools",
-                                          title: "TOOLS & METHODS",
-                                          loc: "sidebar",
-                                          on: !0,
-                                          type: "labeled_list",
-                                          items: [
-                                            {
-                                              l: "[Category 1]",
-                                              v: "[Tool/method names]",
-                                            },
-                                            {
-                                              l: "[Category 2]",
-                                              v: "[Tool/method names]",
-                                            },
-                                            {
-                                              l: "[Category 3]",
-                                              v: "[Tool/method names]",
-                                            },
-                                            {
-                                              l: "[Category 4]",
-                                              v: "[Tool/method names]",
-                                            },
-                                          ],
-                                        },
-                                        {
-                                          id: "certs",
-                                          title: "CERTIFICATES & COURSES",
-                                          loc: "sidebar",
-                                          on: !0,
-                                          type: "list",
-                                          items: [
-                                            "[Certification 1]",
-                                            "[Certification 2]",
-                                            "[Certification 3]",
-                                          ],
-                                        },
-                                        {
-                                          id: "education",
-                                          title: "EDUCATION",
-                                          loc: "sidebar",
-                                          on: !0,
-                                          type: "education",
-                                          items: [
-                                            {
-                                              deg: "[Degree 1]",
-                                              sch: "[Institution / specialisation]",
-                                            },
-                                            {
-                                              deg: "[Degree 2]",
-                                              sch: "[Institution / specialisation]",
-                                            },
-                                            {
-                                              deg: "[Degree 3]",
-                                              sch: "[Institution / specialisation]",
-                                            },
-                                          ],
-                                        },
-                                        {
-                                          id: "publications",
-                                          title: "PUBLICATIONS & PATENT",
-                                          loc: "sidebar",
-                                          on: !0,
-                                          type: "list_italic",
-                                          items: [
-                                            "[Publication 1 — short description]",
-                                            "[Publication 2 — short description]",
-                                            "[Patent or academic credit, if any]",
-                                          ],
-                                        },
-                                        {
-                                          id: "regulatory",
-                                          title: "REGULATORY CONTEXT",
-                                          loc: "sidebar",
-                                          on: !0,
-                                          type: "labeled_list",
-                                          items: [
-                                            {
-                                              group:
-                                                "[Group 1 — e.g., domain standards]",
-                                            },
-                                            {
-                                              l: "[CODE 1]",
-                                              v: "[Description]",
-                                            },
-                                            {
-                                              l: "[CODE 2]",
-                                              v: "[Description]",
-                                            },
-                                            {
-                                              group:
-                                                "[Group 2 — e.g., compliance frameworks]",
-                                            },
-                                            {
-                                              l: "[CODE 3]",
-                                              v: "[Description]",
-                                            },
-                                            {
-                                              l: "[CODE 4]",
-                                              v: "[Description]",
-                                            },
-                                          ],
-                                        },
-                                        {
-                                          id: "additional",
-                                          title: "ADDITIONAL INFORMATION",
-                                          loc: "sidebar",
-                                          on: !0,
-                                          type: "labeled_list",
-                                          items: [
-                                            {
-                                              l: "Languages",
-                                              v: "[Language 1 (Native), Language 2 (Proficient), Language 3 (B1)]",
-                                            },
-                                            {
-                                              l: "Accessibility",
-                                              v: "[Accessibility note, if relevant — otherwise delete]",
-                                            },
-                                            {
-                                              l: "Volunteer",
-                                              v: "[Volunteer role / organisation]",
-                                            },
-                                          ],
-                                        },
-                                        // INTERESTS-SECTION-001: hobbies live
-                                        // in their own subsection as
-                                        // verb+description bullets (the
-                                        // SELECTED OUTCOMES format).
-                                        {
-                                          id: "interests",
-                                          title: "INTERESTS",
-                                          loc: "sidebar",
-                                          on: !0,
-                                          type: "bullets",
-                                          items: [
-                                            {
-                                              b: "[Verb]",
-                                              t: "[what the interest involves — one short line]",
-                                            },
-                                          ],
-                                        },
-                                      ],
-                                      cl: [],
-                                    },
+                                    t = { cv: window._antcvBuildTemplateSkeleton().cv, cl: [] },
                                     n = {
                                       company: "",
                                       role: "",
@@ -37657,105 +37443,7 @@
                                       ("undefined" != typeof window &&
                                         window._antcvTemplateAnt) ||
                                       v,
-                                    t = {
-                                      cv: [],
-                                      cl: [
-                                        {
-                                          id: "greeting",
-                                          title: "GREETING",
-                                          on: !0,
-                                          type: "text_inline",
-                                          content:
-                                            "Dear [GREETING — Hiring Manager],",
-                                        },
-                                        {
-                                          id: "opening",
-                                          title: "OPENING",
-                                          on: !0,
-                                          type: "text_inline",
-                                          content:
-                                            "[OPENING — paragraph 1-2 sentences explaining why you are writing about this specific role at this specific company. Be concrete: name the role, name the company, and what about it caught your attention.]",
-                                        },
-                                        {
-                                          id: "who",
-                                          title: "WHO I AM",
-                                          on: !0,
-                                          type: "text",
-                                          content:
-                                            "[3-4 sentences introducing yourself professionally. Open with your years of experience and the discipline you operate in. Add a sentence about the kinds of environments you have come from (regulated / engineering / product / safety-critical / etc.) and what was characteristic of them. Add a sentence about how you operate — what kind of problems you take on, what you bring to a team, what you keep at the centre of your work. End with a sentence that names the orientation most relevant to this specific role. This is a NARRATIVE paragraph — not a list, not a skill enumeration. Write it the way you would introduce yourself to someone before showing them what you have built.]",
-                                        },
-                                        {
-                                          id: "bring",
-                                          title: "WHAT I BRING",
-                                          on: !0,
-                                          type: "table",
-                                          rows: [
-                                            [
-                                              "Focus Area",
-                                              "Strategic Expertise",
-                                            ],
-                                            [
-                                              "[Focus area 1]",
-                                              "[Strategic expertise — 1 or 2 lines]",
-                                            ],
-                                            [
-                                              "[Focus area 2]",
-                                              "[Strategic expertise — 1 or 2 lines]",
-                                            ],
-                                            [
-                                              "[Focus area 3]",
-                                              "[Strategic expertise — 1 or 2 lines]",
-                                            ],
-                                            [
-                                              "[Focus area 4]",
-                                              "[Strategic expertise — 1 or 2 lines]",
-                                            ],
-                                          ],
-                                        },
-                                        {
-                                          id: "why",
-                                          title: "WHY THIS POSITION",
-                                          on: !0,
-                                          type: "text",
-                                          content:
-                                            "[2-3 sentences linking what the role asks for with what you have done. Cite specifics from your past experience that map to the job description. This is the part where you connect the dots — make it concrete.]",
-                                        },
-                                        {
-                                          id: "contribute",
-                                          title: "HOW I WOULD CONTRIBUTE",
-                                          on: !0,
-                                          type: "text_bullets",
-                                          intro:
-                                            "My immediate priority would be to close the specific gap in [skill or domain area you are honest about not knowing yet], through focused study and hands-on use. From there, I would focus on:",
-                                          items: [
-                                            "[Bullet 1 — concrete action with clear outcome you would aim for.]",
-                                            "[Bullet 2 — concrete action with clear outcome.]",
-                                            "[Bullet 3 — concrete action with clear outcome.]",
-                                            "[Bullet 4 — concrete action with clear outcome.]",
-                                          ],
-                                          closing:
-                                            "My aim is to help [Company] [single concrete scope] - focused on what the team gains.",
-                                        },
-                                        {
-                                          id: "foundation",
-                                          title: "FOUNDATION",
-                                          on: !0,
-                                          type: "foundation",
-                                          hands_on:
-                                            "[1-2 sentences on how you operate hands-on — your working style and habits. What does your day look like when you are deep in the work?]",
-                                          professionally:
-                                            "[1-2 sentences on how you operate in a team setting — communication, decisions, trade-offs. How do colleagues describe working with you?]",
-                                        },
-                                        {
-                                          id: "closure",
-                                          title: "CLOSURE",
-                                          on: !0,
-                                          type: "text",
-                                          content:
-                                            "I would welcome the chance to talk through how I could contribute to [Company]. Please feel free to reach out at your convenience.",
-                                        },
-                                      ],
-                                    },
+                                    t = { cv: [], cl: window._antcvBuildTemplateSkeleton().cl },
                                     n = {
                                       company: "[Company / Team name]",
                                       role: "[Role title]",

@@ -48,7 +48,7 @@ Parallel sessions edit the SAME working clone; a branch does NOT isolate `app.sr
 built in isolated `git worktree`s off `origin/main` while another session had uncommitted `app.src.js`
 work. Use `git worktree add` for any `app.src.js`/`app.js` change.
 
-## Owner session 2026-06-23 (PM4) — Profile/Work-style template per CV Sections Guide + Gabriel kernel load (1.50.828)
+## Owner session 2026-06-23 (PM4) — Profile/Work-style template per CV Sections Guide + Gabriel kernel load (1.50.828 → 830)
 
 ### CLOSED
 - **GABRIEL-KERNEL-LOAD-001** `[SHIPPED 1.50.828, commit 93d5381]` — owner supplied `CV Sections Guide.docx`
@@ -72,6 +72,17 @@ work. Use `git worktree add` for any `app.src.js`/`app.js` change.
   Cache-bust quintet → 1.50.828 (also fixed a pre-existing `app.js?v` drift the prior session left:
   loader was pinned 825 while TARGET/seed/sw were 827 → all now 828). Supersedes the hardcoded
   **PROFILE-REWRITE-001** (1.50.648) for everyone except Gabriel (who keeps it via his kernel).
+- **PROFILE-NO-FILLER-001 / PROFILE-NO-DISABILITY-001** `[SHIPPED 1.50.830]` — owner: the profile produced
+  banal filler ("Has worked with people from many backgrounds;") and leaked the accessibility disclosure
+  ("hearing impaired, which has not limited his career.") into PROFILE. Both are LLM-generated, not
+  hardcoded, so this is prompt hardening applied where it covers every generation: the main prompt PROFILE
+  bullet (runs for Gabriel's kernel path + all) and the kernel-default RENDER CONSTRAINTS. NO-FILLER-001
+  bans vague generic claims (team player / works well with others / worked with many backgrounds) and
+  requires people-orientation as a CONCRETE BEHAVIOUR (e.g. "aligns engineers, suppliers and management
+  around one clear decision"). NO-DISABILITY-001 forbids any disability / hearing-impairment / accessibility
+  mention AND the "has not limited his/their career" framing in `profile_content` — that lives only in the
+  CV Accessibility row or the cover letter (aligns with ACCESS-NO-COMMENT-001). Cache-bust → 1.50.830;
+  `node --check` OK. Regen-gated to verify live.
 
 ### OPEN
 - **GABRIEL-KERNEL-REGEN-VERIFY** `[regen-gated]` — confirm on a real signed-in generate that Gabriel still

@@ -21,13 +21,14 @@ Owner walked the live unsolicited app. Six items; #4 FIXED+VERIFIED in prod, the
 
 ---
 
-## CLOSED / SHIPPED (recent, 1.50.700–828)
+## CLOSED / SHIPPED (recent, 1.50.700–830)
 
-### Profile / Work-style template per CV Sections Guide (2026-06-23, 1.50.828)
+### Profile / Work-style template per CV Sections Guide (2026-06-23, 1.50.828 → 830)
 | ID / name | Version | One-line |
 |---|---|---|
 | GABRIEL-KERNEL-LOAD-001 | 1.50.828 | De-hardcode the embedded PERSONALITY KERNEL default (Profile + Work style now derive from the candidate material); preserve Gabriel's exact wording via a name-guarded `__ANTCV_GABRIEL_KERNEL` seeded into the stored-kernel path (slice cap 4500→8000). Commit 93d5381. |
 | PROFILE-WORKSTYLE-TEMPLATE-001 | 1.50.828 | Main-prompt PROFILE/WORK STYLE rules + both `me()` placeholders rewritten to the guide; caps unified (Profile 45-62w/320-400ch hard-400; Work style 22-32w/145-200ch hard-200); banned list += seamless, bottomline, wore many hats, rolled up sleeves, huge professional pride. Cache-bust quintet → 828 (fixed app.js?v drift 825→828). |
+| PROFILE-NO-FILLER-001 / PROFILE-NO-DISABILITY-001 | 1.50.830 | Prompt hardening (main prompt + kernel-default): ban banal profile filler ("worked with people from many backgrounds", team player, works well with others) → require concrete people-behaviour; forbid any disability/hearing-impairment/accessibility mention AND "has not limited his/their career" framing in `profile_content` (Accessibility row / cover letter only). |
 
 ### Targeting persistence (the 4-layer Nordea fix + export sanitize)
 | ID / name | Version | One-line |

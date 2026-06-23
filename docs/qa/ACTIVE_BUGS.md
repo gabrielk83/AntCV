@@ -1,6 +1,29 @@
 > **AUTHORITATIVE current state + next-session prompt: `docs/qa/SESSION_HANDOFF_2026-06-18-pm3.md`.** It supersedes the scattered PM/PM2 docs for what shipped (640-652) and what's open. The blocks below are the per-batch detail.
 
-## Owner session 2026-06-23 (PM) — unsolicited shows NVIDIA (1.50.816)
+## Owner session 2026-06-23 (PM) — unsolicited shows NVIDIA (1.50.816) + CL lead-ins / methods (1.50.817)
+
+### CLOSED
+- **CL-LEADIN-KEEP-001** `[SHIPPED 1.50.817]` — owner: "keep the who i am and why this
+  company/position in the lead-ins for CL subsections." Diagnosed live: the CL who/why are already
+  `rich_block` with `headlineOff` + a bold lead-in `b` ("Who I am" / "Why this position"|"Why this
+  company") — but the lead-in was only injected by `antcv-text-sections-to-rich-block-759.js` when
+  converting FROM a `text` section. When GENERATION emits who/why directly as `rich_block`, the lead `b`
+  is whatever the LLM produced (often EMPTY), and there was NO ongoing re-sync for `who` at all. Hardened
+  759: for who/why rich_block rows, INJECT the canonical lead-in when `b` is empty/missing, keep the why
+  position<->company flip in sync while canonical, never clobber a user-customised lead, and set
+  `leadColon` so it renders "Who I am: …". Runs every load on any application (and autosaves), so it is
+  not limited to the current doc. Export already renders the rich_block `b` as a bold lead-in
+  (worker `renderRichBlock`). Unit-tested `pwa/test/unit/cl-leadin-keep.test.mjs` (7/7).
+- **AI-TO-METHODS-RICHBLOCK-001** `[SHIPPED 1.50.817]` — owner: move the "AI-assisted: experiment setup,
+  log triage, measurement analysis, protocol templating, documentation retrieval, prompt/evaluation
+  workflows" row into the Methods group; "appended not only for the current application." Diagnosed live:
+  TOOLS & METHODS migrated to `rich_block` (group markers `{grp:true,t:…}` + rows `{b,t}`), but the
+  `antcv-ai-assisted-to-methods.js` sidecar only handled the old `labeled_list` shape, so the floating
+  `{b:"AI-assisted"}` row (sitting above the first group) was never moved. Extended the sidecar with a
+  rich_block relocate: move the AI-assisted row to the END of the `{grp:"Methods"}` group; idempotent;
+  legacy labeled_list path kept. Generation prompt already instructs this (me() ~2751). Verified live
+  against the owner's real data (AI-assisted moved under Methods), unit-tested
+  `pwa/test/unit/ai-to-methods-richblock.test.mjs` (6/6). Runs every load on any application.
 
 ### CLOSED
 - **UNSOLICITED-SHOWS-NVIDIA-001** `[SHIPPED 1.50.816]` — owner: an UNSOLICITED application still

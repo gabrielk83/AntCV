@@ -14,7 +14,7 @@
 (function () {
   'use strict';
   if (window.__antcvAiToMethods) return;
-  window.__antcvAiToMethods = '1.50.809';
+  window.__antcvAiToMethods = '1.50.817';
 
   var SRC = 'ai-assisted-to-methods';
   function disabled() { try { var v = localStorage.getItem('antcv:disable-ai-to-methods'); return v === '1' || v === 'true'; } catch (_) { return false; } }
@@ -63,6 +63,37 @@
     return true;
   }
 
+  // RICH-BLOCK shape (AI-TO-METHODS-RICHBLOCK-001, owner 2026-06-23): TOOLS &
+  // METHODS is now a `rich_block`, not a `labeled_list`. Its group headers are
+  // items with `grp:true` (name in `t`) and its rows are `{b:<lead>, t:<body>}`.
+  // The "AI-assisted" row floats ABOVE the first group; move it to the end of the
+  // Methods group. Same algorithm as relocate(), keyed off grp markers + the `b`
+  // lead. The old labeled_list path only matched `l`/`group`, so it never fired on
+  // the migrated rich_block and the row kept floating.
+  function isGrpMarkerR(it) { return !!(it && it.grp && String(it.t || '').trim()); }
+  function isAiRowR(it) { return !!(it && !it.grp && /\bai[\s\-]?assist/i.test(String(it.b || it.l || it.t || ''))); }
+  function isMethodsMarkerR(it) { return !!(it && it.grp && /^\s*methods\s*$/i.test(String(it.t || ''))); }
+  function nextGrpAfterR(items, from) {
+    for (var j = from + 1; j < items.length; j++) { if (isGrpMarkerR(items[j])) return j; }
+    return items.length;
+  }
+  function relocateRich(items) {
+    if (!Array.isArray(items)) return false;
+    var aiIdx = -1, methodsIdx = -1, i;
+    for (i = 0; i < items.length; i++) {
+      if (aiIdx < 0 && isAiRowR(items[i])) aiIdx = i;
+      if (methodsIdx < 0 && isMethodsMarkerR(items[i])) methodsIdx = i;
+    }
+    if (aiIdx < 0 || methodsIdx < 0) return false;
+    var methodsEnd = nextGrpAfterR(items, methodsIdx);
+    if (aiIdx > methodsIdx && aiIdx < methodsEnd) return false;   // already inside Methods
+    var ai = items.splice(aiIdx, 1)[0];
+    if (aiIdx < methodsIdx) methodsIdx--;
+    methodsEnd = nextGrpAfterR(items, methodsIdx);
+    items.splice(methodsEnd, 0, ai);
+    return true;
+  }
+
   var lastRaw = null;
   function apply() {
     if (disabled()) return;
@@ -75,7 +106,9 @@
       var list = b[doc];
       if (!Array.isArray(list)) return;
       list.forEach(function (sec) {
-        if (sec && sec.type === 'labeled_list' && relocate(sec.items)) changed = true;
+        if (!sec) return;
+        if (sec.type === 'labeled_list' && relocate(sec.items)) changed = true;
+        else if (sec.type === 'rich_block' && relocateRich(sec.items)) changed = true;
       });
     });
     if (!changed) { lastRaw = raw; return; }
@@ -94,5 +127,5 @@
   try { window.addEventListener('storage', function (e) { if (!e || e.key === 'sections' || e.key === null) tick(); }); } catch (_) {}
   setInterval(tick, 4000);
 
-  window.AntcvAiToMethods = { version: '1.50.809', _apply: apply, _relocate: relocate };
+  window.AntcvAiToMethods = { version: '1.50.817', _apply: apply, _relocate: relocate, _relocateRich: relocateRich };
 })();

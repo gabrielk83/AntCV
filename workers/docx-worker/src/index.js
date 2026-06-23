@@ -23801,8 +23801,9 @@ __name(makePhotosCircular, "makePhotosCircular");
 function aiNoticeVmlRun(side) {
   // AI-WATERMARK-EXPORT-LOCATION-001: a bottom-corner-anchored VML text frame
   // (v:rect + textbox, no fill/stroke = WM-003). mso-position-vertical:bottom +
-  // -relative:margin pins it to the page-margin bottom; horizontal:left|right
-  // pins the corner. The textbox inset (~14pt sides, ~11pt bottom ≈ preview's
+  // -relative:page pins it to the page-edge bottom; horizontal:left|right
+  // -relative:page pins the corner (1.14.78 "page anchor", fixes the 3-copies flow).
+  // The textbox inset (~14pt sides, ~11pt bottom ≈ preview's
   // 18px DEFAULT_INSET) is the WM-002 clearance. Injected ONLY at the last page's
   // sentinel run, so it renders once (WM-005). Same raw-VML layer as the DEMO mark.
   const horiz = side === "left" ? "left" : "right";

@@ -70,7 +70,9 @@ check('CV: two-page doc has a page break', lastBreak >= 0);
 check('CV: shape is after the last page break (last page)', ni > lastBreak, `break=${lastBreak} shape=${ni}`);
 // Anchoring + corner (ai_wm_side:'left').
 const shape = cvXml.slice(ni, cvXml.indexOf('</v:rect>', ni) + 9);
-check('CV: anchored to page-margin bottom', /mso-position-vertical:bottom/.test(shape) && /mso-position-vertical-relative:margin/.test(shape));
+// worker 1.14.78 ("page anchor", fixes 3-copies flow) deliberately anchors the notice
+// to the PAGE edge (relative:page), not the bottom margin. Test follows the shipped intent.
+check('CV: anchored to page-edge bottom', /mso-position-vertical:bottom/.test(shape) && /mso-position-vertical-relative:page/.test(shape));
 check('CV: left corner honoured', /mso-position-horizontal:left/.test(shape), shape.slice(0, 160));
 check('CV: no fill/stroke (WM-003)', /filled="f"/.test(shape) && /stroked="f"/.test(shape));
 

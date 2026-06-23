@@ -34037,7 +34037,12 @@
                                   const e = {
                                       version: 2,
                                       type: "cv",
-                                      sections: (ro.cv || []).map(fl),
+                                      // TEMPLATE-DERIVE-001: derive the exported
+                                      // template sections from the live default
+                                      // skeleton (me) and blank every data-bearing
+                                      // value, NOT from ro.cv via fl (which kept the
+                                      // user's real deg/label/group values - a leak).
+                                      sections: window._antcvBuildTemplateSkeleton().cv,
                                       fontSizes: u.get("fontSizes", null),
                                       navyColor: u.get("navyColor", null),
                                       lineTargets: u.get("lineTargets", null),
@@ -34103,7 +34108,9 @@
                                   const e = {
                                       version: 2,
                                       type: "cl",
-                                      sections: (ro.cl || []).map(fl),
+                                      // TEMPLATE-DERIVE-001: derive from the live
+                                      // default skeleton (me), blanked - not ro.cl.
+                                      sections: window._antcvBuildTemplateSkeleton().cl,
                                       fontSizes: u.get("fontSizes", null),
                                       navyColor: u.get("navyColor", null),
                                       lineTargets: u.get("lineTargets", null),

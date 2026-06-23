@@ -90,5 +90,34 @@ const outApp = run(appHelper, 'Ge');
 let ok = check('app.src.js helper', outSrc) && check('app.js helper', outApp);
 if (JSON.stringify(outSrc) !== JSON.stringify(outApp)) { console.error('[cross] FAIL: src vs app output differ'); ok = false; }
 else console.log('[cross] PASS');
+
+// Static guard: the "CV/CoverLetter Template.json" export buttons must derive
+// their sections from _antcvBuildTemplateSkeleton(), NOT from the live document
+// (ro.cv/ro.cl) via fl - which kept the user's real deg/label/group values and
+// leaked them into the downloaded template (TEMPLATE-DERIVE-001 follow-up).
+function jsonButtons(name, text, callee) {
+  const errs = [];
+  if (/sections:\s*\(ro\.cv\s*\|\|\s*\[\]\)\.map\(fl\)/.test(text)) errs.push('CV .json still exports ro.cv.map(fl) (leaky)');
+  if (/sections:\s*\(ro\.cl\s*\|\|\s*\[\]\)\.map\(fl\)/.test(text)) errs.push('CL .json still exports ro.cl.map(fl) (leaky)');
+  if (!text.includes(`sections: window._antcvBuildTemplateSkeleton().cv`) &&
+      !text.includes(`sections:window._antcvBuildTemplateSkeleton().cv`)) errs.push('CV .json does not derive from skeleton');
+  if (!text.includes(`sections: window._antcvBuildTemplateSkeleton().cl`) &&
+      !text.includes(`sections:window._antcvBuildTemplateSkeleton().cl`)) errs.push('CL .json does not derive from skeleton');
+  if (errs.length) { console.error(`[${name} .json buttons] FAIL`); errs.forEach((x) => console.error('  - ' + x)); }
+  else console.log(`[${name} .json buttons] PASS`);
+  return errs.length === 0;
+}
+ok = jsonButtons('app.src.js', srcAll) && ok;
+// app.js is minified: ro->xo, fl->Yl. Assert no leaky map and skeleton-derived.
+{
+  const errs = [];
+  if (/sections:\([a-zA-Z$_]+\.cv\|\|\[\]\)\.map\(/.test(appAll)) errs.push('CV .json still exports a mapped live doc (leaky)');
+  if (/sections:\([a-zA-Z$_]+\.cl\|\|\[\]\)\.map\(/.test(appAll)) errs.push('CL .json still exports a mapped live doc (leaky)');
+  if (!appAll.includes('sections:window._antcvBuildTemplateSkeleton().cv')) errs.push('CV .json (min) not skeleton-derived');
+  if (!appAll.includes('sections:window._antcvBuildTemplateSkeleton().cl')) errs.push('CL .json (min) not skeleton-derived');
+  if (errs.length) { console.error('[app.js .json buttons] FAIL'); errs.forEach((x) => console.error('  - ' + x)); ok = false; }
+  else console.log('[app.js .json buttons] PASS');
+}
+
 console.log(ok ? 'TEMPLATE-DERIVE OK' : 'TEMPLATE-DERIVE FAILED');
 process.exit(ok ? 0 : 1);

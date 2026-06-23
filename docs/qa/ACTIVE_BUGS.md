@@ -1,5 +1,32 @@
 > **AUTHORITATIVE current state + next-session prompt: `docs/qa/SESSION_HANDOFF_2026-06-18-pm3.md`.** It supersedes the scattered PM/PM2 docs for what shipped (640-652) and what's open. The blocks below are the per-batch detail.
 
+## Owner session 2026-06-23 (PM3) — template exports derive from the default skeleton (1.50.824 → 825)
+
+### CLOSED
+- **TEMPLATE-DERIVE-001** `[SHIPPED 1.50.824, PR #301]` — owner: the downloadable CV/CL **templates** had
+  drifted from the live default builder `me()` that generation uses. The **"⬇ Export CV/CL template"**
+  buttons each carried their OWN frozen `t={cv:[…],cl:[…]}` section literals — missing the main-column
+  PUBLICATIONS & PATENTS (`richPub`) + RECOMMENDATIONS sections, stale section order, and a retired
+  INTERESTS section. Added `window._antcvBuildTemplateSkeleton()` (injected right after the `me()` builder):
+  calls `me()` and blanks every data-bearing value to a bracketed placeholder while preserving
+  id/type/loc/on/richPub/role-on/order — so a downloaded template mirrors the current default skeleton and
+  never leaks the signed-in user's real tools/education/certs/referees. Both buttons derive from it; future
+  skeleton changes flow in automatically. Surgical `app.js` mirror (no terser round-trip — the rebuild gate
+  is unpassed), boot-smoke errors=0. New test `pwa/test/template-derive.test.mjs`. Internal `Ai` tag →
+  `1.50.586-template-derive`.
+- **TEMPLATE-DERIVE-JSON-001** `[SHIPPED 1.50.825, PR #302]` — owner follow-up: the SECOND template pair,
+  **"⬇ CV/CoverLetter Template.json"** (the round-trip JSON export beside Import CV/CL), exported
+  `(ro.cv||[]).map(fl)` — the user's LIVE document, blanked by `fl`. But `fl` (`app.src.js` ~20366)
+  deliberately keeps `deg`/`l`/`group` values, so the downloaded "template" **leaked real degree names +
+  referee names** (RECOMMENDATIONS rows are education-type `{deg,sch}`) and reflected the user's edited
+  layout, not the canonical default. Both `.json` exports now source `sections` from
+  `_antcvBuildTemplateSkeleton()` (no `fl`; `fl` is now dead). minified `ro`→`xo`, `fl`→`Yl`. Regression
+  test gained a static guard that both bundles' `.json` buttons are skeleton-derived with no leaky
+  `.map(fl)`. boot-smoke errors=0. Style settings left as-is per owner.
+
+### OPEN
+- _(none for this batch — both template-export paths now derive from `me()`.)_
+
 ## Owner session 2026-06-23 (PM) — unsolicited shows NVIDIA (1.50.816) + CL lead-ins / methods (1.50.817)
 
 ### CLOSED

@@ -34,7 +34,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.822';
+  var VERSION = '1.50.827';
   if (window.__antcvTablesPartition === VERSION) return;
   window.__antcvTablesPartition = VERSION;
 
@@ -69,7 +69,9 @@
     var parts = s.split(',');
     var out = '';
     for (var i = 0; i < parts.length; i++) {
-      var next = (out ? out + ',' : '') + parts[i].trim();
+      var piece = parts[i].trim();
+      if (!piece) continue;
+      var next = (out ? out + ', ' : '') + piece;   // keep ", " spacing, not bare ","
       if (next.length > EXPERTISE_MAX) break;
       out = next;
     }

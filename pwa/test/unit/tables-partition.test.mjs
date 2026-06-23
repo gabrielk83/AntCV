@@ -108,6 +108,7 @@ test('fill rows carry compacted real expertise from the kernel', () => {
   for (const r of core.rows.slice(1)) {
     assert.ok(String(r[1]).length <= 60, 'expertise cell is compact');
     assert.ok(String(r[1]).length > 0, 'expertise cell non-empty');
+    assert.ok(!/,\S/.test(String(r[1])), 'commas keep a following space (no ",photonics")');
   }
 });
 

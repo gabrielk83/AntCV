@@ -405,6 +405,33 @@ work. Use `git worktree add` for any `app.src.js`/`app.js` change.
   measurement from the preview-paginated DOM, high-risk, owner-gated. RENDER effect of the cleaner
   single break needs owner eyes on a real multi-page sidebar (big-doc live verify is freeze-gated).
 
+- **UNSOLICITED-NOT-TARGETED-001** `[SHIPPED 1.50.837 — 2026-06-23]` — owner QA on a real
+  UNSOLICITED CV (`CV_..._Unsolicited_Product_Project_Expert_20260623.pdf`): the export MERGED
+  same-company roles into one ugly triple-title (`Change Request Lead / Change Request Lead &
+  System Architect / System Architect | Innoviz`), HID Publications & Patents, and HID the
+  low-signal roles (dormitory security guard, Copenhagen Wolves ops, student council) — while the
+  PREVIEW correctly showed them separate + full breadth (preview≠export). Owner rule: "Unsolicited
+  keeps the full breadth." ROOT CAUSE: `_isTargetedExport()` (antcv-docx-client.js) only
+  short-circuited `co !== 'unsolicited'`, so an explicit `meta.company === 'unsolicited'` FELL
+  THROUGH to the "stable fallback" heuristics, where a STICKY `experience.__antcvMerged` flag (or a
+  stale `antcv:activeAppCompany`) left by a PRIOR targeted session forced `true`. So every
+  unsolicited export was treated as targeted. FIX: an EXPLICIT `unsolicited` marker (meta.company
+  OR activeAppCompany) is authoritative => returns FALSE, overriding the sticky flag; any OTHER
+  explicit company => targeted; the `__antcvMerged` drift-fallback now only applies when
+  meta.company is EMPTY. Fixes the merge (Issue E) + the Publications/role hides (Issue D) for
+  unsolicited; preview and export now agree on full breadth. Verified `unsolicited-not-targeted.test.mjs`
+  (4 cases incl. a real-company no-regression case) + 373/373 units + boot-smoke. NEEDS a fresh
+  unsolicited export to confirm visually. SEPARATE residual issues from the same QA batch, NOT
+  fixed here (generation/data quality — regen-gated, owner signed-in): (B) some standalone roles'
+  `Results:` restate a bullet (the merged-Innoviz repeat was a CONSEQUENCE of the merge and is gone);
+  (C) a Results line reads incomplete (`Benchmark imprinted against non-imprinted devices`) — the
+  GENERATED outcome itself is short (~48 chars, well under the 260-char lamination cap), not a
+  render cut; (A) HOW I WOULD CONTRIBUTE shows no intro/closing — the section supports both keys,
+  so it needs the owner to confirm whether the intro/closing FIELDS hold content (=> render bug to
+  fix) or are empty (=> generation/prompt gap, like the who/why lead-in fallback in
+  [[cl-leadins-and-methods-richblock]]). Some missing roles may also be a KERNEL DATA GAP
+  (ROLE-DECOMP-001 note) — if absent from the stored sections, the un-hide cannot recover them.
+
 - **JD-FETCH-CHIP-LABEL-001** `[SHIPPED 1.50.740 — nightly 2026-06-20]` — owner: "when you fetch a JD, add
   the Job and company name as the first lines in" the green JD-ready chip (currently
   `✓ 4449 chars · url-fetch · 1 page`). DONE: the JD-ready chip (app.src.js ~39426 / app.js

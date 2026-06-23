@@ -875,14 +875,25 @@ function _isTargetedExport() {
   try {
     const m = JSON.parse(localStorage.getItem('meta') || '{}');
     const co = String((m && m.company) || '').trim().toLowerCase();
-    if (co && co !== 'unsolicited') return true;
+    // UNSOLICITED-NOT-TARGETED-001 (owner 2026-06-23): an EXPLICIT 'unsolicited' marker is
+    // AUTHORITATIVE and must win over the sticky fallbacks below. Otherwise a __antcvMerged
+    // flag (or a stale activeAppCompany) left on the sections by a PRIOR targeted session makes
+    // an UNSOLICITED export wrongly merge same-company roles + hide Publications/breadth (the
+    // owner's bug: an unsolicited CV came out with Innoviz/Meprolight/TAU merged, security
+    // guard / Copenhagen Wolves / student council + Publications dropped). Owner rule:
+    // "Unsolicited keeps the full breadth." So 'unsolicited' ⇒ FALSE; any OTHER explicit
+    // company ⇒ targeted; only when meta.company is EMPTY do we consult the drift fallbacks.
+    if (co === 'unsolicited') return false;
+    if (co) return true;
     // STABLE fallback (PUBLICATIONS-HIDE-STABLE-001): the volatile meta.company /
-    // activeAppCompany can drift to empty mid-session, which would silently switch the
+    // activeAppCompany can drift to EMPTY mid-session, which would silently switch the
     // display-time hides back off. An app whose experience was already MERGED is a targeted
-    // application — treat it as such regardless of the drifted meta.
+    // application — treat it as such regardless of the drifted meta. An explicit 'unsolicited'
+    // active company still wins (return false) even when meta.company drifted empty.
     try {
       const ac = String(localStorage.getItem('antcv:activeAppCompany') || '').replace(/"/g, '').trim().toLowerCase();
-      if (ac && ac !== 'unsolicited') return true;
+      if (ac === 'unsolicited') return false;
+      if (ac) return true;
     } catch (_) {}
     const s = JSON.parse(localStorage.getItem('sections') || '{}');
     const exp = (s && Array.isArray(s.cv) ? s.cv : []).find((x) => x && x.type === 'experience');

@@ -18420,15 +18420,36 @@
               }));
             try {
               let t = 0;
-              for (const e of n)
-                try {
+              // FIT-PARALLEL-001 (owner 2026-06-23): compress the column's
+              // eligible sections with bounded concurrency instead of strictly
+              // one-at-a-time. Each ll() already fans to ~4 compress passes and
+              // self-skips a section that already fits (the al() gate in ll), so
+              // a cap of 2 sections (~8 inflight passes spread across providers)
+              // overlaps the slow network calls without tripping rate limits.
+              // Bi()'s commit is a functional per-id map, so concurrent section
+              // writes never clobber each other.
+              const __FIT_CONC = 2;
+              let __fi = 0;
+              const __fitWorker = async () => {
+                for (;;) {
+                  const k = __fi++;
+                  if (k >= n.length) break;
+                  const e2 = n[k];
                   try {
-                    uo(
-                      `⇥ Compressing "${(e && e.title) || e.id}" (${t + 1}/${n.length})…`,
-                    );
+                    try {
+                      uo(
+                        `⇥ Compressing "${(e2 && e2.title) || e2.id}" (${k + 1}/${n.length})…`,
+                      );
+                    } catch (e) {}
+                    (await ll({ sectionId: e2.id }), t++);
                   } catch (e) {}
-                  (await ll({ sectionId: e.id }), t++);
-                } catch (e) {}
+                }
+              };
+              await Promise.all(
+                Array.from({ length: Math.min(__FIT_CONC, n.length) }, () =>
+                  __fitWorker(),
+                ),
+              );
               try {
                 uo("");
               } catch (e) {}

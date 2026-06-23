@@ -82,6 +82,23 @@ const groupStarts = [0, 4, 8, 12, 16];
 const prevIdx = prevKeys.length ? Number(prevKeys[0]) : -1;
 const onGroup = groupStarts.includes(prevIdx);
 console.log('preview break index:', prevIdx, 'on group start?', onGroup);
-const ok = prevKeys.length === 1 && onGroup && errs.length === 0;
-console.log(ok ? 'SIDEBAR-PREVIEW-BREAK OK' : 'SIDEBAR-PREVIEW-BREAK MISSING (bug reproduced)');
+
+// SALMON-NPAGE-LIMIT-MISMATCH-001 (2026-06-23): the FORCE-preview sidebar seed and the
+// N-page greedy walk used to disagree on the fill line, emitting DUPLICATE page-2 entries
+// (e.g. {"11":2,"12":2}) — a duplicate-salmon source. The invariant this locks: each page
+// number appears AT MOST ONCE in the preview map (no two break items both claim page 2),
+// AND a preview break exists (so the sidebar flows THROUGH the salmon, the original push
+// guard). The break may land on a group start OR — per SIDEBAR-SNAP-GAP-001 — on the raw
+// overflow item when snapping to a group start would waste >SNAP_GAP_MAX of the page, so
+// `onGroup` is informational, not asserted.
+const prevPages = prevKeys.map(k => Number(prev[k]));
+const pageCounts = prevPages.reduce((m, p) => (m[p] = (m[p] || 0) + 1, m), {});
+const dupPage = Object.keys(pageCounts).find(p => pageCounts[p] > 1);
+const hasBreak = prevKeys.length >= 1;
+const noDup = !dupPage;
+console.log('preview page assignments:', JSON.stringify(prevPages), dupPage ? ('DUPLICATE page ' + dupPage) : 'no duplicate pages');
+const ok = hasBreak && noDup && errs.length === 0;
+if (!hasBreak) console.log('FAIL: no preview break written (sidebar would push the salmon below A4)');
+if (dupPage) console.log('FAIL: duplicate page-' + dupPage + ' entries (SALMON-NPAGE-LIMIT-MISMATCH-001 regressed)');
+console.log(ok ? 'SIDEBAR-PREVIEW-BREAK OK' : 'SIDEBAR-PREVIEW-BREAK FAILED');
 process.exit(ok ? 0 : 1);

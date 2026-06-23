@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.835-salmon-unified-killswitch';
+  var VERSION = '1.50.836-salmon-npage-limit-fix';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -565,12 +565,18 @@
           // EXPORT pass (autoKey !== PREVIEW_KEY) is UNTOUCHED → the DOCX keeps its own sidebar
           // break (owner: removing it breaks the DOCX) and we never feed the worker a forwarded
           // sidebar break. Oscillation is prevented by the matching tightened CLEAR line above.
-          var idx;
-          if (!isMainCol && autoKey === PREVIEW_KEY && SIDEBAR_PREVIEW_INFLATE > 1) {
-            idx = firstOverflowItem(secEl, colTop, limit / SIDEBAR_PREVIEW_INFLATE);
-          } else {
-            idx = firstOverflowItem(secEl, colTop, limit);
-          }
+          // SALMON-NPAGE-LIMIT-MISMATCH-001 (2026-06-23): the FORCE-preview sidebar
+          // case computes the SEED break at the TIGHTENED line, but the N-page greedy
+          // walk below (allOverflowPages) used the FULL `limit` — the two disagreed and
+          // emitted DUPLICATE page-2 entries for one section (e.g. {"11":2,"12":2}),
+          // a duplicate-salmon source in the preview. Capture the effective line ONCE
+          // and use it for BOTH the seed and the greedy walk so every preview sidebar
+          // page boundary tracks the same (PDF-equivalent) line. PREVIEW MAP ONLY — the
+          // export pass keeps the full `limit` untouched (the DOCX sidebar break safety
+          // rule). The matching CLEAR line above already uses this tightened base.
+          var __forcePrevSidebar = (!isMainCol && autoKey === PREVIEW_KEY && SIDEBAR_PREVIEW_INFLATE > 1);
+          var __effLimit = __forcePrevSidebar ? (limit / SIDEBAR_PREVIEW_INFLATE) : limit;
+          var idx = firstOverflowItem(secEl, colTop, __effLimit);
           if (idx >= 1) {
             br = snapToGroup(groupStarts(sec), idx);
             // PB-PREVIEW-SIDEBAR-SALMON-PUSH-001 (owner 2026-06-08): when the
@@ -605,8 +611,10 @@
               var __snapEl = secEl.querySelector('[' + ITEM_PATH_ATTR + '="items.' + br + '"]');
               if (__snapEl && visible(__snapEl)) {
                 var __snapBottom = __snapEl.getBoundingClientRect().bottom - colTop;
-                // limit is the scaled A4 line; SNAP_GAP_MAX is unscaled px, scale it.
-                if ((limit - __snapBottom) > (SNAP_GAP_MAX * scale)) br = idx;
+                // __effLimit is the scaled fill line (tightened on the force-preview pass);
+                // SNAP_GAP_MAX is unscaled px, scale it. SALMON-NPAGE-LIMIT-MISMATCH-001:
+                // measure the wasted gap against the SAME line we fill to.
+                if ((__effLimit - __snapBottom) > (SNAP_GAP_MAX * scale)) br = idx;
               }
             }
           }
@@ -620,7 +628,8 @@
           // untouched here. The greedy map already includes the page-2 seed.
           var __isTable = (sec && sec.type === 'table') || !!secEl.querySelector('table');
           if (SIDEBAR_NPAGE && !isMainCol && !__isTable) {
-            var __nmap = allOverflowPages(secEl, sec, colTop, limit, scale, br);
+            // SALMON-NPAGE-LIMIT-MISMATCH-001: greedy walk on the SAME line as the seed.
+            var __nmap = allOverflowPages(secEl, sec, colTop, __effLimit, scale, br);
             map[sid] = __nmap && Object.keys(__nmap).length ? __nmap : (function () { var o = {}; o[String(br)] = 2; return o; })();
           } else {
             map[sid][String(br)] = 2;

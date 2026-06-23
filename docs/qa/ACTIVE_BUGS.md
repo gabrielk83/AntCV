@@ -385,6 +385,26 @@ work. Use `git worktree add` for any `app.src.js`/`app.js` change.
   (subtree+attributes) + ancestor-textContent antipattern, woken repeatedly by the boot mutation
   storm — same memo/scope fix applies per file, each needing its own verification.
 
+- **SALMON-NPAGE-LIMIT-MISMATCH-001** `[SHIPPED 1.50.836 — 2026-06-23]` — the FORCE-preview
+  sidebar pass (`antcv-auto-pagebreak-block-001.js`) computed its SEED break at the tightened
+  PDF-equivalent line (`limit / SIDEBAR_PREVIEW_INFLATE`) but ran the N-page greedy walk
+  (`allOverflowPages`) at the FULL `limit`. The two disagreed and emitted DUPLICATE page-2 entries
+  in the PREVIEW map for one section (e.g. `autoPagesPreview = {"regctx":{"11":2,"12":2}}`) — a
+  duplicate-salmon source. FIX: capture the effective fill line once (`__effLimit`, tightened on
+  the force-preview pass) and use it for the seed, the SNAP_GAP gap measure, AND the greedy walk,
+  so every preview sidebar page boundary tracks the same line. PREVIEW MAP ONLY — for the export
+  pass `autoKey !== PREVIEW_KEY` ⇒ `__effLimit === limit`, byte-identical to the old code (the
+  DOCX sidebar break safety rule holds; HEAD failed the export-coupling diag identically, proving
+  the change is export-neutral). Verified `diag-sidebar-salmon-push.mjs` (now locks the no-duplicate
+  invariant; the old `onGroup` assertion was stale post-SNAP-GAP-001), the 4 other salmon diags,
+  369/369 units, boot-smoke. NOTE: `diag-sidebar-preview-break.mjs` check (B) ("export unchanged
+  by the preview factor") is PRE-EXISTINGLY red on HEAD — the export pass measures the live DOM
+  the PREVIEW pagination already reshaped, so the preview factor influences the export map THROUGH
+  shared render state. That export↔preview DOM coupling is a separate, deeper architectural item
+  (the "two break maps entangled" concern) — NOT addressed here; would need decoupling the export
+  measurement from the preview-paginated DOM, high-risk, owner-gated. RENDER effect of the cleaner
+  single break needs owner eyes on a real multi-page sidebar (big-doc live verify is freeze-gated).
+
 - **JD-FETCH-CHIP-LABEL-001** `[SHIPPED 1.50.740 — nightly 2026-06-20]` — owner: "when you fetch a JD, add
   the Job and company name as the first lines in" the green JD-ready chip (currently
   `✓ 4449 chars · url-fetch · 1 page`). DONE: the JD-ready chip (app.src.js ~39426 / app.js

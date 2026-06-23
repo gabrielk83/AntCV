@@ -15,7 +15,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.783';
+  var VERSION = '1.50.831';
   if (window.__antcvCoreCompCompress === VERSION) return;
   window.__antcvCoreCompCompress = VERSION;
 
@@ -25,15 +25,29 @@
     return (s.id === 'bring' || /what i bring/i.test(String(s.title || ''))) ? CAP_CL : CAP_CV;
   }
   // Focus-Area abbreviations (owner example: Documentation → Docs). Whole-word, case-insensitive.
+  // NOTE: "Coordination → Coord." was REMOVED (owner 2026-06-23: "do not use the shortening
+  // 'Coord.'; if Coordination/Coordinating/Coordinate/Coordinated/Coordinates is in use display it
+  // fully"). It was also the source of an edit-revert bug — the owner expanded "Coord." → the full
+  // word and this sidecar re-abbreviated it on the next sections-updated. See EXPAND below.
   var ABBR = [
     [/\bDocumentation\b/gi, 'Docs'],
     [/\bRequirements\b/gi, 'Reqs'],
-    [/\bCoordination\b/gi, 'Coord.'],
     [/\bManagement\b/gi, 'Mgmt'],
   ];
   function abbreviate(s) {
     var v = String(s == null ? '' : s);
     ABBR.forEach(function (p) { v = v.replace(p[0], p[1]); });
+    return v;
+  }
+  // BANNED-SHORTENING (owner 2026-06-23): expand any pre-existing "Coord" / "Coord." back to the full
+  // "Coordination" (the noun form these Focus-Area labels intend). `\bCoord\b` only matches the
+  // standalone token — it never touches "Coordinator", "Coordinate(d/s)", or "Coordination" itself.
+  var EXPAND = [
+    [/\bCoord\b\.?/gi, 'Coordination'],
+  ];
+  function expand(s) {
+    var v = String(s == null ? '' : s);
+    EXPAND.forEach(function (p) { v = v.replace(p[0], p[1]); });
     return v;
   }
   function capWords(s, cap) {
@@ -62,8 +76,10 @@
           if (!isTbl(s)) return;
           s.rows.forEach(function (row, i) {
             if (i === 0 || !Array.isArray(row)) return;     // skip header row
-            if (typeof row[0] === 'string') { var fa = abbreviate(row[0]); if (fa !== row[0]) { row[0] = fa; changed = true; } }
-            if (typeof row[1] === 'string') { var se = capWords(row[1], capFor(s)); if (se !== row[1]) { row[1] = se; changed = true; } }
+            // Focus Area: abbreviate (Docs/Reqs/Mgmt) then expand any banned "Coord." → full word.
+            if (typeof row[0] === 'string') { var fa = expand(abbreviate(row[0])); if (fa !== row[0]) { row[0] = fa; changed = true; } }
+            // Strategic Expertise: expand banned "Coord.", then cap to the per-doc width.
+            if (typeof row[1] === 'string') { var se = capWords(expand(row[1]), capFor(s)); if (se !== row[1]) { row[1] = se; changed = true; } }
           });
         });
       });
@@ -75,5 +91,5 @@
 
   window.addEventListener('antcv:sections-updated', run);
   [0, 300, 900, 2000, 3500, 6000].forEach(function (ms) { setTimeout(run, ms); });
-  window.AntcvCoreCompCompress = { version: VERSION, run: run, _cap: capWords, _abbr: abbreviate };
+  window.AntcvCoreCompCompress = { version: VERSION, run: run, _cap: capWords, _abbr: abbreviate, _expand: expand };
 })();

@@ -36,8 +36,10 @@ function run(sections, { jd = '' } = {}) {
   return JSON.parse(store.get('sections'));
 }
 const cl = (...secs) => ({ cv: [], cl: secs });
+const cv = (...secs) => ({ cv: secs, cl: [] });
 const who = (extra) => Object.assign({ id: 'who', type: 'rich_block', headlineOff: true, items: [{ b: '', t: 'I am a product professional.' }] }, extra);
 const why = (b) => ({ id: 'why', type: 'rich_block', headlineOff: true, items: [{ b: b, t: 'This role fits.' }] });
+const ws = (b) => ({ id: 'work_style', type: 'rich_block', headlineOff: true, items: [{ b: b, t: 'Structured and calm under pressure.' }] });
 
 test('empty WHO lead -> "Who I am" + leadColon', () => {
   const out = run(cl(who()));
@@ -76,6 +78,31 @@ test('text who -> converted to rich_block with lead-in + leadColon', () => {
   assert.equal(s.leadColon, true);
   assert.equal(s.items[0].b, 'Who I am');
   assert.equal(s.items[0].t, 'I am a pro.');
+});
+
+// WORKSTYLE-LEADIN-001 (owner 2026-06-23): the CV work_style lead-in was empty
+// when generation emits it directly as a rich_block; default it to "Work style".
+test('empty CV work_style lead -> "Work style" + leadColon', () => {
+  const out = run(cv(ws('')));
+  const s = out.cv[0];
+  assert.equal(s.items[0].b, 'Work style');
+  assert.equal(s.leadColon, true);
+  assert.equal(s.items[0].t, 'Structured and calm under pressure.'); // body untouched
+});
+
+test('text CV work_style -> rich_block with "Work style" lead-in + leadColon', () => {
+  const out = run(cv({ id: 'work_style', type: 'text_inline', title: 'Work style', content: 'Methodical.' }));
+  const s = out.cv[0];
+  assert.equal(s.type, 'rich_block');
+  assert.equal(s.headlineOff, true);
+  assert.equal(s.leadColon, true);
+  assert.equal(s.items[0].b, 'Work style');
+  assert.equal(s.items[0].t, 'Methodical.');
+});
+
+test('user-customised work_style lead is NOT clobbered', () => {
+  const out = run(cv(ws('How I operate')));
+  assert.equal(out.cv[0].items[0].b, 'How I operate');
 });
 
 test('idempotent: a second run makes no further change', () => {

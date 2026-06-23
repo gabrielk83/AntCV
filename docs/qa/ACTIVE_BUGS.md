@@ -367,6 +367,23 @@ work. Use `git worktree add` for any `app.src.js`/`app.js` change.
   antcv.pages.dev (owner signed in), capture the gate-hang console (login-loading-gate logs
   + auth), and either fix the cover-lift/sign-in completion or gate the PDF export on a
   "sections restored" signal so the FIRST export is correct without a second refresh.
+  **UPDATE 2026-06-23 (BOOT-CJLR-PERF-001, 1.50.835):** measured-attribution pass corrected
+  the standing assumption. The autoPages MEASURER is NOT the bulk — `diag-measurer-attribution.mjs`
+  (measurer ON vs OFF via the new `antcv:disable-autopagebreak` kill switch) shows it is only
+  ~1% (~173ms) of boot blocking. A CPU profile (`diag-boot-cpu-profile.mjs`) found the single
+  biggest contributor was `antcv-profile-workstyle-cjlr-238.js` at ~5951ms / 37%: `panelRows()`
+  scanned EVERY button, climbed 7 ancestors each, and called `clean(ancestor.textContent)` at
+  each level — serializing the whole-document text + running `/\s+/g` once PER button (buttons
+  share ancestors ⇒ the giant panel node re-serialized dozens of times per run). FIX (sidecar
+  only, behaviour-preserving, verified `diag-cjlr-placement.mjs` 9/9): a per-run element→text
+  memo (collapses shared serializations to one) + a length cap that stops the climb at the first
+  ancestor too big to be a control row. Measured: that file's CPU self-time 5951→1646ms (−72%);
+  total boot blocking on the synthetic owner-scale doc 14.9s→13.5s avg (−1.4s; larger on the real
+  6-page doc since the cost scales with DOM size); longest single block 1461→892ms. REMAINING:
+  the rest of the freeze is a long TAIL of sidecars (language-ui-429, what-i-bring-header-cjlr-249,
+  watermark-page-anchor-341, core-wib-strict-row-layout-274 …) sharing the same MutationObserver
+  (subtree+attributes) + ancestor-textContent antipattern, woken repeatedly by the boot mutation
+  storm — same memo/scope fix applies per file, each needing its own verification.
 
 - **JD-FETCH-CHIP-LABEL-001** `[SHIPPED 1.50.740 — nightly 2026-06-20]` — owner: "when you fetch a JD, add
   the Job and company name as the first lines in" the green JD-ready chip (currently

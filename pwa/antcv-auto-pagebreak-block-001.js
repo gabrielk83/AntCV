@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.815-salmon-unified';
+  var VERSION = '1.50.835-salmon-unified-killswitch';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -1054,9 +1054,19 @@
     } catch (_) { return String(nowMs()); }
   }
 
+  // BOOT-MEASURER-DEFER-001: kill switch (attribution + owner debug, mirrors the
+  // storm-damper's antcv:disable-storm-damp). When set, run() early-returns so the
+  // expensive compute never blocks the main thread — used to measure the measurer's
+  // exact share of boot blocking, and as an escape hatch if pagination ever wedges.
+  function measurerDisabled() {
+    try { return window.__antcvAutoPBoff === true || localStorage.getItem('antcv:disable-autopagebreak') === '1'; }
+    catch (_) { return false; }
+  }
+
   function run() {
     try {
       var now = nowMs();
+      if (measurerDisabled()) return;
       // SIDEBAR-DRAG-DANCE-001: never measure mid-drag — the layout is still
       // moving and any write would feed the dance. The pointer-up handler runs
       // one settle pass once things stop.

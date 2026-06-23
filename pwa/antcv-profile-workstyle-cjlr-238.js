@@ -5,7 +5,7 @@
  */
 (function(){
   'use strict';
-  const VERSION = '1.50.592-photo-shadow-leak-guard';
+  const VERSION = '1.50.835-boot-perf';
   // v1.40.238-preview-guard: Preview is button-free. Profile/Work-style
   // CJLR controls must not attach to rows inside .antcv-preview-paper.
   const isInPreviewPaper = el => { if(!el) return false; const p=document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]'); return !!(p && p.contains(el)); };
@@ -19,6 +19,25 @@
   ];
   const clean = s => String(s||'').replace(/\s+/g,' ').trim();
   const low = s => clean(s).toLowerCase();
+  // BOOT-CJLR-PERF-001 (2026-06-23): this sidecar was the single biggest boot-freeze
+  // contributor (~6s, ~37% of an owner-scale boot, profiled via diag-boot-cpu-profile.mjs).
+  // Cause: panelRows() scanned EVERY button, climbed 7 ancestors each, and called
+  // clean(ancestor.textContent) at each level — serializing the WHOLE document text +
+  // running /\s+/g over it once PER button (buttons share ancestors, so the giant panel
+  // node was re-serialized dozens of times per run, and run() fires many times on boot).
+  // Fix: a per-run element→cleaned-text memo collapses those shared serializations to one,
+  // and a length cap stops the climb at the first ancestor too big to be a control row.
+  // Both are behaviour-preserving (a giant ancestor was never a valid single-section row).
+  let __runTextCache = null;   // Map<Element,string> rebuilt each run(); null outside a run
+  const MAX_ROW_TEXT = 300;    // a section control row's cleaned text is short; bigger ⇒ not a row
+  function cleanText(el){
+    if(!el) return '';
+    if(__runTextCache){ const c=__runTextCache.get(el); if(c!==undefined) return c; }
+    const t = clean(el.textContent);
+    if(__runTextCache) __runTextCache.set(el, t);
+    return t;
+  }
+  const lowText = el => cleanText(el).toLowerCase();
   const visible = el => !!(el && el.isConnected && (el.offsetWidth || el.offsetHeight || el.getClientRects().length));
   const readMap = () => { try { const m=JSON.parse(localStorage.getItem(KEY)||'{}'); return m&&typeof m==='object'?m:{}; } catch(_){ return {}; } };
   const writeMap = m => { try { localStorage.setItem(KEY, JSON.stringify(m||{})); } catch(_){} };
@@ -42,7 +61,7 @@
     const attrs = [el.getAttribute('data-sid'), el.getAttribute('data-section-id'), el.id, el.className].map(String).join(' ').toLowerCase();
     if(/work[_-]?style/.test(attrs)) return SECTIONS[1];
     if(/profile/.test(attrs)) return SECTIONS[0];
-    const txt = low(el.textContent || '');
+    const txt = lowText(el);
     // PW-CJLR-PHOTO-LEAK-001 (owner 2026-06-13): "PROFILE PHOTO" also starts
     // with "profile" — without this guard the workstyle CJLR cycler injected
     // into the PROFILE PHOTO card's Shape/Contour/Shadow rows (between the
@@ -65,12 +84,18 @@
       let p=btn.parentElement;
       for(let d=0; p && d<7; d++,p=p.parentElement){
         if(isInPreviewPaper(p)) break;
+        // BOOT-CJLR-PERF-001: ancestors only grow going up; once one is bigger than
+        // any plausible single-section control row, none above it is a target either,
+        // so stop climbing. This is what avoids serializing the whole-document text
+        // node (the dominant cost) — and it also skips the expensive shape-card
+        // querySelector below on those giant subtrees.
+        const text = cleanText(p);
+        if(text.length > MAX_ROW_TEXT) break;
         // PW-CJLR-PHOTO-LEAK-001: never climb INTO the PROFILE PHOTO card. Its
         // Shape/Contour/Shadow rows carry the shadow Off/On buttons, and the
         // cycler was landing before that "On". Reject any ancestor that holds a
         // shape button / shadow toggle.
         if(p.querySelector && p.querySelector('.antcv-fp-shape-btn, .antcv-fp-shape-row, [data-shadow]')) continue;
-        const text = clean(p.textContent);
         const sec = sectionFromText(text);
         if(sec && p.querySelectorAll && p.querySelectorAll('button').length>=3){
           if(!out.some(x=>x.row===p)) out.push({row:p, sec});
@@ -192,6 +217,10 @@
     pending=true;
     requestAnimationFrame(()=>{
       pending=false;
+      // BOOT-CJLR-PERF-001: fresh per-run text memo. The DOM does not mutate during
+      // this synchronous sweep, so caching ancestor textContent within one run is
+      // safe and collapses the shared-ancestor re-serialization that made boot slow.
+      __runTextCache = new Map();
       try{
         // PW-CJLR-PHOTO-LEAK-001: strip any cycler that already leaked into the
         // PROFILE PHOTO card (between the SHADOW Off/On buttons) before re-placing.
@@ -204,6 +233,7 @@
         applyEditors();
         applyPreview();
       }catch(e){ try{ console.warn('[profile-workstyle-cjlr-238] failed:', e && e.message); }catch(_){} }
+      finally{ __runTextCache = null; }
     });
   }
   function start(){

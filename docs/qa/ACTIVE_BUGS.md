@@ -432,6 +432,27 @@ work. Use `git worktree add` for any `app.src.js`/`app.js` change.
   [[cl-leadins-and-methods-richblock]]). Some missing roles may also be a KERNEL DATA GAP
   (ROLE-DECOMP-001 note) — if absent from the stored sections, the un-hide cannot recover them.
 
+- **CL-CONTRIBUTE-INTRO-CLOSING-001** `[SHIPPED 1.50.838 — 2026-06-24, regen-gated]` — owner QA
+  (Issue A of the unsolicited batch): HOW I WOULD CONTRIBUTE rendered as bullets only — no opening
+  (intro) and no closing line. Owner confirmed both are EMPTY/not-generated (they are the markerless
+  opening/closing ROWS of the rich_block — `antcv-hwic-to-rich-block-760.js` maps
+  contribute_intro→row{b:'',t} and contribute_closing→row{b:'',t}, both rendered without a bullet
+  marker). The data model, converter, and client mapping (`app.src.js` ~25185:
+  `intro: a(F.contribute_intro) || a(e.intro) || n.contribute_intro || ""`) all support them — the
+  gap is GENERATION. The full prompt (`k`) DID mandate contribute_intro/closing, but the intro
+  template was JD-gap-framed ("My immediate priority would be to close the gap in [gap]…"), which an
+  UNSOLICITED run (no JD, no gap) leaves empty; and the neutral fallback `n.contribute_intro` only
+  applies when the unsolicited flag `p` is true. FIX: made the full generation prompt
+  UNSOLICITED-AWARE — for a no-JD run, contribute_intro must use a general first-priorities lead-in
+  ("If a role fits, my first priorities would typically be:") instead of a JD gap, contribute_closing
+  names general value rather than a specific [Company], and BOTH are explicitly REQUIRED/non-empty in
+  EVERY run. Prompt-STRING edit only (no logic), mirrored byte-for-byte into `app.js` (verified single
+  occurrence each, boot-smoke OK). REGEN-GATED: takes effect on the next generation; needs owner to
+  regenerate (signed in) and confirm the opening + closing rows now populate. The per-section regen
+  path (`workers/*/src/prompt-augment.js` cl_how_i_would_contribute) still requests bullets + optional
+  closing only (no intro) — left for a follow-up since its text→{intro,items,closing} mapping is
+  unconfirmed; the full-doc path is the owner's reported case and is fixed.
+
 - **JD-FETCH-CHIP-LABEL-001** `[SHIPPED 1.50.740 — nightly 2026-06-20]` — owner: "when you fetch a JD, add
   the Job and company name as the first lines in" the green JD-ready chip (currently
   `✓ 4449 chars · url-fetch · 1 page`). DONE: the JD-ready chip (app.src.js ~39426 / app.js

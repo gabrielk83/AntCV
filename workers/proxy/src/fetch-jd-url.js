@@ -686,6 +686,33 @@ export async function handleFetchJdUrl(request, env, getCORS) {
   const status = response.status;
   const contentType = (response.headers.get('content-type') || '').toLowerCase();
 
+  // JD-FETCH-BOT-CHALLENGE-001: guard on the HTTP status BEFORE extracting.
+  // A bot-protected career site (Thales / phenom-feeds, DataDome, Akamai,
+  // PerimeterX) answers a server-side fetch with 403 (or 401/429/503) and an
+  // error/challenge HTML body. Without this guard the body was treated as a
+  // successful fetch and the wall page was returned as the "JD". Surface a
+  // clear paste-manually message instead — never feed an error page to the LLM.
+  if (status >= 400) {
+    let error;
+    if (status === 403 || status === 401 || status === 451) {
+      error = `The site blocked the automated fetch (HTTP ${status} — bot protection or a login wall). Open the URL in a browser tab, copy the visible job description, and paste it into Additional Signals.`;
+    } else if (status === 429) {
+      error = `The site rate-limited the fetch (HTTP 429). Wait a moment, or open the URL in a tab and paste the job description into Additional Signals.`;
+    } else if (status === 404 || status === 410) {
+      error = `The posting was not found (HTTP ${status}) — the link may have expired. Check the URL, or paste the job description text directly.`;
+    } else {
+      error = `The site returned HTTP ${status}. Open the URL in a tab and paste the visible job description into Additional Signals.`;
+    }
+    return new Response(JSON.stringify({
+      ok: false,
+      error,
+      wall: true,
+      status,
+      url: fetchUrl,
+      rewrite: rewriteNote,
+    }), { status: 200, headers: { 'Content-Type': 'application/json', ...CORS } });
+  }
+
   // Reject non-HTML responses. PDFs go through the existing PDF
   // upload path. Plain text we'd accept but rarely see for JDs.
   // (The LinkedIn guest endpoint returns an HTML fragment, so it

@@ -398,6 +398,20 @@
       return "balanced";
     }
   };
+  // GEN-WIDTH-001 (owner 2026-06-23): provider fan-out WIDTH per generation
+  // mode — how many providers a task uses for its failover ladder (and, where
+  // it runs, the consensus polls). quick(fast)=2, regular(balanced)=3,
+  // thorough=4. A "generate from previous application" quick-gen regen
+  // (window.__antcvQuickGen) forces width 3 regardless of preset. Supersedes
+  // the old GEN-SPEED-001 fast=1 single-provider rule (fast now keeps a
+  // 2-provider ladder for one-retry robustness).
+  const __fanWidth = () => {
+    try {
+      if (window.__antcvQuickGen) return 3;
+    } catch (_) {}
+    const s = __genSpeed();
+    return "fast" === s ? 2 : "thorough" === s ? 4 : 3;
+  };
   // GEN-COST-CEILING-001 (owner 2026-06-12, decision 3): per-generation
   // cost ceiling in USD. 0 / unset = no ceiling. window.__antcvGenCost is
   // reset when a generation starts and accumulated per LLM call; once a
@@ -1937,14 +1951,23 @@
       }
     } catch (_) {}
     l = __antcvReorderByQuality(r, l);
+    // GEN-WIDTH-001 (owner 2026-06-23): cap the failover ladder to the
+    // per-mode fan-out width (quick/fast=2, regular=3, thorough=4; a quick-gen
+    // regen forces 3). This is the final width word before the try-loop and
+    // supersedes the old GEN-SPEED-001 fast=1 single-provider rule — fast now
+    // keeps a 2-provider ladder for one-retry robustness.
+    {
+      const __w = __fanWidth();
+      if (l.length > __w) l = l.slice(0, __w);
+    }
     // PERF-003 (1.50.359, owner-confirmed split): MECHANICAL tasks fail fast —
     // cap the failover ladder at 2 providers. Quality-critical tasks
     // (generate_cv, consensus_*, fuse, analyze_fit, long_context, enrich,
-    // apply_correction, all translation) keep their full width. forceProvider
-    // lists are length-1 and unaffected. parse_jd (the main generation call)
-    // keeps its OUTER retry ladder of forced providers, so a capped first
-    // attempt still recovers across the 4 outer attempts — this only stops one
-    // slow internal cascade from cycling 4 providers before that ladder turns.
+    // apply_correction, all translation) keep their full per-mode width.
+    // forceProvider lists are length-1 and unaffected. parse_jd (the main
+    // generation call) keeps its OUTER retry ladder of forced providers, so a
+    // capped first attempt still recovers across the 4 outer attempts — this
+    // only stops one slow internal cascade from cycling 4 providers.
     if (
       /^(extract|extract_pdf|parse_jd|compress|fix_orphans)$/.test(r) &&
       l.length > 2 &&
@@ -1952,10 +1975,6 @@
     ) {
       l = l.slice(0, 2);
     }
-    // GEN-SPEED-001: FAST mode runs a single provider per task — failover
-    // is traded for convergence time (the outer parse_jd retry ladder
-    // still rotates forced providers across its attempts).
-    if ("fast" === __genSpeed() && l.length > 1) l = l.slice(0, 1);
     // GEN-COST-CEILING-001: once the running generation crossed its cost
     // ceiling, finish cheap — one provider per remaining task.
     if (__overCostCeil() && l.length > 1) {
@@ -15635,7 +15654,7 @@
               }
               oo.putShowcase({
                 sections: __secs,
-                meta: u.get("meta", null),
+                meta: (function (m) { try { if (!m || "object" != typeof m) return m; var co = String(m.company || "").trim(); if (!co || "Unsolicited" === co) return m; var c = Object.assign({}, m, { company: "Unsolicited", role: "Open Application" }); try { delete c.rationale; } catch (_) {} return c; } catch (_) { return m; } })(u.get("meta", null)), /* UNSOLICITED-IDENTITY-SOURCE-FIX-001: never store a real company in the unsolicited kernel slot */
                 rationale: u.get("rationale", null),
                 jd_language: je,
               }, (() => { try { var p = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {}; p = p.personalInfo || p; return String((p.stylePrefs || {}).style || "").trim(); } catch (_) { return ""; } })());
@@ -15840,14 +15859,34 @@
                   } catch (e) {}
                 }
                 if (t.meta && "object" == typeof t.meta) {
+                  // UNSOLICITED-IDENTITY-SOURCE-FIX-001 (1.50.819): the kernel
+                  // showcase slot is BY DESIGN the unsolicited kernel (the guard
+                  // ~15775 returns when the live meta carries a real company, so
+                  // we only reach here in unsolicited context). A slot left
+                  // contaminated by an older targeted commit would otherwise
+                  // re-inject that company's meta on every boot
+                  // (UNSOLICITED-SHOWS-NVIDIA-001). Enforce the invariant on read:
+                  // force Unsolicited / Open Application and drop the JD-specific
+                  // rationale, keeping the candidate's own subtitle + prose. The
+                  // 816 sidecar heals the running tab; this removes the source.
+                  const __m = (function (m) {
+                    try {
+                      if (!m || "object" != typeof m) return m;
+                      var co = String(m.company || "").trim();
+                      if (!co || "Unsolicited" === co) return m;
+                      var c = Object.assign({}, m, { company: "Unsolicited", role: "Open Application" });
+                      try { delete c.rationale; } catch (_) {}
+                      return c;
+                    } catch (_) { return m; }
+                  })(t.meta);
                   try {
-                    u.set("meta", t.meta);
+                    u.set("meta", __m);
                   } catch (e) {}
                   try {
-                    lo(t.meta);
+                    lo(__m);
                   } catch (e) {}
                 }
-                if (t.rationale) {
+                if (t.rationale && !(t.meta && t.meta.company && "Unsolicited" !== String(t.meta.company).trim())) {
                   try {
                     u.set("rationale", t.rationale);
                   } catch (e) {}
@@ -25729,7 +25768,7 @@
                     if (!__antcvHasRealSections(__secs)) return;
                     oo.putShowcase({
                       sections: __secs,
-                      meta: u.get("meta", null),
+                      meta: (function (m) { try { if (!m || "object" != typeof m) return m; var co = String(m.company || "").trim(); if (!co || "Unsolicited" === co) return m; var c = Object.assign({}, m, { company: "Unsolicited", role: "Open Application" }); try { delete c.rationale; } catch (_) {} return c; } catch (_) { return m; } })(u.get("meta", null)), /* UNSOLICITED-IDENTITY-SOURCE-FIX-001: never store a real company in the unsolicited kernel slot */
                       rationale: u.get("rationale", null),
                       jd_language: je,
                     }, (() => { try { var p = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {}; p = p.personalInfo || p; return String((p.stylePrefs || {}).style || "").trim(); } catch (_) { return ""; } })());

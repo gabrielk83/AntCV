@@ -178,6 +178,46 @@ work. Use `git worktree add` for any `app.src.js`/`app.js` change.
   real lazy/worker pagination refactor. Diagnose via `pwa/test/diag-boot-storm.mjs`. Highest remaining
   systemic perf issue.
 
+## Owner session 2026-06-23 (PM continuation C) — Coord. ban + CV regen review (1.50.831)
+
+### CLOSED
+- **BANNED-SHORTENING-COORD-001** `[SHIPPED 1.50.831]` — owner: "do not use the shortening 'Coord.'; if
+  Coordination/Coordinating/Coordinate/Coordinated/Coordinates is in use display it fully." Root cause:
+  `antcv-core-comp-compress.js` abbreviated `Coordination → Coord.` in CORE COMPETENCIES / WHAT I BRING
+  focus labels. This ALSO caused the edit-revert below (the owner expanded "Coord." → the full word and the
+  sidecar re-shortened it on the next sections-updated). Fix: removed the abbreviation + added an EXPAND
+  that restores any "Coord"/"Coord." → "Coordination" (whole-token; never touches Coordinator /
+  Coordinate(d/s) / Coordination). Test `core-comp-compress-coord.test.mjs` (8).
+
+### OPEN / diagnosed
+- **TABLE-CELL-EDIT-REVERT** `[PARTIAL — Coord. cause fixed 831; non-Coord needs owner retest]` — owner:
+  editing focus-area cells in CV/CL reverts after a few seconds (scroll), not saved on refresh/export.
+  CONFIRMED cause for "Coord." = the abbreviator (fixed). A data-layer repro (writing edits straight into
+  `localStorage.sections` + dispatching sections-updated) showed NON-Coord focus edits ("Technical-
+  Commercial"→"Techno-commercial") and expertise edits PERSIST — the table sidecars (partitioner/dedup)
+  no-op when disjoint, so they don't clobber. If non-Coord edits STILL revert after 831, the cause is the
+  editor-panel (`d({rows})`, app.src.js:7918) → React `ro` → autosave → cloud-restore sync path
+  (app-level), needing a live demo of the actual panel-edit flow to pin.
+- **CV-UNSOLICITED-ALL-ROLES-001** `[OPEN — regen/prompt]` — in the 2026-06-23 unsolicited regen, 4 roles
+  are `on:false` (Security Guard, IDF Computer Systems Administrator, Pan Idræt foreningsarbejde, Students
+  Council). EXPERIENCE-TAILOR-001 already says "for the UNSOLICITED kernel keep FULL breadth (do NOT
+  prune)" but the LLM pruned anyway. FIX DIRECTION: harden the prompt (unsolicited ⇒ EVERY role on:true,
+  never hide) + verify on regen. Deterministic un-hide sidecar deferred (clobber-class risk vs manual hides).
+- **CV-MERGE-TITLE-ORDER-001** `[OPEN — regen/prompt]` — merged role title "Electro-Optics Team Leader /
+  R&D Electro-Optics Engineer" should be "R&D Electro-Optics Engineer / Team Leader" (rule: CONTENT/
+  specialist function FIRST, level/seniority AFTER; don't repeat the domain word). That role is also
+  MISSING a result (lamination found no kernel-role outcome match for Meprolight).
+- **CV-MERGE-BULLET-RESULT-UNION-001** `[OPEN — regen/prompt]` — the Research Assistant / Teaching
+  Assistant merge took only ONE bullet from teaching (no research bullets) and only ONE result from
+  research (no teaching result). A merged role MUST union ALL bullets AND ALL results from BOTH source
+  roles. Same guard needed for every merged role.
+- **CV-UNSOLICITED-PUBS-FULL-001** `[OPEN — verify/regen]` — Publications & Patents must show in FULL for
+  an unsolicited application (current regen shows 4 — confirm none trimmed vs the kernel's full list).
+- **KERNEL-PROPAGATE-ANITA-DEVON-001** `[OPEN]` — propagate the Gabriel-kernel structural changes
+  (GABRIEL-KERNEL-LOAD-001 / PROFILE-WORKSTYLE-TEMPLATE-001, 828) into `docs/personas/anita/personalInfo.json`
+  + `docs/personas/devon/personalInfo.json` (persona-appropriate, not a copy), then regenerate JSON exports
+  for all 3 personas.
+
 ## Owner session 2026-06-23 (PM continuation B) — work_style / tables / GEN-SPEED test (1.50.819→827)
 
 ### CLOSED

@@ -500,3 +500,45 @@ handed-over `APPLY.sh`/bundle was stale-based + used `npm run build:app` (gated-
 Desktop; because `app.js` is a single line every concurrent change forces a full-line conflict, so the
 edit was RE-APPLIED onto each new base rather than merged. Two branches briefly took the same version
 (823) — picked the next free one. State: regression test + boot-smoke green both bundles; quintet 823→824→825.
+
+---
+
+# 2026-06-23 (PM continuation C) — Coord. ban + edit-revert root cause + CV regen review (1.50.831)
+
+Owner provided a live unsolicited regen (CV+CL PDFs + browser) and a batch of fixes.
+
+## SHIPPED — 1.50.831
+- **BANNED-SHORTENING-COORD-001** (`antcv-core-comp-compress.js`): owner banned the "Coord." shortening
+  ("if Coordination/Coordinating/Coordinate/Coordinated/Coordinates is in use, display it fully"). Root
+  cause: this sidecar abbreviated `Coordination → Coord.` in the CORE COMPETENCIES / WHAT I BRING focus
+  labels — which ALSO caused the edit-revert (owner expands "Coord." → full word, sidecar re-shortens on
+  the next sections-updated). Removed the abbreviation + added an EXPAND restoring "Coord"/"Coord." →
+  "Coordination" (whole-token, safe). Test `core-comp-compress-coord.test.mjs` (8). Quintet → 831.
+
+## DIAGNOSED (root causes; fixes open)
+- **TABLE-CELL-EDIT-REVERT** — confirmed the Coord. case = the abbreviator (fixed 831). Data-layer repro
+  (writing edits into `localStorage.sections` + dispatching sections-updated, waiting past the 4-5s
+  sidecar intervals) showed NON-Coord focus edits + expertise edits PERSIST — the partitioner/dedup no-op
+  when tables are disjoint, so they are NOT the clobber. If non-Coord edits still revert after 831, it's
+  the editor-panel→React→autosave→cloud-restore path (app-level), needs a live demo to pin.
+- **CV regen review** (owner comments on the live unsolicited doc): (1) 4 roles `on:false` in an
+  unsolicited app — must be all-visible (CV-UNSOLICITED-ALL-ROLES-001). (2) merged title order should be
+  content-first/level-after + that role missing a result (CV-MERGE-TITLE-ORDER-001). (3) merged roles must
+  union ALL bullets + ALL results from BOTH source roles (Research/Teaching took 1 each)
+  (CV-MERGE-BULLET-RESULT-UNION-001). (4) Publications & Patents in full for unsolicited
+  (CV-UNSOLICITED-PUBS-FULL-001). All regen/prompt-gated — see ACTIVE_BUGS continuation C.
+- **Partitioner glance** — verified working on the live doc (current tables already disjoint → correct
+  no-op; earlier live `_partition` on the overlap case produced a disjoint CORE).
+
+## OPEN deliverables carried to next focused step
+- KERNEL-PROPAGATE-ANITA-DEVON-001: mirror the 828 Gabriel-kernel structural changes into anita/devon
+  personalInfo.json + regenerate JSON exports for all 3 personas.
+- The 4 CV regen/prompt fixes above (need app.src.js prompt edits + a regen to verify).
+
+## Coverage note (owner request)
+This file (SESSION_LOG_2026-06-23.md) is the running log for the 2026-06-23 sessions. The prior day's work
+is in `docs/qa/SESSION_LOG_2026-06-22.md` (clean-delete→wizard + relay, 1.50.768→788). Items CLOSED since
+06-22 are tracked here + in `docs/qa/ACTIVE_BUGS.md`: rich-block lead-ins/methods (817), unsolicited
+identity (816 sidecar + 819 source fix), boot-freeze offenders coalesced (818), work_style lead-in (822),
+tables partitioner (826/827), GEN-WIDTH/RECRUITER-FOLD/FIT-PARALLEL/LLM-SCORER (819-823),
+GABRIEL-KERNEL-LOAD/PROFILE-WORKSTYLE-TEMPLATE (828), GEN-SPEED test re-align, and Coord. ban (831).

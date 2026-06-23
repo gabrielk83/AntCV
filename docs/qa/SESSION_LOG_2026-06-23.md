@@ -369,3 +369,38 @@ State: suite 321/321, boot-smoke OK, cache-bust quintet at 817, local == origin/
 - `pwa/test/out/mobile-*.png` are untracked test artifacts (3 files), intentionally not committed.
 - The full `node --test pwa/test/unit/*.test.mjs` glob can hang at process-exit on an open handle in a
   pre-existing test file; run with `--test-force-exit` to get the real summary (321/321).
+
+---
+
+# 2026-06-23 (PM continuation) — BOOT-FREEZE sidecar coalescing (1.50.818)
+
+## SHIPPED — `1.50.818` (live on antcv.pages.dev)
+**BOOT-FREEZE partial mitigation: coalesce the two named live offenders.** The owner's big-doc boot
+freeze console named `antcv-splitter-flip.js setInterval` (~4798ms) and `antcv-sidebar-position.js`
+(~255ms). Both sidecars ran an UNTHROTTLED full-tree `querySelectorAll` on every `style`/`class`
+mutation across the whole `document.body` subtree, plus an unconditional poll (1.5s / 0.75s). During
+pagination (style/class churn on thousands of nodes) that is one scan PER mutation.
+
+Fix (sidecar-only, no app.js surgery):
+- Added a `makeCoalesced` trailing debounce (200ms wait, 1000ms max-wait cap) to BOTH sidecars; the
+  MutationObserver, the poll and the storage listener now route through it, so a multi-second storm
+  collapses from N scans to ~1/sec. Initial-attach passes stay DIRECT (splitter still positions/attaches
+  immediately).
+- `antcv-sidebar-position.js`: dropped `attributes` from the observer (childList only). Its apply is
+  guarded by the `antcvSidebarPositionApplied` dataset, so attribute callbacks only ever no-op (a style
+  clobber leaves dataset='right', which the guard skips) — observing style/class was pure cost. Poll
+  750ms → 2000ms.
+- `antcv-splitter-flip.js`: keeps attribute observation (functional for right-mode re-flip) but coalesced;
+  poll 1500ms → 2500ms and routed through the scheduler.
+
+Tests: `pwa/test/unit/boot-storm-sidecar-coalesce.test.mjs` (6) — burst collapses to one scan, maxWait
+cap still fires, direct scan is synchronous, observer options locked (sidebar=childList-only,
+splitter=keeps style/class). Suite 327/327, boot-smoke OK, cache-bust quintet 817 → 818.
+
+## Honest scope note
+`pwa/test/diag-boot-storm.mjs` shows the BULK of the 16s boot block is the app's own pagination/
+sections-updated storm, NOT these sidecars (neutralising both moved total blocking only within run-to-run
+noise on the synthetic doc). The sidecar cost scales with DOM size — it dominates on the owner's real
+6-page NVIDIA doc (hence the 4798ms console violation there), which the synthetic diag doc is too small to
+surface. This change removes the two NAMED offenders; the core pagination freeze (app.src.js) remains the
+open systemic item ([[boot-storm-gate-freeze]], partial damper 1.50.772).

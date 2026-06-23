@@ -63,7 +63,7 @@
 (function () {
   'use strict';
 
-  const SCRIPT_VERSION = '1.40.151';
+  const SCRIPT_VERSION = '1.50.818';
   const SPLITTER_SEL = '.antcv-col-splitter';
   const SIDEBAR_SEL = '[data-antcv-document-sidebar="true"]';
   const PAGE_ROW_SEL = '.antcv-page-row';
@@ -250,6 +250,28 @@
     flipSplitterPositions();
   }
 
+  // Perf (BOOT-FREEZE / [[boot-storm-gate-freeze]]): big-doc pagination
+  // churns style/class on thousands of nodes, so the observer fired a
+  // full-tree scan() per mutation and the 1.5s poll was a named live
+  // offender. Coalesce the observer/poll/storage paths into a trailing
+  // debounce (waitMs) with a maxWaitMs cap so a continuous storm still
+  // scans at least once per maxWaitMs. The initial passes stay direct
+  // so the splitter attaches/positions immediately.
+  function makeCoalesced(fn, waitMs, maxWaitMs) {
+    let t = null, firstAt = 0;
+    return function () {
+      const now = (window.performance && window.performance.now)
+        ? window.performance.now() : Date.now();
+      if (t === null) firstAt = now;
+      else clearTimeout(t);
+      const sinceFirst = now - firstAt;
+      const delay = sinceFirst >= maxWaitMs ? 0
+        : Math.min(waitMs, maxWaitMs - sinceFirst);
+      t = setTimeout(function () { t = null; fn(); }, delay);
+    };
+  }
+  const scheduleScan = makeCoalesced(scan, 200, 1000);
+
   // Initial passes
   [0, 200, 600, 1500].forEach(function (d) {
     if (d === 0) scan();
@@ -257,7 +279,7 @@
   });
 
   try {
-    const mo = new MutationObserver(scan);
+    const mo = new MutationObserver(scheduleScan);
     mo.observe(document.body, {
       childList: true,
       subtree: true,
@@ -266,13 +288,13 @@
     });
   } catch (_) {}
 
-  // Polling fallback at low rate.
-  setInterval(scan, 1500);
+  // Polling fallback at low rate (coalesced; slowed from 1.5s).
+  setInterval(scheduleScan, 2500);
 
   // Storage change listener (other tabs)
   window.addEventListener('storage', function (e) {
     if (!e || e.key === POS_KEY || e.key === STORAGE_KEY || e.key === null) {
-      scan();
+      scheduleScan();
     }
   });
 
@@ -285,5 +307,6 @@
     _flipSplitterPositions: flipSplitterPositions,
     _writeSidebarRatio: writeSidebarRatio,
     _scan: scan,
+    _scheduleScan: scheduleScan,
   };
 })();

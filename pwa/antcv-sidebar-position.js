@@ -27,11 +27,16 @@
 (function () {
   'use strict';
 
-  const SCRIPT_VERSION = '1.40.146';
+  const SCRIPT_VERSION = '1.50.818';
   const STORAGE_KEY = 'sidebarPosition';
   const PAGE_ROW_SEL = '.antcv-page-row';
   const APPLIED_FLAG = 'antcvSidebarPositionApplied';
-  const POLL_MS = 750;
+  // Perf (BOOT-FREEZE / [[boot-storm-gate-freeze]]): on a big doc the
+  // page paginates by churning style/class on thousands of nodes. This
+  // poll used to run every 750ms unconditionally; slowed to 2000ms now
+  // that real changes arrive promptly via the childList observer, the
+  // storage event and the click listener — the poll is only a net.
+  const POLL_MS = 2000;
 
   if (window.__antcvSidebarPositionInstalled) return;
   window.__antcvSidebarPositionInstalled = SCRIPT_VERSION;
@@ -67,6 +72,26 @@
     });
   }
 
+  // Coalesce a burst of observer callbacks into a single apply pass.
+  // During big-doc pagination the DOM mutates continuously for several
+  // seconds; without this every mutation triggered a full-tree
+  // querySelectorAll. Trailing debounce (waitMs) with a maxWaitMs cap
+  // so a continuous storm still applies at least once per maxWaitMs.
+  function makeCoalesced(fn, waitMs, maxWaitMs) {
+    let t = null, firstAt = 0;
+    return function () {
+      const now = (window.performance && window.performance.now)
+        ? window.performance.now() : Date.now();
+      if (t === null) firstAt = now;
+      else clearTimeout(t);
+      const sinceFirst = now - firstAt;
+      const delay = sinceFirst >= maxWaitMs ? 0
+        : Math.min(waitMs, maxWaitMs - sinceFirst);
+      t = setTimeout(function () { t = null; fn(); }, delay);
+    };
+  }
+  const scheduleApply = makeCoalesced(applyToAllPageRows, 200, 1000);
+
   // Initial passes, in case page-rows mount after this script.
   [0, 200, 600, 1500].forEach((d) => {
     if (d === 0) applyToAllPageRows();
@@ -89,18 +114,18 @@
   }, true);
 
   // MutationObserver to catch React re-renders that recreate the
-  // page-row (e.g. switching docs between CV and CL).
+  // page-row (e.g. switching docs between CV and CL). We only need
+  // childList here: applying row-reverse is guarded by the
+  // APPLIED_FLAG dataset, so attribute-change callbacks only ever
+  // no-op (a style clobber leaves the dataset='right', which the
+  // guard skips) — observing 'style'/'class' across the whole subtree
+  // was pure cost during pagination. Callback is coalesced.
   try {
-    const mo = new MutationObserver(function () { applyToAllPageRows(); });
-    mo.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['style', 'class'],
-    });
+    const mo = new MutationObserver(scheduleApply);
+    mo.observe(document.body, { childList: true, subtree: true });
   } catch (_) {}
 
   // Polling fallback for any edge case where the observer
-  // doesn't fire.
+  // doesn't fire (slowed; see POLL_MS note).
   setInterval(applyToAllPageRows, POLL_MS);
 })();

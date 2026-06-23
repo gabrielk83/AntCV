@@ -50,7 +50,7 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.50.335-panel-fit';
+  var SCRIPT_VERSION = '1.50.820-recruiter-fold';
   if (window.__antcvAnalysisMerge344 === SCRIPT_VERSION) return;
   window.__antcvAnalysisMerge344 = SCRIPT_VERSION;
 

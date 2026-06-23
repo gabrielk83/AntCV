@@ -1755,6 +1755,84 @@
       return good.length ? good.concat(demoted) : list; // never empty the list
     } catch (_) { return list; }
   }
+  // LLM-SCORER-001 (owner 2026-06-23): wire the L[task] {qW,lW,cW} weights —
+  // previously vestigial (keys like cv_generate/jd_parse never matched the live
+  // task names generate_cv/parse_jd, and there was no per-provider score data) —
+  // into a cost-quality-latency ORDERING of the candidate provider list. Safety
+  // contract: it only REORDERS (never drops a provider, never empties the list),
+  // runs ONLY on the pure-default path (an explicit forceProvider / preferGPT /
+  // routingOverride is honoured as-is, see the ee() call site), and the demotion
+  // reorder still gets the final say after it. Kill switch: localStorage
+  // 'antcv:disable-llm-scorer'='1'. The per-provider base table is a static
+  // prior (no telemetry exists yet); the demotion memory layers real-world
+  // degradation on top. Provider keys are normalised claude->anthropic.
+  // Static priors. quality spread is deliberately WIDE so qW dominates on the
+  // high-quality tasks (cv_generate qW .7 -> openai/anthropic lead, not the
+  // cheapest model); cost/latency then break ties and lead the cheap tasks
+  // (jd_parse/keyword_extract -> mistral/gemini). Tune here or per-task in L.
+  const __LLM_BASE = {
+    anthropic: { q: 1.0, c: 0.9, lat: 0.6 },
+    openai: { q: 0.95, c: 0.6, lat: 0.5 },
+    gemini: { q: 0.65, c: 0.3, lat: 0.3 },
+    mistral: { q: 0.5, c: 0.2, lat: 0.3 },
+  };
+  const __LLM_TASK_ALIAS = {
+    generate_cv: "cv_generate",
+    generate_cl: "cl_generate",
+    parse_jd: "jd_parse",
+    extract_keywords: "keyword_extract",
+    match_skills: "keyword_extract",
+    consensus_poll: "keyword_extract",
+    extract_pdf: "long_context_pdf",
+    long_context: "long_context_pdf",
+    translate_da: "refine_danish",
+    refine_da: "refine_danish",
+    refine_en: "translate",
+  };
+  const __LLM_W_DEFAULT = { qW: 0.5, lW: 0.1, cW: 0.4 };
+  function __antcvTaskWeights(task) {
+    try {
+      return L[__LLM_TASK_ALIAS[task] || task] || __LLM_W_DEFAULT;
+    } catch (_) {
+      return __LLM_W_DEFAULT;
+    }
+  }
+  function __antcvProviderScore(prov, w) {
+    const k = "claude" === prov ? "anthropic" : prov;
+    const b = __LLM_BASE[k] || { q: 0.6, c: 0.5, lat: 0.5 };
+    let s = (w.qW || 0) * b.q - (w.cW || 0) * b.c - (w.lW || 0) * b.lat;
+    // refine_danish etc. carry danishBias: keep the strong-prose providers
+    // (anthropic/openai) ahead for Danish output, where the cost-led demotion
+    // would otherwise bury Claude — the hand-tuned Danish lead.
+    if (w.danishBias && ("anthropic" === k || "openai" === k)) s += 0.15;
+    return s;
+  }
+  function __llmScorerDisabled() {
+    try {
+      return "1" === localStorage.getItem("antcv:disable-llm-scorer");
+    } catch (_) {
+      return false;
+    }
+  }
+  function __antcvScoreOrder(task, list) {
+    try {
+      if (__llmScorerDisabled() || !Array.isArray(list) || list.length < 2)
+        return list;
+      const w = __antcvTaskWeights(task);
+      const out = list
+        .map((p, i) => [p, i, __antcvProviderScore(p, w)])
+        .sort((a, b) => b[2] - a[2] || a[1] - b[1])
+        .map((x) => x[0]);
+      return out.length === list.length ? out : list;
+    } catch (_) {
+      return list;
+    }
+  }
+  try {
+    if (typeof window !== "undefined")
+      window.__antcvLlmScoreOrder = (t, l) =>
+        __antcvScoreOrder(t, Array.isArray(l) ? l.slice() : []);
+  } catch (_) {}
   // 1.50.294 LLM-QUALITY-PERSIST-001. Seed the per-(task→provider) demotion
   // memory from the SERVER-SIDE D1 rolling-window health (relay GET
   // /api/llm-health), so a provider that has been consistently DEGRADED/DOWN for
@@ -1950,6 +2028,18 @@
         l.includes(__pid) || l.push(__pid);
       }
     } catch (_) {}
+    // LLM-SCORER-001: apply the weighted cost-quality order on the pure-default
+    // path only — an explicit forceProvider/preferGPT/routingOverride choice is
+    // left as the caller set it. The demotion reorder below still runs after.
+    {
+      let __explicit = (i && Q(i)) || true === a || false === a;
+      if (!__explicit)
+        try {
+          const __ro = u.get("routingOverrides", {})[r];
+          if (__ro && Q(__ro)) __explicit = true;
+        } catch (_) {}
+      if (!__explicit) l = __antcvScoreOrder(r, l);
+    }
     l = __antcvReorderByQuality(r, l);
     // GEN-WIDTH-001 (owner 2026-06-23): cap the failover ladder to the
     // per-mode fan-out width (quick/fast=2, regular=3, thorough=4; a quick-gen

@@ -447,10 +447,12 @@ re-tuning, not rebuilding. The four genuinely-open gaps shipped below. Reports:
   pre-shipped before this session (see the perf report's already-done map).
 
 ## OPEN / follow-ups
-- **LLM-SCORER tuning** `[owner-glance]` — the scorer leads with openai over claude on `generate_cl`
-  / `analyze_fit` / `enrich` (cost edges quality by a hair); `analyze_fit` has no `L` entry so it
-  uses the cost-leaning default. To prefer claude-first there, bump that task's `qW` or anthropic's
-  base `q`, or add an `L` entry. All knobs in `__LLM_BASE` / `L` (`app.src.js`).
+- **LLM-SCORER tuning** `[SHIPPED 1.50.829 — LLM-SCORER-TUNE-001]` — the scorer had led with openai
+  over claude on `generate_cl` / `analyze_fit` / `enrich` (cost edged quality by a hair; `analyze_fit`
+  had no `L` entry so used the cost-leaning default). FIXED: openai base `q` .95→.92 (widens the
+  anthropic↔openai quality gap) + quality-dominant per-task weights (`cl_generate` qW.85/cW.15,
+  `enrich` qW.8/cW.15, new `analyze_fit` qW.8/cW.15). Live-verified: `generate_cl`/`enrich`/`analyze_fit`
+  now lead with claude; `generate_cv` stays openai-first; cheap/mechanical unchanged. Unit test updated.
 - **Mechanical-task cheap model routing** `[deferred]` — routing compress/fix_orphans to cheap model
   variants for openai/anthropic/mistral needs worker model-id verification; only gemini→2.5-pro
   (big-gen) is wired today.

@@ -1100,19 +1100,33 @@
         allow: ["openai", "anthropic"],
         fallback: "anthropic",
       },
+      // LLM-SCORER-TUNE-001 (owner 2026-06-23): cover-letter prose is quality-
+      // critical and runs once per gen, so cost barely matters — qW up, cW down
+      // -> Claude-first (restores the old Z [anthropic,openai] intent).
       cl_generate: {
-        qW: 0.65,
+        qW: 0.85,
         lW: 0,
-        cW: 0.35,
+        cW: 0.15,
         allow: ["anthropic", "openai"],
         fallback: "anthropic",
       },
+      // LLM-SCORER-TUNE-001: enrich -> quality-first (Claude lead) per owner.
       enrich: {
-        qW: 0.55,
+        qW: 0.8,
         lW: 0.05,
-        cW: 0.4,
+        cW: 0.15,
         allow: ["openai", "anthropic", "mistral", "gemini"],
         fallback: "openai",
+      },
+      // LLM-SCORER-TUNE-001: analyze_fit had NO L entry -> cost-leaning default
+      // led with openai. The fit rationale is quality-sensitive, so give it a
+      // quality-dominant profile (Claude-first, matching old Z [claude,openai…]).
+      analyze_fit: {
+        qW: 0.8,
+        lW: 0.05,
+        cW: 0.15,
+        allow: ["anthropic", "openai", "mistral", "gemini"],
+        fallback: "anthropic",
       },
       compress: {
         qW: 0.5,
@@ -1771,8 +1785,11 @@
   // cheapest model); cost/latency then break ties and lead the cheap tasks
   // (jd_parse/keyword_extract -> mistral/gemini). Tune here or per-task in L.
   const __LLM_BASE = {
+    // LLM-SCORER-TUNE-001 (owner 2026-06-23): openai q .95 -> .92 widens the
+    // anthropic<->openai quality gap so the quality-dominant tasks below can
+    // actually lead with Claude (the .05 gap was too small to overcome cost).
     anthropic: { q: 1.0, c: 0.9, lat: 0.6 },
-    openai: { q: 0.95, c: 0.6, lat: 0.5 },
+    openai: { q: 0.92, c: 0.6, lat: 0.5 },
     gemini: { q: 0.65, c: 0.3, lat: 0.3 },
     mistral: { q: 0.5, c: 0.2, lat: 0.3 },
   };

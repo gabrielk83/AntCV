@@ -1,5 +1,52 @@
 > **AUTHORITATIVE current state + next-session prompt: `docs/qa/SESSION_HANDOFF_2026-06-18-pm3.md`.** It supersedes the scattered PM/PM2 docs for what shipped (640-652) and what's open. The blocks below are the per-batch detail.
 
+## Owner session 2026-06-23 (eve) — generation-cycle optimization (1.50.819 → 829)
+
+Independent pass over the generation cycle (owner brief: cut the ~7-min run, reduce "sidecars patching
+sidecars" tweaking — fewer enhance/compress cycles, char limits, richer vocab, faster/better LLMs).
+Diagnosis FIRST established most of the original 5-lever plan was ALREADY shipped (hard per-field char
+caps in the prompt, canonical-vocab rules, the `generate_cv` rationale fields, parallel quorum-2
+consensus, per-task model tiers). Four genuine gaps shipped. Reports:
+`docs/perf/Generate_Cycle_and_Optimisation.md` + `docs/plan/GENERATION_OPTIMIZATION_2026-06-22.md`.
+
+### CLOSED
+- **GEN-WIDTH-001** `[SHIPPED 1.50.819]` — per-mode provider fan-out width via one `__fanWidth()` knob
+  on the failover ladder (`app.src.js` ~407 + cap ~1959): quick(fast)=2, regular(balanced)=3,
+  thorough=4, `__antcvQuickGen` (generate from a previous application)=3. Replaces the old fast=1
+  single-provider rule. This is the owner-intent the PERF-002/003/004 entry (below) was waiting on.
+- **RECRUITER-FOLD-001** `[SHIPPED 1.50.820]` — sidecar `antcv-analysis-merge-344.js`: `runMerge`
+  auto-backfills the recruiter web-search into a NON-QUICK generation's rationale (lazy — only when the
+  Analysis view is open); quick(fast)/`__antcvQuickGen` skip it (recruiter then only on an explicit
+  Analysis-panel press). Field merges made fill-only-if-missing so the backfill never clobbers the
+  analysis `generate_cv` already wrote.
+- **FIT-PARALLEL-001** `[SHIPPED 1.50.821]` — the "Compress column" / "Make it fit" loop (`qi`)
+  compresses eligible sections with bounded concurrency (cap 2) instead of strictly sequential. Safe:
+  `ll` already self-skips sections that already fit (the `al()` over-budget gate); its commit
+  `Bi(n=>n.map(...))` is a functional per-id update (concurrent writes can't clobber).
+- **LLM-SCORER-001** `[SHIPPED 1.50.823]` + **LLM-SCORER-TUNE-001** `[SHIPPED 1.50.829]` — wired the
+  previously-vestigial `L[task]{qW,lW,cW}` weights (keys never matched live task names; no per-provider
+  score data) into a cost-quality-latency ORDERING of the candidate provider list (× a static
+  per-provider base table; `danishBias` keeps Claude near top for Danish). Only reorders (never
+  drops/empties), runs only on the pure-default path (forceProvider/preferGPT/routingOverride
+  honoured), demotion runs after, kill switch `localStorage['antcv:disable-llm-scorer']='1'`. TUNE-001
+  (owner): openai base q .95→.92 + quality-dominant weights so `generate_cl` / `enrich` / `analyze_fit`
+  lead with Claude (`generate_cv` stays openai-first; cheap/mechanical unchanged). Live-verified via
+  `window.__antcvLlmScoreOrder` + unit test `pwa/test/unit/llm-scorer.test.mjs`.
+
+### ALREADY-DONE (investigated, nothing to build)
+- **lever 5a (redundant post-generate analysis cycle)** — none exists: `generate_cv` emits `red_flags`
+  so `runMerge` short-circuited after every generate; the panel/modal `/api/jd-analysis` calls are
+  explicit presses against a user-pasted JD.
+
+### OPEN / follow-up
+- **Mechanical→cheap model routing** `[deferred, owner-gated]` — routing compress/fix_orphans to cheap
+  model variants for openai/anthropic/mistral needs worker model-id verification; only gemini→2.5-pro
+  (big-gen) is wired today.
+
+### Process note
+Parallel sessions edit the SAME working clone; a branch does NOT isolate `app.src.js`. 823 + 829 were
+built in isolated `git worktree`s off `origin/main` while another session had uncommitted `app.src.js`
+work. Use `git worktree add` for any `app.src.js`/`app.js` change.
 ## Owner session 2026-06-23 (PM3) — template exports derive from the default skeleton (1.50.824 → 825)
 
 ### CLOSED
@@ -2270,12 +2317,15 @@ repeat the mistake.
   the JD names the employer); empty only for a true open application. Additive prompt text,
   surgical app.js edit mirrored to `app.src.js`. — FIXED✓ (1.50.169). Live-verify owed:
   generate against a real JD → header shows the real company/role.
-- **PERF-002/003/004** `[OPEN][backlog-mislabel]` — DEFERRED. The backlog frames these as
+- **PERF-002/003/004** `[RESOLVED 1.50.819 — GEN-WIDTH-001]`. The backlog framed these as
   "trim consensus width" on mechanical tasks, but `ee` (app.src.js ~1146) is a **cascade**:
   it returns on the first successful provider and only advances on failure; the per-task `Z`
   map (~1110) is fallback ORDER, not a fan-out. Mechanical tasks make one call, so trimming
   `Z` cuts resilience, not latency. Real consensus is the separate `consensus_poll` path
-  (~20547). NEEDS owner intent before any edit (target the consensus_poll fan-out, not `Z`).
+  (~20547) — already quorum-2 + parallel + 20s cap (PERF-002), so latency was already handled.
+  RESOLUTION: the owner gave intent (per-mode width 2/3/4) and GEN-WIDTH-001 (819) made the
+  failover-ladder width a single `__fanWidth()` knob keyed on the generation mode — see the
+  2026-06-23 (eve) generation-cycle block at the TOP of this file.
 - **WM-MOBILE-SCALE-001** — AI watermark "lost" on mobile (again). The preview paper
   renders inside a `transform: scale(ui)` zoom container (app.js preview zoom; phone
   auto-fit factor well below 1). `antcv-watermark-page-anchor-341` positioned via

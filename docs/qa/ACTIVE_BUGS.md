@@ -233,6 +233,38 @@ work. Use `git worktree add` for any `app.src.js`/`app.js` change.
   real lazy/worker pagination refactor. Diagnose via `pwa/test/diag-boot-storm.mjs`. Highest remaining
   systemic perf issue.
 
+## Owner session 2026-06-23 (PM continuation D) — profile disclosure + interests leak + fetch (1.50.834)
+
+### CLOSED
+- **PROFILE-NO-DISABILITY-STRIP-001** `[SHIPPED 1.50.834]` — owner (angry, repeated): the unsolicited CV
+  PROFILE kept the line "Has worked with people from many backgrounds; hearing impaired, which has not
+  limited his career." The prompt ALREADY bans this (PROFILE-NO-DISABILITY-001 + PROFILE-NO-FILLER-001,
+  app.src.js ~2967) but the LLM emitted it anyway. Deterministic floor: new sidecar
+  `antcv-profile-disclosure-strip.js` strips disability/hearing-impairment disclosure, the
+  "...has not limited his career" framing, and the "people from many backgrounds" filler from the CV
+  PROFILE prose (rich_block items[].t + legacy content), clause-level so good content survives. Scoped to
+  the CV profile ONLY — the Accessibility row + cover letter are untouched (disclosure is allowed there).
+  Cleans the current doc on load + every future gen. Test `profile-disclosure-strip.test.mjs` (7).
+- **PERSONA-INTERESTS-MISSING-001** `[SHIPPED]` (commit b78bddf) — Gabriel's generated interests
+  ("…three feline strategic napping experts (cats)") leaked into Anita's session because Anita's kernel
+  (and Devon's) had no `interests`. Added persona-appropriate `interests` ({l,v}) to both
+  `docs/personas/{anita,devon}/personalInfo.json`; regenerated their Downloads kernel exports.
+
+### OPEN / registered
+- **PROFILE-DISABILITY-PROMPT-ADHERENCE-001** `[OPEN — gen quality]` — the LLM violates the existing
+  PROFILE-NO-DISABILITY-001 / PROFILE-NO-FILLER-001 rules; the 834 strip is the deterministic safety net.
+  Root prompt-adherence issue remains (consider moving these to a post-gen validator / regenerate-on-violation).
+- **INTERESTS-LEAK-SOURCE-001** `[OPEN]` — a persona whose kernel lacks `interests` inherits Gabriel's
+  generated/default INTERESTS in-session (not just the repo default). Giving each persona interests is a
+  band-aid; the real fix is that loading a different kernel must CLEAR the prior persona's generated
+  INTERESTS (session/kernel isolation), and the empty-interests fallback must never be Gabriel-specific.
+- **JD-FETCH-BOT-WALL-THALES-001** `[OPEN — likely in progress in demo-proxy]` — JD fetch fails for the
+  Thales careers URL (phenom/Workday-style bot wall throws a questions/consent popup that must be X'd
+  down): `https://careers.thalesgroup.com/global/en/job/TGPTGWGLOBALR0329190EXTERNALENGLOBAL/Project-Manager`
+  The parallel session appears to be adding `workers/demo-proxy/test/bot-wall-jd.test.mjs` — coordinate /
+  confirm coverage for this host (phenom-feeds career sites). Pattern: detect the bot-wall interstitial,
+  fall back to the position API or surface a dismissible notice.
+
 ## Owner session 2026-06-23 (PM continuation C) — Coord. ban + CV regen review (1.50.831)
 
 ### CLOSED

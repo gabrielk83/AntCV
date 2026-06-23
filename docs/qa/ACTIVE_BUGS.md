@@ -29,17 +29,25 @@ prompt fix never strips prose already STORED from earlier generations. PM5 ships
   `labeled_list` of `{t,v}`; regenerated the Downloads exports. Both persona JSONs re-added at 2-space
   (clean 23-line diff each). This was the original PM5 trigger item; confirmed landed on main this session.
 
-### REGISTERED / OPEN
-- **JD-FETCH-BOT-CHALLENGE-001** `[REGISTERED — owner workaround accepted]` — fetching a JD by URL from a
-  bot-walled career site returns the **bot-challenge page**, not the JD. Repro URL (owner):
+### CLOSED (cont.)
+- **JD-FETCH-BOT-CHALLENGE-001** `[FIXED — workers/demo-proxy + workers/proxy, owner deploy owed]` —
+  fetching a JD by URL from a bot-walled career site returned the **bot-challenge / error page** as the JD.
+  Repro URL (owner):
   `https://careers.thalesgroup.com/global/en/job/TGPTGWGLOBALR03291909EXTERNALENGLOBAL/Project-Manager?utm_source=linkedin&utm_medium=phenom-feeds`
-  (phenom-feeds / Thales). Unlike the JS-shell case (handled by JD-URLFETCH-GARBLED-MSG-001 at
-  `app.src.js` ~23609, which catches <50-char / garbled returns), a bot wall returns PLENTY of readable
-  challenge text ("verify you are human", questions), so the short/garbled gates do NOT fire — generation
-  would run against the challenge text. Owner: *"you can just X it down"* — i.e. the manual fallback
-  (dismiss the URL import, paste the JD into the JD box / Additional Signals) is acceptable; no auto-solve
-  owed. Possible later hardening: detect a bot-challenge signature (h-captcha / "are you human" / phenom
-  bot markers) and surface the existing URL-fallback guidance instead of accepting the text. Low priority.
+  (phenom-feeds / Thales). **Root cause (diagnosed this session):** the live URL answers a server-side
+  fetch with **HTTP 403** (bot protection). The `/api/fetch-jd-url` handler (`fetch-jd-url.js`) never
+  guarded on `response.status` in the main HTML path — only the eightfold JSON helper had `!resp.ok`
+  (line ~579). So the 403 error-page body was extracted and returned as `ok:true, status:403`; the client
+  (`app.src.js` `Wn`, bails only on `!n.ok || !o.ok`) accepted the wall page. `validateContentQuality`
+  caught it only if the body was short. **Fix:** added an `if (status >= 400)` guard right after
+  `const status = response.status;` in BOTH workers (they were byte-identical) — returns `ok:false`,
+  `wall:true`, the upstream `status`, and a status-specific paste-manually message (403/401/451 = blocked /
+  login wall; 429 = rate-limited; 404/410 = expired; else generic). Error-path only — a normal 2xx fetch
+  is unchanged. Test `workers/demo-proxy/test/bot-wall-jd.test.mjs` (4: 403 no-leak + 429 + 404 +
+  200-regression). This delivers the clean "X it down → paste" UX the owner asked for instead of silently
+  ingesting the wall. **Deploy owed:** both `demo-proxy` and `proxy` workers (manual, owner-gated per
+  CLAUDE.md) before the fix is live; WAF/UA tricks won't beat Thales' bot wall, so manual paste stays the
+  intended path — this just makes the failure honest and actionable.
 
 ### Handoff
 - **Pagination + salmon** — owner asked for a fresh next-session prompt to "handle pagination issues

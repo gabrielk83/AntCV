@@ -168,3 +168,162 @@ already-correct; 1 new latent finding surfaced; 4 items precisely root-caused wi
 - PARALLEL: 4 diagnosis subagents (VAL-001/VF-016, PRV-004/VF-015, JD-ANALYSIS-PRINT-001, B2 SCE) in one
   batch - disjoint files, read-only.
 - SERIAL (would have been): integrate/verify/deploy - never reached, nothing passed the verify gate.
+
+---
+
+# Nightly autonomous run #2 (continuation, head 1.50.811) - 1 SAFE fix shipped
+
+Fresh unattended session. Synced (`git pull --rebase`: 36bb80f -> 1d8b9ee). Baseline green
+(boot-smoke OK; worker gated 17/17). Bucket A worked.
+
+## SHIPPED - AI-NOTICE-ANCHOR-DIAG-001 (test + comment only, NO worker deploy, NO version bump)
+`diag-ai-notice-anchor.mjs` had been RED. Earlier handoff called it a "born-inconsistent typo" -
+WRONG. Git history: worker **1.14.75** (`1c3cc31`) anchored the AI notice to `relative:margin`
+(test passed); worker **1.14.78** (`aae5597`, titled "page anchor, fixes 3-copies flow")
+deliberately switched both axes to `relative:page`. So page-edge is the INTENTIONAL shipped
+behavior; the test (asserted margin) + the worker comment (said margin) were left stale and the
+diag went RED at 1.14.78, looking like a typo.
+- Fix: aligned the stale test assertion (`:page`) + the stale `aiNoticeVmlRun` comment to the
+  intentional page-edge anchor. `workers/docx-worker/test/diag-ai-notice-anchor.mjs` +
+  `workers/docx-worker/src/index.js` (comment only).
+- **No production change**: comment-only edit in src; the deployed worker is byte-identical in
+  behavior. No deploy, no VERSION bump, no cache-bust. Diag now GREEN; gated worker set 17/17.
+- Owner decision pushed (non-blocking): keep page-edge (intentional) vs move to bottom-margin. If
+  he wants margin, change `src/index.js:23812` page->margin (+ horiz 23811) and redeploy worker.
+
+## NOT shipped tonight - JD-specific CV compression (bucket A, owner's "app build is next")
+Owner-approved spec: `docs/qa/JD-SPECIFIC-CV-COMPRESSION-SPEC.md`. Deliberately NOT force-built
+unattended. Reasons: (1) the spec itself says "likely a generation-prompt change + a client trim
+sidecar; needs an owner regen to verify" - a prompt change cannot be verified tonight (no signed-in
+regen; Chrome-MCP opens anonymous). (2) The owner's gold-standard examples (SiPh, COMSOL, nanotech.,
+JD-echo renames) are all from ONE NVIDIA CV; a deterministic general transform engine derived from a
+single example risks over-reach (the [[dont-hide-controls-as-duplicates]] lesson). Half-building it
+would violate "an end result, not a brickable mid product."
+Ready-to-build decomposition (for the next attended/regen run):
+- DETERMINISTIC + headless-verifiable (client sidecar, JD-gated on `antcv:lastJdText` >= 30):
+  rule 8 (certs: strip trailing "/CODE", drop exact dups - objective, narrow), rule 9 (accessibility
+  one-line - needs the exact target text), rule 6 (flatten sub-headers only on very-short lists).
+- HIGHER-RISK / better as a PROMPT change (regen-gated, verify with owner): rule 1 (force-keep
+  JD-named tools - the flagship; intersect JD tokens with real data, hook the compress/hide path),
+  rule 2 (ruthless abbreviation - subjective, needs a curated map or the LLM), rule 4 (JD-echo rename +
+  within-group order). Rule 5 = layout (autoPages/sidebar-fill, NOT a content rule). Rule 3 = not a rule.
+  Rule 7 = already done (RESULTS-CUT-003).
+Pushed the owner a decision: build the deterministic slice as a JD-gated sidecar autonomously next
+run, or do the prompt path together with a live regen?
+
+---
+
+# BUG REPORT — UNSOLICITED-SHOWS-NVIDIA-001 (owner, 2026-06-23, NOT fixed)
+
+**Symptom (owner-observed live):** generated an **UNSOLICITED** application (general CV, no posted
+role) and the output **still shows NVIDIA** — the company from this session's prior JD-targeted NVIDIA
+batches ([[nvidia-batch-1.50.809]]). The unsolicited gen is bleeding the stale targeted company / JD /
+generated content instead of producing a clean general CV.
+
+**Status (updated):** ROOT CAUSE CONFIRMED via signed-in live repro (Claude-in-Chrome attached to the
+owner's profile, antcv.pages.dev, app.js?v=1.50.809). NOT yet fixed.
+
+## ROOT CAUSE — CONFIRMED (2026-06-23, live)
+
+The unsolicited gen regenerates the **prose** but never resets the **company/role identity**. Live state
+on the owner's machine:
+- Topbar/header renders **"Test Engineer - Photonic @ NVIDIA"** (NVIDIA from the prior targeted batch).
+- `localStorage.meta` = `{company:"NVIDIA", role:"Test Engineer - Photonic", subtitle:"Processes •
+  Products • People", greeting:"Dear Hiring Manager,", opening:"...interest in future opportunities at
+  your organisation."}` — note the **opening/greeting are the UNSOLICITED cold-outreach texts**, proving
+  an unsolicited gen ran, yet `company`/`role` stayed NVIDIA.
+- `localStorage['antcv:activeAppCompany']` = `"NVIDIA"`.
+- `localStorage.rationale` still holds the NVIDIA analysis ("...aligns well with NVIDIA's needs").
+- `localStorage['antcv:lastJdText']` = **empty** (so the JD-gated readers correctly see "unsolicited",
+  but the company identity is driven by `meta`/`activeAppCompany`, which were NOT cleared).
+
+So the original suspects were WRONG for this state: the loaded app.js **does** contain the
+`/wipe-generated` call, the relay URL **is** set and resolves (`__rb` non-empty), and `lastJdText` is
+already cleared. The miss is purely that **`meta.company`/`meta.role` + `antcv:activeAppCompany` +
+`rationale` survive an unsolicited generation.** Worse, the gen payload SENDS the stale meta + rationale
+as context (`app.src.js:15636-15641`, second site ~25732), so the LLM is actively told the target is
+NVIDIA and echoes it back; the response `meta` is written back over the unsolicited identity.
+
+## DEEPER ROOT CAUSE (found while implementing) — cloud-persisted, self-clobbering
+The contamination is SERVER-SIDE: the **kernel showcase cloud slot** (`/api/kernel-showcase`) stores
+`meta.company="NVIDIA"`. The kernel-restore on boot (`app.src.js:15760-15859`, "KERNEL-CLOUD-PERSIST-001")
+bails ONLY when the LOCAL `meta.company` is already a real company (15777-15783); for a genuinely-
+unsolicited load (local company "Unsolicited") it proceeds and re-applies the slot's NVIDIA meta
+(15842-15844). Proven live: setting local `meta` to Unsolicited + reload → restore put NVIDIA back
+(`antcv:activeAppCompany` "Unsolicited" survived because it's outside the restored `meta` blob). So a
+pure local reset can't stick — the cloud slot re-injects every boot.
+
+## FIX SHIPPED — sidecar guard `antcv-unsolicited-identity-guard.js` (1.50.816)
+Chosen over editing the buried gen-gate (`app.src.js:23893-23920`) because that path can't be verified
+without a real signed-in regen (the project's own "don't guess on the gen path" discipline), and the
+sidecar both reaches the owner immediately and **self-heals the cloud slot**:
+- When the context is unsolicited (`antcv:lastJdText` < 30 chars) but `meta.company` is a real company,
+  force `meta.company → "Unsolicited"`, `meta.role → "Open Application"`, scrub
+  `antcv:activeAppCompany → "Unsolicited"`, drop `rationale`. Keep `subtitle` + greeting/opening.
+- It writes `meta` and dispatches the same `StorageEvent('storage', {key:'meta'})` the candidate editor
+  uses, so the app pulls the cleaned identity into React state `io`; the existing kernel autosave
+  (`app.src.js:15623-15648`, gated to `io.company==="Unsolicited"`) then RE-PERSISTS the cleaned slot to
+  the cloud. After one load with the guard the slot is clean and stops re-injecting NVIDIA.
+- Loop-safe (same-meta bail), edit-safe (skips while a field is focused), disable via
+  `antcv:disable-unsolicited-identity-guard`. Unit-tested: `pwa/test/unit/unsolicited-identity-guard.test.mjs`
+  (7/7). Registered in `index.html`; cache-bust quintet bumped 815 → **816**.
+
+NOT done (deliberately, owner-gated): the source-of-truth gen/restore fix in `app.src.js` (sanitize the
+kernel slot's meta on restore at 15842, and on persist at 25730/15636 so the slot can never store a
+targeted company). That is the proper redundancy but needs a live regen to verify the gen branch; held
+for an attended regen session. The sidecar fully covers the symptom in the meantime.
+
+## Original FIX DIRECTION (recommended, pre-discovery — superseded by the sidecar above)
+On the unsolicited entry/gen path, force the identity to unsolicited BEFORE building the gen payload and
+on commit: `meta.company → "Unsolicited"`, `meta.role → "General CV"`, drop/blank `rationale`, and stamp
+`antcv:activeAppCompany → "Unsolicited"`. Do NOT send the prior targeted meta/rationale as context for an
+unsolicited gen. (The `meta.subtitle` is the candidate's own specialisation line — keep it.)
+
+## Original candidate root causes (kept for history — none held in the confirmed state)
+
+1. **GEN-CONTAMINATION-001 wipe likely never fired.** A full gen is supposed to call
+   `POST /api/prefs/wipe-generated` as stage 1 to drop the prior generated D1 output
+   (`app.src.js:23470-23489`). BUT that call is gated on `__rb` (the relay/proxy URL) being non-empty.
+   **This session shipped relay nullify** (790/792/794: delete/✕ Clear set `antcv:relay-cleared` and
+   blank the relay URL). If the relay URL was cleared, `__rb` is empty → the wipe is skipped → the stale
+   NVIDIA `application` row (cv/cl_sections, kernel_showcase, language_view) survives and seeds the
+   "fresh" unsolicited gen. **First thing to check.** The wipe also runs through the relay only; if the
+   owner uses a direct `proxyUrl` that still resolves, confirm it actually hit `/wipe-generated`.
+
+2. **Unsolicited not categorised as unsolicited.** `__isUnsolicited` is true only when
+   `category==="unsolicited"` OR `jd_company==="unsolicited"` (`app.src.js:15221-15225`, mirror at 20001),
+   and the save path sets `category: r ? "unsolicited" : "targeted"` where
+   `r = (jd_text===stub) || company==="Unsolicited"` (`app.src.js:14580-14596`). If the unsolicited gen
+   was started while the NVIDIA active application was still loaded (company="NVIDIA"), `r` is false →
+   the row is categorised "targeted", `antcv:lastJdText` keeps the NVIDIA JD (15266), and every JD-gated
+   reader (WHY-heading flip [[recs-list-and-why-context]], cluster, per-role outcome visibility) treats
+   it as the NVIDIA application. Verify the unsolicited entry point actually clears company→"Unsolicited"
+   / writes the stub JD BEFORE the gen, and clears `antcv:lastJdText`.
+
+3. **Targeted-app auto-commit clamp** ([[targeted-app-persistence]], 1.50.728-732) was built to STOP a
+   targeted gen reverting to the unsolicited kernel. This bug is the inverse — confirm that guard isn't
+   now pinning the NVIDIA targeted app as "active" so an unsolicited gen can't displace it.
+
+## Where to look
+- `pwa/app.src.js` (+ mirror `pwa/app.js`): 14572-14596 (categorise on attach), 15218-15280 &
+  19990-20074 (cloud-restore active_application + lastJdText mirror), 23470-23489 (wipe-generated gate).
+- `workers/access-relay` `POST /api/prefs/wipe-generated` (GEN-CONTAMINATION-001 handler) — does it wipe
+  the `application` row's company/role too, or only the section blobs? If company survives, NVIDIA labels
+  persist even after a wipe.
+- Sidecars that surface the company in output: `antcv-why-context-title.js`, `antcv-docx-client.js`
+  (CL who/why), `antcv-cluster-demand.js`.
+
+## Repro plan (signed in)
+1. With the NVIDIA targeted application active, start an **unsolicited** gen.
+2. In console BEFORE gen: `localStorage['antcv:lastJdText']` (should it be NVIDIA JD?),
+   `localStorage['antcv:relay-cleared']`, the resolved `__rb`.
+3. Watch the network tab for `POST /api/prefs/wipe-generated` — did it fire and 200?
+4. After gen: inspect the active `application` row (jd_company / jd_role / category) and the CL who/why
+   + WHY heading for "NVIDIA".
+
+## Secondary observation (same console dump, separate issue)
+After the 6-page gen the console shows a long **`requestAnimationFrame` handler** storm plus
+`antcv-splitter-flip.js setInterval took 4798ms`, `antcv-sidebar-position.js 255ms`. This is the
+big-document boot/render pagination FREEZE already tracked as [[boot-storm-gate-freeze]] (open,
+deferred). The splitter-flip + sidebar-position polling intervals are the worst offenders here — worth
+folding into that perf work, but it is NOT the NVIDIA contamination bug. Do not conflate the two.

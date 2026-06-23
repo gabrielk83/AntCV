@@ -330,7 +330,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.50.809';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.50.815';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.50.816';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -372,7 +372,7 @@
           app.src = 'app.js?v=1.50.809';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.50.815';
+            vo.src = 'antcv-version-override.js?v=1.50.816';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -735,6 +735,11 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-role-id-stabilize.js?v=1.50.693" defer></script>
 <script src="antcv-recs-as-list.js?v=1.50.787" defer></script>
 <script src="antcv-why-context-title.js?v=1.50.809" defer></script>
+<!-- UNSOLICITED-SHOWS-NVIDIA-001: an unsolicited gen re-injects a prior targeted company
+     (NVIDIA) from the kernel showcase cloud slot. When the context is unsolicited (no real
+     JD) but meta wears a real company, force the identity back to Unsolicited/Open Application;
+     the app's kernel autosave then re-persists the cleaned slot (self-heal). -->
+<script src="antcv-unsolicited-identity-guard.js?v=1.50.816" defer></script>
 <script src="antcv-ai-assisted-to-methods.js?v=1.50.809" defer></script>
 <script src="antcv-tables-core-dedup.js?v=1.50.654" defer></script>
 <script src="antcv-experience-order.js?v=1.50.513-exp-order" defer></script>
@@ -891,14 +896,14 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      squeeze (<=3 lines over, auto-eligible later) / too-much / desync-suspected.
      Verify: JSON.parse(localStorage['antcv:mainOverflow']). Writes a DIFFERENT key
      than autoPages, so it never collides with antcv-auto-pagebreak-block-001. -->
-<script src="antcv-main-overflow-detect-364.js?v=1.50.812" defer></script>
-<!-- PB-MAIN-OVERFLOW-001 step 2 (1.50.812): auto density-squeeze. Listens for
+<script src="antcv-main-overflow-detect-364.js?v=1.50.816" defer></script>
+<!-- PB-MAIN-OVERFLOW-001 step 2 (1.50.816): auto density-squeeze. Listens for
      antcv:main-overflow-changed and applies a bounded, REVERSIBLE line-height
      nudge to the PREVIEW main column ONLY when verdict==='squeeze' (1-3 lines
      over). Never fires on fits/too-much/way-over/desync. Preview-only: export
      parity is NOT yet claimed (publishes antcv:squeezeApplied for a later
      generate.js mirror). Kill switch localStorage['antcv:disable-squeeze']='1'. -->
-<script src="antcv-main-overflow-squeeze-365.js?v=1.50.812" defer></script>
+<script src="antcv-main-overflow-squeeze-365.js?v=1.50.816" defer></script>
 <!-- SALMON-UNIFIED-001 Phase A (1.50.813): READ-ONLY unified-pagination probe.
      Simulates UNIFIED sheet pagination at the DOCX export line (~924px): both
      columns measured, the EARLIER column drives each page boundary, shorter

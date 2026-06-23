@@ -1,5 +1,42 @@
 > **AUTHORITATIVE current state + next-session prompt: `docs/qa/SESSION_HANDOFF_2026-06-18-pm3.md`.** It supersedes the scattered PM/PM2 docs for what shipped (640-652) and what's open. The blocks below are the per-batch detail.
 
+## Owner session 2026-06-23 (PM) — unsolicited shows NVIDIA (1.50.816)
+
+### CLOSED
+- **UNSOLICITED-SHOWS-NVIDIA-001** `[SHIPPED 1.50.816]` — owner: an UNSOLICITED application still
+  showed "NVIDIA" (the company from a prior JD-targeted batch). **Root cause CONFIRMED via signed-in
+  live repro** (Claude-in-Chrome on the owner's profile): the **kernel showcase cloud slot**
+  (`/api/kernel-showcase`) stored a targeted `meta` (company:"NVIDIA", role:"Test Engineer - Photonic")
+  from the earlier gen. The kernel-restore on boot (`app.src.js:15760-15859`) bails ONLY when the LOCAL
+  `meta.company` is already a real company (15777-15783); on a genuinely-unsolicited load (local company
+  "Unsolicited") it proceeds and re-applies the slot's NVIDIA meta (15842-15844). A pure local reset
+  could NOT stick — the slot re-injected it every boot (proven). FIX: new sidecar
+  `antcv-unsolicited-identity-guard.js` — when the context is unsolicited (`antcv:lastJdText` < 30 chars)
+  but `meta.company` is a real company, force `meta.company → "Unsolicited"`, `meta.role → "Open
+  Application"`, scrub `antcv:activeAppCompany`, drop `rationale` (keep subtitle + greeting/opening). It
+  writes `meta` + dispatches the candidate-editor's `StorageEvent`, so the app pulls the cleaned identity
+  into React state and the existing kernel autosave RE-PERSISTS the cleaned slot to the cloud — the slot
+  self-heals after one load. Loop-safe / edit-safe / disable via
+  `antcv:disable-unsolicited-identity-guard`. Unit-tested (`pwa/test/unit/unsolicited-identity-guard.test.mjs`,
+  7/7); boot-smoke OK; cache-bust quintet 815 → 816. Full writeup:
+  `docs/qa/SESSION_LOG_2026-06-23.md` ("BUG REPORT — UNSOLICITED-SHOWS-NVIDIA-001").
+
+### OPEN
+- **UNSOLICITED-IDENTITY-SOURCE-FIX-001** `[OPEN — owner-gated, needs a live regen]` — the
+  source-of-truth fix in `app.src.js`: sanitize the kernel slot's meta ON RESTORE (15842) and ON PERSIST
+  (25730 / 15636) so the unsolicited kernel slot can NEVER store a targeted company. Deliberately NOT
+  done blind — the buried gen-gate (`app.src.js:23893-23920`, force-Unsolicited only when
+  `__explicitShowcase || __noJD`) needs a real signed-in regen to verify, which can't run unattended
+  (Chrome-MCP opens anonymous). The 816 sidecar fully covers the symptom; this is redundancy for an
+  attended regen session.
+- **BOOT-FREEZE-LIVE-2026-06-23** `[OPEN — already tracked as boot-storm/pagination FREEZE]` — during
+  this session the owner's live tab (antcv.pages.dev) went unresponsive on boot of the big NVIDIA doc:
+  a long `requestAnimationFrame` handler storm plus `antcv-splitter-flip.js setInterval took 4798ms`
+  and `antcv-sidebar-position.js 255ms`. Same issue as the deferred big-document boot pagination freeze
+  ([[boot-storm-gate-freeze]] / partial damper 1.50.772); the splitter-flip + sidebar-position polling
+  intervals are the worst offenders. Separate from the NVIDIA bug — do not conflate. Highest remaining
+  systemic perf issue.
+
 ## NIGHTLY FEATURE REQUESTS (owner 2026-06-19)
 
 - **SIGNIN-GATE-HARDREFRESH-001** `[OPEN — REGRESSION, nightly to diagnose]` — owner

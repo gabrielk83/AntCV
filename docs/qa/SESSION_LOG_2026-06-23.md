@@ -327,3 +327,45 @@ After the 6-page gen the console shows a long **`requestAnimationFrame` handler*
 big-document boot/render pagination FREEZE already tracked as [[boot-storm-gate-freeze]] (open,
 deferred). The splitter-flip + sidebar-position polling intervals are the worst offenders here — worth
 folding into that perf work, but it is NOT the NVIDIA contamination bug. Do not conflate the two.
+
+---
+
+# CONSOLIDATED OPEN / CLOSED — owner session 2026-06-23 (PM, through 1.50.817)
+
+## CLOSED + SHIPPED this session (all live on antcv.pages.dev)
+- **UNSOLICITED-SHOWS-NVIDIA-001** `1.50.816` — unsolicited gen showed the prior targeted company
+  (NVIDIA). Root-caused live: the kernel showcase cloud slot stored a targeted meta; the boot restore
+  re-injected it on every unsolicited load. Fix: `antcv-unsolicited-identity-guard.js` forces the
+  unsolicited identity + nudges React so the app's autosave re-persists a cleaned slot (self-heal).
+  Test: `unsolicited-identity-guard.test.mjs` (7).
+- **CL-LEADIN-KEEP-001** `1.50.817` — keep the bold "Who I am:" / "Why this position|company:" lead-ins
+  in the CL who/why subsections. Hardened `antcv-text-sections-to-rich-block-759.js` to inject the
+  canonical lead-in when generation emits who/why as rich_block with an empty lead, keep the why
+  position/company flip, set `leadColon`. Test: `cl-leadin-keep.test.mjs` (7).
+- **AI-TO-METHODS-RICHBLOCK-001** `1.50.817` — move the floating "AI-assisted: …" row into the Methods
+  group. TOOLS & METHODS is now rich_block; extended `antcv-ai-assisted-to-methods.js` to handle the
+  rich_block shape. Verified live. Test: `ai-to-methods-richblock.test.mjs` (6).
+- (Pushed from owner side, merged clean) **AI-NOTICE-ANCHOR diag/comment alignment** `04bbff8` — test +
+  comment only, no worker deploy.
+
+State: suite 321/321, boot-smoke OK, cache-bust quintet at 817, local == origin/main (0/0).
+
+## OPEN — carried forward
+- **UNSOLICITED-IDENTITY-SOURCE-FIX-001** `[owner-gated, needs a live regen]` — the source-of-truth
+  fix in `app.src.js`: sanitize the kernel slot meta ON RESTORE (15842) + ON PERSIST (25730/15636) so
+  the unsolicited kernel slot can never store a targeted company. Held: the gen-gate
+  (`app.src.js:23893-23920`) needs a real signed-in regen to verify; the 816 sidecar covers the symptom.
+- **BOOT-FREEZE (big document)** `[deferred, highest systemic perf]` — owner's live tab went
+  unresponsive on boot of the big NVIDIA doc: rAF handler storm + `antcv-splitter-flip.js setInterval`
+  ~4798ms + `antcv-sidebar-position.js` ~255ms. = the [[boot-storm-gate-freeze]] pagination freeze
+  (partial damper 1.50.772). The splitter-flip + sidebar-position polling intervals are the worst
+  offenders. Diagnose via `pwa/test/diag-boot-storm.mjs`. Separate from all content fixes above.
+- **leadColon "/Why this position:" rendering** `[owner-glance]` — the lead-in colon was added this
+  session; confirm the who/why render reads "Who I am: ..." (not "Who I am ...") in both preview and PDF
+  once the page is usable; DA lead-ins for who/why are EN-only in 759 today (pre-existing).
+- Older backlog unchanged — see the blocks above this file + `docs/qa/ACTIVE_BUGS.md` (top section).
+
+## Repo hygiene note
+- `pwa/test/out/mobile-*.png` are untracked test artifacts (3 files), intentionally not committed.
+- The full `node --test pwa/test/unit/*.test.mjs` glob can hang at process-exit on an open handle in a
+  pre-existing test file; run with `--test-force-exit` to get the real summary (321/321).

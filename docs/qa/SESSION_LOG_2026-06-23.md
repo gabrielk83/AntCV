@@ -462,3 +462,39 @@ in an isolated `git worktree` off `origin/main` while another session had 90+ li
 
 State: scorer suite green (`llm-scorer.test.mjs`), live `__antcvLlmScoreOrder` verified on the built
 bundle, boot-smoke errors=0, cache-bust quintet bumped per bundle (819/820/821/823).
+
+---
+
+# 2026-06-23 (PM continuation) — TEMPLATE-DERIVE-001: export templates mirror the default skeleton (1.50.824 → 825)
+
+Owner: the downloadable CV/CL **templates** had drifted from the live default builder `me()` that
+generation uses. Two separate button pairs needed fixing; both now derive from one helper so future
+default-skeleton changes flow into the templates automatically and no real candidate data leaks.
+
+## CLOSED / SHIPPED (all live; app.src.js edit + surgical app.js mirror; boot-smoke errors=0)
+- **824 — TEMPLATE-DERIVE-001** (PR #301): the **"⬇ Export CV/CL template"** buttons each carried their
+  OWN frozen `t={cv:[…],cl:[…]}` section literals that had drifted from `me()` — missing the main-column
+  PUBLICATIONS & PATENTS (`richPub`) + RECOMMENDATIONS sections, stale order, retired INTERESTS. Added
+  `window._antcvBuildTemplateSkeleton()` (injected right after the `me()` builder): calls `me()` and maps
+  every section through a type-aware blanking pass — id/type/loc/on/richPub/role-on/order preserved, every
+  data-bearing value → a bracketed placeholder (no leak of tools/education/certs/referees). Both buttons
+  call it. Internal build tag `Ai` → `1.50.586-template-derive`. New test
+  `pwa/test/template-derive.test.mjs` extracts the helper from BOTH bundles, asserts structure preserved +
+  zero token leak + identical src/min output.
+- **825 — TEMPLATE-DERIVE-001 follow-up** (PR #302): the SECOND pair — **"⬇ CV/CoverLetter Template.json"**
+  (the round-trip JSON export beside Import CV/CL) — exported `(ro.cv||[]).map(fl)` i.e. the user's LIVE
+  document. `fl` (`app.src.js` ~20366) blanks most fields but DELIBERATELY keeps `deg`/`l`/`group` values,
+  so it LEAKED real degree names + referee names (RECOMMENDATIONS rows are education-type `{deg,sch}`) and
+  reflected the user's edited layout, not the canonical default. Both `.json` exports now source `sections`
+  from `_antcvBuildTemplateSkeleton()` (no `fl`; `fl` now dead). minified `ro`→`xo`, `fl`→`Yl`. The
+  regression test gained a static guard that both bundles' `.json` buttons are skeleton-derived with no
+  leaky `.map(fl)`. Settings (fontSizes/navyColor/lineTargets/tableRatio) left as-is by owner decision.
+
+## Process note
+Both landed as surgical `app.js` mirrors (NO terser round-trip — the rebuild gate
+`docs/deployment/app-js-source-and-rebuild.md` is unpassed) verified by `pwa/test/boot-smoke.mjs`. The
+handed-over `APPLY.sh`/bundle was stale-based + used `npm run build:app` (gated-unsafe) — NOT used. During
+824, `origin/main` advanced four times and HEAD was switched mid-session by parallel worktrees + GitHub
+Desktop; because `app.js` is a single line every concurrent change forces a full-line conflict, so the
+edit was RE-APPLIED onto each new base rather than merged. Two branches briefly took the same version
+(823) — picked the next free one. State: regression test + boot-smoke green both bundles; quintet 823→824→825.

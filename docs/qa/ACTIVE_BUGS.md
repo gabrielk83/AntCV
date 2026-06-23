@@ -45,20 +45,63 @@
   `docs/qa/SESSION_LOG_2026-06-23.md` ("BUG REPORT — UNSOLICITED-SHOWS-NVIDIA-001").
 
 ### OPEN
-- **UNSOLICITED-IDENTITY-SOURCE-FIX-001** `[OPEN — owner-gated, needs a live regen]` — the
-  source-of-truth fix in `app.src.js`: sanitize the kernel slot's meta ON RESTORE (15842) and ON PERSIST
-  (25730 / 15636) so the unsolicited kernel slot can NEVER store a targeted company. Deliberately NOT
-  done blind — the buried gen-gate (`app.src.js:23893-23920`, force-Unsolicited only when
-  `__explicitShowcase || __noJD`) needs a real signed-in regen to verify, which can't run unattended
-  (Chrome-MCP opens anonymous). The 816 sidecar fully covers the symptom; this is redundancy for an
-  attended regen session.
-- **BOOT-FREEZE-LIVE-2026-06-23** `[OPEN — already tracked as boot-storm/pagination FREEZE]` — during
-  this session the owner's live tab (antcv.pages.dev) went unresponsive on boot of the big NVIDIA doc:
-  a long `requestAnimationFrame` handler storm plus `antcv-splitter-flip.js setInterval took 4798ms`
-  and `antcv-sidebar-position.js 255ms`. Same issue as the deferred big-document boot pagination freeze
-  ([[boot-storm-gate-freeze]] / partial damper 1.50.772); the splitter-flip + sidebar-position polling
-  intervals are the worst offenders. Separate from the NVIDIA bug — do not conflate. Highest remaining
+- **UNSOLICITED-IDENTITY-SOURCE-FIX-001** `[SHIPPED 1.50.819 — gen-branch verify still open]` — the
+  source-of-truth fix in `app.src.js` (+ app.js mirror) IS DONE: inline `__antcvUnsolicitedMeta` sanitize
+  at the kernel-showcase RESTORE site (force Unsolicited/Open Application + skip the contaminated slot's
+  JD rationale) and BOTH putShowcase PERSIST sites (never STORE a real company). 3 sites per bundle, test
+  `unsolicited-identity-source-fix.test.mjs` (7), commit 608525a. The 816 sidecar (verified healing meta
+  live this session) + the gen prompt's `__neutralCo` are the other two layers. STILL OPEN (owner-gated):
+  verify the gen BRANCH output on a real signed-in regen names no company end-to-end.
+- **BOOT-FREEZE-LIVE-2026-06-23** `[PARTIAL — two named offenders coalesced 1.50.818; core pagination OPEN]` —
+  the owner's live tab went unresponsive on boot of the big NVIDIA doc: rAF storm + `antcv-splitter-flip.js
+  setInterval took 4798ms` + `antcv-sidebar-position.js 255ms`. The two NAMED polling offenders are now
+  fixed: `antcv-splitter-flip.js` + `antcv-sidebar-position.js` MutationObserver
+  callbacks + polls are COALESCED (trailing debounce 200ms/1000ms cap) and sidebar-position dropped attribute
+  observation (1.50.818, test `boot-storm-sidecar-coalesce.test.mjs`). The CORE pagination/sections-updated
+  storm (the bulk, ~app.src.js) is STILL OPEN ([[boot-storm-gate-freeze]] / partial damper 1.50.772) — needs a
+  real lazy/worker pagination refactor. Diagnose via `pwa/test/diag-boot-storm.mjs`. Highest remaining
   systemic perf issue.
+
+## Owner session 2026-06-23 (PM continuation B) — work_style / tables / GEN-SPEED test (1.50.819→827)
+
+### CLOSED
+- **WORKSTYLE-LEADIN-001** `[SHIPPED 1.50.822]` — owner: "the line lead-in of work style in the CV is
+  empty; by default it needs the words Work style." Same bug class as CL-LEADIN-KEEP-001: when generation
+  emits the CV `work_style` section directly as a `rich_block`, the 759 text->rich_block branch never
+  runs and step-2 lead-in maintenance only covered who/why, so `work_style` shipped with empty lead `b`.
+  Generalized `antcv-text-sections-to-rich-block-759.js` step-2 (`isLeadInId` + `WORKSTYLE_CANON`) to
+  default work_style's lead to "Work style" + leadColon when empty/canonical, never clobbering a manual
+  edit. Test `cl-leadin-keep.test.mjs` (+3 → 10).
+- **TABLES-PARTITION-001** `[SHIPPED 1.50.826 wired, .827 polish]` — owner: "the tables are still very
+  close in content and wording; why do all your controls keep failing — the table source should generate
+  7-8 seeds, diagnosed separate, then split between the tables." ROOT CAUSE (3 reasons, all confirmed):
+  (1) the LLM emits only ~4 distinct Focus Areas and reuses 3 in both tables (live union was 4) — the
+  pool is too small to split into two disjoint 3-4 tables; TABLE-DIRECTION-001 prompt (which already asks
+  for the 7-8 enumerate+split) is IGNORED. (2) the drop-only `antcv-tables-core-dedup.js` floor BAILS
+  (`keep.length<2` guard) exactly in the severe-overlap case (3/4 dupes → drop leaves 1 → no-op) and can
+  only drop, never swap. (3) that floor requires `bring`+`core_comp` in the SAME doc list, but core_comp
+  is in the CV and bring in the CL — so it never even compares them cross-document. FIX: new sidecar
+  `antcv-tables-partition.js` — scans BOTH docs, ENLARGES the pool from the kernel `tools`
+  Expertise/Methods groups (7 real Focus-Area/expertise pairs), and force-partitions: BRING wins shared
+  areas (untouched), CORE drops shared + keeps its distinct rows + fills to a 3-4 target from the pool
+  (compact ≤60ch, ", " spacing). Idempotent, no-op when already disjoint, disable
+  `antcv:disable-tables-partition`. Test `tables-partition.test.mjs` (8). LIVE-VERIFIED via the deployed
+  pure `_partition` on the original overlap: CORE = [Validation & Compliance (kept), Optics/photonics &
+  sensing, Imaging, Materials & devices], zero overlap with BRING.
+- **GEN-SPEED-001 test re-aligned** `[FIXED — main green]` — `perf-mechanical-trim.test.mjs` asserted the
+  removed `"fast" === __genSpeed() && l.length > 1` (fast=1) string and modelled fast=1 /
+  balanced-quality=4. GEN-WIDTH-001 (819) superseded that with `__fanWidth` (fast=2/balanced=3/thorough=4).
+  Verified the shipped behavior is correct FIRST, then updated the test: assert the `__fanWidth` wiring,
+  add the fan-width layer to the mirrored `cap()` predicate, fix expectations (fast=2, balanced quality=3).
+- **leadColon render (item #3, owner-glance)** `[VERIFIED live in preview]` — CL who/why render
+  "Who I am:" / "Why this company:" with the bold lead-in + colon. PDF parity unverified (needs an export).
+
+### OPEN (carried)
+- **UNSOLICITED gen-branch + #4 content** `[needs owner regen]` — unsolicited gen output names no company
+  end-to-end; WHAT I BRING distinct rows / FOUNDATION fields / numeric Results — all need a real signed-in
+  regen to confirm.
+- **TABLES-PARTITION live-on-doc** `[owner-glance]` — verify on the owner's next OVERLAPPING doc (the live
+  doc this session was already disjoint, so the partitioner correctly no-op'd).
 
 ## NIGHTLY FEATURE REQUESTS (owner 2026-06-19)
 

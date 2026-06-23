@@ -330,7 +330,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.50.809';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.50.821';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.50.822';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -372,7 +372,7 @@
           app.src = 'app.js?v=1.50.821';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.50.821';
+            vo.src = 'antcv-version-override.js?v=1.50.822';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -830,7 +830,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-foundation-to-rich-block-758.js?v=1.50.758" defer></script>
 <!-- RICH-BLOCK-001 Phase C: convert the six named single-paragraph sections (opening, who, why,
      closure, profile, work_style) into rich_block so they gain the full controls. Idempotent. -->
-<script src="antcv-text-sections-to-rich-block-759.js?v=1.50.817" defer></script>
+<script src="antcv-text-sections-to-rich-block-759.js?v=1.50.822" defer></script>
 <!-- RICH-BLOCK-GROUP-001: fold labeled_list (Tools/Regulatory/Additional) + list (Certifications) into rich_block with group rows. -->
 <script src="antcv-labeled-list-to-rich-block-763.js?v=1.50.776" defer></script>
 <!-- RICH-BLOCK-SHAPE-001 (2026-06-23): convert RAW {l,v}/{group} items left inside rich_block

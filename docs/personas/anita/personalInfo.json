@@ -408,5 +408,27 @@
       "large-scale grasshopper crisis simulation"
     ],
     "recommendationRequirement": "Every gap should include a realistic closure recommendation when possible."
-  }
+  },
+  "interests": [
+    {
+      "l": "Seasonal preparedness",
+      "v": "Planning stores and routes well ahead of winter"
+    },
+    {
+      "l": "Logistics & inventory",
+      "v": "Stock rotation, labelling and granary organisation"
+    },
+    {
+      "l": "Team coordination",
+      "v": "Colony relays and load-sharing drills"
+    },
+    {
+      "l": "Reading",
+      "v": "Operations case studies and Aesop fables"
+    },
+    {
+      "l": "Hiking",
+      "v": "Trail scouting and terrain mapping"
+    }
+  ]
 }

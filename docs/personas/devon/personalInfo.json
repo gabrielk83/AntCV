@@ -159,5 +159,27 @@
   "fitAnalysisPreferences": {
     "emphasize": "Coverage of JD requirements already met by real projects + the transferable analyst skills; flag genuine gaps clearly with a close-the-gap plan.",
     "deprioritize": "Years-of-experience filters where shipped evidence is stronger than tenure."
-  }
+  },
+  "interests": [
+    {
+      "l": "Open-source coding",
+      "v": "Side projects and small contributions to web tooling"
+    },
+    {
+      "l": "Data visualisation",
+      "v": "Turning messy datasets into clear dashboards"
+    },
+    {
+      "l": "Continuous learning",
+      "v": "Dev blogs, courses and local tech meetups"
+    },
+    {
+      "l": "Board games",
+      "v": "Strategy and probability with friends"
+    },
+    {
+      "l": "Running",
+      "v": "Clears the head between builds"
+    }
+  ]
 }

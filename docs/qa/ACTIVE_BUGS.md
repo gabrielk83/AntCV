@@ -47,6 +47,37 @@ consensus, per-task model tiers). Four genuine gaps shipped. Reports:
 Parallel sessions edit the SAME working clone; a branch does NOT isolate `app.src.js`. 823 + 829 were
 built in isolated `git worktree`s off `origin/main` while another session had uncommitted `app.src.js`
 work. Use `git worktree add` for any `app.src.js`/`app.js` change.
+
+## Owner session 2026-06-23 (PM4) — Profile/Work-style template per CV Sections Guide + Gabriel kernel load (1.50.828)
+
+### CLOSED
+- **GABRIEL-KERNEL-LOAD-001** `[SHIPPED 1.50.828, commit 93d5381]` — owner supplied `CV Sections Guide.docx`
+  and asked to (1) de-hardcode the embedded PERSONALITY KERNEL **default** and (2) keep Gabriel's exact
+  wording. De-hardcoded the default block (the `(()=>{try{… if(o.personality)…})()` prompt builder in
+  `app.src.js`/`app.js`): Profile + Work style now **derive from the candidate material** — generic 3-part
+  Profile (Who I am / Body-mind / one behaviour-based capability close as the FINAL sentence) + a two-axis
+  Work style whose FINAL clause MUST be about people (never tools/data/systems/docs/process/metrics), with
+  the guide's BAD/BETTER examples. Gabriel's wording preserved by a name-guard: a local `__pk` falls back to
+  an inlined `__ANTCV_GABRIEL_KERNEL` (= full `skills/antcv-writer/assets/gabriel-kernel-personality-v1.json`,
+  `JSON.parse(...)`) when `/\bgabriel\b/i` matches `o.name` and no `o.personality` is stored → he flows
+  through the **stored-kernel path**; stored-kernel slice cap raised 4500→8000 (his kernel stringifies ~5.6k,
+  4500 would truncate `render_constraints`). Every other candidate derives generically. `node --check` OK on
+  both files; kernel parse + round-trip verified; name-match true(Gabriel)/false(Anita). See
+  [[profile-workstyle-kernel-dehardcode]].
+- **PROFILE-WORKSTYLE-TEMPLATE-001** `[SHIPPED 1.50.828]` — the full template change: main-prompt PROFILE /
+  WORK STYLE rules + the two section placeholders (`me()`, both skeletons) rewritten to the guide. Length
+  caps unified across kernel block + main prompt + compress pass: **Profile 45-62 words / 320-400 chars
+  (hard 400)**; **Work style 22-32 words / 145-200 chars (hard 200, 1.5-2 lines, never dropped)**. Banned
+  list gained: `seamless`, `bottomline`, `wore many hats`, `rolled up sleeves`, `huge professional pride`.
+  Cache-bust quintet → 1.50.828 (also fixed a pre-existing `app.js?v` drift the prior session left:
+  loader was pinned 825 while TARGET/seed/sw were 827 → all now 828). Supersedes the hardcoded
+  **PROFILE-REWRITE-001** (1.50.648) for everyone except Gabriel (who keeps it via his kernel).
+
+### OPEN
+- **GABRIEL-KERNEL-REGEN-VERIFY** `[regen-gated]` — confirm on a real signed-in generate that Gabriel still
+  gets his canonical Profile/Work-style via the kernel path, and that a non-Gabriel persona (Anita) gets the
+  generic derivation. Cannot be verified headless (LLM + sign-in gated).
+
 ## Owner session 2026-06-23 (PM3) — template exports derive from the default skeleton (1.50.824 → 825)
 
 ### CLOSED

@@ -21,7 +21,13 @@ Owner walked the live unsolicited app. Six items; #4 FIXED+VERIFIED in prod, the
 
 ---
 
-## CLOSED / SHIPPED (recent, 1.50.700–736)
+## CLOSED / SHIPPED (recent, 1.50.700–828)
+
+### Profile / Work-style template per CV Sections Guide (2026-06-23, 1.50.828)
+| ID / name | Version | One-line |
+|---|---|---|
+| GABRIEL-KERNEL-LOAD-001 | 1.50.828 | De-hardcode the embedded PERSONALITY KERNEL default (Profile + Work style now derive from the candidate material); preserve Gabriel's exact wording via a name-guarded `__ANTCV_GABRIEL_KERNEL` seeded into the stored-kernel path (slice cap 4500→8000). Commit 93d5381. |
+| PROFILE-WORKSTYLE-TEMPLATE-001 | 1.50.828 | Main-prompt PROFILE/WORK STYLE rules + both `me()` placeholders rewritten to the guide; caps unified (Profile 45-62w/320-400ch hard-400; Work style 22-32w/145-200ch hard-200); banned list += seamless, bottomline, wore many hats, rolled up sleeves, huge professional pride. Cache-bust quintet → 828 (fixed app.js?v drift 825→828). |
 
 ### Targeting persistence (the 4-layer Nordea fix + export sanitize)
 | ID / name | Version | One-line |

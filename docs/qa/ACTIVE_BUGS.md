@@ -453,6 +453,84 @@ work. Use `git worktree add` for any `app.src.js`/`app.js` change.
   closing only (no intro) — left for a follow-up since its text→{intro,items,closing} mapping is
   unconfirmed; the full-doc path is the owner's reported case and is fixed.
 
+- **CONTRIBUTE-MARKERS-MID-BULLETS-001** `[SHIPPED 1.50.839 — 2026-06-24]` — owner QA: HOW I WOULD
+  CONTRIBUTE showed "markers on mid-bullets" (only the middle bullets had bullet markers; the first
+  and last looked markerless). ROOT CAUSE: `antcv-hwic-to-rich-block-760.js` identified the
+  intro/closing rows by POSITION — both the text_bullets→rich_block peel (items.shift()/pop()) AND
+  the already-converted "repair" branch stripped the marker off WHATEVER sat first/last, assuming
+  they were always the markerless intro/closing. For a plain generated bullet list (no intro/closing
+  — the common case when generation omits them) that demoted the FIRST and LAST real bullets to
+  markerless paragraphs. FIX: identify intro/closing by CONTENT — a genuine intro is the first row
+  ending with ":" (a lead-in; a real contribution bullet never ends with a colon), and a genuine
+  closing is the last row ONLY when such a lead-in intro exists. Every other row keeps/regains its
+  marker. The repair branch now re-markers wrongly-stripped first/last bullets too, so it HEALS the
+  owner's already-converted section on the next load (no regen needed). Verified
+  `contribute-peel-fix.test.mjs` (5 cases). NOTE: this fixes the MARKERS only — the intro/closing
+  TEXT is still empty (see CL-CONTRIBUTE-INTRO-CLOSING-001 below).
+
+- **CL-CONTRIBUTE-INTRO-CLOSING-002** `[OPEN — regen + hard-refresh needed]` — Issue A of the 0624
+  batch: after a regen the HOW I WOULD CONTRIBUTE opening + closing are STILL empty. The 1.50.838
+  prompt fix (unsolicited-aware contribute_intro/closing) did NOT take effect on the owner's 0624
+  regen — most likely a STALE app.js (the owner noted needing a refresh; the SW served the
+  pre-1.50.838 bundle, so the old prompt generated 4 bullets and no intro/closing). NEXT: owner
+  hard-refreshes (loads ≥1.50.839 app.js), regenerates signed-in, and confirms whether
+  contribute_intro/closing now populate. If a CLEAN reload + regen still yields empty, the prompt
+  fix is insufficient and the fallback is a deterministic neutral injection in 760 for unsolicited
+  (the app already has the neutral text `n.contribute_intro` = "If a role fits, my first priorities
+  would typically be:" at app.src.js ~25056, gated on the unsolicited flag `p`). Tie-in:
+  CONTRIBUTE-MARKERS-MID-BULLETS-001 fixes the markers regardless; this is purely the TEXT.
+
+- **CV-SIDEBAR-SPILL-9-PAGES-001** `[OPEN — pre-existing, NOT a regression; salmon/pagination]` —
+  owner QA 0624: "the salmon break location is incorrect, and we got 9 pages CV". CONFIRMED the
+  EXPORT CV is 9 pages (`/Type/Page` count = 9). IMPORTANT: this is PRE-EXISTING, NOT caused by the
+  un-merge (UNSOLICITED-NOT-TARGETED-001) — yesterday's MERGED 5-role CV (0623) was ALSO 9 pages
+  (verified). Diagnosis: per-page density is 43/72/7/58/1/4/1/0 non-blank lines — pages 3,5,6,7,8 are
+  near-empty. The SIDEBAR column (tools, certs, education, regulatory[many groups], publications,
+  languages, interests, recommendations) is far LONGER than the MAIN column (experience), so after
+  the main ends (~p4) the sidebar continues ALONE onto pages 5-8 with the main column empty beside
+  it — and a trailing blank page 8. This is a docx-worker per-page two-column BALANCING problem (the
+  SIDEBAR_NPAGE/SIDEBAR_UNIFIED engine paginates the long sidebar into its own pages instead of
+  flowing/balancing against the short main). NOT the preview-only SALMON-NPAGE-LIMIT-MISMATCH-001
+  change (export map untouched there). FIX IS DEEP (worker + measurer column balancing) and needs the
+  owner's real sections data to reproduce + live verification — develop against a long-sidebar diag
+  (extend `diag-sidebar-preview-break.mjs` / the docx-worker `diag-twocol-paged.mjs`). Owner-gated.
+
+- **CV-GHOST-PLACEHOLDER-ROLES-PREVIEW-001** `[OPEN — salmon/pagination group]` — owner QA 0624
+  ("1 ghost position generate, see picture"): the PREVIEW shows empty `[Role title], [Company]
+  [Years]` rows in PROFESSIONAL EXPERIENCE (between real roles). These are the generator's
+  `on:false` "unused slot" placeholders (`experience_roles` r7-r10 = `{"id":"r7","on":false,
+  "bullets":["<unused slot>"]}` per the gen schema, kept so the user can toggle real roles back on).
+  The EXPORT correctly skips them (pdftotext shows only real roles), but the PREVIEW renders the
+  empty placeholder slots as ghost rows. FIX: the preview experience render should skip a role that
+  is a pure placeholder (title matching `^\[.*\]$` / bullets that are `<unused slot>` / bracketed
+  placeholders) the same way the export does — a preview-render filter (app.js). Owner-gated repro
+  (needs the live sections to confirm the filter predicate). Document-and-defer per owner.
+
+- **STUDENTS-COUNCIL-NO-RESULTS-001** `[OPEN — likely working-as-designed]` — owner QA 0624:
+  "student representative has no results". The Students Council Representative role shows no Results
+  line. This is the RESULTS-DERIVE-NUMERIC-ONLY-001 behaviour: tier-5 derive only fires for a bullet
+  carrying a concrete METRIC, and if a role has no real outcome and no numeric bullet, it correctly
+  shows NO Results line (better than echoing a non-numeric duty bullet). The role's bullets
+  (represent students, coordinate, support democratic processes) carry no metric. To give it a
+  Results line, the GENERATION must emit a quantified outcome for it (e.g. council size, terms,
+  issues resolved) into outcomes_items/proofPoints — regen-gated. Not a render bug.
+
+- **EXPORT-PREVIEW-PRINT-SETUP-REFRESH-001** `[OPEN — stale first paint]` — owner QA 0624: "I need to
+  refresh the page in order for the export preview to output page instead of print setup". The export
+  preview first paints in a "print setup" state and only renders the proper page view after a manual
+  refresh — a first-paint-before-ready staleness (same family as [[results-firstpaint-stale-laminator]]
+  / the SW/version-mask hazard). Needs live repro to capture which render path paints the print-setup
+  state before the page view is ready.
+
+- **CONTRIBUTE-EDIT-JUMPS-WIB-TABLE-001** `[OPEN — preview re-render churn]` — owner QA 0624:
+  "entering HOW I WOULD CONTRIBUTE makes the WHAT I BRING table jumpy". Editing the contribute section
+  triggers a re-pagination/re-render that visibly shifts the WHAT I BRING table. Likely the
+  contribute sidecars (how-contribute-controls-245 + hwic-to-rich-block-760) dispatch
+  `antcv:sections-updated`/`antcv:item-pages-changed` on every edit, which re-runs the measurer and
+  re-lays-out the CL flow (the WIB table moves during the transient re-measure). Mitigation direction:
+  debounce/coalesce the contribute-edit re-dispatch, or stabilise the WIB table height during
+  re-measure. Needs live repro.
+
 - **JD-FETCH-CHIP-LABEL-001** `[SHIPPED 1.50.740 — nightly 2026-06-20]` — owner: "when you fetch a JD, add
   the Job and company name as the first lines in" the green JD-ready chip (currently
   `✓ 4449 chars · url-fetch · 1 page`). DONE: the JD-ready chip (app.src.js ~39426 / app.js

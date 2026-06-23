@@ -14,7 +14,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.760c';
+  var VERSION = '1.50.839-peel-fix';
   if (window.__antcvHwicToRichBlock760 === VERSION) return;
   window.__antcvHwicToRichBlock760 = VERSION;
 
@@ -79,16 +79,28 @@
       //     keeps intro = items[0] and closing = items[last] inside items[], so they got mk:true).
       //     intro + closing must be MARKERLESS paragraphs; the rows between them keep their markers.
       if (s.type === 'rich_block') {
-        if (Array.isArray(s.items) && s.items.length >= 2) {
-          var first = s.items[0], last = s.items[s.items.length - 1];
-          if ((first && first.mk) || (last && last.mk)) {
-            changed = true;
-            var fixed = s.items.map(function (r, i) {
-              if ((i === 0 || i === s.items.length - 1) && r && r.mk) { var c2 = Object.assign({}, r); delete c2.mk; return c2; }
-              return r;
-            });
-            return Object.assign({}, s, { items: fixed });
-          }
+        // CONTRIBUTE-PEEL-FIX-001 (owner 2026-06-24): repair an already-converted rich_block by
+        // CONTENT, not by POSITION. The earlier code stripped the marker off WHATEVER sat first/last,
+        // assuming they were always intro/closing — but for a plain generated bullet list those are
+        // REAL bullets, so it left only the middle bullets markered ("markers on mid-bullets"). Now:
+        // a genuine intro is the FIRST row ending with ":" (a lead-in; a real contribution bullet
+        // never does), and a genuine closing is the LAST row only WHEN such a lead-in intro exists.
+        // Every other row is a bullet and MUST keep/regain its marker. This both removes a marker
+        // from a true intro/closing AND re-markers a real first/last bullet that was wrongly stripped.
+        if (Array.isArray(s.items) && s.items.length >= 1) {
+          var n = s.items.length;
+          var firstIsLeadIn = /:\s*$/.test(bulletText(s.items[0]));
+          var changedA = false;
+          var fixedA = s.items.map(function (r, i) {
+            var isIntro = (i === 0 && firstIsLeadIn);
+            var isClosing = (i === n - 1 && firstIsLeadIn && n >= 2);
+            var wantMk = !(isIntro || isClosing);
+            var hasMk = !!(r && r.mk);
+            if (wantMk && !hasMk) { changedA = true; var c = Object.assign({}, r); c.mk = true; return c; }
+            if (!wantMk && hasMk) { changedA = true; var c2 = Object.assign({}, r); delete c2.mk; return c2; }
+            return r;
+          });
+          if (changedA) { changed = true; return Object.assign({}, s, { items: fixedA }); }
         }
         return s;
       }
@@ -100,8 +112,22 @@
       var items = Array.isArray(s.items) ? s.items.slice() : [];
       var intro = s.intro != null && String(s.intro).trim() ? String(s.intro) : '';
       var closing = s.closing != null && String(s.closing).trim() ? String(s.closing) : '';
-      if (!intro && items.length) intro = bulletText(items.shift());
-      if (!closing && items.length) closing = bulletText(items.pop());
+      // CONTRIBUTE-PEEL-FIX-001 (owner 2026-06-24 "markers on mid-bullets"): the old peel
+      // UNCONDITIONALLY stole items[0]->intro and items[last]->closing whenever the explicit
+      // intro/closing fields were empty. For a plain generated bullet list (no intro/closing —
+      // the common case when generation omits them), that demoted the FIRST and LAST real
+      // bullets to markerless paragraphs, leaving only the MIDDLE bullets with markers (the
+      // owner's exact symptom). Only peel the generated flat shape {items:[intro, bullet.., closing]}
+      // when items[0] is a genuine LEAD-IN (ends with ":") — a real contribution bullet never
+      // ends with a colon — and peel the closing ONLY when such an intro lead-in was actually
+      // present, so a plain bullet list keeps ALL its markered bullets and loses none to a
+      // phantom intro/closing. When the explicit intro/closing fields are set (the skeleton/
+      // generated-with-fields shape), they win and no peel happens.
+      var _peeledIntro = false;
+      if (!intro && items.length && /:\s*$/.test(bulletText(items[0]))) {
+        intro = bulletText(items.shift()); _peeledIntro = true;
+      }
+      if (!closing && _peeledIntro && items.length) closing = bulletText(items.pop());
       var rows = [];
       var introPresent = !!intro.trim();
       if (introPresent) rows.push({ b: '', t: intro });

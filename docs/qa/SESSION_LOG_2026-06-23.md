@@ -404,3 +404,61 @@ noise on the synthetic doc). The sidecar cost scales with DOM size — it domina
 6-page NVIDIA doc (hence the 4798ms console violation there), which the synthetic diag doc is too small to
 surface. This change removes the two NAMED offenders; the core pagination freeze (app.src.js) remains the
 open systemic item ([[boot-storm-gate-freeze]], partial damper 1.50.772).
+
+---
+
+# 2026-06-23 (PM continuation) — Generation-cycle optimization (1.50.819 → 823)
+
+Owner asked for an independent pass over the generation cycle to cut latency and reduce the
+"sidecars patching sidecars" tweaking (e.g. multiple enhance/compress cycles, char limits, richer
+vocabulary, faster/better LLMs). Investigation FIRST established that **most of the original 5-lever
+plan was already shipped** (hard per-field char caps in the prompt, canonical-vocabulary rules, the
+`generate_cv` rationale fields, parallel quorum-2 consensus, per-task model tiers) — so this was
+re-tuning, not rebuilding. The four genuinely-open gaps shipped below. Reports:
+`docs/perf/Generate_Cycle_and_Optimisation.md` + `docs/plan/GENERATION_OPTIMIZATION_2026-06-22.md`.
+
+## CLOSED / SHIPPED (all live; app.js surgical edit + app.src.js mirror; boot-smoke errors=0)
+- **819 — GEN-WIDTH-001** (lever 3): per-mode provider fan-out width via one `__fanWidth()` knob on
+  the failover ladder — quick(fast)=2, regular(balanced)=3, thorough=4, `__antcvQuickGen` (generate
+  from a previous application)=3. Replaces the old fast=1 single-provider rule. Consensus was already
+  quorum-2/parallel and fast-skipped (PERF-002), so the ladder was the real width lever.
+- **820 — RECRUITER-FOLD-001** (lever 5b; sidecar `antcv-analysis-merge-344.js`): `runMerge` now
+  auto-backfills the recruiter web-search into a NON-QUICK generation's rationale (lazy — only when
+  the Analysis view is open). quick(fast)/`__antcvQuickGen` skip it; recruiter then only on an
+  explicit Analysis-panel press. The non-recruiter field merges are now fill-only-if-missing so the
+  backfill never clobbers the analysis `generate_cv` already wrote.
+- **821 — FIT-PARALLEL-001** (lever 1-batch): the "Compress column" / "Make it fit" loop (`qi`) now
+  compresses eligible sections with bounded concurrency (cap 2) instead of strictly sequential. Safe
+  because `ll` already self-skips sections that already fit (the `al()` over-budget gate) and its
+  commit `Bi(n=>n.map(...))` is a functional per-id update — concurrent section writes can't clobber.
+- **823 — LLM-SCORER-001** (lever 4): wired the previously-vestigial `L[task]{qW,lW,cW}` weights (its
+  keys never matched the live task names; no per-provider score data) into a cost-quality-latency
+  ORDERING of the candidate provider list (× a static per-provider base table; `danishBias` keeps
+  Claude near the top for Danish prose). Only reorders (never drops/empties the list), runs only on
+  the pure-default path (forceProvider/preferGPT/routingOverride honoured), demotion runs after, kill
+  switch `localStorage['antcv:disable-llm-scorer']='1'`. Live-verified via `window.__antcvLlmScoreOrder`
+  + unit test `pwa/test/unit/llm-scorer.test.mjs`.
+
+## ALREADY-DONE (investigated, nothing to build)
+- **lever 5a (redundant post-generate analysis cycle)** — there is none: `generate_cv` already emits
+  `red_flags`, so `runMerge`'s guard short-circuited after every generate; the panel/modal
+  `/api/jd-analysis` calls are explicit presses against a user-pasted JD. No redundant auto-call.
+- **char caps / canonical vocabulary / rationale fields / parallel consensus / model tiers** — all
+  pre-shipped before this session (see the perf report's already-done map).
+
+## OPEN / follow-ups
+- **LLM-SCORER tuning** `[owner-glance]` — the scorer leads with openai over claude on `generate_cl`
+  / `analyze_fit` / `enrich` (cost edges quality by a hair); `analyze_fit` has no `L` entry so it
+  uses the cost-leaning default. To prefer claude-first there, bump that task's `qW` or anthropic's
+  base `q`, or add an `L` entry. All knobs in `__LLM_BASE` / `L` (`app.src.js`).
+- **Mechanical-task cheap model routing** `[deferred]` — routing compress/fix_orphans to cheap model
+  variants for openai/anthropic/mistral needs worker model-id verification; only gemini→2.5-pro
+  (big-gen) is wired today.
+
+## Process note — shared-tree contention
+Parallel sessions edit the SAME working clone; a branch does NOT isolate `app.src.js`. 823 was built
+in an isolated `git worktree` off `origin/main` while another session had 90+ lines of uncommitted
+`app.src.js` work (TEMPLATE-DERIVE). Use `git worktree add` for any `app.src.js`/`app.js` change here.
+
+State: scorer suite green (`llm-scorer.test.mjs`), live `__antcvLlmScoreOrder` verified on the built
+bundle, boot-smoke errors=0, cache-bust quintet bumped per bundle (819/820/821/823).

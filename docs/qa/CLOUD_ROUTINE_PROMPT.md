@@ -8,8 +8,8 @@ Owner: Gabriel. Style: direct, factual, compressed, no corporate filler.
 ---
 
 You are an autonomous AntCV maintenance run on the GitHub repo **gabrielk83/AntCV** (a React PWA in
-`pwa/` + Cloudflare Workers in `workers/`). Current shipped: PWA **1.50.745** (auto-deploys on push
-to `main`), docx-worker **1.14.79**, proxy/demo-proxy **3.6.0**. Work the prioritised backlog below,
+`pwa/` + Cloudflare Workers in `workers/`). Current shipped: PWA **1.50.833** (auto-deploys on push
+to `main`), docx-worker **1.14.80**, proxy/demo-proxy **3.6.0**. Work the prioritised backlog below,
 ship VERIFIED fixes only. Hard rule: **an end result, not a brickable mid-product** — one solid
 verified fix beats several half-verified ones.
 
@@ -101,52 +101,51 @@ account — no login step is needed. AntCV needs no install for the core work (z
 
 ## PRIORITY ORDER
 
-### P0 — SALMON-EMPTY-REGION-001 (Option A) — owner-assigned to the cloud as a `salmon-fixes` PR (2026-06-22)
-> 🔒 **HARD RULE — BRANCH + PR ONLY, NEVER push to `main`.** Owner directive: deliver this as a PR.
-> Create/checkout a branch `salmon-fixes`, commit there, and `gh pr create` (base `main`, title
-> "SALMON-EMPTY-REGION-001 Option A — page-box sizes to content"). **Do NOT push to `main`** — it
-> auto-deploys, this touches the LOOP-PRONE `sidebar-fill-equalize` sidecar, and the cloud cannot
-> visually verify a render loop. The PR is for **desktop Playwright no-oscillation verification**
-> before merge. `__antcvSalmon` is PERMANENT — never remove it.
+### **NVIDIA BATCH STATUS (14 items) — as of 1.50.833**
 
-**SALMON-PAGE3-MISSING-001 is DONE — `[SHIPPED 1.50.751]`. Do NOT redo it** (the measurer experience
-pass is now a greedy N-page fill).
+All non-regen items shipped. Regen-gated items need an owner signed-in generation to verify.
 
-**THE TASK — SALMON-EMPTY-REGION-001, OPTION A.** Make a NON-LAST preview page-box size to its CONTENT
-so the salmon sits flush under the last item (matches the PDF; no dead A4 gap). The LAST/only box keeps
-the full A4 look. **Read the register's "Salmon follow-ups" block FIRST — it has the full diagnosed
-cascade.** Summary: `antcv-page-fit.js` forces row `min-height:1123` → the main column flex-stretches to
-1123 → `antcv-sidebar-fill-equalize-227.js` reads that STRETCHED 1123 (not the ~931 content) and pins
-the sidebar `min-height:1123 !important` → CIRCULAR LOCK. Coordinated, LAST-AWARE fix in BOTH sidecars:
-1. `antcv-page-fit.js`: for a NON-LAST `.antcv-page-row` set `min-height:0` (keep 1123 on the last row).
-2. `antcv-sidebar-fill-equalize-227.js`: for a NON-LAST row, equalize to the main's CONTENT height (sum
-   of the main column's children bottoms, ~931) NOT `getBoundingClientRect().height` (the stretched 1123)
-   — this breaks the lock so the box collapses to content. LAST row keeps fill-to-page (1123).
-**VERIFY (in the PR description, with whatever you can run):** boot-smoke clean + `node scripts/run-tests.mjs`
-green. Extend `pwa/test/diag-pagebox-structure.mjs` to re-measure the rows across several cycles and
-assert the NON-LAST row settles to ~content height AND is STABLE (no oscillation — `sidebar-fill-equalize`
-has a breathe/loop history, SIDEBAR-BREATHING-001). State explicitly in the PR that DESKTOP Playwright
-no-oscillation + visual verify is still owed before merge.
+| # | Item | Status |
+|---|---|---|
+| 1 | Results tense (preview) | `[SHIPPED 1.50.748 + 1.50.754]` Copenhagen always present; first-paint refresh fixed. |
+| 2 | Salmon sidebar break | `[SHIPPED 1.50.749/751/753]` FORCE break + N-page + flush salmon. |
+| 3 | Undo for sidebar-width | `[OPEN — feature]` |
+| 4 | Sidebar size fingerprint re-trigger | `[OPEN — feature]` |
+| 5 | Certs: trim to JD context | `[OPEN — regen-gated]` JD-SPECIFIC-CV-COMPRESSION-SPEC committed. Needs prompt + regen. |
+| 6 | Standards: add laser safety | `[OPEN — kernel/data gap + regen]` |
+| 7 | Languages: drop Uruguayan variant | `[SHIPPED 1.50.746]` |
+| 8 | Accessibility: trim 30-40% | `[OPEN — regen-gated]` Target: "Hearing impaired: Cochlear implant user. Captions & written follow-up work well." |
+| 9 | Twin tables distinct | `[SHIPPED 1.50.806]` Needs owner regen to verify in output. |
+| 10 | WHO I AM / WHY: dual heading | `[SHIPPED 1.50.747]` |
+| 11 | Opening sentence case | `[SHIPPED 1.50.747 — auto-resolved]` |
+| 12 | CL Strategic-Expertise cells too detailed | `[OPEN — regen-gated]` |
+| 13 | WHY YOUR COMPANY wording | `[RENDER CORRECT — JD-SYNC-001 1.50.752 ships code; needs live verify]` |
+| 14 | CL paragraph 3px spacing | `[SHIPPED 1.50.747]` |
 
-### P1 — Targeting persistence + persist the JD (the unlock: fixes the "Unsolicited" mislabel,
-  makes the WHY-heading flip fire = item #13, helps the twin tables = item #9).
-- **P2 — #1 Results tense.** OWNER DECISION FIRST: ask the owner (one line, then wait) —
-  "Results/bullets ALWAYS present for Copenhagen/Nordic, or PER-ROLE (present for current, past for
-  ended)?" Then either make the Present control persist + be read, or default Copenhagen
-  `_expTenseMode` to 'present'. Pure function → unit-test it ("Owned…"→"Own…", "Directed…"→"Direct…").
-- **P3 — #2 Salmon force-break** (see the inlined salmon rules above). Owner's top visual issue.
-- **P4 — CL render cluster #10/#11/#14** together: dedup the H2 heading vs the text_inline colored
-  label (`pwa/app.src.js` text_inline render — emit ONE, not both); sentence-case the inline label
-  ("Who I am:" not "WHO I AM:"); add ~3px spacing between the WHAT-I-BRING table and the following
-  paragraph (preview + worker parity).
-- **P5 — #7 deterministic** (drop Spanish "Uruguayan variant", KEEP English+Hebrew native) +
-  REGEN-GATED content (need an owner regen to verify): #5 trim certs to JD context (rugby-coach cert
-  out), #6 add laser-safety standard, #8 accessibility −30-40% (terser rewrite), #12 CL
-  Strategic-Expertise cells too DETAILED → prompt for terser cells, #9 distinct twin-table seeds.
+### **P0–P4 ALL SHIPPED** — current backlog is P5 / open features / regen-gated
+
+**P0 SALMON-EMPTY-REGION-001** `[SHIPPED 1.50.753]` Flush salmon: non-last page-box sizes to content.
+**P1 Targeting persistence + JD-SYNC-001** `[SHIPPED 1.50.728-732, 752]` + UNSOLICITED-IDENTITY-SOURCE-FIX-001 `[SHIPPED 1.50.819]`. Live verify: load NVIDIA targeted app signed-in → confirm `antcv:lastJdText` populates within ~2s + WHY heading flips to "WHY THIS POSITION". Needs signed-in browser (not verifiable in cloud).
+**P2 Results tense** `[SHIPPED 1.50.748 + 1.50.754]` Copenhagen Modern/Scandinavian always present; first-paint refresh.
+**P3 Salmon force-break** `[SHIPPED 1.50.749/751/753]` Force break + N-page + flush salmon.
+**P4 CL render cluster** `[SHIPPED 1.50.747]` Inline label hidden; sentence case auto-resolved; 3px spacing.
+
+### **Current open / regen-gated items (P5)**
+- **#5 Certs trim to JD context** (regen-gated) — spec: `docs/qa/JD-SPECIFIC-CV-COMPRESSION-SPEC.md`.
+- **#6 Laser safety standard** (kernel/data gap + regen).
+- **#8 Accessibility −30-40%** (regen-gated) — target: "Hearing impaired: Cochlear implant user. Captions & written follow-up work well."
+- **#12 CL Strategic-Expertise cells** (regen-gated) — terser cells.
+- **JD-SYNC-001 live verify** — needs signed-in browser; code in place (1.50.752).
+- **#3/#4** — undo stack for sidebar-width / fingerprint re-trigger (features, not bugs).
+- **UNSOLICITED gen quality** — 4 CV-regen items: all-roles on:true in unsolicited, merge title order, bullet+result union, Publications full (CV-UNSOLICITED-ALL-ROLES-001, CV-MERGE-TITLE-ORDER-001, CV-MERGE-BULLET-RESULT-UNION-001, CV-UNSOLICITED-PUBS-FULL-001). Regen-gated.
+- **BOOT-FREEZE** (`antcv-splitter-flip.js` + `antcv-sidebar-position.js` coalesced 1.50.818; core app.src.js pagination storm still open — highest systemic perf issue).
+- **REVIEW-DATA-DEAD-001** — "Review my data" button dead; sidecar `antcv-data-export-360.js` listener lost on DOM rebuild.
+- **SETTINGS-WRITINGSTYLE-STICKY-001** — WritingStylePicker island bleeds across settings subtabs.
+- **AI-notice position** — owner decision needed: page-edge (`page`, current) vs bottom-margin (`margin`); then fix worker or test.
 
 ## DISCIPLINE
 - **SYNC FIRST (anti-regression, owner requirement):** before any edit run `git fetch origin && git pull --rebase origin main`, and before pushing pull --rebase again. The DESKTOP clone also pushes to main — rebasing (never force-pushing/resetting) guarantees this cloud run does not regress the desktop's work and vice-versa. On a non-ff rejection, `pull --rebase` then push; NEVER `git push --force`/`reset --hard` on main.
-- `node scripts/run-tests.mjs` all-green (348+) before every push; add a unit/diag test per fix.
+- `node scripts/run-tests.mjs` all-green (362+) before every push; add a unit/diag test per fix.
 - One change → mirror (if app.js) → boot-smoke → cache-bust quartet → tests → commit → push.
 - One deployer at a time; never parallel `deploy.yml`. PWA auto-deploys on push; workers deploy via
   `gh workflow run deploy.yml -f target=<docx-worker|proxy|demo-proxy> -f mode=deploy -f confirm=<same>`

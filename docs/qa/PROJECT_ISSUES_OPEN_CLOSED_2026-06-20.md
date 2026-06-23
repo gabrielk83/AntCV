@@ -514,3 +514,50 @@ Cloud routine ran against the CLOUD_ROUTINE_PROMPT priority order (targeting-per
 - Playwright unavailable in cloud sandbox: boot-smoke, diag-pagebox-structure, diag-sidebar-preview-break all need it.
 - Signed-in browser unavailable: JD-SYNC-001 live verify, any regen-gated item.
 - Worker deploy: `gh` CLI unavailable in cloud.
+
+---
+
+## UPDATE — 2026-06-23 owner + cloud sessions (1.50.812 → 1.50.833)
+
+Full session detail: `docs/qa/SESSION_LOG_2026-06-23.md`. Suite: 362/362 unit + 17/17 docx-worker + 1/1 applyOutcomesMode (all green).
+
+### CLOSED / SHIPPED
+| Item | Version | What |
+|---|---|---|
+| UNSOLICITED-SHOWS-NVIDIA-001 — identity guard sidecar | 1.50.816 | `antcv-unsolicited-identity-guard.js`: when `antcv:lastJdText` < 30 chars but `meta.company` is a real company (NVIDIA bled from prior targeted session), force company→"Unsolicited" / role→"Open Application" / scrub `activeAppCompany` / drop `rationale`; dispatches StorageEvent so React re-renders + autosave re-persists the cleaned cloud slot (self-heal). 7 unit tests. |
+| CL-LEADIN-KEEP-001 | 1.50.817 | `antcv-text-sections-to-rich-block-759.js`: inject canonical "Who I am:" / "Why this position:" lead-ins when generation emits who/why as rich_block with an empty lead. 7 unit tests. |
+| AI-TO-METHODS-RICHBLOCK-001 | 1.50.817 | `antcv-ai-assisted-to-methods.js`: handle the rich_block shape for TOOLS & METHODS (move floating "AI-assisted:" row into the Methods group). 6 unit tests. |
+| BOOT-FREEZE sidecar coalesce | 1.50.818 | `antcv-splitter-flip.js` + `antcv-sidebar-position.js`: 200ms trailing debounce (1s max-wait cap) on both MutationObserver + poll — collapses N-scan storm to ~1/sec. `antcv-sidebar-position.js`: drop `attributes` from observer (childList only). Polls slowed (750ms→2s; 1.5s→2.5s). 6 unit tests. Core app pagination storm still open. |
+| UNSOLICITED-IDENTITY-SOURCE-FIX-001 (source-of-truth) | 1.50.819 | `app.src.js` + `app.js` mirror: sanitize the kernel-showcase slot's meta ON RESTORE (line 15846) + ON PERSIST (line 25981) — unsolicited slot can never store a targeted company. 3-site unit test. |
+| GEN-WIDTH-001 | 1.50.819 | `__fanWidth()` knob on the failover ladder: quick=2, regular=3, thorough=4, quickGen=3. Replaces old fast=1 single-provider rule. |
+| RECRUITER-FOLD-001 | 1.50.820 | `antcv-analysis-merge-344.js`: auto-backfill recruiter web-search into non-quick regen rationale (lazy, only when Analysis view open); quick/quickGen skip it; fill-only-if-missing so it never clobbers `generate_cv`. |
+| FIT-PARALLEL-001 | 1.50.821 | `qi` compress loop: concurrent section compression (cap 2) instead of strictly sequential. Safe: `ll` self-skips sections that already fit. |
+| LLM-SCORER-001 | 1.50.823 | Wired `L[task]{qW,lW,cW}` weights into a cost-quality-latency ordering of the provider list (× static per-provider base table; `danishBias` keeps Claude near top for Danish). Kill switch `antcv:disable-llm-scorer`. Unit test `llm-scorer.test.mjs`. |
+| TEMPLATE-DERIVE-001 (export CV/CL template buttons) | 1.50.824 | `window._antcvBuildTemplateSkeleton()`: calls `me()` + blanks all data-bearing values → bracketed placeholders. Both "⬇ Export CV/CL template" buttons source it (no frozen section literals, no data leak). |
+| TEMPLATE-DERIVE-001 follow-up (JSON export) | 1.50.825 | The "⬇ CV/CoverLetter Template.json" round-trip export now sources `_antcvBuildTemplateSkeleton()` instead of the live document (closed deg/referee data leak). |
+| TABLES-PARTITIONER-001 | 1.50.826/827 | CV CORE COMPETENCIES / CL WHAT-I-BRING focus partitioner: when tables share a focus label the sidecar redistributes so they are disjoint. Verified live. |
+| LLM-SCORER-TUNE-001 | 1.50.829 | openai base quality .95→.92; quality-dominant weights for `cl_generate`/`enrich`/`analyze_fit` so generate_cl/enrich/analyze_fit now lead with Claude; `generate_cv` stays openai-first. |
+| GABRIEL-KERNEL-LOAD-001 | 1.50.828 | De-hardcode embedded PERSONALITY KERNEL default; Profile + Work style derive from candidate material; preserve Gabriel's wording via `__ANTCV_GABRIEL_KERNEL` seeded into stored-kernel path (slice cap 4500→8000). |
+| PROFILE-WORKSTYLE-TEMPLATE-001 | 1.50.828 | Main-prompt PROFILE/WORK STYLE rules + both `me()` placeholders rewritten to the guide; caps unified (Profile 45-62w/320-400ch hard-400; Work style 22-32w/145-200ch hard-200); banned list += seamless, bottomline, wore many hats, rolled up sleeves. |
+| PROFILE-NO-FILLER-001 / PROFILE-NO-DISABILITY-001 | 1.50.830 | Prompt: ban banal profile filler; forbid disability/hearing-impairment mention in `profile_content` (Accessibility row / CL only). |
+| BANNED-SHORTENING-COORD-001 | 1.50.831 | `antcv-core-comp-compress.js`: removed "Coordination→Coord." abbreviation; added EXPAND restoring "Coord"/"Coord." → "Coordination" (whole-token). Also fixed the edit-revert for Coord. focus labels. 8 unit tests. |
+| PROFILE-CLEAN-STRIP-001 | 1.50.833 | `pwa/antcv-profile-clean-strip.js` sidecar: strips disability/accessibility framing + banned filler from the stored profile section at restore time, so old stored content conforms to the PROFILE-NO-DISABILITY-001 rule without a regen. |
+
+### STILL OPEN after 1.50.833
+
+| Item | Status |
+|---|---|
+| JD-SYNC-001 live verify | Code in place (1.50.752). Needs signed-in browser: load NVIDIA targeted app, confirm `antcv:lastJdText` populates within ~2s auto-sync tick, WHY heading flips. |
+| NVIDIA #5 Certs trim | Regen-gated. Spec: `docs/qa/JD-SPECIFIC-CV-COMPRESSION-SPEC.md`. |
+| NVIDIA #6 Laser safety | Kernel/data gap + regen. |
+| NVIDIA #8 Accessibility trim | Regen-gated. Target: "Hearing impaired: Cochlear implant user. Captions & written follow-up work well." |
+| NVIDIA #12 CL Strategic-Expertise terser | Regen-gated. |
+| CV-UNSOLICITED-ALL-ROLES-001 | Regen-gated. 4 roles `on:false` in unsolicited app — must be all-visible. |
+| CV-MERGE-TITLE-ORDER-001 | Regen-gated. Merged title order: content-first / level-after. |
+| CV-MERGE-BULLET-RESULT-UNION-001 | Regen-gated. Merged roles must union ALL bullets + ALL results from both source roles. |
+| CV-UNSOLICITED-PUBS-FULL-001 | Regen-gated. Publications & Patents must be full for an unsolicited app. |
+| BOOT-FREEZE (core) | Sidecars coalesced (1.50.818); app.src.js pagination storm still open ([[boot-storm-gate-freeze]]). |
+| REVIEW-DATA-DEAD-001 | "Review my data" button does nothing — listener lost on DOM rebuild. `pwa/antcv-data-export-360.js`. |
+| SETTINGS-WRITINGSTYLE-STICKY-001 | WritingStylePicker island bleeds across settings subtabs. |
+| AI-notice position | Owner decision: keep page-edge (current) or move to bottom-margin? Then fix worker or correct test. |
+| JD-SPECIFIC-CV-COMPRESSION-SPEC (deterministic slice) | Sidecar for rule 8 (certs drop codes/dups), rule 9 (accessibility one-line), rule 6 (flatten short sub-header lists) — autonomously buildable, JD-gated. Higher-risk rules (abbreviation, JD-echo rename, force-keep) need a prompt + regen. |

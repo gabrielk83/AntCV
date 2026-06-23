@@ -468,17 +468,29 @@ work. Use `git worktree add` for any `app.src.js`/`app.js` change.
   `contribute-peel-fix.test.mjs` (5 cases). NOTE: this fixes the MARKERS only — the intro/closing
   TEXT is still empty (see CL-CONTRIBUTE-INTRO-CLOSING-001 below).
 
-- **CL-CONTRIBUTE-INTRO-CLOSING-002** `[OPEN — regen + hard-refresh needed]` — Issue A of the 0624
-  batch: after a regen the HOW I WOULD CONTRIBUTE opening + closing are STILL empty. The 1.50.838
-  prompt fix (unsolicited-aware contribute_intro/closing) did NOT take effect on the owner's 0624
-  regen — most likely a STALE app.js (the owner noted needing a refresh; the SW served the
-  pre-1.50.838 bundle, so the old prompt generated 4 bullets and no intro/closing). NEXT: owner
-  hard-refreshes (loads ≥1.50.839 app.js), regenerates signed-in, and confirms whether
-  contribute_intro/closing now populate. If a CLEAN reload + regen still yields empty, the prompt
-  fix is insufficient and the fallback is a deterministic neutral injection in 760 for unsolicited
-  (the app already has the neutral text `n.contribute_intro` = "If a role fits, my first priorities
-  would typically be:" at app.src.js ~25056, gated on the unsolicited flag `p`). Tie-in:
-  CONTRIBUTE-MARKERS-MID-BULLETS-001 fixes the markers regardless; this is purely the TEXT.
+- **CL-CONTRIBUTE-INTRO-CLOSING-002** `[OPEN — two layers: prompt now loaded; persistence revert]` —
+  Issue A of the 0624 batch: HOW I WOULD CONTRIBUTE opening + closing are empty. LIVE INSPECTION
+  2026-06-24 (Claude-in-Chrome on antcv.pages.dev, owner signed in, after the hard-refresh):
+  • `app.js?v=1.50.838` IS now loaded (window.ANTCV_VERSION 1.50.839, hwic760 1.50.839-peel-fix) —
+    so the 1.50.838 unsolicited-aware contribute_intro/closing prompt fix IS live now. The 0624
+    regen that still showed empty was on a STALE pre-1.50.838 bundle (confirmed root cause of why
+    that fix "didn't work"). A FRESH regen now should populate them — owner to confirm.
+  • SECOND LAYER (persistence): the stored `sections.cl` contribute section is the KERNEL SKELETON,
+    not the generated content — `type:rich_block, items:["", "[Specific thing you would do 1]",
+    "[Specific thing you would do 2]", "[Specific thing you would do 3]", ""]` (placeholders + two
+    EMPTY intro/closing rows). The whole CV experience was also empty (0 roles) in localStorage while
+    the exported PDF had 11 roles. So the GENERATED cover-letter/CV content lives only in React state
+    and is NOT persisted to localStorage `sections` — on reload it reverts to the unsolicited kernel
+    skeleton (same family as [[targeted-app-persistence]] / [[kernel-recovery-and-floor]]). This
+    means even a good regen's intro/closing will VANISH on refresh until the generated CL is
+    committed to the active row. NEXT: (1) owner regenerates NOW (1.50.838 live) and confirms the
+    opening/closing appear immediately post-regen; (2) investigate why generated CL contribute (and
+    the experience roles) are not persisted to `sections` on the unsolicited row — the AUTO-COMMIT
+    path ([[targeted-app-persistence]] 1.50.732) covers targeted apps; the unsolicited kernel row may
+    not persist a regen. CONTRIBUTE-MARKERS-MID-BULLETS-001 (1.50.839) fixes the markers regardless.
+  • NOTE: in the skeleton, the empty intro/closing rows are now markered (760 markers a row that is
+    empty / not a ":"-lead-in) — harmless placeholders; real generated content with a ":"-lead-in
+    intro renders correctly markerless.
 
 - **CV-SIDEBAR-SPILL-9-PAGES-001** `[OPEN — pre-existing, NOT a regression; salmon/pagination]` —
   owner QA 0624: "the salmon break location is incorrect, and we got 9 pages CV". CONFIRMED the

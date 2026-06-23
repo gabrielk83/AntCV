@@ -136,10 +136,24 @@
   async function runMerge() {
     if (inflight) return;
     var rationale = readRationale();
-    // Only merge when there's an analysis object to attach to, and we
-    // haven't already populated recruiter/red_flags for it.
+    // Only merge when there's an analysis object to attach to.
     if (!rationale) return;
-    if (rationale.recruiter !== undefined || rationale.red_flags !== undefined) return;
+    // RECRUITER-FOLD-001 (owner 2026-06-23): the generate pass emits red_flags
+    // but NEVER recruiter (recruiter needs a server-side web search). Auto-
+    // backfill recruiter into a NON-QUICK generation's rationale here (lazy:
+    // only fires when the Analysis view is open — see schedule()). Quick (fast
+    // preset) and from-previous-application (__antcvQuickGen) regens skip it;
+    // recruiter then appears only on an explicit Analysis-panel press, per
+    // owner. Idempotent: never refetch once recruiter is set. The field merge
+    // below is fill-only-if-missing, so this backfill never clobbers the
+    // analysis the generate pass already wrote.
+    if (rationale.recruiter !== undefined) return;
+    var __quickGen = false;
+    try {
+      var __gs = JSON.parse(localStorage.getItem('antcv:genSpeed') || '"balanced"');
+      __quickGen = (__gs === 'fast') || !!window.__antcvQuickGen;
+    } catch (_) { __quickGen = !!window.__antcvQuickGen; }
+    if (__quickGen) return;
     var proxyUrl = readProxyUrl();
     if (!proxyUrl) return;
 
@@ -173,14 +187,13 @@
       // Attach recruiter + red_flags (+ questions for completeness) so the
       // app.js render blocks pick them up. Mark so we don't refetch.
       if (a.recruiter !== undefined) merged.recruiter = a.recruiter;
-      if (a.red_flags !== undefined) merged.red_flags = a.red_flags;
-      else merged.red_flags = merged.red_flags || [];
-      if (a.questions_in_jd !== undefined) merged.questions_in_jd = a.questions_in_jd;
+      if (merged.red_flags === undefined) merged.red_flags = (a.red_flags !== undefined) ? a.red_flags : [];
+      if (merged.questions_in_jd === undefined && a.questions_in_jd !== undefined) merged.questions_in_jd = a.questions_in_jd;
       // v1.50.146 — honesty-first fields for the Analysis report PDF
       // (antcv-analysis-report-pdf-360.js). Same jd-analysis pass.
-      if (a.assumptions !== undefined) merged.assumptions = a.assumptions;
-      if (a.recommendations !== undefined) merged.recommendations = a.recommendations;
-      if (a.confidence_notes !== undefined) merged.confidence_notes = a.confidence_notes;
+      if (merged.assumptions === undefined && a.assumptions !== undefined) merged.assumptions = a.assumptions;
+      if (merged.recommendations === undefined && a.recommendations !== undefined) merged.recommendations = a.recommendations;
+      if (merged.confidence_notes === undefined && a.confidence_notes !== undefined) merged.confidence_notes = a.confidence_notes;
       // ANALYSIS-PANEL-MISSING-FIT-001 (owner 2026-06-09): also carry the CORE
       // analysis fields. app.js renders Overall Fit / Strongest Fit Points / Gaps /
       // tailoring / CL-strategy in the in-app "📊 Application Analysis" panel from the
@@ -189,11 +202,11 @@
       // though the export report (antcv-analysis-report-pdf-360) showed the full set.
       // Guarded with !== undefined so an existing generation-time value is only
       // replaced when this fresh jd-analysis actually provides one.
-      if (a.fit_summary !== undefined) merged.fit_summary = a.fit_summary;
-      if (a.top_fit_points !== undefined) merged.top_fit_points = a.top_fit_points;
-      if (a.gaps !== undefined) merged.gaps = a.gaps;
-      if (a.tailoring_decisions !== undefined) merged.tailoring_decisions = a.tailoring_decisions;
-      if (a.cover_letter_strategy !== undefined) merged.cover_letter_strategy = a.cover_letter_strategy;
+      if (merged.fit_summary === undefined && a.fit_summary !== undefined) merged.fit_summary = a.fit_summary;
+      if (merged.top_fit_points === undefined && a.top_fit_points !== undefined) merged.top_fit_points = a.top_fit_points;
+      if (merged.gaps === undefined && a.gaps !== undefined) merged.gaps = a.gaps;
+      if (merged.tailoring_decisions === undefined && a.tailoring_decisions !== undefined) merged.tailoring_decisions = a.tailoring_decisions;
+      if (merged.cover_letter_strategy === undefined && a.cover_letter_strategy !== undefined) merged.cover_letter_strategy = a.cover_letter_strategy;
       merged._jdAnalysisMergedAt = Date.now();
       if (writeRationale(merged)) fireMerge();
     } catch (_) {

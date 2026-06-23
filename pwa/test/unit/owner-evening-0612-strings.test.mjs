@@ -97,7 +97,9 @@ test('ROLE-DECOMP-001 — distinct roles decomposed, exact dups still collapsed 
 });
 
 test('work-style people-skill close rule in the prompt', () => {
-  assert.ok(bundle.includes('MUST END with a people skill'));
+  // PROFILE-WORKSTYLE-TEMPLATE-001 (1.50.828) reworded the rule: the work-style
+  // FINAL clause MUST be about people (was "MUST END with a people skill").
+  assert.ok(bundle.includes('MUST be about people'));
 });
 
 test('patent numbers never dropped', () => {

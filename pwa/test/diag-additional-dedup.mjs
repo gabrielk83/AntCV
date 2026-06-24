@@ -31,6 +31,9 @@ await page.addScriptTag({ content: sidecar });
 await page.waitForTimeout(150);
 await page.evaluate(() => window.AntcvReviewData && window.AntcvReviewData());
 await page.waitForTimeout(200);
+// CV sidebar content is collapsed by default — expand it to reach Additional info.
+await page.evaluate(() => { const m = document.querySelector('[data-antcv-review-modal]'); const g = [...m.querySelectorAll('button')].find(b => /CV sidebar content/.test(b.textContent || '')); if (g) g.click(); });
+await page.waitForTimeout(150);
 await page.evaluate(() => { const m = document.querySelector('[data-antcv-review-modal]'); const h = [...m.querySelectorAll('button')].find(b => /Additional info/.test(b.textContent || '')); if (h) h.click(); });
 await page.waitForTimeout(200);
 

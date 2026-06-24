@@ -31,6 +31,9 @@ await page.evaluate(() => window.AntcvReviewData && window.AntcvReviewData());
 await page.waitForTimeout(200);
 
 // Expand the Additional info card.
+// CV sidebar content is collapsed by default — expand it to reach Additional info.
+await page.evaluate(() => { const modal = document.querySelector('[data-antcv-review-modal]'); const g = [...modal.querySelectorAll('button')].find(b => /CV sidebar content/.test(b.textContent || '')); if (g) g.click(); });
+await page.waitForTimeout(150);
 await page.evaluate(() => { const modal = document.querySelector('[data-antcv-review-modal]'); const h = [...modal.querySelectorAll('button')].find(b => /Additional info/.test(b.textContent || '')); if (h) h.click(); });
 await page.waitForTimeout(200);
 
@@ -54,7 +57,7 @@ const r = await page.evaluate(() => {
     addCard: !!card,
     hasLangBlock: /🗣️\s*Languages/.test(t), hasInterestsBlock: /🎯\s*Interests/.test(t), hasAccessBlock: /♿\s*Accessibility/.test(t),
     hasProjectsBlock: /💻\s*Software projects/.test(t),
-    hasPubProfile: /Publications profile link/.test(modal.textContent || ''),
+    hasPubProfile: /Publication entries/.test(modal.textContent || '') && /Profile link/.test(modal.textContent || ''),
     seedEnglish: vals.includes('English'), seedDanish: vals.includes('Danish'),
     interestRugby: vals.includes('Rugby'), accessHearing: vals.some(v => /hearing-impaired/.test(v)),
     langSectionSeeded: !!(langSection && Array.isArray(langSection.items) && langSection.items.some(i => i.l === 'English') && langSection.items.some(i => i.l === 'Danish')),

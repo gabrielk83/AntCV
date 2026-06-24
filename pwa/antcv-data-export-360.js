@@ -49,7 +49,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.858-additional-dedup';
+  var VERSION = '1.50.860-pubs-section';
   if (window.__antcvDataExport360 === VERSION) return;
   window.__antcvDataExport360 = VERSION;
 
@@ -890,13 +890,30 @@
 
     // 6 — Languages moved into the Additional-info card as a sub-block (PERSONAL-MERGE-4).
 
-    // 7 — CV sidebar content (structured row editors — replaces the pipe textareas)
-    body.appendChild(rdEl('div', 'font-size:13px;font-weight:700;margin:6px 0 0;', '📎  CV sidebar content'));
-    body.appendChild(rdEl('div', 'font-size:11px;opacity:.6;line-height:1.45;margin:0 0 2px;', 'The structured side column. Edits save instantly and flow into new CVs (existing drafts keep theirs until re-applied). Group headings are preserved.'));
-    body.appendChild(rdSidebarSection({ emoji: '🔧', title: 'Tools & methods', help: 'Label + value per row; add group headings to organise.', key: 'tools', kind: 'lv', grouped: true, cols: ['Label', 'Value'] }, pi.tools));
-    body.appendChild(rdSidebarSection({ emoji: '🎓', title: 'Education', help: 'Degree + school / details per row.', key: 'education', kind: 'degsch', cols: ['Degree', 'School / details'] }, pi.education));
-    body.appendChild(rdSidebarSection({ emoji: '📜', title: 'Certifications', help: 'One per row.', key: 'certifications', kind: 'str', cols: ['Certification'] }, pi.certifications));
-    body.appendChild(rdSidebarSection({ emoji: '📐', title: 'Regulatory / standards', help: 'Code + description per row; add group headings to organise.', key: 'regulatory', kind: 'lv', grouped: true, cols: ['Code', 'Description'] }, pi.regulatory));
+    // 7 — CV sidebar content — collapsible group, COLLAPSED by default (owner
+    // 2026-06-24), matching the per-card disclosure register. The sidebar editors
+    // append into sbBody so the whole group hides/shows as one.
+    var sbKey = 'antcv:rvCollapse:cv-sidebar-content';
+    var sbCollapsed = true;
+    try { if (localStorage.getItem(sbKey) === '0') sbCollapsed = false; } catch (_) {}
+    var sbHdr = rdEl('button', 'display:flex;align-items:center;gap:8px;width:100%;padding:0;margin:6px 0 0;background:transparent;border:none;cursor:pointer;text-align:left;color:inherit;');
+    sbHdr.type = 'button';
+    var sbCaret = rdEl('span', 'font-size:10px;opacity:.6;flex:0 0 auto;', '▸');
+    sbHdr.appendChild(sbCaret);
+    sbHdr.appendChild(rdEl('div', 'font-size:13px;font-weight:700;color:#e6eef3;flex:1;', '📎  CV sidebar content'));
+    body.appendChild(sbHdr);
+    var sbInner = rdEl('div', 'margin-top:9px;');
+    sbInner.appendChild(rdEl('div', 'font-size:11px;opacity:.6;line-height:1.45;margin:0 0 9px;', 'The structured side column. Edits save instantly and flow into new CVs (existing drafts keep theirs until re-applied). Group headings are preserved.'));
+    var sbBody = rdEl('div', 'display:flex;flex-direction:column;gap:11px;');
+    sbInner.appendChild(sbBody);
+    body.appendChild(sbInner);
+    function sbApply() { sbInner.style.display = sbCollapsed ? 'none' : ''; sbCaret.textContent = sbCollapsed ? '▸' : '▾'; }
+    sbApply();
+    sbHdr.addEventListener('click', function () { sbCollapsed = !sbCollapsed; try { localStorage.setItem(sbKey, sbCollapsed ? '1' : '0'); } catch (_) {} sbApply(); });
+    sbBody.appendChild(rdSidebarSection({ emoji: '🔧', title: 'Tools & methods', help: 'Label + value per row; add group headings to organise.', key: 'tools', kind: 'lv', grouped: true, cols: ['Label', 'Value'] }, pi.tools));
+    sbBody.appendChild(rdSidebarSection({ emoji: '🎓', title: 'Education', help: 'Degree + school / details per row.', key: 'education', kind: 'degsch', cols: ['Degree', 'School / details'] }, pi.education));
+    sbBody.appendChild(rdSidebarSection({ emoji: '📜', title: 'Certifications', help: 'One per row.', key: 'certifications', kind: 'str', cols: ['Certification'] }, pi.certifications));
+    sbBody.appendChild(rdSidebarSection({ emoji: '📐', title: 'Regulatory / standards', help: 'Code + description per row; add group headings to organise.', key: 'regulatory', kind: 'lv', grouped: true, cols: ['Code', 'Description'] }, pi.regulatory));
     // Additional info now carries Languages / Interests / Accessibility sub-blocks
     // (CV sections, edited in place). Languages SEEDS once from personalInfo.languages
     // only if its section is empty — the section (the richer Additional-info content)
@@ -942,7 +959,7 @@
     // Read additional FRESH (the sub-blocks above just synced their hidden mirrors
     // into it on open); the native editor hides those tagged rows and preserves
     // them on write (see rdSidebarSection preserveHidden).
-    body.appendChild(rdSidebarSection({ emoji: '➕', title: 'Additional info', help: 'Label + value rows. Languages, Interests and Accessibility are edited in their own blocks below.', key: 'additional', kind: 'lv', cols: ['Label', 'Value'], preserveHidden: true }, (rdReadPI().additional || []), addSubBlocks));
+    sbBody.appendChild(rdSidebarSection({ emoji: '➕', title: 'Additional info', help: 'Label + value rows. Languages, Interests and Accessibility are edited in their own blocks below.', key: 'additional', kind: 'lv', cols: ['Label', 'Value'], preserveHidden: true }, (rdReadPI().additional || []), addSubBlocks));
 
     // Recommendations (owner 2026-06-24): recommenders by NAME / who it was for /
     // contact — its own CV section (sections.cv 'recommendations', education shape).
@@ -976,10 +993,40 @@
     });
     body.appendChild(s8.sec);
 
-    // 9 — Publications profile link (owner 2026-06-24; default OFF). Writes the
-    // SAME section.masterSite the editor-panel Publications editor reads, so the
-    // two surfaces stay in sync.
-    var s9 = rdSection('🔗', 'Publications profile link', 'Optional link to your publications master site (Google Scholar, Academia, ORCID…). Off by default; appears only when you turn it on.');
+    // 9 — Publications (owner 2026-06-24): the publication ENTRIES plus an optional
+    // profile link. Writes the SAME sections.cv['pubs'] the editor-panel
+    // Publications editor reads (items[] + masterSite), so the two surfaces sync.
+    var s9 = rdSection('🔗', 'Publications', 'Your publications, and an optional link to your publications profile (Google Scholar, Academia, ORCID…).');
+    // Publication entries — edit the citation strings directly; the rich 5-field
+    // editor re-derives pubFields from items, so clearing pubFields here is safe.
+    (function () {
+      function readPubs() { var sec = rdFindSection(rdReadSections(), 'pubs'); return (sec && Array.isArray(sec.items)) ? sec.items : []; }
+      function writePubs(items) {
+        var s = rdReadSections(); if (!Array.isArray(s.cv)) s.cv = [];
+        var sec = rdFindSection(s, 'pubs');
+        if (!sec) { sec = { id: 'pubs', title: 'PUBLICATIONS', loc: 'main', on: true, type: 'list_italic', items: [] }; s.cv.push(sec); }
+        sec.items = items; if ('pubFields' in sec) { try { delete sec.pubFields; } catch (_) {} }
+        rdSaveSections(s);
+      }
+      var arr = readPubs().map(function (it) { return (typeof it === 'string') ? it : String((it && it.text) || ''); });
+      var pl = rdEl('div', 'display:flex;flex-direction:column;gap:5px;');
+      function commit() { writePubs(arr.map(function (x) { return String(x || '').trim(); }).filter(Boolean)); }
+      function prow(val, i) {
+        var r = rdEl('div', 'display:flex;gap:5px;align-items:center;');
+        var inp = rdEl('input', RD_ROW_INPUT); inp.value = val; inp.placeholder = 'Title — authors, journal, year';
+        inp.addEventListener('input', function () { arr[i] = inp.value; }); inp.addEventListener('blur', commit);
+        var x = rdEl('button', 'flex:0 0 auto;background:transparent;border:none;color:#f3b4b3;font-size:15px;line-height:1;cursor:pointer;padding:0 4px;', '×');
+        x.type = 'button'; x.title = 'Remove'; x.addEventListener('click', function () { arr.splice(i, 1); commit(); prender(); });
+        r.appendChild(inp); r.appendChild(x); return r;
+      }
+      function prender() { while (pl.firstChild) pl.removeChild(pl.firstChild); arr.forEach(function (v, i) { pl.appendChild(prow(v, i)); }); }
+      s9.body.appendChild(rdEl('div', 'font-size:10px;text-transform:uppercase;letter-spacing:.5px;opacity:.55;margin:0 0 4px;', 'Publication entries'));
+      s9.body.appendChild(pl);
+      var padd = rdMiniBtn('+ publication'); padd.style.marginTop = '6px';
+      padd.addEventListener('click', function () { arr.push(''); prender(); });
+      s9.body.appendChild(padd);
+      prender();
+    })();
     (function () {
       var SITES = ['Google Scholar', 'Academia.edu', 'ORCID', 'ResearchGate', 'Other'];
       function readMS() { var sec = rdFindSection(rdReadSections(), 'pubs'); return (sec && sec.masterSite) || { on: false, label: 'Google Scholar', url: '' }; }
@@ -1004,6 +1051,7 @@
       sel.addEventListener('change', function () { writeMS({ label: sel.value }); });
       url.addEventListener('blur', function () { writeMS({ url: url.value }); });
       row.appendChild(lbl); row.appendChild(sel); row.appendChild(url);
+      s9.body.appendChild(rdEl('div', 'font-size:10px;text-transform:uppercase;letter-spacing:.5px;opacity:.55;margin:9px 0 4px;padding-top:9px;border-top:1px solid rgba(255,255,255,.08);', 'Profile link (optional, off by default)'));
       s9.body.appendChild(row);
     })();
     body.appendChild(s9.sec);

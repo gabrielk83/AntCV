@@ -49,7 +49,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.848-review-edit-launcher';
+  var VERSION = '1.50.849-review-collapse';
   if (window.__antcvDataExport360 === VERSION) return;
   window.__antcvDataExport360 = VERSION;
 
@@ -460,12 +460,32 @@
     wrap.appendChild(inp);
     return wrap;
   }
+  // PERSONAL-MERGE-2 (owner 2026-06-24): every card is a disclosure, COLLAPSED by
+  // default so the modal opens as a clean list of headings instead of a wall of
+  // fields. Open/closed state persists per section (keyed off the title, minus any
+  // parenthetical count so the key stays stable as counts change).
+  function rdCollapseKey(title) {
+    return 'antcv:rvCollapse:' + String(title).replace(/\(.*?\)/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  }
   function rdSection(emoji, title, explanation) {
     var sec = rdEl('div', 'background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.10);border-radius:10px;padding:12px 13px;');
-    sec.appendChild(rdEl('div', 'font-size:13px;font-weight:700;color:#e6eef3;margin:0 0 2px;', emoji + '  ' + title));
-    if (explanation) sec.appendChild(rdEl('div', 'font-size:11px;opacity:.6;line-height:1.45;margin:0 0 9px;', explanation));
+    var key = rdCollapseKey(title);
+    var collapsed = true;
+    try { if (localStorage.getItem(key) === '0') collapsed = false; } catch (_) {}
+    var hdr = rdEl('button', 'display:flex;align-items:center;gap:8px;width:100%;padding:0;margin:0;background:transparent;border:none;cursor:pointer;text-align:left;color:inherit;');
+    hdr.type = 'button';
+    var caret = rdEl('span', 'font-size:10px;opacity:.6;flex:0 0 auto;', '▸');
+    hdr.appendChild(caret);
+    hdr.appendChild(rdEl('span', 'font-size:13px;font-weight:700;color:#e6eef3;flex:1;', emoji + '  ' + title));
+    sec.appendChild(hdr);
+    var inner = rdEl('div', 'margin-top:9px;');
+    if (explanation) inner.appendChild(rdEl('div', 'font-size:11px;opacity:.6;line-height:1.45;margin:0 0 9px;', explanation));
     var body = rdEl('div', 'display:flex;flex-direction:column;gap:6px;');
-    sec.appendChild(body);
+    inner.appendChild(body);
+    sec.appendChild(inner);
+    function apply() { inner.style.display = collapsed ? 'none' : ''; caret.textContent = collapsed ? '▸' : '▾'; }
+    apply();
+    hdr.addEventListener('click', function () { collapsed = !collapsed; try { localStorage.setItem(key, collapsed ? '1' : '0'); } catch (_) {} apply(); });
     return { sec: sec, body: body };
   }
   function rdTip(text) {
@@ -602,9 +622,18 @@
       var cur = rdReadPI(); cur.experience = clean; rdSavePI(cur);
     }
     var s = rdSection('💼', 'Work history (' + roles.length + ' roles)', 'Edit titles, dates, visibility, bullets and outcomes. Add or remove a role in the editor’s Experience section.');
-    roles.forEach(function (r) {
+    roles.forEach(function (r, ri) {
       var card = rdEl('div', 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:9px 10px;margin-bottom:7px;display:flex;flex-direction:column;gap:6px;');
+      // PERSONAL-MERGE-2: each role collapses to title/company/years; bullets &
+      // outcomes hide behind a per-role caret (collapsed by default) so 12 roles
+      // read as a list, not a wall. State persists per role id/index.
+      var rKey = 'antcv:rvRole:' + (r.id || ('idx' + ri));
+      var rCollapsed = true;
+      try { if (localStorage.getItem(rKey) === '0') rCollapsed = false; } catch (_) {}
       var h = rdEl('div', 'display:flex;gap:6px;align-items:center;');
+      var rCaret = rdEl('button', 'flex:0 0 auto;background:transparent;border:none;color:#e6eef3;font-size:11px;opacity:.6;cursor:pointer;padding:0 2px;', '▸');
+      rCaret.type = 'button'; rCaret.title = 'Expand / collapse this role';
+      h.appendChild(rCaret);
       h.appendChild(rdInpCommit(r.title, 'Job title', function (v) { r.title = v; }, commit, true));
       var visLbl = rdEl('label', 'display:flex;align-items:center;gap:5px;font-size:11px;opacity:.8;cursor:pointer;flex:0 0 auto;');
       var vis = document.createElement('input'); vis.type = 'checkbox'; vis.checked = r.on !== false; vis.style.cssText = 'accent-color:#01B7BB;';
@@ -616,8 +645,13 @@
       cy.appendChild(rdInpCommit(r.company, 'Company', function (v) { r.company = v; }, commit));
       cy.appendChild(rdInpCommit(r.years, 'Years', function (v) { r.years = v; }, commit));
       card.appendChild(cy);
-      card.appendChild(rdLineArea('Bullets', r.bullets, function (a) { r.bullets = a; }, commit));
-      card.appendChild(rdLineArea('Outcomes', r.outcomes, function (a) { r.outcomes = a; }, commit));
+      var detail = rdEl('div', 'display:flex;flex-direction:column;gap:6px;');
+      detail.appendChild(rdLineArea('Bullets', r.bullets, function (a) { r.bullets = a; }, commit));
+      detail.appendChild(rdLineArea('Outcomes', r.outcomes, function (a) { r.outcomes = a; }, commit));
+      card.appendChild(detail);
+      function rApply() { detail.style.display = rCollapsed ? 'none' : ''; rCaret.textContent = rCollapsed ? '▸' : '▾'; }
+      rApply();
+      rCaret.addEventListener('click', function () { rCollapsed = !rCollapsed; try { localStorage.setItem(rKey, rCollapsed ? '1' : '0'); } catch (_) {} rApply(); });
       s.body.appendChild(card);
     });
     if (!roles.length) s.body.appendChild(rdEl('div', 'font-size:11px;opacity:.45;', 'No work history stored yet.'));

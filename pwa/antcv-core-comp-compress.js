@@ -4,8 +4,9 @@
  * Strategic Expertise]. Owner asks:
  *   - keep the Focus Area label COMPRESSED — e.g. "Documentation & traceability"
  *     → "Docs & traceability";
- *   - cap each Strategic Expertise cell: the COVER LETTER (bring) at 105 chars; the
- *     CV (core_comp) MUCH tighter (owner 2026-06-22: "CV is much much tighter!").
+ *   - cap each Strategic Expertise cell: the COVER LETTER (bring) UNDER 90 chars
+ *     (owner 2026-06-25; was 105); the CV (core_comp) MUCH tighter (owner
+ *     2026-06-22: "CV is much much tighter!").
  *
  * Trims the Strategic Expertise cell to its per-doc cap at a WORD boundary (no
  * mid-word cut, no added ellipsis) and applies a small Focus-Area abbreviation map
@@ -15,11 +16,11 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.831';
+  var VERSION = '1.50.877';
   if (window.__antcvCoreCompCompress === VERSION) return;
   window.__antcvCoreCompCompress = VERSION;
 
-  var CAP_CL = 105;   // cover letter — WHAT I BRING
+  var CAP_CL = 89;    // cover letter — WHAT I BRING (owner 2026-06-25: each item UNDER 90 chars; was 105)
   var CAP_CV = 60;    // CV — CORE COMPETENCIES (much tighter, owner: "CV is much much tighter")
   function capFor(s) {
     return (s.id === 'bring' || /what i bring/i.test(String(s.title || ''))) ? CAP_CL : CAP_CV;

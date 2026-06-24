@@ -1,7 +1,7 @@
 # Next-nightly handoff — 2026-06-24 (AUTHORITATIVE current state)
 
 > Read this FIRST, then `CLAUDE.md`, then the per-batch detail at the top of `ACTIVE_BUGS.md`.
-> Current shipped: **PWA 1.50.870** (origin/main `36fe94a`) + **docx-worker 1.14.81-trailing-blank-trim** (deployed, /health confirms).
+> Current shipped: **PWA 1.50.873** + **docx-worker 1.14.82-balance-overflow** (deployed, /health confirms).
 > Suite **467/467**. PWA auto-deploys on push to `main`; the docx-worker is a manual deploy.
 
 ## ⭐ TOP PRIORITY for the next run — the owner is providing a FRESH unsolicited CV export

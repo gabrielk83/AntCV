@@ -5393,7 +5393,15 @@
                 key: String(i),
                 node: React.createElement(
                   "p",
-                  { key: i, style: __pStyle },
+                  // RICH-BLOCK-ROWPATH-001 (owner 2026-06-25 "certs should be on page 2"):
+                  // the grp (sub-heading) branch tags rows with data-antcv-row-path, but the
+                  // non-grp body rows did NOT — so the auto-pagebreak measurer (which finds
+                  // breakable items via [data-antcv-row-path^="items."]) could see ONLY group
+                  // headers. A FLAT rich_block with no groups (CERTIFICATES) exposed ZERO
+                  // break points, so it could never paginate: it crammed page 1 and cascaded
+                  // the export to extra pages. Tag every body row so any rich_block (grouped
+                  // or flat) paginates.
+                  { key: i, "data-antcv-row-path": "items." + i, style: __pStyle },
                   mk
                     ? __mkStr
                       ? React.createElement(

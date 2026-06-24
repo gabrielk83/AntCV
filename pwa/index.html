@@ -330,7 +330,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.50.871';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.50.871';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.50.872';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -372,7 +372,7 @@
           app.src = 'app.js?v=1.50.859';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.50.871';
+            vo.src = 'antcv-version-override.js?v=1.50.872';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -675,6 +675,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      scheduler + ONE MutationObserver. The three old files stay on disk,
      unreferenced. -->
 <script src="antcv-photo-ui-427.js?v=1.50.647" defer></script>
+<script src="antcv-photo-control-collapse.js?v=1.50.872" defer></script>
 <script src="antcv-preview-header-tokens.js?v=1.50.41" defer></script>
 <!-- v1.50.159: sidebar-bg tokenization — recolours the preview sidebar per visual
      style (var(--package-base) cascade), matching the DOCX. Companion to
@@ -970,7 +971,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      back up before erasing. Loads AFTER cloud-delete-296 + app.js so its erase
      wrap composes outside the original. Escape: localStorage['antcv:disable-data-export']='1'. -->
 <script src="antcv-quick-contact-collapse.js?v=1.50.598" defer></script>
-<script src="antcv-data-export-360.js?v=1.50.865" defer></script>
+<script src="antcv-data-export-360.js?v=1.50.872" defer></script>
 <script src="antcv-personal-dedup-hide.js?v=1.50.861" defer></script>
 <script src="antcv-settings-sync-extra.js?v=1.50.629" defer></script>
 <script src="antcv-showcase-banner-persist.js?v=1.50.696" defer></script>

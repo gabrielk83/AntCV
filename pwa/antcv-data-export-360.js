@@ -940,26 +940,14 @@
     })();
     body.appendChild(sP.sec);
 
-    // 7 — CV sidebar content — collapsible group, COLLAPSED by default (owner
-    // 2026-06-24), matching the per-card disclosure register. The sidebar editors
-    // append into sbBody so the whole group hides/shows as one.
-    var sbKey = 'antcv:rvCollapse:cv-sidebar-content';
-    var sbCollapsed = true;
-    try { if (localStorage.getItem(sbKey) === '0') sbCollapsed = false; } catch (_) {}
-    var sbHdr = rdEl('button', 'display:flex;align-items:center;gap:8px;width:100%;padding:0;margin:6px 0 0;background:transparent;border:none;cursor:pointer;text-align:left;color:inherit;');
-    sbHdr.type = 'button';
-    var sbCaret = rdEl('span', 'font-size:10px;opacity:.6;flex:0 0 auto;', '▸');
-    sbHdr.appendChild(sbCaret);
-    sbHdr.appendChild(rdEl('div', 'font-size:13px;font-weight:700;color:#e6eef3;flex:1;', '📎  CV sidebar content'));
-    body.appendChild(sbHdr);
-    var sbInner = rdEl('div', 'margin-top:9px;');
-    sbInner.appendChild(rdEl('div', 'font-size:11px;opacity:.6;line-height:1.45;margin:0 0 9px;', 'The structured side column. Edits save instantly and flow into new CVs (existing drafts keep theirs until re-applied). Group headings are preserved.'));
-    var sbBody = rdEl('div', 'display:flex;flex-direction:column;gap:11px;');
-    sbInner.appendChild(sbBody);
-    body.appendChild(sbInner);
-    function sbApply() { sbInner.style.display = sbCollapsed ? 'none' : ''; sbCaret.textContent = sbCollapsed ? '▸' : '▾'; }
-    sbApply();
-    sbHdr.addEventListener('click', function () { sbCollapsed = !sbCollapsed; try { localStorage.setItem(sbKey, sbCollapsed ? '1' : '0'); } catch (_) {} sbApply(); });
+    // 7 — CV sidebar content — a BOXED card (rdSection) matching its siblings
+    // (owner 2026-06-24: "add CV sidebar content inside the same blue box as the
+    // other elements"). rdSection supplies the blue box + the COLLAPSED-by-default
+    // header/caret disclosure register; the sidebar editors append into its body so
+    // the whole group hides/shows as one.
+    var sSb = rdSection('📎', 'CV sidebar content', 'The structured side column. Edits save instantly and flow into new CVs (existing drafts keep theirs until re-applied). Group headings are preserved.');
+    var sbBody = sSb.body;
+    body.appendChild(sSb.sec);
     sbBody.appendChild(rdSidebarSection({ emoji: '🔧', title: 'Tools & methods', help: 'Label + value per row; add group headings to organise.', key: 'tools', kind: 'lv', grouped: true, cols: ['Label', 'Value'] }, pi.tools));
     sbBody.appendChild(rdSidebarSection({ emoji: '🎓', title: 'Education', help: 'Degree + school / details per row.', key: 'education', kind: 'degsch', cols: ['Degree', 'School / details'] }, pi.education));
     sbBody.appendChild(rdSidebarSection({ emoji: '📜', title: 'Certifications', help: 'One per row.', key: 'certifications', kind: 'str', cols: ['Certification'] }, pi.certifications));

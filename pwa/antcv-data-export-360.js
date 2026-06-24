@@ -49,7 +49,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.864-pubs-split-personality';
+  var VERSION = '1.50.865-interests-richblock';
   if (window.__antcvDataExport360 === VERSION) return;
   window.__antcvDataExport360 = VERSION;
 
@@ -649,7 +649,14 @@
     function loadRows() {
       var sec = rdFindSection(rdReadSections(), cfg.id);
       var items = (sec && Array.isArray(sec.items)) ? sec.items : [];
-      return items.filter(function (r) { return r && !('group' in r); }).map(function (r) { var o = {}; FIELDS.forEach(function (f) { o[f.key] = String((r && r[f.key]) || ''); }); return o; });
+      return items.filter(function (r) { return r && !('group' in r) && !('grp' in r); }).map(function (r) {
+        var o = {}; FIELDS.forEach(function (f) { o[f.key] = String((r && r[f.key]) || ''); });
+        // A rich_block section (e.g. Gabriel's interests) stores rows as {b,t};
+        // surface them through the default l/v fields so they show + stay editable.
+        if (Object.prototype.hasOwnProperty.call(o, 'l') && !o.l && r && r.b != null) o.l = String(r.b);
+        if (Object.prototype.hasOwnProperty.call(o, 'v') && !o.v && r && r.t != null) o.v = String(r.t);
+        return o;
+      });
     }
     function cleanItems() {
       return arr.map(function (r) { var o = {}; FIELDS.forEach(function (f) { o[f.key] = String(r[f.key] || '').trim(); }); return o; })
@@ -661,9 +668,13 @@
       var sec = rdFindSection(s, cfg.id);
       var items = cleanItems();
       if (!sec) { if (!items.length) { if (typeof cfg.sync === 'function') { try { cfg.sync(items); } catch (_) {} } return; } sec = { id: cfg.id, title: (cfg.title || cfg.id).toUpperCase(), loc: 'sidebar', on: true, type: SECTYPE, items: [] }; s.cv.push(sec); }
-      // preserve any group markers that 415 may have placed; replace only the data rows.
-      var groups = (Array.isArray(sec.items) ? sec.items : []).filter(function (r) { return r && 'group' in r; });
-      sec.items = groups.concat(items);
+      // preserve any group markers 415 may have placed; replace only the data rows.
+      var groups = (Array.isArray(sec.items) ? sec.items : []).filter(function (r) { return r && ('group' in r || 'grp' in r); });
+      // Write rows in the section's OWN shape: rich_block keeps {b,t}, so a
+      // {l,v} edit never collides with / duplicates the existing rich rows.
+      var rich = sec.type === 'rich_block';
+      var rows = items.map(function (r) { return (rich && ('l' in r) && ('v' in r)) ? { b: r.l, t: r.v } : r; });
+      sec.items = groups.concat(rows);
       if (!sec.type) sec.type = SECTYPE;
       rdSaveSections(s);
       if (typeof cfg.sync === 'function') { try { cfg.sync(items); } catch (_) {} }

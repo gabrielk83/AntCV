@@ -1,4 +1,4 @@
-const VERSION='3.6.0-eightfold-jd';
+const VERSION='3.6.1-jd-bot-wall';
 // Cloudflare Worker — multi-provider LLM proxy with streaming for Anthropic
 // Includes /preferences route for AntCV cloud save.
 //

@@ -21,7 +21,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.439';
+  var VERSION = '1.50.853-personality-results';
   if (window.__antcvPersonalityQuiz439 === VERSION) return;
   window.__antcvPersonalityQuiz439 = VERSION;
 
@@ -260,11 +260,27 @@
     (document.body || document.documentElement).appendChild(backdrop);
   }
 
-  // ─── Settings → Personal entry (collapsible under the Languages card) ──────
+  // PERSONAL-MERGE-5 (owner 2026-06-24): the standalone languages anchor was
+  // retired (LanguageCard is embedded in the writing-style island), so the old
+  // anchor made this card vanish. Anchor on the writing-style-picker column (the
+  // Personal flex column), falling back to the legacy anchor for safety.
+  function findPersonalCol() {
+    var a = document.getElementById('antcv-react-writing-style-picker')
+      || document.querySelector('[data-antcv-react-mount="writing-style-picker"]')
+      || document.getElementById('antcv-react-personal-languages');
+    if (!a) return null;
+    var n = a;
+    for (var i = 0; i < 8 && n && n.parentElement; i++) {
+      try { var cs = getComputedStyle(n.parentElement); if (cs.display === 'flex' && /column/.test(cs.flexDirection)) return n.parentElement; } catch (_) {}
+      n = n.parentElement;
+    }
+    return a.parentElement || null;
+  }
+
+  // ─── Settings → Personal entry (collapsible; shows the kernel result) ──────
   function injectCard() {
-    var langCard = document.getElementById('antcv-react-personal-languages');
-    if (!langCard || !langCard.parentElement) { var ex0 = document.getElementById(CARD_ID); if (ex0) ex0.remove(); return; }
-    var col = langCard.parentElement;
+    var col = findPersonalCol();
+    if (!col) { var ex0 = document.getElementById(CARD_ID); if (ex0) ex0.remove(); return; }
     var existing = document.getElementById(CARD_ID);
     if (existing) { if (existing.parentElement !== col) existing.remove(); else return; }
     // PERSONAL-CARDS-VERTICAL-001 (owner 2026-06-13): full-width so it stacks
@@ -281,6 +297,20 @@
     body.appendChild(el('div', 'font-size:11px;color:rgba(255,255,255,0.55);line-height:1.45;margin-bottom:8px;',
       has ? 'Your kernel is set — generation writes your traits as behaviour, not adjectives. Retake to update it.'
           : 'An 8-question quiz that teaches AntCV how to write you — as concrete behaviour, never adjective lists.'));
+    // Results readout: the ranked trait labels + the work-style line the kernel produced.
+    if (has) {
+      var rwrap = el('div', 'margin:0 0 9px;');
+      var chips = el('div', 'display:flex;flex-wrap:wrap;gap:4px;margin:0 0 6px;');
+      (pi.personality.traits || []).forEach(function (tr) {
+        var lbl = (tr && (tr.label || tr.id)) || '';
+        if (lbl) chips.appendChild(el('span', 'font-size:11px;padding:2px 8px;border-radius:11px;background:rgba(1,183,187,0.16);color:#bdf0f1;', String(lbl)));
+      });
+      if (chips.childNodes.length) rwrap.appendChild(chips);
+      var wsl = pi.personality.work_style_line;
+      wsl = wsl && (wsl.en || (typeof wsl === 'string' ? wsl : ''));
+      if (wsl) rwrap.appendChild(el('div', 'font-size:11px;opacity:.75;line-height:1.45;font-style:italic;', String(wsl)));
+      if (rwrap.childNodes.length) body.appendChild(rwrap);
+    }
     var btn = el('button', 'padding:7px 13px;border-radius:7px;border:0;background:#01B7BB;color:#06243a;cursor:pointer;font-size:12px;font-weight:800;', has ? 'Retake the quiz' : 'Take the quiz');
     btn.type = 'button';
     btn.setAttribute('data-antcv-personality-quiz-open', '1');

@@ -49,7 +49,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.852-additional-subblocks';
+  var VERSION = '1.50.853-fab-removal';
   if (window.__antcvDataExport360 === VERSION) return;
   window.__antcvDataExport360 = VERSION;
 
@@ -1034,7 +1034,11 @@
     if (disabled()) return;
     injectLauncher();
     injectCheckbox();
-    mountExportFab();
+    // PERSONAL-MERGE-5 (owner 2026-06-24): the floating account-locked export FAB
+    // is removed — the control now lives in Settings -> Personal (the launcher)
+    // and in the Review & Edit modal footer. Sweep away any stale FAB a prior
+    // build left mounted.
+    try { var fab = document.querySelector('.antcv-export-fab'); if (fab) fab.remove(); } catch (_) {}
   }
 
   // Throttled, idempotent sweep. Once the nodes exist the sweep is a no-op, so

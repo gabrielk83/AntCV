@@ -358,11 +358,21 @@ work. Use `git worktree add` for any `app.src.js`/`app.js` change.
   part is DONE (Coord.) and the residual genuinely needs an OWNER live signed-in demo: edit a non-Coord
   focus-area cell, scroll/wait, and report whether it reverts (with the network tab showing a cloud-restore
   GET overwriting the autosave). Until that repro, no further code is safe to write here.
-- **CV-UNSOLICITED-ALL-ROLES-001** `[OPEN — regen/prompt]` — in the 2026-06-23 unsolicited regen, 4 roles
-  are `on:false` (Security Guard, IDF Computer Systems Administrator, Pan Idræt foreningsarbejde, Students
-  Council). EXPERIENCE-TAILOR-001 already says "for the UNSOLICITED kernel keep FULL breadth (do NOT
-  prune)" but the LLM pruned anyway. FIX DIRECTION: harden the prompt (unsolicited ⇒ EVERY role on:true,
-  never hide) + verify on regen. Deterministic un-hide sidecar deferred (clobber-class risk vs manual hides).
+- **CV-UNSOLICITED-ALL-ROLES-001** `[PROMPT-HARDENED 1.50.846 — owner regen-verify owed — nightly 2026-06-24]` —
+  in the 2026-06-23 unsolicited regen, 4 roles came back `on:false` (Security Guard, IDF Computer Systems
+  Administrator, Pan Idræt foreningsarbejde, Students Council). EXPERIENCE-TAILOR-001's trailing "for the
+  UNSOLICITED kernel keep FULL breadth (do NOT prune)" was too weak (buried at the end of the targeted-PRUNE
+  sentence), so the LLM pruned anyway. **FIX (1.50.846, prompt-only, app.src.js ~2926 + app.js mirror):**
+  hardened EXPERIENCE-TAILOR-001 with an explicit emphatic standalone directive — **UNSOLICITED-ALL-ROLES-001:
+  "when there is NO job description … you MUST emit EVERY role with on:true — hide NONE, drop NONE, merge NONE …
+  INCLUDING junior, volunteer/foreningsarbejde (Copenhagen Wolves / Pan Idraet), security-guard, students-council,
+  teaching-assistant and early IT/systems-administration roles … breadth IS the point of an unsolicited CV"** —
+  and pins the relevance-based hide/consolidate rules to JD-present only. Deterministic un-hide sidecar STILL
+  deferred (a render-time force-on:true would clobber the owner's manual 👁 hides — can't distinguish LLM-prune
+  from owner-hide). **Owner: regenerate the unsolicited CV and confirm all roles appear** (prompt-only changes
+  are not headless-verifiable; boot-smoke + suite 463/463 green, app.js mirror count-guarded + integrity intact).
+  NOTE: prior prompt-insert regression precedent (838→840) — if this regresses anything, revert is the single
+  app.js mirror block + the app.src.js string tail.
 - **CV-MERGE-TITLE-ORDER-001** `[OPEN — regen/prompt]` — merged role title "Electro-Optics Team Leader /
   R&D Electro-Optics Engineer" should be "R&D Electro-Optics Engineer / Team Leader" (rule: CONTENT/
   specialist function FIRST, level/seniority AFTER; don't repeat the domain word). That role is also

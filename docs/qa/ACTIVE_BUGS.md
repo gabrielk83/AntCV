@@ -342,7 +342,7 @@ work. Use `git worktree add` for any `app.src.js`/`app.js` change.
   Coordinate(d/s) / Coordination). Test `core-comp-compress-coord.test.mjs` (8).
 
 ### OPEN / diagnosed
-- **TABLE-CELL-EDIT-REVERT** `[PARTIAL — Coord. cause fixed 831; non-Coord needs owner retest]` — owner:
+- **TABLE-CELL-EDIT-REVERT** `[PARTIAL — Coord. cause fixed 831; residual CONFIRMED owner-gated (live demo) — nightly 2026-06-24]` — owner:
   editing focus-area cells in CV/CL reverts after a few seconds (scroll), not saved on refresh/export.
   CONFIRMED cause for "Coord." = the abbreviator (fixed). A data-layer repro (writing edits straight into
   `localStorage.sections` + dispatching sections-updated) showed NON-Coord focus edits ("Technical-
@@ -350,6 +350,14 @@ work. Use `git worktree add` for any `app.src.js`/`app.js` change.
   no-op when disjoint, so they don't clobber. If non-Coord edits STILL revert after 831, the cause is the
   editor-panel (`d({rows})`, app.src.js:7918) → React `ro` → autosave → cloud-restore sync path
   (app-level), needing a live demo of the actual panel-edit flow to pin.
+  **NIGHTLY 2026-06-24 — residual is NOT headless-reproducible (confirmed via a written diag, then removed):**
+  the synthetic headless editor boot renders only ~5 global control inputs — the per-section CORE
+  COMPETENCIES table editor panel is NOT in the DOM (no `core_comp` cell inputs, no "CORE COMPETENCIES"
+  editor label, 0 textareas), so the panel-edit `onChange→d({rows})` flow can't be driven headlessly; and
+  the suspected residual clobber (cloud-restore sync) can't fire without a real cloud. So the deterministic
+  part is DONE (Coord.) and the residual genuinely needs an OWNER live signed-in demo: edit a non-Coord
+  focus-area cell, scroll/wait, and report whether it reverts (with the network tab showing a cloud-restore
+  GET overwriting the autosave). Until that repro, no further code is safe to write here.
 - **CV-UNSOLICITED-ALL-ROLES-001** `[OPEN — regen/prompt]` — in the 2026-06-23 unsolicited regen, 4 roles
   are `on:false` (Security Guard, IDF Computer Systems Administrator, Pan Idræt foreningsarbejde, Students
   Council). EXPERIENCE-TAILOR-001 already says "for the UNSOLICITED kernel keep FULL breadth (do NOT

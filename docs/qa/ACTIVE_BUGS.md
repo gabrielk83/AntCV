@@ -1,5 +1,33 @@
 > **AUTHORITATIVE current state + next-session prompt: `docs/qa/SESSION_HANDOFF_2026-06-18-pm3.md`.** It supersedes the scattered PM/PM2 docs for what shipped (640-652) and what's open. The blocks below are the per-batch detail.
 
+## Owner real-PDF review — 2026-06-24 (run 8) — regulatory dup-group merge (1.50.869)
+
+- **DUP-GROUP-MERGE-001** `[SHIPPED 1.50.869]` — analysing the owner's REAL exported CV (9 pages) +
+  his live sections: REGULATORY CONTEXT had SEVEN {grp} headers but only FOUR distinct groups — three
+  were duplicated under case/&-variant names ("Systems, safety and cybersecurity" + "Systems, Safety &
+  Cybersecurity"; "Electrical and EMC" + "Electrical & EMC"; "Environmental, durability and materials
+  compliance" + "...Durability & Materials Compliance"). A generation-merge dedup miss. New sidecar
+  `antcv-dup-group-merge.js` canonicalises group names (lowercase, &->and, punctuation collapsed) and
+  MERGES same-canonical groups under the first header, concatenating rows + dropping exact-duplicate
+  rows; distinct groups untouched; idempotent + loop-safe + restore-proof. Shrinks the sidebar (the
+  column that drives the overflow) and fixes the visible duplicate-header defect. Unit test
+  `dup-group-merge.test.mjs` (4: 7->4 headers + rows preserved, idempotent, exact-dup dedup, no false
+  merge); suite 467/467. NOTE: certs were a FALSE ALARM (string items render fine via the export's
+  string->{t} path; not hidden).
+
+- **CV-SIDEBAR-SPILL-9-PAGES — deep fix STILL OPEN (spec'd)** — the bulk of the 9-page overflow is the
+  sheer SIDEBAR VOLUME (regulatory ~21 standards + tools 14 + certs 9 + education/langs/interests/access)
+  far exceeding the MAIN column (12 roles), so `numPages = max(sidebarPages, mainPages)` (src/index.js
+  ~24664) leaves pages 5-8 with sidebar content + an EMPTY main cell. The dup-group-merge + trailing-trim
+  (1.14.81) trim the edges but do NOT materially cut the count. The real fix re-flows the overflow
+  sidebar FULL-WIDTH (single column → ~2x density → ~half the overflow pages). That is a high-blast-radius
+  docx-worker change whose LibreOffice/CloudConvert PDF rendering can't be verified headlessly — needs a
+  real-export check. SPEC for a focused session: (1) find lastMainSlot; (2) for slots > lastMainSlot,
+  concatenate the sidebar content and emit ONE full-width navy single-cell table (reuse the per-row
+  atLeast navy-fill mechanism) with natural flow so the converter paginates it at full width; (3) move
+  the AI-watermark anchor to the true last (full-width) page; (4) ship behind a payload kill switch,
+  verify on a real export before enabling broadly.
+
 ## Owner batch — 2026-06-24 (run 7 cont.) — pagination trailing-blank trim (docx-worker 1.14.81)
 
 - **PB-WORKER-TRAILING-BLANK-001** `[SHIPPED docx-worker 1.14.81]` — owner "fix pagination/page overflow":

@@ -1,5 +1,56 @@
 > **AUTHORITATIVE current state + next-session prompt: `docs/qa/SESSION_HANDOFF_2026-06-18-pm3.md`.** It supersedes the scattered PM/PM2 docs for what shipped (640-652) and what's open. The blocks below are the per-batch detail.
 
+## Owner live-QA batch — 2026-06-24 (run 4) — unsolicited-gen inspection (1.50.846 → 847)
+
+Owner inspected a live unsolicited generation and reported a batch. CONFIRMED FIXED by owner:
+**TABLE-CELL-EDIT-REVERT** (focus-area cell edits now persist). Shipped this batch:
+
+- **TOOLS-GROUP-FOLD-001** `[SHIPPED 1.50.847]` — owner: "tools group broke apart." The TOOLS & METHODS
+  sidebar rendered a HEADERLESS preamble (Product&systems / Software / Optics&imaging) before an
+  "Expertise" group, with a separate "Tools" group further down. Root cause: `antcv-tools-merge-dedup.js`
+  `collapse()` correctly LEAVES leading rows that don't overlap the groups (genuinely unique content), so
+  they float before the first {grp}. FIX (sidecar, no app.js): new loop-safe `foldLeadingIntoGroup()` pass
+  folds surviving leading ungrouped rows under an existing Tools/Software/Systems/Instruments group (or
+  prepends a canonical "Tools" header) → one coherent grouped structure, no headerless preamble, content
+  preserved, exact-dups removed. Heals stored data on load (NO regen needed). Verified
+  `diag-tools-merge-dedup.mjs` (new assertion: zero ungrouped rows before first group; existing stash
+  assertions still green). Suite 463/463.
+- **CL-CONTRIBUTE-INTRO-CLOSING-002** `[SHIPPED 1.50.847 — owner regen-verify]` — owner: HOW I WOULD
+  CONTRIBUTE shows 4 blank "(click to add)" bullets. Root cause: the unsolicited flag `p` (app.src.js
+  ~24585) went false because `io.company` drifts off the literal "Unsolicited", so the contribute neutral
+  fallbacks never fired. FIX (app.src.js + app.js mirror, LOGIC ONLY — NOT the 1.50.838 prompt change that
+  regressed/reverted): widened `p` to also trust `localStorage["antcv:activeAppCompany"]==="unsolicited"`.
+  Makes the neutral contribute bullets + intro/closing fire on the next generation. Mirror count-guarded;
+  boot-smoke + suite 463/463. Owner verifies on next unsolicited regen.
+- **WORKSTYLE-DISTINCT-001** `[SHIPPED 1.50.847 — owner regen-verify]` — owner: "work style is duplicating
+  the last profile section." Both ended on KPIs / evidence / trust between engineering-suppliers-management.
+  FIX (prompt, app.src.js ~2970 + app.js mirror): new rule forcing work_style_content to take a DIFFERENT
+  angle from the profile's people/communication CLOSE and not reuse its closing noun set. Prompt-only —
+  owner verifies on regen.
+
+### Still OPEN from this batch (diagnosed, not shipped this run)
+- **GEN-STATUS-ENDS-EARLY-001** `[OPEN — diagnosed, app.src.js state-machine]` — the purple generation
+  overlay (`Ue`, app.src.js:12365; gate :41496 on `Nt`) dissolves the instant `sections` commit (the lazy
+  `Nt` initializer :14314 downgrades "generating"→"editor" once sections exist), BEFORE the "🔎 Tightening
+  to length targets…" phase — so it looks done when it isn't. Owner wants it to stay active through
+  tightening until the Application Analysis panel appears. FIX: a persisted `genInFlight` flag set at
+  :23401, cleared after tightening+analysis (:26015), gate the overlay on it, and stop the initializer
+  downgrading mid-flight. Multi-site app.src.js + mirror (riskier — state machine); deferred to a focused
+  pass. NOT a sidecar (the showcase-banner-persist sidecar governs a different element). Headless-simulable
+  via the step machine.
+- **RELOAD-LOOP-001 (settings ruler press resets app)** `[OPEN — instrumented, needs live capture]` — the
+  SPACING & INDENTS sliders (app.src.js ~13707) fire a cloud-write burst on drag; an auth re-emit on
+  cloud-write can trigger a `location.reload` (RELOAD-SPURIOUS-GUARD-001 family). The `[reload-who]`
+  attribution wrapper (`antcv-diag-probes-370.js`) is already armed — owner: drag a slider until it resets,
+  then read the console `[reload-who] …` line (or `AntcvDiag()`) to name the caller, and whether a 2nd tab
+  was open. Not headless-reproducible.
+- **WITHIN-PACKAGE STYLE redesign** `[OPEN — feature]` — make the Default/Alt1/Alt2 head/sidebar picker
+  compact with CIRCULAR swatches, sync it to the preview quick-alt circles, and ensure the quick-alts
+  actually change `--header-bg` (candidate band + table headers). Island/app.src UI work.
+- **Merge Application Analysis + JD-analysis into one rollable menu** `[OPEN — feature/UX]`.
+- **WORK-STYLE / PROFILE & sidebar-salmon** — sidebar still spills with no visible salmon bars
+  (CV-SIDEBAR-SPILL-9-PAGES-001 / salmon completion, item #5 deep two-column balancing — owner-gated live).
+
 ## Nightly autonomous — 2026-06-24 (run 2) — CV ghost placeholder roles in preview (1.50.842)
 
 Fresh nightly run. Confirmed the kickoff bucket-A export backlog is all shipped; the live 0624 owner-QA

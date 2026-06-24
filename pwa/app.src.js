@@ -2968,6 +2968,12 @@
           );
         } catch (_) {}
       })();
+      // WORKSTYLE-DISTINCT-001 (owner 2026-06-24): the WORK STYLE line was
+      // duplicating the PROFILE's closing sentence (both ended on KPIs / evidence /
+      // trust between engineering-suppliers-management). Force them complementary.
+      r.push(
+        "PROFILE / WORK STYLE DISTINCTNESS (WORKSTYLE-DISTINCT-001): work_style_content must NOT restate or paraphrase the PROFILE. The PROFILE already CLOSES on a people / communication / judgement sentence (PROFILE-END-COMMUNICATION-001), so the WORK STYLE line must take a DIFFERENT angle and must NOT reuse the same key nouns/phrases that the profile's final sentence used - e.g. if the profile ends on KPIs / evidence / visible results / trust / stakeholders / engineering-suppliers-management, the WORK STYLE must NOT repeat those; cover instead HOW decisions are made (working from measured data, handling uncertainty or disagreement, written clarity, calm practical next steps). The two must read as complementary - never the same sentence, never the same closing noun set.",
+      );
       try {
         var _g_bw, _g_bp, _g_pt;
         if (
@@ -24593,7 +24599,15 @@
                     // to blank/placeholder. Also accept the response meta company
                     // and the showcase JD sentinel as kernel signals.
                     !!(W && "Unsolicited" === W.company) ||
-                    Un.current === ks,
+                    Un.current === ks ||
+                    // CL-CONTRIBUTE-INTRO-CLOSING-002 (owner 2026-06-24): io.company
+                    // drifts off the literal "Unsolicited" on an active unsolicited
+                    // app, so p went false and the contribute/profile/who/why neutral
+                    // fallbacks never fired -> HOW I WOULD CONTRIBUTE showed 4 blank
+                    // "(click to add)" rows. Trust the explicit persisted unsolicited
+                    // marker too (the same source read at 16187/16403/16451). LOGIC
+                    // ONLY - NOT the 1.50.838 prompt change that regressed (reverted 840).
+                    /^unsolicited$/i.test(String(localStorage.getItem("antcv:activeAppCompany") || "").trim()),
                   // 1.50.280 KERNEL-EXPERIENCE-EMPTY-001: the kernel stores work
                   // history under workHistory (items shaped {id, role, company,
                   // years, bullets}) — NOT "roles", and the field is "role", not

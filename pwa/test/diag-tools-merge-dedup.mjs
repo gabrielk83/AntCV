@@ -46,9 +46,14 @@ await page.waitForTimeout(9000);
 const r = await page.evaluate(()=>{
   const secs = JSON.parse(localStorage.getItem('sections')||'{}');
   const s = (secs.cv||[]).find(x=>x.id==='tools')||{};
-  const leads = (s.items||[]).filter(it=>!it.grp).map(it=>it.b);
+  const items = s.items||[];
+  const leads = items.filter(it=>!it.grp).map(it=>it.b);
   const stashed = (s.trimmedItems||[]).map(it=>it.b);
-  return { visibleLeads:leads, stashedLeads:stashed, nItems:(s.items||[]).length };
+  // TOOLS-GROUP-FOLD-001: after the fold there must be NO headerless ungrouped
+  // preamble — i.e. no ungrouped row appears before the first {grp} marker.
+  let firstGrp = items.findIndex(it=>it&&it.grp);
+  let ungroupedBeforeFirstGrp = firstGrp < 0 ? leads.length : items.slice(0,firstGrp).filter(it=>it&&!it.grp).length;
+  return { visibleLeads:leads, stashedLeads:stashed, nItems:items.length, firstGrp, ungroupedBeforeFirstGrp };
 });
 await browser.close(); await new Promise(rr=>server.close(rr));
 
@@ -70,6 +75,9 @@ if (!r.stashedLeads.includes('Documentation')) { pass=false; fails.push('"Docume
 if (!r.visibleLeads.includes('Niche unique tool')) { pass=false; fails.push('genuinely-unique leading row was wrongly stashed'); }
 if (!r.visibleLeads.includes('Software')) { pass=false; fails.push('detailed "Software" group row lost'); }
 if (r.visibleLeads.indexOf('Data & analytics') > -1) { pass=false; fails.push('concise "Data & analytics" still visible (not collapsed)'); }
+// TOOLS-GROUP-FOLD-001: no headerless ungrouped preamble before the first group
+console.log('ungrouped rows before first group:', r.ungroupedBeforeFirstGrp, '(expect 0 — folded)');
+if (r.ungroupedBeforeFirstGrp !== 0) { pass=false; fails.push('"tools group broke apart": '+r.ungroupedBeforeFirstGrp+' ungrouped row(s) still render before the first group header'); }
 console.log('\n'+(pass?'PASS':'FAIL')+' — TOOLS-MERGE-DEDUP-001');
 if (!pass) { fails.forEach(f=>console.log('  ✗ '+f)); process.exitCode=1; }
 else console.log('  duplicated concise-top rows stashed on trimmedItems; detailed groups kept; unique leading row kept; zero errors.');

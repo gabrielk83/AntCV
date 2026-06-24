@@ -22,7 +22,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.780';
+  var VERSION = '1.50.847-group-fold';
   if (window.__antcvToolsMergeDedup === VERSION) return;
   window.__antcvToolsMergeDedup = VERSION;
   try { var off = localStorage.getItem('antcv:disable-tools-dedup'); if (off === '1' || off === 'true') return; } catch (_) {}
@@ -80,12 +80,59 @@
     return true;
   }
 
+  // TOOLS-GROUP-FOLD-001 (owner 2026-06-24): after collapse(), any leading
+  // ungrouped rows that are GENUINELY UNIQUE (no overlap with the groups, so
+  // collapse() correctly leaves them) still render as a HEADERLESS PREAMBLE
+  // before the first {grp} marker — the owner's "tools group broke apart"
+  // (e.g. Product&systems / Software / Optics&imaging shown above an "Expertise"
+  // group, with a separate "Tools" group further down). Fold those surviving
+  // leading rows INTO a Tools-category group so the whole section is one coherent
+  // grouped structure: merge them under an existing Tools/Software/Systems/
+  // Instruments group if present, else prepend a "Tools" header (the canonical
+  // me() group name — not a fabrication). Content-preserving, dedups exacts.
+  // Loop-safe: once folded there are no ungrouped rows before the first {grp}
+  // (firstGrp becomes 0), so the next run no-ops.
+  var TOOLS_GRP_RX = /^\s*(tools?|software|systems?|instruments?)\b/i;
+  function foldLeadingIntoGroup(sec) {
+    if (!sec || sec.type !== 'rich_block' || !Array.isArray(sec.items)) return false;
+    var items = sec.items;
+    var firstGrp = -1;
+    for (var i = 0; i < items.length; i++) { if (items[i] && items[i].grp) { firstGrp = i; break; } }
+    if (firstGrp <= 0) return false;                       // no leading rows, or no groups
+    var lead = items.slice(0, firstGrp).filter(function (it) { return it && !it.grp; });
+    if (!lead.length) return false;                        // leading run had no real rows
+    var rest = items.slice(firstGrp);
+    var toolsHdr = -1;
+    for (var j = 0; j < rest.length; j++) { if (rest[j] && rest[j].grp && TOOLS_GRP_RX.test(String(rest[j].t || ''))) { toolsHdr = j; break; } }
+    var nextItems;
+    if (toolsHdr >= 0) {
+      // move the leading rows in right after that existing tools-category header
+      nextItems = [];
+      rest.forEach(function (it, k) { nextItems.push(it); if (k === toolsHdr) lead.forEach(function (l) { nextItems.push(l); }); });
+    } else {
+      // no tools-category group exists → prepend a "Tools" header over the leading rows
+      nextItems = [{ grp: true, t: 'Tools' }].concat(lead, rest);
+    }
+    // dedup exact-duplicate rows (same lead+body)
+    var seen = {}, out = [];
+    nextItems.forEach(function (it) {
+      if (it && !it.grp) { var k = String(it.b || '').toLowerCase().trim() + '|' + String(it.t || '').toLowerCase().trim(); if (seen[k]) return; seen[k] = 1; }
+      out.push(it);
+    });
+    sec.items = out;
+    return true;
+  }
+
   function run() {
     try {
       var secs = readSections();
       if (!Array.isArray(secs.cv)) return;
       var changed = false;
-      for (var i = 0; i < secs.cv.length; i++) { if (isTools(secs.cv[i]) && collapse(secs.cv[i])) changed = true; }
+      for (var i = 0; i < secs.cv.length; i++) {
+        if (!isTools(secs.cv[i])) continue;
+        if (collapse(secs.cv[i])) changed = true;
+        if (foldLeadingIntoGroup(secs.cv[i])) changed = true;
+      }
       if (!changed) return;
       localStorage.setItem('sections', JSON.stringify(secs));
       try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { reason: 'tools-merge-dedup' } })); } catch (_) {}

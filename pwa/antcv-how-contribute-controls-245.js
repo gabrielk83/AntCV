@@ -113,7 +113,20 @@
       [data-antcv-hiwc-list] > li { margin:0 0 2px 0!important; padding-left:0!important; }
     `;document.head&&document.head.appendChild(st);
   }
-  function pulse(){try{window.dispatchEvent(new CustomEvent('antcv:sections-updated',{detail:{source:'how-contribute-controls',version:VERSION}}));}catch(_){} try{window.dispatchEvent(new CustomEvent('antcv:item-pages-changed',{detail:{source:'how-contribute-controls',version:VERSION}}));}catch(_){}}
+  // CONTRIBUTE-EDIT-JUMPS-WIB-TABLE-001 (owner 2026-06-24): typing in HOW I WOULD
+  // CONTRIBUTE called pulse() per keystroke, each firing antcv:sections-updated +
+  // antcv:item-pages-changed synchronously. Those wake the preview re-render
+  // (app.src.js item-pages effect) + the unified-pagination probe, which re-measure
+  // the whole CL/main flow and visibly shift the WHAT I BRING ('bring') table on
+  // every key. The 24ms sections-updated damper does NOT cover item-pages-changed.
+  // Fix: keep the localStorage write synchronous (syncSectionField writes BEFORE
+  // pulse(), so no edit is ever lost) but COALESCE the re-dispatch with a trailing
+  // ~180ms debounce — a typing burst yields ONE re-paginate; the final state still
+  // fires after the user pauses. Page-cycle buttons use the separate pulsePages()
+  // and are untouched.
+  function pulseNow(){try{window.dispatchEvent(new CustomEvent('antcv:sections-updated',{detail:{source:'how-contribute-controls',version:VERSION}}));}catch(_){} try{window.dispatchEvent(new CustomEvent('antcv:item-pages-changed',{detail:{source:'how-contribute-controls',version:VERSION}}));}catch(_){}}
+  var __pulseTimer=null;
+  function pulse(){try{clearTimeout(__pulseTimer);}catch(_){}__pulseTimer=setTimeout(function(){__pulseTimer=null;pulseNow();},180);}
   function dispatchInput(el){try{el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));}catch(_){}}
   function getVal(f){return f?(f.isContentEditable?f.textContent:f.value)||'':'';}
   function setVal(f,v){if(!f)return;if(f.isContentEditable)f.textContent=v;else f.value=v;dispatchInput(f);}

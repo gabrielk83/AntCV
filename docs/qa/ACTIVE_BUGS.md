@@ -628,14 +628,23 @@ work. Use `git worktree add` for any `app.src.js`/`app.js` change.
   / the SW/version-mask hazard). Needs live repro to capture which render path paints the print-setup
   state before the page view is ready.
 
-- **CONTRIBUTE-EDIT-JUMPS-WIB-TABLE-001** `[OPEN — preview re-render churn]` — owner QA 0624:
-  "entering HOW I WOULD CONTRIBUTE makes the WHAT I BRING table jumpy". Editing the contribute section
-  triggers a re-pagination/re-render that visibly shifts the WHAT I BRING table. Likely the
-  contribute sidecars (how-contribute-controls-245 + hwic-to-rich-block-760) dispatch
-  `antcv:sections-updated`/`antcv:item-pages-changed` on every edit, which re-runs the measurer and
-  re-lays-out the CL flow (the WIB table moves during the transient re-measure). Mitigation direction:
-  debounce/coalesce the contribute-edit re-dispatch, or stabilise the WIB table height during
-  re-measure. Needs live repro.
+- **CONTRIBUTE-EDIT-JUMPS-WIB-TABLE-001** `[SHIPPED 1.50.843 — nightly 2026-06-24 run 3]` — owner QA
+  0624: "entering HOW I WOULD CONTRIBUTE makes the WHAT I BRING table jumpy". **Root cause confirmed:**
+  `antcv-how-contribute-controls-245.js` `pulse()` (line 116) fired BOTH `antcv:sections-updated` AND
+  `antcv:item-pages-changed` synchronously on every changed keystroke (the bound input listener at line
+  296 → `syncSectionField` line 220 → `pulse()`). Those wake the preview re-render (app.src.js
+  item-pages effect ~15740) + `antcv-unified-pagination-probe-366.js` (~277), which re-measure the whole
+  CL/main flow and visibly shift the `'bring'` (WHAT I BRING) table on every key. The 24ms
+  `antcv-sections-updated-damper.js` only coalesces `sections-updated`, NOT `item-pages-changed`, so the
+  contribute flood reached pagination uncoalesced. **Fix (pure sidecar, no app.js mirror):** split
+  `pulse()` into `pulseNow()` + a 180ms TRAILING debounce. The localStorage write stays SYNCHRONOUS
+  (`syncSectionField` writes before `pulse()`), so no edit is ever lost — only the re-render
+  notification coalesces; a typing burst yields ONE re-paginate after the user pauses. Page-cycle
+  buttons use the separate `pulsePages()` and are untouched. **Verified PAST the sign-in gate**
+  (`pwa/test/diag-contribute-edit-coalesce.mjs`: drives the REAL bound intro listener with a 15-keystroke
+  burst of DISTINCT values [each forces `changed=true`→`pulse()`]; fix → 1 flush + final edit persisted;
+  NEGATIVE CONTROL on the unfixed sidecar → 15 flushes → FAIL, proving the test has teeth). Suite
+  463/463; sidecar parses (`node --check`); cache-bust quintet → 1.50.843.
 
 - **JD-FETCH-CHIP-LABEL-001** `[SHIPPED 1.50.740 — nightly 2026-06-20]` — owner: "when you fetch a JD, add
   the Job and company name as the first lines in" the green JD-ready chip (currently

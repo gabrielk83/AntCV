@@ -1,5 +1,20 @@
 > **AUTHORITATIVE current state + next-session prompt: `docs/qa/SESSION_HANDOFF_2026-06-18-pm3.md`.** It supersedes the scattered PM/PM2 docs for what shipped (640-652) and what's open. The blocks below are the per-batch detail.
 
+## Nightly autonomous — 2026-06-24 — INTERESTS-LEAK-SOURCE-001 session/kernel isolation (1.50.841)
+
+Fresh nightly run. Bucket-A export backlog (COPENHAGEN-BLUE / SECTION-RULE-INK / CL-CONTACT-ONELINE /
+CL-EXPORT-EDGE-MARGINS / PREVIEW-EXPORT-PAGEBREAK / etc.) confirmed all SHIPPED in prior sessions; the
+remaining OPEN items are mostly regen-gated (need a live signed-in generation). Picked the one solid,
+deterministic, headless-verifiable item.
+
+### CLOSED
+- **INTERESTS-LEAK-SOURCE-001** `[SHIPPED 1.50.841]` — the real session/kernel-isolation fix the owner
+  asked for: non-Gabriel personas no longer inherit Gabriel's canonical INTERESTS, and a contaminated
+  section is stripped + hidden rather than refilled. Two parts — name-guard the Gabriel injectors in
+  `antcv-sections-normalize-415.js` + new restore-proof sidecar `antcv-interests-persona-isolation.js`.
+  Verified PAST the sign-in gate (extended `diag-owner-present-gate.mjs`, 4 real boots, zero errors) +
+  unit test (9) + full suite 463/463. Detail in the PM-continuation-D block below.
+
 ## Owner session 2026-06-23 (PM5) — profile leak hard-strip + interests leak + JD-fetch bot wall (1.50.833)
 
 Continuation of PM4 (the session 500'd mid-run; resumed from the screenshot triage). PM4 shipped the
@@ -260,10 +275,25 @@ work. Use `git worktree add` for any `app.src.js`/`app.js` change.
 - **PROFILE-DISABILITY-PROMPT-ADHERENCE-001** `[OPEN — gen quality]` — the LLM violates the existing
   PROFILE-NO-DISABILITY-001 / PROFILE-NO-FILLER-001 rules; the 834 strip is the deterministic safety net.
   Root prompt-adherence issue remains (consider moving these to a post-gen validator / regenerate-on-violation).
-- **INTERESTS-LEAK-SOURCE-001** `[OPEN]` — a persona whose kernel lacks `interests` inherits Gabriel's
-  generated/default INTERESTS in-session (not just the repo default). Giving each persona interests is a
-  band-aid; the real fix is that loading a different kernel must CLEAR the prior persona's generated
-  INTERESTS (session/kernel isolation), and the empty-interests fallback must never be Gabriel-specific.
+- **INTERESTS-LEAK-SOURCE-001** `[SHIPPED 1.50.841 — nightly 2026-06-24]` — a persona whose kernel lacks
+  `interests` inherited Gabriel's generated/default INTERESTS in-session (not just the repo default).
+  **Root cause (diagnosed):** the two INTERESTS injectors in `antcv-sections-normalize-415.js`
+  (`pinInterests`'s `CANON_INTERESTS` + `scrubJuniorRugby`'s canonical rugby row) embed Gabriel's LITERAL
+  hobbies (cats / "literally a team player" / tai-chi) and were gated only on `ownerPresent()` — which is
+  true for ANY persona with a name/experience, so loading Anita/Devon force-filled their short/absent
+  INTERESTS with HIS canon. **Two-part deterministic fix (no app.js surgery):** (1) name-guarded both
+  injectors to Gabriel (`gabrielPresent()` = `/\bgabriel\b/i` on `personalInfo.name`) so a non-Gabriel /
+  fresh / deleted persona is never injected — Gabriel's stale-flip protection preserved. (2) new
+  restore-proof sidecar `antcv-interests-persona-isolation.js` (precedent: `antcv-profile-disclosure-strip.js`):
+  for a non-Gabriel persona, when a distinctive marker (three feline / strategic napping / literally a team
+  player) proves the section leaked from his canon, strips the byte-identical canon rows (shape-agnostic
+  {b,t}/{l,v}); if emptied, hides the section (`on:false`) — never refills with Gabriel content, so the
+  empty-interests fallback is never Gabriel-specific. Kill switch `antcv:disable-interests-persona-isolation`.
+  Unit test `interests-persona-isolation.test.mjs` (9). **Verified PAST the sign-in gate** — extended
+  `diag-owner-present-gate.mjs`: Gabriel still pins his 6 canon; fresh + named-Anita get none; an Anita
+  section pre-loaded with the full leaked canon is stripped to 0 + hidden; zero app errors across 4 real
+  boots. Full suite 463/463. NOTE: the generic `placeRecs` "Danish and international recommenders on
+  request" line is a non-personal placeholder (left untouched, out of scope).
 - **JD-FETCH-BOT-WALL-THALES-001** `[OPEN — likely in progress in demo-proxy]` — JD fetch fails for the
   Thales careers URL (phenom/Workday-style bot wall throws a questions/consent popup that must be X'd
   down): `https://careers.thalesgroup.com/global/en/job/TGPTGWGLOBALR0329190EXTERNALENGLOBAL/Project-Manager`

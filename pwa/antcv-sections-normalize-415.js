@@ -52,6 +52,21 @@
     } catch (_) { return true; }   // on a genuine parse error, don't disrupt the owner
   }
 
+  // INTERESTS-LEAK-SOURCE-001 (owner 2026-06-23: "a persona whose kernel lacks interests inherits
+  // Gabriel's generated/default INTERESTS"). The two INTERESTS injectors below (pinInterests'
+  // CANON_INTERESTS + scrubJuniorRugby's canonical rugby row) embed Gabriel's LITERAL hobbies
+  // (cats, "literally a team player", tai-chi). ownerPresent() only proves SOMEONE is present, not
+  // that it is Gabriel — so loading Anita/Devon (who have a name + experience) passed the gate and
+  // their short/absent INTERESTS got force-filled with HIS canon. Name-guard those two injectors to
+  // Gabriel specifically (same /\bgabriel\b/i pattern app.src.js uses for __ANTCV_GABRIEL_KERNEL).
+  // His stale-flip protection is preserved; every other persona keeps its own interests untouched.
+  function gabrielPresent() {
+    try {
+      var pi = JSON.parse(localStorage.getItem('personalInfo') || '{}') || {};
+      return /\bgabriel\b/i.test(String(pi.name || ''));
+    } catch (_) { return false; }
+  }
+
   function stripFounder(cv) {
     var touched = false;
     var out = cv.map(function (s) {
@@ -737,7 +752,7 @@
     { l: 'Supervision', v: 'Handling three feline strategic napping experts (cats)' }
   ];
   function pinInterests(cv) {
-    if (!ownerPresent()) return null;   // don't inject Gabriel's CANON_INTERESTS for a fresh/deleted user
+    if (!gabrielPresent()) return null;   // INTERESTS-LEAK-SOURCE-001: CANON_INTERESTS are Gabriel's; never inject for a non-Gabriel/fresh/deleted user
     var xi = cv.findIndex(function (s) { return s && s.id === 'interests' && Array.isArray(s.items); });
     if (xi < 0) return null;
     var items = cv[xi].items;
@@ -760,6 +775,7 @@
   // exists, else REPLACE it with the canonical rugby entry in the section's own shape. Idempotent.
   var JUNIOR_RUGBY = /junior rugby|coaching junior|assistant coach/i;
   function scrubJuniorRugby(cv) {
+    if (!gabrielPresent()) return null;   // INTERESTS-LEAK-SOURCE-001: the canonical rugby row is Gabriel's; don't rewrite another persona's interests
     var changed = false;
     var out = cv.map(function (s) {
       if (!s || s.id !== 'interests' || !Array.isArray(s.items)) return s;

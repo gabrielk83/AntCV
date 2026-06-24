@@ -50,9 +50,14 @@ console.log(`Running ${files.length} test file(s):`);
 for (const f of files) console.log(`  • ${relative(ROOT, f).split(sep).join('/')}`);
 console.log('');
 
+// --test-force-exit: some suites register timer-based handles (e.g. the
+// stale-status watchdog setTimeout, PRV-004) that keep the event loop alive
+// after every test has passed, so `node --test` would otherwise HANG at the
+// end and get killed with a nonzero code — masking an all-green run as a
+// failure for CI / the pre-push hook. Force a clean exit once tests finish.
 const res = spawnSync(
   process.execPath,
-  ['--test', '--test-reporter=spec', ...files],
+  ['--test', '--test-force-exit', '--test-reporter=spec', ...files],
   { stdio: 'inherit', cwd: ROOT }
 );
 

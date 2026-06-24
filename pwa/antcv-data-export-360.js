@@ -49,7 +49,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.860-pubs-section';
+  var VERSION = '1.50.861-personal-batch';
   if (window.__antcvDataExport360 === VERSION) return;
   window.__antcvDataExport360 = VERSION;
 
@@ -890,6 +890,32 @@
 
     // 6 — Languages moved into the Additional-info card as a sub-block (PERSONAL-MERGE-4).
 
+    // Personality (owner 2026-06-24): the kernel RESULT as another review/edit
+    // parameter, placed above CV sidebar content. Take/Retake opens the quiz
+    // (antcv-personality-quiz-439); the standalone Personal-tab card is hidden.
+    var sP = rdSection('🧠', 'Personality', 'An 8-question quiz that teaches AntCV how to write you — as concrete behaviour, not adjectives.');
+    (function () {
+      var per = (pi.personality && typeof pi.personality === 'object') ? pi.personality : null;
+      var hasKernel = !!(per && Array.isArray(per.traits) && per.traits.length);
+      if (hasKernel) {
+        var chips = rdEl('div', 'display:flex;flex-wrap:wrap;gap:4px;margin:0 0 6px;');
+        per.traits.forEach(function (tr) { var lbl = (tr && (tr.label || tr.id)) || ''; if (lbl) chips.appendChild(rdEl('span', 'font-size:11px;padding:2px 8px;border-radius:11px;background:rgba(1,183,187,.16);color:#bdf0f1;', String(lbl))); });
+        if (chips.childNodes.length) sP.body.appendChild(chips);
+        var wsl = per.work_style_line; wsl = wsl && (wsl.en || (typeof wsl === 'string' ? wsl : ''));
+        if (wsl) sP.body.appendChild(rdEl('div', 'font-size:11px;opacity:.75;line-height:1.45;font-style:italic;margin:0 0 6px;', String(wsl)));
+      } else {
+        sP.body.appendChild(rdEl('div', 'font-size:11px;opacity:.55;margin:0 0 6px;', 'No personality kernel yet — take the quiz to set it.'));
+      }
+      var pbtn = rdEl('button', 'padding:7px 13px;border-radius:7px;border:0;background:#01B7BB;color:#06243a;cursor:pointer;font-size:12px;font-weight:800;', hasKernel ? 'Retake the quiz' : 'Take the quiz');
+      pbtn.type = 'button';
+      pbtn.addEventListener('click', function () {
+        try { if (window.AntcvPersonalityQuiz && window.AntcvPersonalityQuiz.open) { window.AntcvPersonalityQuiz.open(); return; } } catch (_) {}
+        try { window.dispatchEvent(new CustomEvent('antcv:open-personality-quiz')); } catch (_) {}
+      });
+      sP.body.appendChild(pbtn);
+    })();
+    body.appendChild(sP.sec);
+
     // 7 — CV sidebar content — collapsible group, COLLAPSED by default (owner
     // 2026-06-24), matching the per-card disclosure register. The sidebar editors
     // append into sbBody so the whole group hides/shows as one.
@@ -1162,10 +1188,27 @@
     try {
       var wrap = document.createElement('div');
       wrap.setAttribute(UI_MARK, 'launcher');
-      wrap.style.cssText = 'order:-20;display:flex;flex-direction:column;margin:0 0 6px;';
+      // order:-8 matches antcv-quick-contact-collapse's slot for the import button
+      // (which now lives inside this launcher), avoiding an order tug-of-war. Still
+      // the topmost item (native Name/Headline/contact are -4/-3/-2).
+      wrap.style.cssText = 'order:-8;display:flex;flex-direction:column;margin:0 0 6px;';
       wrap.appendChild(buildReviewButton());
       wrap.appendChild(buildLockedButton());
       col.insertBefore(wrap, col.firstChild);
+    } catch (_) {}
+  }
+
+  // PERSONAL-MERGE (owner 2026-06-24): the 📥 Import button (importer's in-Settings
+  // replacement) sits ABOVE Review & Edit. Move it into the launcher as the first
+  // child. The importer marks its replacement hooked, so it won't move it back.
+  function placeImportInLauncher() {
+    try {
+      var launcher = document.querySelector('[' + UI_MARK + '="launcher"]');
+      var imp = document.querySelector('[data-antcv-import-replacement]');
+      if (launcher && imp && imp.parentNode !== launcher) {
+        try { imp.style.margin = '0 0 8px'; } catch (_) {}
+        launcher.insertBefore(imp, launcher.firstChild);
+      }
     } catch (_) {}
   }
 
@@ -1202,6 +1245,7 @@
   function injectUi() {
     if (disabled()) return;
     injectLauncher();
+    placeImportInLauncher();
     injectCheckbox();
     // PERSONAL-MERGE-5 (owner 2026-06-24): the floating account-locked export FAB
     // is removed — the control now lives in Settings -> Personal (the launcher)

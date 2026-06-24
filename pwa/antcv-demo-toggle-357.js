@@ -28,7 +28,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.360-admin-only';
+  var VERSION = '1.50.861-collapse';
   if (window.__antcvDemoToggle357 === VERSION) return;
   window.__antcvDemoToggle357 = VERSION;
 
@@ -101,15 +101,23 @@
     wrap.setAttribute(BLOCK_ATTR, '1');
     wrap.style.cssText = 'margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,0.08);';
 
-    var label = document.createElement('div');
-    label.textContent = 'ACCOUNT MODE';
-    label.style.cssText = 'color:rgba(255,255,255,0.5);font-size:10px;letter-spacing:1px;margin-bottom:8px;';
+    // ACCOUNT MODE is a disclosure, COLLAPSED by default (owner 2026-06-24).
+    var label = document.createElement('button');
+    label.type = 'button';
+    label.style.cssText = 'display:flex;align-items:center;gap:6px;width:100%;padding:0;margin:0 0 8px;background:transparent;border:none;cursor:pointer;text-align:left;color:rgba(255,255,255,0.5);font-size:10px;letter-spacing:1px;';
+    var caret = document.createElement('span');
+    caret.style.cssText = 'font-size:9px;opacity:.7;';
+    var labelTxt = document.createElement('span');
+    labelTxt.textContent = 'ACCOUNT MODE';
+    label.appendChild(caret); label.appendChild(labelTxt);
     wrap.appendChild(label);
+
+    var content = document.createElement('div');
 
     var hintText = document.createElement('div');
     hintText.style.cssText = 'color:rgba(255,255,255,0.6);font-size:11px;line-height:1.55;margin-bottom:10px;';
     hintText.textContent = 'Demo uses the shared provider with a spending cap and a DEMO watermark. Paid routes through your own keys / paid relay.';
-    wrap.appendChild(hintText);
+    content.appendChild(hintText);
 
     var row = document.createElement('div');
     row.style.cssText = 'display:flex;gap:6px;';
@@ -118,13 +126,21 @@
     var paidBtn = mkBtn('💳 Paid', 'paid', cur === 'paid');
     row.appendChild(demoBtn);
     row.appendChild(paidBtn);
-    wrap.appendChild(row);
+    content.appendChild(row);
 
     var applied = document.createElement('div');
     applied.setAttribute('data-antcv-demo-toggle-hint', '1');
     applied.style.cssText = 'display:none;color:#ffe080;font-size:11px;margin-top:8px;';
     applied.textContent = 'Mode saved. Reload the app to apply it everywhere (watermark, routing, badges).';
-    wrap.appendChild(applied);
+    content.appendChild(applied);
+
+    wrap.appendChild(content);
+    var COLLAPSE_KEY = 'antcv:demoToggleCollapsed';
+    var collapsed = true;
+    try { if (localStorage.getItem(COLLAPSE_KEY) === '0') collapsed = false; } catch (_) {}
+    function applyCollapse() { content.style.display = collapsed ? 'none' : ''; caret.textContent = collapsed ? '▸' : '▾'; }
+    applyCollapse();
+    label.addEventListener('click', function () { collapsed = !collapsed; try { localStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0'); } catch (_) {} applyCollapse(); });
 
     function onPick(mode) {
       setMode(mode);

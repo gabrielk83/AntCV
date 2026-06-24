@@ -23,7 +23,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.854-personal-dedup-hide';
+  var VERSION = '1.50.861-personal-dedup-hide';
   if (window.__antcvPersonalDedupHide === VERSION) return;
   window.__antcvPersonalDedupHide = VERSION;
 
@@ -73,6 +73,15 @@
     // Quick contact details (collapsed by default → its fields aren't in the DOM).
     var qc = col.querySelector('[data-antcv-quick-contact-hdr]');
     if (qc) hide(qc);
+
+    // Name/contact caption helper line (owner 2026-06-24) — redundant.
+    var cap = col.querySelector('[data-antcv-name-caption]') || document.querySelector('[data-antcv-name-caption]');
+    if (cap) hide(cap);
+
+    // Personality kernel card — moved INTO the Review & Edit modal (owner
+    // 2026-06-24), so hide the standalone Personal-tab card.
+    var pcard = document.getElementById('antcv-personality-kernel-card');
+    if (pcard) hide(pcard);
 
     // Background + CV Sidebar Content disclosures, by summary text.
     Array.prototype.forEach.call(col.querySelectorAll('details'), function (dt) {

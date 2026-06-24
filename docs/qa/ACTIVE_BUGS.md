@@ -1,5 +1,46 @@
 > **AUTHORITATIVE current state + next-session prompt: `docs/qa/SESSION_HANDOFF_2026-06-18-pm3.md`.** It supersedes the scattered PM/PM2 docs for what shipped (640-652) and what's open. The blocks below are the per-batch detail.
 
+## Owner live-QA batch — 2026-06-24 (run 5) — settings-ruler reset (1.50.850)
+
+- **RELOAD-LOOP-001 (settings ruler press resets the app)** `[FIX SHIPPED 1.50.850 — owner confirm in use]` —
+  owner: "pressing near the ruler of the settings sometimes makes the app reset." DIAGNOSED via code
+  (ruled out the loaded sidecar reloaders: multitab-signout is cross-tab only; overlay/sections-dedupe
+  reloads are behind confirm()/comments; hardrefresh-force only matches `/Hard Refresh/i` and the 4 live
+  range sliders have NO button ancestor — verified live in the owner's browser). **Root cause:** the
+  `AntcvAuth.subscribe` effect (`app.src.js` ~14118) calls `location.reload()` on an in-session user
+  switch (ACCOUNT-ISOLATION-001), gated by a RAW `Y.email !== e.email`. A settings SPACING-slider drag
+  fires a cloud-write that makes the auth layer RE-EMIT the SAME user's auth state; a trivial
+  case/whitespace diff in the re-emitted email tripped the raw `!==` → spurious reload (the documented
+  RELOAD-SPURIOUS-GUARD pattern). **FIX (app.src.js + app.js mirror, count-guarded):** compare NORMALISED
+  emails (`String(x.email||"").trim().toLowerCase()`) at both guards, so only a GENUINE different user
+  reloads; a same-user re-emit is now a no-op. **Net (sidecar `antcv-diag-probes-370.js`):** the
+  `[reload-who]` attribution tracker now also records `pointerdown`/`input` (a slider DRAG was missed
+  by the click-only tracker), so if any residual reset remains the next occurrence names the exact
+  slider + caller stack. Worktree off origin/main; app.js boots clean (glDemo=function, 0 errors);
+  node --check OK; cache-bust → 1.50.850. Owner: confirm the reset no longer happens dragging the
+  spacing sliders; if it ever recurs, the console `[reload-who]` line now pins it.
+
+## Owner live-QA batch — 2026-06-24 (run 4, cont.) — within-package alt recolor (1.50.849)
+
+- **WITHIN-PACKAGE-STYLE-ALT-RECOLOR-001** `[SHIPPED 1.50.849]` — owner: the WITHIN-PACKAGE STYLE
+  quick-alts (Default/Alt 1/Alt 2) did NOT actually change the candidate band / table-header colour.
+  Root cause: `applyPackageToBody` sets `body[data-package-quick-alt="altN"]` but
+  `antcv-packages-registry.css` had ZERO `data-package-quick-alt` selectors, so `--header-bg`
+  (band + table headers, both `var(--header-bg)`) and `--sidebar-bg` stayed on the base value. FIX
+  (CSS-only — NO island rebuild, so no contention with the parallel feat/personal-review-edit-merge
+  bundle): appended 14 per-alt blocks (`body[data-package="X"][data-package-quick-alt="alt1|alt2"]`)
+  setting `--header-bg`/`--sidebar-bg` to the registry alt head/sidebar pairs. The 2-attribute
+  selector outranks the 1-attribute base by specificity, so the alt wins WITHOUT clobbering the base —
+  critically the copenhagen base hand-edits (#33446F band, #00746E teal heads, #C9D6EC pale sidebar)
+  are PRESERVED (the committed CSS is hand-tuned + `registry.json` is stale, so I APPENDED rather than
+  regenerated). The generator `scripts/generate-registry-css.mjs` also gained the per-alt emission for
+  future regens. Verified headless (`pwa/test/diag-package-alt-recolor.mjs`: default band stays
+  #33446F; alt1→#0B74DE band + #E8F4F5 sidebar; alt2→#283556 + #DCE5EA). Cache-bust → 1.50.849.
+  **STILL OPEN (deferred — needs the islands bundle, contended):** the compact/CIRCULAR swatch redesign
+  of the WITHIN-PACKAGE buttons (`src/islands/PackagePicker/PackagePicker.tsx` `quickAltButtons`,
+  square `Swatch` borderRadius 4→50%) + syncing the preview's quick-alt CIRCLES; and reconciling the
+  stale `registry.json` copenhagen tokens with the hand-edited CSS so the generator is safe to run.
+
 ## Owner live-QA batch — 2026-06-24 (run 4) — unsolicited-gen inspection (1.50.846 → 847)
 
 Owner inspected a live unsolicited generation and reported a batch. CONFIRMED FIXED by owner:
@@ -29,7 +70,7 @@ Owner inspected a live unsolicited generation and reported a batch. CONFIRMED FI
   owner verifies on regen.
 
 ### Still OPEN from this batch (diagnosed, not shipped this run)
-- **GEN-STATUS-ENDS-EARLY-001** `[OPEN — diagnosed, app.src.js state-machine]` — the purple generation
+- **GEN-STATUS-ENDS-EARLY-001** `[SHIPPED 1.50.848 — nightly 2026-06-24, owner regen-verify]` — FIX: a `window.__antcvGenRunning` in-flight flag (set at generation start ~23407, cleared at the true end ~26029 + the failure catch) makes the `Nt` lazy initializer (~14320) keep returning "generating" across the result-commit re-mount, so the purple `Ue` overlay stays up THROUGH the "🔎 Tightening to length targets…" phase and only drops when the Application Analysis appears (the editor flip at 26029). window-scoped so it survives a React re-mount but RESETS on a real page reload — it can never stick a stuck overlay across reloads (anti-brick). app.src.js + app.js mirror (3 sites, count-guarded; node --check + boot-smoke + suite 463/463 on the identical bundle). Behavioural "stays through tightening" verifies on the owner's next real generation. ORIGINAL diagnosis: — the purple generation
   overlay (`Ue`, app.src.js:12365; gate :41496 on `Nt`) dissolves the instant `sections` commit (the lazy
   `Nt` initializer :14314 downgrades "generating"→"editor" once sections exist), BEFORE the "🔎 Tightening
   to length targets…" phase — so it looks done when it isn't. Owner wants it to stay active through

@@ -14117,13 +14117,20 @@
             window.AntcvAuth && window.AntcvAuth.subscribe
               ? window.AntcvAuth.subscribe((e) => {
                   if (e && e.token && e.email) {
-                    if (!Y || Y.email !== e.email) {
+                    // RELOAD-LOOP-001 (owner 2026-06-24): a cloud-write (e.g. a settings
+                    // SPACING slider drag) makes AntcvAuth RE-EMIT the auth state for the
+                    // SAME user; a raw `Y.email !== e.email` then misfired on a trivial
+                    // case/whitespace diff in the re-emitted email and the in-session-switch
+                    // guard below reloaded the app ("pressing near the ruler resets it").
+                    // Compare NORMALISED emails so only a GENUINE different user reloads.
+                    const __nEmail = (x) => String((x && x.email) || "").trim().toLowerCase();
+                    if (!Y || __nEmail(Y) !== __nEmail(e)) {
                       // ACCOUNT-ISOLATION-001 (owner 2026-06-15): an IN-SESSION switch
                       // to a DIFFERENT user — reload so the pre-app.js login gate wipes
                       // the prior user's data BEFORE app.js re-inits (clearing here
                       // races the autosave that writes the prior user's React state
                       // back to storage). First login (Y null) is the normal path below.
-                      if (Y && Y.email && Y.email !== e.email) {
+                      if (Y && Y.email && __nEmail(Y) !== __nEmail(e)) {
                         try { location.reload(); } catch (e) {}
                         return;
                       }
@@ -14319,6 +14326,14 @@
         },
         [Nt, $t] = e(() => {
           const e = u.get("step", "upload");
+          // GEN-STATUS-ENDS-EARLY-001 (owner 2026-06-24): a result-commit re-mount
+          // re-runs this initializer mid-generation; "step" is never persisted as
+          // "generating" (the effect below skips it), so it would fall back to the
+          // pre-gen step and the purple overlay vanished BEFORE the tightening phase.
+          // window.__antcvGenRunning survives a React re-mount but resets on a real
+          // page reload (fresh window) — so it keeps Nt="generating" across the
+          // re-mount yet can NEVER stick a stuck overlay across reloads.
+          if (window.__antcvGenRunning) return "generating";
           return "generating" === e
             ? u.get("sections", null)
               ? "editor"
@@ -23404,7 +23419,7 @@
             // bo(null) → yo is falsy → the panel falls to its empty state
             // until the new generation lands a fresh rationale.
             (() => { try { bo(null); } catch (e) {} })(),
-            u.get("kernelShowcaseInProgress", !1) || $t("generating"),
+            u.get("kernelShowcaseInProgress", !1) || ($t("generating"), (window.__antcvGenRunning = !0)), // GEN-STATUS-ENDS-EARLY-001: mark in-flight so a re-mount keeps the overlay through tightening
             (() => {
               try {
                 const e =
@@ -26026,9 +26041,9 @@
                     u.remove("_showcaseSavedMultiLlm"));
                 } catch (e) {}
               } catch (e) {}
-            } else ($t("editor"), ti("analysis"));
+            } else ($t("editor"), ti("analysis"), (window.__antcvGenRunning = !1)); // GEN-STATUS-ENDS-EARLY-001: generation truly done (analysis shown) -> drop the overlay
           } catch (e) {
-            (vo("Failed: " + e.message), $t("upload"));
+            (vo("Failed: " + e.message), $t("upload"), (window.__antcvGenRunning = !1));
           }
         }),
         ($a = (e, t) =>

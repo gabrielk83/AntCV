@@ -259,6 +259,70 @@ body[data-package="delhi-technical"] {
   --table-header-bg: #E8F8F8;
 }
 
+/* WITHIN-PACKAGE-STYLE-ALT-RECOLOR-001 (owner 2026-06-24, nightly): per-Quick-Alt
+ * head/sidebar overrides. Selecting Alt 1/Alt 2 set body[data-package-quick-alt="altN"]
+ * but no selector consumed it, so the candidate band + table headers (var(--header-bg))
+ * and the sidebar (var(--sidebar-bg)) never recoloured. The 2-attribute selector outranks
+ * the 1-attribute base block, so the alt wins when its attribute is present; "default" has no
+ * attribute override and keeps the (hand-tuned) base block. Appended NOT regenerated — the base
+ * blocks carry hand-edits (copenhagen teal/pale/bright) the generator does not reproduce. */
+body[data-package="copenhagen-modern"][data-package-quick-alt="alt1"] {
+  --header-bg: #0B74DE;
+  --sidebar-bg: #E8F4F5;
+}
+body[data-package="copenhagen-modern"][data-package-quick-alt="alt2"] {
+  --header-bg: #283556;
+  --sidebar-bg: #DCE5EA;
+}
+body[data-package="navy-executive"][data-package-quick-alt="alt1"] {
+  --header-bg: #D9A441;
+  --sidebar-bg: #F5F1E8;
+}
+body[data-package="navy-executive"][data-package-quick-alt="alt2"] {
+  --header-bg: #7F8FA6;
+  --sidebar-bg: #E8EDF3;
+}
+body[data-package="warm-terracotta"][data-package-quick-alt="alt1"] {
+  --header-bg: #5C2E1F;
+  --sidebar-bg: #F7ECE5;
+}
+body[data-package="warm-terracotta"][data-package-quick-alt="alt2"] {
+  --header-bg: #B85E3B;
+  --sidebar-bg: #F3DDD2;
+}
+body[data-package="nordic-frost"][data-package-quick-alt="alt1"] {
+  --header-bg: #4A8FA8;
+  --sidebar-bg: #EDF8FB;
+}
+body[data-package="nordic-frost"][data-package-quick-alt="alt2"] {
+  --header-bg: #7ECEE3;
+  --sidebar-bg: #DCEEF4;
+}
+body[data-package="pampas-contemporary"][data-package-quick-alt="alt1"] {
+  --header-bg: #7A3B1E;
+  --sidebar-bg: #F6F1DD;
+}
+body[data-package="pampas-contemporary"][data-package-quick-alt="alt2"] {
+  --header-bg: #5C5C5C;
+  --sidebar-bg: #ECECEC;
+}
+body[data-package="tokyo-precision"][data-package-quick-alt="alt1"] {
+  --header-bg: #4E5B6E;
+  --sidebar-bg: #F3F4F6;
+}
+body[data-package="tokyo-precision"][data-package-quick-alt="alt2"] {
+  --header-bg: #B0B7C3;
+  --sidebar-bg: #E8E8E8;
+}
+body[data-package="delhi-technical"][data-package-quick-alt="alt1"] {
+  --header-bg: #007C80;
+  --sidebar-bg: #E8F8F8;
+}
+body[data-package="delhi-technical"][data-package-quick-alt="alt2"] {
+  --header-bg: #4B6A88;
+  --sidebar-bg: #EAF1F8;
+}
+
 @media (prefers-color-scheme: dark) {
   body[data-package="copenhagen-modern"][data-dark-mode="active"] {
     --main-head-color: #6FAEFF;

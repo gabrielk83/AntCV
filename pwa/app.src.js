@@ -65,7 +65,22 @@
         if (prev && typeof prev === "object" && Object.keys(prev).length) return prev;
         let doc = "cv";
         try { const d = JSON.parse(localStorage.getItem("doc") || '""'); doc = (typeof d === "string" ? d : "cv").toLowerCase(); } catch (_) {}
-        if (doc !== "cl") return {};   // CV: no export-break fallback (avoids early break + gap)
+        if (doc !== "cl") {
+          // PREVIEW-SIDEBAR-PAGINATE-001 (owner 2026-06-24 "cvc still sliding badly"): the CV
+          // PREVIEW map (antcv:autoPagesPreview) omits the SIDEBAR sections entirely, so with
+          // no fallback they got NO break and the WHOLE sidebar CRAMMED onto page 1 — the export
+          // (antcv:autoPages) splits them (regulatory->p2, languages/accessibility->p3). For a
+          // CV SIDEBAR section, fall back to autoPages so the PREVIEW paginates the sidebar like
+          // the EXPORT (mirror). MAIN sections keep returning {} — the 1.50.318 fix that avoids an
+          // early break + dead gap in the shorter column applies to the main column only.
+          let isSidebar = false;
+          try {
+            const secs = JSON.parse(localStorage.getItem("sections") || "{}");
+            const found = (Array.isArray(secs.cv) ? secs.cv : []).find((s) => s && s.id === sid);
+            isSidebar = !!(found && found.loc === "sidebar");
+          } catch (_) {}
+          if (!isSidebar) return {};   // CV main: no export-break fallback (avoids early break + gap)
+        }
       }
       return (JSON.parse(localStorage.getItem("antcv:autoPages") || "{}") || {})[sid] || {};
     } catch (_) { return {}; }

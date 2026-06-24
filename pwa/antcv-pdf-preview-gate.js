@@ -50,6 +50,37 @@
   const MODAL_ID = 'antcv-pdf-preview-modal';
   const STYLE_ID = 'antcv-pdf-preview-styles';
 
+  // EXPORT-PREVIEW-PRINT-SETUP-REFRESH-001 (owner 2026-06-24, live-confirmed):
+  // the export-preview iframe srcdoc carried the same-origin package stylesheets
+  // as external <link rel=stylesheet>. Inside an iframe those are RENDER-BLOCKING
+  // — on a cold load the modal painted BLANK (the bare "print setup" shell:
+  // --antcv-fit empty, no page) until the links fetched and fired iframe 'load'
+  // (which also gates fitWidth), so the page only appeared after a manual page
+  // refresh warmed the CSS cache. Fix: prefetch + cache the same-origin sheet
+  // TEXT at gate init (it runs in parallel during the ~18s editor boot, so the
+  // cache is warm long before Export is clickable) and INLINE it into the srcdoc
+  // so the iframe paints immediately. Cross-origin or not-yet-cached sheets keep
+  // the <link> form, so a cold cache degrades to EXACTLY today's behaviour (no
+  // regression). Kill switch: localStorage['antcv:disable-sheet-inline']='1'.
+  const __sheetTextCache = new Map();
+  function __sheetInlineDisabled() {
+    try { return localStorage.getItem('antcv:disable-sheet-inline') === '1'; } catch (_) { return false; }
+  }
+  function prefetchSheetText() {
+    if (__sheetInlineDisabled()) return;
+    try {
+      Array.from(document.querySelectorAll('link[rel="stylesheet"]')).forEach(function (l) {
+        var href = l && l.href;
+        if (!href || href.indexOf(location.origin) !== 0) return; // same-origin only
+        if (__sheetTextCache.has(href)) return;
+        fetch(href, { cache: 'force-cache' })
+          .then(function (r) { return r && r.ok ? r.text() : null; })
+          .then(function (t) { if (t != null) __sheetTextCache.set(href, t); })
+          .catch(function () {});
+      });
+    } catch (_) {}
+  }
+
   // ─── Style injection ─────────────────────────────────────────────
   function injectStylesOnce() {
     if (document.getElementById(STYLE_ID)) return;
@@ -253,6 +284,7 @@
   // ─── Build the modal ─────────────────────────────────────────────
   function buildModal({ errorText }) {
     injectStylesOnce();
+    prefetchSheetText(); // warm the inline-sheet cache for the NEXT open if cold now
 
     // If a previous modal is still mounted (back-to-back triggers),
     // remove it so we don't stack.
@@ -373,8 +405,16 @@
       // iframe head so the cloned paper renders with the same fonts,
       // colours, table widths, etc., that the user sees in the live
       // preview.
+      // EXPORT-PREVIEW-PRINT-SETUP-REFRESH-001: inline same-origin sheet TEXT
+      // (prefetched at gate init) so the iframe paints without a render-blocking
+      // network round trip; fall back to <link> for cross-origin / cold cache.
+      const __inlineOk = !__sheetInlineDisabled();
       const sheetLinks = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
-        .map(l => '<link rel="stylesheet" href="' + l.href.replace(/"/g, '&quot;') + '">')
+        .map(l => {
+          const cached = __inlineOk ? __sheetTextCache.get(l.href) : null;
+          if (cached != null) return '<style data-antcv-inlined-sheet="1">' + cached + '</style>';
+          return '<link rel="stylesheet" href="' + l.href.replace(/"/g, '&quot;') + '">';
+        })
         .join('\n');
       const inlineStyles = Array.from(document.querySelectorAll('style'))
         .map(s => '<style>' + (s.textContent || '') + '</style>')
@@ -1037,6 +1077,7 @@ ${inlineStyles}
   function boot() {
     injectStylesOnce();
     injectFab();
+    prefetchSheetText(); // EXPORT-PREVIEW-PRINT-SETUP-REFRESH-001 — warm sheet-text cache during the long editor boot
     installAlertWrap();
 
     // Re-inject FAB if the React shell remounts and wipes the body.

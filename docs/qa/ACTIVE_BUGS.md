@@ -621,12 +621,27 @@ work. Use `git worktree add` for any `app.src.js`/`app.js` change.
   Results line, the GENERATION must emit a quantified outcome for it (e.g. council size, terms,
   issues resolved) into outcomes_items/proofPoints — regen-gated. Not a render bug.
 
-- **EXPORT-PREVIEW-PRINT-SETUP-REFRESH-001** `[OPEN — stale first paint]` — owner QA 0624: "I need to
-  refresh the page in order for the export preview to output page instead of print setup". The export
-  preview first paints in a "print setup" state and only renders the proper page view after a manual
-  refresh — a first-paint-before-ready staleness (same family as [[results-firstpaint-stale-laminator]]
-  / the SW/version-mask hazard). Needs live repro to capture which render path paints the print-setup
-  state before the page view is ready.
+- **EXPORT-PREVIEW-PRINT-SETUP-REFRESH-001** `[SHIPPED 1.50.844 — nightly 2026-06-24 run 3, LIVE-confirmed]` —
+  owner QA 0624: "I need to refresh the page in order for the export preview to output page instead of
+  print setup". **Root cause confirmed LIVE** (Chrome MCP on antcv.pages.dev, owner signed in): the
+  export modal opened BLANK (the bare "print setup" shell — `--antcv-fit` empty, no page) then
+  self-corrected to the rendered page seconds later. The iframe srcdoc (`antcv-pdf-preview-gate.js`
+  `buildModal`, the `sheetLinks` block ~376) carried the same-origin package stylesheets
+  (`antcv-packages-registry.css` + `antcv-mobile-controls.css`) as external `<link rel=stylesheet>`.
+  Inside an iframe those are **render-blocking** — on a cold load the iframe could not paint until they
+  fetched and fired iframe `load`, which ALSO gates the one-shot `fitWidth()` (line ~684); the package
+  CSS lives only in those links so they can't simply be dropped. A page refresh warms the CSS cache so
+  `load` fires fast → looked "fixed by refresh". **Fix (pure sidecar, no app.js mirror):** prefetch +
+  cache the same-origin sheet TEXT at gate init (`prefetchSheetText()`, called in `boot()` — it runs in
+  parallel during the ~18s editor boot, so the cache is warm long before Export is clickable) and INLINE
+  it into the srcdoc as `<style data-antcv-inlined-sheet>` so the iframe paints immediately with no
+  network round trip. Cross-origin / not-yet-cached sheets keep the `<link>` form, so a cold cache
+  degrades to EXACTLY today's behaviour — **purely additive, zero regression**. Kill switch
+  `localStorage['antcv:disable-sheet-inline']='1'`. **Verified PAST the sign-in gate**
+  (`pwa/test/diag-export-preview-inline-sheets.mjs`: with fix → 2 same-origin sheets inlined, ZERO
+  same-origin `<link>` in the iframe, paper renders + fit applied; NEGATIVE CONTROL with the kill switch
+  → same-origin `<link>` retained + 0 inlined, proving the inlining path is what changed). Suite
+  463/463; sidecar parses (`node --check`); cache-bust quintet → 1.50.844.
 
 - **CONTRIBUTE-EDIT-JUMPS-WIB-TABLE-001** `[SHIPPED 1.50.843 — nightly 2026-06-24 run 3]` — owner QA
   0624: "entering HOW I WOULD CONTRIBUTE makes the WHAT I BRING table jumpy". **Root cause confirmed:**

@@ -146,6 +146,23 @@
     return 'right'; // LTR cultural default tie-break
   }
 
+  // BOOT-WM-PERF-001 (nightly 2026-06-24): chooseCorner() walks EVERY element in
+  // the page and getBoundingClientRect()s each (O(N) forced layout). tick() runs
+  // it on every input keystroke, the 1500ms interval, the MutationObserver and
+  // the boot-storm — so it was a top boot-CPU consumer (~143ms, profiled via
+  // diag-boot-profile.mjs) even when nothing relevant changed. Memoise the RESULT
+  // by a cheap content signature (doc + page count + last-page text length +
+  // viewport width — exactly what changes the corner). The cheap anchoring still
+  // runs every tick (so React re-renders are handled); only the O(N) scan is
+  // skipped when the signature is unchanged.
+  var __ccSig = null, __ccCorner = 'right';
+  function chooseCornerCached(box, sig) {
+    if (sig !== null && sig === __ccSig) return __ccCorner;
+    __ccCorner = chooseCorner(box);
+    if (sig !== null) __ccSig = sig;
+    return __ccCorner;
+  }
+
   function anchorToCorner(watermark, pageBox, corner) {
     // The page-box must be position:relative so our absolute
     // child anchors against it; if it isn't, set it.
@@ -274,6 +291,8 @@
       var sids = paper.querySelectorAll('[data-sid]');
       lastPage = sids.length ? sids[sids.length - 1] : paper;
     }
+    // BOOT-WM-PERF-001: cheap signature of everything that affects the corner.
+    var __wmSig = (docIsCl() ? 'cl' : 'cv') + '|' + pageBoxes.length + '|' + ((lastPage && lastPage.textContent || '').length) + '|' + Math.round(window.innerWidth || 0);
     // Keep the LAST watermark in document order — that's the lowest one, nearest
     // the content end (owner: the CL watermark must sit next to the end, like
     // Word — not the higher duplicate). Hide the rest. Anchor relative to the
@@ -299,7 +318,7 @@
           // the marker on top of it ("hidden inside the name"). The CL marker
           // belongs on the RIGHT — opposite the left-aligned signature — per the
           // original spec. The CV stays dynamic (whichever column has more room).
-          var corner = docIsCl() ? 'right' : chooseCorner(box);
+          var corner = docIsCl() ? 'right' : chooseCornerCached(box, __wmSig);
           anchorToCorner(wm, box, corner);
           stashWmSide(corner);
         } catch (_) {}
@@ -318,7 +337,7 @@
         clone.removeAttribute(HIDDEN_FLAG);
         clone.style.display = '';
         lastPage.appendChild(clone);
-        var corner2 = chooseCorner(lastPage);
+        var corner2 = chooseCornerCached(lastPage, __wmSig);
         anchorToCorner(clone, lastPage, corner2);
         stashWmSide(corner2);
       } catch (_) {}

@@ -1,5 +1,17 @@
 > **AUTHORITATIVE current state + next-session prompt: `docs/qa/SESSION_HANDOFF_2026-06-18-pm3.md`.** It supersedes the scattered PM/PM2 docs for what shipped (640-652) and what's open. The blocks below are the per-batch detail.
 
+## Nightly autonomous — 2026-06-24 (run 6) — boot-perf watermark memo (1.50.866)
+
+- **BOOT-WM-PERF-001** `[SHIPPED 1.50.866]` — continuing the boot-freeze sidecar-swarm reduction (see
+  [[boot-storm-gate-freeze]]). `antcv-watermark-page-anchor-341.js` `chooseCorner()` walked EVERY page
+  element + getBoundingClientRect()'d each (O(N) forced layout) on every tick (input/1500ms-interval/
+  MutationObserver/boot-storm) — a top boot-CPU consumer (~143ms, diag-boot-profile.mjs). FIX (sidecar):
+  memoise the corner RESULT by a cheap content signature (doc + page count + last-page text length +
+  viewport width — exactly what changes the corner); the cheap anchoring still runs every tick (handles
+  React re-renders), only the O(N) scan is skipped when unchanged. Re-profiled: watermark-page-anchor
+  dropped OUT of the top-14 by-file; total boot on-CPU ~4.8s→~3.9s (synthetic). Parse OK; sidecar-only,
+  no app.js mirror / no islands bundle (no parallel contention). Cache-bust → 1.50.866.
+
 ## PERSONAL "Review & Edit" merge + follow-ups — 2026-06-24 (1.50.846 → 1.50.865)
 
 Plan: `docs/plan/PERSONAL_REVIEW_EDIT_MERGE.md`. The high-quality data reviewer became the single **Review & Edit** surface, launched from Settings → Personal; the duplicate native Personal controls were retired; tone/sub-section editors made fully editable; then a long owner UX punch-list. All shipped to `main` (PWA auto-deploy) + docx-worker deployed for the publications-link export.

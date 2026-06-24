@@ -330,7 +330,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.50.837';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.50.867';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.50.868';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -372,7 +372,7 @@
           app.src = 'app.js?v=1.50.859';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.50.867';
+            vo.src = 'antcv-version-override.js?v=1.50.868';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -809,7 +809,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-additional-info-row-controls-247.js?v=1.50.151-cldoc" defer></script>
 <script src="antcv-add-cjlr-order-swap-241.js?v=1.40.243" defer></script>
 <script src="antcv-embedded-controls-248.js?v=1.40.248" defer></script>
-<script src="antcv-what-i-bring-header-cjlr-249.js?v=1.40.249-fix-cjlr-isolate-preview-guard" defer></script>
+<script src="antcv-what-i-bring-header-cjlr-249.js?v=1.50.868" defer></script>
 <!-- PUBLICATIONS-MAIN-001 (2026-06-22): the old sidebar publications section is RETIRED.
      antcv-publications-strict-row-layout-273.js + antcv-publications-section-panel-row-fix-278.js
      are unloaded; the new main `pubs` section is migrated/placed by antcv-publications-main-757.js
@@ -987,7 +987,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      SettingsRouter, wizardState). See docs/plan/AntCV_Plan_v2_LockedSources.md
      §7 Pass 1. -->
       <script src="antcv-357-loader.js?v=1.50.367-entitled-chips" defer></script>
-      <script src="antcv-react-islands.js?v=1.50.851" defer></script>
+      <script src="antcv-react-islands.js?v=1.50.868" defer></script>
       <!-- v1.50.164: auto-apply the correct palette when the stored package is the
            legacy orphan default ("scandinavian"), by pressing the Copenhagen Modern
            button — fixes the permanent palette mix on load without a manual click. -->

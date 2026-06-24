@@ -1,5 +1,19 @@
 > **AUTHORITATIVE current state + next-session prompt: `docs/qa/SESSION_HANDOFF_2026-06-18-pm3.md`.** It supersedes the scattered PM/PM2 docs for what shipped (640-652) and what's open. The blocks below are the per-batch detail.
 
+## Owner batch — 2026-06-24 (run 7) — alt-button minimise + boot-perf (1.50.868)
+
+- **ALT-BTN-MINIMISE-001** `[SHIPPED 1.50.868]` — owner: make the WITHIN-PACKAGE STYLE quick-alt buttons
+  visually compact with CIRCULAR swatches (not square). `src/islands/PackagePicker/PackagePicker.tsx`:
+  added a `round` prop to `Swatch` (borderRadius 50%) and used it in `quickAltButtons` at size 13 with
+  tighter padding (4px 9px), gap 7, smaller hex labels. Rebuilt `antcv-react-islands.js` via `npm run build`
+  (vite, 41 modules; bundle diff = only the PackagePicker change; the parallel session's Personal/Layout
+  islands intact). The functional alt-recolor shipped earlier (WITHIN-PACKAGE-STYLE-ALT-RECOLOR-001, 849).
+  boot-smoke + suite 463/463. Owner visual confirm.
+- **BOOT-WIB-PERF-001** `[SHIPPED 1.50.868]` — continuing the boot-freeze sidecar-swarm reduction.
+  `antcv-what-i-bring-header-cjlr-249.js`: `clean(el.textContent)` was called ~5x per table row
+  (header/body filters) + on the 10-ancestor editorRoot climb. Per-run `cleanText` memo collapses the
+  repeats. Sidecar-only; node --check OK.
+
 ## URGENT — 2026-06-24 — every-word version injection (1.50.867)
 
 - **EVERY-WORD-VERSION-INJECTION-001** `[FIX SHIPPED 1.50.867]` — owner (mobile): the app showed the

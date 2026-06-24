@@ -38,7 +38,7 @@ interface Props {
 
 // ─── small UI primitives ─────────────────────────────────────────────────
 
-function Swatch({ color, size = 18, ring = false }: { color: string; size?: number; ring?: boolean }): JSX.Element {
+function Swatch({ color, size = 18, ring = false, round = false }: { color: string; size?: number; ring?: boolean; round?: boolean }): JSX.Element {
   return (
     <span
       aria-hidden="true"
@@ -46,8 +46,9 @@ function Swatch({ color, size = 18, ring = false }: { color: string; size?: numb
         display: 'inline-block',
         width: size,
         height: size,
-        borderRadius: 4,
+        borderRadius: round ? '50%' : 4,
         background: color,
+        flex: '0 0 auto',
         boxShadow: ring ? '0 0 0 2px rgba(255,255,255,0.6), 0 0 0 4px rgba(1,183,187,.45)' : '0 0 0 1px rgba(0,0,0,0.18)',
       }}
     />
@@ -261,16 +262,17 @@ export function PackagePicker({ initialMode, context = 'personal' }: Props): JSX
         onClick={() => selectQuickAlt(alt)}
         aria-pressed={isActive}
         style={{
-          display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8,
+          // ALT-BTN-MINIMISE-001 (owner 2026-06-24): compact + circular swatches.
+          display: 'flex', alignItems: 'center', gap: 7, padding: '4px 9px', borderRadius: 8,
           background: isActive ? 'rgba(1,183,187,.14)' : 'rgba(255,255,255,.04)',
           border: '1px solid ' + (isActive ? 'rgba(1,183,187,.55)' : 'rgba(255,255,255,.14)'),
-          color: '#e6eef3', cursor: 'pointer', textAlign: 'left',
+          color: '#e6eef3', cursor: 'pointer', textAlign: 'left', fontSize: 12,
         }}
       >
-        <Swatch color={head} ring={isActive} />
-        <Swatch color={sidebar} />
+        <Swatch color={head} ring={isActive} round size={13} />
+        <Swatch color={sidebar} round size={13} />
         <span style={{ fontWeight: 650 }}>{label}</span>
-        <span style={{ marginLeft: 'auto', fontSize: 11, opacity: 0.65 }}>{head} / {sidebar}</span>
+        <span style={{ marginLeft: 'auto', fontSize: 10, opacity: 0.6 }}>{head} / {sidebar}</span>
       </button>
     );
   });

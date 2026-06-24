@@ -1,6 +1,11 @@
 # Architecture Plan — Merge the data reviewer into Settings → Personal ("Review & Edit")
 
-Status: PLAN (owner-approved scope 2026-06-24). No code shipped yet.
+Status: ALL 7 BUNDLES SHIPPED on branch `feat/personal-review-edit-merge` (2026-06-24), 1.50.848 → 1.50.854. Each bundle is e2e/unit-verified (pwa/test/diag-personal-merge*.mjs). NOT yet merged to main / not pushed. Owner spot-check still pending on the bundle-4 Languages prefer-richer merge (live data).
+
+Shipped bundles: 1 launcher Account→Personal · 2 collapsible cards + role collapse · 3 editable tone editors (hosts WritingStylePicker sub-editors) · 4 Languages/Interests/Accessibility Additional sub-blocks · 5 FAB removal + personality results/Retake · 6 hide native dupes (coverage-proven CSS sidecar) · 7 account-locked import verified. Plus: repaired the e2e harness gate-seed and fixed two latent bugs it surfaced (AntcvReactIslands namespace clobber; personality card stale anchor).
+
+---
+
 Owner brief: move the high-quality "Review my data" reviewer and merge its functionality into the Personal tab; complete the gaps; make every sub-panel editable, collapsible, language-aware; retire the duplicate native Personal controls.
 
 ### Owner decisions (2026-06-24) — these govern the design

@@ -49,7 +49,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.857-recommendations';
+  var VERSION = '1.50.858-additional-dedup';
   if (window.__antcvDataExport360 === VERSION) return;
   window.__antcvDataExport360 = VERSION;
 
@@ -512,7 +512,9 @@
   }
   // cfg: { emoji, title, help, key, kind:'lv'|'str'|'degsch'|'reg', cols:[..] }
   function rdSidebarSection(cfg, initialArr, afterEl) {
-    var arr = (Array.isArray(initialArr) ? initialArr : []).map(function (r) {
+    // preserveHidden (Additional): rows tagged __sub belong to a dedicated sub-block
+    // (Languages/Interests/Accessibility) — never display or let this editor own them.
+    var arr = (Array.isArray(initialArr) ? initialArr : []).filter(function (r) { return !(cfg.preserveHidden && r && r.__sub); }).map(function (r) {
       if (cfg.kind === 'str') return { t: String(r == null ? '' : r) };
       if (cfg.kind === 'degsch') return { deg: String((r && r.deg) || ''), sch: String((r && r.sch) || '') };
       if (cfg.grouped && r && r.group != null) return { group: String(r.group || '') };
@@ -531,7 +533,17 @@
         return r.l || r.v;
       });
     }
-    function commit() { var cur = rdReadPI(); cur[cfg.key] = toNative(); rdSavePI(cur); }
+    function commit() {
+      var cur = rdReadPI();
+      var native = toNative();
+      if (cfg.preserveHidden) {
+        // Re-read the CURRENT hidden (__sub) rows so a sub-block edit that happened
+        // after this editor opened is not clobbered.
+        var existing = Array.isArray(cur[cfg.key]) ? cur[cfg.key] : [];
+        native = native.concat(existing.filter(function (o) { return o && o.__sub; }));
+      }
+      cur[cfg.key] = native; rdSavePI(cur);
+    }
     var sec = rdSection(cfg.emoji, cfg.title, cfg.help);
     var list = rdEl('div', 'display:flex;flex-direction:column;gap:5px;');
     sec.body.appendChild(list);
@@ -602,6 +614,24 @@
     for (var i = 0; i < cv.length; i++) { if (cv[i] && cv[i].id === id) return cv[i]; }
     return null;
   }
+  // OWNER 2026-06-24: Languages / Interests / Accessibility are shown + edited ONLY
+  // in their dedicated sub-blocks. To avoid them ALSO appearing as visible rows in
+  // the native Additional-info editor (the duplication the owner saw), each
+  // sub-block keeps a HIDDEN mirror in personalInfo.additional, tagged __sub:<cat>
+  // — added when an item is added, removed when removed. The native editor hides
+  // tagged rows and drops legacy un-tagged rows that duplicate a sub-block label.
+  function rdMirrorAdditional(cat, rows) {
+    var cur = rdReadPI();
+    var add = Array.isArray(cur.additional) ? cur.additional.slice() : [];
+    var labels = rows.map(function (r) { return String(r.l || '').toLowerCase(); }).filter(Boolean);
+    var kept = add.filter(function (o) {
+      if (o && o.__sub === cat) return false;                                              // old marks for this category
+      if (o && !o.__sub && o.l && labels.indexOf(String(o.l).toLowerCase()) >= 0) return false; // legacy visible duplicate
+      return true;
+    });
+    rows.forEach(function (r) { if (r.l || r.v) kept.push({ l: r.l, v: r.v, __sub: cat }); });
+    if (JSON.stringify(add) !== JSON.stringify(kept)) { cur.additional = kept; rdSavePI(cur); }
+  }
   // A labelled {l,v} editor over a CV section's items, rendered as a SUB-BLOCK
   // (no card of its own) so it can nest inside the Additional-info card. cfg:
   // { emoji, title, id, cols:[labelPh, valuePh], seed?: () => [{l,v}] }. seed()
@@ -637,14 +667,16 @@
       if (!sec.type) sec.type = SECTYPE;
       rdSaveSections(s);
       if (typeof cfg.sync === 'function') { try { cfg.sync(items); } catch (_) {} }
+      if (cfg.mirrorAdditional) { try { rdMirrorAdditional(cfg.mirrorAdditional, items); } catch (_) {} }
     }
     var arr = loadRows();
     if (!arr.length && typeof cfg.seed === 'function') {
       try { var sd = cfg.seed(); if (sd && sd.length) { arr = sd; commit(); } } catch (_) {}
     }
-    // Reconcile the mirror (e.g. personalInfo.languages) to the section content on
-    // open, even with no edit — so the two stores stay exactly equal.
+    // Reconcile the mirrors (personalInfo.languages, the hidden Additional dupes) to
+    // the section content on open, even with no edit — so the stores stay in sync.
     if (typeof cfg.sync === 'function') { try { cfg.sync(cleanItems()); } catch (_) {} }
+    if (cfg.mirrorAdditional) { try { rdMirrorAdditional(cfg.mirrorAdditional, cleanItems()); } catch (_) {} }
     function rowEl(r, i) {
       var row = rdEl('div', 'display:flex;gap:5px;align-items:center;');
       FIELDS.forEach(function (f) {
@@ -871,7 +903,7 @@
     // always wins. Owner spot-check: the values shown here are what export uses.
     var addSubBlocks = rdEl('div', '');
     addSubBlocks.appendChild(rdSectionLVBlock({
-      emoji: '🗣️', title: 'Languages', id: 'languages', cols: ['Language', 'Level / note'],
+      emoji: '🗣️', title: 'Languages', id: 'languages', cols: ['Language', 'Level / note'], mirrorAdditional: 'languages',
       seed: function () {
         var ls = Array.isArray(pi.languages) ? pi.languages : [];
         return ls.map(function (l) { return { l: String(l.lang || l.l || ''), v: [l.level, l.note].filter(Boolean).join(' — ') || String(l.v || '') }; }).filter(function (r) { return r.l || r.v; });
@@ -887,12 +919,30 @@
         cur.languages = want; rdSavePI(cur);
       }
     }));
-    addSubBlocks.appendChild(rdSectionLVBlock({ emoji: '🎯', title: 'Interests', id: 'interests', cols: ['Interest', 'Detail'] }));
-    addSubBlocks.appendChild(rdSectionLVBlock({ emoji: '♿', title: 'Accessibility', id: 'accessibility', cols: ['Label', 'Note'] }));
+    addSubBlocks.appendChild(rdSectionLVBlock({
+      emoji: '🎯', title: 'Interests', id: 'interests', cols: ['Interest', 'Detail'], mirrorAdditional: 'interests',
+      // Imported interests flow in here: seed from personalInfo.interests when the section is empty.
+      seed: function () {
+        var xs = Array.isArray(pi.interests) ? pi.interests : [];
+        return xs.map(function (s) { return (typeof s === 'string') ? { l: s, v: '' } : { l: String((s && (s.l || s.label || s.name)) || ''), v: String((s && (s.v || s.detail)) || '') }; }).filter(function (r) { return r.l || r.v; });
+      }
+    }));
+    addSubBlocks.appendChild(rdSectionLVBlock({
+      emoji: '♿', title: 'Accessibility', id: 'accessibility', cols: ['Label', 'Note'], mirrorAdditional: 'accessibility',
+      seed: function () {
+        var a = pi.accessibility;
+        if (typeof a === 'string' && a.trim()) return [{ l: 'Accessibility', v: a.trim() }];
+        if (a && typeof a === 'object' && (a.l || a.v || a.note)) return [{ l: String(a.l || 'Accessibility'), v: String(a.v || a.note || '') }];
+        return [];
+      }
+    }));
     // OWNER 2026-06-24: a dedicated Software-projects entry (e.g. AntCV → its git
     // repo). Its own CV section; project name + link/description per row.
     addSubBlocks.appendChild(rdSectionLVBlock({ emoji: '💻', title: 'Software projects', id: 'projects', cols: ['Project', 'Link / description'] }));
-    body.appendChild(rdSidebarSection({ emoji: '➕', title: 'Additional info', help: 'Label + value rows, plus Languages, Interests and Accessibility.', key: 'additional', kind: 'lv', cols: ['Label', 'Value'] }, pi.additional, addSubBlocks));
+    // Read additional FRESH (the sub-blocks above just synced their hidden mirrors
+    // into it on open); the native editor hides those tagged rows and preserves
+    // them on write (see rdSidebarSection preserveHidden).
+    body.appendChild(rdSidebarSection({ emoji: '➕', title: 'Additional info', help: 'Label + value rows. Languages, Interests and Accessibility are edited in their own blocks below.', key: 'additional', kind: 'lv', cols: ['Label', 'Value'], preserveHidden: true }, (rdReadPI().additional || []), addSubBlocks));
 
     // Recommendations (owner 2026-06-24): recommenders by NAME / who it was for /
     // contact — its own CV section (sections.cv 'recommendations', education shape).

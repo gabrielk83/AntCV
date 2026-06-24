@@ -358,7 +358,9 @@ Schema (omit any field the source does not support; do not invent):
   "publicationsStructured": [{ "name": "string", "details": "string", "visible": true }],
   "experience": [{ "role": "string", "company": "string", "years": "YYYY-YYYY", "bullets": ["string","string","string"] }],
   "tools": ["string"],
-  "regulatory": [{ "group": "string" } /* or */, { "l": "string", "v": "string" }]
+  "regulatory": [{ "group": "string" } /* or */, { "l": "string", "v": "string" }],
+  "interests": ["string (hobbies / volunteer / outside-work interests, if stated)"],
+  "accessibility": "string (an accessibility note ONLY if the source explicitly states one; else omit)"
 }
 
 Rules:

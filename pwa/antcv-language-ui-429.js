@@ -21,7 +21,7 @@
 (function () {
   'use strict';
 
-  var SUITE_VERSION = '1.50.429';
+  var SUITE_VERSION = '1.50.870';
   if (window.__antcvLanguageUI429 === SUITE_VERSION) return;
   window.__antcvLanguageUI429 = SUITE_VERSION;
 
@@ -308,7 +308,15 @@
         el.setAttribute('data-antcv-font-harmonized-327',sig);
       });
     }catch(_){}}
-    let busy=false;function apply(){if(busy)return;busy=true;try{const root=settingsRoot();if(!root){removeAllExcept(null);return}if(!isPersonal(root)){removeAllExcept(null);return}let panel=document.querySelector('[data-antcv-language-prefs="1"]');removeAllExcept(panel);if(!panel){panel=build()}const host=contentHost(root);if(!host.contains(panel))host.appendChild(panel);removeAllExcept(panel);harmonizeFonts(root)}catch(e){console.warn('[antcv-language-prefs] apply failed:',e&&e.message)}finally{busy=false}}
+    let busy=false;function apply(){if(busy)return;busy=true;try{
+      // BOOT-LANGUI-GATE-001 (1.50.870): skip the O(all-divs × getComputedStyle ×
+      // getBoundingClientRect) settingsRoot() scan every mutation tick when settings
+      // is clearly not open. Settings renders STANDARD/ADVANCED tab buttons; when
+      // closed, they are absent from the DOM. If we already have an injected panel,
+      // always check (it may need cleanup). Reduces boot sidecar-swarm CPU markedly.
+      var _panelInDom=!!document.querySelector('[data-antcv-language-prefs="1"]');
+      if(!_panelInDom){var _so=false,_btns=document.querySelectorAll('button');for(var _bi=0;_bi<_btns.length;_bi++){var _bu=(_btns[_bi].textContent||'').trim().toUpperCase();if(_bu==='STANDARD'||_bu==='ADVANCED'){_so=true;break;}}if(!_so){busy=false;return;}}
+      const root=settingsRoot();if(!root){removeAllExcept(null);return}if(!isPersonal(root)){removeAllExcept(null);return}let panel=document.querySelector('[data-antcv-language-prefs="1"]');removeAllExcept(panel);if(!panel){panel=build()}const host=contentHost(root);if(!host.contains(panel))host.appendChild(panel);removeAllExcept(panel);harmonizeFonts(root)}catch(e){console.warn('[antcv-language-prefs] apply failed:',e&&e.message)}finally{busy=false}}
     window.AntcvLanguagePrefs={get:read,set:write,apply,VERSION};if(!readJSON('enabledLanguages'))write(DEFAULT);
     function boot(){
       document.addEventListener('click',()=>setTimeout(scheduleAll,0),true);

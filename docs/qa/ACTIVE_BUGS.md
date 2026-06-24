@@ -1,5 +1,18 @@
 > **AUTHORITATIVE current state + next-nightly prompt: `docs/qa/NEXT_NIGHTLY_HANDOFF_2026-06-24.md`.** (PWA 1.50.869 + docx-worker 1.14.81; suite 467/467.) Read it FIRST — it has the shipped list (843→869), the regen-gated items to verify on the owner's incoming fresh export, the deep CV-SIDEBAR-SPILL spec, and the parallel-session/stale-SW discipline. The blocks below are the per-batch detail. (Older handoff: `SESSION_HANDOFF_2026-06-18-pm3.md`.)
 
+## Owner fresh-export — 2026-06-24 (run 9) — contribute char-object heal (1.50.870)
+
+- **CONTRIBUTE-CHAROBJ-FIX-001** `[SHIPPED 1.50.870]` — owner "how I would contribute is STILL empty" on a
+  post-847 export. NOT the p-flag (that worked — intro/closing now populate). The bullet ITEMS were
+  corrupted into CHAR-INDEXED OBJECTS: `{"0":"M","1":"a","2":"p",...,mk:true}` — `antcv-hwic-to-rich-block-760.js`
+  fixedA ran `Object.assign({}, r)` over a STRING item, spreading it char-by-char; the rich_block renderer
+  reads .b/.t (absent) -> BLANK bullets. FIX (760 fixedA mapper): heal a char-indexed object back to {t}
+  (reconstruct from the numeric keys) and normalise a raw string to {t} BEFORE any Object.assign so it can
+  never re-corrupt. Verified on the owner's REAL data (4 char-objects -> 4 correct {t} strings: "Map the
+  current change-request flow...", "Set up KPIs...", "Introduce structured gate criteria...", "Keep
+  decisions..."). Unit test contribute-charobj-fix.test.mjs (5); suite 472/472. Restore-proof (760 runs on
+  load + sections-updated) -> heals the owner's existing corrupted data on next load (no regen needed).
+
 ## Owner real-PDF review — 2026-06-24 (run 8) — regulatory dup-group merge (1.50.869)
 
 - **DUP-GROUP-MERGE-001** `[SHIPPED 1.50.869]` — analysing the owner's REAL exported CV (9 pages) +

@@ -95,9 +95,25 @@
             var isIntro = (i === 0 && firstIsLeadIn);
             var isClosing = (i === n - 1 && firstIsLeadIn && n >= 2);
             var wantMk = !(isIntro || isClosing);
-            var hasMk = !!(r && r.mk);
-            if (wantMk && !hasMk) { changedA = true; var c = Object.assign({}, r); c.mk = true; return c; }
-            if (!wantMk && hasMk) { changedA = true; var c2 = Object.assign({}, r); delete c2.mk; return c2; }
+            // CONTRIBUTE-CHAROBJ-FIX-001 (owner 2026-06-24 "how I would contribute still empty"):
+            // a STRING item that an earlier pass ran Object.assign({}, r) over became a CHAR-INDEXED
+            // object {"0":"M","1":"a",...,mk:true} — the rich_block renderer reads .b/.t (absent) and
+            // showed BLANK bullets. Heal a char-object back to {t}, and normalise a raw string to {t}
+            // BEFORE any Object.assign (so it never re-corrupts).
+            var row = r;
+            if (typeof r === 'string') { row = { t: r }; }
+            else if (r && typeof r === 'object' && r.b == null && r.t == null && r.v == null && r.content == null && !r.grp) {
+              var ck = Object.keys(r).filter(function (k) { return /^\d+$/.test(k); });
+              if (ck.length) {
+                var str = ck.sort(function (a, b) { return (+a) - (+b); }).map(function (k) { return r[k]; }).join('');
+                if (str) row = r.mk ? { t: str, mk: r.mk } : { t: str };
+              }
+            }
+            var wrapped = (row !== r);
+            var hasMk = !!(row && row.mk);
+            if (wantMk && !hasMk) { changedA = true; var c = Object.assign({}, row); c.mk = true; return c; }
+            if (!wantMk && hasMk) { changedA = true; var c2 = Object.assign({}, row); delete c2.mk; return c2; }
+            if (wrapped) { changedA = true; return row; }
             return r;
           });
           if (changedA) { changed = true; return Object.assign({}, s, { items: fixedA }); }

@@ -116,7 +116,29 @@
             if (wrapped) { changedA = true; return row; }
             return r;
           });
-          if (changedA) { changed = true; return Object.assign({}, s, { items: fixedA }); }
+          // CONTRIBUTE-INTRO-CLOSING-FOLD-001 (owner 2026-06-24 "bullets show but still no
+          // opening/closing of HWIC; structurally they are bullets WITHOUT visible markers"):
+          // a generated rich_block can carry intro/closing as SEPARATE FIELDS while items[]
+          // holds only the bullets — the renderer reads items[] only, so the opening/closing
+          // never appear. Fold them in as MARKERLESS rows (the same shape path B emits:
+          // {b:'',t} with NO mk) bracketing the markered bullets, and drop the orphan fields.
+          // Boundary-guarded so it is idempotent (a markerless first/last row = already there)
+          // and lead-in-safe (an items[0] lead-in is already markerless -> no double opening).
+          var finalRows = fixedA;
+          var introTxt = s.intro != null && String(s.intro).trim() ? String(s.intro).trim() : '';
+          var closingTxt = s.closing != null && String(s.closing).trim() ? String(s.closing).trim() : '';
+          if (introTxt && finalRows.length && finalRows[0] && finalRows[0].mk) {
+            finalRows = [{ b: '', t: introTxt }].concat(finalRows); changedA = true;
+          }
+          if (closingTxt && finalRows.length && finalRows[finalRows.length - 1] && finalRows[finalRows.length - 1].mk) {
+            finalRows = finalRows.concat([{ b: '', t: closingTxt }]); changedA = true;
+          }
+          if (changedA) {
+            changed = true;
+            var nsA = Object.assign({}, s, { items: finalRows });
+            delete nsA.intro; delete nsA.closing;
+            return nsA;
+          }
         }
         return s;
       }

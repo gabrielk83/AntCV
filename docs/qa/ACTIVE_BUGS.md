@@ -29,7 +29,7 @@ Owner inspected a live unsolicited generation and reported a batch. CONFIRMED FI
   owner verifies on regen.
 
 ### Still OPEN from this batch (diagnosed, not shipped this run)
-- **GEN-STATUS-ENDS-EARLY-001** `[OPEN — diagnosed, app.src.js state-machine]` — the purple generation
+- **GEN-STATUS-ENDS-EARLY-001** `[SHIPPED 1.50.848 — nightly 2026-06-24, owner regen-verify]` — FIX: a `window.__antcvGenRunning` in-flight flag (set at generation start ~23407, cleared at the true end ~26029 + the failure catch) makes the `Nt` lazy initializer (~14320) keep returning "generating" across the result-commit re-mount, so the purple `Ue` overlay stays up THROUGH the "🔎 Tightening to length targets…" phase and only drops when the Application Analysis appears (the editor flip at 26029). window-scoped so it survives a React re-mount but RESETS on a real page reload — it can never stick a stuck overlay across reloads (anti-brick). app.src.js + app.js mirror (3 sites, count-guarded; node --check + boot-smoke + suite 463/463 on the identical bundle). Behavioural "stays through tightening" verifies on the owner's next real generation. ORIGINAL diagnosis: — the purple generation
   overlay (`Ue`, app.src.js:12365; gate :41496 on `Nt`) dissolves the instant `sections` commit (the lazy
   `Nt` initializer :14314 downgrades "generating"→"editor" once sections exist), BEFORE the "🔎 Tightening
   to length targets…" phase — so it looks done when it isn't. Owner wants it to stay active through

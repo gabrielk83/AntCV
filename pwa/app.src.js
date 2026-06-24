@@ -14319,6 +14319,14 @@
         },
         [Nt, $t] = e(() => {
           const e = u.get("step", "upload");
+          // GEN-STATUS-ENDS-EARLY-001 (owner 2026-06-24): a result-commit re-mount
+          // re-runs this initializer mid-generation; "step" is never persisted as
+          // "generating" (the effect below skips it), so it would fall back to the
+          // pre-gen step and the purple overlay vanished BEFORE the tightening phase.
+          // window.__antcvGenRunning survives a React re-mount but resets on a real
+          // page reload (fresh window) — so it keeps Nt="generating" across the
+          // re-mount yet can NEVER stick a stuck overlay across reloads.
+          if (window.__antcvGenRunning) return "generating";
           return "generating" === e
             ? u.get("sections", null)
               ? "editor"
@@ -23404,7 +23412,7 @@
             // bo(null) → yo is falsy → the panel falls to its empty state
             // until the new generation lands a fresh rationale.
             (() => { try { bo(null); } catch (e) {} })(),
-            u.get("kernelShowcaseInProgress", !1) || $t("generating"),
+            u.get("kernelShowcaseInProgress", !1) || ($t("generating"), (window.__antcvGenRunning = !0)), // GEN-STATUS-ENDS-EARLY-001: mark in-flight so a re-mount keeps the overlay through tightening
             (() => {
               try {
                 const e =
@@ -26026,9 +26034,9 @@
                     u.remove("_showcaseSavedMultiLlm"));
                 } catch (e) {}
               } catch (e) {}
-            } else ($t("editor"), ti("analysis"));
+            } else ($t("editor"), ti("analysis"), (window.__antcvGenRunning = !1)); // GEN-STATUS-ENDS-EARLY-001: generation truly done (analysis shown) -> drop the overlay
           } catch (e) {
-            (vo("Failed: " + e.message), $t("upload"));
+            (vo("Failed: " + e.message), $t("upload"), (window.__antcvGenRunning = !1));
           }
         }),
         ($a = (e, t) =>

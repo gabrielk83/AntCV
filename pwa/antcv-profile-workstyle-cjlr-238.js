@@ -5,7 +5,7 @@
  */
 (function(){
   'use strict';
-  const VERSION = '1.50.835-boot-perf';
+  const VERSION = '1.50.845-boot-perf2';
   // v1.40.238-preview-guard: Preview is button-free. Profile/Work-style
   // CJLR controls must not attach to rows inside .antcv-preview-paper.
   const isInPreviewPaper = el => { if(!el) return false; const p=document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]'); return !!(p && p.contains(el)); };
@@ -29,6 +29,7 @@
   // and a length cap stops the climb at the first ancestor too big to be a control row.
   // Both are behaviour-preserving (a giant ancestor was never a valid single-section row).
   let __runTextCache = null;   // Map<Element,string> rebuilt each run(); null outside a run
+  let __runLowCache = null;    // Map<Element,string> lowercased; same per-run lifecycle as __runTextCache
   const MAX_ROW_TEXT = 300;    // a section control row's cleaned text is short; bigger ⇒ not a row
   function cleanText(el){
     if(!el) return '';
@@ -37,7 +38,20 @@
     if(__runTextCache) __runTextCache.set(el, t);
     return t;
   }
-  const lowText = el => cleanText(el).toLowerCase();
+  // BOOT-CJLR-PERF-002 (nightly 2026-06-24): lowText was the single biggest boot
+  // CPU consumer (~696ms self-time, profiled via diag-boot-profile.mjs). cleanText
+  // was memoised per run but lowText's .toLowerCase() was NOT — and lowText runs on
+  // the SAME big shared ancestors many times per run (editorBlocks' 10-deep climb
+  // across every textarea, and findPreviewSection's all-element fallback scan ×2
+  // sections). Memoising the lowercased string per run collapses those repeats.
+  // Behaviour-preserving (pure memo, same per-run lifecycle as __runTextCache).
+  const lowText = el => {
+    if(!el) return '';
+    if(__runLowCache){ const c=__runLowCache.get(el); if(c!==undefined) return c; }
+    const t = cleanText(el).toLowerCase();
+    if(__runLowCache) __runLowCache.set(el, t);
+    return t;
+  };
   const visible = el => !!(el && el.isConnected && (el.offsetWidth || el.offsetHeight || el.getClientRects().length));
   const readMap = () => { try { const m=JSON.parse(localStorage.getItem(KEY)||'{}'); return m&&typeof m==='object'?m:{}; } catch(_){ return {}; } };
   const writeMap = m => { try { localStorage.setItem(KEY, JSON.stringify(m||{})); } catch(_){} };
@@ -221,6 +235,7 @@
       // this synchronous sweep, so caching ancestor textContent within one run is
       // safe and collapses the shared-ancestor re-serialization that made boot slow.
       __runTextCache = new Map();
+      __runLowCache = new Map();
       try{
         // PW-CJLR-PHOTO-LEAK-001: strip any cycler that already leaked into the
         // PROFILE PHOTO card (between the SHADOW Off/On buttons) before re-placing.
@@ -233,7 +248,7 @@
         applyEditors();
         applyPreview();
       }catch(e){ try{ console.warn('[profile-workstyle-cjlr-238] failed:', e && e.message); }catch(_){} }
-      finally{ __runTextCache = null; }
+      finally{ __runTextCache = null; __runLowCache = null; }
     });
   }
   function start(){

@@ -491,6 +491,24 @@ work. Use `git worktree add` for any `app.src.js`/`app.js` change.
   • NOTE: in the skeleton, the empty intro/closing rows are now markered (760 markers a row that is
     empty / not a ":"-lead-in) — harmless placeholders; real generated content with a ":"-lead-in
     intro renders correctly markerless.
+  • UPDATE 2026-06-24 (REGRESSION FOUND + REVERTED, 1.50.840): the owner's NEXT regen (on the live
+    1.50.838 bundle) produced a COMPLETELY EMPTY contribute — live `sections.cl.contribute` = 4 EMPTY
+    rows (rich_block, all mk:true → "(click to add)" in preview, blank in export), while the CV
+    experience populated fine (15 roles). So generation returned EMPTY `contribute_items`. The ONLY
+    contribute-related change between the WORKING run (4 real JD-relevant bullets, on the stale
+    pre-1.50.838 bundle) and this BROKEN run was the 1.50.838 unsolicited-aware prompt INSERTION — it
+    regressed contribute generation (the verbose insertion right before the `contribute_items`
+    instruction likely disrupted the LLM's contribute output). REVERTED the insertion from app.src.js
+    + app.js (1.50.840, boot-smoke OK) → restores the known-good 4-bullets behaviour. The intro/closing
+    fix must be redone by the nightly WITH per-regen verification, not blind. LIKELY REAL ROOT CAUSE
+    (for the nightly): the unsolicited display flag `p` (app.src.js ~25051 `const n = p ? {...} : {}`)
+    is FALSE for this unsolicited app even though meta.company === "Unsolicited" — so the contribute
+    mapping (~25171) takes the `e.items && !p` branch (empty skeleton items) and `n = {}` (no neutral
+    contribute_intro/items/closing). Fixing `p`'s unsolicited detection would make the neutral
+    fallbacks fire (3 neutral bullets + the neutral intro/closing) WITHOUT any prompt change — the
+    same unsolicited-detection family as UNSOLICITED-NOT-TARGETED-001. Find `p`'s binding in the
+    showcase/render function and align it with the explicit `meta.company`/`activeAppCompany` ===
+    "Unsolicited" marker.
 
 - **CV-SIDEBAR-SPILL-9-PAGES-001** `[OPEN — pre-existing, NOT a regression; salmon/pagination]` —
   owner QA 0624: "the salmon break location is incorrect, and we got 9 pages CV". CONFIRMED the

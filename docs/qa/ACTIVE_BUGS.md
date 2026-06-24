@@ -30,7 +30,7 @@ prompt fix never strips prose already STORED from earlier generations. PM5 ships
   (clean 23-line diff each). This was the original PM5 trigger item; confirmed landed on main this session.
 
 ### CLOSED (cont.)
-- **JD-FETCH-BOT-CHALLENGE-001** `[FIXED — workers/demo-proxy + workers/proxy, owner deploy owed]` —
+- **JD-FETCH-BOT-CHALLENGE-001** `[SHIPPED + DEPLOYED — cv-proxy & demo-proxy 3.6.1-jd-bot-wall, nightly 2026-06-24]` —
   fetching a JD by URL from a bot-walled career site returned the **bot-challenge / error page** as the JD.
   Repro URL (owner):
   `https://careers.thalesgroup.com/global/en/job/TGPTGWGLOBALR03291909EXTERNALENGLOBAL/Project-Manager?utm_source=linkedin&utm_medium=phenom-feeds`
@@ -48,6 +48,12 @@ prompt fix never strips prose already STORED from earlier generations. PM5 ships
   ingesting the wall. **Deploy owed:** both `demo-proxy` and `proxy` workers (manual, owner-gated per
   CLAUDE.md) before the fix is live; WAF/UA tricks won't beat Thales' bot wall, so manual paste stays the
   intended path — this just makes the failure honest and actionable.
+  **DEPLOYED (nightly 2026-06-24):** both workers bumped to `VERSION='3.6.1-jd-bot-wall'` and deployed via
+  `deploy.yml` (demo-proxy run 28066010075, proxy run 28066038730, both `success`). Live `/health` on both
+  reports `3.6.1-jd-bot-wall`. Live E2E against the owner's Thales repro URL now returns
+  `{ok:false, wall:true, status:410, error:"…paste the job description text directly."}` instead of
+  ingesting the wall/error page (the posting has since 410'd; the `status>=400` guard catches it the same
+  way it catches 403). Item is fully closed.
 
 ### Handoff
 - **Pagination + salmon** — owner asked for a fresh next-session prompt to "handle pagination issues

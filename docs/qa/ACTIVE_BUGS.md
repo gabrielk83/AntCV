@@ -1,5 +1,21 @@
 > **AUTHORITATIVE current state + next-session prompt: `docs/qa/SESSION_HANDOFF_2026-06-18-pm3.md`.** It supersedes the scattered PM/PM2 docs for what shipped (640-652) and what's open. The blocks below are the per-batch detail.
 
+## URGENT — 2026-06-24 — every-word version injection (1.50.867)
+
+- **EVERY-WORD-VERSION-INJECTION-001** `[FIX SHIPPED 1.50.867]` — owner (mobile): the app showed the
+  version string wrapped around EVERY word ("1.50.866AntCV1.50.866", "1.50.866Skip1.50.866 1.50.866to1.50.866 ...").
+  ROOT: `antcv-version-override.js` builds `STALE_RE = /\b(v1|v2|...)\b/` from STALE_VERSIONS; a blank /
+  non-string entry (a `null` — seen LIVE in window.AntcvVersionOverride.staleVersions, count 1055 with a
+  null tail) creates an EMPTY alternative `(...||...)` so `\b(\b)\b` matches every word boundary and
+  TARGET_VERSION is inserted around every word. The DEPLOYED file (fetched no-store) + origin/main source
+  were CLEAN (1053 entries, no null) — the owner's browser was running a STALE SW-cached version-override.js
+  from a parallel intermediate that had the null; `?hardReset` did not evict it (stale-SW-version-mask).
+  FIX (defensive, sidecar): filter STALE_VERSIONS to real non-TARGET version strings BEFORE building the
+  regex (`typeof v==='string' && v.trim().length>=3 && v!==TARGET`); if none remain, STALE_RE=null and
+  rewriteTextNodes no-ops. A malformed/stale array can now NEVER inject. Also added 865/866 to STALE
+  properly. Cache-bust → 1.50.867 (forces the stuck SW to fetch the fresh robust file). Owner: hard-refresh;
+  if it persists, the SW needs eviction (the 867 sw.js CACHE bump purges old caches on activate).
+
 ## Nightly autonomous — 2026-06-24 (run 6) — boot-perf watermark memo (1.50.866)
 
 - **BOOT-WM-PERF-001** `[SHIPPED 1.50.866]` — continuing the boot-freeze sidecar-swarm reduction (see

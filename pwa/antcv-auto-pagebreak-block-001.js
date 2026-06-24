@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.836-salmon-npage-limit-fix';
+  var VERSION = '1.50.879-pos-aware-clear';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -473,7 +473,27 @@
       // content reads even slightly under the line, then re-created → dance.
       var __born = __breakBornAt[bornKey(ek)] || 0;
       var __young = __born && (nowMs() - __born) < HOLD_MS;
-      if (__h > 0 && __h <= __fitLine && !__young) {
+      // RICH-BLOCK-OSC-FIX-001 (owner 2026-06-25 "salmon jumping, can't stay in the cut
+      // position"): the clear above tests the section's STANDALONE height (__h). A short
+      // section (e.g. CERTIFICATES ~247px) fits a page ALONE, so it clears — but at its real
+      // POSITION (pushed down by the sidebar content above it) it OVERFLOWS, so the detector
+      // re-breaks it next pass → the salmon flip-flops forever. Make the clear POSITION-aware:
+      // only clear if the section, collapsed back to one piece at its start, still fits within
+      // ITS page (start offset from the column top + height ≤ the page's bottom line). Detector
+      // and clearer now use the SAME (positional) test, so a placed break converges.
+      var __posOK = true;
+      try {
+        if (__cl && __cl.closest) {
+          var __colEl = __cl.closest('.antcv-document-sidebar,[data-antcv-document-sidebar="true"],.antcv-document-main,[data-antcv-document-main="true"]');
+          if (__colEl) {
+            var __lineSc = __ubBase * __sc;                                   // scaled page line
+            var __startTop = __cl.getBoundingClientRect().top - __colEl.getBoundingClientRect().top;
+            var __pageBottom = (Math.floor(Math.max(0, __startTop) / __lineSc) + 1) * __lineSc;
+            __posOK = (__startTop + __h) <= (__pageBottom - hyst * __sc);
+          }
+        }
+      } catch (_) {}
+      if (__h > 0 && __h <= __fitLine && __posOK && !__young) {
         // Section now fits on one page with margin AND the break has had time to
         // settle → CLEAR the break (omit from map). The (CONT.) tail flows back
         // to page 1. Drop the born-stamp so a future re-break starts a fresh hold.

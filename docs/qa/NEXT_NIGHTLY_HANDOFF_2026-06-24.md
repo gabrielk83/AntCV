@@ -1,7 +1,7 @@
 # Next-nightly handoff — 2026-06-24 (AUTHORITATIVE current state)
 
 > Read this FIRST, then `CLAUDE.md`, then the per-batch detail at the top of `ACTIVE_BUGS.md`.
-> Current shipped: **PWA 1.50.869** (origin/main `dc8ef8a`) + **docx-worker 1.14.81-trailing-blank-trim** (deployed, /health confirms).
+> Current shipped: **PWA 1.50.870** (origin/main `36fe94a`) + **docx-worker 1.14.81-trailing-blank-trim** (deployed, /health confirms).
 > Suite **467/467**. PWA auto-deploys on push to `main`; the docx-worker is a manual deploy.
 
 ## ⭐ TOP PRIORITY for the next run — the owner is providing a FRESH unsolicited CV export
@@ -48,7 +48,7 @@ Full per-item detail is in `ACTIVE_BUGS.md` (dated blocks at the top). Summary:
 
 ## OPEN — DEEP / owner-gated (the headline)
 - **CV-SIDEBAR-SPILL-9-PAGES** — the real cause of the 9-page CV: the SIDEBAR (regulatory ~21 + tools 14 + certs 9 + education/langs/interests/access ≈ 7 sections) is far taller than the MAIN (12 roles), so `numPages = max(sidebarPages, mainPages)` (`workers/docx-worker/src/index.js ~24664`) leaves pages 5-8 with sidebar content + an EMPTY main cell. The trailing-trim + dup-group-merge only trim the edges. **THE FIX** (spec in `ACTIVE_BUGS.md`): once the main ends, re-flow the overflow sidebar FULL-WIDTH (single column → ~2× density → ~half the overflow pages); move the AI-watermark anchor to the true last page; **ship behind a payload kill switch and verify on a REAL export** (high blast radius — all CV exports; the LibreOffice/CloudConvert PDF render can't be verified headlessly, so DO NOT blind-ship). The owner's fresh export + a flag-gated test is the path.
-- **Boot-freeze remaining swarm** — next profiled offenders: `antcv-language-ui-429.js` (`settingsRoot` scans ALL divs with getComputedStyle/getBoundingClientRect every tick even when Settings is closed — gate on settings-open; NOTE: Personal-scope, check parallel contention), `antcv-core-wib-strict-row-layout-274.js`, `antcv-selected-outcomes-row-controls-237.js`, `antcv-embedded-controls-248.js`. Bigger lever = a SHARED swarm coalescer (run the set once per settle, not per-tick per sidecar) — higher value, higher blast radius. Re-profile with `diag-boot-profile.mjs` after each.
+- **Boot-freeze remaining swarm** — `antcv-language-ui-429.js` DONE (BOOT-LANGUI-GATE-001, 1.50.870): `apply()` now gates on STANDARD/ADVANCED button presence before the O(all-divs) `settingsRoot()` scan; needs a signed-in desktop browser confirm that the Language panel still shows on Personal tab (diag-language-ui-merge Playwright, not runnable in cloud). Next profiled offenders: `antcv-core-wib-strict-row-layout-274.js`, `antcv-selected-outcomes-row-controls-237.js`, `antcv-embedded-controls-248.js`. Bigger lever = a SHARED swarm coalescer — higher value, higher blast radius. Re-profile with `diag-boot-profile.mjs` after each.
 - **SETTINGS-SCROLL-RESET-001** — needs a live repro (not headless-reproducible).
 - `TABLE-CELL-EDIT-REVERT` residual, `EXPORT-PREVIEW-PRINT-SETUP` (shipped 844 — confirm), per the earlier 0624 batch.
 

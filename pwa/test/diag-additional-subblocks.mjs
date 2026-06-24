@@ -42,15 +42,24 @@ const r = await page.evaluate(() => {
   const vals = card ? [...card.querySelectorAll('input')].map(i => i.value) : [];
   const noStandaloneLang = ![...modal.querySelectorAll('button')].some(b => { const c = b.firstElementChild; return c && /^[▸▾]$/.test((c.textContent || '').trim()) && b.children.length >= 2 && /^[▸▾]\s*🗣️\s*Languages$/.test((b.textContent || '').replace(/\s+/g, ' ').trim()); });
   // sections store reflects the languages seed
-  let langSection = null;
-  try { const s = JSON.parse(localStorage.getItem('sections') || '{}'); langSection = (s.cv || []).find(x => x && x.id === 'languages') || null; } catch (_) {}
+  let langSection = null, piLangMirror = false;
+  try {
+    const s = JSON.parse(localStorage.getItem('sections') || '{}'); langSection = (s.cv || []).find(x => x && x.id === 'languages') || null;
+    const pi = JSON.parse(localStorage.getItem('personalInfo') || '{}');
+    const secRows = (langSection && langSection.items || []).filter(r => r && !('group' in r));
+    piLangMirror = Array.isArray(pi.languages) && pi.languages.length === secRows.length &&
+      pi.languages.every((l, i) => l.lang === secRows[i].l && l.level === secRows[i].v);
+  } catch (_) {}
   return {
     addCard: !!card,
     hasLangBlock: /🗣️\s*Languages/.test(t), hasInterestsBlock: /🎯\s*Interests/.test(t), hasAccessBlock: /♿\s*Accessibility/.test(t),
+    hasProjectsBlock: /💻\s*Software projects/.test(t),
+    hasPubProfile: /Publications profile link/.test(modal.textContent || ''),
     seedEnglish: vals.includes('English'), seedDanish: vals.includes('Danish'),
     interestRugby: vals.includes('Rugby'), accessHearing: vals.some(v => /hearing-impaired/.test(v)),
     langSectionSeeded: !!(langSection && Array.isArray(langSection.items) && langSection.items.some(i => i.l === 'English') && langSection.items.some(i => i.l === 'Danish')),
     noStandaloneLangCard: noStandaloneLang,
+    piLangMirror: piLangMirror,
   };
 });
 
@@ -72,8 +81,9 @@ const edited = await page.evaluate(() => {
 console.log(JSON.stringify(r, null, 1));
 console.log('EDIT:', JSON.stringify(edited));
 const pass = r.addCard && r.hasLangBlock && r.hasInterestsBlock && r.hasAccessBlock &&
+  r.hasProjectsBlock && r.hasPubProfile &&
   r.seedEnglish && r.seedDanish && r.interestRugby && r.accessHearing &&
-  r.langSectionSeeded && r.noStandaloneLangCard && edited.ok && edited.persisted;
+  r.langSectionSeeded && r.noStandaloneLangCard && r.piLangMirror && edited.ok && edited.persisted;
 console.log('\nRESULT:', pass ? 'PASS' : 'FAIL');
 if (errs.length) console.log('pageerrors:', errs.slice(0, 3).join(' | '));
 await browser.close(); await new Promise(r => server.close(r));

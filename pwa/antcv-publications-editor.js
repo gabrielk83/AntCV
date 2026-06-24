@@ -87,6 +87,23 @@
         h("button", { onClick: function () { d({ on: e.on === false }); }, title: e.on === false ? "Section hidden — show" : "Section shown — hide", style: cbtn({ border: "1px solid " + (e.on === false ? "#999" : accent), color: e.on === false ? "#999" : accent, fontSize: 11 }) }, (e.on === false ? "🙈" : "👁") + " Section")
       );
 
+      // ---- publications master-site link (owner 2026-06-24; default OFF) ----
+      // A whole-section link to the candidate's publications profile (Google
+      // Scholar / Academia / ORCID / …). Stored on the section as
+      // section.masterSite = { on, label, url }; off by default so nothing renders
+      // until the candidate opts in.
+      var MS_SITES = ["Google Scholar", "Academia.edu", "ORCID", "ResearchGate", "Other"];
+      var ms = e.masterSite || { on: false, label: "Google Scholar", url: "" };
+      function setMS(patch) { d({ masterSite: Object.assign({ on: false, label: "Google Scholar", url: "" }, ms, patch) }); }
+      var msRow = h("div", { style: { display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", marginBottom: 8, fontSize: 11 } },
+        h("label", { style: { display: "flex", alignItems: "center", gap: 4, cursor: "pointer", whiteSpace: "nowrap" } },
+          h("input", { type: "checkbox", checked: !!ms.on, onChange: function (x) { setMS({ on: x.target.checked }); } }),
+          "Link to publications profile"),
+        h("select", { value: ms.label || "Google Scholar", disabled: !ms.on, onChange: function (x) { setMS({ label: x.target.value }); }, style: { fontSize: 11, padding: 3 } },
+          MS_SITES.map(function (s) { return h("option", { key: s, value: s }, s); })),
+        h("input", { type: "url", value: ms.url || "", disabled: !ms.on, placeholder: "https://scholar.google.com/citations?user=…", onChange: function (x) { setMS({ url: x.target.value }); }, style: Object.assign({}, fldStyle, { flex: 1, minWidth: 150, opacity: ms.on ? 1 : 0.5 }) })
+      );
+
       // ---- rows ----
       var items = e.items || [];
       var rowEls = items.map(function (t, n) {
@@ -118,7 +135,7 @@
 
       var addBtn = h("button", { onClick: addRow, style: { fontSize: 11, background: "none", border: "1px solid " + accent, color: accent, borderRadius: 4, padding: "3px 8px", cursor: "pointer", marginTop: 2 } }, "+ Publication");
 
-      return h(R.Fragment, null, bar, rowEls, addBtn);
+      return h(R.Fragment, null, bar, msRow, rowEls, addBtn);
     }
 
     window.AntcvPublicationsEditor = PublicationsEditor;

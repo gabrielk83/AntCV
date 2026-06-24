@@ -49,7 +49,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.853-fab-removal';
+  var VERSION = '1.50.855-lang-mirror-pubsite-projects';
   if (window.__antcvDataExport360 === VERSION) return;
   window.__antcvDataExport360 = VERSION;
 
@@ -616,23 +616,27 @@
       var items = (sec && Array.isArray(sec.items)) ? sec.items : [];
       return items.filter(function (r) { return r && !('group' in r); }).map(function (r) { return { l: String((r && r.l) || ''), v: String((r && r.v) || '') }; });
     }
-    var arr = loadRows();
-    var seededNote = null;
-    if (!arr.length && typeof cfg.seed === 'function') {
-      try { var sd = cfg.seed(); if (sd && sd.length) { arr = sd; commit(); seededNote = sd.length; } } catch (_) {}
-    }
+    function cleanItems() { return arr.map(function (r) { return { l: r.l.trim(), v: r.v.trim() }; }).filter(function (r) { return r.l || r.v; }); }
     function commit() {
       var s = rdReadSections();
       if (!Array.isArray(s.cv)) s.cv = [];
       var sec = rdFindSection(s, cfg.id);
-      var items = arr.map(function (r) { return { l: r.l.trim(), v: r.v.trim() }; }).filter(function (r) { return r.l || r.v; });
-      if (!sec) { if (!items.length) return; sec = { id: cfg.id, title: (cfg.title || cfg.id).toUpperCase(), loc: 'sidebar', on: true, type: 'labeled_list', items: [] }; s.cv.push(sec); }
+      var items = cleanItems();
+      if (!sec) { if (!items.length) { if (typeof cfg.sync === 'function') { try { cfg.sync(items); } catch (_) {} } return; } sec = { id: cfg.id, title: (cfg.title || cfg.id).toUpperCase(), loc: 'sidebar', on: true, type: 'labeled_list', items: [] }; s.cv.push(sec); }
       // preserve any group markers that 415 may have placed; replace only the {l,v} rows.
       var groups = (Array.isArray(sec.items) ? sec.items : []).filter(function (r) { return r && 'group' in r; });
       sec.items = groups.concat(items);
       if (!sec.type) sec.type = 'labeled_list';
       rdSaveSections(s);
+      if (typeof cfg.sync === 'function') { try { cfg.sync(items); } catch (_) {} }
     }
+    var arr = loadRows();
+    if (!arr.length && typeof cfg.seed === 'function') {
+      try { var sd = cfg.seed(); if (sd && sd.length) { arr = sd; commit(); } } catch (_) {}
+    }
+    // Reconcile the mirror (e.g. personalInfo.languages) to the section content on
+    // open, even with no edit — so the two stores stay exactly equal.
+    if (typeof cfg.sync === 'function') { try { cfg.sync(cleanItems()); } catch (_) {} }
     function rowEl(r, i) {
       var row = rdEl('div', 'display:flex;gap:5px;align-items:center;');
       var a = rdEl('input', RD_ROW_INPUT); a.value = r.l; a.placeholder = cfg.cols[0]; a.addEventListener('input', function () { r.l = a.value; }); a.addEventListener('blur', commit);
@@ -860,10 +864,23 @@
       seed: function () {
         var ls = Array.isArray(pi.languages) ? pi.languages : [];
         return ls.map(function (l) { return { l: String(l.lang || l.l || ''), v: [l.level, l.note].filter(Boolean).join(' — ') || String(l.v || '') }; }).filter(function (r) { return r.l || r.v; });
+      },
+      // OWNER 2026-06-24: personalInfo.languages must be EXACTLY the content of
+      // sections.cv.languages. Mirror the section rows into personalInfo.languages
+      // ({lang,level}) on every edit + on open, writing only when they differ.
+      sync: function (items) {
+        var want = items.map(function (r) { return { lang: r.l, level: r.v }; });
+        var cur = rdReadPI();
+        var prev = Array.isArray(cur.languages) ? cur.languages : [];
+        if (JSON.stringify(prev) === JSON.stringify(want)) return;
+        cur.languages = want; rdSavePI(cur);
       }
     }));
     addSubBlocks.appendChild(rdSectionLVBlock({ emoji: '🎯', title: 'Interests', id: 'interests', cols: ['Interest', 'Detail'] }));
     addSubBlocks.appendChild(rdSectionLVBlock({ emoji: '♿', title: 'Accessibility', id: 'accessibility', cols: ['Label', 'Note'] }));
+    // OWNER 2026-06-24: a dedicated Software-projects entry (e.g. AntCV → its git
+    // repo). Its own CV section; project name + link/description per row.
+    addSubBlocks.appendChild(rdSectionLVBlock({ emoji: '💻', title: 'Software projects', id: 'projects', cols: ['Project', 'Link / description'] }));
     body.appendChild(rdSidebarSection({ emoji: '➕', title: 'Additional info', help: 'Label + value rows, plus Languages, Interests and Accessibility.', key: 'additional', kind: 'lv', cols: ['Label', 'Value'] }, pi.additional, addSubBlocks));
 
     // 8 — What's shown vs hidden (editable toggles)
@@ -886,6 +903,38 @@
       s8.body.appendChild(row);
     });
     body.appendChild(s8.sec);
+
+    // 9 — Publications profile link (owner 2026-06-24; default OFF). Writes the
+    // SAME section.masterSite the editor-panel Publications editor reads, so the
+    // two surfaces stay in sync.
+    var s9 = rdSection('🔗', 'Publications profile link', 'Optional link to your publications master site (Google Scholar, Academia, ORCID…). Off by default; appears only when you turn it on.');
+    (function () {
+      var SITES = ['Google Scholar', 'Academia.edu', 'ORCID', 'ResearchGate', 'Other'];
+      function readMS() { var sec = rdFindSection(rdReadSections(), 'pubs'); return (sec && sec.masterSite) || { on: false, label: 'Google Scholar', url: '' }; }
+      function writeMS(patch) {
+        var s = rdReadSections(); if (!Array.isArray(s.cv)) s.cv = [];
+        var sec = rdFindSection(s, 'pubs');
+        if (!sec) { sec = { id: 'pubs', title: 'PUBLICATIONS', loc: 'main', on: true, type: 'list_italic', items: [] }; s.cv.push(sec); }
+        sec.masterSite = Object.assign({ on: false, label: 'Google Scholar', url: '' }, sec.masterSite || {}, patch);
+        rdSaveSections(s);
+      }
+      var ms = readMS();
+      var row = rdEl('div', 'display:flex;gap:6px;align-items:center;flex-wrap:wrap;');
+      var lbl = rdEl('label', 'display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;');
+      var cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = !!ms.on; cb.style.cssText = 'accent-color:#01B7BB;';
+      lbl.appendChild(cb); lbl.appendChild(rdEl('span', null, 'Link to publications profile'));
+      var sel = rdEl('select', RD_ROW_INPUT + 'flex:0 0 auto;');
+      SITES.forEach(function (s) { var o = document.createElement('option'); o.value = s; o.textContent = s; if (s === (ms.label || 'Google Scholar')) o.selected = true; sel.appendChild(o); });
+      var url = rdEl('input', RD_ROW_INPUT); url.type = 'url'; url.value = ms.url || ''; url.placeholder = 'https://scholar.google.com/citations?user=…';
+      function applyDisabled() { sel.disabled = !cb.checked; url.disabled = !cb.checked; url.style.opacity = cb.checked ? '1' : '.5'; }
+      applyDisabled();
+      cb.addEventListener('change', function () { writeMS({ on: cb.checked }); applyDisabled(); });
+      sel.addEventListener('change', function () { writeMS({ label: sel.value }); });
+      url.addEventListener('blur', function () { writeMS({ url: url.value }); });
+      row.appendChild(lbl); row.appendChild(sel); row.appendChild(url);
+      s9.body.appendChild(row);
+    })();
+    body.appendChild(s9.sec);
 
     // Footer
     var foot = rdEl('div', 'border-top:1px solid rgba(255,255,255,.10);padding:13px 18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;');

@@ -6563,6 +6563,17 @@
                 __det,
               );
             }),
+            // PUB-MASTERSITE-001 (owner 2026-06-24): optional link to the
+            // publications master site (Google Scholar / Academia / ORCID …),
+            // stored on the section as masterSite={on,label,url}; default off.
+            (__isPubs && e.masterSite && e.masterSite.on && e.masterSite.url)
+              ? React.createElement(
+                  "div",
+                  { key: "__ms", style: { fontSize: S ? $.sb : $.text, fontFamily: T, color: S ? __sbInk : "#333", marginTop: 3, lineHeight: 1.3, overflowWrap: "break-word", wordBreak: "break-word" } },
+                  "All publications: ",
+                  React.createElement("a", { href: e.masterSite.url, target: "_blank", rel: "noopener noreferrer", style: { color: "inherit", textDecoration: "underline" } }, e.masterSite.label || e.masterSite.url),
+                )
+              : null,
           );
         }
         case "education": {

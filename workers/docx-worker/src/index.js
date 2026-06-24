@@ -26663,6 +26663,24 @@ function renderSimpleList(s, ctx, isSidebar, italic) {
     }
     outParas.push(new Paragraph(para));
   }
+  // PUB-MASTERSITE-001 (owner 2026-06-24): optional link to the publications
+  // master site (Google Scholar / Academia / ORCID …), stored on the section as
+  // masterSite={on,label,url}; default off. Mirrors the preview render.
+  if (isPublicationsSection(s) && s.masterSite && s.masterSite.on && s.masterSite.url) {
+    const __msColor = isSidebar ? style.sidebarTextColor : style.mainTextColor;
+    const __msSize = pt2hp(isSidebar ? fs.sbBody : fs.mainBody);
+    const __msFont = isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont;
+    const __msBase = { color: __msColor, size: __msSize, font: __msFont };
+    outParas.push(new Paragraph({
+      spacing: { before: 60, after: 30, line: 252, lineRule: "auto" },
+      alignment: a,
+      shading: isSidebar ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" } : void 0,
+      children: [
+        new TextRun({ text: "All publications: ", ...__msBase }),
+        new ExternalHyperlink({ link: String(s.masterSite.url), children: [new TextRun({ text: String(s.masterSite.label || s.masterSite.url), ...__msBase, underline: {} })] })
+      ]
+    }));
+  }
   return outParas;
 }
 __name(renderSimpleList, "renderSimpleList");

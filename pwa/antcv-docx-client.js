@@ -690,6 +690,14 @@ export function buildPayload({
     ...(typeof readItemPages === 'function'
       ? { item_pages: readItemPages() }
       : {}),
+    /* BALANCE-OVERFLOW-001 (owner 2026-06-24, FLAG-GATED, default OFF): when the CV
+       sidebar paginates DEEPER than the main, the worker normally renders the overflow
+       as [sidebar | EMPTY main] pages (the owner's 9-page CV). With this flag the worker
+       re-flows that overflow FULL-WIDTH (~2x density -> fewer pages). Default off — a
+       real-export PDF render can't be verified headlessly. Enable to test:
+         localStorage.setItem('antcv:balance-overflow','1')   (then export)
+       Workers < 1.14.82 ignore it. */
+    ...((() => { try { return localStorage.getItem('antcv:balance-overflow') === '1' ? { balance_overflow: true } : {}; } catch (_) { return {}; } })()),
     ...(typeof readPanelDefaultAlign === 'function'
       ? { panel_default_alignment: readPanelDefaultAlign() }
       : {}),

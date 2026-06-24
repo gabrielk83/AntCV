@@ -24348,6 +24348,9 @@ async function generateDocx(payload) {
   const __mainW = PAGE_W - __sidebarW;
   const ctx = {
     style,
+    // BALANCE-OVERFLOW-001 (FLAG-GATED, default off): re-flow sidebar overflow full-width
+    // (mergeStyle drops non-string keys, so the flag rides the payload, not style).
+    balanceOverflow: payload.balance_overflow === true || !!(payload.style && payload.style.balanceOverflow === true),
     sidebarW: __sidebarW,
     mainW: __mainW,
     fs: fontSizes,
@@ -24868,21 +24871,55 @@ function buildTwoColumnDocument(ctx) {
     const __mn = mainPages[p] || [];
     if (p === 0 || __sb.length > 0 || __mn.length > 0) __renderSlots.push(p);
   }
-  // AI-WATERMARK-EXPORT-LOCATION-001 (1.14.79): push the floating sentinel into the
-  // LAST RENDERED slot's main column BEFORE that slot is rendered, so it ships inside
-  // the last real page. The VML frame is absolutely positioned (vertical/horizontal-
-  // relative:page, set in aiNoticeVmlRun), zero layout footprint, so it floats to the
-  // page-bottom corner without adding a page (the 1.14.78 body-level placement added
-  // a 6th page; cell placement + page anchor does not).
-  {
+  // CV-SIDEBAR-SPILL / BALANCE-OVERFLOW-001 (owner 2026-06-24, FLAG-GATED, default OFF):
+  // when the SIDEBAR paginates deeper than the MAIN, slots past the main's last page
+  // render as [sidebar | EMPTY main] — the owner's 9-page CV with empty-main pages 5-8.
+  // With style.balanceOverflow on: keep the two-column [sidebar|main] tables for slots
+  // 0..lastMainSlot, then emit the CONCATENATED overflow sidebar content as ONE FULL-WIDTH
+  // navy table with NATURAL flow, so the converter re-paginates it at full width (~2x
+  // density -> ~half the overflow pages). Default OFF (zero regression) until the owner
+  // verifies a real export — the LibreOffice/CloudConvert PDF render can't be checked
+  // headlessly. Kill: omit style.balanceOverflow.
+  const __balanceOverflow = !!ctx.balanceOverflow;
+  let __lastMainSlot = -1;
+  for (let p = 0; p < numPages; p++) { if ((mainPages[p] || []).length > 0) __lastMainSlot = p; }
+  const __pageBreakPara = () => new Paragraph({ pageBreakBefore: true, spacing: { before: 0, after: 0, line: 1, lineRule: "exact" }, children: [] });
+  const makeFullWidthSidebarTable = (els) => new Table({
+    width: { size: PAGE_W, type: WidthType.DXA }, columnWidths: [PAGE_W], borders: noBorders(),
+    rows: [new TableRow({ cantSplit: false, children: [new TableCell({
+      width: { size: PAGE_W, type: WidthType.DXA },
+      shading: { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" },
+      borders: noBorders(), margins: { top: 240, bottom: 240, left: sbLR, right: sbLR },
+      children: els && els.length ? els : [emptyParagraph()]
+    })] })]
+  });
+  const __overflowActive = __balanceOverflow && __lastMainSlot >= 0 &&
+    __renderSlots.some((p) => p > __lastMainSlot && (sidebarPages[p] || []).length > 0);
+  // AI-WATERMARK-EXPORT-LOCATION-001 (1.14.79): the floating sentinel (zero layout
+  // footprint, page-anchored) ships in the LAST rendered content — the last main slot
+  // normally, or the full-width overflow block when balance-overflow re-flows it.
+  if (!__overflowActive) {
     const __lastRendered = __renderSlots.length ? __renderSlots[__renderSlots.length - 1] : 0;
     if (!mainPages[__lastRendered]) mainPages[__lastRendered] = [];
     mainPages[__lastRendered].push(buildAiDisclosureHangingTextbox(ctx, { side: ctx.__aiWmCorner || "right" }));
   }
-  __renderSlots.forEach((p, __i) => {
-    if (__i > 0) docChildren.push(new Paragraph({ pageBreakBefore: true, spacing: { before: 0, after: 0, line: 1, lineRule: "exact" }, children: [] }));
-    docChildren.push(makePageTable(sidebarPages[p] || [], mainPages[p] || [], p === 0));
-  });
+  if (__overflowActive) {
+    const __twoCol = __renderSlots.filter((p) => p <= __lastMainSlot);
+    __twoCol.forEach((p, __i) => {
+      if (__i > 0) docChildren.push(__pageBreakPara());
+      docChildren.push(makePageTable(sidebarPages[p] || [], mainPages[p] || [], p === 0));
+    });
+    const __overflowEls = [];
+    for (let op = __lastMainSlot + 1; op < numPages; op++) { (sidebarPages[op] || []).forEach((e) => __overflowEls.push(e)); }
+    __overflowEls.push(buildAiDisclosureHangingTextbox(ctx, { side: ctx.__aiWmCorner || "right" }));
+    if (__twoCol.length) docChildren.push(__pageBreakPara());
+    docChildren.push(makeFullWidthSidebarTable(__overflowEls));
+  } else {
+    __renderSlots.forEach((p, __i) => {
+      if (__i > 0) docChildren.push(__pageBreakPara());
+      docChildren.push(makePageTable(sidebarPages[p] || [], mainPages[p] || [], p === 0));
+    });
+  }
   // AI-WATERMARK-EXPORT-LOCATION-001 fix (1.14.78): body-level sentinel carrier,
   // appended AFTER the final page table (not inside a cell). postProcessDocx swaps its
   // run for the page-anchored VML frame; at body level on the last page it renders
@@ -27457,7 +27494,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   the anchor's spacing-after from (px/2+14) to (px/2-12) so the first sidebar
 //   section sits just under the medallion (~0.27in higher; the full 0.6in would
 //   overlap the photo at the default diameter).
-var VERSION = "1.14.81-trailing-blank-trim";
+var VERSION = "1.14.82-balance-overflow";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

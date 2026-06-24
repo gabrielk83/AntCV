@@ -113,6 +113,7 @@
     [/linkedin.*\.pdf$/i,                                  'linkedin-pdf'],
     [/(via|character.?strengths).*\.pdf$/i,                'via-pdf'],
     [/work.?example|portfolio|case.?stud/i,                'work-examples-pdf'],
+    [/recommendation|reference.?letter|anbefaling|udtalelse/i, 'recommendation-doc'],
     [/patent|publication/i,                                'publication-pdf'],
     [/(cv|resume|curriculum).*\.(pdf|docx)$/i,             'cv-doc'],
     [/skills?.*\.docx$/i,                                  'skills-docx'],
@@ -122,6 +123,7 @@
 
   function detectFromContent(text) {
     const t = text.slice(0, 2000);
+    if (/to whom it may concern|letter of recommendation|it is my (pleasure|honou?r) to recommend|i (highly |strongly |gladly )?recommend|i am writing to recommend|served as a reference for/i.test(t)) return 'recommendation-doc';
     if (/character strengths report|signature strengths|^\s*via\b/i.test(t)) return 'via-pdf';
     if (/words and phrases to avoid|buzzwords and vague corporate/i.test(t)) return 'words-docx';
     if (/patent application publication|claim \d+|cover window/i.test(t))    return 'publication-pdf';
@@ -450,6 +452,47 @@ ${text}`;
     };
   }
 
+  // RECS-IMPORT-001 (owner 2026-06-24): capture a recommendation / reference
+  // letter's metadata (who wrote it, their title, the role it supports, contact)
+  // and append it to the Recommendations CV section (education shape {deg,sch,gpa},
+  // edited in the Review & Edit panel).
+  const RECOMMENDATION_PROMPT = (text) => `You extract metadata from a recommendation / reference letter. Return JSON only — no prose, no markdown fences.
+Fields:
+- recommender_name: who WROTE the letter (the referee)
+- recommender_title: their job title and organisation if stated (e.g. "VP Engineering, Acme")
+- candidate_name: the person being recommended
+- for_position: the role/position the letter supports, if stated (else "")
+- relationship: how the recommender knows the candidate (e.g. "former manager", "PhD supervisor")
+- contact: any email or phone for the recommender (else "")
+Return exactly: {"recommender_name":"","recommender_title":"","candidate_name":"","for_position":"","relationship":"","contact":""}
+LETTER:
+${text}`;
+
+  async function handleRecommendation(file) {
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    const text = ext === 'pdf' ? await extractPdfText(file) : await extractDocxText(file);
+    let meta = {};
+    try { meta = repairAndParseJSON(await callLLM(RECOMMENDATION_PROMPT(text.slice(0, CFG.maxPdfChars)))) || {}; } catch (_) { meta = {}; }
+    const name = [meta.recommender_name, meta.recommender_title].filter(Boolean).join(', ').trim();
+    const who = meta.for_position
+      ? ('For ' + meta.for_position + (meta.relationship ? ' — ' + meta.relationship : ''))
+      : (meta.relationship || 'Reference');
+    const row = { deg: name || 'Recommender', sch: who, gpa: String(meta.contact || '').trim() };
+    // Append to the Recommendations section directly (sections aren't field-diffed),
+    // snapshotting first so the import Undo restores it.
+    try { snapshotForUndo(['sections']); } catch (_) {}
+    const sections = Store.get('sections', {}) || {};
+    if (!Array.isArray(sections.cv)) sections.cv = [];
+    let sec = sections.cv.find((s) => s && (s.id === 'recommendations' || /^(RECOMMENDATIONS|REFERENCES)$/i.test(String(s.title || ''))));
+    if (!sec) { sec = { id: 'recommendations', title: 'RECOMMENDATIONS', loc: 'sidebar', on: true, type: 'education', items: [] }; sections.cv.push(sec); }
+    if (!Array.isArray(sec.items)) sec.items = [];
+    sec.items.push(row);
+    Store.set('sections', sections);
+    try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { source: 'rec-import' } })); } catch (_) {}
+    try { window._antcvCloudWrite && window._antcvCloudWrite({ sections: sections }); } catch (_) {}
+    return { proposed: {}, summary: `Recommendation captured → ${name || 'recommender'}${meta.for_position ? ' (for ' + meta.for_position + ')' : ''} — added to Recommendations` };
+  }
+
   async function handleSkillsDOCX(file) {
     const content = await extractDocxText(file);
     return {
@@ -492,6 +535,7 @@ ${text}`;
     'cv-doc':            handleCV,
     'publication-pdf':   handlePublication,
     'work-examples-pdf': handlePublication,
+    'recommendation-doc': handleRecommendation,
     'skills-docx':       handleSkillsDOCX,
     'words-docx':        handleWordsDOCX,
     'danish-docx':       handleDanishDOCX,
@@ -507,6 +551,7 @@ ${text}`;
     'cv-doc':            'CV / résumé',
     'publication-pdf':   'Publication / patent',
     'work-examples-pdf': 'Work examples',
+    'recommendation-doc': 'Recommendation / reference letter',
     'skills-docx':       'Skills list',
     'words-docx':        'Banned words list',
     'danish-docx':       'Danish reference',
@@ -1171,5 +1216,5 @@ ${text}`;
 
   // Expose for debugging / programmatic invocation (mergePath + DEDUP_KEYS exposed
   // for the REG-DEDUP-001 dedupe test — pure data transform, drives the real code).
-  window.AntCVImporter = { open: openModal, close: closeModal, undoLastUpload: undoLastUpload, mergePath: mergePath, DEDUP_KEYS: DEDUP_KEYS };
+  window.AntCVImporter = { open: openModal, close: closeModal, undoLastUpload: undoLastUpload, mergePath: mergePath, DEDUP_KEYS: DEDUP_KEYS, _detectKind: detectKind, _handlerKinds: Object.keys(HANDLERS) };
 })();

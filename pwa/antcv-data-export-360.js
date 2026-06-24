@@ -49,7 +49,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.855-lang-mirror-pubsite-projects';
+  var VERSION = '1.50.857-recommendations';
   if (window.__antcvDataExport360 === VERSION) return;
   window.__antcvDataExport360 = VERSION;
 
@@ -608,25 +608,33 @@
   // runs ONCE only when the section is empty/absent — a non-destructive
   // prefer-richer merge (the section always wins if it already has rows).
   function rdSectionLVBlock(cfg) {
+    // FIELDS lets a block carry more than the default {l,v} pair — e.g.
+    // Recommendations uses the education shape {deg,sch} + a contact field.
+    var FIELDS = Array.isArray(cfg.fields) ? cfg.fields : [{ key: 'l', ph: cfg.cols[0] }, { key: 'v', ph: cfg.cols[1] }];
+    var SECTYPE = cfg.type || 'labeled_list';
+    function blank() { var o = {}; FIELDS.forEach(function (f) { o[f.key] = ''; }); return o; }
     var wrap = rdEl('div', 'margin:9px 0 0;padding-top:9px;border-top:1px solid rgba(255,255,255,.08);');
-    wrap.appendChild(rdEl('div', 'font-size:11px;font-weight:700;color:#cdd6e0;margin:0 0 5px;', cfg.emoji + '  ' + cfg.title));
+    if (!cfg.noHeading) wrap.appendChild(rdEl('div', 'font-size:11px;font-weight:700;color:#cdd6e0;margin:0 0 5px;', cfg.emoji + '  ' + cfg.title));
     var list = rdEl('div', 'display:flex;flex-direction:column;gap:5px;');
     function loadRows() {
       var sec = rdFindSection(rdReadSections(), cfg.id);
       var items = (sec && Array.isArray(sec.items)) ? sec.items : [];
-      return items.filter(function (r) { return r && !('group' in r); }).map(function (r) { return { l: String((r && r.l) || ''), v: String((r && r.v) || '') }; });
+      return items.filter(function (r) { return r && !('group' in r); }).map(function (r) { var o = {}; FIELDS.forEach(function (f) { o[f.key] = String((r && r[f.key]) || ''); }); return o; });
     }
-    function cleanItems() { return arr.map(function (r) { return { l: r.l.trim(), v: r.v.trim() }; }).filter(function (r) { return r.l || r.v; }); }
+    function cleanItems() {
+      return arr.map(function (r) { var o = {}; FIELDS.forEach(function (f) { o[f.key] = String(r[f.key] || '').trim(); }); return o; })
+        .filter(function (r) { return FIELDS.some(function (f) { return r[f.key]; }); });
+    }
     function commit() {
       var s = rdReadSections();
       if (!Array.isArray(s.cv)) s.cv = [];
       var sec = rdFindSection(s, cfg.id);
       var items = cleanItems();
-      if (!sec) { if (!items.length) { if (typeof cfg.sync === 'function') { try { cfg.sync(items); } catch (_) {} } return; } sec = { id: cfg.id, title: (cfg.title || cfg.id).toUpperCase(), loc: 'sidebar', on: true, type: 'labeled_list', items: [] }; s.cv.push(sec); }
-      // preserve any group markers that 415 may have placed; replace only the {l,v} rows.
+      if (!sec) { if (!items.length) { if (typeof cfg.sync === 'function') { try { cfg.sync(items); } catch (_) {} } return; } sec = { id: cfg.id, title: (cfg.title || cfg.id).toUpperCase(), loc: 'sidebar', on: true, type: SECTYPE, items: [] }; s.cv.push(sec); }
+      // preserve any group markers that 415 may have placed; replace only the data rows.
       var groups = (Array.isArray(sec.items) ? sec.items : []).filter(function (r) { return r && 'group' in r; });
       sec.items = groups.concat(items);
-      if (!sec.type) sec.type = 'labeled_list';
+      if (!sec.type) sec.type = SECTYPE;
       rdSaveSections(s);
       if (typeof cfg.sync === 'function') { try { cfg.sync(items); } catch (_) {} }
     }
@@ -639,17 +647,20 @@
     if (typeof cfg.sync === 'function') { try { cfg.sync(cleanItems()); } catch (_) {} }
     function rowEl(r, i) {
       var row = rdEl('div', 'display:flex;gap:5px;align-items:center;');
-      var a = rdEl('input', RD_ROW_INPUT); a.value = r.l; a.placeholder = cfg.cols[0]; a.addEventListener('input', function () { r.l = a.value; }); a.addEventListener('blur', commit);
-      var b = rdEl('input', RD_ROW_INPUT); b.value = r.v; b.placeholder = cfg.cols[1]; b.addEventListener('input', function () { r.v = b.value; }); b.addEventListener('blur', commit);
+      FIELDS.forEach(function (f) {
+        var inp = rdEl('input', RD_ROW_INPUT); inp.value = r[f.key] || ''; inp.placeholder = f.ph || '';
+        inp.addEventListener('input', function () { r[f.key] = inp.value; }); inp.addEventListener('blur', commit);
+        row.appendChild(inp);
+      });
       var x = rdEl('button', 'flex:0 0 auto;background:transparent;border:none;color:#f3b4b3;font-size:15px;line-height:1;cursor:pointer;padding:0 4px;', '×');
       x.type = 'button'; x.title = 'Remove'; x.setAttribute('aria-label', 'Remove row');
       x.addEventListener('click', function () { arr.splice(i, 1); commit(); render(); });
-      row.appendChild(a); row.appendChild(b); row.appendChild(x); return row;
+      row.appendChild(x); return row;
     }
     function render() { while (list.firstChild) list.removeChild(list.firstChild); arr.forEach(function (r, i) { list.appendChild(rowEl(r, i)); }); }
     wrap.appendChild(list);
     var add = rdMiniBtn('+ row'); add.style.marginTop = '6px';
-    add.addEventListener('click', function () { arr.push({ l: '', v: '' }); render(); });
+    add.addEventListener('click', function () { arr.push(blank()); render(); });
     wrap.appendChild(add);
     render();
     return wrap;
@@ -882,6 +893,17 @@
     // repo). Its own CV section; project name + link/description per row.
     addSubBlocks.appendChild(rdSectionLVBlock({ emoji: '💻', title: 'Software projects', id: 'projects', cols: ['Project', 'Link / description'] }));
     body.appendChild(rdSidebarSection({ emoji: '➕', title: 'Additional info', help: 'Label + value rows, plus Languages, Interests and Accessibility.', key: 'additional', kind: 'lv', cols: ['Label', 'Value'] }, pi.additional, addSubBlocks));
+
+    // Recommendations (owner 2026-06-24): recommenders by NAME / who it was for /
+    // contact — its own CV section (sections.cv 'recommendations', education shape).
+    // Also populated by uploading a recommendation letter (importer captures the
+    // who / position metadata).
+    var sRec = rdSection('📨', 'Recommendations', 'Recommenders by name, the position/context it was for, and contact. Uploading a recommendation letter fills this in.');
+    sRec.body.appendChild(rdSectionLVBlock({
+      id: 'recommendations', type: 'education', noHeading: true,
+      fields: [{ key: 'deg', ph: 'Recommender / who' }, { key: 'sch', ph: 'Position / who it was for' }, { key: 'gpa', ph: 'Contact (optional)' }]
+    }));
+    body.appendChild(sRec.sec);
 
     // 8 — What's shown vs hidden (editable toggles)
     var vc = pi.visibilityControls || {};

@@ -57,11 +57,15 @@ const r = await page.evaluate(() => {
     const tas = [...sec.querySelectorAll('textarea')];
     roleDetailHidden = tas.length > 0 && tas.every(t => t.offsetParent === null);
   }
-  return { modalPresent: true, sectionCount: sectionHeaders.length, initialAllCollapsed, firstExpands, roleCaretCount, roleDetailHidden };
+  const allTxt = modal.textContent || '';
+  const toneCard = /Tone & banned terms/.test(allTxt);
+  const oldGone = !/Banned words, phrases & tone/.test(allTxt) && !/Semantic constraints \(/.test(allTxt);
+  return { modalPresent: true, sectionCount: sectionHeaders.length, initialAllCollapsed, firstExpands, roleCaretCount, roleDetailHidden, toneCard, oldGone };
 });
 console.log(JSON.stringify(r, null, 1));
 const pass = r.modalPresent && r.sectionCount >= 6 && r.initialAllCollapsed &&
-  r.firstExpands && r.roleCaretCount === 2 && r.roleDetailHidden === true;
+  r.firstExpands && r.roleCaretCount === 2 && r.roleDetailHidden === true &&
+  r.toneCard === true && r.oldGone === true;
 console.log('\nRESULT:', pass ? 'PASS' : 'FAIL');
 if (errs.length) console.log('pageerrors:', errs.slice(0, 3).join(' | '));
 await browser.close(); await new Promise(r => server.close(r));

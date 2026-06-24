@@ -12,6 +12,7 @@ import { mountPreviewToolbarIsland } from './islands/PreviewToolbar/mount';
 import { mountSettingsRouterIsland } from './islands/SettingsRouter/mount';
 import { mountPackagePickerIsland } from './islands/PackagePicker/mount';
 import { mountWritingStylePickerIsland } from './islands/WritingStylePicker/mount';
+import { mountToneEditorsInto } from './islands/WritingStylePicker/WritingStylePicker';
 import { mountExportOptionsIsland } from './islands/ExportOptions/mount';
 import { mountLayoutPickerIsland } from './islands/LayoutPicker/mount';
 import { mountBreadcrumbsIsland } from './islands/Breadcrumbs/mount';
@@ -25,7 +26,7 @@ import { exposeMigrationDebugApi, runGabrielMigration } from './lib/gabriel-migr
 import { installWritingStyleFetchWrap } from './lib/install-fetch-wrap';
 import { exposeObservabilityApi } from './lib/observability';
 
-const VERSION = '1.50.711';
+const VERSION = '1.50.850';
 
 declare global {
   interface Window {
@@ -37,6 +38,7 @@ declare global {
 interface AntcvReactIslandsAPI {
   version: string;
   mountAll: () => void;
+  mountToneEditors: (node: HTMLElement) => () => void;
 }
 
 // Install the wizard-state guard + body[data-package] binding synchronously —
@@ -79,6 +81,7 @@ const api: AntcvReactIslandsAPI = {
     try { mountWizardLanguagePickerIsland(); } catch (e) { console.warn('[react-islands] WizardLanguagePicker mount failed', e); }
     try { mountJobSearchTargetingIsland(); } catch (e) { console.warn('[react-islands] JobSearchTargeting mount failed', e); }
   },
+  mountToneEditors: mountToneEditorsInto,
 };
 
 if (window.__antcvReactIslandsBooted === VERSION) {

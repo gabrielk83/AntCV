@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { createRoot } from 'react-dom/client';
 import {
   ACTIVE_STYLE_IDS,
   STYLE_IDS,
@@ -1405,4 +1406,136 @@ export function WritingStylePicker(): JSX.Element {
       )}
     </section>
   );
+}
+
+// PERSONAL-MERGE-3 (owner 2026-06-24): the editable tone panels for the
+// "Review & Edit my data" modal. Reuses the SAME private sub-editors + the SAME
+// canonical writing-prefs read/write the Personal-tab island uses, so banned
+// words/phrases (per-language scope + bank + bulk paste + clear all) and semantic
+// constraints all round-trip through export/import with zero parallel write
+// paths. Mounted on modal open via window.AntcvReactIslands.mountToneEditors.
+export function ToneEditors(): JSX.Element {
+  const [prefs, setPrefs] = useState<WritingPrefs>(() => readWritingPrefs());
+  const [bannedScope, setBannedScope] = useState<BannedScope>('all');
+  const [allWords, setAllWords] = useState<string[]>(() => readAllScopeBanned('words'));
+  const [allPhrases, setAllPhrases] = useState<string[]>(() => readAllScopeBanned('phrases'));
+  const [enabledLangs, setEnabledLangs] = useState<LangCode[]>(() => bannedScopeLangs());
+  const [wordsOpen, setWordsOpen] = useState(true);
+  const [phrasesOpen, setPhrasesOpen] = useState(true);
+  const [semOpen, setSemOpen] = useState(true);
+
+  useEffect(() => {
+    const refreshPrefs = () => {
+      setPrefs(readWritingPrefs());
+      setAllWords(readAllScopeBanned('words'));
+      setAllPhrases(readAllScopeBanned('phrases'));
+    };
+    const refreshLangs = () => setEnabledLangs(bannedScopeLangs());
+    window.addEventListener('antcv:writing-prefs-changed', refreshPrefs);
+    window.addEventListener('antcv:enabled-languages-changed', refreshLangs);
+    window.addEventListener('antcv:language-prefs-changed', refreshLangs);
+    return () => {
+      window.removeEventListener('antcv:writing-prefs-changed', refreshPrefs);
+      window.removeEventListener('antcv:enabled-languages-changed', refreshLangs);
+      window.removeEventListener('antcv:language-prefs-changed', refreshLangs);
+    };
+  }, []);
+
+  const setAll = useCallback((kind: 'words' | 'phrases', next: string[]) => {
+    writeAllScopeBanned(kind, next);
+    if (kind === 'words') setAllWords(next); else setAllPhrases(next);
+  }, []);
+  const onAddBanned = useCallback((kind: 'words' | 'phrases', value: string) => {
+    const v = value.trim();
+    if (!v) return;
+    if (bannedScope === 'all') {
+      const cur = kind === 'words' ? allWords : allPhrases;
+      if (cur.some((x) => x.toLowerCase() === v.toLowerCase())) return;
+      setAll(kind, [...cur, v]);
+    } else {
+      setPrefs(addBannedItem(kind, bannedScope, v));
+    }
+  }, [bannedScope, allWords, allPhrases, setAll]);
+  const onAddBannedBulk = useCallback((kind: 'words' | 'phrases', raw: string): { added: number; skipped: number } => {
+    if (bannedScope === 'all') {
+      const cur = kind === 'words' ? allWords : allPhrases;
+      const seen = new Set(cur.map((x) => x.toLowerCase()));
+      let added = 0, skipped = 0;
+      const next = cur.slice();
+      raw.split(/[\n,;]+/).map((s) => s.trim()).filter(Boolean).forEach((tok) => {
+        if (seen.has(tok.toLowerCase())) { skipped++; return; }
+        seen.add(tok.toLowerCase()); next.push(tok); added++;
+      });
+      if (added) setAll(kind, next);
+      return { added, skipped };
+    }
+    const { prefs: nextP, added, skipped } = addBannedItems(kind, bannedScope, raw);
+    setPrefs(nextP);
+    return { added, skipped };
+  }, [bannedScope, allWords, allPhrases, setAll]);
+  const onRemoveBanned = useCallback((kind: 'words' | 'phrases', value: string) => {
+    if (bannedScope === 'all') {
+      const cur = kind === 'words' ? allWords : allPhrases;
+      setAll(kind, cur.filter((x) => x !== value));
+    } else {
+      setPrefs(removeBannedItem(kind, bannedScope, value));
+    }
+  }, [bannedScope, allWords, allPhrases, setAll]);
+  const onClearBanned = useCallback((kind: 'words' | 'phrases') => {
+    if (bannedScope === 'all') setAll(kind, []);
+    else setPrefs(clearBannedBucket(kind, bannedScope));
+  }, [bannedScope, setAll]);
+  const onScopeChange = useCallback((scope: BannedScope) => {
+    setBannedScope(scope);
+    if (scope !== 'all') writeEditorLanguage(scope);
+  }, []);
+
+  return (
+    <div data-antcv-react-island="tone-editors" style={{ color: '#d7e6ee' }}>
+      <div style={{ margin: '0 0 6px' }}>
+        <ScopeSelector value={bannedScope} scopes={['all', ...enabledLangs]} onChange={onScopeChange} />
+      </div>
+      <div style={{ fontSize: 10.5, opacity: 0.55, margin: '0 0 6px' }}>
+        {bannedScope === 'all'
+          ? 'Applies to every output language (also after translation).'
+          : `Only when generating in ${SCOPE_LABELS[bannedScope]}.`}
+      </div>
+      <CollapsibleHeader open={wordsOpen} onToggle={() => setWordsOpen((v) => !v)}>Banned words ({SCOPE_LABELS[bannedScope]})</CollapsibleHeader>
+      {wordsOpen && (
+        <BannedListEditor
+          kind="words"
+          scopeLabel={SCOPE_LABELS[bannedScope]}
+          items={bannedScope === 'all' ? allWords : (prefs.extraBannedWords[bannedScope] ?? [])}
+          bank={BANNED_WORD_BANK}
+          onAdd={(v) => onAddBanned('words', v)}
+          onAddBulk={(raw) => onAddBannedBulk('words', raw)}
+          onRemove={(v) => onRemoveBanned('words', v)}
+          onClearAll={() => onClearBanned('words')}
+        />
+      )}
+      <CollapsibleHeader open={phrasesOpen} onToggle={() => setPhrasesOpen((v) => !v)}>Banned phrases ({SCOPE_LABELS[bannedScope]})</CollapsibleHeader>
+      {phrasesOpen && (
+        <BannedListEditor
+          kind="phrases"
+          scopeLabel={SCOPE_LABELS[bannedScope]}
+          items={bannedScope === 'all' ? allPhrases : (prefs.extraBannedPhrases[bannedScope] ?? [])}
+          bank={BANNED_PHRASE_BANK}
+          onAdd={(v) => onAddBanned('phrases', v)}
+          onAddBulk={(raw) => onAddBannedBulk('phrases', raw)}
+          onRemove={(v) => onRemoveBanned('phrases', v)}
+          onClearAll={() => onClearBanned('phrases')}
+        />
+      )}
+      <CollapsibleHeader open={semOpen} onToggle={() => setSemOpen((v) => !v)}>Semantic constraints</CollapsibleHeader>
+      {semOpen && <SemanticConstraintsEditor />}
+    </div>
+  );
+}
+
+// Mount the tone editors into an arbitrary node (the modal card body). Returns a
+// teardown the modal calls on close so the React root is cleaned up each cycle.
+export function mountToneEditorsInto(node: HTMLElement): () => void {
+  const root = createRoot(node);
+  root.render(React.createElement(ToneEditors));
+  return () => { try { root.unmount(); } catch { /* */ } };
 }

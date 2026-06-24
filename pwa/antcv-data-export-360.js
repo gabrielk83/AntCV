@@ -49,7 +49,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.849-review-collapse';
+  var VERSION = '1.50.850-tone-editors';
   if (window.__antcvDataExport360 === VERSION) return;
   window.__antcvDataExport360 = VERSION;
 
@@ -675,7 +675,8 @@
     overlay.setAttribute('data-antcv-review-modal', '1');
     var card = rdEl('div', 'width:100%;max-width:720px;background:#1d2740;border:1px solid rgba(255,255,255,.13);' +
       'border-radius:14px;color:#e6eef3;display:flex;flex-direction:column;max-height:92vh;box-shadow:0 12px 48px rgba(0,0,0,.4);font-family:inherit;');
-    function close() { try { document.body.removeChild(overlay); } catch (_) {} document.removeEventListener('keydown', onKey); }
+    var __rvTeardowns = [];
+    function close() { try { __rvTeardowns.forEach(function (t) { try { t(); } catch (_) {} }); } catch (_) {} try { document.body.removeChild(overlay); } catch (_) {} document.removeEventListener('keydown', onKey); }
     function onKey(e) { if (e.key === 'Escape') close(); }
     overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
     document.addEventListener('keydown', onKey);
@@ -739,57 +740,27 @@
     // 3 — Work history (editable role cards)
     body.appendChild(rdWorkHistory(pi.experience));
 
-    // 4 — Semantic constraints (read-friendly)
-    var rules = (function () {
-      var v2 = Array.isArray(sp.semanticConstraintsV2) ? sp.semanticConstraintsV2 : [];
-      var bc = Array.isArray(sp.bannedContextual) ? sp.bannedContextual : [];
-      var src = v2.length ? v2 : bc;
-      return src.map(function (r) {
-        var sc = r.scope || r.when || r.context || {};
-        return {
-          trigger: String(r.trigger || ''),
-          avoid: rdArr(r.avoid != null ? r.avoid : r.pattern),
-          prefer: rdArr(r.prefer != null ? r.prefer : (r.use_instead != null ? r.use_instead : r.replacement)),
-          scope: String(sc.role_company || sc.companyContains || sc.role_title || sc.titleContains || '')
-        };
-      }).filter(function (r) { return r.avoid.length || r.trigger; });
-    })();
-    var s4 = rdSection('🎯', 'Semantic constraints (' + rules.length + ')', 'Rules that steer wording by meaning — avoid X, prefer Y, optionally only for certain roles.');
-    rules.forEach(function (r) {
-      var rc = rdEl('div', 'padding:7px 0;border-top:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column;gap:5px;');
-      var th = rdEl('div', 'display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;');
-      th.appendChild(rdEl('span', 'font-size:12px;', r.trigger || 'general rule'));
-      if (r.scope) th.appendChild(rdPill('scope: ' + r.scope, false));
-      rc.appendChild(th);
-      var ap = rdEl('div', 'display:flex;gap:6px;align-items:center;flex-wrap:wrap;');
-      ap.appendChild(rdEl('span', 'font-size:10px;color:#f3b4b3;', 'avoid'));
-      ap.appendChild(rdChips(r.avoid, 'rgba(229,75,74,.16)', '#f3b4b3'));
-      ap.appendChild(rdEl('span', 'font-size:12px;opacity:.5;', '→'));
-      ap.appendChild(rdEl('span', 'font-size:10px;color:#bdf0f1;', 'prefer'));
-      ap.appendChild(rdChips(r.prefer, 'rgba(1,183,187,.16)', '#bdf0f1'));
-      rc.appendChild(ap);
-      s4.body.appendChild(rc);
-    });
-    if (!rules.length) s4.body.appendChild(rdEl('div', 'font-size:11px;opacity:.45;', 'No semantic constraints set.'));
-    s4.body.appendChild(rdTip('Edit these in Settings → Personal → Tone & banned terms → Semantic constraints.'));
+    // 4 — Tone & banned terms (EDITABLE — PERSONAL-MERGE-3). Replaces the former
+    // read-only Semantic + Banned chip cards. Hosts the React tone editors so
+    // banned words / phrases (per-language scope + bank + bulk paste + clear all)
+    // and semantic constraints are edited here and round-trip through
+    // export/import via the SAME canonical writing-prefs store the Personal tab
+    // uses — no parallel write path. The teardown unmounts the root on close.
+    var s4 = rdSection('🚫', 'Tone & banned terms', 'Words and phrases the writer must never use, and meaning-based rules — editable, with per-language scope (All / EN / DA / …), a bank, and bulk paste.');
+    var toneMount = rdEl('div', '');
+    s4.body.appendChild(toneMount);
+    (function mountTone(tries) {
+      try {
+        if (window.AntcvReactIslands && typeof window.AntcvReactIslands.mountToneEditors === 'function') {
+          var td = window.AntcvReactIslands.mountToneEditors(toneMount);
+          if (typeof td === 'function') __rvTeardowns.push(td);
+          return;
+        }
+      } catch (e) { try { console.warn('[review-modal] tone editors mount failed:', e); } catch (_) {} }
+      if (tries > 0) setTimeout(function () { mountTone(tries - 1); }, 120);
+      else toneMount.appendChild(rdEl('div', 'font-size:11px;opacity:.55;', 'Tone editor is loading… if it stays empty, reopen this panel.'));
+    })(20);
     body.appendChild(s4.sec);
-
-    // 5 — Banned terms & tone (read)
-    function splitList(v) { return String(v || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean); }
-    var s5 = rdSection('🚫', 'Banned words, phrases & tone', 'Terms the writer must never use, and the tone it should keep.');
-    var bw = rdEl('div', 'display:flex;flex-direction:column;gap:3px;');
-    bw.appendChild(rdEl('div', 'font-size:10px;text-transform:uppercase;letter-spacing:.5px;opacity:.55;', 'banned words'));
-    bw.appendChild(rdChips(splitList(sp.banned_words), 'rgba(229,75,74,.14)', '#f3b4b3'));
-    s5.body.appendChild(bw);
-    var bph = rdEl('div', 'display:flex;flex-direction:column;gap:3px;');
-    bph.appendChild(rdEl('div', 'font-size:10px;text-transform:uppercase;letter-spacing:.5px;opacity:.55;', 'banned phrases'));
-    bph.appendChild(rdChips(splitList(sp.banned_phrases), 'rgba(229,75,74,.14)', '#f3b4b3'));
-    s5.body.appendChild(bph);
-    var bt = rdEl('div', 'display:flex;flex-direction:column;gap:3px;');
-    bt.appendChild(rdEl('div', 'font-size:10px;text-transform:uppercase;letter-spacing:.5px;opacity:.55;', 'preferred tone'));
-    bt.appendChild(rdChips(splitList(sp.preferred_tone), 'rgba(1,183,187,.14)', '#bdf0f1'));
-    s5.body.appendChild(bt);
-    body.appendChild(s5.sec);
 
     // 6 — Languages (read)
     var langs = Array.isArray(pi.languages) ? pi.languages : [];

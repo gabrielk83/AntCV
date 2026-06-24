@@ -14117,13 +14117,20 @@
             window.AntcvAuth && window.AntcvAuth.subscribe
               ? window.AntcvAuth.subscribe((e) => {
                   if (e && e.token && e.email) {
-                    if (!Y || Y.email !== e.email) {
+                    // RELOAD-LOOP-001 (owner 2026-06-24): a cloud-write (e.g. a settings
+                    // SPACING slider drag) makes AntcvAuth RE-EMIT the auth state for the
+                    // SAME user; a raw `Y.email !== e.email` then misfired on a trivial
+                    // case/whitespace diff in the re-emitted email and the in-session-switch
+                    // guard below reloaded the app ("pressing near the ruler resets it").
+                    // Compare NORMALISED emails so only a GENUINE different user reloads.
+                    const __nEmail = (x) => String((x && x.email) || "").trim().toLowerCase();
+                    if (!Y || __nEmail(Y) !== __nEmail(e)) {
                       // ACCOUNT-ISOLATION-001 (owner 2026-06-15): an IN-SESSION switch
                       // to a DIFFERENT user — reload so the pre-app.js login gate wipes
                       // the prior user's data BEFORE app.js re-inits (clearing here
                       // races the autosave that writes the prior user's React state
                       // back to storage). First login (Y null) is the normal path below.
-                      if (Y && Y.email && Y.email !== e.email) {
+                      if (Y && Y.email && __nEmail(Y) !== __nEmail(e)) {
                         try { location.reload(); } catch (e) {}
                         return;
                       }

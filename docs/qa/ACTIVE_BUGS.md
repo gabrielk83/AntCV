@@ -1,5 +1,25 @@
 > **AUTHORITATIVE current state + next-session prompt: `docs/qa/SESSION_HANDOFF_2026-06-18-pm3.md`.** It supersedes the scattered PM/PM2 docs for what shipped (640-652) and what's open. The blocks below are the per-batch detail.
 
+## Owner live-QA batch — 2026-06-24 (run 5) — settings-ruler reset (1.50.850)
+
+- **RELOAD-LOOP-001 (settings ruler press resets the app)** `[FIX SHIPPED 1.50.850 — owner confirm in use]` —
+  owner: "pressing near the ruler of the settings sometimes makes the app reset." DIAGNOSED via code
+  (ruled out the loaded sidecar reloaders: multitab-signout is cross-tab only; overlay/sections-dedupe
+  reloads are behind confirm()/comments; hardrefresh-force only matches `/Hard Refresh/i` and the 4 live
+  range sliders have NO button ancestor — verified live in the owner's browser). **Root cause:** the
+  `AntcvAuth.subscribe` effect (`app.src.js` ~14118) calls `location.reload()` on an in-session user
+  switch (ACCOUNT-ISOLATION-001), gated by a RAW `Y.email !== e.email`. A settings SPACING-slider drag
+  fires a cloud-write that makes the auth layer RE-EMIT the SAME user's auth state; a trivial
+  case/whitespace diff in the re-emitted email tripped the raw `!==` → spurious reload (the documented
+  RELOAD-SPURIOUS-GUARD pattern). **FIX (app.src.js + app.js mirror, count-guarded):** compare NORMALISED
+  emails (`String(x.email||"").trim().toLowerCase()`) at both guards, so only a GENUINE different user
+  reloads; a same-user re-emit is now a no-op. **Net (sidecar `antcv-diag-probes-370.js`):** the
+  `[reload-who]` attribution tracker now also records `pointerdown`/`input` (a slider DRAG was missed
+  by the click-only tracker), so if any residual reset remains the next occurrence names the exact
+  slider + caller stack. Worktree off origin/main; app.js boots clean (glDemo=function, 0 errors);
+  node --check OK; cache-bust → 1.50.850. Owner: confirm the reset no longer happens dragging the
+  spacing sliders; if it ever recurs, the console `[reload-who]` line now pins it.
+
 ## Owner live-QA batch — 2026-06-24 (run 4, cont.) — within-package alt recolor (1.50.849)
 
 - **WITHIN-PACKAGE-STYLE-ALT-RECOLOR-001** `[SHIPPED 1.50.849]` — owner: the WITHIN-PACKAGE STYLE

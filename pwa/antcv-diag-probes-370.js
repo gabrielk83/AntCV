@@ -402,12 +402,21 @@
       var orig = window.location.reload.bind(window.location);
       // last meaningful user interaction (helps tell "I clicked X then it reloaded")
       var lastClick = '';
-      document.addEventListener('click', function (e) {
+      function noteInteraction(e) {
         try {
           var t = e.target;
-          lastClick = (t && (t.id || t.getAttribute && (t.getAttribute('data-antcv-genspeed') || t.getAttribute('data-lang') || t.getAttribute('aria-label')) || (t.textContent || '').trim().slice(0, 30))) || t.tagName;
+          if (!t) return;
+          // RELOAD-LOOP-001 (2026-06-24): also capture pointerdown/input so a
+          // SLIDER DRAG ("pressing near the ruler") is recorded — click alone
+          // missed it, leaving lastClick stale when a slider triggered a reload.
+          var tag = (t.tagName || '').toLowerCase();
+          var kind = tag === 'input' ? (tag + '[' + (t.type || '') + ']' + (t.getAttribute && t.getAttribute('aria-label') ? ' ' + t.getAttribute('aria-label') : '')) : '';
+          lastClick = (e.type + ': ') + (kind || t.id || (t.getAttribute && (t.getAttribute('data-antcv-genspeed') || t.getAttribute('data-lang') || t.getAttribute('aria-label'))) || (t.textContent || '').trim().slice(0, 30) || tag);
         } catch (_) {}
-      }, true);
+      }
+      document.addEventListener('click', noteInteraction, true);
+      document.addEventListener('pointerdown', noteInteraction, true);
+      document.addEventListener('input', noteInteraction, true);
       try {
         window.location.reload = function () {
           try {

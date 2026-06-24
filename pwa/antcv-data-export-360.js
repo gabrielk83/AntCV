@@ -49,7 +49,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.851-tone-editors';
+  var VERSION = '1.50.852-additional-subblocks';
   if (window.__antcvDataExport360 === VERSION) return;
   window.__antcvDataExport360 = VERSION;
 
@@ -511,7 +511,7 @@
     b.type = 'button'; if (title) b.title = title; return b;
   }
   // cfg: { emoji, title, help, key, kind:'lv'|'str'|'degsch'|'reg', cols:[..] }
-  function rdSidebarSection(cfg, initialArr) {
+  function rdSidebarSection(cfg, initialArr, afterEl) {
     var arr = (Array.isArray(initialArr) ? initialArr : []).map(function (r) {
       if (cfg.kind === 'str') return { t: String(r == null ? '' : r) };
       if (cfg.kind === 'degsch') return { deg: String((r && r.deg) || ''), sch: String((r && r.sch) || '') };
@@ -582,7 +582,73 @@
     }
     sec.body.appendChild(addRow);
     render();
+    if (afterEl) sec.body.appendChild(afterEl);
     return sec.sec;
+  }
+
+  // PERSONAL-MERGE-4 (owner 2026-06-24): Languages / Interests / Accessibility live
+  // as their own CV sections (sections.cv[{id}], managed by sections-normalize-415),
+  // NOT in personalInfo. These helpers read/write that store with {l,v} rows and
+  // dispatch antcv:sections-updated so the preview + export pick the edit up.
+  function rdReadSections() { try { return JSON.parse(localStorage.getItem('sections') || '{}') || {}; } catch (_) { return {}; } }
+  function rdSaveSections(s) {
+    try { localStorage.setItem('sections', JSON.stringify(s)); } catch (_) {}
+    try { window._antcvCloudWrite && window._antcvCloudWrite({ sections: s }); } catch (_) {}
+    try { window.dispatchEvent(new CustomEvent('antcv:sections-updated')); } catch (_) {}
+    try { window.dispatchEvent(new StorageEvent('storage', { key: 'sections' })); } catch (_) {}
+  }
+  function rdFindSection(sections, id) {
+    var cv = (sections && Array.isArray(sections.cv)) ? sections.cv : [];
+    for (var i = 0; i < cv.length; i++) { if (cv[i] && cv[i].id === id) return cv[i]; }
+    return null;
+  }
+  // A labelled {l,v} editor over a CV section's items, rendered as a SUB-BLOCK
+  // (no card of its own) so it can nest inside the Additional-info card. cfg:
+  // { emoji, title, id, cols:[labelPh, valuePh], seed?: () => [{l,v}] }. seed()
+  // runs ONCE only when the section is empty/absent — a non-destructive
+  // prefer-richer merge (the section always wins if it already has rows).
+  function rdSectionLVBlock(cfg) {
+    var wrap = rdEl('div', 'margin:9px 0 0;padding-top:9px;border-top:1px solid rgba(255,255,255,.08);');
+    wrap.appendChild(rdEl('div', 'font-size:11px;font-weight:700;color:#cdd6e0;margin:0 0 5px;', cfg.emoji + '  ' + cfg.title));
+    var list = rdEl('div', 'display:flex;flex-direction:column;gap:5px;');
+    function loadRows() {
+      var sec = rdFindSection(rdReadSections(), cfg.id);
+      var items = (sec && Array.isArray(sec.items)) ? sec.items : [];
+      return items.filter(function (r) { return r && !('group' in r); }).map(function (r) { return { l: String((r && r.l) || ''), v: String((r && r.v) || '') }; });
+    }
+    var arr = loadRows();
+    var seededNote = null;
+    if (!arr.length && typeof cfg.seed === 'function') {
+      try { var sd = cfg.seed(); if (sd && sd.length) { arr = sd; commit(); seededNote = sd.length; } } catch (_) {}
+    }
+    function commit() {
+      var s = rdReadSections();
+      if (!Array.isArray(s.cv)) s.cv = [];
+      var sec = rdFindSection(s, cfg.id);
+      var items = arr.map(function (r) { return { l: r.l.trim(), v: r.v.trim() }; }).filter(function (r) { return r.l || r.v; });
+      if (!sec) { if (!items.length) return; sec = { id: cfg.id, title: (cfg.title || cfg.id).toUpperCase(), loc: 'sidebar', on: true, type: 'labeled_list', items: [] }; s.cv.push(sec); }
+      // preserve any group markers that 415 may have placed; replace only the {l,v} rows.
+      var groups = (Array.isArray(sec.items) ? sec.items : []).filter(function (r) { return r && 'group' in r; });
+      sec.items = groups.concat(items);
+      if (!sec.type) sec.type = 'labeled_list';
+      rdSaveSections(s);
+    }
+    function rowEl(r, i) {
+      var row = rdEl('div', 'display:flex;gap:5px;align-items:center;');
+      var a = rdEl('input', RD_ROW_INPUT); a.value = r.l; a.placeholder = cfg.cols[0]; a.addEventListener('input', function () { r.l = a.value; }); a.addEventListener('blur', commit);
+      var b = rdEl('input', RD_ROW_INPUT); b.value = r.v; b.placeholder = cfg.cols[1]; b.addEventListener('input', function () { r.v = b.value; }); b.addEventListener('blur', commit);
+      var x = rdEl('button', 'flex:0 0 auto;background:transparent;border:none;color:#f3b4b3;font-size:15px;line-height:1;cursor:pointer;padding:0 4px;', '×');
+      x.type = 'button'; x.title = 'Remove'; x.setAttribute('aria-label', 'Remove row');
+      x.addEventListener('click', function () { arr.splice(i, 1); commit(); render(); });
+      row.appendChild(a); row.appendChild(b); row.appendChild(x); return row;
+    }
+    function render() { while (list.firstChild) list.removeChild(list.firstChild); arr.forEach(function (r, i) { list.appendChild(rowEl(r, i)); }); }
+    wrap.appendChild(list);
+    var add = rdMiniBtn('+ row'); add.style.marginTop = '6px';
+    add.addEventListener('click', function () { arr.push({ l: '', v: '' }); render(); });
+    wrap.appendChild(add);
+    render();
+    return wrap;
   }
 
   // WORK-HISTORY-EDIT-001 (owner 2026-06-18): edit existing roles inline in the
@@ -775,18 +841,7 @@
     })(20);
     body.appendChild(s4.sec);
 
-    // 6 — Languages (read)
-    var langs = Array.isArray(pi.languages) ? pi.languages : [];
-    var s6 = rdSection('🗣️', 'Languages', 'Languages and levels — used for both writing language and CV content.');
-    if (langs.length) {
-      langs.forEach(function (l) {
-        var row = rdEl('div', 'display:flex;gap:8px;align-items:baseline;padding:3px 0;');
-        row.appendChild(rdEl('span', 'font-size:12.5px;font-weight:600;min-width:90px;', l.lang || ''));
-        row.appendChild(rdEl('span', 'font-size:11.5px;opacity:.7;', [l.level, l.note].filter(Boolean).join(' — ')));
-        s6.body.appendChild(row);
-      });
-    } else { s6.body.appendChild(rdEl('div', 'font-size:11px;opacity:.45;', 'No languages stored.')); }
-    body.appendChild(s6.sec);
+    // 6 — Languages moved into the Additional-info card as a sub-block (PERSONAL-MERGE-4).
 
     // 7 — CV sidebar content (structured row editors — replaces the pipe textareas)
     body.appendChild(rdEl('div', 'font-size:13px;font-weight:700;margin:6px 0 0;', '📎  CV sidebar content'));
@@ -795,7 +850,21 @@
     body.appendChild(rdSidebarSection({ emoji: '🎓', title: 'Education', help: 'Degree + school / details per row.', key: 'education', kind: 'degsch', cols: ['Degree', 'School / details'] }, pi.education));
     body.appendChild(rdSidebarSection({ emoji: '📜', title: 'Certifications', help: 'One per row.', key: 'certifications', kind: 'str', cols: ['Certification'] }, pi.certifications));
     body.appendChild(rdSidebarSection({ emoji: '📐', title: 'Regulatory / standards', help: 'Code + description per row; add group headings to organise.', key: 'regulatory', kind: 'lv', grouped: true, cols: ['Code', 'Description'] }, pi.regulatory));
-    body.appendChild(rdSidebarSection({ emoji: '➕', title: 'Additional info', help: 'Label + value per row.', key: 'additional', kind: 'lv', cols: ['Label', 'Value'] }, pi.additional));
+    // Additional info now carries Languages / Interests / Accessibility sub-blocks
+    // (CV sections, edited in place). Languages SEEDS once from personalInfo.languages
+    // only if its section is empty — the section (the richer Additional-info content)
+    // always wins. Owner spot-check: the values shown here are what export uses.
+    var addSubBlocks = rdEl('div', '');
+    addSubBlocks.appendChild(rdSectionLVBlock({
+      emoji: '🗣️', title: 'Languages', id: 'languages', cols: ['Language', 'Level / note'],
+      seed: function () {
+        var ls = Array.isArray(pi.languages) ? pi.languages : [];
+        return ls.map(function (l) { return { l: String(l.lang || l.l || ''), v: [l.level, l.note].filter(Boolean).join(' — ') || String(l.v || '') }; }).filter(function (r) { return r.l || r.v; });
+      }
+    }));
+    addSubBlocks.appendChild(rdSectionLVBlock({ emoji: '🎯', title: 'Interests', id: 'interests', cols: ['Interest', 'Detail'] }));
+    addSubBlocks.appendChild(rdSectionLVBlock({ emoji: '♿', title: 'Accessibility', id: 'accessibility', cols: ['Label', 'Note'] }));
+    body.appendChild(rdSidebarSection({ emoji: '➕', title: 'Additional info', help: 'Label + value rows, plus Languages, Interests and Accessibility.', key: 'additional', kind: 'lv', cols: ['Label', 'Value'] }, pi.additional, addSubBlocks));
 
     // 8 — What's shown vs hidden (editable toggles)
     var vc = pi.visibilityControls || {};

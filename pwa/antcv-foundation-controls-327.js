@@ -26,7 +26,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.327-foundation-controls';
+  var VERSION = '1.50.863-foundation-controls';
   if (window.__antcvFoundationControls327 === VERSION) return;
   window.__antcvFoundationControls327 = VERSION;
 
@@ -174,7 +174,9 @@
 
   function attachPanel() {
     var fields = Array.prototype.slice.call(document.querySelectorAll('textarea,[contenteditable="true"],input'))
-      .filter(function (f) { return visible(f) && !inPreview(f); });
+      // FND-LEAK-001 (owner 2026-06-24): these editor controls must NOT attach to
+      // fields inside the Review & Edit data modal — they belong in the editor.
+      .filter(function (f) { return visible(f) && !inPreview(f) && !(f.closest && f.closest('[data-antcv-review-modal]')); });
     PARTS.forEach(function (P) {
       var field = fields.find(function (f) { return isFoundationField(f, P.rx); });
       if (field) ensureRow(field, P);

@@ -1,4 +1,4 @@
-> **AUTHORITATIVE current state + next-session prompt: `docs/qa/SESSION_HANDOFF_2026-06-18-pm3.md`.** It supersedes the scattered PM/PM2 docs for what shipped (640-652) and what's open. The blocks below are the per-batch detail.
+> **AUTHORITATIVE current state + next-nightly prompt: `docs/qa/NEXT_NIGHTLY_HANDOFF_2026-06-24.md`.** (PWA 1.50.869 + docx-worker 1.14.81; suite 467/467.) Read it FIRST — it has the shipped list (843→869), the regen-gated items to verify on the owner's incoming fresh export, the deep CV-SIDEBAR-SPILL spec, and the parallel-session/stale-SW discipline. The blocks below are the per-batch detail. (Older handoff: `SESSION_HANDOFF_2026-06-18-pm3.md`.)
 
 ## Owner real-PDF review — 2026-06-24 (run 8) — regulatory dup-group merge (1.50.869)
 

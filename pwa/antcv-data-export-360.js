@@ -49,7 +49,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.850-tone-editors';
+  var VERSION = '1.50.851-tone-editors';
   if (window.__antcvDataExport360 === VERSION) return;
   window.__antcvDataExport360 = VERSION;
 
@@ -749,10 +749,23 @@
     var s4 = rdSection('🚫', 'Tone & banned terms', 'Words and phrases the writer must never use, and meaning-based rules — editable, with per-language scope (All / EN / DA / …), a bank, and bulk paste.');
     var toneMount = rdEl('div', '');
     s4.body.appendChild(toneMount);
+    // The islands bundle's IIFE name clobbers window.AntcvReactIslands with its
+    // module namespace, so the mounter is exposed on a dedicated global; fall back
+    // to the namespace's .api / clobbered shapes for resilience.
+    function findToneMounter() {
+      try {
+        if (typeof window.AntcvMountToneEditors === 'function') return window.AntcvMountToneEditors;
+        var a = window.AntcvReactIslands;
+        if (a && typeof a.mountToneEditors === 'function') return a.mountToneEditors;
+        if (a && a.api && typeof a.api.mountToneEditors === 'function') return a.api.mountToneEditors;
+      } catch (_) {}
+      return null;
+    }
     (function mountTone(tries) {
       try {
-        if (window.AntcvReactIslands && typeof window.AntcvReactIslands.mountToneEditors === 'function') {
-          var td = window.AntcvReactIslands.mountToneEditors(toneMount);
+        var fn = findToneMounter();
+        if (fn) {
+          var td = fn(toneMount);
           if (typeof td === 'function') __rvTeardowns.push(td);
           return;
         }

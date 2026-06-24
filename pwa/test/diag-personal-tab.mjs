@@ -26,6 +26,11 @@ const SECTIONS = { cv:[
 const browser=await chromium.launch();
 const page=await browser.newPage({viewport:{width:1280,height:1400}});
 await page.addInitScript(({sections})=>{
+  // HARNESS-GATE-SEED-001 (2026-06-24): the login loading overlay covers the app
+  // for up to 9s for signed-in users; disable it so the editor is reachable
+  // immediately. Also stub the SW so a cache-bust can't reload mid-test.
+  try{ if(navigator.serviceWorker) navigator.serviceWorker.register=()=>Promise.reject(new Error('sw-off')); }catch(_){}
+  localStorage.setItem('antcv:disable-loading-gate','1');
   localStorage.setItem('antcv:auth:token','t');localStorage.setItem('antcv:auth:email','g@e.com');localStorage.setItem('antcv:auth:expires_at','4102444800');
   localStorage.setItem('session',JSON.stringify({email:'g@e.com',ts:1717000000000}));
   localStorage.setItem('step',JSON.stringify('editor'));localStorage.setItem('doc',JSON.stringify('cv'));
@@ -55,21 +60,26 @@ let opened = await page.evaluate(()=>{
   return 'no-gear';
 });
 await page.waitForTimeout(900);
-let openedState = await page.evaluate(()=>/STANDARD/.test(document.body.textContent||''));
+// HARNESS-GATE-SEED-001: the settings tab marker is "Standard" (not "STANDARD").
+let openedState = await page.evaluate(()=>/Standard/.test(document.body.textContent||''));
 if(!openedState){ // fallback: click by coordinate where the gear renders
-  await page.mouse.click(1135,25); await page.waitForTimeout(900);
-  openedState = await page.evaluate(()=>/STANDARD/.test(document.body.textContent||''));
+  await page.mouse.click(1122,13); await page.waitForTimeout(900);
+  openedState = await page.evaluate(()=>/Standard/.test(document.body.textContent||''));
 }
 await page.screenshot({path:path.join(OUT,'personal-tab-settings.png')});
-await clickByText('STANDARD',true); await page.waitForTimeout(500);
+await clickByText('Standard',true); await page.waitForTimeout(500);
 let toPersonal = await clickByText('Personal',true); if(!toPersonal) toPersonal = await clickByText('User',true);
 await page.waitForTimeout(1500);
 console.log('gear:',opened,'| settings open:',openedState);
 
 const dump = await page.evaluate(()=>{
-  const anchor=document.getElementById('antcv-react-personal-languages');
-  if(!anchor) return {err:'no languages anchor', hasSettings: /STANDARD/.test(document.body.textContent||'')};
-  const col=anchor.parentElement; const cs=getComputedStyle(col);
+  // The standalone languages anchor was retired (LanguageCard is embedded in the
+  // writing-style island). Anchor the Personal-column dump on the writing-style
+  // picker mount, which only exists in Settings -> Personal.
+  const anchor=document.getElementById('antcv-react-writing-style-picker');
+  if(!anchor) return {err:'no writing-style-picker anchor', hasSettings: /Standard/.test(document.body.textContent||'')};
+  let col=anchor.parentElement; for(let i=0;i<8&&col&&col.parentElement;i++){const cc=getComputedStyle(col);if(cc.display==='flex'&&/column/.test(cc.flexDirection))break;col=col.parentElement;}
+  const cs=getComputedStyle(col);
   const kids=[...col.children].map((c,i)=>{const k=getComputedStyle(c);const r=c.getBoundingClientRect();return{i,id:c.id||'',order:k.order,w:Math.round(r.width),fb:k.flexBasis,fg:k.flexGrow,x:Math.round(r.x),y:Math.round(r.y),t:(c.textContent||'').replace(/\s+/g,' ').trim().slice(0,40)};});
   return {colDisp:cs.display,wrap:cs.flexWrap,dir:cs.flexDirection,colW:Math.round(col.getBoundingClientRect().width),kids};
 });

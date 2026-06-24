@@ -26,7 +26,7 @@ import { exposeMigrationDebugApi, runGabrielMigration } from './lib/gabriel-migr
 import { installWritingStyleFetchWrap } from './lib/install-fetch-wrap';
 import { exposeObservabilityApi } from './lib/observability';
 
-const VERSION = '1.50.850';
+const VERSION = '1.50.851';
 
 declare global {
   interface Window {
@@ -83,6 +83,15 @@ const api: AntcvReactIslandsAPI = {
   },
   mountToneEditors: mountToneEditorsInto,
 };
+
+// PERSONAL-MERGE-3 fix: vite's IIFE `name: 'AntcvReactIslands'` reassigns
+// window.AntcvReactIslands to the module NAMESPACE ({ api }) AFTER this body runs,
+// clobbering the `window.AntcvReactIslands = api` set below — so external callers
+// see `.api.mountToneEditors`, not `.mountToneEditors`. Expose the mounter on a
+// dedicated global the wrapper never touches, so the Review & Edit modal can find
+// it deterministically regardless of the namespace clobber.
+(window as unknown as { AntcvMountToneEditors?: (node: HTMLElement) => () => void })
+  .AntcvMountToneEditors = mountToneEditorsInto;
 
 if (window.__antcvReactIslandsBooted === VERSION) {
   // double-include guard — same version, no re-init.

@@ -23,10 +23,11 @@
   function isOpen() { try { return localStorage.getItem(OPEN_KEY) === '1'; } catch (_) { return false; } }
   function setOpen(v) { try { localStorage.setItem(OPEN_KEY, v ? '1' : '0'); } catch (_) {} }
 
-  // The control's first element child is the "PROFILE PHOTO" label.
+  // The control's first element child is the "PROFILE PHOTO" label. Match on CONTAINS
+  // (not exact / childless) so it still resolves after we insert the caret span into it.
   function labelEl(ctrl) {
     var c = ctrl && ctrl.firstElementChild;
-    return (c && /^\s*PROFILE PHOTO\s*$/i.test(c.textContent || '') && c.children.length === 0) ? c : null;
+    return (c && /PROFILE PHOTO/i.test(c.textContent || '') && (c.textContent || '').length < 40) ? c : null;
   }
   // Find each control via its button-row marker (specific + cheap).
   function findControls() {

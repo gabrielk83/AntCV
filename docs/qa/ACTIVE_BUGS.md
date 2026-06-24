@@ -1,5 +1,34 @@
 > **AUTHORITATIVE current state + next-session prompt: `docs/qa/SESSION_HANDOFF_2026-06-18-pm3.md`.** It supersedes the scattered PM/PM2 docs for what shipped (640-652) and what's open. The blocks below are the per-batch detail.
 
+## Nightly autonomous — 2026-06-24 (run 2) — CV ghost placeholder roles in preview (1.50.842)
+
+Fresh nightly run. Confirmed the kickoff bucket-A export backlog is all shipped; the live 0624 owner-QA
+batch is mostly regen-gated (needs a signed-in generation) or owner-gated-repro (needs live sections).
+Diagnosed two deterministic candidates in parallel (ghost-placeholder preview filter + the CL-contribute
+`p`-flag root cause). Shipped the SOLID, fully headless-verifiable one; deferred the contribute-`p` fix
+(wide blast radius — `p` also gates profile/work_style/who/why neutral seeds — and the owner explicitly
+requires per-regen verification on that item after the 1.50.840 revert; not safe to ship blind).
+
+### CLOSED
+- **CV-GHOST-PLACEHOLDER-ROLES-PREVIEW-001** `[SHIPPED 1.50.842]` — preview now drops the generator's
+  `<unused slot>` placeholder roles so it matches the export, WITHOUT hiding the fresh-doc `me()`
+  skeleton (keyed strictly on the `<unused slot>` bullet marker). One surgical edit in `app.src.js`
+  (~5827) + mirror; covers both preview render paths (the page-2+ render delegates to the same
+  `"experience"` case). Verified past the sign-in gate + negative control; suite 463/463. Detail in the
+  0624 batch block below.
+
+### DEFERRED (diagnosed, not shipped — owner-gated)
+- **CL-CONTRIBUTE-INTRO-CLOSING-002** — root cause re-confirmed (the unsolicited display flag `p`,
+  `app.src.js` ~24574, is false for an unsolicited app once `io.company` drifts off the literal
+  `"Unsolicited"`, so the contribute branch takes the empty-skeleton path and the neutral intro/closing
+  never fire). A safe-looking fix exists (OR a strict `localStorage["antcv:activeAppCompany"]==="unsolicited"`
+  term into `p`), but `p` ALSO gates profile/work_style/who/why neutral seeds, the effect can't be
+  verified end-to-end headlessly (it's computed inside the generation handler behind the LLM call), and
+  the owner explicitly asked for per-regen verification on this item after the 1.50.840 regression revert.
+  Left for an owner-attended regen rather than shipped blind. Full diagnosis (binding, branch, minified
+  anchors `so.current===Ms` / `e.items&&e.items.length&&!g`) preserved in the CL-CONTRIBUTE-INTRO-CLOSING-002
+  entry below.
+
 ## Nightly autonomous — 2026-06-24 — INTERESTS-LEAK-SOURCE-001 session/kernel isolation (1.50.841)
 
 Fresh nightly run. Bucket-A export backlog (COPENHAGEN-BLUE / SECTION-RULE-INK / CL-CONTACT-ONELINE /
@@ -561,16 +590,27 @@ work. Use `git worktree add` for any `app.src.js`/`app.js` change.
   owner's real sections data to reproduce + live verification — develop against a long-sidebar diag
   (extend `diag-sidebar-preview-break.mjs` / the docx-worker `diag-twocol-paged.mjs`). Owner-gated.
 
-- **CV-GHOST-PLACEHOLDER-ROLES-PREVIEW-001** `[OPEN — salmon/pagination group]` — owner QA 0624
+- **CV-GHOST-PLACEHOLDER-ROLES-PREVIEW-001** `[SHIPPED 1.50.842 — nightly 2026-06-24]` — owner QA 0624
   ("1 ghost position generate, see picture"): the PREVIEW shows empty `[Role title], [Company]
   [Years]` rows in PROFESSIONAL EXPERIENCE (between real roles). These are the generator's
-  `on:false` "unused slot" placeholders (`experience_roles` r7-r10 = `{"id":"r7","on":false,
-  "bullets":["<unused slot>"]}` per the gen schema, kept so the user can toggle real roles back on).
-  The EXPORT correctly skips them (pdftotext shows only real roles), but the PREVIEW renders the
-  empty placeholder slots as ghost rows. FIX: the preview experience render should skip a role that
-  is a pure placeholder (title matching `^\[.*\]$` / bullets that are `<unused slot>` / bracketed
-  placeholders) the same way the export does — a preview-render filter (app.js). Owner-gated repro
-  (needs the live sections to confirm the filter predicate). Document-and-defer per owner.
+  "unused slot" placeholders (`experience_roles` r7-r10 = `{"id":"r7",…,"bullets":["<unused slot>"]}`
+  per the gen schema). The EXPORT correctly skips them (no header emitted for an empty role), but the
+  PREVIEW rendered them as ghost rows. **Root cause confirmed:** the preview experience map
+  (`app.src.js` ~5827) already drops `on === false` roles — so the visible ghosts are `on`-TRUTHY
+  unused slots (if they were truly `on:false` the owner could never see them; the schema's `on:false`
+  was illustrative). `AntcvExportHiddenRole` only hides targeted-app irrelevant roles, so an on-true
+  unused slot fell through. **FIX (surgical, app.src.js + mirror app.js):** extend the render's
+  null-return predicate with `__unusedSlot` — drop a role iff `bullets` is non-empty AND **every**
+  bullet trims to `"<unused slot>"`. Keyed ONLY on that exact marker, NOT on bracketed `[Role title]`
+  text — because the fresh-doc `me()` skeleton legitimately uses bracketed `[Role title]` /
+  `[Bullet 1 — …]` placeholders that MUST stay visible/editable for new users (the broad
+  bracketed-placeholder predicate would have hidden the entire new-user skeleton — rejected). The page-2+
+  paginated render (`app.src.js` ~42925) delegates each role to the same `"experience"` case, so the one
+  edit covers both preview paths; behaviour now matches `on:false` exactly. **Verified PAST the sign-in
+  gate** (`pwa/test/diag-ghost-placeholder-roles.mjs`, 4 checks: ghost dropped / real roles render /
+  fresh-skeleton role still renders / exactly 3 visible wrappers — plus a NEGATIVE CONTROL on the
+  unfixed app.js proving the test has teeth: 4 wrappers + `<unused slot>` visible → FAIL). Suite
+  463/463; mirror guarded (anchor count 1); app.js integrity asserted (`(()=>{`, no `"use strict"`).
 
 - **STUDENTS-COUNCIL-NO-RESULTS-001** `[OPEN — likely working-as-designed]` — owner QA 0624:
   "student representative has no results". The Students Council Representative role shows no Results

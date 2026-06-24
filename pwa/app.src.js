@@ -5827,10 +5827,21 @@
             (e.roles || []).map((e, t) => {
               var n;
               const __ri = __origRoles.indexOf(e);
+              // CV-GHOST-PLACEHOLDER-ROLES-PREVIEW-001 (owner QA 2026-06-24): also drop the
+              // generator's UNUSED-SLOT placeholder roles (every bullet === "<unused slot>") so
+              // the preview matches the export (which emits no header for them). Keyed ONLY on the
+              // "<unused slot>" marker — NOT on bracketed [Role title] text, which the fresh-doc
+              // me() skeleton legitimately uses and must stay visible/editable.
+              const __unusedSlot =
+                Array.isArray(e.bullets) &&
+                e.bullets.length > 0 &&
+                e.bullets.every(
+                  (b) => "<unused slot>" === String(b == null ? "" : b).trim().toLowerCase(),
+                );
               // PREVIEW-PARITY-001: also drop roles the EXPORT hides (targeted app), so the
               // preview matches the PDF + the salmon breaks line up. Rendered null IN-PLACE,
               // so the index t (and the bullet edit paths) stay correct.
-              return !1 === e.on || (window.AntcvExportHiddenRole && window.AntcvExportHiddenRole(e))
+              return !1 === e.on || __unusedSlot || (window.AntcvExportHiddenRole && window.AntcvExportHiddenRole(e))
                 ? null
                 : React.createElement(
                     "div",

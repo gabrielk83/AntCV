@@ -49,7 +49,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.639-review-resilient';
+  var VERSION = '1.50.848-review-edit-launcher';
   if (window.__antcvDataExport360 === VERSION) return;
   window.__antcvDataExport360 = VERSION;
 
@@ -648,7 +648,7 @@
 
     // Header
     var head = rdEl('div', 'display:flex;align-items:center;gap:10px;padding:15px 18px;border-bottom:1px solid rgba(255,255,255,.10);');
-    head.appendChild(rdEl('div', 'font-size:16px;font-weight:700;flex:1;', '📋  Review my data'));
+    head.appendChild(rdEl('div', 'font-size:16px;font-weight:700;flex:1;', '📋  Review & Edit my data'));
     var x = rdEl('button', 'background:transparent;border:none;color:#e6eef3;font-size:22px;line-height:1;cursor:pointer;opacity:.7;padding:2px 6px;', '×');
     x.type = 'button'; x.title = 'Close'; x.addEventListener('click', close);
     head.appendChild(x);
@@ -830,15 +830,15 @@
     var b = document.createElement('button');
     b.type = 'button';
     b.setAttribute(UI_MARK, 'review');
-    b.textContent = '📋 Review my data';
-    b.title = 'See everything AntCV has stored about you — read it, fix it, and it is used as-is.';
+    b.textContent = '📋 Review & Edit my data';
+    b.title = 'See and edit everything AntCV has stored about you — it is used as-is.';
     b.style.cssText = 'display:block;width:100%;margin:0 0 8px;padding:12px;' +
       'background:rgba(90,150,230,0.12);border:1px solid rgba(90,150,230,0.5);' +
       'color:#bcd6ff;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;';
     b.addEventListener('click', function (e) {
       e.preventDefault(); e.stopPropagation();
       try { openReview(); }
-      catch (err) { try { console.error('[review-modal] open failed:', err); alert('Review my data could not open: ' + ((err && err.message) || err)); } catch (_) {} }
+      catch (err) { try { console.error('[review-modal] open failed:', err); alert('Review & Edit my data could not open: ' + ((err && err.message) || err)); } catch (_) {} }
     });
     return b;
   }
@@ -872,37 +872,44 @@
     try { card.insertBefore(buildCheckRow(), row); } catch (_) {}
   }
 
-  // REVIEW-DATA-001 (owner 2026-06-18): the data buttons -> end of the PRIVACY
-  // zone, after the "What LLM providers see" box. The plain "Download my data"
-  // button is replaced by "Review my data" (a friendly read/edit modal); the
-  // single export option is the account-locked one.
-  function injectDownload() {
-    var box = findPrivacyProvidersBox();
-    var zone = null, after = null;
-    if (box && box.parentNode) { zone = box.parentNode; after = box.nextSibling; }
-    else {
-      // ROBUST-ANCHOR-001 fallback: privacy box not found — anchor above the
-      // Account danger-zone "Delete my account" card so the buttons never vanish.
+  // The writing-style picker island mounts ONLY in Settings -> Personal, so it
+  // is a reliable anchor for the Personal flex column.
+  function findPersonalColumn() {
+    var anchor = document.getElementById('antcv-react-writing-style-picker')
+      || document.querySelector('[data-antcv-react-mount="writing-style-picker"]');
+    if (!anchor) return null;
+    var el = anchor;
+    for (var i = 0; i < 8 && el && el.parentNode && el.parentNode !== document.body; i++) {
+      el = el.parentNode;
       try {
-        var eb = findEraseButton();
-        var card = eb ? (eb.closest ? (eb.closest('div') || eb.parentNode) : eb.parentNode) : null;
-        if (card && card.parentNode) { zone = card.parentNode; after = card; }
+        var cs = getComputedStyle(el);
+        if (cs.display === 'flex' && /column/.test(cs.flexDirection)) return el;
       } catch (_) {}
     }
-    if (!zone) return;
-    // Clean up the retired plain-download button if a stale build left one.
-    try { var old = zone.querySelector('[' + UI_MARK + '="download"]'); if (old) old.remove(); } catch (_) {}
-    if (zone.querySelector('[' + UI_MARK + '="review"]')) return;
+    return anchor.parentNode || null;
+  }
+
+  // PERSONAL-MERGE-1 (owner 2026-06-24): the Review & Edit + account-locked
+  // export controls move OUT of the Account privacy zone and INTO Settings ->
+  // Personal (the modal is now the single review/edit surface, launched from
+  // Personal). Anchored to the top of the Personal flex column via order:-20.
+  function injectLauncher() {
+    var col = findPersonalColumn();
+    if (!col) return;
+    if (col.querySelector('[' + UI_MARK + '="launcher"]')) return;
+    // Remove any stale privacy-zone / older-build copies before re-homing.
     try {
-      var review = buildReviewButton();
-      var locked = buildLockedButton();
-      if (after) {
-        zone.insertBefore(review, after);
-        zone.insertBefore(locked, review.nextSibling);
-      } else {
-        zone.appendChild(review);
-        zone.appendChild(locked);
-      }
+      var stale = document.querySelectorAll(
+        '[' + UI_MARK + '="review"],[' + UI_MARK + '="locked"],[' + UI_MARK + '="download"],[' + UI_MARK + '="launcher"]');
+      Array.prototype.forEach.call(stale, function (n) { try { n.remove(); } catch (_) {} });
+    } catch (_) {}
+    try {
+      var wrap = document.createElement('div');
+      wrap.setAttribute(UI_MARK, 'launcher');
+      wrap.style.cssText = 'order:-20;display:flex;flex-direction:column;margin:0 0 6px;';
+      wrap.appendChild(buildReviewButton());
+      wrap.appendChild(buildLockedButton());
+      col.insertBefore(wrap, col.firstChild);
     } catch (_) {}
   }
 
@@ -938,7 +945,7 @@
 
   function injectUi() {
     if (disabled()) return;
-    injectDownload();
+    injectLauncher();
     injectCheckbox();
     mountExportFab();
   }
@@ -981,6 +988,7 @@
     _injectUi: injectUi,
     _findEraseButton: findEraseButton,
     _findPrivacyProvidersBox: findPrivacyProvidersBox,
+    _findPersonalColumn: findPersonalColumn,
     _setSaveFirst: function (v) { saveFirst = !!v; },
     _saveFirst: function () { return saveFirst; }
   };

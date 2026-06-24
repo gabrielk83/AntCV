@@ -83,6 +83,24 @@ for (const [id, pkg] of Object.entries(reg.packages)) {
   lines.push(blockFor(id, pkg));
 }
 
+// WITHIN-PACKAGE-STYLE-ALT-RECOLOR-001 (owner 2026-06-24): selecting a
+// Quick Alternative (Alt 1 / Alt 2) sets body[data-package-quick-alt="altN"]
+// but NO selector consumed it, so --header-bg stayed on the base value and the
+// candidate band + table headers (both var(--header-bg)) never recoloured. Emit
+// per-alt overrides: the 2-attribute selector outranks the 1-attribute base
+// block, so the alt's head/sidebar win when its attribute is present. "default"
+// has no attribute override → keeps the base block (unchanged).
+for (const [id, pkg] of Object.entries(reg.packages)) {
+  for (const alt of ['alt1', 'alt2']) {
+    lines.push(`body[data-package="${id}"][data-package-quick-alt="${alt}"] {`);
+    lines.push(`  /* ${pkg.displayName} — ${alt} head/sidebar pair (WITHIN-PACKAGE-STYLE-ALT-RECOLOR-001) */`);
+    lines.push(`  --header-bg: ${pkg[alt].head};`);
+    lines.push(`  --sidebar-bg: ${pkg[alt].sidebar};`);
+    lines.push('}');
+    lines.push('');
+  }
+}
+
 // Dark-mode overrides per package. Plan §3 reserves dark-mode tokens for v1.52
 // (Pass 5). We still emit the CSS so the values are available when the dark
 // mode flag is wired; the selectors are gated by prefers-color-scheme so they

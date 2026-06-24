@@ -1,5 +1,26 @@
 > **AUTHORITATIVE current state + next-session prompt: `docs/qa/SESSION_HANDOFF_2026-06-18-pm3.md`.** It supersedes the scattered PM/PM2 docs for what shipped (640-652) and what's open. The blocks below are the per-batch detail.
 
+## Owner live-QA batch — 2026-06-24 (run 4, cont.) — within-package alt recolor (1.50.849)
+
+- **WITHIN-PACKAGE-STYLE-ALT-RECOLOR-001** `[SHIPPED 1.50.849]` — owner: the WITHIN-PACKAGE STYLE
+  quick-alts (Default/Alt 1/Alt 2) did NOT actually change the candidate band / table-header colour.
+  Root cause: `applyPackageToBody` sets `body[data-package-quick-alt="altN"]` but
+  `antcv-packages-registry.css` had ZERO `data-package-quick-alt` selectors, so `--header-bg`
+  (band + table headers, both `var(--header-bg)`) and `--sidebar-bg` stayed on the base value. FIX
+  (CSS-only — NO island rebuild, so no contention with the parallel feat/personal-review-edit-merge
+  bundle): appended 14 per-alt blocks (`body[data-package="X"][data-package-quick-alt="alt1|alt2"]`)
+  setting `--header-bg`/`--sidebar-bg` to the registry alt head/sidebar pairs. The 2-attribute
+  selector outranks the 1-attribute base by specificity, so the alt wins WITHOUT clobbering the base —
+  critically the copenhagen base hand-edits (#33446F band, #00746E teal heads, #C9D6EC pale sidebar)
+  are PRESERVED (the committed CSS is hand-tuned + `registry.json` is stale, so I APPENDED rather than
+  regenerated). The generator `scripts/generate-registry-css.mjs` also gained the per-alt emission for
+  future regens. Verified headless (`pwa/test/diag-package-alt-recolor.mjs`: default band stays
+  #33446F; alt1→#0B74DE band + #E8F4F5 sidebar; alt2→#283556 + #DCE5EA). Cache-bust → 1.50.849.
+  **STILL OPEN (deferred — needs the islands bundle, contended):** the compact/CIRCULAR swatch redesign
+  of the WITHIN-PACKAGE buttons (`src/islands/PackagePicker/PackagePicker.tsx` `quickAltButtons`,
+  square `Swatch` borderRadius 4→50%) + syncing the preview's quick-alt CIRCLES; and reconciling the
+  stale `registry.json` copenhagen tokens with the hand-edited CSS so the generator is safe to run.
+
 ## Owner live-QA batch — 2026-06-24 (run 4) — unsolicited-gen inspection (1.50.846 → 847)
 
 Owner inspected a live unsolicited generation and reported a batch. CONFIRMED FIXED by owner:

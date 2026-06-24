@@ -35200,6 +35200,7 @@
                                     try {
                                       const t = await fetch(
                                           `${e}/analytics/summary`,
+                                          { credentials: "include" },
                                         ),
                                         n = await t.text();
                                       if (401 === t.status)

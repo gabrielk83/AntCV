@@ -1,4 +1,4 @@
-const VERSION='3.6.1-jd-bot-wall';
+const VERSION='3.6.2-analytics-summary-auth';
 // Cloudflare Worker — multi-provider LLM proxy with streaming for Anthropic
 // Includes /preferences route for AntCV cloud save.
 //
@@ -1837,10 +1837,16 @@ async function handleAnalyticsSummary(request, env) {
     return new Response(JSON.stringify({ ok: true, analytics_bound: false, total_events: 0, event_counts: {}, events: [] }), { status: 200, headers: { 'Content-Type': 'application/json', ...CORS } });
   }
   const url = new URL(request.url);
-  const secret = url.searchParams.get('secret') || '';
-  const expectedSecret = await getKey(env, ['ANALYTICS_SECRET']);
-  if (expectedSecret && secret !== expectedSecret) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json', ...CORS } });
+  // ANALYTICS-SUMMARY-AUTH-001 (owner 2026-06-24): accept a signed-in identity
+  // (Bearer / CF Access) like handleAnalyticsExport, not only ?secret= — a signed-in
+  // admin was always 401, rendered client-side as "Your session expired."
+  const id = await identityFromRequestAsync(request, env);
+  if (!(id && id.email)) {
+    const secret = url.searchParams.get('secret') || '';
+    const expectedSecret = await getKey(env, ['ANALYTICS_SECRET']);
+    if (expectedSecret && secret !== expectedSecret) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json', ...CORS } });
+    }
   }
   const keys = await listAllKeys(env.ANALYTICS);
   const counts = {};

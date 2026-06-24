@@ -1,5 +1,19 @@
 > **AUTHORITATIVE current state + next-session prompt: `docs/qa/SESSION_HANDOFF_2026-06-18-pm3.md`.** It supersedes the scattered PM/PM2 docs for what shipped (640-652) and what's open. The blocks below are the per-batch detail.
 
+## Owner batch — 2026-06-24 (run 7 cont.) — pagination trailing-blank trim (docx-worker 1.14.81)
+
+- **PB-WORKER-TRAILING-BLANK-001** `[SHIPPED docx-worker 1.14.81]` — owner "fix pagination/page overflow":
+  partial, SAFE fix for the CV-SIDEBAR-SPILL-9-PAGES report. A column ending on a page-break marker made
+  `splitChildrenByPage` push a trailing EMPTY page; `numPages = max(...)` counted it → a blank trailing
+  sheet. Added `trimTrailingEmptyPages()` (pops trailing zero-children pages per column before numPages;
+  never removes content). diag-twocol-paged unchanged (no regression); trim proven 3→2 pages content-intact.
+  **STILL OPEN (deep, owner-gated):** the bulk of the 9-page spill is the SIDEBAR being far longer than the
+  MAIN column — after the main ends (~p4) the sidebar continues onto pages 5-8 with an EMPTY main cell
+  (`numPages = max(sidebarPages, mainPages)`, src/index.js ~24664). The real fix is to RE-FLOW the
+  overflow sidebar FULL-WIDTH on empty-main pages (re-paginates it into fewer pages) — a deep two-column
+  engine change that needs the owner's real long-sidebar sections to reproduce + a real-export verification
+  before shipping (all-exports blast radius). Scoped for a focused worker session.
+
 ## Owner batch — 2026-06-24 (run 7) — alt-button minimise + boot-perf (1.50.868)
 
 - **ALT-BTN-MINIMISE-001** `[SHIPPED 1.50.868]` — owner: make the WITHIN-PACKAGE STYLE quick-alt buttons

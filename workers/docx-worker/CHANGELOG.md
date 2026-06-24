@@ -1,3 +1,7 @@
+## 1.14.81-trailing-blank-trim
+
+- PB-WORKER-TRAILING-BLANK-001 (owner 2026-06-24, "we got 9 pages CV" / blank trailing sheet): a column ending on a page-break marker made splitChildrenByPage push a trailing EMPTY page, so numPages = max(...) counted it and the export emitted a blank trailing sheet. Added trimTrailingEmptyPages() — pops trailing content-less pages from each column before numPages (never removes content; only pops zero-children pages). Verified: diag-twocol-paged 2-page case unchanged (no regression); standalone trim check 3-page→2-page with all content kept. NOTE: does NOT fix the deeper sidebar-longer-than-main spill (sidebar continues onto pages with an empty main cell — needs a full-width re-flow of the overflow, owner-gated on real long-sidebar data).
+
 ## 1.14.63-banded-rows
 
 - TABLE-BANDED-ROWS-001 (owner 2026-06-14: "PDF missing the banded-row colours seen in preview"): the competency / What-I-Bring table zebra was both INVERTED and effectively invisible vs the preview. The React preview (`app.src.js` ~5149) bands EVEN data rows (data idx 0,2,4…) with a visible pale teal `#eaf7f7`; the worker banded the ODD rows with near-white `FAFAFA`. The worker now matches the preview: even data rows → `EAF7F7`, odd → none. Applies to both the CV competency table and the CL What-I-Bring table (shared `renderCompetencyTable`). Locked by `test/diag-banded-rows.mjs`. Re-verify owed in a real PDF.

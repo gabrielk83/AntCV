@@ -24659,8 +24659,19 @@ function buildTwoColumnDocument(ctx) {
     }
     return pages;
   }
-  const sidebarPages = splitChildrenByPage(sidebarChildren);
-  const mainPages = splitChildrenByPage(mainChildren);
+  // PB-WORKER-TRAILING-BLANK-001 (owner 2026-06-24 "we got 9 pages CV ... blank
+  // trailing page"): a column ending on a page-break marker (__antcvPB) makes
+  // splitChildrenByPage push a trailing EMPTY page; numPages = max(...) then
+  // counts it, emitting a blank trailing sheet. Trim trailing content-less pages
+  // from each column (never removes content — only pops pages with zero children)
+  // so the page count reflects real content. Does NOT address the deeper
+  // sidebar-longer-than-main spill (full-width re-flow — owner-gated, real data).
+  function trimTrailingEmptyPages(pages) {
+    while (pages.length > 1 && (!pages[pages.length - 1] || pages[pages.length - 1].length === 0)) pages.pop();
+    return pages;
+  }
+  const sidebarPages = trimTrailingEmptyPages(splitChildrenByPage(sidebarChildren));
+  const mainPages = trimTrailingEmptyPages(splitChildrenByPage(mainChildren));
   const numPages = Math.max(sidebarPages.length, mainPages.length, 1);
   // Last-page AI notice anchor (WM-005): land the sentinel in the FINAL page's
   // main cell so the bottom-anchored VML frame postProcessDocx injects renders
@@ -27446,7 +27457,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   the anchor's spacing-after from (px/2+14) to (px/2-12) so the first sidebar
 //   section sits just under the medallion (~0.27in higher; the full 0.6in would
 //   overlap the photo at the default diameter).
-var VERSION = "1.14.80-export-results-table-spacing";
+var VERSION = "1.14.81-trailing-blank-trim";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

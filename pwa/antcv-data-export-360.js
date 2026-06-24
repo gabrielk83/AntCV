@@ -49,7 +49,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.861-personal-batch';
+  var VERSION = '1.50.862-launcher-scope';
   if (window.__antcvDataExport360 === VERSION) return;
   window.__antcvDataExport360 = VERSION;
 
@@ -1242,10 +1242,29 @@
     document.body.appendChild(b);
   }
 
+  // STICKY-LEAK-001 (owner 2026-06-24): the launcher lives in a settings container
+  // that persists across subtabs, so it stayed visible on the Account / set-menu
+  // screen. The writing-style island is present ONLY on Settings -> Personal (it is
+  // unmounted on other subtabs), so use it as the gate: hide the launcher (and the
+  // import button nested in it) whenever that island is absent.
+  function updateLauncherVisibility() {
+    try {
+      var launcher = document.querySelector('[' + UI_MARK + '="launcher"]');
+      if (!launcher) return;
+      // The ACCOUNT MODE block (antcv-demo-toggle) is rendered ONLY on the Account
+      // subtab / set-menu. When it is visible we are NOT on Personal, so hide the
+      // launcher (and the import button nested in it).
+      var acct = document.querySelector('[data-antcv-demo-toggle]');
+      var onAccount = !!(acct && acct.offsetParent !== null);
+      launcher.style.display = onAccount ? 'none' : 'flex';
+    } catch (_) {}
+  }
+
   function injectUi() {
     if (disabled()) return;
     injectLauncher();
     placeImportInLauncher();
+    updateLauncherVisibility();
     injectCheckbox();
     // PERSONAL-MERGE-5 (owner 2026-06-24): the floating account-locked export FAB
     // is removed — the control now lives in Settings -> Personal (the launcher)

@@ -55,13 +55,15 @@ const pubs = await page.evaluate(() => {
     try { const s = JSON.parse(localStorage.getItem('sections')); const sec = s.cv.find(x => x.id === 'pubs'); persisted = sec.items.some(it => /edited/.test(String(it))); } catch (_) {}
   }
   const hasProfileLink = /Profile link/.test(card ? card.textContent || '' : '');
-  return { cardPresent: !!card, showsEntry, persisted, hasProfileLink };
+  const phs = inputs.map(i => i.placeholder);
+  const splitFields = ['Title', 'Authors', 'Journal / publisher', 'Year', 'Pages'].every(ph => phs.includes(ph));
+  return { cardPresent: !!card, showsEntry, persisted, hasProfileLink, splitFields };
 });
 
 console.log('COLLAPSE:', JSON.stringify(collapse));
 console.log('PUBS:', JSON.stringify(pubs));
 const pass = collapse.present && collapse.collapsedByDefault && collapse.caret === '▸' &&
-  pubs.cardPresent && pubs.showsEntry && pubs.persisted && pubs.hasProfileLink;
+  pubs.cardPresent && pubs.showsEntry && pubs.persisted && pubs.hasProfileLink && pubs.splitFields;
 console.log('\nRESULT:', pass ? 'PASS' : 'FAIL');
 if (errs.length) console.log('pageerrors:', errs.slice(0, 3).join(' | '));
 await browser.close(); await new Promise(r => server.close(r));

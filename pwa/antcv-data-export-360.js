@@ -49,7 +49,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.862-launcher-scope';
+  var VERSION = '1.50.864-pubs-split-personality';
   if (window.__antcvDataExport360 === VERSION) return;
   window.__antcvDataExport360 = VERSION;
 
@@ -895,14 +895,27 @@
     // (antcv-personality-quiz-439); the standalone Personal-tab card is hidden.
     var sP = rdSection('🧠', 'Personality', 'An 8-question quiz that teaches AntCV how to write you — as concrete behaviour, not adjectives.');
     (function () {
-      var per = (pi.personality && typeof pi.personality === 'object') ? pi.personality : null;
-      var hasKernel = !!(per && Array.isArray(per.traits) && per.traits.length);
-      if (hasKernel) {
+      function chip(s) { return rdEl('span', 'font-size:11px;padding:2px 8px;border-radius:11px;background:rgba(1,183,187,.16);color:#bdf0f1;', String(s)); }
+      // The result may live at personalInfo.personality (8-question quiz: traits +
+      // work_style_line) OR personalInfo.workStyle (VIA import / wizard: strengths +
+      // summary). Read both so a kernel set in a prior wizard/import shows here.
+      var per = (pi.personality && typeof pi.personality === 'object' && Array.isArray(pi.personality.traits) && pi.personality.traits.length) ? pi.personality : null;
+      var ws = (pi.workStyle && typeof pi.workStyle === 'object') ? pi.workStyle : null;
+      var wsStrengths = ws && Array.isArray(ws.strengths) ? ws.strengths.map(function (s) { return (s && (s.name || s)) || ''; }).filter(Boolean) : [];
+      var wsKeywords = ws && Array.isArray(ws.keywords) ? ws.keywords.filter(Boolean) : [];
+      var wsSummary = ws && (ws.summary || ws.notes) ? String(ws.summary || ws.notes) : '';
+      var hasKernel = !!(per || wsStrengths.length || wsKeywords.length || wsSummary);
+      if (per) {
         var chips = rdEl('div', 'display:flex;flex-wrap:wrap;gap:4px;margin:0 0 6px;');
-        per.traits.forEach(function (tr) { var lbl = (tr && (tr.label || tr.id)) || ''; if (lbl) chips.appendChild(rdEl('span', 'font-size:11px;padding:2px 8px;border-radius:11px;background:rgba(1,183,187,.16);color:#bdf0f1;', String(lbl))); });
+        per.traits.forEach(function (tr) { var lbl = (tr && (tr.label || tr.id)) || ''; if (lbl) chips.appendChild(chip(lbl)); });
         if (chips.childNodes.length) sP.body.appendChild(chips);
         var wsl = per.work_style_line; wsl = wsl && (wsl.en || (typeof wsl === 'string' ? wsl : ''));
         if (wsl) sP.body.appendChild(rdEl('div', 'font-size:11px;opacity:.75;line-height:1.45;font-style:italic;margin:0 0 6px;', String(wsl)));
+      } else if (wsStrengths.length || wsKeywords.length || wsSummary) {
+        var ch2 = rdEl('div', 'display:flex;flex-wrap:wrap;gap:4px;margin:0 0 6px;');
+        wsStrengths.concat(wsKeywords).slice(0, 8).forEach(function (s) { ch2.appendChild(chip(s)); });
+        if (ch2.childNodes.length) sP.body.appendChild(ch2);
+        if (wsSummary) sP.body.appendChild(rdEl('div', 'font-size:11px;opacity:.75;line-height:1.45;font-style:italic;margin:0 0 6px;', wsSummary));
       } else {
         sP.body.appendChild(rdEl('div', 'font-size:11px;opacity:.55;margin:0 0 6px;', 'No personality kernel yet — take the quiz to set it.'));
       }
@@ -1023,33 +1036,70 @@
     // profile link. Writes the SAME sections.cv['pubs'] the editor-panel
     // Publications editor reads (items[] + masterSite), so the two surfaces sync.
     var s9 = rdSection('🔗', 'Publications', 'Your publications, and an optional link to your publications profile (Google Scholar, Academia, ORCID…).');
-    // Publication entries — edit the citation strings directly; the rich 5-field
-    // editor re-derives pubFields from items, so clearing pubFields here is safe.
+    // Publication entries — SPLIT into the same fields as the editor's rich panel
+    // (Title / Authors / Journal / Year / Pages) so editing is unambiguous (no
+    // single-string collision). Round-trips items[] (composed citation) + the
+    // parallel pubFields[] the rich editor reads.
     (function () {
-      function readPubs() { var sec = rdFindSection(rdReadSections(), 'pubs'); return (sec && Array.isArray(sec.items)) ? sec.items : []; }
-      function writePubs(items) {
+      function pclean(v) { return String(v == null ? '' : v).replace(/<\/?[a-z][^>]*>/gi, '').replace(/^[\s"'“”‘’«»]+|[\s"'“”‘’«»]+$/g, '').trim(); }
+      var PSEP = [' — ', ' – ', ' - ', ': '];
+      function splitCite(v) { v = pclean(v); if (!v) return { title: '', details: '' }; for (var i = 0; i < PSEP.length; i++) { var k = v.indexOf(PSEP[i]); if (k > 0) return { title: pclean(v.slice(0, k)), details: v.slice(k + PSEP[i].length).trim() }; } return { title: v, details: '' }; }
+      function parseDetails(d) {
+        d = String(d || ''); var year = '', pages = '', authors = '', journal = '';
+        var ym = d.match(/\b(?:19|20)\d\d\b/g); if (ym) year = ym[ym.length - 1];
+        var pm = d.match(/pp?\.?\s*(\d+\s*[-–—]\s*\d+|\d+)\b/i); if (pm) pages = pm[1];
+        var rest = d; if (pm) rest = rest.replace(pm[0], ''); if (year) rest = rest.replace(year, '');
+        rest = rest.replace(/\s*,\s*,\s*/g, ', ').replace(/^[\s,]+|[\s,]+$/g, '').trim();
+        var parts = rest.split(/\s*,\s*/).filter(Boolean);
+        if (parts.length >= 2) { journal = parts[parts.length - 1]; authors = parts.slice(0, -1).join(', '); } else { journal = rest; }
+        return { authors: authors, journal: journal, year: year, pages: pages };
+      }
+      function compose(r) { var name = pclean(r.name); var o = [r.authors, r.journal, r.year, r.pages ? 'pp. ' + r.pages : ''].map(function (x) { return String(x || '').trim(); }).filter(Boolean).join(', '); return name && o ? name + ' — ' + o : (name || o); }
+      function readRows() {
+        var sec = rdFindSection(rdReadSections(), 'pubs');
+        var items = (sec && Array.isArray(sec.items)) ? sec.items : [];
+        var pf = (sec && Array.isArray(sec.pubFields)) ? sec.pubFields : [];
+        return items.map(function (it, i) {
+          var s = (typeof it === 'string') ? it : String((it && it.text) || '');
+          var f = (pf[i] && typeof pf[i] === 'object') ? pf[i] : parseDetails(splitCite(s).details);
+          return { name: splitCite(s).title, authors: String(f.authors || ''), journal: String(f.journal || ''), year: String(f.year || ''), pages: String(f.pages || '') };
+        });
+      }
+      var arr = readRows();
+      var pl = rdEl('div', 'display:flex;flex-direction:column;gap:6px;');
+      function commit() {
         var s = rdReadSections(); if (!Array.isArray(s.cv)) s.cv = [];
         var sec = rdFindSection(s, 'pubs');
         if (!sec) { sec = { id: 'pubs', title: 'PUBLICATIONS', loc: 'main', on: true, type: 'list_italic', items: [] }; s.cv.push(sec); }
-        sec.items = items; if ('pubFields' in sec) { try { delete sec.pubFields; } catch (_) {} }
+        var rows = arr.filter(function (r) { return r.name || r.authors || r.journal || r.year || r.pages; });
+        sec.items = rows.map(compose);
+        sec.pubFields = rows.map(function (r) { return { authors: r.authors.trim(), journal: r.journal.trim(), year: r.year.trim(), pages: r.pages.trim() }; });
         rdSaveSections(s);
       }
-      var arr = readPubs().map(function (it) { return (typeof it === 'string') ? it : String((it && it.text) || ''); });
-      var pl = rdEl('div', 'display:flex;flex-direction:column;gap:5px;');
-      function commit() { writePubs(arr.map(function (x) { return String(x || '').trim(); }).filter(Boolean)); }
-      function prow(val, i) {
-        var r = rdEl('div', 'display:flex;gap:5px;align-items:center;');
-        var inp = rdEl('input', RD_ROW_INPUT); inp.value = val; inp.placeholder = 'Title — authors, journal, year';
-        inp.addEventListener('input', function () { arr[i] = inp.value; }); inp.addEventListener('blur', commit);
+      function fld(val, ph, set) { var e = rdEl('input', RD_ROW_INPUT); e.value = val || ''; e.placeholder = ph; e.addEventListener('input', function () { set(e.value); }); e.addEventListener('blur', commit); return e; }
+      function prow(r, i) {
+        var box = rdEl('div', 'display:flex;flex-direction:column;gap:4px;padding:7px 8px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);border-radius:6px;');
+        var top = rdEl('div', 'display:flex;gap:5px;align-items:center;');
+        var name = rdEl('input', RD_ROW_INPUT + 'font-weight:600;'); name.value = r.name; name.placeholder = 'Title';
+        name.addEventListener('input', function () { r.name = name.value; }); name.addEventListener('blur', commit);
         var x = rdEl('button', 'flex:0 0 auto;background:transparent;border:none;color:#f3b4b3;font-size:15px;line-height:1;cursor:pointer;padding:0 4px;', '×');
         x.type = 'button'; x.title = 'Remove'; x.addEventListener('click', function () { arr.splice(i, 1); commit(); prender(); });
-        r.appendChild(inp); r.appendChild(x); return r;
+        top.appendChild(name); top.appendChild(x); box.appendChild(top);
+        var row2 = rdEl('div', 'display:flex;gap:5px;');
+        row2.appendChild(fld(r.authors, 'Authors', function (v) { r.authors = v; }));
+        row2.appendChild(fld(r.journal, 'Journal / publisher', function (v) { r.journal = v; }));
+        box.appendChild(row2);
+        var row3 = rdEl('div', 'display:flex;gap:5px;');
+        row3.appendChild(fld(r.year, 'Year', function (v) { r.year = v; }));
+        row3.appendChild(fld(r.pages, 'Pages', function (v) { r.pages = v; }));
+        box.appendChild(row3);
+        return box;
       }
-      function prender() { while (pl.firstChild) pl.removeChild(pl.firstChild); arr.forEach(function (v, i) { pl.appendChild(prow(v, i)); }); }
+      function prender() { while (pl.firstChild) pl.removeChild(pl.firstChild); arr.forEach(function (r, i) { pl.appendChild(prow(r, i)); }); }
       s9.body.appendChild(rdEl('div', 'font-size:10px;text-transform:uppercase;letter-spacing:.5px;opacity:.55;margin:0 0 4px;', 'Publication entries'));
       s9.body.appendChild(pl);
       var padd = rdMiniBtn('+ publication'); padd.style.marginTop = '6px';
-      padd.addEventListener('click', function () { arr.push(''); prender(); });
+      padd.addEventListener('click', function () { arr.push({ name: '', authors: '', journal: '', year: '', pages: '' }); prender(); });
       s9.body.appendChild(padd);
       prender();
     })();
@@ -1204,11 +1254,15 @@
   function placeImportInLauncher() {
     try {
       var launcher = document.querySelector('[' + UI_MARK + '="launcher"]');
-      var imp = document.querySelector('[data-antcv-import-replacement]');
-      if (launcher && imp && imp.parentNode !== launcher) {
-        try { imp.style.margin = '0 0 8px'; } catch (_) {}
-        launcher.insertBefore(imp, launcher.firstChild);
-      }
+      if (!launcher) return;
+      // The app renders more than one native import button, so the importer makes
+      // more than one replacement. Keep exactly ONE — in the launcher — and remove
+      // the rest (the lower duplicate the owner saw).
+      var imps = Array.prototype.slice.call(document.querySelectorAll('[data-antcv-import-replacement]'));
+      if (!imps.length) return;
+      var keep = imps.filter(function (im) { return im.parentNode === launcher; })[0] || imps[0];
+      if (keep.parentNode !== launcher) { try { keep.style.margin = '0 0 8px'; } catch (_) {} launcher.insertBefore(keep, launcher.firstChild); }
+      imps.forEach(function (im) { if (im !== keep) { try { im.remove(); } catch (_) {} } });
     } catch (_) {}
   }
 

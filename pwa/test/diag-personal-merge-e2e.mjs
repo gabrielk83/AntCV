@@ -61,6 +61,7 @@ const s1 = await page.evaluate(() => {
   return {
     launcherPresent: !!launcher, launcherOrder: launcher ? getComputedStyle(launcher).order : null,
     importBeforeReview: !!(launcher && launcher.firstElementChild && launcher.firstElementChild.getAttribute('data-antcv-import-replacement') === '1'),
+    importCount: document.querySelectorAll('[data-antcv-import-replacement]').length,
     reviewLabel: review ? (review.textContent || '').trim() : null,
     apiNow: typeof window.AntcvReactIslands, apiVer: (window.AntcvReactIslands && window.AntcvReactIslands.version) || null,
     booted: window.__antcvReactIslandsBooted || null, hasReact: typeof window.React,
@@ -102,7 +103,7 @@ console.log('LAUNCHER:', JSON.stringify(s1));
 console.log('MODAL:', JSON.stringify(s2));
 console.log('TONE:', JSON.stringify(s3));
 await page.screenshot({ path: path.join(OUT, 'personal-merge-e2e.png'), fullPage: true });
-const pass = s1.launcherPresent && parseInt(s1.launcherOrder, 10) <= -4 && s1.importBeforeReview && s1.reviewLabel && s1.reviewLabel.includes('Review & Edit') &&
+const pass = s1.launcherPresent && parseInt(s1.launcherOrder, 10) <= -4 && s1.importBeforeReview && s1.importCount === 1 && s1.reviewLabel && s1.reviewLabel.includes('Review & Edit') &&
   s2.modal && s2.sectionCount >= 8 && s2.allCollapsed &&
   s3.islandMounted && s3.hasAllScope && s3.seededWord && s3.seededSem;
 console.log('\nRESULT:', pass ? 'PASS' : 'FAIL');

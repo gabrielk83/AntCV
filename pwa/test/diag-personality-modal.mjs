@@ -42,8 +42,26 @@ const r = await page.evaluate(() => {
     abovesidebar: pIdx >= 0 && sbIdx >= 0 && pIdx < sbIdx,
   };
 });
-console.log(JSON.stringify(r, null, 1));
-const pass = r.cardPresent && r.showsTrait && r.showsWorkStyle && r.hasRetake && r.abovesidebar;
+// workStyle path: a kernel set via a prior wizard/import (personalInfo.workStyle)
+// must ALSO render — strengths chips + summary — not "No personality kernel yet".
+await page.evaluate(() => {
+  const m = document.querySelector('[data-antcv-review-modal]'); if (m) m.remove();
+  localStorage.setItem('personalInfo', JSON.stringify({ name: 'Gabriel', workStyle: { strengths: [{ name: 'Perseverance' }, { name: 'Judgment' }], summary: 'Calm, structured, follows through.' } }));
+});
+await page.evaluate(() => window.AntcvReviewData && window.AntcvReviewData());
+await page.waitForTimeout(150);
+await page.evaluate(() => { const m = document.querySelector('[data-antcv-review-modal]'); const h = [...m.querySelectorAll('button')].find(b => /^[▸▾]\s*🧠\s*Personality$/.test((b.textContent || '').replace(/\s+/g, ' ').trim())); if (h) h.click(); });
+await page.waitForTimeout(150);
+const w = await page.evaluate(() => {
+  const m = document.querySelector('[data-antcv-review-modal]');
+  const hdr = [...m.querySelectorAll('button')].find(b => /🧠\s*Personality$/.test((b.textContent || '').replace(/\s+/g, ' ').trim()));
+  const t = hdr ? hdr.parentElement.textContent || '' : '';
+  return { showsStrength: /Perseverance/.test(t), showsSummary: /follows through/.test(t), noEmptyMsg: !/No personality kernel yet/.test(t) };
+});
+console.log('PERSONALITY:', JSON.stringify(r));
+console.log('WORKSTYLE:', JSON.stringify(w));
+const pass = r.cardPresent && r.showsTrait && r.showsWorkStyle && r.hasRetake && r.abovesidebar &&
+  w.showsStrength && w.showsSummary && w.noEmptyMsg;
 console.log('\nRESULT:', pass ? 'PASS' : 'FAIL');
 if (errs.length) console.log('pageerrors:', errs.slice(0, 3).join(' | '));
 await browser.close(); await new Promise(r => server.close(r));

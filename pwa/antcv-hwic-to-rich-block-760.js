@@ -14,7 +14,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.839-peel-fix';
+  var VERSION = '1.50.912-intro-detect';
   if (window.__antcvHwicToRichBlock760 === VERSION) return;
   window.__antcvHwicToRichBlock760 = VERSION;
 
@@ -89,7 +89,15 @@
         // from a true intro/closing AND re-markers a real first/last bullet that was wrongly stripped.
         if (Array.isArray(s.items) && s.items.length >= 1) {
           var n = s.items.length;
-          var firstIsLeadIn = /:\s*$/.test(bulletText(s.items[0]));
+          // HWIC-INTRO-DETECT-ROBUST-001 (owner 2026-06-25): the intro was detected only by a
+          // trailing ":" lead-in, but the FIELD-CAPS length cap (<=125) strips trailing punctuation,
+          // so a capped intro lost its ":" -> 760 thought there was NO intro -> it re-markered the
+          // intro AND closing every render (owner: "the jumpiness cancels the invisibility of intro
+          // and closure"). For the CONTRIBUTE section, also treat a PARAGRAPH-length first row
+          // (>=50 chars) as the intro — its ":" may have been capped off. Keeps marker state stable.
+          var __t0 = bulletText(s.items[0]);
+          var __isContribute = (s.id === 'contribute' || /how i would contribute/i.test(String(s.title || '')));
+          var firstIsLeadIn = /:\s*$/.test(__t0) || (__isContribute && __t0.length >= 50);
           var changedA = false;
           var fixedA = s.items.map(function (r, i) {
             var isIntro = (i === 0 && firstIsLeadIn);

@@ -330,7 +330,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.50.890';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.50.903';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.50.904';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -372,7 +372,7 @@
           app.src = 'app.js?v=1.50.894';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.50.903';
+            vo.src = 'antcv-version-override.js?v=1.50.904';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -758,7 +758,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-section-panel-tweaks.js?v=1.40.203" defer></script>
 <script src="antcv-item-align.js?v=1.50.690-edit-guard" defer></script>
 <script src="antcv-page-fit.js?v=1.50.753" defer></script>
-<script src="antcv-auto-pagebreak-block-001.js?v=1.50.903" defer></script>
+<script src="antcv-auto-pagebreak-block-001.js?v=1.50.904" defer></script>
 <script src="antcv-table-fast-drag.js?v=1.50.490" defer></script>
 <script src="antcv-pdf-error-toast.js?v=1.40.194" defer></script>
 <script src="antcv-item-pages-render.js?v=1.50.202-native-render-retired" defer></script>

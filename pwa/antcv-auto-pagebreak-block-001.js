@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.903-postproc-thr04';
+  var VERSION = '1.50.904-postproc-sticky';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -190,9 +190,14 @@
   // the sidebar taller and overflows the last group mid-item with a wrong fresh header (owner
   // 2026-06-25, repeatedly: "the last group should be in page 3"). Only fires for multi-group
   // sections taller than this fraction of a page, and only past page 1. 0 disables.
-  // Owner-tunable live: AntcvAutoPagebreak.config({ FORCE_LAST_GRP_FRAC:N }). 0.4 because the
-  // owner's regulatory section measures ~0.47 of a page (435/924) — 0.5 missed it.
-  var FORCE_LAST_GRP_FRAC = 0.4;
+  // Owner-tunable live: AntcvAutoPagebreak.config({ FORCE_LAST_GRP_FRAC:N }). 0.35 because the
+  // owner's regulatory section measures ~0.47 of a page (435/924) — 0.5 missed it; 0.35 gives margin.
+  var FORCE_LAST_GRP_FRAC = 0.35;
+  // STICKY set for FORCE-LAST-GRP: once a section's last group is moved to the next page, KEEP it
+  // moved on later recompute cycles even if its measured height drops below the threshold (moving
+  // the group OUT of the page-2 column shrinks the measured total, which would otherwise un-move
+  // it -> the "metastable dance" the owner saw). Breaks the measure<->render feedback loop.
+  var __forceLastGrpStick = {};
   // Measure the profile photo's height (the reserve the sidebar's page 1 loses to it). 0 when
   // there is no photo (then the sidebar band falls back to PAGE1_BAND).
   function __photoReserve() {
@@ -986,11 +991,13 @@
               if (secData && Array.isArray(secData.items)) { secData.items.forEach(function (it, i) { if (it && it.grp != null && it.grp !== '') starts.push(i); }); }
               if (starts.length < 2) return;                                  // needs >=2 groups
               var tot = blocks.reduce(function (s, b) { return s + Math.max(0, b.bottom - b.top); }, 0);
-              if (tot <= __uniLimit * FORCE_LAST_GRP_FRAC) return;            // only a BIG section
+              var big = tot > __uniLimit * FORCE_LAST_GRP_FRAC;               // BIG enough this cycle
+              if (!big && !__forceLastGrpStick[sid]) return;                  // not big AND never forced
               var paged = __sPaged.filter(function (b) { return b.sid === sid; });
               if (!paged.length) return;
               var startPage = Math.min.apply(null, paged.map(function (b) { return b.page; }));
               if (startPage < 2) return;                                      // only past page 1
+              __forceLastGrpStick[sid] = true;                               // STICKY: keep moved hereafter
               var lastGrp = starts[starts.length - 1];
               paged.forEach(function (b) { var k = parseInt(b.key, 10) || 0; b.page = (k >= lastGrp) ? (startPage + 1) : startPage; });
             });

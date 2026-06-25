@@ -180,6 +180,20 @@
         pageBox.style.position = 'relative';
       }
     } catch (_) {}
+    // AI-WM-SIDEBAR-PARENT-001 (owner 2026-06-25 "moved left but inside the main, not the sidebar
+    // corner"): for the SIDEBAR (left) corner, re-parent the watermark INTO the sidebar column so
+    // position:absolute anchors against IT. Otherwise the offset parent is the main column, the
+    // page's left edge is NEGATIVE relative to it, and the left inset clamps to the MAIN's left.
+    if (corner === 'left') {
+      try {
+        var __sb = pageBox.querySelector && pageBox.querySelector('.antcv-document-sidebar');
+        if (__sb && !__sb.contains(watermark)) {
+          var __sbcs = window.getComputedStyle ? window.getComputedStyle(__sb) : null;
+          if (__sbcs && __sbcs.position === 'static') __sb.style.position = 'relative';
+          __sb.appendChild(watermark);
+        }
+      } catch (_) {}
+    }
     watermark.style.position = 'absolute';
     watermark.style.zIndex = '5';
     // BUGFIX 2026-06-05 (CL watermark "gone"): a `bottom`/`right` inset only

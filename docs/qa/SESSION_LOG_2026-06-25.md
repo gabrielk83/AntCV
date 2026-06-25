@@ -79,6 +79,23 @@ pagination, main-column pagination, the AI notice, content length caps, and edit
   (final-role-condense caps the volunteer bullets; React autosaves the full app-record bullets) — that
   needs the cap baked into `ro`/generation, not fought at restore. Page-3 empty-space jump (owner: pages
   1/2 a little, page 3 most) is this content swing flipping the paginator 4↔2 pages.
+- **BOOT-CJLR-PERF-003 (1.50.923)** `[nightly 2026-06-26]` — continuing the boot-freeze sidecar-swarm
+  reduction ([[boot-storm-gate-freeze]]). After 866/868/880 and the 415/React storm idempotency
+  (921/922), `diag-boot-profile.mjs` showed `antcv-profile-workstyle-cjlr-238.js` back as the top
+  sidecar by file (375ms), driven by `sectionFromElement` self-time (~131ms). `editorBlocks()` climbs
+  up to 10 ancestors PER textarea/contenteditable calling `sectionFromElement` at each level; a
+  non-matching textarea climbs all 10, and the HIGH ancestors (panel / editor root / body) are SHARED
+  across every textarea, so each gets re-classified (attrs-string build + 2 regex tests) once per
+  textarea. Fix: a per-run `__runSecCache` Map memo keyed on the element — the SAME proven
+  behaviour-preserving pattern already used twice in this file (`cleanText`, `lowText`), same per-run
+  lifecycle (rebuilt at run() start, cleared in finally; pure given the static-during-sweep DOM).
+  Re-profiled: 238 dropped 375ms → 277ms (−26%) and `sectionFromElement` fell out of the top self-time
+  list. Sidecar-only — NO app.js mirror, NO islands bundle → no parallel-session contention. Verified
+  PAST the sign-in gate (`diag-profile-workstyle-memo-verify.mjs`): 238 boots + run() clean, 0 console
+  errors, AND it still classifies profile→center / work_style→right DISTINCTLY (a wrongly-keyed memo
+  would cross-contaminate). Suite 483/483. NEXT profiled offenders for a future run:
+  `antcv-what-i-bring-header-cjlr-249.js` (editorRoot 112ms), `antcv-core-wib-strict-row-layout-274.js`
+  (panelRoot 112ms).
 
 
 - **AI-NOTICE-MISSING-PREVIEW-001 (1.50.918)** — the 914 re-parent into `.antcv-document-sidebar`

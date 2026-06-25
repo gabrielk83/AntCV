@@ -5,7 +5,7 @@
  */
 (function(){
   'use strict';
-  const VERSION = '1.50.845-boot-perf2';
+  const VERSION = '1.50.923-boot-perf3';
   // v1.40.238-preview-guard: Preview is button-free. Profile/Work-style
   // CJLR controls must not attach to rows inside .antcv-preview-paper.
   const isInPreviewPaper = el => { if(!el) return false; const p=document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]'); return !!(p && p.contains(el)); };
@@ -30,6 +30,17 @@
   // Both are behaviour-preserving (a giant ancestor was never a valid single-section row).
   let __runTextCache = null;   // Map<Element,string> rebuilt each run(); null outside a run
   let __runLowCache = null;    // Map<Element,string> lowercased; same per-run lifecycle as __runTextCache
+  // BOOT-CJLR-PERF-003 (nightly 2026-06-26): after the text/low memos landed,
+  // sectionFromElement was the residual top sidecar self-time (~131ms, profiled
+  // via diag-boot-profile.mjs). editorBlocks() climbs up to 10 ancestors PER
+  // textarea/contenteditable calling sectionFromElement at each level; a
+  // non-matching textarea climbs all 10, and the HIGH ancestors (panel / editor
+  // root / body) are SHARED across every textarea, so they get re-classified
+  // (attrs-string build + 2 regex tests) once per textarea. A per-run memo keyed
+  // on the element collapses those shared re-evaluations to one. Pure given the
+  // DOM, which does not mutate during the synchronous run() sweep (same guarantee
+  // the text memo relies on) ⇒ behaviour-preserving.
+  let __runSecCache = null;    // Map<Element, section|null>; same per-run lifecycle as the text caches
   const MAX_ROW_TEXT = 300;    // a section control row's cleaned text is short; bigger ⇒ not a row
   function cleanText(el){
     if(!el) return '';
@@ -72,6 +83,12 @@
 
   function sectionFromElement(el){
     if(!el) return null;
+    if(__runSecCache){ const c=__runSecCache.get(el); if(c!==undefined) return c; }
+    const r = __sectionFromElementUncached(el);
+    if(__runSecCache) __runSecCache.set(el, r);
+    return r;
+  }
+  function __sectionFromElementUncached(el){
     const attrs = [el.getAttribute('data-sid'), el.getAttribute('data-section-id'), el.id, el.className].map(String).join(' ').toLowerCase();
     if(/work[_-]?style/.test(attrs)) return SECTIONS[1];
     if(/profile/.test(attrs)) return SECTIONS[0];
@@ -236,6 +253,7 @@
       // safe and collapses the shared-ancestor re-serialization that made boot slow.
       __runTextCache = new Map();
       __runLowCache = new Map();
+      __runSecCache = new Map();
       try{
         // PW-CJLR-PHOTO-LEAK-001: strip any cycler that already leaked into the
         // PROFILE PHOTO card (between the SHADOW Off/On buttons) before re-placing.
@@ -248,7 +266,7 @@
         applyEditors();
         applyPreview();
       }catch(e){ try{ console.warn('[profile-workstyle-cjlr-238] failed:', e && e.message); }catch(_){} }
-      finally{ __runTextCache = null; __runLowCache = null; }
+      finally{ __runTextCache = null; __runLowCache = null; __runSecCache = null; }
     });
   }
   function start(){

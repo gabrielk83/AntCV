@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.885-det-coord';
+  var VERSION = '1.50.886-det-coord-cols';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -162,6 +162,10 @@
   // (autoPages stayed all ->2). The real cross-page distribution needs a height-based
   // deterministic coordinator (next). Off = the stable legacy single-increment walk.
   var ABSOLUTE_PAGING = false;
+  // DET-COORD page-1 band deduction (preview px): page 1 holds the candidate header band
+  // above both columns, so its usable budget is smaller than pages 2+. Owner-tunable live:
+  // AntcvAutoPagebreak.config({ PAGE1_BAND:N }). Higher = lighter page 1 (more to page 2).
+  var PAGE1_BAND = 200;
 
   // ============================================================
   // SIDEBAR-SHRINK-RECLAIM-001 (owner 2026-06-11)
@@ -817,8 +821,12 @@
           for (var i = 0; i < ordered.length; i++) {
             var b = ordered[i];
             var h = Math.max(0, b.bottom - b.top);
-            // A block taller than a whole page can't move; it stays and overflows.
-            if (used > 0 && (used + h) > __uniLimit) { page++; used = 0; }
+            // PAGE 1 is SHORTER than pages 2+ — the candidate header band sits above both
+            // columns (worker: page-1 body ~2978 DXA less). Deduct PAGE1_BAND from page 1's
+            // budget so the columns don't over-fill page 1 (which is why certs + the later
+            // roles belonged on page 2). A block taller than a page can't move; it stays.
+            var cap = (page === 1) ? Math.max(300, __uniLimit - PAGE1_BAND) : __uniLimit;
+            if (used > 0 && (used + h) > cap) { page++; used = 0; }
             used += h;
             out.push({ sid: b.sid, kind: b.kind, key: b.key, page: page });
           }
@@ -829,6 +837,7 @@
           var perSid = {}, seenPage = {};
           for (var i = 0; i < paged.length; i++) {
             var b = paged[i];
+            if (!b.sid) continue;                                      // unkeyed block — never emit a break
             if (isExperience ? (b.kind !== 'role') : (b.kind !== 'item')) continue;
             if (b.page <= 1) continue;
             var sk = b.sid + '@' + b.page;
@@ -838,10 +847,16 @@
           }
           return perSid;
         }
-        // Sidebar + main ITEM sections flow together as one column each; experience ROLES
-        // (atomic) paginate on their own.
-        var __reItem = __mapFromPaged(__uniPaginate(__uniBlocks.sidebar.concat(__uniBlocks.main)), false);
-        var __reRole = __mapFromPaged(__uniPaginate(__uniBlocks.main), true);
+        // SIDEBAR and MAIN are PARALLEL columns — paginate each on its OWN cumulative height
+        // (NOT concatenated; concatenating stacked the sidebar after the main and pushed
+        // tools/certs to page 3). The main column carries its ITEM blocks (profile/publications)
+        // and its experience ROLE blocks together in document order (one flow); the sidebar is
+        // its own flow. Extract item breaks per column + role breaks from the main flow.
+        var __sPaged = __uniPaginate(__uniBlocks.sidebar);
+        var __mPaged = __uniPaginate(__uniBlocks.main);
+        var __reSidebar = __mapFromPaged(__sPaged, false);
+        var __reMainItems = __mapFromPaged(__mPaged, false);
+        var __reRole = __mapFromPaged(__mPaged, true);
 
         function __applyUnified(reMap) {
           for (var sid in reMap) {
@@ -853,8 +868,10 @@
             if (!__breakBornAt[bornKey(sid)]) __breakBornAt[bornKey(sid)] = nowMs();
           }
         }
-        __applyUnified(__reItem);
+        __applyUnified(__reSidebar);
+        __applyUnified(__reMainItems);
         __applyUnified(__reRole);
+        var __reItem = Object.assign({}, __reSidebar, __reMainItems);   // for RECONCILE below
 
         // RECONCILE: a coordinator-measured ITEM section that a per-column pass broke but the
         // deterministic pass did NOT re-affirm (it fits page 1 now) -> clear its stale break so
@@ -1252,7 +1269,7 @@
     //   AntcvAutoPagebreak.config({ HYST_STABLE:80 })  // looser stable band
     config: function (o) {
       try {
-        if (!o) return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE, SIDEBAR_UNIFIED: SIDEBAR_UNIFIED, ABSOLUTE_PAGING: ABSOLUTE_PAGING };
+        if (!o) return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE, SIDEBAR_UNIFIED: SIDEBAR_UNIFIED, ABSOLUTE_PAGING: ABSOLUTE_PAGING, PAGE1_BAND: PAGE1_BAND };
         if (typeof o.ONE_PASS === 'boolean') ONE_PASS = o.ONE_PASS;
         if (typeof o.HYST_STABLE === 'number') HYST_STABLE = o.HYST_STABLE;
         if (typeof o.HYST_TIGHT === 'number') HYST_TIGHT = o.HYST_TIGHT;
@@ -1262,8 +1279,9 @@
         if (typeof o.SIDEBAR_NPAGE === 'boolean') SIDEBAR_NPAGE = o.SIDEBAR_NPAGE;
         if (typeof o.SIDEBAR_UNIFIED === 'boolean') SIDEBAR_UNIFIED = o.SIDEBAR_UNIFIED;
         if (typeof o.ABSOLUTE_PAGING === 'boolean') ABSOLUTE_PAGING = o.ABSOLUTE_PAGING;
+        if (typeof o.PAGE1_BAND === 'number') PAGE1_BAND = o.PAGE1_BAND;
         lastSourceFp = null; schedule();
-        return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE, SIDEBAR_UNIFIED: SIDEBAR_UNIFIED, ABSOLUTE_PAGING: ABSOLUTE_PAGING };
+        return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE, SIDEBAR_UNIFIED: SIDEBAR_UNIFIED, ABSOLUTE_PAGING: ABSOLUTE_PAGING, PAGE1_BAND: PAGE1_BAND };
       } catch (_) { return null; }
     },
     // Manual reset of auto breaks (e.g. from console) if a stale break

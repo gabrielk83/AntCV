@@ -1672,10 +1672,38 @@ function normalizeSections(raw) {
         // honour the same per-section pagination the preview shows.
         const _rpM = (s.id && itemPagesMap && typeof itemPagesMap[s.id] === 'object') ? itemPagesMap[s.id] : null;
         const _rpA = (s.id && autoPagesRaw && typeof autoPagesRaw[s.id] === 'object') ? autoPagesRaw[s.id] : null;
+        // GROUP-HEADER-MANUAL-BREAK-001 (owner 2026-06-25): mirror the preview's group-aware snap on
+        // EXPORT. A MANUAL break on a group's FIRST content row must carry the group HEADING with it,
+        // else the worker breaks AFTER the header and orphans it on the previous page. The worker emits
+        // one page-break before whichever row carries row_pages>=2 (it has NO running-page floor), so
+        // MOVE the break from the first content row UP to its group header: set the header's page and
+        // CLEAR the content row's entry (adding both would double-break). Result: a single break before
+        // the header, header + rows flow to the next page together. Auto breaks already snap to a group
+        // start in the coordinator, so only the MANUAL map is adjusted. (Same logic as the preview's
+        // __antcvSnapManualToGroup in app.src.js, with MOVE semantics for the floor-less worker.)
+        let _rpMUse = _rpM;
+        if (_rpM && Array.isArray(s.items)) {
+          let _need = false; for (const k in _rpM) { if (parseInt(_rpM[k], 10) >= 2) { _need = true; break; } }
+          if (_need) {
+            _rpMUse = Object.assign({}, _rpM);
+            for (const k in _rpM) {
+              const p = parseInt(_rpM[k], 10), i = parseInt(k, 10);
+              if (!(p >= 2) || !(i >= 1)) continue;
+              const cur = s.items[i];
+              if (!cur || (typeof cur === 'object' && cur.grp)) continue;          // only a CONTENT row can be a first-content-row
+              let j = i - 1; while (j >= 0 && s.hidden && s.hidden[j]) j--;          // nearest VISIBLE predecessor
+              const prev = j >= 0 ? s.items[j] : null;
+              if (prev && typeof prev === 'object' && prev.grp) {                    // predecessor is the group HEADER
+                _rpMUse[String(j)] = Math.max(parseInt(_rpMUse[String(j)], 10) || 1, p);
+                delete _rpMUse[String(i)];                                          // MOVE (not add) — the floor-less worker would double-break
+              }
+            }
+          }
+        }
         let rowPages = null;
-        if (_rpM || _rpA) {
+        if (_rpMUse || _rpA) {
           rowPages = {};
-          [_rpM, _rpA].forEach((src) => { if (src) for (const k in src) { const n = parseInt(src[k], 10); if (Number.isFinite(n) && n >= 2) rowPages[k] = Math.max(rowPages[k] || 0, n); } });
+          [_rpMUse, _rpA].forEach((src) => { if (src) for (const k in src) { const n = parseInt(src[k], 10); if (Number.isFinite(n) && n >= 2) rowPages[k] = Math.max(rowPages[k] || 0, n); } });
           if (!Object.keys(rowPages).length) rowPages = null;
         }
         return {

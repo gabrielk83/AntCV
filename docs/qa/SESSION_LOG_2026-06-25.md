@@ -105,10 +105,18 @@ pagination, main-column pagination, the AI notice, content length caps, and edit
    (Research Assistant) at the top of page 3, aligned with Environmental. Couldn't verify live (tab
    render). Owner tunes `AntcvAutoPagebreak.config({ MAIN_PAGE_N_BAND:N })` — higher = earlier role,
    lower = later — and reports the value to commit as default.
-6. **GROUP-HEADER-MANUAL-BREAK-001** `[OPEN]` — a manual page-break (P3 row control) on a GROUP's
-   FIRST content row should move the group HEADING + all rows below with it (currently the break lands
-   after the header, orphaning it). Apply the group-aware snap (as in FORCE-LAST-GRP) to MANUAL breaks
-   in the coordinator + worker.
+6. **GROUP-HEADER-MANUAL-BREAK-001** `[FIX SHIPPED 1.50.920, owner-verify]` — a manual break on a
+   group's FIRST content row now carries the group HEADING with it. PREVIEW: new
+   `__antcvSnapManualToGroup` in `app.src.js` (+ minified mirror in `app.js`) wraps the manual read in
+   `__antcvEffBucket` — when a manual itemPages break targets the first content row of a `{grp}` group,
+   it ADDS the group-header index at the same page (the preview consumers' monotonic floor carries the
+   rest). EXPORT: `antcv-docx-client.js` rich_block path MOVES the break from the first content row up
+   to the header index (set header, clear the row) — the floor-less worker emits one break per
+   row_pages≥2, so a move (not add) avoids a double break. The worker source needed NO change: it
+   already renders a header-indexed break before the header (proven by the new worker test). Unit tests:
+   `pwa/test/unit/group-header-manual-break.test.mjs` (5, preview snap) +
+   `workers/docx-worker/test/group-header-manual-break.test.mjs` (1, export render). Suite 480/480.
+   *Owner: set a P3 break on a group's first row and confirm the heading travels in preview + export.*
 7. **AI-NOTICE-DYNAMIC-001** `[OPEN]` — at load (template only) the sidebar is fuller so the notice
    goes to main; as roles generate/edit, the emptier column flips and the notice must FOLLOW. The
    anchor re-runs on `sections-updated` + the chooseCorner cache sig includes last-page text length,

@@ -85,10 +85,44 @@
       return (JSON.parse(localStorage.getItem("antcv:autoPages") || "{}") || {})[sid] || {};
     } catch (_) { return {}; }
   };
+  // GROUP-HEADER-MANUAL-BREAK-001 (owner 2026-06-25): a MANUAL page-break (P3 row control) on a
+  // rich_block group's FIRST content row must carry the group HEADING (the preceding {grp} item) to
+  // the same page — otherwise the break lands AFTER the header and orphans it on the previous page.
+  // Auto breaks already snap to a group start in the coordinator (snapToGroup); this gives MANUAL
+  // breaks the same group-aware snap. Returns a possibly-augmented COPY of the manual itemPages map
+  // (the stored map is never mutated). Cheap no-op when no manual break >=2 is present.
+  const __antcvSnapManualToGroup = (sid, manual) => {
+    try {
+      let hasBreak = false; for (const k in manual) { if (parseInt(manual[k], 10) >= 2) { hasBreak = true; break; } }
+      if (!hasBreak) return manual;
+      let sec = null;
+      try {
+        const secs = JSON.parse(localStorage.getItem("sections") || "{}") || {};
+        for (const list of [secs.cv, secs.cl]) { if (Array.isArray(list)) { const f = list.find((s) => s && s.id === sid); if (f) { sec = f; break; } } }
+      } catch (_) {}
+      const items = sec && Array.isArray(sec.items) ? sec.items : null;
+      if (!items) return manual;
+      const hidden = sec.hidden || null;
+      const snapped = Object.assign({}, manual);
+      for (const k in manual) {
+        const p = parseInt(manual[k], 10); const i = parseInt(k, 10);
+        if (!(p >= 2) || !(i >= 1)) continue;
+        const cur = items[i];
+        if (!cur || cur.grp) continue;                              // only a CONTENT row can be a first-content-row
+        let j = i - 1; while (j >= 0 && hidden && hidden[j]) j--;    // nearest VISIBLE predecessor
+        const prev = j >= 0 ? items[j] : null;
+        if (prev && prev.grp) {                                     // predecessor is the group HEADER -> i is its first content row
+          const hk = String(j);
+          snapped[hk] = Math.max(parseInt(snapped[hk], 10) || 1, p);  // pull the header to the row's page (monotonic floor carries the rest)
+        }
+      }
+      return snapped;
+    } catch (_) { return manual; }
+  };
   const __antcvEffBucket = (sid) => {
     const out = {};
     try {
-      const a = __antcvPB(sid); for (const k in a) { const v = parseInt(a[k], 10); if (v >= 1) out[k] = v; }
+      const a = __antcvSnapManualToGroup(sid, __antcvPB(sid)); for (const k in a) { const v = parseInt(a[k], 10); if (v >= 1) out[k] = v; }
       const b = __antcvAutoPB(sid); for (const k in b) { const v = parseInt(b[k], 10); if (v >= 1) out[k] = Math.max(out[k] || 1, v); }
     } catch (_) {}
     return out;

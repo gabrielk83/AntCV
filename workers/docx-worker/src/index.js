@@ -24593,6 +24593,32 @@ function buildTwoColumnDocument(ctx) {
   // horizontal corner; default right. The anchor paragraph is pushed into the
   // LAST page's main cell below, so it always renders on the final page only.
   const aiWmHint = ctx.aiWmSide === "left" || ctx.aiWmSide === "right" ? ctx.aiWmSide : null;
+  // DET-COORD-PACK-001 (owner 2026-06-25 "education lands page 3 with blank, regulatory page 4,
+  // languages page 5"): each sidebar section with a first-item page break emitted its OWN
+  // section-level break, so splitChildrenByPage gave every page-2 section its own page (certs p2,
+  // education p3, regulatory p4…). Consolidate: walk sections in order, track the running page,
+  // and KEEP a section's leading page-break only when its page INCREASES — strip it when the
+  // section continues on the current page, so a group of same-page sections packs onto one page.
+  // Internal (mid-section) breaks are untouched. Experience role breaks live inside the section.
+  function __firstPageOf(s) {
+    if (s.pageBreakBefore === true) return 2;
+    if (Number(s.page) >= 2) return Number(s.page);
+    if (Array.isArray(s.items) && s.items[0] && typeof s.items[0] === "object" && Number(s.items[0]._page) >= 2) return Number(s.items[0]._page);
+    if (s.row_pages && typeof s.row_pages === "object") { const n = Math.max(Number(s.row_pages["0"]) || 0, Number(s.row_pages["items.0"]) || 0); if (n >= 2) return n; }
+    if (s.type === "experience" && Array.isArray(s.roles) && s.roles[0] && Number(s.roles[0].page) >= 2) return Number(s.roles[0].page);
+    return 1;
+  }
+  function assembleColumn(secs, isSidebar) {
+    let running = 1; const out = [];
+    for (let i = 0; i < secs.length; i++) {
+      const s = secs[i];
+      const tp = __firstPageOf(s);
+      const rendered = renderSection(s, ctx, isSidebar);
+      if (tp > running) { running = tp; for (let j = 0; j < rendered.length; j++) out.push(rendered[j]); }
+      else { let k = (rendered[0] && rendered[0].__antcvPB) ? 1 : 0; for (let j = k; j < rendered.length; j++) out.push(rendered[j]); }
+    }
+    return out;
+  }
   const sidebarChildren = [
     // 1.14.53: the vertical-seam medallion anchors on a zero-height paragraph
     // at the TOP of the page-1 sidebar (its floating position is page-relative,
@@ -24604,12 +24630,7 @@ function buildTwoColumnDocument(ctx) {
     // band-overlap branch) — it now actually runs because the position-forwarding
     // bug was fixed (1.50.492). The non-float inline-in-band rendered FLAT/clipped.
     ...photoTopOfSidebar ? [photoTopOfSidebar] : [],
-    ...sidebarSecs.flatMap((s) => renderSection(
-      s,
-      ctx,
-      /*isSidebar*/
-      true
-    )),
+    ...assembleColumn(sidebarSecs, /*isSidebar*/ true),
     ...photoBottomOfSidebar ? [photoBottomOfSidebar] : []
   ];
   let mainChildren;
@@ -24619,20 +24640,10 @@ function buildTwoColumnDocument(ctx) {
     // photo-row table, matching the 1.50.372 preview.
     mainChildren = [
       buildMainFloatPhotoParagraph(ctx, photoInMain),
-      ...mainSecs.flatMap((s) => renderSection(
-        s,
-        ctx,
-        /*isSidebar*/
-        false
-      ))
+      ...assembleColumn(mainSecs, /*isSidebar*/ false)
     ];
   } else {
-    mainChildren = mainSecs.flatMap((s) => renderSection(
-      s,
-      ctx,
-      /*isSidebar*/
-      false
-    ));
+    mainChildren = assembleColumn(mainSecs, /*isSidebar*/ false);
   }
   if (photoMainBottom) mainChildren.push(buildPhotoParagraph(ctx, photoMainBottom));
   if (photoInHeader) {
@@ -27517,7 +27528,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   the anchor's spacing-after from (px/2+14) to (px/2-12) so the first sidebar
 //   section sits just under the medallion (~0.27in higher; the full 0.6in would
 //   overlap the photo at the default diameter).
-var VERSION = "1.14.84-richblock-wholemove";
+var VERSION = "1.14.85-sidebar-pack";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

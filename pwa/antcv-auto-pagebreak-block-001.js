@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.913-sidebar-stable';
+  var VERSION = '1.50.915-mainline-page1';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -832,9 +832,12 @@
           // is atomic (never split), so breaking at the box line moves the first
           // role that crosses it wholly to page 2 and leaves the prior role flush
           // against the salmon.
-          // EXPORT pass: the main renders close to the preview, so use a larger line than the
-          // sidebar-deflated USABLE_PDF (MAIN-PDF-LINE-BONUS) — else a role that fits the PDF breaks.
-          var __expLimit = limit + ((autoKey === AUTO_KEY) ? MAIN_PDF_LINE_BONUS : 0);
+          // MAIN-PDF-LINE-BONUS is PAGE 1 ONLY (MAIN-PDF-LINE-PAGE1-001, owner 2026-06-25): page 1
+          // loses the candidate header band, so its main line needs the bonus to fit the last
+          // page-1 role (Change Request Lead). Pages 2+ have NO header band, so the bonus there
+          // OVER-filled page 2 (Research Assistant stayed page 2 instead of starting page 3). The
+          // per-page line below adds the bonus only while filling page 1.
+          var __expLimit = limit;
           var roleEls = col.querySelectorAll('[data-antcv-role-index]');
           // SALMON-PAGE3-MISSING-001 (owner 2026-06-22): N-PAGE atomic role pagination.
           // Was 2-page scope — it broke the FIRST role crossing the line to page 2 and
@@ -853,7 +856,8 @@
             var __rr = roleEls[ri].getBoundingClientRect();
             // Role overflows the current page AND isn't the very first block on it (a role
             // taller than a whole page can't move — leave it to avoid an infinite push).
-            if ((__rr.bottom - __pageTop) > __expLimit && (__rr.top - __pageTop) > 1) {
+            var __pLim = __expLimit + ((autoKey === AUTO_KEY && __curPage === 1) ? MAIN_PDF_LINE_BONUS : 0);
+            if ((__rr.bottom - __pageTop) > __pLim && (__rr.top - __pageTop) > 1) {
               __curPage++;
               __pageTop = __rr.top;   // the next page begins at this role's top
               var rmi = parseInt(roleEls[ri].getAttribute('data-antcv-role-index'), 10);

@@ -155,3 +155,11 @@ All non-regen items shipped. Regen-gated items need an owner signed-in generatio
 End with a written report: shipped (item + version), what you verified (and what you could NOT
 verify in cloud — worker deploy / live render), what you skipped + why, and anything needing the
 owner. Update `docs/qa/PROJECT_ISSUES_OPEN_CLOSED_2026-06-20.md` (mark items SHIPPED x.y.z).
+
+**WHEN THE RUN ENDS — DOCUMENT THE OPEN + CLOSED LIST (owner requirement, 2026-06-25):** before
+finishing, write/refresh a dated session log `docs/qa/SESSION_LOG_<YYYY-MM-DD>.md` with TWO explicit
+sections — **CLOSED this run** (item + ID + version + how verified) and **OPEN (carry forward)**
+(item + ID + the next concrete step + why-not-done, e.g. "needs a real export / live render this env
+can't do"). Also refresh `docs/qa/NEXT_SESSION_PROMPT.md` so the next run/session starts from the
+current open queue. Commit + push these docs with the code. A run is not "done" until the open/closed
+state is written down — never leave the status only in chat.

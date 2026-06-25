@@ -1,107 +1,36 @@
-# Next-session prompt — autonomous AntCV bugfix + feature implementation
+# Next session — AntCV (start here)
 
-Paste the block below into a fresh session.
+**Authoritative current state + closed/open lists: `docs/qa/SESSION_LOG_2026-06-25.md`.** Read it first.
+PWA `1.50.917`, docx-worker `1.14.86`, suite 472/472.
 
----
+**SYNC FIRST** (`git fetch origin && git pull --rebase origin main`) — the cloud routine + parallel
+worktrees push to `main`. `app.js` is the minified mirror of `app.src.js` (surgical edits, must start
+`(()=>{`, count-guarded replace). Cache-bust quintet on every loaded-file change (file `?v` + the
+`window.ANTCV_VERSION` seed + `vo.src` in index.html + `sw.js` CACHE + version-override TARGET, add
+the previous to STALE).
 
-You are working autonomously on AntCV (React PWA on Cloudflare Pages + Workers). Read
-`CLAUDE.md` first, then `docs/qa/ACTIVE_BUGS.md`, `docs/FEATURES_REGISTRY.md`, and the
-latest `docs/qa/session-*-fixes.md` changelog for current state.
+> **Environment limits that bit last session:** no PDF renderer here, and the automated Chrome
+> preview tab often renders 0–1 experience roles after reload — so live `antcv:autoPages` readouts and
+> owner export screenshots are the only reliable verification. Calibrate against those, not a blind guess.
 
-## Autonomy
-Full autonomy — run tests, rebuild app.js, update + deploy workers, commit, and push
-freely; report after, no pauses. Ship tight named bundles, not sweeping rewrites.
-Keep branches `main`, `claude/antcv-roadmap-bugs-L9Sqa`, and
-`plan/2026-06-06-analysis-followups` identical (a concurrent session may also push to
-`main` — always `git fetch origin main` + merge before pushing, and if it collides on a
-version string, bump yours so the SW cache-bust stays honest).
+## Open queue (priority order)
 
-## Hard rules (from CLAUDE.md + this session)
-- Edit `pwa/app.src.js` (source); rebuild with `npx terser pwa/app.src.js --compress
-  --mangle -o pwa/app.js`. NEVER esbuild/`build:app` (prepends `"use strict"`,
-  blue-screens). After: verify `node --check`, head `(()=>{`, 0 `use strict`, and the
-  diff is only your change.
-- Cache-bust trio on any app.js change: `app.js?v=` in `pwa/index.html`, `CACHE` in
-  `pwa/sw.js`, `TARGET_VERSION` in `pwa/antcv-version-override.js` (and add the PREVIOUS
-  version to `STALE_VERSIONS` — NEVER the current one). Bump a sidecar's `?v=` when you
-  edit it.
-- The salmon splitter is PERMANENT — never remove `__antcvSalmon`; only tune it.
-- Worker deploy: `gh workflow run deploy.yml -f target=docx-worker -f mode=deploy -f
-  confirm=docx-worker`, then verify `/health`. PWA auto-deploys on push to `main`.
-- Verify headlessly before deploy. PWA: Playwright diags in `pwa/test/` (boot-smoke +
-  the diag-*.mjs). Worker: drive the LIVE `index.js` fetch handler in node — it exports
-  only the handler, env `{}` skips auth, and the bundle replaces `globalThis.process`
-  so write output via `fs.writeSync(1, …)`. See `workers/docx-worker/test/diag-twocol-paged.mjs`.
+1. **AI-NOTICE-MISSING-PREVIEW-001 [REGRESSION, do first]** — notice vanished from the preview in 917;
+   likely the 914 `anchorToCorner` left-corner re-parent into `.antcv-document-sidebar` lands it
+   hidden/off-screen. Fix the re-parent (keep it visible) or revert to positioning relative to the
+   page-box with the sidebar's left coordinate.
+2. **SIDEBAR-PAGE23-DANCE-001** — regulatory (Environmental) + Languages jump in/out of page 3; cache
+   the sidebar page-2/3 boundary like page 1.
+3. **TOOLS-GAP-JUMP-001** — tools is stable on page 1 but the white gap under it flickers.
+4. **HWIC-EDITOR-JUMPINESS-001 [owner emphasised]** — entering the HOW I WOULD CONTRIBUTE panel makes
+   the WHAT I BRING table flip its two header texts + resize, resets bullet markers each change, and
+   removes the closure button. Reproduce with the editor open; look at `antcv-how-contribute-controls-245.js`
+   + `antcv-what-i-bring-header-cjlr-249.js` fighting on focus.
+5. **RESEARCH-ASSISTANT-PAGE3-VERIFY** — confirm `MAIN_PAGE_N_BAND=105` lands role 7 at page-3 top;
+   owner tunes live and reports the value to commit.
+6. **GROUP-HEADER-MANUAL-BREAK-001** — a manual P3 break on a group's first row must move the group
+   header + rows below (group-aware snap for manual breaks, coordinator + worker).
+7. **AI-NOTICE-DYNAMIC-001** — notice must follow the emptier column as content generates/edits;
+   verify post hard-refresh, else re-run the anchor on `antcv:autoPages` change.
 
-## Current state — 2026-06-16 (read first)
-
-Shipped to **1.50.521** + **access-relay** + **docx-worker 1.14.74**; suite **308/308**, boot-smoke clean. Latest session registry is at the TOP of `docs/qa/ACTIVE_BUGS.md` (2026-06-16). Highlights:
-- **KERNEL V2 COMPLETE** — Task 1a (v2 in D1 `user_kernel.kernel_v2`) + §2 tense (isCurrent flag) + §3 language (cross-lingual policy) + §4 upload→kernel ingestion (engine, file→text, preview modal, D1 POST/GET, merged import button, reader bridge into generation, login auto-sync, structured apply, language step). Full plan + status: `docs/plan/KERNEL-V2-AND-INGESTION.md`. Upload-test fixtures: `pwa/test/fixtures/kernel-v2/`.
-- **Owner data reconciled** in D1 (11 reverse-chron roles incl. security guard + Copenhagen Wolves + split Meprolight; see [[gabriel-cv-facts]]).
-- **Many content/feature ships** (outcome dropdown+seeding, role-decompose, group-name visibility, exp-order, profile text). See the registry.
-
-**Top OPEN items** (`docs/qa/ACTIVE_BUGS.md` OPEN ISSUES): **SIDEBAR-NARROW-FIGURE-OVERLAP-001** (item 26, NOT STARTED — band/main/sidebar text overlaps the photo when the sidebar is narrow); the regen-dependent prompt items (metric sharpness, dorm-guard) — owner verifies on regen; **SETTINGS** bucket (LANGUAGES-CARD-PERSONAL-001 mount, SETTINGS-SCROLL-RESET-001, DISCLOSURE-TRIANGLE); and the older preview/export pagination items below. Kernel-v2 follow-ups are refinements only (not blockers) — see the plan doc.
-
----
-
-## Queued from the 2026-06-16 session (ADDITIVE — work alongside the backlog below, do not drop)
-
-These were planned/deferred during the day-long 2026-06-16 session. They are in ADDITION to the Priority-1 + backlog items below — pick by value, none of this replaces them.
-
-**A. Kernel v2 follow-ups** (the brief is shipped; these are the remaining refinements — full context in `docs/plan/KERNEL-V2-AND-INGESTION.md`):
-- Surface each role's `langInvariantTokens[]` into the STORED WORK HISTORY as an explicit `DO-NOT-TRANSLATE:` list (the generic invariant classes cover most today). Builder = `GABRIEL_BG` (`pwa/app.src.js` ~2690) + minified mirror.
-- Expand target languages beyond the EN/DA boolean to **es/zh** + the LANG-EXPAND-001 **lazy tier** (cache in `language_view`); the §3 `__langRule` already self-gates on non-English.
-- Migrate the live readers to consume `user_kernel.kernel_v2` DIRECTLY (vs the v1-history bridge that `applyToCV`/auto-sync populate) and honor `tenseMode: present/past` from it.
-- §4 extraction: image-only-PDF OCR + LinkedIn-export-shaped parsing (`extractTextFromFile` dispatches; `window.AntcvOcrImage` hook exists).
-
-**B. Deferred content/export warm-ups** (deterministic-ish, owner-flagged):
-- **RESULTS-METRIC-SHARPNESS-001** surgical lever — stop `consensus_reinforce` (`pwa/app.src.js` ~24832) rewriting an outcome that ALREADY carries a metric (logic guard → minified mirror; regen-verified).
-- **Regulatory "(Cont.)" first-part-missing** — a continued section shows "(Cont.)" on page 2 with the page-1 part absent (needs a repro; pagination two-map).
-- **Photo-gap preview↔PDF parity** + the **main-left/right in-cell float-wrap** open half ([[photo-bridge-nonfloat]]).
-- **AI-watermark placement** — into the section whose last page has LESS text ([[design-rules-watermark-table]]).
-- **EXPORT-FALLBACK-ON-FIRST-001 / server-PDF retry-after-reset (#6)** — diagnostic-first; touches the export/fetch chain (blue-screen history).
-
-**C. New issue logged this session** — **SIDEBAR-NARROW-FIGURE-OVERLAP-001** (ACTIVE_BUGS item 26, NOT STARTED): when the sidebar is narrow, the candidate-band text + rule and the main + sidebar text run INTO the photo; keep them positioned relative to the figure (incl. sidebar-middle placement). Preview + export parity.
-
-**D. Larger, own-pass** — **CLUSTER-QUAL-001** proxy pipeline (`docs/plan/CLUSTER-QUAL-001.md` + `-IMPL.md`): cv-proxy/demo-proxy qualifications extraction → cluster recompute → fit scoring; D1 single-source-of-truth. Deferred to a dedicated session with dry-run deploys.
-
-**E. Owner-action / regen-verified** (don't chase without the owner): metric-sharpness + the dorm-guard (Tel-Aviv security-guard CONTENT) need a regen / owner data; the Settings bucket below (LANGUAGES-CARD, scroll-reset, disclosure).
-
----
-
-## Priority 1 (do first) — PB-PREVIEW-SIDEBAR-SALMON-PUSH-001
-In the CV page-box PREVIEW, the long sidebar (REGULATORY CONTEXT) does NOT break at the
-salmon line — it PUSHES the salmon down, leaving the page-box taller than A4. The owner:
-"make sure the sidebar text is going through the salmon and not pushing the salmon."
-The main-column analog was fixed in 1.50.318 (scoped the export-break fallback so the CV
-breaks at the A4 line). The sidebar needs the same: the measurer's PREVIEW map
-(`antcv:autoPagesPreview`, computed at `USABLE`≈1053px in `compute(USABLE, PREVIEW_KEY)`)
-must detect the sidebar overflow at a GROUP boundary and write it, so the page-box
-flatMap (`o`, `app.src.js` ~38530) splits the sidebar there and the page-box height is
-bounded by the salmon. Likely cause: the sidebar overflow is written only to the export
-map (924px) and the CV-preview-only read (`__antcvAutoPB`, now `doc!=='cl' → {}` when the
-preview map lacks the section) returns `{}` → no preview split → whole sidebar in one
-page-box → salmon pushed down. Fix so the sidebar overflow lands in the preview map at
-the A4 line, snapped to a group start. Verify with a measurer-isolation harness (a
-synthetic sidebar column of known-height groups; assert `autoPagesPreview[sid]` carries
-a group-start break, and the salmon sits at the A4 line not below the sidebar). Full
-spec in `docs/qa/ACTIVE_BUGS.md`.
-
-## Then work the backlog (highest-value first)
-From `docs/qa/ACTIVE_BUGS.md` and `docs/FEATURES_REGISTRY.md`:
-- **PB-WORKER-TWOCOL-PAGED-001** `[VERIFYING]` — per-page two-column tables shipped
-  (1.14.39); confirm owner Word-export is clean, else iterate.
-- **PB-WORKER-SIDEBAR-RATIO-001 follow-up** — the export now uses the preview's DEFAULT
-  0.33 sidebar ratio; wire the client to forward `sidebar_ratio` (read `cvSidebarRatio`)
-  so a user-ADJUSTED split also matches (the worker already honors a forwarded ratio).
-- **PAGEBREAK-STYLE-OPTIONS-001** — advanced-style menu: keep-(Cont.)-headlines toggle
-  (default ON), repeat-candidate-header per page (default OFF), page numbers
-  (off/top-right/bottom-right). Spec in FEATURES_REGISTRY.
-- **PREVIEW-SUBTITLE-RACE-001** — a concurrent session shipped `antcv-subtitle-sequence-368.js`;
-  confirm it's wired + working.
-- **CL-PDF-PRINT-PATH-001**, **EXPORT-PREVIEW-FEATURES-001**, and the other OPEN items.
-
-For each: reproduce → diagnose → targeted patch → headless verify → ship → flag for
-owner export review. Report a tight summary after each bundle.
-
----
+Coordinator tunables + values: see the bottom of `SESSION_LOG_2026-06-25.md`.

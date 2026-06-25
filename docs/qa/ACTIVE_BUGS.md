@@ -1,5 +1,25 @@
 > **AUTHORITATIVE current state + next-nightly prompt: `docs/qa/NEXT_NIGHTLY_HANDOFF_2026-06-24.md`.** (PWA 1.50.869 + docx-worker 1.14.81; suite 467/467.) Read it FIRST — it has the shipped list (843→869), the regen-gated items to verify on the owner's incoming fresh export, the deep CV-SIDEBAR-SPILL spec, and the parallel-session/stale-SW discipline. The blocks below are the per-batch detail. (Older handoff: `SESSION_HANDOFF_2026-06-18-pm3.md`.)
 
+## Nightly autonomous — 2026-06-25 — boot-freeze sidecar-swarm memo batch (1.50.880)
+
+- **BOOT-COREWIB-PERF-001 / BOOT-OUTCOMES-PERF-001 / BOOT-EMBED-PERF-001** `[SHIPPED 1.50.880]` —
+  continuing the boot-freeze sidecar-swarm reduction ([[boot-storm-gate-freeze]]). The three
+  handoff-named next offenders each spent their boot CPU re-running the SAME pure whitespace-clean
+  over large container `textContent`s on every tick (MutationObserver/click/input/interval). Fixed
+  with the proven per-run `clean` memo (cleared at `run()` start; pure fn → identical output), plus
+  for 274 a `visible()`-after-text-match reorder so `getClientRects()` (forced layout) only runs on
+  title-matching elements, not every `h1,h2,h3,b,strong,div,span` in the doc, + a raw-length guard
+  skipping big containers in the outer panel scan (the ancestor climb still covers them).
+  - `antcv-core-wib-strict-row-layout-274.js`: 227ms → 112ms (−50%).
+  - `antcv-selected-outcomes-row-controls-237.js`: 143ms → 107ms.
+  - `antcv-embedded-controls-248.js`: 134ms → 108ms.
+  - native/gc 2876ms → 2098ms (fewer regex allocations). Re-profiled via `diag-boot-profile.mjs`.
+  Sidecar-only — NO app.js mirror, NO islands bundle → no parallel-session contention. Verified PAST
+  the sign-in gate (`diag-boot-perf-memo-verify.mjs`): editor renders, all three sidecars load +
+  their `run()` executes clean on the live editor DOM, zero sidecar console errors. Suite 472/472.
+  NEXT profiled offenders for a future run: `antcv-profile-workstyle-cjlr-238.js` (sectionFromElement
+  111ms residual), `antcv-what-i-bring-header-cjlr-249.js` (editorRoot 82ms), `antcv-how-contribute-controls-245.js`.
+
 ## Owner fresh-export batch status — 2026-06-24 (run 9) <!-- FRESH-EXPORT-BATCH-0624-status -->
 
 - **(A) Contribute still empty** -> FIXED `CONTRIBUTE-CHAROBJ-FIX-001` [1.50.870] (see block below). Was a char-object corruption of the bullet items, healed restore-proof. Verified on the owner's real data.

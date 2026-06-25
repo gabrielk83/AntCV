@@ -16,7 +16,12 @@
   if(window.__antcvEmbeddedControlsGuard===VERSION) return;
   window.__antcvEmbeddedControlsGuard=VERSION;
 
-  function clean(s){return String(s||'').replace(/\s+/g,' ').trim();}
+  // v1.50.880 BOOT-EMBED-PERF-001: per-run memo for the pure whitespace-clean
+  // (cleared at run() start). fixAdditionalInfo/fixCoreRows clean()ed the FULL
+  // textContent of every div/section (twice per element for the two regex tests);
+  // the memo collapses the repeats. Pure fn, so behaviour is identical.
+  const _cleanMemo=new Map();
+  function clean(s){const k=String(s||'');let v=_cleanMemo.get(k);if(v===undefined){v=k.replace(/\s+/g,' ').trim();_cleanMemo.set(k,v);}return v;}
   function low(s){return clean(s).toLowerCase();}
   function visible(el){return !!(el&&el.isConnected&&(el.offsetWidth||el.offsetHeight||el.getClientRects().length));}
   function cssEscape(s){try{return CSS.escape(String(s));}catch(_){return String(s).replace(/["\\]/g,'\\$&');}}
@@ -140,6 +145,7 @@
     pending=true;
     requestAnimationFrame(()=>{
       pending=false;
+      _cleanMemo.clear();
       try{fixHowContribute();fixAdditionalInfo();fixCoreRows();}catch(e){try{console.warn('[embedded-controls-248]',e&&e.message);}catch(_){}}
     });
   }

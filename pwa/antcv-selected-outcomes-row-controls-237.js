@@ -16,7 +16,12 @@
   const ALIGN=['center','justify','left','right'];
   const ICON={left:'⇤',center:'↔',justify:'☰',right:'⇥'};
   const LABEL={left:'Left aligned',center:'Centered',justify:'Justified',right:'Right aligned'};
-  const clean=s=>String(s||'').replace(/\s+/g,' ').trim();
+  // v1.50.880 BOOT-OUTCOMES-PERF-001: per-run memo for the pure whitespace-clean
+  // (cleared at run() start). editorRoot's ancestor climb + previewItems re-clean the
+  // same large container textContents repeatedly; the memo collapses those. Pure fn,
+  // so behaviour is identical.
+  const _cleanMemo=new Map();
+  const clean=s=>{const k=String(s||'');let v=_cleanMemo.get(k);if(v===undefined){v=k.replace(/\s+/g,' ').trim();_cleanMemo.set(k,v);}return v;};
   const visible=el=>!!(el&&el.isConnected&&(el.offsetWidth||el.offsetHeight||el.getClientRects().length));
   function readJson(k,f){try{const v=JSON.parse(localStorage.getItem(k)||'');return v&&typeof v==='object'?v:f;}catch(_){return f;}}
   function writeJson(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(_){}}
@@ -160,7 +165,7 @@
   function makeContHeader(){const d=document.createElement('div');d.setAttribute('data-antcv-selected-outcome-cont-header','1');Object.assign(d.style,{color:'#00746E',fontWeight:'700',fontSize:'12pt',marginTop:'4pt',marginBottom:'8pt',borderBottom:'1pt solid #00746E',paddingBottom:'2pt',fontFamily:'Trebuchet MS, Calibri, sans-serif'});d.textContent='SELECTED OUTCOMES (CONT.)';return d;}
   function applyPreview(){const sec=previewSection(); if(!sec)return; clearPreview(sec); const items=previewItems(sec); items.forEach((it,i)=>{const a=getAlign(i);it.style.textAlign=a;it.setAttribute('data-antcv-selected-outcome-preview-align',a);Array.from(it.querySelectorAll('span,div,p,td,th,strong,b')).forEach(x=>{x.style.textAlign=a;});}); items.forEach((it,i)=>{if(getPage(i)<2)return;const p=it.parentNode;if(!p)return;p.insertBefore(makeBreak(),it);p.insertBefore(makeContHeader(),it);});}
   let pending=false; function runSoon(){if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;run();});}
-  function run(){try{findRows().forEach(ensureControls);applyPreview();}catch(e){try{console.warn('[selected-outcomes-row-controls-237] failed:',e&&e.message);}catch(_){}}}
+  function run(){_cleanMemo.clear();try{findRows().forEach(ensureControls);applyPreview();}catch(e){try{console.warn('[selected-outcomes-row-controls-237] failed:',e&&e.message);}catch(_){}}}
   function start(){run();[100,300,800,1600,3000].forEach(ms=>setTimeout(run,ms));try{new MutationObserver(runSoon).observe(document.body||document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style','value']});}catch(_){}window.addEventListener('input',runSoon,true);window.addEventListener('click',()=>setTimeout(run,0),true);window.addEventListener('antcv:sections-updated',()=>setTimeout(run,0));setInterval(run,2000);}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
   window.AntcvSelectedOutcomesRowControls237={version:VERSION,run,_findRows:findRows,_applyPreview:applyPreview};

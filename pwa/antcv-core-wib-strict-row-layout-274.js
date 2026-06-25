@@ -15,16 +15,27 @@
   if(window.__antcvCoreWibStrictRowLayout274===VERSION) return;
   window.__antcvCoreWibStrictRowLayout274=VERSION;
 
-  const clean=s=>String(s||'').replace(/\s+/g,' ').trim();
+  // v1.50.880 BOOT-COREWIB-PERF-001: per-run memo for the pure whitespace-clean.
+  // clean() was the file's #1 boot-CPU cost (~104ms) — panelRoot's 10-deep ancestor
+  // climb re-cleaned the same large container textContents across every heading. The
+  // memo (cleared at run() start) collapses those repeats; behaviour is identical.
+  const _cleanMemo=new Map();
+  const clean=s=>{const k=String(s||'');let v=_cleanMemo.get(k);if(v===undefined){v=k.replace(/\s+/g,' ').trim();_cleanMemo.set(k,v);}return v;};
   const visible=el=>!!(el&&el.isConnected&&(el.offsetWidth||el.offsetHeight||el.getClientRects().length));
   const isCoreTitle=t=>/core\s+competencies/i.test(t);
   const isWibTitle=t=>/what\s+i\s+bring/i.test(t);
 
   function panelRoot(){
-    const heads=Array.from(document.querySelectorAll('h1,h2,h3,b,strong,div,span')).filter(visible);
+    // v1.50.880: check the cheap text test BEFORE visible() so getClientRects()
+    // (forced layout) only runs on the few title-matching elements, not every
+    // h1,h2,h3,b,strong,div,span in the doc. The accepted set is unchanged.
+    const heads=Array.from(document.querySelectorAll('h1,h2,h3,b,strong,div,span'));
     for(const h of heads){
-      const t=clean(h.textContent||'');
+      const raw=h.textContent||'';
+      if(raw.length>600) continue; // a title is short; big containers are covered by the ancestor climb
+      const t=clean(raw);
       if(t.length>120 || (!isCoreTitle(t)&&!isWibTitle(t))) continue;
+      if(!visible(h)) continue;
       let p=h;
       for(let d=0;p&&p!==document.body&&d<10;d++,p=p.parentElement){
         const txt=clean(p.textContent||'');
@@ -122,6 +133,7 @@
   }
   let pending=false;
   function run(){
+    _cleanMemo.clear();
     const pr=panelRoot(); if(!pr) return;
     injectCss();
     rows(pr.root).forEach((r,i)=>applyRow(r,pr.kind,i));

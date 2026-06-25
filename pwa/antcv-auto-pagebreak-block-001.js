@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.915-mainline-page1';
+  var VERSION = '1.50.916-main-pagen';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -200,6 +200,12 @@
   // Add this bonus to the MAIN experience line on the EXPORT pass only. Owner-tunable live:
   // AntcvAutoPagebreak.config({ MAIN_PDF_LINE_BONUS:N }).
   var MAIN_PDF_LINE_BONUS = 150;
+  // MAIN-PAGE-N-BAND (owner 2026-06-25 "Research Assistant should start page 3"): pages 2+ of the
+  // MAIN carry a "(CONT.)" experience header + the export renders roles slightly taller, so the
+  // export page-2 main holds FEWER roles than USABLE_PDF suggests. Deduct this from the main's
+  // pages-2+ line so a role that overflows the PDF page starts the next page (aligning the main's
+  // page break with the sidebar's). Owner-tunable live: AntcvAutoPagebreak.config({ MAIN_PAGE_N_BAND:N }).
+  var MAIN_PAGE_N_BAND = 160;
   // STICKY set for FORCE-LAST-GRP: once a section's last group is moved to the next page, KEEP it
   // moved on later recompute cycles even if its measured height drops below the threshold (moving
   // the group OUT of the page-2 column shrinks the measured total, which would otherwise un-move
@@ -902,11 +908,12 @@
         // taller in the export than the preview measures; the coordinator must paginate in
         // EXPORT units or it over-fills page 2 and the export overflows/slides — owner 2026-06-25).
         // keepWholeFrac: keep-whole threshold (see KEEP_WHOLE_FRAC).
-        function __uniPaginate(blocks, band1, inflate, keepWholeFrac, lim) {
+        function __uniPaginate(blocks, band1, inflate, keepWholeFrac, lim, nLim) {
           if (band1 == null) band1 = PAGE1_BAND;
           if (!(inflate > 0)) inflate = 1;
           if (!(keepWholeFrac > 0)) keepWholeFrac = 1;
-          if (!(lim > 0)) lim = __uniLimit;   // per-column page line (main gets a larger one)
+          if (!(lim > 0)) lim = __uniLimit;   // PAGE-1 page line (main gets a larger one)
+          if (!(nLim > 0)) nLim = (inflate > 1) ? (lim / inflate) : lim;   // PAGES-2+ line (main gets a smaller one)
           var ordered = blocks.slice().sort(function (a, b) {
             var sa = __secOrder(a.sid), sb = __secOrder(b.sid);
             if (sa !== sb) return sa - sb;
@@ -937,7 +944,7 @@
           // (__nLimit = __uniLimit / inflate), NOT by inflating heights — so PAGE 1 keeps its
           // original raw budget and stays stable (inflating page 1 wrongly split TOOLS & METHODS
           // off it — owner 2026-06-25). Only pages 2+ get the tighter export-equivalent budget.
-          var __nLimit = (inflate > 1) ? (lim / inflate) : lim;
+          var __nLimit = nLim;
           var grpTot = {};
           ordered.forEach(function (b) { var gk = __groupOf(b.sid, b.key); grpTot[gk] = (grpTot[gk] || 0) + Math.max(0, b.bottom - b.top); });
           var used = 0, page = 1, out = [], curGroup = null;
@@ -991,7 +998,7 @@
         // should be ~PAGE1_BAND alone (budget ~724): TOOLS fits page 1, certs still flow to page 2.
         var __sbBand1 = (typeof SIDEBAR_PAGE1_BAND === 'number') ? SIDEBAR_PAGE1_BAND : PAGE1_BAND;
         var __sPaged = __uniPaginate(__uniBlocks.sidebar, __sbBand1, SIDEBAR_PREVIEW_INFLATE, KEEP_WHOLE_FRAC);
-        var __mPaged = __uniPaginate(__uniBlocks.main, PAGE1_BAND, 1, 1, __uniLimit + MAIN_PDF_LINE_BONUS);
+        var __mPaged = __uniPaginate(__uniBlocks.main, PAGE1_BAND, 1, 1, __uniLimit + MAIN_PDF_LINE_BONUS, Math.max(400, __uniLimit - MAIN_PAGE_N_BAND));
         // FORCE-LAST-GRP post-process (deterministic). For a BIG multi-group SIDEBAR section the
         // coordinator's internal break can land on the wrong group (it broke regulatory at the
         // Imaging group, but the owner has room for Imaging/Electrical on page 2 and wants ONLY
@@ -1468,7 +1475,7 @@
     //   AntcvAutoPagebreak.config({ HYST_STABLE:80 })  // looser stable band
     config: function (o) {
       try {
-        if (!o) return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE, SIDEBAR_UNIFIED: SIDEBAR_UNIFIED, ABSOLUTE_PAGING: ABSOLUTE_PAGING, PAGE1_BAND: PAGE1_BAND, MAIN_PDF_LINE_BONUS: MAIN_PDF_LINE_BONUS, SIDEBAR_PAGE1_BAND: SIDEBAR_PAGE1_BAND, KEEP_WHOLE_FRAC: KEEP_WHOLE_FRAC, FORCE_LAST_GRP_FRAC: FORCE_LAST_GRP_FRAC };
+        if (!o) return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE, SIDEBAR_UNIFIED: SIDEBAR_UNIFIED, ABSOLUTE_PAGING: ABSOLUTE_PAGING, PAGE1_BAND: PAGE1_BAND, MAIN_PDF_LINE_BONUS: MAIN_PDF_LINE_BONUS, MAIN_PAGE_N_BAND: MAIN_PAGE_N_BAND, SIDEBAR_PAGE1_BAND: SIDEBAR_PAGE1_BAND, KEEP_WHOLE_FRAC: KEEP_WHOLE_FRAC, FORCE_LAST_GRP_FRAC: FORCE_LAST_GRP_FRAC };
         if (typeof o.ONE_PASS === 'boolean') ONE_PASS = o.ONE_PASS;
         if (typeof o.HYST_STABLE === 'number') HYST_STABLE = o.HYST_STABLE;
         if (typeof o.HYST_TIGHT === 'number') HYST_TIGHT = o.HYST_TIGHT;
@@ -1480,11 +1487,12 @@
         if (typeof o.ABSOLUTE_PAGING === 'boolean') ABSOLUTE_PAGING = o.ABSOLUTE_PAGING;
         if (typeof o.PAGE1_BAND === 'number') PAGE1_BAND = o.PAGE1_BAND;
         if (typeof o.MAIN_PDF_LINE_BONUS === 'number') MAIN_PDF_LINE_BONUS = o.MAIN_PDF_LINE_BONUS;
+        if (typeof o.MAIN_PAGE_N_BAND === 'number') MAIN_PAGE_N_BAND = o.MAIN_PAGE_N_BAND;
         if (typeof o.SIDEBAR_PAGE1_BAND === 'number') SIDEBAR_PAGE1_BAND = o.SIDEBAR_PAGE1_BAND;
         if (typeof o.KEEP_WHOLE_FRAC === 'number' && o.KEEP_WHOLE_FRAC > 0 && o.KEEP_WHOLE_FRAC <= 1) KEEP_WHOLE_FRAC = o.KEEP_WHOLE_FRAC;
         if (typeof o.FORCE_LAST_GRP_FRAC === 'number' && o.FORCE_LAST_GRP_FRAC >= 0 && o.FORCE_LAST_GRP_FRAC <= 1) FORCE_LAST_GRP_FRAC = o.FORCE_LAST_GRP_FRAC;
         lastSourceFp = null; schedule();
-        return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE, SIDEBAR_UNIFIED: SIDEBAR_UNIFIED, ABSOLUTE_PAGING: ABSOLUTE_PAGING, PAGE1_BAND: PAGE1_BAND, MAIN_PDF_LINE_BONUS: MAIN_PDF_LINE_BONUS, SIDEBAR_PAGE1_BAND: SIDEBAR_PAGE1_BAND, KEEP_WHOLE_FRAC: KEEP_WHOLE_FRAC, FORCE_LAST_GRP_FRAC: FORCE_LAST_GRP_FRAC };
+        return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE, SIDEBAR_UNIFIED: SIDEBAR_UNIFIED, ABSOLUTE_PAGING: ABSOLUTE_PAGING, PAGE1_BAND: PAGE1_BAND, MAIN_PDF_LINE_BONUS: MAIN_PDF_LINE_BONUS, MAIN_PAGE_N_BAND: MAIN_PAGE_N_BAND, SIDEBAR_PAGE1_BAND: SIDEBAR_PAGE1_BAND, KEEP_WHOLE_FRAC: KEEP_WHOLE_FRAC, FORCE_LAST_GRP_FRAC: FORCE_LAST_GRP_FRAC };
       } catch (_) { return null; }
     },
     // Manual reset of auto breaks (e.g. from console) if a stale break

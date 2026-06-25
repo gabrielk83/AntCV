@@ -49,7 +49,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.865-interests-richblock';
+  var VERSION = '1.50.882-launcher-positive-gate';
   if (window.__antcvDataExport360 === VERSION) return;
   window.__antcvDataExport360 = VERSION;
 
@@ -1304,12 +1304,16 @@
     try {
       var launcher = document.querySelector('[' + UI_MARK + '="launcher"]');
       if (!launcher) return;
-      // The ACCOUNT MODE block (antcv-demo-toggle) is rendered ONLY on the Account
-      // subtab / set-menu. When it is visible we are NOT on Personal, so hide the
-      // launcher (and the import button nested in it).
-      var acct = document.querySelector('[data-antcv-demo-toggle]');
-      var onAccount = !!(acct && acct.offsetParent !== null);
-      launcher.style.display = onAccount ? 'none' : 'flex';
+      // STICKY-LEAK-002 (owner 2026-06-25): the launcher's Personal flex-column
+      // PERSISTS in the DOM across screens, so a NEGATIVE gate (hide only on the
+      // Account/set-menu) leaked the buttons onto the SET-PANEL (generate screen) and
+      // the EDITOR PREVIEW too. Use a POSITIVE gate instead: the writing-style-picker
+      // island renders ONLY on Settings -> Personal, so show the launcher IFF that
+      // island is present AND visible; hide it everywhere else.
+      var picker = document.getElementById('antcv-react-writing-style-picker')
+        || document.querySelector('[data-antcv-react-mount="writing-style-picker"]');
+      var onPersonal = !!(picker && picker.offsetParent !== null);
+      launcher.style.display = onPersonal ? 'flex' : 'none';
     } catch (_) {}
   }
 

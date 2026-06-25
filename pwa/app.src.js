@@ -5329,11 +5329,15 @@
               (JSON.parse(localStorage.getItem("antcvItemAlignment") || "{}") ||
                 {})[__sid] || {};
           } catch (_) {}
-          const __rowAlign = (i) => {
+          // RICH-BLOCK-GROUP-ALIGN-DEFAULT-001 (owner 2026-06-25): a GROUPED rich_block
+          // (TOOLS & METHODS, REGULATORY CONTEXT) defaults its GROUP-NAME rows to CENTER and its
+          // CONTENT rows to LEFT. A non-grouped rich_block keeps the JUSTIFY default. Explicit
+          // per-row CJLR overrides (__al) always win.
+          const __hasGrp = (e.items || []).some((it) => it && it.grp);
+          const __rowAlign = (i, isGrp) => {
             const v = __al["items." + i] || __al[String(i)] || __al.__group__;
-            return ["left", "center", "right", "justify"].includes(v)
-              ? v
-              : "justify";
+            if (["left", "center", "right", "justify"].includes(v)) return v;
+            return isGrp ? "center" : (__hasGrp ? "left" : "justify");
           };
           const __items = (e.items || [])
             .map((it, i) => {
@@ -5355,7 +5359,7 @@
                         fontWeight: 700,
                         marginTop: 0 === i ? 0 : 6,
                         marginBottom: 2,
-                        textAlign: __rowAlign(i),
+                        textAlign: __rowAlign(i, true),
                         letterSpacing: 0.3,
                         overflowWrap: "break-word",
                         wordBreak: "break-word",
@@ -5380,7 +5384,7 @@
                 fontFamily: T,
                 fontSize: __fs,
                 color: __txtColor,
-                textAlign: __rowAlign(i),
+                textAlign: __rowAlign(i, false),
                 lineHeight: I,
               };
               if (mk) {

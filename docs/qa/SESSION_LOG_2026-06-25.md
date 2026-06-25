@@ -56,11 +56,14 @@ pagination, main-column pagination, the AI notice, content length caps, and edit
 
 ## OPEN (carry to next session)
 
-1. **AI-NOTICE-MISSING-PREVIEW-001** `[REGRESSION, HIGH]` — the AI notice is MISSING from the preview
-   in 1.50.917 (owner). Almost certainly the 914 sidebar-parent re-parent: when re-parented into the
-   `.antcv-document-sidebar` for the left corner, it lands off-screen / hidden (empty or zero-size
-   sidebar context). Check `anchorToCorner` left branch + that the re-parented node stays visible +
-   positioned; guard against re-parenting when the sidebar isn't the live last-page column.
+1. **AI-NOTICE-MISSING-PREVIEW-001** `[FIX SHIPPED 1.50.918, owner-verify]` — root cause confirmed:
+   the 914 re-parent into `.antcv-document-sidebar` placed the absolutely-positioned marker (anchored
+   at the PAGE bottom) outside the last page's sidebar box — that column can be short / empty /
+   overflow-clipped — so it was clipped away. Fix (`antcv-watermark-page-anchor-341.js` `anchorToCorner`
+   left branch): re-parent into the PAGE-BOX instead of the sidebar. The page-box always spans the
+   full page, so the left inset still resolves against the page's true left edge (= the sidebar's
+   left edge) AND the marker stays visible. Idempotent (guarded by `parentNode`). *Owner must confirm
+   the notice is back in the preview AND in the sidebar's bottom-left corner.*
 2. **SIDEBAR-PAGE23-DANCE-001** `[OPEN]` — regulatory (Environmental) + Languages still jump in/out
    of page 3. The FORCE-LAST-GRP cached-sticky stabilised the FORCE itself, but the page-2/3 sidebar
    boundary still flickers (likely the 913 band change re-opened a measure↔render flip for the
@@ -87,6 +90,16 @@ pagination, main-column pagination, the AI notice, content length caps, and edit
    anchor re-runs on `sections-updated` + the chooseCorner cache sig includes last-page text length,
    so it SHOULD re-place — verify after a hard-refresh (a stale SW may be masking the 911/914 fixes);
    if still static, add an explicit re-run on `antcv:autoPages` change.
+
+8. **CORE-COMP-CAP-VS-EXPAND-001** `[TEST REGRESSION on HEAD, owner decision]` — found 2026-06-26
+   while running the suite: HEAD is **469/472, not 472/472** (the 06-25 close note was wrong). The 909
+   FIELD-CAPS `CAP_FOCUS=25` (folded into `antcv-core-comp-compress.js`, line 87) truncates Focus-Area
+   labels that the same sidecar's `Coord.`→`Coordination` expansion pushes over 25 chars, e.g.
+   `Cross-Discipline Coordination` (29) → `Cross-Discipline` and `Technical team Coordination` (27) →
+   `Technical team`. The `core-comp-compress-coord.test.mjs` expand tests fail. Two owner rules from
+   2026-06-25 collide: **spell out Coordination** vs **Focus Area ≤25**. Needs an owner call: raise the
+   Focus-Area cap (~30) so expanded labels survive, or exempt a just-expanded `Coordination` from the
+   cap, or accept the truncation and update the tests. Untouched pending that decision.
 
 ## Live tunables (coordinator `antcv-auto-pagebreak-block-001.js`)
 `AntcvAutoPagebreak.config({ ... })`: `PAGE1_BAND` (200), `SIDEBAR_PAGE1_BAND` (null=PAGE1_BAND),

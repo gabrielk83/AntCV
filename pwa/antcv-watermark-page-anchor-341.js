@@ -56,7 +56,7 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.50.328-move-on-length-change';
+  var SCRIPT_VERSION = '1.50.918-pagebox-parent-visible';
   if (window.__antcvWatermarkPageAnchor341 === SCRIPT_VERSION) return;
   window.__antcvWatermarkPageAnchor341 = SCRIPT_VERSION;
 
@@ -180,17 +180,19 @@
         pageBox.style.position = 'relative';
       }
     } catch (_) {}
-    // AI-WM-SIDEBAR-PARENT-001 (owner 2026-06-25 "moved left but inside the main, not the sidebar
-    // corner"): for the SIDEBAR (left) corner, re-parent the watermark INTO the sidebar column so
-    // position:absolute anchors against IT. Otherwise the offset parent is the main column, the
-    // page's left edge is NEGATIVE relative to it, and the left inset clamps to the MAIN's left.
+    // AI-NOTICE-MISSING-PREVIEW-001 (owner 2026-06-25 "the notice is MISSING from the preview" in
+    // 917): the 914 fix re-parented the watermark INTO `.antcv-document-sidebar` so the left corner
+    // anchored against the sidebar — but on the LAST page that sidebar column can be short / empty /
+    // overflow-clipped, so the absolutely-positioned marker placed at the PAGE bottom landed outside
+    // the sidebar's box and was clipped away (vanished). Re-parent into the PAGE-BOX instead: it
+    // always spans the full page, so the left inset still resolves against the page's true left edge
+    // (= the sidebar's left edge, what the owner wanted) while the marker stays visible. Idempotent
+    // (guarded by parentNode) so it doesn't loop the MutationObserver.
     if (corner === 'left') {
       try {
-        var __sb = pageBox.querySelector && pageBox.querySelector('.antcv-document-sidebar');
-        if (__sb && !__sb.contains(watermark)) {
-          var __sbcs = window.getComputedStyle ? window.getComputedStyle(__sb) : null;
-          if (__sbcs && __sbcs.position === 'static') __sb.style.position = 'relative';
-          __sb.appendChild(watermark);
+        var __pbIsPage = pageBox.matches && pageBox.matches(PAGE_BOX_SELECTOR);
+        if (__pbIsPage && watermark.parentNode !== pageBox) {
+          pageBox.appendChild(watermark);
         }
       } catch (_) {}
     }

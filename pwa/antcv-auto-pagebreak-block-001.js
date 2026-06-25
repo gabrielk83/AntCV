@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.891-sidebar-band';
+  var VERSION = '1.50.892-dynamic-band';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -170,8 +170,21 @@
   // than the main's because the PHOTO (~150-170px) sits at the sidebar/band top, so the sidebar
   // needs a BIGGER page-1 deduction than the main — otherwise certs fits page 1 in the coordinator
   // while it overflows in the real export. Separate knob (default = main band + a photo reserve).
-  // Owner-tunable live: AntcvAutoPagebreak.config({ SIDEBAR_PAGE1_BAND:N }).
-  var SIDEBAR_PAGE1_BAND = 360;
+  // Owner-tunable live: AntcvAutoPagebreak.config({ SIDEBAR_PAGE1_BAND:N }). DEFAULT null =
+  // AUTO: the sidebar page-1 deduction is computed as PAGE1_BAND + the measured PHOTO height,
+  // because the photo's footprint depends on the sidebar/main ratio + photo size/position and
+  // differs every generation (owner 2026-06-25). A numeric value here pins it (manual override).
+  var SIDEBAR_PAGE1_BAND = null;
+  // Measure the profile photo's height (the reserve the sidebar's page 1 loses to it). 0 when
+  // there is no photo (then the sidebar band falls back to PAGE1_BAND).
+  function __photoReserve() {
+    try {
+      var p = document.querySelector('.antcv-preview-paper img[src^="data:"], [data-antcv-preview-paper] img[src^="data:"], .antcv-preview-paper .antcv-photo, .antcv-preview-paper [data-antcv-photo]');
+      if (!p) return 0;
+      var h = p.getBoundingClientRect().height;
+      return (h > 40 && h < 420) ? Math.round(h) : 0;
+    } catch (_) { return 0; }
+  }
 
   // ============================================================
   // SIDEBAR-SHRINK-RECLAIM-001 (owner 2026-06-11)
@@ -897,7 +910,10 @@
         // tools/certs to page 3). The main column carries its ITEM blocks (profile/publications)
         // and its experience ROLE blocks together in document order (one flow); the sidebar is
         // its own flow. Extract item breaks per column + role breaks from the main flow.
-        var __sPaged = __uniPaginate(__uniBlocks.sidebar, SIDEBAR_PAGE1_BAND);
+        // AUTO sidebar band = main band + the measured photo reserve (per generation), unless
+        // pinned by a numeric SIDEBAR_PAGE1_BAND.
+        var __sbBand1 = (typeof SIDEBAR_PAGE1_BAND === 'number') ? SIDEBAR_PAGE1_BAND : (PAGE1_BAND + __photoReserve());
+        var __sPaged = __uniPaginate(__uniBlocks.sidebar, __sbBand1);
         var __mPaged = __uniPaginate(__uniBlocks.main, PAGE1_BAND);
         var __reSidebar = __mapFromPaged(__sPaged, false);
         var __reMainItems = __mapFromPaged(__mPaged, false);

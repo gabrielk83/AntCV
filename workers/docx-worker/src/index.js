@@ -25841,7 +25841,15 @@ function renderSection(s, ctx, isSidebar) {
   const isCLBoilerplate = ["greeting", "opening", "closure"].includes(s.id);
   const inlineTitleType = !isCLBoilerplate && (s.type === "text_inline" || isWorkStyleSection(s));
   const skipHeading = inlineTitleType || isCLBoilerplate;
-  const _firstItemPageBreak = !!(Array.isArray(s.items) && s.items.length && s.items[0] && typeof s.items[0] === "object" && Number(s.items[0]._page) >= 2);
+  // RICH-BLOCK-WHOLE-MOVE-001 (owner 2026-06-25 "two headlines, CONT not needed"): a rich_block
+  // carries its first-item page in row_pages, NOT items[0]._page — so a whole-section move (certs
+  // -> page 2) didn't trigger the section-level break here; the header orphaned on page 1 and
+  // renderRichBlock added a spurious "(CONT.)" on page 2. Detect row_pages' first item too, so the
+  // WHOLE section (header + items) breaks to page 2 as a unit.
+  const _firstItemPageBreak = !!(Array.isArray(s.items) && s.items.length && (
+    (s.items[0] && typeof s.items[0] === "object" && Number(s.items[0]._page) >= 2) ||
+    (s.row_pages && typeof s.row_pages === "object" && (Number(s.row_pages["0"]) >= 2 || Number(s.row_pages["items.0"]) >= 2))
+  ));
   if (_firstItemPageBreak) s._antcvFirstItemPageMoved = true;
   // Owner 2026-06-05: for a text_bullets section (How I Would Contribute),
   // paging the FIRST part (intro, or bullet_0 when there's no intro) moves the
@@ -26211,6 +26219,10 @@ function renderRichBlock(s, ctx, isSidebar) {
     ]
   }), "make");
   const sep = s.leadColon ? ": " : " ";
+  // RICH-BLOCK-WHOLE-MOVE-001: when the whole section already broke to its page via the
+  // section-level pageBreakPara (_antcvFirstItemPageMoved), swallow the FIRST per-item break so
+  // we don't double-break or stamp a spurious "(CONT.)" — the original header moved with it.
+  let __wholeMoveSkip = !!s._antcvFirstItemPageMoved;
   items.forEach((it, i) => {
     const row = it && typeof it === "object" ? it : { t: String(it || "") };
     const align = paraAlignPath(s, "items." + i + ".t") ?? paraAlignPath(s, "items." + i) ?? groupCjlr ?? AlignmentType.JUSTIFIED;
@@ -26218,7 +26230,7 @@ function renderRichBlock(s, ctx, isSidebar) {
     if (row.grp) {
       const txt = String(row.t || "").trim();
       if (!txt) return;
-      if (rowPage(i) >= 2) out.push(pbBreakPara());
+      if (rowPage(i) >= 2) { if (__wholeMoveSkip) { __wholeMoveSkip = false; } else out.push(pbBreakPara()); }
       out.push(new Paragraph({
         spacing: { before: 120, after: 40 },
         keepNext: true,
@@ -26239,8 +26251,12 @@ function renderRichBlock(s, ctx, isSidebar) {
     const body = row.t || "";
     if (!lead && !body) return;
     if (rowPage(i) >= 2) {
-      out.push(pbBreakPara());
-      if (!s.headlineOff && s.title && !(ctx.style && ctx.style.contHeadlines === false)) out.push(headingParagraph(String(s.title || "").toUpperCase() + " " + (ctx.contSuffix || "(CONT.)"), ctx, isSidebar, s.ruleOff));
+      if (__wholeMoveSkip) {
+        __wholeMoveSkip = false;   // whole section already moved (header included) — no break, no (CONT.)
+      } else {
+        out.push(pbBreakPara());
+        if (!s.headlineOff && s.title && !(ctx.style && ctx.style.contHeadlines === false)) out.push(headingParagraph(String(s.title || "").toUpperCase() + " " + (ctx.contSuffix || "(CONT.)"), ctx, isSidebar, s.ruleOff));
+      }
     }
     if (row.mk === true) out.push(bulletParagraphRich(lead, body, ctx, isSidebar, align));
     else if (typeof row.mk === "string" && row.mk) out.push(make(lead, body, align, row.mk));
@@ -27501,7 +27517,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   the anchor's spacing-after from (px/2+14) to (px/2-12) so the first sidebar
 //   section sits just under the medallion (~0.27in higher; the full 0.6in would
 //   overlap the photo at the default diameter).
-var VERSION = "1.14.83-blank-slack";
+var VERSION = "1.14.84-richblock-wholemove";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

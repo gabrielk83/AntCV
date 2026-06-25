@@ -119,3 +119,31 @@ pagination, main-column pagination, the AI notice, content length caps, and edit
 `AntcvAutoPagebreak.config({ ... })`: `PAGE1_BAND` (200), `SIDEBAR_PAGE1_BAND` (null=PAGE1_BAND),
 `SIDEBAR_PREVIEW_INFLATE` (1.16), `KEEP_WHOLE_FRAC` (0.62), `FORCE_LAST_GRP_FRAC` (0.35),
 `MAIN_PDF_LINE_BONUS` (150, page-1 main), `MAIN_PAGE_N_BAND` (105, pages-2+ main).
+
+---
+
+## Cloud routine — 2026-06-25 (verification run)
+
+Cloud run against main @ 1.50.919. Suite: 474/474. No code changes — cloud env has CDN blocked
+(unpkg.com unreachable → React undefined → boot-smoke fails). All verification requiring a live
+browser (pagination dances, watermark position, HWIC editor) is deferred to a desktop run.
+
+**Environment note recorded:** `playwright@1.49–1.56` all fail in this cloud env because the
+pre-installed browser is `chromium-1194` / `chromium_headless_shell-1194` (Playwright 1.55.1
+expects 1193 — one off); even with a 1193→1194 symlink, the static server can't reach the
+`unpkg.com` CDN so React fails to load and boot-smoke reports `pageerror: ReactDOM is not
+defined`. Boot-smoke is not usable in this cloud context.
+
+**What was verified by inspection:**
+- All NVIDIA batch backlog items (targeting-persistence P1, Results tense P2, salmon sidebar break
+  P3, CL render cluster P4) are confirmed shipped in main (1.50.728–919).
+- `app.js` passes `node --check`, starts `(()=>{`, contains zero `"use strict"`.
+- `antcv:auto-pages-changed` event listener already present in `antcv-watermark-page-anchor-341.js`
+  (line 431) — AI-NOTICE-DYNAMIC-001 is coded; live verify still owed.
+- REVIEW-DATA-DEAD-001: MutationObserver re-inject loop is in place; hard to verify without browser.
+- STICKY-LEAK-001/002: both fixed in `antcv-data-export-360.js` (positive gate on writing-style
+  island presence).
+
+**Not worked (all need live browser):** SIDEBAR-PAGE23-DANCE-001, TOOLS-GAP-JUMP-001,
+HWIC-EDITOR-JUMPINESS-001 (header flip facet), RESEARCH-ASSISTANT-PAGE3-VERIFY,
+GROUP-HEADER-MANUAL-BREAK-001, AI-NOTICE-DYNAMIC-001 live verify.

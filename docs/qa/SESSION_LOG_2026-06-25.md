@@ -52,6 +52,22 @@ pagination, main-column pagination, the AI notice, content length caps, and edit
 
 ### Added 2026-06-26 (next-session continuation)
 
+- **STORM-IDEMPOTENT-001 (1.50.921)** `[ROOT CAUSE of the app-wide jumpiness — owner-verify]` — a live
+  console probe (owner ran it on Settings→Personal) showed `antcv-sections-normalize-415.js` logging
+  "re-applied normalisers … after restore" **thousands of times in 6s** = a `antcv:sections-updated`
+  STORM re-rendering the whole app continuously. That global storm is what made Settings/Personal,
+  HWIC, and WHAT I BRING all flicker (NOT a per-panel sidecar fight — the Personal column itself only
+  mutated 9× in 6s). Root: 415 LISTENS to and DISPATCHES `sections-updated`; several normalisers
+  return a NEW-but-equal structure (reorder-to-same-order), so `changed` went true on already-clean
+  data → 415 wrote + dispatched every cycle, ping-ponging with the other sidecars. Fix: snapshot the
+  input (`__before = JSON.stringify(b)`) and only write + dispatch when the serialised result actually
+  differs (`__after === __before → return`). Idempotent now: a no-op restore is silent. Unit test
+  `sections-normalize-idempotent.test.mjs` (3, incl. a static regression lock on the guard);
+  suite 483/483. *Owner: re-run the probe — `events dispatched` for `antcv:sections-updated` should
+  drop from thousands to a handful, and the Settings/HWIC/WIB flicker should stop.* This very likely
+  also resolves [[boot-storm-gate-freeze]]'s residual "core app.src.js pagination storm" symptom.
+
+
 - **AI-NOTICE-MISSING-PREVIEW-001 (1.50.918)** — the 914 re-parent into `.antcv-document-sidebar`
   hid the notice (the last page's sidebar column can be short/empty/overflow-clipped, so the marker
   placed at the page bottom fell outside its box and was clipped). Re-parent into the PAGE-BOX

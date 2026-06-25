@@ -15,7 +15,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.730-strip-snowflake';
+  var VERSION = '1.50.921-storm-idempotent';
   if (window.__antcvSectionsNormalize === VERSION) return;
   window.__antcvSectionsNormalize = VERSION;
 
@@ -934,6 +934,14 @@
       if (!raw) return;
       var b = JSON.parse(raw);
       if (!b || !Array.isArray(b.cv) || !b.cv.length) return;
+      // STORM-IDEMPOTENT-001 (owner 2026-06-26, live probe): 415 listens to AND dispatches
+      // antcv:sections-updated. Several normalisers below return a NEW-but-equal structure (a
+      // reordered-to-the-same-order array), so `changed` went true on already-normalised data and 415
+      // wrote + dispatched EVERY cycle — ping-ponging sections-updated with the other sidecars
+      // thousands of times (the "re-applied normalisers after restore" storm that re-renders the whole
+      // app and makes Settings/HWIC/WIB flicker). Snapshot the input now and, after normalising, ONLY
+      // write + dispatch when the serialised result is ACTUALLY different. A true no-op stays silent.
+      var __before = JSON.stringify(b);
       var cv = b.cv;
       var changed = false;
       var k = canonKanzen(cv); if (k) { cv = k; changed = true; }
@@ -975,7 +983,12 @@
       if (!changed) return;
       var next = Object.assign({}, b, { cv: cv });
       if (clChanged) next.cl = cl;
-      localStorage.setItem('sections', JSON.stringify(next));
+      // STORM-IDEMPOTENT-001: a normaliser flagged a change but the serialised result may be
+      // identical to the input (reorder-to-same, no-op canon). Only persist + notify on a REAL diff,
+      // else this fires the antcv:sections-updated storm that flickers the whole app.
+      var __after = JSON.stringify(next);
+      if (__after === __before) return;
+      localStorage.setItem('sections', __after);
       try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { source: SRC } })); } catch (_) {}
       try { console.log('[sections-normalize-415] re-applied normalisers (recs/founder/loc-default) after restore'); } catch (_) {}
     } catch (_) {}

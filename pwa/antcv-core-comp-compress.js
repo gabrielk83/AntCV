@@ -16,7 +16,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.909';
+  var VERSION = '1.50.919';
   if (window.__antcvCoreCompCompress === VERSION) return;
   window.__antcvCoreCompCompress = VERSION;
 
@@ -53,6 +53,20 @@
     EXPAND.forEach(function (p) { v = v.replace(p[0], p[1]); });
     return v;
   }
+  // FOCUS-TIGHTEN (owner 2026-06-26): the <=25 Focus-Area cap and the "spell Coordination out fully"
+  // rule collided — "Cross-Discipline/Technical team Coordination" overran 25 and got TRUNCATED to a
+  // half-phrase ("Technical team"). Owner's resolution: "use better sentences, e.g. 'Project team
+  // Coordination' -> 'Project Coordination'." So write the label concisely instead of truncating:
+  // drop the redundant connector "team" sitting immediately before a Coordination noun, so the full
+  // word fits the cap. Narrow (only before Coord/Coordination), whole-word, idempotent.
+  var TIGHTEN = [
+    [/\bteam\s+(?=Coord(?:ination)?\b)/gi, ''],
+  ];
+  function tighten(s) {
+    var v = String(s == null ? '' : s);
+    TIGHTEN.forEach(function (p) { v = v.replace(p[0], p[1]); });
+    return v;
+  }
   function capWords(s, cap) {
     var v = String(s == null ? '' : s);
     if (v.length <= cap) return v;
@@ -78,13 +92,22 @@
         secs[doc].forEach(function (s) {
           // HOW I WOULD CONTRIBUTE intro (CL rich_block): cap items[0].t to CAP_HWIC.
           if ((s && (s.id === 'contribute' || /how i would contribute/i.test(String(s.title || '')))) && Array.isArray(s.items) && s.items[0] && typeof s.items[0] === 'object' && typeof s.items[0].t === 'string') {
-            var hv = capWords(s.items[0].t, CAP_HWIC); if (hv !== s.items[0].t) { s.items[0].t = hv; changed = true; }
+            var __raw0 = s.items[0].t;
+            var hv = capWords(__raw0, CAP_HWIC);
+            // HWIC-INTRO-COLON-KEEP-001 (owner 2026-06-26): the HWIC intro is a ":"-lead-in. capWords
+            // strips trailing punctuation, so a capped intro lost its ":" -> the 760 converter (which
+            // detects the intro by a trailing ":") stopped seeing it as the intro and re-markered it
+            // every render (OPEN #4 marker jitter). Re-attach the ":" when the original had one so the
+            // lead-in signal survives the cap and 760 keeps the intro markerless without guessing.
+            if (/:\s*$/.test(__raw0) && !/:\s*$/.test(hv)) hv = hv.replace(/[\s,;:.\-]+$/, '') + ':';
+            if (hv !== __raw0) { s.items[0].t = hv; changed = true; }
           }
           if (!isTbl(s)) return;
           s.rows.forEach(function (row, i) {
             if (i === 0 || !Array.isArray(row)) return;     // skip header row
-            // Focus Area: abbreviate (Docs/Reqs/Mgmt), expand any banned "Coord." → full word, cap to CAP_FOCUS.
-            if (typeof row[0] === 'string') { var fa = capWords(expand(abbreviate(row[0])), CAP_FOCUS); if (fa !== row[0]) { row[0] = fa; changed = true; } }
+            // Focus Area: abbreviate (Docs/Reqs/Mgmt), tighten ("X team Coordination" → "X Coordination"),
+            // expand any banned "Coord." → full word, cap to CAP_FOCUS.
+            if (typeof row[0] === 'string') { var fa = capWords(expand(tighten(abbreviate(row[0]))), CAP_FOCUS); if (fa !== row[0]) { row[0] = fa; changed = true; } }
             // Strategic Expertise: expand banned "Coord.", then cap to the per-doc width.
             if (typeof row[1] === 'string') { var se = capWords(expand(row[1]), capFor(s)); if (se !== row[1]) { row[1] = se; changed = true; } }
           });
@@ -98,5 +121,5 @@
 
   window.addEventListener('antcv:sections-updated', run);
   [0, 300, 900, 2000, 3500, 6000].forEach(function (ms) { setTimeout(run, ms); });
-  window.AntcvCoreCompCompress = { version: VERSION, run: run, _cap: capWords, _abbr: abbreviate, _expand: expand };
+  window.AntcvCoreCompCompress = { version: VERSION, run: run, _cap: capWords, _abbr: abbreviate, _expand: expand, _tighten: tighten };
 })();

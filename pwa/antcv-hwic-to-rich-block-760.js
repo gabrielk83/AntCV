@@ -14,7 +14,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.912-intro-detect';
+  var VERSION = '1.50.919-intro-colon-only';
   if (window.__antcvHwicToRichBlock760 === VERSION) return;
   window.__antcvHwicToRichBlock760 = VERSION;
 
@@ -89,15 +89,14 @@
         // from a true intro/closing AND re-markers a real first/last bullet that was wrongly stripped.
         if (Array.isArray(s.items) && s.items.length >= 1) {
           var n = s.items.length;
-          // HWIC-INTRO-DETECT-ROBUST-001 (owner 2026-06-25): the intro was detected only by a
-          // trailing ":" lead-in, but the FIELD-CAPS length cap (<=125) strips trailing punctuation,
-          // so a capped intro lost its ":" -> 760 thought there was NO intro -> it re-markered the
-          // intro AND closing every render (owner: "the jumpiness cancels the invisibility of intro
-          // and closure"). For the CONTRIBUTE section, also treat a PARAGRAPH-length first row
-          // (>=50 chars) as the intro — its ":" may have been capped off. Keeps marker state stable.
+          // HWIC-INTRO-DETECT-001: the intro is the FIRST row when it is a ":"-lead-in; a real
+          // contribution bullet never ends with a colon. (912 also treated any first row >=50 chars
+          // as the intro to survive a capped ":" — but a real first bullet is also >=50 chars, so it
+          // got demoted to a markerless paragraph and re-markered every render: the OPEN #4 marker
+          // jitter. The capped-":" case is now fixed at the root — HWIC-INTRO-COLON-KEEP-001 in
+          // antcv-core-comp-compress.js re-attaches the ":" after the cap — so ":"-only is reliable.)
           var __t0 = bulletText(s.items[0]);
-          var __isContribute = (s.id === 'contribute' || /how i would contribute/i.test(String(s.title || '')));
-          var firstIsLeadIn = /:\s*$/.test(__t0) || (__isContribute && __t0.length >= 50);
+          var firstIsLeadIn = /:\s*$/.test(__t0);
           var changedA = false;
           var fixedA = s.items.map(function (r, i) {
             var isIntro = (i === 0 && firstIsLeadIn);

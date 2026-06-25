@@ -48,7 +48,28 @@ pagination, main-column pagination, the AI notice, content length caps, and edit
   *Regressed by the HWIC editor jumpiness — see OPEN #4.*
 - **WM-COLUMN-CLASSIFY-001 (1.50.911) + AI-WM-SIDEBAR-PARENT-001 (1.50.914)** — AI notice column
   chosen by actual column container (not page midline); preview re-parents into the sidebar for the
-  left corner. Export was already correct (page-left = sidebar). **REGRESSED in 917 — see OPEN #1.**
+  left corner. Export was already correct (page-left = sidebar). **REGRESSED in 917; re-fixed in 918.**
+
+### Added 2026-06-26 (next-session continuation)
+
+- **AI-NOTICE-MISSING-PREVIEW-001 (1.50.918)** — the 914 re-parent into `.antcv-document-sidebar`
+  hid the notice (the last page's sidebar column can be short/empty/overflow-clipped, so the marker
+  placed at the page bottom fell outside its box and was clipped). Re-parent into the PAGE-BOX
+  instead: full-page span keeps it visible while the left inset still lands at the page's left edge
+  (= sidebar). `antcv-watermark-page-anchor-341.js`. *Owner verify in preview.*
+- **CORE-COMP-FOCUS-TIGHTEN-001 (1.50.919)** — the 909 `CAP_FOCUS=25` truncated Focus-Area labels
+  the `Coord.`→`Coordination` expansion pushed over 25 (`Technical team Coordination` →
+  `Technical team`). Owner's call: write them concisely, not truncate — drop a redundant `team`
+  before a Coordination noun (`Project team Coordination` → `Project Coordination`). New `tighten()`
+  in `antcv-core-comp-compress.js`; `core-comp-compress-coord.test.mjs` updated. (This was the hidden
+  HEAD test regression — the 06-25 suite was actually 469/472, not 472/472.)
+- **HWIC-INTRO-DETECT-001 / -COLON-KEEP-001 (1.50.919)** — the 912 "first row ≥50 chars = intro"
+  heuristic mis-classified real first/last contribution bullets (also ≥50 chars) as intro/closing,
+  demoting them to markerless every render = the OPEN #4 marker jitter. Fixed at the root instead:
+  `antcv-core-comp-compress.js` now re-attaches the intro's trailing `:` after the HWIC cap, so the
+  760 converter's `:`-only intro detection stays reliable and the length heuristic was dropped.
+  Restored the `contribute-peel-fix.test.mjs` REPAIR test to green. *Resolves the marker-reset facet
+  of OPEN #4; the editor-fighting facet (header flip / closure-button removal) still needs live repro.*
 - **Worker DET-COORD-PACK-001 (1.14.85)** — same-page sidebar sections pack onto one page (no
   per-section page). **Cert double-header / first-item whole-move (1.14.84).**
 
@@ -70,11 +91,14 @@ pagination, main-column pagination, the AI notice, content length caps, and edit
    sections AFTER regulatory). Needs the sidebar page-2/3 boundary cached/deterministic like page 1.
 3. **TOOLS-GAP-JUMP-001** `[OPEN]` — tools stays on page 1 (good) but the WHITE SPACE under it jumps.
    Residual dance: the page-1 sidebar fill/last-item position flickers even though the break doesn't.
-4. **HWIC-EDITOR-JUMPINESS-001** `[OPEN, owner emphasised]` — entering the HOW I WOULD CONTRIBUTE
-   editor panel makes the WHAT I BRING table above it **super jumpy**: it flips the two header texts
-   ("Strategic Expertise" ↔ "Focus Area") and resizes the columns, the bullet marker returns to its
-   previous mode on every change, and the change REMOVES the closure button. Root is in the HWIC
-   controls (`antcv-how-contribute-controls-245.js`) + the WHAT I BRING header CJLR sidecar
+4. **HWIC-EDITOR-JUMPINESS-001** `[PARTIAL — marker facet fixed 1.50.919, owner emphasised]` —
+   entering the HOW I WOULD CONTRIBUTE editor panel makes the WHAT I BRING table above it **super
+   jumpy**: it flips the two header texts ("Strategic Expertise" ↔ "Focus Area") and resizes the
+   columns, the bullet marker returns to its previous mode on every change, and the change REMOVES
+   the closure button. **The bullet-marker-reset facet is fixed (HWIC-INTRO-DETECT-001, 919):** the
+   912 length heuristic that re-classified real bullets as intro/closing each render is gone. STILL
+   OPEN: the WHAT I BRING header text-flip + column resize + closure-button removal — root in the
+   HWIC controls (`antcv-how-contribute-controls-245.js`) + the WHAT I BRING header CJLR sidecar
    (`antcv-what-i-bring-header-cjlr-249.js`) re-rendering/fighting on focus. Needs reproduction with
    the editor open (a fresh session with working live preview).
 5. **RESEARCH-ASSISTANT-PAGE3-VERIFY** `[SHIPPED-UNVERIFIED]` — MAIN_PAGE_N_BAND=105 targets role 7
@@ -90,16 +114,6 @@ pagination, main-column pagination, the AI notice, content length caps, and edit
    anchor re-runs on `sections-updated` + the chooseCorner cache sig includes last-page text length,
    so it SHOULD re-place — verify after a hard-refresh (a stale SW may be masking the 911/914 fixes);
    if still static, add an explicit re-run on `antcv:autoPages` change.
-
-8. **CORE-COMP-CAP-VS-EXPAND-001** `[TEST REGRESSION on HEAD, owner decision]` — found 2026-06-26
-   while running the suite: HEAD is **469/472, not 472/472** (the 06-25 close note was wrong). The 909
-   FIELD-CAPS `CAP_FOCUS=25` (folded into `antcv-core-comp-compress.js`, line 87) truncates Focus-Area
-   labels that the same sidecar's `Coord.`→`Coordination` expansion pushes over 25 chars, e.g.
-   `Cross-Discipline Coordination` (29) → `Cross-Discipline` and `Technical team Coordination` (27) →
-   `Technical team`. The `core-comp-compress-coord.test.mjs` expand tests fail. Two owner rules from
-   2026-06-25 collide: **spell out Coordination** vs **Focus Area ≤25**. Needs an owner call: raise the
-   Focus-Area cap (~30) so expanded labels survive, or exempt a just-expanded `Coordination` from the
-   cap, or accept the truncation and update the tests. Untouched pending that decision.
 
 ## Live tunables (coordinator `antcv-auto-pagebreak-block-001.js`)
 `AntcvAutoPagebreak.config({ ... })`: `PAGE1_BAND` (200), `SIDEBAR_PAGE1_BAND` (null=PAGE1_BAND),

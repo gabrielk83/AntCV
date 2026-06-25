@@ -66,14 +66,30 @@ test('other abbreviations are KEPT (Docs/Reqs/Mgmt)', () => {
   assert.equal(api._abbr('Documentation & Requirements Management'), 'Docs & Reqs Mgmt');
 });
 
-test('run() expands "Coord." in a CORE COMPETENCIES focus label', () => {
-  const rows = runOn([H, ['Technical team Coord.', 'optics, firmware, validation']]);
-  assert.equal(rows[1][0], 'Technical team Coordination');
+// FOCUS-TIGHTEN (owner 2026-06-26): expand "Coord." to the full word AND keep the label under the
+// <=25 Focus-Area cap by writing it concisely — drop a redundant "team" before Coordination ("use
+// better sentences, e.g. 'Project team Coordination' -> 'Project Coordination'"), not truncate.
+test('tighten: drops redundant "team" before a Coordination noun', () => {
+  const { api } = load({ cv: [], cl: [] });
+  assert.equal(api._tighten('Project team Coordination'), 'Project Coordination');
+  assert.equal(api._tighten('Technical team Coord.'), 'Technical Coord.');
 });
 
-test('run() expands "Coord." in a WHAT I BRING focus label too', () => {
-  const rows = runOn([H, ['Cross-Discipline Coord.', 'bridging engineering and suppliers']], 'bring', 'cl');
-  assert.equal(rows[1][0], 'Cross-Discipline Coordination');
+test('tighten leaves "team" alone when not before a Coordination noun', () => {
+  const { api } = load({ cv: [], cl: [] });
+  assert.equal(api._tighten('Cross-functional team leadership'), 'Cross-functional team leadership');
+});
+
+test('run() expands "Coord." + tightens in a CORE COMPETENCIES focus label (fits <=25)', () => {
+  const rows = runOn([H, ['Technical team Coord.', 'optics, firmware, validation']]);
+  assert.equal(rows[1][0], 'Technical Coordination');
+  assert.ok(rows[1][0].length <= 25);
+});
+
+test('run() expands "Coord." + tightens in a WHAT I BRING focus label too (owner example)', () => {
+  const rows = runOn([H, ['Project team Coord.', 'bridging engineering and suppliers']], 'bring', 'cl');
+  assert.equal(rows[1][0], 'Project Coordination');
+  assert.ok(rows[1][0].length <= 25);
 });
 
 test('idempotent: a second run makes no further change', () => {

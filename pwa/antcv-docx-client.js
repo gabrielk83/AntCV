@@ -1663,11 +1663,19 @@ function normalizeSections(raw) {
           // mk: true (default bullet) or a custom emoji string — pass through as-is.
           return row.mk ? { b, t, mk: (typeof row.mk === 'string' ? row.mk : true) } : { b, t };
         }).filter(Boolean);
-        const _rp = (s.id && itemPagesMap && typeof itemPagesMap[s.id] === 'object') ? itemPagesMap[s.id] : null;
+        // RICH-BLOCK-AUTO-PAGE-001 (owner 2026-06-25 "certificates is still a tail to page 1"):
+        // merge the MANUAL itemPages with the coordinator's AUTO autoPages — the table case
+        // already does this, but the rich_block case used itemPagesMap ALONE, so a rich_block
+        // SIDEBAR section (CERTIFICATES, REGULATORY, INTERESTS, TOOLS) never received its auto
+        // page break and the worker tailed it onto page 1 instead of the coordinator's page.
+        // The worker's rich_block render breaks on row_pages (>=2), so this makes the EXPORT
+        // honour the same per-section pagination the preview shows.
+        const _rpM = (s.id && itemPagesMap && typeof itemPagesMap[s.id] === 'object') ? itemPagesMap[s.id] : null;
+        const _rpA = (s.id && autoPagesRaw && typeof autoPagesRaw[s.id] === 'object') ? autoPagesRaw[s.id] : null;
         let rowPages = null;
-        if (_rp) {
+        if (_rpM || _rpA) {
           rowPages = {};
-          for (const k in _rp) { const n = parseInt(_rp[k], 10); if (Number.isFinite(n) && n >= 2) rowPages[k] = n; }
+          [_rpM, _rpA].forEach((src) => { if (src) for (const k in src) { const n = parseInt(src[k], 10); if (Number.isFinite(n) && n >= 2) rowPages[k] = Math.max(rowPages[k] || 0, n); } });
           if (!Object.keys(rowPages).length) rowPages = null;
         }
         return {

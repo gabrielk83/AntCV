@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.901-postproc-data';
+  var VERSION = '1.50.902-postproc-dbg';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -983,15 +983,17 @@
               for (var z = 0; z < (list || []).length; z++) { if (list[z] && list[z].id === sid) { secData = list[z]; break; } }
               var starts = [];
               if (secData && Array.isArray(secData.items)) { secData.items.forEach(function (it, i) { if (it && it.grp != null && it.grp !== '') starts.push(i); }); }
-              if (starts.length < 2) return;                                  // needs >=2 groups
               var tot = blocks.reduce(function (s, b) { return s + Math.max(0, b.bottom - b.top); }, 0);
-              if (tot <= __uniLimit * FORCE_LAST_GRP_FRAC) return;            // only a BIG section
               var paged = __sPaged.filter(function (b) { return b.sid === sid; });
+              var startPage = paged.length ? Math.min.apply(null, paged.map(function (b) { return b.page; })) : -1;
+              try { window.__antcvForceDbg = window.__antcvForceDbg || {}; window.__antcvForceDbg[sid] = { found: !!secData, nStarts: starts.length, starts: starts.slice(0, 8), tot: Math.round(tot), thr: Math.round(__uniLimit * FORCE_LAST_GRP_FRAC), uniLimit: Math.round(__uniLimit), startPage: startPage, pagedLen: paged.length, nItems: secData && secData.items ? secData.items.length : -1 }; } catch (_) {}
+              if (starts.length < 2) return;                                  // needs >=2 groups
+              if (tot <= __uniLimit * FORCE_LAST_GRP_FRAC) return;            // only a BIG section
               if (!paged.length) return;
-              var startPage = Math.min.apply(null, paged.map(function (b) { return b.page; }));
               if (startPage < 2) return;                                      // only past page 1
               var lastGrp = starts[starts.length - 1];
               paged.forEach(function (b) { var k = parseInt(b.key, 10) || 0; b.page = (k >= lastGrp) ? (startPage + 1) : startPage; });
+              try { window.__antcvForceDbg[sid].applied = true; window.__antcvForceDbg[sid].lastGrp = lastGrp; } catch (_) {}
             });
           })();
         }

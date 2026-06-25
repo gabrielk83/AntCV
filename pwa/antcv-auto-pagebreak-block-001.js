@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.910-main-pdf-line';
+  var VERSION = '1.50.913-tools-dbg';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -1047,7 +1047,11 @@
         __applyUnified(__reSidebar);
         __applyUnified(__reMainItems);
         __applyUnified(__reRole);
-        try { window.__antcvDbg2 = window.__antcvDbg2 || {}; window.__antcvDbg2._reSidebarReg = JSON.stringify(__reSidebar.regulatory || null); window.__antcvDbg2._mapReg = JSON.stringify(map.regulatory || null); } catch (_) {}
+        try { window.__antcvDbg2 = window.__antcvDbg2 || {}; window.__antcvDbg2._reSidebarReg = JSON.stringify(__reSidebar.regulatory || null); window.__antcvDbg2._mapReg = JSON.stringify(map.regulatory || null);
+          window.__antcvDbg2._reSidebarTools = JSON.stringify(__reSidebar.tools || null);
+          window.__antcvDbg2._mapToolsApply = JSON.stringify(map.tools || null);
+          window.__antcvDbg2._sPagedTools = JSON.stringify(__sPaged.filter(function (b) { return b.sid === 'tools'; }).map(function (b) { return b.key + '@' + b.page; }));
+        } catch (_) {}
         var __reItem = Object.assign({}, __reSidebar, __reMainItems);   // for RECONCILE below
 
         // RECONCILE: a coordinator-measured ITEM section that a per-column pass broke but the
@@ -1066,6 +1070,7 @@
           delete map[__ms];
           delete __breakBornAt[bornKey(__ms)];
         }
+        try { window.__antcvDbg2._mapToolsFinal = JSON.stringify(map.tools || null); window.__antcvDbg2._toolsInUniSids = !!__uniSids.tools; } catch (_) {}
       } catch (_) {}
     }
 

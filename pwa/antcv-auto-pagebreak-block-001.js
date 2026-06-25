@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.904-postproc-sticky';
+  var VERSION = '1.50.905-pp-dbg2';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -982,24 +982,27 @@
             var bySid = {};
             __uniBlocks.sidebar.forEach(function (b) { (bySid[b.sid] = bySid[b.sid] || []).push(b); });
             Object.keys(bySid).forEach(function (sid) {
-              var blocks = bySid[sid];
-              // group starts from SECTION DATA (items[i].grp) — reliable + matches the DOM row-path
-              // keys; the rendered-block grpHead flag did not survive the coordinator's collection.
-              var secData = null;
-              for (var z = 0; z < (list || []).length; z++) { if (list[z] && list[z].id === sid) { secData = list[z]; break; } }
-              var starts = [];
-              if (secData && Array.isArray(secData.items)) { secData.items.forEach(function (it, i) { if (it && it.grp != null && it.grp !== '') starts.push(i); }); }
-              if (starts.length < 2) return;                                  // needs >=2 groups
-              var tot = blocks.reduce(function (s, b) { return s + Math.max(0, b.bottom - b.top); }, 0);
-              var big = tot > __uniLimit * FORCE_LAST_GRP_FRAC;               // BIG enough this cycle
-              if (!big && !__forceLastGrpStick[sid]) return;                  // not big AND never forced
-              var paged = __sPaged.filter(function (b) { return b.sid === sid; });
-              if (!paged.length) return;
-              var startPage = Math.min.apply(null, paged.map(function (b) { return b.page; }));
-              if (startPage < 2) return;                                      // only past page 1
-              __forceLastGrpStick[sid] = true;                               // STICKY: keep moved hereafter
-              var lastGrp = starts[starts.length - 1];
-              paged.forEach(function (b) { var k = parseInt(b.key, 10) || 0; b.page = (k >= lastGrp) ? (startPage + 1) : startPage; });
+              try {
+                var blocks = bySid[sid];
+                // group starts from SECTION DATA (items[i].grp) — reliable + matches the DOM row-path
+                // keys; the rendered-block grpHead flag did not survive the coordinator's collection.
+                var secData = null;
+                for (var z = 0; z < (list || []).length; z++) { if (list[z] && list[z].id === sid) { secData = list[z]; break; } }
+                var starts = [];
+                if (secData && Array.isArray(secData.items)) { secData.items.forEach(function (it, i) { if (it && it.grp != null && it.grp !== '') starts.push(i); }); }
+                if (starts.length < 2) return;                                // needs >=2 groups
+                var tot = blocks.reduce(function (s, b) { return s + Math.max(0, b.bottom - b.top); }, 0);
+                var big = tot > __uniLimit * FORCE_LAST_GRP_FRAC;             // BIG enough this cycle
+                if (!big && !__forceLastGrpStick[sid]) return;                // not big AND never forced
+                var paged = __sPaged.filter(function (b) { return b.sid === sid; });
+                if (!paged.length) return;
+                var startPage = Math.min.apply(null, paged.map(function (b) { return b.page; }));
+                if (startPage < 2) return;                                    // only past page 1
+                __forceLastGrpStick[sid] = true;                             // STICKY: keep moved hereafter
+                var lastGrp = starts[starts.length - 1];
+                paged.forEach(function (b) { var k = parseInt(b.key, 10) || 0; b.page = (k >= lastGrp) ? (startPage + 1) : startPage; });
+                try { window.__antcvDbg2 = window.__antcvDbg2 || {}; window.__antcvDbg2[sid] = { tot: Math.round(tot), thr: Math.round(__uniLimit * FORCE_LAST_GRP_FRAC), startPage: startPage, lastGrp: lastGrp, applied: true }; } catch (_) {}
+              } catch (e) { try { window.__antcvDbg2 = window.__antcvDbg2 || {}; window.__antcvDbg2['ERR_' + sid] = String(e && e.message || e); } catch (_) {} }
             });
           })();
         }
@@ -1020,6 +1023,7 @@
         __applyUnified(__reSidebar);
         __applyUnified(__reMainItems);
         __applyUnified(__reRole);
+        try { window.__antcvDbg2 = window.__antcvDbg2 || {}; window.__antcvDbg2._reSidebarReg = JSON.stringify(__reSidebar.regulatory || null); window.__antcvDbg2._mapReg = JSON.stringify(map.regulatory || null); } catch (_) {}
         var __reItem = Object.assign({}, __reSidebar, __reMainItems);   // for RECONCILE below
 
         // RECONCILE: a coordinator-measured ITEM section that a per-column pass broke but the

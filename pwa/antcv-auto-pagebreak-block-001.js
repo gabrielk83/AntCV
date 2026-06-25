@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.902-postproc-dbg';
+  var VERSION = '1.50.903-postproc-thr04';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -190,8 +190,9 @@
   // the sidebar taller and overflows the last group mid-item with a wrong fresh header (owner
   // 2026-06-25, repeatedly: "the last group should be in page 3"). Only fires for multi-group
   // sections taller than this fraction of a page, and only past page 1. 0 disables.
-  // Owner-tunable live: AntcvAutoPagebreak.config({ FORCE_LAST_GRP_FRAC:N }).
-  var FORCE_LAST_GRP_FRAC = 0.5;
+  // Owner-tunable live: AntcvAutoPagebreak.config({ FORCE_LAST_GRP_FRAC:N }). 0.4 because the
+  // owner's regulatory section measures ~0.47 of a page (435/924) — 0.5 missed it.
+  var FORCE_LAST_GRP_FRAC = 0.4;
   // Measure the profile photo's height (the reserve the sidebar's page 1 loses to it). 0 when
   // there is no photo (then the sidebar band falls back to PAGE1_BAND).
   function __photoReserve() {
@@ -983,17 +984,15 @@
               for (var z = 0; z < (list || []).length; z++) { if (list[z] && list[z].id === sid) { secData = list[z]; break; } }
               var starts = [];
               if (secData && Array.isArray(secData.items)) { secData.items.forEach(function (it, i) { if (it && it.grp != null && it.grp !== '') starts.push(i); }); }
-              var tot = blocks.reduce(function (s, b) { return s + Math.max(0, b.bottom - b.top); }, 0);
-              var paged = __sPaged.filter(function (b) { return b.sid === sid; });
-              var startPage = paged.length ? Math.min.apply(null, paged.map(function (b) { return b.page; })) : -1;
-              try { window.__antcvForceDbg = window.__antcvForceDbg || {}; window.__antcvForceDbg[sid] = { found: !!secData, nStarts: starts.length, starts: starts.slice(0, 8), tot: Math.round(tot), thr: Math.round(__uniLimit * FORCE_LAST_GRP_FRAC), uniLimit: Math.round(__uniLimit), startPage: startPage, pagedLen: paged.length, nItems: secData && secData.items ? secData.items.length : -1 }; } catch (_) {}
               if (starts.length < 2) return;                                  // needs >=2 groups
+              var tot = blocks.reduce(function (s, b) { return s + Math.max(0, b.bottom - b.top); }, 0);
               if (tot <= __uniLimit * FORCE_LAST_GRP_FRAC) return;            // only a BIG section
+              var paged = __sPaged.filter(function (b) { return b.sid === sid; });
               if (!paged.length) return;
+              var startPage = Math.min.apply(null, paged.map(function (b) { return b.page; }));
               if (startPage < 2) return;                                      // only past page 1
               var lastGrp = starts[starts.length - 1];
               paged.forEach(function (b) { var k = parseInt(b.key, 10) || 0; b.page = (k >= lastGrp) ? (startPage + 1) : startPage; });
-              try { window.__antcvForceDbg[sid].applied = true; window.__antcvForceDbg[sid].lastGrp = lastGrp; } catch (_) {}
             });
           })();
         }

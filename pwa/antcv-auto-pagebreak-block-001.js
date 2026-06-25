@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.906-pp-cached-sticky';
+  var VERSION = '1.50.907-cache-sig';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -618,11 +618,13 @@
     // (the column top, which for both columns is the same page-box top). Keyed by
     // column role so the coordinator can tell sidebar from main.
     var __uniBlocks = { sidebar: [], main: [] };
+    var __sbColW = 0;   // sidebar column layout width — part of the FORCE-LAST-GRP cache signature
 
     for (var c = 0; c < cols.length; c++) {
       var col = cols[c];
       var isMainCol = !!(col.classList && (col.classList.contains('antcv-document-main')))
         || col.getAttribute('data-antcv-document-main') === 'true';
+      if (!isMainCol) { try { if (col.offsetWidth) __sbColW = col.offsetWidth; } catch (_) {} }
       if (deferMainDetect && isMainCol) continue;   // two-phase: detect main next pass
       var colTop = col.getBoundingClientRect().top;
       var __uniBucket = isMainCol ? __uniBlocks.main : __uniBlocks.sidebar;
@@ -985,13 +987,20 @@
               try {
                 var paged = __sPaged.filter(function (b) { return b.sid === sid; });
                 if (!paged.length) return;
-                // STICKY re-apply: once decided, re-apply the SAME break every cycle (deterministic,
-                // immune to the re-measure noise that made it flip back — the "metastable dance").
+                // CACHE SIGNATURE = STABLE inputs only (total visible sidebar blocks + sidebar
+                // column width). These change ONLY on a real edit that frees/uses space — hiding an
+                // upper item, widening the sidebar — NOT on the re-measure noise that caused the
+                // dance. So the cache holds the break stable, yet INVALIDATES when the content
+                // genuinely shifts, letting the group go back UP if it now fits (owner 2026-06-25).
+                var sig = __uniBlocks.sidebar.length + 'x' + Math.round(__sbColW);
+                // STICKY re-apply: same signature -> re-apply the SAME break every cycle
+                // (deterministic, immune to re-measure noise — no "metastable dance").
                 var cached = __forceLastGrpStick[sid];
-                if (cached) {
+                if (cached && cached.sig === sig) {
                   paged.forEach(function (b) { var k = parseInt(b.key, 10) || 0; b.page = (k >= cached.lastGrp) ? (cached.startPage + 1) : cached.startPage; });
                   return;
                 }
+                if (cached && cached.sig !== sig) { delete __forceLastGrpStick[sid]; }   // content shifted -> re-evaluate
                 var blocks = bySid[sid];
                 // group starts from SECTION DATA (items[i].grp) — reliable + matches the DOM row-path
                 // keys; the rendered-block grpHead flag did not survive the coordinator's collection.
@@ -1005,7 +1014,7 @@
                 var startPage = Math.min.apply(null, paged.map(function (b) { return b.page; }));
                 if (startPage < 2) return;                                    // only past page 1
                 var lastGrp = starts[starts.length - 1];
-                __forceLastGrpStick[sid] = { lastGrp: lastGrp, startPage: startPage };   // CACHE the decision
+                __forceLastGrpStick[sid] = { lastGrp: lastGrp, startPage: startPage, sig: sig };   // CACHE the decision + signature
                 paged.forEach(function (b) { var k = parseInt(b.key, 10) || 0; b.page = (k >= lastGrp) ? (startPage + 1) : startPage; });
               } catch (e) { /* per-section: never abort the whole pass */ }
             });

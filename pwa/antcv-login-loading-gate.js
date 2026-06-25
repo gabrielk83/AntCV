@@ -184,8 +184,11 @@
     function applyVer() {
       try {
         var live = (window.ANTCV_VERSION && String(window.ANTCV_VERSION).match(/^\d+\.\d+\.\d+/)) || null;
-        var num = live ? live[0] : (VERSION.match(/^\d+\.\d+\.\d+/) || ['1.50.722'])[0];
-        ver.textContent = num + '-babel-fish';
+        // Show NOTHING until the LIVE version (window.ANTCV_VERSION) is available — never flash the
+        // gate's own stale hardcoded VERSION (the "1.50.722-babel-fish" the owner saw on boot 2026-06-25).
+        // The re-apply ticks below fill the chip once version-override.js pins ANTCV_VERSION.
+        var num = live ? live[0] : null;
+        ver.textContent = num ? (num + '-babel-fish') : '';
       } catch (_) {}
     }
     applyVer();

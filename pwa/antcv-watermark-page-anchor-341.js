@@ -132,8 +132,16 @@
       // the watermark to the dense main column. We want the gap below actual
       // CONTENT, so ignore anything spanning most of the page height.
       if (rect.height && r.height >= rect.height * 0.8) continue;
-      var nodeMid = r.left + r.width / 2;
-      if (nodeMid < midX) {
+      // WM-COLUMN-CLASSIFY-001 (owner 2026-06-25 "notice should be in the empty sidebar"):
+      // classify by actual COLUMN container, NOT the geometric page midline. The main column
+      // starts LEFT of midX (the sidebar is narrow), so a short left-aligned MAIN label — e.g.
+      // the RECOMMENDATIONS "References" line — had its midpoint < midX and was mis-counted as
+      // SIDEBAR content. That set leftMaxBottom = the main's bottom, cancelling the empty
+      // sidebar's large gap -> leftGap == rightGap -> tie -> 'right'. Column membership fixes it.
+      var __inMain = n.closest && n.closest('.antcv-document-main, [data-antcv-document-main="true"]');
+      var __inSide = n.closest && n.closest('.antcv-document-sidebar');
+      var __isLeft = __inSide ? true : (__inMain ? false : ((r.left + r.width / 2) < midX));
+      if (__isLeft) {
         if (r.bottom > leftMaxBottom) leftMaxBottom = r.bottom;
       } else {
         if (r.bottom > rightMaxBottom) rightMaxBottom = r.bottom;

@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.884-abs-paging-off';
+  var VERSION = '1.50.885-det-coord';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -687,11 +687,11 @@
 
       // SALMON-UNIFIED-001 Phase C: record this column's atomic blocks (item rows
       // + experience role wrappers) in UNSCALED px from the column top, for the
-      // coordinator below. Only the EXPORT pass feeds the coordinator (the unified
-      // sheet line tracks the DOCX line, owner's choice #2); the PREVIEW pass keeps
-      // its own per-column fill. CV only. Tables are recorded by tbody row so a
-      // row-split section still contributes a boundary.
-      if (SIDEBAR_UNIFIED && doc === 'cv' && autoKey === AUTO_KEY) {
+      // coordinator below. DET-COORD-001 (owner 2026-06-25): feed it on BOTH passes
+      // (export + preview) so the deterministic coordinator unifies the PREVIEW too
+      // (that is where the dancing showed). CV only. Tables are recorded by tbody row
+      // so a row-split section still contributes a boundary.
+      if (SIDEBAR_UNIFIED && doc === 'cv') {
         try {
           var __rowEls = col.querySelectorAll('[' + ITEM_PATH_ATTR + '^="items."]');
           for (var __ri = 0; __ri < __rowEls.length; __ri++) {
@@ -786,151 +786,91 @@
       } catch (_) {}
     }
 
-    // SALMON-UNIFIED-001 Phase C — UNIFIED SHEET COORDINATOR.
+    // SALMON-UNIFIED-001 Phase C — DETERMINISTIC HEIGHT-BASED COORDINATOR.
     // ------------------------------------------------------------------
-    // The two per-column passes above each paginate INDEPENDENTLY: the sidebar
-    // and the main column can place their page-N break at different heights, so a
-    // 3-page CV can show the page-2→3 salmon in one column at a different line
-    // than the other (or only in one column). The owner chose UNIFIED sheet
-    // pagination tracking the DOCX EXPORT line:
-    //   - one boundary per page across the whole sheet;
-    //   - the EARLIER of the two columns drives each boundary (neither column
-    //     ever overflows past the shared line);
-    //   - the shorter column gets an intentional gap so page N starts on a
-    //     straight line across both columns.
-    // This runs ONLY on the EXPORT pass (autoKey === AUTO_KEY, usableBase ===
-    // USABLE_PDF — the Word-equivalent line), CV only, behind SIDEBAR_NPAGE. The
-    // PREVIEW map keeps its own per-column fill (it already pulls the sidebar up
-    // via SIDEBAR_PREVIEW_INFLATE). It REWRITES the per-sid entries in `map` so
-    // both columns break at the same sheet lines; the change-only write-guard and
-    // the born-stamps from the per-column passes are preserved.
-    if (SIDEBAR_UNIFIED && doc === 'cv' && autoKey === AUTO_KEY
+    // DET-COORD-001 (owner 2026-06-25 "just solve it / a lot of text dancing"): the prior
+    // coordinator paginated by POSITION (block tops). Positions change every time a break
+    // re-renders the layout, so the break pages shifted on each re-measure (dancing); and it
+    // ran on the EXPORT pass only, so the PREVIEW (where the dancing shows) was never unified.
+    // Replace with a DETERMINISTIC pass: order each column's atomic blocks by their DATA
+    // position (section order, then item/role index) and paginate by CUMULATIVE INTRINSIC
+    // HEIGHT (bottom-top — which does NOT change when the layout re-paginates). Same page
+    // budget for both columns, so they align by construction. Runs on BOTH passes with each
+    // pass's own budget. Deterministic input -> identical output every pass -> it converges,
+    // so the salmon stops dancing AND late sections distribute to page 3/4 instead of piling.
+    if (SIDEBAR_UNIFIED && doc === 'cv'
         && (__uniBlocks.sidebar.length || __uniBlocks.main.length)) {
       try {
-        var __uniLimit = usableBase;   // USABLE_PDF on this pass (the export line)
-
-        // Greedy fill one column's atomic blocks into pages of height __uniLimit;
-        // returns each block tagged with its page (1-based). A block whose BOTTOM
-        // crosses the running page line moves WHOLE to the next page, which then
-        // starts at the block's TOP. Mirrors allOverflowPages / the role loop.
+        var __uniLimit = usableBase;   // this pass's page budget (export ~924 / preview ~A4)
+        function __secOrder(sid) {
+          for (var i = 0; i < list.length; i++) { if (list[i] && list[i].id === sid) return i; }
+          return 9999;
+        }
+        // Paginate a column's blocks by CUMULATIVE INTRINSIC HEIGHT, in DATA order.
         function __uniPaginate(blocks) {
-          var sorted = blocks.slice().sort(function (a, b) { return a.top - b.top; });
-          var pageTop = 0, page = 1, out = [];
-          for (var i = 0; i < sorted.length; i++) {
-            var b = sorted[i];
-            if ((b.bottom - pageTop) > __uniLimit && (b.top - pageTop) > 1) {
-              page++; pageTop = b.top;
-            }
-            out.push({ sid: b.sid, kind: b.kind, key: b.key, top: b.top, page: page });
+          var ordered = blocks.slice().sort(function (a, b) {
+            var sa = __secOrder(a.sid), sb = __secOrder(b.sid);
+            if (sa !== sb) return sa - sb;
+            return ((parseInt(a.key, 10) || 0) - (parseInt(b.key, 10) || 0));
+          });
+          var used = 0, page = 1, out = [];
+          for (var i = 0; i < ordered.length; i++) {
+            var b = ordered[i];
+            var h = Math.max(0, b.bottom - b.top);
+            // A block taller than a whole page can't move; it stays and overflows.
+            if (used > 0 && (used + h) > __uniLimit) { page++; used = 0; }
+            used += h;
+            out.push({ sid: b.sid, kind: b.kind, key: b.key, page: page });
           }
           return out;
         }
-        // First (smallest) top per page in a paginated column.
-        function __uniFirstTop(paged) {
-          var m = {};
+        // First-of-page break map for page > 1 (the render's monotonic floor cascades the rest).
+        function __mapFromPaged(paged, isExperience) {
+          var perSid = {}, seenPage = {};
           for (var i = 0; i < paged.length; i++) {
-            var p = paged[i].page;
-            if (m[p] === undefined || paged[i].top < m[p]) m[p] = paged[i].top;
+            var b = paged[i];
+            if (isExperience ? (b.kind !== 'role') : (b.kind !== 'item')) continue;
+            if (b.page <= 1) continue;
+            var sk = b.sid + '@' + b.page;
+            if (seenPage[sk]) continue;
+            seenPage[sk] = 1;
+            (perSid[b.sid] = perSid[b.sid] || {})[String(b.key)] = b.page;
           }
-          return m;
+          return perSid;
         }
+        // Sidebar + main ITEM sections flow together as one column each; experience ROLES
+        // (atomic) paginate on their own.
+        var __reItem = __mapFromPaged(__uniPaginate(__uniBlocks.sidebar.concat(__uniBlocks.main)), false);
+        var __reRole = __mapFromPaged(__uniPaginate(__uniBlocks.main), true);
 
-        var __sPaged = __uniPaginate(__uniBlocks.sidebar);
-        var __mPaged = __uniPaginate(__uniBlocks.main);
-        var __sTop = __uniFirstTop(__sPaged);
-        var __mTop = __uniFirstTop(__mPaged);
+        function __applyUnified(reMap) {
+          for (var sid in reMap) {
+            if (!reMap.hasOwnProperty(sid)) continue;
+            if (!Object.keys(reMap[sid]).length) continue;
+            var __sec2 = sectionById(list, sid);
+            if (__sec2 && __sec2.type === 'table') continue;   // tables keep their row-split
+            map[sid] = reMap[sid];
+            if (!__breakBornAt[bornKey(sid)]) __breakBornAt[bornKey(sid)] = nowMs();
+          }
+        }
+        __applyUnified(__reItem);
+        __applyUnified(__reRole);
 
-        // Unified sheet boundary for page N = the EARLIER (smaller top) of the two
-        // columns' page-N starts, so neither column overflows past it.
-        var __maxPage = 1;
-        Object.keys(__sTop).concat(Object.keys(__mTop)).forEach(function (k) {
-          var n = parseInt(k, 10); if (n > __maxPage) __maxPage = n;
+        // RECONCILE: a coordinator-measured ITEM section that a per-column pass broke but the
+        // deterministic pass did NOT re-affirm (it fits page 1 now) -> clear its stale break so
+        // `map` matches the deterministic pagination exactly. Tables/experience untouched.
+        var __uniSids = {};
+        __uniBlocks.sidebar.concat(__uniBlocks.main).forEach(function (b) {
+          if (b.sid && b.kind === 'item') __uniSids[b.sid] = 1;
         });
-        var __sheet = [];   // [{ page, y }] sorted by y
-        for (var __n = 2; __n <= __maxPage; __n++) {
-          var __a = __sTop[__n], __bb = __mTop[__n];
-          if (__a === undefined && __bb === undefined) continue;
-          var __y = (__a === undefined) ? __bb : (__bb === undefined) ? __a : Math.min(__a, __bb);
-          __sheet.push({ page: __n, y: __y });
-        }
-        __sheet.sort(function (a, b) { return a.y - b.y; });
-
-        if (__sheet.length) {
-          // Re-snap a column's blocks to the shared sheet lines: each block lands
-          // on the highest page whose boundary its TOP has crossed. Build a per-sid
-          // { firstKeyOfPageN: N } map for the FIRST block of each page > 1 — the
-          // render's monotonic floor cascades the rest. Whole blocks only.
-          function __uniResnap(blocks, isExperience) {
-            var sorted = blocks.slice().sort(function (a, b) { return a.top - b.top; });
-            var perSid = {}, seen = {};
-            for (var i = 0; i < sorted.length; i++) {
-              var b = sorted[i];
-              if (!b.sid) continue;
-              if (isExperience && b.kind !== 'role') continue;
-              if (!isExperience && b.kind !== 'item') continue;
-              var pg = 1;
-              for (var j = 0; j < __sheet.length; j++) {
-                if (b.top >= __sheet[j].y - 1) pg = __sheet[j].page;
-              }
-              if (pg > 1) {
-                var sk = b.sid + '@' + pg;
-                if (!seen[sk]) {
-                  seen[sk] = 1;
-                  (perSid[b.sid] = perSid[b.sid] || {})[String(b.key)] = pg;
-                }
-              }
-            }
-            return perSid;
-          }
-
-          // Sidebar item sections + main item sections re-snapped together (both
-          // are 'item' blocks); experience roles re-snapped on their own ('role').
-          var __reItem = __uniResnap(__uniBlocks.sidebar.concat(__uniBlocks.main), false);
-          var __reRole = __uniResnap(__uniBlocks.main, true);
-
-          // Apply: overwrite each affected sid's export entry with the unified map.
-          // Group-snap is intentionally NOT re-applied here — the per-column passes
-          // already snapped their first break to a group start, and the unified
-          // boundary is at/above that line, so the first item past the shared line
-          // is the correct continuation point. Preserve born-stamps.
-          function __applyUnified(reMap) {
-            for (var sid in reMap) {
-              if (!reMap.hasOwnProperty(sid)) continue;
-              var keys = Object.keys(reMap[sid]);
-              if (!keys.length) continue;
-              // Skip a table section (its row-split entry is keyed differently and
-              // handled by the single-break/table path; don't clobber it).
-              var __sec2 = sectionById(list, sid);
-              if (__sec2 && __sec2.type === 'table') continue;
-              map[sid] = reMap[sid];
-              if (!__breakBornAt[bornKey(sid)]) __breakBornAt[bornKey(sid)] = nowMs();
-            }
-          }
-          __applyUnified(__reItem);
-          __applyUnified(__reRole);
-
-          // RECONCILE: a non-table CV section that the per-column (Phase B) pass
-          // broke but the unified re-snap did NOT re-affirm now fits within page 1
-          // under the shared sheet line (the OTHER column drove an earlier boundary
-          // that this section sits above). Leaving its Phase-B break would draw a
-          // salmon the unified sheet says shouldn't exist. Clear those so `map`
-          // matches the shared boundaries exactly. Only sids the coordinator
-          // actually measured (had collected blocks) are eligible — experience,
-          // tables, and any section without blocks are left untouched.
-          var __uniSids = {};
-          __uniBlocks.sidebar.concat(__uniBlocks.main).forEach(function (b) {
-            if (b.sid && b.kind === 'item') __uniSids[b.sid] = 1;
-          });
-          for (var __ms in map) {
-            if (!map.hasOwnProperty(__ms)) continue;
-            if (!__uniSids[__ms]) continue;                 // not an item-section the coordinator measured
-            if (__reItem[__ms]) continue;                   // re-affirmed → keep
-            var __mSec = sectionById(list, __ms);
-            if (__mSec && __mSec.type === 'table') continue; // tables keep their row-split
-            if (__mSec && __mSec.type === 'experience') continue;
-            delete map[__ms];
-            delete __breakBornAt[bornKey(__ms)];
-          }
+        for (var __ms in map) {
+          if (!map.hasOwnProperty(__ms)) continue;
+          if (!__uniSids[__ms]) continue;
+          if (__reItem[__ms]) continue;
+          var __mSec = sectionById(list, __ms);
+          if (__mSec && (__mSec.type === 'table' || __mSec.type === 'experience')) continue;
+          delete map[__ms];
+          delete __breakBornAt[bornKey(__ms)];
         }
       } catch (_) {}
     }

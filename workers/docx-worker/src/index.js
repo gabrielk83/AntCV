@@ -24766,8 +24766,15 @@ function buildTwoColumnDocument(ctx) {
   // as 5 pages with pages 2 and 4 empty. Real safety slack fixes it: the navy
   // bar now stops ~0.5-1cm above the page edge instead of exactly on it —
   // invisible next to a blank page + lost lines.
-  const PAGE1_BODY_MIN = 13260;
-  const CONT_BODY_MIN = PAGE_H - 600;
+  // PDF-BLANK-PAGE-002 (owner 2026-06-25 "still 8 pages" — a 3-byte/blank content stream
+  // confirmed in the export): the 1.14.54 slack (600 DXA) still let stretched rows overflow
+  // the sheet on this CV (candidate band + photo on page 1), so LibreOffice split each row
+  // and rendered the empty tail as a BLANK page (8 pages for ~3-4 of content). DOUBLE the
+  // bottom slack so the stretched navy bar always stops well short of the sheet edge — the
+  // row can never overflow + cascade. Cost: the navy fill ends ~1cm higher (a little more
+  // white at the page bottom) — invisible next to losing the blank pages.
+  const PAGE1_BODY_MIN = 12600;
+  const CONT_BODY_MIN = PAGE_H - 1300;
   const makeBodyRow = (sbEls, mnEls, withHeader) => new TableRow({
     cantSplit: false,
     // 1.14.55: a repeated slim header strip on pages 2+ costs ~900 DXA;
@@ -27494,7 +27501,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   the anchor's spacing-after from (px/2+14) to (px/2-12) so the first sidebar
 //   section sits just under the medallion (~0.27in higher; the full 0.6in would
 //   overlap the photo at the default diameter).
-var VERSION = "1.14.82-balance-overflow";
+var VERSION = "1.14.83-blank-slack";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

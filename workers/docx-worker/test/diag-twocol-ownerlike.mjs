@@ -118,8 +118,9 @@ const navyFills = (xml.match(new RegExp('w:fill="' + NAVY + '"', 'gi')) || []).l
 // match both.
 const trHeights = [...xml.matchAll(/<w:trHeight[^/]*\/>/g)].map(m => m[0]);
 const atLeast = trHeights.filter(h => /w:hRule="atLeast"/.test(h));
-const has13860 = atLeast.some(h => /w:val="13260"/.test(h));
-const has16638 = atLeast.some(h => /w:val="16238"/.test(h));
+// PDF-BLANK-PAGE-002 (1.14.83): slack doubled — page1 13260->12600, cont PAGE_H-600(16238)->-1300(15538).
+const has13860 = atLeast.some(h => /w:val="12600"/.test(h));
+const has16638 = atLeast.some(h => /w:val="15538"/.test(h));
 // PB-WORKER-CONT-HEADER-001: split into top-level page tables and assert
 // page 2's main column carries EXACTLY ONE experience heading — the
 // "PROFESSIONAL EXPERIENCE (Cont.)" continuation — never the historic stray

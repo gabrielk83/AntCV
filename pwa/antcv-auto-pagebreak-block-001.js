@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.899-force-lastgrp';
+  var VERSION = '1.50.900-force-postproc';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -916,8 +916,8 @@
           // original raw budget and stays stable (inflating page 1 wrongly split TOOLS & METHODS
           // off it — owner 2026-06-25). Only pages 2+ get the tighter export-equivalent budget.
           var __nLimit = (inflate > 1) ? (__uniLimit / inflate) : __uniLimit;
-          var grpTot = {}, secTot2 = {};
-          ordered.forEach(function (b) { var gk = __groupOf(b.sid, b.key); var hh = Math.max(0, b.bottom - b.top); grpTot[gk] = (grpTot[gk] || 0) + hh; secTot2[b.sid] = (secTot2[b.sid] || 0) + hh; });
+          var grpTot = {};
+          ordered.forEach(function (b) { var gk = __groupOf(b.sid, b.key); grpTot[gk] = (grpTot[gk] || 0) + Math.max(0, b.bottom - b.top); });
           var used = 0, page = 1, out = [], curGroup = null;
           for (var i = 0; i < ordered.length; i++) {
             var b = ordered[i];
@@ -931,16 +931,8 @@
             if (gk !== curGroup) {
               curGroup = gk;
               var gt = grpTot[gk] || 0;
-              var __st = __grpStarts[b.sid];
-              var __isLastGrp = __st && __st.length > 1 && (parseInt(b.key, 10) || 0) === __st[__st.length - 1];
-              var __bigSec = FORCE_LAST_GRP_FRAC > 0 && (secTot2[b.sid] || 0) > __nLimit * FORCE_LAST_GRP_FRAC;
-              if (used > 0 && page > 1 && __isLastGrp && __bigSec) {
-                // FORCE the last group of a big grouped section onto the next page (export overflows it).
-                page++; used = 0; cap = __nLimit;
-              } else if (used > 0 && gt <= __nLimit * keepWholeFrac && (used + gt) > cap) {
-                // keep each GROUP whole: if it won't fit the current page, start it on the next.
-                page++; used = 0; cap = __nLimit;
-              }
+              // keep each GROUP whole: if it won't fit the current page, start it on the next.
+              if (used > 0 && gt <= __nLimit * keepWholeFrac && (used + gt) > cap) { page++; used = 0; cap = __nLimit; }
             }
             if (used > 0 && (used + h) > cap) { page++; used = 0; }
             used += h;
@@ -973,6 +965,31 @@
         var __sbBand1 = (typeof SIDEBAR_PAGE1_BAND === 'number') ? SIDEBAR_PAGE1_BAND : (PAGE1_BAND + __photoReserve());
         var __sPaged = __uniPaginate(__uniBlocks.sidebar, __sbBand1, SIDEBAR_PREVIEW_INFLATE, KEEP_WHOLE_FRAC);
         var __mPaged = __uniPaginate(__uniBlocks.main, PAGE1_BAND, 1, 1);
+        // FORCE-LAST-GRP post-process (deterministic). For a BIG multi-group SIDEBAR section the
+        // coordinator's internal break can land on the wrong group (it broke regulatory at the
+        // Imaging group, but the owner has room for Imaging/Electrical on page 2 and wants ONLY
+        // the LAST group on the next page). Pin such a section WHOLE to its start page and move
+        // ONLY its last group to start+1. Scoped + disableable (FORCE_LAST_GRP_FRAC). NOT a
+        // universal rule — a content/group-spacing/sidebar-width fallback (owner 2026-06-25).
+        if (FORCE_LAST_GRP_FRAC > 0) {
+          (function () {
+            var bySid = {};
+            __uniBlocks.sidebar.forEach(function (b) { (bySid[b.sid] = bySid[b.sid] || []).push(b); });
+            Object.keys(bySid).forEach(function (sid) {
+              var blocks = bySid[sid];
+              var starts = blocks.filter(function (b) { return b.grpHead; }).map(function (b) { return parseInt(b.key, 10) || 0; }).sort(function (a, b) { return a - b; });
+              if (starts.length < 2) return;                                  // needs >=2 groups
+              var tot = blocks.reduce(function (s, b) { return s + Math.max(0, b.bottom - b.top); }, 0);
+              if (tot <= __uniLimit * FORCE_LAST_GRP_FRAC) return;            // only a BIG section
+              var paged = __sPaged.filter(function (b) { return b.sid === sid; });
+              if (!paged.length) return;
+              var startPage = Math.min.apply(null, paged.map(function (b) { return b.page; }));
+              if (startPage < 2) return;                                      // only past page 1
+              var lastGrp = starts[starts.length - 1];
+              paged.forEach(function (b) { var k = parseInt(b.key, 10) || 0; b.page = (k >= lastGrp) ? (startPage + 1) : startPage; });
+            });
+          })();
+        }
         var __reSidebar = __mapFromPaged(__sPaged, false);
         var __reMainItems = __mapFromPaged(__mPaged, false);
         var __reRole = __mapFromPaged(__mPaged, true);

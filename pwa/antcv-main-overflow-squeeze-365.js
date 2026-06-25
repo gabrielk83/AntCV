@@ -76,7 +76,18 @@
   var SETTLE_MS = 600;  // ignore detector events this long after we restyle
 
   function disabled() {
-    try { return localStorage.getItem('antcv:disable-squeeze') === '1'; } catch (_) { return false; }
+    // SQUEEZE-DANCE-FIX-001 (owner 2026-06-25 "page 1/2 dance at rest, left-center; page 3
+    // ~1 row"): the squeeze<->detector loop oscillated — squeeze (tighten line-height) ->
+    // detector reads 'fits' -> next snapshot it re-expands -> 'over' -> squeeze again. That
+    // line-height churn IS the horizontal left/center dance, and the resulting block-height
+    // change re-flips the page coordinator (the salmon ~1-row dance). The squeeze is
+    // PREVIEW-ONLY (no export parity, per the header) so it never helped the export anyway —
+    // it only destabilized the preview and made it diverge from the export. DEFAULT OFF now;
+    // opt back in with antcv:enable-squeeze='1'.
+    try {
+      if (localStorage.getItem('antcv:enable-squeeze') === '1') return false;
+      return true;
+    } catch (_) { return true; }
   }
   function paper() { return document.querySelector(PAPER_SEL); }
 

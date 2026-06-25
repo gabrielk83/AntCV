@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.895-pagen-band';
+  var VERSION = '1.50.895-sidebar-inflate-grpwhole';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -175,14 +175,14 @@
   // because the photo's footprint depends on the sidebar/main ratio + photo size/position and
   // differs every generation (owner 2026-06-25). A numeric value here pins it (manual override).
   var SIDEBAR_PAGE1_BAND = null;
-  // PAGES 2+ are SHORTER in the export than the preview measures: a tall page-2 row (e.g. 6
-  // experience roles) can exceed the physical page, so LibreOffice splits the whole two-column
-  // row and BOTH columns' tails slide messily onto the next page (owner 2026-06-25 "sliding
-  // problem like page 2"). Deduct PAGE_N_BAND from the pages-2+ budget so the coordinator moves
-  // the borderline block to the next page CLEANLY (with its own break + CONT) BEFORE the export
-  // overflows. Owner-tunable live: AntcvAutoPagebreak.config({ PAGE_N_BAND:N }). Higher = more
-  // breaks (lighter later pages, possibly more pages); 0 = old full-budget behaviour.
-  var PAGE_N_BAND = 140;
+  // KEEP-WHOLE only applies to sections up to this FRACTION of a page. A big SIDEBAR section
+  // (the 25-item REGULATORY CONTEXT) is ~80% of a page: keeping it whole whole-moves it to the
+  // next page and leaves the prior page's sidebar short. Splitting it instead BALANCES it across
+  // the page boundary (its first groups stay, the last group + a "(Cont.)" header flow on) — the
+  // owner's 2026-06-25 ask. Small sections (certs, education, languages) stay whole. The MAIN
+  // column keeps frac=1 (unchanged — owner: "the problem is with the sidebar not main").
+  // Owner-tunable live: AntcvAutoPagebreak.config({ KEEP_WHOLE_FRAC:N }) (0..1).
+  var KEEP_WHOLE_FRAC = 0.62;
   // Measure the profile photo's height (the reserve the sidebar's page 1 loses to it). 0 when
   // there is no photo (then the sidebar band falls back to PAGE1_BAND).
   function __photoReserve() {
@@ -864,8 +864,14 @@
         // Paginate a column's blocks by CUMULATIVE INTRINSIC HEIGHT, in DATA order.
         // band1 = the page-1 budget deduction for THIS column (the sidebar deducts more than
         // the main because the PHOTO sits at the sidebar's top — DET-COORD-004).
-        function __uniPaginate(blocks, band1) {
+        // inflate: preview->export height multiplier for THIS column (sidebar renders ~1.2x
+        // taller in the export than the preview measures; the coordinator must paginate in
+        // EXPORT units or it over-fills page 2 and the export overflows/slides — owner 2026-06-25).
+        // keepWholeFrac: keep-whole threshold (see KEEP_WHOLE_FRAC).
+        function __uniPaginate(blocks, band1, inflate, keepWholeFrac) {
           if (band1 == null) band1 = PAGE1_BAND;
+          if (!(inflate > 0)) inflate = 1;
+          if (!(keepWholeFrac > 0)) keepWholeFrac = 1;
           var ordered = blocks.slice().sort(function (a, b) {
             var sa = __secOrder(a.sid), sb = __secOrder(b.sid);
             if (sa !== sb) return sa - sb;
@@ -876,22 +882,41 @@
           // current page it starts whole on the next one (so CERTIFICATES, CORE COMPETENCIES,
           // profile move as a unit, not item-by-item). Big sections (the 12-role experience, a
           // page-plus regulatory) exceed a page, so keep-whole is skipped and they flow per block.
-          var secTot = {};
-          ordered.forEach(function (b) { secTot[b.sid] = (secTot[b.sid] || 0) + Math.max(0, b.bottom - b.top); });
-          var used = 0, page = 1, out = [], curSid = null;
+          // GROUP boundaries: a section's items[i].grp marks a group start. Keep-whole then
+          // operates per GROUP, not per section — so a big section (REGULATORY CONTEXT) breaks
+          // BETWEEN its groups (each group intact), instead of whole-moving and leaving a short
+          // page. Sections with no groups = one group = whole-section keep-whole (unchanged).
+          var __grpStarts = {};
+          (list || []).forEach(function (sec) {
+            if (!sec || !Array.isArray(sec.items)) return;
+            var st = [];
+            sec.items.forEach(function (it, idx) { if (it && it.grp != null && it.grp !== '') st.push(idx); });
+            if (st.length) __grpStarts[sec.id] = st;
+          });
+          function __groupOf(sid, key) {
+            var st = __grpStarts[sid];
+            if (!st || !st.length) return sid + '#0';
+            var k = parseInt(key, 10) || 0, g = st[0];
+            for (var j = 0; j < st.length; j++) { if (st[j] <= k) g = st[j]; else break; }
+            return sid + '#' + g;
+          }
+          var grpTot = {};
+          ordered.forEach(function (b) { var gk = __groupOf(b.sid, b.key); grpTot[gk] = (grpTot[gk] || 0) + Math.max(0, b.bottom - b.top) * inflate; });
+          var used = 0, page = 1, out = [], curGroup = null;
           for (var i = 0; i < ordered.length; i++) {
             var b = ordered[i];
-            var h = Math.max(0, b.bottom - b.top);
+            var h = Math.max(0, b.bottom - b.top) * inflate;
             // PAGE 1 is SHORTER than pages 2+ — the candidate header band sits above both
             // columns (worker: page-1 body ~2978 DXA less). Deduct PAGE1_BAND from page 1's
             // budget so the columns don't over-fill page 1 (which is why certs + the later
             // roles belonged on page 2). A block taller than a page can't move; it stays.
-            var __capN = Math.max(300, __uniLimit - PAGE_N_BAND);
-            var cap = (page === 1) ? Math.max(300, __uniLimit - band1) : __capN;
-            if (b.sid !== curSid) {
-              curSid = b.sid;
-              var st = secTot[b.sid] || 0;
-              if (used > 0 && st <= __uniLimit && (used + st) > cap) { page++; used = 0; cap = __capN; }
+            var cap = (page === 1) ? Math.max(300, __uniLimit - band1) : __uniLimit;
+            var gk = __groupOf(b.sid, b.key);
+            if (gk !== curGroup) {
+              curGroup = gk;
+              var gt = grpTot[gk] || 0;
+              // keep each GROUP whole: if it won't fit the current page, start it on the next.
+              if (used > 0 && gt <= __uniLimit * keepWholeFrac && (used + gt) > cap) { page++; used = 0; cap = __uniLimit; }
             }
             if (used > 0 && (used + h) > cap) { page++; used = 0; }
             used += h;
@@ -922,8 +947,8 @@
         // AUTO sidebar band = main band + the measured photo reserve (per generation), unless
         // pinned by a numeric SIDEBAR_PAGE1_BAND.
         var __sbBand1 = (typeof SIDEBAR_PAGE1_BAND === 'number') ? SIDEBAR_PAGE1_BAND : (PAGE1_BAND + __photoReserve());
-        var __sPaged = __uniPaginate(__uniBlocks.sidebar, __sbBand1);
-        var __mPaged = __uniPaginate(__uniBlocks.main, PAGE1_BAND);
+        var __sPaged = __uniPaginate(__uniBlocks.sidebar, __sbBand1, SIDEBAR_PREVIEW_INFLATE, KEEP_WHOLE_FRAC);
+        var __mPaged = __uniPaginate(__uniBlocks.main, PAGE1_BAND, 1, 1);
         var __reSidebar = __mapFromPaged(__sPaged, false);
         var __reMainItems = __mapFromPaged(__mPaged, false);
         var __reRole = __mapFromPaged(__mPaged, true);
@@ -1339,7 +1364,7 @@
     //   AntcvAutoPagebreak.config({ HYST_STABLE:80 })  // looser stable band
     config: function (o) {
       try {
-        if (!o) return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE, SIDEBAR_UNIFIED: SIDEBAR_UNIFIED, ABSOLUTE_PAGING: ABSOLUTE_PAGING, PAGE1_BAND: PAGE1_BAND, SIDEBAR_PAGE1_BAND: SIDEBAR_PAGE1_BAND, PAGE_N_BAND: PAGE_N_BAND };
+        if (!o) return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE, SIDEBAR_UNIFIED: SIDEBAR_UNIFIED, ABSOLUTE_PAGING: ABSOLUTE_PAGING, PAGE1_BAND: PAGE1_BAND, SIDEBAR_PAGE1_BAND: SIDEBAR_PAGE1_BAND, KEEP_WHOLE_FRAC: KEEP_WHOLE_FRAC };
         if (typeof o.ONE_PASS === 'boolean') ONE_PASS = o.ONE_PASS;
         if (typeof o.HYST_STABLE === 'number') HYST_STABLE = o.HYST_STABLE;
         if (typeof o.HYST_TIGHT === 'number') HYST_TIGHT = o.HYST_TIGHT;
@@ -1351,9 +1376,9 @@
         if (typeof o.ABSOLUTE_PAGING === 'boolean') ABSOLUTE_PAGING = o.ABSOLUTE_PAGING;
         if (typeof o.PAGE1_BAND === 'number') PAGE1_BAND = o.PAGE1_BAND;
         if (typeof o.SIDEBAR_PAGE1_BAND === 'number') SIDEBAR_PAGE1_BAND = o.SIDEBAR_PAGE1_BAND;
-        if (typeof o.PAGE_N_BAND === 'number') PAGE_N_BAND = o.PAGE_N_BAND;
+        if (typeof o.KEEP_WHOLE_FRAC === 'number' && o.KEEP_WHOLE_FRAC > 0 && o.KEEP_WHOLE_FRAC <= 1) KEEP_WHOLE_FRAC = o.KEEP_WHOLE_FRAC;
         lastSourceFp = null; schedule();
-        return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE, SIDEBAR_UNIFIED: SIDEBAR_UNIFIED, ABSOLUTE_PAGING: ABSOLUTE_PAGING, PAGE1_BAND: PAGE1_BAND, SIDEBAR_PAGE1_BAND: SIDEBAR_PAGE1_BAND, PAGE_N_BAND: PAGE_N_BAND };
+        return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE, SIDEBAR_UNIFIED: SIDEBAR_UNIFIED, ABSOLUTE_PAGING: ABSOLUTE_PAGING, PAGE1_BAND: PAGE1_BAND, SIDEBAR_PAGE1_BAND: SIDEBAR_PAGE1_BAND, KEEP_WHOLE_FRAC: KEEP_WHOLE_FRAC };
       } catch (_) { return null; }
     },
     // Manual reset of auto breaks (e.g. from console) if a stale break

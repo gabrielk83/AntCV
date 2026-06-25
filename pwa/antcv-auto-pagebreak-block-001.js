@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.905-pp-dbg2';
+  var VERSION = '1.50.906-pp-cached-sticky';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -983,6 +983,15 @@
             __uniBlocks.sidebar.forEach(function (b) { (bySid[b.sid] = bySid[b.sid] || []).push(b); });
             Object.keys(bySid).forEach(function (sid) {
               try {
+                var paged = __sPaged.filter(function (b) { return b.sid === sid; });
+                if (!paged.length) return;
+                // STICKY re-apply: once decided, re-apply the SAME break every cycle (deterministic,
+                // immune to the re-measure noise that made it flip back — the "metastable dance").
+                var cached = __forceLastGrpStick[sid];
+                if (cached) {
+                  paged.forEach(function (b) { var k = parseInt(b.key, 10) || 0; b.page = (k >= cached.lastGrp) ? (cached.startPage + 1) : cached.startPage; });
+                  return;
+                }
                 var blocks = bySid[sid];
                 // group starts from SECTION DATA (items[i].grp) — reliable + matches the DOM row-path
                 // keys; the rendered-block grpHead flag did not survive the coordinator's collection.
@@ -992,17 +1001,13 @@
                 if (secData && Array.isArray(secData.items)) { secData.items.forEach(function (it, i) { if (it && it.grp != null && it.grp !== '') starts.push(i); }); }
                 if (starts.length < 2) return;                                // needs >=2 groups
                 var tot = blocks.reduce(function (s, b) { return s + Math.max(0, b.bottom - b.top); }, 0);
-                var big = tot > __uniLimit * FORCE_LAST_GRP_FRAC;             // BIG enough this cycle
-                if (!big && !__forceLastGrpStick[sid]) return;                // not big AND never forced
-                var paged = __sPaged.filter(function (b) { return b.sid === sid; });
-                if (!paged.length) return;
+                if (tot <= __uniLimit * FORCE_LAST_GRP_FRAC) return;          // only a BIG section
                 var startPage = Math.min.apply(null, paged.map(function (b) { return b.page; }));
                 if (startPage < 2) return;                                    // only past page 1
-                __forceLastGrpStick[sid] = true;                             // STICKY: keep moved hereafter
                 var lastGrp = starts[starts.length - 1];
+                __forceLastGrpStick[sid] = { lastGrp: lastGrp, startPage: startPage };   // CACHE the decision
                 paged.forEach(function (b) { var k = parseInt(b.key, 10) || 0; b.page = (k >= lastGrp) ? (startPage + 1) : startPage; });
-                try { window.__antcvDbg2 = window.__antcvDbg2 || {}; window.__antcvDbg2[sid] = { tot: Math.round(tot), thr: Math.round(__uniLimit * FORCE_LAST_GRP_FRAC), startPage: startPage, lastGrp: lastGrp, applied: true }; } catch (_) {}
-              } catch (e) { try { window.__antcvDbg2 = window.__antcvDbg2 || {}; window.__antcvDbg2['ERR_' + sid] = String(e && e.message || e); } catch (_) {} }
+              } catch (e) { /* per-section: never abort the whole pass */ }
             });
           })();
         }

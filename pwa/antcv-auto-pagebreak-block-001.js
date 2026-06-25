@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.900-force-postproc';
+  var VERSION = '1.50.901-postproc-data';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -977,7 +977,12 @@
             __uniBlocks.sidebar.forEach(function (b) { (bySid[b.sid] = bySid[b.sid] || []).push(b); });
             Object.keys(bySid).forEach(function (sid) {
               var blocks = bySid[sid];
-              var starts = blocks.filter(function (b) { return b.grpHead; }).map(function (b) { return parseInt(b.key, 10) || 0; }).sort(function (a, b) { return a - b; });
+              // group starts from SECTION DATA (items[i].grp) — reliable + matches the DOM row-path
+              // keys; the rendered-block grpHead flag did not survive the coordinator's collection.
+              var secData = null;
+              for (var z = 0; z < (list || []).length; z++) { if (list[z] && list[z].id === sid) { secData = list[z]; break; } }
+              var starts = [];
+              if (secData && Array.isArray(secData.items)) { secData.items.forEach(function (it, i) { if (it && it.grp != null && it.grp !== '') starts.push(i); }); }
               if (starts.length < 2) return;                                  // needs >=2 groups
               var tot = blocks.reduce(function (s, b) { return s + Math.max(0, b.bottom - b.top); }, 0);
               if (tot <= __uniLimit * FORCE_LAST_GRP_FRAC) return;            // only a BIG section

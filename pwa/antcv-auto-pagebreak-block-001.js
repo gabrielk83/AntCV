@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.888-table-keepwhole';
+  var VERSION = '1.50.889-preview-eq-export';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -824,7 +824,12 @@
     if (SIDEBAR_UNIFIED && doc === 'cv'
         && (__uniBlocks.sidebar.length || __uniBlocks.main.length)) {
       try {
-        var __uniLimit = usableBase;   // this pass's page budget (export ~924 / preview ~A4)
+        // PREVIEW=EXPORT-001 (owner 2026-06-25 "make both page 2 in both representations"):
+        // unify BOTH passes on the EXPORT line (USABLE_PDF) instead of each pass's own budget.
+        // The preview previously paginated at the taller A4 line, so it kept one more row on
+        // page 1 than the export (System Architect stayed page 1 in preview, page 2 in export).
+        // Same budget for both => the preview's page assignments match the PDF exactly.
+        var __uniLimit = USABLE_PDF;
         function __secOrder(sid) {
           for (var i = 0; i < list.length; i++) { if (list[i] && list[i].id === sid) return i; }
           return 9999;

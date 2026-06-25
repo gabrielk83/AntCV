@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.879-pos-aware-clear';
+  var VERSION = '1.50.881-absolute-paging';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -151,6 +151,12 @@
   // per-column N-page path (Phase B) can ship even if the coordinator is disabled.
   // Console-tunable: AntcvAutoPagebreak.config({ SIDEBAR_UNIFIED: false }).
   var SIDEBAR_UNIFIED = true;
+  // CUMULATIVE-ABSOLUTE-PAGE-001 (owner 2026-06-25): page sidebar items by ABSOLUTE
+  // offset from the column top (floor(offset/limit)+1) in the greedy multi-page walk,
+  // so a section that sits on page 3 is tagged page 3 — not "page 2". Fixes late sidebar
+  // sections (regulatory/languages/interests/accessibility) all stacking on page 2 and
+  // cascading the export to extra pages. Live kill: AntcvAutoPagebreak.config({ ABSOLUTE_PAGING:false }).
+  var ABSOLUTE_PAGING = true;
 
   // ============================================================
   // SIDEBAR-SHRINK-RECLAIM-001 (owner 2026-06-11)
@@ -279,12 +285,17 @@
   // split). Mirrors the EXPERIENCE role greedy loop.
   function allOverflowPages(sectionEl, sec, columnTop, limit, scale, firstBr) {
     var out = {};
-    if (firstBr >= 1) out[String(firstBr)] = 2;   // seed with the proven page-2 break
     var rows = sectionEl.querySelectorAll('[' + ITEM_PATH_ATTR + '^="items."]');
-    if (!rows.length) return out;
+    if (!rows.length) { if (firstBr >= 1) out[String(firstBr)] = 2; return out; }
     var starts = groupStarts(sec);
-    var pageTop = columnTop;     // viewport-top of the current page being filled
-    var curPage = 1;
+    // ABSOLUTE path (CUMULATIVE-ABSOLUTE-PAGE-001): the page an item lands on = its
+    // offset from the column top in whole `limit` strides. Captures the empty space ABOVE
+    // a section, so a section starting on page 3 yields page 3 (the old per-section walk
+    // collapsed that gap and tagged everything "page 2"). LEGACY path (ABSOLUTE_PAGING off)
+    // is the original single-increment walk, preserved for a clean live revert.
+    var pageTop = columnTop;     // legacy: viewport-top of the current page being filled
+    var curPage = 1;             // legacy page counter
+    var lastAbs = 1;             // absolute: highest page already recorded
     for (var i = 0; i < rows.length; i++) {
       var el = rows[i];
       if (!visible(el)) continue;
@@ -292,27 +303,39 @@
       if (!m) continue;
       var rawIdx = Number(m[1]);
       var rc = el.getBoundingClientRect();
-      // Overflow if this item's bottom crosses the current page line AND it is
-      // not the first block on the page (an item taller than a page can't move).
-      if ((rc.bottom - pageTop) > limit && (rc.top - pageTop) > 1) {
-        curPage++;
-        pageTop = rc.top;        // the new page begins at this item's top
-        // Snap the break UP to a group start (keep groups whole), with the same
-        // fallbacks the single-break path uses.
+      var crossed, pageForBreak;
+      if (ABSOLUTE_PAGING) {
+        pageForBreak = Math.floor((rc.top - columnTop) / limit) + 1;   // 1-based absolute page
+        crossed = pageForBreak > lastAbs;
+      } else {
+        // Overflow if this item's bottom crosses the current page line AND it is
+        // not the first block on the page (an item taller than a page can't move).
+        crossed = (rc.bottom - pageTop) > limit && (rc.top - pageTop) > 1;
+        pageForBreak = curPage + 1;
+      }
+      if (crossed) {
+        if (ABSOLUTE_PAGING) { lastAbs = pageForBreak; } else { curPage++; pageTop = rc.top; }
+        // Snap the break UP to a group start (keep groups whole).
         var snapped = snapToGroup(starts, rawIdx);
         if (snapped < 1) snapped = rawIdx;
         if (snapped >= 1 && snapped < rawIdx) {
           var snapEl = sectionEl.querySelector('[' + ITEM_PATH_ATTR + '="items.' + snapped + '"]');
           if (snapEl && visible(snapEl)) {
-            var snapBottom = snapEl.getBoundingClientRect().bottom - columnTop;
-            if ((limit - snapBottom) > (SNAP_GAP_MAX * scale)) snapped = rawIdx;
+            var __sr = snapEl.getBoundingClientRect();
+            var snapBottomRel = __sr.bottom - columnTop;
+            // gap = empty space left below the snapped item on ITS page (absolute) /
+            // below the line (legacy). If snapping wastes > SNAP_GAP_MAX, cut at raw.
+            var snapPageLine = ABSOLUTE_PAGING
+              ? (Math.floor((__sr.top - columnTop) / limit) + 1) * limit
+              : limit;
+            if ((snapPageLine - snapBottomRel) > (SNAP_GAP_MAX * scale)) snapped = rawIdx;
           }
         }
-        // Record the FIRST item of this page only (don't overwrite page 2's
-        // already-snapped seed if the greedy walk lands on the same boundary).
-        if (!out[String(snapped)]) out[String(snapped)] = curPage;
+        // Record the FIRST item of this page only.
+        if (!out[String(snapped)]) out[String(snapped)] = pageForBreak;
       }
     }
+    if (!Object.keys(out).length && firstBr >= 1) out[String(firstBr)] = 2;
     return out;
   }
 
@@ -1284,7 +1307,7 @@
     //   AntcvAutoPagebreak.config({ HYST_STABLE:80 })  // looser stable band
     config: function (o) {
       try {
-        if (!o) return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE, SIDEBAR_UNIFIED: SIDEBAR_UNIFIED };
+        if (!o) return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE, SIDEBAR_UNIFIED: SIDEBAR_UNIFIED, ABSOLUTE_PAGING: ABSOLUTE_PAGING };
         if (typeof o.ONE_PASS === 'boolean') ONE_PASS = o.ONE_PASS;
         if (typeof o.HYST_STABLE === 'number') HYST_STABLE = o.HYST_STABLE;
         if (typeof o.HYST_TIGHT === 'number') HYST_TIGHT = o.HYST_TIGHT;
@@ -1293,8 +1316,9 @@
         if (typeof o.SIDEBAR_PREVIEW_INFLATE === 'number' && o.SIDEBAR_PREVIEW_INFLATE >= 1 && o.SIDEBAR_PREVIEW_INFLATE <= 2) SIDEBAR_PREVIEW_INFLATE = o.SIDEBAR_PREVIEW_INFLATE;
         if (typeof o.SIDEBAR_NPAGE === 'boolean') SIDEBAR_NPAGE = o.SIDEBAR_NPAGE;
         if (typeof o.SIDEBAR_UNIFIED === 'boolean') SIDEBAR_UNIFIED = o.SIDEBAR_UNIFIED;
+        if (typeof o.ABSOLUTE_PAGING === 'boolean') ABSOLUTE_PAGING = o.ABSOLUTE_PAGING;
         lastSourceFp = null; schedule();
-        return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE, SIDEBAR_UNIFIED: SIDEBAR_UNIFIED };
+        return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE, SIDEBAR_UNIFIED: SIDEBAR_UNIFIED, ABSOLUTE_PAGING: ABSOLUTE_PAGING };
       } catch (_) { return null; }
     },
     // Manual reset of auto breaks (e.g. from console) if a stale break

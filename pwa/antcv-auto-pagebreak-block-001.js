@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.886-det-coord-cols';
+  var VERSION = '1.50.888-table-keepwhole';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -725,6 +725,25 @@
               bottom: (__qc.bottom - colTop) / scale,
             });
           }
+          // DET-COORD-003 (owner 2026-06-25): TABLE sections (CORE COMPETENCIES) carry real
+          // height but had NO row-path / role blocks, so the coordinator under-counted the main
+          // column by the table's height and left an extra role on page 1 (System Architect
+          // stuck there). Record each table's tbody rows as kind:'table' — their HEIGHT counts
+          // in the cumulative flow, but __mapFromPaged never emits a break on them (tables keep
+          // their own row-split path), so they push the roles down to the right page.
+          var __tblRows = col.querySelectorAll('table tbody tr');
+          for (var __wi = 0; __wi < __tblRows.length; __wi++) {
+            var __wEl = __tblRows[__wi];
+            if (!visible(__wEl)) continue;
+            var __wSidEl = __wEl.closest ? __wEl.closest('[data-sid]') : null;
+            var __wc = __wEl.getBoundingClientRect();
+            __uniBucket.push({
+              sid: __wSidEl ? __wSidEl.getAttribute('data-sid') : null,
+              kind: 'table', key: 'tr' + __wi,
+              top: (__wc.top - colTop) / scale,
+              bottom: (__wc.bottom - colTop) / scale,
+            });
+          }
         } catch (_) {}
       }
 
@@ -817,7 +836,14 @@
             if (sa !== sb) return sa - sb;
             return ((parseInt(a.key, 10) || 0) - (parseInt(b.key, 10) || 0));
           });
-          var used = 0, page = 1, out = [];
+          // KEEP-WHOLE (DET-COORD-003): per-section total height. A section that fits within a
+          // single page is never SPLIT across pages — if it can't fit the space left on the
+          // current page it starts whole on the next one (so CERTIFICATES, CORE COMPETENCIES,
+          // profile move as a unit, not item-by-item). Big sections (the 12-role experience, a
+          // page-plus regulatory) exceed a page, so keep-whole is skipped and they flow per block.
+          var secTot = {};
+          ordered.forEach(function (b) { secTot[b.sid] = (secTot[b.sid] || 0) + Math.max(0, b.bottom - b.top); });
+          var used = 0, page = 1, out = [], curSid = null;
           for (var i = 0; i < ordered.length; i++) {
             var b = ordered[i];
             var h = Math.max(0, b.bottom - b.top);
@@ -826,6 +852,11 @@
             // budget so the columns don't over-fill page 1 (which is why certs + the later
             // roles belonged on page 2). A block taller than a page can't move; it stays.
             var cap = (page === 1) ? Math.max(300, __uniLimit - PAGE1_BAND) : __uniLimit;
+            if (b.sid !== curSid) {
+              curSid = b.sid;
+              var st = secTot[b.sid] || 0;
+              if (used > 0 && st <= __uniLimit && (used + st) > cap) { page++; used = 0; cap = __uniLimit; }
+            }
             if (used > 0 && (used + h) > cap) { page++; used = 0; }
             used += h;
             out.push({ sid: b.sid, kind: b.kind, key: b.key, page: page });

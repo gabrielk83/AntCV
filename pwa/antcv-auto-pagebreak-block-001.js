@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.881-absolute-paging';
+  var VERSION = '1.50.884-abs-paging-off';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -155,8 +155,13 @@
   // offset from the column top (floor(offset/limit)+1) in the greedy multi-page walk,
   // so a section that sits on page 3 is tagged page 3 — not "page 2". Fixes late sidebar
   // sections (regulatory/languages/interests/accessibility) all stacking on page 2 and
-  // cascading the export to extra pages. Live kill: AntcvAutoPagebreak.config({ ABSOLUTE_PAGING:false }).
-  var ABSOLUTE_PAGING = true;
+  // cascading the export to extra pages. Live toggle: AntcvAutoPagebreak.config({ ABSOLUTE_PAGING:true }).
+  // DEFAULT OFF (owner 2026-06-25 "a lot of text dancing"): on the page-row-split preview the
+  // absolute offset is relative to EACH ROW's top, not the document, so re-measures shifted the
+  // break pages and INCREASED the dancing — and it never produced the page-3 breaks intended
+  // (autoPages stayed all ->2). The real cross-page distribution needs a height-based
+  // deterministic coordinator (next). Off = the stable legacy single-increment walk.
+  var ABSOLUTE_PAGING = false;
 
   // ============================================================
   // SIDEBAR-SHRINK-RECLAIM-001 (owner 2026-06-11)

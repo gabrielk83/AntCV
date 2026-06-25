@@ -16,12 +16,14 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.877';
+  var VERSION = '1.50.909';
   if (window.__antcvCoreCompCompress === VERSION) return;
   window.__antcvCoreCompCompress = VERSION;
 
-  var CAP_CL = 89;    // cover letter — WHAT I BRING (owner 2026-06-25: each item UNDER 90 chars; was 105)
-  var CAP_CV = 60;    // CV — CORE COMPETENCIES (much tighter, owner: "CV is much much tighter")
+  var CAP_CL = 89;        // cover letter — WHAT I BRING (owner 2026-06-25: each item UNDER 90 chars)
+  var CAP_CV = 125;       // CV — CORE COMPETENCIES Strategic Expertise (owner 2026-06-25: <=125; was 60)
+  var CAP_FOCUS = 25;     // Focus Area column label (owner 2026-06-25: <=25 chars)
+  var CAP_HWIC = 125;     // CL — HOW I WOULD CONTRIBUTE intro (owner 2026-06-25: <=125 chars)
   function capFor(s) {
     return (s.id === 'bring' || /what i bring/i.test(String(s.title || ''))) ? CAP_CL : CAP_CV;
   }
@@ -74,11 +76,15 @@
       ['cv', 'cl'].forEach(function (doc) {
         if (!Array.isArray(secs[doc])) return;
         secs[doc].forEach(function (s) {
+          // HOW I WOULD CONTRIBUTE intro (CL rich_block): cap items[0].t to CAP_HWIC.
+          if ((s && (s.id === 'contribute' || /how i would contribute/i.test(String(s.title || '')))) && Array.isArray(s.items) && s.items[0] && typeof s.items[0] === 'object' && typeof s.items[0].t === 'string') {
+            var hv = capWords(s.items[0].t, CAP_HWIC); if (hv !== s.items[0].t) { s.items[0].t = hv; changed = true; }
+          }
           if (!isTbl(s)) return;
           s.rows.forEach(function (row, i) {
             if (i === 0 || !Array.isArray(row)) return;     // skip header row
-            // Focus Area: abbreviate (Docs/Reqs/Mgmt) then expand any banned "Coord." → full word.
-            if (typeof row[0] === 'string') { var fa = expand(abbreviate(row[0])); if (fa !== row[0]) { row[0] = fa; changed = true; } }
+            // Focus Area: abbreviate (Docs/Reqs/Mgmt), expand any banned "Coord." → full word, cap to CAP_FOCUS.
+            if (typeof row[0] === 'string') { var fa = capWords(expand(abbreviate(row[0])), CAP_FOCUS); if (fa !== row[0]) { row[0] = fa; changed = true; } }
             // Strategic Expertise: expand banned "Coord.", then cap to the per-doc width.
             if (typeof row[1] === 'string') { var se = capWords(expand(row[1]), capFor(s)); if (se !== row[1]) { row[1] = se; changed = true; } }
           });

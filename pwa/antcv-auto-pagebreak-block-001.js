@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.895-sidebar-inflate-grpwhole';
+  var VERSION = '1.50.897-inflate-116';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -124,7 +124,9 @@
   // taller PDF). 1.32 ≈ pulls the break up ~2-3 subsubsections so Languages→page 2 like
   // the PDF. Owner-tune live: AntcvAutoPagebreak.config({ SIDEBAR_PREVIEW_INFLATE: N }) —
   // higher = breaks earlier (more sidebar to page 2); 1.0 disables the force entirely.
-  var SIDEBAR_PREVIEW_INFLATE = 1.20;
+  // 1.50.897: 1.20 over-inflated PAGE 1 — it split TOOLS & METHODS onto page 2 when it fits
+  // page 1 (owner 2026-06-25). 1.16 keeps TOOLS whole on page 1 while still correcting pages 2+.
+  var SIDEBAR_PREVIEW_INFLATE = 1.16;
   var ITEM_PATH_ATTR = 'data-antcv-row-path';
   // SIDEBAR-SNAP-GAP-001 (owner 2026-06-11): max page-1 space (UNSCALED px) a
   // group-snap may waste before we abandon the snap and break at the raw overflow

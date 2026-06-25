@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.889-preview-eq-export';
+  var VERSION = '1.50.891-sidebar-band';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -166,6 +166,12 @@
   // above both columns, so its usable budget is smaller than pages 2+. Owner-tunable live:
   // AntcvAutoPagebreak.config({ PAGE1_BAND:N }). Higher = lighter page 1 (more to page 2).
   var PAGE1_BAND = 200;
+  // DET-COORD-004 (owner 2026-06-25 "certs back on page 1"): the SIDEBAR's page 1 is shorter
+  // than the main's because the PHOTO (~150-170px) sits at the sidebar/band top, so the sidebar
+  // needs a BIGGER page-1 deduction than the main — otherwise certs fits page 1 in the coordinator
+  // while it overflows in the real export. Separate knob (default = main band + a photo reserve).
+  // Owner-tunable live: AntcvAutoPagebreak.config({ SIDEBAR_PAGE1_BAND:N }).
+  var SIDEBAR_PAGE1_BAND = 360;
 
   // ============================================================
   // SIDEBAR-SHRINK-RECLAIM-001 (owner 2026-06-11)
@@ -835,7 +841,10 @@
           return 9999;
         }
         // Paginate a column's blocks by CUMULATIVE INTRINSIC HEIGHT, in DATA order.
-        function __uniPaginate(blocks) {
+        // band1 = the page-1 budget deduction for THIS column (the sidebar deducts more than
+        // the main because the PHOTO sits at the sidebar's top — DET-COORD-004).
+        function __uniPaginate(blocks, band1) {
+          if (band1 == null) band1 = PAGE1_BAND;
           var ordered = blocks.slice().sort(function (a, b) {
             var sa = __secOrder(a.sid), sb = __secOrder(b.sid);
             if (sa !== sb) return sa - sb;
@@ -856,7 +865,7 @@
             // columns (worker: page-1 body ~2978 DXA less). Deduct PAGE1_BAND from page 1's
             // budget so the columns don't over-fill page 1 (which is why certs + the later
             // roles belonged on page 2). A block taller than a page can't move; it stays.
-            var cap = (page === 1) ? Math.max(300, __uniLimit - PAGE1_BAND) : __uniLimit;
+            var cap = (page === 1) ? Math.max(300, __uniLimit - band1) : __uniLimit;
             if (b.sid !== curSid) {
               curSid = b.sid;
               var st = secTot[b.sid] || 0;
@@ -888,8 +897,8 @@
         // tools/certs to page 3). The main column carries its ITEM blocks (profile/publications)
         // and its experience ROLE blocks together in document order (one flow); the sidebar is
         // its own flow. Extract item breaks per column + role breaks from the main flow.
-        var __sPaged = __uniPaginate(__uniBlocks.sidebar);
-        var __mPaged = __uniPaginate(__uniBlocks.main);
+        var __sPaged = __uniPaginate(__uniBlocks.sidebar, SIDEBAR_PAGE1_BAND);
+        var __mPaged = __uniPaginate(__uniBlocks.main, PAGE1_BAND);
         var __reSidebar = __mapFromPaged(__sPaged, false);
         var __reMainItems = __mapFromPaged(__mPaged, false);
         var __reRole = __mapFromPaged(__mPaged, true);
@@ -1305,7 +1314,7 @@
     //   AntcvAutoPagebreak.config({ HYST_STABLE:80 })  // looser stable band
     config: function (o) {
       try {
-        if (!o) return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE, SIDEBAR_UNIFIED: SIDEBAR_UNIFIED, ABSOLUTE_PAGING: ABSOLUTE_PAGING, PAGE1_BAND: PAGE1_BAND };
+        if (!o) return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE, SIDEBAR_UNIFIED: SIDEBAR_UNIFIED, ABSOLUTE_PAGING: ABSOLUTE_PAGING, PAGE1_BAND: PAGE1_BAND, SIDEBAR_PAGE1_BAND: SIDEBAR_PAGE1_BAND };
         if (typeof o.ONE_PASS === 'boolean') ONE_PASS = o.ONE_PASS;
         if (typeof o.HYST_STABLE === 'number') HYST_STABLE = o.HYST_STABLE;
         if (typeof o.HYST_TIGHT === 'number') HYST_TIGHT = o.HYST_TIGHT;
@@ -1316,8 +1325,9 @@
         if (typeof o.SIDEBAR_UNIFIED === 'boolean') SIDEBAR_UNIFIED = o.SIDEBAR_UNIFIED;
         if (typeof o.ABSOLUTE_PAGING === 'boolean') ABSOLUTE_PAGING = o.ABSOLUTE_PAGING;
         if (typeof o.PAGE1_BAND === 'number') PAGE1_BAND = o.PAGE1_BAND;
+        if (typeof o.SIDEBAR_PAGE1_BAND === 'number') SIDEBAR_PAGE1_BAND = o.SIDEBAR_PAGE1_BAND;
         lastSourceFp = null; schedule();
-        return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE, SIDEBAR_UNIFIED: SIDEBAR_UNIFIED, ABSOLUTE_PAGING: ABSOLUTE_PAGING, PAGE1_BAND: PAGE1_BAND };
+        return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE, SIDEBAR_UNIFIED: SIDEBAR_UNIFIED, ABSOLUTE_PAGING: ABSOLUTE_PAGING, PAGE1_BAND: PAGE1_BAND, SIDEBAR_PAGE1_BAND: SIDEBAR_PAGE1_BAND };
       } catch (_) { return null; }
     },
     // Manual reset of auto breaks (e.g. from console) if a stale break

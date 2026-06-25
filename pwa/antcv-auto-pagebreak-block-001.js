@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.897-inflate-116';
+  var VERSION = '1.50.898-page1-raw';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -902,23 +902,28 @@
             for (var j = 0; j < st.length; j++) { if (st[j] <= k) g = st[j]; else break; }
             return sid + '#' + g;
           }
+          // Heights stay RAW. The export inflation is applied by DEFLATING the pages-2+ budget
+          // (__nLimit = __uniLimit / inflate), NOT by inflating heights — so PAGE 1 keeps its
+          // original raw budget and stays stable (inflating page 1 wrongly split TOOLS & METHODS
+          // off it — owner 2026-06-25). Only pages 2+ get the tighter export-equivalent budget.
+          var __nLimit = (inflate > 1) ? (__uniLimit / inflate) : __uniLimit;
           var grpTot = {};
-          ordered.forEach(function (b) { var gk = __groupOf(b.sid, b.key); grpTot[gk] = (grpTot[gk] || 0) + Math.max(0, b.bottom - b.top) * inflate; });
+          ordered.forEach(function (b) { var gk = __groupOf(b.sid, b.key); grpTot[gk] = (grpTot[gk] || 0) + Math.max(0, b.bottom - b.top); });
           var used = 0, page = 1, out = [], curGroup = null;
           for (var i = 0; i < ordered.length; i++) {
             var b = ordered[i];
-            var h = Math.max(0, b.bottom - b.top) * inflate;
+            var h = Math.max(0, b.bottom - b.top);
             // PAGE 1 is SHORTER than pages 2+ — the candidate header band sits above both
             // columns (worker: page-1 body ~2978 DXA less). Deduct PAGE1_BAND from page 1's
             // budget so the columns don't over-fill page 1 (which is why certs + the later
             // roles belonged on page 2). A block taller than a page can't move; it stays.
-            var cap = (page === 1) ? Math.max(300, __uniLimit - band1) : __uniLimit;
+            var cap = (page === 1) ? Math.max(300, __uniLimit - band1) : __nLimit;
             var gk = __groupOf(b.sid, b.key);
             if (gk !== curGroup) {
               curGroup = gk;
               var gt = grpTot[gk] || 0;
               // keep each GROUP whole: if it won't fit the current page, start it on the next.
-              if (used > 0 && gt <= __uniLimit * keepWholeFrac && (used + gt) > cap) { page++; used = 0; cap = __uniLimit; }
+              if (used > 0 && gt <= __nLimit * keepWholeFrac && (used + gt) > cap) { page++; used = 0; cap = __nLimit; }
             }
             if (used > 0 && (used + h) > cap) { page++; used = 0; }
             used += h;

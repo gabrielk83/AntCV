@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.913-tools-dbg';
+  var VERSION = '1.50.913-sidebar-stable';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -980,7 +980,12 @@
         // its own flow. Extract item breaks per column + role breaks from the main flow.
         // AUTO sidebar band = main band + the measured photo reserve (per generation), unless
         // pinned by a numeric SIDEBAR_PAGE1_BAND.
-        var __sbBand1 = (typeof SIDEBAR_PAGE1_BAND === 'number') ? SIDEBAR_PAGE1_BAND : (PAGE1_BAND + __photoReserve());
+        // SIDEBAR-BAND-NO-PHOTO-001 (owner 2026-06-25 "tools 2nd group pushed off page 1 for no
+        // reason"): the auto band added the photo height (PAGE1_BAND + photo = ~356), shrinking the
+        // page-1 sidebar budget to ~568 so TOOLS (~615) overflowed. The navy sidebar starts at the
+        // page top (it does NOT lose the candidate header band the way the main does), so the band
+        // should be ~PAGE1_BAND alone (budget ~724): TOOLS fits page 1, certs still flow to page 2.
+        var __sbBand1 = (typeof SIDEBAR_PAGE1_BAND === 'number') ? SIDEBAR_PAGE1_BAND : PAGE1_BAND;
         var __sPaged = __uniPaginate(__uniBlocks.sidebar, __sbBand1, SIDEBAR_PREVIEW_INFLATE, KEEP_WHOLE_FRAC);
         var __mPaged = __uniPaginate(__uniBlocks.main, PAGE1_BAND, 1, 1, __uniLimit + MAIN_PDF_LINE_BONUS);
         // FORCE-LAST-GRP post-process (deterministic). For a BIG multi-group SIDEBAR section the
@@ -1047,11 +1052,6 @@
         __applyUnified(__reSidebar);
         __applyUnified(__reMainItems);
         __applyUnified(__reRole);
-        try { window.__antcvDbg2 = window.__antcvDbg2 || {}; window.__antcvDbg2._reSidebarReg = JSON.stringify(__reSidebar.regulatory || null); window.__antcvDbg2._mapReg = JSON.stringify(map.regulatory || null);
-          window.__antcvDbg2._reSidebarTools = JSON.stringify(__reSidebar.tools || null);
-          window.__antcvDbg2._mapToolsApply = JSON.stringify(map.tools || null);
-          window.__antcvDbg2._sPagedTools = JSON.stringify(__sPaged.filter(function (b) { return b.sid === 'tools'; }).map(function (b) { return b.key + '@' + b.page; }));
-        } catch (_) {}
         var __reItem = Object.assign({}, __reSidebar, __reMainItems);   // for RECONCILE below
 
         // RECONCILE: a coordinator-measured ITEM section that a per-column pass broke but the
@@ -1070,7 +1070,20 @@
           delete map[__ms];
           delete __breakBornAt[bornKey(__ms)];
         }
-        try { window.__antcvDbg2._mapToolsFinal = JSON.stringify(map.tools || null); window.__antcvDbg2._toolsInUniSids = !!__uniSids.tools; } catch (_) {}
+        // SIDEBAR-AUTHORITATIVE-CLEAR-001 (owner 2026-06-25 "tools keeps being pushed for no
+        // reason"): the deterministic sidebar pass is the SOURCE OF TRUTH for sidebar ITEM-
+        // sections. Clear any break it did NOT produce — a stale/legacy value the RECONCILE above
+        // can miss (it only covers sections whose item-blocks were collected; a collection gap
+        // left tools' stale "3->2" in place, band-insensitively). Regulatory's post-process break
+        // and languages/interests/accessibility breaks are in __reSidebar, so they are KEPT.
+        (list || []).forEach(function (sec) {
+          if (!sec || sec.loc !== 'sidebar') return;
+          if (sec.type === 'table' || sec.type === 'experience') return;
+          var __rs = __reSidebar[sec.id];
+          if ((!__rs || !Object.keys(__rs).length) && map[sec.id]) {
+            delete map[sec.id]; delete __breakBornAt[bornKey(sec.id)];
+          }
+        });
       } catch (_) {}
     }
 

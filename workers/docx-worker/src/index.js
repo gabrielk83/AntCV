@@ -26234,19 +26234,25 @@ function renderRichBlock(s, ctx, isSidebar) {
   // section-level pageBreakPara (_antcvFirstItemPageMoved), swallow the FIRST per-item break so
   // we don't double-break or stamp a spurious "(CONT.)" — the original header moved with it.
   let __wholeMoveSkip = !!s._antcvFirstItemPageMoved;
+  // RICH-BLOCK-GROUP-ALIGN-DEFAULT-001 (owner 2026-06-25): a GROUPED rich_block (TOOLS & METHODS,
+  // REGULATORY CONTEXT) defaults its GROUP-NAME rows to CENTER and its CONTENT rows to LEFT; a
+  // non-grouped rich_block keeps JUSTIFY. Explicit per-row / __group__ CJLR overrides still win.
+  // Mirrors the preview's __rowAlign (app.src.js RICH-BLOCK-GROUP-ALIGN-DEFAULT-001).
+  const __hasGrp = items.some((it) => it && typeof it === "object" && it.grp);
   items.forEach((it, i) => {
     const row = it && typeof it === "object" ? it : { t: String(it || "") };
-    const align = paraAlignPath(s, "items." + i + ".t") ?? paraAlignPath(s, "items." + i) ?? groupCjlr ?? AlignmentType.JUSTIFIED;
+    const align = paraAlignPath(s, "items." + i + ".t") ?? paraAlignPath(s, "items." + i) ?? groupCjlr ?? (__hasGrp ? AlignmentType.LEFT : AlignmentType.JUSTIFIED);
     // RICH-BLOCK-GROUP-001: a grp row is a bold sub-heading (like labeled_list).
     if (row.grp) {
       const txt = String(row.t || "").trim();
       if (!txt) return;
+      const galign = paraAlignPath(s, "items." + i + ".t") ?? paraAlignPath(s, "items." + i) ?? groupCjlr ?? AlignmentType.CENTER;
       if (rowPage(i) >= 2) { if (__wholeMoveSkip) { __wholeMoveSkip = false; } else out.push(pbBreakPara()); }
       out.push(new Paragraph({
         spacing: { before: 120, after: 40 },
         keepNext: true,
         keepLines: true,
-        alignment: align,
+        alignment: galign,
         shading: isSidebar ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" } : void 0,
         children: [new TextRun({
           text: txt,
@@ -27528,7 +27534,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   the anchor's spacing-after from (px/2+14) to (px/2-12) so the first sidebar
 //   section sits just under the medallion (~0.27in higher; the full 0.6in would
 //   overlap the photo at the default diameter).
-var VERSION = "1.14.85-sidebar-pack";
+var VERSION = "1.14.86-grp-align";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

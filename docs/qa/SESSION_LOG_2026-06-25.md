@@ -66,6 +66,19 @@ pagination, main-column pagination, the AI notice, content length caps, and edit
   suite 483/483. *Owner: re-run the probe — `events dispatched` for `antcv:sections-updated` should
   drop from thousands to a handful, and the Settings/HWIC/WIB flicker should stop.* This very likely
   also resolves [[boot-storm-gate-freeze]]'s residual "core app.src.js pagination storm" symptom.
+- **STORM-IDEMPOTENT-002 (1.50.922)** `[storm part 2 — owner-verify]` — re-probe after 921 confirmed
+  the fix loaded + worked (`sections-updated` dropped **thousands → 11 in 5s**), but exposed a 3-way
+  tug-of-war STILL writing `sections` 4× each in 5s: `app.js` (React autosave), 415, and
+  `antcv-final-role-condense.js`. The React `antcv:sections-updated` handler (app.src.js ~15800) called
+  `ao()` (setState) on EVERY dispatch — even identical content — re-rendering + re-scheduling the 500ms
+  autosave, which the normalisers react to again. Same non-idempotent bug as 415, on the React side
+  (the `app.js` writer). Fix: skip the `ao()` setState when the external write equals the last applied
+  (`window.__antcvLastSecApplied` string compare). app.src.js + minified app.js mirror; boot-smoke OK;
+  483/483. *Owner: re-probe — `app.js` should drop out of the top `sections` writers and the page-3
+  transition swing should settle.* RESIDUAL if it persists: the genuine full↔capped CONTENT swing
+  (final-role-condense caps the volunteer bullets; React autosaves the full app-record bullets) — that
+  needs the cap baked into `ro`/generation, not fought at restore. Page-3 empty-space jump (owner: pages
+  1/2 a little, page 3 most) is this content swing flipping the paginator 4↔2 pages.
 
 
 - **AI-NOTICE-MISSING-PREVIEW-001 (1.50.918)** — the 914 re-parent into `.antcv-document-sidebar`

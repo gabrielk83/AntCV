@@ -15810,7 +15810,17 @@
                       ? { ...e, items: Se(e.items, 12) }
                       : e,
                   );
-                (ao({ cv: n(t.cv), cl: n(t.cl) }),
+                const __nextSec = { cv: n(t.cv), cl: n(t.cl) };
+                // STORM-IDEMPOTENT-002 (owner 2026-06-26 live probe): only push to React state when the
+                // external write ACTUALLY differs from what we last applied. The normalisers re-dispatch
+                // antcv:sections-updated with IDENTICAL content; calling ao() (setState) on every one
+                // re-renders + re-schedules the 500ms autosave (the app.js "sections" writer), which the
+                // normalisers react to again — the sections-updated storm that jumps the editor and the
+                // preview page-transition spacing. Skip the no-op refresh; a real external change applies.
+                const __sig = JSON.stringify(__nextSec);
+                if (__sig === window.__antcvLastSecApplied) return;
+                window.__antcvLastSecApplied = __sig;
+                (ao(__nextSec),
                   console.info(
                     "[antcv] sections refreshed from external write",
                     (e && e.detail) || {},

@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.898-page1-raw';
+  var VERSION = '1.50.899-force-lastgrp';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -185,6 +185,13 @@
   // column keeps frac=1 (unchanged — owner: "the problem is with the sidebar not main").
   // Owner-tunable live: AntcvAutoPagebreak.config({ KEEP_WHOLE_FRAC:N }) (0..1).
   var KEEP_WHOLE_FRAC = 0.62;
+  // FORCE the LAST group of a BIG grouped sidebar section (e.g. REGULATORY CONTEXT's Environmental
+  // group) onto the next page, even if the coordinator thinks it fits — because the export renders
+  // the sidebar taller and overflows the last group mid-item with a wrong fresh header (owner
+  // 2026-06-25, repeatedly: "the last group should be in page 3"). Only fires for multi-group
+  // sections taller than this fraction of a page, and only past page 1. 0 disables.
+  // Owner-tunable live: AntcvAutoPagebreak.config({ FORCE_LAST_GRP_FRAC:N }).
+  var FORCE_LAST_GRP_FRAC = 0.5;
   // Measure the profile photo's height (the reserve the sidebar's page 1 loses to it). 0 when
   // there is no photo (then the sidebar band falls back to PAGE1_BAND).
   function __photoReserve() {
@@ -737,6 +744,10 @@
             __uniBucket.push({
               sid: __rSidEl ? __rSidEl.getAttribute('data-sid') : null,
               kind: 'item', key: __rm[1],
+              // GROUP HEADER signal in DOM-key space (data grp indices don't match DOM row-path
+              // keys). rich_block renders a {grp} header as a bold DIV with no "CODE:" colon;
+              // item rows are <p> "CODE: desc". This marks where a group starts for keep-whole.
+              grpHead: (__rEl.tagName === 'DIV' && !/:/.test((__rEl.textContent || '').slice(0, 40))),
               top: (__rc.top - colTop) / scale,
               bottom: (__rc.bottom - colTop) / scale,
             });
@@ -889,12 +900,10 @@
           // BETWEEN its groups (each group intact), instead of whole-moving and leaving a short
           // page. Sections with no groups = one group = whole-section keep-whole (unchanged).
           var __grpStarts = {};
-          (list || []).forEach(function (sec) {
-            if (!sec || !Array.isArray(sec.items)) return;
-            var st = [];
-            sec.items.forEach(function (it, idx) { if (it && it.grp != null && it.grp !== '') st.push(idx); });
-            if (st.length) __grpStarts[sec.id] = st;
+          ordered.forEach(function (b) {
+            if (b.grpHead) { (__grpStarts[b.sid] = __grpStarts[b.sid] || []).push(parseInt(b.key, 10) || 0); }
           });
+          Object.keys(__grpStarts).forEach(function (k) { __grpStarts[k].sort(function (a, b) { return a - b; }); });
           function __groupOf(sid, key) {
             var st = __grpStarts[sid];
             if (!st || !st.length) return sid + '#0';
@@ -907,8 +916,8 @@
           // original raw budget and stays stable (inflating page 1 wrongly split TOOLS & METHODS
           // off it — owner 2026-06-25). Only pages 2+ get the tighter export-equivalent budget.
           var __nLimit = (inflate > 1) ? (__uniLimit / inflate) : __uniLimit;
-          var grpTot = {};
-          ordered.forEach(function (b) { var gk = __groupOf(b.sid, b.key); grpTot[gk] = (grpTot[gk] || 0) + Math.max(0, b.bottom - b.top); });
+          var grpTot = {}, secTot2 = {};
+          ordered.forEach(function (b) { var gk = __groupOf(b.sid, b.key); var hh = Math.max(0, b.bottom - b.top); grpTot[gk] = (grpTot[gk] || 0) + hh; secTot2[b.sid] = (secTot2[b.sid] || 0) + hh; });
           var used = 0, page = 1, out = [], curGroup = null;
           for (var i = 0; i < ordered.length; i++) {
             var b = ordered[i];
@@ -922,8 +931,16 @@
             if (gk !== curGroup) {
               curGroup = gk;
               var gt = grpTot[gk] || 0;
-              // keep each GROUP whole: if it won't fit the current page, start it on the next.
-              if (used > 0 && gt <= __nLimit * keepWholeFrac && (used + gt) > cap) { page++; used = 0; cap = __nLimit; }
+              var __st = __grpStarts[b.sid];
+              var __isLastGrp = __st && __st.length > 1 && (parseInt(b.key, 10) || 0) === __st[__st.length - 1];
+              var __bigSec = FORCE_LAST_GRP_FRAC > 0 && (secTot2[b.sid] || 0) > __nLimit * FORCE_LAST_GRP_FRAC;
+              if (used > 0 && page > 1 && __isLastGrp && __bigSec) {
+                // FORCE the last group of a big grouped section onto the next page (export overflows it).
+                page++; used = 0; cap = __nLimit;
+              } else if (used > 0 && gt <= __nLimit * keepWholeFrac && (used + gt) > cap) {
+                // keep each GROUP whole: if it won't fit the current page, start it on the next.
+                page++; used = 0; cap = __nLimit;
+              }
             }
             if (used > 0 && (used + h) > cap) { page++; used = 0; }
             used += h;
@@ -1371,7 +1388,7 @@
     //   AntcvAutoPagebreak.config({ HYST_STABLE:80 })  // looser stable band
     config: function (o) {
       try {
-        if (!o) return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE, SIDEBAR_UNIFIED: SIDEBAR_UNIFIED, ABSOLUTE_PAGING: ABSOLUTE_PAGING, PAGE1_BAND: PAGE1_BAND, SIDEBAR_PAGE1_BAND: SIDEBAR_PAGE1_BAND, KEEP_WHOLE_FRAC: KEEP_WHOLE_FRAC };
+        if (!o) return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE, SIDEBAR_UNIFIED: SIDEBAR_UNIFIED, ABSOLUTE_PAGING: ABSOLUTE_PAGING, PAGE1_BAND: PAGE1_BAND, SIDEBAR_PAGE1_BAND: SIDEBAR_PAGE1_BAND, KEEP_WHOLE_FRAC: KEEP_WHOLE_FRAC, FORCE_LAST_GRP_FRAC: FORCE_LAST_GRP_FRAC };
         if (typeof o.ONE_PASS === 'boolean') ONE_PASS = o.ONE_PASS;
         if (typeof o.HYST_STABLE === 'number') HYST_STABLE = o.HYST_STABLE;
         if (typeof o.HYST_TIGHT === 'number') HYST_TIGHT = o.HYST_TIGHT;
@@ -1384,8 +1401,9 @@
         if (typeof o.PAGE1_BAND === 'number') PAGE1_BAND = o.PAGE1_BAND;
         if (typeof o.SIDEBAR_PAGE1_BAND === 'number') SIDEBAR_PAGE1_BAND = o.SIDEBAR_PAGE1_BAND;
         if (typeof o.KEEP_WHOLE_FRAC === 'number' && o.KEEP_WHOLE_FRAC > 0 && o.KEEP_WHOLE_FRAC <= 1) KEEP_WHOLE_FRAC = o.KEEP_WHOLE_FRAC;
+        if (typeof o.FORCE_LAST_GRP_FRAC === 'number' && o.FORCE_LAST_GRP_FRAC >= 0 && o.FORCE_LAST_GRP_FRAC <= 1) FORCE_LAST_GRP_FRAC = o.FORCE_LAST_GRP_FRAC;
         lastSourceFp = null; schedule();
-        return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE, SIDEBAR_UNIFIED: SIDEBAR_UNIFIED, ABSOLUTE_PAGING: ABSOLUTE_PAGING, PAGE1_BAND: PAGE1_BAND, SIDEBAR_PAGE1_BAND: SIDEBAR_PAGE1_BAND, KEEP_WHOLE_FRAC: KEEP_WHOLE_FRAC };
+        return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE, SIDEBAR_UNIFIED: SIDEBAR_UNIFIED, ABSOLUTE_PAGING: ABSOLUTE_PAGING, PAGE1_BAND: PAGE1_BAND, SIDEBAR_PAGE1_BAND: SIDEBAR_PAGE1_BAND, KEEP_WHOLE_FRAC: KEEP_WHOLE_FRAC, FORCE_LAST_GRP_FRAC: FORCE_LAST_GRP_FRAC };
       } catch (_) { return null; }
     },
     // Manual reset of auto breaks (e.g. from console) if a stale break

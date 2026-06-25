@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.916-main-pagen';
+  var VERSION = '1.50.917-main-pagen-105';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -205,7 +205,7 @@
   // export page-2 main holds FEWER roles than USABLE_PDF suggests. Deduct this from the main's
   // pages-2+ line so a role that overflows the PDF page starts the next page (aligning the main's
   // page break with the sidebar's). Owner-tunable live: AntcvAutoPagebreak.config({ MAIN_PAGE_N_BAND:N }).
-  var MAIN_PAGE_N_BAND = 160;
+  var MAIN_PAGE_N_BAND = 105;
   // STICKY set for FORCE-LAST-GRP: once a section's last group is moved to the next page, KEEP it
   // moved on later recompute cycles even if its measured height drops below the threshold (moving
   // the group OUT of the page-2 column shrinks the measured total, which would otherwise un-move

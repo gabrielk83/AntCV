@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.892-dynamic-band';
+  var VERSION = '1.50.895-pagen-band';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -175,6 +175,14 @@
   // because the photo's footprint depends on the sidebar/main ratio + photo size/position and
   // differs every generation (owner 2026-06-25). A numeric value here pins it (manual override).
   var SIDEBAR_PAGE1_BAND = null;
+  // PAGES 2+ are SHORTER in the export than the preview measures: a tall page-2 row (e.g. 6
+  // experience roles) can exceed the physical page, so LibreOffice splits the whole two-column
+  // row and BOTH columns' tails slide messily onto the next page (owner 2026-06-25 "sliding
+  // problem like page 2"). Deduct PAGE_N_BAND from the pages-2+ budget so the coordinator moves
+  // the borderline block to the next page CLEANLY (with its own break + CONT) BEFORE the export
+  // overflows. Owner-tunable live: AntcvAutoPagebreak.config({ PAGE_N_BAND:N }). Higher = more
+  // breaks (lighter later pages, possibly more pages); 0 = old full-budget behaviour.
+  var PAGE_N_BAND = 140;
   // Measure the profile photo's height (the reserve the sidebar's page 1 loses to it). 0 when
   // there is no photo (then the sidebar band falls back to PAGE1_BAND).
   function __photoReserve() {
@@ -878,11 +886,12 @@
             // columns (worker: page-1 body ~2978 DXA less). Deduct PAGE1_BAND from page 1's
             // budget so the columns don't over-fill page 1 (which is why certs + the later
             // roles belonged on page 2). A block taller than a page can't move; it stays.
-            var cap = (page === 1) ? Math.max(300, __uniLimit - band1) : __uniLimit;
+            var __capN = Math.max(300, __uniLimit - PAGE_N_BAND);
+            var cap = (page === 1) ? Math.max(300, __uniLimit - band1) : __capN;
             if (b.sid !== curSid) {
               curSid = b.sid;
               var st = secTot[b.sid] || 0;
-              if (used > 0 && st <= __uniLimit && (used + st) > cap) { page++; used = 0; cap = __uniLimit; }
+              if (used > 0 && st <= __uniLimit && (used + st) > cap) { page++; used = 0; cap = __capN; }
             }
             if (used > 0 && (used + h) > cap) { page++; used = 0; }
             used += h;
@@ -1330,7 +1339,7 @@
     //   AntcvAutoPagebreak.config({ HYST_STABLE:80 })  // looser stable band
     config: function (o) {
       try {
-        if (!o) return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE, SIDEBAR_UNIFIED: SIDEBAR_UNIFIED, ABSOLUTE_PAGING: ABSOLUTE_PAGING, PAGE1_BAND: PAGE1_BAND, SIDEBAR_PAGE1_BAND: SIDEBAR_PAGE1_BAND };
+        if (!o) return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE, SIDEBAR_UNIFIED: SIDEBAR_UNIFIED, ABSOLUTE_PAGING: ABSOLUTE_PAGING, PAGE1_BAND: PAGE1_BAND, SIDEBAR_PAGE1_BAND: SIDEBAR_PAGE1_BAND, PAGE_N_BAND: PAGE_N_BAND };
         if (typeof o.ONE_PASS === 'boolean') ONE_PASS = o.ONE_PASS;
         if (typeof o.HYST_STABLE === 'number') HYST_STABLE = o.HYST_STABLE;
         if (typeof o.HYST_TIGHT === 'number') HYST_TIGHT = o.HYST_TIGHT;
@@ -1342,8 +1351,9 @@
         if (typeof o.ABSOLUTE_PAGING === 'boolean') ABSOLUTE_PAGING = o.ABSOLUTE_PAGING;
         if (typeof o.PAGE1_BAND === 'number') PAGE1_BAND = o.PAGE1_BAND;
         if (typeof o.SIDEBAR_PAGE1_BAND === 'number') SIDEBAR_PAGE1_BAND = o.SIDEBAR_PAGE1_BAND;
+        if (typeof o.PAGE_N_BAND === 'number') PAGE_N_BAND = o.PAGE_N_BAND;
         lastSourceFp = null; schedule();
-        return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE, SIDEBAR_UNIFIED: SIDEBAR_UNIFIED, ABSOLUTE_PAGING: ABSOLUTE_PAGING, PAGE1_BAND: PAGE1_BAND, SIDEBAR_PAGE1_BAND: SIDEBAR_PAGE1_BAND };
+        return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE, SIDEBAR_UNIFIED: SIDEBAR_UNIFIED, ABSOLUTE_PAGING: ABSOLUTE_PAGING, PAGE1_BAND: PAGE1_BAND, SIDEBAR_PAGE1_BAND: SIDEBAR_PAGE1_BAND, PAGE_N_BAND: PAGE_N_BAND };
       } catch (_) { return null; }
     },
     // Manual reset of auto breaks (e.g. from console) if a stale break

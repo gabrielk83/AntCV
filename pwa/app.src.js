@@ -35450,7 +35450,7 @@
                         React.createElement(
                           "div",
                           { style: { color: "rgba(255,255,255,0.45)", fontSize: 10, lineHeight: 1.45, marginBottom: 8 } },
-                          "Your Cloudflare access-relay worker (LLM + cloud sync). Masked when set — type or paste to replace; ✕ Clear to empty.",
+                          "Cloudflare access-relay worker for LLM + cloud sync. Masked when set; type/paste to replace or ✕ Clear.",
                         ),
                         (() => {
                           const cur = String(
@@ -35769,6 +35769,18 @@
                           },
                           "Task → Provider",
                         ),
+                        React.createElement(
+                          "div",
+                          {
+                            style: {
+                              color: "rgba(255,255,255,0.3)",
+                              fontSize: 9,
+                              lineHeight: 1.5,
+                              marginBottom: 6,
+                            },
+                          },
+                          "Hit Refresh for live scores. Override per task via the dropdown.",
+                        ),
                         Object.keys(Z)
                           .filter((e) => "default" !== e)
                           .map((e) => {
@@ -36067,7 +36079,6 @@
                             marginTop: 10,
                           },
                         },
-                        "Hit Refresh for live scores. Override per task via the dropdown.",
                         React.createElement(
                           "div",
                           {

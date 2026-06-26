@@ -26029,12 +26029,19 @@ function headingParagraph(title2, ctx, isSidebar, noRule) {
   const __gapKey = isSidebar ? "sidebarSectionGap" : ctx.doc === "cl" ? "bodySectionGap" : "mainSectionGap";
   const __gapPx = Number(style && style[__gapKey]);
   const __gapDelta = Number.isFinite(__gapPx) && __gapPx >= 0 && __gapPx <= 60 ? Math.round((__gapPx - 8) * 15) : 0;
+  // PROFILE-TOPGAP-001 (owner 2026-06-26): drop the before-space on the FIRST main CV heading (PROFILE)
+  // so it sits flush under the candidate header band — no gap. Subsequent main headings keep their gap.
+  let __isFirstMainHeading = false;
+  if (!isSidebar && ctx.doc !== "cl") {
+    if (!ctx.__mainHeadingSeen) { __isFirstMainHeading = true; ctx.__mainHeadingSeen = true; }
+  }
+  const __beforeDxa = __isFirstMainHeading ? 0 : Math.max(0, (isSidebar ? 40 : 80) + __gapDelta);
   return new Paragraph({
     // PREVIEW-PDF-SIDEBAR-GEOM-001 (owner 2026-06-10): the sidebar heading-to-
     // underline gap read much looser in the PDF than the preview. Tighten the
     // sidebar heading: smaller before-space and a smaller text-to-rule border
     // gap (space 2 vs 4 pt). Main headings keep the original spacing.
-    spacing: { before: Math.max(0, (isSidebar ? 40 : 80) + __gapDelta), after: isSidebar ? 30 : 40 },
+    spacing: { before: __beforeDxa, after: isSidebar ? 30 : 40 },
     // keepNext: heading must stay glued to whatever follows it, so a
     // heading never appears alone at the bottom of a page with its
     // content pushed to the next page. keepLines: never split the
@@ -27559,7 +27566,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   the anchor's spacing-after from (px/2+14) to (px/2-12) so the first sidebar
 //   section sits just under the medallion (~0.27in higher; the full 0.6in would
 //   overlap the photo at the default diameter).
-var VERSION = "1.14.87-md-hyperlinks";
+var VERSION = "1.14.88-profile-topgap";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

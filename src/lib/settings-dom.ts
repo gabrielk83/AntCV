@@ -82,6 +82,26 @@ export interface TabState {
     | 'analytics';
 }
 
+// STICKY-LEAK-003 (owner 2026-06-26): the Personal fallback in getTabState keys on "ADVANCED TONE" +
+// "BANNED WORDS" body text — but those strings are ALSO produced by the WritingStylePicker island
+// itself (it renders "Advanced tone"; dedup leaves "Banned words" buttons). Once the island mounted on
+// a genuine Personal visit, its OWN text kept isPersonalSubtab() true on Account/Layout too, so it
+// never unmounted (the writing-style + job-search-targeting panels the owner saw stuck on other tabs —
+// a self-perpetuating loop). Exclude every React-island / react-mount subtree from the fallback text so
+// an island can't be the signal that keeps itself mounted. Native section headers (app.js renders
+// ADVANCED TONE / BANNED WORDS on the real Personal panel) still drive the fallback correctly.
+function bodyTextExcludingIslands(root: Element): string {
+  try {
+    const clone = root.cloneNode(true) as Element;
+    clone
+      .querySelectorAll('[data-antcv-react-island],[data-antcv-react-mount]')
+      .forEach((n) => n.remove());
+    return norm(clone.textContent).slice(0, 16000);
+  } catch {
+    return norm(root.textContent).slice(0, 16000);
+  }
+}
+
 export function getTabState(root: Element): TabState {
   const top = activeButton(root, /^(STANDARD|ADVANCED|ADMIN)$/i);
   const sub = activeButton(
@@ -91,12 +111,14 @@ export function getTabState(root: Element): TabState {
   const t = top ? (low(top.textContent) as TabState['top']) : '';
   let s = (sub ? low(sub.textContent) : '') as TabState['sub'];
   if (s === ('user' as TabState['sub'])) s = 'personal';
-  const body = norm(root.textContent).slice(0, 16000);
-  if (t === 'standard' && (!s || s === 'account') && /ADVANCED TONE/i.test(body) && /BANNED WORDS/i.test(body)) {
-    s = 'personal';
-  }
-  if (t === 'standard' && /SIGN IN/i.test(body) && /Sign in is required/i.test(body)) {
-    s = s || 'account';
+  if (t === 'standard') {
+    const body = bodyTextExcludingIslands(root);
+    if ((!s || s === 'account') && /ADVANCED TONE/i.test(body) && /BANNED WORDS/i.test(body)) {
+      s = 'personal';
+    }
+    if (/SIGN IN/i.test(body) && /Sign in is required/i.test(body)) {
+      s = s || 'account';
+    }
   }
   return { top: t, sub: s };
 }

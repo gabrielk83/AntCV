@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.933-beforepage';
+  var VERSION = '1.50.934-scroll-jump';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -1274,8 +1274,13 @@
       var secs = localStorage.getItem(SECTIONS_KEY) || '';
       var doc = activeDoc();
       var scroll = document.querySelector('.antcv-preview-scroll');
-      var ch = scroll ? scroll.clientHeight : 0;
-      var cw = scroll ? scroll.clientWidth : 0;
+      // SCROLL-JUMP-001 (owner 2026-06-26 "scrolling down should not cause one jump"): use OFFSET
+      // width/height, NOT client*. clientWidth DROPS by the scrollbar width (~17px) the instant a
+      // vertical scrollbar appears on first scroll -> the fingerprint flipped -> one re-paginate ->
+      // the jump. offsetWidth/Height include the scrollbar, so they change ONLY on a real container
+      // resize (the thing this dimension is meant to detect), never on scrollbar appearance.
+      var ch = scroll ? scroll.offsetHeight : 0;
+      var cw = scroll ? scroll.offsetWidth : 0;
       // 1.50.281: hash the FULL sections (was first/last 400 chars only — that
       // missed MIDDLE changes, e.g. experience roles filling in on regenerate
       // or a mid-list hide/unhide, so the measurer never re-ran and the salmon
@@ -1494,6 +1499,9 @@
     // pagination settles once editing ends. focusin re-arms it (no paginate between consecutive fields).
     try { window.addEventListener('focusin', function () { __editGuardUntil = nowMs() + 600; }, true); } catch (_) {}
     try { window.addEventListener('focusout', function () { __editGuardUntil = nowMs() + 600; setTimeout(schedule, 700); }, true); } catch (_) {}
+    // SCROLL-JUMP-001: never re-paginate mid-scroll — arm the cooldown on any scroll so a transient
+    // layout read during scrolling can't write autoPages and shift the view. The 3s poll settles it.
+    try { window.addEventListener('scroll', function () { __editGuardUntil = nowMs() + 400; }, { capture: true, passive: true }); } catch (_) {}
     setInterval(schedule, 3000);   // 1.50.337: back to the calm poll (was 1200) — see start()
   }
   if (document.readyState === 'loading') {

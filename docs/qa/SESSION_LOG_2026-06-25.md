@@ -93,6 +93,30 @@ pagination, main-column pagination, the AI notice, content length caps, and edit
   zero.* SEPARATE NEW ITEM owner flagged on 922/923: the WRITING-STYLE / "JOB SEARCH TARGETING" panel
   went **sticky on other tabs** — needs its own look (STICKY-LEAK family; possibly the reduced re-renders
   leave the picker island mounted across subtabs).
+- **WIB-EDIT-WRAP-001 (1.50.925)** `[SHIPPED — owner-verify]` — owner: the WHAT I BRING / Core-Comp edit
+  rows cramped the text. `antcv-core-wib-strict-row-layout-274.js` now wraps: the Focus/Strategic cells
+  flex-grow to full panel width on line 1, control buttons spill to line 2. Inline + `!important` CSS
+  both updated. Suite 484/484.
+
+## OPEN — owner batch 2026-06-26 (carry forward)
+
+1. **STORM verify (921→924)** — owner re-probe pending; the storm fixes should also resolve the
+   edit-marker-fades-after-2s and the "table reshapes when editing any section" symptoms (both were
+   storm re-renders). Confirm via probe2: `final-role-condense` gone from `sections` writers, count near
+   zero.
+2. **UNSOLICITED-DEFAULTS-001 (Interests ON, Additional OFF)** `[REGEN-GATED, owner-confirmed]` — NOT a
+   live bug: `explodeAdditionalToSections` already creates Interests `on:true` (415:668) and the skeleton
+   has Additional `on:true`, so the Interests-OFF the owner saw came from the LLM generation. Fix = a
+   prompt default rule (unsolicited → Interests visible, Additional hidden; user can still toggle). Takes
+   effect only on a fresh generation. Not yet shipped (needs the prompt edit + app.js mirror + a regen to
+   verify).
+3. **RICH-BLOCK-HYPERLINK-001 (NEW feature)** `[owner request]` — the rich_block editable text field
+   ("textcha") must support hyperlinks: display/overlay text + embedded URL, insertable as inline markup
+   in the field. Spans THREE layers: the preview render (app.src.js rich_block → emit `<a>`), the docx
+   export (`workers/docx-worker` inlineRuns → emit a hyperlink run), and the editor (accept the markup).
+   Needs a markup-syntax decision (proposed: markdown `[text](url)`). Not started — feature, design first.
+4. **STICKY-PANEL-001** — writing-style / "JOB SEARCH TARGETING" panel sticky on other Settings subtabs
+   (owner, on 922/923). Investigate after the storm verify (may be remount-related).
 - **BOOT-CJLR-PERF-003 (1.50.923)** `[nightly 2026-06-26]` — continuing the boot-freeze sidecar-swarm
   reduction ([[boot-storm-gate-freeze]]). After 866/868/880 and the 415/React storm idempotency
   (921/922), `diag-boot-profile.mjs` showed `antcv-profile-workstyle-cjlr-238.js` back as the top

@@ -21,7 +21,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.832';
+  var VERSION = '1.50.942-merge-converge';
   if (window.__antcvUnsolicitedCvCompleteness === VERSION) return;
   window.__antcvUnsolicitedCvCompleteness = VERSION;
 
@@ -78,7 +78,13 @@
       if (!exp || !Array.isArray(exp.roles)) return;
       exp.roles.forEach(function (r) {
         if (!r) return;
-        if (r.on === false) { r.on = true; changed = true; }           // un-hide every role
+        // STORM-MERGEHIDE-CONVERGE-001 (owner 2026-06-26 jump-probe): do NOT un-hide a role that
+        // antcv-role-merge-dedup INTENTIONALLY hid as a merged duplicate (__antcvMergeHidden). Blindly
+        // un-hiding it made merge-dedup re-hide it next tick -> an endless sections-updated tug-of-war
+        // (the real source of the salmon "breathing", the page-2/3 dance, AND the edit-revert). Skipping
+        // the merge-hidden role lets BOTH sidecars converge: every OTHER role shows, the merged duplicate
+        // stays hidden, no further writes.
+        if (r.on === false && !r.__antcvMergeHidden) { r.on = true; changed = true; } // un-hide every role except a merged duplicate
         if (typeof r.title === 'string') { var nt = reorderTitle(r.title); if (nt !== r.title) { r.title = nt; changed = true; } }
       });
       if (!changed) return;

@@ -110,11 +110,20 @@ pagination, main-column pagination, the AI notice, content length caps, and edit
    prompt default rule (unsolicited → Interests visible, Additional hidden; user can still toggle). Takes
    effect only on a fresh generation. Not yet shipped (needs the prompt edit + app.js mirror + a regen to
    verify).
-3. **RICH-BLOCK-HYPERLINK-001 (NEW feature)** `[owner request]` — the rich_block editable text field
-   ("textcha") must support hyperlinks: display/overlay text + embedded URL, insertable as inline markup
-   in the field. Spans THREE layers: the preview render (app.src.js rich_block → emit `<a>`), the docx
-   export (`workers/docx-worker` inlineRuns → emit a hyperlink run), and the editor (accept the markup).
-   Needs a markup-syntax decision (proposed: markdown `[text](url)`). Not started — feature, design first.
+3. **RICH-BLOCK-HYPERLINK-001** `[EXPORT SHIPPED — worker 1.14.87 deployed; PREVIEW pending]` — markdown
+   `[text](url)` syntax (owner-confirmed). EXPORT DONE: worker `inlineRuns` refactored (`styledRuns`
+   helper + link split) → real docx `ExternalHyperlink`, restricted to http(s)/mailto so placeholders
+   stay literal; universal (any section text); test `hyperlink-export.test.mjs`. NEXT LAYER = PREVIEW
+   render: app.src.js rich_block text renders via the inline-EDITABLE `B` component, so showing a
+   rendered `<a>` there conflicts with inline editing of that row. UX choice for the owner: (a) render
+   the link in the preview (that text becomes panel-edit-only, matches export), or (b) keep the preview
+   showing the `[text](url)` code (inline-editable) with only the export rendering the link. Pending
+   owner pick.
+4. **ENRICH/FIT-RICHBLOCK-001 (NEW feature)** `[owner request 2026-06-26]` — Enrich + Fit must work on
+   `rich_block`, BOTH per-item (per row) AND globally (whole section). A GLOBAL Fit may change the number
+   of items/bullets (merge/drop rows), not just trim text. UNDO must be scope-aware: a global action →
+   global undo; a per-item action → local undo — depending on which button was pressed. Spans the
+   enrich/fit pipeline (LLM) + the rich_block editor controls + a scoped undo stack. Big — design first.
 4. **STICKY-PANEL-001** — writing-style / "JOB SEARCH TARGETING" panel sticky on other Settings subtabs
    (owner, on 922/923). Investigate after the storm verify (may be remount-related).
 - **BOOT-CJLR-PERF-003 (1.50.923)** `[nightly 2026-06-26]` — continuing the boot-freeze sidecar-swarm

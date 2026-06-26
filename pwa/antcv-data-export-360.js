@@ -49,7 +49,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.882-launcher-positive-gate';
+  var VERSION = '1.50.929-review-order';
   if (window.__antcvDataExport360 === VERSION) return;
   window.__antcvDataExport360 = VERSION;
 
@@ -1129,7 +1129,9 @@
       s9.body.appendChild(rdEl('div', 'font-size:10px;text-transform:uppercase;letter-spacing:.5px;opacity:.55;margin:9px 0 4px;padding-top:9px;border-top:1px solid rgba(255,255,255,.08);', 'Profile link (optional, off by default)'));
       s9.body.appendChild(row);
     })();
-    body.appendChild(s9.sec);
+    // REVIEW-ORDER-001 (owner 2026-06-26): Publications & patents go BEFORE "What's shown on the CV".
+    // s8 ("What's shown") was appended first; insert s9 (Publications) ahead of it instead of after.
+    body.insertBefore(s9.sec, s8.sec);
 
     // Footer
     var foot = rdEl('div', 'border-top:1px solid rgba(255,255,255,.10);padding:13px 18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;');

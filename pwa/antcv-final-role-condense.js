@@ -13,9 +13,17 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.894';
+  var VERSION = '1.50.924-folded-into-415';
   if (window.__antcvFinalRoleCondense === VERSION) return;
   window.__antcvFinalRoleCondense = VERSION;
+
+  // RETIRED 2026-06-26 (FINAL-ROLE-CONDENSE-FOLD-001): this sidecar STORMED against
+  // antcv-sections-normalize-415.js's canonCopenhagenWolves — it capped the volunteer role's bullets
+  // while canon re-added CW_BULLET, each dispatching antcv:sections-updated and re-triggering the other
+  // (6 writes each / 5s, flipping the paginator + jumping the preview). Both trims now live INSIDE 415's
+  // single idempotent normalise pass (run AFTER canon), so there is exactly one writer. Disabled here to
+  // remove the second warring writer. Kept as a loadable no-op for cache-bust history.
+  return;
 
   var VOLUNTEER_RE = /foreningsarbejde|pan\s*idr|copenhagen\s*wolves/i;
   var MERGED_RE = / & | and /i;

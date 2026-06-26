@@ -79,6 +79,20 @@ pagination, main-column pagination, the AI notice, content length caps, and edit
   (final-role-condense caps the volunteer bullets; React autosaves the full app-record bullets) — that
   needs the cap baked into `ro`/generation, not fought at restore. Page-3 empty-space jump (owner: pages
   1/2 a little, page 3 most) is this content swing flipping the paginator 4↔2 pages.
+- **FINAL-ROLE-CONDENSE-FOLD-001 (1.50.924)** `[storm part 3 — owner-verify]` — re-probe after 922
+  confirmed `app.js` DROPPED OUT of the `sections` writers (the React fix worked; owner: "only one
+  flicker now"), leaving a 2-way fight: `415` (×6) ↔ `antcv-final-role-condense.js` (×6). Root: 415's
+  `canonCopenhagenWolves` rebuilds the volunteer (Copenhagen Wolves) role and re-adds `CW_BULLET`, while
+  `final-role-condense` caps that same role to 3 bullets — each dispatches `sections-updated` and
+  re-triggers the other, forever (this is the residual content swing flagged in 922, now pinned to the
+  exact role). Fix: FOLDED both of final-role-condense's trims (volunteer ≤3 bullets; regulatory heading
+  "…Materials Compliance"→"…Compliance") INTO 415's single idempotent pass, run AFTER canon, and RETIRED
+  the standalone sidecar (`return;` no-op). One writer now; the canon→cap result is a fixpoint. Test
+  added (caps the role + a settled doc dispatches 0). Suite 484/484. *Owner: re-probe — `final-role-
+  condense` should be gone from the writers, `sections` writes + the page-3 swing should drop to near
+  zero.* SEPARATE NEW ITEM owner flagged on 922/923: the WRITING-STYLE / "JOB SEARCH TARGETING" panel
+  went **sticky on other tabs** — needs its own look (STICKY-LEAK family; possibly the reduced re-renders
+  leave the picker island mounted across subtabs).
 - **BOOT-CJLR-PERF-003 (1.50.923)** `[nightly 2026-06-26]` — continuing the boot-freeze sidecar-swarm
   reduction ([[boot-storm-gate-freeze]]). After 866/868/880 and the 415/React storm idempotency
   (921/922), `diag-boot-profile.mjs` showed `antcv-profile-workstyle-cjlr-238.js` back as the top

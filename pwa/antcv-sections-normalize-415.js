@@ -15,7 +15,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.921-storm-idempotent';
+  var VERSION = '1.50.924-condense-fold';
   if (window.__antcvSectionsNormalize === VERSION) return;
   window.__antcvSectionsNormalize = VERSION;
 
@@ -213,6 +213,43 @@
     if (cwIdx.length > 1) { var drop = {}; for (var k2 = 1; k2 < cwIdx.length; k2++) drop[cwIdx[k2]] = true; nextRoles = nextRoles.filter(function (_, i) { return !drop[i]; }); }
     var copy = cv.slice(); copy[xi] = Object.assign({}, copy[xi], { roles: nextRoles });
     return copy;
+  }
+
+  // FINAL-ROLE-CONDENSE-FOLD-001 (1.50.924, owner 2026-06-26 live probe): folded in from the retired
+  // antcv-final-role-condense.js, which STORMED against canonCopenhagenWolves above — the standalone
+  // sidecar capped the volunteer role's bullets while canon re-added CW_BULLET, each dispatching
+  // sections-updated and re-triggering the other (6 writes each / 5s, flipping the paginator). Running
+  // the cap HERE, AFTER canon, inside 415's single idempotent pass kills the fight: canon merges +
+  // ensures CW_BULLET, THEN the cap trims to <=3, and the result is a fixpoint (the guard then stays
+  // silent). (1) volunteer/foreningsarbejde role <=3 bullets (4 if a merged title); (2) regulatory
+  // heading "Environmental, Durability & Materials Compliance" -> "…& Compliance".
+  var VOL_RE = /foreningsarbejde|pan\s*idr|copenhagen\s*wolves/i;
+  var VOL_MERGED_RE = / & | and /i;
+  function condenseVolunteerRoles(cv) {
+    var changed = false;
+    cv.forEach(function (sec) {
+      if (!sec || !(sec.type === 'experience' || /experience/i.test(sec.title || '')) || !Array.isArray(sec.roles)) return;
+      sec.roles.forEach(function (r) {
+        if (!r || !Array.isArray(r.bullets)) return;
+        if (!(VOL_RE.test(String(r.title || '')) || VOL_RE.test(String(r.company || '')))) return;
+        var cap = VOL_MERGED_RE.test(String(r.title || '')) ? 4 : 3;
+        if (r.bullets.length > cap) { r.bullets = r.bullets.slice(0, cap); changed = true; }
+      });
+    });
+    return changed ? cv : null;
+  }
+  var REG_HEAD_RX = /Environmental,\s*Durability\s*&\s*Materials\s*Compliance/i;
+  function shortenRegulatoryHeading(cv) {
+    var changed = false;
+    cv.forEach(function (sec) {
+      if (!sec || !Array.isArray(sec.items)) return;
+      sec.items.forEach(function (it) {
+        if (!it || typeof it !== 'object') return;
+        if (it.t != null && REG_HEAD_RX.test(String(it.t))) { it.t = String(it.t).replace(REG_HEAD_RX, 'Environmental, Durability & Compliance'); changed = true; }
+        else if (it.group != null && REG_HEAD_RX.test(String(it.group))) { it.group = String(it.group).replace(REG_HEAD_RX, 'Environmental, Durability & Compliance'); changed = true; }
+      });
+    });
+    return changed ? cv : null;
   }
 
   // IDF-ABBREV-001 (owner 2026-06-19): "in many cases show IDF instead of Israeli
@@ -973,6 +1010,10 @@
       var pin = pinInterests(cv); if (pin) { cv = pin; changed = true; }
       var dhn = dedupeHiddenDupByName(cv); if (dhn) { cv = dhn; changed = true; }
       var dedu = dedupeEducation(cv); if (dedu) { cv = dedu; changed = true; }
+      // FINAL-ROLE-CONDENSE-FOLD-001: run the volunteer-bullet cap + regulatory-heading shorten LAST,
+      // after canon/dedupe/order have settled, so nothing downstream re-adds the bullets it trims.
+      var vcap = condenseVolunteerRoles(cv); if (vcap) { cv = vcap; changed = true; }
+      var rhead = shortenRegulatoryHeading(cv); if (rhead) { cv = rhead; changed = true; }
       // SECTION-PREVIEW-LOC-001 / TYPE-NORMALIZE: also normalise the CL sections'
       // loc + work_style type so imported CL sections render in the preview.
       var cl = Array.isArray(b.cl) ? b.cl : null;

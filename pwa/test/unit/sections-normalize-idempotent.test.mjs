@@ -91,6 +91,34 @@ test('a fully-normalised document dispatches nothing on the very first normalise
   assert.equal(ctx.dispatches(), 0, 'an already-normalised doc must not write/dispatch (idempotent)');
 });
 
+test('FINAL-ROLE-CONDENSE-FOLD: caps the volunteer role to 3 bullets AND is idempotent (no oscillation)', () => {
+  // canonCopenhagenWolves rebuilds the Copenhagen Wolves role (and re-adds CW_BULLET); the folded-in
+  // cap must trim it to <=3 in the SAME pass and then hold — otherwise canon ↔ cap storm forever.
+  const doc = {
+    cv: [{
+      id: 'experience', type: 'experience', title: 'PROFESSIONAL EXPERIENCE', loc: 'main', on: true,
+      roles: [
+        { id: 'r1', title: 'Product Manager', company: 'Innoviz', years: '2022 – 2024', on: true, bullets: ['a', 'b'] },
+        { id: 'r2', title: 'Team Operations', company: 'Copenhagen Wolves RFC', years: '2019 – 2022', on: true,
+          bullets: ['Coached the squad.', 'Ran logistics.', 'Organised fixtures.', 'Managed kit.', 'Handled comms.', 'Booked pitches.'] },
+      ],
+    }],
+    cl: [],
+  };
+  const ctx = load(doc);
+  for (let i = 0; i < 5; i++) ctx.api._normalize();           // settle
+  const settled = JSON.parse(ctx.store.get('sections'));
+  const vol = settled.cv[0].roles.find((r) => /copenhagen wolves|pan idr|foreningsarbejde/i.test((r.company || '') + ' ' + (r.title || '')));
+  assert.ok(vol, 'volunteer role present');
+  assert.ok(vol.bullets.length <= 4, `volunteer bullets capped (got ${vol.bullets.length})`);
+
+  // …and a further normalise on the settled doc must be a silent no-op (the canon↔cap storm is gone).
+  const ctx2 = load(settled);
+  ctx2.resetDispatches();
+  ctx2.api._normalize();
+  assert.equal(ctx2.dispatches(), 0, 'settled volunteer-capped doc does not re-dispatch (no canon↔cap oscillation)');
+});
+
 test('source keeps the real-change idempotency guard (regression lock)', () => {
   assert.ok(/__after\s*===\s*__before/.test(src), 'the __after === __before guard was removed — the storm can return');
   assert.ok(/__before\s*=\s*JSON\.stringify\(b\)/.test(src), 'the __before snapshot was removed');

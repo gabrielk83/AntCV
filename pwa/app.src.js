@@ -5915,7 +5915,10 @@
                     {
                       key: t,
                       "data-antcv-role-index": __ri >= 0 ? __ri : t,
-                      style: { marginBottom: 7, pageBreakInside: "avoid" },
+                      // ROLE-GAP-001 (owner 2026-06-26): inter-role (sub-subsection) gap is now the
+                      // SPACING & INDENTS "role gap" slider (k.roleGap, px); default 8 matches the export
+                      // (worker before:120 DXA = 8px) and tightens the prior 7px preview-vs-export 1px gap.
+                      style: { marginBottom: Number.isFinite(Number(k.roleGap)) ? Number(k.roleGap) : 8, pageBreakInside: "avoid" },
                     },
                     React.createElement(
                       "div",
@@ -13795,6 +13798,8 @@
               ["mainSectionGap", "CV main · subsection gap", 0, 60, 14],
               ["sidebarSectionGap", "CV sidebar · subsection gap", 0, 60, 12],
               ["bodySectionGap", "CL body · subsection gap", 0, 60, 16],
+              // — Role separation (sub-subsections: experience + foreningsarbejde roles) —
+              ["roleGap", "CV main · role gap", 0, 40, 8],
               // — Bullet marker —
               ["bulletIndent", "Bullet text · from edge", 10, 60, 24],
               ["bulletMarkerGap", "Bullet marker · gap to text", 4, 40, 21],

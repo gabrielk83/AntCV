@@ -26510,6 +26510,11 @@ function renderCompetencyTable(s, ctx) {
 __name(renderCompetencyTable, "renderCompetencyTable");
 function renderExperience(s, ctx) {
   const { style, fs } = ctx;
+  // ROLE-GAP-001 (owner 2026-06-26): inter-role (sub-subsection) gap is the SPACING & INDENTS "role gap"
+  // slider (style.roleGap, px -> DXA x15). Default 120 DXA (= 8px) preserves the prior hard-coded spacing.
+  const __roleGapDxa = (style && Number.isFinite(Number(style.roleGap)))
+    ? Math.max(0, Math.min(600, Math.round(Number(style.roleGap) * 15)))
+    : 120;
   const out = [];
   const roles = Array.isArray(s.roles) ? s.roles.filter((r) => r && r.on !== false) : [];
   const rightTab = ctx.mainW - 640 - 40;
@@ -26559,7 +26564,7 @@ function renderExperience(s, ctx) {
     if (left.length || yearsRun) {
       const roleAlign = paraAlignPath(s, "roles." + ri + ".title") ?? paraAlignPath(s, "roles." + ri) ?? paraAlign(s, null, void 0);
       out.push(new Paragraph({
-        spacing: { before: 120, after: 40 },
+        spacing: { before: __roleGapDxa, after: 40 },
         alignment: roleAlign,
         // keepNext: the role title (e.g. "Customer Change Requests Specialist
         // | Innoviz Technologies | 2020 — 2025") must stay glued to its
@@ -27566,7 +27571,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   the anchor's spacing-after from (px/2+14) to (px/2-12) so the first sidebar
 //   section sits just under the medallion (~0.27in higher; the full 0.6in would
 //   overlap the photo at the default diameter).
-var VERSION = "1.14.88-profile-topgap";
+var VERSION = "1.14.89-role-gap";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

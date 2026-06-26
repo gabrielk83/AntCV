@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.932-force-sticky';
+  var VERSION = '1.50.933-beforepage';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -1027,7 +1027,7 @@
                 var blkCount = __uniBlocks.sidebar.length;
                 var cached = __forceLastGrpStick[sid];
                 if (cached && blkCount >= cached.blkCount) {
-                  paged.forEach(function (b) { var k = parseInt(b.key, 10) || 0; b.page = (k >= cached.lastGrp) ? (cached.startPage + 1) : cached.startPage; });
+                  paged.forEach(function (b) { var k = parseInt(b.key, 10) || 0; if (k >= cached.lastGrp) b.page = cached.startPage + 1; });
                   return;
                 }
                 if (cached && blkCount < cached.blkCount) { delete __forceLastGrpStick[sid]; }   // content shrank -> re-evaluate
@@ -1041,11 +1041,18 @@
                 if (starts.length < 2) return;                                // needs >=2 groups
                 var tot = blocks.reduce(function (s, b) { return s + Math.max(0, b.bottom - b.top); }, 0);
                 if (tot <= __uniLimit * FORCE_LAST_GRP_FRAC) return;          // only a BIG section
-                var startPage = Math.min.apply(null, paged.map(function (b) { return b.page; }));
-                if (startPage < 2) return;                                    // only past page 1
                 var lastGrp = starts[starts.length - 1];
-                __forceLastGrpStick[sid] = { lastGrp: lastGrp, startPage: startPage, blkCount: blkCount };   // CACHE the decision + block count
-                paged.forEach(function (b) { var k = parseInt(b.key, 10) || 0; b.page = (k >= lastGrp) ? (startPage + 1) : startPage; });
+                // BEFORE-PAGE (owner 2026-06-26 "can stay on page 2 / dances"): isolate the last group
+                // relative to where the content BEFORE it ends — NOT the section's MIN page. regulatory
+                // spans page 1 -> 2, so the old startPage = min = 1 hit the "startPage < 2 -> return"
+                // guard and the force NEVER fired (Environmental left to the natural break -> dance /
+                // "stays on page 2"). beforePage = max page among the pre-group blocks; isolate ONLY the
+                // last group onto beforePage + 1, leaving the earlier groups on their natural pages.
+                var beforePage = 1;
+                paged.forEach(function (b) { var k = parseInt(b.key, 10) || 0; if (k < lastGrp) beforePage = Math.max(beforePage, b.page); });
+                if (beforePage < 2) return;                                   // only isolate once the section reaches page 2+
+                __forceLastGrpStick[sid] = { lastGrp: lastGrp, startPage: beforePage, blkCount: blkCount };   // CACHE the decision + block count
+                paged.forEach(function (b) { var k = parseInt(b.key, 10) || 0; if (k >= lastGrp) b.page = beforePage + 1; });
               } catch (e) { /* per-section: never abort the whole pass */ }
             });
           })();
@@ -1298,6 +1305,11 @@
       return !!(ae && (ae.isContentEditable || /^(?:input|textarea|select)$/i.test(ae.tagName || '')));
     } catch (_) { return false; }
   }
+  // EDIT-GUARD-PAGINATE-002 (owner 2026-06-26 "dances when clicking text for editing"): the live
+  // activeElement check misses the brief window AROUND a click (focus settles a tick after mousedown;
+  // editor controls mount on focus and shift layout). A short cooldown set on every focus CHANGE bridges
+  // that window so a click-to-edit never lands a re-paginate.
+  var __editGuardUntil = 0;
 
   function run() {
     try {
@@ -1313,8 +1325,9 @@
       // of fingerprint sensitivity). A genuine user edit lands after this
       // short window and still re-measures.
       if (now < cooldownUntil) return;
-      // EDIT-GUARD-PAGINATE-001: do not re-paginate mid-edit (it blurs the caret). Re-runs on focusout.
-      if (userIsEditing()) return;
+      // EDIT-GUARD-PAGINATE-001/002: do not re-paginate mid-edit (it blurs the caret + dances the page
+      // break). Skip while editing AND in the short cooldown around a focus change. Re-runs on focusout.
+      if (userIsEditing() || now < __editGuardUntil) return;
 
       // GATE: skip entirely when the source content + viewport are
       // unchanged since the last compute. Breaks the self-feedback loop.
@@ -1476,9 +1489,11 @@
       try { window.addEventListener(ev, schedule); } catch (_) {}
     });
     try { window.addEventListener('resize', schedule, { passive: true }); } catch (_) {}
-    // EDIT-GUARD-PAGINATE-001: re-measure shortly AFTER editing ends (the run() guard skipped it during
-    // editing). 250ms lets a click-into-another-field re-arm the guard instead of paginating between fields.
-    try { window.addEventListener('focusout', function () { setTimeout(schedule, 250); }, true); } catch (_) {}
+    // EDIT-GUARD-PAGINATE-002: every focus CHANGE (clicking into/out of a field) arms a cooldown so the
+    // run() guard skips a re-paginate around the click; focusout also re-measures AFTER the cooldown so
+    // pagination settles once editing ends. focusin re-arms it (no paginate between consecutive fields).
+    try { window.addEventListener('focusin', function () { __editGuardUntil = nowMs() + 600; }, true); } catch (_) {}
+    try { window.addEventListener('focusout', function () { __editGuardUntil = nowMs() + 600; setTimeout(schedule, 700); }, true); } catch (_) {}
     setInterval(schedule, 3000);   // 1.50.337: back to the calm poll (was 1200) — see start()
   }
   if (document.readyState === 'loading') {

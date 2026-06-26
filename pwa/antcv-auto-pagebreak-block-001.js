@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.917-main-pagen-105';
+  var VERSION = '1.50.931-edit-guard';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -1283,6 +1283,18 @@
     catch (_) { return false; }
   }
 
+  // EDIT-GUARD-PAGINATE-001 (owner 2026-06-26 "editing text goes out of the selected text too quick"):
+  // while the user is actively editing a contentEditable / input in the preview, a re-measure writes
+  // antcv:autoPages -> the preview page-boxes re-render -> the contentEditable is replaced and the caret
+  // / selection is LOST. Defer measuring during editing (mirrors 415's EDIT-GUARD-001); the focusout
+  // recheck below + the 3s poll catch up once editing stops, so pagination is never stale for long.
+  function userIsEditing() {
+    try {
+      var ae = document.activeElement;
+      return !!(ae && (ae.isContentEditable || /^(?:input|textarea|select)$/i.test(ae.tagName || '')));
+    } catch (_) { return false; }
+  }
+
   function run() {
     try {
       var now = nowMs();
@@ -1297,6 +1309,8 @@
       // of fingerprint sensitivity). A genuine user edit lands after this
       // short window and still re-measures.
       if (now < cooldownUntil) return;
+      // EDIT-GUARD-PAGINATE-001: do not re-paginate mid-edit (it blurs the caret). Re-runs on focusout.
+      if (userIsEditing()) return;
 
       // GATE: skip entirely when the source content + viewport are
       // unchanged since the last compute. Breaks the self-feedback loop.
@@ -1458,6 +1472,9 @@
       try { window.addEventListener(ev, schedule); } catch (_) {}
     });
     try { window.addEventListener('resize', schedule, { passive: true }); } catch (_) {}
+    // EDIT-GUARD-PAGINATE-001: re-measure shortly AFTER editing ends (the run() guard skipped it during
+    // editing). 250ms lets a click-into-another-field re-arm the guard instead of paginating between fields.
+    try { window.addEventListener('focusout', function () { setTimeout(schedule, 250); }, true); } catch (_) {}
     setInterval(schedule, 3000);   // 1.50.337: back to the calm poll (was 1200) — see start()
   }
   if (document.readyState === 'loading') {

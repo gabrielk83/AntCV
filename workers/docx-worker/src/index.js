@@ -24282,12 +24282,10 @@ function isWorkStyleSection(s) {
   return t === "work style" || t === "workstyle" || t === "arbejdsstil" || t === "arbejdsform" || t === "arbejdsform stil" || t === "min arbejdsstil" || t === "personlig stil" || t === "arbejdsmetode";
 }
 __name(isWorkStyleSection, "isWorkStyleSection");
-function inlineRuns(text, baseRun) {
+function styledRuns(s, baseRun) {
   const out = [];
-  if (text === null || text === void 0) return out;
-  const s = decodeBasicEntities(text);
   if (!/<\/?\s*(b|strong|i|em)\b/i.test(s)) {
-    out.push(new TextRun({ ...baseRun, text: s }));
+    if (s) out.push(new TextRun({ ...baseRun, text: s }));
     return out;
   }
   const re = /<\s*(\/?)\s*(b|strong|i|em)\b[^>]*>/ig;
@@ -24320,6 +24318,33 @@ function inlineRuns(text, baseRun) {
       italics: Boolean(italic || baseRun.italics)
     }));
   }
+  return out;
+}
+__name(styledRuns, "styledRuns");
+function inlineRuns(text, baseRun) {
+  if (text === null || text === void 0) return [];
+  const s = decodeBasicEntities(text);
+  // RICH-BLOCK-HYPERLINK-001 (owner 2026-06-26): markdown links [text](url) become REAL docx
+  // ExternalHyperlinks (underlined, link-blue) so the exported CV/CL has clickable links. Restricted to
+  // http(s)/mailto URLs so bracketed placeholders ("[Role title]", "[Lead]") and "[x](note)" are never
+  // mistaken for links. Plain + <b>/<i> styling still applies to every non-link segment via styledRuns.
+  if (s.indexOf("](") < 0) return styledRuns(s, baseRun);
+  const LINK_RE = /\[([^\]]+)\]\(\s*((?:https?:\/\/|mailto:)[^)\s]+)\s*\)/g;
+  const out = [];
+  let cursor = 0, m, found = false;
+  while ((m = LINK_RE.exec(s)) !== null) {
+    found = true;
+    const before = s.slice(cursor, m.index);
+    if (before) out.push(...styledRuns(before, baseRun));
+    out.push(new ExternalHyperlink({
+      link: m[2],
+      children: [new TextRun({ ...baseRun, text: m[1], underline: {}, color: "0563C1" })]
+    }));
+    cursor = m.index + m[0].length;
+  }
+  if (!found) return styledRuns(s, baseRun);
+  const tail = s.slice(cursor);
+  if (tail) out.push(...styledRuns(tail, baseRun));
   return out;
 }
 __name(inlineRuns, "inlineRuns");
@@ -27534,7 +27559,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   the anchor's spacing-after from (px/2+14) to (px/2-12) so the first sidebar
 //   section sits just under the medallion (~0.27in higher; the full 0.6in would
 //   overlap the photo at the default diameter).
-var VERSION = "1.14.86-grp-align";
+var VERSION = "1.14.87-md-hyperlinks";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

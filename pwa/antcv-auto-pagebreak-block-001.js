@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.931-edit-guard';
+  var VERSION = '1.50.932-force-sticky';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -1018,15 +1018,19 @@
                 // upper item, widening the sidebar — NOT on the re-measure noise that caused the
                 // dance. So the cache holds the break stable, yet INVALIDATES when the content
                 // genuinely shifts, letting the group go back UP if it now fits (owner 2026-06-25).
-                var sig = __uniBlocks.sidebar.length + 'x' + Math.round(__sbColW);
-                // STICKY re-apply: same signature -> re-apply the SAME break every cycle
-                // (deterministic, immune to re-measure noise — no "metastable dance").
+                // MONOTONIC-STICKY (owner 2026-06-26 "cut blind"): the page-2/3 dance was the cache
+                // invalidating on re-measure noise (sub-px __sbColW, a transient startPage read) ->
+                // re-evaluate -> a momentary condition flip un-forced the last group -> it bounced back.
+                // Key the cache on the visible sidebar BLOCK COUNT only and re-apply the SAME break every
+                // cycle while the count is unchanged OR grew. Only a genuine content SHRINK (an upper item
+                // hidden -> fewer blocks) invalidates + re-evaluates (the group may now fit earlier).
+                var blkCount = __uniBlocks.sidebar.length;
                 var cached = __forceLastGrpStick[sid];
-                if (cached && cached.sig === sig) {
+                if (cached && blkCount >= cached.blkCount) {
                   paged.forEach(function (b) { var k = parseInt(b.key, 10) || 0; b.page = (k >= cached.lastGrp) ? (cached.startPage + 1) : cached.startPage; });
                   return;
                 }
-                if (cached && cached.sig !== sig) { delete __forceLastGrpStick[sid]; }   // content shifted -> re-evaluate
+                if (cached && blkCount < cached.blkCount) { delete __forceLastGrpStick[sid]; }   // content shrank -> re-evaluate
                 var blocks = bySid[sid];
                 // group starts from SECTION DATA (items[i].grp) — reliable + matches the DOM row-path
                 // keys; the rendered-block grpHead flag did not survive the coordinator's collection.
@@ -1040,7 +1044,7 @@
                 var startPage = Math.min.apply(null, paged.map(function (b) { return b.page; }));
                 if (startPage < 2) return;                                    // only past page 1
                 var lastGrp = starts[starts.length - 1];
-                __forceLastGrpStick[sid] = { lastGrp: lastGrp, startPage: startPage, sig: sig };   // CACHE the decision + signature
+                __forceLastGrpStick[sid] = { lastGrp: lastGrp, startPage: startPage, blkCount: blkCount };   // CACHE the decision + block count
                 paged.forEach(function (b) { var k = parseInt(b.key, 10) || 0; b.page = (k >= lastGrp) ? (startPage + 1) : startPage; });
               } catch (e) { /* per-section: never abort the whole pass */ }
             });

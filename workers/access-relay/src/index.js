@@ -1,6 +1,6 @@
 import { insertLlmCall, aggregateHealth, getLatestHealth, pruneOld, insertQualitySignal } from './telemetry.js';
 
-const VERSION='1.3.0';
+const VERSION='1.3.1';
 // antcv-access-relay — auth + hardening
 // =====================================
 // Public-facing relay with built-in user authentication.
@@ -3960,6 +3960,14 @@ const method = request.method;
     const refresh = await maybeRefreshHeader(env, id);
     try {
       const headers = { Accept: 'application/json' };
+      // ANALYTICS-SUMMARY-AUTH-002 (owner 2026-06-26 "View summary -> reset error"): CF Access was
+      // removed from the cv-proxy, so its CF-Access service-token headers are no longer validated there
+      // — the proxy now trusts the relay-signed Bearer (shared JWT_SECRET) via identityFromRequestAsync.
+      // We already verified the admin above; forward their Authorization Bearer so the proxy resolves an
+      // identity and skips the brittle ?secret check (a UPSTREAM_ANALYTICS_SECRET vs ANALYTICS_SECRET
+      // mismatch was returning 401, which the PWA rendered as "session expired" and reset the admin out).
+      var __authHdr = request.headers.get('Authorization');
+      if (__authHdr) headers['Authorization'] = __authHdr;
       if (env.CF_ACCESS_CLIENT_ID)     headers['CF-Access-Client-Id']     = env.CF_ACCESS_CLIENT_ID;
       if (env.CF_ACCESS_CLIENT_SECRET) headers['CF-Access-Client-Secret'] = env.CF_ACCESS_CLIENT_SECRET;
       const upstreamRes = await callUpstream(env, upstreamUrl, { method: 'GET', headers }, _adminMode);
@@ -4045,6 +4053,10 @@ const method = request.method;
     const refresh = await maybeRefreshHeader(env, id);
     try {
       const headers = { Accept: 'application/json, text/csv' };
+      // ANALYTICS-SUMMARY-AUTH-002: forward the admin's relay-signed Bearer (same as the summary path)
+      // so the cv-proxy resolves an identity instead of falling to the brittle ?secret match.
+      var __authHdr2 = request.headers.get('Authorization');
+      if (__authHdr2) headers['Authorization'] = __authHdr2;
       if (env.CF_ACCESS_CLIENT_ID)     headers['CF-Access-Client-Id']     = env.CF_ACCESS_CLIENT_ID;
       if (env.CF_ACCESS_CLIENT_SECRET) headers['CF-Access-Client-Secret'] = env.CF_ACCESS_CLIENT_SECRET;
       const upstreamRes = await callUpstream(env, upstreamUrl, { method: 'GET', headers }, _adminMode2);

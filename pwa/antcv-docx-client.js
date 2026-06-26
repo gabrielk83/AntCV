@@ -2387,7 +2387,7 @@ export function applyOutcomesMode(docSections, doc) {
     // from the role so the same line is NOT shown twice (owner: "the bullet it came
     // from has to be hidden"). deriveResultFromRole returns the chosen bullet INDEX
     // so the source bullet can be dropped.
-    const deriveResultFromRole = (r) => {
+    const deriveResultFromRole = (r, allowNonNumeric) => {
       const bl = Array.isArray(r.bullets) ? r.bullets : [];
       const textOf = (b) => String(typeof b === 'string' ? b : (b && (b.b || b.t)) || '').trim();
       let bestIdx = -1, bestScore = -1;
@@ -2406,7 +2406,13 @@ export function applyOutcomesMode(docSections, doc) {
       // ONLY when the chosen bullet carries a concrete metric (number/%/x). If the best
       // bullet has NO metric, derive NOTHING — the role shows its bullets and no Results
       // line, which is far better than a non-numeric bullet echoed as a fake result.
-      if (bestScore < 1000) return null;
+      // RESULTS-UNSOLICITED-COVERAGE-001 (owner 2026-06-26: Student-Council + Computer-
+      // Administrator roles were MISSING Results in the unsolicited app). EXCEPTION: in the
+      // no-JD unsolicited document every role should carry a Result for breadth, so a role
+      // with no numeric bullet derives from its strongest bullet anyway (allowNonNumeric).
+      // JD-targeted docs keep numeric-only. The source bullet is still hidden (caller), so
+      // the line is not duplicated; keepMin / the zero-bullet guard still protect the role.
+      if (!allowNonNumeric && bestScore < 1000) return null;
       let txt = textOf(bl[bestIdx]);
       if (txt.length > 260) {
         var cut = txt.slice(0, 260);
@@ -2500,6 +2506,8 @@ export function applyOutcomesMode(docSections, doc) {
       if (out) return { ...r, results: out };
       const c = { ...r }; delete c.results; return c;
     };
+    // RESULTS-UNSOLICITED-COVERAGE-001: no JD => unsolicited breadth => every role carries a line.
+    const __unsolicited = !(_jd && _jd.trim());
     const expOut = {
       ...exp,
       roles: (exp.roles || []).map((r) => {
@@ -2519,7 +2527,7 @@ export function applyOutcomesMode(docSections, doc) {
         // torn off, only the result stayed"): NEVER consume a role's only content into a
         // Result — if deriving would leave ZERO bullets, skip the derive and keep the
         // bullet as content (no Results line) instead.
-        const d = deriveResultFromRole(r);
+        const d = deriveResultFromRole(r, __unsolicited);
         if (!d) return { ...r, bullets: _txBl(r.bullets) };
         const keptBullets = (Array.isArray(r.bullets) ? r.bullets : []).filter((_, i) => i !== d.index);
         if (!keptBullets.length) return { ...r, bullets: _txBl(r.bullets) };

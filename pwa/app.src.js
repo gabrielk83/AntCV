@@ -15800,6 +15800,19 @@
         React.useEffect(() => {
           const e = (e) => {
             try {
+              // EDIT-GUARD-REVERT-001 (owner 2026-06-26 "editing 2 lines -> 1 line reverts the change"):
+              // the inline editors commit to React state only on BLUR, so a re-render WHILE a
+              // contentEditable is focused overwrites the DOM-only in-progress edit. When the edit changes
+              // the line count the section height shifts and a height-sensitive sidecar dispatches
+              // sections-updated mid-edit -> this ao() re-render fires -> the edit is reverted. Defer the
+              // refresh while editing; __blurReplay below re-applies it once editing ends.
+              try {
+                const __ae = document.activeElement;
+                if (__ae && __ae.closest && __ae.closest("[data-antcv-editable-text]")) {
+                  window.__antcvSecRefreshPending = true;
+                  return;
+                }
+              } catch (_) {}
               const t = u.get("sections", null);
               // 1.50.275: ignore an empty {cv:[],cl:[]} external write — do not
               // blank the editor (see KERNEL-CORE-EMPTY-001 above).
@@ -15830,9 +15843,21 @@
               console.warn("antcv:sections-updated handler failed", e);
             }
           };
+          const __blurReplay = () => {
+            if (window.__antcvSecRefreshPending) {
+              window.__antcvSecRefreshPending = false;
+              setTimeout(() => {
+                try { window.dispatchEvent(new CustomEvent("antcv:sections-updated", { detail: { source: "edit-blur-replay" } })); } catch (_) {}
+              }, 250);
+            }
+          };
           return (
             window.addEventListener("antcv:sections-updated", e),
-            () => window.removeEventListener("antcv:sections-updated", e)
+            window.addEventListener("focusout", __blurReplay, !0),
+            () => (
+              window.removeEventListener("antcv:sections-updated", e),
+              window.removeEventListener("focusout", __blurReplay, !0)
+            )
           );
         }, []),
         // 1.50.202: page-break model changed (antcv:item-pages-changed). Force a

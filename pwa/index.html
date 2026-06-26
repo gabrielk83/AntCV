@@ -330,7 +330,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.50.920';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.50.926';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.50.927';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -372,7 +372,7 @@
           app.src = 'app.js?v=1.50.922';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.50.926';
+            vo.src = 'antcv-version-override.js?v=1.50.927';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -624,6 +624,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-format-prefs.js?v=1.50.472" defer></script>
 <script src="antcv-page-budget.js?v=1.40.349" defer></script>
 <script src="antcv-cl-length-560.js?v=1.50.568" defer></script>
+<script src="antcv-budget-rows-collapse.js?v=1.50.927" defer></script>
 <!-- SIDECAR-CONSOLIDATE G6 (1.50.429): lang-bar-filter + language-prefs +
      language-prefs-defaults merged into ONE file behind a single shared rAF
      scheduler + ONE MutationObserver. The owner-touched wizard-language-slide,
@@ -991,7 +992,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      SettingsRouter, wizardState). See docs/plan/AntCV_Plan_v2_LockedSources.md
      §7 Pass 1. -->
       <script src="antcv-357-loader.js?v=1.50.367-entitled-chips" defer></script>
-      <script src="antcv-react-islands.js?v=1.50.926" defer></script>
+      <script src="antcv-react-islands.js?v=1.50.927" defer></script>
       <!-- v1.50.164: auto-apply the correct palette when the stored package is the
            legacy orphan default ("scandinavian"), by pressing the Copenhagen Modern
            button — fixes the permanent palette mix on load without a manual click. -->

@@ -102,6 +102,28 @@ function bodyTextExcludingIslands(root: Element): string {
   }
 }
 
+// STICKY-LEAK-004 (owner 2026-06-26): STICKY-LEAK-003 excluded island subtrees from the fallback text,
+// which fixed most tabs — but the islands STILL stuck on Application History, because the NATIVE
+// "ADVANCED TONE" / "BANNED WORDS" headers linger in the Personal flex-column (hidden, display:none)
+// that persists across subtabs, so a plain text test still matched. Require a VISIBLE native marker:
+// on a non-Personal subtab the Personal column is hidden, so its markers aren't visible and the
+// fallback no longer mis-fires. Excludes island subtrees and matches an element's OWN text only.
+function hasVisibleNativeMarker(root: Element, re: RegExp): boolean {
+  const nodes = Array.from(
+    root.querySelectorAll('div,span,button,h1,h2,h3,h4,label,p,strong,b,summary'),
+  );
+  for (const el of nodes) {
+    if ((el as HTMLElement).closest('[data-antcv-react-island],[data-antcv-react-mount]')) continue;
+    const own = Array.from(el.childNodes)
+      .filter((n) => n.nodeType === 3)
+      .map((n) => (n as Text).textContent)
+      .join(' ');
+    if (!re.test(norm(own))) continue;
+    if (isElementVisible(el)) return true;
+  }
+  return false;
+}
+
 export function getTabState(root: Element): TabState {
   const top = activeButton(root, /^(STANDARD|ADVANCED|ADMIN)$/i);
   const sub = activeButton(
@@ -112,10 +134,14 @@ export function getTabState(root: Element): TabState {
   let s = (sub ? low(sub.textContent) : '') as TabState['sub'];
   if (s === ('user' as TabState['sub'])) s = 'personal';
   if (t === 'standard') {
-    const body = bodyTextExcludingIslands(root);
-    if ((!s || s === 'account') && /ADVANCED TONE/i.test(body) && /BANNED WORDS/i.test(body)) {
+    if (
+      (!s || s === 'account') &&
+      hasVisibleNativeMarker(root, /ADVANCED TONE/i) &&
+      hasVisibleNativeMarker(root, /BANNED WORDS/i)
+    ) {
       s = 'personal';
     }
+    const body = bodyTextExcludingIslands(root);
     if (/SIGN IN/i.test(body) && /Sign in is required/i.test(body)) {
       s = s || 'account';
     }

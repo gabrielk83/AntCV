@@ -2143,6 +2143,23 @@ export function applyOutcomesMode(docSections, doc) {
     const lineOf = (x) => typeof x === 'string' ? x : [x && x.b, x && x.t].filter(Boolean).join(' ').trim();
     const visRoles = (exp.roles || []).filter((r) => r && r.on !== false);
     if (!visRoles.length) return docSections;
+    // GABRIEL-EXACT-RESULTS-001 (owner 2026-06-26: the seeded Research-Assistant + Security-Guard
+    // Results came back CUT — the model honoured the verbatim kernel guidance only partially). For
+    // Gabriel, pin those two roles' Results to the EXACT owner text as the HIGHEST lamination tier
+    // (checked first in the loop below) so the line survives verbatim, uncapped, in BOTH preview +
+    // export. Name-guarded (Gabriel only); non-mutating (sets _lam, never the input role).
+    let _gabrielN = '';
+    try { const _g = JSON.parse(localStorage.getItem('personalInfo') || '{}') || {}; _gabrielN = String((_g.personalInfo ? _g.personalInfo.name : _g.name) || ''); } catch (_) {}
+    const _GAB_EXACT = /\bgabriel\b/i.test(_gabrielN) ? [
+      { reT: /research\s+assist|teaching\s*\/?\s*research|\bRA\b/i, reC: /tel[\s-]?aviv|\bTAU\b/i, text: 'Benchmarked imprinted vs taut, non-imprinted devices; non-imprinted won on structure, manufacturability, responsivity, and 10× faster gating.' },
+      { reT: /security\s+guard|\bvagt\b/i, reC: null, text: 'Manage access and incidents for 750-resident student housing.' },
+    ] : [];
+    const _gabrielExactResult = (r) => {
+      if (!_GAB_EXACT.length || !r) return null;
+      const t = String(r.title || ''), c = String(r.company || '');
+      for (const e of _GAB_EXACT) { if (e.reT.test(t) && (!e.reC || e.reC.test(c))) return e.text; }
+      return null;
+    };
     // RESULTS-CROSSROLE-BLEED-002 (owner 2026-06-19): score a candidate outcome not
     // only against a role's title/company but against that role's OWN KERNEL outcomes
     // (personalInfo.workHistory[].outcomes), populated below. The kernel is the ground
@@ -2246,6 +2263,8 @@ export function applyOutcomesMode(docSections, doc) {
       return t;
     };
     visRoles.forEach((r) => {
+      // GABRIEL-EXACT-RESULTS-001: owner-pinned verbatim Results win above ALL tiers (no cap, no cut).
+      const _gx = _gabrielExactResult(r); if (_gx) { _lam.set(r, _gx); return; }
       // 1) explicit role.results string wins verbatim.
       if (typeof r.results === 'string' && r.results.trim()) { _lam.set(r, r.results.trim()); return; }
       // 2) self-contained role.outcomes[] (owner's 'outcome_edits' lists): use the

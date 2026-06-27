@@ -1,5 +1,32 @@
 > **AUTHORITATIVE current state + next-nightly prompt: `docs/qa/NEXT_NIGHTLY_HANDOFF_2026-06-24.md`.** (PWA 1.50.869 + docx-worker 1.14.81; suite 467/467.) Read it FIRST — it has the shipped list (843→869), the regen-gated items to verify on the owner's incoming fresh export, the deep CV-SIDEBAR-SPILL spec, and the parallel-session/stale-SW discipline. The blocks below are the per-batch detail. (Older handoff: `SESSION_HANDOFF_2026-06-18-pm3.md`.)
 
+## Nightly autonomous — 2026-06-27 — boot-freeze root-cache batch (1.50.943)
+
+- **BOOT-COREWIB-ROOTCACHE-001 / BOOT-WIB-ROOTCACHE-001** `[SHIPPED 1.50.943]` — continuing the
+  boot-freeze sidecar-swarm reduction ([[boot-storm-gate-freeze]]). `diag-boot-profile.mjs` (at HEAD
+  1.50.942) flagged the two top remaining sidecar root-finders, each running a FULL-DOCUMENT
+  `querySelectorAll` on EVERY `run()` (boot timers + MutationObserver + click/input/sections-updated =
+  dozens of times during the boot storm) though they resolve to the SAME element each run:
+  - `antcv-core-wib-strict-row-layout-274.js` `panelRoot` (~108ms): `qs('h1,h2,h3,b,strong,div,span')`
+    + 10-deep ancestor climb.
+  - `antcv-what-i-bring-header-cjlr-249.js` `editorRoot` (~99ms): `qs('input,textarea,[contenteditable]')`
+    seed scan + climb.
+  FIX (same behaviour-preserving cross-run cache as BOOT-WM-PERF-001's chooseCorner memo): cache the
+  resolved root across runs + re-validate it cheaply — the scan path is the original predicate verbatim
+  (factored into `panelMatch` / `editorRootValid`), the cache short-circuits only when the cached element
+  still passes the SAME test (O(1) text test, or a subtree-scoped count, vs an O(doc) scan). Null results
+  are never cached (panel may not exist yet at boot); 249 never caches/keeps a preview-paper root, so the
+  `inPreviewPaper` guard in `findRows` is unchanged. Verified PAST the sign-in gate
+  (`pwa/test/diag-rootcache-verify.mjs`): both resolve a real root then short-circuit the full-document
+  scan — 249 findRows returns a consistent 2 rows with doc seed-scans 1->0; 274 run() doc head-scans
+  1->0; zero sidecar console errors. Re-profiled: panelRoot 108->72ms, editorRoot dropped OUT of the top
+  self-time list, native/gc 3566->2582ms. Sidecar-only — NO app.js mirror, NO islands bundle → no
+  parallel-session contention. Suite 485/485. NEXT profiled offenders for a future run:
+  `antcv-profile-workstyle-cjlr-238.js` (~300ms, now top — already cleanText/lowText/sectionFromElement
+  memoised, residual is the per-run climb itself), `antcv-embedded-controls-248.js` (~180ms),
+  `antcv-how-contribute-controls-245.js` (~172ms). Bigger lever = a SHARED swarm coalescer (higher value,
+  higher blast radius). Re-profile with `diag-boot-profile.mjs` after each.
+
 ## Nightly autonomous — 2026-06-25 — boot-freeze sidecar-swarm memo batch (1.50.880)
 
 - **BOOT-COREWIB-PERF-001 / BOOT-OUTCOMES-PERF-001 / BOOT-EMBED-PERF-001** `[SHIPPED 1.50.880]` —

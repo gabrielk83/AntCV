@@ -25,7 +25,31 @@
   const isCoreTitle=t=>/core\s+competencies/i.test(t);
   const isWibTitle=t=>/what\s+i\s+bring/i.test(t);
 
+  // v1.50.943 BOOT-COREWIB-ROOTCACHE-001: panelRoot ran a full-document
+  // querySelectorAll('h1,h2,h3,b,strong,div,span') + 10-deep ancestor climb on
+  // EVERY run() (boot timers + MutationObserver + click/input/sections-updated =
+  // dozens of times during the boot storm) though the panel is the same element
+  // each time (~108ms boot self-time, diag-boot-profile.mjs). Cache the resolved
+  // root across runs + re-validate it cheaply (one text-predicate test on the
+  // cached element, O(1) vs O(doc)); only re-scan when the cache is empty/stale.
+  // Same behaviour-preserving cross-run cache pattern as BOOT-WM-PERF-001's
+  // chooseCorner memo. panelMatch is the original inner-climb text test verbatim
+  // (NO visibility gate, so the scan path is unchanged); the cache adds an
+  // isConnected+visible gate before trusting a cached root. Null results are NOT
+  // cached (the panel may not exist yet at boot — keep scanning until it appears).
+  function panelMatch(p){
+    const txt=clean(p.textContent||'');
+    if(/cv preview|docx/i.test(txt)) return null;
+    if((isCoreTitle(txt)||isWibTitle(txt)) && /focus\s*area/i.test(txt) && /strategic\s*expertise/i.test(txt) && /\+\s*row/i.test(txt))
+      return isCoreTitle(txt)?'core':'wib';
+    return null;
+  }
+  let __panelCache=null;
   function panelRoot(){
+    if(__panelCache){
+      if(__panelCache.isConnected && visible(__panelCache)){const k=panelMatch(__panelCache); if(k) return {root:__panelCache, kind:k};}
+      __panelCache=null;
+    }
     // v1.50.880: check the cheap text test BEFORE visible() so getClientRects()
     // (forced layout) only runs on the few title-matching elements, not every
     // h1,h2,h3,b,strong,div,span in the doc. The accepted set is unchanged.
@@ -38,11 +62,8 @@
       if(!visible(h)) continue;
       let p=h;
       for(let d=0;p&&p!==document.body&&d<10;d++,p=p.parentElement){
-        const txt=clean(p.textContent||'');
-        if(/cv preview|docx/i.test(txt)) continue;
-        if((isCoreTitle(txt)||isWibTitle(txt)) && /focus\s*area/i.test(txt) && /strategic\s*expertise/i.test(txt) && /\+\s*row/i.test(txt)){
-          return {root:p, kind:isCoreTitle(txt)?'core':'wib'};
-        }
+        const k=panelMatch(p);
+        if(k){__panelCache=p; return {root:p, kind:k};}
       }
     }
     return null;

@@ -58,7 +58,25 @@
     const txt=cleanText(row);
     return /focus area|strategic expertise/i.test(txt) || fields.some(f=>/focus area|strategic/i.test(f.value||f.placeholder||f.textContent||''));
   }
+  // v1.50.943 BOOT-WIB-ROOTCACHE-001: editorRoot ran a full-document
+  // querySelectorAll('input,textarea,[contenteditable]') to find the focus-area
+  // seed on EVERY run() (boot timers + MutationObserver + click/input/
+  // sections-updated = dozens of times during the boot storm) though the editor
+  // root is the same element each time (~99ms boot self-time). Cache the resolved
+  // root across runs + re-validate it cheaply against its OWN subtree (scoped
+  // querySelectorAll, not the whole document); only re-scan when stale. Same
+  // cross-run cache pattern as 274's panelRoot / BOOT-WM-PERF-001. A preview-paper
+  // root is never cached + always invalidated, so the inPreviewPaper guard in
+  // findRows behaves exactly as before. Null results are not cached.
+  function editorRootValid(p){
+    if(!p||!p.isConnected||inPreviewPaper(p)) return false;
+    if(CORE_RX.test(cleanText(p))) return true;
+    const count=Array.from(p.querySelectorAll('input,textarea,[contenteditable="true"]')).filter(x=>/focus area|strategic/i.test(x.value||x.placeholder||x.textContent||'')).length;
+    return count>=4;
+  }
+  let __editorRootCache=null;
   function editorRoot(){
+    if(__editorRootCache){ if(editorRootValid(__editorRootCache)) return __editorRootCache; __editorRootCache=null; }
     const seeds=Array.from(document.querySelectorAll('input,textarea,[contenteditable="true"]')).filter(f=>/focus area|strategic expertise/i.test(f.value||f.placeholder||f.textContent||''));
     const seed=seeds[0]; if(!seed) return null;
     let p=seed.parentElement,best=null;
@@ -68,6 +86,7 @@
       if(count>=4) best=p;
       if(CORE_RX.test(t)){best=p;break;}
     }
+    if(best && !inPreviewPaper(best)) __editorRootCache=best;
     return best;
   }
   function directRowForField(f,root){

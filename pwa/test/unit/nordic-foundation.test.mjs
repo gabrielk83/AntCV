@@ -9,9 +9,10 @@ import path from 'node:path';
 
 const SRC = readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../antcv-foundation-to-rich-block-758.js'), 'utf8');
 
-function load(toneRegister, sections) {
+function load(toneRegister, sections, name) {
   const store = new Map();
   if (toneRegister !== undefined) store.set('toneRegister', JSON.stringify(toneRegister));
+  if (name !== undefined) store.set('personalInfo', JSON.stringify({ name }));
   store.set('sections', JSON.stringify(sections));
   const localStorage = {
     getItem: (k) => (store.has(k) ? store.get(k) : null),
@@ -80,4 +81,24 @@ test('no toneRegister: not forced', () => {
   const { sec } = load(undefined, richFoundation());
   assert.equal(sec.headlineOff, undefined);
   assert.equal(findRow(sec, 'Hands-on').mk, undefined);
+});
+
+test('GABRIEL-FOUNDATION-OPENING: nordic + Gabriel + no opening -> "Foundation" opener prepended', () => {
+  const { sec } = load('nordic-minimal', legacyFoundation(), 'Gabriel Alexander Karp-Gershon');
+  assert.equal(sec.items[0].b, 'Foundation', 'first row is the Foundation opener');
+  assert.ok(/I connect hardware engineering/.test(sec.items[0].t), 'opener carries the sentence');
+  assert.equal(sec.items[0].mk, undefined, 'opener is a paragraph (no bullet)');
+  assert.equal(findRow(sec, 'Hands-on').mk, true);
+});
+
+test('opening injection is name-guarded: non-Gabriel gets no opener', () => {
+  const { sec } = load('nordic-minimal', legacyFoundation(), 'Jane Doe');
+  assert.notEqual(sec.items[0].b, 'Foundation');
+});
+
+test('opening injection idempotent: a 2nd run does not double-add', () => {
+  const h = load('nordic-minimal', legacyFoundation(), 'Gabriel Karp');
+  const after2 = h.rerun();
+  const openers = after2.items.filter((r) => r && r.b === 'Foundation').length;
+  assert.equal(openers, 1, 'exactly one Foundation opener');
 });

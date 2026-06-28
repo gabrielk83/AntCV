@@ -18,7 +18,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.949-nordic-foundation';
+  var VERSION = '1.50.951-foundation-opening';
   if (window.__antcvFoundationToRichBlock758 === VERSION) return;
   window.__antcvFoundationToRichBlock758 = VERSION;
 
@@ -33,6 +33,16 @@
     try { var tr = localStorage.getItem('toneRegister');
       if (tr) { var v = JSON.parse(tr); return v === 'nordic-minimal' || v === 'scandinavian'; } } catch (_) {}
     return false;
+  }
+  // GABRIEL-FOUNDATION-OPENING-001 (owner 2026-06-28): the generator emits FOUNDATION as only
+  // hands_on + professionally; the "Foundation:" OPENING sentence is dropped, so with the headline
+  // hidden the section had no opener. Restore it as the lead-in opening row when missing. This is
+  // Gabriel's SPECIFIC content (hardware engineering …), NOT a generic default, so it is name-guarded
+  // to Gabriel — same pattern as the kernel role_results_exact seed. Idempotent (only when the first
+  // row isn't already a "Foundation" lead-in).
+  var GABRIEL_FOUNDATION_OPENING = 'I connect hardware engineering, product scope and production readiness via requirements, validation & traceability.';
+  function isGabriel() {
+    try { var p = JSON.parse(localStorage.getItem('personalInfo') || '{}'); return /\bgabriel\b/i.test(String((p && p.name) || '')); } catch (_) { return false; }
   }
   function convertList(list, idsOut) {
     if (!Array.isArray(list)) return { changed: false, list: list };
@@ -53,6 +63,12 @@
         }
         return r;
       });
+      // Restore Gabriel's "Foundation" opening sentence as the first (paragraph) row when missing.
+      var hasOpening = c.items[0] && typeof c.items[0] === 'object' && c.items[0].b === 'Foundation';
+      if (!hasOpening && isGabriel()) {
+        c.items = [{ b: 'Foundation', t: GABRIEL_FOUNDATION_OPENING }].concat(c.items);
+        touched = true;
+      }
       if (!touched) return sec;
       changed = true;
       return c;

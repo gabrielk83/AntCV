@@ -1,9 +1,12 @@
 > **AUTHORITATIVE current state + next-nightly prompt: `docs/qa/NEXT_NIGHTLY_HANDOFF_2026-06-24.md`.** (PWA 1.50.869 + docx-worker 1.14.81; suite 467/467.) Read it FIRST — it has the shipped list (843→869), the regen-gated items to verify on the owner's incoming fresh export, the deep CV-SIDEBAR-SPILL spec, and the parallel-session/stale-SW discipline. The blocks below are the per-batch detail. (Older handoff: `SESSION_HANDOFF_2026-06-18-pm3.md`.)
 
-## Owner-steered live batch — 2026-06-28 — pagination + PDF header (worker 1.14.90)
+## Owner-steered live batch — 2026-06-28 — pagination + PDF header + export (worker 1.14.90/1.14.91, PWA 1.50.946)
 
-Owner reviewed a real exported CV/PDF mid-nightly and reported 5 issues. Triaged by
-verifiability; shipped the one verifiable structural fix, diagnosed the rest.
+Owner reviewed a real exported CV/PDF mid-nightly and reported 5 issues + new feature
+requests. Triaged by verifiability. SHIPPED: #4 (group split, worker 1.14.90), #5 (PDF
+header left, worker 1.14.91), export warmup (PWA 1.50.946). Diagnosed + queued: #2, #3,
+rich_block rule toggle, candidate-header contact bug + rule-lines (all need app.js-mirror
+edits and/or a live browser).
 
 - **(1) ADDITIONAL INFORMATION "Research outputs" label missing in preview** — `[DROPPED by owner]`
   Root cause IS understood (`antcv-group-name-visibility.js` RULE 1 hides a lone
@@ -52,14 +55,52 @@ verifiability; shipped the one verifiable structural fix, diagnosed the rest.
   and the cache invalidation carries the SIDEBAR-SHRINK-RECLAIM regression risk — needs
   the jump-probe + the owner's live browser on a real 3-4 page CV.
 
-- **(5) PDF candidate-header text too far right vs preview** `[DIAGNOSED — needs PDF check]`
-  Worker band-overlap header: text cell origin = `sidebarW + 120` twips; preview =
-  `sidebarW − 28px` (≈ −420 twips). Export sits ~36px too far right. Fix = make the
-  text-cell origin `sidebarW − 420` (Option A: narrow the photo-zone cell by 540 +
-  widen the text cell by 540, keeping left:120; Option B: text-cell `left: -420`).
-  `workers/docx-worker/src/index.js` ~24830/24839/24842. NOT shipped tonight: the
-  result is only confirmable in the real CloudConvert PDF (no headless renderer), and
-  it touches EVERY band-overlap header (the owner's default) — wants an owner PDF check.
+- **(5) PDF candidate-header text too far right vs preview** `[SHIPPED docx-worker 1.14.91]`
+  **PDF-HEADER-LEFT-001** — Option A (geometry, owner-approved). Band-overlap bridge
+  header text origin was `sidebarW + 120` twips; preview is `sidebarW − 28px`. Narrowed
+  the empty photo-zone cell by 540 twips + widened the text cell by 540 (cells still sum
+  to PAGE_W, text left margin kept 120) → origin `sidebarW − 420` = −28px, matching the
+  preview. `workers/docx-worker/src/index.js` ~24829-24846. Verified in document.xml
+  (chk): 3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420; node
+  --test 13/13; photo-bridge/midsplit/ownerlike/photo-positions OK. Deployed run
+  28325421198. Owner does the final CloudConvert PDF eyeball.
+
+- **(Export) "Page setup" first on PDF export, refresh needed for CloudConvert** `[SHIPPED PWA 1.50.946]`
+  **EXPORT-WARMUP-001** — the PDF button gates on `await isPdfWorkerAvailable()` which
+  lazily probes the docx-worker `/health` on the FIRST click; a cold worker returns a
+  transient null (NOT cached) → gate fails → browser-print fallback (`kl()`); refresh
+  warms it. New sidecar `antcv-pdf-worker-warmup.js` calls the probe in the background
+  ~2.5s after boot (retry until /health answers) so the cache is populated before the
+  first export. Purely additive + read-only — cannot regress (worst case no-op). Kill
+  switch `antcv:disable-pdf-warmup`. Verified `pwa/test/diag-pdf-warmup-verify.mjs`
+  (proactive /health hit, no user click; suite 485/485).
+
+- **(Feature) rich_block RULE independent of HEADLINE** `[DIAGNOSED — queued]`
+  Owner: the "— Rule" button is disabled when the headline is hidden ("No rule without a
+  headline"); wants the horizontal rule show/hide-able independently. Coupling in 3 of 4
+  layers: EDITOR `antcv-rich-block-editor.js` L66 (`disabled:headOff` + `if(!headOff)`
+  guard); PREVIEW `app.src.js` ~6858-6899 (headlineOff → whole heading block incl. rule
+  returns null); WORKER `index.js` renderSection ~26001 (`s.headlineOff` skips heading
+  entirely) + `headingParagraph` always packs title+rule together. Fix: decouple — early-
+  null only when BOTH off; render title node on `!headlineOff`; thread `headlineOff` into
+  headingParagraph to emit a title-less bordered paragraph (standalone rule). NOTE: the
+  heading wrapper is GENERIC across all section types, so this is not rich_block-scoped.
+  Needs app.js mirror + worker deploy + headless verify (preview + document.xml).
+
+- **(Feature/bug) Candidate-header: Contact click closes the section + per-field rule lines** `[DIAGNOSED — queued]`
+  BUG: clicking the "Contact" row in the candidate side-panel collapses the section
+  instead of opening contact editing. Root: the accordion row `je` (app.src.js ~11267)
+  shares its click area with the loc-move `◀` button (`s(e.key)` rewrites sections, moves
+  contact out of the topbar list) and the section header's collapse toggle
+  (data-candidate-drop-loc, ~45044); the move/ON-OFF buttons lack stopPropagation. Fix:
+  add `ev.stopPropagation()` to the loc/ON-OFF button handlers (~11545/11572/11594) and a
+  `target.closest('button,input,…')` early-out on the row onClick (~11426). FEATURE: add
+  an optional horizontal rule before/after each header field (Name/Spec/Application/Contact)
+  — the `f(color,before,after)` rule helper already exists (app.src.js ~26302); add a
+  `headerItemRule` store (mirror of headerItemAlign) + worker buildHeaderCell parity
+  (~25288). Needs app.js mirror (shadow-hazard: verify `je`'s locals in-scope).
+
+- **(3) and (2) below stay DIAGNOSED — owner live-tuning / live browser (unchanged).**
 
 ## Nightly autonomous — 2026-06-28 — wait-screen scan gate (1.50.945)
 

@@ -179,7 +179,14 @@
   // CERTS-PAGE2-001 (owner 2026-06-28): pinned to 300 (was AUTO/null -> ~200) — owner live-confirmed
   // 300 flows CERTIFICATES & COURSES off page 1 onto page 2 (the sidebar reflowed after the LANGUAGES
   // heal). Higher = page-1 sidebar holds less. Owner-tunable live via config({ SIDEBAR_PAGE1_BAND }).
-  var SIDEBAR_PAGE1_BAND = 300;
+  // TOOLS-PAGE1-BAND-001 (owner 2026-06-28 "TOOLS should have stayed on page 1 fully"): with the photo
+  // in the sidebar, measured TOOLS & METHODS = 627px logical, but band 300 gave a page-1 budget of only
+  // 924-300 = 624px, so TOOLS overflowed by ~3px and broke at its last group (and the sig-cache pinned a
+  // worse 3-page split). Lower to 270 (budget 654) so TOOLS (627) fits page 1 with a ~27px noise margin,
+  // while CERTIFICATES (179px) after TOOLS still overflows (627+179=806 > 654) and flows to page 2 —
+  // preserving CERTS-PAGE2-001. The 30px increase in page-1 fill stays within the export SAFETY (70px)
+  // slack, so the worker holds it on page 1 too (no coordinator<->export divergence).
+  var SIDEBAR_PAGE1_BAND = 270;
   // KEEP-WHOLE only applies to sections up to this FRACTION of a page. A big SIDEBAR section
   // (the 25-item REGULATORY CONTEXT) is ~80% of a page: keeping it whole whole-moves it to the
   // next page and leaves the prior page's sidebar short. Splitting it instead BALANCES it across

@@ -18,7 +18,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.758';
+  var VERSION = '1.50.949-nordic-foundation';
   if (window.__antcvFoundationToRichBlock758 === VERSION) return;
   window.__antcvFoundationToRichBlock758 = VERSION;
 
@@ -26,10 +26,40 @@
     try { var v = JSON.parse(localStorage.getItem('sections') || '{}'); return (v && typeof v === 'object') ? v : {}; }
     catch (_) { return {}; }
   }
+  // NORDIC-FOUNDATION-DEFAULT-001 (owner 2026-06-28): for the Nordic Minimal style the FOUNDATION
+  // default is HEADLINE HIDDEN + Hands-on/Professionally rendered as BULLETS (an existing "Foundation"
+  // opening row, if present, stays a paragraph). Same toneRegister read as the HWIC fix (760).
+  function isNordicMinimal() {
+    try { var tr = localStorage.getItem('toneRegister');
+      if (tr) { var v = JSON.parse(tr); return v === 'nordic-minimal' || v === 'scandinavian'; } } catch (_) {}
+    return false;
+  }
   function convertList(list, idsOut) {
     if (!Array.isArray(list)) return { changed: false, list: list };
     var changed = false;
+    // Apply the Nordic-Minimal FOUNDATION default to a foundation rich_block: headline hidden +
+    // Hands-on/Professionally as bullets. Idempotent (headlineOff only when unset → respects a user
+    // who re-showed it; mk only added when absent). Other styles untouched. NOTE: turning a marker
+    // OFF reads the same as never having one, so under nordic a removed Hands-on/Professionally bullet
+    // is re-added (this is a STYLE DEFAULT, per the directive); add a sentinel later if needed.
+    function nordicFoundationDefault(sec) {
+      if (!sec || sec.id !== 'foundation' || sec.type !== 'rich_block' || !Array.isArray(sec.items) || !isNordicMinimal()) return sec;
+      var c = Object.assign({}, sec);
+      var touched = false;
+      if (c.headlineOff === undefined) { c.headlineOff = true; touched = true; }
+      c.items = c.items.map(function (r) {
+        if (r && typeof r === 'object' && (r.b === 'Hands-on' || r.b === 'Professionally') && r.mk !== true) {
+          touched = true; var rc = Object.assign({}, r); rc.mk = true; return rc;
+        }
+        return r;
+      });
+      if (!touched) return sec;
+      changed = true;
+      return c;
+    }
     var out = list.map(function (s) {
+      // Already-converted foundation rich_block (re-run / regen): apply the nordic default in place.
+      if (s && s.id === 'foundation' && s.type === 'rich_block') return nordicFoundationDefault(s);
       if (!s || s.type !== 'foundation') return s;
       changed = true;
       idsOut.push(s.id);
@@ -44,7 +74,7 @@
       if (s.pageBreakBefore) ns.pageBreakBefore = s.pageBreakBefore;
       if (s.headlineOff) ns.headlineOff = s.headlineOff;
       if (s.ruleOff) ns.ruleOff = s.ruleOff;
-      return ns;
+      return nordicFoundationDefault(ns);
     });
     return { changed: changed, list: out };
   }

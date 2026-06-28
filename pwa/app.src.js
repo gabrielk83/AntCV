@@ -38131,13 +38131,21 @@
                                                     },
                                                   );
                                                 } catch (e) {}
+                                                // DATA-LOSS-LOAD-GRACE-001 (2026-06-28):
+                                                // never blank a populated editor when the
+                                                // loaded app's sections came back empty
+                                                // (old wipe-generated bug) — keep current,
+                                                // notice instead. See the topbar twin.
+                                                const __hasReal =
+                                                  (Array.isArray(n.cv_sections) && n.cv_sections.length) ||
+                                                  (Array.isArray(n.cl_sections) && n.cl_sections.length);
                                                 // APPHISTORY-RELOAD-001: the data
                                                 // loaded into state but the user was
                                                 // left on the Settings/History view,
                                                 // so it looked like nothing happened.
                                                 // Surface the loaded CV: switch to the
                                                 // editor and close the Settings panel.
-                                                (ao({
+                                                (__hasReal ? (ao({
                                                   cv: n.cv_sections || [],
                                                   cl: n.cl_sections || [],
                                                 }),
@@ -38190,7 +38198,7 @@
                                                   await oo.setActive(e.id),
                                                   Ml(e.id),
                                                   $t("editor"),
-                                                  q(!1));
+                                                  q(!1)) : Gl("This saved draft has no stored content (it was cleared by an earlier bug). Your current draft is unchanged. Regenerate this one to rebuild it."));
                                               }
                                             } catch (e) {
                                               Gl((e && e.message) || String(e));
@@ -44256,11 +44264,20 @@
                                         },
                                       );
                                     } catch (e) {}
+                                    // DATA-LOSS-LOAD-GRACE-001 (2026-06-28): a saved app whose
+                                    // cv/cl_sections came back EMPTY (e.g. nulled by the old blanket
+                                    // wipe-generated bug, GEN-CONTAMINATION-PRESERVE-DRAFTS-001) must
+                                    // NOT blank the populated editor — empty sections trip the client
+                                    // minimum-sections floor and show the me() template. Keep the
+                                    // current draft and surface a notice instead of destroying it.
+                                    const __hasReal =
+                                      (Array.isArray(n.cv_sections) && n.cv_sections.length) ||
+                                      (Array.isArray(n.cl_sections) && n.cl_sections.length);
                                     // APPHISTORY-RELOAD-001 / 1.50.235:
                                     // surface the loaded CV — switch to the
                                     // editor view and hydrate sections + meta
                                     // (incl. subtitle) from the saved record.
-                                    (ao({
+                                    (__hasReal ? (ao({
                                       cv: n.cv_sections || [],
                                       cl: n.cl_sections || [],
                                     }),
@@ -44327,7 +44344,7 @@
                                       })(),
                                       await oo.setActive(e.id),
                                       Ml(e.id),
-                                      $t("editor"));
+                                      $t("editor")) : Gl("This saved draft has no stored content (it was cleared by an earlier bug). Your current draft is unchanged. Regenerate this one to rebuild it."));
                                   }
                                   Jl(!1);
                                 } catch (e) {

@@ -24827,7 +24827,15 @@ function buildTwoColumnDocument(ctx) {
   const headerRow = bridgeOn ? new TableRow({
     children: [
       new TableCell({
-        width: { size: ctx.sidebarW, type: WidthType.DXA },
+        // PDF-HEADER-LEFT-001 (owner 2026-06-28): pull the candidate text block
+        // LEFT to match the preview. Preview text origin = (sidebarW% − 28px) ≈
+        // sidebarW − 420 twips; the export was sidebarW + 120 (~36px too far right).
+        // Narrow the empty photo zone by 540 twips (= 28px pull-back + the 120 text
+        // left-margin) and widen the text cell by the same 540, so the text origin
+        // lands at (sidebarW − 540) + 120 = sidebarW − 420. Cells still sum to PAGE_W.
+        // The page-anchored bridge medallion is UNAFFECTED — it lives in the sidebar
+        // column (page-relative position), not in this empty zone cell.
+        width: { size: ctx.sidebarW - 540, type: WidthType.DXA },
         shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
         borders: noBorders(),
         margins: { top: 240, bottom: 80, left: 80, right: 80 },
@@ -24836,7 +24844,7 @@ function buildTwoColumnDocument(ctx) {
         children: [emptyParagraph()]
       }),
       new TableCell({
-        width: { size: PAGE_W - ctx.sidebarW, type: WidthType.DXA },
+        width: { size: PAGE_W - ctx.sidebarW + 540, type: WidthType.DXA },
         shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
         borders: noBorders(),
         margins: { top: 240, bottom: 80, left: 120, right: 360 },
@@ -27629,7 +27637,16 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   page break and each smaller chunk falls under the body<=18 cantSplit guard.
 //   Whole-section move (first item on page 2) still falls through to
 //   _firstItemPageBreak unchanged. Sidebar-only; guarded by _antcvSegment.
-var VERSION = "1.14.90-richblock-midsplit";
+// 1.14.91 (owner 2026-06-28): PDF-HEADER-LEFT-001 — the band-overlap candidate
+//   header text block sat ~36px too far right vs the preview. The bridge header
+//   row split the band into a photo-zone cell (sidebarW) + a text cell (left
+//   margin 120), so text origin = sidebarW + 120; the preview is sidebarW − 28px.
+//   Narrowed the empty photo zone by 540 twips and widened the text cell by 540
+//   (cells still sum to PAGE_W), so text origin = (sidebarW − 540) + 120 =
+//   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
+//   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
+//   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
+var VERSION = "1.14.91-pdf-header-left";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

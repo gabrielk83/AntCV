@@ -25874,6 +25874,54 @@ function renderSection(s, ctx, isSidebar) {
       return out2;
     }
   }
+  // RICH-BLOCK-MIDSECTION-SPLIT-001 (owner 2026-06-28): a SIDEBAR rich_block
+  // (REGULATORY CONTEXT, TOOLS & METHODS) that spans pages carried its per-row
+  // breaks INSIDE the section-wrapper body cell (renderRichBlock pbBreakPara) —
+  // invisible to the per-page two-column splitter (splitChildrenByPage only sees
+  // TOP-LEVEL __antcvPB). Result (owner real PDF): a {grp} group header + its
+  // first row orphaned at the bottom of page 1, and a single labeled value split
+  // mid-sentence across the page boundary. Mirror the proven labeled_list/table/
+  // experience chunkers: split the items by their row_pages page into TOP-LEVEL
+  // segments so each break is a document-level page break the splitter honours,
+  // and each (smaller) chunk falls under the body.length<=18 cantSplit guard so a
+  // value can no longer break mid-paragraph. The WHOLE-section move (first item on
+  // page 2) yields a single chunk here and falls through to _firstItemPageBreak
+  // below (RICH-BLOCK-WHOLE-MOVE-001), unchanged. Guarded by _antcvSegment so the
+  // recursive re-render of each segment doesn't re-split.
+  if (
+    isSidebar && !s._antcvSegment && s.type === "rich_block" &&
+    Array.isArray(s.items) && s.items.length > 1 &&
+    s.row_pages && typeof s.row_pages === "object"
+  ) {
+    const _rpx = s.row_pages;
+    const _pageOf = (i) => {
+      const n = Number(_rpx[String(i)] != null ? _rpx[String(i)] : _rpx["items." + i]);
+      return Number.isFinite(n) && n >= 2 && n <= 4 ? Math.round(n) : 1;
+    };
+    let run = 1; const chunks = []; const byPage = {};
+    for (let i = 0; i < s.items.length; i++) {
+      let p = _pageOf(i);
+      if (p > run) run = p; else p = run;
+      if (byPage[p] === undefined) { byPage[p] = chunks.length; chunks.push({ page: p, items: [] }); }
+      chunks[byPage[p]].items.push(s.items[i]);
+    }
+    if (chunks.length > 1) {
+      const out2 = [];
+      chunks.forEach((ch, ci) => {
+        const seg = Object.assign({}, s, {
+          items: ch.items,
+          // breaks are now top-level segment boundaries — clear row_pages so
+          // renderRichBlock doesn't ALSO emit an in-cell pbBreakPara/(CONT.).
+          row_pages: {},
+          _antcvSegment: true,
+          title: ci > 0 ? (ctx.style && ctx.style.contHeadlines === false ? "" : (s.title || "") + " " + (ctx.contSuffix || "(CONT.)")) : s.title,
+          pageBreakBefore: ci > 0 ? true : s.pageBreakBefore,
+        });
+        out2.push(...renderSection(seg, ctx, isSidebar));
+      });
+      return out2;
+    }
+  }
   const isCLBoilerplate = ["greeting", "opening", "closure"].includes(s.id);
   const inlineTitleType = !isCLBoilerplate && (s.type === "text_inline" || isWorkStyleSection(s));
   const skipHeading = inlineTitleType || isCLBoilerplate;
@@ -27571,7 +27619,17 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   the anchor's spacing-after from (px/2+14) to (px/2-12) so the first sidebar
 //   section sits just under the medallion (~0.27in higher; the full 0.6in would
 //   overlap the photo at the default diameter).
-var VERSION = "1.14.89-role-gap";
+// 1.14.90 (owner 2026-06-28): RICH-BLOCK-MIDSECTION-SPLIT-001 — a SIDEBAR
+//   rich_block (REGULATORY CONTEXT) that spans pages emitted its per-row breaks
+//   INSIDE the section-wrapper body cell (invisible to the two-column page
+//   splitter), so a {grp} group header + first row orphaned at the bottom of
+//   page 1 and a single labeled value split mid-sentence across the boundary.
+//   Now chunked into TOP-LEVEL page segments by row_pages (mirrors the existing
+//   labeled_list/table/experience chunkers) so each break is a document-level
+//   page break and each smaller chunk falls under the body<=18 cantSplit guard.
+//   Whole-section move (first item on page 2) still falls through to
+//   _firstItemPageBreak unchanged. Sidebar-only; guarded by _antcvSegment.
+var VERSION = "1.14.90-richblock-midsplit";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

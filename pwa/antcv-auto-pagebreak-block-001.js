@@ -221,13 +221,12 @@
   // the group OUT of the page-2 column shrinks the measured total, which would otherwise un-move
   // it -> the "metastable dance" the owner saw). Breaks the measure<->render feedback loop.
   var __forceLastGrpStick = {};
-  // SIDEBAR-SIG-CACHE-001 (owner 2026-06-28 "fixate sidebar page 2-3"): FLAG-GATED (default OFF).
-  // The whole sidebar __sPaged re-derives from live measured heights on EVERY pass, so sub-px
-  // re-measure noise on scroll flips the page-2/3 boundary (the "dance"). When enabled, __sPaged is
-  // cached keyed on a STABLE signature (sidebar block count + bucketed column width + page-1 band +
-  // a coarse 50px-bucketed total height) and REUSED while the signature is unchanged — deterministic
-  // across re-measure noise, invalidating only on a genuine content change. Default OFF keeps the
-  // path byte-identical to today (zero production risk). Enable: localStorage['antcv:sidebar-sig-cache']='1'.
+  // SIDEBAR-SIG-CACHE-001 (owner 2026-06-28 "fixate sidebar page 2-3", confirmed DEFAULT ON — the
+  // damping is desired). The whole sidebar __sPaged re-derives from live measured heights on EVERY
+  // pass, so sub-px re-measure noise on scroll flips the page-1/2 and page-2/3 boundaries (the
+  // "dance"). __sPaged is cached on a STABLE signature (block count + bucketed column width + page-1
+  // band) and REUSED while unchanged — deterministic across re-measure noise, invalidating on a real
+  // add/remove/resize. Kill switch: localStorage['antcv:sidebar-sig-cache']='0'.
   var __sidebarPagedCache = null;
   // Measure the profile photo's height (the reserve the sidebar's page 1 loses to it). 0 when
   // there is no photo (then the sidebar band falls back to PAGE1_BAND).
@@ -1015,16 +1014,18 @@
         // page top (it does NOT lose the candidate header band the way the main does), so the band
         // should be ~PAGE1_BAND alone (budget ~724): TOOLS fits page 1, certs still flow to page 2.
         var __sbBand1 = (typeof SIDEBAR_PAGE1_BAND === 'number') ? SIDEBAR_PAGE1_BAND : PAGE1_BAND;
-        // SIDEBAR-SIG-CACHE-001 (FLAG-GATED, default OFF): stabilise the page-2/3 sidebar boundary by
-        // reusing the prior __sPaged while a stable signature is unchanged (kills the re-measure dance).
+        // SIDEBAR-SIG-CACHE-001 (owner 2026-06-28: DEFAULT ON — the damping is desired; disable with
+        // localStorage 'antcv:sidebar-sig-cache'='0'). Reuse the prior sidebar __sPaged while a STABLE
+        // signature is unchanged so the page-1/2 AND page-2/3 boundaries hold across re-measure noise.
+        // Signature = block count + bucketed column width + page-1 band — NO per-measure height term:
+        // the earlier 50px-height bucket still flipped at the page-1/2 endings, so keying on block-count
+        // (matching the proven FORCE_LAST_GRP sticky) stops BOTH dances. Invalidates on add/remove/resize.
         var __sPaged;
-        var __sigCacheOn = false; try { __sigCacheOn = localStorage.getItem('antcv:sidebar-sig-cache') === '1'; } catch (_) {}
+        var __sigCacheOn = true; try { __sigCacheOn = localStorage.getItem('antcv:sidebar-sig-cache') !== '0'; } catch (_) {}
         if (__sigCacheOn) {
-          var __sbTot = 0;
-          for (var __si = 0; __si < __uniBlocks.sidebar.length; __si++) { var __sblk = __uniBlocks.sidebar[__si]; __sbTot += Math.max(0, (__sblk.bottom || 0) - (__sblk.top || 0)); }
-          var __sbSig = __uniBlocks.sidebar.length + 'x' + Math.round((__sbColW || 0) / 10) + 'x' + __sbBand1 + 'x' + Math.round(__sbTot / 50);
+          var __sbSig = __uniBlocks.sidebar.length + 'x' + Math.round((__sbColW || 0) / 10) + 'x' + __sbBand1;
           if (__sidebarPagedCache && __sidebarPagedCache.sig === __sbSig && Array.isArray(__sidebarPagedCache.paged)) {
-            __sPaged = __sidebarPagedCache.paged;   // reuse — page-2/3 boundary holds across re-measure noise
+            __sPaged = __sidebarPagedCache.paged;   // reuse — sidebar page boundaries hold across re-measure noise
           } else {
             __sPaged = __uniPaginate(__uniBlocks.sidebar, __sbBand1, SIDEBAR_PREVIEW_INFLATE, KEEP_WHOLE_FRAC);
             __sidebarPagedCache = { sig: __sbSig, paged: __sPaged };

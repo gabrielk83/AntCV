@@ -35,10 +35,11 @@ guard 3/3; deployed via deploy.yml (✓); relay `/health` 200.
 RESIDUAL:
 - The **3 already-nulled drafts are unrecoverable** (cloud sections null, showcase deleted, KV holds
   only the current app). The owner must regenerate them. Future regens are safe.
-- **Client load-grace guard (next bundle):** the explicit app-switch apply sites (topbar ~44263 +
-  settings ~38140) still BLANK the populated editor when a loaded app is empty → silent template. Add
-  `(__hasReal ? (…existing apply…) : Gl("this draft has no stored content; your current draft is
-  unchanged"))` at both sites. Touches the app.js mirror + cache-bust quintet → ship as its own bundle.
+- **Client load-grace guard — DONE (DATA-LOSS-LOAD-GRACE-001, LIVE 1.50.957).** Both explicit
+  app-switch apply sites (topbar ~44263 + settings ~38140) now wrap the apply in
+  `__hasReal ? (…existing…) : Gl(notice)`; loading an empty/damaged app keeps the current populated
+  draft and shows a notice instead of blanking into the template. Mirrored to app.js, boot-smoke
+  clean, suite 521/521, confirmed live (guard present in app.js?v=1.50.957, app boots).
 
 VERIFY recipe (owner): generate a NEW targeted app, save it, run a FULL regen (different company), then
 load the saved one from the topbar/Settings switch — it should now return WITH its content (pre-fix it

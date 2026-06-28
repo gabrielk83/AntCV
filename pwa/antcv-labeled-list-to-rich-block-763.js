@@ -18,7 +18,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.763e';
+  var VERSION = '1.50.955-interests-align';
   if (window.__antcvLabeledListToRichBlock763 === VERSION) return;
   window.__antcvLabeledListToRichBlock763 = VERSION;
 
@@ -116,18 +116,38 @@
       if (touched) localStorage.setItem('antcvItemAlignment', JSON.stringify(al));
     } catch (_) {}
   }
+  // INTERESTS-ALIGN-STABLE-001 (owner 2026-06-28): the INTERESTS rich_block content alignment flips
+  // LEFT<->JUSTIFY because __hasGrp oscillates (the {grp} marker comes and goes across passes), and
+  // the rich_block default is grouped->LEFT / ungrouped->JUSTIFY. Pin an explicit __group__='left'
+  // (which BOTH the preview __rowAlign and the worker groupCjlr honor BEFORE the __hasGrp default) so
+  // it can't flip. Only when unset (respects an owner override); idempotent; runs every pass. Returns
+  // true if it wrote (so run() repaints once).
+  function pinInterestsAlign(secs) {
+    try {
+      var has = ['cv', 'cl'].some(function (dk) { return Array.isArray(secs[dk]) && secs[dk].some(function (s) { return s && s.id === 'interests'; }); });
+      if (!has) return false;
+      var al = JSON.parse(localStorage.getItem('antcvItemAlignment') || '{}') || {};
+      if (!al.interests || typeof al.interests !== 'object') al.interests = {};
+      if (al.interests.__group__) return false;   // already pinned / owner-set
+      al.interests.__group__ = 'left';
+      localStorage.setItem('antcvItemAlignment', JSON.stringify(al));
+      return true;
+    } catch (_) { return false; }
+  }
   function run() {
     try {
       var secs = readSections();
+      var pinned = pinInterestsAlign(secs);   // independent of conversion — runs every pass
       var centerIds = [];
       var cv = mapList(secs.cv || [], centerIds);
       var cl = mapList(secs.cl || [], centerIds);
-      if (!cv.changed && !cl.changed) return;
       if (cv.changed) secs.cv = cv.list;
       if (cl.changed) secs.cl = cl.list;
-      localStorage.setItem('sections', JSON.stringify(secs));
+      if (cv.changed || cl.changed) localStorage.setItem('sections', JSON.stringify(secs));
       centerSections(centerIds);
-      try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { reason: 'labeled-list-to-rich-block-763' } })); } catch (_) {}
+      if (cv.changed || cl.changed || pinned) {
+        try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { reason: 'labeled-list-to-rich-block-763' } })); } catch (_) {}
+      }
     } catch (_) { /* self-disable on any error */ }
   }
   window.addEventListener('antcv:sections-updated', run);

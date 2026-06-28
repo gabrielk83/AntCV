@@ -1,4 +1,6 @@
-> **AUTHORITATIVE current state + next-nightly prompt: `docs/qa/NEXT_NIGHTLY_HANDOFF_2026-06-24.md`.** (PWA 1.50.869 + docx-worker 1.14.81; suite 467/467.) Read it FIRST — it has the shipped list (843→869), the regen-gated items to verify on the owner's incoming fresh export, the deep CV-SIDEBAR-SPILL spec, and the parallel-session/stale-SW discipline. The blocks below are the per-batch detail. (Older handoff: `SESSION_HANDOFF_2026-06-18-pm3.md`.)
+> **AUTHORITATIVE current state + next-session prompt: `docs/qa/NEXT_SESSION_2026-06-28.md`** (PWA 1.50.956 + docx-worker 1.14.93; suite 521/521). Read it FIRST — top priority is [CRITICAL] DATA-LOSS-ON-RESTORE, then the export-only pagination parity. Older: `docs/qa/NEXT_NIGHTLY_HANDOFF_2026-06-24.md`.
+>
+> _(prior pointer:)_ **`docs/qa/NEXT_NIGHTLY_HANDOFF_2026-06-24.md`.** (PWA 1.50.869 + docx-worker 1.14.81; suite 467/467.) Read it FIRST — it has the shipped list (843→869), the regen-gated items to verify on the owner's incoming fresh export, the deep CV-SIDEBAR-SPILL spec, and the parallel-session/stale-SW discipline. The blocks below are the per-batch detail. (Older handoff: `SESSION_HANDOFF_2026-06-18-pm3.md`.)
 
 ## Owner-steered live batch — 2026-06-28 — pagination + PDF header + export (worker 1.14.90/1.14.91, PWA 1.50.946)
 

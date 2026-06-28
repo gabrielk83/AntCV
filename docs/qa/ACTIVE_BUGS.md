@@ -1,5 +1,66 @@
 > **AUTHORITATIVE current state + next-nightly prompt: `docs/qa/NEXT_NIGHTLY_HANDOFF_2026-06-24.md`.** (PWA 1.50.869 + docx-worker 1.14.81; suite 467/467.) Read it FIRST — it has the shipped list (843→869), the regen-gated items to verify on the owner's incoming fresh export, the deep CV-SIDEBAR-SPILL spec, and the parallel-session/stale-SW discipline. The blocks below are the per-batch detail. (Older handoff: `SESSION_HANDOFF_2026-06-18-pm3.md`.)
 
+## Owner-steered live batch — 2026-06-28 — pagination + PDF header (worker 1.14.90)
+
+Owner reviewed a real exported CV/PDF mid-nightly and reported 5 issues. Triaged by
+verifiability; shipped the one verifiable structural fix, diagnosed the rest.
+
+- **(1) ADDITIONAL INFORMATION "Research outputs" label missing in preview** — `[DROPPED by owner]`
+  Root cause IS understood (`antcv-group-name-visibility.js` RULE 1 hides a lone
+  `{l,v}` row in a subsubsection; "Research outputs" is an unclassified "Other" row
+  appended with no `{group}` marker → lone trailing row → label hidden). Owner said
+  "it is okay to keep this role" → leave as-is. Fix-if-revisited: RULE 1 should only
+  hide a lone row whose subsubsection was opened by a real `{group}` marker.
+
+- **(4) Sidebar group split across pages** `[SHIPPED docx-worker 1.14.90]`
+  **RICH-BLOCK-MIDSECTION-SPLIT-001** — REGULATORY CONTEXT (a sidebar `rich_block`)
+  spanned pages with the "Environmental, Durability & Compliance" group header
+  orphaned at the bottom of page 1 and "MIL-STD-810G: ...qualification, including
+  Method 514 vibration" split mid-sentence. Root cause: `renderSection`'s segment-split
+  eligibility list (`workers/docx-worker/src/index.js` ~25767) omitted `rich_block`, so
+  a spanning rich_block emitted its per-row break INSIDE the section-wrapper body cell —
+  invisible to `splitChildrenByPage` (top-level `__antcvPB` only) — and LibreOffice
+  chopped the one giant cell arbitrarily. FIX: chunk a sidebar rich_block by `row_pages`
+  into TOP-LEVEL page segments (mirrors the proven labeled_list/table/experience
+  chunkers; row_pages cleared per chunk; `_antcvSegment` guard); each smaller chunk
+  also falls under the `body<=18` cantSplit guard so a value can't break mid-paragraph.
+  Whole-section move (first item page 2) still falls through to `_firstItemPageBreak`
+  unchanged. Verified `test/diag-richblock-midsplit.mjs` (drives the worker, inspects
+  word/document.xml): CONTROL=1 page/0 breaks, MIDSPLIT=2 top-level page tables + body
+  break, header rides to page 2 with its row, value intact, (CONT.) heading, no loss.
+  Regression-clean: node --test fail 0; wholemove/twocol-paged/rich-block-export/
+  sidebar-pack/twocol-ownerlike all OK. Deployed run 28324814881.
+
+- **(3) Role header orphaned (System Architect on page 1, body page 2)** `[DIAGNOSED — needs live tuning]`
+  PREVIEW-EXPORT-PAGEBREAK-PARITY: the coordinator (`antcv-auto-pagebreak-block-001.js`
+  `__uniPaginate`) over-packs page 1 because the role's preview-measured height
+  under-estimates its export height (Calibri renders taller + `MAIN_PDF_LINE_BONUS=150`
+  inflates the page-1 line), and the worker page-box cell isn't a hard clamp
+  (`makeBodyRow` cantSplit:false/atLeast) so LibreOffice splits the over-packed role.
+  Fix = a more conservative page-1 main budget (lower `MAIN_PDF_LINE_BONUS` / raise
+  `PAGE1_BAND`, or a role-tail guard). This is a TUNING number the owner calibrates
+  live on the real doc (`AntcvAutoPagebreak.config({...})`) — NOT blind-shippable
+  (it shifts every role's page assignment). Owner to report the value to commit.
+
+- **(2) Page-2/3 "dance" on scroll** `[DIAGNOSED — needs live browser]`
+  SIDEBAR-PAGE23-DANCE-001: only page-1 and FORCE_LAST_GRP have a determinism cache;
+  the ordinary page-2/3 boundary re-derives from live measured heights on every pass.
+  The 3s poll re-measures the scroll-re-rendered preview; sub-pixel height deltas near
+  the `cap` flip the break. Fix = a block-count+width signature cache for the whole
+  sidebar `__sPaged` (mirror FORCE_LAST_GRP) so the boundary is deterministic across
+  scroll re-measures. NOT blind-shippable: headless metrics won't prove the visual fix,
+  and the cache invalidation carries the SIDEBAR-SHRINK-RECLAIM regression risk — needs
+  the jump-probe + the owner's live browser on a real 3-4 page CV.
+
+- **(5) PDF candidate-header text too far right vs preview** `[DIAGNOSED — needs PDF check]`
+  Worker band-overlap header: text cell origin = `sidebarW + 120` twips; preview =
+  `sidebarW − 28px` (≈ −420 twips). Export sits ~36px too far right. Fix = make the
+  text-cell origin `sidebarW − 420` (Option A: narrow the photo-zone cell by 540 +
+  widen the text cell by 540, keeping left:120; Option B: text-cell `left: -420`).
+  `workers/docx-worker/src/index.js` ~24830/24839/24842. NOT shipped tonight: the
+  result is only confirmable in the real CloudConvert PDF (no headless renderer), and
+  it touches EVERY band-overlap header (the owner's default) — wants an owner PDF check.
+
 ## Nightly autonomous — 2026-06-28 — wait-screen scan gate (1.50.945)
 
 - **BOOT-WAITSCREEN-GATE-001** `[SHIPPED 1.50.945]` — continuing the boot-freeze

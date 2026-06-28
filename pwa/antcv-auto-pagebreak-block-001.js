@@ -176,7 +176,10 @@
   // AUTO: the sidebar page-1 deduction is computed as PAGE1_BAND + the measured PHOTO height,
   // because the photo's footprint depends on the sidebar/main ratio + photo size/position and
   // differs every generation (owner 2026-06-25). A numeric value here pins it (manual override).
-  var SIDEBAR_PAGE1_BAND = null;
+  // CERTS-PAGE2-001 (owner 2026-06-28): pinned to 300 (was AUTO/null -> ~200) — owner live-confirmed
+  // 300 flows CERTIFICATES & COURSES off page 1 onto page 2 (the sidebar reflowed after the LANGUAGES
+  // heal). Higher = page-1 sidebar holds less. Owner-tunable live via config({ SIDEBAR_PAGE1_BAND }).
+  var SIDEBAR_PAGE1_BAND = 300;
   // KEEP-WHOLE only applies to sections up to this FRACTION of a page. A big SIDEBAR section
   // (the 25-item REGULATORY CONTEXT) is ~80% of a page: keeping it whole whole-moves it to the
   // next page and leaves the prior page's sidebar short. Splitting it instead BALANCES it across
@@ -218,6 +221,14 @@
   // the group OUT of the page-2 column shrinks the measured total, which would otherwise un-move
   // it -> the "metastable dance" the owner saw). Breaks the measure<->render feedback loop.
   var __forceLastGrpStick = {};
+  // SIDEBAR-SIG-CACHE-001 (owner 2026-06-28 "fixate sidebar page 2-3"): FLAG-GATED (default OFF).
+  // The whole sidebar __sPaged re-derives from live measured heights on EVERY pass, so sub-px
+  // re-measure noise on scroll flips the page-2/3 boundary (the "dance"). When enabled, __sPaged is
+  // cached keyed on a STABLE signature (sidebar block count + bucketed column width + page-1 band +
+  // a coarse 50px-bucketed total height) and REUSED while the signature is unchanged — deterministic
+  // across re-measure noise, invalidating only on a genuine content change. Default OFF keeps the
+  // path byte-identical to today (zero production risk). Enable: localStorage['antcv:sidebar-sig-cache']='1'.
+  var __sidebarPagedCache = null;
   // Measure the profile photo's height (the reserve the sidebar's page 1 loses to it). 0 when
   // there is no photo (then the sidebar band falls back to PAGE1_BAND).
   function __photoReserve() {
@@ -1004,7 +1015,23 @@
         // page top (it does NOT lose the candidate header band the way the main does), so the band
         // should be ~PAGE1_BAND alone (budget ~724): TOOLS fits page 1, certs still flow to page 2.
         var __sbBand1 = (typeof SIDEBAR_PAGE1_BAND === 'number') ? SIDEBAR_PAGE1_BAND : PAGE1_BAND;
-        var __sPaged = __uniPaginate(__uniBlocks.sidebar, __sbBand1, SIDEBAR_PREVIEW_INFLATE, KEEP_WHOLE_FRAC);
+        // SIDEBAR-SIG-CACHE-001 (FLAG-GATED, default OFF): stabilise the page-2/3 sidebar boundary by
+        // reusing the prior __sPaged while a stable signature is unchanged (kills the re-measure dance).
+        var __sPaged;
+        var __sigCacheOn = false; try { __sigCacheOn = localStorage.getItem('antcv:sidebar-sig-cache') === '1'; } catch (_) {}
+        if (__sigCacheOn) {
+          var __sbTot = 0;
+          for (var __si = 0; __si < __uniBlocks.sidebar.length; __si++) { var __sblk = __uniBlocks.sidebar[__si]; __sbTot += Math.max(0, (__sblk.bottom || 0) - (__sblk.top || 0)); }
+          var __sbSig = __uniBlocks.sidebar.length + 'x' + Math.round((__sbColW || 0) / 10) + 'x' + __sbBand1 + 'x' + Math.round(__sbTot / 50);
+          if (__sidebarPagedCache && __sidebarPagedCache.sig === __sbSig && Array.isArray(__sidebarPagedCache.paged)) {
+            __sPaged = __sidebarPagedCache.paged;   // reuse — page-2/3 boundary holds across re-measure noise
+          } else {
+            __sPaged = __uniPaginate(__uniBlocks.sidebar, __sbBand1, SIDEBAR_PREVIEW_INFLATE, KEEP_WHOLE_FRAC);
+            __sidebarPagedCache = { sig: __sbSig, paged: __sPaged };
+          }
+        } else {
+          __sPaged = __uniPaginate(__uniBlocks.sidebar, __sbBand1, SIDEBAR_PREVIEW_INFLATE, KEEP_WHOLE_FRAC);
+        }
         var __mPaged = __uniPaginate(__uniBlocks.main, PAGE1_BAND, 1, 1, __uniLimit + MAIN_PDF_LINE_BONUS, Math.max(400, __uniLimit - MAIN_PAGE_N_BAND));
         // FORCE-LAST-GRP post-process (deterministic). For a BIG multi-group SIDEBAR section the
         // coordinator's internal break can land on the wrong group (it broke regulatory at the

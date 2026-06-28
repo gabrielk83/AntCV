@@ -210,7 +210,9 @@
   // export page-2 main holds FEWER roles than USABLE_PDF suggests. Deduct this from the main's
   // pages-2+ line so a role that overflows the PDF page starts the next page (aligning the main's
   // page break with the sidebar's). Owner-tunable live: AntcvAutoPagebreak.config({ MAIN_PAGE_N_BAND:N }).
-  var MAIN_PAGE_N_BAND = 105;
+  // RA-PAGE2-001 (owner 2026-06-28): default 105 -> 60. With the page-1 budget change (MAIN_PDF_LINE_BONUS
+  // 150->20) the page-2/3 boundary shifted; owner live-confirmed 60 lands Research Assistant on page 2.
+  var MAIN_PAGE_N_BAND = 60;
   // STICKY set for FORCE-LAST-GRP: once a section's last group is moved to the next page, KEEP it
   // moved on later recompute cycles even if its measured height drops below the threshold (moving
   // the group OUT of the page-2 column shrinks the measured total, which would otherwise un-move

@@ -1,5 +1,40 @@
 > **AUTHORITATIVE current state + next-nightly prompt: `docs/qa/NEXT_NIGHTLY_HANDOFF_2026-06-24.md`.** (PWA 1.50.869 + docx-worker 1.14.81; suite 467/467.) Read it FIRST — it has the shipped list (843→869), the regen-gated items to verify on the owner's incoming fresh export, the deep CV-SIDEBAR-SPILL spec, and the parallel-session/stale-SW discipline. The blocks below are the per-batch detail. (Older handoff: `SESSION_HANDOFF_2026-06-18-pm3.md`.)
 
+## Nightly autonomous — 2026-06-28 — boot-freeze swarm-tail batch (1.50.944)
+
+- **BOOT-HIWC-PERF-001 / BOOT-EMBED-ROOTCACHE-001 / BOOT-FND-PERF-001 / BOOT-FND-ROOTCACHE-001**
+  `[SHIPPED 1.50.944]` — continuing the boot-freeze sidecar-swarm reduction
+  ([[boot-storm-gate-freeze]]). `diag-boot-profile.mjs` (at HEAD 1.50.943) flagged the next three
+  top tail offenders. All sidecar-only (NO app.js mirror, NO islands bundle → no parallel-session
+  contention). Same proven behaviour-preserving patterns as 943's BOOT-COREWIB/WIB-ROOTCACHE-001:
+  CROSS-RUN ROOT CACHE (re-validate the cached root with the SAME predicate; never cache null/
+  non-preview roots) + PER-RUN clean(el.textContent) memo (Map cleared at run() start).
+  - `antcv-how-contribute-controls-245.js` (~165ms): per-run `cleanEl` memo (root() 10-deep climb,
+    previewParts, previewSection all re-serialised the same big shared ancestors per run) + a
+    cross-run `__previewSecCache` on `previewSection()` (was a full-doc `.find()` over every
+    [data-sid],section,div + clean(textContent)).
+  - `antcv-embedded-controls-248.js` (~159ms): cross-run `__addinfoCache` on the addinfo root finder
+    (was a full-document querySelectorAll('div,section,main,form') + clean(textContent) on EVERY
+    element per run; the panel is the same element each run). The existing 880 per-run clean memo
+    couldn't help — distinct textContent per element ⇒ ~0 hit rate; only a root cache fixes a
+    full-document subtree scan.
+  - `antcv-foundation-controls-327.js` (~142ms, NOT previously treated): per-run `cleanEl` memo
+    (isFoundationField climbs 4 ancestors per field PER PART; foundationPreviewParas cleans every
+    <p>) + cross-run `__fndRootCache` on `foundationPreviewParas()`. (A filter-reorder that ran
+    inPreview()'s document.querySelector before visible() was drafted but REVERTED — it would have
+    ADDED querySelector calls on every field, the wrong direction for the dominant native cost.)
+  Verified PAST the sign-in gate (`pwa/test/diag-sidecar-perf-944-verify.mjs`): editor renders, all
+  three sidecars load + their run() executes clean, 327's root cache short-circuits a repeat scan
+  (doc [data-sid=foundation] scans 1→0), zero sidecar console errors. Re-profiled
+  (`diag-boot-profile.mjs`): total boot on-CPU 5682→4770ms, native/gc 3333→2510ms (−25% — the
+  cross-run caches remove the full-document querySelectorAll cost that lived under native/gc); 327
+  dropped OFF the top-14 self-time list (142→<59ms). Suite 485/485. NEXT profiled offenders for a
+  future run: `antcv-profile-workstyle-cjlr-238.js` (~280ms, still top — already fully memoised;
+  residual is the irreducible per-run ancestor climb), `antcv-what-i-bring-header-cjlr-249.js`
+  (~205ms), `antcv-selected-outcomes-row-controls-237.js` (~155ms). Bigger lever remains a SHARED
+  swarm coalescer (higher value, higher blast radius). Re-profile before targeting (numbers noisy
+  run-to-run).
+
 ## Nightly autonomous — 2026-06-27 — boot-freeze root-cache batch (1.50.943)
 
 - **BOOT-COREWIB-ROOTCACHE-001 / BOOT-WIB-ROOTCACHE-001** `[SHIPPED 1.50.943]` — continuing the

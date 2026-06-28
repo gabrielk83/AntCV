@@ -16,6 +16,20 @@
   const ICON={left:'⇤',center:'↔',justify:'☰',right:'⇥'};
   const LABEL={left:'Left aligned',center:'Centered',justify:'Justified',right:'Right aligned'};
   const clean=s=>String(s||'').replace(/\s+/g,' ').trim();
+  // BOOT-HIWC-PERF-001: clean(el.textContent) was the file's #1 boot cost (~66ms):
+  // root()'s 10-deep ancestor climb, previewSection()'s full-doc scan and
+  // previewParts() all re-serialize the SAME big shared ancestors many times per
+  // run(). cleanEl() memoises clean(el.textContent) per run() (Map cleared at run
+  // start, keyed by element). Pure: the DOM does not mutate during the synchronous
+  // run() sweep (same guarantee 238's __runTextCache relies on) => output identical.
+  let __runCleanCache=null; // Map<Element,string>; rebuilt each run(), null outside
+  function cleanEl(el){
+    if(!el) return '';
+    if(__runCleanCache){const c=__runCleanCache.get(el); if(c!==undefined) return c;}
+    const t=clean(el.textContent);
+    if(__runCleanCache) __runCleanCache.set(el,t);
+    return t;
+  }
   const visible=el=>!!(el&&el.isConnected&&(el.offsetWidth||el.offsetHeight||el.getClientRects().length));
   // v1.40.245-preview-guard: Preview is button-free. All seeds and
   // host resolutions must reject elements inside .antcv-preview-paper.
@@ -138,7 +152,7 @@
     let p=seed.parentElement,best=null;
     for(let d=0;p&&d<10;d++,p=p.parentElement){
       if(isInPreviewPaper(p)) break;
-      const txt=clean(p.textContent);
+      const txt=cleanEl(p);
       if(/Intro line/i.test(txt)&&/Closing line/i.test(txt)&&/Bullets/i.test(txt)) best=p;
       if(RX.test(txt)){best=p;break;}
     }
@@ -545,11 +559,30 @@
     }catch(_){}
   }
 
-  function previewSection(){return document.querySelector('[data-sid="'+CSS.escape(sid())+'"]')||Array.from(document.querySelectorAll('[data-sid],section,div')).find(el=>visible(el)&&RX.test(clean(el.textContent).slice(0,180)));}
+  // BOOT-HIWC-PERF-001: the fallback .find() over every [data-sid],section,div +
+  // clean(el.textContent) per element was ~48ms/run. It resolves to the SAME
+  // preview section each run, so cache it and re-validate cheaply with the SAME
+  // predicate (previewSectionValid); only re-scan when the cache is empty/stale.
+  // Same cross-run cache pattern as 274's panelRoot. Null is NEVER cached (the
+  // preview may not be mounted yet at boot — keep scanning until it appears).
+  let __previewSecCache=null;
+  function previewSectionValid(el){
+    if(!el||!el.isConnected||!visible(el)) return false;
+    try{if(el.matches('[data-sid="'+CSS.escape(sid())+'"]')) return true;}catch(_){}
+    return RX.test(cleanEl(el).slice(0,180));
+  }
+  function previewSection(){
+    if(__previewSecCache){ if(previewSectionValid(__previewSecCache)) return __previewSecCache; __previewSecCache=null; }
+    const direct=document.querySelector('[data-sid="'+CSS.escape(sid())+'"]');
+    if(direct){__previewSecCache=direct; return direct;}
+    const hit=Array.from(document.querySelectorAll('[data-sid],section,div')).find(el=>visible(el)&&RX.test(cleanEl(el).slice(0,180)));
+    if(hit) __previewSecCache=hit;
+    return hit||null;
+  }
   function previewParts(secEl){
     if(!secEl)return{};const els=Array.from(secEl.querySelectorAll('p,li,div,[data-edit-path],[data-antcv-row-path]')).filter(visible).filter(el=>!el.querySelector('input,textarea,button'));
     const out={intro:null,closing:null,bullets:[]};const cands=[];
-    els.forEach(el=>{const t=clean(el.textContent); if(!t||RX.test(t))return; const path=String(el.getAttribute('data-edit-path')||el.getAttribute('data-antcv-row-path')||''); if(/intro/i.test(path)||/intro/i.test(t)){out.intro=out.intro||el;} else if(/closing/i.test(path)||/closing/i.test(t)||/summaris|summariz/i.test(t)){out.closing=el;} else if((el.tagName||'').toLowerCase()==='li'||/bullets|items/i.test(path)||/^[▪•‣⁃●◦∙▸‧•·▪▸‣◦*\-–]/.test(t)){cands.push(el);} });
+    els.forEach(el=>{const t=cleanEl(el); if(!t||RX.test(t))return; const path=String(el.getAttribute('data-edit-path')||el.getAttribute('data-antcv-row-path')||''); if(/intro/i.test(path)||/intro/i.test(t)){out.intro=out.intro||el;} else if(/closing/i.test(path)||/closing/i.test(t)||/summaris|summariz/i.test(t)){out.closing=el;} else if((el.tagName||'').toLowerCase()==='li'||/bullets|items/i.test(path)||/^[▪•‣⁃●◦∙▸‧•·▪▸‣◦*\-–]/.test(t)){cands.push(el);} });
     // 1.50.193: keep only the OUTERMOST bullet candidates — the preview wraps
     // each bullet in a container <div> that holds the editable span, so both
     // match; dropping nested ones avoids counting a bullet twice (which threw
@@ -651,7 +684,7 @@
   }
 
   let pending=false;function runSoon(){if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;run();});}
-  function run(){if(isTypingInHiwc())return;try{const r=root();if(r){cleanupClosingHelperText(r);controlsForField(findIntro(r),'intro');controlsForField(findClosing(r),'closing');const __ta=findBulletsAny(r);if(__ta){controlsForField(__ta,'bullets');}renderBulletControls(r,__ta);}/* core CJLR cleanup handled by antcv-core-competencies-row-controls; do not prune across the whole Core section */ applyPreview();}catch(e){try{console.warn('[how-contribute-controls-245] failed:',e&&e.message);}catch(_){}}}
+  function run(){if(isTypingInHiwc())return;__runCleanCache=new Map();try{const r=root();if(r){cleanupClosingHelperText(r);controlsForField(findIntro(r),'intro');controlsForField(findClosing(r),'closing');const __ta=findBulletsAny(r);if(__ta){controlsForField(__ta,'bullets');}renderBulletControls(r,__ta);}/* core CJLR cleanup handled by antcv-core-competencies-row-controls; do not prune across the whole Core section */ applyPreview();}catch(e){try{console.warn('[how-contribute-controls-245] failed:',e&&e.message);}catch(_){}}finally{__runCleanCache=null;}}
   function start(){injectCss();run();[100,300,800,1600,3000].forEach(ms=>setTimeout(run,ms));try{new MutationObserver(()=>{if(__applying)return;runSoon();}).observe(document.body||document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style','value']});}catch(_){}window.addEventListener('input',runSoon,true);window.addEventListener('click',()=>setTimeout(run,0),true);window.addEventListener('antcv:sections-updated',()=>setTimeout(run,0));/* v1.50.57: blind setInterval(run,2000) removed — it was the flicker clock. Updates are now event-driven (sections-updated/input/click) plus a slow safety re-sync that no-ops when nothing changed. */setInterval(()=>{if(!__applying)run();},8000);}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
   window.AntcvHowContributeControls239={version:VERSION,run};

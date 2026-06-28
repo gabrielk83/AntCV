@@ -43,6 +43,19 @@
   ];
 
   var clean = function (s) { return String(s == null ? '' : s).replace(/\s+/g, ' ').trim(); };
+  // BOOT-FND-PERF-001: per-run memo of clean(el.textContent). isFoundationField
+  // climbs 4 ancestors per field PER PART (same ancestors re-serialised), plus
+  // foundationPreviewParas cleans every <p>. Memo keyed by element, cleared at
+  // run() start; collapses the repeats (boot-perf, identical output). Mirrors
+  // antcv-profile-workstyle-cjlr-238 __runTextCache.
+  var __runTextCache = null;
+  var cleanEl = function (el) {
+    if (!el) return '';
+    if (__runTextCache) { var c = __runTextCache.get(el); if (c !== undefined) return c; }
+    var t = clean(el.textContent);
+    if (__runTextCache) __runTextCache.set(el, t);
+    return t;
+  };
   var visible = function (el) { return !!(el && el.isConnected && (el.offsetWidth || el.offsetHeight || (el.getClientRects && el.getClientRects().length))); };
   var inPreview = function (el) { var p = document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]'); return !!(p && el && p.contains(el)); };
 
@@ -80,18 +93,32 @@
   function compressText(s) { var t = clean(s); if (!t) return t; return t.replace(/\b(really|very|quite|just|simply|basically|actually|in order to|a number of|the fact that)\b/gi, function (m) { return /in order to/i.test(m) ? 'to' : (/a number of/i.test(m) ? 'several' : (/the fact that/i.test(m) ? 'that' : '')); }).replace(/\s+/g, ' ').replace(/\s+([,.;:])/g, '$1').trim(); }
 
   // ---- PREVIEW: apply CJLR alignment to the two foundation paragraphs ----
+  // BOOT-FND-ROOTCACHE-001: the foundation preview root is the same element each
+  // run, but this ran a full-document querySelector(+fallback querySelectorAll)
+  // every run() during the boot storm. Cache it cross-run + re-validate cheaply
+  // with the SAME predicate (in a preview paper AND a [data-sid=foundation]);
+  // only re-scan when stale. Never cache null, never cache a non-preview root.
+  // Mirrors 274 panelRoot / 249 editorRoot.
+  function fndRootValid(r) {
+    return !!(r && r.isConnected && inPreview(r) && r.getAttribute && r.getAttribute('data-sid') === 'foundation');
+  }
+  var __fndRootCache = null;
   function foundationPreviewParas() {
-    var root = document.querySelector('.antcv-preview-paper [data-sid="foundation"], [data-antcv-preview-paper] [data-sid="foundation"], [data-sid="foundation"]');
-    if (!root || !inPreview(root)) {
-      // fall back: first [data-sid=foundation] inside any preview paper
-      var all = Array.prototype.slice.call(document.querySelectorAll('[data-sid="foundation"]')).filter(inPreview);
-      root = all[0] || null;
+    var root = (__fndRootCache && fndRootValid(__fndRootCache)) ? __fndRootCache : null;
+    if (!root) {
+      root = document.querySelector('.antcv-preview-paper [data-sid="foundation"], [data-antcv-preview-paper] [data-sid="foundation"], [data-sid="foundation"]');
+      if (!root || !inPreview(root)) {
+        // fall back: first [data-sid=foundation] inside any preview paper
+        var all = Array.prototype.slice.call(document.querySelectorAll('[data-sid="foundation"]')).filter(inPreview);
+        root = all[0] || null;
+      }
+      if (root && inPreview(root)) __fndRootCache = root; else __fndRootCache = null;
     }
     if (!root) return {};
     var ps = Array.prototype.slice.call(root.querySelectorAll('p')).filter(visible);
     var map = {};
     ps.forEach(function (p) {
-      var txt = clean(p.textContent);
+      var txt = cleanEl(p);
       PARTS.forEach(function (P) { if (!map[P.part] && P.rx.test(txt)) map[P.part] = p; });
     });
     return map;
@@ -111,7 +138,7 @@
     if (!field || inPreview(field)) return false;
     var p = field.parentElement;
     for (var d = 0; p && d < 4; d++, p = p.parentElement) {
-      var t = clean(p.textContent);
+      var t = cleanEl(p);
       if (t && t.length < 80 && partRx.test(t)) return true;
     }
     return false;
@@ -188,8 +215,10 @@
     if (pending) return; pending = true;
     requestAnimationFrame(function () {
       pending = false;
+      __runTextCache = new Map();
       try { reconcilePages(); attachPanel(); applyPreview(); }
       catch (e) { try { console.warn('[foundation-controls-327] failed:', e && e.message); } catch (_) {} }
+      finally { __runTextCache = null; }
     });
   }
   function start() {

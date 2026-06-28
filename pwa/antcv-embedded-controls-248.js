@@ -88,9 +88,32 @@
     });
   }
 
-  function fixAdditionalInfo(){
-    const rootCandidates=Array.from(document.querySelectorAll('div,section,main,form')).filter(el=>visible(el)&&/additional information/i.test(clean(el.textContent).slice(0,500))&&/\+\s*item/i.test(clean(el.textContent)));
+  // v1.50.944 BOOT-EMBED-ROOTCACHE-001: the addinfo root finder ran a full-document
+  // querySelectorAll('div,section,main,form') + clean(el.textContent) on EVERY element
+  // every run() (boot timers + dense MutationObserver + click/input/sections-updated =
+  // dozens of times during the boot storm) though the panel is the SAME element each
+  // time (~46ms boot self-time at the line-92 filter, ~43ms in clean). Cache the
+  // resolved root across runs + re-validate it cheaply (one predicate test on the
+  // cached element, O(1) vs O(doc)); only re-scan when the cache is empty/stale. Same
+  // behaviour-preserving cross-run cache as BOOT-COREWIB-ROOTCACHE-001 (274). addinfoMatch
+  // is the original filter predicate verbatim; null roots are NOT cached (the panel may
+  // not exist yet at boot — keep scanning until it appears).
+  function addinfoMatch(el){
+    return visible(el)&&/additional information/i.test(clean(el.textContent).slice(0,500))&&/\+\s*item/i.test(clean(el.textContent));
+  }
+  let __addinfoCache=null;
+  function addinfoRoot(){
+    if(__addinfoCache){
+      if(__addinfoCache.isConnected && addinfoMatch(__addinfoCache)) return __addinfoCache;
+      __addinfoCache=null;
+    }
+    const rootCandidates=Array.from(document.querySelectorAll('div,section,main,form')).filter(addinfoMatch);
     const root=rootCandidates.sort((a,b)=>a.textContent.length-b.textContent.length)[0]||null;
+    if(root) __addinfoCache=root;
+    return root;
+  }
+  function fixAdditionalInfo(){
+    const root=addinfoRoot();
     if(!root) return;
     const rows=Array.from(root.querySelectorAll('[data-antcv-addinfo-row="1"]'));
     rows.forEach((row,i)=>{

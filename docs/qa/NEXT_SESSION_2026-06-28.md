@@ -11,19 +11,38 @@ mode=deploy -f confirm=docx-worker`, then `gh run watch <id> --exit-status`.
 
 ## OPEN ISSUES — priority order
 
-### 1. [CRITICAL] DATA-LOSS-ON-RESTORE — loading a saved application doesn't restore full data
-Owner 2026-06-28: loading a previous application shows the TEMPLATE/placeholder for several sections
-instead of the saved content — **CV: Core Competencies + Professional Experience**; **CL: What I Bring
-+ HOW I WOULD CONTRIBUTE + the closing**. The owner is forced to **regenerate from scratch** each time.
-This is the top priority. Likely the kernel/cloud restore (KERNEL-CLOUD-PERSIST / the showcase slot)
-or the per-email KV(sections)+D1(kernel) sync writing/restoring a skeleton over the real data, OR a
-migration blanking sections on load (cf. the SIDEBAR EMPTIES / PUB-REPOPULATE / CONTRIBUTE-CHAROBJ
-class — [[rich-block-universal-section]], [[cloud-persist-and-account-isolation]], [[kernel-recovery-
-and-floor]]). Diagnose with the owner's REAL live data via Chrome MCP (read localStorage `sections`,
-`meta`, the kernel showcase, the cloud slot) — find WHERE the real Core-Comp/Experience/WhatIBring/HWIC/
-closing content is (kernel? a stale cloud slot? lost?) and why restore loads a skeleton instead. Fix =
-make restore prefer real content + the minimum-sections floor never overwrite populated sections.
-**Verify on the owner's real account, not synthetic.**
+### 1. [CRITICAL] DATA-LOSS-ON-RESTORE — FIXED AT SOURCE (access-relay 1.3.2, 2026-06-28)
+**Resolved.** Diagnosed live on the owner's real account via Chrome MCP. The owner's localStorage
+`sections` AND the most recent saved app (id 384, Unsolicited) held FULL real content — nothing was lost
+locally. The loss lived in the cloud `application` rows: **3 of 4** saved apps (338 Aimpoint, 369 Open
+Application, 385 NVIDIA) had `cv_sections`/`cl_sections` = **NULL** (rationale + jd_* + meta intact,
+`created_at == updated_at` → nulled by a single op, not a later empty write).
+
+ROOT CAUSE: `POST /api/prefs/wipe-generated` (GEN-CONTAMINATION-001, the full-regen STAGE 1 fired from
+app.src.js ~23877) ran a **BLANKET** `UPDATE application SET cv_sections=NULL, cl_sections=NULL WHERE
+user_hash=?` + a blanket `language_view` delete — nulling **every** saved application, not just the
+regen's contamination seed. The seed is only the ACTIVE app (the row GET /api/prefs surfaces as
+`active_application` and the PWA re-applies on cloud-restore) + `kernel_showcase`; the other saved apps
+are the user's drafts and are never a generation seed. Loading a nulled row → `ao({cv:[],cl:[]})` →
+empty → the client minimum-sections floor restores the me() skeleton = the TEMPLATE.
+
+FIX (`workers/access-relay/src/index.js` `handleApiPrefsWipeGenerated`): scope BOTH the cv/cl NULL and
+the `language_view` delete to the active app only (`... AND id IN (SELECT application_id FROM
+active_application WHERE user_hash=?)`). `kernel_showcase` delete unchanged → GEN-CONTAMINATION-001's
+intent preserved. Verified `test/diag-wipe-generated-preserves-drafts.mjs` 4/4 + diag-empty-overwrite-
+guard 3/3; deployed via deploy.yml (✓); relay `/health` 200.
+
+RESIDUAL:
+- The **3 already-nulled drafts are unrecoverable** (cloud sections null, showcase deleted, KV holds
+  only the current app). The owner must regenerate them. Future regens are safe.
+- **Client load-grace guard (next bundle):** the explicit app-switch apply sites (topbar ~44263 +
+  settings ~38140) still BLANK the populated editor when a loaded app is empty → silent template. Add
+  `(__hasReal ? (…existing apply…) : Gl("this draft has no stored content; your current draft is
+  unchanged"))` at both sites. Touches the app.js mirror + cache-bust quintet → ship as its own bundle.
+
+VERIFY recipe (owner): generate a NEW targeted app, save it, run a FULL regen (different company), then
+load the saved one from the topbar/Settings switch — it should now return WITH its content (pre-fix it
+came back as the template).
 
 ### 2. PAGINATION IS EXPORT-ONLY now — preview is CORRECT, the PRINT/PDF differs
 Owner clarified: Recommendations → page 4, and Interests/Accessibility → page 4, are **NOT preview

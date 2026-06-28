@@ -1,6 +1,6 @@
 import { insertLlmCall, aggregateHealth, getLatestHealth, pruneOld, insertQualitySignal } from './telemetry.js';
 
-const VERSION='1.3.1';
+const VERSION='1.3.2';
 // antcv-access-relay — auth + hardening
 // =====================================
 // Public-facing relay with built-in user authentication.
@@ -1611,10 +1611,21 @@ async function handleApiPrefsRenew(request, env) {
 // GEN-CONTAMINATION-001 (owner 2026-06-23): POST /api/prefs/wipe-generated.
 // Clears the user's GENERATED D1 output so a FULL regen starts from a clean slate
 // (the kernel only) and never merges with / seeds from the prior application:
-//   - application.cv_sections / cl_sections → NULL (keep the JD rows + metadata)
-//   - language_view rows → deleted
+//   - the ACTIVE application.cv_sections / cl_sections → NULL (keep its JD row + metadata)
+//   - the ACTIVE application's language_view rows → deleted
 //   - kernel_showcase (the unsolicited generated CV/CL) → deleted
 // The kernel (user_kernel) and the saved-application list are preserved.
+//
+// GEN-CONTAMINATION-PRESERVE-DRAFTS-001 (owner 2026-06-28, CRITICAL data loss):
+// the wipe MUST scope to the ACTIVE application only. The active row is the one
+// auto-applied on cloud-restore (GET /api/prefs surfaces active_application and the
+// PWA re-applies its sections), so it is the genuine contamination seed. The OTHER
+// saved applications are the user's drafts — the UI promises "switch between them to
+// revisit older drafts" — and must NOT be touched. The previous blanket
+// `UPDATE application SET cv_sections=NULL ... WHERE user_hash=?` nulled EVERY row,
+// silently destroying every saved draft (loading one then showed only the template/
+// skeleton because empty sections trip the client minimum-sections floor). Confirmed
+// live on the owner's account: 3 of 4 saved apps had cv_sections/cl_sections = NULL.
 async function handleApiPrefsWipeGenerated(request, env) {
   const id = await identityFromRequest(request, env);
   if (!id) return jsonResponse({ error: 'unauthenticated' }, 401, request, env);
@@ -1623,11 +1634,15 @@ async function handleApiPrefsWipeGenerated(request, env) {
   if (!hasD1(env)) return jsonResponse({ ok: true, d1: false, wiped: {} }, 200, request, env, refresh);
   const userHash = await userHashFromEmail(id.email);
   try {
+    // The active application = the row the active_application pointer references.
+    const ACTIVE_SUBQUERY = 'IN (SELECT application_id FROM active_application WHERE user_hash = ?)';
     const batch = await env.DB.batch([
       env.DB.prepare(
-        'DELETE FROM language_view WHERE application_id IN (SELECT id FROM application WHERE user_hash = ?)'
+        'DELETE FROM language_view WHERE application_id ' + ACTIVE_SUBQUERY
       ).bind(userHash),
-      env.DB.prepare('UPDATE application SET cv_sections = NULL, cl_sections = NULL WHERE user_hash = ?').bind(userHash),
+      env.DB.prepare(
+        'UPDATE application SET cv_sections = NULL, cl_sections = NULL WHERE user_hash = ? AND id ' + ACTIVE_SUBQUERY
+      ).bind(userHash, userHash),
       env.DB.prepare('DELETE FROM kernel_showcase WHERE user_hash = ?').bind(userHash),
     ]);
     const ch = (i) => (batch[i] && batch[i].meta && batch[i].meta.changes) || 0;

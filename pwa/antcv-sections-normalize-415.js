@@ -624,11 +624,24 @@
   // (labeled_list) and the worker export already render a {group} marker as a bold
   // subhead, so this is a content-only regroup (no fabrication). Idempotent: skips
   // once any {group} marker is present. Restore-proof via the 415 poll/listeners.
+  // MISCLASSIFY-LANG-001 (owner 2026-06-28): the old test concatenated label+value
+  // and checked Languages on the COMBINED string with a bare "language" alternation,
+  // so an INTEREST like {l:"Cultural exchange", v:"Languages, food culture and board
+  // games"} leaked into the LANGUAGES section (its value mentions "Languages"). Fix:
+  // an item whose LABEL is plainly an interest wins FIRST; Languages then matches on
+  // the LABEL (Languages/Sprog or a bare language NAME) or a language NAME/CEFR in the
+  // VALUE — never on the bare word "language" appearing in an interest's value.
   function classifyAdditional(it) {
-    var s = String((it && it.l) || '') + ' ' + String((it && it.v) || '');
+    var lab = String((it && it.l) || '');
+    var val = String((it && it.v) || '');
+    var s = lab + ' ' + val;
+    var INTEREST_LABEL = /(interest|hobb|fritid|leisure|pastime|rugby|hiking|hike|tai.?chi|reading|sport|volunteer|frivillig|foreningsarbejde|coach|\bcat\b|feline|cultural exchange|board game|food culture)/i;
+    var LANG_NAME = /(english|danish|spanish|hebrew|german|french|norwegian|swedish|finnish|arabic|mandarin|chinese|portuguese|italian|russian|dutch|japanese|korean|polish|turkish)/i;
+    if (INTEREST_LABEL.test(lab)) return 'Interests';
     if (/(accessib|accommodat|hearing|deaf|hard of hearing|disab|sign language|assistive)/i.test(s)) return 'Accessibility';
-    if (/(language|languages|sprog|fluent|fluency|proficien|mother tongue|native speaker|bilingual|\b[ABC][12]\b|english|danish|spanish|hebrew|german|french|norwegian|swedish|finnish|arabic|mandarin|chinese|portuguese|italian|russian|dutch|japanese|korean|polish|turkish)/i.test(s)) return 'Languages';
-    if (/(interest|hobb|fritid|leisure|pastime|rugby|hiking|hike|tai.?chi|reading|sport|volunteer|frivillig|foreningsarbejde|coach|\bcat\b|feline)/i.test(s)) return 'Interests';
+    if (/(\blanguages?\b|\bsprog\b)/i.test(lab) || LANG_NAME.test(lab) ||
+        LANG_NAME.test(val) || /(\b[ABC][12]\b|mother tongue|native speaker|bilingual)/i.test(val)) return 'Languages';
+    if (INTEREST_LABEL.test(s)) return 'Interests';
     return 'Other';
   }
   // ADDITIONAL-EXPLODE-001 (owner 2026-06-18: "have these sidebar subsections in

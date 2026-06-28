@@ -199,7 +199,12 @@
   // the main's page-1 capacity — an experience role that fits the PDF was broken to the next page.
   // Add this bonus to the MAIN experience line on the EXPORT pass only. Owner-tunable live:
   // AntcvAutoPagebreak.config({ MAIN_PDF_LINE_BONUS:N }).
-  var MAIN_PDF_LINE_BONUS = 150;
+  // ROLE-ORPHAN-PAGE1-001 (owner 2026-06-28): default lowered 150 -> 20. At 150 the
+  // page-1 main budget was over-packed, so a boundary role (System Architect) kept its
+  // HEADER on page 1 while its body overflowed to page 2 (orphan). The owner live-tuned
+  // via AntcvAutoPagebreak.config({MAIN_PDF_LINE_BONUS}) and found 0-40 place the role
+  // whole on page 2; 20 = the middle (robust against run-to-run measurement noise).
+  var MAIN_PDF_LINE_BONUS = 20;
   // MAIN-PAGE-N-BAND (owner 2026-06-25 "Research Assistant should start page 3"): pages 2+ of the
   // MAIN carry a "(CONT.)" experience header + the export renders roles slightly taller, so the
   // export page-2 main holds FEWER roles than USABLE_PDF suggests. Deduct this from the main's

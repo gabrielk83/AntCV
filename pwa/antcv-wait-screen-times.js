@@ -168,7 +168,32 @@
     return n;
   }
 
+  // Cheap precondition (BOOT-WAITSCREEN-GATE-001): every REPLACEMENTS entry
+  // requires a "60"/"90" with a word boundary in front (\b60, "(60s)", "~60s",
+  // non-alnum/start before the digits) or a "1-2 minutes" token. If the
+  // whole-document text contains none of those, the 9-selector case-insensitive
+  // full-document querySelectorAll + per-element textContent scan in
+  // findWaitScreenContainers cannot rewrite anything, so skip it. During boot no
+  // wait overlay exists, so this short-circuits every wasted pass. Reads one
+  // already-materialised string + regex — never calls querySelector, so it can't
+  // add to the dominant native query cost.
+  //   - The \b is what the REPLACEMENTS need AND what keeps this exact: it
+  //     excludes incidental substrings like the always-present spinner keyframe
+  //     "rotate(360deg)" (no boundary between 3 and 6) and years like 1990/2090,
+  //     none of which any replacement would rewrite. A plain indexOf('60') would
+  //     match "360deg" on every page and never let the gate fire.
+  // Strict superset of "a replacement could match", so it never suppresses a
+  // real rewrite (a 60/90 that is in content but not in a wait overlay just
+  // falls through to the unchanged scan path, which then rewrites nothing).
+  function canMatchAnyReplacement() {
+    const t = (document.body && document.body.textContent) || '';
+    if (/\b(?:60|90)/.test(t)) return true;
+    if (/\b1[–—-]2\s+minutes?\b/.test(t)) return true;
+    return false;
+  }
+
   function applyAll() {
+    if (!canMatchAnyReplacement()) return 0;
     const containers = findWaitScreenContainers();
     let total = 0;
     for (const c of containers) {

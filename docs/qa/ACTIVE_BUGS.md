@@ -1,5 +1,43 @@
 > **AUTHORITATIVE current state + next-nightly prompt: `docs/qa/NEXT_NIGHTLY_HANDOFF_2026-06-24.md`.** (PWA 1.50.869 + docx-worker 1.14.81; suite 467/467.) Read it FIRST — it has the shipped list (843→869), the regen-gated items to verify on the owner's incoming fresh export, the deep CV-SIDEBAR-SPILL spec, and the parallel-session/stale-SW discipline. The blocks below are the per-batch detail. (Older handoff: `SESSION_HANDOFF_2026-06-18-pm3.md`.)
 
+## Nightly autonomous — 2026-06-28 — wait-screen scan gate (1.50.945)
+
+- **BOOT-WAITSCREEN-GATE-001** `[SHIPPED 1.50.945]` — continuing the boot-freeze
+  sidecar-swarm reduction ([[boot-storm-gate-freeze]]). Re-profiled at HEAD 1.50.944
+  (`diag-boot-profile.mjs`): the previously-treated tail offenders (238/274/245/249/237)
+  are now all ~25-36ms (diminishing returns), so this run targeted the biggest UNTREATED
+  offender — `findWaitScreenContainers @ antcv-wait-screen-times.js` (~81ms self, file
+  82ms). That sidecar rewrites the generation overlay's "60/90 seconds" label to "4-6
+  minutes"; its `findWaitScreenContainers()` runs a 9-selector case-insensitive
+  full-document `querySelectorAll` (`[class*="overlay" i]`,modal,wait,loading,progress,
+  spinner,role=dialog,…) on EVERY `applyAll()` (rAF + 4 timeouts + a body subtree
+  MutationObserver = many fires during the boot storm). During boot NO wait overlay
+  exists, so every pass scanned the whole tree and found nothing — pure waste.
+  FIX (sidecar-only, NO app.js mirror, NO islands bundle → no parallel-session
+  contention): a cheap precondition `canMatchAnyReplacement()` at the top of `applyAll()`.
+  Every `REPLACEMENTS` entry requires a word-boundaried "60"/"90" (`\b(?:60|90)`) or a
+  "1-2 minutes" token; if `document.body.textContent` has none, no rewrite can fire, so
+  skip the scan and return 0. KEY trap caught + fixed: a plain `indexOf('60')` matched the
+  always-present spinner keyframe `rotate(360deg)` (and years 1990/2090) → the gate would
+  NEVER short-circuit in production and the fix would be worthless. The `\b` mirrors
+  exactly what the replacements need and excludes those incidental substrings. The gate
+  reads ONE already-materialised string + regex — never calls querySelector, so it can't
+  add to the dominant native query cost. Strict superset of "a replacement could match" →
+  never suppresses a real rewrite (a 60/90 in content but not in a wait overlay just falls
+  through to the unchanged scan, which rewrites nothing). Verified PAST the sign-in gate
+  (`pwa/test/diag-waitscreen-gate-verify.mjs`): editor renders; on a clean doc the
+  wait-screen full-document scan count is 0 (gate short-circuits); a real injected overlay
+  with "60 seconds" is still rewritten to "4-6 minutes"; zero sidecar console errors.
+  Re-profiled: `antcv-wait-screen-times.js` dropped OFF the top-14 file list and
+  `findWaitScreenContainers` is gone from the self-time list (was 81ms top); native/gc
+  by-file 2801→1864ms (noisy run-to-run, but the function disappearing is unambiguous).
+  Suite 485/485. NEXT untreated offenders for a future run (re-profile first — noisy):
+  `txt @ antcv-wizard-section-format-step10.js:13` (~59ms),
+  `findSidebarSectionRows @ antcv-sidebar-section-row-hide-page-279.js:140` (~38ms). The
+  json-repair-bundle `wrapped` (~150ms) is a `JSON.parse` override — DO NOT TOUCH (parse
+  chain; the self-time is native parse cost attributed to the wrapper frame). Bigger lever
+  remains a SHARED swarm coalescer (higher value, higher blast radius).
+
 ## Nightly autonomous — 2026-06-28 — boot-freeze swarm-tail batch (1.50.944)
 
 - **BOOT-HIWC-PERF-001 / BOOT-EMBED-ROOTCACHE-001 / BOOT-FND-PERF-001 / BOOT-FND-ROOTCACHE-001**

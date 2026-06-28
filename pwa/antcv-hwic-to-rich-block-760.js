@@ -14,13 +14,23 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.919-intro-colon-only';
+  var VERSION = '1.50.948-nordic-hwic-headline';
   if (window.__antcvHwicToRichBlock760 === VERSION) return;
   window.__antcvHwicToRichBlock760 = VERSION;
 
   function readSections() {
     try { var v = JSON.parse(localStorage.getItem('sections') || '{}'); return (v && typeof v === 'object') ? v : {}; }
     catch (_) { return {}; }
+  }
+  // NORDIC-HWIC-HEADLINE-OFF-001 (owner 2026-06-28): for the Nordic Minimal writing style the HWIC
+  // default is HEADLINE HIDDEN (the section's big heading is dropped; the per-row lead-in carries the
+  // label, and lead-in fields stay available). Style id lives in localStorage["toneRegister"] (a
+  // JSON-stringified id; legacy alias "scandinavian" -> nordic-minimal). Read pattern mirrors
+  // antcv-cl-length-560.js. Returns false on any read failure so OTHER styles are never forced.
+  function isNordicMinimal() {
+    try { var tr = localStorage.getItem('toneRegister');
+      if (tr) { var v = JSON.parse(tr); return v === 'nordic-minimal' || v === 'scandinavian'; } } catch (_) {}
+    return false;
   }
   function bulletText(it) {
     if (it == null) return '';
@@ -72,6 +82,16 @@
   function convertList(list) {
     if (!Array.isArray(list)) return { changed: false, list: list };
     var changed = false;
+    // Apply the Nordic-Minimal HWIC default (headline hidden) to the contribute section's RESULT,
+    // in BOTH the already-rich_block and the just-converted return paths. Idempotent + override-safe:
+    // only when headlineOff is UNSET (a user who re-shows the headline via the editor writes
+    // headlineOff:false, which is respected and never re-hidden). Non-nordic styles are untouched.
+    function hwHeadline(sec) {
+      if (sec && sec.id === 'contribute' && sec.type === 'rich_block' && isNordicMinimal() && sec.headlineOff === undefined) {
+        var c = Object.assign({}, sec); c.headlineOff = true; changed = true; return c;
+      }
+      return sec;
+    }
     var out = list.map(function (s) {
       if (!s || s.id !== 'contribute') return s;
       // (A) REPAIR an already-converted rich_block whose intro/closing became markered bullets
@@ -144,10 +164,10 @@
             changed = true;
             var nsA = Object.assign({}, s, { items: finalRows });
             delete nsA.intro; delete nsA.closing;
-            return nsA;
+            return hwHeadline(nsA);
           }
         }
-        return s;
+        return hwHeadline(s);
       }
       if (s.type !== 'text_bullets') return s;
       // (B) CONVERT text_bullets -> rich_block. Handle BOTH shapes:
@@ -191,7 +211,8 @@
       if (s.hidden) ns.hidden = s.hidden;
       if (s.pageBreakBefore) ns.pageBreakBefore = s.pageBreakBefore;
       if (s.ruleOff) ns.ruleOff = s.ruleOff;
-      return ns;
+      if (s.headlineOff) ns.headlineOff = true;   // preserve an explicit source headlineOff
+      return hwHeadline(ns);
     });
     return { changed: changed, list: out };
   }

@@ -644,6 +644,27 @@ export function buildPayload({
           return { photoSizePx: n };
         } catch (_) { return {}; }
       })()),
+      // CL-SIGNATURE-001 (owner 2026-06-28): forward the optional cover-letter signature image
+      // (standalone localStorage keys — survive cloud-restore). CL-only; only when present + not
+      // hidden. The worker (1.14.93) renders it after the sign-off, sized by width × aspect (the
+      // aspect is computed at upload so the export preserves the real ratio).
+      ...((() => {
+        try {
+          if (doc !== 'cl') return {};
+          if (localStorage.getItem('antcv:signatureHidden') === '1') return {};
+          const sig = localStorage.getItem('antcv:signatureB64');
+          if (!sig) return {};
+          const clean = (k) => String(localStorage.getItem(k) || '').replace(/["']/g, '');
+          const out = { signature_b64: sig };
+          const al = clean('antcv:signatureAlign').toLowerCase();
+          out.signature_align = (al === 'left' || al === 'right') ? al : 'center';
+          const sz = Number(clean('antcv:signatureSize'));
+          out.signature_size_px = (Number.isFinite(sz) && sz >= 40 && sz <= 400) ? Math.round(sz) : 160;
+          const asp = Number(clean('antcv:signatureAspect'));
+          out.signature_aspect = (Number.isFinite(asp) && asp > 0.05 && asp <= 3) ? asp : 0.4;
+          return out;
+        } catch (_) { return {}; }
+      })()),
     },
     meta: {
       subtitle,

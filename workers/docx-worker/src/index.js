@@ -25108,6 +25108,31 @@ function buildLinearDocument(ctx) {
       })
     ]
   }));
+  // CL-SIGNATURE-001 (owner 2026-06-28): an optional uploaded signature image at the END of the cover
+  // letter (after the sign-off). Inline ImageRun in an aligned paragraph; width = signature_size_px,
+  // height = width × signature_aspect (the client forwards the image's real ratio so it isn't
+  // distorted). Default center, ~160px. The client omits it when hidden/absent. try/catch skips a bad
+  // image so the CL never breaks. See docs/plan/CL_SIGNATURE_FEATURE.md.
+  if (pi.signature_b64) {
+    try {
+      var __sigData = base64ToUint8Array(pi.signature_b64);
+      var __sigW = (function () { var n = Number(pi.signature_size_px); return Number.isFinite(n) && n >= 40 && n <= 400 ? Math.round(n) : 160; })();
+      var __sigAsp = (function () { var a = Number(pi.signature_aspect); return Number.isFinite(a) && a > 0.05 && a <= 3 ? a : 0.4; })();
+      var __sigH = Math.max(16, Math.round(__sigW * __sigAsp));
+      var __sigAlign = ({ left: AlignmentType.LEFT, center: AlignmentType.CENTER, right: AlignmentType.RIGHT })[String(pi.signature_align || "center").toLowerCase()] || AlignmentType.CENTER;
+      bodyChildren.push(new Paragraph({
+        spacing: { before: 80, after: 0, line: 276, lineRule: "auto" },
+        keepLines: true,
+        alignment: __sigAlign,
+        children: [new ImageRun({
+          data: __sigData,
+          type: detectImageType(pi.signature_b64),
+          transformation: { width: __sigW, height: __sigH },
+          altText: { title: "Signature", description: "Signature", name: "Signature" }
+        })]
+      }));
+    } catch (__sigErr) { /* bad signature image -> skip; never break the CL */ }
+  }
   // 1.14.32 CL-PAGINATE-001: the candidate band stays a full-bleed table, but the
   // BODY is no longer wrapped in a table cell — a single tall table row (with the
   // nested WHAT-I-BRING table inside it) does NOT split across pages in
@@ -27646,7 +27671,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.91-pdf-header-left";
+var VERSION = "1.14.93-cl-signature";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

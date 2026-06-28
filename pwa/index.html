@@ -330,7 +330,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.50.941';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.50.945';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.50.946';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -372,7 +372,7 @@
           app.src = 'app.js?v=1.50.940';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.50.945';
+            vo.src = 'antcv-version-override.js?v=1.50.946';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -686,6 +686,9 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <!-- EXPORT-SETTLED-001: defer the FIRST export until the doc is settled (cloud-restore + migrations
      converged) so it isn't stale — the real fix for "refresh twice for a good PDF". -->
 <script src="antcv-export-settled-gate.js?v=1.50.774" defer></script>
+<!-- EXPORT-WARMUP-001: warm the docx-worker /health probe after boot so the FIRST PDF export
+     uses CloudConvert instead of cold-probing -> browser-print ("Page setup") fallback. -->
+<script src="antcv-pdf-worker-warmup.js?v=1.50.946" defer></script>
 <script src="antcv-tone-helper.js?v=1.50.23-brand" defer></script>
 <script src="antcv-banned-audit.js?v=1.40.341-p0a" defer></script>
 <script src="antcv-llm-audit.js?v=1.40.178" defer></script>

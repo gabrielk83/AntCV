@@ -75,6 +75,9 @@
     } catch (_) { /* self-disable on any error */ }
   }
   window.addEventListener('antcv:sections-updated', run);
-  [0, 500, 1300, 2600].forEach(function (ms) { setTimeout(run, ms); });
+  // Cloud-restore writes the bring TABLE seconds after load (after my early timers), and it
+  // does not always re-dispatch sections-updated — so run on a LATER settle window too, and
+  // poll briefly, mirroring the PUB-REPOPULATE late-settle pattern. Idempotent (one-way).
+  [0, 600, 1500, 3000, 5000, 9000, 14000].forEach(function (ms) { setTimeout(run, ms); });
   window.AntcvBringToRichBlock = { version: VERSION, run: run };
 })();

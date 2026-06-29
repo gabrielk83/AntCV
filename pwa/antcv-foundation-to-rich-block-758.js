@@ -58,8 +58,18 @@
       var touched = false;
       if (c.headlineOff === undefined) { c.headlineOff = true; touched = true; }
       c.items = c.items.map(function (r) {
-        if (r && typeof r === 'object' && (r.b === 'Hands-on' || r.b === 'Professionally') && r.mk !== true) {
-          touched = true; var rc = Object.assign({}, r); rc.mk = true; return rc;
+        if (r && typeof r === 'object' && (r.b === 'Hands-on' || r.b === 'Professionally')) {
+          var rc = Object.assign({}, r); var ch = false;
+          if (rc.mk !== true) { rc.mk = true; ch = true; }
+          // FOUNDATION-LEADIN-DEDUP-001 (owner 2026-06-29): the body must not repeat the lead-in word.
+          // e.g. lead-in "Hands-on" + body "Hands-on across…" -> strip so it reads "Hands-on across…"
+          // (lead-in stays the bold label; the body continues from "across"). Idempotent.
+          if (typeof rc.t === 'string') {
+            var esc = String(rc.b).replace(/[.*+?^${}()|[\]\\-]/g, '\\$&');
+            var st = rc.t.replace(new RegExp('^\\s*' + esc + '[\\s:,\\-]+', 'i'), '');
+            if (st !== rc.t) { rc.t = st; ch = true; }
+          }
+          if (ch) { touched = true; return rc; }
         }
         return r;
       });

@@ -1,6 +1,6 @@
 import { insertLlmCall, aggregateHealth, getLatestHealth, pruneOld, insertQualitySignal } from './telemetry.js';
 
-const VERSION='1.3.4';
+const VERSION='1.3.5';
 // antcv-access-relay — auth + hardening
 // =====================================
 // Public-facing relay with built-in user authentication.
@@ -755,6 +755,8 @@ const KERNEL_PREFS_STR_FIELDS = new Set([
   'clSlogan', 'clSloganHidden', 'clSloganAlign',
   // CL-CLOSING-EDIT-001 (owner 2026-06-29): editable sign-off closing (default "At your service,").
   'clClosing',
+  // CL-SIGNNAME-001 (owner 2026-06-29): editable sign-off name + its own CJLR align (default center).
+  'clSignName', 'clSignNameAlign',
 ]);
 const KERNEL_PREFS_BOOL_FIELDS = new Set([
   'consensusEnabled', 'kernelShowcaseGenerated', 'useChatGPT', 'wizardCompleted',

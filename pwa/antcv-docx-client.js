@@ -694,6 +694,19 @@ export function buildPayload({
           return ov ? { cl_closing: ov } : {};
         } catch (_) { return {}; }
       })()),
+      // CL-SIGNNAME-001 (owner 2026-06-29): editable sign-off name (override; empty -> the worker
+      // uses the first word of the full name) + its own CJLR align (default center). CL-only.
+      ...((() => {
+        try {
+          if (doc !== 'cl') return {};
+          const out = {};
+          const ov = String(localStorage.getItem('antcv:clSignName') || '').trim();
+          if (ov) out.cl_sign_name = ov;
+          const al = String(localStorage.getItem('antcv:clSignNameAlign') || 'center').replace(/["']/g, '').toLowerCase();
+          out.cl_sign_name_align = (al === 'left' || al === 'right' || al === 'center') ? al : 'center';
+          return out;
+        } catch (_) { return {}; }
+      })()),
     },
     header_align: align,
     // v1.50.8 — pass the active visual package + ATS legacy-tier flag

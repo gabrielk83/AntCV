@@ -33,6 +33,8 @@
     hidden: 'antcv:clSloganHidden',
     align: 'antcv:clSloganAlign',
     closing: 'antcv:clClosing',   // CL-CLOSING-EDIT-001: editable sign-off closing (default "At your service,")
+    signName: 'antcv:clSignName',       // CL-SIGNNAME-001: editable sign-off name (default = first word of full name)
+    signAlign: 'antcv:clSignNameAlign', // CL-SIGNNAME-001: sign-off name CJLR (default center)
     open: 'antcv:clSloganCtrlOpen'
   };
   var ACCENT = 'rgb(1,183,187)';
@@ -68,6 +70,15 @@
     return s.toUpperCase();
   }
 
+  // The default (placeholder) for the sign-off name = the first word of the candidate's full name.
+  function nameFirstWord() {
+    try {
+      var p = JSON.parse(localStorage.getItem('personalInfo') || '{}') || {};
+      var fn = String((p && p.name) || '').trim();
+      return fn ? fn.split(/\s+/)[0] : '';
+    } catch (_) { return ''; }
+  }
+
   // ---- find the CL signature control (its own marker) to mount AFTER it ----
   function sigControl() {
     return document.querySelector('[data-antcv-cl-sig-control]');
@@ -82,8 +93,8 @@
     if (on) b.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); on(b); });
     return b;
   }
-  function setAlignActive(buttons) {
-    var a = String(get(K.align, 'center')).replace(/["']/g, '').toLowerCase();
+  function setAlignActive(buttons, key) {
+    var a = String(get(key || K.align, 'center')).replace(/["']/g, '').toLowerCase();
     if (a !== 'left' && a !== 'right' && a !== 'center') a = 'center';
     for (var k in buttons) {
       var active = (k === a);
@@ -181,6 +192,39 @@
     closingRow.appendChild(closingNote);
     body.appendChild(closingRow);
 
+    // CL-SIGNNAME-001: sign-off NAME (the typed name under the signature) — editable + its own CJLR.
+    var nameRow = document.createElement('div');
+    nameRow.style.cssText = 'display:flex;flex-direction:column;gap:4px;';
+    var nameLbl = document.createElement('div');
+    nameLbl.style.cssText = 'font-size:10px;font-weight:600;color:#cdd;';
+    nameLbl.textContent = 'Sign-off name';
+    var nameIn = document.createElement('input');
+    nameIn.type = 'text';
+    nameIn.style.cssText = 'padding:6px 8px;font-size:11px;background:rgba(255,255,255,0.06);color:#fff;' +
+      'border:1px solid rgba(255,255,255,0.18);border-radius:4px;font-family:inherit;';
+    nameIn.addEventListener('input', function () {
+      var v = String(nameIn.value || '').trim();
+      if (v) set(K.signName, v); else del(K.signName);
+      bump();
+    });
+    var nameNote = document.createElement('div');
+    nameNote.style.cssText = 'font-size:9px;opacity:.6;line-height:1.4;';
+    nameNote.textContent = 'The personal name above/below the signature. Defaults to your first name. The header name is unchanged.';
+    var nameAlignRow = document.createElement('div');
+    nameAlignRow.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:10px;color:#cdd;';
+    nameAlignRow.appendChild(document.createTextNode('Align:'));
+    var nameAlignBtns = {};
+    [['left', 'Left'], ['center', 'Center'], ['right', 'Right']].forEach(function (p) {
+      var b = btn(p[1], function () { set(K.signAlign, p[0]); setAlignActive(nameAlignBtns, K.signAlign); bump(); });
+      nameAlignBtns[p[0]] = b;
+      nameAlignRow.appendChild(b);
+    });
+    nameRow.appendChild(nameLbl);
+    nameRow.appendChild(nameIn);
+    nameRow.appendChild(nameAlignRow);
+    nameRow.appendChild(nameNote);
+    body.appendChild(nameRow);
+
     box.appendChild(head);
     box.appendChild(body);
 
@@ -200,6 +244,9 @@
       hiddenCb.checked = get(K.hidden, '0') === '1';
       setAlignActive(alignBtns);
       closingIn.value = get(K.closing, '');
+      nameIn.value = get(K.signName, '');
+      nameIn.placeholder = nameFirstWord() || 'e.g. Gabriel';
+      setAlignActive(nameAlignBtns, K.signAlign);
       applyOpen();
     };
     box.__refresh();

@@ -32,7 +32,7 @@
 (function () {
   'use strict';
   if (window.__antcvClCloudSyncExtra) return;
-  window.__antcvClCloudSyncExtra = '1.50.972';
+  window.__antcvClCloudSyncExtra = '1.50.975';
 
   var DISABLE = 'antcv:disable-cl-cloud-sync-extra';
   // [ localStorage key, relay field ]
@@ -46,6 +46,8 @@
     ['antcv:clSloganHidden', 'clSloganHidden'],
     ['antcv:clSloganAlign', 'clSloganAlign'],
     ['antcv:clClosing', 'clClosing'],
+    ['antcv:clSignName', 'clSignName'],
+    ['antcv:clSignNameAlign', 'clSignNameAlign'],
   ];
 
   function disabled() { try { var v = localStorage.getItem(DISABLE); return v === '1' || v === 'true'; } catch (_) { return false; } }

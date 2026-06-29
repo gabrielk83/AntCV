@@ -25151,7 +25151,10 @@ function buildLinearDocument(ctx) {
   // sized width=signature_size_px, height=width×signature_aspect (real ratio forwarded by the
   // client; omitted when hidden/absent). try/catch skips a bad image so the CL never breaks.
   // See docs/plan/CL_SIGNATURE_FEATURE.md.
-  var __clNameAlign = AlignmentType.LEFT;
+  // CL-SIGNNAME-001 (owner 2026-06-29): the typed sign-off name has its OWN CJLR alignment
+  // (meta.cl_sign_name_align, default CENTER), independent of the signature alignment. (Was
+  // NAME-FOLLOWS-SIG-001: name followed the signature.) The signature still uses its own align.
+  var __clNameAlign = ({ left: AlignmentType.LEFT, center: AlignmentType.CENTER, right: AlignmentType.RIGHT })[String((ctx.meta && ctx.meta.cl_sign_name_align) || "center").toLowerCase()] || AlignmentType.CENTER;
   if (pi.signature_b64) {
     try {
       var __sigData = base64ToUint8Array(pi.signature_b64);
@@ -25159,7 +25162,6 @@ function buildLinearDocument(ctx) {
       var __sigAsp = (function () { var a = Number(pi.signature_aspect); return Number.isFinite(a) && a > 0.05 && a <= 3 ? a : 0.4; })();
       var __sigH = Math.max(16, Math.round(__sigW * __sigAsp));
       var __sigAlign = ({ left: AlignmentType.LEFT, center: AlignmentType.CENTER, right: AlignmentType.RIGHT })[String(pi.signature_align || "center").toLowerCase()] || AlignmentType.CENTER;
-      __clNameAlign = __sigAlign;
       bodyChildren.push(new Paragraph({
         spacing: { before: 80, after: 0, line: 276, lineRule: "auto" },
         keepLines: true,
@@ -25180,7 +25182,13 @@ function buildLinearDocument(ctx) {
     alignment: __clNameAlign,
     children: [
       new TextRun({
-        text: pi.name || ({ da: "Dit navn", es: "Tu nombre", zh: "姓名" }[lang] || "Your Name"),
+        // editable sign-off name: meta.cl_sign_name override, else the first word of the full
+        // name (the personal/short form, e.g. "Gabriel"). The header band name is unchanged.
+        text: (function () {
+          try { var ov = ctx.meta && ctx.meta.cl_sign_name; if (typeof ov === "string" && ov.trim()) return ov.trim(); } catch (_) {}
+          var fn = String(pi.name || "").trim();
+          return fn ? fn.split(/\s+/)[0] : ({ da: "Dit navn", es: "Tu nombre", zh: "姓名" }[lang] || "Your Name");
+        })(),
         bold: true,
         color: style.mainTextColor,
         size: pt2hp(fs.mainBody),
@@ -27726,7 +27734,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.98-cl-closing-edit";
+var VERSION = "1.14.99-cl-signname";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

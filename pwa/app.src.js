@@ -26689,10 +26689,12 @@
                 ? `${f(t.mainLineColor, 6, 4)}<p style="font-family:'Carlito',${d};font-size:10.5pt;color:#000;margin:3pt 0;text-align:justify;line-height:${p}">${r(s.content || "")}</p>`
                 : "",
               m = (() => {
-                // CL sign-off: "Kind regards," → signature image → typed name. The name
-                // line FOLLOWS the signature's CJLR alignment (NAME-FOLLOWS-SIG-001) so the
-                // sign-off reads as one block; default left when no signature is present.
-                var sig = "", nameAlign = "left";
+                // CL sign-off: closing → signature image → typed name. CL-SIGNNAME-001 (owner
+                // 2026-06-29): the typed name is EDITABLE (antcv:clSignName, default = the first
+                // word of the full name, e.g. "Gabriel") with its OWN CJLR (antcv:clSignNameAlign,
+                // default CENTER), independent of the signature alignment. The header band name is
+                // unchanged. The signature still renders with its own align.
+                var sig = "";
                 try {
                   if (localStorage.getItem("antcv:signatureHidden") !== "1") {
                     var b = localStorage.getItem("antcv:signatureB64");
@@ -26702,11 +26704,12 @@
                         sz = Number(String(localStorage.getItem("antcv:signatureSize") || "").replace(/["']/g, "")),
                         wd = (sz >= 40 && sz <= 400) ? Math.round(sz) : 160;
                       sig = '<p style="margin:6pt 0 0;text-align:' + al + '"><img src="' + b + '" style="width:' + wd + 'px;height:auto;display:inline-block"></p>';
-                      nameAlign = al;
                     }
                   }
                 } catch (_) {}
-                return `<p style="margin-top:12pt;font-family:'Carlito',${d};font-size:10.5pt;color:#000;line-height:${p}">${i}</p>${sig}<p style="font-family:'Carlito',${d};font-size:10.5pt;font-weight:700;margin-top:8pt;color:#000;text-align:${nameAlign}">${w.name || (e ? "Dit navn" : "Your Name")}</p>`;
+                var sn = (() => { try { var ov = String(localStorage.getItem("antcv:clSignName") || "").trim(); if (ov) return ov; } catch (_) {} var fn = String(w.name || "").trim(); return fn ? fn.split(/\s+/)[0] : (e ? "Dit navn" : "Your Name"); })();
+                var na = (() => { try { var a2 = String(localStorage.getItem("antcv:clSignNameAlign") || "center").replace(/["']/g, "").toLowerCase(); return ("left" === a2 || "right" === a2 || "center" === a2) ? a2 : "center"; } catch (_) { return "center"; } })();
+                return `<p style="margin-top:12pt;font-family:'Carlito',${d};font-size:10.5pt;color:#000;line-height:${p}">${i}</p>${sig}<p style="font-family:'Carlito',${d};font-size:10.5pt;font-weight:700;margin-top:8pt;color:#000;text-align:${na}">${sn}</p>`;
               })(),
               g = 5;
             P =
@@ -27951,7 +27954,8 @@
               ),
               S.push(
                 u(
-                  y.name || (l ? "Dit navn" : "Your Name"),
+                  // CL-SIGNNAME-001: editable sign-off name, default = first word of the full name.
+                  (() => { try { var ov = String(localStorage.getItem("antcv:clSignName") || "").trim(); if (ov) return ov; } catch (_) {} var fn = String(y.name || "").trim(); return fn ? fn.split(/\s+/)[0] : (l ? "Dit navn" : "Your Name"); })(),
                   "CV_SignatureName",
                   { spacingBefore: 0, spacingAfter: 60 },
                 ),
@@ -43388,8 +43392,8 @@
                     window.__antcvClSigEl ? window.__antcvClSigEl() : null,
                     React.createElement(
                       "div",
-                      { style: { fontWeight: 700, marginTop: 8, textAlign: window.__antcvClSigAlign ? window.__antcvClSigAlign() : "left" } },
-                      a.name || ("da" === je ? "Dit navn" : "Your Name"),
+                      { style: { fontWeight: 700, marginTop: 8, textAlign: (() => { try { var a3 = String(localStorage.getItem("antcv:clSignNameAlign") || "center").replace(/["']/g, "").toLowerCase(); return ("left" === a3 || "right" === a3 || "center" === a3) ? a3 : "center"; } catch (_) { return "center"; } })() } },
+                      (() => { try { var ov = String(localStorage.getItem("antcv:clSignName") || "").trim(); if (ov) return ov; } catch (_) {} var fn = String(a.name || "").trim(); return fn ? fn.split(/\s+/)[0] : ("da" === je ? "Dit navn" : "Your Name"); })(),
                     ),
                   ),
                 ),
@@ -43489,9 +43493,8 @@
                             window.__antcvClSigEl ? window.__antcvClSigEl() : null,
                             React.createElement(
                               "div",
-                              { style: { fontWeight: 700, marginTop: 8, textAlign: window.__antcvClSigAlign ? window.__antcvClSigAlign() : "left" } },
-                              a.name ||
-                                ("da" === je ? "Dit navn" : "Your Name"),
+                              { style: { fontWeight: 700, marginTop: 8, textAlign: (() => { try { var a3 = String(localStorage.getItem("antcv:clSignNameAlign") || "center").replace(/["']/g, "").toLowerCase(); return ("left" === a3 || "right" === a3 || "center" === a3) ? a3 : "center"; } catch (_) { return "center"; } })() } },
+                              (() => { try { var ov = String(localStorage.getItem("antcv:clSignName") || "").trim(); if (ov) return ov; } catch (_) {} var fn = String(a.name || "").trim(); return fn ? fn.split(/\s+/)[0] : ("da" === je ? "Dit navn" : "Your Name"); })(),
                             ),
                           ),
                         ),

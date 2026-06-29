@@ -25,13 +25,27 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.974-nordic-cl-order';
+  var VERSION = '1.50.977-nordic-cl-order';
   if (window.__antcvNordicClOrder971 === VERSION) return;
   window.__antcvNordicClOrder971 = VERSION;
 
   // The canonical Nordic CL body order (by section id). The positioning line is the F1
   // slogan (rendered above the body, not a section). Sign-off + AI notice are separate.
   var ORDER = ['greeting', 'opening', 'why', 'who', 'foundation', 'bring', 'contribute', 'closure'];
+
+  // NORDIC-CL-TEMPLATE-SEED-001 (owner 2026-06-29): the per-section converters create the bring
+  // lead-in with an EMPTY body and leave foundation Hands-on/Professionally empty/old, so the live
+  // document loses the template's authoring INSTRUCTIONS (the bracketed guidance). Seed them when a
+  // body is empty OR an old bracketed placeholder (never over real content). Verbatim from
+  // CoverLetter_Template.docx (docs/qa/nordic-cl-template-2026-06-29.md).
+  var INSTR = {
+    bring: '[Select 3-4 of my skills that match only from Company Info + Holistic Leads + Specific Leads + JD Analysis. For unsolicited applications, use company info + target role type and mark assumptions.]',
+    handsOn: '[Select only skills that match Company Info + Holistic Leads + Specific Leads + JD analysis. Example: requirements and ALM/Codebeamer tooling, FMEA, DV/PV validation setups, RFQ/RFI and supplier scoring, optical/electro-optical systems, change control, traceability, KPI reporting.]',
+    professionally: '[Translate those skills into value for this company and role. Example: turn mixed technical and commercial input into clear scope, decisions, and measurable progress, while keeping engineering, product, suppliers, and management aligned.]'
+  };
+  // seed when EMPTY or a bracketed placeholder, and not already the instruction (idempotent);
+  // real content (does not start with "[") is preserved.
+  function needsSeed(t) { var s = String(t == null ? '' : t).trim(); return !s || /^\[/.test(s); }
 
   function disabled() { try { var v = localStorage.getItem('antcv:disable-nordic-cl-order'); return v === '1' || v === 'true'; } catch (_) { return false; } }
   function isNordicMinimal() {
@@ -96,6 +110,35 @@
     return { changed: changed, list: out };
   }
 
+  // Seed the template INSTRUCTIONS into empty/placeholder bodies (NORDIC-CL-TEMPLATE-SEED-001):
+  // bring lead-in (item 0) + foundation Hands-on/Professionally rows. Real content is preserved.
+  function seedInstructions(list) {
+    var changed = false;
+    var out = list.map(function (s) {
+      if (!s || s.type !== 'rich_block' || !Array.isArray(s.items) || !s.items.length) return s;
+      if (s.id === 'bring') {
+        var lead = s.items[0];
+        if (lead && typeof lead === 'object' && !lead.mk && needsSeed(lead.t) && lead.t !== INSTR.bring) {
+          var it = s.items.slice(); it[0] = Object.assign({}, lead, { t: INSTR.bring });
+          changed = true; return Object.assign({}, s, { items: it });
+        }
+        return s;
+      }
+      if (s.id === 'foundation') {
+        var it2 = s.items.slice(); var touched = false;
+        for (var i = 0; i < it2.length; i++) {
+          var r = it2[i]; if (!r || typeof r !== 'object') continue;
+          var want = r.b === 'Hands-on' ? INSTR.handsOn : r.b === 'Professionally' ? INSTR.professionally : null;
+          if (want && needsSeed(r.t) && r.t !== want) { it2[i] = Object.assign({}, r, { t: want }); touched = true; }
+        }
+        if (touched) { changed = true; return Object.assign({}, s, { items: it2 }); }
+        return s;
+      }
+      return s;
+    });
+    return { changed: changed, list: out };
+  }
+
   function run() {
     try {
       if (disabled() || !isNordicMinimal()) return;
@@ -103,8 +146,9 @@
       var a = reorder(secs.cl);
       var b = bringBullets(a.list);
       var g = contributeGoal(b.list);
-      if (!a.changed && !b.changed && !g.changed) return;
-      secs.cl = g.list;
+      var sd = seedInstructions(g.list);
+      if (!a.changed && !b.changed && !g.changed && !sd.changed) return;
+      secs.cl = sd.list;
       localStorage.setItem('sections', JSON.stringify(secs));
       try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { reason: 'nordic-cl-order-971' } })); } catch (_) {}
     } catch (_) { /* self-disable on any error */ }

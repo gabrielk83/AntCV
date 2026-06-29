@@ -11,7 +11,12 @@
 > root: the page-1 photo-header bridge uses a different column grid than pages 2-3. Fix them together
 > in `workers/docx-worker/src/index.js` (finer/separate header grid + equal page-table grids + drop the
 > photo-path trailing break), ship FLAG-GATED if needed, owner verifies the export. Then the export-only
-> pagination parity (E) and the floating-spine spine fill. Coordinator items (C/D) are preview-verifiable.
+> pagination parity (E) and the floating-spine spine fill.
+> ALSO (owner "do not forget", NOT render-gated — section "OPEN — COVER-LETTER FORMAT SETTINGS"): **F1**
+> make the CL SLOGAN an editable section + a control in the CL format panel (today it's derived from
+> meta.subtitle, uneditable); **F2** default WHAT I BRING to `rich_block` (rich_context) not `table`;
+> **F3** surface the signature control as a subsection in the CL format panel (today it's under Layout's
+> PROFILE PHOTO). These are preview-verifiable — good to do first.
 > One verified fix at a time; cache-bust quintet; worker deploy via deploy.yml.
 
 ---
@@ -51,6 +56,42 @@ their PIXEL result needs the owner to export a real CloudConvert PDF. Don't ship
   TOOLS freed page 2, regulatory now starts page 2). Fix: cache validity also requires the section's
   start page to match; re-evaluates on a genuine settle, dance-damping preserved. Verified LIVE
   (`autoPages.regulatory = {0:2,19:3}` → Environmental on page 3, stable across 5 re-measures, no dance).
+
+---
+
+## OPEN — COVER-LETTER FORMAT SETTINGS (owner 2026-06-29, "do not forget") — NOT render-gated
+
+Owner wants these CL features promoted into the **cover-letter format settings panel** (the CL
+Settings/format panel, not only the Layout tab). All three are preview-verifiable (no real export needed
+for the control/preview; the export side for slogan + signature already ships — worker 1.14.94).
+
+### F1. SLOGAN as an editable SECTION + a panel control
+SLOGAN-CL-001 (1.50.960) currently DERIVES the slogan from `meta.subtitle` (uppercased) — there is no way
+to edit the slogan text independently or hide it. Owner wants a real **slogan section** with its own
+control in the CL format panel: editable text (default for Gabriel unsolicited = "PROCESSES • PRODUCTS •
+PEOPLE"), show/hide, and (nice) alignment. Storage: a standalone key (e.g. `antcv:clSlogan` /
+`antcv:clSloganHidden`) like the signature keys, OR a real CL section `{id:'slogan', type:'rich_block'/
+heading}` that the builder reads. Builder reads it INSTEAD of `meta.subtitle` when present (subtitle stays
+the fallback default). Touch: preview srcdoc builder (app.src.js CL branch — the slogan IIFE I inlined at
+the top of the CL body td) + app.js mirror + worker `buildLinearDocument` (the `__slogan` block at the top
+of `bodyChildren`) + a panel control sidecar (mirror the `antcv-cl-signature-control.js` pattern).
+
+### F2. WHAT I BRING — default to rich_block (rich_context), not `table`
+The CL `bring` section is `type:"table"` (rows). Owner wants the DEFAULT to be `rich_block` (the universal
+"rich_context" type), like the other CL sections already converted ([[rich-block-universal-section]]).
+Add a migration sidecar (mirror `antcv-hwic-to-rich-block-760.js` / the bring is the LAST own-type CL
+section besides greeting/closure) that converts `bring` table rows → rich_block items (each row's
+`[label, value]` → a `{b:label, t:value}` row, or a grp+rows shape), idempotent + self-converging; and/or
+change the me() skeleton + generation hydration to emit rich_block for `bring`. Verify preview + worker
+render + the diag-full-doc-health. NOTE the bring table is referenced in CL width/closure logic — check
+nothing reads `bring.rows` after conversion.
+
+### F3. SIGNATURE control as a subsection in the CL format panel
+The signature control (`antcv-cl-signature-control.js`, 1.50.959) currently injects under the PROFILE
+PHOTO control in the **Layout** tab. Owner wants it ALSO/instead as a **subsection in the CL format
+panel**. Either add a second mount target (the CL format panel) or move it there. Keep the single-mount /
+own-marker / no-sticky-leak discipline (mount ONCE per panel; if mounted in two panels, guard each with a
+distinct marker so neither leaks). Same standalone keys; no behavior change — just placement.
 
 ---
 

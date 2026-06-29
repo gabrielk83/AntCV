@@ -24639,8 +24639,19 @@ function buildTwoColumnDocument(ctx) {
       const s = secs[i];
       const tp = __firstPageOf(s);
       const rendered = renderSection(s, ctx, isSidebar);
-      if (tp > running) { running = tp; for (let j = 0; j < rendered.length; j++) out.push(rendered[j]); }
-      else { let k = (rendered[0] && rendered[0].__antcvPB) ? 1 : 0; for (let j = k; j < rendered.length; j++) out.push(rendered[j]); }
+      // EXPORT-PARITY-RUNNING-001 (owner 2026-06-29 "recommendations/AI notice pushed to page 5, the
+      // sidebar tail to page 4"): a spanning section (experience roles, split lists/tables, rich_block
+      // rows) emits INTERNAL __antcvPB page-break markers as separate top-level segments. The old loop
+      // advanced `running` only by __firstPageOf (a section's FIRST page), so after a multi-page section
+      // `running` was STALE (too low) and the NEXT tail section's leading break was wrongly KEPT —
+      // adding an extra page break, so the tail landed a page LATE. Count the internal breaks this
+      // section emits and advance `running` by them, so the KEEP/STRIP decision for the next section
+      // sees the TRUE current page and tail sections pack onto the page the coordinator intended.
+      const leadingPB = !!(rendered[0] && rendered[0].__antcvPB);
+      let internalBreaks = 0;
+      for (let j = (leadingPB ? 1 : 0); j < rendered.length; j++) { if (rendered[j] && rendered[j].__antcvPB) internalBreaks++; }
+      if (tp > running) { running = tp + internalBreaks; for (let j = 0; j < rendered.length; j++) out.push(rendered[j]); }
+      else { let k = leadingPB ? 1 : 0; running = running + internalBreaks; for (let j = k; j < rendered.length; j++) out.push(rendered[j]); }
     }
     return out;
   }
@@ -27693,7 +27704,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.94-cl-slogan-signoff";
+var VERSION = "1.14.95-export-parity-running";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

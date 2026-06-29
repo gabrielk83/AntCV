@@ -24734,8 +24734,15 @@ function buildTwoColumnDocument(ctx) {
   // preview's measured hint is only a tiebreaker when the last pages tie; default
   // right. (Was: blindly trust the hint, else default right — which landed on the
   // dense side when the hint was stale/unset.)
-  const __lastMainN = (mainPages[numPages - 1] || []).length;
-  const __lastSideN = (sidebarPages[numPages - 1] || []).length;
+  // AI-WM-SIDE-LASTCONTENT-001 (owner 2026-06-29 "AI notice is still on the long edge"): compare the
+  // columns on the last NON-EMPTY page, NOT numPages-1. An over-counted trailing page (or a last page
+  // whose content overflowed) left BOTH columns empty at numPages-1, so the comparison tied and the
+  // notice fell to the default ("right" = the dense main column = the long edge). On the TRUE last
+  // content page the sidebar usually ended earlier (empty) → it is the lighter side and gets the notice.
+  let __lastContentPage = 0;
+  for (let __p = 0; __p < numPages; __p++) { if ((sidebarPages[__p] || []).length || (mainPages[__p] || []).length) __lastContentPage = __p; }
+  const __lastMainN = (mainPages[__lastContentPage] || []).length;
+  const __lastSideN = (sidebarPages[__lastContentPage] || []).length;
   const __sbPhys = sidebarOnRight ? "right" : "left";
   const __mnPhys = sidebarOnRight ? "left" : "right";
   let aiWmCorner;
@@ -27704,7 +27711,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.95-export-parity-running";
+var VERSION = "1.14.96-ai-wm-side";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

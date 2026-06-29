@@ -52,20 +52,26 @@ structure, generation, section order, the settings panel, the preview, and the e
 
 **Phase 1 DONE (1.50.971)** — `antcv-nordic-cl-order-971.js` enforces the ORDER on live cl + makes
 bring data-rows visible bullets. Layers on the existing converters (foundation-758 already gives the
-3-row foundation; bring-761; hwic-760). Verified (order + bullets + non-Nordic guard). **Owner: please
-eyeball a real preview/export to confirm the new order/structure reads right before Phases 2-3.**
+3-row foundation; bring-761; hwic-760). Verified.
 
-**Phase 2 TODO — me() CL skeleton (fixes the admin-tab template).** The admin Export-template derives
-from `me()` and renders RAW (the live converters do NOT run on it), so the admin .docx/.json templates
-still show the OLD order/types. Update the CL `me()` (app.src.js ~3451-3535 + the app.js minified mirror)
-to the canonical order + rich_block structure + the template's placeholder content (extracted text is in
-the owner's `CoverLetter_Template.docx`). Gate on Nordic. This was the owner's ORIGINAL "admin templates
-missing elements" complaint.
+**Phase 2 DONE (1.50.973)** — me() CL skeleton is GATED on Nordic: `cl: GATE ? [nordic] : [legacy]`
+(app.src.js + app.js mirror), so the admin-tab Export-template (derives from me(), renders raw) now
+shows the new order + rich_block structure + the template's placeholder content. Non-Nordic =
+legacy byte-identical (zero risk). Verified: app.js boots clean, Nordic vs legacy order, template-derive
+guard. Fixes the owner's ORIGINAL "admin templates missing elements" complaint.
 
-**Phase 3 TODO — generation + positioning + Goal + AI-notice.** Update the generation prompt/skeleton
-(app.src.js ~2900 CL structure) to EMIT this order/content for Nordic. Add the "Goal:" lead-in to
-contribute's closing row (skipped in Phase 1 to avoid fighting hwic-760's intro/closing detection).
-Confirm the positioning line (F1 slogan) is the only top tagline (no dup). Keep the current AI-notice.
+**Phase 3 DONE (1.50.974, structural)** — the Nordic order sidecar now adds the "Goal:" lead-in to a
+GENERATED contribute's closing row (me() already seeds it). Positioning = the F1 slogan (no separate
+section -> no dup). AI notice = current format (unchanged, per owner).
+
+**Phase 3 REMAINING (refinement, non-blocking) — generation prompt CONTENT.** The CL generation
+prompt/skeleton (app.src.js ~2900, the cl-skeleton structure block) still describes the OLD section
+shape. Update it to GUIDE the LLM to emit the template's content shape for Nordic (positioning line;
+why/who lead-ins; foundation Foundation/Hands-on/Professionally; bring = "[Need]: [action]" rows;
+contribute intro + actions + Goal). NOTE: the STRUCTURE is already enforced post-generation (me() +
+the order/converter sidecars reshape any generation), so this is purely CONTENT-quality — lower
+urgency, and it's a large prompt-text edit + app.js mirror, so do it as its own focused step.
+Authoritative content: `docs/qa/nordic-cl-template-2026-06-29.md`.
 
 ---
 
@@ -77,7 +83,11 @@ Confirm the positioning line (F1 slogan) is the only top tagline (no dup). Keep 
   cl-cloud-sync MAP + a "Sign-off closing" input in the CL control). Read at all 4 sign-off sites
   (srcdoc + React×2 + inline-docx fallback + worker via `meta.cl_closing`). Verified worker 3/3 +
   boot-smoke. See [[cl-slogan-signature-standalone-keys]].
-- **1.50.971 — NORDIC-CL-TEMPLATE-001 phase 1.** See the IN-PROGRESS section above.
+- **1.50.971-974 — NORDIC-CL-TEMPLATE-001 phases 1-3.** Live CL + admin template + generated CL all
+  follow the owner's new Nordic template (order greeting→opening→why→who→foundation→bring→contribute→
+  closure; rich_block lead-ins; foundation 3-row w/ Hands-on/Professionally bullets; bring no-heading
+  lead + 4 bullets; contribute intro+bullets+Goal). me() Nordic-gated (1.50.973); order/bullets/Goal
+  sidecar (971/974). Only the generation prompt CONTENT remains (refinement). See the section above.
 - **1.50.970 / access-relay 1.3.3 — CL-SIG-SLOGAN-CLOUD-001.** The CL signature + editable slogan now
   cloud-persist (were local-only; lost on hard reset). Allowlisted their camelCase forms in the relay
   `KERNEL_PREFS_STR_FIELDS` + new sidecar `antcv-cl-cloud-sync-extra.js` (push via `_antcvCloudWrite`,

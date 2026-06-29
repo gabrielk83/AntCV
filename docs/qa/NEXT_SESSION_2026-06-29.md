@@ -95,6 +95,27 @@ distinct marker so neither leaks). Same standalone keys; no behavior change — 
 
 ---
 
+## OPEN — kernel role bullets/results + Students-Council dup (owner 2026-06-29)
+
+Owner: 3 roles' bullets/results "not saved to the unsolicited Gabriel CV", esp. Students Council
+"a bullet was chosen as result and both bullet and result are seen." Diagnosed on live data
+(personalInfo.workHistory, 12 roles; proofPointsByRole 11; selectedOutcomes 22):
+- **Students-Council DUP — root cause:** Council has **0 outcomes** in the kernel (`hasOutcomes:0`,
+  no proofPoints). The per-role result lamination (role.results → outcomes[] → proofPointIds →
+  best-match → DERIVE) falls through to DERIVING a result from a BULLET → the bullet shows as both a
+  bullet AND the "Results:" line. FIX (tractable, benefits every outcome-less role): in the laminator
+  (`applyOutcomesMode` — docx-client + the app.src.js preview), when the derived result has no REAL
+  outcome source (no role.results / outcomes[] / proofPoint) OR equals/contains a visible bullet, DROP
+  the result (or drop the duplicated bullet) so it never double-prints. Render-gated for the export.
+- **Bullets/results content gap:** kernel CSA has 3 bullets (owner wants 4 — missing "Train recruits…"),
+  Council 3 (owner wants 2 + a real result "Modernised 15 outdated EE exam-prep booklets…"), and the CV
+  GENERATION dropped CSA 3→2. The kernel content ≠ the owner's authoritative set. SAFEST fix: owner sets
+  the correct bullets + per-role Results via the experience editor (persists to the kernel + cloud), OR
+  confirms the pasted text is authoritative and a session writes personalInfo.workHistory[bullets] +
+  the per-role outcome/result for these 3 roles (then verify it survives a regen — this is the
+  [[data-loss-on-restore]] class; confirm the save persists). Owner's authoritative content is in the
+  2026-06-29 message (CSA 4 bullets + result; Ops 3 + result; Council 2 + "Modernised 15…").
+
 ## OPEN — TOP PRIORITY: candidate-header photo/text placement (owner 2026-06-29, precise measurements)
 
 Owner gave exact target geometry (default 1.52" photo) for the bridge candidate header

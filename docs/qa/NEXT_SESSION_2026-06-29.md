@@ -95,7 +95,47 @@ distinct marker so neither leaks). Same standalone keys; no behavior change — 
 
 ---
 
-## OPEN — kernel role bullets/results + Students-Council dup (owner 2026-06-29)
+## OPEN — TOP NEXT: kernel role bullets/results + Students-Council dup (owner 2026-06-29, explicit rules)
+
+OWNER'S EXACT RULES for the fix (do these FIRST next session, carefully + verified — high-stakes kernel data):
+1. **Dup = hide the BULLET, not the result.** When a role has no real outcome and the laminator derives the
+   "Results:" line from a bullet, KEEP the result line and HIDE the source bullet (don't drop the result).
+   A "dedup-hide below" ALREADY exists for the seeded-from-bullet case (`applyOutcomesMode`, docx-client
+   ~2342-2347 "the dedup-hide below then removes the duplicate source bullet") but it is NOT firing for
+   Students Council — find why (the bullet-fallback may not seed/pin an outcome for an outcome-less +
+   proofPoint-less role, so there's nothing the dedup keys on) and make the bullet hide. Mirror in the
+   preview laminator (app.src.js) for parity.
+2. **Manual result stays SEPARATE from bullets.** If the owner adds a result manually, it must NOT
+   overwrite/consume a bullet — result and bullet are independent fields. (i.e. role.results string is its
+   own field; never promote-and-delete a bullet when a real result is present.)
+3. **Students-Council result is "lost several times" — READ/PERSISTENCE bug.** The Council result keeps
+   disappearing. Investigate the read/save path for role.results / role.outcomes on the council role (kernel
+   D1 split + the laminator + any migration that strips it). This is the [[data-loss-on-restore]] class —
+   confirm a written result PERSISTS across reload + regen.
+4. **Write the owner's authoritative content** (owner OK'd) for the 3 roles into the kernel
+   (personalInfo.workHistory bullets + role.results) AND verify it persists. Set role.results (tier-1
+   verbatim, wins above all) so it laminates without deriving from a bullet:
+   - CSA (Computer Systems Administrator | IDF, Communication Corps, 2001-2003): bullets = [Administer
+     classified IT infrastructure… provisioning, hardware procurement, incident response, first-line
+     support; Write documentation preserving continuity across commander rotations; Build the unit's first
+     automated backup-and-restore procedure, cutting recovery time from hours to minutes; Train recruits on
+     help-desk routines, access handling & recovery procedures]; result = "Support 100 users across 150
+     machines in a classified construction centre, with documented access, support, and recovery workflows."
+   - Team Operations Manager (foreningsarbejde) | Pan Idræt, 2023-present: bullets = [Manage logistics for
+     ~25 players and coaches across Denmark and abroad; co-organise annual sports and social events; World
+     Rugby Level 1 coach and assistant coach; handle practical team support (equipment, kit, storage,
+     setup); Operations and assistant-coaching for Copenhagen Wolves RFC, an inclusive amateur rugby club
+     under Pan Idræt]; result = "Coordinate a 25-player squad, 300-guest club events, and club
+     representation with Rugby Danmark and IGR Europe."
+   - Students Council Representative | Tel Aviv University, 2005-2007: bullets = [Represent EE students to
+     faculty on curriculum and welfare matters; Coordinate between student body and academic staff to
+     resolve issues]; result = "Modernised 15 outdated EE exam-preparation booklets with updated examples,
+     cleaner coverage, and improved print quality."
+   NOTE: setting role.results gives Council a REAL result → the laminator stops deriving from a bullet →
+   resolves the dup at the source (rule 1 is then the robustness backstop for other outcome-less roles).
+   CSA generation also dropped a bullet (kernel 3 → CV 2) — the kernel write + a regen restores it.
+
+### Original capture:
 
 Owner: 3 roles' bullets/results "not saved to the unsolicited Gabriel CV", esp. Students Council
 "a bullet was chosen as result and both bullet and result are seen." Diagnosed on live data

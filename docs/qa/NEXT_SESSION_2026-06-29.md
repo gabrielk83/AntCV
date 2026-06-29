@@ -95,6 +95,45 @@ distinct marker so neither leaks). Same standalone keys; no behavior change — 
 
 ---
 
+## OPEN — owner batch 2026-06-29 (late) — CL sign-off, compress, quick-gen, Professionally
+
+### G. CL sign-off: order + CJLR + editable defaults
+- Order must be **closing → name → signature** (signature AFTER the name). NOTE: NAME-FOLLOWS-SIG-001
+  currently puts sig BEFORE name — REVERSE it. Sites: worker `buildLinearDocument` (move the sig
+  Paragraph after the name), the React preview (`window.__antcvClSigEl` is dropped between closing &
+  name today — move it after the name), and the export srcdoc `m`.
+- **All three (closing, name, signature) share the SAME CJLR alignment** (the signature's align). The
+  closing ("Kind regards,") is currently left-default — align it like the name+sig.
+- **Editable defaults:** closing default = **"At your service,"** (was "Kind regards,"); sign-off NAME
+  default = **"Gabriel"** (personal/short, NOT the full header name). Both EDITABLE. Add standalone keys
+  (e.g. `antcv:clClosing`, `antcv:clSignName`) + small controls (mirror the signature control pattern in
+  the Layout/CL panel) + read them in the React preview + worker + srcdoc. The header name stays the
+  full name; only the SIGN-OFF name changes.
+
+### H. rich_block not compressible ("Section type \"rich_block\" is not compressible here.")
+Foundation is now rich_block; the per-section compress handler (app.src.js ~19749) supports
+foundation/experience/table/labeled_list/list/education but NOT rich_block → it alerts + leaves a
+"junk processing" state. FIX: add a `rich_block` branch — build `{id,type:'rich_block',items:[{b,t}]}`
+(preserve b lead-ins / grp / mk; compress only the `t` bodies), add a rich_block compress prompt
+(tighten `t`, keep b/grp/mk + numbers/tools/proper-nouns), map the result back to items[].t. Also fix
+the error-path cleanup so a rejected/failed compress fully resets the processing state (no junk
+spinner). app.src.js + app.js mirror.
+
+### I. Quick generation — converge a 4-page kernel to ~1.5–2 pages
+Owner: a QUICK generation that starts from the 4-page unsolicited kernel must HIDE irrelevant
+positions + bullets + tools (on:false / hidden:true — NOT delete) to converge to a reasonable 1.5–2
+pages. Today quick-gen keeps content essentially verbatim (no relevance pruning). Add a quick-gen
+pruning pass (JD-relevance or recency/seniority when no JD): mark low-relevance roles on:false, trim
+each kept role's bullets, hide off-topic tools/regulatory — to a page target. Generation-side
+(app.src.js ~23820 __quickGen path) + the prompt. Substantial; spec + verify on a real quick-gen.
+
+### J. CL Foundation "Professionally" — no bold body
+Owner: "Professionally does not need bold text immediately after it." The Hands-on lead-in dup is FIXED
+(FOUNDATION-LEADIN-DEDUP-001, 1.50.968). For Professionally the body has no bold markers + the
+rich_block render only bolds the lead-in `b` — so confirm with the owner what reads as bold (possibly
+the bold teal lead-in "Professionally" itself, or a render colon-emphasis) and adjust (e.g. leadBold
+off for that row, or don't emphasise the body's pre-colon clause).
+
 ## OPEN — TOP NEXT: kernel role bullets/results + Students-Council dup (owner 2026-06-29, explicit rules)
 
 OWNER'S EXACT RULES for the fix (do these FIRST next session, carefully + verified — high-stakes kernel data):

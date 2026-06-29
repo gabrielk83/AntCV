@@ -1066,13 +1066,8 @@
                 // Key the cache on the visible sidebar BLOCK COUNT only and re-apply the SAME break every
                 // cycle while the count is unchanged OR grew. Only a genuine content SHRINK (an upper item
                 // hidden -> fewer blocks) invalidates + re-evaluates (the group may now fit earlier).
-                var blkCount = __uniBlocks.sidebar.length;
-                var cached = __forceLastGrpStick[sid];
-                if (cached && blkCount >= cached.blkCount) {
-                  paged.forEach(function (b) { var k = parseInt(b.key, 10) || 0; if (k >= cached.lastGrp) b.page = cached.startPage + 1; });
-                  return;
-                }
-                if (cached && blkCount < cached.blkCount) { delete __forceLastGrpStick[sid]; }   // content shrank -> re-evaluate
+                // Compute the section's groups + current start page FIRST (needed for both
+                // the cache-validity check and the decision).
                 var blocks = bySid[sid];
                 // group starts from SECTION DATA (items[i].grp) — reliable + matches the DOM row-path
                 // keys; the rendered-block grpHead flag did not survive the coordinator's collection.
@@ -1082,18 +1077,31 @@
                 if (secData && Array.isArray(secData.items)) { secData.items.forEach(function (it, i) { if (it && it.grp != null && it.grp !== '') starts.push(i); }); }
                 if (starts.length < 2) return;                                // needs >=2 groups
                 var tot = blocks.reduce(function (s, b) { return s + Math.max(0, b.bottom - b.top); }, 0);
-                if (tot <= __uniLimit * FORCE_LAST_GRP_FRAC) return;          // only a BIG section
                 var lastGrp = starts[starts.length - 1];
                 // BEFORE-PAGE (owner 2026-06-26 "can stay on page 2 / dances"): isolate the last group
                 // relative to where the content BEFORE it ends — NOT the section's MIN page. regulatory
                 // spans page 1 -> 2, so the old startPage = min = 1 hit the "startPage < 2 -> return"
-                // guard and the force NEVER fired (Environmental left to the natural break -> dance /
-                // "stays on page 2"). beforePage = max page among the pre-group blocks; isolate ONLY the
-                // last group onto beforePage + 1, leaving the earlier groups on their natural pages.
+                // guard and the force NEVER fired. beforePage = max page among the pre-group blocks;
+                // isolate ONLY the last group onto beforePage + 1.
                 var beforePage = 1;
                 paged.forEach(function (b) { var k = parseInt(b.key, 10) || 0; if (k < lastGrp) beforePage = Math.max(beforePage, b.page); });
-                if (beforePage < 2) return;                                   // only isolate once the section reaches page 2+
-                __forceLastGrpStick[sid] = { lastGrp: lastGrp, startPage: beforePage, blkCount: blkCount };   // CACHE the decision + block count
+                var blkCount = __uniBlocks.sidebar.length;
+                var cached = __forceLastGrpStick[sid];
+                try { if (localStorage.getItem('antcv:flg-debug') === '1') console.log('[FLG]', sid, { tot: Math.round(tot), thr: Math.round(__uniLimit * FORCE_LAST_GRP_FRAC), big: tot > __uniLimit * FORCE_LAST_GRP_FRAC, grps: starts.length, lastGrp: lastGrp, beforePage: beforePage, cached: cached && { sp: cached.startPage, bc: cached.blkCount } }); } catch (_) {}
+                // FORCE-LAST-GRP-SETTLE-001 (owner 2026-06-29 "Environmental should cut into page 3"):
+                // re-apply the cached decision ONLY while the block count is stable AND the section's
+                // START PAGE is unchanged. The old key (block-count only) let a BOOT-TIME transient
+                // decision stick forever — after TOOLS-PAGE1-BAND-001 freed page 2, regulatory now
+                // STARTS on page 2, but a stale startPage from an earlier layout kept Environmental on
+                // page 2. The page-2/3 dance damping still holds: a SETTLED start page is stable across
+                // re-measure noise, so only a genuine settle re-evaluates.
+                if (cached && blkCount >= cached.blkCount && cached.startPage === beforePage) {
+                  paged.forEach(function (b) { var k = parseInt(b.key, 10) || 0; if (k >= cached.lastGrp) b.page = cached.startPage + 1; });
+                  return;
+                }
+                if (tot <= __uniLimit * FORCE_LAST_GRP_FRAC) { delete __forceLastGrpStick[sid]; return; }   // only a BIG section
+                if (beforePage < 2) { delete __forceLastGrpStick[sid]; return; }   // not yet on page 2+ — don't force; clear any stale decision
+                __forceLastGrpStick[sid] = { lastGrp: lastGrp, startPage: beforePage, blkCount: blkCount };   // CACHE the decision + start page + block count
                 paged.forEach(function (b) { var k = parseInt(b.key, 10) || 0; if (k >= lastGrp) b.page = beforePage + 1; });
               } catch (e) { /* per-section: never abort the whole pass */ }
             });

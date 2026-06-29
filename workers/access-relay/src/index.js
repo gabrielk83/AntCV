@@ -1,6 +1,6 @@
 import { insertLlmCall, aggregateHealth, getLatestHealth, pruneOld, insertQualitySignal } from './telemetry.js';
 
-const VERSION='1.3.2';
+const VERSION='1.3.3';
 // antcv-access-relay — auth + hardening
 // =====================================
 // Public-facing relay with built-in user authentication.
@@ -744,6 +744,15 @@ const KERNEL_PREFS_STR_FIELDS = new Set([
   // SETTINGS-SYNC-EXTRA-001 (owner 2026-06-18): photo placement string
   // (e.g. "sidebar_top"). Pushed by antcv-settings-sync-extra.js.
   'photoPosition',
+  // CL-SIG-SLOGAN-CLOUD-001 (owner 2026-06-29): the cover-letter SIGNATURE image +
+  // the editable SLOGAN are kept in standalone localStorage keys (cloud-restore-safe,
+  // see the sidecar-prefs clobber hazard) and so were LOCAL-ONLY — every hard reset
+  // needed a re-upload. Allowlist their camelCase forms so antcv-cl-cloud-sync-extra.js
+  // can round-trip them via /api/prefs. signatureB64 is the processed (cropped,
+  // transparent, <=600px) PNG data-URL — small enough for preferences. All are strings
+  // (sizes/aspect ride as numeric strings; the client coerces with Number()).
+  'signatureB64', 'signatureAlign', 'signatureSize', 'signatureAspect', 'signatureHidden',
+  'clSlogan', 'clSloganHidden', 'clSloganAlign',
 ]);
 const KERNEL_PREFS_BOOL_FIELDS = new Set([
   'consensusEnabled', 'kernelShowcaseGenerated', 'useChatGPT', 'wizardCompleted',

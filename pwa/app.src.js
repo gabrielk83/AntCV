@@ -43353,9 +43353,10 @@
                       null,
                       n ? "Med venlig hilsen," : "Kind regards,",
                     ),
+                    window.__antcvClSigEl ? window.__antcvClSigEl() : null,
                     React.createElement(
                       "div",
-                      { style: { fontWeight: 700, marginTop: 8 } },
+                      { style: { fontWeight: 700, marginTop: 8, textAlign: window.__antcvClSigAlign ? window.__antcvClSigAlign() : "left" } },
                       a.name || ("da" === je ? "Dit navn" : "Your Name"),
                     ),
                   ),
@@ -43453,9 +43454,10 @@
                               null,
                               n ? "Med venlig hilsen," : "Kind regards,",
                             ),
+                            window.__antcvClSigEl ? window.__antcvClSigEl() : null,
                             React.createElement(
                               "div",
-                              { style: { fontWeight: 700, marginTop: 8 } },
+                              { style: { fontWeight: 700, marginTop: 8, textAlign: window.__antcvClSigAlign ? window.__antcvClSigAlign() : "left" } },
                               a.name ||
                                 ("da" === je ? "Dit navn" : "Your Name"),
                             ),

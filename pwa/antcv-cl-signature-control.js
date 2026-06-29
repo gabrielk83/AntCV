@@ -38,10 +38,39 @@
   function bump() {
     set(K.rev, String((parseInt(get(K.rev, '0'), 10) || 0) + 1));
     try { window.dispatchEvent(new CustomEvent('antcv:signature-changed')); } catch (_) {}
+    // SIGNATURE-PREVIEW-RERENDER-001 (owner 2026-06-29 "uploaded but nothing in the CL preview"):
+    // the on-screen CL preview is a React render that reads the signature from localStorage on each
+    // render, but a localStorage write alone doesn't re-render React. Fire the app's existing
+    // 'antcv:sections-updated' refresh so the preview rebuilds and picks up the signature / align /
+    // size immediately. (The migration sidecars listening to it are idempotent — cheap no-ops.)
+    try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { reason: 'cl-signature-control' } })); } catch (_) {}
   }
 
   function isOpen() { return get(K.open, '0') === '1'; }
   function setOpen(v) { set(K.open, v ? '1' : '0'); }
+
+  // ---- on-screen CL preview hooks (app.js sign-off render calls these) ----
+  // The live preview is a React render; expose the signature as a React element + its
+  // align so app.js can drop it between "Kind regards," and the typed name with a tiny
+  // mirror edit. React is a UMD global (window.React). Returns null when hidden/absent.
+  window.__antcvClSigAlign = function () {
+    try {
+      if (get(K.hidden, '0') === '1' || !get(K.b64, '')) return 'left';
+      var al = String(get(K.align, 'center')).replace(/["']/g, '').toLowerCase();
+      return (al === 'left' || al === 'right') ? al : 'center';
+    } catch (_) { return 'left'; }
+  };
+  window.__antcvClSigEl = function () {
+    try {
+      var R = window.React; if (!R) return null;
+      if (get(K.hidden, '0') === '1') return null;
+      var sb = get(K.b64, ''); if (!sb) return null;
+      var align = window.__antcvClSigAlign();
+      var sz = Number(String(get(K.size, '160')).replace(/["']/g, '')), wd = (sz >= 40 && sz <= 400) ? Math.round(sz) : 160;
+      return R.createElement('div', { style: { textAlign: align, marginTop: 6 } },
+        R.createElement('img', { src: sb, style: { width: wd + 'px', height: 'auto', display: 'inline-block' } }));
+    } catch (_) { return null; }
+  };
 
   // ---- find the PROFILE PHOTO control (same marker the collapse sidecar uses) ----
   function photoControl() {

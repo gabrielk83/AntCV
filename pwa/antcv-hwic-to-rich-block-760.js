@@ -86,11 +86,46 @@
     // in BOTH the already-rich_block and the just-converted return paths. Idempotent + override-safe:
     // only when headlineOff is UNSET (a user who re-shows the headline via the editor writes
     // headlineOff:false, which is respected and never re-hidden). Non-nordic styles are untouched.
+    // Sentence-case a section title for use as a bold lead-in label (keeps a standalone
+    // English "I" capitalised): "HOW I WOULD CONTRIBUTE" -> "How I would contribute".
+    function sentenceCaseLabel(title) {
+      var t = String(title || '').trim();
+      if (!t) return '';
+      t = t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
+      return t.replace(/\bi\b/g, 'I');
+    }
     function hwHeadline(sec) {
-      if (sec && sec.id === 'contribute' && sec.type === 'rich_block' && isNordicMinimal() && sec.headlineOff === undefined) {
-        var c = Object.assign({}, sec); c.headlineOff = true; changed = true; return c;
+      if (!sec || sec.id !== 'contribute' || sec.type !== 'rich_block') return sec;
+      var c = sec, mutated = false;
+      // Nordic-Minimal default: headline HIDDEN (override-safe — only when UNSET; a user who
+      // re-shows the headline writes headlineOff:false, respected and never re-hidden).
+      if (isNordicMinimal() && c.headlineOff === undefined) {
+        c = Object.assign({}, c); c.headlineOff = true; mutated = true;
       }
-      return sec;
+      // HWIC-LEADIN-001 (owner 2026-06-29 "the how I would contribute lead-in is missing"): when the
+      // headline is HIDDEN the intro row must carry the label as its bold lead-in, else there is no
+      // "How I would contribute" anywhere. Set the intro lead-in (from the title) when the headline is
+      // off and the first markerless row has no lead-in; CLEAR it again if the user re-shows the
+      // headline (so the label never doubles). Mirrors GABRIEL-FOUNDATION-OPENING-001. Idempotent.
+      if (Array.isArray(c.items) && c.items.length) {
+        var i0 = c.items[0];
+        var isIntroRow = i0 && typeof i0 === 'object' && !i0.grp && !i0.mk;
+        if (isIntroRow) {
+          var label = sentenceCaseLabel(c.title);
+          var lead = i0.b == null ? '' : String(i0.b).trim();
+          if (c.headlineOff === true && !lead && label) {
+            if (c === sec) c = Object.assign({}, c);
+            var items = c.items.slice(); items[0] = Object.assign({}, i0, { b: label });
+            c.items = items; mutated = true;
+          } else if (c.headlineOff === false && lead && lead === label) {
+            if (c === sec) c = Object.assign({}, c);
+            var items2 = c.items.slice(); items2[0] = Object.assign({}, i0, { b: '' });
+            c.items = items2; mutated = true;
+          }
+        }
+      }
+      if (mutated) changed = true;
+      return c;
     }
     var out = list.map(function (s) {
       if (!s || s.id !== 'contribute') return s;

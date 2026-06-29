@@ -678,8 +678,16 @@ export function buildPayload({
           if (doc !== 'cl') return {};
           const out = {};
           if (localStorage.getItem('antcv:clSloganHidden') === '1') { out.slogan_hidden = true; return out; }
+          // SLOGAN-SUBTITLE-SOURCE-001 (owner 2026-06-30): for a CL the local `subtitle` var (and
+          // hence meta.subtitle sent below) is OVERRIDDEN to the "Application: <role>" header label,
+          // so the worker's slogan fallback (meta.subtitle) showed the APP LABEL instead of the
+          // standing line. Forward the slogan = the override OR the INCOMING meta.subtitle (the real
+          // standing / role-smart line, e.g. "Processes • Products • People"), so it never falls back
+          // to the app label.
           const ov = String(localStorage.getItem('antcv:clSlogan') || '').trim();
-          if (ov && !/^\[/.test(ov)) out.slogan = ov;
+          const standing = String((meta && meta.subtitle) || '').trim();
+          const sl = (ov && !/^\[/.test(ov)) ? ov : standing;
+          if (sl && !/^\[/.test(sl)) out.slogan = sl;
           const al = String(localStorage.getItem('antcv:clSloganAlign') || 'center').replace(/["']/g, '').toLowerCase();
           out.slogan_align = (al === 'left' || al === 'right' || al === 'center') ? al : 'center';
           return out;

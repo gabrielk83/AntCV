@@ -25,7 +25,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.977-nordic-cl-order';
+  var VERSION = '1.50.982-nordic-cl-order';
   if (window.__antcvNordicClOrder971 === VERSION) return;
   window.__antcvNordicClOrder971 = VERSION;
 
@@ -118,9 +118,18 @@
       if (!s || s.type !== 'rich_block' || !Array.isArray(s.items) || !s.items.length) return s;
       if (s.id === 'bring') {
         var lead = s.items[0];
-        if (lead && typeof lead === 'object' && !lead.mk && needsSeed(lead.t) && lead.t !== INSTR.bring) {
-          var it = s.items.slice(); it[0] = Object.assign({}, lead, { t: INSTR.bring });
-          changed = true; return Object.assign({}, s, { items: it });
+        if (!lead || typeof lead !== 'object' || lead.mk) return s;
+        // BRING-LEADIN-CLEAN-001 (owner 2026-06-30): the lead-in instruction is GUIDANCE for a blank
+        // template only. Once the data rows are GENERATED (real), the "[Select 3-4 …]" instruction must
+        // NOT show — keep just the "What I bring" label. Seed the instruction ONLY when the data rows
+        // are still empty/placeholder (template mode). Never touch a real lead-in the user typed.
+        var dataReal = s.items.slice(1).some(function (r) { var t = String((r && r.t) || '').trim(); return t && !/^\[/.test(t); });
+        if (needsSeed(lead.t)) {
+          var want = dataReal ? '' : INSTR.bring;
+          if (String(lead.t == null ? '' : lead.t) !== want) {
+            var it = s.items.slice(); it[0] = Object.assign({}, lead, { t: want });
+            changed = true; return Object.assign({}, s, { items: it });
+          }
         }
         return s;
       }

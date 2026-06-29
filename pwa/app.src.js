@@ -5908,6 +5908,13 @@
           const __origRoles = Array.isArray(e.__antcvOrigRoles)
             ? e.__antcvOrigRoles
             : e.roles || [];
+          // CV-GHOST-PLACEHOLDER-ROLES-PREVIEW-002 (owner 2026-06-30): a GENERATED CV must also
+          // drop fully-bracketed "[Role title]" placeholder roles (unfilled slots the generator
+          // left behind), not just "<unused slot>". Guarded: only when the doc has at least one
+          // REAL role, so a FRESH me() skeleton (all roles bracketed) keeps them visible/editable.
+          const __isBr = (s) => { const x = String(s == null ? "" : s).trim(); return !x || /^\[[^\]]*\]$/.test(x) || "<unused slot>" === x.toLowerCase(); };
+          const __isPlaceholderRole = (r) => !!(r && __isBr(r.title) && __isBr(r.company) && (!Array.isArray(r.bullets) || !r.bullets.length || r.bullets.every((b) => __isBr(b))));
+          const __hasRealRole = (e.roles || []).some((r) => r && !__isPlaceholderRole(r));
           return React.createElement(
             React.Fragment,
             null,
@@ -5928,7 +5935,7 @@
               // PREVIEW-PARITY-001: also drop roles the EXPORT hides (targeted app), so the
               // preview matches the PDF + the salmon breaks line up. Rendered null IN-PLACE,
               // so the index t (and the bullet edit paths) stay correct.
-              return !1 === e.on || __unusedSlot || (window.AntcvExportHiddenRole && window.AntcvExportHiddenRole(e))
+              return !1 === e.on || __unusedSlot || (__hasRealRole && __isPlaceholderRole(e)) || (window.AntcvExportHiddenRole && window.AntcvExportHiddenRole(e))
                 ? null
                 : React.createElement(
                     "div",

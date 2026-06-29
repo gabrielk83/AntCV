@@ -26676,7 +26676,10 @@
             }
             P = g + f;
           } else {
-            const i = o("Kind regards,"),
+            // CL-CLOSING-EDIT-001 (owner 2026-06-29): editable sign-off closing; EN default is
+            // "At your service," (the Nordic template), override via antcv:clClosing. Parity with
+            // the worker closeWord + the React preview.
+            const i = (() => { try { const ov = String(localStorage.getItem("antcv:clClosing") || "").trim(); if (ov) return ov; } catch (_) {} return ({ da: "Med venlig hilsen,", es: "Atentamente,", zh: "此致敬礼，" })[je] || "At your service,"; })(),
               l = a.filter(
                 (e) => e.on && "closure" !== e.id && "jd_questions" !== e.id,
               ),
@@ -27935,11 +27938,13 @@
               )),
               S.push(
                 u(
+                  // CL-CLOSING-EDIT-001 (owner 2026-06-29): EN sign-off default is "At your service,"
+                  // (Nordic template). Inline-docx fallback path (worker-down); default only.
                   {
                     da: "Med venlig hilsen,",
                     es: "Saludos cordiales,",
                     zh: "此致敬礼,",
-                  }[je] || "Kind regards,",
+                  }[je] || "At your service,",
                   "CV_Body",
                   { spacingBefore: 240, spacingAfter: 120 },
                 ),
@@ -43378,7 +43383,7 @@
                     React.createElement(
                       "div",
                       null,
-                      n ? "Med venlig hilsen," : "Kind regards,",
+                      n ? "Med venlig hilsen," : (() => { try { const ov = String(localStorage.getItem("antcv:clClosing") || "").trim(); if (ov) return ov; } catch (_) {} return "At your service,"; })(),
                     ),
                     window.__antcvClSigEl ? window.__antcvClSigEl() : null,
                     React.createElement(
@@ -43479,7 +43484,7 @@
                             React.createElement(
                               "div",
                               null,
-                              n ? "Med venlig hilsen," : "Kind regards,",
+                              n ? "Med venlig hilsen," : (() => { try { const ov = String(localStorage.getItem("antcv:clClosing") || "").trim(); if (ov) return ov; } catch (_) {} return "At your service,"; })(),
                             ),
                             window.__antcvClSigEl ? window.__antcvClSigEl() : null,
                             React.createElement(

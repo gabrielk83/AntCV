@@ -32,6 +32,7 @@
     text: 'antcv:clSlogan',
     hidden: 'antcv:clSloganHidden',
     align: 'antcv:clSloganAlign',
+    closing: 'antcv:clClosing',   // CL-CLOSING-EDIT-001: editable sign-off closing (default "At your service,")
     open: 'antcv:clSloganCtrlOpen'
   };
   var ACCENT = 'rgb(1,183,187)';
@@ -156,6 +157,30 @@
     body.appendChild(hiddenRow);
     body.appendChild(alignRow);
 
+    // CL-CLOSING-EDIT-001: sign-off closing (the line above the name). Default "At your service,".
+    var closingRow = document.createElement('div');
+    closingRow.style.cssText = 'display:flex;flex-direction:column;gap:4px;border-top:1px solid rgba(1,183,187,0.18);padding-top:8px;';
+    var closingLbl = document.createElement('div');
+    closingLbl.style.cssText = 'font-size:10px;font-weight:600;color:#cdd;';
+    closingLbl.textContent = 'Sign-off closing';
+    var closingIn = document.createElement('input');
+    closingIn.type = 'text';
+    closingIn.style.cssText = 'padding:6px 8px;font-size:11px;background:rgba(255,255,255,0.06);color:#fff;' +
+      'border:1px solid rgba(255,255,255,0.18);border-radius:4px;font-family:inherit;';
+    closingIn.placeholder = 'At your service,';
+    closingIn.addEventListener('input', function () {
+      var v = String(closingIn.value || '').trim();
+      if (v) set(K.closing, v); else del(K.closing);
+      bump();
+    });
+    var closingNote = document.createElement('div');
+    closingNote.style.cssText = 'font-size:9px;opacity:.6;line-height:1.4;';
+    closingNote.textContent = 'The line above your name (was "Kind regards,"). Leave empty for the default.';
+    closingRow.appendChild(closingLbl);
+    closingRow.appendChild(closingIn);
+    closingRow.appendChild(closingNote);
+    body.appendChild(closingRow);
+
     box.appendChild(head);
     box.appendChild(body);
 
@@ -174,6 +199,7 @@
       textIn.placeholder = ph || 'e.g. PROCESSES • PRODUCTS • PEOPLE';
       hiddenCb.checked = get(K.hidden, '0') === '1';
       setAlignActive(alignBtns);
+      closingIn.value = get(K.closing, '');
       applyOpen();
     };
     box.__refresh();

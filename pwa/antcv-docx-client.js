@@ -685,6 +685,15 @@ export function buildPayload({
           return out;
         } catch (_) { return {}; }
       })()),
+      // CL-CLOSING-EDIT-001 (owner 2026-06-29): forward the editable sign-off closing (default
+      // "At your service,") so the worker renders it instead of the hardcoded "Kind regards,". CL-only.
+      ...((() => {
+        try {
+          if (doc !== 'cl') return {};
+          const ov = String(localStorage.getItem('antcv:clClosing') || '').trim();
+          return ov ? { cl_closing: ov } : {};
+        } catch (_) { return {}; }
+      })()),
     },
     header_align: align,
     // v1.50.8 — pass the active visual package + ATS legacy-tier flag

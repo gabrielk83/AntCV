@@ -25123,7 +25123,12 @@ function buildLinearDocument(ctx) {
     }));
     bodyChildren.push(...renderSection(closureSec, ctx, false));
   }
-  const closeWord = { da: "Med venlig hilsen,", es: "Atentamente,", zh: "此致敬礼，" }[lang] || "Kind regards,";
+  // CL-CLOSING-EDIT-001 (owner 2026-06-29): the sign-off closing is editable (standalone key
+  // antcv:clClosing, forwarded as meta.cl_closing) and the EN default is "At your service," (the
+  // Nordic template), not "Kind regards,". An override wins for all languages; otherwise the
+  // per-language defaults stand (da/es/zh unchanged).
+  const closeWord = (ctx.meta && typeof ctx.meta.cl_closing === "string" && ctx.meta.cl_closing.trim())
+    || { da: "Med venlig hilsen,", es: "Atentamente,", zh: "此致敬礼，" }[lang] || "At your service,";
   bodyChildren.push(new Paragraph({
     // v1.50.269: before 240 -> 150; keepNext binds the closing block
     // (Kind regards -> name -> watermark) so it can't orphan a single
@@ -27721,7 +27726,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.97-cl-slogan-edit";
+var VERSION = "1.14.98-cl-closing-edit";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

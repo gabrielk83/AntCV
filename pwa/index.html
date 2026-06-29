@@ -330,7 +330,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.50.956';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.50.962';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.50.963';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -372,7 +372,7 @@
           app.src = 'app.js?v=1.50.960';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.50.962';
+            vo.src = 'antcv-version-override.js?v=1.50.963';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -872,6 +872,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <!-- RICH-BLOCK-001 / HWIC: convert HOW I WOULD CONTRIBUTE (text_bullets) into rich_block —
      intro/closing as paragraphs, bullets as marker rows (mk:true). Idempotent. -->
 <script src="antcv-hwic-to-rich-block-760.js?v=1.50.962" defer></script>
+<script src="antcv-bring-to-rich-block-761.js?v=1.50.963" defer></script>
 <script src="antcv-core-wib-strict-row-layout-274.js?v=1.50.943" defer></script>
 <script src="antcv-row-controls-wording-341.js?v=1.40.357-p1b3" defer></script>
 <script src="antcv-help-text-wording-357.js?v=1.40.357-p1b2" defer></script>

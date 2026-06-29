@@ -125,13 +125,59 @@
         var url = String(rd.result || '');
         var img = new Image();
         img.onload = function () {
-          var asp = (img.naturalWidth > 0) ? (img.naturalHeight / img.naturalWidth) : 0.4;
-          set(K.b64, url);
-          set(K.aspect, String(Math.max(0.05, Math.min(3, asp)).toFixed(4)));
-          if (get(K.hidden, '0') === '1') set(K.hidden, '0');
-          note.style.color = '';
-          note.textContent = 'Signature uploaded. It appears at the end of the cover letter.';
-          bump(); refresh();
+          // SIGNATURE-WHITE-CLEAR-001 (owner 2026-06-29): process the upload through a canvas —
+          // (a) make near-white pixels TRANSPARENT so the ink reads bold (no white box),
+          // (b) fade partial-white (anti-aliased) edges, (c) bounding-box crop to the ink,
+          // (d) downscale to <=600px wide. The result is a small transparent PNG that stores
+          // reliably (a full-size raw PNG dataURL overflowed the localStorage quota and the
+          // setItem failed silently -> "uploaded but not visible"). Raw fallback on any error.
+          var stored = false;
+          try {
+            var nW = img.naturalWidth || img.width, nH = img.naturalHeight || img.height;
+            if (nW && nH) {
+              var MAXW = 600, sc = nW > MAXW ? MAXW / nW : 1;
+              var w = Math.max(1, Math.round(nW * sc)), h = Math.max(1, Math.round(nH * sc));
+              var cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+              var cx = cv.getContext('2d'); cx.drawImage(img, 0, 0, w, h);
+              var minX = w, minY = h, maxX = 0, maxY = 0, hasInk = false;
+              try {
+                var idata = cx.getImageData(0, 0, w, h), d = idata.data;
+                for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) {
+                  var i = (y * w + x) * 4, r = d[i], g = d[i + 1], b = d[i + 2], a = d[i + 3];
+                  if (a < 8) continue;
+                  if (r > 232 && g > 232 && b > 232) { d[i + 3] = 0; continue; }     // near-white -> clear
+                  var lum = (r + g + b) / 3;
+                  if (lum > 180) { d[i + 3] = Math.round(a * (255 - lum) / 75); if (d[i + 3] < 8) continue; }
+                  hasInk = true;
+                  if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y;
+                }
+                cx.putImageData(idata, 0, 0);
+              } catch (_) { hasInk = false; }
+              var outCv = cv;
+              if (hasInk && maxX > minX && maxY > minY) {
+                var pad = 4, sx = Math.max(0, minX - pad), sy = Math.max(0, minY - pad);
+                var cw = Math.min(w - sx, maxX - minX + 1 + pad * 2), ch = Math.min(h - sy, maxY - minY + 1 + pad * 2);
+                var c2 = document.createElement('canvas'); c2.width = cw; c2.height = ch;
+                c2.getContext('2d').drawImage(cv, sx, sy, cw, ch, 0, 0, cw, ch); outCv = c2;
+              }
+              var out = outCv.toDataURL('image/png');
+              set(K.b64, out);
+              set(K.aspect, String(Math.max(0.05, Math.min(3, outCv.height / outCv.width)).toFixed(4)));
+              stored = !!localStorage.getItem(K.b64);
+            }
+          } catch (_) { stored = false; }
+          if (!stored) {
+            try { set(K.b64, url); set(K.aspect, String(Math.max(0.05, Math.min(3, (img.naturalHeight / img.naturalWidth) || 0.4)).toFixed(4))); stored = !!localStorage.getItem(K.b64); } catch (_) {}
+          }
+          if (stored) {
+            if (get(K.hidden, '0') === '1') set(K.hidden, '0');
+            note.style.color = '';
+            note.textContent = 'Signature uploaded (white background cleared). It appears at the end of the cover letter.';
+            bump(); refresh();
+          } else {
+            note.style.color = '#ff9090';
+            note.textContent = 'Could not store the signature (image too large) — please try a smaller PNG.';
+          }
         };
         img.onerror = function () {
           note.style.color = '#ff9090';

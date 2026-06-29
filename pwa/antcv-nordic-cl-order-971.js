@@ -25,7 +25,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.971-nordic-cl-order';
+  var VERSION = '1.50.974-nordic-cl-order';
   if (window.__antcvNordicClOrder971 === VERSION) return;
   window.__antcvNordicClOrder971 = VERSION;
 
@@ -75,14 +75,36 @@
     return { changed: changed, list: out };
   }
 
+  // CONTRIBUTE: the closing row (the LAST markerless row, after the bullets) carries the
+  // "Goal" lead-in per the template ("Goal: [outcome]"). hwic-760 leaves it markerless with
+  // no lead-in; give it b:"Goal" when its lead-in is empty. Idempotent; never overrides a
+  // real lead-in. (me()'s Nordic skeleton already seeds this; this is for GENERATED CLs.)
+  function contributeGoal(list) {
+    var changed = false;
+    var out = list.map(function (s) {
+      if (!s || s.id !== 'contribute' || s.type !== 'rich_block' || !Array.isArray(s.items) || s.items.length < 3) return s;
+      var n = s.items.length, last = s.items[n - 1];
+      // last must be a markerless paragraph (the closing), preceded by at least one bullet
+      var hasBulletBefore = s.items.slice(1, n - 1).some(function (r) { return r && r.mk; });
+      if (!last || typeof last !== 'object' || last.mk || !hasBulletBefore) return s;
+      var lead = last.b == null ? '' : String(last.b).trim();
+      if (lead) return s;                                  // already has a lead-in -> leave it
+      var items = s.items.slice(); items[n - 1] = Object.assign({}, last, { b: 'Goal' });
+      changed = true;
+      return Object.assign({}, s, { items: items });
+    });
+    return { changed: changed, list: out };
+  }
+
   function run() {
     try {
       if (disabled() || !isNordicMinimal()) return;
       var secs = readSections(); if (!secs || !Array.isArray(secs.cl)) return;
       var a = reorder(secs.cl);
       var b = bringBullets(a.list);
-      if (!a.changed && !b.changed) return;
-      secs.cl = b.list;
+      var g = contributeGoal(b.list);
+      if (!a.changed && !b.changed && !g.changed) return;
+      secs.cl = g.list;
       localStorage.setItem('sections', JSON.stringify(secs));
       try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { reason: 'nordic-cl-order-971' } })); } catch (_) {}
     } catch (_) { /* self-disable on any error */ }

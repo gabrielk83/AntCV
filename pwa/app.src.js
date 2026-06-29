@@ -26685,10 +26685,29 @@
               u = s
                 ? `${f(t.mainLineColor, 6, 4)}<p style="font-family:'Carlito',${d};font-size:10.5pt;color:#000;margin:3pt 0;text-align:justify;line-height:${p}">${r(s.content || "")}</p>`
                 : "",
-              m = `<p style="margin-top:12pt;font-family:'Carlito',${d};font-size:10.5pt;color:#000;line-height:${p}">${i}</p><p style="font-family:'Carlito',${d};font-size:10.5pt;font-weight:700;margin-top:8pt;color:#000">${w.name || (e ? "Dit navn" : "Your Name")}</p>${(() => { try { if (localStorage.getItem("antcv:signatureHidden") === "1") return ""; var b = localStorage.getItem("antcv:signatureB64"); if (!b) return ""; var a = String(localStorage.getItem("antcv:signatureAlign") || "center").replace(/["']/g, "").toLowerCase(), al = ("left" === a || "right" === a) ? a : "center", s = Number(String(localStorage.getItem("antcv:signatureSize") || "").replace(/["']/g, "")), wd = (s >= 40 && s <= 400) ? Math.round(s) : 160; return '<p style="margin-top:4pt;text-align:' + al + '"><img src="' + b + '" style="width:' + wd + 'px;height:auto;display:inline-block"></p>'; } catch (_) { return ""; } })()}`,
+              m = (() => {
+                // CL sign-off: "Kind regards," → signature image → typed name. The name
+                // line FOLLOWS the signature's CJLR alignment (NAME-FOLLOWS-SIG-001) so the
+                // sign-off reads as one block; default left when no signature is present.
+                var sig = "", nameAlign = "left";
+                try {
+                  if (localStorage.getItem("antcv:signatureHidden") !== "1") {
+                    var b = localStorage.getItem("antcv:signatureB64");
+                    if (b) {
+                      var a = String(localStorage.getItem("antcv:signatureAlign") || "center").replace(/["']/g, "").toLowerCase(),
+                        al = ("left" === a || "right" === a) ? a : "center",
+                        sz = Number(String(localStorage.getItem("antcv:signatureSize") || "").replace(/["']/g, "")),
+                        wd = (sz >= 40 && sz <= 400) ? Math.round(sz) : 160;
+                      sig = '<p style="margin:6pt 0 0;text-align:' + al + '"><img src="' + b + '" style="width:' + wd + 'px;height:auto;display:inline-block"></p>';
+                      nameAlign = al;
+                    }
+                  }
+                } catch (_) {}
+                return `<p style="margin-top:12pt;font-family:'Carlito',${d};font-size:10.5pt;color:#000;line-height:${p}">${i}</p>${sig}<p style="font-family:'Carlito',${d};font-size:10.5pt;font-weight:700;margin-top:8pt;color:#000;text-align:${nameAlign}">${w.name || (e ? "Dit navn" : "Your Name")}</p>`;
+              })(),
               g = 5;
             P =
-              `<table width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse"><tr><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td><td style="padding:6pt 0 14pt;vertical-align:top">${l.map(b).join("")}${u}${m}</td><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td></tr></table>` +
+              `<table width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse"><tr><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td><td style="padding:6pt 0 14pt;vertical-align:top">${(() => { try { var st = String(io.subtitle || "").replace(/\s*\|\s*/g, " • ").trim(); if (!st || /^\[/.test(st)) return ""; return '<p style="font-family:\'Cabin\',' + d + ';font-size:11pt;font-weight:700;letter-spacing:.08em;text-align:center;color:' + (t.mainLineColor || "#01746E") + ';margin:0 0 12pt">' + st.toUpperCase() + '</p>'; } catch (_) { return ""; } })()}${l.map(b).join("")}${u}${m}</td><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td></tr></table>` +
               (c
                 ? `<div style="page-break-before:always;mso-page-break-before:always;break-before:page"><table width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="${n}" style="width:100%;border-collapse:collapse;background:${n};page-break-after:avoid;mso-page-break-after:avoid"><tr><td bgcolor="${n}" style="background:${n};padding:14pt 16pt 8pt;text-align:center">${N}${_}${$}</td></tr></table><table width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse"><tr><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td><td style="padding:6pt 0 14pt;vertical-align:top">${b(c)}${m}</td><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td></tr></table></div>`
                 : "");

@@ -25031,6 +25031,28 @@ function buildLinearDocument(ctx) {
   const jdqSec = sections.find((s) => s && s.id === "jd_questions" && s.on !== false);
   const otherSecs = sections.filter((s) => !s || s.id !== "closure" && s.id !== "jd_questions");
   const bodyChildren = [];
+  // SLOGAN-CL-001 (owner 2026-06-29): a tagline heading at the TOP of the cover-letter body
+  // (before the opening) — the candidate subtitle, uppercased + centered (Gabriel unsolicited
+  // default: "PROCESSES • PRODUCTS • PEOPLE"). Skipped when the subtitle is empty/placeholder.
+  // Mirrors the preview srcdoc builder (app.src.js CL branch) for preview/export parity.
+  {
+    const __slogan = String((ctx.meta && ctx.meta.subtitle) || "").replace(/\s*\|\s*/g, " • ").trim();
+    if (__slogan && !__slogan.startsWith("[")) {
+      bodyChildren.push(new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 0, after: 160, line: 240, lineRule: "auto" },
+        keepNext: true,
+        children: [new TextRun({
+          text: __slogan.toUpperCase(),
+          bold: true,
+          color: style.mainHeadColor,
+          size: pt2hp(11),
+          font: style.mainBodyFont,
+          characterSpacing: 20
+        })]
+      }));
+    }
+  }
   const photoInHeaderCL = maybeBuildPhotoFor(ctx, "header");
   const photoInMainCL = maybeBuildPhotoFor(ctx, "main");
   if (photoInHeaderCL) {
@@ -25089,30 +25111,14 @@ function buildLinearDocument(ctx) {
       font: style.mainBodyFont
     })]
   }));
-  bodyChildren.push(new Paragraph({
-    spacing: { before: 60, after: 0, line: 276, lineRule: "auto" },
-    keepNext: true,
-    keepLines: true,
-    alignment: AlignmentType.LEFT,
-    // AI-WATERMARK-EXPORT-LOCATION-001 (spec 2026-06-16): the AI notice no longer
-    // rides the signature line (owner: it goes to the page bottom). The 1-page CL
-    // appends a last-page anchor sentinel as the final section child below; the
-    // 2-page (jd_questions) path keeps its own anchor on the page-2 block.
-    children: [
-      new TextRun({
-        text: pi.name || ({ da: "Dit navn", es: "Tu nombre", zh: "姓名" }[lang] || "Your Name"),
-        bold: true,
-        color: style.mainTextColor,
-        size: pt2hp(fs.mainBody),
-        font: style.mainBodyFont
-      })
-    ]
-  }));
-  // CL-SIGNATURE-001 (owner 2026-06-28): an optional uploaded signature image at the END of the cover
-  // letter (after the sign-off). Inline ImageRun in an aligned paragraph; width = signature_size_px,
-  // height = width × signature_aspect (the client forwards the image's real ratio so it isn't
-  // distorted). Default center, ~160px. The client omits it when hidden/absent. try/catch skips a bad
-  // image so the CL never breaks. See docs/plan/CL_SIGNATURE_FEATURE.md.
+  // CL sign-off order: "Kind regards," -> optional signature image -> typed name.
+  // NAME-FOLLOWS-SIG-001 (owner 2026-06-29): the typed name adopts the signature's CJLR
+  // alignment so the sign-off reads as one block; default LEFT when no signature is present.
+  // CL-SIGNATURE-001 (owner 2026-06-28): optional uploaded signature image; inline ImageRun
+  // sized width=signature_size_px, height=width×signature_aspect (real ratio forwarded by the
+  // client; omitted when hidden/absent). try/catch skips a bad image so the CL never breaks.
+  // See docs/plan/CL_SIGNATURE_FEATURE.md.
+  var __clNameAlign = AlignmentType.LEFT;
   if (pi.signature_b64) {
     try {
       var __sigData = base64ToUint8Array(pi.signature_b64);
@@ -25120,9 +25126,11 @@ function buildLinearDocument(ctx) {
       var __sigAsp = (function () { var a = Number(pi.signature_aspect); return Number.isFinite(a) && a > 0.05 && a <= 3 ? a : 0.4; })();
       var __sigH = Math.max(16, Math.round(__sigW * __sigAsp));
       var __sigAlign = ({ left: AlignmentType.LEFT, center: AlignmentType.CENTER, right: AlignmentType.RIGHT })[String(pi.signature_align || "center").toLowerCase()] || AlignmentType.CENTER;
+      __clNameAlign = __sigAlign;
       bodyChildren.push(new Paragraph({
         spacing: { before: 80, after: 0, line: 276, lineRule: "auto" },
         keepLines: true,
+        keepNext: true,
         alignment: __sigAlign,
         children: [new ImageRun({
           data: __sigData,
@@ -25133,6 +25141,20 @@ function buildLinearDocument(ctx) {
       }));
     } catch (__sigErr) { /* bad signature image -> skip; never break the CL */ }
   }
+  bodyChildren.push(new Paragraph({
+    spacing: { before: 60, after: 0, line: 276, lineRule: "auto" },
+    keepLines: true,
+    alignment: __clNameAlign,
+    children: [
+      new TextRun({
+        text: pi.name || ({ da: "Dit navn", es: "Tu nombre", zh: "姓名" }[lang] || "Your Name"),
+        bold: true,
+        color: style.mainTextColor,
+        size: pt2hp(fs.mainBody),
+        font: style.mainBodyFont
+      })
+    ]
+  }));
   // 1.14.32 CL-PAGINATE-001: the candidate band stays a full-bleed table, but the
   // BODY is no longer wrapped in a table cell — a single tall table row (with the
   // nested WHAT-I-BRING table inside it) does NOT split across pages in
@@ -27671,7 +27693,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.93-cl-signature";
+var VERSION = "1.14.94-cl-slogan-signoff";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

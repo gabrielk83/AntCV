@@ -1,6 +1,22 @@
 # AntCV — Next session handoff (2026-06-29)
 
-**Current state:** PWA **1.50.959**, docx-worker **1.14.93**, access-relay **1.3.2**, unit suite 521/521.
+## ► COPY-PASTE NEW-SESSION PROMPT
+> AntCV — continue from `docs/qa/NEXT_SESSION_2026-06-29.md` (PWA **1.50.961**, docx-worker **1.14.94**,
+> access-relay **1.3.2**, suite 521/521). SYNC FIRST (`git fetch && git pull --rebase origin main`).
+> Read that handoff + MEMORY.md ([[data-loss-on-restore]], [[sidebar-fill-gap-is-antiblank-slack]],
+> [[pagination-two-map-and-worker-test]], [[docx-worker-bundle-no-build]], [[minified-mirror-shadow-hazard]]).
+> There is **NO local renderer** here — docx pagination/header fixes are verified STRUCTURALLY via the
+> worker node harness; PIXELS need the owner's real CloudConvert export. The top open item is the
+> **CV 3-page convergence (A)** + the **candidate-header contacts-spread-left (B)** — they share ONE
+> root: the page-1 photo-header bridge uses a different column grid than pages 2-3. Fix them together
+> in `workers/docx-worker/src/index.js` (finer/separate header grid + equal page-table grids + drop the
+> photo-path trailing break), ship FLAG-GATED if needed, owner verifies the export. Then the export-only
+> pagination parity (E) and the floating-spine spine fill. Coordinator items (C/D) are preview-verifiable.
+> One verified fix at a time; cache-bust quintet; worker deploy via deploy.yml.
+
+---
+
+**Current state:** PWA **1.50.961**, docx-worker **1.14.94**, access-relay **1.3.2**, unit suite 521/521.
 SYNC FIRST (`git fetch && git pull --rebase origin main`). Cache-bust quintet on every loaded PWA file;
 `app.js` is the minified mirror of `app.src.js` (surgical count-guarded edits). Worker deploy =
 `gh workflow run deploy.yml -f target=docx-worker -f mode=deploy -f confirm=docx-worker`.
@@ -25,6 +41,16 @@ their PIXEL result needs the owner to export a real CloudConvert PDF. Don't ship
 - **1.50.959 — CL-SIGNATURE-CONTROL-001.** Layout upload control (sidecar `antcv-cl-signature-
   control.js`, no app.js mirror) + CL-end preview `<img>` (app.src.js + app.js mirror). Export was
   already done (worker 1.14.93). End-to-end: upload PNG/JPG in Layout → CL preview + exported PDF.
+- **1.50.960 / worker 1.14.94 — SLOGAN-CL-001 + NAME-FOLLOWS-SIG-001.** (1) A tagline heading at the
+  top of the CL body (candidate subtitle uppercased; Gabriel unsolicited = "PROCESSES • PRODUCTS •
+  PEOPLE", reuses meta.subtitle). (2) CL sign-off reordered to "Kind regards," → signature → typed
+  name, and the name adopts the signature's CJLR alignment. Preview (app.src.js + app.js mirror) +
+  worker buildLinearDocument; verified `diag-cl-slogan-sig.mjs` 2/2 + existing CL diags green.
+- **1.50.961 — FORCE-LAST-GRP-SETTLE-001.** Environmental, Durability & Compliance now cuts to page 3.
+  The `__forceLastGrpStick` cache re-applied on block-count alone, pinning a stale start page (after
+  TOOLS freed page 2, regulatory now starts page 2). Fix: cache validity also requires the section's
+  start page to match; re-evaluates on a genuine settle, dance-damping preserved. Verified LIVE
+  (`autoPages.regulatory = {0:2,19:3}` → Environmental on page 3, stable across 5 re-measures, no dance).
 
 ---
 
@@ -59,15 +85,7 @@ Fix = a finer header grid (3 cols + gridSpan) OR a SEPARATE header table so the 
 narrower and the contact line reclaims the width. `workers/docx-worker/src/index.js` bridge headerRow
 (~24827) + the page-1 grid. This is the SAME page-1-grid mismatch feeding A.2 — fix together.
 
-### C. [MED] Environmental, Durability & Compliance → page 3 (FORCE-LAST-GRP not firing)
-After TOOLS-PAGE1-BAND-001 freed page 2, REGULATORY CONTEXT now fits entirely on page 2 (`autoPages.
-regulatory = {0:2}`), so its last group (Environmental, item 20) sits at the bottom of a ~97%-full page
-2. The owner wants it isolated onto page 3. FORCE-LAST-GRP (`antcv-auto-pagebreak-block-001.js` ~1043)
-should move it (regulatory tot 493 > threshold 323, 5 groups, beforePage 2) but DOESN'T — the
-block-count-keyed `__forceLastGrpStick` cache likely pinned a transient startPage from boot (handoff
-"confirm FORCE_LAST_GRP doesn't fight the sig-cache"). Cache ON and OFF both give {0:2} now. Fix: make
-`__forceLastGrpStick` re-evaluate when the section's measured start page changes, not only on block-count
-shrink — without re-introducing the page-2/3 dance. Coordinator-side; preview-verifiable (no render).
+### C. Environmental, Durability & Compliance → page 3 — DONE (FORCE-LAST-GRP-SETTLE-001, 1.50.961, verified live)
 
 ### D. [MED] Change Request Lead role → page 1
 Page-1 main through that role = 774px; export page-1 main holds ~744 (ROLE-ORPHAN-PAGE1-001 set

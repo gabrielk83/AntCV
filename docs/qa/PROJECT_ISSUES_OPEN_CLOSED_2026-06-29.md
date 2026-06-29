@@ -46,6 +46,12 @@ Authoritative handoff: `docs/qa/NEXT_SESSION_2026-06-29.md` (has per-item plans 
 5. **J** — CL Foundation "Professionally" bold body — needs owner confirmation of what reads as bold.
 6. **F1** — make the CL SLOGAN an editable section + control (today derived from meta.subtitle).
 7. **F3** — surface the signature control as a subsection in the CL format panel (today under Layout).
+8. **K** — headline CJLR (section title alignment) not working for body/main/Candidate, and MISSING on
+   the Rich_Content (rich_block) heading. Root causes: (a) headline align (`sectionHeadlineAlignment.v1`)
+   is PREVIEW-ONLY (sidecars 208/211 CSS) — never forwarded to the export; (b) the cycler button is
+   contended by 3 sidecars (`data-antcv-panel-action-207/208/211`) and can render empty/non-cycling;
+   (c) rich_block titles get no headline cycler. (Per-row/`__group__` body CJLR via `antcvItemAlignment`
+   already works — this is the HEADLINE/title CJLR.) Full plan = handoff item K.
 
 **Generation:**
 8. **I** — quick-gen must hide irrelevant roles/bullets/tools to converge a 4-page kernel to ~1.5–2 pages.
@@ -72,7 +78,8 @@ Authoritative handoff: `docs/qa/NEXT_SESSION_2026-06-29.md` (has per-item plans 
 >
 > **Order:** (1) kernel role bullets/results + Students-Council dup (owner's exact rules — verify persistence,
 > data-loss class), (2) candidate-header 3-col-grid placement (with the owner exporting to verify), (3) CL
-> sign-off G + rich_block-compress H + slogan/signature panel F1/F3, (4) quick-gen convergence I. One verified
+> sign-off G + rich_block-compress H + headline-CJLR K (export + de-dupe the 207/208/211 cycler + add to
+> rich_block heading) + slogan/signature panel F1/F3, (4) quick-gen convergence I. One verified
 > fix at a time.
 >
 > **Access / tools this session needs (all already connected — load deferred ones via ToolSearch):**

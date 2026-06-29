@@ -127,6 +127,26 @@ pruning pass (JD-relevance or recency/seniority when no JD): mark low-relevance 
 each kept role's bullets, hide off-topic tools/regulatory — to a page target. Generation-side
 (app.src.js ~23820 __quickGen path) + the prompt. Substantial; spec + verify on a real quick-gen.
 
+### K. Headline CJLR not working (body / main / Candidate) + missing on Rich_Content heading
+Owner 2026-06-29: the headline alignment cycler (`data-antcv-headline-cjlr` / `data-antcv-align-cycler=
+"headline"`, "MAIN headline alignment: left (click to cycle)") does not work, and the rich_block
+(Rich_Content) heading has no CJLR control at all. Two root causes:
+1. **Export gap (main):** the section-headline alignment lives in `antcv.sectionHeadlineAlignment.v1` and
+   is applied PREVIEW-ONLY by sidecars `antcv-section-panel-208.js` / `-211.js` via injected CSS
+   (`[data-antcv-section-title-211][data-antcv-title-align=…]{text-align:… !important}`). NOTHING reads it
+   in `antcv-docx-client.js` or the worker → the headline alignment NEVER exports. FIX: forward the
+   per-section headline align (by sid/loc) from the client + apply it to the worker's `headingParagraph`
+   alignment (CV two-col headings + CL + candidate band). Render-gated for pixels.
+2. **Preview button conflict / empty:** the cycler button carries `data-antcv-panel-action-207`,
+   `-208`, AND `-211` (three panel sidecars contend for the same button) and can render with EMPTY text
+   (the ⇤/glyph in `data-antcv-panel-label-211` isn't applied as the button's content) → invisible /
+   non-cycling. FIX: make ONE sidecar own the headline cycler (de-dupe 207/208/211), ensure its glyph +
+   click handler are set, and confirm it sets `data-antcv-title-align` on a `[data-antcv-section-title-211]`
+   title element so the CSS applies. Verify the cycle actually changes the preview heading.
+3. **Rich_Content heading CJLR:** the rich_block title currently has no headline cycler — give it one
+   (it must get `data-antcv-section-title-211` + the cycler), separate from the existing per-row /
+   `__group__` body CJLR (`antcvItemAlignment`) which already works.
+
 ### J. CL Foundation "Professionally" — no bold body
 Owner: "Professionally does not need bold text immediately after it." The Hands-on lead-in dup is FIXED
 (FOUNDATION-LEADIN-DEDUP-001, 1.50.968). For Professionally the body has no bold markers + the

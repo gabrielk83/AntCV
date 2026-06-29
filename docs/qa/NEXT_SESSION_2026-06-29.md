@@ -1,7 +1,7 @@
 # AntCV — Next session handoff (2026-06-29)
 
 ## ► COPY-PASTE NEW-SESSION PROMPT
-> AntCV — continue from `docs/qa/NEXT_SESSION_2026-06-29.md` (PWA **1.50.961**, docx-worker **1.14.94**,
+> AntCV — continue from `docs/qa/NEXT_SESSION_2026-06-29.md` (PWA **1.50.969**, docx-worker **1.14.97**,
 > access-relay **1.3.2**, suite 521/521). SYNC FIRST (`git fetch && git pull --rebase origin main`).
 > Read that handoff + MEMORY.md ([[data-loss-on-restore]], [[sidebar-fill-gap-is-antiblank-slack]],
 > [[pagination-two-map-and-worker-test]], [[docx-worker-bundle-no-build]], [[minified-mirror-shadow-hazard]]).
@@ -12,16 +12,16 @@
 > in `workers/docx-worker/src/index.js` (finer/separate header grid + equal page-table grids + drop the
 > photo-path trailing break), ship FLAG-GATED if needed, owner verifies the export. Then the export-only
 > pagination parity (E) and the floating-spine spine fill.
-> ALSO (owner "do not forget", NOT render-gated — section "OPEN — COVER-LETTER FORMAT SETTINGS"): **F1**
-> make the CL SLOGAN an editable section + a control in the CL format panel (today it's derived from
-> meta.subtitle, uneditable); **F2** default WHAT I BRING to `rich_block` (rich_context) not `table`;
-> **F3** surface the signature control as a subsection in the CL format panel (today it's under Layout's
-> PROFILE PHOTO). These are preview-verifiable — good to do first.
+> ALSO (owner "do not forget", NOT render-gated — section "OPEN — COVER-LETTER FORMAT SETTINGS"):
+> **F1 DONE** (SLOGAN-CL-EDIT-001, 1.50.969 — editable slogan section + control, standalone keys,
+> read in preview/export/worker). **F2 already shipped** (antcv-bring-to-rich-block-761, Nordic-scoped).
+> **F3** still open: surface the signature control as a subsection in the CL format panel (today it's
+> under Layout's PROFILE PHOTO — the slogan control now mounts beside it, forming a CL cluster).
 > One verified fix at a time; cache-bust quintet; worker deploy via deploy.yml.
 
 ---
 
-**Current state:** PWA **1.50.961**, docx-worker **1.14.94**, access-relay **1.3.2**, unit suite 521/521.
+**Current state:** PWA **1.50.969**, docx-worker **1.14.97**, access-relay **1.3.2**, unit suite 521/521.
 SYNC FIRST (`git fetch && git pull --rebase origin main`). Cache-bust quintet on every loaded PWA file;
 `app.js` is the minified mirror of `app.src.js` (surgical count-guarded edits). Worker deploy =
 `gh workflow run deploy.yml -f target=docx-worker -f mode=deploy -f confirm=docx-worker`.
@@ -32,7 +32,23 @@ their PIXEL result needs the owner to export a real CloudConvert PDF. Don't ship
 
 ---
 
-## SHIPPED THIS SESSION (2026-06-28/29) — all verified, suite/boot green
+## SHIPPED THIS SESSION (2026-06-29 later) — verified, suite/boot/worker green
+
+- **1.50.969 / worker 1.14.97 — SLOGAN-CL-EDIT-001 (F1).** The CL slogan is now EDITABLE instead of
+  silently derived from `meta.subtitle`. New control sidecar `antcv-cl-slogan-control.js` (text / hide /
+  align), mounted once after the CL signature control in Layout (CL-format cluster). Standalone,
+  cloud-restore-safe keys: `antcv:clSlogan` (override; empty -> subtitle fallback), `antcv:clSloganHidden`,
+  `antcv:clSloganAlign` (default center). Read at all 3 sites: export srcdoc CL branch (app.src.js + app.js
+  mirror), the React on-screen CL preview (slogan element now rendered — was export-only), and the worker
+  `buildLinearDocument` `__slogan` block via `antcv-docx-client` `meta.slogan` / `slogan_hidden` /
+  `slogan_align`. Backward-compatible (old/absent override -> subtitle). Verified: unit 521/521; worker
+  `diag-cl-slogan-override` 3/3 + `diag-cl-slogan-sig` 2/2; real-Chromium boot-smoke (app.js boots, both
+  sidecars register, resolver correct for fallback/override/hidden/align). Worker deployed via deploy.yml.
+- **F2 was already shipped** (before this session): `antcv-bring-to-rich-block-761.js` (1.50.963/964)
+  converts WHAT I BRING table -> rich_block, scoped to Nordic-Minimal (the owner's style). If the owner
+  wants it for ALL styles, widen the `isNordicMinimal()` gate. Verify on a real Nordic CL.
+
+## SHIPPED EARLIER (2026-06-28/29) — all verified, suite/boot green
 
 - **access-relay 1.3.2 — GEN-CONTAMINATION-PRESERVE-DRAFTS-001** (CRITICAL data loss). `/api/prefs/
   wipe-generated` blanket-nulled EVERY saved app's cv/cl_sections on a full regen; scoped to the ACTIVE
@@ -65,7 +81,12 @@ Owner wants these CL features promoted into the **cover-letter format settings p
 Settings/format panel, not only the Layout tab). All three are preview-verifiable (no real export needed
 for the control/preview; the export side for slogan + signature already ships — worker 1.14.94).
 
-### F1. SLOGAN as an editable SECTION + a panel control
+### F1. SLOGAN as an editable SECTION + a panel control — DONE (SLOGAN-CL-EDIT-001, 1.50.969 / worker 1.14.97)
+Shipped via standalone keys (the signature-control pattern, not a sections-schema entry): `antcv:clSlogan`
+(override; empty -> `meta.subtitle` fallback), `antcv:clSloganHidden`, `antcv:clSloganAlign`. New sidecar
+`antcv-cl-slogan-control.js` (text/hide/align) mounts after the CL signature control. Read in the export
+srcdoc, the React preview, and the worker (`meta.slogan*`). Original spec below for reference.
+
 SLOGAN-CL-001 (1.50.960) currently DERIVES the slogan from `meta.subtitle` (uppercased) — there is no way
 to edit the slogan text independently or hide it. Owner wants a real **slogan section** with its own
 control in the CL format panel: editable text (default for Gabriel unsolicited = "PROCESSES • PRODUCTS •
@@ -76,7 +97,12 @@ the fallback default). Touch: preview srcdoc builder (app.src.js CL branch — t
 the top of the CL body td) + app.js mirror + worker `buildLinearDocument` (the `__slogan` block at the top
 of `bodyChildren`) + a panel control sidecar (mirror the `antcv-cl-signature-control.js` pattern).
 
-### F2. WHAT I BRING — default to rich_block (rich_context), not `table`
+### F2. WHAT I BRING — default to rich_block (rich_context), not `table` — ALREADY SHIPPED (antcv-bring-to-rich-block-761, 1.50.963/964)
+Done before this session, scoped to Nordic-Minimal (the owner's style): the sidecar converts the `bring`
+table -> rich_block (header row dropped; each `[label,value]` -> `{b,t}`; `headlineOff:true`; idempotent +
+late-settle timers for cloud-restore). Non-Nordic styles keep the table. To widen to ALL styles, relax the
+`isNordicMinimal()` gate. Original spec below for reference.
+
 The CL `bring` section is `type:"table"` (rows). Owner wants the DEFAULT to be `rich_block` (the universal
 "rich_context" type), like the other CL sections already converted ([[rich-block-universal-section]]).
 Add a migration sidecar (mirror `antcv-hwic-to-rich-block-760.js` / the bring is the LAST own-type CL

@@ -64,14 +64,29 @@ guard. Fixes the owner's ORIGINAL "admin templates missing elements" complaint.
 GENERATED contribute's closing row (me() already seeds it). Positioning = the F1 slogan (no separate
 section -> no dup). AI notice = current format (unchanged, per owner).
 
-**Phase 3 REMAINING (refinement, non-blocking) — generation prompt CONTENT.** The CL generation
-prompt/skeleton (app.src.js ~2900, the cl-skeleton structure block) still describes the OLD section
-shape. Update it to GUIDE the LLM to emit the template's content shape for Nordic (positioning line;
-why/who lead-ins; foundation Foundation/Hands-on/Professionally; bring = "[Need]: [action]" rows;
-contribute intro + actions + Goal). NOTE: the STRUCTURE is already enforced post-generation (me() +
-the order/converter sidecars reshape any generation), so this is purely CONTENT-quality — lower
-urgency, and it's a large prompt-text edit + app.js mirror, so do it as its own focused step.
-Authoritative content: `docs/qa/nordic-cl-template-2026-06-29.md`.
+**SIGN-OFF NAME DONE (1.50.975 / worker 1.14.99 / relay 1.3.5) — CL-SIGNNAME-001.** The sign-off NAME
+is now editable (`antcv:clSignName`, default = first word of the full name, e.g. "Gabriel") with its OWN
+CJLR (`antcv:clSignNameAlign`, default CENTER), independent of the signature (was NAME-FOLLOWS-SIG). The
+header band name is unchanged. Control: "Sign-off name" input + L/C/R in the CL control. Read at the 4
+sign-off sites + worker via `meta.cl_sign_name`/`_align`; cloud-persist (relay + cl-cloud-sync MAP).
+Verified worker 4/4 + boot-smoke. See [[cl-slogan-signature-standalone-keys]].
+
+**REMAINING — B: adapt the CL GENERATION prompt + C: consensus.** UNVERIFIABLE in this harness (no LLM)
+— ship with the OWNER reviewing a real generation; the STRUCTURE is already enforced post-generation
+(me() + sidecars reshape any output), so this is CONTENT-quality, not a blocker.
+- **B (sites):** the CL output schema/prompt at app.src.js **23816 / 23992 / 24042** (who_content,
+  why_content, `bring_rows`, contribute_items, foundation_hands_on, foundation_professionally) + the
+  interlocking table rules **~2944-2982** (TABLES-DISTINCT-001, FOCUS-LABELS-001, TABLE-DIRECTION-001
+  — these treat WHAT I BRING as a Focus-Area/Expertise TABLE vs the CV CORE COMPETENCIES). Update to the
+  new shape: positioning line; why/who lead-in paragraphs; foundation = Foundation + Hands-on +
+  Professionally; **bring = "[Need from JD]: [matching action]" rows** (not Focus Area/Expertise);
+  contribute = intro + 4 actions + **Goal:**. Mirror to app.js. Reconcile the table-distinctness rules
+  (bring is no longer a Focus-Area table — it's JD-need:action, which is already distinct from core_comp).
+- **C (consensus):** the consensus POLL (app.src.js **~25711**, task `consensus_poll`) polls 2+ LLMs and
+  returns 5-8 **JD signals** (what the JD asks for). Wire those signals into the new bring "[Need from
+  JD]" rows + the contribute "[Specific Lead from JD]" actions, so the consensus output drives the
+  new-format content. (`consensus_reinforce` at 1767/1851 is the other consensus task.)
+- Authoritative template content: `docs/qa/nordic-cl-template-2026-06-29.md`.
 
 ---
 

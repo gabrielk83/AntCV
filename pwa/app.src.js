@@ -2996,7 +2996,7 @@
               "(1) WHAT I BRING (bring_rows): each row is [a NEED of the role/company] : [the candidate's MATCHING action, evidence, or result]. LEFT column = a concrete need the JD/company has (e.g. 'supplier or production readiness', 'validation and quality', 'management communication'); RIGHT column = what the candidate concretely does / has delivered that meets it (e.g. 'assessed feasibility, lead time, quality risk, and total landed cost before technical-commercial decisions'). This is NOT a Focus-Area / capability-label table - it is a NEED→ACTION mapping. 3-4 rows. CONSENSUS TIE-IN: draw the NEEDS (left column) from the most important JD signals - including the multi-LLM CONSENSUS JD signals when present in the additional signals - and for an unsolicited draft (no JD) infer needs from the company info + target role type and mark assumptions. " +
               "(2) FOUNDATION: foundation_hands_on = the specific SKILLS that match the JD/company (e.g. requirements and ALM/Codebeamer tooling, FMEA, DV/PV validation setups, RFQ/RFI and supplier scoring, optical/electro-optical systems, change control, traceability, KPI reporting) - select ONLY those that genuinely match; this is a grounded skills selection, NOT a generic working-style paragraph. foundation_professionally = TRANSLATE those skills into VALUE for this company and role (e.g. turn mixed technical and commercial input into clear scope, decisions, and measurable progress, while keeping engineering, product, suppliers, and management aligned). " +
               "(3) HOW I WOULD CONTRIBUTE: the 4 contribute_items are concrete actions tied to the JD's specific leads / the company's culture; contribute_closing is the GOAL line - the outcome the company gains (e.g. 'faster decisions, cleaner execution, and technical work visible to engineering and management'). " +
-              "(4) POSITIONING LINE (meta.subtitle): the catchy 3-concept line ('Processes • Products • People' for Gabriel unsolicited; otherwise a role-smart line). Keep WHO I AM / WHY as lead-in narrative paragraphs (no inline label).",
+              "(4) POSITIONING LINE (meta.subtitle): the catchy 3-concept line ('Processes • Products • People' for Gabriel unsolicited; otherwise a role-smart line). Keep WHO I AM / WHY as lead-in narrative paragraphs (no inline label). (5) LENGTH — KEEP IT TIGHT (Nordic, owner 2026-06-30): who_content is COMPRESSED to about 55-70 words (3 short sentences); why_content is 1-2 SHORT sentences; contribute_intro MUST fit ONE rendered line (cut to about 90 characters); contribute_closing (the Goal line) MUST fit ONE rendered line (about 100 characters). Trim words rather than let a line wrap.",
           );
         } catch (_) {}
       })();
@@ -25290,6 +25290,15 @@
                           : "bring" === e.id
                             ? {
                                 ...e,
+                                // BRING-HYDRATE-RICHBLOCK-001 (owner 2026-06-30): the Nordic
+                                // template makes `bring` a rich_block (reads `items`), but the
+                                // generated bring_rows are written to `rows` (table) and
+                                // bring-761 only converts type:"table" — so a rich_block bring
+                                // KEPT its placeholders ("WHAT I BRING remained templated", then
+                                // the export drops the bracket placeholders -> empty). RESET to a
+                                // TABLE here so bring-761 re-converts the FRESH generated rows.
+                                type: "table",
+                                items: void 0,
                                 rows: [
                                   ["Focus Area", "Strategic Expertise"],
                                   ...t(

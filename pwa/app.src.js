@@ -26709,7 +26709,10 @@
                 } catch (_) {}
                 var sn = (() => { try { var ov = String(localStorage.getItem("antcv:clSignName") || "").trim(); if (ov) return ov; } catch (_) {} var fn = String(w.name || "").trim(); return fn ? fn.split(/\s+/)[0] : (e ? "Dit navn" : "Your Name"); })();
                 var na = (() => { try { var a2 = String(localStorage.getItem("antcv:clSignNameAlign") || "center").replace(/["']/g, "").toLowerCase(); return ("left" === a2 || "right" === a2 || "center" === a2) ? a2 : "center"; } catch (_) { return "center"; } })();
-                return `<p style="margin-top:12pt;font-family:'Carlito',${d};font-size:10.5pt;color:#000;line-height:${p}">${i}</p>${sig}<p style="font-family:'Carlito',${d};font-size:10.5pt;font-weight:700;margin-top:8pt;color:#000;text-align:${na}">${sn}</p>`;
+                var ca = (() => { try { var a4 = String(localStorage.getItem("antcv:clClosingAlign") || "center").replace(/["']/g, "").toLowerCase(); return ("left" === a4 || "right" === a4 || "center" === a4) ? a4 : "center"; } catch (_) { return "center"; } })();
+                // CL-SIGNOFF-ALIGN-001 (owner 2026-06-29): order closing -> NAME -> signature; the
+                // closing shares the sign-off CJLR (antcv:clClosingAlign, default center).
+                return `<p style="margin-top:12pt;font-family:'Carlito',${d};font-size:10.5pt;color:#000;text-align:${ca};line-height:${p}">${i}</p><p style="font-family:'Carlito',${d};font-size:10.5pt;font-weight:700;margin-top:8pt;color:#000;text-align:${na}">${sn}</p>${sig}`;
               })(),
               g = 5;
             P =
@@ -43386,15 +43389,15 @@
                     },
                     React.createElement(
                       "div",
-                      null,
+                      { style: { textAlign: (() => { try { var a4 = String(localStorage.getItem("antcv:clClosingAlign") || "center").replace(/["']/g, "").toLowerCase(); return ("left" === a4 || "right" === a4 || "center" === a4) ? a4 : "center"; } catch (_) { return "center"; } })() } },
                       n ? "Med venlig hilsen," : (() => { try { const ov = String(localStorage.getItem("antcv:clClosing") || "").trim(); if (ov) return ov; } catch (_) {} return "At your service,"; })(),
                     ),
-                    window.__antcvClSigEl ? window.__antcvClSigEl() : null,
                     React.createElement(
                       "div",
                       { style: { fontWeight: 700, marginTop: 8, textAlign: (() => { try { var a3 = String(localStorage.getItem("antcv:clSignNameAlign") || "center").replace(/["']/g, "").toLowerCase(); return ("left" === a3 || "right" === a3 || "center" === a3) ? a3 : "center"; } catch (_) { return "center"; } })() } },
                       (() => { try { var ov = String(localStorage.getItem("antcv:clSignName") || "").trim(); if (ov) return ov; } catch (_) {} var fn = String(a.name || "").trim(); return fn ? fn.split(/\s+/)[0] : ("da" === je ? "Dit navn" : "Your Name"); })(),
                     ),
+                    window.__antcvClSigEl ? window.__antcvClSigEl() : null,
                   ),
                 ),
                 (() => {
@@ -43487,15 +43490,15 @@
                             },
                             React.createElement(
                               "div",
-                              null,
+                              { style: { textAlign: (() => { try { var a4 = String(localStorage.getItem("antcv:clClosingAlign") || "center").replace(/["']/g, "").toLowerCase(); return ("left" === a4 || "right" === a4 || "center" === a4) ? a4 : "center"; } catch (_) { return "center"; } })() } },
                               n ? "Med venlig hilsen," : (() => { try { const ov = String(localStorage.getItem("antcv:clClosing") || "").trim(); if (ov) return ov; } catch (_) {} return "At your service,"; })(),
                             ),
-                            window.__antcvClSigEl ? window.__antcvClSigEl() : null,
                             React.createElement(
                               "div",
                               { style: { fontWeight: 700, marginTop: 8, textAlign: (() => { try { var a3 = String(localStorage.getItem("antcv:clSignNameAlign") || "center").replace(/["']/g, "").toLowerCase(); return ("left" === a3 || "right" === a3 || "center" === a3) ? a3 : "center"; } catch (_) { return "center"; } })() } },
                               (() => { try { var ov = String(localStorage.getItem("antcv:clSignName") || "").trim(); if (ov) return ov; } catch (_) {} var fn = String(a.name || "").trim(); return fn ? fn.split(/\s+/)[0] : ("da" === je ? "Dit navn" : "Your Name"); })(),
                             ),
+                            window.__antcvClSigEl ? window.__antcvClSigEl() : null,
                           ),
                         ),
                       )

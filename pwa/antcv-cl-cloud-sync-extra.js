@@ -32,7 +32,7 @@
 (function () {
   'use strict';
   if (window.__antcvClCloudSyncExtra) return;
-  window.__antcvClCloudSyncExtra = '1.50.975';
+  window.__antcvClCloudSyncExtra = '1.50.976';
 
   var DISABLE = 'antcv:disable-cl-cloud-sync-extra';
   // [ localStorage key, relay field ]
@@ -46,6 +46,7 @@
     ['antcv:clSloganHidden', 'clSloganHidden'],
     ['antcv:clSloganAlign', 'clSloganAlign'],
     ['antcv:clClosing', 'clClosing'],
+    ['antcv:clClosingAlign', 'clClosingAlign'],
     ['antcv:clSignName', 'clSignName'],
     ['antcv:clSignNameAlign', 'clSignNameAlign'],
   ];

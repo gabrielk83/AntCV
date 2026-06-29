@@ -33,6 +33,7 @@
     hidden: 'antcv:clSloganHidden',
     align: 'antcv:clSloganAlign',
     closing: 'antcv:clClosing',   // CL-CLOSING-EDIT-001: editable sign-off closing (default "At your service,")
+    closingAlign: 'antcv:clClosingAlign', // CL-SIGNOFF-ALIGN-001: sign-off closing CJLR (default center)
     signName: 'antcv:clSignName',       // CL-SIGNNAME-001: editable sign-off name (default = first word of full name)
     signAlign: 'antcv:clSignNameAlign', // CL-SIGNNAME-001: sign-off name CJLR (default center)
     open: 'antcv:clSloganCtrlOpen'
@@ -184,11 +185,21 @@
       if (v) set(K.closing, v); else del(K.closing);
       bump();
     });
+    var closingAlignRow = document.createElement('div');
+    closingAlignRow.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:10px;color:#cdd;';
+    closingAlignRow.appendChild(document.createTextNode('Align:'));
+    var closingAlignBtns = {};
+    [['left', 'Left'], ['center', 'Center'], ['right', 'Right']].forEach(function (p) {
+      var b = btn(p[1], function () { set(K.closingAlign, p[0]); setAlignActive(closingAlignBtns, K.closingAlign); bump(); });
+      closingAlignBtns[p[0]] = b;
+      closingAlignRow.appendChild(b);
+    });
     var closingNote = document.createElement('div');
     closingNote.style.cssText = 'font-size:9px;opacity:.6;line-height:1.4;';
-    closingNote.textContent = 'The line above your name (was "Kind regards,"). Leave empty for the default.';
+    closingNote.textContent = 'The line above your name (was "Kind regards,"). Leave empty for the default. Order: closing, name, signature.';
     closingRow.appendChild(closingLbl);
     closingRow.appendChild(closingIn);
+    closingRow.appendChild(closingAlignRow);
     closingRow.appendChild(closingNote);
     body.appendChild(closingRow);
 
@@ -244,6 +255,7 @@
       hiddenCb.checked = get(K.hidden, '0') === '1';
       setAlignActive(alignBtns);
       closingIn.value = get(K.closing, '');
+      setAlignActive(closingAlignBtns, K.closingAlign);
       nameIn.value = get(K.signName, '');
       nameIn.placeholder = nameFirstWord() || 'e.g. Gabriel';
       setAlignActive(nameAlignBtns, K.signAlign);

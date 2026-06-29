@@ -25136,7 +25136,9 @@ function buildLinearDocument(ctx) {
     spacing: { before: 150, after: 60, line: 276, lineRule: "auto" },
     keepNext: true,
     keepLines: true,
-    alignment: AlignmentType.LEFT,
+    // CL-SIGNOFF-ALIGN-001 (owner 2026-06-29): the closing shares the sign-off CJLR (meta.
+    // cl_closing_align, default CENTER), like the name. Was hard LEFT.
+    alignment: ({ left: AlignmentType.LEFT, center: AlignmentType.CENTER, right: AlignmentType.RIGHT })[String((ctx.meta && ctx.meta.cl_closing_align) || "center").toLowerCase()] || AlignmentType.CENTER,
     children: [new TextRun({
       text: closeWord,
       color: style.mainTextColor,
@@ -25154,31 +25156,13 @@ function buildLinearDocument(ctx) {
   // CL-SIGNNAME-001 (owner 2026-06-29): the typed sign-off name has its OWN CJLR alignment
   // (meta.cl_sign_name_align, default CENTER), independent of the signature alignment. (Was
   // NAME-FOLLOWS-SIG-001: name followed the signature.) The signature still uses its own align.
+  // CL-SIGNOFF-ALIGN-001 (owner 2026-06-29): sign-off ORDER is closing -> NAME -> signature
+  // (the signature comes AFTER the typed name). Was closing -> signature -> name.
   var __clNameAlign = ({ left: AlignmentType.LEFT, center: AlignmentType.CENTER, right: AlignmentType.RIGHT })[String((ctx.meta && ctx.meta.cl_sign_name_align) || "center").toLowerCase()] || AlignmentType.CENTER;
-  if (pi.signature_b64) {
-    try {
-      var __sigData = base64ToUint8Array(pi.signature_b64);
-      var __sigW = (function () { var n = Number(pi.signature_size_px); return Number.isFinite(n) && n >= 40 && n <= 400 ? Math.round(n) : 160; })();
-      var __sigAsp = (function () { var a = Number(pi.signature_aspect); return Number.isFinite(a) && a > 0.05 && a <= 3 ? a : 0.4; })();
-      var __sigH = Math.max(16, Math.round(__sigW * __sigAsp));
-      var __sigAlign = ({ left: AlignmentType.LEFT, center: AlignmentType.CENTER, right: AlignmentType.RIGHT })[String(pi.signature_align || "center").toLowerCase()] || AlignmentType.CENTER;
-      bodyChildren.push(new Paragraph({
-        spacing: { before: 80, after: 0, line: 276, lineRule: "auto" },
-        keepLines: true,
-        keepNext: true,
-        alignment: __sigAlign,
-        children: [new ImageRun({
-          data: __sigData,
-          type: detectImageType(pi.signature_b64),
-          transformation: { width: __sigW, height: __sigH },
-          altText: { title: "Signature", description: "Signature", name: "Signature" }
-        })]
-      }));
-    } catch (__sigErr) { /* bad signature image -> skip; never break the CL */ }
-  }
   bodyChildren.push(new Paragraph({
     spacing: { before: 60, after: 0, line: 276, lineRule: "auto" },
     keepLines: true,
+    keepNext: true,
     alignment: __clNameAlign,
     children: [
       new TextRun({
@@ -25196,6 +25180,27 @@ function buildLinearDocument(ctx) {
       })
     ]
   }));
+  // optional uploaded signature image AFTER the name (CL-SIGNATURE-001), with its own align.
+  if (pi.signature_b64) {
+    try {
+      var __sigData = base64ToUint8Array(pi.signature_b64);
+      var __sigW = (function () { var n = Number(pi.signature_size_px); return Number.isFinite(n) && n >= 40 && n <= 400 ? Math.round(n) : 160; })();
+      var __sigAsp = (function () { var a = Number(pi.signature_aspect); return Number.isFinite(a) && a > 0.05 && a <= 3 ? a : 0.4; })();
+      var __sigH = Math.max(16, Math.round(__sigW * __sigAsp));
+      var __sigAlign = ({ left: AlignmentType.LEFT, center: AlignmentType.CENTER, right: AlignmentType.RIGHT })[String(pi.signature_align || "center").toLowerCase()] || AlignmentType.CENTER;
+      bodyChildren.push(new Paragraph({
+        spacing: { before: 80, after: 0, line: 276, lineRule: "auto" },
+        keepLines: true,
+        alignment: __sigAlign,
+        children: [new ImageRun({
+          data: __sigData,
+          type: detectImageType(pi.signature_b64),
+          transformation: { width: __sigW, height: __sigH },
+          altText: { title: "Signature", description: "Signature", name: "Signature" }
+        })]
+      }));
+    } catch (__sigErr) { /* bad signature image -> skip; never break the CL */ }
+  }
   // 1.14.32 CL-PAGINATE-001: the candidate band stays a full-bleed table, but the
   // BODY is no longer wrapped in a table cell — a single tall table row (with the
   // nested WHAT-I-BRING table inside it) does NOT split across pages in
@@ -27734,7 +27739,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.99-cl-signname";
+var VERSION = "1.14.100-cl-signoff-order";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

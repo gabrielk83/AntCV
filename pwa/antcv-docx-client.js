@@ -690,8 +690,12 @@ export function buildPayload({
       ...((() => {
         try {
           if (doc !== 'cl') return {};
+          const out = {};
           const ov = String(localStorage.getItem('antcv:clClosing') || '').trim();
-          return ov ? { cl_closing: ov } : {};
+          if (ov) out.cl_closing = ov;
+          const al = String(localStorage.getItem('antcv:clClosingAlign') || 'center').replace(/["']/g, '').toLowerCase();
+          out.cl_closing_align = (al === 'left' || al === 'right' || al === 'center') ? al : 'center';
+          return out;
         } catch (_) { return {}; }
       })()),
       // CL-SIGNNAME-001 (owner 2026-06-29): editable sign-off name (override; empty -> the worker

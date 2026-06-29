@@ -95,6 +95,33 @@ distinct marker so neither leaks). Same standalone keys; no behavior change — 
 
 ---
 
+## OPEN — TOP PRIORITY: candidate-header photo/text placement (owner 2026-06-29, precise measurements)
+
+Owner gave exact target geometry (default 1.52" photo) for the bridge candidate header
+(`docs`: "Location in sidebridge.docx"). The CURRENT bug (#6): the header's 2 cells get SNAPPED
+to the BODY column grid `[sidebarW, mainW]` (sidebar 2.75"), so the candidate text starts at 2.75"
+instead of 2.31" — too far right. The `sidebarW-540` pull-back (PDF-HEADER-LEFT-001) is overridden
+by the table grid. FIX = a **3-column grid + gridSpan** so the header and body split at DIFFERENT
+points (the handoff's "finer table grid" option), keeping ONE table (navy band + page-anchored
+medallion unaffected — lower risk than a separate header table):
+
+TARGET (inches → DXA @1440, PAGE_W=11906):
+- left header cell **2.31"** = 3326 DXA · right header cell **5.97"** = 8580 · sidebar **2.75"** = 3960
+  (`ctx.sidebarW`) · main 5.52" = 7946 (`mainW`) · photo **1.52"** · figure center **1.47" from left**
+  = 2117 (→ medallion left = 1.47−0.76 = 0.71" = 1022) · picture & sidebar-text **0.27"** from top ·
+  candidate band height **0.2"**.
+
+PLAN (workers/docx-worker/src/index.js, buildTwoColumnDocument ~24832-24930):
+1. `colWidths` (~24681) → 3 cols: `[HDR_L, sidebarW - HDR_L, mainW]`, `HDR_L = clamp(3326, 1200, sidebarW-200)`.
+2. `makeSidebarCell` → add `columnSpan: 2` (spans col0+col1 = sidebarW); `makeMainCell` = col2 (mainW).
+3. bridge `headerRow`: left cell width=HDR_L (col0, NO span); right cell `columnSpan: 2`, width=PAGE_W-HDR_L.
+4. `makeSlimHeaderRow` + the non-bridge header cell: `columnSpan: 2` → `3`.
+5. Medallion (Part 2): set the band-overlap photo's horizontal offset so the figure CENTER = 1.47"
+   from the page left (left ≈ 1022 DXA/EMU) and top = 0.27" — in `buildPhotoParagraph` band-overlap.
+VERIFY: structural diags (twocol-paged / ownerlike — table/cell counts + grid widths in document.xml)
+catch a malformed grid; the PIXEL result (text at 2.31", figure at 1.47") needs the owner's real
+CloudConvert export. Ship with the owner exporting to confirm each step. This is the #6 item.
+
 ## OPEN — RENDER-GATED (need the owner's real CloudConvert export to verify)
 
 ### A. [HIGH] CV 3-page convergence — tail (INTERESTS/ACCESSIBILITY/RECOMMENDATIONS) spills to page 4

@@ -71,6 +71,12 @@ Confirm the positioning line (F1 slogan) is the only top tagline (no dup). Keep 
 
 ## SHIPPED THIS SESSION (2026-06-29 later) — verified, suite/boot/worker green
 
+- **1.50.972 / worker 1.14.98 / relay 1.3.4 — CL-CLOSING-EDIT-001.** Sign-off closing was hardcoded
+  "Kind regards," (reverted the owner's "At your service,"). Now EN default = **"At your service,"**
+  (da/es/zh keep theirs), editable via standalone key `antcv:clClosing` (persists: relay allowlist +
+  cl-cloud-sync MAP + a "Sign-off closing" input in the CL control). Read at all 4 sign-off sites
+  (srcdoc + React×2 + inline-docx fallback + worker via `meta.cl_closing`). Verified worker 3/3 +
+  boot-smoke. See [[cl-slogan-signature-standalone-keys]].
 - **1.50.971 — NORDIC-CL-TEMPLATE-001 phase 1.** See the IN-PROGRESS section above.
 - **1.50.970 / access-relay 1.3.3 — CL-SIG-SLOGAN-CLOUD-001.** The CL signature + editable slogan now
   cloud-persist (were local-only; lost on hard reset). Allowlisted their camelCase forms in the relay

@@ -1,0 +1,248 @@
+/* antcv-cl-signature-control.js — CL-SIGNATURE-CONTROL-001 (owner 2026-06-28/29)
+ *
+ * Layout-tab control for the COVER LETTER signature image (export shipped 1.14.93).
+ * A collapsible block injected ONCE, directly AFTER the PROFILE PHOTO control (its
+ * button-row marker [data-antcv-bridge-active]). Standalone localStorage keys so a
+ * cloud-restore never clobbers it (see sidecar-prefs-clobber-hazard):
+ *   antcv:signatureB64     data-URL of the uploaded image
+ *   antcv:signatureAlign   'left' | 'center' | 'right'   (default 'center')
+ *   antcv:signatureSize    width px                       (default 160)
+ *   antcv:signatureAspect  height/width ratio, computed at upload via new Image()
+ *   antcv:signatureHidden  '1' | '0'                      (default '0')
+ *
+ * NO app.js mirror. Own data-marker (data-antcv-cl-sig-control). Mounts ONCE (hides
+ * any duplicate that leaks into another panel, mirroring the photo control's fix) and
+ * sets no persistent display style on shared ancestors → no sticky leak.
+ *
+ * On any change it bumps a localStorage tick (antcv:signatureRev) and dispatches
+ * 'antcv:signature-changed' so the preview (app.js srcdoc builder) can re-render.
+ */
+(function () {
+  'use strict';
+  if (window.__antcvClSignatureControl) return;
+  window.__antcvClSignatureControl = true;
+
+  var K = {
+    b64: 'antcv:signatureB64',
+    align: 'antcv:signatureAlign',
+    size: 'antcv:signatureSize',
+    aspect: 'antcv:signatureAspect',
+    hidden: 'antcv:signatureHidden',
+    open: 'antcv:sigCtrlOpen',
+    rev: 'antcv:signatureRev'
+  };
+  var ACCENT = 'rgb(1,183,187)';
+  function get(k, d) { try { var v = localStorage.getItem(k); return v == null ? d : v; } catch (_) { return d; } }
+  function set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} }
+  function del(k) { try { localStorage.removeItem(k); } catch (_) {} }
+  function bump() {
+    set(K.rev, String((parseInt(get(K.rev, '0'), 10) || 0) + 1));
+    try { window.dispatchEvent(new CustomEvent('antcv:signature-changed')); } catch (_) {}
+  }
+
+  function isOpen() { return get(K.open, '0') === '1'; }
+  function setOpen(v) { set(K.open, v ? '1' : '0'); }
+
+  // ---- find the PROFILE PHOTO control (same marker the collapse sidecar uses) ----
+  function photoControl() {
+    var rows = document.querySelectorAll('[data-antcv-bridge-active]');
+    for (var i = 0; i < rows.length; i++) {
+      var ctrl = rows[i].parentElement;
+      var c = ctrl && ctrl.firstElementChild;
+      if (c && /PROFILE PHOTO/i.test(c.textContent || '') && (c.textContent || '').length < 40) return ctrl;
+    }
+    return null;
+  }
+
+  function btn(txt, on) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = txt;
+    b.style.cssText = 'padding:4px 9px;margin:0;border-radius:5px;border:1px solid rgba(1,183,187,0.45);' +
+      'background:rgba(1,183,187,0.10);color:' + ACCENT + ';font-size:10px;font-weight:600;cursor:pointer;';
+    if (on) b.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); on(b); });
+    return b;
+  }
+  function setAlignActive(buttons) {
+    var a = get(K.align, 'center');
+    for (var k in buttons) {
+      var active = (k === a);
+      buttons[k].style.background = active ? ACCENT : 'rgba(1,183,187,0.10)';
+      buttons[k].style.color = active ? '#04231f' : ACCENT;
+    }
+  }
+
+  function build() {
+    var box = document.createElement('div');
+    box.setAttribute('data-antcv-cl-sig-control', '1');
+    box.style.cssText = 'margin:8px 0 0 0;padding:8px 10px;border:1px solid rgba(1,183,187,0.25);' +
+      'border-radius:8px;background:rgba(255,255,255,0.02);';
+
+    // header (collapsible)
+    var head = document.createElement('div');
+    head.style.cssText = 'cursor:pointer;font-size:11px;font-weight:700;letter-spacing:.04em;color:' + ACCENT + ';' +
+      'display:flex;align-items:center;gap:6px;user-select:none;';
+    head.setAttribute('role', 'button');
+    head.title = 'Show / hide the cover-letter signature controls';
+    var caret = document.createElement('span');
+    caret.style.cssText = 'font-size:9px;opacity:.7;';
+    var htxt = document.createElement('span');
+    htxt.textContent = 'COVER LETTER SIGNATURE';
+    head.appendChild(caret);
+    head.appendChild(htxt);
+
+    var body = document.createElement('div');
+    body.style.cssText = 'margin-top:8px;display:flex;flex-direction:column;gap:8px;';
+
+    // current thumbnail + upload
+    var thumbWrap = document.createElement('div');
+    thumbWrap.style.cssText = 'display:flex;align-items:center;gap:10px;flex-wrap:wrap;';
+    var thumb = document.createElement('img');
+    thumb.style.cssText = 'max-width:120px;max-height:48px;background:#fff;border-radius:4px;padding:2px;display:none;';
+    var fileIn = document.createElement('input');
+    fileIn.type = 'file';
+    fileIn.accept = 'image/png,image/jpeg,image/jpg,image/gif,image/webp';
+    fileIn.style.cssText = 'display:none;';
+    var uploadBtn = btn('⬆ Upload signature', function () { fileIn.click(); });
+    var removeBtn = btn('✕ Remove', function () {
+      del(K.b64); del(K.aspect); bump(); refresh();
+    });
+    var note = document.createElement('div');
+    note.style.cssText = 'font-size:9px;opacity:.6;flex-basis:100%;';
+    note.textContent = 'PNG or JPG, transparent background recommended. HEIC is not supported by browsers — export one as PNG/JPG first.';
+
+    fileIn.addEventListener('change', function () {
+      var f = fileIn.files && fileIn.files[0];
+      if (!f) return;
+      if (/heic|heif/i.test(f.type) || /\.heic$|\.heif$/i.test(f.name || '')) {
+        note.textContent = 'HEIC/HEIF can\'t be read in the browser — please convert to PNG or JPG and upload that.';
+        note.style.color = '#ff9090';
+        fileIn.value = '';
+        return;
+      }
+      var rd = new FileReader();
+      rd.onload = function () {
+        var url = String(rd.result || '');
+        var img = new Image();
+        img.onload = function () {
+          var asp = (img.naturalWidth > 0) ? (img.naturalHeight / img.naturalWidth) : 0.4;
+          set(K.b64, url);
+          set(K.aspect, String(Math.max(0.05, Math.min(3, asp)).toFixed(4)));
+          if (get(K.hidden, '0') === '1') set(K.hidden, '0');
+          note.style.color = '';
+          note.textContent = 'Signature uploaded. It appears at the end of the cover letter.';
+          bump(); refresh();
+        };
+        img.onerror = function () {
+          note.style.color = '#ff9090';
+          note.textContent = 'Could not read that image — please use a PNG or JPG.';
+        };
+        img.src = url;
+      };
+      rd.readAsDataURL(f);
+      fileIn.value = '';
+    });
+
+    thumbWrap.appendChild(thumb);
+    thumbWrap.appendChild(uploadBtn);
+    thumbWrap.appendChild(removeBtn);
+    thumbWrap.appendChild(fileIn);
+    thumbWrap.appendChild(note);
+
+    // hidden toggle
+    var hiddenRow = document.createElement('label');
+    hiddenRow.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:10px;color:#cdd;cursor:pointer;';
+    var hiddenCb = document.createElement('input');
+    hiddenCb.type = 'checkbox';
+    hiddenCb.addEventListener('change', function () { set(K.hidden, hiddenCb.checked ? '1' : '0'); bump(); });
+    hiddenRow.appendChild(hiddenCb);
+    hiddenRow.appendChild(document.createTextNode('Hide signature (keep the typed name)'));
+
+    // alignment
+    var alignRow = document.createElement('div');
+    alignRow.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:10px;color:#cdd;';
+    alignRow.appendChild(document.createTextNode('Align:'));
+    var alignBtns = {};
+    [['left', 'Left'], ['center', 'Center'], ['right', 'Right']].forEach(function (p) {
+      var b = btn(p[1], function () { set(K.align, p[0]); setAlignActive(alignBtns); bump(); });
+      alignBtns[p[0]] = b;
+      alignRow.appendChild(b);
+    });
+
+    // size slider
+    var sizeRow = document.createElement('div');
+    sizeRow.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:10px;color:#cdd;';
+    var sizeLbl = document.createElement('span');
+    var sizeIn = document.createElement('input');
+    sizeIn.type = 'range';
+    sizeIn.min = '80'; sizeIn.max = '320'; sizeIn.step = '5';
+    sizeIn.style.cssText = 'flex:1;';
+    sizeIn.addEventListener('input', function () { set(K.size, sizeIn.value); sizeLbl.textContent = sizeIn.value + 'px'; bump(); });
+    sizeRow.appendChild(document.createTextNode('Width:'));
+    sizeRow.appendChild(sizeIn);
+    sizeRow.appendChild(sizeLbl);
+
+    body.appendChild(thumbWrap);
+    body.appendChild(hiddenRow);
+    body.appendChild(alignRow);
+    body.appendChild(sizeRow);
+
+    box.appendChild(head);
+    box.appendChild(body);
+
+    head.addEventListener('click', function (e) {
+      e.preventDefault(); e.stopPropagation();
+      setOpen(!isOpen()); applyOpen();
+    });
+
+    function applyOpen() {
+      var o = isOpen();
+      caret.textContent = o ? '▾' : '▸';
+      body.style.display = o ? 'flex' : 'none';
+    }
+    box.__refresh = function () {
+      var b64 = get(K.b64, '');
+      if (b64) { thumb.src = b64; thumb.style.display = ''; removeBtn.style.display = ''; }
+      else { thumb.style.display = 'none'; removeBtn.style.display = 'none'; }
+      hiddenCb.checked = get(K.hidden, '0') === '1';
+      setAlignActive(alignBtns);
+      var sz = parseInt(get(K.size, '160'), 10) || 160;
+      sizeIn.value = String(sz); sizeLbl.textContent = sz + 'px';
+      applyOpen();
+    };
+    box.__refresh();
+    return box;
+  }
+
+  var mounted = null;
+  function refresh() { if (mounted && mounted.__refresh) mounted.__refresh(); }
+
+  function scan() {
+    // hide any duplicate we previously mounted that is now detached / leaked
+    var existing = document.querySelectorAll('[data-antcv-cl-sig-control]');
+    if (existing.length > 1) {
+      for (var j = 1; j < existing.length; j++) { if (existing[j].parentNode) existing[j].parentNode.removeChild(existing[j]); }
+    }
+    if (mounted && mounted.isConnected) { return; }
+    var photo = photoControl();
+    if (!photo || !photo.parentNode) return;
+    // already a control right after the photo? adopt it.
+    if (photo.nextElementSibling && photo.nextElementSibling.getAttribute &&
+      photo.nextElementSibling.getAttribute('data-antcv-cl-sig-control') === '1') {
+      mounted = photo.nextElementSibling; refresh(); return;
+    }
+    mounted = build();
+    photo.parentNode.insertBefore(mounted, photo.nextSibling);
+  }
+
+  var t = null;
+  function schedule() { if (t) return; t = setTimeout(function () { t = null; scan(); }, 140); }
+  var mo = new MutationObserver(function (muts) {
+    for (var i = 0; i < muts.length; i++) { if (muts[i].addedNodes && muts[i].addedNodes.length) { schedule(); return; } }
+  });
+  function start() {
+    try { mo.observe(document.body, { childList: true, subtree: true }); } catch (_) {}
+    schedule();
+  }
+  if (document.body) start(); else document.addEventListener('DOMContentLoaded', start);
+})();

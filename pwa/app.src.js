@@ -43538,12 +43538,12 @@
                             },
                             React.createElement(
                               "div",
-                              { style: { textAlign: (() => { try { var a4 = String(localStorage.getItem("antcv:clClosingAlign") || "center").replace(/["']/g, "").toLowerCase(); return ("left" === a4 || "right" === a4 || "center" === a4) ? a4 : "center"; } catch (_) { return "center"; } })() } },
+                              { style: { cursor: "text", textAlign: (() => { try { var a4 = String(localStorage.getItem("antcv:clClosingAlign") || "center").replace(/["']/g, "").toLowerCase(); return ("left" === a4 || "right" === a4 || "center" === a4) ? a4 : "center"; } catch (_) { return "center"; } })() }, contentEditable: true, suppressContentEditableWarning: true, spellCheck: false, title: "Click to edit the sign-off line", onBlur: (ev) => { try { localStorage.setItem("antcv:clClosing", String(ev.currentTarget.textContent || "").trim()); window.dispatchEvent(new CustomEvent("antcv:sections-updated", { detail: { reason: "cl-signoff-inline" } })); } catch (_) {} } },
                               n ? "Med venlig hilsen," : (() => { try { const ov = String(localStorage.getItem("antcv:clClosing") || "").trim(); if (ov) return ov; } catch (_) {} return "At your service,"; })(),
                             ),
                             React.createElement(
                               "div",
-                              { style: { fontWeight: 700, marginTop: 8, textAlign: (() => { try { var a3 = String(localStorage.getItem("antcv:clSignNameAlign") || "center").replace(/["']/g, "").toLowerCase(); return ("left" === a3 || "right" === a3 || "center" === a3) ? a3 : "center"; } catch (_) { return "center"; } })() } },
+                              { style: { cursor: "text", fontWeight: 700, marginTop: 8, textAlign: (() => { try { var a3 = String(localStorage.getItem("antcv:clSignNameAlign") || "center").replace(/["']/g, "").toLowerCase(); return ("left" === a3 || "right" === a3 || "center" === a3) ? a3 : "center"; } catch (_) { return "center"; } })() }, contentEditable: true, suppressContentEditableWarning: true, spellCheck: false, title: "Click to edit your name", onBlur: (ev) => { try { localStorage.setItem("antcv:clSignName", String(ev.currentTarget.textContent || "").replace(/\s+/g, " ").trim()); window.dispatchEvent(new CustomEvent("antcv:sections-updated", { detail: { reason: "cl-signoff-inline" } })); } catch (_) {} } },
                               (() => { try { var ov = String(localStorage.getItem("antcv:clSignName") || "").trim(); if (ov) return ov; } catch (_) {} var fn = String(a.name || "").trim(); return fn ? fn.split(/\s+/)[0] : ("da" === je ? "Dit navn" : "Your Name"); })(),
                             ),
                             window.__antcvClSigEl ? window.__antcvClSigEl() : null,

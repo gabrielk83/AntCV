@@ -71,7 +71,17 @@ header band name is unchanged. Control: "Sign-off name" input + L/C/R in the CL 
 sign-off sites + worker via `meta.cl_sign_name`/`_align`; cloud-persist (relay + cl-cloud-sync MAP).
 Verified worker 4/4 + boot-smoke. See [[cl-slogan-signature-standalone-keys]].
 
-**REMAINING — B: adapt the CL GENERATION prompt + C: consensus.** UNVERIFIABLE in this harness (no LLM)
+**B + C DONE (1.50.978, NORDIC-CL-TEMPLATE-GEN-001) — owner must review a real generation.** Additive +
+Nordic-gated: a new prompt rule (pushed only when toneRegister=Nordic) sets the owner-locked field shapes
+— bring_rows = [Need from JD] : [matching action] (NOT Focus-Area/Expertise); the NEEDS + contribute
+actions draw from the JD signals INCLUDING the multi-LLM consensus signals (C); foundation_hands_on = the
+SKILLS that match the JD, foundation_professionally = TRANSLATE them into value; contribute_closing = the
+GOAL; positioning = meta.subtitle. Schema bring_rows example updated. app.src.js + app.js mirror (IIFE in
+the prompt-rule comma chain). Compiles + boots + suite 521/521, but the LLM OUTPUT QUALITY is unverifiable
+here — **owner: run a real Nordic CL generation and review; tune the rule text (app.src.js ~2982 push +
+the app.js mirror) after.** Below is the original detail for reference.
+
+(superseded) UNVERIFIABLE in this harness (no LLM)
 — ship with the OWNER reviewing a real generation; the STRUCTURE is already enforced post-generation
 (me() + sidecars reshape any output), so this is CONTENT-quality, not a blocker.
 - **B (sites):** the CL output schema/prompt at app.src.js **23816 / 23992 / 24042** (who_content,

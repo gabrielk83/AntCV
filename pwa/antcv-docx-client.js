@@ -670,6 +670,21 @@ export function buildPayload({
       subtitle,
       role:     stripFounder(meta.role || ''),
       company:  meta.company  || '',
+      // SLOGAN-CL-EDIT-001 (owner 2026-06-29): forward the editable CL slogan so the worker
+      // renders the same tagline the preview shows. Standalone keys (cloud-restore-safe). An
+      // empty override -> the worker falls back to subtitle (the old default). CL-only.
+      ...((() => {
+        try {
+          if (doc !== 'cl') return {};
+          const out = {};
+          if (localStorage.getItem('antcv:clSloganHidden') === '1') { out.slogan_hidden = true; return out; }
+          const ov = String(localStorage.getItem('antcv:clSlogan') || '').trim();
+          if (ov && !/^\[/.test(ov)) out.slogan = ov;
+          const al = String(localStorage.getItem('antcv:clSloganAlign') || 'center').replace(/["']/g, '').toLowerCase();
+          out.slogan_align = (al === 'left' || al === 'right' || al === 'center') ? al : 'center';
+          return out;
+        } catch (_) { return {}; }
+      })()),
     },
     header_align: align,
     // v1.50.8 — pass the active visual package + ATS legacy-tier flag

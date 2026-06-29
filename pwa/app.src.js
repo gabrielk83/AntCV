@@ -26707,7 +26707,7 @@
               })(),
               g = 5;
             P =
-              `<table width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse"><tr><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td><td style="padding:6pt 0 14pt;vertical-align:top">${(() => { try { var st = String(io.subtitle || "").replace(/\s*\|\s*/g, " • ").trim(); if (!st || /^\[/.test(st)) return ""; return '<p style="font-family:\'Cabin\',' + d + ';font-size:11pt;font-weight:700;letter-spacing:.08em;text-align:center;color:' + (t.mainLineColor || "#01746E") + ';margin:0 0 12pt">' + st.toUpperCase() + '</p>'; } catch (_) { return ""; } })()}${l.map(b).join("")}${u}${m}</td><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td></tr></table>` +
+              `<table width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse"><tr><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td><td style="padding:6pt 0 14pt;vertical-align:top">${(() => { try { if (localStorage.getItem("antcv:clSloganHidden") === "1") return ""; var st = String(localStorage.getItem("antcv:clSlogan") || "").trim(); if (!st || /^\[/.test(st)) st = String(io.subtitle || "").trim(); st = st.replace(/\s*\|\s*/g, " • ").trim(); if (!st || /^\[/.test(st)) return ""; var sa = String(localStorage.getItem("antcv:clSloganAlign") || "center").replace(/["']/g, "").toLowerCase(); if (sa !== "left" && sa !== "right" && sa !== "center") sa = "center"; return '<p style="font-family:\'Cabin\',' + d + ';font-size:11pt;font-weight:700;letter-spacing:.08em;text-align:' + sa + ';color:' + (t.mainLineColor || "#01746E") + ';margin:0 0 12pt">' + st.toUpperCase() + '</p>'; } catch (_) { return ""; } })()}${l.map(b).join("")}${u}${m}</td><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td></tr></table>` +
               (c
                 ? `<div style="page-break-before:always;mso-page-break-before:always;break-before:page"><table width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="${n}" style="width:100%;border-collapse:collapse;background:${n};page-break-after:avoid;mso-page-break-after:avoid"><tr><td bgcolor="${n}" style="background:${n};padding:14pt 16pt 8pt;text-align:center">${N}${_}${$}</td></tr></table><table width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse"><tr><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td><td style="padding:6pt 0 14pt;vertical-align:top">${b(c)}${m}</td><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td></tr></table></div>`
                 : "");
@@ -43234,6 +43234,33 @@
                           "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='200'><text x='150' y='110' font-family='Arial,sans-serif' font-size='44' font-weight='800' fill='rgba(220,50,50,0.10)' text-anchor='middle' transform='rotate(-30 150 100)'>DEMO</text></svg>\")",
                       },
                     }),
+                  // SLOGAN-CL-EDIT-001 (owner 2026-06-29): the teal tagline at the top of the
+                  // cover letter, now editable via antcv-cl-slogan-control. Reads the standalone
+                  // override key (empty -> io.subtitle fallback, the old default), hide flag, and
+                  // CJLR align. Mirrors the export srcdoc IIFE + the worker __slogan block.
+                  (() => {
+                    try {
+                      if (localStorage.getItem("antcv:clSloganHidden") === "1") return null;
+                      var st = String(localStorage.getItem("antcv:clSlogan") || "").trim();
+                      if (!st || /^\[/.test(st)) st = String((io && io.subtitle) || "").trim();
+                      st = st.replace(/\s*\|\s*/g, " • ").trim();
+                      if (!st || /^\[/.test(st)) return null;
+                      var sa = String(localStorage.getItem("antcv:clSloganAlign") || "center").replace(/["']/g, "").toLowerCase();
+                      if (sa !== "left" && sa !== "right" && sa !== "center") sa = "center";
+                      return React.createElement("div", {
+                        key: "__cl_slogan",
+                        style: {
+                          fontFamily: "'Cabin',sans-serif",
+                          fontSize: 15,
+                          fontWeight: 700,
+                          letterSpacing: "0.08em",
+                          textAlign: sa,
+                          color: (ya && ya.mainLineColor) || "#00746E",
+                          margin: "0 0 12px",
+                        },
+                      }, st.toUpperCase());
+                    } catch (_) { return null; }
+                  })(),
                   Pi.filter(
                     (e) =>
                       e.on && "closure" !== e.id && "jd_questions" !== e.id,

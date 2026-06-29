@@ -25050,14 +25050,24 @@ function buildLinearDocument(ctx) {
   const otherSecs = sections.filter((s) => !s || s.id !== "closure" && s.id !== "jd_questions");
   const bodyChildren = [];
   // SLOGAN-CL-001 (owner 2026-06-29): a tagline heading at the TOP of the cover-letter body
-  // (before the opening) — the candidate subtitle, uppercased + centered (Gabriel unsolicited
-  // default: "PROCESSES • PRODUCTS • PEOPLE"). Skipped when the subtitle is empty/placeholder.
+  // (before the opening) — uppercased teal. SLOGAN-CL-EDIT-001 (owner 2026-06-29): now editable
+  // via the client's standalone slogan keys, forwarded as meta.slogan / slogan_hidden /
+  // slogan_align. An empty override falls back to meta.subtitle (the old default; Gabriel
+  // unsolicited = "PROCESSES • PRODUCTS • PEOPLE"). Skipped when hidden or empty/placeholder.
   // Mirrors the preview srcdoc builder (app.src.js CL branch) for preview/export parity.
   {
-    const __slogan = String((ctx.meta && ctx.meta.subtitle) || "").replace(/\s*\|\s*/g, " • ").trim();
+    const __m = ctx.meta || {};
+    let __slogan = "";
+    if (!__m.slogan_hidden) {
+      let __ov = String(__m.slogan || "").trim();
+      if (!__ov || __ov.startsWith("[")) __ov = String(__m.subtitle || "").trim();
+      __slogan = __ov.replace(/\s*\|\s*/g, " • ").trim();
+    }
     if (__slogan && !__slogan.startsWith("[")) {
+      const __sa = String(__m.slogan_align || "center").toLowerCase();
+      const __sAlign = __sa === "left" ? AlignmentType.LEFT : __sa === "right" ? AlignmentType.RIGHT : AlignmentType.CENTER;
       bodyChildren.push(new Paragraph({
-        alignment: AlignmentType.CENTER,
+        alignment: __sAlign,
         spacing: { before: 0, after: 160, line: 240, lineRule: "auto" },
         keepNext: true,
         children: [new TextRun({
@@ -27711,7 +27721,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.96-ai-wm-side";
+var VERSION = "1.14.97-cl-slogan-edit";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

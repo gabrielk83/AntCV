@@ -26266,6 +26266,9 @@ function headingParagraph(title2, ctx, isSidebar, noRule) {
 __name(headingParagraph, "headingParagraph");
 function renderText(s, ctx, isSidebar) {
   if (!s.content) return [];
+  // CV-PLACEHOLDER-DROP-001 (owner 2026-07): drop a still-bracketed template placeholder
+  // ("[PROFILE - …]") rather than printing the instruction text.
+  if (/^\s*\[[\s\S]*\]\s*$/.test(String(s.content))) return [];
   const paras = String(s.content).split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
   const align = paraAlignPath(s, "content") ?? paraAlign(s, null, void 0) ?? AlignmentType.JUSTIFIED;
   return paras.map((p) => bodyParagraphRich(p, ctx, isSidebar, { align }));
@@ -26273,6 +26276,11 @@ function renderText(s, ctx, isSidebar) {
 __name(renderText, "renderText");
 function renderTextInline(s, ctx, isSidebar) {
   if (!s.content) return [];
+  // CV-PLACEHOLDER-DROP-001 (owner 2026-07: WORK STYLE exported the bracketed template
+  // instruction). A text/work-style section whose content is STILL a bracketed template
+  // placeholder ("[WORK STYLE - …]" / "[PROFILE - …]") must be DROPPED, not printed — a
+  // fully-bracketed string is never real content (real prose is not wrapped in []).
+  if (/^\s*\[[\s\S]*\]\s*$/.test(String(s.content))) return [];
   const { style, fs } = ctx;
   const title2 = (s.title || "").trim();
   const paras = String(s.content).split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
@@ -27791,7 +27799,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.104-signature-table-wrap";
+var VERSION = "1.14.105-workstyle-placeholder-drop";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

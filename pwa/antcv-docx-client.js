@@ -2613,7 +2613,13 @@ export function applyOutcomesMode(docSections, doc) {
         // hides (subsumed bullet / derived source bullet that IS the Result) stay hidden,
         // so keepMin's "original" is the post-intentional-hide set, never r.bullets.
         const lam = _lam.get(r);
-        if (lam) return { ...r, results: _tx(lam), bullets: _txBl(keepMin(r.bullets, hideMetricReused(r.bullets, lam))) };
+        // RESULT-SUBSUMES-BULLET-001 (owner 2026-07: IDF "Results:" was a VERBATIM copy of
+        // bullet 1 and the bullet was STILL shown; Sirin similar). Even for a REAL outcome,
+        // if the Result subsumes a bullet (the bullet's text is contained in the Result), HIDE
+        // that bullet — never show the same sentence twice. keepMin still protects a ≥2-bullet
+        // role from collapsing. (Was: real outcomes skipped subsumption — that assumption broke
+        // when generation set role.results to a verbatim bullet.)
+        if (lam) { const sub = hideSubsumed(r, lam); return { ...r, results: _tx(lam), bullets: _txBl(keepMin(sub, hideMetricReused(sub, lam))) }; }
         // pool / explicit-map distribution — may be a bullet-seeded outcome, so hide
         // a bullet when the result text subsumes it OR reuses its number.
         if (resultsByRole.has(r)) { const rt = resultsByRole.get(r); const sub = hideSubsumed(r, rt); return { ...r, results: _tx(rt), bullets: _txBl(keepMin(sub, hideMetricReused(sub, rt))) }; }

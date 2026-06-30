@@ -24,7 +24,10 @@ function expSec(results) {
   return {
     id: 'experience', type: 'experience', on: true,
     roles: [{ id: 'r1', on: true, title: 'Engineer', company: 'NVIDIA',
-               years: '2020-Present', bullets: ['Owned the test pipeline.'],
+               // RESULT-SUBSUMES-BULLET-001 (2026-07): use a bullet NOT contained in the
+               // PAST result, so it stays visible (a subsumed bullet is now hidden) and the
+               // tense re-tensing can be asserted on it.
+               years: '2020-Present', bullets: ['Owned the release calendar.'],
                results }],
   };
 }

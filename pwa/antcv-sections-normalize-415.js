@@ -15,7 +15,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.23-exp-repair';
+  var VERSION = '1.51.27-exp-complete';
   if (window.__antcvSectionsNormalize === VERSION) return;
   window.__antcvSectionsNormalize = VERSION;
 
@@ -743,6 +743,48 @@
     return copy;
   }
 
+  // EXPERIENCE-COMPLETENESS-001 (owner 2026-07: "You lost 2 positions: Student representative,
+  // Computer admin"). repairExperienceFromPI only fires on a FULLY degraded section (<2 real
+  // roles); when the section is otherwise healthy but GENERATION dropped a couple of specific
+  // roles (early-career / off-domain ones the LLM silently omitted), nothing restores them and
+  // the position is gone. This merge restores completeness WITHOUT changing the visible CV: any
+  // real personalInfo role whose title+company is NOT present in the section is re-inserted as
+  // HIDDEN (on:false) — present and recoverable in one click, never lost. Owner rule (the gen
+  // prompt's own words): a hidden role keeps its content; a DROPPED role forces a retype.
+  function repairExperienceCompleteness(cv) {
+    var idx = -1;
+    for (var i = 0; i < cv.length; i++) { if (cv[i] && cv[i].id === 'experience') { idx = i; break; } }
+    if (idx < 0) return null;
+    var sec = cv[idx];
+    var roles = Array.isArray(sec.roles) ? sec.roles : [];
+    var ph = function (r) { return /^\s*\[/.test(String((r && (r.title || r.role)) || '')); };
+    var real = roles.filter(function (r) { return r && !ph(r); });
+    if (real.length < 2) return null;                 // fully degraded -> repairExperienceFromPI owns it
+    var pi = {}; try { pi = JSON.parse(localStorage.getItem('personalInfo') || '{}') || {}; } catch (_) { return null; }
+    var src = Array.isArray(pi.experience) ? pi.experience : null;
+    if (!src || !src.length) return null;
+    var norm = function (s) { return String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); };
+    var key = function (r) { return norm((r && (r.title || r.role)) || '') + '|' + norm((r && r.company) || ''); };
+    var have = {};
+    real.forEach(function (r) { have[key(r)] = true; });
+    var KEEP = ['id', 'title', 'company', 'location', 'years', 'isCurrent', 'bullets', 'outcomes'];
+    var missing = src.filter(function (r) {
+      if (!r || ph(r)) return false;
+      var t = norm(r.title || r.role);
+      if (!t) return false;                           // unnamed PI slot -> skip
+      return !have[key(r)];
+    }).map(function (r) {
+      var o = {}; KEEP.forEach(function (k) { if (r[k] !== undefined) o[k] = r[k]; });
+      o.on = false;                                   // restore HIDDEN — does not change the visible CV
+      return o;
+    });
+    if (!missing.length) return null;
+    var copy = cv.slice();
+    copy[idx] = Object.assign({}, sec, { roles: roles.concat(missing) });
+    try { console.log('[415] experience-completeness restored ' + missing.length + ' missing role(s) hidden'); } catch (_) {}
+    return copy;
+  }
+
   function explodeAdditionalToSections(cv) {
     var xi = -1;
     for (var i = 0; i < cv.length; i++) {
@@ -1139,6 +1181,7 @@
       var rl = repairLanguagesFromPI(cv); if (rl) { cv = rl; changed = true; }
       var ra = repairAccessibilityFromPI(cv); if (ra) { cv = ra; changed = true; }
       var re = repairExperienceFromPI(cv); if (re) { cv = re; changed = true; }
+      var rec = repairExperienceCompleteness(cv); if (rec) { cv = rec; changed = true; }
       var ex = explodeAdditionalToSections(cv); if (ex) { cv = ex; changed = true; }
       var pa = partitionAdditional(cv); if (pa) { cv = pa; changed = true; }
       var jr = scrubJuniorRugby(cv); if (jr) { cv = jr; changed = true; }

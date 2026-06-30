@@ -1,6 +1,6 @@
 # AntCV — Open vs Closed issues (2026-06-30)
 
-**State:** PWA **1.50.996** · docx-worker **1.14.102** · access-relay **1.3.2** · unit suite 529/529.
+**State:** PWA **1.50.997** · docx-worker **1.14.102** · access-relay **1.3.2** · unit suite 529/529.
 Supersedes `PROJECT_ISSUES_OPEN_CLOSED_2026-06-29.md`. Per-item detail: `SESSION_2026-06-30_CL_HARDENING.md`,
 `CL_CV_GENERIC_TEMPLATES_2026-06-30.md`, `NEXT_SESSION_2026-07-01.md`. Full running history: `ACTIVE_BUGS.md`.
 
@@ -14,8 +14,9 @@ Supersedes `PROJECT_ISSUES_OPEN_CLOSED_2026-06-29.md`. Per-item detail: `SESSION
 | 2026-06-29 (data-loss + CL/export) | 14 | relay 1.3.2 data-loss-at-source + 13 PWA/worker fixes |
 | 2026-06-30 (CL/CV hardening + templates) | 18 | 1.50.980→995 + worker 1.14.94→1.14.101 |
 | 2026-06-30 PM (export-review feedback) | 4 | Mgmt→Management + vertical cue (1.50.996), signature-clip (wk 1.14.102), G sign-off order confirmed shipped |
-| **Closed, last 3 batches** | **39** | |
-| **OPEN now** | **17** | 2 owner-blockers, 2 CL-format, 4 generation/edit, 9 render-gated |
+| 2026-06-30 PM2 (CV export review) | 2 | CL opening orphan-tighten + RESULTS-DISTINCT generation rules (1.50.997) |
+| **Closed, last 3 batches** | **41** | |
+| **OPEN now** | **18** | 3 owner-blockers (+CV empty-positions), 2 CL-format, 4 generation/edit, 9 render-gated |
 
 (Cumulative project history predates these snapshots; the authoritative running log is `ACTIVE_BUGS.md` —
 per-batch snapshots are the practical tally. No single from-inception counter is maintained.)
@@ -45,16 +46,30 @@ per-batch snapshots are the practical tally. No single from-inception counter is
 | **1.50.996** | **CL-HEADLINE-VRULE-001** — a section with the headline TEXT hidden had no visual cue; new `headlineVRule` draws a vertical accent line down the section's left edge; editor "│ Cue" toggle (enabled when headline off) | boot-smoke; owner confirms cue on a headline-off section |
 | **wk 1.14.102** | **CL-SIGNATURE-CLIP-001** — signature lower part hidden by white in the CloudConvert PDF (preview fine); the inline image was clipped to its 276-twip line box. Reserve the image's full height (px×15, lineRule "atLeast") | diag-cl-signature/closing/signoff-order OK; owner confirms on export |
 | **(confirmed)** | **G — CL sign-off order closing→name→signature** — already shipped; diag-cl-signoff-order verifies closing<name<sig | diag 2/2 |
+| **1.50.997** | **CL opening orphan-tighten** — the COMPRESSION-TIGHT rule omitted `opening_content`, so the CL opening orphaned to a 4th line; now capped to 3 rendered lines (cut ~30 chars / one clause if it would reach line 4) | gen rule; owner verifies on regen |
+| **1.50.997** | **RESULTS-DISTINCT-001** (generation) — a role's Results headline must read differently from its bullets (no verbatim copy), prefer the quantified outcome, and hide the restated bullet. Partly addresses open #1 on the generation side | gen rule; owner verifies on regen — display-hide of EXISTING dups stays open #1 |
 
 ---
 
 ## OPEN — ordered
 
 **TOP (owner blockers):**
-1. **Kernel role bullets/results + Students-Council dup** (data-loss class) — owner rules: dup → HIDE THE
-   BULLET not the result; manual result stays SEPARATE from bullets; Council result "lost several times" =
-   read/persistence bug. Write owner's authoritative CSA/Ops/Council bullets+results to kernel + verify it
-   persists. (Council `hasOutcomes:0` → laminator derives from a bullet → the dup.)
+1. **Role Results restate a bullet + the dup bullet is not hidden** (data-loss class; owner rules: dup →
+   HIDE THE BULLET not the result; manual result stays SEPARATE from bullets). NEW evidence 2026-06-30 CV
+   export: "Senior Optics, Sirin Labs" Results restated bullet 1; "Computer Systems Administrator, IDF"
+   Results = bullet 2 VERBATIM while bullet 1 ("Cut recovery time from hours to minutes") is the real
+   measurable result that should have been the headline. Generation side PARTLY addressed by
+   RESULTS-DISTINCT-001 (1.50.997 — results must read differently from bullets, prefer the quantified one,
+   hide the restated bullet) — verify on a fresh regen. STILL OPEN: a DISPLAY-LAYER dedup so an EXISTING
+   doc hides a visible bullet whose text is substantially contained in that role's `results` (preview
+   ~5915-6059 + worker render); Council `hasOutcomes:0` → laminator derives from a bullet → the dup. Needs
+   owner's live data + a real export to verify.
+1b. **CV shows 2 empty "[Role title], [Company]  [Years]" positions in the preview** (owner 2026-06-30) —
+   bracketed placeholder roles leak into the GENERATED/exported CV. The ghost-placeholder filter
+   (CV-GHOST-PLACEHOLDER-001) deliberately KEEPS bracketed `[Role title]` roles (so a fresh template stays
+   fillable), so a generated doc with leftover unfilled slots shows them. Fix: in a generated/laminated CV
+   (not the fresh-template editor), drop on:true roles whose title is still the `[Role title]` placeholder.
+   Distinguish generated-doc vs fresh-template carefully (don't hide slots the user is mid-filling).
 2. **Candidate-header photo/text placement** (#6) — 3-column-grid + gridSpan: header splits at 2.31" while
    body sidebar stays 2.75"; medallion center 1.47" from left, 0.27" from top. Render-gated (owner exports).
 3. **rich_block inline-edit PERSISTENCE (data-loss class)** — editing a CL rich_block in the PREVIEW

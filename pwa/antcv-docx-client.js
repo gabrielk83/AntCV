@@ -2534,12 +2534,28 @@ export function applyOutcomesMode(docSections, doc) {
     // "Hide" omits the bullet from the EXPORT render only; the stored sections in
     // localStorage are never mutated, so nothing is deleted and it is reversible.
     const normLine = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    // RESULT-SUBSUMES-BULLET-002 (owner 2026-07 CV(6): the Result is a NEAR-duplicate of a
+    // bullet — "Built automated backup…" vs "Build automated backup…" (tense), "Directed
+    // technical work for…" vs "Direct technical work across…" (reworded). Exact-substring
+    // subsumption missed these, so the bullet stayed visible alongside its Result. Also hide a
+    // bullet whose SIGNIFICANT tokens are ≥72% contained in the Result (a paraphrase/tense
+    // variant), not only a verbatim substring.
+    const _sigTokens = (s) => normLine(s).split(' ').filter((w) => w.length >= 3);
     const hideSubsumed = (role, resultsText) => {
       const nr = normLine(resultsText);
       if (!nr) return Array.isArray(role.bullets) ? role.bullets : [];
+      const rTok = new Set(_sigTokens(resultsText));
       return (Array.isArray(role.bullets) ? role.bullets : []).filter((b) => {
-        const nb = normLine(typeof b === 'string' ? b : (b && (b.b || b.t)) || '');
-        return !(nb.length >= 15 && nr.indexOf(nb) >= 0);
+        const bt = typeof b === 'string' ? b : (b && (b.b || b.t)) || '';
+        const nb = normLine(bt);
+        if (nb.length < 15) return true;                         // too short to judge
+        if (nr.indexOf(nb) >= 0) return false;                   // verbatim substring
+        const bTok = _sigTokens(bt);
+        if (bTok.length >= 4) {
+          const shared = bTok.filter((w) => rTok.has(w)).length;
+          if (shared / bTok.length >= 0.72) return false;        // near-duplicate / paraphrase
+        }
+        return true;
       });
     };
     // RESULT-NUMBER-NO-REUSE-001 (owner 2026-06-19: "if the number is used for the

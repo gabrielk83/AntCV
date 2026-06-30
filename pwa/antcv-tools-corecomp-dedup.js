@@ -20,7 +20,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.8';
+  var VERSION = '1.51.18b';
   if (window.__antcvToolsCoreCompDedup === VERSION) return;
   window.__antcvToolsCoreCompDedup = VERSION;
 
@@ -48,14 +48,34 @@
       // Focus-Area labels = left column, skip the header row (row 0).
       var faList = cc.rows.slice(1).map(function (r) { return Array.isArray(r) ? sig(r[0]) : []; }).filter(function (w) { return w.length; });
       if (!faList.length) return;
-      var before = tools.items.length;
+      // TOOLS-CORECOMP-TRIM-001 (owner 2026-07: a TOOLS value's PARENTHETICAL repeated a whole
+      // competency — "technical-commercial evaluation (RFQ/RFI, supplier scoring, feasibility,
+      // total landed cost)" → keep only "technical-commercial evaluation"). Build the full
+      // CORE COMPETENCIES token set (both columns) and drop any parenthetical whose significant
+      // tokens are mostly found there.
+      var ccTokens = {};
+      cc.rows.slice(1).forEach(function (r) { if (Array.isArray(r)) r.forEach(function (c) { sig(c).forEach(function (w) { ccTokens[w] = 1; }); }); });
+      var trimParen = function (body) {
+        return String(body == null ? '' : body).replace(/\s*\(([^()]+)\)/g, function (m, inner) {
+          var it = sig(inner);
+          if (it.length >= 2) { var sh = it.filter(function (w) { return ccTokens[w]; }).length; if (sh / it.length >= 0.5) return ''; }
+          return m;
+        }).replace(/\s{2,}/g, ' ').replace(/\s+([,.;])/g, '$1').replace(/[\s,;]+$/, '').trim();
+      };
+      var before = tools.items.length, trimmed = 0;
       var kept = tools.items.filter(function (it) {
         if (!it || it.grp || !it.b) return true;                 // keep sub-headers + bodyless rows
         var lw = sig(it.b);
         for (var i = 0; i < faList.length; i++) { if (dup(lw, faList[i])) return false; }
         return true;
       });
-      if (kept.length === before) return;                        // idempotent — nothing duplicated
+      kept.forEach(function (it) {
+        if (it && !it.grp && typeof it.t === 'string' && it.t.indexOf('(') >= 0) {
+          var nt = trimParen(it.t);
+          if (nt && nt !== it.t) { it.t = nt; trimmed++; }
+        }
+      });
+      if (kept.length === before && !trimmed) return;            // idempotent — nothing duplicated
       tools.items = kept;
       localStorage.setItem('sections', JSON.stringify(secs));
       try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { reason: 'tools-corecomp-dedup' } })); } catch (_) {}

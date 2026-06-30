@@ -25198,22 +25198,41 @@ function buildLinearDocument(ctx) {
       var __sigAsp = (function () { var a = Number(pi.signature_aspect); return Number.isFinite(a) && a > 0.05 && a <= 3 ? a : 0.4; })();
       var __sigH = Math.max(16, Math.round(__sigW * __sigAsp));
       var __sigAlign = ({ left: AlignmentType.LEFT, center: AlignmentType.CENTER, right: AlignmentType.RIGHT })[String(pi.signature_align || "center").toLowerCase()] || AlignmentType.CENTER;
-      // CL-SIGNATURE-CLIP-001 (owner 2026-06-30): the inline signature was clipped at
-      // its line box bottom in the CloudConvert PDF (lower part hidden by white) because
-      // line:276 ("auto") did NOT grow to the image height, so LibreOffice cropped the
-      // overflow. Reserve the image's FULL height in the line box (px -> twips = x15,
-      // "atLeast") + a little after-space, so the whole signature renders. Preview was
-      // fine because it lays the image out natively.
-      var __sigLineTw = Math.max(276, Math.round(__sigH * 15));
-      bodyChildren.push(new Paragraph({
-        spacing: { before: 80, after: 40, line: __sigLineTw, lineRule: "atLeast" },
-        keepLines: true,
+      // CL-SIGNATURE-CLIP-002 (owner 2026-06-30: lower-left STILL cut after CLIP-001's
+      // line-box reservation). An INLINE image is positioned on the text baseline and
+      // LibreOffice/CloudConvert can crop the part that falls outside the line box's
+      // ascent/descent regardless of line height. Render the signature inside a
+      // BORDERLESS single-cell TABLE instead: a table cell sizes to its content, so the
+      // whole image renders with no baseline clipping. Table alignment keeps L/C/R; the
+      // cell width is the image width so center/right place it correctly.
+      var __sigCellW = Math.max(300, Math.round(__sigW * 15));
+      var __sigNoBorder = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
+      bodyChildren.push(new Table({
         alignment: __sigAlign,
-        children: [new ImageRun({
-          data: __sigData,
-          type: detectImageType(pi.signature_b64),
-          transformation: { width: __sigW, height: __sigH },
-          altText: { title: "Signature", description: "Signature", name: "Signature" }
+        width: { size: __sigCellW, type: WidthType.DXA },
+        columnWidths: [__sigCellW],
+        borders: {
+          top: __sigNoBorder, bottom: __sigNoBorder, left: __sigNoBorder, right: __sigNoBorder,
+          insideHorizontal: __sigNoBorder, insideVertical: __sigNoBorder
+        },
+        rows: [new TableRow({
+          children: [new TableCell({
+            width: { size: __sigCellW, type: WidthType.DXA },
+            borders: {
+              top: __sigNoBorder, bottom: __sigNoBorder, left: __sigNoBorder, right: __sigNoBorder
+            },
+            margins: { top: 80, bottom: 60, left: 0, right: 0 },
+            children: [new Paragraph({
+              spacing: { before: 0, after: 0 },
+              alignment: __sigAlign,
+              children: [new ImageRun({
+                data: __sigData,
+                type: detectImageType(pi.signature_b64),
+                transformation: { width: __sigW, height: __sigH },
+                altText: { title: "Signature", description: "Signature", name: "Signature" }
+              })]
+            })]
+          })]
         })]
       }));
     } catch (__sigErr) { /* bad signature image -> skip; never break the CL */ }
@@ -27772,7 +27791,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.103-lead-colon-perrow";
+var VERSION = "1.14.104-signature-table-wrap";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

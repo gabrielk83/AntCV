@@ -24,7 +24,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.987-cl-prose-richblock-fill';
+  var VERSION = '1.50.988-cl-prose-richblock-fill';
   if (window.__antcvClProseRbFill987 === VERSION) return;
   window.__antcvClProseRbFill987 = VERSION;
 
@@ -41,15 +41,33 @@
       if (!secs || !Array.isArray(secs.cl)) return;
       var changed = false;
       var cl = secs.cl.map(function (sec) {
-        if (!sec || IDS.indexOf(sec.id) < 0 || sec.type !== 'rich_block' || !Array.isArray(sec.items) || !sec.items.length) return sec;
+        if (!sec || sec.type !== 'rich_block' || !Array.isArray(sec.items) || !sec.items.length) return sec;
         var lead = sec.items[0];
         if (!lead || typeof lead !== 'object') return sec;
-        var prose = String(sec.content == null ? '' : sec.content).trim();
-        if (prose && !isPlaceholder(prose) && isPlaceholder(lead.t)) {
-          var items = sec.items.slice();
-          items[0] = Object.assign({}, lead, { t: prose });
-          changed = true;
-          return Object.assign({}, sec, { items: items });
+        // (1) opening/who/why: bridge the generated prose from .content into items[0].t.
+        if (IDS.indexOf(sec.id) >= 0) {
+          var prose = String(sec.content == null ? '' : sec.content).trim();
+          if (prose && !isPlaceholder(prose) && isPlaceholder(lead.t)) {
+            var items = sec.items.slice();
+            items[0] = Object.assign({}, lead, { t: prose });
+            changed = true;
+            return Object.assign({}, sec, { items: items });
+          }
+          return sec;
+        }
+        // (2) FOUNDATION lead: the "I connect X with Y" line has NO generated field, so it
+        // stays a template placeholder even after Hands-on/Professionally are filled. When the
+        // bullets are REAL (generated CL) but the lead is still a placeholder, replace the lead
+        // with a clean, role-agnostic connector (the owner can inline-edit it). Never touches a
+        // real lead the user wrote.
+        if (sec.id === 'foundation' && isPlaceholder(lead.t)) {
+          var hasRealBullet = sec.items.slice(1).some(function (r) { return r && r.mk && !isPlaceholder(r.t); });
+          if (hasRealBullet) {
+            var it2 = sec.items.slice();
+            it2[0] = Object.assign({}, lead, { t: 'I connect hands-on technical and product practice with the clear decisions, validation, and delivery this kind of role needs.' });
+            changed = true;
+            return Object.assign({}, sec, { items: it2 });
+          }
         }
         return sec;
       });

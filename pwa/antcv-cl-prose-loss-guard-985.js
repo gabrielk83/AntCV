@@ -23,7 +23,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.986-cl-prose-loss-guard';
+  var VERSION = '1.50.988-cl-prose-loss-guard';
   if (window.__antcvClProseGuard985 === VERSION) return;
   window.__antcvClProseGuard985 = VERSION;
 
@@ -125,10 +125,34 @@
     try { console.log('[CL-PROSE-LOSS-GUARD] re-applied real prose over restored placeholders'); } catch (_) {}
   }
 
+  // STANDALONE CL KEYS (signature + editable slogan/closing/name) are ALSO wiped by the
+  // refresh-triggered restore (owner: "export PDF has no signature"). Snapshot them to a
+  // LOCAL-ONLY stash when non-empty; re-apply when a restore empties them. The signature is
+  // skipped if the user explicitly HID it (antcv:signatureHidden='1').
+  var SK = ['antcv:signatureB64', 'antcv:signatureAlign', 'antcv:signatureSize', 'antcv:signatureAspect',
+    'antcv:clSlogan', 'antcv:clClosing', 'antcv:clSignName', 'antcv:clSloganAlign', 'antcv:clClosingAlign', 'antcv:clSignNameAlign'];
+  var SK_STORE = 'antcv:clKeysGuard';
+  function guardKeys() {
+    var stash = {}; try { stash = JSON.parse(localStorage.getItem(SK_STORE) || '{}') || {}; } catch (_) {}
+    var hidden = false; try { hidden = localStorage.getItem('antcv:signatureHidden') === '1'; } catch (_) {}
+    var dirty = false, restored = false;
+    SK.forEach(function (k) {
+      var v = null; try { v = localStorage.getItem(k); } catch (_) {}
+      var has = v != null && String(v).trim() !== '';
+      if (has) { if (stash[k] !== v) { stash[k] = v; dirty = true; } }
+      else if (stash[k] != null && String(stash[k]).trim() !== '') {
+        if (k === 'antcv:signatureB64' && hidden) return; // honour an explicit hide
+        try { localStorage.setItem(k, stash[k]); restored = true; } catch (_) {}
+      }
+    });
+    if (dirty) { try { localStorage.setItem(SK_STORE, JSON.stringify(stash)); } catch (_) {} }
+    if (restored) { try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { reason: 'cl-keys-guard' } })); } catch (_) {} try { console.log('[CL-PROSE-LOSS-GUARD] re-applied signature / editable CL keys'); } catch (_) {} }
+  }
+
   var t = null;
   function run() {
     if (disabled() || erasing()) return;
-    try { reapply(); snapshot(); } catch (_) { /* self-disable on error */ }
+    try { reapply(); snapshot(); guardKeys(); } catch (_) { /* self-disable on error */ }
   }
   function debounced() { if (t) clearTimeout(t); t = setTimeout(run, 400); }
 

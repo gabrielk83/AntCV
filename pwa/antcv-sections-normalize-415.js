@@ -15,7 +15,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.21-acc-repair';
+  var VERSION = '1.51.23-exp-repair';
   if (window.__antcvSectionsNormalize === VERSION) return;
   window.__antcvSectionsNormalize = VERSION;
 
@@ -715,6 +715,34 @@
     return copy;
   }
 
+  // EXPERIENCE-REPAIR-001 (owner 2026-07: "CV did not converge" — PROFESSIONAL EXPERIENCE
+  // exported as the me() skeleton "[Role title] | [Company name]"). The kernel-recovery floor
+  // restored the blank skeleton over a lost experience section, but the REAL roles survive in
+  // personalInfo.experience. When the section has fewer than 2 real (non-placeholder) roles and
+  // personalInfo holds real ones, rebuild the section's roles from personalInfo (the section role
+  // shape is a subset of the personalInfo role shape — id/title/company/years/on/bullets/outcomes;
+  // results are laminated downstream from outcomes). Only fires on a degraded section.
+  function repairExperienceFromPI(cv) {
+    var idx = -1;
+    for (var i = 0; i < cv.length; i++) { if (cv[i] && cv[i].id === 'experience') { idx = i; break; } }
+    if (idx < 0) return null;
+    var sec = cv[idx];
+    var roles = Array.isArray(sec.roles) ? sec.roles : [];
+    var ph = function (r) { return /^\s*\[/.test(String((r && (r.title || r.role)) || '')); };
+    if (roles.filter(function (r) { return r && !ph(r); }).length >= 2) return null;   // section is fine
+    var pi = {}; try { pi = JSON.parse(localStorage.getItem('personalInfo') || '{}') || {}; } catch (_) { return null; }
+    var src = Array.isArray(pi.experience) ? pi.experience : null;
+    if (!src || !src.length) return null;
+    var KEEP = ['id', 'title', 'company', 'location', 'years', 'isCurrent', 'on', 'bullets', 'outcomes'];
+    var newRoles = src.filter(function (r) { return r && r.on !== false && !ph(r); }).map(function (r) {
+      var o = {}; KEEP.forEach(function (k) { if (r[k] !== undefined) o[k] = r[k]; }); return o;
+    });
+    if (newRoles.length < 2) return null;
+    var copy = cv.slice();
+    copy[idx] = Object.assign({}, sec, { roles: newRoles });
+    return copy;
+  }
+
   function explodeAdditionalToSections(cv) {
     var xi = -1;
     for (var i = 0; i < cv.length; i++) {
@@ -1110,6 +1138,7 @@
       var no = neutralizeUnsolicitedOpener(cv); if (no) { cv = no; changed = true; }
       var rl = repairLanguagesFromPI(cv); if (rl) { cv = rl; changed = true; }
       var ra = repairAccessibilityFromPI(cv); if (ra) { cv = ra; changed = true; }
+      var re = repairExperienceFromPI(cv); if (re) { cv = re; changed = true; }
       var ex = explodeAdditionalToSections(cv); if (ex) { cv = ex; changed = true; }
       var pa = partitionAdditional(cv); if (pa) { cv = pa; changed = true; }
       var jr = scrubJuniorRugby(cv); if (jr) { cv = jr; changed = true; }

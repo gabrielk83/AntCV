@@ -1,6 +1,6 @@
 # AntCV — Open vs Closed issues (2026-06-30)
 
-**State:** PWA **1.50.995** · docx-worker **1.14.101** · access-relay **1.3.2** · unit suite 528/528.
+**State:** PWA **1.50.996** · docx-worker **1.14.102** · access-relay **1.3.2** · unit suite 529/529.
 Supersedes `PROJECT_ISSUES_OPEN_CLOSED_2026-06-29.md`. Per-item detail: `SESSION_2026-06-30_CL_HARDENING.md`,
 `CL_CV_GENERIC_TEMPLATES_2026-06-30.md`, `NEXT_SESSION_2026-07-01.md`. Full running history: `ACTIVE_BUGS.md`.
 
@@ -13,8 +13,9 @@ Supersedes `PROJECT_ISSUES_OPEN_CLOSED_2026-06-29.md`. Per-item detail: `SESSION
 | 2026-06-28 (pagination/PDF header) | 3 | group split, PDF-header-left, export warmup |
 | 2026-06-29 (data-loss + CL/export) | 14 | relay 1.3.2 data-loss-at-source + 13 PWA/worker fixes |
 | 2026-06-30 (CL/CV hardening + templates) | 18 | 1.50.980→995 + worker 1.14.94→1.14.101 |
-| **Closed, last 3 batches** | **35** | |
-| **OPEN now** | **16** | 2 owner-blockers, 4 CL-format, 3 generation, 7 render-gated |
+| 2026-06-30 PM (export-review feedback) | 4 | Mgmt→Management + vertical cue (1.50.996), signature-clip (wk 1.14.102), G sign-off order confirmed shipped |
+| **Closed, last 3 batches** | **39** | |
+| **OPEN now** | **17** | 2 owner-blockers, 2 CL-format, 4 generation/edit, 9 render-gated |
 
 (Cumulative project history predates these snapshots; the authoritative running log is `ACTIVE_BUGS.md` —
 per-batch snapshots are the practical tally. No single from-inception counter is maintained.)
@@ -36,6 +37,15 @@ per-batch snapshots are the practical tally. No single from-inception counter is
 | **1.50.995** | **CV admin/export template rebuilt** to `CV_Template_AntCV_Prompts_Generic (4)` — me().cv: PROFILE 2-3 sentences + WRITING-RULES/COHERENCE; WORK STYLE ends on a people skill; per-role `Results:` (r1-r5); SELECTED OUTCOMES kept (preview's results); LANGUAGES/INTERESTS/ACCESSIBILITY split into own sidebar sections in docx order before ADDITIONAL; blank-fn re-templates `role.results` | me() builds 15 sections, unit 528/528, boot-smoke; owner verifies a real CV export |
 | **wk 1.14.101** | **CV contact-line sidebar bridge** — band-overlap mode no longer font-shrinks the contact line (full size, wraps if long); empty photo-zone cell sized to the figure's right edge so the text cell extends left (CONTACT-BRIDGE-NOSHRINK/WIDECELL-001) | worker unit 75/75, diags 31/34 (1 pre-existing FAIL); owner verifies export w/ band-overlap photo + long contact line |
 
+### CLOSED — 2026-06-30 PM (owner export-review feedback)
+
+| Ver | Issue | Verified |
+|---|---|---|
+| **1.50.996** | **Management spelled in full** (owner "use the full word management, not Mgmt") — dropped Management→Mgmt abbreviation + added Mgmt→Management EXPAND in antcv-core-comp-compress.js | unit 529/529 (test updated) |
+| **1.50.996** | **CL-HEADLINE-VRULE-001** — a section with the headline TEXT hidden had no visual cue; new `headlineVRule` draws a vertical accent line down the section's left edge; editor "│ Cue" toggle (enabled when headline off) | boot-smoke; owner confirms cue on a headline-off section |
+| **wk 1.14.102** | **CL-SIGNATURE-CLIP-001** — signature lower part hidden by white in the CloudConvert PDF (preview fine); the inline image was clipped to its 276-twip line box. Reserve the image's full height (px×15, lineRule "atLeast") | diag-cl-signature/closing/signoff-order OK; owner confirms on export |
+| **(confirmed)** | **G — CL sign-off order closing→name→signature** — already shipped; diag-cl-signoff-order verifies closing<name<sig | diag 2/2 |
+
 ---
 
 ## OPEN — ordered
@@ -47,11 +57,17 @@ per-batch snapshots are the practical tally. No single from-inception counter is
    persists. (Council `hasOutcomes:0` → laminator derives from a bullet → the dup.)
 2. **Candidate-header photo/text placement** (#6) — 3-column-grid + gridSpan: header splits at 2.31" while
    body sidebar stays 2.75"; medallion center 1.47" from left, 0.27" from top. Render-gated (owner exports).
+3. **rich_block inline-edit PERSISTENCE (data-loss class)** — editing a CL rich_block in the PREVIEW
+   (contentEditable via `B`, paths `items.i.t`/`items.i.b`) reverts on Ask AI / export / tab switch. The
+   edit DOES commit to `sections`, but a sidecar re-runs on `antcv:sections-updated` (which those events
+   fire) and re-hydrates the row: candidates are `antcv-nordic-cl-order-971.js` (lead-in/INSTR seeding),
+   `antcv-cl-prose-richblock-fill-987.js` (re-bridges generated prose), `antcv-cl-prose-loss-guard-985.js`
+   (restores a prose snapshot it reads as "loss"). Needs the owner's LIVE browser to pin which sidecar
+   clobbers (the 971 guards claim to skip real edits; 985/987 are the likely culprits). Fix = make the
+   re-hydrator skip user-edited rows (mark edited rows / compare against the snapshot). Do NOT blind-fix —
+   regression risk in generation/prose-fill.
 
-**CL format (owner 2026-06-29):**
-3. **G** — sign-off order **closing→name→signature** (sig AFTER name; reverse of NAME-FOLLOWS-SIG); editable
-   defaults closing="At your service," + name="Gabriel". (Verify whether the 991→994 template work already
-   reordered this.)
+**CL format:**
 4. **J** — CL Foundation "Professionally" bold body — needs owner confirmation of what should read as bold.
 5. **F3** — surface the signature control as a subsection in the CL FORMAT panel (today under Layout). (F1
    editable slogan + F2 Nordic-scope already shipped.)
@@ -59,27 +75,35 @@ per-batch snapshots are the practical tally. No single from-inception counter is
    208/211), cycler contended by 3 sidecars (207/208/211 can render empty), and MISSING on rich_block
    headings. (Per-row/`__group__` body CJLR already works.)
 
-**Generation:**
+**Generation / edit:**
 7. **I** — quick-gen must hide irrelevant roles/bullets/tools to converge a 4-page kernel to ~1.5–2 pages.
-8. **bring_intro generation field** — emit the WHAT I BRING intro line on a fresh generation (schema + apply
-   + the 987 prose bridge). Today the lead is clean but empty.
-9. **Recruiter-answers PAGE** — verify the CL renders exactly N question+answer blocks (header band + "Kind
-   regards," + AI notice) ONLY when the JD asks questions, on a real export. Gen rule + `questions_in_jd` +
-   worker `jd_questions` exist; this is end-to-end verification + any render fix.
+8. **bring_intro generation field** — emit the WHAT I BRING intro line on a fresh generation, ending with a
+   colon (e.g. "Structure - across scope, suppliers, validation, and business decisions:"). Schema + apply +
+   the 987 prose bridge. Today the lead (item[0].t) is clean but EMPTY (owner: "What I bring line is still
+   empty… and has no ':'"). Owner-gated to verify on a real generate.
+9. **Lead-in colons on CL sections** (owner 2026-06-30: "Foundation also missing ':' and so does How I would
+   contribute") — the colon after a lead label is the per-section `leadColon` ("L:" toggle, `__leadSep` at
+   app.src.js ~5430). "Why" shows it (owner toggled it); foundation/contribute/bring don't. Fix options:
+   default `leadColon:true` for the CL Nordic lead sections in me() (fresh skeletons + new generations) and/or
+   a sidecar/render-default for existing docs. Note: tangled with #3 persistence — if leadColon toggles also
+   revert, fix #3 first.
+10. **Recruiter-answers PAGE** — verify the CL renders exactly N question+answer blocks (header band + "Kind
+    regards," + AI notice) ONLY when the JD asks questions, on a real export. Gen rule + `questions_in_jd` +
+    worker `jd_questions` exist; this is end-to-end verification + any render fix.
 
 **Render-gated (need owner CloudConvert export):**
-10. **CV 3-page convergence** — floating text-anchored "spine" (tblpPr vertAnchor=text + continuous sectPr +
+11. **CV 3-page convergence** — floating text-anchored "spine" (tblpPr vertAnchor=text + continuous sectPr +
     equal page-table grids). Sidebar colored spine stops ~2cm short = deliberate anti-blank-page slack; the
     floating spine is the real fix — do NOT raise body-row mins ([[sidebar-fill-gap-is-antiblank-slack]]).
-11. **AI-notice two-box** (owner's design) — sidebar-colored box at the BOTTOM of BOTH columns; notice TEXT
+12. **AI-notice two-box** (owner's design) — sidebar-colored box at the BOTTOM of BOTH columns; notice TEXT
     only in the column with fewer lines; the box closes the sidebar-color gap. WORKER change, BOTTOM-ANCHORED
     only (growing the sidebar fill re-triggered PDF-BLANK-PAGE before).
-12. **Strategic Expertise cell text past the border** (CV CORE COMPETENCIES + CL WHAT I BRING) — worker table
+13. **Strategic Expertise cell text past the border** (CV CORE COMPETENCIES + CL WHAT I BRING) — worker table
     cell width.
-13. **CV orphans** (20-40-char tails in bullets + sidebar lists + table cells); **"SW projects: AntCV"**
+14. **CV orphans** (20-40-char tails in bullets + sidebar lists + table cells); **"SW projects: AntCV"**
     Additional-Info value → live ExternalHyperlink; **line-end overflow** (main wraps ~½ line early).
-14. **zoom 5% step + export-preview default 75%**.
-15. **eliminate the CloudConvert refresh** — `__antcvUseServerPdf` (app.src.js ~1441) flips only after config
+15. **zoom 5% step + export-preview default 75%**.
+16. **eliminate the CloudConvert refresh** — `__antcvUseServerPdf` (app.src.js ~1441) flips only after config
     `B` loads, so the FIRST export is browser-print and a refresh is needed; make server-PDF available on the
     first export so the data-loss-triggering refresh isn't needed.
 

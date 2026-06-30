@@ -2490,9 +2490,16 @@ export function applyOutcomesMode(docSections, doc) {
         const t = textOf(bl[i]);
         if (!t || t.length < 12) continue;
         if (/\bpatent\b/i.test(t) || (pno && t.toLowerCase().indexOf(pno) >= 0)) continue;
-        // prefer a bullet carrying a concrete metric (number, %, x, count, range)
+        // RESULTS-DERIVE-MEASURABLE-001 (owner 2026-07, browser-traced: CSA Result was the
+        // non-numeric "Administered…" bullet, not "Cut recovery time from hours to minutes").
+        // A "measurable" result is not only a DIGIT — a qualitative improvement ("from X to Y",
+        // "hours to minutes", cut/reduced/saved/increased/eliminated…) is a real RESULT. Score
+        // those as metric-bearing so they win over a longer plain-duty bullet, and a hard number
+        // gets a small extra tiebreak. Length is only the final tiebreak.
         const hasNum = /\d|%|\bx\b|×/.test(t);
-        const score = (hasNum ? 1000 : 0) + Math.min(t.length, 240);
+        const hasMeasurable = /\bfrom\s+[\w-]+\s+to\s+[\w-]+\b|\b(?:hours?|days?|weeks?|months?)\s+to\s+(?:seconds?|minutes?|hours?|days?)\b|\b(?:cut|reduc\w*|sav\w*|increas\w*|accelerat\w*|eliminat\w*|halv\w*|doubl\w*|tripl\w*|shorten\w*)\b/i.test(t);
+        const metric = hasNum || hasMeasurable;
+        const score = (metric ? 1000 : 0) + (hasNum ? 200 : 0) + Math.min(t.length, 240);
         if (score > bestScore) { bestScore = score; bestIdx = i; }
       }
       if (bestIdx < 0) return null;

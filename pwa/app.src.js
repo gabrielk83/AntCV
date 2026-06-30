@@ -3202,7 +3202,7 @@
               on: !0,
               type: "text",
               content:
-                "[PROFILE - 3 short parts (45-62 words, max 392 chars): (1) WHO I AM - identity + years (if known) + main domain + broad fit; (2) BODY-MIND - one line on what gives you energy, from real material only; (3) ONE behaviour-based capability close (judgement / communication / people) as the FINAL sentence. NO numbers, NO named systems, NO specific outcomes - those belong in SELECTED OUTCOMES.]",
+                "[PROFILE - 2-3 short factual sentences. Open with a role identity matched to the JD (or, with no JD, the target role type and your own field, e.g. '<discipline> professional with <N>+ years in <field>'). State what you do, for whom, and with what result. Pull your 2-3 strongest proof points from your own history (prefer a measurable one: cycle-time or cost change, a shipped product, a patent or publication, team size directed, breadth of stakeholders). No work-style label unless the JD asks for one. Calm, direct, concrete. WRITING RULES: no banned words or phrases; never invent metrics; team verb is directed/supervised/ran, never bare 'led'; plain hyphen only. COHERENCE: state each achievement once; never echo a label into its value; never print a bracketed instruction - leave empty if you have no real content.]",
             },
             {
               id: "work_style",
@@ -3211,7 +3211,7 @@
               on: !0,
               type: "text_inline",
               content:
-                "[Work style - 1 sentence (22-32 words, max 200 chars), two axes: how you work with information and decisions, then a FINAL clause about people - colleagues, alignment, trust, clear next steps. Behaviour, not adjectives.]",
+                "[WORK STYLE - one short line only, and only if the JD signals it matters; otherwise leave empty. Describe how the work gets done in plain terms (example shape: '<verb> first, <concrete habit>, turns <input> into <agreed output>'). End on a people skill. No corporate language; banned: dynamic, proactive, collaborative, 'strategic mindset'.]",
             },
             {
               id: "outcomes",
@@ -3264,6 +3264,7 @@
                     "[Bullet 2 — measurable result]",
                     "[Bullet 3 — ownership area or domain]",
                   ],
+                  results: "[Results - the single strongest measurable outcome for this role, led with the number or named result (e.g. 'Cut <process> from X to Y'; 'Shipped <product> to <N> customers'). From your own work only, no fabrication.]",
                 },
                 {
                   id: "r2",
@@ -3276,6 +3277,7 @@
                     "[Bullet 2 — measurable result]",
                     "[Bullet 3 — ownership area or domain]",
                   ],
+                  results: "[Results - this role's headline measurable outcome, led with the number or named result; from your own work, no fabrication.]",
                 },
                 {
                   id: "r3",
@@ -3287,6 +3289,7 @@
                     "[Bullet 1 — describe scope and outcome]",
                     "[Bullet 2 — measurable result]",
                   ],
+                  results: "[Results - this role's headline measurable outcome, led with the number or named result; from your own work, no fabrication.]",
                 },
                 {
                   id: "r4",
@@ -3298,6 +3301,7 @@
                     "[Bullet 1 — describe scope and outcome]",
                     "[Bullet 2 — measurable result]",
                   ],
+                  results: "[Results - this role's headline measurable outcome, led with the number or named result; from your own work, no fabrication.]",
                 },
                 {
                   id: "r5",
@@ -3309,6 +3313,7 @@
                     "[Bullet 1 — describe scope and outcome]",
                     "[Bullet 2 — measurable result]",
                   ],
+                  results: "[Results - this role's headline measurable outcome, led with the number or named result; from your own work, no fabrication.]",
                 },
                 {
                   id: "r6",
@@ -3460,6 +3465,45 @@
                       },
                     ],
             },
+            // CV-DOCX-ORDER-001 (owner 2026-06-30): LANGUAGES / INTERESTS /
+            // ACCESSIBILITY split out as their own sidebar sections, in docx order,
+            // before ADDITIONAL. ADDITIONAL stays as the catch-all source.
+            {
+              id: "languages",
+              title: "LANGUAGES",
+              loc: "sidebar",
+              on: !0,
+              type: "labeled_list",
+              items: [
+                {
+                  l: "[Language]",
+                  v: "[native / fluent / professional / intermediate / basic - lead with the local language if the role is in a specific country]",
+                },
+                { l: "[Language]", v: "[level]" },
+              ],
+            },
+            {
+              id: "interests",
+              title: "INTERESTS",
+              loc: "sidebar",
+              on: !0,
+              type: "labeled_list",
+              items: [
+                {
+                  l: "[Interest]",
+                  v: "[one-line detail - a few real interests that fit the company culture; drop if space is tight]",
+                },
+              ],
+            },
+            {
+              id: "accessibility",
+              title: "ACCESSIBILITY",
+              loc: "sidebar",
+              on: !0,
+              type: "text",
+              content:
+                "[ACCESSIBILITY - optional. A factual, first-person statement of any communication needs and what works well (example: '<need>; <accommodation that helps>'). State plainly, no apology framing, no editorial verdict. Omit entirely if not applicable.]",
+            },
             {
               id: "additional",
               title: "ADDITIONAL INFORMATION",
@@ -3471,12 +3515,8 @@
                   ? t.additional
                   : [
                       {
-                        l: "Languages",
-                        v: "[Languages and working proficiency]",
-                      },
-                      {
-                        l: "Other",
-                        v: "[Work permit, relocation, volunteering, or selected personal details]",
+                        l: "[Label]",
+                        v: "[Add only items that support the JD - portfolio or links, availability, work permit, relocation, or disclosures. Drop if not needed.]",
                       },
                     ],
             },
@@ -3609,6 +3649,7 @@
           rr.years = ph("YYYY - YYYY");
           rr.bullets = (Array.isArray(r.bullets) ? r.bullets : [""]).map(
             (_, i) => ph("Bullet " + (i + 1) + " - scope and measurable result"));
+          if (r.results != null) rr.results = ph("Results - headline measurable outcome");
           return rr;
         });
         break;

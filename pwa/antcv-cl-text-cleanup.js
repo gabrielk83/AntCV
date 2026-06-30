@@ -25,7 +25,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.13';
+  var VERSION = '1.51.15';
   if (window.__antcvClTextCleanup === VERSION) return;
   window.__antcvClTextCleanup = VERSION;
 
@@ -73,26 +73,41 @@
 
   function c3(body) {
     var t = String(body == null ? '' : body);
-    if (/[.!?]\s*$/.test(t)) return t;                         // a real sentence — leave it
-    var cleaned = t.replace(CONN_TAIL, '').replace(/[\s,;:]+$/, '');
+    if (/[.!?:]\s*$/.test(t)) return t;                        // a real sentence OR a ":" lead-in — leave it
+    var cleaned = t.replace(CONN_TAIL, '').replace(/[\s,;]+$/, '');
     return cleaned || t;                                       // never blank a body
   }
 
-  // C2b — HWIC INTRO COLON (structure repair). The 760 migration only keeps the HOW I
-  // WOULD CONTRIBUTE intro + closing as MARKERLESS paragraphs when the intro row ends with
-  // ":" (a real action bullet never does). A truncated intro ("My first priorities would")
-  // lacks the ":", so 760 markers EVERY row — the heading/intro and the Goal closing render
-  // as bullets. Re-attach the ":" to the intro row (identified by its headline lead `b`) so
-  // 760 recognises it; the closing then follows automatically. Idempotent.
-  function ensureContribIntroColon(sec) {
-    if (!sec || sec.id !== 'contribute' || !Array.isArray(sec.items) || !sec.items.length) return false;
+  // C2b — HWIC STRUCTURE (owner 2026-07: HWIC first + last item must be MARKERLESS, intro
+  // ends with ":"). The intro is the first row carrying the headline lead ("How I would
+  // contribute"), the closing is the last row (the "Goal" line). Make both markerless
+  // paragraphs and give the intro a ":" lead-in. Done DIRECTLY here (not via the 760 colon
+  // heuristic) so it is self-contained and converges in one synchronous pass — and c3 now
+  // preserves a trailing ":" so the colon is not stripped back off. Idempotent.
+  function ensureContribStructure(sec) {
+    if (!sec || sec.id !== 'contribute' || !Array.isArray(sec.items) || sec.items.length < 2) return false;
     var i0 = sec.items[0];
-    if (!i0 || typeof i0 !== 'object') return false;
-    if (!/contribut/i.test(String(i0.b || ''))) return false;   // only the headline-intro row
+    if (!i0 || typeof i0 !== 'object' || !/contribut/i.test(String(i0.b || ''))) return false;
+    var changed = false;
     var t = String(i0.t == null ? '' : i0.t);
-    if (!t.trim() || /[.!?:]\s*$/.test(t)) return false;         // already terminal — leave it
-    i0.t = t.replace(/\s+$/, '') + ':';
-    return true;
+    if (t.trim() && !/[.!?:]\s*$/.test(t)) { i0.t = t.replace(/\s+$/, '') + ':'; changed = true; }
+    if (i0.mk) { i0.mk = false; changed = true; }
+    var last = sec.items[sec.items.length - 1];
+    if (last && last !== i0 && typeof last === 'object' && last.mk) { last.mk = false; changed = true; }
+    return changed;
+  }
+
+  // C4b — WHAT I BRING colon (owner 2026-07: the bring proof rows read "Need Value" with no
+  // ":"; they are label:value, NOT a continuation, so each lead takes a colon). Force colon
+  // on every bring proof row (the rows after the intro that carry a lead).
+  function ensureBringColons(sec) {
+    if (!sec || sec.id !== 'bring' || !Array.isArray(sec.items)) return false;
+    var changed = false;
+    sec.items.forEach(function (it, i) {
+      if (!it || typeof it !== 'object' || it.grp) return;
+      if (i > 0 && it.b && String(it.t || '').trim() && it.colon !== true) { it.colon = true; changed = true; }
+    });
+    return changed;
   }
 
   function run() {
@@ -101,9 +116,6 @@
       var secs = JSON.parse(localStorage.getItem('sections') || '{}');
       if (!secs || !Array.isArray(secs.cl)) return;
       var changed = false;
-      secs.cl.forEach(function (sec) {
-        if (ensureContribIntroColon(sec)) changed = true;
-      });
       secs.cl.forEach(function (sec) {
         if (!sec || sec.type !== 'rich_block' || !Array.isArray(sec.items)) return;
         var c4Sec = (sec.id === 'foundation' || sec.id === 'bring' || sec.id === 'contribute');
@@ -122,6 +134,12 @@
           if (c3Sec) v = c3(v);
           if (v !== orig) { it.t = v; changed = true; }
         });
+      });
+      // Structure/colon repairs run AFTER the per-item c3/c4 loop so c3 cannot strip the
+      // intro colon (c3 also now preserves a trailing ":").
+      secs.cl.forEach(function (sec) {
+        if (ensureContribStructure(sec)) changed = true;
+        if (ensureBringColons(sec)) changed = true;
       });
       if (!changed) return;
       localStorage.setItem('sections', JSON.stringify(secs));

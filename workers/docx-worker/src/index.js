@@ -25198,8 +25198,15 @@ function buildLinearDocument(ctx) {
       var __sigAsp = (function () { var a = Number(pi.signature_aspect); return Number.isFinite(a) && a > 0.05 && a <= 3 ? a : 0.4; })();
       var __sigH = Math.max(16, Math.round(__sigW * __sigAsp));
       var __sigAlign = ({ left: AlignmentType.LEFT, center: AlignmentType.CENTER, right: AlignmentType.RIGHT })[String(pi.signature_align || "center").toLowerCase()] || AlignmentType.CENTER;
+      // CL-SIGNATURE-CLIP-001 (owner 2026-06-30): the inline signature was clipped at
+      // its line box bottom in the CloudConvert PDF (lower part hidden by white) because
+      // line:276 ("auto") did NOT grow to the image height, so LibreOffice cropped the
+      // overflow. Reserve the image's FULL height in the line box (px -> twips = x15,
+      // "atLeast") + a little after-space, so the whole signature renders. Preview was
+      // fine because it lays the image out natively.
+      var __sigLineTw = Math.max(276, Math.round(__sigH * 15));
       bodyChildren.push(new Paragraph({
-        spacing: { before: 80, after: 0, line: 276, lineRule: "auto" },
+        spacing: { before: 80, after: 40, line: __sigLineTw, lineRule: "atLeast" },
         keepLines: true,
         alignment: __sigAlign,
         children: [new ImageRun({
@@ -27759,7 +27766,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.101-contact-bridge-widecell";
+var VERSION = "1.14.102-signature-clip-fix";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

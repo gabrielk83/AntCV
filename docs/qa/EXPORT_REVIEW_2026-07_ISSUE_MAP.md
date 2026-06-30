@@ -6,6 +6,60 @@ This is the authoritative work-list for the next session — handle ALL of it au
 
 ---
 
+## RESOLUTION — session 2026-07 (PWA 1.51.13 · docx-worker 1.14.106)
+
+All fixes diagnosed on the owner's LIVE data via Chrome MCP and verified end-to-end after
+the 1.51.12/13 deploy reloaded the owner's tab. Confirmed against the real `CV_(4).pdf` +
+`CoverLetter_(11).pdf` exports.
+
+- **A1 Work style empty — FIXED (1.51.5, wk 1.14.106).** work_style is a headlineOff
+  rich_block whose body leaked the me() `[WORK STYLE …]` placeholder. Render-side drop of a
+  rich_block row whose body is entirely a bracketed placeholder (worker `renderRichBlock` +
+  preview app.src.js+app.js); the headlineOff section then renders cleanly to nothing.
+  Verified: placeholder absent from preview + worker export; real content kept. Generation
+  already mandates a real work_style (regen yields one).
+- **B1 Languages/Interests/Accessibility dedup — FIXED (1.51.6 + data-safe 1.51.10).** The
+  415 `explodeAdditionalToSections` returned early when no NEW section was needed, so its
+  dedup never ran. Now dedups regardless; a dedicated section is a valid "home" only when it
+  holds GOOD data — LANGUAGES must NAME a language (the broken "native / fluent" does not),
+  so ADDITIONAL keeps the good copy (no data loss). Verified: ADDITIONAL 18→6 (interests +
+  accessibility deduped, the good languages preserved).
+- **C1 HWIC vanishing — FIXED (1.51.7).** Root cause: CL-PROSE-LOSS-GUARD `reapply` could only
+  heal a section still PRESENT as a placeholder; a restore that DELETES the section was
+  invisible to its map. Now re-INSERTS a guarded section that has a real snapshot but is
+  absent, at its canonical CL position. Verified: deleted contribute re-inserted at index 6.
+- **B2 Core competencies replicated into Tools — FIXED (1.51.8).** New
+  `antcv-tools-corecomp-dedup.js` drops a TOOLS rich_block row whose lead duplicates a
+  core_comp Focus-Area concept. Verified: dropped "Optics, photonics & sensing" + "Validation",
+  kept 11/13.
+- **C2 HWIC intro trash / mis-cap — FIXED (1.51.12 prompt + 1.51.13 structure).** The intro
+  was chopped to a 29-char fragment (generation, not an active 30-cap). Generation prompt
+  clarified (intro = complete ~85-char colon lead-in, never chopped; the ≤30 orphan is a
+  re-tighten trigger). Plus C2b: re-attach the intro ":" so the 760 migration keeps the intro
+  + Goal closing as MARKERLESS paragraphs (without it 760 markered every row). Existing chopped
+  text is regen-gated.
+- **C3 WHAT I BRING bullets truncated — FIXED (1.51.9).** Truncation is in the saved data
+  (generation chopped the clause; fuller text not recoverable). `antcv-cl-text-cleanup` strips
+  a trailing dangling connector/comma so bullets read complete ("…validation for"→"…validation").
+- **C4 "Professionally That"→that — FIXED (1.51.9).** Deterministic lowercase of a no-colon
+  marker-row body's first letter when it is a known continuation word (never "I"/proper noun).
+- **C6 Contribute bullets need bold lead-ins — FIXED (1.51.11).** `antcv-cl-text-cleanup` splits
+  a leadless contribute bullet into bold lead + body. Verified leads: "Map current change
+  governance flows", "Set up KPI reporting", "Run RFQ/RFI evaluations", "Define DV/PV test plans".
+- **C5 Bold bleeding into body — NOT REPRODUCIBLE.** No markdown `**`/`<b>` in the data; the
+  worker bolds only the lead run (body normal) and CL(11) renders correctly. Likely a prior-state
+  artifact, already correct on current code/data. Re-check on the owner's next export.
+- **C7 "Who I am" orphan — covered by the existing generation rule.** COMPRESSION-TIGHT already
+  lists who_content for the ≤30-char orphan re-tighten; it applies on regen. No deterministic
+  chopper added (it would lose facts — the rule's whole point is re-tighten, not chop).
+- **C8 Signature cut — NEEDS OWNER INPUT.** CL(11) shows the signature INTACT. If a later export
+  still clips it, the owner must supply the signature PNG (cannot rasterize CloudConvert PDFs
+  locally) so the floating-image / exact-dimension approach can be tested.
+
+---
+
+---
+
 ## A. REGRESSIONS introduced by my recent fixes (FIX FIRST)
 
 1. **Work style LOST / empty (CV).** wk 1.14.105 `CV-PLACEHOLDER-DROP-001` drops a fully-bracketed

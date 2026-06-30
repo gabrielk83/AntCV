@@ -2624,6 +2624,21 @@ export function applyOutcomesMode(docSections, doc) {
       if (out) return { ...r, results: out };
       const c = { ...r }; delete c.results; return c;
     };
+    // RESULTS-COMPRESS-001 (owner 2026-07 "lecture"): a Results line must fit ONE line — compress
+    // it deterministically without dropping the fact. Abbreviate known phrases (Change Control
+    // Board -> CCB), turn approximation words into "~" (roughly/about/approximately/around N -> ~N),
+    // drop a repeated unit ("250 days to 10 days" -> "250 to 10 days"), and tighten "cutting"->"cut".
+    // e.g. "Direct the Change Control Board, cutting the change cycle from roughly 250 days to about
+    // 10 days" -> "Direct the CCB, cut the change cycle from ~250 to ~10 days".
+    const _compressResult = (s) => {
+      let t = String(s == null ? '' : s);
+      t = t.replace(/\bChange Control Board\b/g, 'CCB')
+           .replace(/\bDesign Verification\s*\/\s*Production Validation\b/gi, 'DV/PV')
+           .replace(/\b(?:roughly|approximately|about|around)\s+(?=~?\d)/gi, '~')
+           .replace(/(~?\d[\d.,]*)\s+([A-Za-z%]+)\s+to\s+(~?\d[\d.,]*\s+\2\b)/g, '$1 to $3')
+           .replace(/\bcutting\b/g, 'cut');
+      return t.replace(/\s{2,}/g, ' ').replace(/\s+([.,;])/g, '$1').trim();
+    };
     // RESULTS-UNSOLICITED-COVERAGE-001: no JD => unsolicited breadth => every role carries a line.
     const __unsolicited = !(_jd && _jd.trim());
     const expOut = {
@@ -2642,10 +2657,10 @@ export function applyOutcomesMode(docSections, doc) {
         // that bullet — never show the same sentence twice. keepMin still protects a ≥2-bullet
         // role from collapsing. (Was: real outcomes skipped subsumption — that assumption broke
         // when generation set role.results to a verbatim bullet.)
-        if (lam) { const sub = hideSubsumed(r, lam); return { ...r, results: _tx(lam), bullets: _txBl(keepMin(sub, hideMetricReused(sub, lam))) }; }
+        if (lam) { const sub = hideSubsumed(r, lam); return { ...r, results: _compressResult(_tx(lam)), bullets: _txBl(keepMin(sub, hideMetricReused(sub, lam))) }; }
         // pool / explicit-map distribution — may be a bullet-seeded outcome, so hide
         // a bullet when the result text subsumes it OR reuses its number.
-        if (resultsByRole.has(r)) { const rt = resultsByRole.get(r); const sub = hideSubsumed(r, rt); return { ...r, results: _tx(rt), bullets: _txBl(keepMin(sub, hideMetricReused(sub, rt))) }; }
+        if (resultsByRole.has(r)) { const rt = resultsByRole.get(r); const sub = hideSubsumed(r, rt); return { ...r, results: _compressResult(_tx(rt)), bullets: _txBl(keepMin(sub, hideMetricReused(sub, rt))) }; }
         // tier-5 derive — the Results line IS one of the role's bullets; hide that
         // one source bullet. TA-TORN-OFF-001 (owner 2026-06-19: "Teaching Assistant was
         // torn off, only the result stayed"): NEVER consume a role's only content into a
@@ -2655,7 +2670,7 @@ export function applyOutcomesMode(docSections, doc) {
         if (!d) return { ...r, bullets: _txBl(r.bullets) };
         const keptBullets = (Array.isArray(r.bullets) ? r.bullets : []).filter((_, i) => i !== d.index);
         if (!keptBullets.length) return { ...r, bullets: _txBl(r.bullets) };
-        return { ...r, results: _tx(d.text), bullets: _txBl(keepMin(keptBullets, hideMetricReused(keptBullets, d.text))) };
+        return { ...r, results: _compressResult(_tx(d.text)), bullets: _txBl(keepMin(keptBullets, hideMetricReused(keptBullets, d.text))) };
       }).map(_scrubRoleRugby),
     };
     return docSections.filter((s) => !isOutcomes(s)).map((s) => (s === exp ? expOut : s));

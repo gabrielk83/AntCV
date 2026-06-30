@@ -54,7 +54,12 @@
       }).filter(function (it) { return it.b || it.t; });
       if (!items.length) return s;                                                   // nothing to convert
       // section lead-in (matches who/why/HWIC nordic) so the identity survives a hidden headline.
-      items = [{ b: sentenceCaseLabel(s.title) || 'What I bring', t: '' }].concat(items);
+      // BRING-INTRO-001 (owner 2026-06-30: "What I bring line is still empty"): the lead-in BODY
+      // carries the generated intro phrase (anchor + areas, e.g. "structure - across scope,
+      // suppliers, validation, and business decisions"), stashed on the table section as
+      // `_bringIntro` by the generation apply. Empty when no intro was generated (graceful).
+      var __bIntro = String((s && s._bringIntro) || '').trim();
+      items = [{ b: sentenceCaseLabel(s.title) || 'What I bring', t: __bIntro }].concat(items);
       var ns = { id: s.id, title: s.title, loc: s.loc, on: s.on, type: 'rich_block', items: items, headlineOff: true };
       if (s.hidden) ns.hidden = s.hidden;
       if (s.pageBreakBefore) ns.pageBreakBefore = s.pageBreakBefore;

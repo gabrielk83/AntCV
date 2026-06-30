@@ -63,7 +63,10 @@
       var leadBold = e.leadBold !== false, leadItalic = !!e.leadItalic, leadColor = e.leadColor || accent, leadColon = !!e.leadColon;
       var bar = h("div", { style: { display: "flex", gap: 6, alignItems: "center", marginBottom: 8, flexWrap: "wrap", paddingBottom: 6, borderBottom: "1px dashed #e3e3e3" } },
         h("button", { onClick: function () { d({ headlineOff: !headOff }); }, title: headOff ? "Headline hidden — show it" : "Headline shown — hide it", style: btn({ border: "1px solid " + (headOff ? "#999" : accent), color: headOff ? "#999" : accent }) }, (headOff ? "🙈" : "👁") + " Headline"),
-        h("button", { onClick: function () { if (!headOff) d({ ruleOff: !ruleOff }); }, disabled: headOff, title: headOff ? "No rule without a headline" : (ruleOff ? "Rule hidden — show it" : "Rule shown — hide it"), style: btn({ border: "1px solid " + (headOff ? "#ddd" : ruleOff ? "#999" : accent), color: headOff ? "#ddd" : ruleOff ? "#999" : accent, cursor: headOff ? "not-allowed" : "pointer" }) }, (ruleOff ? "🚫" : "—") + " Rule"),
+        // RULE-INDEPENDENT-001 (owner 2026-07: "still not editable independently"). The rule
+        // is now editable even when the headline TEXT is hidden: while headlineOff it toggles
+        // a standalone `headlineRule` line (opt-in, default off); otherwise it toggles ruleOff.
+        h("button", { onClick: function () { if (headOff) d({ headlineRule: !e.headlineRule }); else d({ ruleOff: !ruleOff }); }, title: headOff ? (e.headlineRule ? "Rule line shown — hide it" : "Show a rule line (headline text stays hidden)") : (ruleOff ? "Rule hidden — show it" : "Rule shown — hide it"), style: btn({ border: "1px solid " + (headOff ? (e.headlineRule ? accent : "#999") : ruleOff ? "#999" : accent), color: headOff ? (e.headlineRule ? accent : "#999") : ruleOff ? "#999" : accent, cursor: "pointer" }) }, ((headOff ? !e.headlineRule : ruleOff) ? "🚫" : "—") + " Rule"),
         // CL-HEADLINE-VRULE-001 (owner 2026-06-30): a vertical cue line for when the
         // headline TEXT is hidden — gives the section a visual marker. Enabled only
         // while the headline is off (that is when the cue is needed).

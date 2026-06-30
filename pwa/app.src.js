@@ -6984,7 +6984,9 @@
         e._antcvSplitCont && !1 === d.contHeadlines
           ? null
           : e.headlineOff
-          ? null
+          ? (e.headlineRule
+              ? React.createElement("div", { style: { borderBottom: "2px solid " + C, marginTop: 4, marginBottom: 6, pageBreakAfter: "avoid", breakAfter: "avoid", pageBreakInside: "avoid", breakInside: "avoid" } })
+              : null)
           : React.createElement(
           "div",
           {

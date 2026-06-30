@@ -26137,7 +26137,22 @@ function renderSection(s, ctx, isSidebar) {
     default:
       break;
   }
-  if (skipHeading || s.headlineOff || !s.title) return [...pageBreakPara, ...body];
+  if (skipHeading || s.headlineOff || !s.title) {
+    // RULE-INDEPENDENT-001 (owner 2026-07): a headline-OFF section can still opt IN to a
+    // standalone rule line (headlineRule) — render just the accent rule, no title text.
+    if (s.headlineOff && s.headlineRule && body.length && !skipHeading) {
+      const __rule = new Paragraph({
+        spacing: { before: isSidebar ? 40 : 80, after: isSidebar ? 30 : 40 },
+        keepNext: true,
+        alignment: isSidebar ? AlignmentType.CENTER : void 0,
+        shading: isSidebar ? { type: ShadingType.CLEAR, fill: ctx.style.sidebarBg, color: "auto" } : void 0,
+        border: { bottom: { color: isSidebar ? ctx.style.sidebarHeadColor : ctx.style.mainHeadColor, space: isSidebar ? 2 : 4, style: BorderStyle.SINGLE, size: 8 } },
+        children: [new TextRun({ text: "" })]
+      });
+      return [...pageBreakPara, __rule, ...body];
+    }
+    return [...pageBreakPara, ...body];
+  }
   if (body.length === 0) return [];
   // 1.14.25: CL is full-width linear — emit heading + body directly (no
   // heading-repetition wrapper) so titled sections aren't triple-nested and
@@ -27809,7 +27824,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.107-empty-leadrow-drop";
+var VERSION = "1.14.108-standalone-rule";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

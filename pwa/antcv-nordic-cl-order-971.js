@@ -25,7 +25,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.982-nordic-cl-order';
+  var VERSION = '1.50.991-nordic-cl-order';
   if (window.__antcvNordicClOrder971 === VERSION) return;
   window.__antcvNordicClOrder971 = VERSION;
 
@@ -39,9 +39,9 @@
   // body is empty OR an old bracketed placeholder (never over real content). Verbatim from
   // CoverLetter_Template.docx (docs/qa/nordic-cl-template-2026-06-29.md).
   var INSTR = {
-    bring: '[Select 3-4 of my skills that match only from Company Info + Holistic Leads + Specific Leads + JD Analysis. For unsolicited applications, use company info + target role type and mark assumptions.]',
-    handsOn: '[Select only skills that match Company Info + Holistic Leads + Specific Leads + JD analysis. Example: requirements and ALM/Codebeamer tooling, FMEA, DV/PV validation setups, RFQ/RFI and supplier scoring, optical/electro-optical systems, change control, traceability, KPI reporting.]',
-    professionally: '[Translate those skills into value for this company and role. Example: turn mixed technical and commercial input into clear scope, decisions, and measurable progress, while keeping engineering, product, suppliers, and management aligned.]'
+    bring: "[INTRO LINE - one short, plain phrase that names what you bring, without overselling. Lead with a single anchor word, then the areas it covers (example shape: \"structure - across scope, suppliers, validation, and business decisions\"; or \"judgement - across requirements, risk, and delivery\"). End with a colon so the bullets below read as proof. Keep it calm and factual; no adjectives like strong/proven/passionate. Then list 3-4 of your skills as the bullets below, matched only from Company Info + Holistic Leads + Specific Leads + JD Analysis. For unsolicited applications, use company info + target role type and mark assumptions. Surface evidence using real proof points from your own history - prefer a measurable one (a percentage, a count, a time or cost change, a shipped output, team size directed); never invent numbers. Verb rule: never bare \"led a team\" - directed/supervised/ran. Banned words/phrases: spearhead, ensure, foster, leverage, robust, comprehensive, deliver (vague), drive (as \"drive change\"), \"key role\", \"pivotal role\", \"proven track record\", \"end-to-end\", \"results-driven\".]",
+    handsOn: "[Select only skills that match Company Info + Holistic Leads + Specific Leads + JD analysis. Example shape: name 4-6 concrete, JD-relevant skills from your own toolkit (methods, tools, domains you actually use), comma-separated.]",
+    professionally: "[Translate those skills into value for this company and role. Example shape: turn your inputs into a clear outcome the employer cares about, while keeping the relevant stakeholders aligned.]"
   };
   // seed when EMPTY or a bracketed placeholder, and not already the instruction (idempotent);
   // real content (does not start with "[") is preserved.

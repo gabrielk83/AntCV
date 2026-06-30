@@ -1728,13 +1728,23 @@ function normalizeSections(raw) {
         // base.item_alignment (alignFor: "items.<i>" + "__group__"). Per-row page from
         // itemPagesMap (>=2). bOff/tOff drop the lead-in / body; a fully-empty or hidden
         // row is dropped so no orphan paragraph exports.
+        // PROFILE-ORPHAN-001 (owner 2026-07: "handle the profile orphan"). A prose paragraph that
+        // wraps to a single short word on the last line reads as an orphan. Glue the last two words
+        // with a non-breaking space so the final line always carries >=2 words (typographic orphan
+        // fix) — only for the prose sections, only when the last word is short, never on a bullet.
+        const __proseGlue = { profile: 1, work_style: 1, opening: 1, who: 1, why: 1, foundation: 1 };
+        const _glueOrphan = (txt) => {
+          if (!__proseGlue[s.id]) return txt;
+          const m = String(txt).match(/^([\s\S]*\S)[ \t]+(\S{1,16})$/);
+          return m ? m[1] + String.fromCharCode(160) + m[2] : txt;
+        };
         const items = (s.items || []).map((it, i) => {
           if (s.hidden && s.hidden[i]) return null;
           const row = it && typeof it === 'object' ? it : { t: String(it || '') };
           // grp row = bold sub-heading (no lead/body); drop if empty.
           if (row.grp) { const gt = clean(row.t) || ''; return gt ? { grp: true, t: gt } : null; }
           const b = row.bOff ? '' : (clean(row.b) || '');
-          const t = row.tOff ? '' : (clean(row.t) || '');
+          const t = row.tOff ? '' : (row.mk ? (clean(row.t) || '') : _glueOrphan(clean(row.t) || ''));
           if (!b && !t) return null;
           // mk: true (default bullet) or a custom emoji string — pass through as-is.
           return row.mk ? { b, t, mk: (typeof row.mk === 'string' ? row.mk : true) } : { b, t };

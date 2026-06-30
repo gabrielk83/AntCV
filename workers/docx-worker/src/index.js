@@ -25126,8 +25126,10 @@ function buildLinearDocument(ctx) {
     ));
   }
   if (closureSec && closureSec.content) {
+    // CL-BOTTOM-RULE-MATCH-001 (owner 2026-07: "make the cl bottom rule same as the top one").
+    // The rule above the closing now matches the heading/header rule weight (size 8, was 6).
     bodyChildren.push(new Paragraph({
-      border: { top: { color: style.mainHeadColor, space: 4, style: BorderStyle.SINGLE, size: 6 } },
+      border: { top: { color: style.mainHeadColor, space: 4, style: BorderStyle.SINGLE, size: 8 } },
       spacing: { before: 120, after: 0, line: 40, lineRule: "exact" },
       children: []
     }));
@@ -27829,7 +27831,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.109-signature-clip-003";
+var VERSION = "1.14.110-cl-bottom-rule";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

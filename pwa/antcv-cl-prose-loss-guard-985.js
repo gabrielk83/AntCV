@@ -23,7 +23,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.988-cl-prose-loss-guard';
+  var VERSION = '1.51.7-cl-prose-loss-guard';
   if (window.__antcvClProseGuard985 === VERSION) return;
   window.__antcvClProseGuard985 = VERSION;
 
@@ -32,6 +32,9 @@
   // (bring is persisted by antcv-nordic-cl-order-971; closure by the editor; both
   //  are included as belt-and-suspenders — re-applying a real value is harmless.)
   var GUARDED = ['opening', 'why', 'who', 'foundation', 'contribute', 'closure', 'bring'];
+  // Canonical CL section order (Nordic) — used to re-insert a guarded section that a
+  // stale restore DELETED outright at its correct position. See CL-PROSE-LOSS-GUARD-002.
+  var ORDER = ['greeting', 'opening', 'why', 'who', 'foundation', 'bring', 'contribute', 'closure'];
   var lastApplyAt = 0;
 
   function disabled() { try { var v = localStorage.getItem('antcv:disable-cl-prose-guard'); return v === '1' || v === 'true'; } catch (_) { return false; } }
@@ -116,6 +119,32 @@
       if (!snap || isReal(sec) || !isReal(snap)) return sec; // only placeholder<-real
       changed = true;
       return JSON.parse(JSON.stringify(snap));
+    });
+    // CL-PROSE-LOSS-GUARD-002 (owner 2026-07: "the whole HOW I WOULD CONTRIBUTE section
+    // is gone after an edit"). The placeholder<-snapshot map above can only heal a section
+    // that is still PRESENT (as a placeholder). A stale cloud / me()-enforce restore can
+    // DELETE a guarded prose section outright — the map never sees it, so HWIC silently
+    // vanishes from the export. Re-INSERT any guarded section that has a REAL snapshot but
+    // is now ABSENT from cl, at its canonical CL position. Only ever ADDS back previously
+    // seen real content; the disable switch + per-application keying still apply. (A
+    // deliberate delete of a core CL section is rare and re-hideable; losing HWIC on export
+    // is the worse failure — the owner's #1 bug.)
+    var liveIds = {};
+    cl.forEach(function (s) { if (s && s.id) liveIds[s.id] = true; });
+    GUARDED.forEach(function (id) {
+      if (liveIds[id]) return;
+      var snap = bucket[id];
+      if (!snap || !isReal(snap)) return;
+      var oi = ORDER.indexOf(id);
+      var at = cl.length;
+      for (var j = 0; j < cl.length; j++) {
+        var jOi = ORDER.indexOf(cl[j] && cl[j].id);
+        if (jOi >= 0 && jOi > oi) { at = j; break; }
+      }
+      cl.splice(at, 0, JSON.parse(JSON.stringify(snap)));
+      liveIds[id] = true;
+      changed = true;
+      try { console.log('[CL-PROSE-LOSS-GUARD] re-inserted missing CL section: ' + id); } catch (_) {}
     });
     if (!changed) return;
     lastApplyAt = now || 1;

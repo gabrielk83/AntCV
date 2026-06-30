@@ -43352,6 +43352,9 @@
                       if (sa !== "left" && sa !== "right" && sa !== "center") sa = "center";
                       return React.createElement("div", {
                         key: "__cl_slogan",
+                        contentEditable: true, suppressContentEditableWarning: true, spellCheck: false,
+                        title: "Click to edit the positioning line",
+                        onBlur: (ev) => { try { localStorage.setItem("antcv:clSlogan", String(ev.currentTarget.textContent || "").trim()); window.dispatchEvent(new CustomEvent("antcv:sections-updated", { detail: { reason: "cl-slogan-inline" } })); } catch (_) {} },
                         style: {
                           fontFamily: "'Cabin',sans-serif",
                           fontSize: 15,
@@ -43360,6 +43363,7 @@
                           textAlign: sa,
                           color: (ya && ya.mainLineColor) || "#00746E",
                           margin: "0 0 12px",
+                          cursor: "text",
                         },
                       }, st.toUpperCase());
                     } catch (_) { return null; }
@@ -43398,7 +43402,13 @@
                       React.createElement(
                         "p",
                         {
+                          // CLOSURE-INLINE-EDIT-001 (owner 2026-06-30): edit the closure in place; onBlur
+                          // writes back to sections.cl[closure].content + dispatches so preview/export update.
+                          contentEditable: true, suppressContentEditableWarning: true, spellCheck: false,
+                          title: "Click to edit the closing paragraph",
+                          onBlur: (ev) => { try { var v = String(ev.currentTarget.textContent || "").trim(); var secs = JSON.parse(localStorage.getItem("sections") || "{}"); if (secs && Array.isArray(secs.cl)) { var ix = secs.cl.findIndex((x) => x && x.id === "closure"); if (ix >= 0) { secs.cl[ix] = Object.assign({}, secs.cl[ix], { content: v }); localStorage.setItem("sections", JSON.stringify(secs)); window.dispatchEvent(new CustomEvent("antcv:sections-updated", { detail: { reason: "cl-closure-inline" } })); } } } catch (_) {} },
                           style: {
+                            cursor: "text",
                             fontFamily: t,
                             fontSize: 14,
                             color: "#000",
@@ -47626,9 +47636,9 @@
                     overflowX: "auto",
                     padding: Ii
                       ? "preview" !== ei
-                        ? "6px 6px 86px 44px"
-                        : "6px 6px 86px"
-                      : "4px 8px 76px 8px",
+                        ? "6px 6px 120px 44px"
+                        : "6px 6px 120px"
+                      : "4px 8px 120px 8px",
                     background: "#d0d2d6",
                     touchAction: "pan-x pan-y pinch-zoom",
                     WebkitOverflowScrolling: "touch",

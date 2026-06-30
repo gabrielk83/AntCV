@@ -24842,6 +24842,16 @@ function buildTwoColumnDocument(ctx) {
   // The text cell's small left margin (120 DXA = 8px) lets the candidate
   // block start near the seam (the preview's leftward flow).
   const bridgeOn = normalisePhotoPosition(ctx.pi && ctx.pi.photoPosition) === "band-overlap" && !!(ctx.pi && ctx.pi.photo_b64);
+  // CONTACT-BRIDGE-WIDECELL-001 (owner 2026-06-30): size the empty photo-zone
+  // cell to the FIGURE's right edge, not a fixed reserve. The medallion is
+  // page-centred on the sidebar middle (buildPhotoParagraph band-overlap:
+  // offset sidebarW/2 - photoPx/2), so its right edge = sidebarW/2 + photoPx/2.
+  // The candidate/contact text cell starts just past that (+120 gap) -> it
+  // extends as far LEFT as the figure allows without overlapping it, giving the
+  // contact line room to keep full size (no shrink) and wrap if long. Clamped
+  // so it never widens past the old reserve (big photos keep the old origin).
+  const __bridgePhotoPx = (() => { const v = Number(ctx.pi && ctx.pi.photoSizePx); return Number.isFinite(v) && v >= 40 && v <= 260 ? Math.round(v) : 156; })();
+  const __bridgeLeftW = bridgeOn ? Math.max(360, Math.min(ctx.sidebarW - 540, Math.round(ctx.sidebarW / 2 + __bridgePhotoPx * 15 / 2) + 120)) : (ctx.sidebarW - 540);
   const headerRow = bridgeOn ? new TableRow({
     children: [
       new TableCell({
@@ -24853,7 +24863,7 @@ function buildTwoColumnDocument(ctx) {
         // lands at (sidebarW − 540) + 120 = sidebarW − 420. Cells still sum to PAGE_W.
         // The page-anchored bridge medallion is UNAFFECTED — it lives in the sidebar
         // column (page-relative position), not in this empty zone cell.
-        width: { size: ctx.sidebarW - 540, type: WidthType.DXA },
+        width: { size: __bridgeLeftW, type: WidthType.DXA },
         shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
         borders: noBorders(),
         margins: { top: 240, bottom: 80, left: 80, right: 80 },
@@ -24862,7 +24872,7 @@ function buildTwoColumnDocument(ctx) {
         children: [emptyParagraph()]
       }),
       new TableCell({
-        width: { size: PAGE_W - ctx.sidebarW + 540, type: WidthType.DXA },
+        width: { size: PAGE_W - __bridgeLeftW, type: WidthType.DXA },
         shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
         borders: noBorders(),
         margins: { top: 240, bottom: 80, left: 120, right: 360 },
@@ -25477,13 +25487,12 @@ function buildHeaderCell(ctx) {
         // FULL joined text exactly as before.
         const bridge = normalisePhotoPosition(pi.photoPosition) === "band-overlap" && pi.photo_b64 && ctx.doc !== "cl";
         const sep = bridge ? " \u2022 " : " \u2022 ";
-        const full = contactBits.map((b) => b.text).join(sep);
-        let pt = fs.contactSize;
-        if (bridge) {
-          const cellPt = (PAGE_W - (ctx.sidebarW || Math.round(PAGE_W * 0.33)) - 480) / 20;
-          const fitPt = cellPt / (0.55 * Math.max(1, full.length));
-          pt = Math.max(7, Math.min(fs.contactSize * 0.88, fitPt));
-        }
+        // CONTACT-BRIDGE-NOSHRINK-001 (owner 2026-06-30): do NOT shrink the
+        // contact line in bridge mode. The split header now widens the text
+        // cell leftward to the figure's right edge (see buildCandidateHeader
+        // bridge branch), so the line keeps full contactSize and wraps onto a
+        // second line if long, instead of being crammed unreadably small.
+        const pt = fs.contactSize;
         const base = { color: style.headerContactColor, size: pt2hp(pt), font: style.headerFont };
         const kids = [];
         contactBits.forEach((b, i) => {
@@ -27750,7 +27759,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.100-cl-signoff-order";
+var VERSION = "1.14.101-contact-bridge-widecell";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

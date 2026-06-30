@@ -46,10 +46,21 @@ AI notice: show on the column with FEWER text lines (owner's two-box idea).
 - me() Nordic CL skeleton already = the generic template body (1.50.991); 971 INSTR in sync.
 - enhance "Fuse CL→CV" already enforces a near-identical banned list.
 
+## DONE (1.50.995, live)
+- **me() CV admin template rebuilt** to `CV_Template_AntCV_Prompts_Generic (4)` (commit 8374f25):
+  PROFILE = 2-3 factual sentences + WRITING-RULES/COHERENCE essence; WORK STYLE one line ending on a
+  people skill; per-role `Results:` headline added to experience r1-r5 (role.results, worker already
+  renders it); SELECTED OUTCOMES kept (owner: it represents results); LANGUAGES / INTERESTS /
+  ACCESSIBILITY split into their own sidebar sections in docx order before ADDITIONAL (catch-all +
+  data source). `_antcvBlankTemplateSection` re-templates role.results. me() builds 15 sections;
+  unit 528/528; boot-smoke clean. Positioning triad = personalInfo.specialization (already enforced
+  <=3 concepts in the gen prompt), not a me() section. Owner to verify a real CV export.
+
 ## OPEN (next session)
-1. **me() CV admin template** — rebuild the CV admin/export template to `CV_Template_AntCV_Prompts_Generic`
-   (positioning triad, PROFILE/Work-Style rules, 6 CORE COMPETENCIES rows, Results: bullets, etc.).
-   The CV *generation* prompt already covers most rules; this is the exportable admin template.
+1. **Contact-line sidebar bridge (structured figure)** — owner request: in band-overlap bridge mode the
+   contact line font-shrinks to cram one line into the narrow text cell (worker index.js ~25478-25500);
+   owner wants a structured figure that ALLOWS long contact text (wrap / full-width row). Design pick
+   pending; worker change, PDF-BLANK-PAGE risk, real-export-gated.
 2. **Recruiter-answers PAGE rendering** — the generation rule + `questions_in_jd` + worker
    `jd_questions` exist; verify the page renders exactly N Q/A blocks (header band + "Kind regards,"
    + AI notice), only when the JD has questions, on a real export.

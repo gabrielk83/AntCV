@@ -3010,6 +3010,11 @@
       r.push(
         "COMPRESSION — WRITE TIGHT (owner 2026-06-30): every CV experience bullet, table cell, and CL row/paragraph must be as SHORT as the content allows. Aim for ONE rendered line per CV experience bullet and per CL bring/contribute row; if a line would WRAP leaving a trailing ORPHAN line of 30 characters or fewer (a few dangling words), RE-TIGHTEN THE WHOLE paragraph or row - shorten it THROUGHOUT (drop filler words like 'the'/'a', use shorter synonyms, remove redundant qualifiers, restructure or merge clauses) so the SAME meaning fits without the orphan. NEVER pad to fill width, and NEVER just chop the trailing words off - reduce length by writing the whole thing tighter while keeping every fact. A complete tight line beats a padded or wrapped one. Applies to: CV experience_roles bullets + outcomes_items, and CL opening_content, who_content, why_content, foundation_hands_on, foundation_professionally, bring_rows, contribute_intro and contribute_items. The CL OPENING is the most orphan-prone paragraph: when it would end on a <=30-char orphan, ANALYSE and rewrite the WHOLE opening tighter (fewer and shorter words across the whole sentence, cut redundancy, merge clauses) so it reads complete with no dangling last line - preserve every fact, number, tool and proper noun; do NOT simply delete the trailing words. Keep every number, tool, proper noun, and standard code.",
       );
+      // LEAD-CONTINUATION-CASE-001 (owner 2026-06-30: "Professionally That" should be
+      // "Professionally that" - no colon means the body continues the lead-in).
+      r.push(
+        "LEAD-IN CONTINUATION CASE (LEAD-CONTINUATION-CASE-001, owner 2026-06-30): a bold MARKER-row lead-in (foundation_hands_on -> 'Hands-on', foundation_professionally -> 'Professionally', and the WHAT I BRING / HOW I WOULD CONTRIBUTE need bullets) is followed by NO colon - the body CONTINUES the lead-in as ONE sentence, so the body MUST START LOWERCASE (write 'Professionally that grounding lets me...' NOT 'Professionally That...'; 'Hands-on across the full path...'), UNLESS its first word is 'I' or a proper noun. The non-marker SECTION lead-ins (Foundation, Who I am, Why this company and role, What I bring, How I would contribute) DO take a colon, so their body may start with a capital.",
+      );
       // RESULTS-DISTINCT-001 (owner 2026-06-30 CV review: the Sirin Labs + IDF role Results
       // restated a bullet verbatim and the duplicated bullet was still shown).
       r.push(
@@ -5539,7 +5544,13 @@
                           value: P(row.b),
                           placeholder: "[Lead]",
                         }),
-                        __leadSep,
+                        // LEAD-COLON-PERROW-001 (owner 2026-06-30): the colon after a
+                        // lead-in is PER ROW, not section-wide — a row WITHOUT a visible
+                        // marker (a section sub-heading like "Foundation:" / "What I bring:")
+                        // gets the colon; a MARKER row (Hands-on / Professionally / the
+                        // Need bullets) does NOT (it flows into the body). `leadColon:false`
+                        // still disables colons section-wide as an escape hatch.
+                        (mk || e.leadColon === false) ? " " : ": ",
                       )
                     : null,
                   tShow

@@ -5468,7 +5468,7 @@
               // drop the whole row (the lead, e.g. "Work style", is just a label). Mirrors the
               // worker renderRichBlock; a real edit / bracketed citation won't match (full-bracket
               // only). A headlineOff section (work_style) then renders cleanly to nothing.
-              if (!row.grp && /^\s*\[[\s\S]*\]\s*$/.test(String(row.t || ""))) return null;
+              if (!row.grp && (/^\s*\[[\s\S]*\]\s*$/.test(String(row.t || "")) || (!String(row.t || "").trim() && e.headlineOff && row.b))) return null;
               // RICH-BLOCK-GROUP-001: a row flagged grp is a bold sub-heading (like labeled_list).
               if (row.grp) {
                 return {

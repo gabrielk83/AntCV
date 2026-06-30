@@ -26511,7 +26511,12 @@ function renderRichBlock(s, ctx, isSidebar) {
     // bracketed template placeholder ("[WORK STYLE - …]") is unfilled — drop the whole row
     // (the lead alone, e.g. "Work style", is just a label). When this empties the section,
     // renderSection suppresses the heading too (headlineOff / body.length===0 → omit cleanly).
+    // EMPTY-LEADROW-DROP (owner 2026-07 CV(5)): the export sanitiser blanks an unfilled
+    // placeholder to "", so work_style arrived as lead "Work style" + EMPTY body and printed
+    // a bare "Work style:" heading. Drop a headlineOff lead-only row with no body too. A real
+    // headlineOff prose row (opening/why/who/foundation) always has body text, so it is kept.
     if (/^\s*\[[\s\S]*\]\s*$/.test(body)) return;
+    if (!String(body).trim() && s.headlineOff && row.b) return;
     if (!lead && !body) return;
     if (rowPage(i) >= 2) {
       if (__wholeMoveSkip) {
@@ -27804,7 +27809,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.106-richblock-placeholder-drop";
+var VERSION = "1.14.107-empty-leadrow-drop";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

@@ -23,7 +23,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.7-cl-prose-loss-guard';
+  var VERSION = '1.51.14-cl-prose-loss-guard';
   if (window.__antcvClProseGuard985 === VERSION) return;
   window.__antcvClProseGuard985 = VERSION;
 
@@ -189,5 +189,11 @@
   // Boot sweep + later windows to catch a cloud-restore / me()-enforce that
   // out-races the first pass (restore + the converter sidecars settle by ~5s).
   [600, 1500, 3500, 7000, 12000].forEach(function (ms) { setTimeout(run, ms); });
+  // PROSE-GUARD-POLL-001 (owner 2026-07): on a HEAVY load the cloud / me()-enforce restore
+  // can placeholder opening/why/who LONG after the boot sweeps (the renderer freezes 45-60s),
+  // so the preview + export stayed half-empty. A forever poll (like sections-normalize-415)
+  // keeps restoring — safe because reapply ONLY ever replaces a PLACEHOLDER with a real
+  // snapshot, never a real value, so it cannot fight a genuine user edit.
+  setInterval(run, 2500);
   window.AntcvClProseGuard = { version: VERSION, run: run, snapshot: snapshot, reapply: reapply };
 })();

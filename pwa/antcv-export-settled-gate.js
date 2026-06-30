@@ -23,10 +23,40 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.774';
-  if (window.__antcvExportSettledGate) return;
+  var VERSION = '1.51.14';
+  if (window.__antcvExportSettledGate === VERSION) return;
   window.__antcvExportSettledGate = VERSION;
   try { var off = localStorage.getItem('antcv:disable-export-gate'); if (off === '1' || off === 'true') return; } catch (_) {}
+
+  // EXPORT-RUN-HEALS-001 (owner 2026-07): the export was capturing a HALF-SETTLED document
+  // on heavy loads — the heal sidecars run async on boot sweeps / events and may not have
+  // converged when the user clicks Export, so fixes (work_style drop, ADDITIONAL dedup,
+  // languages, CL prose restore, contribute lead-ins…) were missing from the PDF even though
+  // the LIVE app was correct. Run every heal SYNCHRONOUSLY right before each export so the
+  // payload (built from localStorage `sections`) always reflects them. Each heal is idempotent
+  // and self-guarded; the whole pass is defensive so a heal can never block an export.
+  function runHealsSync() {
+    var steps = [
+      ['AntcvSidebarRepopulate', 'run'],    // re-derive empty sidebar sections from personalInfo
+      ['AntcvSectionsNormalize', '_normalize'], // 415: explode + dedup ADDITIONAL, role canon…
+      ['AntcvStripSkeleton', 'run'],        // strip leaked me() bracket instructions
+      ['AntcvLanguagesConcise', 'run'],
+      ['AntcvToolsCoreCompDedup', 'run'],   // drop TOOLS rows duplicating CORE COMPETENCIES
+      ['AntcvClProseGuard', 'reapply'],     // restore deleted / placeholdered CL prose
+      ['AntcvClTextCleanup', 'run'],        // CL bring/contribute/foundation text heals
+    ];
+    try {
+      for (var pass = 0; pass < 2; pass++) {           // 2 passes → cross-heal convergence
+        for (var i = 0; i < steps.length; i++) {
+          try {
+            var o = window[steps[i][0]];
+            if (o && typeof o[steps[i][1]] === 'function') o[steps[i][1]]();
+          } catch (_) {}
+        }
+      }
+    } catch (_) {}
+  }
+  window.__antcvRunHealsSync = runHealsSync;
 
   var MIN_FLOOR = 2500;    // ms since load before we consider settling (cloud-restore needs to START)
   var QUIET = 1500;        // sections-updated must be quiet this long (migrations converged)
@@ -100,6 +130,7 @@
       toast(true);
       whenSettled(function () {
         toast(false);
+        runHealsSync();                                     // converge the doc before exporting
         try {
           btn.setAttribute('data-antcv-settled-go', '1');   // bypass the gate on the re-fire
           btn.click();
@@ -109,25 +140,27 @@
     } catch (_) {}
   }, true);
 
-  // ── wrap the direct worker call (modal fallback path that isn't a button click) ──
-  function wrapDocx() {
+  // ── wrap the direct worker calls (PDF + DOCX) so EVERY export path runs the heals first
+  //    and waits for settle (the modal fallback paths that aren't a button click) ──
+  function wrapOne(name) {
     try {
-      var fn = window.exportDocxViaWorker;
+      var fn = window[name];
       if (typeof fn === 'function' && !fn.__antcvSettledWrapped) {
         var wrapped = function () {
           var args = arguments, self = this;
-          if (settled()) return fn.apply(self, args);
+          if (settled()) { runHealsSync(); return fn.apply(self, args); }
           toast(true);
           return new Promise(function (resolve, reject) {
-            whenSettled(function () { toast(false); try { resolve(fn.apply(self, args)); } catch (e) { reject(e); } });
+            whenSettled(function () { toast(false); runHealsSync(); try { resolve(fn.apply(self, args)); } catch (e) { reject(e); } });
           });
         };
         wrapped.__antcvSettledWrapped = true;
         wrapped.__orig = fn;
-        window.exportDocxViaWorker = wrapped;
+        window[name] = wrapped;
       }
     } catch (_) {}
   }
+  function wrapDocx() { wrapOne('exportDocxViaWorker'); wrapOne('exportPdfViaWorker'); }
   wrapDocx();
   var wt = setInterval(wrapDocx, 1000);
   setTimeout(function () { clearInterval(wt); }, HARD_CAP + 2000);

@@ -654,6 +654,43 @@
   //   exists, so the owner's current split is preserved and never duplicated;
   // - any unclassified "Other" items stay in a trimmed ADDITIONAL section.
   // Runs BEFORE partitionAdditional so the grouping step finds nothing to do.
+  // LANGUAGES-REPAIR-001 (owner 2026-07 CV(5): the dedicated LANGUAGES section rendered a
+  // broken "native / fluent" with NO language names, while personalInfo.languages held the
+  // real set). When the dedicated section names no real language, REBUILD it from
+  // personalInfo.languages ({lang, level}); the dedup (explodeAdditionalToSections) then
+  // removes the duplicate Languages rows from ADDITIONAL because the dedicated home is now
+  // good. Only fires when the section is broken (no language name) and a real source exists.
+  function repairLanguagesFromPI(cv) {
+    var idx = -1;
+    for (var i = 0; i < cv.length; i++) { if (cv[i] && cv[i].id === 'languages') { idx = i; break; } }
+    if (idx < 0) return null;
+    var sec = cv[idx];
+    var NAME = /(english|danish|spanish|hebrew|german|french|norwegian|swedish|finnish|arabic|mandarin|chinese|portuguese|italian|russian|dutch|japanese|korean|polish|turkish)/i;
+    var txt = '';
+    if (Array.isArray(sec.items)) sec.items.forEach(function (it) { if (it) txt += ' ' + (it.l || it.b || '') + ' ' + (it.v || it.t || ''); });
+    if (typeof sec.content === 'string') txt += ' ' + sec.content;
+    if (NAME.test(txt)) return null;                 // already names a language -> good, leave it
+    var pi = {}; try { pi = JSON.parse(localStorage.getItem('personalInfo') || '{}') || {}; } catch (_) { return null; }
+    var L = Array.isArray(pi.languages) ? pi.languages : null;
+    if (!L || !L.length) return null;
+    function level(v) {
+      var s = String(v == null ? '' : v).trim();
+      if (/native|mother ?tongue/i.test(s)) return 'native / fluent';
+      if (/profes/i.test(s)) return 'professional';
+      return s;
+    }
+    var items = L.map(function (x) {
+      if (typeof x === 'string') return { l: x.trim(), v: '' };
+      return { l: String(x.lang || x.name || x.language || x.l || '').trim(), v: level(x.level || x.proficiency || x.cefr || x.v) };
+    }).filter(function (r) { return r.l && NAME.test(r.l); });
+    if (!items.length) return null;
+    var copy = cv.slice();
+    var ns = Object.assign({}, sec, { type: 'labeled_list', items: items });
+    delete ns.content;
+    copy[idx] = ns;
+    return copy;
+  }
+
   function explodeAdditionalToSections(cv) {
     var xi = -1;
     for (var i = 0; i < cv.length; i++) {
@@ -1042,6 +1079,7 @@
       var dl = defaultLoc(cv); if (dl) { cv = dl; changed = true; }
       var wi = inlineifyLabeledText(cv); if (wi) { cv = wi; changed = true; }
       var no = neutralizeUnsolicitedOpener(cv); if (no) { cv = no; changed = true; }
+      var rl = repairLanguagesFromPI(cv); if (rl) { cv = rl; changed = true; }
       var ex = explodeAdditionalToSections(cv); if (ex) { cv = ex; changed = true; }
       var pa = partitionAdditional(cv); if (pa) { cv = pa; changed = true; }
       var jr = scrubJuniorRugby(cv); if (jr) { cv = jr; changed = true; }

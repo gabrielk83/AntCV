@@ -5544,7 +5544,11 @@
                   bShow
                     ? React.createElement(
                         "span",
-                        { style: __leadStyle },
+                        // MARKER-LEAD-MONO-001 (owner 2026-07): a MARKER row's bold lead-in renders
+                        // in the main column as BLACK body text in the export, so the preview matches
+                        // (a non-marker section lead keeps the accent/lead colour). Sidebar leads keep
+                        // their head colour for contrast against the navy.
+                        { style: (mk && !S) ? { ...__leadStyle, color: __txtColor } : __leadStyle },
                         React.createElement(B, {
                           path: ["items", i, "b"],
                           value: P(row.b),

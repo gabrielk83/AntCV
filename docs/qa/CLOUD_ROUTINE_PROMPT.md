@@ -8,10 +8,10 @@ Owner: Gabriel. Style: direct, factual, compressed, no corporate filler.
 ---
 
 You are an autonomous AntCV maintenance run on the GitHub repo **gabrielk83/AntCV** (a React PWA in
-`pwa/` + Cloudflare Workers in `workers/`). Current shipped: PWA **1.50.833** (auto-deploys on push
-to `main`), docx-worker **1.14.80**, proxy/demo-proxy **3.6.0**. Work the prioritised backlog below,
-ship VERIFIED fixes only. Hard rule: **an end result, not a brickable mid-product** — one solid
-verified fix beats several half-verified ones.
+`pwa/` + Cloudflare Workers in `workers/`). Current shipped: PWA **1.51.27** (auto-deploys on push
+to `main`), docx-worker **1.14.110**, access-relay **1.3.2**, proxy/demo-proxy **3.6.0**. Work the
+prioritised backlog below, ship VERIFIED fixes only. Hard rule: **an end result, not a brickable
+mid-product** — one solid verified fix beats several half-verified ones.
 
 ## ENVIRONMENT SETUP SCRIPT (claude.ai routine config — NOT the prompt)
 Leave the routine's environment **setup script EMPTY** (or at most `node --version`). It must be
@@ -33,11 +33,10 @@ account — no login step is needed. AntCV needs no install for the core work (z
   labelled WIP commit + report it — never claim unverified success.
 
 ## STEP 0 — Orient (read in the repo)
-1. `docs/qa/PROJECT_ISSUES_OPEN_CLOSED_2026-06-20.md` — the live register. Read the section
-   **"OWNER BATCH — NVIDIA CV/CL exports + preview (2026-06-21, 14 items)"** and the
-   **"Owner corrections (2026-06-21) — AUTHORITATIVE"** block under it: that is this run's backlog,
-   per item with root cause + fix location + gating.
-2. `docs/qa/NEXT_SESSION_PROMPT_2026-06-22.md` — the same backlog as a priority-ordered plan.
+1. `docs/qa/EXPORT_REVIEW_2026-07_ISSUE_MAP.md` — the authoritative export-review register. The
+   `## RESOLUTION` block lists what's already FIXED (A1/B1/B2/C1–C8). The **CURRENT BACKLOG** below
+   (in this file) is what remains after the owner's 2026-07-01 re-review.
+2. `docs/qa/NEXT_SESSION_2026-07-01.md` — the generic CL/CV template plan + deferred features.
 3. `CLAUDE.md` — repo conventions + the app.js gate.
 
 ## INLINED ESSENTIAL FACTS (these normally live in the local memory)
@@ -49,11 +48,13 @@ account — no login step is needed. AntCV needs no install for the core work (z
   (must print `glDemo=function, errors=0`). NEVER run `npm run build:app` (known-unsafe; it adds
   "use strict" and blue-screens the app). A short minified name can shadow a different local in a
   nested scope — verify the binding in-scope or inline the logic.
-- **Cache-bust QUARTET** on every CHANGED loaded file (anything referenced with `?v=` in
+- **Cache-bust QUINTET** on every CHANGED loaded file (anything referenced with `?v=` in
   `pwa/index.html`): bump that file's `?v=` in `index.html` + `pwa/sw.js` `CACHE` constant +
   `pwa/antcv-version-override.js` `TARGET_VERSION` (and ADD the PREVIOUS target to `STALE_VERSIONS`,
-  NEVER the new one). `antcv-version-override.js` changes every release, so its OWN `?v=` must bump
-  every release too. A pre-push hook runs `node scripts/check-cache-bust.mjs --range <upstream>..HEAD`
+  NEVER the new one) + the `window.ANTCV_VERSION = '1.51.x'` seed in `index.html` (the deferred
+  module ~line 326 — the login gate reads it BEFORE version-override pins TARGET; a stale seed
+  flashes the wrong version on boot). `antcv-version-override.js` changes every release, so its OWN
+  `?v=` must bump every release too. A pre-push hook runs `node scripts/check-cache-bust.mjs --range <upstream>..HEAD`
   and BLOCKS the push if a changed loaded asset's `?v` didn't advance — so complete the quartet.
   `pwa/app.src.js` is the source, never loaded, has no `?v` — it is correctly excluded.
 - **Salmon / pagination (the #2 fix) is the MOST blue-screen-prone area.** The measurer is the
@@ -101,7 +102,56 @@ account — no login step is needed. AntCV needs no install for the core work (z
 
 ## PRIORITY ORDER
 
-### **NVIDIA BATCH STATUS (14 items) — as of 1.50.833**
+### **CURRENT BACKLOG (owner re-review 2026-07-01) — DO THIS FIRST**
+
+The owner's central frustration is **convergence / restore reliability**: a single generation
+intermittently leaves a section blank, so the owner has to **regenerate 2–3 times** to get a
+complete CV+CL. Owner's words: *"the way you push from memory is nok."* Make ONE generation
+converge to a complete document. These three are the live failures (the deterministic PI-repairs
+in `pwa/antcv-sections-normalize-415.js` already heal languages / accessibility / experience /
+experience-completeness from `personalInfo` — but the items below have NO `personalInfo` source
+and rely on the snapshot/restore guards, which are NOT converging reliably):
+
+- **CV-CORECOMP-BLANK-001 (#2).** CORE COMPETENCIES (`id:"core_comp"`, `type:"table"`) renders the
+  me() placeholder rows (`["[Focus area 1]","[Strategic expertise …]"]`) after a generation — the
+  LLM's `core_comp_rows` lamination (app.src.js ~23650 / the fusion path) did not land, or the
+  kernel-recovery floor overwrote it with the skeleton. There is NO `personalInfo.core_comp_rows`,
+  so a PI-repair can't fix it. The right fix is a **last-good snapshot guard** like
+  `pwa/antcv-cl-prose-loss-guard-985.js` but for the CV core_comp table: snapshot the rows whenever
+  they are real (non-placeholder), and if a later state shows only placeholders, restore the
+  snapshot. Add it as a new sidecar (cache-bust quintet) or fold into 415. Diagnose WHY the
+  lamination is lost (timing vs the recovery floor) before adding the guard — a guard over a
+  fixable race is a band-aid.
+- **CL-BLANK-001 (#4).** "most cover letter is blank — I had to regenerate it again." The CL prose
+  (who/why/foundation/bring/contribute/closure rich_blocks) came back mostly empty on the first
+  generation. `pwa/antcv-cl-prose-loss-guard-985.js` snapshots + re-inserts deleted CL sections,
+  but a generation that emits EMPTY prose (vs deletes a section) defeats a "deleted-section" guard.
+  Check: does the guard treat an empty-body rich_block as "needs restore", and does the generation
+  apply path ever write empties over good prose? Make the first generation reliably non-blank
+  (the gen prompt already mandates every cl_overrides field be filled — verify the APPLY path).
+- **CV-ACCESS-DROP-001 (#7).** "accessibility was seen in first generation, dropped in second." The
+  ACCESSIBILITY section is present on gen 1 then gone on gen 2. `repairAccessibilityFromPI` (415)
+  rebuilds it from `personalInfo.accessibility` when the section is placeholder/empty — confirm
+  that (a) `personalInfo.accessibility` actually holds the real line after a gen, and (b) the
+  repair fires before the export gate. If gen 2 NULLS `personalInfo.accessibility`, fix the apply
+  path so it never clears a real PI field.
+
+**Method (owner requirement): diagnose on the owner's LIVE data, don't guess.** If this env has a
+signed-in headless browser, drive `antcv.pages.dev`, read `localStorage.sections` /
+`localStorage.personalInfo`, and reproduce the blank/drop before patching. You **cannot** reproduce
+a real LLM generation headlessly — so for the convergence bugs, verify the GUARD/REPAIR logic by
+node simulation (feed a blank-section `sections` blob through the sidecar, assert it heals) and
+flag that the full generate→gate→worker→sync timing must be owner-verified on a real cycle.
+
+**Deferred feature batch (owner list, after the convergence work):** editable CL slogan section;
+3-state What-I-Bring lead show / hide / **monochrome** toggle; sign-off pinned to page bottom
+(except a last page that is the recruiter-Q&A); refresh the exportable **DOCX + JSON templates** so
+they match current me(); CV orphan tails (20–40 char) in bullets / sidebar lists / table cells;
+Strategic-Expertise cell overflow (worker table width); zoom 5% step + export-preview default 75%.
+
+---
+
+### **NVIDIA BATCH STATUS (14 items) — as of 1.50.833 (HISTORICAL — all shipped/regen-gated)**
 
 All non-regen items shipped. Regen-gated items need an owner signed-in generation to verify.
 

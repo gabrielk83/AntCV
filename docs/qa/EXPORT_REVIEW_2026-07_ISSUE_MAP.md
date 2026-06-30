@@ -58,6 +58,30 @@ the 1.51.12/13 deploy reloaded the owner's tab. Confirmed against the real `CV_(
 
 ---
 
+## RE-REVIEW — owner 2026-07-01 (PWA 1.51.27 · docx-worker 1.14.110)
+
+Owner re-export feedback (7 items). Deterministic fixes shipped; convergence items handed to the
+nightly (`docs/qa/CLOUD_ROUTINE_PROMPT.md` → CURRENT BACKLOG).
+
+- **#1 Role-result duplicate — FIXED (1.51.26).** A role BULLET that was a LONGER variant of the
+  Result stayed (bullet→result token overlap fell below threshold). `antcv-docx-client.js`
+  `hideSubsumed` is now bidirectional (RESULT-SUBSUMES-BULLET-003): hide when overlap is high in
+  EITHER direction (bullet⊆result OR result⊆bullet, ≥72%) plus the reverse verbatim-substring check.
+- **#5 "Why this company" rule — FIXED (1.51.26).** Owner wanted a permanent HORIZONTAL rule, not
+  the vertical cue an earlier build added. `antcv-cl-text-cleanup` `ensureWhyVRule` now sets
+  `headlineRule` and clears `headlineVRule`.
+- **#3 Lost 2 positions (Student rep, Computer admin) — FIXED (1.51.27).** Generation silently
+  dropped two roles; `repairExperienceFromPI` only rebuilds a fully-degraded section. New
+  EXPERIENCE-COMPLETENESS-001 (415) merges any `personalInfo` role absent from the section back in
+  as HIDDEN (`on:false`) — present + recoverable, visible CV unchanged.
+- **#6 Signature cut — RESOLVED (no code).** Owner confirms the signature is intact in the PDF; only
+  Adobe's image-editor view clips the full "G". C8 closed.
+- **#2 core_comp blank / #4 CL mostly blank / #7 accessibility dropped on 2nd gen — OPEN, nightly.**
+  Convergence/restore reliability (owner: "the way you push from memory is nok"). Tracked as
+  CV-CORECOMP-BLANK-001 / CL-BLANK-001 / CV-ACCESS-DROP-001 in the cloud-routine CURRENT BACKLOG.
+
+---
+
 ---
 
 ## A. REGRESSIONS introduced by my recent fixes (FIX FIRST)

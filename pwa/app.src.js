@@ -10585,6 +10585,24 @@
       });
       return { ...e, roles: n };
     }
+    if ("rich_block" === t.type) {
+      // H (owner 2026-06-29): apply the compressed "t" bodies back, skipping the SAME
+      // rows the builder skipped (grp sub-headings, hidden rows, empty-t rows) so the
+      // value→row mapping stays aligned (FIXIT-DESYNC-001). Keep "b"/grp/mk/flags intact.
+      let o = 0;
+      const r = (e.items || []).map((it, i) => {
+        if (
+          !it ||
+          it.grp ||
+          (e.hidden && e.hidden[i]) ||
+          !(it.t || "").trim()
+        )
+          return it;
+        const c = (t.items || [])[o++];
+        return c ? { ...it, t: c.t || it.t || "" } : it;
+      });
+      return { ...e, items: r };
+    }
     return e;
   }
   function Be({
@@ -19748,6 +19766,25 @@
                   e.b ? { b: e.b, t: e.t } : { t: e.t || String(e) },
                 ),
               };
+            else if ("rich_block" === r.type)
+              // H (owner 2026-06-29): rich_block (Foundation/why/who/bring/contribute)
+              // had no compress branch -> "not compressible" alert + stuck spinner.
+              // Compress only the "t" bodies; keep "b" lead-ins, grp sub-headings, and
+              // hidden rows UNCHANGED. The filter predicate MUST match Pe's rich_block
+              // applier exactly (FIXIT-DESYNC-001) or values shift across skipped rows.
+              n = {
+                id: r.id,
+                type: "rich_block",
+                items: (r.items || [])
+                  .filter(
+                    (e, i) =>
+                      e &&
+                      !e.grp &&
+                      !(r.hidden && r.hidden[i]) &&
+                      (e.t || "").trim(),
+                  )
+                  .map((e) => ({ b: e.b || "", t: e.t || "" })),
+              };
             else if ("foundation" === r.type)
               n = {
                 id: r.id,
@@ -19783,7 +19820,11 @@
                 return (
                   alert(`Section type "${r.type}" is not compressible here.`),
                   lr(!1),
-                  void tl(null)
+                  tl(null),
+                  void Cr((n) => {
+                    const o = { ...n };
+                    return (delete o[a], t && delete o[e], o);
+                  })
                 );
               n = {
                 id: r.id,
@@ -19825,7 +19866,9 @@
                                   ? `Compress these CV sidebar items by approximately ${e}% in ${a}. ${i} Keep every proper noun, certification code, tool name. Same item count, same order. Return ONLY JSON {items:[...]} in the input shape:\n\n${JSON.stringify(n)}`
                                   : "education" === n.type
                                     ? `Compress these CV education entries by approximately ${e}% in ${a}. ${i} Keep the "deg" (degree) field unchanged. Only tighten "sch" (school/details). Same item count. Return ONLY JSON in the input shape {items:[{deg,sch},...]}:\n\n${JSON.stringify(n)}`
-                                    : `Compress this CV/cover letter section by approximately ${e}% in ${a}. ${i} Keep every number, proper noun, company name, certification code, and technical term exactly. Preserve the section structure (type, bullet count, role count). For text_bullets last item: preserve any closing-value clause but rewrite without the phrase "and that's good because" — that wording is banned. Return ONLY JSON matching the input shape:\n\n${JSON.stringify(n)}`;
+                                    : "rich_block" === n.type
+                                      ? `Compress the body ("t") of each item in this cover-letter / CV rich block by approximately ${e}% in ${a}. ${i} Rules:\n- Keep every "b" (lead-in label) UNCHANGED exactly as input.\n- Tighten ONLY the "t" body fields.\n- Keep every number, proper noun, company name, certification code, tool name, and technical term.\n- Same item count. Preserve the order.\nReturn ONLY valid JSON in the input shape {items:[{b,t},...]}:\n\n${JSON.stringify(n)}`
+                                      : `Compress this CV/cover letter section by approximately ${e}% in ${a}. ${i} Keep every number, proper noun, company name, certification code, and technical term exactly. Preserve the section structure (type, bullet count, role count). For text_bullets last item: preserve any closing-value clause but rewrite without the phrase "and that's good because" — that wording is banned. Return ONLY JSON matching the input shape:\n\n${JSON.stringify(n)}`;
                 const l = await ee(
                   [{ role: "user", content: r }],
                   `You are a senior CV editor. Compress content by the requested percentage while preserving every factual detail. Output language: ${a}. (numbers, proper nouns, technical terms, certifications). Return ONLY valid JSON in the exact input shape. No prose, no markdown, no explanation.`,

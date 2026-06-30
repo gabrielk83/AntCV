@@ -220,7 +220,14 @@ distinct marker so neither leaks). Same standalone keys; no behavior change — 
   the Layout/CL panel) + read them in the React preview + worker + srcdoc. The header name stays the
   full name; only the SIGN-OFF name changes.
 
-### H. rich_block not compressible ("Section type \"rich_block\" is not compressible here.")
+### H. rich_block not compressible ("Section type \"rich_block\" is not compressible here.") — [SHIPPED 1.50.984 — RICH-BLOCK-COMPRESS-001]
+Done exactly as planned below: rich_block branch in the compress source-builder (app.src.js ~19751) +
+prompt chain + the `Pe` applier (~10588), compressing only the `t` bodies and skipping grp/hidden/empty-t
+rows in BOTH builder and applier (no value→row desync). The unsupported-type guard now clears the `Wr`
+processing marker so a genuinely-unsupported type no longer leaves a stuck spinner. Verified by
+`pwa/test/unit/compress-rich-block.test.mjs` (7/7) + `pwa/test/diag-rich-block-compress.mjs` (past the
+gate) + suite 528/528 + boot-smoke. LLM compression quality is owner-verified on a real run.
+
 Foundation is now rich_block; the per-section compress handler (app.src.js ~19749) supports
 foundation/experience/table/labeled_list/list/education but NOT rich_block → it alerts + leaves a
 "junk processing" state. FIX: add a `rich_block` branch — build `{id,type:'rich_block',items:[{b,t}]}`

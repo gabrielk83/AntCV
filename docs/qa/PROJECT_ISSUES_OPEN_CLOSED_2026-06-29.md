@@ -41,8 +41,14 @@ Authoritative handoff: `docs/qa/NEXT_SESSION_2026-06-29.md` (has per-item plans 
 **CL sign-off + format (owner 2026-06-29):**
 3. **G** — sign-off order **closing→name→signature** (sig AFTER name; reverse NAME-FOLLOWS-SIG), all same
    CJLR, editable defaults closing="At your service," + sign-off name="Gabriel".
-4. **H** — `rich_block` not compressible (Foundation) → error + junk processing; add a rich_block compress
-   branch + reset the stuck state.
+4. **H** — `rich_block` not compressible (Foundation) → error + junk processing. **[SHIPPED 1.50.984 —
+   RICH-BLOCK-COMPRESS-001]** Added a `rich_block` branch to the compress source-builder, the compress
+   prompt chain, and the `Pe` applier (compress only the `t` bodies; keep `b` lead-ins, `grp` sub-headings,
+   hidden rows untouched; builder/applier skip the SAME rows so values can't shift — FIXIT-DESYNC-001). The
+   unsupported-type guard now also clears the `Wr` processing marker (no stuck spinner). Verified: unit
+   `compress-rich-block.test.mjs` 7/7, `diag-rich-block-compress.mjs` (renders past the gate, 0 errors, no
+   "not compressible" alert), suite 528/528, boot-smoke clean. LLM-output quality is owner-verified on a
+   real compress.
 5. **J** — CL Foundation "Professionally" bold body — needs owner confirmation of what reads as bold.
 6. **F1** — make the CL SLOGAN an editable section + control (today derived from meta.subtitle).
 7. **F3** — surface the signature control as a subsection in the CL format panel (today under Layout).

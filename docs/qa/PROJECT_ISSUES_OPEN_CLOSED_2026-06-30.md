@@ -1,6 +1,13 @@
 # AntCV — Open vs Closed issues (2026-06-30)
 
-**State:** PWA **1.50.999** · docx-worker **1.14.102** · access-relay **1.3.2** · unit suite 529/529.
+**State:** PWA **1.51.1** · docx-worker **1.14.102** · access-relay **1.3.2** · unit suite 529/529.
+
+### CLOSED — 2026-07 (CL export review, owner)
+| Ver | Issue | Verified |
+|---|---|---|
+| **1.51.0** | **LEAD-COLON-PERROW-001** — colon after a lead-in is now PER ROW: non-marker section lead-ins (Foundation:, Who I am:, Why…:, What I bring:, How I would contribute:) get it; marker rows (Hands-on / Professionally / need bullets) don't. Render fix, immediate | boot-smoke |
+| **1.51.0** | **LEAD-CONTINUATION-CASE-001** (gen) — a marker lead-in has no colon so its body continues the sentence and starts LOWERCASE ("Professionally that…" not "…That…"), unless first word is "I"/proper noun | gen rule; verify on regen |
+| **1.51.1** | **BRING-INTRO-001** — "What I bring:" lead-in body was hardcoded empty in bring-761; now the model returns `cl_overrides.bring_intro` (anchor + areas, framing the rows), carried on the section and set as the lead-in body | gen + render; owner verifies on regen |
 Supersedes `PROJECT_ISSUES_OPEN_CLOSED_2026-06-29.md`. Per-item detail: `SESSION_2026-06-30_CL_HARDENING.md`,
 `CL_CV_GENERIC_TEMPLATES_2026-06-30.md`, `NEXT_SESSION_2026-07-01.md`. Full running history: `ACTIVE_BUGS.md`.
 
@@ -63,7 +70,12 @@ per-batch snapshots are the practical tally. No single from-inception counter is
    hide the restated bullet) — verify on a fresh regen. STILL OPEN: a DISPLAY-LAYER dedup so an EXISTING
    doc hides a visible bullet whose text is substantially contained in that role's `results` (preview
    ~5915-6059 + worker render); Council `hasOutcomes:0` → laminator derives from a bullet → the dup. Needs
-   owner's live data + a real export to verify.
+   owner's live data + a real export to verify. NEW evidence 2026-07 export: IDF now correctly shows the
+   numerical "100 users / 150 machines" result (good), but **Students Council Representative regressed to a
+   non-numerical bullet-derived result** ("Represent Electrical Engineering students to faculty on
+   curriculum…") instead of its seeded numerical result (role_results_exact, 1.50.981). This is the SAME
+   laminator-derives-from-bullet bug — surfaced by the regen (LLM variance), not a new code regression. Fix
+   = make the laminator use the kernel's seeded exact result for council before deriving from a bullet.
 1b. **CV shows 2 empty "[Role title], [Company]  [Years]" positions in the preview** (owner 2026-06-30) —
    bracketed placeholder roles leak into the GENERATED/exported CV. The ghost-placeholder filter
    (CV-GHOST-PLACEHOLDER-001) deliberately KEEPS bracketed `[Role title]` roles (so a fresh template stays

@@ -5490,7 +5490,10 @@
                     ? React.createElement(B, {
                         path: ["items", i, "t"],
                         value: P(row.t || ""),
-                        placeholder: "(click to add)",
+                        // RICH-BLOCK-LABEL-LEAD-NOHINT-001 (owner 2026-06-30): a label-only lead
+                        // (has a bold .b, empty .t — e.g. the "What I bring" heading) showed a
+                        // confusing "(click to add)" hint. Suppress the hint for labelled rows.
+                        placeholder: bShow ? "" : "(click to add)",
                       })
                     : null,
                 ),

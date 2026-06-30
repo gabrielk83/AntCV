@@ -25822,6 +25822,9 @@ function maybeBuildPhotoFor(ctx, target) {
 __name(maybeBuildPhotoFor, "maybeBuildPhotoFor");
 function detectImageType(b64) {
   if (!b64) return "png";
+  // data-URL mime wins (the base64 head below is past the "data:" prefix otherwise).
+  const dm = String(b64).match(/^data:image\/(png|jpe?g|gif)/i);
+  if (dm) { const t = dm[1].toLowerCase(); return t === "jpeg" ? "jpg" : t; }
   const head = b64.slice(0, 12);
   if (head.startsWith("/9j/")) return "jpg";
   if (head.startsWith("iVBORw")) return "png";
@@ -25830,7 +25833,15 @@ function detectImageType(b64) {
 }
 __name(detectImageType, "detectImageType");
 function base64ToUint8Array(b64) {
-  const binary = atob(b64);
+  // SIGNATURE-DATAURL-DECODE-001 (owner 2026-06-30): the signature (and any client image) is a
+  // DATA-URL ("data:image/png;base64,…"). atob() chokes on the "data:…;base64," prefix and the
+  // ImageRun try/catch then SKIPPED the image -> signature never rendered in the CloudConvert PDF.
+  // Strip the data-URL prefix + any whitespace before decoding.
+  let s = String(b64 || "");
+  const c = s.indexOf(",");
+  if (s.slice(0, 5) === "data:" && c >= 0) s = s.slice(c + 1);
+  s = s.replace(/\s+/g, "");
+  const binary = atob(s);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return bytes;

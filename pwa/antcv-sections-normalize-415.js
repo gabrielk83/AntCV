@@ -683,29 +683,40 @@
     mk('languages', 'LANGUAGES', buckets.Languages, hasLang);
     mk('interests', 'INTERESTS', buckets.Interests, hasInt);
     mk('accessibility', 'ACCESSIBILITY', buckets.Accessibility, hasAcc);
-    if (!newSecs.length) return null;   // nothing new to create -> leave as-is
     var copy = cv.slice();
-    var replacement = newSecs;
     // keep any leftover Other items + preserved custom group markers (or the
     // buckets that already have their own section) in a trimmed ADDITIONAL; drop
     // ADDITIONAL only if there is genuinely nothing left.
     var leftover = keptGroups.concat(buckets.Other);
-    // ACCESSIBILITY-DUP-001 (owner 2026-06-18: "accessibility is generated twice"):
-    // only push a category's items back into ADDITIONAL when its dedicated section
-    // does NOT already hold content. If the dedicated section exists AND is non-empty
-    // it is the single home for that category — keeping the items in ADDITIONAL too
-    // renders them twice. An empty/just-created dedicated section keeps the items so
-    // nothing is lost.
-    var pushBack = function (id, exists, bucket) {
-      if (!exists) return;
+    // A dedicated section is a real "home" for a category if it has list items OR
+    // (for a text section like ACCESSIBILITY) a non-trivial content string — the
+    // accessibility section renders from `content`, not `items`.
+    var sectionHasContent = function (id) {
       var sec = cv.filter(function (s) { return s && s.id === id; })[0];
-      var nonEmpty = sec && Array.isArray(sec.items) && sec.items.length;
-      if (!nonEmpty) bucket.forEach(function (it) { leftover.push(it); });
+      if (!sec) return false;
+      if (Array.isArray(sec.items) && sec.items.length) return true;
+      if (typeof sec.content === 'string' && sec.content.replace(/\s/g, '').length) return true;
+      return false;
+    };
+    // ADDITIONAL-DEDUP-001 (owner 2026-07: "if we have Languages, hide it FROM Additional;
+    // if we have Interests, remove Interests from Additional"). ACCESSIBILITY-DUP-001
+    // (owner 2026-06-18: "accessibility is generated twice"). Only KEEP a category's items
+    // in ADDITIONAL when there is NO home for them: no dedicated section (mk() just made one,
+    // which now owns them), or the dedicated section is genuinely empty. When the dedicated
+    // section EXISTS and holds content, it is the single home — drop the rows from ADDITIONAL.
+    // The previous build returned early when no NEW section was created, so this dedup never
+    // ran and duplicate Languages/Interests/Accessibility rows stayed in ADDITIONAL.
+    var pushBack = function (id, exists, bucket) {
+      if (exists && !sectionHasContent(id)) bucket.forEach(function (it) { leftover.push(it); });
     };
     pushBack('languages', hasLang, buckets.Languages);
     pushBack('interests', hasInt, buckets.Interests);
     pushBack('accessibility', hasAcc, buckets.Accessibility);
-    if (leftover.length) replacement = newSecs.concat([Object.assign({}, cv[xi], { items: leftover })]);
+    // Nothing to do only if we neither created a section nor removed any duplicate row.
+    if (!newSecs.length && leftover.length === cv[xi].items.length) return null;
+    var replacement = leftover.length
+      ? newSecs.concat([Object.assign({}, cv[xi], { items: leftover })])
+      : newSecs;   // ADDITIONAL fully emptied -> drop it
     copy.splice.apply(copy, [xi, 1].concat(replacement));
     return copy;
   }

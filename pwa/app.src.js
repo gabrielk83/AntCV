@@ -3221,7 +3221,7 @@
               on: !0,
               type: "text_inline",
               content:
-                "[WORK STYLE - one short line only, and only if the JD signals it matters; otherwise leave empty. Describe how the work gets done in plain terms (example shape: '<verb> first, <concrete habit>, turns <input> into <agreed output>'). End on a people skill. No corporate language; banned: dynamic, proactive, collaborative, 'strategic mindset'.]",
+                "[WORK STYLE - one short line. ALWAYS produce a real one-line work-style sentence, including for an UNSOLICITED CV (no JD) - never leave it empty. Describe how the work gets done in plain terms (example shape: '<verb> first, <concrete habit>, turns <input> into <agreed output>'). End on a people skill. No corporate language; banned: dynamic, proactive, collaborative, 'strategic mindset'.]",
             },
             {
               id: "outcomes",

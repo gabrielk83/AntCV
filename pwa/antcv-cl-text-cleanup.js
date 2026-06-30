@@ -17,14 +17,42 @@
  *   bullet read COMPLETE by stripping a trailing dangling connector / comma so it ends
  *   on a content word. Only touches a body that does NOT already end in sentence
  *   punctuation (so a real sentence is never shortened). bring + contribute bullets.
+ *
+ * C6 — CONTRIBUTE BOLD LEAD-INS (owner: the HOW I WOULD CONTRIBUTE action bullets have an
+ *   empty bold lead `b`; the first phrase should be the bold lead-in). Split a leadless
+ *   contribute action bullet into a bold lead (first clause) + body so it renders
+ *   "**Map current change governance flows** to identify ...". See splitLead.
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.9';
+  var VERSION = '1.51.11';
   if (window.__antcvClTextCleanup === VERSION) return;
   window.__antcvClTextCleanup = VERSION;
 
   function disabled() { try { return localStorage.getItem('antcv:disable-cl-cleanup') === '1'; } catch (_) { return false; } }
+
+  // C6 — CONTRIBUTE BOLD LEAD-INS (owner: the HOW I WOULD CONTRIBUTE action bullets had an
+  // empty bold lead `b`; the first phrase should be the bold lead-in — "Map current change
+  // governance flows", "Set up KPI reporting", ...). Split a leadless action bullet into a
+  // bold lead (first clause) + body: cut at the first connective word / comma (12-48 chars),
+  // else the first four words. Conservative — returns null (no split) when no clean lead.
+  function splitLead(t) {
+    t = String(t == null ? '' : t).trim();
+    if (!t) return null;
+    var connRe = /\s\b(to|and|by|that|so|with|for|across|under|using|into|on|through|which|linking|including|while)\b\s/ig;
+    var m, connIdx = -1;
+    while ((m = connRe.exec(t))) { if (m.index >= 12) { connIdx = m.index; break; } }
+    var commaIdx = t.indexOf(',');
+    var cut = -1;
+    if (commaIdx >= 12 && commaIdx <= 48 && (connIdx < 0 || commaIdx < connIdx)) cut = commaIdx;
+    else if (connIdx >= 12 && connIdx <= 48) cut = connIdx;
+    if (cut < 0) { var w = t.split(/\s+/); if (w.length >= 6) { var l4 = w.slice(0, 4).join(' '); if (l4.length <= 40) cut = l4.length; } }
+    if (cut < 12 || cut > 48) return null;
+    var lead = t.slice(0, cut).trim().replace(/[,:;]$/, '');
+    var body = t.slice(cut).trim().replace(/^[,:;]\s*/, '');
+    if (lead.split(/\s+/).length < 2 || lead.length < 10 || body.length < 15) return null;
+    return { lead: lead, body: body };
+  }
 
   // Words that, when they OPEN a marker-row continuation, are never proper nouns — safe to lowercase.
   var SAFE_LOWER = /^(that|this|these|those|it|its|by|through|with|within|across|using|turning|keeping|building|and|but|so|then|where|when|which|while|a|an|the|each|my|their|his|her|our)$/i;
@@ -63,6 +91,11 @@
         if (!c4Sec && !c3Sec) return;
         sec.items.forEach(function (it) {
           if (!it || typeof it !== 'object' || it.grp) return;
+          // C6: give a leadless contribute action bullet a bold lead-in (split the first clause).
+          if (sec.id === 'contribute' && it.mk && !it.b) {
+            var sp = splitLead(it.t);
+            if (sp) { it.b = sp.lead; it.t = sp.body; changed = true; }
+          }
           var orig = String(it.t == null ? '' : it.t);
           var v = orig;
           if (c4Sec) v = c4(v, it.b, it.mk, it.colon);

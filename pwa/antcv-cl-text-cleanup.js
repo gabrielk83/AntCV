@@ -25,7 +25,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.11';
+  var VERSION = '1.51.13';
   if (window.__antcvClTextCleanup === VERSION) return;
   window.__antcvClTextCleanup = VERSION;
 
@@ -78,12 +78,32 @@
     return cleaned || t;                                       // never blank a body
   }
 
+  // C2b — HWIC INTRO COLON (structure repair). The 760 migration only keeps the HOW I
+  // WOULD CONTRIBUTE intro + closing as MARKERLESS paragraphs when the intro row ends with
+  // ":" (a real action bullet never does). A truncated intro ("My first priorities would")
+  // lacks the ":", so 760 markers EVERY row — the heading/intro and the Goal closing render
+  // as bullets. Re-attach the ":" to the intro row (identified by its headline lead `b`) so
+  // 760 recognises it; the closing then follows automatically. Idempotent.
+  function ensureContribIntroColon(sec) {
+    if (!sec || sec.id !== 'contribute' || !Array.isArray(sec.items) || !sec.items.length) return false;
+    var i0 = sec.items[0];
+    if (!i0 || typeof i0 !== 'object') return false;
+    if (!/contribut/i.test(String(i0.b || ''))) return false;   // only the headline-intro row
+    var t = String(i0.t == null ? '' : i0.t);
+    if (!t.trim() || /[.!?:]\s*$/.test(t)) return false;         // already terminal — leave it
+    i0.t = t.replace(/\s+$/, '') + ':';
+    return true;
+  }
+
   function run() {
     if (disabled()) return;
     try {
       var secs = JSON.parse(localStorage.getItem('sections') || '{}');
       if (!secs || !Array.isArray(secs.cl)) return;
       var changed = false;
+      secs.cl.forEach(function (sec) {
+        if (ensureContribIntroColon(sec)) changed = true;
+      });
       secs.cl.forEach(function (sec) {
         if (!sec || sec.type !== 'rich_block' || !Array.isArray(sec.items)) return;
         var c4Sec = (sec.id === 'foundation' || sec.id === 'bring' || sec.id === 'contribute');

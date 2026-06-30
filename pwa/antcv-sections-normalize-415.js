@@ -688,12 +688,28 @@
     // buckets that already have their own section) in a trimmed ADDITIONAL; drop
     // ADDITIONAL only if there is genuinely nothing left.
     var leftover = keptGroups.concat(buckets.Other);
-    // A dedicated section is a real "home" for a category if it has list items OR
-    // (for a text section like ACCESSIBILITY) a non-trivial content string — the
-    // accessibility section renders from `content`, not `items`.
+    // A dedicated section is a real "home" for a category only if it actually holds
+    // GOOD data — otherwise dropping the ADDITIONAL rows would lose the only good copy.
+    // ADDITIONAL-DEDUP-SAFE-001 (owner 2026-07 CV(4): the dedicated LANGUAGES section had
+    // drifted to a broken "native / fluent" (languages-concise collapse) while ADDITIONAL
+    // still held the full "English (native), Hebrew (native), Spanish (professional),
+    // Danish (B1)". A bare presence check would drop the good additional copy and keep the
+    // broken one. So: text/list presence counts as a home for INTERESTS/ACCESSIBILITY, but
+    // LANGUAGES must NAME a real language (or carry a CEFR level) to count — a section that
+    // only says "native / fluent" is not a valid home and ADDITIONAL keeps its rows.
+    var langNameRe = /(english|danish|spanish|hebrew|german|french|norwegian|swedish|finnish|arabic|mandarin|chinese|portuguese|italian|russian|dutch|japanese|korean|polish|turkish|mother tongue|native speaker|\b[ABC][12]\b)/i;
+    var secAllText = function (sec) {
+      var t = '';
+      if (sec) {
+        if (Array.isArray(sec.items)) sec.items.forEach(function (it) { if (it && typeof it === 'object') t += ' ' + (it.l || it.b || '') + ' ' + (it.v || it.t || ''); else t += ' ' + (it == null ? '' : it); });
+        if (typeof sec.content === 'string') t += ' ' + sec.content;
+      }
+      return t;
+    };
     var sectionHasContent = function (id) {
       var sec = cv.filter(function (s) { return s && s.id === id; })[0];
       if (!sec) return false;
+      if (id === 'languages') return langNameRe.test(secAllText(sec));
       if (Array.isArray(sec.items) && sec.items.length) return true;
       if (typeof sec.content === 'string' && sec.content.replace(/\s/g, '').length) return true;
       return false;

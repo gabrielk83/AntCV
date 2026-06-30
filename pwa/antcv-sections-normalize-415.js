@@ -15,7 +15,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.924-condense-fold';
+  var VERSION = '1.51.21-acc-repair';
   if (window.__antcvSectionsNormalize === VERSION) return;
   window.__antcvSectionsNormalize = VERSION;
 
@@ -691,6 +691,30 @@
     return copy;
   }
 
+  // ACCESSIBILITY-REPAIR-001 (owner 2026-07: the dedicated ACCESSIBILITY section held the me()
+  // placeholder while personalInfo.accessibility held the real line — and the placeholder made
+  // the dedup remove the real copy from ADDITIONAL, so accessibility disappeared from the CV).
+  // When the dedicated section is a placeholder/empty and personalInfo has a real line, populate
+  // it (text/content). The dedup then keeps it as the single home.
+  function repairAccessibilityFromPI(cv) {
+    var idx = -1;
+    for (var i = 0; i < cv.length; i++) { if (cv[i] && cv[i].id === 'accessibility') { idx = i; break; } }
+    if (idx < 0) return null;
+    var sec = cv[idx];
+    var ph = function (v) { var s = String(v == null ? '' : v).trim(); return !s || s.charAt(0) === '['; };
+    var hasReal = (typeof sec.content === 'string' && !ph(sec.content)) ||
+      (Array.isArray(sec.items) && sec.items.some(function (it) { return it && !ph(it.t || it.v || it.b); }));
+    if (hasReal) return null;
+    var pi = {}; try { pi = JSON.parse(localStorage.getItem('personalInfo') || '{}') || {}; } catch (_) { return null; }
+    var av = typeof pi.accessibility === 'string' ? pi.accessibility.trim() : '';
+    if (!av || av.charAt(0) === '[') return null;
+    var copy = cv.slice();
+    var ns = Object.assign({}, sec, { type: 'text', content: av });
+    delete ns.items;
+    copy[idx] = ns;
+    return copy;
+  }
+
   function explodeAdditionalToSections(cv) {
     var xi = -1;
     for (var i = 0; i < cv.length; i++) {
@@ -743,12 +767,17 @@
       }
       return t;
     };
+    // A bracketed me() placeholder ("[ACCESSIBILITY - optional …]") is NOT real content —
+    // ACCESSIBILITY-PLACEHOLDER-001 (owner 2026-07: the dedicated ACCESSIBILITY section held a
+    // placeholder, so a bare presence check deduped the REAL accessibility out of ADDITIONAL and
+    // it vanished from the CV). Reject a placeholder content / item.
+    var _isPh = function (v) { var s = String(v == null ? '' : v).trim(); return !s || s.charAt(0) === '['; };
     var sectionHasContent = function (id) {
       var sec = cv.filter(function (s) { return s && s.id === id; })[0];
       if (!sec) return false;
       if (id === 'languages') return langNameRe.test(secAllText(sec));
-      if (Array.isArray(sec.items) && sec.items.length) return true;
-      if (typeof sec.content === 'string' && sec.content.replace(/\s/g, '').length) return true;
+      if (Array.isArray(sec.items) && sec.items.some(function (it) { return it && !_isPh(it.t || it.v || it.b); })) return true;
+      if (typeof sec.content === 'string' && !_isPh(sec.content)) return true;
       return false;
     };
     // ADDITIONAL-DEDUP-001 (owner 2026-07: "if we have Languages, hide it FROM Additional;
@@ -1080,6 +1109,7 @@
       var wi = inlineifyLabeledText(cv); if (wi) { cv = wi; changed = true; }
       var no = neutralizeUnsolicitedOpener(cv); if (no) { cv = no; changed = true; }
       var rl = repairLanguagesFromPI(cv); if (rl) { cv = rl; changed = true; }
+      var ra = repairAccessibilityFromPI(cv); if (ra) { cv = ra; changed = true; }
       var ex = explodeAdditionalToSections(cv); if (ex) { cv = ex; changed = true; }
       var pa = partitionAdditional(cv); if (pa) { cv = pa; changed = true; }
       var jr = scrubJuniorRugby(cv); if (jr) { cv = jr; changed = true; }

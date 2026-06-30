@@ -993,11 +993,15 @@
     },
     S = {
       anthropic: {
-        model: "claude-opus-4-7",
+        // COST-QUALITY-SONNET-001 (owner 2026-07): Claude Sonnet 4.6 ($3/$15 per 1M) is the
+        // cost-quality optimum for structured CV/CL generation — near-Opus quality + strong
+        // Danish at ~1/5 the cost and lower latency than Opus 4.x. (There is no "Sonnet 5";
+        // 4.6 is the latest Sonnet.) Was claude-opus-4-7 priced (wrongly) at $15/$75.
+        model: "claude-sonnet-4-6",
         quality: 9,
-        danish: 7,
-        cost: 4,
-        latency: 6,
+        danish: 8,
+        cost: 2,
+        latency: 3,
       },
       openai: { model: "gpt-5.5", quality: 10, danish: 9, cost: 4, latency: 3 },
       mistral: {
@@ -1016,7 +1020,7 @@
       },
     },
     C = {
-      anthropic: { inputPer1M: 15, outputPer1M: 75 },
+      anthropic: { inputPer1M: 3, outputPer1M: 15 },
       openai: { inputPer1M: 30, outputPer1M: 60 },
       mistral: { inputPer1M: 3, outputPer1M: 9 },
       gemini: { inputPer1M: 0.15, outputPer1M: 0.6 },

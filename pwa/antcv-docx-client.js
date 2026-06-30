@@ -652,9 +652,15 @@ export function buildPayload({
         try {
           if (doc !== 'cl') return {};
           if (localStorage.getItem('antcv:signatureHidden') === '1') return {};
-          const sig = localStorage.getItem('antcv:signatureB64');
-          if (!sig) return {};
-          const clean = (k) => String(localStorage.getItem(k) || '').replace(/["']/g, '');
+          // SIGNATURE-EXPORT-STASH-FALLBACK-001 (owner 2026-06-30): the refresh-triggered restore
+          // can transiently WIPE antcv:signatureB64 (the loss-guard re-applies it, but an export in
+          // that ~few-second window would miss it -> "signature missing in export"). Read the live
+          // key, else fall back to the loss-guard's LOCAL stash so the export always carries it.
+          const _stash = (() => { try { return JSON.parse(localStorage.getItem('antcv:clKeysGuard') || '{}') || {}; } catch (_) { return {}; } })();
+          let sig = localStorage.getItem('antcv:signatureB64');
+          if (!sig || !String(sig).trim()) sig = _stash['antcv:signatureB64'] || '';
+          if (!sig || !String(sig).trim()) return {};
+          const clean = (k) => { var v = localStorage.getItem(k); if (v == null || String(v).trim() === '') v = _stash[k]; return String(v || '').replace(/["']/g, ''); };
           const out = { signature_b64: sig };
           const al = clean('antcv:signatureAlign').toLowerCase();
           out.signature_align = (al === 'left' || al === 'right') ? al : 'center';

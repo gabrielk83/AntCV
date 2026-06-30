@@ -26789,6 +26789,9 @@
                 try {
                   if (localStorage.getItem("antcv:signatureHidden") !== "1") {
                     var b = localStorage.getItem("antcv:signatureB64");
+                    // SIGNATURE-EXPORT-STASH-FALLBACK-001: a refresh can transiently wipe the key;
+                    // fall back to the loss-guard's local stash so the printed PDF keeps the signature.
+                    if (!b || !String(b).trim()) { try { var _g = JSON.parse(localStorage.getItem("antcv:clKeysGuard") || "{}") || {}; if (_g["antcv:signatureB64"]) b = _g["antcv:signatureB64"]; } catch (_) {} }
                     if (b) {
                       var a = String(localStorage.getItem("antcv:signatureAlign") || "center").replace(/["']/g, "").toLowerCase(),
                         al = ("left" === a || "right" === a) ? a : "center",

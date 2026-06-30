@@ -32,10 +32,12 @@
   // 'Coord.'; if Coordination/Coordinating/Coordinate/Coordinated/Coordinates is in use display it
   // fully"). It was also the source of an edit-revert bug — the owner expanded "Coord." → the full
   // word and this sidecar re-abbreviated it on the next sections-updated. See EXPAND below.
+  // "Management -> Mgmt" was REMOVED (owner 2026-06-30: "use the full word management,
+  // not Mgmt"). Same fix shape as Coord. below: drop the abbreviation + EXPAND any stored
+  // "Mgmt" back to the full word so it never re-abbreviates and owner edits stick.
   var ABBR = [
     [/\bDocumentation\b/gi, 'Docs'],
     [/\bRequirements\b/gi, 'Reqs'],
-    [/\bManagement\b/gi, 'Mgmt'],
   ];
   function abbreviate(s) {
     var v = String(s == null ? '' : s);
@@ -47,6 +49,7 @@
   // standalone token — it never touches "Coordinator", "Coordinate(d/s)", or "Coordination" itself.
   var EXPAND = [
     [/\bCoord\b\.?/gi, 'Coordination'],
+    [/\bMgmt\b\.?/gi, 'Management'],
   ];
   function expand(s) {
     var v = String(s == null ? '' : s);

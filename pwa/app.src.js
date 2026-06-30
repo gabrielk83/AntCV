@@ -6929,6 +6929,14 @@
               pageBreakBefore: e.pageBreakBefore ? "always" : void 0,
               breakBefore: e.pageBreakBefore ? "page" : void 0,
             };
+    // CL-HEADLINE-VRULE-001 (owner 2026-06-30): when the headline TEXT is hidden
+    // (headlineOff) the section had NO visual cue. headlineVRule draws a vertical
+    // accent line down the section's left edge (heading colour) as the marker, so
+    // a headline-off section is still locatable in the CL.
+    if (e.headlineOff && e.headlineVRule) {
+      M.borderLeft = `2px solid ${C}`;
+      M.paddingLeft = 8;
+    }
     return R(
       React.createElement(
         React.Fragment,

@@ -61,9 +61,16 @@ test('expand never touches Coordinator / Coordinate / Coordinated / Coordination
   }
 });
 
-test('other abbreviations are KEPT (Docs/Reqs/Mgmt)', () => {
+test('other abbreviations are KEPT (Docs/Reqs); Management is NOT abbreviated', () => {
   const { api } = load({ cv: [], cl: [] });
-  assert.equal(api._abbr('Documentation & Requirements Management'), 'Docs & Reqs Mgmt');
+  // Management -> Mgmt removed (owner 2026-06-30: "use the full word management").
+  assert.equal(api._abbr('Documentation & Requirements Management'), 'Docs & Reqs Management');
+});
+
+test('expand: a stored "Mgmt" is restored to the full word "Management"', () => {
+  const { api } = load({ cv: [], cl: [] });
+  assert.equal(api._expand('Quality Mgmt'), 'Quality Management');
+  assert.equal(api._expand('Project Mgmt.'), 'Project Management');
 });
 
 // FOCUS-TIGHTEN (owner 2026-06-26): expand "Coord." to the full word AND keep the label under the

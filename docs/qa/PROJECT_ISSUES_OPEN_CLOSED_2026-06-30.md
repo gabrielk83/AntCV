@@ -1,6 +1,13 @@
 # AntCV — Open vs Closed issues (2026-06-30)
 
-**State:** PWA **1.51.2** · docx-worker **1.14.104** · access-relay **1.3.2** · unit suite 529/529.
+**State:** PWA **1.51.4** · docx-worker **1.14.105** · access-relay **1.3.2** · unit suite 529/529.
+
+### CLOSED — 2026-07 (CV export review: work-style, results, numeric)
+| Ver | Issue | Verified |
+|---|---|---|
+| **wk 1.14.105** | **CV-PLACEHOLDER-DROP-001** — WORK STYLE (and PROFILE) exported the bracketed template INSTRUCTION when generation left it unfilled. renderText/renderTextInline now DROP a fully-bracketed `[…]` placeholder (work-style heading is inline, so the section vanishes) | diags; owner verifies export |
+| **1.51.3** | **RESULT-SUBSUMES-BULLET-001** — even for a REAL outcome, if the Result subsumes a bullet (IDF Result = bullet 1 verbatim), HIDE that bullet (was only applied to bullet-derived results) | unit 529/529 |
+| **1.51.4** | **RESULTS-DERIVE-MEASURABLE-001** (browser-traced) — stored CSA/Sirin roles have results=null → laminator DERIVES; it scored "measurable" by DIGIT only, so CSA's "Cut recovery time from hours to minutes" (no digit) lost to the longer "Administered…" bullet. Now a qualitative improvement (from-X-to-Y, cut/reduced/…) counts as a metric and wins; the source bullet is hidden (no dup). Live sim: CSA→"Cut recovery time…", Sirin→"Directed 7-person team" | browser sim on real roles + unit 529/529 |
 
 ### CLOSED — 2026-07 (CL lead-in colon: editable + exportable)
 | Ver | Issue | Verified |
@@ -77,6 +84,14 @@ per-batch snapshots are the practical tally. No single from-inception counter is
    sections-updated listeners, pin which sidecar overwrites. FIX = mark a user-edited row (`_userEdited`/`_dirty`,
    or compare to the snapshot) so the re-hydrator SKIPS it. UNBLOCKS inline lead-in/colon/text editing. Do NOT
    blind-fix — regression risk in generation/prose.
+   **Browser diagnosis 2026-07 (started):** the lead-in is the `B` component — a CUSTOM inline editor
+   (`data-antcv-editable-text` span, `onDoubleClick` to enter edit mode), NOT a React `contentEditable` with
+   onInput/onBlur — so synthetic input/blur do NOT commit (confirmed live). React's in-memory `sections` is
+   AUTHORITATIVE and overwrites a direct localStorage edit on the next `sections-updated` (a direct-LS marker
+   vanished with NO `setItem('sections')` interception). NEXT: reproduce via the REAL path — double-click the
+   lead → edit-mode → type → commit (Enter/blur) → confirm it lands in `sections`, THEN fire Ask AI / tab-switch
+   and watch which writer reverts it (setItem('sections') spy + the B commit handler app.src.js ~6433 +
+   antcv-preview-bullets-dedup-341.js).
 2. **Role Results restate a bullet + dup not hidden; council laminator (#1).** dup → HIDE THE BULLET, not the
    result; the laminator must use the kernel's seeded exact result (`role_results_exact`) for council BEFORE
    deriving from a bullet (Council `hasOutcomes:0` → non-numerical derived result). Owner: **hide in NEW docs,

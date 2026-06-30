@@ -2560,10 +2560,20 @@ export function applyOutcomesMode(docSections, doc) {
         const nb = normLine(bt);
         if (nb.length < 15) return true;                         // too short to judge
         if (nr.indexOf(nb) >= 0) return false;                   // verbatim substring
+        if (nb.indexOf(nr) >= 0) return false;                   // bullet contains the Result verbatim (longer bullet)
         const bTok = _sigTokens(bt);
+        const rArr = _sigTokens(resultsText);
+        // RESULT-SUBSUMES-BULLET-003 (owner 2026-07 Sirin: the BULLET was a LONGER version of the
+        // Result — "Direct technical work across a 7-person EO… for a high-security smartphone
+        // product; own camera, display…" vs the Result's shorter "Direct technical work across a
+        // 7-person EO… and co-invented…". The bullet's extra tail dropped the bullet→result overlap
+        // below the threshold, so it stayed. Hide when the overlap is high in EITHER direction:
+        // the bullet's tokens are ≥72% in the Result, OR the Result's tokens are ≥72% in the bullet.
         if (bTok.length >= 4) {
-          const shared = bTok.filter((w) => rTok.has(w)).length;
-          if (shared / bTok.length >= 0.72) return false;        // near-duplicate / paraphrase
+          const bInR = bTok.filter((w) => rTok.has(w)).length / bTok.length;
+          const bSet = new Set(bTok);
+          const rInB = rArr.length ? rArr.filter((w) => bSet.has(w)).length / rArr.length : 0;
+          if (bInR >= 0.72 || rInB >= 0.72) return false;        // near-duplicate either direction
         }
         return true;
       });

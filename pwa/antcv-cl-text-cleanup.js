@@ -25,7 +25,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.18';
+  var VERSION = '1.51.26';
   if (window.__antcvClTextCleanup === VERSION) return;
   window.__antcvClTextCleanup = VERSION;
 
@@ -114,14 +114,15 @@
     return changed;
   }
 
-  // Item 8 (owner 2026-07): WHY THIS COMPANY/ROLE shows a vertical cue rule by default while
-  // its headline text stays hidden. Set headlineVRule once (the editor can still toggle it).
+  // Item 8 (owner 2026-07, corrected): WHY THIS COMPANY/ROLE shows a HORIZONTAL rule by default
+  // while its headline text stays hidden (owner: "permanent horizontal rule, not vertical").
+  // Set headlineRule (the standalone accent line) once; clear a previously-set headlineVRule.
   function ensureWhyVRule(sec) {
-    if (!sec || sec.id !== 'why' || sec.type !== 'rich_block') return false;
-    if (sec.headlineOff && sec.headlineVRule !== true && sec.__whyVRuleSet !== true) {
-      sec.headlineVRule = true; sec.__whyVRuleSet = true; return true;
-    }
-    return false;
+    if (!sec || sec.id !== 'why' || sec.type !== 'rich_block' || !sec.headlineOff) return false;
+    var changed = false;
+    if (sec.headlineVRule === true) { sec.headlineVRule = false; changed = true; }   // undo the wrong vertical cue
+    if (sec.headlineRule !== true && sec.__whyRuleSet !== true) { sec.headlineRule = true; sec.__whyRuleSet = true; changed = true; }
+    return changed;
   }
 
   function run() {

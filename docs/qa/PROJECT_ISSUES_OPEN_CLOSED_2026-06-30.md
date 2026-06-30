@@ -1,6 +1,11 @@
 # AntCV — Open vs Closed issues (2026-06-30)
 
-**State:** PWA **1.51.1** · docx-worker **1.14.102** · access-relay **1.3.2** · unit suite 529/529.
+**State:** PWA **1.51.2** · docx-worker **1.14.103** · access-relay **1.3.2** · unit suite 529/529.
+
+### CLOSED — 2026-07 (CL lead-in colon: editable + exportable)
+| Ver | Issue | Verified |
+|---|---|---|
+| **1.51.2 / wk 1.14.103** | **LEAD-COLON-PERROW-001 (export + editable)** — the colon now renders PER ROW in the EXPORT too (was section-wide `s.leadColon` → parity gap), an explicit `row.colon` overrides the marker default in preview + export (so it can be REMOVED), a per-row ":" toggle in the editor sets it (persists via d()), and a lead already ending in punctuation gets no auto-colon. NOTE: inline TEXT edits of the lead still hit the #3 persistence bug | rich-block diag + boot-smoke; owner verifies on export |
 
 ### CLOSED — 2026-07 (CL export review, owner)
 | Ver | Issue | Verified |

@@ -1,6 +1,6 @@
 # AntCV — Open vs Closed issues (2026-06-30)
 
-**State:** PWA **1.50.997** · docx-worker **1.14.102** · access-relay **1.3.2** · unit suite 529/529.
+**State:** PWA **1.50.998** · docx-worker **1.14.102** · access-relay **1.3.2** · unit suite 529/529.
 Supersedes `PROJECT_ISSUES_OPEN_CLOSED_2026-06-29.md`. Per-item detail: `SESSION_2026-06-30_CL_HARDENING.md`,
 `CL_CV_GENERIC_TEMPLATES_2026-06-30.md`, `NEXT_SESSION_2026-07-01.md`. Full running history: `ACTIVE_BUGS.md`.
 
@@ -46,7 +46,7 @@ per-batch snapshots are the practical tally. No single from-inception counter is
 | **1.50.996** | **CL-HEADLINE-VRULE-001** — a section with the headline TEXT hidden had no visual cue; new `headlineVRule` draws a vertical accent line down the section's left edge; editor "│ Cue" toggle (enabled when headline off) | boot-smoke; owner confirms cue on a headline-off section |
 | **wk 1.14.102** | **CL-SIGNATURE-CLIP-001** — signature lower part hidden by white in the CloudConvert PDF (preview fine); the inline image was clipped to its 276-twip line box. Reserve the image's full height (px×15, lineRule "atLeast") | diag-cl-signature/closing/signoff-order OK; owner confirms on export |
 | **(confirmed)** | **G — CL sign-off order closing→name→signature** — already shipped; diag-cl-signoff-order verifies closing<name<sig | diag 2/2 |
-| **1.50.997** | **CL opening orphan-tighten** — the COMPRESSION-TIGHT rule omitted `opening_content`, so the CL opening orphaned to a 4th line; now capped to 3 rendered lines (cut ~30 chars / one clause if it would reach line 4) | gen rule; owner verifies on regen |
+| **1.50.997→998** | **CL opening orphan-tighten** — the COMPRESSION-TIGHT rule omitted `opening_content`, so the CL opening orphaned to a 4th line. Now `opening_content` is covered AND the orphan is quantified (1.50.998 owner correction): an ORPHAN = a trailing rendered line of **≤30 characters**; tighten so the opening's LAST line is not a ≤30-char orphan (cut a clause so the tail merges up or the wrap is lost) | gen rule; owner verifies on regen |
 | **1.50.997** | **RESULTS-DISTINCT-001** (generation) — a role's Results headline must read differently from its bullets (no verbatim copy), prefer the quantified outcome, and hide the restated bullet. Partly addresses open #1 on the generation side | gen rule; owner verifies on regen — display-hide of EXISTING dups stays open #1 |
 
 ---

@@ -26472,7 +26472,13 @@ function renderRichBlock(s, ctx, isSidebar) {
       }));
       return;
     }
-    const lead = row.b ? row.b + sep : "";
+    // LEAD-COLON-PERROW-001 (owner 2026-06-30): the colon is PER ROW (matches the preview)
+    // and EXPORTABLE. A non-marker lead-in gets it; a MARKER row (mk) does not; an explicit
+    // row.colon overrides (so it can be removed); a lead already ending in punctuation gets
+    // no auto-colon; section leadColon:false disables all.
+    const __bTrim = String(row.b || "").trim();
+    const __rowColon = (row.colon != null) ? !!row.colon : (!row.mk && s.leadColon !== false && !/[:.;,!?…–—-]$/.test(__bTrim));
+    const lead = row.b ? row.b + (__rowColon ? ": " : " ") : "";
     const body = row.t || "";
     if (!lead && !body) return;
     if (rowPage(i) >= 2) {
@@ -27766,7 +27772,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.102-signature-clip-fix";
+var VERSION = "1.14.103-lead-colon-perrow";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

@@ -5545,12 +5545,22 @@
                           placeholder: "[Lead]",
                         }),
                         // LEAD-COLON-PERROW-001 (owner 2026-06-30): the colon after a
-                        // lead-in is PER ROW, not section-wide — a row WITHOUT a visible
-                        // marker (a section sub-heading like "Foundation:" / "What I bring:")
-                        // gets the colon; a MARKER row (Hands-on / Professionally / the
-                        // Need bullets) does NOT (it flows into the body). `leadColon:false`
-                        // still disables colons section-wide as an escape hatch.
-                        (mk || e.leadColon === false) ? " " : ": ",
+                        // lead-in is PER ROW. Default: a non-marker sub-heading
+                        // ("Foundation:" / "What I bring:") gets it; a MARKER row
+                        // (Hands-on / Professionally / Need bullets) does NOT. EDITABLE:
+                        // an explicit `row.colon` (the ":" toggle) overrides — so the user
+                        // can REMOVE it; and a lead that already ends in punctuation gets no
+                        // auto-colon (inline-typed punctuation is not doubled). `leadColon:false`
+                        // disables section-wide. Mirrored in the worker export (parity).
+                        (() => {
+                          const __b = String(row.b || "").trim();
+                          const __ends = /[:.;,!?…–—-]$/.test(__b);
+                          const __show =
+                            row.colon != null
+                              ? !!row.colon
+                              : !mk && e.leadColon !== false && !__ends;
+                          return __show ? ": " : " ";
+                        })(),
                       )
                     : null,
                   tShow

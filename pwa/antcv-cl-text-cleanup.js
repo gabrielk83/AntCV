@@ -25,7 +25,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.15';
+  var VERSION = '1.51.18';
   if (window.__antcvClTextCleanup === VERSION) return;
   window.__antcvClTextCleanup = VERSION;
 
@@ -59,6 +59,10 @@
   // Trailing run of connective words (+ optional comma) that marks a chopped clause.
   var CONN_TAIL = /(?:\s*,?\s*\b(?:for|and|to|of|with|within|under|the|a|an|in|on|by|or|as|that|which)\b)+\s*$/i;
 
+  // C4 (owner 2026-07, corrected): a MARKER row (foundation / bring / contribute bullet) takes
+  // NO colon and the body CONTINUES the bold lead, so the body's first letter is lowercase —
+  // UNLESS it is "I" or an ALL-CAPS abbreviation (DV/PV, RFQ/RFI, KPI, OEM, ISO, ASPICE).
+  // (Verbs like Run/Define/Convert/Map are lowercased; abbreviations are kept.)
   function c4(body, b, mk, colon) {
     if (!mk || colon || !b) return body;
     var t = String(body == null ? '' : body);
@@ -66,8 +70,8 @@
     if (!m) return body;
     var fw = m[2];
     if (!/^[A-Z]/.test(fw)) return body;                       // already lowercase
-    if (fw === 'I' || fw === 'I,') return body;                // keep "I"
-    if (!SAFE_LOWER.test(fw.replace(/[^A-Za-z]/g, ''))) return body; // not a known continuation word
+    if (fw === 'I' || fw === 'I,' || fw === "I'm" || fw === "I'll" || fw === "I've") return body;
+    if (/^[A-Z][A-Z0-9/&.+-]*[A-Z0-9]$/.test(fw.replace(/[.,;:]+$/, ''))) return body; // ALL-CAPS abbreviation -> keep
     return t.replace(/^(\s*)(\S)/, function (_, sp, ch) { return sp + ch.toLowerCase(); });
   }
 
@@ -97,17 +101,27 @@
     return changed;
   }
 
-  // C4b — WHAT I BRING colon (owner 2026-07: the bring proof rows read "Need Value" with no
-  // ":"; they are label:value, NOT a continuation, so each lead takes a colon). Force colon
-  // on every bring proof row (the rows after the intro that carry a lead).
-  function ensureBringColons(sec) {
+  // C4b REVERTED (owner 2026-07: "If they have markers: do NOT put ':'"). A marker bring row
+  // takes no colon — remove the colon an earlier build wrongly forced on. (The intro row keeps
+  // its own colon; only marker rows are reverted.)
+  function ensureBringNoColon(sec) {
     if (!sec || sec.id !== 'bring' || !Array.isArray(sec.items)) return false;
     var changed = false;
-    sec.items.forEach(function (it, i) {
-      if (!it || typeof it !== 'object' || it.grp) return;
-      if (i > 0 && it.b && String(it.t || '').trim() && it.colon !== true) { it.colon = true; changed = true; }
+    sec.items.forEach(function (it) {
+      if (!it || typeof it !== 'object') return;
+      if (it.mk && it.colon === true) { delete it.colon; changed = true; }
     });
     return changed;
+  }
+
+  // Item 8 (owner 2026-07): WHY THIS COMPANY/ROLE shows a vertical cue rule by default while
+  // its headline text stays hidden. Set headlineVRule once (the editor can still toggle it).
+  function ensureWhyVRule(sec) {
+    if (!sec || sec.id !== 'why' || sec.type !== 'rich_block') return false;
+    if (sec.headlineOff && sec.headlineVRule !== true && sec.__whyVRuleSet !== true) {
+      sec.headlineVRule = true; sec.__whyVRuleSet = true; return true;
+    }
+    return false;
   }
 
   function run() {
@@ -116,6 +130,14 @@
       var secs = JSON.parse(localStorage.getItem('sections') || '{}');
       if (!secs || !Array.isArray(secs.cl)) return;
       var changed = false;
+      secs.cl.forEach(function (sec) { if (ensureWhyVRule(sec)) changed = true; });
+      // Structure/colon repairs run FIRST (the intro gets its ":" — c3 now preserves a trailing
+      // ":" so it is not stripped — and bring markers lose the wrongly-forced colon BEFORE c4 so
+      // c4 can then lowercase their body).
+      secs.cl.forEach(function (sec) {
+        if (ensureContribStructure(sec)) changed = true;
+        if (ensureBringNoColon(sec)) changed = true;
+      });
       secs.cl.forEach(function (sec) {
         if (!sec || sec.type !== 'rich_block' || !Array.isArray(sec.items)) return;
         var c4Sec = (sec.id === 'foundation' || sec.id === 'bring' || sec.id === 'contribute');
@@ -134,12 +156,6 @@
           if (c3Sec) v = c3(v);
           if (v !== orig) { it.t = v; changed = true; }
         });
-      });
-      // Structure/colon repairs run AFTER the per-item c3/c4 loop so c3 cannot strip the
-      // intro colon (c3 also now preserves a trailing ":").
-      secs.cl.forEach(function (sec) {
-        if (ensureContribStructure(sec)) changed = true;
-        if (ensureBringColons(sec)) changed = true;
       });
       if (!changed) return;
       localStorage.setItem('sections', JSON.stringify(secs));

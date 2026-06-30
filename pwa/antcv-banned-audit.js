@@ -61,7 +61,7 @@
 (function () {
   'use strict';
 
-  const SCRIPT_VERSION = '1.50.992-banned-baseline';
+  const SCRIPT_VERSION = '1.50.993-banned-baseline';
 
   if (window.__antcvBannedAuditInstalled) return;
   window.__antcvBannedAuditInstalled = SCRIPT_VERSION;
@@ -106,14 +106,17 @@
   // Bare "deliver"/"drive" are NOT here (too broad — "delivery"/"driven" are fine); the vague
   // uses are caught as the phrase "drive change" + the generation prompt's "vague deliver" note.
   const BASELINE_WORDS = ['compress',
-    'spearhead', 'foster', 'leverage', 'robust', 'comprehensive',
-    'passionate', 'dynamic', 'proactive', 'ensure',
-    'moreover', 'therefore', 'furthermore'];
+    'spearhead', 'ensure', 'foster', 'streamline', 'strengthen', 'empower',
+    'leverage', 'enable', 'robust', 'comprehensive', 'cutting-edge',
+    'state-of-the-art', 'world-class', 'leading', 'impactful', 'rooted',
+    'grounded', 'committed', 'passionate', 'holistic', 'cross-functional',
+    'collaborative', 'journey', 'dynamic', 'proactive', 'results-driven',
+    'strategic', 'agile', 'discuss', 'moreover', 'therefore', 'furthermore'];
   const BASELINE_PHRASES = [
-    'results-driven', 'end-to-end', 'drive change',
-    'key role', 'pivotal role', 'proven track record',
-    'I thrive in', 'My expertise lies in',
-    'I look forward to hearing from you'];
+    'drive change', 'deliver value', 'key role', 'pivotal role',
+    'proven track record', 'strong communicator', 'strategic mindset',
+    'mission-driven', 'I am passionate about', 'responsible for', 'end-to-end',
+    'I look forward to hearing from you', 'I thrive in', 'My expertise lies in'];
 
   function mergeUnique(a, b) {
     const seen = new Set();

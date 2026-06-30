@@ -5463,6 +5463,12 @@
             .map((it, i) => {
               if (e.hidden && e.hidden[i]) return null;
               const row = it && "object" == typeof it ? it : { t: String(it || "") };
+              // CV-PLACEHOLDER-DROP-001 (rich_block preview parity, owner 2026-07): a row whose
+              // body is STILL a bracketed template placeholder ("[WORK STYLE - …]") is unfilled —
+              // drop the whole row (the lead, e.g. "Work style", is just a label). Mirrors the
+              // worker renderRichBlock; a real edit / bracketed citation won't match (full-bracket
+              // only). A headlineOff section (work_style) then renders cleanly to nothing.
+              if (!row.grp && /^\s*\[[\s\S]*\]\s*$/.test(String(row.t || ""))) return null;
               // RICH-BLOCK-GROUP-001: a row flagged grp is a bold sub-heading (like labeled_list).
               if (row.grp) {
                 return {

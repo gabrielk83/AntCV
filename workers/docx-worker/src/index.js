@@ -26507,6 +26507,11 @@ function renderRichBlock(s, ctx, isSidebar) {
     const __rowColon = (row.colon != null) ? !!row.colon : (!row.mk && s.leadColon !== false && !/[:.;,!?…–—-]$/.test(__bTrim));
     const lead = row.b ? row.b + (__rowColon ? ": " : " ") : "";
     const body = row.t || "";
+    // CV-PLACEHOLDER-DROP-001 (rich_block, owner 2026-07): a row whose body is STILL a
+    // bracketed template placeholder ("[WORK STYLE - …]") is unfilled — drop the whole row
+    // (the lead alone, e.g. "Work style", is just a label). When this empties the section,
+    // renderSection suppresses the heading too (headlineOff / body.length===0 → omit cleanly).
+    if (/^\s*\[[\s\S]*\]\s*$/.test(body)) return;
     if (!lead && !body) return;
     if (rowPage(i) >= 2) {
       if (__wholeMoveSkip) {

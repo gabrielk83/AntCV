@@ -27,8 +27,9 @@ Supersedes `PROJECT_ISSUES_OPEN_CLOSED_2026-06-29.md`. Per-item detail: `SESSION
 | 2026-06-30 (CL/CV hardening + templates) | 18 | 1.50.980→995 + worker 1.14.94→1.14.101 |
 | 2026-06-30 PM (export-review feedback) | 4 | Mgmt→Management + vertical cue (1.50.996), signature-clip (wk 1.14.102), G sign-off order confirmed shipped |
 | 2026-06-30 PM2 (CV export review) | 2 | CL opening orphan-tighten + RESULTS-DISTINCT generation rules (1.50.997) |
-| **Closed, last 3 batches** | **41** | |
-| **OPEN now** | **18** | 3 owner-blockers (+CV empty-positions), 2 CL-format, 4 generation/edit, 9 render-gated |
+| 2026-07 (CL export review) | 8 | per-row colon + casing (1.51.0), bring_intro (1.51.1), colon editable/exportable (1.51.2/wk1.14.103), signature table-wrap (wk1.14.104), J=casing, G confirmed |
+| **Closed (recent batches)** | **49** | |
+| **OPEN now** | **15** | START #1 = inline-edit PERSISTENCE (browser); then council/results, empty-positions, A (rule-without-headline), + the render-gated batch |
 
 (Cumulative project history predates these snapshots; the authoritative running log is `ACTIVE_BUGS.md` —
 per-batch snapshots are the practical tally. No single from-inception counter is maintained.)
@@ -63,113 +64,101 @@ per-batch snapshots are the practical tally. No single from-inception counter is
 
 ---
 
-## OPEN — ordered
+## OPEN — ordered (AUTONOMOUS handling; START WITH #1 PERSISTENCE in the LIVE BROWSER)
 
-**TOP (owner blockers):**
-1. **Role Results restate a bullet + the dup bullet is not hidden** (data-loss class; owner rules: dup →
-   HIDE THE BULLET not the result; manual result stays SEPARATE from bullets). NEW evidence 2026-06-30 CV
-   export: "Senior Optics, Sirin Labs" Results restated bullet 1; "Computer Systems Administrator, IDF"
-   Results = bullet 2 VERBATIM while bullet 1 ("Cut recovery time from hours to minutes") is the real
-   measurable result that should have been the headline. Generation side PARTLY addressed by
-   RESULTS-DISTINCT-001 (1.50.997 — results must read differently from bullets, prefer the quantified one,
-   hide the restated bullet) — verify on a fresh regen. STILL OPEN: a DISPLAY-LAYER dedup so an EXISTING
-   doc hides a visible bullet whose text is substantially contained in that role's `results` (preview
-   ~5915-6059 + worker render); Council `hasOutcomes:0` → laminator derives from a bullet → the dup. Needs
-   owner's live data + a real export to verify. NEW evidence 2026-07 export: IDF now correctly shows the
-   numerical "100 users / 150 machines" result (good), but **Students Council Representative regressed to a
-   non-numerical bullet-derived result** ("Represent Electrical Engineering students to faculty on
-   curriculum…") instead of its seeded numerical result (role_results_exact, 1.50.981). This is the SAME
-   laminator-derives-from-bullet bug — surfaced by the regen (LLM variance), not a new code regression. Fix
-   = make the laminator use the kernel's seeded exact result for council before deriving from a bullet.
-1b. **CV shows 2 empty "[Role title], [Company]  [Years]" positions in the preview** (owner 2026-06-30) —
-   bracketed placeholder roles leak into the GENERATED/exported CV. The ghost-placeholder filter
-   (CV-GHOST-PLACEHOLDER-001) deliberately KEEPS bracketed `[Role title]` roles (so a fresh template stays
-   fillable), so a generated doc with leftover unfilled slots shows them. Fix: in a generated/laminated CV
-   (not the fresh-template editor), drop on:true roles whose title is still the `[Role title]` placeholder.
-   Distinguish generated-doc vs fresh-template carefully (don't hide slots the user is mid-filling).
-2. **Candidate-header photo/text placement** (#6) — 3-column-grid + gridSpan: header splits at 2.31" while
-   body sidebar stays 2.75"; medallion center 1.47" from left, 0.27" from top. Render-gated (owner exports).
-3. **rich_block inline-edit PERSISTENCE (data-loss class)** — editing a CL rich_block in the PREVIEW
-   (contentEditable via `B`, paths `items.i.t`/`items.i.b`) reverts on Ask AI / export / tab switch. The
-   edit DOES commit to `sections`, but a sidecar re-runs on `antcv:sections-updated` (which those events
-   fire) and re-hydrates the row: candidates are `antcv-nordic-cl-order-971.js` (lead-in/INSTR seeding),
-   `antcv-cl-prose-richblock-fill-987.js` (re-bridges generated prose), `antcv-cl-prose-loss-guard-985.js`
-   (restores a prose snapshot it reads as "loss"). Needs the owner's LIVE browser to pin which sidecar
-   clobbers (the 971 guards claim to skip real edits; 985/987 are the likely culprits). Fix = make the
-   re-hydrator skip user-edited rows (mark edited rows / compare against the snapshot). Do NOT blind-fix —
-   regression risk in generation/prose-fill.
+**TOP — data-loss / blockers:**
+1. **rich_block inline-edit PERSISTENCE (#3, data-loss class) — START HERE, LIVE BROWSER (Chrome MCP).**
+   Editing a CL rich_block in the PREVIEW (contentEditable via `B`, paths `items.i.t`/`items.i.b`) reverts on
+   Ask AI / export / tab switch. The edit DOES commit to `sections`, but a sidecar re-runs on
+   `antcv:sections-updated` (which those events fire) and re-hydrates the row. Candidates:
+   `antcv-nordic-cl-order-971.js` (lead-in/INSTR seeding), `antcv-cl-prose-richblock-fill-987.js`
+   (re-bridges generated prose), `antcv-cl-prose-loss-guard-985.js` (restores a prose snapshot it reads as
+   "loss"). DIAGNOSE in the live browser: reproduce the edit, watch `localStorage.sections` and the
+   sections-updated listeners, pin which sidecar overwrites. FIX = mark a user-edited row (`_userEdited`/`_dirty`,
+   or compare to the snapshot) so the re-hydrator SKIPS it. UNBLOCKS inline lead-in/colon/text editing. Do NOT
+   blind-fix — regression risk in generation/prose.
+2. **Role Results restate a bullet + dup not hidden; council laminator (#1).** dup → HIDE THE BULLET, not the
+   result; the laminator must use the kernel's seeded exact result (`role_results_exact`) for council BEFORE
+   deriving from a bullet (Council `hasOutcomes:0` → non-numerical derived result). Owner: **hide in NEW docs,
+   no need to fix existing**. RESULTS-DISTINCT-001 (1.50.997) partly covers generation — verify on regen + add
+   the laminator precedence fix (preview ~5915-6059 + worker).
+3. **CV empty "[Role title]" positions (#1b).** Drop on:true roles whose title is still `[Role title]` in a
+   GENERATED/laminated CV (not the fresh-template editor). Hide in NEW docs.
 
-**CL format:**
-4. **J** — CL Foundation "Professionally" bold body — needs owner confirmation of what should read as bold.
-5. **F3** — surface the signature control as a subsection in the CL FORMAT panel (today under Layout). (F1
-   editable slogan + F2 Nordic-scope already shipped.)
-6. **K** — headline/title CJLR (section-title alignment) not forwarded to EXPORT (preview-only sidecars
-   208/211), cycler contended by 3 sidecars (207/208/211 can render empty), and MISSING on rich_block
-   headings. (Per-row/`__group__` body CJLR already works.)
+**A — rule-without-headline + export the vertical cue (owner 2026-07, the big feature):**
+4. Decouple the horizontal RULE from the headline so a section can show a rule with the headline TEXT hidden
+   ("Why this company" with a rule before it, no title). 3 layers: EDITOR `antcv-rich-block-editor.js` (the
+   "Rule" button is disabled when headOff — enable it via a `headlineRule` opt-in), PREVIEW `app.src.js` ~6946
+   (headlineOff returns the whole heading incl. rule as null — render the rule independently), WORKER
+   `index.js` renderSection (headlineOff skips heading — emit a title-less bordered paragraph). PLUS **export
+   the vertical `│ Cue`** (`headlineVRule`) to PDF/docx (worker: add a left border on the section, matching the
+   preview `M.borderLeft`). Opt-in so headline-off sections don't all sprout rules.
 
-**Generation / edit:**
-7. **I** — quick-gen must hide irrelevant roles/bullets/tools to converge a 4-page kernel to ~1.5–2 pages.
-8. **bring_intro generation field** — emit the WHAT I BRING intro line on a fresh generation, ending with a
-   colon (e.g. "Structure - across scope, suppliers, validation, and business decisions:"). Schema + apply +
-   the 987 prose bridge. Today the lead (item[0].t) is clean but EMPTY (owner: "What I bring line is still
-   empty… and has no ':'"). Owner-gated to verify on a real generate.
-9. **Lead-in colons on CL sections** (owner 2026-06-30: "Foundation also missing ':' and so does How I would
-   contribute") — the colon after a lead label is the per-section `leadColon` ("L:" toggle, `__leadSep` at
-   app.src.js ~5430). "Why" shows it (owner toggled it); foundation/contribute/bring don't. Fix options:
-   default `leadColon:true` for the CL Nordic lead sections in me() (fresh skeletons + new generations) and/or
-   a sidecar/render-default for existing docs. Note: tangled with #3 persistence — if leadColon toggles also
-   revert, fix #3 first.
-10. **Recruiter-answers PAGE** — verify the CL renders exactly N question+answer blocks (header band + "Kind
-    regards," + AI notice) ONLY when the JD asks questions, on a real export. Gen rule + `questions_in_jd` +
-    worker `jd_questions` exist; this is end-to-end verification + any render fix.
+**Other:**
+5. **Candidate-header photo/text placement (#6)** — 3-col-grid + gridSpan; medallion center 1.47" / 0.27" top.
+   Render-gated (owner exports to verify pixels).
+6. **K — headline/title CJLR** not forwarded to EXPORT (preview-only sidecars 208/211), cycler contended by
+   207/208/211 (can render empty), MISSING on rich_block headings. (Per-row body CJLR already works.)
+7. **F3** — surface the signature control as a subsection in the CL FORMAT panel (today under Layout).
+8. **I — quick-gen** must hide irrelevant roles/bullets/tools to converge a 4-page kernel to ~1.5–2 pages.
+9. **Recruiter-answers PAGE** — verify N question+answer blocks render ONLY when the JD asks questions (gen
+   rule + `questions_in_jd` + worker `jd_questions` exist; end-to-end verify + render fix).
 
 **Render-gated (need owner CloudConvert export):**
-11. **CV 3-page convergence** — floating text-anchored "spine" (tblpPr vertAnchor=text + continuous sectPr +
-    equal page-table grids). Sidebar colored spine stops ~2cm short = deliberate anti-blank-page slack; the
-    floating spine is the real fix — do NOT raise body-row mins ([[sidebar-fill-gap-is-antiblank-slack]]).
-12. **AI-notice two-box** (owner's design) — sidebar-colored box at the BOTTOM of BOTH columns; notice TEXT
-    only in the column with fewer lines; the box closes the sidebar-color gap. WORKER change, BOTTOM-ANCHORED
-    only (growing the sidebar fill re-triggered PDF-BLANK-PAGE before).
-13. **Strategic Expertise cell text past the border** (CV CORE COMPETENCIES + CL WHAT I BRING) — worker table
-    cell width.
-14. **CV orphans** (20-40-char tails in bullets + sidebar lists + table cells); **"SW projects: AntCV"**
-    Additional-Info value → live ExternalHyperlink; **line-end overflow** (main wraps ~½ line early).
-15. **zoom 5% step + export-preview default 75%**.
-16. **eliminate the CloudConvert refresh** — `__antcvUseServerPdf` (app.src.js ~1441) flips only after config
-    `B` loads, so the FIRST export is browser-print and a refresh is needed; make server-PDF available on the
-    first export so the data-loss-triggering refresh isn't needed.
+10. **CV 3-page convergence** — floating text-anchored spine; the sidebar spine 2cm-short slack is deliberate
+    ([[sidebar-fill-gap-is-antiblank-slack]]).
+11. **AI-notice two-box** — sidebar-colored box at the BOTTOM of BOTH columns, text in the column with fewer
+    lines; WORKER, BOTTOM-ANCHORED only (blank-page risk).
+12. **Strategic Expertise cell text past the border** (CV CORE COMPETENCIES + CL WHAT I BRING) — worker cell width.
+13. **CV orphans → the deterministic ORPHAN-KILLER inside generation/fix-it/enhance** (NOT a user control):
+    measure the rendered ≤30-char tail → trigger an ORCHESTRATED whole-paragraph re-tighten (sample 2-3 LLMs,
+    pick best) or justify the paragraph ([[fixit-orphan-enhance-orchestration]]). Also "SW projects: AntCV" →
+    live ExternalHyperlink; line-end overflow (main wraps ~½ line early).
+14. **zoom 5% step + export-preview default 75%**.
+15. **eliminate the CloudConvert refresh** — `__antcvUseServerPdf` (app.src.js ~1441): make server-PDF available
+    on the FIRST export so the data-loss-triggering refresh isn't needed.
+
+_(Shipped this batch, removed from OPEN: lead-in colons + casing (1.51.0), bring_intro (1.51.1), colon
+editable/exportable (1.51.2 / wk 1.14.103), signature clip (wk 1.14.102→104), J "Professionally That→that"
+= the casing rule, G sign-off order.)_
 
 ---
 
-## NEXT-SESSION PROMPT (copy-paste)
+## NEXT-SESSION PROMPT (copy-paste) — AUTONOMOUS, browser-enabled
 
-> AntCV — continue from `docs/qa/PROJECT_ISSUES_OPEN_CLOSED_2026-06-30.md` (PWA **1.50.995**, docx-worker
-> **1.14.101**, access-relay **1.3.2**, suite 528/528). Read `CLAUDE.md` + MEMORY.md first
-> ([[cv-admin-template-and-contact-bridge]], [[data-loss-on-restore]], [[nordic-cl-template]],
-> [[pagination-two-map-and-worker-test]], [[rich-block-universal-section]], [[minified-mirror-shadow-hazard]],
-> [[docx-worker-bundle-no-build]], [[sidebar-fill-gap-is-antiblank-slack]], [[cloud-persist-and-account-isolation]]).
+> AntCV — continue from `docs/qa/PROJECT_ISSUES_OPEN_CLOSED_2026-06-30.md` (PWA **1.51.2**, docx-worker
+> **1.14.104**, access-relay **1.3.2**, suite 529/529). Read `CLAUDE.md` + MEMORY.md first
+> ([[cv-admin-template-and-contact-bridge]], [[fixit-orphan-enhance-orchestration]], [[data-loss-on-restore]],
+> [[nordic-cl-template]], [[pagination-two-map-and-worker-test]], [[rich-block-universal-section]],
+> [[minified-mirror-shadow-hazard]], [[docx-worker-bundle-no-build]], [[sidebar-fill-gap-is-antiblank-slack]],
+> [[cloud-persist-and-account-isolation]]).
 >
 > **SYNC FIRST:** `git fetch origin && git pull --rebase origin main`. Never force main.
 >
-> **Verify-first (just shipped, owner-gated on a real generate/export):** CV admin template (1.50.995) — a
-> real CV export renders the new sections (LANGUAGES/INTERESTS/ACCESSIBILITY, per-role `Results:`) and the
-> CV_Template.json mirrors them. Contact-line bridge (worker 1.14.101) — a CV export with a band-overlap
-> photo + a LONG contact line shows the contact line full-size (wrapping, not shrunk) sitting right of the
-> medallion. CL generic template (991→994) — a real CL generates clean (banned vocab + semantic
-> constraints + recruiter-answers page when the JD asks questions).
+> **Mandate: work ALL remaining OPEN issues AUTONOMOUSLY, in order, one verified fix at a time.** Full
+> autonomy: diagnose in the live browser, edit, run tests, deploy workers, commit + push to main, report
+> after. Don't pause for approval between items. Use the live BROWSER actively (owner is signed in).
 >
-> **Order (one verified fix at a time):** (1) kernel role bullets/results + Students-Council dup (owner's
-> exact rules — data-loss class, verify persistence); (2) candidate-header 3-col-grid placement (owner
-> exports to verify); (3) CL format — G sign-off order, J bold, F3 signature panel, K headline-CJLR (export
-> + de-dupe the 207/208/211 cycler + rich_block heading); (4) generation — bring_intro field, recruiter-
-> answers PAGE end-to-end, quick-gen convergence I; (5) render-gated — AI-notice two-box (bottom-anchored),
-> Strategic-Expertise cell overflow, CV orphans, zoom 5%/export-preview 75%, eliminate the CloudConvert
-> refresh.
+> **START WITH #1 — rich_block inline-edit PERSISTENCE (data-loss), in the LIVE BROWSER.** Reproduce a CL
+> rich_block lead-in/body edit in the preview, watch `localStorage.sections` + the `antcv:sections-updated`
+> listeners, and pin which sidecar re-hydrates the row (971 / 987 / 985). Fix = mark user-edited rows so the
+> re-hydrator skips them. This UNBLOCKS inline lead-in/colon/text editing. Then proceed down the OPEN list:
+> (2) council laminator / results-dup (hide in NEW docs), (3) empty `[Role title]` positions, (4) **A:
+> rule-without-headline + export the vertical `│ Cue`** (3-layer: editor + preview + worker), (5) candidate-
+> header placement, K headline-CJLR, F3, quick-gen, recruiter-answers page, then the render-gated batch
+> (incl. the deterministic ORPHAN-KILLER inside generation/fix-it/enhance as multi-LLM orchestration —
+> [[fixit-orphan-enhance-orchestration]]).
+>
+> **Verify-on-regen/export (owner will confirm; shipped 1.50.995→1.51.2 / wk 1.14.101→104):** CV admin
+> template, contact-line bridge, generic CL template, per-row lead colon (editable + exportable), "Professionally
+> that" casing, bring_intro, CL-opening orphan re-tighten, signature table-wrap (no clip). If any still wrong on
+> a real export, fix forward.
 >
 > **Access / tools (all connected — load deferred via ToolSearch):**
 > - **Chrome MCP** (`mcp__Claude_in_Chrome__*`) — owner signed in to the LIVE app at https://antcv.pages.dev.
->   Diagnose on real data: `localStorage` (`sections`, `personalInfo`, `antcv:autoPages`, `antcv:signature*`,
->   `toneRegister`, `meta`), kernel, cloud slot; relay API with `credentials:'include'`
+>   USE IT to diagnose #3 and any render/state bug on REAL data: read `localStorage` (`sections`, `personalInfo`,
+>   `antcv:autoPages`, `antcv:signature*`, `toneRegister`, `meta`), the kernel, the cloud slot; add temporary
+>   console probes; relay API with `credentials:'include'`
 >   (`proxyUrl`=`https://antcv-access-relay.karp-gabriel-a.workers.dev`).
 > - **gh CLI** (Bash) — worker deploys ONLY via `gh workflow run deploy.yml -f target=<worker> -f mode=deploy
 >   -f confirm=<worker>` then `gh run watch <id> --exit-status`. PWA auto-deploys on push to main (pwa/**).

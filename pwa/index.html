@@ -330,7 +330,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.50.989';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.50.991';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.50.992';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -372,7 +372,7 @@
           app.src = 'app.js?v=1.50.991';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.50.991';
+            vo.src = 'antcv-version-override.js?v=1.50.992';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -692,7 +692,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      uses CloudConvert instead of cold-probing -> browser-print ("Page setup") fallback. -->
 <script src="antcv-pdf-worker-warmup.js?v=1.50.946" defer></script>
 <script src="antcv-tone-helper.js?v=1.50.23-brand" defer></script>
-<script src="antcv-banned-audit.js?v=1.40.341-p0a" defer></script>
+<script src="antcv-banned-audit.js?v=1.50.992" defer></script>
 <script src="antcv-llm-audit.js?v=1.40.178" defer></script>
 <script src="antcv-validation-severity-341.js?v=1.40.341-p1c" defer></script>
 <script src="antcv-validation-severity-consumer-357.js?v=1.40.357-val001c" defer></script>

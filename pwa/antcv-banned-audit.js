@@ -61,7 +61,7 @@
 (function () {
   'use strict';
 
-  const SCRIPT_VERSION = '1.40.341-p0a';
+  const SCRIPT_VERSION = '1.50.992-banned-baseline';
 
   if (window.__antcvBannedAuditInstalled) return;
   window.__antcvBannedAuditInstalled = SCRIPT_VERSION;
@@ -100,8 +100,20 @@
   //
   // Add ONLY system-mandated terms here. User-facing customisation
   // belongs in personalInfo.stylePrefs.banned_words.
-  const BASELINE_WORDS = ['compress'];
-  const BASELINE_PHRASES = [];
+  // BANNED-BASELINE-TEMPLATE-001 (owner 2026-06-30): the generic CL template's banned
+  // vocabulary, enforced as the GLOBAL floor (merged with the user's own banned_words) so the
+  // audit flags them and enhance/fix-it honours them — matching the generation prompt rule.
+  // Bare "deliver"/"drive" are NOT here (too broad — "delivery"/"driven" are fine); the vague
+  // uses are caught as the phrase "drive change" + the generation prompt's "vague deliver" note.
+  const BASELINE_WORDS = ['compress',
+    'spearhead', 'foster', 'leverage', 'robust', 'comprehensive',
+    'passionate', 'dynamic', 'proactive', 'ensure',
+    'moreover', 'therefore', 'furthermore'];
+  const BASELINE_PHRASES = [
+    'results-driven', 'end-to-end', 'drive change',
+    'key role', 'pivotal role', 'proven track record',
+    'I thrive in', 'My expertise lies in',
+    'I look forward to hearing from you'];
 
   function mergeUnique(a, b) {
     const seen = new Set();

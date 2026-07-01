@@ -27,7 +27,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.28-corecomp-loss-guard';
+  var VERSION = '1.51.30-corecomp-loss-guard';
   if (window.__antcvCoreCompGuard === VERSION) return;
   window.__antcvCoreCompGuard = VERSION;
 
@@ -76,16 +76,37 @@
     return null;
   }
 
-  // REAL = at least one DATA row (skip row 0 = header) has a non-placeholder cell.
-  // A header-only table (rows.length <= 1) or all-bracket data rows is NOT real.
-  function isReal(sec) {
+  // A data row is REAL if it has >=1 non-placeholder cell; a data row is a
+  // PLACEHOLDER row if every cell is a placeholder (e.g. ["[Focus area 5]",
+  // "[Strategic expertise - 1 or 2 lines]"]). Row 0 is the header, always kept.
+  function realDataRows(rows) {
+    var out = [];
+    if (!Array.isArray(rows)) return out;
+    for (var r = 1; r < rows.length; r++) {
+      var row = rows[r];
+      if (!Array.isArray(row)) continue;
+      for (var c = 0; c < row.length; c++) {
+        if (!isPlaceholderCell(row[c])) { out.push(row); break; }
+      }
+    }
+    return out;
+  }
+  // header + only the real data rows (drops "[Focus area N]" placeholder rows).
+  function cleanRows(rows) {
+    var header = (Array.isArray(rows) && rows.length) ? rows[0] : ['Focus Area', 'Strategic Expertise'];
+    return [header].concat(realDataRows(rows));
+  }
+  // REAL = at least one real data row. A header-only or all-placeholder table is NOT real.
+  function isReal(sec) { return !!(sec && Array.isArray(sec.rows) && realDataRows(sec.rows).length > 0); }
+  // Does the table MIX real + placeholder rows (partial lamination that needs cleaning)?
+  function hasPlaceholderData(sec) {
     if (!sec || !Array.isArray(sec.rows)) return false;
     for (var r = 1; r < sec.rows.length; r++) {
       var row = sec.rows[r];
       if (!Array.isArray(row)) continue;
-      for (var c = 0; c < row.length; c++) {
-        if (!isPlaceholderCell(row[c])) return true;
-      }
+      var allPh = true;
+      for (var c = 0; c < row.length; c++) { if (!isPlaceholderCell(row[c])) { allPh = false; break; } }
+      if (allPh) return true;
     }
     return false;
   }
@@ -97,7 +118,9 @@
     if (!sec || !isReal(sec)) return;
     var key = appKey();
     var store = readStore();
-    try { store[key] = { rows: JSON.parse(JSON.stringify(sec.rows)) }; }
+    // store CLEAN rows only (header + real rows) so a later restore can never
+    // bring placeholder "[Focus area N]" rows back.
+    try { store[key] = { rows: JSON.parse(JSON.stringify(cleanRows(sec.rows))) }; }
     catch (_) { return; }
     // keep the store small: cap at the 6 most-recent application buckets.
     try {
@@ -115,7 +138,30 @@
     var secs = readSections(); if (!secs || !Array.isArray(secs.cv)) return;
     var sec = coreCompSection(secs.cv);
     if (!sec) return;                 // section absent - nothing to heal in place
-    if (isReal(sec)) return;          // live rows are real - never overwrite
+    if (isReal(sec)) {
+      // Table has real rows. If it ALSO carries placeholder rows (partial
+      // lamination — the owner's "[Focus area 5]/[Focus area 6]" mixed with real
+      // Optics/Imaging rows), DROP the placeholder rows in place. Never restore
+      // over a table that has real content.
+      if (hasPlaceholderData(sec)) {
+        var cleaned = false;
+        var cv2 = secs.cv.map(function (s) {
+          if (!s || s.id !== SECTION_ID) return s;
+          cleaned = true;
+          var copy = JSON.parse(JSON.stringify(s));
+          copy.rows = cleanRows(s.rows);
+          return copy;
+        });
+        if (cleaned) {
+          lastApplyAt = now || 1;
+          secs.cv = cv2;
+          try { localStorage.setItem('sections', JSON.stringify(secs)); } catch (_) {}
+          try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { reason: 'corecomp-loss-guard' } })); } catch (_) {}
+          try { console.log('[CV-CORECOMP-LOSS-GUARD] dropped placeholder rows from a partially-laminated CORE COMPETENCIES table'); } catch (_) {}
+        }
+      }
+      return;
+    }
     var snap = readStore()[appKey()];
     if (!snap || !Array.isArray(snap.rows)) return;
     // The snapshot must itself be real (defence in depth).

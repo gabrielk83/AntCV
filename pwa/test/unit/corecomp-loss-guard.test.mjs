@@ -87,6 +87,31 @@ test('restore: placeholder-only rows are healed back to the real snapshot', () =
   assert.deepEqual(sec.rows, REAL_ROWS, 'placeholder rows are replaced with the real snapshot');
 });
 
+test('clean: a PARTIAL table (real + placeholder rows) drops the placeholder rows in place', () => {
+  const ctx = makeSandbox({ meta: { company: 'Acme', role: 'PM' }, sections: cv(REAL_ROWS) });
+  const PARTIAL = [
+    HEADER,
+    ['[Focus area 5]', '[Strategic expertise - 1 or 2 lines]'],   // placeholder row
+    ['[Focus area 6]', '[Strategic expertise - 1 or 2 lines]'],   // placeholder row
+    ['Optics, photonics', 'Electro-optics, photonics, semiconductor physics'], // real
+    ['Imaging', 'Camera architecture, image sensors, ISP'],        // real
+  ];
+  ctx.setSections(cv(PARTIAL));
+  ctx.advanceClock(5000);
+  ctx.api.reapply();
+  const sec = ctx.sections().cv.find((s) => s.id === 'core_comp');
+  assert.deepEqual(sec.rows, [HEADER, PARTIAL[3], PARTIAL[4]], 'placeholder rows dropped, real rows + header kept');
+});
+
+test('snapshot: a partial table is snapshotted CLEAN (no placeholder rows stored)', () => {
+  const ctx = makeSandbox({ meta: { company: 'Acme', role: 'PM' }, sections: cv(REAL_ROWS) });
+  const PARTIAL = [HEADER, ['[Focus area 5]', '[Strategic expertise - 1 or 2 lines]'], ['Imaging', 'Camera architecture']];
+  ctx.setSections(cv(PARTIAL));
+  ctx.api.snapshot();
+  const snap = ctx.snapStore();
+  assert.deepEqual(snap['Acme|PM'].rows, [HEADER, ['Imaging', 'Camera architecture']], 'snapshot holds only header + real rows');
+});
+
 test('restore: a header-only table (lamination emptied the data rows) is also healed', () => {
   const ctx = makeSandbox({ meta: { company: 'Acme', role: 'PM' }, sections: cv(REAL_ROWS) });
   ctx.api.snapshot();

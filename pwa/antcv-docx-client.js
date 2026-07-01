@@ -2246,9 +2246,18 @@ export function applyOutcomesMode(docSections, doc) {
     // export. Name-guarded (Gabriel only); non-mutating (sets _lam, never the input role).
     let _gabrielN = '';
     try { const _g = JSON.parse(localStorage.getItem('personalInfo') || '{}') || {}; _gabrielN = String((_g.personalInfo ? _g.personalInfo.name : _g.name) || ''); } catch (_) {}
+    // GABRIEL-EXACT-RESULTS-002 (owner 2026-07-02): the CSA / IDF and Students-Council roles came
+    // back with the Results line COPYCATTING the bullets (no distinct result was generated, so the
+    // derive-from-bullets fallback rehashed them, e.g. "Administer classified IT infrastructure;
+    // ...procedure.; Cut recovery time..."). Owner: "no need to copycat the result from the bullet —
+    // there is an additional NUMERIC result." Pin all 5 kernel role_results_exact lines (not just RA +
+    // security guard) so each role shows its distinct NUMERIC outcome verbatim instead of the bullets.
     const _GAB_EXACT = /\bgabriel\b/i.test(_gabrielN) ? [
       { reT: /research\s+assist|teaching\s*\/?\s*research|\bRA\b/i, reC: /tel[\s-]?aviv|\bTAU\b/i, text: 'Benchmarked imprinted vs taut, non-imprinted devices; non-imprinted won on structure, manufacturability, responsivity, and 10× faster gating.' },
       { reT: /security\s+guard|\bvagt\b/i, reC: null, text: 'Manage access and incidents for 750-resident student housing.' },
+      { reT: /computer\s*systems?\s*admin/i, reC: /\bidf\b|communication\s*corps/i, text: 'Support 100 users across 150 machines in a classified construction centre, with documented access, support, and recovery workflows.' },
+      { reT: /team\s*operations?\s*manager|assistant\s*coach/i, reC: /pan\s*idr|copenhagen\s*wolves/i, text: 'Coordinate a 25-player squad, 300-guest club events, and club representation with Rugby Danmark and IGR Europe.' },
+      { reT: /students?\s*council/i, reC: /tel[\s-]?aviv/i, text: 'Modernised 15 outdated EE exam-preparation booklets with updated examples, cleaner coverage, and improved print quality.' },
     ] : [];
     const _gabrielExactResult = (r) => {
       if (!_GAB_EXACT.length || !r) return null;

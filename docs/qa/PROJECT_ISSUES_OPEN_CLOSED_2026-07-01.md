@@ -22,6 +22,7 @@ This session ran interactively against the owner's LIVE signed-in app (Chrome MC
 | AI-NOTICE-POSITION-CONTROL-001 | Layout control (Auto / bottom L/C/R); forwarded + honored in preview + worker (incl. 'center') | 1.51.35 / wk 1.14.114 | `diag-ai-notice-pos.mjs` (manual overrides auto) |
 | WM-CONTRAST-002 | AI-notice preview colour by ACTUAL sidebar luminance (was assumed-navy → white-on-pale illegible) | 1.51.37 | live DOM |
 | AI-NOTICE-AUTO-SIDEBAR-001 | AUTO defaults to the sidebar (emptier column); old block-count counted blocks-not-height → pushed to the dense main column | wk 1.14.115 | `diag-ai-notice-pos.mjs` |
+| AI-NOTICE-LEFT-CLOUDCONVERT-001 | LEFT exported on the RIGHT: CloudConvert/LibreOffice IGNORED the mso-position-horizontal:left keyword (dropped box at the main-column anchor). Now explicit page-relative margin-left offset. **Owner-verify the re-export.** | wk 1.14.116 | `diag-ai-notice-pos.mjs` + live DOCX unzip |
 | PREVIEW-HYPERLINK-STYLE-002 | Markdown/URLs → styled links in preview; colour by background (white on navy header, teal on light); killed the LinkedIn blink (v001 fought React) | 1.51.38 / 1.51.39 | LIVE (white on header, idempotent 2nd pass, 0 errors) + 5 tests |
 | Blank-section "dancing" | (from prior batches) — **owner confirmed FIXED** | — | owner |
 

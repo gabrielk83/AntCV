@@ -37,6 +37,13 @@ is the upstream cause of the CL semi-empty (why/who/bring placeholders) AND the 
 visible". Verify with ONE real regen from the owner (can't reproduce headlessly). Do NOT hard-force a fixed
 delay that blocks a fast valid generation — gate on the real completion signal.
 
+### 1b. UNSOLICITED CORE COMPETENCIES too specific (regen-gated, tie to #1)
+Owner (2026-07-01): the unsolicited CV's CORE COMPETENCIES came back too NARROW ("EO & photonic
+sensors", "Imaging", "Materials & devices") — for an UNSOLICITED draft the competencies should be
+the BROAD PdM/BA/process identity, not the electro-optics niche. The generation prompt already
+distinguishes unsolicited (broad) vs JD-targeted — verify the unsolicited branch drives core_comp
+from the broad identity, not the photonics cluster. Regen-gated.
+
 ### 2. ROLE-DEDUP + ORDERING (HIGH)
 `pwa/antcv-sections-normalize-415.js` `dedupeRoles` merges only IDENTICAL titles + overlapping years. The
 owner's EXPERIENCE has DUPLICATES from company-spelling variants:
@@ -46,8 +53,10 @@ owner's EXPERIENCE has DUPLICATES from company-spelling variants:
 FIX: merge same-title / same-year-range roles whose COMPANY strings are spelling variants (normalise company:
 expand common acronyms e.g. IDF↔Israel Defense Forces, strip trailing qualifiers after "-"/","), keeping the
 RICHER bullet+result set. Then **VOLUNTARY roles sort LAST** — Students Council Representative + rugby
-(foreningsarbejde / "Volunteer") go after the paid history. Also: **3 empty roles jump in/out** right after
-the PROFESSIONAL EXPERIENCE heading — the empty-slot-hide (EXPERIENCE-EMPTY-SLOT-HIDE-001, 1.51.32) is fighting
+(foreningsarbejde / "Volunteer") go after the paid history — and within the voluntary block keep
+reverse-chron: owner (2026-07-01) "Students Council should be AFTER Rugby operations (earlier volunteer
+work, was placed before)". Rugby 2023-present precedes Students Council 2005-2007. Also: **3 empty roles
+jump in/out** right after the PROFESSIONAL EXPERIENCE heading — the empty-slot-hide (EXPERIENCE-EMPTY-SLOT-HIDE-001, 1.51.32) is fighting
 another injector during the sections-updated storm; make it idempotent + ensure nothing re-adds the hidden
 slots (stable across passes). Diagnose on the owner's LIVE `localStorage.sections`. Node-test the dedup +
 voluntary-last ordering.
@@ -60,7 +69,18 @@ signature renders intact; the recruiter-Q&A page renders when the JD has questio
 apply-path gaps (see the appjs-appsrc-contribute-divergence memory — grep the DEPLOYED app.js directly for CL
 hydration; app.src.js-only edits there are phantom).
 
+### 3b. Editable section HEADING value from the section-list panel (feature)
+Owner (2026-07-01): a rich_block section's HEADING VALUE should be editable directly from the section
+sidebar/preview panel (the list with the ON/OFF + move + ×/→ chips, e.g. "HOW I WOULD CONTRIBUTE" /
+"Closure"). Today that panel toggles/moves/deletes but doesn't let you rename the heading inline. Add an
+inline editable title (mirror the existing rich-block editor's title field) in that panel row.
+
 ### 4. Smaller / regen-gated / owner-input
+- **AI-notice LEFT export — FIXED wk 1.14.116, owner-verify.** Root cause traced live: the DOCX had the
+  correct `mso-position-horizontal:left`, but CloudConvert/LibreOffice IGNORES the left|center keyword
+  (only `right` worked) and dropped the box at the anchor paragraph (main column). Now `aiNoticeVmlRun`
+  uses an EXPLICIT page-relative `margin-left` offset (left=0pt, center, right=pageW-320). Owner
+  re-exports to confirm the PDF finally honors LEFT. `diag-ai-notice-pos.mjs` asserts the offsets.
 - **Focus-area label** — "Optics, photonics &" (truncated) → owner wants Focus Area **"EO & Photonic devices"**,
   Strategic Expertise **"Electro-optics (EO), photonics, semiconductor physics"**. LLM-generated (no source
   string) → fix in the generation prompt / Gabriel kernel seed (regen-gated). Owner already inline-edited live.

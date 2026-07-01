@@ -38,9 +38,22 @@ test('_pinFor matches all 5 kernel roles by title + company', () => {
   assert.match(hit('Students Council Representative', 'Tel Aviv University'), /15 outdated EE exam/);
 });
 
-test('_pinFor returns null for an unrelated role (e.g. Sirin — pinned by proofpoint, not kernel)', () => {
+test('_pinFor pins the Sirin Result to the DISTINCT patent line (not the bullet restatement)', () => {
   const { api } = load({ personalInfo: GAB });
-  assert.equal(api._pinFor({ title: 'Senior Optics & Electro-Optics Engineer', company: 'Sirin Labs' }), null);
+  const t = api._pinFor({ title: 'Senior Optics & Electro-Optics Engineer', company: 'Sirin Labs' });
+  assert.match(t, /Co-invented the stray-light optical window \(Patent No\. 241997\)/);
+  // the trimmed line must NOT carry the bullet's leading clause
+  assert.doesNotMatch(t, /7-person|Sigma-Connectivity|Directed technical work/);
+});
+
+test('SIRIN gate: the Meprolight EO roles are NOT caught by the Sirin pin', () => {
+  const { api } = load({ personalInfo: GAB });
+  assert.equal(api._pinFor({ title: 'Electro-Optics Team Leader', company: 'Meprolight, IWI Group' }), null);
+  assert.equal(api._pinFor({ title: 'R&D Electro-Optics Engineer', company: 'Meprolight, IWI Group' }), null);
+});
+
+test('_pinFor returns null for an unrelated role', () => {
+  const { api } = load({ personalInfo: GAB });
   assert.equal(api._pinFor({ title: 'Product / Project Expert', company: 'Kanzen Konsulenter ApS' }), null);
 });
 

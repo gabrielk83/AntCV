@@ -16,7 +16,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.50-gab-results-pin';
+  var VERSION = '1.51.51-gab-results-pin';
   if (window.__antcvGabResultsPin === VERSION) return;
   window.__antcvGabResultsPin = VERSION;
 
@@ -33,6 +33,12 @@
     { reT: /computer\s*systems?\s*admin/i, reC: /\bidf\b|communication\s*corps/i, text: 'Support 100 users across 150 machines in a classified construction centre, with documented access, support, and recovery workflows.' },
     { reT: /team\s*operations?\s*manager|assistant\s*coach/i, reC: /pan\s*idr|copenhagen\s*wolves/i, text: 'Coordinate a 25-player squad, 300-guest club events, and club representation with Rugby Danmark and IGR Europe.' },
     { reT: /students?\s*council/i, reC: /tel[\s-]?aviv/i, text: 'Modernised 15 outdated EE exam-preparation booklets with updated examples, cleaner coverage, and improved print quality.' },
+    // SIRIN-RESULT-TRIM-001 (owner 2026-07-02): the Sirin Result laminated outcomes[0], whose
+    // leading clause ("Directed technical work across a 7-person EO … at the Sigma-Connectivity ODM
+    // site in Sweden") is byte-identical to bullet[0] — "the content bullet is regenerated inside the
+    // result." Pin the DISTINCT achievement (the co-invented patent) so the Result stops restating the
+    // bullet. Company-gated to Sirin so it never touches the Meprolight EO roles.
+    { reT: /optics|electro-?optics/i, reC: /sirin/i, text: 'Co-invented the stray-light optical window (Patent No. 241997), now in commercial devices.' },
   ];
   function pinFor(r) {
     if (!r) return null;

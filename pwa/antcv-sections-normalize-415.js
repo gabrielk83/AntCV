@@ -713,6 +713,17 @@
     else if (typeof ws === 'string') line = ws;
     line = String(line || '').trim();
     if (!line || line.charAt(0) === '[') return null;
+    // WORK-STYLE-ORPHAN-134 (owner 2026-07-01: "orphan cleaning should have cut it under 134 chars —
+    // the 138-char version slid to a second line"). Cap the one-line style at <=133 chars: drop whole
+    // trailing clauses (after ; or ,) until it fits, else trim at a word boundary; strip a dangling
+    // connector/punctuation so it reads complete.
+    if (line.length > 133) {
+      var cut = line;
+      while (cut.length > 133 && /[;,]/.test(cut)) { cut = cut.replace(/[;,]\s*[^;,]*$/, '').trim(); }
+      if (cut.length > 133) cut = cut.slice(0, 133).replace(/\s+\S*$/, '').trim();
+      cut = cut.replace(/[\s,;:.\-]+$/, '').trim();
+      if (cut.length >= 30) line = cut;   // keep the trim only if it left a sensible line
+    }
     var copy = cv.slice();
     if (Array.isArray(sec.items) && sec.items.length) {
       var items = sec.items.slice();

@@ -48,6 +48,17 @@ test('already-real body -> no-op', () => {
   assert.equal(repair(cv), null);
 });
 
+test('a >133-char line is capped under 134 at a clause/word boundary', () => {
+  const LONG = 'Calm, structured decisions from measured data; clear written outcomes; works through relationships across engineering, suppliers and management.';
+  assert.ok(LONG.length > 133, 'precondition: line is long');
+  const repair = makeRepair({ work_style: { work_style_line_en: LONG } });
+  const cv = [{ id: 'work_style', type: 'rich_block', items: [{ b: 'Work style', t: '' }] }];
+  const t = repair(cv)[0].items[0].t;
+  assert.ok(t.length < 134, 'capped under 134 (was ' + t.length + ')');
+  assert.ok(t.length >= 30, 'still a sensible line');
+  assert.ok(!/[\s,;:.-]$/.test(t), 'no dangling trailing punctuation');
+});
+
 test('no PI work_style -> no-op (no fabricated content)', () => {
   const repair = makeRepair({});
   const cv = [{ id: 'work_style', type: 'rich_block', items: [{ b: 'Work style', t: '' }] }];

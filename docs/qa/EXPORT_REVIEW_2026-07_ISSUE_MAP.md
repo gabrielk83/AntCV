@@ -76,9 +76,29 @@ nightly (`docs/qa/CLOUD_ROUTINE_PROMPT.md` → CURRENT BACKLOG).
   as HIDDEN (`on:false`) — present + recoverable, visible CV unchanged.
 - **#6 Signature cut — RESOLVED (no code).** Owner confirms the signature is intact in the PDF; only
   Adobe's image-editor view clips the full "G". C8 closed.
-- **#2 core_comp blank / #4 CL mostly blank / #7 accessibility dropped on 2nd gen — OPEN, nightly.**
-  Convergence/restore reliability (owner: "the way you push from memory is nok"). Tracked as
-  CV-CORECOMP-BLANK-001 / CL-BLANK-001 / CV-ACCESS-DROP-001 in the cloud-routine CURRENT BACKLOG.
+- **#2 core_comp blank / #4 CL mostly blank / #7 accessibility dropped on 2nd gen — GUARDS SHIPPED 1.51.28
+  (nightly 2026-07-01); real-cycle convergence owner-verify-pending.**
+  Convergence/restore reliability (owner: "the way you push from memory is nok"). All three are
+  stale-restore losses the deterministic guard/repair layer wasn't catching. Fixes (node-sim verified,
+  543/543; a real LLM generate→gate→worker→sync cycle can't be reproduced headlessly, so the owner
+  should confirm one generation now converges):
+  - **CV-CORECOMP-BLANK-001 (#2)** — new sidecar `antcv-corecomp-loss-guard.js`: snapshots the real
+    CORE COMPETENCIES rows to a local-only key per application; restores when a later state shows
+    placeholder-only / header-only rows. Mirrors `antcv-cl-prose-loss-guard-985`; never overwrites a
+    real value, never crosses applications, kill-switch `antcv:disable-corecomp-guard`. Diagnosed first:
+    the bracket rows are NOT from the lamination writer (always real-or-empty) nor the min-sections
+    floor (needs a fully-empty husk) — they come from the stale cloud/me()-enforce restore clobbering
+    the laminated `sections`; with no `personalInfo.core_comp_rows` a local snapshot is the only durable
+    source. 6 unit tests.
+  - **CL-BLANK-001 (#4)** — `antcv-cl-prose-loss-guard-985.js` `proseOf` now tests the BODY (`it.t`)
+    only, ignoring the lead label `it.b`. An empty-body-but-labelled rich_block (`{b:"Who I am",t:""}`)
+    previously read as "real" via the `it.t||it.b` fallback and defeated the restore; now it reads as
+    not-real and the existing placeholder←real restore fires. 3 unit tests (B is the regression proof).
+  - **CV-ACCESS-DROP-001 (#7)** — `repairAccessibilityFromPI` (415) no longer dead-ends on `idx<0`; when
+    the standalone ACCESSIBILITY section is ABSENT (gen-2 routes accessibility into ADDITIONAL) but
+    `personalInfo.accessibility` holds a real line, it CREATES the section at the canonical sidebar
+    position. Runs before `explodeAdditionalToSections`, so explode then drops the duplicate ADDITIONAL
+    row (verified via `sectionHasContent`). Never creates an empty section. 5 unit tests.
 
 ---
 

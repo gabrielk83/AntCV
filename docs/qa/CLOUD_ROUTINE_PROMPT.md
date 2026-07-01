@@ -104,6 +104,17 @@ account — no login step is needed. AntCV needs no install for the core work (z
 
 ### **CURRENT BACKLOG (owner re-review 2026-07-01) — DO THIS FIRST**
 
+> **UPDATE — nightly 2026-07-01 (PWA 1.51.28):** all three convergence guards below SHIPPED and are
+> node-sim verified (543/543). Because a real LLM generate→gate→worker→sync cycle can't be reproduced
+> headlessly, the owner should confirm on a real regeneration that ONE generation now converges
+> (core_comp populated, CL prose non-blank, ACCESSIBILITY survives gen-2). Details in
+> `docs/qa/EXPORT_REVIEW_2026-07_ISSUE_MAP.md` (RE-REVIEW block).
+> - CV-CORECOMP-BLANK-001 — new sidecar `antcv-corecomp-loss-guard.js` (snapshot/restore, mirrors 985).
+> - CL-BLANK-001 — `antcv-cl-prose-loss-guard-985.js` `proseOf` body-only (empty-body-but-labelled
+>   rich_block no longer masquerades as real).
+> - CV-ACCESS-DROP-001 — `repairAccessibilityFromPI` (415) now CREATES the ACCESSIBILITY section from
+>   `personalInfo.accessibility` when absent (was `idx<0 return null`).
+
 The owner's central frustration is **convergence / restore reliability**: a single generation
 intermittently leaves a section blank, so the owner has to **regenerate 2–3 times** to get a
 complete CV+CL. Owner's words: *"the way you push from memory is nok."* Make ONE generation

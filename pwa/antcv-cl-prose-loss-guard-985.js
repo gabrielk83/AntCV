@@ -59,10 +59,12 @@
   function proseOf(sec) {
     if (!sec || typeof sec !== 'object') return '';
     if (sec.type === 'rich_block' && Array.isArray(sec.items)) {
-      // join the non-marker (lead/body) item texts; a real section has at least one
+      // CL-BLANK-001: a section is REAL only if a BODY (it.t) is real. The lead LABEL
+      // (it.b, e.g. "Who I am") survives an empty generation, so counting it as prose
+      // makes an empty-body-but-labelled section masquerade as real and defeats restore.
       for (var i = 0; i < sec.items.length; i++) {
         var it = sec.items[i];
-        var t = it && typeof it === 'object' ? (it.t || it.b) : it;
+        var t = it && typeof it === 'object' ? it.t : it; // body only — ignore the it.b label
         if (!isPlaceholder(t)) return String(t);
       }
       return '';

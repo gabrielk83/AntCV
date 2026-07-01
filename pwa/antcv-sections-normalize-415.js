@@ -699,19 +699,33 @@
   function repairAccessibilityFromPI(cv) {
     var idx = -1;
     for (var i = 0; i < cv.length; i++) { if (cv[i] && cv[i].id === 'accessibility') { idx = i; break; } }
-    if (idx < 0) return null;
-    var sec = cv[idx];
+    var sec = idx >= 0 ? cv[idx] : null;
     var ph = function (v) { var s = String(v == null ? '' : v).trim(); return !s || s.charAt(0) === '['; };
-    var hasReal = (typeof sec.content === 'string' && !ph(sec.content)) ||
-      (Array.isArray(sec.items) && sec.items.some(function (it) { return it && !ph(it.t || it.v || it.b); }));
-    if (hasReal) return null;
+    if (sec) {
+      var hasReal = (typeof sec.content === 'string' && !ph(sec.content)) ||
+        (Array.isArray(sec.items) && sec.items.some(function (it) { return it && !ph(it.t || it.v || it.b); }));
+      if (hasReal) return null;                       // existing section already good
+    }
     var pi = {}; try { pi = JSON.parse(localStorage.getItem('personalInfo') || '{}') || {}; } catch (_) { return null; }
     var av = typeof pi.accessibility === 'string' ? pi.accessibility.trim() : '';
-    if (!av || av.charAt(0) === '[') return null;
+    if (!av || av.charAt(0) === '[') return null;     // no real PI line -> nothing to do (never create an empty section)
     var copy = cv.slice();
-    var ns = Object.assign({}, sec, { type: 'text', content: av });
-    delete ns.items;
-    copy[idx] = ns;
+    if (sec) {                                        // repair in place (existing behaviour)
+      var ns = Object.assign({}, sec, { type: 'text', content: av });
+      delete ns.items;
+      copy[idx] = ns;
+      return copy;
+    }
+    // CV-ACCESS-DROP-001 (owner 2026-07-01: "accessibility was seen in first generation,
+    // dropped in second"). gen-2 routes accessibility into ADDITIONAL and ships no standalone
+    // section, so the old `idx<0 return null` left nothing to repair and the section vanished.
+    // CREATE it from PI at the canonical sidebar position (right after interests, else after
+    // languages, else end). Runs BEFORE explodeAdditionalToSections, so explode then sees the
+    // section exists + holds content and drops the duplicate ADDITIONAL row (no double-render).
+    var newSec = { id: 'accessibility', title: 'ACCESSIBILITY', loc: 'sidebar', on: true, type: 'text', content: av };
+    var anchor = -1;
+    for (var j = 0; j < copy.length; j++) { if (copy[j] && (copy[j].id === 'interests' || copy[j].id === 'languages')) anchor = j; }
+    if (anchor >= 0) copy.splice(anchor + 1, 0, newSec); else copy.push(newSec);
     return copy;
   }
 

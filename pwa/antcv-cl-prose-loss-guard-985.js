@@ -23,7 +23,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.14-cl-prose-loss-guard';
+  var VERSION = '1.51.31-cl-prose-loss-guard';
   if (window.__antcvClProseGuard985 === VERSION) return;
   window.__antcvClProseGuard985 = VERSION;
 
@@ -187,6 +187,21 @@
   }
   function debounced() { if (t) clearTimeout(t); t = setTimeout(run, 400); }
 
+  // CL-BLANK-CAPTURE-001 (owner 2026-07-01: "cover letter mostly empty, needs a 2nd
+  // generation"). On the FIRST generation the real who/why/opening prose exists only
+  // briefly before a stale cloud / me()-enforce restore reverts those sections to the
+  // EMPTY Nordic skeleton ({items:[{b:label,t:""}]}) — and the 400ms-debounced snapshot
+  // ran too late, so the guard had no real snapshot to restore from (foundation/bring
+  // survive because they apply as direct items; who/why/opening apply as .content +
+  // the 987 bridge and are the ones lost). Snapshot SYNCHRONOUSLY on every
+  // sections-updated so the real prose is captured the instant it appears, before the
+  // clobber. Additive + idempotent: snapshot ONLY ever STORES a real section, never
+  // removes or overwrites a real value, so an extra early capture cannot regress
+  // anything. Honours the kill switch / erase gate.
+  window.addEventListener('antcv:sections-updated', function () {
+    if (disabled() || erasing()) return;
+    try { snapshot(); } catch (_) { /* self-disable on error */ }
+  });
   window.addEventListener('antcv:sections-updated', debounced);
   // Boot sweep + later windows to catch a cloud-restore / me()-enforce that
   // out-races the first pass (restore + the converter sidecars settle by ~5s).

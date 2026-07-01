@@ -20,7 +20,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.48-orphan-bind-l3-llm';
+  var VERSION = '1.51.52-orphan-write-verify';
   if (window.__antcvOrphanBind === VERSION) return;
   window.__antcvOrphanBind = VERSION;
 
@@ -137,15 +137,44 @@
     for (var j = 0; j < acr.length; j++) { if (short.indexOf(acr[j]) === -1) return false; }
     return true;
   }
-  function l3WriteBullet(secs, sid, pathParts, text) {
+  // ── ORPHAN-WRITE-VERIFY-001 (owner 2026-07-02): the preview path "roles.N.bullets.M"
+  // uses the RENDER index, but the stored roles array also holds hidden (on:false) and
+  // empty skeleton roles — so preview index ≠ stored index. Writing by path alone put a
+  // shortened IDF/CSA bullet into the Teaching-Assistant and Kanzen roles (export 16).
+  // The path is now only a HINT: every write first VERIFIES the target text matches the
+  // measured text; on mismatch it falls back to a UNIQUE text match across the section's
+  // roles, and ABORTS if none or several match. Tense-tolerant (the render re-tenses the
+  // leading verb, so comparison drops the first word when the tail is substantial).
+  function normText(s) { return String(s == null ? '' : s).replace(/\u00a0/g, ' ').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim(); }
+  function sameText(a, b) {
+    var na = normText(a), nb = normText(b);
+    if (na === nb) return true;
+    var ta = na.split(' ').slice(1).join(' '), tb = nb.split(' ').slice(1).join(' ');
+    return ta.length >= 20 && ta === tb;
+  }
+  function locateBullet(sec, pathParts, expectText) {
+    var node = sec;
+    for (var j = 0; j < pathParts.length - 1; j++) { var k = pathParts[j]; var idx = /^\d+$/.test(k) ? parseInt(k, 10) : k; node = node && node[idx]; if (node == null) { node = null; break; } }
+    if (node) {
+      var lk = pathParts[pathParts.length - 1]; var li = /^\d+$/.test(lk) ? parseInt(lk, 10) : lk;
+      if (typeof node[li] === 'string' && sameText(node[li], expectText)) return { arr: node, i: li };
+    }
+    var hits = [];
+    var roles = Array.isArray(sec.roles) ? sec.roles : [];
+    for (var r = 0; r < roles.length; r++) {
+      var bl = roles[r] && roles[r].bullets;
+      if (!Array.isArray(bl)) continue;
+      for (var b = 0; b < bl.length; b++) { if (typeof bl[b] === 'string' && sameText(bl[b], expectText)) hits.push({ arr: bl, i: b }); }
+    }
+    return hits.length === 1 ? hits[0] : null;
+  }
+  function l3WriteBullet(secs, sid, pathParts, text, expectText) {
     if (!secs || !Array.isArray(secs.cv)) return false;
     var sec = null; for (var i = 0; i < secs.cv.length; i++) { if (secs.cv[i] && secs.cv[i].id === sid) { sec = secs.cv[i]; break; } }
     if (!sec) return false;
-    var node = sec;
-    for (var j = 0; j < pathParts.length - 1; j++) { var k = pathParts[j]; var idx = /^\d+$/.test(k) ? parseInt(k, 10) : k; node = node && node[idx]; if (node == null) return false; }
-    var lk = pathParts[pathParts.length - 1]; var li = /^\d+$/.test(lk) ? parseInt(lk, 10) : lk;
-    if (!node || typeof node[li] !== 'string') return false;
-    node[li] = text; return true;
+    var loc = locateBullet(sec, pathParts, expectText);
+    if (!loc) return false;
+    loc.arr[loc.i] = text; return true;
   }
   function l3WriteResults(rKey, text) {
     var map; try { map = JSON.parse(localStorage.getItem('antcv:resultsOverride') || '{}') || {}; } catch (_) { map = {}; }
@@ -187,7 +216,7 @@
           var r = fresh[i], short = String(arr[i] == null ? '' : arr[i]).trim();
           if (!safeShorten(r.text, short)) continue;
           if (r.kind === 'results') { if (l3WriteResults(r.rKey, short)) wrote++; }
-          else if (l3WriteBullet(secs, r.sid, r.pathParts, short)) wrote++;
+          else if (l3WriteBullet(secs, r.sid, r.pathParts, short, r.text)) wrote++;
         }
         if (wrote) {
           try { localStorage.setItem('sections', JSON.stringify(secs)); } catch (_) {}
@@ -203,17 +232,15 @@
   function readSections() { try { var v = JSON.parse(localStorage.getItem('sections') || '{}'); return (v && typeof v === 'object') ? v : null; } catch (_) { return null; } }
   // Navigate a "roles.2.bullets.1" path inside a section object and bind the leaf's
   // trailing n gaps in the STORED text (leading verb / tense untouched).
-  function bindBulletInSections(sid, pathParts, n) {
+  function bindBulletInSections(sid, pathParts, n, expectText) {
     var secs = readSections(); if (!secs || !Array.isArray(secs.cv)) return false;
     var sec = null; for (var i = 0; i < secs.cv.length; i++) { if (secs.cv[i] && secs.cv[i].id === sid) { sec = secs.cv[i]; break; } }
     if (!sec) return false;
-    var node = sec;
-    for (var j = 0; j < pathParts.length - 1; j++) { var k = pathParts[j]; var idx = /^\d+$/.test(k) ? parseInt(k, 10) : k; node = node && node[idx]; if (node == null) return false; }
-    var lk = pathParts[pathParts.length - 1]; var li = /^\d+$/.test(lk) ? parseInt(lk, 10) : lk;
-    if (!node || typeof node[li] !== 'string') return false;
-    if (alreadyBound(node[li])) return false;
-    var bound = bindLast(node[li], n); if (bound === node[li]) return false;
-    node[li] = bound; localStorage.setItem('sections', JSON.stringify(secs)); return true;
+    var loc = locateBullet(sec, pathParts, expectText);   // ORPHAN-WRITE-VERIFY-001: text-verified, never index-blind
+    if (!loc) return false;
+    if (alreadyBound(loc.arr[loc.i])) return false;
+    var bound = bindLast(loc.arr[loc.i], n); if (bound === loc.arr[loc.i]) return false;
+    loc.arr[loc.i] = bound; localStorage.setItem('sections', JSON.stringify(secs)); return true;
   }
   function bindResultsOverride(rKey, displayText, n) {
     var map; try { map = JSON.parse(localStorage.getItem('antcv:resultsOverride') || '{}') || {}; } catch (_) { map = {}; }
@@ -247,9 +274,11 @@
         var n = chooseBindCount(bd, txt, prefix, flags);
         var bsid = (bd.closest && bd.closest('[data-sid]') && bd.closest('[data-sid]').getAttribute('data-sid')) || 'experience';
         if (n > 0) {
-          if (bindBulletInSections(bsid, rp.split('.'), n)) changed = true;
+          if (bindBulletInSections(bsid, rp.split('.'), n, txt)) changed = true;
         } else if (flags.wasRunt) {
-          residue.push({ key: 'bullet|' + rp, sig: hash(txt), kind: 'bullet', sid: bsid, pathParts: rp.split('.'), text: txt });
+          // ORPHAN-WRITE-VERIFY-001: key by TEXT SIG, not path — paths alias across
+          // renders when hidden/empty roles shift the preview index.
+          residue.push({ key: 'bullet|' + hash(txt), sig: hash(txt), kind: 'bullet', sid: bsid, pathParts: rp.split('.'), text: txt });
         }
       }
 
@@ -276,5 +305,5 @@
   function schedule() { if (__t) return; __t = setTimeout(function () { __t = null; run(); }, 400); }
   window.addEventListener('antcv:sections-updated', schedule);
   [1200, 3000, 6000].forEach(function (ms) { setTimeout(run, ms); });
-  window.AntcvOrphanBind = { version: VERSION, run: run, _bindLast: bindLast, _isRunt: isRunt, _spaceCount: spaceCount, _alreadyBound: alreadyBound, _bindBulletInSections: bindBulletInSections, _bindResultsOverride: bindResultsOverride, _hash: hash, _maybeEscalateToL3: maybeEscalateToL3, _readAttempted: readAttempted, _l3Disabled: l3Disabled, _safeShorten: safeShorten, _l3WriteBullet: l3WriteBullet, _proxyBase: proxyBase };
+  window.AntcvOrphanBind = { version: VERSION, run: run, _bindLast: bindLast, _isRunt: isRunt, _spaceCount: spaceCount, _alreadyBound: alreadyBound, _bindBulletInSections: bindBulletInSections, _bindResultsOverride: bindResultsOverride, _hash: hash, _maybeEscalateToL3: maybeEscalateToL3, _readAttempted: readAttempted, _l3Disabled: l3Disabled, _safeShorten: safeShorten, _l3WriteBullet: l3WriteBullet, _proxyBase: proxyBase, _locateBullet: locateBullet, _sameText: sameText, _normText: normText };
 })();

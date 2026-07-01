@@ -84,3 +84,68 @@ real export PDF (can't be confirmed headlessly). Then wire Layer 3 auto-escalati
 
 This is deterministic, no per-generation LLM cost, and fixes the export (not just the preview) — the gap that
 made every prior attempt fall short.
+
+---
+
+# v2 — evidence from export (16) + the orphan-FREE strategy (2026-07-02, after 1.51.52)
+
+Owner: "the orphans are still present — analyse all orphans in the document and build a strategy to keep
+[orphan]-free documents."
+
+## 7. Orphan inventory — export (16), main column
+
+L1+L2+L3 (1.51.44–48) ran before this export. Result: **zero single-word orphans** (L2 works) but
+**13 multi-word runts** (2–3 word last lines) survived:
+
+| Role | Line | Runt |
+|------|------|------|
+| Change Request Lead | b2 | "customer-facing work." |
+| Sirin | b1 | "for high-security smartphones." |
+| Sirin | b2 | "and Qualcomm tools." |
+| Sirin | b3 | "constraints, and manufacturability." |
+| Sirin | Results | "commercial devices." |
+| EO Team Leader | b3 | "system trade-offs." |
+| EO Team Leader | b4 | "and production handover." |
+| Research Assistant | b1 | "probe stations." |
+| Research Assistant | b2 | "plasma processing." |
+| Research Assistant | b3 | "in MEMS/NEMS." |
+| CSA / IDF | b2 | "restore procedures." |
+| Students Council | b2 | "raised by classmates." |
+| Students Council | b3 | "faculty forums." |
+
+Sidebar (narrow column, cosmetically tolerable but same class): "photonics integration", "fabrication",
+"workflows", "equipment", "and testing".
+
+## 8. Why v1 fell short — three verified causes
+
+1. **Preview breaks ≠ PDF breaks.** L1 measures the PREVIEW column at preview zoom; CloudConvert typesets
+   the DOCX column. Most of the 13 PDF runts were simply not runts in the preview (and vice versa), so L1
+   never flagged them. This is THE dominant cause.
+2. **RUNT_FRAC = 0.32 misses 3-word runts.** "constraints, and manufacturability." is ~40% of the column —
+   below no threshold at 0.32. The detector was tuned for 1–2 word orphans.
+3. **L3 wrote by preview index and CORRUPTED data (fixed 1.51.52).** The preview path `roles.N.bullets.M`
+   uses the RENDER index; the stored array also holds hidden (`on:false`) + empty skeleton roles, so
+   preview N ≠ stored N. A shortened CSA/IDF bullet landed in the Teaching-Assistant and Kanzen roles
+   (export 16, both repaired live). **ORPHAN-WRITE-VERIFY-001** makes every L2/L3 write text-verified:
+   the path is only a hint; the target must match the measured text (tense-lead-tolerant) or be the UNIQUE
+   match in the section, else the write aborts. Attempted-map keys are now text-sig-based, not path-based.
+
+## 9. v2 architecture — measure like the export, fix before the export
+
+- **EXPORT-METRIC-MEASURE-001 (L1', the core fix).** Measure runts in an OFFSCREEN div styled with the
+  EXPORT font family/size and the EXPORT main-column width (the client already mirrors export budgets in
+  preview px — SIDEBAR-INFLATE-GRPWHOLE-001 precedent). Same `getClientRects` mechanics, but detection now
+  tracks the PDF ~1:1 instead of the preview. Scope: bullets + Results first, then sidebar groups + CL body.
+- **Threshold: RUNT_FRAC 0.32 → 0.40 in the export-metric pass** (catches 3-word runts). Keep 0.32 for the
+  live preview ticks so on-screen churn stays low.
+- **EXPORT-PREFLIGHT-ORPHANS-001 (L3', deterministic timing).** Run the orphan pass as an EXPORT PREFLIGHT
+  inside `exportDocxViaWorker`: measure (export metrics) → L2 bind → ONE batched L3 call for all residue →
+  safeShorten gate → RE-MEASURE each accepted rewrite (reject any that still runts or gains a line) →
+  text-verified write → build payload. Bounded by a 12s timeout (export proceeds with whatever landed);
+  progress line in the export overlay. This kills the race where the export leaves before the async tick
+  fires — the reason only 4 lines ever reached L3 in export 16.
+- **L0 (cheap, optional).** One generation-prompt line: write bullets to fill complete typeset lines
+  (~95–110 chars/line in the main column); avoid 2–3 word final fragments. Reduces incidence only.
+
+Order: WRITE-VERIFY (shipped 1.51.52) → EXPORT-METRIC-MEASURE → EXPORT-PREFLIGHT → threshold/scope tuning
+→ L0 prompt line. Each behind its own kill-switch; verify on a real export PDF after each stage.

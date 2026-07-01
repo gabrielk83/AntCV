@@ -62,7 +62,7 @@ test('_alreadyBound detects an existing NBSP (idempotency guard)', () => {
 test('_bindBulletInSections binds a stored bullet by path and persists', () => {
   const sections = { cv: [{ id: 'experience', roles: [{ bullets: ['first bullet', 'owned the whole governance loop end to end'] }] }], cl: [] };
   const { api, store } = load({ sections: JSON.stringify(sections) });
-  const ok = api._bindBulletInSections('experience', ['roles', '0', 'bullets', '1'], 2);
+  const ok = api._bindBulletInSections('experience', ['roles', '0', 'bullets', '1'], 2, 'owned the whole governance loop end to end');
   assert.equal(ok, true);
   const bul = JSON.parse(store.get('sections')).cv[0].roles[0].bullets[1];
   assert.ok(bul.indexOf(NBSP) !== -1);
@@ -72,13 +72,63 @@ test('_bindBulletInSections binds a stored bullet by path and persists', () => {
 test('_bindBulletInSections is idempotent when already bound', () => {
   const sections = { cv: [{ id: 'experience', roles: [{ bullets: ['loop end to' + NBSP + 'end'] }] }], cl: [] };
   const { api } = load({ sections: JSON.stringify(sections) });
-  assert.equal(api._bindBulletInSections('experience', ['roles', '0', 'bullets', '0'], 2), false);
+  assert.equal(api._bindBulletInSections('experience', ['roles', '0', 'bullets', '0'], 2, 'loop end to end'), false);
 });
 
 test('_bindBulletInSections returns false for a missing path', () => {
   const sections = { cv: [{ id: 'experience', roles: [] }], cl: [] };
   const { api } = load({ sections: JSON.stringify(sections) });
-  assert.equal(api._bindBulletInSections('experience', ['roles', '5', 'bullets', '0'], 2), false);
+  assert.equal(api._bindBulletInSections('experience', ['roles', '5', 'bullets', '0'], 2, 'anything at all here'), false);
+});
+
+// ── ORPHAN-WRITE-VERIFY-001: the preview path is a HINT, text is the truth ──────
+// Export 16 regression: preview index ≠ stored index (hidden + empty skeleton roles),
+// so a path-only write put the CSA/IDF bullet into the Teaching-Assistant and Kanzen
+// roles. Every write now verifies the target text; on mismatch it requires a UNIQUE
+// text match across the section, else aborts.
+const IDF = 'Administer classified IT infrastructure; build automated backup-and-restore procedures.';
+
+test('WRITE-VERIFY: a skewed path redirects to the unique text-matched bullet (no cross-role corruption)', () => {
+  // stored: roles[9] = TA (the WRONG target the skewed preview path points at),
+  // roles[10] = CSA (owns the measured text).
+  const roles = [];
+  for (let i = 0; i < 9; i++) roles.push({ title: 'Role ' + i, bullets: ['some unrelated bullet line ' + i] });
+  roles.push({ title: 'Teaching Assistant', bullets: ['Teach and support two courses across 7 semesters.'] });
+  roles.push({ title: 'Computer Systems Administrator', bullets: ['Cut recovery time from hours to minutes.', IDF] });
+  const secs = { cv: [{ id: 'experience', roles }] };
+  const { api } = load();
+  // preview measured the CSA bullet at preview index 9 (one hidden role above it)
+  assert.equal(api._l3WriteBullet(secs, 'experience', ['roles', '9', 'bullets', '1'], 'Administer classified IT infrastructure; automate backup-and-restore.', IDF), true);
+  assert.equal(secs.cv[0].roles[9].bullets[0], 'Teach and support two courses across 7 semesters.');   // TA untouched
+  assert.equal(secs.cv[0].roles[10].bullets[1], 'Administer classified IT infrastructure; automate backup-and-restore.');
+});
+
+test('WRITE-VERIFY: no text match anywhere -> abort, nothing written', () => {
+  const secs = { cv: [{ id: 'experience', roles: [{ title: 'A', bullets: ['a completely different line of text'] }] }] };
+  const { api } = load();
+  assert.equal(api._l3WriteBullet(secs, 'experience', ['roles', '0', 'bullets', '0'], 'short', IDF), false);
+  assert.equal(secs.cv[0].roles[0].bullets[0], 'a completely different line of text');
+});
+
+test('WRITE-VERIFY: ambiguous (two identical bullets in different roles) -> abort', () => {
+  const secs = { cv: [{ id: 'experience', roles: [{ title: 'A', bullets: [IDF] }, { title: 'B', bullets: [IDF] }] }] };
+  const { api } = load();
+  assert.equal(api._l3WriteBullet(secs, 'experience', ['roles', '5', 'bullets', '0'], 'short', IDF), false);
+  assert.equal(secs.cv[0].roles[0].bullets[0], IDF);
+  assert.equal(secs.cv[0].roles[1].bullets[0], IDF);
+});
+
+test('WRITE-VERIFY: tense-transformed leading verb still matches (display present vs stored past)', () => {
+  const { api } = load();
+  assert.equal(api._sameText('Administered classified IT infrastructure; build automated backup-and-restore procedures.', IDF), true);
+  assert.equal(api._sameText('Administer classified IT.', 'Administer classified information.'), false);   // short tails must be exact
+});
+
+test('WRITE-VERIFY: L2 bind also refuses a skewed path with no unique match', () => {
+  const sections = { cv: [{ id: 'experience', roles: [{ bullets: ['innocent bullet that must stay unbound today'] }] }], cl: [] };
+  const { api, store } = load({ sections: JSON.stringify(sections) });
+  assert.equal(api._bindBulletInSections('experience', ['roles', '0', 'bullets', '0'], 2, 'text measured from a different role entirely'), false);
+  assert.equal(JSON.parse(store.get('sections')).cv[0].roles[0].bullets[0].indexOf(NBSP), -1);
 });
 
 test('_bindResultsOverride writes the bound text into the override map', () => {
@@ -118,10 +168,10 @@ test('_safeShorten rejects a rewrite that drops a number or an acronym', () => {
     'Direct a 7-person optics team at Sigma-Connectivity for phones today.'), false);           // dropped EO + ODM
 });
 
-test('_l3WriteBullet replaces the stored bullet at its path', () => {
+test('_l3WriteBullet replaces the stored bullet at its (verified) path', () => {
   const { api } = load();
   const secs = { cv: [{ id: 'experience', roles: [{ bullets: ['first', 'a long orphaning bullet here'] }] }] };
-  assert.equal(api._l3WriteBullet(secs, 'experience', ['roles', '0', 'bullets', '1'], 'tighter bullet'), true);
+  assert.equal(api._l3WriteBullet(secs, 'experience', ['roles', '0', 'bullets', '1'], 'tighter bullet', 'a long orphaning bullet here'), true);
   assert.equal(secs.cv[0].roles[0].bullets[1], 'tighter bullet');
 });
 

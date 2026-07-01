@@ -1,0 +1,74 @@
+# AntCV nightly report — 2026-07-03
+
+Run: autonomous local maintenance on `C:\Users\karpg\GitHub\AntCV`.
+Start state: PWA 1.51.52 · docx-worker 1.14.119 · access-relay 1.3.2 · proxy/demo-proxy 3.6.x.
+End state: **PWA 1.51.53** (pushed to `main`, commit `d127b6a`; PWA auto-deploys). Workers untouched.
+
+Method: diagnosis fanned out to 3 parallel subagents; integration + deploy serial. Every claim below is backed by a test or a repro.
+
+---
+
+## SHIPPED
+
+### EMPTY-ROLE-SOURCE-001 — PWA 1.51.53 (Task 3)
+**Symptom (owner data 2026-07-02):** experience roles r8/r9/r10 were `on:true` with blank title/company and empty bullets, rendering as empty rows. The belt `antcv-empty-role-hide.js` (1.51.52) hid them at boot but the source kept producing them.
+
+**Root cause (two collaborating mechanisms):**
+1. **Writer** — the generation-output→sections experience merge (`pwa/app.src.js` ~25319) appended *every* LLM-returned role whose id wasn't already in the editor list, verbatim, with no `on` normalization. The gen prompt orders "5+ on:true" slots (kernel-completeness-290 addendum), so the model returns extra ids (r8/r9/r10) `on:true`.
+2. **Text-blanker** — `scrubPlaceholders` in `pwa/antcv-kernel-completeness-290.js` (~415, run on every accepted gen response) empties any `"[...]"` bracketed string in place (`node[i]=''`) but leaves the sibling `on:true` untouched. So a model extra `{title:"[Role title]",company:"[Company name]",on:true}` reaches the writer already blanked → pushed as a blank active role.
+
+**Fix (at source, `app.src.js` ~25319):** in the extra-role append loop — skip a role with no title AND no company (drop the empty skeleton leftovers); push any *populated* extra as `on:false` (hidden, recoverable — matches the `on:!1` backfill immediately below and the hide-over-delete rule). Editor roles and id-matched LLM roles unchanged.
+
+**Mirror:** byte-verified surgical edit to minified `app.js` (1 occurrence of the anchor; head still `(()=>{`, zero `use strict`; +116 bytes). Applied via Node substring replace (line 8 is too large to Read into context).
+
+**Verification:**
+- `pwa/test/unit/empty-role-source.test.mjs` — behavioral repro of the fixed loop (blank extras dropped, populated extra forced `on:false` with content preserved, whitespace-only counts as empty, id-dedup) + src↔app.js mirror-parity anchor + IIFE/no-use-strict guard.
+- Full suite **590/590** (`node scripts/run-tests.mjs pwa`).
+- `node pwa/test/boot-smoke.mjs` → BOOT-SMOKE OK, errors=0.
+- `node pwa/test/diag-gate-probe.mjs` → editor renders past the sign-in gate (previewPaper, topbar, gear, Personal tab, launcher, review button all present; only expected offline-relay CORS errors).
+- Cache-bust quintet → 1.51.53 (index.html app.js?v + version-override ?v + ANTCV_VERSION seed; sw.js CACHE; TARGET_VERSION; STALE_VERSIONS += 1.51.52).
+
+The belt sidecar stays in place as defence-in-depth but no longer needs to fire for the gen path.
+
+---
+
+## DIAGNOSED — not shipped (deliberate: owner rule "an end result, not a brickable mid-product")
+
+### PAN-IDRAET-BULLET-NEARDUP-001 (Task 4.2)
+Within the Pan-Idræt role, b1 "…about 25 players…" and b3 "…25 players…" are near-dups; one should survive.
+
+- `_dedupNear` (`pwa/antcv-docx-client.js` 2118-2139) already **would** catch this pair: `_ndStem` drops digits + 1-2-char words and light-stems; b1/b3 share 6 stems → `overlap=1.0` and `sameHead=true` (manage/logistic). No filler-word normalization needed for the match.
+- **Why it's not a one-liner (parity + shape):**
+  - It runs only on Results joins (2357/2491), never on a role's bullets.
+  - Correct export site: `applyOutcomesMode` role-map (2688-2719), where `hideSubsumed`/`hideMetricReused` already filter bullets — add the collapse once at the top of the `.map(r=>…)` body, wrapped in `keepMin(bullets, …)` (`KEEP_MIN=2` at 2634). But that path runs **only in `mode==='results'`**; if the dup shows in section mode too, also add to `sanitizeForExport`'s experience case (1432).
+  - **Preview parity gap:** the preview memo (`app.src.js` 6209-6217) pulls back only `r2.results`, never `r2.bullets`, so export-side bullet hides are invisible to preview today. Cleanest fix = extend that memo to also capture `r2.bullets` and render from it (6115). Otherwise the collapse would desync preview↔export.
+  - Bullets can be strings or `{b,t}` objects — `_dedupNear` takes strings only, so map→text→dedup→map surviving texts back to original objects to preserve shape/alignment.
+  - **Tiebreak:** on a metric-score tie `_dedupNear` keeps the *longer* text → would keep "about 25 players" (the less clean one). Prefer the shorter/approximation-stripped bullet for the bullet path, or rely on `_compressResult` (only runs on Results, not bullets).
+- Test plan: `pwa/test/unit/pan-idraet-bullet-neardup.test.mjs` modeled on `results-lamination.test.mjs` (core collapse, KEEP_MIN floor, no-false-positive, object-shape preserved, determinism).
+
+### JD-SCAN-HALLUCINATION-001 (Task 11a — blocks Task 5 live)
+Commit `db97619` ("docs(nightly): …") is **docs-only** — no ingest code changed. Building blocks exist but are mis-configured for the failing case:
+- Garble detector `f()` (`app.src.js` 772) IS run pre-LLM (line 831) and sets `warning="pdfjs_garbled"` — but the code then **deliberately hands the garbled text to the LLM anyway** with "decode it from the visual rendering" (line 869). That is the forbidden "ask the LLM to clean noise → it invents" path. The NIL mojibake produced dictionary-clean fabricated prose ("NIT Calicut — Temporary Faculty") that passed `f()`, returned at 880-885 as `method="llm-after-pdfjs"`, and never reached OCR.
+- An inline PDF→vision OCR fallback exists (899-956) but only runs *after* the doc-LLM fails/returns garbage — wrong order. It also does NOT use `antcv-jd-image-ocr.js` (that sidecar is image-file-only).
+- Filename↔company cross-check: **not implemented** (filename is captured at 18531/18537, never compared).
+- "JD text unreadable — used OCR" notice: **not implemented** (status line at ~40327 shows `method` verbatim only).
+
+Remaining work: strengthen `f()` (replacement-char ratio, mean word length, charset sanity); reorder `h()` (847-898) to bypass the doc-LLM and go straight to vision on garble-detect; add filename↔company mismatch flag; surface the OCR notice; mirror to app.js. **Verification requires real LLM/vision calls + the actual PDF (`C:\Users\karpg\Downloads\Nanooptics Prototyping Engineer - NIL Technology.pdf`)** — not solidly headless-verifiable in a single nightly, so left for a session that can drive the models. This blocks Task 5's live verification.
+
+---
+
+## NOT ATTEMPTED this run (time-boxed to one solid ship)
+- Task 1 (LLM cascade cost-quality) / Task 2 (gen-flow speed): need D1 `llm_calls` telemetry via the access-relay admin surface (not reachable headless offline) — deferred.
+- Task 4.1 Orphans v2 (export-metric measurer + preflight): the priority backlog item but a large, render-gated change; not landable solidly in the same run as the shipped fix without risking the "brickable mid-product" rule.
+- Task 4 items 3-7 (CL-SECTION-PANEL-BLIP, HWIC-vanishes, candidate-header spread, floating-spine, emdash, reload-loop): unchanged.
+- Task 4 owner additions 8-10 (FIGURE-CONTACT-REF, CL-BRING-LEADIN, WHAT-I-BRING-TRUNCATED): docx-worker + CL-path work, not touched.
+- Task 5 (NIL QnA P2/P3 + Brand fit live): blocked by 11a; no Chrome MCP session confirmed connected at run time.
+
+## NEEDS OWNER EYE
+- Nothing shipped tonight needs a live eyeball (all headless-verified). The NIL application (QnA + Brand fit) and CL panel visual remain owner-eye items but are blocked/unchanged.
+
+## Suite / gate status
+- `node scripts/run-tests.mjs pwa`: 590/590 pass, 0 fail.
+- `node pwa/test/boot-smoke.mjs`: OK.
+- `node pwa/test/diag-gate-probe.mjs`: editor renders.
+- `node scripts/check-cache-bust.mjs`: report-only drift for app.js/version-override resolves with this commit; other drifts pre-existing/out of scope.

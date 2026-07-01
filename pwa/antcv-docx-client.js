@@ -784,6 +784,10 @@ export function buildPayload({
        so the two-column CV places the disclosure in the matching cell.
        Older workers ignore it; the linear CL ignores it too. */
     ...((() => { const s = readAiWmSide(); return s ? { ai_wm_side: s } : {}; })()),
+    /* AI-NOTICE-POSITION-CONTROL-001 (owner 2026-07-01): the Layout control pins the notice corner
+       (bottom left/center/right); forward it so the worker overrides the auto larger-gap logic.
+       'auto'/absent -> not forwarded -> worker keeps the measured behaviour. */
+    ...((() => { try { const p = localStorage.getItem('antcv:aiNoticePos'); return (p === 'left' || p === 'center' || p === 'right') ? { ai_notice_pos: p } : {}; } catch (_) { return {}; } })()),
     /* PB-WORKER-SIDEBAR-RATIO-001 follow-up: forward the user's ADJUSTED CV
        sidebar/main split so the worker's two-column widths match a manually
        dragged splitter, not just the 0.33 default. The worker (index.js 1.14.41)

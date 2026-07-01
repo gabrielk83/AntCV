@@ -23806,7 +23806,7 @@ function aiNoticeVmlRun(side) {
   // The textbox inset (~14pt sides, ~11pt bottom ≈ preview's
   // 18px DEFAULT_INSET) is the WM-002 clearance. Injected ONLY at the last page's
   // sentinel run, so it renders once (WM-005). Same raw-VML layer as the DEMO mark.
-  const horiz = side === "left" ? "left" : "right";
+  const horiz = side === "left" ? "left" : side === "center" ? "center" : "right";
   return '<w:r><w:rPr><w:noProof/></w:rPr><w:pict>' +
     '<v:rect id="AntCVAiNotice" o:spid="_x0000_s4097" style="position:absolute;margin-left:0;margin-top:0;width:320pt;height:18pt;' +
     'mso-position-horizontal:' + horiz + ';mso-position-horizontal-relative:page;' +
@@ -23865,7 +23865,7 @@ function postProcessDocx(input, opts = {}) {
     // closing WM-001/002/004/005. Side ('left'|'right') is encoded in the sentinel
     // (CV: measured larger-gap corner; CL: right). The document root already
     // declares the v/o/w10 namespaces, so the body VML is valid as-is.
-    const AIWM_RE = /<w:r\b[^>]*>(?:(?!<\/w:r>)[\s\S])*?__ANTCV_AIWM_(left|right)__(?:(?!<\/w:r>)[\s\S])*?<\/w:r>/;
+    const AIWM_RE = /<w:r\b[^>]*>(?:(?!<\/w:r>)[\s\S])*?__ANTCV_AIWM_(left|right|center)__(?:(?!<\/w:r>)[\s\S])*?<\/w:r>/;
     const aiWmMatch = xml2.match(AIWM_RE);
     if (aiWmMatch) {
       xml2 = xml2.replace(AIWM_RE, aiNoticeVmlRun(aiWmMatch[1]));
@@ -24417,6 +24417,9 @@ async function generateDocx(payload) {
     // side here: 'left' | 'right'. buildTwoColumnDocument maps it to the
     // sidebar or main cell. Absent (older PWA) → null → default to main.
     aiWmSide: (payload.ai_wm_side === "left" || payload.ai_wm_side === "right") ? payload.ai_wm_side : null,
+    // AI-NOTICE-POSITION-CONTROL-001: owner's manual notice corner ('left'|'center'|'right') from the
+    // Layout control; 'auto'/absent -> null -> the measured larger-gap logic in buildTwoColumnDocument.
+    aiNoticePos: (payload.ai_notice_pos === "left" || payload.ai_notice_pos === "center" || payload.ai_notice_pos === "right") ? payload.ai_notice_pos : null,
     // contCounter is incremented inside `headingParagraph` to allocate
     // a unique placeholder + bookmark id per section heading. The
     // post-processor pairs each placeholder with its bookmark by this
@@ -24593,10 +24596,10 @@ function buildAiDisclosureHangingTextbox(ctx, opts) {
   // side; CL: right) and is ENCODED in the sentinel so postProcessDocx needs no
   // extra plumbing. The carrier paragraph is placed at the end of the last page's
   // content by the callers, so the injected frame renders once, on the last page.
-  const side = opts && opts.side === "left" ? "left" : "right";
+  const side = opts && (opts.side === "left" ? "left" : opts.side === "center" ? "center" : "right");
   return new Paragraph({
     spacing: { before: 0, after: 0, line: 1, lineRule: "exact" },
-    children: [new TextRun({ text: "__ANTCV_AIWM_" + side + "__", size: 2, color: "FFFFFF" })]
+    children: [new TextRun({ text: "__ANTCV_AIWM_" + (side || "right") + "__", size: 2, color: "FFFFFF" })]
   });
 }
 __name(buildAiDisclosureHangingTextbox, "buildAiDisclosureHangingTextbox");
@@ -24745,8 +24748,13 @@ function buildTwoColumnDocument(ctx) {
   const __lastSideN = (sidebarPages[__lastContentPage] || []).length;
   const __sbPhys = sidebarOnRight ? "right" : "left";
   const __mnPhys = sidebarOnRight ? "left" : "right";
+  // AI-NOTICE-POSITION-CONTROL-001 (owner 2026-07-01): a Layout-tab control lets the owner PIN the
+  // notice corner (bottom left/center/right) instead of the auto larger-gap logic. A manual value
+  // wins outright; 'auto'/absent keeps the measured behaviour below.
   let aiWmCorner;
-  if (__lastSideN < __lastMainN) aiWmCorner = __sbPhys;
+  if (ctx.aiNoticePos === "left" || ctx.aiNoticePos === "center" || ctx.aiNoticePos === "right") {
+    aiWmCorner = ctx.aiNoticePos;
+  } else if (__lastSideN < __lastMainN) aiWmCorner = __sbPhys;
   else if (__lastMainN < __lastSideN) aiWmCorner = __mnPhys;
   else aiWmCorner = aiWmHint || "right";
   // AI-WATERMARK-EXPORT-LOCATION-001 fix (1.14.78): sentinel NO LONGER pushed into
@@ -27855,7 +27863,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.113-cl-rule-match";
+var VERSION = "1.14.114-ai-notice-pos";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

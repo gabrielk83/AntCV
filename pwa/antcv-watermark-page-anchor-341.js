@@ -188,7 +188,7 @@
     // always spans the full page, so the left inset still resolves against the page's true left edge
     // (= the sidebar's left edge, what the owner wanted) while the marker stays visible. Idempotent
     // (guarded by parentNode) so it doesn't loop the MutationObserver.
-    if (corner === 'left') {
+    if (corner === 'left' || corner === 'center') {
       try {
         var __pbIsPage = pageBox.matches && pageBox.matches(PAGE_BOX_SELECTOR);
         if (__pbIsPage && watermark.parentNode !== pageBox) {
@@ -198,6 +198,7 @@
     }
     watermark.style.position = 'absolute';
     watermark.style.zIndex = '5';
+    watermark.style.transform = ''; // clear a prior center translateX before repositioning
     // BUGFIX 2026-06-05 (CL watermark "gone"): a `bottom`/`right` inset only
     // lands on the page when the OFFSET PARENT is the page-box. On the cover
     // letter a closer positioned ancestor sits between the watermark and the
@@ -245,6 +246,9 @@
         if (leftLocal < 2) leftLocal = 2;
         watermark.style.left = leftLocal + 'px';
         watermark.style.right = 'auto';
+      } else if (corner === 'center') {
+        watermark.style.left = (pbLeftLocal + (pbRightLocal - pbLeftLocal) / 2 - wmWLocal / 2) + 'px';
+        watermark.style.right = 'auto';
       } else {
         watermark.style.left = (pbRightLocal - DEFAULT_INSET - wmWLocal) + 'px';
         watermark.style.right = 'auto';
@@ -253,6 +257,7 @@
       // Fallback to the old corner inset if rects are unavailable.
       watermark.style.bottom = '12pt';
       if (corner === 'left') { watermark.style.left = DEFAULT_INSET + 'px'; watermark.style.right = 'auto'; }
+      else if (corner === 'center') { watermark.style.left = '50%'; watermark.style.right = 'auto'; watermark.style.transform = 'translateX(-50%)'; }
       else { watermark.style.right = DEFAULT_INSET + 'px'; watermark.style.left = 'auto'; }
     }
     watermark.setAttribute('data-antcv-watermark-corner', corner);
@@ -342,7 +347,8 @@
           // the marker on top of it ("hidden inside the name"). The CL marker
           // belongs on the RIGHT — opposite the left-aligned signature — per the
           // original spec. The CV stays dynamic (whichever column has more room).
-          var corner = docIsCl() ? 'right' : chooseCornerCached(box, __wmSig);
+          var __mp = manualNoticePos();
+          var corner = docIsCl() ? 'right' : (__mp || chooseCornerCached(box, __wmSig));
           anchorToCorner(wm, box, corner);
           stashWmSide(corner);
         } catch (_) {}
@@ -361,7 +367,7 @@
         clone.removeAttribute(HIDDEN_FLAG);
         clone.style.display = '';
         lastPage.appendChild(clone);
-        var corner2 = chooseCornerCached(lastPage, __wmSig);
+        var corner2 = manualNoticePos() || chooseCornerCached(lastPage, __wmSig);
         anchorToCorner(clone, lastPage, corner2);
         stashWmSide(corner2);
       } catch (_) {}
@@ -375,6 +381,14 @@
   // payload (antcv-docx-client) forwards it as `ai_wm_side`. Two-column CV
   // only; the single-column CL ignores the hint, so don't overwrite a CV
   // value while the CL is showing.
+  // AI-NOTICE-POSITION-CONTROL-001 (owner 2026-07-01): the Layout control pins the notice corner.
+  // Returns 'left'|'center'|'right' when the owner chose one, or null for 'auto'/absent (measured).
+  function manualNoticePos() {
+    try {
+      var p = localStorage.getItem('antcv:aiNoticePos');
+      return (p === 'left' || p === 'center' || p === 'right') ? p : null;
+    } catch (_) { return null; }
+  }
   function stashWmSide(corner) {
     try {
       if (docIsCl()) return;

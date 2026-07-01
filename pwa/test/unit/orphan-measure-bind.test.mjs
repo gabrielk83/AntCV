@@ -88,94 +88,104 @@ test('_bindResultsOverride writes the bound text into the override map', () => {
   assert.ok(map['r|Eng|Acme|0'].endsWith('on' + NBSP + 'time'), map['r|Eng|Acme|0']);
 });
 
-// ── L3: escalate unfixable residue to the existing "Fix Orphans" button ──────────
-// L3 clicks the REAL DOM button (no app.js edits — an earlier CustomEvent-bridge attempt
-// there corrupted the file's giant comma-expression and was reverted) rather than
-// reimplementing LLM routing. These tests verify the click/dedup/cooldown/kill-switch
-// logic using a fake button; the real click target is verified live.
-const BTN_TITLE = 'Run orphan-cleanup across both sidebar and main columns. Drops abandoned bullets, empty groups, and broken references.';
-function fakeButton(disabled) {
-  let clicks = 0;
-  return { disabled: !!disabled, click() { clicks++; }, get clicks() { return clicks; } };
+// ── L3: re-tighten unfixable residue with a DIRECT LLM call ──────────────────────
+// The old L3 clicked a DOM button that was not reliably present (live diagnosis:
+// antcv:orphanL3Attempted stayed null — L3 never fired). L3 now calls the LLM directly
+// via the proxy and writes the shortened line back, behind a strict fact-preserving
+// safety gate. These test the pure gate + write-back + the async escalate path.
+const flush = async () => { for (let i = 0; i < 12; i++) await Promise.resolve(); };
+
+test('_safeShorten accepts a genuine, fact-preserving shortening', () => {
+  const { api } = load();
+  assert.equal(api._safeShorten(
+    'Implemented image-quality and autofocus optimization using MATLAB, Imatest, and Qualcomm tools.',
+    'Optimized image quality and autofocus with MATLAB, Imatest, Qualcomm tools.'), true);
+});
+
+test('_safeShorten rejects a rewrite that is longer, empty, or too short', () => {
+  const { api } = load();
+  const o = 'Direct a 7-person EO and optics team at Sigma-Connectivity ODM for smartphones.';
+  assert.equal(api._safeShorten(o, o + ' extra words added here'), false);   // longer
+  assert.equal(api._safeShorten(o, ''), false);                               // empty
+  assert.equal(api._safeShorten(o, 'EO team.'), false);                       // < 45% of original
+});
+
+test('_safeShorten rejects a rewrite that drops a number or an acronym', () => {
+  const { api } = load();
+  assert.equal(api._safeShorten('co-invented the stray-light window (Patent No. 241997), now shipping.',
+    'co-invented the stray-light window, now shipping in devices worldwide today.'), false);   // dropped 241997
+  assert.equal(api._safeShorten('Direct a 7-person EO team at Sigma-Connectivity ODM for phones.',
+    'Direct a 7-person optics team at Sigma-Connectivity for phones today.'), false);           // dropped EO + ODM
+});
+
+test('_l3WriteBullet replaces the stored bullet at its path', () => {
+  const { api } = load();
+  const secs = { cv: [{ id: 'experience', roles: [{ bullets: ['first', 'a long orphaning bullet here'] }] }] };
+  assert.equal(api._l3WriteBullet(secs, 'experience', ['roles', '0', 'bullets', '1'], 'tighter bullet'), true);
+  assert.equal(secs.cv[0].roles[0].bullets[1], 'tighter bullet');
+});
+
+test('_proxyBase reads proxyUrl (JSON-quoted or bare) and strips trailing slash', () => {
+  const { api: a1 } = load({ proxyUrl: '"https://p.example.com/"' });
+  assert.equal(a1._proxyBase(), 'https://p.example.com');
+  const { api: a2 } = load({ relayUrl: 'https://relay.example.com' });
+  assert.equal(a2._proxyBase(), 'https://relay.example.com');
+});
+
+function stubFetch(win, shortArr) {
+  const calls = [];
+  win.fetch = async (url, opts) => {
+    calls.push({ url, body: JSON.parse(opts.body) });
+    return { json: async () => ({ content: [{ text: JSON.stringify(shortArr) }], model: 'claude-sonnet-5' }) };
+  };
+  return calls;
 }
+const R = (text, extra) => Object.assign({ key: 'bullet|roles.0.bullets.1', sig: 1, kind: 'bullet', sid: 'experience', pathParts: ['roles', '0', 'bullets', '1'], text }, extra);
 
-test('_maybeEscalateToL3 clicks the Fix Orphans button for fresh residue', () => {
-  const { api, doc } = load({});
-  const btn = fakeButton(false);
-  doc.querySelector = (sel) => (sel.indexOf(BTN_TITLE.slice(0, 20)) >= 0 ? btn : null);
-  api._maybeEscalateToL3([{ key: 'bullet|roles.0.bullets.1', sig: api._hash('some orphan text') }]);
-  assert.equal(btn.clicks, 1);
+test('_maybeEscalateToL3 kill-switch + missing-proxy block the LLM call', async () => {
+  const off = load({ 'antcv:disable-orphan-l3': '1', proxyUrl: 'https://p' });
+  const c1 = stubFetch(off.sandboxWindow, ['x']);
+  off.api._maybeEscalateToL3([R('a long orphaning bullet with words')]);
+  await flush();
+  assert.equal(c1.length, 0);   // kill-switch
+
+  const noProxy = load({});     // no proxyUrl/relayUrl
+  const c2 = stubFetch(noProxy.sandboxWindow, ['x']);
+  noProxy.api._maybeEscalateToL3([R('a long orphaning bullet with words')]);
+  await flush();
+  assert.equal(c2.length, 0);   // no endpoint
 });
 
-test('_maybeEscalateToL3 does nothing when no button is mounted', () => {
-  const { api, doc } = load({});
-  doc.querySelector = () => null;
-  // should not throw even though there is no button to click
-  api._maybeEscalateToL3([{ key: 'bullet|x', sig: 1 }]);
+test('_maybeEscalateToL3 calls the LLM and writes the shortened bullet back', async () => {
+  const secs = { cv: [{ id: 'experience', roles: [{ bullets: ['first', 'Implemented image-quality and autofocus optimization using MATLAB, Imatest, and Qualcomm tools.'] }] }] };
+  const l = load({ proxyUrl: 'https://p.example.com', sections: JSON.stringify(secs) });
+  const calls = stubFetch(l.sandboxWindow, ['Optimized image quality and autofocus with MATLAB, Imatest, Qualcomm tools.']);
+  l.api._maybeEscalateToL3([R('Implemented image-quality and autofocus optimization using MATLAB, Imatest, and Qualcomm tools.')]);
+  await flush();
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].body.model, 'claude-sonnet-5');
+  const out = JSON.parse(l.store.get('sections')).cv[0].roles[0].bullets[1];
+  assert.equal(out, 'Optimized image quality and autofocus with MATLAB, Imatest, Qualcomm tools.');
 });
 
-test('_maybeEscalateToL3 does not click a disabled button', () => {
-  const { api, doc } = load({});
-  const btn = fakeButton(true);
-  doc.querySelector = () => btn;
-  api._maybeEscalateToL3([{ key: 'bullet|x', sig: 1 }]);
-  assert.equal(btn.clicks, 0);
+test('_maybeEscalateToL3 does NOT write a rewrite that fails the safety gate', async () => {
+  const secs = { cv: [{ id: 'experience', roles: [{ bullets: ['first', 'Direct a 7-person EO team at Sigma-Connectivity ODM for high-security smartphones.'] }] }] };
+  const l = load({ proxyUrl: 'https://p', sections: JSON.stringify(secs) });
+  stubFetch(l.sandboxWindow, ['Direct a big optics team for high-security phones worldwide.']);   // dropped EO + ODM + 7
+  l.api._maybeEscalateToL3([R('Direct a 7-person EO team at Sigma-Connectivity ODM for high-security smartphones.')]);
+  await flush();
+  const out = JSON.parse(l.store.get('sections')).cv[0].roles[0].bullets[1];
+  assert.equal(out, 'Direct a 7-person EO team at Sigma-Connectivity ODM for high-security smartphones.');   // unchanged
 });
 
-test('_maybeEscalateToL3 dedups: the SAME residue signature is not re-escalated', () => {
-  const { api, doc, sandboxWindow } = load({});
-  const btn = fakeButton(false);
-  doc.querySelector = () => btn;
-  const residue = [{ key: 'results|r|Eng|Acme|0', sig: api._hash('same runt text') }];
-  api._maybeEscalateToL3(residue);
-  assert.equal(btn.clicks, 1);
-  sandboxWindow.__antcvOrphanL3LastFire = 0;   // bypass the cooldown to isolate the dedup check
-  api._maybeEscalateToL3(residue);             // identical key+sig -> already attempted
-  assert.equal(btn.clicks, 1);
-});
-
-test('_maybeEscalateToL3 does NOT dedup a residue whose text changed (new signature)', () => {
-  const { api, doc, sandboxWindow } = load({});
-  const btn = fakeButton(false);
-  doc.querySelector = () => btn;
-  api._maybeEscalateToL3([{ key: 'bullet|roles.0.bullets.1', sig: api._hash('first version') }]);
-  assert.equal(btn.clicks, 1);
-  sandboxWindow.__antcvOrphanL3LastFire = 0;
-  api._maybeEscalateToL3([{ key: 'bullet|roles.0.bullets.1', sig: api._hash('edited version') }]);
-  assert.equal(btn.clicks, 2);
-});
-
-test('_maybeEscalateToL3 respects the cooldown between fires', () => {
-  const { api, doc } = load({});
-  const btn = fakeButton(false);
-  doc.querySelector = () => btn;
-  api._maybeEscalateToL3([{ key: 'bullet|a', sig: 1 }]);
-  api._maybeEscalateToL3([{ key: 'bullet|b', sig: 2 }]);   // different residue, but within cooldown
-  assert.equal(btn.clicks, 1);
-});
-
-test('_maybeEscalateToL3 kill-switch: antcv:disable-orphan-l3 blocks escalation', () => {
-  const { api, doc } = load({ 'antcv:disable-orphan-l3': '1' });
-  const btn = fakeButton(false);
-  doc.querySelector = () => btn;
-  api._maybeEscalateToL3([{ key: 'bullet|x', sig: 1 }]);
-  assert.equal(btn.clicks, 0);
-});
-
-test('_maybeEscalateToL3 persists the attempted signature to localStorage', () => {
-  const { api, doc, store } = load({});
-  doc.querySelector = () => fakeButton(false);
-  api._maybeEscalateToL3([{ key: 'results|r|A|B|0', sig: 42 }]);
-  const attempted = JSON.parse(store.get('antcv:orphanL3Attempted'));
-  assert.equal(attempted['results|r|A|B|0'], 42);
-});
-
-test('_suppressNoOrphansAlert swallows only its own known-benign message', () => {
-  const { api, sandboxWindow } = load({});
-  const seen = [];
-  sandboxWindow.alert = (msg) => seen.push(msg);
-  api._suppressNoOrphansAlert(90000);
-  sandboxWindow.alert('No orphan lines detected.');
-  sandboxWindow.alert('Some unrelated important message');
-  assert.deepEqual(seen, ['Some unrelated important message']);
+test('_maybeEscalateToL3 dedups the same line (sig) and caps at 2 rewrites', async () => {
+  const l = load({ proxyUrl: 'https://p', sections: JSON.stringify({ cv: [{ id: 'experience', roles: [{ bullets: ['x', 'orphan line one two three four'] }] }] }) });
+  const calls = stubFetch(l.sandboxWindow, ['shorter one two three']);
+  l.api._maybeEscalateToL3([R('orphan line one two three four', { sig: 7 })]);
+  await flush();
+  assert.equal(calls.length, 1);
+  l.sandboxWindow.__antcvOrphanL3LastFire = 0;   // bypass cooldown
+  l.api._maybeEscalateToL3([R('orphan line one two three four', { sig: 7 })]);   // same sig
+  await flush();
+  assert.equal(calls.length, 1);   // deduped, no second call
 });

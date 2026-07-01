@@ -20,7 +20,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.46-orphan-bind-l3';
+  var VERSION = '1.51.48-orphan-bind-l3-llm';
   if (window.__antcvOrphanBind === VERSION) return;
   window.__antcvOrphanBind = VERSION;
 
@@ -101,59 +101,102 @@
     finally { if (clone) { try { clone.parentNode.removeChild(clone); } catch (_) {} } }
   }
 
-  // ── L3: escalate UNFIXABLE residue to the existing "Fix Orphans" LLM pass ──────
-  // L1/L2 above are deterministic and free. When a genuine runt survives L2 (binding
-  // would overflow to a new line — a real multi-word orphan the NBSP trick can't
-  // solve), route it to the app's OWN "Fix Orphans" feature automatically, no button
-  // press. That feature already does LLM routing/credit/provider-demotion (the ee()
-  // dispatcher) inside a React-component-local closure that a plain sidecar cannot
-  // call directly — so instead of touching the fragile minified app.js/app.src.js
-  // (an earlier attempt to wire a CustomEvent bridge there corrupted the file's giant
-  // comma-expression and was reverted), this CLICKS THE REAL BUTTON already wired to
-  // it (title "Run orphan-cleanup across both sidebar and main columns..."). Zero
-  // app.js edits, zero risk to that file. Dedup by a text-hash signature (persisted,
-  // so a reload doesn't re-fire on the same unresolved text) + a cooldown between
-  // fires. Kill: localStorage['antcv:disable-orphan-l3']='1'.
+  // ── L3: re-tighten UNFIXABLE residue with a DIRECT LLM call ────────────────────
+  // L1/L2 above are deterministic and free, but the NBSP trick can only keep words
+  // together — it CANNOT remove a MULTI-WORD runt (a 2-4 word dangling last line, the
+  // owner's persistent roles/results orphans). The only fix for those is rewriting the
+  // line SHORTER. The prior L3 clicked the app's "Fix Orphans" button, but that button
+  // is not reliably in the DOM (live diagnosis: `antcv:orphanL3Attempted` stayed null —
+  // L3 never fired). So L3 now calls the LLM DIRECTLY via the proxy (same path the doc
+  // chatbot uses; model claude-sonnet-5), sends the residue lines, and writes the
+  // shortened result back to the STORED text — so the DOCX export inherits it. Every
+  // rewrite passes a STRICT safety gate (non-empty, actually shorter, not < 45% of the
+  // original, and preserves EVERY number and ACRONYM verbatim) before it is accepted;
+  // anything that fails is left untouched. Throttled, in-flight-guarded, capped at 2
+  // rewrites per line. Kill: localStorage['antcv:disable-orphan-l3']='1'.
   var L3_KEY = 'antcv:orphanL3Attempted';
   var L3_COOLDOWN_MS = 15000;
-  var L3_BTN_TITLE = 'Run orphan-cleanup across both sidebar and main columns';
+  var L3_MAX_PER_LINE = 2;
   function l3Disabled() { try { var v = localStorage.getItem('antcv:disable-orphan-l3'); return v === '1' || v === 'true'; } catch (_) { return false; } }
   function hash(s) { var h = 0; s = String(s); for (var i = 0; i < s.length; i++) { h = ((h << 5) - h + s.charCodeAt(i)) | 0; } return h; }
   function readAttempted() { try { return JSON.parse(localStorage.getItem(L3_KEY) || '{}') || {}; } catch (_) { return {}; } }
   function writeAttempted(m) { try { localStorage.setItem(L3_KEY, JSON.stringify(m)); } catch (_) {} }
-  // Swallow ONLY the button's own "no orphans found" alert (a benign disagreement
-  // between its detector and ours) for a bounded window; every other alert() passes
-  // through untouched. Always self-restores.
-  function suppressNoOrphansAlert(ms) {
-    try {
-      if (window.__antcvOrigAlert) return;
-      window.__antcvOrigAlert = window.alert;
-      window.alert = function (msg) {
-        if (typeof msg === 'string' && /no orphan lines detected/i.test(msg)) return;
-        return window.__antcvOrigAlert.apply(window, arguments);
-      };
-      setTimeout(function () {
-        try { if (window.__antcvOrigAlert) { window.alert = window.__antcvOrigAlert; delete window.__antcvOrigAlert; } } catch (_) {}
-      }, ms || 90000);
-    } catch (_) {}
+  function proxyBase() {
+    function read(k) { var v = ''; try { v = localStorage.getItem(k) || ''; } catch (_) {} try { if (v && v.charAt(0) === '"') v = JSON.parse(v); } catch (_) {} return String(v || '').replace(/\/+$/, ''); }
+    var b = read('proxyUrl') || read('relayUrl');
+    if (!b && typeof window.ANTCV_RELAY_URL === 'string') b = String(window.ANTCV_RELAY_URL).replace(/\/+$/, '');
+    return b;
   }
+  // Accept a rewrite ONLY if it is a genuine, fact-preserving shortening.
+  function safeShorten(orig, short) {
+    orig = String(orig || ''); short = String(short || '').trim();
+    if (!short || short.length >= orig.length || short.length < orig.length * 0.45) return false;
+    var nums = orig.match(/\d[\d.,%/-]*/g) || [];
+    for (var i = 0; i < nums.length; i++) { if (short.indexOf(nums[i]) === -1) return false; }
+    var acr = orig.match(/\b[A-Z][A-Z0-9]{1,}\b/g) || [];   // MATLAB, RFQ, ODM, EO, ISO, ALM, KPI, SPAD...
+    for (var j = 0; j < acr.length; j++) { if (short.indexOf(acr[j]) === -1) return false; }
+    return true;
+  }
+  function l3WriteBullet(secs, sid, pathParts, text) {
+    if (!secs || !Array.isArray(secs.cv)) return false;
+    var sec = null; for (var i = 0; i < secs.cv.length; i++) { if (secs.cv[i] && secs.cv[i].id === sid) { sec = secs.cv[i]; break; } }
+    if (!sec) return false;
+    var node = sec;
+    for (var j = 0; j < pathParts.length - 1; j++) { var k = pathParts[j]; var idx = /^\d+$/.test(k) ? parseInt(k, 10) : k; node = node && node[idx]; if (node == null) return false; }
+    var lk = pathParts[pathParts.length - 1]; var li = /^\d+$/.test(lk) ? parseInt(lk, 10) : lk;
+    if (!node || typeof node[li] !== 'string') return false;
+    node[li] = text; return true;
+  }
+  function l3WriteResults(rKey, text) {
+    var map; try { map = JSON.parse(localStorage.getItem('antcv:resultsOverride') || '{}') || {}; } catch (_) { map = {}; }
+    map[rKey] = text; try { localStorage.setItem('antcv:resultsOverride', JSON.stringify(map)); } catch (_) {}
+    return true;
+  }
+  var L3_SYSTEM = 'You are a precise CV line editor. Each input string is one CV experience bullet or Results line that currently wraps with a SHORT dangling last line (an orphan of 1-4 words). Rewrite EACH to be a few words SHORTER — use shorter synonyms and remove filler ("the", "a", "that", "in order to", "various", redundant qualifiers) — so it fills complete typeset lines with NO short dangling last line, keeping the SAME meaning and the SAME leading verb form. PRESERVE VERBATIM every number, %, year, patent/standard code, tool name, proper noun, and acronym. Do NOT add facts, do NOT lengthen, do NOT merge lines. Return ONLY a JSON array of strings, the SAME length and order as the input, each the rewritten line.';
   function maybeEscalateToL3(residue) {
     if (l3Disabled() || !residue.length) return;
+    if (window.__antcvOrphanL3InFlight) return;
     try {
       var now = Date.now ? Date.now() : new Date().getTime();
-      var last = Number(window.__antcvOrphanL3LastFire || 0);
-      if (now - last < L3_COOLDOWN_MS) return;
+      if (now - Number(window.__antcvOrphanL3LastFire || 0) < L3_COOLDOWN_MS) return;
       var attempted = readAttempted();
-      var fresh = residue.filter(function (r) { return attempted[r.key] !== r.sig; });
+      var fresh = residue.filter(function (r) {
+        var a = attempted[r.key];
+        if (!a) return true;
+        if (a.sig === r.sig) return false;              // already sent this exact text
+        return (a.n || 0) < L3_MAX_PER_LINE;            // cap re-tightens per line
+      });
       if (!fresh.length) return;
-      var btn = document.querySelector('button[title^="' + L3_BTN_TITLE + '"]');
-      if (!btn || btn.disabled) return;
-      fresh.forEach(function (r) { attempted[r.key] = r.sig; });
-      writeAttempted(attempted);
+      var base = proxyBase();
+      if (!base) return;
       window.__antcvOrphanL3LastFire = now;
-      suppressNoOrphansAlert(90000);
-      btn.click();
-    } catch (_) { /* self-disable */ }
+      window.__antcvOrphanL3InFlight = true;
+      fresh.forEach(function (r) { var a = attempted[r.key] || { n: 0 }; attempted[r.key] = { sig: r.sig, n: (a.n || 0) + 1 }; });
+      writeAttempted(attempted);
+      var inputs = fresh.map(function (r) { return r.text; });
+      window.fetch(base + '/', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json', 'x-provider': 'anthropic' },
+        body: JSON.stringify({ model: 'claude-sonnet-5', max_tokens: 1600, stream: false, system: L3_SYSTEM, messages: [{ role: 'user', content: JSON.stringify(inputs) }] }),
+      }).then(function (res) { return res.json().catch(function () { return null; }); }).then(function (j) {
+        var raw = (j && j.content && j.content[0] && j.content[0].text) || '';
+        var arr; try { arr = JSON.parse(String(raw).replace(/```json|```/g, '').trim()); } catch (_) { arr = null; }
+        if (!Array.isArray(arr) || arr.length !== fresh.length) { try { console.warn('[orphan-l3] unusable LLM response'); } catch (_) {} return; }
+        var secs = readSections(); var wrote = 0;
+        for (var i = 0; i < fresh.length; i++) {
+          var r = fresh[i], short = String(arr[i] == null ? '' : arr[i]).trim();
+          if (!safeShorten(r.text, short)) continue;
+          if (r.kind === 'results') { if (l3WriteResults(r.rKey, short)) wrote++; }
+          else if (l3WriteBullet(secs, r.sid, r.pathParts, short)) wrote++;
+        }
+        if (wrote) {
+          try { localStorage.setItem('sections', JSON.stringify(secs)); } catch (_) {}
+          try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { reason: 'orphan-l3-retighten' } })); } catch (_) {}
+          try { console.log('[orphan-l3] re-tightened ' + wrote + '/' + fresh.length + ' orphan line(s) via ' + ((j && j.model) || 'claude-sonnet-5')); } catch (_) {}
+        }
+      }).catch(function (e) { try { console.warn('[orphan-l3] failed', e && e.message); } catch (_) {} })
+        .then(function () { window.__antcvOrphanL3InFlight = false; });
+    } catch (_) { window.__antcvOrphanL3InFlight = false; }
   }
 
   // ── storage write-back ──────────────────────────────────────────────────────
@@ -202,11 +245,11 @@
         var prefix = ed ? textOf(bd).slice(0, Math.max(0, textOf(bd).length - txt.length)) : '';
         var flags = {};
         var n = chooseBindCount(bd, txt, prefix, flags);
+        var bsid = (bd.closest && bd.closest('[data-sid]') && bd.closest('[data-sid]').getAttribute('data-sid')) || 'experience';
         if (n > 0) {
-          var sid = (bd.closest && bd.closest('[data-sid]') && bd.closest('[data-sid]').getAttribute('data-sid')) || 'experience';
-          if (bindBulletInSections(sid, rp.split('.'), n)) changed = true;
+          if (bindBulletInSections(bsid, rp.split('.'), n)) changed = true;
         } else if (flags.wasRunt) {
-          residue.push({ key: 'bullet|' + rp, sig: hash(txt) });
+          residue.push({ key: 'bullet|' + rp, sig: hash(txt), kind: 'bullet', sid: bsid, pathParts: rp.split('.'), text: txt });
         }
       }
 
@@ -221,7 +264,7 @@
         var rflags = {};
         var rn = chooseBindCount(rs, rtxt, '', rflags);
         if (rn > 0 && bindResultsOverride(rKey, rtxt, rn)) changed = true;
-        else if (rflags.wasRunt) residue.push({ key: 'results|' + rKey, sig: hash(rtxt) });
+        else if (rflags.wasRunt) residue.push({ key: 'results|' + rKey, sig: hash(rtxt), kind: 'results', rKey: rKey, text: rtxt });
       }
 
       if (changed) { try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { reason: 'orphan-measure-bind' } })); } catch (_) {} }
@@ -233,5 +276,5 @@
   function schedule() { if (__t) return; __t = setTimeout(function () { __t = null; run(); }, 400); }
   window.addEventListener('antcv:sections-updated', schedule);
   [1200, 3000, 6000].forEach(function (ms) { setTimeout(run, ms); });
-  window.AntcvOrphanBind = { version: VERSION, run: run, _bindLast: bindLast, _isRunt: isRunt, _spaceCount: spaceCount, _alreadyBound: alreadyBound, _bindBulletInSections: bindBulletInSections, _bindResultsOverride: bindResultsOverride, _hash: hash, _maybeEscalateToL3: maybeEscalateToL3, _readAttempted: readAttempted, _l3Disabled: l3Disabled, _suppressNoOrphansAlert: suppressNoOrphansAlert };
+  window.AntcvOrphanBind = { version: VERSION, run: run, _bindLast: bindLast, _isRunt: isRunt, _spaceCount: spaceCount, _alreadyBound: alreadyBound, _bindBulletInSections: bindBulletInSections, _bindResultsOverride: bindResultsOverride, _hash: hash, _maybeEscalateToL3: maybeEscalateToL3, _readAttempted: readAttempted, _l3Disabled: l3Disabled, _safeShorten: safeShorten, _l3WriteBullet: l3WriteBullet, _proxyBase: proxyBase };
 })();

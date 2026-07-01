@@ -74,20 +74,21 @@ nightly (`docs/qa/CLOUD_ROUTINE_PROMPT.md` → CURRENT BACKLOG).
   dropped two roles; `repairExperienceFromPI` only rebuilds a fully-degraded section. New
   EXPERIENCE-COMPLETENESS-001 (415) merges any `personalInfo` role absent from the section back in
   as HIDDEN (`on:false`) — present + recoverable, visible CV unchanged.
-- **#6 Signature "G" cut — OPEN (owner confirmed 2026-07-01: the G still does NOT render after
-  CLIP-004).** Established fact (owner hint): the PDF cuts the signature but the image opened FROM
-  Adobe's PDF editor is INTACT — the embedded raster is complete, so the clip is in PLACEMENT, not
-  the image data, and NOT the aspect (client forwards the real `signature_aspect`). RULED OUT so far
-  (none fixed it): CLIP-001 line-box reservation, CLIP-002 borderless single-cell table, CLIP-003
-  spacer paragraph after, CLIP-004 explicit `w:trHeight hRule="atLeast"` on the signature row (wk
-  1.14.111 — kept in place, harmless, but insufficient). So it is NOT the table-row content box.
-  NEXT HYPOTHESES to test on a real export: (a) the sign-off lands at/near the page BOTTOM MARGIN and
-  the descender is clipped by the PAGE edge, not the cell — test by forcing a large bottom gap / a
-  guaranteed non-last-line position, or moving the signature off the page-bottom; (b) a FLOATING
-  ImageRun (absolute anchor, not inline-in-cell) so no line/cell/page-flow clip applies — the old C8
-  note flagged this needs the owner's signature PNG to test exact dimensions locally (cannot
-  rasterize a CloudConvert PDF here). BLOCKER: verifying any signature fix needs a real
-  DOCX→CloudConvert→PDF export (owner) or the raw signature PNG + its true pixel dimensions.
+- **#6 Signature "G" cut — CANDIDATE FIX SHIPPED (CLIP-005, wk 1.14.112), owner-verify-pending.**
+  Owner supplied the signature PNG (blue cursive "Gabriel Karp-Gershon"; aspect ~0.4 = the default,
+  so NOT a distortion issue; the vulnerable feature is the G's lower-left descender loop). This time
+  diagnosed from the ACTUAL emitted DOCX — `test/diag-cl-signature.mjs`/a local dump showed the
+  signature is a `<wp:inline>` image (cx=1524000 cy=609600 = 160×64px, correct) sitting on the text
+  baseline in a paragraph whose `<w:spacing>` carried NO line rule. **An inline image is clipped to
+  its LINE BOX, not the table row** — LibreOffice/CloudConvert sizes the line from FONT metrics and
+  crops the taller image's lower-left. That is exactly why CLIP-004 (row height) failed: it grew the
+  row, but the LINE inside stayed short. CLIP-005: set `w:line` + `w:lineRule="atLeast"` on the
+  signature paragraph = image height + slack (`px·15` twips), so the line box reserves the full image
+  height. VERIFIED in the emitted XML (`w:line="1080" w:lineRule="atLeast"`) and guarded in
+  `diag-cl-signature.mjs`. RULED OUT (all failed): CLIP-001 line-box (earlier, incomplete), CLIP-002
+  borderless cell, CLIP-003 spacer-after, CLIP-004 `w:trHeight atLeast` row height (kept, harmless).
+  Owner: confirm a real export now shows the full "G"; if still cut, next is a FLOATING ImageRun
+  (absolute anchor, no line/cell clip) — see [[photo-bridge-non-float]].
 - **#2 core_comp blank / #4 CL mostly blank / #7 accessibility dropped on 2nd gen — FIXED 1.51.29
   (two independent nightly runs converged on complementary fixes for each item), regen-cycle
   verification owed.** Convergence/restore reliability (owner: "the way you push from memory is

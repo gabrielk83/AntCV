@@ -103,6 +103,22 @@ test('clean: a PARTIAL table (real + placeholder rows) drops the placeholder row
   assert.deepEqual(sec.rows, [HEADER, PARTIAL[3], PARTIAL[4]], 'placeholder rows dropped, real rows + header kept');
 });
 
+test('clean: an EXACT-DUPLICATE row is dropped in place (keep first)', () => {
+  const ctx = makeSandbox({ meta: { company: 'Acme', role: 'PM' }, sections: cv(REAL_ROWS) });
+  const DUP = [
+    HEADER,
+    ['Optics, photonics &', 'Electro-optics, photonics, semiconductor physics'],
+    ['Imaging', 'Camera architecture, image sensors, ISP'],
+    ['Optics, photonics &', 'Electro-optics, photonics, semiconductor physics'], // exact dup of row 1
+    ['Materials & devices', 'Nanomaterials, carbon nanotubes, MEMS/NEMS'],
+  ];
+  ctx.setSections(cv(DUP));
+  ctx.advanceClock(5000);
+  ctx.api.reapply();
+  const sec = ctx.sections().cv.find((s) => s.id === 'core_comp');
+  assert.deepEqual(sec.rows, [HEADER, DUP[1], DUP[2], DUP[4]], 'duplicate Optics row removed, order preserved');
+});
+
 test('snapshot: a partial table is snapshotted CLEAN (no placeholder rows stored)', () => {
   const ctx = makeSandbox({ meta: { company: 'Acme', role: 'PM' }, sections: cv(REAL_ROWS) });
   const PARTIAL = [HEADER, ['[Focus area 5]', '[Strategic expertise - 1 or 2 lines]'], ['Imaging', 'Camera architecture']];

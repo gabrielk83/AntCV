@@ -91,10 +91,30 @@
     }
     return out;
   }
-  // header + only the real data rows (drops "[Focus area N]" placeholder rows).
+  // normalized key for a data row (for dedup): both cells, lowercased + collapsed.
+  function rowKey(row) {
+    if (!Array.isArray(row)) return '';
+    return row.map(function (c) { return String(c == null ? '' : c).toLowerCase().replace(/\s+/g, ' ').trim(); }).join('||');
+  }
+  // header + real data rows, with EXACT-DUPLICATE rows dropped (keep first).
+  // CORECOMP-DEDUP-ROWS-001 (owner 2026-07-01: "core competencies duplicating row 2 and 4 Optics
+  // photonics"): a generation/fusion sometimes emits the same Focus Area row twice.
   function cleanRows(rows) {
     var header = (Array.isArray(rows) && rows.length) ? rows[0] : ['Focus Area', 'Strategic Expertise'];
-    return [header].concat(realDataRows(rows));
+    var seen = {}, out = [];
+    realDataRows(rows).forEach(function (row) {
+      var k = rowKey(row);
+      if (k && seen[k]) return;
+      seen[k] = true; out.push(row);
+    });
+    return [header].concat(out);
+  }
+  // Does the table carry EXACT-DUPLICATE data rows?
+  function hasDuplicateData(sec) {
+    if (!sec || !Array.isArray(sec.rows)) return false;
+    var seen = {}, real = realDataRows(sec.rows);
+    for (var i = 0; i < real.length; i++) { var k = rowKey(real[i]); if (!k) continue; if (seen[k]) return true; seen[k] = true; }
+    return false;
   }
   // REAL = at least one real data row. A header-only or all-placeholder table is NOT real.
   function isReal(sec) { return !!(sec && Array.isArray(sec.rows) && realDataRows(sec.rows).length > 0); }
@@ -141,9 +161,9 @@
     if (isReal(sec)) {
       // Table has real rows. If it ALSO carries placeholder rows (partial
       // lamination — the owner's "[Focus area 5]/[Focus area 6]" mixed with real
-      // Optics/Imaging rows), DROP the placeholder rows in place. Never restore
-      // over a table that has real content.
-      if (hasPlaceholderData(sec)) {
+      // Optics/Imaging rows) OR exact-duplicate rows (Optics photonics twice),
+      // clean them in place. Never restore over a table that has real content.
+      if (hasPlaceholderData(sec) || hasDuplicateData(sec)) {
         var cleaned = false;
         var cv2 = secs.cv.map(function (s) {
           if (!s || s.id !== SECTION_ID) return s;

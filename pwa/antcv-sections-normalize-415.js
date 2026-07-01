@@ -694,6 +694,37 @@
   // ACCESSIBILITY-REPAIR-001 (owner 2026-07: the dedicated ACCESSIBILITY section held the me()
   // placeholder while personalInfo.accessibility held the real line — and the placeholder made
   // the dedup remove the real copy from ADDITIONAL, so accessibility disappeared from the CV).
+  // WORK-STYLE-REPAIR-001 (owner 2026-07-01: "work style blanked out in cv"). The work_style section
+  // is a headlineOff rich_block whose body sometimes comes back EMPTY (items[0].t = "") after a stale
+  // restore, even though personalInfo.work_style holds the real one-line style sentence
+  // (work_style_line_en / notes). Fill the empty body from PI so the section stops rendering blank.
+  function repairWorkStyleFromPI(cv) {
+    var idx = -1;
+    for (var i = 0; i < cv.length; i++) { if (cv[i] && cv[i].id === 'work_style') { idx = i; break; } }
+    if (idx < 0) return null;
+    var sec = cv[idx];
+    var ph = function (v) { var s = String(v == null ? '' : v).trim(); return !s || s.charAt(0) === '['; };
+    var curBody = (Array.isArray(sec.items) && sec.items[0]) ? (sec.items[0].t || '') : (typeof sec.content === 'string' ? sec.content : '');
+    if (!ph(curBody)) return null;                    // already has real content
+    var pi = {}; try { pi = JSON.parse(localStorage.getItem('personalInfo') || '{}') || {}; } catch (_) { return null; }
+    var ws = pi.work_style || pi.workStyle || null;
+    var line = '';
+    if (ws && typeof ws === 'object') line = ws.work_style_line_en || ws.work_style_line || ws.notes || ws.summary || '';
+    else if (typeof ws === 'string') line = ws;
+    line = String(line || '').trim();
+    if (!line || line.charAt(0) === '[') return null;
+    var copy = cv.slice();
+    if (Array.isArray(sec.items) && sec.items.length) {
+      var items = sec.items.slice();
+      items[0] = Object.assign({}, items[0], { t: line });
+      copy[idx] = Object.assign({}, sec, { items: items });
+    } else {
+      copy[idx] = Object.assign({}, sec, { content: line });
+    }
+    try { console.log('[415] work_style body repaired from personalInfo'); } catch (_) {}
+    return copy;
+  }
+
   // When the dedicated section is a placeholder/empty and personalInfo has a real line, populate
   // it (text/content). The dedup then keeps it as the single home.
   function repairAccessibilityFromPI(cv) {
@@ -1260,6 +1291,7 @@
       var dl = defaultLoc(cv); if (dl) { cv = dl; changed = true; }
       var wi = inlineifyLabeledText(cv); if (wi) { cv = wi; changed = true; }
       var no = neutralizeUnsolicitedOpener(cv); if (no) { cv = no; changed = true; }
+      var rws = repairWorkStyleFromPI(cv); if (rws) { cv = rws; changed = true; }
       var rl = repairLanguagesFromPI(cv); if (rl) { cv = rl; changed = true; }
       var ra = repairAccessibilityFromPI(cv); if (ra) { cv = ra; changed = true; }
       var al = accessibilityToLabeledList(cv); if (al) { cv = al; changed = true; }

@@ -26270,7 +26270,19 @@ function renderSection(s, ctx, isSidebar) {
           // Guarded by body length so a pathologically tall section can still
           // split rather than overflow/clip. Main-column sections keep their
           // natural split (EXPERIENCE is pre-segmented with its own (Cont.)).
-          ...(isSidebar && body.length <= 18 ? { cantSplit: true } : {}),
+          // PUB-KEEP-WHOLE-001 (owner 2026-07-02: "Publications & Patents should
+          // not have been left with just one line on page 4 — should have been
+          // entirely on page 5"). Confirmed against a real export: the heading
+          // landed with only a sliver of room, and the first citation's own text
+          // then split mid-sentence across the page boundary. Extend the SAME
+          // proven cantSplit mechanism to a Publications-like MAIN-column section
+          // (body.length capped so an unusually long list still falls back to a
+          // natural split — "if not [it fits], it's okay to split", per the
+          // owner). cantSplit moves the WHOLE body to the next page when it
+          // doesn't fit the remaining space; a body genuinely taller than one
+          // page still flows naturally past the cap, so this never forces an
+          // oversized list into an impossible single page.
+          ...((isSidebar || isPublicationsSection(s)) && body.length <= 18 ? { cantSplit: true } : {}),
           children: [bodyCell]
         })
       ]
@@ -27082,6 +27094,12 @@ function renderSimpleList(s, ctx, isSidebar, italic) {
       shading: isSidebar ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" } : void 0,
       children
     };
+    // PUB-KEEP-WHOLE-001 (owner 2026-07-02): a single citation was observed splitting
+    // MID-TEXT across a page boundary (the title alone stranded on one page, the
+    // author/journal line continuing on the next) — confirmed against a real export.
+    // keepLines forces a citation paragraph to move WHOLE to the next page rather than
+    // break inside it, same mechanism as the experience-bullet keepLines below.
+    if (isPubs) para.keepLines = true;
     if (isAcademic) {
       para.indent = { left: 360, hanging: 360 };
     }
@@ -27892,7 +27910,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.117-ai-notice-sidebar-anchor";
+var VERSION = "1.14.118-pub-keep-whole";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

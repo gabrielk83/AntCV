@@ -57,6 +57,7 @@
 // without one are unchanged from the last audit.
 const RATES = {
   // Anthropic — current generation
+  'claude-sonnet-5':     [3.00, 15.00],   // 2026-07 (standard $3/$15; intro $2/$10 through 2026-08-31 — use standard so the demo budget is conservatively capped)
   'claude-opus-4-7':     [5.00, 25.00],   // released 2026-04-16
   'claude-opus-4-6':     [5.00, 25.00],
   'claude-opus-4-5':     [5.00, 25.00],

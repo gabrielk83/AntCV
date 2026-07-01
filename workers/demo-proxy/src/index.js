@@ -1471,6 +1471,17 @@ async function handleRequest(request, env = {}) {
     // requests without writing-style preferences keep streaming for best
     // PWA UX (incremental token rendering).
     body.stream = (demo || writingStyleRequest) ? false : true;
+    // SONNET-5-DROP-IN-001 (2026-07): claude-sonnet-5 has ADAPTIVE THINKING ON BY DEFAULT, and
+    // max_tokens caps thinking+response COMBINED. For any pass-through call targeting sonnet-5 that
+    // did not explicitly choose a thinking mode, disable thinking so the client's max_tokens budget
+    // is fully available for the response (preserves the 4.6-era behaviour AntCV was tuned for).
+    // sonnet-5 also 400s on NON-DEFAULT sampling params — strip temperature/top_p/top_k defensively
+    // (AntCV sends none, but a BYOK/custom body might). Only touches sonnet-5; every other model is
+    // forwarded unchanged. The buffered retry below re-parses this same (normalised) bodyText.
+    if (typeof body.model === 'string' && /claude-sonnet-5/.test(body.model)) {
+      if (body.thinking == null) body.thinking = { type: 'disabled' };
+      delete body.temperature; delete body.top_p; delete body.top_k;
+    }
     bodyText = JSON.stringify(body);
   } catch(e) {}
   const res = await fetch('https://api.anthropic.com/v1/messages', {

@@ -119,7 +119,7 @@ export async function runCoherenceReview(env, payload) {
   let cascade;
   try {
     cascade = await callAnyLLMForJSON(env, COHERENCE_SYSTEM, userPrompt, {
-      models: { anthropic: 'claude-sonnet-4-20250514' },
+      models: { anthropic: 'claude-sonnet-5' },   // SONNET-5-DROP-IN-001 (2026-07): upgrade the coherence check from the aging 4-20250514
       // GEN-MODELROLE-001: cross-section review needs the full doc in
       // context — env.MODEL_ROLES.coherence leads the cascade when set.
       role: 'coherence',

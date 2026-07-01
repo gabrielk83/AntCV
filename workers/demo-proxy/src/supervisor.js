@@ -332,7 +332,7 @@ async function runGroundingCheck(env, { task, candidate_output, source_cv, jd_te
   // Anthropic was throttled or down, the supervisor failed hard with
   // no fallback. Now uses the full provider cascade.
   const cascade = await callAnyLLMForText(env, GROUNDING_SYSTEM, userPrompt, {
-    models: { anthropic: 'claude-sonnet-4-20250514' },
+    models: { anthropic: 'claude-sonnet-5' },   // SONNET-5-DROP-IN-001 (2026-07)
     // GEN-MODELROLE-001: grounding is a mechanical CHECK — when
     // env.MODEL_ROLES names a supervisor provider, it leads the cascade.
     role: 'supervisor',
@@ -461,7 +461,7 @@ Output ONLY the corrected text. No preamble, no explanation.`;
   // role (owner-design recommendation: rewrites never drop to the cheaper
   // supervisor model — different blind spots are for checks, not prose).
   const cascade = await callAnyLLMForText(env, system, repairPrompt, {
-    models: { anthropic: 'claude-sonnet-4-20250514' },
+    models: { anthropic: 'claude-sonnet-5' },   // SONNET-5-DROP-IN-001 (2026-07)
     role: 'writer',
   });
   if (!cascade.ok) {

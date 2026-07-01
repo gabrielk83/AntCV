@@ -98,6 +98,7 @@ CREATE TABLE IF NOT EXISTS llm_provider_costs (
 -- inserting a new row with a later effective_from; the cost lookup
 -- picks the latest row with effective_from <= ts.
 INSERT OR IGNORE INTO llm_provider_costs (provider, model, prompt_cost_per_1m_tokens, completion_cost_per_1m_tokens, effective_from) VALUES
+  ('claude',  'claude-sonnet-5',    3.00,  15.00, 1714521600),
   ('claude',  'claude-sonnet-4-6',  3.00,  15.00, 1714521600),
   ('claude',  'claude-opus-4-6',   15.00,  75.00, 1714521600),
   ('claude',  'claude-haiku-4-5',   0.80,   4.00, 1714521600),

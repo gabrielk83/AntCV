@@ -93,6 +93,7 @@ const PER_CALL_TIMEOUT_MS = 60_000;
 const PROVIDER_MODELS = {
   anthropic: [
     // Current flagship + 4.x family (2025-2026)
+    'claude-sonnet-5',           // 2026-07 preferred: best speed/intelligence, drop-in for 4.6. Adaptive thinking is ON by default -> we send thinking:disabled (see callAnthropic); NO sampling params anywhere in AntCV, so no 400.
     'claude-sonnet-4-20250514',  // stable, current production default for this proxy
     'claude-opus-4-7',           // 2026-04 flagship, available with appropriate tier
     'claude-sonnet-4-6',         // 2026-02 mainline
@@ -187,8 +188,21 @@ async function getKeyForProvider(env, provider) {
 // caller can record them with the same error shape.
 
 async function callAnthropic(key, system, userPrompt, model) {
-  const m = model || 'claude-sonnet-4-20250514';
+  const m = model || 'claude-sonnet-5';
   const { signal, cleanup } = withTimeout(null, PER_CALL_TIMEOUT_MS, 'anthropic');
+  // SONNET-5-DROP-IN-001 (2026-07): claude-sonnet-5 turns ADAPTIVE THINKING ON BY DEFAULT, and
+  // max_tokens is a HARD cap on thinking+response COMBINED — so a fixed 8000 budget could starve
+  // the JSON response these cascade tasks depend on. Send thinking:{type:"disabled"} to preserve
+  // the 4.6-era behaviour (full budget for the response). ONLY for sonnet-5: older fallback models
+  // (3.x/2.x) reject an unknown `thinking` field. sonnet-5 also 400s on non-default sampling params
+  // (temperature/top_p/top_k) — AntCV sends none, so nothing to strip.
+  const __body = {
+    model: m,
+    max_tokens: 8000,
+    system,
+    messages: [{ role: 'user', content: userPrompt }],
+  };
+  if (/claude-sonnet-5/.test(m)) __body.thinking = { type: 'disabled' };
   let res;
   try {
     res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -198,12 +212,7 @@ async function callAnthropic(key, system, userPrompt, model) {
         'x-api-key': key,
         'anthropic-version': '2023-06-01',
       },
-      body: JSON.stringify({
-        model: m,
-        max_tokens: 8000,
-        system,
-        messages: [{ role: 'user', content: userPrompt }],
-      }),
+      body: JSON.stringify(__body),
       signal,
     });
   } finally { cleanup(); }

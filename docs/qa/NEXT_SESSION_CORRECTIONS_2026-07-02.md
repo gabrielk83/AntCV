@@ -6,14 +6,16 @@ Paste this as the opening message. You continue AntCV (React PWA on Cloudflare P
 on push; workers deploy via `gh workflow run deploy.yml -f target=docx-worker -f mode=deploy -f confirm=docx-worker`
 then `gh run watch <id> --exit-status`. Read `CLAUDE.md` + the memory index first.
 
-**State (do NOT regress — all shipped + verified 2026-07-01):** PWA **1.51.40**, docx-worker **1.14.114**,
+**State (do NOT regress — all shipped + verified 2026-07-01):** PWA **1.51.40**, docx-worker **1.14.116**,
 suite **587/587**. The full CLOSED list is in `docs/qa/PROJECT_ISSUES_OPEN_CLOSED_2026-07-01.md` — read it so
 you DON'T redo finished work. In particular these are DONE and must not be reverted: core_comp
 snapshot/clean/dedup guard; CL-BLANK proseOf-body-only + sync-snapshot; accessibility create+labeled_list;
 empty-role hide; HWIC "[object Object]" export fix; work_style repair+134-cap; CL closure rule-match
 (wk 1.14.113, `diag-cl-rules.mjs`); signature wide-margin crop + thumbnail adapt; AI-notice Layout control
-(wk 1.14.114, `diag-ai-notice-pos.mjs`); AI-notice preview luminance contrast; preview hyperlink styling
-(colour-by-background, no blink). Blank-section "dancing" is FIXED (owner confirmed).
++ manual L/C/R (wk 1.14.114); **AI-notice AUTO → sidebar-default** (wk 1.14.115); **AI-notice LEFT export
+CloudConvert fix — explicit page-relative `margin-left` offset** (wk 1.14.116, `diag-ai-notice-pos.mjs`);
+AI-notice preview luminance contrast; preview hyperlink styling (colour-by-background, no blink).
+Blank-section "dancing" is FIXED (owner confirmed).
 
 **Discipline:** edit `pwa/app.src.js` (source) then MIRROR into minified `pwa/app.js` (names DIFFER —
 anchor on string literals, count-guarded; after: `node --check pwa/app.js`, startsWith "(()=>{", no
@@ -84,11 +86,14 @@ inline editable title (mirror the existing rich-block editor's title field) in t
 - **Focus-area label** — "Optics, photonics &" (truncated) → owner wants Focus Area **"EO & Photonic devices"**,
   Strategic Expertise **"Electro-optics (EO), photonics, semiconductor physics"**. LLM-generated (no source
   string) → fix in the generation prompt / Gabriel kernel seed (regen-gated). Owner already inline-edited live.
-- **AI-notice AUTO** — still pushes RIGHT wrongly (crude last-page BLOCK-COUNT proxy in the worker
-  `buildTwoColumnDocument`, ~24748). To fix correctly, get the owner's specific CV (`localStorage.sections` +
-  which side auto chose vs which column is actually emptier on the last page) and reconcile block-count vs the
-  preview-measured hint (`antcv:aiWmSide` from `antcv-watermark-page-anchor-341.js` chooseCorner). Manual
-  L/C/R control is the reliable override meanwhile.
+- **AI-notice AUTO — FIXED (wk 1.14.115 + 1.14.116), owner-verify.** Root of "auto almost always wrong,
+  pushing right": (a) the old auto used a block-COUNT proxy that treated a tall-main + short-sidebar last
+  page as "sidebar fuller" and pushed to the main column — replaced by an **auto default to the sidebar
+  side** (the empty column on a typical CV = owner's "most times the sidebar empty space"); (b) even when
+  auto correctly chose the sidebar, CloudConvert dropped it in the main column (the `margin-left` keyword
+  bug above). Both compose: auto → sidebar side → `margin-left:0pt` → page-left = empty sidebar. The
+  block-count is REMOVED; do NOT reintroduce the flaky height-hint (`antcv:aiWmSide`) — it can disagree
+  with the export's last page. Manual L/C/R overrides the rare full-sidebar CV.
 - **d1_write_failed** — server-side D1 write failure from access-relay `user_kernel`/prefs sync
   (`workers/access-relay/src/index.js` ~896 `env.DB…run()`), surfaced to the client (NOT in app.js as a literal;
   likely transient write contention during rapid saves). Add a client retry-with-backoff on the kernel/prefs PUT

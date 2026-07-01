@@ -1,6 +1,6 @@
 # AntCV — Open / Closed issues — 2026-07-01 (interactive corrections session)
 
-State at end of session: **PWA 1.51.40** · **docx-worker 1.14.114** · access-relay 1.3.2 · suite 587/587.
+State at end of session: **PWA 1.51.40** · **docx-worker 1.14.116** · access-relay 1.3.2 · suite 587/587.
 This session ran interactively against the owner's LIVE signed-in app (Chrome MCP) + worker diagnostics.
 
 ---

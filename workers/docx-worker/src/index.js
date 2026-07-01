@@ -23806,10 +23806,18 @@ function aiNoticeVmlRun(side) {
   // The textbox inset (~14pt sides, ~11pt bottom ≈ preview's
   // 18px DEFAULT_INSET) is the WM-002 clearance. Injected ONLY at the last page's
   // sentinel run, so it renders once (WM-005). Same raw-VML layer as the DEMO mark.
+  // AI-NOTICE-LEFT-CLOUDCONVERT-001 (owner 2026-07-01: manual/auto LEFT rendered on the RIGHT in the
+  // exported PDF even though the DOCX had mso-position-horizontal:left). LibreOffice/CloudConvert
+  // IGNORES the mso-position-horizontal:left|center keyword (only 'right' was honored) and dropped the
+  // box at the ANCHOR paragraph's position (the main column). Use an EXPLICIT page-relative margin-left
+  // OFFSET (deterministic, like the photo float that renders correctly in CloudConvert) so left/center/
+  // right all land where intended. Box 320pt wide on a 595pt A4 page (PAGE_W 11906 twips / 20).
   const horiz = side === "left" ? "left" : side === "center" ? "center" : "right";
+  const __boxW = 320, __pageW = Math.round(PAGE_W / 20); // pt
+  const __ml = side === "left" ? 0 : side === "center" ? Math.round((__pageW - __boxW) / 2) : (__pageW - __boxW);
   return '<w:r><w:rPr><w:noProof/></w:rPr><w:pict>' +
-    '<v:rect id="AntCVAiNotice" o:spid="_x0000_s4097" style="position:absolute;margin-left:0;margin-top:0;width:320pt;height:18pt;' +
-    'mso-position-horizontal:' + horiz + ';mso-position-horizontal-relative:page;' +
+    '<v:rect id="AntCVAiNotice" o:spid="_x0000_s4097" style="position:absolute;margin-left:' + __ml + 'pt;margin-top:0;width:320pt;height:18pt;' +
+    'mso-position-horizontal-relative:page;' +
     'mso-position-vertical:bottom;mso-position-vertical-relative:page;z-index:251658240;mso-wrap-style:square" filled="f" stroked="f">' +
     '<v:textbox inset="14pt,1pt,14pt,11pt"><w:txbxContent>' +
     '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="220" w:lineRule="auto"/><w:jc w:val="' + horiz + '"/></w:pPr>' +
@@ -27871,7 +27879,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.115-ai-notice-auto-sidebar";
+var VERSION = "1.14.116-ai-notice-left-margin";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

@@ -46,8 +46,10 @@ async function build(extra) {
   const xml = unzipEntry(buf, 'word/document.xml').toString('utf8');
   const ni = xml.indexOf('AntCVAiNotice');
   const shape = ni >= 0 ? xml.slice(ni, xml.indexOf('</v:rect>', ni) + 9) : '';
-  const m = shape.match(/mso-position-horizontal:(left|right|center)/);
-  return { horiz: m ? m[1] : null, sentinelLeft: xml.indexOf('__ANTCV_AIWM_') };
+  const m = shape.match(/margin-left:(\d+)pt/);
+  const ml = m ? Number(m[1]) : null;
+  const horiz = ml === 0 ? 'left' : (ml != null && ml < 200) ? 'center' : (ml != null ? 'right' : null);
+  return { horiz, ml, sentinelLeft: xml.indexOf('__ANTCV_AIWM_') };
 }
 
 const checks = [];

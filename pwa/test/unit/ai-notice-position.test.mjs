@@ -19,13 +19,17 @@ function extractFrom(file, name) {
   return src.slice(start, end);
 }
 
-test('worker aiNoticeVmlRun maps side -> mso-position-horizontal', () => {
-  const fn = new Function(extractFrom('../../../workers/docx-worker/src/index.js', 'aiNoticeVmlRun') + '\nreturn aiNoticeVmlRun;')();
-  assert.match(fn('left'), /mso-position-horizontal:left;/);
-  assert.match(fn('center'), /mso-position-horizontal:center;/);
-  assert.match(fn('right'), /mso-position-horizontal:right;/);
-  assert.match(fn('whatever'), /mso-position-horizontal:right;/, 'unknown -> right');
-  // the paragraph justification inside the box follows too
+test('worker aiNoticeVmlRun maps side -> explicit page-relative margin-left', () => {
+  // AI-NOTICE-LEFT-CLOUDCONVERT-001: keyword removed; positions via margin-left offset. PAGE_W (11906
+  // twips) + Math are module-level in the worker, so inject them into the extracted function's scope.
+  const fn = new Function('PAGE_W', 'Math', extractFrom('../../../workers/docx-worker/src/index.js', 'aiNoticeVmlRun') + '\nreturn aiNoticeVmlRun;')(11906, Math);
+  const pageW = Math.round(11906 / 20), boxW = 320;
+  assert.match(fn('left'), /margin-left:0pt;/);
+  assert.match(fn('center'), new RegExp('margin-left:' + Math.round((pageW - boxW) / 2) + 'pt;'));
+  assert.match(fn('right'), new RegExp('margin-left:' + (pageW - boxW) + 'pt;'));
+  assert.match(fn('whatever'), new RegExp('margin-left:' + (pageW - boxW) + 'pt;'), 'unknown -> right offset');
+  assert.ok(!fn('left').includes('mso-position-horizontal:left'), 'keyword removed (CloudConvert ignored it)');
+  // the paragraph justification inside the box still follows the side
   assert.match(fn('center'), /w:jc w:val="center"/);
 });
 

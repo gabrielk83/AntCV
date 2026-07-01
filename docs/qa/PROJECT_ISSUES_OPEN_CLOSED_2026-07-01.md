@@ -22,7 +22,6 @@ This session ran interactively against the owner's LIVE signed-in app (Chrome MC
 | AI-NOTICE-POSITION-CONTROL-001 | Layout control (Auto / bottom L/C/R); forwarded + honored in preview + worker (incl. 'center') | 1.51.35 / wk 1.14.114 | `diag-ai-notice-pos.mjs` (manual overrides auto) |
 | WM-CONTRAST-002 | AI-notice preview colour by ACTUAL sidebar luminance (was assumed-navy → white-on-pale illegible) | 1.51.37 | live DOM |
 | AI-NOTICE-AUTO-SIDEBAR-001 | AUTO defaults to the sidebar (emptier column); old block-count counted blocks-not-height → pushed to the dense main column | wk 1.14.115 | `diag-ai-notice-pos.mjs` |
-| AI-NOTICE-LEFT-CLOUDCONVERT-001 | LEFT exported on the RIGHT: CloudConvert/LibreOffice IGNORED the mso-position-horizontal:left keyword (dropped box at the main-column anchor). Now explicit page-relative margin-left offset. **Owner-verify the re-export.** | wk 1.14.116 | `diag-ai-notice-pos.mjs` + live DOCX unzip |
 | PREVIEW-HYPERLINK-STYLE-002 | Markdown/URLs → styled links in preview; colour by background (white on navy header, teal on light); killed the LinkedIn blink (v001 fought React) | 1.51.38 / 1.51.39 | LIVE (white on header, idempotent 2nd pass, 0 errors) + 5 tests |
 | Blank-section "dancing" | (from prior batches) — **owner confirmed FIXED** | — | owner |
 
@@ -43,6 +42,15 @@ This session ran interactively against the owner's LIVE signed-in app (Chrome MC
 4. **Focus-area label (generation/kernel).** "Optics, photonics &" (truncated) → owner wants Focus Area **"EO & Photonic devices"**, Strategic Expertise **"Electro-optics (EO), photonics, semiconductor physics"**. This is LLM-GENERATED (no source string) — fix in the generation prompt / Gabriel kernel seed (regen-gated). Owner already inline-edited the live data.
 
 5. **AI-notice AUTO — FIXED wk 1.14.115** (was: pushed RIGHT almost always). Auto now defaults to the sidebar side (the emptier column on a typical CV); the block-count proxy is removed. Re-export to confirm; manual L/C/R overrides the rare sidebar-is-fuller CV. _(original note:)_ Auto used a crude last-page BLOCK-COUNT proxy. The worker uses a crude last-page BLOCK-COUNT proxy (`__lastSideN < __lastMainN`), preferring the forwarded preview hint only on a tie. **What's needed from the owner:** the specific CV (its `localStorage.sections` + which side auto chose vs which column is actually emptier on the last page) so the block-count-vs-preview-measured-gap disagreement can be traced and fixed correctly. Manual L/C/R is the reliable override meanwhile.
+
+7. **AI-NOTICE EXPORT lands in the MAIN column, not the sidebar (STILL OPEN — HIGH).** Manual/auto pick the
+   sidebar side and the DOCX carries it, but the raw VML `v:rect` anchors to its sentinel paragraph in the MAIN
+   column (`mainPages`), and CloudConvert IGNORES `mso-position-horizontal-relative:page` → the notice renders at
+   main-column-left (owner confirmed 2026-07-01: auto→left-of-main; manual Left→preview left-of-sidebar but PDF
+   left-of-main). Neither the keyword nor the wk 1.14.116 explicit `margin-left` reached the sidebar. FIX: place
+   the sentinel/anchor paragraph in the SIDEBAR column (`sidebarPages`) for a sidebar notice, OR render it as a
+   page-anchored DrawingML float (wp:anchor, HorizontalPositionRelativeFrom.PAGE) like the photo bridge. Preview
+   (341) is already correct — leave it.
 
 6. **d1_write_failed (backend).** Server-side D1 write failure from access-relay `user_kernel`/prefs sync (`env.DB…run()`), surfaced to the client (not a PWA logic bug; the string isn't in app.js/app.src.js). Fired once during rapid tapping → likely transient write contention. FIX: client retry-with-backoff on the kernel/prefs PUT (careful: fetch-wrapper hazard) + confirm root via D1/wrangler logs. Low urgency unless it blocks saves.
 

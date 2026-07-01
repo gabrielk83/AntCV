@@ -12,10 +12,10 @@ you DON'T redo finished work. In particular these are DONE and must not be rever
 snapshot/clean/dedup guard; CL-BLANK proseOf-body-only + sync-snapshot; accessibility create+labeled_list;
 empty-role hide; HWIC "[object Object]" export fix; work_style repair+134-cap; CL closure rule-match
 (wk 1.14.113, `diag-cl-rules.mjs`); signature wide-margin crop + thumbnail adapt; AI-notice Layout control
-+ manual L/C/R (wk 1.14.114); **AI-notice AUTO → sidebar-default** (wk 1.14.115); **AI-notice LEFT export
-CloudConvert fix — explicit page-relative `margin-left` offset** (wk 1.14.116, `diag-ai-notice-pos.mjs`);
-AI-notice preview luminance contrast; preview hyperlink styling (colour-by-background, no blink).
-Blank-section "dancing" is FIXED (owner confirmed).
++ manual L/C/R (wk 1.14.114); **AI-notice AUTO → sidebar-default** (wk 1.14.115); AI-notice preview
+luminance contrast; preview hyperlink styling (colour-by-background, no blink). Blank-section "dancing"
+is FIXED (owner confirmed). NOTE: the **AI-notice LEFT EXPORT is still OPEN** (see #4) — the wk 1.14.116
+`margin-left` change did NOT fix it (it anchors to the main column, not the sidebar).
 
 **Discipline:** edit `pwa/app.src.js` (source) then MIRROR into minified `pwa/app.js` (names DIFFER —
 anchor on string literals, count-guarded; after: `node --check pwa/app.js`, startsWith "(()=>{", no
@@ -82,11 +82,22 @@ sidebar/preview panel (the list with the ON/OFF + move + ×/→ chips, e.g. "HOW
 inline editable title (mirror the existing rich-block editor's title field) in that panel row.
 
 ### 4. Smaller / regen-gated / owner-input
-- **AI-notice LEFT export — FIXED wk 1.14.116, owner-verify.** Root cause traced live: the DOCX had the
-  correct `mso-position-horizontal:left`, but CloudConvert/LibreOffice IGNORES the left|center keyword
-  (only `right` worked) and dropped the box at the anchor paragraph (main column). Now `aiNoticeVmlRun`
-  uses an EXPLICIT page-relative `margin-left` offset (left=0pt, center, right=pageW-320). Owner
-  re-exports to confirm the PDF finally honors LEFT. `diag-ai-notice-pos.mjs` asserts the offsets.
+- **AI-notice LEFT/AUTO EXPORT lands in the MAIN column, not the sidebar (STILL OPEN — HIGH).** Progress so
+  far: manual/auto correctly pick the sidebar side; the DOCX carries the intended position. BUT the export
+  notice is a raw VML `v:rect` (`aiNoticeVmlRun`, ~23801) whose **anchor/sentinel paragraph is placed in the
+  MAIN column** (`mainPages[__lastRendered]`, ~24983). CloudConvert/LibreOffice **ignores
+  `mso-position-horizontal-relative:page`** and anchors the floating box to its containing text frame (the
+  main column), so `margin-left:0` renders at **main-column left**, not page-left. Confirmed live (owner
+  2026-07-01): auto → left-of-main; manual Left → preview left-of-SIDEBAR (341 is page-relative + correct)
+  but PDF left-of-MAIN. Neither the keyword (wk pre-1.14.116) nor the explicit `margin-left` (wk 1.14.116)
+  reaches the sidebar. **THE REAL FIX (two options):** (a) place the notice sentinel/anchor paragraph in the
+  **SIDEBAR column** (`sidebarPages`) when the chosen side is the sidebar (and in `mainPages` when it's the
+  main), so the VML anchors to the right column; OR (b) render the notice as a **page-anchored DrawingML
+  float** (`wp:anchor` with `HorizontalPositionRelativeFrom.PAGE` + a `posOffset`) like the PHOTO BRIDGE —
+  which is proven to render page-relative in CloudConvert (see the photo float ~25846 + the
+  photo-bridge-non-float memory) — instead of the raw VML `v:rect`. Verify by unzipping the export
+  document.xml AND with the owner's real CloudConvert PDF (position can't be checked from XML alone).
+  The preview (341) is already correct — do not touch it. Keep manual L/C/R + auto→sidebar.
 - **Focus-area label** — "Optics, photonics &" (truncated) → owner wants Focus Area **"EO & Photonic devices"**,
   Strategic Expertise **"Electro-optics (EO), photonics, semiconductor physics"**. LLM-generated (no source
   string) → fix in the generation prompt / Gabriel kernel seed (regen-gated). Owner already inline-edited live.

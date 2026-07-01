@@ -25235,7 +25235,15 @@ function buildLinearDocument(ctx) {
             },
             margins: { top: 80, bottom: 260, left: 0, right: 0 },
             children: [new Paragraph({
-              spacing: { before: 0, after: 0 },
+              // CL-SIGNATURE-CLIP-005 (owner 2026-07-01: the "G" STILL cut after CLIP-004's ROW
+              // height). Confirmed by dumping the emitted document.xml: the signature is a
+              // <wp:inline> image (cx/cy correct = 160x64px) sitting on the text baseline inside a
+              // paragraph whose <w:spacing> had NO line rule. An INLINE image is clipped to its LINE
+              // BOX, not the table row — LibreOffice/CloudConvert sizes the line from FONT metrics and
+              // crops the taller image's lower-left (the G's descender loop). CLIP-004 grew the ROW
+              // but the line inside it stayed short. Force the line box itself to at least the image
+              // height (w:line + w:lineRule="atLeast") so the whole glyph renders. Twips: 1px=15 @96dpi.
+              spacing: { before: 0, after: 0, line: Math.round(__sigH * 15) + 120, lineRule: LineRuleType.AT_LEAST },
               alignment: __sigAlign,
               children: [new ImageRun({
                 data: __sigData,
@@ -27841,7 +27849,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.111-sig-rowheight";
+var VERSION = "1.14.112-sig-lineheight";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

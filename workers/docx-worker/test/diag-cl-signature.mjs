@@ -48,12 +48,17 @@ const al = sigAlign(withSig);
 const namePos = withSig.indexOf('Gabriel K');
 const drawPos = withSig.indexOf('<w:drawing>');
 const afterName = drawPos > namePos;
+// CL-SIGNATURE-CLIP-005: the signature paragraph must carry a line-height rule (w:lineRule="atLeast")
+// so the inline image is NOT clipped to the font line box (the lower-left "G" descender was cut).
+const sigParaPre = withSig.slice(Math.max(0, drawPos - 220), drawPos);
+const hasLineRule = /w:lineRule="atLeast"/.test(sigParaPre) && /w:line="\d+"/.test(sigParaPre);
 
 log('with signature: <w:drawing> count =', dW, '(expect >=1)');
 log('without signature: <w:drawing> count =', dN, '(expect 0)');
 log('signature paragraph alignment =', al, '(expect right)');
 log('signature appears AFTER the sign-off name =', afterName);
+log('signature paragraph has line-box reservation (lineRule=atLeast) =', hasLineRule, '(expect true — CLIP-005)');
 
-const ok = dW >= 1 && dN === 0 && al === 'right' && afterName;
+const ok = dW >= 1 && dN === 0 && al === 'right' && afterName && hasLineRule;
 log(ok ? '\nCL-SIGNATURE OK' : '\nCL-SIGNATURE FAIL');
 process.exit(ok ? 0 : 1);

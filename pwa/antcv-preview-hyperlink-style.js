@@ -1,101 +1,101 @@
-/* antcv-preview-hyperlink-style.js — PREVIEW-HYPERLINK-STYLE-001 (owner 2026-07-01:
- * "make hyperlink look like hyperlinks also in preview").
+/* antcv-preview-hyperlink-style.js — PREVIEW-HYPERLINK-STYLE-002 (owner 2026-07-01)
  *
- * The DOCX/PDF export renders markdown links [text](url) as real hyperlinks, but the live
- * preview showed the RAW markdown as plain text, and autolinked bare URLs weren't visually
- * link-like. This sidecar restyles the preview only:
- *   - markdown [text](url)  -> a styled <a>text</a> (the raw markdown is hidden, matching export)
- *   - a bare http(s):// URL -> a styled <a> on the URL
- *   - existing <a> in the body -> given the link look (teal + underline), except in the navy
- *     candidate header band where the contact line must stay light.
+ * Make links in the PREVIEW look like the export's hyperlinks. Owner scope + rules:
+ *   - style links in ADDITIONAL INFORMATION + PUBLICATIONS (markdown [text](url) -> a real link,
+ *     bare URLs -> a link); the raw markdown is hidden, matching the export.
+ *   - COLOUR BY BACKGROUND: on a DARK background (the navy contact header) the link stays WHITE
+ *     (just underlined + pressable), on a LIGHT background it is the teal link colour. This fixes
+ *     the LinkedIn contact link that PREVIEW-HYPERLINK-STYLE-001 wrongly turned teal (and made
+ *     "blink" — teal fighting React's white on every re-render). White-on-dark matches what React
+ *     already paints, so there is no visible fight.
  *
- * SAFE preview-DOM pattern (mirrors antcv-spell-annotator-384): only leaf text elements are
- * touched (no child elements), via innerHTML with an idempotency signature; React re-renders
- * revert it and we re-apply on antcv:sections-updated (debounced) + a MutationObserver — no tight
- * loop because we skip elements already linkified for the same text. Never touches export. Kill:
+ * Loop/blink control: apply ONLY on antcv:sections-updated (debounced) + a short boot sweep — NO
+ * MutationObserver (v001's characterData observer re-fired on React's own revert = the blink). An
+ * idempotency signature skips already-styled nodes. Never touches the export. Kill:
  * localStorage['antcv:disable-preview-links']='1'.
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.38-preview-hyperlink-style';
+  var VERSION = '1.51.39-preview-hyperlink-style';
   if (window.__antcvPreviewHyperlinkStyle === VERSION) return;
   window.__antcvPreviewHyperlinkStyle = VERSION;
 
-  var LINK_TEAL = '#00746E';
-  var MD = /\[([^\]\n]{1,120})\]\((https?:\/\/[^\s)]{3,400})\)/g;               // [text](url)
-  var BARE = /(^|[\s(])((?:https?:\/\/)[^\s<)]{4,400})/g;                        // bare http(s) URL
+  var TEAL = '#00746E';
+  var WHITE = 'rgba(255,255,255,0.95)';
+  var MD = /\[([^\]\n]{1,120})\]\((https?:\/\/[^\s)]{3,400})\)/g;
+  var BARE = /(^|[\s(])((?:https?:\/\/)[^\s<)]{4,400})/g;
   var SIG = 'data-antcv-linked';
 
   function disabled() { try { var v = localStorage.getItem('antcv:disable-preview-links'); return v === '1' || v === 'true'; } catch (_) { return false; } }
   function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-  function inHeaderBand(el) {
-    // the navy candidate header keeps its own light contact-line colour.
-    return !!(el.closest && el.closest('[data-antcv-candidate-header],[class*="candidate-header" i],[class*="header-band" i]'));
+
+  // Effective background luminance (0..255) behind an element; null if unresolved.
+  function bgLum(el) {
+    var node = el;
+    for (var i = 0; node && i < 16; i++, node = node.parentElement) {
+      try {
+        var m = String(getComputedStyle(node).backgroundColor || '').match(/rgba?\(([^)]+)\)/);
+        if (m) { var p = m[1].split(',').map(function (s) { return parseFloat(s); }); var a = p.length > 3 ? p[3] : 1; if (a >= 0.5 && p.length >= 3) return 0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2]; }
+      } catch (_) {}
+    }
+    return null;
   }
-  function linkStyle(el) {
-    // teal + underline on light body; leave header links to inherit (light on navy).
-    return inHeaderBand(el) ? 'color:inherit;text-decoration:underline;' : 'color:' + LINK_TEAL + ';text-decoration:underline;';
+  function linkColor(el) { var l = bgLum(el); return (l != null && l < 140) ? WHITE : TEAL; }
+
+  // Is this element inside ADDITIONAL INFORMATION or PUBLICATIONS (where the owner wants markdown
+  // links rendered)? Match by the section [data-sid] or a nearby heading.
+  function inLinkSection(el) {
+    try {
+      var sec = el.closest && el.closest('[data-sid]');
+      var sid = sec && (sec.getAttribute('data-sid') || '');
+      if (/additional|pubs|publication/i.test(sid)) return true;
+    } catch (_) {}
+    return false;
   }
 
-  function markup(text, el) {
-    var st = linkStyle(el);
-    var out = esc(text);
-    var touched = false;
-    // markdown first (so its inner url isn't double-linked by BARE)
-    out = out.replace(MD, function (_m, label, url) {
-      touched = true;
-      return '<a href="' + esc(url) + '" target="_blank" rel="noopener" style="' + st + '">' + esc(label) + '</a>';
-    });
-    // bare urls not already inside an <a ...>...</a> we just made
-    out = out.replace(BARE, function (m, pre, url) {
-      // skip if this url already sits inside one of our anchors (href="url")
-      if (out.indexOf('href="' + esc(url) + '"') >= 0) return m;
-      touched = true;
-      return pre + '<a href="' + esc(url) + '" target="_blank" rel="noopener" style="' + st + '">' + esc(url) + '</a>';
-    });
+  function markup(text, color) {
+    var st = 'color:' + color + ';text-decoration:underline;';
+    var out = esc(text), touched = false;
+    out = out.replace(MD, function (_m, label, url) { touched = true; return '<a href="' + esc(url) + '" target="_blank" rel="noopener" style="' + st + '">' + esc(label) + '</a>'; });
+    out = out.replace(BARE, function (m, pre, url) { if (out.indexOf('href="' + esc(url) + '"') >= 0) return m; touched = true; return pre + '<a href="' + esc(url) + '" target="_blank" rel="noopener" style="' + st + '">' + esc(url) + '</a>'; });
     return touched ? out : null;
-  }
-
-  function papers() {
-    try { return document.querySelectorAll('.antcv-preview-paper'); } catch (_) { return []; }
   }
 
   function scanOnce() {
     if (disabled()) return;
-    var ps = papers(); if (!ps.length) return;
+    var ps; try { ps = document.querySelectorAll('.antcv-preview-paper'); } catch (_) { return; }
     for (var pi = 0; pi < ps.length; pi++) {
-      // leaf elements only (no child elements) that contain a link pattern
+      // (1) markdown / bare-URL leaf text -> links, ONLY in additional/publications.
       var nodes = ps[pi].querySelectorAll('*:not(script):not(style)');
       for (var i = 0; i < nodes.length; i++) {
         var el = nodes[i];
-        if (el.childElementCount !== 0) continue;                 // leaf text only
-        if (el.tagName === 'A') continue;                          // already an anchor
+        if (el.childElementCount !== 0 || el.tagName === 'A') continue;
         var text = el.textContent || '';
         if (!text || (text.indexOf('](http') < 0 && text.indexOf('http') < 0)) continue;
+        if (!inLinkSection(el)) continue;
         var sig = String(text.length) + ':' + text.slice(0, 40);
-        if (el.getAttribute(SIG) === sig) continue;                // already done for this exact text
-        var html = markup(text, el);
-        if (html == null) { el.setAttribute(SIG, sig); continue; } // nothing to link; remember
+        if (el.getAttribute(SIG) === sig) continue;
+        var html = markup(text, linkColor(el));
+        if (html == null) { el.setAttribute(SIG, sig); continue; }
         try { el.innerHTML = html; el.setAttribute(SIG, sig); } catch (_) {}
       }
-      // style already-autolinked <a> in the body (not the header) with the link look
+      // (2) every existing <a> in the preview gets the link LOOK, coloured by its background
+      // (white on the navy header, teal on light) so the contact links look pressable + underlined
+      // WITHOUT the teal-on-navy blink.
       var as = ps[pi].querySelectorAll('a');
       for (var j = 0; j < as.length; j++) {
         var a = as[j];
-        if (a.getAttribute('data-antcv-linkstyled') === '1') continue;
-        if (inHeaderBand(a)) { a.setAttribute('data-antcv-linkstyled', '1'); continue; }
-        try { a.style.setProperty('color', LINK_TEAL, 'important'); a.style.setProperty('text-decoration', 'underline', 'important'); a.setAttribute('data-antcv-linkstyled', '1'); } catch (_) {}
+        var col = linkColor(a);
+        if (a.getAttribute('data-antcv-linkcol') === col) continue;
+        try { a.style.setProperty('color', col, 'important'); a.style.setProperty('text-decoration', 'underline', 'important'); a.style.setProperty('cursor', 'pointer', 'important'); a.setAttribute('data-antcv-linkcol', col); } catch (_) {}
       }
     }
   }
 
   var t = null;
-  function schedule() { if (t) return; t = setTimeout(function () { t = null; try { scanOnce(); } catch (_) {} }, 180); }
+  function schedule() { if (t) return; t = setTimeout(function () { t = null; try { scanOnce(); } catch (_) {} }, 260); }
   window.addEventListener('antcv:sections-updated', schedule);
-  var mo = new MutationObserver(function (muts) {
-    for (var i = 0; i < muts.length; i++) { if ((muts[i].addedNodes && muts[i].addedNodes.length) || muts[i].type === 'characterData') { schedule(); return; } }
-  });
-  function start() { try { mo.observe(document.body, { childList: true, subtree: true, characterData: true }); } catch (_) {} [500, 1500, 3500].forEach(function (ms) { setTimeout(schedule, ms); }); }
-  if (document.body) start(); else document.addEventListener('DOMContentLoaded', start);
+  // short boot sweep only — NO MutationObserver (that caused the v001 blink loop).
+  [800, 2000, 4500, 9000].forEach(function (ms) { setTimeout(schedule, ms); });
   window.AntcvPreviewLinks = { version: VERSION, scan: scanOnce };
 })();

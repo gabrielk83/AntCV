@@ -285,8 +285,27 @@
       var sp = localStorage.getItem('sidebarPosition');
       if (sp) { try { var pp = JSON.parse(sp); if (typeof pp === 'string') sp = pp; } catch (_) {} sidebarSide = (String(sp).toLowerCase() === 'right') ? 'right' : 'left'; }
     } catch (_) {}
-    var overNavy = !docIsCl() && (corner === sidebarSide);
-    watermark.style.setProperty('color', overNavy ? 'rgba(255,255,255,0.78)' : 'rgba(0,116,110,0.72)', 'important');
+    // WM-CONTRAST-002 (owner 2026-07-01: "AI notice left text is white on very pale blue"). The old
+    // rule ASSUMED the sidebar is navy and painted the notice white whenever it sat on the sidebar —
+    // but a pale-sidebar package made that white-on-pale illegible. Read the ACTUAL sidebar
+    // background luminance: white text only on a genuinely DARK sidebar, else the muted teal.
+    var onSidebar = !docIsCl() && (corner === sidebarSide);
+    var darkSidebar = false;
+    if (onSidebar) {
+      try {
+        var paperEl = (watermark.closest && watermark.closest(PAGE_BOX_SELECTOR)) || (watermark.closest && watermark.closest('.antcv-preview-paper')) || document;
+        var sbEl = paperEl.querySelector && paperEl.querySelector('.antcv-document-sidebar');
+        if (!sbEl) sbEl = document.querySelector('.antcv-document-sidebar');
+        var bg = sbEl ? window.getComputedStyle(sbEl).backgroundColor : '';
+        var m = String(bg || '').match(/rgba?\(([^)]+)\)/);
+        if (m) {
+          var p = m[1].split(',').map(function (s) { return parseFloat(s); });
+          var a = p.length > 3 ? p[3] : 1;
+          if (a >= 0.5 && p.length >= 3) { darkSidebar = (0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2]) < 140; }
+        }
+      } catch (_) {}
+    }
+    watermark.style.setProperty('color', darkSidebar ? 'rgba(255,255,255,0.85)' : 'rgba(0,116,110,0.82)', 'important');
   }
 
   function hideWatermark(wm) {

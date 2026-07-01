@@ -99,7 +99,22 @@ Work in this order:
     commitments, and business" — each ends abruptly (text loss, not a wrap). Likely the old
     line-end-overflow / bring-truncation item resurfaced or a compression cap cutting at char budget
     without sentence-boundary respect. Find the cutter, fix to trim at sentence/clause boundaries only.
-11. **Owner-confirmed orphan list (green marks, export 2026-07-02)** — validates Task 4 item 1 scope:
+11a. **JD-SCAN-HALLUCINATION-001 (HIGH — owner 2026-07-02 screenshot)** — the NIL JD PDF has NO usable
+    text layer (fonts without ToUnicode; pdftotext/pdfjs yield mojibake). The upload pipeline reported
+    "✓ 3533 chars · llm-after-pdfjs · 3 pages" and the LLM reconstruction FABRICATED a completely
+    different posting: "National Institute of Technology CALICUT, Kerala — Temporary Faculty" — a
+    hallucination seeded by the garbled NIL/NIT tokens. NIL Technology is a nanooptics company in
+    Kongens Lyngby, DENMARK. Everything downstream (generation, analysis, QnA, brand fit) is poisoned.
+    Fix in the JD ingest path: (a) detect garbage extraction BEFORE the LLM pass (replacement-char /
+    non-dictionary ratio, mean word length, charset sanity) and NEVER ask the LLM to "clean" noise —
+    it invents; (b) route unreadable PDFs to the existing OCR path (`antcv-jd-image-ocr.js` — render
+    pages to images → OCR/vision) as the fallback instead; (c) cross-check the reconstructed company
+    against the FILENAME ("NIL Technology" was in the filename) and flag a mismatch to the user rather
+    than silently accepting; (d) surface a visible "JD text unreadable — used OCR" notice. Test with
+    the actual file: `C:\Users\karpg\Downloads\Nanooptics Prototyping Engineer - NIL Technology.pdf`.
+    This BLOCKS Task 5's live verification — fix this first, re-ingest, then run Task 5 on the corrected
+    application.
+11b. **Owner-confirmed orphan list (green marks, export 2026-07-02)** — validates Task 4 item 1 scope:
     "customer-facing work." (CRL), "product variants." / "signal validation." / "measurement setups."
     (System Architect — NEW, all three), "smartphone optics and biometrics." / "Imatest, and Qualcomm
     tools." (Sirin), "in commercial devices." (Sirin Results). Use these as the acceptance set for the

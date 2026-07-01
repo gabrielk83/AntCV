@@ -8,7 +8,7 @@ Owner: Gabriel. Style: direct, factual, compressed, no corporate filler.
 ---
 
 You are an autonomous AntCV maintenance run on the GitHub repo **gabrielk83/AntCV** (a React PWA in
-`pwa/` + Cloudflare Workers in `workers/`). Current shipped: PWA **1.51.27** (auto-deploys on push
+`pwa/` + Cloudflare Workers in `workers/`). Current shipped: PWA **1.51.29** (auto-deploys on push
 to `main`), docx-worker **1.14.110**, access-relay **1.3.2**, proxy/demo-proxy **3.6.0**. Work the
 prioritised backlog below, ship VERIFIED fixes only. Hard rule: **an end result, not a brickable
 mid-product** — one solid verified fix beats several half-verified ones.
@@ -102,57 +102,41 @@ account — no login step is needed. AntCV needs no install for the core work (z
 
 ## PRIORITY ORDER
 
-### **CURRENT BACKLOG (owner re-review 2026-07-01) — DO THIS FIRST**
+### **CURRENT BACKLOG (owner re-review 2026-07-01) — FIXED 1.51.29, regen-cycle verify owed**
 
-> **UPDATE — nightly 2026-07-01 (PWA 1.51.28):** all three convergence guards below SHIPPED and are
-> node-sim verified (543/543). Because a real LLM generate→gate→worker→sync cycle can't be reproduced
-> headlessly, the owner should confirm on a real regeneration that ONE generation now converges
-> (core_comp populated, CL prose non-blank, ACCESSIBILITY survives gen-2). Details in
-> `docs/qa/EXPORT_REVIEW_2026-07_ISSUE_MAP.md` (RE-REVIEW block).
-> - CV-CORECOMP-BLANK-001 — new sidecar `antcv-corecomp-loss-guard.js` (snapshot/restore, mirrors 985).
-> - CL-BLANK-001 — `antcv-cl-prose-loss-guard-985.js` `proseOf` body-only (empty-body-but-labelled
->   rich_block no longer masquerades as real).
-> - CV-ACCESS-DROP-001 — `repairAccessibilityFromPI` (415) now CREATES the ACCESSIBILITY section from
->   `personalInfo.accessibility` when absent (was `idx<0 return null`).
+Two independent runs worked this backlog concurrently (see `CLAUDE.md` "Sync discipline") and
+landed complementary, non-overlapping fixes for every item — both kept. Full detail + code
+pointers: `docs/qa/EXPORT_REVIEW_2026-07_ISSUE_MAP.md` RE-REVIEW section;
+session narrative: `docs/qa/SESSION_LOG_2026-07-01.md`.
 
 The owner's central frustration is **convergence / restore reliability**: a single generation
 intermittently leaves a section blank, so the owner has to **regenerate 2–3 times** to get a
-complete CV+CL. Owner's words: *"the way you push from memory is nok."* Make ONE generation
-converge to a complete document. These three are the live failures (the deterministic PI-repairs
-in `pwa/antcv-sections-normalize-415.js` already heal languages / accessibility / experience /
-experience-completeness from `personalInfo` — but the items below have NO `personalInfo` source
-and rely on the snapshot/restore guards, which are NOT converging reliably):
+complete CV+CL. Owner's words: *"the way you push from memory is nok."* Summary (two layers each):
 
-- **CV-CORECOMP-BLANK-001 (#2).** CORE COMPETENCIES (`id:"core_comp"`, `type:"table"`) renders the
-  me() placeholder rows (`["[Focus area 1]","[Strategic expertise …]"]`) after a generation — the
-  LLM's `core_comp_rows` lamination (app.src.js ~23650 / the fusion path) did not land, or the
-  kernel-recovery floor overwrote it with the skeleton. There is NO `personalInfo.core_comp_rows`,
-  so a PI-repair can't fix it. The right fix is a **last-good snapshot guard** like
-  `pwa/antcv-cl-prose-loss-guard-985.js` but for the CV core_comp table: snapshot the rows whenever
-  they are real (non-placeholder), and if a later state shows only placeholders, restore the
-  snapshot. Add it as a new sidecar (cache-bust quintet) or fold into 415. Diagnose WHY the
-  lamination is lost (timing vs the recovery floor) before adding the guard — a guard over a
-  fixable race is a band-aid.
-- **CL-BLANK-001 (#4).** "most cover letter is blank — I had to regenerate it again." The CL prose
-  (who/why/foundation/bring/contribute/closure rich_blocks) came back mostly empty on the first
-  generation. `pwa/antcv-cl-prose-loss-guard-985.js` snapshots + re-inserts deleted CL sections,
-  but a generation that emits EMPTY prose (vs deletes a section) defeats a "deleted-section" guard.
-  Check: does the guard treat an empty-body rich_block as "needs restore", and does the generation
-  apply path ever write empties over good prose? Make the first generation reliably non-blank
-  (the gen prompt already mandates every cl_overrides field be filled — verify the APPLY path).
-- **CV-ACCESS-DROP-001 (#7).** "accessibility was seen in first generation, dropped in second." The
-  ACCESSIBILITY section is present on gen 1 then gone on gen 2. `repairAccessibilityFromPI` (415)
-  rebuilds it from `personalInfo.accessibility` when the section is placeholder/empty — confirm
-  that (a) `personalInfo.accessibility` actually holds the real line after a gen, and (b) the
-  repair fires before the export gate. If gen 2 NULLS `personalInfo.accessibility`, fix the apply
-  path so it never clears a real PI field.
+- **CV-CORECOMP-BLANK-001 (#2) — FIXED.** *Guard:* new sidecar `antcv-corecomp-loss-guard.js`
+  (snapshot/restore keyed per application, mirrors `antcv-cl-prose-loss-guard-985.js`). *Root
+  cause:* `core_comp_rows` apply (app.src.js ~25076) had no fallback to the section's own existing
+  (`e.rows`) real rows, unlike profile/work_style — fixed, mirrored to `app.js`.
+- **CL-BLANK-001 (#4) — FIXED.** *Guard:* `antcv-cl-prose-loss-guard-985.js`'s `proseOf` now reads
+  the body (`it.t`) only — an empty-body-but-labelled rich_block no longer masquerades as real and
+  defeats restore. *Root cause:* `foundation`/`closure`/`opening` used the narrower `a()`
+  placeholder-stripper instead of the `__clReal()` helper `who`/`why`/`contribute` already use; the
+  Nordic CLOSURE placeholder's nested brackets + lack of an em-dash defeated `a()`, leaking the raw
+  template into the saved section (which the export then blanks). Switched all four to
+  `__clReal()`.
+- **CV-ACCESS-DROP-001 (#7) — FIXED.** *Section layer:* `repairAccessibilityFromPI` (415) no
+  longer dead-ends on `idx<0` — it now CREATES the ACCESSIBILITY section from
+  `personalInfo.accessibility` when the section is absent (gen-2 routed it into ADDITIONAL
+  instead). *Source-of-truth layer:* `antcv-generate-cloud-sync-277.js`'s GET-after-PUT step did a
+  wholesale `personalInfo` REPLACE from the cloud response; if the PUT half silently failed, the
+  GET clobbered `personalInfo.accessibility` itself with a stale cloud copy. Changed to a
+  local-preferring merge.
 
-**Method (owner requirement): diagnose on the owner's LIVE data, don't guess.** If this env has a
-signed-in headless browser, drive `antcv.pages.dev`, read `localStorage.sections` /
-`localStorage.personalInfo`, and reproduce the blank/drop before patching. You **cannot** reproduce
-a real LLM generation headlessly — so for the convergence bugs, verify the GUARD/REPAIR logic by
-node simulation (feed a blank-section `sections` blob through the sidecar, assert it heals) and
-flag that the full generate→gate→worker→sync timing must be owner-verified on a real cycle.
+**NOT verified live** (owed to a desktop/signed-in run): a real owner generate→gate→worker→sync
+cycle, ideally a 2nd generation on the same application, confirming CORE COMPETENCIES / CL prose /
+Accessibility all survive. Neither run had a signed-in browser or could drive a real LLM
+generation — verification was by static tracing + 22 new/updated vm-sandboxed unit tests, full
+suite 551/551 green, not a live cycle.
 
 **Deferred feature batch (owner list, after the convergence work):** editable CL slogan section;
 3-state What-I-Bring lead show / hide / **monochrome** toggle; sign-off pinned to page bottom

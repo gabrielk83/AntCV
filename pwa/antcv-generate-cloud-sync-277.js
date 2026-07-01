@@ -36,7 +36,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.40.277';
+  var VERSION = '1.40.278';
   if (window.__antcvGenerateCloudSync277 === VERSION) return;
   window.__antcvGenerateCloudSync277 = VERSION;
 
@@ -197,8 +197,23 @@
           }
           // Mirror personalInfo too — relevant for kernel prompts that
           // reference the candidate's name/contact.
+          // PI-MERGE-NO-CLOBBER-001 (owner 2026-07: CV-ACCESS-DROP-001 — "accessibility was seen
+          // in first generation, dropped in second"). This GET runs AFTER our own PUT above, so
+          // cloud SHOULD already echo back the fresh local copy — but PUT failures are swallowed
+          // to a console.debug so the user is never blocked, and the GET still runs regardless. A
+          // wholesale REPLACE here then clobbers every local-only field (accessibility, a just-
+          // typed edit, anything not yet round-tripped) with a STALE cloud snapshot. Merge instead:
+          // a real, non-empty LOCAL value always wins; cloud only FILLS a field the local copy is
+          // missing — the same local-preferring merge antcv-personal-info-cloud-restore-282.js and
+          // antcv-load-from-cloud-personal-info-hook-283.js already use, for this exact reason.
           if (body.personalInfo && isPlainObject(body.personalInfo)) {
-            try { localStorage.setItem('personalInfo', JSON.stringify(body.personalInfo)); pulled = true; } catch (_) {}
+            var curPi = readJson('personalInfo', {}) || {};
+            var mergedPi = Object.assign({}, curPi);
+            var piEmpty = function (v) { return v == null || (typeof v === 'string' && !v.trim()) || (Array.isArray(v) && !v.length); };
+            Object.keys(body.personalInfo).forEach(function (k) {
+              if (piEmpty(mergedPi[k]) && !piEmpty(body.personalInfo[k])) mergedPi[k] = body.personalInfo[k];
+            });
+            try { localStorage.setItem('personalInfo', JSON.stringify(mergedPi)); pulled = true; } catch (_) {}
           }
         }).then(function () {
           // Notify React to rehydrate from localStorage. The same event

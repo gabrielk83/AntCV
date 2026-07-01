@@ -25076,7 +25076,18 @@
                       const _ccRaw = t(
                         z.core_comp_rows && z.core_comp_rows.length
                           ? z.core_comp_rows
-                          : x || [],
+                          : x && x.length
+                            ? x
+                            // CV-CORECOMP-BLANK-001 (owner 2026-07): unlike profile/work_style
+                            // above (which fall back to a(e.content) — the EXISTING section's
+                            // value — before defaulting to ""), core_comp had no such rung: an
+                            // empty z.core_comp_rows with no kernel-fallback `x` wiped the table
+                            // to header-only even when the PREVIOUS (still-real) rows were sitting
+                            // right there in e.rows. Fall back to them; _ccCell + the placeholder
+                            // filter below still strip a stale me() skeleton row safely.
+                            : Array.isArray(e.rows)
+                              ? e.rows.slice(1)
+                              : [],
                       );
                       const _ccClean = (Array.isArray(_ccRaw) ? _ccRaw : [])
                         .map((r) =>
@@ -25431,8 +25442,8 @@
                         ? {
                             ...e,
                             content:
-                              a(D.opening) ||
-                              a(r("opening", "content")) ||
+                              __clReal(D.opening) ||
+                              __clReal(r("opening", "content")) ||
                               n.opening ||
                               "",
                           }
@@ -25587,14 +25598,23 @@
                                 : "foundation" === e.id
                                   ? {
                                       ...e,
+                                      // CL-BLANK-001 (owner 2026-07: "most cover letter is
+                                      // blank"). foundation/closure used plain a() instead of
+                                      // __clReal() — a() only strips a placeholder it can match
+                                      // with its em-dash/double-hyphen heuristic; the Nordic
+                                      // template's longer placeholders (no em-dash, nested
+                                      // brackets) defeat that heuristic and leak verbatim into
+                                      // the saved section, which the export then blanks. Same
+                                      // fix already applied to who/why/contribute above
+                                      // (CL-EMPTY-BODY-FIELDS-001 / HWIC-CONTRIB-REAL-FALLBACK-001).
                                       hands_on:
-                                        a(F.foundation_hands_on) ||
-                                        a(e.hands_on) ||
+                                        __clReal(F.foundation_hands_on) ||
+                                        __clReal(e.hands_on) ||
                                         n.foundation_hands_on ||
                                         "",
                                       professionally:
-                                        a(F.foundation_professionally) ||
-                                        a(e.professionally) ||
+                                        __clReal(F.foundation_professionally) ||
+                                        __clReal(e.professionally) ||
                                         n.foundation_professionally ||
                                         "",
                                     }
@@ -25602,8 +25622,8 @@
                                     ? {
                                         ...e,
                                         content:
-                                          a(F.closure_content) ||
-                                          a(e.content) ||
+                                          __clReal(F.closure_content) ||
+                                          __clReal(e.content) ||
                                           n.closure ||
                                           "",
                                       }

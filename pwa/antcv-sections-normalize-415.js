@@ -15,7 +15,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.27-exp-complete';
+  var VERSION = '1.51.29-exp-complete';
   if (window.__antcvSectionsNormalize === VERSION) return;
   window.__antcvSectionsNormalize = VERSION;
 
@@ -798,6 +798,11 @@
     try { console.log('[415] experience-completeness restored ' + missing.length + ' missing role(s) hidden'); } catch (_) {}
     return copy;
   }
+
+  // CV-CORECOMP-BLANK-001: a dedicated last-good snapshot/restore guard now lives in
+  // pwa/antcv-corecomp-loss-guard.js (parallel to antcv-cl-prose-loss-guard-985.js), plus the root
+  // apply-path fix in app.src.js (~line 25076: core_comp_rows now falls back to the section's own
+  // existing real rows, matching the profile/work_style pattern). Not duplicated here.
 
   function explodeAdditionalToSections(cv) {
     var xi = -1;

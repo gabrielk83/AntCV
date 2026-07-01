@@ -23,7 +23,7 @@
 
   var LAUNCH_ID = 'antcv-doc-chatbot-launch';
   var PANEL_ID = 'antcv-doc-chatbot-panel';
-  var MODEL = 'claude-opus-4-7';
+  var MODEL = 'claude-sonnet-5';   // SONNET-5-DROP-IN-001 (2026-07): cheaper ($3/$15 vs Opus $5/$25) AND faster for interactive Q&A; proxy normalizer sends thinking:disabled so the 1100 budget stays on the response
 
   function readJSON(k) { try { var r = localStorage.getItem(k); return r ? JSON.parse(r) : null; } catch (_) { return null; } }
   function activeDoc() { var d = readJSON('doc'); return d === 'cl' ? 'cl' : 'cv'; }

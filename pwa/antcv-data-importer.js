@@ -230,7 +230,7 @@
     const url = resolveProxyUrl();
     if (!url) throw new Error('No proxy URL configured. Open Settings → API and set the cv-proxy URL.');
     const body = {
-      model: 'claude-sonnet-4-5-20250929',
+      model: 'claude-sonnet-5',   // SONNET-5-DROP-IN-001 (2026-07): same-price upgrade over 4.5 for accuracy-critical DOCX->kernel extraction; proxy normalizer sends thinking:disabled so the 4096 budget stays on the response
       max_tokens: 4096,
       messages: [{ role: 'user', content: prompt }],
     };

@@ -10221,21 +10221,88 @@
           "▼",
         ),
       ),
-      React.createElement(
-        "div",
-        {
-          style: {
-            flex: 1,
-            fontSize: S ? 14 : 11,
-            fontWeight: e.on ? 600 : 400,
-            color: e.on ? "#222" : "#aaa",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          },
-        },
-        ye(e.title, u.get("language", "en")),
-      ),
+      // SECTION-TITLE-INLINE-001 (owner 2026-07-01): rename a rich_block section's
+      // HEADING inline from this list row (mirrors the rich-block editor's title
+      // field). Gated to type:"rich_block" so structural/pinned sections (whose
+      // title a sidecar may re-pin) are left read-only. stopPropagation on the
+      // pointer/click keeps editing from starting a row drag or selecting the row;
+      // onBlur/Enter commit, Escape restores. Writes secs[doc][ix].title + dispatch.
+      "rich_block" === e.type
+        ? React.createElement(
+            "div",
+            {
+              contentEditable: !0,
+              suppressContentEditableWarning: !0,
+              spellCheck: !1,
+              draggable: !1,
+              title: "Click to rename this section heading",
+              onClick: (ev) => ev.stopPropagation(),
+              onPointerDown: (ev) => ev.stopPropagation(),
+              onKeyDown: (ev) => {
+                "Enter" === ev.key
+                  ? (ev.preventDefault(), ev.currentTarget.blur())
+                  : "Escape" === ev.key &&
+                    (ev.preventDefault(),
+                    (ev.currentTarget.textContent = ye(
+                      e.title,
+                      u.get("language", "en"),
+                    )),
+                    ev.currentTarget.blur());
+              },
+              onBlur: (ev) => {
+                try {
+                  const nv = String(
+                      ev.currentTarget.textContent || "",
+                    ).trim(),
+                    cur = ye(e.title, u.get("language", "en"));
+                  if (!nv) return void (ev.currentTarget.textContent = cur);
+                  if (nv === cur) return;
+                  const secs = JSON.parse(
+                      localStorage.getItem("sections") || "{}",
+                    ),
+                    arr = secs && Array.isArray(secs[v]) ? secs[v] : null;
+                  if (arr) {
+                    const ix = arr.findIndex((x) => x && x.id === e.id);
+                    ix >= 0 &&
+                      ((arr[ix] = Object.assign({}, arr[ix], { title: nv })),
+                      localStorage.setItem("sections", JSON.stringify(secs)),
+                      window.dispatchEvent(
+                        new CustomEvent("antcv:sections-updated", {
+                          detail: { reason: "section-title-inline" },
+                        }),
+                      ));
+                  }
+                } catch (_) {}
+              },
+              style: {
+                flex: 1,
+                fontSize: S ? 14 : 11,
+                fontWeight: e.on ? 600 : 400,
+                color: e.on ? "#222" : "#aaa",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                cursor: "text",
+                outline: "none",
+              },
+            },
+            ye(e.title, u.get("language", "en")),
+          )
+        : React.createElement(
+            "div",
+            {
+              style: {
+                flex: 1,
+                fontSize: S ? 14 : 11,
+                fontWeight: e.on ? 600 : 400,
+                color: e.on ? "#222" : "#aaa",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              },
+            },
+            ye(e.title, u.get("language", "en")),
+          ),
       React.createElement(
         "div",
         {

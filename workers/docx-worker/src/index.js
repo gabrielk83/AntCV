@@ -25003,8 +25003,21 @@ function buildTwoColumnDocument(ctx) {
   // normally, or the full-width overflow block when balance-overflow re-flows it.
   if (!__overflowActive) {
     const __lastRendered = __renderSlots.length ? __renderSlots[__renderSlots.length - 1] : 0;
-    if (!mainPages[__lastRendered]) mainPages[__lastRendered] = [];
-    mainPages[__lastRendered].push(buildAiDisclosureHangingTextbox(ctx, { side: ctx.__aiWmCorner || "right" }));
+    // AI-NOTICE-SIDEBAR-ANCHOR-001 (owner 2026-07-01): CloudConvert/LibreOffice anchor the
+    // floating VML notice to its CONTAINING COLUMN frame and IGNORE
+    // mso-position-horizontal-relative:page, so a 'left' notice pushed into the MAIN (right)
+    // column landed at the main column's left edge, right of the sidebar (owner: "preview
+    // left-of-sidebar but PDF left-of-main"). Route the sentinel into the COLUMN whose
+    // physical side matches the chosen side — the sidebar column (at __sbPhys) for a
+    // sidebar-side notice, the main column otherwise — so the float anchors to the correct
+    // column. The v:rect still pins vertical to page-bottom, which resolves fine from inside
+    // a cell (that is what the current in-cell push already does). 'center' stays in the main
+    // column (true page-relative centring would need a DrawingML page-anchored float).
+    const __side = ctx.__aiWmCorner || "right";
+    const __toSidebar = (__side === "left" || __side === "right") && __side === __sbPhys;
+    const __col = __toSidebar ? sidebarPages : mainPages;
+    if (!__col[__lastRendered]) __col[__lastRendered] = [];
+    __col[__lastRendered].push(buildAiDisclosureHangingTextbox(ctx, { side: __side }));
   }
   if (__overflowActive) {
     const __twoCol = __renderSlots.filter((p) => p <= __lastMainSlot);
@@ -27879,7 +27892,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.116-ai-notice-left-margin";
+var VERSION = "1.14.117-ai-notice-sidebar-anchor";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

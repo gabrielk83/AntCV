@@ -49,7 +49,22 @@ async function build(extra) {
   const m = shape.match(/margin-left:(\d+)pt/);
   const ml = m ? Number(m[1]) : null;
   const horiz = ml === 0 ? 'left' : (ml != null && ml < 200) ? 'center' : (ml != null ? 'right' : null);
-  return { horiz, ml, sentinelLeft: xml.indexOf('__ANTCV_AIWM_') };
+  // AI-NOTICE-SIDEBAR-ANCHOR-001: which COLUMN cell carries the notice? The float anchors to
+  // its containing column frame in CloudConvert, so the cell placement IS the horizontal
+  // position. The SIDEBAR cell is the coloured one (makeSidebarCell shading fill=sidebarBg);
+  // the main cell has no colour. Detect by the notice's enclosing <w:tc> having a non-white
+  // <w:shd w:fill="..."> — order- and row-independent (works for left OR right sidebars).
+  let sidebarCell = null;
+  if (ni >= 0) {
+    const tcStart = xml.lastIndexOf('<w:tc>', ni);
+    const tcEnd = xml.indexOf('</w:tc>', ni);
+    if (tcStart >= 0 && tcEnd > ni) {
+      const cell = xml.slice(tcStart, tcEnd);
+      const shd = cell.match(/<w:shd\b[^>]*w:fill="([0-9A-Fa-f]{6})"/);
+      sidebarCell = !!(shd && shd[1].toLowerCase() !== 'ffffff');
+    }
+  }
+  return { horiz, ml, sidebarCell, sentinelLeft: xml.indexOf('__ANTCV_AIWM_') };
 }
 
 const checks = [];
@@ -57,10 +72,14 @@ const check = (n, ok, d) => { checks.push(ok); log(`${n}: ${ok ? 'OK' : 'FAIL'}$
 
 // AUTO (no manual pos) now defaults to the SIDEBAR side (AI-NOTICE-AUTO-SIDEBAR-001).
 const auto = await build({});
-log(`auto (no ai_notice_pos, sidebar left) -> ${auto.horiz}`);
+log(`auto (no ai_notice_pos, sidebar left) -> ${auto.horiz} [sidebarCell=${auto.sidebarCell}]`);
 check('auto defaults to the sidebar side (left)', auto.horiz === 'left', `got ${auto.horiz}`);
+// AI-NOTICE-SIDEBAR-ANCHOR-001: the notice must live in the SIDEBAR cell so the CloudConvert
+// float (anchored to its column frame) renders at the sidebar edge, not the main column's left.
+check('auto notice sits in the SIDEBAR cell', auto.sidebarCell === true, `got ${auto.sidebarCell}`);
 const autoR = await build({ style: { sidebarPosition: 'right' } });
 check('auto follows a right sidebar', autoR.horiz === 'right', `got ${autoR.horiz}`);
+check('right-sidebar auto notice sits in the SIDEBAR cell', autoR.sidebarCell === true, `got ${autoR.sidebarCell}`);
 // auto must ignore a stale ai_wm_side hint (it was unreliable) — sidebar still wins
 const autoHint = await build({ ai_wm_side: 'right' });
 check('auto ignores ai_wm_side hint -> still sidebar (left)', autoHint.horiz === 'left', `got ${autoHint.horiz}`);
@@ -68,12 +87,16 @@ check('auto ignores ai_wm_side hint -> still sidebar (left)', autoHint.horiz ===
 const left = await build({ ai_notice_pos: 'left' });
 check("manual 'left' forces left", left.horiz === 'left', `got ${left.horiz}`);
 check("manual 'left' consumed the sentinel", left.sentinelLeft < 0);
+check("manual 'left' notice sits in the SIDEBAR cell", left.sidebarCell === true, `got ${left.sidebarCell}`);
 
 const center = await build({ ai_notice_pos: 'center' });
 check("manual 'center' forces center", center.horiz === 'center', `got ${center.horiz}`);
+check("manual 'center' notice stays in the MAIN cell", center.sidebarCell === false, `got ${center.sidebarCell}`);
 
 const right = await build({ ai_notice_pos: 'right' });
 check("manual 'right' forces right", right.horiz === 'right', `got ${right.horiz}`);
+// left sidebar + manual right -> right is the MAIN column's side, so it stays in the main cell.
+check("manual 'right' (left sidebar) stays in the MAIN cell", right.sidebarCell === false, `got ${right.sidebarCell}`);
 
 // the reported bug: even if the auto hint says right, manual left must win
 const conflict = await build({ ai_notice_pos: 'left', ai_wm_side: 'right' });

@@ -16,7 +16,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.919';
+  var VERSION = '1.51.42';
   if (window.__antcvCoreCompCompress === VERSION) return;
   window.__antcvCoreCompCompress = VERSION;
 
@@ -70,6 +70,27 @@
     TIGHTEN.forEach(function (p) { v = v.replace(p[0], p[1]); });
     return v;
   }
+  // FOCUS-LABEL-EO-001 (owner 2026-07-01): the electro-optics / photonics Focus Area came back as a
+  // long label (e.g. "Optics, photonics & semiconductor devices") that the <=25 cap truncated at a
+  // word boundary to the DANGLING "Optics, photonics &" ("&" is not in capWords' trailing-separator
+  // set, so it survives the trim). Because this sidecar re-runs on every sections-updated, the
+  // truncation re-applied after every hard reset — the owner's inline edit reverted each time. Fix:
+  // canonicalise the whole EO/photonics cluster label to the owner-preferred short form (22 chars,
+  // fits the cap, never re-truncates). Whole-label replace, Focus Area column only. NAME-GUARDED to
+  // Gabriel so a generic candidate's optics label is never rewritten. Idempotent: the target matches
+  // the "eo & photonic" branch and maps to itself (fixpoint).
+  var CANON = [
+    [/^\s*(?:optics[\s,&]+photonics\b.*|eo\s*&\s*photonic\w*\b.*|electro-?optics?\b.*photonic.*)$/i, 'EO & Photonics sensors'],
+  ];
+  function canon(s) {
+    var v = String(s == null ? '' : s);
+    for (var i = 0; i < CANON.length; i++) { if (CANON[i][0].test(v)) return CANON[i][1]; }
+    return v;
+  }
+  function isGabriel() {
+    try { var p = JSON.parse(localStorage.getItem('personalInfo') || '{}') || {}; p = p.personalInfo || p; return /\bgabriel\b/i.test(String((p || {}).name || '')); }
+    catch (_) { return false; }
+  }
   function capWords(s, cap) {
     var v = String(s == null ? '' : s);
     if (v.length <= cap) return v;
@@ -90,6 +111,7 @@
     try {
       var secs = readSections();
       var changed = false;
+      var gab = isGabriel();
       ['cv', 'cl'].forEach(function (doc) {
         if (!Array.isArray(secs[doc])) return;
         secs[doc].forEach(function (s) {
@@ -110,7 +132,7 @@
             if (i === 0 || !Array.isArray(row)) return;     // skip header row
             // Focus Area: abbreviate (Docs/Reqs/Mgmt), tighten ("X team Coordination" → "X Coordination"),
             // expand any banned "Coord." → full word, cap to CAP_FOCUS.
-            if (typeof row[0] === 'string') { var fa = capWords(expand(tighten(abbreviate(row[0]))), CAP_FOCUS); if (fa !== row[0]) { row[0] = fa; changed = true; } }
+            if (typeof row[0] === 'string') { var fa = capWords(expand(tighten(abbreviate(gab ? canon(row[0]) : row[0]))), CAP_FOCUS); if (fa !== row[0]) { row[0] = fa; changed = true; } }
             // Strategic Expertise: expand banned "Coord.", then cap to the per-doc width.
             if (typeof row[1] === 'string') { var se = capWords(expand(row[1]), capFor(s)); if (se !== row[1]) { row[1] = se; changed = true; } }
           });
@@ -124,5 +146,5 @@
 
   window.addEventListener('antcv:sections-updated', run);
   [0, 300, 900, 2000, 3500, 6000].forEach(function (ms) { setTimeout(run, ms); });
-  window.AntcvCoreCompCompress = { version: VERSION, run: run, _cap: capWords, _abbr: abbreviate, _expand: expand, _tighten: tighten };
+  window.AntcvCoreCompCompress = { version: VERSION, run: run, _cap: capWords, _abbr: abbreviate, _expand: expand, _tighten: tighten, _canon: canon };
 })();

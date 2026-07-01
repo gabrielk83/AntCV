@@ -75,6 +75,36 @@ Work in this order:
    ACTIVE_BUGS EMDASH block for the exact line pairs). Skip if time-boxed out; it's old.
 7. RELOAD-LOOP-001 / SIGNIN-GATE-HARDREFRESH-001 — attempt headless repro; if no repro, document and leave.
 
+### Owner additions (2026-07-02 evening, from the owner-edited reference DOCX + CL review)
+8. **FIGURE-CONTACT-REF-001 (HIGH — owner gave the exact implementation)**. Reference DOCX (owner-edited,
+   do NOT commit it — real candidate data): `C:\Users\karpg\Downloads\CV_Gabriel_Alexander_Karp_Gershon_20260702.docx`.
+   Implement the candidate-header photo + contact line in the docx-worker exactly as the reference does:
+   - **Photo figure**: 1.50" × 1.50" (`wp:extent cx="1371600" cy="1371600"`), floating `wp:anchor`
+     **positionH relativeFrom="page"** posOffset 396240 EMU (0.433") + positionV relativeFrom="paragraph"
+     posOffset −365760 EMU (−0.40"), distT/B/L/R=0, behindDoc=0, layoutInCell=0, allowOverlap=1.
+     PAGE-anchored — the photo escapes the column/table (this is the owner's answer to the band-overlap
+     bridge float; supersedes the in-cell float-wrap open item).
+   - **Contact paragraph**: 8pt font, `w:ind w:left="2592" w:right="-216"` (1.8" before text, −0.15"
+     after text) so the text clears the page-anchored photo without a table-cell split.
+   Verify against a real CloudConvert PDF (photo position, no band overlap, contact one line). Check
+   preview parity (preview shows photo left + contact line ~equivalently).
+9. **CL-BRING-LEADIN-MISSING-001 (owner 2026-07-02)** — the WHAT I BRING lead-in AND the opening sentence
+   are NOT VISIBLE in the CL. Suspects: bring-to-rich-block-761 (BRING-EMPTY-SEED-001, 1.51.43) seeding,
+   the CL order/converter sidecars, or the hydration divergence (memory appjs-appsrc-contribute-divergence
+   — grep the DEPLOYED app.js directly, not just app.src.js). Repro headlessly with a full CL, fix, test.
+10. **WHAT-I-BRING-TRUNCATED-001 (owner screenshot 2026-07-02)** — bold-lead bullets CUT MID-SENTENCE at
+    line end in the export: "Supplier coordination assess feasibility, lead time, quality risk, and total
+    landed cost before" / "Change governance own change requests under ASPICE and ISO 26262; run impact
+    analysis across optics" / "KPI reporting build structures linking engineering progress, delivery
+    commitments, and business" — each ends abruptly (text loss, not a wrap). Likely the old
+    line-end-overflow / bring-truncation item resurfaced or a compression cap cutting at char budget
+    without sentence-boundary respect. Find the cutter, fix to trim at sentence/clause boundaries only.
+11. **Owner-confirmed orphan list (green marks, export 2026-07-02)** — validates Task 4 item 1 scope:
+    "customer-facing work." (CRL), "product variants." / "signal validation." / "measurement setups."
+    (System Architect — NEW, all three), "smartphone optics and biometrics." / "Imatest, and Qualcomm
+    tools." (Sirin), "in commercial devices." (Sirin Results). Use these as the acceptance set for the
+    orphan v2 preflight: after implementation, a re-export must clear ALL green-marked runts.
+
 ## Task 5 — NIL Technology application feature verification
 Owner application: **Nanooptics Prototyping Engineer — NIL Technology** (JD PDF has no text layer; the
 saved application lives in the owner's browser localStorage / cloud KV). If Chrome MCP is connected,

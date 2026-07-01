@@ -25316,8 +25316,25 @@
                                 );
                               });
                         })();
-                      for (const e of t)
-                        r.some((t) => t.id === e.id) || l.push(e);
+                      // EMPTY-ROLE-SOURCE-001: LLM-returned roles not in the editor
+                      // list (r) were pushed verbatim. The gen prompt orders "5+
+                      // on:true" slots, so the model emits extras (r8/r9/r10) whose
+                      // bracketed "[Role title]"/"[Company name]" text is emptied by
+                      // kernel-completeness-290's placeholder scrub — landing as blank
+                      // on:true rows that antcv-empty-role-hide.js then mops up at
+                      // boot. Fix at source: drop a role with no title AND no company;
+                      // push any populated extra as on:false (hidden, recoverable,
+                      // mirrors the on:!1 backfill below) so it never renders empty.
+                      for (const e of t) {
+                        if (r.some((t) => t.id === e.id)) continue;
+                        const _hasContent = !!(
+                          e &&
+                          ((e.title && String(e.title).trim()) ||
+                            (e.company && String(e.company).trim()))
+                        );
+                        if (!_hasContent) continue;
+                        l.push({ ...e, on: !1 });
+                      }
                       // EXP-HIDDEN-ROLES-001: a kernel role absent from both the
                       // editor list (r) and the LLM output (t) was being dropped
                       // entirely, so the editor padded with blank "New role"

@@ -858,6 +858,28 @@ const INFORMATIONAL_FIELDS = new Set([
   'proxyUrl_lastCloud',
 ]);
 
+// D1-WRITE-RETRY-001 (owner 2026-07-02): a transient D1 write failure surfaced to the client as
+// `d1_write_failed` during rapid kernel/prefs saves — SQLite write contention or a momentary
+// storage/network blip on the write. Retry the .run() a few times with exponential backoff before
+// giving up, so a momentary lock no longer fails the save. SAFE to retry: every write wrapped here
+// is an idempotent upsert (ON CONFLICT DO UPDATE) or DELETE, so a re-applied write can never
+// double-insert. Reads (.first()/.all()) are NOT retried here. Returns the run() result on success;
+// re-throws the LAST error so the existing catch still returns d1_write_failed after real failures.
+async function d1RunWithRetry(stmt, tries = 4, baseMs = 50) {
+  let lastErr;
+  for (let i = 0; i < tries; i++) {
+    try {
+      return await stmt.run();
+    } catch (e) {
+      lastErr = e;
+      if (i === tries - 1) break;
+      // 50ms, 100ms, 200ms — total worst-case added latency ~350ms before final failure.
+      await new Promise((r) => setTimeout(r, baseMs * (1 << i)));
+    }
+  }
+  throw lastErr;
+}
+
 // kernel v2 §4: POST/PUT /api/profile/kernel-v2 — persist the ingested v2 kernel
 // into the STAGING column user_kernel.kernel_v2. NON-DESTRUCTIVE: the v1
 // identity/history/preferences are left untouched (the live generation path keeps
@@ -893,11 +915,11 @@ async function handleApiKernelV2(request, env) {
   const json = JSON.stringify(kernel);
   const now = Date.now();
   // create the row if absent (empty v1 slots), else update ONLY kernel_v2 + clock.
-  await env.DB.prepare(
+  await d1RunWithRetry(env.DB.prepare(
     'INSERT INTO user_kernel (user_hash, identity, history, preferences, kernel_v2, created_at, updated_at) ' +
     "VALUES (?, '{}', '{}', '{}', ?, ?, ?) " +
     'ON CONFLICT(user_hash) DO UPDATE SET kernel_v2 = excluded.kernel_v2, updated_at = excluded.updated_at'
-  ).bind(userHash, json, now, now).run();
+  ).bind(userHash, json, now, now)); // D1-WRITE-RETRY-001
   return jsonResponse({ ok: true, roles: kernel.experience.length, bytes: json.length }, 200, request, env);
 }
 
@@ -1355,7 +1377,7 @@ async function handleApiPrefs(request, env) {
             'INSERT INTO user_kernel (user_hash, identity, history, preferences, photo_b64, created_at, updated_at) ' +
             'VALUES (?, ?, ?, ?, ?, ?, ?) ' +
             'ON CONFLICT(user_hash) DO UPDATE SET ' + sets.join(', ');
-          await env.DB.prepare(sql).bind(
+          await d1RunWithRetry(env.DB.prepare(sql).bind(
             userHash,
             JSON.stringify(newIdentity),
             JSON.stringify(newHistory),
@@ -1363,7 +1385,7 @@ async function handleApiPrefs(request, env) {
             newPhoto === undefined ? null : newPhoto,
             now,
             now
-          ).run();
+          )); // D1-WRITE-RETRY-001
           d1Written = true;
         } catch (eD1) {
           // D1 failure must not silently drop data — surface it. KV write
@@ -2218,7 +2240,7 @@ async function handleApiProfileKernel(request, env) {
         'INSERT INTO user_kernel (user_hash, identity, history, preferences, photo_b64, created_at, updated_at) ' +
         'VALUES (?, ?, ?, ?, ?, ?, ?) ' +
         'ON CONFLICT(user_hash) DO UPDATE SET ' + sets.join(', ');
-      await env.DB.prepare(sql).bind(
+      await d1RunWithRetry(env.DB.prepare(sql).bind(
         userHash,
         JSON.stringify(identityToWrite),
         JSON.stringify(historyToWrite),
@@ -2226,7 +2248,7 @@ async function handleApiProfileKernel(request, env) {
         photoB64 === undefined ? null : photoB64,
         now,
         now
-      ).run();
+      )); // D1-WRITE-RETRY-001
       const row = await env.DB.prepare(
         'SELECT * FROM user_kernel WHERE user_hash = ? LIMIT 1'
       ).bind(userHash).first();
@@ -2383,7 +2405,7 @@ async function handleApiApplications(request, env) {
 
     try {
       // Idempotent upsert on (user_hash, jd_hash).
-      await env.DB.prepare(
+      await d1RunWithRetry(env.DB.prepare(
         'INSERT INTO application ' +
         '(user_hash, jd_hash, jd_text, supporting_context, jd_language, jd_company, jd_role, subtitle, meta, category, rationale, cv_sections, cl_sections, created_at, updated_at) ' +
         'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?) ' +
@@ -2400,7 +2422,7 @@ async function handleApiApplications(request, env) {
       ).bind(
         userHash, jdHash, jdText, supportingCtx, jdLanguage,
         jdCompany, jdRole, subtitle, meta, category, rationale, now, now
-      ).run();
+      )); // D1-WRITE-RETRY-001
       const row = await env.DB.prepare(
         'SELECT * FROM application WHERE user_hash = ? AND jd_hash = ?'
       ).bind(userHash, jdHash).first();

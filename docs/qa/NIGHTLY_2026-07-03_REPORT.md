@@ -72,3 +72,13 @@ Remaining work: strengthen `f()` (replacement-char ratio, mean word length, char
 - `node pwa/test/boot-smoke.mjs`: OK.
 - `node pwa/test/diag-gate-probe.mjs`: editor renders.
 - `node scripts/check-cache-bust.mjs`: report-only drift for app.js/version-override resolves with this commit; other drifts pre-existing/out of scope.
+
+---
+
+## Re-dispatch verification (second run, 2026-07-03)
+
+Nightly was dispatched again after the ship above. No new code shipped — verified the 1.51.53 ship holds and made an evidence-based call not to force a second, parity-risky ship.
+
+- Re-ran full gates on clean `main` @ `7c2bf51`: suite **590/590**, `boot-smoke` OK (errors=0), `diag-gate-probe` renders past the sign-in gate. `app.js` head `(()=>{`, zero `use strict`. Version quintet consistent at 1.51.53 (ANTCV_VERSION seed / app.js?v / TARGET_VERSION).
+- **PAN-IDRAET-BULLET-NEARDUP-001 parity gap CONFIRMED at code (strengthens the deferral):** the preview Results memo (`pwa/app.src.js` 6208-6217) runs `AntcvApplyOutcomesMode` on a deep copy but reads back **only** `r2.results` into its per-role map (`m["id:"+r2.id]=r2.results`, line 6216) — it never captures `r2.bullets`. The preview renders bullets from raw `root` localStorage sections, not from the export-computed sections. So any bullet-collapse added inside `applyOutcomesMode` (2688-2719) drops the dup bullet in the **PDF only** while the **preview still shows both** → preview↔export desync (the class of bug owner flags, cf. gabriel-results-pin-parity). A correct fix must also extend the preview memo to capture `bullets` AND swap the preview bullet-render source — a render-gated change not solidly verifiable headless (no live browser to confirm PDF parity). Deferred to a session that can drive the preview/PDF live. Diagnosis + test plan from the first run stand.
+- All other items unchanged from the first run: orphans v2 (render-gated), JD-scan / NIL QnA (blocked on real LLM/vision), cascade + gen-flow (need D1 `llm_calls` telemetry, not reachable headless offline).

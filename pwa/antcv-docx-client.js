@@ -920,8 +920,14 @@ function mergeHowContributeFromLocalStorage(docSections, doc) {
     // Prefer NON-EMPTY bullets over items: the shape-guard sidecar stamps
     // bullets:[] onto every stored section, so an empty bullets array means
     // "no sidecar edit", not "delete the bullets" (HOWCONTRIBUTE-001).
-    const bullets = (Array.isArray(src.bullets) && src.bullets.length ? src.bullets : Array.isArray(src.items) ? src.items : [])
-      .map(x => String(x || '').trim()).filter(Boolean);
+    const rawList = (Array.isArray(src.bullets) && src.bullets.length ? src.bullets : Array.isArray(src.items) ? src.items : []);
+    // CONTRIBUTE-RICHBLOCK-EXPORT-001 (owner 2026-07-01: "How I would contribute not visible in
+    // PDF"). This merge is for the LEGACY string-bullet contribute. The current contribute is a
+    // rich_block whose items are OBJECTS ({b,t,mk}); String(obj) -> "[object Object]", which then
+    // overwrote the real items (merged.items = bullets below) and BLANKED HWIC in the export. If the
+    // stored items are objects, the rich_block section is already complete — leave it untouched.
+    if (rawList.some(x => x && typeof x === 'object')) return docSections;
+    const bullets = rawList.map(x => String(x || '').trim()).filter(Boolean);
     return docSections.map(s => {
       if (!s || !rx.test(String(s.title || s.name || s.id || ''))) return s;
       const merged = {

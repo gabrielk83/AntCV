@@ -799,6 +799,69 @@
     return copy;
   }
 
+  // EXPERIENCE-EMPTY-SLOT-HIDE-001 (owner 2026-07-01: "four empty roles" — the CV export showed
+  // four "[Role title], [Company] [Years]" rows with no bullets). The me() skeleton ships unused
+  // experience slots (empty/placeholder title + company, no bullets) with on:true; the renderer
+  // substitutes "[Role title]" placeholders, so they print as empty roles in preview + export. HIDE
+  // (on:false) any role that is ENTIRELY empty — no real title AND no real company AND no real bullet
+  // AND no real outcome/result. Never touches a role with ANY real content; reversible (on:false).
+  function hideEmptyRoleSlots(cv) {
+    var idx = -1;
+    for (var i = 0; i < cv.length; i++) { if (cv[i] && cv[i].id === 'experience') { idx = i; break; } }
+    if (idx < 0) return null;
+    var sec = cv[idx];
+    var roles = Array.isArray(sec.roles) ? sec.roles : [];
+    if (!roles.length) return null;
+    var ph = function (v) { var s = String(v == null ? '' : v).trim(); return !s || s.charAt(0) === '['; };
+    var realBullet = function (r) {
+      var bs = (r && r.bullets) || [];
+      return Array.isArray(bs) && bs.some(function (b) { return !ph(b && typeof b === 'object' ? (b.t || b.text || '') : b); });
+    };
+    var realOutcome = function (r) {
+      if (r && (r.result || r.results)) { var rr = r.result || r.results; if (!ph(rr && typeof rr === 'object' ? (rr.t || rr.result || '') : rr)) return true; }
+      var os = (r && r.outcomes) || [];
+      return Array.isArray(os) && os.some(function (o) { return o && !ph(o.result || o.title || o); });
+    };
+    var changed = false;
+    var newRoles = roles.map(function (r) {
+      if (!r || r.on === false) return r;
+      if (ph(r.title || r.role) && ph(r.company) && !realBullet(r) && !realOutcome(r)) {
+        changed = true;
+        return Object.assign({}, r, { on: false });
+      }
+      return r;
+    });
+    if (!changed) return null;
+    var copy = cv.slice();
+    copy[idx] = Object.assign({}, sec, { roles: newRoles });
+    try { console.log('[415] hid empty experience slot(s)'); } catch (_) {}
+    return copy;
+  }
+
+  // ACCESSIBILITY-PREVIEW-TYPE-001 (owner 2026-07-01: "accessibility not visible in preview"). The
+  // preview sidebar renders labeled_list / rich_block / education, NOT type:"text" — and 763 MANAGES
+  // accessibility as labeled_list — but the me() skeleton + repairAccessibilityFromPI produce
+  // type:"text", so the dedicated ACCESSIBILITY section was invisible in the preview (it still
+  // EXPORTED, because the worker renders type:"text"). Convert a REAL-content type:"text" accessibility
+  // to a single labeled_list item ({l:"", v:content}); an empty label renders just the value in BOTH
+  // the preview (`l && …`) and the worker (`l && v ? "l: v" : l || v`). A placeholder
+  // ("[ACCESSIBILITY …]") is left for repairAccessibilityFromPI to fill first (this runs after it).
+  function accessibilityToLabeledList(cv) {
+    for (var i = 0; i < cv.length; i++) {
+      var s = cv[i];
+      if (!s || s.id !== 'accessibility' || s.type !== 'text') continue;
+      var av = String(s.content == null ? '' : s.content).trim();
+      if (!av || av.charAt(0) === '[') return null;   // placeholder/empty -> leave it for the repair
+      var copy = cv.slice();
+      var ns = Object.assign({}, s, { type: 'labeled_list', items: [{ l: '', v: av }] });
+      delete ns.content;
+      copy[i] = ns;
+      try { console.log('[415] accessibility text -> labeled_list (preview parity)'); } catch (_) {}
+      return copy;
+    }
+    return null;
+  }
+
   // CV-CORECOMP-BLANK-001: a dedicated last-good snapshot/restore guard now lives in
   // pwa/antcv-corecomp-loss-guard.js (parallel to antcv-cl-prose-loss-guard-985.js), plus the root
   // apply-path fix in app.src.js (~line 25076: core_comp_rows now falls back to the section's own
@@ -1199,8 +1262,10 @@
       var no = neutralizeUnsolicitedOpener(cv); if (no) { cv = no; changed = true; }
       var rl = repairLanguagesFromPI(cv); if (rl) { cv = rl; changed = true; }
       var ra = repairAccessibilityFromPI(cv); if (ra) { cv = ra; changed = true; }
+      var al = accessibilityToLabeledList(cv); if (al) { cv = al; changed = true; }
       var re = repairExperienceFromPI(cv); if (re) { cv = re; changed = true; }
       var rec = repairExperienceCompleteness(cv); if (rec) { cv = rec; changed = true; }
+      var hes = hideEmptyRoleSlots(cv); if (hes) { cv = hes; changed = true; }
       var ex = explodeAdditionalToSections(cv); if (ex) { cv = ex; changed = true; }
       var pa = partitionAdditional(cv); if (pa) { cv = pa; changed = true; }
       var jr = scrubJuniorRugby(cv); if (jr) { cv = jr; changed = true; }

@@ -28818,11 +28818,37 @@
           // step in vl() hangs or a completion path misses its Bl(!1), leaving the
           // banner + "Showcase…" pill up although the result is already in state
           // (today the user must reload to recover). This backstop clears the stale
-          // generating state after a generous margin past the ~60s max generation
-          // time, so recovery is automatic. UI-only — touches no generation/cloud path.
-          const e = setTimeout(() => {
+          // generating state so recovery is automatic. UI-only — touches no
+          // generation/cloud path.
+          // OVERLAY-EARLY-HALT-001 (owner 2026-07-02): the old FIXED 2-minute (12e4)
+          // timer fired MID-GENERATION — the app's own status says a generation is
+          // "typically 3–6 min" and a single LLM call may run up to 10 min (the 6e5
+          // abort), plus consensus + retries — so the showcase overlay closed while
+          // generation was STILL running and the owner saw blank who/why/bring
+          // ("keep it on ≥4 more minutes… you captured some halt in the middle").
+          // The watchdog must only fire when the run is genuinely DONE-or-STUCK, never
+          // while it is still working. Use the per-LLM-call cost meter
+          // (window.__antcvGenCost, bumped on every call) as an activity heartbeat:
+          // while cost keeps moving the run is alive, so reschedule; clear only after a
+          // long IDLE with no LLM activity (past the 10-min single-call cap) or a hard
+          // ceiling. The normal completion/error paths still clear the flag first, so
+          // this only ever fires on a true hang.
+          const START = Date.now();
+          const IDLE_MS = 66e4; // ~11 min with NO new LLM cost -> the in-flight call aborted (6e5) and nothing resumed = genuinely stuck
+          const HARD_MS = 12e5; // 20 min absolute backstop for a wedged run
+          let lastCost = -1,
+            lastMoveAt = Date.now(),
+            timer = null;
+          const tick = () => {
             try {
-              if (u.get("kernelShowcaseInProgress", !1)) {
+              if (!u.get("kernelShowcaseInProgress", !1)) return; // cleared by the normal completion/error path
+              const cost = window.__antcvGenCost || 0;
+              if (cost !== lastCost) {
+                ((lastCost = cost), (lastMoveAt = Date.now()));
+              }
+              const idle = Date.now() - lastMoveAt,
+                total = Date.now() - START;
+              if (idle >= IDLE_MS || total >= HARD_MS) {
                 try {
                   u.set("kernelShowcaseInProgress", !1);
                 } catch (e) {}
@@ -28831,13 +28857,20 @@
                 } catch (e) {}
                 try {
                   console.warn(
-                    "[KERNEL-STUCK-LAST-CMD-001] showcase in-progress watchdog fired — cleared stale generating state",
+                    "[KERNEL-STUCK-LAST-CMD-001] showcase watchdog fired — " +
+                      (total >= HARD_MS
+                        ? "hard ceiling"
+                        : "no LLM activity for " + Math.round(idle / 1e3) + "s") +
+                      " — cleared stale generating state",
                   );
                 } catch (e) {}
+                return;
               }
+              timer = setTimeout(tick, 3e4); // still alive — re-check in 30s
             } catch (e) {}
-          }, 12e4);
-          return () => clearTimeout(e);
+          };
+          timer = setTimeout(tick, 6e4); // first check at 60s
+          return () => clearTimeout(timer);
         }, [Pl]),
         React.useEffect(() => {
           if ("undefined" == typeof window) return;

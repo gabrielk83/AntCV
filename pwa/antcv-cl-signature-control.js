@@ -101,6 +101,34 @@
     }
   }
 
+  // Effective background luminance (0..255) behind an element: walk ancestors for the first
+  // background-color with alpha >= 0.5. Returns null if none is resolvable.
+  function bgLum(el) {
+    var node = el;
+    for (var i = 0; node && i < 14; i++, node = node.parentElement) {
+      try {
+        var m = String(getComputedStyle(node).backgroundColor || '').match(/rgba?\(([^)]+)\)/);
+        if (m) {
+          var p = m[1].split(',').map(function (s) { return parseFloat(s); });
+          var a = p.length > 3 ? p[3] : 1;
+          if (a >= 0.5 && p.length >= 3) return 0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2];
+        }
+      } catch (_) {}
+    }
+    return null;
+  }
+  // Make the signature thumbnail fit whatever panel it sits in, and flip the ink light on a dark
+  // panel so dark-ink signatures stay visible. Default to the dark treatment when the background
+  // can't be resolved — this control lives in the (dark) settings panel. SIGNATURE-THUMB-ADAPT-001.
+  function adaptThumb(thumb) {
+    try {
+      var lum = bgLum(thumb.parentElement || thumb);
+      var dark = (lum == null) ? true : lum < 110;
+      thumb.style.background = 'transparent';
+      thumb.style.filter = dark ? 'brightness(0) invert(1)' : '';
+    } catch (_) {}
+  }
+
   function build() {
     var box = document.createElement('div');
     box.setAttribute('data-antcv-cl-sig-control', '1');
@@ -127,7 +155,10 @@
     var thumbWrap = document.createElement('div');
     thumbWrap.style.cssText = 'display:flex;align-items:center;gap:10px;flex-wrap:wrap;';
     var thumb = document.createElement('img');
-    thumb.style.cssText = 'max-width:120px;max-height:48px;background:#fff;border-radius:4px;padding:2px;display:none;';
+    // SIGNATURE-THUMB-ADAPT-001 (owner 2026-07-01: "the signature background should fit the section
+    // it is in; if the bg is dark, flip the ink light"). No hardcoded white box — the background is
+    // set to fit the panel and the ink is light-flipped on a dark panel by adaptThumb() on refresh.
+    thumb.style.cssText = 'max-width:120px;max-height:48px;border-radius:4px;padding:2px;display:none;background:transparent;';
     var fileIn = document.createElement('input');
     fileIn.type = 'file';
     fileIn.accept = 'image/png,image/jpeg,image/jpg,image/gif,image/webp';
@@ -288,7 +319,7 @@
     }
     box.__refresh = function () {
       var b64 = get(K.b64, '');
-      if (b64) { thumb.src = b64; thumb.style.display = ''; removeBtn.style.display = ''; }
+      if (b64) { thumb.src = b64; thumb.style.display = ''; removeBtn.style.display = ''; adaptThumb(thumb); }
       else { thumb.style.display = 'none'; removeBtn.style.display = 'none'; }
       hiddenCb.checked = get(K.hidden, '0') === '1';
       setAlignActive(alignBtns);

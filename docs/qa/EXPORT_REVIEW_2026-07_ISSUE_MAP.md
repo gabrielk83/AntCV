@@ -74,8 +74,16 @@ nightly (`docs/qa/CLOUD_ROUTINE_PROMPT.md` → CURRENT BACKLOG).
   dropped two roles; `repairExperienceFromPI` only rebuilds a fully-degraded section. New
   EXPERIENCE-COMPLETENESS-001 (415) merges any `personalInfo` role absent from the section back in
   as HIDDEN (`on:false`) — present + recoverable, visible CV unchanged.
-- **#6 Signature cut — RESOLVED (no code).** Owner confirms the signature is intact in the PDF; only
-  Adobe's image-editor view clips the full "G". C8 closed.
+- **#6 Signature cut — FIX SHIPPED (wk 1.14.111), owner-verify-pending.** CORRECTION: I initially
+  read the owner's hint backwards. The PDF DOES cut the signature; the image opened FROM Adobe's PDF
+  editor is intact. That is a root-cause hint, not a resolution: the embedded raster is complete, so
+  LibreOffice/CloudConvert draws the full-size image and then CLIPS it to the table row's CONTENT
+  rectangle. The row had no explicit height, so auto-sizing computed it from the paragraph LINE box
+  (font ascent/descent) instead of the inline image height, cropping the lower-left descender of the
+  "G". CL-SIGNATURE-CLIP-004: set `w:trHeight` `hRule="atLeast"` on the signature row to reserve the
+  full image height + cell margins (twips = px·15 + 400). Aspect is already correct (client forwards
+  the real `signature_aspect`), so this is height reservation, not scaling. Owner: verify a real
+  export now shows the full "G".
 - **#2 core_comp blank / #4 CL mostly blank / #7 accessibility dropped on 2nd gen — FIXED 1.51.29
   (two independent nightly runs converged on complementary fixes for each item), regen-cycle
   verification owed.** Convergence/restore reliability (owner: "the way you push from memory is

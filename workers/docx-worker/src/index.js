@@ -25218,6 +25218,16 @@ function buildLinearDocument(ctx) {
           insideHorizontal: __sigNoBorder, insideVertical: __sigNoBorder
         },
         rows: [new TableRow({
+          // CL-SIGNATURE-CLIP-004 (owner 2026-07-01, corrected: the PDF CLIPS the signature but the
+          // embedded image opened from Adobe's PDF editor is INTACT — so LibreOffice/CloudConvert
+          // draws the full-size image and then clips it to the row's CONTENT rectangle, which auto-
+          // sizing computed from the paragraph LINE box (font ascent/descent), NOT the inline image
+          // height. Reserve the row height explicitly (w:trHeight hRule="atLeast") to at least the
+          // image height + the cell's top/bottom margins, so the clip rectangle is tall enough and
+          // the whole glyph (incl. the lower-left descender of the "G") renders. Aspect is already
+          // correct (client forwards the real signature_aspect), so this is a height-reservation fix,
+          // not a scaling one. Twips: 1px = 15 twips @96dpi; margins 80+260; +60 slack.
+          height: { value: Math.round(__sigH * 15) + 400, rule: "atLeast" },
           children: [new TableCell({
             width: { size: __sigCellW, type: WidthType.DXA },
             borders: {
@@ -27831,7 +27841,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.110-cl-bottom-rule";
+var VERSION = "1.14.111-sig-rowheight";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

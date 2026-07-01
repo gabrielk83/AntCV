@@ -25,7 +25,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.994-nordic-cl-order';
+  var VERSION = '1.51.45-nordic-cl-order';
   if (window.__antcvNordicClOrder971 === VERSION) return;
   window.__antcvNordicClOrder971 = VERSION;
 
@@ -148,11 +148,17 @@
     return { changed: changed, list: out };
   }
 
+  // NORDIC-CL-ORDER-MANUAL-001 (owner 2026-07-02): the Nordic order is the DEFAULT only — the
+  // user may reorder CL sections after. Once a manual CL reorder sets this flag, stop enforcing
+  // the ORDER (the content transforms below still run). Cleared implicitly only by clearing the
+  // flag; a manual choice persists across reloads (that is the point — the move must stay).
+  function orderManual() { try { var v = localStorage.getItem('antcv:cl-order-manual'); return v === '1' || v === 'true'; } catch (_) { return false; } }
+
   function run() {
     try {
       if (disabled() || !isNordicMinimal()) return;
       var secs = readSections(); if (!secs || !Array.isArray(secs.cl)) return;
-      var a = reorder(secs.cl);
+      var a = orderManual() ? { changed: false, list: secs.cl } : reorder(secs.cl);
       var b = bringBullets(a.list);
       var g = contributeGoal(b.list);
       var sd = seedInstructions(g.list);

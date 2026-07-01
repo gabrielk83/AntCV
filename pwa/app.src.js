@@ -26457,16 +26457,21 @@
             (vo("Failed: " + e.message), $t("upload"), (window.__antcvGenRunning = !1));
           }
         }),
-        ($a = (e, t) =>
-          Bi((n) => {
+        ($a = (e, t) => {
+          // NORDIC-CL-ORDER-MANUAL-001 (owner 2026-07-02): a manual CL section move flags the
+          // Nordic order sidecar to stop re-ordering, so the move persists across refresh.
+          try { if ("cl" === Lt) localStorage.setItem("antcv:cl-order-manual", "1"); } catch (_) {}
+          return Bi((n) => {
             const o = [...n],
               r = e + t;
             return r < 0 || r >= o.length
               ? n
               : (([o[e], o[r]] = [o[r], o[e]]), o);
-          })),
-        (Aa = (e, t, n = null) =>
-          Bi((o) => {
+          });
+        }),
+        (Aa = (e, t, n = null) => {
+          try { if ("cl" === Lt) localStorage.setItem("antcv:cl-order-manual", "1"); } catch (_) {}
+          return Bi((o) => {
             if (e === t || e < 0 || t < 0 || e >= o.length || t >= o.length)
               return o;
             const r = [...o];
@@ -26476,7 +26481,8 @@
               r.splice(t, 0, a),
               r
             );
-          })),
+          });
+        }),
         (Ia = (e) =>
           Bi((t) =>
             t.map((t) => {

@@ -46,18 +46,22 @@ the BROAD PdM/BA/process identity, not the electro-optics niche. The generation 
 distinguishes unsolicited (broad) vs JD-targeted — verify the unsolicited branch drives core_comp
 from the broad identity, not the photonics cluster. Regen-gated.
 
-### 2. ROLE-DEDUP + ORDERING (HIGH)
-`pwa/antcv-sections-normalize-415.js` `dedupeRoles` merges only IDENTICAL titles + overlapping years. The
-owner's EXPERIENCE has DUPLICATES from company-spelling variants:
+### 2. ROLE-DEDUP + ORDERING (HIGH — widespread)
+Owner (2026-07-01): **MANY positions are DOUBLED — not just the voluntary ones** — so treat this as a
+broad experience-dedup problem, not a few special cases. `pwa/antcv-sections-normalize-415.js`
+`dedupeRoles` merges only IDENTICAL titles + overlapping years, which misses almost all of them. Known
+examples (but assume most roles are affected):
 - Computer Systems Administrator — "IDF, Communication Corps" vs "Israel Defense Forces, Communication Corps"
 - Students Council Representative — "Tel Aviv University" vs "…- Electrical Engineering"
 - Team Operations Manager — "(foreningsarbejde), Pan Idræt" vs "& Assistant Coach (Volunteer), Copenhagen Wolves RFC - Pan Idræt"
+- (verify the FULL live `localStorage.sections` — the owner reports the doubling is pervasive across paid roles too)
 FIX: merge same-title / same-year-range roles whose COMPANY strings are spelling variants (normalise company:
 expand common acronyms e.g. IDF↔Israel Defense Forces, strip trailing qualifiers after "-"/","), keeping the
 RICHER bullet+result set. Then **VOLUNTARY roles sort LAST** — Students Council Representative + rugby
 (foreningsarbejde / "Volunteer") go after the paid history — and within the voluntary block keep
-reverse-chron: owner (2026-07-01) "Students Council should be AFTER Rugby operations (earlier volunteer
-work, was placed before)". Rugby 2023-present precedes Students Council 2005-2007. Also: **3 empty roles
+reverse-chron: owner (2026-07-01) "Students Council **STILL** shows BEFORE Rugby operations — it must be
+AFTER" (earlier volunteer work sorts after the later one). Rugby 2023-present precedes Students Council
+2005-2007; the current ordering is still wrong and must be fixed. Also: **3 empty roles
 jump in/out** right after the PROFESSIONAL EXPERIENCE heading — the empty-slot-hide (EXPERIENCE-EMPTY-SLOT-HIDE-001, 1.51.32) is fighting
 another injector during the sections-updated storm; make it idempotent + ensure nothing re-adds the hidden
 slots (stable across passes). Diagnose on the owner's LIVE `localStorage.sections`. Node-test the dedup +

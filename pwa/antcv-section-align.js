@@ -219,6 +219,23 @@
     // Also align the section block itself so block-level elements
     // (like single-line headers) line up.
     if (sectionEl.style.textAlign !== alignment) sectionEl.style.textAlign = alignment;
+    // CJLR-HEADLINE-001 (owner 2026-07-02: "full section cjlr is not working on headlines"). The
+    // section HEADING is a React div with a HARDCODED inline textAlign (sidebar->center, main->left),
+    // which overrides the block-level textAlign above, so the whole-section cycler never moved the
+    // headline. Align the heading DIV (parent of the title editable) directly — but ONLY when the
+    // user EXPLICITLY set an alignment via the cycler, so an untouched sidebar heading keeps its
+    // centered default. Idempotent (guarded write); re-applied after each React commit by the observer.
+    try {
+      var __sid = sectionEl.getAttribute && sectionEl.getAttribute('data-sid');
+      var __map = (readPi()[PREFS_KEY] || {})[FIELD] || {};
+      if (__sid && ALIGNMENTS.indexOf(__map[__sid]) >= 0) {
+        var __titleEd = sectionEl.querySelector('[data-edit-path="title"]');
+        if (__titleEd && __titleEd.closest('[data-sid]') === sectionEl) {
+          var __head = __titleEd.parentElement;
+          if (__head && __head.style.textAlign !== alignment) __head.style.textAlign = alignment;
+        }
+      }
+    } catch (_) {}
   }
 
   // ─── Cycler button ────────────────────────────────────────────────

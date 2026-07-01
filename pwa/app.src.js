@@ -10160,7 +10160,21 @@
           const o = Number(n.dataTransfer.getData("text/plain"));
           Number.isFinite(o) && r && r(o, t, e.loc);
         },
-        onClick: () => d(e.id),
+        // SECTION-TITLE-CLICK-EDIT-001 (owner 2026-07-02): clicking the GRAY area of a
+        // rich_block row focuses its inline title editor (same as clicking the title text);
+        // moving stays on long-press. Non-rich_block rows keep select-on-click.
+        onClick: (ev) => {
+          if ("rich_block" === e.type) {
+            const ed =
+              ev.currentTarget &&
+              ev.currentTarget.querySelector('[contenteditable="true"]');
+            if (ed) {
+              ed.focus();
+              return;
+            }
+          }
+          d(e.id);
+        },
         style: {
           display: "flex",
           alignItems: "center",

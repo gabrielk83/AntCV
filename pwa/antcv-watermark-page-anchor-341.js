@@ -367,7 +367,7 @@
           // belongs on the RIGHT — opposite the left-aligned signature — per the
           // original spec. The CV stays dynamic (whichever column has more room).
           var __mp = manualNoticePos();
-          var corner = docIsCl() ? 'right' : (__mp || chooseCornerCached(box, __wmSig));
+          var corner = docIsCl() ? 'right' : (__mp || sidebarSideOf());
           anchorToCorner(wm, box, corner);
           stashWmSide(corner);
         } catch (_) {}
@@ -386,7 +386,7 @@
         clone.removeAttribute(HIDDEN_FLAG);
         clone.style.display = '';
         lastPage.appendChild(clone);
-        var corner2 = manualNoticePos() || chooseCornerCached(lastPage, __wmSig);
+        var corner2 = manualNoticePos() || sidebarSideOf();
         anchorToCorner(clone, lastPage, corner2);
         stashWmSide(corner2);
       } catch (_) {}
@@ -407,6 +407,17 @@
       var p = localStorage.getItem('antcv:aiNoticePos');
       return (p === 'left' || p === 'center' || p === 'right') ? p : null;
     } catch (_) { return null; }
+  }
+  // AI-NOTICE-PREVIEW-AUTO-SIDEBAR-001 (owner 2026-07-02): the PREVIEW auto-corner must MATCH the
+  // export. The docx-worker AUTO defaults the notice to the sidebar's physical side (the emptier
+  // column on a typical CV), NOT a geometric measure; the preview used chooseCorner (geometry) and
+  // landed RIGHT while the PDF went LEFT. Default preview auto to the sidebar side too, so the two agree.
+  function sidebarSideOf() {
+    try {
+      var sp = localStorage.getItem('sidebarPosition');
+      if (sp) { try { var pp = JSON.parse(sp); if (typeof pp === 'string') sp = pp; } catch (_) {} return (String(sp).toLowerCase() === 'right') ? 'right' : 'left'; }
+    } catch (_) {}
+    return 'left';
   }
   function stashWmSide(corner) {
     try {

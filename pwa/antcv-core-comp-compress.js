@@ -16,7 +16,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.42';
+  var VERSION = '1.51.43';
   if (window.__antcvCoreCompCompress === VERSION) return;
   window.__antcvCoreCompCompress = VERSION;
 
@@ -80,8 +80,15 @@
   // Gabriel so a generic candidate's optics label is never rewritten. Idempotent: the target matches
   // the "eo & photonic" branch and maps to itself (fixpoint).
   var CANON = [
-    [/^\s*(?:optics[\s,&]+photonics\b.*|eo\s*&\s*photonic\w*\b.*|electro-?optics?\b.*photonic.*)$/i, 'EO & Photonics sensors'],
+    [/^\s*(?:optics[\s,&]+photonics\b.*|eo\s*&\s*photonic\w*\b.*|electro-?optics?\b.*photonic.*)$/i, 'EO & Photonic sensors'],
   ];
+  // FOCUS-LABEL-EO-002 (owner 2026-07-02): pin the EO row's Strategic Expertise to the owner's exact
+  // string. A stale restore / paren pass kept dropping the "(EO)" -> "Electro-optics , photonics,
+  // semiconductor physics" and manual re-adds did not stay. Applied ONLY when the Focus Area is the
+  // canonical EO label AND the expertise is empty / a bracketed placeholder / the EO cluster, so an
+  // unrelated expertise is never clobbered. Idempotent (skips when already equal).
+  var EO_FOCUS = 'EO & Photonic sensors';
+  var EO_EXPERTISE = 'Electro-optics (EO), photonics, semiconductor physics';
   function canon(s) {
     var v = String(s == null ? '' : s);
     for (var i = 0; i < CANON.length; i++) { if (CANON[i][0].test(v)) return CANON[i][1]; }
@@ -135,6 +142,11 @@
             if (typeof row[0] === 'string') { var fa = capWords(expand(tighten(abbreviate(gab ? canon(row[0]) : row[0]))), CAP_FOCUS); if (fa !== row[0]) { row[0] = fa; changed = true; } }
             // Strategic Expertise: expand banned "Coord.", then cap to the per-doc width.
             if (typeof row[1] === 'string') { var se = capWords(expand(row[1]), capFor(s)); if (se !== row[1]) { row[1] = se; changed = true; } }
+            // Pin the EO row's Strategic Expertise to the owner's exact string (heals the dropped "(EO)").
+            if (gab && row[0] === EO_FOCUS && typeof row[1] === 'string' && row[1] !== EO_EXPERTISE) {
+              var __ex = row[1].trim();
+              if (!__ex || /^\[/.test(__ex) || /electro-?optic|photonic|semiconductor|\boptics\b/i.test(row[1])) { row[1] = EO_EXPERTISE; changed = true; }
+            }
           });
         });
       });

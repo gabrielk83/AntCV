@@ -330,7 +330,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.35';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.42';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.43';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -369,10 +369,10 @@
         auth.src = 'antcv-auth.js?v=1.50.312-auth-msg';
         auth.onload = function(){
           var app = document.createElement('script');
-          app.src = 'app.js?v=1.51.42';
+          app.src = 'app.js?v=1.51.43';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.42';
+            vo.src = 'antcv-version-override.js?v=1.51.43';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -631,7 +631,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      i18n, translation-patch, and language-ui-fixes stay separate. The three old
      files stay on disk, unreferenced. -->
 <script src="antcv-language-ui-429.js?v=1.50.870" defer></script>
-<script src="antcv-section-align.js?v=1.50.727" defer></script>
+<script src="antcv-section-align.js?v=1.51.43" defer></script>
 <script src="antcv-subsection-reorder.js?v=1.50.702" defer></script>
 <script src="antcv-disclosure-triangle.js?v=1.50.703" defer></script>
 <script src="antcv-recheck-fit.js?v=1.50.161-proxy-relay" defer></script>
@@ -779,7 +779,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-fit-cv-cloud-sync.js?v=1.40.196" defer></script>
 <script src="antcv-jd-analysis-and-reupload-fix.js?v=1.40.196" defer></script>
 <script src="antcv-pdf-page-mismatch.js?v=1.40.196" defer></script>
-<script src="antcv-watermark-page-anchor-341.js?v=1.51.37" defer></script>
+<script src="antcv-watermark-page-anchor-341.js?v=1.51.43" defer></script>
 <!-- v1.50.171: READ-ONLY diagnostic probes (HOWCONTRIBUTE-001, SETTINGS-SUBTAB-001,
      HARDREFRESH-001, LOGIN-GATE-001). No behaviour change; logs [antcv-diag] lines.
      Run window.AntcvDiag() on demand. -->
@@ -863,7 +863,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-role-merge-dedup.js?v=1.50.883" defer></script>
 <script src="antcv-final-role-condense.js?v=1.50.924" defer></script>
 <!-- CORE-COMP-COMPRESS-001: cap Strategic Expertise cells at 105 chars + abbreviate Focus Area labels. -->
-<script src="antcv-core-comp-compress.js?v=1.51.42" defer></script>
+<script src="antcv-core-comp-compress.js?v=1.51.43" defer></script>
 <!-- TOOLS-CORECOMP-DEDUP-001: drop TOOLS rows that duplicate CORE COMPETENCIES focus areas (owner 2026-07). -->
 <script src="antcv-tools-corecomp-dedup.js?v=1.51.19" defer></script>
 <!-- LANGUAGES-CONCISE-001: trim language proficiency to its concise core (CEFR→word, drop qualifiers). -->

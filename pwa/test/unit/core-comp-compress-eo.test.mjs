@@ -50,15 +50,15 @@ function runOn(rows, { id = 'core_comp', doc = 'cv', pi = GAB } = {}) {
 
 test('_canon maps the long optics/photonics label variants to the owner-preferred short form', () => {
   const { api } = load({ cv: [], cl: [] }, GAB);
-  assert.equal(api._canon('Optics, photonics & semiconductor devices'), 'EO & Photonics sensors');
-  assert.equal(api._canon('Optics, photonics &'), 'EO & Photonics sensors');       // the already-truncated form
-  assert.equal(api._canon('Optics & photonics'), 'EO & Photonics sensors');
-  assert.equal(api._canon('Electro-optics (EO), photonic sensing'), 'EO & Photonics sensors');
+  assert.equal(api._canon('Optics, photonics & semiconductor devices'), 'EO & Photonic sensors');
+  assert.equal(api._canon('Optics, photonics &'), 'EO & Photonic sensors');       // the already-truncated form
+  assert.equal(api._canon('Optics & photonics'), 'EO & Photonic sensors');
+  assert.equal(api._canon('Electro-optics (EO), photonic sensing'), 'EO & Photonic sensors');
 });
 
 test('_canon is idempotent (the target label maps to itself — no growth on re-run)', () => {
   const { api } = load({ cv: [], cl: [] }, GAB);
-  assert.equal(api._canon('EO & Photonics sensors'), 'EO & Photonics sensors');
+  assert.equal(api._canon('EO & Photonic sensors'), 'EO & Photonic sensors');
 });
 
 test('_canon leaves unrelated focus labels untouched', () => {
@@ -68,21 +68,21 @@ test('_canon leaves unrelated focus labels untouched', () => {
   assert.equal(api._canon('Supplier scoring'), 'Supplier scoring');
 });
 
-test('run(): Gabriel core_comp long EO label -> "EO & Photonics sensors" (fits <=25, no dangling &)', () => {
+test('run(): Gabriel core_comp long EO label -> "EO & Photonic sensors" (fits <=25, no dangling &)', () => {
   const rows = runOn([H, ['Optics, photonics & semiconductor devices', 'Electro-optics, photonics, semiconductor physics']]);
-  assert.equal(rows[1][0], 'EO & Photonics sensors');
+  assert.equal(rows[1][0], 'EO & Photonic sensors');
   assert.ok(rows[1][0].length <= 25);
   assert.ok(!/&\s*$/.test(rows[1][0]));
 });
 
 test('run(): the previously-truncated "Optics, photonics &" is healed on reload', () => {
   const rows = runOn([H, ['Optics, photonics &', 'x']]);
-  assert.equal(rows[1][0], 'EO & Photonics sensors');
+  assert.equal(rows[1][0], 'EO & Photonic sensors');
 });
 
 test('run(): also heals a WHAT I BRING (CL) EO focus label', () => {
   const rows = runOn([H, ['Optics, photonics & imaging', 'x']], { id: 'bring', doc: 'cl' });
-  assert.equal(rows[1][0], 'EO & Photonics sensors');
+  assert.equal(rows[1][0], 'EO & Photonic sensors');
 });
 
 test('run() is idempotent for the EO label (no re-truncation across reloads)', () => {
@@ -93,11 +93,39 @@ test('run() is idempotent for the EO label (no re-truncation across reloads)', (
 
 test('NAME-GUARD: a non-Gabriel candidate is NOT relabeled to the EO canon', () => {
   const rows = runOn([H, ['Optics, photonics & semiconductor devices', 'x']], { pi: { name: 'Anita Example' } });
-  assert.notEqual(rows[1][0], 'EO & Photonics sensors');
+  assert.notEqual(rows[1][0], 'EO & Photonic sensors');
   assert.ok(/^optics/i.test(rows[1][0]));
 });
 
 test('NAME-GUARD: nested personalInfo.personalInfo.name shape is recognised', () => {
   const rows = runOn([H, ['Optics, photonics &', 'x']], { pi: { personalInfo: { name: 'Gabriel Karp' } } });
-  assert.equal(rows[1][0], 'EO & Photonics sensors');
+  assert.equal(rows[1][0], 'EO & Photonic sensors');
+});
+
+// FOCUS-LABEL-EO-002: pin the EO row's Strategic Expertise (heal a dropped "(EO)").
+test('run(): pins the EO row expertise, healing a stripped "(EO)"', () => {
+  const rows = runOn([H, ['Optics, photonics & devices', 'Electro-optics , photonics, semiconductor physics']]);
+  assert.equal(rows[1][0], 'EO & Photonic sensors');
+  assert.equal(rows[1][1], 'Electro-optics (EO), photonics, semiconductor physics');
+});
+
+test('run(): pins the EO expertise when the cell is empty', () => {
+  const rows = runOn([H, ['Optics, photonics', '']]);
+  assert.equal(rows[1][1], 'Electro-optics (EO), photonics, semiconductor physics');
+});
+
+test('run(): the EO expertise pin is idempotent', () => {
+  const once = runOn([H, ['EO & Photonic sensors', 'Electro-optics (EO), photonics, semiconductor physics']]);
+  const twice = runOn(once);
+  assert.deepEqual(twice, once);
+});
+
+test('run(): does NOT clobber an unrelated expertise on the EO row', () => {
+  const rows = runOn([H, ['EO & Photonic sensors', 'Requirements traceability and change control']]);
+  assert.equal(rows[1][1], 'Requirements traceability and change control');
+});
+
+test('NAME-GUARD: a non-Gabriel EO expertise is not pinned', () => {
+  const rows = runOn([H, ['Optics, photonics & devices', 'Electro-optics , photonics']], { pi: { name: 'Anita Example' } });
+  assert.notEqual(rows[1][1], 'Electro-optics (EO), photonics, semiconductor physics');
 });

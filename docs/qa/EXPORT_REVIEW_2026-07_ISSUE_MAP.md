@@ -74,16 +74,20 @@ nightly (`docs/qa/CLOUD_ROUTINE_PROMPT.md` → CURRENT BACKLOG).
   dropped two roles; `repairExperienceFromPI` only rebuilds a fully-degraded section. New
   EXPERIENCE-COMPLETENESS-001 (415) merges any `personalInfo` role absent from the section back in
   as HIDDEN (`on:false`) — present + recoverable, visible CV unchanged.
-- **#6 Signature cut — FIX SHIPPED (wk 1.14.111), owner-verify-pending.** CORRECTION: I initially
-  read the owner's hint backwards. The PDF DOES cut the signature; the image opened FROM Adobe's PDF
-  editor is intact. That is a root-cause hint, not a resolution: the embedded raster is complete, so
-  LibreOffice/CloudConvert draws the full-size image and then CLIPS it to the table row's CONTENT
-  rectangle. The row had no explicit height, so auto-sizing computed it from the paragraph LINE box
-  (font ascent/descent) instead of the inline image height, cropping the lower-left descender of the
-  "G". CL-SIGNATURE-CLIP-004: set `w:trHeight` `hRule="atLeast"` on the signature row to reserve the
-  full image height + cell margins (twips = px·15 + 400). Aspect is already correct (client forwards
-  the real `signature_aspect`), so this is height reservation, not scaling. Owner: verify a real
-  export now shows the full "G".
+- **#6 Signature "G" cut — OPEN (owner confirmed 2026-07-01: the G still does NOT render after
+  CLIP-004).** Established fact (owner hint): the PDF cuts the signature but the image opened FROM
+  Adobe's PDF editor is INTACT — the embedded raster is complete, so the clip is in PLACEMENT, not
+  the image data, and NOT the aspect (client forwards the real `signature_aspect`). RULED OUT so far
+  (none fixed it): CLIP-001 line-box reservation, CLIP-002 borderless single-cell table, CLIP-003
+  spacer paragraph after, CLIP-004 explicit `w:trHeight hRule="atLeast"` on the signature row (wk
+  1.14.111 — kept in place, harmless, but insufficient). So it is NOT the table-row content box.
+  NEXT HYPOTHESES to test on a real export: (a) the sign-off lands at/near the page BOTTOM MARGIN and
+  the descender is clipped by the PAGE edge, not the cell — test by forcing a large bottom gap / a
+  guaranteed non-last-line position, or moving the signature off the page-bottom; (b) a FLOATING
+  ImageRun (absolute anchor, not inline-in-cell) so no line/cell/page-flow clip applies — the old C8
+  note flagged this needs the owner's signature PNG to test exact dimensions locally (cannot
+  rasterize a CloudConvert PDF here). BLOCKER: verifying any signature fix needs a real
+  DOCX→CloudConvert→PDF export (owner) or the raw signature PNG + its true pixel dimensions.
 - **#2 core_comp blank / #4 CL mostly blank / #7 accessibility dropped on 2nd gen — FIXED 1.51.29
   (two independent nightly runs converged on complementary fixes for each item), regen-cycle
   verification owed.** Convergence/restore reliability (owner: "the way you push from memory is

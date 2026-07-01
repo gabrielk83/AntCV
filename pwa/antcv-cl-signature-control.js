@@ -184,10 +184,21 @@
               } catch (_) { hasInk = false; }
               var outCv = cv;
               if (hasInk && maxX > minX && maxY > minY) {
-                var pad = 4, sx = Math.max(0, minX - pad), sy = Math.max(0, minY - pad);
-                var cw = Math.min(w - sx, maxX - minX + 1 + pad * 2), ch = Math.min(h - sy, maxY - minY + 1 + pad * 2);
+                // SIGNATURE-PAD-002 (owner 2026-07-01: "signature cut in PDF" — NOT a circular clip).
+                // The old 4px bounding-box crop (pad=4, sub-rectangle of the source) left the ink flush
+                // to the edge, and when the source ink sat at the image edge there were no source pixels
+                // to pad WITH — so the export's inline-image edge-clip cropped the "G" descender (and
+                // the owner's sacrificial end-pattern). Rebuild the ink on a LARGER canvas with a
+                // guaranteed transparent margin (wider at the BOTTOM for descenders), independent of the
+                // source bounds, so the clip always eats whitespace, never ink.
+                var inkW = maxX - minX + 1, inkH = maxY - minY + 1;
+                var padX = Math.max(10, Math.round(inkW * 0.06));
+                var padTop = Math.max(10, Math.round(inkH * 0.15));
+                var padBot = Math.max(18, Math.round(inkH * 0.35));
+                var cw = inkW + padX * 2, ch = inkH + padTop + padBot;
                 var c2 = document.createElement('canvas'); c2.width = cw; c2.height = ch;
-                c2.getContext('2d').drawImage(cv, sx, sy, cw, ch, 0, 0, cw, ch); outCv = c2;
+                c2.getContext('2d').drawImage(cv, minX, minY, inkW, inkH, padX, padTop, inkW, inkH);
+                outCv = c2;
               }
               var out = outCv.toDataURL('image/png');
               set(K.b64, out);

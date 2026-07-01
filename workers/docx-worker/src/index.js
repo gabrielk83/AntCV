@@ -25126,12 +25126,18 @@ function buildLinearDocument(ctx) {
     ));
   }
   if (closureSec && closureSec.content) {
-    // CL-BOTTOM-RULE-MATCH-001 (owner 2026-07: "make the cl bottom rule same as the top one").
-    // The rule above the closing now matches the heading/header rule weight (size 8, was 6).
+    // CL-BOTTOM-RULE-MATCH-002 (owner 2026-07-01: "the upper horizontal line does not match the
+    // lower one; make closing a rich_content and expose its rule, keeping the headline hidden").
+    // The upper rule is a rich_block headlineRule (renderSection ~26169): a BOTTOM border on an
+    // empty para, spacing {before:80,after:40}, keepNext, with a TextRun child. The lower rule used
+    // a TOP border + exact 40-twip line, so the two drifted. Instead of converting closure to a
+    // rich_block (759 keeps it text — that path blanks the sign-off), emit the SAME paragraph the
+    // rich_block main rule emits, so the two rules are byte-identical.
     bodyChildren.push(new Paragraph({
-      border: { top: { color: style.mainHeadColor, space: 4, style: BorderStyle.SINGLE, size: 8 } },
-      spacing: { before: 120, after: 0, line: 40, lineRule: "exact" },
-      children: []
+      spacing: { before: 80, after: 40 },
+      keepNext: true,
+      border: { bottom: { color: style.mainHeadColor, space: 4, style: BorderStyle.SINGLE, size: 8 } },
+      children: [new TextRun({ text: "" })]
     }));
     bodyChildren.push(...renderSection(closureSec, ctx, false));
   }
@@ -27849,7 +27855,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.112-sig-lineheight";
+var VERSION = "1.14.113-cl-rule-match";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

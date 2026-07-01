@@ -24748,15 +24748,23 @@ function buildTwoColumnDocument(ctx) {
   const __lastSideN = (sidebarPages[__lastContentPage] || []).length;
   const __sbPhys = sidebarOnRight ? "right" : "left";
   const __mnPhys = sidebarOnRight ? "left" : "right";
-  // AI-NOTICE-POSITION-CONTROL-001 (owner 2026-07-01): a Layout-tab control lets the owner PIN the
-  // notice corner (bottom left/center/right) instead of the auto larger-gap logic. A manual value
-  // wins outright; 'auto'/absent keeps the measured behaviour below.
+  // AI-NOTICE-POSITION-CONTROL-001 (owner 2026-07-01): a Layout-tab control PINS the notice corner
+  // (bottom left/center/right). A manual value wins outright.
+  // AI-NOTICE-AUTO-SIDEBAR-001 (owner 2026-07-01: "AI-notice AUTO is almost always wrong — pushing to
+  // the right"). The old auto used a last-page BLOCK-COUNT (__lastSideN vs __lastMainN): it counts
+  // BLOCKS, not HEIGHT, so a last page with ONE TALL main role + a couple of SHORT sidebar rows
+  // counted the sidebar as "fuller" and pushed the notice to the dense MAIN column. The notice belongs
+  // in the EMPTIER column, which on a CV is the SIDEBAR almost every time (the sidebar's short lists —
+  // languages/interests/certs — end well before the long PROFESSIONAL EXPERIENCE in the main column).
+  // So AUTO now defaults to the sidebar side. The owner uses the manual L/C/R control for the rare CV
+  // whose sidebar is the fuller column. (__lastSideN/__lastMainN kept for logging/future tuning.)
+  void __lastSideN; void __lastMainN; void __mnPhys; void aiWmHint;
   let aiWmCorner;
   if (ctx.aiNoticePos === "left" || ctx.aiNoticePos === "center" || ctx.aiNoticePos === "right") {
     aiWmCorner = ctx.aiNoticePos;
-  } else if (__lastSideN < __lastMainN) aiWmCorner = __sbPhys;
-  else if (__lastMainN < __lastSideN) aiWmCorner = __mnPhys;
-  else aiWmCorner = aiWmHint || "right";
+  } else {
+    aiWmCorner = __sbPhys;   // AUTO -> the sidebar (emptier column on a typical CV)
+  }
   // AI-WATERMARK-EXPORT-LOCATION-001 fix (1.14.78): sentinel NO LONGER pushed into
   // the last page's table CELL. A floating v:rect anchored vertical-relative:margin
   // cannot resolve "page-margin bottom" from inside a <w:tc> on a margin-0 page, so
@@ -27863,7 +27871,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.114-ai-notice-pos";
+var VERSION = "1.14.115-ai-notice-auto-sidebar";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

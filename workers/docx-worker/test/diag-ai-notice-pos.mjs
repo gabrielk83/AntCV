@@ -53,9 +53,15 @@ async function build(extra) {
 const checks = [];
 const check = (n, ok, d) => { checks.push(ok); log(`${n}: ${ok ? 'OK' : 'FAIL'}${ok ? '' : ' ' + (d || '')}`); };
 
-// baseline: no manual pos -> auto (whatever it picks, just record it)
+// AUTO (no manual pos) now defaults to the SIDEBAR side (AI-NOTICE-AUTO-SIDEBAR-001).
 const auto = await build({});
-log(`auto (no ai_notice_pos) -> ${auto.horiz}`);
+log(`auto (no ai_notice_pos, sidebar left) -> ${auto.horiz}`);
+check('auto defaults to the sidebar side (left)', auto.horiz === 'left', `got ${auto.horiz}`);
+const autoR = await build({ style: { sidebarPosition: 'right' } });
+check('auto follows a right sidebar', autoR.horiz === 'right', `got ${autoR.horiz}`);
+// auto must ignore a stale ai_wm_side hint (it was unreliable) — sidebar still wins
+const autoHint = await build({ ai_wm_side: 'right' });
+check('auto ignores ai_wm_side hint -> still sidebar (left)', autoHint.horiz === 'left', `got ${autoHint.horiz}`);
 
 const left = await build({ ai_notice_pos: 'left' });
 check("manual 'left' forces left", left.horiz === 'left', `got ${left.horiz}`);

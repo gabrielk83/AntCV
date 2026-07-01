@@ -20,7 +20,7 @@
   'use strict';
   if (window.__antcvBringToRichBlock) return;
   window.__antcvBringToRichBlock = true;
-  var VERSION = '1.50.963-bring-rich-block';
+  var VERSION = '1.51.44-bring-rich-block';
 
   function isNordicMinimal() {
     try { var tr = localStorage.getItem('toneRegister'); if (tr) { var v = JSON.parse(tr); return v === 'nordic-minimal' || v === 'scandinavian'; } } catch (_) {}
@@ -44,7 +44,7 @@
     var changed = false;
     var out = list.map(function (s) {
       if (!s || s.id !== 'bring') return s;
-      if (s.type !== 'table' || !Array.isArray(s.rows) || !s.rows.length) return s;  // already converted / no rows
+      if (s.type !== 'table' || !Array.isArray(s.rows)) return s;                     // already converted
       if (!isNordicMinimal()) return s;                                              // Nordic default only
       var rows = s.rows.slice();
       if (rows.length && looksHeader(rows[0])) rows = rows.slice(1);
@@ -52,7 +52,14 @@
         var a = Array.isArray(r) ? r : [];
         return { b: String(a[0] || '').trim(), t: String(a[1] || '').trim() };
       }).filter(function (it) { return it.b || it.t; });
-      if (!items.length) return s;                                                   // nothing to convert
+      // BRING-EMPTY-SEED-001 (owner 2026-07-02): the LLM can return bring_rows completely empty
+      // (or only the header row survives), leaving the table an untouched 2-column shell with NO
+      // data rows -- INVISIBLE in the rendered CL (no heading, nothing to click; the owner's "no
+      // WHAT I BRING section at all"). Do NOT bail here -- fall through and build the rich_block
+      // with ONLY the lead-in item (items stays empty, concat below still yields one item). The
+      // nordic-cl-order-971 seedInstructions pass then fills the placeholder wording (same pattern
+      // as the Foundation Hands-on/Professionally seed), so the section is VISIBLE and editable
+      // instead of silently disappearing. Once real rows exist, they render alongside the lead-in.
       // section lead-in (matches who/why/HWIC nordic) so the identity survives a hidden headline.
       // BRING-INTRO-001 (owner 2026-06-30: "What I bring line is still empty"): the lead-in BODY
       // carries the generated intro phrase (anchor + areas, e.g. "structure - across scope,

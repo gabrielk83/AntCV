@@ -1,5 +1,35 @@
 # AntCV — Session log — 2026-07-01 (two parallel autonomous runs, merged)
 
+## ADDENDUM — owner live-export review (interactive, PWA 1.51.30 + 1.51.31)
+
+Owner tested the real 1.51.29 export and reported the convergence guards did NOT fully land:
+accessibility in panel+PDF but not preview; core_comp still placeholder; CL mostly empty — "all
+require a 2nd generation to fix." Diagnosed on the owner's LIVE localStorage (Chrome MCP, unsolicited
+doc, `meta` empty). Findings + fixes:
+
+- **CORE COMPETENCIES was PARTIAL** — 2 real rows (Optics, Imaging) + 2 literal `[Focus area 5/6]`
+  placeholder rows. The 1.51.28 guard's `isReal` (≥1 real row) passed the whole table as real, so it
+  neither cleaned nor healed — and it snapshotted the placeholders. **Fixed 1.51.30:** row-level
+  placeholder-aware guard — drops placeholder rows when the table has real rows, snapshots CLEAN rows
+  only. 8 tests.
+- **CL who/why/opening/contribute EMPTY; bring-intro + closure = literal me() template.** Read the
+  deployed app.js CL apply: it is CORRECT (hard neutral fallbacks; `__clReal` present, minified `i`).
+  Live who/why/opening exactly match the EMPTY Nordic me() skeleton while foundation holds real
+  generated prose → a stale cloud/me()-enforce restore reverts the `.content`-applied sections
+  (who/why/opening/contribute) to the empty skeleton on the FIRST gen, before the 400ms-debounced
+  loss-guard snapshot ran. foundation/bring survive because they apply as DIRECT rich_block items.
+  **Fixed 1.51.31:** loss-guard snapshots SYNCHRONOUSLY on `sections-updated` so real prose is captured
+  the instant it appears, before the clobber. Additive + idempotent. 3 tests.
+- **ACCESSIBILITY** — correct in localStorage (loc:sidebar, real content) + in the PDF; "not in
+  preview" is a render nuance, not data loss. Deprioritised (browser tab flaky). Carry forward.
+
+**Owner-verify (can't repro an LLM generate→stale-restore headlessly):** reload to 1.51.31, regen the
+unsolicited CL ONCE, confirm who/why/opening survive + core_comp shows no `[Focus area N]`. If CL still
+blanks, the clobber is fully synchronous with the apply → move the fix into the app.js apply path
+(write prose to `items[0].t` directly, like foundation) — also needs a live regen to verify. Suite 556/556.
+
+---
+
 PWA **1.51.27 → 1.51.29** · docx-worker 1.14.110 (untouched) · suite **529/529 → 543/543** (pending
 final re-run after merge, see note at bottom).
 

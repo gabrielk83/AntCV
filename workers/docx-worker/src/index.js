@@ -24876,47 +24876,62 @@ function buildTwoColumnDocument(ctx) {
   // so it never widens past the old reserve (big photos keep the old origin).
   const __bridgePhotoPx = (() => { const v = Number(ctx.pi && ctx.pi.photoSizePx); return Number.isFinite(v) && v >= 40 && v <= 260 ? Math.round(v) : 156; })();
   const __bridgeLeftW = bridgeOn ? Math.max(360, Math.min(ctx.sidebarW - 540, Math.round(ctx.sidebarW / 2 + __bridgePhotoPx * 15 / 2) + 120)) : (ctx.sidebarW - 540);
-  const headerRow = bridgeOn ? new TableRow({
-    children: [
-      new TableCell({
-        // PDF-HEADER-LEFT-001 (owner 2026-06-28): pull the candidate text block
-        // LEFT to match the preview. Preview text origin = (sidebarW% − 28px) ≈
-        // sidebarW − 420 twips; the export was sidebarW + 120 (~36px too far right).
-        // Narrow the empty photo zone by 540 twips (= 28px pull-back + the 120 text
-        // left-margin) and widen the text cell by the same 540, so the text origin
-        // lands at (sidebarW − 540) + 120 = sidebarW − 420. Cells still sum to PAGE_W.
-        // The page-anchored bridge medallion is UNAFFECTED — it lives in the sidebar
-        // column (page-relative position), not in this empty zone cell.
-        width: { size: __bridgeLeftW, type: WidthType.DXA },
-        shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
-        borders: noBorders(),
-        margins: { top: 240, bottom: 80, left: 80, right: 80 },
-        // Empty photo zone — the floating bridge medallion (anchored in the
-        // sidebar's first paragraph, page-positioned) rises into this cell.
-        children: [emptyParagraph()]
-      }),
-      new TableCell({
-        width: { size: PAGE_W - __bridgeLeftW, type: WidthType.DXA },
-        shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
-        borders: noBorders(),
-        margins: { top: 240, bottom: 80, left: 120, right: 360 },
-        verticalAlign: VerticalAlign.CENTER,
-        children: headerCell
-      })
-    ]
-  }) : new TableRow({
-    children: [
-      new TableCell({
-        columnSpan: 2,
-        width: { size: PAGE_W, type: WidthType.DXA },
-        shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
-        borders: noBorders(),
-        // Candidate header pad: 0.25" L/R (360 DXA), matches preview band.
-        margins: { top: 240, bottom: 80, left: 360, right: 360 },
-        children: headerCell
-      })
-    ]
-  });
+  // CONTACT-FULLWIDTH-001 (owner 2026-07-02 "widen the cell"): in BRIDGE mode, lift the tagged
+  // contact paragraph (buildHeaderCell) out of the narrow right split-cell into its OWN
+  // FULL-WIDTH row below name+subtitle. The circular medallion has curved away by the contact
+  // line's vertical position, so full page width there is safe and the long contact line
+  // (email + phone + LinkedIn) no longer wraps / splits the phone number. Non-bridge unchanged.
+  const __contactParas = bridgeOn ? headerCell.filter(function (p) { return p && p.__antcvContactPara; }) : [];
+  const __topParas = __contactParas.length ? headerCell.filter(function (p) { return !(p && p.__antcvContactPara); }) : headerCell;
+  const headerRows = bridgeOn ? [
+    new TableRow({
+      children: [
+        new TableCell({
+          // Empty photo zone — the page-anchored floating bridge medallion rises into this cell.
+          width: { size: __bridgeLeftW, type: WidthType.DXA },
+          shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
+          borders: noBorders(),
+          margins: { top: 240, bottom: 80, left: 80, right: 80 },
+          children: [emptyParagraph()]
+        }),
+        new TableCell({
+          width: { size: PAGE_W - __bridgeLeftW, type: WidthType.DXA },
+          shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
+          borders: noBorders(),
+          margins: { top: 240, bottom: 80, left: 120, right: 360 },
+          verticalAlign: VerticalAlign.CENTER,
+          children: __topParas
+        })
+      ]
+    })
+  ].concat(__contactParas.length ? [
+    new TableRow({
+      children: [
+        new TableCell({
+          columnSpan: 2,
+          width: { size: PAGE_W, type: WidthType.DXA },
+          shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
+          borders: noBorders(),
+          margins: { top: 0, bottom: 80, left: 360, right: 360 },
+          children: __contactParas
+        })
+      ]
+    })
+  ] : []) : [
+    new TableRow({
+      children: [
+        new TableCell({
+          columnSpan: 2,
+          width: { size: PAGE_W, type: WidthType.DXA },
+          shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
+          borders: noBorders(),
+          // Candidate header pad: 0.25" L/R (360 DXA), matches preview band.
+          margins: { top: 240, bottom: 80, left: 360, right: 360 },
+          children: headerCell
+        })
+      ]
+    })
+  ];
   // PAGEBREAK-STYLE-OPTIONS-001(b) (1.14.55): when style.repeatHeader is ON,
   // pages 2+ open with a SLIM candidate strip (name + specialisation —
   // mirrors the preview's repeated strip, not the full page-1 band). Fresh
@@ -24957,7 +24972,7 @@ function buildTwoColumnDocument(ctx) {
     columnWidths: colWidths,
     borders: noBorders(),
     rows: withHeader
-      ? [headerRow, makeBodyRow(sbEls, mnEls, true)]
+      ? headerRows.concat([makeBodyRow(sbEls, mnEls, true)])
       : repeatHdr
         ? [makeSlimHeaderRow(), makeBodyRow(sbEls, mnEls, false)]
         : [makeBodyRow(sbEls, mnEls, false)]
@@ -25604,6 +25619,13 @@ function buildHeaderCell(ctx) {
         return kids;
       })()
     }));
+    // CONTACT-FULLWIDTH-001 (owner 2026-07-02 "widen the cell"): tag the contact paragraph so
+    // the BRIDGE header can lift it into a FULL-WIDTH row BELOW the name/subtitle. In bridge
+    // mode name+subtitle+contact share the narrow right split-cell (the left cell reserves the
+    // medallion), so a long contact line (email + phone + LinkedIn) wraps and the phone splits
+    // mid-number. The circular medallion has curved away by the contact line's vertical position,
+    // so rendering it full-width there is safe and gives it the whole page width.
+    try { out[out.length - 1].__antcvContactPara = true; } catch (_) {}
   }
   if (out.length === 0) {
     out.push(new Paragraph({
@@ -27910,7 +27932,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.118-pub-keep-whole";
+var VERSION = "1.14.119-contact-fullwidth";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

@@ -15,7 +15,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.29-exp-complete';
+  var VERSION = '1.51.41-canon-dedup';
   if (window.__antcvSectionsNormalize === VERSION) return;
   window.__antcvSectionsNormalize = VERSION;
 
@@ -113,6 +113,49 @@
     return copy;
   }
 
+  // COMPANY-VARIANT-KEY-001 (owner 2026-07-02, LIVE localStorage probe): the canon functions
+  // (canonIDF, canonTAU, canonCopenhagenWolves) rewrite a VISIBLE role's company to a short/
+  // canonical form, but dedupeRoles compared the RAW company and repairExperienceCompleteness
+  // compared a raw title|company KEY against personalInfo (which still holds the long form). So a
+  // canon-transformed role no longer matched its PI source and repairExperienceCompleteness
+  // re-inserted the PI copy as a HIDDEN duplicate — the owner's "many positions doubled" (live: a
+  // hidden "Israel Defense Forces, Communication Corps" beside the visible "IDF, Communication
+  // Corps"; a hidden "Tel Aviv University - Electrical Engineering" beside "Tel Aviv University"; a
+  // hidden "Copenhagen Wolves RFC - Pan Idræt" beside "Pan Idræt"). These helpers make company/
+  // title/year comparison variant-tolerant so the same real-world position is recognised across a
+  // canon rewrite.
+  //   _companyKey  — lowercase, expand IDF<->Israel Defense Forces, strip a trailing "- Dept"/
+  //                  ", Corps" qualifier + parentheticals, collapse to tokens.
+  //   _titleCore   — lowercase, drop parentheticals + an "& Assistant Coach"/"and …" tail, tokens.
+  //   _yrKey       — normalised "start-end" span (present/current -> 9999).
+  //   _samePosition — SAME real position when year spans match AND title cores match/prefix (covers
+  //                  IDF, the TAU dept-suffix, and the CW "& Assistant Coach" variants). Deliberately
+  //                  NOT company-only (two distinct roles can share a company + years).
+  function _companyKey(c) {
+    var s = String(c == null ? '' : c).toLowerCase().replace(/\bidf\b/g, 'israel defense forces');
+    s = s.split(/[-–—,]/)[0].replace(/\([^)]*\)/g, ' ');
+    return s.replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+  function _titleCore(t) {
+    var s = String(t == null ? '' : t).toLowerCase().replace(/\([^)]*\)/g, ' ');
+    s = s.split(/\s+[&/]\s+|\s+and\s+/)[0];
+    return s.replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+  function _yrKey(y) {
+    var n = (String(y == null ? '' : y).match(/\d{4}/g) || []).map(Number);
+    var present = /present|current|nu(?:værende|tid)?|pågår|løbende|ongoing/i.test(String(y || ''));
+    var start = n.length ? Math.min.apply(null, n) : 0;
+    var end = present ? 9999 : (n.length ? Math.max.apply(null, n) : start);
+    return start + '-' + end;
+  }
+  function _samePosition(a, b) {
+    if (!a || !b) return false;
+    if (_yrKey(a.years) !== _yrKey(b.years)) return false;
+    var ta = _titleCore(a.title || a.role), tb = _titleCore(b.title || b.role);
+    if (!ta || !tb) return false;
+    return ta === tb || ta.indexOf(tb + ' ') === 0 || tb.indexOf(ta + ' ') === 0;
+  }
+
   // ROLE-DECOMP-001 (owner 2026-06-16): "decompose the merged roles ... merging is
   // later". The old ROLE-DUP-001 merged on title CONTAINMENT (folded "System
   // Architect" into "System Architect & Change Control Lead"). The owner now wants
@@ -120,6 +163,9 @@
   // titles are IDENTICAL after normalisation — i.e. a genuine append-duplicate
   // (e.g. the consensus re-appending the same Kanzen role), never two distinct
   // functions at the same company. Containment-but-not-equal is left UN-merged.
+  // COMPANY-VARIANT-KEY-001: company match now uses _companyKey (variant-tolerant) so an
+  // IDENTICAL-title role whose company is a canon rewrite (IDF vs Israel Defense Forces) collapses
+  // when BOTH are visible; keep the RICHER bullet set as the survivor.
   function dedupeRoles(cv) {
     var xi = cv.findIndex(function (e) { return e && e.type === 'experience' && Array.isArray(e.roles); });
     if (xi < 0) return null;
@@ -130,6 +176,7 @@
       if (!ya.length || !yb.length) return true;
       return Math.min.apply(null, ya) <= Math.max.apply(null, yb) && Math.min.apply(null, yb) <= Math.max.apply(null, ya);
     };
+    var nbul = function (r) { return Array.isArray(r && r.bullets) ? r.bullets.length : 0; };
     var roles = cv[xi].roles.slice();
     var drop = {};
     for (var i = 0; i < roles.length; i++) for (var j = 0; j < roles.length; j++) {
@@ -138,11 +185,12 @@
       if (!a || !b) continue;
       var ta = norm(a.title), tb = norm(b.title);
       if (!ta || !tb || ta !== tb) continue; // ROLE-DECOMP-001: exact-title dup only (was containment)
-      if (norm(a.company) !== norm(b.company)) continue;
+      if (_companyKey(a.company) !== _companyKey(b.company)) continue; // COMPANY-VARIANT-KEY-001
       if (!overlap(a.years, b.years)) continue;
       drop[i] = true;
       if (a.on !== false) b.on = true;
-      if ((!Array.isArray(b.bullets) || !b.bullets.length) && Array.isArray(a.bullets) && a.bullets.length) b.bullets = a.bullets;
+      // keep the richer content: if the dropped role carried MORE bullets, move them to the survivor.
+      if (nbul(a) > nbul(b)) b.bullets = a.bullets;
     }
     var keys = Object.keys(drop);
     if (!keys.length) return null;
@@ -820,15 +868,16 @@
     var src = Array.isArray(pi.experience) ? pi.experience : null;
     if (!src || !src.length) return null;
     var norm = function (s) { return String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); };
-    var key = function (r) { return norm((r && (r.title || r.role)) || '') + '|' + norm((r && r.company) || ''); };
-    var have = {};
-    real.forEach(function (r) { have[key(r)] = true; });
+    // COMPANY-VARIANT-KEY-001: a PI role is "present" when ANY existing section role is the SAME
+    // real-world position (year span + title-core), so a canon-shortened company (IDF, the TAU
+    // dept-suffix, the CW "& Assistant Coach" variant) is recognised and NOT re-added as a hidden
+    // duplicate. The old exact title|company key missed these and doubled the role.
     var KEEP = ['id', 'title', 'company', 'location', 'years', 'isCurrent', 'bullets', 'outcomes'];
     var missing = src.filter(function (r) {
       if (!r || ph(r)) return false;
       var t = norm(r.title || r.role);
       if (!t) return false;                           // unnamed PI slot -> skip
-      return !have[key(r)];
+      return !roles.some(function (s) { return s && _samePosition(s, r); });
     }).map(function (r) {
       var o = {}; KEEP.forEach(function (k) { if (r[k] !== undefined) o[k] = r[k]; });
       o.on = false;                                   // restore HIDDEN — does not change the visible CV
@@ -877,6 +926,35 @@
     var copy = cv.slice();
     copy[idx] = Object.assign({}, sec, { roles: newRoles });
     try { console.log('[415] hid empty experience slot(s)'); } catch (_) {}
+    return copy;
+  }
+
+  // DROP-CANON-HIDDEN-DUP-001 (owner 2026-07-02, LIVE probe): remove HIDDEN (on:false) roles that a
+  // prior build re-added as company-variant duplicates of a VISIBLE role (before the canon-aware
+  // completeness fix above). A hidden role is dropped only when an on:true role is the SAME
+  // real-world position (_samePosition: year span + title core) — e.g. the hidden "Israel Defense
+  // Forces, Communication Corps" beside the visible "IDF, Communication Corps". A genuinely-missing
+  // role restored HIDDEN by repairExperienceCompleteness has NO visible counterpart, so it is kept.
+  // Idempotent: returns null once no hidden role duplicates a visible one.
+  function dropCanonHiddenDups(cv) {
+    var idx = -1;
+    for (var i = 0; i < cv.length; i++) { if (cv[i] && cv[i].id === 'experience') { idx = i; break; } }
+    if (idx < 0) return null;
+    var sec = cv[idx];
+    var roles = Array.isArray(sec.roles) ? sec.roles : [];
+    if (roles.length < 2) return null;
+    var visible = roles.filter(function (r) { return r && r.on !== false; });
+    var drop = {};
+    for (var j = 0; j < roles.length; j++) {
+      var r = roles[j];
+      if (!r || r.on !== false) continue;               // only consider hidden roles
+      if (visible.some(function (v) { return v !== r && _samePosition(v, r); })) drop[j] = true;
+    }
+    if (!Object.keys(drop).length) return null;
+    var kept = roles.filter(function (_, j) { return !drop[j]; });
+    var copy = cv.slice();
+    copy[idx] = Object.assign({}, sec, { roles: kept });
+    try { console.log('[415] dropped ' + (roles.length - kept.length) + ' canon-variant hidden dup role(s)'); } catch (_) {}
     return copy;
   }
 
@@ -1309,6 +1387,7 @@
       var re = repairExperienceFromPI(cv); if (re) { cv = re; changed = true; }
       var rec = repairExperienceCompleteness(cv); if (rec) { cv = rec; changed = true; }
       var hes = hideEmptyRoleSlots(cv); if (hes) { cv = hes; changed = true; }
+      var dch = dropCanonHiddenDups(cv); if (dch) { cv = dch; changed = true; }
       var ex = explodeAdditionalToSections(cv); if (ex) { cv = ex; changed = true; }
       var pa = partitionAdditional(cv); if (pa) { cv = pa; changed = true; }
       var jr = scrubJuniorRugby(cv); if (jr) { cv = jr; changed = true; }

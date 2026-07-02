@@ -73,7 +73,13 @@ const shape = cvXml.slice(ni, cvXml.indexOf('</v:rect>', ni) + 9);
 // worker 1.14.78 ("page anchor", fixes 3-copies flow) deliberately anchors the notice
 // to the PAGE edge (relative:page), not the bottom margin. Test follows the shipped intent.
 check('CV: anchored to page-edge bottom', /mso-position-vertical:bottom/.test(shape) && /mso-position-vertical-relative:page/.test(shape));
-check('CV: left corner honoured', /mso-position-horizontal:left/.test(shape), shape.slice(0, 160));
+// AI-NOTICE-LEFT-CLOUDCONVERT-001 (owner 2026-07-01): LibreOffice/CloudConvert IGNORES
+// the mso-position-horizontal:left|center keyword, so the worker encodes the corner as
+// an EXPLICIT page-relative margin-left offset (+ matching text justification). The
+// diag asserted the abandoned keyword — RED since then. Assert the shipped encoding.
+check('CV: left corner honoured (margin-left:0pt page-relative + jc left)',
+  /margin-left:0pt/.test(shape) && /mso-position-horizontal-relative:page/.test(shape) && /<w:jc w:val="left"\/>/.test(shape),
+  shape.slice(0, 160));
 check('CV: no fill/stroke (WM-003)', /filled="f"/.test(shape) && /stroked="f"/.test(shape));
 
 // ---- CL 1-page: notice present, bottom-right, not on signature line. ----
@@ -88,7 +94,9 @@ const clNotice = (clXml.match(/AntCVAiNotice/g) || []).length;
 check('CL: one anchored notice shape', clNotice === 1, `count=${clNotice}`);
 check('CL: no sentinel leftover', clXml.indexOf('__ANTCV_AIWM_') < 0);
 const clShape = clXml.slice(clXml.indexOf('AntCVAiNotice'), clXml.indexOf('</v:rect>', clXml.indexOf('AntCVAiNotice')) + 9);
-check('CL: right corner', /mso-position-horizontal:right/.test(clShape));
+// right corner = margin-left (pageW 595pt - box 320pt) = 275pt + jc right (see CV note)
+check('CL: right corner (margin-left:275pt page-relative + jc right)',
+  /margin-left:275pt/.test(clShape) && /mso-position-horizontal-relative:page/.test(clShape) && /<w:jc w:val="right"\/>/.test(clShape));
 check('CL: bottom anchor', /mso-position-vertical:bottom/.test(clShape));
 
 const ok = checks.every(Boolean);

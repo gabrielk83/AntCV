@@ -1,4 +1,4 @@
-# LinkedIn post - product perspective (2026-07-02, rev 7)
+# LinkedIn post - product perspective (2026-07-02, rev 8)
 
 Follows the Terence method recorded in [PROBLEM_STATEMENTS.md](PROBLEM_STATEMENTS.md):
 problem and persona first, then the product "why", then the build. Rev 6 (owner ask):
@@ -27,8 +27,8 @@ Who is it for? I build and test with three people in mind:
   carries the old job title - so recruiters never reach the relevant part.
 - An operations specialist whose CV lists every task she carried, but not what
   changed because she was there.
-- And me: 15+ years taking products to market, and recruiters still ask how
-  hands-on I am with AI.
+- And me: recruiters kept asking how hands-on I am with AI. A fair question -
+  my CV never made that side of my work easy to find.
 
 (Two of the three are synthetic test personas - one is an ant. That keeps real
 candidate data out of the code, and it forces the engine to handle profiles

@@ -93,14 +93,14 @@ Fixture: [docs/personas/anita/](../personas/anita/).
 > *"Recruiters see the product-management years; some still question hands-on AI
 > depth. How do I show both at once, without it reading as a pitch?"*
 
-Specialization (unsolicited / no posted role): **Process · Products · People.**
+Specialization (unsolicited / no posted role): **Processes & Products | People.**
 Real background: 15+ years taking hardware–software products from concept to
 production across consumer and regulated markets — change control, validation,
 supplier coordination — plus solo GenAI work.
 
 Two rules for his own application, from owner feedback (2026-06-13):
-- **No domain leak with Anita.** His specialization is *Process · Products ·
-  People*, not "Seasonal Operations · Storage Planning" — that phrasing is
+- **No domain leak with Anita.** His specialization is exactly *Processes &
+  Products | People*, not "Seasonal Operations · Storage Planning" — that phrasing is
   Anita's logistics domain bleeding in and must not appear on his CV.
 - **AntCV is evidence, not the headline.** It belongs **under the Kanzen
   consultancy experience entry** as a shipped project, not as the focus of the
@@ -110,7 +110,7 @@ Two rules for his own application, from owner feedback (2026-06-13):
 > Note: Gabriel's live CV data is stored in his browser (localStorage
 > `personalInfo`), not in this repo, so the subtitle is regenerated from his own
 > stored profile. The fix is applied in the running app (specialization →
-> *Process · Products · People*; move AntCV under the Kanzen role), not by a
+> *Processes & Products | People*; move AntCV under the Kanzen role), not by a
 > repo edit. This doc records the intended positioning so generation stays on it.
 
 ---

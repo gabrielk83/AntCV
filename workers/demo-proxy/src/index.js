@@ -1,4 +1,4 @@
-const VERSION='3.7.0-genjob-parity';
+const VERSION='3.7.1-outcome-metric-dehardcode';
 // Cloudflare Worker — multi-provider LLM proxy with streaming for Anthropic
 // Includes /preferences route for AntCV cloud save.
 //

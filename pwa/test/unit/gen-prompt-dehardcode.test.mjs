@@ -75,3 +75,80 @@ test('no "use strict" was introduced into the deployed bundle (APPJS-BLUESCREEN-
   assert.equal(app.startsWith('(()=>{'), true, 'bundle head intact');
   assert.equal(/^\s*['"]use strict['"]/.test(app), false);
 });
+
+// ============================================================
+// GEN-DEHARDCODE-002 (owner 2026-07-03, follow-up sweep): __neutralCo carried
+// Gabriel's unsolicited identity (profile opener, "for Gabriel" specialization
+// mention, EO/LiDAR forbidden-opener examples, EO focus-area labels), the main
+// prompt carried his WHY-THIS-POSITION breadth list and the Innoviz
+// merge-or-split example, and the STORED WORK HISTORY push named his employers
+// (Innoviz/Meprolight/TAU examples, Kanzen founder framing, the Sirin
+// paragraph) for EVERY candidate. Neutral rules read stored data; Gabriel's
+// wording survives via a name-guarded pin, and the Kanzen/Sirin paragraphs are
+// company-guarded on the stored history itself.
+
+test('002: Gabriel hardcodes are gone from __neutralCo, the main prompt and placeholders', () => {
+  for (const gone of [
+    'for Gabriel: "Processes • Products • People"',
+    '"Electro-optics Engineer" / "Deep Tech"',
+    'frame him as only an electro-optics engineer',
+    'the two Innoviz roles',
+    'Electro-Optics Engineer & Team Leader',
+    'Innoviz Technologies | 2017 - 2025',
+    '| Innoviz | 2020 - 2025',
+    'do NOT describe Kanzen with',
+    'MBA | Technion',
+    'ASPICE | Requirements, traceability',
+  ]) {
+    assert.equal(count(src, gone), 0, 'src still has: ' + gone.slice(0, 50));
+    assert.equal(count(app, gone), 0, 'app.js still has: ' + gone.slice(0, 50));
+  }
+});
+
+test('002: persona-neutral replacements exist byte-identically in BOTH files', () => {
+  for (const marker of [
+    'OWN stored profile and work history (professional field + years of experience',
+    'narrow specialist labels (a single technology, instrument or sub-discipline)',
+    'the work I do best: <one narrow niche>',
+    'NEVER a narrow specialist opener (GEN-PROFILE-001)',
+    '(e.g. two or three consecutive roles at the same employer)',
+    'framing for an own-consultancy engagement is allowed ONLY when',
+    'System Architect & Change Control Lead | <company> | 2017 - 2025',
+    'MBA | Business School',
+  ]) {
+    assert.equal(count(src, marker) >= 1, true, 'src missing: ' + marker.slice(0, 50));
+    assert.equal(count(app, marker) >= 1, true, 'app.js missing: ' + marker.slice(0, 50));
+  }
+});
+
+test('002: the Gabriel unsolicited pin is name-guarded, once, in BOTH files', () => {
+  assert.equal(count(src, 'GABRIEL PROFILE + FOCUS PIN'), 1, 'pin once in src');
+  assert.equal(count(app, 'GABRIEL PROFILE + FOCUS PIN'), 1, 'pin once in app.js');
+  // his identity opener survives ONLY inside the pin
+  assert.equal(count(src, 'IT professional with 15+ years in consumer and regulated markets'), 1);
+  assert.equal(count(app, 'IT professional with 15+ years in consumer and regulated markets'), 1);
+  assert.equal(count(src, '(/\\bgabriel\\b/i.test(String(ie().name || ""))'), 1, 'src pin guard');
+  assert.equal(count(app, '(/\\bgabriel\\b/i.test(String(Fe().name||""))'), 1, 'app.js pin guard');
+});
+
+test('002: Kanzen + Sirin work-history paragraphs are company-guarded on the stored history', () => {
+  assert.equal(count(src, '/kanzen/i.test(whText)'), 1, 'src kanzen guard');
+  assert.equal(count(src, '/sirin/i.test(whText)'), 1, 'src sirin guard');
+  assert.equal(count(app, '/kanzen/i.test(i)'), 1, 'app.js kanzen guard');
+  assert.equal(count(app, '/sirin/i.test(i)'), 1, 'app.js sirin guard');
+  // the guarded content is kept, once each
+  assert.equal(count(src, 'SIRIN LABS — TEAM-LEADERSHIP SEMANTICS'), 1);
+  assert.equal(count(app, 'SIRIN LABS — TEAM-LEADERSHIP SEMANTICS'), 1);
+  assert.equal(count(src, 'Kanzen Konsulenter ApS engagement'), 1);
+  assert.equal(count(app, 'Kanzen Konsulenter ApS engagement'), 1);
+});
+
+test('002: worker writing-style-engine pair is byte-identical and metric examples are persona-neutral', async () => {
+  const eng = await readFile(new URL('../../../workers/proxy/src/writing-style-engine.js', import.meta.url), 'utf8');
+  const demo = await readFile(new URL('../../../workers/demo-proxy/src/writing-style-engine.js', import.meta.url), 'utf8');
+  assert.equal(eng === demo, true, 'proxy/demo-proxy engine drifted');
+  for (const gone of ['241997', '250→10 day cycle', '7-engineer team']) {
+    assert.equal(count(eng, gone), 0, 'engine still has: ' + gone);
+  }
+  assert.equal(count(eng, 'metric shapes: a cycle-time change, a % improvement') >= 1, true, 'neutral metric shapes missing');
+});

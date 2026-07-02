@@ -497,16 +497,17 @@ function blobHasMetric(blob) {
 function missingMetricHit(blob) {
   const clean = String(blob).replace(/\s+/g, ' ').trim();
   const preview = clean.length > 48 ? clean.slice(0, 48) + '…' : clean;
-  return `selected_outcomes item has no number ("${preview}") — every outcome must carry an on-record metric (250→10 day cycle, ~90% cost reduction, 7-engineer team, 15+ years, Patent 241997, 5+ domains); merge or replace the item, never invent a number`;
+  return `selected_outcomes item has no number ("${preview}") — every outcome must carry an on-record metric from the candidate's OWN stored data (metric shapes: a cycle-time change, a % improvement, a team or task-force size, years of experience, a count of domains / patents / products); merge or replace the item, never invent a number`;
 }
 
 // Selected Outcomes metric rule — PER ITEM (owner directive 2026-06-12: a
 // single numbered bullet is not enough; every outcome must carry a number or
-// be merged away). The canonical on-record set has six numbers, so a 3–5
-// bullet section can always be fully quantified honestly. We flag each
+// be merged away). The retry message names metric SHAPES, not any one
+// candidate's numbers (GEN-DEHARDCODE-002: the previous wording listed
+// Gabriel's metrics as the examples for every persona). We flag each
 // metric-free item with a preview so the retry instruction names exactly what
 // to fix; we never force a SPECIFIC number into a SPECIFIC bullet (the model
-// chooses from the on-record set — fabrication stays banned).
+// chooses from the candidate's own on-record set — fabrication stays banned).
 function findMissingMetricHits(text) {
   const root = tryParseSectionsJson(text);
   if (!root) return [];

@@ -89,17 +89,21 @@ await page.evaluate(() => {
   })).observe(document.body, { childList: true, subtree: true, attributes: true, attributeOldValue: false });
 }).catch(() => {});
 
-// probe responsiveness for 10s
-let frozen = false;
-for (let i = 0; i < 5; i++) {
-  await page.waitForTimeout(2000);
+// probe responsiveness for 24s. A HARD loop (the owner’s original freeze) never
+// recovers; heavy-but-recovering churn answers most probes. FROZEN = the page
+// missed a MAJORITY of probes AND the final probe (no recovery).
+let misses = 0, lastAlive = false;
+for (let i = 0; i < 8; i++) {
+  await page.waitForTimeout(3000);
   const alive = await Promise.race([
     page.evaluate(() => 1).catch(() => -1),
     new Promise((r) => setTimeout(() => r('timeout'), 3000)),
   ]);
-  console.log('t+' + (i + 1) * 2 + 's alive:', alive);
-  if (alive === 'timeout') { frozen = true; break; }
+  console.log('t+' + (i + 1) * 3 + 's alive:', alive);
+  if (alive === 'timeout') misses++; lastAlive = alive === 1;
 }
+const frozen = misses >= 5 && !lastAlive;
+console.log('probe misses:', misses + '/8', '| recovered at end:', lastAlive);
 
 const { profile } = await cdp.send('Profiler.stop');
 // aggregate self time per callFrame, attributing NATIVE frames to their nearest

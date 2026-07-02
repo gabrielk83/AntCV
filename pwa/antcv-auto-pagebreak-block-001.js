@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.934-scroll-jump';
+  var VERSION = '1.51.63-promote-margin';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -235,6 +235,52 @@
   // band) and REUSED while unchanged — deterministic across re-measure noise, invalidating on a real
   // add/remove/resize. Kill switch: localStorage['antcv:sidebar-sig-cache']='0'.
   var __sidebarPagedCache = null;
+  // SIDEBAR-PROMOTE-MARGIN-001 (owner 2026-07-03): removing ONE line from a sidebar
+  // subsubsection made the PREVIEW pull the next group (Environmental) up a page while
+  // the PDF correctly kept it down — the freed ~20px made the group "fit" in preview
+  // units, but the export renders the sidebar taller (variance beyond the global
+  // SIDEBAR_PREVIEW_INFLATE), so marginal fits overflow in the PDF. Rule: a GROUP may
+  // be PROMOTED (moved up a page vs its last settled page) only when the destination
+  // page still has at least this many raw px free AFTER taking the group — i.e. it
+  // fits with real slack, not by a hair. Demotions (overflow) are unchanged. 0 disables.
+  // Owner-tunable live: AntcvAutoPagebreak.config({ SIDEBAR_PROMOTE_MARGIN: N }).
+  var SIDEBAR_PROMOTE_MARGIN = 45;
+  // last settled page per sidebar GROUP (keyed by sid + normalized group label so the
+  // identity survives row-index shifts when a line above the group is removed).
+  var __grpPageStick = {};
+  // PURE decision core (unit-tested in pwa/test/unit/sidebar-promote-margin.test.mjs):
+  // paged = [{sid,key,page}] (mutated in place for gated groups); heights = {"sid|key":px};
+  // groupsBySid = {sid:[{key,start}]}; stick = last settled page per group key;
+  // p1Cap/nCap = page budgets; margin = required free px for a promotion.
+  // Returns the nextStick map (group key -> settled page after gating).
+  function __promoteMarginGate(paged, heights, groupsBySid, stick, p1Cap, nCap, margin) {
+    var fillByPage = {};
+    paged.forEach(function (b) { fillByPage[b.page] = (fillByPage[b.page] || 0) + (heights[b.sid + '|' + b.key] || 0); });
+    var bySid = {};
+    paged.forEach(function (b) { (bySid[b.sid] = bySid[b.sid] || []).push(b); });
+    var nextStick = {};
+    Object.keys(groupsBySid).forEach(function (sid) {
+      var groups = groupsBySid[sid] || [];
+      if (!groups.length || !bySid[sid]) return;
+      var blocks = bySid[sid].slice().sort(function (a, b) { return (parseInt(a.key, 10) || 0) - (parseInt(b.key, 10) || 0); });
+      groups.forEach(function (g, gi) {
+        var end = gi + 1 < groups.length ? groups[gi + 1].start : Infinity;
+        var gBlocks = blocks.filter(function (b) { var k = parseInt(b.key, 10) || 0; return k >= g.start && k < end; });
+        if (!gBlocks.length) return;
+        var newPage = gBlocks.reduce(function (m, b) { return Math.min(m, b.page); }, 99);
+        var stuck = stick[g.key];
+        if (stuck && newPage < stuck) {
+          var cap = (newPage === 1) ? p1Cap : nCap;
+          if ((fillByPage[newPage] || 0) > cap - margin) {
+            blocks.forEach(function (b) { var k = parseInt(b.key, 10) || 0; if (k >= g.start) b.page = Math.max(b.page, stuck); });
+            newPage = stuck;
+          }
+        }
+        nextStick[g.key] = newPage;
+      });
+    });
+    return nextStick;
+  }
   // Measure the profile photo's height (the reserve the sidebar's page 1 loses to it). 0 when
   // there is no photo (then the sidebar band falls back to PAGE1_BAND).
   function __photoReserve() {
@@ -1107,6 +1153,39 @@
             });
           })();
         }
+        // SIDEBAR-PROMOTE-MARGIN-001 post-process (owner 2026-07-03): gate group
+        // PROMOTIONS on a real-slack fit so the preview matches the PDF decision
+        // (removing one line must not pull a group up when it only just fits —
+        // the export renders the sidebar taller and keeps it down). Decision core
+        // = __promoteMarginGate (pure, unit-tested); this block only builds inputs.
+        if (SIDEBAR_PROMOTE_MARGIN > 0) {
+          (function () {
+            try {
+              var heights = {};
+              __uniBlocks.sidebar.forEach(function (b) { heights[b.sid + '|' + b.key] = Math.max(0, b.bottom - b.top); });
+              var groupsBySid = {};
+              __sPaged.forEach(function (b) {
+                if (groupsBySid[b.sid]) return;
+                var secData = null;
+                for (var z = 0; z < (list || []).length; z++) { if (list[z] && list[z].id === b.sid) { secData = list[z]; break; } }
+                if (!secData || !Array.isArray(secData.items)) { groupsBySid[b.sid] = []; return; }
+                var groups = [], seenLbl = {};
+                secData.items.forEach(function (it, i) {
+                  if (it && it.grp != null && it.grp !== '') {
+                    var lbl = String(it.grp === true ? (it.t || '') : it.grp).replace(/\s+/g, ' ').trim().toLowerCase();
+                    var n = (seenLbl[lbl] = (seenLbl[lbl] || 0) + 1);
+                    groups.push({ key: b.sid + '#' + lbl + (n > 1 ? '#' + n : ''), start: i });
+                  }
+                });
+                groupsBySid[b.sid] = groups;
+              });
+              var nCap = __uniLimit / SIDEBAR_PREVIEW_INFLATE;
+              var p1Cap = Math.max(300, __uniLimit - __sbBand1);
+              var nextStick = __promoteMarginGate(__sPaged, heights, groupsBySid, __grpPageStick, p1Cap, nCap, SIDEBAR_PROMOTE_MARGIN);
+              for (var pk in nextStick) { if (nextStick.hasOwnProperty(pk)) __grpPageStick[pk] = nextStick[pk]; }
+            } catch (e) { /* never abort the pagination pass */ }
+          })();
+        }
         var __reSidebar = __mapFromPaged(__sPaged, false);
         var __reMainItems = __mapFromPaged(__mPaged, false);
         var __reRole = __mapFromPaged(__mPaged, true);
@@ -1562,6 +1641,7 @@
 
   window.AntcvAutoPagebreak = {
     version: VERSION,
+    _promoteMarginGate: __promoteMarginGate,
     run: function () { lastWritten = null; lastSourceFp = null; schedule(); },
     _compute: compute,
     // SIDEBAR-SHRINK-RECLAIM-001 runtime A/B knobs (console-tunable):
@@ -1569,13 +1649,14 @@
     //   AntcvAutoPagebreak.config({ HYST_STABLE:80 })  // looser stable band
     config: function (o) {
       try {
-        if (!o) return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE, SIDEBAR_UNIFIED: SIDEBAR_UNIFIED, ABSOLUTE_PAGING: ABSOLUTE_PAGING, PAGE1_BAND: PAGE1_BAND, MAIN_PDF_LINE_BONUS: MAIN_PDF_LINE_BONUS, MAIN_PAGE_N_BAND: MAIN_PAGE_N_BAND, SIDEBAR_PAGE1_BAND: SIDEBAR_PAGE1_BAND, KEEP_WHOLE_FRAC: KEEP_WHOLE_FRAC, FORCE_LAST_GRP_FRAC: FORCE_LAST_GRP_FRAC };
+        if (!o) return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE, SIDEBAR_UNIFIED: SIDEBAR_UNIFIED, ABSOLUTE_PAGING: ABSOLUTE_PAGING, PAGE1_BAND: PAGE1_BAND, MAIN_PDF_LINE_BONUS: MAIN_PDF_LINE_BONUS, MAIN_PAGE_N_BAND: MAIN_PAGE_N_BAND, SIDEBAR_PAGE1_BAND: SIDEBAR_PAGE1_BAND, KEEP_WHOLE_FRAC: KEEP_WHOLE_FRAC, FORCE_LAST_GRP_FRAC: FORCE_LAST_GRP_FRAC, SIDEBAR_PROMOTE_MARGIN: SIDEBAR_PROMOTE_MARGIN };
         if (typeof o.ONE_PASS === 'boolean') ONE_PASS = o.ONE_PASS;
         if (typeof o.HYST_STABLE === 'number') HYST_STABLE = o.HYST_STABLE;
         if (typeof o.HYST_TIGHT === 'number') HYST_TIGHT = o.HYST_TIGHT;
         if (typeof o.RECHECK_MS === 'number') RECHECK_MS = o.RECHECK_MS;
         if (typeof o.SNAP_GAP_MAX === 'number') SNAP_GAP_MAX = o.SNAP_GAP_MAX;
         if (typeof o.SIDEBAR_PREVIEW_INFLATE === 'number' && o.SIDEBAR_PREVIEW_INFLATE >= 1 && o.SIDEBAR_PREVIEW_INFLATE <= 2) SIDEBAR_PREVIEW_INFLATE = o.SIDEBAR_PREVIEW_INFLATE;
+        if (typeof o.SIDEBAR_PROMOTE_MARGIN === 'number' && o.SIDEBAR_PROMOTE_MARGIN >= 0 && o.SIDEBAR_PROMOTE_MARGIN <= 400) SIDEBAR_PROMOTE_MARGIN = o.SIDEBAR_PROMOTE_MARGIN;
         if (typeof o.SIDEBAR_NPAGE === 'boolean') SIDEBAR_NPAGE = o.SIDEBAR_NPAGE;
         if (typeof o.SIDEBAR_UNIFIED === 'boolean') SIDEBAR_UNIFIED = o.SIDEBAR_UNIFIED;
         if (typeof o.ABSOLUTE_PAGING === 'boolean') ABSOLUTE_PAGING = o.ABSOLUTE_PAGING;
@@ -1586,7 +1667,7 @@
         if (typeof o.KEEP_WHOLE_FRAC === 'number' && o.KEEP_WHOLE_FRAC > 0 && o.KEEP_WHOLE_FRAC <= 1) KEEP_WHOLE_FRAC = o.KEEP_WHOLE_FRAC;
         if (typeof o.FORCE_LAST_GRP_FRAC === 'number' && o.FORCE_LAST_GRP_FRAC >= 0 && o.FORCE_LAST_GRP_FRAC <= 1) FORCE_LAST_GRP_FRAC = o.FORCE_LAST_GRP_FRAC;
         lastSourceFp = null; schedule();
-        return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE, SIDEBAR_UNIFIED: SIDEBAR_UNIFIED, ABSOLUTE_PAGING: ABSOLUTE_PAGING, PAGE1_BAND: PAGE1_BAND, MAIN_PDF_LINE_BONUS: MAIN_PDF_LINE_BONUS, MAIN_PAGE_N_BAND: MAIN_PAGE_N_BAND, SIDEBAR_PAGE1_BAND: SIDEBAR_PAGE1_BAND, KEEP_WHOLE_FRAC: KEEP_WHOLE_FRAC, FORCE_LAST_GRP_FRAC: FORCE_LAST_GRP_FRAC };
+        return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE, SIDEBAR_UNIFIED: SIDEBAR_UNIFIED, ABSOLUTE_PAGING: ABSOLUTE_PAGING, PAGE1_BAND: PAGE1_BAND, MAIN_PDF_LINE_BONUS: MAIN_PDF_LINE_BONUS, MAIN_PAGE_N_BAND: MAIN_PAGE_N_BAND, SIDEBAR_PAGE1_BAND: SIDEBAR_PAGE1_BAND, KEEP_WHOLE_FRAC: KEEP_WHOLE_FRAC, FORCE_LAST_GRP_FRAC: FORCE_LAST_GRP_FRAC, SIDEBAR_PROMOTE_MARGIN: SIDEBAR_PROMOTE_MARGIN };
       } catch (_) { return null; }
     },
     // Manual reset of auto breaks (e.g. from console) if a stale break

@@ -45,6 +45,7 @@
 ## CLOSED this seeding (evidence)
 
 - Owner PDF review batch 11 (rows 25-29) — resolved in batch 12: PWA 1.51.71 + docx-worker 1.14.121 (commit f98b07b; suite 699/699, docx diags 34/38 == baseline, boot-smoke green). Owner re-export + CL regen confirm the visuals.
+- Owner round-2 (export (3), batch 13) — RESULTS-PIN-OWNER-EDIT-001 + RESULTS-PIN-ONE-LINE-001 + SIDEBAR-TIGHTEN-001 (1.51.72) + SIDEBAR-HEADLINE-PAGE2-ALIGN-002 (wk 1.14.122, cell-margin approach reverted — LibreOffice row-top normalization; spacer paragraph instead). Row-29 sidebar half re-verified via 1.14.122. Watch item: sidebar runts persisted in (3) — tighten pass is the primary mitigation; live preflight diagnosis if they survive the next export.
 
 - Orphans v2 (EXPORT-METRIC-MEASURE-001 + EXPORT-PREFLIGHT-ORPHANS-001) — 1.51.57; real-font diag clears the acceptance set; owner PDF gate pending (row 24).
 - Demo/template flicker loops (STORM-EMPTY-SLOT-CONVERGE-001, PW-CJLR-FOREIGN-SECTION-001) — 1.51.56/1.51.59.

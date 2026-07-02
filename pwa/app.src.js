@@ -2262,7 +2262,12 @@
             ms: __ms,
           });
           __antcvDemoteProvider(r, a); // 1.50.291 #5: deprioritise next time
-          s = new Error(a + " returned inadequate output");
+          // LADDER-CONST-CRASH-001 (owner 2026-07-03): a vestigial
+          // `s = new Error(...)` sat here — but `s` is the CONST transient-retry
+          // delay array above, so the assignment threw "Assignment to constant
+          // variable", the outer catch logged the SAME provider a second time,
+          // and the real fallback ladder was misreported. Nothing reads the
+          // assignment (`continue` re-declares s next iteration) — removed.
           continue;
         }
         const p = Date.now() - i,

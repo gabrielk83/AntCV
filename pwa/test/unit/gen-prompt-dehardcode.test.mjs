@@ -143,6 +143,58 @@ test('002: Kanzen + Sirin work-history paragraphs are company-guarded on the sto
   assert.equal(count(app, 'Kanzen Konsulenter ApS engagement'), 1);
 });
 
+// ============================================================
+// GEN-DEHARDCODE-003 (owner 2026-07-03, third sweep): four Gabriel-flavored
+// example lists still reached every persona — the translator KEEP-VERBATIM
+// examples (Innoviz / Sirin Labs / Pan Idræt / Copenhagen Wolves RFC, LiDAR /
+// Power BI / Codebeamer), the tools-category taxonomy shaped on his
+// hardware/optics/PM background (Zemax / OpticStudio / EO design), the
+// certification-relevance examples (BABOK / Six Sigma / ASPICE / "Prøve i
+// dansk 2"), the PATENTS bullet quoting his cover-window patent work, and the
+// LANG-CROSS-001 invariant list naming his metrics (250, 10, $8M, 7-person)
+// and tech (LiDAR, SWIR, SPAD, SiPM). All five replaced by persona-neutral
+// shape descriptions; the candidate's stored data supplies the specifics.
+
+test('003: Gabriel example lists are gone from translator + gen prompt in BOTH files', () => {
+  for (const gone of [
+    // (1) translator KEEP VERBATIM examples
+    'Innoviz, Sirin Labs, Pan Idræt, Copenhagen Wolves RFC',
+    'LiDAR, Power BI, Codebeamer',
+    // (5) LANG-CROSS-001 metrics + niche-tech examples
+    '$8M, 7-person',
+    'LiDAR, SWIR, FPGA, SPAD, SiPM',
+    // (2) tools-category taxonomy example
+    'hardware/optics/PM background',
+    'Zemax, OpticStudio, Code V',
+    // (3) certification-relevance examples
+    'BABOK for BA roles',
+    'for Denmark-local roles',
+    // (4) PATENTS bullet example
+    'cover-window geometry reducing optical crosstalk',
+  ]) {
+    assert.equal(count(src, gone), 0, 'src still has: ' + gone.slice(0, 50));
+    assert.equal(count(app, gone), 0, 'app.js still has: ' + gone.slice(0, 50));
+  }
+});
+
+test('003: persona-neutral replacements exist in BOTH files', () => {
+  for (const marker of [
+    'employers, clubs, associations — even small local ones',
+    'technology names (tools, platforms, protocols)',
+    '(e.g. 30%, 10×, $2M, 5-person, ~25)',
+    'FMEA, MBSE); and quoted',
+    // S3 quoting differs per file (\" in src, raw " in app.js) — quote-free substrings
+    'category labels and tools MUST come from the candidate',
+    '(their named methods and standards)',
+    'judge each stored certification by its OWN domain',
+    'a language certificate for roles local to that language',
+    'the design or engineering change the patent covers, described in plain words',
+  ]) {
+    assert.equal(count(src, marker) >= 1, true, 'src missing: ' + marker.slice(0, 50));
+    assert.equal(count(app, marker) >= 1, true, 'app.js missing: ' + marker.slice(0, 50));
+  }
+});
+
 test('002: worker writing-style-engine pair is byte-identical and metric examples are persona-neutral', async () => {
   const eng = await readFile(new URL('../../../workers/proxy/src/writing-style-engine.js', import.meta.url), 'utf8');
   const demo = await readFile(new URL('../../../workers/demo-proxy/src/writing-style-engine.js', import.meta.url), 'utf8');

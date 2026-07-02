@@ -116,3 +116,17 @@ test('fnEcho: generic filename ("JD final.pdf") → never a false mismatch', () 
   const r = fnEcho('JD final.pdf', { text: 'Any extracted text at all.', warning: null });
   assert.equal(r.warning, null);
 });
+
+// JD-VISION-PROVIDER-001 (1.51.102): the vision tier must use the EXPLICIT
+// claude-first provider order (preferGPT:false) so page images never go to a
+// vision-blind provider first (mistral returned a short non-answer that ee()
+// counted as success — diag chain "…garbled_skip_llm_for_vision; vision_insufficient").
+for (const [name, text] of [['app.src.js', src], ['app.js', app]]) {
+  test(`${name}: vision tier pins the explicit vision-capable provider order`, () => {
+    // the vision call is the long_context site adjacent to method:"vision"
+    const i = text.indexOf('method: "vision"') !== -1 ? text.indexOf('method: "vision"') : text.indexOf('method:"vision"');
+    assert.ok(i !== -1, `${name}: vision tier missing`);
+    const w = text.slice(Math.max(0, i - 1200), i + 1200);
+    assert.ok(/task:\s*"long_context",\s*preferGPT:\s*!1/.test(w), `${name}: vision ee() call lost preferGPT:!1`);
+  });
+}

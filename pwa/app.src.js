@@ -997,7 +997,19 @@
           pages: l,
           totalPages: i,
         };
-      })(e, async (e, t) => await ee(e, t, { task: "long_context" }));
+      })(
+        e,
+        // JD-VISION-PROVIDER-001 (owner 2026-07-03 night, "stuck after uploading
+        // pdf" — diag: vision_insufficient): the vision tier sends page IMAGES,
+        // but the default long_context routing appends every configured provider
+        // and the cost scorer can put MISTRAL first — which cannot see images,
+        // returns a short non-answer that ee() treats as success (the adequacy
+        // gate only covers parse_jd/generate_cv), and the whole extraction
+        // throws without a vision-capable model ever seeing the pages.
+        // preferGPT:false = the EXPLICIT claude→openai→gemini→mistral order:
+        // scorer skipped, vision-capable providers first, mistral last resort.
+        async (e, t) => await ee(e, t, { task: "long_context", preferGPT: !1 }),
+      );
       if (t.text && t.text.length >= 100 && !f(t.text))
         return fnEcho(
           ((n.text = t.text),

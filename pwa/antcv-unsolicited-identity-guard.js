@@ -31,7 +31,7 @@
 (function () {
   'use strict';
   if (window.__antcvUnsolicitedIdentityGuard) return;
-  window.__antcvUnsolicitedIdentityGuard = '1.51.76-patch-d';
+  window.__antcvUnsolicitedIdentityGuard = '1.51.79';
 
   var SRC = 'unsolicited-identity-guard';
   var META_KEY = 'meta';
@@ -69,74 +69,6 @@
     catch (_) { return null; }
   }
 
-  // GEN-UNSOL-STALE-JD-001 Patch D (owner 2026-07-03, "resolve the prose-ghost class"):
-  // forcing meta.company back to Unsolicited (above) fixes the HEADER, but a prior
-  // targeted company's name can still be baked into the CL BODY prose (the "unsolicited
-  // application went all Terma" bug). When we scrub the identity we ALSO know the exact
-  // contaminating company `co`, so neutralize it in the CL prose here — the one moment
-  // the prior company is known. Conservative: only the specific legal name + a
-  // distinctive base token (>=4 chars), possessive-aware, CL sections only (never the CV
-  // work history). Self-healing + idempotent (after the scrub the company is gone and
-  // meta reads Unsolicited, so it does not re-fire).
-  function escapeRx(s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
-  var _POS = '(?:[’‘\']s)';
-  function companyBase(co) {
-    var s = String(co || '')
-      .replace(/\b(a\/s|aps|ab|as|inc|incorporated|ltd|limited|llc|l\.l\.c|gmbh|corp|corporation|co|company|ag|s\.a|sa|n\.v|nv|b\.v|bv|oyj|oy|plc|group|holdings?|technologies|technology|systems|labs?|solutions)\b\.?/gi, ' ')
-      .replace(/[.,/&]/g, ' ').replace(/\s{2,}/g, ' ').trim();
-    var first = (s.split(/\s+/)[0] || '').trim();
-    return first.length >= 4 ? first : '';
-  }
-  function neutralizeCompany(text, co) {
-    var t = String(text == null ? '' : text);
-    var full = String(co || '').trim();
-    var base = companyBase(co);
-    if (full) {
-      t = t.replace(new RegExp(escapeRx(full) + _POS, 'gi'), "your organisation's");
-      t = t.replace(new RegExp(escapeRx(full), 'gi'), 'your organisation');
-    }
-    if (base) {
-      t = t.replace(new RegExp('\\b' + escapeRx(base) + _POS, 'gi'), "your organisation's");
-      t = t.replace(new RegExp('\\b' + escapeRx(base) + '\\b', 'gi'), 'your organisation');
-    }
-    return t;
-  }
-  function scrubCompanyFromCl(co) {
-    if (!co || isUnsolicitedLabel(co)) return;
-    // 1) neutralize the company in the CL prose sections
-    var secs = null; try { secs = JSON.parse(localStorage.getItem('sections') || '{}'); } catch (_) { secs = null; }
-    if (secs && Array.isArray(secs.cl)) {
-      var changed = false;
-      var f = function (v) { if (typeof v !== 'string') return v; var n = neutralizeCompany(v, co); if (n !== v) changed = true; return n; };
-      secs.cl.forEach(function (sec) {
-        if (!sec || typeof sec !== 'object') return;
-        if (typeof sec.content === 'string') sec.content = f(sec.content);
-        if (Array.isArray(sec.items)) sec.items = sec.items.map(function (it) {
-          if (it && typeof it === 'object') { if (typeof it.t === 'string') it.t = f(it.t); if (typeof it.b === 'string') it.b = f(it.b); return it; }
-          return typeof it === 'string' ? f(it) : it;
-        });
-        if (Array.isArray(sec.rows)) sec.rows = sec.rows.map(function (row) { return Array.isArray(row) ? row.map(f) : row; });
-      });
-      if (changed) {
-        try { localStorage.setItem('sections', JSON.stringify(secs)); } catch (_) {}
-        try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { reason: SRC + '-company-scrub' } })); } catch (_) {}
-        try { console.warn('[unsolicited-identity-guard] scrubbed prior company "' + co + '" out of the unsolicited CL prose'); } catch (_) {}
-      }
-    }
-    // 2) purge any poisoned CL-prose-guard bucket (an unsolicited / empty-company key
-    // that wrongly holds this company's prose) so it can't be re-injected.
-    try {
-      var store = JSON.parse(localStorage.getItem('antcv:clProseGuard') || '{}') || {};
-      var probe = companyBase(co) || String(co).trim();
-      var rx = new RegExp(escapeRx(probe), 'i');
-      var del = false;
-      Object.keys(store).forEach(function (k) {
-        if (/^(unsolicited\||\|)/i.test(k) && rx.test(JSON.stringify(store[k]))) { delete store[k]; del = true; }
-      });
-      if (del) localStorage.setItem('antcv:clProseGuard', JSON.stringify(store));
-    } catch (_) {}
-  }
-
   var lastSeen = null;
   function apply() {
     if (disabled() || isEditing()) return;
@@ -164,9 +96,8 @@
     try { out = JSON.stringify(next); localStorage.setItem(META_KEY, out); } catch (_) { return; }
     lastSeen = next.company + '|' + next.role;
     scrubSidecarKeys();
-    // Patch D: the identity is forced to Unsolicited above — also strip the prior
-    // company `co` out of the CL body prose (it is the one moment `co` is known).
-    try { scrubCompanyFromCl(co); } catch (_) {}
+    // NOTE: scrubbing the prior company out of the CL/CV BODY prose (Patch D) lives in
+    // the dedicated, employer-protected sidecar antcv-unsol-company-scrub.js (1.51.77).
     // Pull the cleaned identity into React state exactly like the candidate
     // editor does, so the top-bar chip updates AND the app's kernel autosave
     // re-persists the cleaned slot to the cloud (self-heal).
@@ -200,5 +131,5 @@
   }); } catch (_) {}
   setInterval(tick, 4000);
 
-  window.AntcvUnsolicitedIdentityGuard = { version: '1.51.76-patch-d', _apply: apply, _isSpecificJob: isSpecificJob, _isUnsolicitedLabel: isUnsolicitedLabel, _neutralizeCompany: neutralizeCompany, _companyBase: companyBase, _scrubCompanyFromCl: scrubCompanyFromCl };
+  window.AntcvUnsolicitedIdentityGuard = { version: '1.51.79', _apply: apply, _isSpecificJob: isSpecificJob, _isUnsolicitedLabel: isUnsolicitedLabel };
 })();

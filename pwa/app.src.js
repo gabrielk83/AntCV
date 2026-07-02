@@ -28828,6 +28828,9 @@
           "_showcaseSavedConsensus",
           "_showcaseSavedMultiLlm",
           "antcv:apply:snapshot",
+          // CL-PROSE-UNSOL-POISON-001: a leak-purge also clears the CL-prose guard store
+          // so stale targeted prose can't be re-injected after the purge.
+          "antcv:clProseGuard",
         ]),
         ns = [/^antcv:banks:/, /^gapState_/, /^antcv:debug:lastParses/],
         os = new Set([

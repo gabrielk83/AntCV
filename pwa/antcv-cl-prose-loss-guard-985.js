@@ -23,7 +23,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.31-cl-prose-loss-guard';
+  var VERSION = '1.51.74-cl-prose-unsol-poison';
   if (window.__antcvClProseGuard985 === VERSION) return;
   window.__antcvClProseGuard985 = VERSION;
 
@@ -45,6 +45,25 @@
       var m = JSON.parse(localStorage.getItem('meta') || '{}') || {};
       return String((m.company || '') + '|' + (m.role || '')).slice(0, 200);
     } catch (_) { return '|'; }
+  }
+  // CL-PROSE-UNSOL-POISON-001 (owner 2026-07-03): an UNSOLICITED application's CL prose
+  // must never be snapshotted or re-applied by this guard. Root cause of "an unsolicited
+  // application went all Terma": meta.company was flipped to "Unsolicited" while a prior
+  // TARGETED company's CL body was still live in sections, so snapshot() captured that
+  // company's prose under the "Unsolicited|<role>" bucket and reapply() re-injected it
+  // forever. Unsolicited prose is company-neutral and regenerable — it does not need
+  // loss-protection, and skipping the guard here makes cross-company poisoning impossible.
+  // (guardKeys() for signature/slogan is NOT gated — those are not company-specific.)
+  function isUnsolicited() {
+    try {
+      var m = JSON.parse(localStorage.getItem('meta') || '{}') || {};
+      var c = String(m.company || '').trim().toLowerCase();
+      // EXPLICIT "unsolicited" only — an EMPTY company is the transient fresh-generation
+      // window (before meta is stamped) that CL-BLANK-CAPTURE-001 relies on to snapshot
+      // prose early; gating it would drop real prose. The poison was the explicit
+      // "Unsolicited|<role>" bucket, which this catches.
+      return c === 'unsolicited';
+    } catch (_) { return false; }
   }
   function readSections() {
     try { var v = JSON.parse(localStorage.getItem('sections') || '{}'); return (v && typeof v === 'object') ? v : null; } catch (_) { return null; }
@@ -84,6 +103,7 @@
 
   // Snapshot real CL prose sections for the current application.
   function snapshot() {
+    if (isUnsolicited()) return;   // never capture prose under an unsolicited key
     var secs = readSections(); if (!secs || !Array.isArray(secs.cl)) return;
     var key = appKey();
     var store = readStore();
@@ -108,6 +128,7 @@
 
   // Re-apply a snapshotted real section ONLY where the live one is now a placeholder.
   function reapply() {
+    if (isUnsolicited()) return;   // never re-inject a company's prose into an unsolicited app
     var now = (window.performance && performance.now) ? performance.now() : 0;
     if (now && lastApplyAt && (now - lastApplyAt) < 1200) return; // anti-loop
     var secs = readSections(); if (!secs || !Array.isArray(secs.cl)) return;

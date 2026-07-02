@@ -28,7 +28,7 @@
 | 14 | Access-relay D1-WRITE-RETRY deploy — likely CLOSED (memory: deployed 2026-07-02); verify `d1_write_failed` gone + close | PROJECT_ISSUES 07-02 carry-forward #2 | no |
 | 15 | SIDEBAR-PAGE23-DANCE — likely CLOSED (sig-cache 1.50.9xx + SIDEBAR-PROMOTE-MARGIN-001 1.51.63); verify live + close | 2026-06-28 diagnosed | no |
 | 16 | diag-ai-notice-anchor RED since worker 1.14.75 | memory stale-status-deadflags | no |
-| 17 | PAN-IDRAET-BULLET-NEARDUP-001 (within-role near-dup bullets) — blocked on preview memo emitting bullets too | memory preview-memo-results-only; NIGHTLY 07-03 Task 4.2 | 2026-07-02 |
+| 17 | PAN-IDRAET-BULLET-NEARDUP-001 — EXPORT half SHIPPED 1.51.70 (within-role near-dup collapse in sanitizeForExport, single-source both modes, KEEP_MIN=2, cleaner line wins). Preview-side hide DEFERRED (index-based edit path — ORPHAN-WRITE-VERIFY risk; needs live browser + index-safe marker) | memory preview-memo-results-only; NIGHTLY 07-03 Task 4.2 | partial 2026-07-03 |
 | 18 | JD-SCAN-HALLUCINATION-001 ingest reorder (garble → vision FIRST; filename↔company check; "used OCR" notice) — needs real models/owner present | ACTIVE_BUGS; ORPHANS_V2 prompt stretch | 2026-07-02 |
 | 19 | GEN-UNSOL-STALE-JD-001 Patch D (scrub known prior company when meta.company returns empty) | ACTIVE_BUGS 1.51.54 block | 2026-07-02 |
 | 20 | ~~Gen-prompt example-text leftovers~~ CLOSED — GEN-DEHARDCODE-003 shipped 1.51.67 (all five example lists neutralized; sweep complete, see CLOSED list) | GEN-DEHARDCODE-002 report → ACTIVE_BUGS batch 10 | 2026-07-02 |

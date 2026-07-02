@@ -1117,6 +1117,14 @@ function sanitizeForExport(docSections, doc) {
     const targeted = _isTargetedExport();
     return docSections.map((s) => {
       if (!s || typeof s !== 'object') return s;
+      // PAN-IDRAET-BULLET-NEARDUP-001: collapse within-role near-duplicate bullets
+      // BEFORE any mode/targeted handling, so both the results-mode (post-
+      // applyOutcomesMode) and section-mode payloads carry one clean line. Runs on
+      // every experience section; KEEP_MIN=2 respected; stored sections untouched.
+      if (s.type === 'experience' && Array.isArray(s.roles)) {
+        const roles = s.roles.map(_collapseRoleBullets);
+        if (roles.some((r, i) => r !== s.roles[i])) s = { ...s, roles };
+      }
       // (0) URUGUAYAN-VARIANT-STRIP-001: strip regional qualifier from Spanish language line.
       if ((s.id === 'languages' || /^languages?$/i.test(String(s.title || s.id || ''))) && Array.isArray(s.items)) {
         const items = _stripUruguayan(s.items);
@@ -2184,6 +2192,63 @@ function _dedupNear(texts) {
   });
   return kept.map((k) => k.text);
 }
+// PAN-IDRAET-BULLET-NEARDUP-001 (owner export-16 2026-07-02): a role can carry two
+// bullets that are the SAME fact phrased twice — Pan Idræt's "Manage logistics for
+// about 25 players and coaches…" (b1) vs "Manage logistics for 25 players…" (b3).
+// _dedupNear collapses this for Results joins; apply the SAME anchor-clause/overlap
+// predicate to a role's own bullets so the export never prints the near-dup twice.
+// Bullets may be strings or {b,t} objects. Winner tiebreak follows the owner's
+// preference for the CLEANER line ("25 players" over "about 25 players"): higher
+// _metricScore first; tie → fewer approximation words (about/roughly/…); tie →
+// shorter. The winner keeps its ORIGINAL bullet object (string or {b,t}) and the
+// earlier slot, so order and any per-bullet fields survive. Non-text bullets pass
+// through untouched. Export-side only (like hideSubsumed) — stored sections and the
+// index-based preview edit path are never mutated. KEEP_MIN is enforced by the caller.
+// (_bulletText — string|{b,t} → text — is already defined above at module scope.)
+const _approxCount = (s) => (String(s == null ? '' : s).match(/\b(?:about|roughly|approximately|around|approx|circa)\b|~/gi) || []).length;
+function _dedupNearBullets(bullets) {
+  const kept = [];
+  (bullets || []).forEach((b) => {
+    const text = _bulletText(b);
+    if (!text || !text.trim()) { kept.push({ b }); return; }   // preserve non-text bullets as-is
+    const arr = _ndStem(text), toks = new Set(arr), lead = arr.slice(0, 2);
+    const sc = _metricScore(text), ap = _approxCount(text), len = text.length;
+    if (!toks.size) { kept.push({ b, toks, lead, sc, ap, len }); return; }
+    let dup = -1;
+    for (let i = 0; i < kept.length; i++) {
+      const k = kept[i]; if (!k.toks || !k.toks.size) continue;
+      let shared = 0; toks.forEach((w) => { if (k.toks.has(w)) shared++; });
+      if (shared < 3) continue;
+      const overlap = shared / Math.min(toks.size, k.toks.size) >= 0.6;
+      const sameHead = lead.length === 2 && k.lead.length === 2 && lead[0] === k.lead[0] && lead[1] === k.lead[1];
+      if (overlap || sameHead) { dup = i; break; }
+    }
+    if (dup < 0) { kept.push({ b, toks, lead, sc, ap, len }); return; }
+    const cur = kept[dup];
+    const better = sc > cur.sc
+      || (sc === cur.sc && ap < cur.ap)
+      || (sc === cur.sc && ap === cur.ap && len < cur.len);
+    if (better) kept[dup] = { b, toks, lead, sc, ap, len };
+  });
+  return kept.map((k) => k.b);
+}
+// KEEP-MIN floor (mirrors applyOutcomesMode's keepMin, owner KEEP-MIN-BULLETS-001):
+// a within-role collapse must NOT drop a role below min(2, original count) bullets.
+function _keepMinBullets(original, collapsed) {
+  const o = Array.isArray(original) ? original : [];
+  const c = Array.isArray(collapsed) ? collapsed : o;
+  return (c.length >= Math.min(2, o.length)) ? c : o;
+}
+// Collapse one role's near-dup bullets, KEEP_MIN-guarded; returns the SAME role
+// object reference when nothing changed (so callers can cheaply detect a no-op).
+function _collapseRoleBullets(r) {
+  if (!r || typeof r !== 'object' || !Array.isArray(r.bullets) || r.bullets.length < 2) return r;
+  const collapsed = _dedupNearBullets(r.bullets);
+  if (collapsed.length >= r.bullets.length) return r;      // nothing collapsed
+  const kept = _keepMinBullets(r.bullets, collapsed);
+  return kept === r.bullets ? r : { ...r, bullets: kept };
+}
+export { _dedupNearBullets, _collapseRoleBullets, _keepMinBullets };
 // TENSE-AT-LAMINATION-001 (owner 2026-06-19: "I want the tense the user chose to be
 // the generated tense — the app already takes too much work time"). Generation already
 // writes bullets/outcomes in the chosen tense via the prompt's __tenseRule; but a

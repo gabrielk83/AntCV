@@ -7285,8 +7285,8 @@
             }),
             React.createElement(Fe, {
               value: (e.align && e.align.role) || "left",
-              onChange: (t) => d({ align: { ...(e.align || {}), role: t } }),
-              title: "CJLR for application role",
+              onChange: (t) => { d({ align: { ...(e.align || {}), role: t, company: t } }); try { window.__antcvSetHeaderItemAlign && window.__antcvSetHeaderItemAlign("specialisation", t); } catch (_) {} },
+              title: "CJLR for the Application line",
             }),
           ),
           React.createElement(
@@ -7311,11 +7311,7 @@
                 boxSizing: "border-box",
               },
             }),
-            React.createElement(Fe, {
-              value: (e.align && e.align.company) || "left",
-              onChange: (t) => d({ align: { ...(e.align || {}), company: t } }),
-              title: "CJLR for application company",
-            }),
+            
           ),
         );
       }
@@ -11722,6 +11718,11 @@
             } catch (e) {}
             if (n) {
               (t.preventDefault(), t.stopPropagation());
+              // HEADER-DRAG-DROP-NOMOVE-001 (owner 2026-07-03 "pressing on contacts
+              // collapses"): an armed long-press with NO movement fell into the drop
+              // inference (nearest drop-loc / screen-thirds) and MOVED the row out of
+              // the top bar. No displacement = no drop.
+              if (Math.abs((x.current.lastX || t.clientX || 0) - x.current.sx) <= 8 && Math.abs((x.current.lastY || t.clientY || 0) - x.current.sy) <= 8) return;
               const n = x.current.lastX || t.clientX,
                 o = x.current.lastY || t.clientY;
               requestAnimationFrame(() => {
@@ -12269,9 +12270,12 @@
                   autoFocus: !0,
                 }),
                 React.createElement(Fe, {
-                  value: b("application_role"),
-                  onChange: (e) => y("application_role", e),
-                  title: "CJLR for application role",
+                  // APPLICATION-CJLR-ONE-001 (owner 2026-07-03 "only one CJLR is needed here -
+                  // none of them works"): ONE control, driving the BAND's Application line
+                  // (specialisation) plus both editor inputs.
+                  value: b("specialisation"),
+                  onChange: (e) => { y("specialisation", e); y("application_role", e); y("application_company", e); },
+                  title: "CJLR for the Application line",
                 }),
               ),
               React.createElement("div", { style: S }, "Application — Company"),
@@ -12290,11 +12294,7 @@
                     textAlign: b("application_company"),
                   },
                 }),
-                React.createElement(Fe, {
-                  value: b("application_company"),
-                  onChange: (e) => y("application_company", e),
-                  title: "CJLR for application company",
-                }),
+                
               ),
             );
           const e = (e) => {

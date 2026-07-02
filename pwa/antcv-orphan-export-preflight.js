@@ -432,7 +432,13 @@
         ...(ac ? { signal: ac.signal } : {}),
       }).then(function (res) { return res.json().catch(function () { return null; }); }).then(function (j) {
         clearTimeout(timer);
-        var raw = (j && j.content && j.content[0] && j.content[0].text) || '';
+        // BILLING-CASCADE-001 follow-through: the proxy now falls back to a
+        // FUNDED provider when the shared anthropic key is out of credit, so
+        // the answer can arrive in OpenAI/Mistral (choices[]) or Gemini
+        // (candidates[]) shape — read all three, not just Anthropic's.
+        var raw = (j && j.content && j.content[0] && j.content[0].text) ||
+          (j && j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) ||
+          (j && j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts && j.candidates[0].content.parts[0] && j.candidates[0].content.parts[0].text) || '';
         var arr; try { arr = JSON.parse(String(raw).replace(/```json|```/g, '').trim()); } catch (_) { arr = null; }
         if (!Array.isArray(arr) || arr.length !== fresh.length) {
           try { console.warn('[orphan-preflight] unusable LLM response'); } catch (_) {}

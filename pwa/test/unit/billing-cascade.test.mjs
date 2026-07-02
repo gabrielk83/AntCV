@@ -58,6 +58,13 @@ test('sniff regexes: BYOK billing and demo cap do NOT cascade', () => {
   assert.ok(!keyRe.test(cap) && !billRe.test(cap), 'cap body matches neither predicate');
 });
 
+test('preflight L3 parser reads all three fallback response shapes', async () => {
+  const pf = await readFile(new URL('../../antcv-orphan-export-preflight.js', import.meta.url), 'utf8');
+  assert.match(pf, /j\.content\[0\]\.text/);                       // anthropic
+  assert.match(pf, /j\.choices\[0\]\.message\.content/);            // openai / mistral
+  assert.match(pf, /j\.candidates\[0\]\.content\.parts\[0\]/);      // gemini
+});
+
 test('guard only re-reads 400/402/429 and never the last provider', () => {
   const block = grab(proxy);
   assert.match(block, /i < order\.length - 1/);

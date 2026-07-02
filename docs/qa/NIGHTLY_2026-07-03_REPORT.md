@@ -1,5 +1,61 @@
 # AntCV nightly report — 2026-07-03
 
+> **Two runs this date.** The block immediately below is the LATER run (re-dispatch at
+> 01:40, repo already at 1.51.69). The original 1.51.53 run report follows under
+> "EARLIER RUN (1.51.53)". Both retained.
+
+---
+
+## LATER RUN — PWA 1.51.70 (PAN-IDRAET-BULLET-NEARDUP-001)
+
+Start state on sync: PWA **1.51.69** (dispatch assumed 1.51.52 — Task 3 empty-role,
+orphans v2, figure-contact-ref and the batch 4–10 work all shipped since). Verify-first
+reconcile, then one solid fix. End state: **PWA 1.51.70** (pushed `main`, commit `c4a3d54`;
+auto-deploys). Workers untouched.
+
+### Shipped — PAN-IDRAET-BULLET-NEARDUP-001 (export half), 1.51.70
+
+- Within-role near-duplicate bullets collapse on export. Real case: Pan Idræt carried
+  "Manage logistics for about 25 players and coaches…" AND "…for 25 players…" — same fact,
+  printed twice in the PDF (owner export-16).
+- `antcv-docx-client.js` `sanitizeForExport` (single source; runs in BOTH results-mode
+  [after applyOutcomesMode] and section-mode). New `_dedupNearBullets` reuses `_dedupNear`'s
+  owner-tuned predicate (≥3 shared stems AND (≥0.6 overlap OR same verb+object headline)) on
+  a role's own bullets; string or `{b,t}`; winner = higher `_metricScore` → fewer approximation
+  words → shorter, so the cleaner "25 players" line wins with its original object + slot.
+  `_keepMinBullets` enforces KEEP_MIN=2.
+- EXPORT-SIDE ONLY (same non-destructive class as `hideSubsumed`): stored sections and the
+  index-based preview edit path (`roles.t.bullets.n`) never mutated → no ORPHAN-WRITE risk.
+- Proof: `unit/pan-idraet-bullet-neardup.test.mjs` (7). Suite **695/695** (was 688), boot-smoke
+  green, `app.js` untouched. Quintet → 1.51.70, STALE invariant intact.
+
+### Verified-closed this run (no code)
+
+- EMPTY-ROLE-SOURCE-001 source fix present (`app.src.js` 25485+) + belt loaded — Task 3 stays closed.
+- Orphans v2 (1.51.57), ORPHAN-WRITE-VERIFY (1.51.52), FIGURE-CONTACT-REF (wk 1.14.120) all in tree.
+- Task 1 invariants: `thinking:disabled` gated `/claude-sonnet-5/`-only (`proxy` + `demo-proxy`
+  byte-identical, line 205); flagship gen model still `claude-opus-4-7` (line 98) — NOT flipped.
+
+### Needs owner-eye
+
+- **PAN-IDRAET preview parity** — preview still shows the source bullet (editable), matching the
+  existing export-only `hideSubsumed` behavior. Full parity needs a live browser + an index-safe
+  render (hide-without-reindex) so the `roles.t.bullets.n` edit path can't corrupt. Deferred.
+- **Task 1 deep** (cascade retuning) — needs the D1 `llm_calls` admin surface, not reachable
+  headless. Invariants hold; measured per-task reordering awaits the telemetry read.
+- **Task 2** (gen-flow speed) — needs live `__antcvGenCost` + D1 durations; no blind re-tune
+  (all 5 levers already shipped 1.50.819-829).
+- **Task 5** (NIL live) — Chrome MCP not connected; saved app lives in owner's browser/KV.
+- **JD-SCAN-HALLUCINATION-001** — ingest reorder needs real models; owner-present item.
+
+### Not reached (one solid fix > several half-fixes)
+
+CL-SECTION-PANEL-BLIP-001, HWIC-vanishes-after-edit, EMDASH separator half.
+
+---
+
+## EARLIER RUN (1.51.53)
+
 Run: autonomous local maintenance on `C:\Users\karpg\GitHub\AntCV`.
 Start state: PWA 1.51.52 · docx-worker 1.14.119 · access-relay 1.3.2 · proxy/demo-proxy 3.6.x.
 End state: **PWA 1.51.53** (pushed to `main`, commit `d127b6a`; PWA auto-deploys). Workers untouched.

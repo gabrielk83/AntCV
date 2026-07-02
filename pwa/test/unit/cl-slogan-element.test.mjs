@@ -34,7 +34,7 @@ function load(store0) {
 test('defaults: visible, center, empty text -> falls back to the specialisation subtitle uppercased with | as bullet', () => {
   const { w } = load({ personalInfo: JSON.stringify({ subtitle: 'Processes | Products | People' }) });
   const api = w.AntcvClSloganElement;
-  assert.ok(api && api.version.includes('cl-slogan-element'));
+  assert.ok(api && api.version.includes('cl-body-elements'));
   const c = api._cfg();
   assert.equal(c.hidden, false);
   assert.equal(c.align, 'center');
@@ -76,4 +76,32 @@ test('kill switch: scan() with the disable flag removes nothing and mounts nothi
   const { w } = load({ 'antcv:disable-cl-slogan-element': '1' });
   // document.createElement throws in this sandbox — scan() must not reach it when disabled
   assert.doesNotThrow(() => w.AntcvClSloganElement.scan());
+});
+
+test('SIGN-OFF element cfg: closing + name + both CJLRs from the standalone keys, defaults center', () => {
+  const { w } = load({
+    'antcv:clClosing': 'Best regards,',
+    'antcv:clClosingAlign': 'left',
+    'antcv:clSignName': 'Gabriel',
+  });
+  const c = w.AntcvClSloganElement._signoffCfg();
+  assert.equal(c.closing, 'Best regards,');
+  assert.equal(c.closingAlign, 'left');
+  assert.equal(c.name, 'Gabriel');
+  assert.equal(c.nameAlign, 'center', 'absent name-align defaults to center');
+});
+
+test('SIGNATURE element cfg: hidden flag, align sanitized, stored = B64 presence', () => {
+  const empty = load({}).w.AntcvClSloganElement._sigCfg();
+  assert.equal(empty.hidden, false);
+  assert.equal(empty.align, 'center');
+  assert.equal(empty.stored, false);
+  const c = load({
+    'antcv:signatureHidden': '1',
+    'antcv:signatureAlign': '"RIGHT"',
+    'antcv:signatureB64': 'data:image/png;base64,xyz',
+  }).w.AntcvClSloganElement._sigCfg();
+  assert.equal(c.hidden, true);
+  assert.equal(c.align, 'right');
+  assert.equal(c.stored, true);
 });

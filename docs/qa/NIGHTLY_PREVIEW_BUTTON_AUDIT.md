@@ -42,7 +42,7 @@ the band). Assume more exist. Two failure classes to catch:
 
 - **ANALYTICS-BUTTONS-SESSION-TIMEOUT-001** (register row 24): all 3 admin ANALYTICS buttons
   kill the session and restart the app. Suspect: the antcv-auth.js wrappedFetch 401 wipe
-  (matches any proxyUrl path;  matches "unauthorized"). Protocol in
+  (matches any proxyUrl path; its `indexOf("auth")` test also matches "unauthorized"). Protocol in
   ACTIVE_BUGS — headless 401-stub repro, live status/body capture, THEN a narrow fix +
   regression test. Do not patch the fetch-wrap chain on hypothesis alone.
 

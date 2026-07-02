@@ -226,7 +226,14 @@
     if (reason === 'application-qa-detect' || reason === 'application-qa') return;
     run();
   });
-  window.addEventListener('storage', function (e) { if (e && e.key === 'antcv:lastJdText') run(); });
+  // JD-SCOPE-ISOLATION-001: the redirected JD write lands on THIS tab's NAMESPACED
+  // key (antcv:app:{id}:jdText), so a foreign app's write (different namespace) is
+  // ignored. Fallback to the base key when the scope sidecar is absent (unit tests).
+  window.addEventListener('storage', function (e) {
+    if (!e) return;
+    var jk = (window.AntcvJdScope && window.AntcvJdScope.nsKey) ? window.AntcvJdScope.nsKey('jdText') : 'antcv:lastJdText';
+    if (e.key === jk) run();
+  });
   [0, 500, 1500, 3000, 6000].forEach(function (ms) { setTimeout(run, ms); });
   window.AntcvApplicationQaDetect = { version: VERSION, run: run, _heuristic: heuristic, _map: mapQuestions };
 })();

@@ -105,8 +105,14 @@
   }
 
   window.addEventListener('antcv:sections-updated', run);
-  // also re-run when the question source changes in this or another tab.
-  window.addEventListener('storage', function (e) { if (e && e.key === 'antcv:applicationQuestions') run(); });
+  // also re-run when the question source changes in this or another tab on the SAME
+  // app. JD-SCOPE-ISOLATION-001: match this tab's namespaced key so a parallel
+  // session on a different app can't inject its questions here (fallback: base key).
+  window.addEventListener('storage', function (e) {
+    if (!e) return;
+    var qk = (window.AntcvJdScope && window.AntcvJdScope.nsKey) ? window.AntcvJdScope.nsKey('questions') : 'antcv:applicationQuestions';
+    if (e.key === qk) run();
+  });
   [0, 300, 900, 2000, 3500, 6000].forEach(function (ms) { setTimeout(run, ms); });
   window.AntcvApplicationQa = { version: VERSION, run: run, _header: candidateHeader };
 })();

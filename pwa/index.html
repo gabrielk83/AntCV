@@ -23,6 +23,13 @@
        top-right corner, or window.AntcvDebug.open(). Disable: localStorage
        ['antcv:debug:disable']='1'. Does NOT touch window.fetch. -->
   <script src="antcv-debug-logger.js?v=1.50.187"></script>
+  <!-- JD-SCOPE-ISOLATION-001 (2026-07-03): per-application JD-state isolation. Loads
+       SECOND (right after the error logger, before every JD-key reader incl. app.js
+       and the QnA/identity-guard sidecars) so its narrow localStorage redirect is
+       installed first. Namespaces antcv:lastJdText/applicationQuestions/
+       activeAppCompany per current-app-id (tracked per TAB) so two parallel sessions
+       (two tabs / desktop+mobile / two browsers) can't contaminate each other's JD. -->
+  <script src="antcv-jd-scope.js?v=1.51.71"></script>
   <!-- BOOT-STORM-DAMP-001: coalesce bursts of antcv:sections-updated so the boot storm
        doesn't peg the main thread (the "gate hangs / refresh twice" freeze). Loaded FIRST
        so its listener registers before any other; kill switch antcv:disable-storm-damp. -->
@@ -753,7 +760,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      (NVIDIA) from the kernel showcase cloud slot. When the context is unsolicited (no real
      JD) but meta wears a real company, force the identity back to Unsolicited/Open Application;
      the app's kernel autosave then re-persists the cleaned slot (self-heal). -->
-<script src="antcv-unsolicited-identity-guard.js?v=1.50.816" defer></script>
+<script src="antcv-unsolicited-identity-guard.js?v=1.51.71" defer></script>
 <script src="antcv-ai-assisted-to-methods.js?v=1.50.817" defer></script>
 <script src="antcv-tables-core-dedup.js?v=1.50.654" defer></script>
 <script src="antcv-tables-partition.js?v=1.50.827" defer></script>
@@ -881,8 +888,8 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-strip-skeleton-placeholders.js?v=1.50.773" defer></script>
 <!-- APPLICATION-QA-001 P1: render a CL Application Q&A page (candidate header + Q/A rich_block) from
      antcv:applicationQuestions; hidden when empty. -->
-<script src="antcv-application-qa-section.js?v=1.50.778" defer></script>
-<script src="antcv-application-qa-detect.js?v=1.51.55" defer></script>
+<script src="antcv-application-qa-section.js?v=1.51.71" defer></script>
+<script src="antcv-application-qa-detect.js?v=1.51.71" defer></script>
 <!-- TWIN-TABLE-DEDUP-001: hide CORE COMPETENCIES rows that exactly duplicate WHAT I BRING (reversible). -->
 <script src="antcv-twin-table-dedup.js?v=1.50.767" defer></script>
 <!-- RICH-BLOCK-001 / HWIC: convert HOW I WOULD CONTRIBUTE (text_bullets) into rich_block —

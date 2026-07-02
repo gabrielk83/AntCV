@@ -28875,6 +28875,14 @@
           for (const t of ns) if (t.test(e)) return "ghost-pattern";
           return "unknown";
         };
+      // JD-SCOPE-ISOLATION-001: mirror the single active-application-id state (Fl)
+      // into antcv-jd-scope so THIS tab's JD keys (lastJdText / applicationQuestions
+      // / activeAppCompany) are namespaced to the application it is editing. Prevents
+      // one parallel session's JD from contaminating another. One effect = the whole
+      // client-side hook; the scope sidecar does the localStorage redirect.
+      React.useEffect(() => {
+        try { window.AntcvJdScope && window.AntcvJdScope.setCurrentAppId(Fl == null ? "kernel" : String(Fl)); } catch (_e) {}
+      }, [Fl]);
       React.useEffect(() => {
         if ("undefined" != typeof window)
           return (

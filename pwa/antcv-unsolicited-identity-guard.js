@@ -120,7 +120,13 @@
   // After the async kernel restore settles (it awaits the cloud fetch), and on
   // any later meta/JD change.
   [600, 1600, 3200].forEach(function (d) { setTimeout(tick, d); });
-  try { window.addEventListener('storage', function (e) { if (!e || e.key === META_KEY || e.key === 'antcv:lastJdText' || e.key === null) tick(); }); } catch (_) {}
+  // JD-SCOPE-ISOLATION-001: react to META and to THIS tab's namespaced JD key only
+  // (fallback to the base key when the scope sidecar is absent — unit tests).
+  try { window.addEventListener('storage', function (e) {
+    if (!e || e.key === null || e.key === META_KEY) { tick(); return; }
+    var jk = (window.AntcvJdScope && window.AntcvJdScope.nsKey) ? window.AntcvJdScope.nsKey('jdText') : 'antcv:lastJdText';
+    if (e.key === jk) tick();
+  }); } catch (_) {}
   setInterval(tick, 4000);
 
   window.AntcvUnsolicitedIdentityGuard = { version: '1.50.816', _apply: apply, _isSpecificJob: isSpecificJob, _isUnsolicitedLabel: isUnsolicitedLabel };

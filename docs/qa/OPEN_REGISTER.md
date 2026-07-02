@@ -12,7 +12,7 @@
 
 | # | Item | Source / detail | verified |
 |---|------|-----------------|----------|
-| 1 | Candidate-header 3-col-grid placement (spread-left #2) | NEXT_SESSION_2026-06-29 | no |
+| 1 | ~~Candidate-header 3-col-grid placement (spread-left #2)~~ CLOSED — the 06-29 3-col-grid plan was SUPERSEDED by the owner's reference DOCX geometry, shipped as CONTACT-FULLWIDTH-001 (wk 1.14.119) + FIGURE-CONTACT-REF-001 (wk 1.14.120: page-anchored 1.50" medallion posH 0.433", contact 8pt ind 1.8"); 1.14.120 sat committed-but-UNDEPLOYED until 2026-07-03 (live /health said 1.14.119) — deployed + verified live 2026-07-03; pixel confirmation rides row 29 | NEXT_SESSION_2026-06-29 → wk 1.14.119/120 | 2026-07-03 |
 | 2 | Quick-gen page convergence (#4) + CV 3-page convergence, export-only pagination parity | NEXT_SESSION_2026-06-29 (render-gated set) | no |
 | 3 | SW-projects hyperlink + line-end overflow | 2026-06-29 batch OPEN list | no |
 | 4 | Page-anchored floating spine (sidebar navy fill to page bottom — real fix; PAGE1_BODY_MIN pins stay) | memory sidebar-fill-gap; ACTIVE_BUGS | no |
@@ -40,7 +40,7 @@
 | 26 | CV-ORPHANS-RESIDUAL-001 — orphans still in owner's CV export; verify preflight ran in his tab FIRST (stale-SW / hard-refresh gate, ties row 24) before tuning RUNT_FRAC | ACTIVE_BUGS batch 11 | 2026-07-03 |
 | 27 | ROLE-RESULTS-MISSING-TA-SG-001 — Teaching Assistant + Security Guard render no Result line (kernel role_results_exact + PINS sidecar carry Security-Guard; TA unseeded?) — diagnose seed vs render | ACTIVE_BUGS batch 11; memories gabriel-role-results-seed / gabriel-results-pin-parity | 2026-07-03 |
 | 28 | CORECOMP-TABLE-CELL-PAD-001 — Focus-Area table text too close to cell borders in PDF; add cell padding (docx worker table margins, preview parity) | ACTIVE_BUGS batch 11 | 2026-07-03 |
-| 29 | SIDEBAR-HEADLINE-PAGE2-ALIGN-001 (page-2+ sidebar headline must start LOWER to align with main CONT. headline) + HEADER-CONTACT-PHOTO-FIT-001 (contact line smaller + right-oriented so the photo doesn't cover its start; relates row 5 photo-bridge) | ACTIVE_BUGS batch 11 (owner pics) | 2026-07-03 |
+| 29 | SIDEBAR-HEADLINE-PAGE2-ALIGN-001 (page-2+ sidebar headline must start LOWER to align with main CONT. headline) + HEADER-CONTACT-PHOTO-FIT-001 (contact line smaller + right-oriented so the photo doesn't cover its start; relates row 5 photo-bridge). CONTACT-PHOTO-FIT half LIKELY FIXED: the owner's reviewed PDF was rendered by wk 1.14.119 (full-width contact, no indent); wk 1.14.120 pins contact to 8pt + ind left 1.8" clearing the fixed photo edge — DEPLOYED 2026-07-03 (was committed-not-deployed), owner re-export decides. SIDEBAR-HEADLINE half untouched | ACTIVE_BUGS batch 11 (owner pics); wk 1.14.120 deploy | 2026-07-03 |
 
 ## CLOSED this seeding (evidence)
 
@@ -53,3 +53,4 @@
 - app.js conflict-marker incident — shipped broken as 1.51.65, repaired 1.51.66 (verified live).
 - Gen-prompt example-list leftovers (row 20) — GEN-DEHARDCODE-003, 1.51.67 (translator KEEP-VERBATIM, LANG-CROSS metrics/tech, tools taxonomy, cert relevance, patent bullet; tests gen-prompt-dehardcode 003 blocks). De-hardcode sweep COMPLETE.
 - Demo-cap UX (cap 429 mis-advised as transient rate limit; Anita skeleton placeholders were the cap symptom) — DEMO-CAP-UX-001, 1.51.68 (ladder stop + banner + fail-fast; BYOK passes; unit/demo-cap-ux.test.mjs); quintet 1.51.69.
+- Candidate-header 3-col-grid placement (row 1, spread-left #2) — superseded by owner-reference geometry CONTACT-FULLWIDTH-001 (wk 1.14.119) + FIGURE-CONTACT-REF-001 (wk 1.14.120); root cause of the batch-11 HEADER-CONTACT-PHOTO-FIT-001 report was 1.14.120 committed-but-UNDEPLOYED (live /health = 1.14.119 at owner's export). Deployed 2026-07-03 via deploy.yml (run 28602458782), live /health = 1.14.120-figure-contact-ref; suite 781/781 + diag-photo-bridge-export + diag-contact-fullwidth green pre-deploy. Owner pixel check rides row 29.

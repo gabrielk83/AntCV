@@ -1,4 +1,4 @@
-const VERSION='3.7.1-outcome-metric-dehardcode';
+const VERSION='3.7.2-billing-cascade';
 // Cloudflare Worker — multi-provider LLM proxy with streaming for Anthropic
 // Includes /preferences route for AntCV cloud save.
 //
@@ -152,7 +152,27 @@ async function handleWithProviderFallback(request, env) {
     }
     // Success or a client error -> done. Only a 5xx means "provider
     // unavailable", so keep trying the next provider.
-    if (lastResp && lastResp.status < 500) return lastResp;
+    // BILLING-CASCADE-001 (owner console 2026-07-03): anthropic returns
+    // OUT-OF-CREDIT as a 400, which parked here as a "client error" and
+    // STOPPED the cascade — a billing failure on the SHARED key hard-failed
+    // the call even though the other providers were funded. A server-key
+    // billing/quota 4xx is a provider-unavailable condition: sniff the
+    // classified error body (key_source server + a billing phrase) and keep
+    // cascading. BYOK (key_source client) still returns immediately — the
+    // caller must see their own billing problem. demo_cap_reached is NOT
+    // matched (no key_source:server + no billing phrase) — the cap is
+    // cross-provider by design and must not burn the ladder.
+    if (lastResp && lastResp.status < 500) {
+      let billingOnServerKey = false;
+      if (i < order.length - 1 && (lastResp.status === 400 || lastResp.status === 402 || lastResp.status === 429)) {
+        try {
+          const t = await lastResp.clone().text();
+          billingOnServerKey = /"key_source"\s*:\s*"server"/.test(t) &&
+            /credit balance|insufficient\s+(credit|funds?|balance|quota)|insufficient_quota|purchase credits|exceeded your current quota|OUT OF CREDIT|Plans & Billing/i.test(t);
+        } catch (_) { billingOnServerKey = false; }
+      }
+      if (!billingOnServerKey) return lastResp;
+    }
   }
   return lastResp || new Response(
     JSON.stringify({ error: 'all_providers_unavailable', message: 'Every configured provider returned a 5xx. Try again shortly.' }),

@@ -38,6 +38,9 @@ account — no login step is needed. AntCV needs no install for the core work (z
    (in this file) is what remains after the owner's 2026-07-01 re-review.
 2. `docs/qa/NEXT_SESSION_2026-07-01.md` — the generic CL/CV template plan + deferred features.
 3. `CLAUDE.md` — repo conventions + the app.js gate.
+4. `docs/qa/OPEN_REGISTER.md` + `docs/qa/NIGHTLY_BACKLOG_RECONCILE.md` — the STANDING
+   backlog-reconcile slot (owner 2026-07-03): every run verifies/refreshes the 3-5 stalest
+   register rows in addition to its dated tasks. Older open items must never age out.
 
 ## INLINED ESSENTIAL FACTS (these normally live in the local memory)
 - **app.js is GATED.** Edit `pwa/app.src.js` (the human source) then MIRROR the change into the

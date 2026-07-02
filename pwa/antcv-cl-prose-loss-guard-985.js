@@ -23,7 +23,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.74-cl-prose-unsol-poison';
+  var VERSION = '1.51.101-skeleton-capture-skip';
   if (window.__antcvClProseGuard985 === VERSION) return;
   window.__antcvClProseGuard985 = VERSION;
 
@@ -72,7 +72,19 @@
     try { var v = JSON.parse(localStorage.getItem(STORE) || '{}'); return (v && typeof v === 'object') ? v : {}; } catch (_) { return {}; }
   }
 
-  function isPlaceholder(t) { var s = String(t == null ? '' : t).trim(); return !s || s.charAt(0) === '['; }
+  // CL-GUARD-SKELETON-CAPTURE-001 (owner 2026-07-03, the NIL round): the me()
+  // skeleton's opening BODY starts with plain words — "I am applying for
+  // [Role title] at [Company], where I can contribute to [main JD need 1…]" —
+  // so the old first-char-'[' check classified it as REAL and snapshot()
+  // captured the SKELETON under the targeted bucket ("NIL Technology|…" held
+  // 2164 bytes of template). Template text is bracket-DOMINATED, not
+  // bracket-LED: treat >=2 bracketed segments as placeholder too. One
+  // bracketed token (e.g. a "[verify]" flag) still counts as real prose.
+  function isPlaceholder(t) {
+    var s = String(t == null ? '' : t).trim();
+    if (!s || s.charAt(0) === '[') return true;
+    return (s.match(/\[[^\]]{2,80}\]/g) || []).length >= 2;
+  }
 
   // The primary prose text of a section (decides real vs placeholder).
   function proseOf(sec) {
@@ -201,6 +213,30 @@
     if (restored) { try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { reason: 'cl-keys-guard' } })); } catch (_) {} try { console.log('[CL-PROSE-LOSS-GUARD] re-applied signature / editable CL keys'); } catch (_) {} }
   }
 
+  // CL-GUARD-SKELETON-CAPTURE-001 boot purge: drop bucket sections captured
+  // under the OLD isPlaceholder (skeleton/template snapshots — e.g. the owner's
+  // "NIL Technology|…" bucket held the me() skeleton). A non-real snapshot can
+  // never be re-applied, but purging keeps the store honest and lets a future
+  // REAL capture start clean. Runs once per load; drops emptied buckets.
+  function purgeSkeletonSnapshots() {
+    try {
+      var store = readStore();
+      var changed = false;
+      Object.keys(store).forEach(function (k) {
+        var bucket = store[k];
+        if (!bucket || typeof bucket !== 'object') return;
+        Object.keys(bucket).forEach(function (id) {
+          if (!isReal(bucket[id])) { delete bucket[id]; changed = true; }
+        });
+        if (!Object.keys(bucket).length) { delete store[k]; changed = true; }
+      });
+      if (changed) {
+        localStorage.setItem(STORE, JSON.stringify(store));
+        try { console.log('[CL-PROSE-LOSS-GUARD] purged skeleton/template snapshots'); } catch (_) {}
+      }
+    } catch (_) {}
+  }
+
   var t = null;
   function run() {
     if (disabled() || erasing()) return;
@@ -226,6 +262,7 @@
   window.addEventListener('antcv:sections-updated', debounced);
   // Boot sweep + later windows to catch a cloud-restore / me()-enforce that
   // out-races the first pass (restore + the converter sidecars settle by ~5s).
+  setTimeout(purgeSkeletonSnapshots, 300);
   [600, 1500, 3500, 7000, 12000].forEach(function (ms) { setTimeout(run, ms); });
   // PROSE-GUARD-POLL-001 (owner 2026-07): on a HEAVY load the cloud / me()-enforce restore
   // can placeholder opening/why/who LONG after the boot sweeps (the renderer freezes 45-60s),
@@ -233,5 +270,5 @@
   // keeps restoring — safe because reapply ONLY ever replaces a PLACEHOLDER with a real
   // snapshot, never a real value, so it cannot fight a genuine user edit.
   setInterval(run, 2500);
-  window.AntcvClProseGuard = { version: VERSION, run: run, snapshot: snapshot, reapply: reapply };
+  window.AntcvClProseGuard = { version: VERSION, run: run, snapshot: snapshot, reapply: reapply, purgeSkeletonSnapshots: purgeSkeletonSnapshots, _isPlaceholder: isPlaceholder };
 })();

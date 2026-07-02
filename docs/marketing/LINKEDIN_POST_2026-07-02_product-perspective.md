@@ -1,11 +1,11 @@
-# LinkedIn post - product perspective (2026-07-02, rev 5)
+# LinkedIn post - product perspective (2026-07-02, rev 6)
 
 Follows the Terence method recorded in [PROBLEM_STATEMENTS.md](PROBLEM_STATEMENTS.md):
-problem and persona first, then the product "why", then the build. Rev 5 (owner ask):
-Pains 2+4 merged into one voice/fit pain (languages + writing styles + personality
-test serve the same purpose); banned-words layer moved from Pain 1 into it (it is a
-voice feature, not a trust feature); Pain 1 keeps trust + cost-quality only; no VIA
-mention. Tone guard: no banned words, no em dashes, short factual sentences, no pitch.
+problem and persona first, then the product "why", then the build. Rev 6 (owner ask):
+Pain 1 order flipped - quality-cost first, then the damage of a bad quality-cost
+(invented claims); graphic concepts added in the style of the v33 post animation
+(dark grid, glass panels, Supervisor pipeline, glow accents, sparkle). Tone guard:
+no banned words, no em dashes, short factual sentences, no pitch.
 
 ---
 
@@ -33,15 +33,15 @@ Who it is for. I design and test against three problem shapes:
 candidate data out of the code and force the engine to handle profiles unlike
 mine.)
 
-Pain 1: "AI tools invent things I never did, and their quality drifts with
-every model release and price change."
-Built: honesty as a constraint, and a cost-quality function that is tuned, not
-trusted. Reframe, never invent; unsupported claims are flagged, not written.
-Your own LLM keys, element-by-element review, and an AI-disclosure mark on
-every export. Underneath, a router scores every response for adequacy, demotes
-a provider on the specific task it underperforms, and slots new models into
-the supporting cascade as they release - the flagship generator changes only
-when a candidate proves better on real output.
+Pain 1: "Every model release and price change moves the quality-cost line -
+and when quality slips, AI starts inventing things I never did."
+Built: a cost-quality function that is tuned, not trusted, with honesty as the
+hard floor under it. A router scores every response for adequacy, demotes a
+provider on the specific task it underperforms, and slots new models into the
+supporting cascade as they release - the flagship generator changes only when
+a candidate proves better on real output. The floor: reframe, never invent;
+unsupported claims are flagged, not written. Your own LLM keys,
+element-by-element review, and an AI-disclosure mark on every export.
 
 Pain 2: "AI applications all sound the same - not my language, not my market,
 not my voice."
@@ -82,23 +82,66 @@ sounds most like yours? That answer decides what I build next.
 
 ---
 
+## Graphic options (style-matched to the v33 animation)
+
+Shared style cues from the video: dark slate grid background, frosted-glass
+panels with a gloss highlight, bold white labels, glowing cyan arrows, blurred
+document cards, the four-point sparkle accent bottom-right.
+
+**A. Pipeline hero (ready as SVG):**
+[LINKEDIN_POST_2026-07-02_graphic-a.svg](LINKEDIN_POST_2026-07-02_graphic-a.svg)
+- 1200x627 (LinkedIn 1.91:1). Left glass panel = the three pain quotes; center
+  Supervisor panel with the three built layers (quality-cost router / author
+  fit / reader context, "MULTI-LLM CONSENSUS" caption); right = Target Job
+  Description card with "CV + cover letter, hours -> minutes". Mirrors the
+  video's Fit/Gap Matching frame so the post reads as a continuation.
+- Export to PNG at 2x for LinkedIn (e.g. Edge/Chrome print-to-image, or
+  `npx sharp` / any SVG-to-PNG step).
+
+**B. Before/after split (image-gen prompt):**
+"Split-screen product graphic, dark slate background with a faint blueprint
+grid. Left: a blurred generic CV page in grey glass, labeled 'sounds like AI'.
+Right: the same page sharpened, warm-lit, labeled 'sounds like you', with
+small tags: 12 styles, 4 languages, personality kernel. Frosted glass panels,
+glowing cyan edge light, bold white sans-serif labels, one four-point sparkle
+bottom right. No people, no logos. 1200x627."
+
+**C. The ant courier (brand tie-in, image-gen prompt):**
+"A single stylized ant carrying a glowing rectangular CV card across a dark
+blueprint grid toward a large glass panel titled 'Target Job Description'.
+Path drawn as a dotted glowing line with three checkpoints labeled: quality
+gate, voice fit, reader fit. Dark slate palette, frosted glass, cyan glow,
+bold white labels, four-point sparkle accent. Minimal, technical, calm; no
+cartoon face on the ant. 1200x627."
+
+**D. Personality test, two directions (image-gen prompt):**
+"Center: a glass card titled 'Personality test' with 8 small toggle rows. Two
+glowing arrows leave it in opposite directions: left arrow to a recruiter-side
+CV panel labeled 'Work Style - behaviour, not adjectives'; right arrow into a
+gear-like engine panel labeled 'generation tuned to the author'. Dark
+blueprint grid, frosted glass, cyan glow, white bold labels, sparkle accent.
+1200x627."
+
+Recommendation: A as the post image (continuity with the video); C as a
+comment-thread follow-up image if engagement warrants it.
+
+---
+
 ## Notes
 
 - Hook = the general problem statement from PROBLEM_STATEMENTS.md section 1.
-- Pain 1 = trust + cost-quality only: anti-fabrication, flagged claims, own
-  keys, per-element review, AI-disclosure; ee() router, output-adequacy gate,
+- Pain 1 order per owner: quality-cost function first, then the damage of a
+  bad quality-cost (invention). Mechanisms: ee() router, output-adequacy gate,
   per-task provider demotion, runtime quality-price scorer + daily
   model-freshness check, sonnet-5 into the cascade 2026-07-02 while flagship
-  gen stays Opus 4.7 until proven. Banned-words moved OUT (voice feature).
-- Pain 2 = the merged voice/fit pain: 12 writing styles; generation targets
-  en/da/es/zh (app.src.js language maps); wizard + spell layer cover 20+ incl.
-  Amharic, Faroese, Greenlandic; cross-language invariants = kernel-v2
-  crossPolicy; Danish conventions; personality quiz
-  (antcv-personality-quiz-439.js: 8 forced-choice questions, six trait
-  clusters -> personalInfo.personality, rendered as behaviour-evidence, never
-  raw adjectives, injected into generation + Work Style section); banned-words
-  layer. The quoted behaviour line is a real trait evidence string from the
-  quiz. No VIA mention per owner.
+  gen stays Opus 4.7 until proven; anti-fabrication, flagged claims, own keys,
+  per-element review, AI-disclosure.
+- Pain 2 = merged voice/fit pain: 12 writing styles; generation targets
+  en/da/es/zh; wizard + spell layer cover 20+ incl. Amharic, Faroese,
+  Greenlandic; cross-language invariants = kernel-v2 crossPolicy; Danish
+  conventions; personality quiz (antcv-personality-quiz-439.js, six trait
+  clusters, behaviour-evidence rendering); banned-words layer. No VIA mention
+  per owner.
 - Pain 3 mechanisms: GEN-PROFILE-001 opener switch, APPLICATION-QA bridge,
   semantic constraints, abbreviation first-use rules, JD-gated niche depth.
 - The "friend" line credits the Terence feedback without naming him.

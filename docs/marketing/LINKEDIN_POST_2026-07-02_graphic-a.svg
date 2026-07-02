@@ -1,0 +1,105 @@
+<svg viewBox="0 0 1200 627" width="1200" height="627" xmlns="http://www.w3.org/2000/svg" role="img">
+  <title>AntCV - three pains, one system</title>
+  <desc>Dark grid scene in the AntCV video style: a pains panel flows into a Supervisor pipeline (quality-cost router, author fit, reader context) and out to the target job description.</desc>
+  <defs>
+    <pattern id="grid" width="72" height="72" patternUnits="userSpaceOnUse">
+      <path d="M 72 0 L 0 0 0 72" fill="none" stroke="#3a4149" stroke-width="1"/>
+    </pattern>
+    <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5b6a7a" stop-opacity="0.55"/>
+      <stop offset="0.12" stop-color="#46525f" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#39424c" stop-opacity="0.55"/>
+    </linearGradient>
+    <linearGradient id="gloss" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#cfe9ff" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#cfe9ff" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#cfe9ff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="6" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="softglow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="3" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="627" fill="#272c33"/>
+  <rect width="1200" height="627" fill="url(#grid)"/>
+
+  <text x="600" y="64" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="700" fill="#eef4fa" filter="url(#softglow)">Three pains. One system.</text>
+
+  <!-- LEFT: the pains -->
+  <g>
+    <rect x="56" y="150" width="292" height="330" rx="18" fill="url(#glass)" stroke="#76879b" stroke-width="1.5"/>
+    <rect x="86" y="156" width="232" height="3" rx="1.5" fill="url(#gloss)"/>
+    <text x="202" y="196" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="19" font-weight="700" letter-spacing="2" fill="#dfe9f5">THE PAINS</text>
+    <g font-family="Segoe UI, Arial, sans-serif" fill="#c7d5e2" font-size="15">
+      <rect x="80" y="216" width="244" height="66" rx="10" fill="#2e353d" stroke="#5a6a7c"/>
+      <text x="96" y="243" font-weight="600" fill="#eef4fa">"Quality drifts with every</text>
+      <text x="96" y="264" font-weight="600" fill="#eef4fa">model release"</text>
+      <rect x="80" y="294" width="244" height="66" rx="10" fill="#2e353d" stroke="#5a6a7c"/>
+      <text x="96" y="321" font-weight="600" fill="#eef4fa">"Sounds like AI,</text>
+      <text x="96" y="342" font-weight="600" fill="#eef4fa">not like me"</text>
+      <rect x="80" y="372" width="244" height="66" rx="10" fill="#2e353d" stroke="#5a6a7c"/>
+      <text x="96" y="399" font-weight="600" fill="#eef4fa">"Ignores who is</text>
+      <text x="96" y="420" font-weight="600" fill="#eef4fa">actually reading"</text>
+    </g>
+  </g>
+
+  <!-- arrows left -> center -->
+  <g stroke="#8fd8ff" stroke-width="3" fill="none" filter="url(#glow)" opacity="0.9">
+    <path d="M 356 315 H 412"/>
+    <path d="M 400 303 L 418 315 L 400 327" fill="#8fd8ff" stroke="none"/>
+  </g>
+
+  <!-- CENTER: supervisor -->
+  <g>
+    <rect x="428" y="110" width="430" height="416" rx="20" fill="url(#glass)" stroke="#8fa2b8" stroke-width="2"/>
+    <rect x="468" y="116" width="350" height="3" rx="1.5" fill="url(#gloss)"/>
+    <text x="643" y="162" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="700" fill="#f4f8fc" filter="url(#softglow)">Supervisor</text>
+
+    <g font-family="Segoe UI, Arial, sans-serif">
+      <rect x="456" y="188" width="374" height="88" rx="12" fill="#2e353d" stroke="#6f86ff" stroke-opacity="0.7"/>
+      <text x="474" y="216" font-size="16" font-weight="700" letter-spacing="1.5" fill="#a9c8ff">QUALITY-COST ROUTER</text>
+      <text x="474" y="240" font-size="14" fill="#c7d5e2">adequacy score on every response</text>
+      <text x="474" y="260" font-size="14" fill="#c7d5e2">per-task demotion &#183; new models earn their slot</text>
+
+      <rect x="456" y="288" width="374" height="88" rx="12" fill="#2e353d" stroke="#8fd8ff" stroke-opacity="0.7"/>
+      <text x="474" y="316" font-size="16" font-weight="700" letter-spacing="1.5" fill="#8fd8ff">AUTHOR FIT</text>
+      <text x="474" y="340" font-size="14" fill="#c7d5e2">12 writing styles &#183; EN DA ES ZH, +20 languages</text>
+      <text x="474" y="360" font-size="14" fill="#c7d5e2">personality kernel &#8594; behaviour, not adjectives</text>
+
+      <rect x="456" y="388" width="374" height="88" rx="12" fill="#2e353d" stroke="#9be8c9" stroke-opacity="0.7"/>
+      <text x="474" y="416" font-size="16" font-weight="700" letter-spacing="1.5" fill="#9be8c9">READER CONTEXT</text>
+      <text x="474" y="440" font-size="14" fill="#c7d5e2">targeted vs unsolicited opening</text>
+      <text x="474" y="460" font-size="14" fill="#c7d5e2">answers the questions inside the posting</text>
+    </g>
+    <text x="643" y="508" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="15" letter-spacing="2" fill="#9fb0c1">MULTI-LLM CONSENSUS</text>
+  </g>
+
+  <!-- arrows center -> right -->
+  <g stroke="#8fd8ff" stroke-width="3" fill="none" filter="url(#glow)" opacity="0.9">
+    <path d="M 866 315 H 922"/>
+    <path d="M 910 303 L 928 315 L 910 327" fill="#8fd8ff" stroke="none"/>
+  </g>
+
+  <!-- RIGHT: target JD -->
+  <g>
+    <rect x="938" y="196" width="212" height="240" rx="18" fill="url(#glass)" stroke="#76879b" stroke-width="1.5"/>
+    <rect x="962" y="202" width="164" height="3" rx="1.5" fill="url(#gloss)"/>
+    <text x="1044" y="284" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="700" fill="#eef4fa" filter="url(#softglow)">Target</text>
+    <text x="1044" y="322" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="700" fill="#eef4fa" filter="url(#softglow)">Job</text>
+    <text x="1044" y="360" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="700" fill="#eef4fa" filter="url(#softglow)">Description</text>
+  </g>
+  <text x="1044" y="470" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="15" fill="#9fb0c1">CV + cover letter</text>
+  <text x="1044" y="492" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="15" fill="#8fd8ff">hours &#8594; minutes</text>
+
+  <!-- sparkle accent (matches the video's bottom-right star) -->
+  <g fill="#dfe9f5" filter="url(#glow)">
+    <path d="M 1128 566 c 3 14 8 19 22 22 c -14 3 -19 8 -22 22 c -3 -14 -8 -19 -22 -22 c 14 -3 19 -8 22 -22 z"/>
+  </g>
+
+  <text x="60" y="596" font-family="Segoe UI, Arial, sans-serif" font-size="14" letter-spacing="1" fill="#8494a5">AntCV &#183; antcv.pages.dev</text>
+</svg>

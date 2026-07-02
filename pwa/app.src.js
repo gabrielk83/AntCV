@@ -27208,10 +27208,10 @@
                 : `<div style="font-family:'Cabin',${s};font-size:${qo}pt;color:#fff;text-align:${E("specialisation")};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2pt;line-height:1.1">${(io.subtitle || (e ? "[Specialisering — 1–3 fokusområder, adskilt med •]" : "[Specialisation — 1–3 focus areas, separated by •]")).replace(/\s*\|\s*/g, " • ")}</div>`
               : "",
             N = A
-              ? `<p style="font-family:'Cabin',${s};font-size:${u.nameSize}pt;font-weight:700;color:#fff;text-align:${E("name")};margin:12pt 0 3pt;line-height:1.1;mso-line-height-rule:exactly">${w.name || (e ? "Dit navn" : "Your Name")}</p>`
+              ? `<p style="font-family:'Cabin',${s};font-size:${u.nameSize}pt;font-weight:700;color:#fff;text-align:${E("name")};margin:12pt 0 3pt;line-height:1.1;mso-line-height-rule:exactly">${w.name || (e ? "Dit navn" : "Your Name")}</p>${window.__antcvHdrRuleHtml ? window.__antcvHdrRuleHtml("name", "#01B7BB", 2, 0) : ""}`
               : "",
             $ = O
-              ? `${f("#01B7BB", 3, 1)}<p style="font-family:'Cabin',${s};font-size:${u.contactSize}pt;color:#fff;text-align:${E("contact")};margin:3pt 0;line-height:1.2;mso-line-height-rule:exactly">${x}</p>${f("#01B7BB", 1, 0)}`
+              ? `${window.__antcvHdrRuleHtml ? window.__antcvHdrRuleHtml("specialisation", "#01B7BB", 3, 1) : f("#01B7BB", 3, 1)}<p style="font-family:'Cabin',${s};font-size:${u.contactSize}pt;color:#fff;text-align:${E("contact")};margin:3pt 0;line-height:1.2;mso-line-height-rule:exactly">${x}</p>${window.__antcvHdrRuleHtml ? window.__antcvHdrRuleHtml("contact", "#01B7BB", 1, 0) : f("#01B7BB", 1, 0)}`
               : "",
             L =
               A || I || O
@@ -42508,6 +42508,8 @@
                       marginBottom: __nzPx(ya && ya.candidateGap, 5),
                       lineHeight: 1.1,
                       textAlign: y("name"),
+                      // HEADER-ITEM-RULE-001: optional rule below the NAME (default off)
+                      ...(window.__antcvHdrRuleStyle ? window.__antcvHdrRuleStyle("name", l) : {}),
                     },
                   },
                   a.name || ("da" === je ? "Dit navn" : "Your Name"),
@@ -42535,13 +42537,7 @@
                   ? React.createElement(
                       React.Fragment,
                       { key: "contact" },
-                      React.createElement("div", {
-                        style: {
-                          borderBottom: `1px solid ${l}`,
-                          margin:
-                            "4px 0 " + __nzPx(ya && ya.candidateGap, 5) + "px",
-                        },
-                      }),
+                      (window.__antcvHdrRuleDiv ? window.__antcvHdrRuleDiv(React, "specialisation", l, "4px 0 " + __nzPx(ya && ya.candidateGap, 5) + "px") : React.createElement("div", { style: { borderBottom: `1px solid ${l}`, margin: "4px 0 " + __nzPx(ya && ya.candidateGap, 5) + "px" } })),
                       React.createElement(
                         "div",
                         {
@@ -42595,12 +42591,7 @@
                         },
                         m,
                       ),
-                      React.createElement("div", {
-                        style: {
-                          borderBottom: `1px solid ${l}`,
-                          margin: "3px 0 0",
-                        },
-                      }),
+                      (window.__antcvHdrRuleDiv ? window.__antcvHdrRuleDiv(React, "contact", l, "3px 0 0") : React.createElement("div", { style: { borderBottom: `1px solid ${l}`, margin: "3px 0 0" } })),
                     )
                   : null;
         return React.createElement(

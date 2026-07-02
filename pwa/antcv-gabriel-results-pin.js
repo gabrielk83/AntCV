@@ -16,7 +16,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.72-gab-results-pin-owner-edit';
+  var VERSION = '1.51.76-gab-results-pin-no-number';
   if (window.__antcvGabResultsPin === VERSION) return;
   window.__antcvGabResultsPin = VERSION;
 
@@ -44,10 +44,12 @@
     // site in Sweden") is byte-identical to bullet[0] — "the content bullet is regenerated inside the
     // result." Pin the DISTINCT achievement (the co-invented patent) so the Result stops restating the
     // bullet. Company-gated to Sirin so it never touches the Meprolight EO roles.
-    // RESULTS-PIN-ONE-LINE-001 (owner 2026-07-03): "Patent No. " dropped so the Sirin
-    // Result fits ONE typeset line (the number itself is kept — PATENT NUMBERS ARE
-    // NEVER DROPPED). `old` lists superseded pin texts so the upgrade applies once.
-    { reT: /optics|electro-?optics/i, reC: /sirin/i, text: 'Co-invented the stray-light optical window (241997), now in commercial devices.', old: ['Co-invented the stray-light optical window (Patent No. 241997), now in commercial devices.'] },
+    // RESULTS-PIN-NO-NUMBER-001 (owner 2026-07-03): the patent NUMBER lives once in
+    // PUBLICATIONS & PATENTS — the Result describes the work without it (same as the
+    // gen rule "a role line may describe the underlying work but must not carry the
+    // patent number"). `old` lists superseded pin texts so upgrades apply once and
+    // owner edits still stick.
+    { reT: /optics|electro-?optics/i, reC: /sirin/i, text: 'Co-invented the stray-light optical window, now in commercial devices.', old: ['Co-invented the stray-light optical window (Patent No. 241997), now in commercial devices.', 'Co-invented the stray-light optical window (241997), now in commercial devices.'] },
   ];
   function entryFor(r) {
     if (!r) return null;

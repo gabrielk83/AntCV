@@ -2413,10 +2413,12 @@ export function applyOutcomesMode(docSections, doc) {
       // clause repeats bullet[0] verbatim ("the content bullet is regenerated inside the result"). Pin the
       // DISTINCT co-invented-patent achievement. Company-gated to Sirin so it never hits the Meprolight EO
       // roles. Byte-identical to antcv-gabriel-results-pin.js PINS (preview parity).
-      // RESULTS-PIN-ONE-LINE-001 (owner 2026-07-03): "Patent No. " dropped so the Sirin
-      // Result fits ONE typeset line (the number itself is kept — PATENT NUMBERS ARE
-      // NEVER DROPPED). `old` lists superseded pin texts so the upgrade applies once.
-      { reT: /optics|electro-?optics/i, reC: /sirin/i, text: 'Co-invented the stray-light optical window (241997), now in commercial devices.', old: ['Co-invented the stray-light optical window (Patent No. 241997), now in commercial devices.'] },
+      // RESULTS-PIN-NO-NUMBER-001 (owner 2026-07-03): the patent NUMBER lives once in
+      // PUBLICATIONS & PATENTS — the Result describes the work without it (same as the
+      // gen rule "a role line may describe the underlying work but must not carry the
+      // patent number"). `old` lists superseded pin texts so upgrades apply once and
+      // owner edits still stick.
+      { reT: /optics|electro-?optics/i, reC: /sirin/i, text: 'Co-invented the stray-light optical window, now in commercial devices.', old: ['Co-invented the stray-light optical window (Patent No. 241997), now in commercial devices.', 'Co-invented the stray-light optical window (241997), now in commercial devices.'] },
     ] : [];
     // RESULTS-PIN-OWNER-EDIT-001 (owner 2026-07-03): this tier sat ABOVE role.results,
     // so an owner-edited Results line was overridden right back to the pin in the

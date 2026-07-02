@@ -58,12 +58,13 @@ test('PINS sidecar and docx-client _GAB_EXACT carry identical entries (preview/e
   assert.deepEqual(pins, exact.map((l) => l.replace(/\},$/, '},')), 'entry lines byte-identical');
 });
 
-test('_pinFor pins the Sirin Result to the DISTINCT patent line (not the bullet restatement)', () => {
+test('_pinFor pins the Sirin Result to the DISTINCT patent-work line (not the bullet restatement)', () => {
   const { api } = load({ personalInfo: GAB });
   const t = api._pinFor({ title: 'Senior Optics & Electro-Optics Engineer', company: 'Sirin Labs' });
-  // RESULTS-PIN-ONE-LINE-001: "Patent No. " dropped, the NUMBER itself kept
-  assert.match(t, /Co-invented the stray-light optical window \(241997\)/);
-  assert.doesNotMatch(t, /Patent No\./);
+  // RESULTS-PIN-NO-NUMBER-001: the number lives ONCE, in PUBLICATIONS & PATENTS —
+  // the Result describes the work with no number at all
+  assert.match(t, /Co-invented the stray-light optical window, now in commercial devices\./);
+  assert.doesNotMatch(t, /241997|Patent No\./);
   // the trimmed line must NOT carry the bullet's leading clause
   assert.doesNotMatch(t, /7-person|Sigma-Connectivity|Directed technical work/);
 });
@@ -79,13 +80,19 @@ test('run() leaves an owner-edited Results line alone', () => {
   assert.equal(JSON.parse(store.get('sections')).cv[0].roles[0].results, ownerEdit, 'owner edit survives the pin sweep');
 });
 
-test('run() upgrades a SUPERSEDED pin text (old form) to the current pin once', () => {
-  const oldPin = 'Co-invented the stray-light optical window (Patent No. 241997), now in commercial devices.';
-  const { api, store } = load(withRoles([
-    { title: 'Senior Optics & Electro-Optics Engineer', company: 'Sirin Labs', bullets: [], results: oldPin },
-  ]));
-  api.run();
-  assert.match(JSON.parse(store.get('sections')).cv[0].roles[0].results, /\(241997\)/, 'old pin text upgraded to the one-line form');
+test('run() upgrades SUPERSEDED pin texts (both prior forms) to the current numberless pin', () => {
+  for (const oldPin of [
+    'Co-invented the stray-light optical window (Patent No. 241997), now in commercial devices.',
+    'Co-invented the stray-light optical window (241997), now in commercial devices.',
+  ]) {
+    const { api, store } = load(withRoles([
+      { title: 'Senior Optics & Electro-Optics Engineer', company: 'Sirin Labs', bullets: [], results: oldPin },
+    ]));
+    api.run();
+    const r = JSON.parse(store.get('sections')).cv[0].roles[0].results;
+    assert.match(r, /optical window, now in commercial devices\./, 'upgraded to the current pin');
+    assert.doesNotMatch(r, /241997/, 'the number lives only in PUBLICATIONS & PATENTS');
+  }
 });
 
 test('run() still replaces a bullet-COPYCAT result (the original reason pins exist)', () => {
@@ -94,7 +101,7 @@ test('run() still replaces a bullet-COPYCAT result (the original reason pins exi
     { title: 'Senior Optics & Electro-Optics Engineer', company: 'Sirin Labs', bullets: [bullet], results: bullet },
   ]));
   api.run();
-  assert.match(JSON.parse(store.get('sections')).cv[0].roles[0].results, /\(241997\)/, 'copycat result replaced by the pin');
+  assert.match(JSON.parse(store.get('sections')).cv[0].roles[0].results, /optical window, now in commercial devices\./, 'copycat result replaced by the pin');
 });
 
 test('SIRIN gate: the Meprolight EO roles are NOT caught by the Sirin pin', () => {

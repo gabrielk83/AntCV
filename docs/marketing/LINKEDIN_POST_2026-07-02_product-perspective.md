@@ -1,4 +1,4 @@
-# LinkedIn post - product perspective (2026-07-02, rev 6)
+# LinkedIn post - product perspective (2026-07-02, rev 7)
 
 Follows the Terence method recorded in [PROBLEM_STATEMENTS.md](PROBLEM_STATEMENTS.md):
 problem and persona first, then the product "why", then the build. Rev 6 (owner ask):
@@ -21,17 +21,18 @@ After my last post, a friend gave me direct feedback: the demo showed a
 solution, but not the problem or the people it serves. Fair. So here is the
 product view: the pains first, then what was built against each one.
 
-Who it is for. I design and test against three problem shapes:
+Who is it for? I build and test with three people in mind:
 
-- The career-changer: real skills, wrong job title, recruiters stop at the
-  title.
-- The operations specialist: a CV that lists duties survived, not outcomes.
-- Me: 15+ years of product work, and still the question "but how hands-on are
-  you with AI?"
+- A career-changer who has the skills for the new field, but whose CV still
+  carries the old job title - so recruiters never reach the relevant part.
+- An operations specialist whose CV lists every task she carried, but not what
+  changed because she was there.
+- And me: 15+ years taking products to market, and recruiters still ask how
+  hands-on I am with AI.
 
-(Two are synthetic test personas. One is an ant. Test fixtures keep real
-candidate data out of the code and force the engine to handle profiles unlike
-mine.)
+(Two of the three are synthetic test personas - one is an ant. That keeps real
+candidate data out of the code, and it forces the engine to handle profiles
+very different from mine.)
 
 Pain 1: "Every model release and price change moves the quality-cost line -
 and when quality slips, AI starts inventing things I never did."

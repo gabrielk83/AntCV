@@ -2086,6 +2086,29 @@
         if (_own.length) l = _own;
       }
     } catch (_) {}
+    // DEMO-CAP-UX-001: once the shared demo budget has 429'd this session,
+    // every shared-key call will 429 too — fail fast with the real reason
+    // instead of burning a full provider ladder per task. A user who pastes
+    // their OWN key afterwards passes (a client key bypasses the demo cap
+    // server-side, and the restriction above routes them off the demo path).
+    if (window.__antcvDemoCapReached) {
+      let __ownAny = false;
+      try {
+        __ownAny = !!(
+          u.get("apiKey", "") ||
+          u.get("openaiKey", "") ||
+          u.get("mistralKey", "") ||
+          u.get("geminiKey", "")
+        );
+      } catch (_) {}
+      if (!__ownAny) {
+        const __de = new Error(
+          "DEMO BUDGET USED UP — the shared demo budget for your account is spent for this month (all demo providers share it). Paste your own API key in ⚙ Settings → API Keys to keep generating, or wait for the monthly reset.",
+        );
+        ((__de.demoCapReached = true), (__de.task = r));
+        throw __de;
+      }
+    }
     // 1.50.291 #5: deprioritise providers that recently gave inadequate output
     // for this task (kept in the list, just moved to the back).
     // LLM-ONBOARD-001: audit-approved custom LLMs join the BACK of the
@@ -2350,6 +2373,40 @@
                   `[v1.40.104] 402 from ${a} but banner bridge not ready: ${String(o || "").slice(0, 120)}`,
                 );
           } catch (e) {}
+        // DEMO-CAP-UX-001 (owner 2026-07-03): "demo_cap_reached" is the per-user
+        // MONTHLY demo budget shared by ALL demo providers (a client-supplied
+        // key bypasses it server-side) — falling back to another demo provider
+        // can never succeed. Stop the ladder, banner the user, and point them
+        // at their own keys. Page reload clears the session flag.
+        if (/demo_cap_reached/i.test(o)) {
+          window.__antcvDemoCapReached = Date.now();
+          const __capMsg =
+            (String(o).match(/Demo cap reached:[^"}]+/) || [])[0] ||
+            "The shared demo budget for your account is used up this month.";
+          try {
+            const __bs =
+              ("undefined" != typeof window && window.__antcvCreditBannerSet) ||
+              null;
+            __bs &&
+              __bs({
+                provider: a,
+                message:
+                  "Demo budget used up — " +
+                  __capMsg +
+                  " All demo providers share this budget. Paste your own API key in ⚙ Settings → API Keys to continue now (own keys are not capped).",
+                ts: Date.now(),
+              });
+          } catch (e) {}
+          const __de = new Error(
+            "DEMO BUDGET USED UP — " +
+              __capMsg +
+              " Every demo provider shares this monthly budget, so switching providers cannot help. Paste your own API key in ⚙ Settings → API Keys to keep generating (your own key bypasses the demo cap).",
+          );
+          ((__de.demoCapReached = true),
+            (__de.providerFailures = c),
+            (__de.task = r));
+          throw __de;
+        }
         const m = new Error(
           `${a} ${o.toLowerCase().includes("network") || o.toLowerCase().includes("fetch") ? "network error" : "error"}: ${o}`,
         );

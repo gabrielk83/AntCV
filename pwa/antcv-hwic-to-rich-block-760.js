@@ -30,7 +30,12 @@
   function isNordicMinimal() {
     try { var tr = localStorage.getItem('toneRegister');
       if (tr) { var v = JSON.parse(tr); return v === 'nordic-minimal' || v === 'scandinavian'; } } catch (_) {}
-    return false;
+    // TONE-DEFAULT-SCANDINAVIAN-001 (owner 2026-07-03, Anita CL): an ABSENT toneRegister
+    // meant these converters no-op'd in fresh/demo sessions while the CL skeleton is
+    // nordic-shaped for EVERYONE (TEMPLATE-STRUCT-DEFAULT-001) — bring stayed a table,
+    // foundation fields never reached the rich_block. The app's tone default is
+    // 'scandinavian' (u.get('toneRegister','scandinavian')) — mirror it here.
+    return true;
   }
   function bulletText(it) {
     if (it == null) return '';

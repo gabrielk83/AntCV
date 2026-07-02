@@ -62,11 +62,17 @@ test('convert(): real data rows still convert normally (existing behaviour prese
   assert.equal(out.items[1].b, 'Sourcing & Feasibility');
 });
 
-test('convert(): non-Nordic style leaves an empty bring table untouched', () => {
-  const { api, store } = load({ cl: [bring([])] }, null);   // no toneRegister -> not nordic
-  api.run();
-  assert.equal(store.has('sections'), true);
-  const out = JSON.parse(store.get('sections')).cl[0];
+// TONE-DEFAULT-SCANDINAVIAN-001 (owner 2026-07-03): an ABSENT toneRegister now
+// takes the nordic default (the converters used to no-op in fresh/demo sessions
+// while the CL skeleton is nordic-shaped for everyone). An EXPLICIT non-nordic
+// register still leaves the table untouched.
+test('convert(): ABSENT toneRegister converts (nordic default); explicit non-nordic does not', () => {
+  const a = load({ cl: [bring([])] }, null);   // no toneRegister -> nordic DEFAULT
+  a.api.run();
+  assert.equal(JSON.parse(a.store.get('sections')).cl[0].type, 'rich_block');
+  const b = load({ cl: [bring([])] }, 'formal');   // explicit non-nordic
+  b.api.run();
+  const out = b.store.has('sections') ? JSON.parse(b.store.get('sections')).cl[0] : bring([]);
   assert.equal(out.type, 'table');   // unchanged
 });
 

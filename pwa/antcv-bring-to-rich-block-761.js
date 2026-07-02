@@ -24,7 +24,12 @@
 
   function isNordicMinimal() {
     try { var tr = localStorage.getItem('toneRegister'); if (tr) { var v = JSON.parse(tr); return v === 'nordic-minimal' || v === 'scandinavian'; } } catch (_) {}
-    return false;
+    // TONE-DEFAULT-SCANDINAVIAN-001 (owner 2026-07-03, Anita CL): an ABSENT toneRegister
+    // meant these converters no-op'd in fresh/demo sessions while the CL skeleton is
+    // nordic-shaped for EVERYONE (TEMPLATE-STRUCT-DEFAULT-001) — bring stayed a table,
+    // foundation fields never reached the rich_block. The app's tone default is
+    // 'scandinavian' (u.get('toneRegister','scandinavian')) — mirror it here.
+    return true;
   }
   function sentenceCaseLabel(t) {
     t = String(t || '').trim(); if (!t) return '';
@@ -66,6 +71,11 @@
       // suppliers, validation, and business decisions"), stashed on the table section as
       // `_bringIntro` by the generation apply. Empty when no intro was generated (graceful).
       var __bIntro = String((s && s._bringIntro) || '').trim();
+      // BRING-INTRO-NEUTRAL-001 (owner 2026-07-03: lead-in empty on the Anita CL): when the
+      // generation omits bring_intro, use a neutral connector instead of an EMPTY lead body -
+      // an empty lead makes the rows read as part of the PREVIOUS section in the export
+      // (headlines are hidden, so the lead-in is the section's only visible identity).
+      if (!__bIntro) __bIntro = 'a few concrete strengths, each backed by work I have actually done:';
       items = [{ b: sentenceCaseLabel(s.title) || 'What I bring', t: __bIntro }].concat(items);
       var ns = { id: s.id, title: s.title, loc: s.loc, on: s.on, type: 'rich_block', items: items, headlineOff: true };
       if (s.hidden) ns.hidden = s.hidden;

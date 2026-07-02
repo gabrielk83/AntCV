@@ -1833,6 +1833,11 @@ function normalizeSections(raw) {
           ...base,
           items,
           ...(s.headlineOff ? { headlineOff: true } : {}),
+          // WHY-RULE-EXPORT-PARITY-001 (owner 2026-07-03): antcv-cl-text-cleanup sets
+          // headlineRule on the WHY section (the standalone accent line the preview
+          // draws); the worker supports it (RULE-INDEPENDENT-001) but this payload
+          // case never forwarded it — the line showed in preview, not in the export.
+          ...(s.headlineRule ? { headlineRule: true } : {}),
           ...(s.ruleOff ? { ruleOff: true } : {}),
           ...(rowPages ? { row_pages: rowPages } : {}),
           ...(s.leadBold === false ? { leadBold: false } : {}),

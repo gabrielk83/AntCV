@@ -77,10 +77,10 @@ test('nordic + user re-showed headline (headlineOff:false): respected', () => {
   assert.equal(sec.headlineOff, false);
 });
 
-test('no toneRegister: not forced', () => {
+test('no toneRegister: nordic DEFAULT applies (TONE-DEFAULT-SCANDINAVIAN-001)', () => {
   const { sec } = load(undefined, richFoundation());
-  assert.equal(sec.headlineOff, undefined);
-  assert.equal(findRow(sec, 'Hands-on').mk, undefined);
+  assert.equal(sec.headlineOff, true);
+  assert.equal(findRow(sec, 'Hands-on').mk, true);
 });
 
 test('GABRIEL-FOUNDATION-OPENING: nordic + Gabriel + no opening -> "Foundation" opener prepended', () => {
@@ -91,9 +91,13 @@ test('GABRIEL-FOUNDATION-OPENING: nordic + Gabriel + no opening -> "Foundation" 
   assert.equal(findRow(sec, 'Hands-on').mk, true);
 });
 
-test('opening injection is name-guarded: non-Gabriel gets no opener', () => {
+// FOUNDATION-OPENING-NEUTRAL-001 (owner 2026-07-03): every candidate gets an
+// opener now — Gabriel his exact sentence, everyone else the neutral connector.
+test('non-Gabriel gets the NEUTRAL Foundation opener (never Gabriel content)', () => {
   const { sec } = load('nordic-minimal', legacyFoundation(), 'Jane Doe');
-  assert.notEqual(sec.items[0].b, 'Foundation');
+  assert.equal(sec.items[0].b, 'Foundation');
+  assert.match(sec.items[0].t, /I connect what I do best/);
+  assert.ok(!/hardware engineering/.test(sec.items[0].t), 'Gabriel wording never leaks');
 });
 
 test('opening injection idempotent: a 2nd run does not double-add', () => {

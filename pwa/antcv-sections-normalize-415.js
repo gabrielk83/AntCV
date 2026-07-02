@@ -1173,6 +1173,71 @@
     { l: 'Reading', v: 'Technology, society and systems thinking' },
     { l: 'Supervision', v: 'Handling three feline strategic napping experts (cats)' }
   ];
+  // INTERESTS-FROM-PI-001 (owner 2026-07-03, Anita demo): the only interests injectors
+  // were Gabriel-name-guarded (INTERESTS-LEAK-SOURCE-001), so every OTHER candidate kept
+  // the template placeholder while their REAL interests sat in personalInfo.interests and
+  // an ADDITIONAL 'Hobbies' row - the preview showed the placeholder, the export dropped
+  // it (the owner's preview/PDF mismatch). GENERIC, persona-safe repair (reads only the
+  // candidate's OWN pi): fill a placeholder-only INTERESTS from pi.interests in the
+  // section's own shape, absorb ADDITIONAL Interests/Hobbies rows (dedup by label, drop
+  // the emptied umbrella header), then drop leftover placeholder rows. A still-empty
+  // interests hides via hideEmptyOptionalSections (extended). Idempotent.
+  function repairInterestsFromPI(cv) {
+    var xi = cv.findIndex(function (s) { return s && s.id === 'interests' && Array.isArray(s.items); });
+    if (xi < 0) return null;
+    var sec = cv[xi];
+    var ph = function (v) { var s2 = String(v == null ? '' : v).trim(); return !s2 || s2.charAt(0) === '['; };
+    var leadOf = function (it) { return it ? (it.l != null ? it.l : it.b) : ''; };
+    var bodyOf = function (it) { return it ? (it.v != null ? it.v : it.t) : ''; };
+    var isReal = function (it) { return it && (!ph(leadOf(it)) || !ph(bodyOf(it))); };
+    var rowsReal = sec.items.filter(isReal);
+    var pi = {};
+    try { var rawPi = JSON.parse(localStorage.getItem('personalInfo') || '{}') || {}; pi = rawPi.personalInfo ? rawPi.personalInfo : rawPi; } catch (_) {}
+    var piInts = Array.isArray(pi.interests) ? pi.interests.filter(function (it) { return it && (typeof it === 'string' ? it.trim() : (it.l || it.v)); }) : [];
+    var asRich = sec.type === 'rich_block';
+    var mk = function (l, v) { return asRich ? { b: String(l || ''), t: String(v || '') } : { l: String(l || ''), v: String(v || '') }; };
+    var changed = false;
+    var items = sec.items.slice();
+    if (!rowsReal.length && piInts.length) {
+      items = piInts.map(function (it) { return typeof it === 'string' ? mk('', it) : mk(it.l, it.v); });
+      changed = true;
+    }
+    var ai = cv.findIndex(function (s2) { return s2 && s2.id === 'additional' && Array.isArray(s2.items); });
+    var addlMoved = [], addlItems = null;
+    if (ai >= 0) {
+      addlItems = cv[ai].items.filter(function (it) {
+        var lead = String(leadOf(it) || '').trim();
+        var isHob = it && !it.grp && !it.group && /^(hobbies|interests?)$/i.test(lead);
+        var grpLbl = it && (it.grp || it.group) ? String(it.grp === true ? (it.t || '') : (it.grp || it.group)).trim() : '';
+        if (isHob) { addlMoved.push(it); return false; }
+        if (grpLbl && /^(interests?|hobbies)$/i.test(grpLbl)) return false;
+        return true;
+      });
+      if (addlItems.length === cv[ai].items.length) { addlItems = null; }
+    }
+    if (addlMoved.length) {
+      var have = {};
+      items.forEach(function (it) { if (isReal(it)) have[String(leadOf(it) || '').toLowerCase()] = 1; });
+      addlMoved.forEach(function (it) {
+        var l = String(leadOf(it) || ''), v = String(bodyOf(it) || '');
+        if (ph(l) && ph(v)) return;
+        if (l && have[l.toLowerCase()]) return;
+        items.push(mk(l, v)); have[l.toLowerCase()] = 1;
+      });
+      changed = true;
+    } else if (addlItems) {
+      changed = true;   // only an emptied umbrella header was dropped
+    }
+    if (!changed) return null;
+    var realNow = items.filter(isReal);
+    if (realNow.length) items = realNow;
+    var copy = cv.slice();
+    copy[xi] = Object.assign({}, sec, { items: items });
+    if (ai >= 0 && addlItems) copy[ai] = Object.assign({}, cv[ai], { items: addlItems });
+    try { console.log('[415] interests repaired from PI (+' + addlMoved.length + ' moved from additional)'); } catch (_) {}
+    return copy;
+  }
+
   function pinInterests(cv) {
     if (!gabrielPresent()) return null;   // INTERESTS-LEAK-SOURCE-001: CANON_INTERESTS are Gabriel's; never inject for a non-Gabriel/fresh/deleted user
     var xi = cv.findIndex(function (s) { return s && s.id === 'interests' && Array.isArray(s.items); });
@@ -1317,7 +1382,7 @@
     var changed = false;
     var copy = cv.map(function (s) {
       if (!s || s.on === false) return s;
-      if (!/^(recommendations|accessibility)$/.test(String(s.id || ''))) return s;
+      if (!/^(recommendations|accessibility|interests)$/.test(String(s.id || ''))) return s;
       var hasReal = false;
       if (typeof s.content === 'string' && !_phv(s.content)) hasReal = true;
       [].concat(s.items || [], s.rows || []).forEach(function (it) {
@@ -1444,6 +1509,7 @@
       var jr = scrubJuniorRugby(cv); if (jr) { cv = jr; changed = true; }
       var ish = normalizeInterestsShape(cv); if (ish) { cv = ish; changed = true; }
       var ibt = stripInterestsBtRemnant(cv); if (ibt) { cv = ibt; changed = true; }
+      var rint = repairInterestsFromPI(cv); if (rint) { cv = rint; changed = true; }
       var pin = pinInterests(cv); if (pin) { cv = pin; changed = true; }
       var dhn = dedupeHiddenDupByName(cv); if (dhn) { cv = dhn; changed = true; }
       var dedu = dedupeEducation(cv); if (dedu) { cv = dedu; changed = true; }

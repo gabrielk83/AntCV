@@ -32,7 +32,12 @@
   function isNordicMinimal() {
     try { var tr = localStorage.getItem('toneRegister');
       if (tr) { var v = JSON.parse(tr); return v === 'nordic-minimal' || v === 'scandinavian'; } } catch (_) {}
-    return false;
+    // TONE-DEFAULT-SCANDINAVIAN-001 (owner 2026-07-03, Anita CL): an ABSENT toneRegister
+    // meant these converters no-op'd in fresh/demo sessions while the CL skeleton is
+    // nordic-shaped for EVERYONE (TEMPLATE-STRUCT-DEFAULT-001) — bring stayed a table,
+    // foundation fields never reached the rich_block. The app's tone default is
+    // 'scandinavian' (u.get('toneRegister','scandinavian')) — mirror it here.
+    return true;
   }
   // GABRIEL-FOUNDATION-OPENING-001 (owner 2026-06-28): the generator emits FOUNDATION as only
   // hands_on + professionally; the "Foundation:" OPENING sentence is dropped, so with the headline
@@ -75,8 +80,13 @@
       });
       // Restore Gabriel's "Foundation" opening sentence as the first (paragraph) row when missing.
       var hasOpening = c.items[0] && typeof c.items[0] === 'object' && c.items[0].b === 'Foundation';
-      if (!hasOpening && isGabriel()) {
-        c.items = [{ b: 'Foundation', t: GABRIEL_FOUNDATION_OPENING }].concat(c.items);
+      // FOUNDATION-OPENING-NEUTRAL-001 (owner 2026-07-03): every candidate gets an
+      // opening lead row — Gabriel keeps his exact sentence (name-guarded), everyone
+      // else gets the neutral connector (same one antcv-cl-prose-richblock-fill-987
+      // uses) so the letter never opens the block with a bare "Hands-on" bullet.
+      if (!hasOpening) {
+        var __opening = isGabriel() ? GABRIEL_FOUNDATION_OPENING : 'I connect what I do best with the outcomes this employer is after.';
+        c.items = [{ b: 'Foundation', t: __opening }].concat(c.items);
         touched = true;
       }
       if (!touched) return sec;

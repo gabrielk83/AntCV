@@ -68,7 +68,7 @@ test('nordic + text_bullets: converts to rich_block AND defaults headline hidden
   assert.ok(c.items.length >= 2);
 });
 
-test('no toneRegister set: not forced (read-failure safe default)', () => {
+test('no toneRegister set: nordic DEFAULT applies (TONE-DEFAULT-SCANDINAVIAN-001)', () => {
   const c = load(undefined, richContribute());
-  assert.equal(c.headlineOff, undefined);
+  assert.equal(c.headlineOff, true);
 });

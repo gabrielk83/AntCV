@@ -328,7 +328,7 @@
   })();
 </script>
 <script type="module">
-  import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.60';
+  import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.64';
   window.exportDocxViaWorker = exportDocxViaWorker;
   window.ANTCV_VERSION = '1.51.64';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
@@ -670,7 +670,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-cluster-demand.js?v=1.50.711" defer></script>
 <!-- SETTINGS-PERSONAL-FREEZE-001: memoize the preview-paper querySelector shared by ~40 sidecar guards (60% of CPU in the settings freeze profile). Loads FIRST among sidecars. Kill antcv:disable-pp-memo. -->
 <script src="antcv-preview-paper-memo.js?v=1.51.59" defer></script>
-<script src="antcv-sections-normalize-415.js?v=1.51.60" defer></script>
+<script src="antcv-sections-normalize-415.js?v=1.51.64" defer></script>
 <script src="antcv-demo-watermark.js?v=1.50.340-live-keystate" defer></script>
 <script src="antcv-bullet-targets.js?v=1.40.136" defer></script>
 <!-- SIDECAR-CONSOLIDATE G10 (1.50.427): photo-position + photo-pentagon-shape +
@@ -845,7 +845,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-publications-editor.js?v=1.50.855" defer></script>
 <!-- RICH-BLOCK-001 Phase B: convert legacy `foundation` sections into `rich_block` so they
      gain the full rich-block controls. Idempotent; runs on CV + CL. -->
-<script src="antcv-foundation-to-rich-block-758.js?v=1.50.968" defer></script>
+<script src="antcv-foundation-to-rich-block-758.js?v=1.51.64" defer></script>
 <!-- CV-SUBTITLE-PIN-001: keep Gabriel's unsolicited specialization line "Processes • Products • People"
      from reverting to the template on kernel-showcase restore. Name-guarded, restore-proof, CV-only. -->
 <script src="antcv-cv-subtitle-pin-760.js?v=1.50.954" defer></script>
@@ -887,8 +887,8 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-twin-table-dedup.js?v=1.50.767" defer></script>
 <!-- RICH-BLOCK-001 / HWIC: convert HOW I WOULD CONTRIBUTE (text_bullets) into rich_block —
      intro/closing as paragraphs, bullets as marker rows (mk:true). Idempotent. -->
-<script src="antcv-hwic-to-rich-block-760.js?v=1.50.962" defer></script>
-<script src="antcv-bring-to-rich-block-761.js?v=1.51.46" defer></script>
+<script src="antcv-hwic-to-rich-block-760.js?v=1.51.64" defer></script>
+<script src="antcv-bring-to-rich-block-761.js?v=1.51.64" defer></script>
 <script src="antcv-nordic-cl-order-971.js?v=1.51.45" defer></script>
 <script src="antcv-core-wib-strict-row-layout-274.js?v=1.50.943" defer></script>
 <script src="antcv-row-controls-wording-341.js?v=1.40.357-p1b3" defer></script>

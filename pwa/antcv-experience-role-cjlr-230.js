@@ -6,7 +6,7 @@
  */
 (function(){
   'use strict';
-  const VERSION = '1.40.230-preview-guard';
+  const VERSION = '1.51.59-idempotent-sweep';
   // v1.40.230-preview-guard: Preview is button-free. Role cards from
   // inside .antcv-preview-paper must not get CJLR buttons.
   const isInPreviewPaper = el => { if(!el) return false; const p=document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]'); return !!(p && p.contains(el)); };
@@ -28,15 +28,23 @@
     });
   }
 
+  // SETTINGS-PERSONAL-FREEZE-001 (owner 2026-07-03): a role card's text is short.
+  // Climbing past this size serialized nearly the WHOLE document textContent per
+  // textarea per level (the CPU profile's 49% querySelector + clean storm that
+  // froze the tab when Settings → Personal added its inputs). Same cap pattern
+  // as BOOT-CJLR-PERF-001 in profile-workstyle-cjlr-238.
+  const MAX_CARD_TEXT = 4000;
   function roleCardForTextarea(ta){
     let p = ta && ta.parentElement;
     let best = null;
     for(let depth=0; p && depth<10; depth++, p=p.parentElement){
       if(!p.querySelectorAll) continue;
+      const raw = p.textContent || '';
+      if(raw.length > MAX_CARD_TEXT) break;          // ancestors only grow — none above is a card
       const tas = p.querySelectorAll('textarea');
       const inputs = Array.from(p.querySelectorAll('input'));
       const buttons = p.querySelectorAll('button');
-      const txt = clean(p.textContent);
+      const txt = clean(raw);
       const looksRole = /\[?Role title\]?/i.test(txt) || inputs.some(i=>/role title/i.test(i.placeholder||i.value||''));
       const hasHeadingFields = inputs.length >= 3 && inputs.some(i=>/company/i.test(i.placeholder||i.value||'')) && inputs.some(i=>/yyyy|year/i.test(i.placeholder||i.value||''));
       if(tas.length === 1 && hasHeadingFields && looksRole && buttons.length >= 2){ best = p; break; }
@@ -67,8 +75,12 @@
   function applyEditor(card, align){
     const ta = card && card.querySelector('textarea');
     if(!ta) return;
-    ta.style.textAlign = align;
-    ta.setAttribute('data-antcv-role-content-align', align);
+    // SETTINGS-PERSONAL-FREEZE-001: write-on-change only (v1.50.80 idempotency
+    // pattern). Unconditional style/attribute writes retriggered this sidecar's
+    // OWN MutationObserver (attributeFilter includes 'style') on every pass —
+    // back-to-back multi-second rAF bodies = the owner's button loop / freeze.
+    if(ta.style.textAlign !== align) ta.style.textAlign = align;
+    if(ta.getAttribute('data-antcv-role-content-align') !== align) ta.setAttribute('data-antcv-role-content-align', align);
   }
 
   function ensureButton(card, idx){
@@ -103,16 +115,22 @@
   }
 
   function paintButton(btn, align){
-    btn.textContent = ICON[align] || ICON.left;
-    btn.title = 'Role content alignment: ' + (LABEL[align] || align) + '. Click to cycle Center, Justify, Left, Right.';
-    btn.setAttribute('aria-label', btn.title);
-    Object.assign(btn.style, {
-      display:'inline-flex', alignItems:'center', justifyContent:'center',
-      width:'30px', minWidth:'30px', height:'26px', minHeight:'26px',
-      padding:'0', margin:'0 2px', border:'1px solid #01B7BB', borderRadius:'5px',
-      background:'rgba(1, 183, 187, 0.08)', color:'#00746E', fontWeight:'700', fontSize:'14px',
-      lineHeight:'1', cursor:'pointer', order:'44', pointerEvents:'auto', opacity:'1'
-    });
+    // SETTINGS-PERSONAL-FREEZE-001: every write guarded so a stable state
+    // produces ZERO mutations (the observer below watches style/childList).
+    const icon = ICON[align] || ICON.left;
+    if(btn.textContent !== icon) btn.textContent = icon;
+    const title = 'Role content alignment: ' + (LABEL[align] || align) + '. Click to cycle Center, Justify, Left, Right.';
+    if(btn.title !== title){ btn.title = title; btn.setAttribute('aria-label', title); }
+    if(btn.getAttribute('data-antcv-230-styled') !== '1'){
+      btn.setAttribute('data-antcv-230-styled','1');
+      Object.assign(btn.style, {
+        display:'inline-flex', alignItems:'center', justifyContent:'center',
+        width:'30px', minWidth:'30px', height:'26px', minHeight:'26px',
+        padding:'0', margin:'0 2px', border:'1px solid #01B7BB', borderRadius:'5px',
+        background:'rgba(1, 183, 187, 0.08)', color:'#00746E', fontWeight:'700', fontSize:'14px',
+        lineHeight:'1', cursor:'pointer', order:'44', pointerEvents:'auto', opacity:'1'
+      });
+    }
   }
 
   function roleData(){
@@ -159,15 +177,15 @@
 
   function applyPreviewElement(el, align){
     if(!el) return;
-    el.style.textAlign = align;
-    el.setAttribute('data-antcv-role-preview-align', align);
+    if(el.style.textAlign !== align) el.style.textAlign = align;
+    if(el.getAttribute('data-antcv-role-preview-align') !== align) el.setAttribute('data-antcv-role-preview-align', align);
     // List containers need the same setting, otherwise bullets can stay left while text changes.
     let p = el.parentElement;
     for(let i=0; p && i<3; i++, p=p.parentElement){
       const tag = (p.tagName||'').toLowerCase();
       if(tag === 'ul' || tag === 'ol' || tag === 'p'){
-        p.style.textAlign = align;
-        p.setAttribute('data-antcv-role-preview-align', align);
+        if(p.style.textAlign !== align) p.style.textAlign = align;
+        if(p.getAttribute('data-antcv-role-preview-align') !== align) p.setAttribute('data-antcv-role-preview-align', align);
       }
     }
   }
@@ -205,14 +223,20 @@
     });
   }
 
+  // SETTINGS-PERSONAL-FREEZE-001: trailing debounce for observer-driven runs.
+  // Per-pass cost scales with the number of editor textareas; reacting to every
+  // mutation burst back-to-back is what saturated the main thread. 300ms trailing
+  // keeps the buttons responsive while merging storms into one pass.
+  let moT = null;
+  function runSoon(){ if(moT) return; moT = setTimeout(()=>{ moT = null; run(); }, 300); }
   function start(){
     run();
     [100,250,600,1200,2500,4500].forEach(ms=>setTimeout(run,ms));
-    try { new MutationObserver(run).observe(document.body||document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style','value']}); } catch(_){}
-    window.addEventListener('input', run, true);
+    try { new MutationObserver(runSoon).observe(document.body||document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style','value']}); } catch(_){}
+    window.addEventListener('input', runSoon, true);
     window.addEventListener('click', ()=>setTimeout(run,0), true);
-    window.addEventListener('antcv:sections-updated', run);
-    setInterval(run, 1500);
+    window.addEventListener('antcv:sections-updated', runSoon);
+    setInterval(run, 2500);
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', start); else start();
   window.AntcvExperienceRoleCjlr230 = { version: VERSION, run, _findEditorCards: findEditorCards, _applyPreview: applyPreview };

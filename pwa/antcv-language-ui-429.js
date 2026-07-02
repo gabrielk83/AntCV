@@ -308,7 +308,19 @@
         el.setAttribute('data-antcv-font-harmonized-327',sig);
       });
     }catch(_){}}
-    let busy=false;function apply(){if(busy)return;busy=true;try{
+    // SETTINGS-PERSONAL-FREEZE-001 (owner 2026-07-03): this apply() used to run on
+    // EVERY document mutation (shared observer) with an O(all divs × textContent)
+    // settingsRoot scan, and re-derived contentHost each pass — when that heuristic
+    // flapped (other sidecars mutating the column) the panel was RE-APPENDED,
+    // creating the childList churn that woke every other sweep (part of the
+    // settings-tab freeze/button-loop). Throttle to 400ms trailing and keep the
+    // panel where it is while its current parent is still inside the root.
+    let lastApply=0,applyT=null;
+    let busy=false;function apply(){
+      const nowT=Date.now();
+      if(nowT-lastApply<400){if(!applyT){applyT=setTimeout(function(){applyT=null;apply();},400-(nowT-lastApply));}return;}
+      lastApply=nowT;
+      if(busy)return;busy=true;try{
       // BOOT-LANGUI-GATE-001 (1.50.870): skip the O(all-divs × getComputedStyle ×
       // getBoundingClientRect) settingsRoot() scan every mutation tick when settings
       // is clearly not open. Settings renders STANDARD/ADVANCED tab buttons; when
@@ -316,7 +328,12 @@
       // always check (it may need cleanup). Reduces boot sidecar-swarm CPU markedly.
       var _panelInDom=!!document.querySelector('[data-antcv-language-prefs="1"]');
       if(!_panelInDom){var _so=false,_btns=document.querySelectorAll('button');for(var _bi=0;_bi<_btns.length;_bi++){var _bu=(_btns[_bi].textContent||'').trim().toUpperCase();if(_bu==='STANDARD'||_bu==='ADVANCED'){_so=true;break;}}if(!_so){busy=false;return;}}
-      const root=settingsRoot();if(!root){removeAllExcept(null);return}if(!isPersonal(root)){removeAllExcept(null);return}let panel=document.querySelector('[data-antcv-language-prefs="1"]');removeAllExcept(panel);if(!panel){panel=build()}const host=contentHost(root);if(!host.contains(panel))host.appendChild(panel);removeAllExcept(panel);harmonizeFonts(root)}catch(e){console.warn('[antcv-language-prefs] apply failed:',e&&e.message)}finally{busy=false}}
+      const root=settingsRoot();if(!root){removeAllExcept(null);return}if(!isPersonal(root)){removeAllExcept(null);return}let panel=document.querySelector('[data-antcv-language-prefs="1"]');removeAllExcept(panel);if(!panel){panel=build()}
+      // host stickiness: only re-place the panel when it is NOT already mounted
+      // somewhere under the settings root (re-appending on every heuristic flap
+      // was a mutation-storm source and made the card visibly jump).
+      if(!(panel.parentElement&&root.contains(panel))){const host=contentHost(root);if(!host.contains(panel))host.appendChild(panel);}
+      removeAllExcept(panel);harmonizeFonts(root)}catch(e){console.warn('[antcv-language-prefs] apply failed:',e&&e.message)}finally{busy=false}}
     window.AntcvLanguagePrefs={get:read,set:write,apply,VERSION};if(!readJSON('enabledLanguages'))write(DEFAULT);
     function boot(){
       document.addEventListener('click',()=>setTimeout(scheduleAll,0),true);

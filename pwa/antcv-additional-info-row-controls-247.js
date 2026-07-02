@@ -387,11 +387,17 @@
   injectCss();
   run();
   [150, 400, 900, 1600].forEach(function (ms) { setTimeout(run, ms); });
+  // SETTINGS-PERSONAL-FREEZE-001 (owner 2026-07-03): reacting to EVERY childList
+  // mutation with a full norm()/panelRoot() document scan was the top residual
+  // CPU consumer in the settings-tab freeze profile. Trailing 300ms debounce
+  // merges mutation bursts into one pass; behaviour otherwise unchanged.
+  var __moT = null;
+  function runSoon() { if (__moT) return; __moT = setTimeout(function () { __moT = null; run(); }, 300); }
   try {
-    new MutationObserver(function () { setTimeout(run, 0); }).observe(document.body || document.documentElement, {
+    new MutationObserver(runSoon).observe(document.body || document.documentElement, {
       childList: true, subtree: true
     });
   } catch (_) {}
-  window.addEventListener('storage', run);
-  window.addEventListener('antcv:sections-updated', function () { setTimeout(run, 0); });
+  window.addEventListener('storage', runSoon);
+  window.addEventListener('antcv:sections-updated', runSoon);
 })();

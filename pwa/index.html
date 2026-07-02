@@ -630,7 +630,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      scheduler + ONE MutationObserver. The owner-touched wizard-language-slide,
      i18n, translation-patch, and language-ui-fixes stay separate. The three old
      files stay on disk, unreferenced. -->
-<script src="antcv-language-ui-429.js?v=1.50.870" defer></script>
+<script src="antcv-language-ui-429.js?v=1.51.59" defer></script>
 <script src="antcv-section-align.js?v=1.51.43" defer></script>
 <script src="antcv-subsection-reorder.js?v=1.50.702" defer></script>
 <script src="antcv-disclosure-triangle.js?v=1.50.703" defer></script>
@@ -668,6 +668,8 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      normalizer + docx-client so its window.AntcvClusterDemand is available to the
      blended numeric+demand ordering. -->
 <script src="antcv-cluster-demand.js?v=1.50.711" defer></script>
+<!-- SETTINGS-PERSONAL-FREEZE-001: memoize the preview-paper querySelector shared by ~40 sidecar guards (60% of CPU in the settings freeze profile). Loads FIRST among sidecars. Kill antcv:disable-pp-memo. -->
+<script src="antcv-preview-paper-memo.js?v=1.51.59" defer></script>
 <script src="antcv-sections-normalize-415.js?v=1.51.56" defer></script>
 <script src="antcv-demo-watermark.js?v=1.50.340-live-keystate" defer></script>
 <script src="antcv-bullet-targets.js?v=1.40.136" defer></script>
@@ -810,14 +812,14 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      intervals). Verified: 211's CSS replicates each 206/207/208 rule; no
      external consumer of their APIs/attrs. Review: docs/refactor/SIDECAR_CONSOLIDATION_REVIEW.md -->
 <script src="antcv-section-panel-211.js?v=1.50.418" defer></script>
-<script src="antcv-experience-role-cjlr-230.js?v=1.40.239-preview-guard" defer></script>
+<script src="antcv-experience-role-cjlr-230.js?v=1.51.59" defer></script>
 <script src="antcv-core-competencies-row-controls-234.js?v=1.50.802" defer></script>
 <script src="antcv-selected-outcomes-row-controls-237.js?v=1.51.56" defer></script>
 <script src="antcv-profile-workstyle-cjlr-238.js?v=1.51.56" defer></script>
 <script src="antcv-how-contribute-controls-245.js?v=1.50.944" defer></script>
 <script src="antcv-foundation-controls-327.js?v=1.50.944" defer></script>
 <script src="antcv-what-i-bring-cjlr-cleanup-246.js?v=1.40.246" defer></script>
-<script src="antcv-additional-info-row-controls-247.js?v=1.50.151-cldoc" defer></script>
+<script src="antcv-additional-info-row-controls-247.js?v=1.51.59" defer></script>
 <script src="antcv-add-cjlr-order-swap-241.js?v=1.40.243" defer></script>
 <script src="antcv-embedded-controls-248.js?v=1.50.944" defer></script>
 <script src="antcv-what-i-bring-header-cjlr-249.js?v=1.50.943" defer></script>
@@ -1022,7 +1024,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      SettingsRouter, wizardState). See docs/plan/AntCV_Plan_v2_LockedSources.md
      §7 Pass 1. -->
       <script src="antcv-357-loader.js?v=1.50.400" defer></script>
-      <script src="antcv-react-islands.js?v=1.50.927" defer></script>
+      <script src="antcv-react-islands.js?v=1.51.59" defer></script>
       <!-- v1.50.164: auto-apply the correct palette when the stored package is the
            legacy orphan default ("scandinavian"), by pressing the Copenhagen Modern
            button — fixes the permanent palette mix on load without a manual click. -->

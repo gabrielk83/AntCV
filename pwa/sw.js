@@ -36,6 +36,7 @@ const SHELL = [
   './antcv-tables-partition.js',
   './antcv-orphan-measure-bind.js',
   './antcv-orphan-export-preflight.js',
+  './antcv-preview-paper-memo.js',
   './antcv-empty-role-hide.js',
   './antcv-gabriel-results-pin.js',
   './antcv-unsolicited-cv-completeness.js',

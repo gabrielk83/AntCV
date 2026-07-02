@@ -105,8 +105,10 @@ export function JobSearchTargeting(): React.ReactElement {
   const nSel = prefs.regions.length + prefs.employment.length + prefs.formats.length;
   const summary = nSel ? `${nSel} selected` : 'none set';
 
+  // SETTINGS-DONE-SEPARATION-001 (owner 2026-07-03): clear separation between the
+  // content cards above and the bottom Job-search-targeting / Done row.
   return (
-    <div data-antcv-react-mount="job-search-targeting" style={{ padding: '2px 0 4px' }}>
+    <div data-antcv-react-mount="job-search-targeting" style={{ padding: '12px 0 6px', marginTop: 12, borderTop: '1px solid rgba(255,255,255,.12)' }}>
       <button type="button" onClick={toggle} aria-expanded={open}
         style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', padding: 0, margin: 0,
           background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>

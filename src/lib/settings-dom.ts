@@ -47,7 +47,18 @@ function activeButton(root: Element, re: RegExp): Element | null {
   return all.find(activeish) ?? null;
 }
 
+// SETTINGS-PERSONAL-FREEZE-001 (owner 2026-07-03): every island's mutation-driven
+// applyOnce() called this — an ALL-divs visibility + full-textContent scan — so a
+// busy Settings panel cost O(islands × divs × page text) per mutation burst and
+// contributed to the settings-tab main-thread saturation. The settings root
+// changes rarely; a 300ms TTL memo (isConnected-revalidated) keeps every caller
+// correct while collapsing the scans. Same pattern as antcv-preview-paper-memo.
+let __rootMemo: { t: number; el: HTMLElement | null } = { t: -1e9, el: null };
 export function findSettingsRoot(): HTMLElement | null {
+  const now = performance.now();
+  if (now - __rootMemo.t < 300 && (__rootMemo.el === null || __rootMemo.el.isConnected)) {
+    return __rootMemo.el;
+  }
   let best: HTMLElement | null = null;
   const candidates = Array.from(
     document.querySelectorAll<HTMLElement>('[role="dialog"],main,section,div'),
@@ -61,6 +72,7 @@ export function findSettingsRoot(): HTMLElement | null {
       }
     }
   }
+  __rootMemo = { t: now, el: best };
   return best;
 }
 
@@ -124,7 +136,22 @@ function hasVisibleNativeMarker(root: Element, re: RegExp): boolean {
   return false;
 }
 
+// SETTINGS-PERSONAL-FREEZE-001: getTabState deep-clones the settings root
+// (bodyTextExcludingIslands) and walks all its nodes — memoized per root for
+// 300ms for the same reason as findSettingsRoot above.
+let __tabMemo: { t: number; root: Element | null; st: TabState } = {
+  t: -1e9,
+  root: null,
+  st: { top: '', sub: '' },
+};
 export function getTabState(root: Element): TabState {
+  const nowT = performance.now();
+  if (__tabMemo.root === root && nowT - __tabMemo.t < 300) return __tabMemo.st;
+  const st = __getTabStateUncached(root);
+  __tabMemo = { t: nowT, root, st };
+  return st;
+}
+function __getTabStateUncached(root: Element): TabState {
   const top = activeButton(root, /^(STANDARD|ADVANCED|ADMIN)$/i);
   const sub = activeButton(
     root,

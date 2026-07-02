@@ -4,56 +4,49 @@
 > prose detail lives in the linked docs. Rows are ordered oldest-verified-first so
 > the nightly slot always chews the stalest end. `verified:` = the last date a
 > human/agent confirmed the row against the CURRENT code, not the date it was filed.
-> Seeded 2026-07-02 (late session) from ACTIVE_BUGS batches 1-8 + the
-> PROJECT_ISSUES_OPEN_CLOSED chain (07-02 ← 07-01 ← 06-30 ← 06-29) + MASTER_BACKLOG +
-> FEATURES_REGISTRY + auto-memory. Chain items not re-verified tonight carry `verified: no`.
+> Seeded 2026-07-02 from ACTIVE_BUGS batches 1-8 + the PROJECT_ISSUES chain + MASTER_BACKLOG.
+> **RENUMBERED 2026-07-03 (owner ask: "show what is actually open"):** closed rows moved to
+> the CLOSED section below; references to old row numbers in ACTIVE_BUGS batches ≤15 use the
+> OLD numbering. Verify-first sweep 2026-07-03 closed old rows 1, 5, 10(core), 13, 14, 20, 25-29.
 
 ## OPEN — verify-first queue (oldest/staleness first)
 
 | # | Item | Source / detail | verified |
 |---|------|-----------------|----------|
-| 1 | ~~Candidate-header 3-col-grid placement (spread-left #2)~~ CLOSED — the 06-29 3-col-grid plan was SUPERSEDED by the owner's reference DOCX geometry, shipped as CONTACT-FULLWIDTH-001 (wk 1.14.119) + FIGURE-CONTACT-REF-001 (wk 1.14.120: page-anchored 1.50" medallion posH 0.433", contact 8pt ind 1.8"); 1.14.120 sat committed-but-UNDEPLOYED until 2026-07-03 (live /health said 1.14.119) — deployed + verified live 2026-07-03; pixel confirmation rides row 29 | NEXT_SESSION_2026-06-29 → wk 1.14.119/120 | 2026-07-03 |
-| 2 | Quick-gen page convergence (#4) + CV 3-page convergence, export-only pagination parity | NEXT_SESSION_2026-06-29 (render-gated set) | no |
-| 3 | SW-projects hyperlink + line-end overflow | 2026-06-29 batch OPEN list | no |
-| 4 | Page-anchored floating spine (sidebar navy fill to page bottom — real fix; PAGE1_BODY_MIN pins stay) | memory sidebar-fill-gap; ACTIVE_BUGS | no |
-| 5 | Photo bridge: in-cell float-wrap | memory photo-bridge-nonfloat | no |
-| 6 | rich_block RULE editor decoupling ("— Rule" button disabled when headline hidden). Export half DONE (headlineRule + WHY-RULE-EXPORT-PARITY-001 1.51.64) | 2026-06-28 queued feature | partial 2026-07-02 |
-| 7 | Candidate-header: Contact row click collapses section + per-field rule lines | 2026-06-28 diagnosed/queued | no |
-| 8 | Wizard+Settings UX tier-2/3 structural items | docs/qa/WIZARD_SETTINGS_UX_2026-06-16.md | no |
-| 9 | CL slogan/signature F3 — distinct CL-format panel placement | memory cl-slogan-signature | no |
-| 10 | Kernel v2 + upload→kernel ingestion | docs/plan/KERNEL-V2-AND-INGESTION.md (not started) | no |
-| 11 | Cluster demand model: worker pipeline + nightly recruitment-site refresh | memory cluster-demand-model | no |
-| 12 | Ordering spec: JD-cluster top-20 skills weighting | memory ordering-jd-cluster-top-skills (not modelled) | no |
-| 13 | DATA-LOSS residual: client load-grace guard — likely CLOSED (DATA-LOSS-LOAD-GRACE-001 1.50.957); verify + close | memory data-loss-on-restore vs 06-29 batch | no |
-| 14 | Access-relay D1-WRITE-RETRY deploy — likely CLOSED (memory: deployed 2026-07-02); verify `d1_write_failed` gone + close | PROJECT_ISSUES 07-02 carry-forward #2 | no |
-| 15 | SIDEBAR-PAGE23-DANCE — likely CLOSED (sig-cache 1.50.9xx + SIDEBAR-PROMOTE-MARGIN-001 1.51.63); verify live + close | 2026-06-28 diagnosed | no |
-| 16 | diag-ai-notice-anchor RED since worker 1.14.75 | memory stale-status-deadflags | no |
-| 17 | PAN-IDRAET-BULLET-NEARDUP-001 — EXPORT half SHIPPED 1.51.70 (within-role near-dup collapse in sanitizeForExport, single-source both modes, KEEP_MIN=2, cleaner line wins). Preview-side hide DEFERRED (index-based edit path — ORPHAN-WRITE-VERIFY risk; needs live browser + index-safe marker) | memory preview-memo-results-only; NIGHTLY 07-03 Task 4.2 | partial 2026-07-03 |
-| 18 | JD-SCAN-HALLUCINATION-001 ingest reorder (garble → vision FIRST; filename↔company check; "used OCR" notice) — needs real models/owner present | ACTIVE_BUGS; ORPHANS_V2 prompt stretch | 2026-07-02 |
-| 19 | GEN-UNSOL-STALE-JD-001 Patch D (scrub known prior company when meta.company returns empty) | ACTIVE_BUGS 1.51.54 block | 2026-07-02 |
-| 20 | ~~Gen-prompt example-text leftovers~~ CLOSED — GEN-DEHARDCODE-003 shipped 1.51.67 (all five example lists neutralized; sweep complete, see CLOSED list) | GEN-DEHARDCODE-002 report → ACTIVE_BUGS batch 10 | 2026-07-02 |
-| 21 | Latent sid-fallback pattern in 234/247/249 (giant-container grab when the target section is absent; 237 hardened 1.51.60) | SETTINGS batch 5 note | 2026-07-02 |
-| 22 | Settings sweep-army burst cost (heavy-but-recovering churn under owner-scale kernel: 279/356/341/language-ui) — optimization track | freeze diag profiles (batches 5+7) | 2026-07-02 |
-| 23 | Anita demo residuals (batch-9 narrowed): docx missing photo + PDF contact placement are SESSION-STATE-gated (bridge indent verified correctly photo-gated in the worker; re-import persona + hard-refresh + re-export decides). Hill&Colony header was an EXTRACTION artifact — present in the PDF; the real issue was the Results bleed (fixed via per-role results, re-import gated) | ACTIVE_BUGS batch 9 | 2026-07-02 |
-| 24 | OWNER regen verifications owed: orphan preflight acceptance set (hard-refresh first!); CL foundation/bring/interests on a fresh Anita gen; Gabriel CL unchanged-good | ACTIVE_BUGS batches 7-8 | 2026-07-02 |
-| 25 | ~~CL-LINE-FILL-RESIDUAL-001 + CL-SIGNATURE-SPACING-001~~ CLOSED (batch 12, 1.51.71 + wk 1.14.121) — LINE-FILL-SLOTS-001 prompt rule now names opening_content / foundation_hands_on / foundation_professionally (last line must fill; <~60 chars → add stored detail); signature spacing +12px/+6px shipped in the worker (closing before 330, name before 150) AND both preview paths (React 26/14, HTML 21pt/12.5pt). LINE-FILL half is prompt-level — owner regen confirms | ACTIVE_BUGS batch 12 | 2026-07-03 |
-| 26 | ~~CV-ORPHANS-RESIDUAL-001~~ CLOSED (batch 12, 1.51.71) — NOT stale-SW: all 7 runts in the owner's PDF (fracs 0.15-0.27, PyMuPDF-measured) were SIDEBAR labeled values; the preflight was main-column-only BY DESIGN. SIDEBAR-ORPHANS-001 extends it: sidebar labeled_list values measured at sidebar geometry + L2 NBSP-bound, never L3, never stored-section writes | ACTIVE_BUGS batch 12 | 2026-07-03 |
-| 27 | ~~ROLE-RESULTS-MISSING-TA-SG-001~~ CLOSED (batch 12, 1.51.71) — Security Guard result VERIFIED PRESENT in the owner's PDF p3 (no bug); Teaching Assistant had NO pin anywhere (the TAU split leaves a bare title the RA matcher misses). TA pin added to PINS + _GAB_EXACT + kernel role_results_exact (SEM/Raman/confocal training — stored fact); merged "R&D and Teaching Assistant" excluded by lookahead | ACTIVE_BUGS batch 12 | 2026-07-03 |
-| 28 | ~~CORECOMP-TABLE-CELL-PAD-001~~ CLOSED (batch 12, wk 1.14.121 + 1.51.71) — worker table cell L/R margins 90→150 DXA (6px→10px, header + data rows); preview parity (React 7px→10px L/R, HTML 5pt→7.5pt) | ACTIVE_BUGS batch 12 | 2026-07-03 |
-| 29 | ~~SIDEBAR-HEADLINE-PAGE2-ALIGN-001 + HEADER-CONTACT-PHOTO-FIT-001~~ CLOSED (batch 12) — sidebar half: each page is its own two-column table (cell top margins re-apply); measured 5pt sidebar-higher on p2-3 → continuation pages add +100 DXA to the sidebar cell top (wk 1.14.121; page 1 keeps 240). Contact half: already fixed by wk 1.14.120 (owner's PDF predates the deploy); OWNER CONFIRMED placement good on re-export (2026-07-03) + asked same-size tighter letter separation → CONTACT-TRACK-TIGHT-001 (bridge contact runs w:spacing -10 = condensed 0.5pt, wk 1.14.123, deployed + live /health verified); owner eyeball of the tracking owed | ACTIVE_BUGS batch 12 (owner pics) | 2026-07-03 |
+| 1 | Quick-gen page convergence + CV 3-page convergence, export-only pagination parity | NEXT_SESSION_2026-06-29 (render-gated set) | no |
+| 2 | SW-projects hyperlink + line-end overflow | 2026-06-29 batch OPEN list | no |
+| 3 | Page-anchored floating spine (sidebar navy fill to page bottom — real fix; PAGE1_BODY_MIN pins stay) | memory sidebar-fill-gap; ACTIVE_BUGS | no |
+| 4 | rich_block RULE editor decoupling — EDITOR half ("— Rule" button disabled when headline hidden); export half DONE (headlineRule + WHY-RULE-EXPORT-PARITY-001, 1.51.64) | 2026-06-28 queued feature | partial 2026-07-02 |
+| 5 | Candidate-header: Contact row click collapses section + per-field rule lines | 2026-06-28 diagnosed/queued | no |
+| 6 | Wizard+Settings UX tier-2/3 structural items | docs/qa/WIZARD_SETTINGS_UX_2026-06-16.md | no |
+| 7 | CL slogan/signature F3 — distinct CL-format panel placement | memory cl-slogan-signature | no |
+| 8 | Kernel v2 REMAINDER only — the core is SHIPPED (the old "not started" row was stale): Task 1a + §2 TENSE (1.50.515) + §3 LANG-CROSS (1.50.516) + §4 ingestion engine/extraction/UI/D1/reader-bridge/auto-sync (1.50.517-521 + relay kernel-v2 routes) are all live. REMAINING: (a) migrate generation readers to consume `kernel_v2` DIRECTLY (tense/history still read the v1 `history` bridge), (b) surface per-role `langInvariantTokens[]` as the explicit DO-NOT-TRANSLATE list in STORED WORK HISTORY, (c) expand cross-language beyond the EN/DA flag to es/zh + the lazy `language_view` tier (LANG-EXPAND-001), (d) §6 regression parity pass (P/DOCX/PDF, desktop+mobile) on a sample UPLOADED docx | docs/plan/KERNEL-V2-AND-INGESTION.md (status log) | 2026-07-03 |
+| 9 | Cluster demand model: worker pipeline + nightly recruitment-site refresh | memory cluster-demand-model | no |
+| 10 | Ordering spec: JD-cluster top-20 skills weighting | memory ordering-jd-cluster-top-skills (not modelled) | no |
+| 11 | SIDEBAR-PAGE23-DANCE — likely CLOSED (sig-cache 1.50.9xx + SIDEBAR-PROMOTE-MARGIN-001 1.51.63); live verify + close | 2026-06-28 diagnosed | no |
+| 12 | diag-ai-notice-anchor RED since worker 1.14.75 (one of the 4 standing docx-diag baseline fails: ai-notice-anchor, cjlr-table-export, pageflow-export, spacing-linkedin-export) | memory stale-status-deadflags | no |
+| 13 | PAN-IDRAET-BULLET-NEARDUP-001 preview-side hide — export half SHIPPED 1.51.70 (sanitizeForExport collapse); preview hide DEFERRED (index-based edit path, ORPHAN-WRITE-VERIFY risk; needs live browser + index-safe marker) | memory preview-memo-results-only; NIGHTLY 07-03 | partial 2026-07-03 |
+| 14 | JD-SCAN-HALLUCINATION-001 ingest reorder (garble → vision FIRST; filename↔company check; "used OCR" notice) — needs real models/owner present | ACTIVE_BUGS; ORPHANS_V2 prompt stretch | 2026-07-02 |
+| 15 | GEN-UNSOL-STALE-JD-001 Patch D (scrub known prior company when meta.company returns empty) — partially mitigated by CL-PROSE-UNSOL-POISON-001 (1.51.75) + JD-SCOPE-ISOLATION (1.51.72/73); re-verify what remains | ACTIVE_BUGS 1.51.54 block | 2026-07-02 |
+| 16 | Latent sid-fallback pattern in 234/247/249 (giant-container grab when the target section is absent; 237 hardened 1.51.60) | SETTINGS batch 5 note | 2026-07-02 |
+| 17 | Settings sweep-army burst cost (heavy-but-recovering churn under owner-scale kernel: 279/356/341/language-ui) — optimization track | freeze diag profiles (batches 5+7) | 2026-07-02 |
+| 18 | Anita demo residuals: docx missing photo + PDF contact placement are SESSION-STATE-gated (re-import persona + hard-refresh + re-export decides); CL foundation/bring/interests on a fresh Anita gen | ACTIVE_BUGS batches 8-9 | 2026-07-02 |
+| 19 | JD-SCOPE-ISOLATION residuals: cold-restore occ-2 ("manual-save sentinel" path) NOT device-guarded; multi-device flow unit+headless verified but NOT tested with two real devices; `shouldAdoptCloudPointer` wired only for the JD-inherit case | ACTIVE_BUGS 2026-07-03 JD-scope entry; memory jd-scope-isolation | 2026-07-03 |
+| 20 | OWNER VERIFY LIST (consolidated, batches 12-16 + parallel sessions) — one Hard Refresh + CL regen + CV re-export checks all: (a) p2/p3 sidebar↔main headline alignment — wk 1.14.122 spacer, round-2 fix NOT yet proven in a real CloudConvert PDF (round 1 failed there); (b) sidebar runts gone (1.51.75 font-metric + 1.51.72 tighten); (c) CL +12/+6px signature spacing + the 3 line-fill slots (regen, prompt-level); (d) Sirin Result numberless (1.51.76) and an inline edit STICKS; (e) "Uni. of Toronto" abbreviation in the export; (f) contact letter-tracking (CONTACT-TRACK-TIGHT-001, wk 1.14.123) | ACTIVE_BUGS batches 12-16 | 2026-07-03 |
 
-## CLOSED this seeding (evidence)
+## CLOSED (evidence; most recent first)
 
-- Owner PDF review batch 11 (rows 25-29) — resolved in batch 12: PWA 1.51.71 + docx-worker 1.14.121 (commit f98b07b; suite 699/699, docx diags 34/38 == baseline, boot-smoke green). Owner re-export + CL regen confirm the visuals.
-- Owner round-2 (export (3), batch 13) — RESULTS-PIN-OWNER-EDIT-001 + RESULTS-PIN-ONE-LINE-001 + SIDEBAR-TIGHTEN-001 (1.51.72) + SIDEBAR-HEADLINE-PAGE2-ALIGN-002 (wk 1.14.122, cell-margin approach reverted — LibreOffice row-top normalization; spacer paragraph instead). Row-29 sidebar half re-verified via 1.14.122. Watch item: sidebar runts persisted in (3) — tighten pass is the primary mitigation; live preflight diagnosis if they survive the next export.
-
-- Orphans v2 (EXPORT-METRIC-MEASURE-001 + EXPORT-PREFLIGHT-ORPHANS-001) — 1.51.57; real-font diag clears the acceptance set; owner PDF gate pending (row 24).
-- Demo/template flicker loops (STORM-EMPTY-SLOT-CONVERGE-001, PW-CJLR-FOREIGN-SECTION-001) — 1.51.56/1.51.59.
-- CL base template struct (TEMPLATE-STRUCT-DEFAULT-001) — 1.51.58; converters tone-default + hydration family — 1.51.64.
-- Gabriel gen-prompt de-hardcode rounds — 1.51.60/62/64 (+ workers 3.7.x).
-- Demo-proxy gen-job/coherence/salary parity — workers 3.7.0, deployed + verified live.
-- Preview pagination promotion gate (SIDEBAR-PROMOTE-MARGIN-001) — 1.51.63.
-- app.js conflict-marker incident — shipped broken as 1.51.65, repaired 1.51.66 (verified live).
-- Gen-prompt example-list leftovers (row 20) — GEN-DEHARDCODE-003, 1.51.67 (translator KEEP-VERBATIM, LANG-CROSS metrics/tech, tools taxonomy, cert relevance, patent bullet; tests gen-prompt-dehardcode 003 blocks). De-hardcode sweep COMPLETE.
-- Demo-cap UX (cap 429 mis-advised as transient rate limit; Anita skeleton placeholders were the cap symptom) — DEMO-CAP-UX-001, 1.51.68 (ladder stop + banner + fail-fast; BYOK passes; unit/demo-cap-ux.test.mjs); quintet 1.51.69.
-- Candidate-header 3-col-grid placement (row 1, spread-left #2) — superseded by owner-reference geometry CONTACT-FULLWIDTH-001 (wk 1.14.119) + FIGURE-CONTACT-REF-001 (wk 1.14.120); root cause of the batch-11 HEADER-CONTACT-PHOTO-FIT-001 report was 1.14.120 committed-but-UNDEPLOYED (live /health = 1.14.119 at owner's export). Deployed 2026-07-03 via deploy.yml (run 28602458782), live /health = 1.14.120-figure-contact-ref; suite 781/781 + diag-photo-bridge-export + diag-contact-fullwidth green pre-deploy. Owner pixel check rides row 29.
+- Old row 13 (DATA-LOSS load-grace guard) — VERIFIED 2026-07-03: DATA-LOSS-LOAD-GRACE-001 code in BOTH bundles (`__hasReal` guard ×6 in app.js; the ID string is a src-only comment).
+- Old row 14 (access-relay D1-WRITE-RETRY) — VERIFIED 2026-07-03: D1-WRITE-RETRY-001 in workers/access-relay/src/index.js (retry wrapper + 2 call sites); relay redeployed 2026-07-03 (JD-SCOPE Stage 2). Watch: `d1_write_failed` recurrence in telemetry.
+- Old row 10 CORE (Kernel v2 + upload→kernel ingestion) — was stale "not started": SHIPPED 1.50.515-521 + relay kernel-v2 routes per docs/plan/KERNEL-V2-AND-INGESTION.md status log (D1 staging, tense, language, ingest engine, file extraction, import UI + conflict/gap modals, D1 persistence, entry button, reader bridge, auto-sync, structured apply, language step). Remainder tracked as NEW row 8.
+- Old row 5 (photo bridge in-cell float-wrap) — SUPERSEDED by FIGURE-CONTACT-REF-001 (wk 1.14.120): the page-anchored medallion escapes the column/table entirely (worker comment marks the supersession); owner confirmed placement good 2026-07-03.
+- Old row 29 (SIDEBAR-HEADLINE-PAGE2-ALIGN + HEADER-CONTACT-PHOTO-FIT) — batch 12/13: align round 2 = wk 1.14.122 spacer paragraph (owner PDF confirm rides new row 20a); contact fixed wk 1.14.120, owner confirmed placement, tracking tightened wk 1.14.123 (eyeball rides new row 20f).
+- Old rows 25-28 (CL line-fill + signature spacing; CV orphans root cause; TA/SG results; core-comp table padding) — batches 12-13, PWA 1.51.71/72 + wk 1.14.121/122; sidebar runt mystery closed batch 15 (SIDEBAR-FONT-METRIC-001, 1.51.75, 8/8 proven in diag-orphan-preflight-sidebar.mjs).
+- Old row 20 (gen-prompt example-text leftovers) — GEN-DEHARDCODE-003, 1.51.67; de-hardcode sweep COMPLETE.
+- Old row 1 (candidate-header 3-col grid) — superseded by owner reference DOCX geometry (wk 1.14.119/120), deployed + owner-confirmed 2026-07-03.
+- Owner round-2 batch 13: RESULTS-PIN-OWNER-EDIT-001 + SIDEBAR-TIGHTEN-001 (1.51.72) + ALIGN-002 (wk 1.14.122); batch 14: COMPRESSION-VS-LINE-WIDTH-001 general rule + TONE-DEFAULT-SCANDINAVIAN-002 (1.51.74); batch 16: RESULTS-PIN-NO-NUMBER-001 (1.51.76).
+- Orphans v2 (EXPORT-METRIC-MEASURE-001 + EXPORT-PREFLIGHT-ORPHANS-001) — 1.51.57; sidebar half 1.51.71/75.
+- Demo/template flicker loops — 1.51.56/1.51.59. CL base template struct — 1.51.58; converters tone-default + hydration family — 1.51.64.
+- Gabriel gen-prompt de-hardcode rounds — 1.51.60/62/64/67 (+ workers 3.7.x). Demo-proxy gen-job/coherence/salary parity — workers 3.7.0, verified live.
+- Preview pagination promotion gate (SIDEBAR-PROMOTE-MARGIN-001) — 1.51.63. app.js conflict-marker incident — broken 1.51.65, repaired 1.51.66.
+- Demo-cap UX (DEMO-CAP-UX-001) — 1.51.68/69. PAN-IDRAET export half — 1.51.70.

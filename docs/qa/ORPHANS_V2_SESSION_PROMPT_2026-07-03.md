@@ -69,7 +69,7 @@ PROFILE** — include the profile text section in the preflight scope.
    `workers/docx-worker/test/diag-twocol-ownerlike.mjs` for the harness pattern)
    with a seeded section whose text produces a known runt; assert the preflight
    removed it in the payload AND the emitted document.xml line content matches the
-   measurer's prediction (this is the核 claim of v2 — prove it, don't assert it).
+   measurer's prediction (this is the core claim of v2 — prove it, don't assert it).
 4. Live half (owner does the final eyeball): after deploy, owner re-exports the
    NIL/unsolicited CV; the acceptance set above must be clean in the PDF.
 

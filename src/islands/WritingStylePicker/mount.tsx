@@ -48,6 +48,42 @@ function hideNativeWritingStyleBlock(settingsRoot: HTMLElement): void {
   }
 }
 
+// BANNED-WORDS-MERGE-001 (WIZARD_SETTINGS_UX #8, owner 2026-06-17 "merge the
+// standalone Banned-words INTO the Writing-Style section"): the native
+// collapsed <details><summary>Banned Words</summary>…</details> block in
+// Personal duplicates the island's Banned words / Banned phrases editors. The
+// island is a true superset: its "All languages" scope reads/writes the SAME
+// stylePrefs.banned_words / banned_phrases strings the generation prompt and
+// this native control use, it carries the "+ Pick from the bank" picker, and
+// it adds the per-language (en/da/es/zh) extraBanned* scopes the native
+// control never had (enforced server-side via the §4.7 preamble). So the
+// native block is pure duplication — hide it. The 06-17 data-store-divergence
+// warning is STALE: both stores reach generation today.
+// Kill-switch: localStorage antcv:keep-native-banned = '1'.
+// Known tradeoff (accepted): getTabState's ambiguous-Personal fallback keys on
+// a VISIBLE native "BANNED WORDS" marker; hiding removes that signal. That
+// path only runs when the subtab chips fail to resolve, and it fails SAFE
+// (island not mounted) rather than sticky — see STICKY-LEAK-005.
+function hideNativeBannedWordsBlock(settingsRoot: HTMLElement): void {
+  try { if (localStorage.getItem('antcv:keep-native-banned') === '1') return; } catch { /* */ }
+  const summaries = Array.from(settingsRoot.querySelectorAll('summary'));
+  for (const sum of summaries) {
+    if (sum.closest(`#${MOUNT_ID}`)) continue;
+    if (sum.closest('[data-antcv-react-mount],[data-antcv-react-island]')) continue;
+    const own = Array.from(sum.childNodes)
+      .filter((n) => n.nodeType === 3)
+      .map((n) => n.textContent ?? '')
+      .join(' ')
+      .replace(/[ \t\n\r]+/g, ' ')
+      .trim();
+    if (!/^Banned Words$/i.test(own)) continue;
+    const block = (sum.closest('details') ?? sum.parentElement) as HTMLElement | null;
+    if (!block || block.getAttribute('data-antcv-native-banned-hidden') === '1') continue;
+    block.setAttribute('data-antcv-native-banned-hidden', '1');
+    block.style.setProperty('display', 'none', 'important');
+  }
+}
+
 let root: Root | null = null;
 let container: HTMLElement | null = null;
 
@@ -149,6 +185,7 @@ function applyOnce(): void {
   // churn, re-adding them), so the native layout never flashes before the island.
   try { hideLegacyWritingStyleSelect(settingsRoot); } catch { /* */ }
   try { hideNativeWritingStyleBlock(settingsRoot); } catch { /* */ }
+  try { hideNativeBannedWordsBlock(settingsRoot); } catch { /* */ }
   // Release the reserved height once the island has actually painted, so its real
   // (possibly taller/shorter) content isn't clipped or over-padded.
   if (container) {

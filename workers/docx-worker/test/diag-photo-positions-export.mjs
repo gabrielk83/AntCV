@@ -124,16 +124,17 @@ function check(name, ok, detail) { checks.push({ name, ok, detail }); log(`${nam
   check('none (Hidden) exports NO photo', noImage, '');
 }
 {
-  // PHOTO-BRIDGE-NONFLOAT-001 REVERTED (1.14.71): band-overlap is back to a
-  // FLOATING straddle medallion (floats render in the owner's CloudConvert PDF;
-  // the earlier "no bridge" was the forwarding bug, fixed PWA-side in 1.50.492).
-  // Float anchor, 156px, NOT inline in the (empty) band row.
+  // FIGURE-CONTACT-REF-001 (1.14.120): band-overlap is PINNED at 1.50"
+  // (1371600 EMU) per the owner-edited reference DOCX, page-anchored at
+  // posH 396240 — the slider no longer scales the bridge medallion (it still
+  // governs every other position). Float anchor, NOT inline in the (empty)
+  // band row.
   const xml = await gen({ photoPosition: 'band-overlap', photoSizePx: 156 });
-  const sized = xml.includes('cx="1485900" cy="1485900"');
+  const sized = xml.includes('cx="1371600" cy="1371600"');
   const floated = /<wp:anchor/.test(xml);
   const firstRow = xml.slice(xml.indexOf('<w:tr'), xml.indexOf('</w:tr>'));
   const bandRowEmpty = !/<wp:inline/.test(firstRow) && !/<wp:anchor/.test(firstRow);
-  check('band-overlap float straddle (156px, band row empty)', sized && floated && bandRowEmpty,
+  check('band-overlap float pinned 1.50" (band row empty)', sized && floated && bandRowEmpty,
     JSON.stringify({ sized, floated, bandRowEmpty }));
 }
 {

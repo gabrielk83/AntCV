@@ -80,20 +80,41 @@ const nRow = firstRow(normal);
 const bSplit = !/gridSpan/.test(bRow) && (bRow.match(/<w:tc>/g) || []).length === 2;
 const nSpan = /w:gridSpan w:val="2"/.test(nRow);
 
-// The medallion is a FLOAT (wp:anchor) at the forwarded 156px (156×9525=1485900),
-// with a NEGATIVE paragraph-relative vertical offset (lifted over the seam) and
-// layoutInCell="0" (escapes the sidebar cell). It is NOT inline in the band row.
+// FIGURE-CONTACT-REF-001 (1.14.120, owner reference DOCX): the medallion is a
+// FLOAT (wp:anchor) FIXED at 1.50" (1371600 EMU), page-anchored at posH 396240
+// (0.433") with posV paragraph-relative -365760 (-0.40"), layoutInCell="0",
+// and it now RIDES THE CONTACT PARAGRAPH (first run of the ind-2592 paragraph)
+// instead of the sidebar's first paragraph — which stays as a pure SPACER
+// (w:after="990", no drawing). Contact line: 8pt (w:sz 16) + ind 2592/-216.
 const bFloat = /<wp:anchor/.test(bridge);
-const bSized = bridge.includes('cx="1485900" cy="1485900"');
-const bNegV = /<wp:positionV relativeFrom="paragraph"><wp:posOffset>-\d+<\/wp:posOffset>/.test(bridge);
+const bSized = bridge.includes('cx="1371600" cy="1371600"');
+const bPosH = bridge.includes('<wp:positionH relativeFrom="page"><wp:posOffset>396240</wp:posOffset>');
+const bPosV = bridge.includes('<wp:positionV relativeFrom="paragraph"><wp:posOffset>-365760</wp:posOffset>');
 const bEscapesCell = /layoutInCell="0"/.test(bridge);
 const bNotInBandRow = !/<wp:anchor/.test(bRow) && !/<wp:inline/.test(bRow); // band row is the empty photo zone
+// anchor rides the CONTACT paragraph: the paragraph containing the phone digits
+function paraAround(xml, needle) {
+  const i = xml.indexOf(needle);
+  if (i < 0) return '';
+  const start = xml.lastIndexOf('<w:p ', i) >= 0 ? Math.max(xml.lastIndexOf('<w:p ', i), xml.lastIndexOf('<w:p>', i)) : xml.lastIndexOf('<w:p>', i);
+  const end = xml.indexOf('</w:p>', i);
+  return start >= 0 && end >= 0 ? xml.slice(start, end) : '';
+}
+const contactPara = paraAround(bridge, '31 71');
+const bAnchorInContact = /<wp:anchor/.test(contactPara);
+const bContactInd = /w:left="2592"/.test(contactPara) && /w:right="-216"/.test(contactPara);
+const bContact8pt = /<w:sz w:val="16"\/>/.test(contactPara);
+// sidebar first paragraph = spacer: after=990, no drawing anywhere in it
+const bSpacer = bridge.includes('w:after="990"');
 // Control: default sidebar-top keeps the single gridSpan-2 band + an inline image.
 const nInline = /<wp:inline/.test(normal);
+const nContactPara = paraAround(normal, '31 71');
+const nNoInd = !/w:left="2592"/.test(nContactPara);
 
 log('bridge header split (2 cells, no gridSpan):', bSplit, '| normal gridSpan-2 kept:', nSpan);
-log('bridge medallion FLOAT (156px):', bFloat && bSized, '| negative V offset:', bNegV, '| escapes cell:', bEscapesCell, '| band row empty:', bNotInBandRow);
-log('normal sidebar-top photo stays inline:', nInline);
-const ok = bSplit && nSpan && bFloat && bSized && bNegV && bEscapesCell && bNotInBandRow && nInline;
+log('bridge medallion FLOAT 1.50":', bFloat && bSized, '| posH page 396240:', bPosH, '| posV -365760:', bPosV, '| escapes cell:', bEscapesCell, '| band row empty:', bNotInBandRow);
+log('anchor rides contact para:', bAnchorInContact, '| contact ind 2592/-216:', bContactInd, '| contact 8pt:', bContact8pt, '| sidebar spacer 990:', bSpacer);
+log('normal sidebar-top photo stays inline:', nInline, '| normal contact no ind:', nNoInd);
+const ok = bSplit && nSpan && bFloat && bSized && bPosH && bPosV && bEscapesCell && bNotInBandRow && bAnchorInContact && bContactInd && bContact8pt && bSpacer && nInline && nNoInd;
 log(ok ? 'PHOTO-BRIDGE-EXPORT OK' : 'PHOTO-BRIDGE-EXPORT FAIL');
 process.exit(ok ? 0 : 1);

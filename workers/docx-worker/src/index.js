@@ -24613,7 +24613,9 @@ function buildAiDisclosureHangingTextbox(ctx, opts) {
 __name(buildAiDisclosureHangingTextbox, "buildAiDisclosureHangingTextbox");
 function buildTwoColumnDocument(ctx) {
   const { style, sections } = ctx;
-  const headerCell = buildHeaderCell(ctx);
+  // FIGURE-CONTACT-REF-001: only the two-column (bridge-capable) document
+  // embeds the page-anchored photo in the contact paragraph.
+  const headerCell = buildHeaderCell(ctx, /*bridgePhoto*/ true);
   const sidebarSecs = sections.filter((s) => s.loc === "sidebar");
   const mainSecs = sections.filter((s) => s.loc !== "sidebar");
   const photoTopOfSidebar = maybeBuildPhotoFor(ctx, "sidebar-top");
@@ -24875,7 +24877,10 @@ function buildTwoColumnDocument(ctx) {
   // contact line room to keep full size (no shrink) and wrap if long. Clamped
   // so it never widens past the old reserve (big photos keep the old origin).
   const __bridgePhotoPx = (() => { const v = Number(ctx.pi && ctx.pi.photoSizePx); return Number.isFinite(v) && v >= 40 && v <= 260 ? Math.round(v) : 156; })();
-  const __bridgeLeftW = bridgeOn ? Math.max(360, Math.min(ctx.sidebarW - 540, Math.round(ctx.sidebarW / 2 + __bridgePhotoPx * 15 / 2) + 120)) : (ctx.sidebarW - 540);
+  // FIGURE-CONTACT-REF-001: the photo's right edge is now FIXED at
+  // (396240 + 1371600) / 635 = 2784 twips — floor the reserved zone at
+  // 2904 (2784 + 120 gap) so the name cell clears it at any slider value.
+  const __bridgeLeftW = bridgeOn ? Math.max(2904, Math.min(ctx.sidebarW - 540, Math.round(ctx.sidebarW / 2 + __bridgePhotoPx * 15 / 2) + 120)) : (ctx.sidebarW - 540);
   // CONTACT-FULLWIDTH-001 (owner 2026-07-02 "widen the cell"): in BRIDGE mode, lift the tagged
   // contact paragraph (buildHeaderCell) out of the narrow right split-cell into its OWN
   // FULL-WIDTH row below name+subtitle. The circular medallion has curved away by the contact
@@ -25497,7 +25502,7 @@ function buildLinearDocument(ctx) {
   });
 }
 __name(buildLinearDocument, "buildLinearDocument");
-function buildHeaderCell(ctx) {
+function buildHeaderCell(ctx, bridgePhoto) {
   const { style, fs, pi, meta, headerAlign } = ctx;
   const out = [];
   // ADV-SPACING-CONTROLS-001 (1.14.60): the candidate-header gap slider
@@ -25573,13 +25578,22 @@ function buildHeaderCell(ctx) {
     // docx->PDF path — the empty-spacer paragraph's bottom border was dropped in
     // the PDF (owner: "the line under the specialisation is not visible in the PDF").
     const headerRule = { color: style.sidebarHeadColor, space: 4, style: BorderStyle.SINGLE, size: 6 };
+    // FIGURE-CONTACT-REF-001 (owner reference DOCX, 2026-07-02/03): in bridge
+    // mode the 1.50" medallion rides the CONTACT paragraph as a PAGE-anchored
+    // float (posH page 396240 EMU = 0.433", posV paragraph -365760 EMU =
+    // -0.40") and the contact line drops to 8pt with ind left 2592 / right
+    // -216 so the text clears the photo. The photo thereby escapes the
+    // column/table (supersedes the in-cell float-wrap open item).
+    const __bridgePhotoOn = bridgePhoto === true && normalisePhotoPosition(pi.photoPosition) === "band-overlap" && !!pi.photo_b64 && ctx.doc !== "cl";
+    if (__bridgePhotoOn) ctx.__bridgePhotoInContact = true;
     out.push(new Paragraph({
       shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
       spacing: { before: 0, after: 60, line: 40, lineRule: "exact" },
       children: []
     }));
     out.push(new Paragraph({
-      alignment: alignType(headerAlign.contact),
+      alignment: __bridgePhotoOn ? AlignmentType.JUSTIFIED : alignType(headerAlign.contact),
+      ...(__bridgePhotoOn ? { indent: { left: 2592, right: -216 } } : {}),
       shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
       border: { top: { ...headerRule }, bottom: { ...headerRule } },
       spacing: { before: 0, after: __cgAfter(60) },
@@ -25601,9 +25615,35 @@ function buildHeaderCell(ctx) {
         // cell leftward to the figure's right edge (see buildCandidateHeader
         // bridge branch), so the line keeps full contactSize and wraps onto a
         // second line if long, instead of being crammed unreadably small.
-        const pt = fs.contactSize;
+        // FIGURE-CONTACT-REF-001: bridge contact is pinned to 8pt per the
+        // owner reference (w:sz 16); non-bridge keeps fs.contactSize.
+        const pt = __bridgePhotoOn ? 8 : fs.contactSize;
         const base = { color: style.headerContactColor, size: pt2hp(pt), font: style.headerFont };
         const kids = [];
+        if (__bridgePhotoOn) {
+          // The 1.50" page-anchored medallion, first run of this paragraph —
+          // exactly the owner-edited reference's carrier structure.
+          kids.push(new ImageRun({
+            data: base64ToUint8Array(pi.photo_b64),
+            type: detectImageType(pi.photo_b64),
+            transformation: { width: 144, height: 144 },
+            outline: { width: 12700, solidFillType: "rgb", value: (style && style.photoBorderColor || style && style.sidebarHeadColor || style && style.accent || "01B7BB").replace(/^#/, "") },
+            floating: {
+              horizontalPosition: { relative: HorizontalPositionRelativeFrom.PAGE, offset: 396240 },
+              verticalPosition: { relative: VerticalPositionRelativeFrom.PARAGRAPH, offset: -365760 },
+              wrap: { type: TextWrappingType.NONE },
+              behindDocument: false,
+              allowOverlap: true,
+              layoutInCell: false,
+              zIndex: 10
+            },
+            altText: {
+              title: "Profile photo",
+              description: pi.name ? "Profile photo of " + pi.name : "Profile photo",
+              name: "profile-photo"
+            }
+          }));
+        }
         contactBits.forEach((b, i) => {
           const prefix = i ? sep : "";
           if (b.link) {
@@ -25757,6 +25797,13 @@ function buildPhotoParagraph(ctx, position) {
     // a smaller photo Diameter yields more clearance.
     const fwdPx = Number(pi.photoSizePx);
     const px = Number.isFinite(fwdPx) && fwdPx >= 40 && fwdPx <= 260 ? Math.round(fwdPx) : 156;
+    if (ctx.__bridgePhotoInContact) {
+      // FIGURE-CONTACT-REF-001: the medallion rides the CONTACT paragraph
+      // (page-anchored 1.5in — see buildHeaderCell). This paragraph stays as
+      // the SPACER keeping the first sidebar section clear of the photo's
+      // lower arc — after=990 pinned per the owner-edited reference DOCX.
+      return new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 0, after: 990 }, children: [] });
+    }
     const offsetEmu = -Math.round((px / 2 + 16) * 9525);
     return new Paragraph({
       alignment: AlignmentType.CENTER,
@@ -25765,7 +25812,7 @@ function buildPhotoParagraph(ctx, position) {
         new ImageRun({
           data,
           type: detectImageType(pi.photo_b64),
-          transformation: { width: px, height: px },
+          transformation: { width: Math.min(px, 144), height: Math.min(px, 144) },
           outline: { width: 12700, solidFillType: "rgb", value: outlineColor },
           floating: {
             // PHOTO-BRIDGE-EXPORT-001 (owner 2026-06-14): the band-overlap
@@ -25778,7 +25825,10 @@ function buildPhotoParagraph(ctx, position) {
             // ambiguous once the float leaves the cell); vertical stays
             // PARAGRAPH-relative because the anchor IS the first sidebar
             // paragraph — i.e. the band↔sidebar seam — lifted by half a diameter.
-            horizontalPosition: { relative: HorizontalPositionRelativeFrom.PAGE, offset: Math.round((ctx.sidebarW / 2 - px * 15 / 2) * 635) },
+            // FIGURE-CONTACT-REF-001 (fallback branch: photo with no contact
+            // bits): fixed page-left 0.433" per the owner reference, no longer
+            // sidebar-centred.
+            horizontalPosition: { relative: HorizontalPositionRelativeFrom.PAGE, offset: 396240 },
             verticalPosition: { relative: VerticalPositionRelativeFrom.PARAGRAPH, offset: offsetEmu },
             wrap: { type: TextWrappingType.NONE },
             behindDocument: false,
@@ -27932,7 +27982,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.119-contact-fullwidth";
+var VERSION = "1.14.120-figure-contact-ref";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

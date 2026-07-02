@@ -337,7 +337,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.83';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.93';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.94';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -379,7 +379,7 @@
           app.src = 'app.js?v=1.51.91';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.93';
+            vo.src = 'antcv-version-override.js?v=1.51.94';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -827,16 +827,16 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      external consumer of their APIs/attrs. Review: docs/refactor/SIDECAR_CONSOLIDATION_REVIEW.md -->
 <script src="antcv-section-panel-211.js?v=1.50.418" defer></script>
 <script src="antcv-experience-role-cjlr-230.js?v=1.51.59" defer></script>
-<script src="antcv-core-competencies-row-controls-234.js?v=1.50.802" defer></script>
+<script src="antcv-core-competencies-row-controls-234.js?v=1.51.94" defer></script>
 <script src="antcv-selected-outcomes-row-controls-237.js?v=1.51.56" defer></script>
 <script src="antcv-profile-workstyle-cjlr-238.js?v=1.51.56" defer></script>
 <script src="antcv-how-contribute-controls-245.js?v=1.50.944" defer></script>
 <script src="antcv-foundation-controls-327.js?v=1.50.944" defer></script>
 <script src="antcv-what-i-bring-cjlr-cleanup-246.js?v=1.40.246" defer></script>
-<script src="antcv-additional-info-row-controls-247.js?v=1.51.59" defer></script>
+<script src="antcv-additional-info-row-controls-247.js?v=1.51.94" defer></script>
 <script src="antcv-add-cjlr-order-swap-241.js?v=1.40.243" defer></script>
 <script src="antcv-embedded-controls-248.js?v=1.50.944" defer></script>
-<script src="antcv-what-i-bring-header-cjlr-249.js?v=1.50.943" defer></script>
+<script src="antcv-what-i-bring-header-cjlr-249.js?v=1.51.94" defer></script>
 <!-- PUBLICATIONS-MAIN-001 (2026-06-22): the old sidebar publications section is RETIRED.
      antcv-publications-strict-row-layout-273.js + antcv-publications-section-panel-row-fix-278.js
      are unloaded; the new main `pubs` section is migrated/placed by antcv-publications-main-757.js

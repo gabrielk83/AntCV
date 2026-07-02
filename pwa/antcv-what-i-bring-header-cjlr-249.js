@@ -171,7 +171,9 @@
       if(cjlr.nextSibling!==page) h.insertBefore(cjlr,page);
     }
   }
-  function previewSection(){const sid=coreSid();return document.querySelector('[data-sid="'+CSS.escape(sid)+'"]')||Array.from(document.querySelectorAll('[data-sid],section,div')).find(el=>visible(el)&&CORE_RX.test(cleanText(el).slice(0,180)));}
+  // SID-FALLBACK-HARDEN-001 (register row 16, 237's pattern): data-gate +
+  // [data-sid]-only fallback — never grab an arbitrary section/div by text.
+  function previewSection(){if(!coreSection())return null;const sid=coreSid();return document.querySelector('[data-sid="'+CSS.escape(sid)+'"]')||Array.from(document.querySelectorAll('[data-sid]')).find(el=>visible(el)&&CORE_RX.test(cleanText(el).slice(0,180)))||null;}
   function clearPreview(sec){sec&&sec.querySelectorAll('[data-antcv-core-page-break="1"],[data-antcv-core-header-clone="1"]').forEach(n=>n.remove());}
   function cloneHeaderFor(table,beforeRow){
     const br=document.createElement('tr'); br.setAttribute('data-antcv-core-page-break','1'); br.style.breakBefore='page'; br.style.pageBreakBefore='always'; br.style.height='0';

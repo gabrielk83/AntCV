@@ -199,8 +199,15 @@
   }
 
   function previewSection(){
+    // SID-FALLBACK-HARDEN-001 (register row 16, same class as
+    // OUTCOMES-PREVIEW-MISMATCH-001 in 237): no core section in the DATA ->
+    // nothing to align; and the DOM fallback only accepts a [data-sid] host —
+    // never an arbitrary section/div whose text happens to match (that grabbed
+    // a giant app container when the section was absent and stamped alignment
+    // over everything inside it).
+    if(!coreSection()) return null;
     const sid=coreSid();
-    return document.querySelector('[data-sid="'+CSS.escape(sid)+'"]') || Array.from(document.querySelectorAll('[data-sid], section, div')).find(el=>visible(el) && CORE_RX.test(clean(el.textContent).slice(0,160)));
+    return document.querySelector('[data-sid="'+CSS.escape(sid)+'"]') || Array.from(document.querySelectorAll('[data-sid]')).find(el=>visible(el) && CORE_RX.test(clean(el.textContent).slice(0,160))) || null;
   }
   function previewRows(sec){
     if(!sec) return [];

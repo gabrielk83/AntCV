@@ -181,8 +181,15 @@
   }
 
   function panelRoot() {
+    // SID-FALLBACK-HARDEN-001 (register row 16, 237's pattern): no Additional
+    // Information section in the DATA -> no panel to control; and a header
+    // candidate must BE a header (short own text), not any container whose
+    // full text merely CONTAINS the phrase — that grabbed giant app divs.
+    if (!findAdditionalSection()) return null;
     const headers = Array.from(document.querySelectorAll('h1,h2,h3,div,span')).filter(function (el) {
-      return !isInPreviewPaper(el) && /additional information/i.test(norm(el.textContent || ''));
+      if (isInPreviewPaper(el)) return false;
+      const t = norm(el.textContent || '');
+      return t.length <= 48 && /additional information/i.test(t);
     });
     for (const h of headers) {
       let p = h;

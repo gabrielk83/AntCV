@@ -5903,7 +5903,16 @@
                   rows.slice(start, end).map((t, n) => {
                     const rr = start + n;
                     if (e.hidden && e.hidden[rr]) return null;
-                    const o = (t[0] || "").replace(/ and /gi, " & ");
+                    // AMP-ADJACENT-001 (owner 2026-07-02): tighten " and " → " & "
+                    // ONLY when neither neighbouring word already carries an "&".
+                    // "V&V and compliance" stays (V&V, R&D, Ben & Jerry's are
+                    // legitimate) — "V&V & compliance" reads as a typo. Lookahead
+                    // keeps the right word unconsumed so "a and b and c" still
+                    // tightens both. Stored data is never touched (render-only);
+                    // the DOCX path reads rows raw, so this also restores parity
+                    // with the PDF, which already showed "and".
+                    const o = (t[0] || "").replace(/(\S+) and (?=(\S+))/gi, (_m, _w, _x) =>
+                      _w.includes("&") || _x.includes("&") ? _m : _w + " & ");
                     return React.createElement(
                       "tr",
                       {
@@ -27021,8 +27030,11 @@
                         .map((n, a) => {
                           const i = start + a;
                           if (e.hidden && e.hidden[i]) return "";
+                          // AMP-ADJACENT-001: same neighbour-"&" guard as the
+                          // preview table render (see mk at case "table" above).
                           const r = (n[0] || "")
-                            .replace(/ and /gi, " &amp; ")
+                            .replace(/(\S+) and (?=(\S+))/gi, (_m, _w, _x) =>
+                              _w.includes("&") || _x.includes("&") ? _m : _w + " &amp; ")
                             .replace(/ & /g, " &amp; ");
                           return `<tr style="background:${(i - 1) % 2 == 0 ? "#eaf7f7" : "#fff"}"><td width="${s}" style="width:${s}pt;padding:3pt 7.5pt;border:0.5pt solid ${t.tableBorderColor};font-family:'Carlito',${d};font-size:${u.mainTblCell}pt;font-weight:700;color:${t.tableFirstColText};line-height:${p};vertical-align:middle"><div style="${h}">${r}</div></td><td width="${c}" style="width:${c}pt;padding:3pt 7.5pt;border:0.5pt solid ${t.tableBorderColor};font-family:'Carlito',${d};font-size:${u.mainTblCell}pt;color:${t.tableOtherColText};text-align:justify;line-height:${p};vertical-align:middle"><div style="${h}">${n[1] || ""}</div></td></tr>`;
                         })

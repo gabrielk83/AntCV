@@ -1,4 +1,4 @@
-# LinkedIn post - product perspective (2026-07-02, rev 9)
+# LinkedIn post - product perspective (2026-07-02, rev 10)
 
 Follows the Terence method recorded in [PROBLEM_STATEMENTS.md](PROBLEM_STATEMENTS.md):
 problem and persona first, then the product "why", then the build. Rev 6 (owner ask):
@@ -66,7 +66,10 @@ application from an unsolicited one and changes the opening identity to match.
 It reads the questions hidden inside a posting and answers them in the letter.
 It knows "agile" the method from "agile" the buzzword, expands an abbreviation
 on first use in the body text, and keeps niche technical depth only for the
-roles that ask for it.
+roles that ask for it. The analysis of each posting exports as its own PDF
+report: match, gaps, red flags, and the recruiter's contact when the ad names
+one. Next in line: a dated copy of the ad itself - postings get taken down,
+and the application you wrote deserves to keep its evidence.
 
 The result, at least for me: preparing an application takes minutes instead
 of hours - in my own words, and under my own control.
@@ -144,6 +147,10 @@ comment-thread follow-up image if engagement warrants it.
   clusters, behaviour-evidence rendering); banned-words layer. No VIA mention
   per owner.
 - Pain 3 mechanisms: GEN-PROFILE-001 opener switch, APPLICATION-QA bridge,
-  semantic constraints, abbreviation first-use rules, JD-gated niche depth.
+  semantic constraints, abbreviation first-use rules, JD-gated niche depth;
+  analysis report PDF (antcv-analysis-report-pdf-360, 1.51.54: fit/gaps/red
+  flags/recruiter card) is SHIPPED and stated as Built; the dated JD copy is
+  the docs/qa/NIGHTLY_JD_CAPTURE_PDF.md work order and is stated as "next in
+  line", NOT claimed as built.
 - The "friend" line credits the Terence feedback without naming him.
 - No em or en dashes anywhere; plain hyphens only.

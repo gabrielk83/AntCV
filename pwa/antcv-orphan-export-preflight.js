@@ -38,7 +38,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.57-orphan-export-preflight';
+  var VERSION = '1.51.71-orphan-preflight-sidebar';
   if (window.__antcvOrphanExportPreflight === VERSION) return;
   window.__antcvOrphanExportPreflight = VERSION;
 
@@ -81,12 +81,27 @@
         : (PKG_BODY_FONT[String(payload && payload.package || '').toLowerCase()] || 'Calibri');
     var bulletPt = Number(fs.bulletContent); if (!isFinite(bulletPt) || bulletPt <= 0) bulletPt = 10.5;
     var bodyPt = Number(fs.mainBody); if (!isFinite(bodyPt) || bodyPt <= 0) bodyPt = 10.5;
+    // SIDEBAR-ORPHANS-001 (owner PDF review 2026-07-03): the owner's export
+    // carried 7 runts, ALL sidebar labeled values (tools / regulatory /
+    // interests) — this preflight was main-column-only by design. Sidebar
+    // geometry mirrors worker makeSidebarCell (sbLR default 120 DXA) and
+    // renderLabeledList (fs.sbBody, sidebarBodyFont || sidebarFont).
+    var sbPadPx = pxTok(style.sidebarEdgePad);
+    var sbLR = sbPadPx !== undefined ? Math.round(sbPadPx * 15) : 120;
+    var sbPt = Number(fs.sbBody); if (!isFinite(sbPt) || sbPt <= 0) sbPt = 10;
+    var sideFamily = (typeof style.sidebarBodyFont === 'string' && /^[a-z ]{3,}$/i.test(style.sidebarBodyFont))
+      ? style.sidebarBodyFont
+      : (typeof style.sidebarFont === 'string' && /^[a-z ]{3,}$/i.test(style.sidebarFont))
+        ? style.sidebarFont : 'Cabin';
     return {
       family: family,
       cellWpx: cellW / TWIPS_PER_PX,
       bulletWpx: (cellW - bIndent) / TWIPS_PER_PX,   // numbering indent: text column for bullet body
       bulletPx: bulletPt * 96 / 72,
       bodyPx: bodyPt * 96 / 72,
+      sideCellWpx: (sidebarW - 2 * sbLR) / TWIPS_PER_PX,
+      sbBodyPx: sbPt * 96 / 72,
+      sideFamily: sideFamily,
     };
   }
 
@@ -200,7 +215,35 @@
     var secs = (payload && payload.sections) || [];
     for (var si = 0; si < secs.length; si++) {
       (function (s) {
-        if (!s || s.loc === 'sidebar') return;
+        if (!s) return;
+        if (s.loc === 'sidebar') {
+          // SIDEBAR-ORPHANS-001: labeled_list VALUES wrap in the narrow column
+          // and orphan exactly like main bullets (all 7 runts in the owner's
+          // 2026-07-02 export were here). L2 NBSP binds ONLY — payload-scoped,
+          // content-preserving; sidebar lines never go to L3 and never touch
+          // stored sections.
+          if (s.type !== 'labeled_list' || !Array.isArray(s.items)) return;
+          for (var li = 0; li < s.items.length; li++) {
+            (function (it, li2) {
+              if (!it || typeof it !== 'object') return;
+              if (it.hidden === true || it.on === false) return;
+              if (s.hidden && s.hidden[li2]) return;
+              if (it.group !== undefined || it.subhead !== undefined || it.header !== undefined || it.category !== undefined) return;
+              var vk = (typeof it.v === 'string' && it.v.trim()) ? 'v' : (typeof it.value === 'string' && it.value.trim()) ? 'value' : null;
+              if (!vk || /^\s*\[/.test(it[vk])) return;
+              var label = String(it.l || it.label || '');
+              out.push({
+                kind: 'side_label', sid: s.id || '', itemIdx: li2,
+                widthPx: met.sideCellWpx, fontPx: met.sbBodyPx, align: 'left',
+                family: met.sideFamily,
+                prefixHtml: (label && it.labelHidden !== true) ? '<b>' + esc(label) + ': </b>' : '',
+                get: function () { return it[vk]; },
+                set: function (v) { it[vk] = v; },
+              });
+            })(s.items[li], li);
+          }
+          return;
+        }
         if (s.type === 'experience' && Array.isArray(s.roles)) {
           for (var ri = 0; ri < s.roles.length; ri++) {
             (function (role, ri2) {
@@ -334,7 +377,7 @@
       var met = metricsFromPayload(payload);
       var measure = opts.measureLines || domMeasureLines;
       var targets = collectTargets(payload, met);
-      targets.forEach(function (tg) { tg.family = met.family; });
+      targets.forEach(function (tg) { if (!tg.family) tg.family = met.family; });
       summary.scanned = targets.length;
 
       var residue = [];
@@ -342,7 +385,9 @@
         var r;
         try { r = tryL2(measure, tg); } catch (_) { r = {}; }
         if (r.fixed) { summary.runts++; summary.bound++; }
-        else if (r.runt) { summary.runts++; residue.push({ tg: tg, text: tg.get(), baseLines: r.baseLines }); }
+        // SIDEBAR-ORPHANS-001: sidebar values stop at L2 — no LLM rewrite, no
+        // stored-section mirror (the narrow column is not worth a reword risk).
+        else if (r.runt) { summary.runts++; if (tg.kind !== 'side_label') residue.push({ tg: tg, text: tg.get(), baseLines: r.baseLines }); }
       });
       summary.residue = residue.length;
       try { console.log('[orphan-preflight] scanned ' + summary.scanned + ', runts ' + summary.runts + ', L2-bound ' + summary.bound + ', residue ' + residue.length); } catch (_) {}

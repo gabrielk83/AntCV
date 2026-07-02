@@ -24795,7 +24795,7 @@ function buildTwoColumnDocument(ctx) {
   const __sbEdge = __pxTok("sidebarEdgePad");
   const sbLR = __sbEdge != null ? Math.round(__sbEdge * 15) : 120;
   const seamDxa = Math.round((__pxTok("seamGap") || 0) * 15);
-  const makeSidebarCell = (els) => new TableCell({
+  const makeSidebarCell = (els, contTop) => new TableCell({
     width: { size: ctx.sidebarW, type: WidthType.DXA },
     shading: { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" },
     borders: noBorders(),
@@ -24805,7 +24805,12 @@ function buildTwoColumnDocument(ctx) {
     // publication line breaking at "2009" in the PDF but not the preview). Match
     // the preview's 120 DXA so the export text width lines up with the on-screen
     // measurer. Top kept at 240 (the navy band's breathing room).
-    margins: { top: Math.max(0, 240 + __vDelta), bottom: Math.max(0, 240 + __vDelta), left: sbLR, right: sbLR },
+    // SIDEBAR-HEADLINE-PAGE2-ALIGN-001 (owner 2026-07-03): each page is its OWN
+    // two-column table (PB-WORKER-TWOCOL-PAGED-001), so cell top margins re-apply
+    // per page. Measured in the owner's PDF: the sidebar's first headline sat 5pt
+    // (100 DXA) HIGHER than the main column's "(CONT.)" headline on pages 2-3.
+    // Continuation pages get +100 on the sidebar top; page 1 keeps 240 (band gap).
+    margins: { top: Math.max(0, 240 + (contTop ? 100 : 0) + __vDelta), bottom: Math.max(0, 240 + __vDelta), left: sbLR, right: sbLR },
     children: els && els.length ? els : [emptyParagraph()]
   });
   // 1.14.47 — indent-controls export parity: the main column's edge padding
@@ -24860,7 +24865,7 @@ function buildTwoColumnDocument(ctx) {
     // 1.14.55: a repeated slim header strip on pages 2+ costs ~900 DXA;
     // shrink those pages' body min so the total stays inside the sheet.
     height: { value: withHeader ? PAGE1_BODY_MIN : style && style.repeatHeader === true ? CONT_BODY_MIN - 900 : CONT_BODY_MIN, rule: "atLeast" },
-    children: sidebarOnRight ? [makeMainCell(mnEls), makeSidebarCell(sbEls)] : [makeSidebarCell(sbEls), makeMainCell(mnEls)]
+    children: sidebarOnRight ? [makeMainCell(mnEls), makeSidebarCell(sbEls, !withHeader)] : [makeSidebarCell(sbEls, !withHeader), makeMainCell(mnEls)]
   });
   // PHOTO-SIDEBAR-BRIDGE-001 (1.14.51): in bridge mode the candidate header
   // is SPLIT on the page grid — the left cell (sidebar width) is the photo
@@ -25208,7 +25213,9 @@ function buildLinearDocument(ctx) {
     // v1.50.269: before 240 -> 150; keepNext binds the closing block
     // (Kind regards -> name -> watermark) so it can't orphan a single
     // line onto a new page. keepNext only bites at a page boundary.
-    spacing: { before: 150, after: 60, line: 276, lineRule: "auto" },
+    // CL-SIGNATURE-SPACING-001 (owner 2026-07-03): +12px (180 DXA) between the
+    // closure paragraph and the sign-off word -> before 150+180=330.
+    spacing: { before: 330, after: 60, line: 276, lineRule: "auto" },
     keepNext: true,
     keepLines: true,
     // CL-SIGNOFF-ALIGN-001 (owner 2026-06-29): the closing shares the sign-off CJLR (meta.
@@ -25235,7 +25242,9 @@ function buildLinearDocument(ctx) {
   // (the signature comes AFTER the typed name). Was closing -> signature -> name.
   var __clNameAlign = ({ left: AlignmentType.LEFT, center: AlignmentType.CENTER, right: AlignmentType.RIGHT })[String((ctx.meta && ctx.meta.cl_sign_name_align) || "center").toLowerCase()] || AlignmentType.CENTER;
   bodyChildren.push(new Paragraph({
-    spacing: { before: 60, after: 0, line: 276, lineRule: "auto" },
+    // CL-SIGNATURE-SPACING-001: +6px (90 DXA) between the sign-off word and
+    // the name -> before 60+90=150.
+    spacing: { before: 150, after: 0, line: 276, lineRule: "auto" },
     keepLines: true,
     keepNext: true,
     alignment: __clNameAlign,
@@ -25468,7 +25477,8 @@ function buildLinearDocument(ctx) {
                       false
                     ),
                     new Paragraph({
-                      spacing: { before: 240, after: 60, line: 276, lineRule: "auto" },
+                      // CL-SIGNATURE-SPACING-001: +180/+90 DXA, same as the primary sign-off path.
+                      spacing: { before: 420, after: 60, line: 276, lineRule: "auto" },
                       alignment: AlignmentType.LEFT,
                       children: [new TextRun({
                         text: closeWord,
@@ -25478,7 +25488,7 @@ function buildLinearDocument(ctx) {
                       })]
                     }),
                     new Paragraph({
-                      spacing: { before: 60, after: 0, line: 276, lineRule: "auto" },
+                      spacing: { before: 150, after: 0, line: 276, lineRule: "auto" },
                       alignment: AlignmentType.LEFT,
                       children: [new TextRun({
                         text: pi.name || ({ da: "Dit navn", es: "Tu nombre", zh: "姓名" }[lang] || "Your Name"),
@@ -26798,7 +26808,10 @@ function renderCompetencyTable(s, ctx) {
         width: { size: i === 0 ? col1 : col2, type: WidthType.DXA },
         shading: { type: ShadingType.CLEAR, fill: tableHeaderBg, color: "auto" },
         borders: cellBorders,
-        margins: { top: 130, bottom: 130, left: 90, right: 90 },
+        // CORECOMP-TABLE-CELL-PAD-001 (owner 2026-07-03): text sat on the cell
+        // borders in the PDF; L/R 90 (6px) -> 150 (10px). Preview padding is
+        // bumped to match (TABLE-WRAP-PARITY-001 kept).
+        margins: { top: 130, bottom: 130, left: 150, right: 150 },
         verticalAlign: VerticalAlign.CENTER,
         children: [new Paragraph({
           alignment: headerAlignT,
@@ -26825,7 +26838,10 @@ function renderCompetencyTable(s, ctx) {
         // preview: even data rows → EAF7F7, odd → none.
         shading: idx % 2 === 0 ? { type: ShadingType.CLEAR, fill: "EAF7F7", color: "auto" } : void 0,
         borders: cellBorders,
-        margins: { top: 130, bottom: 130, left: 90, right: 90 },
+        // CORECOMP-TABLE-CELL-PAD-001 (owner 2026-07-03): text sat on the cell
+        // borders in the PDF; L/R 90 (6px) -> 150 (10px). Preview padding is
+        // bumped to match (TABLE-WRAP-PARITY-001 kept).
+        margins: { top: 130, bottom: 130, left: 150, right: 150 },
         children: [new Paragraph({
           // TABLE-WRAP-PARITY-001: the preview renders the expertise cell
           // LEFT-aligned; the export's JUSTIFIED stretched word gaps into
@@ -27982,7 +27998,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.120-figure-contact-ref";
+var VERSION = "1.14.121-pdf-review-batch11";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

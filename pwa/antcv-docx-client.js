@@ -2370,6 +2370,12 @@ export function applyOutcomesMode(docSections, doc) {
       { reT: /computer\s*systems?\s*admin/i, reC: /\bidf\b|communication\s*corps/i, text: 'Support 100 users across 150 machines in a classified construction centre, with documented access, support, and recovery workflows.' },
       { reT: /team\s*operations?\s*manager|assistant\s*coach/i, reC: /pan\s*idr|copenhagen\s*wolves/i, text: 'Coordinate a 25-player squad, 300-guest club events, and club representation with Rugby Danmark and IGR Europe.' },
       { reT: /students?\s*council/i, reC: /tel[\s-]?aviv/i, text: 'Modernised 15 outdated EE exam-preparation booklets with updated examples, cleaner coverage, and improved print quality.' },
+      // ROLE-RESULTS-MISSING-TA-SG-001 (owner PDF review 2026-07-03): a gen that SPLITS the TAU
+      // role leaves a bare "Teaching Assistant" slot no pin matches (the RA matcher wants
+      // research). Distinct teaching-side fact from the kernel snapshot (SEM/Raman/confocal
+      // training), NOT a restatement of the 7-semesters bullet. The merged "R&D and Teaching
+      // Assistant" title is EXCLUDED (negative lookahead) so it keeps the RA benchmark result.
+      { reT: /^(?!.*(?:research|r\s*&\s*d)).*teaching\s+assist/i, reC: /tel[\s-]?aviv|\bTAU\b/i, text: 'Train graduate students on SEM, Raman, and confocal microscopy measurement protocols.' },
       // SIRIN-RESULT-TRIM-001 (owner 2026-07-02): the Sirin Result laminated outcomes[0], whose leading
       // clause repeats bullet[0] verbatim ("the content bullet is regenerated inside the result"). Pin the
       // DISTINCT co-invented-patent achievement. Company-gated to Sirin so it never hits the Meprolight EO

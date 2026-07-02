@@ -38,6 +38,26 @@ test('_pinFor matches all 5 kernel roles by title + company', () => {
   assert.match(hit('Students Council Representative', 'Tel Aviv University'), /15 outdated EE exam/);
 });
 
+test('TA pin (ROLE-RESULTS-MISSING-TA-SG-001): a SPLIT Teaching Assistant slot gets the distinct teaching result', () => {
+  const { api } = load({ personalInfo: GAB });
+  assert.match(api._pinFor({ title: 'Teaching Assistant', company: 'Tel Aviv University' }), /SEM, Raman, and confocal microscopy/);
+  // the merged kernel title is EXCLUDED (keeps status quo — no TA pin, RA regex does not match it either)
+  assert.equal(api._pinFor({ title: 'R&D and Teaching Assistant', company: 'Tel Aviv University' }), null);
+  // the slashed variant still routes to the RA benchmark pin (checked first in PINS order)
+  assert.match(api._pinFor({ title: 'Teaching / Research Assistant', company: 'Tel Aviv University' }), /non-imprinted won on structure/);
+  // company gate: a non-TAU teaching assistant is untouched
+  assert.equal(api._pinFor({ title: 'Teaching Assistant', company: 'Copenhagen Business School' }), null);
+});
+
+test('PINS sidecar and docx-client _GAB_EXACT carry identical entries (preview/export parity)', async () => {
+  const client = await readFile(new URL('../../antcv-docx-client.js', import.meta.url), 'utf8');
+  const grab = (t) => t.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.startsWith('{ reT: '));
+  const pins = grab(src);
+  const exact = grab(client);
+  assert.equal(pins.length, 7, 'PINS has 7 entries');
+  assert.deepEqual(pins, exact.map((l) => l.replace(/\},$/, '},')), 'entry lines byte-identical');
+});
+
 test('_pinFor pins the Sirin Result to the DISTINCT patent line (not the bullet restatement)', () => {
   const { api } = load({ personalInfo: GAB });
   const t = api._pinFor({ title: 'Senior Optics & Electro-Optics Engineer', company: 'Sirin Labs' });

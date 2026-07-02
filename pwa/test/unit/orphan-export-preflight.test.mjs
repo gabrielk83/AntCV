@@ -221,15 +221,68 @@ test('CL / linear payloads are skipped', async () => {
   assert.equal(sum.skipped, 'doc');
 });
 
-test('sidebar sections and bracketed placeholders are never targets', () => {
+test('bracketed placeholders, sidebar subheads/hidden rows and non-labeled sidebar types are never targets', () => {
   const { api } = load();
   const payload = cvPayload([
     { ...expSection(['[Bullet 1 - describe scope]']), id: 'experience' },
-    { id: 'tools', type: 'labeled_list', loc: 'sidebar', items: [{ l: 'a', v: 'b' }] },
+    { id: 'certs', type: 'list', loc: 'sidebar', items: ['BABOK v3 - IIBA (2022)'] },     // simple list: not targeted
+    { id: 'tools', type: 'labeled_list', loc: 'sidebar', items: [
+      { group: 'Methods' },                                                               // subhead: never
+      { l: 'Hidden', v: 'some hidden value text', hidden: true },                         // hidden: never
+      { l: 'Ph', v: '[placeholder value]' },                                              // placeholder: never
+    ] },
     { id: 'profile', type: 'text', loc: 'main', content: '[PROFILE - template placeholder]' },
   ]);
   const targets = api._collectTargets(payload, api._metricsFromPayload(payload));
   assert.equal(targets.length, 0);
+});
+
+// ── SIDEBAR-ORPHANS-001 (owner PDF review 2026-07-03): all 7 runts in the
+// owner's export were sidebar labeled values — the sidebar is now measured
+// with its OWN column geometry and L2-bound; sidebar lines never go to L3. ──
+test('sidebar labeled_list values are targets with sidebar metrics + bold label prefix', () => {
+  const { api } = load();
+  const payload = cvPayload([
+    { id: 'tools', type: 'labeled_list', loc: 'sidebar', items: [
+      { group: 'Tools' },
+      { l: 'Lab & fabrication', v: 'Cleanroom fabrication, photolithography, thin-film deposition and etching' },
+      { l: 'NoLabel', v: 'value-only measured row text here', labelHidden: true },
+    ] },
+  ]);
+  const m = api._metricsFromPayload(payload);
+  // sidebarW = round(11906*0.33) = 3929; side cell = 3929 - 2*120 = 3689 twips = 245.9px
+  assert.equal(Math.round(m.sideCellWpx * 10) / 10, 245.9);
+  assert.equal(Math.round(m.sbBodyPx * 100) / 100, Math.round(10 * 96 / 72 * 100) / 100);
+  assert.equal(m.sideFamily, 'Cabin');
+  const targets = api._collectTargets(payload, m);
+  assert.equal(targets.length, 2);
+  assert.equal(targets[0].kind, 'side_label');
+  assert.equal(Math.round(targets[0].widthPx * 10) / 10, 245.9, 'sidebar target measures at the SIDEBAR column width');
+  assert.match(targets[0].prefixHtml, /<b>Lab &amp; fabrication: <\/b>/);
+  assert.equal(targets[1].prefixHtml, '', 'labelHidden row measures value only');
+});
+
+test('sidebar runts are L2-bound in the payload and NEVER become L3 residue', async () => {
+  // side cell 245.9px @6px/char ≈ 40 chars/line; 1-char words make an
+  // unbindable runt (MAX_BIND glue is far under 0.40 of the column).
+  const unbindable = Array(60).fill('a').join(' ') + '.';
+  const bindable = Array(17).fill('word').join(' ') + '.';
+  const payload = cvPayload([
+    { id: 'tools', type: 'labeled_list', loc: 'sidebar', items: [
+      { l: 'Lab', v: bindable },
+      { l: 'Reg', v: unbindable },
+    ] },
+  ]);
+  let fetchCalls = 0;
+  const { api } = load({ proxyUrl: 'https://relay.example' });
+  const sum = await api.run(payload, { measureLines: fakeMeasure, fetchImpl: () => { fetchCalls++; return Promise.resolve({ json: () => Promise.resolve({ content: [{ text: '[]' }] }) }); } });
+  assert.equal(sum.residue, 0, 'sidebar runts never reach the L3 residue list');
+  assert.equal(fetchCalls, 0, 'no LLM call for sidebar-only runts');
+  assert.equal(sum.runts >= 1, true, 'the fixture did runt');
+  if (sum.bound >= 1) {
+    const vals = [payload.sections[0].items[0].v, payload.sections[0].items[1].v].join('');
+    assert.ok(vals.includes(' '), 'a bound sidebar value carries NBSP glue');
+  }
 });
 
 // ── profile + results targets ────────────────────────────────────────────────

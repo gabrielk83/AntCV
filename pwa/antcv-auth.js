@@ -120,14 +120,28 @@
         }
       }
       if (res.status === 401 && token) {
-        const cloned = res.clone();
-        let body;
-        try { body = await cloned.json(); } catch (e) { body = null; }
-        const looksLikeAuth =
-          body && typeof body.error === 'string' &&
-          (body.error === 'unauthenticated' || body.error.indexOf('expired') >= 0 || body.error.indexOf('auth') >= 0);
-        if (looksLikeAuth) {
-          writeState({ token: '', email: '', expiresAt: 0 });
+        // ANALYTICS-BUTTONS-SESSION-TIMEOUT-001 (owner 2026-07-03): a 401 from a
+        // NON-session endpoint must not kill the session. The relay's /analytics/*
+        // handlers pass the upstream cv-proxy's 401 body through ("Unauthorized —
+        // supply ?secret=… or sign in"), and the old indexOf('auth') test matched
+        // "Unauthorized" — so ONE analytics button press wiped the token and
+        // rebooted the whole app to the login gate. Session death is now believed
+        // only from the session-critical paths (/auth/*, /api/prefs — the
+        // constant-sync path, so a genuinely expired token still signs out within
+        // seconds of the next sync) and only with the relay's own session error
+        // strings (no 'auth' substring match — "Unauthorized" contains it).
+        const relPath = url.slice(getProxyUrl().length);
+        const isSessionPath = relPath.indexOf('/auth/') === 0 || relPath.indexOf('/api/prefs') === 0;
+        if (isSessionPath) {
+          const cloned = res.clone();
+          let body;
+          try { body = await cloned.json(); } catch (e) { body = null; }
+          const looksLikeAuth =
+            body && typeof body.error === 'string' &&
+            (body.error === 'unauthenticated' || body.error.indexOf('expired') >= 0);
+          if (looksLikeAuth) {
+            writeState({ token: '', email: '', expiresAt: 0 });
+          }
         }
       }
     }

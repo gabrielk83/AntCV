@@ -784,6 +784,26 @@
       (e.match(/\(cid:\d+\)/g) || []).length > 3
     )
       return !0;
+    // JD-SCAN-HALLUCINATION-001 hardening (1.51.100): charset statistics.
+    // Broken-ToUnicode streams are mostly control/private-use glyphs and
+    // punctuation with almost no letters; real text in ANY language (Latin,
+    // Hebrew, CJK, Arabic) is mostly Unicode letters/digits. Language-neutral
+    // on purpose — the common-word check below only knows EN/DA.
+    if ((e.match(/�/g) || []).length > 10) return !0;
+    {
+      const c = e.replace(/\s/g, "");
+      if (c.length > 200) {
+        let letters = 0,
+          ctrl = 0;
+        for (const ch of c) {
+          if (/[\p{L}\p{N}]/u.test(ch)) letters++;
+          const cc = ch.codePointAt(0);
+          (cc < 32 || (cc >= 57344 && cc <= 63743)) && ctrl++;
+        }
+        if (ctrl / c.length > 0.05) return !0;
+        if (letters / c.length < 0.35) return !0;
+      }
+    }
     const t = (
         e.match(
           /\b(the|and|or|of|to|in|is|for|with|on|at|that|this|are|as|be|by|we|our|you|your|will|have|from|will|can|not|but|all|any|new|one|out|use|how|its|who|has|had|was|were|been|og|er|en|et|den|det|der|som|af|til|på|med|for|ikke|har|kan|skal|vil|jeg|du|vi|de)\b/gi,
@@ -801,6 +821,37 @@
   window.AntcvExtractPDFText = window.AntcvExtractPDFText || h;
   async function h(e, t) {
     const n = { text: "", method: "", pages: 0, warning: null };
+    // JD-SCAN-HALLUCINATION-001 filename↔content echo (1.51.100): a JD file
+    // name usually carries the company/role ("Nanooptics Prototyping Engineer
+    // - NIL Technology.pdf"). If NO meaningful filename token appears in the
+    // extracted text, the wrong document was likely read (or the extractor
+    // hallucinated) — append a warning marker, never block. The upload chip
+    // surfaces it.
+    const fnEcho = (r) => {
+      try {
+        const base = String(e.name || "").replace(/\.[a-z0-9]+$/i, "");
+        const stop =
+          /^(?:jd|job|description|posting|position|vacancy|opening|role|copy|final|draft|version|the|and|for|with|som|til|hos|med|stilling|jobopslag)$/i;
+        const toks = (base.match(/[\p{L}\p{N}]{4,}/gu) || []).filter(
+          (t) => !stop.test(t) && !/^\d+$/.test(t),
+        );
+        if (toks.length && r.text) {
+          const low = r.text.toLowerCase();
+          if (!toks.some((t) => low.includes(t.toLowerCase()))) {
+            r.warning =
+              (r.warning || "") +
+              "; filename_mismatch(" +
+              toks.slice(0, 4).join(",") +
+              ")";
+            console.warn(
+              "[extractPDFText] no filename token found in the extracted text — verify the right document was read:",
+              toks.join(", "),
+            );
+          }
+        }
+      } catch (_) {}
+      return r;
+    };
     let o = "";
     try {
       const t = await window.loadPDFJS(),
@@ -830,7 +881,7 @@
         (o = i),
         i.length >= 100 && !f(i))
       )
-        return ((n.text = i), (n.method = "pdfjs"), n);
+        return fnEcho(((n.text = i), (n.method = "pdfjs"), n));
       i.length < 100
         ? (console.warn(
             `[extractPDFText] PDF.js: only ${i.length} chars — trying LLM`,
@@ -890,10 +941,10 @@
           );
         })();
         if (t && t.length >= 100 && !f(t))
-          return (
-            (n.text = t.trim()),
+          return fnEcho(
+            ((n.text = t.trim()),
             (n.method = n.warning ? "llm-after-pdfjs" : "llm"),
-            n
+            n),
           );
         t && t.length >= 100
           ? (console.warn(
@@ -948,15 +999,15 @@
         };
       })(e, async (e, t) => await ee(e, t, { task: "long_context" }));
       if (t.text && t.text.length >= 100 && !f(t.text))
-        return (
-          (n.text = t.text),
+        return fnEcho(
+          ((n.text = t.text),
           (n.method = "vision"),
           (n.pages = t.totalPages || n.pages),
           t.totalPages > t.pages &&
             (n.warning =
               (n.warning || "") +
               `; vision_truncated_to_${t.pages}_of_${t.totalPages}_pages`),
-          n
+          n),
         );
       (console.warn(
         "[extractPDFText] Vision extraction returned insufficient text",
@@ -18706,10 +18757,11 @@
           try {
             let n = "",
               o = "",
-              r = 0;
+              r = 0,
+              w = null;
             if ("pdf" === t) {
               const t = await h(e);
-              ((n = t.text), (o = t.method), (r = t.pages));
+              ((n = t.text), (o = t.method), (r = t.pages), (w = t.warning || null));
             } else if ("docx" === t || "doc" === t) {
               const t = await e.arrayBuffer();
               ((n = (
@@ -18720,7 +18772,7 @@
                 (o = "mammoth"),
                 (r = 1));
             } else ((n = await e.text()), (o = "plaintext"), (r = 1));
-            Ft({ text: n, method: o, pages: r, fileName: e.name });
+            Ft({ text: n, method: o, pages: r, fileName: e.name, warning: w });
           } catch (t) {
             (Ft({
               text: "",
@@ -40670,6 +40722,20 @@
                         " page",
                         1 !== zt.pages ? "s" : "",
                       ),
+                      // JD-SCAN-HALLUCINATION-001 (1.51.100): make the OCR path
+                      // and a filename↔content mismatch VISIBLE, not console-only.
+                      "vision" === zt.method &&
+                        React.createElement(
+                          "span",
+                          { style: { fontSize: 10, color: "#ffcc66" } },
+                          "📷 Read visually (OCR) — the PDF text layer was unusable. Review the extracted text below.",
+                        ),
+                      String(zt.warning || "").includes("filename_mismatch") &&
+                        React.createElement(
+                          "span",
+                          { style: { fontSize: 10, color: "#ffcc66" } },
+                          "⚠ The file name doesn't match the extracted text — check the right JD was read.",
+                        ),
                     ),
                   !jt &&
                     (null == zt ? void 0 : zt.error) &&

@@ -2291,6 +2291,9 @@ function _collapseRoleBullets(r) {
   return kept === r.bullets ? r : { ...r, bullets: kept };
 }
 export { _dedupNearBullets, _collapseRoleBullets, _keepMinBullets, sanitizeForExport };
+// PAN-IDRAET-PREVIEW-HIDE-001: expose the SAME collapse predicate the export uses so
+// the preview-hide sidecar (antcv-neardup-preview-hide.js) can never drift from it.
+try { if (typeof window !== 'undefined') window.AntcvCollapseRoleBullets = _collapseRoleBullets; } catch (_) {}
 // TENSE-AT-LAMINATION-001 (owner 2026-06-19: "I want the tense the user chose to be
 // the generated tense — the app already takes too much work time"). Generation already
 // writes bullets/outcomes in the chosen tense via the prompt's __tenseRule; but a

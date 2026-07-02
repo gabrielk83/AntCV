@@ -36,6 +36,11 @@
 | 22 | Settings sweep-army burst cost (heavy-but-recovering churn under owner-scale kernel: 279/356/341/language-ui) — optimization track | freeze diag profiles (batches 5+7) | 2026-07-02 |
 | 23 | Anita demo residuals (batch-9 narrowed): docx missing photo + PDF contact placement are SESSION-STATE-gated (bridge indent verified correctly photo-gated in the worker; re-import persona + hard-refresh + re-export decides). Hill&Colony header was an EXTRACTION artifact — present in the PDF; the real issue was the Results bleed (fixed via per-role results, re-import gated) | ACTIVE_BUGS batch 9 | 2026-07-02 |
 | 24 | OWNER regen verifications owed: orphan preflight acceptance set (hard-refresh first!); CL foundation/bring/interests on a fresh Anita gen; Gabriel CL unchanged-good | ACTIVE_BUGS batches 7-8 | 2026-07-02 |
+| 25 | CL-LINE-FILL-RESIDUAL-001 (3 green-marked CL areas end mid-line: opening tail, Hands-on tail, Professionally tail — fill to end of typeset line) + CL-SIGNATURE-SPACING-001 (+12px closure→"At your service,", +6px →"Gabriel"; preview + docx parity) | ACTIVE_BUGS batch 11 (owner PDF review, Gabriel unsolicited 20260702) | 2026-07-03 |
+| 26 | CV-ORPHANS-RESIDUAL-001 — orphans still in owner's CV export; verify preflight ran in his tab FIRST (stale-SW / hard-refresh gate, ties row 24) before tuning RUNT_FRAC | ACTIVE_BUGS batch 11 | 2026-07-03 |
+| 27 | ROLE-RESULTS-MISSING-TA-SG-001 — Teaching Assistant + Security Guard render no Result line (kernel role_results_exact + PINS sidecar carry Security-Guard; TA unseeded?) — diagnose seed vs render | ACTIVE_BUGS batch 11; memories gabriel-role-results-seed / gabriel-results-pin-parity | 2026-07-03 |
+| 28 | CORECOMP-TABLE-CELL-PAD-001 — Focus-Area table text too close to cell borders in PDF; add cell padding (docx worker table margins, preview parity) | ACTIVE_BUGS batch 11 | 2026-07-03 |
+| 29 | SIDEBAR-HEADLINE-PAGE2-ALIGN-001 (page-2+ sidebar headline must start LOWER to align with main CONT. headline) + HEADER-CONTACT-PHOTO-FIT-001 (contact line smaller + right-oriented so the photo doesn't cover its start; relates row 5 photo-bridge) | ACTIVE_BUGS batch 11 (owner pics) | 2026-07-03 |
 
 ## CLOSED this seeding (evidence)
 

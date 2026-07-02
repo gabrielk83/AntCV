@@ -998,6 +998,14 @@ function mergeHowContributeFromLocalStorage(docSections, doc) {
 // of normalise timing. Mirror these in antcv-sections-normalize-415.js so the preview
 // converges too.
 const FAB_TOOLS = /\b(?:snowflake|dbt)\b/i;
+// SIDEBAR-TIGHTEN-001 (owner 2026-07-03): deterministic sidebar abbreviations so long
+// certificate/tool lines stop wrapping into runt tails — "critical for keeping a 3
+// pages unsolicited". Export-only (stored sections + preview untouched, the house
+// sanitizeForExport pattern). Owner-named pairs; extend as he names more.
+const SIDEBAR_ABBR = [
+  [/\bUniversity of\b/g, 'Uni. of'],
+  [/\bIntroduction to\b/g, 'Intro to'],
+];
 // Always low-signal for a senior professional targeted application (any cluster):
 // student council, dormitory security guard, volunteer-sport foreningsarbejde.
 const IRRELEVANT_ROLE = /students?\s+council|security\s+guard|foreningsarbejde/i;
@@ -1124,6 +1132,31 @@ function sanitizeForExport(docSections, doc) {
       if (s.type === 'experience' && Array.isArray(s.roles)) {
         const roles = s.roles.map(_collapseRoleBullets);
         if (roles.some((r, i) => r !== s.roles[i])) s = { ...s, roles };
+      }
+      // SIDEBAR-TIGHTEN-001: apply the owner's sidebar abbreviations to list strings
+      // and labeled l/v values BEFORE the per-id passes below (several of them return
+      // early). Reassigns s and falls through.
+      if (s.loc === 'sidebar' && Array.isArray(s.items)) {
+        const _abbr = (t) => {
+          if (typeof t !== 'string') return t;
+          let out = t;
+          for (const [re, to] of SIDEBAR_ABBR) out = out.replace(re, to);
+          return out;
+        };
+        let hitAbbr = false;
+        const items = s.items.map((it) => {
+          if (typeof it === 'string') { const v = _abbr(it); if (v !== it) { hitAbbr = true; return v; } return it; }
+          if (it && typeof it === 'object') {
+            const patch = {};
+            for (const k of ['l', 'v', 'label', 'value']) {
+              const v = _abbr(it[k]);
+              if (v !== it[k]) patch[k] = v;
+            }
+            if (Object.keys(patch).length) { hitAbbr = true; return { ...it, ...patch }; }
+          }
+          return it;
+        });
+        if (hitAbbr) s = { ...s, items };
       }
       // (0) URUGUAYAN-VARIANT-STRIP-001: strip regional qualifier from Spanish language line.
       if ((s.id === 'languages' || /^languages?$/i.test(String(s.title || s.id || ''))) && Array.isArray(s.items)) {
@@ -2248,7 +2281,7 @@ function _collapseRoleBullets(r) {
   const kept = _keepMinBullets(r.bullets, collapsed);
   return kept === r.bullets ? r : { ...r, bullets: kept };
 }
-export { _dedupNearBullets, _collapseRoleBullets, _keepMinBullets };
+export { _dedupNearBullets, _collapseRoleBullets, _keepMinBullets, sanitizeForExport };
 // TENSE-AT-LAMINATION-001 (owner 2026-06-19: "I want the tense the user chose to be
 // the generated tense — the app already takes too much work time"). Generation already
 // writes bullets/outcomes in the chosen tense via the prompt's __tenseRule; but a
@@ -2380,12 +2413,38 @@ export function applyOutcomesMode(docSections, doc) {
       // clause repeats bullet[0] verbatim ("the content bullet is regenerated inside the result"). Pin the
       // DISTINCT co-invented-patent achievement. Company-gated to Sirin so it never hits the Meprolight EO
       // roles. Byte-identical to antcv-gabriel-results-pin.js PINS (preview parity).
-      { reT: /optics|electro-?optics/i, reC: /sirin/i, text: 'Co-invented the stray-light optical window (Patent No. 241997), now in commercial devices.' },
+      // RESULTS-PIN-ONE-LINE-001 (owner 2026-07-03): "Patent No. " dropped so the Sirin
+      // Result fits ONE typeset line (the number itself is kept — PATENT NUMBERS ARE
+      // NEVER DROPPED). `old` lists superseded pin texts so the upgrade applies once.
+      { reT: /optics|electro-?optics/i, reC: /sirin/i, text: 'Co-invented the stray-light optical window (241997), now in commercial devices.', old: ['Co-invented the stray-light optical window (Patent No. 241997), now in commercial devices.'] },
     ] : [];
+    // RESULTS-PIN-OWNER-EDIT-001 (owner 2026-07-03): this tier sat ABOVE role.results,
+    // so an owner-edited Results line was overridden right back to the pin in the
+    // export ("deleting the patent number ... makes it jump back"). The pin now wins
+    // ONLY over: empty results, a known pin text (current or superseded `old`), or a
+    // COPYCAT of the role's own bullets. Any other non-empty text falls through to
+    // tier 1 (role.results verbatim). Mirrors antcv-gabriel-results-pin.js pinWins.
+    const _gabNormT = (t) => String(t || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    const _gabCopycat = (cur, bullets) => {
+      const nc = _gabNormT(cur); if (nc.length < 15 || !Array.isArray(bullets)) return false;
+      for (const b of bullets) {
+        const nb = _gabNormT(typeof b === 'string' ? b : (b && (b.t || b.b)) || '');
+        if (nb.length < 15) continue;
+        if (nb.slice(0, 30) === nc.slice(0, 30)) return true;
+        if (nb.indexOf(nc) !== -1 || nc.indexOf(nb) !== -1) return true;
+      }
+      return false;
+    };
     const _gabrielExactResult = (r) => {
       if (!_GAB_EXACT.length || !r) return null;
       const t = String(r.title || ''), c = String(r.company || '');
-      for (const e of _GAB_EXACT) { if (e.reT.test(t) && (!e.reC || e.reC.test(c))) return e.text; }
+      for (const e of _GAB_EXACT) {
+        if (e.reT.test(t) && (!e.reC || e.reC.test(c))) {
+          const cur = typeof r.results === 'string' ? r.results.trim() : '';
+          if (cur && cur !== e.text && (!e.old || e.old.indexOf(cur) === -1) && !_gabCopycat(cur, r.bullets)) return null;
+          return e.text;
+        }
+      }
       return null;
     };
     // RESULTS-CROSSROLE-BLEED-002 (owner 2026-06-19): score a candidate outcome not

@@ -16,7 +16,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.71-gab-results-pin-ta';
+  var VERSION = '1.51.72-gab-results-pin-owner-edit';
   if (window.__antcvGabResultsPin === VERSION) return;
   window.__antcvGabResultsPin = VERSION;
 
@@ -44,13 +44,41 @@
     // site in Sweden") is byte-identical to bullet[0] — "the content bullet is regenerated inside the
     // result." Pin the DISTINCT achievement (the co-invented patent) so the Result stops restating the
     // bullet. Company-gated to Sirin so it never touches the Meprolight EO roles.
-    { reT: /optics|electro-?optics/i, reC: /sirin/i, text: 'Co-invented the stray-light optical window (Patent No. 241997), now in commercial devices.' },
+    // RESULTS-PIN-ONE-LINE-001 (owner 2026-07-03): "Patent No. " dropped so the Sirin
+    // Result fits ONE typeset line (the number itself is kept — PATENT NUMBERS ARE
+    // NEVER DROPPED). `old` lists superseded pin texts so the upgrade applies once.
+    { reT: /optics|electro-?optics/i, reC: /sirin/i, text: 'Co-invented the stray-light optical window (241997), now in commercial devices.', old: ['Co-invented the stray-light optical window (Patent No. 241997), now in commercial devices.'] },
   ];
-  function pinFor(r) {
+  function entryFor(r) {
     if (!r) return null;
     var t = String(r.title || ''), c = String(r.company || '');
-    for (var i = 0; i < PINS.length; i++) { var e = PINS[i]; if (e.reT.test(t) && (!e.reC || e.reC.test(c))) return e.text; }
+    for (var i = 0; i < PINS.length; i++) { var e = PINS[i]; if (e.reT.test(t) && (!e.reC || e.reC.test(c))) return e; }
     return null;
+  }
+  function pinFor(r) { var e = entryFor(r); return e ? e.text : null; }
+  // RESULTS-PIN-OWNER-EDIT-001 (owner 2026-07-03): "deleting the patent number ...
+  // makes it jump back to previous form" — the pin rewrote ANY differing results,
+  // clobbering owner inline edits. The pin now wins ONLY over: an empty results, a
+  // known pin text (current or superseded `old`), or a COPYCAT of the role's own
+  // bullets (the original reason pins exist). Any other non-empty text is an owner
+  // edit and STICKS.
+  function normT(t) { return String(t || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); }
+  function copycat(cur, bullets) {
+    var nc = normT(cur); if (nc.length < 15 || !Array.isArray(bullets)) return false;
+    for (var i = 0; i < bullets.length; i++) {
+      var b = bullets[i];
+      var nb = normT(typeof b === 'string' ? b : (b && (b.t || b.b)) || '');
+      if (nb.length < 15) continue;
+      if (nb.slice(0, 30) === nc.slice(0, 30)) return true;
+      if (nb.indexOf(nc) !== -1 || nc.indexOf(nb) !== -1) return true;
+    }
+    return false;
+  }
+  function pinWins(cur, e, bullets) {
+    if (!cur) return true;
+    if (cur === e.text) return false;                                  // already pinned
+    if (e.old && e.old.indexOf(cur) !== -1) return true;               // superseded pin text
+    return copycat(cur, bullets);                                      // gen copycat of own bullets
   }
   function run() {
     if (disabled() || !isGabriel()) return;
@@ -61,8 +89,12 @@
       secs.cv.forEach(function (s) {
         if (!s || s.type !== 'experience' || !Array.isArray(s.roles)) return;
         s.roles.forEach(function (r) {
-          var pin = pinFor(r);
-          if (pin && String(r.results == null ? '' : r.results) !== pin) { r.results = pin; changed = true; }
+          var e = entryFor(r);
+          if (!e) return;
+          var cur = String(r.results == null ? '' : r.results).trim();
+          if (cur === e.text) return;
+          if (!pinWins(cur, e, r.bullets)) return;                     // owner edit sticks
+          r.results = e.text; changed = true;
         });
       });
       if (!changed) return;
@@ -72,5 +104,5 @@
   }
   window.addEventListener('antcv:sections-updated', function () { setTimeout(run, 300); });
   [600, 2000, 4000, 8000].forEach(function (ms) { setTimeout(run, ms); });
-  window.AntcvGabResultsPin = { version: VERSION, run: run, _pinFor: pinFor };
+  window.AntcvGabResultsPin = { version: VERSION, run: run, _pinFor: pinFor, _entryFor: entryFor, _pinWins: pinWins, _copycat: copycat };
 })();

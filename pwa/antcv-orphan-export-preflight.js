@@ -38,7 +38,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.71-orphan-preflight-sidebar';
+  var VERSION = '1.51.72-orphan-preflight-sidebar-gate';
   if (window.__antcvOrphanExportPreflight === VERSION) return;
   window.__antcvOrphanExportPreflight = VERSION;
 
@@ -301,7 +301,11 @@
   // a genuine runt L2 cannot clear, or {} when the text does not runt at all.
   function tryL2(measure, tg) {
     var raw = tg.get();
-    if (typeof raw !== 'string' || bindableSpaces(raw).length < 2 || raw.length < 40) return {};
+    // Sidebar values wrap in a ~2.5x narrower column — a 25-char value can already
+    // span two lines there, so the main-column 40-char floor skipped real sidebar
+    // runts (e.g. "Weapon-mounted sight interface context", 38 chars).
+    var minLen = tg.kind === 'side_label' ? 24 : 40;
+    if (typeof raw !== 'string' || bindableSpaces(raw).length < 2 || raw.length < minLen) return {};
     var base = measureTarget(measure, tg, raw);
     if (!isRuntLines(base, tg.widthPx)) return {};
     var maxN = Math.min(MAX_BIND, bindableSpaces(raw).length - 1);

@@ -335,7 +335,7 @@
   })();
 </script>
 <script type="module">
-  import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.71';
+  import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.72';
   window.exportDocxViaWorker = exportDocxViaWorker;
   window.ANTCV_VERSION = '1.51.72';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
@@ -875,10 +875,10 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-core-comp-compress.js?v=1.51.43" defer></script>
 <script src="antcv-orphan-measure-bind.js?v=1.51.52" defer></script>
 <!-- ORPHANS v2 (owner 2026-07-03): export-metric measurer + export preflight (EXPORT-METRIC-MEASURE-001 / EXPORT-PREFLIGHT-ORPHANS-001). Awaited from antcv-docx-client before the POST; kill antcv:disable-orphan-preflight. -->
-<script src="antcv-orphan-export-preflight.js?v=1.51.71" defer></script>
+<script src="antcv-orphan-export-preflight.js?v=1.51.72" defer></script>
 <!-- EMPTY-ROLE-HIDE-001 (1.51.52): hide fully-empty skeleton roles (gray "[Role title]" placeholder rows) -->
 <script src="antcv-empty-role-hide.js?v=1.51.52" defer></script>
-<script src="antcv-gabriel-results-pin.js?v=1.51.71" defer></script>
+<script src="antcv-gabriel-results-pin.js?v=1.51.72" defer></script>
 <!-- TOOLS-CORECOMP-DEDUP-001: drop TOOLS rows that duplicate CORE COMPETENCIES focus areas (owner 2026-07). -->
 <script src="antcv-tools-corecomp-dedup.js?v=1.51.19" defer></script>
 <!-- LANGUAGES-CONCISE-001: trim language proficiency to its concise core (CEFR→word, drop qualifiers). -->

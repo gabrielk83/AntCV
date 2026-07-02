@@ -24795,7 +24795,7 @@ function buildTwoColumnDocument(ctx) {
   const __sbEdge = __pxTok("sidebarEdgePad");
   const sbLR = __sbEdge != null ? Math.round(__sbEdge * 15) : 120;
   const seamDxa = Math.round((__pxTok("seamGap") || 0) * 15);
-  const makeSidebarCell = (els, contTop) => new TableCell({
+  const makeSidebarCell = (els) => new TableCell({
     width: { size: ctx.sidebarW, type: WidthType.DXA },
     shading: { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" },
     borders: noBorders(),
@@ -24805,12 +24805,12 @@ function buildTwoColumnDocument(ctx) {
     // publication line breaking at "2009" in the PDF but not the preview). Match
     // the preview's 120 DXA so the export text width lines up with the on-screen
     // measurer. Top kept at 240 (the navy band's breathing room).
-    // SIDEBAR-HEADLINE-PAGE2-ALIGN-001 (owner 2026-07-03): each page is its OWN
-    // two-column table (PB-WORKER-TWOCOL-PAGED-001), so cell top margins re-apply
-    // per page. Measured in the owner's PDF: the sidebar's first headline sat 5pt
-    // (100 DXA) HIGHER than the main column's "(CONT.)" headline on pages 2-3.
-    // Continuation pages get +100 on the sidebar top; page 1 keeps 240 (band gap).
-    margins: { top: Math.max(0, 240 + (contTop ? 100 : 0) + __vDelta), bottom: Math.max(0, 240 + __vDelta), left: sbLR, right: sbLR },
+    // SIDEBAR-HEADLINE-PAGE2-ALIGN-002: do NOT align via this cell's top margin —
+    // LibreOffice normalizes the row content top to the LARGEST cell margin, so the
+    // 1.14.121 +100 here pushed BOTH columns down and kept the 5pt gap (owner's
+    // 16:17Z export). The alignment spacer now lives in the sidebar PARAGRAPH
+    // stream (makePageTable, continuation pages only).
+    margins: { top: Math.max(0, 240 + __vDelta), bottom: Math.max(0, 240 + __vDelta), left: sbLR, right: sbLR },
     children: els && els.length ? els : [emptyParagraph()]
   });
   // 1.14.47 — indent-controls export parity: the main column's edge padding
@@ -24865,7 +24865,7 @@ function buildTwoColumnDocument(ctx) {
     // 1.14.55: a repeated slim header strip on pages 2+ costs ~900 DXA;
     // shrink those pages' body min so the total stays inside the sheet.
     height: { value: withHeader ? PAGE1_BODY_MIN : style && style.repeatHeader === true ? CONT_BODY_MIN - 900 : CONT_BODY_MIN, rule: "atLeast" },
-    children: sidebarOnRight ? [makeMainCell(mnEls), makeSidebarCell(sbEls, !withHeader)] : [makeSidebarCell(sbEls, !withHeader), makeMainCell(mnEls)]
+    children: sidebarOnRight ? [makeMainCell(mnEls), makeSidebarCell(sbEls)] : [makeSidebarCell(sbEls), makeMainCell(mnEls)]
   });
   // PHOTO-SIDEBAR-BRIDGE-001 (1.14.51): in bridge mode the candidate header
   // is SPLIT on the page grid — the left cell (sidebar width) is the photo
@@ -24977,16 +24977,32 @@ function buildTwoColumnDocument(ctx) {
       })
     ]
   });
-  const makePageTable = (sbEls, mnEls, withHeader) => new Table({
-    width: { size: PAGE_W, type: WidthType.DXA },
-    columnWidths: colWidths,
-    borders: noBorders(),
-    rows: withHeader
-      ? headerRows.concat([makeBodyRow(sbEls, mnEls, true)])
-      : repeatHdr
-        ? [makeSlimHeaderRow(), makeBodyRow(sbEls, mnEls, false)]
-        : [makeBodyRow(sbEls, mnEls, false)]
-  });
+  const makePageTable = (sbEls, mnEls, withHeader) => {
+    // SIDEBAR-HEADLINE-PAGE2-ALIGN-002 (owner 2026-07-03, round 2): the sidebar's
+    // first headline sits 5pt (100 DXA) higher than the main "(CONT.)" headline on
+    // continuation pages (paragraph before-space asymmetry: sidebar 40+gap vs main
+    // 80+gap). A cell-margin fix cannot work — LibreOffice normalizes the row top
+    // to the largest cell margin (both columns moved in the owner's 1.14.121
+    // export). Instead lead the SIDEBAR paragraph stream with an exact-height
+    // 100-twip spacer on continuation pages only; page 1 is untouched.
+    const sb = (!withHeader && sbEls && sbEls.length)
+      ? [new Paragraph({
+          spacing: { before: 0, after: 0, line: 100, lineRule: "exact" },
+          shading: { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" },
+          children: []
+        }), ...sbEls]
+      : sbEls;
+    return new Table({
+      width: { size: PAGE_W, type: WidthType.DXA },
+      columnWidths: colWidths,
+      borders: noBorders(),
+      rows: withHeader
+        ? headerRows.concat([makeBodyRow(sb, mnEls, true)])
+        : repeatHdr
+          ? [makeSlimHeaderRow(), makeBodyRow(sb, mnEls, false)]
+          : [makeBodyRow(sb, mnEls, false)]
+    });
+  };
   const docChildren = [];
   // EMPTY-PAGE-GUARD-001 (1.14.79): splitChildrenByPage can emit a slot with NO
   // content in EITHER column (stray double page-break, or sidebar overflow past the
@@ -27998,7 +28014,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.121-pdf-review-batch11";
+var VERSION = "1.14.122-sidebar-align-2";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

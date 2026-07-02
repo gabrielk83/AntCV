@@ -100,6 +100,34 @@ test('default app id is kernel; null/empty coerce to kernel', () => {
   assert.equal(tab.AntcvJdScope.getCurrentAppId(), 'kernel');
 });
 
+test('Stage 2: deviceId is stable per install and stored under a NON-JD key', () => {
+  const backing = new Map();
+  const tab = makeTab(backing);
+  const d1 = tab.AntcvJdScope.deviceId();
+  const d2 = tab.AntcvJdScope.deviceId();
+  assert.ok(d1 && d1.length > 3);
+  assert.equal(d1, d2, 'stable across calls');
+  assert.equal(backing.get('antcv:deviceId'), d1, 'persisted un-namespaced');
+});
+
+test('Stage 2: shouldAdoptCloudPointer — the cross-device "don\'t yank me" decision', () => {
+  const backing = new Map();
+  const S = makeTab(backing).AntcvJdScope;
+  const A = S.shouldAdoptCloudPointer.bind(S);
+  // no cloud app -> nothing to guard
+  assert.equal(A({ cloudAppId: null }), true);
+  // my own pointer -> adopt
+  assert.equal(A({ cloudAppId: '5', cloudDeviceId: 'dev1', myDeviceId: 'dev1', myTabAppId: '9' }), true);
+  // I'm on kernel (no specific app) -> adopt
+  assert.equal(A({ cloudAppId: '5', cloudDeviceId: 'dev1', myDeviceId: 'dev2', myTabAppId: 'kernel' }), true);
+  // same app -> adopt
+  assert.equal(A({ cloudAppId: '5', cloudDeviceId: 'dev1', myDeviceId: 'dev2', myTabAppId: '5' }), true);
+  // ANOTHER device switched the pointer to a DIFFERENT app while I'm editing mine -> KEEP mine
+  assert.equal(A({ cloudAppId: '5', cloudDeviceId: 'dev1', myDeviceId: 'dev2', myTabAppId: '9' }), false);
+  // null/empty tab app id coerces to kernel -> adopt
+  assert.equal(A({ cloudAppId: '5', cloudDeviceId: 'dev1', myDeviceId: 'dev2', myTabAppId: null }), true);
+});
+
 test('one-time migration copies a pre-existing global JD into the current app slot', () => {
   const backing = new Map();
   backing.set('antcv:lastJdText', 'in-flight JD');   // legacy global present before load

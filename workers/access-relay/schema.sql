@@ -59,6 +59,11 @@ CREATE TABLE IF NOT EXISTS language_view (
 CREATE TABLE IF NOT EXISTS active_application (
   user_hash         TEXT PRIMARY KEY,
   application_id    INTEGER,
+  -- JD-SCOPE-ISOLATION-001 Stage 2: which device last set the pointer + when, so a
+  -- second device's cold-restore can avoid being yanked onto another device's app.
+  -- (The relay also adds these lazily via ALTER for pre-existing databases.)
+  device_id         TEXT,
+  updated_at        INTEGER,
   FOREIGN KEY (user_hash) REFERENCES user_kernel(user_hash) ON DELETE CASCADE,
   FOREIGN KEY (application_id) REFERENCES application(id) ON DELETE SET NULL
 );

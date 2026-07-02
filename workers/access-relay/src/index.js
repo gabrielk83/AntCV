@@ -1039,14 +1039,21 @@ async function handleApiPrefs(request, env) {
     let activeApplication = null;
     if (d1Available) {
       try {
+        await ensureActiveAppColumns(env);
         const ptr = await env.DB.prepare(
-          'SELECT application_id FROM active_application WHERE user_hash = ?'
+          'SELECT application_id, device_id, updated_at FROM active_application WHERE user_hash = ?'
         ).bind(userHash).first();
         if (ptr && ptr.application_id) {
           const appRow = await env.DB.prepare(
             'SELECT * FROM application WHERE id = ? AND user_hash = ?'
           ).bind(ptr.application_id, userHash).first();
           activeApplication = shapeApplicationRow(appRow);
+          // JD-SCOPE-ISOLATION-001 Stage 2: surface the pointer's device stamp so the
+          // PWA cold-restore can skip adopting an app another device just switched to.
+          if (activeApplication) {
+            activeApplication._pointer_device_id = ptr.device_id || null;
+            activeApplication._pointer_updated_at = ptr.updated_at || null;
+          }
         }
       } catch (_) { activeApplication = null; }
     }
@@ -2430,10 +2437,12 @@ async function handleApiApplications(request, env) {
       // pasted a JD — work on it" expectation.
       if (row && row.id) {
         try {
+          await ensureActiveAppColumns(env);
+          const deviceId = typeof body.device_id === 'string' ? body.device_id.slice(0, 64) : null;
           await env.DB.prepare(
-            'INSERT INTO active_application (user_hash, application_id) VALUES (?, ?) ' +
-            'ON CONFLICT(user_hash) DO UPDATE SET application_id = excluded.application_id'
-          ).bind(userHash, row.id).run();
+            'INSERT INTO active_application (user_hash, application_id, device_id, updated_at) VALUES (?, ?, ?, ?) ' +
+            'ON CONFLICT(user_hash) DO UPDATE SET application_id = excluded.application_id, device_id = excluded.device_id, updated_at = excluded.updated_at'
+          ).bind(userHash, row.id, deviceId, now).run();
         } catch (_) { /* best-effort */ }
       }
       return jsonResponse(
@@ -2790,6 +2799,22 @@ async function handleApiKernelShowcase(request, env) {
   return jsonResponse({ error: 'method_not_allowed' }, 405, request, env, refresh);
 }
 
+// JD-SCOPE-ISOLATION-001 Stage 2: stamp the active_application pointer with the
+// device that last set it + when, so a cold-restore on a SECOND device can tell the
+// pointer belongs to another device and avoid being yanked onto its app (desktop<->
+// mobile / two-browser JD contamination). Idempotent runtime migration — the columns
+// are nullable, so old clients that never send device_id are unaffected. Guarded to
+// run at most once per worker isolate.
+let _activeAppColsEnsured = false;
+async function ensureActiveAppColumns(env) {
+  if (_activeAppColsEnsured || !hasD1(env)) return;
+  _activeAppColsEnsured = true;
+  for (const col of ['device_id TEXT', 'updated_at INTEGER']) {
+    try { await env.DB.prepare('ALTER TABLE active_application ADD COLUMN ' + col).run(); }
+    catch (_) { /* duplicate column — already migrated */ }
+  }
+}
+
 // ---- /api/active  (pointer to current application) ------------------
 
 async function handleApiActive(request, env) {
@@ -2802,11 +2827,14 @@ async function handleApiActive(request, env) {
 
   if (m === 'GET') {
     try {
+      await ensureActiveAppColumns(env);
       const row = await env.DB.prepare(
-        'SELECT application_id FROM active_application WHERE user_hash = ?'
+        'SELECT application_id, device_id, updated_at FROM active_application WHERE user_hash = ?'
       ).bind(userHash).first();
       return jsonResponse(
-        { ok: true, application_id: row ? row.application_id : null },
+        { ok: true, application_id: row ? row.application_id : null,
+          device_id: row ? (row.device_id || null) : null,
+          updated_at: row ? (row.updated_at || null) : null },
         200, request, env, refresh
       );
     } catch (e) {
@@ -2839,12 +2867,15 @@ async function handleApiActive(request, env) {
       }
     }
     try {
+      await ensureActiveAppColumns(env);
+      const deviceId = body && typeof body.device_id === 'string' ? body.device_id.slice(0, 64) : null;
+      const nowMs = Date.now();
       await env.DB.prepare(
-        'INSERT INTO active_application (user_hash, application_id) VALUES (?, ?) ' +
-        'ON CONFLICT(user_hash) DO UPDATE SET application_id = excluded.application_id'
-      ).bind(userHash, newId).run();
+        'INSERT INTO active_application (user_hash, application_id, device_id, updated_at) VALUES (?, ?, ?, ?) ' +
+        'ON CONFLICT(user_hash) DO UPDATE SET application_id = excluded.application_id, device_id = excluded.device_id, updated_at = excluded.updated_at'
+      ).bind(userHash, newId, deviceId, nowMs).run();
       return jsonResponse(
-        { ok: true, application_id: newId },
+        { ok: true, application_id: newId, device_id: deviceId, updated_at: nowMs },
         200, request, env, refresh
       );
     } catch (e) {

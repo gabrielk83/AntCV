@@ -15434,7 +15434,11 @@
         setActive(e) {
           return this._call("/api/active", {
             method: "PUT",
-            body: JSON.stringify({ application_id: e }),
+            body: JSON.stringify({
+              application_id: e,
+              // JD-SCOPE-ISOLATION-001 Stage 2: stamp WHICH device set the pointer.
+              device_id: (typeof window !== "undefined" && window.AntcvJdScope && window.AntcvJdScope.deviceId) ? window.AntcvJdScope.deviceId() : undefined,
+            }),
           });
         },
         getShowcase(style) {
@@ -15870,6 +15874,19 @@
                             __co = String(e.jd_company || "").trim().toLowerCase();
                           const __isUnsolicited =
                             __cat === "unsolicited" || __co === "unsolicited";
+                          // JD-SCOPE-ISOLATION-001 Stage 2: if the active pointer was
+                          // last set by ANOTHER device (desktop<->mobile / two browsers),
+                          // do NOT inherit its tailored JD into THIS device's upload box
+                          // on cold-load — that is the cross-device JD contamination.
+                          // Backward-safe: a null stamp (old client / pre-migration) =
+                          // the previous behavior. Own-device pointer is never foreign.
+                          const __foreignDevice = (() => {
+                            try {
+                              const mine = window.AntcvJdScope && window.AntcvJdScope.deviceId && window.AntcvJdScope.deviceId();
+                              const setter = e && e._pointer_device_id;
+                              return !!(setter && mine && String(setter) !== String(mine));
+                            } catch (_) { return false; }
+                          })();
                           const t =
                               e.jd_text.startsWith(
                                 "GENERAL CV — UNSOLICITED APPLICATION CONTEXT",
@@ -15903,14 +15920,14 @@
                             } catch (e) {}
                           else
                             try {
-                              Vt(e.jd_text);
+                              Vt(__foreignDevice ? "" : e.jd_text);
                             } catch (e) {}
                           // JD-CLOUD-VISIBILITY-001 (owner 2026-06-15): mirror the
                           // restored JD into antcv:lastJdText so JD-aware per-role
                           // outcome visibility works cross-machine WITHOUT a regen.
                           // Unsolicited / general-context / manual-save rows carry no
                           // real JD → clear the mirror.
-                          try { localStorage.setItem("antcv:lastJdText", (__isUnsolicited || t || n) ? "" : (e.jd_text || "")); } catch (e) {}
+                          try { localStorage.setItem("antcv:lastJdText", (__isUnsolicited || __foreignDevice || t || n) ? "" : (e.jd_text || "")); } catch (e) {}
                         } else {
                           // No jd_text at all — make sure the textarea
                           // is empty (1.50.253: covers the case where a

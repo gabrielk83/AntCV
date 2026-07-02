@@ -109,6 +109,35 @@
     };
   } catch (_) {}
 
+  // ---- Stage 2 (cloud): a per-INSTALL device id (device-scoped, NOT a JD key, so it
+  // is not redirected) — lets the cloud active_application pointer record which device
+  // set it, so a second device's cold-restore can avoid being yanked onto the first
+  // device's app. Generated once, persisted in localStorage.
+  function deviceId() {
+    var d = null;
+    try { d = rawGet('antcv:deviceId'); } catch (_) {}
+    if (d && String(d).trim()) return String(d);
+    var v;
+    try { v = (window.crypto && window.crypto.randomUUID) ? window.crypto.randomUUID() : null; } catch (_) { v = null; }
+    if (!v) v = 'dev-' + Math.abs(((Date.now ? Date.now() : 0) ^ (Math.floor(1e9 * (Math.random ? Math.random() : 0))))).toString(36) + '-' + (tabAppId() || 'k');
+    try { rawSet('antcv:deviceId', v); } catch (_) {}
+    return v;
+  }
+  // PURE decision: should THIS tab's cold-restore adopt the cloud active_application
+  // pointer, or keep the app it is already editing? Adopt when the pointer is mine, or
+  // when I have no specific app in progress, or when it points at the same app. Only
+  // when ANOTHER device just switched the shared pointer to a DIFFERENT app do we keep
+  // ours (the desktop<->mobile / two-browser "don't yank me" case).
+  function shouldAdoptCloudPointer(o) {
+    o = o || {};
+    var cloudApp = (o.cloudAppId == null || o.cloudAppId === '') ? null : String(o.cloudAppId);
+    if (!cloudApp) return true;                                   // no cloud app → nothing to guard
+    if (o.cloudDeviceId && o.cloudDeviceId === o.myDeviceId) return true;  // my own pointer
+    var myApp = (o.myTabAppId == null || o.myTabAppId === '' || o.myTabAppId === 'null') ? 'kernel' : String(o.myTabAppId);
+    if (myApp === 'kernel') return true;                          // I'm not on a specific app
+    if (myApp === cloudApp) return true;                          // same app
+    return false;                                                 // another device, a different app → keep mine
+  }
   function getJd(id) { try { return rawGet(nsKey('jdText', id)) || ''; } catch (_) { return ''; } }
   function setJd(v, id) { try { rawSet(nsKey('jdText', id), String(v == null ? '' : v)); } catch (_) {} }
   function getQuestions(id) { try { return rawGet(nsKey('questions', id)) || ''; } catch (_) { return ''; } }
@@ -117,7 +146,8 @@
 
   window.AntcvJdScope = {
     setCurrentAppId: setCurrentAppId, getCurrentAppId: tabAppId, isMyJdKey: isMyJdKey, nsKey: nsKey,
-    getJd: getJd, setJd: setJd, getQuestions: getQuestions, setQuestions: setQuestions, getCompany: getCompany
+    getJd: getJd, setJd: setJd, getQuestions: getQuestions, setQuestions: setQuestions, getCompany: getCompany,
+    deviceId: deviceId, shouldAdoptCloudPointer: shouldAdoptCloudPointer
   };
   window.__antcvJdScopeInstalled = true;
 })();

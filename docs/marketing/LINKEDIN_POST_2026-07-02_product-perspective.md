@@ -1,11 +1,12 @@
-# LinkedIn post - product perspective (2026-07-02, rev 3)
+# LinkedIn post - product perspective (2026-07-02, rev 4)
 
 Follows the Terence method recorded in [PROBLEM_STATEMENTS.md](PROBLEM_STATEMENTS.md):
-problem and persona first, then the product "why", then the build. Rev 3 (owner ask):
-Pain 1 = trust + cost-quality function merged (the honesty stack predates babel-fish;
-the router/scorer is the ongoing half); Pain 2 = languages expanded (EN/DA/ES/ZH
-generation, 20+ language layer incl. Amharic); Pain 3 = context awareness. Tone
-guard applies: no banned words, no em dashes, short factual sentences, no pitch.
+problem and persona first, then the product "why", then the build. Rev 4 (owner ask):
+added Pain 4 = personality test, two directions (recruiter sees soft skills as
+behaviour; generation tuned to the author's own pattern). Pain 1 = trust +
+cost-quality function; Pain 2 = languages (EN/DA/ES/ZH generation, 20+ layer);
+Pain 3 = reader context. Tone guard: no banned words, no em dashes, short factual
+sentences, no pitch.
 
 ---
 
@@ -61,6 +62,15 @@ It knows "agile" the method from "agile" the buzzword, expands an abbreviation
 on first use in the body text, and keeps niche technical depth only for the
 roles that ask for it.
 
+Pain 4: "AI-written applications all sound the same - and none of them sound
+like me."
+Built: a short personality test, working in two directions at once. Toward the
+recruiter, it becomes a Work Style section that shows soft skills as behaviour
+("keeps decisions steady when timelines tighten"), never as a list of
+adjectives. Toward the engine, the same profile tunes generation to the
+author's own pattern, so the wording matches how the candidate actually works
+and writes. A VIA character-strengths report can feed it too.
+
 Result: application preparation went from hours to minutes, in the candidate's
 own voice, under the candidate's own control.
 
@@ -69,7 +79,7 @@ applied AI at the same time - problem selection, trade-offs, and a shipped
 system (a PWA on Cloudflare, multi-LLM routing with supervisor and consensus
 checks).
 
-If you hire, recruit, or are searching yourself: which of the three pains
+If you hire, recruit, or are searching yourself: which of the four pains
 sounds most like yours? That answer decides what I build next.
 
 #productmanagement #appliedAI #jobsearch #buildinpublic
@@ -79,17 +89,22 @@ sounds most like yours? That answer decides what I build next.
 ## Notes
 
 - Hook = the general problem statement from PROBLEM_STATEMENTS.md section 1.
-- Pain 1 merges the honesty stack (shipped in the pre-babel-fish versions) with
-  the live cost-quality work: ee() router, output-adequacy gate, per-task
-  provider demotion, runtime quality-price scorer + daily model-freshness
-  check, sonnet-5 slotted into the cascade 2026-07-02 while flagship gen stays
+- Pain 1 merges the honesty stack (shipped pre-babel-fish) with the live
+  cost-quality work: ee() router, output-adequacy gate, per-task provider
+  demotion, runtime quality-price scorer + daily model-freshness check,
+  sonnet-5 slotted into the cascade 2026-07-02 while flagship gen stays
   Opus 4.7 until proven.
 - Pain 2 language facts verified in code: generation targets en/da/es/zh
   (app.src.js language maps); wizard + spell layer cover 20+ incl. Amharic,
-  Faroese, Greenlandic (antcv-wizard-language-slide-339.js,
-  antcv-spell-annotator-384.js LANG_NAME); cross-language invariants =
-  kernel-v2 crossPolicy.
+  Faroese, Greenlandic; cross-language invariants = kernel-v2 crossPolicy.
 - Pain 3 mechanisms: GEN-PROFILE-001 opener switch, APPLICATION-QA bridge,
   semantic constraints, abbreviation first-use rules, JD-gated niche depth.
+- Pain 4 mechanisms: antcv-personality-quiz-439.js (8 forced-choice questions,
+  deterministic, six trait clusters -> personalInfo.personality; traits render
+  as behaviour-evidence, never raw adjectives; injected into generation as
+  behaviour evidence + canonical work-style line + render constraints);
+  antcv-personality.js Work Style sidecar (VIA Character Strengths PDF import,
+  apply-to-CV work_style section). The quoted behaviour line is a real trait
+  evidence string from the quiz.
 - The "friend" line credits the Terence feedback without naming him.
 - No em or en dashes anywhere; plain hyphens only.

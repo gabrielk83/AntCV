@@ -588,7 +588,22 @@ export function buildPayload({
   // it here. Falls back to "Application: [role and company]" when both
   // role and company are empty so the band isn't blank.
   const subtitle = (() => {
-    if (doc !== 'cl') return stripFounder(meta.subtitle || '');
+    if (doc !== 'cl') {
+      // CV-APPLICATION-LINE-001 (owner 2026-07-03, Anita demo): the CV header band
+      // must carry the "Application: <role> — <company|Unsolicited>" line whenever a
+      // role is known — the CL already synthesizes it, but the CV used the raw stored
+      // subtitle (the positioning triad in fresh/demo sessions), so Anita's CV had no
+      // Application line while her CL did. Gabriel's flow already stores the Application
+      // line as the subtitle, so this synthesis is a no-op for him. A subtitle that
+      // already reads "Application:/Ansøgning:" is kept verbatim.
+      const stored = stripFounder(meta.subtitle || '');
+      const cvRole = stripFounder((meta.role || '').trim());
+      if (!cvRole || /^(application|ansøgning)\s*:/i.test(stored)) return stored;
+      const cvCo = (meta.company || '').trim();
+      const isDA2 = (language === 'da');
+      const coLabel = cvCo && !/^(unsolicited|open application|n\/a)$/i.test(cvCo) ? cvCo : (isDA2 ? 'Uopfordret' : 'Unsolicited');
+      return (isDA2 ? 'Ansøgning: ' : 'Application: ') + cvRole + ' \u2014 ' + coLabel;
+    }
     const role = stripFounder((meta.role || '').trim());
     const company = (meta.company || '').trim();
     const isDA = (language === 'da');

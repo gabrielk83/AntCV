@@ -34,7 +34,7 @@
 | 20 | Gen-prompt example-text leftovers (translation/tools/cert example lists still Gabriel-flavored) | GEN-DEHARDCODE-002 report (1.51.64 parallel session) | 2026-07-02 |
 | 21 | Latent sid-fallback pattern in 234/247/249 (giant-container grab when the target section is absent; 237 hardened 1.51.60) | SETTINGS batch 5 note | 2026-07-02 |
 | 22 | Settings sweep-army burst cost (heavy-but-recovering churn under owner-scale kernel: 279/356/341/language-ui) — optimization track | freeze diag profiles (batches 5+7) | 2026-07-02 |
-| 23 | Anita demo residuals: docx missing photo; PDF contact text placement/size (FIGURE-CONTACT-REF family); Hill&Colony role header lost (role merge/dedup) — regen-gated AFTER persona re-import | ACTIVE_BUGS batch 8 | 2026-07-02 |
+| 23 | Anita demo residuals (batch-9 narrowed): docx missing photo + PDF contact placement are SESSION-STATE-gated (bridge indent verified correctly photo-gated in the worker; re-import persona + hard-refresh + re-export decides). Hill&Colony header was an EXTRACTION artifact — present in the PDF; the real issue was the Results bleed (fixed via per-role results, re-import gated) | ACTIVE_BUGS batch 9 | 2026-07-02 |
 | 24 | OWNER regen verifications owed: orphan preflight acceptance set (hard-refresh first!); CL foundation/bring/interests on a fresh Anita gen; Gabriel CL unchanged-good | ACTIVE_BUGS batches 7-8 | 2026-07-02 |
 
 ## CLOSED this seeding (evidence)

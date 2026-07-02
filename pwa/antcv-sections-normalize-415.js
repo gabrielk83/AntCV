@@ -766,6 +766,21 @@
     // trailing clauses (after ; or ,) until it fits, else trim at a word boundary; strip a dangling
     // connector/punctuation so it reads complete.
     if (line.length > 133) {
+      // WORK-STYLE-SENTENCE-CUT-001 (owner 2026-07-03, Anita: "…tracking systems. Comfortable"
+      // cut mid-sentence): when the source is MULTI-SENTENCE prose (persona notes), pack whole
+      // sentences under the cap first; the clause/word trim below only handles a single
+      // over-long sentence.
+      var __sents = line.match(/[^.!?]+[.!?]+/g);
+      if (__sents && __sents.length > 1) {
+        var __acc = '';
+        for (var __si = 0; __si < __sents.length; __si++) {
+          var __nxt = (__acc + __sents[__si]).trim();
+          if (__nxt.length <= 133) __acc = __nxt; else break;
+        }
+        if (__acc.length >= 30) line = __acc;
+      }
+    }
+    if (line.length > 133) {
       var cut = line;
       while (cut.length > 133 && /[;,]/.test(cut)) { cut = cut.replace(/[;,]\s*[^;,]*$/, '').trim(); }
       if (cut.length > 133) cut = cut.slice(0, 133).replace(/\s+\S*$/, '').trim();
@@ -1182,6 +1197,29 @@
   // section's own shape, absorb ADDITIONAL Interests/Hobbies rows (dedup by label, drop
   // the emptied umbrella header), then drop leftover placeholder rows. A still-empty
   // interests hides via hideEmptyOptionalSections (extended). Idempotent.
+  // WORKSTYLE-ADDITIONAL-DEDUP-001 (owner 2026-07-03, Anita demo): the persona/pi additional[]
+  // carries a "Work style" row that duplicates the main Work Style section. Drop the additional
+  // row once the MAIN section has real content (the single-home rule the other repairs follow).
+  function dropAdditionalWorkStyleDup(cv) {
+    var wi = cv.findIndex(function (s2) { return s2 && s2.id === 'work_style'; });
+    if (wi < 0) return null;
+    var ws = cv[wi];
+    var ph2 = function (v) { var t = String(v == null ? '' : v).trim(); return !t || t.charAt(0) === '['; };
+    var body = (Array.isArray(ws.items) && ws.items[0]) ? (ws.items[0].t || '') : (typeof ws.content === 'string' ? ws.content : '');
+    if (ph2(body)) return null;                       // main not real yet — keep the additional copy
+    var ai = cv.findIndex(function (s2) { return s2 && s2.id === 'additional' && Array.isArray(s2.items); });
+    if (ai < 0) return null;
+    var kept = cv[ai].items.filter(function (it) {
+      var lead = String((it && (it.l != null ? it.l : it.b)) || '').trim();
+      return !(it && !it.grp && !it.group && /^work[ -]?style$/i.test(lead));
+    });
+    if (kept.length === cv[ai].items.length) return null;
+    var copy = cv.slice();
+    copy[ai] = Object.assign({}, cv[ai], { items: kept });
+    try { console.log('[415] dropped additional Work-style dup (single home = main section)'); } catch (_) {}
+    return copy;
+  }
+
   function repairInterestsFromPI(cv) {
     var xi = cv.findIndex(function (s) { return s && s.id === 'interests' && Array.isArray(s.items); });
     if (xi < 0) return null;
@@ -1509,6 +1547,7 @@
       var jr = scrubJuniorRugby(cv); if (jr) { cv = jr; changed = true; }
       var ish = normalizeInterestsShape(cv); if (ish) { cv = ish; changed = true; }
       var ibt = stripInterestsBtRemnant(cv); if (ibt) { cv = ibt; changed = true; }
+      var wsd = dropAdditionalWorkStyleDup(cv); if (wsd) { cv = wsd; changed = true; }
       var rint = repairInterestsFromPI(cv); if (rint) { cv = rint; changed = true; }
       var pin = pinInterests(cv); if (pin) { cv = pin; changed = true; }
       var dhn = dedupeHiddenDupByName(cv); if (dhn) { cv = dhn; changed = true; }

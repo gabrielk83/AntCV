@@ -24,7 +24,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.988-cl-prose-richblock-fill';
+  var VERSION = '1.51.60-neutral-lead';
   if (window.__antcvClProseRbFill987 === VERSION) return;
   window.__antcvClProseRbFill987 = VERSION;
 
@@ -64,7 +64,11 @@
           var hasRealBullet = sec.items.slice(1).some(function (r) { return r && r.mk && !isPlaceholder(r.t); });
           if (hasRealBullet) {
             var it2 = sec.items.slice();
-            it2[0] = Object.assign({}, lead, { t: 'I connect hands-on technical and product practice with the clear decisions, validation, and delivery this kind of role needs.' });
+            // FOUNDATION-LEAD-NEUTRAL-001 (owner 2026-07-03): the old fallback hardcoded a
+            // Gabriel-flavored line ('hands-on technical and product practice') that read
+            // falsely specific on other candidates. Persona-neutral connector; generation
+            // is now instructed to fill the real lead so this fallback rarely fires.
+            it2[0] = Object.assign({}, lead, { t: 'I connect what I do best with the outcomes this employer is after.' });
             changed = true;
             return Object.assign({}, sec, { items: it2 });
           }

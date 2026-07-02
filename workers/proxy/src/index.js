@@ -1,4 +1,4 @@
-const VERSION='3.6.2-analytics-summary-auth';
+const VERSION='3.7.0-genjob-parity';
 // Cloudflare Worker — multi-provider LLM proxy with streaming for Anthropic
 // Includes /preferences route for AntCV cloud save.
 //

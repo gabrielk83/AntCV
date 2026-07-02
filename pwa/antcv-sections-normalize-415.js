@@ -15,7 +15,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.56-empty-slot-sparse-guard';
+  var VERSION = '1.51.60-empty-optional-leak';
   if (window.__antcvSectionsNormalize === VERSION) return;
   window.__antcvSectionsNormalize = VERSION;
 
@@ -1291,6 +1291,50 @@
     return copy;
   }
 
+  // EMPTY-OPTIONAL-LEAK-001 (owner 2026-07-03, Anita demo): (a) an education item whose
+  // deg AND sch are both blank/bracketed rendered a lone italic "[Degree]" row above the
+  // real MBA; drop such items when the section has at least one REAL item (the wizard
+  // template keeps its placeholders). (b) RECOMMENDATIONS / ACCESSIBILITY with NO real
+  // content printed placeholder text on a real CV — hide (on:false, hide-over-delete)
+  // when the CV has real experience content; the wizard/template state is untouched.
+  function _phv(v) { var s = String(v == null ? '' : v).trim(); return !s || s.charAt(0) === '['; }
+  function dropEmptyEducationItems(cv) {
+    var xi = cv.findIndex(function (s) { return s && s.id === 'education' && Array.isArray(s.items); });
+    if (xi < 0) return null;
+    var items = cv[xi].items;
+    var real = items.filter(function (it) { return it && (!_phv(it.deg) || !_phv(it.sch)); });
+    if (!real.length || real.length === items.length) return null;   // sparse template OR nothing to drop
+    var copy = cv.slice(); copy[xi] = Object.assign({}, copy[xi], { items: real });
+    try { console.log('[415] dropped ' + (items.length - real.length) + ' empty education item(s)'); } catch (_) {}
+    return copy;
+  }
+  function hideEmptyOptionalSections(cv) {
+    var expReal = cv.some(function (s) {
+      return s && s.type === 'experience' && Array.isArray(s.roles) &&
+        s.roles.some(function (r) { return r && r.on !== false && (!_phv(r.title) || !_phv(r.company)); });
+    });
+    if (!expReal) return null;                          // wizard/template: leave placeholders visible
+    var changed = false;
+    var copy = cv.map(function (s) {
+      if (!s || s.on === false) return s;
+      if (!/^(recommendations|accessibility)$/.test(String(s.id || ''))) return s;
+      var hasReal = false;
+      if (typeof s.content === 'string' && !_phv(s.content)) hasReal = true;
+      [].concat(s.items || [], s.rows || []).forEach(function (it) {
+        if (hasReal || it == null) return;
+        if (typeof it === 'string') { if (!_phv(it)) hasReal = true; return; }
+        if (Array.isArray(it)) { if (it.some(function (c) { return typeof c === 'string' && !_phv(c); })) hasReal = true; return; }
+        ['l', 'v', 't', 'b', 'deg', 'sch', 'text', 'value'].forEach(function (k) { if (typeof it[k] === 'string' && !_phv(it[k])) hasReal = true; });
+      });
+      if (hasReal) return s;
+      changed = true;
+      return Object.assign({}, s, { on: false });
+    });
+    if (!changed) return null;
+    try { console.log('[415] hid empty optional section(s) (recommendations/accessibility)'); } catch (_) {}
+    return copy;
+  }
+
   // SIRIN-TEAM-001 (owner 2026-06-19): the Sirin role is NOT a 'task force' - it is the
   // Sigma-Connectivity ODM engineering team (Sweden) that Gabriel DIRECTED for ~2 years.
   // Rename every 'task force' -> 'team' across the CV (role bullets, the selected
@@ -1403,6 +1447,8 @@
       var pin = pinInterests(cv); if (pin) { cv = pin; changed = true; }
       var dhn = dedupeHiddenDupByName(cv); if (dhn) { cv = dhn; changed = true; }
       var dedu = dedupeEducation(cv); if (dedu) { cv = dedu; changed = true; }
+      var dee = dropEmptyEducationItems(cv); if (dee) { cv = dee; changed = true; }
+      var heo = hideEmptyOptionalSections(cv); if (heo) { cv = heo; changed = true; }
       // FINAL-ROLE-CONDENSE-FOLD-001: run the volunteer-bullet cap + regulatory-heading shorten LAST,
       // after canon/dedupe/order have settled, so nothing downstream re-adds the bullets it trims.
       var vcap = condenseVolunteerRoles(cv); if (vcap) { cv = vcap; changed = true; }

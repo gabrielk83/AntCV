@@ -21,7 +21,7 @@
   "location": "Copenhagen, Denmark",
   "city": "Copenhagen",
   "country": "Denmark",
-  "citizenship": "EU Citizen",
+  "citizenship": "Danish",
   "patentNumber": "EP-AC-0042",
   "patentDescription": "Co-inventor of a modular subterranean granary geometry that reduces moisture migration between adjacent storage chambers, cited in three colony-wide winter readiness audits.",
   "background": "Reliable planner inspired by the hardworking ant from Aesop's fable. Known for preparing early, documenting thoroughly, and keeping projects moving through difficult seasons. Strong at logistics, contingency planning, and steady operational delivery.",
@@ -145,10 +145,6 @@
     {
       "l": "Accessibility",
       "v": "Comfortable presenting in writing; prefers asynchronous reviews over live meetings"
-    },
-    {
-      "l": "Career timescale",
-      "v": "Profile uses ant-scale seasonal cycles. Current reference point: Spring 2026."
     }
   ],
   "contactItems": [
@@ -184,7 +180,7 @@
       "key": "citizenship",
       "label": "Citizenship",
       "icon": "★",
-      "value": "EU Citizen",
+      "value": "Danish",
       "visible": true
     }
   ],
@@ -429,6 +425,16 @@
     {
       "l": "Hiking",
       "v": "Trail scouting and terrain mapping"
+    }
+  ],
+  "recommendations": [
+    {
+      "deg": "Marta Hyllevang — Head of Storage Operations, Northfield Cooperative",
+      "sch": "\"Anita's inventory tracking and contingency plans carried us through the hardest late-winter peak on record. When others improvised, she already had the checklist written.\" — available on request"
+    },
+    {
+      "deg": "Sören Hill — Logistics Director, Hill & Colony Logistics",
+      "sch": "\"Her colour-coded route tracking and handover documentation kept three seasonal teams aligned through the winter-to-spring transition. Calm, precise, and always prepared.\" — available on request"
     }
   ]
 }

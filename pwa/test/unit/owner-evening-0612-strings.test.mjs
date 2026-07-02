@@ -106,9 +106,11 @@ test('patent numbers never dropped', () => {
   assert.ok(bundle.includes('PATENT NUMBERS ARE NEVER DROPPED'));
 });
 
-test('accessibility explicitly hearing-impaired', () => {
-  assert.ok(bundle.includes('HEARING-IMPAIRED person'));
-  assert.ok(bundle.includes('hearing-impaired person; omit row only'));
+test('accessibility rule is persona-neutral (GEN-ACCESS-DEHARDCODE-001, owner 2026-07-03)', () => {
+  // the old hardcoded hearing-impaired rule hallucinated onto other candidates (Anita demo)
+  assert.ok(!bundle.includes('HEARING-IMPAIRED person'));
+  assert.ok(bundle.includes('OWN stored accessibility need'));
+  assert.ok(bundle.includes('never invent one'));
 });
 
 test('punctuation dash rule', () => {
@@ -124,8 +126,11 @@ test('ADV-SPACING-CONTROLS-001 — slider keys + helpers', () => {
 
 test('LINKEDIN-CLICK + CONTACT-LOCAL-FORM markers', () => {
   assert.ok(bundle.includes('noopener noreferrer'));
-  // owner correction 2026-06-12: postcode + district, with the comma
-  assert.ok(bundle.includes('2300, København S'));
+  // LOCALFORM-NO-FABRICATION-001 (owner 2026-07-03): the postcode is only ever
+  // REFORMATTED from a stored value, never invented for a bare Copenhagen.
+  assert.ok(!bundle.includes('?t="2300, København S":'), 'minified fabrication ternary still present');
+  const srcParity = readFileSync(path.join(ROOT, 'app.src.js'), 'utf8');
+  assert.ok(srcParity.includes('LOCALFORM-NO-FABRICATION-001'));
 });
 
 test('GEN-PROFILE-001 — unsolicited broad-identity opener rule', () => {

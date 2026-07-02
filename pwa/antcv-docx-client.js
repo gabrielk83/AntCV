@@ -614,7 +614,12 @@ export function buildPayload({
       .replace(/\s{2,}/g, ' ')
       .replace(/[,\s]+$/g, '')
       .trim();
-    if (/^københavn( s)?$/i.test(s)) return '2300, København S';
+    // LOCALFORM-NO-FABRICATION-001 (owner 2026-07-03, Anita demo): a bare
+    // "Copenhagen, Denmark" used to come out as "2300, København S" — GABRIEL's
+    // postcode+district invented for ANY Copenhagen candidate (Anita's exported
+    // contact line carried a false address). Only REFORMAT a postcode the stored
+    // value already has; a location without one stays "København". Gabriel's own
+    // stored location carries the real postcode, so his line is unchanged.
     const m = s.match(/^(\d{4})\s+(københavn.*)$/i);
     if (m) return `${m[1]}, ${m[2]}`;
     return s;

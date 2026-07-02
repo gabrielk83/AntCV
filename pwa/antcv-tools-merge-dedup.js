@@ -22,7 +22,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.55-value-dedup';
+  var VERSION = '1.51.60-empty-group-order';
   if (window.__antcvToolsMergeDedup === VERSION) return;
   window.__antcvToolsMergeDedup = VERSION;
   try { var off = localStorage.getItem('antcv:disable-tools-dedup'); if (off === '1' || off === 'true') return; } catch (_) {}
@@ -167,6 +167,60 @@
     return true;
   }
 
+  // TOOLS-EMPTY-GROUP-001 (owner 2026-07-03, Anita/unsolicited CV): the gen can emit a
+  // group header with NO rows under it ("Software" printing as a bare centered label).
+  // The old empty-header sweep only ran when dedupeValueRows dropped something; this
+  // pass runs UNCONDITIONALLY. Idempotent.
+  function dropEmptyGroups(sec) {
+    if (!sec || !Array.isArray(sec.items)) return false;
+    var items = sec.items, out = [], changed = false;
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i];
+      if (it && it.grp) {
+        var hasRow = false;
+        for (var j = i + 1; j < items.length; j++) {
+          if (items[j] && items[j].grp) break;
+          if (items[j]) { hasRow = true; break; }
+        }
+        if (!hasRow) { changed = true; continue; }
+      }
+      out.push(it);
+    }
+    if (!changed) return false;
+    sec.items = out;
+    return true;
+  }
+  // TOOLS-EXPERTISE-FIRST-001 (owner 2026-07-03): "Expertise should be the first item
+  // in tools — make sure it fits the application type." For a FULLY UNSOLICITED
+  // application the broad Expertise group leads; JD-targeted order is the generator's
+  // call and is left alone. Moves the whole Expertise block (header + its rows) in
+  // front of the first group. Idempotent (no-op when already first / absent).
+  function fullyUnsolicited() {
+    try {
+      var jd = String(localStorage.getItem('antcv:lastJdText') || '').trim();
+      if (jd.length >= 30) return false;
+      var meta = JSON.parse(localStorage.getItem('meta') || '{}') || {};
+      var co = String(meta.company || '').trim();
+      return !co || /^(unsolicited|open application|n\/a)$/i.test(co);
+    } catch (_) { return false; }
+  }
+  function expertiseFirst(sec) {
+    if (!sec || !Array.isArray(sec.items) || !fullyUnsolicited()) return false;
+    var items = sec.items, firstGrp = -1, expGrp = -1;
+    for (var i = 0; i < items.length; i++) {
+      if (!(items[i] && items[i].grp)) continue;
+      if (firstGrp < 0) firstGrp = i;
+      if (expGrp < 0 && /expertise/i.test(String(items[i].t || ''))) expGrp = i;
+    }
+    if (firstGrp < 0 || expGrp < 0 || expGrp === firstGrp) return false;
+    var end = items.length;
+    for (var k = expGrp + 1; k < items.length; k++) { if (items[k] && items[k].grp) { end = k; break; } }
+    var block = items.slice(expGrp, end);
+    var rest = items.slice(0, expGrp).concat(items.slice(end));
+    sec.items = rest.slice(0, firstGrp).concat(block, rest.slice(firstGrp));
+    return true;
+  }
+
   function run() {
     try {
       var secs = readSections();
@@ -177,6 +231,8 @@
         if (collapse(secs.cv[i])) changed = true;
         if (foldLeadingIntoGroup(secs.cv[i])) changed = true;
         if (dedupeValueRows(secs.cv[i])) changed = true;
+        if (dropEmptyGroups(secs.cv[i])) changed = true;
+        if (expertiseFirst(secs.cv[i])) changed = true;
       }
       if (!changed) return;
       localStorage.setItem('sections', JSON.stringify(secs));
@@ -186,5 +242,5 @@
 
   window.addEventListener('antcv:sections-updated', run);
   [0, 300, 900, 2000, 3500, 6000].forEach(function (ms) { setTimeout(run, ms); });
-  window.AntcvToolsMergeDedup = { version: VERSION, run: run, _collapse: collapse, _dedupeValueRows: dedupeValueRows };
+  window.AntcvToolsMergeDedup = { version: VERSION, run: run, _collapse: collapse, _dedupeValueRows: dedupeValueRows, _dropEmptyGroups: dropEmptyGroups, _expertiseFirst: expertiseFirst };
 })();

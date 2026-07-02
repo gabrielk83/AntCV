@@ -44,12 +44,15 @@ test('export normalises Danish-spelled "2300 København S, Danmark" → "2300, K
   assert.equal(exportedLocation('2300 København S, Danmark'), '2300, København S');
 });
 
-test('export normalises bare "Copenhagen, Denmark" → "2300, København S"', () => {
-  assert.equal(exportedLocation('Copenhagen, Denmark'), '2300, København S');
+// LOCALFORM-NO-FABRICATION-001 (owner 2026-07-03, Anita demo): a bare Copenhagen
+// location must NEVER gain an invented postcode/district — that fabricated
+// Gabriel's address onto other candidates. Only a stored postcode is reformatted.
+test('bare "Copenhagen, Denmark" stays København — no invented postcode', () => {
+  assert.equal(exportedLocation('Copenhagen, Denmark'), 'København');
 });
 
-test('export normalises bare "København" → "2300, København S"', () => {
-  assert.equal(exportedLocation('København'), '2300, København S');
+test('bare "København" stays København — no invented postcode', () => {
+  assert.equal(exportedLocation('København'), 'København');
 });
 
 test('export keeps an explicit non-default district postcode, adds the comma', () => {

@@ -1,4 +1,4 @@
-const VERSION='3.6.2-analytics-summary-auth';
+const VERSION='3.7.0-genjob-parity';
 // Cloudflare Worker — multi-provider LLM proxy with streaming for Anthropic
 // Includes /preferences route for AntCV cloud save.
 //
@@ -39,6 +39,8 @@ import {
   logWritingEngineEvent,
 } from './writing-style-engine.js';
 import { handleJDAnalysis } from './jd-analysis.js';
+import { handleJobRoute } from './gen-job.js';
+import { runCoherenceReview } from './gen-coherence.js';
 import { handleKernelExtraction } from './kernel-extraction.js';
 import { handleFetchJdUrl } from './fetch-jd-url.js';
 import { handleSupervisorCheck } from './supervisor.js';
@@ -716,6 +718,22 @@ async function handleRequest(request, env = {}) {
   }
 
   const CORS = corsHeadersFor(request, env, 'x-api-key, x-provider, x-gemini-model');
+
+    // ---- GEN-BACKGROUND-001 Option A: resumable generation job routes ----
+    // PARITY (owner 2026-07-03): ported from workers/proxy — the demo deployment
+    // 404'd /job/* so demo generations could not use the checkpointed job path
+    // (a prime suspect for the Anita demo's missing sections). Placement mirrors
+    // the proxy: BEFORE the POST-only /v1/messages machinery; job section calls
+    // re-enter handleRequest on /v1/messages, which is not a /job path -> no
+    // recursion. Demo preflight/caps still apply to each section call.
+    if (url.pathname.includes('/job/')) {
+      const jobResp = await handleJobRoute(request, env, CORS, {
+        runSection: handleRequest,
+        identityFn: identityFromRequestAsync,
+        coherenceFn: runCoherenceReview,
+      });
+      if (jobResp) return jobResp;
+    }
 
   if (request.method === 'OPTIONS') return new Response(null, { headers: CORS });
   if (request.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: CORS });

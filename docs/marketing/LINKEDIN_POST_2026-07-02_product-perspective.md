@@ -1,4 +1,4 @@
-# LinkedIn post - product perspective (2026-07-02, rev 8)
+# LinkedIn post - product perspective (2026-07-02, rev 9)
 
 Follows the Terence method recorded in [PROBLEM_STATEMENTS.md](PROBLEM_STATEMENTS.md):
 problem and persona first, then the product "why", then the build. Rev 6 (owner ask):
@@ -68,13 +68,13 @@ It knows "agile" the method from "agile" the buzzword, expands an abbreviation
 on first use in the body text, and keeps niche technical depth only for the
 roles that ask for it.
 
-Result: application preparation went from hours to minutes, in the candidate's
-own voice, under the candidate's own control.
+The result, at least for me: preparing an application takes minutes instead
+of hours - in my own words, and under my own control.
 
-Why build it this way: I wanted one artifact that shows product thinking and
-applied AI at the same time - problem selection, trade-offs, and a shipped
-system (a PWA on Cloudflare, multi-LLM routing with supervisor and consensus
-checks).
+Why build it this way: I would rather show than claim. One piece of work that
+carries both sides - the product decisions (which problem, which trade-offs)
+and the applied AI (a PWA on Cloudflare, multi-LLM routing with supervisor
+and consensus checks).
 
 If you hire, recruit, or are searching yourself: which of the three pains
 sounds most like yours? That answer decides what I build next.

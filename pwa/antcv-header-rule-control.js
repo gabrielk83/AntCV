@@ -4,9 +4,10 @@
  * payload header_rules → worker borders). This sidecar adds:
  *  (a) the render HELPERS the live preview + HTML export call (guarded splices
  *      with exact-legacy fallbacks): __antcvHdrRuleDiv / Html / Style;
- *  (b) the SETTINGS CONTROL — "CV HEADER RULE LINES" box in Settings → Layout
- *      (after the PROFILE PHOTO control): per field (Name / Specialization /
- *      Contact) an on/off checkbox + thickness (pt) + color + auto(theme).
+ *  (b) the PER-FIELD CONTROL (owner 2026-07-03 "not in Settings — in the editor
+ *      side panel!"): a compact "Rule line below" row injected into each header
+ *      field DETAILED EDITOR (the ← Back panel that opens from the candidate
+ *      rows), next to the CJLR control: on/off + thickness (pt) + colour + auto.
  * DEFAULTS (absent store) = copenhagen-modern = today's look: rule below
  * Spec/Application + below Contact, none below Name, 0.75pt, theme teal.
  * Kill (UI only; helpers keep honoring the store):
@@ -14,7 +15,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.85-header-rule-control';
+  var VERSION = '1.51.86-header-rule-inpanel';
   if (window.__antcvHeaderRuleControl === VERSION) return;
   window.__antcvHeaderRuleControl = VERSION;
 
@@ -74,79 +75,68 @@
     } catch (_) {}
   }
 
-  function photoControl() {
-    var rows = document.querySelectorAll('[data-antcv-bridge-active]');
-    for (var i = 0; i < rows.length; i++) {
-      var ctrl = rows[i].parentElement;
-      var c = ctrl && ctrl.firstElementChild;
-      if (c && /PROFILE PHOTO/i.test(c.textContent || '') && (c.textContent || '').length < 40) return ctrl;
-    }
+  // ---- per-field control, injected into each header field's DETAILED EDITOR ----
+  // The je expanded panel = a div holding a "← Back" button + renderEditor();
+  // its PREVIOUS sibling is the field row, whose text starts with the label.
+  var FIELD_OF_LABEL = [
+    [/^name/i, 'name'],
+    [/^special/i, 'specialisation'],
+    [/^application/i, 'specialisation'],   // the Application line IS the specialisation slot
+    [/^contact/i, 'contact'],
+  ];
+  function fieldOfRow(row) {
+    try {
+      var txt = String(row && row.textContent || '').trim();
+      for (var i = 0; i < FIELD_OF_LABEL.length; i++) if (FIELD_OF_LABEL[i][0].test(txt)) return FIELD_OF_LABEL[i][1];
+    } catch (_) {}
     return null;
   }
-
-  function buildRow(f) {
-    var cfg = fieldCfg(f.k, f.defOn);
+  function buildRuleRow(k) {
+    var defOn = defOnOf(k);
+    var cfg = fieldCfg(k, defOn);
     var row = document.createElement('div');
-    row.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:11px;flex-wrap:wrap;';
+    row.setAttribute('data-antcv-header-rule-row', k);
+    row.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:10px;margin-top:8px;padding-top:6px;border-top:1px dashed rgba(1,183,187,0.35);flex-wrap:wrap;';
+    var lb = document.createElement('span');
+    lb.textContent = 'Rule line below';
+    lb.style.cssText = 'font-weight:700;color:' + ACCENT + ';letter-spacing:.03em;';
     var cb = document.createElement('input');
     cb.type = 'checkbox'; cb.checked = cfg.on;
-    cb.onchange = function () { writeField(f.k, { on: cb.checked }); };
-    var lb = document.createElement('span');
-    lb.textContent = f.label;
-    lb.style.cssText = 'flex:1 1 120px;min-width:110px;';
+    cb.onchange = function () { writeField(k, { on: cb.checked }); };
     var sel = document.createElement('select');
-    sel.style.cssText = 'font-size:10px;padding:2px;';
+    sel.style.cssText = 'font-size:10px;padding:1px 2px;';
     [0.5, 0.75, 1, 1.5, 2].forEach(function (p) {
       var o = document.createElement('option'); o.value = String(p); o.textContent = p + ' pt';
       if (Math.abs(p - cfg.pt) < 0.01) o.selected = true;
       sel.appendChild(o);
     });
-    sel.onchange = function () { writeField(f.k, { pt: Number(sel.value) }); };
+    sel.onchange = function () { writeField(k, { pt: Number(sel.value) }); };
     var col = document.createElement('input');
     col.type = 'color'; col.value = cfg.color || ACCENT;
     col.title = 'Rule colour';
-    col.style.cssText = 'width:26px;height:20px;padding:0;border:none;background:none;cursor:pointer;';
-    col.oninput = function () { writeField(f.k, { color: col.value.replace('#', '') }); };
+    col.style.cssText = 'width:24px;height:18px;padding:0;border:none;background:none;cursor:pointer;';
+    col.oninput = function () { writeField(k, { color: col.value.replace('#', '') }); };
     var auto = document.createElement('button');
     auto.type = 'button'; auto.textContent = 'auto';
     auto.title = 'Use the theme colour';
-    auto.style.cssText = 'font-size:9px;padding:2px 6px;border-radius:4px;border:1px solid rgba(1,183,187,0.45);background:none;color:' + ACCENT + ';cursor:pointer;';
-    auto.onclick = function () { writeField(f.k, { color: '' }); col.value = ACCENT; };
-    row.appendChild(cb); row.appendChild(lb); row.appendChild(sel); row.appendChild(col); row.appendChild(auto);
+    auto.style.cssText = 'font-size:9px;padding:1px 5px;border-radius:4px;border:1px solid rgba(1,183,187,0.45);background:none;color:' + ACCENT + ';cursor:pointer;';
+    auto.onclick = function () { writeField(k, { color: '' }); col.value = ACCENT; };
+    row.appendChild(lb); row.appendChild(cb); row.appendChild(sel); row.appendChild(col); row.appendChild(auto);
     return row;
   }
-
-  function build() {
-    var box = document.createElement('div');
-    box.setAttribute('data-antcv-header-rule-control', '1');
-    box.style.cssText = 'margin:8px 0 0 0;padding:8px 10px;border:1px solid rgba(1,183,187,0.25);border-radius:8px;background:rgba(255,255,255,0.02);';
-    var head = document.createElement('div');
-    head.style.cssText = 'font-size:11px;font-weight:700;letter-spacing:.04em;color:' + ACCENT + ';margin-bottom:6px;';
-    head.textContent = 'CV HEADER RULE LINES';
-    box.appendChild(head);
-    var note = document.createElement('div');
-    note.textContent = 'Horizontal lines under each header field (preview + PDF).';
-    note.style.cssText = 'font-size:9px;opacity:.6;margin-bottom:6px;';
-    box.appendChild(note);
-    var wrap = document.createElement('div');
-    wrap.style.cssText = 'display:flex;flex-direction:column;gap:5px;';
-    FIELDS.forEach(function (f) { wrap.appendChild(buildRow(f)); });
-    box.appendChild(wrap);
-    return box;
-  }
-
-  var mounted = null;
   function scan() {
     if (uiDisabled()) return;
     try {
-      var existing = document.querySelectorAll('[data-antcv-header-rule-control]');
-      for (var j = 1; j < existing.length; j++) { if (existing[j].parentNode) existing[j].parentNode.removeChild(existing[j]); }
-      if (mounted && mounted.isConnected) return;
-      if (existing.length && existing[0].isConnected) { mounted = existing[0]; return; }
-      var photo = photoControl();
-      if (!photo || !photo.parentNode) return;
-      mounted = build();
-      photo.parentNode.insertBefore(mounted, photo.nextSibling);
+      var btns = document.querySelectorAll('button');
+      for (var i = 0; i < btns.length; i++) {
+        if (String(btns[i].textContent || '').trim() !== '← Back') continue;
+        var backRow = btns[i].parentElement;
+        var panel = backRow && backRow.parentElement;
+        if (!panel || panel.querySelector('[data-antcv-header-rule-row]')) continue;
+        var k = fieldOfRow(panel.previousElementSibling);
+        if (!k) continue;
+        panel.appendChild(buildRuleRow(k));
+      }
     } catch (_) {}
   }
   var t = null;

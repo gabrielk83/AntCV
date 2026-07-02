@@ -15121,7 +15121,10 @@
               } catch (e) {}
               // RESULTS-LAMINATION-001: mirror the active JD into localStorage so
               // the export (applyOutcomesMode) + preview can JD-gate role.outcomes.
-              try { localStorage.setItem("antcv:lastJdText", n || ""); } catch (e) {}
+              // JD-TARGETED-META-STICK-001: never persist the unsolicited stub
+              // or a manual-save marker as "the JD" — downstream gates (subtitle,
+              // analysis, question detection) read this key as real JD text.
+              try { localStorage.setItem("antcv:lastJdText", (/^GENERAL CV [—–-] UNSOLICITED APPLICATION CONTEXT/i.test(n) || /^Manual save/i.test(n)) ? "" : (n || "")); } catch (e) {}
               if (!n) {
                 try {
                   Object.assign(to.current, e);
@@ -16813,12 +16816,12 @@
                         rationale: yo,
                         // JD-PERSIST-001 (2026-06-22): persist the JD text on the targeted row so
                         // antcv:lastJdText is populated on reload (gates WHY-heading flip + cluster logic).
-                        jd_text: String(Un.current || Ut || "").trim(),
+                        jd_text: (function () { var t = String(Un.current || Ut || "").trim(); return /^GENERAL CV/i.test(t) || /^Manual save/i.test(t) ? String(Ut || "").trim() : t; })(),
                       });
                       try { Ml(__id); } catch (e) {}
                       try { localStorage.setItem("antcv:activeAppCompany", (io && io.company) || ""); } catch (e) {}
                       // JD-PERSIST-001: also mirror to lastJdText immediately so gates fire in this session.
-                      try { const __jdT = String(Un.current || Ut || "").trim(); if (__jdT.length >= 30) localStorage.setItem("antcv:lastJdText", __jdT); } catch (e) {}
+                      try { const __jdT = String(Un.current || Ut || "").trim(); if (__jdT.length >= 30 && !__jdT.startsWith("GENERAL CV") && !__jdT.startsWith("Manual save")) localStorage.setItem("antcv:lastJdText", __jdT); } catch (e) {}
                       try { console.log("[apps] AUTO-COMMIT: targeted application '" + __ioCo + "' committed + activated (was drifting from the unsolicited kernel)"); } catch (e) {}
                     }
                   } catch (e) { try { console.warn("[apps] auto-commit failed:", e && e.message); } catch (_) {} }
@@ -24038,6 +24041,16 @@
                 ),
                 void uo("")
               );
+            // JD-TARGETED-META-STICK-001 (owner 2026-07-03): a REAL JD is
+            // attached — a stale kernel-showcase stub pinned in Un.current by
+            // cloud-restore must not hijack this run (it forced meta back to
+            // "Unsolicited", leaked the stub into Additional signals and into
+            // antcv:lastJdText — the NIL application regression).
+            if (
+              c && String(c).trim() && Un && Un.current &&
+              /^GENERAL CV [—–-] UNSOLICITED APPLICATION CONTEXT/i.test(String(Un.current))
+            )
+              Un.current = null;
             for (const e of Yt)
               e.text && e.text.trim()
                 ? d.push({
@@ -24543,8 +24556,14 @@
               const __jdNamedCompany =
                 __llmCo &&
                 !/^(unsolicited|open\s+application|n\/?a)$/i.test(__llmCo);
+              // JD-TARGETED-META-STICK-001: a leftover Un.current is only a
+              // "showcase in progress" signal when there is NO real JD — with
+              // a JD attached it is a stale stub and must not force-unsolicit
+              // a targeted run (P1 above clears the known stub shape; this is
+              // defence in depth for older/unknown stub variants).
               const __explicitShowcase =
-                u.get("kernelShowcaseInProgress", !1) || (Un && Un.current);
+                u.get("kernelShowcaseInProgress", !1) ||
+                (!!(Un && Un.current) && __noJD);
               if (
                 __explicitShowcase ||
                 // CL-GHOST-COMPANY-001 hardening (owner 2026-06-09 "make sure the
@@ -24748,6 +24767,27 @@
                 );
               } catch (_) {}
             }
+            // SLOGAN-TARGETED-REFRESH-001 (owner 2026-07-03): a tailored gen
+            // carries a fresh role-smart meta.subtitle (SPEC-CATCHY-001), but
+            // the CL band prefers the antcv:clSlogan override, which stays
+            // pinned at the unsolicited standing line. Refresh WITHOUT
+            // clobbering a manual owner edit: clear the override ONLY when its
+            // value equals the standing specialization line or the last auto
+            // value (antcv:clSloganAuto) — the band then falls back to the new
+            // io.subtitle at all three render sites.
+            try {
+              if (W && W.company && "Unsolicited" !== W.company && W.subtitle) {
+                const __n = (s) =>
+                  String(s || "").replace(/\s*[•*|]\s*/g, " • ").trim().toUpperCase();
+                const __cur = __n(localStorage.getItem("antcv:clSlogan"));
+                const __std = __n((ie() || {}).specialization);
+                const __auto = __n(localStorage.getItem("antcv:clSloganAuto"));
+                if (__cur && (__cur === __std || __cur === __auto)) {
+                  localStorage.setItem("antcv:clSlogan", "");
+                  localStorage.setItem("antcv:clSloganAuto", String(W.subtitle).trim());
+                }
+              }
+            } catch (e) {}
             if (
               (lo({
                 company: W.company,

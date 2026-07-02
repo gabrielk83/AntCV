@@ -76,7 +76,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.339-analyse-row';
+  var VERSION = '1.51.54-upper-reorg';
   if (window.__antcvAnalysisPanelJdBlock356 === VERSION) return;
   window.__antcvAnalysisPanelJdBlock356 = VERSION;
 
@@ -455,12 +455,13 @@
         var jdA = (resJd && resJd.status === 200 && resJd.body && resJd.body.ok) ? (resJd.body.analysis || resJd.body) : null;
 
         if (fit) renderFit(results, fit, t);
-        if (jdA && rf && typeof rf._renderJdAnalysis === 'function') {
-          rf._renderJdAnalysis(results, jdA, {
-            recruiter: t.recruiter, questions: t.questions, redFlags: t.redFlags,
-            noRecruiter: t.noRecruiter, noQuestions: t.noQuestions, noRedFlags: t.noRedFlags,
-          });
-        }
+        // UPPER-REPORT-REORG-001 (owner 2026-07-03): the lower Recruiter /
+        // Questions / Red-flags cards (rf._renderJdAnalysis) are GONE from this
+        // block — the same data now renders in the upper report (app.js
+        // Recruiter + Red Flags sections; antcv-analysis-report-pdf-360.js
+        // fills Recruiter-empty + Questions inside #antcv-analysis-report).
+        // The rationale merge below still feeds them. renderFit stays as
+        // in-place run feedback.
 
         var merged = readRationale() || {};
         if (fit) {

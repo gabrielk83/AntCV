@@ -262,6 +262,21 @@ export function computeTableWidthDxa(docSections, docType) {
   return Math.round(defaultDxa * (maxPct / 100));
 }
 
+// EXPORT-PREFLIGHT-ORPHANS-001 (owner 2026-07-03): one awaited call-out to the
+// orphan-export-preflight sidecar with a hard 12s timeout and a no-op fallback.
+// The sidecar mutates payload.sections in place (whole-string replacements), so a
+// late resolution after the race simply misses this export — never corrupts it.
+async function runOrphanPreflight(payload) {
+  try {
+    const pf = (typeof window !== 'undefined') && window.AntcvOrphanExportPreflight;
+    if (!pf || typeof pf.run !== 'function') return;
+    await Promise.race([
+      Promise.resolve(pf.run(payload)).catch(() => null),
+      new Promise((r) => setTimeout(r, 12000)),
+    ]);
+  } catch (_) { /* the export must never fail because of the preflight */ }
+}
+
 /**
  * Build payload + POST + trigger browser download.
  * Throws on any failure — caller should catch and show a useful error.
@@ -340,6 +355,13 @@ export async function exportDocxViaWorker({
     fontSizes, language, navyColor, layout, filename,
     headerItemAlign, headerItemLoc, password, watermark,
   });
+
+  // EXPORT-PREFLIGHT-ORPHANS-001 (owner 2026-07-03, orphans v2): measure runts in the
+  // BUILT payload with EXPORT metrics and fix them in place (NBSP bind + one batched
+  // LLM re-tighten) before the POST. Hard-bounded: the export proceeds with whatever
+  // landed after 12s, and ANY preflight failure is swallowed — the export can never
+  // hang or fail because of orphan control. Kill: antcv:disable-orphan-preflight.
+  await runOrphanPreflight(payload);
 
   const headers = { 'Content-Type': 'application/json' };
   const secret = (typeof window !== 'undefined' && window.ANTCV_DOCX_SECRET) || '';
@@ -2899,6 +2921,10 @@ export async function exportPdfViaWorker(opts) {
     language, navyColor, layout, filename,
     headerItemAlign, headerItemLoc, password, watermark,
   });
+
+  // EXPORT-PREFLIGHT-ORPHANS-001: the owner's orphans live in THIS path (the
+  // CloudConvert PDF). Same bounded, swallow-all preflight as exportDocxViaWorker.
+  await runOrphanPreflight(payload);
 
   const headers = { 'Content-Type': 'application/json', 'Accept': 'application/pdf' };
   const secret = (typeof window !== 'undefined' && window.ANTCV_DOCX_SECRET) || '';

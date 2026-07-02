@@ -143,6 +143,9 @@
     }
     if (ext === 'pdf')  return 'generic-pdf';
     if (ext === 'docx') return 'generic-docx';
+    // UNION-ACCEPT-001 (#9-12): .txt CVs were kernel-engine-only; the unified
+    // loader accepts them too and routes them down the CV path.
+    if (ext === 'txt')  return 'cv-doc';
     return 'unsupported';
   }
 
@@ -427,7 +430,9 @@ ${text}`;
 
   async function handleCV(file) {
     const ext  = (file.name.split('.').pop() || '').toLowerCase();
-    const text = ext === 'pdf' ? await extractPdfText(file) : await extractDocxText(file);
+    const text = ext === 'pdf' ? await extractPdfText(file)
+      : ext === 'txt' ? await file.text()
+      : await extractDocxText(file);
     const stylePrefs = (Store.get('personalInfo', {}) || {}).stylePrefs || {};
     const extracted  = repairAndParseJSON(await callLLM(PERSONAL_PROMPT(text.slice(0, CFG.maxPdfChars), stylePrefs)));
     const digest     = await callLLM(MEMORY_PROMPT(text.slice(0, 12000)));
@@ -784,7 +789,7 @@ ${text}`;
   document.head.appendChild(style);
 
   const EXPLANATION =
-    'Drop in JSON, PDF, DOCX, or image files containing facts about you — a LinkedIn profile, a CV, a banned-words list, a VIA character-strengths assessment, a profile photo, or a previous settings export — and AntCV will route each file to the right slot, propose the changes, and let you accept or reject each one before anything is written. Nothing is overwritten silently. (Restoring a full AntCV backup file — incl. an encrypted one — does a complete restore after a confirmation.)';
+    'Drop in JSON, PDF, DOCX, TXT, or image files containing facts about you — a LinkedIn profile, a CV, a banned-words list, a VIA character-strengths assessment, a profile photo, or a previous settings export — and AntCV will route each file to the right slot, propose the changes, and let you accept or reject each one before anything is written. A CV also opens the kernel review (roles, conflicts, gaps) and MERGES into your kernel; only a signed AntCV kernel .json overwrites it. Nothing is overwritten silently. (Restoring a full AntCV backup file — incl. an encrypted one — does a complete restore after a confirmation.)';
 
   let modalState = null;
 
@@ -801,7 +806,7 @@ ${text}`;
       <h2>Import user settings from raw data</h2>
       <div class="antcv-import-blurb">${EXPLANATION}</div>
       <div class="antcv-import-files">
-        <input type="file" multiple accept=".json,.pdf,.docx,.png,.jpg,.jpeg,.webp" id="antcv-import-input">
+        <input type="file" multiple accept=".json,.pdf,.docx,.txt,.png,.jpg,.jpeg,.webp" id="antcv-import-input">
       </div>
       <div id="antcv-import-status"></div>
       <div id="antcv-import-staged"></div>
@@ -1020,6 +1025,23 @@ ${text}`;
       console.warn('[antcv-data-importer] experience→sections plumbing failed:', e);
     }
 
+    // KERNEL-CHAIN-001 (owner #9-12 rule a — kernel governance in the upload
+    // flow): a plain CV upload ALSO flows through the kernel engine after the
+    // field diff is applied — structured roles, the conflict/gap review modal
+    // (metrics never auto-overwritten, gaps listed not invented), MERGE into
+    // the current kernel. Only a signed kernel envelope (handleJSON above)
+    // OVERWRITES. Chain the FIRST applied CV-shaped file; capture it BEFORE
+    // closeModal() nulls modalState. Kill-switch: antcv:no-kernel-chain='1'.
+    try {
+      let noChain = false;
+      try { noChain = localStorage.getItem('antcv:no-kernel-chain') === '1'; } catch (_) {}
+      const CV_KINDS = { 'cv-doc': 1, 'generic-pdf': 1, 'generic-docx': 1 };
+      const cvStaged = (modalState.staged || []).find(s => s && !s.error && CV_KINDS[s.kind] && s.file);
+      if (!noChain && cvStaged && window.AntcvKernelImport && typeof window.AntcvKernelImport.runImport === 'function') {
+        const __cvFile = cvStaged.file;
+        setTimeout(() => { try { window.AntcvKernelImport.runImport(__cvFile); } catch (_) {} }, 400);
+      }
+    } catch (_) {}
     closeModal();
     // v1.40.3 — tell the React app to re-read state from localStorage
     // immediately, so the sidebar (tools/certs/education/publications/

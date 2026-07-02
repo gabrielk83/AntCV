@@ -38,7 +38,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.72-orphan-preflight-sidebar-gate';
+  var VERSION = '1.51.75-orphan-preflight-sidebar-font';
   if (window.__antcvOrphanExportPreflight === VERSION) return;
   window.__antcvOrphanExportPreflight = VERSION;
 
@@ -89,10 +89,15 @@
     var sbPadPx = pxTok(style.sidebarEdgePad);
     var sbLR = sbPadPx !== undefined ? Math.round(sbPadPx * 15) : 120;
     var sbPt = Number(fs.sbBody); if (!isFinite(sbPt) || sbPt <= 0) sbPt = 10;
+    // SIDEBAR-FONT-METRIC-001 (owner export (3), 2026-07-03): the payload does NOT
+    // carry sidebarBodyFont — the WORKER fills it server-side from the package BODY
+    // font (default Calibri -> the PDF's Carlito). style.sidebarFont is the HEADING
+    // font (Trebuchet MS); measuring the values with it scrambled every wrap point,
+    // so all 8 sidebar runts in the owner's export went undetected. Fall back to
+    // the SAME package body family as the main column.
     var sideFamily = (typeof style.sidebarBodyFont === 'string' && /^[a-z ]{3,}$/i.test(style.sidebarBodyFont))
       ? style.sidebarBodyFont
-      : (typeof style.sidebarFont === 'string' && /^[a-z ]{3,}$/i.test(style.sidebarFont))
-        ? style.sidebarFont : 'Cabin';
+      : family;
     return {
       family: family,
       cellWpx: cellW / TWIPS_PER_PX,

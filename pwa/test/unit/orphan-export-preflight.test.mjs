@@ -253,7 +253,10 @@ test('sidebar labeled_list values are targets with sidebar metrics + bold label 
   // sidebarW = round(11906*0.33) = 3929; side cell = 3929 - 2*120 = 3689 twips = 245.9px
   assert.equal(Math.round(m.sideCellWpx * 10) / 10, 245.9);
   assert.equal(Math.round(m.sbBodyPx * 100) / 100, Math.round(10 * 96 / 72 * 100) / 100);
-  assert.equal(m.sideFamily, 'Cabin');
+  // SIDEBAR-FONT-METRIC-001: the payload never carries sidebarBodyFont (the worker
+  // fills it from the package BODY font), so the measurer must use the same body
+  // family as the main column — NEVER style.sidebarFont (the heading font).
+  assert.equal(m.sideFamily, 'Calibri');
   const targets = api._collectTargets(payload, m);
   assert.equal(targets.length, 2);
   assert.equal(targets[0].kind, 'side_label');

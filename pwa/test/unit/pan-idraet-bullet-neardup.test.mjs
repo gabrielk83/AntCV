@@ -4,7 +4,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-const { _dedupNearBullets, _collapseRoleBullets, _keepMinBullets } =
+// minimal localStorage shim so the backfill branch can read a personalInfo kernel.
+const _lsStore = {};
+globalThis.localStorage = {
+  getItem: (k) => (k in _lsStore ? _lsStore[k] : null),
+  setItem: (k, v) => { _lsStore[k] = String(v); },
+  removeItem: (k) => { delete _lsStore[k]; },
+};
+
+const { _dedupNearBullets, _collapseRoleBullets, _keepMinBullets, _backfillRoleBullets } =
   await import('../../antcv-docx-client.js');
 
 // The real owner export-16 pair (Pan Idræt): same fact, "about 25" vs "25".
@@ -68,4 +76,60 @@ test('empty / non-text bullets pass through untouched', () => {
   assert.deepEqual(_dedupNearBullets([]), []);
   const role = { bullets: [] };
   assert.equal(_collapseRoleBullets(role), role, 'empty role untouched');
+});
+
+// PAN-IDRAET-BACKFILL-001 — _backfillRoleBullets pulls DISTINCT extra bullets from the
+// user's own data (kernel bullets / outcomes / proofPointIds) for the build-time
+// backfill sidecar. Never re-adds a near-dup of a surviving bullet or the Results line.
+test('backfill: pulls a distinct kernel bullet, skips a near-dup paraphrase', () => {
+  localStorage.setItem('personalInfo', JSON.stringify({
+    experience: [{
+      title: 'Team Manager', company: 'Pan Idraet',
+      bullets: [B1, B3,
+        'Manage logistics for the 25-strong squad and their coaching staff',   // near-dup of surviving B3
+        'Chaired the parents committee and ran monthly fixtures'],             // truly distinct
+    }],
+  }));
+  try {
+    // surviving = the cleaner near-dup line that will remain after collapse.
+    const extra = _backfillRoleBullets({ title: 'Team Manager', company: 'Pan Idraet' }, [B3], 1);
+    assert.equal(extra.length, 1, 'returns exactly `need`');
+    assert.ok(/parents committee/.test(extra[0]), 'the DISTINCT kernel bullet is chosen, not the paraphrase');
+  } finally { localStorage.removeItem('personalInfo'); }
+});
+
+test('backfill: no distinct data -> returns empty (sidecar then keeps the near-dup)', () => {
+  localStorage.setItem('personalInfo', JSON.stringify({
+    experience: [{ title: 'Team Manager', company: 'Pan Idraet', bullets: [B1, B3] }],
+  }));
+  try {
+    const extra = _backfillRoleBullets({ title: 'Team Manager', company: 'Pan Idraet' }, [B3], 1);
+    assert.deepEqual(extra, [], 'nothing distinct to add');
+  } finally { localStorage.removeItem('personalInfo'); }
+});
+
+test('backfill: falls back to on-role outcomes when no kernel match', () => {
+  const extra = _backfillRoleBullets(
+    { title: 'X', company: 'Y', outcomes: ['Grew active membership 40% over two seasons'] },
+    ['Some surviving bullet about scheduling'],
+    1,
+  );
+  assert.equal(extra.length, 1);
+  assert.ok(/active membership/.test(extra[0]), 'on-role outcome backfilled');
+});
+
+test('backfill: excludes a candidate subsumed by the role Results line', () => {
+  const extra = _backfillRoleBullets(
+    { title: 'X', company: 'Y', results: 'Grew active membership 40% over two seasons',
+      outcomes: ['Grew active membership 40% over two seasons', 'Launched the winter training camp'] },
+    ['Some surviving bullet'],
+    2,
+  );
+  assert.ok(!extra.some((b) => /active membership/.test(b)), 'the Results-duplicate is filtered out');
+  assert.ok(extra.some((b) => /winter training camp/.test(b)), 'the distinct outcome is kept');
+});
+
+test('backfill: need<=0 or no role -> empty', () => {
+  assert.deepEqual(_backfillRoleBullets({ outcomes: ['a'] }, [], 0), []);
+  assert.deepEqual(_backfillRoleBullets(null, [], 1), []);
 });

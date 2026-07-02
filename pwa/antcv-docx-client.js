@@ -2304,6 +2304,76 @@ function _keepMinBullets(original, collapsed) {
   const c = Array.isArray(collapsed) ? collapsed : o;
   return (c.length >= Math.min(2, o.length)) ? c : o;
 }
+// PAN-IDRAET-BACKFILL-001 (owner 2026-07-02: "if there is less than 2 bullets left
+// after collapse - add more info from the user database. for a reasonable user there
+// should be more data"). Same near-dup predicate as _dedupNearBullets, kept SEPARATE
+// so the shipped, live-verified _dedupNearBullets stays untouched: two texts are
+// near-dupes when they share >=3 stemmed tokens AND EITHER >=0.6 of the smaller token
+// set overlaps OR they open on the same verb+object headline. Used by the BUILD-TIME
+// backfill sidecar (antcv-neardup-backfill.js) — which appends a distinct bullet to
+// the STORED role so preview AND export both show it (parity by construction; an
+// export-only backfill would desync the hide-only preview mirror).
+function _nearDupText(a, b) {
+  const sa = _ndStem(a), sb = _ndStem(b);
+  const ta = new Set(sa), tb = new Set(sb);
+  if (!ta.size || !tb.size) return false;
+  let shared = 0; ta.forEach((w) => { if (tb.has(w)) shared++; });
+  if (shared < 3) return false;
+  const overlap = shared / Math.min(ta.size, tb.size) >= 0.6;
+  const sameHead = sa.length >= 2 && sb.length >= 2 && sa[0] === sb[0] && sa[1] === sb[1];
+  return overlap || sameHead;
+}
+// normalized title|company signature for matching a doc-section role back to its
+// kernel role in personalInfo (kernel roles carry no stable id).
+function _sigOf(title, company) {
+  const n = (x) => String(x == null ? '' : x).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const s = n(title) + '|' + n(company);
+  return s === '|' ? '' : s;
+}
+function _roleKernelMatch(role, kroles) {
+  if (!role || !Array.isArray(kroles) || !kroles.length) return null;
+  const rid = role.id != null ? String(role.id) : '';
+  if (rid) { const byId = kroles.find((k) => k && k.id != null && String(k.id) === rid); if (byId) return byId; }
+  const sig = _sigOf(role.title, role.company);
+  return sig ? (kroles.find((k) => k && _sigOf(k.title, k.company) === sig) || null) : null;
+}
+// Gather up to `need` DISTINCT extra bullets from the user's own data for this role:
+// kernel bullets (workHistory/experience/roles, matched by id or title|company), then
+// on-role outcomes / proofPoints, then resolved proofPointIds. Each candidate is
+// filtered (exact + near-dup) against the surviving bullets, the already-picked
+// backfills and the role's Results line, so a duplicate is never re-introduced.
+// Returned as plain-string bullets re-tensed to the chosen export tense (no-op for
+// 'auto'). Pure w.r.t. the role object — the sidecar appends the result to STORED
+// bullets.
+function _backfillRoleBullets(role, surviving, need) {
+  if (!role || !(need > 0)) return [];
+  let pi = {}, tmode = 'auto';
+  try { const raw = JSON.parse(localStorage.getItem('personalInfo') || '{}') || {}; pi = raw.personalInfo ? raw.personalInfo : raw; } catch (_) {}
+  try { tmode = _expTenseMode(); } catch (_) {}
+  const kroles = [].concat(pi.workHistory || [], pi.experience || [], pi.roles || []).filter(Boolean);
+  const km = _roleKernelMatch(role, kroles);
+  const ppText = {};
+  try { [].concat(pi.proofPointsByRole || [], pi.proofPointsByPosition || []).forEach((p) => { if (p && p.id && typeof p.text === 'string') ppText[p.id] = p.text; }); } catch (_) {}
+  const _oText = (o) => typeof o === 'string' ? o : (o ? String(o.result || o.text || [o.b, o.t].filter(Boolean).join(' ') || o.title || '').trim() : '');
+  const cand = [];
+  if (km && Array.isArray(km.bullets)) km.bullets.forEach((b) => { const t = _bulletText(b); if (t) cand.push(t); });
+  if (Array.isArray(role.outcomes)) role.outcomes.forEach((o) => { const t = _oText(o); if (t) cand.push(t); });
+  if (Array.isArray(role.proofPoints)) role.proofPoints.forEach((p) => { const t = _oText(p); if (t) cand.push(t); });
+  if (Array.isArray(role.proofPointIds)) role.proofPointIds.forEach((id) => { const t = ppText[id]; if (t) cand.push(t); });
+  const block = (Array.isArray(surviving) ? surviving.map(_bulletText) : []).filter(Boolean);
+  if (typeof role.results === 'string' && role.results.trim()) block.push(role.results.trim());
+  const out = [];
+  for (const raw of cand) {
+    const t = String(raw == null ? '' : raw).trim();
+    if (!t) continue;
+    const lc = t.toLowerCase();
+    if (block.some((x) => x.toLowerCase() === lc) || out.some((x) => x.toLowerCase() === lc)) continue;   // exact
+    if (block.some((x) => _nearDupText(x, t)) || out.some((x) => _nearDupText(x, t))) continue;           // near-dup
+    out.push(t);
+    if (out.length >= need) break;
+  }
+  return out.map((t) => { try { return _tenseLead(t, tmode); } catch (_) { return t; } });
+}
 // Collapse one role's near-dup bullets, KEEP_MIN-guarded; returns the SAME role
 // object reference when nothing changed (so callers can cheaply detect a no-op).
 function _collapseRoleBullets(r) {
@@ -2313,10 +2383,18 @@ function _collapseRoleBullets(r) {
   const kept = _keepMinBullets(r.bullets, collapsed);
   return kept === r.bullets ? r : { ...r, bullets: kept };
 }
-export { _dedupNearBullets, _collapseRoleBullets, _keepMinBullets, sanitizeForExport };
+export { _dedupNearBullets, _collapseRoleBullets, _keepMinBullets, _backfillRoleBullets, sanitizeForExport };
 // PAN-IDRAET-PREVIEW-HIDE-001: expose the SAME collapse predicate the export uses so
 // the preview-hide sidecar (antcv-neardup-preview-hide.js) can never drift from it.
-try { if (typeof window !== 'undefined') window.AntcvCollapseRoleBullets = _collapseRoleBullets; } catch (_) {}
+// PAN-IDRAET-BACKFILL-001: also expose the raw near-dup collapse + the distinct-data
+// backfill so the build-time backfill sidecar reuses THIS module's logic (no drift).
+try {
+  if (typeof window !== 'undefined') {
+    window.AntcvCollapseRoleBullets = _collapseRoleBullets;
+    window.AntcvDedupNearBullets = _dedupNearBullets;
+    window.AntcvBackfillRoleBullets = _backfillRoleBullets;
+  }
+} catch (_) {}
 // TENSE-AT-LAMINATION-001 (owner 2026-06-19: "I want the tense the user chose to be
 // the generated tense — the app already takes too much work time"). Generation already
 // writes bullets/outcomes in the chosen tense via the prompt's __tenseRule; but a

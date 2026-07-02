@@ -170,10 +170,12 @@ function startBodyObserver(): MutationObserver {
   const obs = new MutationObserver(() => {
     if (pending) return;
     pending = true;
-    requestAnimationFrame(() => {
+    // STICKY-LEAK-005: setTimeout, not rAF — rAF never fires in a background
+    // tab, freezing this loop with `pending` stuck true (stranded island).
+    setTimeout(() => {
       pending = false;
       try { applyOnce(); } catch (e) { console.warn('[LanguageCard] applyOnce failed', e); }
-    });
+    }, 60);
   });
   obs.observe(target, { childList: true, subtree: true, attributes: false });
   return obs;

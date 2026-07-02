@@ -169,10 +169,12 @@ export function mountWritingStylePickerIsland(): void {
   observer = new MutationObserver(() => {
     if (pending) return;
     pending = true;
-    requestAnimationFrame(() => {
+    // STICKY-LEAK-005: setTimeout, not rAF — rAF never fires in a background
+    // tab, freezing this loop with `pending` stuck true (stranded island).
+    setTimeout(() => {
       pending = false;
       try { applyOnce(); } catch (e) { console.warn('[WritingStylePicker] applyOnce failed', e); }
-    });
+    }, 60);
   });
   observer.observe(document.body, { childList: true, subtree: true });
 

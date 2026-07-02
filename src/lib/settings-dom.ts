@@ -212,6 +212,13 @@ export function isLayoutSubtab(root: Element): boolean {
   // (never Advanced/Admin, where the layout button can also linger).
   if (st.sub) return false;
   if (st.top && st.top !== 'standard') return false;
+  // STICKY-LEAK-005 (owner 2026-07-03, live screenshot): a visible marker OWNED
+  // by another subtab is a definitive NOT-Layout signal even when the chip
+  // heuristic comes back empty — "Delete user" only renders on Account,
+  // "APPLICATIONS" only on Application history. Excludes island subtrees, so an
+  // island can never keep itself mounted through this test.
+  if (hasVisibleNativeMarker(root, /Delete user/i)) return false;
+  if (hasVisibleNativeMarker(root, /^APPLICATIONS$/i)) return false;
   return findAdvancedStyleButton(root) != null;
 }
 

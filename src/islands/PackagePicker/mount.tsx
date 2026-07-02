@@ -221,21 +221,34 @@ export function mountPackagePickerIsland(): void {
 
   try { applyOnce(); } catch (e) { console.warn('[PackagePicker] initial mount failed', e); }
 
+  // STICKY-LEAK-005: rAF debounce never fires in a background/occluded tab — a
+  // mutation there set `pending` and froze the observe→applyOnce loop until the
+  // next foreground paint, stranding the card (and its native-button
+  // decorations) across subtab switches. setTimeout keeps running in background
+  // tabs, so the loop can no longer freeze.
   let pending = false;
-  observer = new MutationObserver(() => {
+  const schedule = () => {
     if (pending) return;
     pending = true;
-    requestAnimationFrame(() => {
+    setTimeout(() => {
       pending = false;
       try { applyOnce(); } catch (e) { console.warn('[PackagePicker] applyOnce failed', e); }
-    });
-  });
+    }, 60);
+  };
+  observer = new MutationObserver(schedule);
   observer.observe(document.body, { childList: true, subtree: true });
+  // STICKY-LEAK-005 heartbeat: while mounted, re-check every 1.5s so any strand
+  // self-heals within a beat. No-op when unmounted.
+  const heartbeat = setInterval(() => {
+    if (!state.container) return;
+    try { applyOnce(); } catch { /* */ }
+  }, 1500);
 
   (window as unknown as { __antcvReactPackagePickerTeardown?: () => void })
     .__antcvReactPackagePickerTeardown = () => {
     try { observer?.disconnect(); } catch { /* */ }
     observer = null;
+    try { clearInterval(heartbeat); } catch { /* */ }
     unmountIfMounted();
     booted = false;
   };

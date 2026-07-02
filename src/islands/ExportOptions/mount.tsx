@@ -107,21 +107,35 @@ export function mountExportOptionsIsland(): void {
   booted = true;
 
   try { applyOnce(); } catch (e) { console.warn('[ExportOptions] initial mount failed', e); }
+  // STICKY-LEAK-005: the debounce was requestAnimationFrame — which never fires
+  // in a background/occluded tab, so a mutation arriving there set `pending` and
+  // froze the whole observe→applyOnce loop until the next foreground paint
+  // (island stranded mounted across subtab switches). setTimeout still runs in
+  // background tabs (clamped, which is fine for a 60ms debounce).
   let pending = false;
-  observer = new MutationObserver(() => {
+  const schedule = () => {
     if (pending) return;
     pending = true;
-    requestAnimationFrame(() => {
+    setTimeout(() => {
       pending = false;
       try { applyOnce(); } catch (e) { console.warn('[ExportOptions] applyOnce failed', e); }
-    });
-  });
+    }, 60);
+  };
+  observer = new MutationObserver(schedule);
   observer.observe(document.body, { childList: true, subtree: true });
+  // STICKY-LEAK-005 heartbeat: while the card is mounted, re-check every 1.5s
+  // regardless of mutations — ANY strand (missed mutation, throttled timer,
+  // detection edge) self-heals within a beat. No-op when unmounted.
+  const heartbeat = setInterval(() => {
+    if (!container) return;
+    try { applyOnce(); } catch { /* */ }
+  }, 1500);
 
   (window as unknown as { __antcvReactExportOptionsTeardown?: () => void })
     .__antcvReactExportOptionsTeardown = () => {
     try { observer?.disconnect(); } catch { /* */ }
     observer = null;
+    try { clearInterval(heartbeat); } catch { /* */ }
     unmountIfMounted();
     booted = false;
   };

@@ -844,7 +844,19 @@
       (console.warn("[extractPDFText] PDF.js extraction failed:", e.message),
         (n.warning = "pdfjs_error: " + e.message));
     }
-    if (o.trim().length <= 30)
+    // JD-SCAN-HALLUCINATION-001 (owner 2026-07-03, the NIL JD PDF): when a text
+    // LAYER exists but is GARBLED (broken ToUnicode font maps — pdfjs extracts
+    // ~1500 chars/page of control glyphs), the document-LLM tier reads the SAME
+    // corrupted stream; providers without native PDF page rendering hallucinate
+    // a plausible JD from it, and the garble detector cannot flag fluent
+    // hallucinated output. Pixels cannot lie: route the garbled case straight
+    // to the vision tier, exactly like image-only PDFs.
+    if ("pdfjs_garbled" === n.warning)
+      (console.warn(
+        "[extractPDFText] garbled text layer — skipping LLM-document step (hallucination risk), going straight to vision OCR",
+      ),
+        (n.warning += "; garbled_skip_llm_for_vision"));
+    else if (o.trim().length <= 30)
       (console.warn(
         `[extractPDFText] PDF.js returned only ${o.trim().length} chars — skipping LLM-document step (image-only PDF), going straight to vision OCR`,
       ),

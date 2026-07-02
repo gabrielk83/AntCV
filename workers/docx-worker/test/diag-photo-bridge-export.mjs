@@ -104,17 +104,21 @@ const contactPara = paraAround(bridge, '31 71');
 const bAnchorInContact = /<wp:anchor/.test(contactPara);
 const bContactInd = /w:left="2592"/.test(contactPara) && /w:right="-216"/.test(contactPara);
 const bContact8pt = /<w:sz w:val="16"\/>/.test(contactPara);
+// CONTACT-TRACK-TIGHT-001 (1.14.123): bridge contact runs condensed 0.5pt
+// (rPr w:spacing w:val="-10"); non-bridge contact keeps default tracking.
+const bContactTight = /<w:spacing w:val="-10"\/>/.test(contactPara);
 // sidebar first paragraph = spacer: after=990, no drawing anywhere in it
 const bSpacer = bridge.includes('w:after="990"');
 // Control: default sidebar-top keeps the single gridSpan-2 band + an inline image.
 const nInline = /<wp:inline/.test(normal);
 const nContactPara = paraAround(normal, '31 71');
 const nNoInd = !/w:left="2592"/.test(nContactPara);
+const nNoTight = !/<w:spacing w:val="-10"\/>/.test(nContactPara);
 
 log('bridge header split (2 cells, no gridSpan):', bSplit, '| normal gridSpan-2 kept:', nSpan);
 log('bridge medallion FLOAT 1.50":', bFloat && bSized, '| posH page 396240:', bPosH, '| posV -365760:', bPosV, '| escapes cell:', bEscapesCell, '| band row empty:', bNotInBandRow);
-log('anchor rides contact para:', bAnchorInContact, '| contact ind 2592/-216:', bContactInd, '| contact 8pt:', bContact8pt, '| sidebar spacer 990:', bSpacer);
-log('normal sidebar-top photo stays inline:', nInline, '| normal contact no ind:', nNoInd);
-const ok = bSplit && nSpan && bFloat && bSized && bPosH && bPosV && bEscapesCell && bNotInBandRow && bAnchorInContact && bContactInd && bContact8pt && bSpacer && nInline && nNoInd;
+log('anchor rides contact para:', bAnchorInContact, '| contact ind 2592/-216:', bContactInd, '| contact 8pt:', bContact8pt, '| contact tracking -10:', bContactTight, '| sidebar spacer 990:', bSpacer);
+log('normal sidebar-top photo stays inline:', nInline, '| normal contact no ind:', nNoInd, '| normal no tracking:', nNoTight);
+const ok = bSplit && nSpan && bFloat && bSized && bPosH && bPosV && bEscapesCell && bNotInBandRow && bAnchorInContact && bContactInd && bContact8pt && bContactTight && bSpacer && nInline && nNoInd && nNoTight;
 log(ok ? 'PHOTO-BRIDGE-EXPORT OK' : 'PHOTO-BRIDGE-EXPORT FAIL');
 process.exit(ok ? 0 : 1);

@@ -25644,7 +25644,10 @@ function buildHeaderCell(ctx, bridgePhoto) {
         // FIGURE-CONTACT-REF-001: bridge contact is pinned to 8pt per the
         // owner reference (w:sz 16); non-bridge keeps fs.contactSize.
         const pt = __bridgePhotoOn ? 8 : fs.contactSize;
-        const base = { color: style.headerContactColor, size: pt2hp(pt), font: style.headerFont };
+        // CONTACT-TRACK-TIGHT-001 (owner 2026-07-03, on the 1.14.120 PDF:
+        // "same size but letter separation a bit smaller"): condense the
+        // bridge contact runs by 0.5pt (w:spacing -10 twentieths). Size stays 8pt.
+        const base = { color: style.headerContactColor, size: pt2hp(pt), font: style.headerFont, ...(__bridgePhotoOn ? { characterSpacing: -10 } : {}) };
         const kids = [];
         if (__bridgePhotoOn) {
           // The 1.50" page-anchored medallion, first run of this paragraph —
@@ -28014,7 +28017,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.122-sidebar-align-2";
+var VERSION = "1.14.123-contact-track-tight";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

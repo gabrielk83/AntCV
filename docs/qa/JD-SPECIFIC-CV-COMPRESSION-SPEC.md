@@ -84,3 +84,27 @@ NOT relevance-ranked section reordering (both explicitly rejected by the owner).
   existing autoPages + sidebar-fill pagination, not a content rule.
 - Likely a generation-prompt change (worker) + a client trim sidecar; needs an
   owner regen to verify. Parity: preview + export ([[export-sanitize-and-preview-parity]]).
+
+## Additions (owner 2026-07-03, NIL application — "do not forget")
+
+10. **Adapt the SPECIALIZATION and the CL SLOGAN to the JD.** The header positioning
+    triad (`personalInfo.specialization`, the "Application:" band line) and the CL
+    slogan (standalone keys `antcv:clSlogan` etc.) must be regenerated/adapted per
+    targeted application, not carried over from the previous one.
+
+11. **Sidebar relevance cut with an explicit EXEMPT LIST.** Cut everything irrelevant
+    to the JD from the sidebar — EXCEPT Interests, Languages, and Accessibility, which
+    always stay. (Extends rules 2/8 from item-level trims to whole irrelevant
+    entries/groups; rule 3's "no cross-section dedup" still holds.)
+
+12. **Merge positions; remove or rephrase bullets.** Roles with low JD relevance may be
+    MERGED (e.g. two adjacent same-employer roles become one entry) and their bullets
+    removed or rephrased toward the JD. Variant-tolerant `_samePosition` machinery
+    exists (role-doubling fix 1.51.41) — merging must never duplicate or ghost a role.
+
+13. **When the JD contains applicant questions → the CL gets its second (Q&A) page.**
+    Machinery SHIPPED (APPLICATION-QA-001: P1 renders from
+    `antcv:applicationQuestions`; P2+P3 bridge antcv-application-qa-detect.js fills it
+    from rationale.questions_in_jd or POST /api/jd-analysis). For the NIL application
+    the bridge never fired because parse_jd crashed (LADDER-CONST-CRASH-001, fixed
+    1.51.97) — VERIFY after the owner's NIL regen that the second CL page appears.

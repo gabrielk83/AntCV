@@ -15,7 +15,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.86-header-rule-inpanel';
+  var VERSION = '1.51.87-header-rule-detect2';
   if (window.__antcvHeaderRuleControl === VERSION) return;
   window.__antcvHeaderRuleControl = VERSION;
 
@@ -84,10 +84,18 @@
     [/^application/i, 'specialisation'],   // the Application line IS the specialisation slot
     [/^contact/i, 'contact'],
   ];
-  function fieldOfRow(row) {
+  // HEADER-RULE-DETECT-002 (owner DOM capture): the ROW text starts with the
+  // move buttons, not the label — detect from the PANEL content first (the
+  // Name editor carries 'Full name'), then a word-search of the row text.
+  function fieldOfRow(row, panel) {
     try {
-      var txt = String(row && row.textContent || '').trim();
-      for (var i = 0; i < FIELD_OF_LABEL.length; i++) if (FIELD_OF_LABEL[i][0].test(txt)) return FIELD_OF_LABEL[i][1];
+      var pt = String(panel && panel.textContent || '');
+      if (/full name/i.test(pt)) return 'name';
+      var rt = String(row && row.textContent || '');
+      if (/special/i.test(rt) || /special/i.test(pt)) return 'specialisation';
+      if (/application/i.test(rt) || /application/i.test(pt)) return 'specialisation';
+      if (/contact/i.test(rt) || /contact/i.test(pt)) return 'contact';
+      if (/name/i.test(rt)) return 'name';
     } catch (_) {}
     return null;
   }
@@ -133,7 +141,7 @@
         var backRow = btns[i].parentElement;
         var panel = backRow && backRow.parentElement;
         if (!panel || panel.querySelector('[data-antcv-header-rule-row]')) continue;
-        var k = fieldOfRow(panel.previousElementSibling);
+        var k = fieldOfRow(panel.previousElementSibling, panel);
         if (!k) continue;
         panel.appendChild(buildRuleRow(k));
       }

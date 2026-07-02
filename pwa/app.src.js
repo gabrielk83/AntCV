@@ -7205,7 +7205,7 @@
           }),
           React.createElement(Fe, {
             value: (e.align && e.align.content) || "left",
-            onChange: (t) => d({ align: { ...(e.align || {}), content: t } }),
+            onChange: (t) => { d({ align: { ...(e.align || {}), content: t } }); try { window.__antcvSetHeaderItemAlign && window.__antcvSetHeaderItemAlign("name", t); } catch (_) {} },
             title: "CJLR for name text",
           }),
         ),
@@ -12038,13 +12038,13 @@
   }) {
     const [m, g] = React.useState(() => ie()),
       [f, h] = React.useState(null),
-      y = (e, t) => {
+      y = (window.__antcvSetHeaderItemAlign = (e, t) => {
         const n = { ...(d || {}), [e]: t };
         (p(n), u.set("headerItemAlign", n));
         try {
           cloudWrite({ headerItemAlign: n });
         } catch (e) {}
-      },
+      }),
       b = (e) => (d && d[e]) || "left",
       w = (e) => {
         (c(e), u.set("topbarOrder", e));
@@ -12175,7 +12175,10 @@
             }),
             React.createElement(Fe, {
               value: b("name_input"),
-              onChange: (e) => y("name_input", e),
+              // HEADER-NAME-CJLR-001 (owner 2026-07-03 "CJLR of name button is not
+              // working"): this wrote only headerItemAlign.name_input (the EDITOR
+              // input's text-align) — the BAND reads .name. Drive both.
+              onChange: (e) => { y("name_input", e); y("name", e); },
               title: "CJLR for name text",
             }),
           ),

@@ -101,3 +101,44 @@ test('idempotent: a second run after scrubbing changes nothing', () => {
   api.run();
   assert.equal(store.get('sections'), after);
 });
+
+// UNSOL-SCRUB-GUARDKEYS-001 (1.51.98, the NIL/Terma recurrence): the prior
+// company may predate antcv:activeAppCompany — but the clProseGuard bucket
+// keys ("Terma A/S|Senior Systems Engineer – …") still name it. Harvest the
+// key's company half (+ a legal-suffix-stripped variant) as scrub candidates.
+
+test('guard-key company (activeAppCompany EMPTY): "Terma A/S" bucket scrubs bare "Terma" prose', () => {
+  const s = baseStore('Unsolicited', '');
+  s['antcv:clProseGuard'] = JSON.stringify({
+    '|': { opening: { items: [{ b: '', t: 'skeleton' }] } },
+    'Terma A/S|Senior Systems Engineer – Electro-Optical Systems': { opening: {} },
+  });
+  const { api, store, events } = load(s);
+  api.run();
+  const secs = JSON.parse(store.get('sections'));
+  assert.doesNotMatch(secs.cv[0].content, /Terma/);
+  assert.match(secs.cv[0].content, /your organisation/);
+  assert.doesNotMatch(secs.cl[0].items[0].t, /Terma/);
+  assert.match(secs.cv[1].roles[0].bullets[0], /Innoviz Technologies/, 'employer mention untouched');
+  assert.ok(events.includes('unsol-company-scrub'));
+});
+
+test('guard-key harvesting skips the "|" skeleton bucket and employer-named buckets', () => {
+  const s = baseStore('Unsolicited', '');
+  s.sections = JSON.stringify({ cv: [{ id: 'p', type: 'text', loc: 'main', content: 'Clean unsolicited profile.' }], cl: [] });
+  s['antcv:clProseGuard'] = JSON.stringify({
+    '|': { opening: {} },
+    'Innoviz Technologies|Change Request Lead': { opening: {} },
+  });
+  const { api, store } = load(s);
+  const before = store.get('sections');
+  api.run();
+  assert.equal(store.get('sections'), before, 'employer bucket + skeleton bucket must not trigger a write');
+});
+
+test('_stripLegal drops Danish/intl suffixes, keeps plain names', () => {
+  const { api } = load(baseStore('Unsolicited', ''));
+  assert.equal(api._stripLegal('Terma A/S'), 'Terma');
+  assert.equal(api._stripLegal('Kanzen Konsulenter ApS'), 'Kanzen Konsulenter');
+  assert.equal(api._stripLegal('NIL Technology'), 'NIL Technology');
+});

@@ -2933,6 +2933,34 @@
           try {
             const wh = o.workHistory || o.experience || o.roles;
             if (Array.isArray(wh) && wh.length) {
+              // KERNEL-V2-READER-001 (register row 8a/8b): read the STAGED v2
+              // kernel DIRECTLY (antcv:ingestedKernel — the store autoSync fills
+              // from D1 kernel_v2) and key per-role langInvariantTokens by
+              // company|title, so each STORED WORK HISTORY line carries the
+              // explicit DO-NOT-TRANSLATE list the §3 language rule honors.
+              // Additive: absent/invalid kernel changes nothing.
+              const v2ByKey = (() => {
+                try {
+                  const k = JSON.parse(localStorage.getItem("antcv:ingestedKernel") || "null");
+                  const m = {};
+                  if (k && Array.isArray(k.experience))
+                    k.experience.forEach((r2) => {
+                      if (!r2 || "object" != typeof r2) return;
+                      const key = (String(r2.company || "").trim() + "|" + String(r2.role || r2.title || "").trim()).toLowerCase();
+                      if (key !== "|") m[key] = r2;
+                    });
+                  return m;
+                } catch (_) { return {}; }
+              })();
+              const v2Toks = (company, title) => {
+                try {
+                  const v2 = v2ByKey[(company + "|" + title).toLowerCase()];
+                  const toks = v2 && Array.isArray(v2.langInvariantTokens)
+                    ? v2.langInvariantTokens.filter((t) => t && "string" == typeof t && t.trim()).slice(0, 12)
+                    : [];
+                  return toks.length ? " | DO-NOT-TRANSLATE: " + toks.join(", ") : "";
+                } catch (_) { return ""; }
+              };
               const lines = wh
                 .map((e, i) => {
                   if (!e || "object" != typeof e) return "";
@@ -2953,6 +2981,7 @@
                     // flag so the writer chooses tense from the FLAG, never by parsing
                     // the date string.
                     (e.isCurrent === true ? " | CURRENT ROLE" : "") +
+                    v2Toks(company, title) +
                     (bullets.length ? "\n    - " + bullets.join("\n    - ") : "")
                   );
                 })

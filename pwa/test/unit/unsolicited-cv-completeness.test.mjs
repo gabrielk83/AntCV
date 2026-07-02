@@ -84,6 +84,34 @@ test('NOT fully-unsolicited (company set, no JD): also skips', () => {
   assert.equal(api._fullyUnsolicited(), false);
 });
 
+// STORM-EMPTY-SLOT-CONVERGE-001 (owner 2026-07-03): 415's hideEmptyRoleSlots hides an
+// entirely-empty placeholder slot; this sidecar must NOT un-hide it (the un-hide/re-hide
+// ping-pong was the demo-mode sections-updated storm behind the alignment "jumping" and
+// the Settings→Personal "bleeping").
+test('placeholder-empty slot stays hidden (no 415 ping-pong)', () => {
+  const sections = { cv: [{ id: 'experience', type: 'experience', roles: [
+    { id: 'r1', title: 'Product Expert', company: 'Kanzen', bullets: ['real bullet'], on: true },
+    { id: 'r8', title: '[Role title]', company: '[Company name]', bullets: ['[Bullet 1 - describe scope and outcome]'], on: false },
+    { id: 'r9', title: '', company: '', bullets: [], on: false },
+    { id: 'c', title: 'Security Guard', on: false },   // REAL role: still un-hidden
+  ] }], cl: [] };
+  const { api, store } = load({ company: 'Unsolicited', sections });
+  api._apply();
+  const roles = JSON.parse(store.get('sections')).cv[0].roles;
+  assert.equal(roles[1].on, false, 'placeholder slot r8 stays hidden');
+  assert.equal(roles[2].on, false, 'empty slot r9 stays hidden');
+  assert.equal(roles[3].on, true, 'real hidden role still un-hidden');
+});
+
+test('emptySlot predicate mirrors 415 (real content in any field keeps the role real)', () => {
+  const { api } = load();
+  assert.equal(api._emptySlot({ title: '[Role title]', company: '', bullets: [] }), true);
+  assert.equal(api._emptySlot({ title: '[Role title]', company: 'Acme', bullets: [] }), false);
+  assert.equal(api._emptySlot({ title: '', company: '', bullets: ['did a thing'] }), false);
+  assert.equal(api._emptySlot({ title: '', company: '', bullets: [], results: 'a result' }), false);
+  assert.equal(api._emptySlot({ title: '', company: '', bullets: [], outcomes: [{ title: 'x' }] }), false);
+});
+
 test('idempotent', () => {
   const sections = { cv: [{ id: 'experience', type: 'experience', roles: [
     { id: 'b', title: 'Electro-Optics Team Leader / R&D Electro-Optics Engineer', on: false },

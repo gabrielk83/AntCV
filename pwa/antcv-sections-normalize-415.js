@@ -15,7 +15,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.41-canon-dedup';
+  var VERSION = '1.51.56-empty-slot-sparse-guard';
   if (window.__antcvSectionsNormalize === VERSION) return;
   window.__antcvSectionsNormalize = VERSION;
 
@@ -904,6 +904,13 @@
     var roles = Array.isArray(sec.roles) ? sec.roles : [];
     if (!roles.length) return null;
     var ph = function (v) { var s = String(v == null ? '' : v).trim(); return !s || s.charAt(0) === '['; };
+    // STORM-EMPTY-SLOT-CONVERGE-001 (owner 2026-07-03, demo "jumping"/"bleeping"): the same
+    // sparse-CV guard as antcv-empty-role-hide.js. In the WIZARD/TEMPLATE state every role is a
+    // placeholder — hiding them all left the demo preview with no PROFESSIONAL EXPERIENCE block
+    // and (before the completeness-side fix) fed an un-hide/re-hide sections-updated storm.
+    // Real CVs (>= 2 roles with real title/company) still get their unused slots hidden.
+    var withReal = roles.filter(function (r) { return r && (!ph(r.title || r.role) || !ph(r.company)); }).length;
+    if (withReal < 2) return null;                     // template/wizard: leave placeholders visible
     var realBullet = function (r) {
       var bs = (r && r.bullets) || [];
       return Array.isArray(bs) && bs.some(function (b) { return !ph(b && typeof b === 'object' ? (b.t || b.text || '') : b); });

@@ -5,7 +5,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='1.50.218-outcomes-page-only';
+  const VERSION='1.51.56-preview-mismatch-guard';
   // v1.40.237-preview-guard: Preview is button-free. Reject seeds and
   // hosts inside .antcv-preview-paper.
   const isInPreviewPaper=el=>{if(!el)return false;const p=document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]');return !!(p&&p.contains(el));};
@@ -151,7 +151,14 @@
     cjlr.onclick=ev=>{ev.preventDefault();ev.stopPropagation();const n=nextAlign(getAlign(idx));setAlign(idx,n);paintCJLR(cjlr,n);applyEditor(row,n);applyPreview();};
   }
 
-  function previewSection(){const sid=outcomeSid();return document.querySelector('[data-sid="'+CSS.escape(sid)+'"]')||Array.from(document.querySelectorAll('[data-sid],section,div')).find(el=>visible(el)&&OUTCOME_RX.test(clean(el.textContent).slice(0,160)));}
+  // OUTCOMES-PREVIEW-MISMATCH-001 (owner 2026-07-03, demo "jumping"): when the CV has NO
+  // SELECTED OUTCOMES section (the wizard/demo template), the old fallback matched ANY visible
+  // div whose first 160 chars contained "selected outcomes" — a giant app container — and
+  // applyPreview stamped its default 'left' onto every td/th/span inside it (incl. the CORE
+  // COMPETENCIES header). 234 wrote center/justify back; the two MutationObserver sweeps
+  // re-triggered each other in an endless ~10ms center<->left loop. Guard: no outcomes section
+  // in the DATA -> nothing to align; the DOM fallback only accepts a [data-sid] host.
+  function previewSection(){if(!outcomeSection())return null;const sid=outcomeSid();return document.querySelector('[data-sid="'+CSS.escape(sid)+'"]')||Array.from(document.querySelectorAll('[data-sid]')).find(el=>visible(el)&&OUTCOME_RX.test(clean(el.textContent).slice(0,160)))||null;}
   function previewItems(sec){
     if(!sec)return[];
     const candidates=Array.from(sec.querySelectorAll('li,tr,[data-antcv-row-path^="items."],[data-edit-path*="items."],p,div')).filter(visible).filter(el=>{

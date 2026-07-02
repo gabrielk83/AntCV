@@ -5,7 +5,7 @@
  */
 (function(){
   'use strict';
-  const VERSION = '1.50.923-boot-perf3';
+  const VERSION = '1.51.56-foreign-section-boundary';
   // v1.40.238-preview-guard: Preview is button-free. Profile/Work-style
   // CJLR controls must not attach to rows inside .antcv-preview-paper.
   const isInPreviewPaper = el => { if(!el) return false; const p=document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]'); return !!(p && p.contains(el)); };
@@ -186,6 +186,20 @@
     document.querySelectorAll('textarea, [contenteditable="true"]').forEach(el=>{
       let p=el.parentElement, sec=null, host=null;
       for(let d=0; p && d<10; d++,p=p.parentElement){
+        // PW-CJLR-FOREIGN-SECTION-001 (owner 2026-07-03, demo "jumping"): a preview
+        // editable inside ANOTHER section (e.g. a CORE COMPETENCIES header cell) used to
+        // climb THROUGH its own [data-sid=core_comp] host (attrs match neither /profile/
+        // nor /work_style/ -> null -> keep climbing) up to the MAIN-COLUMN container,
+        // whose textContent starts with "PROFILE" (the column's first section) — so the
+        // /^profile\b/ text fallback classified the WHOLE COLUMN as the profile section
+        // and applyEditors stamped the profile alignment (default left) onto every
+        // preview editable in it. 234 wrote the header back to center; the two
+        // MutationObserver sweeps re-triggered each other in an endless center<->left
+        // loop (the owner's table-header "jumping"). A [data-sid]/[data-section-id]
+        // ancestor with a FOREIGN sid is a section boundary: the editable belongs to
+        // that section, never to profile/work_style — stop climbing.
+        const ds = p.getAttribute ? (p.getAttribute('data-sid') || p.getAttribute('data-section-id')) : null;
+        if (ds && !/^(profile|work[_-]?style|workstyle)$/i.test(String(ds))) break;
         sec = sectionFromElement(p);
         if(sec){ host=p; break; }
       }

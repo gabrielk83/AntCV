@@ -21,7 +21,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.942-merge-converge';
+  var VERSION = '1.51.56-empty-slot-converge';
   if (window.__antcvUnsolicitedCvCompleteness === VERSION) return;
   window.__antcvUnsolicitedCvCompleteness = VERSION;
 
@@ -67,6 +67,28 @@
 
   function readSections() { try { var v = JSON.parse(localStorage.getItem('sections') || '{}'); return (v && typeof v === 'object') ? v : {}; } catch (_) { return {}; } }
 
+  // STORM-EMPTY-SLOT-CONVERGE-001 (owner 2026-07-03, demo-mode "jumping"/"bleeping"):
+  // 415's hideEmptyRoleSlots (EXPERIENCE-EMPTY-SLOT-HIDE-001) hides a role whose
+  // title/company are placeholders and that has no real bullet/outcome; this sidecar
+  // then blindly un-hid it — an endless sections-updated ping-pong (~7.5 writes/s in
+  // the template/demo state) that re-rendered React constantly, so the preview
+  // alignments (table header center, sidebar justify) repainted late on every tick
+  // ("jumping between justified, centered, left") and Settings → Personal islands
+  // re-anchored ("bleeping" that never converges). "ALL positions visible" means all
+  // REAL positions — an entirely-empty placeholder slot stays hidden. The predicate
+  // mirrors 415's byte-for-byte so the two sidecars agree and converge in one pass.
+  function _ph(v) { var s = String(v == null ? '' : v).trim(); return !s || s.charAt(0) === '['; }
+  function _realBullet(r) {
+    var bs = (r && r.bullets) || [];
+    return Array.isArray(bs) && bs.some(function (b) { return !_ph(b && typeof b === 'object' ? (b.t || b.text || '') : b); });
+  }
+  function _realOutcome(r) {
+    if (r && (r.result || r.results)) { var rr = r.result || r.results; if (!_ph(rr && typeof rr === 'object' ? (rr.t || rr.result || '') : rr)) return true; }
+    var os = (r && r.outcomes) || [];
+    return Array.isArray(os) && os.some(function (o) { return o && !_ph(o.result || o.title || o); });
+  }
+  function emptySlot(r) { return _ph(r && (r.title || r.role)) && _ph(r && r.company) && !_realBullet(r) && !_realOutcome(r); }
+
   function apply() {
     if (disabled()) return;
     if (!fullyUnsolicited()) return;
@@ -84,7 +106,9 @@
         // (the real source of the salmon "breathing", the page-2/3 dance, AND the edit-revert). Skipping
         // the merge-hidden role lets BOTH sidecars converge: every OTHER role shows, the merged duplicate
         // stays hidden, no further writes.
-        if (r.on === false && !r.__antcvMergeHidden) { r.on = true; changed = true; } // un-hide every role except a merged duplicate
+        // STORM-EMPTY-SLOT-CONVERGE-001: never un-hide an entirely-empty placeholder
+        // slot — 415 hideEmptyRoleSlots just hid it and would hide it again (loop).
+        if (r.on === false && !r.__antcvMergeHidden && !emptySlot(r)) { r.on = true; changed = true; } // un-hide every real role except a merged duplicate
         if (typeof r.title === 'string') { var nt = reorderTitle(r.title); if (nt !== r.title) { r.title = nt; changed = true; } }
       });
       if (!changed) return;
@@ -101,5 +125,5 @@
   try { window.addEventListener('storage', function (e) { if (!e || e.key === 'sections' || e.key === 'meta' || e.key === null) tick(); }); } catch (_) {}
   setInterval(tick, 5000);
 
-  window.AntcvUnsolicitedCvCompleteness = { version: VERSION, _apply: apply, _reorderTitle: reorderTitle, _fullyUnsolicited: fullyUnsolicited };
+  window.AntcvUnsolicitedCvCompleteness = { version: VERSION, _apply: apply, _reorderTitle: reorderTitle, _fullyUnsolicited: fullyUnsolicited, _emptySlot: emptySlot };
 })();

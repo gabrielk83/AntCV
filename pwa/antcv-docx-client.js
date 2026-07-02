@@ -769,6 +769,29 @@ export function buildPayload({
       })()),
     },
     header_align: align,
+    // HEADER-ITEM-RULE-001 (owner 2026-07-03): per-field header rule lines with
+    // hide/show + thickness (pt) + color. DEFAULT (absent key) = the current
+    // copenhagen-modern look: rule below Specialization/Application + rule below
+    // Contact, none below Name. Store: localStorage 'headerItemRule' =
+    // { name|specialisation|contact: { on, pt, color } }.
+    header_rules: (() => {
+      const D = { name: { on: false, pt: 0.75, color: '' }, specialisation: { on: true, pt: 0.75, color: '' }, contact: { on: true, pt: 0.75, color: '' } };
+      try {
+        const raw = JSON.parse(localStorage.getItem('headerItemRule') || 'null');
+        if (!raw || typeof raw !== 'object') return D;
+        const norm = (k) => {
+          const v = raw[k];
+          if (!v || typeof v !== 'object') return D[k];
+          const pt = Number(v.pt);
+          return {
+            on: typeof v.on === 'boolean' ? v.on : D[k].on,
+            pt: Number.isFinite(pt) && pt >= 0.25 && pt <= 4 ? pt : D[k].pt,
+            color: typeof v.color === 'string' && /^#?[0-9a-fA-F]{6}$/.test(v.color) ? v.color.replace(/^#/, '') : '',
+          };
+        };
+        return { name: norm('name'), specialisation: norm('specialisation'), contact: norm('contact') };
+      } catch (_) { return D; }
+    })(),
     // v1.50.8 — pass the active visual package + ATS legacy-tier flag
     // so the worker derives its base palette from
     // packages/registry.json. The worker falls back to its legacy

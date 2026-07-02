@@ -11756,7 +11756,16 @@
                 (e.currentTarget.style.position = "relative"));
           },
           onClick: (t) => {
+            // HEADER-ROW-CLICK-001: a click landing on an interactive child must do
+            // ONLY that child's job — bubbling into this toggle double-fired it.
+            if (t && t.target && t.target.closest && t.target.closest("button,input,select,textarea,[contenteditable=true]")) return;
             n(e.key);
+          },
+          // HEADER-ROW-DBLCLICK-001 (owner 2026-07-03): double-click ANYWHERE on the
+          // row — editable text and the gray area included — OPENS the detailed editor.
+          onDoubleClick: (ev) => {
+            try { ev.stopPropagation(); } catch (_) {}
+            if (!t) n(e.key);
           },
           style: {
             display: "flex",
@@ -11786,7 +11795,7 @@
             React.createElement(
               "button",
               {
-                onClick: () => i(e.key, -1),
+                onClick: (ev) => { ev.stopPropagation(); i(e.key, -1); },
                 disabled: 0 === r,
                 style: {
                   fontSize: m,
@@ -11805,7 +11814,7 @@
             React.createElement(
               "button",
               {
-                onClick: () => i(e.key, 1),
+                onClick: (ev) => { ev.stopPropagation(); i(e.key, 1); },
                 disabled: r === a - 1,
                 style: {
                   fontSize: m,
@@ -11874,7 +11883,7 @@
             React.createElement(
               "button",
               {
-                onClick: () => s(e.key),
+                onClick: (ev) => { ev.stopPropagation(); s(e.key); },
                 title:
                   "contact" === e.key
                     ? "Move out of the top bar (into sidebar)"
@@ -11901,7 +11910,7 @@
             React.createElement(
               "button",
               {
-                onClick: () => s(e.key),
+                onClick: (ev) => { ev.stopPropagation(); s(e.key); },
                 title: `Currently in ${e.loc}. Tap to cycle ${"main" === e.loc ? "→ sidebar" : "→ top bar"}.`,
                 style: {
                   fontSize: g,
@@ -11923,7 +11932,7 @@
             React.createElement(
               "button",
               {
-                onClick: () => c(e.key),
+                onClick: (ev) => { ev.stopPropagation(); c(e.key); },
                 style: {
                   fontSize: g,
                   padding: u,
@@ -11941,7 +11950,7 @@
           React.createElement(
             "button",
             {
-              onClick: () => n(e.key),
+              onClick: (ev) => { ev.stopPropagation(); n(e.key); },
               title: "Edit",
               style: {
                 fontSize: g,

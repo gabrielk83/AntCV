@@ -24397,6 +24397,7 @@ async function generateDocx(payload) {
     meta: payload.meta || {},
     doc: payload.doc,
     headerAlign,
+    headerRules: payload.header_rules || {},
     sections: Array.isArray(payload.sections) ? payload.sections.filter((s) => s.on !== false) : [],
     // v1.14.8: per-item page assignments from the PWA's
     // antcv:itemPages map. Shape: { '<sid>': { '<itemIdx>': <page> } }.
@@ -25555,6 +25556,17 @@ function buildHeaderCell(ctx, bridgePhoto) {
   if (pi.name) {
     out.push(new Paragraph({
       alignment: alignType(headerAlign.name),
+      // HEADER-ITEM-RULE-001: optional rule BELOW the name (default OFF).
+      ...((() => {
+        try {
+          const v = (ctx && ctx.headerRules && ctx.headerRules.name) || {};
+          if (v.on !== true) return {};
+          const pt = Number(v.pt);
+          const size = Math.max(2, Math.min(32, Math.round((Number.isFinite(pt) && pt > 0 ? pt : 0.75) * 8)));
+          const color = typeof v.color === "string" && /^[0-9a-f]{6}$/i.test(v.color) ? v.color : style.sidebarHeadColor;
+          return { border: { bottom: { color, space: 4, style: BorderStyle.SINGLE, size } } };
+        } catch (_) { return {}; }
+      })()),
       // 1.14.27: the running-header strip is now a thin 2pt line, so give the
       // name back 3pt (before:60) of top space inside the band so it isn't
       // clipped at the top edge of the candidate section.
@@ -25618,7 +25630,24 @@ function buildHeaderCell(ctx, bridgePhoto) {
     // contact paragraph (top + bottom borders) so they survive the CloudConvert
     // docx->PDF path — the empty-spacer paragraph's bottom border was dropped in
     // the PDF (owner: "the line under the specialisation is not visible in the PDF").
-    const headerRule = { color: style.sidebarHeadColor, space: 4, style: BorderStyle.SINGLE, size: 6 };
+    // HEADER-ITEM-RULE-001 (owner 2026-07-03): per-field header rules with
+    // hide/show + thickness + color (payload.header_rules from the PWA).
+    // ABSENT payload = the copenhagen-modern default, which is EXACTLY the
+    // previous hardcoded look (rule below Spec/Application = the contact
+    // paragraph's TOP border; rule below Contact = its BOTTOM border; none
+    // below Name). DOCX border size is EIGHTHS of a point (6 = 0.75pt).
+    const __hr = (ctx && ctx.headerRules) || {};
+    const __ruleFor = (k, defOn) => {
+      const v = __hr[k] || {};
+      const on = typeof v.on === "boolean" ? v.on : defOn;
+      if (!on) return null;
+      const pt = Number(v.pt);
+      const size = Math.max(2, Math.min(32, Math.round((Number.isFinite(pt) && pt > 0 ? pt : 0.75) * 8)));
+      const color = typeof v.color === "string" && /^[0-9a-f]{6}$/i.test(v.color) ? v.color : style.sidebarHeadColor;
+      return { color, space: 4, style: BorderStyle.SINGLE, size };
+    };
+    const __ruleSpec = __ruleFor("specialisation", true);
+    const __ruleContact = __ruleFor("contact", true);
     // FIGURE-CONTACT-REF-001 (owner reference DOCX, 2026-07-02/03): in bridge
     // mode the 1.50" medallion rides the CONTACT paragraph as a PAGE-anchored
     // float (posH page 396240 EMU = 0.433", posV paragraph -365760 EMU =
@@ -25636,7 +25665,7 @@ function buildHeaderCell(ctx, bridgePhoto) {
       alignment: __bridgePhotoOn ? AlignmentType.JUSTIFIED : alignType(headerAlign.contact),
       ...(__bridgePhotoOn ? { indent: { left: 2592, right: -216 } } : {}),
       shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
-      border: { top: { ...headerRule }, bottom: { ...headerRule } },
+      border: { ...(__ruleSpec ? { top: { ...__ruleSpec } } : {}), ...(__ruleContact ? { bottom: { ...__ruleContact } } : {}) },
       spacing: { before: 0, after: __cgAfter(60) },
       children: (() => {
         // 1.14.51 bridge round 3 (owner): ONE space around the bullet
@@ -28032,7 +28061,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.124-float-spine";
+var VERSION = "1.14.125-header-item-rule";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

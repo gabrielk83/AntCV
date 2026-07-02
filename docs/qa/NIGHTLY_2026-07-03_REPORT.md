@@ -36,11 +36,36 @@ auto-deploys). Workers untouched.
 - Task 1 invariants: `thinking:disabled` gated `/claude-sonnet-5/`-only (`proxy` + `demo-proxy`
   byte-identical, line 205); flagship gen model still `claude-opus-4-7` (line 98) — NOT flipped.
 
+### Live verification (Chrome MCP, owner's browser)
+
+- **1.51.70 deployed** — origin serves `index.html` @ `antcv-docx-client.js?v=1.51.70` + seed
+  `ANTCV_VERSION='1.51.70'`; the deployed `antcv-docx-client.js` contains `_dedupNearBullets`.
+- **Fix correct on REAL owner data** — ran the exact 1.51.70 collapse logic against the live
+  `sections` (Gabriel's loaded Unsolicited CV, 12 experience roles): **0 false collapses** across
+  all roles (the key safety property — no distinct bullet wrongly merged). Current stored data
+  already carries the clean "Managed logistics for 25 players…" (a prior regen fixed the export-16
+  "about 25" pair), so 1.51.70 is the recurrence safety-net; injecting a duplicate into the real
+  Pan Idræt role collapses it correctly (3→ kept, dup removed).
+- **Task 5 QnA paths live** — both sidecars loaded on prod: `antcv-application-qa-section.js`
+  (P1, 1.50.778) + `antcv-application-qa-detect.js` (P2/P3, 1.51.55). `antcv:applicationQuestions`
+  absent (active app = Unsolicited, no JD) — expected.
+- **Task 5 Brand-fit toggle located** — the 🎨 checkbox "Brand fit (match colours & fonts to the
+  target company)" surfaces on the home/wizard screen below Generate; opt-in `window.__antcvBrandFit`
+  (undefined until checked). Confirmed it flips the flag when toggled.
+- The saved **NIL Technology** application is in cloud KV (not the loaded local state). Deep-verifying
+  its detected questions / QnA CL page / brand_fit colours needs LOADING that app, which mutates the
+  owner's live session and re-runs the known-broken JD extraction (JD-SCAN-HALLUCINATION-001) at LLM
+  cost — NOT done unilaterally; owner should load it (or say go). A stray click during cloud-restore
+  settling briefly toggled brand-fit + a JD-extraction spinner; both are non-persisted form state and
+  a reload fully restored the clean state (activeApp=Unsolicited, lastJdText empty, flag cleared).
+
 ### Needs owner-eye
 
 - **PAN-IDRAET preview parity** — preview still shows the source bullet (editable), matching the
   existing export-only `hideSubsumed` behavior. Full parity needs a live browser + an index-safe
   render (hide-without-reindex) so the `roles.t.bullets.n` edit path can't corrupt. Deferred.
+- **NIL Technology live verification** — load the saved NIL app and confirm its QnA page +
+  brand_fit output; owner-gated (session mutation + hallucination-prone JD re-extraction).
 - **Task 1 deep** (cascade retuning) — needs the D1 `llm_calls` admin surface, not reachable
   headless. Invariants hold; measured per-task reordering awaits the telemetry read.
 - **Task 2** (gen-flow speed) — needs live `__antcvGenCost` + D1 durations; no blind re-tune

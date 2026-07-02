@@ -31,7 +31,7 @@
 | 17 | PAN-IDRAET-BULLET-NEARDUP-001 (within-role near-dup bullets) — blocked on preview memo emitting bullets too | memory preview-memo-results-only; NIGHTLY 07-03 Task 4.2 | 2026-07-02 |
 | 18 | JD-SCAN-HALLUCINATION-001 ingest reorder (garble → vision FIRST; filename↔company check; "used OCR" notice) — needs real models/owner present | ACTIVE_BUGS; ORPHANS_V2 prompt stretch | 2026-07-02 |
 | 19 | GEN-UNSOL-STALE-JD-001 Patch D (scrub known prior company when meta.company returns empty) | ACTIVE_BUGS 1.51.54 block | 2026-07-02 |
-| 20 | Gen-prompt example-text leftovers (translation/tools/cert example lists still Gabriel-flavored) | GEN-DEHARDCODE-002 report (1.51.64 parallel session) | 2026-07-02 |
+| 20 | ~~Gen-prompt example-text leftovers~~ CLOSED — GEN-DEHARDCODE-003 shipped 1.51.67 (all five example lists neutralized; sweep complete, see CLOSED list) | GEN-DEHARDCODE-002 report → ACTIVE_BUGS batch 10 | 2026-07-02 |
 | 21 | Latent sid-fallback pattern in 234/247/249 (giant-container grab when the target section is absent; 237 hardened 1.51.60) | SETTINGS batch 5 note | 2026-07-02 |
 | 22 | Settings sweep-army burst cost (heavy-but-recovering churn under owner-scale kernel: 279/356/341/language-ui) — optimization track | freeze diag profiles (batches 5+7) | 2026-07-02 |
 | 23 | Anita demo residuals (batch-9 narrowed): docx missing photo + PDF contact placement are SESSION-STATE-gated (bridge indent verified correctly photo-gated in the worker; re-import persona + hard-refresh + re-export decides). Hill&Colony header was an EXTRACTION artifact — present in the PDF; the real issue was the Results bleed (fixed via per-role results, re-import gated) | ACTIVE_BUGS batch 9 | 2026-07-02 |
@@ -46,3 +46,5 @@
 - Demo-proxy gen-job/coherence/salary parity — workers 3.7.0, deployed + verified live.
 - Preview pagination promotion gate (SIDEBAR-PROMOTE-MARGIN-001) — 1.51.63.
 - app.js conflict-marker incident — shipped broken as 1.51.65, repaired 1.51.66 (verified live).
+- Gen-prompt example-list leftovers (row 20) — GEN-DEHARDCODE-003, 1.51.67 (translator KEEP-VERBATIM, LANG-CROSS metrics/tech, tools taxonomy, cert relevance, patent bullet; tests gen-prompt-dehardcode 003 blocks). De-hardcode sweep COMPLETE.
+- Demo-cap UX (cap 429 mis-advised as transient rate limit; Anita skeleton placeholders were the cap symptom) — DEMO-CAP-UX-001, 1.51.68 (ladder stop + banner + fail-fast; BYOK passes; unit/demo-cap-ux.test.mjs); quintet 1.51.69.

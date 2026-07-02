@@ -10264,6 +10264,14 @@
             return;
           d(e.id);
         },
+        // SECTION-ROW-DBLCLICK-001 (owner 2026-07-03): double-click on the ROW -
+        // the gray area next to the editable title included - always ENDS with the
+        // section editor OPEN (two single clicks toggle twice; p is the re-rendered
+        // selected state, so opening only when !p lands OPEN from either start).
+        onDoubleClick: (ev) => {
+          try { ev.stopPropagation(); } catch (_) {}
+          if (!p) d(e.id);
+        },
         style: {
           display: "flex",
           alignItems: "center",

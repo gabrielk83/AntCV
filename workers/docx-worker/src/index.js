@@ -24384,6 +24384,10 @@ async function generateDocx(payload) {
     // BALANCE-OVERFLOW-001 (FLAG-GATED, default off): re-flow sidebar overflow full-width
     // (mergeStyle drops non-string keys, so the flag rides the payload, not style).
     balanceOverflow: payload.balance_overflow === true || !!(payload.style && payload.style.balanceOverflow === true),
+    // FLOAT-SPINE-001 (FLAG-GATED, default off): continuation page-tables become
+    // floating text-anchored tables under a continuous section, per the owner's
+    // hand-edited "_3page proper" reference (same flag transport as balance_overflow).
+    floatSpine: payload.float_spine === true || !!(payload.style && payload.style.floatSpine === true),
     sidebarW: __sidebarW,
     mainW: __mainW,
     fs: fontSizes,
@@ -24996,6 +25000,14 @@ function buildTwoColumnDocument(ctx) {
       width: { size: PAGE_W, type: WidthType.DXA },
       columnWidths: colWidths,
       borders: noBorders(),
+      // FLOAT-SPINE-001 (owner hand-edited "_3page proper" reference, FLAG-GATED
+      // default OFF): continuation tables (NOT page 1) become floating
+      // text-anchored tables — <w:tblpPr w:leftFromText="180" w:rightFromText="180"
+      // w:vertAnchor="text" w:tblpY="1"/> + <w:tblOverlap w:val="never"/> — so under
+      // the continuous sectPr they PACK against preceding content instead of each
+      // claiming a guaranteed inline page (the sidebar navy can then fill to the
+      // page bottom without re-triggering PDF-BLANK-PAGE; PAGE1_BODY_MIN pins stay).
+      ...(!withHeader && ctx.floatSpine ? { float: { verticalAnchor: "text", absoluteVerticalPosition: 1, leftFromText: 180, rightFromText: 180, overlap: "never" } } : {}),
       rows: withHeader
         ? headerRows.concat([makeBodyRow(sb, mnEls, true)])
         : repeatHdr
@@ -25114,6 +25126,9 @@ function buildTwoColumnDocument(ctx) {
     sections: [
       {
         properties: {
+          // FLOAT-SPINE-001: the reference's body sectPr carries
+          // <w:type w:val="continuous"/> so the floating continuation tables pack.
+          ...(ctx.floatSpine ? { type: "continuous" } : {}),
           page: {
             size: { width: PAGE_W, height: PAGE_H, orientation: PageOrientation.PORTRAIT },
             margin: { top: 0, right: 0, bottom: 0, left: 0, header: 0, footer: 60, gutter: 0 }
@@ -28017,7 +28032,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.123-contact-track-tight";
+var VERSION = "1.14.124-float-spine";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

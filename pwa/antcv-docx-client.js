@@ -816,6 +816,15 @@ export function buildPayload({
          localStorage.setItem('antcv:balance-overflow','1')   (then export)
        Workers < 1.14.82 ignore it. */
     ...((() => { try { return localStorage.getItem('antcv:balance-overflow') === '1' ? { balance_overflow: true } : {}; } catch (_) { return {}; } })()),
+    /* FLOAT-SPINE-001 (register row 3, FLAG-GATED, default OFF): continuation
+       page-tables become floating text-anchored tables under a continuous section
+       (the owner's hand-edited "_3page proper" reference), so pages pack instead of
+       each claiming a guaranteed inline page — the path to sidebar-navy-to-page-bottom
+       without re-triggering PDF-BLANK-PAGE. Default off — the LibreOffice/CloudConvert
+       render can't be verified headlessly. Enable to test:
+         localStorage.setItem('antcv:float-spine','1')   (then export)
+       Workers < 1.14.124 ignore it. */
+    ...((() => { try { return localStorage.getItem('antcv:float-spine') === '1' ? { float_spine: true } : {}; } catch (_) { return {}; } })()),
     ...(typeof readPanelDefaultAlign === 'function'
       ? { panel_default_alignment: readPanelDefaultAlign() }
       : {}),

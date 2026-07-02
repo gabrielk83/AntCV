@@ -139,3 +139,20 @@ test('one-time migration copies a pre-existing global JD into the current app sl
   makeTab(backing);
   assert.equal(backing.get('antcv:app:kernel:jdText'), 'edited');
 });
+
+// ── JD-SCOPE-OCC2-GUARD-001 (register row 19, owner 2026-07-03): BOTH cloud
+// restore paths must carry the foreign-device guard — occ-1 (cold-start) shipped
+// with Stage 2; occ-2 (read-from-cloud / manual-save sentinel path) was open. ──
+test('both restore paths carry the foreign-device guard in BOTH bundles', () => {
+  const src = readFileSync(new URL('../../app.src.js', import.meta.url), 'utf8');
+  const app = readFileSync(new URL('../../app.js', import.meta.url), 'utf8');
+  const count = (h, n) => h.split(n).length - 1;
+  // occ-1 (src __foreignDevice / app __antcvFd) + occ-2 (src __foreignDevice2 / app __antcvFd2)
+  assert.equal(count(src, '_pointer_device_id') >= 2, true, 'src: both restore blocks read the pointer stamp');
+  assert.equal(count(app, '_pointer_device_id') >= 2, true, 'app.js: both restore blocks read the pointer stamp');
+  assert.equal(count(src, 'JD-SCOPE-OCC2-GUARD-001'), 1, 'src occ-2 guard marker');
+  assert.equal(count(src, 'Vt(__foreignDevice2 ? "" : e.jd_text)'), 1, 'src occ-2 Vt guarded');
+  assert.equal(count(src, '(__isUnsolicited || __foreignDevice2 || t || n)'), 1, 'src occ-2 mirror guarded');
+  assert.equal(count(app, 'cn(__antcvFd2?"":e.jd_text)'), 1, 'app.js occ-2 Vt guarded');
+  assert.equal(count(app, '"antcv:lastJdText",o||__antcvFd2||r||a?'), 1, 'app.js occ-2 mirror guarded');
+});

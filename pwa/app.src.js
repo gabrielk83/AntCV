@@ -20785,6 +20785,17 @@
                       "Manual save — no JD text available." === e.jd_text ||
                       "Manual save - no JD text available." === e.jd_text ||
                       e.jd_text.startsWith("Manual save");
+                  // JD-SCOPE-OCC2-GUARD-001 (register row 19, owner 2026-07-03): the read-from-
+                  // cloud path adopted ANOTHER device's tailored JD into this tab. Same
+                  // foreign-device check as the cold-start restore (occ-1); e is the
+                  // active_application row, which carries _pointer_device_id (relay Stage 2).
+                  const __foreignDevice2 = (() => {
+                    try {
+                      const mine = window.AntcvJdScope && window.AntcvJdScope.deviceId && window.AntcvJdScope.deviceId();
+                      const setter = e && e._pointer_device_id;
+                      return !!(setter && mine && String(setter) !== String(mine));
+                    } catch (_) { return false; }
+                  })();
                   if (__isUnsolicited) {
                     // CLAMP-GUARD-001 (owner 2026-06-19): do NOT wipe a JD the user JUST
                     // attached (e.g. a URL fetch) when an auto-sync re-reads the still-
@@ -20834,11 +20845,11 @@
                     );
                   } else
                     try {
-                      Vt(e.jd_text);
+                      Vt(__foreignDevice2 ? "" : e.jd_text);
                     } catch (e) {}
                   // JD-CLOUD-VISIBILITY-001 (owner 2026-06-15): mirror the restored
                   // JD into antcv:lastJdText (cross-machine JD-aware visibility).
-                  try { localStorage.setItem("antcv:lastJdText", (__isUnsolicited || t || n) ? "" : (e.jd_text || "")); } catch (e) {}
+                  try { localStorage.setItem("antcv:lastJdText", (__isUnsolicited || __foreignDevice2 || t || n) ? "" : (e.jd_text || "")); } catch (e) {}
                 } else {
                   try { Vt(""); } catch (e) {}
                   try { localStorage.setItem("antcv:lastJdText", ""); } catch (e) {}

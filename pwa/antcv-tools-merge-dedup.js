@@ -22,7 +22,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.847-group-fold';
+  var VERSION = '1.51.55-value-dedup';
   if (window.__antcvToolsMergeDedup === VERSION) return;
   window.__antcvToolsMergeDedup = VERSION;
   try { var off = localStorage.getItem('antcv:disable-tools-dedup'); if (off === '1' || off === 'true') return; } catch (_) {}
@@ -123,6 +123,50 @@
     return true;
   }
 
+  // TOOLS-VALUE-DEDUP-001 (owner 2026-07-03, export 2026-07-02): the gen merge
+  // appends kernel canon rows whose LABEL and GROUP are swapped versions of
+  // rows the LLM already emitted ("grp Optics… / b:Expertise / t:<tail>" vs
+  // "grp Expertise / b:Optics… / t:<same tail>") — byte-identical VALUES under
+  // different labels, so every label-keyed dedup pass misses them. Drop a row
+  // whose normalized BODY exactly equals an earlier kept row's body (>=24
+  // chars — short legit repeats like "Python" under two labels are safe),
+  // stash dropped rows on trimmedItems (hide-over-delete), then remove any
+  // group header left with zero rows (the emptied umbrella Expertise/Tools).
+  function dedupeValueRows(sec) {
+    if (!sec || sec.type !== 'rich_block' || !Array.isArray(sec.items)) return false;
+    var norm = function (t) { return String(t || '').replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase(); };
+    var seen = {}, kept = [], dropped = [];
+    sec.items.forEach(function (it) {
+      if (it && !it.grp) {
+        var body = norm(it.t);
+        if (body.length >= 24 && seen[body]) { dropped.push(it); return; }
+        if (body.length >= 24) seen[body] = 1;
+      }
+      kept.push(it);
+    });
+    if (!dropped.length) return false;
+    // remove group headers that now own zero rows before the next grp/end
+    var out = [];
+    for (var i = 0; i < kept.length; i++) {
+      var it = kept[i];
+      if (it && it.grp) {
+        var hasRow = false;
+        for (var j = i + 1; j < kept.length; j++) {
+          if (kept[j] && kept[j].grp) break;
+          if (kept[j]) { hasRow = true; break; }
+        }
+        if (!hasRow) continue;
+      }
+      out.push(it);
+    }
+    sec.items = out;
+    var prior = Array.isArray(sec.trimmedItems) ? sec.trimmedItems : [];
+    var have = {}; prior.forEach(function (it) { have[String(it.b) + '|' + String(it.t)] = 1; });
+    dropped.forEach(function (it) { var k = String(it.b) + '|' + String(it.t); if (!have[k]) { prior.push(it); have[k] = 1; } });
+    sec.trimmedItems = prior;
+    return true;
+  }
+
   function run() {
     try {
       var secs = readSections();
@@ -132,6 +176,7 @@
         if (!isTools(secs.cv[i])) continue;
         if (collapse(secs.cv[i])) changed = true;
         if (foldLeadingIntoGroup(secs.cv[i])) changed = true;
+        if (dedupeValueRows(secs.cv[i])) changed = true;
       }
       if (!changed) return;
       localStorage.setItem('sections', JSON.stringify(secs));
@@ -141,5 +186,5 @@
 
   window.addEventListener('antcv:sections-updated', run);
   [0, 300, 900, 2000, 3500, 6000].forEach(function (ms) { setTimeout(run, ms); });
-  window.AntcvToolsMergeDedup = { version: VERSION, run: run, _collapse: collapse };
+  window.AntcvToolsMergeDedup = { version: VERSION, run: run, _collapse: collapse, _dedupeValueRows: dedupeValueRows };
 })();

@@ -147,6 +147,60 @@ test('legacy jd_questions CL section is hidden (never deleted) on a non-empty wr
   assert.equal(cl[0].on, false, 'section hidden');
 });
 
+// ---- GEN-UNSOL-STALE-JD-001: unsolicited context gate ----------------------
+
+test('unsolicited via meta: stale questions emptied, sentinel deleted, no fetch', async () => {
+  const { api, store, fetchCalls, dispatched } = load({
+    'antcv:lastJdText': NIL_JD,
+    meta: JSON.stringify({ company: 'Unsolicited' }),
+    rationale: JSON.stringify({ questions_in_jd: TWO_QS }),
+    'antcv:applicationQuestions': JSON.stringify(TWO_QS.map((q) => ({ question: q.question, answer: 'stale' }))),
+    'antcv:applicationQuestionsJd': 'stale-fp',
+  });
+  api.run();
+  await new Promise((r) => setImmediate(r));
+  assert.equal(fetchCalls.length, 0, 'Source B suppressed');
+  assert.equal(store.get('antcv:applicationQuestions'), '[]', 'stale set emptied so P1 hides the page');
+  assert.equal(store.get('antcv:applicationQuestionsJd'), undefined, 'sentinel deleted');
+  assert.ok(dispatched.includes('antcv:sections-updated'));
+});
+
+test('unsolicited via activeAppCompany (JSON-quoted): same gate', async () => {
+  const { api, store, fetchCalls } = load({
+    'antcv:lastJdText': NIL_JD,
+    'antcv:activeAppCompany': '"Unsolicited"',
+    'antcv:applicationQuestions': JSON.stringify([{ question: 'q', answer: 'a' }]),
+  });
+  api.run();
+  await new Promise((r) => setImmediate(r));
+  assert.equal(fetchCalls.length, 0);
+  assert.equal(store.get('antcv:applicationQuestions'), '[]');
+});
+
+test('unsolicited with already-empty key: no write, no dispatch, no fetch', async () => {
+  const { api, store, fetchCalls, dispatched } = load({
+    'antcv:lastJdText': NIL_JD,
+    meta: JSON.stringify({ company: 'Unsolicited' }),
+  });
+  api.run();
+  await new Promise((r) => setImmediate(r));
+  assert.equal(fetchCalls.length, 0);
+  assert.equal(store.get('antcv:applicationQuestions'), undefined);
+  assert.equal(dispatched.length, 0);
+});
+
+test('targeted control: meta.company=NIL keeps Source A working (gate does not regress)', async () => {
+  const { api, store, fetchCalls } = load({
+    'antcv:lastJdText': NIL_JD,
+    meta: JSON.stringify({ company: 'NIL Technology' }),
+    rationale: JSON.stringify({ questions_in_jd: TWO_QS }),
+  });
+  api.run();
+  await new Promise((r) => setImmediate(r));
+  assert.equal(fetchCalls.length, 0);
+  assert.equal(JSON.parse(store.get('antcv:applicationQuestions')).length, 2);
+});
+
 test('kill switch blocks everything', async () => {
   const { api, store, fetchCalls } = load({
     'antcv:lastJdText': NIL_JD,

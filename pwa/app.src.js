@@ -10160,19 +10160,17 @@
           const o = Number(n.dataTransfer.getData("text/plain"));
           Number.isFinite(o) && r && r(o, t, e.loc);
         },
-        // SECTION-TITLE-CLICK-EDIT-001 (owner 2026-07-02): clicking the GRAY area of a
-        // rich_block row focuses its inline title editor (same as clicking the title text);
-        // moving stays on long-press. Non-rich_block rows keep select-on-click.
+        // SECTION-ROW-OPEN-001 (owner 2026-07-03, supersedes SECTION-TITLE-
+        // CLICK-EDIT-001): with the title inline-editable, a gray-area click
+        // must OPEN the section editor again on ANY row. Rename stays on the
+        // title text itself; the closest() guard keeps buttons/inputs/title
+        // clicks from also opening.
         onClick: (ev) => {
-          if ("rich_block" === e.type) {
-            const ed =
-              ev.currentTarget &&
-              ev.currentTarget.querySelector('[contenteditable="true"]');
-            if (ed) {
-              ed.focus();
-              return;
-            }
-          }
+          if (
+            ev.target.closest &&
+            ev.target.closest('button,input,textarea,select,[contenteditable="true"]')
+          )
+            return;
           d(e.id);
         },
         style: {
@@ -10251,6 +10249,14 @@
               draggable: !1,
               title: "Click to rename this section heading",
               onClick: (ev) => ev.stopPropagation(),
+              // SECTION-ROW-OPEN-001: double-click commits any in-progress
+              // rename (blur -> onBlur write) then opens the section editor.
+              onDoubleClick: (ev) => {
+                ev.preventDefault();
+                ev.stopPropagation();
+                ev.currentTarget.blur();
+                d(e.id);
+              },
               onPointerDown: (ev) => ev.stopPropagation(),
               onKeyDown: (ev) => {
                 "Enter" === ev.key
@@ -24071,10 +24077,24 @@
                     },
                   }),
                   d.push({ type: "text", text: `(Above PDF: ${e.name})` }));
+            // GEN-UNSOL-STALE-JD-001 (owner 2026-07-03): with NO JD attached, a
+            // signals payload that IS the previous targeted app's JD (cloud-
+            // restore fills the signals textarea from the active row's jd_text,
+            // mirrored in antcv:lastJdText) must not enter the prompt — the
+            // "unsolicited CL full of NIL content" leak.
+            const __antcvSigTxt = Un.current || Ut;
+            const __antcvSigStale = (() => {
+              try {
+                if (c && String(c).trim()) return !1;
+                const t = String(localStorage.getItem("antcv:lastJdText") || "").trim();
+                return t.length >= 30 && String(__antcvSigTxt || "").trim() === t;
+              } catch (_) { return !1; }
+            })();
             Ut &&
+              !__antcvSigStale &&
               d.push({
                 type: "text",
-                text: "Additional signals:\n" + (Un.current || Ut),
+                text: "Additional signals:\n" + __antcvSigTxt,
               });
             // CL-GHOST-COMPANY-001 (owner 2026-06-09): an UNSOLICITED application
             // (no JD file) must never name a specific company in the cover-letter /
@@ -24633,6 +24653,22 @@
                     opening:
                       "I am writing to introduce myself and express my interest in future opportunities at your organisation.",
                   }));
+                // GEN-UNSOL-STALE-JD-001: this result is committed UNSOLICITED —
+                // no prior targeted app's JD context may survive it. Clear the
+                // JD mirror + the application-QnA bridge keys, and empty the
+                // signals textarea when it still holds that stale JD, so the
+                // JD-gated sidecars (WHY-title, outcome visibility, identity
+                // guard, QA detect/section) see the unsolicited context and the
+                // committed row cannot re-seed it. Deliberately does NOT touch
+                // antcv:activeAppCompany — once lastJdText is empty the
+                // identity guard un-blocks and scrubs the rest itself.
+                try {
+                  const __sjd = String(localStorage.getItem("antcv:lastJdText") || "").trim();
+                  try { __sjd && String(Ut || "").trim() === __sjd && Vt(""); } catch (e) {}
+                  localStorage.setItem("antcv:lastJdText", "");
+                  localStorage.removeItem("antcv:applicationQuestions");
+                  localStorage.removeItem("antcv:applicationQuestionsJd");
+                } catch (e) {}
                 try {
                   const e = (D.company || "").trim();
                   if (

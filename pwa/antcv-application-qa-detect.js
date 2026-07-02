@@ -25,7 +25,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.54';
+  var VERSION = '1.51.55';
   if (window.__antcvApplicationQaDetect === VERSION) return;
   window.__antcvApplicationQaDetect = VERSION;
 
@@ -148,6 +148,21 @@
     return parts.join('\n\n').slice(0, 15000);
   }
 
+  // GEN-UNSOL-STALE-JD-001: application questions only exist for a real JD.
+  // Detect an unsolicited context the same way the identity guard does.
+  function unsolicitedContext() {
+    try {
+      var m = JSON.parse(localStorage.getItem('meta') || 'null');
+      if (m && typeof m === 'object' &&
+          /^(unsolicited|open\s+application)$/i.test(String(m.company || '').trim())) return true;
+    } catch (_) {}
+    try {
+      var ac = String(localStorage.getItem('antcv:activeAppCompany') || '').replace(/"/g, '').trim();
+      if (/^unsolicited$/i.test(ac)) return true;
+    } catch (_) {}
+    return false;
+  }
+
   // Source A: rationale.questions_in_jd from the last targeted generation.
   function fromRationale() {
     var rat = readJson('rationale', null);
@@ -180,6 +195,15 @@
   function run() {
     try {
       if (disabled() || busy) return;
+      // GEN-UNSOL-STALE-JD-001: in an unsolicited context never build the
+      // page, and empty a stale set so P1 hides it (the NIL-questions-on-an-
+      // unsolicited-CL leak).
+      if (unsolicitedContext()) {
+        var cur0 = readJson(OUT_KEY, null);
+        if (Array.isArray(cur0) && cur0.length) writeQuestions([]);
+        try { localStorage.removeItem(SENTINEL_KEY); } catch (_) {}
+        return;
+      }
       // Source A first — free, and authoritative after a targeted gen.
       var fromA = fromRationale();
       if (fromA.length) { writeQuestions(fromA); return; }

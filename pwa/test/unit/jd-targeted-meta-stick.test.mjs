@@ -40,13 +40,24 @@ test('every meta-stick anchor exists in app.js (mirror in sync)', () => {
 });
 
 test('P1: the stub-clear guard sits before the Additional-signals push in both files', () => {
-  // src: guard then the push; app.js: guard expression then sn&&p.push(...)
+  // GEN-UNSOL-STALE-JD-001 Patch A renamed the push payload to __antcvSigTxt;
+  // the stub-clear guard must still precede it in both files.
   const srcIdxGuard = src.indexOf('UNSOLICITED APPLICATION CONTEXT/i.test(String(Un.current))');
-  const srcIdxPush = src.indexOf('"Additional signals:\\n" + (Un.current || Ut)');
+  const srcIdxPush = src.indexOf('"Additional signals:\\n" + __antcvSigTxt');
   assert.ok(srcIdxGuard > 0 && srcIdxPush > 0 && srcIdxGuard < srcIdxPush, 'src: guard must precede the signals push');
   const appIdxGuard = app.indexOf('UNSOLICITED APPLICATION CONTEXT/i.test(String(so.current))&&(so.current=null)');
-  const appIdxPush = app.indexOf('"Additional signals:\\n"+(so.current||sn)');
+  const appIdxPush = app.indexOf('"Additional signals:\\n"+__antcvSigTxt');
   assert.ok(appIdxGuard > 0 && appIdxPush > 0 && appIdxGuard < appIdxPush, 'app.js: guard must precede the signals push');
+});
+
+test('Patch A: stale-JD signals guard present in both files', () => {
+  assert.ok(src.includes('__antcvSigStale'), 'src Patch A missing');
+  assert.ok(app.includes('__antcvSigStale'), 'app.js Patch A missing');
+});
+
+test('Patch B: unsolicited commit clears lastJdText + QnA keys in both files', () => {
+  assert.ok(src.includes('localStorage.removeItem("antcv:applicationQuestionsJd")'), 'src Patch B missing');
+  assert.ok(app.includes('localStorage.removeItem("antcv:applicationQuestionsJd")'), 'app.js Patch B missing');
 });
 
 test('P2: leftover showcase ref is gated on no-JD in both files', () => {

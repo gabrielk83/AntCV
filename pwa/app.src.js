@@ -24799,7 +24799,7 @@
             // whitelist. _t persists navyColor (+cloud); wa partial-merges
             // styleConfig (+cloud) and flips the package to "custom".
             try {
-              const bf = T && T.brand_fit;
+              const bf = (T && T.brand_fit) || ("function" == typeof window.__antcvBrandFitSample ? window.__antcvBrandFitSample() : null); /* BRAND-FIT-PALETTE-001: deterministic JD-hex fallback (antcv-brandfit-sample.js) when the model omitted brand_fit */
               if (__brandFit && bf && "object" == typeof bf) {
                 const hex = (v) =>
                   "string" == typeof v && /^#[0-9a-fA-F]{6}$/.test(v.trim())

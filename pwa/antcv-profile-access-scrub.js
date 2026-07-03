@@ -22,7 +22,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.103-profile-access-scrub';
+  var VERSION = '1.51.104-profile-access-scrub';
   if (window.__antcvProfileAccessScrub === VERSION) return;
   window.__antcvProfileAccessScrub = VERSION;
 
@@ -85,12 +85,28 @@
       if (!secs || typeof secs !== 'object') return;
       var changed = false;
 
-      // 1) profile section — sentence-level scrub
+      // 1) profile section — sentence-level scrub. The profile lives in TWO
+      // shapes: plain `content` and rich_block `items[].t` (the live NIL row
+      // carried the offending sentence in items[0].t — 1.51.103 missed it).
       if (Array.isArray(secs.cv)) {
         var cv = secs.cv.map(function (s) {
-          if (!s || s.id !== 'profile' || typeof s.content !== 'string') return s;
-          var v = scrubProfile(s.content);
-          if (v !== s.content) { changed = true; return Object.assign({}, s, { content: v }); }
+          if (!s || s.id !== 'profile') return s;
+          var patch = null;
+          if (typeof s.content === 'string') {
+            var v = scrubProfile(s.content);
+            if (v !== s.content) (patch = patch || {}).content = v;
+          }
+          if (Array.isArray(s.items)) {
+            var hit = false;
+            var items = s.items.map(function (it) {
+              if (!it || typeof it !== 'object' || typeof it.t !== 'string') return it;
+              var nv = scrubProfile(it.t);
+              if (nv !== it.t) { hit = true; return Object.assign({}, it, { t: nv }); }
+              return it;
+            });
+            if (hit) (patch = patch || {}).items = items;
+          }
+          if (patch) { changed = true; return Object.assign({}, s, patch); }
           return s;
         });
         if (changed) secs = Object.assign({}, secs, { cv: cv });

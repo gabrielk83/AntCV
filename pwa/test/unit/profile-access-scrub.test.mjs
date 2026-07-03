@@ -105,3 +105,21 @@ test('idempotent: second run changes nothing', () => {
   G.run();
   assert.equal(backing.get('sections'), after);
 });
+
+test('rich_block profile (items[].t — the live NIL row shape) is scrubbed too', () => {
+  const backing = new Map();
+  const t =
+    'IT professional with 15+ years across commercial and regulated markets. ' +
+    'Builds the relationships that make hard changes land. ' +
+    'Has worked with people from many backgrounds; hearing impaired.';
+  backing.set('sections', JSON.stringify({
+    cv: [{ id: 'profile', type: 'rich_block', items: [{ b: '', t }] }],
+    cl: [],
+  }));
+  const G = load(backing);
+  G.run();
+  const out = JSON.parse(backing.get('sections')).cv[0].items[0].t;
+  assert.doesNotMatch(out, /many backgrounds|hearing impaired/i);
+  assert.match(out, /IT professional with 15\+ years/);
+  assert.match(out, /hard changes land/);
+});

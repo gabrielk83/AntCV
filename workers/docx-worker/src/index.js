@@ -25446,21 +25446,38 @@ function buildLinearDocument(ctx) {
   // PAGEBREAK-STYLE-OPTIONS-001(c) (1.14.56): the CL gets the same footer
   // page number as the CV (both corner choices render via the footer \u2014 see
   // the two-column builder's note).
-  const clPgNumBlock = style && (style.pageNumbers === "top-right" || style.pageNumbers === "bottom-right") ? {
-    options: {
-      children: [new Paragraph({
-        alignment: AlignmentType.RIGHT,
-        spacing: { before: 0, after: 0, line: 180, lineRule: "exact" },
-        indent: { right: 120 },
-        children: [new TextRun({
-          children: [PageNumber.CURRENT],
-          size: 14,
-          color: "777777",
-          font: "Arial"
-        })]
-      })]
-    }
-  } : null;
+  // CL-AI-NOTICE-FOOTER-001 (owner 2026-07-04): the AI notice moves into the
+  // SECTION FOOTER so EVERY CL page carries it at the true page bottom. The
+  // VML page-bottom frame proved unreliable from inside the page-2 table cell
+  // (LibreOffice dropped it — AI-NOTICE-BOTTOM-CLOUDCONVERT-001), and a footer
+  // is the engine-native per-page mechanism. Page number (when configured)
+  // shares the footer.
+  const __clNoticePara = new Paragraph({
+    alignment: AlignmentType.RIGHT,
+    spacing: { before: 0, after: 0, line: 200, lineRule: "exact" },
+    indent: { right: 120 },
+    children: [new TextRun({
+      text: "AI-assisted — author retains responsibility for content.",
+      italics: true,
+      size: 13,
+      color: "4D7976",
+      font: "Calibri"
+    })]
+  });
+  const __clPgNumPara = style && (style.pageNumbers === "top-right" || style.pageNumbers === "bottom-right") ? new Paragraph({
+    alignment: AlignmentType.RIGHT,
+    spacing: { before: 0, after: 0, line: 180, lineRule: "exact" },
+    indent: { right: 120 },
+    children: [new TextRun({
+      children: [PageNumber.CURRENT],
+      size: 14,
+      color: "777777",
+      font: "Arial"
+    })]
+  }) : null;
+  const clPgNumBlock = {
+    options: { children: __clPgNumPara ? [__clNoticePara, __clPgNumPara] : [__clNoticePara] }
+  };
   return new File({
     creator: pi.name || "AntCV user",
     lastModifiedBy: pi.name || "AntCV user",
@@ -25482,14 +25499,11 @@ function buildLinearDocument(ctx) {
             margin: { top: 0, right: CL_SIDE_MARGIN, bottom: 220, left: CL_SIDE_MARGIN, header: 0, footer: 60, gutter: 0 }
           }
         },
-        ...(clPgNumBlock ? { footers: { default: clPgNumBlock } } : {}),
+        footers: { default: clPgNumBlock },
         children: jdqSec ? [
           bodyTable,
-          // CL-AI-NOTICE-BOTH-PAGES-001 (owner 2026-07-04): with the Q&A page
-          // the letter page LOST its AI notice (the single sentinel moved to
-          // page 2). Anchor one per page — postProcessDocx now swaps EVERY
-          // sentinel (unique VML ids), each pinned to ITS page's bottom corner.
-          buildAiDisclosureHangingTextbox(ctx, { side: "right" }),
+          // CL-AI-NOTICE-FOOTER-001: the notice now lives in the section
+          // FOOTER (every page, true bottom) — no body sentinels in the CL.
           // Hard page break paragraph between pages 1 and 2.
           // Word collapses zero-height paragraphs that have only a
           // pageBreakBefore; using a small exact line-rule keeps
@@ -25555,15 +25569,14 @@ function buildLinearDocument(ctx) {
                         font: style.mainBodyFont
                       })]
                     }),
-                    // AI-WATERMARK-EXPORT-LOCATION-001: last-page anchor sentinel
-                    // (already the final element of the page-2 cell → last page).
-                    buildAiDisclosureHangingTextbox(ctx, { side: "right" })
+                    // CL-AI-NOTICE-FOOTER-001: notice moved to the section footer
+                    emptyParagraph()
                   ]
                 })]
               })
             ]
           })
-        ] : [clHeaderBand, clBodyTopGap, ...(bodyChildren.length ? bodyChildren : [emptyParagraph()]), buildAiDisclosureHangingTextbox(ctx, { side: "right" })]
+        ] : [clHeaderBand, clBodyTopGap, ...(bodyChildren.length ? bodyChildren : [emptyParagraph()])]
       }
     ]
   });
@@ -28090,7 +28103,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.130-ai-notice-bottom-literal";
+var VERSION = "1.14.131-cl-ai-notice-footer";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

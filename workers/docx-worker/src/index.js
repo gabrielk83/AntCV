@@ -25244,9 +25244,9 @@ function buildLinearDocument(ctx) {
     // rich_block (759 keeps it text — that path blanks the sign-off), emit the SAME paragraph the
     // rich_block main rule emits, so the two rules are byte-identical.
     bodyChildren.push(new Paragraph({
-      // CL-RULE-BALANCE-001: balanced half-above/half-below (see the
-      // RULE-INDEPENDENT-001 rule paragraph).
-      spacing: { before: 110, after: 110, line: 40, lineRule: "exact" },
+      // CL-RULE-BALANCE-002: above = before+lineBox(40)+borderSpace(80),
+      // below = after — equalized at ~160tw (see the standalone rule).
+      spacing: { before: 40, after: 160, line: 40, lineRule: "exact" },
       keepNext: true,
       border: { bottom: { color: style.mainHeadColor, space: 4, style: BorderStyle.SINGLE, size: 8 } },
       children: [new TextRun({ text: "" })]
@@ -26397,7 +26397,12 @@ function renderSection(s, ctx, isSidebar) {
         // carried a FULL line box, so the gap above the line was ~3x the gap
         // below. Exact tiny line height + equal before/after = balanced
         // half-above / half-below spacing.
-        spacing: { before: isSidebar ? 50 : 110, after: isSidebar ? 50 : 110, line: 40, lineRule: "exact" },
+        // CL-RULE-BALANCE-002 (owner 2026-07-04, measured on the exported PDF):
+        // the border draws BELOW the paragraph box offset by w:space (4pt=80tw),
+        // so the visible gap above the line = before + lineBox(40) + space(80)
+        // while below = after only. 110/110 was actually ~230/110. Compensate:
+        // above = before + 40 + space, below = after -> equal at ~160tw (8pt).
+        spacing: { before: isSidebar ? 20 : 40, after: isSidebar ? 100 : 160, line: 40, lineRule: "exact" },
         keepNext: true,
         alignment: isSidebar ? AlignmentType.CENTER : void 0,
         shading: isSidebar ? { type: ShadingType.CLEAR, fill: ctx.style.sidebarBg, color: "auto" } : void 0,
@@ -28103,7 +28108,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.131-cl-ai-notice-footer";
+var VERSION = "1.14.132-cl-rule-balance-2";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

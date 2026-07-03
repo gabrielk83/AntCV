@@ -171,3 +171,55 @@ NOT relevance-ranked section reordering (both explicitly rejected by the owner).
   "Electro-Optics Team Leader / R&D Electro-Optics Engineer" but
   "Electro-Optics Engineer & Team Leader" — the craft identity leads, the
   leadership qualifier follows, joined with "&", no slash-title chains.
+
+## Rules 25-33 (owner 2026-07-04, NIL live-review session — generalise ALL of it)
+
+25. **Certificates: JD-relevance cut, per application.** Keep only certificates
+    whose domain maps to a JD activity; drop language/sport/off-domain certs in
+    a targeted CV, and drop any certificate DUPLICATED by a regulatory row
+    (ASPICE cert vs ASPICE regulatory row = one survives). Extends rule 8.
+26. **Accessibility: per-application minimalism.** In a targeted CV the row is
+    the SHORTEST factual form (e.g. "Hearing impaired.") — accommodation
+    detail (implant/aid model, captions/transcripts/follow-up preferences) is
+    not application content unless the role warrants it. Rule 20's career-
+    comment ban stands everywhere.
+27. **Regulatory: every standard must map to a JD activity.** Imaging standards
+    are NOT relevant to a fabrication role (ISO 12233/15739/EMVA 1288 cut for
+    NIL); environmental/durability and weapons-context standards are out
+    unless the JD is that domain. Few survivors -> ONE flat list (rule 19).
+    NIL end-state: ASPICE (traceability), IEC 60825-1 (laser safety),
+    DIN EN 61010 (lab equipment safety).
+28. **Merged-role Results: BOTH constituent results, verbatim, numbers intact.**
+    Never promote a bullet to the Results line, never trim the real quantified
+    results to a thin one-liner. Two same-company roles kept SPLIT each keep
+    their OWN Results (Innoviz: CCB 250->10 days AND LiDAR cost -90%).
+29. **Sidebar labeled values fit ONE rendered line.** "Tai-chi: Stability and
+    calm under pressure" wrapping is a defect — trim wording (or widen the
+    sidebar) until one line. Ties into row 27 (runt/orphan sweep).
+30. **Never force-justify a line with large word gaps.** A justified last/short
+    line with stretched spaces reads broken (Meprolight bullet 2). Render-level:
+    justify only when the line fills naturally; else left-align. (Row 27.)
+31. **Education gold format (one line per degree, tails only when relevant).**
+    Owner's exact form: "MBA: Technion - Strategy, Finance" / "M.Sc. Electrical
+    Engineering(EE): Tel Aviv University - Optics, photonics, nanotech" /
+    "B.Sc. Physics & B.Sc. EE: Tel Aviv University" / "FVU Dansk: KVUC -
+    ongoing". Generalise: "nanotech" abbreviation is fine; competitions/
+    honourable mentions are cut in targeted CVs; NEVER drop a degree relevant
+    to the position (the B.Sc. EE was wrongly dropped once); double degrees
+    join on one line with "&".
+32. **Tools/methods relevance is judged per GROUP AND per VALUE.** Whole
+    irrelevant categories go (Imaging, Product & systems for NIL); surviving
+    categories carry only JD-mapped tools (Software -> Python, Jupyter, Git;
+    MATLAB, COMSOL for NIL; PM/BI tools out). Methods likewise (Quality ->
+    Six Sigma BB, DOE, Gage R&R, MSA for a process-development JD).
+33. **Slogan is per-application content** (rule 23 delivered for NIL as
+    "MAKING THE INVISIBLE MANUFACTURABLE" — the pattern: a short surprising
+    line that connects the candidate's craft to the role's essence, not a
+    standing motto).
+
+### Process lessons (same session, for the build)
+- Live content edits RACE the restore storm: apply edits and fire the export in
+  the SAME synchronous tick; saved application rows can restore a STALE
+  snapshot on selection (row 29 residual — row re-save only after live repair).
+- The antcv tab renderer freezes frequently under MCP automation (recycle the
+  tab, keep evals small).

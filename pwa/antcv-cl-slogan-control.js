@@ -56,6 +56,19 @@
   // with "|" turned into " • ". Read from the stored kernel showcase / personalInfo so the
   // control can SHOW the user what the empty field will render.
   function subtitleFallback() {
+    // SLOGAN-SMART-STATEMENT-001 (owner 2026-07-04: "the slogan and the
+    // specialization are definitely NOT the same for a specified job"): on a
+    // TARGETED application the fallback is the gen's meta.cl_slogan (a smart
+    // statement) — NEVER the specialization triad; no cl_slogan -> no slogan
+    // line. Unsolicited keeps the standing specialization-derived default.
+    try {
+      var m = JSON.parse(localStorage.getItem('meta') || '{}') || {};
+      var co = String(m.company || '').trim();
+      if (co && !/^unsolicited$/i.test(co) && !/^open application$/i.test(co)) {
+        var sm = String(m.cl_slogan || '').trim();
+        return (sm && !/^\[/.test(sm)) ? sm.toUpperCase() : '';
+      }
+    } catch (_) {}
     function fromObj(o) {
       try {
         if (!o || typeof o !== 'object') return '';

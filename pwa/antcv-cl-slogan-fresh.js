@@ -38,7 +38,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.120-slogan-fresh';
+  var VERSION = '1.51.127-smart-statement';
   if (window.__antcvClSloganFresh) return;
   window.__antcvClSloganFresh = VERSION;
 
@@ -71,12 +71,19 @@
   }
   function appKeyOf(m) { return String(m.company || '').trim() + '|' + String(m.role || m.position || '').trim(); }
   // A REAL fresh slogan: non-empty, not a bracketed template placeholder.
-  function realSubtitle(m) {
-    var s = String(m.subtitle || '').trim();
+  // SLOGAN-SMART-STATEMENT-001 (owner: "the slogan and the specialization are
+  // definitely NOT the same for a specified job"): the gen's DISTINCT smart
+  // statement lives in meta.cl_slogan (prompt field since 1.51.127);
+  // meta.subtitle is the SPECIALIZATION triad and only serves as the legacy
+  // comparison value, never as an adoptable slogan.
+  function realText(v) {
+    var s = String(v || '').trim();
     if (!s || s.length < 3) return '';
     if (/\[[^\]]*\]/.test(s)) return '';
     return s;
   }
+  function realSubtitle(m) { return realText(m.cl_slogan) || realText(m.subtitle); }
+  function freshSmart(m) { return realText(m.cl_slogan); }
 
   function tick() {
     if (disabled()) return;
@@ -84,10 +91,22 @@
       var S = '';
       try { S = String(localStorage.getItem(K_TEXT) || '').trim(); } catch (_) {}
       var ctx = readCtx();
-      if (!S) { if (ctx) dropCtx(); return; }
       var m = readMeta();
-      if (!isTargeted(m)) return;                      // unsolicited: standing motto path, never touch
+      if (!isTargeted(m)) { if (!S && ctx) dropCtx(); return; }   // unsolicited: standing motto path, never touch
       var cur = appKeyOf(m);
+      // ADOPT the gen's smart statement: no override -> the fresh cl_slogan
+      // becomes the key (all four render sites read it), stamped to this app.
+      var smart = freshSmart(m);
+      if (!S) {
+        if (ctx) dropCtx();
+        if (smart) {
+          try { localStorage.setItem(K_TEXT, smart); } catch (_) {}
+          writeCtx({ v: smart, app: cur });
+          try { console.log('[slogan-fresh] adopted the generated smart slogan for "' + cur + '"'); } catch (_) {}
+          try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { source: 'slogan-fresh' } })); } catch (_) {}
+        }
+        return;
+      }
       var sub = realSubtitle(m);
       if (ctx && typeof ctx === 'object' && typeof ctx.v === 'string') {
         if (ctx.v !== S) { writeCtx({ v: S, app: cur }); return; }   // fresh write -> current app owns it

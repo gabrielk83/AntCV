@@ -131,3 +131,43 @@ test('empty override clears a stale ctx and stays empty', () => {
   assert.equal(store.get('antcv:clSlogan'), undefined);
   assert.equal(store.get('antcv:clSloganCtx'), undefined);
 });
+
+// ── SLOGAN-SMART-STATEMENT-001 (1.51.127, owner: "the slogan and the
+// specialization are definitely NOT the same for a specified job") ───────────
+
+test('adoption: a fresh targeted gen with meta.cl_slogan writes the key, stamped to this app', () => {
+  const { api, store } = load({
+    meta: JSON.stringify({ company: 'Trackman A/S', role: 'PM', subtitle: 'Processes • Products • People', cl_slogan: 'TRACKING EVERY DECISION TO THE DATA' }),
+  });
+  api._tick();
+  assert.equal(store.get('antcv:clSlogan'), 'TRACKING EVERY DECISION TO THE DATA');
+  assert.deepEqual(JSON.parse(store.get('antcv:clSloganCtx')), { v: 'TRACKING EVERY DECISION TO THE DATA', app: 'Trackman A/S|PM' });
+});
+
+test('adoption never copies the SPECIALIZATION subtitle when cl_slogan is absent', () => {
+  const { api, store } = load({
+    meta: JSON.stringify({ company: 'Trackman A/S', role: 'PM', subtitle: 'Processes • Products • People' }),
+  });
+  api._tick();
+  assert.equal(store.get('antcv:clSlogan'), undefined, 'no smart statement -> no slogan (never the triad)');
+});
+
+test('stale other-app override yields, then the smart statement is adopted (two ticks)', () => {
+  const { api, store } = load({
+    'antcv:clSlogan': NIL_SLOGAN,
+    'antcv:clSloganCtx': JSON.stringify({ v: NIL_SLOGAN, app: 'NIL Technology|Nanooptics Prototyping Engineer' }),
+    meta: JSON.stringify({ company: 'Trackman A/S', role: 'PM', subtitle: 'Processes • Products • People', cl_slogan: 'TRACKING EVERY DECISION TO THE DATA' }),
+  });
+  api._tick();   // yield
+  api._tick();   // adopt
+  assert.equal(store.get('antcv:clSlogan'), 'TRACKING EVERY DECISION TO THE DATA');
+});
+
+test('both bundles carry the cl_slogan prompt field exactly once (mirror lock)', async () => {
+  const appSrc = await readFile(new URL('../../app.src.js', import.meta.url), 'utf8');
+  const appMin = await readFile(new URL('../../app.js', import.meta.url), 'utf8');
+  const NEEDLE = '"cl_slogan":"<COVER-LETTER SLOGAN';
+  assert.equal(appSrc.split(NEEDLE).length - 1, 1, 'app.src.js prompt example');
+  assert.equal(appMin.split(NEEDLE).length - 1, 1, 'app.js prompt example');
+  assert.ok(appSrc.includes('NEVER a copy of the subtitle/specialization'), 'the distinctness rule is in the prompt');
+});

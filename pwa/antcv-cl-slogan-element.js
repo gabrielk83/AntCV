@@ -61,6 +61,17 @@
   // Effective slogan the CL renders: override key, else the specialisation subtitle,
   // uppercased with " | " shown as " • " (same derivation as the render sites).
   function subtitleFallback() {
+    // SLOGAN-SMART-STATEMENT-001: targeted app -> the gen's meta.cl_slogan or
+    // NOTHING; the specialization triad never doubles as the slogan (owner
+    // 2026-07-04). Unsolicited keeps the standing default.
+    try {
+      var m = JSON.parse(localStorage.getItem('meta') || '{}') || {};
+      var co = String(m.company || '').trim();
+      if (co && !/^unsolicited$/i.test(co) && !/^open application$/i.test(co)) {
+        var sm = String(m.cl_slogan || '').trim();
+        return (sm && !/^\[/.test(sm)) ? sm.toUpperCase() : '';
+      }
+    } catch (_) {}
     function fromObj(o) {
       try { return String((o && (o.subtitle || o.specialization || (o.meta && o.meta.subtitle))) || ''); } catch (_) { return ''; }
     }

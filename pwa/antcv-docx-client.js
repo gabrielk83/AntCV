@@ -763,9 +763,19 @@ export function buildPayload({
           // standing / role-smart line, e.g. "Processes • Products • People"), so it never falls back
           // to the app label.
           const ov = String(localStorage.getItem('antcv:clSlogan') || '').trim();
+          // SLOGAN-SMART-STATEMENT-001 (owner 2026-07-04): on a TARGETED app the
+          // chain is override -> the gen's meta.cl_slogan (the smart statement) ->
+          // NOTHING (slogan_hidden, so the WORKER's own subtitle fallback never
+          // duplicates the specialization). Unsolicited keeps the standing default.
+          const smart = String((meta && meta.cl_slogan) || '').trim();
+          const co = String((meta && meta.company) || '').trim();
+          const targeted = !!co && !/^unsolicited$/i.test(co) && !/^open application$/i.test(co);
           const standing = String((meta && meta.subtitle) || '').trim();
-          const sl = (ov && !/^\[/.test(ov)) ? ov : standing;
+          const sl = (ov && !/^\[/.test(ov)) ? ov
+            : (smart && !/^\[/.test(smart)) ? smart
+              : (targeted ? '' : standing);
           if (sl && !/^\[/.test(sl)) out.slogan = sl;
+          else if (targeted) { out.slogan_hidden = true; return out; }
           const al = String(localStorage.getItem('antcv:clSloganAlign') || 'center').replace(/["']/g, '').toLowerCase();
           out.slogan_align = (al === 'left' || al === 'right' || al === 'center') ? al : 'center';
           return out;

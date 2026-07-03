@@ -204,3 +204,66 @@ test('labeled_list tools shape ({l,v}) is handled too (pre-RICHBLOCK apps)', () 
   assert.equal(niche.hidden, true, 'zero-survivor labeled row hides via it.hidden');
   assert.match(niche.v, /Catalyst chemistry/, 'value intact');
 });
+
+// ── v2 (1.51.126, owner Trackman review 3): PM-tools domain bridge, empty-group
+// hide, and residue HEAL on a re-armed cut ────────────────────────────────────
+
+test('v2 PM bridge: Jira/Codebeamer/MS Project survive a "project management" JD without literal hits', () => {
+  const s = baseStore();
+  const secs = JSON.parse(s.sections);
+  secs.cv[0].items = [
+    { grp: true, t: 'Tools' },
+    { b: 'Software', t: 'Jira, Confluence, Codebeamer ALM, MS Project, LabVIEW-RT, catalyst chemistry' },
+  ];
+  s.sections = JSON.stringify(secs);
+  const { api, store } = load(s);
+  api._apply();
+  const sw = JSON.parse(store.get('sections')).cv[0].items[1];
+  assert.match(sw.t, /Jira/);
+  assert.match(sw.t, /Codebeamer ALM/);
+  assert.match(sw.t, /MS Project/);
+  assert.doesNotMatch(sw.t, /catalyst chemistry/, 'non-PM, non-JD token still trims');
+});
+
+test('v2 empty-group hide: a group whose every content row hides gets its header hidden too', () => {
+  const s = baseStore();
+  const secs = JSON.parse(s.sections);
+  secs.cv[0].items = [
+    { grp: true, t: 'Tools' },
+    { b: 'Software', t: 'Jira, Confluence' },          // survives (PM bridge)
+    { grp: true, t: 'Niche' },
+    { b: 'Wet lab', t: 'Catalyst chemistry, nanoparticle prep' },   // zero survivors -> row hides
+  ];
+  s.sections = JSON.stringify(secs);
+  const { api, store } = load(s);
+  api._apply();
+  const tools = JSON.parse(store.get('sections')).cv[0];
+  const hid = tools.hidden || {};
+  assert.equal(hid[3], true, 'zero-survivor row hidden');
+  assert.equal(hid[2], true, 'its group header hidden too — no header over nothing');
+  assert.ok(!hid[0], 'group with visible rows keeps its header');
+});
+
+test('v2 heal: a re-armed cut restores residue tokens that now pass (the over-cut Trackman repair)', () => {
+  const s = baseStore();
+  const secs = JSON.parse(s.sections);
+  // the v1 over-cut state: PM tools parked in the residue row, real row trimmed
+  secs.cv[0].items = [
+    { grp: true, t: 'Tools' },
+    { b: 'Software', t: 'Git' },
+    { b: 'Hidden - Software', t: 'Jira, Codebeamer ALM, catalyst chemistry', bullets: [] },
+  ];
+  s.sections = JSON.stringify(secs);
+  // simulate the v1 stamp being present but OLD (different salt) -> v2 re-arms
+  s['antcv:sidebarCutStamp'] = 'stale-v1-stamp';
+  const { api, store } = load(s);
+  api._apply();
+  const tools = JSON.parse(store.get('sections')).cv[0];
+  const sw = tools.items.find((it) => String(it.b || '') === 'Software');
+  assert.match(sw.t, /Jira/, 'PM token healed back into the category row');
+  assert.match(sw.t, /Codebeamer ALM/);
+  const res = tools.items.find((it) => /^Hidden - Software/.test(String(it.b || '')));
+  assert.ok(res, 'residue row survives with the still-irrelevant remainder');
+  assert.match(String(res.t), /catalyst chemistry/);
+  assert.doesNotMatch(String(res.t), /Jira/);
+});

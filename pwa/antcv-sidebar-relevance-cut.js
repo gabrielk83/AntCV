@@ -42,7 +42,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.121-sidebar-relevance-cut';
+  var VERSION = '1.51.126-cut-v2-pm-bridge';
   if (window.__antcvSidebarRelevanceCut) return;
   window.__antcvSidebarRelevanceCut = VERSION;
 
@@ -116,6 +116,11 @@
     // certificate bridges
     { id: 'quality', row: /six sigma|fmea|apis|8d|quality|gage|msa|spc/i, jd: /quality|process|manufactur|production|risk/i },
     { id: 'pm', row: /pmp|prince2?|project management|agile|scrum/i, jd: /project manag|agile|scrum|pmp/i },
+    // PM-TOOLS-BRIDGE (owner 2026-07-04 Trackman review 3: "many tools relevant
+    // for project management are hidden" — Jira/Codebeamer/MS Project never
+    // appear LITERALLY in a JD that says "project management methodologies").
+    { id: 'pm-tools', row: /\bjira\b|confluence|codebeamer|\balm\b|(?:ms|microsoft)\s+project|gantt|power\s?bi|\bexcel\b|risk register|stakeholder|prioriti[sz]ation|planning|roadmap/i, jd: /project manag|program manag|agile|scrum|planning|stakeholder|prioriti|risk|roadmap|timeline/i },
+    { id: 'requirements-tools', row: /requirements|traceability|change (?:governance|management|control)|\bccb\b|enterprise architect|doors\b/i, jd: /requirement|traceab|change|specification|architecture/i },
     { id: 'ai', row: /\bai\b|copilot|machine learning|llm/i, jd: /\bai\b|machine learning|\bml\b|artificial intelligence|data.driven/i },
     { id: 'business-analysis', row: /babok|business analysis/i, jd: /business analys/i },
   ];
@@ -153,12 +158,53 @@
   }
 
   // ── section passes (pure; return true when changed) ────────────────────────
-  function cutTools(sec, jdSet) {
+  // rule 32 keep test — per VALUE token: a direct JD word hit OR a domain
+  // bridge (PM-TOOLS-BRIDGE: "Jira" survives a "project management" JD even
+  // though the word Jira never appears in the ad).
+  function tokenKeeps(t, jdSet, jd) {
+    if (wordHits(t, jdSet)) return true;
+    var d = domainSurvives(t, jd);
+    return d.detected && d.survives;
+  }
+  function cutTools(sec, jdSet, jd) {
     if (!Array.isArray(sec.items)) return false;
     var richSection = sec.items.some(function (it) { return isRichItem(it) && !isGroupRow(it); });
     var changed = false;
     var items = sec.items.slice();
     var hiddenMap = (sec.hidden && typeof sec.hidden === 'object') ? Object.assign({}, sec.hidden) : {};
+    // HEAL pass (owner Trackman review 3): a re-armed cut first RESTORES residue
+    // tokens that pass the current keep test back into their category rows —
+    // an earlier over-aggressive pass parked PM tools in "Hidden -" rows; the
+    // improved bridge brings them home (insertBest keeps line economy).
+    var IB = H()._insertBest;
+    for (var r = items.length - 1; r >= 0; r--) {
+      var res = items[r];
+      if (!isResidue(res)) continue;
+      var category = String(labelOf(res)).replace(RESIDUE_RE, '').trim();
+      var resToks = tokensOf(valOf(res));
+      var back = resToks.filter(function (t) { return tokenKeeps(t, jdSet, jd); });
+      if (!back.length) continue;
+      var target = -1;
+      for (var j = 0; j < items.length; j++) {
+        if (j === r || !items[j] || typeof items[j] !== 'object' || isGroupRow(items[j]) || isResidue(items[j])) continue;
+        if (norm(labelOf(items[j])) === norm(category)) { target = j; break; }
+      }
+      if (target >= 0) {
+        var rowToks = tokensOf(valOf(items[target]));
+        back.forEach(function (t) { if (rowToks.map(norm).indexOf(norm(t)) === -1) rowToks = IB ? IB(category, rowToks, t) : rowToks.concat([t]); });
+        items[target] = setVal(items[target], rowToks.join(', '));
+        if (hiddenMap[target]) delete hiddenMap[target];              // healing un-hides the row
+        if (items[target].hidden === true) items[target] = Object.assign({}, items[target], { hidden: false });
+      } else {
+        items.splice(r, 0, richSection ? { b: category, t: back.join(', '), bullets: [] } : { l: category, v: back.join(', ') });
+        r++; // res shifted right
+      }
+      var remain = resToks.filter(function (t) { return !tokenKeeps(t, jdSet, jd); });
+      var resIdx = items.indexOf(res);
+      if (remain.length) items[resIdx] = setVal(res, remain.join(', '));
+      else items.splice(resIdx, 1);
+      changed = true;
+    }
     for (var i = 0; i < items.length; i++) {
       var it = items[i];
       if (!it || typeof it !== 'object' || isGroupRow(it) || isResidue(it)) continue;
@@ -166,10 +212,8 @@
       var label = String(labelOf(it));
       var toks = tokensOf(valOf(it));
       if (!toks.length) continue;
-      // rule 32: relevance is judged per VALUE — the token's OWN words must hit
-      // the JD (a relevant category label must not carry its irrelevant tokens).
       var keep = [], drop = [];
-      toks.forEach(function (t) { (wordHits(t, jdSet) ? keep : drop).push(t); });
+      toks.forEach(function (t) { (tokenKeeps(t, jdSet, jd) ? keep : drop).push(t); });
       if (!drop.length) continue;
       if (keep.length) {
         items[i] = setVal(it, keep.join(', '));
@@ -181,6 +225,31 @@
       }
       if (drop.length) items = upsertResidue(items, richSection, label, drop);
       changed = true;
+    }
+    // EMPTY-GROUP-HIDE (owner: "if the entire tools group is gone something is
+    // wrong" — a group header must never stand over nothing, in preview OR
+    // export). A grp row whose every following content row (until the next grp)
+    // is hidden gets hidden too; a group with visible rows stays.
+    var isHiddenAt = function (idx) {
+      var x = items[idx];
+      return !!(hiddenMap[idx] || (x && x.hidden === true) || isResidue(x));
+    };
+    for (var g = 0; g < items.length; g++) {
+      if (!isGroupRow(items[g])) continue;
+      var any = false;
+      for (var k = g + 1; k < items.length && !isGroupRow(items[k]); k++) {
+        if (items[k] && typeof items[k] === 'object' && !isHiddenAt(k)) { any = true; break; }
+      }
+      var gHidden = !!(hiddenMap[g] || (items[g] && items[g].hidden === true));
+      if (!any && !gHidden) {
+        if (items[g] && items[g].grp) hiddenMap[g] = true;
+        else items[g] = Object.assign({}, items[g], { hidden: true });
+        changed = true;
+      } else if (any && gHidden) {
+        if (hiddenMap[g]) delete hiddenMap[g];
+        if (items[g] && items[g].hidden === true) items[g] = Object.assign({}, items[g], { hidden: false });
+        changed = true;
+      }
     }
     if (!changed) return false;
     sec.items = items;
@@ -255,7 +324,10 @@
       if (!isTargeted(m)) return;
       var jd = jdText();
       if (jd.trim().length < 30) return;
-      var stamp = String(hash(String(m.company) + '|' + String(m.role || '') + '|' + jd.slice(0, 2000)));
+      // CUT_VERSION salts the stamp: shipping an improved cut re-arms every
+      // app ONCE (v2 = PM-tools bridge + empty-group hide + residue heal — the
+      // owner's over-cut Trackman state repairs itself on next boot).
+      var stamp = String(hash('v2|' + String(m.company) + '|' + String(m.role || '') + '|' + jd.slice(0, 2000)));
       try { if (localStorage.getItem(STAMP_KEY) === stamp) return; } catch (_) {}
       var b = readJson('sections', null);
       if (!b || !Array.isArray(b.cv)) return;
@@ -264,7 +336,7 @@
       b.cv.forEach(function (sec) {
         if (!sec || sec.on === false || sec.loc !== 'sidebar') return;
         var id = String(sec.id || '');
-        if (id === 'tools' && cutTools(sec, jdSet)) { changed = true; counts.tools = 1; }
+        if (id === 'tools' && cutTools(sec, jdSet, jd)) { changed = true; counts.tools = 1; }
         else if (id === 'certs' && cutCerts(sec, jdSet, jd)) { changed = true; counts.certs = 1; }
         else if (id === 'regulatory' && cutRegulatory(sec, jdSet, jd)) { changed = true; counts.regulatory = 1; }
       });

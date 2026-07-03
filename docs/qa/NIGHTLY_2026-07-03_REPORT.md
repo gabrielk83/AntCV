@@ -1,7 +1,66 @@
 # AntCV nightly report — 2026-07-03
 
-> **Three runs this date.** Newest first: the LATE-NIGHT run (re-dispatch, repo at 1.51.102) is
-> immediately below. Then the 01:40 run (1.51.70), then the original 1.51.53 run. All retained.
+> **Four runs this date.** Newest first: the 02:26 RE-DISPATCH run (repo at 1.51.102, shipped a
+> regression test) is immediately below. Then the LATE-NIGHT run (report-only), the 01:40 run
+> (1.51.70), and the original 1.51.53 run. All retained.
+
+---
+
+## RE-DISPATCH RUN 02:26 — shipped e2d99b6 (HWIC regression lock; test-only)
+
+Run: local desktop, autonomous. A **parallel session was live** on the JD/NIL doc thread throughout
+(pushed 1.51.102 `JD-VISION-PROVIDER-001`, then `9474e1d` NIL round-3, then `9474e1d`→ my rebase base;
+tree stayed clean between its pushes). Sync-first at start (HEAD `18a82d3`), suite 804/804 baseline.
+
+### TL;DR
+- **Shipped one thing, zero brick risk:** a headless regression test that LOCKS the fix for the
+  owner's #1 inline-edit persistence bug (HWIC / HOW I WOULD CONTRIBUTE vanishing after an edit).
+  Test-only — no `app.js`/`index.html`/`sw.js`, no cache-bust, no version bump, **no collision** with
+  the parallel session's asset edits. Commit `e2d99b6`, pushed to `main`.
+- **Verify-first on the three remaining headless-attemptable items** (fanned to 3 read-only agents):
+  HWIC-vanishes = **already fixed** (1.51.7) but **untested** → now tested; EMDASH separator = **clean**
+  (no defect); CL-SECTION-PANEL-BLIP = **live-DOM-gated** (extra-control source not locatable in loaded
+  scripts; blind fix would violate the prove-dead-or-FUSE rule) → correctly owner-eye.
+
+### Shipped — CL-PROSE-LOSS-GUARD-002 regression lock (`e2d99b6`)
+- `pwa/test/unit/cl-prose-loss-guard-reinsert.test.mjs` (4 tests, loads the real sidecar in a vm
+  sandbox — same harness as `cl-prose-loss-guard-empty-body.test.mjs`).
+- The fix (`antcv-cl-prose-loss-guard-985.js` lines 167–183) re-inserts a guarded CL prose section
+  that a stale cloud/me()-enforce restore DELETED outright, at its canonical Nordic position. It
+  shipped 1.51.7 but **every existing guard test only exercised the map() placeholder-heal path** —
+  the absent-section re-insertion (the actual owner bug) had no lock. Now locked:
+  - **D** — a deleted `contribute` is re-inserted from a real snapshot (content preserved).
+  - **E** — re-insertion lands between `bring` and `closure` (canonical order), not appended.
+  - **F** — no real snapshot → an absent section is never fabricated.
+  - **G** — unsolicited application → a targeted-company HWIC is never re-injected (poison-safe).
+- Test D genuinely exercises the LOSS-GUARD-002 loop: `contribute` is absent, so the `map()` heal
+  never touches it — only lines 167–183 restore it. Remove that loop and D fails.
+- Suite **804 → 808**, boot-smoke green, `app.js` head `(()=>{`, zero `use strict`.
+
+### Verify-first verdicts (this run's diagnosis, 3 read-only agents)
+- **HWIC-vanishes-after-edit** — REAL historically, **fixed 1.51.7** (LOSS-GUARD-002 re-insertion,
+  owner-confirmed in EXPORT_REVIEW_2026-07). Gap was test coverage → closed this run. **Verified-closed.**
+- **EMDASH separator half** (ACTIVE_BUGS `[OPEN — interconnected]` tail) — **CLEAN, no defect.** All
+  writer↔reader pairs already atomic: CL spec_block reader (7338) is dash-tolerant (`/\s+—\s+|\s+-\s+/`),
+  writers emit ` - `; education deg—sch writer (19122) ↔ reader (19428) matched on ` - `; the style-label
+  `da` dropdown em-dashes are in-code constants, one-way read, never stored. Three-layer defense
+  (sidecar normalize / DASH-HYPHEN-001 prompt rule / render literals) shipped + round-trip-tested
+  1.50.636–666. **Recommend closing the register tail.**
+- **CL-SECTION-PANEL-BLIP-001** (row 23-adjacent) — **live-DOM-gated, NOT headless-fixable.** The
+  extra cluster (a "1" chip + ⏮/⏭ + extra ✨ on Opening / WHY-YOUR-COMPANY rows) has **no source in any
+  loaded script** (rich-block editor renders no chips/arrows; `antcv-cl-body-move-button-341.js` owns the
+  ☰ hamburger with the left-edge overlap). It is either a correct rich_block-vs-text discriminator or a
+  React-rendered control that needs a live DOM to trace. Owner rule (dont-hide-controls-as-duplicates)
+  forbids a blind hide. **Needs a live-browser session with the owner.**
+
+### Not shipped, unchanged from prior runs (evidence stands)
+Task 1 (cascade retune) + Task 2 (gen-flow speed) need D1 `llm_calls` telemetry (no GET route headless).
+Orphans v2 / table geometry / float spine are render-gated (PDF-BLANK-PAGE/overlap brick history). NIL
+rows 28/29 are the parallel session's active thread. JD-scan (row 14) needs real models/owner.
+
+### Needs owner-eye (unchanged + one closed)
+CL-SECTION-PANEL-BLIP (live DOM), NIL live verification (QnA + brand-fit on the real app), Task 1/2
+telemetry. HWIC no longer needs an eye — it is test-locked.
 
 ---
 

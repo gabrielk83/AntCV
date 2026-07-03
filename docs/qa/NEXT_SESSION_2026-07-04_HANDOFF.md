@@ -1,9 +1,17 @@
+
 # HANDOFF 2026-07-04 — open vs. closed + next-session prompt
 
 Owner ask (2026-07-03 evening): "document all open vs. closed issues and give me a prompt
 for a new session to handle all remaining issues." Authoritative detail lives in
 `docs/qa/OPEN_REGISTER.md` (row numbers below reference it) and
 `docs/qa/JD-SPECIFIC-CV-COMPRESSION-SPEC.md` (rules 1-44). This file is the snapshot + the prompt.
+
+> **UPDATE 2026-07-04 (audit pass, session 2):** `OPEN_REGISTER.md` was audited for completeness
+> against `docs/qa/PROJECT_ISSUES_OPEN_CLOSED_2026-07-02.md`. Every open/partial row is now
+> explicitly tagged TO DO. Three items shipped code (1.51.41-43) but were only ever tracked
+> inside that 07-02 session file as "confirm on a regen" — never promoted to the register, so
+> the nightly reconcile could never have picked them up. Added as **rows 35-37** (see below,
+> folded into priority P6).
 
 ## CLOSED — NIL campaign + this session (PWA 1.51.101→1.51.117, workers wk 1.14.126→132, relay/proxy current)
 
@@ -58,6 +66,20 @@ image-aware routing; row 23 preview-button audit (standing nightly); rows 1/3/9/
 row 19 two-device test (owner); CL-RULE-BALANCE-002 preview leg (live measurement);
 QA-page signature image duplicate (worker); row 20 owner verify list.
 
+**P6 (rows 35-37, NEW — cheap, do first if a session has spare time before P1-P5): three
+regen-confirm checks found during the 2026-07-04 register audit.** All three already shipped
+code weeks ago (1.51.41-43) but were never explicitly confirmed against a real regen or closed
+in the register, so they've been silently sitting open:
+- **Row 35 — OVERLAY-EARLY-HALT-001.** Run one unsolicited generation start-to-finish (3-6 min)
+  and confirm the generation overlay stays up the whole time (no early close mid-gen).
+- **Row 36 — GEN-CORECOMP-BROAD-001.** On that same unsolicited regen, confirm CORE COMPETENCIES
+  comes back BROAD (PdM/BA/process framing), not the narrow EO/photonics niche.
+- **Row 37 — FOCUS-LABEL-EO-001.** Confirm the EO focus-area label renders in its canonicalised
+  form (not the raw LLM string) on a regen that touches that section.
+
+If all three hold, close rows 35-37 in `OPEN_REGISTER.md` in the same pass — don't leave them
+open on faith just because they're old.
+
 **Owner-eye pending (no code):** long-press feel on the real phone (550ms/8px); neardup
 backfill on real data (1.51.95); wk 1.14.122 alignment spacer in a real PDF; analytics buttons
 after hard refresh; rules 23 adaptive slogan on a FRESH generation.
@@ -77,6 +99,13 @@ end-to-end before touching anything. Sync first: git fetch origin && git pull --
 State: PWA 1.51.117 live, suite 854/854, NIL campaign closed (see the handoff's CLOSED table —
 do not re-diagnose anything there). Work my priorities IN ORDER, one release at a time,
 diagnostic-first, and measure results on FRESH generations (97.5% loop, spec rule 38):
+
+0. QUICK WINS FIRST (rows 35-37, register audit 2026-07-04): three fixes shipped in 1.51.41-43
+but never confirmed or closed — OVERLAY-EARLY-HALT-001 (generation overlay must stay up the full
+3-6 min, not close early), GEN-CORECOMP-BROAD-001 (unsolicited CORE COMPETENCIES must read broad
+PdM/BA/process, not narrow EO/photonics), FOCUS-LABEL-EO-001 (EO focus-area label must render
+canonicalised). Run ONE unsolicited regen, check all three, close rows 35-37 in OPEN_REGISTER.md
+if they hold — if any fails, diagnose it properly and keep the row open with what you found.
 
 1. ROW 27 ORPHAN SWEEP toward the ~1.5-PAGE targeted CV (spec rules 30 + 40). Baseline =
 docs/qa/RUNT_INVENTORY_UNSOL_20260703.md. Recalibrate the orphan-measure-bind v2 preflight:

@@ -227,9 +227,12 @@ test('end-to-end with P1: after the bridge writes, the scaffold builds applicati
   const cl = JSON.parse(store.get('sections')).cl;
   const qa = cl.find((s) => s.id === 'application_qa');
   assert.ok(qa, 'application_qa created');
-  assert.equal(cl.indexOf(qa), cl.findIndex((s) => s.id === 'closure') + 1, 'placed after closure');
+  // QA-STANDALONE-PAGE-001 (1.51.107): the page now splices at the very END of
+  // the CL (after sign-off/signature elements) and carries its own closing
+  // block (closing line + sign-off + name) after the answers.
+  assert.equal(cl.indexOf(qa), cl.length - 1, 'placed LAST');
   assert.equal(qa.pageBreakBefore, true);
-  assert.equal(qa.items.length, 3); // header + 2 Q&A rows
+  assert.equal(qa.items.length, 6); // header + 2 Q&A rows + closing line + sign-off + name
   assert.match(qa.items[0].t, /Responses to your application questions:/);
   assert.equal(qa.items[1].b, TWO_QS[0].question);
 });

@@ -54,11 +54,11 @@ test('kernel namespace + real Q&A section: run() never hides it', () => {
   assert.notEqual(secs.cl[0].on, false, 'real Q&A must survive the kernel-namespace empty read');
 });
 
-test('real app namespace + explicitly empty source: still hides (withdrawn questions)', () => {
+test('QA-SECTION-DURABLE-001: a real Q&A section survives an empty key on ANY namespace (app id too)', () => {
   const { api, store } = load({ sections: JSON.stringify({ cv: [], cl: [REAL_QA_SECTION] }) }, '435');
   api.run();
   const secs = JSON.parse(store.get('sections'));
-  assert.equal(secs.cl[0].on, false, 'an app with an explicitly empty questions slot hides the page');
+  assert.notEqual(secs.cl[0].on, false, 'the section is the durable source of truth once built');
 });
 
 test('kernel namespace + placeholder-only section: may hide (nothing real to protect)', () => {
@@ -81,4 +81,36 @@ test('questions present in the app namespace: section built/kept on', () => {
   const secs = JSON.parse(store.get('sections'));
   const qa = secs.cl.find((s) => s.id === 'application_qa');
   assert.ok(qa && qa.on !== false && qa.pageBreakBefore, 'section created after closure with a page break');
+});
+
+// QA-STANDALONE-PAGE-001 (spec rule 24): the built page is self-contained and always LAST.
+test('built section carries its own closing block (line + sign-off + name) after the answers', () => {
+  const { api, store } = load({
+    sections: JSON.stringify({ cv: [], cl: [{ id: 'closure', type: 'rich_block', items: [{ b: '', t: 'Closing.' }] }] }),
+    'antcv:applicationQuestions': JSON.stringify([{ question: 'Q1?', answer: 'A1 grounded in real data.' }]),
+    'antcv:clClosing': JSON.stringify('At your service,'),
+    'antcv:clSignName': JSON.stringify('Gabriel'),
+    personalInfo: JSON.stringify({ name: 'Gabriel Alexander Karp-Gershon' }),
+  }, '435');
+  api.run();
+  const secs = JSON.parse(store.get('sections'));
+  const qa = secs.cl.find((s) => s.id === 'application_qa');
+  const texts = qa.items.map((it) => it.t);
+  assert.ok(texts.includes('At your service,'), 'sign-off present');
+  assert.ok(texts.includes('Gabriel'), 'name present');
+  assert.equal(secs.cl[secs.cl.length - 1].id, 'application_qa', 'Q&A page is the LAST cl element');
+});
+
+test('an existing Q&A section that is not last gets MOVED to the end on sync', () => {
+  const { api, store } = load({
+    sections: JSON.stringify({ cv: [], cl: [
+      { id: 'application_qa', title: 'APPLICATION QUESTIONS', loc: 'main', on: true, type: 'rich_block', pageBreakBefore: true, items: [{ grp: true, t: 'Responses to your application questions' }] },
+      { id: 'signoff_el', type: 'rich_block', items: [{ b: '', t: 'At your service,' }] },
+    ] }),
+    'antcv:applicationQuestions': JSON.stringify([{ question: 'Q1?', answer: 'A1 grounded in real data.' }]),
+    personalInfo: JSON.stringify({ name: 'Gabriel Alexander Karp-Gershon' }),
+  }, '435');
+  api.run();
+  const secs = JSON.parse(store.get('sections'));
+  assert.equal(secs.cl[secs.cl.length - 1].id, 'application_qa');
 });

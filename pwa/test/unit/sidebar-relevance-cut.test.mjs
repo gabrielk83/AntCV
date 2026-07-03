@@ -267,3 +267,34 @@ test('v2 heal: a re-armed cut restores residue tokens that now pass (the over-cu
   assert.match(String(res.t), /catalyst chemistry/);
   assert.doesNotMatch(String(res.t), /Jira/);
 });
+
+// ── STAMP-IN-BLOB (1.51.129, owner "the fuck?" — a stale row/cloud restore
+// reverted the sections to the pre-cut snapshot while the SIDE-KEY stamp
+// survived, so the cut never re-ran and the full regulatory list came back) ──
+
+test('stamp-in-blob: a restored PRE-CUT snapshot re-arms the cut even when the side key matches', () => {
+  const s = baseStore();
+  const { api, store } = load(s);
+  api._apply();   // first pass: cuts + stamps blob + side key
+  const sideStamp = store.get('antcv:sidebarCutStamp');
+  assert.ok(sideStamp);
+  assert.ok(JSON.parse(store.get('sections'))._sidebarCutStamp, 'blob carries the stamp');
+  // the stale restore: pre-cut content comes back, side key survives
+  store.set('sections', baseStore().sections);
+  api._apply();
+  const reg = JSON.parse(store.get('sections')).cv[2];
+  assert.ok(!reg.items.some((it) => it.l === 'STANAG 4694' && it.hidden !== true), 'restored stale rows re-hidden');
+  assert.equal(JSON.parse(store.get('sections'))._sidebarCutStamp, sideStamp, 'blob re-stamped');
+});
+
+test('stamp-in-blob: a post-cut blob with user un-hides is NEVER re-fought (stamp travels with the content)', () => {
+  const { api, store } = load(baseStore());
+  api._apply();
+  const secs = JSON.parse(store.get('sections'));
+  const reg = secs.cv[2];
+  const idx = reg.items.findIndex((it) => it.l === 'STANAG 4694');
+  reg.items[idx] = { ...reg.items[idx], hidden: false };   // user restores via the eye
+  store.set('sections', JSON.stringify(secs));             // blob still carries the stamp
+  api._apply();
+  assert.equal(JSON.parse(store.get('sections')).cv[2].items[idx].hidden, false, 'user decision sticks');
+});

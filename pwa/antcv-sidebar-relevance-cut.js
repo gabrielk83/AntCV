@@ -328,9 +328,20 @@
       // app ONCE (v2 = PM-tools bridge + empty-group hide + residue heal — the
       // owner's over-cut Trackman state repairs itself on next boot).
       var stamp = String(hash('v2|' + String(m.company) + '|' + String(m.role || '') + '|' + jd.slice(0, 2000)));
-      try { if (localStorage.getItem(STAMP_KEY) === stamp) return; } catch (_) {}
       var b = readJson('sections', null);
       if (!b || !Array.isArray(b.cv)) return;
+      // STAMP-IN-BLOB (owner 2026-07-04 "the fuck?" — a stale row/cloud restore
+      // reverted the Trackman sections to the pre-cut snapshot while the SIDE-KEY
+      // stamp survived, so the cut never re-ran and the full 24-row regulatory
+      // came back). The stamp now travels INSIDE the sections blob: a restored
+      // pre-cut snapshot lacks it -> the cut re-arms automatically; a post-cut
+      // blob (incl. later user un-hides) carries it -> never re-fought. The side
+      // key stays as a secondary gate for blob writers that rebuild the root.
+      // A missing blob stamp ALWAYS re-runs (the owner's live state: side key
+      // stamped v2, blob = restored stale content — the side key alone must
+      // never veto). The pass is idempotent on already-cut content, and the
+      // heal pass restores bridge-passing tokens, so a re-run is safe.
+      try { if (b._sidebarCutStamp === stamp) return; } catch (_) {}
       var jdSet = jdSetOf(jd);
       var changed = false, counts = {};
       b.cv.forEach(function (sec) {
@@ -341,10 +352,14 @@
         else if (id === 'regulatory' && cutRegulatory(sec, jdSet, jd)) { changed = true; counts.regulatory = 1; }
       });
       // The stamp is written even when nothing changed — the decision for this
-      // app+JD is made; user un-hides are never re-fought.
+      // app+JD is made; user un-hides are never re-fought. STAMP-IN-BLOB: the
+      // blob field is the authoritative gate (travels through row saves and
+      // restores); the sections blob is therefore written once even when the
+      // content itself needed no change.
+      b._sidebarCutStamp = stamp;
       try { localStorage.setItem(STAMP_KEY, stamp); } catch (_) {}
+      try { localStorage.setItem('sections', JSON.stringify(b)); } catch (_) {}
       if (changed) {
-        try { localStorage.setItem('sections', JSON.stringify(b)); } catch (_) {}
         try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { source: SRC } })); } catch (_) {}
         try { console.log('[sidebar-relevance-cut] JD-relevance cut applied (' + Object.keys(counts).join(', ') + ') for "' + m.company + '"'); } catch (_) {}
       }

@@ -1,5 +1,3 @@
-# OPEN REGISTER — rolling consolidated backlog (maintained by the nightly reconcile slot)
-
 > Standing order: `docs/qa/NIGHTLY_BACKLOG_RECONCILE.md`. This file is a ROLL-UP —
 > prose detail lives in the linked docs. Rows are ordered oldest-verified-first so
 > the nightly slot always chews the stalest end. `verified:` = the last date a
@@ -11,6 +9,50 @@
 > **RECONCILE 2026-07-04:** the NIL-campaign shipping (1.51.103-116 + wk 1.14.126-131) closed discrete
 > legs — logged in CLOSED. Rows 26/28/29/31 advanced to `partial` (their remaining gen/render/row-repair
 > legs stay OPEN; the parallel session owns them). No row fully closed this pass.
+> **AUDIT PASS 2026-07-04 (session 2):** completeness + staleness check against
+> `docs/qa/PROJECT_ISSUES_OPEN_CLOSED_2026-07-02.md` and `docs/qa/NEXT_SESSION_2026-07-04_HANDOFF.md`.
+> Every OPEN/partial row below is now explicitly `TO DO` — no row is left in an ambiguous
+> "no code change but unconfirmed" state without a status word. Three items shipped code but
+> were never given a register row (they only lived in a 07-02 session file as "regen-gated" /
+> "confirm on a regen") — added as rows 35-37. No row was found to be fully implemented while
+> still marked open; the 07-03/07-04 verify-first sweeps had already caught those. Rows 35-37 are
+> flagged `TO DO — likely already validated implicitly` because multiple NIL-campaign regens have
+> run clean since 1.51.41-43 without the original symptom recurring, but no one has explicitly
+> confirmed and closed them.
+
+## TO-DO SUMMARY (audit 2026-07-04, session 2) — every row below is TO DO
+
+| # | One-line remaining scope | TO DO |
+|---|---|---|
+| 1 | Quick-gen page convergence + CV 3-page convergence, export-only pagination parity | TO DO |
+| 2 | SW-projects line-end overflow leg (hyperlink half already closed) | TO DO |
+| 3 | Floating spine: byte-diff flag-on doc vs reference, add grid equalization + spacer anchor | TO DO |
+| 6 | Wizard/Settings UX — owner eyeball gate on merged banned-words UI + 6-file loader test | TO DO |
+| 8 | Kernel v2 — bullets-path v2 migration, es/zh tier, §6 regression pass on uploaded docx | TO DO |
+| 9 | Cluster demand model — worker pipeline + nightly recruitment-site refresh | TO DO |
+| 14 | JD-scan-hallucination ingest reorder — needs real models + owner present | TO DO |
+| 16 | Sidebar TOOLS/REGULATORY justify↔left flap — re-check after hard refresh, diagnose if persists | TO DO |
+| 17 | Settings sweep-army cost on Layout/Account/Advanced panels (Personal panel already fixed) | TO DO |
+| 19 | JD-scope isolation — two-real-device test | TO DO |
+| 20 | Owner verify list — 6 sub-items (alignment, sidebar runts, CL spacing, Sirin result, abbreviation, contact tracking) | TO DO |
+| 22 | CL slogan rich-content phase 2 — real sections.cl rich_block object, dedupe render sites | TO DO |
+| 23 | Preview-button audit pass 2 (65 not-visible, 23 overlay-obstructed) + live dangerous-button audit | TO DO |
+| 24 | Analytics buttons — both sides fixed, needs owner click-through confirm | TO DO |
+| 25 | Table geometry parity — diagnose real CloudConvert PDF vs preview measurement | TO DO |
+| 26 | Tools sidebar compress — exact owner gold-text (Instruments/Lab strings) as deterministic rule | TO DO |
+| 27 | Orphan sweep v3 — work-style tail truncation, page-3 ghost, real-PDF 1.5-page verify | TO DO |
+| 28 | NIL gen adaptation — CV ~1.5-page gen-level target (current export still 5pp) | TO DO |
+| 29 | NIL state-stick — leg C: stale-row snapshot restore + auto-save downgraded-meta belt | TO DO |
+| 30 | LLM image routing — make provider selection image-aware, filter vision-blind providers | TO DO |
+| 31 | Poisoned NIL row repair — set row meta from its own display name, guard auto-save | TO DO |
+| 32 | CL platform-signals — hardware-platform JD tone/positioning gen-prompt rule | TO DO |
+| 33 | Export align parity — name-line + section-headline alignment lost on PDF/DOCX export | TO DO |
+| 34 | Export/preview parity sweep — role-merge parity is the owner-escalated top item | TO DO |
+| **35** | **NEW — OVERLAY-EARLY-HALT-001 regen-confirm.** Shipped 1.51.41 (heartbeat-gated watchdog replacing the fixed 2-min timer). Never explicitly confirmed on a real owner regen per the 07-02 session's own open item #1. | **TO DO — likely already validated implicitly (many clean NIL regens since); confirm once, then close** |
+| **36** | **NEW — GEN-CORECOMP-BROAD-001 regen-confirm.** Shipped 1.51.41 (unsolicited CORE COMPETENCIES broadened to PdM/BA/process identity). Never explicitly confirmed per 07-02 open item #1b. | **TO DO — likely already validated implicitly; confirm once, then close** |
+| **37** | **NEW — FOCUS-LABEL-EO-001 regen-confirm.** Shipped 1.51.42/43 (canonicalised EO focus-area label post-process). Never explicitly confirmed per 07-02 open item #4. | **TO DO — likely already validated implicitly; confirm once, then close** |
+
+---
 
 ## OPEN — verify-first queue (oldest/staleness first)
 
@@ -52,6 +94,10 @@
 | 31 | META-STATE-CORRUPTION-002 (2026-07-04, blocks clean NIL re-exports — row 29 writer #2): (a) a SECOND meta-downgrade writer beyond cloud-sync-277 flips the app's REACT-STATE meta to Unsolicited mid-session (277 guard held, storage stayed NIL, yet band/filename exported "Unsolicited" — exports build from REACT state, and localStorage writes NEVER reach it; sidecar edits propagate only via antcv:sections-updated + a React ingest beat, so "same-tick storage-write + export click" is the WRONG pattern); prime suspect = the cold-restore occ-2 block (memory: occ-1 guarded, occ-2 NOT) or the row auto-save loop; (b) the saved NIL application row is POISONED (meta Unsolicited + qa on:false in its snapshot) and re-poisons state on every selection; fix = occ-2 downgrade guard + a row-repair (set row meta from its own display name) + auto-save must not persist a DOWNGRADED meta into a targeted row. MANUAL WORKAROUND for the owner: select the NIL row, correct the band inline if wrong, toggle APPLICATION QUESTIONS on in Sections, export. SHIPPED: leg (a) — writer #2 KILLED, META-DRIFT-GUARD-002 (1.51.108) guards BOTH cloud-adoption blocks in BOTH bundles; lock meta-drift-guard-both-blocks.test.mjs asserts zero unguarded jd_company adoption sites. REMAINING: leg (b) — repair the poisoned NIL row (set row meta from its own display name) + auto-save must not persist a DOWNGRADED meta into a targeted row | ACTIVE_BUGS 2026-07-04 | partial — writer #2 killed 1.51.108 |
 
 | 32 | CL-PLATFORM-SIGNALS-001 (owner 2026-07-03, "LinkedIn Message Improvement.pdf" — distilled from the Trackman CTO exchange): for HARDWARE-PLATFORM-class JDs the CL generation must reflect: platform thinking (modular platforms, reuse across products, long-term maintainability, reuse surviving org growth — "this resonated directly with the CTO"); technical positioning woven naturally (cameras, LiDAR, tracking systems, electro-optics, multi-sensor — never a keyword list); PM positioning as requirements/architecture/change-governance/prioritization (not generic PM); CURIOSITY tone ("I was curious how…" over "I am the ideal candidate…"); buzzwords banned (innovation/cutting-edge/world-class) in favour of concrete engineering language (platform/requirements/architecture/trade-offs/reuse/scaling). Implementation: gen-prompt rule gated on platform-class JD detection (platform|modular|reuse|product famil) — app.src.js+app.js mirror work, same injection chain as __clusterRule/brandFit; source PDF in Downloads | owner 2026-07-03 attachment | no |
+
+| 35 | OVERLAY-EARLY-HALT-001 regen-confirm — found in `docs/qa/PROJECT_ISSUES_OPEN_CLOSED_2026-07-02.md` open item #1, never given a register row. Shipped 1.51.41 (KERNEL-STUCK showcase watchdog changed from a fixed 2-min timer to a heartbeat gate on `__antcvGenCost`, clearing only after ~11min idle or a 20min ceiling). Owner asked for "one real regen to confirm" the overlay stays up through a full 3-6min unsolicited generation. Never explicitly confirmed/closed | PROJECT_ISSUES_OPEN_CLOSED_2026-07-02.md #1; 1.51.41 | no — added 2026-07-04 audit |
+| 36 | GEN-CORECOMP-BROAD-001 regen-confirm — found in the same 07-02 file, open item #1b, never given a register row. Shipped 1.51.41 (unsolicited CORE COMPETENCIES prompt rule broadened to PdM/BA/process framing instead of EO/photonics niche). Owner asked to confirm on a regen. Never explicitly confirmed/closed | PROJECT_ISSUES_OPEN_CLOSED_2026-07-02.md #1b; 1.51.41 | no — added 2026-07-04 audit |
+| 37 | FOCUS-LABEL-EO-001 regen-confirm — found in the same 07-02 file, open item #4, never given a register row. Shipped 1.51.42/43 on the parallel `fix/focus-area-heading-ainotice` branch (canonicalises the LLM-generated EO focus-area label post-process). Owner asked to confirm on a regen. Never explicitly confirmed/closed | PROJECT_ISSUES_OPEN_CLOSED_2026-07-02.md #4; 1.51.42/43 | no — added 2026-07-04 audit |
 
 ## CLOSED (evidence; most recent first)
 

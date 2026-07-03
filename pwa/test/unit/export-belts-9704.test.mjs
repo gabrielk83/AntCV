@@ -1,0 +1,90 @@
+// Export enforcement belts (spec rules 16/16a/17/18/36/38 — owner 2026-07-04
+// "so fix in code!"): ROLE-CLASS-HIDE-001 + BULLET-CAP-BELT-001 in
+// sanitizeForExport (via buildPayload), SIDEBAR-DEFAULT-32-001, and
+// PLACEHOLDER-EXPORT-GATE-001 markers.
+
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+
+const store = new Map();
+store.set('outcomesMode', JSON.stringify('results'));
+store.set('personalInfo', JSON.stringify({}));
+// targeted context: meta carries a real company
+store.set('meta', JSON.stringify({ company: 'NIL Technology', role: 'Nanooptics Prototyping Engineer' }));
+globalThis.localStorage = {
+  getItem: (k) => (store.has(k) ? store.get(k) : null),
+  setItem: (k, v) => store.set(k, String(v)),
+  removeItem: (k) => store.delete(k),
+};
+globalThis.window = globalThis.window || {};
+
+const { buildPayload } = await import('../../antcv-docx-client.js');
+
+const B = (n) => Array.from({ length: n }, (_, i) => `Did concrete thing number ${i + 1} with a measurable outcome and tools.`);
+
+function payloadWithRoles(roles) {
+  return buildPayload({
+    sections: {
+      cv: [{ id: 'experience', type: 'experience', title: 'PROFESSIONAL EXPERIENCE', loc: 'main', on: true, roles }],
+      cl: [],
+    },
+    doc: 'cv',
+    personalInfo: { name: 'Gabriel' },
+    meta: { company: 'NIL Technology', role: 'Nanooptics Prototyping Engineer' },
+  });
+}
+
+test('ROLE-CLASS-HIDE-001: Security Guard / Students Council / Team Ops never ship in a targeted payload', () => {
+  const r = payloadWithRoles([
+    { id: 'r1', title: 'Product / Project Expert', company: 'Kanzen Konsulenter ApS', years: '2022 - 2026', on: true, bullets: B(3) },
+    { id: 'r2', title: 'Security Guard, Student Dormitories', company: 'Tel Aviv University', years: '2010', on: true, bullets: B(3) },
+    { id: 'r3', title: 'Students Council Representative', company: 'Tel Aviv University', years: '2005 - 2007', on: true, bullets: B(3) },
+    { id: 'r4', title: 'Team Operations Manager (foreningsarbejde)', company: 'Pan Idræt', years: '2023 - present', on: true, bullets: B(3) },
+  ]);
+  const exp = r.sections.find((s) => s.id === 'experience');
+  const titles = exp.roles.map((x) => x.title).join(' | ');
+  assert.doesNotMatch(titles, /Security Guard|Students Council|Team Operations/);
+  assert.match(titles, /Kanzen|Product \/ Project Expert/);
+});
+
+test('BULLET-CAP-BELT-001: plain role capped at 4, merged (& Leader) role at 5', () => {
+  const r = payloadWithRoles([
+    { id: 'r1', title: 'Product / Project Expert', company: 'Kanzen Konsulenter ApS', years: '2022 - 2026', on: true, bullets: B(6) },
+    { id: 'r2', title: 'Electro-Optics Engineer & Team Leader', company: 'Meprolight, IWI Group', years: '2010 - 2014', on: true, bullets: B(6) },
+    { id: 'r3', title: 'Senior Optics & Electro-Optics Engineer', company: 'Sirin Labs', years: '2014 - 2017', on: true, bullets: B(6) },
+  ]);
+  const exp = r.sections.find((s) => s.id === 'experience');
+  const by = (t) => exp.roles.find((x) => x.title.startsWith(t));
+  assert.equal(by('Product / Project Expert').bullets.length, 4, 'plain role capped at 4');
+  assert.equal(by('Electro-Optics Engineer & Team Leader').bullets.length, 5, 'merged role capped at 5');
+  assert.equal(by('Senior Optics & Electro-Optics').bullets.length, 4, '"&" inside a FUNCTION name is not a merge');
+});
+
+test('UNSOLICITED payloads are untouched by the targeted belts', () => {
+  store.set('meta', JSON.stringify({ company: 'Unsolicited', role: 'Open Application' }));
+  const r = payloadWithRoles([
+    { id: 'r1', title: 'Security Guard, Student Dormitories', company: 'Tel Aviv University', years: '2010', on: true, bullets: B(6) },
+  ]);
+  store.set('meta', JSON.stringify({ company: 'NIL Technology', role: 'Nanooptics Prototyping Engineer' }));
+  const exp = r.sections.find((s) => s.id === 'experience');
+  assert.equal(exp.roles.length, 1, 'unsolicited keeps the breadth');
+  assert.equal(exp.roles[0].bullets.length, 6, 'no cap outside targeted exports');
+});
+
+test('SIDEBAR-DEFAULT-32-001: unset ratio defaults to 0.32; a user choice still wins', () => {
+  store.delete('cvSidebarRatio');
+  const r1 = payloadWithRoles([]);
+  assert.equal(r1.sidebar_ratio, 0.32, 'default 32%');
+  store.set('cvSidebarRatio', JSON.stringify(0.38));
+  const r2 = payloadWithRoles([]);
+  assert.equal(r2.sidebar_ratio, 0.38, 'user splitter choice wins');
+  store.delete('cvSidebarRatio');
+});
+
+test('PLACEHOLDER-EXPORT-GATE-001: wired before BOTH export preflights, with kill switch', () => {
+  const src = readFileSync(new URL('../../antcv-docx-client.js', import.meta.url), 'utf8');
+  assert.equal(src.split('placeholderGate(payload);').length - 1, 2, 'gate at both export paths');
+  assert.ok(src.includes("antcv:disable-placeholder-gate"), 'kill switch present');
+  assert.ok(src.includes('PLACEHOLDER-EXPORT-GATE-001'), 'marker present');
+});

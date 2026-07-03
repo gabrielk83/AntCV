@@ -22,7 +22,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.104-profile-access-scrub';
+  var VERSION = '1.51.109-profile-access-scrub';
   if (window.__antcvProfileAccessScrub === VERSION) return;
   window.__antcvProfileAccessScrub = VERSION;
 
@@ -116,6 +116,33 @@
       var r1 = walkStrings(secs.cv, stripCareerClause);
       var r2 = walkStrings(secs.cl, stripCareerClause);
       if (r1[0] || r2[0]) { changed = true; secs = Object.assign({}, secs, { cv: r1[1], cl: r2[1] }); }
+
+      // 3) ACCESS-MIDDLE-001 (spec rule 34, owner 2026-07-04): the accessibility
+      // row targets the MIDDLE ground — "Hearing impaired." alone is too little,
+      // the full accommodation paragraph too much. Canonicalise BOTH extremes to
+      // the owner's one-liner. NAME-GUARDED to Gabriel (persona-contamination
+      // rule: never write one candidate's facts onto another).
+      try {
+        var __pi = readJson('personalInfo', {}) || {}; __pi = __pi.personalInfo || __pi;
+        if (/\bgabriel\b/i.test(String(__pi.name || ''))) {
+          var CANON = 'Hearing impaired (cochlear implant); written follow-up works well.';
+          var cv3 = (secs.cv || []).map(function (s3) {
+            if (!s3 || s3.id !== 'accessibility' || !Array.isArray(s3.items)) return s3;
+            var hit3 = false;
+            var items3 = s3.items.map(function (it3) {
+              if (!it3 || typeof it3.v !== 'string') return it3;
+              var v3 = it3.v.trim();
+              if (!/hearing/i.test(v3)) return it3;
+              var tooShort = v3.length < 25, tooLong = v3.length > 90;
+              if ((tooShort || tooLong) && v3 !== CANON) { hit3 = true; return Object.assign({}, it3, { v: CANON }); }
+              return it3;
+            });
+            if (hit3) { changed = true; return Object.assign({}, s3, { items: items3 }); }
+            return s3;
+          });
+          if (changed) secs = Object.assign({}, secs, { cv: cv3 });
+        }
+      } catch (_) {}
 
       if (!changed) return;
       localStorage.setItem('sections', JSON.stringify(secs));

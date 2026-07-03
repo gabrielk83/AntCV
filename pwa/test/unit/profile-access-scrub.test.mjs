@@ -123,3 +123,21 @@ test('rich_block profile (items[].t — the live NIL row shape) is scrubbed too'
   assert.match(out, /IT professional with 15\+ years/);
   assert.match(out, /hard changes land/);
 });
+
+// ACCESS-MIDDLE-001 (spec rule 34): canonicalise BOTH extremes to the owner's
+// middle-ground one-liner — name-guarded to Gabriel.
+test('ACCESS-MIDDLE-001: too-short and too-long accessibility rows canonicalise; middle stays; non-Gabriel untouched', () => {
+  const CANON = 'Hearing impaired (cochlear implant); written follow-up works well.';
+  const mk = (v, name) => {
+    const backing = new Map();
+    backing.set('personalInfo', JSON.stringify({ name }));
+    backing.set('sections', JSON.stringify({ cv: [{ id: 'accessibility', type: 'labeled_list', items: [{ l: '', v, labelHidden: true }] }], cl: [] }));
+    const G = load(backing);
+    G.run();
+    return JSON.parse(backing.get('sections')).cv[0].items[0].v;
+  };
+  assert.equal(mk('Hearing impaired.', 'Gabriel Alexander Karp-Gershon'), CANON, 'too short -> canon');
+  assert.equal(mk('Hearing impaired; cochlear implant and hearing aid. Structured communication tools work well; captions, transcripts and written follow-up help', 'Gabriel Alexander Karp-Gershon'), CANON, 'too long -> canon');
+  assert.equal(mk(CANON, 'Gabriel Alexander Karp-Gershon'), CANON, 'canon is stable');
+  assert.equal(mk('Hearing impaired.', 'Anita Demo'), 'Hearing impaired.', 'non-Gabriel persona untouched');
+});

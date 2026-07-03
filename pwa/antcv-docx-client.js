@@ -277,6 +277,32 @@ async function runOrphanPreflight(payload) {
   } catch (_) { /* the export must never fail because of the preflight */ }
 }
 
+// PLACEHOLDER-EXPORT-GATE-001 (spec rule 38, owner 2026-07-04): a payload whose
+// CORE COMPETENCIES / bring table rows are BRACKET PLACEHOLDERS ("[Focus area 1]",
+// "[Strategic expertise - 1 or 2 lines]") is a FAILED generation snapshot — the
+// owner exported one without noticing. Detect it and ask before exporting; a
+// declined confirm throws so the caller shows the message. Detection is table
+// rows only (the loudest failure class); >=2 placeholder rows = placeholder
+// table. Kill: localStorage['antcv:disable-placeholder-gate']='1'.
+function placeholderGate(payload) {
+  try {
+    if (typeof localStorage !== 'undefined' && localStorage.getItem('antcv:disable-placeholder-gate') === '1') return;
+    const secs = (payload && payload.sections) || [];
+    const isPh = (v) => /^\s*\[[^\]]{2,80}\]\s*$/.test(String(v == null ? '' : v));
+    let phTables = 0;
+    for (const s of secs) {
+      if (!s || !Array.isArray(s.rows) || s.rows.length < 2) continue;
+      const body = s.rows.slice(1);
+      const phRows = body.filter((r) => Array.isArray(r) && r.length && r.every(isPh)).length;
+      if (phRows >= 2) phTables++;
+    }
+    if (!phTables) return;
+    const msg = 'This document contains a PLACEHOLDER table ("[Focus area 1]" rows) — a failed/stale generation snapshot. Export anyway?';
+    const ok = (typeof confirm === 'function') ? confirm(msg) : true;
+    if (!ok) { const e = new Error('Export cancelled: placeholder table detected — regenerate first.'); e.placeholderGate = true; throw e; }
+  } catch (e) { if (e && e.placeholderGate) throw e; /* detector errors never block */ }
+}
+
 /**
  * Build payload + POST + trigger browser download.
  * Throws on any failure — caller should catch and show a useful error.
@@ -361,6 +387,7 @@ export async function exportDocxViaWorker({
   // LLM re-tighten) before the POST. Hard-bounded: the export proceeds with whatever
   // landed after 12s, and ANY preflight failure is swallowed — the export can never
   // hang or fail because of orphan control. Kill: antcv:disable-orphan-preflight.
+  placeholderGate(payload);
   await runOrphanPreflight(payload);
 
   const headers = { 'Content-Type': 'application/json' };
@@ -885,16 +912,19 @@ export function buildPayload({
 // own default. The narrow [0.18, 0.2) preview range maps to the 0.2 floor, the
 // closest the worker can render without a band-widening worker deploy.
 function readSidebarRatio() {
+  // SIDEBAR-DEFAULT-32-001 (spec rule 36, owner 2026-07-04): the DEFAULT
+  // sidebar proportion is 32% — the user's preview-splitter choice
+  // (cvSidebarRatio) still wins when set.
   try {
-    if (typeof localStorage === 'undefined') return null;
+    if (typeof localStorage === 'undefined') return 0.32;
     const raw = localStorage.getItem('cvSidebarRatio');
-    if (raw == null) return null;
+    if (raw == null) return 0.32;
     let v;
     try { v = JSON.parse(raw); } catch (_) { v = Number(raw); }
     v = Number(v);
-    if (!Number.isFinite(v) || v <= 0) return null;
+    if (!Number.isFinite(v) || v <= 0) return 0.32;
     return Math.max(0.2, Math.min(0.55, v));
-  } catch (_) { return null; }
+  } catch (_) { return 0.32; }
 }
 
 // Which page side the AI watermark should sit on, as measured by the
@@ -1162,8 +1192,28 @@ function sanitizeForExport(docSections, doc) {
       // applyOutcomesMode) and section-mode payloads carry one clean line. Runs on
       // every experience section; KEEP_MIN=2 respected; stored sections untouched.
       if (s.type === 'experience' && Array.isArray(s.roles)) {
-        const roles = s.roles.map(_collapseRoleBullets);
-        if (roles.some((r, i) => r !== s.roles[i])) s = { ...s, roles };
+        let roles = s.roles.map(_collapseRoleBullets);
+        if (targeted) {
+          // ROLE-CLASS-HIDE-001 (spec rule 18, owner 2026-07-04 "fix in code"):
+          // in a TARGETED export the hide-for-this-role-class set never ships,
+          // regardless of what a stale row snapshot restored. Payload-only —
+          // stored sections keep the roles for the editor toggle.
+          const HIDE_CLASS = /security guard|students council|team operations manager/i;
+          roles = roles.filter((r) => !(r && HIDE_CLASS.test(String(r.title || ''))));
+          // BULLET-CAP-BELT-001 (spec rules 16/16a/17): plain roles carry at most
+          // 4 bullets in a targeted export; a MERGED role (function & leadership
+          // title) at most 5. Bullets are ordered strongest-first by the
+          // generation (SECTION-ORDER-001), so keeping the FIRST N is the
+          // deterministic version of "most relevant only". Payload-only.
+          const MERGED_TAIL = /&\s*(?:[A-Za-z.]+\s+)?(?:leader|lead|manager|coach|architect|specialist)\b/i;
+          roles = roles.map((r) => {
+            if (!r || !Array.isArray(r.bullets)) return r;
+            const cap = MERGED_TAIL.test(String(r.title || '')) ? 5 : 4;
+            if (r.bullets.length <= cap) return r;
+            return { ...r, bullets: r.bullets.slice(0, cap) };
+          });
+        }
+        if (roles.length !== s.roles.length || roles.some((r, i) => r !== s.roles[i])) s = { ...s, roles };
       }
       // SIDEBAR-TIGHTEN-001: apply the owner's sidebar abbreviations to list strings
       // and labeled l/v values BEFORE the per-id passes below (several of them return
@@ -3194,6 +3244,7 @@ export async function exportPdfViaWorker(opts) {
 
   // EXPORT-PREFLIGHT-ORPHANS-001: the owner's orphans live in THIS path (the
   // CloudConvert PDF). Same bounded, swallow-all preflight as exportDocxViaWorker.
+  placeholderGate(payload);
   await runOrphanPreflight(payload);
 
   const headers = { 'Content-Type': 'application/json', 'Accept': 'application/pdf' };

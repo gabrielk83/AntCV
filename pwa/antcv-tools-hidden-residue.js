@@ -37,7 +37,7 @@
 (function () {
   'use strict';
   if (window.__antcvToolsHiddenResidue) return;
-  window.__antcvToolsHiddenResidue = '1.51.114';
+  window.__antcvToolsHiddenResidue = '1.51.115';
 
   var SRC = 'tools-hidden-residue';
   var PREFIX = 'Hidden - ';
@@ -98,6 +98,40 @@
     return !!n && hayPadded.indexOf(' ' + n + ' ') !== -1;
   }
 
+  // RESIDUE-RESTORE-PLACEMENT (owner 2026-07-03): a restored token goes back
+  // WHERE IT COSTS THE LEAST SPACE, not to the end of the line. Simulate the
+  // sidebar word-wrap at a few plausible column widths and pick the insertion
+  // index with the fewest total lines (ties -> earliest position, which keeps
+  // JD-relevance order mostly intact). Same long+short packing idea as spec
+  // rule 40, applied deterministically to one row.
+  var WRAP_WIDTHS = [26, 30, 34];
+  function simulateLines(text, width) {
+    var words = String(text).split(/\s+/).filter(Boolean);
+    var lines = 1, cur = 0;
+    for (var i = 0; i < words.length; i++) {
+      var wl = words[i].length;
+      if (cur === 0) cur = wl;
+      else if (cur + 1 + wl <= width) cur += 1 + wl;
+      else { lines++; cur = wl; }
+    }
+    return lines;
+  }
+  function lineCost(label, toks) {
+    var text = label + ': ' + toks.join(', ');
+    var c = 0;
+    for (var i = 0; i < WRAP_WIDTHS.length; i++) c += simulateLines(text, WRAP_WIDTHS[i]);
+    return c;
+  }
+  function insertBest(label, toks, tok) {
+    var bestIdx = toks.length, bestCost = Infinity;
+    for (var i = 0; i <= toks.length; i++) {
+      var trial = toks.slice(0, i).concat([tok], toks.slice(i));
+      var c = lineCost(label, trial);
+      if (c < bestCost) { bestCost = c; bestIdx = i; }
+    }
+    return toks.slice(0, bestIdx).concat([tok], toks.slice(bestIdx));
+  }
+
   // Pure reconcile: returns the next items array, or null for no change.
   function reconcile(items, cats) {
     if (!Array.isArray(items) || !Array.isArray(cats) || !cats.length) return null;
@@ -121,8 +155,9 @@
         var hayRow = ' ' + norm((row.l || '') + ' ' + (row.v || '')) + ' ';
         var add = toks.filter(function (t) { return !hasToken(hayRow, t); });
         if (add.length) {
-          var v = String(row.v == null ? '' : row.v).replace(/\s+$/, '');
-          next[target] = Object.assign({}, row, { v: (v ? v.replace(/[,;\s]+$/, '') + ', ' : '') + add.join(', '), hidden: false });
+          var rowToks = tokensOf(row.v);
+          for (var a = 0; a < add.length; a++) rowToks = insertBest(String(row.l || ''), rowToks, add[a]);
+          next[target] = Object.assign({}, row, { v: rowToks.join(', '), hidden: false });
         }
         next.splice(i, 1);
       } else {
@@ -204,11 +239,13 @@
   setInterval(tick, 4000);
 
   window.AntcvToolsHiddenResidue = {
-    version: '1.51.114',
+    version: '1.51.115',
     _reconcile: reconcile,
     _kernelCategories: kernelCategories,
     _tokens: tokensOf,
     _norm: norm,
+    _insertBest: insertBest,
+    _lineCost: lineCost,
     _apply: apply,
   };
 })();

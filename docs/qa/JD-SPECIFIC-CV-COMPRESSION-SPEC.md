@@ -289,3 +289,13 @@ NOT relevance-ranked section reordering (both explicitly rejected by the owner).
     Gates: no-op on the skeleton template and when zero kernel tokens are
     present (other-language / unrelated list). Disable:
     localStorage['antcv:disable-tools-hidden-residue'] = '1'.
+    42a (owner 2026-07-03, second pass, 1.51.115): RESTORE PLACEMENT is
+    space-optimal — a restored token is inserted at the position in the
+    category line that yields the FEWEST wrapped lines (word-wrap simulated
+    at several sidebar widths; ties go to the earliest index, preserving
+    JD-relevance order), never blindly appended. And the residue group NEVER
+    renders anywhere: preview's labeled_list renderer skips any
+    "Hidden - " labeled row outright (both bundles, RESIDUE-PREVIEW-SKIP),
+    so even the moment between the eye-click and the restore pass — or a
+    disabled sidecar — cannot flash it into the preview; export was already
+    belted in docx-client.

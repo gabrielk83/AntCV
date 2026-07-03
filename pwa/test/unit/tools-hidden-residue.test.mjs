@@ -159,3 +159,23 @@ test('export belt: sanitizeForExport drops residue rows from sidebar sections', 
   assert.equal(tools.items.length, 1, 'both residue rows dropped from the payload');
   assert.equal(tools.items[0].l, 'Lab & fabrication');
 });
+
+test('RESTORE placement: insertBest never beats worse than append-at-end and keeps all tokens', () => {
+  const { api } = loadSidecar();
+  const label = 'Lab & fabrication';
+  const toks = ['Cleanroom fabrication', 'lithography', 'etch', 'plasma processing', 'DRIE'];
+  const out = api._insertBest(label, toks, 'PDMS nanoimprint');
+  assert.equal(out.length, toks.length + 1);
+  assert.equal(out.filter((t) => t === 'PDMS nanoimprint').length, 1);
+  for (const t of toks) assert.ok(out.includes(t), 'no original token lost: ' + t);
+  const appended = toks.concat(['PDMS nanoimprint']);
+  assert.ok(api._lineCost(label, out) <= api._lineCost(label, appended), 'chosen position costs no more lines than appending');
+});
+
+test('RESIDUE-PREVIEW-SKIP: both app bundles skip residue rows in the labeled_list preview', () => {
+  const src = readFileSync(new URL('../../app.src.js', import.meta.url), 'utf8');
+  const min = readFileSync(new URL('../../app.js', import.meta.url), 'utf8');
+  assert.ok(src.includes('RESIDUE-PREVIEW-SKIP'), 'app.src.js carries the marker');
+  assert.ok(src.includes('row.hidden || /^\\s*hidden\\s*[-–—:]\\s*/i.test(String(row.l || ""))'), 'app.src.js skip condition present');
+  assert.ok(min.includes('e.hidden||/^\\s*hidden\\s*[-–—:]\\s*/i.test(String(e.l||""))'), 'app.js (minified mirror) skip condition present');
+});

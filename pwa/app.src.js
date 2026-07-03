@@ -6767,7 +6767,8 @@
                         placeholder: "[Sub-group]",
                       }),
                     );
-            } else if (row && row.hidden) {
+            } else if (row && (row.hidden || /^\s*hidden\s*[-–—:]\s*/i.test(String(row.l || "")))) {
+              // RESIDUE-PREVIEW-SKIP: "Hidden - <category>" review rows never render.
               node = null;
             } else if (!row) {
               // 1.50.254: a deleted item briefly arrives here as a null

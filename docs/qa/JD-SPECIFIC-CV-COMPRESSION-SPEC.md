@@ -108,3 +108,56 @@ NOT relevance-ranked section reordering (both explicitly rejected by the owner).
     from rationale.questions_in_jd or POST /api/jd-analysis). For the NIL application
     the bridge never fired because parse_jd crashed (LADDER-CONST-CRASH-001, fixed
     1.51.97) — VERIFY after the owner's NIL regen that the second CL page appears.
+
+## Round-4 review additions (owner 2026-07-04, first NIL-targeted export)
+
+14. **CV header keeps the SPECIALIZATION line.** The targeted export replaced the
+    positioning triad with "Application: <role> — <company>". The Application line
+    must not displace the specialization (adapted per rule 10); decide placement so
+    both roles are served (CL may carry the Application line; CV leads with the
+    adapted specialization).
+
+15. **TOOLS & METHODS: hide ALL JD-irrelevant entries.** The NIL export kept the
+    full bloated list. Rule 11's exempt list (Interests/Languages/Accessibility)
+    does NOT cover tools — tools get the aggressive cut: hidden:true for every
+    category/item the JD does not need.
+
+16. **Role bullets: 3-4 max, most JD-relevant only.** Per visible role.
+
+17. **MERGED role: up to 5 bullets (highest fit) and MORE THAN ONE Result.**
+    A merge combines two roles' evidence — one Result line under-sells it.
+
+18. **Hide-for-this-role-class set:** Security Guard, Students Council
+    Representative, Team Operations Manager (Pan Idræt) are irrelevant for
+    hands-on engineering roles (on:false, never deleted — rule from
+    sections-hide-over-delete).
+
+19. **Regulatory: few items → ONE flat list** (extends rule 6: no group subheads
+    when the visible set is small). For NIL specifically: STANAG 4694
+    (weapon-mounted sight) and STANAG 4355 (ballistics/fire-control) are
+    irrelevant — environmental detail was also too deep for the role.
+
+20. **Accessibility: SHORT.** One tight line (rule 9 stands) — and the phrase
+    "It has not limited his career" (any variant) is BANNED EVERYWHERE.
+    ACCESS-NO-COMMENT-001 already bans it in the prompt and the model violated
+    it → needs an ENFORCEMENT BELT (post-gen scrub), not more prompt text.
+
+21. **Patent bullet wording:** the stray-light window bullet must carry the word
+    "patented"/"patent" ("Co-invented the patented stray-light optical window…");
+    the patent NUMBER stays only in Publications (existing rule).
+
+22. **Profile: no filler, no disability.** "Has worked with people from many
+    backgrounds; hearing impaired, which has not limited his career." violated
+    BOTH PROFILE-NO-FILLER-001 and PROFILE-NO-DISABILITY-001 (already in the
+    prompt) → enforcement belt required: post-gen profile scrub (strip
+    disability/accessibility mentions + the banned career-comment phrase +
+    generic people-filler from profile_content).
+
+23. **CL SLOGAN adapts per role — surprising, innovative connection.** The
+    standing "PROCESSES • PRODUCTS • PEOPLE" must not survive a targeted gen
+    (strengthens rule 10): generate a role-fitted slogan that connects the
+    candidate to THIS role in an unexpected way.
+
+24. **CL Q&A = a real SEPARATE PAGE.** Hard page break before it; its own
+    candidate header/section, its own closure, sign-off, name, signature, and
+    AI notice — a standalone answer sheet, not a continuation block.

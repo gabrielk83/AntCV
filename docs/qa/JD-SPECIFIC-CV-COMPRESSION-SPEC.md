@@ -223,3 +223,27 @@ NOT relevance-ranked section reordering (both explicitly rejected by the owner).
   snapshot on selection (row 29 residual — row re-save only after live repair).
 - The antcv tab renderer freezes frequently under MCP automation (recycle the
   tab, keep evals small).
+
+## Rules 34-38 (owner 2026-07-04, second live review — "keep working until >=97.5% aligned")
+
+34. **Accessibility: the MIDDLE ground, not the extremes.** "Hearing impaired."
+    alone is TOO LITTLE; the full accommodation paragraph is too much. Target
+    form: "Hearing impaired (cochlear implant); written follow-up works well."
+    — one line, factual, carries the one accommodation that matters.
+35. **Google Scholar (and any profile link) renders as a HYPERLINK**, in
+    preview and PDF ("Details available via Google Scholar" as plain text is a
+    defect — link it).
+36. **Sidebar default proportion = 32%**; the user can change it in the
+    preview (the splitter), and that choice must round-trip to the export.
+37. **Brand fit must actually re-colour the document.** When the user selects
+    "fit to the ad/company brand", the export palette adopts the JD's sampled
+    brand identity (the NIL JD carries "logo blue #0373c6 / dark navy #00355a")
+    — staying on the default copenhagen palette is a failed brand fit
+    (BRAND-FIT-PALETTE-001; the brand_fit flag reaches the prompt, the PALETTE
+    application layer does not consume the sampled colours).
+38. **Enforcement beats prompts (97.5% standing order).** Every rule above that
+    can be checked deterministically gets a BELT (export preflight or sidecar):
+    bullet caps per role class (16a), placeholder-table detection (a core_comp
+    of "[Focus area N]" rows is a FAILED generation — block the export and
+    surface a regen prompt), banned phrases, section relevance sets. The owner
+    gate is: generations land >=97.5% aligned with the spec WITHOUT hand edits.

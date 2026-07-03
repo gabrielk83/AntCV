@@ -15972,6 +15972,26 @@
                     try {
                       const e = n && n.active_application;
                       if (e && "object" == typeof e) {
+                        // META-DRIFT-GUARD-002 (register row 31, owner 2026-07-04
+                        // "keep working until 97.5%"): the COLD-START restore was the
+                        // last unguarded meta writer — it adopted a stale
+                        // unsolicited/empty cloud row's meta into React state AND
+                        // replaced sections wholesale, re-clobbering a live targeted
+                        // draft on every restore pass (probe-confirmed: exports kept
+                        // flipping to "Unsolicited" while storage said NIL). Same
+                        // semantics as META-DRIFT-GUARD-001 on the Read-from-Cloud
+                        // path: when the in-memory draft carries a REAL company and
+                        // the row is unsolicited/empty, KEEP the draft (meta AND
+                        // sections). True cold start (io.company empty) is inert.
+                        const __mN2 = (s) => String(s || "").trim().toLowerCase();
+                        const __curCo2 = __mN2(io && io.company);
+                        const __rowCo2 = __mN2(e.jd_company);
+                        const __draftDrift2 =
+                          __curCo2 && "unsolicited" !== __curCo2 &&
+                          ("" === __rowCo2 || "unsolicited" === __rowCo2);
+                        if (__draftDrift2) {
+                          try { console.log("[cloud-restore] META-DRIFT-GUARD-002: keeping tailored draft (" + __curCo2 + ") over the unsolicited row"); } catch (e) {}
+                        } else {
                         if (e.jd_company || e.jd_role)
                           try {
                             lo({
@@ -15996,6 +16016,7 @@
                                 : [],
                             });
                           } catch (e) {}
+                        }
                         if (e.rationale && "object" == typeof e.rationale)
                           try {
                             bo(e.rationale);

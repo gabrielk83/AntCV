@@ -36,11 +36,12 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.105-meta-downgrade-guard';
+  var VERSION = '1.51.124-sequence-guard';
   if (window.__antcvGenerateCloudSync277 === VERSION) return;
   window.__antcvGenerateCloudSync277 = VERSION;
 
   var TOKEN_KEY = 'antcv:auth:token';
+  var META_STAMP_KEY = 'antcv:metaStamp';   // {key:'Company|Role', ts} — when the local meta identity last changed (observed)
 
   // ─── Storage helpers ────────────────────────────────────────────────
   function readRaw(k) { try { return localStorage.getItem(k) || ''; } catch (_) { return ''; } }
@@ -65,6 +66,45 @@
     return v;
   }
   function getAuthToken() { return readRaw(TOKEN_KEY); }
+
+  // ─── 277-SEQUENCE-GUARD-001 helpers (register row 29 leg A) ─────────
+  // "Never let OLDER cloud meta overwrite NEWER local" — the round-4 probe
+  // caught this GET landing AFTER a generation with the PRE-GEN cloud state
+  // (slow round trip / second tab). Two independent guards:
+  //  (1) in-flight identity: the local meta identity is snapshotted when the
+  //      sync STARTS; if it changed by adoption time, a generation or user
+  //      action landed mid-round-trip — skip the WHOLE adoption (meta AND
+  //      sections; the next tick pushes the fresh state instead).
+  //  (2) staleness: the relay's active_application carries the D1 row's
+  //      updated_at; a cloud row older than the local meta-identity change
+  //      (3-min clock-skew margin) is a stale snapshot — skip adoption.
+  // Kill: localStorage['antcv:disable-277-sequence-guard']='1'.
+  function metaKey() {
+    var m = readJson('meta', {}) || {};
+    return String(m.company || '').trim() + '|' + String(m.role || '').trim();
+  }
+  function stampMetaIdentity() {
+    try {
+      var key = metaKey();
+      var st = readJson(META_STAMP_KEY, null);
+      if (!st || st.key !== key) writeRaw(META_STAMP_KEY, JSON.stringify({ key: key, ts: Date.now() }));
+    } catch (_) {}
+  }
+  function metaStampTs() {
+    var st = readJson(META_STAMP_KEY, null);
+    return (st && st.key === metaKey() && isFinite(Number(st.ts))) ? Number(st.ts) : 0;
+  }
+  function parseCloudTs(v) {
+    if (v == null) return 0;
+    var n = Number(v);
+    if (isFinite(n) && n > 0) return n < 1e12 ? n * 1000 : n;   // epoch seconds vs ms
+    var d = Date.parse(String(v));
+    return isFinite(d) ? d : 0;
+  }
+  function seqGuardDisabled() {
+    try { return localStorage.getItem('antcv:disable-277-sequence-guard') === '1'; } catch (_) { return false; }
+  }
+  var SEQ_SKEW_MS = 180000;
 
   // ─── "Usable local data" probe (same shape as fit-cv-cloud-sync) ────
   function isPlainObject(v) { return v !== null && typeof v === 'object' && !Array.isArray(v); }
@@ -124,6 +164,11 @@
         if (!base) return resolve({ ok: false, pushed: false, pulled: false, reason: 'no-relay-url' });
         if (!tok)  return resolve({ ok: false, pushed: false, pulled: false, reason: 'no-auth-token' });
 
+        // 277-SEQUENCE-GUARD-001: observe the local meta identity NOW — the
+        // adoption stage compares against it after the round trip.
+        stampMetaIdentity();
+        var metaKeyAtStart = metaKey();
+
         var pushed = false;
         var pulled = false;
         var pullSections = 0;
@@ -169,6 +214,25 @@
           if (!body) return;
           // Mirror cv_sections / cl_sections back into local 'sections'.
           var aa = body.active_application;
+          // 277-SEQUENCE-GUARD-001 (row 29 leg A): never adopt a cloud
+          // application snapshot that is OLDER than the local state.
+          if (aa && !seqGuardDisabled()) {
+            var __curMetaKey = metaKey();
+            if (__curMetaKey !== metaKeyAtStart) {
+              // A generation / row switch landed DURING the round trip — the
+              // body in hand predates it by construction. Adopting would
+              // re-clobber the fresh meta AND sections (the round-4 revert).
+              try { console.log('[cloud-sync-277] 277-SEQUENCE-GUARD-001: meta changed mid round-trip ("' + metaKeyAtStart + '" -> "' + __curMetaKey + '") — adoption skipped this pass'); } catch (_) {}
+              aa = null;
+            } else {
+              var __cloudTs = parseCloudTs(aa.updated_at);
+              var __localTs = metaStampTs();
+              if (__cloudTs && __localTs && __cloudTs < __localTs - SEQ_SKEW_MS) {
+                try { console.log('[cloud-sync-277] 277-SEQUENCE-GUARD-001: cloud row (' + new Date(__cloudTs).toISOString() + ') predates the local meta change (' + new Date(__localTs).toISOString() + ') — adoption skipped'); } catch (_) {}
+                aa = null;
+              }
+            }
+          }
           if (aa) {
             var cur = readJson('sections', null);
             if (!cur || (!Array.isArray(cur) && !isPlainObject(cur))) cur = { cv: [], cl: [] };
@@ -212,6 +276,7 @@
                 if (aa.jd_company) m.company = aa.jd_company;
                 if (aa.jd_role)    m.role    = aa.jd_role;
                 try { localStorage.setItem('meta', JSON.stringify(m)); pulled = true; } catch (_) {}
+                stampMetaIdentity();   // the adoption IS the newest local change now
               }
             }
           }

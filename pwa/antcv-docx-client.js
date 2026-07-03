@@ -563,7 +563,10 @@ export function buildPayload({
   // Normalize sections — the PWA stores these as { cv: [...], cl: [...] }
   // depending on doc type; the worker just wants the active list.
   const docSections = sanitizeForExport(applyOutcomesMode(
-    mergeHowContributeFromLocalStorage((sections && sections[doc]) || (Array.isArray(sections) ? sections : []), doc),
+    mergeHowContributeFromLocalStorage(
+      hydrateClProse((sections && sections[doc]) || (Array.isArray(sections) ? sections : []), doc, meta),
+      doc
+    ),
     doc
   ), doc);
 
@@ -909,6 +912,78 @@ export function buildPayload({
   try { linkifyKernelUrls(payload); } catch (_) {}
 
   return payload;
+}
+
+// ── CL-HYDRATE-EXPORT-GATE-001 (register row 29 leg B, owner round-4) ─────────
+// The CL HYDRATION RACE caught live: at gen-complete the opening/why/who
+// sections still held skeleton/template text while the real prose sat in
+// meta / the prose-loss guard's bucket; the sections self-heal within minutes
+// (the guard's async reapply tick) but a fast export raced it and shipped the
+// literal "Dear [Hiring Team / Name]," placeholders. This gate runs INSIDE
+// buildPayload (exports build from REACT state — a localStorage heal can't fix
+// the payload in hand): a guarded CL section whose prose is STILL a template
+// placeholder is replaced from the best real source — the prose-loss guard's
+// bucket snapshot for the CURRENT application (full section, right shape),
+// else the meta string for opening/greeting. Placeholder←real only; never
+// fabricates; classifier mirrors the guard (ANY bracketed template segment).
+// Kill: localStorage['antcv:disable-cl-hydrate-gate']='1'.
+const CL_HYDRATE_IDS = ['greeting', 'opening', 'why', 'who', 'foundation', 'contribute', 'closure', 'bring'];
+function _clPlaceholder(t) {
+  const s = String(t == null ? '' : t).trim();
+  if (!s || s.charAt(0) === '[') return true;
+  return (s.match(/\[[^\]]{2,80}\]/g) || []).length >= 1;
+}
+function _clProseOf(sec) {
+  if (!sec || typeof sec !== 'object') return '';
+  if (Array.isArray(sec.items)) {
+    for (const it of sec.items) {
+      const t = it && typeof it === 'object' ? it.t : it;   // body only — the lead label survives an empty gen
+      if (typeof t === 'string' && t.trim()) return t;
+    }
+    return '';
+  }
+  return typeof sec.content === 'string' ? sec.content : '';
+}
+function hydrateClProse(list, doc, meta) {
+  try {
+    if (doc !== 'cl' || !Array.isArray(list)) return list;
+    if (localStorage.getItem('antcv:disable-cl-hydrate-gate') === '1') return list;
+    const m = meta || {};
+    let bucket = null;
+    try {
+      const g = JSON.parse(localStorage.getItem('antcv:clProseGuard') || 'null');
+      const key = String(m.company || '').trim() + '|' + String(m.role || '').trim();
+      if (g && typeof g === 'object' && g[key] && typeof g[key] === 'object') bucket = g[key];
+    } catch (_) {}
+    const metaText = { opening: m.opening, greeting: m.greeting };
+    let hydrated = 0;
+    const out = list.map((sec) => {
+      if (!sec || CL_HYDRATE_IDS.indexOf(String(sec.id || '')) === -1) return sec;
+      if (!_clPlaceholder(_clProseOf(sec))) return sec;
+      // best source: the guard's full-section snapshot (right shape) …
+      const snap = bucket && bucket[sec.id];
+      if (snap && typeof snap === 'object' && !_clPlaceholder(_clProseOf(snap))) {
+        hydrated++;
+        return JSON.parse(JSON.stringify(snap));
+      }
+      // … else the meta string for the header prose ids.
+      const mt = metaText[sec.id];
+      if (typeof mt === 'string' && mt.trim() && !_clPlaceholder(mt)) {
+        hydrated++;
+        if (Array.isArray(sec.items)) {
+          const items = sec.items.slice();
+          const i0 = items.findIndex((it) => it && typeof it === 'object');
+          if (i0 >= 0) items[i0] = { ...items[i0], t: mt };
+          else items.unshift({ b: '', t: mt });
+          return { ...sec, items };
+        }
+        return { ...sec, content: mt };
+      }
+      return sec;
+    });
+    if (hydrated) { try { console.log('[docx-client] CL-HYDRATE-EXPORT-GATE-001: hydrated ' + hydrated + ' placeholder CL section(s) from meta/guard before export'); } catch (_) {} }
+    return hydrated ? out : list;
+  } catch (_) { return list; }
 }
 
 // ── LINKIFY-EXPORT-001 helpers ───────────────────────────────────────────────

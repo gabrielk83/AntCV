@@ -92,3 +92,71 @@ test('kill switch restores the old mirror-everything behaviour', async () => {
   await ctx.api.syncBothWays();
   assert.equal(JSON.parse(ctx.store.get('meta')).company, 'Unsolicited');
 });
+
+// 277-SEQUENCE-GUARD-001 (register row 29 leg A, 1.51.124): never let an OLDER
+// cloud application snapshot overwrite NEWER local state. Two guards: (1) the
+// local meta identity changed DURING the round trip (a generation landed) ->
+// the whole adoption is skipped; (2) the cloud row's updated_at predates the
+// local meta-identity change beyond clock skew -> skipped.
+
+test('in-flight guard: a generation landing mid round-trip is never re-clobbered', async () => {
+  let ctxRef = null;
+  const fetchImpl = async (url, opts) => {
+    const method = (opts && opts.method) || 'GET';
+    if (method === 'PUT') return { ok: true, status: 200, json: async () => ({}) };
+    // the GENERATION lands while the GET is in flight: meta + sections change
+    ctxRef.store.set('meta', JSON.stringify({ company: 'Trackman A/S', role: 'Project Manager, Hardware' }));
+    ctxRef.store.set('sections', JSON.stringify({ cv: [{ id: 'profile', type: 'text', title: 'PROFILE', content: 'Fresh Trackman profile prose.', items: [1] }], cl: [] }));
+    return { ok: true, status: 200, json: async () => ({ active_application: {
+      jd_company: 'NIL Technology', jd_role: 'Nanooptics Prototyping Engineer',
+      cv_sections: [{ id: 'profile', type: 'text', title: 'PROFILE', content: 'STALE pre-gen profile.', items: [1] }],
+      updated_at: new Date().toISOString(),
+    } }) };
+  };
+  ctxRef = load(storage('Unsolicited'), fetchImpl);
+  await ctxRef.api.syncBothWays();
+  const m = JSON.parse(ctxRef.store.get('meta'));
+  assert.equal(m.company, 'Trackman A/S', 'fresh mid-flight meta survives');
+  const secs = JSON.parse(ctxRef.store.get('sections'));
+  assert.match(secs.cv[0].content, /Fresh Trackman/, 'fresh mid-flight sections survive too');
+});
+
+test('staleness guard: a cloud row hours older than the local meta change is skipped', async () => {
+  const old = new Date(Date.now() - 2 * 3600_000).toISOString();
+  const ctx = load(
+    storage('Trackman A/S', { 'antcv:metaStamp': JSON.stringify({ key: 'Trackman A/S|Nanooptics Prototyping Engineer', ts: Date.now() - 60_000 }) }),
+    relayReturning({ jd_company: 'NIL Technology', jd_role: 'Old Role', updated_at: old })
+  );
+  await ctx.api.syncBothWays();
+  assert.equal(JSON.parse(ctx.store.get('meta')).company, 'Trackman A/S', 'older cloud row never overwrites newer local meta');
+});
+
+test('staleness guard: a NEWER cloud row (other device) still mirrors; kill switch restores old behaviour', async () => {
+  const fresh = new Date().toISOString();
+  const ctx = load(
+    storage('Trackman A/S', { 'antcv:metaStamp': JSON.stringify({ key: 'Trackman A/S|Nanooptics Prototyping Engineer', ts: Date.now() - 3600_000 }) }),
+    relayReturning({ jd_company: 'NIL Technology', jd_role: 'Newer Role', updated_at: fresh })
+  );
+  await ctx.api.syncBothWays();
+  assert.equal(JSON.parse(ctx.store.get('meta')).company, 'NIL Technology', 'genuinely newer cloud state wins');
+
+  const old = new Date(Date.now() - 2 * 3600_000).toISOString();
+  const killed = load(
+    storage('Trackman A/S', {
+      'antcv:metaStamp': JSON.stringify({ key: 'Trackman A/S|Nanooptics Prototyping Engineer', ts: Date.now() - 60_000 }),
+      'antcv:disable-277-sequence-guard': '1',
+    }),
+    relayReturning({ jd_company: 'NIL Technology', jd_role: 'Old Role', updated_at: old })
+  );
+  await killed.api.syncBothWays();
+  assert.equal(JSON.parse(killed.store.get('meta')).company, 'NIL Technology', 'kill switch: old mirror behaviour');
+});
+
+test('legacy cloud rows without updated_at keep the pre-guard behaviour', async () => {
+  const ctx = load(
+    storage('Unsolicited', { 'antcv:metaStamp': JSON.stringify({ key: 'Unsolicited|Open Application', ts: Date.now() - 60_000 }) }),
+    relayReturning({ jd_company: 'NIL Technology', jd_role: 'Nanooptics Prototyping Engineer' })
+  );
+  await ctx.api.syncBothWays();
+  assert.equal(JSON.parse(ctx.store.get('meta')).company, 'NIL Technology', 'no timestamp -> guard fails open');
+});

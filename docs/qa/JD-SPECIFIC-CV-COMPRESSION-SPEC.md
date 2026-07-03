@@ -260,3 +260,18 @@ NOT relevance-ranked section reordering (both explicitly rejected by the owner).
   provenance, and ATS-aware document generation.") shows in SW/AI/PROJECT
   positions; NEITHER is prominent for cleanroom/fabrication work. Machine gates
   = `showWhenJDContainsAny` in the kernel v10 (2026-07-04).
+
+## Rules 40-41 (owner 2026-07-04, priority directive "start with 5, then 2, then 4")
+
+40. **SIDEBAR LINE ECONOMY** (the owner's manual technique, now a gen rule +
+    queued belt): the sidebar drives the page count. Within each group, ORDER
+    items so longer and shorter values sit adjacent (they pack into fewer
+    rendered lines); hide JD-irrelevant qualifications and niche tools
+    entirely; prefer the compressed form of every value. Combined with the
+    role-bullet orphan work (rows 27/28) this is the main lever toward the
+    ~1.5-page target. Wired into the gen prompt (1.51.113); the deterministic
+    packing/measure belt rides the row-27 orphan sweep.
+41. **MERGED-TITLE JOINER = " & ", never "/"** (rule 17a generalised): the
+    deterministic role-merge in docx-client now joins with " & "
+    ("Change Request Lead & System Architect" — the Innoviz ORDER is correct
+    as-is, Change Request Lead is a position); merged bullet cap aligned to 5.

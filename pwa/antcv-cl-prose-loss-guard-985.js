@@ -23,7 +23,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.101-skeleton-capture-skip';
+  var VERSION = '1.51.113-skeleton-capture-2';
   if (window.__antcvClProseGuard985 === VERSION) return;
   window.__antcvClProseGuard985 = VERSION;
 
@@ -83,7 +83,14 @@
   function isPlaceholder(t) {
     var s = String(t == null ? '' : t).trim();
     if (!s || s.charAt(0) === '[') return true;
-    return (s.match(/\[[^\]]{2,80}\]/g) || []).length >= 2;
+    // CL-GUARD-SKELETON-CAPTURE-002 (owner 2026-07-04, priority 5 "fix"): the
+    // >=2 rule missed single-bracket template lines ("I would start by
+    // learning where [Company/team] loses time…") — captured as real, never
+    // healed, so every stale row-restore of the placeholder contribute stuck.
+    // The GUARDED CL prose ids never carry legitimate brackets (the "[verify]"
+    // flag lives in application_qa, which is NOT guarded) — so ANY bracketed
+    // template segment marks the body as placeholder.
+    return (s.match(/\[[^\]]{2,80}\]/g) || []).length >= 1;
   }
 
   // The primary prose text of a section (decides real vs placeholder).

@@ -48,9 +48,9 @@ const SKELETON_OPENING = {
   id: 'opening', type: 'rich_block', headlineOff: true,
   items: [{ b: '', t: 'I am applying for [Role title] at [Company], where I can contribute to [main JD need 1 (example: a core responsibility from the JD)], [main JD need 2 (example: a second responsibility)].' }],
 };
-const REAL_OPENING_ONE_BRACKET = {
-  id: 'opening', type: 'rich_block', headlineOff: true,
-  items: [{ b: '', t: 'NIL Technology pushes nanooptics from prototype to production [verify], and that is the work I have done for 15 years across LiDAR and smartphone optics.' }],
+const SINGLE_BRACKET_TEMPLATE = {
+  id: 'contribute', type: 'rich_block', headlineOff: true,
+  items: [{ b: 'How I would contribute:', t: 'I would start by learning where [Company/team] loses time, clarity, trust, or traceability.' }],
 };
 
 test('skeleton opening is NOT captured under a targeted key', () => {
@@ -63,15 +63,15 @@ test('skeleton opening is NOT captured under a targeted key', () => {
   assert.equal(store['NIL Technology|Nanooptics Prototyping Engineer'], undefined, 'skeleton must not be snapshotted');
 });
 
-test('real prose with a single bracketed token IS still captured', () => {
+test('CL-GUARD-SKELETON-CAPTURE-002: even a SINGLE-bracket template line is never captured (guarded ids carry no legit brackets)', () => {
   const backing = new Map();
   backing.set('meta', JSON.stringify({ company: 'NIL Technology', role: 'Nanooptics Prototyping Engineer' }));
-  backing.set('sections', JSON.stringify({ cv: [], cl: [REAL_OPENING_ONE_BRACKET] }));
+  backing.set('sections', JSON.stringify({ cv: [], cl: [SINGLE_BRACKET_TEMPLATE] }));
   const G = load(backing);
   G.snapshot();
   const store = JSON.parse(backing.get('antcv:clProseGuard') || '{}');
   const bucket = store['NIL Technology|Nanooptics Prototyping Engineer'];
-  assert.ok(bucket && bucket.opening, 'one bracketed token must not block a real capture');
+  assert.ok(!bucket || !bucket.contribute, 'the [Company/team] template line must not be snapshotted');
 });
 
 test('purgeSkeletonSnapshots drops skeleton buckets, keeps real ones', () => {
@@ -93,7 +93,8 @@ test('_isPlaceholder: skeleton body true, real prose false, bracket-led true', (
   const backing = new Map();
   const G = load(backing);
   assert.equal(G._isPlaceholder(SKELETON_OPENING.items[0].t), true);
-  assert.equal(G._isPlaceholder(REAL_OPENING_ONE_BRACKET.items[0].t), false);
+  assert.equal(G._isPlaceholder(SINGLE_BRACKET_TEMPLATE.items[0].t), true);
+  assert.equal(G._isPlaceholder('I keep decisions and their rationale in the open so anyone joining later can see why.'), false);
   assert.equal(G._isPlaceholder('[Opening]'), true);
   assert.equal(G._isPlaceholder(''), true);
 });

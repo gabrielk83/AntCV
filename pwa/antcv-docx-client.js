@@ -1153,11 +1153,14 @@ function mergeSameCompanyRoles(roles) {
         .map((b, i) => ({ b, i, s: _relevanceScore(b) }))
         .sort((a, c) => c.s - a.s || a.i - c.i)
         .map((x) => x.b);
-      if (bullets.length > 6) bullets = bullets.slice(0, 6);
+      // Rule 17/16a: a merged role carries at most 5 bullets (belt re-caps too).
+      if (bullets.length > 5) bullets = bullets.slice(0, 5);
       const ys = [];
       grp.forEach((g) => (String(g.years || '').match(/\d{4}/g) || []).forEach((y) => ys.push(parseInt(y, 10))));
       const years = ys.length ? (Math.min(...ys) + ' - ' + Math.max(...ys)) : (grp[0].years || '');
-      out.push({ ...grp[0], title: titles.join(' / '), bullets, years });
+      // MERGED-TITLE-JOIN-001 (owner 2026-07-04, spec rule 17a): merged roles
+      // join with " & ", never "/" — "Change Request Lead & System Architect".
+      out.push({ ...grp[0], title: titles.join(' & '), bullets, years });
     });
     return out;
   } catch (_) { return null; }

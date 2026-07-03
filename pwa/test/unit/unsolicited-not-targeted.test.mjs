@@ -66,7 +66,8 @@ test('a REAL targeted company still merges + hides (no regression)', () => {
   assert.ok(Array.isArray(merged), 'targeted export must merge');
   const innoviz = merged.filter((r) => r && r.company === 'Innoviz Technologies' && r.on !== false);
   assert.equal(innoviz.length, 1, 'the two Innoviz roles consolidate to one');
-  assert.ok(/\//.test(innoviz[0].title), 'merged title joins the distinct titles');
+  // MERGED-TITLE-JOIN-001 (spec rule 41): merged roles join with ' & ', never '/'.
+  assert.ok(/ & /.test(innoviz[0].title), 'merged title joins the distinct titles with &');
   assert.equal(window.AntcvExportHiddenSection(PUB), true, 'targeted (non-research) hides Publications');
   assert.equal(window.AntcvExportHiddenRole(ROLES[2]), true, 'targeted hides the security-guard role');
 });

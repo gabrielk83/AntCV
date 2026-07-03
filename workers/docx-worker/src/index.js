@@ -23798,7 +23798,8 @@ function makePhotosCircular(documentXml, shape) {
   return { xml: next, count: count3 };
 }
 __name(makePhotosCircular, "makePhotosCircular");
-function aiNoticeVmlRun(side) {
+function aiNoticeVmlRun(side, __idx) {
+  __idx = Number.isFinite(__idx) ? __idx : 0;
   // AI-WATERMARK-EXPORT-LOCATION-001: a bottom-corner-anchored VML text frame
   // (v:rect + textbox, no fill/stroke = WM-003). mso-position-vertical:bottom +
   // -relative:page pins it to the page-edge bottom; horizontal:left|right
@@ -23816,7 +23817,7 @@ function aiNoticeVmlRun(side) {
   const __boxW = 320, __pageW = Math.round(PAGE_W / 20); // pt
   const __ml = side === "left" ? 0 : side === "center" ? Math.round((__pageW - __boxW) / 2) : (__pageW - __boxW);
   return '<w:r><w:rPr><w:noProof/></w:rPr><w:pict>' +
-    '<v:rect id="AntCVAiNotice" o:spid="_x0000_s4097" style="position:absolute;margin-left:' + __ml + 'pt;margin-top:0;width:320pt;height:18pt;' +
+    '<v:rect id="AntCVAiNotice' + __idx + '" o:spid="_x0000_s' + (4097 + __idx) + '" style="position:absolute;margin-left:' + __ml + 'pt;margin-top:0;width:320pt;height:18pt;' +
     'mso-position-horizontal-relative:page;' +
     'mso-position-vertical:bottom;mso-position-vertical-relative:page;z-index:251658240;mso-wrap-style:square" filled="f" stroked="f">' +
     '<v:textbox inset="14pt,1pt,14pt,11pt"><w:txbxContent>' +
@@ -23874,10 +23875,14 @@ function postProcessDocx(input, opts = {}) {
     // (CV: measured larger-gap corner; CL: right). The document root already
     // declares the v/o/w10 namespaces, so the body VML is valid as-is.
     const AIWM_RE = /<w:r\b[^>]*>(?:(?!<\/w:r>)[\s\S])*?__ANTCV_AIWM_(left|right|center)__(?:(?!<\/w:r>)[\s\S])*?<\/w:r>/;
-    const aiWmMatch = xml2.match(AIWM_RE);
-    if (aiWmMatch) {
-      xml2 = xml2.replace(AIWM_RE, aiNoticeVmlRun(aiWmMatch[1]));
+    // CL-AI-NOTICE-BOTH-PAGES-001: swap EVERY sentinel (one per page), each
+    // with a unique VML shape id so multiple frames coexist.
+    let __aiWmIdx = 0;
+    let aiWmMatch;
+    while ((aiWmMatch = xml2.match(AIWM_RE))) {
+      xml2 = xml2.replace(AIWM_RE, aiNoticeVmlRun(aiWmMatch[1], __aiWmIdx++));
       aiNoticeInjected = true;
+      if (__aiWmIdx > 8) break;
     }
     const hasWm = !!(opts && opts.watermark && String(opts.watermark).trim());
     const headerBgHex = (opts && opts.headerBg ? String(opts.headerBg).trim().replace(/[^0-9A-Fa-f]/g, "") : "").slice(0, 6);
@@ -25473,6 +25478,11 @@ function buildLinearDocument(ctx) {
         ...(clPgNumBlock ? { footers: { default: clPgNumBlock } } : {}),
         children: jdqSec ? [
           bodyTable,
+          // CL-AI-NOTICE-BOTH-PAGES-001 (owner 2026-07-04): with the Q&A page
+          // the letter page LOST its AI notice (the single sentinel moved to
+          // page 2). Anchor one per page — postProcessDocx now swaps EVERY
+          // sentinel (unique VML ids), each pinned to ITS page's bottom corner.
+          buildAiDisclosureHangingTextbox(ctx, { side: "right" }),
           // Hard page break paragraph between pages 1 and 2.
           // Word collapses zero-height paragraphs that have only a
           // pageBreakBefore; using a small exact line-rule keeps
@@ -28073,7 +28083,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.127-cl-rule-balance";
+var VERSION = "1.14.128-cl-ai-notice-both-pages";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

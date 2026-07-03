@@ -299,3 +299,17 @@ NOT relevance-ranked section reordering (both explicitly rejected by the owner).
     so even the moment between the eye-click and the restore pass — or a
     disabled sidecar — cannot flash it into the preview; export was already
     belted in docx-client.
+43. **LONG-PRESS HIDE + VISIBILITY FEEDBACK** (owner 2026-07-03, 1.51.116):
+    press-and-hold (~550ms) or right-click a sidebar element in the PREVIEW
+    opens a menu: per-token "Hide <tool>" entries (multi-token rows) and
+    "Hide entire element". A hidden token moves into the per-application
+    "Hidden - <category>" group (created when absent; non-kernel tokens are
+    preserved there by the reconcile). EVERY manual hide/unhide is an
+    override of the generation's choice and is logged to
+    antcv:visibilityAnalytics (menu actions + panel-eye flips + residue
+    restores, small-diff-gated so generation writes are never
+    misattributed). A compact latest-decision-per-item summary in
+    antcv:visibility-feedback is injected into the gen prompt
+    (VISIBILITY-FEEDBACK-001, both bundles) so future generations honor the
+    user's demonstrated KEEP/HIDE preferences. Disable:
+    localStorage['antcv:disable-sidebar-visibility-ux'] = '1'.

@@ -126,6 +126,22 @@ test('HEAL: a token re-added by hand removes it from the residue row', () => {
   assert.equal(residue.v, 'deposition, DRIE, plasma processing, PECVD/CVD CNT growth, catalyst preparation, SOI MEMS/NEMS fabrication');
 });
 
+test('non-kernel tokens hidden via long-press survive the kernel rebuild', () => {
+  const { api } = loadSidecar();
+  // 'Custom nanoimprint jig' is NOT in the kernel (edited/generated wording) —
+  // the residue row must keep it as long as it stays missing from the section.
+  const items = [
+    { l: 'Lab & fabrication', v: 'Cleanroom fabrication, lithography, etch' },
+    { l: 'Project & lifecycle', v: 'Codebeamer, Jira, MS Project' },
+    { l: 'Hidden - Lab & fabrication', v: 'PDMS nanoimprint, Custom nanoimprint jig', hidden: true },
+  ];
+  const next = api._reconcile(items, cats(api));
+  assert.ok(next);
+  const residue = next.find((it) => it.l === 'Hidden - Lab & fabrication');
+  assert.ok(/Custom nanoimprint jig/.test(residue.v), 'non-kernel token preserved');
+  assert.ok(/PDMS nanoimprint/.test(residue.v), 'kernel token still collected');
+});
+
 test('skeleton gate: bracketed template values produce no residue', () => {
   const { api } = loadSidecar();
   const items = [

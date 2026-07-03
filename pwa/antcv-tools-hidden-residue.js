@@ -37,7 +37,7 @@
 (function () {
   'use strict';
   if (window.__antcvToolsHiddenResidue) return;
-  window.__antcvToolsHiddenResidue = '1.51.115';
+  window.__antcvToolsHiddenResidue = '1.51.116';
 
   var SRC = 'tools-hidden-residue';
   var PREFIX = 'Hidden - ';
@@ -191,6 +191,17 @@
       for (var k = 0; k < next.length; k++) {
         if (isResidue(next[k]) && norm(String(next[k].l).replace(RESIDUE_RE, '')) === norm(c.label)) { idx = k; break; }
       }
+      // LONGPRESS-HIDE (owner 2026-07-03): tokens hidden from the preview menu
+      // may be EDITED/generated wording absent from the kernel — a residue row
+      // keeps those as long as they are still missing from the section, instead
+      // of being clobbered by the kernel-only rebuild.
+      if (idx >= 0) {
+        var kern = {};
+        c.tokens.forEach(function (t) { kern[norm(t)] = true; });
+        tokensOf(next[idx].v).forEach(function (t) {
+          if (!kern[norm(t)] && !hasToken(hay, t)) missing.push(t);
+        });
+      }
       if (!missing.length) {
         if (idx >= 0) { next.splice(idx, 1); changed = true; }
         return;
@@ -239,7 +250,7 @@
   setInterval(tick, 4000);
 
   window.AntcvToolsHiddenResidue = {
-    version: '1.51.115',
+    version: '1.51.116',
     _reconcile: reconcile,
     _kernelCategories: kernelCategories,
     _tokens: tokensOf,

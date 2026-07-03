@@ -2970,6 +2970,15 @@
             "STORED TOOLS & METHODS — the output MUST include ALL of these VERBATIM in the TOOLS & METHODS sidebar section, grouped sensibly by domain. EVERY item MUST sit UNDER a VISIBLE named group header (e.g. 'Project workflow', 'Engineering', 'Methods', 'Tools', 'Expertise'). When there are 4+ items total, NO item may FLOAT above or between groups: the FIRST line of the section MUST be a group header, and every single item belongs to exactly one group — never leave a row ungrouped at the top. (Only skip grouping entirely when there are fewer than 4 items.) Do not drop any:\n  - " +
               a(o.tools).join("\n  - "),
           ),
+        // VISIBILITY-FEEDBACK-001 (owner 2026-07-03): pass the user's manual
+        // hide/unhide overrides (antcv-sidebar-visibility-ux.js summary) to
+        // the model so future generations honor demonstrated preferences.
+        (function () {
+          try {
+            var fb = localStorage.getItem("antcv:visibility-feedback");
+            fb && fb.trim() && r.push("USER VISIBILITY FEEDBACK (VISIBILITY-FEEDBACK-001) — in previous generations for this candidate the user MANUALLY overrode visibility choices listed below (latest decision per item). Honor them when setting hidden flags and when compressing sidebar values: keep the KEEP VISIBLE items present and visible whenever remotely relevant to this JD; keep the HIDE items hidden or omitted from compressed values unless THIS job description explicitly demands them:\n" + fb);
+          } catch (_) {}
+        })(),
         Array.isArray(o.education) &&
           o.education.length &&
           r.push(

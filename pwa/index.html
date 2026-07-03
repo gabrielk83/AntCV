@@ -337,7 +337,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.131';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.131';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.132';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -379,7 +379,7 @@
           app.src = 'app.js?v=1.51.127';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.131';
+            vo.src = 'antcv-version-override.js?v=1.51.132';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -920,6 +920,8 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <!-- SIDECAR-MERGE-G5 (2026-06-13): mobile-topbar-cleanup-275 + mobile-fab-cleanup-351 + mobile-bottom-compact-352 + mobile-alt-circles-dropdown-354 consolidated into one file with a single shared rAF scheduler + one MutationObserver (was 4). Behaviour preserved verbatim. -->
 <script src="antcv-mobile-ui-418.js?v=1.51.128" defer></script>
 <script src="antcv-generate-cloud-sync-277.js?v=1.51.124" defer></script>
+<!-- GEN-BACKGROUND-001 client engine (window.AntcvGenJob): resumable, tab-backgrounding-survivable generation driver for the server /job/* backend. INERT until the app calls run() — integration is gated behind antcv:disable-gen-job. Spec: docs/qa/GEN-BACKGROUND-001-CLIENT-SPEC.md -->
+<script src="antcv-gen-job-client.js?v=1.51.132" defer></script>
 <!-- RETIRED (PUBLICATIONS-MAIN-001 2026-06-22): antcv-publications-section-panel-row-fix-278.js -->
 <script src="antcv-sidebar-section-row-hide-page-279.js?v=1.40.281" defer></script>
 <script src="antcv-personal-info-cloud-restore-282.js?v=1.50.432" defer></script>

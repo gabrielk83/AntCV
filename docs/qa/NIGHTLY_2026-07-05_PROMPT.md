@@ -48,20 +48,21 @@ for nightly is structured and full coverage is planned."** This prompt IS that s
 
 ## BAND A — MOBILE & TAB ISOLATION (owner P0, do first)
 
-**A1 — GEN-BACKGROUND-001-CLIENT (register row 38), the single most important item.**
-Server is done (`gen-job.js` + `/job/*` dispatch on main in both proxy bundles). The PWA still runs
-the old streaming loop → a backgrounded mobile tab breaks generation. Steps, in order:
-  1. VERIFY the /job/* dispatch is LIVE (curl the deployed proxy `/job/…`; on-main ≠ live — if not
-     deployed, that's a `gh workflow run deploy.yml -f target=proxy` first).
-  2. SPEC the client state-machine in a short doc (create → poll with backoff → resume on
-     visibilitychange/foreground → cancel; where it plugs into the existing gen driver in app.src.js;
-     the exact minified anchor). Do NOT splice before the spec exists.
-  3. Implement as a surgical app.src.js edit mirrored to app.js (rule 3). Behind a kill-switch
-     (`antcv:disable-gen-job`) that falls back to the streaming loop, so a bad splice can't brick gen.
-  4. Headless test: start a gen, set `document.hidden=true` + dispatch `visibilitychange`, assert the
-     job keeps polling and resumes on foreground; kill-switch restores streaming.
-  This is high-risk (touches the gen core) — if the spec/anchor isn't rock-solid, ship the SPEC +
-  a WIP branch and PushNotify the owner rather than a shaky splice.
+**A1 — GEN-BACKGROUND-001-CLIENT (register row 38). ENGINE SHIPPED 1.51.132; now OWNER-GATED on approach.**
+Progress: the client engine `pwa/antcv-gen-job-client.js` (`window.AntcvGenJob`, 8 tests) is done and
+loaded (inert until called), with the full /job/* state machine + reload/foreground resume + kill-switch
+`antcv:disable-gen-job`. The BLOCKER is architectural, in the spec `docs/qa/GEN-BACKGROUND-001-CLIENT-SPEC.md`:
+the current app generation is ONE big multi-provider call, not per-section, and gen-job's backgrounding
+survival requires MANY short per-section /steps (a single 3-6 min /step isn't viable on Workers). So the
+app.js integration ALSO requires DECOMPOSING generation into a per-section plan — a gen-core change.
+  Steps this run: (1) VERIFY the /job/* dispatch is LIVE (curl the deployed proxy /job/create with a bad
+  body → expect 400 no_sections, not 404; if 404, `gh workflow run deploy.yml -f target=proxy` + mirror
+  demo-proxy). (2) PushNotify the owner the A/B decision from the spec (A = full per-section decompose,
+  staged behind the kill-switch with a fresh-gen quality A/B before flipping default; B = resume-on-reload
+  only, does NOT close it) and WAIT for his pick. (3) On A: decompose ONE low-risk section (PROFILE) first,
+  prove the AntcvGenJob.run round-trip + fresh-gen quality parity behind the kill-switch, then extend.
+  Do NOT flip the default or decompose the whole gen core without the owner's approach + a quality A/B —
+  this is the one change that can brick generation.
 
 **A2 — TAB/DEVICE ISOLATION residuals (register row 39a).** The setItem-writer probe (boot-storm
 pattern) on `meta`/`sections`/`antcv:app:*` during ONE row selection + ONE gen in a real tab; find
@@ -90,10 +91,15 @@ doc-type/payload target.
 
 **D1 — PERF-001 (row 45):** multi-second main-thread stalls on export/preview. Chrome/boot-cpu-profile
 around export + preview toggle → find the sync long task → debounce/memoize/offload.
-**D2 — GEN-MODELROLE-001 (row 39):** NOT "not started" — code is shipped fail-soft, inert until the
-`MODEL_ROLES` env is set. Surface the decision table (docs/plan/GEN-MODELROLE-001_design.md) + a
-cost/quality recommendation from D1 `llm_calls`; owner sets the env. This is the SUPERVISOR-model
-lever that also hardens GEN-LANGFAB (a different-model self-review catches fabrication).
+**D2 — GEN-MODELROLE-001 (row 39): VERIFY-LIVE ONLY, not a design task.** Verify-first found it is fully
+wired: code in multi-llm/supervisor/gen-coherence/index (both proxies) AND `MODEL_ROLES =
+{"writer":"anthropic","supervisor":"mistral","coherence":"anthropic"}` already SET in BOTH wrangler.toml
+[vars] (owner-decided 2026-06-13). Action: confirm the last proxy + demo-proxy deploy carried the var
+(wrangler [vars] apply on deploy — check deploy timestamp vs the wrangler commit) and D1 `llm_calls` shows
+the split routing (supervisor→mistral, writer/coherence→anthropic). If not deployed: `gh workflow run
+deploy.yml -f target=proxy` + demo-proxy, then curl a supervisor-tagged call and confirm the provider.
+This is the SUPERVISOR-model lever that also hardens GEN-LANGFAB (a different-model review catches
+fabrication) — so verifying it live directly helps Band C.
 
 ## BAND E — STANDING COVERAGE (every run, ~30-60 min, never skipped)
 

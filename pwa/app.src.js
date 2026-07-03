@@ -7202,7 +7202,10 @@
           ? null
           : e.headlineOff
           ? (e.headlineRule
-              ? React.createElement("div", { style: { borderBottom: "2px solid " + C, marginTop: 4, marginBottom: 6, pageBreakAfter: "avoid", breakAfter: "avoid", pageBreakInside: "avoid", breakInside: "avoid" } })
+              ? React.createElement("div", {
+                  // CL-RULE-BALANCE-001 (owner 2026-07-04): symmetric spacing
+                  // around the standalone rule — half above, half below.
+                  style: { borderBottom: "2px solid " + C, marginTop: 9, marginBottom: 9, pageBreakAfter: "avoid", breakAfter: "avoid", pageBreakInside: "avoid", breakInside: "avoid" } })
               : null)
           : React.createElement(
           "div",

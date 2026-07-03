@@ -25232,7 +25232,9 @@ function buildLinearDocument(ctx) {
     // rich_block (759 keeps it text — that path blanks the sign-off), emit the SAME paragraph the
     // rich_block main rule emits, so the two rules are byte-identical.
     bodyChildren.push(new Paragraph({
-      spacing: { before: 80, after: 40 },
+      // CL-RULE-BALANCE-001: balanced half-above/half-below (see the
+      // RULE-INDEPENDENT-001 rule paragraph).
+      spacing: { before: 110, after: 110, line: 40, lineRule: "exact" },
       keepNext: true,
       border: { bottom: { color: style.mainHeadColor, space: 4, style: BorderStyle.SINGLE, size: 8 } },
       children: [new TextRun({ text: "" })]
@@ -26361,7 +26363,11 @@ function renderSection(s, ctx, isSidebar) {
     // standalone rule line (headlineRule) — render just the accent rule, no title text.
     if (s.headlineOff && s.headlineRule && body.length && !skipHeading) {
       const __rule = new Paragraph({
-        spacing: { before: isSidebar ? 40 : 80, after: isSidebar ? 30 : 40 },
+        // CL-RULE-BALANCE-001 (owner 2026-07-04): the empty rule paragraph
+        // carried a FULL line box, so the gap above the line was ~3x the gap
+        // below. Exact tiny line height + equal before/after = balanced
+        // half-above / half-below spacing.
+        spacing: { before: isSidebar ? 50 : 110, after: isSidebar ? 50 : 110, line: 40, lineRule: "exact" },
         keepNext: true,
         alignment: isSidebar ? AlignmentType.CENTER : void 0,
         shading: isSidebar ? { type: ShadingType.CLEAR, fill: ctx.style.sidebarBg, color: "auto" } : void 0,
@@ -28067,7 +28073,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.126-qa-standalone-page";
+var VERSION = "1.14.127-cl-rule-balance";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

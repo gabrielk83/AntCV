@@ -900,7 +900,63 @@ export function buildPayload({
     ...((() => { const r = readSidebarRatio(); return r != null ? { sidebar_ratio: r } : {}; })()),
   };
 
+  // LINKIFY-EXPORT-001 (spec rules 35/39, register row 28): bare kernel-known
+  // URLs (Google Scholar / kernel projects like AntCV) inside payload strings
+  // become markdown [display](url) so the worker's inlineRuns renders REAL
+  // clickable w:hyperlinks in the DOCX/PDF. Kernel-known URLs ONLY — never
+  // generic linkification. Publications sections are skipped (their citation
+  // renderer is markdown-blind; the masterSite hyperlink is their vehicle).
+  try { linkifyKernelUrls(payload); } catch (_) {}
+
   return payload;
+}
+
+// ── LINKIFY-EXPORT-001 helpers ───────────────────────────────────────────────
+function kernelLinkUrls() {
+  const out = [];
+  try {
+    let p = JSON.parse(localStorage.getItem('personalInfo') || '{}') || {};
+    p = p.personalInfo || p;
+    const push = (u) => {
+      u = String(u || '').trim();
+      if (/^https?:\/\//i.test(u) && !out.includes(u)) out.push(u);
+    };
+    push(p.googleScholar);
+    if (p.publicationsScholar && typeof p.publicationsScholar === 'object') push(p.publicationsScholar.url);
+    (Array.isArray(p.projects) ? p.projects : []).forEach((pr) => {
+      if (pr && pr.renderAsHyperlink && pr.url) push(pr.url);
+    });
+  } catch (_) {}
+  return out;
+}
+const LINKIFY_SKIP_KEYS = { url: 1, link: 1, href: 1, photo: 1, image: 1, id: 1, type: 1, loc: 1 };
+function linkifyKernelUrls(payload) {
+  const urls = kernelLinkUrls();
+  if (!urls.length || !Array.isArray(payload.sections)) return;
+  const escRe = (s) => String(s).replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+  const subs = urls.map((u) => ({
+    re: new RegExp('(\\]\\()?' + escRe(u), 'g'),
+    md: '[' + u.replace(/^https?:\/\//i, '').replace(/\/$/, '') + '](' + u + ')',
+  }));
+  const walk = (node) => {
+    if (!node || typeof node !== 'object') return;
+    for (const k of Object.keys(node)) {
+      if (LINKIFY_SKIP_KEYS[k]) continue;
+      const v = node[k];
+      if (typeof v === 'string') {
+        if (v.indexOf('http') === -1) continue;
+        let next = v;
+        for (const s of subs) next = next.replace(s.re, (m, pre) => (pre ? m : s.md)); // already-markdown occurrences untouched
+        if (next !== v) node[k] = next;
+      } else if (v && typeof v === 'object') walk(v);
+    }
+  };
+  payload.sections.forEach((sec) => {
+    if (!sec) return;
+    const sid = String(sec.id || '').toLowerCase();
+    if (sid === 'pubs' || sid === 'publications' || /publication/i.test(String(sec.title || ''))) return; // citation renderer is markdown-blind
+    walk(sec);
+  });
 }
 
 // PB-WORKER-SIDEBAR-RATIO-001 follow-up: the CV sidebar/main split lives in
@@ -2148,6 +2204,15 @@ function normalizeSections(raw) {
             return null;
           }),
           ...(s.hidden ? { hidden: s.hidden } : {}),
+          // PUB-MASTERSITE-EXPORT-001 (spec rule 35, register row 28): the
+          // publications masterSite link (PUB-MASTERSITE-001) rendered in the
+          // PREVIEW (app.src.js anchor) and the WORKER supports it as a real
+          // ExternalHyperlink — but this payload case never forwarded it, so
+          // the exported PDF silently dropped the Google Scholar link. Forward
+          // it sanitized (http(s) only).
+          ...((s.masterSite && s.masterSite.on && typeof s.masterSite.url === 'string' && /^https?:\/\//i.test(s.masterSite.url))
+            ? { masterSite: { on: true, label: String(s.masterSite.label || ''), url: s.masterSite.url } }
+            : {}),
         };
 
       case 'labeled_list':

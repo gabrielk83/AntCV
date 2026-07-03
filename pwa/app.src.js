@@ -2076,6 +2076,18 @@
     }
   }
   async function ee(e, t, n = {}) {
+    // GEN-BACKGROUND-001 checkpoint-memo (antcv-gen-memo.js): during a gen run
+    // (opt-in antcv:gen-resume) replay a completed LLM call from the persisted
+    // checkpoint instead of re-calling; persist on success. Output-neutral; the
+    // memo is inert (null) unless a gen run is active + opted in + not killed.
+    var __gm = (window.AntcvGenMemo && window.AntcvGenMemo.active()) ? window.AntcvGenMemo : null;
+    var __gk = __gm ? __gm.key(e, t, n) : null;
+    if (__gm && __gk) { var __gh = __gm.get(__gk); if (void 0 !== __gh) return __gh; }
+    var __gr = await __eeInner(e, t, n);
+    if (__gm && __gk && "string" == typeof __gr && __gr) { try { __gm.set(__gk, __gr); } catch (_) {} }
+    return __gr;
+  }
+  async function __eeInner(e, t, n = {}) {
     var o;
     // 1.50.294 LLM-QUALITY-PERSIST-001 fallback: if the startup seed was skipped
     // (e.g. not signed in at load), kick it now — fire-and-forget, NOT awaited,
@@ -26870,7 +26882,7 @@
                     u.remove("_showcaseSavedMultiLlm"));
                 } catch (e) {}
               } catch (e) {}
-            } else ($t("editor"), ti("analysis"), (window.__antcvGenRunning = !1)); // GEN-STATUS-ENDS-EARLY-001: generation truly done (analysis shown) -> drop the overlay
+            } else ($t("editor"), ti("analysis"), (window.__antcvGenRunning = !1), (window.AntcvGenMemo && window.AntcvGenMemo.clear())); // GEN-STATUS-ENDS-EARLY-001: generation truly done (analysis shown) -> drop the overlay
           } catch (e) {
             (vo("Failed: " + e.message), $t("upload"), (window.__antcvGenRunning = !1));
           }

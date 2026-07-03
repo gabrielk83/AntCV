@@ -1859,7 +1859,10 @@ function normalizeSections(raw) {
       on: s.on !== false,
       type: s.type,
       ...(itemAlign ? { item_alignment: itemAlign } : {}),
-      ...(sectionBreakIds.has(s.id) ? { pageBreakBefore: true } : {}),
+      // QA-STANDALONE-PAGE-001: a section's OWN pageBreakBefore (set by the
+      // application-qa scaffold) was dropped here — only measurer/manual breaks
+      // survived, so the Q&A page never hard-broke in the PDF. Honor it.
+      ...(sectionBreakIds.has(s.id) || s.pageBreakBefore === true ? { pageBreakBefore: true } : {}),
     };
     switch (s.type) {
       case 'text':

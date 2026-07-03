@@ -232,7 +232,7 @@ test('end-to-end with P1: after the bridge writes, the scaffold builds applicati
   // block (closing line + sign-off + name) after the answers.
   assert.equal(cl.indexOf(qa), cl.length - 1, 'placed LAST');
   assert.equal(qa.pageBreakBefore, true);
-  assert.equal(qa.items.length, 6); // header + 2 Q&A rows + closing line + sign-off + name
+  assert.equal(qa.items.length, 4); // header + 2 Q&A rows + closing line (sign-off+name render worker-side, wk 1.14.126)
   assert.match(qa.items[0].t, /Responses to your application questions:/);
   assert.equal(qa.items[1].b, TWO_QS[0].question);
 });

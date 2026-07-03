@@ -22,7 +22,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.107-qa-durable-standalone';
+  var VERSION = '1.51.110-qa-signoff-variety';
   if (window.__antcvApplicationQa === VERSION) return;
   window.__antcvApplicationQa = VERSION;
 
@@ -59,17 +59,12 @@
   // the letter's own closure/sign-off/signature ended page 1. (The signature
   // IMAGE + AI notice remain worker-rendered document furniture.)
   function closingItems() {
-    var pi = readPI();
-    var name = '';
-    try { name = String(JSON.parse(localStorage.getItem('antcv:clSignName') || '""') || '').trim(); } catch (_) { name = String(localStorage.getItem('antcv:clSignName') || '').trim(); }
-    if (!name) name = String(pi.name || '').split(' ')[0] || '';
-    var signoff = '';
-    try { signoff = String(JSON.parse(localStorage.getItem('antcv:clClosing') || '""') || '').trim(); } catch (_) { signoff = String(localStorage.getItem('antcv:clClosing') || '').trim(); }
-    if (!signoff) signoff = 'At your service,';
+    // QA-SIGNOFF-VARIETY-001 (owner 2026-07-04) moved WORKER-SIDE (wk 1.14.126):
+    // the dedicated Q&A page 2 renders its own alternate sign-off + name + AI
+    // notice, so the SECTION carries only the closing line — a sign-off here
+    // too would print twice.
     return [
       { b: '', t: 'I look forward to expanding on any of these answers in a conversation.' },
-      { b: '', t: signoff },
-      { b: '', t: name },
     ];
   }
 

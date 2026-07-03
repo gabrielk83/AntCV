@@ -96,8 +96,11 @@ test('built section carries its own closing block (line + sign-off + name) after
   const secs = JSON.parse(store.get('sections'));
   const qa = secs.cl.find((s) => s.id === 'application_qa');
   const texts = qa.items.map((it) => it.t);
-  assert.ok(texts.includes('At your service,'), 'sign-off present');
-  assert.ok(texts.includes('Gabriel'), 'name present');
+  // wk 1.14.126: sign-off + name render WORKER-SIDE on the dedicated page 2
+  // (alternate sign-off, never the letter's) — the section carries only the
+  // closing line.
+  assert.ok(texts.some((t) => /look forward to expanding/.test(t)), 'closing line present');
+  assert.ok(!texts.includes('At your service,'), 'no duplicated letter sign-off in the section');
   assert.equal(secs.cl[secs.cl.length - 1].id, 'application_qa', 'Q&A page is the LAST cl element');
 });
 

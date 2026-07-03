@@ -25150,8 +25150,12 @@ function buildLinearDocument(ctx) {
   const { style, fs, pi, lang, sections } = ctx;
   const headerCell = buildHeaderCell(ctx);
   const closureSec = sections.find((s) => s && s.id === "closure");
-  const jdqSec = sections.find((s) => s && s.id === "jd_questions" && s.on !== false);
-  const otherSecs = sections.filter((s) => !s || s.id !== "closure" && s.id !== "jd_questions");
+  // QA-STANDALONE-PAGE-001 (owner 2026-07-04, spec rule 24): the modern
+  // application-questions bridge writes id "application_qa" (and hides the
+  // legacy "jd_questions"), so this page-2 machinery never fired and the Q&A
+  // flowed INSIDE the letter body. Both ids now use the dedicated page 2.
+  const jdqSec = sections.find((s) => s && (s.id === "jd_questions" || s.id === "application_qa") && s.on !== false);
+  const otherSecs = sections.filter((s) => !s || s.id !== "closure" && s.id !== "jd_questions" && s.id !== "application_qa");
   const bodyChildren = [];
   // SLOGAN-CL-001 (owner 2026-06-29): a tagline heading at the TOP of the cover-letter body
   // (before the opening) — uppercased teal. SLOGAN-CL-EDIT-001 (owner 2026-06-29): now editable
@@ -25510,10 +25514,12 @@ function buildLinearDocument(ctx) {
                     ),
                     new Paragraph({
                       // CL-SIGNATURE-SPACING-001: +180/+90 DXA, same as the primary sign-off path.
+                      // QA-SIGNOFF-VARIETY-001 (owner 2026-07-04): the letter already closed with
+                      // the user's sign-off on page 1 — the Q&A page closes with a DIFFERENT one.
                       spacing: { before: 420, after: 60, line: 276, lineRule: "auto" },
                       alignment: AlignmentType.LEFT,
                       children: [new TextRun({
-                        text: closeWord,
+                        text: /best regards/i.test(closeWord) ? ({ da: "Med de bedste hilsner,", es: "Un cordial saludo,", zh: "顺祝商祺，" }[lang] || "Sincerely yours,") : ({ da: "Bedste hilsner,", es: "Saludos cordiales,", zh: "谨致问候，" }[lang] || "Best regards,"),
                         color: style.mainTextColor,
                         size: pt2hp(fs.mainBody),
                         font: style.mainBodyFont
@@ -28061,7 +28067,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.125-header-item-rule";
+var VERSION = "1.14.126-qa-standalone-page";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

@@ -23816,10 +23816,17 @@ function aiNoticeVmlRun(side, __idx) {
   const horiz = side === "left" ? "left" : side === "center" ? "center" : "right";
   const __boxW = 320, __pageW = Math.round(PAGE_W / 20); // pt
   const __ml = side === "left" ? 0 : side === "center" ? Math.round((__pageW - __boxW) / 2) : (__pageW - __boxW);
+  // AI-NOTICE-BOTTOM-CLOUDCONVERT-001 (owner 2026-07-04, the Q&A page): the
+  // mso-position-vertical:bottom KEYWORD is ignored by LibreOffice/CloudConvert
+  // when the anchor paragraph lives inside a TABLE CELL (the page-2 cell) — the
+  // frame dropped at the anchor's y (mid-page). Same class as the horizontal
+  // AI-NOTICE-LEFT-CLOUDCONVERT-001 fix: use an EXPLICIT page-relative
+  // margin-top offset instead of the keyword.
+  const __mt = Math.round(PAGE_H / 20) - 18;
   return '<w:r><w:rPr><w:noProof/></w:rPr><w:pict>' +
-    '<v:rect id="AntCVAiNotice' + __idx + '" o:spid="_x0000_s' + (4097 + __idx) + '" style="position:absolute;margin-left:' + __ml + 'pt;margin-top:0;width:320pt;height:18pt;' +
+    '<v:rect id="AntCVAiNotice' + __idx + '" o:spid="_x0000_s' + (4097 + __idx) + '" style="position:absolute;margin-left:' + __ml + 'pt;margin-top:' + __mt + 'pt;width:320pt;height:18pt;' +
     'mso-position-horizontal-relative:page;' +
-    'mso-position-vertical:bottom;mso-position-vertical-relative:page;z-index:251658240;mso-wrap-style:square" filled="f" stroked="f">' +
+    'mso-position-vertical-relative:page;z-index:251658240;mso-wrap-style:square" filled="f" stroked="f">' +
     '<v:textbox inset="14pt,1pt,14pt,11pt"><w:txbxContent>' +
     '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="220" w:lineRule="auto"/><w:jc w:val="' + horiz + '"/></w:pPr>' +
     '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:i/><w:color w:val="4D7976"/><w:sz w:val="13"/></w:rPr>' +
@@ -28083,7 +28090,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.128-cl-ai-notice-both-pages";
+var VERSION = "1.14.129-ai-notice-bottom-explicit";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

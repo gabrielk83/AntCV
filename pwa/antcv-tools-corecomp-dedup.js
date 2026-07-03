@@ -20,7 +20,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.18b';
+  var VERSION = '1.51.125-residue-skip';
   if (window.__antcvToolsCoreCompDedup === VERSION) return;
   window.__antcvToolsCoreCompDedup = VERSION;
 
@@ -62,15 +62,25 @@
           return m;
         }).replace(/\s{2,}/g, ' ').replace(/\s+([,.;])/g, '$1').replace(/[\s,;]+$/, '').trim();
       };
+      // RESIDUE-DEDUP-LOOP-001 (owner 2026-07-03 "regulatory context is very
+      // jumpy", caught live with the writer probe: 43 sections writes in ~18s,
+      // tools-corecomp-dedup <-> tools-hidden-residue ping-pong): a
+      // "Hidden - <category>" REVIEW row carries the category label, so this
+      // filter matched it against the same Focus-Area label and DROPPED it —
+      // and the residue reconciler re-created it on the next tick, forever.
+      // Residue rows never render (RESIDUE-PREVIEW-SKIP + export belt), so
+      // dedup must never touch them.
+      var isResidueRow = function (it) { return /^\s*hidden\s*[-–—:]\s*/i.test(String((it && (it.b != null ? it.b : it.l)) || '')); };
       var before = tools.items.length, trimmed = 0;
       var kept = tools.items.filter(function (it) {
         if (!it || it.grp || !it.b) return true;                 // keep sub-headers + bodyless rows
+        if (isResidueRow(it)) return true;                       // review artifacts are not duplicates
         var lw = sig(it.b);
         for (var i = 0; i < faList.length; i++) { if (dup(lw, faList[i])) return false; }
         return true;
       });
       kept.forEach(function (it) {
-        if (it && !it.grp && typeof it.t === 'string' && it.t.indexOf('(') >= 0) {
+        if (it && !it.grp && !isResidueRow(it) && typeof it.t === 'string' && it.t.indexOf('(') >= 0) {
           var nt = trimParen(it.t);
           if (nt && nt !== it.t) { it.t = nt; trimmed++; }
         }

@@ -327,3 +327,27 @@ NOT relevance-ranked section reordering (both explicitly rejected by the owner).
     stable-value detection) and undo drives the React roller natively.
     Bonus repair: app.js's CV-PLACEHOLDER-DROP-001 regex had lost its
     backslashes (dead in production) — restored.
+
+## Rules 45-47 (owner 2026-07-03, Trackman round 2 — screenshot review)
+
+45. **PREVIEW = PRINTED OUTPUT.** The preview must always equal the exported
+    PDF/DOCX. Export-only mutations that change VISIBLE content (token
+    reordering, alignment overrides, abbreviations, caps) must either write
+    STORED sections (preview renders them too) or carry a preview mirror.
+    NBSP glue (visually identical) is the accepted exception. Register row 34
+    tracks the inventory + migration of existing export-only belts.
+46. **NO 3-LINE BULLETS in tailored applications (nordic minimal).** A role
+    bullet in a TARGETED generation must fit at most TWO typeset lines
+    (the Kanzen first bullet wrapped to four). Gen-prompt rule + a
+    deterministic belt: the export preflight measures every bullet; a
+    targeted bullet at >=3 lines is re-tightened (L3 shorten, re-measure
+    accepts <=2 lines). Orphans in the FIRST roles get priority (rule 30 /
+    row 27 machinery).
+47. **OLD ROLES: 2-3 bullets, only if highly relevant.** In targeted CVs,
+    early-career roles carry at most 3 bullets (>=8 years old) and at most
+    2 (>=14 years old) — and only JD-relevant ones (a project-manager
+    application must not carry a stack of Research/Teaching-Assistant
+    bullets). Deterministic belt tier over BULLET-CAP-BELT-001 (gen orders
+    strongest-first; the belt keeps the first N). Owner-approved
+    abbreviation: "Automotive environmental conditions and testing" ->
+    "Environmental testing".

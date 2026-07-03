@@ -1198,6 +1198,8 @@ const FAB_TOOLS = /\b(?:snowflake|dbt)\b/i;
 const SIDEBAR_ABBR = [
   [/\bUniversity of\b/g, 'Uni. of'],
   [/\bIntroduction to\b/g, 'Intro to'],
+  // Owner 2026-07-03 (Trackman review round 2): explicit approval.
+  [/\bAutomotive environmental conditions and testing\b/gi, 'Environmental testing'],
 ];
 // Always low-signal for a senior professional targeted application (any cluster):
 // student council, dormitory security guard, volunteer-sport foreningsarbejde.

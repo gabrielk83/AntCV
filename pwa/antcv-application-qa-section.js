@@ -22,7 +22,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.778';
+  var VERSION = '1.51.106-qa-kernel-namespace';
   if (window.__antcvApplicationQa === VERSION) return;
   window.__antcvApplicationQa = VERSION;
 
@@ -70,6 +70,19 @@
 
       if (!qs.length) {
         // No questions → hide the section if present (never delete; preserve manual edits).
+        // QA-KERNEL-NAMESPACE-001 (owner 2026-07-04, "fix the QnA page issue"):
+        // a FRESH TAB boots on the 'kernel' JD-scope namespace, where the
+        // questions slot is ALWAYS empty — this hide then nuked a REAL Q&A
+        // section and the CL exported without its questions page (three
+        // 1-page CLs in a row). An empty read from the kernel scratch scope
+        // is NOT evidence the questions were withdrawn: only hide when the
+        // tab is actually ON an application, or when the section carries no
+        // real content anyway.
+        var tabApp = null;
+        try { tabApp = window.AntcvJdScope && window.AntcvJdScope.getCurrentAppId ? String(window.AntcvJdScope.getCurrentAppId()) : null; } catch (_) {}
+        var hasRealQa = idx >= 0 && Array.isArray(secs.cl[idx].items) &&
+          secs.cl[idx].items.some(function (it) { return it && !it.grp && typeof it.t === 'string' && it.t.trim().length > 20; });
+        if (tabApp === 'kernel' && hasRealQa) return;
         if (idx >= 0 && secs.cl[idx].on !== false) { secs.cl[idx] = Object.assign({}, secs.cl[idx], { on: false }); changed = true; }
         if (!changed) return;
       } else {

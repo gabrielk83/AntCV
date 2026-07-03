@@ -161,3 +161,13 @@ NOT relevance-ranked section reordering (both explicitly rejected by the owner).
 24. **CL Q&A = a real SEPARATE PAGE.** Hard page break before it; its own
     candidate header/section, its own closure, sign-off, name, signature, and
     AI notice — a standalone answer sheet, not a continuation block.
+
+### Rule 16/17 clarifications (owner 2026-07-04, delivery-run review)
+
+- **16a. A NON-merged role never gets merged-role bullet counts.** Kanzen
+  (single role) exported 6 bullets — wrong: a plain role keeps 3 bullets, the
+  most JD-relevant tasks only. Only a MERGED role may go up to 5 (rule 17).
+- **17a. Merged-role TITLE ORDER: function first, lead after.** Not
+  "Electro-Optics Team Leader / R&D Electro-Optics Engineer" but
+  "Electro-Optics Engineer & Team Leader" — the craft identity leads, the
+  leadership qualifier follows, joined with "&", no slash-title chains.

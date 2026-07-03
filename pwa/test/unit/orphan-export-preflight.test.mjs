@@ -6,6 +6,12 @@
 // safeShorten + a re-measure, and mirrors rewrites to stored sections ONLY via
 // the shipped text-verified writer. Tests run the sidecar in a vm sandbox with
 // a deterministic greedy-wrap measurer + injected fetch/storage.
+// v3 (MAIN-RUNT-ORPHAN-SWEEP-001, register row 27): RUNT_FRAC 0.60 (the owner
+// fill floor), L3 may LENGTHEN from kernel FACTS (safeRewrite gate — new
+// numbers must exist in the stored facts), NO-FORCE-JUSTIFY belt (rule 30:
+// payload item_alignment LEFT override for naturally under-filled mid-lines),
+// SIDEBAR-PACKING belt (rule 40: comma-token reorder, accepted only when the
+// measured line count drops), and rich_block sidebar rows as bind targets.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -93,14 +99,22 @@ test('metricsFromPayload: legacy ATS tier forces Calibri; ratio clamped to worke
   assert.equal(Math.round(m.cellWpx * 15), 11906 - sidebarW - 300);
 });
 
-// ── RUNT_FRAC 0.40 boundary ─────────────────────────────────────────────────
-test('isRuntLines: 0.40 boundary + single-line never runts', () => {
+// ── RUNT_FRAC 0.60 boundary (v3: the owner fill floor IS the threshold) ─────
+test('isRuntLines: 0.60 boundary + single-line never runts', () => {
   const { api } = load();
-  assert.equal(api.RUNT_FRAC, 0.40);
-  assert.equal(api._isRuntLines([500, 199], 500), true);     // 0.398 < 0.40
-  assert.equal(api._isRuntLines([500, 201], 500), false);    // 0.402 >= 0.40
-  assert.equal(api._isRuntLines([199], 500), false);         // one line cannot orphan
+  assert.equal(api.RUNT_FRAC, 0.60);
+  assert.equal(api._isRuntLines([500, 299], 500), true);     // 0.598 < 0.60
+  assert.equal(api._isRuntLines([500, 301], 500), false);    // 0.602 >= 0.60
+  assert.equal(api._isRuntLines([299], 500), false);         // one line cannot orphan
   assert.equal(api._isRuntLines([], 500), false);
+});
+
+test('hasUnderfilledMidline: rule-30 detector reads NON-last lines only', () => {
+  const { api } = load();
+  assert.equal(api.JUSTIFY_MIN, 0.85);
+  assert.equal(api._hasUnderfilledMidline([420, 480], 500), true);   // 0.84 mid-line
+  assert.equal(api._hasUnderfilledMidline([430, 100], 500), false);  // mid fine; LAST line never counts
+  assert.equal(api._hasUnderfilledMidline([100], 500), false);       // single line: nothing to justify-stretch
 });
 
 // ── measurer math: known text + width → expected break count ────────────────
@@ -140,17 +154,18 @@ test('L2 bind clears a runt without an LLM call', async () => {
   }
 });
 
-// ── L3: residue goes through ONE batched call; safeShorten + re-measure gate ─
+// ── L3: residue goes through ONE batched call; safeRewrite + re-measure gate ─
 function residueFixture() {
-  // width 497.8 -> ~82 chars. 2-char words: MAX_BIND=6 binds glue ≤7 words = 20
-  // chars = 120px < 0.40*497.8 (199px) -> L2 can never clear it -> residue.
+  // width 497.8 -> ~82 chars. 2-char words: MAX_BIND=8 binds glue ≤9 words = 26
+  // chars = 156px < 0.60*497.8 (299px) -> L2 can never clear it -> residue.
   const words = Array(56).fill('ab');                        // 56*3-1 = 167 chars ≈ 3 lines, runt tail
   return words.join(' ') + ' zz 42.';
 }
 // A valid rewrite: shorter than orig but >= 45% of it (safeShorten floor), keeps
-// the number, and greedy-measures to 2 lines with a wide (non-runt) last line.
-const GOOD_SHORT = 'ab '.repeat(40).trim() + ' zz 42.';
-test('L3: batched rewrite applied when safeShorten + re-measure pass', async () => {
+// the number, and greedy-measures to 2 lines with a >=60%-filled last line
+// (46 words -> 27 + 19; last line 57 chars = 342px = 68.7% of 497.8).
+const GOOD_SHORT = 'ab '.repeat(44).trim() + ' zz 42.';
+test('L3: batched rewrite applied when safeRewrite + re-measure pass', async () => {
   const orig = residueFixture();
   const short = GOOD_SHORT;
   const payload = cvPayload([expSection([orig])]);
@@ -162,7 +177,9 @@ test('L3: batched rewrite applied when safeShorten + re-measure pass', async () 
   assert.equal(sum.rewritten, 1);
   assert.equal(payload.sections[0].roles[0].bullets[0], short);
   assert.equal(body.model, 'claude-sonnet-5');
-  assert.deepEqual(JSON.parse(body.messages[0].content), [orig], 'one batched call carries the residue');
+  // v3 request shape: each residue item carries the line + its kernel FACTS
+  // (empty here — no personalInfo in storage).
+  assert.deepEqual(JSON.parse(body.messages[0].content), [{ line: orig, facts: '' }], 'one batched call carries the residue');
   assert.ok(events.includes('antcv:sections-updated'));
   const attempted = JSON.parse(store.get('antcv:orphanPreflightAttempted'));
   assert.equal(Object.keys(attempted).length, 1, 'attempt recorded');
@@ -355,4 +372,190 @@ test('toDisplayHtml: entities decoded, tags normalized, links reduced to text', 
   assert.equal(api._toDisplayHtml('A &amp; B'), 'A &amp; B');
   assert.equal(api._toDisplayHtml('<strong>x</strong> <em>y</em>'), '<b>x</b> <i>y</i>');
   assert.equal(api._toDisplayHtml('see [the docs](https://x.y/z) now'), 'see the docs now');
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// v3 — MAIN-RUNT-ORPHAN-SWEEP-001 (register row 27)
+// ════════════════════════════════════════════════════════════════════════════
+
+// ── safeRewrite: the LENGTHEN gate (never fabricate) ─────────────────────────
+test('safeRewrite: shorter rewrites keep the safeShorten contract', () => {
+  const { api } = load();
+  const orig = 'Lead validation and delivery for the crew program across three sites';
+  assert.equal(api._safeRewrite(orig, 'Lead validation and delivery for the crew program', ''), true);
+  assert.equal(api._safeRewrite(orig, orig, 'facts'), false, 'identical rewrite is a no-op');
+});
+
+test('safeRewrite: a LONGER rewrite requires facts and fact-backed new numbers', () => {
+  const { api } = load();
+  const orig = 'Led optical validation for LiDAR programs';
+  const longer = 'Led optical validation for LiDAR programs across 12 automotive platforms';
+  assert.equal(api._safeRewrite(orig, longer, ''), false, 'no facts -> nothing stored to lengthen from');
+  assert.equal(api._safeRewrite(orig, longer, 'delivered 12 automotive platforms end to end'), true);
+  assert.equal(api._safeRewrite(orig, longer, 'delivered platforms end to end'), false, 'new number 12 absent from facts -> fabrication, rejected');
+});
+
+test('safeRewrite: growth bound + banned dashes + original numbers verbatim', () => {
+  const { api } = load();
+  const orig = 'Cut cycle time 95% in review';
+  assert.equal(api._safeRewrite(orig, 'Cut cycle time 95% in review — with governance', 'with governance'), false, 'em dash never enters');
+  assert.equal(api._safeRewrite(orig, 'Cut review cycle in governance work', 'facts'), false, '95% dropped');
+  const huge = orig + ' ' + 'pad '.repeat(40);
+  assert.equal(api._safeRewrite(orig, huge, 'pad'), false, 'growth bounded — fill the line, not the page');
+});
+
+// ── kernelFactsFor: stored detail per target kind ────────────────────────────
+test('kernelFactsFor: bullets match kernel experience by company; profile reads background+workStyle', () => {
+  const pi = { personalInfo: {
+    background: 'Physicist turned product engineer.',
+    workStyle: 'Works through relationships across engineering and suppliers.',
+    experience: [
+      { title: 'EO Engineer', company: 'Acme', bullets: ['Built test benches for 14 product lines'], results: 'Cut NRE 30%.' },
+      { title: 'Other', company: 'Elsewhere', bullets: ['Unrelated detail'] },
+    ],
+  } };
+  const { api } = load({ personalInfo: JSON.stringify(pi) });
+  const bulletFacts = api._kernelFactsFor({ kind: 'bullet', role: { title: 'Senior EO Engineer', company: 'Acme' } }, null);
+  assert.match(bulletFacts, /14 product lines/);
+  assert.match(bulletFacts, /Cut NRE 30%/);
+  assert.doesNotMatch(bulletFacts, /Unrelated detail/, 'other companies never leak in');
+  const profFacts = api._kernelFactsFor({ kind: 'profile' }, null);
+  assert.match(profFacts, /Physicist turned product engineer/);
+  assert.match(profFacts, /relationships across engineering/);
+  assert.equal(api._kernelFactsFor({ kind: 'side_label' }, null), '', 'sidebar values never get facts');
+});
+
+// ── L3 LENGTHEN end-to-end: runt line grows from kernel facts, no line gained ─
+test('L3 lengthen: fact-backed longer rewrite fills the runt line without adding a line', async () => {
+  const orig = Array(56).fill('ab').join(' ') + ' zz.';
+  const longer = Array(56).fill('ab').join(' ') + ' zz 45 ' + Array(14).fill('ab').join(' ') + '.';
+  const pi = { experience: [{ title: 'PdM', company: 'Acme', bullets: ['Improved throughput by 45 percent using automation'], results: '' }] };
+  const payload = cvPayload([expSection([orig])]);
+  let body = null;
+  const fetchImpl = (url, opts) => { body = JSON.parse(opts.body); return Promise.resolve({ json: () => Promise.resolve({ content: [{ text: JSON.stringify([longer]) }] }) }); };
+  const { api } = load({ proxyUrl: 'https://relay.example', personalInfo: JSON.stringify(pi) });
+  const sum = await api.run(payload, { measureLines: fakeMeasure, fetchImpl });
+  assert.equal(sum.residue, 1);
+  assert.equal(sum.rewritten, 1, 'lengthened rewrite accepted');
+  assert.equal(payload.sections[0].roles[0].bullets[0], longer);
+  const sent = JSON.parse(body.messages[0].content);
+  assert.match(sent[0].facts, /45 percent/, 'kernel facts shipped with the residue line');
+  // the re-measure: same line count as the original, last line >= 60%
+  const m = fakeMeasure({ html: longer, widthPx: 497.8 });
+  assert.equal(m.length, fakeMeasure({ html: orig, widthPx: 497.8 }).length);
+  assert.ok(m[m.length - 1] / 497.8 >= 0.60);
+});
+
+test('L3 lengthen: a longer rewrite whose new number is NOT in the facts is rejected', async () => {
+  const orig = Array(56).fill('ab').join(' ') + ' zz.';
+  const fabricated = Array(56).fill('ab').join(' ') + ' zz 99 ' + Array(14).fill('ab').join(' ') + '.';
+  const pi = { experience: [{ title: 'PdM', company: 'Acme', bullets: ['Improved throughput by 45 percent'], results: '' }] };
+  const payload = cvPayload([expSection([orig])]);
+  const { api } = load({ proxyUrl: 'https://relay.example', personalInfo: JSON.stringify(pi) });
+  const sum = await api.run(payload, { measureLines: fakeMeasure, fetchImpl: () => Promise.resolve({ json: () => Promise.resolve({ content: [{ text: JSON.stringify([fabricated]) }] }) }) });
+  assert.equal(sum.rewritten, 0, 'fabricated 99 blocked by the facts gate');
+  assert.equal(payload.sections[0].roles[0].bullets[0], orig);
+});
+
+// ── rule 30: NO-FORCE-JUSTIFY belt ───────────────────────────────────────────
+// width 497.8 (bullet) @6px/char = 82 chars/line. Ten 6-char words = 69 chars
+// (414px = 83.2% < JUSTIFY_MIN 85%) then a 60-char word forces the wrap: the
+// mid-line is naturally under-filled -> justified render would stretch it.
+const midUnderfillBullet = () => Array(10).fill('sixchr').join(' ') + ' ' + 'x'.repeat(60);
+test('rule 30: an under-filled mid-line writes a LEFT item_alignment override into the payload', async () => {
+  const payload = cvPayload([expSection([midUnderfillBullet()])]);
+  const { api } = load();
+  const sum = await api.run(payload, { measureLines: fakeMeasure });
+  assert.equal(sum.leftAligned, 1);
+  assert.equal(payload.sections[0].item_alignment['roles.0.bullets.0'], 'left');
+  assert.equal(sum.residue, 0, 'last line at 72% is not a runt — alignment was the only fix');
+});
+
+test('rule 30: explicit user CJLR on the path (or a __group__ override) always wins', async () => {
+  const p1 = cvPayload([{ ...expSection([midUnderfillBullet()]), item_alignment: { 'roles.0.bullets.0': 'justify' } }]);
+  const { api } = load();
+  const s1 = await api.run(p1, { measureLines: fakeMeasure });
+  assert.equal(s1.leftAligned, 0);
+  assert.equal(p1.sections[0].item_alignment['roles.0.bullets.0'], 'justify', 'user choice untouched');
+  const p2 = cvPayload([{ ...expSection([midUnderfillBullet()]), item_alignment: { __group__: 'justify' } }]);
+  const s2 = await api.run(p2, { measureLines: fakeMeasure });
+  assert.equal(s2.leftAligned, 0);
+  assert.equal(p2.sections[0].item_alignment['roles.0.bullets.0'], undefined);
+});
+
+// ── rule 40: sidebar packing belt ────────────────────────────────────────────
+test('packTokens: comma token lists parse; prose and grouped values are shape-gated out', () => {
+  const { api } = load();
+  const ok = api._packTokens('Python, Git, Jupyter, MATLAB.');
+  assert.ok(ok && ok.trailingDot);
+  assert.equal(Array.from(ok.toks).join('|'), 'Python|Git|Jupyter|MATLAB');
+  assert.equal(api._packTokens('Stability, calm, and reliable under pressure'), null, 'conjunction token = prose');
+  assert.equal(api._packTokens('One, two'), null, 'fewer than 3 tokens');
+  assert.equal(api._packTokens('Optics: benches, HRSEM, Raman'), null, 'inner colon = prose/label');
+  assert.equal(api._packTokens('A; B, C, D'), null, 'semicolon grouping preserved');
+  assert.equal(api._packTokens('[placeholder], b, c'), null, 'placeholders never');
+});
+
+// Sidebar width 245.9px @6px/char = 40 chars/line, bold lead "Software: " counts.
+// Long,long,long,short,short wraps to 3 lines; long+short adjacency packs to 2.
+const PACK_ITEMS = () => [
+  { grp: true, t: 'Tools' },
+  { b: 'Software', t: 'aaaaaaaaaaaaaaaa, cccccccccccccccc, eeeeeeeeeeeeeeee, bb, dd' },
+];
+test('rule 40: rich_block tools row is packed to fewer measured lines, tokens preserved', async () => {
+  const payload = cvPayload([{ id: 'tools', type: 'rich_block', loc: 'sidebar', items: PACK_ITEMS() }]);
+  const { api } = load();
+  const sum = await api.run(payload, { measureLines: fakeMeasure });
+  assert.equal(sum.packed, 1);
+  assert.ok(sum.packedLinesSaved >= 1);
+  const packed = payload.sections[0].items[1].t;
+  const before = fakeMeasure({ html: '<b>Software: </b>' + 'aaaaaaaaaaaaaaaa, cccccccccccccccc, eeeeeeeeeeeeeeee, bb, dd', widthPx: 245.9 });
+  const after = fakeMeasure({ html: '<b>Software: </b>' + packed, widthPx: 245.9 });
+  assert.ok(after.length < before.length, 'measured line count dropped');
+  assert.equal(
+    packed.split(',').map((t) => t.trim()).sort().join('|'),
+    'aaaaaaaaaaaaaaaa, cccccccccccccccc, eeeeeeeeeeeeeeee, bb, dd'.split(',').map((t) => t.trim()).sort().join('|'),
+    'same token multiset — order only'
+  );
+});
+
+test('rule 40: kill switch antcv:disable-sidebar-packing leaves the value byte-identical', async () => {
+  const payload = cvPayload([{ id: 'tools', type: 'rich_block', loc: 'sidebar', items: PACK_ITEMS() }]);
+  const { api } = load({ 'antcv:disable-sidebar-packing': '1' });
+  const sum = await api.run(payload, { measureLines: fakeMeasure });
+  assert.equal(sum.packed, undefined);
+  // L2 NBSP binding may still glue trailing gaps (that is the bind belt, not
+  // packing) — token ORDER must be untouched.
+  const nbsp = String.fromCharCode(160);
+  assert.equal(payload.sections[0].items[1].t.split(nbsp).join(' '), 'aaaaaaaaaaaaaaaa, cccccccccccccccc, eeeeeeeeeeeeeeee, bb, dd');
+});
+
+test('rule 40: prose sidebar values are never reordered', async () => {
+  const prose = 'Stability, calm, and reliable under pressure';
+  const payload = cvPayload([{ id: 'interests', type: 'labeled_list', loc: 'sidebar', items: [{ l: 'Tai-chi', v: prose }] }]);
+  const { api } = load();
+  await api.run(payload, { measureLines: fakeMeasure });
+  // NBSP binding may glue gaps; the WORD ORDER of the prose must be untouched.
+  assert.equal(payload.sections[0].items[0].v.split(String.fromCharCode(160)).join(' '), prose);
+});
+
+// ── rich_block sidebar rows are L2 bind targets (v2 only saw labeled_list) ───
+test('rich_block sidebar rows collect as side targets; grp/residue/mk rows never do', () => {
+  const { api } = load();
+  const payload = cvPayload([
+    { id: 'tools', type: 'rich_block', loc: 'sidebar', items: [
+      { grp: true, t: 'Tools' },
+      { b: 'Software', t: 'Python plus a long enough value to be measured for binding' },
+      { b: 'Hidden - Lab & fabrication', t: 'PDMS nanoimprint' },   // residue: belt-dropped, never measured
+      { b: 'Marker', t: 'a marker row body', mk: true },
+      { b: 'Empty', t: '' },
+      { b: 'Ph', t: '[placeholder value]' },
+    ] },
+  ]);
+  const targets = api._collectTargets(payload, api._metricsFromPayload(payload));
+  assert.equal(targets.length, 1);
+  assert.equal(targets[0].kind, 'side_label');
+  assert.match(targets[0].prefixHtml, /<b>Software: <\/b>/, 'lead + worker auto-colon in the measured prefix');
+  targets[0].set('replaced');
+  assert.equal(payload.sections[0].items[1].t, 'replaced');
 });

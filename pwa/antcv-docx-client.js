@@ -1247,6 +1247,28 @@ const IRRELEVANT_ROLE = /students?\s+council|security\s+guard|foreningsarbejde/i
 // app: hide the old IDF sysadmin role + the Publications & Patents section).
 const CLUSTER_ROLE = /computer\s+systems?\s+administrator/i;
 function _jdText() { try { return String(localStorage.getItem('antcv:lastJdText') || '').toLowerCase(); } catch (_) { return ''; } }
+// JD relevance for the OLD-ROLE bullet cap (rule 47 refinement, owner
+// 2026-07-04: "the age cap applies also for relevant roles — a merged role's
+// bullets must be very relevant to stay"). Significant JD tokens = >=4-char
+// words minus a small stopword set; a bullet is relevant when it shares one.
+const _JD_STOP = new Set('with that this from will your team work role able across into over under after within their have been they also more than what when which using used based include including such other each both once about our its the and for'.split(' '));
+function _jdSignificantTokens() {
+  const jd = _jdText();
+  if (!jd || jd.length < 30) return null;                       // no usable JD -> no relevance gating
+  const set = new Set();
+  (jd.match(/[a-z][a-z0-9+/&.-]{3,}/g) || []).forEach((w) => { if (!_JD_STOP.has(w)) set.add(w); });
+  return set.size ? set : null;
+}
+function _bulletRelevantToJd(bullet, jdSet) {
+  if (!jdSet) return true;                                       // can't judge -> keep (never over-drop)
+  const words = String(bullet || '').toLowerCase().match(/[a-z][a-z0-9+/&.-]{3,}/g) || [];
+  for (const w of words) {
+    if (_JD_STOP.has(w)) continue;
+    if (jdSet.has(w)) return true;
+    if (w.length > 4 && (jdSet.has(w.slice(0, -1)) || jdSet.has(w + 's'))) return true;   // light plural tolerance
+  }
+  return false;
+}
 function _jdIsTechOps() { return /\b(?:it support|sysadmin|system[s]? admin|infrastructure|devops|networking|on-?prem|server administration|helpdesk|service desk)\b/.test(_jdText()); }
 function _jdIsResearch() { return /\b(?:research|patent|publication|r&d|phd|ph\.d|scientist|academ|postdoc|peer[- ]review)\b/.test(_jdText()); }
 function _isTargetedExport() {
@@ -1389,20 +1411,32 @@ function sanitizeForExport(docSections, doc) {
           // strongest-first ordering (SECTION-ORDER-001) this keeps the most
           // relevant N. Payload-only. Age from the role's END year vs now.
           const nowYear = _payloadNowYear();
+          const jdSet = _jdSignificantTokens();
           roles = roles.map((r) => {
             if (!r || !Array.isArray(r.bullets)) return r;
             const isMerged = MERGED_TAIL.test(String(r.title || ''));
-            let cap = isMerged ? 5 : 4;
-            // The age tightening (rule 47) targets PLAIN old roles — the RA/TA/
-            // early-career stack the owner never wants padded. A MERGED role is
-            // deliberately-kept combined evidence (rule 17/28): it holds its
-            // 5-bullet cap regardless of age.
-            if (!isMerged) {
-              const ageCap = _oldRoleBulletCap(r.years, nowYear);
-              if (ageCap != null && ageCap < cap) cap = ageCap;
+            const typeCap = isMerged ? 5 : 4;
+            const ageCap = _oldRoleBulletCap(r.years, nowYear);   // 2 / 3 / null
+            // OLD-ROLE-BULLET-CAP-001 (owner 2026-07-04 refinement): the age cap
+            // applies to ALL old roles, MERGED included — a merged role no longer
+            // gets a free pass to 5. A PLAIN old role is hard-capped at the age
+            // count (strongest-first). A MERGED old role keeps the age count as a
+            // FLOOR and may earn bullets ABOVE it (up to 5) ONLY when they are
+            // very relevant to the JD ("must be very relevant to stay"). Non-old
+            // roles keep their normal type cap. Bullets are strongest-first.
+            let bullets = r.bullets;
+            if (ageCap == null) {
+              if (bullets.length > typeCap) bullets = bullets.slice(0, typeCap);
+            } else if (!isMerged) {
+              if (bullets.length > ageCap) bullets = bullets.slice(0, ageCap);
+            } else {
+              const kept = bullets.slice(0, ageCap);              // age floor, strongest first
+              for (let i = ageCap; i < bullets.length && kept.length < typeCap; i++) {
+                if (_bulletRelevantToJd(bullets[i], jdSet)) kept.push(bullets[i]);
+              }
+              bullets = kept;
             }
-            if (r.bullets.length <= cap) return r;
-            return { ...r, bullets: r.bullets.slice(0, cap) };
+            return bullets === r.bullets ? r : { ...r, bullets };
           });
         }
         if (roles.length !== s.roles.length || roles.some((r, i) => r !== s.roles[i])) s = { ...s, roles };

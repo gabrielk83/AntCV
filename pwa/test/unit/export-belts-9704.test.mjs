@@ -120,3 +120,41 @@ test('OLD-ROLE-BULLET-CAP: not applied in an UNSOLICITED export', () => {
   const exp = p.sections.find((s) => s.type === 'experience');
   assert.equal(exp.roles[0].bullets.length, 6, 'unsolicited keeps the full breadth');
 });
+
+// OLD-ROLE-BULLET-CAP-001 refinement (owner 2026-07-04: "the age cap applies
+// also for relevant roles — a merged role's bullets must be very relevant to
+// stay"). Age cap is the FLOOR for a merged old role; bonus bullets above it
+// (up to 5) are kept ONLY when JD-relevant.
+test('OLD-ROLE merged: age cap is the floor; bonus bullets above it must be JD-relevant', () => {
+  store.set('antcv:lastJdText', 'Hardware platform project management with modular design, validation, calibration, and supplier coordination for tracking systems and requirements.');
+  const p = payloadWithRoles([{
+    id: 'm', title: 'Electro-Optics Engineer & Team Leader', company: 'Meprolight', years: '2010 - 2014', on: true,  // 12y -> floor 3
+    bullets: [
+      'Led optical alignment and metrology for prototype builds.',        // floor 1
+      'Ran design reviews across the optics group.',                       // floor 2
+      'Managed prototype-to-production handover.',                         // floor 3
+      'Owned validation and calibration workflows for tracking modules.',  // bonus RELEVANT
+      'Mentored junior staff on soldering technique in the lab.',          // bonus NOT relevant
+      'Coordinated supplier requirements and platform modular design.',    // bonus RELEVANT
+    ],
+  }]);
+  store.delete('antcv:lastJdText');
+  const role = p.sections.find((s) => s.type === 'experience').roles[0];
+  // orphan-bind may NBSP-glue trailing words — normalize before matching.
+  const bl = role.bullets.map((b) => String(b).replace(/ /g, ' '));
+  assert.equal(bl.length, 5, 'floor 3 + 2 JD-relevant bonus bullets');
+  assert.ok(bl.some((b) => /calibration/.test(b)), 'relevant bonus kept');
+  assert.ok(bl.some((b) => /modular design/.test(b)), 'second relevant bonus kept');
+  assert.ok(!bl.some((b) => /soldering technique/.test(b)), 'irrelevant bonus dropped');
+});
+
+test('OLD-ROLE merged with NO relevant bonus bullets -> falls to the age floor', () => {
+  store.set('antcv:lastJdText', 'Unrelated culinary pastry baking role about ovens flour dough recipes kitchen hygiene and dessert plating across many shifts in a busy restaurant.');
+  const p = payloadWithRoles([{
+    id: 'm', title: 'EO Engineer & Team Leader', company: 'Meprolight', years: '2010 - 2014', on: true,  // 12y -> floor 3
+    bullets: ['Led optical metrology.', 'Ran design reviews.', 'Managed transfer.', 'Owned validation workflows.', 'Coached staff.'],
+  }]);
+  store.delete('antcv:lastJdText');
+  const role = p.sections.find((s) => s.type === 'experience').roles[0];
+  assert.equal(role.bullets.length, 3, 'no JD-relevant bonus -> the 11-15y age floor');
+});

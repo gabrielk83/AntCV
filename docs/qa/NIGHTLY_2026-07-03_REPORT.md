@@ -1,8 +1,98 @@
 # AntCV nightly report — 2026-07-03
 
-> **Two runs this date.** The block immediately below is the LATER run (re-dispatch at
-> 01:40, repo already at 1.51.69). The original 1.51.53 run report follows under
-> "EARLIER RUN (1.51.53)". Both retained.
+> **Three runs this date.** Newest first: the LATE-NIGHT run (re-dispatch, repo at 1.51.102) is
+> immediately below. Then the 01:40 run (1.51.70), then the original 1.51.53 run. All retained.
+
+---
+
+## LATE-NIGHT RUN — no ship (parallel session live; report-only)
+
+Run: local desktop, autonomous. Owner active at keyboard; Chrome MCP connected (owner's live origin,
+karp.gabriel.a@gmail.com). Synced clean at start (HEAD 1.51.101).
+
+### TL;DR
+- **No code shipped — by design.** (1) A **parallel session was actively committing to this same clone**
+  during my run: 1.51.102 `JD-VISION-PROVIDER-001` landed <15 min in, tree clean = they finished a
+  commit. Editing the shared tree would collide (worktree-contention memory + CLAUDE.md sync discipline).
+  (2) Every ship candidate was already-shipped, not-reproducible on current data, config-clean, or
+  gen/restore-dependent + brick-history. Verify-first + "not a brickable mid product" → verified diagnosis,
+  no speculative fix.
+- **Verified live:** row 24 analytics endpoints 200; 1.51.101 boot-purge ran (poisoned buckets gone);
+  Task 1 sonnet-5 cascade config correct.
+- **New precise NIL diagnosis (rows 28/29):** targeted gen wrote `meta` (header prose — good NIL) but CL
+  **body** rich_blocks came back **empty**; company/role reverted to Unsolicited. Section map below.
+
+### Parallel-session note
+Start: HEAD `5492941` (1.51.101), `pull --rebase` up-to-date. Mid-run: HEAD `cd93bc5` (1.51.102), tree
+clean, 1.51.102 files touched <15 min. Local==origin. Another session owns the JD-extraction/NIL thread
+in this clone right now (1.51.99→1.51.102 all JD-extraction). I did not edit shared code. This report and
+any ACTIVE_BUGS edit were done after a fresh `pull --rebase` to avoid regressing their work.
+
+### Verified this run
+- **Row 24 (ANALYTICS-BUTTONS):** from the owner's authed tab — `GET /analytics/summary` **200**,
+  `GET /api/analytics/export?format=json` **200** (28 sessions). Root 401→wipe cause gone at the endpoint.
+  Client scope-fix (1.51.92) in the loaded bundle. **Recommend closing pending one owner button-click.**
+- **Task 1 config clean:** `workers/proxy/src/multi-llm.js` line 205 gates `thinking:{type:'disabled'}`
+  to `/claude-sonnet-5/` only; flagship stays `claude-opus-4-7` (rule #6). No change. (I run on
+  `opus-4-8[1m]` — a newer flagship candidate, but I have **no measured evidence** it beats 4-7 for gen,
+  so **no proposal**; awareness only.)
+- **1.51.101 boot-purge live:** `antcv:clProseGuard` now absent on the owner's origin (poisoned NIL/`"|"`
+  buckets cleared by `purgeSkeletonSnapshots()`). Caveat: owner's tab serves `app.js?v=1.51.100`
+  (masked to 1.51.101; consistent with 1.51.101 sidecar-only). **1.51.102 app.js not yet on device —
+  owner must hard-refresh.**
+
+### NIL diagnosis (rows 28/29) — from live localStorage
+Two stores disagree:
+- **`meta`** (CL header): `company="Unsolicited"`/`role="Open Application"` (**reverted**), but
+  `subtitle="Nanofabrication • Process Optimization • Cleanroom Coordination"`, `greeting="Dear Vladimir
+  Miljkovic,"` (real NIL contact), `opening=` full NIL-targeted paragraph (NIL Technology, nanoscale
+  optics, Nanooptics Prototyping Engineer, DTU Nanolab). Header prose is good NIL.
+- **`sections.cl`** (CL body): Greeting=`"Dear [Hiring Team / Name],"` (skeleton); Opening=`""`;
+  WHY YOUR COMPANY=stale Terma `"your organisation's aerospace and defence…"` (1.51.98-scrubbed);
+  WHO I AM=generic prose; FOUNDATION=`""`; **WHAT I BRING=`""`**; HOW I WOULD CONTRIBUTE=`""`;
+  Closure=skeleton.
+
+Proves:
+1. **Row 29(ii) — empty CL body leg, now mapped section-by-section.** Only `meta` got prose; body
+   rich_blocks (Opening/Foundation/What-I-Bring/How-I-Contribute) returned empty. Generation-layer
+   failure, distinct from the 1.51.101 capture-guard fix (which stops *snapshotting* skeletons — correct,
+   but doesn't make the gen write prose).
+2. **Row 29(i) — state didn't stick.** No NIL app row (`antcv:app:*` = only kernel + app:435, both
+   jdText empty; `lastJdText` empty). Company/role had nowhere to persist; boot restore re-pinned
+   Unsolicited while the meta prose survived.
+3. **WHAT-I-BRING "not visible / truncated" (Task4 #9/#10)** is downstream of #1 — the body is literally
+   `""`. Fix the empty-body leg first, re-check truncation after a good regen.
+
+Next fix (for the NIL-thread owner / parallel session), diagnostic-first, no blind patch:
+- Instrument the CL-section gen return: empty targeted rich_block → E4 retry must fire, and must NOT
+  overwrite the live section with empty/skeleton. Check D1 `llm_calls` for the CL leg provider/adequacy
+  (no GET route this session — proxy POST-only).
+- Targeted gen must create/stamp the app row so company/role + filename survive boot restore.
+- Owner path stands: **hard-refresh to 1.51.102, re-run NIL gen**, then re-verify rows 28/13(Q&A)/brand-fit.
+
+### Telemetry (Task 1/2 signal, live `/analytics/summary`, as-of 2026-07-02T23:59Z)
+`llm_call 7002 / llm_error 480` (6.9%); `generation_start 568 / generation_complete 428` (**~25%
+non-completion**); `hallucination_flagged 297` (JD detector active). Can't attribute to task/provider
+without D1 `llm_calls` (no GET route). **Recommend a read-only relay `llm_calls` aggregate** so future
+nightlies can do Task 1 from data, not code.
+
+### Not shipped, and why
+- **Row 26 (TOOLS-SIDEBAR-COMPRESS):** gold targets ("Instruments"/"Lab & fabrication" with "confocal
+  microscopy"/"electrical probe stations"/trailing "fabrication") **do not exist in current
+  `sections.cv.tools`** — regenerated to a tighter structure. Symptom not reproducible; strings are
+  LLM-generated (not kernel-pinned), so a real fix is a gen-prompt/compress-rule change needing a live
+  regen to verify. Re-scope with owner against a fresh export.
+- **Rows 27/25/3 (orphan sweep / table geometry / float spine):** need real CloudConvert PDF measurement
+  + PDF-BLANK-PAGE/overlap brick history — not safe blind on a contended tree.
+- **Row 23 / CL-panel-blip:** live-DOM diagnosable but fiddly UI with "prove-dead-or-FUSE" constraint;
+  not rushed at this hour.
+
+### Needs owner-eye
+1. Hard-refresh to pick up 1.51.102 (you're on 1.51.100 app.js).
+2. Re-run NIL gen; watch: NIL app row created? CL body sections fill with NIL prose? Q&A page (row 13)?
+   brand-fit applies?
+3. If CL body still empty after a clean regen → that's the empty-CL-leg gen bug (evidence above).
+4. Row 24: click the 3 analytics buttons once — expect download/summary, no restart.
 
 ---
 

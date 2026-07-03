@@ -22,7 +22,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.110-qa-signoff-variety';
+  var VERSION = '1.51.111-qa-header-trim';
   if (window.__antcvApplicationQa === VERSION) return;
   window.__antcvApplicationQa = VERSION;
 
@@ -68,8 +68,13 @@
     ];
   }
 
+  // QA-HEADER-TRIM-001 (owner 2026-07-04): no candidate-header line ("<Name> -
+  // <headline>. Responses to your application questions:") — the page's
+  // HEADLINE is the section title itself ("Responses to application
+  // questions:"), so the items are just the Q&A rows + the closing line.
+  var QA_TITLE = 'Responses to application questions:';
   function buildItems(qs) {
-    var items = [{ grp: true, t: candidateHeader() }];
+    var items = [];
     qs.forEach(function (qa) { items.push({ b: qa.question, t: qa.answer }); });
     return items.concat(closingItems());
   }
@@ -103,7 +108,7 @@
       } else {
         var items = buildItems(qs);
         if (idx < 0) {
-          var sec = { id: 'application_qa', title: 'APPLICATION QUESTIONS', loc: 'main', on: true,
+          var sec = { id: 'application_qa', title: QA_TITLE, loc: 'main', on: true,
             type: 'rich_block', leadBold: true, pageBreakBefore: true, items: items };
           // QA-STANDALONE-PAGE-001: splice at the very END of the CL — after
           // closure AND after the sign-off/signature elements (1.51.90/91) —
@@ -120,8 +125,8 @@
             var n = nextItems[i];
             return !!it && !!n && (it.grp ? (n.grp && it.t === n.t) : (it.b === n.b && it.t === n.t));
           });
-          if (!same || cur.on === false || cur.type !== 'rich_block' || !cur.pageBreakBefore) {
-            secs.cl[idx] = Object.assign({}, cur, { type: 'rich_block', on: true, leadBold: true, pageBreakBefore: true, items: nextItems });
+          if (!same || cur.on === false || cur.type !== 'rich_block' || !cur.pageBreakBefore || cur.title !== QA_TITLE) {
+            secs.cl[idx] = Object.assign({}, cur, { type: 'rich_block', on: true, leadBold: true, pageBreakBefore: true, title: QA_TITLE, items: nextItems });
             changed = true;
           }
           // QA-STANDALONE-PAGE-001: keep the Q&A page LAST (after the

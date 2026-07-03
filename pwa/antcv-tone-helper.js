@@ -535,7 +535,10 @@
           txt += ' \u2022 ' + tone + ' preset chips locked (can add, cannot remove)';
         }
       }
-      status.textContent = txt;
+      // SETTINGS-PERSONAL-STABILIZE-001 (owner 2026-07-04): write only on a
+      // real change — the unconditional rewrite emitted a childList mutation
+      // per tick (120/8s) into every settings-panel observer.
+      if (status.textContent !== txt) status.textContent = txt;
     }
   }
 

@@ -37,19 +37,21 @@
     exportToolbarRoots().forEach(function(root){
       Array.from(root.querySelectorAll('button,[role="button"],a')).forEach(function(b){
         if(!isStrayExportControl(b)) return;
-        b.setAttribute('data-antcv-mobile-export-hidden-275','1');
-        b.style.display='none';
-        b.style.visibility='hidden';
+        // SETTINGS-PERSONAL-STABILIZE-001: idempotent — the unconditional
+        // stamp fired 1252 attribute mutations/8s into the settings observers.
+        if(b.getAttribute('data-antcv-mobile-export-hidden-275')!=='1') b.setAttribute('data-antcv-mobile-export-hidden-275','1');
+        if(b.style.display!=='none') b.style.display='none';
+        if(b.style.visibility!=='hidden') b.style.visibility='hidden';
       });
     });
   }
   function hidePanelEscape(){
     const b=document.getElementById('antcv-panel-escape-btn');
     if(b){
-      b.setAttribute('data-antcv-mobile-top-x-hidden-275','1');
-      b.style.display='none';
-      b.style.visibility='hidden';
-      b.style.pointerEvents='none';
+      if(b.getAttribute('data-antcv-mobile-top-x-hidden-275')!=='1') b.setAttribute('data-antcv-mobile-top-x-hidden-275','1');
+      if(b.style.display!=='none') b.style.display='none';
+      if(b.style.visibility!=='hidden') b.style.visibility='hidden';
+      if(b.style.pointerEvents!=='none') b.style.pointerEvents='none';
     }
   }
   function run(){try{hidePanelEscape();cleanupExportToolbar();}catch(e){try{console.warn('[mobile-topbar-cleanup-275]',e&&e.message);}catch(_){}}}

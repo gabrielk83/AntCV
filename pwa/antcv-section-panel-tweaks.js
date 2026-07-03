@@ -290,7 +290,7 @@
       if (cur !== BANNED_SUMMARY_TEXT) {
         origSum.textContent = BANNED_SUMMARY_TEXT;
       }
-      original.dataset.antcvRenamedFromTone = '1';
+      if (original.dataset.antcvRenamedFromTone !== '1') original.dataset.antcvRenamedFromTone = '1';   // SETTINGS-PERSONAL-STABILIZE-001: idempotent (was 407 mutations/8s)
     }
     if (original.style.order !== '40') original.style.order = '40';
 

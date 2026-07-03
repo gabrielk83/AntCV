@@ -337,7 +337,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.127';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.127';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.128';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -379,7 +379,7 @@
           app.src = 'app.js?v=1.51.127';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.127';
+            vo.src = 'antcv-version-override.js?v=1.51.128';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -711,7 +711,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <!-- EXPORT-WARMUP-001: warm the docx-worker /health probe after boot so the FIRST PDF export
      uses CloudConvert instead of cold-probing -> browser-print ("Page setup") fallback. -->
 <script src="antcv-pdf-worker-warmup.js?v=1.50.946" defer></script>
-<script src="antcv-tone-helper.js?v=1.50.23-brand" defer></script>
+<script src="antcv-tone-helper.js?v=1.51.128" defer></script>
 <script src="antcv-banned-audit.js?v=1.50.993" defer></script>
 <script src="antcv-llm-audit.js?v=1.40.178" defer></script>
 <script src="antcv-validation-severity-341.js?v=1.40.341-p1c" defer></script>
@@ -785,7 +785,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-panel-bottom-pad.js?v=1.40.145" defer></script>
 <script src="antcv-sidebar-position.js?v=1.50.818" defer></script>
 <script src="antcv-splitter-flip.js?v=1.50.818" defer></script>
-<script src="antcv-section-panel-tweaks.js?v=1.40.203" defer></script>
+<script src="antcv-section-panel-tweaks.js?v=1.51.128" defer></script>
 <script src="antcv-item-align.js?v=1.50.690-edit-guard" defer></script>
 <script src="antcv-page-fit.js?v=1.50.753" defer></script>
 <script src="antcv-auto-pagebreak-block-001.js?v=1.51.63" defer></script>
@@ -918,7 +918,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-page-break-icon-357.js?v=1.40.357-pb005b" defer></script>
 <script src="antcv-pub-injected-reaper-352.js?v=1.40.352" defer></script>
 <!-- SIDECAR-MERGE-G5 (2026-06-13): mobile-topbar-cleanup-275 + mobile-fab-cleanup-351 + mobile-bottom-compact-352 + mobile-alt-circles-dropdown-354 consolidated into one file with a single shared rAF scheduler + one MutationObserver (was 4). Behaviour preserved verbatim. -->
-<script src="antcv-mobile-ui-418.js?v=1.50.419" defer></script>
+<script src="antcv-mobile-ui-418.js?v=1.51.128" defer></script>
 <script src="antcv-generate-cloud-sync-277.js?v=1.51.124" defer></script>
 <!-- RETIRED (PUBLICATIONS-MAIN-001 2026-06-22): antcv-publications-section-panel-row-fix-278.js -->
 <script src="antcv-sidebar-section-row-hide-page-279.js?v=1.40.281" defer></script>
@@ -1020,7 +1020,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      first" checkbox into the red Delete-account card, and wraps AntcvFullErase to
      back up before erasing. Loads AFTER cloud-delete-296 + app.js so its erase
      wrap composes outside the original. Escape: localStorage['antcv:disable-data-export']='1'. -->
-<script src="antcv-quick-contact-collapse.js?v=1.50.598" defer></script>
+<script src="antcv-quick-contact-collapse.js?v=1.51.128" defer></script>
 <script src="antcv-data-export-360.js?v=1.50.929" defer></script>
 <script src="antcv-personal-dedup-hide.js?v=1.50.861" defer></script>
 <script src="antcv-settings-sync-extra.js?v=1.50.629" defer></script>

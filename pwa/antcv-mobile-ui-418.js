@@ -52,11 +52,21 @@
   function run275() {
     try {
       var b = document.getElementById('antcv-panel-escape-btn');
-      if (b) { b.setAttribute('data-antcv-mobile-top-x-hidden-275', '1'); b.style.display = 'none'; b.style.visibility = 'hidden'; b.style.pointerEvents = 'none'; }
+      // SETTINGS-PERSONAL-STABILIZE-001: idempotent writes only (the twin of
+      // the topbar-cleanup-275 stamp — together they fed a sustained mutation
+      // storm into every settings-panel observer).
+      if (b) {
+        if (b.getAttribute('data-antcv-mobile-top-x-hidden-275') !== '1') b.setAttribute('data-antcv-mobile-top-x-hidden-275', '1');
+        if (b.style.display !== 'none') b.style.display = 'none';
+        if (b.style.visibility !== 'hidden') b.style.visibility = 'hidden';
+        if (b.style.pointerEvents !== 'none') b.style.pointerEvents = 'none';
+      }
       t275_roots().forEach(function (root) {
         Array.from(root.querySelectorAll('button,[role="button"],a')).forEach(function (bb) {
           if (!t275_isStray(bb)) return;
-          bb.setAttribute('data-antcv-mobile-export-hidden-275', '1'); bb.style.display = 'none'; bb.style.visibility = 'hidden';
+          if (bb.getAttribute('data-antcv-mobile-export-hidden-275') !== '1') bb.setAttribute('data-antcv-mobile-export-hidden-275', '1');
+          if (bb.style.display !== 'none') bb.style.display = 'none';
+          if (bb.style.visibility !== 'hidden') bb.style.visibility = 'hidden';
         });
       });
     } catch (e) { try { console.warn('[mobile-ui-418/275]', e && e.message); } catch (_) {} }

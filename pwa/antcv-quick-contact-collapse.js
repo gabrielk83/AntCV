@@ -99,6 +99,13 @@
 
   function paintHeader(h) {
     var open = isOpen();
+    var want = open ? 'true' : 'false';
+    // SETTINGS-PERSONAL-STABILIZE-001 (owner 2026-07-04 "stabilise all the
+    // jumps"): this rebuild ran UNCONDITIONALLY on every apply() pass — 939
+    // childList + 313 aria-expanded mutations in 8s measured in the Personal
+    // panel, feeding every settings observer. Repaint ONLY on a real state
+    // change (the 211 flicker-fix pattern).
+    if (h.getAttribute('aria-expanded') === want && h.firstChild) return;
     h.textContent = '';
     var tri = document.createElement('span');
     tri.setAttribute('aria-hidden', 'true');
@@ -106,7 +113,7 @@
     tri.style.cssText = 'font-size:10px;opacity:0.8;';
     h.appendChild(tri);
     h.appendChild(document.createTextNode(' Quick contact details'));
-    h.setAttribute('aria-expanded', open ? 'true' : 'false');
+    h.setAttribute('aria-expanded', want);
   }
 
   // The direct child of `col` that contains the input whose placeholder includes
@@ -239,7 +246,9 @@
 
     var open = isOpen();
     for (var i = 0; i < rows.length; i++) {
-      rows[i].setAttribute(ROW, '1');
+      // SETTINGS-PERSONAL-STABILIZE-001: stamp only when missing (was an
+      // unconditional attribute write per row per pass — 939 mutations/8s).
+      if (rows[i].getAttribute(ROW) !== '1') rows[i].setAttribute(ROW, '1');
       // Only touch display when it needs to change (avoids feeding the observer).
       var want = open ? '' : 'none';
       if (rows[i].style.display !== want) rows[i].style.display = want;

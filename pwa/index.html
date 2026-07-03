@@ -337,7 +337,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.117';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.119';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.120';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -379,7 +379,7 @@
           app.src = 'app.js?v=1.51.117';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.119';
+            vo.src = 'antcv-version-override.js?v=1.51.120';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -691,6 +691,8 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-ai-notice-position-control.js?v=1.51.35" defer></script>
 <script src="antcv-cl-slogan-control.js?v=1.50.976" defer></script>
 <script src="antcv-cl-slogan-element.js?v=1.51.91" defer></script>
+<!-- SLOGAN-FRESH-GEN-001 (spec rules 23/33): a sticky antcv:clSlogan override owned by ANOTHER application yields to the fresh generated slogan (meta.subtitle). Kill antcv:disable-slogan-fresh. -->
+<script src="antcv-cl-slogan-fresh.js?v=1.51.120" defer></script>
 <!-- CL-FORMAT-PANEL-001 (F3): distinct "COVER LETTER FORMAT" panel in Settings→Layout wrapping the CL signature + slogan/sign-off controls. Kill antcv:disable-cl-format-panel. -->
 <script src="antcv-cl-format-panel.js?v=1.51.82" defer></script>
 <!-- HEADER-ITEM-RULE-001 UI + preview parity: per-field header rule lines (on/off + pt + colour) writing headerItemRule; helpers __antcvHdrRuleDiv/Html/Style feed the live preview + HTML export. Kill antcv:disable-header-rule-control (UI only). -->
@@ -1023,9 +1025,9 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-personal-dedup-hide.js?v=1.50.861" defer></script>
 <script src="antcv-settings-sync-extra.js?v=1.50.629" defer></script>
 <script src="antcv-cl-cloud-sync-extra.js?v=1.50.976" defer></script>
-<script src="antcv-cl-prose-loss-guard-985.js?v=1.51.113" defer></script>
+<script src="antcv-cl-prose-loss-guard-985.js?v=1.51.120" defer></script>
 <!-- GEN-UNSOL-STALE-JD-001 Patch D: scrub a KNOWN PRIOR targeted company from unsolicited prose (employer names protected). Kill antcv:disable-unsol-company-scrub. -->
-<script src="antcv-unsol-company-scrub.js?v=1.51.98" defer></script>
+<script src="antcv-unsol-company-scrub.js?v=1.51.120" defer></script>
 <script src="antcv-profile-access-scrub.js?v=1.51.109" defer></script>
 <!-- CV CORE COMPETENCIES last-good snapshot guard: heals a stale-restore placeholder table back to the laminated rows (CV-CORECOMP-BLANK-001, owner 2026-07-01). -->
 <script src="antcv-corecomp-loss-guard.js?v=1.51.36" defer></script>

@@ -26,7 +26,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.98-unsol-company-scrub';
+  var VERSION = '1.51.120-recent-target-guard';
   if (window.__antcvUnsolCompanyScrub === VERSION) return;
   window.__antcvUnsolCompanyScrub = VERSION;
 
@@ -68,6 +68,34 @@
     return out;
   }
 
+  // SCRUB-RECENT-TARGET-GUARD-001 (owner Trackman review 2026-07-03): a guard
+  // bucket captured within the last 30 min is the CURRENT target caught in a
+  // transient meta flip to Unsolicited (row 29 family) — scrubbing it destroys
+  // the FRESH prose (the Trackman CL exported "your organisation's hardware
+  // platform" this way). The prose-loss guard stamps bucket._ts on capture;
+  // recently-captured companies are never scrub candidates. Unstamped (legacy)
+  // buckets keep the old behaviour — they predate this session by definition.
+  var RECENT_MS = 30 * 60 * 1000;
+  function recentCompanies() {
+    var out = {};
+    try {
+      var g = readJson('antcv:clProseGuard', null);
+      if (g && typeof g === 'object' && !Array.isArray(g)) {
+        var now = Date.now();
+        Object.keys(g).forEach(function (k) {
+          var b = g[k];
+          if (!b || typeof b !== 'object') return;
+          var ts = Number(b._ts);
+          if (isFinite(ts) && ts > 0 && (now - ts) < RECENT_MS) {
+            var c = String(k).split('|')[0].trim().toLowerCase();
+            if (c) { out[c] = 1; var s = stripLegal(c); if (s) out[s.toLowerCase()] = 1; }
+          }
+        });
+      }
+    } catch (_) {}
+    return out;
+  }
+
   // "Terma A/S" → "Terma"; prose usually drops the legal suffix.
   function stripLegal(name) {
     return String(name || '').replace(/[\s,]+(?:A\/S|ApS|AB|AS|GmbH|Inc\.?|Ltd\.?|LLC|S\.?A\.?|Oy|BV|PLC|Co\.?|Corp\.?)\s*$/i, '').trim();
@@ -86,7 +114,13 @@
     function addWithVariant(v) { add(v); var s = stripLegal(v); if (s && s !== v) add(s); }
     addWithVariant(priorCompany());
     guardCompanies().forEach(addWithVariant);
-    return out;
+    // Recency filter LAST so it also covers the activeAppCompany source (the
+    // same fresh target can arrive through either door during a meta flip).
+    var recent = recentCompanies();
+    return out.filter(function (v) {
+      var k = v.toLowerCase();
+      return !recent[k] && !recent[stripLegal(v).toLowerCase()];
+    });
   }
 
   function employerNames() {
@@ -206,5 +240,5 @@
     setTimeout(run, 400);
   });
   [800, 2500, 6000].forEach(function (ms) { setTimeout(run, ms); });
-  window.AntcvUnsolCompanyScrub = { version: VERSION, run: run, _scrubList: scrubList, _isEmployer: isEmployer, _priorCompany: priorCompany, _priorCompanies: priorCompanies, _stripLegal: stripLegal };
+  window.AntcvUnsolCompanyScrub = { version: VERSION, run: run, _scrubList: scrubList, _isEmployer: isEmployer, _priorCompany: priorCompany, _priorCompanies: priorCompanies, _stripLegal: stripLegal, _recentCompanies: recentCompanies };
 })();

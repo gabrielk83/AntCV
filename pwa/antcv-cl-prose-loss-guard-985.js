@@ -23,7 +23,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.113-skeleton-capture-2';
+  var VERSION = '1.51.120-bucket-ts';
   if (window.__antcvClProseGuard985 === VERSION) return;
   window.__antcvClProseGuard985 = VERSION;
 
@@ -136,6 +136,13 @@
       }
     });
     if (!changed) return;
+    // SCRUB-RECENT-TARGET-GUARD-001 (owner Trackman review 2026-07-03): stamp the
+    // capture time. The unsol-company-scrub harvests bucket KEYS as prior-company
+    // scrub candidates; a bucket captured MINUTES ago is the CURRENT target mid
+    // meta-flip (row 29 family), not a stale carryover — the recency stamp lets
+    // the scrub skip it (the Trackman CL lost "Trackman" -> "your organisation"
+    // through exactly this window). Underscore-keys are metadata, never sections.
+    bucket._ts = Date.now();
     store[key] = bucket;
     // keep the store small: cap at the 6 most-recent application buckets
     try {
@@ -233,9 +240,10 @@
         var bucket = store[k];
         if (!bucket || typeof bucket !== 'object') return;
         Object.keys(bucket).forEach(function (id) {
+          if (id.charAt(0) === '_') return;   // metadata (_ts), not a section snapshot
           if (!isReal(bucket[id])) { delete bucket[id]; changed = true; }
         });
-        if (!Object.keys(bucket).length) { delete store[k]; changed = true; }
+        if (!Object.keys(bucket).some(function (id) { return id.charAt(0) !== '_'; })) { delete store[k]; changed = true; }
       });
       if (changed) {
         localStorage.setItem(STORE, JSON.stringify(store));

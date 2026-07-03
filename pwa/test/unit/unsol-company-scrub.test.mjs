@@ -21,7 +21,7 @@ function load(store0) {
     setTimeout() { return 0; },
     console: { log() {}, warn() {} },
     CustomEvent: function (t, o) { this.type = t; Object.assign(this, o); },
-    JSON, Array, Object, String, RegExp, Error, Math, Number, Boolean,
+    JSON, Array, Object, String, RegExp, Error, Math, Number, Boolean, Date,
   };
   vm.createContext(sandbox);
   vm.runInContext(src, sandbox);
@@ -141,4 +141,63 @@ test('_stripLegal drops Danish/intl suffixes, keeps plain names', () => {
   assert.equal(api._stripLegal('Terma A/S'), 'Terma');
   assert.equal(api._stripLegal('Kanzen Konsulenter ApS'), 'Kanzen Konsulenter');
   assert.equal(api._stripLegal('NIL Technology'), 'NIL Technology');
+});
+
+// SCRUB-RECENT-TARGET-GUARD-001 (owner Trackman review 2026-07-03): a guard
+// bucket captured MINUTES ago is the CURRENT target caught mid meta-flip
+// (row 29 family) — scrubbing it destroyed the fresh Trackman CL ("your
+// organisation's hardware platform"). Recently-captured companies are never
+// scrub candidates; old and unstamped (legacy) buckets keep the old behaviour.
+
+const TRACKMAN_PROSE = {
+  cv: [{ id: 'profile', type: 'text', loc: 'main', content: 'Ready to support Trackman hardware programmes.' }],
+  cl: [{ id: 'why', type: 'rich_block', loc: 'body', items: [{ b: 'Why', t: 'Trackman builds modular tracking hardware.' }] }],
+};
+
+test('recent-target guard: a bucket captured 1 min ago is NEVER scrubbed (Trackman repro)', () => {
+  const s = baseStore('Unsolicited', '');
+  s.sections = JSON.stringify(TRACKMAN_PROSE);
+  s['antcv:clProseGuard'] = JSON.stringify({
+    'Trackman A/S|Project Manager, Hardware': { opening: {}, _ts: Date.now() - 60_000 },
+  });
+  const { api, store } = load(s);
+  const before = store.get('sections');
+  api.run();
+  assert.equal(store.get('sections'), before, 'fresh target mid meta-flip must survive');
+});
+
+test('recent-target guard covers the activeAppCompany source too', () => {
+  const s = baseStore('Unsolicited', 'Trackman A/S');
+  s.sections = JSON.stringify(TRACKMAN_PROSE);
+  s['antcv:clProseGuard'] = JSON.stringify({
+    'Trackman A/S|Project Manager, Hardware': { opening: {}, _ts: Date.now() - 120_000 },
+  });
+  const { api, store } = load(s);
+  const before = store.get('sections');
+  api.run();
+  assert.equal(store.get('sections'), before, 'same fresh company through the other door must survive');
+});
+
+test('an OLD stamped bucket (2h) still scrubs — stale carryover behaviour preserved', () => {
+  const s = baseStore('Unsolicited', '');
+  s.sections = JSON.stringify(TRACKMAN_PROSE);
+  s['antcv:clProseGuard'] = JSON.stringify({
+    'Trackman A/S|Project Manager, Hardware': { opening: {}, _ts: Date.now() - 2 * 3600_000 },
+  });
+  const { api, store } = load(s);
+  api.run();
+  const secs = JSON.parse(store.get('sections'));
+  assert.doesNotMatch(secs.cv[0].content, /Trackman/);
+  assert.match(secs.cv[0].content, /your organisation/);
+});
+
+test('an UNSTAMPED legacy bucket still scrubs', () => {
+  const s = baseStore('Unsolicited', '');
+  s.sections = JSON.stringify(TRACKMAN_PROSE);
+  s['antcv:clProseGuard'] = JSON.stringify({
+    'Trackman A/S|Project Manager, Hardware': { opening: {} },
+  });
+  const { api, store } = load(s);
+  api.run();
+  assert.doesNotMatch(JSON.parse(store.get('sections')).cv[0].content, /Trackman/);
 });

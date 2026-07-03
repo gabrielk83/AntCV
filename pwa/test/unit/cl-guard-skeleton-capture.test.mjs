@@ -98,3 +98,32 @@ test('_isPlaceholder: skeleton body true, real prose false, bracket-led true', (
   assert.equal(G._isPlaceholder('[Opening]'), true);
   assert.equal(G._isPlaceholder(''), true);
 });
+
+// SCRUB-RECENT-TARGET-GUARD-001 (1.51.120): snapshot() stamps bucket._ts so the
+// unsol-company-scrub can skip a JUST-captured target (the Trackman meta-flip
+// false positive); purge must treat underscore keys as metadata, not sections.
+
+test('snapshot stamps bucket._ts; purge preserves it and still drops emptied buckets', () => {
+  const backing = new Map();
+  backing.set('meta', JSON.stringify({ company: 'Trackman A/S', role: 'Project Manager, Hardware' }));
+  backing.set('sections', JSON.stringify({ cv: [], cl: [
+    { id: 'opening', type: 'rich_block', headlineOff: true, items: [{ b: '', t: 'Trackman builds modular tracking hardware and I have shipped platform validation for exactly this class of product.' }] },
+  ] }));
+  const G = load(backing);
+  const t0 = Date.now();
+  G.snapshot();
+  const store = JSON.parse(backing.get('antcv:clProseGuard'));
+  const bucket = store['Trackman A/S|Project Manager, Hardware'];
+  assert.ok(bucket && bucket.opening, 'real prose captured');
+  assert.ok(Number(bucket._ts) >= t0, 'capture timestamp stamped');
+  G.purgeSkeletonSnapshots();
+  const after = JSON.parse(backing.get('antcv:clProseGuard'));
+  const b2 = after['Trackman A/S|Project Manager, Hardware'];
+  assert.ok(b2 && b2.opening && Number(b2._ts) >= t0, 'purge keeps real sections AND the _ts metadata');
+  // a bucket whose only content is metadata counts as EMPTY and is dropped
+  backing.set('antcv:clProseGuard', JSON.stringify({ 'Old Co|Role': { opening: SKELETON_OPENING, _ts: 123 } }));
+  const G2 = load(backing);
+  G2.purgeSkeletonSnapshots();
+  const purged = JSON.parse(backing.get('antcv:clProseGuard'));
+  assert.equal(purged['Old Co|Role'], undefined, 'skeleton-only bucket (metadata aside) still purged whole');
+});

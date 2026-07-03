@@ -36,7 +36,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.40.278';
+  var VERSION = '1.51.105-meta-downgrade-guard';
   if (window.__antcvGenerateCloudSync277 === VERSION) return;
   window.__antcvGenerateCloudSync277 = VERSION;
 
@@ -188,11 +188,31 @@
               try { localStorage.setItem('sections', JSON.stringify(cur)); pulled = true; } catch (_) {}
             }
             // Mirror jd_company/jd_role into meta.
+            // META-DOWNGRADE-GUARD-001 (owner 2026-07-04, the NIL revert — register
+            // row 29): a stale cloud active_application must NEVER downgrade a
+            // TARGETED local meta to unsolicited/empty. A live writer-probe caught
+            // THIS write flipping "NIL Technology" back to "Unsolicited" mid-session
+            // (the cloud row lagged the local gen); the auto-save then persisted the
+            // flipped meta into the saved application row, poisoning it for every
+            // later selection. Downgrade = incoming company empty/"Unsolicited"
+            // while local meta carries a real company. Upgrades (unsolicited →
+            // targeted) and real-company → real-company changes still mirror.
+            // Kill: localStorage['antcv:disable-meta-downgrade-guard']='1'.
             if (aa.jd_company || aa.jd_role) {
               var m = readJson('meta', {}) || {};
-              if (aa.jd_company) m.company = aa.jd_company;
-              if (aa.jd_role)    m.role    = aa.jd_role;
-              try { localStorage.setItem('meta', JSON.stringify(m)); pulled = true; } catch (_) {}
+              var __curCo = String(m.company || '').trim();
+              var __inCo = String(aa.jd_company || '').trim();
+              var __downgrade = __curCo && !/^unsolicited$/i.test(__curCo) &&
+                                (!__inCo || /^unsolicited$/i.test(__inCo));
+              var __killDg = false;
+              try { __killDg = localStorage.getItem('antcv:disable-meta-downgrade-guard') === '1'; } catch (_) {}
+              if (__downgrade && !__killDg) {
+                try { console.log('[cloud-sync-277] META-DOWNGRADE-GUARD-001: kept local targeted meta "' + __curCo + '" (cloud offered "' + (__inCo || 'empty') + '")'); } catch (_) {}
+              } else {
+                if (aa.jd_company) m.company = aa.jd_company;
+                if (aa.jd_role)    m.role    = aa.jd_role;
+                try { localStorage.setItem('meta', JSON.stringify(m)); pulled = true; } catch (_) {}
+              }
             }
           }
           // Mirror personalInfo too — relevant for kernel prompts that

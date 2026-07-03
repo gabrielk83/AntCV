@@ -335,9 +335,9 @@
   })();
 </script>
 <script type="module">
-  import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.95';
+  import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.103';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.102';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.103';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -379,7 +379,7 @@
           app.src = 'app.js?v=1.51.102';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.102';
+            vo.src = 'antcv-version-override.js?v=1.51.103';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -889,7 +889,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-neardup-backfill.js?v=1.51.95" defer></script>
 <!-- PAN-IDRAET-PREVIEW-HIDE-001: visually hide the near-dup bullets the EXPORT collapses (index-safe display:none; predicate = the export own via window.AntcvCollapseRoleBullets). Kill antcv:disable-neardup-preview-hide. -->
 <script src="antcv-neardup-preview-hide.js?v=1.51.81" defer></script>
-<script src="antcv-gabriel-results-pin.js?v=1.51.76" defer></script>
+<script src="antcv-gabriel-results-pin.js?v=1.51.103" defer></script>
 <!-- TOOLS-CORECOMP-DEDUP-001: drop TOOLS rows that duplicate CORE COMPETENCIES focus areas (owner 2026-07). -->
 <script src="antcv-tools-corecomp-dedup.js?v=1.51.19" defer></script>
 <!-- LANGUAGES-CONCISE-001: trim language proficiency to its concise core (CEFR→word, drop qualifiers). -->
@@ -1024,6 +1024,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-cl-prose-loss-guard-985.js?v=1.51.101" defer></script>
 <!-- GEN-UNSOL-STALE-JD-001 Patch D: scrub a KNOWN PRIOR targeted company from unsolicited prose (employer names protected). Kill antcv:disable-unsol-company-scrub. -->
 <script src="antcv-unsol-company-scrub.js?v=1.51.98" defer></script>
+<script src="antcv-profile-access-scrub.js?v=1.51.103" defer></script>
 <!-- CV CORE COMPETENCIES last-good snapshot guard: heals a stale-restore placeholder table back to the laminated rows (CV-CORECOMP-BLANK-001, owner 2026-07-01). -->
 <script src="antcv-corecomp-loss-guard.js?v=1.51.36" defer></script>
 <!-- CL render-side text heals: C4 lead-continuation case (Professionally that) + C3 bring/contribute dangling-truncation cleanup (owner 2026-07). -->

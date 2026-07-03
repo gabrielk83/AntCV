@@ -63,7 +63,7 @@ test('_pinFor pins the Sirin Result to the DISTINCT patent-work line (not the bu
   const t = api._pinFor({ title: 'Senior Optics & Electro-Optics Engineer', company: 'Sirin Labs' });
   // RESULTS-PIN-NO-NUMBER-001: the number lives ONCE, in PUBLICATIONS & PATENTS —
   // the Result describes the work with no number at all
-  assert.match(t, /Co-invented the stray-light optical window, now in commercial devices\./);
+  assert.match(t, /Co-invented the patented stray-light optical window, now in commercial devices\./);
   assert.doesNotMatch(t, /241997|Patent No\./);
   // the trimmed line must NOT carry the bullet's leading clause
   assert.doesNotMatch(t, /7-person|Sigma-Connectivity|Directed technical work/);

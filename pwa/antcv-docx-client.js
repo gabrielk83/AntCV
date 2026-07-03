@@ -2531,7 +2531,7 @@ export function applyOutcomesMode(docSections, doc) {
       // gen rule "a role line may describe the underlying work but must not carry the
       // patent number"). `old` lists superseded pin texts so upgrades apply once and
       // owner edits still stick.
-      { reT: /optics|electro-?optics/i, reC: /sirin/i, text: 'Co-invented the stray-light optical window, now in commercial devices.', old: ['Co-invented the stray-light optical window (Patent No. 241997), now in commercial devices.', 'Co-invented the stray-light optical window (241997), now in commercial devices.'] },
+      { reT: /optics|electro-?optics/i, reC: /sirin/i, text: 'Co-invented the patented stray-light optical window, now in commercial devices.', old: ['Co-invented the stray-light optical window, now in commercial devices.', 'Co-invented the stray-light optical window (Patent No. 241997), now in commercial devices.', 'Co-invented the stray-light optical window (241997), now in commercial devices.'] },
     ] : [];
     // RESULTS-PIN-OWNER-EDIT-001 (owner 2026-07-03): this tier sat ABOVE role.results,
     // so an owner-edited Results line was overridden right back to the pin in the

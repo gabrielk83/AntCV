@@ -49,7 +49,7 @@
     // gen rule "a role line may describe the underlying work but must not carry the
     // patent number"). `old` lists superseded pin texts so upgrades apply once and
     // owner edits still stick.
-    { reT: /optics|electro-?optics/i, reC: /sirin/i, text: 'Co-invented the stray-light optical window, now in commercial devices.', old: ['Co-invented the stray-light optical window (Patent No. 241997), now in commercial devices.', 'Co-invented the stray-light optical window (241997), now in commercial devices.'] },
+    { reT: /optics|electro-?optics/i, reC: /sirin/i, text: 'Co-invented the patented stray-light optical window, now in commercial devices.', old: ['Co-invented the stray-light optical window, now in commercial devices.', 'Co-invented the stray-light optical window (Patent No. 241997), now in commercial devices.', 'Co-invented the stray-light optical window (241997), now in commercial devices.'] },
   ];
   function entryFor(r) {
     if (!r) return null;

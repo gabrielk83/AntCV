@@ -247,3 +247,16 @@ NOT relevance-ranked section reordering (both explicitly rejected by the owner).
     of "[Focus area N]" rows is a FAILED generation — block the export and
     surface a regen prompt), banned phrases, section relevance sets. The owner
     gate is: generations land >=97.5% aligned with the spec WITHOUT hand edits.
+
+### Rule 35 completion + rule 39 (owner 2026-07-04)
+
+- **35 (completed):** Google Scholar URL is canonical in the Gabriel kernel v10
+  (`https://scholar.google.com/citations?user=E6q1Y34AAAAJ&hl=en`) — render as
+  a real hyperlink wherever shown.
+- **39. Link-bearing extras are JD-CLASS-gated.** Google Scholar shows in
+  RESEARCH-heavy positions; the AntCV software project
+  (`https://github.com/gabrielk83/AntCV`, canonical description: "Multi-agent
+  job application orchestration platform with provider routing, validation,
+  provenance, and ATS-aware document generation.") shows in SW/AI/PROJECT
+  positions; NEITHER is prominent for cleanroom/fabrication work. Machine gates
+  = `showWhenJDContainsAny` in the kernel v10 (2026-07-04).

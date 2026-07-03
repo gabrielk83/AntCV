@@ -44,8 +44,14 @@ test('the Nordic template gate (LINE-FILL carrier) defaults ON when toneRegister
 test('LINE-FILL slots rule still present (nordic block) and the export preflight is persona-neutral', async () => {
   assert.equal(count(src, 'LINE-FILL-SLOTS-001'), 1);
   assert.equal(count(app, 'LINE-FILL-SLOTS-001'), 1);
-  // the export preflight sidecar has no name guard and no unsolicited/targeted gate
+  // the export preflight sidecar carries NO persona/name guard — orphan+runt
+  // fixing is candidate-neutral. The ONLY app-type gate is BULLET-LINES-CAP
+  // (spec rule 46, owner-explicit "for tailored applications do NOT generate
+  // 3-line bullets") — a documented targeted-only feature, not persona logic.
   const pf = await readFile(new URL('../../antcv-orphan-export-preflight.js', import.meta.url), 'utf8');
   assert.equal(/\bgabriel\b/i.test(pf), false, 'preflight carries no persona guard');
-  assert.equal(/unsolicited|targeted/i.test(pf.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '')), false, 'preflight code has no app-type gate');
+  const pfCode = pf.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '');
+  // every unsolicited/targeted reference must live inside the rule-46 helper.
+  assert.ok(/isTargetedMeta/.test(pfCode), 'the app-type gate is the named rule-46 helper');
+  assert.equal((pfCode.match(/unsolicited/gi) || []).length, 1, 'exactly one unsolicited check (the rule-46 helper)');
 });

@@ -767,7 +767,10 @@ export function buildPayload({
           // chain is override -> the gen's meta.cl_slogan (the smart statement) ->
           // NOTHING (slogan_hidden, so the WORKER's own subtitle fallback never
           // duplicates the specialization). Unsolicited keeps the standing default.
-          const smart = String((meta && meta.cl_slogan) || '').trim();
+          let smart = String((meta && meta.cl_slogan) || '').trim();
+          // SLOGAN-QUALITY-GATE-001: the export consults the SAME gate the
+          // preview uses — a low-quality generated slogan ships NOWHERE.
+          try { if (smart && typeof window !== 'undefined' && typeof window.__antcvSloganQualityOk === 'function' && !window.__antcvSloganQualityOk(smart, meta)) smart = ''; } catch (_) {}
           const co = String((meta && meta.company) || '').trim();
           const targeted = !!co && !/^unsolicited$/i.test(co) && !/^open application$/i.test(co);
           const standing = String((meta && meta.subtitle) || '').trim();
@@ -1211,6 +1214,32 @@ const SIDEBAR_ABBR = [
   // Owner 2026-07-03 (Trackman review round 2): explicit approval.
   [/\bAutomotive environmental conditions and testing\b/gi, 'Environmental testing'],
 ];
+// OLD-ROLE-BULLET-CAP-001 (spec rule 47): the END year of a role's date range
+// ("2006 - 2010", "2022 - 2026 (present)"), or null if none / still current.
+function _roleEndYear(years) {
+  const s = String(years == null ? '' : years);
+  if (/present|current|now|nu\b|nuv/i.test(s)) return null;   // still ongoing -> not "old"
+  const ys = (s.match(/\b(19|20)\d\d\b/g) || []).map(Number);
+  return ys.length ? Math.max(...ys) : null;
+}
+// The tighter bullet cap for an OLD PLAIN role (rule 47). Thresholds calibrated
+// to the owner's own timeline + the delivered-and-verified NIL pair: RA/TA
+// (ended ~16y ago) is the hard-cut case he named -> 2; a plain role 11-15y old
+// -> 3; anything more recent keeps the normal cap (Sirin, ended ~9y ago,
+// shipped at 4 in the verified pair, so <11y must not tighten). null = no cap.
+function _oldRoleBulletCap(years, nowYear) {
+  const end = _roleEndYear(years);
+  if (end == null) return null;
+  const age = (nowYear || _payloadNowYear()) - end;
+  if (age >= 16) return 2;
+  if (age >= 11) return 3;
+  return null;
+}
+// Live current year (browser export). Isolated so a test can stub it.
+function _payloadNowYear() {
+  try { return new Date().getFullYear(); } catch (_) { return 2026; }
+}
+
 // Always low-signal for a senior professional targeted application (any cluster):
 // student council, dormitory security guard, volunteer-sport foreningsarbejde.
 const IRRELEVANT_ROLE = /students?\s+council|security\s+guard|foreningsarbejde/i;
@@ -1352,9 +1381,26 @@ function sanitizeForExport(docSections, doc) {
           // generation (SECTION-ORDER-001), so keeping the FIRST N is the
           // deterministic version of "most relevant only". Payload-only.
           const MERGED_TAIL = /&\s*(?:[A-Za-z.]+\s+)?(?:leader|lead|manager|coach|architect|specialist)\b/i;
+          // OLD-ROLE-BULLET-CAP-001 (spec rule 47, owner Trackman round 2: "for
+          // old roles pass 2-3 bullets only if highly relevant — a project
+          // manager should not get lots of research & teaching assistant
+          // bullets"). Early-career roles get a TIGHTER cap by age: a role that
+          // ended >=14y ago -> 2 bullets, >=8y ago -> 3. Combined with
+          // strongest-first ordering (SECTION-ORDER-001) this keeps the most
+          // relevant N. Payload-only. Age from the role's END year vs now.
+          const nowYear = _payloadNowYear();
           roles = roles.map((r) => {
             if (!r || !Array.isArray(r.bullets)) return r;
-            const cap = MERGED_TAIL.test(String(r.title || '')) ? 5 : 4;
+            const isMerged = MERGED_TAIL.test(String(r.title || ''));
+            let cap = isMerged ? 5 : 4;
+            // The age tightening (rule 47) targets PLAIN old roles — the RA/TA/
+            // early-career stack the owner never wants padded. A MERGED role is
+            // deliberately-kept combined evidence (rule 17/28): it holds its
+            // 5-bullet cap regardless of age.
+            if (!isMerged) {
+              const ageCap = _oldRoleBulletCap(r.years, nowYear);
+              if (ageCap != null && ageCap < cap) cap = ageCap;
+            }
             if (r.bullets.length <= cap) return r;
             return { ...r, bullets: r.bullets.slice(0, cap) };
           });

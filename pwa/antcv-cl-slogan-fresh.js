@@ -83,7 +83,37 @@
     return s;
   }
   function realSubtitle(m) { return realText(m.cl_slogan) || realText(m.subtitle); }
-  function freshSmart(m) { return realText(m.cl_slogan); }
+  // SLOGAN-QUALITY-GATE-001 (owner: "slogan needs to be a SMART statement" —
+  // rule 38: enforce, don't trust the prompt). A generated cl_slogan is adopted
+  // ONLY when it looks like one: 2-8 words, no bullet-separator keyword-list
+  // shape, no banned buzzwords, and NEVER an echo of the specialization triad,
+  // the company, or the role title. A failing slogan is treated as ABSENT
+  // (no slogan line beats a bad one).
+  var BUZZ = /innovation|innovative|cutting[- ]edge|world[- ]class|passionate|dynamic|results[- ]driven|synergy|state[- ]of[- ]the[- ]art|best[- ]in[- ]class/i;
+  function normPhrase(s) { return String(s || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').replace(/\s+/g, ' ').trim(); }
+  function sloganQualityOk(s, m) {
+    s = String(s || '').trim();
+    if (!s || s.length > 64) return false;
+    if (/[•|]/.test(s)) return false;                                  // triad/keyword-list shape
+    if ((s.match(/,/g) || []).length > 2) return false;                 // comma keyword list
+    var words = normPhrase(s).split(' ').filter(Boolean);
+    if (words.length < 2 || words.length > 8) return false;
+    if (BUZZ.test(s)) return false;
+    var n = normPhrase(s);
+    var against = [m && m.subtitle, m && m.company, m && m.role];
+    try { var p = JSON.parse(localStorage.getItem('personalInfo') || '{}') || {}; p = p.personalInfo || p; against.push(p.specialization, p.subtitle); } catch (_) {}
+    for (var i = 0; i < against.length; i++) {
+      var a = normPhrase(against[i]);
+      if (!a) continue;
+      if (n === a) return false;
+      if (a.length >= 10 && (n.indexOf(a) !== -1 || a.indexOf(n) !== -1)) return false;   // echo/containment
+    }
+    return true;
+  }
+  function freshSmart(m) {
+    var s = realText(m.cl_slogan);
+    return (s && sloganQualityOk(s, m)) ? s : '';
+  }
 
   function tick() {
     if (disabled()) return;
@@ -140,5 +170,8 @@
   try { window.addEventListener('storage', function (e) { if (!e || e.key === 'meta' || e.key === K_TEXT || e.key === null) debounced(); }); } catch (_) {}
   setInterval(debounced, 5000);
 
-  window.AntcvClSloganFresh = { version: VERSION, _tick: tick, _isTargeted: isTargeted, _realSubtitle: realSubtitle, _appKeyOf: appKeyOf };
+  // Shared quality check — the preview fallbacks and the export chain consult
+  // the SAME gate so a low-quality cl_slogan renders NOWHERE.
+  window.__antcvSloganQualityOk = sloganQualityOk;
+  window.AntcvClSloganFresh = { version: VERSION, _tick: tick, _isTargeted: isTargeted, _realSubtitle: realSubtitle, _appKeyOf: appKeyOf, _qualityOk: sloganQualityOk };
 })();

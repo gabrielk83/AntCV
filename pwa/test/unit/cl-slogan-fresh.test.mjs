@@ -171,3 +171,33 @@ test('both bundles carry the cl_slogan prompt field exactly once (mirror lock)',
   assert.equal(appMin.split(NEEDLE).length - 1, 1, 'app.js prompt example');
   assert.ok(appSrc.includes('NEVER a copy of the subtitle/specialization'), 'the distinctness rule is in the prompt');
 });
+
+// ── SLOGAN-QUALITY-GATE-001 (1.51.130, owner: "slogan needs to be a smart
+// statement") — a generated cl_slogan is adopted ONLY when it passes quality;
+// a failing one is ABSENT (no slogan beats a bad one) ────────────────────────
+
+test('quality gate: good smart statements pass', () => {
+  const { api } = load({ meta: '{}' });
+  const m = { subtitle: 'Processes • Products • People', company: 'Trackman A/S', role: 'Project Manager, Hardware' };
+  assert.equal(api._qualityOk('MAKING THE INVISIBLE MANUFACTURABLE', m), true);
+  assert.equal(api._qualityOk('Tracking every decision to the data', m), true);
+});
+
+test('quality gate: rejects triad/keyword-list shape, buzzwords, echoes of spec/company/role', () => {
+  const { api } = load({ meta: '{}' });
+  const m = { subtitle: 'Processes • Products • People', company: 'Trackman A/S', role: 'Project Manager, Hardware' };
+  assert.equal(api._qualityOk('Processes • Products • People', m), false, 'the specialization triad itself');
+  assert.equal(api._qualityOk('Optics, imaging, sensing, validation, delivery', m), false, 'comma keyword list');
+  assert.equal(api._qualityOk('Cutting-edge world-class innovation leader', m), false, 'buzzwords');
+  assert.equal(api._qualityOk('Project Manager Hardware', m), false, 'echoes the role title');
+  assert.equal(api._qualityOk('word', m), false, 'one word is not a statement');
+  assert.equal(api._qualityOk('one two three four five six seven eight nine', m), false, 'too many words');
+});
+
+test('adoption is quality-gated: a triad-shaped cl_slogan is NOT adopted', () => {
+  const { api, store } = load({
+    meta: JSON.stringify({ company: 'Trackman A/S', role: 'PM', subtitle: 'Processes • Products • People', cl_slogan: 'Processes • Products • People' }),
+  });
+  api._tick();
+  assert.equal(store.get('antcv:clSlogan'), undefined, 'a slogan identical to the triad shape never adopts');
+});

@@ -47,7 +47,7 @@
 | 31 | Poisoned NIL row repair — set row meta from its own display name, guard auto-save | TO DO |
 | 32 | CL platform-signals — hardware-platform JD tone/positioning gen-prompt rule | TO DO |
 | 33 | Export align parity — name-line + section-headline alignment lost on PDF/DOCX export | TO DO |
-| 34 | Export/preview parity sweep — role-merge parity is the owner-escalated top item | TO DO |
+| 34 | Export/preview parity sweep — role-merge parity is the owner-escalated top item (rules 46/47 belts SHIPPED 1.51.130: no 3-line bullets in targeted + old-role bullet caps; role-merge stored-sections parity still TO DO) | TO DO |
 | **35** | **NEW — OVERLAY-EARLY-HALT-001 regen-confirm.** Shipped 1.51.41 (heartbeat-gated watchdog replacing the fixed 2-min timer). Never explicitly confirmed on a real owner regen per the 07-02 session's own open item #1. | **TO DO — likely already validated implicitly (many clean NIL regens since); confirm once, then close** |
 | **36** | **NEW — GEN-CORECOMP-BROAD-001 regen-confirm.** Shipped 1.51.41 (unsolicited CORE COMPETENCIES broadened to PdM/BA/process identity). Never explicitly confirmed per 07-02 open item #1b. | **TO DO — likely already validated implicitly; confirm once, then close** |
 | **37** | **NEW — FOCUS-LABEL-EO-001 regen-confirm.** Shipped 1.51.42/43 (canonicalised EO focus-area label post-process). Never explicitly confirmed per 07-02 open item #4. | **TO DO — likely already validated implicitly; confirm once, then close** |

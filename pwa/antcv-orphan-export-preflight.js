@@ -67,7 +67,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.119-orphan-v3';
+  var VERSION = '1.51.130-orphan-v3-bulletcap';
   if (window.__antcvOrphanExportPreflight === VERSION) return;
   window.__antcvOrphanExportPreflight = VERSION;
 
@@ -87,6 +87,17 @@
 
   function disabled(storage) {
     try { var v = (storage || localStorage).getItem('antcv:disable-orphan-preflight'); return v === '1' || v === 'true'; } catch (_) { return false; }
+  }
+  // BULLET-LINES-CAP (spec rule 46, owner Trackman round 2: "for tailored
+  // applications do NOT generate 3-line bullets in nordic minimal!"): in a
+  // TARGETED export a role bullet must fit TWO typeset lines.
+  var MAX_BULLET_LINES = 2;
+  function isTargetedMeta(storage) {
+    try {
+      var m = JSON.parse((storage || localStorage).getItem('meta') || '{}') || {};
+      var c = String(m.company || '').trim();
+      return !!c && !/^unsolicited$/i.test(c) && !/^open application$/i.test(c);
+    } catch (_) { return false; }
   }
   function packingDisabled(storage) {
     try { var v = (storage || localStorage).getItem('antcv:disable-sidebar-packing'); return v === '1' || v === 'true'; } catch (_) { return false; }
@@ -282,7 +293,7 @@
     if (!b && typeof window.ANTCV_RELAY_URL === 'string') b = String(window.ANTCV_RELAY_URL).replace(/\/+$/, '');
     return b;
   }
-  var L3_SYSTEM = 'You are a precise CV line editor. Each input item is {"line","facts"}: "line" is one CV line (an experience bullet, a Results line, or a profile sentence group) whose LAST typeset line in the EXPORTED PDF fills under 60% of the column (a dangling runt); "facts" is stored source material about the SAME role from the candidate\'s own data (may be empty). Rewrite EACH line so it fills complete typeset lines with NO short dangling last line. You may SHORTEN (shorter synonyms, drop filler like "the", "a", "that", "in order to", "various", redundant qualifiers) OR LENGTHEN by folding in ONE concrete detail taken ONLY from "facts" — never invent a fact, number, tool, or claim that is not in "line" or "facts". Keep the SAME meaning and the SAME leading verb form. PRESERVE VERBATIM every number, %, year, patent/standard code, tool name, proper noun, acronym, and any <b>/<i> tags from the original. NEVER use an em dash or en dash. Do NOT merge lines. Return ONLY a JSON array of strings, the SAME length and order as the input.';
+  var L3_SYSTEM = 'You are a precise CV line editor. Each input item is {"line","facts"}: "line" is one CV line (an experience bullet, a Results line, or a profile sentence group) whose LAST typeset line in the EXPORTED PDF fills under 60% of the column (a dangling runt); "facts" is stored source material about the SAME role from the candidate\'s own data (may be empty). Rewrite EACH line so it fills complete typeset lines with NO short dangling last line. You may SHORTEN (shorter synonyms, drop filler like "the", "a", "that", "in order to", "various", redundant qualifiers) OR LENGTHEN by folding in ONE concrete detail taken ONLY from "facts" — never invent a fact, number, tool, or claim that is not in "line" or "facts". An item may carry "maxLines": that line is TOO LONG for the layout — shorten it decisively so it fits within that many typeset lines (keep only the strongest content; a two-line bullet beats a three-line one). Keep the SAME meaning and the SAME leading verb form. PRESERVE VERBATIM every number, %, year, patent/standard code, tool name, proper noun, acronym, and any <b>/<i> tags from the original. NEVER use an em dash or en dash. Do NOT merge lines. Return ONLY a JSON array of strings, the SAME length and order as the input.';
 
   // ── kernel FACTS for the LENGTHEN leg ────────────────────────────────────────
   function normKey(s) { return String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); }
@@ -626,6 +637,7 @@
       targets.forEach(function (tg) { if (!tg.family) tg.family = met.family; });
       summary.scanned = targets.length;
 
+      var targeted = isTargetedMeta(storage);
       var residue = [];
       targets.forEach(function (tg) {
         var base = null;
@@ -639,10 +651,20 @@
         }
         var r;
         try { r = tryL2(measure, tg, base); } catch (_) { r = {}; }
+        // rule 46: a targeted bullet spanning >= 3 typeset lines is TOO LONG —
+        // it goes to L3 with a hard 2-line cap even when its last line is full.
+        var overLines = 0;
+        if (targeted && tg.kind === 'bullet') {
+          try { var lw = measureTarget(measure, tg, tg.get()); if (lw.length > MAX_BULLET_LINES) overLines = lw.length; } catch (_) {}
+        }
         if (r.fixed) { summary.runts++; summary.bound++; }
         // SIDEBAR-ORPHANS-001: sidebar values stop at L2 — no LLM rewrite, no
         // stored-section mirror (the narrow column is not worth a reword risk).
-        else if (r.runt) { summary.runts++; if (tg.kind !== 'side_label') residue.push({ tg: tg, text: tg.get(), baseLines: r.baseLines }); }
+        else if (r.runt) { summary.runts++; if (tg.kind !== 'side_label') residue.push({ tg: tg, text: tg.get(), baseLines: r.baseLines, maxLines: overLines ? MAX_BULLET_LINES : undefined }); return; }
+        if (overLines) {
+          summary.longBullets = (summary.longBullets || 0) + 1;
+          residue.push({ tg: tg, text: tg.get(), baseLines: overLines, maxLines: MAX_BULLET_LINES });
+        }
       });
       summary.residue = residue.length;
       try { console.log('[orphan-preflight] scanned ' + summary.scanned + ', runts ' + summary.runts + ', L2-bound ' + summary.bound + ', left-aligned ' + summary.leftAligned + ', packed ' + (summary.packed || 0) + ', residue ' + residue.length); } catch (_) {}
@@ -671,7 +693,11 @@
 
       var ac = (typeof AbortController === 'function') ? new AbortController() : null;
       var timer = setTimeout(function () { try { if (ac) ac.abort(); } catch (_) {} }, L3_TIMEOUT_MS);
-      var inputs = fresh.map(function (r) { return { line: r.text, facts: r.facts || '' }; });
+      var inputs = fresh.map(function (r) {
+        var it = { line: r.text, facts: r.facts || '' };
+        if (r.maxLines) it.maxLines = r.maxLines;   // rule 46: hard line cap for over-long targeted bullets
+        return it;
+      });
       return fetchImpl(base + '/', {
         method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json', 'x-provider': 'anthropic' },
@@ -702,7 +728,10 @@
           // clean is accepted bound.
           var lines;
           try { lines = measureTarget(measure, tg, short); } catch (_) { lines = []; }
-          if (lines.length > r.baseLines) continue;
+          // rule 46: an over-long bullet's rewrite must fit the HARD cap, not
+          // merely avoid growing; runt rewrites keep the no-gain rule.
+          var lineCap = r.maxLines || r.baseLines;
+          if (lines.length > lineCap) continue;
           var accepted = null;
           if (!isRuntLines(lines, tg.widthPx)) accepted = short;
           else {

@@ -88,3 +88,35 @@ test('PLACEHOLDER-EXPORT-GATE-001: wired before BOTH export preflights, with kil
   assert.ok(src.includes("antcv:disable-placeholder-gate"), 'kill switch present');
   assert.ok(src.includes('PLACEHOLDER-EXPORT-GATE-001'), 'marker present');
 });
+
+// ── OLD-ROLE-BULLET-CAP-001 (spec rule 47, owner Trackman round 2: "for old
+// roles pass 2-3 bullets only if highly relevant — a project manager should
+// not get lots of research & teaching assistant bullets"). End-year 2010 is
+// >=14y old for any now >= 2024; end-year 2016 is >=8y for any now >= 2024. ──
+
+test('OLD-ROLE-BULLET-CAP: RA/TA (>=16y) -> 2; plain 11-15y -> 3; recent (Sirin-era <11y) -> 4', () => {
+  const p = payloadWithRoles([
+    { id: 'r0', title: 'Product Expert', company: 'Kanzen', years: '2022 - 2026 (present)', on: true, bullets: B(6) },       // current -> 4
+    { id: 'r1', title: 'Senior Optics Engineer', company: 'Sirin', years: '2014 - 2017', on: true, bullets: B(6) },          // ended 2017 ~9y -> 4 (verified-pair behaviour)
+    { id: 'r2', title: 'Optics Engineer', company: 'Meprolight', years: '2010 - 2013', on: true, bullets: B(6) },            // ended 2013 ~13y, PLAIN -> 3
+    { id: 'r3', title: 'Research Assistant', company: 'Tel Aviv University', years: '2006 - 2010', on: true, bullets: B(6) }, // ~16y -> 2
+  ]);
+  const exp = p.sections.find((s) => s.type === 'experience');
+  const byCo = (c) => exp.roles.find((r) => r.company === c);
+  assert.equal(byCo('Kanzen').bullets.length, 4, 'recent role keeps the plain-role cap');
+  assert.equal(byCo('Sirin').bullets.length, 4, '<11y old is NOT tightened (Sirin shipped at 4)');
+  assert.equal(byCo('Meprolight').bullets.length, 3, '11-15y plain role -> 3');
+  assert.equal(byCo('Tel Aviv University').bullets.length, 2, '>=16y old -> 2 bullets (no RA/TA bullet stack)');
+});
+
+test('OLD-ROLE-BULLET-CAP: not applied in an UNSOLICITED export', () => {
+  store.set('meta', JSON.stringify({ company: 'Unsolicited', role: 'Open Application' }));
+  const p = buildPayload({
+    sections: { cv: [{ id: 'experience', type: 'experience', title: 'PROFESSIONAL EXPERIENCE', loc: 'main', on: true,
+      roles: [{ id: 'r2', title: 'Research Assistant', company: 'TAU', years: '2006 - 2010', on: true, bullets: B(6) }] }], cl: [] },
+    doc: 'cv', personalInfo: { name: 'Gabriel' }, meta: { company: 'Unsolicited', role: 'Open Application' },
+  });
+  store.set('meta', JSON.stringify({ company: 'NIL Technology', role: 'Nanooptics Prototyping Engineer' }));  // restore for later tests
+  const exp = p.sections.find((s) => s.type === 'experience');
+  assert.equal(exp.roles[0].bullets.length, 6, 'unsolicited keeps the full breadth');
+});

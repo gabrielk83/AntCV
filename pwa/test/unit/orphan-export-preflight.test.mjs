@@ -559,3 +559,34 @@ test('rich_block sidebar rows collect as side targets; grp/residue/mk rows never
   targets[0].set('replaced');
   assert.equal(payload.sections[0].items[1].t, 'replaced');
 });
+
+// ── BULLET-LINES-CAP (spec rule 46, owner Trackman round 2: "for tailored
+// applications do NOT generate 3-line bullets in nordic minimal!") ────────────
+test('rule 46: a targeted 3-line bullet (last line FULL, not a runt) is capped to 2 lines via L3', async () => {
+  // bulletWpx default ~497.8px = ~82 chars/line. 48 x "wxyz" -> ~3 full lines,
+  // last line full (NOT a runt) -> pure over-length case.
+  const orig = Array(48).fill('wxyz').join(' ') + '.';
+  const short = Array(28).fill('wxyz').join(' ') + '.';  // ~2 full lines
+  const payload = cvPayload([expSection([orig])]);
+  let body = null;
+  const fetchImpl = (url, opts) => { body = JSON.parse(opts.body); return Promise.resolve({ json: () => Promise.resolve({ content: [{ text: JSON.stringify([short]) }] }) }); };
+  const { api } = load({ proxyUrl: 'https://relay.example', meta: JSON.stringify({ company: 'Trackman A/S', role: 'PM' }) });
+  const base = fakeMeasure({ html: orig, widthPx: 497.8 });
+  assert.ok(base.length >= 3, 'fixture is >=3 lines');
+  assert.ok(base[base.length - 1] / 497.8 >= 0.60, 'last line is full — NOT a runt (isolates rule 46)');
+  const sum = await api.run(payload, { measureLines: fakeMeasure, fetchImpl });
+  assert.equal(sum.longBullets, 1, 'the over-long targeted bullet was flagged');
+  assert.equal(JSON.parse(body.messages[0].content)[0].maxLines, 2, 'the L3 request carries the 2-line cap');
+  const out = fakeMeasure({ html: payload.sections[0].roles[0].bullets[0], widthPx: 497.8 });
+  assert.ok(out.length <= 2, 'the bullet now fits 2 lines');
+});
+
+test('rule 46: an UNSOLICITED 3-line bullet is left alone (targeted-only)', async () => {
+  const orig = Array(48).fill('wxyz').join(' ') + '.';
+  const payload = cvPayload([expSection([orig])]);
+  let calls = 0;
+  const { api } = load({ proxyUrl: 'https://relay.example', meta: JSON.stringify({ company: 'Unsolicited' }) });
+  const sum = await api.run(payload, { measureLines: fakeMeasure, fetchImpl: () => { calls++; return Promise.resolve({ json: () => Promise.resolve({ content: [{ text: '[]' }] }) }); } });
+  assert.equal(sum.longBullets || 0, 0, 'no line-cap in an unsolicited export');
+  assert.equal(payload.sections[0].roles[0].bullets[0], orig, 'bullet unchanged');
+});

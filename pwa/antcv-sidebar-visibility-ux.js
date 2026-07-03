@@ -38,7 +38,7 @@
 (function () {
   'use strict';
   if (window.__antcvSidebarVisibilityUx) return;
-  window.__antcvSidebarVisibilityUx = '1.51.116';
+  window.__antcvSidebarVisibilityUx = '1.51.117';
 
   var SRC = 'sidebar-visibility-ux';
   var LOG_KEY = 'antcv:visibilityAnalytics';
@@ -48,6 +48,15 @@
   var RESIDUE_RE = /^\s*hidden\s*[-–—:]\s*/i;
 
   function disabled() { try { var v = localStorage.getItem('antcv:disable-sidebar-visibility-ux'); return v === '1' || v === 'true'; } catch (_) { return false; } }
+
+  // RICHBLOCK-SHAPE-001: tools (and other converted sections) carry rich_block
+  // items {b,t,bullets} with {grp:true} group rows; visibility for those lives
+  // in the SECTION-LEVEL hidden index map, not it.hidden.
+  function labelOf(it) { return it && typeof it === 'object' ? (it.l != null ? it.l : (it.b != null ? it.b : '')) : ''; }
+  function valOf(it) { return it && typeof it === 'object' ? (it.v != null ? it.v : (it.t != null ? it.t : '')) : (it == null ? '' : it); }
+  function isGroupRow(it) { return !!(it && typeof it === 'object' && (it.group !== undefined || it.grp)); }
+  function isRichItem(it) { return !!(it && typeof it === 'object' && it.l == null && it.v == null && (it.b !== undefined || it.t !== undefined)); }
+  function setVal(it, v) { return it.v != null || it.l != null ? Object.assign({}, it, { v: v }) : Object.assign({}, it, { t: v }); }
 
   function tokensOf(v) {
     try { if (window.AntcvToolsHiddenResidue) return window.AntcvToolsHiddenResidue._tokens(v); } catch (_) {}
@@ -117,24 +126,29 @@
         var p = pById[s.id];
         if (!p) return;
         // Index rows by normalized label (labels are stable across a flip).
-        var pByLabel = {};
-        p.items.forEach(function (it) {
-          if (it && typeof it === 'object' && it.group === undefined && it.l) pByLabel[String(it.l).trim().toLowerCase()] = it;
+        var pByLabel = {}, pHid = p.hidden || {}, nHid = s.hidden || {};
+        p.items.forEach(function (it, i) {
+          var L = String(labelOf(it)).trim();
+          if (it && typeof it === 'object' && !isGroupRow(it) && L) pByLabel[L.toLowerCase()] = { it: it, i: i };
         });
-        s.items.forEach(function (it) {
-          if (!it || typeof it !== 'object' || it.group !== undefined || !it.l) return;
-          var old = pByLabel[String(it.l).trim().toLowerCase()];
-          if (!old) return;
-          var wasHidden = old.hidden === true, isHidden = it.hidden === true;
+        s.items.forEach(function (it, i) {
+          if (!it || typeof it !== 'object' || isGroupRow(it)) return;
+          var L = String(labelOf(it)).trim();
+          if (!L) return;
+          var prev = pByLabel[L.toLowerCase()];
+          if (!prev) return;
+          // Visibility = it.hidden (labeled shape) OR the section index map (rich shape).
+          var wasHidden = prev.it.hidden === true || pHid[prev.i] === true;
+          var isHidden = it.hidden === true || nHid[i] === true;
           if (wasHidden === isHidden) return;
-          var residue = RESIDUE_RE.test(String(it.l));
+          var residue = RESIDUE_RE.test(L);
           if (residue) {
             // Un-hiding a residue row = restoring its tokens.
-            if (!isHidden) tokensOf(it.v).forEach(function (t) {
-              out.push({ t: new Date().toISOString(), app: app, sid: s.id, label: String(it.l).replace(RESIDUE_RE, '').trim(), token: t, action: 'unhide', src: 'residue-eye' });
+            if (!isHidden) tokensOf(valOf(it)).forEach(function (t) {
+              out.push({ t: new Date().toISOString(), app: app, sid: s.id, label: L.replace(RESIDUE_RE, '').trim(), token: t, action: 'unhide', src: 'residue-eye' });
             });
           } else {
-            out.push({ t: new Date().toISOString(), app: app, sid: s.id, label: String(it.l).trim(), token: null, action: isHidden ? 'hide' : 'unhide', src: 'panel-eye' });
+            out.push({ t: new Date().toISOString(), app: app, sid: s.id, label: L, token: null, action: isHidden ? 'hide' : 'unhide', src: 'panel-eye' });
           }
         });
       });
@@ -181,9 +195,18 @@
       var sec = (b.cv || []).find(function (s) { return s && s.id === sid; });
       if (!sec || sec.loc !== 'sidebar' || !Array.isArray(sec.items)) return null;
       var it = sec.items[idx];
-      if (!it || typeof it !== 'object' || it.group !== undefined) return null;
-      if (RESIDUE_RE.test(String(it.l || ''))) return null;   // residue rows never render anyway
-      return { sid: sid, idx: idx, item: it, el: rowEl };
+      if (!it || typeof it !== 'object' || isGroupRow(it)) return null;
+      if (RESIDUE_RE.test(String(labelOf(it)))) return null;   // residue rows never render anyway
+      // Residue tokens of THIS category (for the menu's Restore entries).
+      var category = String(labelOf(it)).trim();
+      var residueToks = [];
+      sec.items.forEach(function (r) {
+        if (r && typeof r === 'object' && !isGroupRow(r) && RESIDUE_RE.test(String(labelOf(r))) &&
+            String(labelOf(r)).replace(RESIDUE_RE, '').trim().toLowerCase() === category.toLowerCase()) {
+          residueToks = residueToks.concat(tokensOf(valOf(r)));
+        }
+      });
+      return { sid: sid, idx: idx, item: it, el: rowEl, rich: isRichItem(it), residueToks: residueToks };
     } catch (_) { return null; }
   }
 
@@ -205,29 +228,56 @@
       if (!sec || !Array.isArray(sec.items)) return false;
       var it = sec.items[row.idx];
       if (!it) return false;
-      var toks = tokensOf(it.v).filter(function (t) { return t !== token; });
-      if (tokensOf(it.v).length === toks.length) return false;
-      sec.items[row.idx] = Object.assign({}, it, { v: toks.join(', ') });
+      pushUndo(sec, 'Hid “' + token + '”');
+      var toks = tokensOf(valOf(it)).filter(function (t) { return t !== token; });
+      if (tokensOf(valOf(it)).length === toks.length) { popUndo(); return false; }
+      sec.items[row.idx] = setVal(it, toks.join(', '));
       // Upsert the Hidden group NOW (owner: "or generate the hidden group if no
       // such") so the move is visible immediately even before the residue
-      // sidecar's next reconcile pass.
-      var label = 'Hidden - ' + String(it.l || '').trim();
-      var res = sec.items.find(function (x) { return x && typeof x === 'object' && x.group === undefined && String(x.l || '').trim().toLowerCase() === label.toLowerCase(); });
-      if (res) { if (tokensOf(res.v).indexOf(token) === -1) res.v = (String(res.v || '').trim() ? String(res.v).trim().replace(/[,;\s]+$/, '') + ', ' : '') + token; res.hidden = true; }
-      else sec.items.push({ l: label, v: token, hidden: true });
+      // sidecar's next reconcile pass. Created in the SECTION's own shape:
+      // rich rows carry no flag (RESIDUE-PREVIEW-SKIP hides them everywhere),
+      // labeled rows get hidden:true.
+      var label = 'Hidden - ' + String(labelOf(it)).trim();
+      var res = null;
+      sec.items.forEach(function (x) { if (!res && x && typeof x === 'object' && !isGroupRow(x) && String(labelOf(x)).trim().toLowerCase() === label.toLowerCase()) res = x; });
+      if (res) {
+        if (tokensOf(valOf(res)).indexOf(token) === -1) {
+          var rv = String(valOf(res)).trim().replace(/[,;\s]+$/, '');
+          var ri = sec.items.indexOf(res);
+          sec.items[ri] = setVal(res, (rv ? rv + ', ' : '') + token);
+          if (!isRichItem(res)) sec.items[ri].hidden = true;
+        }
+      } else sec.items.push(isRichItem(it) ? { b: label, t: token, bullets: [] } : { l: label, v: token, hidden: true });
       return true;
     });
-    if (ok) logEvent({ t: new Date().toISOString(), app: appContext(), sid: row.sid, label: String(row.item.l || '').trim(), token: token, action: 'hide', src: 'longpress' });
+    if (ok) {
+      logEvent({ t: new Date().toISOString(), app: appContext(), sid: row.sid, label: String(labelOf(row.item)).trim(), token: token, action: 'hide', src: 'longpress' });
+      showToast('Hidden “' + trunc(token, 24) + '”');
+    }
   }
 
   function hideRow(row) {
     var ok = writeSections(function (b) {
       var sec = (b.cv || []).find(function (s) { return s && s.id === row.sid; });
       if (!sec || !Array.isArray(sec.items) || !sec.items[row.idx]) return false;
-      sec.items[row.idx] = Object.assign({}, sec.items[row.idx], { hidden: true });
+      pushUndo(sec, 'Hid “' + trunc(String(labelOf(row.item)), 24) + '”');
+      if (isRichItem(sec.items[row.idx])) {
+        // RICH shape: the renderer + the panel eye both use the SECTION-LEVEL
+        // hidden index map — it.hidden is IGNORED there (the owner's
+        // forever-hidden bug). Write the map so the panel shows the monkey and
+        // the eye can restore.
+        var h = Array.isArray(sec.hidden) ? sec.hidden.slice() : Object.assign({}, sec.hidden || {});
+        h[row.idx] = true;
+        sec.hidden = h;
+      } else {
+        sec.items[row.idx] = Object.assign({}, sec.items[row.idx], { hidden: true });
+      }
       return true;
     });
-    if (ok) logEvent({ t: new Date().toISOString(), app: appContext(), sid: row.sid, label: String(row.item.l || '').trim(), token: null, action: 'hide', src: 'longpress' });
+    if (ok) {
+      logEvent({ t: new Date().toISOString(), app: appContext(), sid: row.sid, label: String(labelOf(row.item)).trim(), token: null, action: 'hide', src: 'longpress' });
+      showToast('Hidden “' + trunc(String(labelOf(row.item)), 24) + '”');
+    }
   }
 
   function openMenu(row, x, y) {
@@ -244,11 +294,17 @@
       d.addEventListener('click', function (e) { e.stopPropagation(); closeMenu(); if (fn) fn(); });
       m.appendChild(d);
     }
-    var toks = tokensOf(row.item.v);
+    var toks = tokensOf(valOf(row.item));
     if (toks.length >= 2) toks.forEach(function (t) {
-      addEntry('🙈 Hide “' + (t.length > 34 ? t.slice(0, 33) + '…' : t) + '”', function () { hideToken(row, t); });
+      addEntry('🙈 Hide “' + trunc(t, 34) + '”', function () { hideToken(row, t); });
     });
     addEntry('🙈 Hide entire element', function () { hideRow(row); }, true);
+    // Restore entries for tokens sitting in this category's Hidden group (rich
+    // rows have no eye-flag path, so the menu IS the restore surface).
+    (row.residueToks || []).forEach(function (t) {
+      addEntry('↩ Restore “' + trunc(t, 30) + '”', function () { restoreToken(row, t); });
+    });
+    if (undoStack.length) addEntry('↩ Undo: ' + undoStack[undoStack.length - 1].desc, function () { undoLast(); });
     addEntry('Cancel', null);
     document.body.appendChild(m);
     var w = m.offsetWidth, h = m.offsetHeight;
@@ -262,6 +318,126 @@
       }, true);
     }, 0);
   }
+
+  // ---------- undo + toast (owner: "there is no undo for this hiding, and no
+  // undo for resizing of sidebar or table") ----------
+  function trunc(t, n) { t = String(t); return t.length > n ? t.slice(0, n - 1) + '…' : t; }
+  var undoStack = [];   // {desc, kind:'section', sid, prev} | {desc, kind:'key', key, prev}
+  function pushUndo(sec, desc) {
+    try { undoStack.push({ desc: desc, kind: 'section', sid: sec.id, prev: JSON.parse(JSON.stringify(sec)) }); if (undoStack.length > 20) undoStack.shift(); } catch (_) {}
+  }
+  function popUndo() { undoStack.pop(); }
+  function undoLast() {
+    var u = undoStack.pop();
+    if (!u) return;
+    if (u.kind === 'section') {
+      writeSections(function (b) {
+        var i = (b.cv || []).findIndex(function (s) { return s && s.id === u.sid; });
+        if (i < 0) return false;
+        b.cv[i] = u.prev;
+        return true;
+      });
+      logEvent({ t: new Date().toISOString(), app: appContext(), sid: u.sid, label: '', token: null, action: 'undo', src: 'undo' });
+      showToast('Undone: ' + u.desc, true);
+    } else if (u.kind === 'key') {
+      if (!driveRoller(u.key, u.prev)) { try { localStorage.setItem(u.key, JSON.stringify(u.prev)); } catch (_) {} }
+      resizeSeen[u.key] = JSON.stringify(u.prev);
+      showToast('Undone: ' + u.desc, true);
+    }
+  }
+
+  var toastEl = null, toastTimer = null;
+  function showToast(msg, noUndo) {
+    try {
+      if (toastEl && toastEl.parentNode) toastEl.parentNode.removeChild(toastEl);
+      if (toastTimer) clearTimeout(toastTimer);
+      var d = document.createElement('div');
+      d.setAttribute('data-antcv-visibility-toast', '1');
+      d.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:26px;z-index:99999;background:#123;color:#fff;border-radius:8px;padding:9px 14px;font:12.5px Georgia,serif;box-shadow:0 4px 14px rgba(0,0,0,0.35);display:flex;gap:12px;align-items:center;max-width:92vw;';
+      var span = document.createElement('span');
+      span.textContent = msg;
+      span.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+      d.appendChild(span);
+      if (!noUndo && undoStack.length) {
+        var u = document.createElement('button');
+        u.textContent = 'UNDO';
+        u.style.cssText = 'background:none;border:1px solid #7fd;color:#7fd;border-radius:5px;padding:3px 10px;font:700 12px Georgia,serif;cursor:pointer;flex-shrink:0;';
+        u.addEventListener('click', function (e) { e.stopPropagation(); undoLast(); });
+        d.appendChild(u);
+      }
+      document.body.appendChild(d);
+      toastEl = d;
+      toastTimer = setTimeout(function () { if (toastEl && toastEl.parentNode) toastEl.parentNode.removeChild(toastEl); toastEl = null; }, 9000);
+    } catch (_) {}
+  }
+
+  function restoreToken(row, token) {
+    var category = String(labelOf(row.item)).trim();
+    var done = false;
+    try {
+      var b0 = JSON.parse(localStorage.getItem('sections') || '{}') || {};
+      var sec0 = (b0.cv || []).find(function (x) { return x && x.id === row.sid; });
+      if (sec0) pushUndo(sec0, 'Restored “' + trunc(token, 24) + '”');
+      if (window.AntcvToolsHiddenResidue && window.AntcvToolsHiddenResidue.restoreToken) {
+        done = window.AntcvToolsHiddenResidue.restoreToken(row.sid, category, token);
+      }
+      if (!done) popUndo();
+    } catch (_) {}
+    if (done) {
+      logEvent({ t: new Date().toISOString(), app: appContext(), sid: row.sid, label: category, token: token, action: 'unhide', src: 'longpress' });
+      showToast('Restored “' + trunc(token, 24) + '”');
+    }
+  }
+
+  // ---------- resize undo: sidebar splitter + table column rollers ----------
+  var RESIZE_KEYS = {
+    cvSidebarRatio: { desc: 'Sidebar resize', title: 'Sidebar width as % of total CV page width' },
+    cvTableRatio: { desc: 'CV table resize', title: 'CV table: Focus Area column width' },
+    clTableRatio: { desc: 'CL table resize', title: 'CL table: Focus Area column width' },
+  };
+  var resizeSeen = {}, resizePrev = {}, resizeBaselined = false;
+  function driveRoller(key, ratio) {
+    try {
+      var conf = RESIZE_KEYS[key];
+      if (!conf) return false;
+      var input = null;
+      var wraps = document.querySelectorAll('.antcv-top-sliders [title]');
+      for (var i = 0; i < wraps.length; i++) {
+        if ((wraps[i].getAttribute('title') || '').indexOf(conf.title) === 0) { input = wraps[i].querySelector('input[type="range"]'); if (input) break; }
+      }
+      if (!input) return false;
+      var pct = String(Math.round(Number(ratio) * 100));
+      var proto = window.HTMLInputElement && window.HTMLInputElement.prototype;
+      var desc = proto && Object.getOwnPropertyDescriptor(proto, 'value');
+      if (desc && typeof desc.set === 'function') desc.set.call(input, pct); else input.value = pct;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      return true;
+    } catch (_) { return false; }
+  }
+  function watchResizes() {
+    try {
+      for (var key in RESIZE_KEYS) {
+        var raw = localStorage.getItem(key);
+        if (raw == null) continue;
+        if (!(key in resizeSeen)) { resizeSeen[key] = raw; continue; }
+        if (raw === resizeSeen[key]) { delete resizePrev[key]; continue; }
+        // changed: wait until the value is STABLE across two polls (drag ended)
+        if (resizePrev[key] === raw) {
+          var prevVal = null;
+          try { prevVal = JSON.parse(resizeSeen[key]); } catch (_) { prevVal = Number(resizeSeen[key]); }
+          if (prevVal != null && isFinite(Number(prevVal))) {
+            undoStack.push({ desc: RESIZE_KEYS[key].desc, kind: 'key', key: key, prev: Number(prevVal) });
+            if (undoStack.length > 20) undoStack.shift();
+            showToast(RESIZE_KEYS[key].desc);
+          }
+          resizeSeen[key] = raw;
+          delete resizePrev[key];
+        } else resizePrev[key] = raw;
+      }
+    } catch (_) {}
+  }
+  setInterval(watchResizes, 1300);
 
   function cancelPress() {
     if (press.timer) { clearTimeout(press.timer); press.timer = null; }
@@ -310,7 +486,10 @@
   setInterval(tick, 4000);
 
   window.AntcvSidebarVisibilityUx = {
-    version: '1.51.116',
+    version: '1.51.117',
+    _undoLast: undoLast,
+    _undoStack: function () { return undoStack; },
+    _restoreToken: restoreToken,
     _diffEvents: diffEvents,
     _buildFeedback: buildFeedback,
     _logEvent: logEvent,

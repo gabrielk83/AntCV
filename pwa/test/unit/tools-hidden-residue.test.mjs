@@ -142,6 +142,45 @@ test('non-kernel tokens hidden via long-press survive the kernel rebuild', () =>
   assert.ok(/PDMS nanoimprint/.test(residue.v), 'kernel token still collected');
 });
 
+test('RICH shape (the real runtime tools): diff creates a {b,t} residue row', () => {
+  // RICHBLOCK-SHAPE-001 — tools is MIGRATED to rich_block at runtime; items
+  // are {b,t,bullets} with {grp:true} groups. The owner's mobile bug: the
+  // 1.51.114 sidecar only understood {l,v}.
+  const { api } = loadSidecar();
+  const items = [
+    { grp: true, t: 'Engineering', bullets: [] },
+    { b: 'Lab & fabrication', t: 'Cleanroom fabrication, lithography, deposition, etch, DRIE, plasma processing, PECVD/CVD CNT growth, catalyst preparation, SOI MEMS/NEMS fabrication', bullets: [] },
+    { b: 'Project & lifecycle', t: 'Codebeamer, Jira, MS Project', bullets: [] },
+  ];
+  const next = api._reconcile(items, cats(api));
+  assert.ok(next, 'reconcile reports a change');
+  const residue = next.filter((it) => /^Hidden - /.test(it.b || it.l || ''));
+  assert.equal(residue.length, 1);
+  assert.equal(residue[0].b, 'Hidden - Lab & fabrication', 'residue row in the SECTION shape (b, not l)');
+  assert.equal(residue[0].t, 'PDMS nanoimprint');
+  assert.ok(!('hidden' in residue[0]), 'rich residue carries NO per-item flag (renderer ignores it; RESIDUE-PREVIEW-SKIP hides it)');
+  assert.equal(api._reconcile(next, cats(api)), null, 'idempotent on rich shape');
+});
+
+test('restoreToken (menu-driven): moves a token from the rich residue row back into the line', () => {
+  const { api, backing } = loadSidecar();
+  backing['personalInfo'] = JSON.stringify({ tools: KERNEL_TOOLS });
+  backing['sections'] = JSON.stringify({
+    cv: [{
+      id: 'tools', loc: 'sidebar', type: 'rich_block',
+      items: [
+        { b: 'Lab & fabrication', t: 'Cleanroom fabrication, lithography, etch', bullets: [] },
+        { b: 'Hidden - Lab & fabrication', t: 'PDMS nanoimprint, DRIE', bullets: [] },
+      ],
+    }],
+  });
+  assert.equal(api.restoreToken('tools', 'Lab & fabrication', 'PDMS nanoimprint'), true);
+  const items = JSON.parse(backing['sections']).cv[0].items;
+  assert.ok(/PDMS nanoimprint/.test(items[0].t), 'token back in the real line');
+  const res = items.find((it) => /^Hidden - /.test(it.b || ''));
+  assert.equal(res.t, 'DRIE', 'restored token left the residue row');
+});
+
 test('skeleton gate: bracketed template values produce no residue', () => {
   const { api } = loadSidecar();
   const items = [

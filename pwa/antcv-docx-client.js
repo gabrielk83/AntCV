@@ -1221,8 +1221,10 @@ function sanitizeForExport(docSections, doc) {
       // TOOLS-HIDDEN-RESIDUE-001 export belt: 'Hidden - <category>' residue rows
       // (antcv-tools-hidden-residue.js) are per-application panel artifacts for
       // review — they never ship, even if a stale hidden flag left one visible.
+      // Checks BOTH label shapes: {l,v} labeled_list and {b,t} rich_block
+      // (tools is MIGRATED to rich_block at runtime — RICHBLOCK-SHAPE-001).
       if (s.loc === 'sidebar' && Array.isArray(s.items)) {
-        const items = s.items.filter((it) => !(it && typeof it === 'object' && it.group === undefined && /^\s*hidden\s*[-–—:]\s*/i.test(String(it.l || ''))));
+        const items = s.items.filter((it) => !(it && typeof it === 'object' && it.group === undefined && !it.grp && /^\s*hidden\s*[-–—:]\s*/i.test(String(it.l != null ? it.l : (it.b || '')))));
         if (items.length !== s.items.length) s = { ...s, items };
       }
       // SIDEBAR-TIGHTEN-001: apply the owner's sidebar abbreviations to list strings

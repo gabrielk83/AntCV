@@ -313,3 +313,17 @@ NOT relevance-ranked section reordering (both explicitly rejected by the owner).
     (VISIBILITY-FEEDBACK-001, both bundles) so future generations honor the
     user's demonstrated KEEP/HIDE preferences. Disable:
     localStorage['antcv:disable-sidebar-visibility-ux'] = '1'.
+44. **RICHBLOCK-SHAPE-001 + UNDO** (owner mobile report 2026-07-03,
+    1.51.117): the runtime TOOLS section is rich_block ({b,t,bullets} items,
+    {grp:true} groups, visibility in the SECTION-LEVEL hidden index map) —
+    the whole Hidden-group family is shape-aware now. Long-press menu shows
+    per-token entries on rich rows; whole-element hide writes the section
+    map (panel monkey + eye restore work); residue rows are created in the
+    section's own shape and renderer-skipped in BOTH preview cases; menu
+    carries "Restore <token>" entries (rich rows have no eye path) and an
+    Undo entry. UNDO system: every menu hide/restore snapshots the section
+    (stack of 20) with a bottom toast; sidebar-splitter and CV/CL
+    table-column resizes are watched (cvSidebarRatio, cv/clTableRatio,
+    stable-value detection) and undo drives the React roller natively.
+    Bonus repair: app.js's CV-PLACEHOLDER-DROP-001 regex had lost its
+    backslashes (dead in production) — restored.

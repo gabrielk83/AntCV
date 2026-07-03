@@ -5676,6 +5676,8 @@
             .map((it, i) => {
               if (e.hidden && e.hidden[i]) return null;
               const row = it && "object" == typeof it ? it : { t: String(it || "") };
+              // RESIDUE-PREVIEW-SKIP (rich_block): "Hidden - <category>" review rows never render.
+              if (!row.grp && /^\s*hidden\s*[-–—:]\s*/i.test(String(row.b || row.l || ""))) return null;
               // CV-PLACEHOLDER-DROP-001 (rich_block preview parity, owner 2026-07): a row whose
               // body is STILL a bracketed template placeholder ("[WORK STYLE - …]") is unfilled —
               // drop the whole row (the lead, e.g. "Work style", is just a label). Mirrors the

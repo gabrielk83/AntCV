@@ -37,7 +37,7 @@
 (function () {
   'use strict';
   if (window.__antcvToolsHiddenResidue) return;
-  window.__antcvToolsHiddenResidue = '1.51.116';
+  window.__antcvToolsHiddenResidue = '1.51.117';
 
   var SRC = 'tools-hidden-residue';
   var PREFIX = 'Hidden - ';
@@ -60,6 +60,17 @@
     return raw.split(/[,;]/).map(function (t) { return t.trim(); })
       .filter(function (t) { return t.length >= 2 && t.indexOf('[') === -1; });
   }
+
+  // RICHBLOCK-SHAPE-001 (owner mobile report 2026-07-03): the TOOLS section is
+  // MIGRATED to rich_block at runtime (AI-TO-METHODS-RICHBLOCK-001) — items are
+  // {b: label, t: value, bullets: []} with {grp:true, t: name} group rows, and
+  // per-item visibility lives in the SECTION-LEVEL hidden index map, not
+  // it.hidden. All row access goes through these shape helpers.
+  function labelOf(it) { return it && typeof it === 'object' ? (it.l != null ? it.l : (it.b != null ? it.b : '')) : ''; }
+  function valOf(it) { return it && typeof it === 'object' ? (it.v != null ? it.v : (it.t != null ? it.t : '')) : (it == null ? '' : it); }
+  function isGroupRow(it) { return !!(it && typeof it === 'object' && (it.group !== undefined || it.grp)); }
+  function isRichItem(it) { return !!(it && typeof it === 'object' && it.l == null && it.v == null && (it.b !== undefined || it.t !== undefined)); }
+  function setVal(it, v) { return it.v != null || it.l != null ? Object.assign({}, it, { v: v }) : Object.assign({}, it, { t: v }); }
 
   // Kernel master categories: [{ label, tokens }], merged by normalised label.
   // Accepts {l,v} items and 'Label: v1, v2' strings (both stored shapes).
@@ -90,7 +101,7 @@
   }
 
   function isResidue(it) {
-    return !!(it && typeof it === 'object' && it.group === undefined && RESIDUE_RE.test(String(it.l || '')));
+    return !!(it && typeof it === 'object' && !isGroupRow(it) && RESIDUE_RE.test(String(labelOf(it))));
   }
 
   function hasToken(hayPadded, tok) {
@@ -139,25 +150,27 @@
     var next = items.slice();
 
     // RESTORE: a residue row the user un-hid folds back into its category row.
+    // (labeled_list eye path; rich_block restores arrive via restoreToken from
+    // the long-press menu because rich rows carry no per-item flag.)
     for (var i = next.length - 1; i >= 0; i--) {
       var it = next[i];
-      if (!isResidue(it) || it.hidden === true) continue;
-      var category = String(it.l || '').replace(RESIDUE_RE, '').trim();
-      var toks = tokensOf(it.v);
+      if (!isResidue(it) || it.hidden === true || isRichItem(it)) continue;
+      var category = String(labelOf(it)).replace(RESIDUE_RE, '').trim();
+      var toks = tokensOf(valOf(it));
       var target = -1;
       for (var j = 0; j < next.length; j++) {
         var cand = next[j];
-        if (j === i || !cand || typeof cand !== 'object' || cand.group !== undefined || isResidue(cand)) continue;
-        if (norm(cand.l) === norm(category)) { target = j; break; }
+        if (j === i || !cand || typeof cand !== 'object' || isGroupRow(cand) || isResidue(cand)) continue;
+        if (norm(labelOf(cand)) === norm(category)) { target = j; break; }
       }
       if (target >= 0) {
         var row = next[target];
-        var hayRow = ' ' + norm((row.l || '') + ' ' + (row.v || '')) + ' ';
+        var hayRow = ' ' + norm(labelOf(row) + ' ' + valOf(row)) + ' ';
         var add = toks.filter(function (t) { return !hasToken(hayRow, t); });
         if (add.length) {
-          var rowToks = tokensOf(row.v);
-          for (var a = 0; a < add.length; a++) rowToks = insertBest(String(row.l || ''), rowToks, add[a]);
-          next[target] = Object.assign({}, row, { v: rowToks.join(', '), hidden: false });
+          var rowToks = tokensOf(valOf(row));
+          for (var a = 0; a < add.length; a++) rowToks = insertBest(String(labelOf(row)), rowToks, add[a]);
+          next[target] = Object.assign({}, setVal(row, rowToks.join(', ')), { hidden: false });
         }
         next.splice(i, 1);
       } else {
@@ -168,13 +181,14 @@
     }
 
     // DIFF vs the kernel over the NON-residue rows.
+    var richSection = next.some(function (it) { return isRichItem(it) && !isGroupRow(it); });
     var hayParts = [];
     var placeholderOnly = true;
     next.forEach(function (it) {
       if (isResidue(it)) return;
       var txt;
       if (typeof it === 'string') txt = it;
-      else if (it && typeof it === 'object') txt = it.group !== undefined ? String(it.group || '') : String(it.l || '') + ' ' + String(it.v == null ? '' : it.v);
+      else if (it && typeof it === 'object') txt = isGroupRow(it) ? String(it.group !== undefined ? it.group : (it.t || '')) : String(labelOf(it)) + ' ' + String(valOf(it));
       else return;
       if (txt.indexOf('[') === -1 && norm(txt)) placeholderOnly = false;
       hayParts.push(txt);
@@ -189,7 +203,7 @@
       var missing = c.tokens.filter(function (t) { return !hasToken(hay, t); });
       var idx = -1;
       for (var k = 0; k < next.length; k++) {
-        if (isResidue(next[k]) && norm(String(next[k].l).replace(RESIDUE_RE, '')) === norm(c.label)) { idx = k; break; }
+        if (isResidue(next[k]) && norm(String(labelOf(next[k])).replace(RESIDUE_RE, '')) === norm(c.label)) { idx = k; break; }
       }
       // LONGPRESS-HIDE (owner 2026-07-03): tokens hidden from the preview menu
       // may be EDITED/generated wording absent from the kernel — a residue row
@@ -198,7 +212,7 @@
       if (idx >= 0) {
         var kern = {};
         c.tokens.forEach(function (t) { kern[norm(t)] = true; });
-        tokensOf(next[idx].v).forEach(function (t) {
+        tokensOf(valOf(next[idx])).forEach(function (t) {
           if (!kern[norm(t)] && !hasToken(hay, t)) missing.push(t);
         });
       }
@@ -208,9 +222,14 @@
       }
       var want = missing.join(', ');
       if (idx >= 0) {
-        if (String(next[idx].v) !== want) { next[idx] = Object.assign({}, next[idx], { v: want, hidden: true }); changed = true; }
+        if (String(valOf(next[idx])) !== want) { next[idx] = setVal(next[idx], want); if (!isRichItem(next[idx])) next[idx].hidden = true; changed = true; }
       } else {
-        next.push({ l: PREFIX + c.label, v: want, hidden: true });
+        // Residue rows are created in the SECTION's own shape: rich sections
+        // get {b,t,bullets} (renderer-skipped by RESIDUE-PREVIEW-SKIP, no flag
+        // needed — the per-item flag is IGNORED by the rich renderer, which is
+        // exactly the owner's forever-hidden bug), labeled sections get
+        // {l,v,hidden:true}.
+        next.push(richSection ? { b: PREFIX + c.label, t: want, bullets: [] } : { l: PREFIX + c.label, v: want, hidden: true });
         changed = true;
       }
     });
@@ -229,9 +248,22 @@
       var b = JSON.parse(raw), changed = false;
       var list = b && b.cv;
       if (Array.isArray(list)) list.forEach(function (sec) {
-        if (!sec || sec.id !== 'tools' || sec.type !== 'labeled_list' || !Array.isArray(sec.items)) return;
+        if (!sec || sec.id !== 'tools' || !Array.isArray(sec.items)) return;
+        if (sec.type !== 'labeled_list' && sec.type !== 'rich_block') return;
         var next = reconcile(sec.items, cats);
-        if (next) { sec.items = next; changed = true; }
+        if (next) {
+          sec.items = next;
+          // Rich sections hide via the SECTION-LEVEL index map — drop stale
+          // entries pointing at residue rows / beyond the array so a later
+          // append can never inherit a foreign hidden flag.
+          if (sec.hidden && typeof sec.hidden === 'object') {
+            for (var hk in sec.hidden) {
+              var hi = parseInt(hk, 10);
+              if (!isNaN(hi) && (hi >= next.length || isResidue(next[hi]))) delete sec.hidden[hk];
+            }
+          }
+          changed = true;
+        }
       });
       if (changed) {
         var os = JSON.stringify(b); localStorage.setItem('sections', os); lastSec = os;
@@ -249,12 +281,62 @@
   try { window.addEventListener('storage', function (e) { if (!e || e.key === 'sections' || e.key === 'personalInfo' || e.key === null) tick(); }); } catch (_) {}
   setInterval(tick, 4000);
 
+  // Menu-driven restore (rich rows carry no per-item flag, so the long-press
+  // menu calls this directly; works for labeled sections too).
+  function restoreToken(sid, category, token) {
+    try {
+      var raw = localStorage.getItem('sections');
+      if (!raw) return false;
+      var b = JSON.parse(raw);
+      var sec = (b.cv || []).find(function (x) { return x && x.id === sid; });
+      if (!sec || !Array.isArray(sec.items)) return false;
+      var items = sec.items;
+      var resIdx = -1;
+      for (var i = 0; i < items.length; i++) {
+        if (isResidue(items[i]) && norm(String(labelOf(items[i])).replace(RESIDUE_RE, '')) === norm(category)) { resIdx = i; break; }
+      }
+      if (resIdx < 0) return false;
+      var resToks = tokensOf(valOf(items[resIdx]));
+      if (resToks.map(norm).indexOf(norm(token)) === -1) return false;
+      var remain = resToks.filter(function (t) { return norm(t) !== norm(token); });
+      var target = -1;
+      for (var j = 0; j < items.length; j++) {
+        if (j === resIdx || !items[j] || typeof items[j] !== 'object' || isGroupRow(items[j]) || isResidue(items[j])) continue;
+        if (norm(labelOf(items[j])) === norm(category)) { target = j; break; }
+      }
+      if (target >= 0) {
+        var rowToks = insertBest(String(labelOf(items[target])), tokensOf(valOf(items[target])), token);
+        items[target] = setVal(items[target], rowToks.join(', '));
+      } else if (isRichItem(items[resIdx])) {
+        items.splice(resIdx, 0, { b: category, t: token, bullets: [] });
+        resIdx++;
+      } else {
+        items.splice(resIdx, 0, { l: category, v: token });
+        resIdx++;
+      }
+      if (remain.length) items[resIdx] = setVal(items[resIdx], remain.join(', '));
+      else {
+        items.splice(resIdx, 1);
+        if (sec.hidden && typeof sec.hidden === 'object') {
+          for (var hk in sec.hidden) { var hi = parseInt(hk, 10); if (!isNaN(hi) && hi >= resIdx) delete sec.hidden[hk]; }
+        }
+      }
+      var os = JSON.stringify(b);
+      localStorage.setItem('sections', os); lastSec = os;
+      try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { source: SRC } })); } catch (_) {}
+      return true;
+    } catch (_) { return false; }
+  }
+
   window.AntcvToolsHiddenResidue = {
-    version: '1.51.116',
+    version: '1.51.117',
     _reconcile: reconcile,
     _kernelCategories: kernelCategories,
     _tokens: tokensOf,
     _norm: norm,
+    _labelOf: labelOf,
+    _valOf: valOf,
+    restoreToken: restoreToken,
     _insertBest: insertBest,
     _lineCost: lineCost,
     _apply: apply,

@@ -126,6 +126,58 @@ test('buildFeedback: latest decision per item wins', () => {
   assert.ok(/HIDE: "EMVA 1288" \(whole element\)/.test(txt));
 });
 
+test('RICH shape: hideRow writes the SECTION-LEVEL hidden map (the mechanism the panel eye uses)', () => {
+  // The owner's forever-hidden mobile bug: it.hidden is IGNORED by the rich
+  // renderer + rich panel editor; both use the section-level index map.
+  const { api, backing } = loadSidecar();
+  backing['sections'] = JSON.stringify({
+    cv: [{
+      id: 'tools', title: 'TOOLS & METHODS', loc: 'sidebar', type: 'rich_block',
+      items: [
+        { grp: true, t: 'Engineering', bullets: [] },
+        { b: 'Lab & fabrication', t: 'Cleanroom fabrication, DRIE', bullets: [] },
+      ],
+    }],
+  });
+  const row = { sid: 'tools', idx: 1, item: { b: 'Lab & fabrication', t: 'x', bullets: [] } };
+  // findRow is DOM-bound; drive hideRow directly with a rich item.
+  api._hideToken(row, 'DRIE');
+  const sec = JSON.parse(backing['sections']).cv[0];
+  const res = sec.items.find((it) => /^Hidden - /.test(it.b || ''));
+  assert.ok(res, 'rich residue row created');
+  assert.equal(res.b, 'Hidden - Lab & fabrication');
+  assert.equal(res.t, 'DRIE');
+  assert.ok(!('hidden' in res), 'rich residue has no per-item flag');
+  assert.ok(!/DRIE/.test(sec.items[1].t), 'token removed from the line');
+});
+
+test('undo: restores the exact pre-hide section', () => {
+  const { api, backing } = loadSidecar();
+  backing['sections'] = JSON.stringify({
+    cv: [{
+      id: 'tools', loc: 'sidebar', type: 'rich_block',
+      items: [{ b: 'Lab & fabrication', t: 'Cleanroom fabrication, DRIE', bullets: [] }],
+    }],
+  });
+  const before = backing['sections'];
+  api._hideToken({ sid: 'tools', idx: 0, item: { b: 'Lab & fabrication', t: 'x', bullets: [] } }, 'DRIE');
+  assert.notEqual(backing['sections'], before, 'hide changed the section');
+  api._undoLast();
+  const sec = JSON.parse(backing['sections']).cv[0];
+  assert.equal(sec.items.length, 1, 'residue row gone after undo');
+  assert.equal(sec.items[0].t, 'Cleanroom fabrication, DRIE', 'line back to the pre-hide value');
+});
+
+test('RESIDUE-PREVIEW-SKIP covers the rich_block renderer in both bundles; app.js placeholder regex repaired', () => {
+  const src = readFileSync(new URL('../../app.src.js', import.meta.url), 'utf8');
+  const min = readFileSync(new URL('../../app.js', import.meta.url), 'utf8');
+  assert.ok(src.includes('if (!row.grp && /^\\s*hidden\\s*[-–—:]\\s*/i.test(String(row.b || row.l || ""))) return null;'), 'app.src.js rich_block skip');
+  assert.ok(min.includes('if(!r.grp&&/^\\s*hidden\\s*[-–—:]\\s*/i.test(String(r.b||r.l||"")))return null;'), 'app.js rich_block skip');
+  // APPJS-REGEX-BACKSLASH-REPAIR: the corrupted escape-less regex must be gone.
+  assert.ok(!min.includes('/^s*[[sS]*]s*$/'), 'corrupted CV-PLACEHOLDER-DROP regex repaired');
+  assert.ok(min.includes('/^\\s*\\[[\\s\\S]*\\]\\s*$/.test(String(r.t||""))'), 'correct placeholder regex present in app.js');
+});
+
 test('VISIBILITY-FEEDBACK-001: both app bundles inject the feedback into the gen prompt', () => {
   const src = readFileSync(new URL('../../app.src.js', import.meta.url), 'utf8');
   const min = readFileSync(new URL('../../app.js', import.meta.url), 'utf8');

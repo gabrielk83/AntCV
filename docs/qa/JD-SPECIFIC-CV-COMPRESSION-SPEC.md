@@ -275,3 +275,17 @@ NOT relevance-ranked section reordering (both explicitly rejected by the owner).
     deterministic role-merge in docx-client now joins with " & "
     ("Change Request Lead & System Architect" — the Innoviz ORDER is correct
     as-is, Change Request Lead is a position); merged bullet cap aligned to 5.
+42. **TOOLS HIDDEN RESIDUE — per-application review row** (owner 2026-07-03,
+    the PDMS question): hiding a whole sidebar row is reversible via the
+    row eye-toggle, but a tool trimmed INSIDE a compressed value was not.
+    antcv-tools-hidden-residue.js (1.51.114) bridges deterministically: every
+    kernel token (personalInfo.tools — the master generation never mutates)
+    missing from the application's TOOLS & METHODS section is collected into
+    "Hidden - <category>: <missing tokens>" — a hidden row appended to the
+    panel, per application only, never global, never rendered (hidden:true +
+    docx-client export belt drops any "Hidden - " row). Clicking the eye on a
+    residue row MERGES its tokens back into the real category line and the
+    residue row disappears; a token re-added by hand heals out automatically.
+    Gates: no-op on the skeleton template and when zero kernel tokens are
+    present (other-language / unrelated list). Disable:
+    localStorage['antcv:disable-tools-hidden-residue'] = '1'.

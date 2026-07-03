@@ -1,0 +1,161 @@
+// TOOLS-HIDDEN-RESIDUE-001 (owner 2026-07-03) — per-application review row for
+// tools trimmed INSIDE a compressed value.
+//
+// Owner: the stored "Lab & fabrication: …, PDMS nanoimprint, …" loses PDMS in a
+// targeted generation; it must reappear as "Hidden - Lab & fabrication: PDMS
+// nanoimprint" in the panel (hidden, per application), and un-hiding that row
+// must merge the token back into the real line without retyping.
+//
+// Locks:
+//  1. DIFF: a kernel token missing from the section grows a hidden residue row.
+//  2. Idempotent: a second reconcile over the result is a no-op.
+//  3. RESTORE: un-hiding the residue row folds tokens into the category row
+//     and removes the residue row.
+//  4. HEAL: a token re-added by hand empties + removes the residue row.
+//  5. Skeleton gate: bracketed template values produce no residue.
+//  6. Zero-presence gate: a section sharing NO kernel token (other language /
+//     unrelated) is left alone — the kernel is never dumped wholesale.
+//  7. Export belt: sanitizeForExport drops residue rows from sidebar sections.
+
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import vm from 'node:vm';
+
+const SRC = readFileSync(new URL('../../antcv-tools-hidden-residue.js', import.meta.url), 'utf8');
+
+function loadSidecar() {
+  const backing = {};
+  const localStorage = {
+    getItem: (k) => (k in backing ? backing[k] : null),
+    setItem: (k, v) => { backing[k] = String(v); },
+    removeItem: (k) => { delete backing[k]; },
+  };
+  const window = { addEventListener() {}, dispatchEvent() {} };
+  const ctx = {
+    window, localStorage, console,
+    setTimeout: () => 0, setInterval: () => 0, clearTimeout() {},
+    CustomEvent: function CustomEvent() {},
+  };
+  ctx.globalThis = ctx;
+  vm.createContext(ctx);
+  new vm.Script(SRC).runInContext(ctx);
+  return { api: window.AntcvToolsHiddenResidue, backing };
+}
+
+const KERNEL_TOOLS = [
+  { l: 'Lab & fabrication', v: 'Cleanroom fabrication, lithography, deposition, etch, DRIE, plasma processing, PDMS nanoimprint, PECVD/CVD CNT growth, catalyst preparation, SOI MEMS/NEMS fabrication' },
+  { l: 'Project & lifecycle', v: 'Codebeamer, Jira, MS Project' },
+];
+
+function cats(api) { return api._kernelCategories({ tools: KERNEL_TOOLS }); }
+
+test('DIFF: trimmed kernel tokens land in a hidden residue row per category', () => {
+  const { api } = loadSidecar();
+  const items = [
+    { l: 'Lab & fabrication', v: 'Cleanroom fabrication, lithography, deposition, etch, DRIE, plasma processing, PECVD/CVD CNT growth, catalyst preparation, SOI MEMS/NEMS fabrication' },
+    { l: 'Project & lifecycle', v: 'Codebeamer, Jira, MS Project' },
+  ];
+  const next = api._reconcile(items, cats(api));
+  assert.ok(next, 'reconcile reports a change');
+  const residue = next.filter((it) => /^Hidden - /.test(it.l || ''));
+  assert.equal(residue.length, 1, 'exactly one residue row');
+  assert.equal(residue[0].l, 'Hidden - Lab & fabrication');
+  assert.equal(residue[0].v, 'PDMS nanoimprint');
+  assert.equal(residue[0].hidden, true, 'residue row is hidden');
+});
+
+test('idempotent: reconciling the reconciled section is a no-op', () => {
+  const { api } = loadSidecar();
+  const items = [
+    { l: 'Lab & fabrication', v: 'Cleanroom fabrication, lithography, etch' },
+    { l: 'Project & lifecycle', v: 'Codebeamer, Jira, MS Project' },
+  ];
+  const once = api._reconcile(items, cats(api));
+  assert.ok(once);
+  assert.equal(api._reconcile(once, cats(api)), null, 'second pass is a no-op');
+});
+
+test('RESTORE: un-hiding the residue row merges tokens back and removes it', () => {
+  const { api } = loadSidecar();
+  const items = [
+    { l: 'Lab & fabrication', v: 'Cleanroom fabrication, lithography, etch' },
+    { l: 'Project & lifecycle', v: 'Codebeamer, Jira, MS Project' },
+    { l: 'Hidden - Lab & fabrication', v: 'PDMS nanoimprint, DRIE', hidden: false }, // eye clicked
+  ];
+  const next = api._reconcile(items, cats(api));
+  assert.ok(next);
+  const lab = next.find((it) => it.l === 'Lab & fabrication');
+  assert.ok(/PDMS nanoimprint/.test(lab.v), 'PDMS is back in the real line');
+  assert.ok(/DRIE/.test(lab.v), 'DRIE is back in the real line');
+  // Kernel tokens STILL missing from the section are re-collected into a fresh
+  // hidden residue row — the restored ones must not be in it.
+  const residue = next.filter((it) => /^Hidden - /.test(it.l || ''));
+  assert.equal(residue.length, 1, 'still-missing tokens stay reviewable');
+  assert.equal(residue[0].hidden, true);
+  assert.ok(!/PDMS|DRIE/.test(residue[0].v), 'restored tokens left the residue row');
+  assert.equal(api._reconcile(next, cats(api)), null, 'stable after restore');
+});
+
+test('RESTORE fallback: no surviving category row promotes the residue row in place', () => {
+  const { api } = loadSidecar();
+  const items = [
+    { l: 'Project & lifecycle', v: 'Codebeamer, Jira, MS Project' },
+    { l: 'Hidden - Lab & fabrication', v: 'PDMS nanoimprint', hidden: false },
+  ];
+  const next = api._reconcile(items, cats(api));
+  assert.ok(next);
+  const promoted = next.find((it) => it.l === 'Lab & fabrication');
+  assert.ok(promoted, 'residue row promoted to a real category row');
+  assert.equal(promoted.v, 'PDMS nanoimprint');
+  assert.ok(promoted.hidden === false, 'promoted row is visible');
+});
+
+test('HEAL: a token re-added by hand removes it from the residue row', () => {
+  const { api } = loadSidecar();
+  const items = [
+    { l: 'Lab & fabrication', v: 'Cleanroom fabrication, lithography, etch, PDMS nanoimprint' },
+    { l: 'Project & lifecycle', v: 'Codebeamer, Jira, MS Project' },
+    { l: 'Hidden - Lab & fabrication', v: 'PDMS nanoimprint, DRIE', hidden: true },
+  ];
+  const next = api._reconcile(items, cats(api));
+  assert.ok(next);
+  const residue = next.find((it) => it.l === 'Hidden - Lab & fabrication');
+  assert.ok(residue, 'residue row survives while DRIE is still missing');
+  // Rebuilt in KERNEL order (the master is the reference), PDMS healed out.
+  assert.equal(residue.v, 'deposition, DRIE, plasma processing, PECVD/CVD CNT growth, catalyst preparation, SOI MEMS/NEMS fabrication');
+});
+
+test('skeleton gate: bracketed template values produce no residue', () => {
+  const { api } = loadSidecar();
+  const items = [
+    { l: 'Tools', v: '[Methods, platforms, lab equipment, software, or workflows relevant to the role]' },
+    { l: 'Methods', v: '[How you work: requirements, validation, stakeholder mapping, design reviews, etc.]' },
+  ];
+  assert.equal(api._reconcile(items, cats(api)), null);
+});
+
+test('zero-presence gate: a section sharing no kernel token is left alone', () => {
+  const { api } = loadSidecar();
+  const items = [
+    { l: 'Regnskab', v: 'Dinero, e-conomic, Excel-makroer' },
+  ];
+  assert.equal(api._reconcile(items, cats(api)), null);
+});
+
+test('export belt: sanitizeForExport drops residue rows from sidebar sections', async () => {
+  globalThis.window = globalThis.window || {};
+  const { sanitizeForExport } = await import('../../antcv-docx-client.js');
+  const sections = [{
+    id: 'tools', title: 'TOOLS & METHODS', loc: 'sidebar', on: true, type: 'labeled_list',
+    items: [
+      { l: 'Lab & fabrication', v: 'Cleanroom fabrication, lithography, etch' },
+      { l: 'Hidden - Lab & fabrication', v: 'PDMS nanoimprint', hidden: true },
+      { l: 'Hidden - Project & lifecycle', v: 'MS Project' }, // stale flag: even visible it never ships
+    ],
+  }];
+  const out = sanitizeForExport(sections, 'cv');
+  const tools = out.find((s) => s.id === 'tools');
+  assert.equal(tools.items.length, 1, 'both residue rows dropped from the payload');
+  assert.equal(tools.items[0].l, 'Lab & fabrication');
+});

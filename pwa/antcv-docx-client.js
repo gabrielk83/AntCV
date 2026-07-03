@@ -1218,6 +1218,13 @@ function sanitizeForExport(docSections, doc) {
         }
         if (roles.length !== s.roles.length || roles.some((r, i) => r !== s.roles[i])) s = { ...s, roles };
       }
+      // TOOLS-HIDDEN-RESIDUE-001 export belt: 'Hidden - <category>' residue rows
+      // (antcv-tools-hidden-residue.js) are per-application panel artifacts for
+      // review — they never ship, even if a stale hidden flag left one visible.
+      if (s.loc === 'sidebar' && Array.isArray(s.items)) {
+        const items = s.items.filter((it) => !(it && typeof it === 'object' && it.group === undefined && /^\s*hidden\s*[-–—:]\s*/i.test(String(it.l || ''))));
+        if (items.length !== s.items.length) s = { ...s, items };
+      }
       // SIDEBAR-TIGHTEN-001: apply the owner's sidebar abbreviations to list strings
       // and labeled l/v values BEFORE the per-id passes below (several of them return
       // early). Reassigns s and falls through.

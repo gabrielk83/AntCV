@@ -23822,7 +23822,7 @@ function aiNoticeVmlRun(side, __idx) {
   // frame dropped at the anchor's y (mid-page). Same class as the horizontal
   // AI-NOTICE-LEFT-CLOUDCONVERT-001 fix: use an EXPLICIT page-relative
   // margin-top offset instead of the keyword.
-  const __mt = Math.round(PAGE_H / 20) - 18;
+  const __mt = 824; // A4 page height 842pt (PAGE_H 16838/20) - 18pt box height; literal because PAGE_H declares later in this bundle and test replicas eval this function standalone
   return '<w:r><w:rPr><w:noProof/></w:rPr><w:pict>' +
     '<v:rect id="AntCVAiNotice' + __idx + '" o:spid="_x0000_s' + (4097 + __idx) + '" style="position:absolute;margin-left:' + __ml + 'pt;margin-top:' + __mt + 'pt;width:320pt;height:18pt;' +
     'mso-position-horizontal-relative:page;' +
@@ -28090,7 +28090,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.129-ai-notice-bottom-explicit";
+var VERSION = "1.14.130-ai-notice-bottom-literal";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

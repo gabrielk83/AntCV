@@ -48,21 +48,24 @@ for nightly is structured and full coverage is planned."** This prompt IS that s
 
 ## BAND A — MOBILE & TAB ISOLATION (owner P0, do first)
 
-**A1 — GEN-BACKGROUND-001-CLIENT (register row 38). ENGINE SHIPPED 1.51.132; now OWNER-GATED on approach.**
-Progress: the client engine `pwa/antcv-gen-job-client.js` (`window.AntcvGenJob`, 8 tests) is done and
-loaded (inert until called), with the full /job/* state machine + reload/foreground resume + kill-switch
-`antcv:disable-gen-job`. The BLOCKER is architectural, in the spec `docs/qa/GEN-BACKGROUND-001-CLIENT-SPEC.md`:
-the current app generation is ONE big multi-provider call, not per-section, and gen-job's backgrounding
-survival requires MANY short per-section /steps (a single 3-6 min /step isn't viable on Workers). So the
-app.js integration ALSO requires DECOMPOSING generation into a per-section plan — a gen-core change.
-  Steps this run: (1) VERIFY the /job/* dispatch is LIVE (curl the deployed proxy /job/create with a bad
-  body → expect 400 no_sections, not 404; if 404, `gh workflow run deploy.yml -f target=proxy` + mirror
-  demo-proxy). (2) PushNotify the owner the A/B decision from the spec (A = full per-section decompose,
-  staged behind the kill-switch with a fresh-gen quality A/B before flipping default; B = resume-on-reload
-  only, does NOT close it) and WAIT for his pick. (3) On A: decompose ONE low-risk section (PROFILE) first,
-  prove the AntcvGenJob.run round-trip + fresh-gen quality parity behind the kill-switch, then extend.
-  Do NOT flip the default or decompose the whole gen core without the owner's approach + a quality A/B —
-  this is the one change that can brick generation.
+**A1 — GEN-BACKGROUND-001 (register rows 38 + 38a). APPROACH A SHIPPED END-TO-END 1.51.133/134; now
+OWNER-A/B + FLIP-DEFAULT.** Owner chose A. Finding: AntCV gen is a DEPENDENT client pipeline (each
+stage's prompt built from prior results), not independent server sections — so the fit is
+CHECKPOINT-MEMOIZATION at the `ee()` LLM chokepoint, not a /job/* switch. SHIPPED + LIVE, default OFF
+(opt-in `antcv:gen-resume=1`, kill `antcv:disable-gen-memo`): `antcv-gen-memo.js` memoizes each completed
+gen LLM call; a surgical `ee()`/`Le()` wrapper in BOTH bundles replays completed calls on a re-run;
+gen-done clear(); INPUT-SIGNATURE (JD+meta) for cross-reload; AUTO-RESUME-ON-FOREGROUND re-invokes the
+app generate fn (`window.__antcvGenTrigger`) once per interrupted checkpoint. 11 memo tests + both-bundle
+mirror lock; suite 956/956 + boot-smoke.
+  Steps this run — DO NOT re-implement (verify-first, it's shipped): (1) A/B on a REAL mobile gen with
+  `antcv:gen-resume=1`: start a gen → background/lock mid-run → foreground → confirm it auto-resumes fast
+  (completed calls replay, only the interrupted one re-runs) AND a mid-run reload resumes; capture whether
+  output matches a normal (flag-off) gen — it must (the memo is output-neutral). (2) If the A/B is clean,
+  propose FLIPPING THE DEFAULT (make `antcv:gen-resume` default-on with the kill-switch retained) — a
+  one-line sidecar change + quintet; PushNotify the owner before flipping. (3) REMAINING follow-on only
+  if the owner wants true MID-CALL survival: the server-driven decompose using the shipped
+  `antcv-gen-job-client.js` /job engine — big, owner-gated, spec first. Do NOT touch the gen core further
+  without a fresh-gen A/B.
 
 **A2 — TAB/DEVICE ISOLATION residuals (register row 39a).** The setItem-writer probe (boot-storm
 pattern) on `meta`/`sections`/`antcv:app:*` during ONE row selection + ONE gen in a real tab; find

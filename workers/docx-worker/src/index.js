@@ -25057,6 +25057,27 @@ function buildTwoColumnDocument(ctx) {
   let __lastMainSlot = -1;
   for (let p = 0; p < numPages; p++) { if ((mainPages[p] || []).length > 0) __lastMainSlot = p; }
   const __pageBreakPara = () => new Paragraph({ pageBreakBefore: true, spacing: { before: 0, after: 0, line: 1, lineRule: "exact" }, children: [] });
+  // FLOAT-SPINE-SPACER-001 (register row 3, attempted without the owner's reference
+  // docx — UNVERIFIED against real LibreOffice/CloudConvert rendering, owner
+  // visual re-export required before flipping ctx.floatSpine on in production):
+  // every continuation table under FLOAT-SPINE-001 got the byte-IDENTICAL
+  // <w:tblpPr vertAnchor="text" tblpY="1"> anchor (confirmed via a 3-continuation-
+  // table repro: tables 1 and 2 were byte-for-byte identical tblpPr blocks), and
+  // each was preceded by the same near-zero-height (line:1, exact) __pageBreakPara.
+  // The row's own diagnosis: LibreOffice may collapse those emptied anchor
+  // paragraphs so multiple floats resolve to the same Y. This gives each
+  // continuation table's own immediate anchor paragraph real, distinct height and
+  // content (an increasing line height + a non-empty zero-width run) so no two
+  // anchors can be byte-identical or collapse into the same paragraph. Only used
+  // for floatSpine continuation breaks; the default (flag OFF) and page-1 break
+  // both still use the unchanged __pageBreakPara — zero behavior change outside
+  // this default-OFF experimental path.
+  const __floatAnchorPara = (idx) => new Paragraph({
+    pageBreakBefore: true,
+    spacing: { before: 0, after: 0, line: 20 + idx, lineRule: "exact" },
+    children: [new TextRun({ text: "​", size: 2 })]
+  });
+  const __contBreakPara = (idx) => (ctx.floatSpine ? __floatAnchorPara(idx) : __pageBreakPara());
   const makeFullWidthSidebarTable = (els) => new Table({
     width: { size: PAGE_W, type: WidthType.DXA }, columnWidths: [PAGE_W], borders: noBorders(),
     rows: [new TableRow({ cantSplit: false, children: [new TableCell({
@@ -25092,7 +25113,7 @@ function buildTwoColumnDocument(ctx) {
   if (__overflowActive) {
     const __twoCol = __renderSlots.filter((p) => p <= __lastMainSlot);
     __twoCol.forEach((p, __i) => {
-      if (__i > 0) docChildren.push(__pageBreakPara());
+      if (__i > 0) docChildren.push(__contBreakPara(__i));
       docChildren.push(makePageTable(sidebarPages[p] || [], mainPages[p] || [], p === 0));
     });
     const __overflowEls = [];
@@ -25102,7 +25123,7 @@ function buildTwoColumnDocument(ctx) {
     docChildren.push(makeFullWidthSidebarTable(__overflowEls));
   } else {
     __renderSlots.forEach((p, __i) => {
-      if (__i > 0) docChildren.push(__pageBreakPara());
+      if (__i > 0) docChildren.push(__contBreakPara(__i));
       docChildren.push(makePageTable(sidebarPages[p] || [], mainPages[p] || [], p === 0));
     });
   }

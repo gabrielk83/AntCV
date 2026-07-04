@@ -44,6 +44,30 @@
 
 const PROBE_TIMEOUT_MS = 30_000;
 
+// PERF-QUALIFY-CACHE-001: qualifyEndpoint runs the full probe battery (6 real
+// LLM calls) against the user's endpoint. Routing/model-picker code paths
+// call this repeatedly for the same (provider_shape, url, modelId, apiKey)
+// tuple within a session — caching the verdict avoids re-paying that latency
+// and cost. TTL is short enough that a genuinely fixed endpoint (rotated key,
+// swapped model) is re-qualified well within a working day.
+const QUALIFY_CACHE_TTL_SECONDS = 12 * 60 * 60;
+const QUALIFY_CACHE_PREFIX = 'byok_qualify:';
+
+// Cache key is a hash of the full tuple INCLUDING the apiKey, so cache
+// entries never collide across two different keys pointed at the same URL —
+// the raw key itself is never stored, only its digest.
+async function qualifyCacheKey(opts) {
+  const material = [
+    opts.provider_shape || 'openai_compat',
+    opts.url,
+    opts.modelId,
+    opts.apiKey,
+  ].join(' ');
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(material));
+  const hex = Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('');
+  return QUALIFY_CACHE_PREFIX + hex;
+}
+
 // ─── Test battery — must stay in sync with the PWA's
 //     antcv-llm-audit.js TEST_BATTERY definitions ────────────────────
 //
@@ -312,7 +336,7 @@ async function runProbe(probeId, probe, opts) {
 
 // ─── Top-level qualifier ────────────────────────────────────────────
 
-async function qualifyEndpoint(opts) {
+async function qualifyEndpoint(opts, env) {
   if (!opts || !opts.url || !opts.apiKey || !opts.modelId) {
     return { ok: false, error: 'url, apiKey, and modelId are required' };
   }
@@ -322,6 +346,23 @@ async function qualifyEndpoint(opts) {
   // Cap is a defence against accidental loops / DoS through this endpoint.
   if (opts.url.length > 500) {
     return { ok: false, error: 'url is unreasonably long' };
+  }
+
+  const kv = env && env.KV_BINDING;
+  let cacheKey = null;
+  if (kv && !opts.forceRefresh) {
+    cacheKey = await qualifyCacheKey(opts);
+    try {
+      const cached = await kv.get(cacheKey);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        return { ...parsed, cached: true };
+      }
+    } catch (e) {
+      console.warn('[byok-qualify] cache read failed:', e && e.message);
+    }
+  } else if (kv) {
+    cacheKey = await qualifyCacheKey(opts);
   }
 
   const probeIds = Object.keys(TEST_BATTERY);
@@ -375,7 +416,7 @@ async function qualifyEndpoint(opts) {
   // surface the per-probe detail for nuance.
   for (const t of approved_tasks) rejected_tasks.delete(t);
 
-  return {
+  const result = {
     ok: true,
     verdict,
     approved_tasks: Array.from(approved_tasks),
@@ -386,6 +427,16 @@ async function qualifyEndpoint(opts) {
     medium_failures,
     probes_run: probeIds.length,
   };
+
+  if (kv && cacheKey) {
+    try {
+      await kv.put(cacheKey, JSON.stringify(result), { expirationTtl: QUALIFY_CACHE_TTL_SECONDS });
+    } catch (e) {
+      console.warn('[byok-qualify] cache write failed:', e && e.message);
+    }
+  }
+
+  return { ...result, cached: false };
 }
 
-export { qualifyEndpoint, TEST_BATTERY, applyChecks, tryParseJSON };
+export { qualifyEndpoint, TEST_BATTERY, applyChecks, tryParseJSON, qualifyCacheKey, QUALIFY_CACHE_TTL_SECONDS };

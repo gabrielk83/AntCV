@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   ACTIVE_STYLE_IDS,
@@ -1071,7 +1071,38 @@ export function WritingStylePicker(): JSX.Element {
   // #4 step 2 — Advanced Tone group (chips + preferred tone + saved customs), last + collapsed.
   const [advToneOpen, setAdvToneOpen] = useState(false);
   const [preferredTone, setPreferredTone] = useState<string>(() => readPreferredTone());
-  const onPreferredTone = useCallback((v: string) => { setPreferredTone(v); writePreferredTone(v); }, []);
+  // PERF-DEBOUNCE-001: writePreferredTone() does a localStorage read+stringify
+  // of the whole personalInfo blob (photo data URI, certs, etc. included) AND
+  // fires a cloud-sync PUT — both used to run on every keystroke in this
+  // textarea. Local input state still updates every keystroke (the textarea
+  // stays responsive); the persistence write is debounced to 500ms of typing
+  // idle, and flushed immediately on blur so nothing is lost if the panel
+  // closes mid-pause.
+  const preferredToneTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const preferredToneRef = useRef(preferredTone);
+  preferredToneRef.current = preferredTone;
+  const flushPreferredTone = useCallback(() => {
+    if (preferredToneTimer.current) {
+      clearTimeout(preferredToneTimer.current);
+      preferredToneTimer.current = null;
+    }
+    writePreferredTone(preferredToneRef.current);
+  }, []);
+  const onPreferredTone = useCallback((v: string) => {
+    setPreferredTone(v);
+    if (preferredToneTimer.current) clearTimeout(preferredToneTimer.current);
+    preferredToneTimer.current = setTimeout(() => {
+      preferredToneTimer.current = null;
+      writePreferredTone(v);
+    }, 500);
+  }, []);
+  useEffect(() => () => {
+    // Flush a pending write on unmount so a fast panel-close never drops it.
+    if (preferredToneTimer.current) {
+      clearTimeout(preferredToneTimer.current);
+      writePreferredTone(preferredToneRef.current);
+    }
+  }, []);
 
   useEffect(() => {
     const refreshPrefs = () => {
@@ -1387,6 +1418,7 @@ export function WritingStylePicker(): JSX.Element {
             <textarea
               value={preferredTone}
               onChange={(e) => onPreferredTone(e.currentTarget.value)}
+              onBlur={flushPreferredTone}
               placeholder="e.g. Direct, factual, compressed. Short sentences. Show traits through concrete behaviour, not adjective lists."
               rows={3}
               style={{ width: '100%', padding: '6px 8px', background: 'rgba(255,255,255,.05)', color: '#e6eef3', border: '1px solid rgba(255,255,255,.18)', borderRadius: 6, fontFamily: 'inherit', fontSize: 12, resize: 'vertical' }}

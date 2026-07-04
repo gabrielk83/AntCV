@@ -31,7 +31,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.187';
+  var VERSION = '1.51.160';
   if (window.__antcvDebugLogger === VERSION) return;
   window.__antcvDebugLogger = VERSION;
 
@@ -89,6 +89,48 @@
     return s;
   }
 
+  // SO-004 (docs/qa/OPEN_REGISTER.md row 41) — React prod error #185
+  // ("Maximum update depth exceeded") on editor field commits reproduces ONLY
+  // on the owner's real Android Chrome; a headless capture harness
+  // (pwa/test/diag-so004-capture.mjs) that wraps React's hook dispatch to
+  // find the runaway setState's caller stack could not reproduce it. Rather
+  // than monkey-patch React.useState/useReducer in PRODUCTION (every session,
+  // every component, a much bigger blast radius than this one bug — the exact
+  // category of speculative core-path change CLAUDE.md's incident history
+  // warns against), this widens the ALREADY-DEPLOYED, ALREADY-SAFE error
+  // capture below with the context a #185 crash specifically needs: which
+  // panel/editor was open and how many edits landed in the seconds right
+  // before it, using data this logger already collects (breadcrumbs) or can
+  // read cheaply (a DOM query, no React internals touched). Next real crash
+  // this fires on, `window.AntcvDebug.dump()` / the on-device viewer carries
+  // that context without needing DevTools attached.
+  var SO004_RE = /Maximum update depth exceeded|Minified React error #185/i;
+  function so004Context() {
+    var ctx = { so004: true };
+    try {
+      var active = document.activeElement;
+      ctx.activeElement = describe(active);
+    } catch (e) {}
+    try {
+      var panel = document.querySelector('.antcv-editor-side-panel, .antcv-mobile-bottom-panel, [data-antcv-app-panel]');
+      ctx.editorPanelOpen = !!panel;
+      if (panel) {
+        var backBtn = Array.prototype.slice.call(panel.querySelectorAll('button'))
+          .filter(function (b) { return /^←\s*Back/.test((b.textContent || '').trim()); })[0];
+        ctx.panelHasBackButton = !!backBtn;
+      }
+    } catch (e) {}
+    try {
+      var now = Date.now();
+      var recent = breadcrumbs.filter(function (c) {
+        return (c.type === 'input' || c.type === 'change') && (now - Date.parse(c.t)) < 3000;
+      });
+      ctx.editsInLast3s = recent.length;
+    } catch (e) {}
+    try { ctx.step = ls(1, 'step') || ''; ctx.doc = ls(1, 'doc') || ''; } catch (e) {}
+    return ctx;
+  }
+
   function record(kind, fields) {
     if (disabled()) return;
     var entry = {
@@ -116,11 +158,17 @@
         return;
       }
       var err = e && e.error;
-      record('error', {
-        message: (e && e.message) ? String(e.message) : ((err && err.message) || 'unknown error'),
+      var msg = (e && e.message) ? String(e.message) : ((err && err.message) || 'unknown error');
+      var fields = {
+        message: msg,
         source: (e && e.filename) ? (e.filename + ':' + e.lineno + ':' + e.colno) : '',
         stack: (err && err.stack) ? trunc(err.stack, 4000) : ''
-      });
+      };
+      if (SO004_RE.test(msg) || SO004_RE.test(fields.stack)) {
+        var ctx = so004Context();
+        for (var ck in ctx) if (Object.prototype.hasOwnProperty.call(ctx, ck)) fields[ck] = ctx[ck];
+      }
+      record('error', fields);
     } catch (_) {}
   }, true);
 
@@ -169,6 +217,11 @@
     if (en.message) lines.push(en.message);
     if (en.source) lines.push('at ' + en.source);
     if (en.stack) lines.push(en.stack);
+    if (en.so004) {
+      lines.push('SO-004 context: activeElement=' + en.activeElement + ' editorPanelOpen=' + en.editorPanelOpen
+        + ' panelHasBackButton=' + en.panelHasBackButton + ' editsInLast3s=' + en.editsInLast3s
+        + ' step=' + en.step + ' doc=' + en.doc);
+    }
     lines.push('url: ' + en.url + '   ver: ' + en.ver + '   viewport: ' + en.vw);
     if (en.ua) lines.push('ua: ' + en.ua);
     if (en.crumbs && en.crumbs.length) {

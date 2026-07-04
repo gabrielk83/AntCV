@@ -22,7 +22,7 @@
        there is no devtools/terminal. Open: add #antcv-debug to the URL, 4-tap the
        top-right corner, or window.AntcvDebug.open(). Disable: localStorage
        ['antcv:debug:disable']='1'. Does NOT touch window.fetch. -->
-  <script src="antcv-debug-logger.js?v=1.50.187"></script>
+  <script src="antcv-debug-logger.js?v=1.51.160"></script>
   <!-- JD-SCOPE-ISOLATION-001 (2026-07-03): per-application JD-state isolation. Loads
        SECOND (right after the error logger, before every JD-key reader incl. app.js
        and the QnA/identity-guard sidecars) so its narrow localStorage redirect is
@@ -345,7 +345,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.159';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.159';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.160';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -387,7 +387,7 @@
           app.src = 'app.js?v=1.51.155';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.159';
+            vo.src = 'antcv-version-override.js?v=1.51.160';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);

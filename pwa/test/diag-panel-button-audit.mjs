@@ -139,16 +139,82 @@ function enumerateExpr() {
   })()`;
 }
 
+// PASS-2 (register row 23 remainder): two classes of false negatives in the
+// first pass, both fixed with a bounded, single retry rather than a whole new
+// enumeration strategy:
+//
+//   "unclickable" (23 in the 2026-07-03 run) — every one of these failed with
+//   "Timeout … waiting for locator([data-audit-sig=…])", i.e. the locator
+//   never resolved at all. force:true bypasses actionability checks (covered/
+//   disabled/stable) but NOT locator resolution — so this isn't an overlay
+//   covering a real, present button, it's the stamped data-audit-sig attribute
+//   having been wiped by a React re-render that happened between the
+//   enumerate-and-stamp step and the click step (many of these labels — ▲ ▼ +
+//   − ON ↶ — are per-row steppers whose row list is exactly what re-renders
+//   when a PRIOR click in the same round changes something). Fix: retry once
+//   via a label-based locator that doesn't depend on the (possibly stale)
+//   stamped attribute surviving a re-render.
+//
+//   "not-visible-or-disabled" (65 in that run) — mostly per-row/per-section
+//   controls: CJLR aligners (10), "Fit this section tighter" (8), "Enrich
+//   this section" (7), per-item ✕ (7). Checked the CJLR cycler's own source
+//   (antcv-item-align.js:324-360, makeCycler()) — it is NOT a CSS :hover
+//   reveal; the button is injected with a fixed, always-visible 20-24px
+//   inline size. The likelier gate, per this project's own history
+//   (HEADER-ROW-DBLCLICK-001 / SECTION-ROW-DBLCLICK-001, docs/qa/
+//   OPEN_REGISTER.md old row 5): a dblclick on the row opens a detailed
+//   editor that these per-item controls live inside. A hover-then-recheck
+//   is attempted anyway (harmless — it only ever ADDS a chance to recover,
+//   falling through to the original verdict on no change) in case some
+//   OTHER not-visible family (a floating-FAB-style control, say) genuinely
+//   is hover-gated, but re-running this harness with the hover leg found
+//   ZERO recoveries (see the "PASS-2:" console line at the end of a run) —
+//   confirming CJLR-class controls need the dblclick path, not hover. Left
+//   as pass-3 follow-up rather than guessed here: it needs verifying
+//   whether a row dblclick reveals the SAME stamped element or opens a
+//   editor holding a NEW one (which would need re-enumeration, not just a
+//   recheck).
+function findRowAncestorExpr(sig) {
+  return `(() => {
+    const el = document.querySelector('[data-audit-sig="${sig}"]');
+    if (!el) return null;
+    const row = el.closest('[data-sid], tr, li, [data-antcv-row-path]');
+    return row ? true : false;
+  })()`;
+}
+
 const processed = new Set();
 const results = [];
 const MAX_CLICKS = 160;
 let clicks = 0;
+let unclickableRetried = 0;
+let notVisibleRecovered = 0;
 while (clicks < MAX_CLICKS) {
   const list = await page.evaluate(enumerateExpr());
-  const next = list.find((b) => !processed.has(b.sig));
+  let next = list.find((b) => !processed.has(b.sig));
   if (!next) break;
   processed.add(next.sig);
-  if (!next.visible || next.disabled) { results.push({ ...next, verdict: 'not-visible-or-disabled' }); continue; }
+  if (!next.visible || next.disabled) {
+    // PASS-2 leg 1: hover the nearest row/section ancestor — many controls
+    // only gain non-trivial size on :hover of their row.
+    const hasRowAncestor = await page.evaluate(findRowAncestorExpr(next.sig)).catch(() => false);
+    if (hasRowAncestor) {
+      try {
+        await page.locator(`[data-audit-sig="${next.sig}"]`).first()
+          .locator('xpath=ancestor-or-self::*[@data-sid or self::tr or self::li or @data-antcv-row-path][1]')
+          .hover({ timeout: 800 });
+        await page.waitForTimeout(150);
+        const recheck = await page.evaluate((sig) => {
+          const el = document.querySelector(`[data-audit-sig="${sig.replace(/"/g, '\\"')}"]`);
+          if (!el) return null;
+          const r = el.getBoundingClientRect();
+          return r.width > 4 && r.height > 4 && r.bottom > -innerHeight && r.top < innerHeight * 5;
+        }, next.sig).catch(() => null);
+        if (recheck) { next = { ...next, visible: true }; notVisibleRecovered++; }
+      } catch (_) { /* hover failed — fall through to the not-visible verdict below */ }
+    }
+    if (!next.visible) { results.push({ ...next, verdict: 'not-visible-or-disabled' }); continue; }
+  }
   if (DANGEROUS.test(next.label)) { results.push({ ...next, verdict: 'skipped-dangerous' }); continue; }
   clicks++;
   const before = await page.evaluate(() => ({ w: window.__auditWrites.length, m: window.__auditMutations }));
@@ -156,8 +222,18 @@ while (clicks < MAX_CLICKS) {
   try {
     await page.locator(`[data-audit-sig="${next.sig}"]`).first().click({ timeout: 1500, force: true });
   } catch (e) {
-    results.push({ ...next, verdict: 'unclickable', note: String(e && e.message).slice(0, 100) });
-    continue;
+    // PASS-2 leg 2: one retry via a label-based locator, in case the stamped
+    // attribute was wiped by a re-render between enumeration and this click.
+    let recovered = false;
+    try {
+      await page.getByText(next.label, { exact: false }).first().click({ timeout: 1200, force: true });
+      recovered = true;
+      unclickableRetried++;
+    } catch (_) { /* genuinely unclickable — fall through */ }
+    if (!recovered) {
+      results.push({ ...next, verdict: 'unclickable', note: String(e && e.message).slice(0, 100) });
+      continue;
+    }
   }
   await page.waitForTimeout(600);
   const after = await page.evaluate(() => ({ w: window.__auditWrites.length, m: window.__auditMutations }));
@@ -172,6 +248,7 @@ while (clicks < MAX_CLICKS) {
   await page.keyboard.press('Escape').catch(() => {});
   await page.waitForTimeout(120);
 }
+console.log(`PASS-2: ${notVisibleRecovered} not-visible button(s) recovered via row-hover; ${unclickableRetried} unclickable button(s) recovered via label-locator retry.`);
 
 // ── phase 2: preview-only suspects — keys written by controls that the export
 // payload builder never mentions (static cross-check against docx-client + the

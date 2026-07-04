@@ -14578,7 +14578,7 @@
                 e &&
                 "object" == typeof e &&
                 "string" == typeof e.l &&
-                (!e.v || !e.v.trim())
+                ("string" != typeof e.v || !e.v.trim())
               ) {
                 const n = e.l.indexOf(":");
                 if (n > 0 && n < e.l.length - 1)
@@ -25414,7 +25414,7 @@
                             e &&
                             "object" == typeof e &&
                             "string" == typeof e.l &&
-                            (!e.v || !e.v.trim())
+                            ("string" != typeof e.v || !e.v.trim())
                           ) {
                             const t = e.l.indexOf(":");
                             if (t > 0 && t < e.l.length - 1)

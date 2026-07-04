@@ -18,23 +18,35 @@ property or it reopens the bug phase 1 was built to avoid.**
 
 ## Current state (confirmed by reading the code, 2026-07-04)
 
-Three independent call sites read the 3 raw keys directly and each renders its own
-bespoke markup:
+**Four** independent call sites read the 3 raw keys directly and each renders its own
+bespoke markup — one more than originally scoped, confirmed by tracing the actual
+render tree and call graph (not guessed):
 
-1. `pwa/app.src.js` ~line 27552 — one live-preview render path (`<table>` markup,
-   inline styles, own uppercase/align/`•`-join logic).
-2. `pwa/app.src.js` ~line 44146 — a second preview render path (appears to be a
-   parallel code path, e.g. print or an alternate island — not yet confirmed which).
+1. `pwa/app.src.js` ~line 44147 — **the live interactive editor preview.** Confirmed:
+   sits directly inside the root component's render tree for the `"cl"` document
+   view (`ReactDOM.createRoot(...).render(React.createElement(...))` → the
+   `"cl" === Lt` branch → a Fragment containing this IIFE), with its own `onBlur`
+   handler writing back to `antcv:clSlogan` and dispatching `antcv:sections-updated`.
+   Its own code comment calls the other two sites "mirrors" of this one.
+2. `pwa/app.src.js` ~line 27552 — **the "Export as PDF" button's client-side
+   `window.print()` fallback path**, NOT dead code and NOT the editor. It lives
+   inside a function (`Na`) that builds a full HTML document string, called when the
+   server-side PDF export is unavailable. Must still be touched (it renders the
+   slogan today) but is a distinct, lower-traffic path from the live editor.
 3. `pwa/antcv-docx-client.js` ~line 806 (`buildPayload`) — reads the same keys and
    writes them into `payload.meta.slogan` / `meta.slogan_hidden` / etc. for the
-   worker.
+   worker (the real DOCX/PDF export path, separate from #2's print fallback).
+4. The worker (`workers/docx-worker/src/index.js`) renders the slogan from
+   `ctx.meta.slogan` — there is no `sections.cl` entry for it today at all.
 
-The worker (`workers/docx-worker/src/index.js`) renders the slogan from
-`ctx.meta.slogan` — there is no `sections.cl` entry for it today at all.
+(A third `app.src.js` function, `$c` at ~line 28901, also contains slogan-shaped
+code but is genuinely dead — defined, never called from anywhere. Out of scope;
+no need to touch it.)
 
-Each of these 3+1 sites independently re-implements: hidden-check, blank/placeholder
+Each of sites 1-3 independently re-implements: hidden-check, blank/placeholder
 fallback to the specialization subtitle, `|` → ` • ` replacement, alignment
-sanitization, uppercasing. That's the duplication row 22 flags.
+sanitization, uppercasing. That's the duplication row 22 flags — now confirmed
+across 3 render sites (not 2) plus the worker.
 
 ## Proposed target shape
 
@@ -67,12 +79,16 @@ there — it's regenerated from the keys on every read.
 
 ## Dedupe plan (the "3 render sites + worker" problem, named explicitly in the code)
 
-- **Preview (both app.src.js sites):** replace the bespoke `<table>`/markup blocks
-  with a call into the SAME generic rich_block section renderer already used for
-  every other CL section, feeding it the synthetic section object above, positioned
-  first in the main column. This is the actual dedupe: today each site has its own
-  copy of the uppercase/align/fallback logic; after this change there is exactly
-  ONE renderer (the existing rich_block path) and ONE derivation function.
+- **Editor preview (site 1, line ~44147) and print fallback (site 2, line ~27552):**
+  replace the bespoke markup in BOTH with a call into the SAME generic rich_block
+  section renderer already used for every other CL section, feeding it the
+  synthetic section object below, positioned first in the main column. This is the
+  actual dedupe: today each site has its own copy of the uppercase/align/fallback
+  logic; after this change there is exactly ONE renderer (the existing rich_block
+  path) and ONE derivation function. Site 1 (the live editor) is the
+  higher-priority/higher-risk edit; site 2 (print fallback) is lower-traffic but
+  must not be left rendering the OLD bespoke markup once site 1 changes, or the
+  print-fallback output would silently diverge from the editor/export.
 - **`buildPayload`:** stop writing `meta.slogan*` fields; splice the synthetic
   section into `payload.sections` instead (first main-column entry), same as any
   other rich_block CL section.

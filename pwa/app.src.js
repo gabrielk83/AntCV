@@ -25193,6 +25193,12 @@
                 company: W.company,
                 role: W.role,
                 subtitle: W.subtitle,
+                // SLOGAN-META-STAMP-001 (owner 2026-07-05: balanced gen kept the
+                // OLD slogan): the LLM's fresh cl_slogan was generated (prompt
+                // schema, sibling of subtitle) but never carried into meta, so
+                // antcv-cl-slogan-fresh.freshSmart() always read '' and the stale
+                // override survived — in EVERY speed mode. Carry it through.
+                cl_slogan: W.cl_slogan || "",
                 greeting: W.greeting,
                 opening: W.opening,
               }),

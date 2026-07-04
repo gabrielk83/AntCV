@@ -92,3 +92,20 @@ test('SIDEBAR-GROUP-MERGE-001: no-op when only one of the pair is present', () =
   assert.equal(JSON.parse(t).items.length, 1, 'nothing to merge into -> untouched');
   assert.match(t, /Imaging/);
 });
+
+test('SIDEBAR-GROUP-MERGE-001: "Project management" folds into "Project & delivery management"', () => {
+  const t = sidebarPayload([
+    { l: 'Project & delivery management', v: 'Hardware project leadership, change control (CCB)' },
+    { l: 'Project management', v: 'Stage-gate planning, KPIs & status reporting' },
+  ]);
+  const parsed = JSON.parse(t);
+  assert.equal(parsed.items.length, 1, 'the duplicate PM group is folded in');
+  assert.equal(parsed.items[0].l, 'Project & delivery management', 'the fuller label is kept');
+  assert.match(t, /Hardware project leadership, change control \(CCB\), Stage-gate planning, KPIs & status reporting/);
+});
+
+test('SIDEBAR-GROUP-MERGE-001: "Project management" alone (no & delivery target) is untouched', () => {
+  const t = sidebarPayload([{ l: 'Project management', v: 'Stage-gate planning, KPIs' }]);
+  assert.equal(JSON.parse(t).items.length, 1, 'no target -> left as-is');
+  assert.match(t, /Project management/);
+});

@@ -16,7 +16,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.76-gab-results-pin-no-number';
+  var VERSION = '1.51.150-stray-present-tense';
   if (window.__antcvGabResultsPin === VERSION) return;
   window.__antcvGabResultsPin = VERSION;
 
@@ -38,7 +38,7 @@
     // research). Distinct teaching-side fact from the kernel snapshot (SEM/Raman/confocal
     // training), NOT a restatement of the 7-semesters bullet. The merged "R&D and Teaching
     // Assistant" title is EXCLUDED (negative lookahead) so it keeps the RA benchmark result.
-    { reT: /^(?!.*(?:research|r\s*&\s*d)).*teaching\s+assist/i, reC: /tel[\s-]?aviv|\bTAU\b/i, text: 'Train graduate students on SEM, Raman, and confocal microscopy measurement protocols.' },
+    { reT: /^(?!.*(?:research|r\s*&\s*d)).*teaching\s+assist/i, reC: /tel[\s-]?aviv|\bTAU\b/i, text: 'Set 20 exams for ~150 students; train graduates on SEM, Raman, and confocal microscopy.', old: ['Train graduate students on SEM, Raman, and confocal microscopy measurement protocols.'] },
     // SIRIN-RESULT-TRIM-001 (owner 2026-07-02): the Sirin Result laminated outcomes[0], whose
     // leading clause ("Directed technical work across a 7-person EO … at the Sigma-Connectivity ODM
     // site in Sweden") is byte-identical to bullet[0] — "the content bullet is regenerated inside the
@@ -49,7 +49,7 @@
     // gen rule "a role line may describe the underlying work but must not carry the
     // patent number"). `old` lists superseded pin texts so upgrades apply once and
     // owner edits still stick.
-    { reT: /optics|electro-?optics/i, reC: /sirin/i, text: 'Co-invented the patented stray-light optical window, now in commercial devices.', old: ['Co-invented the stray-light optical window, now in commercial devices.', 'Co-invented the stray-light optical window (Patent No. 241997), now in commercial devices.', 'Co-invented the stray-light optical window (241997), now in commercial devices.'] },
+    { reT: /optics|electro-?optics/i, reC: /sirin/i, text: 'Co-invent a patented stray-light optical window, now in commercial devices.', old: ['Co-invented the patented stray-light optical window, now in commercial devices.', 'Co-invented a patented stray-light optical window, now in commercial devices.', 'Co-invented the stray-light optical window, now in commercial devices.', 'Co-invented the stray-light optical window (Patent No. 241997), now in commercial devices.', 'Co-invented the stray-light optical window (241997), now in commercial devices.'] },
   ];
   function entryFor(r) {
     if (!r) return null;

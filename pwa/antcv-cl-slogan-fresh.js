@@ -38,7 +38,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.145-personal-slogan';
+  var VERSION = '1.51.150-unsol-clear';
   if (window.__antcvClSloganFresh) return;
   window.__antcvClSloganFresh = VERSION;
 
@@ -126,8 +126,23 @@
       try { S = String(localStorage.getItem(K_TEXT) || '').trim(); } catch (_) {}
       var ctx = readCtx();
       var m = readMeta();
-      if (!isTargeted(m)) { if (!S && ctx) dropCtx(); return; }   // unsolicited: standing motto path, never touch
       var cur = appKeyOf(m);
+      if (!isTargeted(m)) {
+        // SLOGAN-UNSOL-CLEAR-001 (owner 2026-07-05: "a slogan has stuck over an
+        // unsolicited application"): an unsolicited CL carries NO JD-specific slogan.
+        // If the current slogan was adopted by slogan-fresh for a DIFFERENT (targeted)
+        // app, clear it so it does not leak onto the unsolicited CL. A slogan owned by
+        // THIS app (a manual unsolicited slogan) is kept untouched.
+        if (S && ctx && typeof ctx === 'object' && ctx.v === S && ctx.app !== cur) {
+          dropOverride();
+          dropCtx();
+          try { console.log('[slogan-fresh] cleared a targeted slogan that stuck over an unsolicited application (SLOGAN-UNSOL-CLEAR-001)'); } catch (_) {}
+          try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { source: 'slogan-fresh' } })); } catch (_) {}
+          return;
+        }
+        if (!S && ctx) dropCtx();
+        return;
+      }
       // ADOPT the gen's smart statement: no override -> the fresh cl_slogan
       // becomes the key (all four render sites read it), stamped to this app.
       var smart = freshSmart(m);

@@ -163,6 +163,31 @@ test('stale other-app override yields, then the smart statement is adopted (two 
   assert.equal(store.get('antcv:clSlogan'), 'TRACKING EVERY DECISION TO THE DATA');
 });
 
+// ── SLOGAN-UNSOL-CLEAR-001 (owner 2026-07-05: "a slogan has stuck over an
+// unsolicited application") ──────────────────────────────────────────────────
+const unsolMeta = JSON.stringify({ company: 'Unsolicited', role: 'Open Application', subtitle: 'Processes • Products • People' });
+
+test('a targeted slogan owned by ANOTHER app is cleared on an unsolicited application', () => {
+  const { api, store, events } = load({
+    'antcv:clSlogan': TM_SLOGAN,
+    'antcv:clSloganCtx': JSON.stringify({ v: TM_SLOGAN, app: 'Trackman A/S|Project Manager, Hardware' }),
+    meta: unsolMeta,
+  });
+  api._tick();
+  assert.equal(store.get('antcv:clSlogan'), undefined, 'the leaked targeted slogan is cleared');
+  assert.ok(events.includes('slogan-fresh'));
+});
+
+test('a manual slogan owned by THIS unsolicited app is kept', () => {
+  const { api, store } = load({
+    'antcv:clSlogan': 'A calm hand on hard decisions',
+    'antcv:clSloganCtx': JSON.stringify({ v: 'A calm hand on hard decisions', app: 'Unsolicited|Open Application' }),
+    meta: unsolMeta,
+  });
+  api._tick();
+  assert.equal(store.get('antcv:clSlogan'), 'A calm hand on hard decisions', 'a slogan owned by this unsolicited app survives');
+});
+
 test('both bundles carry the cl_slogan prompt field exactly once (mirror lock)', async () => {
   const appSrc = await readFile(new URL('../../app.src.js', import.meta.url), 'utf8');
   const appMin = await readFile(new URL('../../app.js', import.meta.url), 'utf8');

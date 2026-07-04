@@ -1237,6 +1237,11 @@ function _balanceParens(t) {
 // Owner-specified pairs only (like SIDEBAR_ABBR) — never a generic auto-merge.
 const SIDEBAR_GROUP_MERGE = [
   { from: /^\s*imaging\s*$/i, into: /optics.*photonic.*sens/i },
+  // Owner 2026-07-05: "Project management" and "Project & delivery management" are
+  // near-duplicates and should not be separated. Fold the shorter generic group
+  // into the fuller one. Anchored ^...$ so "Project management" never matches the
+  // "& delivery" target.
+  { from: /^\s*project management\s*$/i, into: /project\s*&\s*delivery\s*management/i },
 ];
 // Read the label / value fields of a sidebar item in either shape
 // (labeled_list {l,v} | rich_block {b,t}). Returns null for a group header / string.
@@ -2875,7 +2880,7 @@ export function applyOutcomesMode(docSections, doc) {
       // research). Distinct teaching-side fact from the kernel snapshot (SEM/Raman/confocal
       // training), NOT a restatement of the 7-semesters bullet. The merged "R&D and Teaching
       // Assistant" title is EXCLUDED (negative lookahead) so it keeps the RA benchmark result.
-      { reT: /^(?!.*(?:research|r\s*&\s*d)).*teaching\s+assist/i, reC: /tel[\s-]?aviv|\bTAU\b/i, text: 'Train graduate students on SEM, Raman, and confocal microscopy measurement protocols.' },
+      { reT: /^(?!.*(?:research|r\s*&\s*d)).*teaching\s+assist/i, reC: /tel[\s-]?aviv|\bTAU\b/i, text: 'Set 20 exams for ~150 students; train graduates on SEM, Raman, and confocal microscopy.', old: ['Train graduate students on SEM, Raman, and confocal microscopy measurement protocols.'] },
       // SIRIN-RESULT-TRIM-001 (owner 2026-07-02): the Sirin Result laminated outcomes[0], whose leading
       // clause repeats bullet[0] verbatim ("the content bullet is regenerated inside the result"). Pin the
       // DISTINCT co-invented-patent achievement. Company-gated to Sirin so it never hits the Meprolight EO
@@ -2885,7 +2890,7 @@ export function applyOutcomesMode(docSections, doc) {
       // gen rule "a role line may describe the underlying work but must not carry the
       // patent number"). `old` lists superseded pin texts so upgrades apply once and
       // owner edits still stick.
-      { reT: /optics|electro-?optics/i, reC: /sirin/i, text: 'Co-invented the patented stray-light optical window, now in commercial devices.', old: ['Co-invented the stray-light optical window, now in commercial devices.', 'Co-invented the stray-light optical window (Patent No. 241997), now in commercial devices.', 'Co-invented the stray-light optical window (241997), now in commercial devices.'] },
+      { reT: /optics|electro-?optics/i, reC: /sirin/i, text: 'Co-invent a patented stray-light optical window, now in commercial devices.', old: ['Co-invented the patented stray-light optical window, now in commercial devices.', 'Co-invented a patented stray-light optical window, now in commercial devices.', 'Co-invented the stray-light optical window, now in commercial devices.', 'Co-invented the stray-light optical window (Patent No. 241997), now in commercial devices.', 'Co-invented the stray-light optical window (241997), now in commercial devices.'] },
     ] : [];
     // RESULTS-PIN-OWNER-EDIT-001 (owner 2026-07-03): this tier sat ABOVE role.results,
     // so an owner-edited Results line was overridden right back to the pin in the

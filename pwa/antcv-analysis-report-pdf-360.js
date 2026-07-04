@@ -36,7 +36,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.51.54-upper-report';
+  var VERSION = '1.51.137-analysis-print-surface';
   if (window.__antcvAnalysisReportPdf360 === VERSION) return;
   window.__antcvAnalysisReportPdf360 = VERSION;
 
@@ -542,7 +542,13 @@
       var html = reportHtml(m, icon);
       var iframe = document.createElement('iframe');
       iframe.setAttribute('aria-hidden', 'true');
-      iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;';
+      // JD-ANALYSIS-PRINT-001 (register row 44): a visibility:hidden / 0x0 iframe
+      // has no layout box, so Chrome's iframe.contentWindow.print() falls back to
+      // printing the TOP-LEVEL page (the CV preview behind the modal) — the reported
+      // "Download analysis prints the CV" bug. Keep the iframe render-present but
+      // visually offscreen (the repo's known-good pattern, cf. antcv-orphan-export-
+      // preflight.js) so print() targets the analysis document itself. A4 at 96dpi.
+      iframe.style.cssText = 'position:fixed;left:-99999px;top:0;width:794px;height:1123px;border:0;opacity:0;pointer-events:none;';
       document.body.appendChild(iframe);
 
       var done = false;

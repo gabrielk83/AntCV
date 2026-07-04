@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.158';
+const CACHE = 'antcv-1.51.159';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',
@@ -43,6 +43,7 @@ const SHELL = [
   './antcv-empty-role-hide.js',
   './antcv-roles-active-floor.js',
   './antcv-role-merge-stored.js',
+  './antcv-sidebar-group-merge-stored.js',
   './antcv-lang-fabrication-guard.js',
   './antcv-outcomes-loss-guard.js',
   './antcv-gabriel-results-pin.js',

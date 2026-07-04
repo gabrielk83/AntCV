@@ -1017,7 +1017,7 @@
           var __nLimit = nLim;
           var grpTot = {};
           ordered.forEach(function (b) { var gk = __groupOf(b.sid, b.key); grpTot[gk] = (grpTot[gk] || 0) + Math.max(0, b.bottom - b.top); });
-          var used = 0, page = 1, out = [], curGroup = null, curGroupCount = 0, curGroupHeaderH = 0;
+          var used = 0, page = 1, out = [], curGroup = null, curGroupCount = 0, curGroupHeaderH = 0, curGroupIsRealHead = false;
           for (var i = 0; i < ordered.length; i++) {
             var b = ordered[i];
             var h = Math.max(0, b.bottom - b.top);
@@ -1031,6 +1031,16 @@
               curGroup = gk;
               curGroupCount = 0;
               curGroupHeaderH = h;
+              // MAIN-ROLE-ORPHAN-GUARD-MISFIRE-001: __groupOf falls back to ONE group per
+              // section (sid+'#0') when a section has no real .grp markers — e.g. every
+              // MAIN "experience" role (roles never carry grpHead), which collapses ALL
+              // roles into a single group starting at the FIRST role. Without this flag,
+              // ORPHAN-GROUP-HEADER-GUARD below mistook that first role for a stranded
+              // "header" whenever the NEXT role overflowed, and wrongly carried a role
+              // that fit fine (e.g. the current job) onto the next page along with one
+              // that didn't. Only treat curGroupCount===1 as an orphan-able header when
+              // this group actually started at a real grpHead row (a sidebar sub-heading).
+              curGroupIsRealHead = !!b.grpHead;
               var gt = grpTot[gk] || 0;
               // keep each GROUP whole: if it won't fit the current page, start it on the next —
               // BUT only when the page is already reasonably full. KEEP-WHOLE-WASTE-GUARD: without
@@ -1053,7 +1063,7 @@
               // the only thing placed for this group so far is its header, carry the
               // header forward with the row that just overflowed instead.
               var carry = 0;
-              if (curGroupCount === 1 && out.length && out[out.length - 1].page === page) {
+              if (curGroupIsRealHead && curGroupCount === 1 && out.length && out[out.length - 1].page === page) {
                 out[out.length - 1].page = page + 1;
                 carry = curGroupHeaderH;
               }
@@ -1123,6 +1133,31 @@
           (function () {
             var bySid = {};
             __uniBlocks.sidebar.forEach(function (b) { (bySid[b.sid] = bySid[b.sid] || []).push(b); });
+            // FORCE-LAST-GRP-FIT-GUARD-001 (owner 2026-07-04): the force below used to be
+            // UNCONDITIONAL — any "big" (tot > FORCE_LAST_GRP_FRAC of a page) multi-group
+            // section always lost its last group to the next page, even when that group
+            // plainly had room to stay (REGULATORY CONTEXT's "Environmental..." group
+            // pushed to its own page while the prior page still had space left — dead
+            // space, the same class of waste KEEP-WHOLE-WASTE-GUARD fixed for the normal
+            // per-group path). Only force the last group away when it genuinely would NOT
+            // fit on its current page — checked against the EXPORT-INFLATED height (the
+            // original reason this rule exists: the PDF renders the sidebar taller than
+            // the preview, so a group that "just fits" here can still overflow there).
+            // Height lookup for every measured sidebar block, keyed sid+'|'+key.
+            var __heightBySidKey = {};
+            __uniBlocks.sidebar.forEach(function (b) { __heightBySidKey[b.sid + '|' + b.key] = Math.max(0, b.bottom - b.top); });
+            // Sum of every block CURRENTLY placed on `page`, excluding `exSid`'s own
+            // blocks from `exFromKey` onward (the last group being evaluated for THAT
+            // sid) — i.e. "how full is this page from everything else."
+            function __fillOnPageExcluding(page, exSid, exFromKey) {
+              var sum = 0;
+              __sPaged.forEach(function (b) {
+                if (b.page !== page) return;
+                if (b.sid === exSid && (parseInt(b.key, 10) || 0) >= exFromKey) return;
+                sum += __heightBySidKey[b.sid + '|' + b.key] || 0;
+              });
+              return sum;
+            }
             Object.keys(bySid).forEach(function (sid) {
               try {
                 var paged = __sPaged.filter(function (b) { return b.sid === sid; });
@@ -1173,6 +1208,18 @@
                 }
                 if (tot <= __uniLimit * FORCE_LAST_GRP_FRAC) { delete __forceLastGrpStick[sid]; return; }   // only a BIG section
                 if (beforePage < 2) { delete __forceLastGrpStick[sid]; return; }   // not yet on page 2+ — don't force; clear any stale decision
+                // FORCE-LAST-GRP-FIT-GUARD-001: only force when the last group would NOT
+                // fit on beforePage at its export-inflated height. lastGroupTot is THIS
+                // group's own raw height; otherFill is everything else already on
+                // beforePage (any sidebar section, this group's own earlier content
+                // excluded so it isn't double counted).
+                var lastGroupTot = blocks.reduce(function (s, b) { return s + ((parseInt(b.key, 10) || 0) >= lastGrp ? Math.max(0, b.bottom - b.top) : 0); }, 0);
+                var otherFill = __fillOnPageExcluding(beforePage, sid, lastGrp);
+                // pages-2+ budget, same derivation __uniPaginate uses internally when nLim
+                // isn't passed explicitly (the sidebar call above never passes it).
+                var __nLimEquiv = __uniLimit / (SIDEBAR_PREVIEW_INFLATE > 1 ? SIDEBAR_PREVIEW_INFLATE : 1);
+                var wouldFit = (otherFill + lastGroupTot * SIDEBAR_PREVIEW_INFLATE) <= __nLimEquiv;
+                if (wouldFit) { delete __forceLastGrpStick[sid]; return; }   // genuinely fits — leave the coordinator's own placement alone
                 __forceLastGrpStick[sid] = { lastGrp: lastGrp, startPage: beforePage, blkCount: blkCount };   // CACHE the decision + start page + block count
                 paged.forEach(function (b) { var k = parseInt(b.key, 10) || 0; if (k >= lastGrp) b.page = beforePage + 1; });
               } catch (e) { /* per-section: never abort the whole pass */ }

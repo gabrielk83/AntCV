@@ -1296,6 +1296,10 @@ function _mergeSidebarGroups(items) {
   }
   return changed ? out : items;
 }
+// SIDEBAR-GROUP-MERGE-STORED-001: expose the EXACT export merge so a stored-sections
+// preview-parity sidecar can produce a byte-identical merge. Preview == export by
+// construction (mirrors ROLE-MERGE-STORED-001's window.AntcvMergeSameCompanyRoles).
+try { if (typeof window !== 'undefined') window.AntcvMergeSidebarGroups = _mergeSidebarGroups; } catch (_) {}
 // OLD-ROLE-BULLET-CAP-001 (spec rule 47): the END year of a role's date range
 // ("2006 - 2010", "2022 - 2026 (present)"), or null if none / still current.
 function _roleEndYear(years) {

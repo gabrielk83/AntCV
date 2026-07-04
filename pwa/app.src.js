@@ -24071,7 +24071,7 @@
             );
         }),
         (_wlhook = "undefined" != typeof window && (window.AntcvFusion = wl)),
-        (vl = async () => {
+        (window.__antcvGenTrigger = vl = async () => {  /* GEN-BACKGROUND-001 row 38a: expose the generate fn so antcv-gen-memo auto-resumes an interrupted run on foreground */
           var e, t, n, o;
           if (!Bt && !Ut && !Un.current && 0 === Yt.length)
             return void vo("Upload a job description or add signals first.");

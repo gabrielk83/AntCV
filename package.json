@@ -13,7 +13,9 @@
     "test:pwa": "node scripts/run-tests.mjs pwa",
     "test:workers": "node scripts/run-tests.mjs workers",
     "test:smoke": "node scripts/run-docx-diags.mjs",
-    "qa:browser": "node scripts/browser-qa.mjs"
+    "qa:browser": "node scripts/browser-qa.mjs",
+    "qa:perf": "node scripts/perf-qa.mjs",
+    "qa:bundle-size": "node scripts/bundle-size-report.mjs --check-budget"
   },
   "devDependencies": {
     "@types/react": "18.3.12",

@@ -1017,7 +1017,7 @@
           var __nLimit = nLim;
           var grpTot = {};
           ordered.forEach(function (b) { var gk = __groupOf(b.sid, b.key); grpTot[gk] = (grpTot[gk] || 0) + Math.max(0, b.bottom - b.top); });
-          var used = 0, page = 1, out = [], curGroup = null;
+          var used = 0, page = 1, out = [], curGroup = null, curGroupCount = 0, curGroupHeaderH = 0;
           for (var i = 0; i < ordered.length; i++) {
             var b = ordered[i];
             var h = Math.max(0, b.bottom - b.top);
@@ -1029,13 +1029,29 @@
             var gk = __groupOf(b.sid, b.key);
             if (gk !== curGroup) {
               curGroup = gk;
+              curGroupCount = 0;
+              curGroupHeaderH = h;
               var gt = grpTot[gk] || 0;
               // keep each GROUP whole: if it won't fit the current page, start it on the next.
               if (used > 0 && gt <= __nLimit * keepWholeFrac && (used + gt) > cap) { page++; used = 0; cap = __nLimit; }
             }
-            if (used > 0 && (used + h) > cap) { page++; used = 0; }
+            if (used > 0 && (used + h) > cap) {
+              // ORPHAN-GROUP-HEADER-GUARD: a group too big for KEEP-WHOLE (line above)
+              // still shouldn't strand its OWN header alone at the page bottom with
+              // none of its content — that reads as dead space under a heading, with
+              // the content restarting under a "(Cont.)" banner on the next page. If
+              // the only thing placed for this group so far is its header, carry the
+              // header forward with the row that just overflowed instead.
+              var carry = 0;
+              if (curGroupCount === 1 && out.length && out[out.length - 1].page === page) {
+                out[out.length - 1].page = page + 1;
+                carry = curGroupHeaderH;
+              }
+              page++; used = carry;
+            }
             used += h;
             out.push({ sid: b.sid, kind: b.kind, key: b.key, page: page });
+            curGroupCount++;
           }
           return out;
         }

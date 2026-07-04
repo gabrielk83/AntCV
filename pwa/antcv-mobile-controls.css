@@ -1135,6 +1135,31 @@ body.antcv-editor-ready {
   }
 }
 
+/* NATIVE-PRINT-CLIP-001 (owner 2026-07-04, live report): the v113 rule above
+   pins html/body/#root to height:100dvh + overflow:hidden on mobile so the
+   in-app preview starts at the paper instead of a huge scrollable grey
+   field. That's correct for on-screen viewing, but the browser's own native
+   "Print" / "Save as PDF" (menu-driven, NOT the in-app print button — that
+   path goes through antcv-print-iframe-preview.js's iframe clone and never
+   hits this CSS) prints the live DOM as laid out. overflow:hidden with a
+   capped height clips everything past one viewport's worth of content out
+   of the print render, so a multi-page CV printed this way on a phone came
+   out "1 of 1" pages even though on-screen scrolling showed page 2 and
+   beyond. Undo the clip for print specifically; none of the other v113/v115
+   sizing (which only affects on-screen layout) needs to change. */
+@media print {
+  html, body, #root {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  body.antcv-editor-ready .antcv-preview-scroll {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+}
+
 /* v115: align preview label/export controls to paper and reduce top/bottom grey field. */
 @media (max-width: 900px) {
   body.antcv-editor-ready .antcv-preview-scroll {

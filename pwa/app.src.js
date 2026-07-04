@@ -17196,16 +17196,33 @@
                 localStorage.setItem("antcv:lastJdText", __jT);
               }
             } catch (_) {}
-            oo.update(__activeId, {
+            // META-DOWNGRADE-GUARD-003 (row 31 leg b, 1.51.155): never AUTO-persist a
+            // DOWNGRADED meta (empty/"unsolicited" company) into the active row when the
+            // row context is UNKNOWN (__expectedCompany === null — no activeAppCompany
+            // committed yet: cold restore / mid-load). That is the exact path that POISONS
+            // a targeted server row (a transient unsolicited io overwrites its real company
+            // + meta; on the next selection the poisoned row re-poisons React state —
+            // register row 31: "auto-save must not persist a DOWNGRADED meta into a targeted
+            // row"). When context is KNOWN, the drift branch above already handles it, so we
+            // do not interfere. Sections still sync; only the meta/jd_company fields are
+            // withheld. This can only REMOVE fields from the write — never add a bad one.
+            const __dgIsDowngrade = (__ioCo === "" || __ioCo === "unsolicited");
+            const __dgCtxUnknown = (__expectedCompany === null);
+            const __dgPayload = {
               cv_sections: (ro && ro.cv) || [],
               cl_sections: (ro && ro.cl) || [],
-              jd_company: (io && io.company) || "",
-              jd_role: (io && io.role) || "",
-              subtitle: (io && io.subtitle) || "",
-              meta: io && "object" == typeof io ? io : {},
               rationale: yo,
               ...__jdSyncField,
-            })
+            };
+            if (__dgIsDowngrade && __dgCtxUnknown) {
+              try { console.log("[apps] META-DOWNGRADE-GUARD-003: withheld a downgraded meta (company '" + __ioCo + "') from active row", __activeId, "— context unknown, sections only"); } catch (e) {}
+            } else {
+              __dgPayload.jd_company = (io && io.company) || "";
+              __dgPayload.jd_role = (io && io.role) || "";
+              __dgPayload.subtitle = (io && io.subtitle) || "";
+              __dgPayload.meta = io && "object" == typeof io ? io : {};
+            }
+            oo.update(__activeId, __dgPayload)
               .then(() => {
                 try {
                   console.log(

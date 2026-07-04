@@ -691,7 +691,8 @@ async function handleRequest(request, env = {}) {
         apiKey:         body.apiKey,
         modelId:        body.modelId,
         provider_shape: body.provider_shape || 'openai_compat',
-      });
+        forceRefresh:   body.forceRefresh === true,
+      }, env);
       const status = result.ok ? 200 : 400;
       return new Response(JSON.stringify({ ...result, cv_proxy_version: VERSION }, null, 2), {
         status, headers: { 'Content-Type': 'application/json', ...CORS_AUDIT },

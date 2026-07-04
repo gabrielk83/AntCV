@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.156';
+const CACHE = 'antcv-1.51.157';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',
@@ -7,6 +7,7 @@ const SHELL = [
   './antcv-data-importer.js',
   './antcv-packages-registry.css',
   './antcv-react-islands.js',
+  './antcv-react-islands-panels.js',
   './antcv-react-dom-guard.js',
   './antcv-personal-info-anti-thinning-353.js',
   './antcv-section-align.js',
@@ -81,10 +82,20 @@ const SHELL = [
   'https://unpkg.com/@babel/standalone/babel.min.js',
   'https://unpkg.com/mammoth/mammoth.browser.min.js',
 ];
-// HTML / source files use network-first so updates aren't stuck behind cache.
+// HTML / navigations use network-first so updates aren't stuck behind cache.
 // v1.38: relay-config.json is also network-first AND skip-cache, so admin
 // URL changes propagate without forcing a service-worker bump.
-const NETWORK_FIRST = /\.(html|js|css|jsx)(\?|$)|\/$|relay-config\.json/;
+const NETWORK_FIRST = /\.html(\?|$)|\/$|relay-config\.json/;
+// PERF-SW-CACHE-001: .js/.css/.jsx are network-first ONLY when requested
+// WITHOUT a `?v=` cache-bust query. index.html's script tags already carry
+// `?v=` on (almost) every sidecar (CLAUDE.md cache-bust protocol requires a
+// bump on every hotfix), so "foo.js?v=1.51.157" is a DIFFERENT cache key
+// from any prior version — cache-first can never serve stale content for
+// it, and a warm reload skips the network round-trip entirely. A .js/.css
+// request WITHOUT a version query (should not happen for anything wired
+// through the protocol, but a safe fallback for anything that slips through)
+// keeps the old network-first behaviour.
+const CODE_ASSET = /\.(js|css|jsx)$/;
 
 self.addEventListener('install', e => {
   // Resilient precache: add each asset INDEPENDENTLY so a single missing
@@ -127,7 +138,9 @@ self.addEventListener('fetch', e => {
   // cookies/Authorization) and the SW never stores the result.
   if (url.hostname.endsWith('.workers.dev')) return;
 
-  const isNavOrSource = e.request.mode === 'navigate' || NETWORK_FIRST.test(url.pathname);
+  const isVersionedCodeAsset = CODE_ASSET.test(url.pathname) && url.searchParams.has('v');
+  const isNavOrSource = !isVersionedCodeAsset &&
+    (e.request.mode === 'navigate' || NETWORK_FIRST.test(url.pathname) || CODE_ASSET.test(url.pathname));
 
   if (isNavOrSource) {
     // Network-first: try fresh, fall back to cache only if offline.

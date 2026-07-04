@@ -17,7 +17,7 @@ export default defineConfig({
     cssCodeSplit: false,
     sourcemap: true,
     lib: {
-      entry: resolve(__dirname, 'src/main.tsx'),
+      entry: resolve(__dirname, 'src/main-core.tsx'),
       name: 'AntcvReactIslands',
       formats: ['iife'],
       fileName: () => 'antcv-react-islands.js',

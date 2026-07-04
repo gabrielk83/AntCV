@@ -24409,6 +24409,10 @@ async function generateDocx(payload) {
     meta: payload.meta || {},
     doc: payload.doc,
     headerAlign,
+    // HEADLINE-ALIGN-EXPORT-PARITY (row 33): loc-keyed section-headline alignment
+    // { topbar, sidebar, main } forwarded from the PWA preview. headingParagraph
+    // reads it by the section's loc so PDF/DOCX headlines match the preview.
+    headlineAlign: payload.headline_align || {},
     headerRules: payload.header_rules || {},
     sections: Array.isArray(payload.sections) ? payload.sections.filter((s) => s.on !== false) : [],
     // v1.14.8: per-item page assignments from the PWA's
@@ -26418,12 +26422,12 @@ function renderSection(s, ctx, isSidebar) {
   // heading-repetition wrapper) so titled sections aren't triple-nested and
   // shrunk to ~80% by Word/Google Docs. CV keeps the wrapper for its columns.
   if (ctx && ctx.doc === "cl") {
-    return [...pageBreakPara, headingParagraph(s.title, ctx, false, s.ruleOff), ...body];
+    return [...pageBreakPara, headingParagraph(s.title, ctx, false, s.ruleOff, s), ...body];
   }
   const headingCell = new TableCell({
     borders: noBorders(),
     margins: { top: 0, bottom: 0, left: 0, right: 0 },
-    children: [headingParagraph(s.title, ctx, isSidebar, s.ruleOff)]
+    children: [headingParagraph(s.title, ctx, isSidebar, s.ruleOff, s)]
   });
   const bodyCell = new TableCell({
     borders: noBorders(),
@@ -26491,7 +26495,7 @@ function renderSection(s, ctx, isSidebar) {
   ];
 }
 __name(renderSection, "renderSection");
-function headingParagraph(title2, ctx, isSidebar, noRule) {
+function headingParagraph(title2, ctx, isSidebar, noRule, sec) {
   const { style, fs } = ctx;
   if (typeof ctx.contCounter !== "number") ctx.contCounter = 0;
   const contId = ctx.contCounter++;
@@ -26533,7 +26537,14 @@ function headingParagraph(title2, ctx, isSidebar, noRule) {
     keepLines: true,
     // Sidebar headings are centred over the narrow sidebar column. Main
     // column headings stay left-aligned so they line up with body prose.
-    alignment: isSidebar ? AlignmentType.CENTER : void 0,
+    // HEADLINE-ALIGN-EXPORT-PARITY (row 33): honour a user-set headline alignment
+    // forwarded as ctx.headlineAlign (keyed by loc); else the legacy default.
+    alignment: (() => {
+      const ha = ctx && ctx.headlineAlign;
+      const v = ha && ha[isSidebar ? "sidebar" : "main"];
+      if (v === "left" || v === "center" || v === "right" || v === "justify") return alignType(v);
+      return isSidebar ? AlignmentType.CENTER : void 0;
+    })(),
     shading: isSidebar ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" } : void 0,
     border: noRule ? void 0 : { bottom: { color: isSidebar ? style.sidebarHeadColor : style.mainHeadColor, space: isSidebar ? 2 : 4, style: BorderStyle.SINGLE, size: 8 } },
     children: [

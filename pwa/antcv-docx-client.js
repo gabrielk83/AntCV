@@ -587,8 +587,18 @@ export function buildPayload({
   // Default alignment matches the PWA preview (centered for the candidate
   // header band). Anything the user changed in HeaderInlineEditor flows
   // through here and is honoured by the worker.
+  // NAME-ALIGN-EXPORT-PARITY (row 33): the Name-line alignment set in the preview
+  // lives in localStorage 'antcv:nameLineAlign' (written by antcv-name-align-fix.js),
+  // which the HeaderInlineEditor prop does NOT carry. Read it as a fallback so a
+  // centred/right Name exports aligned instead of defaulting center.
+  const nameLineAlign = (() => {
+    try {
+      const v = String(localStorage.getItem('antcv:nameLineAlign') || '').toLowerCase();
+      return (v === 'left' || v === 'center' || v === 'right' || v === 'justify') ? v : '';
+    } catch (_) { return ''; }
+  })();
   const align = {
-    name:           (headerItemAlign && headerItemAlign.name)           || 'center',
+    name:           (headerItemAlign && headerItemAlign.name)           || nameLineAlign || 'center',
     specialisation: (headerItemAlign && headerItemAlign.specialisation) || 'center',
     contact:        (headerItemAlign && headerItemAlign.contact)        || 'center',
   };
@@ -812,6 +822,21 @@ export function buildPayload({
       })()),
     },
     header_align: align,
+    // HEADLINE-ALIGN-EXPORT-PARITY (row 33): section-headline alignment persists in
+    // localStorage 'antcv.sectionHeadlineAlignment.v1' as a loc-keyed map
+    // { topbar, sidebar, main } (written by antcv-section-panel-211.js), preview-only.
+    // Forward it so the worker's headingParagraph aligns PDF/DOCX headlines to match
+    // the preview. Older workers ignore the extra field (inert until deployed).
+    headline_align: (() => {
+      try {
+        const raw = JSON.parse(localStorage.getItem('antcv.sectionHeadlineAlignment.v1') || 'null');
+        if (!raw || typeof raw !== 'object') return {};
+        const ok = (v) => v === 'left' || v === 'center' || v === 'right' || v === 'justify';
+        const out = {};
+        ['topbar', 'sidebar', 'main'].forEach((k) => { if (ok(raw[k])) out[k] = raw[k]; });
+        return out;
+      } catch (_) { return {}; }
+    })(),
     // HEADER-ITEM-RULE-001 (owner 2026-07-03): per-field header rule lines with
     // hide/show + thickness (pt) + color. DEFAULT (absent key) = the current
     // copenhagen-modern look: rule below Specialization/Application + rule below

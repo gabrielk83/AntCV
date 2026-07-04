@@ -24,13 +24,13 @@ globalThis.window = globalThis.window || {};
 const { buildPayload } = await import('../../antcv-docx-client.js');
 
 let _seq = 0;
-function sidebarPayload(items) {
+function sidebarPayload(items, type = 'labeled_list') {
   const id = 'standards' + (++_seq); // unique per call — buildPayload memoises by section id
   const p = buildPayload({
     sections: {
       cv: [
         { id: 'experience', type: 'experience', title: 'PROFESSIONAL EXPERIENCE', loc: 'main', on: true, roles: [{ id: 'r1', title: 'X', company: 'Y', years: '2022 - 2026', on: true, bullets: ['a b c d e f g h'] }] },
-        { id, type: 'labeled_list', title: 'STANDARDS', loc: 'sidebar', on: true, items },
+        { id, type, title: 'STANDARDS', loc: 'sidebar', on: true, items },
       ],
       cl: [],
     },
@@ -65,4 +65,30 @@ test('a balanced value is left unchanged', () => {
   const t = sidebarPayload([{ l: 'Product & systems', v: 'change control (CCB), planning' }]);
   assert.match(t, /change control \(CCB\), planning/);
   assert.doesNotMatch(t, /\(CCB\), planning\)/, 'no spurious extra ")" appended to already-balanced text');
+});
+
+test('SIDEBAR-GROUP-MERGE-001: Imaging folds into Optics, photonics & sensing ({l,v})', () => {
+  const t = sidebarPayload([
+    { l: 'Optics, photonics & sensing', v: 'Electro-optics, LiDAR' },
+    { l: 'Imaging', v: 'Camera architecture, image sensors' },
+  ]);
+  assert.match(t, /Electro-optics, LiDAR, Camera architecture, image sensors/, 'values merged onto the Optics line');
+  const parsed = JSON.parse(t);
+  assert.equal(parsed.items.length, 1, 'the Imaging item is dropped after merge');
+  assert.equal(parsed.items[0].l, 'Optics, photonics & sensing');
+});
+
+test('SIDEBAR-GROUP-MERGE-001: same in rich_block {b,t} shape', () => {
+  const t = sidebarPayload([
+    { b: 'Optics, photonics & sensing', t: 'Electro-optics, LiDAR' },
+    { b: 'Imaging', t: 'Camera architecture, image sensors' },
+  ], 'rich_block');
+  assert.match(t, /Electro-optics, LiDAR, Camera architecture, image sensors/);
+  assert.equal(JSON.parse(t).items.length, 1);
+});
+
+test('SIDEBAR-GROUP-MERGE-001: no-op when only one of the pair is present', () => {
+  const t = sidebarPayload([{ l: 'Imaging', v: 'Camera architecture, image sensors' }]);
+  assert.equal(JSON.parse(t).items.length, 1, 'nothing to merge into -> untouched');
+  assert.match(t, /Imaging/);
 });

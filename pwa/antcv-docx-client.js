@@ -1229,6 +1229,43 @@ function _balanceParens(t) {
   if (opens <= closes) return t;
   return t.replace(/[\s,;]+$/, '') + ')'.repeat(opens - closes);
 }
+// SIDEBAR-GROUP-MERGE-001 (owner 2026-07-05: "if you have so few items in groups
+// that can be merged (they have commonality) please merge them" — e.g.
+// "Optics, photonics & sensing: Electro-optics, LiDAR" + "Imaging: Camera
+// architecture, image sensors" -> one line). Each entry folds a SOURCE category's
+// values into a TARGET category's values (same section), then drops the source.
+// Owner-specified pairs only (like SIDEBAR_ABBR) — never a generic auto-merge.
+const SIDEBAR_GROUP_MERGE = [
+  { from: /^\s*imaging\s*$/i, into: /optics.*photonic.*sens/i },
+];
+// Read the label / value fields of a sidebar item in either shape
+// (labeled_list {l,v} | rich_block {b,t}). Returns null for a group header / string.
+function _grpFields(it) {
+  if (!it || typeof it !== 'object' || it.grp) return null;
+  if (typeof it.l === 'string' || typeof it.v === 'string') return { lf: 'l', vf: 'v' };
+  if (typeof it.b === 'string' || typeof it.t === 'string') return { lf: 'b', vf: 't' };
+  return null;
+}
+// Merge owner-specified category pairs within a sidebar item array. Returns a new
+// items array (or the same reference when nothing merged). Shape-tolerant no-op.
+function _mergeSidebarGroups(items) {
+  if (!Array.isArray(items) || items.length < 2) return items;
+  let changed = false;
+  let out = items.slice();
+  for (const rule of SIDEBAR_GROUP_MERGE) {
+    const srcIdx = out.findIndex((it) => { const f = _grpFields(it); return f && rule.from.test(String(it[f.lf] || '').trim()); });
+    const dstIdx = out.findIndex((it) => { const f = _grpFields(it); return f && rule.into.test(String(it[f.lf] || '').trim()); });
+    if (srcIdx < 0 || dstIdx < 0 || srcIdx === dstIdx) continue;
+    const sf = _grpFields(out[srcIdx]); const df = _grpFields(out[dstIdx]);
+    const srcVal = String(out[srcIdx][sf.vf] || '').trim().replace(/[.,;\s]+$/, '');
+    const dstVal = String(out[dstIdx][df.vf] || '').trim().replace(/[.,;\s]+$/, '');
+    if (!srcVal) { out = out.filter((_, i) => i !== srcIdx); changed = true; continue; }
+    const merged = dstVal ? dstVal + ', ' + srcVal : srcVal;
+    out = out.map((it, i) => (i === dstIdx ? { ...it, [df.vf]: merged } : it)).filter((_, i) => i !== srcIdx);
+    changed = true;
+  }
+  return changed ? out : items;
+}
 // OLD-ROLE-BULLET-CAP-001 (spec rule 47): the END year of a role's date range
 // ("2006 - 2010", "2022 - 2026 (present)"), or null if none / still current.
 function _roleEndYear(years) {
@@ -1469,6 +1506,10 @@ function sanitizeForExport(docSections, doc) {
       // and labeled l/v values BEFORE the per-id passes below (several of them return
       // early). Reassigns s and falls through.
       if (s.loc === 'sidebar' && Array.isArray(s.items)) {
+        // SIDEBAR-GROUP-MERGE-001: fold owner-specified related category-groups
+        // (e.g. Imaging -> Optics, photonics & sensing) before the abbr pass.
+        const _mg = _mergeSidebarGroups(s.items);
+        if (_mg !== s.items) s = { ...s, items: _mg };
         const _abbr = (t) => {
           if (typeof t !== 'string') return t;
           let out = t;

@@ -156,3 +156,26 @@ test('both restore paths carry the foreign-device guard in BOTH bundles', () => 
   assert.equal(count(app, 'cn(__antcvFd2?"":e.jd_text)'), 1, 'app.js occ-2 Vt guarded');
   assert.equal(count(app, '"antcv:lastJdText",o||__antcvFd2||r||a?'), 1, 'app.js occ-2 mirror guarded');
 });
+
+// PTR-STALE-GUARD-001 (register row 39a residual, owner 2026-07-04): the
+// __foreignDevice guard above only protects against ANOTHER device's pointer.
+// A SAME-device active_application pointer can still be stale (race / lagging
+// PUT / second same-device tab) and point at a different real application —
+// the content-based drift guards only catch real -> empty/unsolicited. Both
+// meta/sections adoption sites must call the new pure guard, in BOTH bundles.
+test('both meta/sections adoption sites call AntcvPointerStaleGuard in BOTH bundles', () => {
+  const src = readFileSync(new URL('../../app.src.js', import.meta.url), 'utf8');
+  const app = readFileSync(new URL('../../app.js', import.meta.url), 'utf8');
+  const count = (h, n) => h.split(n).length - 1;
+  // one call site per adoption block (Read-from-Cloud __draftDrift, cold-restore __draftDrift2/__ddB)
+  assert.equal(count(src, 'window.AntcvPointerStaleGuard && window.AntcvPointerStaleGuard.isStalePointer'), 2, 'src: two call sites');
+  assert.equal(count(app, 'window.AntcvPointerStaleGuard&&window.AntcvPointerStaleGuard.isStalePointer'), 2, 'app.js: two call sites');
+  assert.equal(count(src, 'PTR-STALE-GUARD-001'), 4, 'src: comment + log marker at each of the 2 sites');
+  assert.equal(count(src, '__draftDrift = __staleSamePtr ||'), 1, 'src: read-from-cloud drift OR-ed with staleness');
+  assert.equal(count(src, '__staleSamePtr2 ||'), 1, 'src: cold-restore drift OR-ed with staleness');
+  // pointerDeviceId/pointerUpdatedAt must be threaded from the row at both sites
+  assert.equal(count(src, 'pointerDeviceId: e._pointer_device_id'), 2, 'src: both sites pass the pointer device id');
+  assert.equal(count(src, 'pointerUpdatedAt: e._pointer_updated_at'), 2, 'src: both sites pass the pointer timestamp');
+  assert.equal(count(app, 'pointerDeviceId:e._pointer_device_id'), 2, 'app.js: both sites pass the pointer device id');
+  assert.equal(count(app, 'pointerUpdatedAt:e._pointer_updated_at'), 2, 'app.js: both sites pass the pointer timestamp');
+});

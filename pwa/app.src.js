@@ -16013,11 +16013,31 @@
                         const __mN2 = (s) => String(s || "").trim().toLowerCase();
                         const __curCo2 = __mN2(io && io.company);
                         const __rowCo2 = __mN2(e.jd_company);
+                        // PTR-STALE-GUARD-001 (register row 39a residual, owner 2026-07-04):
+                        // a SAME-device active_application pointer can still be STALE (a
+                        // race / lagging PUT / second same-device tab) and point at a
+                        // DIFFERENT real application than the one just loaded locally — the
+                        // drift check below only catches real -> empty/unsolicited, not
+                        // real -> a different real company. Reuses the 277-SEQUENCE-GUARD-001
+                        // timestamp pattern; backward-safe (inert without both timestamps).
+                        const __staleSamePtr2 = (() => {
+                          try {
+                            return !!(window.AntcvPointerStaleGuard && window.AntcvPointerStaleGuard.isStalePointer({
+                              localCompany: io && io.company,
+                              localRole: io && io.role,
+                              rowCompany: e.jd_company,
+                              rowRole: e.jd_role,
+                              pointerDeviceId: e._pointer_device_id,
+                              pointerUpdatedAt: e._pointer_updated_at,
+                            }));
+                          } catch (_) { return false; }
+                        })();
                         const __draftDrift2 =
-                          __curCo2 && "unsolicited" !== __curCo2 &&
-                          ("" === __rowCo2 || "unsolicited" === __rowCo2);
+                          __staleSamePtr2 ||
+                          (__curCo2 && "unsolicited" !== __curCo2 &&
+                          ("" === __rowCo2 || "unsolicited" === __rowCo2));
                         if (__draftDrift2) {
-                          try { console.log("[cloud-restore] META-DRIFT-GUARD-002: keeping tailored draft (" + __curCo2 + ") over the unsolicited row"); } catch (e) {}
+                          try { console.log(__staleSamePtr2 ? "[cloud-restore] PTR-STALE-GUARD-001: keeping local draft (" + __curCo2 + ") over a stale same-device pointer (" + __rowCo2 + ")" : "[cloud-restore] META-DRIFT-GUARD-002: keeping tailored draft (" + __curCo2 + ") over the unsolicited row"); } catch (e) {}
                         } else {
                         if (e.jd_company || e.jd_role)
                           try {
@@ -20912,9 +20932,25 @@
                 var __mN = function (s) { return String(s || "").trim().toLowerCase(); };
                 var __curCo = __mN(io && io.company);
                 var __rowCo = __mN(e.jd_company);
-                var __draftDrift = __curCo && "unsolicited" !== __curCo && ("" === __rowCo || "unsolicited" === __rowCo);
+                // PTR-STALE-GUARD-001 (register row 39a residual, owner 2026-07-04): same
+                // guard as the cold-start restore (occ-2) — a SAME-device pointer can be
+                // stale and point at a different real application; the drift check below
+                // only catches real -> empty/unsolicited.
+                var __staleSamePtr = (function () {
+                  try {
+                    return !!(window.AntcvPointerStaleGuard && window.AntcvPointerStaleGuard.isStalePointer({
+                      localCompany: io && io.company,
+                      localRole: io && io.role,
+                      rowCompany: e.jd_company,
+                      rowRole: e.jd_role,
+                      pointerDeviceId: e._pointer_device_id,
+                      pointerUpdatedAt: e._pointer_updated_at,
+                    }));
+                  } catch (_) { return false; }
+                })();
+                var __draftDrift = __staleSamePtr || (__curCo && "unsolicited" !== __curCo && ("" === __rowCo || "unsolicited" === __rowCo));
                 if (__draftDrift) {
-                  try { console.log("[Read from Cloud] META-DRIFT-GUARD: keeping tailored draft (" + __curCo + ") over the unsolicited row"); } catch (e) {}
+                  try { console.log(__staleSamePtr ? "[Read from Cloud] PTR-STALE-GUARD-001: keeping local draft (" + __curCo + ") over a stale same-device pointer (" + __rowCo + ")" : "[Read from Cloud] META-DRIFT-GUARD: keeping tailored draft (" + __curCo + ") over the unsolicited row"); } catch (e) {}
                 } else {
                   if (e.jd_company || e.jd_role)
                     try {

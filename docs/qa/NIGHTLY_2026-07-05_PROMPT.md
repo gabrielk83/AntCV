@@ -1,10 +1,11 @@
 # AntCV nightly — 2026-07-05 (structured full-coverage plan; local antcv-nightly + cloud Routine; MULTI-MODEL)
 
 Autonomous maintenance on `C:\Users\karpg\GitHub\AntCV` (cloud Routine: the repo clone).
-Owner: Gabriel. Style: direct, compressed, no filler. Shipped at dispatch: PWA **1.51.131** ·
-docx-worker **wk 1.14.132** · access-relay **1.3.3/auth-26** · proxy **3.7.1** · suite **937/937**.
+Owner: Gabriel. Style: direct, compressed, no filler. Shipped as of 2026-07-04: PWA **1.51.135** ·
+docx-worker **wk 1.14.132** · access-relay **1.3.3/auth-26** · proxy **3.7.1** · suite **968/968**.
 Owner directive 2026-07-04: **"treat mobile and tab isolation as high priority … make sure the plan
 for nightly is structured and full coverage is planned."** This prompt IS that structure.
+Since dispatch: A2's client leg (same-device stale pointer) SHIPPED — see A2 below.
 
 ## HOW TO WORK THIS (read once)
 
@@ -67,11 +68,27 @@ mirror lock; suite 956/956 + boot-smoke.
   `antcv-gen-job-client.js` /job engine — big, owner-gated, spec first. Do NOT touch the gen core further
   without a fresh-gen A/B.
 
-**A2 — TAB/DEVICE ISOLATION residuals (register row 39a).** The setItem-writer probe (boot-storm
-pattern) on `meta`/`sections`/`antcv:app:*` during ONE row selection + ONE gen in a real tab; find
-the writer that restored the stale Trackman snapshot (row 29 leg C) and guard it at source. Also
-row 19 (two-real-device test — owner-gated) and the same-device stale cloud active_application
-pointer (the foreign-device guard doesn't protect it).
+**A2 — TAB/DEVICE ISOLATION residuals (register row 39a). 2 of 3 legs SHIPPED — VERIFY-FIRST, do
+NOT re-implement.** Leg 1 (server, AUTOSAVE-NO-DOWNGRADE-001, access-relay, DEPLOYED): PUT
+/api/applications/:id blocks a meta downgrade (real company → empty/Unsolicited) and a blank
+cv/cl overwrite over populated content; explicit null wipes and genuine upgrades still pass.
+Leg 2 (client, PTR-STALE-GUARD-001, PWA 1.51.135): the `__foreignDevice` guard only ever protected
+against ANOTHER device's active_application pointer; it never protected a SAME-device pointer that
+is simply STALE (a race / lagging PUT / second same-device tab) and points at a different real
+application — new sidecar `antcv-pointer-stale-guard.js` compares the pointer's
+`_pointer_updated_at` against the local `antcv:metaStamp` (277-SEQUENCE-GUARD-001 pattern,
+backward-safe, inert without both timestamps) and is OR-ed into the drift check at both adoption
+sites in both bundles. 11 unit tests + a both-bundle mirror lock; suite 968/968 + boot-smoke.
+Together legs 1+2 close BOTH halves of the "the fuck?" Trackman revert class of bug.
+Steps this run — verify, don't rebuild: (1) confirm access-relay is actually running the deployed
+guard (curl a downgrade PUT against a real row, expect the company preserved). (2) LIVE A/B the
+client leg: open two tabs on the same device (or a tab + a quick row-switch race), force a stale
+pointer scenario, confirm the fresher local draft survives cold-restore; check console for the
+`PTR-STALE-GUARD-001` log line firing when expected and staying silent otherwise. **REMAINING (leg
+3, owner-gated):** row 19 two-real-device test — needs an actual second physical device, can't be
+faked headlessly. If leg-3 needs prep, stage the repro steps but do not fabricate a "device" via a
+second tab (that's leg 2, already covered) — flag it in the report as needing the owner's second
+device/phone.
 
 ## BAND B — DATA LOSS / CRASH (owner, high)
 

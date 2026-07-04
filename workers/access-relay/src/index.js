@@ -2480,7 +2480,7 @@ async function handleApiApplicationById(request, env, idStr) {
   let owned;
   try {
     owned = await env.DB.prepare(
-      'SELECT user_hash FROM application WHERE id = ?'
+      'SELECT user_hash, cv_sections, cl_sections, jd_company FROM application WHERE id = ?'
     ).bind(appId).first();
   } catch (e) {
     return jsonResponse(
@@ -2516,11 +2516,30 @@ async function handleApiApplicationById(request, env, idStr) {
     if (!body || typeof body !== 'object') {
       return jsonResponse({ error: 'invalid_body' }, 400, request, env, refresh);
     }
+    // AUTOSAVE-NO-DOWNGRADE-001 (register row 29/31 leg C, owner 2026-07-04 "the fuck?"
+    // Trackman revert): the client auto-saves the active app on every row switch /
+    // periodic tick with the CURRENT React sections + meta. If that state is
+    // transiently EMPTY or DOWNGRADED to Unsolicited (a mid-restore/mid-flip beat),
+    // the write poisons a real targeted row — later loaded back as the stale/blank
+    // snapshot. Same data-loss discipline as DEMO-RESET-EMPTY-OVERWRITE-001, applied
+    // to the application row: never downgrade a row that already carries a REAL
+    // company, and never blank a row that already has sections. An explicit null
+    // (deliberate wipe-generated) is still honoured — only an empty [] over populated
+    // content is blocked.
+    const __curCo = String((owned && owned.jd_company) || '').trim();
+    const __curReal = !!__curCo && !/^unsolicited$/i.test(__curCo);
+    const __newCo = String(body.jd_company || '').trim();
+    const __newDowngrade = !__newCo || /^unsolicited$/i.test(__newCo);
+    const __blockDowngrade = __curReal && __newDowngrade;
+    const __curHasCv = !!(owned && owned.cv_sections && owned.cv_sections !== '[]' && owned.cv_sections !== 'null');
+    const __curHasCl = !!(owned && owned.cl_sections && owned.cl_sections !== '[]' && owned.cl_sections !== 'null');
+    const __blockCvBlank = Array.isArray(body.cv_sections) && body.cv_sections.length === 0 && __curHasCv;
+    const __blockClBlank = Array.isArray(body.cl_sections) && body.cl_sections.length === 0 && __curHasCl;
     // Whitelist of mutable fields. Anything else is dropped.
     const sets = [];
     const vals = [];
-    if (typeof body.jd_company === 'string') { sets.push('jd_company = ?'); vals.push(body.jd_company); }
-    if (typeof body.jd_role    === 'string') { sets.push('jd_role = ?');    vals.push(body.jd_role); }
+    if (typeof body.jd_company === 'string' && !__blockDowngrade) { sets.push('jd_company = ?'); vals.push(body.jd_company); }
+    if (typeof body.jd_role    === 'string' && !__blockDowngrade) { sets.push('jd_role = ?');    vals.push(body.jd_role); }
     if (typeof body.subtitle   === 'string') { sets.push('subtitle = ?');   vals.push(body.subtitle); }
     if (body.meta !== undefined) {
       sets.push('meta = ?');
@@ -2538,11 +2557,11 @@ async function handleApiApplicationById(request, env, idStr) {
     if (body.rationale && typeof body.rationale === 'object') {
       sets.push('rationale = ?'); vals.push(JSON.stringify(body.rationale));
     }
-    if (body.cv_sections !== undefined) {
+    if (body.cv_sections !== undefined && !__blockCvBlank) {
       sets.push('cv_sections = ?');
       vals.push(body.cv_sections === null ? null : JSON.stringify(body.cv_sections));
     }
-    if (body.cl_sections !== undefined) {
+    if (body.cl_sections !== undefined && !__blockClBlank) {
       sets.push('cl_sections = ?');
       vals.push(body.cl_sections === null ? null : JSON.stringify(body.cl_sections));
     }

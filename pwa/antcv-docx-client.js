@@ -1213,7 +1213,22 @@ const SIDEBAR_ABBR = [
   [/\bIntroduction to\b/g, 'Intro to'],
   // Owner 2026-07-03 (Trackman review round 2): explicit approval.
   [/\bAutomotive environmental conditions and testing\b/gi, 'Environmental testing'],
+  // Owner 2026-07-05 (Trackman review): trim standards descriptions.
+  [/\bMachine-vision sensor characterization\b/gi, 'Machine-vision characterization'],
+  [/\bOpto-electronic conversion function\b/gi, 'EO conversion function'],
 ];
+// SIDEBAR-PAREN-BALANCE-001 (owner 2026-07-05: "cut in middle of parenthesis" —
+// e.g. "…technical-commercial evaluation (RFQ/RFI" with no closing ")"). A
+// compression/cut truncated the value mid-parenthesis. Deterministically balance
+// it: if a value has more "(" than ")", append the missing ")" so the parenthetical
+// closes cleanly. Trailing whitespace/comma before the close is tidied.
+function _balanceParens(t) {
+  if (typeof t !== 'string' || t.indexOf('(') === -1) return t;
+  const opens = (t.match(/\(/g) || []).length;
+  const closes = (t.match(/\)/g) || []).length;
+  if (opens <= closes) return t;
+  return t.replace(/[\s,;]+$/, '') + ')'.repeat(opens - closes);
+}
 // OLD-ROLE-BULLET-CAP-001 (spec rule 47): the END year of a role's date range
 // ("2006 - 2010", "2022 - 2026 (present)"), or null if none / still current.
 function _roleEndYear(years) {
@@ -1458,6 +1473,7 @@ function sanitizeForExport(docSections, doc) {
           if (typeof t !== 'string') return t;
           let out = t;
           for (const [re, to] of SIDEBAR_ABBR) out = out.replace(re, to);
+          out = _balanceParens(out);
           return out;
         };
         let hitAbbr = false;

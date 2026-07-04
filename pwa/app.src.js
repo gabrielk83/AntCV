@@ -2239,7 +2239,14 @@
     // capped first attempt still recovers across the 4 outer attempts — this
     // only stops one slow internal cascade from cycling 4 providers.
     if (
-      /^(extract|extract_pdf|parse_jd|compress|fix_orphans)$/.test(r) &&
+      // BALANCED-COMPRESS-QUALITY-001 (owner 2026-07-05 "go with C": balanced
+      // produced a 6-page CV). `compress` is the post-gen TIGHTENING pass that
+      // shrinks the CV toward its page budget — it is QUALITY-critical, not a
+      // fail-fast mechanical task. Capping it to 2 providers in balanced meant a
+      // tightening failure left the CV untightened (long). Removed from the cap so
+      // compress keeps its full per-mode fan-width (balanced=3, thorough=4); fast
+      // still lands at 2 via __fanWidth. The other mechanical tasks stay capped.
+      /^(extract|extract_pdf|parse_jd|fix_orphans)$/.test(r) &&
       l.length > 2 &&
       "thorough" !== __genSpeed()
     ) {
@@ -26840,7 +26847,11 @@
                   { task: "compress" },
                 ),
                 r = Ki(o);
-              (r &&
+              (r ||
+                console.warn(
+                  "[compress] tightening parse failed - kept untightened content (BALANCED-COMPRESS-QUALITY-001)",
+                ),
+              r &&
                 ao((e) => {
                   const t = e.cv.map((e) => {
                     if ("profile" === e.id && r.profile_content)

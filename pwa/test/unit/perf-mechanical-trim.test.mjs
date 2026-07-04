@@ -3,7 +3,11 @@
 // PERF-003 / PERF-004 (1.50.359). Locks two behaviours into the source:
 //  - PERF-003: ee()'s failover ladder is capped at 2 providers for the
 //    owner-confirmed MECHANICAL tasks only (extract, extract_pdf, parse_jd,
-//    compress, fix_orphans). Quality-critical tasks keep full width.
+//    fix_orphans). Quality-critical tasks keep full width.
+//    BALANCED-COMPRESS-QUALITY-001 (owner 2026-07-05): `compress` was REMOVED
+//    from this cap — the post-gen tightening pass is quality-critical (a 2-cap
+//    failure left balanced CVs at full 6-page length), so it now keeps its full
+//    per-mode fan-width (balanced=3, thorough=4; fast still 2 via __fanWidth).
 //  - PERF-004: the post-generate tightening pass is skipped when the draft is
 //    already within its own budgets (profile ≤400, work style ≤200, first-page
 //    bullets ≤130, continuation bullets ≤90 chars; empty fields never skip).
@@ -23,7 +27,7 @@ const src = await readFile(new URL('../../app.src.js', import.meta.url), 'utf8')
 //     GEN-WIDTH-001 SUPERSEDED the old GEN-SPEED-001 fast=1 rule — fast now
 //     keeps a 2-provider ladder for one-retry robustness.
 //  2. PERF-003 then caps MECHANICAL tasks to 2 (unless thorough lifts it).
-const MECHANICAL = /^(extract|extract_pdf|parse_jd|compress|fix_orphans)$/;
+const MECHANICAL = /^(extract|extract_pdf|parse_jd|fix_orphans)$/;
 const fanWidth = (speed) => (speed === 'fast' ? 2 : speed === 'thorough' ? 4 : 3);
 const cap = (task, list, speed = 'balanced') => {
   let l = list;
@@ -35,7 +39,9 @@ const cap = (task, list, speed = 'balanced') => {
 
 test('PERF-003: source carries the mechanical-task cap', () => {
   assert.match(src, /PERF-003 \(1\.50\.359/);
-  assert.match(src, /\^\(extract\|extract_pdf\|parse_jd\|compress\|fix_orphans\)\$\/\.test\(r\) &&\s*l\.length > 2 &&\s*"thorough" !== __genSpeed\(\)/);
+  assert.match(src, /\^\(extract\|extract_pdf\|parse_jd\|fix_orphans\)\$\/\.test\(r\) &&\s*l\.length > 2 &&\s*"thorough" !== __genSpeed\(\)/);
+  // BALANCED-COMPRESS-QUALITY-001: compress must NOT be in the mechanical cap anymore
+  assert.doesNotMatch(src, /\^\(extract\|extract_pdf\|parse_jd\|compress\|fix_orphans\)\$\//);
   assert.match(src, /l = l\.slice\(0, 2\);/);
 });
 
@@ -59,18 +65,20 @@ test('GEN-WIDTH-001: preset semantics (mirrored predicate)', () => {
   // fast = width 2 (superseded fast=1): mechanical no-ops since already 2
   assert.deepEqual(cap('compress', four, 'fast'), ['mistral', 'openai']);
   assert.deepEqual(cap('generate_cv', four, 'fast'), ['mistral', 'openai']);
-  // balanced = width 3: mechanical then tightens to 2, quality keeps 3
-  assert.deepEqual(cap('compress', four, 'balanced'), ['mistral', 'openai']);
+  // balanced = width 3: mechanical tightens to 2; compress is now QUALITY -> keeps 3
+  assert.deepEqual(cap('compress', four, 'balanced'), ['mistral', 'openai', 'gemini']);
+  assert.deepEqual(cap('parse_jd', four, 'balanced'), ['mistral', 'openai']);
   assert.deepEqual(cap('generate_cv', four, 'balanced'), ['mistral', 'openai', 'gemini']);
 });
 
 test('PERF-003: mechanical tasks capped at 2, quality tasks keep the per-mode width (balanced=3)', () => {
   const four = ['mistral', 'openai', 'gemini', 'claude'];
-  for (const t of ['extract', 'extract_pdf', 'parse_jd', 'compress', 'fix_orphans']) {
+  for (const t of ['extract', 'extract_pdf', 'parse_jd', 'fix_orphans']) {
     assert.deepEqual(cap(t, four), ['mistral', 'openai'], t);
   }
-  // quality tasks are not mechanically capped, but balanced __fanWidth still trims to 3
-  for (const t of ['generate_cv', 'consensus_poll', 'consensus_reinforce', 'fuse',
+  // quality tasks are not mechanically capped, but balanced __fanWidth still trims to 3.
+  // compress is now QUALITY-critical (BALANCED-COMPRESS-QUALITY-001) -> keeps 3 in balanced.
+  for (const t of ['compress', 'generate_cv', 'consensus_poll', 'consensus_reinforce', 'fuse',
     'analyze_fit', 'long_context', 'enrich', 'apply_correction',
     'translate', 'translate_da', 'refine_da', 'refine_en', 'default']) {
     assert.deepEqual(cap(t, four), ['mistral', 'openai', 'gemini'], t);

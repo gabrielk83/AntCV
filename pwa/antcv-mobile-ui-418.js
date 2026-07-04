@@ -13,6 +13,26 @@
  *   [354] alt-circles       — collapse the topbar palette swatches to a single
  *                             tap-to-open dropdown on mobile (stateful, capture-
  *                             phase click handling preserved exactly).
+ *   [419] editor-ready-flag — owner report (2026-07-05, screenshot): the CV/CL
+ *                             preview on a phone rendered at full desktop width
+ *                             (content bled off both edges), only fixable by
+ *                             pinch-zooming the WHOLE page out to ~60%. Root
+ *                             cause: antcv-mobile-controls.css ships an
+ *                             UNGATED `.antcv-preview-scroll > div { min-width:
+ *                             794px !important }` rule (ORPHAN-PREFLIGHT-V3,
+ *                             1.51.119) that always wins over app.src.js's own
+ *                             accurate scale-to-fit (the `ui`/`mi` transform
+ *                             logic) on any viewport <=900px. The CSS's own
+ *                             "undo" rule already exists, scoped to
+ *                             `body.antcv-editor-ready` (higher specificity,
+ *                             same !important — it would win the cascade) —
+ *                             but nothing in this repo ever added that class
+ *                             (grepped every .js file: zero hits before this
+ *                             module). #419 sets/clears it from the exact,
+ *                             already-proven "is the preview actually on
+ *                             screen" check antcv-pdf-preview-gate.js uses for
+ *                             its own FAB visibility gate. Kill switch:
+ *                             antcv:disable-editor-ready-flag.
  *
  * Pure DOM + CSS, no fetch wrap, no app.js edit. The old per-file globals
  * (window.AntcvMobileTopbarCleanup275 / …Fab351 / …BottomCompact352 /
@@ -20,7 +40,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.418';
+  var VERSION = '1.51.161';
   if (window.__antcvMobileUi418 === VERSION) return;
   window.__antcvMobileUi418 = VERSION;
 
@@ -228,9 +248,37 @@
     (document.head || document.documentElement).appendChild(s);
   }
 
+  // ───────────────────────── [419] editor-ready flag ───────────────────────
+  // Same "is the preview genuinely rendered on screen" check
+  // antcv-pdf-preview-gate.js's previewIsOnScreen() uses for its own FAB
+  // visibility gate — deliberately not a new detector, reusing the proven one.
+  function e419_disabled() { try { return localStorage.getItem('antcv:disable-editor-ready-flag') === '1'; } catch (_) { return false; } }
+  function e419_previewOnScreen() {
+    try {
+      var papers = document.querySelectorAll('.antcv-preview-paper');
+      for (var i = 0; i < papers.length; i++) {
+        var p = papers[i];
+        if (p.offsetParent !== null) {
+          var r = p.getBoundingClientRect();
+          if (r.width > 40 && r.height > 40) return true;
+        }
+      }
+    } catch (_) {}
+    return false;
+  }
+  function run419() {
+    if (e419_disabled()) return;
+    try {
+      var ready = e419_previewOnScreen();
+      var has = document.body.classList.contains('antcv-editor-ready');
+      if (ready && !has) document.body.classList.add('antcv-editor-ready');
+      else if (!ready && has) document.body.classList.remove('antcv-editor-ready');
+    } catch (_) {}
+  }
+
   // ───────────────────────── shared scheduler + observer ──────────────────
   var pending = false;
-  function sweep() { injectCss(); run275(); run351(); c354_paint(); }
+  function sweep() { injectCss(); run275(); run351(); c354_paint(); run419(); }
   function schedule() {
     if (pending) return;
     pending = true;
@@ -258,6 +306,7 @@
   window.AntcvMobileFabCleanup351 = { version: '1.40.351', sweep: run351 };
   window.AntcvMobileBottomCompact352 = { version: '1.50.104' };
   window.AntcvMobileAltCirclesDropdown354 = { version: '1.50.113', paint: c354_paint };
+  window.AntcvMobileEditorReadyFlag419 = { version: '1.51.161', run: run419, isOnScreen: e419_previewOnScreen };
   window.AntcvMobileUi418 = { version: VERSION, sweep: sweep };
-  try { console.debug('[mobile-ui-418] consolidated 275+351+352+354 installed v' + VERSION); } catch (_) {}
+  try { console.debug('[mobile-ui-418] consolidated 275+351+352+354+419 installed v' + VERSION); } catch (_) {}
 })();

@@ -84,3 +84,25 @@ test('dual-sync: multi-llm.js + supervisor.js byte-identical across proxies', as
     assert.equal(a, b, f + ' drifted between proxy and demo-proxy');
   }
 });
+
+// ── LLM-IMAGE-ROUTING-001 (register row 30) ──────────────────────────────────
+import { messagesHaveImages, filterVisionBlind, VISION_BLIND } from '../src/multi-llm.js';
+
+test('messagesHaveImages: detects all image block shapes; false for text-only', () => {
+  assert.equal(messagesHaveImages(undefined), false);
+  assert.equal(messagesHaveImages([{ role: 'user', content: 'plain string' }]), false);
+  assert.equal(messagesHaveImages([{ role: 'user', content: [{ type: 'text', text: 'hi' }] }]), false);
+  assert.equal(messagesHaveImages([{ role: 'user', content: [{ type: 'image', source: { type: 'base64', data: 'AAAA' } }] }]), true);
+  assert.equal(messagesHaveImages([{ role: 'user', content: [{ type: 'image_url', image_url: { url: 'data:image/png;base64,AAAA' } }] }]), true);
+  assert.equal(messagesHaveImages([{ role: 'user', content: [{ type: 'image_url', image_url: 'data:image/png;base64,AAAA' }] }]), true);
+});
+
+test('VISION_BLIND is exactly {mistral}', () => {
+  assert.deepEqual([...VISION_BLIND].sort(), ['mistral']);
+});
+
+test('filterVisionBlind: drops vision-blind on images, unchanged on text, never empties', () => {
+  assert.deepEqual(filterVisionBlind(DEFAULT_ORDER, true), ['anthropic', 'openai', 'gemini']);
+  assert.deepEqual(filterVisionBlind(DEFAULT_ORDER, false), DEFAULT_ORDER);
+  assert.deepEqual(filterVisionBlind(['mistral'], true), ['mistral']);
+});

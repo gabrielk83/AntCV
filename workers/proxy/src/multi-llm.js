@@ -42,6 +42,34 @@
 const DEFAULT_ORDER = ['anthropic', 'openai', 'mistral', 'gemini'];
 const PER_CALL_TIMEOUT_MS = 60_000;
 
+// LLM-IMAGE-ROUTING-001 (register row 30): providers with NO vision support. When a
+// request carries image content blocks (JD screenshot / PDF-page images) a
+// vision-blind provider can't read them and returns a short non-answer that still
+// parses as success. Filter these OUT of the ladder up front. mistral is text-only;
+// anthropic/openai/gemini are multimodal.
+const VISION_BLIND = new Set(['mistral']);
+// Detect image content blocks in a messages array (Anthropic {type:'image'},
+// OpenAI/Mistral {type:'image_url'}). Text-only callers pass no array -> false.
+export function messagesHaveImages(messages) {
+  if (!Array.isArray(messages)) return false;
+  for (const m of messages) {
+    const content = m && m.content;
+    if (!Array.isArray(content)) continue;
+    for (const block of content) {
+      if (!block || typeof block !== 'object') continue;
+      if (block.type === 'image') return true;
+      if (block.type === 'image_url' && block.image_url) return true;
+    }
+  }
+  return false;
+}
+// Drop vision-blind providers from a ladder when images are present; never empties.
+export function filterVisionBlind(order, hasImages) {
+  if (!hasImages) return order;
+  const v = order.filter((p) => !VISION_BLIND.has(p));
+  return v.length ? v : order;
+}
+
 // v3.4.0 round-robin coverage expansion: per-provider model fallback chains.
 //
 // Why this exists
@@ -413,6 +441,8 @@ export async function callAnyLLMForJSON(env, system, userPrompt, opts = {}) {
   const role = typeof opts.role === 'string' && opts.role ? opts.role : null;
   let order = Array.isArray(opts.order) && opts.order.length ? opts.order : DEFAULT_ORDER;
   if (role) order = roleHeadOrder(env, role, order);
+  // LLM-IMAGE-ROUTING-001: image-bearing messages drop vision-blind providers.
+  order = filterVisionBlind(order, messagesHaveImages(opts.messages));
   const models = opts.models || {};
   const validate = typeof opts.validate === 'function' ? opts.validate : null;
   const attempts = [];
@@ -539,7 +569,7 @@ export async function callAnyLLMForJSON(env, system, userPrompt, opts = {}) {
 }
 
 // Exports for unit testing.
-export { callAnthropic, callOpenAI, callMistral, callGemini, getKeyForProvider, DEFAULT_ORDER, PROVIDER_MODELS };
+export { callAnthropic, callOpenAI, callMistral, callGemini, getKeyForProvider, DEFAULT_ORDER, PROVIDER_MODELS, VISION_BLIND };
 
 // v3.3.0: explicit text-mode alias. callAnyLLMForJSON's name implies
 // it's only for JSON tasks, but the function itself never parses JSON

@@ -2152,6 +2152,14 @@
       const _f = l.filter((e) => !__antcvDeadProviders.has(e));
       if (_f.length) l = _f;
     }
+    // LLM-IMAGE-ROUTING-001 (row 30): when the messages carry image content
+    // blocks (JD screenshot / PDF-page images), drop vision-BLIND providers
+    // (mistral) from the ladder so a blind provider can't return a short
+    // non-answer that still counts as success. Guard: never empty the ladder.
+    try {
+      const __hasImg = Array.isArray(e) && e.some((m) => m && Array.isArray(m.content) && m.content.some((b) => b && typeof b === "object" && (b.type === "image" || (b.type === "image_url" && b.image_url))));
+      if (__hasImg) { const _vf = l.filter((p) => p !== "mistral"); if (_vf.length) l = _vf; }
+    } catch (_) {}
     // 1.50.305 BYOK-NO-SERVER-FALLBACK: V()/Q() treat a provider as available when
     // the user has their OWN key OR the deployment has a server key for it
     // (B.server_keys). So a BYOK user with e.g. only Claude+OpenAI keys still had

@@ -1032,8 +1032,18 @@
               curGroupCount = 0;
               curGroupHeaderH = h;
               var gt = grpTot[gk] || 0;
-              // keep each GROUP whole: if it won't fit the current page, start it on the next.
-              if (used > 0 && gt <= __nLimit * keepWholeFrac && (used + gt) > cap) { page++; used = 0; cap = __nLimit; }
+              // keep each GROUP whole: if it won't fit the current page, start it on the next —
+              // BUT only when the page is already reasonably full. KEEP-WHOLE-WASTE-GUARD: without
+              // this, a group that is "small enough" (<=keepWholeFrac of a page) but arrives early
+              // on an otherwise-empty page gets whole-moved away even when there's plenty of room
+              // left, stranding that leftover room as dead space (the sidebar reads as unnaturally
+              // short while the group restarts whole on the next page). Only whole-move when the
+              // remaining room on THIS page is already small (<=25% of a page) — the classic
+              // "almost full, one more small group doesn't quite fit" case the rule exists for.
+              // A big remaining gap instead falls through to per-block placement below (still
+              // protected from stranding a lone header by ORPHAN-GROUP-HEADER-GUARD).
+              var __remaining = cap - used;
+              if (used > 0 && gt <= __nLimit * keepWholeFrac && (used + gt) > cap && __remaining <= __nLimit * 0.25) { page++; used = 0; cap = __nLimit; }
             }
             if (used > 0 && (used + h) > cap) {
               // ORPHAN-GROUP-HEADER-GUARD: a group too big for KEEP-WHOLE (line above)

@@ -31,7 +31,7 @@
 (function () {
   'use strict';
   if (window.__antcvUnsolicitedIdentityGuard) return;
-  window.__antcvUnsolicitedIdentityGuard = '1.51.79';
+  window.__antcvUnsolicitedIdentityGuard = '1.51.144';
 
   var SRC = 'unsolicited-identity-guard';
   var META_KEY = 'meta';
@@ -53,9 +53,33 @@
 
   // A specific job means a real JD is in play (cloud-aware mirror). Short/empty
   // => unsolicited context. Same threshold the WHY-title sidecar uses.
+  // AntcvJdScope transparently redirects antcv:lastJdText to the tab-namespaced
+  // key, so this already reads THIS tab's JD.
   function isSpecificJob() {
     try { return String(localStorage.getItem('antcv:lastJdText') || '').trim().length >= 30; }
     catch (_) { return false; }
+  }
+
+  // TARGETING-STICK-001 (owner 2026-07-05: a Trackman gen came out Unsolicited AND
+  // manually typing "Trackman" in the CL reverted to Unsolicited on Enter). Root
+  // cause: this gen ran in the UNSOLICITED namespace with the JD cleared under the
+  // __isUnsolicited paths, so isSpecificJob() is false even though the app is really
+  // targeting Trackman — and the old "no JD => force Unsolicited" fired on the gen
+  // AND on every manual company edit. Fix: the force only ever cleans a BOOT-WINDOW
+  // stale kernel-restore leak (the original NVIDIA bug); an intentional real company
+  // that appears interactively (a user edit or a fresh gen, i.e. AFTER boot) is
+  // REMEMBERED as a durable override and never reverted again — it survives reloads.
+  var OVERRIDE_KEY = 'antcv:identityOverrideCompany';
+  var BOOT_MS = 5000;
+  var bootAt = (function () { try { return Date.now(); } catch (_) { return 0; } })();
+  function nowMs() { try { return Date.now(); } catch (_) { return bootAt; } }
+  function readOverride() {
+    try { return String(localStorage.getItem(OVERRIDE_KEY) || '').replace(/"/g, '').trim(); }
+    catch (_) { return ''; }
+  }
+  function writeOverride(v) {
+    try { if (v) localStorage.setItem(OVERRIDE_KEY, v); else localStorage.removeItem(OVERRIDE_KEY); }
+    catch (_) {}
   }
 
   // A value that is NOT a real targeted company: the canonical unsolicited
@@ -72,17 +96,30 @@
   var lastSeen = null;
   function apply() {
     if (disabled() || isEditing()) return;
-    // Only act in an unsolicited context — never touch a real targeted app.
-    if (isSpecificJob()) return;
     var meta = readMeta();
     if (!meta) return;
     var co = String(meta.company || '').trim();
-    // Already clean (or no company) — nothing to do.
+    // Already clean (or no company) — nothing to do. The company is unsolicited now,
+    // so any remembered targeted override is stale; drop it and scrub sidecar keys.
     if (isUnsolicitedLabel(co)) {
-      // Still scrub a stray targeted activeAppCompany / rationale if present.
+      if (readOverride()) writeOverride('');
       scrubSidecarKeys();
       return;
     }
+    // A REAL company is present. Decide: intentional targeting (respect + remember)
+    // vs a boot-time stale kernel-restore leak (force clean, the original bug).
+    // 1) A real JD in scope -> definitely targeted. Remember + respect.
+    if (isSpecificJob()) { writeOverride(co); return; }
+    // 2) It matches a remembered intentional override -> respect (survives reloads).
+    var override = readOverride();
+    if (override && override.toLowerCase() === co.toLowerCase()) return;
+    // 3) After the boot window, a real company that appeared is an INTENTIONAL
+    //    interactive change (a user edit or a fresh gen) -> remember + respect,
+    //    never revert. This is what makes a manual "Trackman" edit stick.
+    if ((nowMs() - bootAt) >= BOOT_MS) { writeOverride(co); return; }
+    // 4) Within the boot window with no JD and no override -> a stale kernel-restore
+    //    leak (UNSOLICITED-SHOWS-NVIDIA-001). Force back to the canonical unsolicited
+    //    identity and self-heal the slot.
     var key = co + '|' + String(meta.role || '');
     if (key === lastSeen) return; // own write / unchanged — avoid loops
 
@@ -131,5 +168,9 @@
   }); } catch (_) {}
   setInterval(tick, 4000);
 
-  window.AntcvUnsolicitedIdentityGuard = { version: '1.51.79', _apply: apply, _isSpecificJob: isSpecificJob, _isUnsolicitedLabel: isUnsolicitedLabel };
+  window.AntcvUnsolicitedIdentityGuard = {
+    version: '1.51.144', _apply: apply, _isSpecificJob: isSpecificJob,
+    _isUnsolicitedLabel: isUnsolicitedLabel, _readOverride: readOverride, _writeOverride: writeOverride,
+    _setBootAt: function (t) { bootAt = t; }, _bootMs: BOOT_MS,
+  };
 })();

@@ -35,6 +35,7 @@ function makeSandbox(initial) {
     console: { warn() {}, debug() {}, log() {}, error() {}, info() {} },
     setTimeout() { return 0; },   // suppress the IIFE's scheduled ticks; we call _apply directly
     setInterval() { return 0; },
+    Date: { now: () => 1_000_000 },  // fixed clock; now===bootAt => within the boot window (force preserved)
     JSON, Array, Object, Error, RegExp, Math, String, Number, Boolean,
   };
   vm.createContext(sandbox);
@@ -124,4 +125,36 @@ test('disable flag turns the guard off', () => {
   ctx = makeSandbox({ 'antcv:lastJdText': '', 'meta': CONTAMINATED_META, 'antcv:disable-unsolicited-identity-guard': '1' });
   api()._apply();
   assert.equal(JSON.parse(ctx.store.get('meta')).company, 'NVIDIA');  // untouched
+});
+
+// ─── TARGETING-STICK-001 (owner 2026-07-05) ──────────────────────────
+const TRACKMAN_META = JSON.stringify({ company: 'Trackman A/S', role: 'Project Manager, Hardware', subtitle: 'X' });
+
+test('AFTER boot, a real company (manual edit / fresh gen, no JD) is remembered and NOT reverted', () => {
+  ctx = makeSandbox({ 'antcv:lastJdText': '', 'meta': TRACKMAN_META });
+  api()._setBootAt(1_000_000 - 10_000);   // 10s before now -> past the 5s boot window
+  api()._apply();
+  assert.equal(JSON.parse(ctx.store.get('meta')).company, 'Trackman A/S', 'the manual/gen company survives');
+  assert.equal(api()._readOverride(), 'Trackman A/S', 'and is remembered as a durable override');
+  assert.equal(ctx.dispatched.length, 0, 'no forced meta rewrite');
+});
+
+test('a remembered override is respected even within the boot window (survives reload)', () => {
+  ctx = makeSandbox({ 'antcv:lastJdText': '', 'meta': TRACKMAN_META, 'antcv:identityOverrideCompany': 'Trackman A/S' });
+  api()._setBootAt(1_000_000);            // within the boot window
+  api()._apply();
+  assert.equal(JSON.parse(ctx.store.get('meta')).company, 'Trackman A/S', 'never reverted once remembered');
+});
+
+test('a DIFFERENT stale company at boot is still cleaned even if an override for another company exists', () => {
+  ctx = makeSandbox({ 'antcv:lastJdText': '', 'meta': CONTAMINATED_META, 'antcv:identityOverrideCompany': 'Trackman A/S' });
+  api()._setBootAt(1_000_000);            // within boot window; NVIDIA != Trackman override
+  api()._apply();
+  assert.equal(JSON.parse(ctx.store.get('meta')).company, 'Unsolicited', 'a non-matching boot leak is still forced');
+});
+
+test('switching back to an unsolicited label clears the remembered override', () => {
+  ctx = makeSandbox({ 'meta': JSON.stringify({ company: 'Unsolicited', role: 'Open Application', subtitle: 'X' }), 'antcv:identityOverrideCompany': 'Trackman A/S' });
+  api()._apply();
+  assert.equal(api()._readOverride(), '', 'the stale override is dropped when the app is unsolicited again');
 });

@@ -345,7 +345,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.143';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.143';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.144';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -387,7 +387,7 @@
           app.src = 'app.js?v=1.51.142';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.143';
+            vo.src = 'antcv-version-override.js?v=1.51.144';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -777,7 +777,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      (NVIDIA) from the kernel showcase cloud slot. When the context is unsolicited (no real
      JD) but meta wears a real company, force the identity back to Unsolicited/Open Application;
      the app's kernel autosave then re-persists the cleaned slot (self-heal). -->
-<script src="antcv-unsolicited-identity-guard.js?v=1.51.79" defer></script>
+<script src="antcv-unsolicited-identity-guard.js?v=1.51.144" defer></script>
 <script src="antcv-ai-assisted-to-methods.js?v=1.50.817" defer></script>
 <script src="antcv-tables-core-dedup.js?v=1.50.654" defer></script>
 <script src="antcv-tools-hidden-residue.js?v=1.51.117" defer></script>

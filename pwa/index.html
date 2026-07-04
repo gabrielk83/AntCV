@@ -345,7 +345,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.131';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.135';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.136';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -387,7 +387,7 @@
           app.src = 'app.js?v=1.51.135';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.135';
+            vo.src = 'antcv-version-override.js?v=1.51.136';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -904,6 +904,8 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-gabriel-results-pin.js?v=1.51.103" defer></script>
 <!-- TOOLS-CORECOMP-DEDUP-001: drop TOOLS rows that duplicate CORE COMPETENCIES focus areas (owner 2026-07). -->
 <script src="antcv-tools-corecomp-dedup.js?v=1.51.125" defer></script>
+<!-- GEN-LANGFAB-001 (1.51.136): drop fabricated languages + correct levels against kernel personalInfo.languages ({lang,level}), name-neutral. Runs before concise so hallucinated rows are removed first. Kill antcv:disable-lang-fabrication-guard -->
+<script src="antcv-lang-fabrication-guard.js?v=1.51.136" defer></script>
 <!-- LANGUAGES-CONCISE-001: trim language proficiency to its concise core (CEFR→word, drop qualifiers). -->
 <script src="antcv-languages-concise.js?v=1.50.796" defer></script>
 <!-- SKELETON-LEAK-001: strip leaked me() authoring instructions ("[PROFILE - 2-3 sentences…]") that

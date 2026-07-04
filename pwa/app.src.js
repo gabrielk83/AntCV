@@ -39859,6 +39859,15 @@
             className: "fade",
             style: {
               minHeight: "100dvh",
+              // MOBILE-PANEL-ZOOM-001 (row 46): on mobile #root is height:100dvh
+              // + overflow:hidden (viewport lock), so this centered upload screen
+              // clipped its own overflow — the Brand-fit / Speed / Cap row fell
+              // below the fold and was unreachable at 100% zoom. Make this screen
+              // its OWN scroll container. The inner column gets margin:auto 0
+              // (auto margins override justify-content in flexbox) so it stays
+              // centred when it fits and scrolls from the top when it does not.
+              height: "100dvh",
+              overflowY: "auto",
               background: `linear-gradient(160deg,${__darkNavy(Ke)} 0%,#1a2a45 100%)`,
               display: "flex",
               flexDirection: "column",
@@ -39870,7 +39879,7 @@
           },
           React.createElement(
             "div",
-            { style: { width: "100%", maxWidth: 480 } },
+            { style: { width: "100%", maxWidth: 480, margin: "auto 0" } },
             __antcvSettingsModal(),
             React.createElement(
               "div",

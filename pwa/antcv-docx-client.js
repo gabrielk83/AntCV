@@ -284,6 +284,27 @@ async function runOrphanPreflight(payload) {
 // declined confirm throws so the caller shows the message. Detection is table
 // rows only (the loudest failure class); >=2 placeholder rows = placeholder
 // table. Kill: localStorage['antcv:disable-placeholder-gate']='1'.
+//
+// CL-SKELETON-EXPORT-GATE-001 (owner 2026-07-05, live report — a real Open
+// Application Cover Letter PDF shipped with the raw TEMPLATE-STRUCT-DEFAULT-001
+// skeleton verbatim, "Dear [Hiring Team / Name]," and all). Root cause traced:
+// CL-HYDRATE-EXPORT-GATE-001 above already rescues a placeholder CL section
+// from the prose-loss guard bucket or meta.opening/greeting — but that guard
+// bucket is DELIBERATELY never populated for Unsolicited apps
+// (CL-PROSE-UNSOL-POISON-001 in antcv-cl-prose-loss-guard-985.js, to stop a
+// prior company's prose leaking into a later unsolicited one), so an
+// unsolicited CL whose generation failed/raced has NO rescue path for why/who/
+// foundation/bring/contribute/closure and ships the raw skeleton silently.
+// Rather than touch that guard's gating (real risk of reintroducing the
+// cross-contamination bug it was built to stop) or invent generation-recovery
+// logic, this extends the SAME already-shipped, owner-approved pattern above:
+// detect the failure loudly and let the user decide, instead of silently
+// mailing a broken cover letter to a real employer. Reuses hydrateClProse's
+// own placeholder/prose-extraction helpers (defined below; function
+// declarations are hoisted) so detection can never drift from what the
+// hydration gate already tried and failed to fix. Kill:
+// localStorage['antcv:disable-placeholder-gate']='1' (shared switch — this is
+// the same feature family).
 function placeholderGate(payload) {
   try {
     if (typeof localStorage !== 'undefined' && localStorage.getItem('antcv:disable-placeholder-gate') === '1') return;
@@ -296,10 +317,20 @@ function placeholderGate(payload) {
       const phRows = body.filter((r) => Array.isArray(r) && r.length && r.every(isPh)).length;
       if (phRows >= 2) phTables++;
     }
-    if (!phTables) return;
-    const msg = 'This document contains a PLACEHOLDER table ("[Focus area 1]" rows) — a failed/stale generation snapshot. Export anyway?';
+    let phClSections = 0;
+    if (payload && payload.doc === 'cl') {
+      for (const s of secs) {
+        if (!s || CL_HYDRATE_IDS.indexOf(String(s.id || '')) === -1) continue;
+        if (_clPlaceholder(_clProseOf(s))) phClSections++;
+      }
+    }
+    if (!phTables && !phClSections) return;
+    const msg = phClSections
+      ? 'This cover letter still contains PLACEHOLDER text (e.g. "Dear [Hiring Team / Name]") in ' + phClSections
+        + ' section(s) — the generation did not complete. Export anyway?'
+      : 'This document contains a PLACEHOLDER table ("[Focus area 1]" rows) — a failed/stale generation snapshot. Export anyway?';
     const ok = (typeof confirm === 'function') ? confirm(msg) : true;
-    if (!ok) { const e = new Error('Export cancelled: placeholder table detected — regenerate first.'); e.placeholderGate = true; throw e; }
+    if (!ok) { const e = new Error('Export cancelled: placeholder content detected — regenerate first.'); e.placeholderGate = true; throw e; }
   } catch (e) { if (e && e.placeholderGate) throw e; /* detector errors never block */ }
 }
 
@@ -2775,7 +2806,7 @@ function _collapseRoleBullets(r) {
   const kept = _keepMinBullets(r.bullets, collapsed);
   return kept === r.bullets ? r : { ...r, bullets: kept };
 }
-export { _dedupNearBullets, _collapseRoleBullets, _keepMinBullets, _backfillRoleBullets, sanitizeForExport };
+export { _dedupNearBullets, _collapseRoleBullets, _keepMinBullets, _backfillRoleBullets, sanitizeForExport, placeholderGate };
 // PAN-IDRAET-PREVIEW-HIDE-001: expose the SAME collapse predicate the export uses so
 // the preview-hide sidecar (antcv-neardup-preview-hide.js) can never drift from it.
 // PAN-IDRAET-BACKFILL-001: also expose the raw near-dup collapse + the distinct-data

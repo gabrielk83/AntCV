@@ -10490,12 +10490,15 @@
         ? React.createElement(
             "div",
             {
-              contentEditable: !0,
+              contentEditable: !1,
               suppressContentEditableWarning: !0,
               spellCheck: !1,
               draggable: !1,
-              title: "Click to rename this section heading",
-              onClick: (ev) => ev.stopPropagation(),
+              title: "Click to open the section editor (rename the heading inside it)",
+              onClick: (ev) => {
+                ev.stopPropagation();
+                d(e.id);
+              },
               // SECTION-ROW-OPEN-001: double-click commits any in-progress
               // rename (blur -> onBlur write) then opens the section editor.
               onDoubleClick: (ev) => {

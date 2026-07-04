@@ -135,7 +135,15 @@
         h("button", { onClick: addGroup, style: { fontSize: 11, background: "none", border: "1px solid #0a8", color: "#0a8", borderRadius: 4, padding: "4px 10px", cursor: "pointer" } }, "+ Group")
       );
 
-      return h(R.Fragment, null, bar, rowEls, addBtns);
+      // SECTION-TITLE-IN-EDITOR-001 (owner 2026-07-05: "make the section title
+      // editable inside the detailed editor"): a "Section heading" field at the top
+      // of the editor. The section title is edited HERE now, so the panel-list title
+      // is a plain click-to-open label (no inline edit stealing the open click).
+      var titleField = h("div", { style: { display: "flex", alignItems: "center", gap: 6, marginBottom: 8 } },
+        h("span", { style: { fontSize: 10, color: "#888", flexShrink: 0, textTransform: "uppercase", letterSpacing: 0.3 } }, "Section heading"),
+        h("input", { value: e.title || "", onChange: function (x) { d({ title: x.target.value }); }, placeholder: "Section heading", style: { flex: "1 1 auto", minWidth: 0, fontSize: 12, fontWeight: 700, padding: "4px 6px", border: "1px solid #ccc", borderRadius: 4, fontFamily: "Georgia,serif" } })
+      );
+      return h(R.Fragment, null, titleField, bar, rowEls, addBtns);
     }
 
     window.AntcvRichBlockEditor = RichBlockEditor;

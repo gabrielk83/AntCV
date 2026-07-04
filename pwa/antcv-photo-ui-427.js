@@ -781,8 +781,11 @@
         }
         var row = b.parentElement;
         if (row) {
-          if (isActive) row.setAttribute('data-antcv-bridge-active', '1');
-          else row.removeAttribute('data-antcv-bridge-active');
+          // SETTINGS-SWEEP-STABILIZE (row 17, 1.51.156): toggle on change only —
+          // this re-stamped data-antcv-bridge-active every tick (attribute-mutation
+          // churn on the Layout panel), retriggering observers for no reason.
+          if (isActive) { if (row.getAttribute('data-antcv-bridge-active') !== '1') row.setAttribute('data-antcv-bridge-active', '1'); }
+          else if (row.hasAttribute('data-antcv-bridge-active')) row.removeAttribute('data-antcv-bridge-active');
         }
       });
     }

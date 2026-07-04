@@ -80,15 +80,18 @@
 
     box.appendChild(head); box.appendChild(body);
 
+    // SETTINGS-SWEEP-STABILIZE (row 17, 1.51.156): __refresh runs every scan tick;
+    // these re-set button styles + replaced the caret text node unconditionally
+    // (35 childList mutations / 6s on the Layout panel). Write-on-change only.
     function setActive() {
       var cur = pos();
       for (var k in buttons) {
-        var on = (k === cur);
-        buttons[k].style.background = on ? ACCENT : 'rgba(1,183,187,0.10)';
-        buttons[k].style.color = on ? '#04231f' : ACCENT;
+        var on = (k === cur), bg = on ? ACCENT : 'rgba(1,183,187,0.10)', col = on ? '#04231f' : ACCENT;
+        if (buttons[k].style.background !== bg) buttons[k].style.background = bg;
+        if (buttons[k].style.color !== col) buttons[k].style.color = col;
       }
     }
-    function applyOpen() { var o = isOpen(); caret.textContent = o ? '▾' : '▸'; body.style.display = o ? 'flex' : 'none'; }
+    function applyOpen() { var o = isOpen(), g = o ? '▾' : '▸', d = o ? 'flex' : 'none'; if (caret.textContent !== g) caret.textContent = g; if (body.style.display !== d) body.style.display = d; }
     head.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); set(OPEN, isOpen() ? '0' : '1'); applyOpen(); });
 
     box.__refresh = function () { setActive(); applyOpen(); };

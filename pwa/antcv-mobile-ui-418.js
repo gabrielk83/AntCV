@@ -85,8 +85,14 @@
   }
   function f351_hide(btn) {
     if (!btn) return;
-    if (btn.getAttribute(HIDDEN_ATTR) === '1' && btn.style.display === 'none') return;
-    btn.style.setProperty('display', 'none', 'important'); btn.setAttribute(HIDDEN_ATTR, '1'); btn.setAttribute('aria-hidden', 'true'); btn.setAttribute('tabindex', '-1');
+    var already = btn.getAttribute(HIDDEN_ATTR) === '1';
+    if (already && btn.style.display === 'none') return;
+    // SETTINGS-SWEEP-STABILIZE (row 17, 1.51.156): re-apply ONLY what changed. A
+    // React re-render can clear our display:none, so we re-hide — but the three
+    // attributes were re-set every tick even when already present, churning the
+    // MutationObserver. Set them once; only touch display on later re-shows.
+    if (btn.style.display !== 'none') btn.style.setProperty('display', 'none', 'important');
+    if (!already) { btn.setAttribute(HIDDEN_ATTR, '1'); btn.setAttribute('aria-hidden', 'true'); btn.setAttribute('tabindex', '-1'); }
   }
   function f351_target() { return document.querySelector('.antcv-top-tools') || document.querySelector('.antcv-top-file-name') || document.querySelector('.antcv-topbar-title'); }
   function f351_stylePill(el) {

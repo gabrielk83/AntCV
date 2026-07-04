@@ -260,8 +260,11 @@
       else if (corner === 'center') { watermark.style.left = '50%'; watermark.style.right = 'auto'; watermark.style.transform = 'translateX(-50%)'; }
       else { watermark.style.right = DEFAULT_INSET + 'px'; watermark.style.left = 'auto'; }
     }
-    watermark.setAttribute('data-antcv-watermark-corner', corner);
-    watermark.setAttribute('data-antcv-watermark-anchored', '1');
+    // SETTINGS-SWEEP-STABILIZE (row 17, 1.51.156): stamp on change only — these
+    // fired every tick (207 attribute mutations / 6s in the probe), churning the
+    // MutationObserver. Skip the setAttribute when the value already matches.
+    if (watermark.getAttribute('data-antcv-watermark-corner') !== String(corner)) watermark.setAttribute('data-antcv-watermark-corner', corner);
+    if (watermark.getAttribute('data-antcv-watermark-anchored') !== '1') watermark.setAttribute('data-antcv-watermark-anchored', '1');
     // WM-003 (owner): text-only marker — strip the box (border, fill, padding,
     // radius, shadow) that app.js renders inline, leaving the light teal text
     // anchored in the corner. Matches the de-boxed DOCX/PDF export.
@@ -424,7 +427,12 @@
       if (docIsCl()) return;
       var side = (corner === 'left') ? 'left' : 'right';
       window.__antcvAiWmSide = side;
-      localStorage.setItem('antcv:aiWmSide', side);
+      // SETTINGS-SWEEP-STABILIZE (register row 17, 1.51.156): write-on-change only.
+      // This ran on every rAF + MutationObserver tick, re-stamping antcv:aiWmSide
+      // 35-60x/sec at rest — the dominant settings-panel churn measured by
+      // diag-settings-panels-probe (207-361 writes / 6s across Personal/Account/
+      // Layout). A synchronous localStorage write per tick is the costly part.
+      if (localStorage.getItem('antcv:aiWmSide') !== side) localStorage.setItem('antcv:aiWmSide', side);
     } catch (_) {}
   }
 

@@ -43,9 +43,13 @@
   function applyCollapse(ctrl, label) {
     var open = isOpen();
     var caret = label.querySelector('[data-antcv-photo-caret]');
-    if (caret) caret.textContent = open ? '▾' : '▸';
-    var ch = ctrl.children;
-    for (var i = 0; i < ch.length; i++) { if (ch[i] !== label) ch[i].style.display = open ? '' : 'none'; }
+    // SETTINGS-SWEEP-STABILIZE (row 17, 1.51.156): write-on-change only. This ran
+    // every scan tick, replacing the caret text node (childList churn) and re-
+    // setting each child's display (style churn) — 47 caret + N display mutations
+    // / 6s in the Layout-panel probe. Only touch the DOM when the value differs.
+    if (caret) { var g = open ? '▾' : '▸'; if (caret.textContent !== g) caret.textContent = g; }
+    var ch = ctrl.children, dv = open ? '' : 'none';
+    for (var i = 0; i < ch.length; i++) { if (ch[i] !== label && ch[i].style.display !== dv) ch[i].style.display = dv; }
   }
 
   function enhance(ctrl, idx) {

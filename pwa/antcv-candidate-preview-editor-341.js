@@ -58,7 +58,7 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.50.107-ca006-header-anchor-guard';
+  var SCRIPT_VERSION = '1.51.139-ca006-pathc-header-whitelist';
   if (window.__antcvCandidatePreviewEditor341 === SCRIPT_VERSION) return;
   window.__antcvCandidatePreviewEditor341 = SCRIPT_VERSION;
 
@@ -312,10 +312,28 @@
       var inContentSection = function (el) {
         try { return !!(el.closest && el.closest(CONTENT_SECTION_SEL)); } catch (_) { return false; }
       };
+      // CA-006 (register row 43) hardening: the blacklist above misses a role
+      // node that lost its [data-sid] ancestor (paginated .antcv-page-row clones,
+      // merged roles) — so the Application sentence can still bleed into the first
+      // experience role title. That bleed ONLY happens on Path C, where
+      // findCandidateBlock() fell back to the WHOLE preview paper as `block` and
+      // the anchor search spans the entire document. In Paths A/B `block` is
+      // already scoped to the candidate header, so the search is safe there and
+      // this guard stays inert. On Path C, require the anchor to live inside a
+      // positive CANDIDATE-HEADER marker (band / drop-loc / candidate sid); a
+      // role node carries none of these, so it can never be chosen. Strictly
+      // additive: it can only REJECT anchors, never create a bleed, and if a
+      // markerless Path-C build has no candidate region the code already refuses
+      // to materialise a phantom sentence (return below) — no new regression.
+      var CAND_REGION_SEL = '[data-antcv-candidate-band="1"],[data-candidate-drop-loc="topbar"],'
+        + '[data-sid="candidate"],[data-sid="topbar"],[data-sid="top_bar"],[data-section-id="candidate"]';
+      var wholePaper = false;
+      try { wholePaper = !!(block.matches && block.matches('.antcv-preview-paper, [data-antcv-preview-paper]')); } catch (_) {}
       for (var i = 0; i < probes.length; i++) {
         var el = probes[i];
         if (el.children.length > 0) continue;
         if (inContentSection(el)) continue; // CA-006: skip experience/profile/etc.
+        if (wholePaper) { try { if (!el.closest(CAND_REGION_SEL)) continue; } catch (_) {} } // CA-006: Path C header-only
         var t = clean(el.textContent || '');
         if (!t) continue;
         var lct = t.toLowerCase();
@@ -453,10 +471,18 @@
         + '[data-section-id]:not([data-section-id="candidate"]):not([data-section-id="topbar"]):not([data-section-id="top_bar"])';
       try { return !!(el.closest && el.closest(sel)); } catch (_) { return false; }
     };
+    // CA-006 Path-C header-only guard (same rationale as wrapApplicationSentence):
+    // when `block` is the whole preview paper, only accept a specialisation anchor
+    // inside a candidate-header marker. Inert on Paths A/B (scoped block).
+    var subCandRegionSel = '[data-antcv-candidate-band="1"],[data-candidate-drop-loc="topbar"],'
+      + '[data-sid="candidate"],[data-sid="topbar"],[data-sid="top_bar"],[data-section-id="candidate"]';
+    var subWholePaper = false;
+    try { subWholePaper = !!(block.matches && block.matches('.antcv-preview-paper, [data-antcv-preview-paper]')); } catch (_) {}
     for (var i = 0; i < probes.length; i++) {
       var el = probes[i];
       if (el.querySelector('[data-antcv-candidate-edit]')) continue; // skip name/application hosts
       if (subInContentSection(el)) continue; // CA-006: header-only
+      if (subWholePaper) { try { if (!el.closest(subCandRegionSel)) continue; } catch (_) {} } // CA-006: Path C header-only
       var t = clean(el.textContent || '');
       if (!t) continue;
       var isPlaceholder = /^\[\s*specialis/i.test(t) || /fokusomr[aå]der/i.test(t);

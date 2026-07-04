@@ -1441,6 +1441,10 @@ function mergeSameCompanyRoles(roles) {
     return out;
   } catch (_) { return null; }
 }
+// ROLE-MERGE-STORED-001 (register row 34): expose the EXACT export merge so the
+// stored-sections preview-parity sidecar (antcv-role-merge-stored.js) produces a
+// byte-identical merged role. Preview == export by construction.
+try { if (typeof window !== 'undefined') window.AntcvMergeSameCompanyRoles = mergeSameCompanyRoles; } catch (_) {}
 // URUGUAYAN-VARIANT-STRIP-001 (2026-06-22): strip ", Uruguayan variant" qualifier from
 // Spanish language items at export. Owner: keep EN/HE native; only drop the regional
 // qualifier for Spanish. Applied to labeled_list items where the label is Spanish-like.

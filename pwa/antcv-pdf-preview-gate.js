@@ -882,9 +882,61 @@ ${inlineStyles}
     if (el.parentElement) el.parentElement.removeChild(el);
   }
 
+  // PERF-001 (docs/qa/OPEN_REGISTER.md row 45, owner console report: "'click'
+  // handler took 4369..11184ms" from this file): buildModal() synchronously
+  // serialises every live .antcv-preview-paper via outerHTML (a multi-page CV
+  // can be a large, deeply-nested tree — the cost scales with document size)
+  // plus every inline <style> tag in the page. That work was all happening
+  // INSIDE the FAB's click handler, so the whole tab appeared frozen with zero
+  // feedback for up to 11 seconds. Fix: show a lightweight loading shell
+  // IMMEDIATELY (the click handler itself now does only cheap DOM creation —
+  // no more long-task violation attributed to the click), then build the real
+  // modal on the next frame. Double rAF guarantees the loading shell has
+  // actually PAINTED before the expensive synchronous build starts (a single
+  // rAF can fire before the browser paints). buildModal()'s own
+  // "remove any existing #…-backdrop" step at its top cleans up the loading
+  // shell for us since it uses the same id — no separate teardown needed.
+  //
+  // This does not shrink the total synchronous work (still the same
+  // outerHTML cost once it runs) — it turns "frozen with no feedback" into
+  // "spinner appears immediately, then builds". Reducing the underlying cost
+  // (e.g. cloneNode + direct iframe DOM insertion instead of an
+  // outerHTML/srcdoc round-trip) is the likely next lever, but needs live
+  // DevTools profiling against a real multi-page document to attribute
+  // correctly before touching this heavily owner-tuned build path further.
+  function buildLoadingShell() {
+    injectStylesOnce();
+    const backdrop = document.createElement('div');
+    backdrop.id = MODAL_ID + '-backdrop';
+    const modal = document.createElement('div');
+    modal.id = MODAL_ID;
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.style.cssText = 'align-items:center;justify-content:center;min-height:160px;';
+    const spinner = document.createElement('div');
+    spinner.textContent = 'Building export preview…';
+    spinner.style.cssText =
+      'padding:48px 24px;text-align:center;color:#445;font-size:14px;' +
+      'font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;';
+    modal.appendChild(spinner);
+    backdrop.appendChild(modal);
+    // No keydown/click-outside handlers here on purpose: this shell only
+    // exists for one-to-two animation frames before buildModal() replaces it
+    // (same id, so its own "remove any existing backdrop" step at the top
+    // tears this down) — not worth a listener that would have to be
+    // separately torn down before that swap.
+    return backdrop;
+  }
+
   function openModal({ errorText } = {}) {
-    const backdrop = buildModal({ errorText: errorText || null });
-    document.body.appendChild(backdrop);
+    const loading = buildLoadingShell();
+    document.body.appendChild(loading);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const backdrop = buildModal({ errorText: errorText || null });
+        document.body.appendChild(backdrop);
+      });
+    });
   }
 
   // ─── Floating FAB ────────────────────────────────────────────────

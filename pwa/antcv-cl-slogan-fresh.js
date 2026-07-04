@@ -38,7 +38,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.127-smart-statement';
+  var VERSION = '1.51.145-personal-slogan';
   if (window.__antcvClSloganFresh) return;
   window.__antcvClSloganFresh = VERSION;
 
@@ -84,20 +84,24 @@
   }
   function realSubtitle(m) { return realText(m.cl_slogan) || realText(m.subtitle); }
   // SLOGAN-QUALITY-GATE-001 (owner: "slogan needs to be a SMART statement" —
-  // rule 38: enforce, don't trust the prompt). A generated cl_slogan is adopted
-  // ONLY when it looks like one: 2-8 words, no bullet-separator keyword-list
-  // shape, no banned buzzwords, and NEVER an echo of the specialization triad,
-  // the company, or the role title. A failing slogan is treated as ABSENT
-  // (no slogan line beats a bad one).
+  // rule 38: enforce, don't trust the prompt). SLOGAN-PERSONAL-001 (owner
+  // 2026-07-05: "the slogan should be professional and personal — e.g. 'As a
+  // rugby player and former hockey player, I make hardware platforms work across
+  // sports'"): the slogan may now be a longer, first-person PERSONAL statement,
+  // so the window is 3-10 words (was 2-8) and the char cap is 110 (was 64). A
+  // generated cl_slogan is adopted ONLY when it looks like one: 3-10 words, no
+  // bullet-separator keyword-list shape, no banned buzzwords, and NEVER an echo of
+  // the specialization triad, the company, or the role title. A failing slogan is
+  // treated as ABSENT (no slogan line beats a bad one).
   var BUZZ = /innovation|innovative|cutting[- ]edge|world[- ]class|passionate|dynamic|results[- ]driven|synergy|state[- ]of[- ]the[- ]art|best[- ]in[- ]class/i;
   function normPhrase(s) { return String(s || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').replace(/\s+/g, ' ').trim(); }
   function sloganQualityOk(s, m) {
     s = String(s || '').trim();
-    if (!s || s.length > 64) return false;
+    if (!s || s.length > 110) return false;
     if (/[•|]/.test(s)) return false;                                  // triad/keyword-list shape
     if ((s.match(/,/g) || []).length > 2) return false;                 // comma keyword list
     var words = normPhrase(s).split(' ').filter(Boolean);
-    if (words.length < 2 || words.length > 8) return false;
+    if (words.length < 3 || words.length > 10) return false;
     if (BUZZ.test(s)) return false;
     var n = normPhrase(s);
     var against = [m && m.subtitle, m && m.company, m && m.role];

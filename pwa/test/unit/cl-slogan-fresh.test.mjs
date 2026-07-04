@@ -181,6 +181,8 @@ test('quality gate: good smart statements pass', () => {
   const m = { subtitle: 'Processes • Products • People', company: 'Trackman A/S', role: 'Project Manager, Hardware' };
   assert.equal(api._qualityOk('MAKING THE INVISIBLE MANUFACTURABLE', m), true);
   assert.equal(api._qualityOk('Tracking every decision to the data', m), true);
+  // SLOGAN-PERSONAL-001: a longer, first-person PERSONAL statement (3-10 words) now passes.
+  assert.equal(api._qualityOk('As a rugby player I make hardware work across sports', m), true, 'personal first-person slogan');
 });
 
 test('quality gate: rejects triad/keyword-list shape, buzzwords, echoes of spec/company/role', () => {
@@ -190,8 +192,8 @@ test('quality gate: rejects triad/keyword-list shape, buzzwords, echoes of spec/
   assert.equal(api._qualityOk('Optics, imaging, sensing, validation, delivery', m), false, 'comma keyword list');
   assert.equal(api._qualityOk('Cutting-edge world-class innovation leader', m), false, 'buzzwords');
   assert.equal(api._qualityOk('Project Manager Hardware', m), false, 'echoes the role title');
-  assert.equal(api._qualityOk('word', m), false, 'one word is not a statement');
-  assert.equal(api._qualityOk('one two three four five six seven eight nine', m), false, 'too many words');
+  assert.equal(api._qualityOk('word two', m), false, 'two words is below the 3-word floor');
+  assert.equal(api._qualityOk('one two three four five six seven eight nine ten eleven', m), false, 'over 10 words');
 });
 
 test('adoption is quality-gated: a triad-shaped cl_slogan is NOT adopted', () => {

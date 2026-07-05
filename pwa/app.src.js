@@ -48586,7 +48586,22 @@
                       flexDirection: "column",
                       alignItems: "stretch",
                       gap: 8,
-                      margin: Ii ? "0 auto" : "0 0 0 0",
+                      // PREVIEW-FRAME-CENTER-MOBILE-001 (owner 2026-07-05:
+                      // "no reason for the preview to be pushed like that").
+                      // Mobile never centred this frame (margin 0 0 0 0,
+                      // pinned left) — invisible before ZOOM-FLOOR-001 (today,
+                      // same session) since at the OLD 35% floor the frame was
+                      // still wider than the viewport, so left-pinned vs.
+                      // centred looked identical. The new 10% floor can make
+                      // the frame much NARROWER than the viewport, and pinned
+                      // left then dumps all the freed space on the right —
+                      // exactly the "pushed" look reported. Auto-margins are
+                      // a no-op when the frame is wider than its container
+                      // (the normal, non-zoomed-out case), so centring on
+                      // mobile too is safe: no visible change until zoomed out
+                      // far enough for it to matter, and the RIGHT time to
+                      // matter, it now centers instead of piling right.
+                      margin: "0 auto",
                       boxSizing: "border-box",
                       overflow: "visible",
                       touchAction: "pan-x pan-y pinch-zoom",

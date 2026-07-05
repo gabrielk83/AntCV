@@ -13292,14 +13292,26 @@
     return React.createElement(
       "div",
       {
+        // GEN-OVERLAY-SCROLL-001 (owner 2026-07-05, mobile): same class of
+        // bug as MOBILE-PANEL-ZOOM-001 (row 46) — a centered column with no
+        // internal scroll, on a mobile #root/body that is height:100dvh +
+        // overflow:hidden. The section-status list grows as generation
+        // progresses and can exceed one viewport, clipping the top (title /
+        // Cancel) with no way to reach it. height (not minHeight) +
+        // overflowY:auto turns this into its own scroll container; the
+        // inner column gets margin:auto 0 below (auto margins override
+        // justifyContent in flexbox: centered when it fits, scrolls from
+        // the top when it doesn't) — the exact fix already proven there.
         style: {
-          minHeight: "100dvh",
+          height: "100dvh",
+          overflowY: "auto",
           background: `linear-gradient(160deg,${e},#1a2a45)`,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           fontFamily: "Georgia,serif",
           padding: "24px",
+          boxSizing: "border-box",
         },
       },
       React.createElement(
@@ -13310,6 +13322,7 @@
             color: "#fff",
             maxWidth: 520,
             width: "100%",
+            margin: "auto 0",
           },
         },
         React.createElement(
@@ -39940,15 +39953,23 @@
           "div",
           {
             className: "fade",
+            // UPLOAD-SCREEN-SCROLLTOP-001 (owner 2026-07-05, mobile, every
+            // load consistently): the EN/gear/Editor header row is cut off at
+            // the very top on a real session with existing data (taller
+            // content — extra Editor button + Re-edit-application panel —
+            // pushes the column just past one viewport). margin:"auto 0"
+            // below correctly makes this a scrolls-from-top case once
+            // content overflows, but doesn't GUARANTEE the initial scroll
+            // position actually lands at 0 — a known auto-margin/overflow
+            // edge case where the browser's first layout pass (before
+            // images/fonts settle) can compute a "still fits, center it"
+            // scroll offset that then persists even once the true (taller)
+            // height is established. Force it explicitly on mount instead
+            // of relying on that resolving itself.
+            ref: (el) => {
+              if (el) el.scrollTop = 0;
+            },
             style: {
-              minHeight: "100dvh",
-              // MOBILE-PANEL-ZOOM-001 (row 46): on mobile #root is height:100dvh
-              // + overflow:hidden (viewport lock), so this centered upload screen
-              // clipped its own overflow — the Brand-fit / Speed / Cap row fell
-              // below the fold and was unreachable at 100% zoom. Make this screen
-              // its OWN scroll container. The inner column gets margin:auto 0
-              // (auto margins override justify-content in flexbox) so it stays
-              // centred when it fits and scrolls from the top when it does not.
               height: "100dvh",
               overflowY: "auto",
               background: `linear-gradient(160deg,${__darkNavy(Ke)} 0%,#1a2a45 100%)`,

@@ -46,10 +46,11 @@ vm.createContext(ctx);
 vm.runInContext(
   hasD1Src + '\n' + retrySrc + '\n' + blockSrc +
   '\nthis.clusterForCategory = clusterForCategory; this.qualCanonical = qualCanonical; ' +
-  'this.recomputeClusterTop20 = recomputeClusterTop20; this.persistQualifications = persistQualifications;',
+  'this.recomputeClusterTop20 = recomputeClusterTop20; this.persistQualifications = persistQualifications; ' +
+  'this.GLOBAL_USER_HASH = GLOBAL_USER_HASH;',
   ctx
 );
-const { clusterForCategory, qualCanonical, recomputeClusterTop20, persistQualifications } = ctx;
+const { clusterForCategory, qualCanonical, recomputeClusterTop20, persistQualifications, GLOBAL_USER_HASH } = ctx;
 
 // ---- Fake D1: an in-memory implementation of exactly the statements the
 // extracted helpers issue against application_qualification / cluster_top_qualifications.
@@ -69,16 +70,19 @@ function makeFakeDB() {
           return hit ? { 1: 1 } : null;
         }
         if (sql.includes("COUNT(DISTINCT application_id) AS n")) {
-          const [userHash, clusterId] = bound;
-          const ids = new Set(aq.filter((r) => r.user_hash === userHash && r.cluster_id === clusterId && r.source !== 'seed').map((r) => r.application_id));
+          // GLOBAL (CLUSTER-DEMAND-GLOBAL-001): no user_hash filter — real
+          // 'jd' rows count ACROSS ALL USERS for the "based on N jobs" signal.
+          const [clusterId] = bound;
+          const ids = new Set(aq.filter((r) => r.cluster_id === clusterId && r.source === 'jd').map((r) => r.application_id));
           return { n: ids.size };
         }
         throw new Error('fake DB: unhandled first() query: ' + sql);
       },
       async all() {
         if (sql.includes('GROUP BY qual_canonical')) {
-          const [userHash, clusterId] = bound;
-          const rows = aq.filter((r) => r.user_hash === userHash && r.cluster_id === clusterId);
+          // GLOBAL: aggregates every user's rows for this cluster_id.
+          const [clusterId] = bound;
+          const rows = aq.filter((r) => r.cluster_id === clusterId);
           const groups = new Map();
           for (const r of rows) {
             if (!groups.has(r.qual_canonical)) groups.set(r.qual_canonical, { qual_canonical: r.qual_canonical, appIds: new Set(), weight_sum: 0, qual_display: r.qual_text });
@@ -161,7 +165,7 @@ test('persistQualifications: inserts rows and recomputes top-20 ordered by weigh
       { text: 'Six Sigma', weight: 0.25 },
     ],
   });
-  const top = env.DB._ctq().filter((r) => r.user_hash === 'u1' && r.cluster_id === 'pm_process');
+  const top = env.DB._ctq().filter((r) => r.user_hash === GLOBAL_USER_HASH && r.cluster_id === 'pm_process');
   assert.equal(top.length, 2);
   assert.equal(top[0].rank, 1);
   assert.equal(top[0].qual_canonical, 'stakeholder management');
@@ -199,7 +203,32 @@ test('persistQualifications: empty/missing qualifications is a no-op', async () 
   assert.equal(env.DB._aq().length, 0);
 });
 
-test('recomputeClusterTop20: shared_clusters flags a qual that also tops another cluster for the same user', async () => {
+test('persistQualifications: DIFFERENT users contributing the same cluster POOL into one global top-20 (CLUSTER-DEMAND-GLOBAL-001)', async () => {
+  const env = { DB: makeFakeDB() };
+  await persistQualifications(env, { userHash: 'alice', applicationId: 1, category: 'product_management', qualifications: [{ text: 'Stakeholder management', weight: 1.0 }] });
+  await persistQualifications(env, { userHash: 'bob', applicationId: 2, category: 'product_management', qualifications: [{ text: 'Stakeholder management', weight: 0.5 }] });
+  const top = env.DB._ctq().filter((r) => r.cluster_id === 'pm_process');
+  assert.equal(top.length, 1, 'the two users\' rows must pool into ONE global row set, not one per user');
+  assert.equal(top[0].user_hash, GLOBAL_USER_HASH, 'the rollup is written under the global sentinel, not either real user_hash');
+  assert.equal(top[0].frequency, 2, 'frequency counts distinct applications across BOTH users');
+  assert.equal(top[0].weight_sum, 1.5);
+  assert.equal(top[0].jd_count, 2, '"based on N jobs" now counts across all AntCV users');
+});
+
+test('recomputeClusterTop20: a real per-user "jd" row outranks a lower-weight "research" row for the same qualification', async () => {
+  const env = { DB: makeFakeDB() };
+  await persistQualifications(env, { userHash: 'alice', applicationId: 1, category: 'product_management', qualifications: [{ text: 'Requirements management', weight: 1.0 }] });
+  // Simulate a weekly-research row inserted directly (as the tuning job would) at RESEARCH_WEIGHT for a DIFFERENT qual.
+  await env.DB.prepare(
+    'INSERT INTO application_qualification (application_id, user_hash, cluster_id, qual_text, qual_canonical, weight, source, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+  ).bind(null, GLOBAL_USER_HASH, 'pm_process', 'AI literacy', 'ai literacy', 0.4, 'research', Date.now()).run();
+  await recomputeClusterTop20(env, 'pm_process');
+  const top = env.DB._ctq().filter((r) => r.cluster_id === 'pm_process').sort((a, b) => a.rank - b.rank);
+  assert.equal(top[0].qual_canonical, 'requirements management', 'the real user JD signal (weight 1.0) must rank above the research seed row (weight 0.4)');
+  assert.equal(top[0].jd_count, 1, 'jd_count only counts source=jd rows, not the research row');
+});
+
+test('recomputeClusterTop20: shared_clusters flags a qual that also tops another cluster (global, cross-application)', async () => {
   const env = { DB: makeFakeDB() };
   // Seed pm_process's top-20 with "stakeholder management" first.
   await persistQualifications(env, { userHash: 'u1', applicationId: 1, category: 'product_management', qualifications: [{ text: 'Stakeholder management', weight: 1.0 }] });

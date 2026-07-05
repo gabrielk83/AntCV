@@ -28,12 +28,16 @@ function extract(startMarker, endMarker) {
 }
 
 const hasD1Src = extract('function hasD1(env) {', '\n}');
+// fetchApplicationFit closes over the module-scope GLOBAL_USER_HASH constant
+// (CLUSTER-DEMAND-GLOBAL-001) for its cluster_top_qualifications lookup —
+// must be in scope or that lookup silently no-ops via its own try/catch.
+const globalHashSrc = extract("const GLOBAL_USER_HASH = '", "';");
 const fetchSrc = extract('async function fetchApplicationFit(', '\n}');
 
 const ctx = { console, JSON, String, Array, Object, Promise };
 vm.createContext(ctx);
-vm.runInContext(hasD1Src + '\n' + fetchSrc + '\nthis.fetchApplicationFit = fetchApplicationFit;', ctx);
-const { fetchApplicationFit } = ctx;
+vm.runInContext(globalHashSrc + '\n' + hasD1Src + '\n' + fetchSrc + '\nthis.fetchApplicationFit = fetchApplicationFit; this.GLOBAL_USER_HASH = GLOBAL_USER_HASH;', ctx);
+const { fetchApplicationFit, GLOBAL_USER_HASH } = ctx;
 
 // ---- Fake D1: an in-memory implementation of exactly the two SELECTs
 // fetchApplicationFit issues against application_fit and
@@ -83,7 +87,7 @@ test('shapes a full fit object: score/tier/matched/gaps parsed, plus jd_count fr
         gaps: JSON.stringify(['Quantum computing research']),
         computed_at: 1751000000000,
       }],
-      topQuals: { 'u1|pm_process': { jd_count: 7 } },
+      topQuals: { [GLOBAL_USER_HASH + '|pm_process']: { jd_count: 7 } },
     }),
   };
   const fit = await fetchApplicationFit(env, 'u1', 101);

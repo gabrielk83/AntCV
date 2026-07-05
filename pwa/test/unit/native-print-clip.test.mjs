@@ -17,7 +17,12 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const css = await readFile(new URL('../../antcv-mobile-controls.css', import.meta.url), 'utf8');
+// Normalize CRLF -> LF: this test measures character OFFSETS (fixed-size
+// slice windows below), so a Windows autocrlf checkout (CRLF) would shift
+// every offset vs the canonical LF blob and push the @media print block's
+// closing brace out of the slice window — a false failure on desktop while
+// CI (LF) stays green. Normalize so the offsets are checkout-independent.
+const css = (await readFile(new URL('../../antcv-mobile-controls.css', import.meta.url), 'utf8')).replace(/\r\n/g, '\n');
 
 const v113Index = css.indexOf('v113: preview viewport must start at the paper');
 const printFixIndex = css.indexOf('NATIVE-PRINT-CLIP-001');
@@ -32,7 +37,7 @@ test('a NATIVE-PRINT-CLIP-001 fix block exists, after the v113 rule it undoes', 
 });
 
 test('the fix is scoped to @media print and resets html/body/#root overflow+height', () => {
-  const block = css.slice(printFixIndex, printFixIndex + 1200);
+  const block = css.slice(printFixIndex, printFixIndex + 1600);
   const printBlockMatch = block.match(/@media print\s*\{([\s\S]*?)\n\}/);
   assert.ok(printBlockMatch, 'must contain an @media print block');
   const body = printBlockMatch[1];
@@ -41,7 +46,7 @@ test('the fix is scoped to @media print and resets html/body/#root overflow+heig
 });
 
 test('the print override also relaxes .antcv-preview-scroll (not just the root)', () => {
-  const block = css.slice(printFixIndex, printFixIndex + 1200);
+  const block = css.slice(printFixIndex, printFixIndex + 1600);
   assert.match(block, /\.antcv-preview-scroll\s*\{[^}]*overflow:\s*visible\s*!important/, '.antcv-preview-scroll must also be un-clipped for print');
 });
 

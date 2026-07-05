@@ -102,3 +102,76 @@ preview-sidecar not app.js/roles[0]; SO-003 has no single writer).
 ## NOTES
 - No app.js / app.src.js edits this run — all four fixes are self-contained sidecars, so no minified-mirror risk, no boot-smoke needed. main was never regressed; sync-first + rebase before every push.
 - The parallel worktrees under `.claude/worktrees/*` are other sessions' — untouched.
+
+---
+
+# SESSION 2 — 2026-07-05 late (desktop antcv-nightly, Opus 4.8 1M)
+
+**Preceding state:** SESSION 1 (above) shipped 1.51.136-139; the tree then advanced further (parallel
+sessions) to **PWA 1.51.163** — the state at this session's start. Sync: `pull --rebase` → already up to
+date. This was an **implementation-exhausted verification night**: every Band A–D register item is
+already SHIPPED or owner/device-gated. One real defect found + fixed; live-deploy state re-confirmed;
+register staleness swept. This session **confirms** SESSION 1's verifications (D2/A2) and extends the
+standing coverage — no contradictions.
+
+## SHIPPED (session 2)
+
+### NATIVE-PRINT-CLIP-TEST-EOL-FRAGILE-001 — test-only, no version bump, no cache-bust
+- **Symptom:** the nightly baseline suite failed **on this Windows desktop** with
+  `native-print-clip.test.mjs` → "must contain an @media print block" (`printBlockMatch` null); the Linux
+  cloud Routine reported the same suite green (that is why every "992/992" claim held there).
+- **Root cause (measured, not guessed):** the test finds the `@media print` block by a fixed
+  character-offset slice `css.slice(printFixIndex, printFixIndex + 1200)`. Git stores
+  `antcv-mobile-controls.css` as **LF** (blob 1337 LF / 0 CRLF); a Windows `autocrlf` checkout
+  materialises it **CRLF** (1337 CRLF pairs). The ~12 extra `\r` bytes in the NATIVE-PRINT-CLIP-001
+  comment shift the block's closing brace from offset **1180 (LF)** to **1203 (CRLF)** — 3 bytes past the
+  1200 window — so the regex finds no terminating `\n}`. The **production fix is correct and present**
+  (the `@media print` un-clip in 18ad1fb); only the test's offset math was checkout-dependent, and it was
+  red-on-Windows from the moment it landed.
+- **Fix:** `.replace(/\r\n/g,'\n')` on read (canonical-LF offsets) + windows 1200→1600.
+- **Verified:** 5/5 assertions pass on this CRLF checkout; full pwa suite **1065/1065** (was 1064/1065 —
+  this was the sole failure). File: `pwa/test/unit/native-print-clip.test.mjs`.
+
+## VERIFICATION (session 2 — extends/confirms session 1)
+
+- **D2 GEN-MODELROLE (row 39) — DEPLOY-VERIFIED, consistent with session 1.** `MODEL_ROLES` present in
+  BOTH wrangler.toml; cv-proxy /health `3.7.2-billing-cascade` **== tree VERSION**, relay auth-26 == tree
+  ⇒ `[vars]` applied live. **D1 `llm_calls` cross-check (new this session):** queried the live `ant_memory`
+  DB — the generation pipeline logs by `task` (compress / consensus_poll / parse_jd / analyze_fit / …),
+  **0** rows tagged supervisor/coherence/writer. This **corroborates SESSION 1's self-correction**: the
+  supervisor grounding path does not log to `llm_calls`, so telemetry-absence is not evidence of absence
+  — SESSION 1 already proved the supervisor runs live via an authed `/api/supervisor/check` curl. All four
+  providers healthy live. Nothing to redeploy.
+- **A2 tab/device isolation (row 39a) — DEPLOYED-CODE re-confirmed.** Leg 1 relay guard at index.js:2519
+  in the live PUT/POST handler, RELAY_VERSION == /health. **New observation:** the `meta` blob write
+  (line 2544) is not downgrade-guarded server-side (jd_company/jd_role are) — client guards backstop it;
+  logged as an owner-decision follow-up. Leg 2 PTR-STALE-GUARD present + wired both bundles. Legs' live
+  A/B + leg 3 remain owner/device-gated.
+- **E2 settings-panel stability (row 17) — extended past session 1.** SESSION 1 probed only the Personal
+  panel; this session ran `diag-settings-panels-probe` across **Personal + Account + Layout** on 1.51.163
+  → all **0 mutations/6s, 0 page errors, DIAG PASS**. Row 17 DONE holds and is now verified on all three
+  standard panels.
+- **E1 register staleness sweep.** Rows dated 2026-07-05 with code-presence evidence: **35** (`__antcvGenCost`
+  heartbeat present), **36** (`CORECOMP-BROAD` present), **37** (FOCUS-AREA canon rules present) — the
+  1.51.41-43 fixes survived 120+ version bumps un-regressed; regen-confirm still owner-gated. Row **9**
+  confirmed a genuine gap (client half + `cluster_top_qualifications` D1 table exist; worker pipeline +
+  cron unbuilt). Row **17** re-verified.
+- **E3 button-audit (row 23):** re-ran `diag-panel-button-audit` on 1.51.163 (PANEL_BUTTON_AUDIT_2026-07-05.json):
+  197 buttons — 118 active, 12 dangerous-skipped, 10 ui-only, 55 not-visible, **unclickable 23→2** (the
+  pass-2 retry leg is holding), **0 page errors, 0 DEAD controls**. not-visible steady at 55 = the
+  root-caused CJLR/dblclick family (not a bug). The 8 "preview-only" keys flagged are legitimate UI state
+  (settingsTab/subTab/topbarOrder/analytics counts/probes), not export-parity gaps. Live dangerous-button
+  audit + CJLR pass-3 remain owner-gated.
+
+## SESSION-2 OWNER-DECISION additions
+- **D2 role-tagged logging (optional):** `llm_calls` logs by task only, so supervisor→mistral is invisible
+  in telemetry (the live proof is the authed curl, not the DB). If you want D2 permanently self-verifiable
+  from D1, add a role tag on the generation calls (small change, both proxies, needs deploy). Not done —
+  D2 is verify-only.
+- **A2 server meta-guard (minor):** relay downgrade guard covers `jd_company`/`jd_role` but not the `meta`
+  blob; client guards backstop it. Close the server-side symmetry too?
+
+## SESSION-2 NOTES
+- Only edits: `pwa/test/unit/native-print-clip.test.mjs` (test robustness) + doc updates
+  (`OPEN_REGISTER.md` rows 9/17/35/36/37/39/39a, `ACTIVE_BUGS.md`, this report). No production asset, no
+  app.js, no cache-bust, no worker deploy. main never regressed; rebased-clean before push.

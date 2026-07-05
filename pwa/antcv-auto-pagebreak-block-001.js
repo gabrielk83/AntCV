@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.51.65-early-break-tune2';
+  var VERSION = '1.51.66-early-break-tune3';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -257,11 +257,12 @@
   // page still has at least this many raw px free AFTER taking the group — i.e. it
   // fits with real slack, not by a hair. Demotions (overflow) are unchanged. 0 disables.
   // Owner-tunable live: AntcvAutoPagebreak.config({ SIDEBAR_PROMOTE_MARGIN: N }).
-  // SIDEBAR-EARLY-BREAK-001 (owner 2026-07-05, live-tuned): 45 required more free slack
-  // before promoting a group back up a page than this owner's real content needed,
-  // contributing to the "moved to next page too early" complaint. Second A/B round
-  // (paired with the SIDEBAR_PAGE1_BAND 180->190 correction) landed on 15.
-  var SIDEBAR_PROMOTE_MARGIN = 15;
+  // SIDEBAR-EARLY-BREAK-001 (owner 2026-07-05): first live A/B lowered this to 15, paired
+  // with SIDEBAR_PAGE1_BAND 180->190. That combo let a group (Lab & fabrication) get
+  // PROMOTED onto page 1 with too little real slack — it then overflowed with no room
+  // left, worse than the whitespace this margin trades against. Split the difference
+  // between the original 45 (safe, never overflowed) and the too-permissive 15.
+  var SIDEBAR_PROMOTE_MARGIN = 25;
   // last settled page per sidebar GROUP (keyed by sid + normalized group label so the
   // identity survives row-index shifts when a line above the group is removed).
   var __grpPageStick = {};

@@ -32891,6 +32891,23 @@
                                   window.__antcvPurgeGhosts &&
                                   window.__antcvPurgeGhosts({ quiet: !0 });
                               } catch (e) {}
+                              // HARDREFRESH-STICKY-PAGEBREAK-001 (owner 2026-07-05: "tools is
+                              // pushed out again" after a live pagination-constant retune). The
+                              // sidebar/main auto-pagebreak measurer (antcv-auto-pagebreak-
+                              // block-001.js) is DELIBERATELY sticky — once a section has a
+                              // computed break, it is never re-measured (that's what stops the
+                              // page boundary from oscillating on every scroll re-render). That
+                              // stickiness lives in its OWN localStorage keys, independent of the
+                              // service-worker cache Hard Refresh already clears — so a user with
+                              // no devtools console (can't call AntcvAutoPagebreak.clear()
+                              // themselves) had no way to discard a break computed under an old
+                              // tuning constant after a deploy. Hard Refresh now also drops those
+                              // two keys so the next load re-measures from scratch against
+                              // whatever SIDEBAR_PAGE1_BAND/etc. just shipped.
+                              try {
+                                localStorage.removeItem("antcv:autoPages");
+                                localStorage.removeItem("antcv:autoPagesPreview");
+                              } catch (e) {}
                             } catch (e) {
                               console.warn("Hard refresh cleanup error:", e);
                             }

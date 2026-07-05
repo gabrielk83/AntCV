@@ -1194,7 +1194,7 @@
                 paged.forEach(function (b) { var k = parseInt(b.key, 10) || 0; if (k < lastGrp) beforePage = Math.max(beforePage, b.page); });
                 var blkCount = __uniBlocks.sidebar.length;
                 var cached = __forceLastGrpStick[sid];
-                try { if (localStorage.getItem('antcv:flg-debug') === '1') console.log('[FLG]', sid, { tot: Math.round(tot), thr: Math.round(__uniLimit * FORCE_LAST_GRP_FRAC), big: tot > __uniLimit * FORCE_LAST_GRP_FRAC, grps: starts.length, lastGrp: lastGrp, beforePage: beforePage, cached: cached && { sp: cached.startPage, bc: cached.blkCount } }); } catch (_) {}
+                try { if (localStorage.getItem('antcv:flg-debug') === '1') console.log('[FLG]', sid, { tot: Math.round(tot), thr: Math.round(__uniLimit * FORCE_LAST_GRP_FRAC), big: tot > __uniLimit * FORCE_LAST_GRP_FRAC, grps: starts.length, lastGrp: lastGrp, beforePage: beforePage, cached: cached && { sp: cached.startPage, bc: cached.blkCount, gc: cached.grpCount } }); } catch (_) {}
                 // FORCE-LAST-GRP-SETTLE-001 (owner 2026-06-29 "Environmental should cut into page 3"):
                 // re-apply the cached decision ONLY while the block count is stable AND the section's
                 // START PAGE is unchanged. The old key (block-count only) let a BOOT-TIME transient
@@ -1202,7 +1202,19 @@
                 // STARTS on page 2, but a stale startPage from an earlier layout kept Environmental on
                 // page 2. The page-2/3 dance damping still holds: a SETTLED start page is stable across
                 // re-measure noise, so only a genuine settle re-evaluates.
-                if (cached && blkCount >= cached.blkCount && cached.startPage === beforePage) {
+                // FORCE-LAST-GRP-GRPCOUNT-INVALIDATE-001 (owner 2026-07-05, "page-3 ghost" — a real
+                // export stranded ONE group alone on an otherwise near-empty page): blkCount (total
+                // sidebar BLOCKS/rows) growing doesn't mean the GROUP count grew by the same shape —
+                // REGULATORY CONTEXT grew from 4 groups to 5 (a new "Environmental, Durability &
+                // Compliance" group added after the original "Environmental & Durability"), and every
+                // new group's rows make blkCount >= cached.blkCount trivially true, so this cache kept
+                // reapplying the OLD lastGrp index (pointing at what used to be the final group, now
+                // the 4th of 5) forever. The isolated 4th group landed alone on its own near-empty
+                // page, and the coordinator's per-group pass then placed the NEW 5th group on yet
+                // another page after it — the exact "one group stranded alone" export the owner hit.
+                // A genuine group-COUNT change must invalidate this cache same as a startPage change;
+                // blkCount alone is not a sufficient staleness signal.
+                if (cached && blkCount >= cached.blkCount && cached.startPage === beforePage && cached.grpCount === starts.length) {
                   paged.forEach(function (b) { var k = parseInt(b.key, 10) || 0; if (k >= cached.lastGrp) b.page = cached.startPage + 1; });
                   return;
                 }
@@ -1220,7 +1232,7 @@
                 var __nLimEquiv = __uniLimit / (SIDEBAR_PREVIEW_INFLATE > 1 ? SIDEBAR_PREVIEW_INFLATE : 1);
                 var wouldFit = (otherFill + lastGroupTot * SIDEBAR_PREVIEW_INFLATE) <= __nLimEquiv;
                 if (wouldFit) { delete __forceLastGrpStick[sid]; return; }   // genuinely fits — leave the coordinator's own placement alone
-                __forceLastGrpStick[sid] = { lastGrp: lastGrp, startPage: beforePage, blkCount: blkCount };   // CACHE the decision + start page + block count
+                __forceLastGrpStick[sid] = { lastGrp: lastGrp, startPage: beforePage, blkCount: blkCount, grpCount: starts.length };   // CACHE the decision + start page + block/group count
                 paged.forEach(function (b) { var k = parseInt(b.key, 10) || 0; if (k >= lastGrp) b.page = beforePage + 1; });
               } catch (e) { /* per-section: never abort the whole pass */ }
             });

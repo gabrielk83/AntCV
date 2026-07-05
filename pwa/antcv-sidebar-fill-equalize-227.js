@@ -68,7 +68,18 @@
         var side = row.querySelector(SIDE_SEL);
         var main = row.querySelector(MAIN_SEL);
         if (!side || !main) return;
-        if (idx !== lastIdx) {
+        // TOOLS-CONT-WHITESPACE-001 (owner 2026-07-05, "tools & methods has too
+        // much white space"): this branch used to be `idx !== lastIdx` only, so
+        // the genuinely-last row of a MULTI-page document fell through to the
+        // "LAST page-row" branch below and got stretched to the (page-fit-
+        // forced) full A4 box height even when its real content — e.g. a single
+        // small TOOLS & METHODS group plus a short CERTIFICATES/EDUCATION tail —
+        // was a fraction of that. The paired antcv-page-fit.js change now only
+        // forces the full A4 min-height when there is exactly ONE page-row; any
+        // row in a multi-page document (including the last) should equalize to
+        // real CONTENT, matching the non-last case below. Only the trivial
+        // single-row document still takes the "LAST page-row" A4-fill branch.
+        if (idx !== lastIdx || rows.length > 1) {
           // SALMON-EMPTY-REGION-001 (1.50.753): NON-LAST page-row. Size the box
           // to the TALLER column's CONTENT so the salmon (top of the next
           // page-box) sits flush under the last page-1 item — no ~190px dead

@@ -44,7 +44,7 @@
   'use strict';
 
   if (window.__antcvPdfPreviewGateInstalled) return;
-  window.__antcvPdfPreviewGateInstalled = '1.50.374-page2-print';
+  window.__antcvPdfPreviewGateInstalled = '1.51.188-draggable-fab';
 
   const FAB_ID = 'antcv-pdf-preview-fab';
   const MODAL_ID = 'antcv-pdf-preview-modal';
@@ -1213,7 +1213,7 @@ ${inlineStyles}
 
   // Public API for diagnostics / power-users.
   window.AntcvPdfPreviewGate = {
-    version: '1.50.604-width-fit',
+    version: '1.51.188-draggable-fab',
     open: openModal,
     close: closeModal,
   };

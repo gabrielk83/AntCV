@@ -30,7 +30,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.51.169';
+  var VERSION = '1.51.188';
   if (window.__antcvFitPanelInstalled === VERSION) return;
   window.__antcvFitPanelInstalled = VERSION;
 

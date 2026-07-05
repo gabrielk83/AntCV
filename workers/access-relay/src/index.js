@@ -1067,6 +1067,17 @@ async function handleApiPrefs(request, env) {
       } catch (_) { activeApplication = null; }
     }
 
+    // CLUSTER-QUAL-001 stage 3 (spec section 6 rollout step 6, "PWA: add a fit
+    // panel"): surface the active application's fit_score/tier/matched/gaps
+    // (computed by stage 2a's computeApplicationFit on every save) alongside
+    // it, in the SAME /api/prefs round trip the PWA already uses to restore
+    // cv_sections/rationale — no second endpoint needed. null when there's no
+    // score yet (unsolicited/no-cluster category, or a save that predates
+    // stage 2a shipping).
+    if (activeApplication && d1Available) {
+      activeApplication.fit = await fetchApplicationFit(env, userHash, activeApplication.id);
+    }
+
     // Merge into the flat /api/prefs wire shape.
     //  - apiKeys + transitional fields come from KV
     //  - all settings (BYOK, tone, sidebar, style, etc.) come from kernel.preferences
@@ -2267,6 +2278,39 @@ async function computeApplicationFit(env, userHash, applicationId, category) {
   } catch (_) {
     // Best-effort — fit scoring is a secondary signal; a failure here must
     // never surface as a save failure to the user.
+  }
+}
+
+// CLUSTER-QUAL-001 stage 3 (spec section 6 rollout step 6): read-side
+// counterpart to computeApplicationFit, for the PWA fit panel. Returns
+// {cluster_id, fit_score, tier, matched, gaps, jd_count, computed_at} or
+// null when there's no score yet (no application_fit row — unsolicited/
+// no-cluster category, or a save that predates stage 2a). Never throws.
+async function fetchApplicationFit(env, userHash, applicationId) {
+  if (!hasD1(env) || !applicationId) return null;
+  try {
+    const fitRow = await env.DB.prepare(
+      'SELECT cluster_id, fit_score, matched, gaps, tier, computed_at FROM application_fit WHERE application_id = ? AND user_hash = ?'
+    ).bind(applicationId, userHash).first();
+    if (!fitRow) return null;
+    let jdCount = 0;
+    try {
+      const cRow = await env.DB.prepare(
+        'SELECT jd_count FROM cluster_top_qualifications WHERE user_hash = ? AND cluster_id = ? LIMIT 1'
+      ).bind(userHash, fitRow.cluster_id).first();
+      jdCount = (cRow && cRow.jd_count) || 0;
+    } catch (_) { jdCount = 0; }
+    return {
+      cluster_id: fitRow.cluster_id,
+      fit_score: fitRow.fit_score,
+      tier: fitRow.tier,
+      matched: (() => { try { return JSON.parse(fitRow.matched || '[]'); } catch (_) { return []; } })(),
+      gaps: (() => { try { return JSON.parse(fitRow.gaps || '[]'); } catch (_) { return []; } })(),
+      jd_count: jdCount,
+      computed_at: fitRow.computed_at,
+    };
+  } catch (_) {
+    return null;
   }
 }
 

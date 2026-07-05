@@ -58,7 +58,7 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.170';
+  const TARGET_VERSION = '1.51.171';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
@@ -133,7 +133,7 @@
     // Doing so causes the rewrite loop to match its own output and
     // append the suffix on every MutationObserver cycle. See the
     // idempotency guard in rewriteTextNodes below.
-, '1.50.865', '1.51.156', '1.51.157', '1.51.158', '1.51.159', '1.51.160', '1.51.161', '1.51.162', '1.51.163', '1.51.164', '1.51.165', '1.51.166', '1.51.167', '1.51.168', '1.51.169'
+, '1.50.865', '1.51.156', '1.51.157', '1.51.158', '1.51.159', '1.51.160', '1.51.161', '1.51.162', '1.51.163', '1.51.164', '1.51.165', '1.51.166', '1.51.167', '1.51.168', '1.51.169', '1.51.170'
   ];
   const STALE_SET = new Set(STALE_VERSIONS);
 

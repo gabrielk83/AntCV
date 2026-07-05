@@ -11,9 +11,10 @@
 // cold-start demand weighting before the live D1 path has data.
 //
 // Loads the REAL sidecar in a vm sandbox with a fake window/localStorage and
-// asserts the shape + classification behaviour, plus the critical
-// non-regression: unsolicited scoring still defaults to the ORIGINAL 3
-// clusters (expanding it to 9 would dilute the normalized demand signal ~3x).
+// asserts the shape + classification behaviour, and that untargeted
+// (unsolicited) scoring spans ALL 9 clusters (owner 2026-07-05: an open CV is
+// weighted by whole-market demand; scoreNorm keeps the score on a [0,1] scale
+// regardless of active-cluster count).
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -55,12 +56,12 @@ test('exposes all 9 clusters, each with exactly 20 ranked items and a valid shar
   }
 });
 
-test('untargeted (unsolicited) default stays the ORIGINAL 3 clusters — NOT all 9 (no demand-signal dilution)', () => {
+test('untargeted (unsolicited) scoring spans ALL 9 clusters (owner 2026-07-05 — whole-market demand weighting)', () => {
   const CD = load(''); // no JD -> unsolicited
   // JSON-compare: activeClusters() returns a vm-realm Array, which
   // assert.deepStrictEqual treats as unequal to a host Array even when
   // structurally identical.
-  assert.equal(JSON.stringify(CD.activeClusters()), JSON.stringify(['pm_process', 'photonics_eng', 'research_phd']));
+  assert.equal(JSON.stringify(CD.activeClusters().slice().sort()), JSON.stringify(NINE.slice().sort()));
 });
 
 const CLASSIFY_CASES = {

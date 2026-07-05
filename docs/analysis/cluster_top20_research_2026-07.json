@@ -1,8 +1,8 @@
 {
   "source": "Market research (2025-2026 postings + skills/hiring reports) — CLUSTER-QUAL-001 stage 4 (spec 7.6)",
   "generated": "2026-07-05",
-  "method": "Web research over current job postings and 2025-2026 skills/hiring reports (Robert Half, LinkedIn, Coursera, Corporate Finance Institute, AIHR, Pluralsight, Dataquest, US BLS, Morgan McKinley, et al.); qualifications ranked by frequency of appearance as required/preferred across a spread of postings, leaning international/European (incl. Nordic) since this tool's users are Europe-based. No qualification is included that was not genuinely recurring in real postings.",
-  "note": "These 6 clusters extend the client cold-start demand model from 3 -> 9 clusters. The 3 original clusters (pm_process, photonics_eng, research_phd) remain the analyst-reviewed 16-JD sample in cluster_top20_seed_2026-06.json and are NOT re-derived here. Untargeted (unsolicited) scoring still defaults to those original 3 (see DEFAULT_CLUSTERS in antcv-cluster-demand.js) to avoid diluting the normalized demand signal; these 6 are used when a JD classifies into one of them. The live D1 path (antcv-cluster-demand-live.js) overtakes all of this once a user accumulates real-JD data.",
+  "method": "Web research over current job postings and 2025-2026 skills/hiring reports (Robert Half, LinkedIn, Coursera, Corporate Finance Institute, AIHR, Pluralsight, Dataquest, US BLS, Morgan McKinley, Glassdoor, Jobindex.dk / Danish market, Edstellar Denmark, WorkinDenmark, et al.); Danish/Nordic signal (ESG/CSRD reporting, NIS2 security, Danish-language framing) folded in per owner 2026-07-05; qualifications ranked by frequency of appearance as required/preferred across a spread of postings, leaning international/European (incl. Nordic) since this tool's users are Europe-based. No qualification is included that was not genuinely recurring in real postings.",
+  "note": "These 6 clusters extend the client cold-start demand model from 3 -> 9 clusters. The 3 original clusters (pm_process, photonics_eng, research_phd) started as the analyst-reviewed 16-JD sample in cluster_top20_seed_2026-06.json; all 9 are now in the weekly tuning rotation (docs/deployment/google-cse-setup.md) and change over time. Untargeted (unsolicited) scoring spans ALL 9 clusters (owner 2026-07-05) so an open CV is weighted by whole-market demand. The live D1 path (antcv-cluster-demand-live.js) overtakes this per-user once real-JD data accumulates.",
   "share_legend": {
     "ABC": "universal transferable skill demanded across most clusters (highest visibility, 1.5x)",
     "AB": "shared across adjacent clusters (1.2x)",
@@ -20,7 +20,11 @@
     "https://www.coursera.org/articles/consulting-skills",
     "https://hortoninternational.com/key-leadership-competencies-for-executive-success",
     "https://www.morganmckinley.com/article/top-accounting-finance-skills-in-demand",
-    "https://www.bls.gov/ooh/math/data-scientists.htm"
+    "https://www.bls.gov/ooh/math/data-scientists.htm",
+    "https://www.glassdoor.com/blog/guide/in-demand-skills/",
+    "https://www.edstellar.com/blog/skills-in-demand-in-denmark",
+    "https://www.workindenmark.dk/working-in-denmark/sectors-with-high-demand/business-and-finance",
+    "https://www.ca.dk/artikler/tjek-de-20-mest-efterspurgte-faglige-kompetencer-i-et-studiejob/"
   ],
   "clusters": {
     "engineering_software": {
@@ -36,7 +40,7 @@
         {"r": 8, "q": "API design & microservices (REST / gRPC)", "share": "none"},
         {"r": 9, "q": "Databases & data modelling (SQL & NoSQL)", "share": "AB"},
         {"r": 10, "q": "AI / LLM integration & prompt engineering", "share": "ABC"},
-        {"r": 11, "q": "Secure coding & application security", "share": "none"},
+        {"r": 11, "q": "Secure coding & application security (NIS2)", "share": "none"},
         {"r": 12, "q": "Agile / Scrum delivery & iteration", "share": "AB"},
         {"r": 13, "q": "Frontend frameworks (React / TypeScript)", "share": "none"},
         {"r": 14, "q": "Infrastructure as code (Terraform / Ansible)", "share": "none"},
@@ -45,7 +49,7 @@
         {"r": 17, "q": "Performance optimisation & profiling", "share": "none"},
         {"r": 18, "q": "Cross-functional collaboration with product & design", "share": "ABC"},
         {"r": 19, "q": "Clear technical communication & documentation", "share": "ABC"},
-        {"r": 20, "q": "English fluency (working proficiency)", "share": "ABC"}
+        {"r": 20, "q": "English fluency (Danish an advantage)", "share": "ABC"}
       ]
     },
     "data_analytics": {
@@ -70,7 +74,7 @@
         {"r": 17, "q": "Version control & reproducible analysis (Git)", "share": "none"},
         {"r": 18, "q": "Data governance, privacy & ethics", "share": "none"},
         {"r": 19, "q": "Critical thinking & problem-solving", "share": "ABC"},
-        {"r": 20, "q": "English fluency (working proficiency)", "share": "ABC"}
+        {"r": 20, "q": "English fluency (Danish an advantage)", "share": "ABC"}
       ]
     },
     "consulting": {
@@ -93,9 +97,9 @@
         {"r": 15, "q": "Strategic thinking & framing", "share": "AB"},
         {"r": 16, "q": "Data visualisation & dashboards (Power BI / Tableau)", "share": "none"},
         {"r": 17, "q": "Relationship building & trust", "share": "ABC"},
-        {"r": 18, "q": "Resilience & working to deadlines", "share": "none"},
+        {"r": 18, "q": "ESG & sustainability advisory (CSRD)", "share": "AB"},
         {"r": 19, "q": "AI / digital fluency in delivery", "share": "ABC"},
-        {"r": 20, "q": "English fluency (additional languages an advantage)", "share": "ABC"}
+        {"r": 20, "q": "English fluency (Danish an advantage)", "share": "ABC"}
       ]
     },
     "executive": {
@@ -113,14 +117,14 @@
         {"r": 10, "q": "Emotional intelligence & people leadership", "share": "ABC"},
         {"r": 11, "q": "Cross-functional & enterprise-wide alignment", "share": "ABC"},
         {"r": 12, "q": "Culture, values & talent development", "share": "none"},
-        {"r": 13, "q": "Governance, risk & compliance oversight", "share": "none"},
+        {"r": 13, "q": "Governance, risk, ESG & compliance oversight (CSRD)", "share": "AB"},
         {"r": 14, "q": "AI & digital strategy fluency", "share": "ABC"},
         {"r": 15, "q": "Negotiation & partnership building", "share": "AB"},
         {"r": 16, "q": "Vision communication & influence", "share": "ABC"},
         {"r": 17, "q": "Market & competitive strategy", "share": "AB"},
         {"r": 18, "q": "Resilience & adaptability", "share": "none"},
         {"r": 19, "q": "Global / multi-market leadership experience", "share": "none"},
-        {"r": 20, "q": "English fluency (additional languages an advantage)", "share": "ABC"}
+        {"r": 20, "q": "English fluency (Danish an advantage)", "share": "ABC"}
       ]
     },
     "finance": {
@@ -139,13 +143,13 @@
         {"r": 11, "q": "Cash flow & working-capital management", "share": "none"},
         {"r": 12, "q": "Cost analysis & profitability management", "share": "none"},
         {"r": 13, "q": "Commercial & business acumen", "share": "ABC"},
-        {"r": 14, "q": "Regulatory reporting & risk assessment", "share": "none"},
+        {"r": 14, "q": "Regulatory, ESG & sustainability reporting (CSRD)", "share": "AB"},
         {"r": 15, "q": "Data analysis & SQL fundamentals", "share": "AB"},
         {"r": 16, "q": "AI & automation in finance", "share": "ABC"},
         {"r": 17, "q": "Professional qualification (CPA / ACCA / CFA / CIMA)", "share": "none"},
         {"r": 18, "q": "Attention to detail & accuracy", "share": "none"},
         {"r": 19, "q": "Cross-functional collaboration", "share": "ABC"},
-        {"r": 20, "q": "English fluency (additional languages an advantage)", "share": "ABC"}
+        {"r": 20, "q": "English fluency (Danish an advantage)", "share": "ABC"}
       ]
     },
     "people_soft": {
@@ -170,7 +174,7 @@
         {"r": 17, "q": "AI literacy in HR & automation", "share": "ABC"},
         {"r": 18, "q": "Communication & interpersonal skills", "share": "ABC"},
         {"r": 19, "q": "Employer branding & candidate experience", "share": "none"},
-        {"r": 20, "q": "English fluency (additional languages an advantage)", "share": "ABC"}
+        {"r": 20, "q": "English fluency (Danish an advantage)", "share": "ABC"}
       ]
     }
   }

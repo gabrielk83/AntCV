@@ -752,7 +752,16 @@ const KERNEL_PREFS_STR_FIELDS = new Set([
   // transparent, <=600px) PNG data-URL — small enough for preferences. All are strings
   // (sizes/aspect ride as numeric strings; the client coerces with Number()).
   'signatureB64', 'signatureAlign', 'signatureSize', 'signatureAspect', 'signatureHidden',
-  'clSlogan', 'clSloganHidden', 'clSloganAlign',
+  // SLOGAN-CTX-CLOUD-001 (owner 2026-07-05): clSlogan's OWNERSHIP stamp
+  // (antcv-cl-slogan-fresh.js's antcv:clSloganCtx, {v, app}) was never
+  // allowlisted here even though clSlogan itself was — a fresh device/session
+  // restored the slogan TEXT from the cloud but never its ctx, so the
+  // sidecar's unsolicited-leak-clear check (which requires ctx to identify a
+  // stale owner) could never fire, letting a stale targeted-app slogan (e.g.
+  // a prior company's) survive indefinitely across every later unsolicited
+  // generation. JSON-stringified, but round-trips as a plain string like
+  // every other field here.
+  'clSlogan', 'clSloganHidden', 'clSloganAlign', 'clSloganCtx',
   // CL-CLOSING-EDIT-001 (owner 2026-06-29): editable sign-off closing (default "At your service,")
   // + CL-SIGNOFF-ALIGN-001 its CJLR (default center; order closing -> name -> signature).
   'clClosing', 'clClosingAlign',

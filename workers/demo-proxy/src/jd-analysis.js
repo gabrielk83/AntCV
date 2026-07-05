@@ -192,6 +192,15 @@ function normalize(analysis) {
         grounded: q.grounded === true,
       })),
     language: str(a.language) || 'unknown',
+    // CLUSTER-QUAL-001-CATEGORY-001 (owner 2026-07-05): category was requested
+    // in the prompt schema but never surfaced in the normalized response, so
+    // the client had no real classified category to persist — every save sent
+    // a placeholder "targeted"/"unsolicited" string instead of one of the 12
+    // real category ids, and the whole category->cluster pipeline (row 9)
+    // never saw real data. access-relay's own normalizeCategory() is the
+    // authoritative validator (coerces anything unrecognized to 'unsolicited'),
+    // so this just passes the LLM's raw value through with a safe default.
+    category: str(a.category) || 'unsolicited',
     qualifications: arr(a.qualifications)
       .filter(q => q && typeof q.text === 'string' && q.text.trim())
       .slice(0, 40)

@@ -17,9 +17,8 @@
  *
  * Use (read-only, never throws):
  *   window.AntcvClusterDemand.activeClusters()  -> ['pm_process', ...]
- *       JD present + classifiable -> that one cluster; else (unsolicited) -> the
- *       three default clusters (see DEFAULT_CLUSTERS — untargeted CVs are NOT
- *       scored across all 9, which would dilute the normalized signal).
+ *       JD present + classifiable -> that one cluster; else (unsolicited) -> ALL 9
+ *       clusters, so an open CV is weighted by whole-market demand.
  *   window.AntcvClusterDemand.score(text)       -> number >= 0
  *       higher = more demanded. Unsolicited SUMS across clusters, so a cross-cluster
  *       (shared / ABC) skill is pumped — the owner's "requested in top 2 in most
@@ -126,7 +125,7 @@
       [8, 'API design & microservices (REST / gRPC)', 'none'],
       [9, 'Databases & data modelling (SQL & NoSQL)', 'AB'],
       [10, 'AI / LLM integration & prompt engineering', 'ABC'],
-      [11, 'Secure coding & application security', 'none'],
+      [11, 'Secure coding & application security (NIS2)', 'none'],
       [12, 'Agile / Scrum delivery & iteration', 'AB'],
       [13, 'Frontend frameworks (React / TypeScript)', 'none'],
       [14, 'Infrastructure as code (Terraform / Ansible)', 'none'],
@@ -135,7 +134,7 @@
       [17, 'Performance optimisation & profiling', 'none'],
       [18, 'Cross-functional collaboration with product & design', 'ABC'],
       [19, 'Clear technical communication & documentation', 'ABC'],
-      [20, 'English fluency (working proficiency)', 'ABC']
+      [20, 'English fluency (Danish an advantage)', 'ABC']
     ] },
     data_analytics: { label: 'Data & Analytics', top20: [
       [1, 'SQL & data querying', 'AB'],
@@ -157,7 +156,7 @@
       [17, 'Version control & reproducible analysis (Git)', 'none'],
       [18, 'Data governance, privacy & ethics', 'none'],
       [19, 'Critical thinking & problem-solving', 'ABC'],
-      [20, 'English fluency (working proficiency)', 'ABC']
+      [20, 'English fluency (Danish an advantage)', 'ABC']
     ] },
     consulting: { label: 'Consulting', top20: [
       [1, 'Structured problem-solving (hypothesis-driven, 80/20)', 'none'],
@@ -177,9 +176,9 @@
       [15, 'Strategic thinking & framing', 'AB'],
       [16, 'Data visualisation & dashboards (Power BI / Tableau)', 'none'],
       [17, 'Relationship building & trust', 'ABC'],
-      [18, 'Resilience & working to deadlines', 'none'],
+      [18, 'ESG & sustainability advisory (CSRD)', 'AB'],
       [19, 'AI / digital fluency in delivery', 'ABC'],
-      [20, 'English fluency (additional languages an advantage)', 'ABC']
+      [20, 'English fluency (Danish an advantage)', 'ABC']
     ] },
     executive: { label: 'Executive / Senior Leadership', top20: [
       [1, 'Strategic vision & execution', 'none'],
@@ -194,14 +193,14 @@
       [10, 'Emotional intelligence & people leadership', 'ABC'],
       [11, 'Cross-functional & enterprise-wide alignment', 'ABC'],
       [12, 'Culture, values & talent development', 'none'],
-      [13, 'Governance, risk & compliance oversight', 'none'],
+      [13, 'Governance, risk, ESG & compliance oversight (CSRD)', 'AB'],
       [14, 'AI & digital strategy fluency', 'ABC'],
       [15, 'Negotiation & partnership building', 'AB'],
       [16, 'Vision communication & influence', 'ABC'],
       [17, 'Market & competitive strategy', 'AB'],
       [18, 'Resilience & adaptability', 'none'],
       [19, 'Global / multi-market leadership experience', 'none'],
-      [20, 'English fluency (additional languages an advantage)', 'ABC']
+      [20, 'English fluency (Danish an advantage)', 'ABC']
     ] },
     finance: { label: 'Finance', top20: [
       [1, 'Financial modelling & forecasting (FP&A)', 'AB'],
@@ -217,13 +216,13 @@
       [11, 'Cash flow & working-capital management', 'none'],
       [12, 'Cost analysis & profitability management', 'none'],
       [13, 'Commercial & business acumen', 'ABC'],
-      [14, 'Regulatory reporting & risk assessment', 'none'],
+      [14, 'Regulatory, ESG & sustainability reporting (CSRD)', 'AB'],
       [15, 'Data analysis & SQL fundamentals', 'AB'],
       [16, 'AI & automation in finance', 'ABC'],
       [17, 'Professional qualification (CPA / ACCA / CFA / CIMA)', 'none'],
       [18, 'Attention to detail & accuracy', 'none'],
       [19, 'Cross-functional collaboration', 'ABC'],
-      [20, 'English fluency (additional languages an advantage)', 'ABC']
+      [20, 'English fluency (Danish an advantage)', 'ABC']
     ] },
     people_soft: { label: 'People / HR', top20: [
       [1, 'HR business partnering & stakeholder advisory', 'ABC'],
@@ -245,7 +244,7 @@
       [17, 'AI literacy in HR & automation', 'ABC'],
       [18, 'Communication & interpersonal skills', 'ABC'],
       [19, 'Employer branding & candidate experience', 'none'],
-      [20, 'English fluency (additional languages an advantage)', 'ABC']
+      [20, 'English fluency (Danish an advantage)', 'ABC']
     ] }
   };
 
@@ -319,21 +318,20 @@
     return best;
   }
 
-  // Untargeted (unsolicited / unclassified) default cluster set. Stage 4 grew
-  // SEED from 3 -> 9 clusters, but the unsolicited branch must NOT sum demand
-  // across all 9: scoreNorm divides by (PER_CLUSTER_REF * cluster count), so a
-  // 3->9 jump would dilute a candidate's normalized demand ~3x for skills they
-  // actually hold, since the 6 added career clusters (finance/HR/etc.) a given
-  // candidate doesn't match contribute ~0 to the numerator but still inflate
-  // the denominator. The untargeted default therefore stays the original three
-  // analyst-reviewed clusters (this tool's owner's demonstrated profile) —
-  // preserving pre-stage-4 unsolicited behaviour exactly. The 6 new clusters
-  // are used ONLY when a JD classifies into one of them (targeted path).
-  var DEFAULT_CLUSTERS = ['pm_process', 'photonics_eng', 'research_phd'];
-
+  // Untargeted (unsolicited / unclassified) -> ALL clusters (owner 2026-07-05).
+  // A general/open CV isn't aimed at one cluster, so its demand weighting should
+  // reflect the WHOLE market: a skill demanded across many of the 9 career
+  // clusters (communication, stakeholder management, AI literacy, data) is what a
+  // general CV should foreground. scoreNorm divides by the active-cluster count so
+  // the score stays on a [0,1] scale regardless of how many clusters are active —
+  // a broadly-transferable skill still saturates toward 1, a single-cluster niche
+  // skill scores low (correct for an untargeted CV). Note this DOES down-weight a
+  // deeply niche single-cluster skill relative to the old 3-cluster default; that
+  // is the intended "weight what the broad market demands" behaviour for an
+  // unsolicited application.
   function activeClusters() {
     var c = classifyJD();
-    return c ? [c] : DEFAULT_CLUSTERS.slice();
+    return c ? [c] : Object.keys(SEED);
   }
 
   // Demand score of a text given the active clusters. For each active cluster, take the

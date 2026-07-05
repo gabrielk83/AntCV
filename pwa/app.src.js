@@ -45993,11 +45993,24 @@
                         ));
                     },
                     onTouchMove: (e) => {
+                      // GRAB-ZONE-DISMISS-THRESHOLD-001 (owner 2026-07-05: "sliding down with
+                      // finger in the analysis and section panels is not working in android.
+                      // contact section panel collapses the entire cand[idate]"). This 28px
+                      // sticky handle sits at the very top of the mobile bottom panel, directly
+                      // above the scrollable per-tab content (Sections/Edit/Analysis) — and its
+                      // own dismiss threshold was the SAME 28px as its height, so a touch that
+                      // starts on or barely clips this strip (very plausible: the panel is only
+                      // 33dvh tall) reads any small downward slide as "dismiss" instead of
+                      // letting the gesture reach the scrollable content below, and swallows it
+                      // via touchAction:"none" either way. Raised well past an incidental
+                      // graze/scroll-start so only a clear, deliberate swipe-down closes the
+                      // panel; a real scroll gesture that starts here now has room to bail out
+                      // before the dismiss fires.
                       const t = Number(e.currentTarget.dataset.sy || 0),
                         n =
                           e.touches && e.touches[0] ? e.touches[0].clientY : t;
                       t &&
-                        n - t > 28 &&
+                        n - t > 80 &&
                         (e.preventDefault(), co(null), Qa(!1), ti("preview"));
                     },
                     style: {

@@ -24343,7 +24343,20 @@ function styledRuns(s, baseRun) {
 __name(styledRuns, "styledRuns");
 function inlineRuns(text, baseRun) {
   if (text === null || text === void 0) return [];
-  const s = decodeBasicEntities(text);
+  let s = decodeBasicEntities(text);
+  // NEWLINE-JUSTIFY-001 (owner 2026-07-05, "roles and results has both many
+  // orphans and justification issues"): a stray literal newline in generated
+  // bullet/prose text (LLM output, compression pipeline) becomes a REAL Word
+  // line break once it reaches a TextRun (the docx library auto-splits text
+  // containing \n into separate runs joined by <w:br/>) — and Word's
+  // paragraph-justify NEVER stretches a manually-broken line to the margin,
+  // only a natural word-wrap does. That produced the short, ragged line
+  // stranded mid-bullet ("...Sigma-Connectivity ODM / site in Sweden for a
+  // high-security smartphone / product; own...") instead of one continuously
+  // justified paragraph. Collapse any whitespace run containing a newline/CR
+  // to a single space so the whole bullet reflows and wraps+justifies
+  // naturally, like every other line in the document.
+  s = s.replace(/\s*[\r\n]+\s*/g, " ");
   // RICH-BLOCK-HYPERLINK-001 (owner 2026-06-26): markdown links [text](url) become REAL docx
   // ExternalHyperlinks (underlined, link-blue) so the exported CV/CL has clickable links. Restricted to
   // http(s)/mailto URLs so bracketed placeholders ("[Role title]", "[Lead]") and "[x](note)" are never

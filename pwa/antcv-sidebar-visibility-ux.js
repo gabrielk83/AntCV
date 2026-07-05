@@ -38,7 +38,7 @@
 (function () {
   'use strict';
   if (window.__antcvSidebarVisibilityUx) return;
-  window.__antcvSidebarVisibilityUx = '1.51.179';
+  window.__antcvSidebarVisibilityUx = '1.51.180';
 
   var SRC = 'sidebar-visibility-ux';
   var LOG_KEY = 'antcv:visibilityAnalytics';
@@ -410,7 +410,14 @@
       var proto = window.HTMLInputElement && window.HTMLInputElement.prototype;
       var desc = proto && Object.getOwnPropertyDescriptor(proto, 'value');
       if (desc && typeof desc.set === 'function') desc.set.call(input, pct); else input.value = pct;
-      input.dispatchEvent(new Event('input', { bubbles: true }));
+      // TOPBAR-UNDO-UNIFY-001 follow-up (owner 2026-07-05, live-verify catch):
+      // a plain `new Event('input')` does not carry the shape React's
+      // synthetic ChangeEventPlugin expects — the DOM value visibly updated
+      // but the app's onChange (and therefore its localStorage persist)
+      // never fired, so the "undo" silently did nothing. InputEvent is what
+      // real user typing/dragging dispatches natively.
+      var InputEventCtor = window.InputEvent || Event;
+      input.dispatchEvent(new InputEventCtor('input', { bubbles: true }));
       input.dispatchEvent(new Event('change', { bubbles: true }));
       return true;
     } catch (_) { return false; }
@@ -544,7 +551,7 @@
   setInterval(tick, 4000);
 
   window.AntcvSidebarVisibilityUx = {
-    version: '1.51.179',
+    version: '1.51.180',
     _undoLast: undoLast,
     _undoStack: function () { return undoStack; },
     _restoreToken: restoreToken,

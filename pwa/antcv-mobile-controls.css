@@ -1341,10 +1341,8 @@ body.antcv-editor-ready {
  * zoom on a real phone, forcing the owner to zoom the browser out to ~60%.
  * VERIFY-FIRST correction: the actual crowding element is the relocated
  * #antcv-pdf-preview-fab ("Export" pill antcv-topbar-tools-347.js moves into
- * .antcv-top-tools) — real fix lives there (skip the relocation on mobile).
- * .antcv-export-buttons (⬇ PDF / 📄 DOCX) lives in .antcv-preview-actions,
- * a SEPARATE row, not the topbar at all — no CSS change needed here for it.
- * antcv-mobile-export-fab.js still adds a floating one-tap PDF/DOCX
- * shortcut on mobile (mirrors "Ask AI"), purely additive, forwarding to the
- * same still-visible buttons.
+ * .antcv-top-tools) — real fix lives there (skip the relocation on mobile,
+ * it falls back to its own natural floating position). .antcv-export-buttons
+ * (⬇ PDF / 📄 DOCX) lives in .antcv-preview-actions, a SEPARATE row, not the
+ * topbar at all — no CSS change needed here for it.
  */

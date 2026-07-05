@@ -44602,7 +44602,12 @@
             className: "no-print antcv-topbar",
             style: {
               background: Ke,
-              padding: "8px 12px",
+              // MOBILE-TOPBAR-SAFEAREA-001 (owner 2026-07-05, live phone
+              // report): the topbar sat at the very top of the document, so
+              // on mobile Chrome (viewport-fit=cover) it rendered underneath
+              // the OS status bar / address-bar overlay and was unreachable.
+              // Mirrors the existing bottom-toolbar safe-area pattern below.
+              padding: "max(8px, env(safe-area-inset-top)) 12px 8px 12px",
               display: "flex",
               alignItems: "center",
               gap: 8,

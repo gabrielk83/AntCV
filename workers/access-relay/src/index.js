@@ -3975,6 +3975,62 @@ const method = request.method;
     }
   }
 
+  // CSE-PROXY-001 (owner 2026-07-05): the weekly demand-tuning job
+  // (CLUSTER-QUAL-001 §7.6 — a SCHEDULED CLAUDE CODE SESSION, not this Worker)
+  // needs Google Custom Search results scoped to job-market sites
+  // (Jobindex.dk, Glassdoor, LinkedIn jobs, etc. — see
+  // docs/deployment/google-cse-setup.md) without ever holding the real,
+  // billable Google API key. SAME pattern as /api/security-alert above: the
+  // THIRD-PARTY secret (GOOGLE_CSE_KEY) stays a Worker secret ONLY — never
+  // logged, never returned, never in a commit/PR/trigger config. Callers
+  // authenticate with a separate, narrow-scope, trivially-rotated
+  // CSE_PROXY_TOKEN instead (its only capability is querying OUR configured
+  // search engine — it cannot be used for anything else, and revoking it
+  // costs nothing since it isn't billable itself).
+  if (path === '/api/cse-search' && method === 'GET') {
+    const tok = request.headers.get('x-antcv-cse-token') || '';
+    if (!env.CSE_PROXY_TOKEN || tok !== env.CSE_PROXY_TOKEN) {
+      return jsonResponse({ error: 'unauthorized' }, 401, request, env);
+    }
+    if (!env.GOOGLE_CSE_KEY) {
+      return jsonResponse({ error: 'GOOGLE_CSE_KEY not set on relay' }, 503, request, env);
+    }
+    const url = new URL(request.url);
+    const q = String(url.searchParams.get('q') || '').trim().slice(0, 300);
+    if (!q) return jsonResponse({ error: 'missing q' }, 400, request, env);
+    const siteSearch = String(url.searchParams.get('siteSearch') || '').trim().slice(0, 100);
+    const dateRestrict = String(url.searchParams.get('dateRestrict') || 'm3').trim().slice(0, 10);
+    const num = Math.min(10, Math.max(1, parseInt(url.searchParams.get('num'), 10) || 10));
+    // CSE ID is not sensitive (it's embedded in the public cse.js widget
+    // snippet Google itself generates) — safe as a plain constant.
+    const CSE_ID = '67ce5387bc18f4028';
+    const gUrl = new URL('https://www.googleapis.com/customsearch/v1');
+    gUrl.searchParams.set('key', env.GOOGLE_CSE_KEY);
+    gUrl.searchParams.set('cx', CSE_ID);
+    gUrl.searchParams.set('q', q);
+    gUrl.searchParams.set('num', String(num));
+    if (siteSearch) { gUrl.searchParams.set('siteSearch', siteSearch); gUrl.searchParams.set('siteSearchFilter', 'i'); }
+    if (dateRestrict) gUrl.searchParams.set('dateRestrict', dateRestrict);
+    try {
+      const res = await fetch(gUrl.toString());
+      if (!res.ok) {
+        const b = await res.text().catch(() => '');
+        return jsonResponse({ error: `Google CSE ${res.status}: ${b.slice(0, 300)}` }, 502, request, env);
+      }
+      const data = await res.json();
+      const items = Array.isArray(data.items)
+        ? data.items.slice(0, num).map((it) => ({ title: it.title, link: it.link, snippet: it.snippet }))
+        : [];
+      return jsonResponse({
+        ok: true,
+        items,
+        total_results: (data.searchInformation && data.searchInformation.totalResults) || null,
+      }, 200, request, env);
+    } catch (e) {
+      return jsonResponse({ error: String(e && e.message || e) }, 502, request, env);
+    }
+  }
+
   if (path === '/__diag' && method === 'GET') {
     const probe = await probeUpstream(env);
     const id = await identityFromRequest(request, env);

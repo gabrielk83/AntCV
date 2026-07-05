@@ -17,6 +17,7 @@
  *   antcv:clSlogan        <->  clSlogan
  *   antcv:clSloganHidden  <->  clSloganHidden      ('1' | '0')
  *   antcv:clSloganAlign   <->  clSloganAlign
+ *   antcv:clSloganCtx     <->  clSloganCtx         (JSON string {v,app} — ownership stamp)
  *
  * Push    : poll-diff every 4s + on tab-hide / pagehide -> _antcvCloudWrite(patch).
  * Restore : one GET after the app's own restore settles; applies a cloud value ONLY
@@ -32,7 +33,7 @@
 (function () {
   'use strict';
   if (window.__antcvClCloudSyncExtra) return;
-  window.__antcvClCloudSyncExtra = '1.50.976';
+  window.__antcvClCloudSyncExtra = '1.51.164';
 
   var DISABLE = 'antcv:disable-cl-cloud-sync-extra';
   // [ localStorage key, relay field ]
@@ -45,6 +46,12 @@
     ['antcv:clSlogan', 'clSlogan'],
     ['antcv:clSloganHidden', 'clSloganHidden'],
     ['antcv:clSloganAlign', 'clSloganAlign'],
+    // SLOGAN-CTX-CLOUD-001 (owner 2026-07-05): antcv-cl-slogan-fresh.js's
+    // ownership stamp for clSlogan MUST travel with it — without this, a
+    // fresh device/session gets the slogan TEXT back from the cloud but not
+    // who it belongs to, and the staleness-clearing logic in that sidecar
+    // can never identify (and clear) a stale prior-app slogan.
+    ['antcv:clSloganCtx', 'clSloganCtx'],
     ['antcv:clClosing', 'clClosing'],
     ['antcv:clClosingAlign', 'clClosingAlign'],
     ['antcv:clSignName', 'clSignName'],

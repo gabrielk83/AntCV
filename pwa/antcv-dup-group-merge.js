@@ -19,7 +19,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.869-dup-group-merge';
+  var VERSION = '1.51.173-dup-group-merge-named-fold';
   if (window.__antcvDupGroupMerge === VERSION) return;
   window.__antcvDupGroupMerge = VERSION;
   try { var off = localStorage.getItem('antcv:disable-dup-group-merge'); if (off === '1' || off === 'true') return; } catch (_) {}
@@ -27,6 +27,39 @@
   function canon(t) { return String(t || '').toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, ' ').trim(); }
   function rowKey(it) { return canon((it && (it.b || it.l)) || '') + '|' + canon((it && (it.t || it.v)) || ''); }
   function readSecs() { try { var v = JSON.parse(localStorage.getItem('sections') || '{}'); return (v && typeof v === 'object') ? v : {}; } catch (_) { return {}; } }
+
+  // REG-GROUP-FOLD-NAMED-001 (owner 2026-07-05): REGULATORY CONTEXT kept
+  // splitting the SAME standards across two headers — "Environmental &
+  // Durability" and "Environmental, Durability & [Materials] Compliance" — one
+  // group for what the owner wants merged under the SHORTER name. The
+  // canon-auto-merge below only folds groups whose canonical text is IDENTICAL
+  // (&/and/punctuation-only differences); these two differ by a whole extra
+  // word ("compliance"), so canon() never equates them and the split survived
+  // live even after shortenRegulatoryHeading trimmed "Materials" off the long
+  // form. Named fold, same precedent as antcv-docx-client.js's
+  // SIDEBAR_GROUP_MERGE: fold the compliance-flavored header's rows into the
+  // shorter header, keeping the shorter header's text.
+  var NAMED_FOLD = [
+    { from: /^environmental,?\s*durability\s*&?\s*(materials\s*)?compliance$/i, into: 'Environmental & Durability' },
+  ];
+  function applyNamedFolds(blocks) {
+    var changed = false;
+    NAMED_FOLD.forEach(function (rule) {
+      var dstCanon = canon(rule.into);
+      var dstIdx = -1, srcIdx = -1;
+      for (var i = 0; i < blocks.length; i++) {
+        if (blocks[i].canon === dstCanon) dstIdx = i;
+        else if (srcIdx < 0 && rule.from.test(String(blocks[i].header.t || '').trim())) srcIdx = i;
+      }
+      if (dstIdx < 0 || srcIdx < 0 || dstIdx === srcIdx) return;
+      var dst = blocks[dstIdx], src = blocks[srcIdx];
+      var seen = {}; dst.rows.forEach(function (r) { seen[rowKey(r)] = 1; });
+      src.rows.forEach(function (r) { var k = rowKey(r); if (!seen[k]) { dst.rows.push(r); seen[k] = 1; } });
+      blocks.splice(srcIdx, 1);
+      changed = true;
+    });
+    return changed;
+  }
 
   // Merge duplicate-canonical {grp} groups in one section's items[]. Returns true if changed.
   function mergeGroups(sec) {
@@ -41,8 +74,9 @@
       else if (cur) { cur.rows.push(it); }
       else lead.push(it);
     }
+    var namedChanged = applyNamedFolds(blocks);
     // Merge blocks sharing a canonical name into the FIRST occurrence.
-    var byCanon = {}, order = [], changed = false;
+    var byCanon = {}, order = [], changed = namedChanged;
     for (var b = 0; b < blocks.length; b++) {
       var blk = blocks[b];
       if (!blk.canon) { order.push(blk); continue; } // empty group name — keep as-is

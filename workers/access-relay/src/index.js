@@ -2016,6 +2016,142 @@ function normalizeCategory(cat) {
   return CATEGORIES.has(c) ? c : 'unsolicited';
 }
 
+// ---- CLUSTER-QUAL-001 stage 1: qualification extraction + top-20 recompute --
+// docs/plan/CLUSTER-QUAL-001.md sections 1-3.2. The D1 tables already exist
+// (applied 2026-06-16, confirmed empty pre-this-change); nothing in cv-proxy
+// or this file previously wrote to them.
+//
+// CATEGORY-TO-CLUSTER-001: coarse grouping over the 12 category ids above,
+// per the spec's section 1. Fold-ins are taken directly from the doc's own
+// June-2026 sample write-up (pm_process <- project/product management +
+// process/BA + compliance-ops; photonics_eng <- optics/photonics + hardware-
+// eng; research_phd is already ~1:1). The 6 categories the June sample never
+// examined get their own 1:1 cluster — this is NOT a claim they belong
+// together or alone, just the data-driven default until real JD volume
+// reshapes it (the spec explicitly allows adding/adjusting clusters later).
+const CATEGORY_TO_CLUSTER = {
+  engineering_hardware: 'photonics_eng',
+  product_management: 'pm_process',
+  program_management: 'pm_process',
+  operations: 'pm_process',
+  research_phd: 'research_phd',
+  engineering_software: 'engineering_software',
+  data_analytics: 'data_analytics',
+  consulting: 'consulting',
+  executive: 'executive',
+  finance: 'finance',
+  people_soft: 'people_soft',
+  // 'unsolicited' deliberately has no cluster — a true no-JD application has
+  // no qualifications to extract from in the first place.
+};
+
+function clusterForCategory(category) {
+  return CATEGORY_TO_CLUSTER[category] || null;
+}
+
+// qual_canonical (spec 3.1 step 2): lowercase, strip punctuation, drop a
+// small stopword list, collapse whitespace. Deliberately simple — no real
+// lemmatizer is available in a Worker; this is good enough for exact/
+// near-exact GROUP BY dedup and can be swapped for something smarter later
+// without changing the table shape.
+const QUAL_STOPWORDS = new Set(['a', 'an', 'the', 'of', 'and', 'or', 'with', 'in', 'to', 'for', 'on']);
+function qualCanonical(text) {
+  return String(text || '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .split(/\s+/)
+    .filter((t) => t && !QUAL_STOPWORDS.has(t))
+    .join(' ')
+    .trim();
+}
+
+// Section 3.2: recompute the per-user, per-cluster top-20 from
+// application_qualification. Delete+insert, matching the spec's own wording.
+async function recomputeClusterTop20(env, userHash, clusterId) {
+  const top = await env.DB.prepare(
+    'SELECT qual_canonical, COUNT(DISTINCT application_id) AS frequency, SUM(weight) AS weight_sum, MAX(qual_text) AS qual_display ' +
+    'FROM application_qualification WHERE user_hash = ? AND cluster_id = ? GROUP BY qual_canonical ' +
+    'ORDER BY weight_sum DESC, frequency DESC LIMIT 20'
+  ).bind(userHash, clusterId).all();
+  const top20 = (top && top.results) || [];
+
+  // jd_count (spec 3.2): real (non-seed) JDs contributing, for the "based on
+  // N jobs" confidence signal the doc specifies for the UI.
+  const cntRow = await env.DB.prepare(
+    "SELECT COUNT(DISTINCT application_id) AS n FROM application_qualification WHERE user_hash = ? AND cluster_id = ? AND source != 'seed'"
+  ).bind(userHash, clusterId).first();
+  const jdCount = (cntRow && cntRow.n) || 0;
+
+  // shared_clusters: for each qual, which OTHER clusters (same user) already
+  // carry it in THEIR current top-20 — the cross-cluster "high-visibility"
+  // signal the spec's generation-visibility step (3.4) foregrounds.
+  const otherTop = await env.DB.prepare(
+    'SELECT cluster_id, qual_canonical FROM cluster_top_qualifications WHERE user_hash = ? AND cluster_id != ?'
+  ).bind(userHash, clusterId).all();
+  const sharedMap = new Map();
+  for (const r of (otherTop && otherTop.results) || []) {
+    if (!sharedMap.has(r.qual_canonical)) sharedMap.set(r.qual_canonical, []);
+    sharedMap.get(r.qual_canonical).push(r.cluster_id);
+  }
+
+  const now = Date.now();
+  await d1RunWithRetry(env.DB.prepare(
+    'DELETE FROM cluster_top_qualifications WHERE user_hash = ? AND cluster_id = ?'
+  ).bind(userHash, clusterId));
+  for (let i = 0; i < top20.length; i++) {
+    const r = top20[i];
+    const shared = sharedMap.get(r.qual_canonical) || [];
+    await d1RunWithRetry(env.DB.prepare(
+      'INSERT INTO cluster_top_qualifications (user_hash, cluster_id, rank, qual_canonical, qual_display, frequency, weight_sum, shared_clusters, jd_count, updated_at) ' +
+      'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    ).bind(userHash, clusterId, i + 1, r.qual_canonical, r.qual_display, r.frequency, r.weight_sum, JSON.stringify(shared), jdCount, now));
+  }
+}
+
+// Section 3.1: extract this JD's qualifications (from the rationale the
+// client already sent — no extra LLM round-trip) into application_qualification,
+// then recompute the cluster's top-20 if this application hasn't been
+// extracted into this cluster before ("distinguishable" = a jd_hash new to
+// this user+cluster; application_id is already 1:1 with jd_hash via the
+// application table's UNIQUE(user_hash, jd_hash), so "has this application_id
+// already got rows in this cluster" is an equivalent, simpler check).
+// Best-effort: never throws past the caller — a failure here must never
+// break the application save itself.
+// NOTE (known limitation, not yet handled): if the SAME application is later
+// re-saved with materially edited qualifications (e.g. the user pastes a
+// fuller JD over an earlier quick save), this will NOT re-extract, since
+// application_id already has rows. The spec doesn't address this edge case;
+// deferred rather than guessed at.
+async function persistQualifications(env, { userHash, applicationId, category, qualifications }) {
+  if (!hasD1(env) || !applicationId) return;
+  const clusterId = clusterForCategory(category);
+  if (!clusterId) return; // unsolicited / unrecognized category — nothing to extract into
+  if (!Array.isArray(qualifications) || !qualifications.length) return;
+
+  try {
+    const already = await env.DB.prepare(
+      'SELECT 1 FROM application_qualification WHERE user_hash = ? AND cluster_id = ? AND application_id = ? LIMIT 1'
+    ).bind(userHash, clusterId, applicationId).first();
+    if (already) return;
+
+    const now = Date.now();
+    for (const q of qualifications) {
+      const canonical = qualCanonical(q && q.text);
+      if (!canonical) continue;
+      const weight = Number(q.weight);
+      await d1RunWithRetry(env.DB.prepare(
+        'INSERT INTO application_qualification (application_id, user_hash, cluster_id, qual_text, qual_canonical, weight, source, created_at) ' +
+        'VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+      ).bind(applicationId, userHash, clusterId, String(q.text).slice(0, 200), canonical, Number.isFinite(weight) ? weight : 1.0, 'jd', now));
+    }
+
+    await recomputeClusterTop20(env, userHash, clusterId);
+  } catch (_) {
+    // Best-effort — qualification extraction is a secondary signal; a
+    // failure here must never surface as a save failure to the user.
+  }
+}
+
 // ---- One-time KV → D1 migration --------------------------------------
 //
 // On first D1-aware read for a user, if user_kernel has no row AND the
@@ -2443,6 +2579,19 @@ async function handleApiApplications(request, env) {
             'INSERT INTO active_application (user_hash, application_id, device_id, updated_at) VALUES (?, ?, ?, ?) ' +
             'ON CONFLICT(user_hash) DO UPDATE SET application_id = excluded.application_id, device_id = excluded.device_id, updated_at = excluded.updated_at'
           ).bind(userHash, row.id, deviceId, now).run();
+        } catch (_) { /* best-effort */ }
+      }
+      // CLUSTER-QUAL-001 stage 1: extract qualifications from the rationale
+      // the client already computed (jd-analysis.js's qualifications[] field)
+      // — no extra LLM round-trip. Best-effort, never blocks the save.
+      if (row && row.id && body.rationale && typeof body.rationale === 'object') {
+        try {
+          await persistQualifications(env, {
+            userHash,
+            applicationId: row.id,
+            category,
+            qualifications: body.rationale.qualifications,
+          });
         } catch (_) { /* best-effort */ }
       }
       return jsonResponse(

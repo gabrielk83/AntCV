@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.51.63-promote-margin';
+  var VERSION = '1.51.64-early-break-tune';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -126,7 +126,13 @@
   // higher = breaks earlier (more sidebar to page 2); 1.0 disables the force entirely.
   // 1.50.897: 1.20 over-inflated PAGE 1 — it split TOOLS & METHODS onto page 2 when it fits
   // page 1 (owner 2026-06-25). 1.16 keeps TOOLS whole on page 1 while still correcting pages 2+.
-  var SIDEBAR_PREVIEW_INFLATE = 1.16;
+  // SIDEBAR-EARLY-BREAK-001 (owner 2026-07-05, live-tuned on real content: "groups/rows
+  // moved to the next page too early... it kills my CV"): 1.16 pulled the preview break
+  // up more than this owner's actual sidebar content needs, wasting page-1 space. Live
+  // A/B'd via AntcvAutoPagebreak.config() against the real CV until content landed
+  // correctly; 1.10 is the confirmed value. Still > 1.0 (the force isn't disabled) so
+  // export-taller-than-preview safety remains, just less aggressive.
+  var SIDEBAR_PREVIEW_INFLATE = 1.10;
   var ITEM_PATH_ATTR = 'data-antcv-row-path';
   // SIDEBAR-SNAP-GAP-001 (owner 2026-06-11): max page-1 space (UNSCALED px) a
   // group-snap may waste before we abandon the snap and break at the raw overflow
@@ -186,7 +192,12 @@
   // while CERTIFICATES (179px) after TOOLS still overflows (627+179=806 > 654) and flows to page 2 —
   // preserving CERTS-PAGE2-001. The 30px increase in page-1 fill stays within the export SAFETY (70px)
   // slack, so the worker holds it on page 1 too (no coordinator<->export divergence).
-  var SIDEBAR_PAGE1_BAND = 270;
+  // SIDEBAR-EARLY-BREAK-001 (owner 2026-07-05, live-tuned): 270 was originally set so
+  // TOOLS & METHODS barely fit page 1 (owner's 2026-06-28 content, ~27px margin) — too
+  // fragile against any later content change, and too conservative for this owner's
+  // current CV, leaving visible page-1 whitespace. Live A/B'd down to 180 against the
+  // real CV via AntcvAutoPagebreak.config(); confirmed by the owner as the fix.
+  var SIDEBAR_PAGE1_BAND = 180;
   // KEEP-WHOLE only applies to sections up to this FRACTION of a page. A big SIDEBAR section
   // (the 25-item REGULATORY CONTEXT) is ~80% of a page: keeping it whole whole-moves it to the
   // next page and leaves the prior page's sidebar short. Splitting it instead BALANCES it across
@@ -244,7 +255,10 @@
   // page still has at least this many raw px free AFTER taking the group — i.e. it
   // fits with real slack, not by a hair. Demotions (overflow) are unchanged. 0 disables.
   // Owner-tunable live: AntcvAutoPagebreak.config({ SIDEBAR_PROMOTE_MARGIN: N }).
-  var SIDEBAR_PROMOTE_MARGIN = 45;
+  // SIDEBAR-EARLY-BREAK-001 (owner 2026-07-05, live-tuned): 45 required more free slack
+  // before promoting a group back up a page than this owner's real content needed,
+  // contributing to the "moved to next page too early" complaint. Live A/B'd down to 20.
+  var SIDEBAR_PROMOTE_MARGIN = 20;
   // last settled page per sidebar GROUP (keyed by sid + normalized group label so the
   // identity survives row-index shifts when a line above the group is removed).
   var __grpPageStick = {};

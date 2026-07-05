@@ -90,7 +90,11 @@
          glyph rendered as an invisible Tofu box on some systems
          where the user couldn't find the FAB at all). z-index now
          clears the overlay (99999) and most editor chrome but stays
-         below the mobile bottom-nav (2147481600). */
+         below the mobile bottom-nav (2147481600).
+         EXPORT-FAB-DRAGGABLE-001 (owner 2026-07-05: "make the mobile export
+         button floating so I can move it if it hides stuff"): cursor/touch-action
+         now match the draggable Ask-AI launcher (antcv-doc-chatbot-440.js) —
+         drag logic + position persistence added below in injectFab(). */
       #${FAB_ID} {
         position: fixed;
         bottom: 100px;
@@ -103,7 +107,8 @@
         background: #00746E;
         color: #fff;
         border: 1px solid #00867F;
-        cursor: pointer;
+        cursor: grab;
+        touch-action: none;
         font-size: 13px;
         font-weight: 700;
         letter-spacing: 0.02em;
@@ -115,6 +120,7 @@
         opacity: 0.96;
         transition: opacity 0.15s, transform 0.15s, background 0.15s;
       }
+      #${FAB_ID}:active { cursor: grabbing; }
       #${FAB_ID}:hover { opacity: 1; background: #00867F; transform: translateY(-1px); }
       #${FAB_ID}:focus-visible { outline: 2.5px solid #01B7BB; outline-offset: 2px; }
       #${FAB_ID} svg { width: 16px; height: 16px; flex: 0 0 auto; }
@@ -1082,14 +1088,65 @@ ${inlineStyles}
     else fab.setAttribute('tabindex', '-1');
   }
 
+  // EXPORT-FAB-DRAGGABLE-001 (owner 2026-07-05): "make the mobile export
+  // button floating so I can move it if it hides stuff". The FAB already
+  // floated at a fixed position; a prior separate draggable Export FAB
+  // (antcv-mobile-export-fab.js) was removed as redundant clutter (owner
+  // feedback: it didn't open print preview, and this pill already floats
+  // naturally). Rather than reintroduce a second control, this pill itself
+  // becomes draggable — same pointerdown/move/up + 4px drag-vs-click
+  // threshold + localStorage-persisted position as the Ask-AI launcher
+  // (antcv-doc-chatbot-440.js ensureLauncher()), so there is still exactly
+  // one floating Export control, just a movable one.
+  const FAB_POS_KEY = 'antcv:pdfPreviewFabPos';
+  function applyFabSavedPosition(fab) {
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(FAB_POS_KEY) || 'null'); } catch (_) {}
+    if (saved && typeof saved.left === 'number' && typeof saved.top === 'number') {
+      fab.style.left = Math.max(4, Math.min(saved.left, (window.innerWidth || 800) - 60)) + 'px';
+      fab.style.top = Math.max(4, Math.min(saved.top, (window.innerHeight || 600) - 50)) + 'px';
+      fab.style.right = '';
+      fab.style.bottom = '';
+    }
+    // No saved position — leave the CSS defaults (bottom:100px; left:16px) in place.
+  }
+  function wireFabDrag(fab) {
+    let dragging = false, moved = false, sx = 0, sy = 0, ox = 0, oy = 0;
+    fab.addEventListener('pointerdown', (ev) => {
+      dragging = true; moved = false; sx = ev.clientX; sy = ev.clientY;
+      const r = fab.getBoundingClientRect(); ox = r.left; oy = r.top;
+      fab.style.cursor = 'grabbing';
+      try { fab.setPointerCapture(ev.pointerId); } catch (_) {}
+    });
+    fab.addEventListener('pointermove', (ev) => {
+      if (!dragging) return;
+      const dx = ev.clientX - sx, dy = ev.clientY - sy;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) moved = true;
+      if (moved) {
+        fab.style.left = Math.max(4, Math.min(ox + dx, (window.innerWidth || 800) - 60)) + 'px';
+        fab.style.top = Math.max(4, Math.min(oy + dy, (window.innerHeight || 600) - 50)) + 'px';
+        fab.style.right = ''; fab.style.bottom = '';
+      }
+    });
+    fab.addEventListener('pointerup', (ev) => {
+      dragging = false; fab.style.cursor = 'grab';
+      try { fab.releasePointerCapture(ev.pointerId); } catch (_) {}
+      if (moved) {
+        const r = fab.getBoundingClientRect();
+        try { localStorage.setItem(FAB_POS_KEY, JSON.stringify({ left: r.left, top: r.top })); } catch (_) {}
+      } else {
+        openModal();
+      }
+    });
+  }
   function injectFab() {
     if (document.getElementById(FAB_ID)) return;
     injectStylesOnce();
     const fab = document.createElement('button');
     fab.id = FAB_ID;
     fab.type = 'button';
-    fab.setAttribute('aria-label', 'Export — preview and save as PDF or DOCX');
-    fab.title = 'Export — preview the document and save as PDF or DOCX';
+    fab.setAttribute('aria-label', 'Export — preview and save as PDF or DOCX. Drag to move.');
+    fab.title = 'Export — preview the document and save as PDF or DOCX. Drag to move.';
     // v1.50.51 — keep the SVG document icon (the "page" affordance the user
     // asked to retain) but shorten the visible text label from
     // "Document export" to "Export". innerHTML is safe here — no user input
@@ -1101,7 +1158,8 @@ ${inlineStyles}
         '<path d="M9 14h6"/>' +
         '<path d="M9 18h4"/>' +
       '</svg><span>Export</span>';
-    fab.addEventListener('click', () => openModal());
+    applyFabSavedPosition(fab);
+    wireFabDrag(fab);
     document.body.appendChild(fab);
     syncFabVisibility();
   }

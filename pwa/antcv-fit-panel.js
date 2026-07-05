@@ -171,8 +171,20 @@
     return html;
   }
 
+  // MARKET-FIT-UPPER-001 (owner 2026-07-05: "the market analysis you do
+  // should also be in the upper analysis, not in the lower one"). This card
+  // used to anchor after #antcv-analysis-report — the BOTTOM sidecar block,
+  // landing it after Tailoring Decisions / Cover Letter Strategy, effectively
+  // the last thing in the whole panel. #antcv-analysis-report-top is the
+  // established "upper zone" anchor from ANALYSIS-PANEL-ORDER-001 (rendered
+  // by antcv-analysis-report-pdf-360.js right after the native "Overall Fit"
+  // section) — anchoring there instead puts Market Fit in the upper zone,
+  // right where the owner wants it. Falls back to the bottom anchor so the
+  // card still renders (rather than silently vanishing) on any older/partial
+  // DOM state where the top block hasn't mounted yet.
   function findAnchor() {
-    return document.getElementById('antcv-analysis-report');
+    return document.getElementById('antcv-analysis-report-top') ||
+      document.getElementById('antcv-analysis-report');
   }
 
   function render() {

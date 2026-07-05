@@ -45994,9 +45994,11 @@
                     onTouchStart: (e) => {
                       e.touches &&
                         e.touches[0] &&
-                        (e.currentTarget.dataset.sy = String(
+                        ((e.currentTarget.dataset.sy = String(
                           e.touches[0].clientY,
-                        ));
+                        )),
+                        (e.currentTarget.dataset.ly =
+                          e.currentTarget.dataset.sy));
                     },
                     onTouchMove: (e) => {
                       // GRAB-ZONE-DISMISS-THRESHOLD-001 (owner 2026-07-05: "sliding down with
@@ -46012,12 +46014,26 @@
                       // graze/scroll-start so only a clear, deliberate swipe-down closes the
                       // panel; a real scroll gesture that starts here now has room to bail out
                       // before the dismiss fires.
+                      // GRAB-ZONE-SCROLL-FORWARD-001 (owner 2026-07-05, follow-up: raising the
+                      // threshold above did NOT restore scrolling — touchAction:"none" on this
+                      // handle blocks the browser's OWN native scroll for ANY touch that starts
+                      // here, independent of the JS threshold; the previous fix only delayed the
+                      // dismiss, it never let a non-dismiss drag actually scroll anything. Fix:
+                      // manually forward the incremental delta to the active tab's scrollable
+                      // content (its DOM sibling — exactly one tab's content renders at a time)
+                      // whenever the gesture hasn't crossed the dismiss threshold.
                       const t = Number(e.currentTarget.dataset.sy || 0),
+                        ly = Number(e.currentTarget.dataset.ly || t),
                         n =
                           e.touches && e.touches[0] ? e.touches[0].clientY : t;
-                      t &&
-                        n - t > 80 &&
-                        (e.preventDefault(), co(null), Qa(!1), ti("preview"));
+                      if (t && n - t > 80) {
+                        e.preventDefault();
+                        (co(null), Qa(!1), ti("preview"));
+                        return;
+                      }
+                      const scroller = e.currentTarget.nextElementSibling;
+                      scroller && ly && (scroller.scrollTop -= n - ly);
+                      e.currentTarget.dataset.ly = String(n);
                     },
                     style: {
                       height: 28,

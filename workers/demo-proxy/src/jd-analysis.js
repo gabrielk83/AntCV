@@ -47,6 +47,7 @@ Your output MUST be valid JSON matching this exact schema. No prose before or af
   "supporting_context": string,
   "detected_language": string,
   "category": "engineering_hardware"|"engineering_software"|"product_management"|"research_phd"|"program_management"|"operations"|"data_analytics"|"consulting"|"executive"|"finance"|"people_soft"|"unsolicited",
+  "qualifications": [ { "text": string, "weight": 1.0|0.5|0.25 } ],
   "red_flags": string[],
   "assumptions": string[],
   "recommendations": string[],
@@ -65,6 +66,7 @@ PAGE-NOISE STRIPPING — jd_text, supporting_context, detected_language, categor
 - "supporting_context": role-specific tips or signals from the page that apply ONLY to THIS role — e.g., "The hiring manager Maria values X", "This team is migrating from Y to Z". These help tailoring but are NOT facts about the user. Empty string if none.
 - "detected_language": ISO 639-1 code of jd_text (e.g. "en", "da", "sv", "de", "fr", "es"). Same value goes in the legacy "language" field too. If unintelligible, "unknown".
 - "category": auto-tag based on JD content. One of: engineering_hardware, engineering_software, product_management, research_phd, program_management, operations, data_analytics, consulting, executive, finance, people_soft, unsolicited. If the JD is conspicuously absent (user pasted a company URL with no posting), use "unsolicited". "people_soft" covers HR, talent, L&D, comms, marketing, content, design.
+- "qualifications" — every distinct skill/qualification/requirement the JD asks for (CLUSTER-QUAL-001), each as a SHORT normalized phrase (e.g. "Stakeholder management", "PMP certification", "Python", not a full sentence). weight: 1.0 for explicitly required/must-have, 0.5 for preferred/nice-to-have-but-named-as-a-plus, 0.25 for a loosely implied or tangential skill. Extract from BOTH "requirements"/"must have" sections AND responsibilities text where a concrete skill is named. Do NOT invent a qualification the JD doesn't actually ask for or imply. [] for a true unsolicited (no JD) run.
 
 CLASSIFICATION RULES:
 - Treat the input as a job description if you can identify ANY of: a role title, "Tasks and responsibilities", "About the role", "What you'll do", "We are looking for", "Apply", "Application deadline", or company-and-location framing. PDF extraction often garbles parts of the page — work with what's readable. Do NOT declare "no job description" unless the entire input is unintelligible.
@@ -190,6 +192,15 @@ function normalize(analysis) {
         grounded: q.grounded === true,
       })),
     language: str(a.language) || 'unknown',
+    qualifications: arr(a.qualifications)
+      .filter(q => q && typeof q.text === 'string' && q.text.trim())
+      .slice(0, 40)
+      .map(q => {
+        const w = Number(q.weight);
+        const weight = (w === 1.0 || w === 0.5 || w === 0.25) ? w
+          : (w >= 0.75 ? 1.0 : w >= 0.375 ? 0.5 : 0.25);
+        return { text: q.text.trim().slice(0, 200), weight };
+      }),
     red_flags: arr(a.red_flags).filter(x => typeof x === 'string').slice(0, 20),
     assumptions: arr(a.assumptions).filter(x => typeof x === 'string' && x.trim()).slice(0, 20),
     recommendations: arr(a.recommendations).filter(x => typeof x === 'string' && x.trim()).slice(0, 20),

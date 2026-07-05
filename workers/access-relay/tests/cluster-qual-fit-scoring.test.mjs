@@ -44,14 +44,18 @@ vm.createContext(ctx);
 vm.runInContext(
   hasD1Src + '\n' + retrySrc + '\n' + blockSrc +
   '\nthis.kernelCorpusTokens = kernelCorpusTokens; this.isQualMatched = isQualMatched; ' +
-  'this.fitTier = fitTier; this.computeApplicationFit = computeApplicationFit;',
+  'this.fitTier = fitTier; this.computeApplicationFit = computeApplicationFit; ' +
+  'this.GLOBAL_USER_HASH = GLOBAL_USER_HASH;',
   ctx
 );
-const { kernelCorpusTokens, isQualMatched, fitTier, computeApplicationFit } = ctx;
+const { kernelCorpusTokens, isQualMatched, fitTier, computeApplicationFit, GLOBAL_USER_HASH } = ctx;
 
 // ---- Fake D1: an in-memory implementation of exactly the statements
 // computeApplicationFit issues against cluster_top_qualifications,
-// user_kernel, and application_fit.
+// user_kernel, and application_fit. topQuals is keyed by GLOBAL_USER_HASH
+// (CLUSTER-DEMAND-GLOBAL-001: fit is scored against the GLOBAL cross-user
+// top-20, not a per-user one) — kernelHistory stays keyed by the real
+// user_hash (that IS still per-user: the candidate's own evidenced skills).
 function makeFakeDB({ topQuals, kernelHistory }) {
   const fits = [];
 
@@ -152,7 +156,7 @@ test('computeApplicationFit: a well-evidenced candidate scores high and lists ma
   const env = {
     DB: makeFakeDB({
       topQuals: {
-        'u1|pm_process': [
+        [GLOBAL_USER_HASH + '|pm_process']: [
           { qual_canonical: 'stakeholder management', qual_display: 'Stakeholder management', weight_sum: 2.0 },
           { qual_canonical: 'six sigma', qual_display: 'Six Sigma', weight_sum: 1.0 },
         ],
@@ -178,7 +182,7 @@ test('computeApplicationFit: an unevidenced qualification is a gap, not a fabric
   const env = {
     DB: makeFakeDB({
       topQuals: {
-        'u1|pm_process': [
+        [GLOBAL_USER_HASH + '|pm_process']: [
           { qual_canonical: 'stakeholder management', qual_display: 'Stakeholder management', weight_sum: 1.0 },
           { qual_canonical: 'quantum computing research', qual_display: 'Quantum computing research', weight_sum: 1.0 },
         ],
@@ -197,7 +201,7 @@ test('computeApplicationFit: an unevidenced qualification is a gap, not a fabric
 test('computeApplicationFit: re-scoring the SAME application upserts (does not duplicate rows)', async () => {
   const env = {
     DB: makeFakeDB({
-      topQuals: { 'u1|pm_process': [{ qual_canonical: 'python', qual_display: 'Python', weight_sum: 1.0 }] },
+      topQuals: { [GLOBAL_USER_HASH + '|pm_process']: [{ qual_canonical: 'python', qual_display: 'Python', weight_sum: 1.0 }] },
       kernelHistory: { u1: { tools: [{ l: 'Software', v: 'Python' }] } },
     }),
   };
@@ -225,7 +229,7 @@ test('computeApplicationFit: never throws even if D1 is absent (best-effort)', a
 test('computeApplicationFit: a missing/unparseable kernel history never throws, scores as all-gaps', async () => {
   const env = {
     DB: makeFakeDB({
-      topQuals: { 'u1|pm_process': [{ qual_canonical: 'python', qual_display: 'Python', weight_sum: 1.0 }] },
+      topQuals: { [GLOBAL_USER_HASH + '|pm_process']: [{ qual_canonical: 'python', qual_display: 'Python', weight_sum: 1.0 }] },
       kernelHistory: {}, // no user_kernel row at all
     }),
   };

@@ -2069,6 +2069,24 @@ function clusterForCategory(category) {
   return CATEGORY_TO_CLUSTER[category] || null;
 }
 
+// CLUSTER-DEMAND-GLOBAL-001 (owner 2026-07-05, "top 20 should come from both
+// jobs users [all users, not just me] and the weekly research, with more
+// weight to actual user jobs"): the demand model changed from PER-USER to
+// GLOBAL (cross-AntCV-user, per cluster). cluster_top_qualifications already
+// has the right columns (user_hash, cluster_id, rank, ...) — no schema
+// migration needed. Rows are now written under this ONE sentinel user_hash
+// per cluster instead of one row set per real user, so the top-20 pools
+// EVERY user's real-JD signal (source='jd', LLM weight 1.0/0.5/0.25 — highest)
+// blended with the weekly-research-refreshed rows (source='research', fixed
+// RESEARCH_WEIGHT — lower, so live user data always dominates once it
+// accumulates, exactly the spec 4 "seed rows carry lower weight so real JD
+// signals overtake them" behaviour, just pooled across users instead of one).
+// No FK constraint exists on application_qualification/cluster_top_qualifications
+// in the live D1 schema (confirmed via schema introspection), so this sentinel
+// needs no matching user_kernel row.
+const GLOBAL_USER_HASH = '__global_market__';
+const RESEARCH_WEIGHT = 0.4;
+
 // qual_canonical (spec 3.1 step 2): lowercase, strip punctuation, drop a
 // small stopword list, collapse whitespace. Deliberately simple — no real
 // lemmatizer is available in a Worker; this is good enough for exact/
@@ -2085,29 +2103,34 @@ function qualCanonical(text) {
     .trim();
 }
 
-// Section 3.2: recompute the per-user, per-cluster top-20 from
-// application_qualification. Delete+insert, matching the spec's own wording.
-async function recomputeClusterTop20(env, userHash, clusterId) {
+// Section 3.2 (GLOBAL, CLUSTER-DEMAND-GLOBAL-001): recompute a cluster's
+// top-20 from application_qualification ACROSS ALL USERS — no user_hash
+// filter on the aggregation, so every AntCV user's real-JD extractions (and
+// the weekly research rows, both sharing this one cluster_id) pool into one
+// market-wide ranking. Written under GLOBAL_USER_HASH so the existing
+// (user_hash, cluster_id, rank) primary key needs no migration. Delete+insert,
+// matching the spec's own wording.
+async function recomputeClusterTop20(env, clusterId) {
   const top = await env.DB.prepare(
     'SELECT qual_canonical, COUNT(DISTINCT application_id) AS frequency, SUM(weight) AS weight_sum, MAX(qual_text) AS qual_display ' +
-    'FROM application_qualification WHERE user_hash = ? AND cluster_id = ? GROUP BY qual_canonical ' +
+    'FROM application_qualification WHERE cluster_id = ? GROUP BY qual_canonical ' +
     'ORDER BY weight_sum DESC, frequency DESC LIMIT 20'
-  ).bind(userHash, clusterId).all();
+  ).bind(clusterId).all();
   const top20 = (top && top.results) || [];
 
-  // jd_count (spec 3.2): real (non-seed) JDs contributing, for the "based on
-  // N jobs" confidence signal the doc specifies for the UI.
+  // jd_count (spec 3.2): real (non-research) JDs contributing, ACROSS ALL
+  // USERS — the "based on N jobs" confidence signal, now a whole-platform count.
   const cntRow = await env.DB.prepare(
-    "SELECT COUNT(DISTINCT application_id) AS n FROM application_qualification WHERE user_hash = ? AND cluster_id = ? AND source != 'seed'"
-  ).bind(userHash, clusterId).first();
+    "SELECT COUNT(DISTINCT application_id) AS n FROM application_qualification WHERE cluster_id = ? AND source = 'jd'"
+  ).bind(clusterId).first();
   const jdCount = (cntRow && cntRow.n) || 0;
 
-  // shared_clusters: for each qual, which OTHER clusters (same user) already
-  // carry it in THEIR current top-20 — the cross-cluster "high-visibility"
-  // signal the spec's generation-visibility step (3.4) foregrounds.
+  // shared_clusters: for each qual, which OTHER clusters already carry it in
+  // THEIR current global top-20 — the cross-cluster "high-visibility" signal
+  // the spec's generation-visibility step (3.4) foregrounds.
   const otherTop = await env.DB.prepare(
     'SELECT cluster_id, qual_canonical FROM cluster_top_qualifications WHERE user_hash = ? AND cluster_id != ?'
-  ).bind(userHash, clusterId).all();
+  ).bind(GLOBAL_USER_HASH, clusterId).all();
   const sharedMap = new Map();
   for (const r of (otherTop && otherTop.results) || []) {
     if (!sharedMap.has(r.qual_canonical)) sharedMap.set(r.qual_canonical, []);
@@ -2117,14 +2140,14 @@ async function recomputeClusterTop20(env, userHash, clusterId) {
   const now = Date.now();
   await d1RunWithRetry(env.DB.prepare(
     'DELETE FROM cluster_top_qualifications WHERE user_hash = ? AND cluster_id = ?'
-  ).bind(userHash, clusterId));
+  ).bind(GLOBAL_USER_HASH, clusterId));
   for (let i = 0; i < top20.length; i++) {
     const r = top20[i];
     const shared = sharedMap.get(r.qual_canonical) || [];
     await d1RunWithRetry(env.DB.prepare(
       'INSERT INTO cluster_top_qualifications (user_hash, cluster_id, rank, qual_canonical, qual_display, frequency, weight_sum, shared_clusters, jd_count, updated_at) ' +
       'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-    ).bind(userHash, clusterId, i + 1, r.qual_canonical, r.qual_display, r.frequency, r.weight_sum, JSON.stringify(shared), jdCount, now));
+    ).bind(GLOBAL_USER_HASH, clusterId, i + 1, r.qual_canonical, r.qual_display, r.frequency, r.weight_sum, JSON.stringify(shared), jdCount, now));
   }
 }
 
@@ -2165,7 +2188,7 @@ async function persistQualifications(env, { userHash, applicationId, category, q
       ).bind(applicationId, userHash, clusterId, String(q.text).slice(0, 200), canonical, Number.isFinite(weight) ? weight : 1.0, 'jd', now));
     }
 
-    await recomputeClusterTop20(env, userHash, clusterId);
+    await recomputeClusterTop20(env, clusterId);
   } catch (_) {
     // Best-effort — qualification extraction is a secondary signal; a
     // failure here must never surface as a save failure to the user.
@@ -2237,9 +2260,10 @@ function fitTier(score) {
   return 'T4';
 }
 
-// Section 3.3: score this application against its cluster's CURRENT top-20.
-// Best-effort, same discipline as persistQualifications — never throws past
-// the caller, never blocks the application save.
+// Section 3.3: score this application against its cluster's CURRENT (now
+// GLOBAL, cross-user) top-20. Best-effort, same discipline as
+// persistQualifications — never throws past the caller, never blocks the
+// application save.
 async function computeApplicationFit(env, userHash, applicationId, category) {
   if (!hasD1(env) || !applicationId) return;
   const clusterId = clusterForCategory(category);
@@ -2248,7 +2272,7 @@ async function computeApplicationFit(env, userHash, applicationId, category) {
   try {
     const top = await env.DB.prepare(
       'SELECT qual_canonical, qual_display, weight_sum FROM cluster_top_qualifications WHERE user_hash = ? AND cluster_id = ?'
-    ).bind(userHash, clusterId).all();
+    ).bind(GLOBAL_USER_HASH, clusterId).all();
     const top20 = (top && top.results) || [];
     if (!top20.length) return; // nothing to score against yet
 
@@ -2297,7 +2321,7 @@ async function fetchApplicationFit(env, userHash, applicationId) {
     try {
       const cRow = await env.DB.prepare(
         'SELECT jd_count FROM cluster_top_qualifications WHERE user_hash = ? AND cluster_id = ? LIMIT 1'
-      ).bind(userHash, fitRow.cluster_id).first();
+      ).bind(GLOBAL_USER_HASH, fitRow.cluster_id).first();
       jdCount = (cRow && cRow.jd_count) || 0;
     } catch (_) { jdCount = 0; }
     return {
@@ -2315,11 +2339,14 @@ async function fetchApplicationFit(env, userHash, applicationId) {
 }
 
 // ---- CLUSTER-QUAL-001 stage 2b: GET /api/cluster-top20 (spec section 3.4) --
-// Read-only endpoint the CLIENT calls to fetch the current cluster's top-20
-// qualifications (with shared_clusters + jd_count) so the gen prompt can
-// weight ordering/selection by real market demand instead of only the
-// static client-side seed (antcv-cluster-demand.js covers 3 of 12
-// categories; this covers all 12 once real applications accumulate).
+// Read-only endpoint the CLIENT calls to fetch the current cluster's GLOBAL
+// (cross-user, CLUSTER-DEMAND-GLOBAL-001) top-20 qualifications (with
+// shared_clusters + jd_count) so the gen prompt can weight ordering/selection
+// by real market demand instead of only the static client-side seed
+// (antcv-cluster-demand.js covers all 9 clusters as the cold-start fallback;
+// this covers every real-JD-backed cluster once ANY AntCV user has saved an
+// application in it — not just the caller). Still requires sign-in (this is
+// not a public endpoint), but the data returned is not caller-specific.
 // Query: ?category=<one of the 12 real ids>. A category with no cluster
 // (e.g. "unsolicited") returns cluster_id: null and an empty top20 — the
 // client falls back to the static seed in that case, same as today.
@@ -2327,7 +2354,6 @@ async function handleApiClusterTop20(request, env) {
   const id = await identityFromRequest(request, env);
   if (!id) return jsonResponse({ error: 'unauthenticated' }, 401, request, env);
   if (!hasD1(env)) return jsonResponse({ error: 'd1_not_bound' }, 503, request, env);
-  const userHash = await userHashFromEmail(id.email);
   const url = new URL(request.url);
   const category = normalizeCategory(url.searchParams.get('category'));
   const clusterId = clusterForCategory(category);
@@ -2337,7 +2363,7 @@ async function handleApiClusterTop20(request, env) {
   try {
     const top = await env.DB.prepare(
       'SELECT rank, qual_display, weight_sum, shared_clusters, jd_count FROM cluster_top_qualifications WHERE user_hash = ? AND cluster_id = ? ORDER BY rank ASC'
-    ).bind(userHash, clusterId).all();
+    ).bind(GLOBAL_USER_HASH, clusterId).all();
     const rows = (top && top.results) || [];
     return jsonResponse({
       ok: true,

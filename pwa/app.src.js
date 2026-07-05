@@ -15428,7 +15428,22 @@
                   // got clamped and its application stayed labelled Unsolicited. `r` is
                   // true only when genuinely unsolicited (stub JD / company "Unsolicited"),
                   // so categorise targeted rows as "targeted".
-                  category: r ? "unsolicited" : "targeted",
+                  // CLUSTER-QUAL-001-CATEGORY-001 (owner 2026-07-05): "targeted" was
+                  // NEVER a real category value — access-relay's normalizeCategory()
+                  // coerces anything outside the 12 real category ids (+ "unsolicited")
+                  // back to "unsolicited", so EVERY targeted save silently lost its
+                  // real classification and the category->cluster pipeline (row 9)
+                  // never saw real data. Prefer the JD-analysis result's OWN "category"
+                  // field (jd-analysis.js's normalize(), sibling of "qualifications")
+                  // when a fresh analysis is available; fall back to the old
+                  // placeholder only when no analysis has run yet for this JD.
+                  category: r
+                    ? "unsolicited"
+                    : (() => {
+                        const ra = void 0 !== e.rationale ? e.rationale : yo;
+                        const cat = ra && "object" == typeof ra && "string" == typeof ra.category ? ra.category.trim() : "";
+                        return cat || "targeted";
+                      })(),
                 },
                 i =
                   e.sections && "object" == typeof e.sections ? e.sections : ro;

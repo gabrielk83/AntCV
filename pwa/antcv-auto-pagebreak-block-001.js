@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.51.64-early-break-tune';
+  var VERSION = '1.51.65-early-break-tune2';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -195,9 +195,11 @@
   // SIDEBAR-EARLY-BREAK-001 (owner 2026-07-05, live-tuned): 270 was originally set so
   // TOOLS & METHODS barely fit page 1 (owner's 2026-06-28 content, ~27px margin) — too
   // fragile against any later content change, and too conservative for this owner's
-  // current CV, leaving visible page-1 whitespace. Live A/B'd down to 180 against the
-  // real CV via AntcvAutoPagebreak.config(); confirmed by the owner as the fix.
-  var SIDEBAR_PAGE1_BAND = 180;
+  // current CV, leaving visible page-1 whitespace. First A/B pass landed on 180, but
+  // that then let ~1-2 lines too many onto page 1 (the "fabrication, lithography,
+  // deposition, etch, DRIE, plasma" line should have flowed to page 2). 200 overcorrected
+  // the other way. 190 is the confirmed middle value via a second live A/B round.
+  var SIDEBAR_PAGE1_BAND = 190;
   // KEEP-WHOLE only applies to sections up to this FRACTION of a page. A big SIDEBAR section
   // (the 25-item REGULATORY CONTEXT) is ~80% of a page: keeping it whole whole-moves it to the
   // next page and leaves the prior page's sidebar short. Splitting it instead BALANCES it across
@@ -257,8 +259,9 @@
   // Owner-tunable live: AntcvAutoPagebreak.config({ SIDEBAR_PROMOTE_MARGIN: N }).
   // SIDEBAR-EARLY-BREAK-001 (owner 2026-07-05, live-tuned): 45 required more free slack
   // before promoting a group back up a page than this owner's real content needed,
-  // contributing to the "moved to next page too early" complaint. Live A/B'd down to 20.
-  var SIDEBAR_PROMOTE_MARGIN = 20;
+  // contributing to the "moved to next page too early" complaint. Second A/B round
+  // (paired with the SIDEBAR_PAGE1_BAND 180->190 correction) landed on 15.
+  var SIDEBAR_PROMOTE_MARGIN = 15;
   // last settled page per sidebar GROUP (keyed by sid + normalized group label so the
   // identity survives row-index shifts when a line above the group is removed).
   var __grpPageStick = {};

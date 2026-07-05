@@ -2270,6 +2270,47 @@ async function computeApplicationFit(env, userHash, applicationId, category) {
   }
 }
 
+// ---- CLUSTER-QUAL-001 stage 2b: GET /api/cluster-top20 (spec section 3.4) --
+// Read-only endpoint the CLIENT calls to fetch the current cluster's top-20
+// qualifications (with shared_clusters + jd_count) so the gen prompt can
+// weight ordering/selection by real market demand instead of only the
+// static client-side seed (antcv-cluster-demand.js covers 3 of 12
+// categories; this covers all 12 once real applications accumulate).
+// Query: ?category=<one of the 12 real ids>. A category with no cluster
+// (e.g. "unsolicited") returns cluster_id: null and an empty top20 — the
+// client falls back to the static seed in that case, same as today.
+async function handleApiClusterTop20(request, env) {
+  const id = await identityFromRequest(request, env);
+  if (!id) return jsonResponse({ error: 'unauthenticated' }, 401, request, env);
+  if (!hasD1(env)) return jsonResponse({ error: 'd1_not_bound' }, 503, request, env);
+  const userHash = await userHashFromEmail(id.email);
+  const url = new URL(request.url);
+  const category = normalizeCategory(url.searchParams.get('category'));
+  const clusterId = clusterForCategory(category);
+  if (!clusterId) {
+    return jsonResponse({ ok: true, cluster_id: null, top20: [] }, 200, request, env);
+  }
+  try {
+    const top = await env.DB.prepare(
+      'SELECT rank, qual_display, weight_sum, shared_clusters, jd_count FROM cluster_top_qualifications WHERE user_hash = ? AND cluster_id = ? ORDER BY rank ASC'
+    ).bind(userHash, clusterId).all();
+    const rows = (top && top.results) || [];
+    return jsonResponse({
+      ok: true,
+      cluster_id: clusterId,
+      jd_count: rows.length ? rows[0].jd_count : 0,
+      top20: rows.map((r) => ({
+        rank: r.rank,
+        qual: r.qual_display,
+        weight_sum: r.weight_sum,
+        shared_clusters: (() => { try { return JSON.parse(r.shared_clusters || '[]'); } catch (_) { return []; } })(),
+      })),
+    }, 200, request, env);
+  } catch (e) {
+    return jsonResponse({ error: 'd1_read_failed', message: String(e && e.message || e) }, 500, request, env);
+  }
+}
+
 // ---- One-time KV → D1 migration --------------------------------------
 //
 // On first D1-aware read for a user, if user_kernel has no row AND the
@@ -4104,6 +4145,9 @@ const method = request.method;
     if (appIdMatch) {
       return handleApiApplicationById(request, env, appIdMatch[1]);
     }
+  }
+  if (path === '/api/cluster-top20') {
+    return handleApiClusterTop20(request, env);
   }
   if (path === '/api/active') {
     return handleApiActive(request, env);

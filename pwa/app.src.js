@@ -24601,13 +24601,24 @@
             const __clusterRule = (() => {
               try {
                 if (__noJD) return "";
+                // CLUSTER-QUAL-001 stage 2b (section 3.4, owner 2026-07-05): prefer the
+                // REAL D1-backed top-20 (antcv-cluster-demand-live.js, GET
+                // /api/cluster-top20) over the static 3-cluster analyst seed —
+                // classifyJD() can only ever pick one of ITS OWN 3 hardcoded clusters,
+                // so it can never surface real data for the other 9 categories. Falls
+                // back to the existing seed path unchanged when live data isn't
+                // cached yet (signed out, offline, cold cache, unsolicited).
+                const LIVE = window.AntcvClusterDemandLive;
+                const live = LIVE && "function" == typeof LIVE.get ? LIVE.get() : null;
                 const CD = window.AntcvClusterDemand;
-                const ci = CD && "function" == typeof CD.classifyJD ? CD.classifyJD() : null;
-                const cl = ci && CD.clusters && CD.clusters[ci];
+                const ci = (live && live.clusterId) || (CD && "function" == typeof CD.classifyJD ? CD.classifyJD() : null);
+                const cl = (live && live.cluster) || (ci && CD && CD.clusters && CD.clusters[ci]);
                 if (!cl || !Array.isArray(cl.top20) || !cl.top20.length) return "";
                 const it = cl.top20.slice(0, 20).map((r) => (Array.isArray(r) ? String(r[1] || "") : String((r && r.q) || ""))).filter(Boolean);
                 if (!it.length) return "";
-                return "\n- JD-CLUSTER DEMAND WEIGHTING (ORDERING-JD-CLUSTER-001): this JD classifies into the '" + String(cl.label || ci) + "' cluster. Beyond the literal JD text, WEIGHT the cluster's market-wide most-demanded qualifications when SELECTING and ORDERING content (experience bullets, CORE COMPETENCIES rows, TOOLS group order, WHAT I BRING): a stored fact matching a high-demand qualification outranks an equally-true niche fact. Demand order (most-demanded first): " + it.map((q, i) => (i + 1) + ") " + q).join("; ") + ". Real stored evidence only - this list weights ORDERING and SELECTION, it NEVER adds a skill the candidate does not have.";
+                const sharedQ = new Set(cl.top20.filter((r) => !Array.isArray(r) && Array.isArray(r.shared) && r.shared.length).map((r) => String(r.q || "")));
+                const sharedNote = sharedQ.size ? " Qualifications flagged SHARED below are demanded across MULTIPLE clusters - foreground these first, they are the strongest transferable signals: " + Array.from(sharedQ).slice(0, 8).join("; ") + "." : "";
+                return "\n- JD-CLUSTER DEMAND WEIGHTING (ORDERING-JD-CLUSTER-001): this JD classifies into the '" + String(cl.label || ci) + "' cluster. Beyond the literal JD text, WEIGHT the cluster's market-wide most-demanded qualifications when SELECTING and ORDERING content (experience bullets, CORE COMPETENCIES rows, TOOLS group order, WHAT I BRING): a stored fact matching a high-demand qualification outranks an equally-true niche fact." + sharedNote + " Demand order (most-demanded first): " + it.map((q, i) => (i + 1) + ") " + q).join("; ") + ". Real stored evidence only - this list weights ORDERING and SELECTION, it NEVER adds a skill the candidate does not have.";
               } catch (_) { return ""; }
             })();
             // CL-PLATFORM-SIGNALS-001 (register row 32): for HARDWARE-PLATFORM-class

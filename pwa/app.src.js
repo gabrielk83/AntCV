@@ -18875,7 +18875,21 @@
       }, [ei, _i]),
         o(() => {
           _i();
-        }, [Lt, je, Ke, ya, _i]),
+          // PREVIEW-SCROLL-JITTER-001 (owner 2026-07-05, live phone report:
+          // "very strong jitter... you can see it between two pages"). _i()
+          // unconditionally snaps the preview scroll position back to (0,0)
+          // (immediate + 80ms + 240ms staggered) — correct when the DOCUMENT
+          // itself changed (Lt = doc "cv"/"cl", je = language), since the
+          // user just made a deliberate choice and should see the result
+          // from the top. Ke (navyColor) and ya (styleConfig) are PURELY
+          // COSMETIC and were removed from this effect's deps: they change
+          // silently in the background (brand-fit, the STYLE-BG-FOLLOW-PKG-001
+          // self-heal effect, cloud-restore) while the user may be mid-scroll
+          // reading page 2 — live-proven via CDP: scrolled to 500, triggered
+          // a style-package change through the real API, scrollTop dropped to
+          // 209 within ~1s with no user action. A colour/font change has no
+          // reason to move the user's reading position.
+        }, [Lt, je, _i]),
         o(() => {
           so && "preview" === ei && Li(so);
         }, [so, ei, Lt, Li]),

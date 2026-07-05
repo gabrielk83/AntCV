@@ -13040,7 +13040,9 @@
               ? "Drafting cover letter…"
               : l < 150
                 ? "Generating analysis (fit, gaps, tailoring decisions)…"
-                : "Wrapping up — this is taking longer than usual…",
+                : "thorough" === __genSpeed()
+                  ? "Wrapping up — Thorough mode typically takes 3-6 min, this is normal…"
+                  : "Wrapping up — this is taking longer than usual…",
       h =
         l < 30
           ? "~90s remaining"
@@ -13493,7 +13495,12 @@
             React.createElement("b", null, "Tab was backgrounded."),
             " Mobile browsers throttle network streams when the tab isn't visible — generation may have stalled or dropped. If progress doesn't resume in 30 seconds, tap Cancel and retry. Keep this tab in the foreground next time.",
           ),
-        l > 60 &&
+        l >
+          ("thorough" === __genSpeed()
+            ? 200
+            : "fast" === __genSpeed()
+              ? 45
+              : 90) &&
           !c &&
           React.createElement(
             "div",
@@ -13507,7 +13514,9 @@
             },
             ("da" === i
               ? "Long Danish generations can take 3-5 minutes. Keep this tab visible — switching tabs may break the connection on mobile."
-              : "This is taking longer than the usual ~90 seconds. Keep this tab visible — switching away may break the connection on mobile.") +
+              : "thorough" === __genSpeed()
+                ? "Thorough mode cross-checks with multiple models and typically takes 3-6 minutes — this is normal. Keep this tab visible — switching away may break the connection on mobile."
+                : "This is taking longer than the usual ~60-90 seconds. Keep this tab visible — switching away may break the connection on mobile.") +
               ("fast" !== __genSpeed()
                 ? " Tip: the ⚡ Fast speed preset next to Generate trades cross-checking for a much shorter wait."
                 : ""),
@@ -24978,7 +24987,48 @@
             // whitelist. _t persists navyColor (+cloud); wa partial-merges
             // styleConfig (+cloud) and flips the package to "custom".
             try {
-              const bf = (T && T.brand_fit) || ("function" == typeof window.__antcvBrandFitSample ? window.__antcvBrandFitSample() : null); /* BRAND-FIT-PALETTE-001: deterministic JD-hex fallback (antcv-brandfit-sample.js) when the model omitted brand_fit */
+              // BRAND-FIT-REAL-SAMPLE-001 (owner 2026-07-05): COMPANY-BRAND-FIT-001
+              // previously relied ENTIRELY on the model's own knowledge of a
+              // company's branding, with the only fallback being a client-side
+              // regex-scan of the JD's own prose text for hex codes — which
+              // virtually never fires for a real posting (job text doesn't carry
+              // CSS). When brand-fit is on, try a REAL, deterministic sample of
+              // the company's own website FIRST, via /api/fetch-brand-colors:
+              // it fetches the company's homepage (resolved from the JD's own
+              // domain when that isn't a third-party job board, else guessed
+              // from the company name) and extracts its actual theme-color /
+              // stylesheet colours. Scoped to THIS generation only — never
+              // cached, never carried into another application's run — so a
+              // fetched palette can never leak across companies/applications.
+              let __realBrandFit = null;
+              if (__brandFit) {
+                try {
+                  const __rbBase = String(
+                    u.get("proxyUrl", "") ||
+                      ("undefined" != typeof window && window.ANTCV_RELAY_URL) ||
+                      "",
+                  )
+                    .trim()
+                    .replace(/\/+$/, "");
+                  const __jdSrcUrl = Bt && "url" === Bt.kind && Bt.source ? String(Bt.source) : "";
+                  const __coName = String((D && D.company) || "").trim();
+                  if (__rbBase && (__jdSrcUrl || __coName) && !/^unsolicited$/i.test(__coName)) {
+                    const __rbResp = await fetch(__rbBase + "/api/fetch-brand-colors", {
+                      method: "POST",
+                      credentials: "include",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ jdUrl: __jdSrcUrl, companyName: __coName }),
+                    });
+                    const __rbJson = await __rbResp.json().catch(() => null);
+                    if (__rbJson && __rbJson.ok && (__rbJson.navy || __rbJson.accent)) {
+                      __realBrandFit = { navy: __rbJson.navy, accent: __rbJson.accent, source: __rbJson.source };
+                    }
+                  }
+                } catch (_) {
+                  __realBrandFit = null;
+                }
+              }
+              const bf = __realBrandFit || (T && T.brand_fit) || ("function" == typeof window.__antcvBrandFitSample ? window.__antcvBrandFitSample() : null); /* BRAND-FIT-PALETTE-001: real site-sampled colours (BRAND-FIT-REAL-SAMPLE-001) > LLM guess > deterministic JD-hex fallback (antcv-brandfit-sample.js) */
               if (__brandFit && bf && "object" == typeof bf) {
                 const hex = (v) =>
                   "string" == typeof v && /^#[0-9a-fA-F]{6}$/.test(v.trim())

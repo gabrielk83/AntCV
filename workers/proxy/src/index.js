@@ -41,6 +41,7 @@ import {
 import { handleJDAnalysis } from './jd-analysis.js';
 import { handleKernelExtraction } from './kernel-extraction.js';
 import { handleFetchJdUrl } from './fetch-jd-url.js';
+import { handleFetchBrandColors } from './fetch-brand-colors.js';
 import { handleSupervisorCheck } from './supervisor.js';
 import { buildExport as buildAnalyticsExport } from './analytics-export.js';
 import { identityFromBearer } from './jwt-verify.js';
@@ -635,6 +636,9 @@ async function handleRequest(request, env = {}) {
   }
   if (url.pathname.includes('/fetch-jd-url') || url.pathname.includes('/fetch_jd_url')) {
     return handleFetchJdUrl(request, env, corsHeadersFor);
+  }
+  if (url.pathname.includes('/fetch-brand-colors') || url.pathname.includes('/fetch_brand_colors')) {
+    return handleFetchBrandColors(request, env, corsHeadersFor);
   }
   if (url.pathname.includes('/supervisor/check') || url.pathname.includes('/supervisor_check')) {
     return handleSupervisorCheck(request, env, corsHeadersFor);

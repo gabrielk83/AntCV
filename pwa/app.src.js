@@ -18643,7 +18643,8 @@
               const l = i.dist || t(e.touches),
                 s = i.scale || 1,
                 c = t(e.touches) / l,
-                d = Math.max(0.35, Math.min(5.2, s * c));
+                // ZOOM-FLOOR-001: keep the pinch-gesture floor matching the +/- button (0.1).
+                d = Math.max(0.1, Math.min(5.2, s * c));
               ((o = Math.round(1e3 * d) / 1e3),
                 null == r && (r = requestAnimationFrame(a)));
             },
@@ -48758,8 +48759,12 @@
                 onClick: () => {
                   ((ki.current = !0),
                     fi(!1),
+                    // ZOOM-FLOOR-001 (owner 2026-07-05: "allow zoom out down to 10-20%,
+                    // currently it is down to 35%" — wants to fit 3-4 preview pages in one
+                    // screenshot for pagination diagnosis). Was floored at 0.35; lowered to
+                    // 0.1 so repeated "-" clicks can reach 10%.
                     mi((e) =>
-                      Math.max(0.35, Math.round(100 * (e - 0.1)) / 100),
+                      Math.max(0.1, Math.round(100 * (e - 0.1)) / 100),
                     ));
                 },
                 style: {

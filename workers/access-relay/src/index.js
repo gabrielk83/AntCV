@@ -2161,6 +2161,115 @@ async function persistQualifications(env, { userHash, applicationId, category, q
   }
 }
 
+// ---- CLUSTER-QUAL-001 stage 2: fit scoring (spec section 3.3) --------------
+// Runs independently of persistQualifications' "already extracted" guard —
+// this application's fit against the cluster top-20 can change even when
+// THIS application didn't just add new qualifications (another application
+// updating the shared cluster top-20 is enough), so it's always recomputed
+// on save, not gated on a fresh extraction.
+
+// Flatten the user_kernel.history JSON into a canonicalized token set for
+// matching, per spec 3.3: "history.tools, history.workHistory[].bullets,
+// certifications, education, regulatory". {l,v}-shaped rows (tools/regulatory)
+// contribute both the label and the value; education rows contribute deg+sch;
+// work-history roles contribute bullets/outcomes/results (outcomes/results
+// are the same kind of evidence spec 3.3 means by "bullets" — the candidate's
+// demonstrated work, not a different signal).
+function kernelCorpusTokens(history) {
+  const parts = [];
+  function pushArr(arr) {
+    if (!Array.isArray(arr)) return;
+    arr.forEach((x) => {
+      if (typeof x === 'string') { parts.push(x); return; }
+      if (!x || typeof x !== 'object') return;
+      if (typeof x.l === 'string') parts.push(x.l);
+      if (typeof x.v === 'string') parts.push(x.v);
+      if (typeof x.deg === 'string') parts.push(x.deg);
+      if (typeof x.sch === 'string') parts.push(x.sch);
+    });
+  }
+  pushArr(history && history.tools);
+  pushArr(history && history.certifications);
+  pushArr(history && history.education);
+  pushArr(history && history.regulatory);
+  if (Array.isArray(history && history.workHistory)) {
+    history.workHistory.forEach((role) => {
+      pushArr(role && role.bullets);
+      pushArr(role && role.outcomes);
+      pushArr(role && role.results);
+    });
+  }
+  const tokens = qualCanonical(parts.join(' ')).split(' ').filter(Boolean);
+  return new Set(tokens);
+}
+
+// "String/skill match" (spec 3.3): a qualification is matched when a clear
+// MAJORITY of its own significant (non-stopword) tokens appear anywhere in
+// the candidate's real history — deliberately simple (no fuzzy/semantic
+// matching available in a Worker), errs toward NOT matching on a marginal
+// overlap so fit_score doesn't overstate evidence the candidate doesn't
+// actually have (never fabricate a match, mirroring 3.4's own "never
+// fabricate to close a gap" rule for generation).
+const QUAL_MATCH_THRESHOLD = 0.6;
+function isQualMatched(qualCanon, corpusTokens) {
+  const toks = String(qualCanon || '').split(' ').filter(Boolean);
+  if (!toks.length) return false;
+  let hit = 0;
+  toks.forEach((t) => { if (corpusTokens.has(t)) hit++; });
+  return (hit / toks.length) >= QUAL_MATCH_THRESHOLD;
+}
+
+function fitTier(score) {
+  if (score >= 75) return 'T1';
+  if (score >= 55) return 'T2';
+  if (score >= 35) return 'T3';
+  return 'T4';
+}
+
+// Section 3.3: score this application against its cluster's CURRENT top-20.
+// Best-effort, same discipline as persistQualifications — never throws past
+// the caller, never blocks the application save.
+async function computeApplicationFit(env, userHash, applicationId, category) {
+  if (!hasD1(env) || !applicationId) return;
+  const clusterId = clusterForCategory(category);
+  if (!clusterId) return; // unsolicited / unrecognized category — no cluster to score against
+
+  try {
+    const top = await env.DB.prepare(
+      'SELECT qual_canonical, qual_display, weight_sum FROM cluster_top_qualifications WHERE user_hash = ? AND cluster_id = ?'
+    ).bind(userHash, clusterId).all();
+    const top20 = (top && top.results) || [];
+    if (!top20.length) return; // nothing to score against yet
+
+    const kernelRow = await env.DB.prepare('SELECT history FROM user_kernel WHERE user_hash = ?').bind(userHash).first();
+    let history = {};
+    try { history = JSON.parse((kernelRow && kernelRow.history) || '{}') || {}; } catch (_) { history = {}; }
+    const corpus = kernelCorpusTokens(history);
+
+    const matched = [], gaps = [];
+    let sumAll = 0, sumMatched = 0;
+    top20.forEach((q) => {
+      sumAll += q.weight_sum;
+      if (isQualMatched(q.qual_canonical, corpus)) { matched.push(q.qual_display); sumMatched += q.weight_sum; }
+      else gaps.push(q.qual_display);
+    });
+    const fitScore = sumAll > 0 ? Math.round((100 * sumMatched) / sumAll) : 0;
+    const tier = fitTier(fitScore);
+    const now = Date.now();
+
+    await d1RunWithRetry(env.DB.prepare(
+      'INSERT INTO application_fit (application_id, user_hash, cluster_id, fit_score, matched, gaps, tier, computed_at) ' +
+      'VALUES (?, ?, ?, ?, ?, ?, ?, ?) ' +
+      'ON CONFLICT(application_id) DO UPDATE SET ' +
+      '  user_hash = excluded.user_hash, cluster_id = excluded.cluster_id, fit_score = excluded.fit_score, ' +
+      '  matched = excluded.matched, gaps = excluded.gaps, tier = excluded.tier, computed_at = excluded.computed_at'
+    ).bind(applicationId, userHash, clusterId, fitScore, JSON.stringify(matched), JSON.stringify(gaps), tier, now));
+  } catch (_) {
+    // Best-effort — fit scoring is a secondary signal; a failure here must
+    // never surface as a save failure to the user.
+  }
+}
+
 // ---- One-time KV → D1 migration --------------------------------------
 //
 // On first D1-aware read for a user, if user_kernel has no row AND the
@@ -2602,6 +2711,14 @@ async function handleApiApplications(request, env) {
             qualifications: body.rationale.qualifications,
           });
         } catch (_) { /* best-effort */ }
+      }
+      // CLUSTER-QUAL-001 stage 2: score this application against its
+      // cluster's current top-20 — independent of whether extraction above
+      // actually ran (another application updating the shared cluster
+      // top-20 is enough to change THIS application's fit). Best-effort,
+      // never blocks the save.
+      if (row && row.id) {
+        try { await computeApplicationFit(env, userHash, row.id, category); } catch (_) { /* best-effort */ }
       }
       return jsonResponse(
         { ok: true, application: shapeApplicationRow(row) },

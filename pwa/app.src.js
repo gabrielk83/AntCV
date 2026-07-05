@@ -10956,6 +10956,18 @@
         { ...e, items: n }
       );
     }
+    if ("bullets_item" === t.type && "number" == typeof l) {
+      // ITEM-COMPRESS-RICHBLOCK-001: same shape as labeled_list_item above —
+      // "b" (the lead-in label, e.g. "Goal:") is frozen like "l", only "t"
+      // (the body) is tightened, like "v".
+      const n = [...(e.items || [])];
+      return (
+        n[l] &&
+          !n[l].group &&
+          (n[l] = { ...n[l], t: t.t || n[l].t || "" }),
+        { ...e, items: n }
+      );
+    }
     if ("list_item" === t.type && "number" == typeof l) {
       const n = [...(e.items || [])];
       return (void 0 !== n[l] && (n[l] = t.value || n[l]), { ...e, items: n });
@@ -20204,11 +20216,25 @@
             if (void 0 !== n.group)
               return void alert("Group subheadings cannot be compressed.");
             const o =
+                // ITEM-COMPRESS-RICHBLOCK-001 (owner 2026-07-05: clicked
+                // Compress on a "bullets"-type rich_block item — {b,t} shape,
+                // e.g. {b:"Goal:", t:"My aim is..."} — and got a false
+                // "already fits tightly" with a visible orphan on screen).
+                // Root cause: this branch's fallback was `n || ""`, handing
+                // al() the RAW OBJECT for anything that isn't labeled_list/
+                // education. al()'s very first check is `"string" != typeof e`
+                // — true for an object — so it short-circuits to "fits" WITHOUT
+                // measuring anything. The ELSE branch a few lines below (the
+                // section-wide Fix Orphans scan) already extracts "bullets"
+                // items correctly; mirror that exact extraction here so the
+                // per-item Compress button measures the same text.
                 "labeled_list" === r.type
                   ? n.v || ""
                   : "education" === r.type
                     ? n.sch || ""
-                    : n || "",
+                    : "bullets" === r.type
+                      ? (n.b ? n.b + " " : "") + (n.t || n || "")
+                      : n || "",
               a = "labeled_list" === r.type ? "labeled_val" : "list_item";
             if (al(o, a, 10))
               return void alert(
@@ -20293,6 +20319,17 @@
                   };
                 else if ("list" === r.type || "list_italic" === r.type)
                   n = { id: e, type: "list_item", itemIdx: o, value: a };
+                else if ("bullets" === r.type)
+                  // ITEM-COMPRESS-RICHBLOCK-001: {b,t} rich_block item (e.g.
+                  // {b:"Goal:", t:"My aim is..."}), mirrors labeled_list_item
+                  // (b stays frozen like l, only t is tightened, like v).
+                  n = {
+                    id: e,
+                    type: "bullets_item",
+                    itemIdx: o,
+                    b: a.b || "",
+                    t: a.t || "",
+                  };
                 else {
                   if ("education" !== r.type)
                     return (
@@ -20425,7 +20462,9 @@
                     ? `Compress the Strategic Expertise cell of this single CV table row by approximately ${e}% in ${a}. ${i} Rules:\n- Keep "focus" UNCHANGED exactly as input.\n- Tighten ONLY "expertise".\n- Keep every number, proper noun, certification code, tool name, technical term.\n\nDIMENSION-AWARE TARGET (Strategic Expertise column ≈ 3.36" / 40 chars per line at Calibri 10pt). After compression, hit ONE of these targets exactly:\n  - **1-LINE target**: 32-40 chars (~5-7 words). Fills single line.\n  - **2-LINE target**: 75-82 chars (~12-14 words). Fills line 1 AND line 2 to within ~10 chars of end.\nFORBIDDEN AFTER COMPRESSION: 41-74 chars (half-empty 2nd line) or 83+ chars (wraps to 3 lines). The compress is wasted if the result still falls in a forbidden range — pick the bucket that fits the content best.\n\nReturn ONLY valid JSON in the input shape {focus,expertise,rowIdx,type,id}:\n\n${JSON.stringify(n)}`
                     : "labeled_list_item" === n.type
                       ? `Compress the value ("v") of this single CV sidebar item by approximately ${e}% in ${a}. ${i} Rules:\n- Keep "l" (label) UNCHANGED exactly as input.\n- Tighten ONLY "v" field.\n- Keep every proper noun, tool name, technology, certification code.\nReturn ONLY valid JSON in the input shape {l,v}:\n\n${JSON.stringify(n)}`
-                      : "list_item" === n.type
+                      : "bullets_item" === n.type
+                        ? `Compress the body ("t") of this single CV/cover-letter bullet by approximately ${e}% in ${a}. ${i} Rules:\n- Keep "b" (lead-in label) UNCHANGED exactly as input.\n- Tighten ONLY the "t" field.\n- Keep every number, proper noun, company name, certification code, tool name, technical term.\nReturn ONLY valid JSON in the input shape {b,t}:\n\n${JSON.stringify(n)}`
+                        : "list_item" === n.type
                         ? `Compress this single CV sidebar item by approximately ${e}% in ${a}. ${i} Keep every proper noun, certification code, tool name, citation marker, year, journal name. Return ONLY valid JSON in the input shape {value:"..."}:\n\n${JSON.stringify(n)}`
                         : "education_item" === n.type
                           ? `Compress this single education entry by approximately ${e}% in ${a}. ${i} Keep "deg" UNCHANGED exactly. Tighten ONLY "sch" field. Preserve year, institution, specialization. Return ONLY valid JSON in the input shape {deg,sch}:\n\n${JSON.stringify(n)}`
@@ -20658,13 +20697,19 @@
                             { type: "list_item", value: E.value },
                             { itemIdx: e },
                           )
-                        : "education" === n.type
+                        : "bullets" === n.type
                           ? Pe(
                               n,
-                              { type: "education_item", sch: E.sch },
+                              { type: "bullets_item", t: E.t },
                               { itemIdx: e },
                             )
-                          : n;
+                          : "education" === n.type
+                            ? Pe(
+                                n,
+                                { type: "education_item", sch: E.sch },
+                                { itemIdx: e },
+                              )
+                            : n;
                   }
                   return Pe(
                     n,

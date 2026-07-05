@@ -40,9 +40,31 @@
 //  Return shape (bad request):
 //    { ok: false, error }
 //
+//  BYOK-COST-AUDIT-001 (owner 2026-07-05): this docstring has documented
+//  `total_cost_usd_est` in the return shape since this file's very first
+//  version, but the field was NEVER actually computed — qualifyEndpoint()
+//  built its result object without it. A BYOK provider could pass every
+//  quality probe (verdict: approved) while its actual per-token cost went
+//  completely untracked, e.g. a model whose id didn't match any entry in
+//  demo-enforcement.js's RATES table silently fell through to the fallback
+//  rate with no visibility to the user or the PWA's audit UI. Fixed below:
+//  every probe's token usage is now priced against the SAME rate table
+//  in demo-enforcement.js (imported, not duplicated, so quarterly rate
+//  audits stay in one place), and the result now genuinely carries
+//  total_cost_usd_est plus a side-by-side comparison against this app's
+//  canonical default model, so the user can see BOTH quality and relative
+//  cost before trusting a new BYOK provider.
 // =================================================================
 
+import { estimateCostUsd, rateFor } from './demo-enforcement.js';
+
 const PROBE_TIMEOUT_MS = 30_000;
+
+// The app's own default/canonical model (see multi-llm.js — claude-sonnet-5
+// is the preferred first Anthropic model) — the reference point a new BYOK
+// provider's cost is compared against so "approved but 6x the price" is
+// visible, not just "approved".
+const CANONICAL_REFERENCE_MODEL = 'claude-sonnet-5';
 
 // PERF-QUALIFY-CACHE-001: qualifyEndpoint runs the full probe battery (6 real
 // LLM calls) against the user's endpoint. Routing/model-picker code paths
@@ -416,6 +438,28 @@ async function qualifyEndpoint(opts, env) {
   // surface the per-probe detail for nuance.
   for (const t of approved_tasks) rejected_tasks.delete(t);
 
+  // BYOK-COST-AUDIT-001: price the audit run's own real token usage against
+  // opts.modelId's rate (demo-enforcement.js's RATES table — the SAME one
+  // the demo spending cap uses, so an unrecognized model id degrades to the
+  // same conservative FALLBACK_RATE rather than silently reading as free).
+  // Compared against this app's own canonical default model, priced on the
+  // SAME token counts — an honest like-for-like comparison, since only the
+  // per-token rate differs between the two cost figures.
+  let total_tokens_in = 0, total_tokens_out = 0;
+  for (const r of results) {
+    total_tokens_in += r.tokens_in || 0;
+    total_tokens_out += r.tokens_out || 0;
+  }
+  const total_cost_usd_est = estimateCostUsd(opts.modelId, total_tokens_in, total_tokens_out);
+  const [providerInRate, providerOutRate] = rateFor(opts.modelId);
+  const [canonicalInRate, canonicalOutRate] = rateFor(CANONICAL_REFERENCE_MODEL);
+  const canonical_cost_usd_est = estimateCostUsd(CANONICAL_REFERENCE_MODEL, total_tokens_in, total_tokens_out);
+  const cost_vs_canonical = canonical_cost_usd_est > 0
+    ? (total_cost_usd_est / canonical_cost_usd_est <= 0.7 ? 'cheaper'
+      : total_cost_usd_est / canonical_cost_usd_est >= 1.4 ? 'pricier'
+      : 'comparable')
+    : 'unknown';
+
   const result = {
     ok: true,
     verdict,
@@ -426,6 +470,16 @@ async function qualifyEndpoint(opts, env) {
     critical_failures,
     medium_failures,
     probes_run: probeIds.length,
+    total_cost_usd_est,
+    total_tokens_in,
+    total_tokens_out,
+    provider_rate_per_million_usd: { input: providerInRate, output: providerOutRate },
+    canonical_reference: {
+      model: CANONICAL_REFERENCE_MODEL,
+      rate_per_million_usd: { input: canonicalInRate, output: canonicalOutRate },
+      cost_usd_est_same_usage: canonical_cost_usd_est,
+    },
+    cost_vs_canonical,
   };
 
   if (kv && cacheKey) {

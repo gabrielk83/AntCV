@@ -58,7 +58,7 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.188-babel-fish';
+  const TARGET_VERSION = '1.51.189-babel-fish';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
@@ -133,7 +133,7 @@
     // Doing so causes the rewrite loop to match its own output and
     // append the suffix on every MutationObserver cycle. See the
     // idempotency guard in rewriteTextNodes below.
-, '1.50.865', '1.51.156', '1.51.157', '1.51.158', '1.51.159', '1.51.160', '1.51.161', '1.51.162', '1.51.163', '1.51.164', '1.51.165', '1.51.166', '1.51.167', '1.51.168', '1.51.169', '1.51.170', '1.51.171', '1.51.172-babel-fish', '1.51.173-babel-fish', '1.51.174-babel-fish', '1.51.175-babel-fish', '1.51.176-babel-fish', '1.51.177-babel-fish', '1.51.178-babel-fish', '1.51.179-babel-fish', '1.51.180-babel-fish', '1.51.181-babel-fish', '1.51.182-babel-fish', '1.51.183-babel-fish', '1.51.184-babel-fish', '1.51.185-babel-fish', '1.51.186-babel-fish', '1.51.187-babel-fish'
+, '1.50.865', '1.51.156', '1.51.157', '1.51.158', '1.51.159', '1.51.160', '1.51.161', '1.51.162', '1.51.163', '1.51.164', '1.51.165', '1.51.166', '1.51.167', '1.51.168', '1.51.169', '1.51.170', '1.51.171', '1.51.172-babel-fish', '1.51.173-babel-fish', '1.51.174-babel-fish', '1.51.175-babel-fish', '1.51.176-babel-fish', '1.51.177-babel-fish', '1.51.178-babel-fish', '1.51.179-babel-fish', '1.51.180-babel-fish', '1.51.181-babel-fish', '1.51.182-babel-fish', '1.51.183-babel-fish', '1.51.184-babel-fish', '1.51.185-babel-fish', '1.51.186-babel-fish', '1.51.187-babel-fish', '1.51.188-babel-fish'
   ];
   const STALE_SET = new Set(STALE_VERSIONS);
 

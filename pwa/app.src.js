@@ -40048,22 +40048,31 @@
           "div",
           {
             className: "fade",
-            // UPLOAD-SCREEN-SCROLLTOP-001 (owner 2026-07-05, mobile, every
-            // load consistently): the EN/gear/Editor header row is cut off at
-            // the very top on a real session with existing data (taller
-            // content — extra Editor button + Re-edit-application panel —
-            // pushes the column just past one viewport). margin:"auto 0"
-            // below correctly makes this a scrolls-from-top case once
-            // content overflows, but doesn't GUARANTEE the initial scroll
-            // position actually lands at 0 — a known auto-margin/overflow
-            // edge case where the browser's first layout pass (before
-            // images/fonts settle) can compute a "still fits, center it"
-            // scroll offset that then persists even once the true (taller)
-            // height is established. Force it explicitly on mount instead
-            // of relying on that resolving itself.
-            ref: (el) => {
-              if (el) el.scrollTop = 0;
-            },
+            // UPLOAD-SCREEN-TOP-CLIP-001 (owner 2026-07-05, mobile, live-
+            // verified on device): the EN/gear/Editor header row was cut off
+            // at the top on real content (taller than one viewport) — and,
+            // separately, rendered BEHIND the "Generating kernel showcase…"
+            // fixed banner while a background generation is running.
+            // SUPERSEDES the 2026-07-05 UPLOAD-SCREEN-SCROLLTOP-001 attempt
+            // (forcing scrollTop=0 on mount) — that was chasing the wrong
+            // mechanism. Live measurement on a real phone (via CDP) showed
+            // the header row at a NEGATIVE offset even with scrollTop
+            // already 0 — the clip wasn't a scroll-position artifact, it was
+            // `justifyContent:"center"` on this flex column actively
+            // centering the overflowing content, symmetrically clipping ~20px
+            // off BOTH the top and bottom every time content (or the
+            // banner-active body padding, see index.html's
+            // `.antcv-banner-active` rule) leaves less room than the content
+            // needs. margin:"auto 0" on the inner wrapper below already
+            // resolves to 0 once content overflows (correct top-anchor-and-
+            // scroll per the flexbox spec), but a competing
+            // justifyContent:"center" on THIS container fights it. Dropping
+            // to "flex-start" here and letting the child's margin:"auto 0"
+            // own the "center when it fits" behaviour removes the conflict —
+            // confirmed live: toggling this one property moved the header
+            // row from off-screen (top:-13px) / behind-the-banner (top:38px,
+            // inside the banner's 0-58px span) to a clean top:79px, clear of
+            // both.
             style: {
               height: "100dvh",
               overflowY: "auto",
@@ -40071,7 +40080,7 @@
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              justifyContent: "center",
+              justifyContent: "flex-start",
               padding: 20,
               fontFamily: "Georgia,serif",
             },

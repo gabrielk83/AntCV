@@ -38,7 +38,7 @@
 (function () {
   'use strict';
   if (window.__antcvSidebarVisibilityUx) return;
-  window.__antcvSidebarVisibilityUx = '1.51.180';
+  window.__antcvSidebarVisibilityUx = '1.51.181';
 
   var SRC = 'sidebar-visibility-ux';
   var LOG_KEY = 'antcv:visibilityAnalytics';
@@ -455,7 +455,8 @@
   // this stack: whichever action is more recent — a normal edit (inferred
   // from the topbar's own undo-count in its title, "(N)") or a resize —
   // wins when the button is clicked.
-  var lastRegularEditTs = 0, lastSeenDrCount = null, topbarUndoWired = false;
+  var lastRegularEditTs = 0, lastSeenDrCount = null;
+  var UNDO_WIRED_ATTR = 'data-antcv-undo-unify-wired';
   function parseDrCount(title) {
     var m = /\((\d+)\)/.exec(title || '');
     return m ? Number(m[1]) : 0;
@@ -488,8 +489,14 @@
       btn.style.setProperty('cursor', 'pointer', 'important');
     }
 
-    if (!topbarUndoWired) {
-      topbarUndoWired = true;
+    if (btn.getAttribute(UNDO_WIRED_ATTR) !== '1') {
+      // Per-NODE marker, not a bare module-level flag — if React ever
+      // replaces this button (rather than updating it in place, e.g. on
+      // its disabled/enabled transition), a global flag would silently
+      // leave the fresh node with no listener at all and clicks would
+      // just fall through to the app's own (often no-op) handler. Caught
+      // live: the button clicked, no error, but the value never reverted.
+      btn.setAttribute(UNDO_WIRED_ATTR, '1');
       btn.addEventListener('click', function (e) {
         var top = undoStack[undoStack.length - 1];
         if (top && top.ts > lastRegularEditTs) {
@@ -551,7 +558,7 @@
   setInterval(tick, 4000);
 
   window.AntcvSidebarVisibilityUx = {
-    version: '1.51.180',
+    version: '1.51.181',
     _undoLast: undoLast,
     _undoStack: function () { return undoStack; },
     _restoreToken: restoreToken,

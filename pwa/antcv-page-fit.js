@@ -84,7 +84,23 @@
       // stylesheet rule `.antcv-page-row{min-height:1123px!important}` that would
       // otherwise pin every row at A4 and defeat the non-last collapse. An inline
       // `!important` beats a stylesheet `!important`.
-      var wantMin = (idx === lastIdx) ? (PAGE_HEIGHT_PX + 'px') : '0px';
+      //
+      // TOOLS-CONT-WHITESPACE-001 (owner 2026-07-05, "tools & methods has too
+      // much white space"): the special-case above ONLY covered idx===lastIdx,
+      // so whichever section happened to spill onto the FINAL page-row (TOOLS &
+      // METHODS continuing after a page break was the reported case, but any
+      // trailing sidebar content hits the same path) got padded to a full
+      // 1123px sheet even when its real content was a single small group —
+      // the sidebar's own min-height was raised to match (see the paired
+      // change below), leaving several hundred px of dead white space below
+      // the last real row. That "look like a full A4 sheet" padding was
+      // deliberate for the ONLY-page case (rows.length===1 — an otherwise
+      // near-empty single-page CV should still look like a page), but nothing
+      // downstream needs the genuinely-last row of a MULTI-page document
+      // padded — there's no next salmon to keep flush against, so it can
+      // collapse to content exactly like every other row. Only the trivial
+      // single-row document keeps the full A4 minimum now.
+      var wantMin = (rows.length === 1) ? (PAGE_HEIGHT_PX + 'px') : '0px';
       if (row.style.minHeight !== wantMin ||
           row.style.getPropertyPriority('min-height') !== 'important') {
         row.style.setProperty('min-height', wantMin, 'important');

@@ -345,7 +345,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.162';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.167';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.168';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -387,7 +387,7 @@
           app.src = 'app.js?v=1.51.167';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.167';
+            vo.src = 'antcv-version-override.js?v=1.51.168';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -798,7 +798,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-splitter-flip.js?v=1.50.818" defer></script>
 <script src="antcv-section-panel-tweaks.js?v=1.51.128" defer></script>
 <script src="antcv-item-align.js?v=1.50.690-edit-guard" defer></script>
-<script src="antcv-page-fit.js?v=1.50.753" defer></script>
+<script src="antcv-page-fit.js?v=1.51.168" defer></script>
 <script src="antcv-auto-pagebreak-block-001.js?v=1.51.165" defer></script>
 <script src="antcv-table-fast-drag.js?v=1.50.490" defer></script>
 <script src="antcv-pdf-error-toast.js?v=1.40.194" defer></script>
@@ -968,7 +968,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-table-row-page-controls-328.js?v=1.50.637" defer></script>
 <script src="antcv-sidebar-subsection-pagebreaks-329.js?v=1.50.446" defer></script>
 <script src="antcv-sidebar-item-page-controls-359.js?v=1.50.151-cldoc" defer></script>
-<script src="antcv-sidebar-fill-equalize-227.js?v=1.50.753" defer></script>
+<script src="antcv-sidebar-fill-equalize-227.js?v=1.51.168" defer></script>
 <!-- PB-MAIN-OVERFLOW-001 step 1 (1.50.811): READ-ONLY main-column overflow detector.
      Measures the main column total content height across all page-rows vs live A4
      usable height; writes antcv:mainOverflow {verdict, overshootLines, ...}. Renders

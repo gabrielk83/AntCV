@@ -24,17 +24,30 @@ no Jobindex/Glassdoor site-scoping), so this is an upgrade, not a hard blocker.
    Google account you want to own this (a normal Gmail is fine; free).
 2. Click **Add** / **Create a search engine**.
 3. **Name** it e.g. `AntCV job-demand research`.
-4. **What to search:**
-   - Choose **Search the entire web** (recommended — the tuning job scopes to
-     specific sites per query with the `siteSearch` parameter), **or**
-   - restrict it to the sites we care about by adding, under *Sites to search*:
-     `jobindex.dk`, `glassdoor.com`, `careers.google.com`, `linkedin.com/jobs`.
-     (Entire-web + per-query `siteSearch` is more flexible; pick that if unsure.)
+4. **Sites to search.** Google's current flow forces you to add at least one
+   site here — the "Search the entire web" option is no longer on the create
+   screen (it moves to Setup → Basics *after* creation). We don't need entire
+   web anyway: site-scoped is exactly what the tuning job wants. Add each of
+   these (type it, click **Add**, repeat) — these are the accepted patterns
+   (bare public suffixes like `*.dk` / `*.com` are rejected; a specific
+   registered domain is fine):
+   ```
+   *.jobindex.dk
+   *.glassdoor.com
+   www.linkedin.com/jobs/*
+   *.thehub.io
+   *.it-jobbank.dk
+   www.google.com/about/careers/*
+   ```
+   (`jobindex.dk`, `thehub.io`, `it-jobbank.dk` are strong Danish/Nordic boards;
+   Glassdoor + LinkedIn jobs are the broad market; the last is Google's own
+   postings. You can add/remove sites any time later.)
 5. Create it. Open the engine's **Overview / Basics** page and copy the
    **Search engine ID** — a string like `a1b2c3d4e5f6g7h8i`. **That is your
    `GOOGLE_CSE_ID` (`cx`).**
-6. (Optional but recommended) In the engine settings turn **Image search** off
-   and leave **SafeSearch** default; nothing else matters for us.
+6. (Optional) In Setup → Basics you *can* flip **"Search the entire web"** on if
+   you ever want unscoped results — not needed for the tuning job. Leave
+   **SafeSearch** default; turn **Image search** off (irrelevant to us).
 
 ## 2. Enable the Custom Search JSON API + create the API key (gets you the key)
 

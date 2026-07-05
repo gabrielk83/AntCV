@@ -1337,16 +1337,14 @@ body.antcv-editor-ready {
 }
 
 /* MOBILE-TOPBAR-EXPORT-FAB-001 (owner 2026-07-05, live phone report): the
- * topbar (EN/Unsolicited dropdowns, title, icon row, PDF/DOCX export
- * buttons) is a single nowrap row (see the 1.50.115 rule above) — on a real
- * phone at 100% zoom it doesn't fit and the owner had to zoom the browser
- * out to ~60% just to reach every control. Same class of bug as
- * MOBILE-PANEL-ZOOM-001, different row. Fix: move Export off the topbar on
- * mobile into a floating "Ask AI"-style launcher (antcv-mobile-export-fab.js)
- * that forwards taps to these same buttons — hiding them here does not lose
- * any behaviour, their onClick handlers are untouched and still reachable
- * programmatically (a hidden button still responds to .click()).
+ * topbar (EN/Unsolicited dropdowns, title, icon row) doesn't fit at 100%
+ * zoom on a real phone, forcing the owner to zoom the browser out to ~60%.
+ * VERIFY-FIRST correction: the actual crowding element is the relocated
+ * #antcv-pdf-preview-fab ("Export" pill antcv-topbar-tools-347.js moves into
+ * .antcv-top-tools) — real fix lives there (skip the relocation on mobile).
+ * .antcv-export-buttons (⬇ PDF / 📄 DOCX) lives in .antcv-preview-actions,
+ * a SEPARATE row, not the topbar at all — no CSS change needed here for it.
+ * antcv-mobile-export-fab.js still adds a floating one-tap PDF/DOCX
+ * shortcut on mobile (mirrors "Ask AI"), purely additive, forwarding to the
+ * same still-visible buttons.
  */
-@media (max-width: 900px) {
-  .antcv-export-buttons { display: none !important; }
-}

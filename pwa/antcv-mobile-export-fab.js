@@ -1,24 +1,22 @@
-/* AntCV mobile Export FAB (v1.51.176)
+/* AntCV mobile Export FAB (v1.51.178)
  * ============================================================================
  * MOBILE-TOPBAR-EXPORT-FAB-001 (owner 2026-07-05, live phone report). The
- * topbar's PDF/DOCX export buttons are hidden on mobile (antcv-mobile-controls.css,
- * @media max-width:900px) because the row (EN/Unsolicited dropdowns, title,
- * icons, export buttons) does not fit at 100% zoom on a real phone — the
- * owner had to zoom the browser out to ~60% to reach every control, the
- * same class of bug as MOBILE-PANEL-ZOOM-001, different row.
+ * .antcv-export-buttons (⬇ PDF / 📄 DOCX) row lives in .antcv-preview-actions,
+ * not the topbar — it stays visible and untouched everywhere.
  *
  * This adds an ALWAYS-VISIBLE floating "Export" launcher on mobile, styled
  * and behaved exactly like the existing "Ask AI" launcher
  * (antcv-doc-chatbot-440.js): fixed position, draggable, persisted position.
  * Tapping it opens a small menu with PDF / DOCX, and each option forwards a
- * real .click() to the ACTUAL (hidden but still-functional) topbar buttons —
- * a hidden button still responds to a programmatic .click(), so this reuses
+ * real .click() to the ACTUAL .antcv-export-buttons buttons — this reuses
  * every bit of the real export logic (worker calls, fallbacks, alerts,
- * password gate, analytics) with zero duplication and zero app.js edit.
+ * password gate, analytics) with zero duplication and zero app.js edit, as
+ * a convenient one-tap shortcut regardless of where that row currently sits
+ * on screen.
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.176';
+  var VERSION = '1.51.178';
   if (window.__antcvMobileExportFab === VERSION) return;
   window.__antcvMobileExportFab = VERSION;
 

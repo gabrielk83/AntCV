@@ -47,7 +47,7 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.50.356-unhide';
+  var SCRIPT_VERSION = '1.51.178-mobile-skip-relocate';
   if (window.__antcvTopbarTools347 === SCRIPT_VERSION) return;
   window.__antcvTopbarTools347 = SCRIPT_VERSION;
 
@@ -152,8 +152,25 @@
     }
 
     // 2) Document-export -> top tools
+    // MOBILE-TOPBAR-EXPORT-FAB-001 (owner 2026-07-05, live phone report):
+    // on a narrow viewport the topbar row (EN/Unsolicited dropdowns, title,
+    // icons, THIS relocated FAB) doesn't fit at 100% zoom. Skip the
+    // relocation on mobile so the FAB stays in its own natural floating spot
+    // (antcv-pdf-preview-gate's own CSS: left:16px, bottom:100px — opposite
+    // side from the Ask AI / mobile-export-fab launchers, no collision). If
+    // a prior desktop session already relocated it before a resize to
+    // mobile, move it back out.
     var doc = document.querySelector(DOCEXPORT_SEL);
-    if (doc && doc.getAttribute(MOVED_ATTR) !== '1') {
+    var isMobileWidth = (window.innerWidth || 0) <= 900;
+    if (isMobileWidth) {
+      if (doc && doc.getAttribute(MOVED_ATTR) === '1') {
+        try {
+          doc.style.cssText = '';
+          doc.removeAttribute(MOVED_ATTR);
+          (document.body || document.documentElement).appendChild(doc);
+        } catch (_) {}
+      }
+    } else if (doc && doc.getAttribute(MOVED_ATTR) !== '1') {
       try {
         styleDocExportForTopbar(doc);
         tools.appendChild(doc); // rightmost

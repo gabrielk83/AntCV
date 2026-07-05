@@ -95,13 +95,26 @@ const RATES = {
   'gemini-2.0-flash':    [0.10,  0.40],
   'gemini-2.5-flash':    [0.10,  0.40],
   'gemini-2.5-pro':      [1.25, 10.00],
+  // xAI Grok — added 2026-07-05 (BYOK-COST-AUDIT-001, owner: the byok-qualify
+  // audit never priced a BYOK provider whose model id fell through to
+  // FALLBACK_RATE, e.g. any grok-* model — cost silently went untracked).
+  // Web-search-sourced (xAI's own pricing page returned 403 to automated
+  // fetch); re-verify directly against docs.x.ai before relying on this for
+  // a high-volume production decision. Re-audit alongside the quarterly pass.
+  'grok-4-fast':         [0.20,  0.50],   // 2026-07 web-sourced, unverified against docs.x.ai
+  'grok-4':              [3.00, 15.00],   // 2026-07 web-sourced, unverified against docs.x.ai
+  'grok-3-mini':         [0.30,  0.50],   // 2026-07 web-sourced, unverified against docs.x.ai
+  'grok-3':              [2.00, 10.00],   // 2026-07 web-sourced, unverified against docs.x.ai
 };
 
 // Fallback when no model match — assume Sonnet pricing so the cap
 // burns faster on unknown models (safer for the demo budget).
 const FALLBACK_RATE = [3.00, 15.00];
 
-function rateFor(modelString) {
+// Exported (BYOK-COST-AUDIT-001, 2026-07-05) so byok-qualify.js's custom-
+// provider audit can price a BYOK endpoint's model against this SAME table
+// instead of duplicating a second, driftable pricing list.
+export function rateFor(modelString) {
   const m = String(modelString || '').toLowerCase();
   if (!m) return FALLBACK_RATE;
   // Match longest key first so "claude-3-5-sonnet" beats "claude-3"
@@ -112,7 +125,7 @@ function rateFor(modelString) {
   return FALLBACK_RATE;
 }
 
-function estimateCostUsd(modelString, inputTokens, outputTokens) {
+export function estimateCostUsd(modelString, inputTokens, outputTokens) {
   const [inRate, outRate] = rateFor(modelString);
   const cost = (Number(inputTokens) || 0) * inRate / 1e6
              + (Number(outputTokens) || 0) * outRate / 1e6;

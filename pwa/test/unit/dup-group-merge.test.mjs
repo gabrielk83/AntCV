@@ -65,6 +65,38 @@ test('exact-duplicate rows deduped on merge', () => {
   assert.ok(sec.items.some(it=>it.b==='new'), 'distinct row kept');
 });
 
+test('REG-GROUP-FOLD-NAMED-001: "Environmental & Durability" + "Environmental, Durability & Compliance" fold into ONE group under the shorter name', () => {
+  const sec = { id: 'regulatory', items: [
+    { grp: true, t: 'Environmental & Durability' },
+    { b: 'ISO 14524', t: 'Opto-electronic conversion function' },
+    { b: 'STANAG 4694', t: 'Weapon-mounted sight interface context' },
+    { grp: true, t: 'Environmental, Durability & Compliance' },
+    { b: 'MIL-STD-810G', t: 'Environmental qualification, including Method 514 vibration' },
+    { b: 'RoHS', t: 'Restricted substances' },
+  ] };
+  const changed = merge(sec);
+  assert.equal(changed, true, 'should fold');
+  const headers = sec.items.filter(it => it.grp);
+  assert.equal(headers.length, 1, 'two near-duplicate headers -> one');
+  assert.equal(headers[0].t, 'Environmental & Durability', 'kept the SHORTER header text');
+  const bodies = sec.items.filter(it => !it.grp).map(it => it.b);
+  ['ISO 14524', 'STANAG 4694', 'MIL-STD-810G', 'RoHS'].forEach(s => assert.ok(bodies.includes(s), 'kept ' + s));
+});
+
+test('REG-GROUP-FOLD-NAMED-001: also folds the pre-shortened "…& Materials Compliance" long form', () => {
+  const sec = { id: 'regulatory', items: [
+    { grp: true, t: 'Environmental & Durability' },
+    { b: 'IEC 60529', t: 'Ingress protection' },
+    { grp: true, t: 'Environmental, Durability & Materials Compliance' },
+    { b: 'ISO 16750', t: 'Automotive environmental conditions and testing' },
+  ] };
+  const changed = merge(sec);
+  assert.equal(changed, true);
+  const headers = sec.items.filter(it => it.grp);
+  assert.equal(headers.length, 1);
+  assert.equal(headers[0].t, 'Environmental & Durability');
+});
+
 test('distinct groups untouched (no false merge)', () => {
   const sec = { id: 'tools', items: [ { grp:true,t:'Expertise' },{ b:'a',t:'1' },{ grp:true,t:'Tools' },{ b:'b',t:'2' },{ grp:true,t:'Methods' },{ b:'c',t:'3' } ] };
   assert.equal(merge(sec), false, 'distinct canons -> no merge');

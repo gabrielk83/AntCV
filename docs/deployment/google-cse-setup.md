@@ -68,30 +68,49 @@ no Jobindex/Glassdoor site-scoping), so this is an upgrade, not a hard blocker.
 - Paid tier (if you ever want more) is **$5 per 1,000 queries**, capped at
   10k/day — not needed for weekly tuning.
 
-## 4. Hand the two values to AntCV
+## 4. CSE-PROXY-001 — the weekly job never touches the raw key
 
-You do **not** paste keys into the repo. Provide them one of two ways:
+The weekly demand-tuning job (CLUSTER-QUAL-001 §7.6) is a **scheduled Claude
+Code session**, not this repo's Cloudflare Worker — it cannot read a Worker
+secret directly. So the raw, billable `GOOGLE_CSE_KEY` lives ONLY as a
+Cloudflare secret on **access-relay**, and the weekly job instead calls a
+small proxy endpoint the Worker exposes:
 
-- **Tell me the two values in chat** and I'll set them as Cloudflare Worker
-  secrets on the tuning worker (`wrangler secret put GOOGLE_CSE_ID` /
-  `GOOGLE_CSE_KEY`), **or**
-- set them yourself:
-  ```
-  npx wrangler secret put GOOGLE_CSE_ID     # paste the cx
-  npx wrangler secret put GOOGLE_CSE_KEY     # paste the API key
-  ```
-  on whichever worker runs the tuning (to be wired — see the weekly-tuning
-  section of `docs/plan/CLUSTER-QUAL-001.md` §7.6).
+```
+GET https://<access-relay-domain>/api/cse-search
+      ?q=<query>
+      &siteSearch=jobindex.dk     # optional, per-source scoping
+      &dateRestrict=m3            # optional, defaults to m3 (last 3 months)
+      &num=10                     # optional, defaults to 10, clamped 1..10
+Header: x-antcv-cse-token: <CSE_PROXY_TOKEN>
+```
 
-> Treat both as secrets. The `cx` is low-risk but the API key is billable —
-> keep it out of commits, screenshots, and PR bodies.
+The Worker holds the real `GOOGLE_CSE_KEY` + the `cx` and constructs the
+actual Google request server-side; the caller only ever needs
+`CSE_PROXY_TOKEN` — a **separate, self-issued, narrow-scope, trivially
+rotatable** secret whose only capability is calling this one proxy endpoint.
+This is the SAME pattern this repo already uses for
+`/api/security-alert` + `SECURITY_ALERT_TOKEN` (see `SECURITY-WEEKLY-001` in
+`workers/access-relay/src/index.js`).
 
-## 5. Query shape the tuning job uses (reference)
+Set both secrets on access-relay (once the endpoint is deployed):
+```
+npx wrangler secret put GOOGLE_CSE_KEY      # the real AIza... key — Worker-only, never leaves Cloudflare
+npx wrangler secret put CSE_PROXY_TOKEN     # a fresh random token, e.g.: openssl rand -hex 32
+```
+The weekly job's scheduled-trigger config is given only `CSE_PROXY_TOKEN` (not
+`GOOGLE_CSE_KEY`) — losing that token only exposes our own scoped search
+proxy, never the billable Google credential.
+
+> Never paste `GOOGLE_CSE_KEY` into a commit, PR body, screenshot, or a
+> scheduled-trigger prompt — it goes directly into a Cloudflare secret only.
+
+## 5. Query shape the Worker uses internally (reference)
 
 ```
 GET https://www.googleapis.com/customsearch/v1
       ?key=GOOGLE_CSE_KEY
-      &cx=GOOGLE_CSE_ID
+      &cx=<cx>
       &q=<cluster search terms>
       &siteSearch=jobindex.dk        # per-source scoping (optional)
       &siteSearchFilter=i            # i = include only that site

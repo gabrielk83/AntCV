@@ -2061,7 +2061,15 @@
     try {
       if (!/^(parse_jd|generate_cv)$/.test(String(task || ""))) return false;
       const s = String(text || "").trim();
-      if (s.length < 800) return true;
+      // PARSE-JD-ADEQUACY-FLOOR-001 (owner 2026-07-06): the 800-char floor was
+      // sized for a CV+CL JSON (multiple KB); parse_jd's valid output (company,
+      // role, a few requirements) is legitimately much smaller. Applying 800 to
+      // parse_jd wrongly rejected a complete ~464-char parse as "truncated" and,
+      // with a single available provider, hard-failed the whole task. Use a
+      // task-specific floor; the unbalanced-brace check below still guards true
+      // mid-object truncation for BOTH tasks.
+      const __floor = "parse_jd" === String(task || "") ? 80 : 800;
+      if (s.length < __floor) return true;
       let open = 0, close = 0;
       for (let i = 0; i < s.length; i++) {
         const ch = s.charCodeAt(i);

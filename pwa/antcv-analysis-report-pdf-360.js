@@ -86,18 +86,45 @@
   // filled gap detail + how-I-cover answer. Recompute the SAME key app.js's gap
   // component uses (app.src.js Be ~L11124) so the export carries what the owner
   // sees + fills. Key derivation MUST stay byte-identical to that component.
-  function gapStateKey(gap, i, meta) {
-    var txt = (typeof gap === 'string' ? gap : (gap && (gap.text || gap.gap)) || '')
+  function gapTextSlug(gap) {
+    return (typeof gap === 'string' ? gap : (gap && (gap.text || gap.gap)) || '')
       .toString().slice(0, 80).replace(/\s+/g, '_');
+  }
+  function gapStateKey(gap, i, meta) {
     var cr = (((meta && meta.company) || '') + '_' + ((meta && meta.role) || ''))
       .slice(0, 40).replace(/\s+/g, '_');
-    return 'gapState_' + cr + '_' + i + '_' + txt;
+    return 'gapState_' + cr + '_' + i + '_' + gapTextSlug(gap);
+  }
+  function readGapStateRaw(k) {
+    try { var v = JSON.parse(localStorage.getItem(k) || 'null'); return v && typeof v === 'object' ? v : null; }
+    catch (_) { return null; }
   }
   function readGapState(gap, i, meta) {
+    // 1) EXACT key (fast path — byte-identical to app.src.js Be ~L11124).
+    var exact = readGapStateRaw(gapStateKey(gap, i, meta));
+    if (exact && (exact.detail || exact.correction || exact.corrected)) return exact;
+    // 2) CONTENT-BASED fallback: the exact key bakes in company_role + the gap
+    //    INDEX, both of which can drift between when the owner filled the gap and
+    //    when they export (a re-gen reorders gaps; meta.company can be rewritten
+    //    e.g. to "Unsolicited"). Match ANY saved gapState_ whose gapText slug
+    //    equals this gap's, newest (highest ts) wins. This is why the owner's
+    //    filled detail + "how I cover" + covered flag were still missing from the
+    //    export under the exact-key-only 1.51.196 attempt.
+    var slug = gapTextSlug(gap);
+    if (!slug || slug.length < 4) return exact || {};
+    var suffix = '_' + slug, best = null, bestTs = -1;
     try {
-      var v = JSON.parse(localStorage.getItem(gapStateKey(gap, i, meta)) || 'null');
-      return v && typeof v === 'object' ? v : {};
-    } catch (_) { return {}; }
+      for (var n = 0; n < localStorage.length; n++) {
+        var key = localStorage.key(n);
+        if (!key || key.indexOf('gapState_') !== 0) continue;
+        if (key.length < suffix.length || key.slice(-suffix.length) !== suffix) continue;
+        var v = readGapStateRaw(key);
+        if (!v) continue;
+        var ts = Number(v.ts) || 0;
+        if (ts >= bestTs) { bestTs = ts; best = v; }
+      }
+    } catch (_) {}
+    return best || exact || {};
   }
   function isDanish() { return /^da/i.test(readString('language', 'en')); }
 

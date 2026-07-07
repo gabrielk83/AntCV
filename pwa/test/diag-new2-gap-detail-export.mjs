@@ -40,8 +40,13 @@ const out=await page.evaluate(()=>{
   localStorage.setItem('rationale',JSON.stringify(rationale));
   // Build the gapState keys EXACTLY as app.src.js Be does.
   function key(gap,i){var txt=(typeof gap==='string'?gap:(gap&&(gap.text||gap.gap))||'').toString().slice(0,80).replace(/\s+/g,'_');var cr=((meta.company||'')+'_'+(meta.role||'')).slice(0,40).replace(/\s+/g,'_');return 'gapState_'+cr+'_'+i+'_'+txt;}
+  // gap 0: EXACT key (fast path).
   localStorage.setItem(key(gaps[0],0),JSON.stringify({corrected:true,correction:'MARKER_CORRECTION_1 — I ran GDPR-heavy regulated projects.',detail:'MARKER_DETAIL_1\n1. SPECIFIC DETAILS: missing kommunal exposure.\n2. WHY IT MATTERS: shared-infra context.\n3. HOW TO ADDRESS: frame regulated-domain work.',ts:1}));
-  localStorage.setItem(key(gaps[1],1),JSON.stringify({corrected:false,correction:'',detail:'MARKER_DETAIL_2 — backend/data specialist who partners with frontend.',ts:2}));
+  // gap 1: DRIFTED key — saved under a DIFFERENT company + WRONG index (simulates
+  // a re-gen reordering gaps / meta.company rewritten). Content-based fallback
+  // must still find it by gapText slug.
+  function driftKey(gap){var txt=(typeof gap==='string'?gap:(gap&&(gap.text||gap.gap))||'').toString().slice(0,80).replace(/\s+/g,'_');var cr=('DifferentCo_OtherRole').slice(0,40).replace(/\s+/g,'_');return 'gapState_'+cr+'_7_'+txt;}
+  localStorage.setItem(driftKey(gaps[1]),JSON.stringify({corrected:false,correction:'',detail:'MARKER_DETAIL_2 — backend/data specialist who partners with frontend.',ts:2}));
   var api=window.AntcvAnalysisReportPdf360;
   if(!api||!api._reportHtml) return {api:false};
   var html='';try{html=api._reportHtml();}catch(e){return {api:true,err:String(e)};}

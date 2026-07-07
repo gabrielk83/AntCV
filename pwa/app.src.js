@@ -17905,6 +17905,16 @@
                     console.error("translateAllSections error:", e),
                   ));
             };
+          // MOB-006 (owner re-report 2026-07-08: "language switch still nothing
+          // happens in mobile"). The confirm modal ($r) is the friction gating
+          // every switch; on a phone a 3-button "Translate now?" dialog should
+          // not stand between a tap and the language change. On mobile, skip the
+          // modal and switch DIRECTLY (i() sets the language synchronously via
+          // It(e), then translates) — a tap always changes the language.
+          if (typeof window !== "undefined" && (window.innerWidth || 0) < 760) {
+            i();
+            return;
+          }
           if (a && a.sections && a.meta) {
             const o = (null == (t = a.sections.cv) ? void 0 : t.length) || 0,
               l = (null == (n = a.sections.cl) ? void 0 : n.length) || 0;

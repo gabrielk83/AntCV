@@ -17535,9 +17535,21 @@
               }),
               r.appendChild(l),
               o.appendChild(r),
-              (o.onclick = (t) => {
-                t.target === o && s(e.cancelValue || "cancel");
-              }),
+              // MOB-006 (owner 2026-07-07): on mobile, tapping a language option
+              // (top-right) opens this CENTERED confirm modal; the tap's residual
+              // ghost-click can land on the backdrop (which is now under the
+              // finger's original spot) and INSTANTLY dismiss the dialog via this
+              // cancel-on-backdrop-tap, so the language never switches ("pressing
+              // the other language does nothing"). Playwright fires one clean
+              // click so it never reproduces. Arm the backdrop-cancel only AFTER
+              // a short delay so a same-tap residual click can't close it; the
+              // buttons' own onclick handlers are attached synchronously and work
+              // immediately, and Escape/desktop behaviour is unchanged.
+              setTimeout(() => {
+                o.onclick = (t) => {
+                  t.target === o && s(e.cancelValue || "cancel");
+                };
+              }, 450),
               document.body.appendChild(o));
           } catch (n) {
             console.error("_antcvChoice3 error", n);

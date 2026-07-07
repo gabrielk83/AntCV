@@ -25692,7 +25692,7 @@ function buildHeaderCell(ctx, bridgePhoto) {
   const contactBits = [];
   if (pi.location) contactBits.push({ text: `\u2302\xA0${pi.location}` });
   if (pi.citizenship) contactBits.push({ text: `\u2605\xA0${pi.citizenship}` });
-  if (pi.email) contactBits.push({ text: `@\xA0${pi.email}` });
+  if (pi.email) contactBits.push({ text: `✉\xA0${pi.email}` }); // HEADER-BANNER rule 2: email icon = ✉ (U+2709), never @ (KOMBIT gold)
   if (pi.phone) contactBits.push({ text: `\u260E\xA0${pi.phone}` });
   if (pi.linkedin) {
     const v = String(pi.linkedin).trim();
@@ -25766,7 +25766,9 @@ function buildHeaderCell(ctx, bridgePhoto) {
         // header colours kept). Font sizing unchanged: estimated from the
         // FULL joined text exactly as before.
         const bridge = normalisePhotoPosition(pi.photoPosition) === "band-overlap" && pi.photo_b64 && ctx.doc !== "cl";
-        const sep = bridge ? " \u2022 " : " \u2022 ";
+        // HEADER-BANNER rule 2 (KOMBIT gold): the icon glyphs (\u2302 \u2605 \u2709 \u260e \ud83d\udd17) ARE
+        // the separators \u2014 drop the " \u2022 " bullets, use ~3 spaces between items.
+        const sep = "\u00a0\u00a0\u00a0";
         // CONTACT-BRIDGE-NOSHRINK-001 (owner 2026-06-30): do NOT shrink the
         // contact line in bridge mode. The split header now widens the text
         // cell leftward to the figure's right edge (see buildCandidateHeader

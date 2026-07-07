@@ -78,6 +78,27 @@
     var v = readJSON('personalInfo');
     return v && typeof v === 'object' ? v : {};
   }
+  // NEW-2 (owner 2026-07-07): the Analysis panel's expandable gap blocks persist
+  // their AI detail (SPECIFIC DETAILS / WHY IT MATTERS / HOW TO ADDRESS), the
+  // owner's "I cover this" correction, and the covered flag to per-gap
+  // localStorage keys `gapState_<company_role>_<idx>_<gapText>` — NOT into
+  // `rationale.gaps[]`. This export read only `rationale`, so it dropped every
+  // filled gap detail + how-I-cover answer. Recompute the SAME key app.js's gap
+  // component uses (app.src.js Be ~L11124) so the export carries what the owner
+  // sees + fills. Key derivation MUST stay byte-identical to that component.
+  function gapStateKey(gap, i, meta) {
+    var txt = (typeof gap === 'string' ? gap : (gap && (gap.text || gap.gap)) || '')
+      .toString().slice(0, 80).replace(/\s+/g, '_');
+    var cr = (((meta && meta.company) || '') + '_' + ((meta && meta.role) || ''))
+      .slice(0, 40).replace(/\s+/g, '_');
+    return 'gapState_' + cr + '_' + i + '_' + txt;
+  }
+  function readGapState(gap, i, meta) {
+    try {
+      var v = JSON.parse(localStorage.getItem(gapStateKey(gap, i, meta)) || 'null');
+      return v && typeof v === 'object' ? v : {};
+    } catch (_) { return {}; }
+  }
   function isDanish() { return /^da/i.test(readString('language', 'en')); }
 
   function T() {
@@ -93,6 +114,7 @@
       overall: 'Samlet match', strengths: 'Stærkeste matchpunkter',
       gaps: 'Mangler / ærlig vurdering', recruiter: 'Rekrutterer',
       redFlags: 'Røde flag', questions: 'Spørgsmål i opslaget',
+      gapDetail: 'Uddybning', howICover: 'Sådan dækker jeg dette', gapCovered: 'Dækket',
       recruiterEmpty: 'Ingen tydelig rekrutteringskontakt fundet.',
       questionsEmpty: 'Ingen foreslåede spørgsmål.',
       salary: 'Løn', salaryEst: 'Løn (estimat)',
@@ -114,6 +136,7 @@
       overall: 'Overall fit', strengths: 'Strongest fit points',
       gaps: 'Gaps / honest assessment', recruiter: 'Recruiter',
       redFlags: 'Red flags', questions: 'Questions in the job description',
+      gapDetail: 'Detail', howICover: 'How I cover this', gapCovered: 'Covered',
       recruiterEmpty: 'No clear recruiter info found.',
       questionsEmpty: 'No suggested questions.',
       salary: 'Salary', salaryEst: 'Salary (estimate)',
@@ -152,15 +175,27 @@
     }
 
     // Gaps: strings or {missing, jd_mention} or {gap, how_to_close}.
+    // NEW-2: also fold in the owner-filled per-gap state (detail + "I cover
+    // this" correction + covered flag) keyed by the SAME index app.js maps on
+    // (yo.gaps.map((e,t)=>Be({gap:e,idx:t}))) — so index alignment is exact.
     var gaps = [];
     if (Array.isArray(r.gaps)) {
-      gaps = r.gaps.map(function (x) {
+      gaps = r.gaps.map(function (x, i) {
         if (!x) return null;
-        if (typeof x === 'string') return { text: x.trim(), how: '' };
-        var text = x.missing || x.gap || x.text || x.title || '';
-        var how = x.how_to_close || x.suggested_edit || x.jd_mention || x.fix || '';
-        if (!text && !how) return null;
-        return { text: String(text).trim(), how: String(how).trim() };
+        var gs = readGapState(x, i, meta);
+        var base;
+        if (typeof x === 'string') {
+          base = { text: x.trim(), how: '' };
+        } else {
+          var text = x.missing || x.gap || x.text || x.title || '';
+          var how = x.how_to_close || x.suggested_edit || x.jd_mention || x.fix || '';
+          if (!text && !how && !(gs.detail || gs.correction)) return null;
+          base = { text: String(text).trim(), how: String(how).trim() };
+        }
+        base.detail = (typeof gs.detail === 'string') ? gs.detail.trim() : '';
+        base.correction = (typeof gs.correction === 'string') ? gs.correction.trim() : '';
+        base.corrected = !!gs.corrected;
+        return base;
       }).filter(Boolean);
     }
 
@@ -342,11 +377,18 @@
       }), 'rep-ticks')));
     }
 
-    // Gaps
+    // Gaps — NEW-2: carry the owner-filled per-gap detail + "how I cover this"
+    // correction + covered flag (persisted to gapState_* by the panel), which
+    // the rationale-only export used to drop.
     if (m.gaps.length) {
       parts.push(section(t.gaps, '#c0392b', ul(m.gaps.map(function (g) {
-        return '<b>' + esc(g.text) + '</b>' + (g.how ? '<span class="rep-how"> — ' + esc(g.how) + '</span>' : '');
-      }))));
+        var head = (g.corrected ? '<span class="rep-gap-cov">✓ ' + esc(t.gapCovered) + '</span> ' : '') +
+          '<b>' + esc(g.text) + '</b>' + (g.how ? '<span class="rep-how"> — ' + esc(g.how) + '</span>' : '');
+        var extra = '';
+        if (g.detail) extra += '<div class="rep-gap-detail">' + esc(g.detail).replace(/\n+/g, '<br>') + '</div>';
+        if (g.correction) extra += '<div class="rep-gap-cover"><b>' + esc(t.howICover) + ':</b> ' + esc(g.correction) + '</div>';
+        return head + extra;
+      }), 'rep-gaps')));
     }
 
     // Recommendations
@@ -492,6 +534,11 @@
       '.rep-ticks{list-style:none;padding-left:2px;}',
       '.rep-tick{color:#00746E;font-weight:800;margin-right:6px;}',
       '.rep-how{color:#555;}',
+      // NEW-2: filled gap detail + how-I-cover blocks
+      '.rep-gaps li{margin-bottom:7px;}',
+      '.rep-gap-cov{color:#1e824c;font-weight:700;font-size:8.5pt;}',
+      '.rep-gap-detail{margin:3px 0 2px;padding:6px 9px;background:#fbfbfb;border-left:3px solid #d9d9d9;border-radius:0 5px 5px 0;font-size:9.5pt;line-height:1.5;color:#444;white-space:normal;}',
+      '.rep-gap-cover{margin:3px 0 0;padding:6px 9px;background:#f0fdf9;border-left:3px solid #00746E;border-radius:0 5px 5px 0;font-size:9.5pt;line-height:1.5;color:#274;}',
       '.rep-flags{list-style:none;padding-left:2px;}',
       '.rep-flag{color:#c0392b;font-weight:800;margin-right:6px;}',
       '.rep-conf{border-radius:7px;padding:7px 11px;margin:0 0 7px;}',

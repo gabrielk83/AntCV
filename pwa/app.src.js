@@ -17061,11 +17061,14 @@
                               u.set("meta", { ...(io || {}), ...mm });
                             } catch (e) {}
                           } catch (e) {}
-                          if (n.rationale) {
-                            try {
-                              bo(n.rationale);
-                            } catch (e) {}
-                          }
+                          // NEW-1 (owner 2026-07-07): overwrite the analysis
+                          // UNCONDITIONALLY (value-or-null) so hydrating an
+                          // application never keeps the PREVIOUS app's rationale
+                          // when the loaded one has none (stale-analysis leak).
+                          try {
+                            bo(n.rationale || null);
+                            u.set("rationale", n.rationale || null);
+                          } catch (e) {}
                           try {
                             // 1.50.252: stamp the loaded row's company so
                             // auto-sync knows whether subsequent edits still

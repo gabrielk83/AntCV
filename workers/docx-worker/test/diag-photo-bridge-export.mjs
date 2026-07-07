@@ -77,7 +77,11 @@ const nRow = firstRow(normal);
 // The split band header keeps an EMPTY photo zone; the float anchors in the
 // sidebar's first paragraph, page-positioned, lifted half a diameter so its
 // centre sits on the band-sidebar seam.
-const bSplit = !/gridSpan/.test(bRow) && (bRow.match(/<w:tc>/g) || []).length === 2;
+// HEADER-BANNER rule 2 (2026-07-07): the bridge name/spec row is now a FULL-WIDTH
+// gridSpan=2 centred row (one stack on the contact axis), not the old empty-photo-
+// zone + text split. The medallion still FLOATS over the sidebar (page-anchored,
+// layoutInCell=0), asserted below — it never needed the reserved cell.
+const bNameSpan = /w:gridSpan w:val="2"/.test(bRow);
 const nSpan = /w:gridSpan w:val="2"/.test(nRow);
 
 // FIGURE-CONTACT-REF-001 (1.14.120, owner reference DOCX): the medallion is a
@@ -115,10 +119,10 @@ const nContactPara = paraAround(normal, '31 71');
 const nNoInd = !/w:left="2592"/.test(nContactPara);
 const nNoTight = !/<w:spacing w:val="-10"\/>/.test(nContactPara);
 
-log('bridge header split (2 cells, no gridSpan):', bSplit, '| normal gridSpan-2 kept:', nSpan);
+log('bridge name row gridSpan=2 (rule-2 stack):', bNameSpan, '| normal gridSpan-2 kept:', nSpan);
 log('bridge medallion FLOAT 1.50":', bFloat && bSized, '| posH page 396240:', bPosH, '| posV -365760:', bPosV, '| escapes cell:', bEscapesCell, '| band row empty:', bNotInBandRow);
 log('anchor rides contact para:', bAnchorInContact, '| contact ind 2592/-216:', bContactInd, '| contact 8pt:', bContact8pt, '| contact tracking -10:', bContactTight, '| sidebar spacer 990:', bSpacer);
 log('normal sidebar-top photo stays inline:', nInline, '| normal contact no ind:', nNoInd, '| normal no tracking:', nNoTight);
-const ok = bSplit && nSpan && bFloat && bSized && bPosH && bPosV && bEscapesCell && bNotInBandRow && bAnchorInContact && bContactInd && bContact8pt && bContactTight && bSpacer && nInline && nNoInd && nNoTight;
+const ok = bNameSpan && nSpan && bFloat && bSized && bPosH && bPosV && bEscapesCell && bNotInBandRow && bAnchorInContact && bContactInd && bContact8pt && bContactTight && bSpacer && nInline && nNoInd && nNoTight;
 log(ok ? 'PHOTO-BRIDGE-EXPORT OK' : 'PHOTO-BRIDGE-EXPORT FAIL');
 process.exit(ok ? 0 : 1);

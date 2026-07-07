@@ -24939,22 +24939,22 @@ function buildTwoColumnDocument(ctx) {
   const __contactParas = bridgeOn ? headerCell.filter(function (p) { return p && p.__antcvContactPara; }) : [];
   const __topParas = __contactParas.length ? headerCell.filter(function (p) { return !(p && p.__antcvContactPara); }) : headerCell;
   const headerRows = bridgeOn ? [
+    // HEADER-BANNER rule 2 (KOMBIT gold, owner 2026-07-07 "1 go"): name +
+    // specialisation are a FULL-WIDTH centered row (gridSpan=2), so they centre
+    // on the PAGE axis — the SAME axis as the full-width contact line below — not
+    // on the narrow right split-cell's centre (which pushed the name right of the
+    // contact). The bridge medallion is a PAGE-anchored FLOAT (layoutInCell:false)
+    // so it still rises over the sidebar column; the centred name/spec begin well
+    // to the right of the photo's right edge, so no reserved photo cell is needed
+    // and a long name keeps the full page width (no wrap).
     new TableRow({
       children: [
         new TableCell({
-          // Empty photo zone — the page-anchored floating bridge medallion rises into this cell.
-          width: { size: __bridgeLeftW, type: WidthType.DXA },
+          columnSpan: 2,
+          width: { size: PAGE_W, type: WidthType.DXA },
           shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
           borders: noBorders(),
-          margins: { top: 240, bottom: 80, left: 80, right: 80 },
-          children: [emptyParagraph()]
-        }),
-        new TableCell({
-          width: { size: PAGE_W - __bridgeLeftW, type: WidthType.DXA },
-          shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
-          borders: noBorders(),
-          margins: { top: 240, bottom: 80, left: 120, right: 360 },
-          verticalAlign: VerticalAlign.CENTER,
+          margins: { top: 240, bottom: 80, left: 360, right: 360 },
           children: __topParas
         })
       ]

@@ -59,9 +59,12 @@ const normal = await gen({ photoPosition: 'sidebar-top' });
 const checks = [];
 const check = (n, ok, d) => { checks.push(ok); log(`${n}: ${ok ? 'OK' : 'FAIL'}${ok ? '' : ' ' + (d || '')}`); };
 
-check('bridge: NAME is in a non-gridSpan split cell', cellGridSpan(bridge, NAME) === false, 'got ' + cellGridSpan(bridge, NAME));
+// HEADER-BANNER rule 2 (2026-07-07): the bridge name/spec are now a FULL-WIDTH
+// gridSpan=2 centered row (one stack on the contact axis), NOT the old narrow
+// split cell — so the name centres on the same page axis as the contact below.
+check('bridge: NAME is in a gridSpan=2 full-width centered cell (rule-2 stack)', cellGridSpan(bridge, NAME) === true, 'got ' + cellGridSpan(bridge, NAME));
 check('bridge: CONTACT (phone) is in a gridSpan=2 full-width cell', cellGridSpan(bridge, PHONE) === true, 'got ' + cellGridSpan(bridge, PHONE));
-check('bridge: contact sits in a LATER row than the name', differentRows(bridge, NAME, PHONE));
+check('bridge: contact sits in a LATER row than the name (stacked, both full-width)', differentRows(bridge, NAME, PHONE));
 check('control sidebar-top: name + contact share ONE gridSpan-2 cell (same row)', cellGridSpan(normal, NAME) === true && !differentRows(normal, NAME, PHONE));
 check('contact text intact (phone digits present)', bridge.includes('31 71'));
 

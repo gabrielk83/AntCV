@@ -17520,8 +17520,15 @@
                 t.textContent = e.label;
                 const n = !!e.primary,
                   o = !!e.danger;
+                // MOB-006 (owner 2026-07-08): on mobile the confirm modal's
+                // buttons did not fire on tap (the language never switched even
+                // though the dialog is up). Harden the touch target: bind
+                // pointerup (fires reliably for touch, before the ~300ms
+                // synthetic click) AS WELL AS onclick, guarded so it runs once;
+                // touch-action:manipulation kills the tap delay/double-tap-zoom;
+                // 44px min-height gives a real finger target.
                 ((t.style.cssText =
-                  "padding:10px 14px;border-radius:6px;border:1px solid " +
+                  "padding:12px 14px;border-radius:6px;border:1px solid " +
                   (n ? "#283556" : o ? "#c33" : "#bbb") +
                   ";background:" +
                   (n ? "#283556" : o ? "#fff" : "#f7f7f7") +
@@ -17529,8 +17536,17 @@
                   (n ? "#fff" : o ? "#c33" : "#333") +
                   ";font-size:14px;font-weight:" +
                   (n ? "600" : "500") +
-                  ";cursor:pointer;width:100%;text-align:left;"),
-                  (t.onclick = () => s(e.value)),
+                  ";cursor:pointer;width:100%;text-align:left;touch-action:manipulation;min-height:44px;margin-bottom:2px;"),
+                  (() => {
+                    let __fired = false;
+                    const __act = (ev) => {
+                      if (__fired) return;
+                      __fired = true;
+                      try { ev && ev.preventDefault && ev.preventDefault(); ev && ev.stopPropagation && ev.stopPropagation(); } catch (_) {}
+                      s(e.value);
+                    };
+                    ((t.onclick = __act), t.addEventListener("pointerup", __act));
+                  })(),
                   l.appendChild(t));
               }),
               r.appendChild(l),
@@ -17905,16 +17921,6 @@
                     console.error("translateAllSections error:", e),
                   ));
             };
-          // MOB-006 (owner re-report 2026-07-08: "language switch still nothing
-          // happens in mobile"). The confirm modal ($r) is the friction gating
-          // every switch; on a phone a 3-button "Translate now?" dialog should
-          // not stand between a tap and the language change. On mobile, skip the
-          // modal and switch DIRECTLY (i() sets the language synchronously via
-          // It(e), then translates) — a tap always changes the language.
-          if (typeof window !== "undefined" && (window.innerWidth || 0) < 760) {
-            i();
-            return;
-          }
           if (a && a.sections && a.meta) {
             const o = (null == (t = a.sections.cv) ? void 0 : t.length) || 0,
               l = (null == (n = a.sections.cl) ? void 0 : n.length) || 0;

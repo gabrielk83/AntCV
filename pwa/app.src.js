@@ -16128,12 +16128,33 @@
                             }));
                           } catch (_) { return false; }
                         })();
+                        // CROSS-DEVICE-GEN-LEAK-GUARD (owner 2026-07-08): a generation on
+                        // ANOTHER device (desktop) sets the SHARED active_application pointer
+                        // to a DIFFERENT app (e.g. "Sigma"); on THIS device (mobile, reviewing
+                        // the unsolicited app) the restore below clobbered the local
+                        // sections/meta with the foreign app — "the unsolicited application I
+                        // reviewed on mobile changed to Sigma". The drift guard only caught
+                        // local-real -> row-empty/unsolicited; the inverse (local unsolicited,
+                        // row a foreign-device REAL company) fell through. KEEP the local
+                        // active app whenever the pointer was set by a FOREIGN device AND the
+                        // local app DIFFERS from the row — the foreign app stays in the app
+                        // LIST to open explicitly. A fresh device (__curCo2 empty) still
+                        // restores normally; same-company rows still apply.
+                        const __foreignActiveHijack = (() => {
+                          try {
+                            const mine = window.AntcvJdScope && window.AntcvJdScope.deviceId && window.AntcvJdScope.deviceId();
+                            const setter = e && e._pointer_device_id;
+                            const foreign = !!(setter && mine && String(setter) !== String(mine));
+                            return foreign && !!__curCo2 && __curCo2 !== __rowCo2;
+                          } catch (_) { return false; }
+                        })();
                         const __draftDrift2 =
                           __staleSamePtr2 ||
+                          __foreignActiveHijack ||
                           (__curCo2 && "unsolicited" !== __curCo2 &&
                           ("" === __rowCo2 || "unsolicited" === __rowCo2));
                         if (__draftDrift2) {
-                          try { console.log(__staleSamePtr2 ? "[cloud-restore] PTR-STALE-GUARD-001: keeping local draft (" + __curCo2 + ") over a stale same-device pointer (" + __rowCo2 + ")" : "[cloud-restore] META-DRIFT-GUARD-002: keeping tailored draft (" + __curCo2 + ") over the unsolicited row"); } catch (e) {}
+                          try { console.log(__staleSamePtr2 ? "[cloud-restore] PTR-STALE-GUARD-001: keeping local draft (" + __curCo2 + ") over a stale same-device pointer (" + __rowCo2 + ")" : __foreignActiveHijack ? "[cloud-restore] CROSS-DEVICE-GEN-LEAK-GUARD: keeping local app (" + __curCo2 + ") over a FOREIGN-device pointer (" + __rowCo2 + ")" : "[cloud-restore] META-DRIFT-GUARD-002: keeping tailored draft (" + __curCo2 + ") over the unsolicited row"); } catch (e) {}
                         } else {
                         if (e.jd_company || e.jd_role)
                           try {
@@ -21140,9 +21161,21 @@
                     }));
                   } catch (_) { return false; }
                 })();
-                var __draftDrift = __staleSamePtr || (__curCo && "unsolicited" !== __curCo && ("" === __rowCo || "unsolicited" === __rowCo));
+                // CROSS-DEVICE-GEN-LEAK-GUARD (owner 2026-07-08, read-from-cloud path):
+                // a foreign-device generation (desktop "Sigma") must not clobber THIS
+                // device's active app (mobile unsolicited). Keep local when the pointer
+                // is foreign-device AND the local app differs. See the cold-restore twin.
+                var __foreignActiveHijack = (function () {
+                  try {
+                    var mine = window.AntcvJdScope && window.AntcvJdScope.deviceId && window.AntcvJdScope.deviceId();
+                    var setter = e && e._pointer_device_id;
+                    var foreign = !!(setter && mine && String(setter) !== String(mine));
+                    return foreign && !!__curCo && __curCo !== __rowCo;
+                  } catch (_) { return false; }
+                })();
+                var __draftDrift = __staleSamePtr || __foreignActiveHijack || (__curCo && "unsolicited" !== __curCo && ("" === __rowCo || "unsolicited" === __rowCo));
                 if (__draftDrift) {
-                  try { console.log(__staleSamePtr ? "[Read from Cloud] PTR-STALE-GUARD-001: keeping local draft (" + __curCo + ") over a stale same-device pointer (" + __rowCo + ")" : "[Read from Cloud] META-DRIFT-GUARD: keeping tailored draft (" + __curCo + ") over the unsolicited row"); } catch (e) {}
+                  try { console.log(__staleSamePtr ? "[Read from Cloud] PTR-STALE-GUARD-001: keeping local draft (" + __curCo + ") over a stale same-device pointer (" + __rowCo + ")" : __foreignActiveHijack ? "[Read from Cloud] CROSS-DEVICE-GEN-LEAK-GUARD: keeping local app (" + __curCo + ") over a FOREIGN-device pointer (" + __rowCo + ")" : "[Read from Cloud] META-DRIFT-GUARD: keeping tailored draft (" + __curCo + ") over the unsolicited row"); } catch (e) {}
                 } else {
                   if (e.jd_company || e.jd_role)
                     try {

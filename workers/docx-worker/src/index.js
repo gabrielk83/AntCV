@@ -23910,7 +23910,18 @@ function postProcessDocx(input, opts = {}) {
       const headerXml =
         '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
         '<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w10="urn:schemas-microsoft-com:office:word">' +
-        '<w:p><w:pPr>' + (headerBgHex ? '<w:shd w:val="clear" w:color="auto" w:fill="' + headerBgHex + '"/>' : '') + '<w:spacing w:before="0" w:after="0" w:line="40" w:lineRule="exact"/></w:pPr>' + watermarkRun + '</w:p></w:hdr>';
+        // HEADER-NAVY-STRIP-001 (owner 2026-07-07): the running header paragraph
+        // used to be shaded with headerBgHex ("page-break continuity" strip). On
+        // page 1 that renders as a colour strip ABOVE the name banner, and when the
+        // header colour lags the active brand (e.g. a Copenhagen-navy 33446F header
+        // on a red-branded CV) it shows as a mismatched navy glitch at the very top.
+        // Owner-validated fix: make the header INVISIBLE - drop the shd fill and set
+        // the paragraph mark to 1pt (sz=2) so it collapses in Word AND LibreOffice/
+        // CloudConvert (which otherwise renders the empty para at the default font as
+        // a strip). line stays 40 (2pt, a multiple of 0.5pt). The demo watermark run
+        // is absolutely-positioned VML, independent of the 1pt para font, so it is
+        // unaffected and still floats over every page.
+        '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="40" w:lineRule="exact"/><w:rPr><w:sz w:val="2"/><w:szCs w:val="2"/></w:rPr></w:pPr>' + watermarkRun + '</w:p></w:hdr>';
       files["word/header1.xml"] = strToU8(headerXml);
       // Relationship (choose a non-colliding rId).
       const relsName = "word/_rels/document.xml.rels";

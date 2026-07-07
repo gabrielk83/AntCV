@@ -24840,10 +24840,10 @@ function buildTwoColumnDocument(ctx) {
   const __sbEdge = __pxTok("sidebarEdgePad");
   const sbLR = __sbEdge != null ? Math.round(__sbEdge * 15) : 120;
   const seamDxa = Math.round((__pxTok("seamGap") || 0) * 15);
-  const makeSidebarCell = (els) => new TableCell({
+  const makeSidebarCell = (els, withHeader) => new TableCell({
     width: { size: ctx.sidebarW, type: WidthType.DXA },
     shading: { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" },
-    borders: noBorders(),
+    borders: withHeader ? bodyTopBorder(style.headerBg) : noBorders(),
     // PREVIEW-PDF-SIDEBAR-GEOM-001 (owner 2026-06-10): the preview sidebar uses
     // 8px (=120 DXA) L/R padding; the worker used 144 (9.6px), so the export
     // text column was ~3px narrower each side and wrapped more (e.g. a
@@ -24864,9 +24864,9 @@ function buildTwoColumnDocument(ctx) {
   // constant 144 was 9.6px, a 0.4px parity drift now removed).
   const mePx = Number(style && style.mainEdgeIndent);
   const mainEdge = Number.isFinite(mePx) && mePx >= 0 && mePx <= 60 ? Math.round(mePx * 15) : 150;
-  const makeMainCell = (els) => new TableCell({
+  const makeMainCell = (els, withHeader) => new TableCell({
     width: { size: ctx.mainW, type: WidthType.DXA },
-    borders: noBorders(),
+    borders: withHeader ? bodyTopBorder(style.headerBg) : noBorders(),
     // ADV-SPACING-CONTROLS-001: seamGap widens the seam side only.
     margins: {
       top: Math.max(0, 120 + __vDelta),
@@ -24910,7 +24910,7 @@ function buildTwoColumnDocument(ctx) {
     // 1.14.55: a repeated slim header strip on pages 2+ costs ~900 DXA;
     // shrink those pages' body min so the total stays inside the sheet.
     height: { value: withHeader ? PAGE1_BODY_MIN : style && style.repeatHeader === true ? CONT_BODY_MIN - 900 : CONT_BODY_MIN, rule: "atLeast" },
-    children: sidebarOnRight ? [makeMainCell(mnEls), makeSidebarCell(sbEls)] : [makeSidebarCell(sbEls), makeMainCell(mnEls)]
+    children: sidebarOnRight ? [makeMainCell(mnEls, withHeader), makeSidebarCell(sbEls, withHeader)] : [makeSidebarCell(sbEls, withHeader), makeMainCell(mnEls, withHeader)]
   });
   // PHOTO-SIDEBAR-BRIDGE-001 (1.14.51): in bridge mode the candidate header
   // is SPLIT on the page grid — the left cell (sidebar width) is the photo
@@ -27725,6 +27725,15 @@ __name(emptyParagraph, "emptyParagraph");
 function noBorders() {
   const n = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
   return { top: n, bottom: n, left: n, right: n, insideHorizontal: n, insideVertical: n };
+}
+// HEADER-BANNER rule 5/6 (KOMBIT gold, owner 2026-07-07 "add it"): the
+// banner→body divider is owned by the FIRST body row's cell TOPS (both cells,
+// single sz=12 ≈ 1.4pt), in the band colour, so it reads as one uniform line
+// under the banner. Body-cell TOPS (not the banner gridSpan-cell bottom, which
+// renders a sub-pixel seam at the internal grid line). `color` = band/brand.
+function bodyTopBorder(color) {
+  const n = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
+  return { top: { style: BorderStyle.SINGLE, size: 12, color: color || "auto" }, bottom: n, left: n, right: n, insideHorizontal: n, insideVertical: n };
 }
 __name(noBorders, "noBorders");
 

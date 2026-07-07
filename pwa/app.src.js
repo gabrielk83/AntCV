@@ -5707,6 +5707,25 @@
             if (["left", "center", "right", "justify"].includes(v)) return v;
             return isGrp ? "center" : (__hasGrp ? "left" : "justify");
           };
+          // GROUP-EMPTY-HIDE-001 (owner 2026-07-06): a {grp} sub-heading with NO rendered child
+          // row must be hidden entirely (heading + label), not left as a bare dangling label —
+          // mirrors the worker renderRichBlock. A group runs from its {grp} row to the next {grp}
+          // or end of items; a following row counts as a real child only if it survives the same
+          // drop rules the map below applies (hidden[], "Hidden -" residue, bracket placeholder,
+          // both-sides-blank). Regains its heading the moment it has ≥1 real child.
+          const __grpHasChild = (gi) => {
+            const A = e.items || [];
+            for (let j = gi + 1; j < A.length; j++) {
+              const x = A[j];
+              if (x && "object" == typeof x && x.grp) break;
+              if (e.hidden && e.hidden[j]) continue;
+              const q = x && "object" == typeof x ? x : { t: String(x || "") };
+              if (/^\s*hidden\s*[-–—:]\s*/i.test(String(q.b || q.l || ""))) continue;
+              if (/^\s*\[[\s\S]*\]\s*$/.test(String(q.t || "")) || (!String(q.t || "").trim() && e.headlineOff && q.b)) continue;
+              if ((q.b && !q.bOff) || !q.tOff) return true;
+            }
+            return false;
+          };
           const __items = (e.items || [])
             .map((it, i) => {
               if (e.hidden && e.hidden[i]) return null;
@@ -5721,6 +5740,8 @@
               if (!row.grp && (/^\s*\[[\s\S]*\]\s*$/.test(String(row.t || "")) || (!String(row.t || "").trim() && e.headlineOff && row.b))) return null;
               // RICH-BLOCK-GROUP-001: a row flagged grp is a bold sub-heading (like labeled_list).
               if (row.grp) {
+                // GROUP-EMPTY-HIDE-001: no rendered child → hide the heading+label entirely.
+                if (!__grpHasChild(i)) return null;
                 return {
                   key: String(i),
                   node: React.createElement(

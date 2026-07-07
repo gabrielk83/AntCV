@@ -26806,6 +26806,27 @@ function renderRichBlock(s, ctx, isSidebar) {
   // non-grouped rich_block keeps JUSTIFY. Explicit per-row / __group__ CJLR overrides still win.
   // Mirrors the preview's __rowAlign (app.src.js RICH-BLOCK-GROUP-ALIGN-DEFAULT-001).
   const __hasGrp = items.some((it) => it && typeof it === "object" && it.grp);
+  // GROUP-EMPTY-HIDE-001 (owner 2026-07-06): mirror the preview (app.src.js) — a {grp} sub-heading
+  // with NO rendered child row is hidden entirely (no bare dangling label). A group runs from its
+  // {grp} row to the next {grp} or end; a following row counts as a real child only if it survives
+  // the same drops applied below (bracket placeholder, headlineOff lead-only, both-sides-blank).
+  const __grpHasChild = (gi) => {
+    for (let j = gi + 1; j < items.length; j++) {
+      const x = items[j];
+      if (x && typeof x === "object" && x.grp) break;
+      const q = x && typeof x === "object" ? x : { t: String(x || "") };
+      if (/^\s*hidden\s*[-–—:]\s*/i.test(String(q.b || q.l || ""))) continue;
+      const bTrim = String(q.b || "").trim();
+      const colon = (q.colon != null) ? !!q.colon : (!q.mk && s.leadColon !== false && !/[:.;,!?…–—-]$/.test(bTrim));
+      const lead = q.b ? q.b + (colon ? ": " : " ") : "";
+      const body = q.t || "";
+      if (/^\s*\[[\s\S]*\]\s*$/.test(body)) continue;
+      if (!String(body).trim() && s.headlineOff && q.b) continue;
+      if (!lead && !body) continue;
+      return true;
+    }
+    return false;
+  };
   items.forEach((it, i) => {
     const row = it && typeof it === "object" ? it : { t: String(it || "") };
     const align = paraAlignPath(s, "items." + i + ".t") ?? paraAlignPath(s, "items." + i) ?? groupCjlr ?? (__hasGrp ? AlignmentType.LEFT : AlignmentType.JUSTIFIED);
@@ -26813,6 +26834,7 @@ function renderRichBlock(s, ctx, isSidebar) {
     if (row.grp) {
       const txt = String(row.t || "").trim();
       if (!txt) return;
+      if (!__grpHasChild(i)) return;   // GROUP-EMPTY-HIDE-001: no rendered child → hide heading
       const galign = paraAlignPath(s, "items." + i + ".t") ?? paraAlignPath(s, "items." + i) ?? groupCjlr ?? AlignmentType.CENTER;
       if (rowPage(i) >= 2) { if (__wholeMoveSkip) { __wholeMoveSkip = false; } else out.push(pbBreakPara()); }
       out.push(new Paragraph({

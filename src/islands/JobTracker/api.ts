@@ -80,6 +80,16 @@ export async function fetchJdUrl(url: string): Promise<JdFetch> {
   return { ok: true, text: j.text, title: j.title, wall_hint: j.wall_hint };
 }
 
+// Cluster top-20 most-demanded qualifications for the user's cluster.
+export interface ClusterTop { cluster_id: string | null; top20: { rank: number; qual: string; weight_sum: number }[]; }
+export async function fetchClusterTop20(): Promise<ClusterTop> {
+  try {
+    const res = await call('/api/cluster-top20', { method: 'GET' });
+    const j = await res.json().catch(() => ({}));
+    return { cluster_id: j.cluster_id ?? null, top20: Array.isArray(j.top20) ? j.top20 : [] };
+  } catch { return { cluster_id: null, top20: [] }; }
+}
+
 export const TRACKED_STATUSES = [
   'Not started', 'Identified (posting saved)', 'CV/CL drafting',
   'CV/CL drafted', 'Submitted', 'Interview', 'Offer', 'Rejected', 'Archive / closed',

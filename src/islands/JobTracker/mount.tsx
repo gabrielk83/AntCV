@@ -8,6 +8,7 @@
 import { createRoot, type Root } from 'react-dom/client';
 import { createElement } from 'react';
 import { JobTracker } from './JobTracker';
+import { startFitWatch } from './fitWatch';
 
 const LAUNCHER_ID = 'antcv-job-tracker-launcher';
 const PANEL_ID = 'antcv-job-tracker-panel-root';
@@ -52,6 +53,7 @@ export function mountJobTrackerIsland(): void {
   booted = true;
   (window as unknown as { AntcvOpenJobTracker?: () => void }).AntcvOpenJobTracker = openJobTracker;
   try { ensureLauncher(); } catch (e) { console.warn('[JobTracker] launcher failed', e); }
+  try { startFitWatch(); } catch (e) { console.warn('[JobTracker] fit-watch failed', e); }
   // The vanilla app re-renders and can wipe body children; a light observer
   // re-adds the launcher if it disappears. setTimeout (not rAF) per STICKY-LEAK-005.
   let pending = false;

@@ -38,8 +38,15 @@ Cache-bust + deploy + browser-verify protocol applies to that touch (see below).
          posting,tracked,next,flag,urlkey,band]...],       // weekly tracker
   urls:{urlkey:url},
   support:{urlkey:"ROLE/FIT/FLAG + top-5 needs·bring·insight"},  // → Additional Signals
-  artifacts:{urlkey:{cv_url,cl_url,analysis_url,generated_at}} }
+  scores:{urlkey:{fit,rank,why}},                          // analysis-driven (drives Top-5 membership)
+  artifacts:{urlkey:{application_id,jd_hash,generated_at,   // ← the LIVE saved application (traceable)
+                     cv_export_url,cl_export_url,analysis_url}} }
 ```
+
+`artifacts[urlkey].application_id` is the key traceability link: it points at a
+real, persisted AntCV **application** (D1 `application` row), not just a static
+file. Export URLs are optional convenience copies; the application itself is the
+editable source of truth.
 
 Writes use optimistic concurrency: PUT `{doc, base_rev}`; on 409 the island
 re-fetches, row-merges, and retries (same contract the CLI uses). The island
@@ -69,10 +76,39 @@ holds `rev` in state and passes it as `base_rev`.
     row's stored JD (`jd_text`) with `supporting_context` = `support[urlkey]` +
     the relevant `envelope` guidelines, then run the existing generation flow
     (client assembles the prompt; Additional Signals is the injection channel —
-    no worker change). Store results in `artifacts[urlkey]`.
-  - **Open artifacts** → hyperlinks to the generated CV/CL/Analysis.
-- "Top 5" membership = the 5 rows flagged as top-5 (add a `top5` marker to those
-  rows, or derive from rank ≤ N with an explicit pin set — decide at build).
+    no worker change). The result is **saved as a real AntCV application** (see
+    Traceability), and its `application_id` is written to `artifacts[urlkey]`.
+  - **Open** → re-enters that saved application in the normal preview (edit /
+    save / export), not a static file. **Re-generate** overwrites in place.
+
+### Traceability — generated apps are live, saved, and re-openable (owner req)
+
+Generation from a tracker row does NOT produce throwaway files. It creates /
+updates a persisted AntCV application via the EXISTING machinery:
+- `POST /api/applications` upserts a D1 `application` row (deduped by `jd_hash`),
+  so it appears in the app's **Saved Applications** ("saved to memory") like any
+  other application.
+- The tracker row records `artifacts[urlkey].application_id` (+ `jd_hash`).
+- Clicking the tracker entry sets it as the **active application**
+  (`/api/active` pointer / the app's open-saved-application flow) → preview
+  loads it → the owner can **edit, save, and export** exactly as normal.
+- Exported CV/CL files (docx-worker) can additionally be linked as
+  `cv_export_url` / `cl_export_url`, but the application row is the editable
+  source; the row and the saved application stay in sync via `application_id`.
+
+This reuses saved-applications + `active_application` + preview/export — no new
+persistence path, and nothing generated is ever orphaned.
+
+### Top-5 membership — analysis-driven, with owner override (owner req)
+
+Membership is NOT a manual pin. It is derived from the **analysis / fit score**
+(`scores[urlkey].fit`, the same ranking logic behind the Weekly Tracker order):
+the top N by score are the Top 5. Owner overrides:
+- **Drop** a company (V4) — removes it and feeds the reason to the envelope.
+- **"Ask AI to re-weight"** — a free-text box ("X should score higher because…")
+  → proxy low-tier call re-scores that role with the owner's rationale recorded
+  in `scores[urlkey].why`; the Top 5 recomputes. So the owner nudges the ranking
+  in natural language instead of hard-pinning.
 
 ### V4 — Drop a company from the Top 5 → why → update Dream Envelope
 1. "Drop from Top 5" on a focus card opens a required prompt:
@@ -120,10 +156,13 @@ on next sync.
 3. V3 (top-5 focus + generate + artifacts).
 4. V4 (drop → classify → envelope).
 
-## Open decisions (resolve at build)
+## Decisions (settled with owner 2026-07-08)
 
-- Top-5 membership: add a `top5:bool`/`pin` to rows vs derive from rank. Prefer
-  an explicit `top5` marker so pinning is independent of rank churn.
-- Entry point location: upload menu vs main nav vs both.
-- Classify model: reuse the analysis model (proxy router) at low cost tier.
-- Mobile layout: the island must degrade to a single-column card list (MOB rules).
+- **Top-5 membership:** analysis/score-driven (not a manual pin). Owner overrides
+  via **drop** (V4) or **"ask AI to re-weight because…"** (natural-language nudge,
+  proxy low-tier, recorded in `scores[urlkey].why`). See V3 · membership.
+- **Traceability:** generated apps are saved AntCV applications (D1), appear in
+  Saved Applications, and re-open in preview to edit/save/export. See Traceability.
+- **Entry point:** BOTH the upload menu AND the main nav.
+- **Classify model (drop-reason + re-weight):** proxy **low tier**.
+- **Mobile:** single-column card list (MOB rules) — approved.

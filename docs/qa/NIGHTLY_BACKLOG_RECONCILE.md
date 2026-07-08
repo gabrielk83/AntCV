@@ -64,3 +64,16 @@ master-profile kernel (NOT a re-typed export) and passes
 `docs/qa/DELIVERABLE_PREFLIGHT_CHECKLIST.md` before it is handed over. A raw
 docx-worker payload bypasses the app belts — so either generate through the full
 pipeline or apply the belts + checklist by hand.
+
+---
+
+## 2026-07-08 — LIVE-GEN EVALUATION work-orders (owner drove app-gen; findings from the app-generated Trackman CV+CL)
+
+Context: the owner generated a Trackman application through the LIVE app pipeline (not hand-built). Evaluated the exported CV (5pp) + CL. Two contamination leaks were fixed at the state layer this session (PWA 1.51.216 company via `yo`; 1.51.218 `applicationQuestions`), and two CL header bugs fixed in the worker (1.14.139: slogan reads `meta.cl_slogan`; subtitle em-dash → hyphen belt). The REMAINING items below are GENERATOR-BASELINE work (rows 59/62/66/74) — they need a FULL generation to reproduce + validate (this desktop can't complete a live gen: SSE background-stall), so they are queued here for a session that can validate:
+
+- **(b) SIDEBAR EMPTY on page 1 + 5-PAGE CV.** The exported CV ran 5 pages with the page-1 sidebar showing only the "TOOLS & METHODS" heading and no items under it (content flowed to later pages). Root is tied to (d): the sidebar was NOT trimmed, so it's very long and the column flow strands the heading. Diagnose the sidebar heading/first-item column-break (heading-orphan) AND the page count. Reproduce with a real gen; measure the rendered sidebar per page.
+- **(c) LINE-FILL missed in the LIVE pipeline.** Main-column bullets rendered justified with huge inter-word gaps + orphans + short last lines throughout — the orphan/enhance pass that works in hand-built worker payloads did NOT land in the live gen output. This is the recurring "97.5%" line-fill: the estimator (`Vi`/`__pdfMainW`, autofit finding row 74) + `fix_orphans` enrich pass must actually run and gate the export at generation. Verify the pass fires post-gen (not just the manual "Fix Orphans" button).
+- **(d) SIDEBAR NOT TRIMMED → page bloat.** The LLM's `hidden:true` JD-relevance flags + the "SIDEBAR LINE ECONOMY" rule did not compress the sidebar (tools/certs/regulatory all shown), producing 5 pages vs the ~1.5-2pp target. Check the generation output's `hidden` flags and the export's respect for them; confirm the page-budget (`pageBudget`) compression is applied.
+- **CONTENT (smaller):** generic "IT professional" PROFILE opener (should be the hardware-PM identity for a JD run); garbled hyphen-compressions in the CL ("sports-focused on clear execution", "applications-focused"); Meprolight merged-title order.
+- **PARALLEL-GEN CONTAMINATION:** the owner's parallel "cycle" generation produced 4 identical Trackmans — parallel tabs/gens share the JD store (last-write-wins). Separate from the sequential fix (1.51.216/218); needs per-gen JD isolation (jd-scope-isolation Stage1 per-tab).
+- **BACKGROUND-STALL (row 74, the mobile 97.5% blocker):** generation stream dies when the tab isn't foreground. Diagnostic-first in the sensitive stream code.

@@ -39,7 +39,18 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [addUrl, setAddUrl] = useState('');
   const [adding, setAdding] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Narrow viewports get a stacked card list — a wide fixed table pushes the
+  // Next-action / Flag columns off-screen in portrait (only reachable in
+  // landscape). MOB rules: single-column cards.
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 680px)');
+    const on = () => setIsMobile(mq.matches); on();
+    try { mq.addEventListener('change', on); } catch { mq.addListener(on); }
+    return () => { try { mq.removeEventListener('change', on); } catch { mq.removeListener(on); } };
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true); setErr(null);
@@ -216,7 +227,32 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
         {(err || note) && <div style={{ padding: '6px 16px', fontSize: 12, color: err ? '#b3261e' : '#2e7d32', background: err ? '#fdecea' : '#eaf5ea' }}>{err || note}</div>}
 
         <div style={{ flex: 1, overflow: 'auto' }}>
-          {loading ? <div style={{ padding: 24 }}>Loading…</div> : view === 'list' ? (
+          {loading ? <div style={{ padding: 24 }}>Loading…</div> : view === 'list' ? (isMobile ? (
+            <div style={{ padding: 12, display: 'grid', gap: 10 }}>
+              {rows.map((r) => {
+                const uk = r[11]; const t = tierOf(r[12]); const hasJd = ((doc?.jd || {})[uk] || '').length > 200; const star = isTop5(r);
+                return (
+                  <div key={uk} style={{ border: '1px solid #d5deec', borderLeft: '5px solid ' + t.accent, borderRadius: 8, background: t.tint, padding: '10px 12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontWeight: 800, color: t.accent, fontSize: 15 }}>{star ? '★' : ''}{r[0]}</span>
+                      <strong style={{ flex: 1, fontSize: 14 }}>{r[1]}</strong>
+                      <span style={{ background: t.accent, color: '#fff', borderRadius: 4, padding: '1px 6px', fontSize: 11, fontWeight: 700 }}>{t.label}</span>
+                      <span style={{ fontSize: 14 }} title={hasJd ? 'JD stored' : 'No JD'}>{hasJd ? '✅' : '—'}</span>
+                    </div>
+                    <div style={{ fontSize: 13, margin: '3px 0' }}>{r[2]}</div>
+                    <div style={{ fontSize: 11, color: '#556', marginBottom: 4 }}>📍 {r[3]}{doc?.urls?.[uk] ? <> · <a href={doc.urls[uk]} target="_blank" rel="noreferrer" style={{ color: t.accent, fontWeight: 700 }}>posting ↗</a></> : null}</div>
+                    <div style={mLbl}>Status</div>
+                    <select value={r[8]} onChange={(e) => editRow(uk, 8, e.target.value)} style={{ width: '100%', fontSize: 13, padding: 5 }}>{TRACKED_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}{!TRACKED_STATUSES.includes(r[8]) && r[8] ? <option value={r[8]}>{r[8]}</option> : null}</select>
+                    <div style={mLbl}>Next action</div>
+                    <textarea value={r[9]} onChange={(e) => editRow(uk, 9, e.target.value)} rows={2} style={ta} />
+                    <div style={mLbl}>Flag / notes</div>
+                    <textarea value={r[10]} onChange={(e) => editRow(uk, 10, e.target.value)} rows={2} style={ta} />
+                  </div>
+                );
+              })}
+              {rows.length === 0 && <div style={{ padding: 16, fontSize: 13 }}>No rows yet — paste a job URL or upload a JD file above.</div>}
+            </div>
+          ) : (
             <table style={{ borderCollapse: 'collapse', width: '100%', tableLayout: 'fixed' }}>
               <colgroup>
                 <col style={{ width: 46 }} /><col style={{ width: 58 }} /><col style={{ width: 150 }} /><col style={{ width: 210 }} />
@@ -244,7 +280,7 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
                 {rows.length === 0 && <tr><td style={cell} colSpan={10}>No rows yet — paste a job URL or upload a JD file above.</td></tr>}
               </tbody>
             </table>
-          ) : (
+          )) : (
             <div style={{ padding: 14, display: 'grid', gap: 14 }}>
               {top5.map((r) => <FocusCard key={r[11]} row={r} doc={doc} busy={busyKey === r[11]}
                 onPrepare={() => void prepareAndOpen(r)} onOpen={() => void openSaved(r)} onDrop={() => void dropFromTop5(r)} />)}
@@ -353,6 +389,7 @@ function Line({ icon, label, text, color }: { icon: string; label: string; text:
 }
 
 const ta: React.CSSProperties = { width: '100%', boxSizing: 'border-box', fontSize: 12, padding: '4px 6px', border: '1px solid #cfd8e6', borderRadius: 4, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.35, minHeight: 34 };
+const mLbl: React.CSSProperties = { fontSize: 11, fontWeight: 700, color: '#334', margin: '7px 0 2px' };
 function btn(bg: string, color = '#fff'): React.CSSProperties {
   return { background: bg, color, border: 'none', padding: '6px 12px', borderRadius: 6, fontSize: 12, cursor: 'pointer', fontWeight: 600 };
 }

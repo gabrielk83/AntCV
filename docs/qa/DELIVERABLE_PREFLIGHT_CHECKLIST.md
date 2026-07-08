@@ -58,8 +58,21 @@ memories `generate-deliverables-via-worker`, `header-banner-design-rules`,
       **Every interest item carries a WHY or a specific — never a bare word** (owner 2026-07-08:
       "Hiking" → "Hiking - long-distance walking to reset and think clearly"; "Cultural exchange"
       → name the countries). Bare single-word interests are a defect.
-- [ ] LANGUAGES with real levels; EDUCATION (abbreviate once then reuse — "M.Sc. Electrical
-      Engineering (EE)" then "B.Sc. EE"); CERTIFICATIONS; STANDARDS; PUBLICATIONS/PATENTS.
+- [ ] LANGUAGES with real levels — **Danish = "Intermediate"** (not "B1"; owner 2026-07-08);
+      EDUCATION (abbreviate once then reuse — "M.Sc. Electrical Engineering (EE)" then "B.Sc. EE");
+      CERTIFICATIONS; STANDARDS; PUBLICATIONS/PATENTS.
+- [ ] **DK volunteer/community roles use the Danish word "foreningsarbejde"**, NOT "Volunteer"
+      (owner 2026-07-08). Keep the role header on ONE line (shorten the company if it wraps —
+      e.g. "Copenhagen Wolves RFC", drop the "Pan Idræt" umbrella).
+- [ ] **REFERENCES: generic only — "International and Danish references available on request."
+      NEVER name recommenders the owner did not surface** (owner 2026-07-08: names were listed
+      that he deliberately did not expose). No Innoviz/Welltec/TAU/Pan-Idræt names.
+- [ ] **PUBLICATION COUNT is owner-set — state TWO peer-reviewed publications, do NOT inflate to
+      3 or 4** (owner 2026-07-08 "I keep you on 2 on purpose"). Don't add LinkedIn to the pubs
+      link line (LinkedIn is already in the header); Google Scholar link only.
+- [ ] **INTERESTS: one concise line each** — a why/specific but NOT a 3-line sprawl (owner
+      2026-07-08 "over-enhanced again"): "Hiking - to clear the head", "Cross-cultural work
+      (Israel to Denmark)". Balance between bare words (banned) and over-enhancement (banned).
 
 ## 2. CV layout / formatting
 - [ ] **DATES: never "20XX - present" for Gabriel — always "20XX - 2026"** (owner, KOMBIT +
@@ -69,11 +82,12 @@ memories `generate-deliverables-via-worker`, `header-banner-design-rules`,
       "a patented …" (no number); if there is no such section, the number goes in Sirin.
 - [ ] **PUBLICATIONS brief for non-research roles** (PM etc.): patent + a one-line summary
       ("Three peer-reviewed publications on …") + an active-link line — NOT full citations.
-- [ ] **AI-assisted notice** = visible at the **sidebar bottom** (after the last sidebar item).
-      **The worker now renders it INLINE** (docx-worker 1.14.135, AI-NOTICE-INLINE-001) because
-      the old page-anchored VML frame did NOT render in Word ExportAsFixedFormat for two-column
-      CVs. Route it to the sidebar side via `ai_wm_side` = the sidebar's physical side. VERIFY it
-      appears in the rendered PDF (search "author retains") — do not trust the VML.
+- [ ] **AI-assisted notice** = **PINNED at the page bottom** in the sidebar column (NOT flowed
+      after the last sidebar line — owner 2026-07-08: an inline notice "regressed to the initial
+      problem"). The worker keeps the **page-anchored VML** and lifts it up the page so it lands
+      fully visible (docx-worker 1.14.136, AI-NOTICE-ANCHOR-FIX-001, `__mt` 806pt — 824pt put the
+      box edge ON the page edge and Word clipped it). Route to the sidebar side via `ai_wm_side` =
+      the sidebar's physical side. VERIFY "author retains" sits at ~y 806-824 of the last page.
 - [ ] **Sidebar fills to the page end** on **every** page (no dead space at the bottom).
 - [ ] **Columns bottom out together**; main column not far short of the sidebar.
 - [ ] **No orphans / short lines** — measure last-line fill ratio; ENRICH short lines and
@@ -83,6 +97,18 @@ memories `generate-deliverables-via-worker`, `header-banner-design-rules`,
       and table cells excepted). This is the owner's repeated ask — implement it, don't ship runts.
 - [ ] List-shaped sidebar sections are **bulleted** (CORE STRENGTHS, SPORT & INTERESTS,
       PUBLICATIONS), not cramped paragraphs. CORE STRENGTHS: tabular OR justify the choice.
+- [ ] **COMPETENCY TABLE: narrow the Focus column (`tableRatio` ≈ 0.22) AND trim each Strengths
+      cell so it sits on ONE line** (owner 2026-07-08 "at least 3-4 items on one line"). Measure:
+      most/all rows single-line in the render.
+- [ ] **Section HEADING must hug a following table** — no 2pt after-space gap (worker
+      HEADING-TABLE-GAP-001, 1.14.136: heading after-space = 0 for `type:'table'` sections).
+- [ ] **TOOLS & METHODS keeps its GROUP structure** (owner 2026-07-08 "missing groups") — the
+      full kernel grouping (Project & delivery / Requirements & ALM / Quality & methods /
+      Qualification / Sensing & optics / Engineering & imaging / Data & reporting), not a
+      flattened few. A fuller sidebar also fills page-1 dead space.
+- [ ] **KNOWN GAP (deferred): page-2+ sidebar content dead-space / columns to the exact page
+      end** — a genuine fix needs the FLOAT-SPINE; reducing the row-fill slack re-triggers
+      PDF-BLANK-PAGE (8-blank-pages incident). Do NOT shrink the slack blind; track it.
 - [ ] **REFERENCES** at the **main column's end**, not the sidebar.
 - [ ] **STANDARDS** given room; include electro-optics / **imaging standards** (MTF/SFR, EMVA 1288, etc.).
 - [ ] **Google Scholar / LinkedIn** rendered as **active hyperlinks**, not plain text.

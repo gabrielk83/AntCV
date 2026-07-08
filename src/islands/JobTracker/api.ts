@@ -43,6 +43,7 @@ export interface TrackerDoc {
   gen?: Record<string, string>;         // per-row generation tier: 'high' | 'quick'
   queue?: Record<string, boolean>;      // per-row nightly-generation flag (⏰); default on until generated
   brandfit?: Record<string, boolean>;   // per-row: brand-fit the CV/CL to the employer
+  brand?: Record<string, { navy?: string; accent?: string; source?: string }>; // sampled employer brand colours
   signals?: Record<string, string>;     // per-row owner-added Additional Signals (on top of auto-collected)
   support?: Record<string, string>;
   scores?: Record<string, { fit?: number; rank?: number; why?: string }>;
@@ -144,6 +145,17 @@ export function fitPercent(band: string, text: string, top20: { qual: string }[]
   }
   pct += Math.min(hits * 2.5, 16);
   return Math.max(35, Math.min(98, Math.round(pct)));
+}
+
+// Sample the employer's real brand colours from their site (BRAND-FIT-REAL-SAMPLE-001).
+export interface BrandColors { navy?: string; accent?: string; source?: string; }
+export async function fetchBrandColors(jdUrl: string, companyName: string): Promise<BrandColors | null> {
+  try {
+    const res = await call('/api/fetch-brand-colors', { method: 'POST', body: JSON.stringify({ jdUrl, companyName }) });
+    const j = await res.json().catch(() => ({}));
+    if (!j || j.ok !== true || (!j.navy && !j.accent)) return null;
+    return { navy: j.navy, accent: j.accent, source: j.source };
+  } catch { return null; }
 }
 
 // Cluster top-20 most-demanded qualifications for the user's cluster.

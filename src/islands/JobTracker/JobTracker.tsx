@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   getDoc, putDoc, fetchJdUrl, createApplication, setActive, classifyReason,
-  fetchClusterTop20, askAI, fitPercent, TRACKED_STATUSES, type TrackerDoc, type Row,
+  fetchClusterTop20, askAI, fitPercent, fetchBrandColors, TRACKED_STATUSES, type TrackerDoc, type Row,
 } from './api';
 
 const NAVY = '#1F3864';
@@ -106,7 +106,31 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
   };
   function setGen(uk: string, q: string): void { if (!doc) return; setDocState({ ...doc, gen: { ...(doc.gen || {}), [uk]: q } }); setDirty(true); }
   const brandOf = (uk: string) => !!(doc?.brandfit || {})[uk];
-  function toggleBrand(uk: string): void { if (!doc) return; setDocState({ ...doc, brandfit: { ...(doc.brandfit || {}), [uk]: !brandOf(uk) } }); setDirty(true); }
+  const brandColorsOf = (uk: string) => (doc?.brand || {})[uk];
+  const [brandBusy, setBrandBusy] = useState<Set<string>>(new Set());
+  // Toggling Brand on samples the employer's real brand colours from their site.
+  async function toggleBrand(uk: string, row: Row): Promise<void> {
+    if (!doc) return;
+    const on = !brandOf(uk);
+    setDocState({ ...doc, brandfit: { ...(doc.brandfit || {}), [uk]: on } }); setDirty(true);
+    if (!on || brandColorsOf(uk)) return; // off, or colours already fetched
+    setBrandBusy((s) => new Set(s).add(uk)); setErr(null); setNote('Fetching ' + row[1] + ' brand colours…');
+    try {
+      const c = await fetchBrandColors((doc.urls || {})[uk] || '', row[1]);
+      if (c && (c.navy || c.accent)) {
+        setDocState((d) => (d ? { ...d, brand: { ...(d.brand || {}), [uk]: c } } : d)); setDirty(true);
+        setNote('Brand colours sampled for ' + row[1] + ' ✓');
+      } else setNote('No brand colours found for ' + row[1] + ' — the CV keeps its palette; the brand-fit note still applies.');
+    } catch (e) { setErr('Brand fetch failed: ' + String((e as Error).message || e)); }
+    finally { setBrandBusy((s) => { const n = new Set(s); n.delete(uk); return n; }); }
+  }
+  function Swatches({ uk }: { uk: string }): JSX.Element | null {
+    const c = brandColorsOf(uk); if (!c) return brandBusy.has(uk) ? <span style={{ fontSize: 10, color: '#889' }}>…</span> : null;
+    return <span style={{ display: 'inline-flex', gap: 2, verticalAlign: 'middle', marginLeft: 3 }} title={c.source || 'sampled brand colours'}>
+      {c.navy ? <span style={{ width: 11, height: 11, borderRadius: 2, background: c.navy, border: '1px solid #ccc', display: 'inline-block' }} /> : null}
+      {c.accent ? <span style={{ width: 11, height: 11, borderRadius: 2, background: c.accent, border: '1px solid #ccc', display: 'inline-block' }} /> : null}
+    </span>;
+  }
   const signalsOf = (uk: string) => (doc?.signals || {})[uk] || '';
   function setSignals(uk: string, v: string): void { if (!doc) return; setDocState({ ...doc, signals: { ...(doc.signals || {}), [uk]: v } }); setDirty(true); }
   const hasArtifact = (uk: string) => !!doc?.artifacts?.[uk]?.application_id;
@@ -210,7 +234,10 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
       const supporting = 'TARGET-ROLE GUIDELINES (Dream Envelope):\n' + envText
         + '\n\nROLE INTEL:\n' + ((d.support || {})[uk] || '')
         + (ownerSig ? '\n\nADDITIONAL SIGNALS (owner-added):\n' + ownerSig : '')
-        + ((d.brandfit || {})[uk] ? '\n\nBRAND-FIT: style the CV and cover letter to the employer\'s brand identity.' : '');
+        + ((d.brandfit || {})[uk] ? '\n\nBRAND-FIT: style the CV and cover letter to the employer\'s brand identity'
+            + ((d.brand || {})[uk] && ((d.brand || {})[uk].navy || (d.brand || {})[uk].accent)
+                ? ' — primary ' + ((d.brand || {})[uk].navy || '(none)') + ', accent ' + ((d.brand || {})[uk].accent || '(none)') + ' (sampled from the company site).'
+                : '.') : '');
       const id = await createApplication({ jd_text: jd, jd_company: row[1], jd_role: row[2], category: categoryFor(row[2], row[1]), supporting_context: supporting });
       if (!id) { setErr('Could not create the application.'); return; }
       const next: TrackerDoc = { ...d, artifacts: { ...(d.artifacts || {}), [uk]: { application_id: id, generated_at: Date.now() } } };
@@ -301,7 +328,7 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
                     <div style={mLbl}>Flag / notes</div>
                     <textarea value={r[10]} onChange={(e) => editRow(uk, 10, e.target.value)} rows={2} style={ta} />
                     <label style={{ display: 'flex', alignItems: 'center', gap: 7, margin: '9px 0 2px', fontSize: 13, fontWeight: 700, color: '#334' }}>
-                      <input type="checkbox" checked={brandOf(uk)} onChange={() => toggleBrand(uk)} style={{ width: 18, height: 18 }} /> 🎨 Brand-fit to employer
+                      <input type="checkbox" checked={brandOf(uk)} onChange={() => void toggleBrand(uk, r)} style={{ width: 18, height: 18 }} /> 🎨 Brand-fit to employer <Swatches uk={uk} />
                     </label>
                     <div style={mLbl}>Additional signals (for generation)</div>
                     <textarea value={signalsOf(uk)} onChange={(e) => setSignals(uk, e.target.value)} rows={2} placeholder="hiring manager, emphasis, insider context…" style={ta} />
@@ -341,7 +368,7 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
                       <td style={cell}><select value={r[8]} onChange={(e) => editRow(uk, 8, e.target.value)} style={{ fontSize: 12, width: '100%' }}>{TRACKED_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}{!TRACKED_STATUSES.includes(r[8]) && r[8] ? <option value={r[8]}>{r[8]}</option> : null}</select></td>
                       <td style={cell}><textarea value={r[9]} onChange={(e) => editRow(uk, 9, e.target.value)} onFocus={() => setExpandRow(uk)} rows={expandRow === uk ? 5 : 2} style={ta} /></td>
                       <td style={cell}><textarea value={r[10]} onChange={(e) => editRow(uk, 10, e.target.value)} onFocus={() => setExpandRow(uk)} rows={expandRow === uk ? 5 : 2} style={ta} /></td>
-                      <td style={{ ...cell, textAlign: 'center' }}><input type="checkbox" checked={brandOf(uk)} onChange={() => toggleBrand(uk)} title="Brand-fit the CV/CL to this employer's identity" style={{ width: 17, height: 17 }} /></td>
+                      <td style={{ ...cell, textAlign: 'center', whiteSpace: 'nowrap' }}><input type="checkbox" checked={brandOf(uk)} onChange={() => void toggleBrand(uk, r)} title="Brand-fit: sample this employer's brand colours and style the CV/CL to them" style={{ width: 17, height: 17 }} /><Swatches uk={uk} /></td>
                       <td style={cell}><textarea value={signalsOf(uk)} onChange={(e) => setSignals(uk, e.target.value)} onFocus={() => setExpandRow(uk)} rows={expandRow === uk ? 5 : 2} placeholder="extra signals for generation…" style={ta} /></td>
                       <td style={{ ...cell, whiteSpace: 'nowrap' }}>
                         <button onClick={() => setGen(uk, genOf(uk) === 'high' ? 'quick' : 'high')} title="Generation quality — tap to switch"

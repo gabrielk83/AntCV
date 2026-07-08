@@ -77,3 +77,12 @@ Context: the owner generated a Trackman application through the LIVE app pipelin
 - **CONTENT (smaller):** generic "IT professional" PROFILE opener (should be the hardware-PM identity for a JD run); garbled hyphen-compressions in the CL ("sports-focused on clear execution", "applications-focused"); Meprolight merged-title order.
 - **PARALLEL-GEN CONTAMINATION:** the owner's parallel "cycle" generation produced 4 identical Trackmans — parallel tabs/gens share the JD store (last-write-wins). Separate from the sequential fix (1.51.216/218); needs per-gen JD isolation (jd-scope-isolation Stage1 per-tab).
 - **BACKGROUND-STALL (row 74, the mobile 97.5% blocker):** generation stream dies when the tab isn't foreground. Diagnostic-first in the sensitive stream code.
+
+### 2026-07-08 ADD — TWO-COLUMN PAGINATION DESYNC (sidebar-photo trigger) — owner: "you have not identified it"
+
+An UNSOLICITED CV with the PHOTO IN THE SIDEBAR (photoPosition sidebar-top, NOT the bridge/band-overlap) exposed a severe pagination desync — measured per page (PyMuPDF word extents):
+- p1: main y686 + sidebar y768 (both filled) · p2: main **EMPTY** + sidebar y262 (sidebar-only) · p3: both filled · p4: main y690 + sidebar **EMPTY** (main-only) · p5: partial. → 5 pages, half-empty pages.
+
+ROOT: the two columns paginate INDEPENDENTLY (per-page `makePageTable` slots) and drift apart when their content heights differ. The sidebar photo makes the sidebar taller on p1, kicking off the drift; thereafter the sidebar-overflow claims a page with an empty main (p2) and the main later claims a page with an empty sidebar (p4). Previous line-fill/layout work only handled the BRIDGE photo (band-overlap in the header) — the sidebar-body photo mode was NOT accounted for.
+
+FIX PATH: the `balanceOverflow` (reflow sidebar overflow full-width) and `floatSpine` (floating continuation tables) flags (docx-worker ctx, both default OFF) are exactly for this — validate + enable for the multi-page case, OR make the main+sidebar share ONE synced flow. Reproduce with a sidebar-top-photo + long-sidebar payload (Word-COM render, measurable here), test each flag, then enable. Ties row 61 (float-spine), row 74, coordinator-sidebar-inflate. This is ALSO the root of the 5-page bloat seen on the Trackman run (row 74 (b)/(d)) — same desync, JD-run just happened to align better.

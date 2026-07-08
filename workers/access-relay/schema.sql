@@ -40,11 +40,13 @@ CREATE TABLE IF NOT EXISTS application (
   rationale          TEXT,                       -- JSON: LLM JD-analysis output
   cv_sections        TEXT,                       -- JSON, in jd_language
   cl_sections        TEXT,                       -- JSON, in jd_language
+  style_config       TEXT,                       -- JSON: this application's OWN brand-fit/custom colors+fonts (BRAND-FIT-PER-APP-001)
   created_at         INTEGER NOT NULL,
   updated_at         INTEGER NOT NULL,
   FOREIGN KEY (user_hash) REFERENCES user_kernel(user_hash) ON DELETE CASCADE,
   UNIQUE (user_hash, jd_hash)
 );
+-- existing tables: style_config added live via `ALTER TABLE application ADD COLUMN style_config TEXT;`
 
 CREATE TABLE IF NOT EXISTS language_view (
   application_id    INTEGER NOT NULL,

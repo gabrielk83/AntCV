@@ -25,11 +25,13 @@ memories `generate-deliverables-via-worker`, `header-banner-design-rules`,
       Also: military comms for public-sector/comms roles, inclusive-sport for
       values-driven employers. Don't just narrow the JD set — pull the relevant
       background forward.
-- [ ] **Named-contact LEADS (row 55c):** when the application has a named contact,
-      GREET them in the CL ("Dear <Name>,") and reflect their LinkedIn signals
-      (recent posts, stated priorities, team focus) as holistic/specific leads in
-      the WHY / HOW-I-CONTRIBUTE sections. **Trackman: Nicolaj** — fold his LinkedIn
-      signals in. Requires the actual content: owner pastes it or provides the
+- [ ] **Contact LEADS (row 55c) — distinguish role:** GREET only the actual HIRING
+      MANAGER when named ("Dear <Name>,"). A contact who is a **signal source but
+      NOT the hiring manager** (Trackman: **Nicolaj**) must **NOT** be greeted —
+      use their LinkedIn signals (recent posts, stated priorities, team focus) as
+      holistic/specific LEADS woven into the WHY / HOW-I-CONTRIBUTE sections only,
+      and keep the greeting generic/appropriate (Trackman: the CTO / Tracking
+      Systems team). Requires the actual content: owner pastes it or provides the
       profile URL for a browsing session (LinkedIn is auth-gated, not fetchable blind).
 
 ## 1. MANDATORY sections (never drop)

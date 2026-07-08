@@ -16156,22 +16156,50 @@
                         }
                       } catch (e) {}
                     }
+                    // NULL-CLEAR-RESTORE-001 (owner 2026-07-05, handoff from mobile
+                    // testing session): GET /api/prefs can legitimately return an
+                    // explicit `null` for any of these fields — the server's
+                    // validateKernelPref treats null as "clear this field" (distinct
+                    // from undefined/"field untouched"). The old `if (o.field && …)`
+                    // checks are falsy-gated, so a server-side null silently left the
+                    // STALE local value in place forever — a cloud-side "reset" could
+                    // never actually clear a device that already had the old value
+                    // cached. Each field below now has an `else if (null === o.field)`
+                    // branch that removes the local key (and, for the color/package
+                    // fields, resets the live React state too, so the clear is visible
+                    // without a reload). __antcvClearOrSet is a tiny shared helper.
                     if (o.styleConfig && "object" == typeof o.styleConfig)
                       try {
                         wa(o.styleConfig);
+                      } catch (e) {}
+                    else if (null === o.styleConfig)
+                      try {
+                        u.remove("styleConfig");
                       } catch (e) {}
                     if (o.stylePackage && "string" == typeof o.stylePackage)
                       try {
                         (ka(__pkgNorm(o.stylePackage)),
                           u.set("stylePackage", __pkgNorm(o.stylePackage)));
                       } catch (e) {}
+                    else if (null === o.stylePackage)
+                      try {
+                        (u.remove("stylePackage"), ka("copenhagen-modern"));
+                      } catch (e) {}
                     if (o.lineTargets && "object" == typeof o.lineTargets)
                       try {
                         Fa(o.lineTargets);
                       } catch (e) {}
+                    else if (null === o.lineTargets)
+                      try {
+                        u.remove("lineTargets");
+                      } catch (e) {}
                     if (o.fontSizes && "object" == typeof o.fontSizes)
                       try {
                         Kr(o.fontSizes);
+                      } catch (e) {}
+                    else if (null === o.fontSizes)
+                      try {
+                        u.remove("fontSizes");
                       } catch (e) {}
                     if ("number" == typeof o.cvTableRatio)
                       try {
@@ -16190,6 +16218,10 @@
                         (fr(o.headerItemLoc),
                           u.set("headerItemLoc", o.headerItemLoc));
                       } catch (e) {}
+                    else if (null === o.headerItemLoc)
+                      try {
+                        u.remove("headerItemLoc");
+                      } catch (e) {}
                     if (
                       o.headerItemAlign &&
                       "object" == typeof o.headerItemAlign
@@ -16198,6 +16230,10 @@
                         (wr(o.headerItemAlign),
                           u.set("headerItemAlign", o.headerItemAlign));
                       } catch (e) {}
+                    else if (null === o.headerItemAlign)
+                      try {
+                        u.remove("headerItemAlign");
+                      } catch (e) {}
                     if (
                       o.routingOverrides &&
                       "object" == typeof o.routingOverrides
@@ -16205,9 +16241,17 @@
                       try {
                         u.set("routingOverrides", o.routingOverrides);
                       } catch (e) {}
+                    else if (null === o.routingOverrides)
+                      try {
+                        u.remove("routingOverrides");
+                      } catch (e) {}
                     if (o.compressPrefs && "object" == typeof o.compressPrefs)
                       try {
                         u.set("compressPrefs", o.compressPrefs);
+                      } catch (e) {}
+                    else if (null === o.compressPrefs)
+                      try {
+                        u.remove("compressPrefs");
                       } catch (e) {}
                     if (
                       o.language &&
@@ -16221,12 +16265,20 @@
                       try {
                         (qe(o.navyColor), u.set("navyColor", o.navyColor));
                       } catch (e) {}
+                    else if (null === o.navyColor)
+                      try {
+                        (u.remove("navyColor"), qe("#283556"));
+                      } catch (e) {}
                     if (
                       o.customStyleConfig &&
                       "object" == typeof o.customStyleConfig
                     )
                       try {
                         u.set("customStyleConfig", o.customStyleConfig);
+                      } catch (e) {}
+                    else if (null === o.customStyleConfig)
+                      try {
+                        u.remove("customStyleConfig");
                       } catch (e) {}
                     if (
                       o.openaiProxyUrl &&
@@ -21408,6 +21460,12 @@
                   void 0 !== e.geminiModel && At(e.geminiModel || ""),
                   e.language && It(e.language),
                   e.navyColor && _t(e.navyColor),
+                  // NULL-CLEAR-RESTORE-001 (owner 2026-07-05): see the matching
+                  // boot-time cloud-restore block above — an explicit server-side
+                  // null (validateKernelPref's "clear this field") must actually
+                  // clear the local value, not be silently skipped by a falsy check.
+                  null === e.navyColor &&
+                    (u.remove("navyColor"), qe("#283556")),
                   e.photo && (Fn(e.photo), u.set("photo", e.photo)),
                   void 0 !== e.profileDoc &&
                     (So(e.profileDoc || ""),
@@ -21429,15 +21487,20 @@
                   e.lineTargets &&
                     "object" == typeof e.lineTargets &&
                     Fa(e.lineTargets),
+                  null === e.lineTargets && u.remove("lineTargets"),
                   e.fontSizes &&
                     "object" == typeof e.fontSizes &&
                     Kr(e.fontSizes),
+                  null === e.fontSizes && u.remove("fontSizes"),
                   e.styleConfig &&
                     "object" == typeof e.styleConfig &&
                     wa(e.styleConfig),
+                  null === e.styleConfig && u.remove("styleConfig"),
                   e.stylePackage &&
                     (ka(__pkgNorm(e.stylePackage)),
                     u.set("stylePackage", __pkgNorm(e.stylePackage))),
+                  null === e.stylePackage &&
+                    (u.remove("stylePackage"), ka("copenhagen-modern")),
                   "number" == typeof e.cvTableRatio && aa(e.cvTableRatio),
                   "number" == typeof e.clTableRatio && ia(e.clTableRatio),
                   "number" == typeof e.cvSidebarRatio &&
@@ -21454,18 +21517,24 @@
                   e.customStyleConfig &&
                     "object" == typeof e.customStyleConfig &&
                     u.set("customStyleConfig", e.customStyleConfig),
+                  null === e.customStyleConfig &&
+                    u.remove("customStyleConfig"),
                   e.headerItemLoc &&
                     "object" == typeof e.headerItemLoc &&
                     u.set("headerItemLoc", e.headerItemLoc),
+                  null === e.headerItemLoc && u.remove("headerItemLoc"),
                   e.headerItemAlign &&
                     "object" == typeof e.headerItemAlign &&
                     u.set("headerItemAlign", e.headerItemAlign),
+                  null === e.headerItemAlign && u.remove("headerItemAlign"),
                   e.routingOverrides &&
                     "object" == typeof e.routingOverrides &&
                     u.set("routingOverrides", e.routingOverrides),
+                  null === e.routingOverrides && u.remove("routingOverrides"),
                   e.compressPrefs &&
                     "object" == typeof e.compressPrefs &&
                     u.set("compressPrefs", e.compressPrefs),
+                  null === e.compressPrefs && u.remove("compressPrefs"),
                   e.personalInfo && !m())
                 ) {
                   try {

@@ -2031,6 +2031,12 @@ function shapeApplicationRow(row) {
     rationale:          parseJsonField(row.rationale, null),
     cv_sections:        parseJsonField(row.cv_sections, null),
     cl_sections:        parseJsonField(row.cl_sections, null),
+    // BRAND-FIT-PER-APP-001 (owner 2026-07-05): brand-fit-derived colors
+    // (navy/accent/fonts) previously only had an account-wide home
+    // (navyColor/styleConfig in KV prefs), so generating one CV with brand
+    // fit on recolored every future application on every device. This
+    // column lets a style live on the application it was generated for.
+    style_config:       parseJsonField(row.style_config, null),
     created_at:         row.created_at,
     updated_at:         row.updated_at,
   };
@@ -2962,6 +2968,14 @@ async function handleApiApplicationById(request, env, idStr) {
     if (body.cl_sections !== undefined && !__blockClBlank) {
       sets.push('cl_sections = ?');
       vals.push(body.cl_sections === null ? null : JSON.stringify(body.cl_sections));
+    }
+    // BRAND-FIT-PER-APP-001: style_config is this application's OWN saved
+    // colors/fonts (from brand-fit or manual "Save as custom" scoped to this
+    // app) — same undefined-skip / explicit-null-clears convention as every
+    // other field here.
+    if (body.style_config !== undefined) {
+      sets.push('style_config = ?');
+      vals.push(body.style_config === null ? null : JSON.stringify(body.style_config));
     }
     if (!sets.length) {
       return jsonResponse({ error: 'no_fields_to_update' }, 400, request, env, refresh);

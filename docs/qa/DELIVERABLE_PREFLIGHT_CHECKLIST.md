@@ -33,6 +33,20 @@ memories `generate-deliverables-via-worker`, `header-banner-design-rules`,
       and keep the greeting generic/appropriate (Trackman: the CTO / Tracking
       Systems team). Requires the actual content: owner pastes it or provides the
       profile URL for a browsing session (LinkedIn is auth-gated, not fetchable blind).
+      **Trackman leads captured** (from `Downloads/LinkedIn Message Improvement.pdf`,
+      Nicolaj's exchange, "resonated directly with the CTO"): the STRONGEST signal is
+      **platform reuse that survives organizational growth / reuse over time** — center
+      it. Also: lead with CURIOSITY about the engineering problem (not selling); name
+      sensor breadth (cameras, LiDAR, tracking, electro-optics, multi-sensor) NATURALLY;
+      frame PM as requirements / architecture decisions / change governance / planning &
+      prioritization / cross-functional execution / stakeholder alignment (not generic
+      "project management"); show that different sports need different sensing/tracking/
+      analytics (product thinking). TONE: "I was curious how… / My experience has been…";
+      AVOID "I am the ideal candidate", "extensive experience", and buzzwords
+      (innovation, cutting-edge, world-class). Concrete engineering language only
+      (platform, requirements, architecture, trade-offs, reuse, scaling, planning,
+      execution). The existing draft already leans this way — the re-do makes reuse-over-time
+      the spine.
 
 ## 1. MANDATORY sections (never drop)
 - [ ] **ACCESSIBILITY** section present (hearing-impaired, not limiting) — Gabriel-mandatory.

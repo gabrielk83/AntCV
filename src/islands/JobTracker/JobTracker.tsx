@@ -64,10 +64,13 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
   // Next-action / Flag columns off-screen in portrait (only reachable in
   // landscape). MOB rules: single-column cards.
   useEffect(() => {
-    const mq = window.matchMedia('(max-width: 680px)');
-    const on = () => setIsMobile(mq.matches); on();
-    try { mq.addEventListener('change', on); } catch { mq.addListener(on); }
-    return () => { try { mq.removeEventListener('change', on); } catch { mq.removeListener(on); } };
+    // Use innerWidth (layout viewport) directly + a resize listener — more
+    // reliable across mobile browsers than matchMedia alone. ≤820 → cards.
+    const on = () => setIsMobile((window.innerWidth || 9999) <= 820);
+    on();
+    window.addEventListener('resize', on);
+    window.addEventListener('orientationchange', on);
+    return () => { window.removeEventListener('resize', on); window.removeEventListener('orientationchange', on); };
   }, []);
 
   const load = useCallback(async () => {
@@ -278,7 +281,7 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
               {rows.length === 0 && <div style={{ padding: 16, fontSize: 13 }}>No rows yet — paste a job URL or upload a JD file above.</div>}
             </div>
           ) : (
-            <table style={{ borderCollapse: 'collapse', width: '100%', tableLayout: 'fixed' }}>
+            <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 900, tableLayout: 'fixed' }}>
               <colgroup>
                 <col style={{ width: 46 }} /><col style={{ width: 58 }} /><col style={{ width: 150 }} /><col style={{ width: 210 }} />
                 <col style={{ width: 120 }} /><col style={{ width: 34 }} /><col style={{ width: 130 }} /><col /><col /><col style={{ width: 54 }} />

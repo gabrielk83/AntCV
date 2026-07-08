@@ -15127,6 +15127,12 @@
                 source: e,
               }),
                 Ft({ text: o.text || "", method: "url-fetch", pages: 1, fileName: (o.title || r).slice(0, 120) }),
+                // JD-SWAP-STALE-RATIONALE-001 (owner 2026-07-08, reproduced live): fetching a NEW
+                // JD must clear the PREVIOUS run's analysis (yo). Otherwise CL-GHOST-COMPANY-001
+                // pushes the stale `yo.supporting_context` into the next generation as "PRIOR RUN
+                // CONTEXT (carry forward)", leaking the old target company into the new letter
+                // (fetched NCC -> letter said "Sigma Connectivity"). Matches the NEW-1 load-clear.
+                bo(null),
                 qt(""),
                 Zt({ busy: !1, error: null, hint: o.wall_hint || null }),
                 Gr &&
@@ -19033,6 +19039,9 @@
                 (r = 1));
             } else ((n = await e.text()), (o = "plaintext"), (r = 1));
             Ft({ text: n, method: o, pages: r, fileName: e.name, warning: w });
+            // JD-SWAP-STALE-RATIONALE-001: uploading a NEW JD file clears the prior run's analysis
+            // (yo) too, so a stale target company can't leak via CL-GHOST-COMPANY-001 (see url-fetch).
+            try { bo(null); } catch (e) {}
           } catch (t) {
             (Ft({
               text: "",

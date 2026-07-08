@@ -391,6 +391,7 @@ function FocusCard({ row, doc, cluster, mobile, busy, onPrepare, onOpen, onDrop,
   const [savingSup, setSavingSup] = useState(false);
   const [cardHover, setCardHover] = useState(false);
   const [ai, setAi] = useState(false);
+  const [jdHelp, setJdHelp] = useState(false);
   useEffect(() => { if (!dirty) setP(parseSupport(rawSupport)); }, [rawSupport, dirty]);
 
   const hasJd = ((doc?.jd || {})[uk] || '').length > 200;
@@ -439,10 +440,21 @@ function FocusCard({ row, doc, cluster, mobile, busy, onPrepare, onOpen, onDrop,
         </div>
         <span title="Estimated fit (tier + cluster demand)" style={{ background: '#fff', color: pctColor, borderRadius: 14, padding: '3px 10px', fontSize: fs(13, 16), fontWeight: 800 }}>{pct}%</span>
         <span style={{ background: '#ffffff2e', borderRadius: 5, padding: '2px 8px', fontSize: fs(11, 13), fontWeight: 700 }}>{t.label}</span>
-        <span title={hasJd ? 'JD stored' : 'JD missing'} style={{ fontSize: fs(15, 18) }}>{hasJd ? '✅' : '⚠️'}</span>
+        <button onClick={(e) => { e.stopPropagation(); setJdHelp((v) => !v); }}
+          title={hasJd ? 'JD stored — tap for info' : 'JD missing — tap for info'} aria-label="JD status info"
+          style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: fs(16, 21), padding: 0, lineHeight: 1 }}>{hasJd ? '✅' : '⚠️'}</button>
       </div>
       <div style={{ height: 5, background: '#eef1f6' }}><div style={{ height: '100%', width: pct + '%', background: pctColor }} /></div>
       <div style={{ padding: '11px 14px' }}>
+        {jdHelp && (
+          <div style={{ background: hasJd ? '#eaf5ea' : '#fff6e5', border: '1px solid ' + (hasJd ? '#bcdcbc' : '#f0cf8a'), borderRadius: 8, padding: '9px 11px', marginBottom: 9, fontSize: fs(12, 14), color: '#3a3320', display: 'flex', gap: 8, alignItems: 'flex-start', lineHeight: 1.4 }}>
+            <span style={{ fontSize: fs(15, 18) }}>{hasJd ? '✅' : '⚠️'}</span>
+            <span style={{ flex: 1 }}>{hasJd
+              ? 'The full job description is stored for this role — fit scoring, "Prepare & open", and generation all use it.'
+              : 'No job description is stored yet. "Prepare & open" and the analysis need it. Add it from the List view: paste the DIRECT posting URL (a careers-index page won\'t yield a JD), or upload the JD with the 📎 button.'}</span>
+            <button onClick={() => setJdHelp(false)} aria-label="Close" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, color: '#998', padding: 0 }}>✕</button>
+          </div>
+        )}
         <div style={{ fontSize: fs(11, 13), color: '#556', marginBottom: 8 }}>
           📍 {row[3]}{row[4] ? ' · ' + row[4] : ''}{url ? <> · <a href={url} target="_blank" rel="noreferrer" style={{ color: t.accent, fontWeight: 700 }}>posting ↗</a></> : null}
         </div>

@@ -25242,7 +25242,11 @@ function buildLinearDocument(ctx) {
     const __m = ctx.meta || {};
     let __slogan = "";
     if (!__m.slogan_hidden) {
-      let __ov = String(__m.slogan || "").trim();
+      // CL-SLOGAN-META-FIELD-001 (owner 2026-07-08, app-gen CL had NO slogan): the app forwards
+      // the LLM's fresh slogan as meta.cl_slogan (via {...io}), but the worker only read
+      // meta.slogan (the standalone-override key) — so a tailored gen, which clears the override,
+      // rendered no slogan. Prefer the override, then the LLM cl_slogan, then the subtitle.
+      let __ov = String(__m.slogan || __m.cl_slogan || "").trim();
       if (!__ov || __ov.startsWith("[")) __ov = String(__m.subtitle || "").trim();
       __slogan = __ov.replace(/\s*\|\s*/g, " • ").trim();
     }
@@ -25693,7 +25697,10 @@ function buildHeaderCell(ctx, bridgePhoto) {
       ]
     }));
   }
-  const subtitle = (meta.subtitle || "").replace(/\s*\|\s*/g, "  \u2022  ");
+  // SUBTITLE-EMDASH-BELT-001 (owner 2026-07-08, app-gen CL header had "Hardware \u2014 Trackman A/S"):
+  // the banned em/en dash reached the "Application: role \u2014 company" line; sanitise to a hyphen here
+  // so it never renders regardless of how the app built the subtitle.
+  const subtitle = (meta.subtitle || "").replace(/\s*[\u2014\u2013]\s*/g, " - ").replace(/\s*\|\s*/g, "  \u2022  ");
   if (subtitle) {
     out.push(new Paragraph({
       alignment: alignType(headerAlign.specialisation),
@@ -28227,7 +28234,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.138-table-heading-underline";
+var VERSION = "1.14.139-cl-slogan-emdash-belt";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

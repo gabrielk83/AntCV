@@ -27184,8 +27184,24 @@ function renderExperience(s, ctx) {
         font: style.mainBodyFont
       }));
     }
-    const yearsRun = role.years ? new TextRun({
-      text: "	" + role.years,
+    // DATE-NO-PRESENT-001 (owner 2026-07-09, "not present instead of 2+26"):
+    // a role date must NEVER read "present" (or a localized/parenthetical
+    // equivalent) — the end reads as the CURRENT YEAR ("20XX-2026"). Deterministic
+    // export-side belt (the LLM leaks "present" past the prompt rule): strip a
+    // "(present)"-style parenthetical, then replace a standalone present-token with
+    // the current year. Scoped to the date field only, so body prose ("represent",
+    // "presentation") is untouched.
+    const __scrubYears = (y) => {
+      if (!y) return y;
+      const Y = String(new Date().getFullYear());
+      return String(y)
+        .replace(/\s*\(\s*(?:present|nuv[æa]rende|nutid|ongoing|current(?:ly)?|now|p[åa]g[åa]ende|actual)\s*\)/gi, "")
+        .replace(/\b(?:present|nuv[æa]rende|nutid|ongoing|currently|current|now|p[åa]g[åa]ende)\b/gi, Y)
+        .replace(/\s{2,}/g, " ").trim();
+    };
+    const __yrs = __scrubYears(role.years);
+    const yearsRun = __yrs ? new TextRun({
+      text: "	" + __yrs,
       color: "595959",
       size: pt2hp(fs.expSubHead),
       font: style.mainBodyFont
@@ -28234,7 +28250,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.139-cl-slogan-emdash-belt";
+var VERSION = "1.14.140-date-no-present";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

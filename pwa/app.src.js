@@ -2053,6 +2053,18 @@
     if (v && typeof v === "object") return Object.entries(v).map(function (e) { return e[0] + ": " + __ratStr(e[1]); }).join("; ");
     return v == null ? "" : String(v);
   }
+  // DATE-NO-PRESENT-001 (owner 2026-07-09, "not present instead of 2+26"): a role
+  // date must never read "present"/localized/parenthetical equivalent — the end
+  // reads as the CURRENT YEAR. Deterministic belt (mirrors the docx-worker
+  // __scrubYears); scoped to the years string only, so body prose is untouched.
+  function __antcvScrubYears(y) {
+    if (!y) return y;
+    var Y = String(new Date().getFullYear());
+    return String(y)
+      .replace(/\s*\(\s*(?:present|nuv[æa]rende|nutid|ongoing|current(?:ly)?|now|p[åa]g[åa]ende|actual)\s*\)/gi, "")
+      .replace(/\b(?:present|nuv[æa]rende|nutid|ongoing|currently|current|now|p[åa]g[åa]ende)\b/gi, Y)
+      .replace(/\s{2,}/g, " ").trim();
+  }
   function __antcvModelFor(prov, task) {
     try { if ("gemini" === prov && __antcvBigGen(task)) return "gemini-2.5-pro"; } catch (_) {}
     return void 0;
@@ -27582,7 +27594,7 @@
                   w = n
                     .map((e, n) => {
                       const i = `<b style="font-family:'Carlito',${d};font-size:${u.mainExp}pt;font-style:italic;color:${t.mainSubHeadColor}">${e.title}</b><span style="font-family:'Carlito',${d};font-size:${u.mainExp}pt;font-style:italic;font-weight:400;color:${t.mainCompanyColor}">, ${e.company}</span>`,
-                        l = `<span style="font-family:'Carlito',${d};font-size:${u.mainExp}pt;font-style:italic;color:${t.mainYearColor || "#595959"}">${e.years}</span>`,
+                        l = `<span style="font-family:'Carlito',${d};font-size:${u.mainExp}pt;font-style:italic;color:${t.mainYearColor || "#595959"}">${__antcvScrubYears(e.years)}</span>`,
                         s = (e.bullets || [])
                           .map(
                             (e) =>
@@ -28873,7 +28885,7 @@
                       ? `<w:r><w:t xml:space="preserve"> | </w:t></w:r>${V(e.company, "CV_LineMiddleItalic")}`
                       : "",
                     s = e.years
-                      ? `<w:r><w:tab/></w:r>${V(e.years, "CV_LineRest")}`
+                      ? `<w:r><w:tab/></w:r>${V(__antcvScrubYears(e.years), "CV_LineRest")}`
                       : "";
                   (n.push(
                     `<w:p><w:pPr><w:pStyle w:val="CV_Body"/><w:tabs><w:tab w:val="right" w:pos="9000"/></w:tabs><w:spacing w:before="120" w:after="20"/></w:pPr>${i}${l}${s}</w:p>`,

@@ -14,6 +14,18 @@ Desktop/CI-only. Safe: reads a PDF + a font, prints a calibrated width. Never
 touches production rendering.
 
 Usage: python scripts/calibrate-linefill.py <rendered.pdf> [font_px]
+
+CALIBRATION FINDING (2026-07-08): the two-column body table is
+`<w:tblLayout w:type="autofit"/>`. Word AND LibreOffice/CloudConvert autofit the
+columns to CONTENT and IGNORE the grid `gridCol` widths. So the RENDERED main
+column is content-driven (~490px page-1 / ~540px page-2 for Gabriel's data),
+NOT ratio-driven: sidebar_ratio scales the docx grid but the render ignores it.
+=> the estimator's ratio-aware formula (which predicts the grid) is WRONG for the
+export; the fixed constant (~466-490px) is the right shape but should track the
+AUTOFIT result, which is content/page-dependent and not a clean ratio function.
+The estimator can only be approximately accurate under autofit. To make the
+ratio-formula correct, the worker table would have to be FIXED layout
+(w:tblLayout w:type="fixed") - an architectural change with content-overflow risk.
 """
 import sys
 from PIL import ImageFont

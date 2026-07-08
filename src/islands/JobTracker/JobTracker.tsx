@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   getDoc, putDoc, fetchJdUrl, createApplication, setActive, classifyReason,
-  TRACKED_STATUSES, type TrackerDoc, type Row,
+  fetchClusterTop20, askAI, fitPercent, TRACKED_STATUSES, type TrackerDoc, type Row,
 } from './api';
 
 const NAVY = '#1F3864';
@@ -40,6 +40,7 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
   const [addUrl, setAddUrl] = useState('');
   const [adding, setAdding] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [cluster, setCluster] = useState<{ qual: string }[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Narrow viewports get a stacked card list — a wide fixed table pushes the
@@ -62,6 +63,7 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
     finally { setLoading(false); }
   }, []);
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => { void fetchClusterTop20().then((c) => setCluster(c.top20 || [])).catch(() => { /* */ }); }, []);
 
   const rows = useMemo<Row[]>(() => {
     const r = (doc?.rows || []).slice();
@@ -84,6 +86,12 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
   }, [rev]);
 
   async function save(): Promise<void> { if (!doc) return; setSaving(true); setErr(null); setNote(null); try { await persist(doc); } finally { setSaving(false); } }
+
+  // Persist an edited support/intel blob for one role (used by the Top-5 card).
+  const saveSupport = useCallback(async (uk: string, text: string): Promise<boolean> => {
+    if (!doc) return false;
+    return persist({ ...doc, support: { ...(doc.support || {}), [uk]: text } }, true);
+  }, [doc, persist]);
 
   // Append a row from a JD (shared by URL + file paths).
   function appendRow(company: string, role: string, jdText: string, url?: string): void {
@@ -282,8 +290,8 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
             </table>
           )) : (
             <div style={{ padding: 14, display: 'grid', gap: 14 }}>
-              {top5.map((r) => <FocusCard key={r[11]} row={r} doc={doc} busy={busyKey === r[11]}
-                onPrepare={() => void prepareAndOpen(r)} onOpen={() => void openSaved(r)} onDrop={() => void dropFromTop5(r)} />)}
+              {top5.map((r) => <FocusCard key={r[11]} row={r} doc={doc} cluster={cluster} busy={busyKey === r[11]}
+                onPrepare={() => void prepareAndOpen(r)} onOpen={() => void openSaved(r)} onDrop={() => void dropFromTop5(r)} onSaveSupport={saveSupport} />)}
               {top5.length === 0 && <div>No Top-5 roles yet.</div>}
             </div>
           )}
@@ -334,23 +342,71 @@ function parseSupport(text: string): { header: string; fit: string; flag: string
   return out;
 }
 
-function FocusCard({ row, doc, busy, onPrepare, onOpen, onDrop }: {
-  row: Row; doc: TrackerDoc | null; busy: boolean; onPrepare: () => void; onOpen: () => void; onDrop: () => void;
+// Rebuild the support/intel blob from the structured form (round-trips parseSupport).
+function buildSupport(p: ReturnType<typeof parseSupport>): string {
+  const out: string[] = [];
+  if (p.header) out.push('ROLE: ' + p.header);
+  if (p.fit) out.push('FIT: ' + p.fit);
+  if (p.flag) out.push('FLAG/RISK: ' + p.flag);
+  for (const s of p.sections) {
+    out.push('• ' + s.title);
+    for (const it of s.items) {
+      let seg = 'NEED: ' + it.need;
+      if (it.bring) seg += '  |  I BRING: ' + it.bring;
+      if (it.insight) seg += '  |  INSIGHT/Q: ' + it.insight;
+      out.push(seg);
+    }
+  }
+  return out.join('\n');
+}
+
+function FocusCard({ row, doc, cluster, busy, onPrepare, onOpen, onDrop, onSaveSupport }: {
+  row: Row; doc: TrackerDoc | null; cluster: { qual: string }[]; busy: boolean;
+  onPrepare: () => void; onOpen: () => void; onDrop: () => void; onSaveSupport: (uk: string, text: string) => Promise<boolean>;
 }): JSX.Element {
   const uk = row[11]; const t = tierOf(row[12]);
-  const p = parseSupport((doc?.support || {})[uk] || '');
+  const rawSupport = (doc?.support || {})[uk] || '';
+  const [p, setP] = useState(() => parseSupport(rawSupport));
+  const [dirty, setDirty] = useState(false);
+  const [savingSup, setSavingSup] = useState(false);
+  const [hover, setHover] = useState<string | null>(null);
+  const [aiKey, setAiKey] = useState<string | null>(null);
+  // Re-sync when the underlying doc changes and we have no local edits.
+  useEffect(() => { if (!dirty) setP(parseSupport(rawSupport)); }, [rawSupport, dirty]);
+
   const hasJd = ((doc?.jd || {})[uk] || '').length > 200;
   const saved = doc?.artifacts?.[uk]?.application_id;
   const url = doc?.urls?.[uk];
+  const pct = fitPercent(row[12], rawSupport + ' ' + ((doc?.jd || {})[uk] || ''), cluster);
+
+  function editItem(si: number, ii: number, field: 'need' | 'bring' | 'insight', v: string): void {
+    setP((prev) => { const c = { ...prev, sections: prev.sections.map((s) => ({ ...s, items: s.items.slice() })) }; c.sections[si].items[ii] = { ...c.sections[si].items[ii], [field]: v }; return c; });
+    setDirty(true);
+  }
+  async function saveIntel(): Promise<void> { setSavingSup(true); try { if (await onSaveSupport(uk, buildSupport(p))) setDirty(false); } finally { setSavingSup(false); } }
+  async function refine(si: number, ii: number): Promise<void> {
+    const it = p.sections[si].items[ii]; const key = si + ':' + ii; setAiKey(key);
+    try {
+      const jd = (doc?.jd || {})[uk] || '';
+      const sys = 'You refine ONE "What I bring" bullet for a job application. Return ONLY the improved bullet — one concrete, specific sentence that answers the employer need using the candidate\'s angle. Fix spelling and grammar. No quotes, no preamble, no bullet marker.';
+      const user = 'Role: ' + row[1] + ' — ' + row[2] + '\nEmployer NEED: ' + it.need + '\nCurrent "I bring": ' + (it.bring || '(empty)') + (jd ? '\nJD excerpt:\n' + jd.slice(0, 1400) : '');
+      const out = await askAI(user, sys, 200);
+      if (out) editItem(si, ii, 'bring', out.replace(/^["'\s]+|["'\s]+$/g, ''));
+    } catch (e) { alert('Ask AI failed: ' + String((e as Error).message || e)); }
+    finally { setAiKey(null); }
+  }
+
+  const pctColor = pct >= 80 ? '#2e7d32' : pct >= 60 ? '#B58A00' : '#C4711F';
   return (
     <div style={{ border: '1px solid #d5deec', borderRadius: 10, overflow: 'hidden', background: '#fff', boxShadow: '0 1px 4px rgba(20,30,60,0.06)' }}>
-      {/* header band in the tier colour */}
       <div style={{ background: t.accent, color: '#fff', padding: '9px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
         <span style={{ fontSize: 20, fontWeight: 800 }}>★{row[0]}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 800, fontSize: 15, lineHeight: 1.1 }}>{row[1]}</div>
           <div style={{ fontSize: 12, opacity: 0.92 }}>{row[2]}</div>
         </div>
+        {/* fit % */}
+        <span title="Estimated fit (tier + cluster demand)" style={{ background: '#fff', color: pctColor, borderRadius: 14, padding: '3px 10px', fontSize: 13, fontWeight: 800 }}>{pct}%</span>
         <span style={{ background: '#ffffff2e', borderRadius: 5, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>{t.label}</span>
         <span title={hasJd ? 'JD stored' : 'JD missing'} style={{ fontSize: 15 }}>{hasJd ? '✅' : '⚠️'}</span>
       </div>
@@ -360,24 +416,35 @@ function FocusCard({ row, doc, busy, onPrepare, onOpen, onDrop }: {
         </div>
         {p.fit && <Line icon="🎯" label="Fit" text={p.fit} color="#2a3244" />}
         {p.flag && <Line icon="⚠️" label="Flag" text={p.flag} color="#8a4b12" />}
-        {p.sections.map((s, i) => (
-          <div key={i} style={{ marginTop: 10 }}>
+        {p.sections.map((s, si) => (
+          <div key={si} style={{ marginTop: 10 }}>
             <div style={{ fontSize: 11, fontWeight: 800, color: t.accent, letterSpacing: 0.3, textTransform: 'uppercase', marginBottom: 5 }}>{s.title}</div>
-            {s.items.map((it, j) => (
-              <div key={j} style={{ borderLeft: '3px solid ' + t.tint, padding: '4px 0 6px 9px', marginBottom: 6 }}>
+            {s.items.map((it, ii) => { const key = si + ':' + ii; return (
+              <div key={ii} onMouseEnter={() => setHover(key)} onMouseLeave={() => setHover((h) => (h === key ? null : h))}
+                style={{ borderLeft: '3px solid ' + t.tint, padding: '4px 0 6px 9px', marginBottom: 8 }}>
                 <div style={{ fontSize: 12.5, fontWeight: 700, color: '#1e2636' }}>▸ {it.need}</div>
-                {it.bring && <div style={{ fontSize: 12, color: '#28632a', marginTop: 2 }}><b>I bring:</b> {it.bring}</div>}
-                {it.insight && <div style={{ fontSize: 12, color: '#5a4b8a', marginTop: 2 }}><b>Insight:</b> {it.insight}</div>}
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginTop: 3 }}>
+                  <b style={{ fontSize: 12, color: '#28632a', whiteSpace: 'nowrap', paddingTop: 4 }}>I bring:</b>
+                  <textarea value={it.bring} onChange={(e) => editItem(si, ii, 'bring', e.target.value)} rows={2}
+                    placeholder="what you bring to this need — edit freely"
+                    style={{ ...ta, fontSize: 12, background: '#f6fbf6', border: '1px solid #cfe4cf', color: '#1d3a1e' }} />
+                  <button onClick={() => void refine(si, ii)} disabled={aiKey === key}
+                    title="Ask AI to fine-tune this line"
+                    style={{ ...btn(t.accent), padding: '4px 8px', fontSize: 11, whiteSpace: 'nowrap', opacity: hover === key || aiKey === key ? 1 : 0.28 }}>
+                    {aiKey === key ? '…' : '✨ AI'}</button>
+                </div>
+                {it.insight && <div style={{ fontSize: 12, color: '#5a4b8a', marginTop: 3 }}><b>Insight:</b> {it.insight}</div>}
               </div>
-            ))}
+            ); })}
           </div>
         ))}
         {!p.sections.length && !p.fit && <div style={{ fontSize: 12, color: '#889' }}>(no role intel yet — add the JD, then Prepare)</div>}
-        <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'center' }}>
           {saved
             ? <button onClick={onOpen} disabled={busy} style={btn('#2e7d32')}>{busy ? '…' : '↗ Open in preview'}</button>
             : <button onClick={onPrepare} disabled={busy} style={btn(t.accent)}>{busy ? 'Preparing…' : '✨ Prepare & open in AntCV'}</button>}
           <button onClick={onDrop} disabled={busy} style={btn('#f4e6e2', '#7a2618')}>✕ Drop from Top 5</button>
+          {dirty && <button onClick={() => void saveIntel()} disabled={savingSup} style={btn('#2e7d32')}>{savingSup ? 'Saving…' : '💾 Save intel edits'}</button>}
         </div>
       </div>
     </div>

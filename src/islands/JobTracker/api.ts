@@ -112,6 +112,36 @@ export async function setActive(applicationId: number): Promise<void> {
   await call('/api/active', { method: 'POST', body: JSON.stringify({ application_id: applicationId }) });
 }
 
+// Ask-AI (low tier): reuse the app's own LLM path — POST an Anthropic-style
+// /v1/messages to the relay (same credentialed cookie + provider routing the app
+// uses). Returns the model's text. Used to fine-tune a "What I bring" line.
+export async function askAI(userText: string, system: string, maxTokens = 320): Promise<string> {
+  const res = await fetch(proxyBase() + '/v1/messages', {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: maxTokens, system, messages: [{ role: 'user', content: userText }] }),
+  });
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((j && (j.error?.message || j.error || j.message)) || ('HTTP ' + res.status));
+  if (Array.isArray(j.content)) return j.content.map((c: { text?: string }) => c?.text || '').join('').trim();
+  return String(j.completion || j.text || '').trim();
+}
+
+// Fit % for a role — analysis-lite: a tier baseline nudged by how many of the
+// user's cluster top-20 qualifications the role's JD/intel hits.
+export function fitPercent(band: string, text: string, top20: { qual: string }[]): number {
+  const base: Record<string, number> = { DDEBF7: 82, E2EFDA: 64, FCE4D6: 46, FFF2CC: 78, D9D9D9: 35 };
+  let pct = base[(band || '').toUpperCase()] ?? 55;
+  const low = (text || '').toLowerCase();
+  let hits = 0;
+  for (const q of top20 || []) {
+    const words = (q.qual || '').toLowerCase().match(/[a-zà-ú][a-zà-ú+#.-]{2,}/g) || [];
+    if (words.length && words.filter((w) => low.includes(w)).length >= Math.ceil(words.length * 0.6)) hits++;
+  }
+  pct += Math.min(hits * 2.5, 16);
+  return Math.max(35, Math.min(98, Math.round(pct)));
+}
+
 // Cluster top-20 most-demanded qualifications for the user's cluster.
 export interface ClusterTop { cluster_id: string | null; top20: { rank: number; qual: string; weight_sum: number }[]; }
 export async function fetchClusterTop20(): Promise<ClusterTop> {

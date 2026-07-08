@@ -3021,6 +3021,116 @@ async function handleApiApplicationById(request, env, idStr) {
 //
 // GET  -> { ok, showcase: {sections,meta,rationale,jd_language,updated_at} | null }
 // PUT  -> upsert on user_hash; body {sections,meta,rationale,jd_language}
+// =================================================================
+// JOB TRACKER — per-user job-search workbook (JOB-TRACKER-001)
+// -----------------------------------------------------------------
+// Stores the whole job-search "workbook" (dream-envelope, weekly-tracker
+// rows, top-5, history, contacts, application-log) as ONE JSON document per
+// user, keyed by user_hash. It is the SOURCE OF TRUTH; the local Excel file
+// and (later) the AntCV web UI are both clients that render/edit this doc.
+//
+// Concurrency: optimistic, via a monotonically-increasing `rev`. A PUT sends
+// { doc, base_rev }. If base_rev is provided and doesn't match the stored
+// rev, the write is rejected 409 with the current { doc, rev } so the caller
+// (sync CLI or UI) can 3-way merge and retry — never a silent clobber.
+// Passing base_rev = null/absent forces the write (first-writer / reset).
+//
+// Single-blob (not per-row tables) because the whole workbook is small,
+// always read/written together, and this keeps sync trivial. Per-row
+// generation (Phase 2) addresses rows by their `id` INSIDE the doc.
+async function handleApiJobTracker(request, env) {
+  const id = await identityFromRequest(request, env);
+  if (!id) return jsonResponse({ error: 'unauthenticated' }, 401, request, env);
+  if (!hasD1(env)) return jsonResponse({ error: 'd1_not_bound' }, 503, request, env);
+  const refresh = await maybeRefreshHeader(env, id);
+  const userHash = await userHashFromEmail(id.email);
+  const m = request.method;
+
+  try {
+    await env.DB.prepare(
+      'CREATE TABLE IF NOT EXISTS job_tracker (' +
+      'user_hash TEXT PRIMARY KEY, doc TEXT, rev INTEGER NOT NULL DEFAULT 0, ' +
+      'updated_at INTEGER, ' +
+      'FOREIGN KEY (user_hash) REFERENCES user_kernel(user_hash) ON DELETE CASCADE)'
+    ).run();
+  } catch (_) {}
+
+  if (m === 'GET') {
+    try {
+      const row = await env.DB.prepare(
+        'SELECT doc, rev, updated_at FROM job_tracker WHERE user_hash = ?'
+      ).bind(userHash).first();
+      return jsonResponse({
+        ok: true,
+        doc: row ? parseJsonField(row.doc, null) : null,
+        rev: row ? (row.rev || 0) : 0,
+        updated_at: row ? row.updated_at : null,
+      }, 200, request, env, refresh);
+    } catch (e) {
+      return jsonResponse({ ok: true, doc: null, rev: 0 }, 200, request, env, refresh);
+    }
+  }
+
+  if (m === 'DELETE') {
+    try {
+      await env.DB.prepare('DELETE FROM job_tracker WHERE user_hash = ?').bind(userHash).run();
+      return jsonResponse({ ok: true, deleted: true }, 200, request, env, refresh);
+    } catch (e) {
+      return jsonResponse({ error: 'd1_delete_failed', message: String(e && e.message || e) }, 500, request, env, refresh);
+    }
+  }
+
+  if (m === 'PUT') {
+    let body;
+    try { body = await request.json(); }
+    catch (_) { return jsonResponse({ error: 'invalid_json' }, 400, request, env, refresh); }
+    if (!body || typeof body !== 'object' || !body.doc || typeof body.doc !== 'object') {
+      return jsonResponse({ error: 'invalid_body', message: 'expected { doc: {...}, base_rev? }' }, 400, request, env, refresh);
+    }
+    // Ensure the FK parent row exists (mirrors kernel_showcase PUT).
+    try {
+      const k = await env.DB.prepare('SELECT user_hash FROM user_kernel WHERE user_hash = ?').bind(userHash).first();
+      if (!k) {
+        const mig = await migrateKvPrefsToD1IfEmpty(env, id);
+        if (!mig.migrated) {
+          const now0 = Date.now();
+          await env.DB.prepare('INSERT INTO user_kernel (user_hash, identity, history, preferences, photo_b64, created_at, updated_at) VALUES (?, ?, ?, ?, NULL, ?, ?) ON CONFLICT(user_hash) DO NOTHING')
+            .bind(userHash, JSON.stringify({ email: id.email }), JSON.stringify({}), JSON.stringify({}), now0, now0).run();
+        }
+      }
+    } catch (_) {}
+
+    const cur = await env.DB.prepare('SELECT rev FROM job_tracker WHERE user_hash = ?').bind(userHash).first();
+    const curRev = cur ? (cur.rev || 0) : 0;
+    const baseRev = (body.base_rev === null || body.base_rev === undefined) ? null : Number(body.base_rev);
+    if (baseRev !== null && baseRev !== curRev) {
+      // Someone advanced the doc since the caller last read it — hand back the
+      // current state so the caller can merge and retry, don't overwrite.
+      let curDoc = null;
+      try {
+        const r = await env.DB.prepare('SELECT doc FROM job_tracker WHERE user_hash = ?').bind(userHash).first();
+        curDoc = r ? parseJsonField(r.doc, null) : null;
+      } catch (_) {}
+      return jsonResponse({ error: 'conflict', rev: curRev, doc: curDoc }, 409, request, env, refresh);
+    }
+
+    const nextRev = curRev + 1;
+    const now = Date.now();
+    const docStr = JSON.stringify(body.doc);
+    try {
+      await env.DB.prepare(
+        'INSERT INTO job_tracker (user_hash, doc, rev, updated_at) VALUES (?, ?, ?, ?) ' +
+        'ON CONFLICT(user_hash) DO UPDATE SET doc = excluded.doc, rev = excluded.rev, updated_at = excluded.updated_at'
+      ).bind(userHash, docStr, nextRev, now).run();
+      return jsonResponse({ ok: true, rev: nextRev, updated_at: now }, 200, request, env, refresh);
+    } catch (e) {
+      return jsonResponse({ error: 'd1_write_failed', message: String(e && e.message || e) }, 500, request, env, refresh);
+    }
+  }
+
+  return jsonResponse({ error: 'method_not_allowed' }, 405, request, env, refresh);
+}
+
 async function handleApiKernelShowcase(request, env) {
   const id = await identityFromRequest(request, env);
   if (!id) return jsonResponse({ error: 'unauthenticated' }, 401, request, env);
@@ -4280,6 +4390,9 @@ const method = request.method;
   }
   if (path === '/api/kernel-showcase') {
     return handleApiKernelShowcase(request, env);
+  }
+  if (path === '/api/job-tracker') {
+    return handleApiJobTracker(request, env);
   }
 
   // --- /analytics : public, fire-and-forget, never blocking ---

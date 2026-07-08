@@ -87,3 +87,17 @@ CREATE TABLE IF NOT EXISTS kernel_showcase (
   updated_at   INTEGER NOT NULL,
   FOREIGN KEY (user_hash) REFERENCES user_kernel(user_hash) ON DELETE CASCADE
 );
+
+-- Per-user job-search workbook (JOB-TRACKER-001). One JSON `doc` per user
+-- holding the dream-envelope, weekly-tracker rows, top-5, history, contacts
+-- and application-log. Source of truth for the local Excel workbook + (later)
+-- the AntCV web UI. `rev` is a monotonic counter for optimistic-concurrency
+-- (PUT sends base_rev; mismatch → 409 so the caller merges, never clobbers).
+-- The relay also CREATEs this inline (IF NOT EXISTS) so it self-heals.
+CREATE TABLE IF NOT EXISTS job_tracker (
+  user_hash    TEXT PRIMARY KEY,
+  doc          TEXT,                        -- JSON {version, envelope, rows[], top5[], history[], contacts[], application_log[], generated_at}
+  rev          INTEGER NOT NULL DEFAULT 0,
+  updated_at   INTEGER,
+  FOREIGN KEY (user_hash) REFERENCES user_kernel(user_hash) ON DELETE CASCADE
+);

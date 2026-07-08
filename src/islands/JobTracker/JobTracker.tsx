@@ -190,8 +190,8 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
   // you press Generate there. (One-tap / batch generation is the nightly runner.)
   async function prepareAndOpen(row: Row): Promise<void> {
     if (!doc) return;
-    const uk = row[11]; const label = row[2] || row[1];
-    if (!window.confirm('Open "' + label + '" in AntCV?\n\nThe app reloads with this job\'s description loaded, ready for you to press Generate. (It does not generate here.)')) return;
+    const uk = row[11]; const label = row[2] || row[1]; const already = hasArtifact(uk);
+    if (!window.confirm((already ? 'Reopen' : 'Open') + ' "' + label + '" in AntCV?\n\nThe app reloads with this job loaded' + (already ? ' — including any CV/CL you already generated.' : ', ready for you to press Generate. (It does not generate here.)'))) return;
     setBusyKey(uk); setErr(null); setNote(null);
     try {
       let d = doc; let jd = (d.jd || {})[uk] || '';
@@ -215,17 +215,11 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
     finally { setBusyKey(null); }
   }
 
-  async function openSaved(row: Row): Promise<void> {
-    const uk = row[11]; const id = doc?.artifacts?.[uk]?.application_id;
-    if (!id) return;
-    if (!window.confirm('Reopen "' + (row[2] || row[1]) + '" in AntCV? (reloads the app with this job loaded)')) return;
-    setBusyKey(uk);
-    try {
-      await setActive(id);
-      try { const jd = (doc?.jd || {})[uk]; if (jd) localStorage.setItem('antcv:lastJdText', jd); } catch { /* */ }
-      onClose(); setTimeout(() => { try { location.reload(); } catch { /* */ } }, 80);
-    } catch (e) { setErr(String((e as Error).message || e)); setBusyKey(null); }
-  }
+  // Reopen = re-seed (upsert): corrects a stale category on older seeds and
+  // PRESERVES any generated cv/cl sections (the relay upsert never overwrites
+  // them), then reloads so the app restores the JD + sections. Fixes the
+  // "opens to the upload menu with nothing" bug.
+  async function openSaved(row: Row): Promise<void> { return prepareAndOpen(row); }
 
   async function dropFromTop5(row: Row): Promise<void> {
     if (!doc) return;

@@ -105,20 +105,30 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
     finally { setAdding(false); }
   }
 
+  // Extract text from an uploaded JD file. Plain-text is read directly; PDFs
+  // and images/scans go through the app's own multi-tier extractor
+  // (window.AntcvExtractPDFText: PDF.js text → LLM document → vision OCR).
   async function addFromFile(file: File): Promise<void> {
     setAdding(true); setErr(null); setNote(null);
     try {
-      const buf = await file.text();
-      // Guard binary formats we can't read as text here (PDF/Word).
-      if (/^%PDF/.test(buf) || buf.slice(0, 2) === 'PK') {
-        setErr('That looks like a PDF/Word file — text extraction isn\'t wired here yet. Paste the JD text, upload a .txt, or use the URL. (PDF parse is a follow-up.)');
-        return;
+      const name = (file.name || '').toLowerCase();
+      let text = '';
+      if (/\.(txt|md|csv|json|text)$/.test(name) || (file.type || '').startsWith('text/')) {
+        text = (await file.text()).trim();
+      } else {
+        const extract = (window as unknown as { AntcvExtractPDFText?: (f: File) => Promise<{ text?: string; method?: string; warning?: string | null }> }).AntcvExtractPDFText;
+        if (typeof extract !== 'function') { setErr('The app\'s PDF/OCR extractor isn\'t loaded yet — reload the page, or upload a .txt / use the URL.'); return; }
+        setNote('Extracting text (PDF.js → LLM → OCR)…');
+        const r = await extract(file);
+        text = String((r && r.text) || '').trim();
+        if (r && r.warning) console.info('[JobTracker] extract:', r.method, r.warning);
       }
-      if (buf.trim().length < 100) { setErr('File has too little text to be a JD.'); return; }
+      if (text.length < 100) { setErr('Could not extract enough text from that file. Try a clearer scan, the regular uploader, or paste the text.'); return; }
       const company = window.prompt('Company?') || '';
-      const role = window.prompt('Role / title?', file.name.replace(/\.[a-z]+$/i, '')) || '';
+      const role = window.prompt('Role / title?', file.name.replace(/\.[a-z0-9]+$/i, '')) || '';
       if (!company && !role) return;
-      appendRow(company, role, buf.trim());
+      appendRow(company, role, text);
+      setNote('Extracted ' + text.length + ' chars from ' + file.name + '. Review & Save.');
     } catch (e) { setErr(String((e as Error).message || e)); }
     finally { setAdding(false); if (fileRef.current) fileRef.current.value = ''; }
   }
@@ -194,9 +204,9 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
             <input value={addUrl} onChange={(e) => setAddUrl(e.target.value)} placeholder="Paste a job URL to add it (fetches the JD into the list)"
               style={{ flex: 1, padding: '7px 10px', border: '1px solid #c3ccdb', borderRadius: 6, fontSize: 13 }} onKeyDown={(e) => { if (e.key === 'Enter') void addFromUrl(); }} />
             <button onClick={() => void addFromUrl()} disabled={adding || !addUrl.trim()} style={btn(NAVY)}>{adding ? 'Fetching…' : 'Add JD'}</button>
-            <input ref={fileRef} type="file" accept=".txt,.md,.json,.text,.csv,.pdf,.docx" style={{ display: 'none' }}
+            <input ref={fileRef} type="file" accept=".txt,.md,.json,.text,.csv,.pdf,image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" style={{ display: 'none' }}
               onChange={(e) => { const f = e.target.files?.[0]; if (f) void addFromFile(f); }} />
-            <button onClick={() => fileRef.current?.click()} disabled={adding} title="Upload a JD file (.txt today; PDF/Word soon)"
+            <button onClick={() => fileRef.current?.click()} disabled={adding} title="Upload a JD file — PDF, text, or image/scan (OCR)"
               style={{ ...btn('#eef1f6', NAVY), border: '1px solid #c3ccdb', fontSize: 15, padding: '5px 10px' }}>📎</button>
           </div>
         )}

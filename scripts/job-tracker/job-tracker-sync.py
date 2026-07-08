@@ -47,7 +47,10 @@ def _req(method, body=None):
     r = urllib.request.Request(ENDPOINT, data=data, method=method,
         headers={"Authorization": "Bearer " + _token(),
                  "Content-Type": "application/json",
-                 "Origin": "https://antcv.pages.dev"})
+                 "Origin": "https://antcv.pages.dev",
+                 # Cloudflare's edge blocks the default Python-urllib UA (403);
+                 # present a browser-like UA so the request reaches the worker.
+                 "User-Agent": "Mozilla/5.0 (AntCV job-tracker-sync)"})
     try:
         with urllib.request.urlopen(r, timeout=30) as resp:
             return resp.status, json.loads(resp.read().decode() or "{}")

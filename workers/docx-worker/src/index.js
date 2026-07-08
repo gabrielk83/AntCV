@@ -24649,10 +24649,27 @@ function buildAiDisclosureHangingTextbox(ctx, opts) {
   // side; CL: right) and is ENCODED in the sentinel so postProcessDocx needs no
   // extra plumbing. The carrier paragraph is placed at the end of the last page's
   // content by the callers, so the injected frame renders once, on the last page.
+  // AI-NOTICE-INLINE-001 (owner 2026-07-08: "AI notice is lost somewhere under page 2"):
+  // the page-anchored VML frame does NOT render in Word ExportAsFixedFormat for a
+  // two-column CV — its anchor sits in a height-stretched table cell that Word drops,
+  // so the notice vanished from the owner's Word view (it survived only in CloudConvert).
+  // Render it as a REAL VISIBLE italic paragraph at the END of the last page's column
+  // content instead: reliable in Word AND CloudConvert, and it sits at the column
+  // bottom (the owner's "sidebar bottom" when routed to the sidebar side). No sentinel
+  // token now, so postProcessDocx injects no VML frame (no duplicate).
   const side = opts && (opts.side === "left" ? "left" : opts.side === "center" ? "center" : "right");
+  const onDark = !!(opts && opts.onDark);
+  const align = side === "left" ? AlignmentType.LEFT : side === "center" ? AlignmentType.CENTER : AlignmentType.RIGHT;
   return new Paragraph({
-    spacing: { before: 0, after: 0, line: 1, lineRule: "exact" },
-    children: [new TextRun({ text: "__ANTCV_AIWM_" + (side || "right") + "__", size: 2, color: "FFFFFF" })]
+    alignment: align,
+    keepLines: true,
+    spacing: { before: 160, after: 0, line: 220, lineRule: "auto" },
+    children: [new TextRun({
+      text: "AI-assisted - author retains responsibility for content.",
+      italics: true, size: 13,
+      // teal on the light main column; a light grey that reads on the dark sidebar.
+      color: onDark ? "C9C9C9" : "4D7976"
+    })]
   });
 }
 __name(buildAiDisclosureHangingTextbox, "buildAiDisclosureHangingTextbox");
@@ -24866,6 +24883,10 @@ function buildTwoColumnDocument(ctx) {
   const mainEdge = Number.isFinite(mePx) && mePx >= 0 && mePx <= 60 ? Math.round(mePx * 15) : 150;
   const makeMainCell = (els, withHeader) => new TableCell({
     width: { size: ctx.mainW, type: WidthType.DXA },
+    // MAIN-TINT-001 (owner 2026-07-08 "add (a)"): optional light brand tint on the
+    // main column so it balances a dark sidebar (rule 12: not both pure). Opt-in via
+    // style.mainTint (a light hex, e.g. FDF1E9); absent -> white as before.
+    shading: style.mainTint ? { type: ShadingType.CLEAR, fill: style.mainTint, color: "auto" } : void 0,
     borders: withHeader ? bodyTopBorder(style.headerBg) : noBorders(),
     // ADV-SPACING-CONTROLS-001: seamGap widens the seam side only.
     margins: {
@@ -25132,7 +25153,7 @@ function buildTwoColumnDocument(ctx) {
     const __toSidebar = (__side === "left" || __side === "right") && __side === __sbPhys;
     const __col = __toSidebar ? sidebarPages : mainPages;
     if (!__col[__lastRendered]) __col[__lastRendered] = [];
-    __col[__lastRendered].push(buildAiDisclosureHangingTextbox(ctx, { side: __side }));
+    __col[__lastRendered].push(buildAiDisclosureHangingTextbox(ctx, { side: __side, onDark: __toSidebar }));
   }
   if (__overflowActive) {
     const __twoCol = __renderSlots.filter((p) => p <= __lastMainSlot);
@@ -25142,7 +25163,7 @@ function buildTwoColumnDocument(ctx) {
     });
     const __overflowEls = [];
     for (let op = __lastMainSlot + 1; op < numPages; op++) { (sidebarPages[op] || []).forEach((e) => __overflowEls.push(e)); }
-    __overflowEls.push(buildAiDisclosureHangingTextbox(ctx, { side: ctx.__aiWmCorner || "right" }));
+    __overflowEls.push(buildAiDisclosureHangingTextbox(ctx, { side: ctx.__aiWmCorner || "right", onDark: true }));
     if (__twoCol.length) docChildren.push(__pageBreakPara());
     docChildren.push(makeFullWidthSidebarTable(__overflowEls));
   } else {
@@ -28197,7 +28218,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.134-ainotice-emdash-hyphen";
+var VERSION = "1.14.135-ainotice-inline-maintint";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

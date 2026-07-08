@@ -99,6 +99,11 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
   }
   const genOf = (uk: string) => (doc?.gen || {})[uk] || 'quick';
   function setGen(uk: string, q: string): void { if (!doc) return; setDocState({ ...doc, gen: { ...(doc.gen || {}), [uk]: q } }); setDirty(true); }
+  const hasArtifact = (uk: string) => !!doc?.artifacts?.[uk]?.application_id;
+  // Nightly queue (⏰): on by default until the row has been generated; explicit toggle wins.
+  const nightlyOn = (uk: string) => { const q = doc?.queue?.[uk]; return q === undefined ? !hasArtifact(uk) : q; };
+  function toggleNightly(uk: string): void { if (!doc) return; setDocState({ ...doc, queue: { ...(doc.queue || {}), [uk]: !nightlyOn(uk) } }); setDirty(true); }
+  const [expandRow, setExpandRow] = useState<string | null>(null);
 
   const persist = useCallback(async (next: TrackerDoc, quiet = false): Promise<boolean> => {
     const res = await putDoc(next, rev);
@@ -281,9 +286,11 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
                       <select value={genOf(uk)} onChange={(e) => setGen(uk, e.target.value)} title="Generation quality" style={{ fontSize: 13, padding: 5 }}>
                         <option value="high">★ High quality</option><option value="quick">⚡ Quick</option>
                       </select>
-                      {doc?.artifacts?.[uk]?.application_id
+                      {hasArtifact(uk)
                         ? <button onClick={() => void openSaved(r)} disabled={busyKey === uk} style={btn('#2e7d32', '#fff', 13)}>{busyKey === uk ? '…' : '↗ Open'}</button>
-                        : <button onClick={() => void prepareAndOpen(r)} disabled={busyKey === uk} style={btn('#2E5DA8', '#fff', 13)}>{busyKey === uk ? '…' : '✨ Prepare & open'}</button>}
+                        : <button onClick={() => void prepareAndOpen(r)} disabled={busyKey === uk} style={btn('#2E5DA8', '#fff', 13)}>{busyKey === uk ? '…' : '✨ Generate now'}</button>}
+                      <button onClick={() => toggleNightly(uk)} title="Include in tonight's batch generation"
+                        style={{ background: nightlyOn(uk) ? '#2E5DA8' : '#eef1f6', color: nightlyOn(uk) ? '#fff' : '#556', border: '1px solid #c3ccdb', borderRadius: 6, cursor: 'pointer', fontSize: 13, fontWeight: 600, padding: '5px 9px' }}>⏰ {nightlyOn(uk) ? 'Nightly ✓' : 'Nightly'}</button>
                     </div>
                   </div>
                 );
@@ -294,7 +301,7 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
             <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 900, tableLayout: 'fixed' }}>
               <colgroup>
                 <col style={{ width: 46 }} /><col style={{ width: 58 }} /><col style={{ width: 150 }} /><col style={{ width: 210 }} />
-                <col style={{ width: 120 }} /><col style={{ width: 34 }} /><col style={{ width: 130 }} /><col /><col /><col style={{ width: 54 }} />
+                <col style={{ width: 120 }} /><col style={{ width: 34 }} /><col style={{ width: 130 }} /><col style={{ width: 175 }} /><col style={{ width: 175 }} /><col style={{ width: 62 }} />
               </colgroup>
               <thead><tr>{['#', 'Tier', 'Company', 'Role', 'Location', 'JD', 'Tracked', 'Next action', 'Flag / notes', 'Link'].map((h) => <th key={h} style={th}>{h}</th>)}</tr></thead>
               <tbody>
@@ -309,13 +316,15 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
                       <td style={cell}>{r[3]}</td>
                       <td style={{ ...cell, textAlign: 'center', fontSize: 14 }} title={hasJd ? 'JD stored' : 'No JD — add a direct posting URL / file'}>{hasJd ? '✅' : '—'}</td>
                       <td style={cell}><select value={r[8]} onChange={(e) => editRow(uk, 8, e.target.value)} style={{ fontSize: 12, width: '100%' }}>{TRACKED_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}{!TRACKED_STATUSES.includes(r[8]) && r[8] ? <option value={r[8]}>{r[8]}</option> : null}</select></td>
-                      <td style={cell}><textarea value={r[9]} onChange={(e) => editRow(uk, 9, e.target.value)} rows={2} style={ta} /></td>
-                      <td style={cell}><textarea value={r[10]} onChange={(e) => editRow(uk, 10, e.target.value)} rows={2} style={ta} /></td>
+                      <td style={cell}><textarea value={r[9]} onChange={(e) => editRow(uk, 9, e.target.value)} onFocus={() => setExpandRow(uk)} rows={expandRow === uk ? 5 : 2} style={ta} /></td>
+                      <td style={cell}><textarea value={r[10]} onChange={(e) => editRow(uk, 10, e.target.value)} onFocus={() => setExpandRow(uk)} rows={expandRow === uk ? 5 : 2} style={ta} /></td>
                       <td style={{ ...cell, textAlign: 'center', whiteSpace: 'nowrap' }}>
                         {doc?.urls?.[uk] ? <a href={doc.urls[uk]} target="_blank" rel="noreferrer" style={{ color: t.accent, fontWeight: 700 }}>↗</a> : ''}
-                        <button onClick={() => (doc?.artifacts?.[uk]?.application_id ? void openSaved(r) : void prepareAndOpen(r))} disabled={busyKey === uk}
-                          title={doc?.artifacts?.[uk]?.application_id ? 'Open the generated application' : 'Prepare & open in AntCV to generate'}
-                          style={{ ...btn(doc?.artifacts?.[uk]?.application_id ? '#2e7d32' : '#2E5DA8'), padding: '2px 6px', fontSize: 12, display: 'block', margin: '4px auto 0' }}>{busyKey === uk ? '…' : (doc?.artifacts?.[uk]?.application_id ? '↗' : '✨')}</button>
+                        <button onClick={() => (hasArtifact(uk) ? void openSaved(r) : void prepareAndOpen(r))} disabled={busyKey === uk}
+                          title={hasArtifact(uk) ? 'Open the generated application' : 'Generate now — prepare & open in AntCV'}
+                          style={{ ...btn(hasArtifact(uk) ? '#2e7d32' : '#2E5DA8'), padding: '2px 6px', fontSize: 12, display: 'block', margin: '4px auto 2px' }}>{busyKey === uk ? '…' : (hasArtifact(uk) ? '↗' : '✨')}</button>
+                        <button onClick={() => toggleNightly(uk)} title={nightlyOn(uk) ? "In tonight's generation queue — tap to remove" : 'Tap to queue for tonight'}
+                          style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 15, opacity: nightlyOn(uk) ? 1 : 0.28, display: 'block', margin: '0 auto' }}>⏰</button>
                       </td>
                     </tr>
                   );

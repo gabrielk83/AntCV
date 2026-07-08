@@ -41,6 +41,7 @@ export interface TrackerDoc {
   urls?: Record<string, string>;
   jd?: Record<string, string>;          // raw JD text per row (carried into the list)
   gen?: Record<string, string>;         // per-row generation tier: 'high' | 'quick'
+  queue?: Record<string, boolean>;      // per-row nightly-generation flag (⏰); default on until generated
   support?: Record<string, string>;
   scores?: Record<string, { fit?: number; rank?: number; why?: string }>;
   artifacts?: Record<string, {

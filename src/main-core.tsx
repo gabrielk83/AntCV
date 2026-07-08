@@ -33,7 +33,7 @@ import { exposeMigrationDebugApi, runGabrielMigration } from './lib/gabriel-migr
 import { installWritingStyleFetchWrap } from './lib/install-fetch-wrap';
 import { exposeObservabilityApi } from './lib/observability';
 
-const VERSION = '1.51.214';
+const VERSION = '1.51.215';
 
 declare global {
   interface Window {

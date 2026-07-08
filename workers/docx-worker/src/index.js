@@ -26601,9 +26601,10 @@ function headingParagraph(title2, ctx, isSidebar, noRule, sec) {
     // HEADING-TABLE-GAP-001 (owner 2026-07-08: "you still keep spacing of 2 after the headline
     // and this fucks the distance when there is a table"): a `table` section renders its own
     // header row right under the heading, so the heading's after-space (2pt) + the table pushed
-    // the grid too far down. Drop the after-space to 0 when the section is a table so the grid
-    // hugs the heading. Universal — every table-typed section, CV or CL.
-    spacing: { before: __beforeDxa, after: isSidebar ? 30 : (sec && sec.type === "table" ? 0 : 40) },
+    // the grid too far down. BUT after:0 collapsed the heading's own underline INTO the table
+    // top border (owner 2026-07-08 "you lost the horizontal line"). Keep a small after (24 =
+    // 1.2pt) so the underline stays visible + distinct while the grid still sits close.
+    spacing: { before: __beforeDxa, after: isSidebar ? 30 : (sec && sec.type === "table" ? 24 : 40) },
     // keepNext: heading must stay glued to whatever follows it, so a
     // heading never appears alone at the bottom of a page with its
     // content pushed to the next page. keepLines: never split the
@@ -28226,7 +28227,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.137-header-contact-axis";
+var VERSION = "1.14.138-table-heading-underline";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

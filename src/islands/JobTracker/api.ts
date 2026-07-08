@@ -40,6 +40,7 @@ export interface TrackerDoc {
   rows: Row[];
   urls?: Record<string, string>;
   jd?: Record<string, string>;          // raw JD text per row (carried into the list)
+  gen?: Record<string, string>;         // per-row generation tier: 'high' | 'quick'
   support?: Record<string, string>;
   scores?: Record<string, { fit?: number; rank?: number; why?: string }>;
   artifacts?: Record<string, {

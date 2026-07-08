@@ -97,6 +97,8 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
     setDocState({ ...doc, rows: (doc.rows || []).map((r) => { if (r[11] !== uk) return r; const c = r.slice() as Row; c[idx] = value; return c; }) });
     setDirty(true);
   }
+  const genOf = (uk: string) => (doc?.gen || {})[uk] || 'quick';
+  function setGen(uk: string, q: string): void { if (!doc) return; setDocState({ ...doc, gen: { ...(doc.gen || {}), [uk]: q } }); setDirty(true); }
 
   const persist = useCallback(async (next: TrackerDoc, quiet = false): Promise<boolean> => {
     const res = await putDoc(next, rev);
@@ -275,6 +277,14 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
                     <textarea value={r[9]} onChange={(e) => editRow(uk, 9, e.target.value)} rows={2} style={ta} />
                     <div style={mLbl}>Flag / notes</div>
                     <textarea value={r[10]} onChange={(e) => editRow(uk, 10, e.target.value)} rows={2} style={ta} />
+                    <div style={{ display: 'flex', gap: 8, marginTop: 9, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <select value={genOf(uk)} onChange={(e) => setGen(uk, e.target.value)} title="Generation quality" style={{ fontSize: 13, padding: 5 }}>
+                        <option value="high">★ High quality</option><option value="quick">⚡ Quick</option>
+                      </select>
+                      {doc?.artifacts?.[uk]?.application_id
+                        ? <button onClick={() => void openSaved(r)} disabled={busyKey === uk} style={btn('#2e7d32', '#fff', 13)}>{busyKey === uk ? '…' : '↗ Open'}</button>
+                        : <button onClick={() => void prepareAndOpen(r)} disabled={busyKey === uk} style={btn('#2E5DA8', '#fff', 13)}>{busyKey === uk ? '…' : '✨ Prepare & open'}</button>}
+                    </div>
                   </div>
                 );
               })}
@@ -301,7 +311,12 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
                       <td style={cell}><select value={r[8]} onChange={(e) => editRow(uk, 8, e.target.value)} style={{ fontSize: 12, width: '100%' }}>{TRACKED_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}{!TRACKED_STATUSES.includes(r[8]) && r[8] ? <option value={r[8]}>{r[8]}</option> : null}</select></td>
                       <td style={cell}><textarea value={r[9]} onChange={(e) => editRow(uk, 9, e.target.value)} rows={2} style={ta} /></td>
                       <td style={cell}><textarea value={r[10]} onChange={(e) => editRow(uk, 10, e.target.value)} rows={2} style={ta} /></td>
-                      <td style={{ ...cell, textAlign: 'center' }}>{doc?.urls?.[uk] ? <a href={doc.urls[uk]} target="_blank" rel="noreferrer" style={{ color: t.accent, fontWeight: 700 }}>↗</a> : ''}</td>
+                      <td style={{ ...cell, textAlign: 'center', whiteSpace: 'nowrap' }}>
+                        {doc?.urls?.[uk] ? <a href={doc.urls[uk]} target="_blank" rel="noreferrer" style={{ color: t.accent, fontWeight: 700 }}>↗</a> : ''}
+                        <button onClick={() => (doc?.artifacts?.[uk]?.application_id ? void openSaved(r) : void prepareAndOpen(r))} disabled={busyKey === uk}
+                          title={doc?.artifacts?.[uk]?.application_id ? 'Open the generated application' : 'Prepare & open in AntCV to generate'}
+                          style={{ ...btn(doc?.artifacts?.[uk]?.application_id ? '#2e7d32' : '#2E5DA8'), padding: '2px 6px', fontSize: 12, display: 'block', margin: '4px auto 0' }}>{busyKey === uk ? '…' : (doc?.artifacts?.[uk]?.application_id ? '↗' : '✨')}</button>
+                      </td>
                     </tr>
                   );
                 })}

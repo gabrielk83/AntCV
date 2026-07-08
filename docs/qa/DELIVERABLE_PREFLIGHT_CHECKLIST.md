@@ -17,6 +17,15 @@ memories `generate-deliverables-via-worker`, `header-banner-design-rules`,
       references-placement) — so those rules must be applied by hand OR the
       deliverable must be generated through the full app pipeline.
 
+## 0b. JD-DOMAIN RELEVANCE RECALL (row 54)
+- [ ] **Recall kernel items that fit the EMPLOYER'S DOMAIN**, not just the literal JD.
+      E.g. Trackman is a **sports** company → the **Copenhagen Wolves rugby
+      volunteering** is a real fit signal and should be ELEVATED to a CV role
+      (or at least mentioned in the CL), not buried in a sidebar interests line.
+      Also: military comms for public-sector/comms roles, inclusive-sport for
+      values-driven employers. Don't just narrow the JD set — pull the relevant
+      background forward.
+
 ## 1. MANDATORY sections (never drop)
 - [ ] **ACCESSIBILITY** section present (hearing-impaired, not limiting) — Gabriel-mandatory.
 - [ ] **INTERESTS/SPORT** includes the **cats** item and the witty reveal

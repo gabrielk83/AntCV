@@ -13007,6 +13007,7 @@
     sections: r,
     sectionStatus: a,
     language: i,
+    jobLabel: __jobLbl,
   }) {
     const [l, s] = React.useState(0),
       [c, d] = React.useState(!1),
@@ -13387,6 +13388,26 @@
           },
           "Generating…",
         ),
+        // GEN-JOB-LABEL-001 (owner 2026-07-08): show WHICH job is generating during the long
+        // run — sourced from the JD's own source name (reliable for the current JD; meta.company
+        // can still be the prior run's during a fresh gen).
+        __jobLbl &&
+          React.createElement(
+            "div",
+            {
+              style: {
+                fontSize: 13,
+                color: t,
+                fontWeight: 600,
+                margin: "0 auto 8px",
+                maxWidth: 460,
+                textAlign: "center",
+                lineHeight: 1.3,
+                wordBreak: "break-word",
+              },
+            },
+            "🎯 " + __jobLbl,
+          ),
         React.createElement(
           "div",
           {
@@ -42878,6 +42899,7 @@
           sections: ro,
           sectionStatus: mo,
           language: je,
+          jobLabel: (Bt && Bt.name) || (zt && zt.fileName) || "",
           onCancel: () => {
             (Do(!1),
               uo(""),

@@ -310,7 +310,7 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
             </table>
           )) : (
             <div style={{ padding: 14, display: 'grid', gap: 14 }}>
-              {top5.map((r) => <FocusCard key={r[11]} row={r} doc={doc} cluster={cluster} busy={busyKey === r[11]}
+              {top5.map((r) => <FocusCard key={r[11]} row={r} doc={doc} cluster={cluster} mobile={isMobile} busy={busyKey === r[11]}
                 onPrepare={() => void prepareAndOpen(r)} onOpen={() => void openSaved(r)} onDrop={() => void dropFromTop5(r)} onSaveSupport={saveSupport} />)}
               {top5.length === 0 && <div>No Top-5 roles yet.</div>}
             </div>
@@ -380,8 +380,8 @@ function buildSupport(p: ReturnType<typeof parseSupport>): string {
   return out.join('\n');
 }
 
-function FocusCard({ row, doc, cluster, busy, onPrepare, onOpen, onDrop, onSaveSupport }: {
-  row: Row; doc: TrackerDoc | null; cluster: { qual: string }[]; busy: boolean;
+function FocusCard({ row, doc, cluster, mobile, busy, onPrepare, onOpen, onDrop, onSaveSupport }: {
+  row: Row; doc: TrackerDoc | null; cluster: { qual: string }[]; mobile: boolean; busy: boolean;
   onPrepare: () => void; onOpen: () => void; onDrop: () => void; onSaveSupport: (uk: string, text: string) => Promise<boolean>;
 }): JSX.Element {
   const uk = row[11]; const t = tierOf(row[12]);
@@ -389,98 +389,105 @@ function FocusCard({ row, doc, cluster, busy, onPrepare, onOpen, onDrop, onSaveS
   const [p, setP] = useState(() => parseSupport(rawSupport));
   const [dirty, setDirty] = useState(false);
   const [savingSup, setSavingSup] = useState(false);
-  const [hover, setHover] = useState<string | null>(null);
-  const [aiKey, setAiKey] = useState<string | null>(null);
-  // Re-sync when the underlying doc changes and we have no local edits.
+  const [cardHover, setCardHover] = useState(false);
+  const [ai, setAi] = useState(false);
   useEffect(() => { if (!dirty) setP(parseSupport(rawSupport)); }, [rawSupport, dirty]);
 
   const hasJd = ((doc?.jd || {})[uk] || '').length > 200;
   const saved = doc?.artifacts?.[uk]?.application_id;
   const url = doc?.urls?.[uk];
   const pct = fitPercent(row[12], rawSupport + ' ' + ((doc?.jd || {})[uk] || ''), cluster);
+  const fs = (d: number, m: number) => (mobile ? m : d); // font-size: bigger on mobile
 
   function editItem(si: number, ii: number, field: 'need' | 'bring' | 'insight', v: string): void {
     setP((prev) => { const c = { ...prev, sections: prev.sections.map((s) => ({ ...s, items: s.items.slice() })) }; c.sections[si].items[ii] = { ...c.sections[si].items[ii], [field]: v }; return c; });
     setDirty(true);
   }
   async function saveIntel(): Promise<void> { setSavingSup(true); try { if (await onSaveSupport(uk, buildSupport(p))) setDirty(false); } finally { setSavingSup(false); } }
-  async function refine(si: number, ii: number): Promise<void> {
-    const it = p.sections[si].items[ii]; const key = si + ':' + ii; setAiKey(key);
+  // ONE Ask-AI: refine EVERY "I bring" line in a single call.
+  async function refineAll(): Promise<void> {
+    const flat: { si: number; ii: number; need: string; bring: string }[] = [];
+    p.sections.forEach((s, si) => s.items.forEach((it, ii) => { if (it.need) flat.push({ si, ii, need: it.need, bring: it.bring }); }));
+    if (!flat.length) return;
+    setAi(true);
     try {
       const jd = (doc?.jd || {})[uk] || '';
-      const sys = 'You refine ONE "What I bring" bullet for a job application. Return ONLY the improved bullet — one concrete, specific sentence that answers the employer need using the candidate\'s angle. Fix spelling and grammar. No quotes, no preamble, no bullet marker.';
-      const user = 'Role: ' + row[1] + ' — ' + row[2] + '\nEmployer NEED: ' + it.need + '\nCurrent "I bring": ' + (it.bring || '(empty)') + (jd ? '\nJD excerpt:\n' + jd.slice(0, 1400) : '');
-      const out = await askAI(user, sys, 200);
-      if (out) editItem(si, ii, 'bring', out.replace(/^["'\s]+|["'\s]+$/g, ''));
+      const sys = 'You refine a candidate\'s "What I bring" bullets for a job application. For EACH numbered need, return an improved one-sentence bullet that answers the need using the candidate\'s angle — concrete, specific, correct spelling and grammar, no fluff. Return ONLY a numbered list using the SAME numbers, one bullet per line, nothing else.';
+      const list = flat.map((f, i) => (i + 1) + '. NEED: ' + f.need + '  CURRENT: ' + (f.bring || '(none)')).join('\n');
+      const user = 'Role: ' + row[1] + ' — ' + row[2] + (jd ? '\nJD excerpt:\n' + jd.slice(0, 1200) : '') + '\n\nImprove each "I bring":\n' + list;
+      const out = await askAI(user, sys, 700);
+      const map: Record<number, string> = {};
+      out.split('\n').forEach((line) => { const m = line.match(/^\s*(\d+)[.)]\s*(.+)/); if (m) map[parseInt(m[1], 10)] = m[2].trim().replace(/^["']|["']$/g, ''); });
+      setP((prev) => { const c = { ...prev, sections: prev.sections.map((s) => ({ ...s, items: s.items.slice() })) };
+        flat.forEach((f, i) => { const txt = map[i + 1]; if (txt) c.sections[f.si].items[f.ii] = { ...c.sections[f.si].items[f.ii], bring: txt }; });
+        return c; });
+      setDirty(true);
     } catch (e) { alert('Ask AI failed: ' + String((e as Error).message || e)); }
-    finally { setAiKey(null); }
+    finally { setAi(false); }
   }
 
   const pctColor = pct >= 80 ? '#2e7d32' : pct >= 60 ? '#B58A00' : '#C4711F';
+  const showAi = (cardHover || mobile) && p.sections.some((s) => s.items.some((it) => it.need));
   return (
-    <div style={{ border: '1px solid #d5deec', borderRadius: 10, overflow: 'hidden', background: '#fff', boxShadow: '0 1px 4px rgba(20,30,60,0.06)' }}>
-      <div style={{ background: t.accent, color: '#fff', padding: '9px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
-        <span style={{ fontSize: 20, fontWeight: 800 }}>★{row[0]}</span>
+    <div onMouseEnter={() => setCardHover(true)} onMouseLeave={() => setCardHover(false)}
+      style={{ border: '1px solid #d5deec', borderRadius: 10, overflow: 'hidden', background: '#fff', boxShadow: '0 1px 4px rgba(20,30,60,0.06)' }}>
+      <div style={{ background: t.accent, color: '#fff', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span style={{ fontSize: fs(20, 24), fontWeight: 800 }}>★{row[0]}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 800, fontSize: 15, lineHeight: 1.1 }}>{row[1]}</div>
-          <div style={{ fontSize: 12, opacity: 0.92 }}>{row[2]}</div>
+          <div style={{ fontWeight: 800, fontSize: fs(15, 18), lineHeight: 1.15 }}>{row[1]}</div>
+          <div style={{ fontSize: fs(12, 14), opacity: 0.92 }}>{row[2]}</div>
         </div>
-        {/* fit % */}
-        <span title="Estimated fit (tier + cluster demand)" style={{ background: '#fff', color: pctColor, borderRadius: 14, padding: '3px 10px', fontSize: 13, fontWeight: 800 }}>{pct}%</span>
-        <span style={{ background: '#ffffff2e', borderRadius: 5, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>{t.label}</span>
-        <span title={hasJd ? 'JD stored' : 'JD missing'} style={{ fontSize: 15 }}>{hasJd ? '✅' : '⚠️'}</span>
+        <span title="Estimated fit (tier + cluster demand)" style={{ background: '#fff', color: pctColor, borderRadius: 14, padding: '3px 10px', fontSize: fs(13, 16), fontWeight: 800 }}>{pct}%</span>
+        <span style={{ background: '#ffffff2e', borderRadius: 5, padding: '2px 8px', fontSize: fs(11, 13), fontWeight: 700 }}>{t.label}</span>
+        <span title={hasJd ? 'JD stored' : 'JD missing'} style={{ fontSize: fs(15, 18) }}>{hasJd ? '✅' : '⚠️'}</span>
       </div>
-      {/* fit bar */}
       <div style={{ height: 5, background: '#eef1f6' }}><div style={{ height: '100%', width: pct + '%', background: pctColor }} /></div>
-      <div style={{ padding: '10px 14px' }}>
-        <div style={{ fontSize: 11, color: '#556', marginBottom: 8 }}>
+      <div style={{ padding: '11px 14px' }}>
+        <div style={{ fontSize: fs(11, 13), color: '#556', marginBottom: 8 }}>
           📍 {row[3]}{row[4] ? ' · ' + row[4] : ''}{url ? <> · <a href={url} target="_blank" rel="noreferrer" style={{ color: t.accent, fontWeight: 700 }}>posting ↗</a></> : null}
         </div>
-        {p.fit && <Line icon="🎯" label="Fit" text={p.fit} color="#2a3244" />}
-        {p.flag && <Line icon="⚠️" label="Flag" text={p.flag} color="#8a4b12" />}
+        {p.fit && <Line icon="🎯" label="Fit" text={p.fit} color="#2a3244" size={fs(12.5, 14.5)} />}
+        {p.flag && <Line icon="⚠️" label="Flag" text={p.flag} color="#8a4b12" size={fs(12.5, 14.5)} />}
         {p.sections.map((s, si) => (
-          <div key={si} style={{ marginTop: 10 }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: t.accent, letterSpacing: 0.3, textTransform: 'uppercase', marginBottom: 5 }}>{s.title}</div>
-            {s.items.map((it, ii) => { const key = si + ':' + ii; return (
-              <div key={ii} onMouseEnter={() => setHover(key)} onMouseLeave={() => setHover((h) => (h === key ? null : h))}
-                style={{ borderLeft: '3px solid ' + t.tint, padding: '4px 0 6px 9px', marginBottom: 8 }}>
-                <div style={{ ...clamp2, fontSize: 12.5, fontWeight: 700, color: '#1e2636' }} title={it.need}>▸ {it.need}</div>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginTop: 3 }}>
-                  <b style={{ fontSize: 12, color: '#28632a', whiteSpace: 'nowrap', paddingTop: 4 }}>🟢</b>
-                  <textarea value={it.bring} onChange={(e) => editItem(si, ii, 'bring', e.target.value)} rows={2}
+          <div key={si} style={{ marginTop: 11 }}>
+            <div style={{ fontSize: fs(11, 13), fontWeight: 800, color: t.accent, letterSpacing: 0.3, textTransform: 'uppercase', marginBottom: 5 }}>{s.title}</div>
+            {s.items.map((it, ii) => (
+              <div key={ii} style={{ borderLeft: '3px solid ' + t.tint, padding: '4px 0 7px 10px', marginBottom: 9 }}>
+                <div style={{ ...clamp2, fontSize: fs(12.5, 14.5), fontWeight: 700, color: '#1e2636', lineHeight: 1.35 }} title={it.need}>▸ {it.need}</div>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginTop: 4 }}>
+                  <b style={{ fontSize: fs(12, 15), color: '#28632a', paddingTop: 3 }}>🟢</b>
+                  <textarea value={it.bring} onChange={(e) => editItem(si, ii, 'bring', e.target.value)} rows={mobile ? 3 : 2}
                     placeholder="what you bring — edit freely"
-                    style={{ ...ta, fontSize: 12, background: '#f6fbf6', border: '1px solid #cfe4cf', color: '#1d3a1e' }} />
-                  <button onClick={() => void refine(si, ii)} disabled={aiKey === key}
-                    title="Ask AI to fine-tune this line"
-                    style={{ ...btn(t.accent), padding: '4px 8px', fontSize: 11, whiteSpace: 'nowrap', opacity: hover === key || aiKey === key ? 1 : 0.3 }}>
-                    {aiKey === key ? '…' : '✨ AI'}</button>
+                    style={{ ...ta, fontSize: fs(12.5, 14.5), lineHeight: 1.4, background: '#f6fbf6', border: '1px solid #cfe4cf', color: '#1d3a1e' }} />
                 </div>
-                {it.insight && <div style={{ ...clamp2, fontSize: 12, color: '#5a4b8a', marginTop: 3 }} title={it.insight}>💡 {it.insight}</div>}
+                {it.insight && <div style={{ ...clamp2, fontSize: fs(12, 13.5), color: '#5a4b8a', marginTop: 4, lineHeight: 1.35 }} title={it.insight}>💡 {it.insight}</div>}
               </div>
-            ); })}
+            ))}
           </div>
         ))}
-        {!p.sections.length && !p.fit && <div style={{ fontSize: 12, color: '#889' }}>(no role intel yet — add the JD, then Prepare)</div>}
+        {!p.sections.length && !p.fit && <div style={{ fontSize: fs(12, 14), color: '#889' }}>(no role intel yet — add the JD, then Prepare)</div>}
         <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'center' }}>
           {saved
-            ? <button onClick={onOpen} disabled={busy} style={btn('#2e7d32')}>{busy ? '…' : '↗ Open in preview'}</button>
-            : <button onClick={onPrepare} disabled={busy} style={btn(t.accent)}>{busy ? 'Preparing…' : '✨ Prepare & open in AntCV'}</button>}
-          <button onClick={onDrop} disabled={busy} style={btn('#f4e6e2', '#7a2618')}>✕ Drop from Top 5</button>
-          {dirty && <button onClick={() => void saveIntel()} disabled={savingSup} style={btn('#2e7d32')}>{savingSup ? 'Saving…' : '💾 Save intel edits'}</button>}
+            ? <button onClick={onOpen} disabled={busy} style={btn('#2e7d32', '#fff', fs(12, 14))}>{busy ? '…' : '↗ Open in preview'}</button>
+            : <button onClick={onPrepare} disabled={busy} style={btn(t.accent, '#fff', fs(12, 14))}>{busy ? 'Preparing…' : '✨ Prepare & open in AntCV'}</button>}
+          <button onClick={onDrop} disabled={busy} style={btn('#f4e6e2', '#7a2618', fs(12, 14))}>✕ Drop</button>
+          {showAi && <button onClick={() => void refineAll()} disabled={ai} title="Ask AI to polish all 'I bring' lines"
+            style={btn(t.accent, '#fff', fs(12, 14))}>{ai ? 'Polishing…' : '✨ Ask AI'}</button>}
+          {dirty && <button onClick={() => void saveIntel()} disabled={savingSup} style={btn('#2e7d32', '#fff', fs(12, 14))}>{savingSup ? 'Saving…' : '💾 Save edits'}</button>}
         </div>
       </div>
     </div>
   );
 }
 
-function Line({ icon, label, text, color }: { icon: string; label: string; text: string; color: string }): JSX.Element {
-  return <div title={text} style={{ ...clamp2, fontSize: 12.5, color, margin: '3px 0', lineHeight: 1.4 }}><span style={{ marginRight: 5 }}>{icon}</span><b>{label}:</b> {text}</div>;
+function Line({ icon, label, text, color, size }: { icon: string; label: string; text: string; color: string; size: number }): JSX.Element {
+  return <div title={text} style={{ ...clamp2, fontSize: size, color, margin: '3px 0', lineHeight: 1.4 }}><span style={{ marginRight: 5 }}>{icon}</span><b>{label}:</b> {text}</div>;
 }
 
 const clamp2: React.CSSProperties = { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' };
 
 const ta: React.CSSProperties = { width: '100%', boxSizing: 'border-box', fontSize: 12, padding: '4px 6px', border: '1px solid #cfd8e6', borderRadius: 4, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.35, minHeight: 34 };
 const mLbl: React.CSSProperties = { fontSize: 11, fontWeight: 700, color: '#334', margin: '7px 0 2px' };
-function btn(bg: string, color = '#fff'): React.CSSProperties {
-  return { background: bg, color, border: 'none', padding: '6px 12px', borderRadius: 6, fontSize: 12, cursor: 'pointer', fontWeight: 600 };
+function btn(bg: string, color = '#fff', size = 12): React.CSSProperties {
+  return { background: bg, color, border: 'none', padding: '6px 12px', borderRadius: 6, fontSize: size, cursor: 'pointer', fontWeight: 600 };
 }

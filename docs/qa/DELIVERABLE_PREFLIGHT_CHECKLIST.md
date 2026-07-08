@@ -72,12 +72,34 @@ memories `generate-deliverables-via-worker`, `header-banner-design-rules`,
 ## 3. Cover letter
 - [ ] **Application line** in the header (NOT the specialization line; CL subtitle = application).
       NB generator quirk: CL renders subtitle twice — fix the generator, don't blank the line.
-- [ ] **Slogan** present (CL slogan element).
-- [ ] **Signature** image present above the typed name.
+- [ ] **Slogan is PERSONAL + brand/fit-derived** (owner 2026-07-08): not a generic product tagline.
+      It must reflect a real read of the company brand and the candidate's fit. Place it EITHER
+      on top (visible slogan line) OR embedded as the opening sentence's LEAD-IN (the preferred
+      form the owner endorsed) — e.g. Trackman: "The work I care about most is making the invisible
+      manufacturable:" leads the opening. One or the other, not a weak top slogan competing with a
+      strong lead-in. (Keep `meta.slogan` non-empty regardless, to avoid the subtitle double-render.)
+- [ ] **Signature: CENTERED by default** (owner 2026-07-08) unless AntCV/owner orders otherwise —
+      `signature_align:'center'` (the worker already defaults to center; never override to 'left'
+      without instruction). **Recolor the ink to the brand / visual style** — do NOT ship the raw
+      blue pen. Key out the white background to transparent and remap ink to the brand dark tone
+      (Trackman: blue → dark gray `#333333` = header charcoal). Method: Pillow, `alpha = (255-luma)`,
+      `RGB = brand-dark`. Signature sits above/below the typed name, centered.
+- [ ] **Closure = homework/fit MIXED with a personal, job-adapted signal + an invitation**
+      (owner 2026-07-08 — "make this pattern stay, adapted to the job and candidate's signals;
+      mix and make strong, not only here but AntCV in general"). Show you did the research and read
+      a strong fit ("From what I have learned about <Company>, I understand the priorities behind this
+      role … and see a strong match with my experience and the way I work"), fold in a REAL personal
+      signal adapted to the employer (Trackman is sports → the inclusive-rugby-club operations line),
+      and CLOSE on a concrete invitation ("learn more about your needs, introduce myself further, and
+      share a few early ideas on where I could contribute"). Don't ship only the homework half or only
+      the signal half — blend both.
 - [ ] Lead-ins are **orange rich_block leads** (`b:'Goal'`), NOT section headings — incl. **Goal**.
 - [ ] Prose **compressed to the owner's targets** (measured char deltas — e.g. the LiDAR
       contribute bullet −12, the Goal line −8); one-line results; no orphans.
-- [ ] Banned em/en dashes → hyphen only; banned-words clean.
+- [ ] Banned em/en dashes → hyphen only; banned-words clean. **Incl. the worker's built-in
+      AI-assisted notice** (fixed docx-worker 1.14.134 — the "AI-assisted — author…" footer used an
+      em dash on EVERY doc; also the value+citation join and doc-title metadata). Measure the rendered
+      PDF for any `—`/`–`, footer included, not just the body you authored.
 
 ## 4. Verify (measure, don't guess)
 - [ ] Word-COM render → **rm the PDF first** (stale-cache trap) → PyMuPDF measure:

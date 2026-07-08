@@ -97,7 +97,13 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
     setDocState({ ...doc, rows: (doc.rows || []).map((r) => { if (r[11] !== uk) return r; const c = r.slice() as Row; c[idx] = value; return c; }) });
     setDirty(true);
   }
-  const genOf = (uk: string) => (doc?.gen || {})[uk] || 'quick';
+  // Generation tier: explicit choice wins; otherwise Top-5 default to High
+  // quality (they're the priority applications), the rest to Quick.
+  const genOf = (uk: string) => {
+    const g = (doc?.gen || {})[uk]; if (g) return g;
+    const r = (doc?.rows || []).find((x) => x[11] === uk);
+    return r && (Number(r[0]) || 99) <= 5 ? 'high' : 'quick';
+  };
   function setGen(uk: string, q: string): void { if (!doc) return; setDocState({ ...doc, gen: { ...(doc.gen || {}), [uk]: q } }); setDirty(true); }
   const hasArtifact = (uk: string) => !!doc?.artifacts?.[uk]?.application_id;
   // Nightly queue (⏰): on by default until the row has been generated; explicit toggle wins.
@@ -311,9 +317,9 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
             <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 900, tableLayout: 'fixed' }}>
               <colgroup>
                 <col style={{ width: 46 }} /><col style={{ width: 58 }} /><col style={{ width: 150 }} /><col style={{ width: 210 }} />
-                <col style={{ width: 120 }} /><col style={{ width: 34 }} /><col style={{ width: 130 }} /><col style={{ width: 175 }} /><col style={{ width: 175 }} /><col style={{ width: 62 }} />
+                <col style={{ width: 120 }} /><col style={{ width: 34 }} /><col style={{ width: 130 }} /><col style={{ width: 175 }} /><col style={{ width: 175 }} /><col style={{ width: 118 }} />
               </colgroup>
-              <thead><tr>{['#', 'Tier', 'Company', 'Role', 'Location', 'JD', 'Tracked', 'Next action', 'Flag / notes', 'Link'].map((h) => <th key={h} style={th}>{h}</th>)}</tr></thead>
+              <thead><tr>{['#', 'Tier', 'Company', 'Role', 'Location', 'JD', 'Tracked', 'Next action', 'Flag / notes', 'Generate'].map((h) => <th key={h} style={th}>{h}</th>)}</tr></thead>
               <tbody>
                 {rows.map((r) => {
                   const uk = r[11]; const t = tierOf(r[12]); const hasJd = ((doc?.jd || {})[uk] || '').length > 200; const star = isTop5(r);
@@ -328,13 +334,17 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
                       <td style={cell}><select value={r[8]} onChange={(e) => editRow(uk, 8, e.target.value)} style={{ fontSize: 12, width: '100%' }}>{TRACKED_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}{!TRACKED_STATUSES.includes(r[8]) && r[8] ? <option value={r[8]}>{r[8]}</option> : null}</select></td>
                       <td style={cell}><textarea value={r[9]} onChange={(e) => editRow(uk, 9, e.target.value)} onFocus={() => setExpandRow(uk)} rows={expandRow === uk ? 5 : 2} style={ta} /></td>
                       <td style={cell}><textarea value={r[10]} onChange={(e) => editRow(uk, 10, e.target.value)} onFocus={() => setExpandRow(uk)} rows={expandRow === uk ? 5 : 2} style={ta} /></td>
-                      <td style={{ ...cell, textAlign: 'center', whiteSpace: 'nowrap' }}>
-                        {doc?.urls?.[uk] ? <a href={doc.urls[uk]} target="_blank" rel="noreferrer" style={{ color: t.accent, fontWeight: 700 }}>↗</a> : ''}
+                      <td style={{ ...cell, whiteSpace: 'nowrap' }}>
+                        <button onClick={() => setGen(uk, genOf(uk) === 'high' ? 'quick' : 'high')} title="Generation quality — tap to switch"
+                          style={{ background: genOf(uk) === 'high' ? '#fff3cf' : '#eef1f6', color: genOf(uk) === 'high' ? '#8a6d00' : '#556', border: '1px solid #cfd8e6', borderRadius: 5, cursor: 'pointer', fontSize: 11, fontWeight: 700, padding: '2px 4px', display: 'block', width: '100%', marginBottom: 3 }}>{genOf(uk) === 'high' ? '★ High' : '⚡ Quick'}</button>
                         <button onClick={() => (hasArtifact(uk) ? void openSaved(r) : void prepareAndOpen(r))} disabled={busyKey === uk}
-                          title={hasArtifact(uk) ? 'Reopen this application in AntCV' : 'Open in AntCV — loads the JD, then press Generate there'}
-                          style={{ ...btn(hasArtifact(uk) ? '#2e7d32' : '#2E5DA8'), padding: '2px 6px', fontSize: 12, display: 'block', margin: '4px auto 2px' }}>{busyKey === uk ? '…' : (hasArtifact(uk) ? '↗' : '✨')}</button>
-                        <button onClick={() => toggleNightly(uk)} title={nightlyOn(uk) ? "In tonight's generation queue — tap to remove" : 'Tap to queue for tonight'}
-                          style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 15, opacity: nightlyOn(uk) ? 1 : 0.28, display: 'block', margin: '0 auto' }}>⏰</button>
+                          title={hasArtifact(uk) ? 'Reopen in AntCV' : 'Open in AntCV — loads the JD, then press Generate there'}
+                          style={{ ...btn(hasArtifact(uk) ? '#2e7d32' : '#2E5DA8'), padding: '3px 4px', fontSize: 11, display: 'block', width: '100%', marginBottom: 3 }}>{busyKey === uk ? '…' : (hasArtifact(uk) ? '↗ Open' : '✨ Open')}</button>
+                        <div style={{ display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center' }}>
+                          <button onClick={() => toggleNightly(uk)} title={nightlyOn(uk) ? "In tonight's queue — tap to remove" : 'Queue for tonight'}
+                            style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 15, opacity: nightlyOn(uk) ? 1 : 0.28, padding: 0 }}>⏰</button>
+                          {doc?.urls?.[uk] ? <a href={doc.urls[uk]} target="_blank" rel="noreferrer" title="Open posting" style={{ color: t.accent, fontWeight: 700, fontSize: 14 }}>↗</a> : null}
+                        </div>
                       </td>
                     </tr>
                   );

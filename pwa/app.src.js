@@ -15153,7 +15153,11 @@
                 // pushes the stale `yo.supporting_context` into the next generation as "PRIOR RUN
                 // CONTEXT (carry forward)", leaking the old target company into the new letter
                 // (fetched NCC -> letter said "Sigma Connectivity"). Matches the NEW-1 load-clear.
+                // Also clear the applicationQuestions store — a prior JD's questions (NIL's cleanroom
+                // Q&A) otherwise leak a whole "Responses to application questions" page into a JD
+                // (Trackman) that has none.
                 bo(null),
+                (function(){try{localStorage.removeItem("antcv:applicationQuestions");localStorage.removeItem("antcv:applicationQuestionsJd")}catch(e){}})(),
                 qt(""),
                 Zt({ busy: !1, error: null, hint: o.wall_hint || null }),
                 Gr &&
@@ -19061,8 +19065,9 @@
             } else ((n = await e.text()), (o = "plaintext"), (r = 1));
             Ft({ text: n, method: o, pages: r, fileName: e.name, warning: w });
             // JD-SWAP-STALE-RATIONALE-001: uploading a NEW JD file clears the prior run's analysis
-            // (yo) too, so a stale target company can't leak via CL-GHOST-COMPANY-001 (see url-fetch).
-            try { bo(null); } catch (e) {}
+            // (yo) AND the applicationQuestions store, so neither a stale company (CL-GHOST-COMPANY-001)
+            // nor a prior JD's Q&A page can leak into the new application (see url-fetch).
+            try { bo(null); localStorage.removeItem("antcv:applicationQuestions"); localStorage.removeItem("antcv:applicationQuestionsJd"); } catch (e) {}
           } catch (t) {
             (Ft({
               text: "",

@@ -43,3 +43,24 @@ verify first).
   → verify or leave open.
 - Owner priority order applies when picking fix candidates: CONTENT & EXPORT →
   SETTINGS → FEATURES.
+
+## Standing add-on 2026-07-08 — GENERATOR-BASELINE from the Trackman review (row 66)
+
+Owner reviewed the generated Trackman CV+CL and flagged a batch of generator
+baseline gaps (OPEN_REGISTER **row 66**). Every nightly reserves effort to feed
+these into the GENERATOR (they must happen automatically, not by hand — row 59A):
+
+- **AI-notice bottom-anchor** + **sidebar-fill-to-page-end** on every page.
+- **Orphan/enrich pass** (bidirectional line-fill; measure the render, not chars).
+- **Mandatory sections never dropped**: ACCESSIBILITY, INTERESTS with the cats
+  item + the witty reveal; sidebar list sections BULLETED; CORE STRENGTHS tabular.
+- **REFERENCES** at the main-column end; **STANDARDS** + imaging standards.
+- **Hyperlinks** for Scholar/LinkedIn; **light main-column tint** vs a dark sidebar.
+- **CL**: application line (not specialisation) rendered ONCE; slogan; signature;
+  Goal + others as orange rich_block LEAD-INS (not headings); compression targets.
+
+**Process rule (prevention):** ANY deliverable is generated from the authoritative
+master-profile kernel (NOT a re-typed export) and passes
+`docs/qa/DELIVERABLE_PREFLIGHT_CHECKLIST.md` before it is handed over. A raw
+docx-worker payload bypasses the app belts — so either generate through the full
+pipeline or apply the belts + checklist by hand.

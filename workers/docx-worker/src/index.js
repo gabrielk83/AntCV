@@ -23833,7 +23833,7 @@ function aiNoticeVmlRun(side, __idx) {
     'mso-position-vertical-relative:page;z-index:251658240;mso-wrap-style:square" filled="f" stroked="f">' +
     '<v:textbox inset="14pt,1pt,14pt,11pt"><w:txbxContent>' +
     '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="220" w:lineRule="auto"/><w:jc w:val="' + horiz + '"/></w:pPr>' +
-    '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:i/><w:color w:val="4D7976"/><w:sz w:val="13"/></w:rPr>' +
+    '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:i/><w:color w:val="9A9A9A"/><w:sz w:val="13"/></w:rPr>' +
     '<w:t xml:space="preserve">AI-assisted - author retains responsibility for content.</w:t></w:r>' +
     '</w:p></w:txbxContent></v:textbox></v:rect></w:pict></w:r>';
 }
@@ -25654,9 +25654,18 @@ function buildHeaderCell(ctx, bridgePhoto) {
   const __cgPx = Number(style && style.candidateGap);
   const __cgDelta = Number.isFinite(__cgPx) && __cgPx >= 0 && __cgPx <= 60 ? Math.round((__cgPx - 3) * 15) : 0;
   const __cgAfter = (base) => Math.max(0, base + __cgDelta);
+  // HEADER-CONTACT-AXIS-001 (owner 2026-07-08: "name and specification need to be centred TO the
+  // contact, not to the document centre - why did you not universalise that"): with a bridge photo
+  // the contact line is indented left:2592 to clear the medallion, so it centres on a right-shifted
+  // axis; the name/subtitle had NO indent and centred on the PAGE centre -> misaligned. Give the
+  // name + subtitle the SAME indent so all three share the contact's axis. Universal (every
+  // bridge-photo CV). CL (no bridge) is unaffected.
+  const __bridgeHdr = bridgePhoto === true && normalisePhotoPosition(pi.photoPosition) === "band-overlap" && !!pi.photo_b64 && ctx.doc !== "cl";
+  const __hdrIndent = __bridgeHdr ? { indent: { left: 2592, right: -216 } } : {};
   if (pi.name) {
     out.push(new Paragraph({
       alignment: alignType(headerAlign.name),
+      ...__hdrIndent,
       // HEADER-ITEM-RULE-001: optional rule BELOW the name (default OFF).
       ...((() => {
         try {
@@ -25688,6 +25697,7 @@ function buildHeaderCell(ctx, bridgePhoto) {
   if (subtitle) {
     out.push(new Paragraph({
       alignment: alignType(headerAlign.specialisation),
+      ...__hdrIndent,
       spacing: { before: 0, after: __cgAfter(60) },
       shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
       children: [
@@ -28216,7 +28226,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.136-ainotice-anchor-heading-gap";
+var VERSION = "1.14.137-header-contact-axis";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

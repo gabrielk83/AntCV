@@ -90,11 +90,22 @@ memories `generate-deliverables-via-worker`, `header-banner-design-rules`,
       the sidebar's physical side. VERIFY "author retains" sits at ~y 806-824 of the last page.
 - [ ] **Sidebar fills to the page end** on **every** page (no dead space at the bottom).
 - [ ] **Columns bottom out together**; main column not far short of the sidebar.
-- [ ] **No orphans / short lines** — measure last-line fill ratio; ENRICH short lines and
-      TRIM runts (bidirectional, render-measured — line-distribution-guidelines). **The two-column
-      main body is ~76 chars/line at 10.5pt; RESULTS lines must be ONE line (≤ ~74 chars);**
-      reword any paragraph whose last line is a single word (measure every wrapped block, headings
-      and table cells excepted). This is the owner's repeated ask — implement it, don't ship runts.
+- [ ] **NO orphans — EVEN, FULL lines everywhere (owner's #1 repeated demand; MEASURE, don't eyeball).**
+      Method that works: render → `pg.get_text("words")`, group words into visual lines by y-band,
+      compute each line's fill = (rightmost word x1 − left margin) / column width. Justified text
+      fragments `get_text("dict")` lines — the WORDS method is reliable. A bullet's non-final lines
+      justify to fill=1.0; only the LAST line is short. Target: **every paragraph is either ONE full
+      line (~76 chars main / ~30 sidebar) OR TWO+ FULL lines whose last line fills ≥ ~0.65**. Fix each
+      offender by ENRICHING the short last line (add real content — the green marks) or COMPRESSING to
+      one line (the purple marks) — bidirectional, not all-one-way. RESULTS = one line. **2-full-line
+      bullets also FILL the page** (compress-everything-to-1-line under-fills page 2 → dead space).
+      Iterate build→measure until 0 runts <0.5. In the narrow sidebar avoid single-word last lines
+      (shorten labels: "(Toronto)" not "(Univ. of Toronto)").
+- [ ] **ACCESSIBILITY belongs on page 2, not page 1** (owner 2026-07-08) — order it at/near the END
+      of the sidebar so it flows off page 1.
+- [ ] **COMPETENCY table: BOTH the Focus labels AND the Strengths on ONE line each.** Widen the
+      Focus col (`tableRatio` ≈ 0.36 so "Requirements & governance" fits) AND trim the longest
+      Strengths cell so it still fits the narrower Strengths col — they compete; balance by measure.
 - [ ] List-shaped sidebar sections are **bulleted** (CORE STRENGTHS, SPORT & INTERESTS,
       PUBLICATIONS), not cramped paragraphs. CORE STRENGTHS: tabular OR justify the choice.
 - [ ] **COMPETENCY TABLE: narrow the Focus column (`tableRatio` ≈ 0.22) AND trim each Strengths

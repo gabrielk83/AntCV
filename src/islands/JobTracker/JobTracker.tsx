@@ -179,9 +179,14 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
     finally { setAdding(false); if (fileRef.current) fileRef.current.value = ''; }
   }
 
+  // Seed the JD into a saved AntCV application and open it in the editor. NOTE:
+  // this does NOT auto-generate — it hands off to the app with the JD loaded, and
+  // you press Generate there. (One-tap / batch generation is the nightly runner.)
   async function prepareAndOpen(row: Row): Promise<void> {
     if (!doc) return;
-    const uk = row[11]; setBusyKey(uk); setErr(null); setNote(null);
+    const uk = row[11]; const label = row[2] || row[1];
+    if (!window.confirm('Open "' + label + '" in AntCV?\n\nThe app reloads with this job\'s description loaded, ready for you to press Generate. (It does not generate here.)')) return;
+    setBusyKey(uk); setErr(null); setNote(null);
     try {
       let d = doc; let jd = (d.jd || {})[uk] || '';
       if ((!jd || jd.length < 200) && d.urls?.[uk]) {
@@ -196,19 +201,24 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
       if (!id) { setErr('Could not create the application.'); return; }
       const next: TrackerDoc = { ...d, artifacts: { ...(d.artifacts || {}), [uk]: { application_id: id, generated_at: Date.now() } } };
       await setActive(id);
+      try { localStorage.setItem('antcv:lastJdText', jd); } catch { /* */ }
       if (!(await persist(next, true))) return;
       onClose();
-      setTimeout(() => { try { location.reload(); } catch { /* */ } }, 60);
-    } catch (e) { setErr(String((e as Error).message || e)); }
+      setTimeout(() => { try { location.reload(); } catch { /* */ } }, 80);
+    } catch (e) { setErr('Could not open in AntCV: ' + String((e as Error).message || e)); }
     finally { setBusyKey(null); }
   }
 
   async function openSaved(row: Row): Promise<void> {
-    const id = doc?.artifacts?.[row[11]]?.application_id;
+    const uk = row[11]; const id = doc?.artifacts?.[uk]?.application_id;
     if (!id) return;
-    setBusyKey(row[11]);
-    try { await setActive(id); onClose(); setTimeout(() => { try { location.reload(); } catch { /* */ } }, 60); }
-    catch (e) { setErr(String((e as Error).message || e)); setBusyKey(null); }
+    if (!window.confirm('Reopen "' + (row[2] || row[1]) + '" in AntCV? (reloads the app with this job loaded)')) return;
+    setBusyKey(uk);
+    try {
+      await setActive(id);
+      try { const jd = (doc?.jd || {})[uk]; if (jd) localStorage.setItem('antcv:lastJdText', jd); } catch { /* */ }
+      onClose(); setTimeout(() => { try { location.reload(); } catch { /* */ } }, 80);
+    } catch (e) { setErr(String((e as Error).message || e)); setBusyKey(null); }
   }
 
   async function dropFromTop5(row: Row): Promise<void> {
@@ -288,7 +298,7 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
                       </select>
                       {hasArtifact(uk)
                         ? <button onClick={() => void openSaved(r)} disabled={busyKey === uk} style={btn('#2e7d32', '#fff', 13)}>{busyKey === uk ? '…' : '↗ Open'}</button>
-                        : <button onClick={() => void prepareAndOpen(r)} disabled={busyKey === uk} style={btn('#2E5DA8', '#fff', 13)}>{busyKey === uk ? '…' : '✨ Generate now'}</button>}
+                        : <button onClick={() => void prepareAndOpen(r)} disabled={busyKey === uk} style={btn('#2E5DA8', '#fff', 13)}>{busyKey === uk ? '…' : '✨ Open in AntCV'}</button>}
                       <button onClick={() => toggleNightly(uk)} title="Include in tonight's batch generation"
                         style={{ background: nightlyOn(uk) ? '#2E5DA8' : '#eef1f6', color: nightlyOn(uk) ? '#fff' : '#556', border: '1px solid #c3ccdb', borderRadius: 6, cursor: 'pointer', fontSize: 13, fontWeight: 600, padding: '5px 9px' }}>⏰ {nightlyOn(uk) ? 'Nightly ✓' : 'Nightly'}</button>
                     </div>
@@ -321,7 +331,7 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
                       <td style={{ ...cell, textAlign: 'center', whiteSpace: 'nowrap' }}>
                         {doc?.urls?.[uk] ? <a href={doc.urls[uk]} target="_blank" rel="noreferrer" style={{ color: t.accent, fontWeight: 700 }}>↗</a> : ''}
                         <button onClick={() => (hasArtifact(uk) ? void openSaved(r) : void prepareAndOpen(r))} disabled={busyKey === uk}
-                          title={hasArtifact(uk) ? 'Open the generated application' : 'Generate now — prepare & open in AntCV'}
+                          title={hasArtifact(uk) ? 'Reopen this application in AntCV' : 'Open in AntCV — loads the JD, then press Generate there'}
                           style={{ ...btn(hasArtifact(uk) ? '#2e7d32' : '#2E5DA8'), padding: '2px 6px', fontSize: 12, display: 'block', margin: '4px auto 2px' }}>{busyKey === uk ? '…' : (hasArtifact(uk) ? '↗' : '✨')}</button>
                         <button onClick={() => toggleNightly(uk)} title={nightlyOn(uk) ? "In tonight's generation queue — tap to remove" : 'Tap to queue for tonight'}
                           style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 15, opacity: nightlyOn(uk) ? 1 : 0.28, display: 'block', margin: '0 auto' }}>⏰</button>

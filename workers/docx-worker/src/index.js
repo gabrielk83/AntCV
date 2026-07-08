@@ -23822,7 +23822,11 @@ function aiNoticeVmlRun(side, __idx) {
   // frame dropped at the anchor's y (mid-page). Same class as the horizontal
   // AI-NOTICE-LEFT-CLOUDCONVERT-001 fix: use an EXPLICIT page-relative
   // margin-top offset instead of the keyword.
-  const __mt = 824; // A4 page height 842pt (PAGE_H 16838/20) - 18pt box height; literal because PAGE_H declares later in this bundle and test replicas eval this function standalone
+  // AI-NOTICE-ANCHOR-FIX-001 (owner 2026-07-08: "the watermark slided a bit out of page").
+  // A4 = 842pt; box 18pt. margin-top 824 put the box bottom EXACTLY on the page edge (824+18=842),
+  // so Word ExportAsFixedFormat clipped/dropped its last pixels — the notice looked "lost". Lift it
+  // to 806pt (box bottom 824pt -> ~18pt bottom clearance) so it lands fully visible at the sidebar bottom.
+  const __mt = 806;
   return '<w:r><w:rPr><w:noProof/></w:rPr><w:pict>' +
     '<v:rect id="AntCVAiNotice' + __idx + '" o:spid="_x0000_s' + (4097 + __idx) + '" style="position:absolute;margin-left:' + __ml + 'pt;margin-top:' + __mt + 'pt;width:320pt;height:18pt;' +
     'mso-position-horizontal-relative:page;' +
@@ -24649,27 +24653,16 @@ function buildAiDisclosureHangingTextbox(ctx, opts) {
   // side; CL: right) and is ENCODED in the sentinel so postProcessDocx needs no
   // extra plumbing. The carrier paragraph is placed at the end of the last page's
   // content by the callers, so the injected frame renders once, on the last page.
-  // AI-NOTICE-INLINE-001 (owner 2026-07-08: "AI notice is lost somewhere under page 2"):
-  // the page-anchored VML frame does NOT render in Word ExportAsFixedFormat for a
-  // two-column CV — its anchor sits in a height-stretched table cell that Word drops,
-  // so the notice vanished from the owner's Word view (it survived only in CloudConvert).
-  // Render it as a REAL VISIBLE italic paragraph at the END of the last page's column
-  // content instead: reliable in Word AND CloudConvert, and it sits at the column
-  // bottom (the owner's "sidebar bottom" when routed to the sidebar side). No sentinel
-  // token now, so postProcessDocx injects no VML frame (no duplicate).
+  // AI-NOTICE-ANCHOR-FIX-001 (owner 2026-07-08: the inline paragraph "regressed to the initial
+  // problem" — it sat immediately after the last sidebar line with dead space below. The REAL
+  // bug was that the page-anchored VML box slid a hair OFF the page bottom. So keep the
+  // page-anchored sentinel/VML approach and just lift the box up the page (see aiNoticeVmlRun
+  // __mt) so it lands fully visible at the sidebar bottom.) Zero-footprint sentinel paragraph
+  // whose run postProcessDocx swaps for the page-bottom VML frame.
   const side = opts && (opts.side === "left" ? "left" : opts.side === "center" ? "center" : "right");
-  const onDark = !!(opts && opts.onDark);
-  const align = side === "left" ? AlignmentType.LEFT : side === "center" ? AlignmentType.CENTER : AlignmentType.RIGHT;
   return new Paragraph({
-    alignment: align,
-    keepLines: true,
-    spacing: { before: 160, after: 0, line: 220, lineRule: "auto" },
-    children: [new TextRun({
-      text: "AI-assisted - author retains responsibility for content.",
-      italics: true, size: 13,
-      // teal on the light main column; a light grey that reads on the dark sidebar.
-      color: onDark ? "C9C9C9" : "4D7976"
-    })]
+    spacing: { before: 0, after: 0, line: 1, lineRule: "exact" },
+    children: [new TextRun({ text: "__ANTCV_AIWM_" + (side || "right") + "__", size: 2, color: "FFFFFF" })]
   });
 }
 __name(buildAiDisclosureHangingTextbox, "buildAiDisclosureHangingTextbox");
@@ -26595,7 +26588,12 @@ function headingParagraph(title2, ctx, isSidebar, noRule, sec) {
     // underline gap read much looser in the PDF than the preview. Tighten the
     // sidebar heading: smaller before-space and a smaller text-to-rule border
     // gap (space 2 vs 4 pt). Main headings keep the original spacing.
-    spacing: { before: __beforeDxa, after: isSidebar ? 30 : 40 },
+    // HEADING-TABLE-GAP-001 (owner 2026-07-08: "you still keep spacing of 2 after the headline
+    // and this fucks the distance when there is a table"): a `table` section renders its own
+    // header row right under the heading, so the heading's after-space (2pt) + the table pushed
+    // the grid too far down. Drop the after-space to 0 when the section is a table so the grid
+    // hugs the heading. Universal — every table-typed section, CV or CL.
+    spacing: { before: __beforeDxa, after: isSidebar ? 30 : (sec && sec.type === "table" ? 0 : 40) },
     // keepNext: heading must stay glued to whatever follows it, so a
     // heading never appears alone at the bottom of a page with its
     // content pushed to the next page. keepLines: never split the
@@ -28218,7 +28216,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.135-ainotice-inline-maintint";
+var VERSION = "1.14.136-ainotice-anchor-heading-gap";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

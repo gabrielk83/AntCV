@@ -2042,6 +2042,17 @@
   // stronger model for those tasks only (cost-quality: flash stays for the
   // cheap tasks). A user-set geminiModel still wins (handled inside re()).
   function __antcvBigGen(task) { return /^(parse_jd|generate_cv)$/.test(String(task || "")); }
+  // RATIONALE-OBJECT-RENDER-GUARD-001 (owner 2026-07-08, React #31 crash): the LLM sometimes
+  // returns a rationale string field (tailoring_decisions, cover_letter_strategy, fit_summary) as
+  // an OBJECT ({"Merged Innoviz roles":"…", …}) instead of a string; rendering it raw as a React
+  // child crashes the WHOLE analysis panel mid-generation (leaving sections looking templated).
+  // Coerce any object/array to a readable string so the render never throws.
+  function __ratStr(v) {
+    if (typeof v === "string") return v;
+    if (Array.isArray(v)) return v.map(__ratStr).filter(Boolean).join("; ");
+    if (v && typeof v === "object") return Object.entries(v).map(function (e) { return e[0] + ": " + __ratStr(e[1]); }).join("; ");
+    return v == null ? "" : String(v);
+  }
   function __antcvModelFor(prov, task) {
     try { if ("gemini" === prov && __antcvBigGen(task)) return "gemini-2.5-pro"; } catch (_) {}
     return void 0;
@@ -47994,7 +48005,7 @@
                                 padding: "8px 10px",
                               },
                             },
-                            yo.fit_summary,
+                            __ratStr(yo.fit_summary),
                           ),
                         ),
                         React.createElement(
@@ -48326,7 +48337,7 @@
                                   padding: "8px 10px",
                                 },
                               },
-                              yo.tailoring_decisions,
+                              __ratStr(yo.tailoring_decisions),
                             ),
                           ),
                         yo.cover_letter_strategy &&
@@ -48360,7 +48371,7 @@
                                   padding: "8px 10px",
                                 },
                               },
-                              yo.cover_letter_strategy,
+                              __ratStr(yo.cover_letter_strategy),
                             ),
                           ),
                         React.createElement(

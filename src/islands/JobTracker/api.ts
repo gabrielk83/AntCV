@@ -7,6 +7,16 @@
 
 const RELAY_FALLBACK = 'https://antcv-access-relay.karp-gabriel-a.workers.dev';
 
+// Signed-in check — the Job Tracker must never surface before login. Prefer the
+// app's own AntcvAuth.isSignedIn(); fall back to a present session token.
+export function isAuthed(): boolean {
+  try {
+    const a = (window as unknown as { AntcvAuth?: { isSignedIn?: () => boolean } }).AntcvAuth;
+    if (a && typeof a.isSignedIn === 'function') return !!a.isSignedIn();
+  } catch { /* */ }
+  try { return !!localStorage.getItem('antcv:auth:token'); } catch { return false; }
+}
+
 export function proxyBase(): string {
   try {
     const raw = localStorage.getItem('proxyUrl');

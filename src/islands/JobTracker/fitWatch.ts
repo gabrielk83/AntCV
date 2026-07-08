@@ -5,7 +5,7 @@
 // domain. If it's a strong fit and not already tracked, offer to add it to the
 // weekly list. Pure island behavior — no app.js edit.
 
-import { getDoc, putDoc, fetchClusterTop20, type Row, type TrackerDoc } from './api';
+import { getDoc, putDoc, fetchClusterTop20, isAuthed, type Row, type TrackerDoc } from './api';
 
 const NAVY = '#1F3864';
 const POLL_MS = 2500;
@@ -113,6 +113,7 @@ async function check(jd: string): Promise<void> {
 
 export function startFitWatch(): void {
   setInterval(() => {
+    if (!isAuthed()) return; // never before login
     let jd = '';
     try { jd = String(localStorage.getItem('antcv:lastJdText') || '').trim(); } catch { /* */ }
     if (!jd || jd === lastSeen || jd.length < 200 || STUB.test(jd)) { lastSeen = jd; return; }

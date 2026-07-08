@@ -14,6 +14,23 @@ function slug(s: string): string {
   return (s || 'row').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 24) || 'row';
 }
 
+// Map a role to one of the relay's 12 real categories. A NON-real value (e.g.
+// "targeted") is coerced to "unsolicited" server-side, which makes the app treat
+// the restored application as a no-JD unsolicited draft and BLANK the JD box on
+// open (the "nothing set" bug). Pick a real category so the JD survives.
+function categoryFor(role: string, company: string): string {
+  const s = (role + ' ' + company).toLowerCase();
+  if (/\b(product manager|product owner|\bpm\b|product\b)/.test(s)) return 'product_management';
+  if (/(program|project) manager|programme|delivery lead|steering/.test(s)) return 'program_management';
+  if (/software|developer|full-?stack|backend|frontend|\bit\b|data engineer/.test(s)) return 'engineering_software';
+  if (/data|analytics|analyst|scientist/.test(s)) return 'data_analytics';
+  if (/research|phd|postdoc/.test(s)) return 'research_phd';
+  if (/consultant|consulting|advisor/.test(s)) return 'consulting';
+  if (/quality|auditor|qms|operations|supply/.test(s)) return 'operations';
+  if (/director|head of|vp|chief|executive/.test(s)) return 'executive';
+  return 'engineering_hardware'; // EO / optics / photonics / hardware default
+}
+
 // Tier meta keyed by the row's band hex: label, accent, a MORE-notable row tint,
 // and a legend description.
 interface Tier { key: string; label: string; accent: string; tint: string; desc: string; }
@@ -165,7 +182,7 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
       if (!jd || jd.length < 200) { setErr('No JD text for this role — add the DIRECT posting URL or a JD file first.'); return; }
       const envText = (d.envelope || []).map((e) => e[0] + ': ' + e[1] + (e[2] ? ' — ' + e[2] : '')).join('\n');
       const supporting = 'TARGET-ROLE GUIDELINES (Dream Envelope):\n' + envText + '\n\nROLE INTEL:\n' + ((d.support || {})[uk] || '');
-      const id = await createApplication({ jd_text: jd, jd_company: row[1], jd_role: row[2], supporting_context: supporting });
+      const id = await createApplication({ jd_text: jd, jd_company: row[1], jd_role: row[2], category: categoryFor(row[2], row[1]), supporting_context: supporting });
       if (!id) { setErr('Could not create the application.'); return; }
       const next: TrackerDoc = { ...d, artifacts: { ...(d.artifacts || {}), [uk]: { application_id: id, generated_at: Date.now() } } };
       await setActive(id);
@@ -410,6 +427,8 @@ function FocusCard({ row, doc, cluster, busy, onPrepare, onOpen, onDrop, onSaveS
         <span style={{ background: '#ffffff2e', borderRadius: 5, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>{t.label}</span>
         <span title={hasJd ? 'JD stored' : 'JD missing'} style={{ fontSize: 15 }}>{hasJd ? '✅' : '⚠️'}</span>
       </div>
+      {/* fit bar */}
+      <div style={{ height: 5, background: '#eef1f6' }}><div style={{ height: '100%', width: pct + '%', background: pctColor }} /></div>
       <div style={{ padding: '10px 14px' }}>
         <div style={{ fontSize: 11, color: '#556', marginBottom: 8 }}>
           📍 {row[3]}{row[4] ? ' · ' + row[4] : ''}{url ? <> · <a href={url} target="_blank" rel="noreferrer" style={{ color: t.accent, fontWeight: 700 }}>posting ↗</a></> : null}
@@ -422,18 +441,18 @@ function FocusCard({ row, doc, cluster, busy, onPrepare, onOpen, onDrop, onSaveS
             {s.items.map((it, ii) => { const key = si + ':' + ii; return (
               <div key={ii} onMouseEnter={() => setHover(key)} onMouseLeave={() => setHover((h) => (h === key ? null : h))}
                 style={{ borderLeft: '3px solid ' + t.tint, padding: '4px 0 6px 9px', marginBottom: 8 }}>
-                <div style={{ fontSize: 12.5, fontWeight: 700, color: '#1e2636' }}>▸ {it.need}</div>
+                <div style={{ ...clamp2, fontSize: 12.5, fontWeight: 700, color: '#1e2636' }} title={it.need}>▸ {it.need}</div>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginTop: 3 }}>
-                  <b style={{ fontSize: 12, color: '#28632a', whiteSpace: 'nowrap', paddingTop: 4 }}>I bring:</b>
+                  <b style={{ fontSize: 12, color: '#28632a', whiteSpace: 'nowrap', paddingTop: 4 }}>🟢</b>
                   <textarea value={it.bring} onChange={(e) => editItem(si, ii, 'bring', e.target.value)} rows={2}
-                    placeholder="what you bring to this need — edit freely"
+                    placeholder="what you bring — edit freely"
                     style={{ ...ta, fontSize: 12, background: '#f6fbf6', border: '1px solid #cfe4cf', color: '#1d3a1e' }} />
                   <button onClick={() => void refine(si, ii)} disabled={aiKey === key}
                     title="Ask AI to fine-tune this line"
-                    style={{ ...btn(t.accent), padding: '4px 8px', fontSize: 11, whiteSpace: 'nowrap', opacity: hover === key || aiKey === key ? 1 : 0.28 }}>
+                    style={{ ...btn(t.accent), padding: '4px 8px', fontSize: 11, whiteSpace: 'nowrap', opacity: hover === key || aiKey === key ? 1 : 0.3 }}>
                     {aiKey === key ? '…' : '✨ AI'}</button>
                 </div>
-                {it.insight && <div style={{ fontSize: 12, color: '#5a4b8a', marginTop: 3 }}><b>Insight:</b> {it.insight}</div>}
+                {it.insight && <div style={{ ...clamp2, fontSize: 12, color: '#5a4b8a', marginTop: 3 }} title={it.insight}>💡 {it.insight}</div>}
               </div>
             ); })}
           </div>
@@ -452,8 +471,10 @@ function FocusCard({ row, doc, cluster, busy, onPrepare, onOpen, onDrop, onSaveS
 }
 
 function Line({ icon, label, text, color }: { icon: string; label: string; text: string; color: string }): JSX.Element {
-  return <div style={{ fontSize: 12.5, color, margin: '3px 0', lineHeight: 1.45 }}><span style={{ marginRight: 5 }}>{icon}</span><b>{label}:</b> {text}</div>;
+  return <div title={text} style={{ ...clamp2, fontSize: 12.5, color, margin: '3px 0', lineHeight: 1.4 }}><span style={{ marginRight: 5 }}>{icon}</span><b>{label}:</b> {text}</div>;
 }
+
+const clamp2: React.CSSProperties = { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' };
 
 const ta: React.CSSProperties = { width: '100%', boxSizing: 'border-box', fontSize: 12, padding: '4px 6px', border: '1px solid #cfd8e6', borderRadius: 4, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.35, minHeight: 34 };
 const mLbl: React.CSSProperties = { fontSize: 11, fontWeight: 700, color: '#334', margin: '7px 0 2px' };

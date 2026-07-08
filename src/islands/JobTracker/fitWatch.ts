@@ -66,7 +66,8 @@ async function addToWeekly(jd: string, hits: string[]): Promise<boolean> {
   const fit = 'Strong cluster fit — matches: ' + (hits.join(', ') || 'your cluster');
   const row: Row = [maxRank + 1, company, role, '', '', '', fit, 'OPEN', 'Not started', '', 'Added from upload (strong fit)', uk, 'E2EFDA'];
   d.rows = [...(d.rows || []), row];
-  d.support = { ...(d.support || {}), [uk]: 'ROLE: ' + company + ' — ' + role + '\nFIT: ' + fit + '\n\nJD:\n' + jd.slice(0, 6000) };
+  d.jd = { ...(d.jd || {}), [uk]: jd };
+  d.support = { ...(d.support || {}), [uk]: 'ROLE: ' + company + ' — ' + role + '\nFIT: ' + fit };
   const res = await putDoc(d, rev);
   return !!res.ok;
 }

@@ -29,6 +29,7 @@ export interface TrackerDoc {
   envelope?: string[][];
   rows: Row[];
   urls?: Record<string, string>;
+  jd?: Record<string, string>;          // raw JD text per row (carried into the list)
   support?: Record<string, string>;
   scores?: Record<string, { fit?: number; rank?: number; why?: string }>;
   artifacts?: Record<string, {
@@ -80,6 +81,27 @@ export async function fetchJdUrl(url: string): Promise<JdFetch> {
   return { ok: true, text: j.text, title: j.title, wall_hint: j.wall_hint };
 }
 
+// Seed a real, persisted AntCV application (D1 `application` row, deduped by
+// jd_hash) — the traceability path: it appears in Saved Applications and can be
+// re-opened in preview. Returns the application id (or null).
+export interface SeedPayload {
+  jd_text: string; jd_company: string; jd_role: string; jd_language?: string;
+  category?: string; supporting_context?: string;
+}
+export async function createApplication(p: SeedPayload): Promise<number | null> {
+  const res = await call('/api/applications', {
+    method: 'POST',
+    body: JSON.stringify({ jd_language: 'en', category: 'targeted', ...p }),
+  });
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((j && (j.error || j.message)) || ('HTTP ' + res.status));
+  return (j && j.application && j.application.id) || null;
+}
+
+export async function setActive(applicationId: number): Promise<void> {
+  await call('/api/active', { method: 'POST', body: JSON.stringify({ application_id: applicationId }) });
+}
+
 // Cluster top-20 most-demanded qualifications for the user's cluster.
 export interface ClusterTop { cluster_id: string | null; top20: { rank: number; qual: string; weight_sum: number }[]; }
 export async function fetchClusterTop20(): Promise<ClusterTop> {
@@ -94,6 +116,25 @@ export const TRACKED_STATUSES = [
   'Not started', 'Identified (posting saved)', 'CV/CL drafting',
   'CV/CL drafted', 'Submitted', 'Interview', 'Offer', 'Rejected', 'Archive / closed',
 ];
+
+// Drop-reason → Dream Envelope dimension. Keyword classifier (deterministic,
+// zero-cost, offline). The envelope dimension labels must match the doc's
+// envelope[i][0] cells. (Proxy low-tier LLM classification is a drop-in upgrade
+// behind the same signature — reason in, dimension out.)
+export const ENVELOPE_DIMS = [
+  'Salary', 'Title', 'Work tasks', 'Commuting', 'Work hours', 'Location / atmosphere', 'Values — what drains me',
+];
+export function classifyReason(reason: string): string {
+  const r = reason.toLowerCase();
+  const has = (...ws: string[]) => ws.some((w) => r.includes(w));
+  if (has('commut', 'travel', 'distance', 'far', 'relocat', 'jutland', 'fly', 'drive', 'km', 'hour away')) return 'Commuting';
+  if (has('salary', 'pay', 'comp', 'money', 'wage', 'dkk', 'below', 'low pay', 'underpaid')) return 'Salary';
+  if (has('title', 'senior', 'junior', 'level', 'overqualif', 'ic ', 'individual contributor', 'manager role')) return 'Title';
+  if (has('weekend', 'overtime', 'hours', 'on-call', 'shift', 'evening', 'night')) return 'Work hours';
+  if (has('remote', 'office', 'on-site', 'onsite', 'hybrid', 'noise', 'open-plan', 'location', 'atmosphere', 'acoustic')) return 'Location / atmosphere';
+  if (has('task', 'domain', 'tech', 'role type', 'not product', 'not pm', 'bench', 'boring', 'irrelevant', 'skill')) return 'Work tasks';
+  return 'Values — what drains me';
+}
 
 // Band colour → tier label (for the list UI).
 export function tierOf(band: string): string {

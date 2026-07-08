@@ -42,6 +42,8 @@ export interface TrackerDoc {
   jd?: Record<string, string>;          // raw JD text per row (carried into the list)
   gen?: Record<string, string>;         // per-row generation tier: 'high' | 'quick'
   queue?: Record<string, boolean>;      // per-row nightly-generation flag (⏰); default on until generated
+  brandfit?: Record<string, boolean>;   // per-row: brand-fit the CV/CL to the employer
+  signals?: Record<string, string>;     // per-row owner-added Additional Signals (on top of auto-collected)
   support?: Record<string, string>;
   scores?: Record<string, { fit?: number; rank?: number; why?: string }>;
   artifacts?: Record<string, {

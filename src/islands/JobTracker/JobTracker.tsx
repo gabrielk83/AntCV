@@ -105,6 +105,10 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
     return r && (Number(r[0]) || 99) <= 5 ? 'high' : 'quick';
   };
   function setGen(uk: string, q: string): void { if (!doc) return; setDocState({ ...doc, gen: { ...(doc.gen || {}), [uk]: q } }); setDirty(true); }
+  const brandOf = (uk: string) => !!(doc?.brandfit || {})[uk];
+  function toggleBrand(uk: string): void { if (!doc) return; setDocState({ ...doc, brandfit: { ...(doc.brandfit || {}), [uk]: !brandOf(uk) } }); setDirty(true); }
+  const signalsOf = (uk: string) => (doc?.signals || {})[uk] || '';
+  function setSignals(uk: string, v: string): void { if (!doc) return; setDocState({ ...doc, signals: { ...(doc.signals || {}), [uk]: v } }); setDirty(true); }
   const hasArtifact = (uk: string) => !!doc?.artifacts?.[uk]?.application_id;
   // Nightly queue (⏰): on by default until the row has been generated; explicit toggle wins.
   const nightlyOn = (uk: string) => { const q = doc?.queue?.[uk]; return q === undefined ? !hasArtifact(uk) : q; };
@@ -202,7 +206,11 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
       }
       if (!jd || jd.length < 200) { setErr('No JD text for this role — add the DIRECT posting URL or a JD file first.'); return; }
       const envText = (d.envelope || []).map((e) => e[0] + ': ' + e[1] + (e[2] ? ' — ' + e[2] : '')).join('\n');
-      const supporting = 'TARGET-ROLE GUIDELINES (Dream Envelope):\n' + envText + '\n\nROLE INTEL:\n' + ((d.support || {})[uk] || '');
+      const ownerSig = (d.signals || {})[uk] || '';
+      const supporting = 'TARGET-ROLE GUIDELINES (Dream Envelope):\n' + envText
+        + '\n\nROLE INTEL:\n' + ((d.support || {})[uk] || '')
+        + (ownerSig ? '\n\nADDITIONAL SIGNALS (owner-added):\n' + ownerSig : '')
+        + ((d.brandfit || {})[uk] ? '\n\nBRAND-FIT: style the CV and cover letter to the employer\'s brand identity.' : '');
       const id = await createApplication({ jd_text: jd, jd_company: row[1], jd_role: row[2], category: categoryFor(row[2], row[1]), supporting_context: supporting });
       if (!id) { setErr('Could not create the application.'); return; }
       const next: TrackerDoc = { ...d, artifacts: { ...(d.artifacts || {}), [uk]: { application_id: id, generated_at: Date.now() } } };
@@ -292,6 +300,11 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
                     <textarea value={r[9]} onChange={(e) => editRow(uk, 9, e.target.value)} rows={2} style={ta} />
                     <div style={mLbl}>Flag / notes</div>
                     <textarea value={r[10]} onChange={(e) => editRow(uk, 10, e.target.value)} rows={2} style={ta} />
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 7, margin: '9px 0 2px', fontSize: 13, fontWeight: 700, color: '#334' }}>
+                      <input type="checkbox" checked={brandOf(uk)} onChange={() => toggleBrand(uk)} style={{ width: 18, height: 18 }} /> 🎨 Brand-fit to employer
+                    </label>
+                    <div style={mLbl}>Additional signals (for generation)</div>
+                    <textarea value={signalsOf(uk)} onChange={(e) => setSignals(uk, e.target.value)} rows={2} placeholder="hiring manager, emphasis, insider context…" style={ta} />
                     <div style={{ display: 'flex', gap: 8, marginTop: 9, alignItems: 'center', flexWrap: 'wrap' }}>
                       <select value={genOf(uk)} onChange={(e) => setGen(uk, e.target.value)} title="Generation quality" style={{ fontSize: 13, padding: 5 }}>
                         <option value="high">★ High quality</option><option value="quick">⚡ Quick</option>
@@ -311,9 +324,9 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
             <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 900, tableLayout: 'fixed' }}>
               <colgroup>
                 <col style={{ width: 46 }} /><col style={{ width: 58 }} /><col style={{ width: 150 }} /><col style={{ width: 210 }} />
-                <col style={{ width: 120 }} /><col style={{ width: 34 }} /><col style={{ width: 130 }} /><col style={{ width: 175 }} /><col style={{ width: 175 }} /><col style={{ width: 118 }} />
+                <col style={{ width: 120 }} /><col style={{ width: 34 }} /><col style={{ width: 130 }} /><col style={{ width: 175 }} /><col style={{ width: 175 }} /><col style={{ width: 48 }} /><col style={{ width: 160 }} /><col style={{ width: 118 }} />
               </colgroup>
-              <thead><tr>{['#', 'Tier', 'Company', 'Role', 'Location', 'JD', 'Tracked', 'Next action', 'Flag / notes', 'Generate'].map((h) => <th key={h} style={th}>{h}</th>)}</tr></thead>
+              <thead><tr>{['#', 'Tier', 'Company', 'Role', 'Location', 'JD', 'Tracked', 'Next action', 'Flag / notes', 'Brand', 'Signals', 'Generate'].map((h) => <th key={h} style={th}>{h}</th>)}</tr></thead>
               <tbody>
                 {rows.map((r) => {
                   const uk = r[11]; const t = tierOf(r[12]); const hasJd = ((doc?.jd || {})[uk] || '').length > 200; const star = isTop5(r);
@@ -328,6 +341,8 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
                       <td style={cell}><select value={r[8]} onChange={(e) => editRow(uk, 8, e.target.value)} style={{ fontSize: 12, width: '100%' }}>{TRACKED_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}{!TRACKED_STATUSES.includes(r[8]) && r[8] ? <option value={r[8]}>{r[8]}</option> : null}</select></td>
                       <td style={cell}><textarea value={r[9]} onChange={(e) => editRow(uk, 9, e.target.value)} onFocus={() => setExpandRow(uk)} rows={expandRow === uk ? 5 : 2} style={ta} /></td>
                       <td style={cell}><textarea value={r[10]} onChange={(e) => editRow(uk, 10, e.target.value)} onFocus={() => setExpandRow(uk)} rows={expandRow === uk ? 5 : 2} style={ta} /></td>
+                      <td style={{ ...cell, textAlign: 'center' }}><input type="checkbox" checked={brandOf(uk)} onChange={() => toggleBrand(uk)} title="Brand-fit the CV/CL to this employer's identity" style={{ width: 17, height: 17 }} /></td>
+                      <td style={cell}><textarea value={signalsOf(uk)} onChange={(e) => setSignals(uk, e.target.value)} onFocus={() => setExpandRow(uk)} rows={expandRow === uk ? 5 : 2} placeholder="extra signals for generation…" style={ta} /></td>
                       <td style={{ ...cell, whiteSpace: 'nowrap' }}>
                         <button onClick={() => setGen(uk, genOf(uk) === 'high' ? 'quick' : 'high')} title="Generation quality — tap to switch"
                           style={{ background: genOf(uk) === 'high' ? '#fff3cf' : '#eef1f6', color: genOf(uk) === 'high' ? '#8a6d00' : '#556', border: '1px solid #cfd8e6', borderRadius: 5, cursor: 'pointer', fontSize: 11, fontWeight: 700, padding: '2px 4px', display: 'block', width: '100%', marginBottom: 3 }}>{genOf(uk) === 'high' ? '★ High' : '⚡ Quick'}</button>
@@ -343,7 +358,7 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
                     </tr>
                   );
                 })}
-                {rows.length === 0 && <tr><td style={cell} colSpan={10}>No rows yet — paste a job URL or upload a JD file above.</td></tr>}
+                {rows.length === 0 && <tr><td style={cell} colSpan={12}>No rows yet — paste a job URL or upload a JD file above.</td></tr>}
               </tbody>
             </table>
           )) : (

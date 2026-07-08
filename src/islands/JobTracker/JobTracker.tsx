@@ -1,21 +1,31 @@
 // JOB-TRACKER-001 Phase 3 — JobTracker island.
-// V1 review/edit list · V2 add-JD · V3 Top-5 focus + prepare/open a traceable
-// saved application · V4 drop → why → classify → Dream Envelope learning.
-// Full-screen overlay over the vanilla app; reads/writes the per-user tracker
-// doc via the relay with rev-based optimistic concurrency.
+// V1 review/edit list · V2 add-JD (URL or file) · V3 Top-5 focus + prepare/open
+// a traceable saved application · V4 drop → why → classify → Dream Envelope.
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   getDoc, putDoc, fetchJdUrl, createApplication, setActive, classifyReason,
-  tierOf, TRACKED_STATUSES, type TrackerDoc, type Row,
+  TRACKED_STATUSES, type TrackerDoc, type Row,
 } from './api';
 
 const NAVY = '#1F3864';
-const bandHex = (b: string) => (/^[0-9A-Fa-f]{6}$/.test(b || '') ? '#' + b : '#ffffff');
 const today = () => new Date().toISOString().slice(0, 10);
 function slug(s: string): string {
   return (s || 'row').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 24) || 'row';
 }
+
+// Tier meta keyed by the row's band hex: label, accent, a MORE-notable row tint,
+// and a legend description.
+interface Tier { key: string; label: string; accent: string; tint: string; desc: string; }
+const TIERS: Record<string, Tier> = {
+  DDEBF7: { key: 'T1', label: 'T1', accent: '#2E5DA8', tint: '#CFE0F7', desc: 'Strong fit — EO / photonics, open & reachable' },
+  E2EFDA: { key: 'T2', label: 'T2', accent: '#3E8E3E', tint: '#D2ECC5', desc: 'Transferable / PM-side — envelope fit, a step away' },
+  FCE4D6: { key: 'T3', label: 'T3', accent: '#C4711F', tint: '#FAD3B4', desc: 'Weak / off-domain — apply only if pivoting' },
+  FFF2CC: { key: '★', label: 'In progress', accent: '#B58A00', tint: '#FFE7A0', desc: 'Submitted / in progress' },
+  D9D9D9: { key: '—', label: 'Archive', accent: '#777777', tint: '#D0D0D0', desc: 'Closed / archived' },
+};
+const tierOf = (band: string): Tier => TIERS[(band || '').toUpperCase()] || { key: '', label: '', accent: '#999', tint: '#f3f3f3', desc: '' };
+const isTop5 = (r: Row) => (Number(r[0]) || 99) <= 5;
 
 export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
   const [doc, setDocState] = useState<TrackerDoc | null>(null);
@@ -29,6 +39,7 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [addUrl, setAddUrl] = useState('');
   const [adding, setAdding] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     setLoading(true); setErr(null);
@@ -46,7 +57,7 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
     r.sort((a, b) => (Number(a[0]) || 99) - (Number(b[0]) || 99));
     return r;
   }, [doc]);
-  const top5 = useMemo(() => rows.filter((r) => (Number(r[0]) || 99) <= 5).slice(0, 5), [rows]);
+  const top5 = useMemo(() => rows.filter(isTop5).slice(0, 5), [rows]);
 
   function editRow(uk: string, idx: number, value: string): void {
     if (!doc) return;
@@ -54,7 +65,6 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
     setDirty(true);
   }
 
-  // Persist the whole doc with optimistic concurrency; returns success.
   const persist = useCallback(async (next: TrackerDoc, quiet = false): Promise<boolean> => {
     const res = await putDoc(next, rev);
     if (res.ok) { setRev(res.rev || rev + 1); setDocState(next); setDirty(false); if (!quiet) setNote('Saved ✓'); return true; }
@@ -63,6 +73,21 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
   }, [rev]);
 
   async function save(): Promise<void> { if (!doc) return; setSaving(true); setErr(null); setNote(null); try { await persist(doc); } finally { setSaving(false); } }
+
+  // Append a row from a JD (shared by URL + file paths).
+  function appendRow(company: string, role: string, jdText: string, url?: string): void {
+    if (!doc) return;
+    const uk = slug(company + '-' + role) + '-' + String(Date.now()).slice(-4);
+    const maxRank = Math.max(0, ...(doc.rows || []).map((r) => Number(r[0]) || 0));
+    const row: Row = [maxRank + 1, company, role, '', '', '', '', 'OPEN', 'Not started', '', 'Added', uk, 'E2EFDA'];
+    const next: TrackerDoc = {
+      ...doc, rows: [...(doc.rows || []), row],
+      urls: url ? { ...(doc.urls || {}), [uk]: url } : (doc.urls || {}),
+      jd: { ...(doc.jd || {}), [uk]: jdText },
+      support: { ...(doc.support || {}), [uk]: 'ROLE: ' + company + ' — ' + role },
+    };
+    setDocState(next); setDirty(true); setNote('Added "' + (role || company) + '". Review & Save.');
+  }
 
   async function addFromUrl(): Promise<void> {
     const url = addUrl.trim(); if (!url || !doc) return;
@@ -74,22 +99,30 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
       const company = window.prompt('Company?', title.split(/ at | hos | - /i).pop()?.trim() || '') || '';
       const role = window.prompt('Role / title?', title) || '';
       if (!company && !role) return;
-      const uk = slug(company + '-' + role) + '-' + String(Date.now()).slice(-4);
-      const maxRank = Math.max(0, ...(doc.rows || []).map((r) => Number(r[0]) || 0));
-      const row: Row = [maxRank + 1, company, role, '', '', '', '', 'OPEN', 'Not started', '', 'Added from URL', uk, 'E2EFDA'];
-      const next: TrackerDoc = {
-        ...doc, rows: [...(doc.rows || []), row],
-        urls: { ...(doc.urls || {}), [uk]: url },
-        jd: { ...(doc.jd || {}), [uk]: jd.text || '' },
-        support: { ...(doc.support || {}), [uk]: 'ROLE: ' + company + ' — ' + role },
-      };
-      setDocState(next); setDirty(true); setAddUrl(''); setNote('Added "' + (role || company) + '". Review & Save.');
+      appendRow(company, role, jd.text || '', url);
+      setAddUrl('');
     } catch (e) { setErr(String((e as Error).message || e)); }
     finally { setAdding(false); }
   }
 
-  // V3 — seed a real saved application from the row's JD + support/envelope, set
-  // it active, record application_id on the row, then open it in preview.
+  async function addFromFile(file: File): Promise<void> {
+    setAdding(true); setErr(null); setNote(null);
+    try {
+      const buf = await file.text();
+      // Guard binary formats we can't read as text here (PDF/Word).
+      if (/^%PDF/.test(buf) || buf.slice(0, 2) === 'PK') {
+        setErr('That looks like a PDF/Word file — text extraction isn\'t wired here yet. Paste the JD text, upload a .txt, or use the URL. (PDF parse is a follow-up.)');
+        return;
+      }
+      if (buf.trim().length < 100) { setErr('File has too little text to be a JD.'); return; }
+      const company = window.prompt('Company?') || '';
+      const role = window.prompt('Role / title?', file.name.replace(/\.[a-z]+$/i, '')) || '';
+      if (!company && !role) return;
+      appendRow(company, role, buf.trim());
+    } catch (e) { setErr(String((e as Error).message || e)); }
+    finally { setAdding(false); if (fileRef.current) fileRef.current.value = ''; }
+  }
+
   async function prepareAndOpen(row: Row): Promise<void> {
     if (!doc) return;
     const uk = row[11]; setBusyKey(uk); setErr(null); setNote(null);
@@ -100,16 +133,14 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
         const f = await fetchJdUrl(d.urls[uk]);
         if (f.ok && f.text && f.text.length > 200) { jd = f.text; d = { ...d, jd: { ...(d.jd || {}), [uk]: jd } }; }
       }
-      if (!jd || jd.length < 200) { setErr('No JD text available for this role — add the DIRECT posting URL first (careers-index pages don\'t yield a JD).'); return; }
+      if (!jd || jd.length < 200) { setErr('No JD text for this role — add the DIRECT posting URL or a JD file first.'); return; }
       const envText = (d.envelope || []).map((e) => e[0] + ': ' + e[1] + (e[2] ? ' — ' + e[2] : '')).join('\n');
       const supporting = 'TARGET-ROLE GUIDELINES (Dream Envelope):\n' + envText + '\n\nROLE INTEL:\n' + ((d.support || {})[uk] || '');
       const id = await createApplication({ jd_text: jd, jd_company: row[1], jd_role: row[2], supporting_context: supporting });
       if (!id) { setErr('Could not create the application.'); return; }
       const next: TrackerDoc = { ...d, artifacts: { ...(d.artifacts || {}), [uk]: { application_id: id, generated_at: Date.now() } } };
       await setActive(id);
-      const ok = await persist(next, true);
-      if (!ok) return;
-      // Open it: the app loads the active application into preview on boot.
+      if (!(await persist(next, true))) return;
       onClose();
       setTimeout(() => { try { location.reload(); } catch { /* */ } }, 60);
     } catch (e) { setErr(String((e as Error).message || e)); }
@@ -124,7 +155,6 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
     catch (e) { setErr(String((e as Error).message || e)); setBusyKey(null); }
   }
 
-  // V4 — drop → why → classify → append a dated learning to the envelope dimension.
   async function dropFromTop5(row: Row): Promise<void> {
     if (!doc) return;
     const reason = window.prompt('Why are you dropping ' + row[1] + '?');
@@ -132,34 +162,27 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
     const uk = row[11]; setBusyKey(uk); setErr(null); setNote(null);
     try {
       const dim = classifyReason(reason);
-      const env = (doc.envelope || []).map((e) => {
-        if (e[0] !== dim) return e;
-        const c = e.slice(); c[3] = String(c[3] || '') + '  •  [' + today() + '] dropped ' + row[1] + ': ' + reason.trim(); return c;
-      });
-      const rowsNext = (doc.rows || []).map((r) => {
-        if (r[11] !== uk) return r;
-        const c = r.slice() as Row; c[8] = 'Archive / closed'; c[10] = 'Dropped (' + dim + '): ' + reason.trim(); c[12] = 'D9D9D9'; return c;
-      });
-      const next: TrackerDoc = { ...doc, envelope: env, rows: rowsNext };
-      const ok = await persist(next, true);
-      if (ok) setNote('Dropped ' + row[1] + '. Envelope learning added → ' + dim + '.');
+      const env = (doc.envelope || []).map((e) => { if (e[0] !== dim) return e; const c = e.slice(); c[3] = String(c[3] || '') + '  •  [' + today() + '] dropped ' + row[1] + ': ' + reason.trim(); return c; });
+      const rowsNext = (doc.rows || []).map((r) => { if (r[11] !== uk) return r; const c = r.slice() as Row; c[8] = 'Archive / closed'; c[10] = 'Dropped (' + dim + '): ' + reason.trim(); c[12] = 'D9D9D9'; return c; });
+      if (await persist({ ...doc, envelope: env, rows: rowsNext }, true)) setNote('Dropped ' + row[1] + '. Envelope learning added → ' + dim + '.');
     } catch (e) { setErr(String((e as Error).message || e)); }
     finally { setBusyKey(null); }
   }
 
-  const cell: React.CSSProperties = { padding: '4px 6px', borderBottom: '1px solid #e3e8f0', fontSize: 12, verticalAlign: 'top' };
+  const cell: React.CSSProperties = { padding: '5px 7px', borderBottom: '1px solid #dbe2ee', fontSize: 12, verticalAlign: 'top' };
   const th: React.CSSProperties = { ...cell, background: NAVY, color: '#fff', position: 'sticky', top: 0, fontWeight: 600, textAlign: 'left' };
+  const jdCount = Object.values(doc?.jd || {}).filter((t) => (t || '').length > 200).length;
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,22,40,0.55)', zIndex: 99999, display: 'flex' }}
       onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}>
-      <div style={{ background: '#fff', margin: '2vh auto', width: 'min(1120px, 96vw)', height: '96vh', borderRadius: 10, display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 12px 48px rgba(0,0,0,0.4)' }}>
+      <div style={{ background: '#fff', margin: '2vh auto', width: 'min(1180px, 97vw)', height: '96vh', borderRadius: 10, display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 12px 48px rgba(0,0,0,0.4)' }}>
         <div style={{ background: NAVY, color: '#fff', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <strong style={{ fontSize: 15 }}>Job Tracker</strong>
+          <strong style={{ fontSize: 15 }}>📋 Job Tracker</strong>
           <span style={{ opacity: 0.8, fontSize: 12 }}>rev {rev}{dirty ? ' · unsaved' : ''}</span>
           <span style={{ flex: 1 }} />
           <button onClick={() => setView('list')} style={btn(view === 'list' ? '#ffffff33' : 'transparent')}>List</button>
-          <button onClick={() => setView('top5')} style={btn(view === 'top5' ? '#ffffff33' : 'transparent')}>Top 5</button>
+          <button onClick={() => setView('top5')} style={btn(view === 'top5' ? '#ffffff33' : 'transparent')}>★ Top 5</button>
           <span style={{ width: 8 }} />
           <button onClick={() => void load()} disabled={saving} style={btn('#ffffff22')}>Reload</button>
           <button onClick={() => void save()} disabled={!dirty || saving} style={btn(dirty ? '#2e7d32' : '#ffffff22')}>{saving ? 'Saving…' : 'Save'}</button>
@@ -169,36 +192,46 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
         {view === 'list' && (
           <div style={{ padding: '8px 16px', borderBottom: '1px solid #e3e8f0', display: 'flex', gap: 8, alignItems: 'center', background: '#f6f8fc' }}>
             <input value={addUrl} onChange={(e) => setAddUrl(e.target.value)} placeholder="Paste a job URL to add it (fetches the JD into the list)"
-              style={{ flex: 1, padding: '6px 10px', border: '1px solid #c3ccdb', borderRadius: 6, fontSize: 13 }} onKeyDown={(e) => { if (e.key === 'Enter') void addFromUrl(); }} />
+              style={{ flex: 1, padding: '7px 10px', border: '1px solid #c3ccdb', borderRadius: 6, fontSize: 13 }} onKeyDown={(e) => { if (e.key === 'Enter') void addFromUrl(); }} />
             <button onClick={() => void addFromUrl()} disabled={adding || !addUrl.trim()} style={btn(NAVY)}>{adding ? 'Fetching…' : 'Add JD'}</button>
+            <input ref={fileRef} type="file" accept=".txt,.md,.json,.text,.csv,.pdf,.docx" style={{ display: 'none' }}
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) void addFromFile(f); }} />
+            <button onClick={() => fileRef.current?.click()} disabled={adding} title="Upload a JD file (.txt today; PDF/Word soon)"
+              style={{ ...btn('#eef1f6', NAVY), border: '1px solid #c3ccdb', fontSize: 15, padding: '5px 10px' }}>📎</button>
           </div>
         )}
+
+        <Legend />
 
         {(err || note) && <div style={{ padding: '6px 16px', fontSize: 12, color: err ? '#b3261e' : '#2e7d32', background: err ? '#fdecea' : '#eaf5ea' }}>{err || note}</div>}
 
         <div style={{ flex: 1, overflow: 'auto' }}>
           {loading ? <div style={{ padding: 24 }}>Loading…</div> : view === 'list' ? (
-            <table style={{ borderCollapse: 'collapse', width: '100%' }}>
-              <thead><tr>{['#', 'Tier', 'Company', 'Role', 'Location', 'JD', 'Tracked status', 'Next action', 'Flag / notes', 'Link'].map((h) => <th key={h} style={th}>{h}</th>)}</tr></thead>
+            <table style={{ borderCollapse: 'collapse', width: '100%', tableLayout: 'fixed' }}>
+              <colgroup>
+                <col style={{ width: 46 }} /><col style={{ width: 58 }} /><col style={{ width: 150 }} /><col style={{ width: 210 }} />
+                <col style={{ width: 120 }} /><col style={{ width: 34 }} /><col style={{ width: 130 }} /><col /><col /><col style={{ width: 54 }} />
+              </colgroup>
+              <thead><tr>{['#', 'Tier', 'Company', 'Role', 'Location', 'JD', 'Tracked', 'Next action', 'Flag / notes', 'Link'].map((h) => <th key={h} style={th}>{h}</th>)}</tr></thead>
               <tbody>
                 {rows.map((r) => {
-                  const uk = r[11]; const hasJd = ((doc?.jd || {})[uk] || '').length > 200;
+                  const uk = r[11]; const t = tierOf(r[12]); const hasJd = ((doc?.jd || {})[uk] || '').length > 200; const star = isTop5(r);
                   return (
-                    <tr key={uk} style={{ background: bandHex(r[12]) }}>
-                      <td style={{ ...cell, textAlign: 'center', fontWeight: 700 }}>{r[0]}</td>
-                      <td style={{ ...cell, textAlign: 'center' }}>{tierOf(r[12])}</td>
+                    <tr key={uk} style={{ background: t.tint }}>
+                      <td style={{ ...cell, textAlign: 'center', fontWeight: 700, borderLeft: '4px solid ' + t.accent }}>{star ? '★' : ''}{r[0]}</td>
+                      <td style={{ ...cell }}><span style={{ background: t.accent, color: '#fff', borderRadius: 4, padding: '1px 6px', fontSize: 11, fontWeight: 700 }}>{t.label}</span></td>
                       <td style={{ ...cell, fontWeight: 600 }}>{r[1]}</td>
                       <td style={cell}>{r[2]}</td>
                       <td style={cell}>{r[3]}</td>
-                      <td style={{ ...cell, textAlign: 'center' }} title={hasJd ? 'JD stored' : 'No JD — add a direct posting URL'}>{hasJd ? '✓' : '—'}</td>
-                      <td style={cell}><select value={r[8]} onChange={(e) => editRow(uk, 8, e.target.value)} style={{ fontSize: 12, maxWidth: 150 }}>{TRACKED_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}{!TRACKED_STATUSES.includes(r[8]) && r[8] ? <option value={r[8]}>{r[8]}</option> : null}</select></td>
-                      <td style={cell}><input value={r[9]} onChange={(e) => editRow(uk, 9, e.target.value)} style={inp} /></td>
-                      <td style={cell}><input value={r[10]} onChange={(e) => editRow(uk, 10, e.target.value)} style={inp} /></td>
-                      <td style={{ ...cell, textAlign: 'center' }}>{doc?.urls?.[uk] ? <a href={doc.urls[uk]} target="_blank" rel="noreferrer" style={{ color: NAVY }}>Open ↗</a> : ''}</td>
+                      <td style={{ ...cell, textAlign: 'center', fontSize: 14 }} title={hasJd ? 'JD stored' : 'No JD — add a direct posting URL / file'}>{hasJd ? '✅' : '—'}</td>
+                      <td style={cell}><select value={r[8]} onChange={(e) => editRow(uk, 8, e.target.value)} style={{ fontSize: 12, width: '100%' }}>{TRACKED_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}{!TRACKED_STATUSES.includes(r[8]) && r[8] ? <option value={r[8]}>{r[8]}</option> : null}</select></td>
+                      <td style={cell}><textarea value={r[9]} onChange={(e) => editRow(uk, 9, e.target.value)} rows={2} style={ta} /></td>
+                      <td style={cell}><textarea value={r[10]} onChange={(e) => editRow(uk, 10, e.target.value)} rows={2} style={ta} /></td>
+                      <td style={{ ...cell, textAlign: 'center' }}>{doc?.urls?.[uk] ? <a href={doc.urls[uk]} target="_blank" rel="noreferrer" style={{ color: t.accent, fontWeight: 700 }}>↗</a> : ''}</td>
                     </tr>
                   );
                 })}
-                {rows.length === 0 && <tr><td style={cell} colSpan={10}>No rows yet — paste a job URL above.</td></tr>}
+                {rows.length === 0 && <tr><td style={cell} colSpan={10}>No rows yet — paste a job URL or upload a JD file above.</td></tr>}
               </tbody>
             </table>
           ) : (
@@ -210,42 +243,106 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
           )}
         </div>
         <div style={{ padding: '6px 16px', fontSize: 11, color: '#667', borderTop: '1px solid #e3e8f0' }}>
-          {rows.length} roles · {Object.values(doc?.jd || {}).filter((t) => (t || '').length > 200).length} with JD · edits sync to your Excel.
+          {rows.length} roles · {jdCount} with JD · ★ = Top 5 · edits sync to your Excel.
         </div>
       </div>
     </div>
   );
 }
 
+function Legend(): JSX.Element {
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, padding: '7px 16px', borderBottom: '1px solid #e3e8f0', background: '#fbfcfe', fontSize: 11, color: '#445', alignItems: 'center' }}>
+      <strong style={{ color: NAVY }}>Legend:</strong>
+      {['DDEBF7', 'E2EFDA', 'FCE4D6', 'FFF2CC', 'D9D9D9'].map((b) => { const t = TIERS[b]; return (
+        <span key={b} style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ width: 13, height: 13, borderRadius: 3, background: t.tint, border: '1px solid ' + t.accent, display: 'inline-block' }} />
+          <b style={{ color: t.accent }}>{t.label}</b> {t.desc}
+        </span>
+      ); })}
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><b>★</b> Top 5</span>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><b>✅</b> JD stored</span>
+    </div>
+  );
+}
+
+// Parse the support blob into structured sections for the Top-5 card.
+interface Item { need: string; bring: string; insight: string; }
+function parseSupport(text: string): { header: string; fit: string; flag: string; sections: { title: string; items: Item[] }[] } {
+  const out = { header: '', fit: '', flag: '', sections: [] as { title: string; items: Item[] }[] };
+  let cur: { title: string; items: Item[] } | null = null;
+  for (const raw of (text || '').split('\n')) {
+    const line = raw.trim(); if (!line) continue;
+    if (line.startsWith('ROLE:')) out.header = line.slice(5).trim();
+    else if (line.startsWith('FIT:')) out.fit = line.slice(4).trim();
+    else if (/^FLAG(\/RISK)?:/.test(line)) out.flag = line.replace(/^FLAG(\/RISK)?:/, '').trim();
+    else if (line.startsWith('•')) { cur = { title: line.replace(/^•\s*/, ''), items: [] }; out.sections.push(cur); }
+    else if (line.startsWith('NEED:')) {
+      const body = line.slice(5);
+      const need = (body.split('|')[0] || '').trim();
+      const bring = (body.match(/I BRING:\s*([^|]*)/i)?.[1] || '').trim();
+      const insight = (body.match(/INSIGHT\/Q:\s*(.*)$/i)?.[1] || '').trim();
+      if (cur) cur.items.push({ need, bring, insight });
+    }
+  }
+  return out;
+}
+
 function FocusCard({ row, doc, busy, onPrepare, onOpen, onDrop }: {
   row: Row; doc: TrackerDoc | null; busy: boolean; onPrepare: () => void; onOpen: () => void; onDrop: () => void;
 }): JSX.Element {
-  const uk = row[11];
-  const support = (doc?.support || {})[uk] || '';
+  const uk = row[11]; const t = tierOf(row[12]);
+  const p = parseSupport((doc?.support || {})[uk] || '');
   const hasJd = ((doc?.jd || {})[uk] || '').length > 200;
   const saved = doc?.artifacts?.[uk]?.application_id;
   const url = doc?.urls?.[uk];
   return (
-    <div style={{ border: '1px solid #d5deec', borderLeft: '4px solid ' + NAVY, borderRadius: 8, padding: '12px 14px', background: '#fff' }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-        <strong style={{ fontSize: 14, color: NAVY }}>#{row[0]} {row[1]}</strong>
-        <span style={{ fontSize: 13 }}>{row[2]}</span>
-        <span style={{ flex: 1 }} />
-        <span style={{ fontSize: 11, color: hasJd ? '#2e7d32' : '#b3261e' }}>{hasJd ? 'JD ✓' : 'JD missing'}</span>
+    <div style={{ border: '1px solid #d5deec', borderRadius: 10, overflow: 'hidden', background: '#fff', boxShadow: '0 1px 4px rgba(20,30,60,0.06)' }}>
+      {/* header band in the tier colour */}
+      <div style={{ background: t.accent, color: '#fff', padding: '9px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span style={{ fontSize: 20, fontWeight: 800 }}>★{row[0]}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 800, fontSize: 15, lineHeight: 1.1 }}>{row[1]}</div>
+          <div style={{ fontSize: 12, opacity: 0.92 }}>{row[2]}</div>
+        </div>
+        <span style={{ background: '#ffffff2e', borderRadius: 5, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>{t.label}</span>
+        <span title={hasJd ? 'JD stored' : 'JD missing'} style={{ fontSize: 15 }}>{hasJd ? '✅' : '⚠️'}</span>
       </div>
-      <div style={{ fontSize: 11, color: '#556', margin: '2px 0 8px' }}>{row[3]}{row[4] ? ' · ' + row[4] : ''}{url ? <> · <a href={url} target="_blank" rel="noreferrer" style={{ color: NAVY }}>posting ↗</a></> : null}</div>
-      <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', fontSize: 12, lineHeight: 1.4, color: '#2a3244', margin: 0, maxHeight: 220, overflow: 'auto', background: '#f7f9fc', padding: 8, borderRadius: 6 }}>{support || '(no intel yet)'}</pre>
-      <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-        {saved
-          ? <button onClick={onOpen} disabled={busy} style={btn('#2e7d32')}>{busy ? '…' : 'Open in preview'}</button>
-          : <button onClick={onPrepare} disabled={busy} style={btn(NAVY)}>{busy ? 'Preparing…' : 'Prepare & open in AntCV'}</button>}
-        <button onClick={onDrop} disabled={busy} style={btn('#eef1f6', '#7a2618')}>Drop from Top 5</button>
+      <div style={{ padding: '10px 14px' }}>
+        <div style={{ fontSize: 11, color: '#556', marginBottom: 8 }}>
+          📍 {row[3]}{row[4] ? ' · ' + row[4] : ''}{url ? <> · <a href={url} target="_blank" rel="noreferrer" style={{ color: t.accent, fontWeight: 700 }}>posting ↗</a></> : null}
+        </div>
+        {p.fit && <Line icon="🎯" label="Fit" text={p.fit} color="#2a3244" />}
+        {p.flag && <Line icon="⚠️" label="Flag" text={p.flag} color="#8a4b12" />}
+        {p.sections.map((s, i) => (
+          <div key={i} style={{ marginTop: 10 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: t.accent, letterSpacing: 0.3, textTransform: 'uppercase', marginBottom: 5 }}>{s.title}</div>
+            {s.items.map((it, j) => (
+              <div key={j} style={{ borderLeft: '3px solid ' + t.tint, padding: '4px 0 6px 9px', marginBottom: 6 }}>
+                <div style={{ fontSize: 12.5, fontWeight: 700, color: '#1e2636' }}>▸ {it.need}</div>
+                {it.bring && <div style={{ fontSize: 12, color: '#28632a', marginTop: 2 }}><b>I bring:</b> {it.bring}</div>}
+                {it.insight && <div style={{ fontSize: 12, color: '#5a4b8a', marginTop: 2 }}><b>Insight:</b> {it.insight}</div>}
+              </div>
+            ))}
+          </div>
+        ))}
+        {!p.sections.length && !p.fit && <div style={{ fontSize: 12, color: '#889' }}>(no role intel yet — add the JD, then Prepare)</div>}
+        <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+          {saved
+            ? <button onClick={onOpen} disabled={busy} style={btn('#2e7d32')}>{busy ? '…' : '↗ Open in preview'}</button>
+            : <button onClick={onPrepare} disabled={busy} style={btn(t.accent)}>{busy ? 'Preparing…' : '✨ Prepare & open in AntCV'}</button>}
+          <button onClick={onDrop} disabled={busy} style={btn('#f4e6e2', '#7a2618')}>✕ Drop from Top 5</button>
+        </div>
       </div>
     </div>
   );
 }
 
-const inp: React.CSSProperties = { width: '100%', boxSizing: 'border-box', fontSize: 12, padding: '3px 5px', border: '1px solid #d3dae6', borderRadius: 4 };
+function Line({ icon, label, text, color }: { icon: string; label: string; text: string; color: string }): JSX.Element {
+  return <div style={{ fontSize: 12.5, color, margin: '3px 0', lineHeight: 1.45 }}><span style={{ marginRight: 5 }}>{icon}</span><b>{label}:</b> {text}</div>;
+}
+
+const ta: React.CSSProperties = { width: '100%', boxSizing: 'border-box', fontSize: 12, padding: '4px 6px', border: '1px solid #cfd8e6', borderRadius: 4, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.35, minHeight: 34 };
 function btn(bg: string, color = '#fff'): React.CSSProperties {
-  return { background: bg, color, border: 'none', padding: '5px 12px', borderRadius: 6, fontSize: 12, cursor: 'pointer', fontWeight: 600 };
+  return { background: bg, color, border: 'none', padding: '6px 12px', borderRadius: 6, fontSize: 12, cursor: 'pointer', fontWeight: 600 };
 }

@@ -49,24 +49,47 @@ memories `generate-deliverables-via-worker`, `header-banner-design-rules`,
       the spine.
 
 ## 1. MANDATORY sections (never drop)
-- [ ] **ACCESSIBILITY** section present (hearing-impaired, not limiting) — Gabriel-mandatory.
-- [ ] **INTERESTS/SPORT** includes the **cats** item and the witty reveal
-      ("literally a team player" for rugby; cats punchline) — the joke lands by REVEAL.
-- [ ] LANGUAGES with real levels; EDUCATION; CERTIFICATIONS; STANDARDS; PUBLICATIONS/PATENTS.
+- [ ] **ACCESSIBILITY** section present — Gabriel-mandatory. **EXACT wording only:**
+      "Hearing-impaired; clear visual contact and written follow-up work well." **NEVER add
+      "Hearing has not limited my career" (or any equivalent) — BANNED in every application**
+      (owner 2026-07-08). No medical detail beyond the one sentence.
+- [ ] **INTERESTS/SPORT** includes the **cats** item (punchline LAST; "team player" stays
+      unwritten per kernel `never_render_raw` — the wit is the rugby↔cats juxtaposition).
+      **Every interest item carries a WHY or a specific — never a bare word** (owner 2026-07-08:
+      "Hiking" → "Hiking - long-distance walking to reset and think clearly"; "Cultural exchange"
+      → name the countries). Bare single-word interests are a defect.
+- [ ] LANGUAGES with real levels; EDUCATION (abbreviate once then reuse — "M.Sc. Electrical
+      Engineering (EE)" then "B.Sc. EE"); CERTIFICATIONS; STANDARDS; PUBLICATIONS/PATENTS.
 
 ## 2. CV layout / formatting
-- [ ] **AI-assisted notice** = LAST element at the **bottom of the sidebar** (anchored),
-      not floating below page 2. Measure its Y vs page bottom (PyMuPDF).
+- [ ] **DATES: never "20XX - present" for Gabriel — always "20XX - 2026"** (owner, KOMBIT +
+      2026-07-08). Kanzen ApS ends 2026; every current role reads "… - 2026".
+- [ ] **PATENT NUMBER appears exactly ONCE** in the whole CV (owner 2026-07-08): if there is a
+      PUBLICATIONS/PATENT section, the number lives there and the Sirin role says only
+      "a patented …" (no number); if there is no such section, the number goes in Sirin.
+- [ ] **PUBLICATIONS brief for non-research roles** (PM etc.): patent + a one-line summary
+      ("Three peer-reviewed publications on …") + an active-link line — NOT full citations.
+- [ ] **AI-assisted notice** = visible at the **sidebar bottom** (after the last sidebar item).
+      **The worker now renders it INLINE** (docx-worker 1.14.135, AI-NOTICE-INLINE-001) because
+      the old page-anchored VML frame did NOT render in Word ExportAsFixedFormat for two-column
+      CVs. Route it to the sidebar side via `ai_wm_side` = the sidebar's physical side. VERIFY it
+      appears in the rendered PDF (search "author retains") — do not trust the VML.
 - [ ] **Sidebar fills to the page end** on **every** page (no dead space at the bottom).
 - [ ] **Columns bottom out together**; main column not far short of the sidebar.
 - [ ] **No orphans / short lines** — measure last-line fill ratio; ENRICH short lines and
-      TRIM runts (bidirectional, render-measured — line-distribution-guidelines).
+      TRIM runts (bidirectional, render-measured — line-distribution-guidelines). **The two-column
+      main body is ~76 chars/line at 10.5pt; RESULTS lines must be ONE line (≤ ~74 chars);**
+      reword any paragraph whose last line is a single word (measure every wrapped block, headings
+      and table cells excepted). This is the owner's repeated ask — implement it, don't ship runts.
 - [ ] List-shaped sidebar sections are **bulleted** (CORE STRENGTHS, SPORT & INTERESTS,
       PUBLICATIONS), not cramped paragraphs. CORE STRENGTHS: tabular OR justify the choice.
 - [ ] **REFERENCES** at the **main column's end**, not the sidebar.
 - [ ] **STANDARDS** given room; include electro-optics / **imaging standards** (MTF/SFR, EMVA 1288, etc.).
 - [ ] **Google Scholar / LinkedIn** rendered as **active hyperlinks**, not plain text.
-- [ ] Main column carries a **light brand tint** to balance a dark sidebar (rule 12: not both pure).
+      **Use `[text](url)` markdown in any text/bullet** — the worker turns it into a clickable
+      ExternalHyperlink (inlineRuns / RICH-BLOCK-HYPERLINK-001). Verify with PDF link annots.
+- [ ] Main column carries a **light brand tint** to balance a dark sidebar (rule 12: not both
+      pure). **Set `style.mainTint`** (a light hex, e.g. `FCF3EC`; worker 1.14.135 MAIN-TINT-001).
 - [ ] Header gold rules (row 62): centered name/spec/contact stack, ✉+icon contacts, photo over sidebar, divider.
 
 ## 3. Cover letter

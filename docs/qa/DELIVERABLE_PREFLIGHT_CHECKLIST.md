@@ -73,11 +73,13 @@ memories `generate-deliverables-via-worker`, `header-banner-design-rules`,
 - [ ] **Application line** in the header (NOT the specialization line; CL subtitle = application).
       NB generator quirk: CL renders subtitle twice — fix the generator, don't blank the line.
 - [ ] **Slogan is PERSONAL + brand/fit-derived** (owner 2026-07-08): not a generic product tagline.
-      It must reflect a real read of the company brand and the candidate's fit. Place it EITHER
-      on top (visible slogan line) OR embedded as the opening sentence's LEAD-IN (the preferred
-      form the owner endorsed) — e.g. Trackman: "The work I care about most is making the invisible
-      manufacturable:" leads the opening. One or the other, not a weak top slogan competing with a
-      strong lead-in. (Keep `meta.slogan` non-empty regardless, to avoid the subtitle double-render.)
+      It must reflect a real read of the company brand and the candidate's fit. **Support BOTH
+      placements in the generator; render only ONE visible, chosen by the TONE of the posting**
+      (owner 2026-07-08): a formal/corporate posting → a top slogan line; a warmer/curiosity-led
+      posting → the embedded opening LEAD-IN (Trackman: "The work I care about most is making the
+      invisible manufacturable:"). Keep the other option available, not deleted. Never a weak top
+      slogan competing with a strong lead-in. (Keep `meta.slogan` non-empty regardless, to avoid
+      the subtitle double-render.)
 - [ ] **Signature: CENTERED by default** (owner 2026-07-08) unless AntCV/owner orders otherwise —
       `signature_align:'center'` (the worker already defaults to center; never override to 'left'
       without instruction). **Recolor the ink to the brand / visual style** — do NOT ship the raw
@@ -88,7 +90,11 @@ memories `generate-deliverables-via-worker`, `header-banner-design-rules`,
       (owner 2026-07-08 — "make this pattern stay, adapted to the job and candidate's signals;
       mix and make strong, not only here but AntCV in general"). Show you did the research and read
       a strong fit ("From what I have learned about <Company>, I understand the priorities behind this
-      role … and see a strong match with my experience and the way I work"), fold in a REAL personal
+      role … and see a strong match with my experience and the way I work"). **Serve the
+      homework/priorities read SOFT at the open and let conviction BUILD across the paragraph**
+      (owner 2026-07-08): use "I see / observe / to my understanding / my sense is …" then rise
+      to "the closer I look, the stronger the match" — NEVER a blunt "I understand the priorities
+      behind this role" (too assertive, not the owner's voice). Fold in a REAL personal
       signal adapted to the employer (Trackman is sports → the inclusive-rugby-club operations line),
       and CLOSE on a concrete invitation ("learn more about your needs, introduce myself further, and
       share a few early ideas on where I could contribute"). Don't ship only the homework half or only

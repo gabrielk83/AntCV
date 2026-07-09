@@ -4577,6 +4577,58 @@
         Requirements: "要求",
         Analysis: "分析",
         Engineering: "工程",
+        "PROFESSIONAL EXPERIENCE (CONT.)": "工作经历（续）",
+        "PROFILE (CONT.)": "个人简介（续）",
+        LANGUAGES: "语言能力",
+        REFERENCES: "推荐人",
+        PUBLICATIONS: "出版物",
+        PATENT: "专利",
+        STANDARDS: "标准与合规",
+        "REGULATORY & STANDARDS": "法规与标准",
+        ACCESSIBILITY: "无障碍沟通",
+        VOLUNTEERING: "志愿工作",
+        OPENING: "开场白",
+        GREETING: "称呼",
+        CLOSURE: "结尾",
+        SUMMARY: "概要",
+        Accessibility: "无障碍沟通",
+        Volunteer: "志愿工作",
+        Hobbies: "兴趣爱好",
+        Global: "全球",
+        "Project & workflow": "项目与工作流",
+        "Reporting & data": "报告与数据",
+        "Process & quality": "流程与质量",
+        "Data & BI": "数据与商业智能",
+        DevOps: "开发运维",
+        "ALM & PM": "ALM 与项目管理",
+        "Requirements, traceability": "需求与可追溯性",
+        FuSa: "功能安全",
+        "Functional safety": "功能安全",
+        Cybersecurity: "网络安全",
+        Imaging: "成像",
+        Resolution: "分辨率",
+        Noise: "噪声",
+        "Laser safety": "激光安全",
+        "Environmental testing": "环境测试",
+        "Goal:": "目标：",
+        "Who I am:": "个人介绍：",
+        "What I bring:": "我能带来：",
+        "Why this position:": "选择此职位的原因：",
+        "Intro:": "引言：",
+        "M.Sc. Electrical Engineering (EE)": "电子工程硕士（EE）",
+        "M.Sc.": "硕士",
+        "B.Sc.": "学士",
+        "B.Sc. EE": "电子工程学士",
+        "B.Sc. Physics & B.Sc. EE": "物理学学士与电子工程学士",
+        "(CONT.)": "（续）",
+        "(Cont.)": "（续）",
+        "Cont.": "续",
+        "EU Citizen": "欧盟公民",
+        "Copenhagen, Denmark": "丹麦，哥本哈根",
+        "Dear Hiring Team,": "尊敬的招聘团队：",
+        "References available on request": "推荐人信息可应要求提供",
+        "References available upon request": "推荐人信息可应要求提供",
+        "References available on request.": "推荐人信息可应要求提供。",
       },
     },
     he = {};
@@ -19692,7 +19744,7 @@
               }));
             try {
               const n = " ",
-                o = (e, t) => {
+                o = (e, t, mw, mf) => {
                   const o = String(e || "");
                   if (!o.trim()) return o;
                   const r = o.split(/(\s+)/),
@@ -19700,16 +19752,53 @@
                   for (let e = 0; e < r.length; e++)
                     /^\s+$/.test(r[e]) && a.push(e);
                   if (a.length < 1) return o;
-                  const i = Math.min(t - 1, a.length);
+                  let i = Math.min(t - 1, a.length);
+                  // FIX-ORPHANS-WIDTH-GUARD-001 (owner 2026-07-09 "pressing fit-it
+                  // → lines ~30 chars too long"): the bind pulls the last i+1 words
+                  // onto the last line as ONE unbreakable NBSP cluster; with no
+                  // width check a wide cluster (worst in a narrow column) overflows
+                  // the column. Shrink i until the trailing cluster fits ONE line at
+                  // the column width (mw px / mf pt); if even the last two words
+                  // don't fit, leave the paragraph UNBOUND rather than overflow.
+                  if (mw && mf) {
+                    while (i >= 1) {
+                      const s = r.slice(a[a.length - i] + 1).join("");
+                      let lc = 1;
+                      try {
+                        lc = Vi(s, mw, mf, { padLeft: 0 });
+                      } catch (_) {
+                        lc = 1;
+                      }
+                      if (lc <= 1) break;
+                      i--;
+                    }
+                    if (i < 1) return o;
+                  }
                   for (let e = a.length - i; e < a.length; e++) r[a[e]] = n;
                   return r.join("");
                 },
                 r = (e) => /\u00A0\S+\s*$/.test(String(e || "")),
                 a = t.map((e) => {
-                  const t = r(e.text) ? 3 : 2;
+                  const t = r(e.text) ? 3 : 2,
+                    // Column width for the width-guard (px @ pt). All items in this
+                    // batch share the fixed column (Qi passes Gi one loc), but the
+                    // measure width differs by field: sidebar 220, table col0 220
+                    // (CL 170) / col1 360, labeled-list value 210, main body ~466
+                    // (CL ~700). Look the section up by sid for its loc so a main
+                    // vs sidebar "labelval"/"item" never collide. Conservative on
+                    // main (466 ≤ the ~490-540 autofit render) so the guard never
+                    // UNDER-shrinks into an overflow.
+                    __sec = Pi.find((s) => s.id === e.sid),
+                    __sb = !!(__sec && "sidebar" === __sec.loc);
+                  let mw, mf;
+                  if (__sb) ((mw = 220), (mf = 10));
+                  else if ("table" === e.field)
+                    ((mw = 1 === e.col ? 360 : "cl" === Lt ? 170 : 220), (mf = 10));
+                  else if ("labelval" === e.field) ((mw = 210), (mf = 10));
+                  else ((mw = "cl" === Lt ? 700 : 466), (mf = 14));
                   return {
                     key: `${e.sid}|${e.field}${null != e.idx ? "|" + e.idx : ""}${null != e.col ? "|c" + e.col : ""}${e.roleId ? "|" + e.roleId : ""}`,
-                    fixed: o(e.text, t),
+                    fixed: o(e.text, t, mw, mf),
                   };
                 });
               (console.log(

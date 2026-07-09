@@ -58,11 +58,13 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.223-setin-guard';
+  const TARGET_VERSION = '1.51.225-fitit-width-guard';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.223-setin-guard',
+    '1.51.224-zh-furniture',
     '1.40.172', '1.40.173', '1.40.174', '1.40.175', '1.40.176', '1.40.177',
     '1.40.178', '1.40.179', '1.40.180', '1.40.181', '1.40.182', '1.40.183',
     '1.40.184', '1.40.185', '1.40.186', '1.40.187', '1.40.188', '1.40.189',

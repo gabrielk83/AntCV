@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.224-zh-furniture';
+const CACHE = 'antcv-1.51.225-fitit-width-guard';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

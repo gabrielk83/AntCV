@@ -343,9 +343,9 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
             <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 900, tableLayout: 'fixed' }}>
               <colgroup>
                 <col style={{ width: 46 }} /><col style={{ width: 58 }} /><col style={{ width: 150 }} /><col style={{ width: 210 }} />
-                <col style={{ width: 120 }} /><col style={{ width: 34 }} /><col style={{ width: 130 }} /><col style={{ width: 175 }} /><col style={{ width: 175 }} /><col style={{ width: 48 }} /><col style={{ width: 160 }} /><col style={{ width: 118 }} />
+                <col style={{ width: 120 }} /><col style={{ width: 34 }} /><col style={{ width: 130 }} /><col style={{ width: 175 }} /><col style={{ width: 175 }} /><col style={{ width: 160 }} /><col style={{ width: 140 }} />
               </colgroup>
-              <thead><tr>{['#', 'Tier', 'Company', 'Role', 'Location', 'JD', 'Tracked', 'Next action', 'Flag / notes', 'Brand', 'Signals', 'Generate'].map((h) => <th key={h} style={th}>{h}</th>)}</tr></thead>
+              <thead><tr>{['#', 'Tier', 'Company', 'Role', 'Location', 'JD', 'Tracked', 'Next action', 'Flag / notes', 'Signals', 'Generate'].map((h) => <th key={h} style={th}>{h}</th>)}</tr></thead>
               <tbody>
                 {rows.map((r) => {
                   const uk = r[11]; const t = tierOf(r[12]); const hasJd = ((doc?.jd || {})[uk] || '').length > 200; const star = isTop5(r);
@@ -360,7 +360,6 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
                       <td style={cell}><select value={r[8]} onChange={(e) => editRow(uk, 8, e.target.value)} style={{ fontSize: 12, width: '100%' }}>{TRACKED_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}{!TRACKED_STATUSES.includes(r[8]) && r[8] ? <option value={r[8]}>{r[8]}</option> : null}</select></td>
                       <td style={cell}><textarea value={r[9]} onChange={(e) => editRow(uk, 9, e.target.value)} onFocus={() => setExpandRow(uk)} rows={expandRow === uk ? 5 : 2} style={ta} /></td>
                       <td style={cell}><textarea value={r[10]} onChange={(e) => editRow(uk, 10, e.target.value)} onFocus={() => setExpandRow(uk)} rows={expandRow === uk ? 5 : 2} style={ta} /></td>
-                      <td style={{ ...cell, textAlign: 'center', whiteSpace: 'nowrap' }}><input type="checkbox" checked={brandOf(uk)} onChange={() => void toggleBrand(uk, r)} title="Brand-fit: sample this employer's brand colours and style the CV/CL to them" style={{ width: 17, height: 17 }} /><Swatches uk={uk} /></td>
                       <td style={cell}><textarea value={signalsOf(uk)} onChange={(e) => setSignals(uk, e.target.value)} onFocus={() => setExpandRow(uk)} rows={expandRow === uk ? 5 : 2} placeholder="extra signals for generation…" style={ta} /></td>
                       <td style={{ ...cell, whiteSpace: 'nowrap' }}>
                         <button onClick={() => setGen(uk, genOf(uk) === 'high' ? 'quick' : 'high')} title="Generation quality — tap to switch"
@@ -368,16 +367,19 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
                         <button onClick={() => (hasArtifact(uk) ? void openSaved(r) : void prepareAndOpen(r))} disabled={busyKey === uk}
                           title={hasArtifact(uk) ? 'Reopen in AntCV' : 'Open in AntCV — loads the JD, then press Generate there'}
                           style={{ ...btn(hasArtifact(uk) ? '#2e7d32' : '#2E5DA8'), padding: '3px 4px', fontSize: 11, display: 'block', width: '100%', marginBottom: 3 }}>{busyKey === uk ? '…' : (hasArtifact(uk) ? '↗ Open' : '✨ Open')}</button>
-                        <div style={{ display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', gap: 7, justifyContent: 'center', alignItems: 'center' }}>
                           <button onClick={() => toggleNightly(uk)} title={nightlyOn(uk) ? "In tonight's queue — tap to remove" : 'Queue for tonight'}
                             style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 15, opacity: nightlyOn(uk) ? 1 : 0.28, padding: 0 }}>⏰</button>
+                          <label title="Brand-fit: sample the employer's colours & style the CV/CL to them" style={{ display: 'inline-flex', alignItems: 'center', gap: 1, cursor: 'pointer' }}>
+                            <input type="checkbox" checked={brandOf(uk)} onChange={() => void toggleBrand(uk, r)} style={{ width: 14, height: 14 }} /><span style={{ fontSize: 13 }}>🎨</span><Swatches uk={uk} />
+                          </label>
                           {doc?.urls?.[uk] ? <a href={doc.urls[uk]} target="_blank" rel="noreferrer" title="Open posting" style={{ color: t.accent, fontWeight: 700, fontSize: 14 }}>↗</a> : null}
                         </div>
                       </td>
                     </tr>
                   );
                 })}
-                {rows.length === 0 && <tr><td style={cell} colSpan={12}>No rows yet — paste a job URL or upload a JD file above.</td></tr>}
+                {rows.length === 0 && <tr><td style={cell} colSpan={11}>No rows yet — paste a job URL or upload a JD file above.</td></tr>}
               </tbody>
             </table>
           ) : (

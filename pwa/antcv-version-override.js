@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.226-zh-name';
+  const TARGET_VERSION = '1.51.227-china-layout';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.226-zh-name',
     '1.51.225-fitit-width-guard',
     '1.51.223-setin-guard',
     '1.51.224-zh-furniture',

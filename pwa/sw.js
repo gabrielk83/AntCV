@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.226-zh-name';
+const CACHE = 'antcv-1.51.227-china-layout';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

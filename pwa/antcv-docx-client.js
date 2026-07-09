@@ -569,6 +569,23 @@ export async function exportDocxViaWorker({
   };
 }
 
+// CHINA-LAYOUT-ZH-001 (owner 2026-07-09): a Chinese (zh) CV follows the 简历
+// convention — the PROFILE pitch becomes 自我评价 at the END (not the top), and
+// References/Recommendations are dropped. Guarded to zh + cv so every other
+// language/doc is byte-unchanged. Sections keep their loc; the worker groups by
+// loc, so moving PROFILE to the end of the array lands it at the bottom of the
+// main column. Header subtitle already carries the 求职意向 line.
+function applyChinaLayoutZh(sections, doc, language) {
+  if (language !== 'zh' || doc !== 'cv' || !Array.isArray(sections) || !sections.length) return sections;
+  const label = (s) => String((s && (s.title || s.id)) || '');
+  const isProfile = (s) => s && (s.id === 'profile' || /^PROFILE$|^PROFIL$|个人简介|自我评价/i.test(label(s)));
+  const isRefs = (s) => s && (s.id === 'references' || s.id === 'recommendations' || /REFERENCE|RECOMMENDATION|推荐人|REFERENCER|ANBEFALINGER/i.test(label(s).toUpperCase()));
+  const kept = sections.filter((s) => !isRefs(s));
+  const profiles = kept.filter(isProfile).map((s) => ({ ...s, title: '自我评价' }));
+  const rest = kept.filter((s) => !isProfile(s));
+  return [...rest, ...profiles];
+}
+
 /**
  * Pure function — builds the worker payload from the PWA state.
  * Exported separately so it can be tested in isolation and so a future
@@ -926,7 +943,7 @@ export function buildPayload({
       : {}),
     style: buildStyle(styleConfig, navyColor),
     font_sizes: buildFontSizes(fontSizes),
-    sections: bindOrphansInSections(normalizeSections(docSections)),
+    sections: bindOrphansInSections(normalizeSections(applyChinaLayoutZh(docSections, doc, language))),
     meta_signature: {
       generator: 'AntCV',
       generator_version: (typeof window !== 'undefined' && window.ANTCV_VERSION) || '',

@@ -23798,8 +23798,12 @@ function makePhotosCircular(documentXml, shape) {
   return { xml: next, count: count3 };
 }
 __name(makePhotosCircular, "makePhotosCircular");
-function aiNoticeVmlRun(side, __idx) {
+function aiNoticeVmlRun(side, __idx, noticeText, noticeFont) {
   __idx = Number.isFinite(__idx) ? __idx : 0;
+  // FURNITURE-ZH-001: caller (postProcessDocx) forwards the localized notice +
+  // font; Chinese needs a CJK eastAsia face or the glyphs box out in the VML.
+  const _txt = (typeof noticeText === "string" && noticeText) ? noticeText : "AI-assisted - author retains responsibility for content.";
+  const _font = (typeof noticeFont === "string" && noticeFont) ? noticeFont : "Calibri";
   // AI-WATERMARK-EXPORT-LOCATION-001: a bottom-corner-anchored VML text frame
   // (v:rect + textbox, no fill/stroke = WM-003). mso-position-vertical:bottom +
   // -relative:page pins it to the page-edge bottom; horizontal:left|right
@@ -23833,8 +23837,8 @@ function aiNoticeVmlRun(side, __idx) {
     'mso-position-vertical-relative:page;z-index:251658240;mso-wrap-style:square" filled="f" stroked="f">' +
     '<v:textbox inset="14pt,1pt,14pt,11pt"><w:txbxContent>' +
     '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="220" w:lineRule="auto"/><w:jc w:val="' + horiz + '"/></w:pPr>' +
-    '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:i/><w:color w:val="9A9A9A"/><w:sz w:val="13"/></w:rPr>' +
-    '<w:t xml:space="preserve">AI-assisted - author retains responsibility for content.</w:t></w:r>' +
+    '<w:r><w:rPr><w:rFonts w:ascii="' + _font + '" w:hAnsi="' + _font + '" w:eastAsia="' + _font + '"/><w:i/><w:color w:val="9A9A9A"/><w:sz w:val="13"/></w:rPr>' +
+    '<w:t xml:space="preserve">' + _txt + '</w:t></w:r>' +
     '</w:p></w:txbxContent></v:textbox></v:rect></w:pict></w:r>';
 }
 __name(aiNoticeVmlRun, "aiNoticeVmlRun");
@@ -23891,7 +23895,7 @@ function postProcessDocx(input, opts = {}) {
     let __aiWmIdx = 0;
     let aiWmMatch;
     while ((aiWmMatch = xml2.match(AIWM_RE))) {
-      xml2 = xml2.replace(AIWM_RE, aiNoticeVmlRun(aiWmMatch[1], __aiWmIdx++));
+      xml2 = xml2.replace(AIWM_RE, aiNoticeVmlRun(aiWmMatch[1], __aiWmIdx++, opts && opts.aiNotice, opts && opts.aiFont));
       aiNoticeInjected = true;
       if (__aiWmIdx > 8) break;
     }
@@ -24415,6 +24419,14 @@ async function generateDocx(payload) {
     style.sidebarBodyFont = cjk;
     style.headerFont = cjk;
   }
+  // FURNITURE-ZH-001 (owner 2026-07-09): localize the two worker-injected labels
+  // that otherwise stay English under zh \u2014 the per-role "Results:" lead and the
+  // AI-assisted footer. Stashed on `style` (threaded to every builder); the AI
+  // notice also needs a CJK face or its Chinese text boxes out.
+  const __zhDoc = lang === "zh";
+  style._resultsLabel = __zhDoc ? "\u6210\u679C\uFF1A" : "Results: ";
+  style._aiNotice = __zhDoc ? "\u672C\u6587\u6863\u7531 AI \u8F85\u52A9\u751F\u6210\uFF0C\u5185\u5BB9\u7531\u4F5C\u8005\u8D1F\u8D23\u3002" : "AI-assisted - author retains responsibility for content.";
+  style._aiFont = __zhDoc ? "Microsoft YaHei" : "Calibri";
   const CONT_SUFFIX = { en: "(CONT.)", da: "(FORTS.)", es: "(CONT.)", zh: "\uFF08\u7EED\uFF09" };
   const contSuffix = CONT_SUFFIX[lang] || CONT_SUFFIX.en;
   const layout = payload.layout || (payload.doc === "cl" ? "linear" : "two_column");
@@ -24506,7 +24518,7 @@ async function generateDocx(payload) {
   let postProcessError = null;
   let markersRemaining = 0;
   try {
-    const result = postProcessDocx(raw, { watermark: payload.watermark || "", photoShape: resolvePhotoShape(payload), headerBg: (style && style.headerBg) || "" });
+    const result = postProcessDocx(raw, { watermark: payload.watermark || "", photoShape: resolvePhotoShape(payload), headerBg: (style && style.headerBg) || "", aiNotice: style && style._aiNotice, aiFont: style && style._aiFont });
     buffer2 = result.buffer;
     replacements = result.replacements || 0;
     if (replacements > 0) {
@@ -25539,11 +25551,11 @@ function buildLinearDocument(ctx) {
     spacing: { before: 0, after: 0, line: 200, lineRule: "exact" },
     indent: { right: 120 },
     children: [new TextRun({
-      text: "AI-assisted - author retains responsibility for content.",
+      text: (style && style._aiNotice) || "AI-assisted - author retains responsibility for content.",
       italics: true,
       size: 13,
       color: "4D7976",
-      font: "Calibri"
+      font: (style && style._aiFont) || "Calibri"
     })]
   });
   const __clPgNumPara = style && (style.pageNumbers === "top-right" || style.pageNumbers === "bottom-right") ? new Paragraph({
@@ -27269,7 +27281,7 @@ function renderExperience(s, ctx) {
             // LABEL is a main inline label, so it follows MAIN-HEADINGS-GREEN-001
             // → mainHeadColor (teal #00746E), not the black body ink. The outcome
             // text after it stays neutral body ink (content, like company/year).
-            text: "Results: ",
+            text: style._resultsLabel || "Results: ",
             bold: true,
             italics: true,
             color: style.mainHeadColor,
@@ -28265,7 +28277,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.141-cjk-zh-font";
+var VERSION = "1.14.142-zh-furniture-labels";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

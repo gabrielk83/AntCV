@@ -711,6 +711,24 @@ export function buildPayload({
     return s;
   };
 
+  // NAME-ZH-LOCALIZE-001 (owner 2026-07-09): in a Chinese (zh) export the
+  // candidate name must render in Chinese, not Latin. Name-GUARDED to Gabriel's
+  // exact stored name (and close variants) so it can NEVER rewrite another
+  // candidate's name (same no-fabrication discipline as LOCALFORM-* above —
+  // Anita's export must be untouched). Surname-first per Chinese convention:
+  // 柯 (Karp) 葛顺 (Gershon) · 加百列 (Gabriel) · 亚历山大 (Alexander).
+  const localizeName = (n, lang) => {
+    if (lang !== 'zh') return n;
+    const key = String(n || '').trim().replace(/\s+/g, ' ');
+    const ZH = {
+      'Gabriel Alexander Karp-Gershon': '柯葛顺·加百列·亚历山大',
+      'Gabriel Alexander Karp Gershon': '柯葛顺·加百列·亚历山大',
+      'Gabriel Karp-Gershon':           '柯葛顺·加百列·亚历山大',
+      'Gabriel Karp Gershon':           '柯葛顺·加百列·亚历山大',
+    };
+    return ZH[key] || n;
+  };
+
   const payload = {
     schema_version: '1.0',
     doc,
@@ -718,7 +736,7 @@ export function buildPayload({
     layout: layout || (doc === 'cl' ? 'linear' : 'two_column'),
     filename: filename || buildFilename({ personalInfo, meta, doc, language }),
     personal_info: {
-      name:        personalInfo.name        || '',
+      name:        localizeName(personalInfo.name || '', language),
       email:       personalInfo.email       || '',
       phone:       personalInfo.phone       || '',
       location:    localForm(personalInfo.location || ''),

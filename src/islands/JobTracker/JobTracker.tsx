@@ -155,7 +155,7 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
   }, [doc, persist]);
 
   // Append a row from a JD (shared by URL + file paths).
-  function appendRow(company: string, role: string, jdText: string, url?: string): void {
+  function appendRow(company: string, role: string, jdText: string, url?: string, support?: string): void {
     if (!doc) return;
     const uk = slug(company + '-' + role) + '-' + String(Date.now()).slice(-4);
     const maxRank = Math.max(0, ...(doc.rows || []).map((r) => Number(r[0]) || 0));
@@ -164,22 +164,54 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
       ...doc, rows: [...(doc.rows || []), row],
       urls: url ? { ...(doc.urls || {}), [uk]: url } : (doc.urls || {}),
       jd: { ...(doc.jd || {}), [uk]: jdText },
-      support: { ...(doc.support || {}), [uk]: 'ROLE: ' + company + ' — ' + role },
+      support: { ...(doc.support || {}), [uk]: support || ('ROLE: ' + company + ' — ' + role) },
     };
-    setDocState(next); setDirty(true); setNote('Added "' + (role || company) + '". Review & Save.');
+    setDocState(next); setDirty(true); setNote('Added "' + (role || company) + '" with JD + signals. Review & Save.');
+  }
+
+  // Unwrap redirect wrappers (LinkedIn safety/go, generic ?url=) to the real posting.
+  function unwrapUrl(u: string): string {
+    try {
+      const m = u.match(/[?&](?:url|u|target|q)=([^&]+)/i);
+      if (m && (/linkedin\.com\/safety\/go/i.test(u) || /\/(redirect|go|out|away)\b/i.test(u) || /google\.[a-z.]+\/url/i.test(u))) {
+        let dec = decodeURIComponent(m[1]);
+        if (/%[0-9A-Fa-f]{2}/.test(dec)) { try { dec = decodeURIComponent(dec); } catch { /* */ } }
+        if (/^https?:\/\//i.test(dec)) return dec;
+      }
+    } catch { /* */ }
+    return u;
+  }
+
+  // Auto-analyse a fetched JD into the compact intel block (needs / I bring / insight),
+  // so a manually-added row arrives populated instead of empty.
+  async function analyzeJd(jd: string, company: string, role: string): Promise<string> {
+    const sys = 'You analyse a job description for a candidate and output a COMPACT intel block in EXACTLY this format, nothing else:\n'
+      + 'ROLE: <company> — <role>\nFIT: <one line: how the candidate fits>\nFLAG/RISK: <one line: a gap, clearance, location or domain risk; or "none">\n'
+      + '• SIGNALS & INSIGHTS\nNEED: <employer need>  |  I BRING: <candidate angle>  |  INSIGHT/Q: <an abnormal JD signal or a question>\n'
+      + '(3 to 5 NEED lines, each < 160 chars). CANDIDATE = Gabriel: electro-optics / optical-systems engineer + hardware project manager (Sirin stray-light patent, Innoviz LiDAR beam-path, Meprolight sights), Copenhagen, EU (Polish) citizen, ~15 yrs.';
+    try {
+      const out = await askAI('Company: ' + company + '\nRole: ' + role + '\n\nJOB DESCRIPTION:\n' + jd.slice(0, 4500), sys, 700);
+      return (out && out.includes('NEED:')) ? out.trim() : ('ROLE: ' + company + ' — ' + role);
+    } catch { return 'ROLE: ' + company + ' — ' + role; }
   }
 
   async function addFromUrl(): Promise<void> {
-    const url = addUrl.trim(); if (!url || !doc) return;
-    setAdding(true); setErr(null); setNote(null);
+    const raw = addUrl.trim(); if (!raw || !doc) return;
+    const url = unwrapUrl(raw);
+    setAdding(true); setErr(null); setNote('Fetching the JD…');
     try {
       const jd = await fetchJdUrl(url);
-      if (!jd.ok) { setErr('Fetch failed: ' + (jd.error || jd.wall_hint || 'unknown')); return; }
-      const title = (jd.title || '').replace(/\s*[|·—-]\s*(LinkedIn|Jobindex|Indeed).*$/i, '').trim();
-      const company = window.prompt('Company?', title.split(/ at | hos | - /i).pop()?.trim() || '') || '';
+      if (!jd.ok || !(jd.text && jd.text.length > 200)) {
+        setErr('Could not extract a JD from that link' + (jd.wall_hint ? ' (' + jd.wall_hint + ')' : '') + '. Use the DIRECT posting URL, or 📎 upload the JD.');
+        return;
+      }
+      const title = (jd.title || '').replace(/\s*[|·—-]\s*(LinkedIn|Jobindex|Indeed|The Happy Recruiter).*$/i, '').trim();
+      const company = window.prompt('Company?', title.split(/ at | hos | - | \| /i).pop()?.trim() || '') || '';
       const role = window.prompt('Role / title?', title) || '';
       if (!company && !role) return;
-      appendRow(company, role, jd.text || '', url);
+      setNote('Analysing the JD & extracting signals…');
+      const support = await analyzeJd(jd.text, company, role);
+      appendRow(company, role, jd.text, url, support);
       setAddUrl('');
     } catch (e) { setErr(String((e as Error).message || e)); }
     finally { setAdding(false); }
@@ -307,47 +339,7 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
         {(err || note) && <div style={{ padding: '6px 16px', fontSize: 12, color: err ? '#b3261e' : '#2e7d32', background: err ? '#fdecea' : '#eaf5ea' }}>{err || note}</div>}
 
         <div style={{ flex: 1, overflow: 'auto' }}>
-          {loading ? <div style={{ padding: 24 }}>Loading…</div> : view === 'list' ? (isMobile ? (
-            <div style={{ padding: 12, display: 'grid', gap: 10 }}>
-              {rows.map((r) => {
-                const uk = r[11]; const t = tierOf(r[12]); const hasJd = ((doc?.jd || {})[uk] || '').length > 200; const star = isTop5(r);
-                return (
-                  <div key={uk} style={{ border: '1px solid #d5deec', borderLeft: '5px solid ' + t.accent, borderRadius: 8, background: t.tint, padding: '10px 12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontWeight: 800, color: t.accent, fontSize: 15 }}>{star ? '★' : ''}{r[0]}</span>
-                      <strong style={{ flex: 1, fontSize: 14 }}>{r[1]}</strong>
-                      <span style={{ background: t.accent, color: '#fff', borderRadius: 4, padding: '1px 6px', fontSize: 11, fontWeight: 700 }}>{t.label}</span>
-                      <span style={{ fontSize: 14 }} title={hasJd ? 'JD stored' : 'No JD'}>{hasJd ? '✅' : '—'}</span>
-                    </div>
-                    <div style={{ fontSize: 13, margin: '3px 0' }}>{r[2]}</div>
-                    <div style={{ fontSize: 11, color: '#556', marginBottom: 4 }}>📍 {r[3]}{doc?.urls?.[uk] ? <> · <a href={doc.urls[uk]} target="_blank" rel="noreferrer" style={{ color: t.accent, fontWeight: 700 }}>posting ↗</a></> : null}</div>
-                    <div style={mLbl}>Status</div>
-                    <select value={r[8]} onChange={(e) => editRow(uk, 8, e.target.value)} style={{ width: '100%', fontSize: 13, padding: 5 }}>{TRACKED_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}{!TRACKED_STATUSES.includes(r[8]) && r[8] ? <option value={r[8]}>{r[8]}</option> : null}</select>
-                    <div style={mLbl}>Next action</div>
-                    <textarea value={r[9]} onChange={(e) => editRow(uk, 9, e.target.value)} rows={2} style={ta} />
-                    <div style={mLbl}>Flag / notes</div>
-                    <textarea value={r[10]} onChange={(e) => editRow(uk, 10, e.target.value)} rows={2} style={ta} />
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 7, margin: '9px 0 2px', fontSize: 13, fontWeight: 700, color: '#334' }}>
-                      <input type="checkbox" checked={brandOf(uk)} onChange={() => void toggleBrand(uk, r)} style={{ width: 18, height: 18 }} /> 🎨 Brand-fit to employer <Swatches uk={uk} />
-                    </label>
-                    <div style={mLbl}>Additional signals (for generation)</div>
-                    <textarea value={signalsOf(uk)} onChange={(e) => setSignals(uk, e.target.value)} rows={2} placeholder="hiring manager, emphasis, insider context…" style={ta} />
-                    <div style={{ display: 'flex', gap: 8, marginTop: 9, alignItems: 'center', flexWrap: 'wrap' }}>
-                      <select value={genOf(uk)} onChange={(e) => setGen(uk, e.target.value)} title="Generation quality" style={{ fontSize: 13, padding: 5 }}>
-                        <option value="high">★ High quality</option><option value="quick">⚡ Quick</option>
-                      </select>
-                      {hasArtifact(uk)
-                        ? <button onClick={() => void openSaved(r)} disabled={busyKey === uk} style={btn('#2e7d32', '#fff', 13)}>{busyKey === uk ? '…' : '↗ Open'}</button>
-                        : <button onClick={() => void prepareAndOpen(r)} disabled={busyKey === uk} style={btn('#2E5DA8', '#fff', 13)}>{busyKey === uk ? '…' : '✨ Open in AntCV'}</button>}
-                      <button onClick={() => toggleNightly(uk)} title="Include in tonight's batch generation"
-                        style={{ background: nightlyOn(uk) ? '#2E5DA8' : '#eef1f6', color: nightlyOn(uk) ? '#fff' : '#556', border: '1px solid #c3ccdb', borderRadius: 6, cursor: 'pointer', fontSize: 13, fontWeight: 600, padding: '5px 9px' }}>⏰ {nightlyOn(uk) ? 'Nightly ✓' : 'Nightly'}</button>
-                    </div>
-                  </div>
-                );
-              })}
-              {rows.length === 0 && <div style={{ padding: 16, fontSize: 13 }}>No rows yet — paste a job URL or upload a JD file above.</div>}
-            </div>
-          ) : (
+          {loading ? <div style={{ padding: 24 }}>Loading…</div> : view === 'list' ? (
             <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 900, tableLayout: 'fixed' }}>
               <colgroup>
                 <col style={{ width: 46 }} /><col style={{ width: 58 }} /><col style={{ width: 150 }} /><col style={{ width: 210 }} />
@@ -388,7 +380,7 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
                 {rows.length === 0 && <tr><td style={cell} colSpan={12}>No rows yet — paste a job URL or upload a JD file above.</td></tr>}
               </tbody>
             </table>
-          )) : (
+          ) : (
             <div style={{ padding: 14, display: 'grid', gap: 14 }}>
               {top5.map((r) => <FocusCard key={r[11]} row={r} doc={doc} cluster={cluster} mobile={isMobile} busy={busyKey === r[11]}
                 onPrepare={() => void prepareAndOpen(r)} onOpen={() => void openSaved(r)} onDrop={() => void dropFromTop5(r)} onSaveSupport={saveSupport} />)}

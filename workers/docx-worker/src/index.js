@@ -24400,6 +24400,21 @@ async function generateDocx(payload) {
   const style = mergeStyle(payload.style || {}, payload.package, payload.legacy_ats_tier === true);
   const fontSizes = { ...FONT_DEFAULTS, ...payload.font_sizes || {} };
   const lang = payload.language || "en";
+  // CJK-FONT-ZH-001 (owner 2026-07-09): the package fonts are Latin faces
+  // (Calibri / Segoe UI) \u2014 Chinese glyphs in headings, the name band, and body
+  // box out under them. When the document language is Chinese, force a
+  // CJK-capable face for every font slot. Latin text still renders correctly in
+  // this face; Word / LibreOffice substitute an available CJK font if the exact
+  // face is absent. mergeStyle can't carry a font from the payload (it
+  // hex-coerces unknown string tokens), so this must live worker-side.
+  if (lang === "zh") {
+    const cjk = "Microsoft YaHei";
+    style.mainHeadFont = cjk;
+    style.mainBodyFont = cjk;
+    style.sidebarFont = cjk;
+    style.sidebarBodyFont = cjk;
+    style.headerFont = cjk;
+  }
   const CONT_SUFFIX = { en: "(CONT.)", da: "(FORTS.)", es: "(CONT.)", zh: "\uFF08\u7EED\uFF09" };
   const contSuffix = CONT_SUFFIX[lang] || CONT_SUFFIX.en;
   const layout = payload.layout || (payload.doc === "cl" ? "linear" : "two_column");
@@ -28250,7 +28265,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.140-date-no-present";
+var VERSION = "1.14.141-cjk-zh-font";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

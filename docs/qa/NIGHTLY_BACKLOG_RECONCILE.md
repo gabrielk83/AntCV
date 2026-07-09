@@ -88,3 +88,35 @@ ROOT: the two columns paginate INDEPENDENTLY (per-page `makePageTable` slots) an
 FLAG PROBE (2026-07-09, desktop Word-COM, DONE — negative result): built sidebar-top-photo repros at balanced and short-main (roles.slice(0,1)) sidebar/main ratios, rendered baseline vs `balance_overflow` (bo) vs `float_spine` (fs). **All six renders byte-identical page geometry → the flags are INERT on these payloads.** Root cause of the no-op, read from the worker (`__overflowActive`, src/index.js:25128): `balanceOverflow` only fires when a render slot has sidebar content BEYOND `__lastMainSlot` (sidebar OUTLASTS main → reflow the tail full-width). My payloads' main content reaches the last page, so the guard is false and nothing reflows. More important: the live desync is INTERLEAVED (p2 sidebar-only, p4 main-only) — the two cells overflow their per-slot page height and drift in BOTH directions. `balanceOverflow` only collapses a trailing sidebar-only run; it does nothing for a main-only page (p4) or mid-document drift. `floatSpine` likewise only rewrites continuation-break anchors, not cell-height budgeting. So NEITHER flag is a fix here, and enabling them is unvalidated (protocol: no speculative layout flips) AND would be a no-op anyway.
 
 REAL FIX PATH (architectural, deferred to a focused session): the per-slot `makePageTable` model is fundamentally fragile — one [sidebar|main] table per page-slot with a hard page break, each cell re-flowed to natural height by CloudConvert/LibreOffice under AUTOFIT (see calibrate-linefill.py finding: columns are content-driven, ignore the grid). When either cell exceeds its slot's page height, subsequent slots desync. Fix must budget each slot's content to the AUTOFIT page height at PAGINATION time (client `autoPages`) — accounting for the sidebar-body photo's height (the missed trigger) — so no cell overflows its slot; OR abandon per-slot tables for one genuinely balanced flow. NOT a payload flag. Ties row 61 (float-spine), row 74, coordinator-sidebar-inflate. Also the root of the 5-page bloat on the Trackman run (row 74 (b)/(d)) — same desync, JD-run happened to align better.
+
+### 2026-07-09 ADD — FIX-ORPHANS NBSP-BIND can create an over-long last line (owner: "pressing fit-it → lines ~30 chars too long")
+
+Owner confirmed the culprit is the **Fix Orphans** button (not Enrich). Mechanism
+(app.src.js `Qi`, the `o(text, t)` binder ~19670): to de-runt a short last line it
+replaces the last `t-1` inter-word spaces with NBSP so the last 2 (t=2) or 3 (t=3,
+when the text already ends NBSP-bound → repeated presses escalate) words bind into
+one unbreakable cluster and move together. FRAGILITY: the bind count is a blunt 2/3
+with NO width check — if the bound cluster is wider than the column it renders as an
+over-long/overflowing line (worst in a narrow column: sidebar labeled_list/list/edu
+are measured at ~220px@10pt; a 3-word cluster there can exceed the column).
+
+REPRO STATUS: could NOT reproduce geometrically in the owner's provided unsolicited
+PDF — both columns overflow only ≤19pt (~3-4 chars, the ▪-marker/justify edge
+artifact), NOT 30 chars. So that PDF is the pre-fit-it state; need the owner's actual
+too-long line (screenshot / which section) to reproduce, per diagnostic-first rule
+(no speculative app.js patch — blue-screen history).
+
+READY FIX (width-guard, both app.src.js + minified app.js mirror + cache-bust):
+1. Thread the measure context onto every inventory push in `Gi` (~19219-19440): add
+   `mw` (the px width already passed to Vi), `mf` (font px: 14 main / 10 sidebar+table),
+   `mo` (the align/padLeft opts) to each pushed item — main content/hands_on/
+   professionally/intro/item/bullet/exp use (__pdfMainW,14,opts); table col0=220,
+   col1=360 @10; labeled_list(main)=210@10; sidebar labelval/list/edu=220@10.
+2. In the binder `o(e, t, mw, mf, mo)`: after choosing `want=min(t-1, spaces)`, reduce
+   `want` while the trailing (want+1) words don't fit ONE line — `Vi(clusterWords, mw,
+   mf, mo) > 1` → want-- ; if want<1 leave UNBOUND (return original) so a very long
+   trailing word never forces overflow. Then NBSP-bind only the surviving `want` spaces.
+3. Validate: rebuild a sidebar-heavy CV, press-simulate the fix, Word-COM render, confirm
+   no sidebar/main line exceeds its column right edge. Also consider capping t at 2
+   (kill the repeated-press escalation to 3) as belt-and-suspenders.
+Ties [[orphan-measure-bind]], [[line-distribution-guidelines]].

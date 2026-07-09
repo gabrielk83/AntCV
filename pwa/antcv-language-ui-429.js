@@ -348,17 +348,34 @@
    * Runs in boot AFTER Filter so window.AntcvLangBarFilter exists.
    * ===================================================================== */
   var Defaults = (function () {
-    if (window.__antcvLanguagePrefsDefaults === '1.40.339') return { boot: function () {} };
-    window.__antcvLanguagePrefsDefaults = '1.40.339';
+    if (window.__antcvLanguagePrefsDefaults === '1.51.228-hardreset') return { boot: function () {} };
+    window.__antcvLanguagePrefsDefaults = '1.51.228-hardreset';
     const DEFAULT_LANGS=['en','da'];
     function valid(arr){arr=(Array.isArray(arr)?arr:[]).map(x=>String(x||'').trim().toLowerCase()).filter(x=>['en','da','es','zh'].includes(x));arr=Array.from(new Set(arr));return arr.length?arr:DEFAULT_LANGS.slice()}
     function readStored(){try{const raw=localStorage.getItem('enabledLanguages')||localStorage.getItem('antcv:enabledLanguages')||localStorage.getItem('antcv:visibleLanguages');if(raw)return valid(JSON.parse(raw))}catch(_){}return null}
     function save(arr){const next=valid(arr),raw=JSON.stringify(next);try{localStorage.setItem('enabledLanguages',raw)}catch(_){}try{localStorage.setItem('antcv:enabledLanguages',raw)}catch(_){}try{localStorage.setItem('antcv:visibleLanguages',raw)}catch(_){}try{const pi=JSON.parse(localStorage.getItem('personalInfo')||'{}')||{};pi.stylePrefs=pi.stylePrefs||{};pi.stylePrefs.visibleLanguages=next;pi.stylePrefs.languageBar=next;localStorage.setItem('personalInfo',JSON.stringify(pi))}catch(_){}try{window.dispatchEvent(new CustomEvent('antcv:language-prefs-changed',{detail:{visibleLanguages:next,scope:'topbar-only'}}))}catch(_){}try{if(window.AntcvLangBarFilter&&window.AntcvLangBarFilter._applyAll)window.AntcvLangBarFilter._applyAll()}catch(_){}return next}
     function justDeletedRecent(){try{const ck=document.cookie||'';const m=ck.match(/(?:^|;\s*)antcv-just-deleted=([^;]+)/);if(!m)return false;const ts=parseInt(decodeURIComponent(m[1]),10);if(!ts)return false;return (Date.now()-ts)<24*60*60*1000}catch(_){return false}}
-    window.AntcvLanguagePrefsDefaults={version:'1.40.339',save,readStored,justDeletedRecent};
+    // HARDRESET-LANG-RESTORE-001 (owner 2026-07-09): a language list the CLOUD
+    // restore has written into personalInfo.stylePrefs.
+    function readCloudLang(){try{const pi=JSON.parse(localStorage.getItem('personalInfo')||'{}')||{};const sp=pi.stylePrefs||{};const v=sp.visibleLanguages||sp.enabledLanguages||sp.languageBar;if(Array.isArray(v)&&v.length)return valid(v)}catch(_){}return null}
+    window.AntcvLanguagePrefsDefaults={version:'1.51.228-hardreset',save,readStored,justDeletedRecent,readCloudLang};
     function boot(){
-      if(justDeletedRecent()){try{console.info('[language-prefs-defaults] antcv-just-deleted set; forcing EN+DA defaults')}catch(_){}save(DEFAULT_LANGS);}
-      else if(!readStored())save(DEFAULT_LANGS);
+      // DELETE flow (antcv-just-deleted cookie): force a fresh EN+DA start.
+      // Owner 2026-07-09: "if the user is deleted I want no restore."
+      if(justDeletedRecent()){try{console.info('[language-prefs-defaults] antcv-just-deleted set; forcing EN+DA defaults')}catch(_){}save(DEFAULT_LANGS);return;}
+      // Normal reload: local cache already holds the languages — leave it.
+      if(readStored())return;
+      // HARD RESET: local cache was cleared and the user's languages are arriving
+      // from the CLOUD restore. Do NOT clobber with EN+DA — wait for the restored
+      // list, and only fall back to defaults if none ever arrives (genuinely
+      // anonymous / no cloud data). Owner: "languages are supposed to come from
+      // the cloud as well as everything else."
+      var applied=false;
+      function tryApply(){if(applied)return true;var got=readStored()||readCloudLang();if(got){applied=true;save(got);return true}return false;}
+      if(tryApply())return;
+      var tries=0;
+      var iv=setInterval(function(){tries++;if(tryApply()||tries>=24){clearInterval(iv);if(!applied)save(DEFAULT_LANGS);}},300);
+      try{window.addEventListener('antcv:cloud-restored',tryApply);}catch(_){}
     }
     return { boot: boot };
   })();

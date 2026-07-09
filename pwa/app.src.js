@@ -17922,6 +17922,18 @@
                           r = t.slice(1);
                         if (Array.isArray(e)) {
                           const t = [...e];
+                          // SETIN-ARRAY-UNDEF-GUARD-001 (owner 2026-07-09 crash
+                          // "Cannot read properties of undefined (reading 'title')"):
+                          // a translated paragraph's stored path can outlive the
+                          // structure it referenced (roles/items removed or reordered
+                          // between path-collection and this async apply). The array
+                          // branch used to recurse into e[o] unconditionally, so a path
+                          // through a non-existent index (e.g. roles[5].title when roles
+                          // shrank) recursed into undefined and threw. SKIP a missing
+                          // index rather than create it — creating would fill the array
+                          // with undefined holes and risk a fresh crash in any later
+                          // roles.map(r => r.title) render.
+                          if (void 0 === e[o]) return t;
                           return ((t[o] = u(e[o], r, n)), t);
                         }
                         const a = { ...e };

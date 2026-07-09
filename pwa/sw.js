@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.222-date-no-present';
+const CACHE = 'antcv-1.51.223-setin-guard';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

@@ -125,4 +125,70 @@ nothing changes production without a human merge.
 
 ---
 
+## 6. KNOWN ISSUE (opened 2026-07-10, still OPEN) — persistent 403 despite fully-correct setup
+
+The weekly run on 2026-07-10 hit `/api/cse-search` returning `502` with a wrapped
+Google `403 PERMISSION_DENIED: "This project does not have the access to Custom
+Search JSON API."` on every single call — before AND after this session and the
+owner jointly verified, in order:
+
+1. Custom Search API shows **Status: Enabled** on the exact GCP project (`antcv-access`).
+2. A billing account (`01FF2F-F60222-E7BD65`) is **linked** to that project.
+3. The API key (`AntCV_Seeker`, then rotated to `AntCV_Seeker_2`) is **present in
+   that exact project**, restricted to allow only Custom Search API, Application
+   restrictions: None.
+4. The Quotas page shows "Custom Search API — Queries per day" **actively
+   incrementing** (so requests do reach Google and get routed correctly).
+5. Calling `https://www.googleapis.com/customsearch/v1` **directly** (bypassing
+   this repo's Worker entirely) with the real key + real `cx` reproduces the
+   *identical* 403 — ruling out anything in this repo's code/proxy.
+6. Google's own **API Explorer** ("Try this API") against the SAME `cx` with
+   Google's own demo credentials returns a working `200` with real results —
+   ruling out the search engine (`cx`) itself or a Custom-Search-wide outage.
+
+So: right project, right billing, right key, right `cx`, requests reaching
+Google and being quota-counted — and still denied. This is a Google-side
+account/project **entitlement hold** that isn't visible anywhere in the console
+UI checked so far. **A Google Cloud Support case was opened 2026-07-10** citing
+this exact evidence trail; resolution is pending on their side, not ours.
+
+**For the next weekly run:** re-test the proxy first (per the runbook's own
+"one simple test query before the full pass" step) — do NOT assume this is
+fixed just because time has passed, and do NOT assume it's still broken either.
+If it's still 403ing and the Support case is still open, the documented
+fallback is: proceed with plain WebSearch research only (reduced Nordic/Danish
+site-scoped coverage), same as the 2026-07-10 run did, and note it in that
+week's PR.
+
+## 7. KNOWN BUG (found 2026-07-10, still OPEN) — `GOOGLE_CSE_ID` secret is dead code
+
+`workers/access-relay/src/index.js`'s `/api/cse-search` handler does **not**
+read `env.GOOGLE_CSE_ID` at all — the `cx` value is a **hardcoded constant**:
+
+```js
+// CSE ID is not sensitive (it's embedded in the public cse.js widget
+// snippet Google itself generates) — safe as a plain constant.
+const CSE_ID = '67ce5387bc18f4028';
+```
+
+So step 4 above ("Set both secrets on access-relay") is misleading for
+`GOOGLE_CSE_ID` today: setting it via `wrangler secret put GOOGLE_CSE_ID` has
+**zero effect** — the Worker ignores it and always uses the hardcoded value.
+This happened to be harmless during the 2026-07-10 investigation (the hardcoded
+`cx` matched the intended Programmable Search Engine), but it means:
+
+- If the search engine (`cx`) is ever regenerated/replaced, this hardcoded
+  constant must be updated **in code** (a deploy), not by rotating a secret.
+- The `wrangler secret put GOOGLE_CSE_ID` instructions in §4 above should either
+  be removed (if the constant approach is intentional/permanent — it *is*
+  low-sensitivity, per the comment) or the code should be fixed to read
+  `env.GOOGLE_CSE_ID || CSE_ID` so the secret actually does something.
+
+Not fixed in this doc-only session (weekly demand-tuning runs don't touch
+Worker code) — flagged here + in `docs/qa/MASTER_BACKLOG.md` for a proper code
+session to pick up.
+
+---
+
 _Owner: 2026-07-05. Part of CLUSTER-QUAL-001 stage 4 (spec §7.6, weekly refresh)._
+_Updated 2026-07-10: logged the persistent entitlement 403 (Support case open) and the `GOOGLE_CSE_ID` dead-secret bug found while diagnosing it._

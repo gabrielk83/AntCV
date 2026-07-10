@@ -61,15 +61,26 @@ test('whitespace-only company is not a real company', () => {
   assert.equal(sanitize(m), m);
 });
 
-test('source + mirror both carry the transform at all 3 sites', () => {
+test('source + mirror both carry the transform at every showcase boundary', () => {
   const src = readFileSync(new URL('../../app.src.js', import.meta.url), 'utf8');
   const min = readFileSync(new URL('../../app.js', import.meta.url), 'utf8');
-  const srcMarker = 'Object.assign({}, m, { company: "Unsolicited", role: "Open Application" })';
-  const minMarker = 'Object.assign({},m,{company:"Unsolicited",role:"Open Application"})';
-  const srcN = src.split(srcMarker).length - 1;
-  const minN = min.split(minMarker).length - 1;
-  assert.equal(srcN, 3, 'app.src.js must have the sanitize at restore + 2 persist sites');
-  assert.equal(minN, 3, 'app.js mirror must have the sanitize at restore + 2 persist sites');
+  // The showcase slot is BY DESIGN the unsolicited kernel, so EVERY write/read
+  // boundary sanitizes the meta. As of 1.51.239 there are 6 sites:
+  //   • 2 generation-commit putShowcase (edit-persist + gen-commit)
+  //   • 2 manual-save putShowcase (APP-HISTORY-KERNEL-SAVE-001, owner 2026-07-10)
+  //   • 1 restore getShowcase
+  //   • 1 AntcvApplyStyleKernel Load hook (APP-HISTORY-STYLE-KERNELS-001)
+  // Whitespace-tolerant between tokens (but NOT inside the "Open Application"
+  // literal) so a source site written in compact form (the
+  // APP-HISTORY-KERNEL-SAVE-001 blocks are pasted minified) still counts —
+  // otherwise a purely cosmetic formatting difference false-fails the guard.
+  const marker = /Object\.assign\(\{\},\s*m,\s*\{\s*company:\s*"Unsolicited",\s*role:\s*"Open Application"\s*\}\)/g;
+  const count = (s) => (s.match(marker) || []).length;
+  const srcN = count(src);
+  const minN = count(min);
+  assert.equal(srcN, 6, 'app.src.js must sanitize all 6 showcase boundaries');
+  assert.equal(minN, 6, 'app.js mirror must sanitize all 6 showcase boundaries');
+  assert.equal(srcN, minN, 'source + minified mirror must not drift');
 });
 
 test('restore-side rationale guard present in both bundles', () => {

@@ -29,7 +29,7 @@
        installed first. Namespaces antcv:lastJdText/applicationQuestions/
        activeAppCompany per current-app-id (tracked per TAB) so two parallel sessions
        (two tabs / desktop+mobile / two browsers) can't contaminate each other's JD. -->
-  <script src="antcv-jd-scope.js?v=1.51.259"></script>
+  <script src="antcv-jd-scope.js?v=1.51.73"></script>
   <!-- PTR-STALE-GUARD-001 (register row 39a residual, 2026-07-04): pure staleness
        check for the active_application pointer adoption in app.js cold-restore /
        Read-from-Cloud — a SAME-device pointer can still be stale (race / lagging
@@ -38,11 +38,6 @@
        localStorage + the optional AntcvJdScope.deviceId() above; must load before
        app.js reads window.AntcvPointerStaleGuard at cold-restore. -->
   <script src="antcv-pointer-stale-guard.js?v=1.51.135"></script>
-  <!-- TAB-DOC-ISOLATION-001 (owner 2026-07-10): per-tab snapshot of the generated
-       document; on boot, if a PARALLEL tab overwrote the shared localStorage sections,
-       restore THIS tab's own document so app.js reads the right one. Must load before
-       app.js reads sections. Safe/additive (never deletes; sessionStorage-backed). -->
-  <script src="antcv-tab-doc-isolation.js?v=1.51.253-tab-doc-isolation"></script>
   <!-- BOOT-STORM-DAMP-001: coalesce bursts of antcv:sections-updated so the boot storm
        doesn't peg the main thread (the "gate hangs / refresh twice" freeze). Loaded FIRST
        so its listener registers before any other; kill switch antcv:disable-storm-damp. -->
@@ -350,7 +345,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.243-localform-da';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.259-parallel-gen-pointer';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.246-demand-seed-refresh';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -389,10 +384,10 @@
         auth.src = 'antcv-auth.js?v=1.51.92-analytics-401-scope';
         auth.onload = function(){
           var app = document.createElement('script');
-          app.src = 'app.js?v=1.51.259-brand-open-attach';  /* BRAND-FIT-OPEN-001 + attach filter widen */
+          app.src = 'app.js?v=1.51.245-lang-dropdown-current';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.259-topfive-research';
+            vo.src = 'antcv-version-override.js?v=1.51.246-demand-seed-refresh';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -585,7 +580,7 @@
 <a href="#root" class="antcv-skip-link">Skip to main content</a>
 <div id="root" role="main" aria-label="AntCV application"></div>
 <script>
-const PHOTO_B64 = "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";
+const PHOTO_B64 = "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";
 </script>
 
 <script>
@@ -653,7 +648,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      scheduler + ONE MutationObserver. The owner-touched wizard-language-slide,
      i18n, translation-patch, and language-ui-fixes stay separate. The three old
      files stay on disk, unreferenced. -->
-<script src="antcv-language-ui-429.js?v=1.51.249-arabic-lang" defer></script>
+<script src="antcv-language-ui-429.js?v=1.51.238-multilang-he-am" defer></script>
 <script src="antcv-section-align.js?v=1.51.43" defer></script>
 <script src="antcv-subsection-reorder.js?v=1.50.702" defer></script>
 <script src="antcv-disclosure-triangle.js?v=1.50.703" defer></script>
@@ -690,7 +685,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <!-- CLUSTER-QUAL-001: 20-most-demanded-skills model (read half); loaded before the
      normalizer + docx-client so its window.AntcvClusterDemand is available to the
      blended numeric+demand ordering. -->
-<script src="antcv-cluster-demand.js?v=1.51.171" defer></script>
+<script src="antcv-cluster-demand.js?v=1.51.246" defer></script>
 <!-- CLUSTER-QUAL-001 stage 2b (section 3.4): real D1-backed top-20 for the CURRENT
      application's category, preferred by __clusterRule over the static seed above. -->
 <script src="antcv-cluster-demand-live.js?v=1.51.167" defer></script>
@@ -723,11 +718,6 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      /api/kernel-showcase) BELOW the regular saved-app table; both collapsed by default.
      Sidecar-owned DOM. Kill: antcv:disable-style-kernels-table. -->
 <script src="antcv-app-history-style-kernels.js?v=1.51.240-kernel-writingstyle-key" defer></script>
-<!-- ZH-PREVIEW-FURNITURE-001 (owner 2026-07-10): on-screen zh localization of the
-     render furniture the worker fixes only touch on EXPORT — "Results:" label, contact
-     city/EU-Citizen, header NAME + CL signature, CL closing, Foundation lead-in, AI
-     notice, "ISP tools". Scoped/exact-match; DOM-text only. Kill: antcv:disable-zh-furniture. -->
-<script src="antcv-zh-preview-furniture.js?v=1.51.246-zh-preview-furniture" defer></script>
 <script src="antcv-preview-header-tokens.js?v=1.50.41" defer></script>
 <!-- v1.50.159: sidebar-bg tokenization — recolours the preview sidebar per visual
      style (var(--package-base) cascade), matching the DOCX. Companion to
@@ -1070,7 +1060,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-quick-contact-collapse.js?v=1.51.128" defer></script>
 <script src="antcv-data-export-360.js?v=1.50.929" defer></script>
 <script src="antcv-personal-dedup-hide.js?v=1.50.861" defer></script>
-<script src="antcv-settings-sync-extra.js?v=1.51.247-hardreset-lang-restore" defer></script>
+<script src="antcv-settings-sync-extra.js?v=1.51.230-lang-cloud-sync" defer></script>
 <script src="antcv-cl-cloud-sync-extra.js?v=1.51.164" defer></script>
 <script src="antcv-cl-prose-loss-guard-985.js?v=1.51.120" defer></script>
 <!-- GEN-UNSOL-STALE-JD-001 Patch D: scrub a KNOWN PRIOR targeted company from unsolicited prose (employer names protected). Kill antcv:disable-unsol-company-scrub. -->
@@ -1104,7 +1094,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      SettingsRouter, wizardState). See docs/plan/AntCV_Plan_v2_LockedSources.md
      §7 Pass 1. -->
       <script src="antcv-357-loader.js?v=1.50.400" defer></script>
-      <script src="antcv-react-islands.js?v=1.51.258-topfive-research" defer></script>
+      <script src="antcv-react-islands.js?v=1.51.234" defer></script>
       <!-- v1.50.164: auto-apply the correct palette when the stored package is the
            legacy orphan default ("scandinavian"), by pressing the Copenhagen Modern
            button — fixes the permanent palette mix on load without a manual click. -->

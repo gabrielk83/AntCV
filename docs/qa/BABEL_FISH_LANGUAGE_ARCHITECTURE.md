@@ -122,8 +122,17 @@ breaks generation (per the nightly hard rules).
   (language-aware kernel guard) + auto-run the babel-fish render on the fresh output when
   the ribbon language's rendering is missing/stale. Makes "pick zh → get zh" work using
   existing pieces. Verify live via the Browser-pane gate.
-- **Phase 2 (full store):** per-language cloud renderings of the neutral facts, §2
-  invariant/renderable map enforced with the §4.3 fact-preservation check, §6 pre-warm.
+- **Phase 2 core (SHIPPED 1.51.321-babel-cache):** the babel-relang sidecar became the
+  lazy-cached per-language materializer. Mode split on `antcv:genSpeed`: fast/balanced
+  snapshot each confirmed rendering to `antcv:langRender:<L>` and RESTORE it instantly
+  on re-select (`window.AntcvApplyStyleKernel`, no LLM); thorough skips the cache (a full
+  native generation via the honest `LANGUAGE:` line is the source of truth). Wrong-script
+  non-Latin content with no cache → cheap `__antcvRelang(L,true)`. Never auto-fires a
+  multi-minute generation from a passive switch. Client-local cache; detection on the
+  sections data model.
+- **Phase 2b (open):** cross-device CLOUD persistence of the per-language renderings
+  (populate the `style|lang` slots / sync `antcv:langRender:<L>`), the §2 invariant/
+  renderable field map enforced with the §4.3 fact-preservation check, and §6 pre-warm.
 
 ## 8. Tests / verification
 

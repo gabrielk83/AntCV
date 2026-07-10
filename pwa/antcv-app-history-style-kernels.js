@@ -18,7 +18,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.239-style-kernels-load';
+  var VERSION = '1.51.240-kernel-writingstyle-key';
   if (window.__antcvStyleKernelsTable === VERSION) return;
   window.__antcvStyleKernelsTable = VERSION;
   try { if (localStorage.getItem('antcv:disable-style-kernels-table') === '1') return; } catch (_) {}
@@ -149,7 +149,8 @@
         window.dispatchEvent(new CustomEvent('antcv:load-style-kernel', { detail: { style_key: styleKey, showcase: sc } }));
       } catch (_) {}
       var p = styleParts(styleKey);
-      var lbl = prettyStyle(p.style || styleKey) + (p.lang ? ' (' + (LANG[p.lang] || p.lang.toUpperCase()) + ')' : '');
+      var __lang = (sc && sc.jd_language) || p.lang || '';
+      var lbl = prettyStyle(p.style || styleKey) + (__lang ? ' (' + (LANG[__lang] || __lang.toUpperCase()) + ')' : '');
       if (window.AntcvApplyStyleKernel) {
         var okApplied = false;
         try { okApplied = window.AntcvApplyStyleKernel(sc, styleKey) !== false; } catch (_) {}

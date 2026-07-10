@@ -16798,7 +16798,7 @@
                 meta: (function (m) { try { if (!m || "object" != typeof m) return m; var co = String(m.company || "").trim(); if (!co || "Unsolicited" === co) return m; var c = Object.assign({}, m, { company: "Unsolicited", role: "Open Application" }); try { delete c.rationale; } catch (_) {} return c; } catch (_) { return m; } })(u.get("meta", null)), /* UNSOLICITED-IDENTITY-SOURCE-FIX-001: never store a real company in the unsolicited kernel slot */
                 rationale: u.get("rationale", null),
                 jd_language: je,
-              }, (() => { try { var p = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {}; p = p.personalInfo || p; var __st = String((p.stylePrefs || {}).style || "").trim(); var __lg = String(localStorage.getItem("language") || "en").toLowerCase().slice(0,2) || "en"; return __st ? __st + "|" + __lg : ""; } catch (_) { return ""; } })());
+              }, (() => { try { var p = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {}; p = p.personalInfo || p; var __st = String((p.writingPrefs || {}).style || "").trim().toLowerCase(); var __lg = String(localStorage.getItem("language") || "en").toLowerCase().slice(0,2) || "en"; return __st ? __st + "|" + __lg : ""; } catch (_) { return ""; } })());
               try {
                 console.log(
                   "[v1.50.267 KERNEL-CLOUD-PERSIST] re-saved kernel showcase after edit (subtitle/meta/sections)",
@@ -16967,7 +16967,7 @@
           return (
             (async () => {
               try {
-                const e = await oo.getShowcase((() => { try { var p = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {}; p = p.personalInfo || p; var __st = String((p.stylePrefs || {}).style || "").trim(); var __lg = String(localStorage.getItem("language") || "en").toLowerCase().slice(0,2) || "en"; return __st ? __st + "|" + __lg : ""; } catch (_) { return ""; } })());
+                const e = await oo.getShowcase((() => { try { var p = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {}; p = p.personalInfo || p; var __st = String((p.writingPrefs || {}).style || "").trim().toLowerCase(); var __lg = String(localStorage.getItem("language") || "en").toLowerCase().slice(0,2) || "en"; return __st ? __st + "|" + __lg : ""; } catch (_) { return ""; } })());
                 if (o) return;
                 // 1.50.277: mark restore ATTEMPTED on every non-cancelled
                 // outcome (no slot / empty slot / real slot) so the Cs() regen
@@ -27426,7 +27426,7 @@
                     // 1.50.274: only persist a freshly-generated showcase if it
                     // actually has content — never write an empty/template husk.
                     if (!__antcvHasRealSections(__secs)) return;
-                    const __kk = (() => { try { var p = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {}; p = p.personalInfo || p; var __st = String((p.stylePrefs || {}).style || "").trim(); var __lg = String(localStorage.getItem("language") || "en").toLowerCase().slice(0,2) || "en"; return __st ? __st + "|" + __lg : ""; } catch (_) { return ""; } })();
+                    const __kk = (() => { try { var p = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {}; p = p.personalInfo || p; var __st = String((p.writingPrefs || {}).style || "").trim().toLowerCase(); var __lg = String(localStorage.getItem("language") || "en").toLowerCase().slice(0,2) || "en"; return __st ? __st + "|" + __lg : ""; } catch (_) { return ""; } })();
                     try { const __ex = await oo.getShowcase(__kk); if (__ex && __ex.showcase && __ex.style_key === __kk && !window.confirm('A saved style kernel for "' + String(__kk).replace("|", " / ") + '" already exists. Replace it with this new generation?')) return; } catch (_) {}
                     
                     oo.putShowcase({

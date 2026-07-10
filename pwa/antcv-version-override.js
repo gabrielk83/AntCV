@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.239-style-kernels-load';
+  const TARGET_VERSION = '1.51.240-kernel-writingstyle-key';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.239-style-kernels-load',
     '1.51.238-multilang-he-am',
     '1.51.237-lang-gen-lock',
     '1.51.236-style-kernels-table',

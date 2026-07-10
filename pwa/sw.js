@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.239-style-kernels-load';
+const CACHE = 'antcv-1.51.240-kernel-writingstyle-key';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

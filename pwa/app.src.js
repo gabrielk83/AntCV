@@ -17051,6 +17051,10 @@
             }
           );
         }, [Y && Y.email]),
+        // APP-HISTORY-STYLE-KERNELS-001 Load hook: window.AntcvApplyStyleKernel(sc)
+        // applies a saved style kernel (sections/meta/rationale) into the editor —
+        // reuses the boot-restore setters (ao/lo/bo) + forces Unsolicited identity.
+        React.useEffect(() => { try { window.AntcvApplyStyleKernel = function (sc) { try { if (!sc || !sc.sections) return false; var t = sc; if (t.sections && "object" == typeof t.sections) { try { u.set("sections", t.sections); } catch (e) {} try { ao({ cv: t.sections.cv || [], cl: t.sections.cl || [] }); } catch (e) {} } if (t.meta && "object" == typeof t.meta) { var __mm = (function (m) { try { if (!m || "object" != typeof m) return m; var co = String(m.company || "").trim(); if (!co || "Unsolicited" === co) return m; var c = Object.assign({}, m, { company: "Unsolicited", role: "Open Application" }); try { delete c.rationale; } catch (_) {} return c; } catch (_) { return m; } })(t.meta); try { u.set("meta", __mm); } catch (e) {} try { lo(__mm); } catch (e) {} } if (t.rationale) { try { u.set("rationale", t.rationale); } catch (e) {} try { bo(t.rationale); } catch (e) {} } try { window.dispatchEvent(new CustomEvent("antcv:sections-updated")); } catch (_) {} return true; } catch (_) { return false; } }; } catch (_) {} }, []),
         React.useEffect(() => {
           Y &&
             Y.email &&

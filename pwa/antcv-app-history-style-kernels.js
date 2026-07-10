@@ -18,7 +18,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.236-style-kernels-table';
+  var VERSION = '1.51.239-style-kernels-load';
   if (window.__antcvStyleKernelsTable === VERSION) return;
   window.__antcvStyleKernelsTable = VERSION;
   try { if (localStorage.getItem('antcv:disable-style-kernels-table') === '1') return; } catch (_) {}
@@ -148,8 +148,17 @@
       try {
         window.dispatchEvent(new CustomEvent('antcv:load-style-kernel', { detail: { style_key: styleKey, showcase: sc } }));
       } catch (_) {}
-      if (window.AntcvApplyStyleKernel) { try { window.AntcvApplyStyleKernel(sc, styleKey); } catch (_) {} }
-      else alert('Loaded "' + prettyStyle(styleParts(styleKey).style) + '" — the editor will adopt it. (If nothing changes, this needs the app-side apply hook.)');
+      var p = styleParts(styleKey);
+      var lbl = prettyStyle(p.style || styleKey) + (p.lang ? ' (' + (LANG[p.lang] || p.lang.toUpperCase()) + ')' : '');
+      if (window.AntcvApplyStyleKernel) {
+        var okApplied = false;
+        try { okApplied = window.AntcvApplyStyleKernel(sc, styleKey) !== false; } catch (_) {}
+        alert(okApplied
+          ? 'Loaded "' + lbl + '" into the editor. Close Settings to see it.'
+          : 'Could not apply "' + lbl + '" — please try again.');
+      } else {
+        alert('Loaded "' + lbl + '" — but the editor apply-hook isn\'t available yet (update the app to the latest version).');
+      }
     }).catch(function () { btn.textContent = old; btn.disabled = false; alert('Load failed — check your connection / sign-in.'); });
   }
 

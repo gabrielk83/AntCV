@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.238-multilang-he-am';
+const CACHE = 'antcv-1.51.239-style-kernels-load';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

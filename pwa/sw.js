@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.229-jobtracker-nonadmin-anchor';
+const CACHE = 'antcv-1.51.230-lang-cloud-sync';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

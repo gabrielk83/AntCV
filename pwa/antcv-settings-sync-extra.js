@@ -24,10 +24,15 @@
 (function () {
   'use strict';
   if (window.__antcvSettingsSyncExtra) return;
-  window.__antcvSettingsSyncExtra = '1.50.629';
+  window.__antcvSettingsSyncExtra = '1.51.230-langsync';
 
   var DISABLE = 'antcv:disable-settings-sync-extra';
-  var KEYS = ['photoPosition', 'photoSize', 'exportPwEnabled', 'enabledProviders', 'customTopbarPalette', 'topbarOrder'];
+  // LANG-CLOUD-SYNC-001 (owner 2026-07-10): the available-languages list
+  // (standalone 'enabledLanguages') was NEVER cloud-synced — only the default
+  // `language` was — so on a hard reset the cloud held stale ['en','da'] and the
+  // user's list (e.g. + zh) was lost. It's relay-allowlisted; ride this sidecar's
+  // push/restore. (Paired with the hard-reset restore defer in antcv-language-ui-429.)
+  var KEYS = ['photoPosition', 'photoSize', 'exportPwEnabled', 'enabledProviders', 'customTopbarPalette', 'topbarOrder', 'enabledLanguages'];
 
   function disabled() { try { var v = localStorage.getItem(DISABLE); return v === '1' || v === 'true'; } catch (_) { return false; } }
   function erasing() { try { return !!(localStorage.getItem('antcv:full-erase-in-progress') || localStorage.getItem('antcv:just-erased')); } catch (_) { return false; } }
@@ -90,6 +95,10 @@
 
   function boot() {
     lastSeen = snapshot();            // seed: never push the initial state
+    // LANG-CLOUD-SYNC-001: force a one-time push of the current local
+    // enabledLanguages so a list that predates this sync still seeds the cloud
+    // (the seed above would otherwise suppress it until the user re-toggles).
+    try { lastSeen.enabledLanguages = null; } catch (_) {}
     setTimeout(restore, 2500);        // after the app's own cloud-restore settles
     setInterval(pushChanged, 4000);
     document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') pushChanged(); });

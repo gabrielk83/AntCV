@@ -8,10 +8,19 @@ Owner: Gabriel. Style: direct, factual, compressed, no corporate filler.
 ---
 
 You are an autonomous AntCV maintenance run on the GitHub repo **gabrielk83/AntCV** (a React PWA in
-`pwa/` + Cloudflare Workers in `workers/`). Current shipped: PWA **1.51.29** (auto-deploys on push
-to `main`), docx-worker **1.14.110**, access-relay **1.3.2**, proxy/demo-proxy **3.6.0**. Work the
-prioritised backlog below, ship VERIFIED fixes only. Hard rule: **an end result, not a brickable
-mid-product** — one solid verified fix beats several half-verified ones.
+`pwa/` + Cloudflare Workers in `workers/`). Work the prioritised backlog below, ship VERIFIED fixes
+only. Hard rule: **an end result, not a brickable mid-product** — one solid verified fix beats
+several half-verified ones.
+
+> **VERSION NOTE (the numbers below are stale — check live before quoting).** As of 2026-07-10 PWA
+> is ~**1.51.258**, workers redeployed several times. Do NOT trust the "1.51.29 / 3.6.0" figures in
+> the next paragraph; read `pwa/sw.js` CACHE + `git log` for the real current versions. For the most
+> recent job-tracker + shared-engine work (coherence-repair fix, KV-quota masking fix, brand-on-Open,
+> TARGET FACTS, web COMPANY RESEARCH, signal-image OCR), read `docs/qa/JOBTRACKER_SESSION_2026-07-10.md`
+> and `docs/qa/ACTIVE_BUGS.md` (top block).
+
+Historical: at authoring time PWA **1.51.29** (auto-deploys on push to `main`), docx-worker
+**1.14.110**, access-relay **1.3.2**, proxy/demo-proxy **3.6.0**.
 
 ## ENVIRONMENT SETUP SCRIPT (claude.ai routine config — NOT the prompt)
 Leave the routine's environment **setup script EMPTY** (or at most `node --version`). It must be

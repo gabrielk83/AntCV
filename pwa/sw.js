@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.262-babel-lang-name';
+const CACHE = 'antcv-1.51.300-tab-doc-iso';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

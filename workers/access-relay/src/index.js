@@ -4170,7 +4170,6 @@ const method = request.method;
     const id = await identityFromRequest(request, env);
     if (!id) return jsonResponse({ error: 'unauthenticated' }, 401, request, env);
     const refresh = await maybeRefreshHeader(env, id);
-    if (!env.GOOGLE_CSE_KEY) return jsonResponse({ error: 'GOOGLE_CSE_KEY not set on relay' }, 503, request, env, refresh);
     let q = '', siteSearch = '', dateRestrict = 'm6', num = 6;
     if (method === 'POST') {
       let body; try { body = await request.json(); } catch { body = {}; }
@@ -4186,6 +4185,27 @@ const method = request.method;
       num = Math.min(10, Math.max(1, parseInt(u.searchParams.get('num'), 10) || 6));
     }
     if (!q) return jsonResponse({ error: 'missing q' }, 400, request, env, refresh);
+
+    // PREFERRED backend: Brave Search (env.BRAVE_API_KEY) — no Google
+    // project/org/DNS friction. Falls through to Google CSE only if unset.
+    if (env.BRAVE_API_KEY) {
+      const bUrl = new URL('https://api.search.brave.com/res/v1/web/search');
+      bUrl.searchParams.set('q', siteSearch ? ('site:' + siteSearch + ' ' + q) : q);
+      bUrl.searchParams.set('count', String(num));
+      const fr = /y/.test(dateRestrict) ? 'py' : (/m/.test(dateRestrict) ? 'pm' : (/w/.test(dateRestrict) ? 'pw' : ''));
+      if (fr) bUrl.searchParams.set('freshness', fr);
+      try {
+        const res = await fetch(bUrl.toString(), { headers: { 'Accept': 'application/json', 'Accept-Encoding': 'gzip', 'X-Subscription-Token': env.BRAVE_API_KEY } });
+        if (!res.ok) { const b = await res.text().catch(() => ''); return jsonResponse({ error: `Brave ${res.status}: ${b.slice(0, 300)}` }, 502, request, env, refresh); }
+        const data = await res.json();
+        const results = (data && data.web && Array.isArray(data.web.results)) ? data.web.results : [];
+        const items = results.slice(0, num).map((it) => ({ title: it.title, link: it.url, snippet: it.description || '' }));
+        return jsonResponse({ ok: true, query: q, source: 'brave', items }, 200, request, env, refresh);
+      } catch (e) { return jsonResponse({ error: 'Brave: ' + String(e && e.message || e) }, 502, request, env, refresh); }
+    }
+
+    // Fallback backend: Google CSE (needs GOOGLE_CSE_KEY + a provisioned project).
+    if (!env.GOOGLE_CSE_KEY) return jsonResponse({ error: 'no search backend: set BRAVE_API_KEY (preferred) or GOOGLE_CSE_KEY on the relay' }, 503, request, env, refresh);
     const CSE_ID = '67ce5387bc18f4028';
     const gUrl = new URL('https://www.googleapis.com/customsearch/v1');
     gUrl.searchParams.set('key', env.GOOGLE_CSE_KEY);

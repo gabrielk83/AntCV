@@ -24,7 +24,7 @@
 (function () {
   'use strict';
   if (window.__antcvSettingsSyncExtra) return;
-  window.__antcvSettingsSyncExtra = '1.51.247-hardreset-lang-restore';
+  window.__antcvSettingsSyncExtra = '1.51.322-langrenders-sync';
 
   var DISABLE = 'antcv:disable-settings-sync-extra';
   // LANG-CLOUD-SYNC-001 (owner 2026-07-10): the available-languages list
@@ -32,7 +32,10 @@
   // `language` was — so on a hard reset the cloud held stale ['en','da'] and the
   // user's list (e.g. + zh) was lost. It's relay-allowlisted; ride this sidecar's
   // push/restore. (Paired with the hard-reset restore defer in antcv-language-ui-429.)
-  var KEYS = ['photoPosition', 'photoSize', 'exportPwEnabled', 'enabledProviders', 'customTopbarPalette', 'topbarOrder', 'enabledLanguages'];
+  var KEYS = ['photoPosition', 'photoSize', 'exportPwEnabled', 'enabledProviders', 'customTopbarPalette', 'topbarOrder', 'enabledLanguages',
+    // BABEL-FISH-CLOUD-CACHE-001 (owner 2026-07-11): the babel-fish per-language
+    // rendering cache (antcv-babel-relang.js maintains it, hard-capped at ~40KB).
+    'langRenders'];
 
   function disabled() { try { var v = localStorage.getItem(DISABLE); return v === '1' || v === 'true'; } catch (_) { return false; } }
   function erasing() { try { return !!(localStorage.getItem('antcv:full-erase-in-progress') || localStorage.getItem('antcv:just-erased')); } catch (_) { return false; } }

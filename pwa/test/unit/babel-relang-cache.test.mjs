@@ -19,11 +19,18 @@ test('sidecar: reads genSpeed and honours the mode split', () => {
   assert.equal(s.includes("speed !== 'thorough' && restoreCache(L)"), true, 'fast/balanced restore cache; thorough skips');
 });
 
-test('sidecar: caches per language and restores via AntcvApplyStyleKernel', () => {
-  assert.equal(s.includes("antcv:langRender:"), true, 'per-language cache key prefix');
+test('sidecar: caches per language in a single cloud-synced bundle, restores via AntcvApplyStyleKernel', () => {
+  assert.equal(s.includes("var BUNDLE_KEY = 'langRenders'"), true, 'single cloud-synced bundle key');
+  assert.equal(s.includes('BUNDLE_CAP'), true, 'hard size cap so it never bloats prefs');
   assert.equal(s.includes('function snapshot('), true, 'snapshots renderings');
   assert.equal(s.includes('window.AntcvApplyStyleKernel({ sections'), true, 'restores into React state via the apply hook');
   assert.equal(s.includes('BABEL-FISH-CACHE-001'), true, 'documented');
+  assert.equal(s.includes('BABEL-FISH-CLOUD-CACHE-001'), true, 'cloud-cache documented');
+});
+
+test('sidecar: bundle is the settings-sync-extra synced key + relay-allowlisted', async () => {
+  const sync = await readFile(new URL('../../antcv-settings-sync-extra.js', import.meta.url), 'utf8');
+  assert.equal(sync.includes("'langRenders'"), true, 'settings-sync-extra syncs langRenders');
 });
 
 test('sidecar: never restores a mislabelled (wrong-script) snapshot', () => {

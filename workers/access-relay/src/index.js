@@ -1,6 +1,6 @@
 import { insertLlmCall, aggregateHealth, getLatestHealth, pruneOld, insertQualitySignal } from './telemetry.js';
 
-const VERSION='1.3.9';
+const VERSION='1.3.10';
 // antcv-access-relay — auth + hardening
 // =====================================
 // Public-facing relay with built-in user authentication.
@@ -35,7 +35,7 @@ const VERSION='1.3.9';
 // Required binding (declare in wrangler.toml):
 //   KV_BINDING        KV namespace (stores OTPs, rate counters, prefs, signals)
 
-const RELAY_VERSION = 'auth-29-kernel-lang-match';
+const RELAY_VERSION = 'auth-30-langrenders';
 const SESSION_TTL_SECONDS    = 7 * 24 * 60 * 60;       // 7 days
 // Refresh whenever the token has < 6 days left (i.e. it's more than 1 day old),
 // so ANY request past the first day rotates it to a fresh 7-day token via the
@@ -822,6 +822,13 @@ const KERNEL_PREFS_OBJ_FIELDS = new Set([
   'enabledProviders',
   'customTopbarPalette',
   'topbarOrder',
+  // BABEL-FISH-CLOUD-CACHE-001 (owner 2026-07-11): langRenders — the babel-fish
+  // per-language rendering cache { <lang>: { sections, meta, hash, at } } so a
+  // rendering you produced on one device is available on another ("the user data
+  // on the cloud for all languages"). Object -> passes the OBJ validator. The
+  // client (antcv-babel-relang.js) hard-caps its size before writing, so this can
+  // never bloat the prefs blob.
+  'langRenders',
 ]);
 
 function isInKernelAllowlist(field) {

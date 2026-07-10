@@ -27,7 +27,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.321-babel-cache';
+  var VERSION = '1.51.322-babel-cloud-cache';
   if (window.__antcvBabelRelang === VERSION) return;
   window.__antcvBabelRelang = VERSION;
   try { if (localStorage.getItem('antcv:disable-babel-relang') === '1') return; } catch (_) {}
@@ -42,7 +42,13 @@
   var THRESHOLD = 0.12;    // target-script letters / total letters below this = stale
   var MIN_LETTERS = 200;   // ignore the empty skeleton / mid-load
   var BACKOFF_MS = 20000;  // one relang attempt per language per 20s
-  var CACHE_PREFIX = 'antcv:langRender:';
+  // BABEL-FISH-CLOUD-CACHE-001 (owner 2026-07-11): a SINGLE cloud-synced key holds
+  // every language's rendering — { <lang>: { sections, meta, hash, at } } — so a
+  // rendering produced on one device is available on another (relay allowlists
+  // 'langRenders'; settings-sync-extra rides it up/down). Hard-capped so it can
+  // never bloat the prefs blob: oldest-.at entries are dropped first.
+  var BUNDLE_KEY = 'langRenders';
+  var BUNDLE_CAP = 40000;  // max serialized bundle size (chars)
 
   function lang() {
     try {
@@ -91,22 +97,38 @@
 
   function hashOf(s) { return s.length + ':' + s.slice(0, 24) + ':' + s.slice(-24); }
 
+  function readBundle() { var b = parse(BUNDLE_KEY); return (b && typeof b === 'object' && !Array.isArray(b)) ? b : {}; }
+  function writeBundle(b) {
+    try {
+      var s = JSON.stringify(b);
+      // hard size cap: drop the oldest (.at) renderings until under BUNDLE_CAP
+      var n = 0;
+      while (s.length > BUNDLE_CAP && n++ < 20) {
+        var oldest = null, oldestAt = Infinity;
+        for (var k in b) { if (b[k] && b[k].at < oldestAt) { oldestAt = b[k].at; oldest = k; } }
+        if (oldest == null) break;
+        delete b[oldest];
+        s = JSON.stringify(b);
+      }
+      if (s.length <= BUNDLE_CAP) localStorage.setItem(BUNDLE_KEY, s);
+    } catch (_) {}
+  }
+
   // Snapshot the current content under language L when it is confirmed to be in L.
   function snapshot(L, sectionsObj) {
     try {
       var raw = sectionsRaw(); if (!raw) return;
-      var prev = parse(CACHE_PREFIX + L);
+      var b = readBundle();
       var h = hashOf(raw);
-      if (prev && prev.hash === h) return;      // unchanged -> skip write
-      localStorage.setItem(CACHE_PREFIX + L, JSON.stringify({
-        sections: sectionsObj, meta: parse('meta') || {}, hash: h,
-      }));
+      if (b[L] && b[L].hash === h) return;      // unchanged -> skip write
+      b[L] = { sections: sectionsObj, meta: parse('meta') || {}, hash: h, at: Date.now() };
+      writeBundle(b);
     } catch (_) {}
   }
 
   function restoreCache(L) {
     try {
-      var c = parse(CACHE_PREFIX + L);
+      var c = readBundle()[L];
       if (!c || !c.sections) return false;
       // guard: the cached rendering must itself be in L (never restore a
       // mislabelled English snapshot under a zh key)

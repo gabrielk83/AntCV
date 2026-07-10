@@ -1,6 +1,6 @@
 import { insertLlmCall, aggregateHealth, getLatestHealth, pruneOld, insertQualitySignal } from './telemetry.js';
 
-const VERSION='1.3.7';
+const VERSION='1.3.8';
 // antcv-access-relay — auth + hardening
 // =====================================
 // Public-facing relay with built-in user authentication.
@@ -35,7 +35,7 @@ const VERSION='1.3.7';
 // Required binding (declare in wrangler.toml):
 //   KV_BINDING        KV namespace (stores OTPs, rate counters, prefs, signals)
 
-const RELAY_VERSION = 'auth-27-app-history-cap-50';
+const RELAY_VERSION = 'auth-28-kernel-key-lang';
 const SESSION_TTL_SECONDS    = 7 * 24 * 60 * 60;       // 7 days
 // Refresh whenever the token has < 6 days left (i.e. it's more than 1 day old),
 // so ANY request past the first day rotates it to a fresh 7-day token via the
@@ -3182,15 +3182,26 @@ async function handleApiKernelShowcase(request, env) {
     }
     if (m === 'GET') {
       try {
-        const srow = await env.DB.prepare(
-          'SELECT sections, meta, rationale, jd_language, updated_at FROM kernel_showcase_styled WHERE user_hash = ? AND style_key = ?'
-        ).bind(userHash, __style).first();
+        // KERNEL-KEY-LANG-001 (owner 2026-07-10): style_key is now "<style>|<lang>".
+        // Fall back to a pre-existing legacy row (style-only, then the single ''
+        // slot) so kernels saved before the language-keying still restore. The
+        // app's next edit-resave re-writes under the new key (natural migration).
+        const __cands = [__style];
+        if (__style && __style.indexOf('|') > 0) __cands.push(__style.slice(0, __style.lastIndexOf('|')));
+        if (__style) __cands.push('');
+        let srow = null, __hitKey = __style;
+        for (const __k of __cands) {
+          srow = await env.DB.prepare(
+            'SELECT sections, meta, rationale, jd_language, updated_at FROM kernel_showcase_styled WHERE user_hash = ? AND style_key = ?'
+          ).bind(userHash, __k).first();
+          if (srow) { __hitKey = __k; break; }
+        }
         const showcase = srow ? {
           sections: parseJsonField(srow.sections, null), meta: parseJsonField(srow.meta, null),
           rationale: parseJsonField(srow.rationale, null), jd_language: srow.jd_language || 'en',
           updated_at: srow.updated_at,
         } : null;
-        return jsonResponse({ ok: true, showcase, style_key: __style }, 200, request, env, refresh);
+        return jsonResponse({ ok: true, showcase, style_key: __hitKey }, 200, request, env, refresh);
       } catch (e) {
         return jsonResponse({ ok: true, showcase: null }, 200, request, env, refresh);
       }

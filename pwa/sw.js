@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.261-byok-brave';
+const CACHE = 'antcv-1.51.262-babel-lang-name';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

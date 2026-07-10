@@ -2091,6 +2091,24 @@
       extra = e ? e.extra : "";
     return "\n\n" + flag + " FINAL LANGUAGE CHECK BEFORE OUTPUTTING (LANG-GEN-LOCK-001): the OUTPUT LANGUAGE is " + name + ". EVERY value — profile, work style, all bullets, section prose, table cells, focus areas, cover-letter paragraphs, and any headings or labels — MUST be written in " + name + ". Keep these INVARIANT (verbatim, unchanged): company / organisation names; tool / framework / standard / protocol names (Jira, SQL, ASPICE, ISO 26262, FMEA, MBSE); ALL numbers and metrics; patent numbers; and quoted publication / patent titles. TRANSLATE into natural " + name + ": role / job titles, city and country names, and civic terms (e.g. 'EU Citizen')." + extra + " The schema below shows English EXAMPLE values for clarity ONLY — your actual values MUST be in the target language. If you catch ANY English sentence, heading, or label, translate it before returning.";
   }
+  // BABEL-FISH-LANG-NAME-001 (owner 2026-07-11): the prominent prompt `LANGUAGE:` line
+  // used to be hardcoded to "UK English" for every non-Danish language, contradicting the
+  // trailing __langGenLock and letting the model drift back to English. This names the
+  // TRUE target so the prominent directive and the lock agree. Fallback = UK English.
+  function __langPromptName(code) {
+    code = String(code || "").toLowerCase();
+    var M = {
+      da: "Copenhagen Danish (simple everyday words, hverdagssprog, no buzzwords, short sentences)",
+      zh: "Simplified Chinese (中文 / 简体, formal business register, concise factual phrasing)",
+      es: "Spanish (Latin American business register, formal, descriptive)",
+      he: "Hebrew (עברית, Israeli professional register, written RIGHT-TO-LEFT)",
+      am: "Amharic (አማርኛ, Ethiopian formal register, Ge'ez / Fidäl script)",
+      ar: "Arabic (العربية, Modern Standard Arabic, formal register, written RIGHT-TO-LEFT)",
+      fr: "French (formal professional register, vous-form)",
+      de: "German (formal professional register, Sie-form)"
+    };
+    return M[code] || "UK English (clear, professional, no Americanisms)";
+  }
   // LANG-TRANSLATE-RENDER-SOURCES-001 (owner 2026-07-10): the header renders the SLOGAN
   // from the standalone localStorage key antcv:clSlogan and the SUBTITLE from
   // personalInfo.specialization — NOT from io.cl_slogan / io.subtitle. Translate updates
@@ -24896,9 +24914,7 @@
               closure: "working",
             }));
           const a = "da" === je,
-            i = a
-              ? "Copenhagen Danish (simple everyday words, hverdagssprog, no buzzwords, short sentences)"
-              : "UK English",
+            i = __langPromptName(je),
             l = da[pa] || da["nordic-minimal"],
             s = a
               ? "Skriv som en dansker skriver professionelt: direkte, konkret og præcist. Undgå buzzwords og anglicismer. Kaldt og faktuelt. Undgå salgsord og ros til dig selv. Testspørgsmål: ville dette sætte lyde naturligt sagt roligt på et møde i København?"

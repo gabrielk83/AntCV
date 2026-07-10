@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.261-byok-brave';
+  const TARGET_VERSION = '1.51.262-babel-lang-name';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.261-byok-brave',
     '1.51.260-shift-versionfix',
     '1.51.260-lang-dropdown-current',
     '1.51.260-demand-seed-refresh',

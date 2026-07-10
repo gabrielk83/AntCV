@@ -103,7 +103,7 @@ async function writeJob(env, job) {
     const msg = (e && e.message) ? e.message : String(e);
     const err = new Error('kv_write_failed: ' + msg);
     err.kv_write_failed = true;
-    err.quota = /10048|free usage limit|usage limit for this operation/i.test(msg);
+    err.quota = /10048|free usage limit|usage limit for this operation|limit exceeded for the day|put\(\) limit/i.test(msg);
     throw err;
   }
   return job;

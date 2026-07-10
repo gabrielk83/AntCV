@@ -44,7 +44,7 @@
 #   python gen-runner.py run --persist         # also save real applications + doc writeback
 # Flags: --row UK (repeatable) | --max-high N (5) | --max-quick M (10)
 #        --kernel-file PATH | --out DIR | --provider anthropic | --dry (plan only, no LLM)
-import os, sys, json, time, argparse, urllib.request, urllib.error
+import os, sys, json, time, argparse, urllib.request, urllib.error, re, copy
 
 RELAY = os.environ.get("ANTCV_RELAY", "https://antcv-access-relay.karp-gabriel-a.workers.dev").rstrip("/")
 PROXY = os.environ.get("ANTCV_PROXY", "https://cv-proxy.karp-gabriel-a.workers.dev").rstrip("/")
@@ -433,16 +433,160 @@ def cmd_run(args):
         c, b = put_doc(cur, rev2)
         print(f"doc writeback: {c} rev={b.get('rev')}")
 
+# ── skeleton overlay (blocker #1: full-fidelity persist) ───────────
+# The runner generates 8 tailored sections (cv_profile/outcomes/core +
+# cl_who/why/bring/contribute/foundation). A saved application renders EXACTLY
+# its cv_sections/cl_sections (no client-side me() merge — see the
+# gabriel-master-profile / kernel-recovery-and-floor memories), so persisting
+# only those 8 flat blocks yields an app MISSING the whole sidebar, experience
+# roles, and competency furniture. Fix: OVERLAY the 8 generated sections onto a
+# captured full me() skeleton (Gabriel's real structure+furniture), converting
+# each into the app's native shape (bullets {b,t} / table rows / rich_block
+# labelled bullets). The skeleton is captured ONCE from a live browser session
+# (localStorage 'sections') to ~/.antcv/cv_skeleton.json — it carries real
+# candidate data so it lives OUTSIDE the repo. Re-capture when the profile
+# materially changes.
+SKELETON_PATH = os.environ.get("ANTCV_SKELETON") or os.path.join(
+    os.path.expanduser("~"), ".antcv", "cv_skeleton.json")
+
+def _ov_find(arr, sid):
+    for s in arr:
+        if s.get("id") == sid: return s
+    return None
+
+def _ov_table(md):
+    rows = []
+    for ln in (md or "").split("\n"):
+        ln = ln.strip()
+        if not ln.startswith("|"): continue
+        cells = [c.strip() for c in ln.strip("|").split("|")]
+        if all(set(c) <= set("-: ") for c in cells): continue  # separator
+        rows.append(cells)
+    return rows
+
+def _ov_outcomes(md):
+    out = []
+    for ln in (md or "").split("\n"):
+        ln = ln.strip()
+        if not ln: continue
+        m = re.match(r"^\*\*(.+?)\*\*\s*/\s*(.+)$", ln)
+        if m:
+            out.append({"b": sanitize_text(m.group(1)), "t": sanitize_text(m.group(2)), "bullets": []})
+        else:
+            ln2 = re.sub(r"^[-*]\s+", "", ln)
+            out.append({"b": "", "t": sanitize_text(re.sub(r"\*\*", "", ln2)), "bullets": []})
+    return out
+
+def _ov_foundation(md):
+    txt = re.sub(r"\*\*", "", md or "")
+    m_pro = re.search(r"Professionally\s*:\s*", txt)
+    m_hands = re.search(r"Hands-?on\s*:\s*", txt, re.I)
+    handson = professionally = intro = ""
+    if m_hands:
+        intro = txt[:m_hands.start()].strip()
+        if m_pro and m_pro.start() > m_hands.start():
+            handson = txt[m_hands.end():m_pro.start()].strip()
+            professionally = txt[m_pro.end():].strip()
+        else:
+            handson = txt[m_hands.end():].strip()
+    else:
+        handson = txt.strip()
+    return sanitize_text(handson), sanitize_text(professionally), sanitize_text(intro)
+
+def load_skeleton():
+    try:
+        with open(SKELETON_PATH, encoding="utf-8") as f:
+            sk = json.load(f)
+        if isinstance(sk.get("cv"), list) and isinstance(sk.get("cl"), list):
+            return sk
+    except Exception as e:
+        print(f"   [skeleton] not usable ({e})")
+    return None
+
+def build_structured_sections(sk, sections, company, role):
+    """Overlay the 8 generated sections onto a copy of the me() skeleton,
+    converting each into the app's native structured shape. Returns (cv, cl)."""
+    cv = copy.deepcopy(sk["cv"]); cl = copy.deepcopy(sk["cl"])
+    def raw(sid): return (sections.get(sid) or {}).get("result") or ""
+    def txt(sid): return sanitize_text(raw(sid))
+
+    # profile (+ split a trailing 'Work style:' line into work_style)
+    prof = txt("cv_profile")
+    m = re.search(r"\n\s*Work style\s*:\s*(.+)$", prof, re.I | re.S)
+    ws = None
+    if m: ws = sanitize_text(m.group(1)); prof = prof[:m.start()].strip()
+    p = _ov_find(cv, "profile")
+    if p and prof: p["items"] = [{"b": "", "t": prof, "bullets": []}]
+    if ws:
+        w = _ov_find(cv, "work_style")
+        if w:
+            if w.get("type") == "rich_block": w["items"] = [{"b": "", "t": ws, "bullets": []}]
+            else: w["content"] = ws
+
+    oc = _ov_outcomes(raw("cv_outcomes"))
+    o = _ov_find(cv, "outcomes")
+    if o and oc: o["items"] = oc
+
+    rows = _ov_table(raw("cv_core"))
+    c = _ov_find(cv, "core_comp")
+    if c and rows:
+        hdr = ["Focus Area", "Strategic Expertise"]
+        body = [[sanitize_text(x) for x in rr] for rr in rows if [x.lower() for x in rr[:1]] != ["focus area"]]
+        c["rows"] = [hdr] + body
+
+    def set_lead(arr, sid, text):
+        s = _ov_find(arr, sid)
+        if s and text:
+            items = s.get("items") or [{"b": "", "t": ""}]
+            items = list(items); items[0] = {**items[0], "t": text}
+            s["items"] = items
+    set_lead(cl, "who", txt("cl_who_i_am"))
+    set_lead(cl, "why", txt("cl_why_this_position"))
+
+    ho, pro, intro = _ov_foundation(raw("cl_foundation"))
+    f = _ov_find(cl, "foundation")
+    if f and (ho or pro):
+        items = [{"b": "Foundation", "t": intro or "I connect what I do best with the outcomes this employer is after.", "bullets": []}]
+        if ho: items.append({"b": "Hands-on", "t": ho, "mk": True})
+        if pro: items.append({"b": "Professionally", "t": pro, "mk": True})
+        f["items"] = items
+
+    for gid, clid, head in [("cl_what_i_bring", "bring", "What I bring"),
+                            ("cl_how_i_would_contribute", "contribute", "How I would contribute")]:
+        trows = _ov_table(raw(gid))
+        s = _ov_find(cl, clid)
+        if s and trows:
+            body = [rr for rr in trows if rr[0].lower() != "focus area"]
+            items = [{"b": head, "t": "", "bullets": []}]
+            for rr in body:
+                if len(rr) >= 2: items.append({"b": sanitize_text(rr[0]), "t": sanitize_text(rr[1]), "mk": True})
+            if len(items) > 1: s["items"] = items
+
+    g = _ov_find(cl, "greeting")
+    if g: g["content"] = "Dear Hiring Team,"
+    op = _ov_find(cl, "opening")
+    if op: op["items"] = [{"b": "", "t": f"I am applying for the {role} position at {company}."}]
+    cz = _ov_find(cl, "closure")
+    if cz: cz["content"] = f"I would welcome the chance to discuss how I can contribute to {company} as {role}."
+    return cv, cl
+
 def persist_application(doc, r, res, category, language):
-    """POST a real application, PUT the generated sections, write artifacts back.
-    NOTE: cv/cl sections here are stored as raw {title,text} blocks — the
-    structured render mapping (labeled_list/experience/etc.) is a later
-    increment; this makes the content retrievable + editable in the app now."""
+    """POST a real application, PUT a FULL me()-shaped section set (sidebar +
+    experience + furniture) with the 8 generated sections overlaid by id/shape.
+    Falls back to flat {type:text} blocks only if the skeleton fixture is
+    missing (logs a warning), so a persist never crashes."""
     uk = r["uk"]
-    cv = [{"id": sid, "title": s["title"], "type": "text", "content": sanitize_text(s.get("result") or ""), "loc": "main"}
-          for sid, s in res["sections"].items() if sid.startswith("cv_")]
-    cl = [{"id": sid, "title": s["title"], "type": "text", "content": sanitize_text(s.get("result") or ""), "loc": "main"}
-          for sid, s in res["sections"].items() if sid.startswith("cl_")]
+    company, role = str(r["company"]), str(r["role"])
+    sk = load_skeleton()
+    if sk:
+        cv, cl = build_structured_sections(sk, res["sections"], company, role)
+        print(f"   [skeleton] overlaid: cv={len(cv)} cl={len(cl)} sections (full-fidelity)")
+    else:
+        print("   [skeleton] MISSING ~/.antcv/cv_skeleton.json — falling back to flat text blocks (low fidelity)")
+        cv = [{"id": sid, "title": s["title"], "type": "text", "content": sanitize_text(s.get("result") or ""), "loc": "main"}
+              for sid, s in res["sections"].items() if sid.startswith("cv_")]
+        cl = [{"id": sid, "title": s["title"], "type": "text", "content": sanitize_text(s.get("result") or ""), "loc": "main"}
+              for sid, s in res["sections"].items() if sid.startswith("cl_")]
     c, b = _req(RELAY, "/api/applications", "POST", {
         "jd_text": r["jd"], "jd_company": str(r["company"]), "jd_role": str(r["role"]),
         "category": category, "jd_language": language, "save_as_new": True,

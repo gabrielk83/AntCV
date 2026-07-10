@@ -17,7 +17,7 @@
 // It is a plain node script (not a workflow) — Date/Math.random are fine here.
 
 import { execSync } from 'node:child_process';
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import os from 'node:os';
@@ -101,7 +101,13 @@ function overlaps(a, b) {
 
 // ---- session id ------------------------------------------------------------
 function sessionId(create = false) {
-  if (existsSync(IDFILE)) return readFileSync(IDFILE, 'utf8').trim();
+  // An existing-but-EMPTY id file (a prior release blanked it) is NOT a valid id — treat
+  // it as absent, otherwise a subsequent claim gets written with id:'' and can never be
+  // released. This was the 2026-07-10 stuck-claim bug.
+  if (existsSync(IDFILE)) {
+    const v = readFileSync(IDFILE, 'utf8').trim();
+    if (v) return v;
+  }
   if (!create) return null;
   const id = 'sh_' + Date.now().toString(36) + '_' + Math.floor(Math.random() * 1e6).toString(36);
   try { mkdirSync(dirname(IDFILE), { recursive: true }); writeFileSync(IDFILE, id); } catch {}
@@ -193,13 +199,14 @@ function cmdRelease() {
   claims = claims.filter((c) => c.id !== id);
   writeLedger(claims);
   commitPush(`chore(shift): release ${mine ? mine.range : id}`, arg('no-push', false));
-  try { if (existsSync(IDFILE)) writeFileSync(IDFILE, ''); } catch {}
+  try { if (existsSync(IDFILE)) unlinkSync(IDFILE); } catch {}   // delete, don't blank — see sessionId()
   console.log(mine ? `released ${mine.range}` : 'no claim for this session (cleaned id)');
 }
 
 function cmdReap() {
   sync();
-  const hours = parseFloat(arg('hours', '6')) || 6;
+  const parsed = parseFloat(arg('hours', '6'));
+  const hours = Number.isFinite(parsed) ? parsed : 6;   // 0 is valid (reap all past claims)
   const cutoff = Date.now() - hours * 3600 * 1000;
   let { claims } = readLedger();
   const dead = claims.filter((c) => new Date(c.beat || c.started).getTime() < cutoff);

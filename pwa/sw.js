@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.248-translate-render-sources';
+const CACHE = 'antcv-1.51.249-arabic-lang';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

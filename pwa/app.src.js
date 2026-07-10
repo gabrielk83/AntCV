@@ -2081,6 +2081,7 @@
       es: { flag: "🇪🇸", name: "Spanish (Latin American business register)", extra: " Keep person names in Latin script unchanged." },
       he: { flag: "🇮🇱", name: "Hebrew (Israeli professional register, written RIGHT-TO-LEFT)", extra: " Write the prose in Hebrew; render the candidate's name in Hebrew where a natural form exists, otherwise keep it in Latin script. Numbers stay left-to-right." },
       am: { flag: "🇪🇹", name: "Amharic (Ethiopian formal register, Ge'ez / Fidäl script)", extra: " Keep person names and all Latin proper nouns unchanged." },
+      ar: { flag: "🇸🇦", name: "Arabic (Modern Standard Arabic, formal register, written RIGHT-TO-LEFT)", extra: " Write the prose in Arabic; keep person names in Latin script where no natural Arabic form exists; numbers stay left-to-right." },
       fr: { flag: "🇫🇷", name: "French (formal professional register)", extra: " Keep person names in Latin script unchanged." },
       de: { flag: "🇩🇪", name: "German (formal professional register, Sie-form)", extra: " Keep person names in Latin script unchanged." }
     };
@@ -11753,6 +11754,7 @@
     { code: "zh", label: "中文", name: "中文" },
     { code: "he", label: "עב", name: "עברית" },
     { code: "am", label: "አማ", name: "አማርኛ" },
+    { code: "ar", label: "ع", name: "العربية" },
   ];
   function We({
     language: e,
@@ -17833,7 +17835,7 @@
             i = () => {
               (vr(
                 "Translate to " +
-                  ({ da: "Danish", es: "Spanish", zh: "中文", he: "עברית", am: "አማርኛ" }[e] || "English"),
+                  ({ da: "Danish", es: "Spanish", zh: "中文", he: "עברית", am: "አማרኛ", ar: "العربية" }[e] || "English"),
               ),
                 Nr(r),
                 It(e),
@@ -17848,10 +17850,11 @@
                             zh: "Simplified Chinese (中文 / 简体, formal business register, concise factual phrasing, preserve all Latin proper nouns unchanged)",
                             he: "Hebrew (עברית, Israeli professional register, formal and concise, written RIGHT-TO-LEFT; preserve all Latin proper nouns, tool/standard names and numbers unchanged)",
                             am: "Amharic (አማርኛ, Ethiopian formal register, concise factual phrasing in Ge'ez / Fidäl script; preserve all Latin proper nouns, tool/standard names and numbers unchanged)",
+                            ar: "Arabic (العربية, Modern Standard Arabic, formal register, written RIGHT-TO-LEFT; preserve all Latin proper nouns, tool/standard names and numbers unchanged)",
                           }[e] ||
                           "UK English (clear, professional, no Americanisms)",
                         _lng = e,
-                        _isWide = "es" === e || "zh" === e || "he" === e || "am" === e,
+                        _isWide = "es" === e || "zh" === e || "he" === e || "am" === e || "ar" === e,
                         n = (e) => {
                           const t = [],
                             n = (e, n) => {
@@ -18256,7 +18259,7 @@
               {
                 title:
                   "Switch to " +
-                  ({ da: "Danish", es: "Spanish", zh: "中文", he: "עברית", am: "አማርኛ" }[e] ||
+                  ({ da: "Danish", es: "Spanish", zh: "中文", he: "עברית", am: "አማרኛ", ar: "العربية" }[e] ||
                     "English") +
                   "?",
                 message:
@@ -18294,7 +18297,7 @@
                 "cache" === t
                   ? (vr(
                       "Switch to " +
-                        ({ da: "Danish", es: "Spanish", zh: "中文", he: "עברית", am: "አማርኛ" }[e] ||
+                        ({ da: "Danish", es: "Spanish", zh: "中文", he: "עברית", am: "አማרኛ", ar: "العربية" }[e] ||
                           "English") +
                         " (from cache)",
                     ),
@@ -18311,7 +18314,7 @@
               {
                 title:
                   "Switch to " +
-                  ({ da: "Danish", es: "Spanish", zh: "中文", he: "עברית", am: "አማርኛ" }[e] ||
+                  ({ da: "Danish", es: "Spanish", zh: "中文", he: "עברית", am: "አማרኛ", ar: "العربية" }[e] ||
                     "English") +
                   "?",
                 message:
@@ -18322,6 +18325,7 @@
                     zh: "Simplified Chinese (中文)",
                     he: "Hebrew (עברית)",
                     am: "Amharic (አማርኛ)",
+                    ar: "Arabic (العربية)",
                   }[e] || "English") +
                   ".\n\nThis makes a few LLM calls. If your primary provider rate-limits, the calls cascade through Claude → GPT → Gemini → Mistral.\n\nA progress bar appears at the top of the editor while translating.",
                 buttons: [
@@ -28110,7 +28114,7 @@
             // CL-CLOSING-EDIT-001 (owner 2026-06-29): editable sign-off closing; EN default is
             // "At your service," (the Nordic template), override via antcv:clClosing. Parity with
             // the worker closeWord + the React preview.
-            const i = (() => { try { const ov = String(localStorage.getItem("antcv:clClosing") || "").trim(); if (ov) return ov; } catch (_) {} return ({ da: "Med venlig hilsen,", es: "Atentamente,", zh: "此致敬礼，", he: "בברכה,", am: "ከሰላምታ ጋር," })[je] || "At your service,"; })(),
+            const i = (() => { try { const ov = String(localStorage.getItem("antcv:clClosing") || "").trim(); if (ov) return ov; } catch (_) {} return ({ da: "Med venlig hilsen,", es: "Atentamente,", zh: "此致敬礼，", he: "בברכה,", am: "ከሰላምታ ጋር,", ar: "مع خالص التقدير," })[je] || "At your service,"; })(),
               l = a.filter(
                 (e) => e.on && "closure" !== e.id && "jd_questions" !== e.id,
               ),
@@ -29386,6 +29390,7 @@
                     zh: "此致敬礼,",
                     he: "בברכה,",
                     am: "ከሰላምታ ጋር,",
+                    ar: "مع خالص التقدير,",
                   }[je] || "At your service,",
                   "CV_Body",
                   { spacingBefore: 240, spacingAfter: 120 },

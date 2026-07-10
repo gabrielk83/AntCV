@@ -60,6 +60,7 @@
       'de': 'de', 'deutsch': 'de', 'german': 'de',
       'he': 'he', 'עב': 'he', 'עברית': 'he', 'hebrew': 'he', 'iw': 'he',
       'am': 'am', 'አማ': 'am', 'አማርኛ': 'am', 'amharic': 'am',
+      'ar': 'ar', 'ع': 'ar', 'العربية': 'ar', 'arabic': 'ar',
     };
 
     function labelToCode(text) {
@@ -146,7 +147,7 @@
         byParent.get(parent).push({ btn: b, code: code });
       }
       byParent.forEach(function (list) {
-        if (list.length < 2 || list.length > 6) return;
+        if (list.length < 2 || list.length > 8) return;
         for (var j = 0; j < list.length; j++) out.push(list[j]);
       });
       return out;
@@ -281,7 +282,8 @@
       {code:'es',label:'ES',name:'Español'},
       {code:'zh',label:'中文',name:'中文'},
       {code:'he',label:'עב',name:'עברית'},
-      {code:'am',label:'አማ',name:'አማርኛ'}
+      {code:'am',label:'አማ',name:'አማርኛ'},
+      {code:'ar',label:'ع',name:'العربية'}
     ];
     const CODES=OPTIONS.map(o=>o.code), DEFAULT=['en','da'];
     function norm(x){return String(x||'').replace(/[ \t\r\n]+/g,' ').trim()}

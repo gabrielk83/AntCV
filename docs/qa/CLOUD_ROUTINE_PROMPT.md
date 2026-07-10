@@ -19,6 +19,14 @@ several half-verified ones.
 > TARGET FACTS, web COMPANY RESEARCH, signal-image OCR), read `docs/qa/JOBTRACKER_SESSION_2026-07-10.md`
 > and `docs/qa/ACTIVE_BUGS.md` (top block).
 >
+> **SHIFT PROTOCOL — claim a version range before you work (2026-07-10).** Multiple sessions push to
+> `origin/main` and have collided on version numbers + shared-working-tree WIP (e.g. a merge that regressed
+> the cache-bust quintet below the deployed version). Before editing: (1) `git fetch origin && git pull
+> --rebase origin main`; (2) `node scripts/shift.mjs claim --task "<what>"` — reserves a version-number range
+> in `docs/qa/NIGHT_SHIFT.md` (computed from the true high-water mark, robust to a regressed TARGET) and prints
+> a `git worktree add` line; (3) work in that worktree, not the shared clone; (4) use only numbers inside your
+> range; (5) `node scripts/shift.mjs release` when done. `status` lists active claims. Full detail: `docs/qa/NIGHT_SHIFT.md`.
+>
 > **CLOUD SYNC MODEL CHANGED (2026-07-10, PARALLEL-GEN-POINTER-002).** The account active pointer is no
 > longer a single `active_application` row — there is now a **per-device** `active_application_device`
 > table so parallel generations across tabs/browsers/devices never clobber each other. Any relay code that

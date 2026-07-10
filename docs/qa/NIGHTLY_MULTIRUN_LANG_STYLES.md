@@ -13,6 +13,20 @@ This is a MULTI-RUN order. Each nightly run: (1) SYNC FIRST, (2) read the STATUS
 block below, (3) do the next unchecked phase, (4) update STATUS + append a run log
 line, (5) commit/push. Do not skip phases; do not start a phase you cannot verify.
 
+## SHIFT PROTOCOL — claim before you work (parallel-session safety)
+
+Multiple sessions push to `origin/main`. Before editing, reserve your lane so you never
+collide on a version number or a shared working tree (full detail: `docs/qa/NIGHT_SHIFT.md`):
+
+1. **SYNC** — `git fetch origin && git pull --rebase origin main`.
+2. **CLAIM** — `node scripts/shift.mjs claim --task "<what you're doing>"` reserves a
+   version-number range for you and records it in the ledger; it prints your range + a
+   `git worktree add` line.
+3. **WORKTREE** — run that `git worktree add ../AntCV-<name> -b <name>` and work THERE, not
+   in the shared clone (kills the "another session's uncommitted app.js under my commits" bug).
+4. Use only version numbers **inside your claimed range**; `node scripts/shift.mjs beat` to heartbeat.
+5. **RELEASE** — `node scripts/shift.mjs release` when done. `status` lists active claims; `reap` clears dead ones.
+
 ## STATUS (update every run)
 
 - [~] R1 Language register registry + client wiring (en/da/es/zh -> 23) — PARTIAL: `__langGenLock`

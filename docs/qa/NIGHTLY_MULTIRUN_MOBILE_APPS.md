@@ -9,6 +9,16 @@ app feel unfinished.
 MULTI-RUN order. Each run: SYNC FIRST, read STATUS, do the next phase, verify,
 update STATUS + run log, push.
 
+## SHIFT PROTOCOL — claim before you work (parallel-session safety)
+
+Multiple sessions push to `origin/main`. Before editing, reserve your lane (full detail:
+`docs/qa/NIGHT_SHIFT.md`): (1) `git fetch origin && git pull --rebase origin main`;
+(2) `node scripts/shift.mjs claim --task "<what>"` — reserves a version-number range + records
+it in the ledger, prints your range + a `git worktree add` line; (3) run that
+`git worktree add ../AntCV-<name> -b <name>` and work THERE, not the shared clone; (4) use only
+numbers **inside your range**, `node scripts/shift.mjs beat` to heartbeat; (5)
+`node scripts/shift.mjs release` when done (`status` lists claims, `reap` clears dead ones).
+
 ## STATUS (update every run)
 
 - [ ] R1 Install polish: manifest screenshots, maskable icon set, iOS touch icons +

@@ -151,6 +151,30 @@ def put_doc(doc, base_rev):
     code, b = _req(RELAY, "/api/job-tracker", "PUT", {"doc": doc, "base_rev": base_rev})
     return code, b
 
+# ── research (RESEARCH-001) ────────────────────────────────────────
+# Google-CSE web research on the employer via the relay /api/research
+# (JWT-auth; GOOGLE_CSE_KEY lives on the relay). Returns a compact digest
+# folded into the generation as SUBORDINATE context (grounds "why this
+# company" / values / recent news; never the candidate's identity).
+def research(company, role, num=6):
+    q = ('"%s" %s Denmark' % (company or "", role or "")).strip()
+    if len(q) < 3:
+        return ""
+    try:
+        c, b = _req(RELAY, "/api/research", "POST", {"q": q, "num": num, "dateRestrict": "y1"})
+        if c != 200 or not isinstance(b, dict) or not b.get("ok"):
+            return ""
+        out = []
+        for it in (b.get("items") or [])[:num]:
+            t = (it.get("title") or "").strip()
+            s = (it.get("snippet") or "").strip().replace("\n", " ")
+            ln = (it.get("link") or "").strip()
+            if t or s:
+                out.append("- %s — %s (%s)" % (t, s[:200], ln))
+        return "\n".join(out)
+    except Exception:
+        return ""
+
 # ── row eligibility ────────────────────────────────────────────────
 def row_uk(row):  return row[11] if len(row) > 11 and row[11] else (str(row[1]) + "|" + str(row[2]))
 
@@ -248,6 +272,9 @@ def _user_turn(profile_json, meta, section_ask):
     if meta.get("support"):
         lines.append("=== ROLE INTEL (needs / bring / signals; subordinate) ===")
         lines.append(json.dumps(meta["support"])[:2500]); lines.append("")
+    if meta.get("research"):
+        lines.append("=== RECENT WEB RESEARCH on the employer (Google CSE; SUBORDINATE — may be dated, verify; NEVER a source of the candidate's identity/history) ===")
+        lines.append(str(meta["research"])[:2500]); lines.append("")
     _langname = {"da": "Danish", "en": "English", "sv": "Swedish"}.get(meta.get("language"), meta.get("language"))
     lines.append("OUTPUT LANGUAGE: write this section in " + str(_langname) + ".")
     lines.append("TASK: " + section_ask)
@@ -350,8 +377,11 @@ def cmd_run(args):
     for r in todo:
         uk = r["uk"]
         language = detect_language(r["jd"])
+        rsch = research(r["company"], r["role"]) if getattr(args, "research", True) else ""
+        if rsch: print("   research: %d findings" % len(rsch.splitlines()))
         meta = {"company": r["company"], "role": r["role"], "jd": r["jd"],
-                "signals": signals.get(uk), "support": support.get(uk), "language": language}
+                "signals": signals.get(uk), "support": support.get(uk),
+                "research": rsch, "language": language}
         sections, model = build_plan(profile, meta, r["tier"])
         print(f"\n== {uk} [{r['tier']}] {r['company']} / {r['role']} — {len(sections)} sections, model={model}")
         if args.dry:
@@ -430,6 +460,7 @@ def main():
         p.add_argument("--max-quick", type=int, default=10)
         p.add_argument("--persist", action="store_true", help="save real applications + doc writeback")
         p.add_argument("--dry", action="store_true", help="build the plan only; no LLM calls")
+        p.add_argument("--no-research", dest="research", action="store_false", help="skip Google-CSE employer research")
     args = ap.parse_args()
     if args.cmd == "list": cmd_list(args)
     elif args.cmd == "run": cmd_run(args)

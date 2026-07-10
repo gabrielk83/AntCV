@@ -4141,6 +4141,47 @@ const method = request.method;
     }
   }
 
+  // RESEARCH-001: authenticated web research (Google CSE) gated on the user's
+  // session JWT — so the job-tracker runner (owner token) and the in-app Ask-AI
+  // assistant can research a company/role WITHOUT the narrow CSE_PROXY_TOKEN.
+  // Same backend as /api/cse-search above.
+  if (path === '/api/research' && (method === 'GET' || method === 'POST')) {
+    const id = await identityFromRequest(request, env);
+    if (!id) return jsonResponse({ error: 'unauthenticated' }, 401, request, env);
+    const refresh = await maybeRefreshHeader(env, id);
+    if (!env.GOOGLE_CSE_KEY) return jsonResponse({ error: 'GOOGLE_CSE_KEY not set on relay' }, 503, request, env, refresh);
+    let q = '', siteSearch = '', dateRestrict = 'm6', num = 6;
+    if (method === 'POST') {
+      let body; try { body = await request.json(); } catch { body = {}; }
+      q = String((body && body.q) || '').trim().slice(0, 300);
+      siteSearch = String((body && body.siteSearch) || '').trim().slice(0, 100);
+      dateRestrict = String((body && body.dateRestrict) || 'm6').trim().slice(0, 10);
+      num = Math.min(10, Math.max(1, parseInt(body && body.num, 10) || 6));
+    } else {
+      const u = new URL(request.url);
+      q = String(u.searchParams.get('q') || '').trim().slice(0, 300);
+      siteSearch = String(u.searchParams.get('siteSearch') || '').trim().slice(0, 100);
+      dateRestrict = String(u.searchParams.get('dateRestrict') || 'm6').trim().slice(0, 10);
+      num = Math.min(10, Math.max(1, parseInt(u.searchParams.get('num'), 10) || 6));
+    }
+    if (!q) return jsonResponse({ error: 'missing q' }, 400, request, env, refresh);
+    const CSE_ID = '67ce5387bc18f4028';
+    const gUrl = new URL('https://www.googleapis.com/customsearch/v1');
+    gUrl.searchParams.set('key', env.GOOGLE_CSE_KEY);
+    gUrl.searchParams.set('cx', CSE_ID);
+    gUrl.searchParams.set('q', q);
+    gUrl.searchParams.set('num', String(num));
+    if (siteSearch) { gUrl.searchParams.set('siteSearch', siteSearch); gUrl.searchParams.set('siteSearchFilter', 'i'); }
+    if (dateRestrict) gUrl.searchParams.set('dateRestrict', dateRestrict);
+    try {
+      const res = await fetch(gUrl.toString());
+      if (!res.ok) { const b = await res.text().catch(() => ''); return jsonResponse({ error: `Google CSE ${res.status}: ${b.slice(0, 300)}` }, 502, request, env, refresh); }
+      const data = await res.json();
+      const items = Array.isArray(data.items) ? data.items.slice(0, num).map((it) => ({ title: it.title, link: it.link, snippet: it.snippet })) : [];
+      return jsonResponse({ ok: true, query: q, items }, 200, request, env, refresh);
+    } catch (e) { return jsonResponse({ error: String(e && e.message || e) }, 502, request, env, refresh); }
+  }
+
   if (path === '/__diag' && method === 'GET') {
     const probe = await probeUpstream(env);
     const id = await identityFromRequest(request, env);

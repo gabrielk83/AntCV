@@ -1,6 +1,6 @@
 import { insertLlmCall, aggregateHealth, getLatestHealth, pruneOld, insertQualitySignal } from './telemetry.js';
 
-const VERSION='1.3.6';
+const VERSION='1.3.7';
 // antcv-access-relay — auth + hardening
 // =====================================
 // Public-facing relay with built-in user authentication.
@@ -35,7 +35,7 @@ const VERSION='1.3.6';
 // Required binding (declare in wrangler.toml):
 //   KV_BINDING        KV namespace (stores OTPs, rate counters, prefs, signals)
 
-const RELAY_VERSION = 'auth-26-per-style-kernels';
+const RELAY_VERSION = 'auth-27-app-history-cap-50';
 const SESSION_TTL_SECONDS    = 7 * 24 * 60 * 60;       // 7 days
 const SESSION_REFRESH_WINDOW = 1 * 24 * 60 * 60;       // refresh in last day
 const OTP_TTL_SECONDS        = 10 * 60;                // 10 min
@@ -2960,7 +2960,12 @@ async function handleApiApplicationById(request, env, idStr) {
       await env.DB.prepare(
         'UPDATE application SET ' + sets.join(', ') + ' WHERE id = ?'
       ).bind(...vals).run();
-      // Sweep: keep the user's newest 5 REAL (company-named) applications.
+      // Sweep: keep the user's newest 50 REAL (company-named) applications.
+      // APP-HISTORY-CAP-50 (owner 2026-07-10): raised from 5 to 50 so a full
+      // job-search history (>=1 per role/company) survives — the nightly top-10
+      // weekly generator needs a broad saved set, and the 5-cap was actively
+      // deleting the owner's applications down to 5. The editor PREVIEW still
+      // shows only the last 5 (client-side); the Settings history tab shows all.
       // KERNEL-HISTORY-KEEP-001 (owner 2026-06-10): the unsolicited / kernel
       // showcase row (jd_company empty or "Unsolicited") is PINNED — never
       // swept — so it always stays in the history unless the user renews it
@@ -2973,7 +2978,7 @@ async function handleApiApplicationById(request, env, idStr) {
           "AND LOWER(TRIM(COALESCE(jd_company, ''))) NOT IN ('', 'unsolicited') " +
           'AND id NOT IN (SELECT id FROM application WHERE user_hash = ? ' +
           "AND LOWER(TRIM(COALESCE(jd_company, ''))) NOT IN ('', 'unsolicited') " +
-          'ORDER BY updated_at DESC LIMIT 5)'
+          'ORDER BY updated_at DESC LIMIT 50)'
         ).bind(userHash, userHash).run();
       } catch (_) { /* sweep is best-effort */ }
       const row = await env.DB.prepare(

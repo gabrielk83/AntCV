@@ -56,6 +56,14 @@ account — no login step is needed. AntCV needs no install for the core work (z
   clearly flag in your report that the worker deploy / live verify is owed to a desktop run.
 - If a fix can only be verified live/headless and you can't do that here, leave it as a clearly
   labelled WIP commit + report it — never claim unverified success.
+- **POST-DEPLOY LIVE VERIFY is a DESKTOP capability (owner 2026-07-10).** Desktop Claude Code runs
+  have an in-app Browser pane that verifies the live `antcv.pages.dev` deploy (procedure:
+  `docs/qa/LIVE_VERIFY_BROWSER_PANE.md`). The cloud routine does NOT have it — for every PWA change
+  you ship, add a line to your report: **"post-deploy live-verify owed to a desktop run"** (deployed
+  version live? changed `?v` fetched fresh? code marker in the built bundle?). The next desktop run
+  clears the owed verify. This exists because a concurrent merge once reverted a changed sidecar's
+  `?v` below the shipped value — tests were green but the fix never reached browsers (stale-`?v`
+  phantom ship).
 
 ## STEP 0 — Orient (read in the repo)
 1. `docs/qa/EXPORT_REVIEW_2026-07_ISSUE_MAP.md` — the authoritative export-review register. The

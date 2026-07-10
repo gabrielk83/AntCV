@@ -64,6 +64,14 @@ Run log:
 5. Suite green via `node scripts/run-tests.mjs pwa` + `node pwa/test/boot-smoke.mjs`
    before every push. Workers deploy via `gh workflow run deploy.yml` only.
 6. Flagship gen model stays claude-opus-4-7 unless the owner flips it.
+7. **POST-DEPLOY LIVE VERIFY (desktop runs, owner 2026-07-10):** after push + the
+   Pages auto-deploy, open the in-app Browser pane on `https://antcv.pages.dev/` and
+   run the checklist in `docs/qa/LIVE_VERIFY_BROWSER_PANE.md` — confirm the deployed
+   version is live (freshness-guard), each changed sidecar loaded at its NEW `?v=`, and
+   each edit's code marker is present in the built bundle. This catches the stale-`?v`
+   phantom-ship regression that tests + static tracing miss. NEVER navigate `?hardReset=1`
+   (signs the owner out + wipes languages to EN-DA). Cloud runs can't do this — they
+   flag it "owed to a desktop run"; the next desktop run clears the owed verify.
 
 ## Ground truth (verified 2026-07-02 by code audit)
 

@@ -51,6 +51,13 @@ Run log:
    final eyeball).
 5. The share-target flow (manifest share_target + antcv-share-target-jd-375.js) is
    LIVE - do not regress it when touching manifest.json.
+6. **POST-DEPLOY LIVE VERIFY (desktop runs, owner 2026-07-10):** after push + the
+   Pages auto-deploy, open the in-app Browser pane on `https://antcv.pages.dev/` and
+   run `docs/qa/LIVE_VERIFY_BROWSER_PANE.md` — confirm the deployed version is live,
+   each changed asset loaded at its NEW `?v=`, and each edit's marker is in the built
+   bundle. Catches the stale-`?v` phantom-ship regression. NEVER navigate `?hardReset=1`.
+   Use `resize_window({preset:'mobile'})` for the mobile-viewport structural checks
+   (read_page/console/js; screenshots time out on this PWA). Cloud runs flag it "owed".
 
 ## Ground truth (verified 2026-07-02 by code audit)
 

@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.259-parallel-gen-pointer';
+const CACHE = 'antcv-1.51.246-demand-seed-refresh';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',
@@ -24,7 +24,6 @@ const SHELL = [
   './antcv-pub-injected-reaper-352.js',
   './antcv-cloud-put-shrink-guard-355.js',
   './antcv-jd-watch.js',
-  './antcv-tab-doc-isolation.js',
   './antcv-spell-annotator-384.js',
   './antcv-orphan-cloud-persist-385.js',
   './antcv-confidence-overlay-386.js',

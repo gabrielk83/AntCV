@@ -45,6 +45,27 @@ function findReEdit(): HTMLElement | null {
   return null;
 }
 
+// NON-ADMIN fallback anchor: the always-rendered "📎 Attach signal files…"
+// button lives in the same upload area and is shown to every signed-in user
+// (the re-edit control is admin-only). Match on the leading paperclip emoji —
+// it survives UI localisation where the label text does not. Returns the
+// button's flex-row wrapper so the Job Tracker button slots in just above it.
+function findAttachAnchor(): HTMLElement | null {
+  const btns = document.querySelectorAll('button');
+  for (const b of Array.from(btns)) {
+    if ((b.textContent || '').trim().startsWith('📎')) {
+      return (b.parentElement as HTMLElement) || (b as HTMLElement);
+    }
+  }
+  return null;
+}
+
+// The upload-area anchor the Job Tracker button sits before: the admin re-edit
+// control when present, otherwise the non-admin attach-files row.
+function findAnchor(): HTMLElement | null {
+  return findReEdit() || findAttachAnchor();
+}
+
 function makeButton(): HTMLButtonElement {
   const b = document.createElement('button');
   b.id = BTN_ID;
@@ -70,19 +91,19 @@ function ensureButton(): void {
     closePanel();
     return;
   }
-  const reEdit = findReEdit();
-  if (!reEdit || !reEdit.parentElement) {
-    // Anchor not on screen yet (or non-admin: the re-edit control isn't
-    // rendered). Leave the button out until the upload area with the anchor is
-    // present; the observer will retry. (A non-admin anchor is a follow-up.)
+  const anchor = findAnchor();
+  if (!anchor || !anchor.parentElement) {
+    // Upload area with the anchor not on screen yet. Leave the button out; the
+    // observer retries on DOM churn. (findAnchor covers both admin re-edit and
+    // the non-admin attach-files row, so this is now a timing gate only.)
     return;
   }
-  const parent = reEdit.parentElement;
-  // Already correctly placed immediately before re-edit?
-  if (existing && existing.nextElementSibling === reEdit && existing.parentElement === parent) return;
+  const parent = anchor.parentElement;
+  // Already correctly placed immediately before the anchor?
+  if (existing && existing.nextElementSibling === anchor && existing.parentElement === parent) return;
   const btn = existing || makeButton();
   if (existing && existing.parentElement) existing.parentElement.removeChild(existing);
-  parent.insertBefore(btn, reEdit);
+  parent.insertBefore(btn, anchor);
 }
 
 let booted = false;

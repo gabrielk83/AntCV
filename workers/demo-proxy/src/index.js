@@ -112,6 +112,11 @@ async function handleWithProviderFallback(request, env) {
   const isPost = request.method === 'POST';
   const hasClientKey = !!((request.headers.get('x-api-key') || '').trim());
   if (!isPost || hasClientKey) return handleRequest(request, env || {});
+  // CASCADE-SCOPE-001: /job/* routes are job-envelope KV ops with no provider to
+  // fail over to — a KV.put failure (e.g. free-tier daily write cap, error
+  // 10048) was being relabelled "all_providers_unavailable". Pass job routes
+  // straight through so their real error surfaces unmasked.
+  if (new URL(request.url).pathname.includes('/job/')) return handleRequest(request, env || {});
   let bodyBuf = null;
   try { bodyBuf = await request.arrayBuffer(); } catch (_) { bodyBuf = null; }
   if (bodyBuf === null) return handleRequest(request, env || {});

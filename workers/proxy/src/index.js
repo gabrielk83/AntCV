@@ -81,6 +81,14 @@ async function handleWithProviderFallback(request, env) {
   const isPost = request.method === 'POST';
   const hasClientKey = !!((request.headers.get('x-api-key') || '').trim());
   if (!isPost || hasClientKey) return handleRequest(request, env || {});
+  // CASCADE-SCOPE-001: the provider fallback only makes sense for the LLM
+  // endpoint. /job/* routes (create/step/cancel) are job-envelope KV ops with
+  // NO provider to fail over to — a KV.put failure (e.g. free-tier daily write
+  // cap, error 10048) throwing here was being caught below and RELABELLED as
+  // "all_providers_unavailable", masking a storage-quota problem as a provider
+  // outage for hours. Pass job routes straight through so their real error
+  // (or a clean kv_write_failed) surfaces unmasked.
+  if (new URL(request.url).pathname.includes('/job/')) return handleRequest(request, env || {});
   let bodyBuf = null;
   try { bodyBuf = await request.arrayBuffer(); } catch (_) { bodyBuf = null; }
   if (bodyBuf === null) return handleRequest(request, env || {});

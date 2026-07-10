@@ -90,9 +90,22 @@ async function readJob(env, jobId) {
 
 async function writeJob(env, job) {
   job.updated_at = nowMs();
-  await jobsKV(env).put(kvKey(job.job_id), JSON.stringify(job), {
-    expirationTtl: JOB_TTL_SECONDS,
-  });
+  try {
+    await jobsKV(env).put(kvKey(job.job_id), JSON.stringify(job), {
+      expirationTtl: JOB_TTL_SECONDS,
+    });
+  } catch (e) {
+    // KV-WRITE-GUARD-001: surface KV.put failures as a tagged error instead of a
+    // bare throw. The Cloudflare free-tier daily write cap surfaces here as
+    // "error 10048 / free usage limit"; without this the throw became an
+    // unhandled worker exception (1101) that the provider cascade mislabelled
+    // as "all_providers_unavailable". Callers translate this into a clean 503.
+    const msg = (e && e.message) ? e.message : String(e);
+    const err = new Error('kv_write_failed: ' + msg);
+    err.kv_write_failed = true;
+    err.quota = /10048|free usage limit|usage limit for this operation/i.test(msg);
+    throw err;
+  }
   return job;
 }
 
@@ -164,7 +177,19 @@ export async function createJob(request, env, CORS, identityFn) {
     source_cv: typeof body.source_cv === 'string' ? body.source_cv.slice(0, 40000) : null,
     jd_text: typeof body.jd_text === 'string' ? body.jd_text.slice(0, 20000) : null,
   };
-  await writeJob(env, job);
+  try {
+    await writeJob(env, job);
+  } catch (e) {
+    if (e && e.kv_write_failed) {
+      return jsonResponse({
+        error: e.quota ? 'kv_quota_exceeded' : 'kv_write_failed',
+        message: e.quota
+          ? 'Job storage write hit the Cloudflare KV free-tier daily write cap (error 10048). Resets 00:00 UTC, or upgrade to Workers Paid.'
+          : ('Job storage write failed: ' + (e.message || 'unknown')),
+      }, 503, CORS);
+    }
+    throw e;
+  }
   return jsonResponse({ job_id: job.job_id, status: job.status, sections: job.sections.length }, 200, CORS);
 }
 

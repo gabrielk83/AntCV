@@ -303,7 +303,21 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
             + ((d.brand || {})[uk] && ((d.brand || {})[uk].navy || (d.brand || {})[uk].accent)
                 ? ' — primary ' + ((d.brand || {})[uk].navy || '(none)') + ', accent ' + ((d.brand || {})[uk].accent || '(none)') + ' (sampled from the company site).'
                 : '.') : '');
-      const id = await createApplication({ jd_text: jd, jd_company: row[1], jd_role: row[2], category: categoryFor(row[2], row[1]), supporting_context: supporting });
+      // BRAND-FIT-OPEN-001: when the row is brand-fitted, turn the sampled
+      // employer colours into a styleConfig patch (identical mapping to the
+      // app's post-generation COMPANY-BRAND-FIT-SCOPE-001) so Open APPLIES the
+      // palette (header/sidebar band + accents), not just describes it in text.
+      const brandSc: Record<string, string> | undefined = (() => {
+        if (!(d.brandfit || {})[uk]) return undefined;
+        const bc = (d.brand || {})[uk]; if (!bc) return undefined;
+        const hex = (v?: string) => (typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v.trim()) ? v.trim() : null);
+        const dark = (h: string) => { const r = parseInt(h.slice(1, 3), 16), g = parseInt(h.slice(3, 5), 16), bl = parseInt(h.slice(5, 7), 16); return (0.299 * r + 0.587 * g + 0.114 * bl) / 255 < 0.62; };
+        const navy = hex(bc.navy), accent = hex(bc.accent); const sc: Record<string, string> = {};
+        if (navy && dark(navy)) { sc.headerBg = navy; sc.sidebarBg = navy; }
+        if (accent) { sc.photoBorderColor = accent; sc.sidebarLineColor = accent; sc.sidebarHeadColor = accent; }
+        return Object.keys(sc).length ? sc : undefined;
+      })();
+      const id = await createApplication({ jd_text: jd, jd_company: row[1], jd_role: row[2], category: categoryFor(row[2], row[1]), supporting_context: supporting, style_config: brandSc });
       if (!id) { setErr('Could not create the application.'); return; }
       const next: TrackerDoc = { ...d, artifacts: { ...(d.artifacts || {}), [uk]: { application_id: id, generated_at: Date.now() } } };
       await setActive(id);

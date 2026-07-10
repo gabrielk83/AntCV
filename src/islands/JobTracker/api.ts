@@ -102,11 +102,18 @@ export async function fetchJdUrl(url: string): Promise<JdFetch> {
 export interface SeedPayload {
   jd_text: string; jd_company: string; jd_role: string; jd_language?: string;
   category?: string; supporting_context?: string;
+  // BRAND-FIT-OPEN-001: a styleConfig patch (brand palette). Nested into the
+  // application's meta.styleConfig so the app applies it per-application on Open
+  // (the relay stores body.meta verbatim; the app restore reads meta.styleConfig).
+  style_config?: Record<string, string>;
 }
 export async function createApplication(p: SeedPayload): Promise<number | null> {
+  const { style_config, ...rest } = p;
+  const body: Record<string, unknown> = { jd_language: 'en', category: 'targeted', ...rest };
+  if (style_config && Object.keys(style_config).length) body.meta = { styleConfig: style_config };
   const res = await call('/api/applications', {
     method: 'POST',
-    body: JSON.stringify({ jd_language: 'en', category: 'targeted', ...p }),
+    body: JSON.stringify(body),
   });
   const j = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error((j && (j.error || j.message)) || ('HTTP ' + res.status));

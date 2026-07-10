@@ -16362,6 +16362,18 @@
                                 : [],
                             });
                           } catch (e) {}
+                        // BRAND-FIT-OPEN-001: apply the tracker-sampled employer brand
+                        // palette stored on the application's meta.styleConfig (same wa()
+                        // patch-setter the post-generation brand-fit uses) so Open actually
+                        // shows the brand colours instead of only describing them in text.
+                        if (
+                          e.meta &&
+                          e.meta.styleConfig &&
+                          "object" == typeof e.meta.styleConfig
+                        )
+                          try {
+                            wa(e.meta.styleConfig);
+                          } catch (e) {}
                         }
                         if (e.rationale && "object" == typeof e.rationale)
                           try {
@@ -25174,7 +25186,7 @@
               uo("🤖 ChatGPT drafting (2/3)…");
               const e = [
                   c ? `JOB DESCRIPTION:\n${c}` : "",
-                  ...Yt.filter((e) => "docx" === e.type).map(
+                  ...Yt.filter((e) => e.text && e.text.trim()).map(
                     (e) => `FILE "${e.name}":\n${e.text}`,
                   ),
                   Un.current || Ut

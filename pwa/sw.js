@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.253-tab-doc-isolation';
+const CACHE = 'antcv-1.51.254-brand-open-attach';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

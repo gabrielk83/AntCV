@@ -43,6 +43,18 @@ test('sidecar: wrong-script fallback re-renders via the translate pass, never au
   assert.equal(s.includes('_antcvGenerateKernelShowcase'), false, 'no auto showcase gen on a passive switch');
 });
 
+test('sidecar: fact-preservation invariant check (BABEL-FISH-INVARIANT-001)', async () => {
+  assert.equal(s.includes('BABEL-FISH-INVARIANT-001'), true, 'documented');
+  assert.equal(s.includes('function invariantSet('), true, 'extracts the invariant set');
+  assert.equal(s.includes('function missingInvariants('), true, 'diffs invariants source vs rendering');
+  assert.equal(s.includes('verify = { lang: L, src: invariantSet(txt) }'), true, 'captures source facts before the translate');
+  assert.equal(s.includes('miss.length >= DRIFT_SEVERE) return'), true, 'severe drift -> does NOT cache the lossy rendering');
+  // the extractor logic: numbers + ALL-CAPS acronyms are invariants
+  const iSrc = s.slice(s.indexOf('function invariantSet('), s.indexOf('function missingInvariants('));
+  assert.equal(/\\d\[\\d\.,\]/.test(iSrc), true, 'captures numbers');
+  assert.equal(/A-Z\]\{2,\}/.test(iSrc), true, 'captures ALL-CAPS acronyms');
+});
+
 test('sidecar: detection is on the data model, not the DOM', () => {
   assert.equal(s.includes("localStorage.getItem('sections')") || s.includes("getItem('sections')"), true, 'reads sections data model');
   assert.equal(/querySelector|innerText|document\.body/.test(s), false, 'never samples the DOM (would be diluted by English chrome)');

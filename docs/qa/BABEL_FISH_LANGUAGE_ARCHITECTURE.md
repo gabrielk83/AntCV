@@ -130,9 +130,23 @@ breaks generation (per the nightly hard rules).
   non-Latin content with no cache → cheap `__antcvRelang(L,true)`. Never auto-fires a
   multi-minute generation from a passive switch. Client-local cache; detection on the
   sections data model.
-- **Phase 2b (open):** cross-device CLOUD persistence of the per-language renderings
-  (populate the `style|lang` slots / sync `antcv:langRender:<L>`), the §2 invariant/
-  renderable field map enforced with the §4.3 fact-preservation check, and §6 pre-warm.
+- **Phase 2b (SHIPPED 1.51.323-babel-cloud-cache + relay 1.3.10/auth-30):** cross-device
+  CLOUD persistence. The cache became a single `langRenders` key ({ <lang>: { sections,
+  meta, hash, at } }), hard-capped ~40KB (oldest-`at` dropped first). `settings-sync-extra`
+  KEYS += `langRenders`; relay `KERNEL_PREFS_OBJ_FIELDS` allowlists it. Verified: POST
+  `/api/prefs {langRenders}` → 200 → GET returns it with CJK intact → cleaned up.
+- **Phase 2c Part A — fact-preservation check (SHIPPED 1.51.324-babel-invariant):** after a
+  relang, the INVARIANTS (every number/metric + every ALL-CAPS acronym — tool/standard
+  names) must survive unchanged. The sidecar captures the source invariant set before the
+  translate and diffs it against the rendering; drift → console warn + `AntcvBabelRelang.
+  lastDrift`; severe drift (≥2 missing) → the lossy rendering is NOT cached. Implements §4.3
+  for the translate path.
+- **Phase 2c Part B — pre-warm (DEFERRED → 2d):** proactively rendering every enabled
+  language up front needs a HEADLESS translate — the current `__antcvRelang`/`Pr` mutates
+  the LIVE view (switches language + translates in place), so background pre-warming would
+  disrupt what the user sees. The lazy cache + 2b cloud sync already fill every enabled
+  language incrementally as the user visits it. Real pre-warm awaits a background translate
+  that writes to the cache without touching the live sections.
 
 ## 8. Tests / verification
 

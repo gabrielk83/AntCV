@@ -27,7 +27,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.323-babel-cloud-cache';
+  var VERSION = '1.51.324-babel-invariant';
   if (window.__antcvBabelRelang === VERSION) return;
   window.__antcvBabelRelang = VERSION;
   try { if (localStorage.getItem('antcv:disable-babel-relang') === '1') return; } catch (_) {}
@@ -140,6 +140,26 @@
     } catch (_) { return false; }
   }
 
+  // BABEL-FISH-INVARIANT-001 (Phase 2c): after a render, the INVARIANTS — every
+  // number/metric and every ALL-CAPS acronym (tool / standard names: CCB, FMEA,
+  // ISO, ASPICE, SQL, EMC) — MUST survive unchanged (the babel fish carries meaning,
+  // it never alters facts). Capture the source set just before the translate; verify
+  // it against the rendering after. Drift -> warn; severe drift -> do NOT cache the
+  // lossy rendering (so a translation that dropped a number never gets persisted).
+  function invariantSet(txt) {
+    var m = {};
+    (txt.match(/\d[\d.,]*\d|\d/g) || []).forEach(function (n) { n = n.replace(/[.,]+$/, ''); if (n) m['#' + n] = 1; });
+    (txt.match(/\b[A-Z]{2,}\b/g) || []).forEach(function (a) { m['^' + a] = 1; });
+    return m;
+  }
+  function missingInvariants(srcSet, txt) {
+    var have = invariantSet(txt), miss = [];
+    for (var k in srcSet) { if (!have[k]) miss.push(k.slice(1)); }
+    return miss;
+  }
+  var DRIFT_SEVERE = 2;
+  var verify = { lang: null, src: null };
+
   var last = { lang: null, at: 0 };
   function check() {
     var L = lang();
@@ -148,7 +168,20 @@
     var txt = textOf(sObj);
     var inL = isInLanguage(txt, L);
 
-    if (inL === true) { snapshot(L, sObj); return; }          // already correct -> keep cache fresh
+    if (inL === true) {                                       // already in the target language
+      // fact-preservation verify if we just finished a relang into L
+      if (verify.lang === L && verify.src) {
+        var miss = missingInvariants(verify.src, txt);
+        verify = { lang: null, src: null };
+        if (miss.length) {
+          try { window.AntcvBabelRelang.lastDrift = { lang: L, missing: miss, at: Date.now() }; } catch (_) {}
+          try { console.warn('[babel-relang] invariant drift after ' + L + ' render — missing:', miss.slice(0, 8)); } catch (_) {}
+          if (miss.length >= DRIFT_SEVERE) return;            // do NOT cache a lossy rendering
+        }
+      }
+      snapshot(L, sObj);                                       // keep the cache fresh
+      return;
+    }
     if (inL === null) return;                                 // not enough content to judge
 
     // Content is NOT in the (non-Latin) ribbon language L.
@@ -164,6 +197,7 @@
     var now = Date.now();
     if (last.lang === L && (now - last.at) < BACKOFF_MS) return;
     last = { lang: L, at: now };
+    verify = { lang: L, src: invariantSet(txt) };             // capture source facts for the post-render check
     try { console.info('[babel-relang] content not in', L, '— re-rendering into ribbon language (' + speed + ')'); } catch (_) {}
     try { window.__antcvRelang(L, true); }
     catch (e) { try { console.warn('[babel-relang] relang failed', e); } catch (_) {} }
@@ -177,5 +211,5 @@
   window.addEventListener('antcv:language-changed', schedule);
   window.addEventListener('antcv:sections-updated', schedule);
   [1800, 4500, 9000].forEach(function (d) { setTimeout(schedule, d); });
-  window.AntcvBabelRelang = { version: VERSION, _check: check, _snapshot: snapshot, _restore: restoreCache };
+  window.AntcvBabelRelang = { version: VERSION, _check: check, _snapshot: snapshot, _restore: restoreCache, _invariants: invariantSet, _missing: missingInvariants, lastDrift: null };
 })();

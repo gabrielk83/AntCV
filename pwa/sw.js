@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.323-babel-cloud-cache';
+const CACHE = 'antcv-1.51.324-babel-invariant';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

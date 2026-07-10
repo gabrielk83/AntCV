@@ -69,6 +69,25 @@
     }
 
     function readPreference() {
+      // LANG-BAR-STALE-STYLEPREFS-001 (owner 2026-07-10): read the SYNCED
+      // enabled-languages keys FIRST. prefs.enabledLanguages round-trips into
+      // 'enabledLanguages' / 'antcv:enabledLanguages' (LANG-CLOUD-SYNC-001); the
+      // older personalInfo.stylePrefs copy can be STALE (e.g. ['en','da'] after
+      // zh was added) — reading it before the synced keys HID zh on every hard
+      // refresh even though the cloud + the dropdown had zh.
+      try {
+        var SYNCED_KEYS = ['enabledLanguages', 'antcv:enabledLanguages'];
+        for (var si = 0; si < SYNCED_KEYS.length; si++) {
+          var sraw = localStorage.getItem(SYNCED_KEYS[si]);
+          if (!sraw) continue;
+          var sarr = JSON.parse(sraw);
+          if (Array.isArray(sarr)) {
+            var snorm = sarr.map(function (v) { return labelToCode(String(v)) || String(v).toLowerCase(); })
+                            .filter(Boolean);
+            if (snorm.length) return snorm;
+          }
+        }
+      } catch (_) {}
       try {
         var raw = localStorage.getItem(STORAGE_KEY);
         if (raw) {

@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.232-lang-modal-ghost';
+const CACHE = 'antcv-1.51.233-langbar-zh';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

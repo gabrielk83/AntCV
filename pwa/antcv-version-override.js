@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.232-lang-modal-ghost';
+  const TARGET_VERSION = '1.51.233-langbar-zh';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.232-lang-modal-ghost',
     '1.51.231-tracker-ask-ai',
     '1.51.230-lang-cloud-sync',
     '1.51.229-jobtracker-nonadmin-anchor',

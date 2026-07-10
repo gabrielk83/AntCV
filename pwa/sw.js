@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.249-arabic-lang';
+const CACHE = 'antcv-1.51.250-unsolicited-lang-lock';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

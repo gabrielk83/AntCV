@@ -39594,6 +39594,9 @@
                                                   // completed for X at Y"
                                                   // text.
                                                   bo(n.rationale || null),
+                                                  // APP-SWITCH-LANGUAGE-001 (owner 2026-07-10): switching to a saved
+                                                  // application also switches the language dropdown to that app's jd_language.
+                                                  (() => { try { var __al = String((n && n.jd_language) || "").toLowerCase().replace(/[^a-z]/g, "").slice(0, 2); if (__al && ["en", "da", "es", "zh", "he", "am"].indexOf(__al) >= 0) { try { u.set("language", __al); } catch (_) {} try { localStorage.setItem("language", __al); localStorage.setItem("uiLang", __al); } catch (_) {} try { window.dispatchEvent(new CustomEvent("antcv:language-changed", { detail: { language: __al } })); } catch (_) {} try { window.dispatchEvent(new CustomEvent("antcv:language-prefs-changed", { detail: {} })); } catch (_) {} } } catch (_) {} })(),
                                                   (() => {
                                                     try {
                                                       // 1.50.252: stamp the

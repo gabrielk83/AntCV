@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.243-localform-da';
+const CACHE = 'antcv-1.51.244-app-switch-lang';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

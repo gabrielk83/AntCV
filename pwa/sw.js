@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.247-brandfit-scope-hardreset-lang';
+const CACHE = 'antcv-1.51.248-translate-render-sources';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

@@ -2090,6 +2090,33 @@
       extra = e ? e.extra : "";
     return "\n\n" + flag + " FINAL LANGUAGE CHECK BEFORE OUTPUTTING (LANG-GEN-LOCK-001): the OUTPUT LANGUAGE is " + name + ". EVERY value — profile, work style, all bullets, section prose, table cells, focus areas, cover-letter paragraphs, and any headings or labels — MUST be written in " + name + ". Keep these INVARIANT (verbatim, unchanged): company / organisation names; tool / framework / standard / protocol names (Jira, SQL, ASPICE, ISO 26262, FMEA, MBSE); ALL numbers and metrics; patent numbers; and quoted publication / patent titles. TRANSLATE into natural " + name + ": role / job titles, city and country names, and civic terms (e.g. 'EU Citizen')." + extra + " The schema below shows English EXAMPLE values for clarity ONLY — your actual values MUST be in the target language. If you catch ANY English sentence, heading, or label, translate it before returning.";
   }
+  // LANG-TRANSLATE-RENDER-SOURCES-001 (owner 2026-07-10): the header renders the SLOGAN
+  // from the standalone localStorage key antcv:clSlogan and the SUBTITLE from
+  // personalInfo.specialization — NOT from io.cl_slogan / io.subtitle. Translate updates
+  // io only, so those two fields never showed the target language. These helpers read /
+  // write / snapshot / restore those render sources so translation reaches them AND they
+  // round-trip across language switches (snapshot into the per-language cache entry, restore
+  // on switch). ie() and the slogan render read these localStorage keys fresh, so a write
+  // + the existing re-render updates the preview.
+  function __antcvWriteSlogan(v) { try { if ("string" == typeof v) localStorage.setItem("antcv:clSlogan", v); } catch (_) {} }
+  function __antcvWriteSpec(v) {
+    try {
+      if ("string" != typeof v) return;
+      var pi = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {};
+      if (pi && "object" == typeof pi) { pi.specialization = v; localStorage.setItem("personalInfo", JSON.stringify(pi)); }
+    } catch (_) {}
+  }
+  function __antcvSnapStandalone() {
+    var s = {};
+    try { var sl = localStorage.getItem("antcv:clSlogan"); if (null != sl) s.clSlogan = sl; } catch (_) {}
+    try { var pi = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {}; if ("string" == typeof pi.specialization) s.specialization = pi.specialization; } catch (_) {}
+    return s;
+  }
+  function __antcvRestoreStandalone(s) {
+    if (!s || "object" != typeof s) return;
+    if ("string" == typeof s.clSlogan) __antcvWriteSlogan(s.clSlogan);
+    if ("string" == typeof s.specialization) __antcvWriteSpec(s.specialization);
+  }
   function __antcvModelFor(prov, task) {
     try { if ("gemini" === prov && __antcvBigGen(task)) return "gemini-2.5-pro"; } catch (_) {}
     return void 0;
@@ -17799,6 +17826,7 @@
                 sections: JSON.parse(JSON.stringify(ro)),
                 meta: { ...io },
                 hash: o,
+                standalone: __antcvSnapStandalone(),
               },
             },
             a = Or[e],
@@ -17971,8 +17999,43 @@
                             o.push({ doc: _d, sid: t.id, ...r });
                         }
                       const r = [];
-                      if (io.subtitle && "string" == typeof io.subtitle)
-                        r.push({ key: "subtitle", value: io.subtitle });
+                      // LANG-TRANSLATE-RENDER-SOURCES-001: collect the SUBTITLE and SLOGAN
+                      // from their real render sources (io.subtitle || personalInfo.
+                      // specialization; antcv:clSlogan || io.cl_slogan) and TAG them (__std)
+                      // so the translated value is mirrored back into those sources after
+                      // apply — otherwise the header (which reads specialization + the
+                      // standalone slogan key) never showed the target language.
+                      const __subVal =
+                        io.subtitle &&
+                        "string" == typeof io.subtitle &&
+                        io.subtitle.trim()
+                          ? io.subtitle
+                          : (() => {
+                              try {
+                                const pi =
+                                  JSON.parse(
+                                    localStorage.getItem("personalInfo") || "{}",
+                                  ) || {};
+                                return "string" == typeof pi.specialization
+                                  ? pi.specialization
+                                  : "";
+                              } catch (_) {
+                                return "";
+                              }
+                            })();
+                      if (__subVal && __subVal.trim())
+                        r.push({ key: "subtitle", value: __subVal, __std: "spec" });
+                      const __slogVal = (() => {
+                        try {
+                          const v = localStorage.getItem("antcv:clSlogan");
+                          if (null != v && String(v).trim()) return String(v);
+                        } catch (_) {}
+                        return io.cl_slogan && "string" == typeof io.cl_slogan
+                          ? io.cl_slogan
+                          : "";
+                      })();
+                      if (__slogVal && __slogVal.trim())
+                        r.push({ key: "cl_slogan", value: __slogVal, __std: "slogan" });
                       if (io.role && "string" == typeof io.role)
                         r.push({ key: "role", value: io.role });
                       if (_isWide) {
@@ -18027,27 +18090,49 @@
                           for (const e of m) t[e] = "translating";
                           return t;
                         });
-                        try {
-                          const e = await ee(
-                              [{ role: "user", content: u }],
-                              i,
-                              { task: "long_context" },
-                            ),
-                            t = Ki(e);
-                          if (!t || "object" != typeof t)
-                            throw new Error(
-                              "LLM returned no parseable JSON for chunk " +
-                                (n + 1),
+                        // LANG-TRANSLATE-BATCH-RETRY-001 (owner 2026-07-10): a swallowed
+                        // chunk failure left that chunk's content (often the longer profile
+                        // / table rows, which land in later chunks) in the source language.
+                        // Retry each chunk up to 3 attempts with backoff (ee() cascades
+                        // providers) before giving up, so a transient rate-limit / parse
+                        // hiccup no longer drops content silently.
+                        let __ok = !1;
+                        for (let __att = 0; __att < 3 && !__ok; __att++) {
+                          try {
+                            const e = await ee(
+                                [{ role: "user", content: u }],
+                                i,
+                                { task: "long_context" },
+                              ),
+                              t = Ki(e);
+                            if (!t || "object" != typeof t)
+                              throw new Error(
+                                "LLM returned no parseable JSON for chunk " +
+                                  (n + 1),
+                              );
+                            let __got = 0;
+                            for (const e of o)
+                              "string" == typeof t[e] &&
+                                ((d[e] = t[e]), __got++);
+                            if (__got > 0) __ok = !0;
+                            else
+                              throw new Error(
+                                "chunk " + (n + 1) + " returned no keys",
+                              );
+                          } catch (e) {
+                            console.warn(
+                              "Translation chunk",
+                              n + 1,
+                              "attempt",
+                              __att + 1,
+                              "failed:",
+                              e.message,
                             );
-                          for (const e of o)
-                            "string" == typeof t[e] && (d[e] = t[e]);
-                        } catch (e) {
-                          console.warn(
-                            "Translation chunk",
-                            n + 1,
-                            "failed:",
-                            e.message,
-                          );
+                            if (__att < 2)
+                              await new Promise((r) =>
+                                setTimeout(r, 400 * (__att + 1)),
+                              );
+                          }
                         }
                         (Cr((e) => {
                           const t = { ...e };
@@ -18121,9 +18206,18 @@
                           return (
                             r.forEach((e, n) => {
                               const o = d["m" + n];
+                              // LANG-TRANSLATE-RENDER-SOURCES-001: apply the translated value
+                              // to the meta key AND mirror the tagged SUBTITLE / SLOGAN into
+                              // the standalone render sources the header actually reads
+                              // (personalInfo.specialization / antcv:clSlogan). ie() + the
+                              // slogan render read these fresh, so this re-render shows the
+                              // target language on the subtitle + slogan.
                               "string" == typeof o &&
                                 o.trim() &&
-                                (t[e.key] = o);
+                                ((t[e.key] = o),
+                                "spec" === e.__std
+                                  ? __antcvWriteSpec(o)
+                                  : "slogan" === e.__std && __antcvWriteSlogan(o));
                             }),
                             t
                           );
@@ -18144,6 +18238,7 @@
                             ),
                             meta: { ...(Dr.current || io) },
                             hash: Lr(Br.current || ro, Dr.current || io),
+                            standalone: __antcvSnapStandalone(),
                           },
                         };
                         return (u.set("languageCache", n), n);
@@ -18206,6 +18301,7 @@
                     Nr(r),
                     ao(a.sections),
                     lo(a.meta),
+                    __antcvRestoreStandalone(a.standalone),
                     It(e))
                   : "translate" === t && i();
               },

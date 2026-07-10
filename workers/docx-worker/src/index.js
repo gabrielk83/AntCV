@@ -24411,23 +24411,46 @@ async function generateDocx(payload) {
   // this face; Word / LibreOffice substitute an available CJK font if the exact
   // face is absent. mergeStyle can't carry a font from the payload (it
   // hex-coerces unknown string tokens), so this must live worker-side.
-  if (lang === "zh") {
-    const cjk = "Microsoft YaHei";
-    style.mainHeadFont = cjk;
-    style.mainBodyFont = cjk;
-    style.sidebarFont = cjk;
-    style.sidebarBodyFont = cjk;
-    style.headerFont = cjk;
+  // SCRIPT-FONT-001 (owner 2026-07-10, "handle hebrew amharic arab + all font-issue
+  // languages"): the package fonts are Latin faces (Calibri / Carlito) with no CJK /
+  // Hebrew / Arabic / Ge'ez glyphs, so non-Latin text boxes out (tofu). For any language
+  // whose script the Latin face can't render, force a script-capable face on EVERY font
+  // slot; Word / LibreOffice (CloudConvert) substitute an available face for that script.
+  // he/ar are also RIGHT-TO-LEFT (see __rtlDoc below). Latin languages (en/da/es/fr/de)
+  // keep the package font.
+  const SCRIPT_FONT = {
+    zh: "Microsoft YaHei",   // CJK -> Noto Sans CJK
+    he: "Noto Sans Hebrew",  // Hebrew
+    ar: "Noto Sans Arabic",  // Arabic
+    am: "Noto Sans Ethiopic" // Amharic / Ge'ez
+  };
+  if (SCRIPT_FONT[lang]) {
+    const sf = SCRIPT_FONT[lang];
+    style.mainHeadFont = sf;
+    style.mainBodyFont = sf;
+    style.sidebarFont = sf;
+    style.sidebarBodyFont = sf;
+    style.headerFont = sf;
   }
-  // FURNITURE-ZH-001 (owner 2026-07-09): localize the two worker-injected labels
-  // that otherwise stay English under zh \u2014 the per-role "Results:" lead and the
-  // AI-assisted footer. Stashed on `style` (threaded to every builder); the AI
-  // notice also needs a CJK face or its Chinese text boxes out.
+  // RTL-DOC-001: Hebrew + Arabic read right-to-left. Threaded to the builders so
+  // paragraphs get w:bidi and runs get w:rtl.
+  const __rtlDoc = lang === "he" || lang === "ar";
+  style._rtl = __rtlDoc;
+  // FURNITURE-LANG-001 (extends FURNITURE-ZH-001): localize the two worker-injected
+  // labels (per-role "Results:" lead + AI-assisted footer) and give the AI notice a
+  // script-capable face so its non-Latin text doesn't box out. Falls back to English.
+  const __RESULTS = { zh: "\u6210\u679C\uFF1A", he: "\u05EA\u05D5\u05E6\u05D0\u05D5\u05EA: ", ar: "\u0627\u0644\u0646\u062A\u0627\u0626\u062C: ", am: "\u12CD\u1324\u1276\u127D: " };
+  const __AINOTICE = {
+    zh: "\u672C\u6587\u6863\u7531 AI \u8F85\u52A9\u751F\u6210\uFF0C\u5185\u5BB9\u7531\u4F5C\u8005\u8D1F\u8D23\u3002",
+    he: "\u05DE\u05E1\u05DE\u05DA \u05D6\u05D4 \u05E0\u05D5\u05E6\u05E8 \u05D1\u05E1\u05D9\u05D5\u05E2 \u05D1\u05D9\u05E0\u05D4 \u05DE\u05DC\u05D0\u05DB\u05D5\u05EA\u05D9\u05EA - \u05D4\u05DE\u05D7\u05D1\u05E8 \u05D0\u05D7\u05E8\u05D0\u05D9 \u05DC\u05EA\u05D5\u05DB\u05DF.",
+    ar: "\u062A\u0645 \u0625\u0646\u0634\u0627\u0621 \u0647\u0630\u0627 \u0627\u0644\u0645\u0633\u062A\u0646\u062F \u0628\u0645\u0633\u0627\u0639\u062F\u0629 \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A - \u0627\u0644\u0645\u0624\u0644\u0641 \u0645\u0633\u0624\u0648\u0644 \u0639\u0646 \u0627\u0644\u0645\u062D\u062A\u0648\u0649.",
+    am: "\u12A8\u12DA\u1205 \u1230\u1290\u12F5 \u1260 AI \u12A5\u122D\u12F3\u1273 \u1270\u1348\u1325\u122F\u120D - \u12F0\u122B\u1232\u12CD \u1208\u12ED\u12D8\u1271 \u1270\u1320\u12EB\u1242 \u1290\u12CD\u1362"
+  };
   const __zhDoc = lang === "zh";
-  style._resultsLabel = __zhDoc ? "\u6210\u679C\uFF1A" : "Results: ";
-  style._aiNotice = __zhDoc ? "\u672C\u6587\u6863\u7531 AI \u8F85\u52A9\u751F\u6210\uFF0C\u5185\u5BB9\u7531\u4F5C\u8005\u8D1F\u8D23\u3002" : "AI-assisted - author retains responsibility for content.";
-  style._aiFont = __zhDoc ? "Microsoft YaHei" : "Calibri";
-  const CONT_SUFFIX = { en: "(CONT.)", da: "(FORTS.)", es: "(CONT.)", zh: "\uFF08\u7EED\uFF09" };
+  style._resultsLabel = __RESULTS[lang] || "Results: ";
+  style._aiNotice = __AINOTICE[lang] || "AI-assisted - author retains responsibility for content.";
+  style._aiFont = SCRIPT_FONT[lang] || "Calibri";
+  const CONT_SUFFIX = { en: "(CONT.)", da: "(FORTS.)", es: "(CONT.)", zh: "\uFF08\u7EED\uFF09", he: "(\u05D4\u05DE\u05E9\u05DA)", ar: "(\u062A\u0627\u0628\u0639)", am: "(\u1240\u1323\u12ED)" };
   const contSuffix = CONT_SUFFIX[lang] || CONT_SUFFIX.en;
   const layout = payload.layout || (payload.doc === "cl" ? "linear" : "two_column");
   const headerAlign = {
@@ -27785,10 +27808,21 @@ function renderEducation(s, ctx, isSidebar) {
 }
 __name(renderEducation, "renderEducation");
 function buildStyles(ctx) {
+  // RTL-DOC-001 (owner 2026-07-10): for Hebrew / Arabic set the document DEFAULTS so
+  // every run is right-to-left (w:rtl) and every paragraph is bidi (w:bidi) — a global
+  // RTL without threading a flag through every builder. The Unicode bidi algorithm keeps
+  // embedded Latin tokens (numbers, company / tool names) left-to-right within the RTL
+  // flow. LTR languages are unaffected.
+  const rtl = !!(ctx.style && ctx.style._rtl);
   return {
     default: {
       document: {
-        run: { font: ctx.style.mainBodyFont, size: pt2hp(ctx.fs.mainBody) }
+        run: {
+          font: ctx.style.mainBodyFont,
+          size: pt2hp(ctx.fs.mainBody),
+          ...(rtl ? { rightToLeft: true } : {})
+        },
+        ...(rtl ? { paragraph: { bidirectional: true } } : {})
       }
     },
     paragraphStyles: []
@@ -28277,7 +28311,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.142-zh-furniture-labels";
+var VERSION = "1.14.143-script-fonts-rtl";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

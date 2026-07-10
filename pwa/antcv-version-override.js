@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.241-kernel-lang-unwrap';
+  const TARGET_VERSION = '1.51.242-zh-guards-kernelsave';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.241-kernel-lang-unwrap',
     '1.51.240-kernel-writingstyle-key',
     '1.51.239-style-kernels-load',
     '1.51.238-multilang-he-am',

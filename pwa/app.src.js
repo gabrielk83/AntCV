@@ -39269,7 +39269,7 @@
                                       // distinct row each time so saves don't
                                       // collapse onto the first list entry.
                                       save_as_new: !0,
-                                    });
+                                    }); /* APP-HISTORY-KERNEL-SAVE-001 (owner 2026-07-10): also persist the manual unsolicited save to the per-(style×lang) kernel */ try{var __mks=u.get("sections",null);if(__mks&&((__mks.cv&&__mks.cv.length)||(__mks.cl&&__mks.cl.length))){oo.putShowcase({sections:__mks,meta:(function(m){try{if(!m||"object"!=typeof m)return m;var co=String(m.company||"").trim();if(!co||"Unsolicited"===co)return m;var c=Object.assign({},m,{company:"Unsolicited",role:"Open Application"});try{delete c.rationale}catch(_){}return c}catch(_){return m}})(io),rationale:yo,jd_language:je},(()=>{try{var p=JSON.parse(localStorage.getItem("personalInfo")||"{}")||{};p=p.personalInfo||p;var __st=String((p.writingPrefs||{}).style||"").trim().toLowerCase();var __lg=String(localStorage.getItem("language")||"en").toLowerCase().replace(/[^a-z]/g,"").slice(0,2)||"en";return __st?__st+"|"+__lg:""}catch(_){return""}})())}}catch(_){}
                                   t &&
                                     t.application &&
                                     t.application.id &&
@@ -45581,7 +45581,7 @@
                                     (yo && yo.supporting_context) || "",
                                   rationale: yo,
                                   save_as_new: !0,
-                                });
+                                }); /* APP-HISTORY-KERNEL-SAVE-001 (owner 2026-07-10): also persist the manual unsolicited save to the per-(style×lang) kernel */ try{var __mks=u.get("sections",null);if(__mks&&((__mks.cv&&__mks.cv.length)||(__mks.cl&&__mks.cl.length))){oo.putShowcase({sections:__mks,meta:(function(m){try{if(!m||"object"!=typeof m)return m;var co=String(m.company||"").trim();if(!co||"Unsolicited"===co)return m;var c=Object.assign({},m,{company:"Unsolicited",role:"Open Application"});try{delete c.rationale}catch(_){}return c}catch(_){return m}})(io),rationale:yo,jd_language:je},(()=>{try{var p=JSON.parse(localStorage.getItem("personalInfo")||"{}")||{};p=p.personalInfo||p;var __st=String((p.writingPrefs||{}).style||"").trim().toLowerCase();var __lg=String(localStorage.getItem("language")||"en").toLowerCase().replace(/[^a-z]/g,"").slice(0,2)||"en";return __st?__st+"|"+__lg:""}catch(_){return""}})())}}catch(_){}
                               t &&
                                 t.application &&
                                 t.application.id &&

@@ -16,11 +16,16 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.150-stray-present-tense';
+  var VERSION = '1.51.242-lang-guard';
   if (window.__antcvGabResultsPin === VERSION) return;
   window.__antcvGabResultsPin = VERSION;
 
   function disabled() { try { var v = localStorage.getItem('antcv:disable-gabriel-results-pin'); return v === '1' || v === 'true'; } catch (_) { return false; } }
+  // LANG-GUARD-PINS-001 (owner 2026-07-10): the pins are ENGLISH text. When the
+  // output language is not English, the translation pass has localized the
+  // Results — re-pinning English would overwrite it (the "Results stayed English
+  // under zh" report). Only pin in English.
+  function nonEnglish() { try { var v = localStorage.getItem('language') || ''; if (v && v.charAt(0) === '"') v = JSON.parse(v); v = String(v || 'en').toLowerCase().replace(/[^a-z]/g, '').slice(0, 2); return !!v && v !== 'en'; } catch (_) { return false; } }
   function isGabriel() {
     try { var p = JSON.parse(localStorage.getItem('personalInfo') || '{}') || {}; p = p.personalInfo || p; return /\bgabriel\b/i.test(String((p || {}).name || '')); }
     catch (_) { return false; }
@@ -83,7 +88,7 @@
     return copycat(cur, bullets);                                      // gen copycat of own bullets
   }
   function run() {
-    if (disabled() || !isGabriel()) return;
+    if (disabled() || !isGabriel() || nonEnglish()) return;
     try {
       var secs = JSON.parse(localStorage.getItem('sections') || '{}');
       if (!secs || !Array.isArray(secs.cv)) return;

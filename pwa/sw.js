@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.241-kernel-lang-unwrap';
+const CACHE = 'antcv-1.51.242-zh-guards-kernelsave';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

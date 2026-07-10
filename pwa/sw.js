@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.230-lang-cloud-sync';
+const CACHE = 'antcv-1.51.231-tracker-ask-ai';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

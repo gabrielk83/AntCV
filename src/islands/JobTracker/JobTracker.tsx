@@ -138,6 +138,30 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
   const nightlyOn = (uk: string) => { const q = doc?.queue?.[uk]; return q === undefined ? !hasArtifact(uk) : q; };
   function toggleNightly(uk: string): void { if (!doc) return; setDocState({ ...doc, queue: { ...(doc.queue || {}), [uk]: !nightlyOn(uk) } }); setDirty(true); }
   const [expandRow, setExpandRow] = useState<string | null>(null);
+  // Single floating "Ask AI" assistant for the whole job list.
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatQ, setChatQ] = useState('');
+  const [chatA, setChatA] = useState('');
+  const [chatBusy, setChatBusy] = useState(false);
+  function trackerContext(): string {
+    const rs = (doc?.rows || []).slice().sort((a, b) => (Number(a[0]) || 99) - (Number(b[0]) || 99));
+    const lines = rs.map((r) => {
+      const uk = r[11]; const fit = ((doc?.support || {})[uk] || '').split('\n').find((l) => l.startsWith('FIT:')) || '';
+      return `#${r[0]} ${r[1]} — ${r[2]} | ${r[3]} | ${tierOf(r[12]).label} | ${r[8]} | ${((doc?.jd || {})[uk] || '').length > 200 ? 'JD✓' : 'no JD'}${fit ? ' | ' + fit.slice(0, 90) : ''}`;
+    });
+    const env = (doc?.envelope || []).map((e) => e[0] + ': ' + e[1]).join('; ');
+    return 'DREAM ENVELOPE: ' + env + '\n\nJOB LIST (' + rs.length + ' roles):\n' + lines.join('\n');
+  }
+  async function askTracker(): Promise<void> {
+    const q = chatQ.trim(); if (!q) return;
+    setChatBusy(true); setChatA('');
+    try {
+      const sys = "You are the candidate's job-search assistant. Answer questions about their job tracker using ONLY the job list + Dream Envelope provided. Be concise, specific and actionable; when asked to rank/compare/prioritise, reason from the fit notes + envelope. You may draft short outreach/notes on request. Never invent roles or facts.";
+      const out = await askAI('MY JOB TRACKER:\n' + trackerContext() + '\n\nQUESTION: ' + q, sys, 800);
+      setChatA(out || '(no answer)');
+    } catch (e) { setChatA('Ask AI failed: ' + String((e as Error).message || e)); }
+    finally { setChatBusy(false); }
+  }
 
   const persist = useCallback(async (next: TrackerDoc, quiet = false): Promise<boolean> => {
     const res = await putDoc(next, rev);
@@ -309,7 +333,7 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,22,40,0.55)', zIndex: 99999, display: 'flex' }}
       onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}>
-      <div style={{ background: '#fff', margin: '2vh auto', width: 'min(1180px, 97vw)', height: '96vh', borderRadius: 10, display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 12px 48px rgba(0,0,0,0.4)' }}>
+      <div style={{ position: 'relative', background: '#fff', margin: '2vh auto', width: 'min(1180px, 97vw)', height: '96vh', borderRadius: 10, display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 12px 48px rgba(0,0,0,0.4)' }}>
         <div style={{ background: NAVY, color: '#fff', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
           <strong style={{ fontSize: 15 }}>📋 Job Tracker</strong>
           <span style={{ opacity: 0.8, fontSize: 12 }}>rev {rev}{dirty ? ' · unsaved' : ''}</span>
@@ -393,6 +417,22 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
         <div style={{ padding: '6px 16px', fontSize: 11, color: '#667', borderTop: '1px solid #e3e8f0' }}>
           {rows.length} roles · {jdCount} with JD · ★ = Top 5 · edits sync to your Excel.
         </div>
+
+        {/* single floating Ask-AI assistant for the whole list */}
+        {chatOpen && (
+          <div style={{ position: 'absolute', right: 16, bottom: 66, width: 'min(430px, 90%)', maxHeight: '62%', background: '#fff', border: '1px solid #01b7bb', borderRadius: 12, boxShadow: '0 12px 40px rgba(0,0,0,0.3)', display: 'flex', flexDirection: 'column', overflow: 'hidden', zIndex: 6 }}>
+            <div style={{ background: '#01b7bb', color: '#06243a', padding: '8px 12px', fontWeight: 800, fontSize: 13, display: 'flex', alignItems: 'center' }}>🤖 Ask AI about your job list<span style={{ flex: 1 }} /><button onClick={() => setChatOpen(false)} aria-label="Close" style={{ background: 'none', border: 0, cursor: 'pointer', fontWeight: 800, color: '#06243a', fontSize: 15 }}>✕</button></div>
+            {chatA && <div style={{ padding: '10px 12px', overflow: 'auto', fontSize: 13, whiteSpace: 'pre-wrap', lineHeight: 1.45, color: '#1a2233' }}>{chatA}</div>}
+            <div style={{ padding: 10, borderTop: '1px solid #e3e8f0', display: 'flex', gap: 6, alignItems: 'flex-end' }}>
+              <textarea value={chatQ} onChange={(e) => setChatQ(e.target.value)} rows={2} placeholder="e.g. which 3 roles best fit my envelope? · draft an outreach note for KK Group · what am I missing?"
+                onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) void askTracker(); }}
+                style={{ ...ta, fontSize: 13 }} />
+              <button onClick={() => void askTracker()} disabled={chatBusy || !chatQ.trim()} style={btn('#01b7bb', '#06243a', 13)}>{chatBusy ? '…' : 'Ask'}</button>
+            </div>
+          </div>
+        )}
+        <button onClick={() => setChatOpen((o) => !o)} title="Ask AI about your job list"
+          style={{ position: 'absolute', right: 16, bottom: 14, zIndex: 7, background: '#01b7bb', color: '#06243a', fontWeight: 800, fontSize: 13, border: 0, borderRadius: 24, padding: '10px 15px', cursor: 'pointer', boxShadow: '0 6px 20px rgba(0,0,0,0.35)', display: 'flex', alignItems: 'center', gap: 6 }}>🤖 Ask AI</button>
       </div>
     </div>
   );

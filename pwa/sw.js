@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.236-style-kernels-table';
+const CACHE = 'antcv-1.51.237-lang-gen-lock';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

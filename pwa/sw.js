@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.231-tracker-ask-ai';
+const CACHE = 'antcv-1.51.232-lang-modal-ghost';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

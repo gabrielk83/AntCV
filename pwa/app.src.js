@@ -17672,7 +17672,22 @@
                       try { ev && ev.preventDefault && ev.preventDefault(); ev && ev.stopPropagation && ev.stopPropagation(); } catch (_) {}
                       s(e.value);
                     };
-                    ((t.onclick = __act), t.addEventListener("pointerup", __act));
+                    // LANG-MODAL-GHOST-TAP-001 (owner 2026-07-10): on the PREVIEW
+                    // screen the confirm dialog "flashed" — opened then closed in a
+                    // few ms, and a language was still written. Live trace: the close
+                    // came from a BUTTON handler firing the instant the modal opened
+                    // (s <- g), i.e. a trailing pointerup/click from the SAME gesture
+                    // that opened the dialog (the language-menu option click) auto-
+                    // fired the freshly-inserted primary button. MOB-006 armed the
+                    // BACKDROP after 450ms for exactly this ghost class but left the
+                    // BUTTONS synchronous, so they stayed vulnerable. Fix: attach the
+                    // button handlers after a short delay too — a same-gesture ghost
+                    // fires within a few ms and is missed; a real tap (seconds after
+                    // the user reads the dialog) lands after the arm window, so
+                    // MOB-006's touch-tap fix is preserved. Escape/desktop unchanged.
+                    setTimeout(() => {
+                      ((t.onclick = __act), t.addEventListener("pointerup", __act));
+                    }, 350);
                   })(),
                   l.appendChild(t));
               }),

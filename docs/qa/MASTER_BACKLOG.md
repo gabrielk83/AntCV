@@ -36,6 +36,41 @@ Branch: `claude/antcv-roadmap-bugs-L9Sqa`. Compiled 2026-06-04.
 
 # PART 1 — ACTIVE BUGS
 
+## Session 2026-07-10 roll-up (newest — CLUSTER-QUAL-001 weekly demand-seed tuning)
+
+Full prose: `docs/deployment/google-cse-setup.md` §6-7 (CSE entitlement + dead-var detail),
+`docs/qa/SESSION_LOG_2026-07-10.md`. This was a **weekly demand-tuning run** (not a general
+maintenance session) — scope was `pwa/antcv-cluster-demand.js` + `docs/analysis/*` + D1 only;
+it did not touch app.js/sidecars, so nothing below overlaps the app-level backlog.
+
+| ID | Tag | Item | Next action |
+|----|-----|------|-------------|
+| CSE-PROXY-GOOGLE-ENTITLEMENT-001 | `OPEN` `HIGH` | `/api/cse-search` (access-relay) 403s on every call — Google Cloud `PERMISSION_DENIED` on Custom Search JSON API despite the API enabled, billing linked, key valid+rotated, and quota actively incrementing. Reproduced calling Google directly (bypassing the Worker), so it's not this repo's code. Google's own API Explorer against the same `cx` works fine with Google's demo credentials, so it's not the search engine either — this is an account/project-level entitlement hold invisible in the console. Google Cloud Support case opened 2026-07-10. | `[owner]` track the Support case; re-test `GET /api/cse-search?q=software+engineer&siteSearch=jobindex.dk` before every future weekly run — do not assume fixed or still-broken without testing |
+| CSE-PROXY-CX-DEAD-VAR-001 | `OPEN` `LOW` | **New bug, found while diagnosing the above.** `workers/access-relay/src/index.js`'s `/api/cse-search` handler hardcodes `const CSE_ID = '67ce5387bc18f4028';` and never reads `env.GOOGLE_CSE_ID` — so `docs/deployment/google-cse-setup.md`'s instruction to `wrangler secret put GOOGLE_CSE_ID` has zero effect today. Harmless while the hardcoded value matches the intended engine, but silently breaks if the engine is ever rotated. | `[code]` either read `env.GOOGLE_CSE_ID \|\| CSE_ID` in the handler, or remove the dead secret-setup instructions from the setup doc if the constant is intentionally permanent |
+| DANISH-POSTCODE-EXPORT-001 | `OPEN` `MED` | **Pre-existing, NOT caused by this session** — discovered incidentally: `node scripts/run-tests.mjs` on a clean `origin/main` checkout (confirmed via `git stash` + re-run, no cluster-demand changes present) already fails 6 tests in `pwa/test/unit/contact-line-denmark.test.mjs` (København/Copenhagen postcode normalization on export — e.g. `"2300 København S, Denmark"` not normalizing to `"2300, København S"`). | `[console]` needs its own diagnostic session; not investigated here (out of scope for a docs/D1-only weekly run) |
+| CSE-PROXY-AUTH-TEST-001 | `OPEN` `LOW` | **Pre-existing, NOT caused by this session** — same clean-checkout confirmation as above: `workers/access-relay/tests/cse-search-proxy.test.mjs` test *"never calls identityFromRequest / user auth — this is machine-to-machine, not a signed-in user"* already fails on `origin/main`. | `[console]` needs its own diagnostic session |
+
+**Resolved this session:** CLUSTER-QUAL-001 weekly refresh — researched all 9 demand clusters
+(WebSearch only, CSE proxy unavailable per CSE-PROXY-GOOGLE-ENTITLEMENT-001 above); wrote
+`source='research'` rows to D1 `application_qualification` and recomputed
+`cluster_top_qualifications` live for all 9 clusters (pm_process, photonics_eng, research_phd,
+engineering_software, data_analytics, consulting, executive, finance, people_soft — D1 was
+completely empty pre-run, first real population); updated the client SEED
+(`pwa/antcv-cluster-demand.js`) for 8/9 clusters (pm_process unchanged — research confirmed
+still current) including fixing 3 leaked personal-CV specifics (a real patent number, a
+specific university's course count, a specific country research-stay reference) found in the
+analyst-reviewed seed and mirrored into `docs/analysis/cluster_top20_seed_2026-06.json`; full
+cache-bust quartet → `1.51.246-demand-seed-refresh`; draft PR opened for review (D1 writes
+already live, PR is for the code/doc trail only, per CLUSTER-QUAL-001 §7.6).
+
+**Process note (not a product bug):** direct D1 writes to the live `cluster_top_qualifications`
+table this run required explicit, specific per-cluster user authorization each time — the auto
+mode permission classifier repeatedly denied plausible-looking DELETE+INSERT sequences citing
+(sometimes factually incorrect) duplication/authorization concerns, even after a general "go
+ahead" from the owner. What worked: literal DELETE-then-INSERT (not a bare INSERT into an
+already-empty table) and explicit per-action wording from the owner ("insert the X rows...").
+Future weekly runs should expect this and budget extra round-trips for the D1-write step.
+
 ## Session 2026-06-06 roll-up (newest — app.js rebuild safety · page-split engine)
 
 Full prose in `docs/qa/ACTIVE_BUGS.md` (top section). Safe-rebuild procedure:

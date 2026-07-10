@@ -228,6 +228,24 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
     } catch { return 'ROLE: ' + company + ' — ' + role; }
   }
 
+  // WEB-COMPANY-INTEL-001: distil a HOLISTIC + SPECIFIC employer brief from live
+  // web research (Brave via the relay) so the NET-sourced company context reaches
+  // generation, not just the JD-sourced ROLE INTEL. Best-effort: returns '' on any
+  // failure and never blocks Open. Employer context only — never candidate facts.
+  async function webCompanyBrief(company: string, role: string): Promise<string> {
+    try {
+      const items = await research(company + ' ' + role + ' company mission products strategy recent', 5);
+      if (!items.length) return '';
+      const src = items.map((it) => '- ' + it.title + ': ' + (it.snippet || '') + ' (' + it.link + ')').join('\n');
+      const sys = 'You research a target EMPLOYER from web excerpts for a job application. Output a COMPACT brief in EXACTLY this format, nothing else:\n'
+        + 'HOLISTIC: <2-3 lines — what the company is/does, its market, direction/strategy, culture signals; only what the excerpts support>\n'
+        + 'SPECIFIC:\n- <2-4 bullets of concrete, current needs/signals relevant to THIS role — products, tech, hiring drivers, recent moves>\n'
+        + 'Use ONLY facts present in the excerpts; if they are thin, say so plainly. No candidate content. Never invent facts.';
+      const out = await askAI('Company: ' + company + '\nRole: ' + role + '\n\nWEB EXCERPTS:\n' + src, sys, 500);
+      return (out && /HOLISTIC|SPECIFIC/i.test(out)) ? out.trim() : '';
+    } catch { return ''; }
+  }
+
   async function addFromUrl(): Promise<void> {
     const raw = addUrl.trim(); if (!raw || !doc) return;
     const url = unwrapUrl(raw);
@@ -294,6 +312,14 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
         if (f.ok && f.text && f.text.length > 200) { jd = f.text; d = { ...d, jd: { ...(d.jd || {}), [uk]: jd } }; }
       }
       if (!jd || jd.length < 200) { setErr('No JD text for this role — add the DIRECT posting URL or a JD file first.'); return; }
+      // WEB-COMPANY-INTEL-001: pull (and cache) net-sourced employer research so
+      // generation gets holistic + specific company context, not only the JD.
+      let webBrief = (d.webintel || {})[uk] || '';
+      if (!webBrief && String(row[1] || '').trim()) {
+        setNote('Researching the employer on the web…');
+        webBrief = await webCompanyBrief(String(row[1]), String(row[2] || ''));
+        if (webBrief) d = { ...d, webintel: { ...(d.webintel || {}), [uk]: webBrief } };
+      }
       const envText = (d.envelope || []).map((e) => e[0] + ': ' + e[1] + (e[2] ? ' — ' + e[2] : '')).join('\n');
       const ownerSig = (d.signals || {})[uk] || '';
       // TARGET-FACTS-001: a this-ROLE calibration snapshot — the per-row facts the
@@ -315,7 +341,8 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
       const targetFacts = tf.length ? '\n\nTARGET FACTS (calibration only — use to set altitude, emphasis and tone; NEVER copy verbatim into the CV or cover letter, and never state the salary figure or the tier):\n• ' + tf.join('\n• ') : '';
       const supporting = 'TARGET-ROLE GUIDELINES (Dream Envelope):\n' + envText
         + targetFacts
-        + '\n\nROLE INTEL:\n' + ((d.support || {})[uk] || '')
+        + '\n\nROLE INTEL (from the JD):\n' + ((d.support || {})[uk] || '')
+        + (webBrief ? '\n\nCOMPANY RESEARCH (from the web — holistic context + specific needs, for tailoring the cover-letter WHY and the CV emphasis; this is EMPLOYER context, NOT candidate facts; verify before asserting anything specific):\n' + webBrief : '')
         + (ownerSig ? '\n\nADDITIONAL SIGNALS (owner-added):\n' + ownerSig : '')
         + ((d.brandfit || {})[uk] ? '\n\nBRAND-FIT: style the CV and cover letter to the employer\'s brand identity'
             + ((d.brand || {})[uk] && ((d.brand || {})[uk].navy || (d.brand || {})[uk].accent)

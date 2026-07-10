@@ -46,6 +46,7 @@ export interface TrackerDoc {
   brand?: Record<string, { navy?: string; accent?: string; source?: string }>; // sampled employer brand colours
   signals?: Record<string, string>;     // per-row owner-added Additional Signals (on top of auto-collected)
   support?: Record<string, string>;
+  webintel?: Record<string, string>;    // per-row distilled web research on the employer (HOLISTIC + SPECIFIC), cached
   scores?: Record<string, { fit?: number; rank?: number; why?: string }>;
   artifacts?: Record<string, {
     application_id?: number; jd_hash?: string; generated_at?: number;

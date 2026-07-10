@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.256-parallel-gen-iso';
+  const TARGET_VERSION = '1.51.257-web-company-intel';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.256-parallel-gen-iso',
     '1.51.254-brand-open-attach',
     '1.51.253-tab-doc-isolation',
     '1.51.252-gen-lang-per-tab',

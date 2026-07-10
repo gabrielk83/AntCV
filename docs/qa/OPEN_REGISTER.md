@@ -20,6 +20,15 @@
 > run clean since 1.51.41-43 without the original symptom recurring, but no one has explicitly
 > confirmed and closed them.
 
+> **STALENESS SWEEP 2026-07-11 (nightly, verify+report — no ship):** every open row given a status word in
+> `docs/qa/NIGHTLY_2026-07-11_REPORT.md`. Baseline PWA 1.51.324-babel-invariant, suite 1217/1217, boot-smoke OK.
+> Live-verify clean: PWA live = TARGET (no version regression), relay auth-30, proxy 3.7.2; babel-fish +
+> lang-fabrication + pointer-stale sidecars wired + live-served. Re-verified headlessly this run: row 17 (0 mut/8s
+> DIAG PASS), row 23 (196 buttons / 0 throw / 0 dead / 51 not-visible — no regression), row 16 (no align flap),
+> row 26-family residue (write-storm dead, DIAG PASS), A2 legs 1+2 (downgrade-guard source + auth-30, PTR-STALE
+> live, per-device pointer helpers no raw INSERT). No row was implemented-but-still-open; nothing shipped (every
+> open row is owner-gated / needs a 2nd device / needs live models / content-gen larger than one safe nightly).
+
 ## TO-DO SUMMARY (audit 2026-07-04, session 2) — every row below is TO DO
 
 | # | One-line remaining scope | TO DO |

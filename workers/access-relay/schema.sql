@@ -68,6 +68,24 @@ CREATE TABLE IF NOT EXISTS active_application (
   FOREIGN KEY (application_id) REFERENCES application(id) ON DELETE SET NULL
 );
 
+-- PARALLEL-GEN-POINTER-002: per-DEVICE active pointer. The single active_application
+-- row above is shared by every device/tab of an account, so a generation finishing on
+-- one device flips the pointer under another device that is mid-draft. This table gives
+-- each device its OWN active-application pointer (keyed user_hash+device_id); a device
+-- with no row here falls back to the legacy global active_application (latest anywhere)
+-- so a fresh device still restores something sensible. Additive — old clients that never
+-- send device_id keep using the legacy row untouched.
+CREATE TABLE IF NOT EXISTS active_application_device (
+  user_hash         TEXT NOT NULL,
+  device_id         TEXT NOT NULL,
+  application_id    INTEGER,
+  updated_at        INTEGER,
+  PRIMARY KEY (user_hash, device_id),
+  FOREIGN KEY (user_hash) REFERENCES user_kernel(user_hash) ON DELETE CASCADE,
+  FOREIGN KEY (application_id) REFERENCES application(id) ON DELETE SET NULL
+);
+CREATE INDEX IF NOT EXISTS idx_aad_user ON active_application_device(user_hash);
+
 CREATE INDEX IF NOT EXISTS idx_app_user     ON application(user_hash);
 CREATE INDEX IF NOT EXISTS idx_app_jd       ON application(user_hash, jd_hash);
 CREATE INDEX IF NOT EXISTS idx_app_category ON application(user_hash, category);

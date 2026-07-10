@@ -15859,7 +15859,7 @@
           return this._call("/api/applications");
         },
         getActive() {
-          return this._call("/api/active");
+          return this._call("/api/active" + ((window.AntcvJdScope && window.AntcvJdScope.devQ) ? window.AntcvJdScope.devQ() : ""));
         },
         get(e) {
           return this._call("/api/applications/" + e);
@@ -15999,7 +15999,7 @@
             (Yn.current ||
               (async () => {
                 try {
-                  const t = await fetch(e + "/api/prefs", {
+                  const t = await fetch(e + "/api/prefs" + ((window.AntcvJdScope && window.AntcvJdScope.devQ) ? window.AntcvJdScope.devQ() : ""), {
                     credentials: "include",
                   });
                   if (!t.ok) {
@@ -21335,7 +21335,7 @@
             throw new Error(
               "Set the AntCV Access Relay Worker URL in Settings → API Keys first.",
             );
-          return D(e) + "/api/prefs";
+          return D(e) + "/api/prefs" + ((window.AntcvJdScope && window.AntcvJdScope.devQ) ? window.AntcvJdScope.devQ() : "");
         },
         dl = async () => {
           et("Loading cloud preferences…");

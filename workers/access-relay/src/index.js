@@ -1053,10 +1053,10 @@ async function handleApiPrefs(request, env) {
     let activeApplication = null;
     if (d1Available) {
       try {
-        await ensureActiveAppColumns(env);
-        const ptr = await env.DB.prepare(
-          'SELECT application_id, device_id, updated_at FROM active_application WHERE user_hash = ?'
-        ).bind(userHash).first();
+        // PARALLEL-GEN-POINTER-002: restore THIS device's own active application (falls
+        // back to the legacy global pointer when this device has never set one), so a
+        // parallel generation on another device/tab can't yank this device's cold-restore.
+        const ptr = await readActivePointer(env, userHash, deviceIdFromRequest(request));
         if (ptr && ptr.application_id) {
           const appRow = await env.DB.prepare(
             'SELECT * FROM application WHERE id = ? AND user_hash = ?'
@@ -1517,14 +1517,16 @@ async function handleApiPrefs(request, env) {
           ).bind(userHash),
           env.DB.prepare('DELETE FROM application WHERE user_hash = ?').bind(userHash),
           env.DB.prepare('DELETE FROM active_application WHERE user_hash = ?').bind(userHash),
+          env.DB.prepare('DELETE FROM active_application_device WHERE user_hash = ?').bind(userHash), // PARALLEL-GEN-POINTER-002
           env.DB.prepare('DELETE FROM user_kernel WHERE user_hash = ?').bind(userHash),
         ]);
         const ch = (i) => (coreBatch[i] && coreBatch[i].meta && coreBatch[i].meta.changes) || 0;
         result.details.d1_core = {
-          language_view:      ch(0),
-          application:        ch(1),
-          active_application: ch(2),
-          user_kernel:        ch(3),
+          language_view:             ch(0),
+          application:               ch(1),
+          active_application:        ch(2),
+          active_application_device: ch(3),
+          user_kernel:               ch(4),
         };
       } catch (e) {
         result.details.d1_core = { error: String(e && e.message || e) };
@@ -2661,6 +2663,7 @@ async function handleApiProfileKernel(request, env) {
         ).bind(userHash),
         env.DB.prepare('DELETE FROM application WHERE user_hash = ?').bind(userHash),
         env.DB.prepare('DELETE FROM active_application WHERE user_hash = ?').bind(userHash),
+        env.DB.prepare('DELETE FROM active_application_device WHERE user_hash = ?').bind(userHash), // PARALLEL-GEN-POINTER-002
         env.DB.prepare('DELETE FROM user_kernel WHERE user_hash = ?').bind(userHash),
       ]);
       const ch = (i) => (batchResult[i] && batchResult[i].meta && batchResult[i].meta.changes) || 0;
@@ -2670,10 +2673,11 @@ async function handleApiProfileKernel(request, env) {
           deleted: true,
           user_hash: userHash,
           details: {
-            language_view:      ch(0),
-            application:        ch(1),
-            active_application: ch(2),
-            user_kernel:        ch(3),
+            language_view:             ch(0),
+            application:               ch(1),
+            active_application:        ch(2),
+            active_application_device: ch(3),
+            user_kernel:               ch(4),
           },
         },
         200, request, env, refresh
@@ -2807,12 +2811,8 @@ async function handleApiApplications(request, env) {
       // pasted a JD — work on it" expectation.
       if (row && row.id) {
         try {
-          await ensureActiveAppColumns(env);
           const deviceId = typeof body.device_id === 'string' ? body.device_id.slice(0, 64) : null;
-          await env.DB.prepare(
-            'INSERT INTO active_application (user_hash, application_id, device_id, updated_at) VALUES (?, ?, ?, ?) ' +
-            'ON CONFLICT(user_hash) DO UPDATE SET application_id = excluded.application_id, device_id = excluded.device_id, updated_at = excluded.updated_at'
-          ).bind(userHash, row.id, deviceId, now).run();
+          await writeActivePointer(env, userHash, row.id, deviceId, now); // PARALLEL-GEN-POINTER-002
         } catch (_) { /* best-effort */ }
       }
       // CLUSTER-QUAL-001 stage 1: extract qualifications from the rationale
@@ -3356,6 +3356,66 @@ async function ensureActiveAppColumns(env) {
     try { await env.DB.prepare('ALTER TABLE active_application ADD COLUMN ' + col).run(); }
     catch (_) { /* duplicate column — already migrated */ }
   }
+  // PARALLEL-GEN-POINTER-002: idempotent runtime migration so prod gets the per-device
+  // pointer table without a manual `wrangler d1 execute schema.sql`. IF NOT EXISTS →
+  // safe to run every cold isolate.
+  try {
+    await env.DB.prepare(
+      'CREATE TABLE IF NOT EXISTS active_application_device (' +
+      'user_hash TEXT NOT NULL, device_id TEXT NOT NULL, application_id INTEGER, updated_at INTEGER, ' +
+      'PRIMARY KEY (user_hash, device_id))'
+    ).run();
+  } catch (_) { /* best-effort — falls back to the legacy global pointer */ }
+}
+
+// PARALLEL-GEN-POINTER-002: write the active pointer to BOTH the per-device table
+// (keyed user_hash+device_id — each device/tab keeps its own active app) AND the legacy
+// global active_application row (kept as the cross-device "latest" fallback a fresh
+// device restores from). Additive: with no device_id only the legacy row is written,
+// exactly today's behavior. The per-device write is best-effort — the legacy row is the
+// durable authority so a per-device failure never loses the pointer.
+async function writeActivePointer(env, userHash, appId, deviceId, nowMs) {
+  await ensureActiveAppColumns(env);
+  await env.DB.prepare(
+    'INSERT INTO active_application (user_hash, application_id, device_id, updated_at) VALUES (?, ?, ?, ?) ' +
+    'ON CONFLICT(user_hash) DO UPDATE SET application_id = excluded.application_id, device_id = excluded.device_id, updated_at = excluded.updated_at'
+  ).bind(userHash, appId, deviceId, nowMs).run();
+  if (deviceId) {
+    try {
+      await env.DB.prepare(
+        'INSERT INTO active_application_device (user_hash, device_id, application_id, updated_at) VALUES (?, ?, ?, ?) ' +
+        'ON CONFLICT(user_hash, device_id) DO UPDATE SET application_id = excluded.application_id, updated_at = excluded.updated_at'
+      ).bind(userHash, deviceId, appId, nowMs).run();
+    } catch (_) { /* per-device best-effort; legacy row already persisted */ }
+  }
+}
+
+// PARALLEL-GEN-POINTER-002: read the active pointer for a SPECIFIC device. Returns the
+// device's own pointer when it has one (so a parallel gen on another device can't yank
+// it out from under this device); otherwise falls back to the legacy global pointer
+// (fresh device → latest app anywhere). Shape matches the legacy row plus a _source tag.
+async function readActivePointer(env, userHash, deviceId) {
+  await ensureActiveAppColumns(env);
+  if (deviceId) {
+    try {
+      const dev = await env.DB.prepare(
+        'SELECT application_id, updated_at FROM active_application_device WHERE user_hash = ? AND device_id = ?'
+      ).bind(userHash, deviceId).first();
+      if (dev && dev.application_id) {
+        return { application_id: dev.application_id, device_id: deviceId, updated_at: dev.updated_at || null, _source: 'device' };
+      }
+    } catch (_) { /* fall through to global */ }
+  }
+  const g = await env.DB.prepare(
+    'SELECT application_id, device_id, updated_at FROM active_application WHERE user_hash = ?'
+  ).bind(userHash).first();
+  if (!g) return null;
+  return { application_id: g.application_id, device_id: g.device_id || null, updated_at: g.updated_at || null, _source: 'global' };
+}
+
+// PARALLEL-GEN-POINTER-002: read device_id off a request's query string (?device_id=…).
+function deviceIdFromRequest(request) {
+  try { return new URL(request.url).searchParams.get('device_id') || null; } catch (_) { return null; }
 }
 
 // ---- /api/active  (pointer to current application) ------------------
@@ -3370,14 +3430,13 @@ async function handleApiActive(request, env) {
 
   if (m === 'GET') {
     try {
-      await ensureActiveAppColumns(env);
-      const row = await env.DB.prepare(
-        'SELECT application_id, device_id, updated_at FROM active_application WHERE user_hash = ?'
-      ).bind(userHash).first();
+      // PARALLEL-GEN-POINTER-002: this device's own pointer (fallback: legacy global).
+      const row = await readActivePointer(env, userHash, deviceIdFromRequest(request));
       return jsonResponse(
         { ok: true, application_id: row ? row.application_id : null,
           device_id: row ? (row.device_id || null) : null,
-          updated_at: row ? (row.updated_at || null) : null },
+          updated_at: row ? (row.updated_at || null) : null,
+          source: row ? (row._source || null) : null },
         200, request, env, refresh
       );
     } catch (e) {
@@ -3410,13 +3469,9 @@ async function handleApiActive(request, env) {
       }
     }
     try {
-      await ensureActiveAppColumns(env);
       const deviceId = body && typeof body.device_id === 'string' ? body.device_id.slice(0, 64) : null;
       const nowMs = Date.now();
-      await env.DB.prepare(
-        'INSERT INTO active_application (user_hash, application_id, device_id, updated_at) VALUES (?, ?, ?, ?) ' +
-        'ON CONFLICT(user_hash) DO UPDATE SET application_id = excluded.application_id, device_id = excluded.device_id, updated_at = excluded.updated_at'
-      ).bind(userHash, newId, deviceId, nowMs).run();
+      await writeActivePointer(env, userHash, newId, deviceId, nowMs); // PARALLEL-GEN-POINTER-002
       return jsonResponse(
         { ok: true, application_id: newId, device_id: deviceId, updated_at: nowMs },
         200, request, env, refresh
@@ -3995,6 +4050,10 @@ async function handleKvScoped(request, env, prefix, payloadField, maxStringLen) 
 // =====================================================================
 //  Main router
 // =====================================================================
+
+// PARALLEL-GEN-POINTER-002: test-only export so the per-device pointer read/write logic
+// can be exercised in node against a mock env.DB. Unused by the worker runtime.
+export const __test = { writeActivePointer, readActivePointer, deviceIdFromRequest };
 
 export default {
   async fetch(request, env, ctx) {

@@ -123,6 +123,17 @@
     try { rawSet('antcv:deviceId', v); } catch (_) {}
     return v;
   }
+  // PARALLEL-GEN-POINTER-002: build a `?device_id=…` query suffix for the cloud prefs/
+  // active GETs, so the relay returns THIS device's own active-application pointer (not
+  // whatever another device generated last). Empty string when no device id — relay then
+  // falls back to the legacy global pointer, i.e. today's behavior.
+  function devQ(sep) {
+    try {
+      var d = deviceId();
+      if (!d) return '';
+      return (sep || '?') + 'device_id=' + encodeURIComponent(d);
+    } catch (_) { return ''; }
+  }
   // PURE decision: should THIS tab's cold-restore adopt the cloud active_application
   // pointer, or keep the app it is already editing? Adopt when the pointer is mine, or
   // when I have no specific app in progress, or when it points at the same app. Only
@@ -147,7 +158,7 @@
   window.AntcvJdScope = {
     setCurrentAppId: setCurrentAppId, getCurrentAppId: tabAppId, isMyJdKey: isMyJdKey, nsKey: nsKey,
     getJd: getJd, setJd: setJd, getQuestions: getQuestions, setQuestions: setQuestions, getCompany: getCompany,
-    deviceId: deviceId, shouldAdoptCloudPointer: shouldAdoptCloudPointer
+    deviceId: deviceId, shouldAdoptCloudPointer: shouldAdoptCloudPointer, devQ: devQ
   };
   window.__antcvJdScopeInstalled = true;
 })();

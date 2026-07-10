@@ -74,12 +74,20 @@ binding = "UPSTREAM_DEMO"
 service = "antcv-demo-proxy"
 environment = "production"
 
-# Secrets to set via `npx wrangler secret put …`:
+# Secrets to set via `npx wrangler secret put …` (or the CF dashboard →
+# Settings → Variables and Secrets → Add → Secret):
 #   JWT_SECRET                    >=32-byte random string for HS256 signing
 #   RESEND_API_KEY                Resend API key
 #   UPSTREAM_ANALYTICS_SECRET     Same value as cv-proxy's ANALYTICS_SECRET.
+#   BRAVE_API_KEY                 Brave Search API subscription token — PREFERRED
+#                                 backend for /api/research (job-tracker research +
+#                                 the 🤖 assistant). Set 2026-07-10 via dashboard.
 #
-# Optional (only needed if the service bindings above aren't bound):
+# Optional / fallback:
+#   GOOGLE_CSE_KEY            Google Custom Search key — /api/research + /api/cse-search
+#                             FALLBACK (only used when BRAVE_API_KEY is unset). Currently
+#                             403s on antcv-access (project not provisioned for the JSON API).
+#   CSE_PROXY_TOKEN           narrow-scope token guarding the legacy /api/cse-search route
 #   CF_ACCESS_CLIENT_ID       service-token id for cv-proxy's Access policy
 #   CF_ACCESS_CLIENT_SECRET   service-token secret
 

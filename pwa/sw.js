@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.300-tab-doc-iso';
+const CACHE = 'antcv-1.51.320-babel-relang';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',
@@ -72,6 +72,7 @@ const SHELL = [
   './antcv-auto-pagebreak-block-001.js',
   './antcv-table-fast-drag.js',
   './antcv-settings-history-guard.js',
+  './antcv-babel-relang.js',
   './antcv-auth.js',
   './icons/icon-192.png',
   './icons/icon-512.png',

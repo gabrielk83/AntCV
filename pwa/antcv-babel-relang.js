@@ -20,7 +20,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.263-babel-relang';
+  var VERSION = '1.51.320-babel-relang';
   if (window.__antcvBabelRelang === VERSION) return;
   window.__antcvBabelRelang = VERSION;
   try { if (localStorage.getItem('antcv:disable-babel-relang') === '1') return; } catch (_) {}

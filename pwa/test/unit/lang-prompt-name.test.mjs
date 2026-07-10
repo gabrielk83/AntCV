@@ -40,3 +40,19 @@ test('app.js (deployed): same fix present, hardcode gone', () => {
   assert.equal(app.includes('function __langPromptName('), true, 'helper in the bundle');
   assert.equal(app.includes('l=__langPromptName(Be)'), true, 'LANGUAGE line (minified) uses the helper');
 });
+
+// ── BABEL-FISH-RELANG-001 (Phase 1b): the translate pass is exposed with a force
+// flag so the relang sidecar can re-render an English kernel served under a
+// non-Latin ribbon into the ribbon language. ─────────────────────────────────
+
+test('app.src.js: Pr takes a force flag and exposes __antcvRelang', () => {
+  assert.equal(src.includes('Pr = (e, __force) =>'), true, 'Pr signature gains __force');
+  assert.equal(src.includes('if (!__force && e === je) return;'), true, 'guard honours __force');
+  assert.equal(src.includes('window.__antcvRelang = (e, f) => Pr(e, f)'), true, 'relang exposed');
+  assert.equal(src.includes('BABEL-FISH-RELANG-001'), true, 'documented');
+});
+
+test('app.js (deployed): Pr force flag + __antcvRelang exposure present (minified)', () => {
+  assert.equal(app.includes('Xr=(e,__force)=>{var t,n;if(!__force&&e===Be)return;'), true, 'minified Pr gains __force + guard');
+  assert.equal(app.includes('window.__antcvRelang=(e,f)=>Xr(e,f)'), true, 'relang exposed in the bundle');
+});

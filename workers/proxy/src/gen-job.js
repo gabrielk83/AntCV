@@ -76,6 +76,29 @@ function uuid() {
 
 function kvKey(jobId) { return JOB_PREFIX + jobId; }
 
+// COHERENCE-META-STRIP-001: the coherence-repair re-run occasionally prepends a
+// narration line describing what it is doing ("This is cv_outcomes — the
+// authoritative source...", "Here is the corrected section", "Per the review,
+// ..."). The augmented repair prompt asks it not to, but the model still leaks
+// one now and then, so a deterministic strip is the reliable belt. Drop only
+// LEADING lines that are clearly repair-narration (real CV/CL content never
+// opens this way), stopping at the first genuine content line. Never blanks.
+function stripRepairMeta(text) {
+  if (typeof text !== 'string' || !text) return text;
+  const META = /^\s*(this is (cv_|cl_|the )|this section\b|here('?s| is) the (corrected|revised)|the (corrected|revised) (version|section)|per the (review|coherence)|as (requested|instructed|per)|following the (review|coherence)|i('| wi)ll (produce|provide|rewrite)|below is\b|note:|to (fix|address|reduce) (the|this))/i;
+  const AUTH = /(authoritative source|other sections generalise|other sections generalize|the issues (above|found)|coherence review)/i;
+  const lines = text.split('\n');
+  let i = 0;
+  while (i < lines.length) {
+    const ln = lines[i];
+    if (ln.trim() === '') { i++; continue; }               // skip leading blanks
+    if (META.test(ln) || AUTH.test(ln)) { i++; continue; } // drop a narration line
+    break;                                                  // first real content line
+  }
+  const out = lines.slice(i).join('\n').replace(/^\s+/, '');
+  return out.trim() ? out : text;                          // never blank the section
+}
+
 // PARITY (owner 2026-07-03): this file is byte-identical in workers/proxy and
 // workers/demo-proxy; each worker binds its own KV namespace name.
 function jobsKV(env) { return (env && (env.CV_PROXY_DATA || env.CV_DEMO_PROXY_DATA)) || null; }
@@ -476,7 +499,7 @@ async function runCoherencePhase(request, env, CORS, job, runSection, selfOrigin
   if (rewrites) {
     for (const s of job.sections) {
       if (Object.prototype.hasOwnProperty.call(rewrites, s.id)) {
-        const nt = rewrites[s.id];
+        const nt = stripRepairMeta(rewrites[s.id]);
         if (typeof nt === 'string' && nt.trim() && nt.trim() !== (s.result || '').trim()) {
           s.result = nt;
           s.coherence_revised = true;
@@ -533,7 +556,7 @@ async function runCoherencePhase(request, env, CORS, job, runSection, selfOrigin
         if (resp && resp.status < 400) {
           const drained = await drainSectionResponse(resp, job.provider);
           if (drained.text && drained.text.trim()) {
-            s.result = drained.text;
+            s.result = stripRepairMeta(drained.text);
             s.coherence_revised = true;
             addUsage(job.totals, drained.usage);
             repaired.push(s.id);

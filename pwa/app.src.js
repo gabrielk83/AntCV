@@ -41657,7 +41657,7 @@
               React.createElement("input", {
                 ref: li,
                 type: "file",
-                accept: ".pdf,.doc,.docx",
+                accept: ".pdf,.doc,.docx,.txt,.md,.csv,.png,.jpg,.jpeg,.gif,.webp,image/png,image/jpeg,image/gif,image/webp",
                 multiple: !0,
                 style: { display: "none" },
                 onChange: async (e) => {
@@ -41692,6 +41692,66 @@
                                 `Could not extract text from "${e.name}":\n\n${t.message}`,
                               ),
                               console.error("PDF extraction failed:", t));
+                          }
+                        else if (
+                          ["png", "jpg", "jpeg", "gif", "webp"].includes(
+                            e.name.split(".").pop().toLowerCase(),
+                          ) ||
+                          (e.type || "").startsWith("image/")
+                        )
+                          // SIGNAL-IMAGE-OCR-001: a single image / screenshot attached as a
+                          // signal file is OCR'd via the app's vision extractor (same path the
+                          // JobTracker island uses), not dropped into the docx branch.
+                          try {
+                            if ("function" != typeof window.AntcvExtractPDFText)
+                              throw new Error(
+                                "OCR extractor not loaded yet - reload the page and retry",
+                              );
+                            const o = await window.AntcvExtractPDFText(e);
+                            if (jn.current) break;
+                            const r = String((o && o.text) || "").trim();
+                            Jt((t) => [
+                              ...t.filter((t) => t.name !== e.name),
+                              {
+                                name: e.name,
+                                text: r || "(no text found in image)",
+                                type: "image",
+                                extractionMethod: (o && o.method) || "ocr",
+                              },
+                            ]);
+                            console.log(
+                              "[IMG] OCR " + e.name + ": " + r.length + " chars",
+                            );
+                          } catch (t) {
+                            jn.current ||
+                              (alert(
+                                "Could not OCR " + e.name + ": " + ((t && t.message) || t),
+                              ),
+                              console.error("Image OCR failed:", t));
+                          }
+                        else if (
+                          ["txt", "md", "csv", "text"].includes(
+                            e.name.split(".").pop().toLowerCase(),
+                          ) ||
+                          (e.type || "").startsWith("text/")
+                        )
+                          try {
+                            const o = (await e.text()).trim();
+                            if (jn.current) break;
+                            Jt((t) => [
+                              ...t.filter((t) => t.name !== e.name),
+                              { name: e.name, text: o || "(empty file)", type: "text" },
+                            ]);
+                          } catch (t) {
+                            jn.current ||
+                              Jt((t) => [
+                                ...t.filter((t) => t.name !== e.name),
+                                {
+                                  name: e.name,
+                                  text: "(could not read text)",
+                                  type: "text",
+                                },
+                              ]);
                           }
                         else
                           try {

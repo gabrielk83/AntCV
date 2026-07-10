@@ -31,8 +31,13 @@ collide on a version number or a shared working tree (full detail: `docs/qa/NIGH
 
 - [~] R1 Language register registry + client wiring (en/da/es/zh -> 23) — PARTIAL: `__langGenLock`
       directive covers zh/es/he/am/fr/de (+generic) in targeted+unsolicited prompts (1.51.237/250/252);
-      translation round-trip now covers subtitle + CL slogan (1.51.248). NOT done: the full 23-language
-      `__ANTCV_LANG_REGISTRY` sidecar + register/voice/name-map lookups this phase specifies.
+      translation round-trip now covers subtitle + CL slogan (1.51.248). **BABEL-FISH stack SHIPPED +
+      verified live (1.51.262→324, spec BABEL_FISH_LANGUAGE_ARCHITECTURE.md):** 1a honest `LANGUAGE:` line
+      (`__langPromptName`, killed the hardcoded "UK English" for non-Danish — the root cause of "unsolicited
+      zh → English"); 1b `antcv-babel-relang.js` re-renders wrong-script content to the ribbon language; 2
+      lazy per-language cache w/ genSpeed split; 2b cross-device `langRenders` cloud sync (relay auth-30); 2c-A
+      fact-preservation invariant check. NOT done: the full 23-language `__ANTCV_LANG_REGISTRY` sidecar +
+      register/voice/name-map lookups this phase specifies; 2c-B pre-warm (needs a headless translate).
 - [~] R2 Export path: filename suffixes; RTL + CJK in docx-worker — SUBSTANTIALLY SHIPPED: CJK font
       (zh Microsoft YaHei), RTL he/ar (w:rtl + w:bidi + `visuallyRightToLeft` layout mirror), Ethiopic am
       font (worker 1.14.143/144). STILL OPEN: filename-suffix registry (still `_Dansk`-only) + owner VISUAL
@@ -50,6 +55,16 @@ Run log:
   + translation subtitle/slogan round-trip), R3 (per-style page-budget + commercial order sidecar). he/am/ar
   now selectable in the language bar. NEXT unchecked full phases: finish R1 registry, R2 filename-suffix +
   owner ar/zh visual gate, then R3 full registry orders.
+- 2026-07-11 (desktop, babel-fish track — spec `docs/qa/BABEL_FISH_LANGUAGE_ARCHITECTURE.md`, memory
+  `babel-fish-language`): shipped the full babel-fish language stack answering the owner's "unsolicited zh
+  still generates English" + "meaning is canonical, every language is a rendering" model. 1a
+  `__langPromptName` honest `LANGUAGE:` line (1.51.262, root-cause fix); 1b relang sidecar (1.51.320); 2 lazy
+  per-lang cache + genSpeed split (1.51.321); 2b `langRenders` cloud sync + relay auth-30 (1.51.323); 2c-A
+  fact-preservation invariant check (1.51.324). Verified live signed-in (real zh render on
+  karp.gabriel.a@antcv.net) + cloud round-trip + invariant drift detection. This substantially advances R1
+  (client wiring for real per-language output) — the remaining R1 gap is the declarative 23-language
+  `__ANTCV_LANG_REGISTRY`. OPEN: 2c-B pre-warm (headless translate); R1 registry; R2 filename-suffix + owner
+  ar/zh visual gate; R3 full registry orders.
 
 ## Hard rules (same as every nightly; violating any = failed run)
 

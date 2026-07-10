@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.233-langbar-zh';
+const CACHE = 'antcv-1.51.234-jobtracker-research';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

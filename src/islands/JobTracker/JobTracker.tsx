@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   getDoc, putDoc, fetchJdUrl, createApplication, setActive, classifyReason,
-  fetchClusterTop20, askAI, fitPercent, fetchBrandColors, TRACKED_STATUSES, type TrackerDoc, type Row,
+  fetchClusterTop20, askAI, fitPercent, fetchBrandColors, research, TRACKED_STATUSES, type TrackerDoc, type Row,
 } from './api';
 
 const NAVY = '#1F3864';
@@ -156,8 +156,17 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
     const q = chatQ.trim(); if (!q) return;
     setChatBusy(true); setChatA('');
     try {
-      const sys = "You are the candidate's job-search assistant. Answer questions about their job tracker using ONLY the job list + Dream Envelope provided. Be concise, specific and actionable; when asked to rank/compare/prioritise, reason from the fit notes + envelope. You may draft short outreach/notes on request. Never invent roles or facts.";
-      const out = await askAI('MY JOB TRACKER:\n' + trackerContext() + '\n\nQUESTION: ' + q, sys, 800);
+      // Best-effort web research (Google CSE via the relay). Returns [] and is
+      // skipped silently if the Custom Search API isn't enabled yet.
+      let researchBlock = '';
+      try {
+        setChatA('Researching…');
+        const items = await research(q, 4);
+        if (items.length) researchBlock = '\n\nWEB RESEARCH (Google — may be dated; cite the links when you use them):\n'
+          + items.map((it) => '- ' + it.title + ': ' + (it.snippet || '') + ' (' + it.link + ')').join('\n');
+      } catch { /* */ }
+      const sys = "You are the candidate's job-search assistant. Answer questions about their job tracker using the job list + Dream Envelope provided, plus any WEB RESEARCH given. Be concise, specific and actionable; when asked to rank/compare/prioritise, reason from the fit notes + envelope. You may draft short outreach/notes on request. Cite research links when you use them. Never invent roles or facts. Candidate = electro-optics / optical-systems engineer + hardware project manager, Copenhagen.";
+      const out = await askAI('MY JOB TRACKER:\n' + trackerContext() + researchBlock + '\n\nQUESTION: ' + q, sys, 900);
       setChatA(out || '(no answer)');
     } catch (e) { setChatA('Ask AI failed: ' + String((e as Error).message || e)); }
     finally { setChatBusy(false); }

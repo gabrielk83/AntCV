@@ -147,6 +147,17 @@ export function fitPercent(band: string, text: string, top20: { qual: string }[]
   return Math.max(35, Math.min(98, Math.round(pct)));
 }
 
+// Authenticated web research (Google CSE) via the relay /api/research (RESEARCH-001).
+// Returns [] on any failure (incl. the Custom Search API not being enabled) so
+// callers degrade gracefully.
+export async function research(q: string, num = 4): Promise<{ title: string; link: string; snippet: string }[]> {
+  try {
+    const res = await call('/api/research', { method: 'POST', body: JSON.stringify({ q, num }) });
+    const j = await res.json().catch(() => ({}));
+    return (j && j.ok && Array.isArray(j.items)) ? j.items : [];
+  } catch { return []; }
+}
+
 // Sample the employer's real brand colours from their site (BRAND-FIT-REAL-SAMPLE-001).
 export interface BrandColors { navy?: string; accent?: string; source?: string; }
 export async function fetchBrandColors(jdUrl: string, companyName: string): Promise<BrandColors | null> {

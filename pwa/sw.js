@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.234-jobtracker-research';
+const CACHE = 'antcv-1.51.235-style-page-budget';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

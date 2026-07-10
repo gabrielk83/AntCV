@@ -25,7 +25,16 @@ import os from 'node:os';
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..');
 const LEDGER = join(REPO, 'docs', 'qa', 'NIGHT_SHIFT.md');
 const VERSION_FILE = join(REPO, 'pwa', 'antcv-version-override.js');
-const IDFILE = join(REPO, '.git', 'shift-session-id');
+// Resolve the per-worktree git dir so the session-id file lives in a REAL directory even
+// inside a git WORKTREE — there `<repo>/.git` is a FILE (a gitdir pointer), not a dir, so
+// join(REPO,'.git',…) is an invalid path and the id never persists (the 2026-07-10 bug that
+// forced a hand-edited release). `--absolute-git-dir` returns the worktree-specific dir
+// (main clone → .git; worktree → .git/worktrees/<name>) → an id file PER session/worktree.
+function resolveGitDir() {
+  try { return execSync('git rev-parse --absolute-git-dir', { cwd: REPO, encoding: 'utf8' }).trim(); }
+  catch { return join(REPO, '.git'); }
+}
+const IDFILE = join(resolveGitDir(), 'shift-session-id');
 const BEGIN = '<!-- SHIFT:BEGIN';
 const END = '<!-- SHIFT:END -->';
 

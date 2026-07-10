@@ -1,6 +1,6 @@
 import { insertLlmCall, aggregateHealth, getLatestHealth, pruneOld, insertQualitySignal } from './telemetry.js';
 
-const VERSION='1.3.8';
+const VERSION='1.3.9';
 // antcv-access-relay — auth + hardening
 // =====================================
 // Public-facing relay with built-in user authentication.
@@ -35,7 +35,7 @@ const VERSION='1.3.8';
 // Required binding (declare in wrangler.toml):
 //   KV_BINDING        KV namespace (stores OTPs, rate counters, prefs, signals)
 
-const RELAY_VERSION = 'auth-28-kernel-key-lang';
+const RELAY_VERSION = 'auth-29-kernel-lang-match';
 const SESSION_TTL_SECONDS    = 7 * 24 * 60 * 60;       // 7 days
 // Refresh whenever the token has < 6 days left (i.e. it's more than 1 day old),
 // so ANY request past the first day rotates it to a fresh 7-day token via the
@@ -3186,15 +3186,22 @@ async function handleApiKernelShowcase(request, env) {
         // Fall back to a pre-existing legacy row (style-only, then the single ''
         // slot) so kernels saved before the language-keying still restore. The
         // app's next edit-resave re-writes under the new key (natural migration).
+        const __li = __style ? __style.lastIndexOf('|') : -1;
+        const __reqLang = __li > 0 ? __style.slice(__li + 1) : '';
         const __cands = [__style];
-        if (__style && __style.indexOf('|') > 0) __cands.push(__style.slice(0, __style.lastIndexOf('|')));
+        if (__li > 0) __cands.push(__style.slice(0, __li));
         if (__style) __cands.push('');
         let srow = null, __hitKey = __style;
         for (const __k of __cands) {
-          srow = await env.DB.prepare(
+          const __r = await env.DB.prepare(
             'SELECT sections, meta, rationale, jd_language, updated_at FROM kernel_showcase_styled WHERE user_hash = ? AND style_key = ?'
           ).bind(userHash, __k).first();
-          if (srow) { __hitKey = __k; break; }
+          if (!__r) continue;
+          // KERNEL-KEY-LANG-001: exact key always accepted; a LEGACY fallback row
+          // is accepted only if its language matches the request — otherwise we'd
+          // serve an English kernel under Chinese labels (owner 2026-07-10 report).
+          // A language mismatch -> null -> the app regenerates fresh in style+lang.
+          if (__k === __style || !__reqLang || String(__r.jd_language || '') === __reqLang) { srow = __r; __hitKey = __k; break; }
         }
         const showcase = srow ? {
           sections: parseJsonField(srow.sections, null), meta: parseJsonField(srow.meta, null),

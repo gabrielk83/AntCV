@@ -296,7 +296,25 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
       if (!jd || jd.length < 200) { setErr('No JD text for this role — add the DIRECT posting URL or a JD file first.'); return; }
       const envText = (d.envelope || []).map((e) => e[0] + ': ' + e[1] + (e[2] ? ' — ' + e[2] : '')).join('\n');
       const ownerSig = (d.signals || {})[uk] || '';
+      // TARGET-FACTS-001: a this-ROLE calibration snapshot — the per-row facts the
+      // (general) Dream Envelope doesn't carry: priority tier, fit angle, this
+      // role's location/mobility, and its risk flag, plus the comp/seniority
+      // altitude. Framed as calibration-ONLY so the generator sets tone/altitude
+      // without copying any of it verbatim (no salary or tier leaks into the CV/CL).
+      // Lives in supporting_context (the PRIOR-RUN block) — never in the JD.
+      const envDim = (name: string) => { const e = (d.envelope || []).find((x) => String(x[0] || '').toLowerCase().startsWith(name)); return e ? String(e[1] || '').trim() : ''; };
+      const tierName = (d.gen || {})[uk] === 'high' ? 'HIGH-priority (flagship quality)' : (d.gen || {})[uk] === 'quick' ? 'quick draft' : (String(row[5] || '').trim() ? 'tier ' + String(row[5]).trim() : '');
+      const tf: string[] = [];
+      const salaryT = envDim('salary'); if (salaryT) tf.push('Compensation altitude: ' + salaryT + ' — pitch the seniority this implies; do not undersell.');
+      const titleT = envDim('title'); if (titleT) tf.push('Target title band: ' + titleT + '.');
+      if (tierName) tf.push('Priority for this application: ' + tierName + '.');
+      const locBits = [String(row[3] || '').trim(), String(row[4] || '').trim() ? 'commute ' + String(row[4]).trim() : ''].filter(Boolean).join(', ');
+      if (locBits) tf.push('Location / mobility: ' + locBits + '. If this needs relocation or weekly fly-in, the candidate is open to it per the envelope — acknowledge fit naturally, never over-explain.');
+      if (String(row[6] || '').trim()) tf.push('Fit angle for this role: ' + String(row[6]).trim());
+      if (String(row[10] || '').trim()) tf.push('Watch / risk to handle: ' + String(row[10]).trim());
+      const targetFacts = tf.length ? '\n\nTARGET FACTS (calibration only — use to set altitude, emphasis and tone; NEVER copy verbatim into the CV or cover letter, and never state the salary figure or the tier):\n• ' + tf.join('\n• ') : '';
       const supporting = 'TARGET-ROLE GUIDELINES (Dream Envelope):\n' + envText
+        + targetFacts
         + '\n\nROLE INTEL:\n' + ((d.support || {})[uk] || '')
         + (ownerSig ? '\n\nADDITIONAL SIGNALS (owner-added):\n' + ownerSig : '')
         + ((d.brandfit || {})[uk] ? '\n\nBRAND-FIT: style the CV and cover letter to the employer\'s brand identity'

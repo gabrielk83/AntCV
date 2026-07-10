@@ -58,23 +58,11 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.259-parallel-gen-pointer';
+  const TARGET_VERSION = '1.51.246-demand-seed-refresh';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
-    '1.51.257-web-company-intel',
-    '1.51.256-parallel-gen-iso',
-    '1.51.254-brand-open-attach',
-    '1.51.253-tab-doc-isolation',
-    '1.51.252-gen-lang-per-tab',
-    '1.51.251-signal-image-ocr',
-    '1.51.250-unsolicited-lang-lock',
-    '1.51.249-arabic-lang',
-    '1.51.248-translate-render-sources',
-    '1.51.247-brandfit-scope-hardreset-lang',
-    '1.51.246-zh-preview-furniture',
-    '1.51.245-lang-dropdown-current',
     '1.51.244-app-switch-lang',
     '1.51.243-localform-da',
     '1.51.242-zh-guards-kernelsave',
@@ -167,7 +155,7 @@
     // Doing so causes the rewrite loop to match its own output and
     // append the suffix on every MutationObserver cycle. See the
     // idempotency guard in rewriteTextNodes below.
-, '1.50.865', '1.51.156', '1.51.157', '1.51.158', '1.51.159', '1.51.160', '1.51.161', '1.51.162', '1.51.163', '1.51.164', '1.51.165', '1.51.166', '1.51.167', '1.51.168', '1.51.169', '1.51.170', '1.51.171', '1.51.172-babel-fish', '1.51.173-babel-fish', '1.51.174-babel-fish', '1.51.175-babel-fish', '1.51.176-babel-fish', '1.51.177-babel-fish', '1.51.178-babel-fish', '1.51.179-babel-fish', '1.51.180-babel-fish', '1.51.181-babel-fish', '1.51.182-babel-fish', '1.51.183-babel-fish', '1.51.184-babel-fish', '1.51.185-babel-fish', '1.51.186-babel-fish', '1.51.187-babel-fish', '1.51.188-babel-fish', '1.51.189-babel-fish', '1.51.190-babel-fish', '1.51.191-babel-fish', '1.51.192-babel-fish', '1.51.193', '1.51.193-babel-fish', '1.51.194', '1.51.194-babel-fish', '1.51.195', '1.51.195-babel-fish', '1.51.196', '1.51.196-babel-fish', '1.51.197', '1.51.197-babel-fish', '1.51.198', '1.51.198-babel-fish', '1.51.199', '1.51.199-babel-fish', '1.51.200', '1.51.201', '1.51.202', '1.51.203', '1.51.204', '1.51.205', '1.51.206', '1.51.207', '1.51.208', '1.51.209', '1.51.210', '1.51.211', '1.51.212', '1.51.213', '1.51.214', '1.51.215', '1.51.216', '1.51.217', '1.51.218', '1.51.219', '1.51.220', '1.51.200-babel-fish', '1.51.221', '1.51.221-babel-fish', '1.51.222-date-no-present', '1.51.255-target-facts', '1.51.258-topfive-research'
+, '1.50.865', '1.51.156', '1.51.157', '1.51.158', '1.51.159', '1.51.160', '1.51.161', '1.51.162', '1.51.163', '1.51.164', '1.51.165', '1.51.166', '1.51.167', '1.51.168', '1.51.169', '1.51.170', '1.51.171', '1.51.172-babel-fish', '1.51.173-babel-fish', '1.51.174-babel-fish', '1.51.175-babel-fish', '1.51.176-babel-fish', '1.51.177-babel-fish', '1.51.178-babel-fish', '1.51.179-babel-fish', '1.51.180-babel-fish', '1.51.181-babel-fish', '1.51.182-babel-fish', '1.51.183-babel-fish', '1.51.184-babel-fish', '1.51.185-babel-fish', '1.51.186-babel-fish', '1.51.187-babel-fish', '1.51.188-babel-fish', '1.51.189-babel-fish', '1.51.190-babel-fish', '1.51.191-babel-fish', '1.51.192-babel-fish', '1.51.193', '1.51.193-babel-fish', '1.51.194', '1.51.194-babel-fish', '1.51.195', '1.51.195-babel-fish', '1.51.196', '1.51.196-babel-fish', '1.51.197', '1.51.197-babel-fish', '1.51.198', '1.51.198-babel-fish', '1.51.199', '1.51.199-babel-fish', '1.51.200', '1.51.201', '1.51.202', '1.51.203', '1.51.204', '1.51.205', '1.51.206', '1.51.207', '1.51.208', '1.51.209', '1.51.210', '1.51.211', '1.51.212', '1.51.213', '1.51.214', '1.51.215', '1.51.216', '1.51.217', '1.51.218', '1.51.219', '1.51.220', '1.51.200-babel-fish', '1.51.221', '1.51.221-babel-fish', '1.51.222-date-no-present', '1.51.245-lang-dropdown-current'
   ];
   const STALE_SET = new Set(STALE_VERSIONS);
 
@@ -214,7 +202,7 @@
     if (assertCount > 30) clearInterval(assertTimer); // ~6 s at 200 ms cadence
   }, 200);
 
-  // ─── Layer B: console.log wrap ──────────────────────────────────
+  // ─── Layer B: console.log wrap ─────────────────────────
   (function wrapConsole() {
     const orig = console.log.bind(console);
     if (console.log.__antcvVersionWrapped) return;
@@ -235,7 +223,7 @@
     console.log.__antcvVersionWrapped = true;
   })();
 
-  // ─── Layer C: DOM text rewrite ──────────────────────────────────
+  // ─── Layer C: DOM text rewrite ──────────────────────────
   // We rewrite text nodes whose textContent contains a stale
   // version string. To avoid touching arbitrary user content
   // ("we shipped version 1.40.172 in production…"), we gate on

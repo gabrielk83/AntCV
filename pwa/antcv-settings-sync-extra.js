@@ -24,7 +24,7 @@
 (function () {
   'use strict';
   if (window.__antcvSettingsSyncExtra) return;
-  window.__antcvSettingsSyncExtra = '1.51.230-langsync';
+  window.__antcvSettingsSyncExtra = '1.51.247-hardreset-lang-restore';
 
   var DISABLE = 'antcv:disable-settings-sync-extra';
   // LANG-CLOUD-SYNC-001 (owner 2026-07-10): the available-languages list
@@ -38,6 +38,18 @@
   function erasing() { try { return !!(localStorage.getItem('antcv:full-erase-in-progress') || localStorage.getItem('antcv:just-erased')); } catch (_) { return false; } }
   function raw(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
   function parse(k) { var r = raw(k); if (r == null) return undefined; try { return JSON.parse(r); } catch (_) { return r; } }
+  // HARD-RESET-LANG-RESTORE-001 (owner 2026-07-10): signOut()/hard reset does a
+  // full localStorage.clear(); on the next boot antcv-language-ui-429 line 360
+  // synchronously re-seeds the bare ['en','da'] default BEFORE this restore runs
+  // (2.5s). The generic "present locally -> skip" rule would then strip the
+  // user's extra languages (e.g. zh) on every hard reset. Treat a bare EN-DA
+  // list as "absent" so the cloud list (authoritative) wins; a genuine 2+ list
+  // stays protected.
+  function isBareLangDefault(v) {
+    if (!Array.isArray(v) || v.length !== 2) return false;
+    var s = v.map(function (x) { return String(x || '').trim().toLowerCase(); }).sort().join(',');
+    return s === 'da,en';
+  }
   function relayUrl() {
     try {
       var v = JSON.parse(localStorage.getItem('proxyUrl') || '""') || '';
@@ -81,12 +93,25 @@
           var applied = [];
           KEYS.forEach(function (k) {
             if (prefs[k] === undefined || prefs[k] === null) return;
-            if (raw(k) != null) return; // present locally -> don't clobber a local edit
+            var localPresent = raw(k) != null;
+            // HARD-RESET-LANG-RESTORE-001: a bare EN-DA enabledLanguages was
+            // re-seeded by the boot default, not a genuine local edit — let the
+            // richer cloud list override it (but never downgrade to a bare cloud).
+            if (localPresent && k === 'enabledLanguages' &&
+                isBareLangDefault(parse(k)) && !isBareLangDefault(prefs[k])) {
+              localPresent = false;
+            }
+            if (localPresent) return; // present locally -> don't clobber a local edit
             try { localStorage.setItem(k, JSON.stringify(prefs[k])); applied.push(k); lastSeen[k] = raw(k); } catch (_) {}
           });
           if (applied.length) {
             try { console.info('[settings-sync-extra] restored from cloud:', applied.join(',')); } catch (_) {}
             try { window.dispatchEvent(new Event('storage')); } catch (_) {}
+            // nudge the language UI + dropdown to re-read the restored list
+            if (applied.indexOf('enabledLanguages') >= 0) {
+              try { window.dispatchEvent(new Event('antcv:language-changed')); } catch (_) {}
+              try { if (window.AntcvLanguagePrefs && window.AntcvLanguagePrefs.apply) window.AntcvLanguagePrefs.apply(); } catch (_) {}
+            }
           }
         })
         .catch(function () { restored = false; });

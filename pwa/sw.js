@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.246-zh-preview-furniture';
+const CACHE = 'antcv-1.51.247-brandfit-scope-hardreset-lang';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

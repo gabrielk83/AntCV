@@ -25411,8 +25411,13 @@
                     ? String(v).trim()
                     : null;
                 const navy = hex(bf.navy), accent = hex(bf.accent);
-                navy && darkEnough(navy) && _t(navy);
                 const scPatch = {};
+                // COMPANY-BRAND-FIT-SCOPE-001 (owner 2026-07-10): brand-fit must
+                // recolor ONLY the CV/CL preview band + sidebar, NOT the app
+                // window/chrome. Route the brand navy through styleConfig
+                // (headerBg/sidebarBg) instead of _t()/navyColor (the global
+                // window color). _t(navy) is intentionally NOT called.
+                if (navy && darkEnough(navy)) { scPatch.headerBg = navy; scPatch.sidebarBg = navy; }
                 if (accent) {
                   scPatch.photoBorderColor = accent;
                   scPatch.sidebarLineColor = accent;

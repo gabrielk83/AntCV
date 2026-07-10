@@ -13,11 +13,19 @@ only. Hard rule: **an end result, not a brickable mid-product** — one solid ve
 several half-verified ones.
 
 > **VERSION NOTE (the numbers below are stale — check live before quoting).** As of 2026-07-10 PWA
-> is ~**1.51.258**, workers redeployed several times. Do NOT trust the "1.51.29 / 3.6.0" figures in
+> is ~**1.51.259**, workers redeployed several times. Do NOT trust the "1.51.29 / 3.6.0" figures in
 > the next paragraph; read `pwa/sw.js` CACHE + `git log` for the real current versions. For the most
 > recent job-tracker + shared-engine work (coherence-repair fix, KV-quota masking fix, brand-on-Open,
 > TARGET FACTS, web COMPANY RESEARCH, signal-image OCR), read `docs/qa/JOBTRACKER_SESSION_2026-07-10.md`
 > and `docs/qa/ACTIVE_BUGS.md` (top block).
+>
+> **CLOUD SYNC MODEL CHANGED (2026-07-10, PARALLEL-GEN-POINTER-002).** The account active pointer is no
+> longer a single `active_application` row — there is now a **per-device** `active_application_device`
+> table so parallel generations across tabs/browsers/devices never clobber each other. Any relay code that
+> touches the active pointer MUST go through `readActivePointer`/`writeActivePointer` (both tables) and pass
+> `?device_id=` on prefs/active GETs — never re-add a raw `INSERT INTO active_application … ON CONFLICT
+> (user_hash)`. The docx-worker also gained RTL (he/ar) + CJK (zh) + Ethiopic (am) export. Full detail:
+> `docs/qa/SESSION_2026-07-10_PARALLEL_GEN_AND_LANG.md`.
 
 Historical: at authoring time PWA **1.51.29** (auto-deploys on push to `main`), docx-worker
 **1.14.110**, access-relay **1.3.2**, proxy/demo-proxy **3.6.0**.

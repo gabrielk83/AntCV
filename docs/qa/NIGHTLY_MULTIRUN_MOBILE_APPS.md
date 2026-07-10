@@ -20,7 +20,12 @@ update STATUS + run log, push.
       (owner decision gate)
 
 Run log:
-- (none yet)
+- 2026-07-10 (desktop, parallel-gen track — see SESSION_2026-07-10_PARALLEL_GEN_AND_LANG.md): no R1-R4
+  phase closed, but shipped the cross-device parallel-generation isolation this mobile story depends on —
+  per-device cloud pointer (relay PARALLEL-GEN-POINTER-002 / new `active_application_device` table, 1.51.259)
+  + client keep-local guard (1.51.256) + same-device tab-doc-isolation sidecar (1.51.253). Net effect for
+  mobile: a desktop generation no longer yanks the phone's in-progress draft (and vice-versa). When testing
+  the installed PWA on the owner's phone (R2/R5), desktop⇄mobile parallel gens are now safe to run.
 
 ## Hard rules
 

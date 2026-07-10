@@ -15,15 +15,27 @@ line, (5) commit/push. Do not skip phases; do not start a phase you cannot verif
 
 ## STATUS (update every run)
 
-- [ ] R1 Language register registry + client wiring (en/da/es/zh -> 23)
-- [ ] R2 Export path: filename suffixes; RTL + CJK in docx-worker (may split into 2 runs)
-- [ ] R3 Style structure registry: sectionOrder + CL skeleton variant for all 12 styles
+- [~] R1 Language register registry + client wiring (en/da/es/zh -> 23) — PARTIAL: `__langGenLock`
+      directive covers zh/es/he/am/fr/de (+generic) in targeted+unsolicited prompts (1.51.237/250/252);
+      translation round-trip now covers subtitle + CL slogan (1.51.248). NOT done: the full 23-language
+      `__ANTCV_LANG_REGISTRY` sidecar + register/voice/name-map lookups this phase specifies.
+- [~] R2 Export path: filename suffixes; RTL + CJK in docx-worker — SUBSTANTIALLY SHIPPED: CJK font
+      (zh Microsoft YaHei), RTL he/ar (w:rtl + w:bidi + `visuallyRightToLeft` layout mirror), Ethiopic am
+      font (worker 1.14.143/144). STILL OPEN: filename-suffix registry (still `_Dansk`-only) + owner VISUAL
+      gate on ar/zh PDFs.
+- [~] R3 Style structure registry: sectionOrder + CL skeleton variant for all 12 styles — FIRST SLICE:
+      `antcv-style-page-budget.js` seeds per-style pageBudget + commercial-section order (1.51.235).
+      NOT done: full registry.json sectionOrder[]/clSectionOrder[] for all 12 + clSkeletonDelta.
 - [ ] R4 Personality-fit style adapters (12 styles x 6 trait clusters)
 - [ ] R5 Nordic Minimal generic-baseline regression + Research Formal edge case
 - [ ] R6 Wizard/Settings surface + full matrix smoke + server readiness sign-off
 
 Run log:
-- (none yet)
+- 2026-07-10 (desktop, parallel-gen/lang track — see SESSION_2026-07-10_PARALLEL_GEN_AND_LANG.md):
+  advanced R2 (CJK+RTL+Ethiopic export, worker 1.14.143/144), R1 (per-tab `__langGenLock` zh/es/he/am/fr/de
+  + translation subtitle/slogan round-trip), R3 (per-style page-budget + commercial order sidecar). he/am/ar
+  now selectable in the language bar. NEXT unchecked full phases: finish R1 registry, R2 filename-suffix +
+  owner ar/zh visual gate, then R3 full registry orders.
 
 ## Hard rules (same as every nightly; violating any = failed run)
 

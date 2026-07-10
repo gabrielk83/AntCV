@@ -2937,6 +2937,10 @@
     // other cities pass through untouched.
     const __localForm = (v) => {
       let s = String(v || "").trim();
+      // LOCALFORM-DA-ONLY-001 (owner 2026-07-10): Danish local form only for a
+      // Danish-language application; en/zh keep "Copenhagen" for the translator.
+      let __lf = "en"; try { let __v = localStorage.getItem("language") || ""; if (__v && __v.charAt(0) === '"') __v = JSON.parse(__v); __lf = String(__v || "en").toLowerCase().replace(/[^a-z]/g, "").slice(0, 2) || "en"; } catch (_) {}
+      if (__lf !== "da") return s.replace(/københavn/gi, "Copenhagen");
       if (!/copenhagen|københavn/i.test(s)) return s;
       s = s
         .replace(/copenhagen/gi, "København")

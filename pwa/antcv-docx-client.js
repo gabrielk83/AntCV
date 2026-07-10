@@ -710,6 +710,10 @@ export function buildPayload({
   // "2300 København S, Denmark". Non-Copenhagen locations pass through.
   const localForm = (v) => {
     let s = String(v || '').trim();
+    // LOCALFORM-DA-ONLY-001 (owner 2026-07-10): the Danish local form is only right
+    // for a Danish-language application. For en/zh/etc. leave the city as written
+    // (Copenhagen) so the language layer localizes it (zh -> 哥本哈根).
+    if (language !== 'da') return s.replace(/københavn/gi, 'Copenhagen');
     if (!/copenhagen|københavn/i.test(s)) return s;
     s = s
       .replace(/copenhagen/gi, 'København')

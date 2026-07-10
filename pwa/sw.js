@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.242-zh-guards-kernelsave';
+const CACHE = 'antcv-1.51.243-localform-da';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

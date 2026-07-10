@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.251-signal-image-ocr';
+  const TARGET_VERSION = '1.51.252-gen-lang-per-tab';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.251-signal-image-ocr',
     '1.51.250-unsolicited-lang-lock',
     '1.51.249-arabic-lang',
     '1.51.248-translate-render-sources',

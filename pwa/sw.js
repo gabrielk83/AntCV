@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.251-signal-image-ocr';
+const CACHE = 'antcv-1.51.252-gen-lang-per-tab';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

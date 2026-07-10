@@ -16330,9 +16330,25 @@
                             return foreign && !!__curCo2 && __curCo2 !== __rowCo2;
                           } catch (_) { return false; }
                         })();
+                        // PARALLEL-GEN-ISO-001 (owner 2026-07-10, "run generations in
+                        // parallel"): each tab owns its app-id (AntcvJdScope per-tab
+                        // currentAppId). If the shared active_application pointer names a
+                        // DIFFERENT app than the one THIS tab is working on, a parallel
+                        // tab / device generated it — KEEP this tab's app (the foreign app
+                        // stays in the app LIST to open explicitly). Same-device parallel
+                        // tabs share the device id, so the device guard above can't catch
+                        // this; the app-id can. Keep-local is always safe (no data loss).
+                        const __foreignAppId2 = (() => {
+                          try {
+                            const mine = window.AntcvJdScope && window.AntcvJdScope.getCurrentAppId && window.AntcvJdScope.getCurrentAppId();
+                            const rowId = e && (e.id || e.application_id);
+                            return !!(mine && rowId && String(mine) !== String(rowId));
+                          } catch (_) { return false; }
+                        })();
                         const __draftDrift2 =
                           __staleSamePtr2 ||
                           __foreignActiveHijack ||
+                          __foreignAppId2 ||
                           (__curCo2 && "unsolicited" !== __curCo2 &&
                           ("" === __rowCo2 || "unsolicited" === __rowCo2));
                         if (__draftDrift2) {
@@ -21540,7 +21556,18 @@
                     return foreign && !!__curCo && __curCo !== __rowCo;
                   } catch (_) { return false; }
                 })();
-                var __draftDrift = __staleSamePtr || __foreignActiveHijack || (__curCo && "unsolicited" !== __curCo && ("" === __rowCo || "unsolicited" === __rowCo));
+                // PARALLEL-GEN-ISO-001 (read-from-cloud twin of the cold-restore guard):
+                // keep THIS tab's app when the shared pointer names a different app-id (a
+                // parallel tab/device generated it). Same-device parallel tabs share the
+                // device id, so only the app-id catches this. Keep-local is always safe.
+                var __foreignAppId = (function () {
+                  try {
+                    var mine = window.AntcvJdScope && window.AntcvJdScope.getCurrentAppId && window.AntcvJdScope.getCurrentAppId();
+                    var rowId = e && (e.id || e.application_id);
+                    return !!(mine && rowId && String(mine) !== String(rowId));
+                  } catch (_) { return false; }
+                })();
+                var __draftDrift = __staleSamePtr || __foreignActiveHijack || __foreignAppId || (__curCo && "unsolicited" !== __curCo && ("" === __rowCo || "unsolicited" === __rowCo));
                 if (__draftDrift) {
                   try { console.log(__staleSamePtr ? "[Read from Cloud] PTR-STALE-GUARD-001: keeping local draft (" + __curCo + ") over a stale same-device pointer (" + __rowCo + ")" : __foreignActiveHijack ? "[Read from Cloud] CROSS-DEVICE-GEN-LEAK-GUARD: keeping local app (" + __curCo + ") over a FOREIGN-device pointer (" + __rowCo + ")" : "[Read from Cloud] META-DRIFT-GUARD: keeping tailored draft (" + __curCo + ") over the unsolicited row"); } catch (e) {}
                 } else {

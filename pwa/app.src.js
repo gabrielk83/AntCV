@@ -17864,9 +17864,14 @@
             return 0;
           }
         },
-        Pr = (e) => {
+        Pr = (e, __force) => {
           var t, n;
-          if (e === je) return;
+          // BABEL-FISH-RELANG-001 (owner 2026-07-11): __force lets the babel-fish
+          // relang sidecar re-render CURRENT content into the ribbon language even
+          // when e===je (content is stale in another language — e.g. an English
+          // kernel served under a zh ribbon). Existing callers pass one arg, so
+          // __force is undefined and behaviour is unchanged.
+          if (!__force && e === je) return;
           const o = Lr(ro, io),
             r = {
               ...Or,
@@ -24744,6 +24749,7 @@
             );
         }),
         (_wlhook = "undefined" != typeof window && (window.AntcvFusion = wl)),
+        ("undefined" != typeof window && (window.__antcvRelang = (e, f) => Pr(e, f))),  /* BABEL-FISH-RELANG-001: expose the translate pass so the relang sidecar can re-render content into the ribbon language */
         (window.__antcvGenTrigger = vl = async () => {  /* GEN-BACKGROUND-001 row 38a: expose the generate fn so antcv-gen-memo auto-resumes an interrupted run on foreground */
           var e, t, n, o;
           if (!Bt && !Ut && !Un.current && 0 === Yt.length)

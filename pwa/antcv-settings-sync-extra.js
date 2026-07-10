@@ -24,7 +24,7 @@
 (function () {
   'use strict';
   if (window.__antcvSettingsSyncExtra) return;
-  window.__antcvSettingsSyncExtra = '1.51.322-langrenders-sync';
+  window.__antcvSettingsSyncExtra = '1.51.323-langrenders-sync';
 
   var DISABLE = 'antcv:disable-settings-sync-extra';
   // LANG-CLOUD-SYNC-001 (owner 2026-07-10): the available-languages list

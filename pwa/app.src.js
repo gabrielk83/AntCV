@@ -16517,24 +16517,19 @@
                       : (() => {
                           try {
                             const _pi = u.get("personalInfo", {});
-                            const _arr = [
-                              "workHistory",
-                              "experience",
-                              "education",
-                              "publications",
-                              "publicationsStructured",
-                              "certifications",
-                              "skills",
-                              "tools",
-                              "additional",
-                              "regulatory",
-                            ];
+                            // WIZARD-AUTOLOAD-001 twin fix (owner 2026-07-11): use the SAME
+                            // real-content signal Gate 1's __returning uses — only data the user
+                            // actually entered (name/background/email) counts. A kernel-seeded
+                            // skills/tools array is NOT "returning content"; the old _arr.some()
+                            // scan mis-classified a fresh signed-in user as returning and skipped
+                            // the wizard.
                             const _hc =
                               _pi &&
                               typeof _pi === "object" &&
-                              _arr.some(
-                                (k) =>
-                                  Array.isArray(_pi[k]) && _pi[k].length > 0,
+                              !!(
+                                _pi.name ||
+                                _pi.background ||
+                                (_pi.email && _pi.email.length)
                               );
                             if (_hc) {
                               u.set("wizardSkipped", !0);
@@ -16547,8 +16542,15 @@
                               yn(!1);
                             } else {
                               console.log(
-                                "[cloud-restore] no wizard flag, fresh-start user — keeping wizard open",
+                                "[cloud-restore] no wizard flag, fresh-start user — opening wizard",
                               );
+                              // WIZARD-NEW-USER-OPEN-001 (owner 2026-07-11): Gate 1 (mount) skips
+                              // the wizard for any authenticated user (token/session present, to
+                              // avoid WIZARD-LOGIN-FLASH-001), and Gate 2 previously only ever
+                              // CLOSED it — so a signed-in new user never saw onboarding. This
+                              // branch runs post-cloud-restore (no flash risk); with no flag and
+                              // no real personalInfo the user genuinely needs the wizard, so open it.
+                              yn(!0);
                             }
                           } catch (_eh) {
                             console.warn(

@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.235-style-page-budget';
+  const TARGET_VERSION = '1.51.236-style-kernels-table';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.235-style-page-budget',
     '1.51.234-jobtracker-research',
     '1.51.233-langbar-zh',
     '1.51.232-lang-modal-ghost',

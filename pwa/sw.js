@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.235-style-page-budget';
+const CACHE = 'antcv-1.51.236-style-kernels-table';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

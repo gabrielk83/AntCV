@@ -187,8 +187,14 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
     return persist({ ...doc, support: { ...(doc.support || {}), [uk]: text } }, true);
   }, [doc, persist]);
 
+  // Save an edited employer web-research brief (Top-5 card).
+  const saveWeb = useCallback(async (uk: string, text: string): Promise<boolean> => {
+    if (!doc) return false;
+    return persist({ ...doc, webintel: { ...(doc.webintel || {}), [uk]: text } }, true);
+  }, [doc, persist]);
+
   // Append a row from a JD (shared by URL + file paths).
-  function appendRow(company: string, role: string, jdText: string, url?: string, support?: string): void {
+  function appendRow(company: string, role: string, jdText: string, url?: string, support?: string, web?: string): void {
     if (!doc) return;
     const uk = slug(company + '-' + role) + '-' + String(Date.now()).slice(-4);
     const maxRank = Math.max(0, ...(doc.rows || []).map((r) => Number(r[0]) || 0));
@@ -198,6 +204,7 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
       urls: url ? { ...(doc.urls || {}), [uk]: url } : (doc.urls || {}),
       jd: { ...(doc.jd || {}), [uk]: jdText },
       support: { ...(doc.support || {}), [uk]: support || ('ROLE: ' + company + ' — ' + role) },
+      webintel: web ? { ...(doc.webintel || {}), [uk]: web } : (doc.webintel || {}),
     };
     setDocState(next); setDirty(true); setNote('Added "' + (role || company) + '" with JD + signals. Review & Save.');
   }
@@ -246,6 +253,13 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
     } catch { return ''; }
   }
 
+  // Re-run employer web research for one row and cache it (Top-5 card ↻ button).
+  async function researchRow(uk: string, company: string, role: string): Promise<string> {
+    const web = await webCompanyBrief(company, role);
+    if (web && doc) await persist({ ...doc, webintel: { ...(doc.webintel || {}), [uk]: web } }, true);
+    return web;
+  }
+
   async function addFromUrl(): Promise<void> {
     const raw = addUrl.trim(); if (!raw || !doc) return;
     const url = unwrapUrl(raw);
@@ -262,7 +276,9 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
       if (!company && !role) return;
       setNote('Analysing the JD & extracting signals…');
       const support = await analyzeJd(jd.text, company, role);
-      appendRow(company, role, jd.text, url, support);
+      setNote('Researching the employer on the web…');
+      const web = await webCompanyBrief(company, role);
+      appendRow(company, role, jd.text, url, support, web);
       setAddUrl('');
     } catch (e) { setErr(String((e as Error).message || e)); }
     finally { setAdding(false); }
@@ -290,7 +306,10 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
       const company = window.prompt('Company?') || '';
       const role = window.prompt('Role / title?', file.name.replace(/\.[a-z0-9]+$/i, '')) || '';
       if (!company && !role) return;
-      appendRow(company, role, text);
+      setNote('Analysing the JD & researching the employer…');
+      const support = await analyzeJd(text, company, role);
+      const web = await webCompanyBrief(company, role);
+      appendRow(company, role, text, undefined, support, web);
       setNote('Extracted ' + text.length + ' chars from ' + file.name + '. Review & Save.');
     } catch (e) { setErr(String((e as Error).message || e)); }
     finally { setAdding(false); if (fileRef.current) fileRef.current.value = ''; }
@@ -477,7 +496,8 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
           ) : (
             <div style={{ padding: 14, display: 'grid', gap: 14 }}>
               {top5.map((r) => <FocusCard key={r[11]} row={r} doc={doc} cluster={cluster} mobile={isMobile} busy={busyKey === r[11]}
-                onPrepare={() => void prepareAndOpen(r)} onOpen={() => void openSaved(r)} onDrop={() => void dropFromTop5(r)} onSaveSupport={saveSupport} />)}
+                onPrepare={() => void prepareAndOpen(r)} onOpen={() => void openSaved(r)} onDrop={() => void dropFromTop5(r)} onSaveSupport={saveSupport}
+                onSaveWeb={saveWeb} onResearch={researchRow} />)}
               {top5.length === 0 && <div>No Top-5 roles yet.</div>}
             </div>
           )}
@@ -562,9 +582,10 @@ function buildSupport(p: ReturnType<typeof parseSupport>): string {
   return out.join('\n');
 }
 
-function FocusCard({ row, doc, cluster, mobile, busy, onPrepare, onOpen, onDrop, onSaveSupport }: {
+function FocusCard({ row, doc, cluster, mobile, busy, onPrepare, onOpen, onDrop, onSaveSupport, onSaveWeb, onResearch }: {
   row: Row; doc: TrackerDoc | null; cluster: { qual: string }[]; mobile: boolean; busy: boolean;
   onPrepare: () => void; onOpen: () => void; onDrop: () => void; onSaveSupport: (uk: string, text: string) => Promise<boolean>;
+  onSaveWeb: (uk: string, text: string) => Promise<boolean>; onResearch: (uk: string, company: string, role: string) => Promise<string>;
 }): JSX.Element {
   const uk = row[11]; const t = tierOf(row[12]);
   const rawSupport = (doc?.support || {})[uk] || '';
@@ -575,6 +596,15 @@ function FocusCard({ row, doc, cluster, mobile, busy, onPrepare, onOpen, onDrop,
   const [ai, setAi] = useState(false);
   const [jdHelp, setJdHelp] = useState(false);
   useEffect(() => { if (!dirty) setP(parseSupport(rawSupport)); }, [rawSupport, dirty]);
+  // Employer web-research brief (viewable + editable in the card; fed to generation).
+  const rawWeb = (doc?.webintel || {})[uk] || '';
+  const [web, setWeb] = useState(rawWeb);
+  const [webDirty, setWebDirty] = useState(false);
+  const [savingWeb, setSavingWeb] = useState(false);
+  const [researching, setResearching] = useState(false);
+  useEffect(() => { if (!webDirty) setWeb(rawWeb); }, [rawWeb, webDirty]);
+  async function saveWebEdit(): Promise<void> { setSavingWeb(true); try { if (await onSaveWeb(uk, web)) setWebDirty(false); } finally { setSavingWeb(false); } }
+  async function doResearch(): Promise<void> { setResearching(true); try { const w = await onResearch(uk, row[1], row[2]); if (w) { setWeb(w); setWebDirty(false); } else alert('No web research found — check the proxy URL / Brave key in Settings.'); } catch (e) { alert('Research failed: ' + String((e as Error).message || e)); } finally { setResearching(false); } }
 
   const hasJd = ((doc?.jd || {})[uk] || '').length > 200;
   const saved = doc?.artifacts?.[uk]?.application_id;
@@ -660,6 +690,17 @@ function FocusCard({ row, doc, cluster, mobile, busy, onPrepare, onOpen, onDrop,
           </div>
         ))}
         {!p.sections.length && !p.fit && <div style={{ fontSize: fs(12, 14), color: '#889' }}>(no role intel yet — add the JD, then Prepare)</div>}
+        <div style={{ marginTop: 12, borderTop: '1px dashed #d5deec', paddingTop: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+            <span style={{ fontSize: fs(11, 13), fontWeight: 800, color: t.accent, letterSpacing: 0.3, textTransform: 'uppercase' }}>🌐 Company research (web)</span>
+            <button onClick={() => void doResearch()} disabled={researching} title="Fetch or refresh employer research from the web (holistic + specific — fed into generation)"
+              style={{ ...btn('#eef3fb', '#1d3a6e', fs(11, 13)), padding: '2px 8px', marginLeft: 'auto' }}>{researching ? 'Researching…' : (web ? '↻ Refresh' : '🔎 Research')}</button>
+          </div>
+          <textarea value={web} onChange={(e) => { setWeb(e.target.value); setWebDirty(true); }} rows={web ? (mobile ? 6 : 5) : 2}
+            placeholder="Holistic + specific employer context from the web — feeds the WHY-this-company, cover letter and employer Q&As. Tap Research to fetch."
+            style={{ ...ta, fontSize: fs(12, 14), lineHeight: 1.4, background: '#f6f9fe', border: '1px solid #cfddf0', color: '#1d2a44' }} />
+          {webDirty && <button onClick={() => void saveWebEdit()} disabled={savingWeb} style={{ ...btn('#1d3a6e', '#fff', fs(11, 13)), marginTop: 6 }}>{savingWeb ? 'Saving…' : '💾 Save research'}</button>}
+        </div>
         <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'center' }}>
           {saved
             ? <button onClick={onOpen} disabled={busy} style={btn('#2e7d32', '#fff', fs(12, 14))}>{busy ? '…' : '↗ Open in preview'}</button>

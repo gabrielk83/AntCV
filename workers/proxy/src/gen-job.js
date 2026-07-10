@@ -481,7 +481,10 @@ async function runCoherencePhase(request, env, CORS, job, runSection, selfOrigin
           { role: 'user', content:
             'A cross-section coherence review of the full CV/cover letter found these issues with THIS section relative to the others:\n\n' +
             issuesForSection +
-            '\n\nProduce a corrected version of THIS section only that fixes the issues above (remove repetition with other sections, resolve contradictions, drop redundancy). Keep all facts; do not introduce new claims. Do not use banned words/phrases. Return only the corrected section text.' },
+            '\n\nProduce a corrected version of THIS section only that fixes the issues above (remove repetition with other sections, resolve contradictions, drop redundancy). ' +
+            'CRITICAL — keep THIS section in the EXACT SAME FORMAT and structure as your previous version shown above: if it was a table, return a table with the same columns; if it was prose, return prose; if it was bullets, return bullets. Do NOT adopt the format, wording, columns, or structure of any OTHER section named in the review — only reduce the overlap by generalising or trimming THIS section\'s own content. ' +
+            'Keep all facts; do not introduce new claims. Do not use banned words/phrases. ' +
+            'Output ONLY the corrected section content itself — no preamble, no commentary, no explanation, and no reference to "the review", "the issues", "the fix", or these instructions. Return only the corrected section text.' },
         ]),
         max_tokens: (s.prompt && s.prompt.max_tokens) || 1500,
         stream: true,

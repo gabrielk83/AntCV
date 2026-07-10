@@ -1,0 +1,17 @@
+CORRECTION (2026-07-10): this commit's subject line is inaccurate.
+
+Its actual diff is the TRANSLATION-WALKER COVERAGE fix (LANG-TRANSLATE-COVERAGE-001):
+the live zh/es/da translation walker gained cases for `rich_block` sections (e.g.
+HOW I WOULD CONTRIBUTE) and each experience role's `results` line, which were never
+sent to the translator before and so stayed in the source language on a zh/es export.
+It contains NO targeted-gen-prompt output-language lock.
+
+The mislabel happened because a concurrent automated commit swept these uncommitted
+working-tree changes under a pre-queued message/version (1.51.237-lang-gen-lock).
+
+The real gen-prompt output-language lock (LANG-GEN-LOCK-001, `__langGenLock`) shipped
+separately in 1.51.238-multilang-he-am.
+
+The subject cannot be amended directly: 41a60fc is already pushed and buried under
+later commits, so a reword would require a forbidden force-push to main. This note is
+the git-safe record instead.

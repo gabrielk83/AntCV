@@ -13,6 +13,29 @@ export const persona = JSON.parse(
   readFileSync(join(ROOT, 'docs', 'personas', 'anita', 'personalInfo.json'), 'utf8')
 );
 
+// Patch number of the repo's committed TARGET_VERSION (e.g. 260 from
+// '1.51.260-shift-versionfix'). The version-live check compares the LIVE
+// window.ANTCV_VERSION against this to catch a deploy that never flipped or a
+// merge that REGRESSED the version below what shipped (the 245/246 incident).
+export function repoTargetPatch() {
+  try {
+    const vo = readFileSync(join(ROOT, 'pwa', 'antcv-version-override.js'), 'utf8');
+    const m = vo.match(/TARGET_VERSION\s*=\s*'1\.51\.(\d+)/);
+    return m ? parseInt(m[1], 10) : null;
+  } catch { return null; }
+}
+const patchOf = (v) => { const m = String(v || '').match(/1\.51\.(\d+)/); return m ? parseInt(m[1], 10) : null; };
+
+// Sidecars whose presence on the LIVE bundle proves a specific feature actually
+// shipped (beats grepping the minified file — this asserts the deployed code wired it).
+export const LIVE_SIDECAR_PROBES = [
+  { path: 'AntcvJdScope.devQ',       feature: 'per-device pointer query (PARALLEL-GEN-POINTER-002)' },
+  { path: 'AntcvJdScope.deviceId',   feature: 'per-install device id (JD-SCOPE-ISOLATION-001)' },
+  { path: 'AntcvJdScope.getCurrentAppId', feature: 'per-tab app id (PARALLEL-GEN-ISO-001)' },
+  { path: 'AntcvTabDocIso.tabId',    feature: 'tab-doc isolation sidecar (1.51.253)' },
+  { path: 'AntcvDebug.open',         feature: 'debug logger' },
+];
+
 // Registry id scheme (packages/registry.json). app.js legacy aliases that must
 // NOT survive a reload are the orphans: stylePackage "scandinavian",
 // toneRegister "scandinavian".
@@ -22,6 +45,50 @@ export const REGISTRY_PACKAGE_IDS = new Set([
 ]);
 
 export const CHECKS = [
+  {
+    id: 'version-live',
+    desc: 'The LIVE window.ANTCV_VERSION is present and NOT below the repo TARGET_VERSION '
+        + '(catches a deploy that never flipped, or a merge that regressed the version below '
+        + "what shipped — the 245/246 incident). Against production, expects the deploy to have settled.",
+    async run(page, ctx) {
+      await page.goto(ctx.baseUrl, { waitUntil: 'domcontentloaded' });
+      await page.waitForTimeout(1500);
+      const live = await page.evaluate(() => window.ANTCV_VERSION || null);
+      const livePatch = patchOf(live);
+      const repoPatch = repoTargetPatch();
+      // Pass when the live build is at/above the repo target. Below = regression or
+      // an unfinished deploy; missing = the seed never ran (bundle boot failure).
+      const pass = livePatch != null && repoPatch != null && livePatch >= repoPatch;
+      return {
+        pass,
+        detail: {
+          live, livePatch, repoTargetPatch: repoPatch,
+          note: livePatch == null ? 'no ANTCV_VERSION on the page — boot failure'
+            : livePatch >= repoPatch ? 'live is at/ahead of repo target — deploy healthy'
+            : `live (${livePatch}) is BELOW repo target (${repoPatch}) — regression or deploy not live yet`,
+        },
+      };
+    },
+  },
+  {
+    id: 'sidecars-live',
+    desc: 'Feature sidecars are wired on the LIVE bundle (AntcvJdScope.devQ/deviceId/'
+        + 'getCurrentAppId, AntcvTabDocIso, AntcvDebug) — proves the deployed code, not just '
+        + 'the repo, carries the parallel-gen + isolation features.',
+    async run(page, ctx) {
+      await page.goto(ctx.baseUrl, { waitUntil: 'domcontentloaded' });
+      await page.waitForTimeout(2000);
+      const found = await page.evaluate((probes) => probes.map((p) => {
+        const parts = p.path.split('.');
+        let o = window, ok = true;
+        for (const k of parts) { if (o && (k in o || o[k] !== undefined)) o = o[k]; else { ok = false; break; } }
+        return { path: p.path, feature: p.feature, present: ok && o !== undefined };
+      }), LIVE_SIDECAR_PROBES);
+      await ctx.screenshot('sidecars-live');
+      const missing = found.filter((f) => !f.present);
+      return { pass: missing.length === 0, detail: { missing: missing.map((m) => m.path), all: found } };
+    },
+  },
   {
     id: 'boot',
     desc: 'App boots with the persona loaded; no uncaught console errors',

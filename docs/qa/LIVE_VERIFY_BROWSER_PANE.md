@@ -66,6 +66,31 @@ correct scope. Entering a password to sign in is prohibited regardless.
    `?v` confirmed, each marker confirmed. If any check fails, the ship is not done —
    fix the cache-bust (or re-push) and re-verify.
 
+## Automated companion (CI / pre-push, no pane, no agent)
+
+The manual pane procedure above is for a desktop agent. Its steps 2-4 (version live,
+sidecar loaded, feature wired) are also codified as headless Playwright checks that ANY
+run — including the cloud routine, a pre-push hook, or CI — can execute with plain `node`:
+
+```
+node scripts/browser-qa.mjs --only version-live     # live ANTCV_VERSION >= repo TARGET_VERSION
+node scripts/browser-qa.mjs --only sidecars-live     # feature sidecars wired on the live bundle
+node scripts/browser-qa.mjs --url http://localhost:8788   # or against local pages dev
+```
+
+- **`version-live`** fails when the live version is BELOW the repo `TARGET_VERSION` — the
+  exact 245/246 regression class (a merge that reverted the cache-bust below what shipped).
+- **`sidecars-live`** probes `AntcvJdScope.devQ` / `.deviceId` / `.getCurrentAppId`,
+  `AntcvTabDocIso.tabId`, `AntcvDebug.open` on the live page. On its first run (2026-07-10)
+  it caught that **`antcv-tab-doc-isolation.js` is served but has NO `<script>` tag in
+  `index.html`** — the 1.51.253 sidecar was dead since it shipped (the "exists on disk, not
+  loaded" hazard). Add or remove probes in `scripts/qa-checks.mjs` `LIVE_SIDECAR_PROBES`.
+
+Both write a screenshot to `docs/qa/screenshots/` + a JSON report to
+`docs/qa/last-browser-qa.json` and exit non-zero on failure (hook/CI ready). Checks live in
+`scripts/qa-checks.mjs` (shared with `phone-qa.mjs`); needs `npx playwright install chromium`
+once. This is the machine gate; the pane procedure above is the richer interactive one.
+
 ## What this canNOT do (be honest in the report)
 
 - Drive a signed-in generation, brand-fit, or any auth flow (no session; password

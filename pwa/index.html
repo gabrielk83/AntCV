@@ -38,6 +38,11 @@
        localStorage + the optional AntcvJdScope.deviceId() above; must load before
        app.js reads window.AntcvPointerStaleGuard at cold-restore. -->
   <script src="antcv-pointer-stale-guard.js?v=1.51.135"></script>
+  <!-- TAB-DOC-ISOLATION-001 (owner 2026-07-10): per-tab snapshot of the generated
+       document; on boot, if a PARALLEL tab overwrote the shared localStorage sections,
+       restore THIS tab's own document so app.js reads the right one. Must load before
+       app.js reads sections. Safe/additive (never deletes; sessionStorage-backed). -->
+  <script src="antcv-tab-doc-isolation.js?v=1.51.253-tab-doc-isolation"></script>
   <!-- BOOT-STORM-DAMP-001: coalesce bursts of antcv:sections-updated so the boot storm
        doesn't peg the main thread (the "gate hangs / refresh twice" freeze). Loaded FIRST
        so its listener registers before any other; kill switch antcv:disable-storm-damp. -->
@@ -345,7 +350,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.243-localform-da';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.252-gen-lang-per-tab';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.253-tab-doc-isolation';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -384,10 +389,10 @@
         auth.src = 'antcv-auth.js?v=1.51.92-analytics-401-scope';
         auth.onload = function(){
           var app = document.createElement('script');
-          app.src = 'app.js?v=1.51.252-gen-lang-per-tab';  /* SIGNAL-IMAGE-OCR-001: 📎 signal-files accepts + OCRs images/txt */
+          app.src = 'app.js?v=1.51.253-tab-doc-isolation';  /* SIGNAL-IMAGE-OCR-001: 📎 signal-files accepts + OCRs images/txt */
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.252-gen-lang-per-tab';
+            vo.src = 'antcv-version-override.js?v=1.51.253-tab-doc-isolation';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);

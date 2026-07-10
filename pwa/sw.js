@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.244-app-switch-lang';
+const CACHE = 'antcv-1.51.245-lang-dropdown-current';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

@@ -11785,24 +11785,40 @@
           return null;
         }
       })(),
-      _activeDisabled = !!(
-        _enabledLangs && !_enabledLangs.includes(_rawC.code)
-      ),
-      c = _activeDisabled
-        ? Me.find((m) => _enabledLangs.includes(m.code)) || _rawC
-        : _rawC;
+      // LANG-DROPDOWN-CURRENT-ALWAYS-001 (owner 2026-07-10, "adding a language makes the
+      // dropdown not do anything on select"): the CURRENT output language must ALWAYS be
+      // the dropdown's selected item, even when it isn't in the enabled top-bar set. A CV
+      // generated / switched into e.g. zh while enabledLanguages=[en,da] used to mislabel
+      // the button as EN and an auto-switch effect fought the active content — so the
+      // dropdown appeared to do nothing. Never switch away from the active language; the
+      // enabled set only governs which OTHER languages the dropdown offers.
+      c = _rawC;
     React.useEffect(() => {
-      if (
-        _activeDisabled &&
-        c &&
-        c.code !== _rawC.code &&
-        typeof t === "function"
-      ) {
-        try {
-          t(c.code);
-        } catch (_) {}
-      }
-    }, [_activeDisabled, c && c.code]);
+      // LANG-ENABLE-CURRENT-001 (owner 2026-07-10): persist the ACTIVE output language
+      // into the enabled set so the user can always switch BACK to it (leaving e.g. zh
+      // while it was never enabled would otherwise drop it from the dropdown). Same
+      // operation the Settings checkbox performs; add-if-missing, self-limiting.
+      try {
+        if (_enabledLangs && _rawC && !_enabledLangs.includes(_rawC.code)) {
+          const next = _enabledLangs.concat([_rawC.code]),
+            raw = JSON.stringify(next);
+          ["enabledLanguages", "antcv:enabledLanguages", "antcv:visibleLanguages"].forEach(
+            (k) => {
+              try {
+                localStorage.setItem(k, raw);
+              } catch (_) {}
+            },
+          );
+          try {
+            window.dispatchEvent(
+              new CustomEvent("antcv:enabled-languages-changed", {
+                detail: { enabledLanguages: next },
+              }),
+            );
+          } catch (_) {}
+        }
+      } catch (_) {}
+    }, [_rawC && _rawC.code, _enabledLangs && _enabledLangs.length]);
     const d = Me.filter(
         (e) =>
           e.code !== c.code &&

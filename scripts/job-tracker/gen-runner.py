@@ -383,6 +383,18 @@ def cmd_run(args):
     if not todo:
         print("no eligible rows to generate."); return
     print(f"generating {len(high)} high + {len(quick)} quick (of {len(rows)} eligible). persist={args.persist} dry={args.dry}")
+    # ACTIVE-POINTER-GUARD-001: POST /api/applications sets the new app as the
+    # account's active application. A batch persist would otherwise hijack the
+    # user's editing pointer to the last generated app. Capture it up front and
+    # restore it after, so a headless run never disturbs the user's working app.
+    saved_active = None
+    if args.persist:
+        try:
+            _c, _p = _req(RELAY, "/api/prefs")
+            saved_active = ((_p.get("active_application") or {}) or {}).get("id")
+            print(f"   [active-guard] saved current active application: {saved_active}")
+        except Exception as _e:
+            print(f"   [active-guard] could not read current active ({_e})")
     support = doc.get("support") or {}; signals = doc.get("signals") or {}
     results_index = []
     for r in todo:
@@ -432,6 +444,10 @@ def cmd_run(args):
         cur["queue"] = {**(cur.get("queue") or {}), **(doc.get("queue") or {})}
         c, b = put_doc(cur, rev2)
         print(f"doc writeback: {c} rev={b.get('rev')}")
+        # restore the user's active-application pointer (see ACTIVE-POINTER-GUARD-001)
+        if saved_active is not None:
+            rc, _ = _req(RELAY, "/api/active", "POST", {"application_id": saved_active})
+            print(f"   [active-guard] restored active application {saved_active} ({rc})")
 
 # ── skeleton overlay (blocker #1: full-fidelity persist) ───────────
 # The runner generates 8 tailored sections (cv_profile/outcomes/core +

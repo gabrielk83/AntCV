@@ -58,6 +58,8 @@
       'es': 'es', 'español': 'es', 'espanol': 'es', 'spanish': 'es',
       'fr': 'fr', 'français': 'fr', 'francais': 'fr', 'french': 'fr',
       'de': 'de', 'deutsch': 'de', 'german': 'de',
+      'he': 'he', 'עב': 'he', 'עברית': 'he', 'hebrew': 'he', 'iw': 'he',
+      'am': 'am', 'አማ': 'am', 'አማርኛ': 'am', 'amharic': 'am',
     };
 
     function labelToCode(text) {
@@ -277,7 +279,9 @@
       {code:'en',label:'EN',name:'English'},
       {code:'da',label:'DA',name:'Dansk'},
       {code:'es',label:'ES',name:'Español'},
-      {code:'zh',label:'中文',name:'中文'}
+      {code:'zh',label:'中文',name:'中文'},
+      {code:'he',label:'עב',name:'עברית'},
+      {code:'am',label:'አማ',name:'አማርኛ'}
     ];
     const CODES=OPTIONS.map(o=>o.code), DEFAULT=['en','da'];
     function norm(x){return String(x||'').replace(/[ \t\r\n]+/g,' ').trim()}

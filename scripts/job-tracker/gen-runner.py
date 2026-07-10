@@ -79,6 +79,16 @@ def _token():
         return open(p, "r", encoding="utf-8").read().strip()
     sys.exit("No token. Set ANTCV_TOKEN or put the PWA JWT in " + p)
 
+# Persist a rotated token (relay X-Auth-Refresh) so ~/.antcv/token self-renews
+# as long as the nightly keeps running; no single token outlives its 7-day exp.
+def _save_token(t):
+    if not t or os.environ.get("ANTCV_TOKEN"): return
+    try:
+        p = os.environ.get("ANTCV_TOKEN_FILE", os.path.expanduser("~/.antcv/token"))
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+        open(p, "w", encoding="utf-8").write(t.strip())
+    except Exception: pass
+
 def _req(base, path, method="GET", body=None, timeout=120):
     data = json.dumps(body).encode() if body is not None else None
     r = urllib.request.Request(base + path, data=data, method=method, headers={
@@ -89,6 +99,7 @@ def _req(base, path, method="GET", body=None, timeout=120):
     })
     try:
         with urllib.request.urlopen(r, timeout=timeout) as resp:
+            _save_token(resp.headers.get("X-Auth-Refresh"))
             return resp.status, json.loads(resp.read().decode() or "{}")
     except urllib.error.HTTPError as e:
         try: payload = json.loads(e.read().decode() or "{}")

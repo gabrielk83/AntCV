@@ -34,13 +34,27 @@ XLSX  = os.environ.get("JOB_XLSX")
 SNAP  = DOC + ".sync"          # snapshot: {"rev": int, "doc": {...}}
 ENDPOINT = RELAY + "/api/job-tracker"
 
+def _token_file():
+    return os.environ.get("ANTCV_TOKEN_FILE", os.path.expanduser("~/.antcv/token"))
+
 def _token():
     t = os.environ.get("ANTCV_TOKEN")
     if t: return t.strip()
-    p = os.environ.get("ANTCV_TOKEN_FILE", os.path.expanduser("~/.antcv/token"))
+    p = _token_file()
     if os.path.exists(p):
         return open(p, "r", encoding="utf-8").read().strip()
     sys.exit("No token. Set ANTCV_TOKEN or put it in " + p)
+
+# Persist a rotated token so ~/.antcv/token renews itself and never expires
+# while the CLI/nightly keeps running (the relay sends X-Auth-Refresh once the
+# token is >1 day old). Only writes the file form (an env-var token can't be
+# updated from here).
+def _save_token(t):
+    if not t or os.environ.get("ANTCV_TOKEN"): return
+    try:
+        p = _token_file(); os.makedirs(os.path.dirname(p), exist_ok=True)
+        open(p, "w", encoding="utf-8").write(t.strip())
+    except Exception: pass
 
 def _req(method, body=None):
     data = json.dumps(body).encode() if body is not None else None
@@ -53,6 +67,7 @@ def _req(method, body=None):
                  "User-Agent": "Mozilla/5.0 (AntCV job-tracker-sync)"})
     try:
         with urllib.request.urlopen(r, timeout=30) as resp:
+            _save_token(resp.headers.get("X-Auth-Refresh"))
             return resp.status, json.loads(resp.read().decode() or "{}")
     except urllib.error.HTTPError as e:
         try: payload = json.loads(e.read().decode() or "{}")

@@ -37,7 +37,12 @@ const VERSION='1.3.7';
 
 const RELAY_VERSION = 'auth-27-app-history-cap-50';
 const SESSION_TTL_SECONDS    = 7 * 24 * 60 * 60;       // 7 days
-const SESSION_REFRESH_WINDOW = 1 * 24 * 60 * 60;       // refresh in last day
+// Refresh whenever the token has < 6 days left (i.e. it's more than 1 day old),
+// so ANY request past the first day rotates it to a fresh 7-day token via the
+// X-Auth-Refresh header. The PWA and the CLI/nightly both capture it — so an
+// actively-used token (the daily nightly, the sync CLI) renews itself forever
+// while no single token ever outlives its 7-day expiry (no security downgrade).
+const SESSION_REFRESH_WINDOW = 6 * 24 * 60 * 60;       // refresh once >1 day old
 const OTP_TTL_SECONDS        = 10 * 60;                // 10 min
 const OTP_COOLDOWN_SECONDS   = 60;                     // 1 OTP per email per minute
 const OTP_IP_LIMIT_PER_HOUR  = 5;

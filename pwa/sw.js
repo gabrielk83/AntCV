@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.260-shift-versionfix';
+const CACHE = 'antcv-1.51.261-byok-brave';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

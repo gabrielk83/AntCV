@@ -31538,6 +31538,34 @@
                     "With your own keys you’re not a demo user, so PDFs aren’t rendered on AntCV’s shared CloudConvert. Add your own CloudConvert key for crisp server PDF, or leave blank to use the built-in browser-print PDF (still ATS-readable). Get a key at cloudconvert.com → Dashboard → Authorization → API Keys.",
                   ),
                 ),
+              // BYOK-BRAVE-001: optional Brave Search key for the job-tracker's
+              // employer web research (mirrors the CloudConvert key block above).
+              "byok" === En &&
+                React.createElement(
+                  "div",
+                  { style: { marginTop: 14 } },
+                  React.createElement(
+                    "label",
+                    { style: { display: "block", color: "rgba(255,255,255,0.7)", fontSize: 11, fontWeight: 600, marginBottom: 4 } },
+                    "Brave Search API key (optional — for employer web research)",
+                  ),
+                  React.createElement("input", {
+                    type: "password",
+                    placeholder: "Your Brave Search API key",
+                    defaultValue: u.get("braveKey", "") || "",
+                    onChange: (e) => {
+                      try {
+                        u.set("braveKey", String((e.target && e.target.value) || "").trim());
+                      } catch (_) {}
+                    },
+                    style: { width: "100%", padding: "8px 10px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.18)", borderRadius: 6, color: "#fff", fontSize: 11, fontFamily: "monospace", boxSizing: "border-box" },
+                  }),
+                  React.createElement(
+                    "div",
+                    { style: { color: "rgba(255,255,255,0.45)", fontSize: 10, lineHeight: 1.45, marginTop: 4 } },
+                    "Powers the job-tracker employer web research (holistic + specific company intel). Leave blank to use AntCV's shared Brave key. Free key at brave.com/search/api.",
+                  ),
+                ),
               React.createElement(
                 "div",
                 {

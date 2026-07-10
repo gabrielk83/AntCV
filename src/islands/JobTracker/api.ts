@@ -160,7 +160,12 @@ export function fitPercent(band: string, text: string, top20: { qual: string }[]
 // callers degrade gracefully.
 export async function research(q: string, num = 4): Promise<{ title: string; link: string; snippet: string }[]> {
   try {
-    const res = await call('/api/research', { method: 'POST', body: JSON.stringify({ q, num }) });
+    // BYOK-BRAVE-001: send the user's own Brave key (Settings → API Keys → BYOK,
+    // stored in localStorage["braveKey"]) so the relay searches on their quota;
+    // blank → the relay falls back to its shared BRAVE_API_KEY secret.
+    let braveKey = '';
+    try { braveKey = JSON.parse(localStorage.getItem('braveKey') || '""') || ''; } catch { /* */ }
+    const res = await call('/api/research', { method: 'POST', body: JSON.stringify({ q, num, ...(braveKey ? { braveKey } : {}) }) });
     const j = await res.json().catch(() => ({}));
     return (j && j.ok && Array.isArray(j.items)) ? j.items : [];
   } catch { return []; }

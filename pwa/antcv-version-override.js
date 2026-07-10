@@ -58,11 +58,14 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.260-shift-versionfix';
+  const TARGET_VERSION = '1.51.261-byok-brave';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.260-shift-versionfix',
+    '1.51.260-lang-dropdown-current',
+    '1.51.260-demand-seed-refresh',
     '1.51.244-app-switch-lang',
     '1.51.243-localform-da',
     '1.51.242-zh-guards-kernelsave',

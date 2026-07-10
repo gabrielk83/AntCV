@@ -4236,10 +4236,11 @@ const method = request.method;
     const id = await identityFromRequest(request, env);
     if (!id) return jsonResponse({ error: 'unauthenticated' }, 401, request, env);
     const refresh = await maybeRefreshHeader(env, id);
-    let q = '', siteSearch = '', dateRestrict = 'm6', num = 6;
+    let q = '', siteSearch = '', dateRestrict = 'm6', num = 6, braveKeyClient = '';
     if (method === 'POST') {
       let body; try { body = await request.json(); } catch { body = {}; }
       q = String((body && body.q) || '').trim().slice(0, 300);
+      braveKeyClient = String((body && body.braveKey) || '').trim();
       siteSearch = String((body && body.siteSearch) || '').trim().slice(0, 100);
       dateRestrict = String((body && body.dateRestrict) || 'm6').trim().slice(0, 10);
       num = Math.min(10, Math.max(1, parseInt(body && body.num, 10) || 6));
@@ -4252,16 +4253,20 @@ const method = request.method;
     }
     if (!q) return jsonResponse({ error: 'missing q' }, 400, request, env, refresh);
 
-    // PREFERRED backend: Brave Search (env.BRAVE_API_KEY) — no Google
-    // project/org/DNS friction. Falls through to Google CSE only if unset.
-    if (env.BRAVE_API_KEY) {
+    // BYOK-BRAVE-001: a caller may supply its OWN Brave key (Settings → API Keys
+    // → BYOK) via the x-brave-key header or body.braveKey; prefer it over the relay
+    // secret so a BYOK user searches on their own quota. Else the relay secret.
+    const braveKey = String(request.headers.get('x-brave-key') || '').trim() || braveKeyClient || env.BRAVE_API_KEY || '';
+    // PREFERRED backend: Brave Search — no Google project/org/DNS friction.
+    // Falls through to Google CSE only if no Brave key at all.
+    if (braveKey) {
       const bUrl = new URL('https://api.search.brave.com/res/v1/web/search');
       bUrl.searchParams.set('q', siteSearch ? ('site:' + siteSearch + ' ' + q) : q);
       bUrl.searchParams.set('count', String(num));
       const fr = /y/.test(dateRestrict) ? 'py' : (/m/.test(dateRestrict) ? 'pm' : (/w/.test(dateRestrict) ? 'pw' : ''));
       if (fr) bUrl.searchParams.set('freshness', fr);
       try {
-        const res = await fetch(bUrl.toString(), { headers: { 'Accept': 'application/json', 'Accept-Encoding': 'gzip', 'X-Subscription-Token': env.BRAVE_API_KEY } });
+        const res = await fetch(bUrl.toString(), { headers: { 'Accept': 'application/json', 'Accept-Encoding': 'gzip', 'X-Subscription-Token': braveKey } });
         if (!res.ok) { const b = await res.text().catch(() => ''); return jsonResponse({ error: `Brave ${res.status}: ${b.slice(0, 300)}` }, 502, request, env, refresh); }
         const data = await res.json();
         const results = (data && data.web && Array.isArray(data.web.results)) ? data.web.results : [];

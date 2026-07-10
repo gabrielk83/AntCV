@@ -25104,6 +25104,11 @@ function buildTwoColumnDocument(ctx) {
     return new Table({
       width: { size: PAGE_W, type: WidthType.DXA },
       columnWidths: colWidths,
+      // RTL-LAYOUT-MIRROR-001 (owner 2026-07-10, "full layout mirroring now"): for
+      // Hebrew / Arabic flip the two-column body table with w:bidiVisual so the FIRST
+      // cell (sidebar) lays out on the RIGHT and the main column on the LEFT — the whole
+      // CV mirrors. Cell widths stay in logical order; only the visual order reverses.
+      ...(ctx.style._rtl ? { visuallyRightToLeft: true } : {}),
       borders: noBorders(),
       // FLOAT-SPINE-001 (owner hand-edited "_3page proper" reference, FLAG-GATED
       // default OFF): continuation tables (NOT page 1) become floating
@@ -28311,7 +28316,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.143-script-fonts-rtl";
+var VERSION = "1.14.144-rtl-layout-mirror";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

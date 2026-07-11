@@ -1053,12 +1053,39 @@
       if (r.on === false) {
         var t = String(r.title || '');
         if (t.split(/\s&\s/).length >= 3) { changed = true; continue; } // merge artifact — drop
+        // UNSOL-FULL-BREADTH-002 (owner 2026-07-11 8-page PDF, pages 7-8 English):
+        // never un-hide a LATIN-titled role onto a wide-script doc — it is the
+        // English canon rendering of a role already visible in the ribbon
+        // language (years-format drift hid it from _samePosition), not a missing
+        // role. Un-hiding it appended English pages.
+        var wideRibbonUFB = false;
+        try { var LU = String(localStorage.getItem('language') || 'en').replace(/"/g, '').slice(0, 2); wideRibbonUFB = LU === 'zh' || LU === 'he' || LU === 'am' || LU === 'ar'; } catch (_) {}
+        if (wideRibbonUFB && !_isWideTitle(r.title)) { out.push(r); continue; } // wrong-language rendering — stays hidden
         var dup = false;
         for (var j = 0; j < roles.length; j++) {
           var v = roles[j];
           if (v && v !== r && v.on !== false && _samePosition(r, v)) { dup = true; break; }
         }
         if (!dup) { r = Object.assign({}, r, { on: true }); changed = true; } // full breadth — un-hide
+      } else {
+        // UNSOL-FULL-BREADTH-002 reverse leg: a VISIBLE Latin-titled role on a
+        // wide-script ribbon whose company/years match a visible wide-script
+        // role is the English canon twin the earlier pass wrongly un-hid
+        // (the 8-page PDF). Re-hide it.
+        var wideR2 = false;
+        try { var LU2 = String(localStorage.getItem('language') || 'en').replace(/"/g, '').slice(0, 2); wideR2 = LU2 === 'zh' || LU2 === 'he' || LU2 === 'am' || LU2 === 'ar'; } catch (_) {}
+        if (wideR2 && !_isWideTitle(r.title)) {
+          for (var j2 = 0; j2 < roles.length; j2++) {
+            var v2 = roles[j2];
+            if (!v2 || v2 === r || v2.on === false || !_isWideTitle(v2.title)) continue;
+            var ck = _companyKey(r.company);
+            if ((ck && ck === _companyKey(v2.company)) || _samePosition(r, v2)) {
+              r = Object.assign({}, r, { on: false });
+              changed = true;
+              break;
+            }
+          }
+        }
       }
       out.push(r);
     }
@@ -1683,8 +1710,15 @@
       // (Foundation / Hands-on / Professionally) when the same block already
       // carries at least one wide-script item — the residue class only, so a
       // legit English quote inside a zh item is never touched.
-      var rbr = dropRichBlockLatinResidue(cv); if (rbr) { cv = rbr; changed = true; }
-      if (cl) { var rbc = dropRichBlockLatinResidue(cl); if (rbc) { cl = rbc; clChanged = true; } }
+      // BABEL-RICHBLOCK-RESIDUE-001 DISABLED (owner 2026-07-11 "preview jumpy /
+      // edit closes"): the drop entered a write war with LEGACY re-adders
+      // (foundation-758 pre-345 caches, shape-guard eager writes, languageCache
+      // echoes) — one cycle every ~5s, editor unmounting mid-edit. The 758-side
+      // FOUNDATION-OPENING-LANG-001 fix prevents NEW English injections on wide
+      // ribbons; the residual stored English row is the translate pass's job.
+      // Re-enable only after the re-adder inventory is complete.
+      // var rbr = dropRichBlockLatinResidue(cv); if (rbr) { cv = rbr; changed = true; }
+      // if (cl) { var rbc = dropRichBlockLatinResidue(cl); if (rbc) { cl = rbc; clChanged = true; } }
       if (clChanged) changed = true;
       if (!changed) return;
       var next = Object.assign({}, b, { cv: cv });

@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.341-lang-restore-guard';
+  const TARGET_VERSION = '1.51.342-pi-echo-guard';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.341-lang-restore-guard',
     '1.51.340-langs-dict',
     '1.51.339-tighten-window',
     '1.51.338-dedup-unicode',

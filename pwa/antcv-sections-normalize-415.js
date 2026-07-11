@@ -174,6 +174,31 @@
     return false;
   }
 
+  // BABEL-RICHBLOCK-RESIDUE-001: see the call site in the pipeline. Wide ribbon
+  // only; drops pure-Latin lead-in rows (Foundation/Hands-on/Professionally)
+  // from a rich_block that already carries a wide-script item.
+  function dropRichBlockLatinResidue(list) {
+    var wideRibbon = false;
+    try { var L = String(localStorage.getItem('language') || 'en').replace(/"/g, '').slice(0, 2); wideRibbon = L === 'zh' || L === 'he' || L === 'am' || L === 'ar'; } catch (_) {}
+    if (!wideRibbon) return null;
+    var LEAD_RE = /^(foundation|hands-?on|professionally)\s*:?\s*$/i;
+    var changed = false;
+    var out = list.map(function (s) {
+      if (!s || s.type !== 'rich_block' || !Array.isArray(s.items) || s.items.length < 2) return s;
+      var hasWide = s.items.some(function (it) { return it && _WIDE_RE.test(String(it.b || '') + String(it.t || '')); });
+      if (!hasWide) return s;
+      var kept = s.items.filter(function (it) {
+        if (!it) return false;
+        var b = String(it.b || ''), t = String(it.t || '');
+        var latinOnly = !_WIDE_RE.test(b + t);
+        if (latinOnly && LEAD_RE.test(b.trim())) { changed = true; return false; }
+        return true;
+      });
+      return kept.length !== s.items.length ? Object.assign({}, s, { items: kept }) : s;
+    });
+    return changed ? out : null;
+  }
+
   // ROLE-DECOMP-001 (owner 2026-06-16): "decompose the merged roles ... merging is
   // later". The old ROLE-DUP-001 merged on title CONTAINMENT (folded "System
   // Architect" into "System Architect & Change Control Lead"). The owner now wants
@@ -1604,6 +1629,16 @@
       var clChanged = false;
       if (cl) { var dlc = defaultLoc(cl); if (dlc) { cl = dlc; clChanged = true; } }
       if (cl) { var wic = inlineifyLabeledText(cl, { workStyleOnly: true }); if (wic) { cl = wic; clChanged = true; } }
+      // BABEL-RICHBLOCK-RESIDUE-001 (owner 2026-07-11 screenshot: "Foundation: I
+      // connect what I do best…" stayed English inside an otherwise-zh CL): a
+      // rich_block accumulated a LATIN duplicate of a lead-in row next to its
+      // ribbon-language twin (partial-pass damage). On a wide-script ribbon, drop
+      // a pure-Latin item whose lead label is one of the known lead-ins
+      // (Foundation / Hands-on / Professionally) when the same block already
+      // carries at least one wide-script item — the residue class only, so a
+      // legit English quote inside a zh item is never touched.
+      var rbr = dropRichBlockLatinResidue(cv); if (rbr) { cv = rbr; changed = true; }
+      if (cl) { var rbc = dropRichBlockLatinResidue(cl); if (rbc) { cl = rbc; clChanged = true; } }
       if (clChanged) changed = true;
       if (!changed) return;
       var next = Object.assign({}, b, { cv: cv });

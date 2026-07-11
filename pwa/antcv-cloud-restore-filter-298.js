@@ -100,13 +100,58 @@
     return true;
   }
 
+  // LANG-PI-ECHO-GUARD-001 (owner 2026-07-11, screenshot: header name /
+  // Copenhagen / EU Citizen revert to English on a zh ribbon): the translate
+  // pass writes the ribbon-language identity values into personalInfo
+  // (TRANSLATE-PI-IDENTITY-001), then the next prefs GET restores the cloud
+  // copy still holding the LATIN values. When the ribbon is a wide-script
+  // language and the LOCAL field is already in that script, an incoming
+  // Latin-only value must not downgrade it — keep the local rendering.
+  // Sections have the same guard in cloud-sync-277 (LANG-RESTORE-GUARD-001).
+  var PI_ID_FIELDS = ['name', 'city', 'citizenship', 'specialization'];
+  var WIDE_RE_298 = /[一-鿿㐀-䶿֐-׿؀-ۿሀ-፿]/;
+  function wideRibbon() {
+    try { var L = String(localStorage.getItem('language') || 'en').replace(/"/g, '').slice(0, 2); return L === 'zh' || L === 'he' || L === 'am' || L === 'ar'; } catch (_) { return false; }
+  }
+  function guardPiEcho(json) {
+    try {
+      if (!wideRibbon()) return false;
+      var pi = json.personalInfo || (json.data && json.data.personalInfo);
+      if (!pi || typeof pi !== 'object') return false;
+      var local = null;
+      try { local = JSON.parse(localStorage.getItem('personalInfo') || 'null'); } catch (_) {}
+      if (!local || typeof local !== 'object') return false;
+      var changed = false;
+      for (var i = 0; i < PI_ID_FIELDS.length; i++) {
+        var f = PI_ID_FIELDS[i];
+        var lv = local[f], iv = pi[f];
+        if (typeof lv === 'string' && WIDE_RE_298.test(lv) && typeof iv === 'string' && iv.trim() && !WIDE_RE_298.test(iv)) {
+          pi[f] = lv; changed = true;
+        }
+      }
+      if (Array.isArray(pi.contactItems) && Array.isArray(local.contactItems)) {
+        for (var j = 0; j < pi.contactItems.length; j++) {
+          var ic = pi.contactItems[j], lc = local.contactItems[j];
+          if (ic && lc && typeof ic.value === 'string' && typeof lc.value === 'string' &&
+              WIDE_RE_298.test(lc.value) && ic.value.trim() && !WIDE_RE_298.test(ic.value)) {
+            ic.value = lc.value; changed = true;
+          }
+        }
+      }
+      if (changed) { try { console.log('[cloud-restore-filter] LANG-PI-ECHO-GUARD-001: kept local ribbon-language identity fields over the Latin cloud copy'); } catch (_) {} }
+      return changed;
+    } catch (_) { return false; }
+  }
+
   function filterPayload(json) {
     if (!json || typeof json !== 'object') return { changed: false, body: json };
+    // LANG-PI-ECHO-GUARD-001: runs on EVERY restore (mutates json in place).
+    var piGuarded = guardPiEcho(json);
     // v1.40.339-d: cookie-only. If the user didn't just delete,
     // trust whatever cloud sent us — including wizardCompleted,
     // language preferences, and everything else.
     if (!justDeletedRecent()) {
-      return { changed: false, body: json };
+      return { changed: piGuarded, body: json };
     }
     // Past this point, we know the user just deleted (cookie present).
     // The cloud row may not have been wiped yet; strip wizard-

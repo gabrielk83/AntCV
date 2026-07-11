@@ -1,4 +1,4 @@
-const VERSION='3.7.2-billing-cascade';
+const VERSION='3.8.0-nonanthropic-stream-fix';
 // Cloudflare Worker — multi-provider LLM proxy with streaming for Anthropic
 // Includes /preferences route for AntCV cloud save.
 //
@@ -1159,6 +1159,15 @@ async function handleRequest(request, env = {}) {
         parsed.max_completion_tokens = parsed.max_tokens;
         delete parsed.max_tokens;
       }
+      // NON-ANTHROPIC-STREAM-LEAK-001 (2026-07-11): the incoming body carries
+      // Anthropic's `stream:true`. This branch always buffers the response via
+      // res.text() and returns it as application/json — it never streams SSE to
+      // the client — but if we forward stream:true upstream, OpenAI returns its
+      // own SSE (`data: {chatcmpl...}`) which then leaks through unparsed (the
+      // /job drain and the SCE parser both expect a single JSON body). Force
+      // stream:false so the upstream returns one JSON object with
+      // choices[0].message.content, which every downstream reader handles.
+      parsed.stream = false;
       outBody = JSON.stringify(parsed);
     } catch (e) {}
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -1243,6 +1252,11 @@ async function handleRequest(request, env = {}) {
         if (wantsJsonMode(inBody) && !inBody.response_format) {
           inBody.response_format = { type: 'json_object' };
         }
+        // NON-ANTHROPIC-STREAM-LEAK-001 (2026-07-11): same as the OpenAI
+        // branch — this path buffers via res.text() + returns application/json,
+        // so forwarding Anthropic's stream:true only makes Mistral return raw
+        // SSE that leaks unparsed. Force stream:false for a single JSON body.
+        inBody.stream = false;
         mistralBody = JSON.stringify(inBody);
       }
     } catch (e) {

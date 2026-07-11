@@ -90,3 +90,46 @@ collected. Widen so da role title/years are collected too.
 Fix 1 touches the gen→translate flow and the app.js mirror — the class of edit that
 blue-screened the app twice when rushed. Do Fix 2 (dict furniture) first (low risk,
 proven), then Fix 1 with live verification. One deployer at a time; full cache-bust.
+
+---
+
+## 2026-07-11 (PM) — SHIPPED 1.51.334-unsol-pillar (commit 377e3c5)
+
+### Done + live-verified on antcv.pages.dev
+- **CL sign-off (item 9): FIXED at all four sites.** React preview sites now use the
+  je map; override honored only when it differs from the auto-seeded English default.
+  Live probe: zh ribbon + pinned "At your service," override → renders 此致敬礼，;
+  a REAL custom override still wins (verified both directions, state restored).
+- **Unsolicited pillar (owner decision — supersedes the display-map plan):** the
+  sentinel now COVERS every language variant instead of translating at display time.
+  ONE canonical matcher in index.html <head> (`window.__ANTCV_UNSOL_RE` +
+  `window.__antcvUnsol`); all 20 app.js comparisons routed through it; 13 sidecar
+  gates widened (old regex kept as fallback). Writes still seed canonical
+  "Unsolicited". docx-client:692 display-label ternary deliberately NOT widened —
+  a stored translated variant should fall through and display as-is.
+- **Translate prompt pins (Pr):** "Unsolicited"/"Open Application" → EXACTLY
+  Uopfordret / Candidatura espontánea / 主动申请 / מועמדות יזומה / ያልተጠየቀ ማመልከቻ /
+  طلب عفوي (matcher-aligned); rich meaningful-name rule extended zh → he/am/ar
+  (established given-name forms; dignified surname transliteration; zh Gabriel pin
+  exact); Latin-name keep extended to da; "Present" in year ranges now translates
+  (nu / actualidad / 至今 / היום / እስከ አሁን / حتى الآن). Items 1, 8, 11.
+- **Fix 1b:** da now collects role title/company/years (was _isWide-only) + meta
+  company for da. Name stays _isWide-gated (da keeps Latin names).
+
+### Fix 1 diagnosis (live, zh ribbon over English content @ 1.51.334)
+- babel-relang trigger is NOT the problem: fired repeatedly ("content not in zh —
+  re-rendering (thorough)"), all guards clear (view=editor, no manual guard, no
+  kill switch, quota fine).
+- `__antcvRelangHeadless('zh')` invoked manually → full pipeline RUNS: "Translating
+  to 中文… (n/11)" banner, chunks apply incrementally (CJK ratio 0.093 → 0.151+ @ 4/11).
+- ⇒ The pipeline works when driven; the historical "stayed English" was most likely
+  interrupted runs (reloads mid-translate) or the pre-334 state. NOTE: an ~11-chunk
+  thorough translate runs MINUTES — a mid-run reload/nav kills it silently and the
+  20s-backoff + MAX_ATTEMPTS=2 per pageload can leave content mixed until the next
+  load. Candidate hardening (not yet done): persist attempt state / resume, or drop
+  chunk size for the headless path.
+### Still open
+- CL-section-loss on translate (#12) — apply-back path is structurally safe
+  (only replaces collected paths); suspicion moves to the languageCache restore /
+  Nr snapshot. Verify after a full translate completes.
+- Salmon "(CONT.)" zh form (dict identity today; owner to confirm 续).

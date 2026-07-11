@@ -120,12 +120,25 @@
   // ── build/refresh the styled-kernels panel ─────────────────────────────
   function rowEl(styleKey, jdLang, updatedAt) {
     var p = styleParts(styleKey);
-    var lang = jdLang || p.lang || '';
+    // KERNEL-TABLE-LANG-KEY-001 (owner 2026-07-11 "captured as an english kernel????"):
+    // the label preferred jd_language over the KEY — a kernel resave from a tab whose
+    // ribbon was momentarily 'en' stamped jd_language:'en' onto the |zh slot and the
+    // table showed "English" for the Chinese kernel. The style_key suffix IS the slot's
+    // identity — it wins; jd_language is only the fallback for legacy un-suffixed keys.
+    var lang = p.lang || jdLang || '';
     var row = document.createElement('div'); row.className = 'antcv-skt-row';
     var nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = prettyStyle(p.style || styleKey); row.appendChild(nm);
     var lg = document.createElement('div'); lg.className = 'lg'; lg.textContent = LANG[lang] || (lang ? lang.toUpperCase() : '—'); row.appendChild(lg);
     var dt = document.createElement('div'); dt.className = 'dt';
-    try { dt.textContent = updatedAt ? new Date(updatedAt).toISOString().slice(0, 10) : ''; } catch (_) {}
+    // KERNEL-TABLE-TIME-001 (owner 2026-07-11): show WHEN the kernel was captured,
+    // not just the date — local date + HH:MM.
+    try {
+      if (updatedAt) {
+        var d = new Date(updatedAt);
+        var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+        dt.textContent = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+      } else dt.textContent = '';
+    } catch (_) {}
     row.appendChild(dt);
     var ld = document.createElement('button'); ld.className = 'ld'; ld.textContent = 'Load';
     ld.title = 'Load this saved style kernel into the editor';

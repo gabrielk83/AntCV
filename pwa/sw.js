@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.339-tighten-window';
+const CACHE = 'antcv-1.51.340-langs-dict';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

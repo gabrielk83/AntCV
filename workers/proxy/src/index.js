@@ -1056,6 +1056,17 @@ async function handleRequest(request, env = {}) {
       // the request for evaluation/model-improvement purposes. The
       // request still goes through their normal abuse-monitoring and
       // safety logging — see their API terms.
+      // GEN-OUTPUT-BUDGET-PROXY-001 (2026-07-11): stale clients still send the
+      // legacy 8192 cap; gemini-2.5's thinking shares that budget and the gen
+      // JSON truncates BEFORE the trailing CL fields (D1-confirmed — the
+      // "cover letter never applies" + thin-bullets root cause). Raise the
+      // exact legacy value server-side so every client benefits without a
+      // bundle update. Small task caps (5/10/20) and explicit budgets pass
+      // through untouched.
+      try {
+        const pB = JSON.parse(bodyText);
+        if (pB && pB.max_tokens === 8192) { pB.max_tokens = 16384; bodyText = JSON.stringify(pB); }
+      } catch (_) { /* non-JSON body — leave as-is */ }
       if (userHashForLlm) {
         try {
           const p2 = JSON.parse(bodyText);
@@ -1358,7 +1369,7 @@ async function handleRequest(request, env = {}) {
     const payload = {
       contents,
       generationConfig: {
-        maxOutputTokens: inBody.max_tokens || 8192,
+        maxOutputTokens: (inBody.max_tokens === 8192 ? 16384 : inBody.max_tokens) || 8192, // GEN-OUTPUT-BUDGET-PROXY-001
         temperature: typeof inBody.temperature === 'number' ? inBody.temperature : 0.7,
       },
     };

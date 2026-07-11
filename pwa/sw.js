@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.336-pi-contact';
+const CACHE = 'antcv-1.51.337-babel-native';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

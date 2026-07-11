@@ -136,14 +136,25 @@
     s = s.split(/[-–—,]/)[0].replace(/\([^)]*\)/g, ' ');
     return s.replace(/[^a-z0-9]+/g, ' ').trim();
   }
+  // BABEL-DEDUP-SCRIPT-001 (owner 2026-07-11 "13 pages of CV"): the dedup was
+  // TRANSLATION-BLIND. _titleCore stripped every non-[a-z0-9] char, so a zh/he/ar
+  // title normalised to EMPTY and never matched anything — every canon backfill /
+  // partial translate re-added roles as duplicates (en+zh trios, 52 roles, 13 pages).
+  // Fixes: (1) Unicode-aware cores so same-script duplicates match textually;
+  // (2) 至今/היום/עד היום/حتى الآن/إلى الآن/እስከ አሁን count as "present";
+  // (3) cross-script pairs (one wide-script title, one Latin) fall back to
+  // company+years identity — the babel-fish view: same position, two renderings.
+  var _WIDE_RE = /[一-鿿㐀-䶿֐-׿؀-ۿሀ-፿]/;
+  function _isWideTitle(t) { return _WIDE_RE.test(String(t == null ? '' : t)); }
   function _titleCore(t) {
     var s = String(t == null ? '' : t).toLowerCase().replace(/\([^)]*\)/g, ' ');
     s = s.split(/\s+[&/]\s+|\s+and\s+/)[0];
-    return s.replace(/[^a-z0-9]+/g, ' ').trim();
+    try { return s.replace(/[^\p{L}\p{N}]+/gu, ' ').trim(); }
+    catch (_) { return s.replace(/[^a-z0-9]+/g, ' ').trim(); }
   }
   function _yrKey(y) {
     var n = (String(y == null ? '' : y).match(/\d{4}/g) || []).map(Number);
-    var present = /present|current|nu(?:værende|tid)?|pågår|løbende|ongoing/i.test(String(y || ''));
+    var present = /present|current|nu(?:værende|tid)?|pågår|løbende|ongoing|至今|现在|היום|עד\s*היום|حتى\s*الآن|إلى\s*الآن|እስከ\s*አሁን/i.test(String(y || ''));
     var start = n.length ? Math.min.apply(null, n) : 0;
     var end = present ? 9999 : (n.length ? Math.max.apply(null, n) : start);
     return start + '-' + end;
@@ -151,9 +162,16 @@
   function _samePosition(a, b) {
     if (!a || !b) return false;
     if (_yrKey(a.years) !== _yrKey(b.years)) return false;
-    var ta = _titleCore(a.title || a.role), tb = _titleCore(b.title || b.role);
-    if (!ta || !tb) return false;
-    return ta === tb || ta.indexOf(tb + ' ') === 0 || tb.indexOf(ta + ' ') === 0;
+    var ra = a.title || a.role, rb = b.title || b.role;
+    var ta = _titleCore(ra), tb = _titleCore(rb);
+    if (ta && tb && (ta === tb || ta.indexOf(tb + ' ') === 0 || tb.indexOf(ta + ' ') === 0)) return true;
+    // BABEL-DEDUP-SCRIPT-001: cross-script pair (translated title vs canon) —
+    // same company + same span = the SAME real position in two renderings.
+    if (_isWideTitle(ra) !== _isWideTitle(rb)) {
+      var ca = _companyKey(a.company), cb = _companyKey(b.company);
+      if (ca && ca === cb) return true;
+    }
+    return false;
   }
 
   // ROLE-DECOMP-001 (owner 2026-06-16): "decompose the merged roles ... merging is
@@ -184,13 +202,28 @@
       var a = roles[i], b = roles[j];
       if (!a || !b) continue;
       var ta = norm(a.title), tb = norm(b.title);
-      if (!ta || !tb || ta !== tb) continue; // ROLE-DECOMP-001: exact-title dup only (was containment)
-      if (_companyKey(a.company) !== _companyKey(b.company)) continue; // COMPANY-VARIANT-KEY-001
-      if (!overlap(a.years, b.years)) continue;
+      var crossScript = _isWideTitle(a.title) !== _isWideTitle(b.title);
+      if (crossScript) {
+        // BABEL-DEDUP-SCRIPT-001: a translated title vs its canon (产品 / 项目专家 vs
+        // Product / Project Expert) is the SAME position in two renderings — the
+        // exact-title rule can never see it. Collapse via _samePosition (years +
+        // company identity). Survivor = the RIBBON-language rendering: when the
+        // ribbon is a wide-script language keep the wide-script title, else the
+        // Latin one. (i is dropped below, so arrange a=dropped, b=survivor.)
+        if (!_samePosition(a, b)) continue;
+        var wantWide = (function () { try { var L = String(localStorage.getItem('language') || 'en').replace(/"/g, '').slice(0, 2); return L === 'zh' || L === 'he' || L === 'am' || L === 'ar'; } catch (_) { return false; } })();
+        if (_isWideTitle(b.title) !== wantWide) continue; // only drop i when j is the wanted rendering
+      } else {
+        if (!ta || !tb || ta !== tb) continue; // ROLE-DECOMP-001: exact-title dup only (was containment)
+        if (_companyKey(a.company) !== _companyKey(b.company)) continue; // COMPANY-VARIANT-KEY-001
+        if (!overlap(a.years, b.years)) continue;
+      }
       drop[i] = true;
       if (a.on !== false) b.on = true;
-      // keep the richer content: if the dropped role carried MORE bullets, move them to the survivor.
-      if (nbul(a) > nbul(b)) b.bullets = a.bullets;
+      // keep the richer content: if the dropped role carried MORE bullets, move them to the
+      // survivor — but NEVER move cross-script bullets onto a ribbon-language survivor
+      // (that would re-inject the other language's content).
+      if (!crossScript && nbul(a) > nbul(b)) b.bullets = a.bullets;
     }
     var keys = Object.keys(drop);
     if (!keys.length) return null;

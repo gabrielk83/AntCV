@@ -1744,7 +1744,24 @@
           output_tokens:
             (null == (c = w.usage) ? void 0 : c.output_tokens) || null,
         }),
-        w.content.map((e) => e.text || "").join("")
+        // ANTHROPIC-CONTENT-GUARD-001 (owner 2026-07-11 mid-gen popup): an API
+        // error body has NO content array — w.content.map threw the raw
+        // "Cannot read properties of undefined (reading 'map')" instead of a
+        // real provider error, killing the task unrecoverably when the cost
+        // ceiling had already collapsed the cascade to one provider.
+        (Array.isArray(w.content)
+          ? w.content
+          : (() => {
+              throw new Error(
+                "anthropic response has no content" +
+                  (w && w.error && w.error.message
+                    ? ": " + w.error.message
+                    : w && w.type
+                      ? " (type " + w.type + ")"
+                      : ""),
+              );
+            })()
+        ).map((e) => e.text || "").join("")
       );
     } finally {
       await w(f);

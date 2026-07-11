@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.336-pi-contact';
+  const TARGET_VERSION = '1.51.337-babel-native';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.336-pi-contact',
     '1.51.335-pi-identity',
     '1.51.334-unsol-pillar',
     '1.51.333-route-debug',

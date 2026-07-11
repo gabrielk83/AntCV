@@ -3127,10 +3127,18 @@ export function applyOutcomesMode(docSections, doc) {
       return t;
     };
     visRoles.forEach((r) => {
+      // BABEL-PINS-LANG-GATE-001 (owner 2026-07-11 "generation in the target language"):
+      // a role whose title is in a wide script (zh/he/ar/am) is a NATIVE-language
+      // rendering — the ENGLISH pin/kernel-outcome tiers must never laminate onto it
+      // (that is how the CSA result leaked under 学生会代表 and English Results appeared
+      // on zh pages). Its own role.results (tier 1, native) still wins; an empty
+      // Results stays empty rather than becoming English.
+      const _wideT = /[一-鿿㐀-䶿֐-׿؀-ۿሀ-፿]/.test(String(r.title || ''));
       // GABRIEL-EXACT-RESULTS-001: owner-pinned verbatim Results win above ALL tiers (no cap, no cut).
-      const _gx = _gabrielExactResult(r); if (_gx) { _lam.set(r, _gx); return; }
+      const _gx = _wideT ? null : _gabrielExactResult(r); if (_gx) { _lam.set(r, _gx); return; }
       // 1) explicit role.results string wins verbatim.
       if (typeof r.results === 'string' && r.results.trim()) { _lam.set(r, r.results.trim()); return; }
+      if (_wideT) return;
       // 2) self-contained role.outcomes[] (owner's 'outcome_edits' lists): use the
       //    DEFAULT-VISIBLE items only — JD-gated hidden ones (defaultVisible:false)
       //    stay hidden in a non-JD export.

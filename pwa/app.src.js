@@ -2164,19 +2164,34 @@
       if (pi && "object" == typeof pi) { pi[field] = v; localStorage.setItem("personalInfo", JSON.stringify(pi)); }
     } catch (_) {}
   }
+  function __antcvWriteContactItem(idx, v) {
+    try {
+      if ("string" != typeof v || !v.trim()) return;
+      var i = parseInt(idx, 10);
+      if (!(i >= 0)) return;
+      var pi = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {};
+      if (pi && Array.isArray(pi.contactItems) && pi.contactItems[i] && "string" == typeof pi.contactItems[i].value) {
+        pi.contactItems[i].value = v;
+        localStorage.setItem("personalInfo", JSON.stringify(pi));
+      }
+    } catch (_) {}
+  }
   function __antcvSnapStandalone() {
     var s = {};
     try { var sl = localStorage.getItem("antcv:clSlogan"); if (null != sl) s.clSlogan = sl; } catch (_) {}
-    try { var pi = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {}; if ("string" == typeof pi.specialization) s.specialization = pi.specialization; if ("string" == typeof pi.name) s.piName = pi.name; if ("string" == typeof pi.city) s.piCity = pi.city; if ("string" == typeof pi.citizenship) s.piCitizen = pi.citizenship; } catch (_) {}
+    try { var sn = localStorage.getItem("antcv:clSignName"); if (null != sn) s.clSignName = sn; } catch (_) {}
+    try { var pi = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {}; if ("string" == typeof pi.specialization) s.specialization = pi.specialization; if ("string" == typeof pi.name) s.piName = pi.name; if ("string" == typeof pi.city) s.piCity = pi.city; if ("string" == typeof pi.citizenship) s.piCitizen = pi.citizenship; if (Array.isArray(pi.contactItems)) s.contactVals = pi.contactItems.map(function (c) { return c && "string" == typeof c.value ? c.value : null; }); } catch (_) {}
     return s;
   }
   function __antcvRestoreStandalone(s) {
     if (!s || "object" != typeof s) return;
     if ("string" == typeof s.clSlogan) __antcvWriteSlogan(s.clSlogan);
+    if ("string" == typeof s.clSignName) { try { localStorage.setItem("antcv:clSignName", s.clSignName); } catch (_) {} }
     if ("string" == typeof s.specialization) __antcvWriteSpec(s.specialization);
     if ("string" == typeof s.piName) __antcvWritePi("name", s.piName);
     if ("string" == typeof s.piCity) __antcvWritePi("city", s.piCity);
     if ("string" == typeof s.piCitizen) __antcvWritePi("citizenship", s.piCitizen);
+    if (Array.isArray(s.contactVals)) s.contactVals.forEach(function (v, i) { if ("string" == typeof v) __antcvWriteContactItem(i, v); });
   }
   function __antcvModelFor(prov, task) {
     try { if ("gemini" === prov && __antcvBigGen(task)) return "gemini-2.5-pro"; } catch (_) {}
@@ -18107,7 +18122,16 @@
                               if (!(r.results && String(r.results).trim())) {
                                 try {
                                   var __rr = (window.__antcvRR || {})["id:" + r.id];
-                                  if (__rr) n(["roles", ri, "results"], __rr);
+                                  // RESULTS-COPYCAT-SKIP-001 (owner 2026-07-11 screenshot):
+                                  // a DERIVED result often copies bullet[0]; materialising
+                                  // its translation shows the same content twice (zh bullet
+                                  // + result). Skip when the normalised 60-char prefix
+                                  // matches any bullet — the distinct-pin results never do.
+                                  if (__rr) {
+                                    var __rrN = String(__rr).toLowerCase().replace(/\s+/g, " ").slice(0, 60);
+                                    var __copy = (r.bullets || []).some(function (b) { return String(b || "").toLowerCase().replace(/\s+/g, " ").slice(0, 60) === __rrN; });
+                                    if (!__copy) n(["roles", ri, "results"], __rr);
+                                  }
                                 } catch (_) {}
                               }
                             });
@@ -18256,6 +18280,28 @@
                         r.push({ key: "pi_city", value: __piT.city, __std: "picity" });
                       if ("string" == typeof __piT.citizenship && __piT.citizenship.trim())
                         r.push({ key: "pi_citizen", value: __piT.citizenship, __std: "picitizen" });
+                      // TRANSLATE-PI-IDENTITY-001b: the HEADER actually renders
+                      // pi.contactItems[].value (live-confirmed: "2300, København S",
+                      // "EU Citizen" come from here, NOT pi.city/pi.citizenship).
+                      // Collect the text-like values (skip email/url/phone shapes —
+                      // invariants) and write back by index.
+                      (Array.isArray(__piT.contactItems) ? __piT.contactItems : []).forEach((ci, cidx) => {
+                        try {
+                          if (!ci || "string" != typeof ci.value || !ci.value.trim()) return;
+                          var v = ci.value.trim();
+                          if (/@|^https?:|^www\.|linkedin\.|github\.|^\+?[\d\s()-]{6,}$/i.test(v)) return;
+                          r.push({ key: "pi_ci_" + cidx, value: ci.value, __std: "pici", __ci: cidx });
+                        } catch (_) {}
+                      });
+                      // TRANSLATE-SIGNNAME-001: the CL signature renders the
+                      // antcv:clSignName override ("Gabriel") before pi.name — collect
+                      // it for script targets so the sign-off name follows the ribbon.
+                      if (_isWide) {
+                        try {
+                          var __sn = String(localStorage.getItem("antcv:clSignName") || "").trim();
+                          if (__sn) r.push({ key: "pi_signname", value: __sn, __std: "signname" });
+                        } catch (_) {}
+                      }
                       if (!o.length && !r.length) return;
                       const a = {};
                       (o.forEach((e, t) => {
@@ -18264,7 +18310,7 @@
                         r.forEach((e, t) => {
                           a["m" + t] = e.value;
                         }));
-                      const i = `You are a professional translator. The input JSON contains text that may be in any language. Translate every value to ${t}, regardless of what language each value is currently in.\n\nRULES:\n- Translate every value to ${t}, even if it appears to already be in another language. Do NOT pass values through unchanged.\n- Proper-noun handling — categorise EACH proper noun, then apply the right rule:\n  KEEP VERBATIM (never translate): company / organisation names (employers, clubs, associations — even small local ones), product names, technology names (tools, platforms, protocols), file-format names, standards codes (ISO 26262, ASPICE, BABOK).\n  TRANSLATE: university and academic-institution names where an established target-language form exists. Examples: Tel Aviv University → Spanish "Universidad de Tel Aviv" / Chinese "特拉维夫大学". Tsinghua University → Spanish "Universidad de Tsinghua" / Chinese "清华大学". Technion → Chinese "以色列理工学院" (keep "Technion" in Spanish, no canonical form). MIT → Chinese "麻省理工学院" (keep "MIT" in Spanish). If no canonical target-language form exists for the institution, keep the original.\n  TRANSLATE: job titles and role names — even when they appear next to an organisation name. Examples: "Operations Manager" → Spanish "Gerente de Operaciones" / Chinese "运营经理". "Senior System Engineer" → Spanish "Ingeniero Senior de Sistemas" / Chinese "高级系统工程师". "Rugby Operations Manager" → Spanish "Gerente de Operaciones de Rugby" / Chinese "橄榄球运营经理".\n  TRANSLATE: city and country names. Copenhagen → København (Danish) / Copenhague (Spanish) / 哥本哈根 (Chinese). Denmark → Danmark (Danish) / Dinamarca (Spanish) / 丹麦 (Chinese). Tel Aviv → 特拉维夫 (Chinese, otherwise unchanged).\n  TRANSLATE: civic / status terms like "EU Citizen". Danish "EU-borger", Spanish "Ciudadano UE", Chinese "欧盟公民".\n  TRANSLATE the application-type label "Unsolicited" (or "Open Application") to EXACTLY: Danish "Uopfordret", Spanish "Candidatura espontánea", Chinese "主动申请", Hebrew "מועמדות יזומה", Amharic "ያልተጠየቀ ማመልከቻ", Arabic "طلب عفوي". Use exactly these forms — no other synonym or spelling.\n  FOR SPANISH AND DANISH TARGETS: keep person names in Latin script unchanged (Gabriel Alexander Karp-Gershon stays as written).\n  FOR CHINESE TARGET: render the candidate's person name in Chinese characters. If the name is "Gabriel Alexander Karp-Gershon" (or a shorter variant such as "Gabriel Karp-Gershon"), use EXACTLY "柯葛顺·加百列·亚历山大" and do not transliterate it any other way. For ANY OTHER full personal name, create a FITTING Chinese name: use the established Chinese form for well-known given names (Gabriel→加百列, Alexander→亚历山大), pick surname glyphs that are phonetically close AND carry positive or neutral meaning suited to the person's profession and character, place the surname FIRST (Chinese order), and never use glyphs with negative connotations (e.g. 埃 "dust", 卡 "stuck/jammed"). Apply when a value is clearly a full personal name (first + last); do NOT transliterate company / organisation names.\n  FOR HEBREW, AMHARIC AND ARABIC TARGETS: render the candidate's person name in the target script with the same care as the Chinese rule: use the established target-script form for well-known given names (Gabriel → Hebrew "גבריאל" / Arabic "جبريل" / Amharic "ገብርኤል"; Alexander → Hebrew "אלכסנדר" / Arabic "ألكسندر" / Amharic "አሌክሳንደር"), and transliterate surnames phonetically with dignified standard spellings — never spellings with negative or comic readings. Apply when a value is clearly a full personal name (first + last); do NOT transliterate company / organisation names or tool names.\n- Quoted strings are titles of real published works (papers, books, articles). Keep ALL text inside straight double quotes "..." and curly quotes “...” EXACTLY as written, in the original source language. Translate only the prose surrounding the quotes. Example: in DA, “Suspended Carbon Nanotube Integration in Microfabricated Devices” — Karp et al., 2009 becomes “Suspended Carbon Nanotube Integration in Microfabricated Devices” — Karp m.fl., 2009 (title verbatim, surrounding prose translated).\n- Keep numbers, dates, year ranges (e.g. 2017-2025) unchanged. The word "Present" in a year range (e.g. "2022 - Present") DOES translate: Danish "nu", Spanish "actualidad", Chinese "至今", Hebrew "היום", Amharic "እስከ አሁን", Arabic "حتى الآن".\n- Preserve formatting: bracketed placeholders like [Role title] / [Rolle titel] stay bracketed; bullet markers stay; punctuation matches target language conventions.\n- Preserve sentinel tokens: any token matching the pattern __ANTCV_KEEP_<digits>__ (for example __ANTCV_KEEP_1__, __ANTCV_KEEP_2__) is a protected reference and MUST be reproduced in the output EXACTLY as written, with the same digits, in the same position relative to the surrounding prose. Do NOT translate, paraphrase, or remove these tokens. They stand in for proper-noun phrases that have been factored out of the input.\n- Match the professional register: calm, factual, direct. No buzzwords. No corporate jargon.\n- For Danish: use "du" not "De". Use everyday Danish, not legalese.\n- For English: UK spelling. Clear, professional, no Americanisms.\n- Banned in any language output: spearhead, leverage, foster, robust, holistic, cutting-edge, world-class, drive (vague), deliver (vague), passionate, committed, comprehensive (without specifics). Danish equivalents (drive frem, fremme, robust, omfattende, banebrydende) also banned.\n\nCRITICAL: Return EVERY input key in your output. Do NOT skip any keys. Do NOT add new keys. The output MUST be a single complete JSON object — finish it before stopping. No explanation, no markdown, no preamble, just the JSON object.`,
+                      const i = `You are a professional translator. The input JSON contains text that may be in any language. Translate every value to ${t}, regardless of what language each value is currently in.\n\nRULES:\n- Translate every value to ${t}, even if it appears to already be in another language. Do NOT pass values through unchanged.\n- Proper-noun handling — categorise EACH proper noun, then apply the right rule:\n  KEEP VERBATIM (never translate): company / organisation names (employers, clubs, associations — even small local ones), product names, technology names (tools, platforms, protocols), file-format names, standards codes (ISO 26262, ASPICE, BABOK).\n  TRANSLATE: university and academic-institution names where an established target-language form exists. Examples: Tel Aviv University → Spanish "Universidad de Tel Aviv" / Chinese "特拉维夫大学". Tsinghua University → Spanish "Universidad de Tsinghua" / Chinese "清华大学". Technion → Chinese "以色列理工学院" (keep "Technion" in Spanish, no canonical form). MIT → Chinese "麻省理工学院" (keep "MIT" in Spanish). If no canonical target-language form exists for the institution, keep the original.\n  TRANSLATE: job titles and role names — even when they appear next to an organisation name. Examples: "Operations Manager" → Spanish "Gerente de Operaciones" / Chinese "运营经理". "Senior System Engineer" → Spanish "Ingeniero Senior de Sistemas" / Chinese "高级系统工程师". "Rugby Operations Manager" → Spanish "Gerente de Operaciones de Rugby" / Chinese "橄榄球运营经理".\n  TRANSLATE: city and country names. Copenhagen → København (Danish) / Copenhague (Spanish) / 哥本哈根 (Chinese). Denmark → Danmark (Danish) / Dinamarca (Spanish) / 丹麦 (Chinese). Tel Aviv → 特拉维夫 (Chinese, otherwise unchanged).\n  TRANSLATE: civic / status terms like "EU Citizen". Danish "EU-borger", Spanish "Ciudadano UE", Chinese "欧盟公民".\n  TRANSLATE the application-type label "Unsolicited" (or "Open Application") to EXACTLY: Danish "Uopfordret", Spanish "Candidatura espontánea", Chinese "主动申请", Hebrew "מועמדות יזומה", Amharic "ያልተጠየቀ ማመልከቻ", Arabic "طلب عفوي". Use exactly these forms — no other synonym or spelling.\n  TRANSLATE language names and fluency levels in a LANGUAGES list: English → 英语 / inglés / אנגלית, Hebrew → 希伯来语, Spanish → 西班牙语, Danish → 丹麦语; "native / fluent" → 母语/流利, "professional" → 专业水平, "intermediate (B1)" → 中级（B1）— same principle in every target language. These are NOT proper nouns to keep verbatim.\n  TRANSLATE industry-role acronym phrases with an established target form, keeping the acronym in parentheses: "ODM site" → Chinese "原始设计制造商（ODM）站点", "OEM" → "原始设备制造商（OEM）". Standards codes (ISO 26262, ASPICE) still stay verbatim.\n  FOR SPANISH AND DANISH TARGETS: keep person names in Latin script unchanged (Gabriel Alexander Karp-Gershon stays as written).\n  FOR CHINESE TARGET: render the candidate's person name in Chinese characters. If the name is "Gabriel Alexander Karp-Gershon" (or a shorter variant such as "Gabriel Karp-Gershon"), use EXACTLY "柯葛顺·加百列·亚历山大" and do not transliterate it any other way. For ANY OTHER full personal name, create a FITTING Chinese name: use the established Chinese form for well-known given names (Gabriel→加百列, Alexander→亚历山大), pick surname glyphs that are phonetically close AND carry positive or neutral meaning suited to the person's profession and character, place the surname FIRST (Chinese order), and never use glyphs with negative connotations (e.g. 埃 "dust", 卡 "stuck/jammed"). Apply when a value is clearly a full personal name (first + last); do NOT transliterate company / organisation names.\n  FOR HEBREW, AMHARIC AND ARABIC TARGETS: render the candidate's person name in the target script with the same care as the Chinese rule: use the established target-script form for well-known given names (Gabriel → Hebrew "גבריאל" / Arabic "جبريل" / Amharic "ገብርኤል"; Alexander → Hebrew "אלכסנדר" / Arabic "ألكسندر" / Amharic "አሌክሳንደር"), and transliterate surnames phonetically with dignified standard spellings — never spellings with negative or comic readings. Apply when a value is clearly a full personal name (first + last); do NOT transliterate company / organisation names or tool names.\n- If a value contains the SAME title or phrase in two languages joined by "&" or "/" (bilingual duplication, e.g. "变更请求负责人 & Change Request Lead & 系统架构师 & System Architect"), output each distinct title ONCE, in the target language only (→ "变更请求负责人 & 系统架构师"). Never keep both language versions of the same phrase.\n- Quoted strings are titles of real published works (papers, books, articles). Keep ALL text inside straight double quotes "..." and curly quotes “...” EXACTLY as written, in the original source language. Translate only the prose surrounding the quotes. Example: in DA, “Suspended Carbon Nanotube Integration in Microfabricated Devices” — Karp et al., 2009 becomes “Suspended Carbon Nanotube Integration in Microfabricated Devices” — Karp m.fl., 2009 (title verbatim, surrounding prose translated).\n- Keep numbers, dates, year ranges (e.g. 2017-2025) unchanged. The word "Present" in a year range (e.g. "2022 - Present") DOES translate: Danish "nu", Spanish "actualidad", Chinese "至今", Hebrew "היום", Amharic "እስከ አሁን", Arabic "حتى الآن".\n- Preserve formatting: bracketed placeholders like [Role title] / [Rolle titel] stay bracketed; bullet markers stay; punctuation matches target language conventions. Markdown links [text](url): keep the URL EXACTLY as written; keep product/site names in the link text (Google Scholar, LinkedIn) verbatim; translate only surrounding prose.\n- Preserve sentinel tokens: any token matching the pattern __ANTCV_KEEP_<digits>__ (for example __ANTCV_KEEP_1__, __ANTCV_KEEP_2__) is a protected reference and MUST be reproduced in the output EXACTLY as written, with the same digits, in the same position relative to the surrounding prose. Do NOT translate, paraphrase, or remove these tokens. They stand in for proper-noun phrases that have been factored out of the input.\n- Match the professional register: calm, factual, direct. No buzzwords. No corporate jargon.\n- For Danish: use "du" not "De". Use everyday Danish, not legalese.\n- For English: UK spelling. Clear, professional, no Americanisms.\n- Banned in any language output: spearhead, leverage, foster, robust, holistic, cutting-edge, world-class, drive (vague), deliver (vague), passionate, committed, comprehensive (without specifics). Danish equivalents (drive frem, fremme, robust, omfattende, banebrydende) also banned.\n\nCRITICAL: Return EVERY input key in your output. Do NOT skip any keys. Do NOT add new keys. The output MUST be a single complete JSON object — finish it before stopping. No explanation, no markdown, no preamble, just the JSON object.`,
                         l = 30,
                         s = Object.keys(a),
                         c = Math.ceil(s.length / l);
@@ -18450,7 +18496,11 @@
                                       ? __antcvWritePi("name", o)
                                       : "picity" === e.__std
                                         ? __antcvWritePi("city", o)
-                                        : "picitizen" === e.__std && __antcvWritePi("citizenship", o));
+                                        : "picitizen" === e.__std
+                                          ? __antcvWritePi("citizenship", o)
+                                          : "pici" === e.__std
+                                            ? __antcvWriteContactItem(e.__ci, o)
+                                            : "signname" === e.__std && (() => { try { localStorage.setItem("antcv:clSignName", o); } catch (_) {} })());
                             }),
                             t
                           );

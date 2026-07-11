@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.330-furniture-lang';
+  const TARGET_VERSION = '1.51.331-llm-route';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.330-furniture-lang',
     '1.51.329-f5-fresh',
     '1.51.326-babel-view-gate',
     '1.51.327-hardreset-local',

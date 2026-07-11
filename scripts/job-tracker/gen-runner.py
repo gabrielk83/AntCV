@@ -58,7 +58,19 @@ SCRATCH = os.environ.get("ANTCV_GENRUN_OUT") or os.path.join(
 # fast + single pass. (Coherence runs server-side after the last section
 # regardless; for 'quick' it is a cheap no-op on a 1-2 section plan.)
 MODEL_HIGH  = os.environ.get("ANTCV_MODEL_HIGH",  "claude-opus-4-8")
-MODEL_QUICK = os.environ.get("ANTCV_MODEL_QUICK", "claude-haiku-4-5-20251001")
+# COST-QUALITY-BENCH-001 (owner 2026-07-11, docs/qa/COST_QUALITY_BENCHMARK_2026-07-11.md):
+# the 'quick' tier was claude-haiku-4-5 — the benchmark's WORST gen model (quality 3.0,
+# dirtiest 10.5 em-dashes/run, AND pricier than gpt-5-mini). gpt-5-mini is the cheap
+# champion (quality 6.0 @ $0.06, 35x under opus). Provider is inferred from the model
+# (see _prov_for), so a quick(openai)/high(anthropic) mix routes correctly.
+MODEL_QUICK = os.environ.get("ANTCV_MODEL_QUICK", "gpt-5-mini")
+
+def _prov_for(model):
+    m = str(model or "").lower()
+    if m.startswith("gpt") or m.startswith("o1") or m.startswith("o3"): return "openai"
+    if m.startswith("gemini"): return "gemini"
+    if m.startswith("mistral") or m.startswith("magistral") or m.startswith("ministral"): return "mistral"
+    return "anthropic"
 
 # The 12 real category ids. NEVER 'targeted'/'unsolicited' for a real JD
 # (the app blanks the JD on open). Rough keyword routing; the owner can
@@ -414,7 +426,10 @@ def cmd_run(args):
             json.dump({"row": r, "sections": sections}, open(plan_path, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
             print(f"   (dry) plan -> {plan_path}"); continue
         t0 = time.time()
-        res = drive(sections, args.provider, model,
+        # Route provider by the tier's model (quick=gpt-5-mini→openai, high=opus→anthropic),
+        # unless the caller pinned --provider to something non-default.
+        prov = _prov_for(model) if args.provider == "anthropic" else args.provider
+        res = drive(sections, prov, model,
                     source_cv=json.dumps(profile, ensure_ascii=False)[:38000], jd_text=r["jd"])
         dt = round(time.time() - t0, 1)
         if res.get("error"):

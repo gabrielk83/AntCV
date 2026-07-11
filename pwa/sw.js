@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.330-furniture-lang';
+const CACHE = 'antcv-1.51.331-llm-route';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

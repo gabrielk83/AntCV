@@ -1835,9 +1835,9 @@
     extract_keywords: ["mistral", "gemini", "openai", "claude"],
     match_skills: ["mistral", "gemini", "openai", "claude"],
     extract_pdf: ["gemini", "claude"],
-    translate: ["mistral", "gemini", "openai", "claude"],
-    translate_da: ["claude", "openai", "mistral", "gemini"],
-    refine_da: ["claude", "openai", "mistral"],
+    translate: ["openai", "gemini", "mistral", "claude"],
+    translate_da: ["openai", "claude", "mistral", "gemini"],
+    refine_da: ["openai", "claude", "mistral"],
     refine_en: ["openai", "claude", "mistral"],
     long_context: ["claude", "openai", "gemini"],
     analyze_fit: ["claude", "openai", "mistral", "gemini"],
@@ -1947,9 +1947,16 @@
     const b = __LLM_BASE[k] || { q: 0.6, c: 0.5, lat: 0.5 };
     let s = (w.qW || 0) * b.q - (w.cW || 0) * b.c - (w.lW || 0) * b.lat;
     // refine_danish etc. carry danishBias: keep the strong-prose providers
-    // (anthropic/openai) ahead for Danish output, where the cost-led demotion
-    // would otherwise bury Claude — the hand-tuned Danish lead.
-    if (w.danishBias && ("anthropic" === k || "openai" === k)) s += 0.15;
+    // ahead for Danish. TRANSLATE-NUMINVARIANT-001 (owner 2026-07-11, benchmark
+    // docs/qa/COST_QUALITY_BENCHMARK_2026-07-11.md): translating a CV to Danish,
+    // OpenAI preserves 100% of numbers/metrics while Claude/Gemini/Mistral drop
+    // ~23% (num_survival 1.0 vs 0.769) — a CV invariant failure. Both write
+    // fluent Danish (fidelity 8-9), so lead with OpenAI for number safety; keep
+    // Claude a strong #2 (best prose). Openai gets the larger boost.
+    if (w.danishBias) {
+      if ("openai" === k) s += 0.28;
+      else if ("anthropic" === k) s += 0.12;
+    }
     return s;
   }
   function __llmScorerDisabled() {

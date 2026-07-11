@@ -1,4 +1,4 @@
-const VERSION='3.8.0-nonanthropic-stream-fix';
+const VERSION='3.8.1-gpt5-reasoning-minimal';
 // Cloudflare Worker — multi-provider LLM proxy with streaming for Anthropic
 // Includes /preferences route for AntCV cloud save.
 //
@@ -1158,6 +1158,15 @@ async function handleRequest(request, env = {}) {
       if (usesNewParam && parsed.max_tokens != null && parsed.max_completion_tokens == null) {
         parsed.max_completion_tokens = parsed.max_tokens;
         delete parsed.max_tokens;
+      }
+      // GPT5-REASONING-STARVE-001 (2026-07-11): gpt-5 / gpt-5-mini are reasoning
+      // models that, on a bounded max_completion_tokens (the ~1.1-1.6k a CV
+      // section allots), spend the ENTIRE budget on internal reasoning and
+      // return empty visible content. CV/CL writing is not a reasoning task, so
+      // cap reasoning to 'minimal' (still supported on gpt-5*) unless the caller
+      // set it explicitly — leaves the budget for actual output.
+      if (/^gpt-5/i.test(m) && parsed.reasoning_effort == null) {
+        parsed.reasoning_effort = 'minimal';
       }
       // NON-ANTHROPIC-STREAM-LEAK-001 (2026-07-11): the incoming body carries
       // Anthropic's `stream:true`. This branch always buffers the response via

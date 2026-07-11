@@ -133,3 +133,33 @@ proven), then Fix 1 with live verification. One deployer at a time; full cache-b
   (only replaces collected paths); suspicion moves to the languageCache restore /
   Nr snapshot. Verify after a full translate completes.
 - Salmon "(CONT.)" zh form (dict identity today; owner to confirm 续).
+
+## 2026-07-11 (late) — babel-native pivot SHIPPED 1.51.337/338 (bd1c615, fff6659)
+
+Owner: "build a solution based on the babel fish concept — generation in the
+TARGET language." Native gen was already correct; the destroyers were the
+post-gen ENGLISH re-injectors. Shipped:
+- BABEL-DEDUP-SCRIPT-001 (normalize-415): Unicode title cores (BOTH _titleCore
+  AND dedupeRoles' local norm), 至今/היום/حتى الآن = present, cross-script pairs
+  collapse via company+years with the ribbon-language survivor. Live effect on
+  the damaged doc: 52 → 23 roles, 13 pages → normal.
+- BABEL-PINS-LANG-GATE-001 (docx-client): English _GAB_EXACT pins + kernel-outcome
+  lamination never touch a wide-script role; native role.results wins; empty stays
+  empty. (Kills the CSA-under-学生会代表 leak class.)
+- ANTHROPIC-CONTENT-GUARD-001: w.content.map crash on API error bodies → real
+  provider error (the mid-gen "All 1 LLM provider failed for parse_jd" popup).
+
+### Residue for the NEXT session (before/during the 16-kernel regen)
+1. OWNER ASK: tightening (post-gen compress) must be INSIDE the generation
+   window — the purple bar closes ~2-3 min early; extend kernelShowcaseInProgress
+   / the overlay through the compress pass.
+2. Languages list values ("English: native / fluent") — prompt pin shipped in
+   1.51.336; verify on the next translate/gen; if the LLM still holds them,
+   consider a furniture dict for language names.
+3. Preview labeled_list does not linkify [text](url) (export DOES) — Google
+   Scholar link shows raw markdown in preview; linkify lives inside the
+   contentEditable U component (careful change).
+4. Damaged-doc leftovers (zh-synonym twins 保安/宿舍保安, 学生会代表/学生委员会代表,
+   IDF company variants) — regen replaces the document; no more machinery.
+5. Then: owner regenerates all 16 style×lang kernels on ≥1.51.338 and audits
+   the credential-forward zh one first.

@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.351-gen-budget';
+  const TARGET_VERSION = '1.51.352-adequacy-scope';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.351-gen-budget',
     '1.51.350-ratio-invariant',
     '1.51.349-kernel-table-time',
     '1.51.348-cw-canon-lang',

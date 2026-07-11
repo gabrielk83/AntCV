@@ -2330,7 +2330,10 @@
       // balances braces). The main generation is inadequate unless the CL
       // fields are present, so the cascade retries the next provider instead
       // of silently shipping a CV-only document.
-      if ("parse_jd" === __task && !/"(cl_opening|opening|who_i_am|who|why)[^"]*"\s*:/.test(s)) return true;
+      // Scope: only the BIG full-generation responses (>= 3000 chars) must carry
+      // the CL fields — parse_jd also serves small legitimate payloads (JD
+      // analysis ~400-800 chars) that have no CL by design.
+      if ("parse_jd" === __task && s.length >= 3000 && !/"(cl_opening|opening|who_i_am|who|why)[^"]*"\s*:/.test(s)) return true;
       return false;
     } catch (_) {
       return false;

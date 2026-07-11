@@ -87,6 +87,8 @@ test('restore-side rationale guard present in both bundles', () => {
   const src = readFileSync(new URL('../../app.src.js', import.meta.url), 'utf8');
   const min = readFileSync(new URL('../../app.js', import.meta.url), 'utf8');
   // the contaminated-slot rationale skip
-  assert.ok(src.includes('if (t.rationale && !(t.meta && t.meta.company && "Unsolicited" !== String(t.meta.company).trim()))'), 'src rationale guard');
-  assert.ok(min.includes('if(t.rationale&&!(t.meta&&t.meta.company&&"Unsolicited"!==String(t.meta.company).trim()))'), 'min rationale guard');
+  // UNSOL-PILLAR-LANG-001 (1.51.334): the guard now matches every language
+  // variant of the sentinel via window.__antcvUnsol, not the English literal.
+  assert.ok(src.includes('if (t.rationale && !(t.meta && t.meta.company && !window.__antcvUnsol(t.meta.company)))') || /t\.rationale && !\(t\.meta && t\.meta\.company && !window\.__antcvUnsol\(/.test(src), 'src rationale guard (pillar form)');
+  assert.ok(/t\.rationale&&!\(t\.meta&&t\.meta\.company&&!window\.__antcvUnsol\(/.test(min), 'min rationale guard (pillar form)');
 });

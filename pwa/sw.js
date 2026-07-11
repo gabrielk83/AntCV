@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.351-gen-budget';
+const CACHE = 'antcv-1.51.352-adequacy-scope';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

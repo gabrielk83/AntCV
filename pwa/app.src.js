@@ -14872,9 +14872,12 @@
       const [Y, J] = e(() => {
           try {
             const e = new URLSearchParams(window.location.search || "");
+            // HARDRESET-LOCAL-ONLY-001: bare ?hardReset=1 is a gentle code refresh and must
+            // NOT clear the session here — only an explicit logout / resetDone does. (The
+            // early index.html handler already reloads to a clean URL for a gentle reset,
+            // so in practice this only fires for logout/resetDone; kept defensive.)
             if (
               "1" === e.get("resetDone") ||
-              "1" === e.get("hardReset") ||
               "1" === e.get("logout")
             )
               return (

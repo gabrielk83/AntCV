@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.326-babel-view-gate';
+const CACHE = 'antcv-1.51.327-hardreset-local';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

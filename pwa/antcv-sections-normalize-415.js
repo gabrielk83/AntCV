@@ -187,7 +187,14 @@
   function dedupeRoles(cv) {
     var xi = cv.findIndex(function (e) { return e && e.type === 'experience' && Array.isArray(e.roles); });
     if (xi < 0) return null;
-    var norm = function (s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); };
+    // BABEL-DEDUP-SCRIPT-001: Unicode-aware like _titleCore — a zh/he/ar title used
+    // to norm to EMPTY here, so same-script exact duplicates (产品 / 项目专家 ×3)
+    // never collapsed.
+    var norm = function (s) {
+      s = String(s || '').toLowerCase();
+      try { return s.replace(/[^\p{L}\p{N}]+/gu, ' ').trim(); }
+      catch (_) { return s.replace(/[^a-z0-9]+/g, ' ').trim(); }
+    };
     var yearsOf = function (s) { return (String(s || '').match(/\d{4}/g) || []).map(Number); };
     var overlap = function (a, b) {
       var ya = yearsOf(a), yb = yearsOf(b);

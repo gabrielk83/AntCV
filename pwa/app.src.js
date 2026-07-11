@@ -2181,6 +2181,29 @@
       if (pi && "object" == typeof pi) { pi[field] = v; localStorage.setItem("personalInfo", JSON.stringify(pi)); }
     } catch (_) {}
   }
+  // PREVIEW-MD-LINK-001 (owner 2026-07-11): the preview labeled_list showed markdown
+  // links as raw text ("[Google Scholar](https://…)") while the EXPORT renders real
+  // hyperlinks (RICH-BLOCK-HYPERLINK-001). Same http(s)/mailto restriction so
+  // bracketed placeholders are never mistaken for links. Returns an array of React
+  // nodes when the string carries at least one link, else null (caller keeps the
+  // editable component).
+  function __antcvMdLinkNodes(s) {
+    try {
+      s = String(s == null ? "" : s);
+      if (s.indexOf("](") < 0) return null;
+      var re = /\[([^\]]+)\]\(\s*((?:https?:\/\/|mailto:)[^)\s]+)\s*\)/g;
+      var out = [], cursor = 0, m, found = false, k = 0;
+      while ((m = re.exec(s)) !== null) {
+        found = true;
+        if (m.index > cursor) out.push(s.slice(cursor, m.index));
+        out.push(React.createElement("a", { key: "mdl" + k++, href: m[2], target: "_blank", rel: "noopener noreferrer", style: { color: "#0563C1", textDecoration: "underline" } }, m[1]));
+        cursor = m.index + m[0].length;
+      }
+      if (!found) return null;
+      if (cursor < s.length) out.push(s.slice(cursor));
+      return out;
+    } catch (_) { return null; }
+  }
   function __antcvWriteContactItem(idx, v) {
     try {
       if ("string" != typeof v || !v.trim()) return;
@@ -5669,11 +5692,11 @@
                   ":",
                 ),
                 " ",
-                React.createElement(B, {
+                (() => { /* PREVIEW-MD-LINK-001 */ const __md = __antcvMdLinkNodes(P(t.v || "")); return __md ? React.createElement("span", null, __md) : React.createElement(B, {
                   path: ["items", n, "v"],
                   value: P(t.v || ""),
                   placeholder: "[Value]",
-                }),
+                }); })(),
               ),
             ),
           ),
@@ -7180,11 +7203,11 @@
                 React.createElement(
                   "span",
                   { style: { fontWeight: 400, color: S ? __sbInk : "#333" } },
-                  React.createElement(B, {
+                  (() => { /* PREVIEW-MD-LINK-001 */ const __md = __antcvMdLinkNodes(P(i)); return __md ? React.createElement("span", null, __md) : React.createElement(B, {
                     path: ["items", t, "v"],
                     value: P(i),
                     placeholder: "[Value]",
-                  }),
+                  }); })(),
                 ),
               );
             }
@@ -25036,7 +25059,7 @@
             // bo(null) → yo is falsy → the panel falls to its empty state
             // until the new generation lands a fresh rationale.
             (() => { try { bo(null); } catch (e) {} })(),
-            u.get("kernelShowcaseInProgress", !1) || ($t("generating"), (window.__antcvGenRunning = !0)), // GEN-STATUS-ENDS-EARLY-001: mark in-flight so a re-mount keeps the overlay through tightening
+            (window.__antcvShowcaseRun = u.get("kernelShowcaseInProgress", !1)) || ($t("generating"), (window.__antcvGenRunning = !0)), // GEN-STATUS-ENDS-EARLY-001 + TIGHTEN-IN-GEN-WINDOW-001: stash the showcase-run marker so the tightening tail can keep the overlay up
             (() => {
               try {
                 const e =
@@ -27739,6 +27762,19 @@
                 );
             }
             (ho("done"), uo("🔎 Tightening to length targets…"));
+            // TIGHTEN-IN-GEN-WINDOW-001 (owner 2026-07-11 "tightening needs to be
+            // included in the generation time"): on a showcase run vl()'s promise can
+            // settle BEFORE this tail, so Cs's finally clears kernelShowcaseInProgress
+            // and the purple overlay closes ~2-3 min early while compress still runs.
+            // Keep-alive: re-assert the flag + overlay every 5s for the duration of
+            // this block; the completion path below stays the real closer.
+            let __tightKeep = null;
+            try {
+              if (u.get("kernelShowcaseInProgress", !1) || window.__antcvShowcaseRun) {
+                const __ka = () => { try { (u.set("kernelShowcaseInProgress", !0), Bl(!0)); } catch (_) {} };
+                (__ka(), (__tightKeep = setInterval(__ka, 5e3)));
+              }
+            } catch (_) {}
             try {
               fo({
                 profile: "working",
@@ -27838,6 +27874,11 @@
                   experience: "done",
                 }));
             }
+            // TIGHTEN-IN-GEN-WINDOW-001: stop the keep-alive; the completion block
+            // below (or Cs's finally) now closes the overlay for real. The keep-alive
+            // re-asserted the flag ≤5s ago, so a showcase run always enters the block.
+            try { if (__tightKeep) clearInterval(__tightKeep); } catch (_) {}
+            try { window.__antcvShowcaseRun = !1; } catch (_) {}
             if (u.get("kernelShowcaseInProgress", !1)) {
               try {
                 u.set("kernelShowcaseInProgress", !1);

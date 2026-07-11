@@ -27,7 +27,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.325-babel-headless';
+  var VERSION = '1.51.326-babel-view-gate';
   if (window.__antcvBabelRelang === VERSION) return;
   window.__antcvBabelRelang = VERSION;
   try { if (localStorage.getItem('antcv:disable-babel-relang') === '1') return; } catch (_) {}
@@ -221,10 +221,25 @@
     try { if (localStorage.getItem('kernelShowcaseInProgress') === 'true') return true; } catch (_) {}
     return false;
   }
+  // BABEL-FISH-VIEW-GATE-001 (owner 2026-07-11): only auto-translate in the EDITOR.
+  // Switching language / writing style while still in the upload / input menu must NOT
+  // kick off a translate+adapt cycle — that produced a translate popup every few seconds
+  // and partial gen/translation mixes. The app exposes window.__antcvView; we run only
+  // when it is 'editor' (post-generate the app switches to 'editor', so a fresh
+  // generation still gets healed into its target language). Unknown view (old bundle) ->
+  // fall through, so behaviour degrades safely rather than freezing.
+  function inEditor() {
+    try {
+      var v = window.__antcvView;
+      if (v === 'upload' || v === 'input' || v === 'generating') return false;
+    } catch (_) {}
+    return true;
+  }
   function check() {
     var L = lang();
     if (typeof window.__antcvRelang !== 'function') return;   // app not ready yet
     if (genInProgress()) return;                              // wait until generation settles
+    if (!inEditor()) return;                                  // never translate in the upload/input menu
     var sObj = parse('sections'); if (!sObj) return;
     var txt = textOf(sObj);
     var inL = isInLanguage(txt, L);

@@ -15189,6 +15189,12 @@
         try {
           "generating" !== Nt && u.set("step", Nt);
         } catch (e) {}
+        // BABEL-FISH-VIEW-GATE-001 (owner 2026-07-11): expose the current view so the
+        // relang sidecar only auto-translates in the EDITOR (or right after a generate),
+        // never while the user is in the upload / input menu switching language or
+        // writing style. Passive translation in upload caused the "translate popup every
+        // few seconds" churn and partial gen/translation mixes.
+        try { window.__antcvView = Nt; } catch (e) {}
       }, [Nt]);
       const [Lt, Pt] = e(() => u.get("doc", "cv"));
       React.useEffect(() => {

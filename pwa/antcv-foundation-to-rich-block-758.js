@@ -78,16 +78,34 @@
         }
         return r;
       });
-      // Restore Gabriel's "Foundation" opening sentence as the first (paragraph) row when missing.
-      var hasOpening = c.items[0] && typeof c.items[0] === 'object' && c.items[0].b === 'Foundation';
+      // Restore the "Foundation" opening sentence as the first (paragraph) row when missing.
+      // FOUNDATION-OPENING-LANG-001 (owner 2026-07-11, THE JUMPY-PREVIEW LOOP): the old check
+      // was `b === 'Foundation'` (English literal) — after a translate the first row is 基础,
+      // the check failed, and this sidecar re-prepended the ENGLISH opening every pass while
+      // the normalize residue-drop removed it: an infinite write loop (~1 cycle / 5s) that
+      // made the preview jump and closed edits. An opening row is now ANY first row whose
+      // lead label is NOT a hands-on/professionally variant (any language); on a zh ribbon a
+      // genuinely missing opening is injected in CHINESE (owner-pinned wording), other
+      // wide-script ribbons skip injection rather than inject English.
+      var __hpRe = /^(hands-?on|professionally|praktisk|professionelt|实践经验|专业上|职业方面)\s*:?\s*$/i;
+      var hasOpening = c.items[0] && typeof c.items[0] === 'object' && c.items[0].b != null && !__hpRe.test(String(c.items[0].b).trim());
       // FOUNDATION-OPENING-NEUTRAL-001 (owner 2026-07-03): every candidate gets an
       // opening lead row — Gabriel keeps his exact sentence (name-guarded), everyone
       // else gets the neutral connector (same one antcv-cl-prose-richblock-fill-987
       // uses) so the letter never opens the block with a bare "Hands-on" bullet.
       if (!hasOpening) {
-        var __opening = isGabriel() ? GABRIEL_FOUNDATION_OPENING : 'I connect what I do best with the outcomes this employer is after.';
-        c.items = [{ b: 'Foundation', t: __opening }].concat(c.items);
-        touched = true;
+        var __L = '';
+        try { __L = String(localStorage.getItem('language') || 'en').replace(/"/g, '').slice(0, 2); } catch (_) {}
+        if ('zh' === __L) {
+          c.items = [{ b: '基础', t: '我将自己最擅长的能力与这家雇主希望实现的成果相结合。' }].concat(c.items);
+          touched = true;
+        } else if ('he' === __L || 'am' === __L || 'ar' === __L) {
+          // no English injection into a wide-script rendering; the translate pass owns it
+        } else {
+          var __opening = isGabriel() ? GABRIEL_FOUNDATION_OPENING : 'I connect what I do best with the outcomes this employer is after.';
+          c.items = [{ b: 'Foundation', t: __opening }].concat(c.items);
+          touched = true;
+        }
       }
       if (!touched) return sec;
       changed = true;

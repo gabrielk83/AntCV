@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.344-contact-crash-fix';
+const CACHE = 'antcv-1.51.345-foundation-loop-fix';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

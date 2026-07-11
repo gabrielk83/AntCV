@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.350-ratio-invariant';
+const CACHE = 'antcv-1.51.351-gen-budget';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

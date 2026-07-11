@@ -2174,11 +2174,60 @@
   // NAME, city "Copenhagen", "EU Citizen") render from personalInfo directly and were
   // never collected by the translate pass — they stayed English under every ribbon.
   // Same render-source pattern as specialization: write-back + snapshot + restore.
+  // LANG-IDENTITY-SWITCH-001 (owner 2026-07-11 "my name stayed in Chinese ... make
+  // sure these changes are able to handle language change"): a wide-script identity
+  // rendering (柯葛顺·加百列·亚历山大) written into personalInfo is STICKY on Latin
+  // ribbons — the collector only translates identity INTO wide scripts, never back.
+  // Stash the Latin canonical before a wide overwrite; restore it whenever the user
+  // switches to a Latin language (en/da/es).
+  var __ANTCV_WIDE_ID_RE = /[一-鿿㐀-䶿֐-׿؀-ۿሀ-፿]/;
   function __antcvWritePi(field, v) {
     try {
       if ("string" != typeof v || !v.trim()) return;
       var pi = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {};
-      if (pi && "object" == typeof pi) { pi[field] = v; localStorage.setItem("personalInfo", JSON.stringify(pi)); }
+      if (pi && "object" == typeof pi) {
+        var cur = pi[field];
+        if ("string" == typeof cur && cur.trim() && !__ANTCV_WIDE_ID_RE.test(cur) && __ANTCV_WIDE_ID_RE.test(v)) pi["__latin_" + field] = cur;
+        pi[field] = v;
+        localStorage.setItem("personalInfo", JSON.stringify(pi));
+      }
+    } catch (_) {}
+  }
+  function __antcvRestoreLatinIdentity() {
+    try {
+      var pi = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {};
+      var changed = false;
+      ["name", "city", "citizenship", "specialization"].forEach(function (f) {
+        var cur = pi[f], stash = pi["__latin_" + f];
+        if ("string" == typeof cur && __ANTCV_WIDE_ID_RE.test(cur) && "string" == typeof stash && stash.trim()) { pi["__zh_" + f] = cur; pi[f] = stash; changed = true; }
+      });
+      if (Array.isArray(pi.contactItems)) pi.contactItems.forEach(function (ci) {
+        if (ci && "string" == typeof ci.value && __ANTCV_WIDE_ID_RE.test(ci.value) && "string" == typeof ci.__latin && ci.__latin.trim()) { ci.__zh = ci.value; ci.value = ci.__latin; changed = true; }
+      });
+      if (changed) localStorage.setItem("personalInfo", JSON.stringify(pi));
+      var sn = localStorage.getItem("antcv:clSignName");
+      var snL = localStorage.getItem("antcv:clSignName_latin");
+      if (sn && __ANTCV_WIDE_ID_RE.test(sn) && snL) { localStorage.setItem("antcv:clSignName_zh", sn); localStorage.setItem("antcv:clSignName", snL); }
+    } catch (_) {}
+  }
+  // LANG-IDENTITY-SWITCH-001 reverse leg (owner: "do not forget 哥本哈根"): switching
+  // BACK to a wide-script ribbon restores the stashed wide renderings instantly
+  // (柯葛顺·加百列·亚历山大 / 哥本哈根 / 欧盟公民 / 加百列) — no LLM round trip needed.
+  function __antcvRestoreWideIdentity() {
+    try {
+      var pi = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {};
+      var changed = false;
+      ["name", "city", "citizenship", "specialization"].forEach(function (f) {
+        var cur = pi[f], stash = pi["__zh_" + f];
+        if ("string" == typeof cur && !__ANTCV_WIDE_ID_RE.test(cur) && "string" == typeof stash && __ANTCV_WIDE_ID_RE.test(stash)) { pi["__latin_" + f] = cur; pi[f] = stash; changed = true; }
+      });
+      if (Array.isArray(pi.contactItems)) pi.contactItems.forEach(function (ci) {
+        if (ci && "string" == typeof ci.value && !__ANTCV_WIDE_ID_RE.test(ci.value) && "string" == typeof ci.__zh && __ANTCV_WIDE_ID_RE.test(ci.__zh)) { ci.__latin = ci.value; ci.value = ci.__zh; changed = true; }
+      });
+      if (changed) localStorage.setItem("personalInfo", JSON.stringify(pi));
+      var sn = localStorage.getItem("antcv:clSignName");
+      var snZ = localStorage.getItem("antcv:clSignName_zh");
+      if (sn && !__ANTCV_WIDE_ID_RE.test(sn) && snZ && __ANTCV_WIDE_ID_RE.test(snZ)) { localStorage.setItem("antcv:clSignName_latin", sn); localStorage.setItem("antcv:clSignName", snZ); }
     } catch (_) {}
   }
   // PREVIEW-MD-LINK-001 (owner 2026-07-11): the preview labeled_list showed markdown
@@ -2275,6 +2324,13 @@
       }
       if (open === 0) return true;      // no JSON object at all
       if (open > close) return true;    // truncated mid-object
+      // PARSE-JD-CL-ADEQUACY-001 (owner 2026-07-11, D1-confirmed): a clipped
+      // response loses its TRAILING fields — the whole cover letter — while
+      // passing the floor + brace checks (a truncated-then-model-closed JSON
+      // balances braces). The main generation is inadequate unless the CL
+      // fields are present, so the cascade retries the next provider instead
+      // of silently shipping a CV-only document.
+      if ("parse_jd" === __task && !/"(cl_opening|opening|who_i_am|who|why)[^"]*"\s*:/.test(s)) return true;
       return false;
     } catch (_) {
       return false;
@@ -18110,6 +18166,12 @@
               ),
                 Nr(r),
                 It(e),
+                // LANG-IDENTITY-SWITCH-001: flip the identity render sources with
+                // the ribbon — Latin targets restore the stashed Latin canonical,
+                // wide targets restore the stashed wide renderings (哥本哈根 …).
+                ("zh" === e || "he" === e || "am" === e || "ar" === e
+                  ? __antcvRestoreWideIdentity()
+                  : __antcvRestoreLatinIdentity()),
                 (async (e) => {
                   if (!Rr) {
                     Sr(!0);

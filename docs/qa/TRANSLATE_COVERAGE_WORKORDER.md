@@ -206,3 +206,31 @@ one gen on a >=354 client, read the truth. If fields present → find the apply
 path that drops them; if absent → strengthen the prompt's CL requirement or
 split generate_cl into its own call.
 ### Batch runbook remains as written; resume after the CL fix on a >=354 client.
+
+## 2026-07-12 — 1.51.354 SHIPPED (f28d221): the capture + twins bundle
+- GEN-KEYS-CAPTURE-001: after the accepted parse_jd destructure, the response
+  shape is logged to localStorage `antcv:last-gen-keys` — {ts, attempts,
+  provider, top-level keys, per-CL-field verdict "real:<len>"/"placeholder"/
+  "empty"/"array:<n>", cvProfile, roles}. The CL apply's WHO branch logs which
+  source won to `antcv:last-gen-who-src` ("gen" = LLM field applied, "section",
+  "neutral", "default"). Read both after any templated gen — they decide
+  model-side vs apply-side in one look. NOTE: the parse-site gate
+  CL-EMPTY-BODY-FIELDS-001 already retries when <4/6 CL fields are real, and
+  D1 showed ONE parse_jd per failed run → prediction: fields arrive "real" and
+  who-src says "gen", meaning the templated result is a LATER clobber
+  (kernel re-apply / cloud echo), not a generation failure.
+- UNSOL-PILLAR-GEN-META-001: the last 3 literal `/^(unsolicited|open
+  application|n\/a)$/i` regexes (GEN-UNSOL-003 scrub, __jdNamedCompany, the
+  ghost-company neutralizer) now use window.__antcvUnsol — a zh model echoing
+  主动申请 as meta.company is scrubbed as the sentinel, not treated as a real
+  employer (previously it would survive AND get "your organisation"-neutralized
+  in body prose).
+- LANG-IDENTITY-SWITCH-001 completed: app.js twins of __ANTCV_WIDE_ID_RE +
+  __antcvRestoreLatinIdentity/__antcvRestoreWideIdentity + the ribbon call site
+  (wide→restore wide set, latin→restore Latin canonical). PLUS the missing
+  FIRST-overwrite stashes found during mirroring: __antcvWriteContactItem and
+  the signname __std writer never stashed the Latin original before a wide
+  overwrite (only __antcvWritePi did) — so the first switch back to a Latin
+  ribbon had nothing to restore for contact lines + the CL signature. Both
+  files now stash `__latin`/`antcv:clSignName_latin` on Latin→wide overwrite.
+- Suite 1222/1222.

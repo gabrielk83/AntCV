@@ -86,11 +86,35 @@ test('non-gated tasks are never flagged (unchanged)', () => {
 test('the minified app.js twin carries the same per-task floor', () => {
   const min = readFileSync(new URL('../../app.js', import.meta.url), 'utf8');
   assert.ok(
-    min.includes('"parse_jd"===String(e||"")?80:800'),
+    min.includes('"parse_jd"===__tk?80:800'),
     'minified app.js must contain the per-task floor',
   );
   assert.ok(
     !min.includes('.trim();if(n.length<800)return!0;let o=0,r=0'),
     'old single-floor form must be gone from app.js',
   );
+});
+
+// MALFORMED-OUTPUT-DETECT-001 (owner 2026-07-11): a provider that leaks its own
+// raw SSE (the 3.8.0 stream-leak class) or a stream envelope is malformed for
+// EVERY task — the health signals never caught this, so the client adequacy gate
+// must. SSE-leak output HAS braces + length, so the old checks passed it.
+test('raw SSE / stream-envelope output is inadequate for every task', () => {
+  const sse = 'data: {"id":"chatcmpl-E0Oz","object":"chat.completion.chunk","choices":[{"delta":{"content":"Hi"}}]}\ndata: [DONE]';
+  assert.equal(inadequate('generate_cv', sse), true);
+  assert.equal(inadequate('generate_cl', sse), true);
+  assert.equal(inadequate('translate', sse), true);   // caught even on a non-JSON task
+  assert.equal(inadequate('parse_jd', sse), true);
+  assert.equal(inadequate('translate', 'event: message\ndata: {}'), true);
+});
+
+test('a legitimate prose translation (no braces) is NOT flagged', () => {
+  // translate is NOT in the JSON floor/brace scope, and prose has no `data:` prefix
+  assert.equal(inadequate('translate', 'Erhvervserfaren projektleder med 15 års erfaring inden for hardware.'), false);
+});
+
+test('the minified twin carries the SSE-leak guard + widened JSON scope', () => {
+  const min = readFileSync(new URL('../../app.js', import.meta.url), 'utf8');
+  assert.ok(min.includes('(id|choices|object)'), 'minified must carry the SSE-leak check');
+  assert.ok(min.includes('parse_jd|generate_cv|generate_cl'), 'minified JSON scope must include generate_cl');
 });

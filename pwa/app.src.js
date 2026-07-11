@@ -1071,14 +1071,19 @@
         // COST-QUALITY-SONNET-001 (owner 2026-07): Claude Sonnet 4.6 ($3/$15 per 1M) is the
         // cost-quality optimum for structured CV/CL generation — near-Opus quality + strong
         // Danish at ~1/5 the cost and lower latency than Opus 4.x. (There is no "Sonnet 5";
-        // 4.6 is the latest Sonnet.) Was claude-opus-4-7 priced (wrongly) at $15/$75.
-        model: "claude-sonnet-4-6",
+        // COST-QUALITY-BENCH-002 (owner 2026-07-11): upgraded sonnet-4-6 -> sonnet-5
+        // (current Sonnet; drop-in, same $3/$15 tier — the old "no Sonnet 5" note
+        // was stale). openai model gpt-5.5 -> gpt-5.4-mini: the 46-run benchmark
+        // (docs/qa/LLM_ROUTER_PROPOSAL_2026-07-11.md) scored gpt-5.4-mini 7.67 ~
+        // opus-4-8's 7.83 at ~1/13 the cost ($0.75/$4.5 vs $30/$60). Thorough gen
+        // stays on opus-4-8 (the max_tokens:32768 flagship path below).
+        model: "claude-sonnet-5",
         quality: 9,
         danish: 8,
         cost: 2,
         latency: 3,
       },
-      openai: { model: "gpt-5.5", quality: 10, danish: 9, cost: 4, latency: 3 },
+      openai: { model: "gpt-5.4-mini", quality: 8, danish: 9, cost: 2, latency: 3 },
       mistral: {
         model: "mistral-large-latest",
         quality: 7,
@@ -1096,7 +1101,7 @@
     },
     C = {
       anthropic: { inputPer1M: 3, outputPer1M: 15 },
-      openai: { inputPer1M: 30, outputPer1M: 60 },
+      openai: { inputPer1M: 0.75, outputPer1M: 4.5 }, // gpt-5.4-mini (was gpt-5.5 30/60)
       mistral: { inputPer1M: 3, outputPer1M: 9 },
       gemini: { inputPer1M: 0.15, outputPer1M: 0.6 },
     };
@@ -1605,7 +1610,7 @@
         u = setTimeout(() => p.abort(), 6e5);
       let m;
       const f = JSON.stringify({
-          model: "claude-opus-4-7",
+          model: "claude-opus-4-8",
           max_tokens: 32768,
           system: t,
           messages: e,
@@ -1917,7 +1922,7 @@
     // anthropic<->openai quality gap so the quality-dominant tasks below can
     // actually lead with Claude (the .05 gap was too small to overcome cost).
     anthropic: { q: 1.0, c: 0.9, lat: 0.6 },
-    openai: { q: 0.92, c: 0.6, lat: 0.5 },
+    openai: { q: 0.92, c: 0.45, lat: 0.5 }, // c 0.6->0.45: gpt-5.4-mini is genuinely cheap (benchmark 2026-07-11)
     gemini: { q: 0.65, c: 0.3, lat: 0.3 },
     mistral: { q: 0.5, c: 0.2, lat: 0.3 },
   };
@@ -2160,16 +2165,22 @@
   //   (b) truncated  — unbalanced braces (more "{" than "}") ⇒ cut mid-object.
   function __antcvOutputInadequate(task, text) {
     try {
-      if (!/^(parse_jd|generate_cv)$/.test(String(task || ""))) return false;
       const s = String(text || "").trim();
-      // PARSE-JD-ADEQUACY-FLOOR-001 (owner 2026-07-06): the 800-char floor was
-      // sized for a CV+CL JSON (multiple KB); parse_jd's valid output (company,
-      // role, a few requirements) is legitimately much smaller. Applying 800 to
-      // parse_jd wrongly rejected a complete ~464-char parse as "truncated" and,
-      // with a single available provider, hard-failed the whole task. Use a
-      // task-specific floor; the unbalanced-brace check below still guards true
-      // mid-object truncation for BOTH tasks.
-      const __floor = "parse_jd" === String(task || "") ? 80 : 800;
+      const __task = String(task || "");
+      // MALFORMED-OUTPUT-DETECT-001 (owner 2026-07-11, docs/qa/LLM_ROUTER_PROPOSAL_
+      // 2026-07-11.md): a provider returning its OWN raw SSE (the 3.8.0 stream-leak
+      // class) or a stream envelope is malformed for EVERY task — no valid CV/CL/
+      // translation/JSON output starts with `data: {`/`event:` or carries a bare
+      // chat-completion chunk. This is exactly the failure the health signals never
+      // caught (openai held health 1.0 while emitting `data:{chatcmpl…}`). Universal,
+      // cheap, ~zero false-positive; makes ee() reject + fall through + demote.
+      if (/^\s*(data:\s*[{[]|event:\s)/.test(s) ||
+          /data:\s*\{"(id|choices|object)"/.test(s.slice(0, 400))) return true;
+      // PARSE-JD-ADEQUACY-FLOOR-001 (owner 2026-07-06): task-specific floor +
+      // brace-balance guard, ONLY for the JSON-shaped tasks (a prose translation
+      // legitimately has no braces, so these checks must not run on it).
+      if (!/^(parse_jd|generate_cv|generate_cl)$/.test(__task)) return false;
+      const __floor = "parse_jd" === __task ? 80 : 800;
       if (s.length < __floor) return true;
       let open = 0, close = 0;
       for (let i = 0; i < s.length; i++) {
@@ -31810,14 +31821,14 @@
                               (S && S[t] && S[t].model) ||
                               null ||
                               ("anthropic" === t
-                                ? "claude-opus-4-7"
+                                ? "claude-opus-4-8"
                                 : "openai" === t
                                   ? "gpt-5.5"
                                   : "mistral" === t
                                     ? "mistral-large-latest"
                                     : "gemini" === t
                                       ? "gemini-2.5-flash"
-                                      : "claude-opus-4-7"),
+                                      : "claude-opus-4-8"),
                             max_tokens: 20,
                             messages: [
                               {
@@ -34606,7 +34617,7 @@
                                         "x-api-key": t || "sk-ant-test",
                                       },
                                       body: JSON.stringify({
-                                        model: "claude-opus-4-7",
+                                        model: "claude-opus-4-8",
                                         max_tokens: 10,
                                         messages: [
                                           { role: "user", content: "Say hi" },
@@ -34776,7 +34787,7 @@
                           React.createElement(
                             "option",
                             { value: "" },
-                            "Auto (use current default — gpt-5.5)",
+                            "Auto (use current default — gpt-5.4-mini)",
                           ),
                           React.createElement(
                             "option",

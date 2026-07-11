@@ -182,3 +182,27 @@ owner's flow). (3) placeholder detector is English-only ([A-Z start + em-dash]) 
 zh-translated placeholders like [行动与…] escape hiding. (4) preview Results
 fallback __lamOfL lacks the wide-title gate (export has it). (5) kernel-overwrite
 window.confirm still wedges automated tabs — replace with the app modal.
+
+## 2026-07-12 (early) — batch blocked on ONE mystery; everything else fixed
+Shipped tonight: 1.51.351 (client caps 16384 + parse_jd CL adequacy), proxy
+GEN-OUTPUT-BUDGET-PROXY-001 (server-side cap raise — DEPLOYED, fixes stale
+clients), 1.51.352 (adequacy scoped >=3000 chars; suite 1222/1222), 1.51.353
+(SAME-ID-SAME-POSITION — stable role ids are the language-agnostic identity;
+kills da/en twin re-adds from repairExperienceCompleteness).
+ZF application: safe in kernel slot `backup-zf-zh` (load from Settings table).
+
+### THE remaining blocker (kernel batch paused)
+The unsolicited kernel gen's CL sections don't apply. Evidence trail:
+- D1: each showcase run = ONE parse_jd (4.5-4.8k completion) + consensus +
+  compress. No CL-specific task.
+- Gemini runs: thinking shares the 8192 budget → truncation (FIXED via caps).
+- Mistral run (00:11, post-cap): stopped NATURALLY at 4,736 tokens — so the
+  model either OMITS the CL fields or the client apply drops them.
+- The 22:00 credential-forward|zh run DID produce a full zh CL → intermittent,
+  likely provider/model-dependent.
+NEXT: ship a client-side capture (log the parse_jd raw JSON's key list +
+whether cl fields present, into localStorage antcv:last-gen-keys) in 354, run
+one gen on a >=354 client, read the truth. If fields present → find the apply
+path that drops them; if absent → strengthen the prompt's CL requirement or
+split generate_cl into its own call.
+### Batch runbook remains as written; resume after the CL fix on a >=354 client.

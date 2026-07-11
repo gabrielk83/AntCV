@@ -105,7 +105,25 @@
   // step. TUNABLE: raise toward 1.15 if breaks still land one unit too LATE in the
   // PDF; lower toward 1.05 if page 1 ends up too empty (breaks too EARLY).
   var WORD_INFLATE = 1.14;
-  var USABLE_PDF = USABLE / WORD_INFLATE;   // ~949px — the Word-equivalent A4 fill
+  // BABEL-SIDEBAR-CUT-001 (owner 2026-07-11, zh CV PDF: page-1 sidebar overflows,
+  // bottom row cut mid-line — "the salmon needs to cut the sidebar a bit before in
+  // chinese"): WORD_INFLATE was tuned on LATIN content; CJK/Hebrew/Arabic/Ethiopic
+  // render taller still in the exported Word/PDF (YaHei line boxes + wider glyphs
+  // change the wrap), so 1.14 under-deflates and the export break lands ~2-3 rows
+  // too LOW. Wide-script ribbons use this factor instead (~75px earlier break).
+  // Live-tune without a deploy: localStorage['antcv:wide-word-inflate']='1.28'.
+  var WORD_INFLATE_WIDE = 1.24;
+  function __wordInflate() {
+    try {
+      var L = String(localStorage.getItem('language') || 'en').replace(/"/g, '').slice(0, 2);
+      if (L === 'zh' || L === 'he' || L === 'am' || L === 'ar') {
+        var ov = parseFloat(localStorage.getItem('antcv:wide-word-inflate') || '');
+        return ov > 1 && ov < 2 ? ov : WORD_INFLATE_WIDE;
+      }
+    } catch (_) {}
+    return WORD_INFLATE;
+  }
+  var USABLE_PDF = USABLE / WORD_INFLATE;   // ~949px — the Word-equivalent A4 fill (Latin; wide ribbons recompute via __wordInflate)
   // SIDEBAR-PREVIEW-BREAK-EARLY-001 (owner 2026-06-21): the PREVIEW sidebar salmon sat
   // too LOW — it broke at the full A4 line (USABLE ~1053px) while the DOCX/worker breaks
   // the sidebar higher (~924px), so the preview showed 2-3 subsubsections MORE on page 1
@@ -984,7 +1002,7 @@
         // The preview previously paginated at the taller A4 line, so it kept one more row on
         // page 1 than the export (System Architect stayed page 1 in preview, page 2 in export).
         // Same budget for both => the preview's page assignments match the PDF exactly.
-        var __uniLimit = USABLE_PDF;
+        var __uniLimit = USABLE / __wordInflate(); // BABEL-SIDEBAR-CUT-001: wide ribbons deflate more
         function __secOrder(sid) {
           for (var i = 0; i < list.length; i++) { if (list[i] && list[i].id === sid) return i; }
           return 9999;
@@ -1577,7 +1595,7 @@
       // SIDEBAR-SHRINK-RECLAIM-001: `tight` is set only on the delayed routine
       // recheck (40px band) — the reactive pass uses the stable 120px band.
       var tight = !!run.__tight;
-      var mapExport = compute(USABLE_PDF, AUTO_KEY, tight);
+      var mapExport = compute(USABLE / __wordInflate(), AUTO_KEY, tight); // BABEL-SIDEBAR-CUT-001
       var mapPreview = compute(USABLE, PREVIEW_KEY, tight);
       // Mark this source as processed BEFORE any write/fire, so the
       // re-render our own write triggers (same source) early-returns.

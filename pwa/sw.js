@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.342-pi-echo-guard';
+const CACHE = 'antcv-1.51.343-owner-pins';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

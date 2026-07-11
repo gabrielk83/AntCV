@@ -369,7 +369,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.337-babel-native';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.342-pi-echo-guard';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.343-owner-pins';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -408,10 +408,10 @@
         auth.src = 'antcv-auth.js?v=1.51.92-analytics-401-scope';
         auth.onload = function(){
           var app = document.createElement('script');
-          app.src = 'app.js?v=1.51.340-langs-dict';
+          app.src = 'app.js?v=1.51.343-owner-pins';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.342-pi-echo-guard';
+            vo.src = 'antcv-version-override.js?v=1.51.343-owner-pins';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -754,7 +754,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-cluster-demand-live.js?v=1.51.167" defer></script>
 <!-- SETTINGS-PERSONAL-FREEZE-001: memoize the preview-paper querySelector shared by ~40 sidecar guards (60% of CPU in the settings freeze profile). Loads FIRST among sidecars. Kill antcv:disable-pp-memo. -->
 <script src="antcv-preview-paper-memo.js?v=1.51.59" defer></script>
-<script src="antcv-sections-normalize-415.js?v=1.51.342-pi-echo-guard" defer></script>
+<script src="antcv-sections-normalize-415.js?v=1.51.343-owner-pins" defer></script>
 <script src="antcv-demo-watermark.js?v=1.50.340-live-keystate" defer></script>
 <script src="antcv-bullet-targets.js?v=1.40.136" defer></script>
 <!-- SIDECAR-CONSOLIDATE G10 (1.50.427): photo-position + photo-pentagon-shape +
@@ -870,7 +870,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-section-panel-tweaks.js?v=1.51.128" defer></script>
 <script src="antcv-item-align.js?v=1.50.690-edit-guard" defer></script>
 <script src="antcv-page-fit.js?v=1.51.168" defer></script>
-<script src="antcv-auto-pagebreak-block-001.js?v=1.51.191" defer></script>
+<script src="antcv-auto-pagebreak-block-001.js?v=1.51.343-owner-pins" defer></script>
 <script src="antcv-table-fast-drag.js?v=1.50.490" defer></script>
 <script src="antcv-pdf-error-toast.js?v=1.40.194" defer></script>
 <script src="antcv-item-pages-render.js?v=1.50.202-native-render-retired" defer></script>

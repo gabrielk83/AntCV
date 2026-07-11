@@ -1023,6 +1023,51 @@
   // Forces, Communication Corps" beside the visible "IDF, Communication Corps". A genuinely-missing
   // role restored HIDDEN by repairExperienceCompleteness has NO visible counterpart, so it is kept.
   // Idempotent: returns null once no hidden role duplicates a visible one.
+  // UNSOL-FULL-BREADTH-001 (owner 2026-07-11 "some roles are still hidden for
+  // unsolicited — should not happen"): the owner rule is "Unsolicited keeps the
+  // full breadth". On an unsolicited doc (pillar match): (a) DROP hidden merge
+  // artifacts — 3+ "&"-joined title segments are targeted-mode merge products
+  // (a legit dual title like "Team Operations Manager & Assistant Coach" has 2
+  // segments and is kept); (b) UN-HIDE a hidden role that is NOT a duplicate of
+  // a visible one (dropCanonHiddenDups owns the duplicate case).
+  function unsolFullBreadth(cv) {
+    var unsol = false;
+    try {
+      var m = JSON.parse(localStorage.getItem('meta') || '{}') || {};
+      var co = String(m.company || '').trim();
+      unsol = !!(co && window.__antcvUnsol && window.__antcvUnsol(co));
+      if (!unsol && !co) {
+        var ac = String(localStorage.getItem('antcv:activeAppCompany') || '').replace(/"/g, '').trim();
+        unsol = !!(ac && window.__antcvUnsol && window.__antcvUnsol(ac));
+      }
+    } catch (_) {}
+    if (!unsol) return null;
+    var xi = cv.findIndex(function (e) { return e && e.type === 'experience' && Array.isArray(e.roles); });
+    if (xi < 0) return null;
+    var roles = cv[xi].roles;
+    var changed = false;
+    var out = [];
+    for (var i = 0; i < roles.length; i++) {
+      var r = roles[i];
+      if (!r) continue;
+      if (r.on === false) {
+        var t = String(r.title || '');
+        if (t.split(/\s&\s/).length >= 3) { changed = true; continue; } // merge artifact — drop
+        var dup = false;
+        for (var j = 0; j < roles.length; j++) {
+          var v = roles[j];
+          if (v && v !== r && v.on !== false && _samePosition(r, v)) { dup = true; break; }
+        }
+        if (!dup) { r = Object.assign({}, r, { on: true }); changed = true; } // full breadth — un-hide
+      }
+      out.push(r);
+    }
+    if (!changed) return null;
+    var copy = cv.slice();
+    copy[xi] = Object.assign({}, copy[xi], { roles: out });
+    return copy;
+  }
+
   function dropCanonHiddenDups(cv) {
     var idx = -1;
     for (var i = 0; i < cv.length; i++) { if (cv[i] && cv[i].id === 'experience') { idx = i; break; } }
@@ -1607,6 +1652,7 @@
       var rec = repairExperienceCompleteness(cv); if (rec) { cv = rec; changed = true; }
       var hes = hideEmptyRoleSlots(cv); if (hes) { cv = hes; changed = true; }
       var dch = dropCanonHiddenDups(cv); if (dch) { cv = dch; changed = true; }
+      var ufb = unsolFullBreadth(cv); if (ufb) { cv = ufb; changed = true; }
       var ex = explodeAdditionalToSections(cv); if (ex) { cv = ex; changed = true; }
       var pa = partitionAdditional(cv); if (pa) { cv = pa; changed = true; }
       var jr = scrubJuniorRugby(cv); if (jr) { cv = jr; changed = true; }

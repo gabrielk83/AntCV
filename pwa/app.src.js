@@ -3109,13 +3109,27 @@
       if (m) return `${m[1]}, ${m[2]}`;
       return s;
     };
+    // OWNER-PINNED-ZH-001 / CONTACT-LINE-DICT-ROUTE-001 (owner 2026-07-11: header
+    // showed "Copenhagen" + "EU Citizen" in English on a zh ribbon even though the
+    // zh dict holds 哥本哈根/欧盟公民 — the builder pushed RAW values, never dict-
+    // routed). Route the two text values through ye(); on zh also swap the city
+    // name inside composite location strings ("2300, København S" → "2300, 哥本哈根 S").
+    const __ctL = (() => { try { return String(localStorage.getItem("language") || "en").replace(/"/g, "").slice(0, 2); } catch (_) { return "en"; } })();
+    const __ctF = (v) => {
+      try {
+        if ("string" != typeof v || !v) return v;
+        v = ye(v, __ctL);
+        if ("zh" === __ctL) v = v.replace(/Copenhagen|København/g, "哥本哈根");
+        return v;
+      } catch (_) { return v; }
+    };
     return (
       (a || n) &&
         o.push([
           "⌂",
-          __localForm(t ? a || "København, Danmark" : a || "Copenhagen, Denmark"),
+          __ctF(__localForm(t ? a || "København, Danmark" : a || "Copenhagen, Denmark")),
         ]),
-      e.citizenship && o.push(["★", e.citizenship]),
+      e.citizenship && o.push(["★", __ctF(e.citizenship)]),
       e.email && o.push(["@", e.email]),
       e.phone && o.push(["☎", e.phone]),
       e.linkedin && o.push(["🔗︎", e.linkedin]),
@@ -4861,6 +4875,12 @@
         "(Cont.)": "（续）",
         "Cont.": "续",
         "EU Citizen": "欧盟公民",
+        // OWNER-PINNED-ZH-001 (owner 2026-07-11): exact-match guaranteed renderings.
+        "Copenhagen": "哥本哈根",
+        "København": "哥本哈根",
+        "Foundation": "基础",
+        "I connect what I do best with the outcomes this employer is after.": "我将自己最擅长的能力与这家雇主希望实现的成果相结合。",
+        "Direct the CCB, cut the change cycle from ~250 to ~10 days": "主持变更控制委员会，将变更周期从约250天缩短至约10天。",
         "Copenhagen, Denmark": "丹麦，哥本哈根",
         "Dear Hiring Team,": "尊敬的招聘团队：",
         "References available on request": "推荐人信息可应要求提供",

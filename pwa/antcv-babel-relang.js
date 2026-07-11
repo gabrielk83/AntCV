@@ -27,7 +27,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.326-babel-view-gate';
+  var VERSION = '1.51.330-furniture-lang';
   if (window.__antcvBabelRelang === VERSION) return;
   window.__antcvBabelRelang = VERSION;
   try { if (localStorage.getItem('antcv:disable-babel-relang') === '1') return; } catch (_) {}
@@ -235,11 +235,22 @@
     } catch (_) {}
     return true;
   }
+  // UPLOAD-LANG-DEFER-001 (owner 2026-07-11): when the user changed language in the upload
+  // menu, the app shows an explicit translate MODAL on editor entry and stamps a guard.
+  // Stand down while that guard is fresh so we don't ALSO auto-translate and race the modal
+  // (or translate content the user is about to decline). ~3 min window, then normal healing.
+  function manualXlateFresh() {
+    try {
+      var g = parseInt(localStorage.getItem('antcv:manual-xlate-guard') || sessionStorage.getItem('antcv:manual-xlate-guard') || '0', 10);
+      return g > 0 && (Date.now() - g) < 180000;
+    } catch (_) { return false; }
+  }
   function check() {
     var L = lang();
     if (typeof window.__antcvRelang !== 'function') return;   // app not ready yet
     if (genInProgress()) return;                              // wait until generation settles
     if (!inEditor()) return;                                  // never translate in the upload/input menu
+    if (manualXlateFresh()) return;                           // an explicit translate modal owns it
     var sObj = parse('sections'); if (!sObj) return;
     var txt = textOf(sObj);
     var inL = isInLanguage(txt, L);

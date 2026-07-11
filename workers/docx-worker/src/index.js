@@ -24439,8 +24439,10 @@ async function generateDocx(payload) {
   // FURNITURE-LANG-001 (extends FURNITURE-ZH-001): localize the two worker-injected
   // labels (per-role "Results:" lead + AI-assisted footer) and give the AI notice a
   // script-capable face so its non-Latin text doesn't box out. Falls back to English.
-  const __RESULTS = { zh: "\u6210\u679C\uFF1A", he: "\u05EA\u05D5\u05E6\u05D0\u05D5\u05EA: ", ar: "\u0627\u0644\u0646\u062A\u0627\u0626\u062C: ", am: "\u12CD\u1324\u1276\u127D: " };
+  const __RESULTS = { da: "Resultat: ", es: "Resultado: ", zh: "\u6210\u679C\uFF1A", he: "\u05EA\u05D5\u05E6\u05D0\u05D5\u05EA: ", ar: "\u0627\u0644\u0646\u062A\u0627\u0626\u062C: ", am: "\u12CD\u1324\u1276\u127D: " };
   const __AINOTICE = {
+    da: "AI-assisteret - forfatteren bevarer ansvaret for indholdet.",
+    es: "Asistido por IA - el autor conserva la responsabilidad del contenido.",
     zh: "\u672C\u6587\u6863\u7531 AI \u8F85\u52A9\u751F\u6210\uFF0C\u5185\u5BB9\u7531\u4F5C\u8005\u8D1F\u8D23\u3002",
     he: "\u05DE\u05E1\u05DE\u05DA \u05D6\u05D4 \u05E0\u05D5\u05E6\u05E8 \u05D1\u05E1\u05D9\u05D5\u05E2 \u05D1\u05D9\u05E0\u05D4 \u05DE\u05DC\u05D0\u05DB\u05D5\u05EA\u05D9\u05EA - \u05D4\u05DE\u05D7\u05D1\u05E8 \u05D0\u05D7\u05E8\u05D0\u05D9 \u05DC\u05EA\u05D5\u05DB\u05DF.",
     ar: "\u062A\u0645 \u0625\u0646\u0634\u0627\u0621 \u0647\u0630\u0627 \u0627\u0644\u0645\u0633\u062A\u0646\u062F \u0628\u0645\u0633\u0627\u0639\u062F\u0629 \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A - \u0627\u0644\u0645\u0624\u0644\u0641 \u0645\u0633\u0624\u0648\u0644 \u0639\u0646 \u0627\u0644\u0645\u062D\u062A\u0648\u0649.",
@@ -26814,8 +26816,8 @@ __name(renderTextBullets, "renderTextBullets");
 function renderFoundation(s, ctx, isSidebar) {
   const out = [];
   const { style, fs, lang } = ctx;
-  const handsOnLabel = lang === "da" ? "Praktisk: " : "Hands-on: ";
-  const professionallyLabel = lang === "da" ? "Professionelt: " : "Professionally: ";
+  const handsOnLabel = ({da:"Praktisk: ",es:"En la práctica: ",zh:"实践经验："}[lang] || "Hands-on: ");
+  const professionallyLabel = ({da:"Professionelt: ",es:"Profesionalmente: ",zh:"专业层面："}[lang] || "Professionally: ");
   const make = /* @__PURE__ */ __name((label, body, align) => new Paragraph({
     spacing: { before: 60, after: 60, line: 276, lineRule: "auto" },
     alignment: align,
@@ -27507,7 +27509,7 @@ function renderSimpleList(s, ctx, isSidebar, italic) {
       alignment: a,
       shading: isSidebar ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" } : void 0,
       children: [
-        new TextRun({ text: "All publications: ", ...__msBase }),
+        new TextRun({ text: ({da:"Alle publikationer: ",es:"Todas las publicaciones: ",zh:"所有出版物："}[ctx.lang] || "All publications: "), ...__msBase }),
         new ExternalHyperlink({ link: String(s.masterSite.url), children: [new TextRun({ text: String(s.masterSite.label || s.masterSite.url), ...__msBase, underline: {} })] })
       ]
     }));

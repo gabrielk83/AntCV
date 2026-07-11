@@ -4382,6 +4382,8 @@
       "HOW I WOULD CONTRIBUTE": "HVORDAN JEG VILLE BIDRAGE",
       FOUNDATION: "GRUNDLAG",
       "Application:": "Ansøgning:",
+      "Results: ": "Resultat: ",
+      "AI-assisted document": "AI-assisteret dokument",
       "Focus Area": "Fokusområde",
       "Strategic Expertise": "Strategisk ekspertise",
       "Hands-on:": "Praktisk:",
@@ -4587,6 +4589,8 @@
         "HOW I WOULD CONTRIBUTE": "CÓMO CONTRIBUIRÍA",
         FOUNDATION: "FUNDAMENTO",
         "Application:": "Postulación:",
+        "Results: ": "Resultado: ",
+        "AI-assisted document": "Documento asistido por IA",
         "Focus Area": "Área de enfoque",
         "Strategic Expertise": "Experiencia estratégica",
         "Hands-on:": "En la práctica:",
@@ -4606,6 +4610,37 @@
         Requirements: "Requisitos",
         Analysis: "Análisis",
         Engineering: "Ingeniería",
+        "PROFESSIONAL EXPERIENCE (CONT.)": "EXPERIENCIA PROFESIONAL (CONT.)",
+        "PROFILE (CONT.)": "PERFIL (CONT.)",
+        LANGUAGES: "IDIOMAS",
+        REFERENCES: "REFERENCIAS",
+        PUBLICATIONS: "PUBLICACIONES",
+        PATENT: "PATENTE",
+        STANDARDS: "NORMAS Y CUMPLIMIENTO",
+        "REGULATORY & STANDARDS": "NORMATIVA Y ESTÁNDARES",
+        ACCESSIBILITY: "ACCESIBILIDAD",
+        VOLUNTEERING: "VOLUNTARIADO",
+        OPENING: "APERTURA",
+        GREETING: "SALUDO",
+        CLOSURE: "CIERRE",
+        SUMMARY: "RESUMEN",
+        Accessibility: "Accesibilidad",
+        Volunteer: "Voluntariado",
+        Hobbies: "Aficiones",
+        Global: "Global",
+        "Goal:": "Objetivo:",
+        "Who I am:": "Quién soy:",
+        "What I bring:": "Qué aporto:",
+        "Why this position:": "Por qué este puesto:",
+        "Intro:": "Introducción:",
+        "(CONT.)": "(CONT.)",
+        "(Cont.)": "(Cont.)",
+        "Cont.": "Cont.",
+        "EU Citizen": "Ciudadano UE",
+        "Copenhagen, Denmark": "Copenhague, Dinamarca",
+        "Dear Hiring Team,": "Estimado equipo de selección,",
+        "References available on request": "Referencias disponibles a petición",
+        "References available upon request": "Referencias disponibles a petición",
       },
       zh: {
         PROFILE: "个人简介",
@@ -4633,6 +4668,8 @@
         "HOW I WOULD CONTRIBUTE": "我将如何贡献",
         FOUNDATION: "基础",
         "Application:": "申请：",
+        "Results: ": "成果：",
+        "AI-assisted document": "AI辅助生成的文档",
         "Focus Area": "重点领域",
         "Strategic Expertise": "核心专长",
         "Hands-on:": "实践经验：",
@@ -4865,7 +4902,15 @@
       return n && o ? `${n} — ${o}` : n || o;
     },
     Re = (e, t) => {
-      if (((e = ve(e)), "da" !== t || !e)) return e;
+      if (((e = ve(e)), !e)) return e;
+      // BABEL-FURNITURE-ES-ZH-001 (owner 2026-07-11): Re used to be a NO-OP for every
+      // language except Danish (`"da" !== t` returned e unchanged), so rich-block lead-in
+      // labels routed through it ("Hands-on:", "Professionally:", "Work style:", "Who I am:",
+      // "Goal:" …) stayed English in Spanish / Chinese even though the es/zh dicts hold the
+      // translations. Route every non-Danish language through the dict translator ye(); the
+      // Danish `we` phrase map below stays Danish-only. (For "en", ye is an identity for
+      // English input, so English output is unchanged.)
+      if ("da" !== t) return ve(ye(e, t));
       const n = ye(e, t);
       return ve(
         n !== e
@@ -6826,7 +6871,7 @@
                                     "#283556",
                                 },
                               },
-                              "Results: ",
+                              L("Results: "),
                             ),
                             (() => {
                               // OUTCOMES-RESULTS-CAP-001: hard char budget so the
@@ -15198,6 +15243,21 @@
         // writing style. Passive translation in upload caused the "translate popup every
         // few seconds" churn and partial gen/translation mixes.
         try { window.__antcvView = Nt; } catch (e) {}
+      }, [Nt]);
+      // UPLOAD-LANG-DEFER-001 (owner 2026-07-11): opening the EDITOR after picking a different
+      // output language in the upload menu presents the translate modal ONCE for that pending
+      // language (Pr with force — je was already set silently, so e===je). A guard timestamp
+      // tells the babel relang sidecar to stand down briefly so it does not also auto-translate
+      // and race the modal. (Pr is referenced via closure; the effect body runs post-mount, by
+      // which time Pr is defined.)
+      React.useEffect(() => {
+        if ("editor" !== Nt) return;
+        var pend = null;
+        try { pend = sessionStorage.getItem("antcv:pending-editor-translate"); } catch (_) {}
+        if (!pend) return;
+        try { sessionStorage.removeItem("antcv:pending-editor-translate"); } catch (_) {}
+        try { sessionStorage.setItem("antcv:manual-xlate-guard", String(Date.now())); } catch (_) {}
+        try { Pr(pend, !0); } catch (_) {}
       }, [Nt]);
       const [Lt, Pt] = e(() => u.get("doc", "cv"));
       React.useEffect(() => {
@@ -40777,7 +40837,21 @@
                   translating: Rr,
                   size: "landing",
                   resetPreviewToFit: _i,
-                  onSelect: Pr,
+                  onSelect: (l) => {
+                    // UPLOAD-LANG-DEFER-001 (owner 2026-07-11): in the upload / input menu,
+                    // switching the output language must NOT pop the translate modal. Just set
+                    // the language silently (dropdown shows it + Generate uses it natively) and
+                    // remember to offer translation when the user opens the editor. In the
+                    // editor / preview the modal still fires immediately (owner: keep the popup
+                    // when the change is done on the preview).
+                    var v; try { v = ("undefined" != typeof window && window.__antcvView) || Nt; } catch (_) { v = Nt; }
+                    if ("upload" === v || "input" === v) {
+                      try { It(l); } catch (_) {}
+                      try { sessionStorage.setItem("antcv:pending-editor-translate", l); } catch (_) {}
+                      return;
+                    }
+                    Pr(l);
+                  },
                 }),
                 // DEMO-BADGE-SETUP-001 (owner 2026-06-13): the setup/landing
                 // header showed the demo badge nowhere — for an ACTIVE demo
@@ -49421,7 +49495,7 @@
                             textAlign: "center",
                           },
                         },
-                        "AI-assisted document",
+                        ye("AI-assisted document", je),
                       ),
                     ),
                   ),

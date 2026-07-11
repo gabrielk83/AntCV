@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.340-langs-dict';
+const CACHE = 'antcv-1.51.341-lang-restore-guard';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

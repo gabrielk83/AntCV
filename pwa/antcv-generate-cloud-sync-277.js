@@ -233,6 +233,33 @@
               }
             }
           }
+          // LANG-RESTORE-GUARD-001 (owner 2026-07-11 "foundation is being translated
+          // and moves back to English" — also name/Copenhagen/results): the translate
+          // pass renders the doc into the ribbon language, then THIS pull adopted a
+          // cloud copy still holding the ENGLISH rendering (pushed by a lagging tab /
+          // pre-translate autosave; its timestamp is often NEWER, so the sequence
+          // guard passes). Never replace ribbon-language content with a wrong-language
+          // cloud copy. Script-detectable ribbons only (zh/he/am/ar): local wide-script
+          // ratio ≥0.22 (a faithful render sits ~0.33-0.42) while the incoming copy is
+          // <0.12 (clearly not in the ribbon language) → keep the local sections; the
+          // meta mirror below still runs. Kill: antcv:disable-lang-restore-guard='1'.
+          try {
+            var __lrgOff = false;
+            try { __lrgOff = localStorage.getItem('antcv:disable-lang-restore-guard') === '1'; } catch (_) {}
+            var __L = String(localStorage.getItem('language') || 'en').replace(/"/g, '').slice(0, 2);
+            if (aa && !__lrgOff && (__L === 'zh' || __L === 'he' || __L === 'am' || __L === 'ar')) {
+              var __langTextOf = function (o) { var out = []; (function w(n) { if (n == null) return; if (typeof n === 'string') { out.push(n); return; } if (Array.isArray(n)) { for (var i = 0; i < n.length; i++) w(n[i]); return; } if (typeof n === 'object') { for (var k in n) if (Object.prototype.hasOwnProperty.call(n, k)) w(n[k]); } })(o); return out.join(' '); };
+              var __wideRatio = function (t) { try { var letters = (t.match(/\p{L}/gu) || []).length; if (!letters) return 0; var wide = (t.match(/[一-鿿㐀-䶿֐-׿؀-ۿሀ-፿]/g) || []).length; return wide / letters; } catch (_) { return 0; } };
+              var __curS = readJson('sections', null);
+              var __locR = __curS ? __wideRatio(__langTextOf(__curS)) : 0;
+              var __inR = __wideRatio(__langTextOf({ cv: aa.cv_sections || [], cl: aa.cl_sections || [] }));
+              if (__locR >= 0.22 && __inR < 0.12) {
+                try { console.log('[cloud-sync-277] LANG-RESTORE-GUARD-001: local content is in "' + __L + '" (ratio ' + __locR.toFixed(2) + ') but the cloud copy is not (' + __inR.toFixed(2) + ') — sections adoption skipped'); } catch (_) {}
+                aa.cv_sections = null;
+                aa.cl_sections = null;
+              }
+            }
+          } catch (_) {}
           if (aa) {
             var cur = readJson('sections', null);
             if (!cur || (!Array.isArray(cur) && !isPlainObject(cur))) cur = { cv: [], cl: [] };

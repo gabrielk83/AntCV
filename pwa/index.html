@@ -369,7 +369,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.337-babel-native';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.340-langs-dict';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.341-lang-restore-guard';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -411,7 +411,7 @@
           app.src = 'app.js?v=1.51.340-langs-dict';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.340-langs-dict';
+            vo.src = 'antcv-version-override.js?v=1.51.341-lang-restore-guard';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -1009,7 +1009,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-pub-injected-reaper-352.js?v=1.40.352" defer></script>
 <!-- SIDECAR-MERGE-G5 (2026-06-13): mobile-topbar-cleanup-275 + mobile-fab-cleanup-351 + mobile-bottom-compact-352 + mobile-alt-circles-dropdown-354 consolidated into one file with a single shared rAF scheduler + one MutationObserver (was 4). Behaviour preserved verbatim. -->
 <script src="antcv-mobile-ui-418.js?v=1.51.161" defer></script>
-<script src="antcv-generate-cloud-sync-277.js?v=1.51.334-unsol-pillar" defer></script>
+<script src="antcv-generate-cloud-sync-277.js?v=1.51.341-lang-restore-guard" defer></script>
 <!-- GEN-BACKGROUND-001 client engine (window.AntcvGenJob): resumable /job/* driver, INERT until called. Spec: docs/qa/GEN-BACKGROUND-001-CLIENT-SPEC.md -->
 <script src="antcv-gen-job-client.js?v=1.51.132" defer></script>
 <!-- GEN-BACKGROUND-001 approach A (the fit for AntCV's DEPENDENT gen pipeline): checkpoint-memo at the ee() LLM chokepoint. During a gen run an interrupted generation replays completed calls from the checkpoint instead of re-running (mobile tab-backgrounding no longer restarts the whole run). Output-neutral; OPT-IN antcv:gen-resume=1 (default off, owner A/B), kill antcv:disable-gen-memo. app.js's ee() wrapper reads window.AntcvGenMemo (null-safe until loaded). -->

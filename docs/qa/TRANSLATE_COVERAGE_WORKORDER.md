@@ -234,3 +234,38 @@ split generate_cl into its own call.
   ribbon had nothing to restore for contact lines + the CL signature. Both
   files now stash `__latin`/`antcv:clSignName_latin` on Latin→wide overwrite.
 - Suite 1222/1222.
+
+## 2026-07-12 — ROOT CAUSE FOUND + 355/356 shipped
+**The templated-CV/CL mystery is SOLVED.** The 354 diagnostic gen surfaced it in
+one run: `[v23] Generate attempt 1/4 failed (bad JSON): JSON repair failed:
+KERNEL_INCOMPLETE: cl_overrides.contribute_intro (9 chars, need >=10)`.
+The kernel-completeness-290 fetch/JSON.parse guard enforces ENGLISH character
+floors on every prose field; valid Chinese prose is ~3x denser, so a correct zh
+contribute_intro (7-9 hanzi) fails the 10-char floor → the WHOLE response is
+discarded → every retry fails identically → generation ends templated. This
+also explains intermittency (a wordier model occasionally clears the floor) and
+why antcv:last-gen-keys never wrote (JSON.parse THREW before the destructure —
+the capture sits after it).
+FIX (1.51.356, 26a0379): CJK-LENGTH-EQUIV-001 — effectiveLen() counts each CJK
+char as 3 toward every floor (isFilledString + checkProseFieldStrict).
+Also in the session:
+- 1.51.355 (50c2a29) RELANG-SINGLE-FLIGHT-001 — owner: "why is translation
+  working on all tabs in chrome and the claude browser in parallel?" Every
+  babel-relang throttle was per-tab in-memory; all tabs + all signed-in
+  browsers fired the same heal concurrently (write-wars/jumpy preview/clobbered
+  CL). Now: only the visible tab heals + cross-tab localStorage lease
+  (antcv:relang-lease, 180s). Cross-DEVICE parallelism reduced, not eliminated.
+- 1.51.356 LOCATION-IDENTITY-001 — pi.location is a FIFTH identity render
+  source (Settings panel + wizard bind s.location from ie()); never collected
+  by translate, never in the restore legs → "locked on Chinese - it is in
+  Settings too". Added to collector (pi_location m-key, __std piloc),
+  apply-back chain, snapshot/restore, both restore-leg field arrays (src+min).
+- 1.51.356 BOOT-IDENTITY-LANG-HEAL-001 — new sidecar
+  antcv-identity-lang-heal.js: heals identity render sources toward the ribbon
+  script on load + every 15s (stash-first; Gabriel-name-guarded token pins
+  哥本哈根/欧盟公民/柯葛顺·加百列·亚历山大/加百列 as fallback when no stash,
+  incl. the mixed "2300, 哥本哈根 S" artifact). Kill: antcv:disable-identity-heal.
+- 1.51.356 TRANSLATE-CELL-COMPACT-001 — owner: "STRATEGIC EXPERTISE IS TOO
+  LONG" (da). Translate prompt now caps translated table cells (~60 chars).
+NEXT: rerun the nordic-minimal|zh + |da diagnostic gens on a >=356 client —
+expect the capture to write and the CL to apply; then resume the 15-kernel batch.

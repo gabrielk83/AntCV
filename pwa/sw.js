@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.347-crossco-match';
+const CACHE = 'antcv-1.51.348-cw-canon-lang';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

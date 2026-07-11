@@ -314,7 +314,15 @@
     var roles = cv[xi].roles;
     var cwIdx = []; roles.forEach(function (r, i) { if (isCW(r)) cwIdx.push(i); });
     if (!cwIdx.length) return null;
-    var TITLE = 'Team Operations Manager (foreningsarbejde)';
+    // CW-CANON-LANG-001 (owner 2026-07-11 "this should be translated fully"): the
+    // canonical title was forced back to ENGLISH on every pass, reverting the
+    // translated 球队运营经理（协会志愿工作）. On a zh ribbon the canon target IS the
+    // zh form; other wide ribbons keep whatever the translate produced (no forcing).
+    var __cwL = 'en';
+    try { __cwL = String(localStorage.getItem('language') || 'en').replace(/"/g, '').slice(0, 2); } catch (_) {}
+    var TITLE = __cwL === 'zh' ? '球队运营经理（协会志愿工作）'
+      : (__cwL === 'he' || __cwL === 'am' || __cwL === 'ar') ? null
+        : 'Team Operations Manager (foreningsarbejde)';
     var COMPANY = 'Pan Idræt';
     var CW_BULLET = 'Operations and assistant-coaching for Copenhagen Wolves RFC, an inclusive amateur rugby club under Pan Idræt.';
     var keep = cwIdx[0];
@@ -323,7 +331,7 @@
     for (var k = 1; k < cwIdx.length; k++) { (Array.isArray(roles[cwIdx[k]].bullets) ? roles[cwIdx[k]].bullets : []).forEach(function (b) { if (bullets.indexOf(b) < 0) bullets.push(b); }); }
     if (!bullets.some(function (b) { return /copenhagen wolves rfc/i.test(String(typeof b === 'string' ? b : (b && (b.b || b.t)) || '')); })) bullets.unshift(CW_BULLET);
     var changed = false;
-    if (base.title !== TITLE) { base.title = TITLE; changed = true; }
+    if (TITLE && base.title !== TITLE) { base.title = TITLE; changed = true; } // CW-CANON-LANG-001: null TITLE = leave the rendered title alone
     if (base.company !== COMPANY) { base.company = COMPANY; changed = true; }
     if (cwIdx.length > 1 || (Array.isArray(roles[keep].bullets) ? roles[keep].bullets.length : 0) !== bullets.length) { base.bullets = bullets; changed = true; }
     if (!changed) return null;

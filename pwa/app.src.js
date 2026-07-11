@@ -174,7 +174,7 @@
       __isCL ? React.createElement("div", { className: "no-print", "aria-hidden": "true", style: { borderTop: "3px solid rgba(200,40,40,0.6)", margin: "10px 0 5px", display: "flex", justifyContent: "center", background: "rgba(200,40,40,0.06)", padding: "2px 0" } },
         React.createElement("span", { style: { background: "rgba(200,40,40,0.7)", color: "#fff", fontSize: 8, padding: "2px 10px", borderRadius: 2, fontFamily: "Arial,sans-serif", letterSpacing: 0.5, whiteSpace: "nowrap" } }, "▼ PAGE " + pg + " ▼")) : null,
       React.createElement("div", { "aria-hidden": "true", style: { pageBreakBefore: "always", breakBefore: "page", height: 0, lineHeight: 0 } }),
-      (__isCL && contTitle) ? React.createElement("div", { style: { color: "#00746E", fontWeight: 700, fontSize: "12pt", marginTop: "4pt", marginBottom: "8pt", borderBottom: "1pt solid #00746E", paddingBottom: "2pt", fontFamily: "Trebuchet MS, Calibri, sans-serif" } }, contTitle + " (CONT.)") : null
+      (__isCL && contTitle) ? React.createElement("div", { style: { color: "#00746E", fontWeight: 700, fontSize: "12pt", marginTop: "4pt", marginBottom: "8pt", borderBottom: "1pt solid #00746E", paddingBottom: "2pt", fontFamily: "Trebuchet MS, Calibri, sans-serif" } }, contTitle + (function () { /* SALMON-CONT-LANG-001 (tune only — splitter is PERMANENT): continuation label in the ribbon language, forms matched to the furniture dict */ try { var L = String(localStorage.getItem("language") || "en").replace(/"/g, "").toLowerCase().slice(0, 2); return { da: " (FORTS.)", zh: "（续）", he: " (המשך)", am: " (ቀጣይ)", ar: " (تابع)" }[L] || " (CONT.)"; } catch (_) { return " (CONT.)"; } })()) : null
     );
   };
   // renderWithBreaks (docs/plan §2): walk ordered items in document order, keep a
@@ -2153,16 +2153,30 @@
       if (pi && "object" == typeof pi) { pi.specialization = v; localStorage.setItem("personalInfo", JSON.stringify(pi)); }
     } catch (_) {}
   }
+  // TRANSLATE-PI-IDENTITY-001 (owner 2026-07-11): the header identity fields (candidate
+  // NAME, city "Copenhagen", "EU Citizen") render from personalInfo directly and were
+  // never collected by the translate pass — they stayed English under every ribbon.
+  // Same render-source pattern as specialization: write-back + snapshot + restore.
+  function __antcvWritePi(field, v) {
+    try {
+      if ("string" != typeof v || !v.trim()) return;
+      var pi = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {};
+      if (pi && "object" == typeof pi) { pi[field] = v; localStorage.setItem("personalInfo", JSON.stringify(pi)); }
+    } catch (_) {}
+  }
   function __antcvSnapStandalone() {
     var s = {};
     try { var sl = localStorage.getItem("antcv:clSlogan"); if (null != sl) s.clSlogan = sl; } catch (_) {}
-    try { var pi = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {}; if ("string" == typeof pi.specialization) s.specialization = pi.specialization; } catch (_) {}
+    try { var pi = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {}; if ("string" == typeof pi.specialization) s.specialization = pi.specialization; if ("string" == typeof pi.name) s.piName = pi.name; if ("string" == typeof pi.city) s.piCity = pi.city; if ("string" == typeof pi.citizenship) s.piCitizen = pi.citizenship; } catch (_) {}
     return s;
   }
   function __antcvRestoreStandalone(s) {
     if (!s || "object" != typeof s) return;
     if ("string" == typeof s.clSlogan) __antcvWriteSlogan(s.clSlogan);
     if ("string" == typeof s.specialization) __antcvWriteSpec(s.specialization);
+    if ("string" == typeof s.piName) __antcvWritePi("name", s.piName);
+    if ("string" == typeof s.piCity) __antcvWritePi("city", s.piCity);
+    if ("string" == typeof s.piCitizen) __antcvWritePi("citizenship", s.piCitizen);
   }
   function __antcvModelFor(prov, task) {
     try { if ("gemini" === prov && __antcvBigGen(task)) return "gemini-2.5-pro"; } catch (_) {}
@@ -7532,7 +7546,7 @@
             },
             React.createElement(B, {
               path: ["title"],
-              value: (L(F) || F) + (e._antcvSplitCont ? " (CONT.)" : ""),
+              value: (L(F) || F) + (e._antcvSplitCont ? (function () { /* SALMON-CONT-LANG-001 */ try { var Lg = String(localStorage.getItem("language") || "en").replace(/"/g, "").toLowerCase().slice(0, 2); return { da: " (FORTS.)", zh: "（续）", he: " (המשך)", am: " (ቀጣይ)", ar: " (تابع)" }[Lg] || " (CONT.)"; } catch (_) { return " (CONT.)"; } })() : ""),
               placeholder: "[Title]",
             }),
           ),
@@ -18083,6 +18097,19 @@
                               // pin, nor a bullet copycat, so it falls through to
                               // role.results verbatim (numbers preserved by the prompt).
                               n(["roles", ri, "results"], r.results);
+                              // TRANSLATE-RR-PIN-001 (owner 2026-07-11): when role.results
+                              // is EMPTY the preview/export Results line comes from the
+                              // outcomes/pin machinery (window.__antcvRR, keyed id:<role id>)
+                              // — English pins, never collected, so 成果: content stayed
+                              // English. Collect the RENDERED value at the results path;
+                              // apply-back stores the translation on role.results, which
+                              // wins the results→outcomes→derive precedence.
+                              if (!(r.results && String(r.results).trim())) {
+                                try {
+                                  var __rr = (window.__antcvRR || {})["id:" + r.id];
+                                  if (__rr) n(["roles", ri, "results"], __rr);
+                                } catch (_) {}
+                              }
                             });
                           if ("labeled_list" === e.type)
                             (e.items || []).forEach((it, i) => {
@@ -18218,6 +18245,17 @@
                         if (io.company && "string" == typeof io.company)
                           r.push({ key: "company", value: io.company });
                       }
+                      // TRANSLATE-PI-IDENTITY-001: header identity render sources.
+                      // Candidate NAME from personalInfo (meta.name is usually unset —
+                      // live-confirmed) for script targets only; city + citizenship for
+                      // every non-en target. Mirror-back via __antcvWritePi on apply.
+                      const __piT = (() => { try { return JSON.parse(localStorage.getItem("personalInfo") || "{}") || {}; } catch (_) { return {}; } })();
+                      if (_isWide && !(io.name && "string" == typeof io.name) && "string" == typeof __piT.name && __piT.name.trim())
+                        r.push({ key: "pi_name", value: __piT.name, __std: "piname" });
+                      if ("string" == typeof __piT.city && __piT.city.trim())
+                        r.push({ key: "pi_city", value: __piT.city, __std: "picity" });
+                      if ("string" == typeof __piT.citizenship && __piT.citizenship.trim())
+                        r.push({ key: "pi_citizen", value: __piT.citizenship, __std: "picitizen" });
                       if (!o.length && !r.length) return;
                       const a = {};
                       (o.forEach((e, t) => {
@@ -18288,10 +18326,25 @@
                             for (const e of o)
                               "string" == typeof t[e] &&
                                 ((d[e] = t[e]), __got++);
-                            if (__got > 0) __ok = !0;
-                            else
+                            // TRANSLATE-CHUNK-ALLKEYS-001 (owner 2026-07-11): __got>0 accepted a
+                            // 1/30-key chunk as success — truncated LLM output silently left
+                            // the rest of the chunk untranslated (the MIXED render root cause;
+                            // live-diagnosed on zh @ 1.51.334: ratio stalled at 0.151, roles
+                            // 1-2 English, zero warnings). Success now = ALL keys; retry
+                            // otherwise; accept a partial only on the FINAL attempt, loudly.
+                            if (__got === o.length) __ok = !0;
+                            else if (2 === __att && __got > 0) {
+                              __ok = !0;
+                              console.warn(
+                                "Translation chunk",
+                                n + 1,
+                                "PARTIAL:",
+                                __got + "/" + o.length,
+                                "keys kept after 3 attempts",
+                              );
+                            } else
                               throw new Error(
-                                "chunk " + (n + 1) + " returned no keys",
+                                "chunk " + (n + 1) + " returned " + __got + "/" + o.length + " keys",
                               );
                           } catch (e) {
                             console.warn(
@@ -18391,7 +18444,13 @@
                                 ((t[e.key] = o),
                                 "spec" === e.__std
                                   ? __antcvWriteSpec(o)
-                                  : "slogan" === e.__std && __antcvWriteSlogan(o));
+                                  : "slogan" === e.__std
+                                    ? __antcvWriteSlogan(o)
+                                    : "piname" === e.__std
+                                      ? __antcvWritePi("name", o)
+                                      : "picity" === e.__std
+                                        ? __antcvWritePi("city", o)
+                                        : "picitizen" === e.__std && __antcvWritePi("citizenship", o));
                             }),
                             t
                           );
@@ -44104,7 +44163,8 @@
                   f =
                     ((e && e.title) ||
                       ("da" === je ? "ERFARING" : "EXPERIENCE")) +
-                    ("da" === je ? " (FORTS.)" : " (CONT.)"),
+                    /* SALMON-CONT-LANG-001: continuation suffix in the ribbon language */
+                    ({ da: " (FORTS.)", zh: "（续）", he: " (המשך)", am: " (ቀጣይ)", ar: " (تابع)" }[je] || " (CONT.)"),
                   h = [];
                 for (let e = 1; e <= u; e++)
                   h.push({ pageNum: e, sb: m(e), roles: g(e) });

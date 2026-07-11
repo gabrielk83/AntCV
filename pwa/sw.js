@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.334-unsol-pillar';
+const CACHE = 'antcv-1.51.335-pi-identity';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

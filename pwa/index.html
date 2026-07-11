@@ -354,7 +354,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.243-localform-da';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.327-hardreset-local';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.329-f5-fresh';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -396,7 +396,7 @@
           app.src = 'app.js?v=1.51.327-hardreset-local';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.327-hardreset-local';
+            vo.src = 'antcv-version-override.js?v=1.51.329-f5-fresh';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -479,6 +479,11 @@
         await Promise.all(regs.map(function(r){return r.unregister()}));
       }
     }catch(e){}
+    // F5-FRESH-001 (owner 2026-07-11): we just unregistered the SW, so the reload below
+    // starts UNCONTROLLED. Flag it so the boot listener reloads ONCE when the freshly
+    // re-registered SW takes control — that second load is fully SW-controlled, so preview
+    // sidecars (the hovering export button) initialise normally, with no manual refresh.
+    try{ sessionStorage.setItem('antcv:sw-reclaim-reload','1'); }catch(e){}
     if(opts.redirect!==false){
       try{
         var clean=location.origin+location.pathname;
@@ -594,6 +599,27 @@
       var __wipe = p.get('logout')=='1' || p.get('resetDone')=='1';
       clearAntcvHardReset({target:location.origin+location.pathname, gentle: !__wipe});
     }
+  }catch(e){}
+})();
+</script>
+<script>
+/* F5-FRESH-001 (owner 2026-07-11): after a reset (SW unregistered), the first load is
+   UNCONTROLLED. Reload ONCE when the freshly-registered SW claims control, so the app comes
+   up fully SW-controlled and preview sidecars (the hovering export button) initialise
+   normally — the automatic replacement for the manual browser refresh. Scoped to a reset via
+   the antcv:sw-reclaim-reload flag, so normal loads and first-time visitors are never
+   double-loaded. */
+(function(){
+  try{
+    if(sessionStorage.getItem('antcv:sw-reclaim-reload')!=='1') return;
+    sessionStorage.removeItem('antcv:sw-reclaim-reload');
+    if(!('serviceWorker' in navigator)) return;
+    if(navigator.serviceWorker.controller) return; /* already SW-controlled — nothing to do */
+    var done=false;
+    navigator.serviceWorker.addEventListener('controllerchange', function(){
+      if(done) return; done=true;
+      try{ location.reload(); }catch(_){}
+    });
   }catch(e){}
 })();
 </script>

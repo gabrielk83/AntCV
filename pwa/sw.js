@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.327-hardreset-local';
+const CACHE = 'antcv-1.51.329-f5-fresh';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',
@@ -140,9 +140,14 @@ self.addEventListener('fetch', e => {
   // cookies/Authorization) and the SW never stores the result.
   if (url.hostname.endsWith('.workers.dev')) return;
 
-  const isVersionedCodeAsset = CODE_ASSET.test(url.pathname) && url.searchParams.has('v');
-  const isNavOrSource = !isVersionedCodeAsset &&
-    (e.request.mode === 'navigate' || NETWORK_FIRST.test(url.pathname) || CODE_ASSET.test(url.pathname));
+  // F5-FRESH-001 (owner 2026-07-11): ALL code assets (js/css/jsx) are NETWORK-FIRST so a
+  // plain browser reload (F5) always pulls the latest build — the SW cache can never pin a
+  // stale version and require a manual hard reset. Immutable ?v=… assets stay fast: the
+  // browser's own HTTP cache serves them with no real round-trip; the SW cache is kept only
+  // as an OFFLINE fallback. (Was cache-first for ?v assets under PERF-SW-CACHE-001; the owner
+  // chose freshness over the saved round-trip.)
+  const isNavOrSource =
+    e.request.mode === 'navigate' || NETWORK_FIRST.test(url.pathname) || CODE_ASSET.test(url.pathname);
 
   if (isNavOrSource) {
     // Network-first: try fresh, fall back to cache only if offline.

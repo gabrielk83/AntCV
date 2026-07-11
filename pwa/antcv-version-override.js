@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.327-hardreset-local';
+  const TARGET_VERSION = '1.51.329-f5-fresh';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.327-hardreset-local',
     '1.51.326-babel-view-gate',
     '1.51.325-babel-headless',
     '1.51.324-babel-invariant',

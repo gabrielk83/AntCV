@@ -1,4 +1,4 @@
-const VERSION='3.8.1-gpt5-reasoning-minimal';
+const VERSION='3.8.2-gpt54-regex+gemini-think';
 // Cloudflare Worker — multi-provider LLM proxy with streaming for Anthropic
 // Includes /preferences route for AntCV cloud save.
 //
@@ -1165,7 +1165,12 @@ async function handleRequest(request, env = {}) {
       // return empty visible content. CV/CL writing is not a reasoning task, so
       // cap reasoning to 'minimal' (still supported on gpt-5*) unless the caller
       // set it explicitly — leaves the budget for actual output.
-      if (/^gpt-5/i.test(m) && parsed.reasoning_effort == null) {
+      // Scope to the BASE gpt-5 family only (gpt-5 / gpt-5-mini / gpt-5-nano):
+      // they starve on a small budget AND accept 'minimal'. Later variants
+      // (gpt-5.4-mini, …) do NOT starve and REJECT 'minimal' with a 400
+      // ("Unsupported value: 'reasoning_effort' does not support 'minimal'"),
+      // so a broad /^gpt-5/ match broke them — hence the anchored pattern.
+      if (/^gpt-5(-(mini|nano))?$/i.test(m) && parsed.reasoning_effort == null) {
         parsed.reasoning_effort = 'minimal';
       }
       // NON-ANTHROPIC-STREAM-LEAK-001 (2026-07-11): the incoming body carries
@@ -1357,6 +1362,16 @@ async function handleRequest(request, env = {}) {
         temperature: typeof inBody.temperature === 'number' ? inBody.temperature : 0.7,
       },
     };
+    // GEMINI-25-THINK-STARVE-001 (2026-07-11): gemini-2.5-* are thinking models;
+    // on a bounded maxOutputTokens (a CV section's ~1.1-1.6k) the thinking pass
+    // consumes the whole budget and the visible text comes back empty (2.5-pro
+    // returned empty on most sections; 2.5-flash coped but is close to the edge).
+    // Cap thinking to a small fixed budget (128 = 2.5-pro's minimum; 2.5-flash
+    // accepts it too) so most of the budget is left for output. CV writing is not
+    // a reasoning task, so minimal thinking is the right trade for bounded gen.
+    if (/^gemini-2\.5/.test(model)) {
+      payload.generationConfig.thinkingConfig = { thinkingBudget: 128 };
+    }
     if (systemBits.length) {
       payload.systemInstruction = { parts: [{ text: systemBits.join('\n\n') }] };
     }

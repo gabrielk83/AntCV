@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.349-kernel-table-time';
+const CACHE = 'antcv-1.51.350-ratio-invariant';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

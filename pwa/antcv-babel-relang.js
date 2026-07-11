@@ -60,6 +60,10 @@
   // and stayed mixed. 0.30 catches the mixed case and triggers a full headless re-render;
   // re-rendering an already-good render is idempotent, so a rare false trigger is safe.
   var THRESHOLD = 0.30;
+  // BABEL-RATIO-INVARIANT-001: threshold for the PROSE-only measure (see
+  // isInLanguage). Faithful compact zh with stored Latin enums sits ~0.28+;
+  // a genuinely mixed render (untranslated roles) sits ~0.18-0.22.
+  var THRESHOLD_PROSE = 0.25;
   var MIN_LETTERS = 200;   // ignore the empty skeleton / mid-load
   var BACKOFF_MS = 20000;  // one relang attempt per language per 20s
   // BABEL-FISH-CLOUD-CACHE-001 (owner 2026-07-11): a SINGLE cloud-synced key holds
@@ -127,7 +131,21 @@
     if (re) {
       var letters = letterCount(txt);
       if (letters < MIN_LETTERS) return null;   // too little to judge
-      return (txt.match(re) || []).length / letters >= THRESHOLD;
+      // BABEL-RATIO-INVARIANT-001 (owner 2026-07-11 "why does every refresh
+      // attempt a translation?"): a COMPACT zh document is INVARIANT-heavy —
+      // tool/product names (Jira, Codebeamer, Power BI, MATLAB), standards
+      // (ASPICE, ISO 26262, CISPR), company names, and stored data enums
+      // ("native / fluent") are Latin by design. The naive script/letters ratio
+      // fell under THRESHOLD on a perfectly faithful rendering, so every page
+      // load fired a heal. Measure only TRANSLATABLE PROSE: Latin tokens that
+      // start lowercase (grammar/prose words). Acronyms, capitalised proper
+      // nouns and product names do not count against the rendering. The
+      // matched threshold is lower because legit stored enums keep a floor of
+      // lowercase Latin even in a faithful render.
+      var script = (txt.match(re) || []).length;
+      var proseLatin = 0;
+      (txt.match(/[A-Za-z][A-Za-z0-9&\/\.\-]*/g) || []).forEach(function (t) { if (/^[a-z]/.test(t) && t.length > 2) proseLatin += t.length; });
+      return script / ((script + proseLatin) || 1) >= THRESHOLD_PROSE;
     }
     // Latin non-English: measure English residue.
     if (letterCount(txt) < MIN_LETTERS) return null;

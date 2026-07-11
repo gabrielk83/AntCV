@@ -1825,9 +1825,25 @@
       await w(f);
     }
   }
-  window.routeLLMDebug = function (e = "en") {
+  // ROUTE-DEBUG-MATCHES-PRODUCTION-001 (owner 2026-07-11): resolve the way ee()
+  // dispatches — Z[task] filtered to available providers, then __antcvScoreOrder
+  // (the cost-quality-latency ordering ee runs on the default path), first provider,
+  // model from S. The old path used K()/J() (a separate S-map scorer over L's alias
+  // keys) which DISAGREED with the live dispatch (e.g. showed da->gemini while ee
+  // routes da->openai). Now the console table reflects the stable production order.
+  // (Transient session demotions — the inline reorder in ee — are a rare runtime
+  // overlay and are not shown; this is the deterministic resolution.)
+  window.routeLLMDebug = function () {
     const t = {};
-    for (const n of Object.keys(L)) t[n] = K(n, e);
+    for (const e of Object.keys(Z)) {
+      if ("default" === e) continue;
+      const o = (Z[e] || Z.default || []).filter((p) => Q(p)),
+        s = __antcvScoreOrder(e, o.slice())[0] || null;
+      t[e] = {
+        provider: s,
+        model: s ? (S["claude" === s ? "anthropic" : s] || {}).model || null : null,
+      };
+    }
     return (console.table(t), t);
   };
   const Z = {
@@ -37538,7 +37554,10 @@
                               n =
                                 (u.get("routingOverrides", {}) || {})[e] || "",
                               o = t.filter((e) => Q(e)),
-                              r = n && Q(n) ? n : o[0] || "(none configured)",
+                              // ROUTE-DEBUG-MATCHES-PRODUCTION-001: "Auto → X" must be
+                              // the provider ee() would pick (the __antcvScoreOrder
+                              // cost-quality order), not raw Z[0]. Mirrors dispatch.
+                              r = n && Q(n) ? n : __antcvScoreOrder(e, o.slice())[0] || "(none configured)",
                               a = bt === e,
                               i = null == ht ? void 0 : ht[e];
                             return React.createElement(

@@ -45,13 +45,35 @@ Owner directive: **global solution, not a patch per application / language / sty
 - CL-section-loss on translate (#12) must be fixed in the same pass — translate must not
   drop cl sections (who/opening/closure). Check the apply-back step for cl.
 
-### Fix 2 — route residual render-furniture through the shared dict (safe, proven pattern)
-Mirror the Re-fix pattern (wrap literal in `ye(str, je)` / `L(...)`):
-- "(Cont.)" / "(CONT.)" continuation label (preview sites ~7456, salmon 177, 43982; export)
-- Foundation "Hands-On:" / "Professionally:" labels
-- "At your service," / CL sign-off (preview ~45124 + export)
-- Application subtitle "Application: {role} - {company}" template
-Add da/es/zh/he dict entries for each.
+### Fix 2 — residual render-furniture (INVESTIGATED 2026-07-11 — mostly already done)
+Bucket A is ~90% already implemented. Verified state per item:
+- **"Application:" label** — ALREADY translated. Dict entries exist (da `Ansøgning:`,
+  es `Postulación:`, zh `申请：` @ 4391/4598/4677) and routed via `ye()`/`o()` at all 3
+  sites (28225 export, 29491, 43684). NO WORK. What renders English is `io.role`
+  (content → Bucket B) + `io.company` ("Unsolicited" sentinel, see below).
+- **"Hands-on:" / "Professionally:" labels** — ALREADY translated. Dict entries
+  (da/es/zh @ 4396/4603/4682) + routed via `L()` in the foundation-TYPE case (5818).
+  NOTE: the CL foundation is a `rich_block` whose `b` = "Hands-on"/"Professionally" is
+  CONTENT (collector n(["items",i,"b"])) → Bucket B, not furniture.
+- **"(CONT.)"** — dict entries exist; but line 177 (inside __antcvSalmon, PERMANENT)
+  hardcodes `contTitle + " (CONT.)"` and the zh dict maps "(CONT.)"→"(CONT.)" (identity —
+  confirm intended zh form, maybe 续). Minor + sensitive location.
+- **CL sign-off "At your service,"** — REAL BUG. Render checks `antcv:clClosing`
+  override FIRST and returns it verbatim; that key is auto-seeded to the English default
+  "At your service," so it PINS English on every language. Sites: 28270 + 29547 have a
+  full da/es/zh/he/am/ar map; **45210 + 45311 only handle da** (n?DA:override||English) —
+  no es/zh map at all. Fix: honor override only when `ov !== "At your service,"` (let the
+  seeded English default fall through to the language map), AND add the language map to
+  45210/45311. Multi-site render-logic change — verify live in each column layout.
+- **"Unsolicited" / "Open Application" app-name** — SENTINEL, not a display label. Code
+  branches on `io.company === "Unsolicited"` in ~12 places (15759, 16936, 17036, 17061,
+  17080, 17119, 17195…). MUST translate at DISPLAY time only (a render-map applied where
+  the subtitle/nav shows io.company/io.role) — NEVER translate the stored value.
+
+Conclusion: there is NO clean "safe dict-wrap" Bucket A pass. The labels are done; the
+residue (sign-off override + multi-site map, sentinel display-map, salmon (CONT.)) is
+render-logic in sensitive/multi-site code that needs the SAME live gen+translate
+verification as Bucket B. FOLD Bucket A residue INTO the Bucket B focused pass.
 
 ### Fix 1b — collector: widen role title/company/years beyond _isWide to include da
 `if (_isWide)` gate @ ~18038 excludes Danish ⇒ da role headers + "Present" never

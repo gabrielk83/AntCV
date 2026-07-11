@@ -33,7 +33,7 @@
   function hash(s) { var h = 0; s = String(s); for (var i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0; return h; }
   function isTargeted(m) {
     var c = String((m && m.company) || '').trim();
-    return !!c && !/^unsolicited$/i.test(c) && !/^open application$/i.test(c);
+    return !!c && !(window.__ANTCV_UNSOL_RE || /^unsolicited$/i).test(c) && !/^open application$/i.test(c); // UNSOL-PILLAR-LANG-001: any language variant
   }
   function clone(o) { var n = {}; for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) n[k] = o[k]; return n; }
   function coKey(r) { return String((r && r.company) || '').trim().toLowerCase(); }

@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.333-route-debug';
+const CACHE = 'antcv-1.51.334-unsol-pillar';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

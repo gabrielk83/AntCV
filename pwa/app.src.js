@@ -15778,7 +15778,7 @@
                 return;
               }
               const o = e.meta && "object" == typeof e.meta ? e.meta : io || {},
-                r = n === ks || (o && "Unsolicited" === o.company),
+                r = n === ks || (o && window.__antcvUnsol(o.company)),
                 a = {
                   jd_text: n,
                   jd_company: String(
@@ -16955,7 +16955,7 @@
         // (the commit site owns the first write).
         React.useEffect(() => {
           try {
-            if (!io || "Unsolicited" !== io.company) return;
+            if (!io || !window.__antcvUnsol(io.company)) return;
             if (u.get("kernelShowcaseInProgress", !1)) return;
             if (Un && Un.current) return;
             // 1.50.272: the kernel_showcase cloud slot was found EMPTY in
@@ -16995,7 +16995,7 @@
               }
               oo.putShowcase({
                 sections: __secs,
-                meta: (function (m) { try { if (!m || "object" != typeof m) return m; var co = String(m.company || "").trim(); if (!co || "Unsolicited" === co) return m; var c = Object.assign({}, m, { company: "Unsolicited", role: "Open Application" }); try { delete c.rationale; } catch (_) {} return c; } catch (_) { return m; } })(u.get("meta", null)), /* UNSOLICITED-IDENTITY-SOURCE-FIX-001: never store a real company in the unsolicited kernel slot */
+                meta: (function (m) { try { if (!m || "object" != typeof m) return m; var co = String(m.company || "").trim(); if (!co || window.__antcvUnsol(co)) return m; var c = Object.assign({}, m, { company: "Unsolicited", role: "Open Application" }); try { delete c.rationale; } catch (_) {} return c; } catch (_) { return m; } })(u.get("meta", null)), /* UNSOLICITED-IDENTITY-SOURCE-FIX-001: never store a real company in the unsolicited kernel slot */
                 rationale: u.get("rationale", null),
                 jd_language: je,
               }, (() => { try { var p = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {}; p = p.personalInfo || p; var __st = String((p.writingPrefs || {}).style || "").trim().toLowerCase(); var __lg = String(localStorage.getItem("language") || "en").toLowerCase().replace(/[^a-z]/g, "").slice(0,2) || "en"; return __st ? __st + "|" + __lg : ""; } catch (_) { return ""; } })());
@@ -17055,7 +17055,7 @@
         }, [io]),
         React.useEffect(() => {
           try {
-            if (io && "Unsolicited" === io.company) {
+            if (io && window.__antcvUnsol(io.company)) {
               if (
                 (io.showcase || lo({ ...io, showcase: !0 }),
                 u.get("kernelShowcaseInProgress", !1))
@@ -17080,7 +17080,7 @@
             } else
               io &&
                 io.company &&
-                "Unsolicited" !== io.company &&
+                !window.__antcvUnsol(io.company) &&
                 io.showcase &&
                 lo({ ...io, showcase: !1 });
           } catch (e) {}
@@ -17099,7 +17099,7 @@
             io.company &&
             !u.get("kernelShowcaseInProgress", !1) &&
             !0 !== io.showcase &&
-            "Unsolicited" !== io.company
+            !window.__antcvUnsol(io.company)
           )
             try {
               no({ jd_text: e, meta: io, sections: ro, rationale: yo });
@@ -17138,7 +17138,7 @@
               mm &&
               "object" == typeof mm &&
               mm.company &&
-              "Unsolicited" !== String(mm.company).trim()
+              !window.__antcvUnsol(mm.company)
             )
               return;
           } catch (e) {}
@@ -17214,7 +17214,7 @@
                     try {
                       if (!m || "object" != typeof m) return m;
                       var co = String(m.company || "").trim();
-                      if (!co || "Unsolicited" === co) return m;
+                      if (!co || window.__antcvUnsol(co)) return m;
                       var c = Object.assign({}, m, { company: "Unsolicited", role: "Open Application" });
                       try { delete c.rationale; } catch (_) {}
                       return c;
@@ -17227,7 +17227,7 @@
                     lo(__m);
                   } catch (e) {}
                 }
-                if (t.rationale && !(t.meta && t.meta.company && "Unsolicited" !== String(t.meta.company).trim())) {
+                if (t.rationale && !(t.meta && t.meta.company && !window.__antcvUnsol(t.meta.company))) {
                   try {
                     u.set("rationale", t.rationale);
                   } catch (e) {}
@@ -17254,7 +17254,7 @@
         // APP-HISTORY-STYLE-KERNELS-001 Load hook: window.AntcvApplyStyleKernel(sc)
         // applies a saved style kernel (sections/meta/rationale) into the editor —
         // reuses the boot-restore setters (ao/lo/bo) + forces Unsolicited identity.
-        React.useEffect(() => { try { window.AntcvApplyStyleKernel = function (sc) { try { if (!sc || !sc.sections) return false; var t = sc; if (t.sections && "object" == typeof t.sections) { try { u.set("sections", t.sections); } catch (e) {} try { ao({ cv: t.sections.cv || [], cl: t.sections.cl || [] }); } catch (e) {} } if (t.meta && "object" == typeof t.meta) { var __mm = (function (m) { try { if (!m || "object" != typeof m) return m; var co = String(m.company || "").trim(); if (!co || "Unsolicited" === co) return m; var c = Object.assign({}, m, { company: "Unsolicited", role: "Open Application" }); try { delete c.rationale; } catch (_) {} return c; } catch (_) { return m; } })(t.meta); try { u.set("meta", __mm); } catch (e) {} try { lo(__mm); } catch (e) {} } if (t.rationale) { try { u.set("rationale", t.rationale); } catch (e) {} try { bo(t.rationale); } catch (e) {} } try { window.dispatchEvent(new CustomEvent("antcv:sections-updated")); } catch (_) {} return true; } catch (_) { return false; } }; } catch (_) {} }, []),
+        React.useEffect(() => { try { window.AntcvApplyStyleKernel = function (sc) { try { if (!sc || !sc.sections) return false; var t = sc; if (t.sections && "object" == typeof t.sections) { try { u.set("sections", t.sections); } catch (e) {} try { ao({ cv: t.sections.cv || [], cl: t.sections.cl || [] }); } catch (e) {} } if (t.meta && "object" == typeof t.meta) { var __mm = (function (m) { try { if (!m || "object" != typeof m) return m; var co = String(m.company || "").trim(); if (!co || window.__antcvUnsol(co)) return m; var c = Object.assign({}, m, { company: "Unsolicited", role: "Open Application" }); try { delete c.rationale; } catch (_) {} return c; } catch (_) { return m; } })(t.meta); try { u.set("meta", __mm); } catch (e) {} try { lo(__mm); } catch (e) {} } if (t.rationale) { try { u.set("rationale", t.rationale); } catch (e) {} try { bo(t.rationale); } catch (e) {} } try { window.dispatchEvent(new CustomEvent("antcv:sections-updated")); } catch (_) {} return true; } catch (_) { return false; } }; } catch (_) {} }, []),
         React.useEffect(() => {
           Y &&
             Y.email &&
@@ -18062,7 +18062,12 @@
                             });
                           if ("experience" === e.type)
                             (e.roles || []).forEach((r, ri) => {
-                              if (_isWide) {
+                              // Fix 1b (TRANSLATE-COVERAGE): da role headers + "Present"
+                              // were never collected (_isWide excludes da). Widen the role
+                              // title/company/years collection to da too. `_isWide` itself
+                              // stays unchanged elsewhere, so io.company ("Unsolicited"
+                              // sentinel) and the name block are still NOT translated for da.
+                              if (_isWide || "da" === _lng) {
                                 n(["roles", ri, "title"], r.title);
                                 n(["roles", ri, "company"], r.company);
                                 n(["roles", ri, "years"], r.years);
@@ -18204,6 +18209,12 @@
                       if (_isWide) {
                         if (io.name && "string" == typeof io.name)
                           r.push({ key: "name", value: io.name });
+                      }
+                      // UNSOL-PILLAR-LANG-001: collect company for da too — the
+                      // "Unsolicited" pillar now matches every language variant
+                      // (window.__antcvUnsol), so a stored "Uopfordret" is safe.
+                      // Name stays _isWide-gated (da keeps Latin names).
+                      if (_isWide || "da" === _lng) {
                         if (io.company && "string" == typeof io.company)
                           r.push({ key: "company", value: io.company });
                       }
@@ -18215,7 +18226,7 @@
                         r.forEach((e, t) => {
                           a["m" + t] = e.value;
                         }));
-                      const i = `You are a professional translator. The input JSON contains text that may be in any language. Translate every value to ${t}, regardless of what language each value is currently in.\n\nRULES:\n- Translate every value to ${t}, even if it appears to already be in another language. Do NOT pass values through unchanged.\n- Proper-noun handling — categorise EACH proper noun, then apply the right rule:\n  KEEP VERBATIM (never translate): company / organisation names (employers, clubs, associations — even small local ones), product names, technology names (tools, platforms, protocols), file-format names, standards codes (ISO 26262, ASPICE, BABOK).\n  TRANSLATE: university and academic-institution names where an established target-language form exists. Examples: Tel Aviv University → Spanish "Universidad de Tel Aviv" / Chinese "特拉维夫大学". Tsinghua University → Spanish "Universidad de Tsinghua" / Chinese "清华大学". Technion → Chinese "以色列理工学院" (keep "Technion" in Spanish, no canonical form). MIT → Chinese "麻省理工学院" (keep "MIT" in Spanish). If no canonical target-language form exists for the institution, keep the original.\n  TRANSLATE: job titles and role names — even when they appear next to an organisation name. Examples: "Operations Manager" → Spanish "Gerente de Operaciones" / Chinese "运营经理". "Senior System Engineer" → Spanish "Ingeniero Senior de Sistemas" / Chinese "高级系统工程师". "Rugby Operations Manager" → Spanish "Gerente de Operaciones de Rugby" / Chinese "橄榄球运营经理".\n  TRANSLATE: city and country names. Copenhagen → København (Danish) / Copenhague (Spanish) / 哥本哈根 (Chinese). Denmark → Danmark (Danish) / Dinamarca (Spanish) / 丹麦 (Chinese). Tel Aviv → 特拉维夫 (Chinese, otherwise unchanged).\n  TRANSLATE: civic / status terms like "EU Citizen". Danish "EU-borger", Spanish "Ciudadano UE", Chinese "欧盟公民".\n  FOR SPANISH TARGET: keep person names in Latin script unchanged (Gabriel Alexander Karp-Gershon stays as written).\n  FOR CHINESE TARGET: render the candidate's person name in Chinese characters. If the name is "Gabriel Alexander Karp-Gershon" (or a shorter variant such as "Gabriel Karp-Gershon"), use EXACTLY "柯葛顺·加百列·亚历山大" and do not transliterate it any other way. For ANY OTHER full personal name, create a FITTING Chinese name: use the established Chinese form for well-known given names (Gabriel→加百列, Alexander→亚历山大), pick surname glyphs that are phonetically close AND carry positive or neutral meaning suited to the person's profession and character, place the surname FIRST (Chinese order), and never use glyphs with negative connotations (e.g. 埃 "dust", 卡 "stuck/jammed"). Apply when a value is clearly a full personal name (first + last); do NOT transliterate company / organisation names.\n- Quoted strings are titles of real published works (papers, books, articles). Keep ALL text inside straight double quotes "..." and curly quotes “...” EXACTLY as written, in the original source language. Translate only the prose surrounding the quotes. Example: in DA, “Suspended Carbon Nanotube Integration in Microfabricated Devices” — Karp et al., 2009 becomes “Suspended Carbon Nanotube Integration in Microfabricated Devices” — Karp m.fl., 2009 (title verbatim, surrounding prose translated).\n- Keep numbers, dates, year ranges (e.g. 2017-2025) unchanged.\n- Preserve formatting: bracketed placeholders like [Role title] / [Rolle titel] stay bracketed; bullet markers stay; punctuation matches target language conventions.\n- Preserve sentinel tokens: any token matching the pattern __ANTCV_KEEP_<digits>__ (for example __ANTCV_KEEP_1__, __ANTCV_KEEP_2__) is a protected reference and MUST be reproduced in the output EXACTLY as written, with the same digits, in the same position relative to the surrounding prose. Do NOT translate, paraphrase, or remove these tokens. They stand in for proper-noun phrases that have been factored out of the input.\n- Match the professional register: calm, factual, direct. No buzzwords. No corporate jargon.\n- For Danish: use "du" not "De". Use everyday Danish, not legalese.\n- For English: UK spelling. Clear, professional, no Americanisms.\n- Banned in any language output: spearhead, leverage, foster, robust, holistic, cutting-edge, world-class, drive (vague), deliver (vague), passionate, committed, comprehensive (without specifics). Danish equivalents (drive frem, fremme, robust, omfattende, banebrydende) also banned.\n\nCRITICAL: Return EVERY input key in your output. Do NOT skip any keys. Do NOT add new keys. The output MUST be a single complete JSON object — finish it before stopping. No explanation, no markdown, no preamble, just the JSON object.`,
+                      const i = `You are a professional translator. The input JSON contains text that may be in any language. Translate every value to ${t}, regardless of what language each value is currently in.\n\nRULES:\n- Translate every value to ${t}, even if it appears to already be in another language. Do NOT pass values through unchanged.\n- Proper-noun handling — categorise EACH proper noun, then apply the right rule:\n  KEEP VERBATIM (never translate): company / organisation names (employers, clubs, associations — even small local ones), product names, technology names (tools, platforms, protocols), file-format names, standards codes (ISO 26262, ASPICE, BABOK).\n  TRANSLATE: university and academic-institution names where an established target-language form exists. Examples: Tel Aviv University → Spanish "Universidad de Tel Aviv" / Chinese "特拉维夫大学". Tsinghua University → Spanish "Universidad de Tsinghua" / Chinese "清华大学". Technion → Chinese "以色列理工学院" (keep "Technion" in Spanish, no canonical form). MIT → Chinese "麻省理工学院" (keep "MIT" in Spanish). If no canonical target-language form exists for the institution, keep the original.\n  TRANSLATE: job titles and role names — even when they appear next to an organisation name. Examples: "Operations Manager" → Spanish "Gerente de Operaciones" / Chinese "运营经理". "Senior System Engineer" → Spanish "Ingeniero Senior de Sistemas" / Chinese "高级系统工程师". "Rugby Operations Manager" → Spanish "Gerente de Operaciones de Rugby" / Chinese "橄榄球运营经理".\n  TRANSLATE: city and country names. Copenhagen → København (Danish) / Copenhague (Spanish) / 哥本哈根 (Chinese). Denmark → Danmark (Danish) / Dinamarca (Spanish) / 丹麦 (Chinese). Tel Aviv → 特拉维夫 (Chinese, otherwise unchanged).\n  TRANSLATE: civic / status terms like "EU Citizen". Danish "EU-borger", Spanish "Ciudadano UE", Chinese "欧盟公民".\n  TRANSLATE the application-type label "Unsolicited" (or "Open Application") to EXACTLY: Danish "Uopfordret", Spanish "Candidatura espontánea", Chinese "主动申请", Hebrew "מועמדות יזומה", Amharic "ያልተጠየቀ ማመልከቻ", Arabic "طلب عفوي". Use exactly these forms — no other synonym or spelling.\n  FOR SPANISH AND DANISH TARGETS: keep person names in Latin script unchanged (Gabriel Alexander Karp-Gershon stays as written).\n  FOR CHINESE TARGET: render the candidate's person name in Chinese characters. If the name is "Gabriel Alexander Karp-Gershon" (or a shorter variant such as "Gabriel Karp-Gershon"), use EXACTLY "柯葛顺·加百列·亚历山大" and do not transliterate it any other way. For ANY OTHER full personal name, create a FITTING Chinese name: use the established Chinese form for well-known given names (Gabriel→加百列, Alexander→亚历山大), pick surname glyphs that are phonetically close AND carry positive or neutral meaning suited to the person's profession and character, place the surname FIRST (Chinese order), and never use glyphs with negative connotations (e.g. 埃 "dust", 卡 "stuck/jammed"). Apply when a value is clearly a full personal name (first + last); do NOT transliterate company / organisation names.\n  FOR HEBREW, AMHARIC AND ARABIC TARGETS: render the candidate's person name in the target script with the same care as the Chinese rule: use the established target-script form for well-known given names (Gabriel → Hebrew "גבריאל" / Arabic "جبريل" / Amharic "ገብርኤል"; Alexander → Hebrew "אלכסנדר" / Arabic "ألكسندر" / Amharic "አሌክሳንደር"), and transliterate surnames phonetically with dignified standard spellings — never spellings with negative or comic readings. Apply when a value is clearly a full personal name (first + last); do NOT transliterate company / organisation names or tool names.\n- Quoted strings are titles of real published works (papers, books, articles). Keep ALL text inside straight double quotes "..." and curly quotes “...” EXACTLY as written, in the original source language. Translate only the prose surrounding the quotes. Example: in DA, “Suspended Carbon Nanotube Integration in Microfabricated Devices” — Karp et al., 2009 becomes “Suspended Carbon Nanotube Integration in Microfabricated Devices” — Karp m.fl., 2009 (title verbatim, surrounding prose translated).\n- Keep numbers, dates, year ranges (e.g. 2017-2025) unchanged. The word "Present" in a year range (e.g. "2022 - Present") DOES translate: Danish "nu", Spanish "actualidad", Chinese "至今", Hebrew "היום", Amharic "እስከ አሁን", Arabic "حتى الآن".\n- Preserve formatting: bracketed placeholders like [Role title] / [Rolle titel] stay bracketed; bullet markers stay; punctuation matches target language conventions.\n- Preserve sentinel tokens: any token matching the pattern __ANTCV_KEEP_<digits>__ (for example __ANTCV_KEEP_1__, __ANTCV_KEEP_2__) is a protected reference and MUST be reproduced in the output EXACTLY as written, with the same digits, in the same position relative to the surrounding prose. Do NOT translate, paraphrase, or remove these tokens. They stand in for proper-noun phrases that have been factored out of the input.\n- Match the professional register: calm, factual, direct. No buzzwords. No corporate jargon.\n- For Danish: use "du" not "De". Use everyday Danish, not legalese.\n- For English: UK spelling. Clear, professional, no Americanisms.\n- Banned in any language output: spearhead, leverage, foster, robust, holistic, cutting-edge, world-class, drive (vague), deliver (vague), passionate, committed, comprehensive (without specifics). Danish equivalents (drive frem, fremme, robust, omfattende, banebrydende) also banned.\n\nCRITICAL: Return EVERY input key in your output. Do NOT skip any keys. Do NOT add new keys. The output MUST be a single complete JSON object — finish it before stopping. No explanation, no markdown, no preamble, just the JSON object.`,
                         l = 30,
                         s = Object.keys(a),
                         c = Math.ceil(s.length / l);
@@ -25795,7 +25806,7 @@
                 (!__jdNamedCompany &&
                   __noJD &&
                   io &&
-                  "Unsolicited" === io.company)
+                  window.__antcvUnsol(io.company))
               ) {
                 const e = ie() || {},
                   __wh0 =
@@ -25803,7 +25814,7 @@
                   t = __wh0.title || __wh0.role || "";
                 (D &&
                   D.company &&
-                  "Unsolicited" !== D.company &&
+                  !window.__antcvUnsol(D.company) &&
                   console.warn(
                     `[v1.40.112 showcase] LLM hallucinated company="${D.company}" role="${D.role || ""}" — discarding and forcing Unsolicited. (No JD was provided; the LLM should not invent a company.)`,
                   ));
@@ -25999,7 +26010,7 @@
             // value (antcv:clSloganAuto) — the band then falls back to the new
             // io.subtitle at all three render sites.
             try {
-              if (W && W.company && "Unsolicited" !== W.company && W.subtitle) {
+              if (W && W.company && !window.__antcvUnsol(W.company) && W.subtitle) {
                 const __n = (s) =>
                   String(s || "").replace(/\s*[•*|]\s*/g, " • ").trim().toUpperCase();
                 const __cur = __n(localStorage.getItem("antcv:clSlogan"));
@@ -26246,7 +26257,7 @@
                   d = ie(),
                   p =
                     !!u.get("kernelShowcaseInProgress", !1) ||
-                    !!(io && "Unsolicited" === io.company) ||
+                    !!(io && window.__antcvUnsol(io.company)) ||
                     // 1.50.280: harden kernel detection. Cs() resets io.company
                     // to "" during generation, so p leaned entirely on the
                     // in-progress flag; if that wasn't set on the run, p went
@@ -26254,7 +26265,7 @@
                     // neutral contribute, profile/outcomes seeds) silently went
                     // to blank/placeholder. Also accept the response meta company
                     // and the showcase JD sentinel as kernel signals.
-                    !!(W && "Unsolicited" === W.company) ||
+                    !!(W && window.__antcvUnsol(W.company)) ||
                     Un.current === ks ||
                     // CL-CONTRIBUTE-INTRO-CLOSING-002 (owner 2026-06-24): io.company
                     // drifts off the literal "Unsolicited" on an active unsolicited
@@ -27101,7 +27112,7 @@
                     try {
                       _isShowcase = !!(
                         io &&
-                        (io.company === "Unsolicited" || io.showcase === true)
+                        (window.__antcvUnsol(io.company) || io.showcase === true)
                       );
                     } catch (_) {}
                     if (_isShowcase) {
@@ -27731,7 +27742,7 @@
                     
                     oo.putShowcase({
                       sections: __secs,
-                      meta: (function (m) { try { if (!m || "object" != typeof m) return m; var co = String(m.company || "").trim(); if (!co || "Unsolicited" === co) return m; var c = Object.assign({}, m, { company: "Unsolicited", role: "Open Application" }); try { delete c.rationale; } catch (_) {} return c; } catch (_) { return m; } })(u.get("meta", null)), /* UNSOLICITED-IDENTITY-SOURCE-FIX-001: never store a real company in the unsolicited kernel slot */
+                      meta: (function (m) { try { if (!m || "object" != typeof m) return m; var co = String(m.company || "").trim(); if (!co || window.__antcvUnsol(co)) return m; var c = Object.assign({}, m, { company: "Unsolicited", role: "Open Application" }); try { delete c.rationale; } catch (_) {} return c; } catch (_) { return m; } })(u.get("meta", null)), /* UNSOLICITED-IDENTITY-SOURCE-FIX-001: never store a real company in the unsolicited kernel slot */
                       rationale: u.get("rationale", null),
                       jd_language: je,
                     }, __kk);
@@ -28289,7 +28300,7 @@
             // CL-CLOSING-EDIT-001 (owner 2026-06-29): editable sign-off closing; EN default is
             // "At your service," (the Nordic template), override via antcv:clClosing. Parity with
             // the worker closeWord + the React preview.
-            const i = (() => { try { const ov = String(localStorage.getItem("antcv:clClosing") || "").trim(); if (ov) return ov; } catch (_) {} return ({ da: "Med venlig hilsen,", es: "Atentamente,", zh: "此致敬礼，", he: "בברכה,", am: "ከሰላምታ ጋር,", ar: "مع خالص التقدير," })[je] || "At your service,"; })(),
+            const i = (() => { try { const ov = String(localStorage.getItem("antcv:clClosing") || "").trim(); if (ov && ov !== "At your service,") return ov; } catch (_) {} return ({ da: "Med venlig hilsen,", es: "Atentamente,", zh: "此致敬礼，", he: "בברכה,", am: "ከሰላምታ ጋር,", ar: "مع خالص التقدير," })[je] || "At your service,"; })(),
               l = a.filter(
                 (e) => e.on && "closure" !== e.id && "jd_questions" !== e.id,
               ),
@@ -29559,14 +29570,14 @@
                 u(
                   // CL-CLOSING-EDIT-001 (owner 2026-06-29): EN sign-off default is "At your service,"
                   // (Nordic template). Inline-docx fallback path (worker-down); default only.
-                  {
+                  (() => { try { const ov = String(localStorage.getItem("antcv:clClosing") || "").trim(); if (ov && ov !== "At your service,") return ov; } catch (_) {} return ({
                     da: "Med venlig hilsen,",
-                    es: "Saludos cordiales,",
-                    zh: "此致敬礼,",
+                    es: "Atentamente,",
+                    zh: "此致敬礼，",
                     he: "בברכה,",
                     am: "ከሰላምታ ጋር,",
                     ar: "مع خالص التقدير,",
-                  }[je] || "At your service,",
+                  })[je] || "At your service,"; })(),
                   "CV_Body",
                   { spacingBefore: 240, spacingAfter: 120 },
                 ),
@@ -39611,7 +39622,7 @@
                                     ) {
                                       oo.putShowcase({
                                         sections: __mks,
-                                        meta: (function (m) { try { if (!m || "object" != typeof m) return m; var co = String(m.company || "").trim(); if (!co || "Unsolicited" === co) return m; var c = Object.assign({}, m, { company: "Unsolicited", role: "Open Application" }); try { delete c.rationale; } catch (_) {} return c; } catch (_) { return m; } })(io),
+                                        meta: (function (m) { try { if (!m || "object" != typeof m) return m; var co = String(m.company || "").trim(); if (!co || window.__antcvUnsol(co)) return m; var c = Object.assign({}, m, { company: "Unsolicited", role: "Open Application" }); try { delete c.rationale; } catch (_) {} return c; } catch (_) { return m; } })(io),
                                         rationale: yo,
                                         jd_language: je,
                                       }, (() => { try { var p = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {}; p = p.personalInfo || p; var __st = String((p.writingPrefs || {}).style || "").trim().toLowerCase(); var __lg = String(localStorage.getItem("language") || "en").toLowerCase().replace(/[^a-z]/g, "").slice(0,2) || "en"; return __st ? __st + "|" + __lg : ""; } catch (_) { return ""; } })());
@@ -41024,7 +41035,7 @@
                             mPre &&
                             "object" == typeof mPre &&
                             mPre.company &&
-                            "Unsolicited" !== String(mPre.company).trim()
+                            !window.__antcvUnsol(mPre.company)
                           );
                         if (isTailoredApp) {
                           try {
@@ -45232,7 +45243,7 @@
                     React.createElement(
                       "div",
                       { style: { textAlign: (() => { try { var a4 = String(localStorage.getItem("antcv:clClosingAlign") || "center").replace(/["']/g, "").toLowerCase(); return ("left" === a4 || "right" === a4 || "center" === a4) ? a4 : "center"; } catch (_) { return "center"; } })() } },
-                      n ? "Med venlig hilsen," : (() => { try { const ov = String(localStorage.getItem("antcv:clClosing") || "").trim(); if (ov) return ov; } catch (_) {} return "At your service,"; })(),
+                      (() => { try { const ov = String(localStorage.getItem("antcv:clClosing") || "").trim(); if (ov && ov !== "At your service,") return ov; } catch (_) {} return ({ da: "Med venlig hilsen,", es: "Atentamente,", zh: "此致敬礼，", he: "בברכה,", am: "ከሰላምታ ጋር,", ar: "مع خالص التقدير," })[je] || "At your service,"; })(),
                     ),
                     React.createElement(
                       "div",
@@ -45333,7 +45344,7 @@
                             React.createElement(
                               "div",
                               { style: { cursor: "text", textAlign: (() => { try { var a4 = String(localStorage.getItem("antcv:clClosingAlign") || "center").replace(/["']/g, "").toLowerCase(); return ("left" === a4 || "right" === a4 || "center" === a4) ? a4 : "center"; } catch (_) { return "center"; } })() }, contentEditable: true, suppressContentEditableWarning: true, spellCheck: false, title: "Click to edit the sign-off line", onBlur: (ev) => { try { localStorage.setItem("antcv:clClosing", String(ev.currentTarget.textContent || "").trim()); window.dispatchEvent(new CustomEvent("antcv:sections-updated", { detail: { reason: "cl-signoff-inline" } })); } catch (_) {} } },
-                              n ? "Med venlig hilsen," : (() => { try { const ov = String(localStorage.getItem("antcv:clClosing") || "").trim(); if (ov) return ov; } catch (_) {} return "At your service,"; })(),
+                              (() => { try { const ov = String(localStorage.getItem("antcv:clClosing") || "").trim(); if (ov && ov !== "At your service,") return ov; } catch (_) {} return ({ da: "Med venlig hilsen,", es: "Atentamente,", zh: "此致敬礼，", he: "בברכה,", am: "ከሰላምታ ጋር,", ar: "مع خالص التقدير," })[je] || "At your service,"; })(),
                             ),
                             React.createElement(
                               "div",
@@ -46015,7 +46026,7 @@
                                 ) {
                                   oo.putShowcase({
                                     sections: __mks,
-                                    meta: (function (m) { try { if (!m || "object" != typeof m) return m; var co = String(m.company || "").trim(); if (!co || "Unsolicited" === co) return m; var c = Object.assign({}, m, { company: "Unsolicited", role: "Open Application" }); try { delete c.rationale; } catch (_) {} return c; } catch (_) { return m; } })(io),
+                                    meta: (function (m) { try { if (!m || "object" != typeof m) return m; var co = String(m.company || "").trim(); if (!co || window.__antcvUnsol(co)) return m; var c = Object.assign({}, m, { company: "Unsolicited", role: "Open Application" }); try { delete c.rationale; } catch (_) {} return c; } catch (_) { return m; } })(io),
                                     rationale: yo,
                                     jd_language: je,
                                   }, (() => { try { var p = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {}; p = p.personalInfo || p; var __st = String((p.writingPrefs || {}).style || "").trim().toLowerCase(); var __lg = String(localStorage.getItem("language") || "en").toLowerCase().replace(/[^a-z]/g, "").slice(0,2) || "en"; return __st ? __st + "|" + __lg : ""; } catch (_) { return ""; } })());

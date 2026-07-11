@@ -64,7 +64,7 @@
     try {
       var m = JSON.parse(localStorage.getItem('meta') || '{}') || {};
       var co = String(m.company || '').trim();
-      if (co && !/^unsolicited$/i.test(co) && !/^open application$/i.test(co)) {
+      if (co && !(window.__ANTCV_UNSOL_RE || /^unsolicited$/i).test(co) && !/^open application$/i.test(co)) { // UNSOL-PILLAR-LANG-001: any language variant
         var sm = String(m.cl_slogan || '').trim();
         // SLOGAN-QUALITY-GATE-001: a low-quality generated slogan renders NOWHERE.
         if (sm && typeof window.__antcvSloganQualityOk === 'function' && !window.__antcvSloganQualityOk(sm, m)) sm = '';

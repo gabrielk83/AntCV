@@ -266,8 +266,8 @@
               var m = readJson('meta', {}) || {};
               var __curCo = String(m.company || '').trim();
               var __inCo = String(aa.jd_company || '').trim();
-              var __downgrade = __curCo && !/^unsolicited$/i.test(__curCo) &&
-                                (!__inCo || /^unsolicited$/i.test(__inCo));
+              var __downgrade = __curCo && !(window.__ANTCV_UNSOL_RE || /^unsolicited$/i).test(__curCo) &&
+                                (!__inCo || (window.__ANTCV_UNSOL_RE || /^unsolicited$/i).test(__inCo)); // UNSOL-PILLAR-LANG-001: any language variant
               var __killDg = false;
               try { __killDg = localStorage.getItem('antcv:disable-meta-downgrade-guard') === '1'; } catch (_) {}
               if (__downgrade && !__killDg) {

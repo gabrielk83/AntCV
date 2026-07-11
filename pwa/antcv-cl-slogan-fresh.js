@@ -67,7 +67,7 @@
 
   function isTargeted(m) {
     var c = String(m.company || '').trim();
-    return !!c && !/^unsolicited$/i.test(c) && !/^open application$/i.test(c);
+    return !!c && !(window.__ANTCV_UNSOL_RE || /^unsolicited$/i).test(c) && !/^open application$/i.test(c); // UNSOL-PILLAR-LANG-001: any language variant
   }
   function appKeyOf(m) { return String(m.company || '').trim() + '|' + String(m.role || m.position || '').trim(); }
   // A REAL fresh slogan: non-empty, not a bracketed template placeholder.

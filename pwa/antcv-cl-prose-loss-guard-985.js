@@ -62,7 +62,7 @@
       // window (before meta is stamped) that CL-BLANK-CAPTURE-001 relies on to snapshot
       // prose early; gating it would drop real prose. The poison was the explicit
       // "Unsolicited|<role>" bucket, which this catches.
-      return c === 'unsolicited';
+      return c === 'unsolicited' || !!(window.__antcvUnsol && window.__antcvUnsol(c)); // UNSOL-PILLAR-LANG-001: any language variant
     } catch (_) { return false; }
   }
   function readSections() {

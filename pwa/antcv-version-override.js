@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.333-route-debug';
+  const TARGET_VERSION = '1.51.334-unsol-pillar';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.333-route-debug',
     '1.51.332-llm-params',
     '1.51.331-llm-route',
     '1.51.330-furniture-lang',

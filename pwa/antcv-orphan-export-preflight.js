@@ -96,7 +96,7 @@
     try {
       var m = JSON.parse((storage || localStorage).getItem('meta') || '{}') || {};
       var c = String(m.company || '').trim();
-      return !!c && !/^unsolicited$/i.test(c) && !/^open application$/i.test(c);
+      return !!c && !(window.__ANTCV_UNSOL_RE || /^unsolicited$/i).test(c) && !/^open application$/i.test(c); // UNSOL-PILLAR-LANG-001: any language variant
     } catch (_) { return false; }
   }
   function packingDisabled(storage) {

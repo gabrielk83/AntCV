@@ -852,7 +852,7 @@ export function buildPayload({
           // preview uses — a low-quality generated slogan ships NOWHERE.
           try { if (smart && typeof window !== 'undefined' && typeof window.__antcvSloganQualityOk === 'function' && !window.__antcvSloganQualityOk(smart, meta)) smart = ''; } catch (_) {}
           const co = String((meta && meta.company) || '').trim();
-          const targeted = !!co && !/^unsolicited$/i.test(co) && !/^open application$/i.test(co);
+          const targeted = !!co && !(window.__ANTCV_UNSOL_RE || /^unsolicited$/i).test(co) && !/^open application$/i.test(co); // UNSOL-PILLAR-LANG-001: any language variant
           const standing = String((meta && meta.subtitle) || '').trim();
           const sl = (ov && !/^\[/.test(ov)) ? ov
             : (smart && !/^\[/.test(smart)) ? smart
@@ -1439,7 +1439,7 @@ function _isTargetedExport() {
     // guard / Copenhagen Wolves / student council + Publications dropped). Owner rule:
     // "Unsolicited keeps the full breadth." So 'unsolicited' ⇒ FALSE; any OTHER explicit
     // company ⇒ targeted; only when meta.company is EMPTY do we consult the drift fallbacks.
-    if (co === 'unsolicited') return false;
+    if (co === 'unsolicited' || !!(window.__antcvUnsol && window.__antcvUnsol(co))) return false; // UNSOL-PILLAR-LANG-001: any language variant
     if (co) return true;
     // STABLE fallback (PUBLICATIONS-HIDE-STABLE-001): the volatile meta.company /
     // activeAppCompany can drift to EMPTY mid-session, which would silently switch the
@@ -1448,7 +1448,7 @@ function _isTargetedExport() {
     // active company still wins (return false) even when meta.company drifted empty.
     try {
       const ac = String(localStorage.getItem('antcv:activeAppCompany') || '').replace(/"/g, '').trim().toLowerCase();
-      if (ac === 'unsolicited') return false;
+      if (ac === 'unsolicited' || !!(window.__antcvUnsol && window.__antcvUnsol(ac))) return false; // UNSOL-PILLAR-LANG-001: any language variant
       if (ac) return true;
     } catch (_) {}
     const s = JSON.parse(localStorage.getItem('sections') || '{}');

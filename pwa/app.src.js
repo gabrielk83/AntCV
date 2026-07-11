@@ -2260,6 +2260,10 @@
       if (!(i >= 0)) return;
       var pi = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {};
       if (pi && Array.isArray(pi.contactItems) && pi.contactItems[i] && "string" == typeof pi.contactItems[i].value) {
+        // LANG-IDENTITY-SWITCH-001: stash the Latin original before the FIRST
+        // wide-script overwrite so a later Latin ribbon can restore it.
+        var cur = pi.contactItems[i].value;
+        if (cur.trim() && !__ANTCV_WIDE_ID_RE.test(cur) && __ANTCV_WIDE_ID_RE.test(v)) pi.contactItems[i].__latin = cur;
         pi.contactItems[i].value = v;
         localStorage.setItem("personalInfo", JSON.stringify(pi));
       }
@@ -18647,7 +18651,7 @@
                                           ? __antcvWritePi("citizenship", o)
                                           : "pici" === e.__std
                                             ? __antcvWriteContactItem(e.__ci, o)
-                                            : "signname" === e.__std && (() => { try { localStorage.setItem("antcv:clSignName", o); } catch (_) {} })());
+                                            : "signname" === e.__std && (() => { try { var __c = localStorage.getItem("antcv:clSignName"); if (__c && __c.trim() && !__ANTCV_WIDE_ID_RE.test(__c) && __ANTCV_WIDE_ID_RE.test(o)) localStorage.setItem("antcv:clSignName_latin", __c); localStorage.setItem("antcv:clSignName", o); } catch (_) {} })());
                             }),
                             t
                           );
@@ -25884,6 +25888,26 @@
               cl_overrides: F = {},
               rationale: M,
             } = T || {};
+            // GEN-KEYS-CAPTURE-001 (1.51.354, diag): record the ACCEPTED parse_jd
+            // response's shape (localStorage antcv:last-gen-keys). A templated
+            // CV/CL is then attributable: cl fields "empty"/"placeholder" -> the
+            // model omitted them (prompt side); "real:<len>" -> the apply path or
+            // a later clobber dropped them. Paired with antcv:last-gen-who-src.
+            try {
+              const __ck = (v) => {
+                if ("string" == typeof v) { const s = v.trim(); return s ? (/^\s*\[/.test(s) || /^FILL_/i.test(s) ? "placeholder" : "real:" + s.length) : "empty"; }
+                return Array.isArray(v) ? "array:" + v.length : v && "object" == typeof v ? "object" : "empty";
+              };
+              localStorage.setItem("antcv:last-gen-keys", JSON.stringify({
+                ts: Date.now(),
+                attempts: N,
+                provider: B || "auto",
+                top: Object.keys(T || {}),
+                cl: Object.fromEntries(Object.entries(F || {}).map(([k, v]) => [k, __ck(v)])),
+                cvProfile: __ck(z.profile_content),
+                roles: Array.isArray(z.experience_roles) ? z.experience_roles.length : 0,
+              }));
+            } catch (e) {}
             // COMPANY-BRAND-FIT-001: apply the returned brand palette — only
             // when the user opted in THIS session (never from a stale or
             // hallucinated field), with strict validation: 6-digit hex only,
@@ -26012,10 +26036,9 @@
                 // "Unsolicited"/"Open Application"/"n/a" echo from the LLM
                 // is not a company either — scrub it so a SPECIFIC
                 // application can never carry the Unsolicited label.
-                if (
-                  !__noJD &&
-                  /^(unsolicited|open\s+application|n\/?a)$/i.test(v)
-                ) {
+                // UNSOL-PILLAR-GEN-META-001: variant-aware — a zh/da model
+                // echoing 主动申请/Uopfordret is the same sentinel echo.
+                if (!__noJD && window.__antcvUnsol(v)) {
                   try {
                     D.company = "";
                   } catch (_) {}
@@ -26028,8 +26051,7 @@
                 return v;
               })();
               const __jdNamedCompany =
-                __llmCo &&
-                !/^(unsolicited|open\s+application|n\/?a)$/i.test(__llmCo);
+                __llmCo && !window.__antcvUnsol(__llmCo); // UNSOL-PILLAR-GEN-META-001
               // JD-TARGETED-META-STICK-001: a leftover Un.current is only a
               // "showcase in progress" signal when there is NO real JD — with
               // a JD attached it is a stale stub and must not force-unsolicit
@@ -26125,10 +26147,7 @@
                 } catch (e) {}
                 try {
                   const e = (D.company || "").trim();
-                  if (
-                    e &&
-                    !/^(unsolicited|open\s+application|n\/?a)$/i.test(e)
-                  ) {
+                  if (e && !window.__antcvUnsol(e)) { // UNSOL-PILLAR-GEN-META-001
                     // 1.50.330: NEUTRALISE in place (was: drop the whole sentence +
                     // replace bare mentions with the literal "[Company]"). Dropping
                     // sentences lost good content, and "[Company]" is itself a
@@ -27085,7 +27104,11 @@
                           ? {
                               ...e,
                               content:
-                                __clReal(F.who_content) ||
+                                // GEN-KEYS-CAPTURE-001: record which source fills WHO
+                                // ("gen" = LLM field, "section" = existing content,
+                                // "neutral" = showcase fallback, "default" = last resort).
+                                ((() => { try { localStorage.setItem("antcv:last-gen-who-src", __clReal(F.who_content) ? "gen" : __clReal(e.content) ? "section" : n.who ? "neutral" : "default"); } catch (_) {} })(),
+                                __clReal(F.who_content)) ||
                                 __clReal(e.content) ||
                                 n.who ||
                                 `I am a ${String(g || "engineer").toLowerCase()} with ${f || "15"}+ years across the roles listed on my CV. I work at the seams between disciplines, keeping requirements, decisions, and trade-offs visible and traceable.` ||

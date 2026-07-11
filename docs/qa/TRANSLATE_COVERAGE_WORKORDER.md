@@ -58,13 +58,20 @@ Bucket A is ~90% already implemented. Verified state per item:
 - **"(CONT.)"** — dict entries exist; but line 177 (inside __antcvSalmon, PERMANENT)
   hardcodes `contTitle + " (CONT.)"` and the zh dict maps "(CONT.)"→"(CONT.)" (identity —
   confirm intended zh form, maybe 续). Minor + sensitive location.
-- **CL sign-off "At your service,"** — REAL BUG. Render checks `antcv:clClosing`
-  override FIRST and returns it verbatim; that key is auto-seeded to the English default
-  "At your service," so it PINS English on every language. Sites: 28270 + 29547 have a
-  full da/es/zh/he/am/ar map; **45210 + 45311 only handle da** (n?DA:override||English) —
-  no es/zh map at all. Fix: honor override only when `ov !== "At your service,"` (let the
-  seeded English default fall through to the language map), AND add the language map to
-  45210/45311. Multi-site render-logic change — verify live in each column layout.
+- **CL sign-off "At your service,"** — REAL BUG (confirmed live: antcv:clClosing =
+  "At your service,"). Two problems:
+  (a) override is honored BEFORE the language map → the auto-seeded English default pins
+      English on every language.
+  (b) the two REACT PREVIEW sites have NO language map at all:
+      - **45216** and **45317** (45317 = the contentEditable sign-off the user sees;
+        its onBlur writes antcv:clClosing) both render `n ? "Med venlig hilsen," :
+        (ov || "At your service,")` — da via `n`, everything else → override-or-English.
+      - 28276 (export inline-docx fallback) and 29544-29553 (worker-down fallback) DO
+        have the full `{da,es,zh,he,am,ar}[je]` map.
+  Fix at ALL four: `ov && ov !== "At your service," ? ov : ({da,es,zh,he,am,ar}[je] ||
+  "At your service,")`. For 45216/45317 this REPLACES the `n ? DA : …` ternary with the
+  je-map — VERIFY `je` is in scope in that React render before editing; a bad ref blanks
+  the preview. Live-verifiable by switching language (no gen needed).
 - **"Unsolicited" / "Open Application" app-name** — SENTINEL, not a display label. Code
   branches on `io.company === "Unsolicited"` in ~12 places (15759, 16936, 17036, 17061,
   17080, 17119, 17195…). MUST translate at DISPLAY time only (a render-map applied where

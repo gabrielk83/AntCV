@@ -17866,13 +17866,17 @@
             return 0;
           }
         },
-        Pr = (e, __force) => {
+        Pr = (e, __force, __nc) => {
           var t, n;
           // BABEL-FISH-RELANG-001 (owner 2026-07-11): __force lets the babel-fish
           // relang sidecar re-render CURRENT content into the ribbon language even
           // when e===je (content is stale in another language — e.g. an English
           // kernel served under a zh ribbon). Existing callers pass one arg, so
           // __force is undefined and behaviour is unchanged.
+          // BABEL-FISH-HEADLESS-001 (owner 2026-07-11): __nc (no-confirm) runs the
+          // translate pass DIRECTLY with no confirmation modal — the sidecar could
+          // never confirm the modal, so a zh ribbon over English content stayed
+          // mixed/stuck. window.__antcvRelangHeadless(e) uses this path.
           if (!__force && e === je) return;
           const o = Lr(ro, io),
             r = {
@@ -18305,6 +18309,10 @@
                     console.error("translateAllSections error:", e),
                   ));
             };
+          // BABEL-FISH-HEADLESS-001: no-confirm path — run the translate directly,
+          // never show the confirmation modal (the sidecar / batch re-render cannot
+          // click it). Same as choosing "Translate now".
+          if (__nc) { try { i(); } catch (_) {} return; }
           if (a && a.sections && a.meta) {
             const o = (null == (t = a.sections.cv) ? void 0 : t.length) || 0,
               l = (null == (n = a.sections.cl) ? void 0 : n.length) || 0;
@@ -24752,6 +24760,7 @@
         }),
         (_wlhook = "undefined" != typeof window && (window.AntcvFusion = wl)),
         ("undefined" != typeof window && (window.__antcvRelang = (e, f) => Pr(e, f))),  /* BABEL-FISH-RELANG-001: expose the translate pass so the relang sidecar can re-render content into the ribbon language */
+        ("undefined" != typeof window && (window.__antcvRelangHeadless = (e) => Pr(e, true, true))),  /* BABEL-FISH-HEADLESS-001: modal-free full translate into e — the sidecar/batch use this so a zh (or any) ribbon never stays mixed waiting on a confirm click */
         (window.__antcvGenTrigger = vl = async () => {  /* GEN-BACKGROUND-001 row 38a: expose the generate fn so antcv-gen-memo auto-resumes an interrupted run on foreground */
           var e, t, n, o;
           if (!Bt && !Ut && !Un.current && 0 === Yt.length)

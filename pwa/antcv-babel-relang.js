@@ -27,10 +27,23 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.324-babel-invariant';
+  var VERSION = '1.51.325-babel-headless';
   if (window.__antcvBabelRelang === VERSION) return;
   window.__antcvBabelRelang = VERSION;
   try { if (localStorage.getItem('antcv:disable-babel-relang') === '1') return; } catch (_) {}
+  // BABEL-FISH-HEADLESS-001 (owner 2026-07-11): one-time purge of the pre-headless
+  // langRenders cache. Older builds cached whatever was current under a language key
+  // — including MIXED / partially-translated content (English roles interleaved with
+  // target-language ones), which then propagated on restore. Drop it once per version
+  // so no stale mixed rendering survives the upgrade; clean renderings re-cache lazily.
+  try {
+    var __seenV = localStorage.getItem('antcv:babel-cache-ver');
+    if (__seenV !== VERSION) {
+      try { localStorage.removeItem('langRenders'); } catch (_) {}
+      try { if (window._antcvCloudWrite) window._antcvCloudWrite({ langRenders: {} }); } catch (_) {}
+      localStorage.setItem('antcv:babel-cache-ver', VERSION);
+    }
+  } catch (_) {}
 
   // Non-Latin target scripts we can reliably detect (Unicode ranges).
   var SCRIPTS = {
@@ -39,7 +52,14 @@
     am: /[ሀ-፿]/g,             // Ethiopic
     ar: /[؀-ۿ]/g,             // Arabic
   };
-  var THRESHOLD = 0.12;    // target-script letters / total letters below this = stale
+  // target-script letters / total letters below this = stale (re-render needed).
+  // BABEL-FISH-HEADLESS-001: raised 0.12 -> 0.30. A GOOD non-Latin render still sits
+  // well above this (a faithful zh CV runs ~0.40 CJK once the Latin invariants — names,
+  // tool/standard codes — are counted), but a MIXED render (half the roles still in
+  // English) lands ~0.15-0.25 and used to pass as "fine", so it never got re-rendered
+  // and stayed mixed. 0.30 catches the mixed case and triggers a full headless re-render;
+  // re-rendering an already-good render is idempotent, so a rare false trigger is safe.
+  var THRESHOLD = 0.30;
   var MIN_LETTERS = 200;   // ignore the empty skeleton / mid-load
   var BACKOFF_MS = 20000;  // one relang attempt per language per 20s
   // BABEL-FISH-CLOUD-CACHE-001 (owner 2026-07-11): a SINGLE cloud-synced key holds
@@ -83,16 +103,35 @@
     catch (_) { return (t.match(/[A-Za-zÀ-ɏЀ-ӿ֐-׿؀-ۿሀ-፿㐀-鿿]/g) || []).length; }
   }
 
-  // Is the given text a faithful rendering of language L? For a non-Latin target
-  // the prose must be predominantly that script. For a Latin target we cannot
-  // detect it, so we trust the app's own belief (return true) — Latin renderings
-  // are produced natively at generation time (BABEL-FISH-LANG-NAME-001).
+  // Strong English grammar / connective words that are essentially ABSENT from clean
+  // Danish or Spanish prose (which use og/med/til/gennem, y/con/de/a través). A clean
+  // da/es rendering scores ~0-3 of these (only inside the odd invariant phrase); a
+  // MIXED rendering (half the roles still in English) scores 15+. Grammar words only —
+  // no domain nouns like "management" that can sit inside an invariant standard name.
+  var EN_MARKER_RE = /\b(the|and|with|through|across|between|which|would|their|there|these|those|were|been|about|while|during|into|over|under|that|this|from|when|where|whose|within|towards|alongside)\b/gi;
+  // A clean da/es CV can still carry a few of these inside INVARIANTS that translation
+  // keeps verbatim — English quoted publication titles, an English company name ("… of
+  // Denmark"). Those top out around 6-10; a genuinely MIXED render (half the roles still
+  // English) scores 25+. 12 sits safely between, so invariant residue never trips it.
+  var EN_RESIDUE_MAX = 12;
+
+  // Is the given text a faithful rendering of language L?
+  //  • English target -> always true (canonical / native).
+  //  • Non-Latin target (zh/he/am/ar) -> the prose must be predominantly that script.
+  //  • Latin non-English target (da/es/...) -> BABEL-FISH-HEADLESS-001: we cannot
+  //    script-detect it, but residual ENGLISH grammar words betray a mixed / partly
+  //    untranslated render, so we heal it the same way (return false -> re-render).
   function isInLanguage(txt, L) {
+    if (L === 'en') return true;
     var re = SCRIPTS[L];
-    if (!re) return true;                       // Latin target -> trust
-    var letters = letterCount(txt);
-    if (letters < MIN_LETTERS) return null;     // too little to judge
-    return (txt.match(re) || []).length / letters >= THRESHOLD;
+    if (re) {
+      var letters = letterCount(txt);
+      if (letters < MIN_LETTERS) return null;   // too little to judge
+      return (txt.match(re) || []).length / letters >= THRESHOLD;
+    }
+    // Latin non-English: measure English residue.
+    if (letterCount(txt) < MIN_LETTERS) return null;
+    return (txt.match(EN_MARKER_RE) || []).length <= EN_RESIDUE_MAX;
   }
 
   function hashOf(s) { return s.length + ':' + s.slice(0, 24) + ':' + s.slice(-24); }
@@ -115,8 +154,14 @@
   }
 
   // Snapshot the current content under language L when it is confirmed to be in L.
+  // BABEL-FISH-HEADLESS-001: only cache NON-LATIN targets (SCRIPTS[L] exists), whose
+  // faithfulness we can actually verify by script ratio. Latin targets (da/es) can't
+  // be verified — a mixed English/Danish render looks "fine" — and the sidecar never
+  // restores a Latin cache anyway (isInLanguage returns true for Latin, so the restore
+  // branch never runs). Caching them only risks persisting mixed content, so skip it.
   function snapshot(L, sectionsObj) {
     try {
+      if (!SCRIPTS[L]) return;
       var raw = sectionsRaw(); if (!raw) return;
       var b = readBundle();
       var h = hashOf(raw);
@@ -161,9 +206,25 @@
   var verify = { lang: null, src: null };
 
   var last = { lang: null, at: 0 };
+  // BABEL-FISH-HEADLESS-001: hard cap on consecutive re-render attempts per language.
+  // A successful render (content verified in L) resets it. If a render never satisfies
+  // isInLanguage — e.g. a Latin CV whose English residue is all in un-translatable
+  // INVARIANTS (quoted English titles) — we stop after MAX_ATTEMPTS instead of looping
+  // a translate every BACKOFF_MS forever.
+  var attempts = {};
+  var MAX_ATTEMPTS = 2;
+  // BABEL-FISH-HEADLESS-001: never fire a re-render while a generation is running —
+  // sections churn mid-gen and a concurrent translate would race the generator. The
+  // post-gen 'antcv:sections-updated' + the timers re-run check() once it settles.
+  function genInProgress() {
+    try { if (window.__antcvGenRunning) return true; } catch (_) {}
+    try { if (localStorage.getItem('kernelShowcaseInProgress') === 'true') return true; } catch (_) {}
+    return false;
+  }
   function check() {
     var L = lang();
     if (typeof window.__antcvRelang !== 'function') return;   // app not ready yet
+    if (genInProgress()) return;                              // wait until generation settles
     var sObj = parse('sections'); if (!sObj) return;
     var txt = textOf(sObj);
     var inL = isInLanguage(txt, L);
@@ -179,10 +240,12 @@
           if (miss.length >= DRIFT_SEVERE) return;            // do NOT cache a lossy rendering
         }
       }
+      attempts[L] = 0;                                          // verified in L -> reset the cap
       snapshot(L, sObj);                                       // keep the cache fresh
       return;
     }
     if (inL === null) return;                                 // not enough content to judge
+    if ((attempts[L] || 0) >= MAX_ATTEMPTS) return;           // give up (likely invariant residue, not real mixing)
 
     // Content is NOT in the (non-Latin) ribbon language L.
     var speed = genSpeed();
@@ -197,9 +260,18 @@
     var now = Date.now();
     if (last.lang === L && (now - last.at) < BACKOFF_MS) return;
     last = { lang: L, at: now };
+    attempts[L] = (attempts[L] || 0) + 1;                     // count this attempt toward the cap
     verify = { lang: L, src: invariantSet(txt) };             // capture source facts for the post-render check
     try { console.info('[babel-relang] content not in', L, '— re-rendering into ribbon language (' + speed + ')'); } catch (_) {}
-    try { window.__antcvRelang(L, true); }
+    // BABEL-FISH-HEADLESS-001: use the modal-free translate. The old __antcvRelang(L,true)
+    // opened a confirmation modal the sidecar could never click, so a zh ribbon over
+    // English content stayed mixed/stuck forever. __antcvRelangHeadless runs the same
+    // translate pass directly. Fall back to the old call only if the headless export is
+    // missing (bundle mismatch) so we never hard-fail.
+    try {
+      if (typeof window.__antcvRelangHeadless === 'function') window.__antcvRelangHeadless(L);
+      else window.__antcvRelang(L, true);
+    }
     catch (e) { try { console.warn('[babel-relang] relang failed', e); } catch (_) {} }
   }
 
@@ -211,5 +283,17 @@
   window.addEventListener('antcv:language-changed', schedule);
   window.addEventListener('antcv:sections-updated', schedule);
   [1800, 4500, 9000].forEach(function (d) { setTimeout(schedule, d); });
+  // BABEL-FISH-HEADLESS-001: gen-completion watcher. A generation does not always
+  // dispatch 'antcv:sections-updated', so after a native generation finishes (in any
+  // language) the sidecar might never re-check and a partly-English render would sit
+  // mixed. Poll the gen flag cheaply; on the true->false edge, schedule a check so the
+  // post-gen content is healed into the ribbon language. (check() itself no-ops when the
+  // content is already clean, so this is safe and self-limiting.)
+  var __wasGen = false;
+  setInterval(function () {
+    var g = genInProgress();
+    if (__wasGen && !g) schedule();   // generation just finished -> verify language
+    __wasGen = g;
+  }, 3000);
   window.AntcvBabelRelang = { version: VERSION, _check: check, _snapshot: snapshot, _restore: restoreCache, _invariants: invariantSet, _missing: missingInvariants, lastDrift: null };
 })();

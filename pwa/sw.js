@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.324-babel-invariant';
+const CACHE = 'antcv-1.51.325-babel-headless';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

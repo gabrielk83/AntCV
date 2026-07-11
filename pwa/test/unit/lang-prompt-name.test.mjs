@@ -46,13 +46,27 @@ test('app.js (deployed): same fix present, hardcode gone', () => {
 // non-Latin ribbon into the ribbon language. ─────────────────────────────────
 
 test('app.src.js: Pr takes a force flag and exposes __antcvRelang', () => {
-  assert.equal(src.includes('Pr = (e, __force) =>'), true, 'Pr signature gains __force');
+  assert.equal(src.includes('Pr = (e, __force, __nc) =>'), true, 'Pr signature gains __force + __nc');
   assert.equal(src.includes('if (!__force && e === je) return;'), true, 'guard honours __force');
   assert.equal(src.includes('window.__antcvRelang = (e, f) => Pr(e, f)'), true, 'relang exposed');
   assert.equal(src.includes('BABEL-FISH-RELANG-001'), true, 'documented');
 });
 
 test('app.js (deployed): Pr force flag + __antcvRelang exposure present (minified)', () => {
-  assert.equal(app.includes('Xr=(e,__force)=>{var t,n;if(!__force&&e===Be)return;'), true, 'minified Pr gains __force + guard');
+  assert.equal(app.includes('Xr=(e,__force,__nc)=>{var t,n;'), true, 'minified Pr gains __force + __nc');
+  assert.equal(app.includes('if(!__force&&e===Be)return;'), true, 'minified guard honours __force');
   assert.equal(app.includes('window.__antcvRelang=(e,f)=>Xr(e,f)'), true, 'relang exposed in the bundle');
+});
+
+// ── BABEL-FISH-HEADLESS-001: modal-free translate path so the babel sidecar can
+// re-render a mixed / wrong-language kernel without a confirm modal it can't click. ──
+test('app.src.js: headless translate (__nc no-confirm) path + exposure', () => {
+  assert.equal(src.includes('if (__nc) { try { i(); } catch (_) {} return; }'), true, 'no-confirm runs the translate directly');
+  assert.equal(src.includes('window.__antcvRelangHeadless = (e) => Pr(e, true, true)'), true, 'headless helper exposed');
+  assert.equal(src.includes('BABEL-FISH-HEADLESS-001'), true, 'documented');
+});
+
+test('app.js (deployed): headless translate present (minified)', () => {
+  assert.equal(app.includes('if(__nc){try{i()}catch(_){}return}'), true, 'minified no-confirm path');
+  assert.equal(app.includes('window.__antcvRelangHeadless=e=>Xr(e,!0,!0)'), true, 'headless helper exposed in the bundle');
 });

@@ -167,9 +167,14 @@
     if (ta && tb && (ta === tb || ta.indexOf(tb + ' ') === 0 || tb.indexOf(ta + ' ') === 0)) return true;
     // BABEL-DEDUP-SCRIPT-001: cross-script pair (translated title vs canon) —
     // same company + same span = the SAME real position in two renderings.
+    // BABEL-DEDUP-SCRIPT-002 (owner 2026-07-11 8-page PDF): a TRANSLATED company
+    // (特拉维夫大学) strips to an EMPTY Latin key, so the canon twin never
+    // matched and stayed/was un-hidden as an extra English role. Cross-script +
+    // same span + an unparseable company key on either side counts as the same
+    // position (the years gate at the top already matched).
     if (_isWideTitle(ra) !== _isWideTitle(rb)) {
       var ca = _companyKey(a.company), cb = _companyKey(b.company);
-      if (ca && ca === cb) return true;
+      if (ca === cb || !ca || !cb) return true;
     }
     return false;
   }

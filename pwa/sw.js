@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.352-adequacy-scope';
+const CACHE = 'antcv-1.51.353-same-id-position';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

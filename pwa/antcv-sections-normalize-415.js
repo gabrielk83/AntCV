@@ -161,6 +161,12 @@
   }
   function _samePosition(a, b) {
     if (!a || !b) return false;
+    // SAME-ID-SAME-POSITION-001 (owner 2026-07-12 "you kept english and danish
+    // versions at once"): roles carry stable canonical ids (kanzen, innoviz-ccr…)
+    // from generation/import — the LANGUAGE-agnostic identity. A Danish-titled
+    // gen role and its English PI source share the id; title/year text
+    // comparison can never see that across Latin↔Latin languages.
+    if (a.id != null && b.id != null && String(a.id) === String(b.id)) return true;
     if (_yrKey(a.years) !== _yrKey(b.years)) return false;
     var ra = a.title || a.role, rb = b.title || b.role;
     var ta = _titleCore(ra), tb = _titleCore(rb);

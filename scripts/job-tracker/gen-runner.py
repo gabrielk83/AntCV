@@ -258,11 +258,13 @@ CV_SECTIONS = [
     ("cv_core",             "CORE COMPETENCIES", "Generate the CV CORE COMPETENCIES table: 6 rows, each 'Focus Area | Strategic Expertise'. Backward-looking, role-independent."),
 ]
 CL_SECTIONS = [
+    ("cl_opening",          "Opening",           "Write the COVER LETTER OPENING line (1-2 first-person sentences): a specific, engaging hook that names the role and gives a genuine, concrete reason this candidate is drawn to it - NOT a flat 'I am applying for the X position at Y'. Calm professional register, no filler, no greeting line, no name."),
     ("cl_who_i_am",         "WHO I AM",          "Write the COVER LETTER WHO I AM section (2-4 first-person sentences)."),
     ("cl_what_i_bring",     "WHAT I BRING",      "Generate the COVER LETTER WHAT I BRING table (4-6 rows 'Focus Area | Strategic Expertise'), forward-looking, focus areas drawn from THIS job description."),
     ("cl_why_this_position","WHY THIS POSITION", "Write the COVER LETTER WHY THIS POSITION section (2-4 sentences specific to this role and company)."),
     ("cl_how_i_would_contribute","HOW I WOULD CONTRIBUTE","Write the COVER LETTER HOW I WOULD CONTRIBUTE section (3-6 verb-led bullets)."),
     ("cl_foundation",       "FOUNDATION",        "Write the COVER LETTER FOUNDATION section: two short paragraphs labelled 'Hands-on:' and 'Professionally:'."),
+    ("cl_closure",          "Closure",           "Write the COVER LETTER CLOSURE (1-2 first-person sentences): a warm, confident sign-off that INVITES a conversation and points at the concrete value the candidate would bring to THIS employer. Do NOT restate why the candidate is drawn to the role (the opening already does that); focus on the invitation and the value. Not generic boilerplate. No 'Sincerely'/signature line, no name."),
 ]
 
 def _user_turn(profile_json, meta, section_ask):
@@ -578,12 +580,24 @@ def build_structured_sections(sk, sections, company, role):
                 if len(rr) >= 2: items.append({"b": sanitize_text(rr[0]), "t": sanitize_text(rr[1]), "mk": True})
             if len(items) > 1: s["items"] = items
 
+    # Greeting stays clean furniture: no hiring-manager name is captured, and the
+    # owner rule is to greet only a named hiring manager (antcv-deliverable-standards).
     g = _ov_find(cl, "greeting")
     if g: g["content"] = "Dear Hiring Team,"
+    # Opening + closure are now GENERATED (fall back to furniture if the section
+    # came back empty). Opening is a rich_block (replace items[0].t, keep headlineOff);
+    # closure is a plain-content section.
+    gen_open = txt("cl_opening").strip()
     op = _ov_find(cl, "opening")
-    if op: op["items"] = [{"b": "", "t": f"I am applying for the {role} position at {company}."}]
+    if op:
+        op_t = gen_open or f"I am applying for the {role} position at {company}."
+        items = op.get("items") or [{"b": "", "t": ""}]
+        items = list(items); items[0] = {**items[0], "b": "", "t": op_t}
+        op["items"] = items
+    gen_close = txt("cl_closure").strip()
     cz = _ov_find(cl, "closure")
-    if cz: cz["content"] = f"I would welcome the chance to discuss how I can contribute to {company} as {role}."
+    if cz:
+        cz["content"] = gen_close or f"I would welcome the chance to discuss how I can contribute to {company} as {role}."
     return cv, cl
 
 def persist_application(doc, r, res, category, language):

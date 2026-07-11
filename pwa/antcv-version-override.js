@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.354-gen-keys-capture';
+  const TARGET_VERSION = '1.51.355-relang-single-flight';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.354-gen-keys-capture',
     '1.51.353-same-id-position',
     '1.51.352-adequacy-scope',
     '1.51.351-gen-budget',

@@ -27,7 +27,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.330-furniture-lang';
+  var VERSION = '1.51.355-relang-single-flight';
   if (window.__antcvBabelRelang === VERSION) return;
   window.__antcvBabelRelang = VERSION;
   try { if (localStorage.getItem('antcv:disable-babel-relang') === '1') return; } catch (_) {}
@@ -73,6 +73,28 @@
   // never bloat the prefs blob: oldest-.at entries are dropped first.
   var BUNDLE_KEY = 'langRenders';
   var BUNDLE_CAP = 40000;  // max serialized bundle size (chars)
+  // RELANG-SINGLE-FLIGHT-001 (owner 2026-07-12 "why is translation working on
+  // all tabs in chrome and the claude browser in parallel?"): every throttle in
+  // this sidecar (backoff, attempt cap, debounce) was a per-tab in-memory
+  // variable, so EVERY open tab over the same localStorage independently fired
+  // the SAME heal — and other signed-in browsers joined via the cloud echo.
+  // Parallel chunked translates then write-war over sections (jumpy preview,
+  // clobbered CL). Two gates: (1) only the VISIBLE tab heals; (2) a cross-tab
+  // lease in localStorage makes it ONE healing tab per browser profile at a
+  // time. Cross-DEVICE parallelism (two browsers both visible + signed in) is
+  // reduced but not eliminated — that needs a cloud-side lease.
+  var LEASE_KEY = 'antcv:relang-lease';
+  var LEASE_MS = 180000;   // covers a full chunked translate run
+  var TAB_ID = 't' + Math.random().toString(36).slice(2, 10);
+  function leaseHeld() {
+    try {
+      var l = JSON.parse(localStorage.getItem(LEASE_KEY) || 'null');
+      return !!(l && l.id !== TAB_ID && (Date.now() - (l.at || 0)) < LEASE_MS);
+    } catch (_) { return false; }
+  }
+  function takeLease(L) {
+    try { localStorage.setItem(LEASE_KEY, JSON.stringify({ id: TAB_ID, lang: L, at: Date.now() })); } catch (_) {}
+  }
 
   function lang() {
     try {
@@ -291,6 +313,13 @@
     if (inL === null) return;                                 // not enough content to judge
     if ((attempts[L] || 0) >= MAX_ATTEMPTS) return;           // give up (likely invariant residue, not real mixing)
 
+    // RELANG-SINGLE-FLIGHT-001: background tabs never heal (both the cache
+    // restore and the translate MUTATE sections — a hidden tab healing behind
+    // the visible one is exactly the write-war), and only one tab per profile
+    // heals within the lease window.
+    try { if (document.hidden) return; } catch (_) {}
+    if (leaseHeld()) return;
+
     // Content is NOT in the (non-Latin) ribbon language L.
     var speed = genSpeed();
 
@@ -304,6 +333,7 @@
     var now = Date.now();
     if (last.lang === L && (now - last.at) < BACKOFF_MS) return;
     last = { lang: L, at: now };
+    takeLease(L);                                             // RELANG-SINGLE-FLIGHT-001
     attempts[L] = (attempts[L] || 0) + 1;                     // count this attempt toward the cap
     verify = { lang: L, src: invariantSet(txt) };             // capture source facts for the post-render check
     try { console.info('[babel-relang] content not in', L, '— re-rendering into ribbon language (' + speed + ')'); } catch (_) {}

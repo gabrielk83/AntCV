@@ -1,4 +1,4 @@
-const VERSION='3.8.2-nonanthropic-provider-fixes';
+const VERSION='3.8.3-gemini-flash-ramble';
 // Cloudflare Worker — multi-provider LLM proxy with streaming for Anthropic
 // Includes /preferences route for AntCV cloud save.
 //
@@ -1409,7 +1409,9 @@ async function handleRequest(request, env = {}) {
     // Cap thinking to a small fixed budget (128 = 2.5-pro's minimum; 2.5-flash
     // accepts it too) so most of the budget is left for output. CV writing is not
     // a reasoning task, so minimal thinking is the right trade for bounded gen.
-    if (/^gemini-2\.5/.test(model)) {
+    // Scope to 2.5-PRO only: flash self-regulates on default thinking; capping
+    // it to 128 made flash ramble (GEMINI-25-FLASH-RAMBLE-001, 2026-07-11).
+    if (/^gemini-2\.5-pro/.test(model)) {
       payload.generationConfig.thinkingConfig = { thinkingBudget: 128 };
     }
     if (systemBits.length) {

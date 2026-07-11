@@ -73,7 +73,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.358';
+  var VERSION = '1.51.356-identity-heal';
   if (window.__antcvKernelCompleteness290 === VERSION) return;
   window.__antcvKernelCompleteness290 = VERSION;
 
@@ -130,10 +130,27 @@
     return false;
   }
 
+  // CJK-LENGTH-EQUIV-001 (owner 2026-07-12): every length floor below was
+  // calibrated for ENGLISH prose. Chinese carries roughly 3x the information
+  // per character, so a perfectly valid zh contribute_intro (7-9 chars, e.g.
+  // "our first priorities:" in 7 hanzi) failed the 10-char floor, the WHOLE
+  // response was discarded as KERNEL_INCOMPLETE, every retry failed the same
+  // way, and the zh kernel generation ended templated. Count each CJK char as
+  // 3 toward the floors. charCode ranges, not a regex literal, per this
+  // file's ASCII-only constraint (header notes).
+  function effectiveLen(t) {
+    var n = t.length;
+    for (var i = 0; i < t.length; i++) {
+      var c = t.charCodeAt(i);
+      if (c >= 0x3400 && c <= 0x9fff) n += 2;
+    }
+    return n;
+  }
+
   function isFilledString(v, minLen) {
     if (typeof v !== 'string') return false;
     var t = v.trim();
-    if (t.length < (minLen || 8)) return false;
+    if (effectiveLen(t) < (minLen || 8)) return false;
     if (isPlaceholderString(t)) return false;
     if (t === 'Focus Area' || t === 'Strategic Expertise') return false;
     if (t.length <= 2) return false;
@@ -246,7 +263,9 @@
     var t = value.trim();
     if (t.length === 0) return label + ' (empty)';
     if (isPlaceholderString(t)) return label + ' (placeholder text)';
-    if (t.length < minLen) return label + ' (' + t.length + ' chars, need >=' + minLen + ')';
+    // CJK-LENGTH-EQUIV-001: weighted length so zh prose is judged fairly.
+    var el = effectiveLen(t);
+    if (el < minLen) return label + ' (' + el + ' chars cjk-weighted, need >=' + minLen + ')';
     return null;
   }
 

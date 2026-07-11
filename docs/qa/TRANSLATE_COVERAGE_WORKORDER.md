@@ -163,3 +163,22 @@ post-gen ENGLISH re-injectors. Shipped:
    IDF company variants) — regen replaces the document; no more machinery.
 5. Then: owner regenerates all 16 style×lang kernels on ≥1.51.338 and audits
    the credential-forward zh one first.
+
+## 2026-07-11 (night) — 1.51.339-343 shipped; next-session debug list
+Shipped: TIGHTEN-IN-GEN-WINDOW-001 (overlay covers tightening), PREVIEW-MD-LINK-001
+(Scholar link clickable in preview), LANGS-ENUM-DICT-001 (语言 list deterministic),
+LANG-RESTORE-GUARD-001 (cloud pull can't clobber zh sections), LANG-PI-ECHO-GUARD-001
+(prefs pull can't downgrade zh identity fields), BABEL-RICHBLOCK-RESIDUE-001 +
+UNSOL-FULL-BREADTH-001 (normalize passes), OWNER-PINNED-ZH-001 (哥本哈根/基础/
+connect-sentence/CCB line exact pins), CONTACT-LINE-DICT-ROUTE-001 (header contact
+values dict-routed), BABEL-SIDEBAR-CUT-001 (wide-script export sidebar breaks
+earlier; tune antcv:wide-word-inflate).
+DEBUG NEXT: (1) normalize-415 pipeline swallows an exception before reaching the
+new passes on the live zh doc (manual application of the same logic worked —
+foundation row dropped; add a console.warn to the pipeline catch and find the
+throwing normaliser). (2) upload-menu language change → editor didn't pop the
+translate modal (defer machinery intact in code; instrument the stamp on the
+owner's flow). (3) placeholder detector is English-only ([A-Z start + em-dash]) —
+zh-translated placeholders like [行动与…] escape hiding. (4) preview Results
+fallback __lamOfL lacks the wide-title gate (export has it). (5) kernel-overwrite
+window.confirm still wedges automated tabs — replace with the app modal.

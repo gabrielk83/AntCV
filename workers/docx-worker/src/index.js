@@ -23798,7 +23798,7 @@ function makePhotosCircular(documentXml, shape) {
   return { xml: next, count: count3 };
 }
 __name(makePhotosCircular, "makePhotosCircular");
-function aiNoticeVmlRun(side, __idx, noticeText, noticeFont) {
+function aiNoticeVmlRun(side, __idx, noticeText, noticeFont, bodyLevel) {
   __idx = Number.isFinite(__idx) ? __idx : 0;
   // FURNITURE-ZH-001: caller (postProcessDocx) forwards the localized notice +
   // font; Chinese needs a CJK eastAsia face or the glyphs box out in the VML.
@@ -23830,7 +23830,13 @@ function aiNoticeVmlRun(side, __idx, noticeText, noticeFont) {
   // A4 = 842pt; box 18pt. margin-top 824 put the box bottom EXACTLY on the page edge (824+18=842),
   // so Word ExportAsFixedFormat clipped/dropped its last pixels — the notice looked "lost". Lift it
   // to 806pt (box bottom 824pt -> ~18pt bottom clearance) so it lands fully visible at the sidebar bottom.
-  const __mt = 806;
+  // AI-NOTICE-CORNER-1PAGE-001 (owner 2026-07-13, app 723 markup: the notice "floats
+  // above content space" on the 1-page zh CV). The BODY-LEVEL carrier (single-slot
+  // docs, AI-NOTICE-1PAGE-BODY-001) is not clamped by any cell, so it can sit lower —
+  // 822pt puts the text at ~823-831pt (~11pt bottom clearance, box bottom 840pt,
+  // still 2pt clear of the 842pt edge that clipped at 824 in AI-NOTICE-ANCHOR-FIX-001).
+  // The owner-verified in-cell/overflow routes keep 806 untouched.
+  const __mt = bodyLevel ? 822 : 806;
   return '<w:r><w:rPr><w:noProof/></w:rPr><w:pict>' +
     '<v:rect id="AntCVAiNotice' + __idx + '" o:spid="_x0000_s' + (4097 + __idx) + '" style="position:absolute;margin-left:' + __ml + 'pt;margin-top:' + __mt + 'pt;width:320pt;height:18pt;' +
     'mso-position-horizontal-relative:page;' +
@@ -23889,13 +23895,15 @@ function postProcessDocx(input, opts = {}) {
     // closing WM-001/002/004/005. Side ('left'|'right') is encoded in the sentinel
     // (CV: measured larger-gap corner; CL: right). The document root already
     // declares the v/o/w10 namespaces, so the body VML is valid as-is.
-    const AIWM_RE = /<w:r\b[^>]*>(?:(?!<\/w:r>)[\s\S])*?__ANTCV_AIWM_(left|right|center)__(?:(?!<\/w:r>)[\s\S])*?<\/w:r>/;
+    // AI-NOTICE-CORNER-1PAGE-001: an optional trailing "B" marks the BODY-LEVEL
+    // (single-slot) sentinel so its VML frame anchors lower, at the page corner.
+    const AIWM_RE = /<w:r\b[^>]*>(?:(?!<\/w:r>)[\s\S])*?__ANTCV_AIWM_(left|right|center)(B?)__(?:(?!<\/w:r>)[\s\S])*?<\/w:r>/;
     // CL-AI-NOTICE-BOTH-PAGES-001: swap EVERY sentinel (one per page), each
     // with a unique VML shape id so multiple frames coexist.
     let __aiWmIdx = 0;
     let aiWmMatch;
     while ((aiWmMatch = xml2.match(AIWM_RE))) {
-      xml2 = xml2.replace(AIWM_RE, aiNoticeVmlRun(aiWmMatch[1], __aiWmIdx++, opts && opts.aiNotice, opts && opts.aiFont));
+      xml2 = xml2.replace(AIWM_RE, aiNoticeVmlRun(aiWmMatch[1], __aiWmIdx++, opts && opts.aiNotice, opts && opts.aiFont, aiWmMatch[2] === "B"));
       aiNoticeInjected = true;
       if (__aiWmIdx > 8) break;
     }
@@ -24712,9 +24720,12 @@ function buildAiDisclosureHangingTextbox(ctx, opts) {
   // __mt) so it lands fully visible at the sidebar bottom.) Zero-footprint sentinel paragraph
   // whose run postProcessDocx swaps for the page-bottom VML frame.
   const side = opts && (opts.side === "left" ? "left" : opts.side === "center" ? "center" : "right");
+  // AI-NOTICE-CORNER-1PAGE-001: body-level (single-slot) sentinels carry a "B"
+  // suffix so postProcessDocx anchors their frame lower (true page corner).
+  const __bl = opts && opts.bodyLevel ? "B" : "";
   return new Paragraph({
     spacing: { before: 0, after: 0, line: 1, lineRule: "exact" },
-    children: [new TextRun({ text: "__ANTCV_AIWM_" + (side || "right") + "__", size: 2, color: "FFFFFF" })]
+    children: [new TextRun({ text: "__ANTCV_AIWM_" + (side || "right") + __bl + "__", size: 2, color: "FFFFFF" })]
   });
 }
 __name(buildAiDisclosureHangingTextbox, "buildAiDisclosureHangingTextbox");
@@ -25239,7 +25250,7 @@ function buildTwoColumnDocument(ctx) {
   // conversion still overflows past the worker's 1-slot estimate the carrier trails
   // the content onto the TRUE last page - better than the old page-0 in-cell drop.
   if (__aiWmBodyLevel) {
-    docChildren.push(buildAiDisclosureHangingTextbox(ctx, { side: ctx.__aiWmCorner || "right", onDark: false }));
+    docChildren.push(buildAiDisclosureHangingTextbox(ctx, { side: ctx.__aiWmCorner || "right", onDark: false, bodyLevel: true }));
   }
   // AI-WATERMARK-EXPORT-LOCATION-001 fix (1.14.78): body-level sentinel carrier,
   // appended AFTER the final page table (not inside a cell). postProcessDocx swaps its
@@ -26222,7 +26233,11 @@ function buildMainFloatPhotoParagraph(ctx, position) {
         outline: { width: 12700, solidFillType: "rgb", value: outlineColor },
         floating: {
           horizontalPosition: { relative: HorizontalPositionRelativeFrom.COLUMN, align: isLeft ? "left" : "right" },
-          verticalPosition: { relative: VerticalPositionRelativeFrom.PARAGRAPH, offset: 19050 },
+          // PHOTO-FLOAT-TOP-OFFSET-001 (owner 2026-07-13, app 723 markup: the
+          // main-right photo sat "stuck against the upper blue header line").
+          // 19050 EMU (1.5pt) -> +10pt = 146050 EMU so the float clears the
+          // header rule; free space below the photo absorbs the shift.
+          verticalPosition: { relative: VerticalPositionRelativeFrom.PARAGRAPH, offset: 146050 },
           wrap: { type: TextWrappingType.SQUARE, side: TextWrappingSide.BOTH_SIDES },
           // PHOTO-AIR-EQUAL-001 (owner 2026-06-12): equal blank space above
           // and below the figure — 4px each (matches the preview).
@@ -28337,7 +28352,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.145-ai-notice-1page";
+var VERSION = "1.14.146-photo-float-offset";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

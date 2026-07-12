@@ -102,7 +102,10 @@
     var changed = false;
     var gab = isGabriel(pi);
     var zhPins = { name: '柯葛顺·加百列·亚历山大', city: '哥本哈根', citizenship: '欧盟公民' };
-    ['name', 'city', 'citizenship', 'specialization', 'location'].forEach(function (f) {
+    // LOCALFORM-DA-ALWAYS-001 (owner 2026-07-12): 'location' removed from the
+    // to-wide swap — a Danish postal location ("2300, København S") stays Danish
+    // on every ribbon incl. zh. (from-wide healing back to Latin still applies.)
+    ['name', 'city', 'citizenship', 'specialization'].forEach(function (f) {
       var cur = pi[f];
       if ('string' != typeof cur || !cur.trim() || WIDE_RE.test(cur)) return;
       var stash = pi['__zh_' + f];
@@ -114,6 +117,9 @@
     });
     if (Array.isArray(pi.contactItems)) pi.contactItems.forEach(function (ci, i) {
       if (!ci || 'string' != typeof ci.value || !ci.value.trim() || WIDE_RE.test(ci.value)) return;
+      // LOCALFORM-DA-ALWAYS-001: a Danish postal location contact item never
+      // swaps to a wide-script rendering.
+      if (/^\d{4},?\s/.test(ci.value) || /københavn/i.test(ci.value)) return;
       if ('string' == typeof ci.__zh && WIDE_RE.test(ci.__zh)) {
         ci.__latin = ci.value; ci.value = ci.__zh; changed = true; log.push('contact' + i);
       }

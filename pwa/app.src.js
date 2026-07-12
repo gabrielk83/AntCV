@@ -3125,11 +3125,17 @@
     );
   }
   function de(e) {
+    // CONTACT-LOC-DEDUP-001 (owner 2026-07-12): when a Location line is stored
+    // it already carries city+country ("2300, København S") — rendering City and
+    // Country as separate rows beside it is redundant. Drop them from the LIST
+    // (they stay editable in the contact grid; clearing Location brings them back).
+    const __hasLoc = !!String((e && e.location) || "").trim();
     return ce(e || {})
       .filter(
-        (e) =>
-          String(e.value || "").trim() ||
-          ["city", "country", "email", "phone", "linkedin"].includes(e.key),
+        (t) =>
+          !(__hasLoc && ("city" === t.key || "country" === t.key)) &&
+          (String(t.value || "").trim() ||
+            ["city", "country", "email", "phone", "linkedin"].includes(t.key)),
       )
       .map((e) => ({
         l: `${e.icon} ${e.label}`,
@@ -3150,10 +3156,9 @@
     // other cities pass through untouched.
     const __localForm = (v) => {
       let s = String(v || "").trim();
-      // LOCALFORM-DA-ONLY-001 (owner 2026-07-10): Danish local form only for a
-      // Danish-language application; en/zh keep "Copenhagen" for the translator.
-      let __lf = "en"; try { let __v = localStorage.getItem("language") || ""; if (__v && __v.charAt(0) === '"') __v = JSON.parse(__v); __lf = String(__v || "en").toLowerCase().replace(/[^a-z]/g, "").slice(0, 2) || "en"; } catch (_) {}
-      if (__lf !== "da") return s.replace(/københavn/gi, "Copenhagen");
+      // LOCALFORM-DA-ALWAYS-001 (owner 2026-07-12, REVERSES LOCALFORM-DA-ONLY-001):
+      // a Denmark location renders its DANISH local form ("2300, København S")
+      // in EVERY application language — the address is a proper noun, not prose.
       if (!/copenhagen|københavn/i.test(s)) return s;
       s = s
         .replace(/copenhagen/gi, "København")
@@ -3191,7 +3196,9 @@
       (a || n) &&
         o.push([
           "⌂",
-          __ctF(__localForm(t ? a || "København, Danmark" : a || "Copenhagen, Denmark")),
+          // LOCALFORM-DA-ALWAYS-001: the location is NOT dict-routed (__ctF) —
+          // "2300, København S" stays Danish on every ribbon incl. zh.
+          __localForm(t ? a || "København, Danmark" : a || "Copenhagen, Denmark"),
         ]),
       e.citizenship && o.push(["★", __ctF(e.citizenship)]),
       e.email && o.push(["@", e.email]),
@@ -18514,6 +18521,10 @@
                           if (!ci || "string" != typeof ci.value || !ci.value.trim()) return;
                           var v = ci.value.trim();
                           if (/@|^https?:|^www\.|linkedin\.|github\.|^\+?[\d\s()-]{6,}$/i.test(v)) return;
+                          // LOCALFORM-DA-ALWAYS-001 (owner 2026-07-12): a Danish postal
+                          // location ("2300, København S") is a proper noun — never
+                          // translated, stays Danish on every ribbon.
+                          if (/^\d{4},?\s/.test(v) || /københavn/i.test(v)) return;
                           r.push({ key: "pi_ci_" + cidx, value: ci.value, __std: "pici", __ci: cidx });
                         } catch (_) {}
                       });

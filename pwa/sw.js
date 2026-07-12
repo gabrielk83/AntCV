@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.365-open-fixes';
+const CACHE = 'antcv-1.51.366-location-danish';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

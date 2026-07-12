@@ -113,3 +113,21 @@ EXPERIENCE stayed English. Two real defects found:
    not reproduced after the fix; if a no-apply recurs on ≥357, instrument `Rr` (in-progress flag) next.
 
 Full evidence trail: docs/qa/TRANSLATE_COVERAGE_WORKORDER.md (2026-07-12 sections).
+
+## Addendum (same session, after "chase it") — 357 verified + 358 shipped
+- **1.51.357 VERIFIED LIVE**: post-fix heal run — PROFILE now Danish ("IT-fagperson med 15 års
+  erfaring, der forbinder produktstrategi…"), visible role bullets Danish ("Byggede KPI- og
+  rapporteringsstrukturer…"), en-markers 171→75. Both 357 defects were real and are gone.
+- **1.51.358 (role twins)**: the verify exposed the accumulation at its worst — **25 VISIBLE roles**,
+  every canonical role present as `<id>` + `<id>-2`/`-3` backfill twins plus gen schema ids (r1) beside
+  canon ids (kanzen). Root cause: the completeness backfill's dup check (_samePosition) is
+  translation-blind, so a da-titled role never matched its en canon → endless re-adds. Shipped:
+  BASE-ID-SAME-POSITION-001 (same id root = same position) + GEN-ID-CANON-MATCH-001 (gen r-id vs
+  canonical id at same company + same tenure, strict start / loose open end) in _samePosition (stops
+  the re-adder), and the matching collapse branch in dedupeRoles (canonical id survives — the Results
+  pins key on it — adopting the gen twin's fresh title+bullets; suffix twins keep the richer side).
+  **Verified live: 25 → 12 roles, one per canonical id, kanzen carrying the fresh Danish title.**
+  Suite 1222/1222.
+- Final da heal fired on the deduped doc; with 357's id-resolved apply the surviving English
+  titles/bullets translate onto the RIGHT roles. Next session starts the kernel batch from a clean,
+  stable-identity document on 1.51.358.

@@ -72,14 +72,17 @@ def _prov_for(model):
     if m.startswith("mistral") or m.startswith("magistral") or m.startswith("ministral"): return "mistral"
     return "anthropic"
 
-# The 12 real category ids. NEVER 'targeted'/'unsolicited' for a real JD
-# (the app blanks the JD on open). Rough keyword routing; the owner can
-# override per row later in the UI.
+# The 11 real category ids the ACCESS-RELAY accepts (workers/access-relay
+# CATEGORIES set). NEVER 'unsolicited' for a real JD (the app blanks the JD
+# on open). CRITICAL: the relay's normalizeCategory() silently downgrades any
+# id NOT in this exact set to 'unsolicited' — so guess_category MUST return
+# only these literals (the 2026-07-12 wrong-category batch defect: it emitted
+# project_management/quality_regulatory/business_analysis, all rejected →
+# stored as unsolicited). Rough keyword routing; owner can override in the UI.
 REAL_CATEGORIES = [
     "engineering_hardware", "engineering_software", "product_management",
-    "project_management", "data_analytics", "research_science",
-    "quality_regulatory", "operations_supply", "business_analysis",
-    "consulting_advisory", "sales_marketing", "other",
+    "program_management", "operations", "data_analytics",
+    "research_phd", "consulting", "executive", "finance", "people_soft",
 ]
 
 # ── auth / http ────────────────────────────────────────────────────
@@ -245,19 +248,27 @@ def detect_language(jd):
     return "da" if da > en * 1.15 and da >= 5 else "en"
 
 def guess_category(role, jd):
+    # Returns ONLY ids in REAL_CATEGORIES (== the relay's CATEGORIES set);
+    # anything else the relay rewrites to 'unsolicited'. Fallback is
+    # 'consulting' (a valid generic white-collar id), never 'other'/'unsolicited'.
     t = (str(role) + " " + str(jd)).lower()
     def has(*ks): return any(k in t for k in ks)
     if has("product manager", "product owner", "senior pm", " pm,"): return "product_management"
-    if has("project manager", "programme manager", "program manager", "project steering"): return "project_management"
-    if has("quality", "regulatory", "audit", "iso ", "compliance"): return "quality_regulatory"
-    if has("business analyst", "business excellence", "reinsurance", " ba ", "analytics engineer"): return "business_analysis"
-    if has("data ", "analytics"): return "data_analytics"
-    if has("research", "scientist", "phd", "postdoc"): return "research_science"
+    if has("project manager", "programme manager", "program manager", "project steering", "head of project"): return "program_management"
+    if has("research", "scientist", "phd", "postdoc"): return "research_phd"
+    # engineering BEFORE data_analytics: an optical/process-engineer JD often
+    # mentions "data" incidentally — that must not route it to data_analytics
+    # (the 2026-07-12 gemini batch mis-routed nkt optical/process rows). Keep
+    # data_analytics to analytics-SPECIFIC role titles, not a bare "data" token.
     if has("optical", "optics", "photonic", "process engineer", "hardware", "lead engineer", "development engineer", "test engineer", "system"): return "engineering_hardware"
+    if has("analytics engineer", "data scientist", "data analyst", "data engineer", "business intelligence", " bi ", "analytics"): return "data_analytics"
     if has("software", "developer", "backend", "frontend"): return "engineering_software"
-    if has("operations", "supply", "service excellence"): return "operations_supply"
-    if has("consult", "advisor", "specialist"): return "consulting_advisory"
-    return "other"
+    if has("quality", "regulatory", "audit", "iso ", "compliance", "operations", "supply", "service excellence", "business excellence", "manufacturing"): return "operations"
+    if has("cfo", "controller", "finance", "accounting", "treasury"): return "finance"
+    if has("chief", "head of", "director", "vp ", "vice president"): return "executive"
+    if has("hr ", "people", "talent", "recruit"): return "people_soft"
+    if has("business analyst", "reinsurance", " ba ", "consult", "advisor", "specialist"): return "consulting"
+    return "consulting"
 
 # ── section plan ───────────────────────────────────────────────────
 # Each section: an Anthropic /v1/messages body. The user turn carries the

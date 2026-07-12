@@ -78,7 +78,11 @@ function makeButton(): HTMLButtonElement {
     borderRadius: '10px', padding: '10px 12px', marginBottom: '10px', fontSize: '12px', fontWeight: '700',
     letterSpacing: '0.3px', cursor: 'pointer', fontFamily: 'inherit',
   } as CSSStyleDeclaration);
-  b.addEventListener('click', () => openJobTracker());
+  // No per-element click listener — see the delegated document-level listener
+  // in mountJobTrackerIsland (BTN-DEAD-CLONE-001): an app re-render can
+  // serialize + recreate this button (styles survive as attributes, listeners
+  // don't), and ensureButton then sees it "already placed" and keeps the dead
+  // clone. Delegation makes ANY #antcv-job-tracker-btn work.
   return b;
 }
 
@@ -111,6 +115,14 @@ export function mountJobTrackerIsland(): void {
   if (booted) return;
   booted = true;
   (window as unknown as { AntcvOpenJobTracker?: () => void }).AntcvOpenJobTracker = openJobTracker;
+  // BTN-DEAD-CLONE-001: delegated open — survives the button being serialized
+  // + recreated by an app re-render (which strips element listeners).
+  document.addEventListener('click', (ev) => {
+    try {
+      const t = ev.target as HTMLElement | null;
+      if (t && typeof t.closest === 'function' && t.closest('#' + BTN_ID)) openJobTracker();
+    } catch { /* */ }
+  }, true);
   try { ensureButton(); } catch (e) { console.warn('[JobTracker] place button failed', e); }
   try { startFitWatch(); } catch (e) { console.warn('[JobTracker] fit-watch failed', e); }
   // Re-place on DOM churn + on auth changes. setTimeout (not rAF) per STICKY-LEAK-005.

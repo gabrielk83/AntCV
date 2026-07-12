@@ -17,6 +17,19 @@ export function isAuthed(): boolean {
   try { return !!localStorage.getItem('antcv:auth:token'); } catch { return false; }
 }
 
+// PARALLEL-GEN-POINTER-002 client side: this device's stable id (from the
+// antcv-jd-scope sidecar). The relay prefers the PER-DEVICE active pointer, so
+// an Open that only writes the legacy global row loses to this device's stale
+// device row on the next reload (the "still shows the previous company" bug).
+// Every active-pointer write from the tracker must carry this stamp.
+export function jdScopeDeviceId(): string | null {
+  try {
+    const s = (window as unknown as { AntcvJdScope?: { deviceId?: () => string } }).AntcvJdScope;
+    const d = s && typeof s.deviceId === 'function' ? s.deviceId() : '';
+    return d ? String(d).slice(0, 64) : null;
+  } catch { return null; }
+}
+
 export function proxyBase(): string {
   try {
     const raw = localStorage.getItem('proxyUrl');
@@ -113,6 +126,7 @@ export async function createApplication(p: SeedPayload): Promise<number | null> 
   const { style_config, ...rest } = p;
   const body: Record<string, unknown> = { jd_language: 'en', category: 'targeted', ...rest };
   if (style_config && Object.keys(style_config).length) body.meta = { styleConfig: style_config };
+  const dev = jdScopeDeviceId(); if (dev) body.device_id = dev; // stamp THIS device's pointer too
   const res = await call('/api/applications', {
     method: 'POST',
     body: JSON.stringify(body),
@@ -123,7 +137,8 @@ export async function createApplication(p: SeedPayload): Promise<number | null> 
 }
 
 export async function setActive(applicationId: number): Promise<void> {
-  await call('/api/active', { method: 'POST', body: JSON.stringify({ application_id: applicationId }) });
+  const dev = jdScopeDeviceId();
+  await call('/api/active', { method: 'POST', body: JSON.stringify({ application_id: applicationId, ...(dev ? { device_id: dev } : {}) }) });
 }
 
 // Ask-AI (low tier): reuse the app's own LLM path — POST an Anthropic-style

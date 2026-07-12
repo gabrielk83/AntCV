@@ -16687,6 +16687,25 @@
                             wa(e.meta.styleConfig);
                           } catch (e) {}
                         }
+                        // BRAND-FIT-OPEN-002 (owner 2026-07-12): a brand-fitted tracker
+                        // row must arrive with the upload panel's session-only Brand-fit
+                        // CHECKBOX armed, not just the palette applied — otherwise the
+                        // next generation runs without the brand-fit rule. Detect intent
+                        // via meta.styleConfig OR the BRAND-FIT: line the tracker appends
+                        // to supporting_context, arm window.__antcvBrandFit, and tick the
+                        // checkbox once it renders (checked=, not click — no onChange loop).
+                        try {
+                          var __bf1 = (e.meta && e.meta.styleConfig && "object" == typeof e.meta.styleConfig) || /\n\nBRAND-FIT:/.test(String(e.supporting_context || ""));
+                          if (__bf1) {
+                            window.__antcvBrandFit = !0;
+                            setTimeout(function () {
+                              try {
+                                var c = document.querySelector("input[data-antcv-brandfit]");
+                                if (c && !c.checked) c.checked = !0;
+                              } catch (e) {}
+                            }, 900);
+                          }
+                        } catch (e) {}
                         // OPEN-JD-VISIBLE-001 (owner 2026-07-12): a tracker-seeded
                         // application carries the whole brief (Dream Envelope, ROLE
                         // INTEL, web research, owner signals) in supporting_context —
@@ -22069,6 +22088,19 @@
                       });
                     } catch (e) {}
                 }
+                // BRAND-FIT-OPEN-002: same brand-fit checkbox arming as occ-1.
+                try {
+                  var __bf2 = (e.meta && e.meta.styleConfig && "object" == typeof e.meta.styleConfig) || /\n\nBRAND-FIT:/.test(String(e.supporting_context || ""));
+                  if (__bf2) {
+                    window.__antcvBrandFit = !0;
+                    setTimeout(function () {
+                      try {
+                        var c = document.querySelector("input[data-antcv-brandfit]");
+                        if (c && !c.checked) c.checked = !0;
+                      } catch (e) {}
+                    }, 900);
+                  }
+                } catch (e) {}
                 // OPEN-JD-VISIBLE-001: same supporting_context → rationale fold
                 // as the cold-start restore (see occ-1 above).
                 try {
@@ -43881,7 +43913,9 @@
                   },
                   React.createElement("input", {
                     type: "checkbox",
-                    defaultChecked: !1,
+                    // BRAND-FIT-OPEN-002: reflect the restore-armed flag when the
+                    // panel renders after a brand-fitted tracker Open.
+                    defaultChecked: !0 === window.__antcvBrandFit,
                     "data-antcv-brandfit": "1",
                     onChange: (ev) => {
                       window.__antcvBrandFit = !!ev.target.checked;

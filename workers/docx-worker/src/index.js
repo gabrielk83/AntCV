@@ -23907,6 +23907,34 @@ function postProcessDocx(input, opts = {}) {
       aiNoticeInjected = true;
       if (__aiWmIdx > 8) break;
     }
+    // SIDEBAR-SPINE-VML-001: swap every per-page spine sentinel for a
+    // PAGE-ANCHORED full-height colored rect behind the sidebar column, so the
+    // color reaches the true page edge without touching row pagination (the
+    // anti-blank-page atLeast minimums stay). Explicit page-relative offsets
+    // (LibreOffice/CloudConvert ignores position keywords), negative z-index
+    // (behind text + cell shading), one unique shape id per page.
+    const SPINE_RE = /<w:r\b[^>]*>(?:(?!<\/w:r>)[\s\S])*?__ANTCV_SPINE_(left|right)__(?:(?!<\/w:r>)[\s\S])*?<\/w:r>/;
+    const __spineColor = (opts && opts.spineColor ? String(opts.spineColor).trim().replace(/[^0-9A-Fa-f]/g, "") : "").slice(0, 6);
+    const __spineW = opts && Number.isFinite(opts.spineWidthPt) ? Math.max(40, Math.min(400, Math.round(opts.spineWidthPt))) : 0;
+    let __spineIdx = 0;
+    let spineMatch;
+    while ((spineMatch = xml2.match(SPINE_RE))) {
+      if (!__spineColor || !__spineW) {
+        // no styling forwarded — strip the sentinel run so no stray text ships
+        xml2 = xml2.replace(SPINE_RE, "");
+        continue;
+      }
+      const __sMl = spineMatch[1] === "right" ? Math.round(PAGE_W / 20) - __spineW : 0;
+      xml2 = xml2.replace(
+        SPINE_RE,
+        '<w:r><w:rPr><w:noProof/></w:rPr><w:pict>' +
+        '<v:rect id="AntCVSpine' + __spineIdx + '" o:spid="_x0000_s' + (6097 + __spineIdx) + '" style="position:absolute;margin-left:' + __sMl + 'pt;margin-top:0;width:' + __spineW + 'pt;height:842pt;' +
+        'mso-position-horizontal-relative:page;mso-position-vertical-relative:page;z-index:-251655000;mso-wrap-style:square" fillcolor="#' + __spineColor + '" stroked="f">' +
+        '<w10:wrap anchorx="page" anchory="page"/></v:rect></w:pict></w:r>'
+      );
+      __spineIdx++;
+      if (__spineIdx > 12) break;
+    }
     const hasWm = !!(opts && opts.watermark && String(opts.watermark).trim());
     const headerBgHex = (opts && opts.headerBg ? String(opts.headerBg).trim().replace(/[^0-9A-Fa-f]/g, "") : "").slice(0, 6);
     if (hasWm || headerBgHex) {
@@ -24537,6 +24565,16 @@ async function generateDocx(payload) {
     // AI-NOTICE-POSITION-CONTROL-001: owner's manual notice corner ('left'|'center'|'right') from the
     // Layout control; 'auto'/absent -> null -> the measured larger-gap logic in buildTwoColumnDocument.
     aiNoticePos: (payload.ai_notice_pos === "left" || payload.ai_notice_pos === "center" || payload.ai_notice_pos === "right") ? payload.ai_notice_pos : null,
+    // SIDEBAR-SPINE-VML-001 (owner 2026-07-13: "sidebar color is many times not
+    // reaching end of page"). The body-row atLeast minimums stop the colored
+    // cell ~2cm short of the page bottom DELIBERATELY (anti-blank-page slack —
+    // PDF-BLANK-PAGE-001/002; do NOT raise them). Instead each page's sidebar
+    // cell carries a zero-footprint sentinel that postProcessDocx swaps for a
+    // PAGE-ANCHORED full-height VML rect in sidebarBg behind the text — the
+    // same explicit-offset raw-VML layer the AI notice and DEMO mark prove
+    // survives CloudConvert/LibreOffice. Never participates in row pagination
+    // -> zero blank-page risk. Kill: style_config sidebarSpine:false.
+    sidebarSpine: !(payload.style && payload.style.sidebarSpine === false),
     // contCounter is incremented inside `headingParagraph` to allocate
     // a unique placeholder + bookmark id per section heading. The
     // post-processor pairs each placeholder with its bookmark by this
@@ -24551,7 +24589,10 @@ async function generateDocx(payload) {
   let postProcessError = null;
   let markersRemaining = 0;
   try {
-    const result = postProcessDocx(raw, { watermark: payload.watermark || "", photoShape: resolvePhotoShape(payload), headerBg: (style && style.headerBg) || "", aiNotice: style && style._aiNotice, aiFont: style && style._aiFont });
+    const result = postProcessDocx(raw, { watermark: payload.watermark || "", photoShape: resolvePhotoShape(payload), headerBg: (style && style.headerBg) || "", aiNotice: style && style._aiNotice, aiFont: style && style._aiFont,
+      // SIDEBAR-SPINE-VML-001: color + width for the per-page full-height rect
+      spineColor: (style && style.sidebarBg) || "",
+      spineWidthPt: Math.round(PAGE_W * (Number(payload.sidebar_ratio) > 0.1 && Number(payload.sidebar_ratio) < 0.7 ? Number(payload.sidebar_ratio) : 0.36) / 20) });
     buffer2 = result.buffer;
     replacements = result.replacements || 0;
     if (replacements > 0) {
@@ -25107,13 +25148,25 @@ function buildTwoColumnDocument(ctx) {
     // to the largest cell margin (both columns moved in the owner's 1.14.121
     // export). Instead lead the SIDEBAR paragraph stream with an exact-height
     // 100-twip spacer on continuation pages only; page 1 is untouched.
-    const sb = (!withHeader && sbEls && sbEls.length)
+    const __sbBase = (!withHeader && sbEls && sbEls.length)
       ? [new Paragraph({
           spacing: { before: 0, after: 0, line: 100, lineRule: "exact" },
           shading: { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" },
           children: []
         }), ...sbEls]
-      : sbEls;
+      : (sbEls || []);
+    // SIDEBAR-SPINE-VML-001: one zero-footprint (1-twip, sidebar-colored text)
+    // sentinel per PAGE at the top of the sidebar cell; postProcessDocx swaps
+    // each for a page-anchored full-height colored rect behind the column.
+    // Side mirrors the visual sidebar position (RTL docs flip it right).
+    const __spineSide = (ctx.style._rtl || style.sidebarPosition === "right") ? "right" : "left";
+    const sb = ctx.sidebarSpine
+      ? [new Paragraph({
+          spacing: { before: 0, after: 0, line: 1, lineRule: "exact" },
+          shading: { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" },
+          children: [new TextRun({ text: "__ANTCV_SPINE_" + __spineSide + "__", size: 2, color: style.sidebarBg || "FFFFFF" })]
+        }), ...__sbBase]
+      : __sbBase;
     return new Table({
       width: { size: PAGE_W, type: WidthType.DXA },
       columnWidths: colWidths,
@@ -28352,7 +28405,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.146-photo-float-offset";
+var VERSION = "1.14.147-sidebar-spine";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

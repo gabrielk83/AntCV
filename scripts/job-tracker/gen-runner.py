@@ -360,6 +360,26 @@ def banned_hits(text):
     t = (text or "").lower()
     return [w for w in BANNED_SAMPLE if w in t]
 
+def provider_exhausted(res):
+    """Return a short human reason if generation failed with a provider
+    BILLING/QUOTA-exhaustion signature (the shared server key is out of
+    credit/quota), else None. This blocks the ENTIRE batch — every remaining
+    row would fail the same way and each wastes a /job/create — so the caller
+    aborts fast + legibly instead of grinding on. Only the owner can clear it
+    (top up Anthropic credit / OpenAI quota); it is NOT a code fault.
+    Signatures seen live 2026-07-12: anthropic 400 'credit balance is too low',
+    openai 429 'exceeded your current quota' / 'insufficient_quota'."""
+    sigs = ("credit balance is too low", "out of credit", "exceeded your current quota",
+            "insufficient_quota", "billing details", "quota_exceeded")
+    blobs = [str(res.get("error") or "")]
+    for s in (res.get("sections") or {}).values():
+        blobs.append(str(s.get("error") or ""))
+    for b in blobs:
+        bl = b.lower()
+        if any(g in bl for g in sigs):
+            return b[:220]
+    return None
+
 def sanitize_text(text):
     """Deterministic last-layer scrub before a section is PERSISTED. The
     writing belts still occasionally emit a banned em/en dash (the
@@ -432,6 +452,14 @@ def cmd_run(args):
         res = drive(sections, prov, model,
                     source_cv=json.dumps(profile, ensure_ascii=False)[:38000], jd_text=r["jd"])
         dt = round(time.time() - t0, 1)
+        pexh = provider_exhausted(res)
+        if pexh:
+            print(f"   PROVIDER OUT OF CREDIT/QUOTA: {pexh}")
+            print("   ABORTING BATCH — the shared server key is exhausted; every remaining "
+                  "row would fail the same way (each wastes a /job/create). Owner must top up "
+                  "billing (Anthropic credit / OpenAI quota) before this batch can run.")
+            results_index.append({"uk": uk, "error": pexh, "provider_blocked": True})
+            break
         if res.get("error"):
             print(f"   FAILED: {res['error']}"); results_index.append({"uk": uk, "error": res["error"]}); continue
         # quality probe

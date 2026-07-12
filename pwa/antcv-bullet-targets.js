@@ -69,7 +69,7 @@
 (function () {
   'use strict';
 
-  const SCRIPT_VERSION = '1.51.375';
+  const SCRIPT_VERSION = '1.51.378';
   const STORAGE_KEY = 'antcv:bullet-targets';
   const STYLE_ID = 'antcv-bullet-targets-styles';
   const STRIP_MARKER = 'data-antcv-bullet-target-strip';
@@ -711,10 +711,12 @@
           const opts = args[1] || (args[0] && args[0].method ? args[0] : null);
           const bodyText = readStringBody(opts);
           if (bodyText) {
-            // SHIP 3 first (width calibration), SHIP 2 second (per-bullet
-            // locks) — both are append-only to the same system prompt.
+            // SHIP 3 first (width calibration), SHIP 4 second (measured
+            // per-bullet windows), SHIP 2 last (manual per-bullet locks) —
+            // all append-only to the same system prompt.
             const widthMod = maybeInjectWidthHint(bodyText);
-            const modified = maybeInjectIntoBody(widthMod || bodyText) || widthMod;
+            const winMod = maybeInjectBulletWindows(widthMod || bodyText) || widthMod;
+            const modified = maybeInjectIntoBody(winMod || bodyText) || winMod;
             if (modified) {
               // Build a fresh opts object so we don't mutate the
               // caller's reference. Preserve everything else.
@@ -846,6 +848,111 @@
       (r.l2[1] + 3) + '-' + (r.l3[0] - 3) + ' chars — those wrap into a short dangling last line.';
   }
 
+  // ── SHIP 4 — per-bullet MEASURED windows (GOLD-TARGET-LAYOUT-DENSITY-001,
+  // v1.51.378). The generic calibration (SHIP 3) tells the model the line
+  // width; this measures EACH bullet's current wrap on the live geometry
+  // (greedy word-wrap with real canvas metrics) and appends absolute
+  // character windows per bullet — the same measure->target step the
+  // headless density loop runs, now inside Fit-it/Enhance. Scaled by the
+  // generation speed level (owner 2026-07-13: fast = lower quality, faster):
+  // fast keeps calibration only; balanced/thorough add the measured windows.
+
+  function genSpeed() {
+    try {
+      const v = String(localStorage.getItem('antcv:genSpeed') || '').replace(/"/g, '');
+      return v || 'balanced';
+    } catch (_) { return 'balanced'; }
+  }
+
+  function measureCtx() {
+    const g = currentGeometry();
+    try {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return null;
+      ctx.font = (g.pt * 4 / 3) + 'px "' + g.font + '", Calibri, sans-serif';
+      return ctx;
+    } catch (_) { return null; }
+  }
+
+  // Greedy word-wrap of one bullet at the live bullet width. Returns the
+  // grow/shrink windows in ABSOLUTE chars, or null when the bullet already
+  // ends on a >=60%-full last line.
+  function bulletWindow(text, ctx, widthPx) {
+    const words = String(text || '').trim().split(/\s+/).filter(Boolean);
+    if (words.length < 3) return null;
+    const spaceW = ctx.measureText(' ').width;
+    let lineW = 0, lines = 1, lastChars = 0, totalW = 0, totalChars = 0;
+    for (const w of words) {
+      const ww = ctx.measureText(w).width;
+      totalW += ww; totalChars += w.length;
+      const cand = lineW === 0 ? ww : lineW + spaceW + ww;
+      if (cand > widthPx && lineW > 0) { lines += 1; lineW = ww; lastChars = w.length; }
+      else { lineW = cand; lastChars = lineW === ww ? w.length : lastChars + 1 + w.length; }
+    }
+    const fill = lineW / widthPx;
+    if (fill >= 0.60) return null;
+    const acw = totalChars ? totalW / totalChars : 5;
+    const n = String(text).length;
+    const addMin = Math.max(1, Math.ceil((0.60 * widthPx - lineW) / acw) + 1);
+    const addHi = Math.floor((0.97 * widthPx - lineW) / acw);
+    const grow = addHi >= addMin ? [n + addMin, n + addHi] : null;
+    const shrink = lines >= 2 ? [n - (lastChars + Math.floor(0.35 * widthPx / acw)), n - lastChars] : null;
+    return { n: n, fillPct: Math.round(fill * 100), grow: grow, shrink: shrink };
+  }
+
+  function buildWindowsBlock(bullets, cellWpx) {
+    const ctx = measureCtx();
+    if (!ctx) return '';
+    const g = currentGeometry();
+    const widthPx = cellWpx - g.bulletIndent;
+    const rows = [];
+    bullets.forEach(function (b, i) {
+      const w = bulletWindow(b, ctx, widthPx);
+      if (!w) return;
+      const opts = [];
+      if (w.grow) opts.push(w.grow[0] + '-' + w.grow[1] + ' chars (fill the last line)');
+      if (w.shrink && w.shrink[0] > 20) opts.push(w.shrink[0] + '-' + w.shrink[1] + ' chars (pull the last line back)');
+      if (opts.length) {
+        rows.push(' - Bullet ' + (i + 1) + ' (now ' + w.n + ' chars, last line ' + w.fillPct +
+                  '% full): rewrite to a TOTAL length of ' + opts.join(' OR '));
+      }
+    });
+    if (!rows.length) return '';
+    return '\nPER-BULLET MEASURED WINDOWS (live wrap measurement; count characters INCLUDING ' +
+      'spaces): bullets listed below end on a short dangling line — land each rewritten ' +
+      'bullet inside one stated total-length window. Bullets NOT listed are already ' +
+      'well-fitted: keep their length within ±3 chars.\n' + rows.join('\n');
+  }
+
+  function maybeInjectBulletWindows(bodyText) {
+    if (typeof bodyText !== 'string') return null;
+    if (genSpeed() === 'fast') return null;   // fast tier: calibration only
+    if (bodyText.indexOf('DIMENSION-AWARE BULLET LENGTH') < 0) return null;
+    if (bodyText.indexOf('PER-BULLET MEASURED WINDOWS') >= 0) return null;
+    let body;
+    try { body = JSON.parse(bodyText); } catch (_) { return null; }
+    if (!body || !Array.isArray(body.messages)) return null;
+    const sysIdx = body.messages.findIndex(m => m && m.role === 'system' && typeof m.content === 'string');
+    if (sysIdx < 0) return null;
+    const cls = classifySystemPrompt(body.messages[sysIdx].content);
+    if (!cls) return null;
+    const home = findRoleHome(cls.roleId);
+    if (!home || !home.bulletCount) return null;
+    const all = readDocSections();
+    const sec = all && (all[home.doc] || []).find(s => s && s.id === home.sectionId);
+    const role = sec && Array.isArray(sec.roles) ? sec.roles[home.roleIdx] : null;
+    const bullets = role && Array.isArray(role.bullets) ? role.bullets : null;
+    if (!bullets || !bullets.length) return null;
+    const g = currentGeometry();
+    const cellWpx = (PAGE_W_DXA - Math.round(PAGE_W_DXA * g.ratio)
+                     - 2 * g.mainEdgeIndent * 15 - g.seamGap * 15) * PX_PER_DXA;
+    const block = buildWindowsBlock(bullets, cellWpx);
+    if (!block) return null;
+    body.messages[sysIdx] = { ...body.messages[sysIdx], content: body.messages[sysIdx].content + block };
+    return JSON.stringify(body);
+  }
+
   // Append the calibration block to the request's system prompt. Handles
   // both prompt carriers: an OpenAI-style {role:"system"} message and an
   // Anthropic-style top-level `system` string (the compress cascade uses
@@ -921,5 +1028,9 @@
     _measureCharsPerLine: measureCharsPerLine,
     _buildWidthBlock: buildWidthBlock,
     _maybeInjectWidthHint: maybeInjectWidthHint,
+    // SHIP 4 internals exposed for tests
+    _bulletWindow: bulletWindow,
+    _buildWindowsBlock: buildWindowsBlock,
+    _maybeInjectBulletWindows: maybeInjectBulletWindows,
   };
 })();

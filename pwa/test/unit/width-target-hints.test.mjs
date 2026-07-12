@@ -107,9 +107,53 @@ test('idempotent + inert on unrelated traffic', () => {
   assert.equal(api._maybeInjectWidthHint('not json {'), null);
 });
 
-test('SHIP 2 wiring composes: width first, bullet locks second', () => {
-  // the wrapper source must feed maybeInjectWidthHint's output into
-  // maybeInjectIntoBody, so both blocks can land on one request
+test('wiring composes: SHIP 3 width, SHIP 4 windows, SHIP 2 locks', () => {
   assert.equal(src.includes('const widthMod = maybeInjectWidthHint(bodyText);'), true);
-  assert.equal(src.includes('maybeInjectIntoBody(widthMod || bodyText) || widthMod'), true);
+  assert.equal(src.includes('maybeInjectBulletWindows(widthMod || bodyText) || widthMod'), true);
+  assert.equal(src.includes('maybeInjectIntoBody(winMod || bodyText) || winMod'), true);
+});
+
+// ── SHIP 4: per-bullet measured windows ─────────────────────────────
+
+const ENRICH_ROLE_SYS = 'You are a senior CV editor. Enrich the bullets…"experience_role"…roleId":"r1"…\n' +
+  'DIMENSION-AWARE BULLET LENGTH: bullets render in main column at Calibri 10.5pt ≈ 64-68 chars per line.';
+
+function storeWithRole(bullets) {
+  return new Map([
+    ['cvSidebarRatio', '0.36'],
+    ['styleConfig', '{}'],
+    ['cv_pwa_sections', JSON.stringify({ cv: [{ id: 'experience', roles: [{ id: 'r1', bullets }] }] })],
+  ]);
+}
+
+test('SHIP 4: a short-last-line bullet gets an absolute char window; full bullets are exempt', () => {
+  // fake metrics: 6px/char, bullet width = 454px -> 10 six-char words per
+  // line. 13 words (90 chars) wrap to 2 lines with a 3-word ~26% runt line;
+  // 10 words (69 chars) fill one line to ~91%.
+  const word = 'abcdef';
+  const runt = Array(13).fill(word).join(' ');   // 90 chars, dangling 3-word tail
+  const full = Array(10).fill(word).join(' ');   // 69 chars, one full line
+  const api = load(storeWithRole([runt, full]));
+  const body = JSON.stringify({ messages: [{ role: 'system', content: ENRICH_ROLE_SYS }, { role: 'user', content: 'x' }] });
+  const out = api._maybeInjectBulletWindows(body);
+  assert.equal(typeof out, 'string');
+  const sys = JSON.parse(out).messages[0].content;
+  assert.equal(sys.includes('PER-BULLET MEASURED WINDOWS'), true);
+  assert.match(sys, /Bullet 1 \(now 90 chars, last line \d+% full\)/);
+  assert.equal(sys.includes('Bullet 2'), false, 'well-fitted bullet not listed');
+});
+
+test('SHIP 4: fast speed level skips the measured windows (owner: lower quality, faster)', () => {
+  const runt = 'x'.repeat(70) + ' ' + 'y'.repeat(19);
+  const store = storeWithRole([runt]);
+  store.set('antcv:genSpeed', 'fast');
+  const api = load(store);
+  const body = JSON.stringify({ messages: [{ role: 'system', content: ENRICH_ROLE_SYS }] });
+  assert.equal(api._maybeInjectBulletWindows(body), null);
+});
+
+test('SHIP 4: idempotent and inert without a role match', () => {
+  const api = load(storeWithRole(['x'.repeat(70) + ' tail']));
+  const noRole = JSON.stringify({ messages: [{ role: 'system', content: 'DIMENSION-AWARE BULLET LENGTH only, no role marker' }] });
+  assert.equal(api._maybeInjectBulletWindows(noRole), null);
 });

@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.377-balance-lastpage';
+const CACHE = 'antcv-1.51.378-fitit-windows';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

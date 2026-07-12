@@ -237,7 +237,7 @@ def _gate_candidate(it, new, language, gr):
         return False, "used a banned word or an em/en dash"
     return True, ""
 
-def llm_refit(items, language="en", facts=""):
+def llm_refit(items, language="en", facts="", n_families=None):
     """items: [{id, text, sec, kind, mode, add_*, cut_*, context, feedback}] ->
     ({id: new_text}, {id: reason}). Candidates are gathered from TWO model
     families (CANDIDATE_PROVIDERS), gated, the best-fitting candidate wins per
@@ -311,7 +311,7 @@ def llm_refit(items, language="en", facts=""):
     # gather gated candidates per item from each provider family
     cands = {}    # id -> list of (new_text, provider, band_dist)
     failed = {}
-    for provider, model in CANDIDATE_PROVIDERS:
+    for provider, model in CANDIDATE_PROVIDERS[:n_families or len(CANDIDATE_PROVIDERS)]:
         try:
             text = _post_llm(provider, model, sys_p, user)
         except Exception as e:
@@ -497,14 +497,27 @@ def kernel_digest(kernel, extra=""):
         out += " || APPLICATION CONTEXT: " + _norm(extra)[:1500]
     return out
 
+# Effort profiles (owner 2026-07-13: "fast can get a lower quality faster run").
+# fast     — deterministic only (COMPACT_SUBS + clause trims), 1 render, no LLM.
+# balanced — 2 iterations, FIRST candidate family only, no respace pass.
+# thorough — the full loop: 4 iterations, all families, respace, pin-fix.
+EFFORT = {
+    "fast":     {"iters": 1, "families": 0, "respace": False},
+    "balanced": {"iters": 2, "families": 1, "respace": False},
+    "thorough": {"iters": MAX_ITERS, "families": len(CANDIDATE_PROVIDERS), "respace": True},
+}
+
 def fit_density(cv, cl, pi, style_config, meta, language, doc="cv",
-                max_iters=MAX_ITERS, page_budget=None, verbose=True,
-                kernel_facts="", fix_pins=True):
+                max_iters=None, page_budget=None, verbose=True,
+                kernel_facts="", fix_pins=True, effort="thorough"):
     """Mutates cv/cl toward the QUALITY_TARGET (97.5% of measured items free of
     runt AND stretch defects). Returns (cv, cl, {'before','after','log',
     'rewrites','pinned'}) — cv/cl are the BEST state seen (never worse than
     the input)."""
     gr = MD._gen_runner()
+    prof = EFFORT.get(effort, EFFORT["thorough"])
+    if max_iters is None:
+        max_iters = prof["iters"]
     log = []
     def _payload(cur_cv, cur_cl):
         job = {"sections": {"cv": cur_cv, "cl": cur_cl}, "personalInfo": pi,
@@ -577,7 +590,8 @@ def fit_density(cv, cl, pi, style_config, meta, language, doc="cv",
         # through the same machinery in `respace` mode. Table cells qualify —
         # they are generated content and shrink-only synonym swaps keep the
         # one-line-per-cell rule.
-        respace = [r for r in rep.get("stretched", [])
+        respace = [] if not prof["respace"] else \
+                  [r for r in rep.get("stretched", [])
                    if id(r) not in runt_ids and live(r)
                    and (r["policy"] in ("rewrite", "listedit") or r["kind"] == "cell")]
         for r in respace:
@@ -638,8 +652,9 @@ def fit_density(cv, cl, pi, style_config, meta, language, doc="cv",
             if n:
                 rewrites.append({"sec": r["sec"], "how": "trim", "old": r["text"], "new": new})
                 pending[_norm(r["text"])] = {"sec": r["sec"], "new": new}
-        if asks:
-            got, failed = llm_refit(asks, language=language, facts=kernel_facts)
+        if asks and prof["families"] > 0:
+            got, failed = llm_refit(asks, language=language, facts=kernel_facts,
+                                    n_families=prof["families"])
             for ask in asks:
                 new = got.get(ask["id"])
                 if new and write_back(root, ask["text"], new):
@@ -708,7 +723,8 @@ def main():
     ap.add_argument("--app", type=int, required=True)
     ap.add_argument("--doc", default="cv", choices=["cv", "cl"])
     ap.add_argument("--apply", action="store_true", help="PUT fitted sections back to the relay")
-    ap.add_argument("--iters", type=int, default=MAX_ITERS)
+    ap.add_argument("--effort", default="thorough", choices=list(EFFORT))
+    ap.add_argument("--iters", type=int, default=None)
     ap.add_argument("--json", help="write before/after report JSON")
     args = ap.parse_args()
 
@@ -728,7 +744,8 @@ def main():
 
     facts = kernel_digest(kernel, extra=str(a.get("supporting_context") or ""))
     cv2, cl2, out = fit_density(cv, cl, pi, sc, meta, language, doc=args.doc,
-                                max_iters=args.iters, kernel_facts=facts)
+                                max_iters=args.iters, kernel_facts=facts,
+                                effort=args.effort)
     if out["before"]:
         MD.print_report(out["before"], f"app {args.app} {args.doc} BEFORE")
         MD.print_report(out["after"], f"app {args.app} {args.doc} AFTER")
